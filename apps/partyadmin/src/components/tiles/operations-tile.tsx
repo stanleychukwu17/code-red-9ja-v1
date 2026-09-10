@@ -37,7 +37,7 @@ export function OperationsTableHeader({
 }) {
   return (
     <TileHeader>
-      <TileLeft className="min-w-[180px]">
+      <TileLeft className="min-w-45">
         <span className="text-c-90 font-bold text-[14px]">{unitTitle}</span>
       </TileLeft>
       <TileRight className="text-sm">
@@ -62,7 +62,7 @@ export function OperationsTableHeader({
         <span className="w-[115px] text-left">Total agents</span>
         <span className="w-[85px] text-left">Total PUs</span>
         <span className="w-[110px] text-left">Overall Readiness</span>
-        <span className="w-[140px] text-left">{supervisorTitle}</span>
+        <span className="w-35 text-left">{supervisorTitle}</span>
         <div className="w-8 shrink-0" />
       </TileRight>
     </TileHeader>
@@ -89,7 +89,7 @@ export function OperationsTableTile({
 
   return (
     <TileRow onClick={onClick}>
-      <TileLeft className="min-w-[180px]">
+      <TileLeft className="min-w-45">
         <span className="text-[14px] text-c-80 truncate">{data.name}</span>
       </TileLeft>
       <TileRight className="min-w-fit gap-4 items-center text-[13.5px]">
@@ -187,7 +187,7 @@ export function OperationsTableTile({
         </span>
 
         {/* Supervisors Avatars */}
-        <div className="w-[140px] flex items-center">
+        <div className="w-35 flex items-center">
           {supervisors.length === 0 ? (
             <span className="text-c-40 text-[12px] italic">Unassigned</span>
           ) : (
@@ -243,8 +243,8 @@ export function PollingUnitOperationsTableHeader() {
         <span className="w-[120px] text-left">Avg Ele. end time</span>
         <span className="w-[95px] text-left">Updates given</span>
         <span className="w-[90px] text-left">Reports given</span>
-        <span className="w-[140px] text-left">Avg. update time interval</span>
-        <span className="w-[160px] text-left">
+        <span className="w-35 text-left">Avg. update time interval</span>
+        <span className="w-40 text-left">
           Live voters referred by agents
         </span>
         <span className="w-[110px] text-left">Results uploaded</span>
@@ -312,12 +312,12 @@ export function PollingUnitOperationsTableTile({
         </span>
 
         {/* Avg update time interval */}
-        <span className="w-[140px] text-c-80">
+        <span className="w-35 text-c-80">
           {data.avg_update_time_interval || "—"}
         </span>
 
         {/* Live voters referred */}
-        <span className="w-[160px] text-c-80">
+        <span className="w-40 text-c-80">
           {data.live_voters_referred?.toLocaleString() ?? 0}
         </span>
 

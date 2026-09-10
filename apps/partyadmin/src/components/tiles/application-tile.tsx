@@ -122,13 +122,13 @@ export function ApplicationTableHeader() {
         <p className="text-c-50 text-[14px] w-[130px] hidden md:block">
           Role
         </p>
-        <p className="text-c-50 text-[14px] w-[160px] hidden md:block">
+        <p className="text-c-50 text-[14px] w-40 hidden md:block">
           Assignment / PU
         </p>
         <p className="text-c-50 text-[14px] w-25 hidden xl:block">
           Agents Count
         </p>
-        <p className="text-c-50 text-[14px] w-[160px]">Make decision</p>
+        <p className="text-c-50 text-[14px] w-40">Make decision</p>
       </TileRight>
     </TileHeader>
   );
@@ -397,7 +397,7 @@ export function ApplicationTableTile({
           </span>
         </div>
         <p
-          className="w-[160px] truncate hidden md:block text-[#313131]"
+          className="w-40 truncate hidden md:block text-[#313131]"
           title={assignmentLocation}
         >
           {assignmentLocation}
@@ -406,7 +406,7 @@ export function ApplicationTableTile({
           {isSupervisor ? "—" : agentsCount}
         </p>
         <div
-          className="w-[160px] flex gap-2 justify-center"
+          className="w-40 flex gap-2 justify-center"
           onClick={(e) => e.stopPropagation()}
         >
           {decisionVariant === "pending" ? (

@@ -72,7 +72,7 @@ export function AgentCoverageTableHeader({
 
   return (
     <TileHeader>
-      <TileLeft className="min-w-[180px]">
+      <TileLeft className="min-w-45">
         <span className="text-c-90 font-bold text-[14px]">{unitTitle}</span>
       </TileLeft>
       <TileRight className="text-sm text-c-50 font-medium">
@@ -84,8 +84,8 @@ export function AgentCoverageTableHeader({
         {isState && (
           <span className="w-[130px] text-left">State Supervisor</span>
         )}
-        <span className="w-[140px] text-left">Overall Readiness</span>
-        <span className="w-[140px] text-left">{supervisorTitle}</span>
+        <span className="w-35 text-left">Overall Readiness</span>
+        <span className="w-35 text-left">{supervisorTitle}</span>
         <div className="w-8 shrink-0" />
       </TileRight>
     </TileHeader>
@@ -119,7 +119,7 @@ export function AgentCoverageTableTile({
 
   return (
     <TileRow onClick={onClick}>
-      <TileLeft className="min-w-[180px]">
+      <TileLeft className="min-w-45">
         <span className="text-[14px] text-c-80 truncate">{data.name}</span>
       </TileLeft>
       <TileRight className="min-w-fit gap-4 items-center text-[13.5px]">
@@ -148,7 +148,7 @@ export function AgentCoverageTableTile({
         )}
 
         {/* Overall Readiness */}
-        <div className="flex items-center gap-2 w-[140px]">
+        <div className="flex items-center gap-2 w-35">
           <span className="size-2.5 rounded-full bg-neutral-300 dark:bg-neutral-600 shrink-0" />
           <span className={getReadinessColor(data.overall_readiness)}>
             {data.overall_readiness ?? 0}%
@@ -156,7 +156,7 @@ export function AgentCoverageTableTile({
         </div>
 
         {/* Supervisor Avatars + Add Button */}
-        <div className="w-[140px] flex items-center gap-1.5">
+        <div className="w-35 flex items-center gap-1.5">
           {supervisors.slice(0, 3).map((s, idx) => (
             <AppAvatar
               key={`${s.id}-${idx}`}
@@ -204,13 +204,13 @@ export function AgentCoverageTableTile({
 export function PollingUnitAgentCoverageTableHeader() {
   return (
     <TileHeader>
-      <TileLeft className="min-w-[180px]">
+      <TileLeft className="min-w-45">
         <span className="text-c-90 font-bold text-[14px]">Polling units</span>
       </TileLeft>
       <TileRight className="text-sm text-c-50 font-medium">
         <span className="w-[130px] text-left">Polling Agents</span>
-        <span className="w-[140px] text-left">Overall Readiness</span>
-        <span className="w-[140px] text-left">PU Agents</span>
+        <span className="w-35 text-left">Overall Readiness</span>
+        <span className="w-35 text-left">PU Agents</span>
         <div className="w-8 shrink-0" />
       </TileRight>
     </TileHeader>
@@ -234,7 +234,7 @@ export function PollingUnitAgentCoverageTableTile({
 
   return (
     <TileRow>
-      <TileLeft className="min-w-[180px]">
+      <TileLeft className="min-w-45">
         <span className="text-[14px] text-c-80 truncate">{data.name}</span>
       </TileLeft>
       <TileRight className="min-w-fit gap-4 items-center text-[13.5px]">
@@ -246,7 +246,7 @@ export function PollingUnitAgentCoverageTableTile({
         </div>
 
         {/* Overall Readiness */}
-        <div className="flex items-center gap-2 w-[140px]">
+        <div className="flex items-center gap-2 w-35">
           <span className="size-2.5 rounded-full bg-neutral-300 dark:bg-neutral-600 shrink-0" />
           <span className={getReadinessColor(data.overall_readiness)}>
             {data.overall_readiness ?? 0}%
@@ -254,7 +254,7 @@ export function PollingUnitAgentCoverageTableTile({
         </div>
 
         {/* PU Agents Avatars + Add Button */}
-        <div className="w-[140px] flex items-center gap-1.5">
+        <div className="w-35 flex items-center gap-1.5">
           {agents.slice(0, 3).map((a, idx) => (
             <AppAvatar
               key={`${a.id}-${idx}`}

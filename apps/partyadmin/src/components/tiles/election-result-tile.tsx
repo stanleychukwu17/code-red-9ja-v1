@@ -58,11 +58,11 @@ export function ElectionResultTableHeader({
   return (
     <TileHeader>
       <TileLeft>
-        <span className="text-c-90 w-[180px] shrink-0">{locationLabel}</span>
+        <span className="text-c-90 w-45 shrink-0">{locationLabel}</span>
       </TileLeft>
       <TileRight>
         <span className="w-[220px] text-c-50">Leading candidate</span>
-        <span className="w-[160px] text-c-50 text-[14px] hidden sm:block">
+        <span className="w-40 text-c-50 text-[14px] hidden sm:block">
           Leading by
         </span>
         <span className="w-28.5 text-c-50 text-[14px] hidden md:block">
@@ -87,7 +87,7 @@ export function ElectionResultTableTile({
   return (
     <TileRow>
       <TileLeft>
-        <div className="w-[180px] shrink-0">
+        <div className="w-45 shrink-0">
           <span className="text-[16px] text-c-80">{data.label}</span>
         </div>
       </TileLeft>
@@ -111,7 +111,7 @@ export function ElectionResultTableTile({
             <p className="text-[15px] text-c-40 italic">No results yet</p>
           )}
         </div>
-        <div className="w-[160px] hidden sm:block">
+        <div className="w-40 hidden sm:block">
           {hasResult && data.leadingByVotes !== undefined ? (
             <span className="text-[15px] text-c-80">
               {formatNumber(data.leadingByVotes)}{" "}

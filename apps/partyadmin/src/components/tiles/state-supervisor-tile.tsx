@@ -30,7 +30,7 @@ export function StateSupervisorTableHeader() {
         <span className="text-c-50 text-[14px] w-[90px]">Readiness</span>
         <span className="text-c-50 text-[14px] w-[110px]">Agents at post</span>
         <span className="text-c-50 text-[14px] w-[110px]">PU coverage</span>
-        <span className="text-c-50 text-[14px] w-[140px]">
+        <span className="text-c-50 text-[14px] w-35">
           PU agent coverage
         </span>
         <span className="text-c-50 text-[14px] w-[130px]">
@@ -58,7 +58,7 @@ export function StateSupervisorTableHeader() {
         <span className="text-c-50 text-[14px] w-[130px]">
           Requested Payout
         </span>
-        <span className="text-c-50 text-[14px] w-[80px]">Paid</span>
+        <span className="text-c-50 text-[14px] w-20">Paid</span>
         <span className="text-c-50 text-[14px] w-[120px]">State</span>
         <div className="ml-2 w-8 shrink-0" />
       </TileRight>
@@ -94,7 +94,7 @@ export function StateSupervisorTableTile({
         <span className="w-[90px] font-medium">{data.readiness_pct ?? 0}%</span>
         <span className="w-[110px]">{data.agents_at_post || "—"}</span>
         <span className="w-[110px]">{data.pu_coverage || "—"}</span>
-        <span className="w-[140px]">{data.pu_agent_coverage || "—"}</span>
+        <span className="w-35">{data.pu_agent_coverage || "—"}</span>
         <span className="w-[130px] font-medium">
           {data.arrived_at || data.avg_arrival_time || "—"}
         </span>
@@ -120,7 +120,7 @@ export function StateSupervisorTableTile({
         <div className="w-[130px] flex justify-start">
           <StatusCheckIcon active={data.requested_payout} />
         </div>
-        <div className="w-[80px] flex justify-start">
+        <div className="w-20 flex justify-start">
           <StatusCheckIcon active={data.paid} />
         </div>
         <span className="w-[120px] truncate">{data.state_name || "—"}</span>

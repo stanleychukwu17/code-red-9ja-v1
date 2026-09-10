@@ -73,22 +73,22 @@ export function MarketingTableHeader() {
         <span className="text-c-50 text-[14px] w-[100px] shrink-0 font-medium">
           End date
         </span>
-        <span className="text-c-50 text-[14px] w-[160px] shrink-0 font-medium">
+        <span className="text-c-50 text-[14px] w-40 shrink-0 font-medium">
           Election group
         </span>
         <span className="text-c-50 text-[14px] w-[120px] shrink-0 font-medium">
           Plan
         </span>
-        <span className="text-c-50 text-[14px] w-[140px] shrink-0 font-medium">
+        <span className="text-c-50 text-[14px] w-35 shrink-0 font-medium">
           States
         </span>
-        <span className="text-c-50 text-[14px] w-[140px] shrink-0 font-medium">
+        <span className="text-c-50 text-[14px] w-35 shrink-0 font-medium">
           Budget
         </span>
-        <span className="text-c-50 text-[14px] w-[140px] shrink-0 font-medium">
+        <span className="text-c-50 text-[14px] w-35 shrink-0 font-medium">
           Budget (per day)
         </span>
-        <span className="text-c-50 text-[14px] w-[180px] shrink-0 font-medium">
+        <span className="text-c-50 text-[14px] w-45 shrink-0 font-medium">
           Amount spent
         </span>
         <span className="text-c-50 text-[14px] w-[100px] shrink-0 font-medium">
@@ -165,7 +165,7 @@ export function MarketingTableTile({ data }: { data: MarketingCampaignType }) {
       try {
         const parsed = JSON.parse(data.states);
         if (Array.isArray(parsed)) rawList = parsed;
-      } catch (_) {}
+      } catch (_) { }
     }
 
     if (rawList.length === 0) return "No state";
@@ -200,7 +200,7 @@ export function MarketingTableTile({ data }: { data: MarketingCampaignType }) {
         <span className="text-[15px] text-c-70 w-[100px] shrink-0">
           {endDateLabel}
         </span>
-        <div className="w-[160px] shrink-0 pr-2">
+        <div className="w-40 shrink-0 pr-2">
           <span className="bg-c-10 dark:bg-white/10 text-c-80 font-medium text-[13px] px-2.5 py-1 rounded-md truncate inline-block max-w-full">
             {data.election_group_name || "—"}
           </span>
@@ -210,16 +210,16 @@ export function MarketingTableTile({ data }: { data: MarketingCampaignType }) {
             {data.plan_name || "No Plan"}
           </span>
         </div>
-        <span className="text-[15px] text-c-70 w-[140px] shrink-0 truncate">
+        <span className="text-[15px] text-c-70 w-35 shrink-0 truncate">
           {statesLabel}
         </span>
-        <span className="text-[15px] text-c-80 w-[140px] shrink-0">
+        <span className="text-[15px] text-c-80 w-35 shrink-0">
           {formatNaira(budgetNum)}
         </span>
-        <span className="text-[15px] text-c-80 w-[140px] shrink-0">
+        <span className="text-[15px] text-c-80 w-35 shrink-0">
           {formatNaira(perDayNum)}
         </span>
-        <span className="text-[15px] text-c-80 font-bold w-[180px] shrink-0">
+        <span className="text-[15px] text-c-80 font-bold w-45 shrink-0">
           {formatNaira(spentNum)}{" "}
           <span className="text-c-50 font-normal">({spentPct}%)</span>
         </span>

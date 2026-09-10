@@ -31,7 +31,7 @@ export type PageHeaderTabProps = {
 export function Layout({ children }: { children: ReactNode }) {
   return (
     <main
-      className="mx-auto flex w-full px-5 md:px-20 flex-col gap-4"
+      className="flex w-full px-5 md:px-7 flex-col gap-4"
       style={{ scrollbarGutter: "stable" }}
     >
       {children}

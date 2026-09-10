@@ -104,9 +104,9 @@ function hexToRgba(hex: string, alpha: number): string {
   const full =
     h.length === 3
       ? h
-          .split("")
-          .map((c) => c + c)
-          .join("")
+        .split("")
+        .map((c) => c + c)
+        .join("")
       : h;
   const r = parseInt(full.slice(0, 2), 16);
   const g = parseInt(full.slice(2, 4), 16);
@@ -380,7 +380,7 @@ export function AgentMarketingSetupDialog({
           setFetchedStates(formatted);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, [open, fetchStates]);
 
   // Compute final normalized states list
@@ -610,10 +610,10 @@ export function AgentMarketingSetupDialog({
                             ...prev,
                             states: exists
                               ? prev.states.filter(
-                                  (s) =>
-                                    s.id !== stateObj.id &&
-                                    s.name !== stateObj.name,
-                                )
+                                (s) =>
+                                  s.id !== stateObj.id &&
+                                  s.name !== stateObj.name,
+                              )
                               : [...prev.states, stateObj],
                           };
                         })
@@ -669,7 +669,7 @@ export function AgentMarketingSetupDialog({
                   >
                     −
                   </button>
-                  <div className="flex items-end gap-2 text-center min-w-[160px] justify-center">
+                  <div className="flex items-end gap-2 text-center min-w-40 justify-center">
                     <span className="text-[72px] font-semibold leading-none tracking-[-0.06em] text-c-90">
                       {value.durationValue}
                     </span>

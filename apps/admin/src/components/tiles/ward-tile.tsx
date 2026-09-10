@@ -26,7 +26,7 @@ export function WardTableHeader() {
       </TileLeft>
       <TileRight>
         <span className="text-c-50 text-[14px] w-28.5">PUs</span>
-        <span className="text-c-50 text-[14px] w-[160px] hidden sm:block">
+        <span className="text-c-50 text-[14px] w-40 hidden sm:block">
           LGA
         </span>
         <span className="text-c-50 text-[14px] w-35">State</span>
@@ -48,7 +48,7 @@ export function WardTableTile({ data }: { data: WardType }) {
         <span className="text-[15px] text-c-70 w-28.5">
           {data.polling_units_count ?? "-"}
         </span>
-        <span className="text-[15px] text-c-70 w-[160px] hidden sm:block">
+        <span className="text-[15px] text-c-70 w-40 hidden sm:block">
           {data.lga_name}
         </span>
         <span className="text-[15px] text-c-70 w-35">

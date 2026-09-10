@@ -62,7 +62,7 @@ export function PollingAgentTableHeader() {
         <span className="text-c-50 text-[14px] w-[120px]">Election ended</span>
         <span className="text-c-50 text-[14px] w-[110px]">Updates Given</span>
         <span className="text-c-50 text-[14px] w-[110px]">Reports Given</span>
-        <span className="text-c-50 text-[14px] w-[140px]">
+        <span className="text-c-50 text-[14px] w-35">
           Live voters referred
         </span>
         <span className="text-c-50 text-[14px] w-[120px]">
@@ -75,11 +75,11 @@ export function PollingAgentTableHeader() {
         <span className="text-c-50 text-[14px] w-[130px]">
           Requested Payout
         </span>
-        <span className="text-c-50 text-[14px] w-[80px]">Paid</span>
+        <span className="text-c-50 text-[14px] w-20">Paid</span>
         <span className="text-c-50 text-[14px] w-[120px]">State</span>
         <span className="text-c-50 text-[14px] w-[130px]">LGA</span>
         <span className="text-c-50 text-[14px] w-[130px]">Ward</span>
-        <span className="text-c-50 text-[14px] w-[180px]">Polling Unit</span>
+        <span className="text-c-50 text-[14px] w-45">Polling Unit</span>
         <div className="ml-2 w-8 shrink-0" />
       </TileRight>
     </TileHeader>
@@ -121,7 +121,7 @@ export function PollingAgentTableTile({
         </span>
         <span className="w-[110px]">{data.updates_given ?? 0}</span>
         <span className="w-[110px]">{data.reports_given ?? 0}</span>
-        <span className="w-[140px]">{data.live_voters_referred ?? 0}</span>
+        <span className="w-35">{data.live_voters_referred ?? 0}</span>
         <span className="w-[120px] font-bold">
           {data.results_uploaded || "—"}
         </span>
@@ -134,13 +134,13 @@ export function PollingAgentTableTile({
         <div className="w-[130px] flex justify-start">
           <StatusCheckIcon active={data.requested_payout} />
         </div>
-        <div className="w-[80px] flex justify-start">
+        <div className="w-20 flex justify-start">
           <StatusCheckIcon active={data.paid} />
         </div>
         <span className="w-[120px] truncate">{data.state_name || "—"}</span>
         <span className="w-[130px] truncate">{data.lga_name || "—"}</span>
         <span className="w-[130px] truncate">{data.ward_name || "—"}</span>
-        <span className="w-[180px] truncate">
+        <span className="w-45 truncate">
           {data.polling_unit_name || data.polling_unit_code || "—"}
         </span>
         <AgentDropdown data={data} refetch={refetch} className="ml-2" />

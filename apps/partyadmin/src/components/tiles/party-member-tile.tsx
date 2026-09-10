@@ -39,7 +39,7 @@ export function PartyAdminTableHeader({ columns }: { columns: string[] }) {
         <p className="text-c-50 text-[14px] w-35 hidden md:block">
           {roleCol}
         </p>
-        <p className="text-c-50 text-[14px] w-[180px] hidden lg:block">
+        <p className="text-c-50 text-[14px] w-45 hidden lg:block">
           {officeCol}
         </p>
         <p className="text-c-50 text-[14px] w-35 hidden sm:block">
@@ -71,7 +71,7 @@ export function PartyAdminTableTile({ data }: { data: PartyAdminType }) {
         <p className="w-35 truncate hidden md:block text-[#ff9a3c] font-medium">
           {data.role || "-"}
         </p>
-        <p className="w-[180px] truncate hidden lg:block text-[#313131]">
+        <p className="w-45 truncate hidden lg:block text-[#313131]">
           {data.partyOffice}
         </p>
         <p className="w-35 hidden sm:block text-[#313131]">

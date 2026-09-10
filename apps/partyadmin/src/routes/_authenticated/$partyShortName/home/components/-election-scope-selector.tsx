@@ -109,7 +109,7 @@ export const ElectionScopeSelector = () => {
       case "nationwide":
         return (
           <>
-            <div className="w-[180px]">
+            <div className="w-45">
               <SelectState
                 selectedId={selectedStateId}
                 update={(state) => {
@@ -126,7 +126,7 @@ export const ElectionScopeSelector = () => {
               />
             </div>
             {/* {selectedStateId && (
-              <div className="w-[180px]">
+              <div className="w-45">
                 <SelectSenatorialDistrict
                   selectedId={selectedDistrictId}
                   update={(district) => {
@@ -143,7 +143,7 @@ export const ElectionScopeSelector = () => {
               </div>
             )}
             {selectedDistrictId && (
-              <div className="w-[180px]">
+              <div className="w-45">
                 <SelectFederalConstituency
                   selectedId={selectedFederalConstituencyId}
                   update={(fc) => {
@@ -161,7 +161,7 @@ export const ElectionScopeSelector = () => {
               </div>
             )}
             {selectedFederalConstituencyId && (
-              <div className="w-[180px]">
+              <div className="w-45">
                 <SelectStateConstituency
                   selectedId={selectedStateConstituencyId}
                   update={(sc) => {
@@ -177,7 +177,7 @@ export const ElectionScopeSelector = () => {
               </div>
             )} */}
             {selectedStateId && (
-              <div className="w-[180px]">
+              <div className="w-45">
                 <SelectLga
                   selectedId={selectedLGAId}
                   update={(lga) => {
@@ -192,7 +192,7 @@ export const ElectionScopeSelector = () => {
               </div>
             )}
             {selectedLGAId && (
-              <div className="w-[180px]">
+              <div className="w-45">
                 <SelectWard
                   selectedId={selectedWardId}
                   update={(ward) => setSelectedWardId(ward?.id)}
@@ -212,17 +212,17 @@ export const ElectionScopeSelector = () => {
       case "state":
         return (
           <>
-            <div className="w-[180px]">
+            <div className="w-45">
               <SelectState
                 selectedId={selectedElection?.state_id || selectedStateId}
-                update={() => {}}
+                update={() => { }}
                 fetchStates={fetchStatesFn}
                 countryOriginalId={selectedCountryId}
                 disabled
                 className="bg-c-5 ring-0 md:ring-0 md:hover:ring"
               />
             </div>
-            <div className="w-[180px]">
+            <div className="w-45">
               <SelectLga
                 selectedId={selectedLGAId}
                 update={(lga) => {
@@ -236,7 +236,7 @@ export const ElectionScopeSelector = () => {
               />
             </div>
             {selectedLGAId && (
-              <div className="w-[180px]">
+              <div className="w-45">
                 <SelectWard
                   selectedId={selectedWardId}
                   update={(ward) => setSelectedWardId(ward?.id)}
@@ -256,29 +256,29 @@ export const ElectionScopeSelector = () => {
       case "senatorial-district":
         return (
           <>
-            <div className="w-[180px]">
+            <div className="w-45">
               <SelectState
                 selectedId={selectedElection?.state_id || selectedStateId}
-                update={() => {}}
+                update={() => { }}
                 fetchStates={fetchStatesFn}
                 countryOriginalId={selectedCountryId}
                 disabled
                 className="bg-c-5 ring-0 md:ring-0 md:hover:ring"
               />
             </div>
-            <div className="w-[180px]">
+            <div className="w-45">
               <SelectSenatorialDistrict
                 selectedId={
                   selectedElection?.senatorial_district_id || selectedDistrictId
                 }
-                update={() => {}}
+                update={() => { }}
                 fetchSenatorialDistricts={fetchDistrictsFn}
                 stateId={selectedElection?.state_id || selectedStateId}
                 disabled
                 className="bg-c-5 ring-0 md:ring-0 md:hover:ring"
               />
             </div>
-            <div className="w-[180px]">
+            <div className="w-45">
               <SelectLga
                 selectedId={selectedLGAId}
                 update={(lga) => {
@@ -292,7 +292,7 @@ export const ElectionScopeSelector = () => {
               />
             </div>
             {selectedLGAId && (
-              <div className="w-[180px]">
+              <div className="w-45">
                 <SelectWard
                   selectedId={selectedWardId}
                   update={(ward) => setSelectedWardId(ward?.id)}
@@ -312,35 +312,35 @@ export const ElectionScopeSelector = () => {
       case "federal-constituency":
         return (
           <>
-            <div className="w-[180px]">
+            <div className="w-45">
               <SelectState
                 selectedId={selectedElection?.state_id || selectedStateId}
-                update={() => {}}
+                update={() => { }}
                 fetchStates={fetchStatesFn}
                 countryOriginalId={selectedCountryId}
                 disabled
                 className="bg-c-5 ring-0 md:ring-0 md:hover:ring"
               />
             </div>
-            <div className="w-[180px]">
+            <div className="w-45">
               <SelectSenatorialDistrict
                 selectedId={
                   selectedElection?.senatorial_district_id || selectedDistrictId
                 }
-                update={() => {}}
+                update={() => { }}
                 fetchSenatorialDistricts={fetchDistrictsFn}
                 stateId={selectedElection?.state_id || selectedStateId}
                 disabled
                 className="bg-c-5 ring-0 md:ring-0 md:hover:ring"
               />
             </div>
-            <div className="w-[180px]">
+            <div className="w-45">
               <SelectFederalConstituency
                 selectedId={
                   selectedElection?.federal_constituency_id ||
                   selectedFederalConstituencyId
                 }
-                update={() => {}}
+                update={() => { }}
                 fetchFederalConstituencies={fetchFederalConstituenciesFn}
                 stateId={selectedElection?.state_id || selectedStateId}
                 senatorialDistrictId={
@@ -350,7 +350,7 @@ export const ElectionScopeSelector = () => {
                 className="bg-c-5 ring-0 md:ring-0 md:hover:ring"
               />
             </div>
-            <div className="w-[180px]">
+            <div className="w-45">
               <SelectLga
                 selectedId={selectedLGAId}
                 update={(lga) => {
@@ -364,7 +364,7 @@ export const ElectionScopeSelector = () => {
               />
             </div>
             {selectedLGAId && (
-              <div className="w-[180px]">
+              <div className="w-45">
                 <SelectWard
                   selectedId={selectedWardId}
                   update={(ward) => setSelectedWardId(ward?.id)}
@@ -384,30 +384,30 @@ export const ElectionScopeSelector = () => {
       case "state-constituency":
         return (
           <>
-            <div className="w-[180px]">
+            <div className="w-45">
               <SelectState
                 selectedId={selectedElection?.state_id || selectedStateId}
-                update={() => {}}
+                update={() => { }}
                 fetchStates={fetchStatesFn}
                 countryOriginalId={selectedCountryId}
                 disabled
                 className="bg-c-5 ring-0 md:ring-0 md:hover:ring"
               />
             </div>
-            <div className="w-[180px]">
+            <div className="w-45">
               <SelectStateConstituency
                 selectedId={
                   selectedElection?.state_constituency_id ||
                   selectedStateConstituencyId
                 }
-                update={() => {}}
+                update={() => { }}
                 fetchStateConstituencies={fetchStateConstituenciesFn}
                 stateId={selectedElection?.state_id || selectedStateId}
                 disabled
                 className="bg-c-5 ring-0 md:ring-0 md:hover:ring"
               />
             </div>
-            <div className="w-[180px]">
+            <div className="w-45">
               <SelectLga
                 selectedId={selectedLGAId}
                 update={(lga) => {
@@ -421,7 +421,7 @@ export const ElectionScopeSelector = () => {
               />
             </div>
             {selectedLGAId && (
-              <div className="w-[180px]">
+              <div className="w-45">
                 <SelectWard
                   selectedId={selectedWardId}
                   update={(ward) => setSelectedWardId(ward?.id)}
@@ -441,27 +441,27 @@ export const ElectionScopeSelector = () => {
       case "lga":
         return (
           <>
-            <div className="w-[180px]">
+            <div className="w-45">
               <SelectState
                 selectedId={selectedElection?.state_id || selectedStateId}
-                update={() => {}}
+                update={() => { }}
                 fetchStates={fetchStatesFn}
                 countryOriginalId={selectedCountryId}
                 disabled
                 className="bg-c-5 ring-0 md:ring-0 md:hover:ring"
               />
             </div>
-            <div className="w-[180px]">
+            <div className="w-45">
               <SelectLga
                 selectedId={selectedElection?.lga_id || selectedLGAId}
-                update={() => {}}
+                update={() => { }}
                 fetchLGAs={fetchLGAsFn}
                 stateId={selectedElection?.state_id || selectedStateId}
                 disabled
                 className="bg-c-5 ring-0 md:ring-0 md:hover:ring"
               />
             </div>
-            <div className="w-[180px]">
+            <div className="w-45">
               <SelectWard
                 selectedId={selectedWardId}
                 update={(ward) => setSelectedWardId(ward?.id)}
@@ -480,30 +480,30 @@ export const ElectionScopeSelector = () => {
       case "ward":
         return (
           <>
-            <div className="w-[180px]">
+            <div className="w-45">
               <SelectState
                 selectedId={selectedElection?.state_id || selectedStateId}
-                update={() => {}}
+                update={() => { }}
                 fetchStates={fetchStatesFn}
                 countryOriginalId={selectedCountryId}
                 disabled
                 className="bg-c-5 ring-0 md:ring-0 md:hover:ring"
               />
             </div>
-            <div className="w-[180px]">
+            <div className="w-45">
               <SelectLga
                 selectedId={selectedElection?.lga_id || selectedLGAId}
-                update={() => {}}
+                update={() => { }}
                 fetchLGAs={fetchLGAsFn}
                 stateId={selectedElection?.state_id || selectedStateId}
                 disabled
                 className="bg-c-5 ring-0 md:ring-0 md:hover:ring"
               />
             </div>
-            <div className="w-[180px]">
+            <div className="w-45">
               <SelectWard
                 selectedId={selectedElection?.ward_id || selectedWardId}
-                update={() => {}}
+                update={() => { }}
                 fetchWards={fetchWardsFn}
                 lgaId={selectedElection?.lga_id || selectedLGAId}
                 stateId={selectedElection?.state_id || selectedStateId}
@@ -526,7 +526,7 @@ export const ElectionScopeSelector = () => {
   return (
     <div className="flex items-center gap-3">
       {/* Country Selection: Defaults and locks to Nigeria (National Jurisdiction) */}
-      <div className="w-[180px]">
+      <div className="w-45">
         <SelectCountry
           selectedId={selectedCountryId?.toString()}
           update={(country) => {

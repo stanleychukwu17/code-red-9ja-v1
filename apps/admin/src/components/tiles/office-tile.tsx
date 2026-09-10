@@ -24,18 +24,18 @@ export type OfficeType = {
 export function OfficeTableHeader() {
   return (
     <TileHeader>
-      <TileLeft>
-        <span className="text-c-90 w-[80px] shrink-0">Rank</span>
-        <span className="text-c-90">Office</span>
+      <TileLeft className="grow-0! w-65 sm:w-[320px] md:w-95 lg:w-95">
+        <span className="text-c-90 w-20 shrink-0">Rank</span>
+        <span className="text-c-90 truncate">Office</span>
       </TileLeft>
       <TileRight>
-        <span className="text-c-50 text-[14px] w-[180px] hidden md:block">
+        <span className="text-c-50 text-[14px] w-47 hidden md:block">
           Election
         </span>
-        <span className="text-c-50 text-[14px] w-[140px] hidden sm:block">
+        <span className="text-c-50 text-[14px] w-45 hidden sm:block">
           Scope
         </span>
-        <span className="text-c-50 text-[14px] w-[160px] hidden lg:block">
+        <span className="text-c-50 text-[14px] w-35 hidden lg:block">
           INEC Type ID
         </span>
         <div className="ml-2 w-8 shrink-0" />
@@ -51,23 +51,37 @@ export function OfficeTableTile({ data }: { data: OfficeType }) {
 
   return (
     <TileRow>
-      <TileLeft>
-        <div className="flex items-center gap-4 w-[80px] shrink-0">
+      <TileLeft className="grow-0! w-65 sm:w-[320px] md:w-95 lg:w-95">
+        <div className="flex items-center gap-4 w-20 shrink-0">
           <StarIcon
             className={cn("size-4 shrink-0 fill-current", getRankColor(rank))}
           />
           <span className="text-[16px] text-c-90">{rank}</span>
         </div>
-        <p className="truncate w-full text-[16px] text-c-90">{data.name}</p>
+        <p
+          title={data.name}
+          className="truncate overflow-hidden text-ellipsis whitespace-nowrap min-w-0 flex-1 text-[16px] text-c-90"
+        >
+          {data.name}
+        </p>
       </TileLeft>
       <TileRight>
-        <span className="text-[15px] text-c-70 w-[180px] hidden md:block truncate">
+        <span
+          title={election}
+          className="text-[15px] text-c-70 w-47 hidden md:block truncate"
+        >
           {election}
         </span>
-        <span className="text-[15px] text-c-70 w-[140px] hidden sm:block truncate">
+        <span
+          title={target}
+          className="text-[15px] text-c-70 w-45 hidden sm:block truncate"
+        >
           {target}
         </span>
-        <span className="text-[14px] text-c-50 font-mono w-[160px] hidden lg:block truncate">
+        <span
+          title={data.inec_election_type_id || undefined}
+          className="text-[14px] text-c-50 font-mono w-35 hidden lg:block truncate"
+        >
           {data.inec_election_type_id || "-"}
         </span>
         <OfficeDropdown data={data} className="ml-2 hidden md:block" />

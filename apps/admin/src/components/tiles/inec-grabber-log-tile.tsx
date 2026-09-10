@@ -42,7 +42,7 @@ export function INECGrabberLogTableHeader() {
         <span className="text-c-90 text-[14px]">Election</span>
       </TileLeft>
       <TileRight>
-        <span className="text-c-50 text-[14px] w-[160px]">
+        <span className="text-c-50 text-[14px] w-40">
           New results collected
         </span>
         <span className="text-c-50 text-[14px] w-[100px] hidden sm:block">
@@ -61,17 +61,17 @@ export function INECGrabberLogTableTile({
 }) {
   const startTime = data.started_at
     ? getLocalTime(data.started_at, {
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true,
-      })
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    })
     : "—";
   const endTime = data.ended_at
     ? getLocalTime(data.ended_at, {
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true,
-      })
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    })
     : "—";
 
   const electionName = data.election_name || "Presidential Election";
@@ -97,7 +97,7 @@ export function INECGrabberLogTableTile({
         <p className="truncate text-[16px] text-c-80">{electionName}</p>
       </TileLeft>
       <TileRight>
-        <span className="text-[15px] font-medium text-primary w-[160px]">
+        <span className="text-[15px] font-medium text-primary w-40">
           {countText}
         </span>
         <span className="text-[15px] text-c-70 w-[100px] hidden sm:block">

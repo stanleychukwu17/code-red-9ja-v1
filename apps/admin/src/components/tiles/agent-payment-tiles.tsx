@@ -32,21 +32,21 @@ export function ElectionPayTableHeader({
       </TileLeft>
       <TileRight className="text-sm text-c-50 font-medium">
         <span className="w-[100px] text-left">Party</span>
-        <span className="w-[180px] text-left">Role</span>
+        <span className="w-45 text-left">Role</span>
         {status === "paid" ? (
           <>
-            <span className="w-[180px] text-left">Paid amount</span>
-            <span className="w-[140px] text-left">Paid at</span>
+            <span className="w-45 text-left">Paid amount</span>
+            <span className="w-35 text-left">Paid at</span>
           </>
         ) : status === "ineligible" ? (
           <>
-            <span className="w-[180px] text-left">Earned amount</span>
-            <span className="w-[180px] text-left">Reason</span>
+            <span className="w-45 text-left">Earned amount</span>
+            <span className="w-45 text-left">Reason</span>
             <div className="w-[90px] shrink-0" />
           </>
         ) : (
           <>
-            <span className="w-[180px] text-left">Earned amount</span>
+            <span className="w-45 text-left">Earned amount</span>
             <div className="w-[90px] shrink-0" />
           </>
         )}
@@ -90,14 +90,14 @@ export function ElectionPayTableTile({
         </span>
 
         {/* Role */}
-        <span className="w-[180px] text-left text-c-80">
+        <span className="w-45 text-left text-c-80">
           {data.role || "Polling agent"}
         </span>
 
         {status === "paid" ? (
           <>
             {/* Paid amount */}
-            <div className="w-[180px] text-left">
+            <div className="w-45 text-left">
               <span className="font-bold text-neutral-900 dark:text-neutral-100">
                 {data.earned_amount}
               </span>{" "}
@@ -107,14 +107,14 @@ export function ElectionPayTableTile({
             </div>
 
             {/* Paid at date */}
-            <span className="w-[140px] text-left text-c-80">
+            <span className="w-35 text-left text-c-80">
               {data.paid_at || "—"}
             </span>
           </>
         ) : status === "ineligible" ? (
           <>
             {/* Earned amount */}
-            <div className="w-[180px] text-left">
+            <div className="w-45 text-left">
               <span className="font-bold text-neutral-900 dark:text-neutral-100">
                 {data.earned_amount}
               </span>{" "}
@@ -124,7 +124,7 @@ export function ElectionPayTableTile({
             </div>
 
             {/* Reason */}
-            <span className={`w-[180px] text-left font-medium ${getReasonColor(data.reason)}`}>
+            <span className={`w-45 text-left font-medium ${getReasonColor(data.reason)}`}>
               {data.reason || "Incomplete requirements"}
             </span>
 
@@ -146,7 +146,7 @@ export function ElectionPayTableTile({
         ) : (
           <>
             {/* Earned amount */}
-            <div className="w-[180px] text-left">
+            <div className="w-45 text-left">
               <span className="font-bold text-neutral-900 dark:text-neutral-100">
                 {data.earned_amount}
               </span>{" "}
@@ -189,17 +189,17 @@ export function ReferralPayTableHeader({
         <span className="text-c-90 font-bold text-[14px]">User</span>
       </TileLeft>
       <TileRight className="text-sm text-c-50 font-medium">
-        <span className="w-[180px] text-left">Ag. w/ duties completed</span>
-        <span className="w-[140px] text-left">Agents referred</span>
-        <span className="w-[140px] text-left">Total referrals</span>
+        <span className="w-45 text-left">Ag. w/ duties completed</span>
+        <span className="w-35 text-left">Agents referred</span>
+        <span className="w-35 text-left">Total referrals</span>
         {status === "paid" ? (
           <>
-            <span className="w-[180px] text-left">Paid amount</span>
-            <span className="w-[140px] text-left">Paid at</span>
+            <span className="w-45 text-left">Paid amount</span>
+            <span className="w-35 text-left">Paid at</span>
           </>
         ) : (
           <>
-            <span className="w-[180px] text-left">Earned amount</span>
+            <span className="w-45 text-left">Earned amount</span>
             <div className="w-[90px] shrink-0" />
           </>
         )}
@@ -238,38 +238,38 @@ export function ReferralPayTableTile({
       </TileLeft>
       <TileRight className="min-w-fit gap-4 items-center text-[13.5px]">
         {/* Ag. w/ duties completed */}
-        <span className="w-[180px] text-left text-c-80">
+        <span className="w-45 text-left text-c-80">
           {data.duties_completed_formatted}
         </span>
 
         {/* Agents referred */}
-        <span className="w-[140px] text-left text-c-80">
+        <span className="w-35 text-left text-c-80">
           {data.agent_referrals?.toLocaleString() ?? 0}
         </span>
 
         {/* Total referrals */}
-        <span className="w-[140px] text-left text-c-80">
+        <span className="w-35 text-left text-c-80">
           {data.total_referrals?.toLocaleString() ?? 0}
         </span>
 
         {status === "paid" ? (
           <>
             {/* Paid amount */}
-            <div className="w-[180px] text-left">
+            <div className="w-45 text-left">
               <span className="font-bold text-neutral-900 dark:text-neutral-100">
                 {data.earned_amount}
               </span>
             </div>
 
             {/* Paid at */}
-            <span className="w-[140px] text-left text-c-80">
+            <span className="w-35 text-left text-c-80">
               {data.paid_at || "—"}
             </span>
           </>
         ) : (
           <>
             {/* Earned amount */}
-            <div className="w-[180px] text-left">
+            <div className="w-45 text-left">
               <span className="font-bold text-neutral-900 dark:text-neutral-100">
                 {data.earned_amount}
               </span>

@@ -6,15 +6,11 @@ import { PartyMembersStack } from "./PartyMembersStack";
 import { PartyOfficials } from "./PartyOfficials";
 import { getPartyMeta } from "./party-constants";
 
-interface PartyCardProps {
+type PartyCardProps = {
 	party: Party;
 }
 
-function PartyCover({
-	coverImage,
-	foundedYear,
-	shortName,
-}: {
+function PartyCover({ coverImage, foundedYear, shortName }: {
 	coverImage: string;
 	foundedYear: number;
 	shortName: string;
@@ -63,7 +59,7 @@ export function PartyCard({ party }: PartyCardProps) {
 	return (
 		<Link
 			to={APP_URL.party(party.short_name.toLowerCase(), party.id.toString())}
-			className="group flex flex-col items-center bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-100 dark:border-neutral-800/90 overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] hover:shadow-xl hover:shadow-neutral-200/60 dark:hover:shadow-neutral-950/60 transition-all duration-300 hover:-translate-y-1 pb-6"
+			className="group flex flex-col items-center bg-[#F1F2F6] dark:bg-neutral-900 rounded overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] hover:shadow-xl hover:shadow-neutral-200/60 dark:hover:shadow-neutral-950/60 transition-all duration-300 hover:-translate-y-1 pb-6"
 		>
 			<PartyCover coverImage={coverImage} foundedYear={foundedYear} shortName={party.short_name} />
 

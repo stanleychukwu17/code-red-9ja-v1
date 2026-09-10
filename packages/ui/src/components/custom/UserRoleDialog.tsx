@@ -84,7 +84,7 @@ export function UserRoleDialog({
           // Only send party_id if the selected roles require it (party admin roles)
           party_id:
             selectedRoles.includes("party_admin") ||
-            selectedRoles.includes("super_party_admin")
+              selectedRoles.includes("super_party_admin")
               ? values.party_id
               : undefined,
         },
@@ -187,19 +187,19 @@ export function UserRoleDialog({
                           {/* Conditionally render Party selector for admin roles */}
                           {(role === "party_admin" ||
                             role === "super_party_admin") && (
-                            <SelectParty
-                              selectedId={partyId ? String(partyId) : undefined}
-                              update={(party) => setPartyId(party?.id)}
-                              className="max-w-[160px]"
-                              fetchParties={
-                                fetchParties ||
-                                (async () => ({
-                                  success: true,
-                                  data: { parties: [] },
-                                }))
-                              }
-                            />
-                          )}
+                              <SelectParty
+                                selectedId={partyId ? String(partyId) : undefined}
+                                update={(party) => setPartyId(party?.id)}
+                                className="max-w-40"
+                                fetchParties={
+                                  fetchParties ||
+                                  (async () => ({
+                                    success: true,
+                                    data: { parties: [] },
+                                  }))
+                                }
+                              />
+                            )}
                           {/* Button to remove a role row, disabled if only one role is left */}
                           <button
                             type="button"

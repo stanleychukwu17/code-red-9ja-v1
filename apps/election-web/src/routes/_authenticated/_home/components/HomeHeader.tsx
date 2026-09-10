@@ -78,7 +78,7 @@ export function HomeHeader({
           className="size-7 shrink-0"
         />
         <div
-          className="flex-1 min-w-0 sm:max-w-[180px]"
+          className="flex-1 min-w-0 sm:max-w-45"
           onClickCapture={(e) => {
             if (onPracticeClick) {
               e.preventDefault();
