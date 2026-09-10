@@ -461,16 +461,14 @@ func (h *Handler) GetPollingUnits(w http.ResponseWriter, r *http.Request) {
 		orderBy, orderDir := parseSortParams(r, "name", "ASC")
 
 		sort.SliceStable(units, func(i, j int) bool {
-			var less bool
-			if orderBy == "name" {
-				less = units[i].Name < units[j].Name
-			} else {
-				less = units[i].ID < units[j].ID
-			}
 			if orderDir == "DESC" {
-				return !less
+				i, j = j, i
 			}
-			return less
+
+			if orderBy == "name" {
+				return units[i].Name < units[j].Name
+			}
+			return units[i].ID < units[j].ID
 		})
 
 		startIndex := 0
@@ -540,16 +538,14 @@ func (h *Handler) GetPollingUnits(w http.ResponseWriter, r *http.Request) {
 	orderBy, orderDir := parseSortParams(r, "name", "ASC")
 
 	sort.SliceStable(units, func(i, j int) bool {
-		var less bool
-		if orderBy == "name" {
-			less = units[i].Name < units[j].Name
-		} else {
-			less = units[i].ID < units[j].ID
-		}
 		if orderDir == "DESC" {
-			return !less
+			i, j = j, i
 		}
-		return less
+
+		if orderBy == "name" {
+			return units[i].Name < units[j].Name
+		}
+		return units[i].ID < units[j].ID
 	})
 
 	startIndex := 0
