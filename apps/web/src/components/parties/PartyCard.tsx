@@ -8,9 +8,13 @@ import { getPartyMeta } from "./party-constants";
 
 type PartyCardProps = {
 	party: Party;
-}
+};
 
-function PartyCover({ coverImage, foundedYear, shortName }: {
+function PartyCover({
+	coverImage,
+	foundedYear,
+	shortName,
+}: {
 	coverImage: string;
 	foundedYear: number;
 	shortName: string;
@@ -31,9 +35,9 @@ function PartyCover({ coverImage, foundedYear, shortName }: {
 
 function PartyAvatar({ party }: { party: Party }) {
 	return (
-		<div className="-mt-12 relative z-10 w-24 h-24 rounded-full border-4 border-white dark:border-neutral-900 shadow-md overflow-hidden bg-white dark:bg-neutral-800 flex items-center justify-center shrink-0">
+		<div className="-mt-12 relative z-10 size-26 rounded-full border-4 border-white dark:border-neutral-900 overflow-hidden bg-white dark:bg-neutral-800 flex items-center justify-center shrink-0">
 			{party.logo ? (
-				<img src={party.logo} alt={party.short_name} className="w-full h-full object-contain p-2" />
+				<img src={party.logo} alt={party.short_name} className="w-full h-full object-contain" />
 			) : (
 				<span className="text-2xl font-black" style={{ color: party.color_hex || "inherit" }}>
 					{party.short_name}
@@ -59,7 +63,7 @@ export function PartyCard({ party }: PartyCardProps) {
 	return (
 		<Link
 			to={APP_URL.party(party.short_name.toLowerCase(), party.id.toString())}
-			className="group flex flex-col items-center bg-[#F1F2F6] dark:bg-neutral-900 rounded overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] hover:shadow-xl hover:shadow-neutral-200/60 dark:hover:shadow-neutral-950/60 transition-all duration-300 hover:-translate-y-1 pb-6"
+			className="group flex flex-col items-center bg-sidebar-mobile dark:bg-neutral-900 rounded overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] hover:shadow-xl hover:shadow-neutral-200/60 dark:hover:shadow-neutral-950/60 transition-all duration-300 hover:-translate-y-1 pb-6"
 		>
 			<PartyCover coverImage={coverImage} foundedYear={foundedYear} shortName={party.short_name} />
 

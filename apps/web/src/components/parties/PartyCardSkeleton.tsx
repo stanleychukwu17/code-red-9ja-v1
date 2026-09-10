@@ -3,7 +3,7 @@ import { SKELETON_PLACEHOLDERS } from "./party-constants";
 
 export function PartyCardSkeleton() {
 	return (
-		<div className="flex flex-col items-center bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-100 dark:border-neutral-800 overflow-hidden pb-6 shadow-sm">
+		<div className="flex flex-col items-center bg-sidebar-mobile dark:bg-neutral-900 rounded overflow-hidden pb-6 shadow-sm">
 			<Skeleton className="h-44 w-full rounded-none" />
 			<Skeleton className="-mt-12 w-24 h-24 rounded-full border-4 border-white dark:border-neutral-900 shadow-md" />
 			<Skeleton className="w-24 h-6 rounded-md mt-4" />

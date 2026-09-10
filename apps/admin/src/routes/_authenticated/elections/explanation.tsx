@@ -56,8 +56,16 @@ function ExplanationRouteComponent() {
 
             <div className="flex flex-col sm:flex-row md:flex-col gap-2 shrink-0">
               <Link
-                to={APP_URL.elections.groups}
+                to={APP_URL.elections.offices}
                 className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity shadow-xs"
+              >
+                <Briefcase className="w-4 h-4" />
+                <span>Go to Offices</span>
+                <ChevronRight className="w-4 h-4 ml-auto" />
+              </Link>
+              <Link
+                to={APP_URL.elections.groups}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-border bg-background hover:bg-c-10 text-c-90 text-sm font-medium transition-colors"
               >
                 <Layers className="w-4 h-4" />
                 <span>Go to Groups</span>
@@ -69,14 +77,6 @@ function ExplanationRouteComponent() {
               >
                 <Vote className="w-4 h-4" />
                 <span>Go to Instances</span>
-                <ChevronRight className="w-4 h-4 ml-auto" />
-              </Link>
-              <Link
-                to={APP_URL.elections.offices}
-                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-border bg-background hover:bg-c-10 text-c-90 text-sm font-medium transition-colors"
-              >
-                <Briefcase className="w-4 h-4" />
-                <span>Go to Offices</span>
                 <ChevronRight className="w-4 h-4 ml-auto" />
               </Link>
             </div>
@@ -162,7 +162,52 @@ function ExplanationRouteComponent() {
           </div>
 
           <div className="space-y-6">
-            {/* 1. GROUPS */}
+            {/* 1. OFFICES */}
+            <div className="rounded-xl border border-border bg-card p-6 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                    <Briefcase className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-bold text-c-90">
+                      1. Offices (/elections/offices)
+                    </h3>
+                    <p className="text-xs text-c-50">
+                      The catalog of elected political positions and titles
+                    </p>
+                  </div>
+                </div>
+                <Link
+                  to={APP_URL.elections.offices}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
+                >
+                  <span>Open Offices Tab</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div className="space-y-2">
+                  <h4 className="font-semibold text-c-90 text-xs uppercase tracking-wide">
+                    What is an Office?
+                  </h4>
+                  <p className="text-c-70 leading-relaxed text-xs sm:text-sm">
+                    An Office defines the constitutionally mandated or elected position that candidates seek to occupy. Examples include <em>President</em>, <em>Governor</em>, <em>Senator</em>, <em>House of Representatives Member</em>, and <em>Chairman</em>.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <h4 className="font-semibold text-c-90 text-xs uppercase tracking-wide">
+                    Why are Offices separated?
+                  </h4>
+                  <p className="text-c-70 leading-relaxed text-xs sm:text-sm">
+                    Decoupling the Office from the election instance allows standardizing titles, responsibilities, and hierarchy across repeated election cycles. You create the "Governor" office once, and it is referenced by every gubernatorial election across all 36 states and all election years.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* 2. GROUPS */}
             <div className="rounded-xl border border-border bg-card p-6 space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border">
                 <div className="flex items-center gap-3">
@@ -171,7 +216,7 @@ function ExplanationRouteComponent() {
                   </div>
                   <div>
                     <h3 className="text-base sm:text-lg font-bold text-c-90">
-                      1. Election Groups (/elections)
+                      2. Election Groups (/elections)
                     </h3>
                     <p className="text-xs text-c-50">
                       Master cycle umbrella &amp; master calendar date
@@ -218,7 +263,7 @@ function ExplanationRouteComponent() {
               </div>
             </div>
 
-            {/* 2. INSTANCES */}
+            {/* 3. INSTANCES */}
             <div className="rounded-xl border border-border bg-card p-6 space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border">
                 <div className="flex items-center gap-3">
@@ -227,7 +272,7 @@ function ExplanationRouteComponent() {
                   </div>
                   <div>
                     <h3 className="text-base sm:text-lg font-bold text-c-90">
-                      2. Election Instances (/elections/instances)
+                      3. Election Instances (/elections/instances)
                     </h3>
                     <p className="text-xs text-c-50">
                       The concrete ballot contests per geopolitical jurisdiction
@@ -312,51 +357,6 @@ function ExplanationRouteComponent() {
                       Local council elections for LGA Chairmen and Ward Councilors.
                     </p>
                   </div>
-                </div>
-              </div>
-            </div>
-
-            {/* 3. OFFICES */}
-            <div className="rounded-xl border border-border bg-card p-6 space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400">
-                    <Briefcase className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-base sm:text-lg font-bold text-c-90">
-                      3. Offices (/elections/offices)
-                    </h3>
-                    <p className="text-xs text-c-50">
-                      The catalog of elected political positions and titles
-                    </p>
-                  </div>
-                </div>
-                <Link
-                  to={APP_URL.elections.offices}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
-                >
-                  <span>Open Offices Tab</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </Link>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div className="space-y-2">
-                  <h4 className="font-semibold text-c-90 text-xs uppercase tracking-wide">
-                    What is an Office?
-                  </h4>
-                  <p className="text-c-70 leading-relaxed text-xs sm:text-sm">
-                    An Office defines the constitutionally mandated or elected position that candidates seek to occupy. Examples include <em>President</em>, <em>Governor</em>, <em>Senator</em>, <em>House of Representatives Member</em>, and <em>Chairman</em>.
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <h4 className="font-semibold text-c-90 text-xs uppercase tracking-wide">
-                    Why are Offices separated?
-                  </h4>
-                  <p className="text-c-70 leading-relaxed text-xs sm:text-sm">
-                    Decoupling the Office from the election instance allows standardizing titles, responsibilities, and hierarchy across repeated election cycles. You create the "Governor" office once, and it is referenced by every gubernatorial election across all 36 states and all election years.
-                  </p>
                 </div>
               </div>
             </div>
