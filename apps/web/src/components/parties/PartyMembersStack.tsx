@@ -3,9 +3,12 @@ import { MEMBER_AVATARS } from "./party-constants";
 interface PartyMembersStackProps {
 	partyId: number;
 	memberCount: string;
+	colorHex?: string | null;
 }
 
-export function PartyMembersStack({ partyId, memberCount }: PartyMembersStackProps) {
+export function PartyMembersStack({ partyId, memberCount, colorHex }: PartyMembersStackProps) {
+	const ringColor = colorHex || "#4ade80";
+
 	return (
 		<div className="flex items-center justify-center mt-5">
 			<div className="flex -space-x-2 overflow-hidden py-1.5 px-0.5">
@@ -14,7 +17,10 @@ export function PartyMembersStack({ partyId, memberCount }: PartyMembersStackPro
 						key={`member-${partyId}-${item.id}`}
 						src={item.url}
 						alt="Member"
-						className="inline-block size-9 rounded-full ring-2 ring-[#4ade80] object-cover"
+						className="inline-block size-9 rounded-full ring-2 object-cover"
+						style={{
+							boxShadow: `0 0 0 2px ${ringColor}`,
+						}}
 					/>
 				))}
 			</div>

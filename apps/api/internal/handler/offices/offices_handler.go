@@ -35,6 +35,7 @@ func NewHandler(service OfficesService, utils *utils.Utils) *Handler {
 }
 
 func parsePaginationParams(r *http.Request) (int, int64) {
+	// 1. Default limit is 20; clamp between 1 and 100
 	limit := 20
 	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
 		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
@@ -46,6 +47,7 @@ func parsePaginationParams(r *http.Request) (int, int64) {
 		}
 	}
 
+	// 2. Parse optional integer cursor (ID of the last item from previous page)
 	var cursor int64
 	if cursorStr := r.URL.Query().Get("cursor"); cursorStr != "" {
 		if c, err := strconv.ParseInt(cursorStr, 10, 64); err == nil {
@@ -83,23 +85,27 @@ type UpdateOfficeRequest struct {
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Router       /offices [post]
 func (h *Handler) CreateOffice(w http.ResponseWriter, r *http.Request) {
+	// 1. Decode incoming JSON request payload
 	var req CreateOfficeRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
+	// 2. Validate mandatory fields (name, election category, scope, and positive rank)
 	if req.Name == "" || req.Election == "" || req.Scope == "" || req.Rank <= 0 {
 		h.utils.RespondError(w, http.StatusBadRequest, "name, election, scope, and rank are required")
 		return
 	}
 
+	// 3. Delegate office creation to service (persists record in DB)
 	o, err := h.service.CreateOffice(r.Context(), req.Name, req.Election, req.Scope, req.Rank, req.InecElectionTypeID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create office: "+err.Error())
 		return
 	}
 
+	// 4. Return 201 Created with the new office record
 	h.utils.RespondSuccess(w, http.StatusCreated, "Office created successfully", map[string]interface{}{
 		"office": o,
 	})
@@ -117,7 +123,10 @@ func (h *Handler) CreateOffice(w http.ResponseWriter, r *http.Request) {
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Router       /offices [get]
 func (h *Handler) ListOffices(w http.ResponseWriter, r *http.Request) {
+	// 1. Parse pagination query parameters (limit and last-seen cursor ID)
 	limit, cursor := parsePaginationParams(r)
+
+	// 2. Parse sort parameters (defaulting to rank ASC)
 	orderBy := r.URL.Query().Get("orderBy")
 	if orderBy == "" {
 		orderBy = "rank"
@@ -127,29 +136,29 @@ func (h *Handler) ListOffices(w http.ResponseWriter, r *http.Request) {
 		order = "ASC"
 	}
 
+	// 3. Fetch all offices from service (reads from DB ordered by ID)
 	offices, err := h.service.ListOffices(r.Context())
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch offices: "+err.Error())
 		return
 	}
 
-	// In-memory sort based on orderBy and order
-	if orderBy == "rank" {
-		sort.SliceStable(offices, func(i, j int) bool {
-			if order == "ASC" {
-				return offices[i].Rank < offices[j].Rank
-			}
-			return offices[i].Rank > offices[j].Rank
-		})
-	} else if orderBy == "name" {
-		sort.SliceStable(offices, func(i, j int) bool {
-			if order == "ASC" {
-				return offices[i].Name < offices[j].Name
-			}
-			return offices[i].Name > offices[j].Name
-		})
-	}
+	// 4. In-memory sorting based on requested column (name or rank) and direction (ASC/DESC)
+	sort.SliceStable(offices, func(i, j int) bool {
+		// For descending order, swap indices (j < i) to maintain strict weak ordering without violating equality
+		if order == "DESC" {
+			i, j = j, i
+		}
 
+		switch orderBy {
+		case "name":
+			return offices[i].Name < offices[j].Name
+		default:
+			return offices[i].Rank < offices[j].Rank
+		}
+	})
+
+	// 5. Cursor-based pagination: find the index after the cursor ID
 	startIndex := 0
 	if cursor > 0 {
 		for i, o := range offices {
@@ -160,6 +169,7 @@ func (h *Handler) ListOffices(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// 6. Slice the requested page (limit items) and determine next_cursor / has_more
 	var paginated []queries.Office
 	hasMore := false
 	nextCursor := ""
@@ -178,6 +188,7 @@ func (h *Handler) ListOffices(w http.ResponseWriter, r *http.Request) {
 		paginated = []queries.Office{}
 	}
 
+	// 7. Return paginated offices with pagination metadata
 	h.utils.RespondSuccess(w, http.StatusOK, "Offices fetched successfully", map[string]interface{}{
 		"offices": paginated,
 		"meta": map[string]interface{}{
@@ -200,6 +211,7 @@ func (h *Handler) ListOffices(w http.ResponseWriter, r *http.Request) {
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Router       /offices/{id} [get]
 func (h *Handler) GetOffice(w http.ResponseWriter, r *http.Request) {
+	// 1. Extract and parse office ID from URL path parameter
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -207,12 +219,14 @@ func (h *Handler) GetOffice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 2. Fetch office by ID via service
 	o, err := h.service.GetOfficeByID(r.Context(), id)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Office not found")
 		return
 	}
 
+	// 3. Return 200 OK with the office details
 	h.utils.RespondSuccess(w, http.StatusOK, "Office fetched successfully", map[string]interface{}{
 		"office": o,
 	})
@@ -232,6 +246,7 @@ func (h *Handler) GetOffice(w http.ResponseWriter, r *http.Request) {
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Router       /offices/{id} [put]
 func (h *Handler) UpdateOffice(w http.ResponseWriter, r *http.Request) {
+	// 1. Extract and parse office ID from URL path parameter
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -239,30 +254,34 @@ func (h *Handler) UpdateOffice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 2. Decode incoming JSON update payload
 	var req UpdateOfficeRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
+	// 3. Validate mandatory fields
 	if req.Name == "" || req.Election == "" || req.Scope == "" || req.Rank <= 0 {
 		h.utils.RespondError(w, http.StatusBadRequest, "name, election, scope, and rank are required")
 		return
 	}
 
-	// Verify exists
+	// 4. Verify office exists before updating
 	_, err = h.service.GetOfficeByID(r.Context(), id)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Office not found")
 		return
 	}
 
+	// 5. Update office details via service
 	updated, err := h.service.UpdateOffice(r.Context(), id, req.Name, req.Election, req.Scope, req.Rank, req.InecElectionTypeID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update office: "+err.Error())
 		return
 	}
 
+	// 6. Return 200 OK with the updated office record
 	h.utils.RespondSuccess(w, http.StatusOK, "Office updated successfully", map[string]interface{}{
 		"office": updated,
 	})
@@ -281,6 +300,7 @@ func (h *Handler) UpdateOffice(w http.ResponseWriter, r *http.Request) {
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Router       /offices/{id} [delete]
 func (h *Handler) DeleteOffice(w http.ResponseWriter, r *http.Request) {
+	// 1. Extract and parse office ID from URL path parameter
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -288,17 +308,19 @@ func (h *Handler) DeleteOffice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verify exists
+	// 2. Verify office exists before deletion
 	_, err = h.service.GetOfficeByID(r.Context(), id)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Office not found")
 		return
 	}
 
+	// 3. Delete office via service
 	if err := h.service.DeleteOffice(r.Context(), id); err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to delete office: "+err.Error())
 		return
 	}
 
+	// 4. Return 200 OK confirming deletion
 	h.utils.RespondSuccess(w, http.StatusOK, "Office deleted successfully", nil)
 }

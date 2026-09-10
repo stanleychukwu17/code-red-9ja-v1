@@ -72,6 +72,10 @@ const (
 	RedisWardsByLGA                   = "bodies:wards:lga:"
 	RedisPollingUnitsByWard           = "bodies:polling_units:ward:"
 	//--END--
+
+	//--START-- for offices
+	RedisOfficesAll = "offices:all" // STRING: used to store and retrieve all offices JSON.
+	//--END--
 )
 
 // AllRedisPrefixes is a list of all key prefixes and static keys used across the application.
@@ -113,4 +117,5 @@ var AllRedisPrefixes = []string{
 	RedisLGAsByState,
 	RedisWardsByLGA,
 	RedisPollingUnitsByWard,
+	RedisOfficesAll,
 }

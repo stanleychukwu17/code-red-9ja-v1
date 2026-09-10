@@ -34,12 +34,19 @@ function PartyCover({
 }
 
 function PartyAvatar({ party }: { party: Party }) {
+	const ringColor = party.color_hex || "#4ade80";
+
 	return (
-		<div className="-mt-12 relative z-10 size-26 rounded-full border-4 border-white dark:border-neutral-900 overflow-hidden bg-white dark:bg-neutral-800 flex items-center justify-center shrink-0">
+		<div
+			className="-mt-12 relative z-10 size-26 rounded-full border-4 border-white dark:border-neutral-900 overflow-hidden bg-white dark:bg-neutral-800 flex items-center justify-center shrink-0 ring-2"
+			style={{
+				boxShadow: `0 0 0 2px ${ringColor}`,
+			}}
+		>
 			{party.logo ? (
 				<img src={party.logo} alt={party.short_name} className="w-full h-full object-contain" />
 			) : (
-				<span className="text-2xl font-black" style={{ color: party.color_hex || "inherit" }}>
+				<span className="text-2xl font-black" style={{ color: ringColor }}>
 					{party.short_name}
 				</span>
 			)}
@@ -76,7 +83,7 @@ export function PartyCard({ party }: PartyCardProps) {
 				{party.name}
 			</p>
 
-			<PartyMembersStack partyId={party.id} memberCount={memberCount} />
+			<PartyMembersStack partyId={party.id} memberCount={memberCount} colorHex={party.color_hex} />
 
 			<PartyOfficials chairman={chairman} secretary={secretary} />
 

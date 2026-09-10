@@ -230,7 +230,8 @@ func (h *Handler) ListElectionGroups(w http.ResponseWriter, r *http.Request) {
 
 	// sort using slice stable
 	sort.SliceStable(responseGroups, func(i, j int) bool {
-		// For descending order, swap indices (j < i) to maintain strict weak ordering without violating equality
+		// For descending order, swap indices (j < i) to maintain strict weak ordering without
+		// violating equality
 		if orderDir == "DESC" {
 			i, j = j, i
 		}
