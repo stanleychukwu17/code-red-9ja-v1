@@ -155,4 +155,5 @@ func (s *WardsService) GetWards(ctx context.Context, localGovernmentID, stateID 
 func (s *WardsService) invalidateCache(ctx context.Context, lgaID int32) {
 	redisKey := fmt.Sprintf("%s%d", db.RedisWardsByLGA, lgaID)
 	s.rdb.Del(ctx, redisKey)
+	s.rdb.Del(ctx, db.RedisNationalMetrics)
 }

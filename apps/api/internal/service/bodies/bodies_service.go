@@ -28,6 +28,32 @@ func (s *BodiesService) GetOccupations(ctx context.Context) ([]queries.Occupatio
 	return s.queries.GetOccupations(ctx)
 }
 
+// GetNationalMetrics retrieves aggregated metrics for electoral bodies nationwide, using a cached version if available.
+func (s *BodiesService) GetNationalMetrics(ctx context.Context) (queries.NationalMetric, error) {
+	if s.rdb != nil {
+		val, err := s.rdb.Get(ctx, db.RedisNationalMetrics).Result()
+		if err == nil {
+			var metrics queries.NationalMetric
+			if err := json.Unmarshal([]byte(val), &metrics); err == nil {
+				return metrics, nil
+			}
+		}
+	}
+
+	metrics, err := s.queries.GetNationalMetrics(ctx)
+	if err != nil {
+		return queries.NationalMetric{}, err
+	}
+
+	if s.rdb != nil {
+		if jsonData, err := json.Marshal(metrics); err == nil {
+			s.rdb.Set(ctx, db.RedisNationalMetrics, jsonData, db.RedisOneYearTTL)
+		}
+	}
+
+	return metrics, nil
+}
+
 // GetAllCountries retrieves a list of all countries, using a cached version if available.
 func (s *BodiesService) GetAllCountries(ctx context.Context) ([]queries.ListCountriesRow, error) {
 	type CountriesResponse struct {
@@ -253,6 +279,7 @@ func (s *BodiesService) DeleteLGA(ctx context.Context, id int32) error {
 func (s *BodiesService) invalidateCache(ctx context.Context, stateID int32) {
 	redisKey := fmt.Sprintf("%s%d", db.RedisLGAsByState, stateID)
 	s.rdb.Del(ctx, redisKey)
+	s.rdb.Del(ctx, db.RedisNationalMetrics)
 }
 
 // function: check if the user country is valid

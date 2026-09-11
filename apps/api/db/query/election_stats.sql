@@ -62,6 +62,7 @@ referral_codes AS (
   FROM assignments
   GROUP BY election_group_id, polling_unit_id
 ),
+
 -- Voters who used an agent code at this PU and then voted
 referral_counts AS (
   SELECT
@@ -115,6 +116,7 @@ party_overall AS (
   FROM assignments
   GROUP BY election_group_id, polling_unit_id, party_id
 ),
+
 party_results AS (
   SELECT
     election_group_id, polling_unit_id, party_id,
@@ -124,6 +126,7 @@ party_results AS (
   WHERE party_id IS NOT NULL
   GROUP BY election_group_id, polling_unit_id, party_id
 ),
+
 -- Average time gap between consecutive updates per party per PU (in seconds)
 update_gaps AS (
   SELECT
@@ -134,6 +137,7 @@ update_gaps AS (
   FROM polling_unit_updates
   WHERE party_id IS NOT NULL
 ),
+
 update_intervals AS (
   SELECT
     election_group_id, polling_unit_id, party_id,
@@ -142,6 +146,7 @@ update_intervals AS (
   WHERE gap_seconds IS NOT NULL
   GROUP BY election_group_id, polling_unit_id, party_id
 ),
+
 party_referral_counts AS (
   SELECT
     a.election_group_id, a.polling_unit_id, a.party_id,
@@ -201,6 +206,7 @@ INSERT INTO election_group_polling_units (
   pu_live_voters_referred_by_agent_count,
   parties
 )
+
 SELECT
   oa.election_group_id, oa.polling_unit_id,
   pu.state_id, pu.lga_id, pu.ward_id,
@@ -244,6 +250,7 @@ ON CONFLICT (election_group_id, polling_unit_id) DO UPDATE SET
   parties = EXCLUDED.parties,
   updated_at = NOW();
 
+
 -- name: RefreshAllElectionGroupWardStats :exec
 -- Aggregates from election_group_polling_units (one level up from PUs).
 WITH epu_agg AS (
@@ -271,6 +278,7 @@ WITH epu_agg AS (
   FROM election_group_polling_units
   GROUP BY election_group_id, ward_id, lga_id, state_id
 ),
+
 -- Expand per-party JSONB from all PUs in each ward
 party_expanded AS (
   SELECT
@@ -299,6 +307,7 @@ party_expanded AS (
   FROM election_group_polling_units epu,
        jsonb_array_elements(epu.parties) AS p(value)
 ),
+
 party_agg AS (
   SELECT
     election_group_id, ward_id, party_id,
@@ -325,6 +334,7 @@ party_agg AS (
   FROM party_expanded
   GROUP BY election_group_id, ward_id, party_id
 ),
+
 party_json AS (
   SELECT
     election_group_id, ward_id,
@@ -337,7 +347,7 @@ party_json AS (
       'pu_updates_count',                updates_count,
       'pu_reports_count',                reports_count,
       'pu_agents_count',                 pu_agents_count,
-        'unique_pu_agents_count', unique_pu_agents_count,
+      'unique_pu_agents_count', unique_pu_agents_count,
       'pu_final_results_uploaded_count', pu_final_results_uploaded_count,
       'unique_pu_final_results_uploaded_count', unique_pu_final_results_uploaded_count,
       'pu_average_update_time_interval_in_seconds', pu_average_update_time_interval_in_seconds,
@@ -354,6 +364,7 @@ party_json AS (
   FROM party_agg
   GROUP BY election_group_id, ward_id
 )
+
 INSERT INTO election_group_wards (
   election_group_id, ward_id, lga_id, state_id,
   unique_final_results_expected,
@@ -368,6 +379,7 @@ INSERT INTO election_group_wards (
   total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters,
   parties
 )
+
 SELECT
   a.election_group_id, a.ward_id, a.lga_id, a.state_id,
   a.unique_final_results_expected,
@@ -388,7 +400,7 @@ ON CONFLICT (election_group_id, ward_id) DO UPDATE SET
   state_id = EXCLUDED.state_id,
   unique_final_results_expected = EXCLUDED.unique_final_results_expected,
   pu_agents_count = EXCLUDED.pu_agents_count,
-    unique_pu_agents_count = EXCLUDED.unique_pu_agents_count,
+  unique_pu_agents_count = EXCLUDED.unique_pu_agents_count,
   pu_agents_in_attendance_count = EXCLUDED.pu_agents_in_attendance_count,
   pu_reports_count = EXCLUDED.pu_reports_count,
   pu_updates_count = EXCLUDED.pu_updates_count,
@@ -428,6 +440,7 @@ ON CONFLICT (election_group_id, ward_id) DO UPDATE SET
   ),
   updated_at = NOW();
 
+
 -- name: RefreshAllElectionGroupLGAStats :exec
 -- Aggregates from election_group_wards grouped by lga_id.
 WITH src_agg AS (
@@ -458,6 +471,7 @@ WITH src_agg AS (
   WHERE lga_id IS NOT NULL
   GROUP BY election_group_id, lga_id, state_id
 ),
+
 party_expanded AS (
   SELECT
     s.election_group_id, s.lga_id,
@@ -487,6 +501,7 @@ party_expanded AS (
        jsonb_array_elements(s.parties) AS p(value)
   WHERE s.lga_id IS NOT NULL
 ),
+
 party_agg AS (
   SELECT
     election_group_id, lga_id, party_id,
@@ -515,6 +530,7 @@ party_agg AS (
   FROM party_expanded
   GROUP BY election_group_id, lga_id, party_id
 ),
+
 party_json AS (
   SELECT
     election_group_id, lga_id,
@@ -546,6 +562,7 @@ party_json AS (
   FROM party_agg
   GROUP BY election_group_id, lga_id
 )
+
 INSERT INTO election_group_lgas (
   election_group_id, lga_id, state_id,
   unique_final_results_expected,
@@ -561,6 +578,7 @@ INSERT INTO election_group_lgas (
   ward_supervisors_count, unique_ward_supervisors_count,
   parties
 )
+
 SELECT
   a.election_group_id, a.lga_id, a.state_id,
   a.unique_final_results_expected,
@@ -623,6 +641,7 @@ ON CONFLICT (election_group_id, lga_id) DO UPDATE SET
   ),
   updated_at = NOW();
 
+
 -- name: RefreshAllElectionGroupStateConstituencyStats :exec
 -- Aggregates from election_group_polling_units grouped by state_constituency_id.
 WITH src_agg AS (
@@ -651,6 +670,7 @@ WITH src_agg AS (
   WHERE state_constituency_id IS NOT NULL
   GROUP BY election_group_id, state_constituency_id, state_id
 ),
+
 party_expanded AS (
   SELECT
     s.election_group_id, s.state_constituency_id,
@@ -679,6 +699,7 @@ party_expanded AS (
        jsonb_array_elements(s.parties) AS p(value)
   WHERE s.state_constituency_id IS NOT NULL
 ),
+
 party_agg AS (
   SELECT
     election_group_id, state_constituency_id, party_id,
@@ -705,6 +726,7 @@ party_agg AS (
   FROM party_expanded
   GROUP BY election_group_id, state_constituency_id, party_id
 ),
+
 party_json AS (
   SELECT
     election_group_id, state_constituency_id,
@@ -717,7 +739,7 @@ party_json AS (
       'pu_updates_count',                updates_count,
       'pu_reports_count',                reports_count,
       'pu_agents_count',                 pu_agents_count,
-        'unique_pu_agents_count', unique_pu_agents_count,
+      'unique_pu_agents_count', unique_pu_agents_count,
       'pu_final_results_uploaded_count', pu_final_results_uploaded_count,
       'unique_pu_final_results_uploaded_count', unique_pu_final_results_uploaded_count,
       'pu_average_update_time_interval_in_seconds', pu_average_update_time_interval_in_seconds,
@@ -734,6 +756,7 @@ party_json AS (
   FROM party_agg
   GROUP BY election_group_id, state_constituency_id
 )
+
 INSERT INTO election_group_state_constituencies (
   election_group_id, state_constituency_id, state_id,
   unique_final_results_expected,
@@ -748,6 +771,7 @@ INSERT INTO election_group_state_constituencies (
   total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters,
   parties
 )
+
 SELECT
   a.election_group_id, a.state_constituency_id, a.state_id,
   a.unique_final_results_expected,
@@ -766,7 +790,7 @@ LEFT JOIN party_json pj USING (election_group_id, state_constituency_id)
 ON CONFLICT (election_group_id, state_constituency_id) DO UPDATE SET
   unique_final_results_expected = EXCLUDED.unique_final_results_expected,
   pu_agents_count = EXCLUDED.pu_agents_count,
-    unique_pu_agents_count = EXCLUDED.unique_pu_agents_count,
+  unique_pu_agents_count = EXCLUDED.unique_pu_agents_count,
   pu_agents_in_attendance_count = EXCLUDED.pu_agents_in_attendance_count,
   pu_reports_count = EXCLUDED.pu_reports_count,
   pu_updates_count = EXCLUDED.pu_updates_count,
@@ -782,9 +806,11 @@ ON CONFLICT (election_group_id, state_constituency_id) DO UPDATE SET
   total_pu_where_election_has_started = EXCLUDED.total_pu_where_election_has_started,
   total_pu_where_election_has_ended = EXCLUDED.total_pu_where_election_has_ended,
   total_pu_unique_final_results_uploaded = EXCLUDED.total_pu_unique_final_results_uploaded,
-  total_pu_where_agents_referred_live_voters = EXCLUDED.total_pu_where_agents_referred_live_voters, state_id = EXCLUDED.state_id,
+  total_pu_where_agents_referred_live_voters = EXCLUDED.total_pu_where_agents_referred_live_voters,
+  state_id = EXCLUDED.state_id,
   parties = EXCLUDED.parties,
   updated_at = NOW();
+
 
 -- name: RefreshAllElectionGroupFederalConstituencyStats :exec
 -- Aggregates from election_group_lgas grouped by federal_constituency_id.
@@ -814,6 +840,7 @@ WITH src_agg AS (
   WHERE federal_constituency_id IS NOT NULL
   GROUP BY election_group_id, federal_constituency_id, state_id
 ),
+
 party_expanded AS (
   SELECT
     s.election_group_id, s.federal_constituency_id,
@@ -842,6 +869,7 @@ party_expanded AS (
        jsonb_array_elements(s.parties) AS p(value)
   WHERE s.federal_constituency_id IS NOT NULL
 ),
+
 party_agg AS (
   SELECT
     election_group_id, federal_constituency_id, party_id,
@@ -868,6 +896,7 @@ party_agg AS (
   FROM party_expanded
   GROUP BY election_group_id, federal_constituency_id, party_id
 ),
+
 party_json AS (
   SELECT
     election_group_id, federal_constituency_id,
@@ -880,7 +909,7 @@ party_json AS (
       'pu_updates_count',                updates_count,
       'pu_reports_count',                reports_count,
       'pu_agents_count',                 pu_agents_count,
-        'unique_pu_agents_count', unique_pu_agents_count,
+      'unique_pu_agents_count', unique_pu_agents_count,
       'pu_final_results_uploaded_count', pu_final_results_uploaded_count,
       'unique_pu_final_results_uploaded_count', unique_pu_final_results_uploaded_count,
       'pu_average_update_time_interval_in_seconds', pu_average_update_time_interval_in_seconds,
@@ -897,6 +926,7 @@ party_json AS (
   FROM party_agg
   GROUP BY election_group_id, federal_constituency_id
 )
+
 INSERT INTO election_group_federal_constituencies (
   election_group_id, federal_constituency_id, state_id,
   unique_final_results_expected,
@@ -911,6 +941,7 @@ INSERT INTO election_group_federal_constituencies (
   total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters,
   parties
 )
+
 SELECT
   a.election_group_id, a.federal_constituency_id, a.state_id,
   a.unique_final_results_expected,
@@ -929,7 +960,7 @@ LEFT JOIN party_json pj USING (election_group_id, federal_constituency_id)
 ON CONFLICT (election_group_id, federal_constituency_id) DO UPDATE SET
   unique_final_results_expected = EXCLUDED.unique_final_results_expected,
   pu_agents_count = EXCLUDED.pu_agents_count,
-    unique_pu_agents_count = EXCLUDED.unique_pu_agents_count,
+  unique_pu_agents_count = EXCLUDED.unique_pu_agents_count,
   pu_agents_in_attendance_count = EXCLUDED.pu_agents_in_attendance_count,
   pu_reports_count = EXCLUDED.pu_reports_count,
   pu_updates_count = EXCLUDED.pu_updates_count,
@@ -945,9 +976,11 @@ ON CONFLICT (election_group_id, federal_constituency_id) DO UPDATE SET
   total_pu_where_election_has_started = EXCLUDED.total_pu_where_election_has_started,
   total_pu_where_election_has_ended = EXCLUDED.total_pu_where_election_has_ended,
   total_pu_unique_final_results_uploaded = EXCLUDED.total_pu_unique_final_results_uploaded,
-  total_pu_where_agents_referred_live_voters = EXCLUDED.total_pu_where_agents_referred_live_voters, state_id = EXCLUDED.state_id,
+  total_pu_where_agents_referred_live_voters = EXCLUDED.total_pu_where_agents_referred_live_voters,
+  state_id = EXCLUDED.state_id,
   parties = EXCLUDED.parties,
   updated_at = NOW();
+
 
 -- name: RefreshAllElectionGroupSenatorialDistrictStats :exec
 -- Aggregates from election_group_lgas grouped by senatorial_district_id.
@@ -977,6 +1010,7 @@ WITH src_agg AS (
   WHERE senatorial_district_id IS NOT NULL
   GROUP BY election_group_id, senatorial_district_id, state_id
 ),
+
 party_expanded AS (
   SELECT
     s.election_group_id, s.senatorial_district_id,
@@ -1005,6 +1039,7 @@ party_expanded AS (
        jsonb_array_elements(s.parties) AS p(value)
   WHERE s.senatorial_district_id IS NOT NULL
 ),
+
 party_agg AS (
   SELECT
     election_group_id, senatorial_district_id, party_id,
@@ -1031,6 +1066,7 @@ party_agg AS (
   FROM party_expanded
   GROUP BY election_group_id, senatorial_district_id, party_id
 ),
+
 party_json AS (
   SELECT
     election_group_id, senatorial_district_id,
@@ -1043,7 +1079,7 @@ party_json AS (
       'pu_updates_count',                updates_count,
       'pu_reports_count',                reports_count,
       'pu_agents_count',                 pu_agents_count,
-        'unique_pu_agents_count', unique_pu_agents_count,
+      'unique_pu_agents_count', unique_pu_agents_count,
       'pu_final_results_uploaded_count', pu_final_results_uploaded_count,
       'unique_pu_final_results_uploaded_count', unique_pu_final_results_uploaded_count,
       'pu_average_update_time_interval_in_seconds', pu_average_update_time_interval_in_seconds,
@@ -1060,6 +1096,7 @@ party_json AS (
   FROM party_agg
   GROUP BY election_group_id, senatorial_district_id
 )
+
 INSERT INTO election_group_senatorial_districts (
   election_group_id, senatorial_district_id, state_id,
   unique_final_results_expected,
@@ -1074,6 +1111,7 @@ INSERT INTO election_group_senatorial_districts (
   total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters,
   parties
 )
+
 SELECT
   a.election_group_id, a.senatorial_district_id, a.state_id,
   a.unique_final_results_expected,
@@ -1092,7 +1130,7 @@ LEFT JOIN party_json pj USING (election_group_id, senatorial_district_id)
 ON CONFLICT (election_group_id, senatorial_district_id) DO UPDATE SET
   unique_final_results_expected = EXCLUDED.unique_final_results_expected,
   pu_agents_count = EXCLUDED.pu_agents_count,
-    unique_pu_agents_count = EXCLUDED.unique_pu_agents_count,
+  unique_pu_agents_count = EXCLUDED.unique_pu_agents_count,
   pu_agents_in_attendance_count = EXCLUDED.pu_agents_in_attendance_count,
   pu_reports_count = EXCLUDED.pu_reports_count,
   pu_updates_count = EXCLUDED.pu_updates_count,
@@ -1108,9 +1146,11 @@ ON CONFLICT (election_group_id, senatorial_district_id) DO UPDATE SET
   total_pu_where_election_has_started = EXCLUDED.total_pu_where_election_has_started,
   total_pu_where_election_has_ended = EXCLUDED.total_pu_where_election_has_ended,
   total_pu_unique_final_results_uploaded = EXCLUDED.total_pu_unique_final_results_uploaded,
-  total_pu_where_agents_referred_live_voters = EXCLUDED.total_pu_where_agents_referred_live_voters, state_id = EXCLUDED.state_id,
+  total_pu_where_agents_referred_live_voters = EXCLUDED.total_pu_where_agents_referred_live_voters,
+  state_id = EXCLUDED.state_id,
   parties = EXCLUDED.parties,
   updated_at = NOW();
+
 
 -- name: RefreshAllElectionGroupStateStats :exec
 -- Aggregates from election_group_lgas grouped by state_id.
@@ -1144,6 +1184,7 @@ WITH src_agg AS (
   WHERE state_id IS NOT NULL
   GROUP BY election_group_id, state_id
 ),
+
 party_expanded AS (
   SELECT
     s.election_group_id, s.state_id,
@@ -1175,6 +1216,7 @@ party_expanded AS (
        jsonb_array_elements(s.parties) AS p(value)
   WHERE s.state_id IS NOT NULL
 ),
+
 party_agg AS (
   SELECT
     election_group_id, state_id, party_id,
@@ -1205,6 +1247,7 @@ party_agg AS (
   FROM party_expanded
   GROUP BY election_group_id, state_id, party_id
 ),
+
 party_json AS (
   SELECT
     election_group_id, state_id,
@@ -1238,6 +1281,7 @@ party_json AS (
   FROM party_agg
   GROUP BY election_group_id, state_id
 )
+
 INSERT INTO election_group_states (
   election_group_id, state_id,
   unique_final_results_expected,
@@ -1254,6 +1298,7 @@ INSERT INTO election_group_states (
   ward_supervisors_count, unique_ward_supervisors_count,
   parties
 )
+
 SELECT
   a.election_group_id, a.state_id,
   a.unique_final_results_expected,
@@ -1321,11 +1366,15 @@ ON CONFLICT (election_group_id, state_id) DO UPDATE SET
 
 -- =====================================================
 -- READ QUERIES
+
+
 -- =====================================================
+
 
 -- name: GetElectionGroupPollingUnitStats :one
 SELECT * FROM election_group_polling_units
 WHERE election_group_id = $1 AND polling_unit_id = $2;
+
 
 -- name: ListElectionGroupPollingUnitStatsByGroup :many
 SELECT * FROM election_group_polling_units
@@ -1335,9 +1384,11 @@ WHERE election_group_id = sqlc.arg('election_group_id')
   AND (sqlc.narg('state_id')::smallint IS NULL OR state_id = sqlc.narg('state_id'))
 ORDER BY polling_unit_id;
 
+
 -- name: GetElectionGroupWardStats :one
 SELECT * FROM election_group_wards
 WHERE election_group_id = $1 AND ward_id = $2;
+
 
 -- name: ListElectionGroupWardStatsByGroup :many
 SELECT * FROM election_group_wards
@@ -1346,9 +1397,11 @@ WHERE election_group_id = sqlc.arg('election_group_id')
   AND (sqlc.narg('state_id')::smallint IS NULL OR state_id = sqlc.narg('state_id'))
 ORDER BY ward_id;
 
+
 -- name: GetElectionGroupLGAStats :one
 SELECT * FROM election_group_lgas
 WHERE election_group_id = $1 AND lga_id = $2;
+
 
 -- name: ListElectionGroupLGAStatsByGroup :many
 SELECT * FROM election_group_lgas
@@ -1357,9 +1410,11 @@ WHERE election_group_id = sqlc.arg('election_group_id')
   AND (sqlc.narg('senatorial_district_id')::int IS NULL OR senatorial_district_id = sqlc.narg('senatorial_district_id'))
 ORDER BY lga_id;
 
+
 -- name: GetElectionGroupStateConstituencyStats :one
 SELECT * FROM election_group_state_constituencies
 WHERE election_group_id = $1 AND state_constituency_id = $2;
+
 
 -- name: ListElectionGroupStateConstituencyStatsByGroup :many
 SELECT * FROM election_group_state_constituencies
@@ -1367,9 +1422,11 @@ WHERE election_group_id = sqlc.arg('election_group_id')
   AND (sqlc.narg('state_id')::smallint IS NULL OR state_id = sqlc.narg('state_id'))
 ORDER BY state_constituency_id;
 
+
 -- name: GetElectionGroupFederalConstituencyStats :one
 SELECT * FROM election_group_federal_constituencies
 WHERE election_group_id = $1 AND federal_constituency_id = $2;
+
 
 -- name: ListElectionGroupFederalConstituencyStatsByGroup :many
 SELECT * FROM election_group_federal_constituencies
@@ -1378,9 +1435,11 @@ WHERE election_group_id = sqlc.arg('election_group_id')
   AND (sqlc.narg('senatorial_district_id')::int IS NULL OR senatorial_district_id = sqlc.narg('senatorial_district_id'))
 ORDER BY federal_constituency_id;
 
+
 -- name: GetElectionGroupSenatorialDistrictStats :one
 SELECT * FROM election_group_senatorial_districts
 WHERE election_group_id = $1 AND senatorial_district_id = $2;
+
 
 -- name: ListElectionGroupSenatorialDistrictStatsByGroup :many
 SELECT * FROM election_group_senatorial_districts
@@ -1388,14 +1447,17 @@ WHERE election_group_id = sqlc.arg('election_group_id')
   AND (sqlc.narg('state_id')::smallint IS NULL OR state_id = sqlc.narg('state_id'))
 ORDER BY senatorial_district_id;
 
+
 -- name: GetElectionGroupStateStats :one
 SELECT * FROM election_group_states
 WHERE election_group_id = $1 AND state_id = $2;
+
 
 -- name: ListElectionGroupStateStatsByGroup :many
 SELECT * FROM election_group_states
 WHERE election_group_id = $1
 ORDER BY state_id;
+
 
 -- ============================================================
 -- SEED QUERIES
@@ -1404,7 +1466,10 @@ ORDER BY state_id;
 -- Uses ON CONFLICT DO NOTHING so re-running is safe (idempotent).
 -- election_group_polling_units is excluded — those are seeded
 -- lazily by the RefreshAllElectionGroupPollingUnitStats cron.
+
+
 -- ============================================================
+
 
 -- name: SeedElectionGroupStateStats :exec
 -- Inserts one zeroed row per state that is in-scope for this election group.
@@ -1416,6 +1481,7 @@ INSERT INTO election_group_states (
   senatorial_districts_count, federal_constituencies_count, lgas_count,
   state_constituencies_count, wards_count, polling_units_count
 )
+
 SELECT DISTINCT $1::integer, s.id,
   s.senatorial_districts_count, s.federal_constituencies_count, s.lgas_count,
   s.state_constituencies_count, s.wards_count, s.polling_units_count
@@ -1432,6 +1498,7 @@ JOIN elections e ON e.election_group_id = $1
   )
 ON CONFLICT (election_group_id, state_id) DO NOTHING;
 
+
 -- name: SeedElectionGroupSenatorialDistrictStats :exec
 -- Inserts one zeroed row per senatorial district in-scope for this election group.
 INSERT INTO election_group_senatorial_districts (
@@ -1439,6 +1506,7 @@ INSERT INTO election_group_senatorial_districts (
   federal_constituencies_count, lgas_count,
   state_constituencies_count, wards_count, polling_units_count
 )
+
 SELECT DISTINCT $1::integer, sd.id, sd.state_id,
   sd.federal_constituencies_count, sd.lgas_count,
   sd.state_constituencies_count, sd.wards_count, sd.polling_units_count
@@ -1459,12 +1527,14 @@ JOIN elections e ON e.election_group_id = $1
   )
 ON CONFLICT (election_group_id, senatorial_district_id) DO NOTHING;
 
+
 -- name: SeedElectionGroupFederalConstituencyStats :exec
 -- Inserts one zeroed row per federal constituency in-scope for this election group.
 INSERT INTO election_group_federal_constituencies (
   election_group_id, federal_constituency_id, state_id, senatorial_district_id,
   lgas_count, state_constituencies_count, wards_count, polling_units_count
 )
+
 SELECT DISTINCT $1::integer, fc.id, fc.state_id, fc.senatorial_district_id,
   fc.lgas_count, fc.state_constituencies_count, fc.wards_count, fc.polling_units_count
 FROM federal_constituencies fc
@@ -1482,12 +1552,14 @@ JOIN elections e ON e.election_group_id = $1
   )
 ON CONFLICT (election_group_id, federal_constituency_id) DO NOTHING;
 
+
 -- name: SeedElectionGroupLGAStats :exec
 -- Inserts one zeroed row per LGA in-scope for this election group.
 INSERT INTO election_group_lgas (
   election_group_id, lga_id, state_id, senatorial_district_id, federal_constituency_id,
   state_constituencies_count, wards_count, polling_units_count
 )
+
 SELECT DISTINCT $1::integer, l.id, l.state_id, l.senatorial_district_id, l.federal_constituency_id,
   l.state_constituencies_count, l.wards_count, l.polling_units_count
 FROM lgas l
@@ -1503,12 +1575,14 @@ JOIN elections e ON e.election_group_id = $1
   )
 ON CONFLICT (election_group_id, lga_id) DO NOTHING;
 
+
 -- name: SeedElectionGroupStateConstituencyStats :exec
 -- Inserts one zeroed row per state constituency in-scope for this election group.
 INSERT INTO election_group_state_constituencies (
   election_group_id, state_constituency_id, state_id,
   wards_count, polling_units_count
 )
+
 SELECT DISTINCT $1::integer, sc.id, sc.state_id,
   sc.wards_count, sc.polling_units_count
 FROM state_constituencies sc
@@ -1524,12 +1598,14 @@ JOIN elections e ON e.election_group_id = $1
   )
 ON CONFLICT (election_group_id, state_constituency_id) DO NOTHING;
 
+
 -- name: SeedElectionGroupWardStats :exec
 -- Inserts one zeroed row per ward in-scope for this election group.
 INSERT INTO election_group_wards (
   election_group_id, ward_id, lga_id, state_id,
   polling_units_count
 )
+
 SELECT DISTINCT $1::integer, w.id, w.lga_id, l.state_id,
   w.polling_units_count
 FROM wards w
@@ -1546,6 +1622,7 @@ JOIN elections e ON e.election_group_id = $1
   )
 ON CONFLICT (election_group_id, ward_id) DO NOTHING;
 
+
 -- ============================================================
 -- INCREMENTAL PARTY ENTRY UPSERTS
 -- Called from Go (ApproveApplication) after a polling agent is
@@ -1557,7 +1634,10 @@ ON CONFLICT (election_group_id, ward_id) DO NOTHING;
 --   increment agents_count and (if first agent in this PU for
 --   this party) increment unique_pu_agents_count.
 -- If party_id does not exist, append a new object.
+
+
 -- ============================================================
+
 
 -- name: UpsertElectionGroupPUPartyEntry :exec
 -- Upserts the party entry inside election_group_polling_units.parties.
@@ -1605,6 +1685,7 @@ SET
 WHERE election_group_id = sqlc.arg(election_group_id)::integer
   AND polling_unit_id   = sqlc.arg(polling_unit_id)::int;
 
+
 -- name: IncrementElectionGroupPUPartyMetrics :exec
 -- Increments metrics in election_group_polling_units when a polling unit update/report is submitted.
 -- $1 = election_group_id, $2 = polling_unit_id, $3 = party_id
@@ -1651,6 +1732,7 @@ SET
 WHERE election_group_id = sqlc.arg(election_group_id)::integer
   AND polling_unit_id   = sqlc.arg(polling_unit_id)::int
   AND parties @> jsonb_build_array(jsonb_build_object('party_id', sqlc.arg(party_id)::smallint));
+
 
 -- name: UpsertElectionGroupWardPartyEntry :exec
 -- Upserts party entry in election_group_wards.parties.
@@ -1708,6 +1790,7 @@ SET
 WHERE election_group_id = sqlc.arg(election_group_id)::integer
   AND ward_id           = sqlc.arg(ward_id)::int;
 
+
 -- name: UpsertElectionGroupLGAPartyEntry :exec
 -- Upserts party entry in election_group_lgas.parties.
 -- $1=election_group_id, $2=lga_id, $3=party_id, $4=agents_delta, $5=unique_pu_delta
@@ -1763,6 +1846,7 @@ SET
 WHERE election_group_id = sqlc.arg(election_group_id)::integer
   AND lga_id            = sqlc.arg(lga_id)::int;
 
+
 -- name: UpsertElectionGroupStateConstituencyPartyEntry :exec
 -- Upserts party entry in election_group_state_constituencies.parties.
 UPDATE election_group_state_constituencies
@@ -1816,6 +1900,7 @@ SET
   updated_at = NOW()
 WHERE election_group_id       = sqlc.arg(election_group_id)::integer
   AND state_constituency_id   = sqlc.arg(state_constituency_id)::int;
+
 
 -- name: UpsertElectionGroupFederalConstituencyPartyEntry :exec
 -- Upserts party entry in election_group_federal_constituencies.parties.
@@ -1871,6 +1956,7 @@ SET
 WHERE election_group_id       = sqlc.arg(election_group_id)::integer
   AND federal_constituency_id = sqlc.arg(federal_constituency_id)::int;
 
+
 -- name: UpsertElectionGroupSenatorialDistrictPartyEntry :exec
 -- Upserts party entry in election_group_senatorial_districts.parties.
 UPDATE election_group_senatorial_districts
@@ -1924,6 +2010,7 @@ SET
   updated_at = NOW()
 WHERE election_group_id      = sqlc.arg(election_group_id)::integer
   AND senatorial_district_id = sqlc.arg(senatorial_district_id)::int;
+
 
 -- name: UpsertElectionGroupStatePartyEntry :exec
 -- Upserts party entry in election_group_states.parties.
@@ -1979,12 +2066,16 @@ SET
 WHERE election_group_id = sqlc.arg(election_group_id)::integer
   AND state_id          = sqlc.arg(state_id)::smallint;
 
+
 -- ============================================================
 -- QUERY: get current party agents_count in a PU for a given party
 -- Used by Go before calling the upsert to compute unique_pu_delta.
 -- Returns the current agents_count for the party in this PU,
 -- or 0 if no entry exists yet.
+
+
 -- ============================================================
+
 
 -- name: GetPUPartyAgentsCount :one
 SELECT COALESCE(
@@ -2000,11 +2091,15 @@ FROM election_group_polling_units
 WHERE election_group_id = sqlc.arg(election_group_id)::integer
   AND polling_unit_id   = sqlc.arg(polling_unit_id)::int;
 
+
 -- ============================================================
 -- SUPERVISOR COUNT INCREMENTS / DECREMENTS
 -- Called from Go after creating/removing supervisor records.
 -- delta = +1 (assign) or -1 (remove).
+
+
 -- ============================================================
+
 
 -- name: AdjustElectionGroupLGAWardSupervisorCounts :exec
 -- Adjusts ward_supervisors_count on election_group_lgas.
@@ -2042,6 +2137,7 @@ SET
 WHERE election_group_id = sqlc.arg(election_group_id)::integer
   AND lga_id            = sqlc.arg(lga_id)::int;
 
+
 -- name: AdjustElectionGroupStateConstituencyWardSupervisorCounts :exec
 UPDATE election_group_state_constituencies
 SET
@@ -2076,6 +2172,7 @@ SET
   updated_at = NOW()
 WHERE election_group_id     = sqlc.arg(election_group_id)::integer
   AND state_constituency_id = sqlc.arg(state_constituency_id)::int;
+
 
 -- name: AdjustElectionGroupFederalConstituencyWardSupervisorCounts :exec
 UPDATE election_group_federal_constituencies
@@ -2112,6 +2209,7 @@ SET
 WHERE election_group_id       = sqlc.arg(election_group_id)::integer
   AND federal_constituency_id = sqlc.arg(federal_constituency_id)::int;
 
+
 -- name: AdjustElectionGroupSenatorialDistrictWardSupervisorCounts :exec
 UPDATE election_group_senatorial_districts
 SET
@@ -2146,6 +2244,7 @@ SET
   updated_at = NOW()
 WHERE election_group_id      = sqlc.arg(election_group_id)::integer
   AND senatorial_district_id = sqlc.arg(senatorial_district_id)::int;
+
 
 -- name: AdjustElectionGroupStateWardSupervisorCounts :exec
 UPDATE election_group_states
@@ -2182,6 +2281,7 @@ SET
 WHERE election_group_id = sqlc.arg(election_group_id)::integer
   AND state_id          = sqlc.arg(state_id)::smallint;
 
+
 -- name: AdjustElectionGroupFederalConstituencyLGASupervisorCounts :exec
 UPDATE election_group_federal_constituencies
 SET
@@ -2217,6 +2317,7 @@ SET
 WHERE election_group_id       = sqlc.arg(election_group_id)::integer
   AND federal_constituency_id = sqlc.arg(federal_constituency_id)::int;
 
+
 -- name: AdjustElectionGroupSenatorialDistrictLGASupervisorCounts :exec
 UPDATE election_group_senatorial_districts
 SET
@@ -2251,6 +2352,7 @@ SET
   updated_at = NOW()
 WHERE election_group_id      = sqlc.arg(election_group_id)::integer
   AND senatorial_district_id = sqlc.arg(senatorial_district_id)::int;
+
 
 -- name: AdjustElectionGroupStateLGASupervisorCounts :exec
 UPDATE election_group_states
@@ -2297,6 +2399,7 @@ WHERE election_group_id = sqlc.arg(election_group_id)::integer
   AND ward_id           = sqlc.arg(ward_id)::int
   AND party_id          = sqlc.arg(party_id)::smallint;
 
+
 -- name: GetLGASupervisorCount :one
 -- Returns the current count of LGA supervisors for a party in a given lga+election group.
 SELECT COUNT(*)::int AS supervisor_count
@@ -2305,6 +2408,7 @@ WHERE election_group_id = sqlc.arg(election_group_id)::integer
   AND lga_id            = sqlc.arg(lga_id)::int
   AND party_id          = sqlc.arg(party_id)::smallint;
 
+
 -- name: GetStateSupervisorCount :one
 -- Returns the current count of state supervisors for a party in a given state+election group.
 SELECT COUNT(*)::int AS supervisor_count
@@ -2312,6 +2416,7 @@ FROM state_election_supervisors
 WHERE election_group_id = sqlc.arg(election_group_id)::integer
   AND state_id          = sqlc.arg(state_id)::smallint
   AND party_id          = sqlc.arg(party_id)::smallint;
+
 
 -- name: AdjustElectionGroupWardWardSupervisorCounts :exec
 UPDATE election_group_wards
@@ -2341,6 +2446,7 @@ SET
   updated_at = NOW()
 WHERE election_group_id = sqlc.arg(election_group_id)::integer
   AND ward_id           = sqlc.arg(ward_id)::int;
+
 
 -- name: AdjustElectionGroupNationalWardSupervisorCounts :exec
 UPDATE election_groups
@@ -2376,6 +2482,7 @@ SET
   updated_at = NOW()
 WHERE id = sqlc.arg(election_group_id)::integer;
 
+
 -- name: AdjustElectionGroupNationalLGASupervisorCounts :exec
 UPDATE election_groups
 SET
@@ -2409,6 +2516,7 @@ SET
   END,
   updated_at = NOW()
 WHERE id = sqlc.arg(election_group_id)::integer;
+
 
 -- name: AdjustElectionGroupNationalStateSupervisorCounts :exec
 UPDATE election_groups
@@ -2444,6 +2552,7 @@ SET
   updated_at = NOW()
 WHERE id = sqlc.arg(election_group_id)::integer;
 
+
 -- name: AdjustElectionGroupStateStateSupervisorCounts :exec
 UPDATE election_group_states
 SET
@@ -2472,6 +2581,7 @@ SET
   updated_at = NOW()
 WHERE election_group_id = sqlc.arg(election_group_id)::integer
   AND state_id          = sqlc.arg(state_id)::smallint;
+
 
 -- name: AdjustElectionGroupLGALGASupervisorCounts :exec
 UPDATE election_group_lgas
@@ -2537,6 +2647,8 @@ SET
   END,
   updated_at = NOW()
 WHERE id = sqlc.arg(election_group_id)::integer;
+
+
 -- name: RefreshAllElectionGroupGlobalStats :exec
 -- Aggregates from election_group_states up to election_groups.
 WITH src_agg AS (
@@ -2564,6 +2676,7 @@ WITH src_agg AS (
   FROM election_group_states
   GROUP BY election_group_id
 ),
+
 party_expanded AS (
   SELECT
     s.election_group_id,
@@ -2596,6 +2709,7 @@ party_expanded AS (
   FROM election_group_states s,
        jsonb_array_elements(s.parties) AS p(value)
 ),
+
 party_agg AS (
   SELECT
     election_group_id, party_id,
@@ -2628,6 +2742,7 @@ party_agg AS (
   FROM party_expanded
   GROUP BY election_group_id, party_id
 ),
+
 party_json AS (
   SELECT
     election_group_id,
@@ -2663,6 +2778,7 @@ party_json AS (
   FROM party_agg
   GROUP BY election_group_id
 )
+
 UPDATE election_groups
 SET
   unique_final_results_expected = COALESCE(s.unique_final_results_expected, 0),
@@ -2716,6 +2832,7 @@ FROM src_agg s
 LEFT JOIN party_json pj ON s.election_group_id = pj.election_group_id
 WHERE election_groups.id = s.election_group_id;
 
+
 -- name: RefreshSingleElectionGroupPollingUnitStats :exec
 -- Aggregates from polling_unit_assignments, results, and updates for a single PU
 WITH assignments AS (
@@ -2734,6 +2851,7 @@ WITH assignments AS (
   FROM polling_unit_assignments
   WHERE polling_unit_assignments.election_group_id = $1 AND polling_unit_assignments.polling_unit_id = $2
 ),
+
 assignment_agg AS (
   SELECT
     election_group_id,
@@ -2748,6 +2866,7 @@ assignment_agg AS (
   FROM assignments
   GROUP BY election_group_id, polling_unit_id
 ),
+
 result_agg AS (
   SELECT
     election_group_id,
@@ -2758,6 +2877,7 @@ result_agg AS (
   WHERE polling_unit_results.election_group_id = $1 AND polling_unit_results.polling_unit_id = $2
   GROUP BY election_group_id, polling_unit_id
 ),
+
 referral_codes AS (
   SELECT
     election_group_id,
@@ -2766,6 +2886,7 @@ referral_codes AS (
   FROM assignments
   GROUP BY election_group_id, polling_unit_id
 ),
+
 party_expanded AS (
   SELECT
     a.election_group_id,
@@ -2783,6 +2904,7 @@ party_expanded AS (
   FROM assignments a
   GROUP BY a.election_group_id, a.polling_unit_id, a.party_id
 ),
+
 party_results AS (
   SELECT
     r.election_group_id,
@@ -2794,6 +2916,7 @@ party_results AS (
   WHERE r.election_group_id = $1 AND r.polling_unit_id = $2
   GROUP BY r.election_group_id, r.polling_unit_id, r.party_id
 ),
+
 party_intervals AS (
   SELECT
     sub.election_group_id,
@@ -2815,6 +2938,7 @@ party_intervals AS (
   WHERE gap_seconds > 0
   GROUP BY sub.election_group_id, sub.polling_unit_id, sub.party_id
 ),
+
 party_json AS (
   SELECT
     pe.election_group_id,
@@ -2839,6 +2963,7 @@ party_json AS (
   LEFT JOIN party_intervals pi ON pe.election_group_id = pi.election_group_id AND pe.polling_unit_id = pi.polling_unit_id AND pe.party_id = pi.party_id
   GROUP BY pe.election_group_id, pe.polling_unit_id
 )
+
 UPDATE election_group_polling_units
 SET
   pu_agents_count = COALESCE(aa.pu_agents_count, 0),
@@ -2860,12 +2985,16 @@ LEFT JOIN party_json pj ON aa.election_group_id = pj.election_group_id AND aa.po
 WHERE election_group_polling_units.election_group_id = aa.election_group_id
   AND election_group_polling_units.polling_unit_id = aa.polling_unit_id;
 
+
 -- =====================================================
 -- EVENT-DRIVEN CASCADE: RefreshSingle* queries
 -- Each query targets exactly one geographic unit so
 -- the cascading worker chain only touches the rows
 -- that actually changed, instead of full table scans.
+
+
 -- =====================================================
+
 
 -- name: GetElectionGroupPollingUnitGeoIDs :one
 -- Returns the geographic IDs for a single PU row (used by the cascade to know what to enqueue next).
@@ -2879,6 +3008,7 @@ SELECT
 FROM election_group_polling_units
 WHERE election_group_id = sqlc.arg(election_group_id)::integer
   AND polling_unit_id   = sqlc.arg(polling_unit_id)::int;
+
 
 -- name: RefreshSingleElectionGroupWardStats :exec
 -- Aggregates from election_group_polling_units for a single ward.
@@ -2909,6 +3039,7 @@ WITH epu_agg AS (
     AND ward_id = sqlc.arg(ward_id)::int
   GROUP BY election_group_id, ward_id, lga_id, state_id
 ),
+
 party_expanded AS (
   SELECT
     epu.election_group_id, epu.ward_id,
@@ -2938,6 +3069,7 @@ party_expanded AS (
   WHERE epu.election_group_id = sqlc.arg(election_group_id)::integer
     AND epu.ward_id = sqlc.arg(ward_id)::int
 ),
+
 party_agg AS (
   SELECT
     election_group_id, ward_id, party_id,
@@ -2964,6 +3096,7 @@ party_agg AS (
   FROM party_expanded
   GROUP BY election_group_id, ward_id, party_id
 ),
+
 party_json AS (
   SELECT
     election_group_id, ward_id,
@@ -2976,7 +3109,7 @@ party_json AS (
       'pu_updates_count',                updates_count,
       'pu_reports_count',                reports_count,
       'pu_agents_count',                 pu_agents_count,
-        'unique_pu_agents_count', unique_pu_agents_count,
+      'unique_pu_agents_count', unique_pu_agents_count,
       'pu_final_results_uploaded_count', pu_final_results_uploaded_count,
       'unique_pu_final_results_uploaded_count', unique_pu_final_results_uploaded_count,
       'pu_average_update_time_interval_in_seconds', pu_average_update_time_interval_in_seconds,
@@ -2993,6 +3126,7 @@ party_json AS (
   FROM party_agg
   GROUP BY election_group_id, ward_id
 )
+
 INSERT INTO election_group_wards (
   election_group_id, ward_id, lga_id, state_id,
   unique_final_results_expected,
@@ -3007,6 +3141,7 @@ INSERT INTO election_group_wards (
   total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters,
   parties
 )
+
 SELECT
   a.election_group_id, a.ward_id, a.lga_id, a.state_id,
   a.unique_final_results_expected,
@@ -3042,7 +3177,8 @@ ON CONFLICT (election_group_id, ward_id) DO UPDATE SET
   total_pu_with_agents_in_attendance = EXCLUDED.total_pu_with_agents_in_attendance,
   total_pu_where_election_has_started = EXCLUDED.total_pu_where_election_has_started,
   total_pu_where_election_has_ended = EXCLUDED.total_pu_where_election_has_ended,
-  total_pu_unique_final_results_uploaded = EXCLUDED.total_pu_unique_final_results_uploaded,  total_pu_where_agents_referred_live_voters = EXCLUDED.total_pu_where_agents_referred_live_voters,
+  total_pu_unique_final_results_uploaded = EXCLUDED.total_pu_unique_final_results_uploaded,
+  total_pu_where_agents_referred_live_voters = EXCLUDED.total_pu_where_agents_referred_live_voters,
   parties = (
     SELECT COALESCE(jsonb_agg(
       COALESCE(ep.elem, '{}'::jsonb) || COALESCE(np.elem, '{}'::jsonb)
@@ -3065,6 +3201,7 @@ ON CONFLICT (election_group_id, ward_id) DO UPDATE SET
     ) np ON TRUE
   ),
   updated_at = NOW();
+
 
 -- name: RefreshSingleElectionGroupLGAStats :exec
 -- Aggregates from election_group_wards for a single LGA.
@@ -3097,6 +3234,7 @@ WITH src_agg AS (
     AND lga_id = sqlc.arg(lga_id)::int
   GROUP BY election_group_id, lga_id, state_id
 ),
+
 party_expanded AS (
   SELECT
     s.election_group_id, s.lga_id,
@@ -3127,6 +3265,7 @@ party_expanded AS (
   WHERE s.election_group_id = sqlc.arg(election_group_id)::integer
     AND s.lga_id = sqlc.arg(lga_id)::int
 ),
+
 party_agg AS (
   SELECT
     election_group_id, lga_id, party_id,
@@ -3155,6 +3294,7 @@ party_agg AS (
   FROM party_expanded
   GROUP BY election_group_id, lga_id, party_id
 ),
+
 party_json AS (
   SELECT
     election_group_id, lga_id,
@@ -3186,6 +3326,7 @@ party_json AS (
   FROM party_agg
   GROUP BY election_group_id, lga_id
 )
+
 INSERT INTO election_group_lgas (
   election_group_id, lga_id, state_id,
   unique_final_results_expected,
@@ -3201,6 +3342,7 @@ INSERT INTO election_group_lgas (
   ward_supervisors_count, unique_ward_supervisors_count,
   parties
 )
+
 SELECT
   a.election_group_id, a.lga_id, a.state_id,
   a.unique_final_results_expected,
@@ -3263,6 +3405,7 @@ ON CONFLICT (election_group_id, lga_id) DO UPDATE SET
   ),
   updated_at = NOW();
 
+
 -- name: RefreshSingleElectionGroupStateConstituencyStats :exec
 -- Aggregates from election_group_polling_units for a single state constituency.
 WITH src_agg AS (
@@ -3292,6 +3435,7 @@ WITH src_agg AS (
     AND state_constituency_id = sqlc.arg(state_constituency_id)::int
   GROUP BY election_group_id, state_constituency_id, state_id
 ),
+
 party_expanded AS (
   SELECT
     s.election_group_id, s.state_constituency_id,
@@ -3321,6 +3465,7 @@ party_expanded AS (
   WHERE s.election_group_id = sqlc.arg(election_group_id)::integer
     AND s.state_constituency_id = sqlc.arg(state_constituency_id)::int
 ),
+
 party_agg AS (
   SELECT
     election_group_id, state_constituency_id, party_id,
@@ -3347,6 +3492,7 @@ party_agg AS (
   FROM party_expanded
   GROUP BY election_group_id, state_constituency_id, party_id
 ),
+
 party_json AS (
   SELECT
     election_group_id, state_constituency_id,
@@ -3376,6 +3522,7 @@ party_json AS (
   FROM party_agg
   GROUP BY election_group_id, state_constituency_id
 )
+
 INSERT INTO election_group_state_constituencies (
   election_group_id, state_constituency_id, state_id,
   unique_final_results_expected,
@@ -3390,6 +3537,7 @@ INSERT INTO election_group_state_constituencies (
   total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters,
   parties
 )
+
 SELECT
   a.election_group_id, a.state_constituency_id, a.state_id,
   a.unique_final_results_expected,
@@ -3429,6 +3577,7 @@ ON CONFLICT (election_group_id, state_constituency_id) DO UPDATE SET
   parties = EXCLUDED.parties,
   updated_at = NOW();
 
+
 -- name: RefreshSingleElectionGroupStateStats :exec
 -- Aggregates from election_group_lgas for a single state.
 WITH src_agg AS (
@@ -3462,6 +3611,7 @@ WITH src_agg AS (
     AND state_id = sqlc.arg(state_id)::smallint
   GROUP BY election_group_id, state_id
 ),
+
 party_expanded AS (
   SELECT
     s.election_group_id, s.state_id,
@@ -3494,6 +3644,7 @@ party_expanded AS (
   WHERE s.election_group_id = sqlc.arg(election_group_id)::integer
     AND s.state_id = sqlc.arg(state_id)::smallint
 ),
+
 party_agg AS (
   SELECT
     election_group_id, state_id, party_id,
@@ -3524,6 +3675,7 @@ party_agg AS (
   FROM party_expanded
   GROUP BY election_group_id, state_id, party_id
 ),
+
 party_json AS (
   SELECT
     election_group_id, state_id,
@@ -3557,6 +3709,7 @@ party_json AS (
   FROM party_agg
   GROUP BY election_group_id, state_id
 )
+
 INSERT INTO election_group_states (
   election_group_id, state_id,
   unique_final_results_expected,
@@ -3573,6 +3726,7 @@ INSERT INTO election_group_states (
   ward_supervisors_count, unique_ward_supervisors_count,
   parties
 )
+
 SELECT
   a.election_group_id, a.state_id,
   a.unique_final_results_expected,
@@ -3637,6 +3791,7 @@ ON CONFLICT (election_group_id, state_id) DO UPDATE SET
   ),
   updated_at = NOW();
 
+
 -- name: RefreshSingleElectionGroupGlobalStats :exec
 -- Aggregates from election_group_states for a single election group.
 WITH src_agg AS (
@@ -3671,6 +3826,7 @@ WITH src_agg AS (
   WHERE election_group_id = sqlc.arg(election_group_id)::integer
   GROUP BY election_group_id
 ),
+
 party_expanded AS (
   SELECT
     s.election_group_id,
@@ -3704,6 +3860,7 @@ party_expanded AS (
        jsonb_array_elements(s.parties) AS p(value)
   WHERE s.election_group_id = sqlc.arg(election_group_id)::integer
 ),
+
 party_agg AS (
   SELECT
     election_group_id, party_id,
@@ -3736,6 +3893,7 @@ party_agg AS (
   FROM party_expanded
   GROUP BY election_group_id, party_id
 ),
+
 party_json AS (
   SELECT
     election_group_id,
@@ -3771,6 +3929,7 @@ party_json AS (
   FROM party_agg
   GROUP BY election_group_id
 )
+
 UPDATE election_groups
 SET
   unique_final_results_expected = COALESCE(s.unique_final_results_expected, 0),
@@ -3824,11 +3983,15 @@ FROM src_agg s
 LEFT JOIN party_json pj ON s.election_group_id = pj.election_group_id
 WHERE election_groups.id = s.election_group_id;
 
+
 -- ============================================================
 -- APPLICATION COUNT INCREMENT QUERIES
 -- Increments/updates application counts (total, accepted, rejected, and role specific)
 -- across polling units, wards, lgas, states, and election_groups.
+
+
 -- ============================================================
+
 
 -- name: AdjustElectionGroupPollingUnitApplicationCounts :exec
 INSERT INTO election_group_polling_units (
@@ -3837,6 +4000,7 @@ INSERT INTO election_group_polling_units (
   applications_count, accepted_applications_count, rejected_applications_count,
   parties
 )
+
 SELECT
   sqlc.arg(election_group_id)::integer,
   sqlc.arg(polling_unit_id)::int,
@@ -3892,6 +4056,7 @@ ON CONFLICT (election_group_id, polling_unit_id) DO UPDATE SET
   END,
   updated_at = NOW();
 
+
 -- name: AdjustElectionGroupWardApplicationCounts :exec
 INSERT INTO election_group_wards (
   election_group_id, ward_id, lga_id, state_id,
@@ -3899,6 +4064,7 @@ INSERT INTO election_group_wards (
   ward_supervisor_applications_count, ward_supervisor_accepted_applications_count, ward_supervisor_rejected_applications_count,
   parties
 )
+
 SELECT
   sqlc.arg(election_group_id)::integer,
   sqlc.arg(ward_id)::int,
@@ -3975,6 +4141,7 @@ ON CONFLICT (election_group_id, ward_id) DO UPDATE SET
   END,
   updated_at = NOW();
 
+
 -- name: AdjustElectionGroupLGAApplicationCounts :exec
 INSERT INTO election_group_lgas (
   election_group_id, lga_id, state_id, senatorial_district_id, federal_constituency_id,
@@ -3983,6 +4150,7 @@ INSERT INTO election_group_lgas (
   lga_supervisor_applications_count, lga_supervisor_accepted_applications_count, lga_supervisor_rejected_applications_count,
   parties
 )
+
 SELECT
   sqlc.arg(election_group_id)::integer,
   sqlc.arg(lga_id)::int,
@@ -4082,6 +4250,7 @@ ON CONFLICT (election_group_id, lga_id) DO UPDATE SET
     )
   END,
   updated_at = NOW();
+
 
 -- name: AdjustElectionGroupStateApplicationCounts :exec
 INSERT INTO election_group_states (
@@ -4213,6 +4382,7 @@ ON CONFLICT (election_group_id, state_id) DO UPDATE SET
     )
   END,
   updated_at = NOW();
+
 
 -- name: AdjustElectionGroupNationalApplicationCounts :exec
 UPDATE election_groups

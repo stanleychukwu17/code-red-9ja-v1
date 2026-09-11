@@ -128,16 +128,9 @@ CREATE TABLE elections (
 );
 
 CREATE INDEX idx_elections_election_group_id ON elections(election_group_id);
-CREATE INDEX idx_elections_state_id ON elections(state_id);
-CREATE INDEX idx_elections_senatorial_district_id ON elections(senatorial_district_id);
-CREATE INDEX idx_elections_federal_constituency_id ON elections(federal_constituency_id);
-CREATE INDEX idx_elections_state_constituency_id ON elections(state_constituency_id);
-CREATE INDEX idx_elections_lga_id ON elections(lga_id);
-CREATE INDEX idx_elections_ward_id ON elections(ward_id);
 CREATE INDEX idx_elections_office_id ON elections(office_id);
 CREATE INDEX idx_elections_rank ON elections(rank);
 CREATE INDEX idx_elections_election_date ON elections(election_date);
-CREATE INDEX idx_elections_contesting_parties ON elections USING gin(contesting_parties);
 
 COMMENT ON COLUMN elections.contesting_parties IS 'List of political parties contesting this election. Shape: [{"party_id": 1, "party_short_name": "APC", "party_name": "All Progressives Congress", "party_logo": "https://..."}]';
 

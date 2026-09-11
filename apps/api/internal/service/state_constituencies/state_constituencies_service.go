@@ -164,4 +164,5 @@ func (s *StateConstituenciesService) GetStateConstituencies(ctx context.Context,
 func (s *StateConstituenciesService) invalidateCache(ctx context.Context, stateID int32) {
 	redisKey := fmt.Sprintf("%s%d", db.RedisStateConstituenciesByState, stateID)
 	s.rdb.Del(ctx, redisKey)
+	s.rdb.Del(ctx, db.RedisNationalMetrics)
 }

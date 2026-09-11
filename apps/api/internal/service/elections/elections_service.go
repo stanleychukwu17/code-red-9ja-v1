@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/worker"
 	"time"
@@ -17,35 +18,73 @@ type earningsService interface {
 	ProcessTaskEarnings(ctx context.Context, assignmentID int64, taskType string, customNarration ...string) (int64, error)
 }
 
+type electionGroupsService interface {
+	GetSafeNationalMetrics(ctx context.Context) queries.NationalMetric
+}
+
 type ElectionsService struct {
 	queries         *queries.Queries
 	pool            *pgxpool.Pool
 	rdb             *redis.Client
 	taskDistributor worker.TaskDistributor
 	earningsSvc     earningsService
+	egSvc           electionGroupsService
 }
 
-func NewElectionsService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client, taskDistributor worker.TaskDistributor) *ElectionsService {
+// NewElectionsService initializes a new ElectionsService with its required database pool,
+// query handlers, Redis client, task distributor, and election groups service dependency.
+func NewElectionsService(
+	q *queries.Queries,
+	pool *pgxpool.Pool,
+	rdb *redis.Client,
+	taskDistributor worker.TaskDistributor,
+	egSvc electionGroupsService,
+) *ElectionsService {
 	return &ElectionsService{
 		queries:         q,
 		pool:            pool,
 		rdb:             rdb,
 		taskDistributor: taskDistributor,
+		egSvc:           egSvc,
 	}
 }
 
+// SetEarningsService allows optional or circular injection of the earnings service.
 func (s *ElectionsService) SetEarningsService(es earningsService) {
 	s.earningsSvc = es
 }
 
-func (s *ElectionsService) invalidateCache(ctx context.Context, id *int32) {
-	s.rdb.Del(ctx, "elections:all")
-	s.rdb.Del(ctx, "election_groups:all")
-	if id != nil {
-		s.rdb.Del(ctx, fmt.Sprintf("election:%d", *id))
+// SetElectionGroupsService sets or updates the injected election groups service.
+func (s *ElectionsService) SetElectionGroupsService(egs electionGroupsService) {
+	s.egSvc = egs
+}
+
+// getSafeNationalMetrics retrieves national administrative counts via the injected election
+// groups service (using Redis cache and DB), or returns standard hardcoded Nigerian metrics as a safe fallback.
+func (s *ElectionsService) getSafeNationalMetrics(ctx context.Context) queries.NationalMetric {
+	if s.egSvc != nil {
+		return s.egSvc.GetSafeNationalMetrics(ctx)
+	}
+	return queries.NationalMetric{
+		SenatorialDistrictsCount:   109,
+		FederalConstituenciesCount: 360,
+		LgasCount:                  774,
+		StateConstituenciesCount:   993,
+		WardsCount:                 8809,
+		PollingUnitsCount:          176846,
 	}
 }
 
+// invalidateCache clears Redis cached lists for elections and election groups, as well as single election details.
+func (s *ElectionsService) invalidateCache(ctx context.Context, id *int32) {
+	s.rdb.Del(ctx, db.RedisElectionsAll)
+	s.rdb.Del(ctx, db.RedisElectionGroupsAll)
+	if id != nil {
+		s.rdb.Del(ctx, fmt.Sprintf("%s%d", db.RedisElectionInfo, *id))
+	}
+}
+
+// CreateElection creates an individual election instance under an existing election group with full geographic resolution.
 func (s *ElectionsService) CreateElection(
 	ctx context.Context,
 	name string,
@@ -56,7 +95,10 @@ func (s *ElectionsService) CreateElection(
 	stateID *int16,
 	senatorialDistrictID, federalConstituencyID, stateConstituencyID, lgaID, wardID *int32,
 ) (queries.Election, error) {
+	// Invalidate election list caches when this function exits
 	defer s.invalidateCache(ctx, nil)
+
+	// 1. Verify office definition and parent election group exist
 	et, err := s.queries.GetOfficeByID(ctx, officeID)
 	if err != nil {
 		return queries.Election{}, err
@@ -66,6 +108,7 @@ func (s *ElectionsService) CreateElection(
 		return queries.Election{}, err
 	}
 
+	// 2. Begin database transaction
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return queries.Election{}, fmt.Errorf("failed to begin transaction: %w", err)
@@ -74,6 +117,7 @@ func (s *ElectionsService) CreateElection(
 
 	txQueries := s.queries.WithTx(tx)
 
+	// 3. Determine dynamic election display name based on geographic level
 	name = et.Election + " Election"
 	if stateID != nil {
 		stateRow, err := txQueries.GetStateByID(ctx, queries.GetStateByIDParams{
@@ -186,10 +230,12 @@ func (s *ElectionsService) CreateElection(
 		}
 	}
 
+	// 4. Resolve full geographic hierarchy (filling missing parent administrative IDs from bottom up)
 	stateID2, senatorialDistrictID4, federalConstituencyID4, stateConstituencyID4, lgaID4, wardID4 := s.resolveGeographicHierarchy(
 		ctx, txQueries, stateID, senatorialDistrictID, federalConstituencyID, stateConstituencyID, lgaID, wardID,
 	)
 
+	// 5. Persist the election instance record
 	election, err := txQueries.CreateElectionInstance(ctx, queries.CreateElectionInstanceParams{
 		Name:                  name,
 		Rank:                  et.Rank,
@@ -211,19 +257,23 @@ func (s *ElectionsService) CreateElection(
 		return queries.Election{}, err
 	}
 
+	// 6. Synchronize the election group rank and computed name across all child elections
 	if err := s.syncElectionGroupNameAndRank(ctx, txQueries, electionGroupID, electionDate.Year()); err != nil {
 		return queries.Election{}, err
 	}
 
+	// 7. Seed expected polling unit result skeletons for statistics and rollups
 	if err := s.syncExpectedResultsForElection(ctx, txQueries, electionGroupID, et.Scope, stateID, senatorialDistrictID, federalConstituencyID, stateConstituencyID, lgaID, wardID, false); err != nil {
 		return queries.Election{}, err
 	}
 
+	// 8. Re-fetch the election with newly synchronized denormalized group name
 	updatedElection, err := txQueries.GetElectionInstanceByID(ctx, election.ID)
 	if err != nil {
 		return queries.Election{}, err
 	}
 
+	// 9. Commit the transaction
 	if err := tx.Commit(ctx); err != nil {
 		return queries.Election{}, fmt.Errorf("failed to commit transaction: %w", err)
 	}
@@ -231,21 +281,25 @@ func (s *ElectionsService) CreateElection(
 	return updatedElection, nil
 }
 
+// CandidateInput holds candidate and party identification for election registration.
 type CandidateInput struct {
 	CandidateID    int64
 	PartyID        int16
 	PartyShortName string
 }
 
+// CreateNationwideElection sets up a country-wide election (e.g., Presidential) along with its candidates.
 func (s *ElectionsService) CreateNationwideElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID *int32, candidates []CandidateInput) (queries.Election, error) {
+	// Invalidate election list caches when this function exits
 	defer s.invalidateCache(ctx, nil)
-	// 1. Fetch office
+
+	// 1. Fetch and validate the target office definition
 	et, err := s.queries.GetOfficeByID(ctx, officeID)
 	if err != nil {
 		return queries.Election{}, fmt.Errorf("failed to fetch office: %w", err)
 	}
 
-	// Begin transaction
+	// 2. Begin database transaction
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return queries.Election{}, fmt.Errorf("failed to begin transaction: %w", err)
@@ -257,7 +311,7 @@ func (s *ElectionsService) CreateNationwideElection(ctx context.Context, officeI
 	var groupID int32
 	var groupName string
 
-	// 2. Resolve/create election group
+	// 3. Resolve parent election group: either join an existing group or auto-create a new one
 	if electionGroupID != nil && *electionGroupID > 0 {
 		groupID = *electionGroupID
 		eg, err := txQueries.GetElectionGroupByID(ctx, groupID)
@@ -266,7 +320,7 @@ func (s *ElectionsService) CreateNationwideElection(ctx context.Context, officeI
 		}
 		groupName = eg.Name
 
-		// Increment elections_count
+		// Increment the number of elections contesting under this group
 		_, err = txQueries.UpdateElectionGroup(ctx, queries.UpdateElectionGroupParams{
 			ID:             eg.ID,
 			Name:           eg.Name,
@@ -279,25 +333,26 @@ func (s *ElectionsService) CreateNationwideElection(ctx context.Context, officeI
 			return queries.Election{}, fmt.Errorf("failed to update election group count: %w", err)
 		}
 	} else {
-		// Auto-create election group
+		// Auto-create election group with collision-safe naming (e.g., "2027 Presidential Election (1)")
 		baseGroupName := fmt.Sprintf("%d %s Election", electionDate.Year(), et.Election)
 		computedGroupName := baseGroupName
 		suffix := 1
 		for {
 			_, err := txQueries.GetElectionGroupByName(ctx, computedGroupName)
 			if err != nil {
-				break
+				break // Name is available
 			}
 			suffix++
 			computedGroupName = fmt.Sprintf("%s (%d)", baseGroupName, suffix)
 		}
-		// Create new group
-		metrics := getSafeNationalMetrics(ctx, txQueries)
+
+		// Retrieve nationwide boundary metrics snapshot (from cache/DB)
+		metrics := s.getSafeNationalMetrics(ctx)
 		newGroup, err := txQueries.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{
 			Name:                       computedGroupName,
 			Rank:                       et.Rank,
 			ElectionsCount:             1,
-			StatesCount:                37, // Fixed 37 states for nationwide election
+			StatesCount:                37, // Fixed 36 states + FCT for nationwide elections
 			ElectionDate:               pgtype.Date{Time: electionDate, Valid: true},
 			SenatorialDistrictsCount:   metrics.SenatorialDistrictsCount,
 			FederalConstituenciesCount: metrics.FederalConstituenciesCount,
@@ -313,7 +368,7 @@ func (s *ElectionsService) CreateNationwideElection(ctx context.Context, officeI
 		groupName = newGroup.Name
 	}
 
-	// 3. Create election record (with all geographic IDs NULL)
+	// 4. Create election record (nationwide scope has no geographic sub-boundary IDs)
 	name := et.Election + " Election"
 	election, err := txQueries.CreateElectionInstance(ctx, queries.CreateElectionInstanceParams{
 		Name:              name,
@@ -330,7 +385,7 @@ func (s *ElectionsService) CreateNationwideElection(ctx context.Context, officeI
 		return queries.Election{}, fmt.Errorf("failed to create election: %w", err)
 	}
 
-	// 4. Create election candidates mapping
+	// 5. Link candidates to this election
 	for _, cand := range candidates {
 		_, err := txQueries.CreateElectionCandidate(ctx, queries.CreateElectionCandidateParams{
 			ElectionID:     election.ID,
@@ -343,22 +398,23 @@ func (s *ElectionsService) CreateNationwideElection(ctx context.Context, officeI
 		}
 	}
 
-	// Sync group rank and name
+	// 6. Synchronize group rank and name across constituent elections
 	if err := s.syncElectionGroupNameAndRank(ctx, txQueries, groupID, electionDate.Year()); err != nil {
 		return queries.Election{}, err
 	}
 
+	// 7. Seed expected results skeletons across nationwide polling units
 	if err := s.syncExpectedResultsForElection(ctx, txQueries, groupID, "nationwide", nil, nil, nil, nil, nil, nil, false); err != nil {
 		return queries.Election{}, err
 	}
 
-	// Fetch updated election to get the synced group name
+	// 8. Fetch updated election with synchronized group name
 	updatedElection, err := txQueries.GetElectionInstanceByID(ctx, election.ID)
 	if err != nil {
 		return queries.Election{}, err
 	}
 
-	// Commit transaction
+	// 9. Commit transaction
 	if err := tx.Commit(ctx); err != nil {
 		return queries.Election{}, fmt.Errorf("failed to commit transaction: %w", err)
 	}
@@ -366,15 +422,18 @@ func (s *ElectionsService) CreateNationwideElection(ctx context.Context, officeI
 	return updatedElection, nil
 }
 
+// CreateStateElection sets up multiple state-level elections (e.g., Governorship) under a shared or auto-created election group.
 func (s *ElectionsService) CreateStateElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID *int32, stateIDs []int16) ([]queries.Election, error) {
+	// Invalidate election list caches when this function exits
 	defer s.invalidateCache(ctx, nil)
-	// 1. Fetch office
+
+	// 1. Fetch and validate the target office definition
 	et, err := s.queries.GetOfficeByID(ctx, officeID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch office: %w", err)
 	}
 
-	// Begin transaction
+	// 2. Begin database transaction
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
@@ -386,7 +445,7 @@ func (s *ElectionsService) CreateStateElection(ctx context.Context, officeID int
 	var groupID int32
 	var groupName string
 
-	// 2. Resolve/create election group
+	// 3. Resolve parent election group: either join an existing group or auto-create a new one
 	if electionGroupID != nil && *electionGroupID > 0 {
 		groupID = *electionGroupID
 		eg, err := txQueries.GetElectionGroupByID(ctx, groupID)
@@ -395,7 +454,7 @@ func (s *ElectionsService) CreateStateElection(ctx context.Context, officeID int
 		}
 		groupName = eg.Name
 
-		// Increment elections_count
+		// Increment elections_count by the number of states contesting
 		_, err = txQueries.UpdateElectionGroup(ctx, queries.UpdateElectionGroupParams{
 			ID:             eg.ID,
 			Name:           eg.Name,
@@ -408,7 +467,7 @@ func (s *ElectionsService) CreateStateElection(ctx context.Context, officeID int
 			return nil, fmt.Errorf("failed to update election group count: %w", err)
 		}
 	} else {
-		// Auto-create election group
+		// Auto-create election group with collision-safe naming
 		baseGroupName := fmt.Sprintf("%d %s Election", electionDate.Year(), et.Election)
 		computedGroupName := baseGroupName
 		suffix := 1
@@ -420,8 +479,9 @@ func (s *ElectionsService) CreateStateElection(ctx context.Context, officeID int
 			suffix++
 			computedGroupName = fmt.Sprintf("%s (%d)", baseGroupName, suffix)
 		}
-		// Create new group
-		metrics := getSafeNationalMetrics(ctx, txQueries)
+
+		// Retrieve nationwide boundary metrics snapshot (from cache/DB)
+		metrics := s.getSafeNationalMetrics(ctx)
 		newGroup, err := txQueries.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{
 			Name:                       computedGroupName,
 			Rank:                       et.Rank,
@@ -444,7 +504,7 @@ func (s *ElectionsService) CreateStateElection(ctx context.Context, officeID int
 
 	createdElections := make([]queries.Election, 0, len(stateIDs))
 
-	// 3. Create election records for each state
+	// 4. Create individual election records for each state
 	for _, stateID := range stateIDs {
 		// Fetch state name using GetStateByID (Nigeria country_id is 161)
 		stateRow, err := txQueries.GetStateByID(ctx, queries.GetStateByIDParams{
@@ -475,6 +535,7 @@ func (s *ElectionsService) CreateStateElection(ctx context.Context, officeID int
 		createdElections = append(createdElections, election)
 	}
 
+	// 5. Seed expected result skeletons for each state
 	for _, stateID := range stateIDs {
 		sid := stateID
 		if err := s.syncExpectedResultsForElection(ctx, txQueries, groupID, "state", &sid, nil, nil, nil, nil, nil, false); err != nil {
@@ -482,12 +543,12 @@ func (s *ElectionsService) CreateStateElection(ctx context.Context, officeID int
 		}
 	}
 
-	// Sync group rank and name
+	// 6. Synchronize group rank and name across constituent elections
 	if err := s.syncElectionGroupNameAndRank(ctx, txQueries, groupID, electionDate.Year()); err != nil {
 		return nil, err
 	}
 
-	// Fetch updated elections to get the synced group names
+	// 7. Fetch updated elections with synced group name
 	updatedElections := make([]queries.Election, 0, len(createdElections))
 	for _, ce := range createdElections {
 		ue, err := txQueries.GetElectionInstanceByID(ctx, ce.ID)
@@ -497,7 +558,7 @@ func (s *ElectionsService) CreateStateElection(ctx context.Context, officeID int
 		updatedElections = append(updatedElections, ue)
 	}
 
-	// Commit transaction
+	// 8. Commit transaction
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
@@ -505,15 +566,18 @@ func (s *ElectionsService) CreateStateElection(ctx context.Context, officeID int
 	return updatedElections, nil
 }
 
+// CreateSenatorialDistrictElection sets up elections across one or more Senatorial Districts.
 func (s *ElectionsService) CreateSenatorialDistrictElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID *int32, senatorialDistrictIDs []int32) ([]queries.Election, error) {
+	// Invalidate election list caches when this function exits
 	defer s.invalidateCache(ctx, nil)
-	// 1. Fetch office
+
+	// 1. Fetch and validate the target office definition
 	et, err := s.queries.GetOfficeByID(ctx, officeID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch office: %w", err)
 	}
 
-	// Begin transaction
+	// 2. Begin database transaction
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
@@ -525,7 +589,7 @@ func (s *ElectionsService) CreateSenatorialDistrictElection(ctx context.Context,
 	var groupID int32
 	var groupName string
 
-	// 2. Resolve/create election group
+	// 3. Resolve parent election group: either join an existing group or auto-create a new one
 	if electionGroupID != nil && *electionGroupID > 0 {
 		groupID = *electionGroupID
 		eg, err := txQueries.GetElectionGroupByID(ctx, groupID)
@@ -534,7 +598,7 @@ func (s *ElectionsService) CreateSenatorialDistrictElection(ctx context.Context,
 		}
 		groupName = eg.Name
 
-		// Increment elections_count
+		// Increment elections_count by the number of senatorial districts
 		_, err = txQueries.UpdateElectionGroup(ctx, queries.UpdateElectionGroupParams{
 			ID:             eg.ID,
 			Name:           eg.Name,
@@ -547,7 +611,7 @@ func (s *ElectionsService) CreateSenatorialDistrictElection(ctx context.Context,
 			return nil, fmt.Errorf("failed to update election group count: %w", err)
 		}
 	} else {
-		// Auto-create election group
+		// Auto-create election group with collision-safe naming
 		baseGroupName := fmt.Sprintf("%d %s Election", electionDate.Year(), et.Election)
 		computedGroupName := baseGroupName
 		suffix := 1
@@ -559,8 +623,9 @@ func (s *ElectionsService) CreateSenatorialDistrictElection(ctx context.Context,
 			suffix++
 			computedGroupName = fmt.Sprintf("%s (%d)", baseGroupName, suffix)
 		}
-		// Create new group
-		metrics := getSafeNationalMetrics(ctx, txQueries)
+
+		// Retrieve nationwide boundary metrics snapshot (from cache/DB)
+		metrics := s.getSafeNationalMetrics(ctx)
 		newGroup, err := txQueries.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{
 			Name:                       computedGroupName,
 			Rank:                       et.Rank,
@@ -583,7 +648,7 @@ func (s *ElectionsService) CreateSenatorialDistrictElection(ctx context.Context,
 
 	createdElections := make([]queries.Election, 0, len(senatorialDistrictIDs))
 
-	// Pre-fetch all senatorial districts into map for O(1) lookups
+	// 4. Pre-fetch all senatorial districts into map for O(1) in-memory lookups
 	districts, err := txQueries.GetSenatorialDistricts(ctx, 0)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch senatorial districts: %w", err)
@@ -593,7 +658,7 @@ func (s *ElectionsService) CreateSenatorialDistrictElection(ctx context.Context,
 		districtMap[d.ID] = d
 	}
 
-	// 3. Create election records for each senatorial district
+	// 5. Create election records for each senatorial district
 	for _, districtID := range senatorialDistrictIDs {
 		districtRow, found := districtMap[districtID]
 		districtName := fmt.Sprintf("District %d", districtID)
@@ -625,6 +690,7 @@ func (s *ElectionsService) CreateSenatorialDistrictElection(ctx context.Context,
 		createdElections = append(createdElections, election)
 	}
 
+	// 6. Seed expected result skeletons for each senatorial district
 	for _, sdid := range senatorialDistrictIDs {
 		dID := sdid
 		if err := s.syncExpectedResultsForElection(ctx, txQueries, groupID, "senatorial_district", nil, &dID, nil, nil, nil, nil, false); err != nil {
@@ -632,12 +698,12 @@ func (s *ElectionsService) CreateSenatorialDistrictElection(ctx context.Context,
 		}
 	}
 
-	// Sync group rank and name
+	// 7. Synchronize group rank and name across constituent elections
 	if err := s.syncElectionGroupNameAndRank(ctx, txQueries, groupID, electionDate.Year()); err != nil {
 		return nil, err
 	}
 
-	// Fetch updated elections to get the synced group names
+	// 8. Fetch updated elections with synced group names
 	updatedElections := make([]queries.Election, 0, len(createdElections))
 	for _, ce := range createdElections {
 		ue, err := txQueries.GetElectionInstanceByID(ctx, ce.ID)
@@ -647,7 +713,7 @@ func (s *ElectionsService) CreateSenatorialDistrictElection(ctx context.Context,
 		updatedElections = append(updatedElections, ue)
 	}
 
-	// Commit transaction
+	// 9. Commit transaction
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
@@ -655,15 +721,18 @@ func (s *ElectionsService) CreateSenatorialDistrictElection(ctx context.Context,
 	return updatedElections, nil
 }
 
+// CreateFederalConstituencyElection sets up elections across one or more Federal Constituencies (House of Representatives).
 func (s *ElectionsService) CreateFederalConstituencyElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID *int32, federalConstituencyIDs []int32) ([]queries.Election, error) {
+	// Invalidate election list caches when this function exits
 	defer s.invalidateCache(ctx, nil)
-	// 1. Fetch office
+
+	// 1. Fetch and validate the target office definition
 	et, err := s.queries.GetOfficeByID(ctx, officeID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch office: %w", err)
 	}
 
-	// Begin transaction
+	// 2. Begin database transaction
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
@@ -675,7 +744,7 @@ func (s *ElectionsService) CreateFederalConstituencyElection(ctx context.Context
 	var groupID int32
 	var groupName string
 
-	// 2. Resolve/create election group
+	// 3. Resolve parent election group: either join an existing group or auto-create a new one
 	if electionGroupID != nil && *electionGroupID > 0 {
 		groupID = *electionGroupID
 		eg, err := txQueries.GetElectionGroupByID(ctx, groupID)
@@ -684,7 +753,7 @@ func (s *ElectionsService) CreateFederalConstituencyElection(ctx context.Context
 		}
 		groupName = eg.Name
 
-		// Increment elections_count
+		// Increment elections_count by the number of federal constituencies contesting
 		_, err = txQueries.UpdateElectionGroup(ctx, queries.UpdateElectionGroupParams{
 			ID:             eg.ID,
 			Name:           eg.Name,
@@ -697,7 +766,7 @@ func (s *ElectionsService) CreateFederalConstituencyElection(ctx context.Context
 			return nil, fmt.Errorf("failed to update election group count: %w", err)
 		}
 	} else {
-		// Auto-create election group
+		// Auto-create election group with collision-safe naming
 		baseGroupName := fmt.Sprintf("%d %s Election", electionDate.Year(), et.Election)
 		computedGroupName := baseGroupName
 		suffix := 1
@@ -709,8 +778,9 @@ func (s *ElectionsService) CreateFederalConstituencyElection(ctx context.Context
 			suffix++
 			computedGroupName = fmt.Sprintf("%s (%d)", baseGroupName, suffix)
 		}
-		// Create new group
-		metrics := getSafeNationalMetrics(ctx, txQueries)
+
+		// Retrieve nationwide boundary metrics snapshot (from cache/DB)
+		metrics := s.getSafeNationalMetrics(ctx)
 		newGroup, err := txQueries.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{
 			Name:                       computedGroupName,
 			Rank:                       et.Rank,
@@ -733,7 +803,7 @@ func (s *ElectionsService) CreateFederalConstituencyElection(ctx context.Context
 
 	createdElections := make([]queries.Election, 0, len(federalConstituencyIDs))
 
-	// Pre-fetch all federal constituencies into map for O(1) lookups
+	// 4. Pre-fetch all federal constituencies into map for O(1) in-memory lookups
 	constituencies, err := txQueries.GetFederalConstituencies(ctx, queries.GetFederalConstituenciesParams{
 		StateID:              0,
 		SenatorialDistrictID: 0,
@@ -746,7 +816,7 @@ func (s *ElectionsService) CreateFederalConstituencyElection(ctx context.Context
 		fcMap[c.ID] = c
 	}
 
-	// 3. Create election records for each federal constituency
+	// 5. Create election records for each federal constituency
 	for _, constituencyID := range federalConstituencyIDs {
 		cRow, found := fcMap[constituencyID]
 		constituencyName := fmt.Sprintf("Federal Constituency %d", constituencyID)
@@ -784,6 +854,7 @@ func (s *ElectionsService) CreateFederalConstituencyElection(ctx context.Context
 		createdElections = append(createdElections, election)
 	}
 
+	// 6. Seed expected result skeletons for each federal constituency
 	for _, fcid := range federalConstituencyIDs {
 		cID := fcid
 		if err := s.syncExpectedResultsForElection(ctx, txQueries, groupID, "federal_constituency", nil, nil, &cID, nil, nil, nil, false); err != nil {
@@ -791,12 +862,12 @@ func (s *ElectionsService) CreateFederalConstituencyElection(ctx context.Context
 		}
 	}
 
-	// Sync group rank and name
+	// 7. Synchronize group rank and name across constituent elections
 	if err := s.syncElectionGroupNameAndRank(ctx, txQueries, groupID, electionDate.Year()); err != nil {
 		return nil, err
 	}
 
-	// Fetch updated elections to get the synced group names
+	// 8. Fetch updated elections with synced group names
 	updatedElections := make([]queries.Election, 0, len(createdElections))
 	for _, ce := range createdElections {
 		ue, err := txQueries.GetElectionInstanceByID(ctx, ce.ID)
@@ -806,7 +877,7 @@ func (s *ElectionsService) CreateFederalConstituencyElection(ctx context.Context
 		updatedElections = append(updatedElections, ue)
 	}
 
-	// Commit transaction
+	// 9. Commit transaction
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
@@ -814,15 +885,18 @@ func (s *ElectionsService) CreateFederalConstituencyElection(ctx context.Context
 	return updatedElections, nil
 }
 
+// CreateStateConstituencyElection sets up elections across one or more State Assembly Constituencies.
 func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID *int32, stateConstituencyIDs []int32) ([]queries.Election, error) {
+	// Invalidate election list caches when this function exits
 	defer s.invalidateCache(ctx, nil)
-	// 1. Fetch office
+
+	// 1. Fetch and validate the target office definition
 	et, err := s.queries.GetOfficeByID(ctx, officeID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch office: %w", err)
 	}
 
-	// Begin transaction
+	// 2. Begin database transaction
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
@@ -834,7 +908,7 @@ func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, 
 	var groupID int32
 	var groupName string
 
-	// 2. Resolve/create election group
+	// 3. Resolve parent election group: either join an existing group or auto-create a new one
 	if electionGroupID != nil && *electionGroupID > 0 {
 		groupID = *electionGroupID
 		eg, err := txQueries.GetElectionGroupByID(ctx, groupID)
@@ -843,7 +917,7 @@ func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, 
 		}
 		groupName = eg.Name
 
-		// Increment elections_count
+		// Increment elections_count by the number of state constituencies
 		_, err = txQueries.UpdateElectionGroup(ctx, queries.UpdateElectionGroupParams{
 			ID:             eg.ID,
 			Name:           eg.Name,
@@ -856,7 +930,7 @@ func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, 
 			return nil, fmt.Errorf("failed to update election group count: %w", err)
 		}
 	} else {
-		// Auto-create election group
+		// Auto-create election group with collision-safe naming
 		baseGroupName := fmt.Sprintf("%d %s Election", electionDate.Year(), et.Election)
 		computedGroupName := baseGroupName
 		suffix := 1
@@ -868,8 +942,9 @@ func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, 
 			suffix++
 			computedGroupName = fmt.Sprintf("%s (%d)", baseGroupName, suffix)
 		}
-		// Create new group
-		metrics := getSafeNationalMetrics(ctx, txQueries)
+
+		// Retrieve nationwide boundary metrics snapshot (from cache/DB)
+		metrics := s.getSafeNationalMetrics(ctx)
 		newGroup, err := txQueries.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{
 			Name:                       computedGroupName,
 			Rank:                       et.Rank,
@@ -892,7 +967,7 @@ func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, 
 
 	createdElections := make([]queries.Election, 0, len(stateConstituencyIDs))
 
-	// Pre-fetch all state constituencies into map for O(1) lookups
+	// 4. Pre-fetch all state constituencies into map for O(1) in-memory lookups
 	constituencies, err := txQueries.GetStateConstituencies(ctx, queries.GetStateConstituenciesParams{
 		StateID:               0,
 		FederalConstituencyID: 0,
@@ -905,7 +980,7 @@ func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, 
 		scMap[c.ID] = c
 	}
 
-	// 3. Create election records for each state constituency
+	// 5. Create election records for each state constituency
 	for _, constituencyID := range stateConstituencyIDs {
 		cRow, found := scMap[constituencyID]
 		constituencyName := fmt.Sprintf("State Constituency %d", constituencyID)
@@ -953,6 +1028,7 @@ func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, 
 		createdElections = append(createdElections, election)
 	}
 
+	// 6. Seed expected result skeletons for each state constituency
 	for _, scid := range stateConstituencyIDs {
 		cID := scid
 		if err := s.syncExpectedResultsForElection(ctx, txQueries, groupID, "state_constituency", nil, nil, nil, &cID, nil, nil, false); err != nil {
@@ -960,12 +1036,12 @@ func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, 
 		}
 	}
 
-	// Sync group rank and name
+	// 7. Synchronize group rank and name across constituent elections
 	if err := s.syncElectionGroupNameAndRank(ctx, txQueries, groupID, electionDate.Year()); err != nil {
 		return nil, err
 	}
 
-	// Fetch updated elections to get the synced group names
+	// 8. Fetch updated elections with synced group names
 	updatedElections := make([]queries.Election, 0, len(createdElections))
 	for _, ce := range createdElections {
 		ue, err := txQueries.GetElectionInstanceByID(ctx, ce.ID)
@@ -975,7 +1051,7 @@ func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, 
 		updatedElections = append(updatedElections, ue)
 	}
 
-	// Commit transaction
+	// 9. Commit transaction
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
@@ -983,15 +1059,18 @@ func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, 
 	return updatedElections, nil
 }
 
+// CreateLgaElection sets up elections across one or more Local Government Areas (LGAs) (e.g., LGA Chairmanship).
 func (s *ElectionsService) CreateLgaElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID *int32, lgaIDs []int32) ([]queries.Election, error) {
+	// Invalidate election list caches when this function exits
 	defer s.invalidateCache(ctx, nil)
-	// 1. Fetch office
+
+	// 1. Fetch and validate the target office definition
 	et, err := s.queries.GetOfficeByID(ctx, officeID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch office: %w", err)
 	}
 
-	// Begin transaction
+	// 2. Begin database transaction
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
@@ -1003,7 +1082,7 @@ func (s *ElectionsService) CreateLgaElection(ctx context.Context, officeID int16
 	var groupID int32
 	var groupName string
 
-	// 2. Resolve/create election group
+	// 3. Resolve parent election group: either join an existing group or auto-create a new one
 	if electionGroupID != nil && *electionGroupID > 0 {
 		groupID = *electionGroupID
 		eg, err := txQueries.GetElectionGroupByID(ctx, groupID)
@@ -1012,7 +1091,7 @@ func (s *ElectionsService) CreateLgaElection(ctx context.Context, officeID int16
 		}
 		groupName = eg.Name
 
-		// Increment elections_count
+		// Increment elections_count by the number of LGAs contesting
 		_, err = txQueries.UpdateElectionGroup(ctx, queries.UpdateElectionGroupParams{
 			ID:             eg.ID,
 			Name:           eg.Name,
@@ -1025,7 +1104,7 @@ func (s *ElectionsService) CreateLgaElection(ctx context.Context, officeID int16
 			return nil, fmt.Errorf("failed to update election group count: %w", err)
 		}
 	} else {
-		// Auto-create election group
+		// Auto-create election group with collision-safe naming
 		baseGroupName := fmt.Sprintf("%d %s Election", electionDate.Year(), et.Election)
 		computedGroupName := baseGroupName
 		suffix := 1
@@ -1037,8 +1116,9 @@ func (s *ElectionsService) CreateLgaElection(ctx context.Context, officeID int16
 			suffix++
 			computedGroupName = fmt.Sprintf("%s (%d)", baseGroupName, suffix)
 		}
-		// Create new group
-		metrics := getSafeNationalMetrics(ctx, txQueries)
+
+		// Retrieve nationwide boundary metrics snapshot (from cache/DB)
+		metrics := s.getSafeNationalMetrics(ctx)
 		newGroup, err := txQueries.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{
 			Name:                       computedGroupName,
 			Rank:                       et.Rank,
@@ -1061,7 +1141,7 @@ func (s *ElectionsService) CreateLgaElection(ctx context.Context, officeID int16
 
 	createdElections := make([]queries.Election, 0, len(lgaIDs))
 
-	// Pre-fetch all LGAs into map for O(1) lookups
+	// 4. Pre-fetch all LGAs into map for O(1) in-memory lookups
 	lgas, err := txQueries.GetLGAs(ctx, 0)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch LGAs: %w", err)
@@ -1071,7 +1151,7 @@ func (s *ElectionsService) CreateLgaElection(ctx context.Context, officeID int16
 		lgaMap[l.ID] = l
 	}
 
-	// 3. Create election records for each LGA
+	// 5. Create election records for each LGA
 	for _, lgaID := range lgaIDs {
 		lgaRow, found := lgaMap[lgaID]
 		lgaName := fmt.Sprintf("LGA %d", lgaID)
@@ -1114,6 +1194,7 @@ func (s *ElectionsService) CreateLgaElection(ctx context.Context, officeID int16
 		createdElections = append(createdElections, election)
 	}
 
+	// 6. Seed expected result skeletons for each LGA
 	for _, lgaid := range lgaIDs {
 		lID := lgaid
 		if err := s.syncExpectedResultsForElection(ctx, txQueries, groupID, "lga", nil, nil, nil, nil, &lID, nil, false); err != nil {
@@ -1121,12 +1202,12 @@ func (s *ElectionsService) CreateLgaElection(ctx context.Context, officeID int16
 		}
 	}
 
-	// Sync group rank and name
+	// 7. Synchronize group rank and name across constituent elections
 	if err := s.syncElectionGroupNameAndRank(ctx, txQueries, groupID, electionDate.Year()); err != nil {
 		return nil, err
 	}
 
-	// Fetch updated elections to get the synced group names
+	// 8. Fetch updated elections with synced group names
 	updatedElections := make([]queries.Election, 0, len(createdElections))
 	for _, ce := range createdElections {
 		ue, err := txQueries.GetElectionInstanceByID(ctx, ce.ID)
@@ -1136,7 +1217,7 @@ func (s *ElectionsService) CreateLgaElection(ctx context.Context, officeID int16
 		updatedElections = append(updatedElections, ue)
 	}
 
-	// Commit transaction
+	// 9. Commit transaction
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
@@ -1144,15 +1225,18 @@ func (s *ElectionsService) CreateLgaElection(ctx context.Context, officeID int16
 	return updatedElections, nil
 }
 
+// CreateWardElection sets up elections across one or more Wards (e.g., Councillorship).
 func (s *ElectionsService) CreateWardElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID *int32, wardIDs []int32) ([]queries.Election, error) {
+	// Invalidate election list caches when this function exits
 	defer s.invalidateCache(ctx, nil)
-	// 1. Fetch office
+
+	// 1. Fetch and validate the target office definition
 	et, err := s.queries.GetOfficeByID(ctx, officeID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch office: %w", err)
 	}
 
-	// Begin transaction
+	// 2. Begin database transaction
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
@@ -1164,7 +1248,7 @@ func (s *ElectionsService) CreateWardElection(ctx context.Context, officeID int1
 	var groupID int32
 	var groupName string
 
-	// 2. Resolve/create election group
+	// 3. Resolve parent election group: either join an existing group or auto-create a new one
 	if electionGroupID != nil && *electionGroupID > 0 {
 		groupID = *electionGroupID
 		eg, err := txQueries.GetElectionGroupByID(ctx, groupID)
@@ -1173,7 +1257,7 @@ func (s *ElectionsService) CreateWardElection(ctx context.Context, officeID int1
 		}
 		groupName = eg.Name
 
-		// Increment elections_count
+		// Increment elections_count by the number of wards contesting
 		_, err = txQueries.UpdateElectionGroup(ctx, queries.UpdateElectionGroupParams{
 			ID:             eg.ID,
 			Name:           eg.Name,
@@ -1186,7 +1270,7 @@ func (s *ElectionsService) CreateWardElection(ctx context.Context, officeID int1
 			return nil, fmt.Errorf("failed to update election group count: %w", err)
 		}
 	} else {
-		// Auto-create election group
+		// Auto-create election group with collision-safe naming
 		baseGroupName := fmt.Sprintf("%d %s Election", electionDate.Year(), et.Election)
 		computedGroupName := baseGroupName
 		suffix := 1
@@ -1198,8 +1282,9 @@ func (s *ElectionsService) CreateWardElection(ctx context.Context, officeID int1
 			suffix++
 			computedGroupName = fmt.Sprintf("%s (%d)", baseGroupName, suffix)
 		}
-		// Create new group
-		metrics := getSafeNationalMetrics(ctx, txQueries)
+
+		// Retrieve nationwide boundary metrics snapshot (from cache/DB)
+		metrics := s.getSafeNationalMetrics(ctx)
 		newGroup, err := txQueries.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{
 			Name:                       computedGroupName,
 			Rank:                       et.Rank,
@@ -1222,7 +1307,7 @@ func (s *ElectionsService) CreateWardElection(ctx context.Context, officeID int1
 
 	createdElections := make([]queries.Election, 0, len(wardIDs))
 
-	// Pre-fetch all wards once to find names & parent IDs in memory
+	// 4. Pre-fetch all wards once to resolve parent IDs in memory
 	wards, err := txQueries.GetWards(ctx, queries.GetWardsParams{
 		LgaID:   0,
 		StateID: 0,
@@ -1235,7 +1320,7 @@ func (s *ElectionsService) CreateWardElection(ctx context.Context, officeID int1
 		wardMap[w.ID] = w
 	}
 
-	// Pre-fetch LGAs to resolve senatorial district & federal constituency for wards via LGA
+	// Pre-fetch LGAs to resolve senatorial district & federal constituency for wards via parent LGA
 	lgas, err := txQueries.GetLGAs(ctx, 0)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch LGAs for ward parent resolution: %w", err)
@@ -1245,7 +1330,7 @@ func (s *ElectionsService) CreateWardElection(ctx context.Context, officeID int1
 		lgaMap[l.ID] = l
 	}
 
-	// 3. Create election records for each Ward
+	// 5. Create election records for each Ward with full ancestral resolution
 	for _, wardID := range wardIDs {
 		wardRow, foundWard := wardMap[wardID]
 		wardName := fmt.Sprintf("Ward %d", wardID)
@@ -1301,6 +1386,7 @@ func (s *ElectionsService) CreateWardElection(ctx context.Context, officeID int1
 		createdElections = append(createdElections, election)
 	}
 
+	// 6. Seed expected result skeletons for each ward
 	for _, wardid := range wardIDs {
 		wID := wardid
 		if err := s.syncExpectedResultsForElection(ctx, txQueries, groupID, "ward", nil, nil, nil, nil, nil, &wID, false); err != nil {
@@ -1308,12 +1394,12 @@ func (s *ElectionsService) CreateWardElection(ctx context.Context, officeID int1
 		}
 	}
 
-	// Sync group rank and name
+	// 7. Synchronize group rank and name across constituent elections
 	if err := s.syncElectionGroupNameAndRank(ctx, txQueries, groupID, electionDate.Year()); err != nil {
 		return nil, err
 	}
 
-	// Fetch updated elections to get the synced group names
+	// 8. Fetch updated elections with synced group names
 	updatedElections := make([]queries.Election, 0, len(createdElections))
 	for _, ce := range createdElections {
 		ue, err := txQueries.GetElectionInstanceByID(ctx, ce.ID)
@@ -1323,7 +1409,7 @@ func (s *ElectionsService) CreateWardElection(ctx context.Context, officeID int1
 		updatedElections = append(updatedElections, ue)
 	}
 
-	// Commit transaction
+	// 9. Commit transaction
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
@@ -1331,8 +1417,12 @@ func (s *ElectionsService) CreateWardElection(ctx context.Context, officeID int1
 	return updatedElections, nil
 }
 
+// GetElectionByID fetches an election instance by its unique identifier.
+// It leverages Redis caching with a 24-hour TTL to minimize database queries for election metadata.
 func (s *ElectionsService) GetElectionByID(ctx context.Context, id int32) (queries.Election, error) {
-	cacheKey := fmt.Sprintf("election:%d", id)
+	cacheKey := fmt.Sprintf("%s%d", db.RedisElectionInfo, id)
+
+	// 1. Attempt to fetch pre-cached election from Redis
 	val, err := s.rdb.Get(ctx, cacheKey).Result()
 	if err == nil {
 		var el queries.Election
@@ -1341,11 +1431,13 @@ func (s *ElectionsService) GetElectionByID(ctx context.Context, id int32) (queri
 		}
 	}
 
+	// 2. Cache miss: fetch election instance directly from the database
 	el, err := s.queries.GetElectionInstanceByID(ctx, id)
 	if err != nil {
 		return el, err
 	}
 
+	// 3. Serialize and populate Redis cache with a 24-hour expiration
 	if elBytes, err := json.Marshal(el); err == nil {
 		s.rdb.Set(ctx, cacheKey, elBytes, 24*time.Hour)
 	}
@@ -1353,8 +1445,12 @@ func (s *ElectionsService) GetElectionByID(ctx context.Context, id int32) (queri
 	return el, nil
 }
 
+// ListElections returns all election instances in the system.
+// Results are cached in Redis under db.RedisElectionsAll with a 24-hour TTL.
 func (s *ElectionsService) ListElections(ctx context.Context) ([]queries.Election, error) {
-	cacheKey := "elections:all"
+	cacheKey := db.RedisElectionsAll
+
+	// 1. Attempt to fetch pre-cached election list from Redis
 	val, err := s.rdb.Get(ctx, cacheKey).Result()
 	if err == nil {
 		var els []queries.Election
@@ -1363,11 +1459,13 @@ func (s *ElectionsService) ListElections(ctx context.Context) ([]queries.Electio
 		}
 	}
 
+	// 2. Cache miss: retrieve all election instances from the database
 	els, err := s.queries.ListElectionInstances(ctx)
 	if err != nil {
 		return nil, err
 	}
 
+	// 3. Cache serialized election list in Redis for 24 hours
 	if elsBytes, err := json.Marshal(els); err == nil {
 		s.rdb.Set(ctx, cacheKey, elsBytes, 24*time.Hour)
 	}
@@ -1375,6 +1473,8 @@ func (s *ElectionsService) ListElections(ctx context.Context) ([]queries.Electio
 	return els, nil
 }
 
+// UpdateElection modifies an existing election instance, resolves any implied geographic ancestor IDs,
+// and invalidates the related Redis cache keys upon success.
 func (s *ElectionsService) UpdateElection(
 	ctx context.Context,
 	id int32,
@@ -1386,6 +1486,7 @@ func (s *ElectionsService) UpdateElection(
 	stateID *int16,
 	senatorialDistrictID, federalConstituencyID, stateConstituencyID, lgaID, wardID *int32,
 ) (queries.Election, error) {
+	// 1. Fetch office and election group definitions to validate existence and get metadata
 	et, err := s.queries.GetOfficeByID(ctx, officeID)
 	if err != nil {
 		return queries.Election{}, err
@@ -1395,10 +1496,12 @@ func (s *ElectionsService) UpdateElection(
 		return queries.Election{}, err
 	}
 
+	// 2. Resolve complete geographic hierarchy upwards from the most specific geographic scope
 	stateID2, senatorialDistrictID4, federalConstituencyID4, stateConstituencyID4, lgaID4, wardID4 := s.resolveGeographicHierarchy(
 		ctx, s.queries, stateID, senatorialDistrictID, federalConstituencyID, stateConstituencyID, lgaID, wardID,
 	)
 
+	// 3. Update election instance in database
 	el, err := s.queries.UpdateElectionInstance(ctx, queries.UpdateElectionInstanceParams{
 		ID:                    id,
 		Name:                  name,
@@ -1418,20 +1521,26 @@ func (s *ElectionsService) UpdateElection(
 		WardID:                wardID4,
 	})
 
+	// 4. Invalidate Redis caches on successful update
 	if err == nil {
 		s.invalidateCache(ctx, &id)
 	}
 	return el, err
 }
 
+// DeleteElection removes an election instance in a transaction, decrements expected polling units
+// across the election group hierarchy, and cleans up or resynchronizes the parent election group.
 func (s *ElectionsService) DeleteElection(ctx context.Context, id int32) error {
+	// Ensure Redis cache invalidation occurs when the operation completes
 	defer s.invalidateCache(ctx, &id)
 
+	// 1. Fetch the target election record to obtain scope, group ID, and geographic boundaries
 	el, err := s.queries.GetElectionInstanceByID(ctx, id)
 	if err != nil {
 		return err
 	}
 
+	// 2. Begin database transaction
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
@@ -1440,10 +1549,12 @@ func (s *ElectionsService) DeleteElection(ctx context.Context, id int32) error {
 
 	txQueries := s.queries.WithTx(tx)
 
+	// 3. Delete the election instance
 	if err := txQueries.DeleteElectionInstance(ctx, id); err != nil {
 		return fmt.Errorf("failed to delete election instance: %w", err)
 	}
 
+	// 4. Extract geographic IDs and decrement expected results for this election's scope
 	var stID *int16
 	if el.StateID.Valid {
 		stID = &el.StateID.Int16
@@ -1466,26 +1577,33 @@ func (s *ElectionsService) DeleteElection(ctx context.Context, id int32) error {
 	}
 	_ = s.syncExpectedResultsForElection(ctx, txQueries, el.ElectionGroupID, el.Scope, stID, sdID, fcID, scID, lgID, wdID, true)
 
-	// Check remaining elections in the parent group
+	// 5. Inspect remaining elections in the parent group: delete group if empty, else resynchronize
 	remainingElections, err := txQueries.ListElectionsDetailedByGroupID(ctx, el.ElectionGroupID)
 	if err == nil {
 		if len(remainingElections) == 0 {
-			// If no elections remain in this group, clean up the empty group
+			// If no elections remain in this group, clean up the empty group record
 			_ = txQueries.DeleteElectionGroup(ctx, el.ElectionGroupID)
 		} else {
-			// Otherwise re-sync the group name, rank, and count
+			// Otherwise resynchronize the group name, rank, and election count based on remaining elections
 			_ = s.syncElectionGroupNameAndRank(ctx, txQueries, el.ElectionGroupID, el.ElectionDate.Time.Year())
 		}
 	}
 
+	// 6. Commit transaction
 	return tx.Commit(ctx)
 }
 
+// GetElectionCandidates retrieves all candidate records associated with an election,
+// including candidate user details, party affiliation, and ballot data.
 func (s *ElectionsService) GetElectionCandidates(ctx context.Context, electionID int32) ([]queries.ListElectionCandidatesDetailedByElectionIDRow, error) {
 	return s.queries.ListElectionCandidatesDetailedByElectionID(ctx, electionID)
 }
 
+// SyncElectionCandidates completely synchronizes the roster of candidates for an election within a transaction.
+// It removes all prior candidates, inserts the new candidate set, updates each candidate's party in users table,
+// and updates the election's candidates_count.
 func (s *ElectionsService) SyncElectionCandidates(ctx context.Context, electionID int32, candidates []CandidateInput) error {
+	// 1. Begin database transaction
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return err
@@ -1494,13 +1612,13 @@ func (s *ElectionsService) SyncElectionCandidates(ctx context.Context, electionI
 
 	txQueries := s.queries.WithTx(tx)
 
-	// Delete existing candidates
+	// 2. Remove all existing candidates associated with this election
 	err = txQueries.DeleteElectionCandidatesForElection(ctx, electionID)
 	if err != nil {
 		return err
 	}
 
-	// 4. Link candidates
+	// 3. Link new candidates to the election and synchronize their user party affiliation
 	for _, cand := range candidates {
 		_, err = txQueries.CreateElectionCandidate(ctx, queries.CreateElectionCandidateParams{
 			ElectionID:     electionID,
@@ -1521,13 +1639,13 @@ func (s *ElectionsService) SyncElectionCandidates(ctx context.Context, electionI
 		}
 	}
 
-	// Get election instance
+	// 4. Fetch the election instance
 	el, err := txQueries.GetElectionInstanceByID(ctx, electionID)
 	if err != nil {
 		return err
 	}
 
-	// Update candidate count
+	// 5. Update candidates count on the election instance
 	_, err = txQueries.UpdateElectionInstance(ctx, queries.UpdateElectionInstanceParams{
 		ID:                    el.ID,
 		Name:                  el.Name,
@@ -1550,11 +1668,15 @@ func (s *ElectionsService) SyncElectionCandidates(ctx context.Context, electionI
 		return err
 	}
 
+	// 6. Commit transaction
 	return tx.Commit(ctx)
 }
 
+// syncElectionGroupNameAndRank recalculates and updates an election group's title and rank based on
+// its constituent elections. It picks the highest-ranked office (lowest numerical rank), resolves naming
+// collisions, updates the group record, and denormalizes the updated group name across all member elections.
 func (s *ElectionsService) syncElectionGroupNameAndRank(ctx context.Context, txQueries *queries.Queries, groupID int32, year int) error {
-	// 1. Fetch all elections detailed by group ID
+	// 1. Fetch all constituent elections in the group
 	elections, err := txQueries.ListElectionsDetailedByGroupID(ctx, groupID)
 	if err != nil {
 		return fmt.Errorf("failed to list elections for syncing group name: %w", err)
@@ -1564,7 +1686,7 @@ func (s *ElectionsService) syncElectionGroupNameAndRank(ctx context.Context, txQ
 		return nil
 	}
 
-	// 2. Find highest ranked election (lowest rank number)
+	// 2. Identify the highest-ranked election (lowest rank numerical value)
 	highestRanked := elections[0]
 	for _, e := range elections {
 		if e.Rank < highestRanked.Rank {
@@ -1572,16 +1694,17 @@ func (s *ElectionsService) syncElectionGroupNameAndRank(ctx context.Context, txQ
 		}
 	}
 
-	// 3. Compute group name
+	// 3. Compute group name format:
+	// - Single election: Year + Election Name (e.g., "2027 Lagos State Governorship Election")
+	// - Multi-election bundle: Year + Highest Ranked Office Election + " Election" (e.g., "2027 Presidential Election")
 	var baseGroupName string
 	if len(elections) == 1 {
-		// Single election: Year + Election Name (which contains the entity name in parentheses if sub-national)
 		baseGroupName = fmt.Sprintf("%d %s", year, highestRanked.Name)
 	} else {
-		// 2 or more elections: Year + Highest Ranked Office Election + " Election"
 		baseGroupName = fmt.Sprintf("%d %s Election", year, highestRanked.OfficeElection)
 	}
 
+	// 4. Resolve naming collisions by appending an incremental suffix if needed
 	newGroupName := baseGroupName
 	suffix := 1
 	for {
@@ -1596,7 +1719,7 @@ func (s *ElectionsService) syncElectionGroupNameAndRank(ctx context.Context, txQ
 		newGroupName = fmt.Sprintf("%s (%d)", baseGroupName, suffix)
 	}
 
-	// 4. Update the election group
+	// 5. Update the election group record with new title, rank, and election count
 	eg, err := txQueries.GetElectionGroupByID(ctx, groupID)
 	if err != nil {
 		return fmt.Errorf("failed to fetch election group: %w", err)
@@ -1614,7 +1737,7 @@ func (s *ElectionsService) syncElectionGroupNameAndRank(ctx context.Context, txQ
 		return fmt.Errorf("failed to update election group: %w", err)
 	}
 
-	// 5. Update the group name stored on each election in the group to maintain denormalized consistency!
+	// 6. Denormalize the updated group name onto each child election instance for consistent queries
 	for _, e := range elections {
 		if e.ElectionGroupName != newGroupName {
 			_, err = txQueries.UpdateElectionInstance(ctx, queries.UpdateElectionInstanceParams{
@@ -1644,7 +1767,11 @@ func (s *ElectionsService) syncElectionGroupNameAndRank(ctx context.Context, txQ
 	return nil
 }
 
+// FieldPartyCandidate assigns or replaces a political party's candidate for an election within a transaction.
+// It removes any existing candidate for the party, inserts the new nominee if candidateID > 0,
+// and updates the election's candidates_count.
 func (s *ElectionsService) FieldPartyCandidate(ctx context.Context, electionID int32, partyID int16, candidateID int64) error {
+	// 1. Begin database transaction
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return err
@@ -1653,7 +1780,7 @@ func (s *ElectionsService) FieldPartyCandidate(ctx context.Context, electionID i
 
 	txQueries := s.queries.WithTx(tx)
 
-	// 1. Delete any existing candidate of this party on the election
+	// 2. Delete any existing candidate of this party on the election
 	err = txQueries.DeleteElectionCandidateForParty(ctx, queries.DeleteElectionCandidateForPartyParams{
 		ElectionID: electionID,
 		PartyID:    pgtype.Int2{Int16: int16(partyID), Valid: true},
@@ -1662,7 +1789,7 @@ func (s *ElectionsService) FieldPartyCandidate(ctx context.Context, electionID i
 		return err
 	}
 
-	// 2. If a new candidateID is provided (candidateID > 0), insert it
+	// 3. If a valid candidateID is provided (> 0), insert the candidate record
 	if candidateID > 0 {
 		party, err := txQueries.GetPartyByID(ctx, partyID)
 		if err != nil {
@@ -1680,13 +1807,13 @@ func (s *ElectionsService) FieldPartyCandidate(ctx context.Context, electionID i
 		}
 	}
 
-	// 3. Count candidates remaining for the election
+	// 4. Count remaining active candidates for the election
 	count, err := txQueries.GetElectionCandidatesCount(ctx, electionID)
 	if err != nil {
 		return err
 	}
 
-	// 4. Update the candidates_count in elections table
+	// 5. Update candidates_count in elections table
 	err = txQueries.UpdateElectionCandidatesCount(ctx, queries.UpdateElectionCandidatesCountParams{
 		ID:              electionID,
 		CandidatesCount: int32(count),
@@ -1695,6 +1822,7 @@ func (s *ElectionsService) FieldPartyCandidate(ctx context.Context, electionID i
 		return err
 	}
 
+	// 6. Commit transaction
 	return tx.Commit(ctx)
 }
 
@@ -1709,7 +1837,11 @@ type ElectionWithCandidates struct {
 	Candidates []queries.ListElectionCandidatesDetailedByElectionIDRow `json:"candidates"`
 }
 
+// GetEligibleElectionsForPollingUnit finds all elections within an election group that are valid
+// for a specific polling unit (matching nationwide, state, district, constituency, LGA, or ward scopes)
+// and hydrates each election with its list of registered candidates.
 func (s *ElectionsService) GetEligibleElectionsForPollingUnit(ctx context.Context, electionGroupID int32, pollingUnitID int32) ([]ElectionWithCandidates, error) {
+	// 1. Fetch elections matching the polling unit's geographic hierarchy
 	elections, err := s.queries.GetEligibleElectionsForPollingUnit(ctx, queries.GetEligibleElectionsForPollingUnitParams{
 		ElectionGroupID: electionGroupID,
 		ID:              int32(pollingUnitID),
@@ -1718,6 +1850,7 @@ func (s *ElectionsService) GetEligibleElectionsForPollingUnit(ctx context.Contex
 		return nil, err
 	}
 
+	// 2. Hydrate each election with its registered candidates
 	result := make([]ElectionWithCandidates, 0, len(elections))
 	for _, election := range elections {
 		candidates, err := s.queries.ListElectionCandidatesDetailedByElectionID(ctx, election.ID)
@@ -1733,6 +1866,16 @@ func (s *ElectionsService) GetEligibleElectionsForPollingUnit(ctx context.Contex
 	return result, nil
 }
 
+// SubmitElectionVotes records user votes across one or more elections in an election group at a specific polling unit.
+// Within a database transaction, it:
+//  1. Validates that voting has not ended (not past election day).
+//  2. Resolves geographic hierarchy for the polling unit (State, LGA, Senatorial District, Federal Constituency).
+//  3. Clears prior votes and did-not-vote reasons for this user and group (allowing edits / ballot updates).
+//  4. Inserts vote records for each election in the ballot.
+//  5. Updates user's PVC (Voter's Card) image if provided.
+//  6. Enqueues background debounced tasks for real-time live results aggregation.
+//  7. Evaluates referral bonuses: if the voter was referred by an assigned agent within the last 6 months,
+//     increments the agent's live-voter referral tally and triggers async commission processing.
 func (s *ElectionsService) SubmitElectionVotes(
 	ctx context.Context,
 	userID int64,
@@ -1741,6 +1884,7 @@ func (s *ElectionsService) SubmitElectionVotes(
 	votes []VoteInput,
 	votersCardImage string,
 ) error {
+	// 1. Begin database transaction
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
@@ -1749,32 +1893,30 @@ func (s *ElectionsService) SubmitElectionVotes(
 
 	qtx := s.queries.WithTx(tx)
 
-	// Fetch election group to validate date
+	// 2. Fetch election group and validate election date (voting closes after election day)
 	eg, err := qtx.GetElectionGroupByID(ctx, electionGroupID)
 	if err != nil {
 		return fmt.Errorf("invalid election group: %w", err)
 	}
 
-	// Validate date: cannot submit votes after election day
 	now := time.Now().Truncate(24 * time.Hour)
 	egDate := eg.ElectionDate.Time.Truncate(24 * time.Hour)
 	if now.After(egDate) {
 		return fmt.Errorf("voting for this election has ended")
 	}
 
-	// Fetch polling unit to get state, lga, ward
+	// 3. Fetch polling unit and parent LGA to resolve geographic hierarchy (State, LGA, Senatorial District, Federal Constituency)
 	pu, err := qtx.GetPollingUnitByID(ctx, int32(pollingUnitID))
 	if err != nil {
 		return fmt.Errorf("invalid polling unit: %w", err)
 	}
 
-	// Fetch LGA to get senatorial_district and federal_constituency
 	lga, err := qtx.GetLGAByID(ctx, pu.LgaID)
 	if err != nil {
 		return fmt.Errorf("invalid LGA: %w", err)
 	}
 
-	// Delete existing votes and reasons for this user and election group to allow scope changes and editing
+	// 4. Delete existing votes and non-voting reasons for this user and group to allow edits and ballot revisions
 	err = qtx.DeleteUserVotesByElectionGroup(ctx, queries.DeleteUserVotesByElectionGroupParams{
 		UserID:          userID,
 		ElectionGroupID: electionGroupID,
@@ -1790,7 +1932,7 @@ func (s *ElectionsService) SubmitElectionVotes(
 		return fmt.Errorf("failed to delete existing non-voting reason: %w", err)
 	}
 
-	// Insert votes
+	// 5. Insert votes for each election in the ballot
 	for _, v := range votes {
 		_, err = qtx.CreateElectionVote(ctx, queries.CreateElectionVoteParams{
 			StateID:               pgtype.Int2{Int16: int16(pu.StateID), Valid: true},
@@ -1809,7 +1951,7 @@ func (s *ElectionsService) SubmitElectionVotes(
 		}
 	}
 
-	// Update user's PVC details
+	// 6. Update user's PVC details with uploaded verification image
 	err = qtx.UpdateUserVotersCard(ctx, queries.UpdateUserVotersCardParams{
 		ID:              userID,
 		VotersCardImage: pgtype.Text{String: votersCardImage, Valid: votersCardImage != ""},
@@ -1818,13 +1960,13 @@ func (s *ElectionsService) SubmitElectionVotes(
 		return fmt.Errorf("failed to update PVC details: %w", err)
 	}
 
-	// Fetch ward for state_constituency_id
+	// 7. Fetch ward to resolve state_constituency_id for live vote aggregation
 	ward, err := qtx.GetWardByID(ctx, pu.WardID)
 	if err != nil {
 		return fmt.Errorf("invalid ward: %w", err)
 	}
 
-	// Enqueue background debounced task to refresh live vote counts
+	// 8. Enqueue background debounced task to refresh live vote counts across all administrative levels
 	for _, v := range votes {
 		err = s.taskDistributor.DistributeTaskAggregateLiveVotes(ctx, &worker.AggregateLiveVotesPayload{
 			Params: queries.RefreshPollingUnitLiveResultsParams{
@@ -1844,11 +1986,12 @@ func (s *ElectionsService) SubmitElectionVotes(
 		}
 	}
 
-	// Check for live voter referral bonus
+	// 9. Check for live voter referral bonus
 	// Conditions:
-	// 1. Voter was referred by an agent (referral record exists)
-	// 2. Voter created account within the last 6 months
-	// 3. Referrer has a polling_unit_assignments record for the exact same election_group_id
+	//  1. Voter was referred by an agent (referral record exists)
+	//  2. Voter registered their account within the last 6 months
+	//  3. Referrer has an active assignment for the exact same election group
+	//  4. Referrer has not reached the target_live_voters_referred_count threshold (default 20)
 	voterUser, uErr := qtx.GetUserByID(ctx, userID)
 	referrerID, refErr := qtx.GetUserReferredByID(ctx, userID)
 	if uErr == nil && refErr == nil && referrerID > 0 {
@@ -1876,7 +2019,7 @@ func (s *ElectionsService) SubmitElectionVotes(
 					targetLiveVoters = 20
 				}
 
-				// Only increment and credit if target hasn't been reached yet
+				// Only increment and credit if target threshold has not been reached yet
 				if float64(refAsgn.LiveVotersReferredCount) < targetLiveVoters {
 					updatedRefAsgn, incErr := qtx.IncrementAssignmentLiveVotersReferredCount(ctx, refAsgn.ID)
 					if incErr == nil && s.earningsSvc != nil {
@@ -1890,6 +2033,7 @@ func (s *ElectionsService) SubmitElectionVotes(
 		}
 	}
 
+	// 10. Commit transaction
 	return tx.Commit(ctx)
 }
 
@@ -1900,8 +2044,10 @@ type UserVoteStatus struct {
 	DidNotVoteExplanation *string                                  `json:"did_not_vote_explanation,omitempty"`
 }
 
+// GetUserElectionGroupVoteStatus checks whether a user has cast votes, submitted a non-voting reason,
+// or taken no action for a specific election group.
 func (s *ElectionsService) GetUserElectionGroupVoteStatus(ctx context.Context, userID int64, electionGroupID int32) (UserVoteStatus, error) {
-	// Check if user voted
+	// 1. Check if the user has cast votes for this election group
 	votes, err := s.queries.GetUserVotesByElectionGroup(ctx, queries.GetUserVotesByElectionGroupParams{
 		UserID:          userID,
 		ElectionGroupID: electionGroupID,
@@ -1917,12 +2063,12 @@ func (s *ElectionsService) GetUserElectionGroupVoteStatus(ctx context.Context, u
 		}, nil
 	}
 
-	// Check if user provided a did not vote reason
+	// 2. If no votes, check if the user provided an explanation/reason for not voting
 	reason, err := s.queries.GetUserDidNotVoteReason(ctx, queries.GetUserDidNotVoteReasonParams{
 		UserID:          userID,
 		ElectionGroupID: electionGroupID,
 	})
-	
+
 	if err == nil {
 		var explanation string
 		if reason.Explanation.Valid {
@@ -1932,7 +2078,7 @@ func (s *ElectionsService) GetUserElectionGroupVoteStatus(ctx context.Context, u
 		if reason.PredefinedReason.Valid {
 			predefinedReason = reason.PredefinedReason.String
 		}
-		
+
 		return UserVoteStatus{
 			Status:                "did_not_vote",
 			DidNotVoteReason:      &predefinedReason,
@@ -1940,17 +2086,22 @@ func (s *ElectionsService) GetUserElectionGroupVoteStatus(ctx context.Context, u
 		}, nil
 	}
 
+	// 3. Neither votes nor non-voting reasons found
 	return UserVoteStatus{
 		Status: "none",
 	}, nil
 }
 
+// resolveGeographicHierarchy takes optional geographic identifiers and resolves missing ancestor IDs
+// bottom-up using the geographic relationship tree (Ward -> State Constituency/LGA -> Senatorial District/Federal Constituency -> State).
+// Returns pgtype-compatible values suitable for database insertion.
 func (s *ElectionsService) resolveGeographicHierarchy(
 	ctx context.Context,
 	txQueries *queries.Queries,
 	stateID *int16,
 	senatorialDistrictID, federalConstituencyID, stateConstituencyID, lgaID, wardID *int32,
 ) (pgtype.Int2, pgtype.Int4, pgtype.Int4, pgtype.Int4, pgtype.Int4, pgtype.Int4) {
+	// Unpack optional pointer values into local variables
 	var sID int16
 	var sdID, fcID, scID, lID, wID int32
 
@@ -1973,7 +2124,7 @@ func (s *ElectionsService) resolveGeographicHierarchy(
 		wID = *wardID
 	}
 
-	// 1. If Ward ID is supplied, fill missing parent IDs from Ward
+	// 1. If Ward ID is supplied, fill missing parent IDs (State, LGA, State Constituency) from Ward
 	if wID > 0 {
 		wards, err := txQueries.GetWards(ctx, queries.GetWardsParams{LgaID: 0, StateID: 0})
 		if err == nil {
@@ -1994,7 +2145,7 @@ func (s *ElectionsService) resolveGeographicHierarchy(
 		}
 	}
 
-	// 2. If State Constituency ID is supplied, fill missing parent IDs
+	// 2. If State Constituency ID is supplied, fill missing parent IDs (State, Senatorial District, Federal Constituency, LGA)
 	if scID > 0 {
 		constituencies, err := txQueries.GetStateConstituencies(ctx, queries.GetStateConstituenciesParams{StateID: 0, FederalConstituencyID: 0})
 		if err == nil {
@@ -2018,7 +2169,7 @@ func (s *ElectionsService) resolveGeographicHierarchy(
 		}
 	}
 
-	// 3. If LGA ID is supplied, fill missing parent IDs
+	// 3. If LGA ID is supplied, fill missing parent IDs (State, Senatorial District, Federal Constituency)
 	if lID > 0 {
 		lgas, err := txQueries.GetLGAs(ctx, 0)
 		if err == nil {
@@ -2039,7 +2190,7 @@ func (s *ElectionsService) resolveGeographicHierarchy(
 		}
 	}
 
-	// 4. If Federal Constituency ID is supplied, fill missing parent IDs
+	// 4. If Federal Constituency ID is supplied, fill missing parent IDs (State, Senatorial District)
 	if fcID > 0 {
 		constituencies, err := txQueries.GetFederalConstituencies(ctx, queries.GetFederalConstituenciesParams{StateID: 0, SenatorialDistrictID: 0})
 		if err == nil {
@@ -2057,7 +2208,7 @@ func (s *ElectionsService) resolveGeographicHierarchy(
 		}
 	}
 
-	// 5. If Senatorial District ID is supplied, fill missing parent IDs
+	// 5. If Senatorial District ID is supplied, fill missing parent State ID
 	if sdID > 0 {
 		districts, err := txQueries.GetSenatorialDistricts(ctx, 0)
 		if err == nil {
@@ -2072,6 +2223,7 @@ func (s *ElectionsService) resolveGeographicHierarchy(
 		}
 	}
 
+	// Format resolved IDs into pgtype nullable types
 	return pgtype.Int2{Int16: sID, Valid: sID > 0},
 		pgtype.Int4{Int32: sdID, Valid: sdID > 0},
 		pgtype.Int4{Int32: fcID, Valid: fcID > 0},
@@ -2080,21 +2232,16 @@ func (s *ElectionsService) resolveGeographicHierarchy(
 		pgtype.Int4{Int32: wID, Valid: wID > 0}
 }
 
-func getSafeNationalMetrics(ctx context.Context, q *queries.Queries) queries.NationalMetric {
-	metrics, err := q.GetNationalMetrics(ctx)
-	if err == nil {
-		return metrics
-	}
-	return queries.NationalMetric{
-		SenatorialDistrictsCount:   109,
-		FederalConstituenciesCount: 360,
-		LgasCount:                  774,
-		StateConstituenciesCount:   993,
-		WardsCount:                 8809,
-		PollingUnitsCount:          176846,
-	}
-}
-
+// syncExpectedResultsForElection maintains the expected results skeleton rows and counts
+// for an election group based on an election's geographic scope.
+//
+// When isDelete is true:
+//   - Decrements expected polling unit counts across the election group hierarchy for the given scope.
+//
+// When isDelete is false:
+//   - Upserts polling unit skeleton rows for the target geographic scope.
+//   - Ensures all parent administrative skeletons (Ward, LGA, Constituency, District, State) exist.
+//   - Triggers rollup calculation to update expected aggregates at all hierarchy levels.
 func (s *ElectionsService) syncExpectedResultsForElection(
 	ctx context.Context,
 	txQueries *queries.Queries,
@@ -2105,6 +2252,7 @@ func (s *ElectionsService) syncExpectedResultsForElection(
 	isDelete bool,
 ) error {
 	if isDelete {
+		// Handle election deletion: decrement expected results according to geographic scope
 		switch scope {
 		case "nationwide":
 			if err := txQueries.DecrementElectionGroupPollingUnitsForNationwideElection(ctx, electionGroupID); err != nil {
@@ -2166,6 +2314,7 @@ func (s *ElectionsService) syncExpectedResultsForElection(
 			}
 		}
 	} else {
+		// Handle election creation: upsert expected results according to geographic scope
 		switch scope {
 		case "nationwide":
 			if err := txQueries.UpsertElectionGroupPollingUnitsForNationwideElection(ctx, electionGroupID); err != nil {
@@ -2226,11 +2375,14 @@ func (s *ElectionsService) syncExpectedResultsForElection(
 				}
 			}
 		}
+
+		// Ensure parent skeleton records exist for newly created polling units
 		if err := txQueries.EnsureElectionGroupParentSkeletons(ctx, electionGroupID); err != nil {
 			return fmt.Errorf("failed ensuring parent skeletons: %w", err)
 		}
 	}
 
+	// Roll up expected results upwards across all hierarchy levels of the election group
 	return txQueries.RollupElectionGroupExpectedResults(ctx, electionGroupID)
 }
 

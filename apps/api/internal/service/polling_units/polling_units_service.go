@@ -167,4 +167,5 @@ func (s *PollingUnitsService) GetPollingUnitsWithCapacity(ctx context.Context, w
 func (s *PollingUnitsService) invalidateCache(ctx context.Context, wardID int32) {
 	redisKey := fmt.Sprintf("%s%d", db.RedisPollingUnitsByWard, wardID)
 	s.rdb.Del(ctx, redisKey)
+	s.rdb.Del(ctx, db.RedisNationalMetrics)
 }

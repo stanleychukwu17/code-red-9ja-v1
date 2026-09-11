@@ -312,6 +312,10 @@ func (q *Queries) AdjustElectionGroupLGALGASupervisorCounts(ctx context.Context,
 
 const adjustElectionGroupLGAWardSupervisorCounts = `-- name: AdjustElectionGroupLGAWardSupervisorCounts :exec
 
+
+
+
+
 UPDATE election_group_lgas
 SET
   ward_supervisors_count        = GREATEST(0, ward_supervisors_count + $1::int),
@@ -661,6 +665,10 @@ func (q *Queries) AdjustElectionGroupNationalWardSupervisorCounts(ctx context.Co
 }
 
 const adjustElectionGroupPollingUnitApplicationCounts = `-- name: AdjustElectionGroupPollingUnitApplicationCounts :exec
+
+
+
+
 
 INSERT INTO election_group_polling_units (
   election_group_id, polling_unit_id, state_id, lga_id, ward_id,
@@ -1530,6 +1538,10 @@ func (q *Queries) GetElectionGroupLGAStats(ctx context.Context, arg GetElectionG
 
 const getElectionGroupPollingUnitGeoIDs = `-- name: GetElectionGroupPollingUnitGeoIDs :one
 
+
+
+
+
 SELECT
   ward_id,
   lga_id,
@@ -1578,6 +1590,10 @@ func (q *Queries) GetElectionGroupPollingUnitGeoIDs(ctx context.Context, arg Get
 }
 
 const getElectionGroupPollingUnitStats = `-- name: GetElectionGroupPollingUnitStats :one
+
+
+
+
 
 SELECT id, election_group_id, polling_unit_id, state_id, lga_id, ward_id, state_constituency_id, federal_constituency_id, senatorial_district_id, unique_final_results_expected, applications_count, accepted_applications_count, rejected_applications_count, pu_agents_count, pu_agents_in_attendance_count, pu_reports_count, pu_updates_count, pu_average_arrival_time, pu_average_update_time_interval_in_seconds, pu_average_election_started_at, pu_average_election_ended_at, pu_election_practice_test_readiness_percentage, pu_final_results_uploaded_count, unique_pu_final_results_uploaded_count, pu_live_voters_referred_by_agent_count, parties, created_at, updated_at FROM election_group_polling_units
 WHERE election_group_id = $1 AND polling_unit_id = $2
@@ -1893,6 +1909,10 @@ func (q *Queries) GetLGASupervisorCount(ctx context.Context, arg GetLGASuperviso
 }
 
 const getPUPartyAgentsCount = `-- name: GetPUPartyAgentsCount :one
+
+
+
+
 
 SELECT COALESCE(
   (
@@ -2662,7 +2682,7 @@ party_json AS (
       'pu_updates_count',                updates_count,
       'pu_reports_count',                reports_count,
       'pu_agents_count',                 pu_agents_count,
-        'unique_pu_agents_count', unique_pu_agents_count,
+      'unique_pu_agents_count', unique_pu_agents_count,
       'pu_final_results_uploaded_count', pu_final_results_uploaded_count,
       'unique_pu_final_results_uploaded_count', unique_pu_final_results_uploaded_count,
       'pu_average_update_time_interval_in_seconds', pu_average_update_time_interval_in_seconds,
@@ -2711,7 +2731,7 @@ LEFT JOIN party_json pj USING (election_group_id, federal_constituency_id)
 ON CONFLICT (election_group_id, federal_constituency_id) DO UPDATE SET
   unique_final_results_expected = EXCLUDED.unique_final_results_expected,
   pu_agents_count = EXCLUDED.pu_agents_count,
-    unique_pu_agents_count = EXCLUDED.unique_pu_agents_count,
+  unique_pu_agents_count = EXCLUDED.unique_pu_agents_count,
   pu_agents_in_attendance_count = EXCLUDED.pu_agents_in_attendance_count,
   pu_reports_count = EXCLUDED.pu_reports_count,
   pu_updates_count = EXCLUDED.pu_updates_count,
@@ -2727,7 +2747,8 @@ ON CONFLICT (election_group_id, federal_constituency_id) DO UPDATE SET
   total_pu_where_election_has_started = EXCLUDED.total_pu_where_election_has_started,
   total_pu_where_election_has_ended = EXCLUDED.total_pu_where_election_has_ended,
   total_pu_unique_final_results_uploaded = EXCLUDED.total_pu_unique_final_results_uploaded,
-  total_pu_where_agents_referred_live_voters = EXCLUDED.total_pu_where_agents_referred_live_voters, state_id = EXCLUDED.state_id,
+  total_pu_where_agents_referred_live_voters = EXCLUDED.total_pu_where_agents_referred_live_voters,
+  state_id = EXCLUDED.state_id,
   parties = EXCLUDED.parties,
   updated_at = NOW()
 `
@@ -3469,7 +3490,7 @@ party_json AS (
       'pu_updates_count',                updates_count,
       'pu_reports_count',                reports_count,
       'pu_agents_count',                 pu_agents_count,
-        'unique_pu_agents_count', unique_pu_agents_count,
+      'unique_pu_agents_count', unique_pu_agents_count,
       'pu_final_results_uploaded_count', pu_final_results_uploaded_count,
       'unique_pu_final_results_uploaded_count', unique_pu_final_results_uploaded_count,
       'pu_average_update_time_interval_in_seconds', pu_average_update_time_interval_in_seconds,
@@ -3518,7 +3539,7 @@ LEFT JOIN party_json pj USING (election_group_id, senatorial_district_id)
 ON CONFLICT (election_group_id, senatorial_district_id) DO UPDATE SET
   unique_final_results_expected = EXCLUDED.unique_final_results_expected,
   pu_agents_count = EXCLUDED.pu_agents_count,
-    unique_pu_agents_count = EXCLUDED.unique_pu_agents_count,
+  unique_pu_agents_count = EXCLUDED.unique_pu_agents_count,
   pu_agents_in_attendance_count = EXCLUDED.pu_agents_in_attendance_count,
   pu_reports_count = EXCLUDED.pu_reports_count,
   pu_updates_count = EXCLUDED.pu_updates_count,
@@ -3534,7 +3555,8 @@ ON CONFLICT (election_group_id, senatorial_district_id) DO UPDATE SET
   total_pu_where_election_has_started = EXCLUDED.total_pu_where_election_has_started,
   total_pu_where_election_has_ended = EXCLUDED.total_pu_where_election_has_ended,
   total_pu_unique_final_results_uploaded = EXCLUDED.total_pu_unique_final_results_uploaded,
-  total_pu_where_agents_referred_live_voters = EXCLUDED.total_pu_where_agents_referred_live_voters, state_id = EXCLUDED.state_id,
+  total_pu_where_agents_referred_live_voters = EXCLUDED.total_pu_where_agents_referred_live_voters,
+  state_id = EXCLUDED.state_id,
   parties = EXCLUDED.parties,
   updated_at = NOW()
 `
@@ -3638,7 +3660,7 @@ party_json AS (
       'pu_updates_count',                updates_count,
       'pu_reports_count',                reports_count,
       'pu_agents_count',                 pu_agents_count,
-        'unique_pu_agents_count', unique_pu_agents_count,
+      'unique_pu_agents_count', unique_pu_agents_count,
       'pu_final_results_uploaded_count', pu_final_results_uploaded_count,
       'unique_pu_final_results_uploaded_count', unique_pu_final_results_uploaded_count,
       'pu_average_update_time_interval_in_seconds', pu_average_update_time_interval_in_seconds,
@@ -3687,7 +3709,7 @@ LEFT JOIN party_json pj USING (election_group_id, state_constituency_id)
 ON CONFLICT (election_group_id, state_constituency_id) DO UPDATE SET
   unique_final_results_expected = EXCLUDED.unique_final_results_expected,
   pu_agents_count = EXCLUDED.pu_agents_count,
-    unique_pu_agents_count = EXCLUDED.unique_pu_agents_count,
+  unique_pu_agents_count = EXCLUDED.unique_pu_agents_count,
   pu_agents_in_attendance_count = EXCLUDED.pu_agents_in_attendance_count,
   pu_reports_count = EXCLUDED.pu_reports_count,
   pu_updates_count = EXCLUDED.pu_updates_count,
@@ -3703,7 +3725,8 @@ ON CONFLICT (election_group_id, state_constituency_id) DO UPDATE SET
   total_pu_where_election_has_started = EXCLUDED.total_pu_where_election_has_started,
   total_pu_where_election_has_ended = EXCLUDED.total_pu_where_election_has_ended,
   total_pu_unique_final_results_uploaded = EXCLUDED.total_pu_unique_final_results_uploaded,
-  total_pu_where_agents_referred_live_voters = EXCLUDED.total_pu_where_agents_referred_live_voters, state_id = EXCLUDED.state_id,
+  total_pu_where_agents_referred_live_voters = EXCLUDED.total_pu_where_agents_referred_live_voters,
+  state_id = EXCLUDED.state_id,
   parties = EXCLUDED.parties,
   updated_at = NOW()
 `
@@ -4017,7 +4040,7 @@ party_json AS (
       'pu_updates_count',                updates_count,
       'pu_reports_count',                reports_count,
       'pu_agents_count',                 pu_agents_count,
-        'unique_pu_agents_count', unique_pu_agents_count,
+      'unique_pu_agents_count', unique_pu_agents_count,
       'pu_final_results_uploaded_count', pu_final_results_uploaded_count,
       'unique_pu_final_results_uploaded_count', unique_pu_final_results_uploaded_count,
       'pu_average_update_time_interval_in_seconds', pu_average_update_time_interval_in_seconds,
@@ -4068,7 +4091,7 @@ ON CONFLICT (election_group_id, ward_id) DO UPDATE SET
   state_id = EXCLUDED.state_id,
   unique_final_results_expected = EXCLUDED.unique_final_results_expected,
   pu_agents_count = EXCLUDED.pu_agents_count,
-    unique_pu_agents_count = EXCLUDED.unique_pu_agents_count,
+  unique_pu_agents_count = EXCLUDED.unique_pu_agents_count,
   pu_agents_in_attendance_count = EXCLUDED.pu_agents_in_attendance_count,
   pu_reports_count = EXCLUDED.pu_reports_count,
   pu_updates_count = EXCLUDED.pu_updates_count,
@@ -5163,7 +5186,7 @@ party_json AS (
       'pu_updates_count',                updates_count,
       'pu_reports_count',                reports_count,
       'pu_agents_count',                 pu_agents_count,
-        'unique_pu_agents_count', unique_pu_agents_count,
+      'unique_pu_agents_count', unique_pu_agents_count,
       'pu_final_results_uploaded_count', pu_final_results_uploaded_count,
       'unique_pu_final_results_uploaded_count', unique_pu_final_results_uploaded_count,
       'pu_average_update_time_interval_in_seconds', pu_average_update_time_interval_in_seconds,
@@ -5229,7 +5252,8 @@ ON CONFLICT (election_group_id, ward_id) DO UPDATE SET
   total_pu_with_agents_in_attendance = EXCLUDED.total_pu_with_agents_in_attendance,
   total_pu_where_election_has_started = EXCLUDED.total_pu_where_election_has_started,
   total_pu_where_election_has_ended = EXCLUDED.total_pu_where_election_has_ended,
-  total_pu_unique_final_results_uploaded = EXCLUDED.total_pu_unique_final_results_uploaded,  total_pu_where_agents_referred_live_voters = EXCLUDED.total_pu_where_agents_referred_live_voters,
+  total_pu_unique_final_results_uploaded = EXCLUDED.total_pu_unique_final_results_uploaded,
+  total_pu_where_agents_referred_live_voters = EXCLUDED.total_pu_where_agents_referred_live_voters,
   parties = (
     SELECT COALESCE(jsonb_agg(
       COALESCE(ep.elem, '{}'::jsonb) || COALESCE(np.elem, '{}'::jsonb)
@@ -5382,6 +5406,10 @@ func (q *Queries) SeedElectionGroupStateConstituencyStats(ctx context.Context, d
 }
 
 const seedElectionGroupStateStats = `-- name: SeedElectionGroupStateStats :exec
+
+
+
+
 
 INSERT INTO election_group_states (
   election_group_id, state_id,
@@ -5653,6 +5681,10 @@ func (q *Queries) UpsertElectionGroupNationalPartyEntry(ctx context.Context, arg
 }
 
 const upsertElectionGroupPUPartyEntry = `-- name: UpsertElectionGroupPUPartyEntry :exec
+
+
+
+
 
 UPDATE election_group_polling_units
 SET

@@ -26,6 +26,7 @@ type BodiesService interface {
 	DeleteLGA(ctx context.Context, id int32) error
 	SyncElectoralUnits(ctx context.Context) (*bodiesservice.SyncReport, error)
 	SyncElectoralUnitsStateFlow(ctx context.Context) (*bodiesservice.SyncReport, error)
+	GetNationalMetrics(ctx context.Context) (queries.NationalMetric, error)
 }
 
 type Handler struct {
@@ -419,7 +420,7 @@ func (h *Handler) RecalculateBodyMetrics(w http.ResponseWriter, r *http.Request)
 func (h *Handler) GetNationalMetrics(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	metrics, err := h.queries.GetNationalMetrics(ctx)
+	metrics, err := h.bodiesService.GetNationalMetrics(ctx)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch national metrics: "+err.Error())
 		return

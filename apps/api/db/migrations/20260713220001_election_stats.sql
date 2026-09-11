@@ -3,8 +3,8 @@
 -- ============================================================
 -- ELECTION STATS TABLES
 -- Pre-aggregated cache tables refreshed by the cron worker
--- (same */10 minute cadence as final results rollups).
--- NOT source-of-truth. Summarised from:
+-- (same */10 minute cadence as final results roll-ups).
+-- NOT source-of-truth. Summarized from:
 --   - polling_unit_assignments  (agent tracking, readiness)
 --   - polling_unit_updates      (reports & updates counts)
 --   - polling_unit_results      (final result submissions)

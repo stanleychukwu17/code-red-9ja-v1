@@ -71,10 +71,18 @@ const (
 	RedisLGAsByState                  = "bodies:lgas:state:"
 	RedisWardsByLGA                   = "bodies:wards:lga:"
 	RedisPollingUnitsByWard           = "bodies:polling_units:ward:"
+	RedisNationalMetrics              = "bodies:national_metrics"
 	//--END--
 
 	//--START-- for offices
 	RedisOfficesAll = "offices:all" // STRING: used to store and retrieve all offices JSON.
+	//--END--
+
+	//--START-- for elections and election groups
+	RedisElectionGroupsAll = "election_groups:all" // STRING: used to store and retrieve all election groups JSON.
+	RedisElectionGroupInfo = "election_group:"     // STRING: "election_group:<id>" used to store and retrieve single election group JSON.
+	RedisElectionsAll      = "elections:all"       // STRING: used to store and retrieve all elections JSON.
+	RedisElectionInfo      = "election:"           // STRING: "election:<id>" used to store and retrieve single election JSON.
 	//--END--
 )
 
@@ -117,5 +125,10 @@ var AllRedisPrefixes = []string{
 	RedisLGAsByState,
 	RedisWardsByLGA,
 	RedisPollingUnitsByWard,
+	RedisNationalMetrics,
 	RedisOfficesAll,
+	RedisElectionGroupsAll,
+	RedisElectionGroupInfo,
+	RedisElectionsAll,
+	RedisElectionInfo,
 }

@@ -47,6 +47,7 @@ func hashCandidateResults(rawJSON []byte) string {
 	return builder.String()
 }
 
+// ProcessTaskCalculateFinalResult processes a task to calculate the final result for a polling unit
 func (processor *RedisTaskProcessor) ProcessTaskCalculateFinalResult(ctx context.Context, task *asynq.Task) error {
 	var payload CalculateFinalResultPayload
 	if err := json.Unmarshal(task.Payload(), &payload); err != nil {
@@ -237,10 +238,12 @@ type TaskDistributor interface {
 	DistributeTaskRollupSingleElection(ctx context.Context, payload *RollupSingleElectionPayload, opts ...asynq.Option) error
 }
 
+// RedisTaskDistributor is a task distributor that uses Redis to enqueue tasks
 type RedisTaskDistributor struct {
 	client *asynq.Client
 }
 
+// NewRedisTaskDistributor creates a new RedisTaskDistributor
 func NewRedisTaskDistributor(redisOpt asynq.RedisClientOpt) TaskDistributor {
 	client := asynq.NewClient(redisOpt)
 	return &RedisTaskDistributor{
@@ -248,6 +251,7 @@ func NewRedisTaskDistributor(redisOpt asynq.RedisClientOpt) TaskDistributor {
 	}
 }
 
+// DistributeTaskCalculateFinalResult enqueues a task to calculate the final result for a polling unit
 func (distributor *RedisTaskDistributor) DistributeTaskCalculateFinalResult(ctx context.Context, payload *CalculateFinalResultPayload, opts ...asynq.Option) error {
 	jsonPayload, err := json.Marshal(payload)
 	if err != nil {

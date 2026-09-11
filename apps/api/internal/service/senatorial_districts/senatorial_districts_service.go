@@ -162,4 +162,5 @@ func (s *SenatorialDistrictsService) GetSenatorialDistricts(ctx context.Context,
 func (s *SenatorialDistrictsService) invalidateCache(ctx context.Context, stateID int32) {
 	redisKey := fmt.Sprintf("%s%d", db.RedisSenatorialDistrictsByState, stateID)
 	s.rdb.Del(ctx, redisKey)
+	s.rdb.Del(ctx, db.RedisNationalMetrics)
 }
