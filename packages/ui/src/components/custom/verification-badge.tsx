@@ -13,7 +13,7 @@ export const getVerificationColor = (id?: number | string) => {
   switch (Number(id)) {
     case 1: return "#d1ccc0"; // vip_verified
     case 2: return "#3B82F6"; // celebrity_verified (blue-500)
-    case 3: return "#10B981"; // political_party_verified (emerald-500)
+    case 3: return "#3B82F6"; // political_party_verified (old: emerald-500 #10B981)
     case 4: return "#4834d4"; // politician_verified (blurple) https://flatuicolors.com/palette/au
     case 5: return "#F59E0B"; // organization_verified (amber-500)
     case 6: return "#95afc0"; // business_verified (soaring-e) https://flatuicolors.com/palette/au

@@ -1,6 +1,14 @@
 import { createServerFn } from "@tanstack/react-start";
 import { API_URL } from "../config";
 import { apiFetchJson } from "./fetch";
+export interface PartyVerification {
+	id: number;
+	verification_type_id: number;
+	verification_title?: string;
+	verification_type?: string;
+	verification_description?: string;
+}
+
 export interface Party {
 	id: number;
 	short_name: string;
@@ -11,11 +19,12 @@ export interface Party {
 	status?: string;
 	slots?: number;
 	is_verified?: boolean;
+	verified?: boolean;
 	color_hex?: string | null;
 	dark_color_hex?: string | null;
 	created_at?: string;
 	updated_at?: string;
-	verifications?: unknown[];
+	verifications?: PartyVerification[];
 }
 
 export const getParties = createServerFn({ method: "GET" }).handler(async () => {

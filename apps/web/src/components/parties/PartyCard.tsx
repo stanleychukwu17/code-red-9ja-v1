@@ -1,3 +1,4 @@
+import { VerificationBadge } from "@repo/ui/components/custom/verification-badge";
 import { Link } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
 import { APP_URL } from "#/lib/config";
@@ -10,15 +11,16 @@ type PartyCardProps = {
 	party: Party;
 };
 
-function PartyCover({
-	coverImage,
-	foundedYear,
-	shortName,
-}: {
+type PartyCoverProps = {
 	coverImage: string;
 	foundedYear: number;
 	shortName: string;
-}) {
+};
+
+/**
+ * Banner image section displaying the cover photo and founded year badge.
+ */
+function PartyCover({ coverImage, foundedYear, shortName }: PartyCoverProps) {
 	return (
 		<div className="relative h-44 w-full overflow-hidden bg-neutral-200 dark:bg-neutral-800">
 			<img
@@ -33,6 +35,10 @@ function PartyCover({
 	);
 }
 
+/**
+ * Centered overlapping avatar displaying the party's logo or short name initials.
+ * Dynamically applies the party's brand color hex to the outer ring border.
+ */
 function PartyAvatar({ party }: { party: Party }) {
 	const ringColor = party.color_hex || "#4ade80";
 
@@ -54,6 +60,50 @@ function PartyAvatar({ party }: { party: Party }) {
 	);
 }
 
+/**
+ * Renders verification checkmark badges for verified parties.
+ * If specific verification rows exist in `party.verifications`, each is displayed;
+ * otherwise defaults to verification type ID 3 (political party verified).
+ */
+function PartyVerificationBadges({ party }: { party: Party }) {
+	const isVerified = Boolean(party.is_verified ?? party.verified);
+	if (!isVerified) return null;
+
+	return (
+		<div className="flex items-center gap-1 shrink-0 relative -bottom-px">
+			{party.verifications && party.verifications.length > 0 ? (
+				party.verifications.map((v) => (
+					<VerificationBadge
+						key={`${v.id}-${v.verification_type_id}`}
+						id={v.verification_type_id}
+						title={v.verification_title}
+						className="size-25"
+					/>
+				))
+			) : (
+				<VerificationBadge id={3} title="Verified Political Party" />
+			)}
+		</div>
+	);
+}
+
+/**
+ * Party headline title combining the party's short name and any verification badges.
+ */
+function PartyTitle({ party }: { party: Party }) {
+	return (
+		<div className="flex items-center justify-center gap-1.5 mt-3 px-4">
+			<h3 className="text-xl sm:text-2xl font-black tracking-tight text-neutral-900 dark:text-white text-center">
+				{party.short_name}
+			</h3>
+			<PartyVerificationBadges party={party} />
+		</div>
+	);
+}
+
+/**
+ * Floating circular plus action button at the bottom of the party card.
+ */
 function PartyActionPlus() {
 	return (
 		<div className="mt-8 mb-2 flex justify-center">
@@ -64,6 +114,11 @@ function PartyActionPlus() {
 	);
 }
 
+/**
+ * Interactive Party Card component representing an individual political party.
+ * Navigates to the party's detail page and displays banner, brand avatar,
+ * verification badges, member avatars stack, party officials, and action button.
+ */
 export function PartyCard({ party }: PartyCardProps) {
 	const { foundedYear, coverImage, memberCount, chairman, secretary } = getPartyMeta(party);
 
@@ -72,21 +127,27 @@ export function PartyCard({ party }: PartyCardProps) {
 			to={APP_URL.party(party.short_name.toLowerCase(), party.id.toString())}
 			className="group flex flex-col items-center bg-sidebar-mobile dark:bg-neutral-900 rounded overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] hover:shadow-xl hover:shadow-neutral-200/60 dark:hover:shadow-neutral-950/60 transition-all duration-300 hover:-translate-y-1 pb-6"
 		>
+			{/* Banner / Cover Header */}
 			<PartyCover coverImage={coverImage} foundedYear={foundedYear} shortName={party.short_name} />
 
+			{/* Center Overlapping Brand Avatar */}
 			<PartyAvatar party={party} />
 
-			<h3 className="text-xl sm:text-2xl font-black tracking-tight text-neutral-900 dark:text-white mt-3 text-center">
-				{party.short_name}
-			</h3>
+			{/* Short Name & Verification Badges */}
+			<PartyTitle party={party} />
+
+			{/* Full Legal Party Name */}
 			<p className="text-xs sm:text-sm font-medium text-neutral-500 dark:text-neutral-400 mt-0.5 text-center px-6 line-clamp-1">
 				{party.name}
 			</p>
 
+			{/* Active Members Avatar Stack */}
 			<PartyMembersStack partyId={party.id} memberCount={memberCount} colorHex={party.color_hex} />
 
+			{/* Party Leadership (Chairman & Secretary) */}
 			<PartyOfficials chairman={chairman} secretary={secretary} />
 
+			{/* Action Plus Button */}
 			<PartyActionPlus />
 		</Link>
 	);
