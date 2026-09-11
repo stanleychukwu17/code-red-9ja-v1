@@ -110,7 +110,7 @@ const deleteElectionGroup = `-- name: DeleteElectionGroup :exec
 DELETE FROM election_groups WHERE id = $1
 `
 
-func (q *Queries) DeleteElectionGroup(ctx context.Context, id int16) error {
+func (q *Queries) DeleteElectionGroup(ctx context.Context, id int32) error {
 	_, err := q.db.Exec(ctx, deleteElectionGroup, id)
 	return err
 }
@@ -119,7 +119,7 @@ const getElectionGroupByID = `-- name: GetElectionGroupByID :one
 SELECT id, name, rank, elections_count, states_count, senatorial_districts_count, federal_constituencies_count, lgas_count, state_constituencies_count, wards_count, polling_units_count, state_supervisors_count, unique_state_supervisors_count, lga_supervisors_count, unique_lga_supervisors_count, ward_supervisors_count, unique_ward_supervisors_count, applications_count, accepted_applications_count, rejected_applications_count, ward_supervisor_applications_count, ward_supervisor_accepted_applications_count, ward_supervisor_rejected_applications_count, lga_supervisor_applications_count, lga_supervisor_accepted_applications_count, lga_supervisor_rejected_applications_count, state_supervisor_applications_count, state_supervisor_accepted_applications_count, state_supervisor_rejected_applications_count, pu_reports_count, pu_updates_count, results_submitted_count, unique_final_results_expected, pu_agents_count, unique_pu_agents_count, pu_agents_in_attendance_count, pu_average_arrival_time, pu_average_election_started_at, pu_average_election_ended_at, pu_election_practice_test_readiness_percentage, pu_final_results_uploaded_count, unique_pu_final_results_uploaded_count, pu_average_update_time_interval_in_seconds, pu_live_voters_referred_by_agent_count, total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance, total_pu_where_election_has_started, total_pu_where_election_has_ended, total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters, parties, election_date, created_at, updated_at FROM election_groups WHERE id = $1
 `
 
-func (q *Queries) GetElectionGroupByID(ctx context.Context, id int16) (ElectionGroup, error) {
+func (q *Queries) GetElectionGroupByID(ctx context.Context, id int32) (ElectionGroup, error) {
 	row := q.db.QueryRow(ctx, getElectionGroupByID, id)
 	var i ElectionGroup
 	err := row.Scan(
@@ -349,7 +349,7 @@ ORDER BY eg.election_date DESC, eg.id DESC
 `
 
 type ListElectionGroupsWithPartyStatsRow struct {
-	ID                    int16              `json:"id"`
+	ID                    int32              `json:"id"`
 	Name                  string             `json:"name"`
 	Rank                  int32              `json:"rank"`
 	ElectionsCount        int32              `json:"elections_count"`
@@ -405,7 +405,7 @@ type UpdateElectionGroupParams struct {
 	ElectionsCount int32       `json:"elections_count"`
 	StatesCount    int32       `json:"states_count"`
 	ElectionDate   pgtype.Date `json:"election_date"`
-	ID             int16       `json:"id"`
+	ID             int32       `json:"id"`
 }
 
 func (q *Queries) UpdateElectionGroup(ctx context.Context, arg UpdateElectionGroupParams) (ElectionGroup, error) {
@@ -490,7 +490,7 @@ RETURNING id, party_id, election_group_id, polling_agents_coverage, elections_co
 
 type UpsertPartyElectionGroupCoverageParams struct {
 	PartyID         int16  `json:"party_id"`
-	ElectionGroupID int16  `json:"election_group_id"`
+	ElectionGroupID int32  `json:"election_group_id"`
 	Column3         []byte `json:"column_3"`
 }
 
@@ -525,7 +525,7 @@ RETURNING id, party_id, election_group_id, polling_agents_coverage, elections_co
 
 type UpsertPartyElectionGroupStatsParams struct {
 	PartyID             int16  `json:"party_id"`
-	ElectionGroupID     int16  `json:"election_group_id"`
+	ElectionGroupID     int32  `json:"election_group_id"`
 	Column3             []byte `json:"column_3"`
 	ElectionsContesting int32  `json:"elections_contesting"`
 }

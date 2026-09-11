@@ -36,7 +36,7 @@ func (s *Service) SetEarningsService(es earningsService) {
 	s.earningsSvc = es
 }
 
-func (s *Service) AssignAgent(ctx context.Context, userID int64, electionGroupID int16, partyID int16, assignedBy int64, pollingUnitID int32, roleType string) (queries.PollingUnitAssignment, error) {
+func (s *Service) AssignAgent(ctx context.Context, userID int64, electionGroupID int32, partyID int16, assignedBy int64, pollingUnitID int32, roleType string) (queries.PollingUnitAssignment, error) {
 	var assignedByVal pgtype.Int8
 	if assignedBy > 0 {
 		assignedByVal = pgtype.Int8{Int64: assignedBy, Valid: true}
@@ -81,7 +81,7 @@ func (s *Service) GetAssignmentByID(ctx context.Context, id int64) (queries.GetA
 	return s.queries.GetAssignmentByID(ctx, id)
 }
 
-func (s *Service) ListAssignments(ctx context.Context, electionGroupID int16, partyID int16, userID int64, pollingUnitID int32, limit, offset int32) ([]queries.ListAssignmentsRow, error) {
+func (s *Service) ListAssignments(ctx context.Context, electionGroupID int32, partyID int16, userID int64, pollingUnitID int32, limit, offset int32) ([]queries.ListAssignmentsRow, error) {
 	return s.queries.ListAssignments(ctx, queries.ListAssignmentsParams{
 		Limit:           limit,
 		Offset:          offset,

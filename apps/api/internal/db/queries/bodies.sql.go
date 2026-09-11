@@ -967,7 +967,7 @@ SELECT
       FROM polling_unit_assignments pua
       WHERE pua.polling_unit_id = pu.id
         AND pua.party_id = $1::smallint
-        AND pua.election_group_id = $2::smallint
+        AND pua.election_group_id = $2::integer
         AND pua.role_type = 'polling_agent'
     ),
     0
@@ -981,7 +981,7 @@ ORDER BY pu.name ASC
 
 type GetPollingUnitsWithPartyCountParams struct {
 	PartyID         int16 `json:"party_id"`
-	ElectionGroupID int16 `json:"election_group_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
 	WardID          int32 `json:"ward_id"`
 	LgaID           int32 `json:"lga_id"`
 	StateID         int32 `json:"state_id"`

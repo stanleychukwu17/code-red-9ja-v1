@@ -1,6 +1,6 @@
 -- +goose Up
 CREATE TABLE election_groups (
-  id SMALLINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   name VARCHAR(255) UNIQUE NOT NULL,
   rank INT NOT NULL,
   
@@ -90,7 +90,7 @@ CREATE TABLE election_groups (
 
 CREATE TABLE elections (
   id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  election_group_id SMALLINT REFERENCES election_groups(id) ON DELETE CASCADE NOT NULL,
+  election_group_id INT REFERENCES election_groups(id) ON DELETE CASCADE NOT NULL,
   state_id SMALLINT REFERENCES c_states(id) ON DELETE SET NULL,
   senatorial_district_id INT REFERENCES senatorial_districts(id) ON DELETE SET NULL,
   federal_constituency_id INT REFERENCES federal_constituencies(id) ON DELETE SET NULL,

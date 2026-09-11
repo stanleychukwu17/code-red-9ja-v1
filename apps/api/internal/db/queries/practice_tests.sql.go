@@ -21,7 +21,7 @@ LIMIT 1
 
 type GetPracticeTestParams struct {
 	UserID          int64       `json:"user_id"`
-	ElectionGroupID pgtype.Int2 `json:"election_group_id"`
+	ElectionGroupID pgtype.Int4 `json:"election_group_id"`
 	Role            string      `json:"role"`
 }
 
@@ -52,7 +52,7 @@ FROM user_practice_tests upt
 JOIN users u ON upt.user_id = u.id
 WHERE
   ($1::bigint = 0 OR upt.user_id = $1) AND
-  ($2::smallint = 0 OR upt.election_group_id = $2) AND
+  ($2::integer = 0 OR upt.election_group_id = $2) AND
   ($3::bigint = 0 OR upt.id < $3)
 ORDER BY upt.id DESC
 LIMIT $4::int
@@ -60,7 +60,7 @@ LIMIT $4::int
 
 type ListUserPracticeTestsParams struct {
 	UserID          int64 `json:"user_id"`
-	ElectionGroupID int16 `json:"election_group_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
 	Cursor          int64 `json:"cursor"`
 	LimitVal        int32 `json:"limit_val"`
 }
@@ -68,7 +68,7 @@ type ListUserPracticeTestsParams struct {
 type ListUserPracticeTestsRow struct {
 	ID               int64              `json:"id"`
 	UserID           int64              `json:"user_id"`
-	ElectionGroupID  pgtype.Int2        `json:"election_group_id"`
+	ElectionGroupID  pgtype.Int4        `json:"election_group_id"`
 	Role             string             `json:"role"`
 	TestAttempts     []byte             `json:"test_attempts"`
 	OverallScore     pgtype.Numeric     `json:"overall_score"`
@@ -186,7 +186,7 @@ RETURNING id, user_id, election_group_id, role, test_attempts, overall_score, ea
 
 type SubmitPracticeTestParams struct {
 	UserID           int64          `json:"user_id"`
-	ElectionGroupID  pgtype.Int2    `json:"election_group_id"`
+	ElectionGroupID  pgtype.Int4    `json:"election_group_id"`
 	Role             string         `json:"role"`
 	Attempt          []byte         `json:"attempt"`
 	OverallScore     pgtype.Numeric `json:"overall_score"`

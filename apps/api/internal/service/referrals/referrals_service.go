@@ -58,10 +58,10 @@ func (s *ReferralsService) UpdateReferral(ctx context.Context, params queries.Up
 	return s.q.UpdateReferral(ctx, params)
 }
 
-func (s *ReferralsService) GetUserReferralByUserAndElectionGroup(ctx context.Context, userID int64, electionGroupID int16) (queries.UserReferral, error) {
+func (s *ReferralsService) GetUserReferralByUserAndElectionGroup(ctx context.Context, userID int64, electionGroupID int32) (queries.UserReferral, error) {
 	return s.q.GetUserReferralByUserAndElectionGroup(ctx, queries.GetUserReferralByUserAndElectionGroupParams{
 		UserID:          userID,
-		ElectionGroupID: pgtype.Int2{Int16: electionGroupID, Valid: electionGroupID > 0},
+		ElectionGroupID: pgtype.Int4{Int32: electionGroupID, Valid: electionGroupID > 0},
 	})
 }
 
@@ -69,7 +69,7 @@ func (s *ReferralsService) ListReferredUsersWithDetails(ctx context.Context, par
 	return s.q.ListReferredUsersWithDetails(ctx, params)
 }
 
-func (s *ReferralsService) GetActiveMarketingCampaignForElectionGroup(ctx context.Context, partyID int16, electionGroupID int16) (queries.PartyMarketingCampaign, error) {
+func (s *ReferralsService) GetActiveMarketingCampaignForElectionGroup(ctx context.Context, partyID int16, electionGroupID int32) (queries.PartyMarketingCampaign, error) {
 	return s.q.GetActiveMarketingCampaignForElectionGroup(ctx, queries.GetActiveMarketingCampaignForElectionGroupParams{
 		PartyID:         partyID,
 		ElectionGroupID: electionGroupID,

@@ -28,7 +28,7 @@ func NewHandler(s *polling_unit_updates.Service, u *utils.Utils, taskDistributor
 
 type CreateUpdateRequest struct {
 	PollingUnitID   int32    `json:"polling_unit_id"`
-	ElectionGroupID int16    `json:"election_group_id"`
+	ElectionGroupID int32    `json:"election_group_id"`
 	AssignmentID    *int64   `json:"assignment_id,omitempty"`
 	PartyID         *int16   `json:"party_id,omitempty"`
 	Message         string   `json:"message"`
@@ -131,8 +131,8 @@ func (h *Handler) ListUpdates(w http.ResponseWriter, r *http.Request) {
 	var params queries.ListPollingUnitUpdatesParams
 
 	if val := r.URL.Query().Get("election_group_id"); val != "" {
-		if v, err := strconv.ParseInt(val, 10, 16); err == nil {
-			params.ElectionGroupID = pgtype.Int2{Int16: int16(v), Valid: true}
+		if v, err := strconv.ParseInt(val, 10, 32); err == nil {
+			params.ElectionGroupID = pgtype.Int4{Int32: int32(v), Valid: true}
 		}
 	}
 	if val := r.URL.Query().Get("party_id"); val != "" {

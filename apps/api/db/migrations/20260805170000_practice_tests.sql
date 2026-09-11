@@ -3,7 +3,7 @@
 CREATE TABLE IF NOT EXISTS user_practice_tests (
   id                BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   user_id           BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  election_group_id SMALLINT REFERENCES election_groups(id) ON DELETE SET NULL,
+  election_group_id INT REFERENCES election_groups(id) ON DELETE SET NULL,
   role              VARCHAR(50) NOT NULL DEFAULT 'polling_agent',
   -- JSON array: [{attempt_number: 1, final_score: 85.0, task_stats: [{task_id: 1, score: 100, ...}], been_paid: false, completed_at: ...}]
   -- Scores are stored on a 0-100 scale. Divide by 10 for display purposes only.

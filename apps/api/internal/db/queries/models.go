@@ -14,7 +14,7 @@ type AgentEarning struct {
 	ID                      int64              `json:"id"`
 	UserID                  int64              `json:"user_id"`
 	PartyID                 int16              `json:"party_id"`
-	ElectionGroupID         int16              `json:"election_group_id"`
+	ElectionGroupID         int32              `json:"election_group_id"`
 	RoleType                string             `json:"role_type"`
 	BasePaymentKobo         int64              `json:"base_payment_kobo"`
 	EarningsAllocation      []byte             `json:"earnings_allocation"`
@@ -118,7 +118,7 @@ type CZonesNigerium struct {
 type DidNotVoteReason struct {
 	ID                int64              `json:"id"`
 	UserID            int64              `json:"user_id"`
-	ElectionGroupID   int16              `json:"election_group_id"`
+	ElectionGroupID   int32              `json:"election_group_id"`
 	NonVotingReasonID pgtype.Int2        `json:"non_voting_reason_id"`
 	Explanation       pgtype.Text        `json:"explanation"`
 	StateID           pgtype.Int2        `json:"state_id"`
@@ -131,7 +131,7 @@ type DidNotVoteReason struct {
 
 type Election struct {
 	ID                    int32       `json:"id"`
-	ElectionGroupID       int16       `json:"election_group_id"`
+	ElectionGroupID       int32       `json:"election_group_id"`
 	StateID               pgtype.Int2 `json:"state_id"`
 	SenatorialDistrictID  pgtype.Int4 `json:"senatorial_district_id"`
 	FederalConstituencyID pgtype.Int4 `json:"federal_constituency_id"`
@@ -200,7 +200,7 @@ type ElectionFinalResult struct {
 }
 
 type ElectionGroup struct {
-	ID                                        int16              `json:"id"`
+	ID                                        int32              `json:"id"`
 	Name                                      string             `json:"name"`
 	Rank                                      int32              `json:"rank"`
 	ElectionsCount                            int32              `json:"elections_count"`
@@ -259,7 +259,7 @@ type ElectionGroup struct {
 
 type ElectionGroupFederalConstituency struct {
 	ID                                        int64              `json:"id"`
-	ElectionGroupID                           int16              `json:"election_group_id"`
+	ElectionGroupID                           int32              `json:"election_group_id"`
 	FederalConstituencyID                     int32              `json:"federal_constituency_id"`
 	StateID                                   pgtype.Int2        `json:"state_id"`
 	SenatorialDistrictID                      pgtype.Int4        `json:"senatorial_district_id"`
@@ -308,7 +308,7 @@ type ElectionGroupFederalConstituency struct {
 
 type ElectionGroupLga struct {
 	ID                                        int64              `json:"id"`
-	ElectionGroupID                           int16              `json:"election_group_id"`
+	ElectionGroupID                           int32              `json:"election_group_id"`
 	LgaID                                     int32              `json:"lga_id"`
 	StateID                                   pgtype.Int2        `json:"state_id"`
 	SenatorialDistrictID                      pgtype.Int4        `json:"senatorial_district_id"`
@@ -356,7 +356,7 @@ type ElectionGroupLga struct {
 
 type ElectionGroupPollingUnit struct {
 	ID                                        int64              `json:"id"`
-	ElectionGroupID                           int16              `json:"election_group_id"`
+	ElectionGroupID                           int32              `json:"election_group_id"`
 	PollingUnitID                             int32              `json:"polling_unit_id"`
 	StateID                                   pgtype.Int2        `json:"state_id"`
 	LgaID                                     pgtype.Int4        `json:"lga_id"`
@@ -387,7 +387,7 @@ type ElectionGroupPollingUnit struct {
 
 type ElectionGroupSenatorialDistrict struct {
 	ID                                        int64              `json:"id"`
-	ElectionGroupID                           int16              `json:"election_group_id"`
+	ElectionGroupID                           int32              `json:"election_group_id"`
 	SenatorialDistrictID                      int32              `json:"senatorial_district_id"`
 	StateID                                   pgtype.Int2        `json:"state_id"`
 	ApplicationsCount                         int32              `json:"applications_count"`
@@ -436,7 +436,7 @@ type ElectionGroupSenatorialDistrict struct {
 
 type ElectionGroupState struct {
 	ID                                        int64              `json:"id"`
-	ElectionGroupID                           int16              `json:"election_group_id"`
+	ElectionGroupID                           int32              `json:"election_group_id"`
 	StateID                                   int16              `json:"state_id"`
 	ApplicationsCount                         int32              `json:"applications_count"`
 	AcceptedApplicationsCount                 int32              `json:"accepted_applications_count"`
@@ -489,7 +489,7 @@ type ElectionGroupState struct {
 
 type ElectionGroupStateConstituency struct {
 	ID                                        int64              `json:"id"`
-	ElectionGroupID                           int16              `json:"election_group_id"`
+	ElectionGroupID                           int32              `json:"election_group_id"`
 	StateConstituencyID                       int32              `json:"state_constituency_id"`
 	StateID                                   pgtype.Int2        `json:"state_id"`
 	ApplicationsCount                         int32              `json:"applications_count"`
@@ -530,7 +530,7 @@ type ElectionGroupStateConstituency struct {
 
 type ElectionGroupWard struct {
 	ID                                        int64              `json:"id"`
-	ElectionGroupID                           int16              `json:"election_group_id"`
+	ElectionGroupID                           int32              `json:"election_group_id"`
 	WardID                                    int32              `json:"ward_id"`
 	LgaID                                     pgtype.Int4        `json:"lga_id"`
 	StateID                                   pgtype.Int2        `json:"state_id"`
@@ -590,7 +590,7 @@ type ElectionLgaFinalResult struct {
 type ElectionPollingUnitFinalResult struct {
 	ID                       int64              `json:"id"`
 	ElectionID               int32              `json:"election_id"`
-	ElectionGroupID          int16              `json:"election_group_id"`
+	ElectionGroupID          int32              `json:"election_group_id"`
 	PollingUnitID            int32              `json:"polling_unit_id"`
 	StateID                  pgtype.Int2        `json:"state_id"`
 	SenatorialDistrictID     pgtype.Int4        `json:"senatorial_district_id"`
@@ -673,7 +673,7 @@ type ElectionVote struct {
 	WardID                pgtype.Int4        `json:"ward_id"`
 	PollingUnitID         pgtype.Int4        `json:"polling_unit_id"`
 	UserID                int64              `json:"user_id"`
-	ElectionGroupID       int16              `json:"election_group_id"`
+	ElectionGroupID       int32              `json:"election_group_id"`
 	ElectionID            int32              `json:"election_id"`
 	PartyID               int16              `json:"party_id"`
 	CreatedAt             pgtype.Timestamptz `json:"created_at"`
@@ -735,7 +735,7 @@ type File struct {
 
 type InecResultGrabber struct {
 	ID                            int64              `json:"id"`
-	ElectionGroupID               int16              `json:"election_group_id"`
+	ElectionGroupID               int32              `json:"election_group_id"`
 	ElectionID                    int32              `json:"election_id"`
 	Name                          pgtype.Text        `json:"name"`
 	Scope                         string             `json:"scope"`
@@ -752,7 +752,7 @@ type InecResultGrabber struct {
 type InecResultGrabberLog struct {
 	ID                    int64              `json:"id"`
 	InecResultGrabberID   int64              `json:"inec_result_grabber_id"`
-	ElectionGroupID       int16              `json:"election_group_id"`
+	ElectionGroupID       int32              `json:"election_group_id"`
 	ElectionID            int32              `json:"election_id"`
 	ResultsCollectedCount int32              `json:"results_collected_count"`
 	Status                string             `json:"status"`
@@ -784,7 +784,7 @@ type LgaElectionSupervisor struct {
 	UserID               int64              `json:"user_id"`
 	StateID              int16              `json:"state_id"`
 	LgaID                int32              `json:"lga_id"`
-	ElectionGroupID      int16              `json:"election_group_id"`
+	ElectionGroupID      int32              `json:"election_group_id"`
 	PartyID              int16              `json:"party_id"`
 	RoleType             pgtype.Text        `json:"role_type"`
 	AssignedBy           pgtype.Int8        `json:"assigned_by"`
@@ -877,7 +877,7 @@ type PartyApplication struct {
 	ID              int64              `json:"id"`
 	UserID          int64              `json:"user_id"`
 	PartyID         int16              `json:"party_id"`
-	ElectionGroupID int16              `json:"election_group_id"`
+	ElectionGroupID int32              `json:"election_group_id"`
 	PollingUnitID   pgtype.Int4        `json:"polling_unit_id"`
 	StateID         pgtype.Int2        `json:"state_id"`
 	LgaID           pgtype.Int4        `json:"lga_id"`
@@ -917,7 +917,7 @@ type PartyCustomPosition struct {
 type PartyElectionGroup struct {
 	ID                    int32              `json:"id"`
 	PartyID               int16              `json:"party_id"`
-	ElectionGroupID       int16              `json:"election_group_id"`
+	ElectionGroupID       int32              `json:"election_group_id"`
 	PollingAgentsCoverage []byte             `json:"polling_agents_coverage"`
 	ElectionsContesting   int32              `json:"elections_contesting"`
 	ReportsCount          int32              `json:"reports_count"`
@@ -930,7 +930,7 @@ type PartyElectionGroup struct {
 type PartyMarketingCampaign struct {
 	ID                 int32              `json:"id"`
 	PartyID            int16              `json:"party_id"`
-	ElectionGroupID    int16              `json:"election_group_id"`
+	ElectionGroupID    int32              `json:"election_group_id"`
 	ElectionID         int32              `json:"election_id"`
 	PlanID             int32              `json:"plan_id"`
 	Type               string             `json:"type"`
@@ -1055,7 +1055,7 @@ type PollingUnitAssignment struct {
 	ID                                      int64              `json:"id"`
 	UserID                                  int64              `json:"user_id"`
 	PollingUnitID                           int32              `json:"polling_unit_id"`
-	ElectionGroupID                         int16              `json:"election_group_id"`
+	ElectionGroupID                         int32              `json:"election_group_id"`
 	PartyID                                 int16              `json:"party_id"`
 	RoleType                                pgtype.Text        `json:"role_type"`
 	AssignedBy                              pgtype.Int8        `json:"assigned_by"`
@@ -1083,7 +1083,7 @@ type PollingUnitResult struct {
 	ID                    int64              `json:"id"`
 	AssignmentID          pgtype.Int8        `json:"assignment_id"`
 	ElectionID            int32              `json:"election_id"`
-	ElectionGroupID       int16              `json:"election_group_id"`
+	ElectionGroupID       int32              `json:"election_group_id"`
 	PollingUnitID         int32              `json:"polling_unit_id"`
 	SubmittedBy           pgtype.Int8        `json:"submitted_by"`
 	PartyID               pgtype.Int2        `json:"party_id"`
@@ -1118,7 +1118,7 @@ type PollingUnitUpdate struct {
 	ID                          int64              `json:"id"`
 	AssignmentID                pgtype.Int8        `json:"assignment_id"`
 	UserID                      int64              `json:"user_id"`
-	ElectionGroupID             int16              `json:"election_group_id"`
+	ElectionGroupID             int32              `json:"election_group_id"`
 	PollingUnitID               int32              `json:"polling_unit_id"`
 	PartyID                     pgtype.Int2        `json:"party_id"`
 	StateID                     pgtype.Int2        `json:"state_id"`
@@ -1139,7 +1139,7 @@ type Referral struct {
 	ID              int64              `json:"id"`
 	UserReferralID  pgtype.Int8        `json:"user_referral_id"`
 	PartyID         pgtype.Int2        `json:"party_id"`
-	ElectionGroupID pgtype.Int2        `json:"election_group_id"`
+	ElectionGroupID pgtype.Int4        `json:"election_group_id"`
 	ReferrerUserID  int64              `json:"referrer_user_id"`
 	ReferredUserID  int64              `json:"referred_user_id"`
 	Milestone       string             `json:"milestone"`
@@ -1205,7 +1205,7 @@ type StateElectionSupervisor struct {
 	ID                   int64              `json:"id"`
 	UserID               int64              `json:"user_id"`
 	StateID              int16              `json:"state_id"`
-	ElectionGroupID      int16              `json:"election_group_id"`
+	ElectionGroupID      int32              `json:"election_group_id"`
 	PartyID              int16              `json:"party_id"`
 	RoleType             pgtype.Text        `json:"role_type"`
 	AssignedBy           pgtype.Int8        `json:"assigned_by"`
@@ -1229,7 +1229,7 @@ type SystemSetting struct {
 type UnmatchedPollingUnitResult struct {
 	ID                    int64              `json:"id"`
 	ElectionID            int32              `json:"election_id"`
-	ElectionGroupID       int16              `json:"election_group_id"`
+	ElectionGroupID       int32              `json:"election_group_id"`
 	SubmittedBy           pgtype.Int8        `json:"submitted_by"`
 	PartyID               pgtype.Int2        `json:"party_id"`
 	RawPollingUnitCode    pgtype.Text        `json:"raw_polling_unit_code"`
@@ -1321,7 +1321,7 @@ type UserMoreInfo struct {
 type UserPracticeTest struct {
 	ID               int64              `json:"id"`
 	UserID           int64              `json:"user_id"`
-	ElectionGroupID  pgtype.Int2        `json:"election_group_id"`
+	ElectionGroupID  pgtype.Int4        `json:"election_group_id"`
 	Role             string             `json:"role"`
 	TestAttempts     []byte             `json:"test_attempts"`
 	OverallScore     pgtype.Numeric     `json:"overall_score"`
@@ -1345,7 +1345,7 @@ type UserReferral struct {
 	ID                                int64              `json:"id"`
 	UserID                            int64              `json:"user_id"`
 	PartyID                           pgtype.Int2        `json:"party_id"`
-	ElectionGroupID                   pgtype.Int2        `json:"election_group_id"`
+	ElectionGroupID                   pgtype.Int4        `json:"election_group_id"`
 	TotalReferrals                    pgtype.Int4        `json:"total_referrals"`
 	AgentReferrals                    pgtype.Int4        `json:"agent_referrals"`
 	UnpaidReferrals                   pgtype.Int4        `json:"unpaid_referrals"`
@@ -1452,7 +1452,7 @@ type WardElectionSupervisor struct {
 	StateID              int16              `json:"state_id"`
 	LgaID                int32              `json:"lga_id"`
 	WardID               int32              `json:"ward_id"`
-	ElectionGroupID      int16              `json:"election_group_id"`
+	ElectionGroupID      int32              `json:"election_group_id"`
 	PartyID              int16              `json:"party_id"`
 	RoleType             pgtype.Text        `json:"role_type"`
 	AssignedBy           pgtype.Int8        `json:"assigned_by"`

@@ -550,7 +550,7 @@ type AssignmentInfo struct {
 	StateID int16
 }
 
-func (s *Service) getAssignmentInfo(ctx context.Context, userID int64, electionGroupID int16, roleType string) (*AssignmentInfo, error) {
+func (s *Service) getAssignmentInfo(ctx context.Context, userID int64, electionGroupID int32, roleType string) (*AssignmentInfo, error) {
 	normRole := strings.ReplaceAll(roleType, "-", "_")
 	switch normRole {
 	case "pollingagent":
@@ -623,7 +623,7 @@ func (s *Service) getAssignmentInfo(ctx context.Context, userID int64, electionG
 func (s *Service) EvaluatePracticeTestPayout(
 	ctx context.Context,
 	userID int64,
-	electionGroupID int16,
+	electionGroupID int32,
 	roleType string,
 	finalScore float64,
 ) (PracticeTestPayoutResult, error) {
@@ -747,7 +747,7 @@ func (s *Service) EvaluatePracticeTestPayout(
 	paidTestsCount := 0
 	existingTest, err := s.q.GetPracticeTest(ctx, queries.GetPracticeTestParams{
 		UserID:          userID,
-		ElectionGroupID: pgtype.Int2{Int16: electionGroupID, Valid: true},
+		ElectionGroupID: pgtype.Int4{Int32: electionGroupID, Valid: true},
 		Role:            roleKey,
 	})
 	if err == nil && len(existingTest.TestAttempts) > 0 {
@@ -800,7 +800,7 @@ func (s *Service) EvaluatePracticeTestPayout(
 func (s *Service) ProcessPracticeTestPayout(
 	ctx context.Context,
 	userID int64,
-	electionGroupID int16,
+	electionGroupID int32,
 	roleType string,
 	earnedKobo int64,
 	testRecordID int64,
@@ -1229,7 +1229,7 @@ func (s *Service) EstimatePotentialPayout(
 	ctx context.Context,
 	taskType string,
 	reqRole string,
-	electionGroupID int16,
+	electionGroupID int32,
 	partyID int16,
 ) (EstimatePayoutResult, error) {
 	roleType := reqRole
@@ -1366,7 +1366,7 @@ type AgentAllocationsResponse struct {
 func (s *Service) GetAgentAllocations(
 	ctx context.Context,
 	userID int64,
-	electionGroupID int16,
+	electionGroupID int32,
 	reqRoleType string,
 	assignmentID int64,
 ) (AgentAllocationsResponse, error) {
@@ -1532,7 +1532,7 @@ func (s *Service) GetAgentAllocations(
 }
 
 // RequestPayout calculates/refreshes earnings and marks agent_earnings.status as 'requested'.
-func (s *Service) RequestPayout(ctx context.Context, userID int64, electionGroupID int16, roleType string) (queries.AgentEarning, error) {
+func (s *Service) RequestPayout(ctx context.Context, userID int64, electionGroupID int32, roleType string) (queries.AgentEarning, error) {
 	if roleType == "" {
 		roleType = "polling_agent"
 	}

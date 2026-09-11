@@ -35,7 +35,7 @@ RETURNING id, party_id, election_group_id, election_id, plan_id, type, states, d
 
 type CreatePartyMarketingCampaignParams struct {
 	PartyID            int16  `json:"party_id"`
-	ElectionGroupID    int16  `json:"election_group_id"`
+	ElectionGroupID    int32  `json:"election_group_id"`
 	ElectionID         int32  `json:"election_id"`
 	PlanID             int32  `json:"plan_id"`
 	Type               string `json:"type"`
@@ -164,7 +164,7 @@ LIMIT 1
 
 type GetActiveMarketingCampaignForElectionGroupParams struct {
 	PartyID         int16 `json:"party_id"`
-	ElectionGroupID int16 `json:"election_group_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
 }
 
 // Returns the active campaign (if any) for a party + election group where NOW() is within start/end dates.
@@ -253,7 +253,7 @@ ORDER BY pmc.created_at DESC
 type GetPartyMarketingCampaignsRow struct {
 	ID                 int32              `json:"id"`
 	PartyID            int16              `json:"party_id"`
-	ElectionGroupID    int16              `json:"election_group_id"`
+	ElectionGroupID    int32              `json:"election_group_id"`
 	ElectionID         int32              `json:"election_id"`
 	PlanID             int32              `json:"plan_id"`
 	Type               string             `json:"type"`
@@ -446,7 +446,7 @@ type ListAllPartyMarketingCampaignsParams struct {
 type ListAllPartyMarketingCampaignsRow struct {
 	ID                 int32              `json:"id"`
 	PartyID            int16              `json:"party_id"`
-	ElectionGroupID    int16              `json:"election_group_id"`
+	ElectionGroupID    int32              `json:"election_group_id"`
 	ElectionID         int32              `json:"election_id"`
 	PlanID             int32              `json:"plan_id"`
 	Type               string             `json:"type"`

@@ -84,7 +84,7 @@ INSERT INTO unmatched_polling_unit_results (
 
 type CreateUnmatchedPollingUnitResultParams struct {
 	ElectionID            int32       `json:"election_id"`
-	ElectionGroupID       int16       `json:"election_group_id"`
+	ElectionGroupID       int32       `json:"election_group_id"`
 	SubmittedBy           pgtype.Int8 `json:"submitted_by"`
 	PartyID               pgtype.Int2 `json:"party_id"`
 	RawPollingUnitCode    pgtype.Text `json:"raw_polling_unit_code"`

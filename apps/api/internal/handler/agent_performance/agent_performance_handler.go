@@ -37,7 +37,7 @@ func NewHandler(q *queries.Queries, pool *pgxpool.Pool, usersService *usersservi
 	}
 }
 
-func (h *Handler) initiateStatsRollup(ctx context.Context, egID int16, roleType string, puID int32, wardID int32, lgaID int32, stateID int16) {
+func (h *Handler) initiateStatsRollup(ctx context.Context, egID int32, roleType string, puID int32, wardID int32, lgaID int32, stateID int16) {
 	if h.distributor == nil || egID <= 0 {
 		return
 	}
@@ -91,7 +91,7 @@ type AgentPerformanceItem struct {
 	ID                 int64   `json:"id"`
 	UserID             int64   `json:"user_id"`
 	PartyID            int16   `json:"party_id"`
-	ElectionGroupID    int16   `json:"election_group_id"`
+	ElectionGroupID    int32   `json:"election_group_id"`
 	StateID            int16   `json:"state_id"`
 	LgaID              int32   `json:"lga_id"`
 	WardID             int32   `json:"ward_id"`
@@ -122,7 +122,7 @@ type AgentPerformanceItem struct {
 type ChangeAgentRoleRequest struct {
 	UserID          int64  `json:"user_id"`
 	PartyID         int16  `json:"party_id"`
-	ElectionGroupID int16  `json:"election_group_id"`
+	ElectionGroupID int32  `json:"election_group_id"`
 	CurrentRoleType string `json:"current_role_type"`
 	NewRoleType     string `json:"new_role_type"`
 	StateID         int16  `json:"state_id"`
@@ -158,8 +158,8 @@ func (h *Handler) GetAgentPerformance(w http.ResponseWriter, r *http.Request) {
 	}
 
 	partyID, _ := strconv.ParseInt(qParams.Get("party_id"), 10, 16)
-	egIDParsed, _ := strconv.ParseInt(qParams.Get("election_group_id"), 10, 16)
-	electionGroupID := int16(egIDParsed)
+	egIDParsed, _ := strconv.ParseInt(qParams.Get("election_group_id"), 10, 32)
+	electionGroupID := int32(egIDParsed)
 	stateID, _ := strconv.ParseInt(qParams.Get("state_id"), 10, 16)
 	lgaID, _ := strconv.ParseInt(qParams.Get("lga_id"), 10, 32)
 	wardID, _ := strconv.ParseInt(qParams.Get("ward_id"), 10, 32)
@@ -767,7 +767,7 @@ func (h *Handler) RevokeAgent(w http.ResponseWriter, r *http.Request) {
 	switch roleType {
 	case "polling_agent", "pu_agent", "polling_unit_agent":
 		var puID int32
-		var egID int16
+		var egID int32
 		var partyID int16
 		_ = h.pool.QueryRow(ctx, "SELECT polling_unit_id, election_group_id, party_id FROM polling_unit_assignments WHERE id = $1", id).Scan(&puID, &egID, &partyID)
 		_, err = h.pool.Exec(ctx, "DELETE FROM polling_unit_assignments WHERE id = $1", id)
@@ -778,7 +778,7 @@ func (h *Handler) RevokeAgent(w http.ResponseWriter, r *http.Request) {
 	case "ward_supervisor", "ward_election_supervisor":
 		var stateID int16
 		var lgaID, wardID int32
-		var egID int16
+		var egID int32
 		var partyID int16
 		_ = h.pool.QueryRow(ctx, "SELECT state_id, lga_id, ward_id, election_group_id, party_id FROM ward_election_supervisors WHERE id = $1", id).Scan(&stateID, &lgaID, &wardID, &egID, &partyID)
 		_, err = h.pool.Exec(ctx, "DELETE FROM ward_election_supervisors WHERE id = $1", id)
@@ -789,7 +789,7 @@ func (h *Handler) RevokeAgent(w http.ResponseWriter, r *http.Request) {
 	case "lga_supervisor", "lga_election_supervisor":
 		var stateID int16
 		var lgaID int32
-		var egID int16
+		var egID int32
 		var partyID int16
 		_ = h.pool.QueryRow(ctx, "SELECT state_id, lga_id, election_group_id, party_id FROM lga_election_supervisors WHERE id = $1", id).Scan(&stateID, &lgaID, &egID, &partyID)
 		_, err = h.pool.Exec(ctx, "DELETE FROM lga_election_supervisors WHERE id = $1", id)
@@ -799,7 +799,7 @@ func (h *Handler) RevokeAgent(w http.ResponseWriter, r *http.Request) {
 		}
 	case "state_supervisor", "state_election_supervisor":
 		var stateID int16
-		var egID int16
+		var egID int32
 		var partyID int16
 		_ = h.pool.QueryRow(ctx, "SELECT state_id, election_group_id, party_id FROM state_election_supervisors WHERE id = $1", id).Scan(&stateID, &egID, &partyID)
 		_, err = h.pool.Exec(ctx, "DELETE FROM state_election_supervisors WHERE id = $1", id)
@@ -820,7 +820,7 @@ func (h *Handler) RevokeAgent(w http.ResponseWriter, r *http.Request) {
 	h.u.RespondSuccess(w, http.StatusOK, "Assignment revoked successfully", nil)
 }
 
-func adjustAgentStats(ctx context.Context, dbtx queries.DBTX, q *queries.Queries, role string, egID int16, partyID int16, stateID int16, lgaID int32, wardID int32, puID int32, isIncrement bool) {
+func adjustAgentStats(ctx context.Context, dbtx queries.DBTX, q *queries.Queries, role string, egID int32, partyID int16, stateID int16, lgaID int32, wardID int32, puID int32, isIncrement bool) {
 	if role == "" || egID <= 0 || partyID <= 0 {
 		return
 	}

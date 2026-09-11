@@ -36,7 +36,7 @@ func NewService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client, taskD
 	}
 }
 
-func (s *Service) initiateStatsRollup(ctx context.Context, egID int16, roleType string, puID int32, wardID int32, lgaID int32, stateID int16) {
+func (s *Service) initiateStatsRollup(ctx context.Context, egID int32, roleType string, puID int32, wardID int32, lgaID int32, stateID int16) {
 	if s.taskDistributor == nil || egID <= 0 {
 		return
 	}
@@ -89,7 +89,7 @@ func (s *Service) initiateStatsRollup(ctx context.Context, egID int16, roleType 
 type SubmitApplicationInput struct {
 	UserID           int64
 	PartyID          int16
-	ElectionGroupIDs []int16
+	ElectionGroupIDs []int32
 	PollingUnitID    int32
 	Avatar           string
 	VotersCardImage  string
@@ -124,8 +124,8 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 	}
 
 	// Deduplicate election group IDs
-	uniqueGroupIDs := make([]int16, 0, len(input.ElectionGroupIDs))
-	seen := make(map[int16]bool)
+	uniqueGroupIDs := make([]int32, 0, len(input.ElectionGroupIDs))
+	seen := make(map[int32]bool)
 	for _, id := range input.ElectionGroupIDs {
 		if !seen[id] {
 			seen[id] = true
@@ -249,7 +249,7 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 		err = txQueries.CreateUserReferralRecord(ctx, queries.CreateUserReferralRecordParams{
 			UserID:          input.UserID,
 			PartyID:         pgtype.Int2{Int16: int16(input.PartyID), Valid: input.PartyID > 0},
-			ElectionGroupID: pgtype.Int2{Int16: egID, Valid: egID > 0},
+			ElectionGroupID: pgtype.Int4{Int32: egID, Valid: egID > 0},
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to create user referral record: %w", err)
@@ -298,7 +298,7 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 
 type SubmitSupervisorApplicationInput struct {
 	UserID               int64
-	ElectionGroupID      int16
+	ElectionGroupID      int32
 	Role                 string
 	StateID              int16
 	LgaID                int32
@@ -425,7 +425,7 @@ func (s *Service) GetApplicationByID(ctx context.Context, id int64) (queries.Par
 	return s.queries.GetApplicationByID(ctx, id)
 }
 
-func (s *Service) ListApplications(ctx context.Context, userID int64, partyID int16, electionGroupID int16, status string, stateID int16, lgaID, wardID int32, limit int32, cursor int64) ([]queries.ListApplicationsRow, error) {
+func (s *Service) ListApplications(ctx context.Context, userID int64, partyID int16, electionGroupID int32, status string, stateID int16, lgaID, wardID int32, limit int32, cursor int64) ([]queries.ListApplicationsRow, error) {
 	return s.queries.ListApplications(ctx, queries.ListApplicationsParams{
 		UserID:          userID,
 		PartyID:         partyID,
@@ -439,7 +439,7 @@ func (s *Service) ListApplications(ctx context.Context, userID int64, partyID in
 	})
 }
 
-func (s *Service) GetPollingUnitRecommendations(ctx context.Context, partyID int16, electionGroupID int16, lgaID, wardID, pollingUnitID int32) ([]queries.GetPollingUnitsWithAgentCountsRow, error) {
+func (s *Service) GetPollingUnitRecommendations(ctx context.Context, partyID int16, electionGroupID int32, lgaID, wardID, pollingUnitID int32) ([]queries.GetPollingUnitsWithAgentCountsRow, error) {
 	var finalRows []queries.GetPollingUnitsWithAgentCountsRow
 
 	// 1. Fetch the applicant's specific polling unit directly (position 1).
@@ -1382,9 +1382,9 @@ func (s *Service) processReferralOnAcceptance(ctx context.Context, txQueries *qu
 		userReferralID = referral.UserReferralID.Int64
 	}
 
-	electionGroupID := int16(0)
+	electionGroupID := int32(0)
 	if referral.ElectionGroupID.Valid {
-		electionGroupID = referral.ElectionGroupID.Int16
+		electionGroupID = referral.ElectionGroupID.Int32
 	}
 
 	// If user_referral_id is not directly set on referral, try finding matching user_referrals record for referrer
@@ -1398,7 +1398,7 @@ func (s *Service) processReferralOnAcceptance(ctx context.Context, txQueries *qu
 			if err == nil && len(referrerRecords) > 0 {
 				userReferralID = referrerRecords[0].ID
 				if referrerRecords[0].ElectionGroupID.Valid {
-					electionGroupID = referrerRecords[0].ElectionGroupID.Int16
+					electionGroupID = referrerRecords[0].ElectionGroupID.Int32
 				}
 			}
 		}
@@ -1416,7 +1416,7 @@ func (s *Service) processReferralOnAcceptance(ctx context.Context, txQueries *qu
 	// Get electionGroupID from user_referrals if still unknown
 	if electionGroupID <= 0 {
 		if urObj, urErr := txQueries.GetUserReferralByID(ctx, userReferralID); urErr == nil && urObj.ElectionGroupID.Valid {
-			electionGroupID = urObj.ElectionGroupID.Int16
+			electionGroupID = urObj.ElectionGroupID.Int32
 		}
 	}
 
@@ -1438,7 +1438,7 @@ func (s *Service) processReferralOnAcceptance(ctx context.Context, txQueries *qu
 	}
 
 	// 4. Update referral: set milestone = 'BECAME_AGENT' and amount_to_pay if active campaign
-	egIDPg := pgtype.Int2{Int16: electionGroupID, Valid: electionGroupID > 0}
+	egIDPg := pgtype.Int4{Int32: electionGroupID, Valid: electionGroupID > 0}
 	if err := txQueries.UpdateReferralOnAgentAcceptance(ctx, queries.UpdateReferralOnAgentAcceptanceParams{
 		ReferredUserID:  acceptedUserID,
 		AmountToPay:     referralAmt,
@@ -1471,7 +1471,7 @@ func (s *Service) processReferralOnAcceptance(ctx context.Context, txQueries *qu
 
 // updateReferralOnApplicationSubmission links a newly submitted application to the applicant's existing referral record
 // if the referral record's election_group_id / party_id / user_referral_id are still unlinked (NULL).
-func (s *Service) updateReferralOnApplicationSubmission(ctx context.Context, txQueries *queries.Queries, userID int64, partyID int64, submittedEGIDs []int16, currentStateID int16, currentCountryID int16) error {
+func (s *Service) updateReferralOnApplicationSubmission(ctx context.Context, txQueries *queries.Queries, userID int64, partyID int64, submittedEGIDs []int32, currentStateID int16, currentCountryID int16) error {
 	// 1. Fetch user's referral record
 	referral, err := txQueries.GetReferralByReferredUserID(ctx, userID)
 	if err != nil {
@@ -1498,7 +1498,7 @@ func (s *Service) updateReferralOnApplicationSubmission(ctx context.Context, txQ
 	}
 
 	// Map submitted election group IDs for fast lookup
-	submittedEGMap := make(map[int16]bool)
+	submittedEGMap := make(map[int32]bool)
 	for _, egID := range submittedEGIDs {
 		submittedEGMap[egID] = true
 	}
@@ -1506,7 +1506,7 @@ func (s *Service) updateReferralOnApplicationSubmission(ctx context.Context, txQ
 	// Filter referrer's user_referral records to only those matching submitted election group IDs
 	var matchedUserReferrals []queries.UserReferral
 	for _, ur := range referrerUserReferrals {
-		if ur.ElectionGroupID.Valid && submittedEGMap[ur.ElectionGroupID.Int16] {
+		if ur.ElectionGroupID.Valid && submittedEGMap[ur.ElectionGroupID.Int32] {
 			matchedUserReferrals = append(matchedUserReferrals, ur)
 		}
 	}
@@ -1529,14 +1529,14 @@ func (s *Service) updateReferralOnApplicationSubmission(ctx context.Context, txQ
 
 	type candidateUR struct {
 		userReferral      queries.UserReferral
-		egID              int16
+		egID              int32
 		electionDate      pgtype.Date
 		hasActiveCampaign bool
 	}
 	var candidates []candidateUR
 
 	for _, ur := range matchedUserReferrals {
-		egID := ur.ElectionGroupID.Int16
+		egID := ur.ElectionGroupID.Int32
 		eg, egErr := txQueries.GetElectionGroupByID(ctx, egID)
 		if egErr != nil {
 			continue
@@ -1640,7 +1640,7 @@ func (s *Service) updateReferralOnApplicationSubmission(ctx context.Context, txQ
 		ID:              referral.ID,
 		UserReferralID:  pgtype.Int8{Int64: selected.userReferral.ID, Valid: true},
 		PartyID:         pgtype.Int2{Int16: int16(partyID), Valid: partyID > 0},
-		ElectionGroupID: pgtype.Int2{Int16: selected.egID, Valid: selected.egID > 0},
+		ElectionGroupID: pgtype.Int4{Int32: selected.egID, Valid: selected.egID > 0},
 		AmountToPay:     pgtype.Numeric{Valid: false},
 		Milestone:       "APPLIED",
 	}); err != nil {

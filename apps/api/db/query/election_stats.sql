@@ -1416,7 +1416,7 @@ INSERT INTO election_group_states (
   senatorial_districts_count, federal_constituencies_count, lgas_count,
   state_constituencies_count, wards_count, polling_units_count
 )
-SELECT DISTINCT $1::smallint, s.id,
+SELECT DISTINCT $1::integer, s.id,
   s.senatorial_districts_count, s.federal_constituencies_count, s.lgas_count,
   s.state_constituencies_count, s.wards_count, s.polling_units_count
 FROM c_states s
@@ -1439,7 +1439,7 @@ INSERT INTO election_group_senatorial_districts (
   federal_constituencies_count, lgas_count,
   state_constituencies_count, wards_count, polling_units_count
 )
-SELECT DISTINCT $1::smallint, sd.id, sd.state_id,
+SELECT DISTINCT $1::integer, sd.id, sd.state_id,
   sd.federal_constituencies_count, sd.lgas_count,
   sd.state_constituencies_count, sd.wards_count, sd.polling_units_count
 FROM senatorial_districts sd
@@ -1465,7 +1465,7 @@ INSERT INTO election_group_federal_constituencies (
   election_group_id, federal_constituency_id, state_id, senatorial_district_id,
   lgas_count, state_constituencies_count, wards_count, polling_units_count
 )
-SELECT DISTINCT $1::smallint, fc.id, fc.state_id, fc.senatorial_district_id,
+SELECT DISTINCT $1::integer, fc.id, fc.state_id, fc.senatorial_district_id,
   fc.lgas_count, fc.state_constituencies_count, fc.wards_count, fc.polling_units_count
 FROM federal_constituencies fc
 JOIN elections e ON e.election_group_id = $1
@@ -1488,7 +1488,7 @@ INSERT INTO election_group_lgas (
   election_group_id, lga_id, state_id, senatorial_district_id, federal_constituency_id,
   state_constituencies_count, wards_count, polling_units_count
 )
-SELECT DISTINCT $1::smallint, l.id, l.state_id, l.senatorial_district_id, l.federal_constituency_id,
+SELECT DISTINCT $1::integer, l.id, l.state_id, l.senatorial_district_id, l.federal_constituency_id,
   l.state_constituencies_count, l.wards_count, l.polling_units_count
 FROM lgas l
 JOIN elections e ON e.election_group_id = $1
@@ -1509,7 +1509,7 @@ INSERT INTO election_group_state_constituencies (
   election_group_id, state_constituency_id, state_id,
   wards_count, polling_units_count
 )
-SELECT DISTINCT $1::smallint, sc.id, sc.state_id,
+SELECT DISTINCT $1::integer, sc.id, sc.state_id,
   sc.wards_count, sc.polling_units_count
 FROM state_constituencies sc
 JOIN elections e ON e.election_group_id = $1
@@ -1530,7 +1530,7 @@ INSERT INTO election_group_wards (
   election_group_id, ward_id, lga_id, state_id,
   polling_units_count
 )
-SELECT DISTINCT $1::smallint, w.id, w.lga_id, l.state_id,
+SELECT DISTINCT $1::integer, w.id, w.lga_id, l.state_id,
   w.polling_units_count
 FROM wards w
 JOIN lgas l ON l.id = w.lga_id
@@ -1602,7 +1602,7 @@ SET
     )::jsonb
   END,
   updated_at = NOW()
-WHERE election_group_id = sqlc.arg(election_group_id)::smallint
+WHERE election_group_id = sqlc.arg(election_group_id)::integer
   AND polling_unit_id   = sqlc.arg(polling_unit_id)::int;
 
 -- name: IncrementElectionGroupPUPartyMetrics :exec
@@ -1648,7 +1648,7 @@ SET
     FROM jsonb_array_elements(parties) AS elem
   ),
   updated_at = NOW()
-WHERE election_group_id = sqlc.arg(election_group_id)::smallint
+WHERE election_group_id = sqlc.arg(election_group_id)::integer
   AND polling_unit_id   = sqlc.arg(polling_unit_id)::int
   AND parties @> jsonb_build_array(jsonb_build_object('party_id', sqlc.arg(party_id)::smallint));
 
@@ -1705,7 +1705,7 @@ SET
     )::jsonb
   END,
   updated_at = NOW()
-WHERE election_group_id = sqlc.arg(election_group_id)::smallint
+WHERE election_group_id = sqlc.arg(election_group_id)::integer
   AND ward_id           = sqlc.arg(ward_id)::int;
 
 -- name: UpsertElectionGroupLGAPartyEntry :exec
@@ -1760,7 +1760,7 @@ SET
     )::jsonb
   END,
   updated_at = NOW()
-WHERE election_group_id = sqlc.arg(election_group_id)::smallint
+WHERE election_group_id = sqlc.arg(election_group_id)::integer
   AND lga_id            = sqlc.arg(lga_id)::int;
 
 -- name: UpsertElectionGroupStateConstituencyPartyEntry :exec
@@ -1814,7 +1814,7 @@ SET
     )::jsonb
   END,
   updated_at = NOW()
-WHERE election_group_id       = sqlc.arg(election_group_id)::smallint
+WHERE election_group_id       = sqlc.arg(election_group_id)::integer
   AND state_constituency_id   = sqlc.arg(state_constituency_id)::int;
 
 -- name: UpsertElectionGroupFederalConstituencyPartyEntry :exec
@@ -1868,7 +1868,7 @@ SET
     )::jsonb
   END,
   updated_at = NOW()
-WHERE election_group_id       = sqlc.arg(election_group_id)::smallint
+WHERE election_group_id       = sqlc.arg(election_group_id)::integer
   AND federal_constituency_id = sqlc.arg(federal_constituency_id)::int;
 
 -- name: UpsertElectionGroupSenatorialDistrictPartyEntry :exec
@@ -1922,7 +1922,7 @@ SET
     )::jsonb
   END,
   updated_at = NOW()
-WHERE election_group_id      = sqlc.arg(election_group_id)::smallint
+WHERE election_group_id      = sqlc.arg(election_group_id)::integer
   AND senatorial_district_id = sqlc.arg(senatorial_district_id)::int;
 
 -- name: UpsertElectionGroupStatePartyEntry :exec
@@ -1976,7 +1976,7 @@ SET
     )::jsonb
   END,
   updated_at = NOW()
-WHERE election_group_id = sqlc.arg(election_group_id)::smallint
+WHERE election_group_id = sqlc.arg(election_group_id)::integer
   AND state_id          = sqlc.arg(state_id)::smallint;
 
 -- ============================================================
@@ -1997,7 +1997,7 @@ SELECT COALESCE(
   0
 )::int AS agents_count
 FROM election_group_polling_units
-WHERE election_group_id = sqlc.arg(election_group_id)::smallint
+WHERE election_group_id = sqlc.arg(election_group_id)::integer
   AND polling_unit_id   = sqlc.arg(polling_unit_id)::int;
 
 -- ============================================================
@@ -2039,7 +2039,7 @@ SET
     )
   END,
   updated_at = NOW()
-WHERE election_group_id = sqlc.arg(election_group_id)::smallint
+WHERE election_group_id = sqlc.arg(election_group_id)::integer
   AND lga_id            = sqlc.arg(lga_id)::int;
 
 -- name: AdjustElectionGroupStateConstituencyWardSupervisorCounts :exec
@@ -2074,7 +2074,7 @@ SET
     )
   END,
   updated_at = NOW()
-WHERE election_group_id     = sqlc.arg(election_group_id)::smallint
+WHERE election_group_id     = sqlc.arg(election_group_id)::integer
   AND state_constituency_id = sqlc.arg(state_constituency_id)::int;
 
 -- name: AdjustElectionGroupFederalConstituencyWardSupervisorCounts :exec
@@ -2109,7 +2109,7 @@ SET
     )
   END,
   updated_at = NOW()
-WHERE election_group_id       = sqlc.arg(election_group_id)::smallint
+WHERE election_group_id       = sqlc.arg(election_group_id)::integer
   AND federal_constituency_id = sqlc.arg(federal_constituency_id)::int;
 
 -- name: AdjustElectionGroupSenatorialDistrictWardSupervisorCounts :exec
@@ -2144,7 +2144,7 @@ SET
     )
   END,
   updated_at = NOW()
-WHERE election_group_id      = sqlc.arg(election_group_id)::smallint
+WHERE election_group_id      = sqlc.arg(election_group_id)::integer
   AND senatorial_district_id = sqlc.arg(senatorial_district_id)::int;
 
 -- name: AdjustElectionGroupStateWardSupervisorCounts :exec
@@ -2179,7 +2179,7 @@ SET
     )
   END,
   updated_at = NOW()
-WHERE election_group_id = sqlc.arg(election_group_id)::smallint
+WHERE election_group_id = sqlc.arg(election_group_id)::integer
   AND state_id          = sqlc.arg(state_id)::smallint;
 
 -- name: AdjustElectionGroupFederalConstituencyLGASupervisorCounts :exec
@@ -2214,7 +2214,7 @@ SET
     )
   END,
   updated_at = NOW()
-WHERE election_group_id       = sqlc.arg(election_group_id)::smallint
+WHERE election_group_id       = sqlc.arg(election_group_id)::integer
   AND federal_constituency_id = sqlc.arg(federal_constituency_id)::int;
 
 -- name: AdjustElectionGroupSenatorialDistrictLGASupervisorCounts :exec
@@ -2249,7 +2249,7 @@ SET
     )
   END,
   updated_at = NOW()
-WHERE election_group_id      = sqlc.arg(election_group_id)::smallint
+WHERE election_group_id      = sqlc.arg(election_group_id)::integer
   AND senatorial_district_id = sqlc.arg(senatorial_district_id)::int;
 
 -- name: AdjustElectionGroupStateLGASupervisorCounts :exec
@@ -2284,7 +2284,7 @@ SET
     )
   END,
   updated_at = NOW()
-WHERE election_group_id = sqlc.arg(election_group_id)::smallint
+WHERE election_group_id = sqlc.arg(election_group_id)::integer
   AND state_id          = sqlc.arg(state_id)::smallint;
 
 
@@ -2293,7 +2293,7 @@ WHERE election_group_id = sqlc.arg(election_group_id)::smallint
 -- Used to determine unique_delta when assigning/removing a ward supervisor.
 SELECT COUNT(*)::int AS supervisor_count
 FROM ward_election_supervisors
-WHERE election_group_id = sqlc.arg(election_group_id)::smallint
+WHERE election_group_id = sqlc.arg(election_group_id)::integer
   AND ward_id           = sqlc.arg(ward_id)::int
   AND party_id          = sqlc.arg(party_id)::smallint;
 
@@ -2301,7 +2301,7 @@ WHERE election_group_id = sqlc.arg(election_group_id)::smallint
 -- Returns the current count of LGA supervisors for a party in a given lga+election group.
 SELECT COUNT(*)::int AS supervisor_count
 FROM lga_election_supervisors
-WHERE election_group_id = sqlc.arg(election_group_id)::smallint
+WHERE election_group_id = sqlc.arg(election_group_id)::integer
   AND lga_id            = sqlc.arg(lga_id)::int
   AND party_id          = sqlc.arg(party_id)::smallint;
 
@@ -2309,7 +2309,7 @@ WHERE election_group_id = sqlc.arg(election_group_id)::smallint
 -- Returns the current count of state supervisors for a party in a given state+election group.
 SELECT COUNT(*)::int AS supervisor_count
 FROM state_election_supervisors
-WHERE election_group_id = sqlc.arg(election_group_id)::smallint
+WHERE election_group_id = sqlc.arg(election_group_id)::integer
   AND state_id          = sqlc.arg(state_id)::smallint
   AND party_id          = sqlc.arg(party_id)::smallint;
 
@@ -2339,7 +2339,7 @@ SET
     )
   END,
   updated_at = NOW()
-WHERE election_group_id = sqlc.arg(election_group_id)::smallint
+WHERE election_group_id = sqlc.arg(election_group_id)::integer
   AND ward_id           = sqlc.arg(ward_id)::int;
 
 -- name: AdjustElectionGroupNationalWardSupervisorCounts :exec
@@ -2374,7 +2374,7 @@ SET
     )
   END,
   updated_at = NOW()
-WHERE id = sqlc.arg(election_group_id)::smallint;
+WHERE id = sqlc.arg(election_group_id)::integer;
 
 -- name: AdjustElectionGroupNationalLGASupervisorCounts :exec
 UPDATE election_groups
@@ -2408,7 +2408,7 @@ SET
     )
   END,
   updated_at = NOW()
-WHERE id = sqlc.arg(election_group_id)::smallint;
+WHERE id = sqlc.arg(election_group_id)::integer;
 
 -- name: AdjustElectionGroupNationalStateSupervisorCounts :exec
 UPDATE election_groups
@@ -2442,7 +2442,7 @@ SET
     )
   END,
   updated_at = NOW()
-WHERE id = sqlc.arg(election_group_id)::smallint;
+WHERE id = sqlc.arg(election_group_id)::integer;
 
 -- name: AdjustElectionGroupStateStateSupervisorCounts :exec
 UPDATE election_group_states
@@ -2470,7 +2470,7 @@ SET
     )
   END,
   updated_at = NOW()
-WHERE election_group_id = sqlc.arg(election_group_id)::smallint
+WHERE election_group_id = sqlc.arg(election_group_id)::integer
   AND state_id          = sqlc.arg(state_id)::smallint;
 
 -- name: AdjustElectionGroupLGALGASupervisorCounts :exec
@@ -2499,7 +2499,7 @@ SET
     )
   END,
   updated_at = NOW()
-WHERE election_group_id = sqlc.arg(election_group_id)::smallint
+WHERE election_group_id = sqlc.arg(election_group_id)::integer
   AND lga_id            = sqlc.arg(lga_id)::int;
 
 
@@ -2536,7 +2536,7 @@ SET
     )
   END,
   updated_at = NOW()
-WHERE id = sqlc.arg(election_group_id)::smallint;
+WHERE id = sqlc.arg(election_group_id)::integer;
 -- name: RefreshAllElectionGroupGlobalStats :exec
 -- Aggregates from election_group_states up to election_groups.
 WITH src_agg AS (
@@ -2877,7 +2877,7 @@ SELECT
   federal_constituency_id,
   senatorial_district_id
 FROM election_group_polling_units
-WHERE election_group_id = sqlc.arg(election_group_id)::smallint
+WHERE election_group_id = sqlc.arg(election_group_id)::integer
   AND polling_unit_id   = sqlc.arg(polling_unit_id)::int;
 
 -- name: RefreshSingleElectionGroupWardStats :exec
@@ -2905,7 +2905,7 @@ WITH epu_agg AS (
     COUNT(*) FILTER (WHERE unique_pu_final_results_uploaded_count > 0) AS total_pu_unique_final_results_uploaded,
     COUNT(*) FILTER (WHERE pu_live_voters_referred_by_agent_count > 0) AS total_pu_where_agents_referred_live_voters
   FROM election_group_polling_units
-  WHERE election_group_id = sqlc.arg(election_group_id)::smallint
+  WHERE election_group_id = sqlc.arg(election_group_id)::integer
     AND ward_id = sqlc.arg(ward_id)::int
   GROUP BY election_group_id, ward_id, lga_id, state_id
 ),
@@ -2935,7 +2935,7 @@ party_expanded AS (
     (p.value->>'pu_agents_count')::int > 0            AS has_agents
   FROM election_group_polling_units epu,
        jsonb_array_elements(epu.parties) AS p(value)
-  WHERE epu.election_group_id = sqlc.arg(election_group_id)::smallint
+  WHERE epu.election_group_id = sqlc.arg(election_group_id)::integer
     AND epu.ward_id = sqlc.arg(ward_id)::int
 ),
 party_agg AS (
@@ -3093,7 +3093,7 @@ WITH src_agg AS (
     COALESCE(SUM(ward_supervisors_count), 0)::int    AS ward_supervisors_count,
     COUNT(*) FILTER (WHERE ward_supervisors_count > 0)::int AS unique_ward_supervisors_count
   FROM election_group_wards
-  WHERE election_group_id = sqlc.arg(election_group_id)::smallint
+  WHERE election_group_id = sqlc.arg(election_group_id)::integer
     AND lga_id = sqlc.arg(lga_id)::int
   GROUP BY election_group_id, lga_id, state_id
 ),
@@ -3124,7 +3124,7 @@ party_expanded AS (
     COALESCE((p.value->>'ward_supervisors_count')::int, 0)             AS ward_supervisors_count
   FROM election_group_wards s,
        jsonb_array_elements(s.parties) AS p(value)
-  WHERE s.election_group_id = sqlc.arg(election_group_id)::smallint
+  WHERE s.election_group_id = sqlc.arg(election_group_id)::integer
     AND s.lga_id = sqlc.arg(lga_id)::int
 ),
 party_agg AS (
@@ -3288,7 +3288,7 @@ WITH src_agg AS (
     COUNT(*) FILTER (WHERE unique_pu_final_results_uploaded_count > 0) AS total_pu_unique_final_results_uploaded,
     COUNT(*) FILTER (WHERE pu_live_voters_referred_by_agent_count > 0) AS total_pu_where_agents_referred_live_voters
   FROM election_group_polling_units
-  WHERE election_group_id = sqlc.arg(election_group_id)::smallint
+  WHERE election_group_id = sqlc.arg(election_group_id)::integer
     AND state_constituency_id = sqlc.arg(state_constituency_id)::int
   GROUP BY election_group_id, state_constituency_id, state_id
 ),
@@ -3318,7 +3318,7 @@ party_expanded AS (
     s.pu_live_voters_referred_by_agent_count > 0 AS has_referrals
   FROM election_group_polling_units s,
        jsonb_array_elements(s.parties) AS p(value)
-  WHERE s.election_group_id = sqlc.arg(election_group_id)::smallint
+  WHERE s.election_group_id = sqlc.arg(election_group_id)::integer
     AND s.state_constituency_id = sqlc.arg(state_constituency_id)::int
 ),
 party_agg AS (
@@ -3458,7 +3458,7 @@ WITH src_agg AS (
     COALESCE(SUM(ward_supervisors_count), 0)::int    AS ward_supervisors_count,
     COALESCE(SUM(unique_ward_supervisors_count), 0)::int AS unique_ward_supervisors_count
   FROM election_group_lgas
-  WHERE election_group_id = sqlc.arg(election_group_id)::smallint
+  WHERE election_group_id = sqlc.arg(election_group_id)::integer
     AND state_id = sqlc.arg(state_id)::smallint
   GROUP BY election_group_id, state_id
 ),
@@ -3491,7 +3491,7 @@ party_expanded AS (
     COALESCE((p.value->>'unique_ward_supervisors_count')::int, 0)      AS unique_ward_supervisors_count
   FROM election_group_lgas s,
        jsonb_array_elements(s.parties) AS p(value)
-  WHERE s.election_group_id = sqlc.arg(election_group_id)::smallint
+  WHERE s.election_group_id = sqlc.arg(election_group_id)::integer
     AND s.state_id = sqlc.arg(state_id)::smallint
 ),
 party_agg AS (
@@ -3668,7 +3668,7 @@ WITH src_agg AS (
     COALESCE(SUM(ward_supervisors_count), 0)::int    AS ward_supervisors_count,
     COALESCE(SUM(unique_ward_supervisors_count), 0)::int AS unique_ward_supervisors_count
   FROM election_group_states
-  WHERE election_group_id = sqlc.arg(election_group_id)::smallint
+  WHERE election_group_id = sqlc.arg(election_group_id)::integer
   GROUP BY election_group_id
 ),
 party_expanded AS (
@@ -3702,7 +3702,7 @@ party_expanded AS (
     COALESCE((p.value->>'unique_ward_supervisors_count')::int, 0)      AS unique_ward_supervisors_count
   FROM election_group_states s,
        jsonb_array_elements(s.parties) AS p(value)
-  WHERE s.election_group_id = sqlc.arg(election_group_id)::smallint
+  WHERE s.election_group_id = sqlc.arg(election_group_id)::integer
 ),
 party_agg AS (
   SELECT
@@ -3838,7 +3838,7 @@ INSERT INTO election_group_polling_units (
   parties
 )
 SELECT
-  sqlc.arg(election_group_id)::smallint,
+  sqlc.arg(election_group_id)::integer,
   sqlc.arg(polling_unit_id)::int,
   pu.state_id, pu.lga_id, pu.ward_id,
   w.state_constituency_id, l.federal_constituency_id, l.senatorial_district_id,
@@ -3900,7 +3900,7 @@ INSERT INTO election_group_wards (
   parties
 )
 SELECT
-  sqlc.arg(election_group_id)::smallint,
+  sqlc.arg(election_group_id)::integer,
   sqlc.arg(ward_id)::int,
   w.lga_id, w.state_id,
   GREATEST(0, sqlc.arg(app_delta)::int),
@@ -3984,7 +3984,7 @@ INSERT INTO election_group_lgas (
   parties
 )
 SELECT
-  sqlc.arg(election_group_id)::smallint,
+  sqlc.arg(election_group_id)::integer,
   sqlc.arg(lga_id)::int,
   l.state_id, l.senatorial_district_id, l.federal_constituency_id,
   GREATEST(0, sqlc.arg(app_delta)::int),
@@ -4093,7 +4093,7 @@ INSERT INTO election_group_states (
   parties
 )
 VALUES (
-  sqlc.arg(election_group_id)::smallint,
+  sqlc.arg(election_group_id)::integer,
   sqlc.arg(state_id)::smallint,
   GREATEST(0, sqlc.arg(app_delta)::int),
   GREATEST(0, sqlc.arg(accepted_delta)::int),
@@ -4306,7 +4306,7 @@ SET
     )
   END,
   updated_at = NOW()
-WHERE id = sqlc.arg(election_group_id)::smallint;
+WHERE id = sqlc.arg(election_group_id)::integer;
 
 
 

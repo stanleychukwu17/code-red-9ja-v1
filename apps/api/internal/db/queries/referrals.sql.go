@@ -78,7 +78,7 @@ ON CONFLICT (user_id, election_group_id) DO NOTHING
 type CreateUserReferralRecordParams struct {
 	UserID          int64       `json:"user_id"`
 	PartyID         pgtype.Int2 `json:"party_id"`
-	ElectionGroupID pgtype.Int2 `json:"election_group_id"`
+	ElectionGroupID pgtype.Int4 `json:"election_group_id"`
 }
 
 func (q *Queries) CreateUserReferralRecord(ctx context.Context, arg CreateUserReferralRecordParams) error {
@@ -97,15 +97,15 @@ type GetApplicationElectionGroupsByUserAndPartyParams struct {
 }
 
 // Returns all distinct election_group_ids for a user's applications under a party.
-func (q *Queries) GetApplicationElectionGroupsByUserAndParty(ctx context.Context, arg GetApplicationElectionGroupsByUserAndPartyParams) ([]int16, error) {
+func (q *Queries) GetApplicationElectionGroupsByUserAndParty(ctx context.Context, arg GetApplicationElectionGroupsByUserAndPartyParams) ([]int32, error) {
 	rows, err := q.db.Query(ctx, getApplicationElectionGroupsByUserAndParty, arg.UserID, arg.PartyID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []int16
+	var items []int32
 	for rows.Next() {
-		var election_group_id int16
+		var election_group_id int32
 		if err := rows.Scan(&election_group_id); err != nil {
 			return nil, err
 		}
@@ -254,7 +254,7 @@ LIMIT 1
 
 type GetUserReferralByUserAndElectionGroupParams struct {
 	UserID          int64       `json:"user_id"`
-	ElectionGroupID pgtype.Int2 `json:"election_group_id"`
+	ElectionGroupID pgtype.Int4 `json:"election_group_id"`
 }
 
 func (q *Queries) GetUserReferralByUserAndElectionGroup(ctx context.Context, arg GetUserReferralByUserAndElectionGroupParams) (UserReferral, error) {
@@ -303,7 +303,7 @@ WHERE user_id = $1 AND election_group_id = $2
 
 type IncrementUserReferralAgentCountParams struct {
 	UserID          int64       `json:"user_id"`
-	ElectionGroupID pgtype.Int2 `json:"election_group_id"`
+	ElectionGroupID pgtype.Int4 `json:"election_group_id"`
 }
 
 // Increments agent_referrals for the referrer's user_referrals row matching the election group.
@@ -380,7 +380,7 @@ WHERE user_id = $1 AND election_group_id = $2
 
 type IncrementUserReferralUnpaidCountParams struct {
 	UserID          int64       `json:"user_id"`
-	ElectionGroupID pgtype.Int2 `json:"election_group_id"`
+	ElectionGroupID pgtype.Int4 `json:"election_group_id"`
 }
 
 // Increments unpaid_referrals for the referrer's user_referrals row matching the election group.
@@ -527,7 +527,7 @@ type ListReferredUsersWithDetailsRow struct {
 	ID              int64              `json:"id"`
 	UserReferralID  pgtype.Int8        `json:"user_referral_id"`
 	PartyID         pgtype.Int2        `json:"party_id"`
-	ElectionGroupID pgtype.Int2        `json:"election_group_id"`
+	ElectionGroupID pgtype.Int4        `json:"election_group_id"`
 	ReferrerUserID  int64              `json:"referrer_user_id"`
 	ReferredUserID  int64              `json:"referred_user_id"`
 	Milestone       string             `json:"milestone"`
@@ -640,7 +640,7 @@ type UpdateReferralOnAgentAcceptanceParams struct {
 	ReferredUserID  int64          `json:"referred_user_id"`
 	AmountToPay     pgtype.Numeric `json:"amount_to_pay"`
 	PartyID         pgtype.Int2    `json:"party_id"`
-	ElectionGroupID pgtype.Int2    `json:"election_group_id"`
+	ElectionGroupID pgtype.Int4    `json:"election_group_id"`
 }
 
 // Updates the referrals row when the referred user is accepted as an agent.
@@ -670,7 +670,7 @@ type UpdateReferralOnApplicationParams struct {
 	ID              int64          `json:"id"`
 	UserReferralID  pgtype.Int8    `json:"user_referral_id"`
 	PartyID         pgtype.Int2    `json:"party_id"`
-	ElectionGroupID pgtype.Int2    `json:"election_group_id"`
+	ElectionGroupID pgtype.Int4    `json:"election_group_id"`
 	AmountToPay     pgtype.Numeric `json:"amount_to_pay"`
 	Milestone       string         `json:"milestone"`
 }

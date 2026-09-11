@@ -36,7 +36,7 @@ LEFT JOIN agent_earnings ae ON ae.user_id = pua.user_id AND ae.election_group_id
 LEFT JOIN election_group_polling_units egpu ON egpu.election_group_id = pua.election_group_id AND egpu.polling_unit_id = pua.polling_unit_id
 WHERE
   (sqlc.arg(party_id)::smallint = 0 OR pua.party_id = sqlc.arg(party_id)) AND
-  (sqlc.arg(election_group_id)::smallint = 0 OR pua.election_group_id = sqlc.arg(election_group_id)) AND
+  (sqlc.arg(election_group_id)::integer = 0 OR pua.election_group_id = sqlc.arg(election_group_id)) AND
   (sqlc.arg(state_id)::smallint = 0 OR pu.state_id = sqlc.arg(state_id)) AND
   (sqlc.arg(lga_id)::int = 0 OR pu.lga_id = sqlc.arg(lga_id)) AND
   (sqlc.arg(ward_id)::int = 0 OR pu.ward_id = sqlc.arg(ward_id)) AND
@@ -77,7 +77,7 @@ LEFT JOIN agent_earnings ae ON ae.user_id = wes.user_id AND ae.election_group_id
 LEFT JOIN election_group_wards egw ON egw.election_group_id = wes.election_group_id AND egw.ward_id = wes.ward_id
 WHERE
   (sqlc.arg(party_id)::smallint = 0 OR wes.party_id = sqlc.arg(party_id)) AND
-  (sqlc.arg(election_group_id)::smallint = 0 OR wes.election_group_id = sqlc.arg(election_group_id)) AND
+  (sqlc.arg(election_group_id)::integer = 0 OR wes.election_group_id = sqlc.arg(election_group_id)) AND
   (sqlc.arg(state_id)::smallint = 0 OR wes.state_id = sqlc.arg(state_id)) AND
   (sqlc.arg(lga_id)::int = 0 OR wes.lga_id = sqlc.arg(lga_id)) AND
   (sqlc.arg(ward_id)::int = 0 OR wes.ward_id = sqlc.arg(ward_id)) AND
@@ -117,7 +117,7 @@ LEFT JOIN agent_earnings ae ON ae.user_id = les.user_id AND ae.election_group_id
 LEFT JOIN election_group_lgas egl ON egl.election_group_id = les.election_group_id AND egl.lga_id = les.lga_id
 WHERE
   (sqlc.arg(party_id)::smallint = 0 OR les.party_id = sqlc.arg(party_id)) AND
-  (sqlc.arg(election_group_id)::smallint = 0 OR les.election_group_id = sqlc.arg(election_group_id)) AND
+  (sqlc.arg(election_group_id)::integer = 0 OR les.election_group_id = sqlc.arg(election_group_id)) AND
   (sqlc.arg(state_id)::smallint = 0 OR les.state_id = sqlc.arg(state_id)) AND
   (sqlc.arg(lga_id)::int = 0 OR les.lga_id = sqlc.arg(lga_id)) AND
   (sqlc.arg(search_query)::varchar = '' OR u.first_name ILIKE '%' || sqlc.arg(search_query) || '%' OR u.last_name ILIKE '%' || sqlc.arg(search_query) || '%') AND
@@ -155,7 +155,7 @@ LEFT JOIN agent_earnings ae ON ae.user_id = ses.user_id AND ae.election_group_id
 LEFT JOIN election_group_states egs ON egs.election_group_id = ses.election_group_id AND egs.state_id = ses.state_id
 WHERE
   (sqlc.arg(party_id)::smallint = 0 OR ses.party_id = sqlc.arg(party_id)) AND
-  (sqlc.arg(election_group_id)::smallint = 0 OR ses.election_group_id = sqlc.arg(election_group_id)) AND
+  (sqlc.arg(election_group_id)::integer = 0 OR ses.election_group_id = sqlc.arg(election_group_id)) AND
   (sqlc.arg(state_id)::smallint = 0 OR ses.state_id = sqlc.arg(state_id)) AND
   (sqlc.arg(search_query)::varchar = '' OR u.first_name ILIKE '%' || sqlc.arg(search_query) || '%' OR u.last_name ILIKE '%' || sqlc.arg(search_query) || '%') AND
   (sqlc.arg(cursor_id)::bigint = 0 OR ses.id < sqlc.arg(cursor_id))

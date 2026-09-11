@@ -28,7 +28,7 @@ INSERT INTO polling_unit_assignments (
 type CreateAssignmentParams struct {
 	UserID               int64       `json:"user_id"`
 	PollingUnitID        int32       `json:"polling_unit_id"`
-	ElectionGroupID      int16       `json:"election_group_id"`
+	ElectionGroupID      int32       `json:"election_group_id"`
 	PartyID              int16       `json:"party_id"`
 	RoleType             pgtype.Text `json:"role_type"`
 	AssignedBy           pgtype.Int8 `json:"assigned_by"`
@@ -127,7 +127,7 @@ type GetAssignmentByIDRow struct {
 	ID                      int64              `json:"id"`
 	UserID                  int64              `json:"user_id"`
 	PollingUnitID           int32              `json:"polling_unit_id"`
-	ElectionGroupID         int16              `json:"election_group_id"`
+	ElectionGroupID         int32              `json:"election_group_id"`
 	PartyID                 int16              `json:"party_id"`
 	RoleType                pgtype.Text        `json:"role_type"`
 	AssignedBy              pgtype.Int8        `json:"assigned_by"`
@@ -206,7 +206,7 @@ ORDER BY gs.threshold
 
 type GetPartyElectionGroupCoverageDistributionParams struct {
 	PartyID         int16 `json:"party_id"`
-	ElectionGroupID int16 `json:"election_group_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
 }
 
 type GetPartyElectionGroupCoverageDistributionRow struct {
@@ -311,7 +311,7 @@ JOIN users u ON a.user_id = u.id
 JOIN polling_units pu ON a.polling_unit_id = pu.id
 JOIN election_groups eg ON a.election_group_id = eg.id
 WHERE 
-  ($3::smallint = 0 OR a.election_group_id = $3) AND
+  ($3::integer = 0 OR a.election_group_id = $3) AND
   ($4::smallint = 0 OR a.party_id = $4) AND
   ($5::int = 0 OR a.polling_unit_id = $5) AND
   ($6::bigint = 0 OR a.user_id = $6)
@@ -322,7 +322,7 @@ LIMIT $1 OFFSET $2
 type ListAssignmentsParams struct {
 	Limit           int32 `json:"limit"`
 	Offset          int32 `json:"offset"`
-	ElectionGroupID int16 `json:"election_group_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
 	PartyID         int16 `json:"party_id"`
 	PollingUnitID   int32 `json:"polling_unit_id"`
 	UserID          int64 `json:"user_id"`
@@ -332,7 +332,7 @@ type ListAssignmentsRow struct {
 	ID                      int64              `json:"id"`
 	UserID                  int64              `json:"user_id"`
 	PollingUnitID           int32              `json:"polling_unit_id"`
-	ElectionGroupID         int16              `json:"election_group_id"`
+	ElectionGroupID         int32              `json:"election_group_id"`
 	PartyID                 int16              `json:"party_id"`
 	RoleType                pgtype.Text        `json:"role_type"`
 	AssignedBy              pgtype.Int8        `json:"assigned_by"`
@@ -435,7 +435,7 @@ type UpdateAssignmentReadinessPercentageRow struct {
 	ID                                      int64              `json:"id"`
 	UserID                                  int64              `json:"user_id"`
 	PollingUnitID                           int32              `json:"polling_unit_id"`
-	ElectionGroupID                         int16              `json:"election_group_id"`
+	ElectionGroupID                         int32              `json:"election_group_id"`
 	PartyID                                 int16              `json:"party_id"`
 	RoleType                                pgtype.Text        `json:"role_type"`
 	AssignedBy                              pgtype.Int8        `json:"assigned_by"`
@@ -514,7 +514,7 @@ type UpdateAssignmentTrackingRow struct {
 	ID                      int64              `json:"id"`
 	UserID                  int64              `json:"user_id"`
 	PollingUnitID           int32              `json:"polling_unit_id"`
-	ElectionGroupID         int16              `json:"election_group_id"`
+	ElectionGroupID         int32              `json:"election_group_id"`
 	PartyID                 int16              `json:"party_id"`
 	RoleType                pgtype.Text        `json:"role_type"`
 	AssignedBy              pgtype.Int8        `json:"assigned_by"`
@@ -570,7 +570,7 @@ RETURNING id, user_id, polling_unit_id, election_group_id, party_id, role_type, 
 type UpdatePollingUnitAssignmentEarnedAmountKoboParams struct {
 	EarnedDeltaKobo int64 `json:"earned_delta_kobo"`
 	UserID          int64 `json:"user_id"`
-	ElectionGroupID int16 `json:"election_group_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
 }
 
 func (q *Queries) UpdatePollingUnitAssignmentEarnedAmountKobo(ctx context.Context, arg UpdatePollingUnitAssignmentEarnedAmountKoboParams) (PollingUnitAssignment, error) {

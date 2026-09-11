@@ -25,7 +25,7 @@ const (
 // ─── Payload types ────────────────────────────────────────────────────────────
 
 type RefreshWardStatsPayload struct {
-	ElectionGroupID int16 `json:"election_group_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
 	WardID          int32 `json:"ward_id"`
 	// Carry LGA/State IDs forward so we can enqueue the next level without an extra DB round-trip.
 	LGAID   int32 `json:"lga_id"`
@@ -33,23 +33,23 @@ type RefreshWardStatsPayload struct {
 }
 
 type RefreshLGAStatsPayload struct {
-	ElectionGroupID int16 `json:"election_group_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
 	LGAID           int32 `json:"lga_id"`
 	StateID         int16 `json:"state_id"`
 }
 
 type RefreshStateConstituencyStatsPayload struct {
-	ElectionGroupID     int16 `json:"election_group_id"`
+	ElectionGroupID     int32 `json:"election_group_id"`
 	StateConstituencyID int32 `json:"state_constituency_id"`
 }
 
 type RefreshStateStatsPayload struct {
-	ElectionGroupID int16 `json:"election_group_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
 	StateID         int16 `json:"state_id"`
 }
 
 type RefreshGlobalStatsPayload struct {
-	ElectionGroupID int16 `json:"election_group_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
 }
 
 // ─── Distributors ─────────────────────────────────────────────────────────────

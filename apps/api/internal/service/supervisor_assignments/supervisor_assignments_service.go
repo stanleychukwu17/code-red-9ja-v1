@@ -25,7 +25,7 @@ type SupervisorAssignmentsResponse struct {
 	WardSupervisor  *queries.WardElectionSupervisor  `json:"ward_supervisor"`
 }
 
-func (s *Service) GetUserSupervisorAssignments(ctx context.Context, userID int64, electionGroupID int16) (*SupervisorAssignmentsResponse, error) {
+func (s *Service) GetUserSupervisorAssignments(ctx context.Context, userID int64, electionGroupID int32) (*SupervisorAssignmentsResponse, error) {
 	resp := &SupervisorAssignmentsResponse{}
 
 	// State

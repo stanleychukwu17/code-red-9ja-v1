@@ -3,7 +3,7 @@
 -- 1. Create 1-to-1 table linking elections to INEC API results & statistics
 CREATE TABLE IF NOT EXISTS inec_result_grabber (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  election_group_id SMALLINT REFERENCES election_groups(id) ON DELETE CASCADE NOT NULL,
+  election_group_id INT REFERENCES election_groups(id) ON DELETE CASCADE NOT NULL,
   election_id INT UNIQUE NOT NULL REFERENCES elections(id) ON DELETE CASCADE,
 
   name VARCHAR(255), -- name
@@ -57,7 +57,7 @@ EXECUTE FUNCTION create_inec_result_grabber_record();
 CREATE TABLE IF NOT EXISTS inec_result_grabber_logs (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   inec_result_grabber_id BIGINT REFERENCES inec_result_grabber(id) ON DELETE CASCADE NOT NULL,
-  election_group_id SMALLINT REFERENCES election_groups(id) ON DELETE CASCADE NOT NULL,
+  election_group_id INT REFERENCES election_groups(id) ON DELETE CASCADE NOT NULL,
   election_id INT REFERENCES elections(id) ON DELETE CASCADE NOT NULL,
 
   results_collected_count INT NOT NULL DEFAULT 0,

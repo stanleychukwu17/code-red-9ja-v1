@@ -76,7 +76,7 @@ WHERE g.election_id = $1
 
 type GetINECResultGrabberByElectionIDRow struct {
 	ID                            int64              `json:"id"`
-	ElectionGroupID               int16              `json:"election_group_id"`
+	ElectionGroupID               int32              `json:"election_group_id"`
 	ElectionID                    int32              `json:"election_id"`
 	Name                          pgtype.Text        `json:"name"`
 	Scope                         string             `json:"scope"`
@@ -133,7 +133,7 @@ WHERE g.id = $1
 
 type GetINECResultGrabberByIDRow struct {
 	ID                            int64              `json:"id"`
-	ElectionGroupID               int16              `json:"election_group_id"`
+	ElectionGroupID               int32              `json:"election_group_id"`
 	ElectionID                    int32              `json:"election_id"`
 	Name                          pgtype.Text        `json:"name"`
 	Scope                         string             `json:"scope"`
@@ -193,7 +193,7 @@ ORDER BY g.id ASC
 
 type ListActiveINECResultGrabbersRow struct {
 	ID                            int64              `json:"id"`
-	ElectionGroupID               int16              `json:"election_group_id"`
+	ElectionGroupID               int32              `json:"election_group_id"`
 	ElectionID                    int32              `json:"election_id"`
 	Name                          pgtype.Text        `json:"name"`
 	Scope                         string             `json:"scope"`
@@ -270,7 +270,7 @@ type ListINECResultGrabbersPaginatedParams struct {
 
 type ListINECResultGrabbersPaginatedRow struct {
 	ID                            int64              `json:"id"`
-	ElectionGroupID               int16              `json:"election_group_id"`
+	ElectionGroupID               int32              `json:"election_group_id"`
 	ElectionID                    int32              `json:"election_id"`
 	Name                          pgtype.Text        `json:"name"`
 	Scope                         string             `json:"scope"`

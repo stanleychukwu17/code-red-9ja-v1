@@ -39,7 +39,7 @@ FROM user_practice_tests upt
 JOIN users u ON upt.user_id = u.id
 WHERE
   (sqlc.arg(user_id)::bigint = 0 OR upt.user_id = sqlc.arg(user_id)) AND
-  (sqlc.arg(election_group_id)::smallint = 0 OR upt.election_group_id = sqlc.arg(election_group_id)) AND
+  (sqlc.arg(election_group_id)::integer = 0 OR upt.election_group_id = sqlc.arg(election_group_id)) AND
   (sqlc.arg(cursor)::bigint = 0 OR upt.id < sqlc.arg(cursor))
 ORDER BY upt.id DESC
 LIMIT sqlc.arg(limit_val)::int;

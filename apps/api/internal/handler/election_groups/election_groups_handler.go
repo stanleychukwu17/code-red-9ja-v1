@@ -17,13 +17,13 @@ import (
 
 type ElectionGroupsService interface {
 	CreateElectionGroup(ctx context.Context, name string, rank int32, electionsCount, statesCount int32, electionDate time.Time) (queries.ElectionGroup, error)
-	GetElectionGroupByID(ctx context.Context, id int16) (queries.ElectionGroup, error)
+	GetElectionGroupByID(ctx context.Context, id int32) (queries.ElectionGroup, error)
 	ListElectionGroups(ctx context.Context) ([]queries.ElectionGroup, error)
-	UpdateElectionGroup(ctx context.Context, id int16, name string, rank int32, electionsCount, statesCount int32, electionDate time.Time) (queries.ElectionGroup, error)
-	DeleteElectionGroup(ctx context.Context, id int16) error
+	UpdateElectionGroup(ctx context.Context, id int32, name string, rank int32, electionsCount, statesCount int32, electionDate time.Time) (queries.ElectionGroup, error)
+	DeleteElectionGroup(ctx context.Context, id int32) error
 	ListElectionGroupsWithPartyStats(ctx context.Context, partyID int16) ([]queries.ListElectionGroupsWithPartyStatsRow, error)
-	UpsertPartyElectionGroupStats(ctx context.Context, partyID int16, electionGroupID int16, pollingAgentsCoverage []byte, electionsContesting int32) (queries.PartyElectionGroup, error)
-	ListGroupElections(ctx context.Context, electionGroupID int16) ([]queries.ListElectionsDetailedByGroupIDRow, error)
+	UpsertPartyElectionGroupStats(ctx context.Context, partyID int16, electionGroupID int32, pollingAgentsCoverage []byte, electionsContesting int32) (queries.PartyElectionGroup, error)
+	ListGroupElections(ctx context.Context, electionGroupID int32) ([]queries.ListElectionsDetailedByGroupIDRow, error)
 }
 
 type Handler struct {
@@ -132,7 +132,7 @@ func (h *Handler) CreateElectionGroup(w http.ResponseWriter, r *http.Request) {
 }
 
 type ElectionGroupResponse struct {
-	ID                                 int16              `json:"id"`
+	ID                                 int32              `json:"id"`
 	Name                               string             `json:"name"`
 	Rank                               int32              `json:"rank"`
 	ElectionsCount                     int32              `json:"elections_count"`
@@ -301,14 +301,14 @@ func (h *Handler) ListElectionGroups(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetElectionGroup(w http.ResponseWriter, r *http.Request) {
 	// 1. Extract and parse election group ID from URL path parameter
 	idStr := chi.URLParam(r, "id")
-	id, err := strconv.ParseInt(idStr, 10, 16)
+	id, err := strconv.ParseInt(idStr, 10, 32)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election group ID")
 		return
 	}
 
 	// 2. Fetch the election group by ID (service checks in-memory cache first, falls back to DB)
-	eg, err := h.service.GetElectionGroupByID(r.Context(), int16(id))
+	eg, err := h.service.GetElectionGroupByID(r.Context(), int32(id))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Election group not found")
 		return
@@ -336,7 +336,7 @@ func (h *Handler) GetElectionGroup(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) UpdateElectionGroup(w http.ResponseWriter, r *http.Request) {
 	// 1. Extract and parse election group ID from URL path parameter
 	idStr := chi.URLParam(r, "id")
-	id, err := strconv.ParseInt(idStr, 10, 16)
+	id, err := strconv.ParseInt(idStr, 10, 32)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election group ID")
 		return
@@ -356,14 +356,14 @@ func (h *Handler) UpdateElectionGroup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 4. Verify the election group exists before attempting update
-	_, err = h.service.GetElectionGroupByID(r.Context(), int16(id))
+	_, err = h.service.GetElectionGroupByID(r.Context(), int32(id))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Election group not found")
 		return
 	}
 
 	// 5. Update election group via service (updates group, syncs date across child elections, and invalidates cache)
-	updated, err := h.service.UpdateElectionGroup(r.Context(), int16(id), req.Name, req.Rank, req.ElectionsCount, req.StatesCount, req.ElectionDate.Time())
+	updated, err := h.service.UpdateElectionGroup(r.Context(), int32(id), req.Name, req.Rank, req.ElectionsCount, req.StatesCount, req.ElectionDate.Time())
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update election group: "+err.Error())
 		return
@@ -390,21 +390,21 @@ func (h *Handler) UpdateElectionGroup(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) DeleteElectionGroup(w http.ResponseWriter, r *http.Request) {
 	// 1. Extract and parse election group ID from URL path parameter
 	idStr := chi.URLParam(r, "id")
-	id, err := strconv.ParseInt(idStr, 10, 16)
+	id, err := strconv.ParseInt(idStr, 10, 32)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election group ID")
 		return
 	}
 
 	// 2. Verify election group exists before attempting deletion
-	_, err = h.service.GetElectionGroupByID(r.Context(), int16(id))
+	_, err = h.service.GetElectionGroupByID(r.Context(), int32(id))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Election group not found")
 		return
 	}
 
 	// 3. Delete election group via service (deletes record and invalidates cache)
-	if err := h.service.DeleteElectionGroup(r.Context(), int16(id)); err != nil {
+	if err := h.service.DeleteElectionGroup(r.Context(), int32(id)); err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to delete election group: "+err.Error())
 		return
 	}
@@ -434,7 +434,7 @@ type UpsertPartyElectionGroupStatsRequest struct {
 func (h *Handler) UpsertPartyElectionGroupStats(w http.ResponseWriter, r *http.Request) {
 	// 1. Extract and parse election group ID from URL path parameter
 	idStr := chi.URLParam(r, "id")
-	electionGroupID, err := strconv.ParseInt(idStr, 10, 16)
+	electionGroupID, err := strconv.ParseInt(idStr, 10, 32)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election group ID")
 		return
@@ -455,7 +455,7 @@ func (h *Handler) UpsertPartyElectionGroupStats(w http.ResponseWriter, r *http.R
 
 	// 4. Marshal polling agent coverage into JSON bytes and upsert stats via service
 	coverageBytes, _ := json.Marshal(req.PollingAgentsCoverage)
-	stats, err := h.service.UpsertPartyElectionGroupStats(r.Context(), int16(req.PartyID), int16(electionGroupID), coverageBytes, req.ElectionsContesting)
+	stats, err := h.service.UpsertPartyElectionGroupStats(r.Context(), int16(req.PartyID), int32(electionGroupID), coverageBytes, req.ElectionsContesting)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to upsert party election group stats: "+err.Error())
 		return
@@ -480,14 +480,14 @@ func (h *Handler) UpsertPartyElectionGroupStats(w http.ResponseWriter, r *http.R
 func (h *Handler) ListGroupElections(w http.ResponseWriter, r *http.Request) {
 	// 1. Extract and parse election group ID from URL path parameter
 	idStr := chi.URLParam(r, "id")
-	id, err := strconv.ParseInt(idStr, 10, 16)
+	id, err := strconv.ParseInt(idStr, 10, 32)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election group ID")
 		return
 	}
 
 	// 2. Fetch all child elections associated with this election group via service
-	elections, err := h.service.ListGroupElections(r.Context(), int16(id))
+	elections, err := h.service.ListGroupElections(r.Context(), int32(id))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch group elections: "+err.Error())
 		return

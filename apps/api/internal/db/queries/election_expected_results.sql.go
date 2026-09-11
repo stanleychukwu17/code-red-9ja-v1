@@ -19,7 +19,7 @@ WHERE election_group_id = $1 AND federal_constituency_id = $2
 `
 
 type DecrementElectionGroupPollingUnitsForFederalConstituencyElectionParams struct {
-	ElectionGroupID       int16       `json:"election_group_id"`
+	ElectionGroupID       int32       `json:"election_group_id"`
 	FederalConstituencyID pgtype.Int4 `json:"federal_constituency_id"`
 }
 
@@ -36,7 +36,7 @@ WHERE election_group_id = $1 AND lga_id = $2
 `
 
 type DecrementElectionGroupPollingUnitsForLgaElectionParams struct {
-	ElectionGroupID int16       `json:"election_group_id"`
+	ElectionGroupID int32       `json:"election_group_id"`
 	LgaID           pgtype.Int4 `json:"lga_id"`
 }
 
@@ -52,7 +52,7 @@ SET unique_final_results_expected = GREATEST(0, unique_final_results_expected - 
 WHERE election_group_id = $1
 `
 
-func (q *Queries) DecrementElectionGroupPollingUnitsForNationwideElection(ctx context.Context, electionGroupID int16) error {
+func (q *Queries) DecrementElectionGroupPollingUnitsForNationwideElection(ctx context.Context, electionGroupID int32) error {
 	_, err := q.db.Exec(ctx, decrementElectionGroupPollingUnitsForNationwideElection, electionGroupID)
 	return err
 }
@@ -65,7 +65,7 @@ WHERE election_group_id = $1 AND senatorial_district_id = $2
 `
 
 type DecrementElectionGroupPollingUnitsForSenatorialDistrictElectionParams struct {
-	ElectionGroupID      int16       `json:"election_group_id"`
+	ElectionGroupID      int32       `json:"election_group_id"`
 	SenatorialDistrictID pgtype.Int4 `json:"senatorial_district_id"`
 }
 
@@ -82,7 +82,7 @@ WHERE election_group_id = $1 AND state_constituency_id = $2
 `
 
 type DecrementElectionGroupPollingUnitsForStateConstituencyElectionParams struct {
-	ElectionGroupID     int16       `json:"election_group_id"`
+	ElectionGroupID     int32       `json:"election_group_id"`
 	StateConstituencyID pgtype.Int4 `json:"state_constituency_id"`
 }
 
@@ -99,7 +99,7 @@ WHERE election_group_id = $1 AND state_id = $2
 `
 
 type DecrementElectionGroupPollingUnitsForStateElectionParams struct {
-	ElectionGroupID int16       `json:"election_group_id"`
+	ElectionGroupID int32       `json:"election_group_id"`
 	StateID         pgtype.Int2 `json:"state_id"`
 }
 
@@ -116,7 +116,7 @@ WHERE election_group_id = $1 AND ward_id = $2
 `
 
 type DecrementElectionGroupPollingUnitsForWardElectionParams struct {
-	ElectionGroupID int16       `json:"election_group_id"`
+	ElectionGroupID int32       `json:"election_group_id"`
 	WardID          pgtype.Int4 `json:"ward_id"`
 }
 
@@ -170,7 +170,7 @@ FROM eg_pus p JOIN c_states cs ON cs.id = p.state_id
 ON CONFLICT (election_group_id, state_id) DO NOTHING
 `
 
-func (q *Queries) EnsureElectionGroupParentSkeletons(ctx context.Context, electionGroupID int16) error {
+func (q *Queries) EnsureElectionGroupParentSkeletons(ctx context.Context, electionGroupID int32) error {
 	_, err := q.db.Exec(ctx, ensureElectionGroupParentSkeletons, electionGroupID)
 	return err
 }
@@ -225,7 +225,7 @@ UPDATE election_group_states st SET unique_final_results_expected = ss.total, up
 FROM state_sum ss WHERE st.election_group_id = ss.election_group_id AND st.state_id = ss.state_id
 `
 
-func (q *Queries) RollupElectionGroupExpectedResults(ctx context.Context, electionGroupID int16) error {
+func (q *Queries) RollupElectionGroupExpectedResults(ctx context.Context, electionGroupID int32) error {
 	_, err := q.db.Exec(ctx, rollupElectionGroupExpectedResults, electionGroupID)
 	return err
 }
@@ -254,7 +254,7 @@ SET unique_final_results_expected = election_group_polling_units.unique_final_re
 `
 
 type UpsertElectionGroupPollingUnitsForFederalConstituencyElectionParams struct {
-	ElectionGroupID       int16       `json:"election_group_id"`
+	ElectionGroupID       int32       `json:"election_group_id"`
 	FederalConstituencyID pgtype.Int4 `json:"federal_constituency_id"`
 }
 
@@ -287,7 +287,7 @@ SET unique_final_results_expected = election_group_polling_units.unique_final_re
 `
 
 type UpsertElectionGroupPollingUnitsForLgaElectionParams struct {
-	ElectionGroupID int16 `json:"election_group_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
 	LgaID           int32 `json:"lga_id"`
 }
 
@@ -318,7 +318,7 @@ SET unique_final_results_expected = election_group_polling_units.unique_final_re
     updated_at = NOW()
 `
 
-func (q *Queries) UpsertElectionGroupPollingUnitsForNationwideElection(ctx context.Context, electionGroupID int16) error {
+func (q *Queries) UpsertElectionGroupPollingUnitsForNationwideElection(ctx context.Context, electionGroupID int32) error {
 	_, err := q.db.Exec(ctx, upsertElectionGroupPollingUnitsForNationwideElection, electionGroupID)
 	return err
 }
@@ -347,7 +347,7 @@ SET unique_final_results_expected = election_group_polling_units.unique_final_re
 `
 
 type UpsertElectionGroupPollingUnitsForSenatorialDistrictElectionParams struct {
-	ElectionGroupID      int16       `json:"election_group_id"`
+	ElectionGroupID      int32       `json:"election_group_id"`
 	SenatorialDistrictID pgtype.Int4 `json:"senatorial_district_id"`
 }
 
@@ -380,7 +380,7 @@ SET unique_final_results_expected = election_group_polling_units.unique_final_re
 `
 
 type UpsertElectionGroupPollingUnitsForStateConstituencyElectionParams struct {
-	ElectionGroupID     int16       `json:"election_group_id"`
+	ElectionGroupID     int32       `json:"election_group_id"`
 	StateConstituencyID pgtype.Int4 `json:"state_constituency_id"`
 }
 
@@ -413,7 +413,7 @@ SET unique_final_results_expected = election_group_polling_units.unique_final_re
 `
 
 type UpsertElectionGroupPollingUnitsForStateElectionParams struct {
-	ElectionGroupID int16 `json:"election_group_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
 	StateID         int32 `json:"state_id"`
 }
 
@@ -446,7 +446,7 @@ SET unique_final_results_expected = election_group_polling_units.unique_final_re
 `
 
 type UpsertElectionGroupPollingUnitsForWardElectionParams struct {
-	ElectionGroupID int16 `json:"election_group_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
 	WardID          int32 `json:"ward_id"`
 }
 

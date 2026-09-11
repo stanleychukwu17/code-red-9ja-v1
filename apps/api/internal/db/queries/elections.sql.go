@@ -60,7 +60,7 @@ type CreateElectionInstanceParams struct {
 	Rank                  int32       `json:"rank"`
 	CandidatesCount       int32       `json:"candidates_count"`
 	ElectionDate          pgtype.Date `json:"election_date"`
-	ElectionGroupID       int16       `json:"election_group_id"`
+	ElectionGroupID       int32       `json:"election_group_id"`
 	ElectionGroupName     string      `json:"election_group_name"`
 	OfficeID              int16       `json:"office_id"`
 	OfficeName            string      `json:"office_name"`
@@ -359,7 +359,7 @@ WHERE e.election_group_id = $1
 
 type ListElectionsDetailedByGroupIDRow struct {
 	ID                    int32              `json:"id"`
-	ElectionGroupID       int16              `json:"election_group_id"`
+	ElectionGroupID       int32              `json:"election_group_id"`
 	StateID               pgtype.Int2        `json:"state_id"`
 	SenatorialDistrictID  pgtype.Int4        `json:"senatorial_district_id"`
 	FederalConstituencyID pgtype.Int4        `json:"federal_constituency_id"`
@@ -385,7 +385,7 @@ type ListElectionsDetailedByGroupIDRow struct {
 	OfficeNameFull        string             `json:"office_name_full"`
 }
 
-func (q *Queries) ListElectionsDetailedByGroupID(ctx context.Context, electionGroupID int16) ([]ListElectionsDetailedByGroupIDRow, error) {
+func (q *Queries) ListElectionsDetailedByGroupID(ctx context.Context, electionGroupID int32) ([]ListElectionsDetailedByGroupIDRow, error) {
 	rows, err := q.db.Query(ctx, listElectionsDetailedByGroupID, electionGroupID)
 	if err != nil {
 		return nil, err
@@ -496,7 +496,7 @@ WHERE election_group_id = $2
 
 type UpdateElectionDatesByGroupParams struct {
 	ElectionDate    pgtype.Date `json:"election_date"`
-	ElectionGroupID int16       `json:"election_group_id"`
+	ElectionGroupID int32       `json:"election_group_id"`
 }
 
 func (q *Queries) UpdateElectionDatesByGroup(ctx context.Context, arg UpdateElectionDatesByGroupParams) error {
@@ -519,7 +519,7 @@ type UpdateElectionInstanceParams struct {
 	Rank                  int32       `json:"rank"`
 	CandidatesCount       int32       `json:"candidates_count"`
 	ElectionDate          pgtype.Date `json:"election_date"`
-	ElectionGroupID       int16       `json:"election_group_id"`
+	ElectionGroupID       int32       `json:"election_group_id"`
 	ElectionGroupName     string      `json:"election_group_name"`
 	OfficeID              int16       `json:"office_id"`
 	OfficeName            string      `json:"office_name"`

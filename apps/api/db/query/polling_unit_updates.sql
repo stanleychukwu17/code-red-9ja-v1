@@ -76,7 +76,7 @@ LEFT JOIN polling_units punits ON pu.polling_unit_id = punits.id
 LEFT JOIN c_states s ON pu.state_id = s.id
 LEFT JOIN lgas l ON pu.lga_id = l.id
 WHERE 
-  (sqlc.narg('election_group_id')::smallint IS NULL OR pu.election_group_id = sqlc.narg('election_group_id'))
+  (sqlc.narg('election_group_id')::integer IS NULL OR pu.election_group_id = sqlc.narg('election_group_id'))
   AND (sqlc.narg('party_id')::smallint IS NULL OR pu.party_id = sqlc.narg('party_id'))
   AND (sqlc.narg('polling_unit_id')::int IS NULL OR pu.polling_unit_id = sqlc.narg('polling_unit_id'))
   AND (sqlc.narg('user_id')::bigint IS NULL OR pu.user_id = sqlc.narg('user_id'))

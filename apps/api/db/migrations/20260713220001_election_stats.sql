@@ -21,7 +21,7 @@
 CREATE TABLE IF NOT EXISTS election_group_polling_units (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 
-  election_group_id         SMALLINT    NOT NULL REFERENCES election_groups(id) ON DELETE CASCADE,
+  election_group_id INT    NOT NULL REFERENCES election_groups(id) ON DELETE CASCADE,
   polling_unit_id           INTEGER   NOT NULL REFERENCES polling_units(id) ON DELETE CASCADE,
 
   -- Denormalised geography (mirrors polling_unit_assignments pattern)
@@ -102,7 +102,7 @@ CREATE INDEX idx_egpu_senatorial        ON election_group_polling_units(senatori
 CREATE TABLE IF NOT EXISTS election_group_wards (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 
-  election_group_id       SMALLINT   NOT NULL REFERENCES election_groups(id) ON DELETE CASCADE,
+  election_group_id INT   NOT NULL REFERENCES election_groups(id) ON DELETE CASCADE,
   ward_id                 INT      NOT NULL REFERENCES wards(id) ON DELETE CASCADE,
   lga_id                  INT      REFERENCES lgas(id) ON DELETE SET NULL,
   state_id                SMALLINT REFERENCES c_states(id) ON DELETE SET NULL,
@@ -197,7 +197,7 @@ CREATE INDEX idx_egw_state          ON election_group_wards(state_id);
 CREATE TABLE IF NOT EXISTS election_group_state_constituencies (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 
-  election_group_id         SMALLINT   NOT NULL REFERENCES election_groups(id) ON DELETE CASCADE,
+  election_group_id INT   NOT NULL REFERENCES election_groups(id) ON DELETE CASCADE,
   state_constituency_id     INT      NOT NULL REFERENCES state_constituencies(id) ON DELETE CASCADE,
   state_id                  SMALLINT REFERENCES c_states(id) ON DELETE SET NULL,
 
@@ -262,7 +262,7 @@ CREATE INDEX idx_egsc_state              ON election_group_state_constituencies(
 CREATE TABLE IF NOT EXISTS election_group_lgas (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 
-  election_group_id       SMALLINT   NOT NULL REFERENCES election_groups(id) ON DELETE CASCADE,
+  election_group_id INT   NOT NULL REFERENCES election_groups(id) ON DELETE CASCADE,
   lga_id                  INT      NOT NULL REFERENCES lgas(id) ON DELETE CASCADE,
   state_id                SMALLINT REFERENCES c_states(id) ON DELETE SET NULL,
   senatorial_district_id  INT      REFERENCES senatorial_districts(id) ON DELETE SET NULL,
@@ -335,7 +335,7 @@ CREATE INDEX idx_eglga_state          ON election_group_lgas(state_id);
 CREATE TABLE IF NOT EXISTS election_group_federal_constituencies (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 
-  election_group_id                                SMALLINT   NOT NULL REFERENCES election_groups(id) ON DELETE CASCADE,
+  election_group_id INT   NOT NULL REFERENCES election_groups(id) ON DELETE CASCADE,
   federal_constituency_id                          INT      NOT NULL REFERENCES federal_constituencies(id) ON DELETE CASCADE,
   state_id                                         SMALLINT REFERENCES c_states(id) ON DELETE SET NULL,
   senatorial_district_id                           INT      REFERENCES senatorial_districts(id) ON DELETE SET NULL,
@@ -410,7 +410,7 @@ CREATE INDEX idx_egfc_state                ON election_group_federal_constituenc
 CREATE TABLE IF NOT EXISTS election_group_senatorial_districts (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 
-  election_group_id           SMALLINT   NOT NULL REFERENCES election_groups(id) ON DELETE CASCADE,
+  election_group_id INT   NOT NULL REFERENCES election_groups(id) ON DELETE CASCADE,
   senatorial_district_id      INT      NOT NULL REFERENCES senatorial_districts(id) ON DELETE CASCADE,
   state_id                    SMALLINT REFERENCES c_states(id) ON DELETE SET NULL,
 
@@ -486,7 +486,7 @@ CREATE INDEX idx_egsd_state               ON election_group_senatorial_districts
 CREATE TABLE IF NOT EXISTS election_group_states (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 
-  election_group_id   SMALLINT   NOT NULL REFERENCES election_groups(id) ON DELETE CASCADE,
+  election_group_id INT   NOT NULL REFERENCES election_groups(id) ON DELETE CASCADE,
   state_id            SMALLINT NOT NULL REFERENCES c_states(id) ON DELETE CASCADE,
 
   -- Application Stats

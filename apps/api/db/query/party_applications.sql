@@ -105,7 +105,7 @@ LEFT JOIN user_bank_accounts uba ON uba.user_id = u.id AND uba.is_primary = true
 WHERE 
   (sqlc.arg(user_id)::bigint = 0 OR pa.user_id = sqlc.arg(user_id)) AND
   (sqlc.arg(party_id)::smallint = 0 OR pa.party_id = sqlc.arg(party_id)) AND
-  (sqlc.arg(election_group_id)::smallint = 0 OR pa.election_group_id = sqlc.arg(election_group_id)) AND
+  (sqlc.arg(election_group_id)::integer = 0 OR pa.election_group_id = sqlc.arg(election_group_id)) AND
   (sqlc.arg(status)::varchar = '' OR pa.status = sqlc.arg(status)) AND
   (sqlc.arg(state_id)::smallint = 0 OR COALESCE(pa.state_id, u.current_state, pu.state_id) = sqlc.arg(state_id)) AND
   (sqlc.arg(lga_id)::integer = 0 OR COALESCE(pa.lga_id, u.current_lga, pu.lga_id) = sqlc.arg(lga_id)) AND
@@ -161,7 +161,7 @@ SELECT
       FROM polling_unit_assignments pua
       WHERE pua.polling_unit_id = pu.id
         AND pua.party_id = sqlc.arg(party_id)::smallint
-        AND pua.election_group_id = sqlc.arg(election_group_id)::smallint
+        AND pua.election_group_id = sqlc.arg(election_group_id)::integer
     ),
     0
   )::integer AS agents_count

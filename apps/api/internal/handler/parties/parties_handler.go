@@ -1403,7 +1403,7 @@ func (h *Handler) DepositTest(w http.ResponseWriter, r *http.Request) {
 
 // CreateMarketingCampaignRequest is the request payload for creating a marketing campaign
 type CreateMarketingCampaignRequest struct {
-	ElectionGroupID  int16           `json:"election_group_id"`
+	ElectionGroupID  int32           `json:"election_group_id"`
 	ElectionID       int32           `json:"election_id"`
 	PlanID           int32           `json:"plan_id"`
 	Type             string          `json:"type"`

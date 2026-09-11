@@ -39,13 +39,13 @@ func (h *Handler) GetSupervisorAssignments(w http.ResponseWriter, r *http.Reques
 	}
 
 	electionGroupIDStr := r.URL.Query().Get("election_group_id")
-	electionGroupID, err := strconv.ParseInt(electionGroupIDStr, 10, 16)
+	electionGroupID, err := strconv.ParseInt(electionGroupIDStr, 10, 32)
 	if err != nil || electionGroupID == 0 {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid or missing election_group_id")
 		return
 	}
 
-	assignments, err := h.service.GetUserSupervisorAssignments(r.Context(), userID, int16(electionGroupID))
+	assignments, err := h.service.GetUserSupervisorAssignments(r.Context(), userID, int32(electionGroupID))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch supervisor assignments")
 		return

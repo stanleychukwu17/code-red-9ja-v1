@@ -12,14 +12,14 @@ type ElectionStatsService interface {
 	ListElectionGroupStateConstituencyStatsByGroup(ctx context.Context, arg queries.ListElectionGroupStateConstituencyStatsByGroupParams) ([]queries.ElectionGroupStateConstituency, error)
 	ListElectionGroupFederalConstituencyStatsByGroup(ctx context.Context, arg queries.ListElectionGroupFederalConstituencyStatsByGroupParams) ([]queries.ElectionGroupFederalConstituency, error)
 	ListElectionGroupSenatorialDistrictStatsByGroup(ctx context.Context, arg queries.ListElectionGroupSenatorialDistrictStatsByGroupParams) ([]queries.ElectionGroupSenatorialDistrict, error)
-	ListElectionGroupStateStatsByGroup(ctx context.Context, electionGroupID int16) ([]queries.ElectionGroupState, error)
+	ListElectionGroupStateStatsByGroup(ctx context.Context, electionGroupID int32) ([]queries.ElectionGroupState, error)
 	GetElectionGroupStateStats(ctx context.Context, arg queries.GetElectionGroupStateStatsParams) (queries.ElectionGroupState, error)
 	GetElectionGroupLGAStats(ctx context.Context, arg queries.GetElectionGroupLGAStatsParams) (queries.ElectionGroupLga, error)
 	GetElectionGroupWardStats(ctx context.Context, arg queries.GetElectionGroupWardStatsParams) (queries.ElectionGroupWard, error)
 	GetElectionGroupFederalConstituencyStats(ctx context.Context, arg queries.GetElectionGroupFederalConstituencyStatsParams) (queries.ElectionGroupFederalConstituency, error)
 	GetElectionGroupStateConstituencyStats(ctx context.Context, arg queries.GetElectionGroupStateConstituencyStatsParams) (queries.ElectionGroupStateConstituency, error)
 	GetElectionGroupSenatorialDistrictStats(ctx context.Context, arg queries.GetElectionGroupSenatorialDistrictStatsParams) (queries.ElectionGroupSenatorialDistrict, error)
-	GetElectionGroupByID(ctx context.Context, id int16) (queries.ElectionGroup, error)
+	GetElectionGroupByID(ctx context.Context, id int32) (queries.ElectionGroup, error)
 	GetStateByID(ctx context.Context, id int16) (queries.CState, error)
 	GetLGAByID(ctx context.Context, id int32) (queries.Lga, error)
 	GetWardByID(ctx context.Context, id int32) (queries.Ward, error)
@@ -62,7 +62,7 @@ func (s *Service) ListElectionGroupSenatorialDistrictStatsByGroup(ctx context.Co
 	return s.queries.ListElectionGroupSenatorialDistrictStatsByGroup(ctx, arg)
 }
 
-func (s *Service) ListElectionGroupStateStatsByGroup(ctx context.Context, electionGroupID int16) ([]queries.ElectionGroupState, error) {
+func (s *Service) ListElectionGroupStateStatsByGroup(ctx context.Context, electionGroupID int32) ([]queries.ElectionGroupState, error) {
 	return s.queries.ListElectionGroupStateStatsByGroup(ctx, electionGroupID)
 }
 
@@ -90,7 +90,7 @@ func (s *Service) GetElectionGroupSenatorialDistrictStats(ctx context.Context, a
 	return s.queries.GetElectionGroupSenatorialDistrictStats(ctx, arg)
 }
 
-func (s *Service) GetElectionGroupByID(ctx context.Context, id int16) (queries.ElectionGroup, error) {
+func (s *Service) GetElectionGroupByID(ctx context.Context, id int32) (queries.ElectionGroup, error) {
 	return s.queries.GetElectionGroupByID(ctx, id)
 }
 

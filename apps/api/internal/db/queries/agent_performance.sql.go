@@ -42,7 +42,7 @@ LEFT JOIN agent_earnings ae ON ae.user_id = les.user_id AND ae.election_group_id
 LEFT JOIN election_group_lgas egl ON egl.election_group_id = les.election_group_id AND egl.lga_id = les.lga_id
 WHERE
   ($1::smallint = 0 OR les.party_id = $1) AND
-  ($2::smallint = 0 OR les.election_group_id = $2) AND
+  ($2::integer = 0 OR les.election_group_id = $2) AND
   ($3::smallint = 0 OR les.state_id = $3) AND
   ($4::int = 0 OR les.lga_id = $4) AND
   ($5::varchar = '' OR u.first_name ILIKE '%' || $5 || '%' OR u.last_name ILIKE '%' || $5 || '%') AND
@@ -53,7 +53,7 @@ LIMIT $7::int
 
 type ListLGASupervisorPerformanceStatsParams struct {
 	PartyID         int16  `json:"party_id"`
-	ElectionGroupID int16  `json:"election_group_id"`
+	ElectionGroupID int32  `json:"election_group_id"`
 	StateID         int16  `json:"state_id"`
 	LgaID           int32  `json:"lga_id"`
 	SearchQuery     string `json:"search_query"`
@@ -65,7 +65,7 @@ type ListLGASupervisorPerformanceStatsRow struct {
 	ID                int64          `json:"id"`
 	UserID            int64          `json:"user_id"`
 	PartyID           int16          `json:"party_id"`
-	ElectionGroupID   int16          `json:"election_group_id"`
+	ElectionGroupID   int32          `json:"election_group_id"`
 	StateID           int16          `json:"state_id"`
 	LgaID             int32          `json:"lga_id"`
 	WardID            int32          `json:"ward_id"`
@@ -175,7 +175,7 @@ LEFT JOIN agent_earnings ae ON ae.user_id = pua.user_id AND ae.election_group_id
 LEFT JOIN election_group_polling_units egpu ON egpu.election_group_id = pua.election_group_id AND egpu.polling_unit_id = pua.polling_unit_id
 WHERE
   ($1::smallint = 0 OR pua.party_id = $1) AND
-  ($2::smallint = 0 OR pua.election_group_id = $2) AND
+  ($2::integer = 0 OR pua.election_group_id = $2) AND
   ($3::smallint = 0 OR pu.state_id = $3) AND
   ($4::int = 0 OR pu.lga_id = $4) AND
   ($5::int = 0 OR pu.ward_id = $5) AND
@@ -187,7 +187,7 @@ LIMIT $8::int
 
 type ListPollingAgentPerformanceStatsParams struct {
 	PartyID         int16  `json:"party_id"`
-	ElectionGroupID int16  `json:"election_group_id"`
+	ElectionGroupID int32  `json:"election_group_id"`
 	StateID         int16  `json:"state_id"`
 	LgaID           int32  `json:"lga_id"`
 	WardID          int32  `json:"ward_id"`
@@ -200,7 +200,7 @@ type ListPollingAgentPerformanceStatsRow struct {
 	ID                 int64          `json:"id"`
 	UserID             int64          `json:"user_id"`
 	PartyID            int16          `json:"party_id"`
-	ElectionGroupID    int16          `json:"election_group_id"`
+	ElectionGroupID    int32          `json:"election_group_id"`
 	StateID            int16          `json:"state_id"`
 	LgaID              int32          `json:"lga_id"`
 	WardID             int32          `json:"ward_id"`
@@ -317,7 +317,7 @@ LEFT JOIN agent_earnings ae ON ae.user_id = ses.user_id AND ae.election_group_id
 LEFT JOIN election_group_states egs ON egs.election_group_id = ses.election_group_id AND egs.state_id = ses.state_id
 WHERE
   ($1::smallint = 0 OR ses.party_id = $1) AND
-  ($2::smallint = 0 OR ses.election_group_id = $2) AND
+  ($2::integer = 0 OR ses.election_group_id = $2) AND
   ($3::smallint = 0 OR ses.state_id = $3) AND
   ($4::varchar = '' OR u.first_name ILIKE '%' || $4 || '%' OR u.last_name ILIKE '%' || $4 || '%') AND
   ($5::bigint = 0 OR ses.id < $5)
@@ -327,7 +327,7 @@ LIMIT $6::int
 
 type ListStateSupervisorPerformanceStatsParams struct {
 	PartyID         int16  `json:"party_id"`
-	ElectionGroupID int16  `json:"election_group_id"`
+	ElectionGroupID int32  `json:"election_group_id"`
 	StateID         int16  `json:"state_id"`
 	SearchQuery     string `json:"search_query"`
 	CursorID        int64  `json:"cursor_id"`
@@ -338,7 +338,7 @@ type ListStateSupervisorPerformanceStatsRow struct {
 	ID                int64          `json:"id"`
 	UserID            int64          `json:"user_id"`
 	PartyID           int16          `json:"party_id"`
-	ElectionGroupID   int16          `json:"election_group_id"`
+	ElectionGroupID   int32          `json:"election_group_id"`
 	StateID           int16          `json:"state_id"`
 	LgaID             int32          `json:"lga_id"`
 	WardID            int32          `json:"ward_id"`
@@ -439,7 +439,7 @@ LEFT JOIN agent_earnings ae ON ae.user_id = wes.user_id AND ae.election_group_id
 LEFT JOIN election_group_wards egw ON egw.election_group_id = wes.election_group_id AND egw.ward_id = wes.ward_id
 WHERE
   ($1::smallint = 0 OR wes.party_id = $1) AND
-  ($2::smallint = 0 OR wes.election_group_id = $2) AND
+  ($2::integer = 0 OR wes.election_group_id = $2) AND
   ($3::smallint = 0 OR wes.state_id = $3) AND
   ($4::int = 0 OR wes.lga_id = $4) AND
   ($5::int = 0 OR wes.ward_id = $5) AND
@@ -451,7 +451,7 @@ LIMIT $8::int
 
 type ListWardSupervisorPerformanceStatsParams struct {
 	PartyID         int16  `json:"party_id"`
-	ElectionGroupID int16  `json:"election_group_id"`
+	ElectionGroupID int32  `json:"election_group_id"`
 	StateID         int16  `json:"state_id"`
 	LgaID           int32  `json:"lga_id"`
 	WardID          int32  `json:"ward_id"`
@@ -464,7 +464,7 @@ type ListWardSupervisorPerformanceStatsRow struct {
 	ID                int64          `json:"id"`
 	UserID            int64          `json:"user_id"`
 	PartyID           int16          `json:"party_id"`
-	ElectionGroupID   int16          `json:"election_group_id"`
+	ElectionGroupID   int32          `json:"election_group_id"`
 	StateID           int16          `json:"state_id"`
 	LgaID             int32          `json:"lga_id"`
 	WardID            int32          `json:"ward_id"`

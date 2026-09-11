@@ -202,10 +202,10 @@ func (h *Handler) GetReferralStats(w http.ResponseWriter, r *http.Request) {
 	userID := claims.UserID
 
 	egIDStr := r.URL.Query().Get("election_group_id")
-	var egID int16
+	var egID int32
 	if egIDStr != "" {
-		if id, err := strconv.ParseInt(egIDStr, 10, 16); err == nil {
-			egID = int16(id)
+		if id, err := strconv.ParseInt(egIDStr, 10, 32); err == nil {
+			egID = int32(id)
 		}
 	}
 

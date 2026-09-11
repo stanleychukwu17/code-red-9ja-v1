@@ -28,7 +28,7 @@ INSERT INTO did_not_vote_reasons (
 
 type CreateDidNotVoteReasonParams struct {
 	UserID            int64       `json:"user_id"`
-	ElectionGroupID   int16       `json:"election_group_id"`
+	ElectionGroupID   int32       `json:"election_group_id"`
 	NonVotingReasonID pgtype.Int2 `json:"non_voting_reason_id"`
 	Explanation       pgtype.Text `json:"explanation"`
 	StateID           pgtype.Int2 `json:"state_id"`
@@ -72,7 +72,7 @@ WHERE user_id = $1 AND election_group_id = $2
 
 type DeleteUserDidNotVoteReasonByElectionGroupParams struct {
 	UserID          int64 `json:"user_id"`
-	ElectionGroupID int16 `json:"election_group_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
 }
 
 func (q *Queries) DeleteUserDidNotVoteReasonByElectionGroup(ctx context.Context, arg DeleteUserDidNotVoteReasonByElectionGroupParams) error {
@@ -121,7 +121,7 @@ WHERE dnvr.user_id = $1 AND dnvr.election_group_id = $2
 
 type GetUserDidNotVoteReasonParams struct {
 	UserID          int64 `json:"user_id"`
-	ElectionGroupID int16 `json:"election_group_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
 }
 
 type GetUserDidNotVoteReasonRow struct {

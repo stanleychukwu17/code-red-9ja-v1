@@ -18,9 +18,9 @@ import (
 )
 
 type PollingUnitAssignmentsService interface {
-	AssignAgent(ctx context.Context, userID int64, electionGroupID int16, partyID int16, assignedBy int64, pollingUnitID int32, roleType string) (queries.PollingUnitAssignment, error)
+	AssignAgent(ctx context.Context, userID int64, electionGroupID int32, partyID int16, assignedBy int64, pollingUnitID int32, roleType string) (queries.PollingUnitAssignment, error)
 	GetAssignmentByID(ctx context.Context, id int64) (queries.GetAssignmentByIDRow, error)
-	ListAssignments(ctx context.Context, electionGroupID int16, partyID int16, userID int64, pollingUnitID int32, limit, offset int32) ([]queries.ListAssignmentsRow, error)
+	ListAssignments(ctx context.Context, electionGroupID int32, partyID int16, userID int64, pollingUnitID int32, limit, offset int32) ([]queries.ListAssignmentsRow, error)
 	DeleteAssignment(ctx context.Context, id int64) error
 	UpdateAssignmentTracking(ctx context.Context, id int64, arrivedAt, arrivalVideoUrl, electionStartedAt, electionStartedVideoUrl, electionEndedAt, electionEndedVideoUrl *string) (queries.UpdateAssignmentTrackingRow, error)
 }
@@ -53,7 +53,7 @@ func NewHandler(service PollingUnitAssignmentsService, usersService UsersService
 type CreateAssignmentRequest struct {
 	FakeID          int64  `json:"fake_id"`
 	PollingUnitID   int32  `json:"polling_unit_id"`
-	ElectionGroupID int16  `json:"election_group_id"`
+	ElectionGroupID int32  `json:"election_group_id"`
 	PartyID         int64  `json:"party_id"`
 	RoleType        string `json:"role_type"`
 }
@@ -200,12 +200,13 @@ func (h *Handler) ListAssignments(w http.ResponseWriter, r *http.Request) {
 
 	// Parse filtering query params
 	var userID int64
-	var electionGroupID, partyID int16
+	var electionGroupID int32
+	var partyID int16
 	var pollingUnitID int32
 
 	if val := r.URL.Query().Get("election_group_id"); val != "" {
-		if eg, err := strconv.ParseInt(val, 10, 16); err == nil {
-			electionGroupID = int16(eg)
+		if eg, err := strconv.ParseInt(val, 10, 32); err == nil {
+			electionGroupID = int32(eg)
 		}
 	}
 	if val := r.URL.Query().Get("party_id"); val != "" {

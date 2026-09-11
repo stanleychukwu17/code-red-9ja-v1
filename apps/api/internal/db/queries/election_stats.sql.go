@@ -43,7 +43,7 @@ SET
     )
   END,
   updated_at = NOW()
-WHERE election_group_id       = $4::smallint
+WHERE election_group_id       = $4::integer
   AND federal_constituency_id = $5::int
 `
 
@@ -51,7 +51,7 @@ type AdjustElectionGroupFederalConstituencyLGASupervisorCountsParams struct {
 	Delta                 int32 `json:"delta"`
 	UniqueDelta           int32 `json:"unique_delta"`
 	PartyID               int16 `json:"party_id"`
-	ElectionGroupID       int16 `json:"election_group_id"`
+	ElectionGroupID       int32 `json:"election_group_id"`
 	FederalConstituencyID int32 `json:"federal_constituency_id"`
 }
 
@@ -98,7 +98,7 @@ SET
     )
   END,
   updated_at = NOW()
-WHERE election_group_id       = $4::smallint
+WHERE election_group_id       = $4::integer
   AND federal_constituency_id = $5::int
 `
 
@@ -106,7 +106,7 @@ type AdjustElectionGroupFederalConstituencyWardSupervisorCountsParams struct {
 	Delta                 int32 `json:"delta"`
 	UniqueDelta           int32 `json:"unique_delta"`
 	PartyID               int16 `json:"party_id"`
-	ElectionGroupID       int16 `json:"election_group_id"`
+	ElectionGroupID       int32 `json:"election_group_id"`
 	FederalConstituencyID int32 `json:"federal_constituency_id"`
 }
 
@@ -130,7 +130,7 @@ INSERT INTO election_group_lgas (
   parties
 )
 SELECT
-  $1::smallint,
+  $1::integer,
   $2::int,
   l.state_id, l.senatorial_district_id, l.federal_constituency_id,
   GREATEST(0, $3::int),
@@ -231,7 +231,7 @@ ON CONFLICT (election_group_id, lga_id) DO UPDATE SET
 `
 
 type AdjustElectionGroupLGAApplicationCountsParams struct {
-	ElectionGroupID      int16 `json:"election_group_id"`
+	ElectionGroupID      int32 `json:"election_group_id"`
 	LgaID                int32 `json:"lga_id"`
 	AppDelta             int32 `json:"app_delta"`
 	AcceptedDelta        int32 `json:"accepted_delta"`
@@ -289,14 +289,14 @@ SET
     )
   END,
   updated_at = NOW()
-WHERE election_group_id = $3::smallint
+WHERE election_group_id = $3::integer
   AND lga_id            = $4::int
 `
 
 type AdjustElectionGroupLGALGASupervisorCountsParams struct {
 	Delta           int32 `json:"delta"`
 	PartyID         int16 `json:"party_id"`
-	ElectionGroupID int16 `json:"election_group_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
 	LgaID           int32 `json:"lga_id"`
 }
 
@@ -343,7 +343,7 @@ SET
     )
   END,
   updated_at = NOW()
-WHERE election_group_id = $4::smallint
+WHERE election_group_id = $4::integer
   AND lga_id            = $5::int
 `
 
@@ -351,7 +351,7 @@ type AdjustElectionGroupLGAWardSupervisorCountsParams struct {
 	Delta           int32 `json:"delta"`
 	UniqueDelta     int32 `json:"unique_delta"`
 	PartyID         int16 `json:"party_id"`
-	ElectionGroupID int16 `json:"election_group_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
 	LgaID           int32 `json:"lga_id"`
 }
 
@@ -464,7 +464,7 @@ SET
     )
   END,
   updated_at = NOW()
-WHERE id = $14::smallint
+WHERE id = $14::integer
 `
 
 type AdjustElectionGroupNationalApplicationCountsParams struct {
@@ -481,7 +481,7 @@ type AdjustElectionGroupNationalApplicationCountsParams struct {
 	StateSupAcceptedDelta int32 `json:"state_sup_accepted_delta"`
 	StateSupRejectedDelta int32 `json:"state_sup_rejected_delta"`
 	PartyID               int16 `json:"party_id"`
-	ElectionGroupID       int16 `json:"election_group_id"`
+	ElectionGroupID       int32 `json:"election_group_id"`
 }
 
 func (q *Queries) AdjustElectionGroupNationalApplicationCounts(ctx context.Context, arg AdjustElectionGroupNationalApplicationCountsParams) error {
@@ -536,14 +536,14 @@ SET
     )
   END,
   updated_at = NOW()
-WHERE id = $4::smallint
+WHERE id = $4::integer
 `
 
 type AdjustElectionGroupNationalLGASupervisorCountsParams struct {
 	Delta           int32 `json:"delta"`
 	UniqueDelta     int32 `json:"unique_delta"`
 	PartyID         int16 `json:"party_id"`
-	ElectionGroupID int16 `json:"election_group_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
 }
 
 func (q *Queries) AdjustElectionGroupNationalLGASupervisorCounts(ctx context.Context, arg AdjustElectionGroupNationalLGASupervisorCountsParams) error {
@@ -588,14 +588,14 @@ SET
     )
   END,
   updated_at = NOW()
-WHERE id = $4::smallint
+WHERE id = $4::integer
 `
 
 type AdjustElectionGroupNationalStateSupervisorCountsParams struct {
 	Delta           int32 `json:"delta"`
 	UniqueDelta     int32 `json:"unique_delta"`
 	PartyID         int16 `json:"party_id"`
-	ElectionGroupID int16 `json:"election_group_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
 }
 
 func (q *Queries) AdjustElectionGroupNationalStateSupervisorCounts(ctx context.Context, arg AdjustElectionGroupNationalStateSupervisorCountsParams) error {
@@ -640,14 +640,14 @@ SET
     )
   END,
   updated_at = NOW()
-WHERE id = $4::smallint
+WHERE id = $4::integer
 `
 
 type AdjustElectionGroupNationalWardSupervisorCountsParams struct {
 	Delta           int32 `json:"delta"`
 	UniqueDelta     int32 `json:"unique_delta"`
 	PartyID         int16 `json:"party_id"`
-	ElectionGroupID int16 `json:"election_group_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
 }
 
 func (q *Queries) AdjustElectionGroupNationalWardSupervisorCounts(ctx context.Context, arg AdjustElectionGroupNationalWardSupervisorCountsParams) error {
@@ -669,7 +669,7 @@ INSERT INTO election_group_polling_units (
   parties
 )
 SELECT
-  $1::smallint,
+  $1::integer,
   $2::int,
   pu.state_id, pu.lga_id, pu.ward_id,
   w.state_constituency_id, l.federal_constituency_id, l.senatorial_district_id,
@@ -725,7 +725,7 @@ ON CONFLICT (election_group_id, polling_unit_id) DO UPDATE SET
 `
 
 type AdjustElectionGroupPollingUnitApplicationCountsParams struct {
-	ElectionGroupID int16 `json:"election_group_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
 	PollingUnitID   int32 `json:"polling_unit_id"`
 	AppDelta        int32 `json:"app_delta"`
 	AcceptedDelta   int32 `json:"accepted_delta"`
@@ -782,7 +782,7 @@ SET
     )
   END,
   updated_at = NOW()
-WHERE election_group_id      = $4::smallint
+WHERE election_group_id      = $4::integer
   AND senatorial_district_id = $5::int
 `
 
@@ -790,7 +790,7 @@ type AdjustElectionGroupSenatorialDistrictLGASupervisorCountsParams struct {
 	Delta                int32 `json:"delta"`
 	UniqueDelta          int32 `json:"unique_delta"`
 	PartyID              int16 `json:"party_id"`
-	ElectionGroupID      int16 `json:"election_group_id"`
+	ElectionGroupID      int32 `json:"election_group_id"`
 	SenatorialDistrictID int32 `json:"senatorial_district_id"`
 }
 
@@ -837,7 +837,7 @@ SET
     )
   END,
   updated_at = NOW()
-WHERE election_group_id      = $4::smallint
+WHERE election_group_id      = $4::integer
   AND senatorial_district_id = $5::int
 `
 
@@ -845,7 +845,7 @@ type AdjustElectionGroupSenatorialDistrictWardSupervisorCountsParams struct {
 	Delta                int32 `json:"delta"`
 	UniqueDelta          int32 `json:"unique_delta"`
 	PartyID              int16 `json:"party_id"`
-	ElectionGroupID      int16 `json:"election_group_id"`
+	ElectionGroupID      int32 `json:"election_group_id"`
 	SenatorialDistrictID int32 `json:"senatorial_district_id"`
 }
 
@@ -870,7 +870,7 @@ INSERT INTO election_group_states (
   parties
 )
 VALUES (
-  $1::smallint,
+  $1::integer,
   $2::smallint,
   GREATEST(0, $3::int),
   GREATEST(0, $4::int),
@@ -993,7 +993,7 @@ ON CONFLICT (election_group_id, state_id) DO UPDATE SET
 `
 
 type AdjustElectionGroupStateApplicationCountsParams struct {
-	ElectionGroupID       int16 `json:"election_group_id"`
+	ElectionGroupID       int32 `json:"election_group_id"`
 	StateID               int16 `json:"state_id"`
 	AppDelta              int32 `json:"app_delta"`
 	AcceptedDelta         int32 `json:"accepted_delta"`
@@ -1063,7 +1063,7 @@ SET
     )
   END,
   updated_at = NOW()
-WHERE election_group_id     = $4::smallint
+WHERE election_group_id     = $4::integer
   AND state_constituency_id = $5::int
 `
 
@@ -1071,7 +1071,7 @@ type AdjustElectionGroupStateConstituencyWardSupervisorCountsParams struct {
 	Delta               int32 `json:"delta"`
 	UniqueDelta         int32 `json:"unique_delta"`
 	PartyID             int16 `json:"party_id"`
-	ElectionGroupID     int16 `json:"election_group_id"`
+	ElectionGroupID     int32 `json:"election_group_id"`
 	StateConstituencyID int32 `json:"state_constituency_id"`
 }
 
@@ -1118,7 +1118,7 @@ SET
     )
   END,
   updated_at = NOW()
-WHERE election_group_id = $4::smallint
+WHERE election_group_id = $4::integer
   AND state_id          = $5::smallint
 `
 
@@ -1126,7 +1126,7 @@ type AdjustElectionGroupStateLGASupervisorCountsParams struct {
 	Delta           int32 `json:"delta"`
 	UniqueDelta     int32 `json:"unique_delta"`
 	PartyID         int16 `json:"party_id"`
-	ElectionGroupID int16 `json:"election_group_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
 	StateID         int16 `json:"state_id"`
 }
 
@@ -1167,14 +1167,14 @@ SET
     )
   END,
   updated_at = NOW()
-WHERE election_group_id = $3::smallint
+WHERE election_group_id = $3::integer
   AND state_id          = $4::smallint
 `
 
 type AdjustElectionGroupStateStateSupervisorCountsParams struct {
 	Delta           int32 `json:"delta"`
 	PartyID         int16 `json:"party_id"`
-	ElectionGroupID int16 `json:"election_group_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
 	StateID         int16 `json:"state_id"`
 }
 
@@ -1220,7 +1220,7 @@ SET
     )
   END,
   updated_at = NOW()
-WHERE election_group_id = $4::smallint
+WHERE election_group_id = $4::integer
   AND state_id          = $5::smallint
 `
 
@@ -1228,7 +1228,7 @@ type AdjustElectionGroupStateWardSupervisorCountsParams struct {
 	Delta           int32 `json:"delta"`
 	UniqueDelta     int32 `json:"unique_delta"`
 	PartyID         int16 `json:"party_id"`
-	ElectionGroupID int16 `json:"election_group_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
 	StateID         int16 `json:"state_id"`
 }
 
@@ -1251,7 +1251,7 @@ INSERT INTO election_group_wards (
   parties
 )
 SELECT
-  $1::smallint,
+  $1::integer,
   $2::int,
   w.lga_id, w.state_id,
   GREATEST(0, $3::int),
@@ -1328,7 +1328,7 @@ ON CONFLICT (election_group_id, ward_id) DO UPDATE SET
 `
 
 type AdjustElectionGroupWardApplicationCountsParams struct {
-	ElectionGroupID      int16 `json:"election_group_id"`
+	ElectionGroupID      int32 `json:"election_group_id"`
 	WardID               int32 `json:"ward_id"`
 	AppDelta             int32 `json:"app_delta"`
 	AcceptedDelta        int32 `json:"accepted_delta"`
@@ -1380,14 +1380,14 @@ SET
     )
   END,
   updated_at = NOW()
-WHERE election_group_id = $3::smallint
+WHERE election_group_id = $3::integer
   AND ward_id           = $4::int
 `
 
 type AdjustElectionGroupWardWardSupervisorCountsParams struct {
 	Delta           int32 `json:"delta"`
 	PartyID         int16 `json:"party_id"`
-	ElectionGroupID int16 `json:"election_group_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
 	WardID          int32 `json:"ward_id"`
 }
 
@@ -1407,7 +1407,7 @@ WHERE election_group_id = $1 AND federal_constituency_id = $2
 `
 
 type GetElectionGroupFederalConstituencyStatsParams struct {
-	ElectionGroupID       int16 `json:"election_group_id"`
+	ElectionGroupID       int32 `json:"election_group_id"`
 	FederalConstituencyID int32 `json:"federal_constituency_id"`
 }
 
@@ -1471,7 +1471,7 @@ WHERE election_group_id = $1 AND lga_id = $2
 `
 
 type GetElectionGroupLGAStatsParams struct {
-	ElectionGroupID int16 `json:"election_group_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
 	LgaID           int32 `json:"lga_id"`
 }
 
@@ -1538,12 +1538,12 @@ SELECT
   federal_constituency_id,
   senatorial_district_id
 FROM election_group_polling_units
-WHERE election_group_id = $1::smallint
+WHERE election_group_id = $1::integer
   AND polling_unit_id   = $2::int
 `
 
 type GetElectionGroupPollingUnitGeoIDsParams struct {
-	ElectionGroupID int16 `json:"election_group_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
 	PollingUnitID   int32 `json:"polling_unit_id"`
 }
 
@@ -1584,7 +1584,7 @@ WHERE election_group_id = $1 AND polling_unit_id = $2
 `
 
 type GetElectionGroupPollingUnitStatsParams struct {
-	ElectionGroupID int16 `json:"election_group_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
 	PollingUnitID   int32 `json:"polling_unit_id"`
 }
 
@@ -1633,7 +1633,7 @@ WHERE election_group_id = $1 AND senatorial_district_id = $2
 `
 
 type GetElectionGroupSenatorialDistrictStatsParams struct {
-	ElectionGroupID      int16 `json:"election_group_id"`
+	ElectionGroupID      int32 `json:"election_group_id"`
 	SenatorialDistrictID int32 `json:"senatorial_district_id"`
 }
 
@@ -1697,7 +1697,7 @@ WHERE election_group_id = $1 AND state_constituency_id = $2
 `
 
 type GetElectionGroupStateConstituencyStatsParams struct {
-	ElectionGroupID     int16 `json:"election_group_id"`
+	ElectionGroupID     int32 `json:"election_group_id"`
 	StateConstituencyID int32 `json:"state_constituency_id"`
 }
 
@@ -1753,7 +1753,7 @@ WHERE election_group_id = $1 AND state_id = $2
 `
 
 type GetElectionGroupStateStatsParams struct {
-	ElectionGroupID int16 `json:"election_group_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
 	StateID         int16 `json:"state_id"`
 }
 
@@ -1821,7 +1821,7 @@ WHERE election_group_id = $1 AND ward_id = $2
 `
 
 type GetElectionGroupWardStatsParams struct {
-	ElectionGroupID int16 `json:"election_group_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
 	WardID          int32 `json:"ward_id"`
 }
 
@@ -1873,13 +1873,13 @@ func (q *Queries) GetElectionGroupWardStats(ctx context.Context, arg GetElection
 const getLGASupervisorCount = `-- name: GetLGASupervisorCount :one
 SELECT COUNT(*)::int AS supervisor_count
 FROM lga_election_supervisors
-WHERE election_group_id = $1::smallint
+WHERE election_group_id = $1::integer
   AND lga_id            = $2::int
   AND party_id          = $3::smallint
 `
 
 type GetLGASupervisorCountParams struct {
-	ElectionGroupID int16 `json:"election_group_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
 	LgaID           int32 `json:"lga_id"`
 	PartyID         int16 `json:"party_id"`
 }
@@ -1904,13 +1904,13 @@ SELECT COALESCE(
   0
 )::int AS agents_count
 FROM election_group_polling_units
-WHERE election_group_id = $2::smallint
+WHERE election_group_id = $2::integer
   AND polling_unit_id   = $3::int
 `
 
 type GetPUPartyAgentsCountParams struct {
 	PartyID         int16 `json:"party_id"`
-	ElectionGroupID int16 `json:"election_group_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
 	PollingUnitID   int32 `json:"polling_unit_id"`
 }
 
@@ -1930,13 +1930,13 @@ func (q *Queries) GetPUPartyAgentsCount(ctx context.Context, arg GetPUPartyAgent
 const getStateSupervisorCount = `-- name: GetStateSupervisorCount :one
 SELECT COUNT(*)::int AS supervisor_count
 FROM state_election_supervisors
-WHERE election_group_id = $1::smallint
+WHERE election_group_id = $1::integer
   AND state_id          = $2::smallint
   AND party_id          = $3::smallint
 `
 
 type GetStateSupervisorCountParams struct {
-	ElectionGroupID int16 `json:"election_group_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
 	StateID         int16 `json:"state_id"`
 	PartyID         int16 `json:"party_id"`
 }
@@ -1952,13 +1952,13 @@ func (q *Queries) GetStateSupervisorCount(ctx context.Context, arg GetStateSuper
 const getWardSupervisorCount = `-- name: GetWardSupervisorCount :one
 SELECT COUNT(*)::int AS supervisor_count
 FROM ward_election_supervisors
-WHERE election_group_id = $1::smallint
+WHERE election_group_id = $1::integer
   AND ward_id           = $2::int
   AND party_id          = $3::smallint
 `
 
 type GetWardSupervisorCountParams struct {
-	ElectionGroupID int16 `json:"election_group_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
 	WardID          int32 `json:"ward_id"`
 	PartyID         int16 `json:"party_id"`
 }
@@ -2012,7 +2012,7 @@ SET
     FROM jsonb_array_elements(parties) AS elem
   ),
   updated_at = NOW()
-WHERE election_group_id = $4::smallint
+WHERE election_group_id = $4::integer
   AND polling_unit_id   = $5::int
   AND parties @> jsonb_build_array(jsonb_build_object('party_id', $3::smallint))
 `
@@ -2021,7 +2021,7 @@ type IncrementElectionGroupPUPartyMetricsParams struct {
 	ReportsDelta    int32 `json:"reports_delta"`
 	UpdatesDelta    int32 `json:"updates_delta"`
 	PartyID         int16 `json:"party_id"`
-	ElectionGroupID int16 `json:"election_group_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
 	PollingUnitID   int32 `json:"polling_unit_id"`
 }
 
@@ -2048,7 +2048,7 @@ ORDER BY federal_constituency_id
 `
 
 type ListElectionGroupFederalConstituencyStatsByGroupParams struct {
-	ElectionGroupID      int16       `json:"election_group_id"`
+	ElectionGroupID      int32       `json:"election_group_id"`
 	StateID              pgtype.Int2 `json:"state_id"`
 	SenatorialDistrictID pgtype.Int4 `json:"senatorial_district_id"`
 }
@@ -2129,7 +2129,7 @@ ORDER BY lga_id
 `
 
 type ListElectionGroupLGAStatsByGroupParams struct {
-	ElectionGroupID      int16       `json:"election_group_id"`
+	ElectionGroupID      int32       `json:"election_group_id"`
 	StateID              pgtype.Int2 `json:"state_id"`
 	SenatorialDistrictID pgtype.Int4 `json:"senatorial_district_id"`
 }
@@ -2210,7 +2210,7 @@ ORDER BY polling_unit_id
 `
 
 type ListElectionGroupPollingUnitStatsByGroupParams struct {
-	ElectionGroupID int16       `json:"election_group_id"`
+	ElectionGroupID int32       `json:"election_group_id"`
 	WardID          pgtype.Int4 `json:"ward_id"`
 	LgaID           pgtype.Int4 `json:"lga_id"`
 	StateID         pgtype.Int2 `json:"state_id"`
@@ -2278,7 +2278,7 @@ ORDER BY senatorial_district_id
 `
 
 type ListElectionGroupSenatorialDistrictStatsByGroupParams struct {
-	ElectionGroupID int16       `json:"election_group_id"`
+	ElectionGroupID int32       `json:"election_group_id"`
 	StateID         pgtype.Int2 `json:"state_id"`
 }
 
@@ -2357,7 +2357,7 @@ ORDER BY state_constituency_id
 `
 
 type ListElectionGroupStateConstituencyStatsByGroupParams struct {
-	ElectionGroupID int16       `json:"election_group_id"`
+	ElectionGroupID int32       `json:"election_group_id"`
 	StateID         pgtype.Int2 `json:"state_id"`
 }
 
@@ -2426,7 +2426,7 @@ WHERE election_group_id = $1
 ORDER BY state_id
 `
 
-func (q *Queries) ListElectionGroupStateStatsByGroup(ctx context.Context, electionGroupID int16) ([]ElectionGroupState, error) {
+func (q *Queries) ListElectionGroupStateStatsByGroup(ctx context.Context, electionGroupID int32) ([]ElectionGroupState, error) {
 	rows, err := q.db.Query(ctx, listElectionGroupStateStatsByGroup, electionGroupID)
 	if err != nil {
 		return nil, err
@@ -2506,7 +2506,7 @@ ORDER BY ward_id
 `
 
 type ListElectionGroupWardStatsByGroupParams struct {
-	ElectionGroupID int16       `json:"election_group_id"`
+	ElectionGroupID int32       `json:"election_group_id"`
 	LgaID           pgtype.Int4 `json:"lga_id"`
 	StateID         pgtype.Int2 `json:"state_id"`
 }
@@ -4146,7 +4146,7 @@ WITH src_agg AS (
     COALESCE(SUM(ward_supervisors_count), 0)::int    AS ward_supervisors_count,
     COALESCE(SUM(unique_ward_supervisors_count), 0)::int AS unique_ward_supervisors_count
   FROM election_group_states
-  WHERE election_group_id = $1::smallint
+  WHERE election_group_id = $1::integer
   GROUP BY election_group_id
 ),
 party_expanded AS (
@@ -4180,7 +4180,7 @@ party_expanded AS (
     COALESCE((p.value->>'unique_ward_supervisors_count')::int, 0)      AS unique_ward_supervisors_count
   FROM election_group_states s,
        jsonb_array_elements(s.parties) AS p(value)
-  WHERE s.election_group_id = $1::smallint
+  WHERE s.election_group_id = $1::integer
 ),
 party_agg AS (
   SELECT
@@ -4304,7 +4304,7 @@ WHERE election_groups.id = s.election_group_id
 `
 
 // Aggregates from election_group_states for a single election group.
-func (q *Queries) RefreshSingleElectionGroupGlobalStats(ctx context.Context, electionGroupID int16) error {
+func (q *Queries) RefreshSingleElectionGroupGlobalStats(ctx context.Context, electionGroupID int32) error {
 	_, err := q.db.Exec(ctx, refreshSingleElectionGroupGlobalStats, electionGroupID)
 	return err
 }
@@ -4335,7 +4335,7 @@ WITH src_agg AS (
     COALESCE(SUM(ward_supervisors_count), 0)::int    AS ward_supervisors_count,
     COUNT(*) FILTER (WHERE ward_supervisors_count > 0)::int AS unique_ward_supervisors_count
   FROM election_group_wards
-  WHERE election_group_id = $1::smallint
+  WHERE election_group_id = $1::integer
     AND lga_id = $2::int
   GROUP BY election_group_id, lga_id, state_id
 ),
@@ -4366,7 +4366,7 @@ party_expanded AS (
     COALESCE((p.value->>'ward_supervisors_count')::int, 0)             AS ward_supervisors_count
   FROM election_group_wards s,
        jsonb_array_elements(s.parties) AS p(value)
-  WHERE s.election_group_id = $1::smallint
+  WHERE s.election_group_id = $1::integer
     AND s.lga_id = $2::int
 ),
 party_agg AS (
@@ -4507,7 +4507,7 @@ ON CONFLICT (election_group_id, lga_id) DO UPDATE SET
 `
 
 type RefreshSingleElectionGroupLGAStatsParams struct {
-	ElectionGroupID int16 `json:"election_group_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
 	LgaID           int32 `json:"lga_id"`
 }
 
@@ -4662,7 +4662,7 @@ WHERE election_group_polling_units.election_group_id = aa.election_group_id
 `
 
 type RefreshSingleElectionGroupPollingUnitStatsParams struct {
-	ElectionGroupID int16 `json:"election_group_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
 	PollingUnitID   int32 `json:"polling_unit_id"`
 }
 
@@ -4696,7 +4696,7 @@ WITH src_agg AS (
     COUNT(*) FILTER (WHERE unique_pu_final_results_uploaded_count > 0) AS total_pu_unique_final_results_uploaded,
     COUNT(*) FILTER (WHERE pu_live_voters_referred_by_agent_count > 0) AS total_pu_where_agents_referred_live_voters
   FROM election_group_polling_units
-  WHERE election_group_id = $1::smallint
+  WHERE election_group_id = $1::integer
     AND state_constituency_id = $2::int
   GROUP BY election_group_id, state_constituency_id, state_id
 ),
@@ -4726,7 +4726,7 @@ party_expanded AS (
     s.pu_live_voters_referred_by_agent_count > 0 AS has_referrals
   FROM election_group_polling_units s,
        jsonb_array_elements(s.parties) AS p(value)
-  WHERE s.election_group_id = $1::smallint
+  WHERE s.election_group_id = $1::integer
     AND s.state_constituency_id = $2::int
 ),
 party_agg AS (
@@ -4839,7 +4839,7 @@ ON CONFLICT (election_group_id, state_constituency_id) DO UPDATE SET
 `
 
 type RefreshSingleElectionGroupStateConstituencyStatsParams struct {
-	ElectionGroupID     int16 `json:"election_group_id"`
+	ElectionGroupID     int32 `json:"election_group_id"`
 	StateConstituencyID int32 `json:"state_constituency_id"`
 }
 
@@ -4877,7 +4877,7 @@ WITH src_agg AS (
     COALESCE(SUM(ward_supervisors_count), 0)::int    AS ward_supervisors_count,
     COALESCE(SUM(unique_ward_supervisors_count), 0)::int AS unique_ward_supervisors_count
   FROM election_group_lgas
-  WHERE election_group_id = $1::smallint
+  WHERE election_group_id = $1::integer
     AND state_id = $2::smallint
   GROUP BY election_group_id, state_id
 ),
@@ -4910,7 +4910,7 @@ party_expanded AS (
     COALESCE((p.value->>'unique_ward_supervisors_count')::int, 0)      AS unique_ward_supervisors_count
   FROM election_group_lgas s,
        jsonb_array_elements(s.parties) AS p(value)
-  WHERE s.election_group_id = $1::smallint
+  WHERE s.election_group_id = $1::integer
     AND s.state_id = $2::smallint
 ),
 party_agg AS (
@@ -5058,7 +5058,7 @@ ON CONFLICT (election_group_id, state_id) DO UPDATE SET
 `
 
 type RefreshSingleElectionGroupStateStatsParams struct {
-	ElectionGroupID int16 `json:"election_group_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
 	StateID         int16 `json:"state_id"`
 }
 
@@ -5092,7 +5092,7 @@ WITH epu_agg AS (
     COUNT(*) FILTER (WHERE unique_pu_final_results_uploaded_count > 0) AS total_pu_unique_final_results_uploaded,
     COUNT(*) FILTER (WHERE pu_live_voters_referred_by_agent_count > 0) AS total_pu_where_agents_referred_live_voters
   FROM election_group_polling_units
-  WHERE election_group_id = $1::smallint
+  WHERE election_group_id = $1::integer
     AND ward_id = $2::int
   GROUP BY election_group_id, ward_id, lga_id, state_id
 ),
@@ -5122,7 +5122,7 @@ party_expanded AS (
     (p.value->>'pu_agents_count')::int > 0            AS has_agents
   FROM election_group_polling_units epu,
        jsonb_array_elements(epu.parties) AS p(value)
-  WHERE epu.election_group_id = $1::smallint
+  WHERE epu.election_group_id = $1::integer
     AND epu.ward_id = $2::int
 ),
 party_agg AS (
@@ -5255,7 +5255,7 @@ ON CONFLICT (election_group_id, ward_id) DO UPDATE SET
 `
 
 type RefreshSingleElectionGroupWardStatsParams struct {
-	ElectionGroupID int16 `json:"election_group_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
 	WardID          int32 `json:"ward_id"`
 }
 
@@ -5270,7 +5270,7 @@ INSERT INTO election_group_federal_constituencies (
   election_group_id, federal_constituency_id, state_id, senatorial_district_id,
   lgas_count, state_constituencies_count, wards_count, polling_units_count
 )
-SELECT DISTINCT $1::smallint, fc.id, fc.state_id, fc.senatorial_district_id,
+SELECT DISTINCT $1::integer, fc.id, fc.state_id, fc.senatorial_district_id,
   fc.lgas_count, fc.state_constituencies_count, fc.wards_count, fc.polling_units_count
 FROM federal_constituencies fc
 JOIN elections e ON e.election_group_id = $1
@@ -5289,7 +5289,7 @@ ON CONFLICT (election_group_id, federal_constituency_id) DO NOTHING
 `
 
 // Inserts one zeroed row per federal constituency in-scope for this election group.
-func (q *Queries) SeedElectionGroupFederalConstituencyStats(ctx context.Context, dollar_1 int16) error {
+func (q *Queries) SeedElectionGroupFederalConstituencyStats(ctx context.Context, dollar_1 int32) error {
 	_, err := q.db.Exec(ctx, seedElectionGroupFederalConstituencyStats, dollar_1)
 	return err
 }
@@ -5299,7 +5299,7 @@ INSERT INTO election_group_lgas (
   election_group_id, lga_id, state_id, senatorial_district_id, federal_constituency_id,
   state_constituencies_count, wards_count, polling_units_count
 )
-SELECT DISTINCT $1::smallint, l.id, l.state_id, l.senatorial_district_id, l.federal_constituency_id,
+SELECT DISTINCT $1::integer, l.id, l.state_id, l.senatorial_district_id, l.federal_constituency_id,
   l.state_constituencies_count, l.wards_count, l.polling_units_count
 FROM lgas l
 JOIN elections e ON e.election_group_id = $1
@@ -5316,7 +5316,7 @@ ON CONFLICT (election_group_id, lga_id) DO NOTHING
 `
 
 // Inserts one zeroed row per LGA in-scope for this election group.
-func (q *Queries) SeedElectionGroupLGAStats(ctx context.Context, dollar_1 int16) error {
+func (q *Queries) SeedElectionGroupLGAStats(ctx context.Context, dollar_1 int32) error {
 	_, err := q.db.Exec(ctx, seedElectionGroupLGAStats, dollar_1)
 	return err
 }
@@ -5327,7 +5327,7 @@ INSERT INTO election_group_senatorial_districts (
   federal_constituencies_count, lgas_count,
   state_constituencies_count, wards_count, polling_units_count
 )
-SELECT DISTINCT $1::smallint, sd.id, sd.state_id,
+SELECT DISTINCT $1::integer, sd.id, sd.state_id,
   sd.federal_constituencies_count, sd.lgas_count,
   sd.state_constituencies_count, sd.wards_count, sd.polling_units_count
 FROM senatorial_districts sd
@@ -5349,7 +5349,7 @@ ON CONFLICT (election_group_id, senatorial_district_id) DO NOTHING
 `
 
 // Inserts one zeroed row per senatorial district in-scope for this election group.
-func (q *Queries) SeedElectionGroupSenatorialDistrictStats(ctx context.Context, dollar_1 int16) error {
+func (q *Queries) SeedElectionGroupSenatorialDistrictStats(ctx context.Context, dollar_1 int32) error {
 	_, err := q.db.Exec(ctx, seedElectionGroupSenatorialDistrictStats, dollar_1)
 	return err
 }
@@ -5359,7 +5359,7 @@ INSERT INTO election_group_state_constituencies (
   election_group_id, state_constituency_id, state_id,
   wards_count, polling_units_count
 )
-SELECT DISTINCT $1::smallint, sc.id, sc.state_id,
+SELECT DISTINCT $1::integer, sc.id, sc.state_id,
   sc.wards_count, sc.polling_units_count
 FROM state_constituencies sc
 JOIN elections e ON e.election_group_id = $1
@@ -5376,7 +5376,7 @@ ON CONFLICT (election_group_id, state_constituency_id) DO NOTHING
 `
 
 // Inserts one zeroed row per state constituency in-scope for this election group.
-func (q *Queries) SeedElectionGroupStateConstituencyStats(ctx context.Context, dollar_1 int16) error {
+func (q *Queries) SeedElectionGroupStateConstituencyStats(ctx context.Context, dollar_1 int32) error {
 	_, err := q.db.Exec(ctx, seedElectionGroupStateConstituencyStats, dollar_1)
 	return err
 }
@@ -5388,7 +5388,7 @@ INSERT INTO election_group_states (
   senatorial_districts_count, federal_constituencies_count, lgas_count,
   state_constituencies_count, wards_count, polling_units_count
 )
-SELECT DISTINCT $1::smallint, s.id,
+SELECT DISTINCT $1::integer, s.id,
   s.senatorial_districts_count, s.federal_constituencies_count, s.lgas_count,
   s.state_constituencies_count, s.wards_count, s.polling_units_count
 FROM c_states s
@@ -5417,7 +5417,7 @@ ON CONFLICT (election_group_id, state_id) DO NOTHING
 // For a 'nationwide' election that means all 37 states.
 // For a scoped election (e.g. state/senatorial-district/etc.) only the
 // relevant state(s) are inserted.
-func (q *Queries) SeedElectionGroupStateStats(ctx context.Context, dollar_1 int16) error {
+func (q *Queries) SeedElectionGroupStateStats(ctx context.Context, dollar_1 int32) error {
 	_, err := q.db.Exec(ctx, seedElectionGroupStateStats, dollar_1)
 	return err
 }
@@ -5427,7 +5427,7 @@ INSERT INTO election_group_wards (
   election_group_id, ward_id, lga_id, state_id,
   polling_units_count
 )
-SELECT DISTINCT $1::smallint, w.id, w.lga_id, l.state_id,
+SELECT DISTINCT $1::integer, w.id, w.lga_id, l.state_id,
   w.polling_units_count
 FROM wards w
 JOIN lgas l ON l.id = w.lga_id
@@ -5445,7 +5445,7 @@ ON CONFLICT (election_group_id, ward_id) DO NOTHING
 `
 
 // Inserts one zeroed row per ward in-scope for this election group.
-func (q *Queries) SeedElectionGroupWardStats(ctx context.Context, dollar_1 int16) error {
+func (q *Queries) SeedElectionGroupWardStats(ctx context.Context, dollar_1 int32) error {
 	_, err := q.db.Exec(ctx, seedElectionGroupWardStats, dollar_1)
 	return err
 }
@@ -5500,7 +5500,7 @@ SET
     )::jsonb
   END,
   updated_at = NOW()
-WHERE election_group_id       = $4::smallint
+WHERE election_group_id       = $4::integer
   AND federal_constituency_id = $5::int
 `
 
@@ -5508,7 +5508,7 @@ type UpsertElectionGroupFederalConstituencyPartyEntryParams struct {
 	AgentsDelta           int32 `json:"agents_delta"`
 	UniquePuDelta         int32 `json:"unique_pu_delta"`
 	PartyID               int16 `json:"party_id"`
-	ElectionGroupID       int16 `json:"election_group_id"`
+	ElectionGroupID       int32 `json:"election_group_id"`
 	FederalConstituencyID int32 `json:"federal_constituency_id"`
 }
 
@@ -5574,7 +5574,7 @@ SET
     )::jsonb
   END,
   updated_at = NOW()
-WHERE election_group_id = $4::smallint
+WHERE election_group_id = $4::integer
   AND lga_id            = $5::int
 `
 
@@ -5582,7 +5582,7 @@ type UpsertElectionGroupLGAPartyEntryParams struct {
 	AgentsDelta     int32 `json:"agents_delta"`
 	UniquePuDelta   int32 `json:"unique_pu_delta"`
 	PartyID         int16 `json:"party_id"`
-	ElectionGroupID int16 `json:"election_group_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
 	LgaID           int32 `json:"lga_id"`
 }
 
@@ -5631,14 +5631,14 @@ SET
     )
   END,
   updated_at = NOW()
-WHERE id = $4::smallint
+WHERE id = $4::integer
 `
 
 type UpsertElectionGroupNationalPartyEntryParams struct {
 	AgentsDelta     int32 `json:"agents_delta"`
 	UniquePuDelta   int32 `json:"unique_pu_delta"`
 	PartyID         int16 `json:"party_id"`
-	ElectionGroupID int16 `json:"election_group_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
 }
 
 // Upserts the party entry inside election_groups.parties.
@@ -5691,14 +5691,14 @@ SET
     )::jsonb
   END,
   updated_at = NOW()
-WHERE election_group_id = $3::smallint
+WHERE election_group_id = $3::integer
   AND polling_unit_id   = $4::int
 `
 
 type UpsertElectionGroupPUPartyEntryParams struct {
 	Delta           int32 `json:"delta"`
 	PartyID         int16 `json:"party_id"`
-	ElectionGroupID int16 `json:"election_group_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
 	PollingUnitID   int32 `json:"polling_unit_id"`
 }
 
@@ -5781,7 +5781,7 @@ SET
     )::jsonb
   END,
   updated_at = NOW()
-WHERE election_group_id      = $4::smallint
+WHERE election_group_id      = $4::integer
   AND senatorial_district_id = $5::int
 `
 
@@ -5789,7 +5789,7 @@ type UpsertElectionGroupSenatorialDistrictPartyEntryParams struct {
 	AgentsDelta          int32 `json:"agents_delta"`
 	UniquePuDelta        int32 `json:"unique_pu_delta"`
 	PartyID              int16 `json:"party_id"`
-	ElectionGroupID      int16 `json:"election_group_id"`
+	ElectionGroupID      int32 `json:"election_group_id"`
 	SenatorialDistrictID int32 `json:"senatorial_district_id"`
 }
 
@@ -5855,7 +5855,7 @@ SET
     )::jsonb
   END,
   updated_at = NOW()
-WHERE election_group_id       = $4::smallint
+WHERE election_group_id       = $4::integer
   AND state_constituency_id   = $5::int
 `
 
@@ -5863,7 +5863,7 @@ type UpsertElectionGroupStateConstituencyPartyEntryParams struct {
 	AgentsDelta         int32 `json:"agents_delta"`
 	UniquePuDelta       int32 `json:"unique_pu_delta"`
 	PartyID             int16 `json:"party_id"`
-	ElectionGroupID     int16 `json:"election_group_id"`
+	ElectionGroupID     int32 `json:"election_group_id"`
 	StateConstituencyID int32 `json:"state_constituency_id"`
 }
 
@@ -5929,7 +5929,7 @@ SET
     )::jsonb
   END,
   updated_at = NOW()
-WHERE election_group_id = $4::smallint
+WHERE election_group_id = $4::integer
   AND state_id          = $5::smallint
 `
 
@@ -5937,7 +5937,7 @@ type UpsertElectionGroupStatePartyEntryParams struct {
 	AgentsDelta     int32 `json:"agents_delta"`
 	UniquePuDelta   int32 `json:"unique_pu_delta"`
 	PartyID         int16 `json:"party_id"`
-	ElectionGroupID int16 `json:"election_group_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
 	StateID         int16 `json:"state_id"`
 }
 
@@ -6003,7 +6003,7 @@ SET
     )::jsonb
   END,
   updated_at = NOW()
-WHERE election_group_id = $4::smallint
+WHERE election_group_id = $4::integer
   AND ward_id           = $5::int
 `
 
@@ -6011,7 +6011,7 @@ type UpsertElectionGroupWardPartyEntryParams struct {
 	AgentsDelta     int32 `json:"agents_delta"`
 	UniquePuDelta   int32 `json:"unique_pu_delta"`
 	PartyID         int16 `json:"party_id"`
-	ElectionGroupID int16 `json:"election_group_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
 	WardID          int32 `json:"ward_id"`
 }
 

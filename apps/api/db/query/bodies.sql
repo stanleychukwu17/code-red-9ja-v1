@@ -76,7 +76,7 @@ SELECT
       FROM polling_unit_assignments pua
       WHERE pua.polling_unit_id = pu.id
         AND pua.party_id = sqlc.arg(party_id)::smallint
-        AND pua.election_group_id = sqlc.arg(election_group_id)::smallint
+        AND pua.election_group_id = sqlc.arg(election_group_id)::integer
         AND pua.role_type = 'polling_agent'
     ),
     0

@@ -109,7 +109,7 @@ LIMIT 1
 
 type GetAgentEarningsByUserAndElectionGroupAndRoleParams struct {
 	UserID          int64  `json:"user_id"`
-	ElectionGroupID int16  `json:"election_group_id"`
+	ElectionGroupID int32  `json:"election_group_id"`
 	RoleType        string `json:"role_type"`
 }
 
@@ -184,7 +184,7 @@ type GetAssignmentForEarningsRow struct {
 	ID                                      int64              `json:"id"`
 	UserID                                  int64              `json:"user_id"`
 	PartyID                                 int16              `json:"party_id"`
-	ElectionGroupID                         int16              `json:"election_group_id"`
+	ElectionGroupID                         int32              `json:"election_group_id"`
 	RoleType                                pgtype.Text        `json:"role_type"`
 	ArrivedAt                               pgtype.Timestamptz `json:"arrived_at"`
 	ElectionStartedAt                       pgtype.Timestamptz `json:"election_started_at"`
@@ -233,7 +233,7 @@ LIMIT 1
 
 type GetAssignmentIDByUserAndElectionGroupParams struct {
 	UserID          int64 `json:"user_id"`
-	ElectionGroupID int16 `json:"election_group_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
 }
 
 func (q *Queries) GetAssignmentIDByUserAndElectionGroup(ctx context.Context, arg GetAssignmentIDByUserAndElectionGroupParams) (int64, error) {
@@ -270,7 +270,7 @@ type ListAgentEarningsRow struct {
 	ID                      int64              `json:"id"`
 	UserID                  int64              `json:"user_id"`
 	PartyID                 int16              `json:"party_id"`
-	ElectionGroupID         int16              `json:"election_group_id"`
+	ElectionGroupID         int32              `json:"election_group_id"`
 	RoleType                string             `json:"role_type"`
 	BasePaymentKobo         int64              `json:"base_payment_kobo"`
 	EarningsAllocation      []byte             `json:"earnings_allocation"`
@@ -420,7 +420,7 @@ RETURNING id, user_id, party_id, election_group_id, role_type, base_payment_kobo
 
 type RequestAgentEarningsPayoutParams struct {
 	UserID          int64  `json:"user_id"`
-	ElectionGroupID int16  `json:"election_group_id"`
+	ElectionGroupID int32  `json:"election_group_id"`
 	RoleType        string `json:"role_type"`
 }
 
@@ -564,7 +564,7 @@ RETURNING id, user_id, party_id, election_group_id, role_type, base_payment_kobo
 type UpsertAgentEarningsParams struct {
 	UserID                  int64          `json:"user_id"`
 	PartyID                 int16          `json:"party_id"`
-	ElectionGroupID         int16          `json:"election_group_id"`
+	ElectionGroupID         int32          `json:"election_group_id"`
 	RoleType                string         `json:"role_type"`
 	BasePaymentKobo         int64          `json:"base_payment_kobo"`
 	EarningsAllocation      []byte         `json:"earnings_allocation"`

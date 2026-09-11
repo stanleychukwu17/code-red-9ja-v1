@@ -1093,7 +1093,7 @@ LEFT JOIN lgas l ON fr.lga_id = l.id
 LEFT JOIN polling_unit_results r ON fr.polling_unit_result_id = r.id
 LEFT JOIN users u ON r.submitted_by = u.id
 WHERE
-  (sqlc.narg('election_group_id')::smallint IS NULL OR fr.election_group_id = sqlc.narg('election_group_id'))
+  (sqlc.narg('election_group_id')::integer IS NULL OR fr.election_group_id = sqlc.narg('election_group_id'))
   AND (sqlc.narg('state_id')::smallint IS NULL OR fr.state_id = sqlc.narg('state_id'))
   AND (sqlc.narg('senatorial_district_id')::int IS NULL OR fr.senatorial_district_id = sqlc.narg('senatorial_district_id'))
   AND (sqlc.narg('federal_constituency_id')::int IS NULL OR fr.federal_constituency_id = sqlc.narg('federal_constituency_id'))

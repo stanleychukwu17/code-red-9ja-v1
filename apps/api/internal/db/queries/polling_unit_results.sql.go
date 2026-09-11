@@ -184,7 +184,7 @@ LIMIT 1
 
 type GetUserPollingUnitResultInElectionGroupParams struct {
 	SubmittedBy     pgtype.Int8 `json:"submitted_by"`
-	ElectionGroupID int16       `json:"election_group_id"`
+	ElectionGroupID int32       `json:"election_group_id"`
 }
 
 func (q *Queries) GetUserPollingUnitResultInElectionGroup(ctx context.Context, arg GetUserPollingUnitResultInElectionGroupParams) (int32, error) {
@@ -224,7 +224,7 @@ SET
 WHERE id = $1
 `
 
-func (q *Queries) IncrementElectionGroupResultCount(ctx context.Context, id int16) error {
+func (q *Queries) IncrementElectionGroupResultCount(ctx context.Context, id int32) error {
 	_, err := q.db.Exec(ctx, incrementElectionGroupResultCount, id)
 	return err
 }
@@ -252,7 +252,7 @@ WHERE party_id = $1 AND election_group_id = $2
 
 type IncrementPartyElectionGroupResultCountParams struct {
 	PartyID         int16 `json:"party_id"`
-	ElectionGroupID int16 `json:"election_group_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
 }
 
 func (q *Queries) IncrementPartyElectionGroupResultCount(ctx context.Context, arg IncrementPartyElectionGroupResultCountParams) error {
@@ -265,7 +265,7 @@ SELECT id, assignment_id, election_id, election_group_id, polling_unit_id, submi
 FROM polling_unit_results
 WHERE
   ($1::int    IS NULL OR election_id       = $1)
-  AND ($2::smallint IS NULL OR election_group_id = $2)
+  AND ($2::integer IS NULL OR election_group_id = $2)
   AND ($3::smallint   IS NULL OR party_id          = $3)
   AND ($4::int IS NULL OR polling_unit_id = $4)
   AND ($5::bigint IS NULL OR submitted_by    = $5)
@@ -281,7 +281,7 @@ LIMIT $12
 
 type ListPollingUnitResultsParams struct {
 	ElectionID      pgtype.Int4 `json:"election_id"`
-	ElectionGroupID pgtype.Int2 `json:"election_group_id"`
+	ElectionGroupID pgtype.Int4 `json:"election_group_id"`
 	PartyID         pgtype.Int2 `json:"party_id"`
 	PollingUnitID   pgtype.Int4 `json:"polling_unit_id"`
 	SubmittedBy     pgtype.Int8 `json:"submitted_by"`
@@ -417,7 +417,7 @@ INSERT INTO polling_unit_results (
 type SubmitPollingUnitResultParams struct {
 	AssignmentID          pgtype.Int8    `json:"assignment_id"`
 	ElectionID            int32          `json:"election_id"`
-	ElectionGroupID       int16          `json:"election_group_id"`
+	ElectionGroupID       int32          `json:"election_group_id"`
 	PollingUnitID         int32          `json:"polling_unit_id"`
 	SubmittedBy           pgtype.Int8    `json:"submitted_by"`
 	PartyID               pgtype.Int2    `json:"party_id"`
