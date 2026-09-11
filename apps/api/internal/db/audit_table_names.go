@@ -21,6 +21,9 @@ const (
 	ActionViewUserPhoneNumbers   = "view_user_phone_numbers"   // Action when a user's phone numbers are viewed
 	ActionDeleteUserPhoneNumber  = "delete_user_phone_number"  // Action when a user's phone number is deleted
 	ActionDeleteFile             = "delete_file"               // Action for deleting a file
+	ActionCreateOffice           = "create_office"             // Action for creating a new political office
+	ActionUpdateOffice           = "update_office"             // Action for updating an existing political office
+	ActionDeleteOffice           = "delete_office"             // Action for deleting a political office
 
 	// -- Actor Roles --
 	ActorRoleSuperAdmin = "super_admin" // A super administrator of the system
@@ -29,6 +32,7 @@ const (
 	ActorRoleUser       = "user"        // A regular user acting on their own account
 
 	// -- Entity Types --
-	EntityTypeUser  = "user"  // Entity type representing a regular user
-	EntityTypeParty = "party" // Entity type representing a political party
+	EntityTypeUser   = "user"   // Entity type representing a regular user
+	EntityTypeParty  = "party"  // Entity type representing a political party
+	EntityTypeOffice = "office" // Entity type representing a political office
 )

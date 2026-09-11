@@ -187,7 +187,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	federalConstituenciesHandler := federalconstituencieshandler.NewHandler(federalConstituenciesService, q, utilsInstance)
 	wardsHandler := wardshandler.NewHandler(wardsService, q, utilsInstance)
 	pollingUnitsHandler := pollingunitshandler.NewHandler(pollingUnitsService, q, utilsInstance)
-	officesHandler := officeshandler.NewHandler(officesService, utilsInstance)
+	officesHandler := officeshandler.NewHandler(officesService, auditService, utilsInstance)
 	electionGroupsHandler := electiongroupshandler.NewHandler(electionGroupsService, utilsInstance)
 	electionStatsHandler := electionstatshandler.NewHandler(electionStatsService, pool, utilsInstance)
 	electionsHandler := electionshandler.NewHandler(electionsService, usersService, utilsInstance)

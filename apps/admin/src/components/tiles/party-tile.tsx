@@ -24,6 +24,7 @@ export type PartyType = {
   date_founded?: string;
   cover_image?: string;
   background_image?: string;
+  cover_position_y?: number;
 };
 
 export function PartyTableHeader() {

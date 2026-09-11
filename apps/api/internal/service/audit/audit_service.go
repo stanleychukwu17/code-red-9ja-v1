@@ -5,7 +5,9 @@ import (
 	"net"
 	"net/netip"
 
+	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
+	apimiddleware "free9ja/api/internal/middleware"
 
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -67,6 +69,24 @@ func RequestMetadataFromContext(ctx context.Context) (string, string) {
 	return ip, userAgent
 }
 
+// ActorInfoFromContext extracts the actor ID and resolved audit role from the context's JWT claims.
+func ActorInfoFromContext(ctx context.Context) (int64, string) {
+	claims, ok := apimiddleware.GetClaimsFromContext(ctx)
+	if !ok || claims == nil {
+		return 0, ""
+	}
+
+	actorRole := db.ActorRoleUser
+	if claims.HasRole(db.ActorRoleSuperAdmin) {
+		actorRole = db.ActorRoleSuperAdmin
+	} else if claims.HasRole(db.ActorRoleAdmin) {
+		actorRole = db.ActorRoleAdmin
+	} else if claims.HasRole(db.ActorRolePartyAdmin) {
+		actorRole = db.ActorRolePartyAdmin
+	}
+	return claims.UserID, actorRole
+}
+
 // LogAction logs an action to the audit log.
 func (s *auditService) LogAction(ctx context.Context, params queries.InsertAuditLogParams) error {
 	ipAddress, userAgent := RequestMetadataFromContext(ctx)
@@ -76,6 +96,15 @@ func (s *auditService) LogAction(ctx context.Context, params queries.InsertAudit
 	}
 	if !params.UserAgent.Valid {
 		params.UserAgent = StringToText(userAgent)
+	}
+	if params.ActorID == 0 || !params.ActorRole.Valid {
+		actorID, actorRole := ActorInfoFromContext(ctx)
+		if params.ActorID == 0 && actorID != 0 {
+			params.ActorID = actorID
+		}
+		if !params.ActorRole.Valid && actorRole != "" {
+			params.ActorRole = StringToText(actorRole)
+		}
 	}
 
 	// Execute the insertion synchronously for now.
@@ -93,6 +122,15 @@ func (s *auditService) LogActionAsync(ctx context.Context, params queries.Insert
 	}
 	if !params.UserAgent.Valid {
 		params.UserAgent = StringToText(userAgent)
+	}
+	if params.ActorID == 0 || !params.ActorRole.Valid {
+		actorID, actorRole := ActorInfoFromContext(ctx)
+		if params.ActorID == 0 && actorID != 0 {
+			params.ActorID = actorID
+		}
+		if !params.ActorRole.Valid && actorRole != "" {
+			params.ActorRole = StringToText(actorRole)
+		}
 	}
 
 	go func(p queries.InsertAuditLogParams) {

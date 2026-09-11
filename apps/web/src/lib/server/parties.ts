@@ -25,6 +25,7 @@ export interface Party {
 	date_founded?: string | null;
 	cover_image?: string | null;
 	background_image?: string | null;
+	cover_position_y?: number | null;
 	created_at?: string;
 	updated_at?: string;
 	verifications?: PartyVerification[];

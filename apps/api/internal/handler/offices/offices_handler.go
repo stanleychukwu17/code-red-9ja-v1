@@ -3,7 +3,9 @@ package officeshandler
 import (
 	"context"
 	"encoding/json"
+	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
+	"free9ja/api/internal/service/audit"
 	"free9ja/api/internal/utils"
 	"net/http"
 	"sort"
@@ -23,14 +25,16 @@ type OfficesService interface {
 }
 
 type Handler struct {
-	service OfficesService
-	utils   *utils.Utils
+	service      OfficesService
+	auditService audit.AuditService
+	utils        *utils.Utils
 }
 
-func NewHandler(service OfficesService, utils *utils.Utils) *Handler {
+func NewHandler(service OfficesService, auditService audit.AuditService, utils *utils.Utils) *Handler {
 	return &Handler{
-		service: service,
-		utils:   utils,
+		service:      service,
+		auditService: auditService,
+		utils:        utils,
 	}
 }
 
@@ -105,7 +109,20 @@ func (h *Handler) CreateOffice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 4. Return 201 Created with the new office record
+	// 4. Audit Logging
+	actorID, actorRole := audit.ActorInfoFromContext(r.Context())
+	newValuesJSON, _ := json.Marshal(o)
+	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
+		Module:     audit.StringToText(db.ModuleAdmin),
+		Action:     db.ActionCreateOffice,
+		ActorID:    actorID,
+		ActorRole:  audit.StringToText(actorRole),
+		EntityType: db.EntityTypeOffice,
+		EntityID:   strconv.FormatInt(int64(o.ID), 10),
+		NewValues:  newValuesJSON,
+	})
+
+	// 5. Return 201 Created with the new office record
 	h.utils.RespondSuccess(w, http.StatusCreated, "Office created successfully", map[string]interface{}{
 		"office": o,
 	})
@@ -268,7 +285,7 @@ func (h *Handler) UpdateOffice(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 4. Verify office exists before updating
-	_, err = h.service.GetOfficeByID(r.Context(), int16(id))
+	existingOffice, err := h.service.GetOfficeByID(r.Context(), int16(id))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Office not found")
 		return
@@ -280,6 +297,21 @@ func (h *Handler) UpdateOffice(w http.ResponseWriter, r *http.Request) {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update office: "+err.Error())
 		return
 	}
+
+	// --- Audit Logging ---
+	actorID, actorRole := audit.ActorInfoFromContext(r.Context())
+	oldValuesJSON, _ := json.Marshal(existingOffice)
+	newValuesJSON, _ := json.Marshal(updated)
+	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
+		Module:     audit.StringToText(db.ModuleAdmin),
+		Action:     db.ActionUpdateOffice,
+		ActorID:    actorID,
+		ActorRole:  audit.StringToText(actorRole),
+		EntityType: db.EntityTypeOffice,
+		EntityID:   idStr,
+		OldValues:  oldValuesJSON,
+		NewValues:  newValuesJSON,
+	})
 
 	// 6. Return 200 OK with the updated office record
 	h.utils.RespondSuccess(w, http.StatusOK, "Office updated successfully", map[string]interface{}{
@@ -309,7 +341,7 @@ func (h *Handler) DeleteOffice(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 2. Verify office exists before deletion
-	_, err = h.service.GetOfficeByID(r.Context(), int16(id))
+	existingOffice, err := h.service.GetOfficeByID(r.Context(), int16(id))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Office not found")
 		return
@@ -320,6 +352,19 @@ func (h *Handler) DeleteOffice(w http.ResponseWriter, r *http.Request) {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to delete office: "+err.Error())
 		return
 	}
+
+	// --- Audit Logging ---
+	actorID, actorRole := audit.ActorInfoFromContext(r.Context())
+	oldValuesJSON, _ := json.Marshal(existingOffice)
+	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
+		Module:     audit.StringToText(db.ModuleAdmin),
+		Action:     db.ActionDeleteOffice,
+		ActorID:    actorID,
+		ActorRole:  audit.StringToText(actorRole),
+		EntityType: db.EntityTypeOffice,
+		EntityID:   idStr,
+		OldValues:  oldValuesJSON,
+	})
 
 	// 4. Return 200 OK confirming deletion
 	h.utils.RespondSuccess(w, http.StatusOK, "Office deleted successfully", nil)

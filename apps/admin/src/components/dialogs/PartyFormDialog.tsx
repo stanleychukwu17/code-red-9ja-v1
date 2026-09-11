@@ -16,7 +16,7 @@ import { FancyInput, Input } from "@repo/ui/components/input";
 import { convertToWebP } from "@repo/ui/lib/image";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Camera, Image as ImageIcon, Loader2, Palette, Plus, Trash2, Umbrella, Upload } from "lucide-react";
+import { Camera, Check, Image as ImageIcon, Loader2, MoveVertical, Palette, Plus, Trash2, Umbrella, Upload } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { PartyType } from "../tiles/party-tile";
 
@@ -57,6 +57,11 @@ export function PartyFormDialog({
 	const [coverUrl, setCoverUrl] = useState("");
 	const [selectedInputCover, setSelectedInputCover] = useState<File | null>(null);
 	const [isUploadingCover, setIsUploadingCover] = useState(false);
+	const [coverPositionY, setCoverPositionY] = useState(50);
+	const [isRepositioning, setIsRepositioning] = useState(false);
+	const [isDraggingCover, setIsDraggingCover] = useState(false);
+	const dragStartY = useRef(0);
+	const dragStartPos = useRef(50);
 
 	const [error, setError] = useState<string | null>(null);
 
@@ -93,6 +98,7 @@ export function PartyFormDialog({
 				setLogoUrl(party.logo || "");
 				const rawCover = party.cover_image || party.background_image || (party as any).coverImage || "";
 				setCoverUrl(rawCover);
+				setCoverPositionY(party.cover_position_y ?? 50);
 			} else {
 				form.setFieldValue("acronym", "");
 				form.setFieldValue("fullName", "");
@@ -102,8 +108,10 @@ export function PartyFormDialog({
 				form.setFieldValue("darkColorHex", "");
 				setLogoUrl("");
 				setCoverUrl("");
+				setCoverPositionY(50);
 			}
 
+			setIsRepositioning(false);
 			setSelectedInputLogo(null);
 			setSelectedInputCover(null);
 			setError(null);
@@ -118,6 +126,32 @@ export function PartyFormDialog({
 	// Opens the file input dialog to allow user select background cover
 	const handleUploadCoverClick = () => {
 		coverFileInputRef.current?.click();
+	};
+
+	// Pointer drag handlers for repositioning cover image vertically
+	const handleCoverPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+		if (!isRepositioning) return;
+		(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+		setIsDraggingCover(true);
+		dragStartY.current = e.clientY;
+		dragStartPos.current = coverPositionY;
+	};
+
+	const handleCoverPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+		if (!isDraggingCover || !isRepositioning) return;
+		const deltaY = e.clientY - dragStartY.current;
+		// Dragging down shifts view up towards 0% (top), dragging up reveals bottom towards 100%
+		const newPos = Math.max(0, Math.min(100, Math.round(dragStartPos.current - deltaY * 0.5)));
+		setCoverPositionY(newPos);
+	};
+
+	const handleCoverPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+		if (isDraggingCover) {
+			try {
+				(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+			} catch {}
+			setIsDraggingCover(false);
+		}
 	};
 
 	// Handle the logo file selection and conversion to WebP
@@ -144,6 +178,7 @@ export function PartyFormDialog({
 			const file = await convertToWebP(rawFile);
 			setSelectedInputCover(file);
 			setCoverUrl(URL.createObjectURL(file));
+			setCoverPositionY(50);
 			setError(null);
 		} catch (err: any) {
 			setError(err.message || "Failed to process background image");
@@ -167,6 +202,8 @@ export function PartyFormDialog({
 	const handleRemoveCover = () => {
 		setCoverUrl("");
 		setSelectedInputCover(null);
+		setIsRepositioning(false);
+		setCoverPositionY(50);
 		if (coverFileInputRef.current) {
 			coverFileInputRef.current.value = "";
 		}
@@ -293,6 +330,7 @@ export function PartyFormDialog({
 						date_founded: values.dateFounded.trim() || undefined,
 						cover_image: finalCoverUrl || undefined,
 						background_image: finalCoverUrl || undefined,
+						cover_position_y: coverPositionY,
 					},
 				});
 			} else {
@@ -307,6 +345,7 @@ export function PartyFormDialog({
 						date_founded: values.dateFounded.trim() || undefined,
 						cover_image: finalCoverUrl || undefined,
 						background_image: finalCoverUrl || undefined,
+						cover_position_y: coverPositionY,
 					},
 				});
 			}
@@ -363,50 +402,184 @@ export function PartyFormDialog({
 						{/* Background Banner & Avatar (Party Logo) */}
 						<div>
 							{/* Background / Cover Image Banner */}
-							<div
-								onClick={handleUploadCoverClick}
-								className="relative h-36 w-full rounded-2xl border-2 border-dashed border-[#dfdfdf] hover:border-[#94a3b8] transition-all bg-[#f8fafc] dark:bg-neutral-800 overflow-hidden flex flex-col items-center justify-center cursor-pointer group"
-							>
-								{coverUrl ? (
-									<>
-										<img
-											src={coverUrl}
-											alt="Party background cover"
-											className="size-full object-cover group-hover:scale-105 transition-transform duration-500"
-										/>
-										<div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-											<span className="text-white text-xs font-semibold bg-black/60 px-3 py-1.5 rounded-full backdrop-blur-sm flex items-center gap-1.5">
-												<Camera className="size-3.5" />
-												Change background image
-											</span>
-										</div>
-									</>
-								) : isUploadingCover ? (
-									<div className="flex flex-col items-center gap-2 text-c-40">
-										<Loader2 className="size-6 animate-spin text-c-50" />
-										<span className="text-xs font-medium">Uploading background banner...</span>
-									</div>
-								) : (
-									<div className="flex flex-col items-center gap-1.5 text-c-40 group-hover:text-c-70 transition-colors">
-										<ImageIcon className="size-8 stroke-[1.5]" />
-										<span className="text-xs font-medium">Click to upload background / cover banner</span>
-									</div>
-								)}
+							{coverUrl ? (
+								<div
+									onPointerDown={handleCoverPointerDown}
+									onPointerMove={handleCoverPointerMove}
+									onPointerUp={handleCoverPointerUp}
+									className={`relative h-40 w-full rounded-2xl border border-[#e5e7eb] dark:border-neutral-800 bg-[#f8fafc] dark:bg-neutral-800 overflow-hidden select-none touch-none ${
+										isRepositioning
+											? "cursor-grab active:cursor-grabbing ring-2 ring-blue-500"
+											: "cursor-default"
+									}`}
+								>
+									<img
+										src={coverUrl}
+										alt="Party background cover"
+										draggable={false}
+										style={{ objectPosition: `center ${coverPositionY}%` }}
+										className="size-full object-cover select-none pointer-events-none"
+									/>
 
-								{coverUrl && (
-									<button
-										type="button"
-										onClick={(e) => {
-											e.stopPropagation();
-											handleRemoveCover();
-										}}
-										className="absolute top-3 right-3 z-10 size-8 rounded-full bg-black/70 hover:bg-red-600 text-white flex items-center justify-center transition cursor-pointer shadow-sm"
-										title="Remove background image"
-									>
-										<Trash2 className="size-4" />
-									</button>
-								)}
-							</div>
+									{/* Drag helper guide when repositioning */}
+									{isRepositioning && (
+										<div className="absolute inset-0 bg-black/25 pointer-events-none flex items-center justify-center">
+											<div className="px-3 py-1.5 rounded-full bg-black/75 backdrop-blur-md text-white text-xs font-semibold shadow flex items-center gap-1.5 animate-pulse">
+												<MoveVertical className="size-3.5" />
+												Drag image up or down to reposition
+											</div>
+										</div>
+									)}
+
+									{/* Action Buttons: 1 for Upload/Change, 1 for Re-adjusting Position */}
+									<div className="absolute top-3 right-3 z-20 flex items-center gap-1.5">
+										{/* Button 1: Upload / Change image */}
+										<button
+											type="button"
+											onClick={(e) => {
+												e.stopPropagation();
+												handleUploadCoverClick();
+											}}
+											disabled={isUploadingCover}
+											className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black/70 hover:bg-black/90 backdrop-blur-md text-white text-xs font-semibold transition cursor-pointer shadow-sm disabled:opacity-50"
+											title="Upload or change background image"
+										>
+											<Upload className="size-3.5" />
+											<span>Change image</span>
+										</button>
+
+										{/* Button 2: Re-adjust position */}
+										<button
+											type="button"
+											onClick={(e) => {
+												e.stopPropagation();
+												setIsRepositioning((prev) => !prev);
+											}}
+											className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg backdrop-blur-md text-xs font-semibold transition cursor-pointer shadow-sm ${
+												isRepositioning
+													? "bg-blue-600 hover:bg-blue-700 text-white ring-2 ring-white/50 shadow-md"
+													: "bg-black/70 hover:bg-black/90 text-white"
+											}`}
+											title="Re-adjust background image position"
+										>
+											{isRepositioning ? (
+												<Check className="size-3.5" />
+											) : (
+												<MoveVertical className="size-3.5" />
+											)}
+											<span>{isRepositioning ? "Done positioning" : "Re-adjust position"}</span>
+										</button>
+
+										{/* Remove background image */}
+										<button
+											type="button"
+											onClick={(e) => {
+												e.stopPropagation();
+												handleRemoveCover();
+											}}
+											className="size-7.5 rounded-lg bg-black/70 hover:bg-red-600 backdrop-blur-md text-white flex items-center justify-center transition cursor-pointer shadow-sm"
+											title="Remove background image"
+										>
+											<Trash2 className="size-3.5" />
+										</button>
+									</div>
+
+									{/* Repositioning Control Bar: Presets + Slider + Done */}
+									{isRepositioning && (
+										<div
+											onClick={(e) => e.stopPropagation()}
+											onPointerDown={(e) => e.stopPropagation()}
+											className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-black/85 backdrop-blur-md text-white shadow-xl border border-white/15"
+										>
+											<span className="text-[11px] font-medium text-white/70">Presets:</span>
+											<div className="flex items-center gap-1 text-[11px]">
+												<button
+													type="button"
+													onClick={() => setCoverPositionY(0)}
+													className={`px-2 py-0.5 rounded text-xs transition ${
+														coverPositionY === 0
+															? "bg-white text-black font-semibold"
+															: "bg-white/15 hover:bg-white/25 text-white"
+													}`}
+												>
+													Top
+												</button>
+												<button
+													type="button"
+													onClick={() => setCoverPositionY(50)}
+													className={`px-2 py-0.5 rounded text-xs transition ${
+														coverPositionY === 50
+															? "bg-white text-black font-semibold"
+															: "bg-white/15 hover:bg-white/25 text-white"
+													}`}
+												>
+													Center
+												</button>
+												<button
+													type="button"
+													onClick={() => setCoverPositionY(100)}
+													className={`px-2 py-0.5 rounded text-xs transition ${
+														coverPositionY === 100
+															? "bg-white text-black font-semibold"
+															: "bg-white/15 hover:bg-white/25 text-white"
+													}`}
+												>
+													Bottom
+												</button>
+											</div>
+
+											<div className="h-3.5 w-px bg-white/20 mx-0.5" />
+
+											<input
+												type="range"
+												min={0}
+												max={100}
+												value={coverPositionY}
+												onChange={(e) => setCoverPositionY(Number(e.target.value))}
+												className="w-20 h-1.5 accent-blue-500 cursor-pointer bg-white/30 rounded-lg"
+											/>
+											<span className="text-[11px] font-mono w-7 text-right text-white/90">
+												{coverPositionY}%
+											</span>
+
+											<button
+												type="button"
+												onClick={() => setIsRepositioning(false)}
+												className="ml-1 inline-flex items-center gap-1 px-2.5 py-0.5 rounded bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition cursor-pointer"
+											>
+												<Check className="size-3" />
+												<span>Done</span>
+											</button>
+										</div>
+									)}
+								</div>
+							) : (
+								<div
+									onClick={handleUploadCoverClick}
+									className="relative h-40 w-full rounded-2xl border-2 border-dashed border-[#dfdfdf] hover:border-[#94a3b8] transition-all bg-[#f8fafc] dark:bg-neutral-800 overflow-hidden flex flex-col items-center justify-center cursor-pointer group"
+								>
+									{isUploadingCover ? (
+										<div className="flex flex-col items-center gap-2 text-c-40">
+											<Loader2 className="size-6 animate-spin text-c-50" />
+											<span className="text-xs font-medium">Uploading background banner...</span>
+										</div>
+									) : (
+										<div className="flex flex-col items-center gap-2 text-c-40 group-hover:text-c-70 transition-colors">
+											<div className="size-10 rounded-full bg-white dark:bg-neutral-700 shadow-sm flex items-center justify-center">
+												<ImageIcon className="size-5 stroke-[1.75]" />
+											</div>
+											<div className="text-center">
+												<p className="text-xs font-semibold text-c-60 group-hover:text-c-80">
+													Click to upload background image
+												</p>
+												<p className="text-[11px] text-c-40">
+													Recommended: 1200 x 400px (JPG, PNG, WebP)
+												</p>
+											</div>
+										</div>
+									)}
+								</div>
+							)}
 
 							{/* Overlapping Avatar Section placed above the short name */}
 							<div className="-mt-12 pl-4 flex items-end justify-between relative z-10">

@@ -12,6 +12,17 @@ type contextKey string
 
 const ClaimsKey contextKey = "claims"
 
+// GetClaims extracts JWT claims from the HTTP request context.
+func GetClaims(r *http.Request) (*utils.JWTClaims, bool) {
+	return GetClaimsFromContext(r.Context())
+}
+
+// GetClaimsFromContext extracts JWT claims from a context.
+func GetClaimsFromContext(ctx context.Context) (*utils.JWTClaims, bool) {
+	claims, ok := ctx.Value(ClaimsKey).(*utils.JWTClaims)
+	return claims, ok && claims != nil
+}
+
 // AuthMiddleware extracts the JWT token from cookies or Authorization header,
 // verifies it, and stores the claims in the request context.
 func AuthMiddleware(jwtSecret string) func(http.Handler) http.Handler {

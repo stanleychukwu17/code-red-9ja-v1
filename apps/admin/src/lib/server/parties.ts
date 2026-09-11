@@ -41,6 +41,7 @@ export const createParty = createServerFn({ method: "POST" })
       date_founded?: string;
       cover_image?: string;
       background_image?: string;
+      cover_position_y?: number;
     }) => data,
   )
   .handler(async ({ data }) => {
@@ -72,6 +73,7 @@ export const updateParty = createServerFn({ method: "POST" })
       date_founded?: string;
       cover_image?: string;
       background_image?: string;
+      cover_position_y?: number;
     }) => data,
   )
   .handler(async ({ data: { id, ...body } }) => {
