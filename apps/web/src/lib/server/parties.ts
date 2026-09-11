@@ -22,6 +22,9 @@ export interface Party {
 	verified?: boolean;
 	color_hex?: string | null;
 	dark_color_hex?: string | null;
+	date_founded?: string | null;
+	cover_image?: string | null;
+	background_image?: string | null;
 	created_at?: string;
 	updated_at?: string;
 	verifications?: PartyVerification[];

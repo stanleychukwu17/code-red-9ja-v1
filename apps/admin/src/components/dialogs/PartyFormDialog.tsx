@@ -16,7 +16,7 @@ import { FancyInput, Input } from "@repo/ui/components/input";
 import { convertToWebP } from "@repo/ui/lib/image";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Palette, Plus, Umbrella } from "lucide-react";
+import { Camera, Image as ImageIcon, Loader2, Palette, Plus, Trash2, Umbrella, Upload } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { PartyType } from "../tiles/party-tile";
 
@@ -53,10 +53,16 @@ export function PartyFormDialog({
 	const [logoUrl, setLogoUrl] = useState("");
 	const [selectedInputLogo, setSelectedInputLogo] = useState<File | null>(null);
 	const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+
+	const [coverUrl, setCoverUrl] = useState("");
+	const [selectedInputCover, setSelectedInputCover] = useState<File | null>(null);
+	const [isUploadingCover, setIsUploadingCover] = useState(false);
+
 	const [error, setError] = useState<string | null>(null);
 
-	// Reference to the file input element
-	const fileInputRef = useRef<HTMLInputElement>(null);
+	// File input references
+	const logoFileInputRef = useRef<HTMLInputElement>(null);
+	const coverFileInputRef = useRef<HTMLInputElement>(null);
 
 	// TanStack Form configuration
 	const form = useForm({
@@ -85,6 +91,8 @@ export function PartyFormDialog({
 				form.setFieldValue("colorHex", party.color_hex || "");
 				form.setFieldValue("darkColorHex", party.dark_color_hex || "");
 				setLogoUrl(party.logo || "");
+				const rawCover = party.cover_image || party.background_image || (party as any).coverImage || "";
+				setCoverUrl(rawCover);
 			} else {
 				form.setFieldValue("acronym", "");
 				form.setFieldValue("fullName", "");
@@ -93,20 +101,27 @@ export function PartyFormDialog({
 				form.setFieldValue("colorHex", "");
 				form.setFieldValue("darkColorHex", "");
 				setLogoUrl("");
+				setCoverUrl("");
 			}
 
 			setSelectedInputLogo(null);
+			setSelectedInputCover(null);
 			setError(null);
 		}
 	}, [open, mode, party]);
 
 	// Opens the file input dialog to allow user select party logo
-	const handleUploadClick = () => {
-		fileInputRef.current?.click();
+	const handleUploadLogoClick = () => {
+		logoFileInputRef.current?.click();
 	};
 
-	// Handle the file selection and conversion to WebP
-	const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+	// Opens the file input dialog to allow user select background cover
+	const handleUploadCoverClick = () => {
+		coverFileInputRef.current?.click();
+	};
+
+	// Handle the logo file selection and conversion to WebP
+	const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
 		const rawFile = e.target.files?.[0];
 		if (!rawFile) return;
 
@@ -116,7 +131,22 @@ export function PartyFormDialog({
 			setLogoUrl(URL.createObjectURL(file));
 			setError(null);
 		} catch (err: any) {
-			setError(err.message || "Failed to process image");
+			setError(err.message || "Failed to process logo image");
+		}
+	};
+
+	// Handle the cover file selection and conversion to WebP
+	const handleCoverChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+		const rawFile = e.target.files?.[0];
+		if (!rawFile) return;
+
+		try {
+			const file = await convertToWebP(rawFile);
+			setSelectedInputCover(file);
+			setCoverUrl(URL.createObjectURL(file));
+			setError(null);
+		} catch (err: any) {
+			setError(err.message || "Failed to process background image");
 		}
 	};
 
@@ -125,11 +155,20 @@ export function PartyFormDialog({
 		if (which === "removing_logo") {
 			setLogoUrl("");
 			setSelectedInputLogo(null);
-			if (fileInputRef.current) {
-				fileInputRef.current.value = "";
+			if (logoFileInputRef.current) {
+				logoFileInputRef.current.value = "";
 			}
-		} else if (which == "changing_logo") {
+		} else if (which === "changing_logo") {
 			setLogoUrl("");
+		}
+	};
+
+	// Handle the removal of the background cover
+	const handleRemoveCover = () => {
+		setCoverUrl("");
+		setSelectedInputCover(null);
+		if (coverFileInputRef.current) {
+			coverFileInputRef.current.value = "";
 		}
 	};
 
@@ -144,25 +183,19 @@ export function PartyFormDialog({
 			darkColorHex: string;
 		}) => {
 			let finalLogoUrl = logoUrl;
+			let finalCoverUrl = coverUrl;
 
-			// Upload the party logo if a new one was selected
+			// 1. Upload the party logo if a new one was selected
 			if (selectedInputLogo) {
 				setIsUploadingLogo(true);
-
-				// party is changing logo, clear the local state just in case
 				handleRemoveImage("changing_logo");
 
-				if (!selectedInputLogo) {
-					throw new Error("No file selected");
-				}
-
 				try {
-					// 1. Get presigned R2 upload URL
 					const res = await getPresignedUploadURL({
 						data: {
-							original_name: selectedInputLogo?.name as string,
-							mime_type: selectedInputLogo?.type as string,
-							file_size: selectedInputLogo?.size as number,
+							original_name: selectedInputLogo.name,
+							mime_type: selectedInputLogo.type,
+							file_size: selectedInputLogo.size,
 							folder: "parties",
 							is_public: true,
 							owner_id: party?.id,
@@ -170,12 +203,11 @@ export function PartyFormDialog({
 					});
 
 					if (!res.success || !res.data) {
-						throw new Error(res.message || "Failed to initiate file upload");
+						throw new Error(res.message || "Failed to initiate logo upload");
 					}
 
 					const { upload_url, public_url, file_id } = res.data;
 
-					// 2. PUT file content directly to R2 bucket
 					const putRes = await fetch(upload_url, {
 						method: "PUT",
 						headers: {
@@ -186,10 +218,9 @@ export function PartyFormDialog({
 
 					if (!putRes.ok) {
 						await confirmFileUpload({ data: { id: file_id, success: false } });
-						throw new Error("Failed to upload image file to storage");
+						throw new Error("Failed to upload logo image file to storage");
 					}
 
-					// 3. Confirm file upload status
 					await confirmFileUpload({ data: { id: file_id, success: true } });
 
 					finalLogoUrl = public_url;
@@ -197,6 +228,51 @@ export function PartyFormDialog({
 					setLogoUrl(public_url);
 				} finally {
 					setIsUploadingLogo(false);
+				}
+			}
+
+			// 2. Upload background cover image if a new one was selected
+			if (selectedInputCover) {
+				setIsUploadingCover(true);
+
+				try {
+					const res = await getPresignedUploadURL({
+						data: {
+							original_name: selectedInputCover.name,
+							mime_type: selectedInputCover.type,
+							file_size: selectedInputCover.size,
+							folder: "parties",
+							is_public: true,
+							owner_id: party?.id,
+						},
+					});
+
+					if (!res.success || !res.data) {
+						throw new Error(res.message || "Failed to initiate cover image upload");
+					}
+
+					const { upload_url, public_url, file_id } = res.data;
+
+					const putRes = await fetch(upload_url, {
+						method: "PUT",
+						headers: {
+							"Content-Type": selectedInputCover.type,
+						},
+						body: selectedInputCover,
+					});
+
+					if (!putRes.ok) {
+						await confirmFileUpload({ data: { id: file_id, success: false } });
+						throw new Error("Failed to upload cover image file to storage");
+					}
+
+					await confirmFileUpload({ data: { id: file_id, success: true } });
+
+					finalCoverUrl = public_url;
+					setSelectedInputCover(null);
+					setCoverUrl(public_url);
+				} finally {
+					setIsUploadingCover(false);
 				}
 			}
 
@@ -215,6 +291,8 @@ export function PartyFormDialog({
 						color_hex: values.colorHex.trim() || undefined,
 						dark_color_hex: values.darkColorHex.trim() || undefined,
 						date_founded: values.dateFounded.trim() || undefined,
+						cover_image: finalCoverUrl || undefined,
+						background_image: finalCoverUrl || undefined,
 					},
 				});
 			} else {
@@ -227,6 +305,8 @@ export function PartyFormDialog({
 						color_hex: values.colorHex.trim() || undefined,
 						dark_color_hex: values.darkColorHex.trim() || undefined,
 						date_founded: values.dateFounded.trim() || undefined,
+						cover_image: finalCoverUrl || undefined,
+						background_image: finalCoverUrl || undefined,
 					},
 				});
 			}
@@ -267,20 +347,120 @@ export function PartyFormDialog({
 
 						<input
 							type="file"
-							ref={fileInputRef}
-							onChange={handleFileChange}
+							ref={logoFileInputRef}
+							onChange={handleLogoChange}
+							accept="image/*"
+							style={{ display: "none" }}
+						/>
+						<input
+							type="file"
+							ref={coverFileInputRef}
+							onChange={handleCoverChange}
 							accept="image/*"
 							style={{ display: "none" }}
 						/>
 
-						{/* Party acronym input */}
+						{/* Background Banner & Avatar (Party Logo) */}
+						<div>
+							{/* Background / Cover Image Banner */}
+							<div
+								onClick={handleUploadCoverClick}
+								className="relative h-36 w-full rounded-2xl border-2 border-dashed border-[#dfdfdf] hover:border-[#94a3b8] transition-all bg-[#f8fafc] dark:bg-neutral-800 overflow-hidden flex flex-col items-center justify-center cursor-pointer group"
+							>
+								{coverUrl ? (
+									<>
+										<img
+											src={coverUrl}
+											alt="Party background cover"
+											className="size-full object-cover group-hover:scale-105 transition-transform duration-500"
+										/>
+										<div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+											<span className="text-white text-xs font-semibold bg-black/60 px-3 py-1.5 rounded-full backdrop-blur-sm flex items-center gap-1.5">
+												<Camera className="size-3.5" />
+												Change background image
+											</span>
+										</div>
+									</>
+								) : isUploadingCover ? (
+									<div className="flex flex-col items-center gap-2 text-c-40">
+										<Loader2 className="size-6 animate-spin text-c-50" />
+										<span className="text-xs font-medium">Uploading background banner...</span>
+									</div>
+								) : (
+									<div className="flex flex-col items-center gap-1.5 text-c-40 group-hover:text-c-70 transition-colors">
+										<ImageIcon className="size-8 stroke-[1.5]" />
+										<span className="text-xs font-medium">Click to upload background / cover banner</span>
+									</div>
+								)}
+
+								{coverUrl && (
+									<button
+										type="button"
+										onClick={(e) => {
+											e.stopPropagation();
+											handleRemoveCover();
+										}}
+										className="absolute top-3 right-3 z-10 size-8 rounded-full bg-black/70 hover:bg-red-600 text-white flex items-center justify-center transition cursor-pointer shadow-sm"
+										title="Remove background image"
+									>
+										<Trash2 className="size-4" />
+									</button>
+								)}
+							</div>
+
+							{/* Overlapping Avatar Section placed above the short name */}
+							<div className="-mt-12 pl-4 flex items-end justify-between relative z-10">
+								<div className="flex items-end gap-3.5">
+									<div
+										onClick={handleUploadLogoClick}
+										className="size-24 rounded-full bg-white dark:bg-neutral-900 border-4 border-white dark:border-neutral-900 shadow-md flex items-center justify-center text-c-40 overflow-hidden shrink-0 cursor-pointer hover:opacity-95 transition group relative"
+										title="Click to upload party logo"
+									>
+										{logoUrl ? (
+											<img src={logoUrl} alt="Logo preview" className="size-full object-cover" />
+										) : isUploadingLogo ? (
+											<Loader2 className="size-7 animate-spin text-c-50" />
+										) : (
+											<Umbrella className="size-10 shrink-0" />
+										)}
+										<div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+											<Camera className="size-5 text-white" />
+										</div>
+									</div>
+
+									<div className="mb-2 flex items-center gap-2">
+										<button
+											type="button"
+											disabled={isUploadingLogo}
+											onClick={handleUploadLogoClick}
+											className="flex h-9 items-center gap-1.5 rounded-lg bg-[#1a1a1a] hover:bg-black disabled:bg-[#ccc] px-3 text-[13px] font-medium text-white transition cursor-pointer"
+										>
+											<Plus className="size-3.5" />
+											<span>{logoUrl ? "Change logo" : "Upload logo"}</span>
+										</button>
+										{logoUrl && (
+											<button
+												type="button"
+												onClick={() => handleRemoveImage("removing_logo")}
+												className="h-9 items-center rounded-lg border border-[#dfdfdf] px-3 text-[13px] font-medium text-red-600 hover:bg-[#fafafa] transition cursor-pointer"
+											>
+												Remove logo
+											</button>
+										)}
+									</div>
+								</div>
+							</div>
+						</div>
+
+						{/* Party acronym / short name input */}
 						<form.Field
 							name="acronym"
 							validators={{
 								onChange: ({ value }) => (!value ? "Party acronym is required" : undefined),
 							}}
 							children={(field) => (
-								<div className="w-full">
+								<div className="w-full pt-1">
+									<label className="text-[13px] font-semibold text-c-50 mb-1 block">Party Short Name</label>
 									<FancyInput
 										type="text"
 										placeholder="Party acronym"
@@ -296,42 +476,6 @@ export function PartyFormDialog({
 								</div>
 							)}
 						/>
-
-						{/* Party Logo upload (Avatar section) */}
-						<div>
-							<label className="text-[14px] font-semibold text-c-50">Party Logo</label>
-							<div className="flex items-center gap-6 mt-2">
-								<div className="size-24 rounded-full bg-[#e2e8f0] flex items-center justify-center text-c-40 border border-[#dfdfdf] overflow-hidden shrink-0">
-									{logoUrl ? (
-										<img src={logoUrl} alt="Logo preview" className="size-full object-cover" />
-									) : isUploadingLogo ? (
-										<Loader2 className="size-8 animate-spin text-c-50" />
-									) : (
-										<Umbrella className="size-10 shrink-0" />
-									)}
-								</div>
-								<div className="flex items-center gap-3">
-									<button
-										type="button"
-										disabled={isUploadingLogo}
-										onClick={handleUploadClick}
-										className="flex h-11 items-center gap-2 rounded-12 bg-[#1a1a1a] hover:bg-black disabled:bg-[#ccc] disabled:cursor-not-allowed px-4 text-[15px] font-semibold text-white transition cursor-pointer"
-									>
-										<Plus className="size-5" />
-										<span>{isUploadingLogo ? "Uploading..." : "Upload image"}</span>
-									</button>
-									{logoUrl && (
-										<button
-											type="button"
-											onClick={() => handleRemoveImage("removing_logo")}
-											className="flex h-11 items-center rounded-12 border border-[#dfdfdf] px-4 text-[15px] font-semibold text-red-600 hover:bg-[#fafafa] transition cursor-pointer"
-										>
-											Remove image
-										</button>
-									)}
-								</div>
-							</div>
-						</div>
 
 						{/* Party full name input */}
 						<form.Field
@@ -535,7 +679,7 @@ export function PartyFormDialog({
 							children={([canSubmit]) => (
 								<Button
 									type="submit"
-									disabled={!canSubmit || saveMutation.isPending || isUploadingLogo}
+									disabled={!canSubmit || saveMutation.isPending || isUploadingLogo || isUploadingCover}
 									loading={saveMutation.isPending}
 									variant="secondary"
 									size="xl"

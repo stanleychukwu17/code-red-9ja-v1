@@ -22,6 +22,8 @@ export type PartyType = {
   color_hex?: string;
   dark_color_hex?: string;
   date_founded?: string;
+  cover_image?: string;
+  background_image?: string;
 };
 
 export function PartyTableHeader() {

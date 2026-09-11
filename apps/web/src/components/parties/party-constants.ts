@@ -172,8 +172,11 @@ export const PARTY_PRESETS: Record<string, PartyPreset> = {
 export function getPartyMeta(party: Party) {
 	const preset = PARTY_PRESETS[party.short_name.toUpperCase()];
 	const foundedYear =
-		preset?.founded ?? (party.created_at ? new Date(party.created_at).getFullYear() : 1998);
-	const coverImage = preset?.coverImage || DEFAULT_COVER;
+		(party.date_founded ? new Date(party.date_founded).getFullYear() : undefined) ??
+		preset?.founded ??
+		(party.created_at ? new Date(party.created_at).getFullYear() : 1998);
+	const coverImage =
+		party.cover_image || party.background_image || preset?.coverImage || DEFAULT_COVER;
 	const memberCount = preset?.members || "300k";
 	const chairman = preset?.chairman || DEFAULT_OFFICIAL;
 	const secretary = preset?.secretary || DEFAULT_OFFICIAL;

@@ -39,6 +39,8 @@ export const createParty = createServerFn({ method: "POST" })
       color_hex?: string;
       dark_color_hex?: string;
       date_founded?: string;
+      cover_image?: string;
+      background_image?: string;
     }) => data,
   )
   .handler(async ({ data }) => {
@@ -68,6 +70,8 @@ export const updateParty = createServerFn({ method: "POST" })
       color_hex?: string;
       dark_color_hex?: string;
       date_founded?: string;
+      cover_image?: string;
+      background_image?: string;
     }) => data,
   )
   .handler(async ({ data: { id, ...body } }) => {
