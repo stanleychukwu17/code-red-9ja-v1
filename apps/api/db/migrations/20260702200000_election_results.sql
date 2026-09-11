@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS unmatched_polling_unit_results (
 
   -- Core context
   election_id              INT      REFERENCES elections(id) ON DELETE CASCADE NOT NULL,
-  election_group_id INT REFERENCES election_groups(id) ON DELETE CASCADE NOT NULL,
+  election_group_id        INT      REFERENCES election_groups(id) ON DELETE CASCADE NOT NULL,
   submitted_by             BIGINT   REFERENCES users(id) ON DELETE SET NULL,
   party_id                 SMALLINT REFERENCES parties(id) ON DELETE SET NULL,
 
