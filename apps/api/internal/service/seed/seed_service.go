@@ -438,7 +438,7 @@ type SimulateElectionResultsRequest struct {
 }
 
 type SimulateResultsResponse struct {
-	ElectionID            int64  `json:"election_id"`
+	ElectionID            int32  `json:"election_id"`
 	ElectionName          string `json:"election_name"`
 	Scope                 string `json:"scope"`
 	SimulatedPollingUnits int    `json:"simulated_polling_units"`
@@ -453,7 +453,7 @@ type candidateResultItem struct {
 
 // SimulateElectionResults creates mock consensus final results for all eligible polling units
 // of an election using all active political parties and automatically triggers the cascading real-time rollups or full sequential reconciliation.
-func (s *SeedService) SimulateElectionResults(ctx context.Context, electionID int64, req SimulateElectionResultsRequest) (*SimulateResultsResponse, error) {
+func (s *SeedService) SimulateElectionResults(ctx context.Context, electionID int32, req SimulateElectionResultsRequest) (*SimulateResultsResponse, error) {
 	election, err := s.queries.GetElectionInstanceByID(ctx, electionID)
 	if err != nil {
 		return nil, fmt.Errorf("election %d not found: %w", electionID, err)
@@ -547,7 +547,7 @@ func (s *SeedService) SimulateElectionResults(ctx context.Context, electionID in
 			// using exponential random weights (Dirichlet-like). This ensures
 			// some marginal parties get a bigger slice while others are tiny —
 			// just like real elections where not all minor parties are equal.
-			rAlloc := rand.New(rand.NewSource(electionID + 77777))
+			rAlloc := rand.New(rand.NewSource(int64(electionID) + 77777))
 			rawWeights := make([]float64, len(unspecified))
 			var totalRaw float64
 			for i := range unspecified {
@@ -610,7 +610,7 @@ func (s *SeedService) SimulateElectionResults(ctx context.Context, electionID in
 				if _, exists := regionalMod[key]; !exists {
 					// Deterministic seed: combine state and party index so every
 					// run with the same inputs yields the same regional pattern.
-					seed := int64(sid)*1000 + int64(i) + electionID*100000
+					seed := int64(sid)*1000 + int64(i) + int64(electionID)*100000
 					rState := rand.New(rand.NewSource(seed))
 					// Box-Muller to get a standard normal, then scale
 					u1, u2 := rState.Float64(), rState.Float64()

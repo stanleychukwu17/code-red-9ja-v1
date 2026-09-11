@@ -20,7 +20,7 @@ SELECT EXISTS(
 
 type CheckIfUserVotedInElectionParams struct {
 	UserID     int64 `json:"user_id"`
-	ElectionID int64 `json:"election_id"`
+	ElectionID int32 `json:"election_id"`
 }
 
 func (q *Queries) CheckIfUserVotedInElection(ctx context.Context, arg CheckIfUserVotedInElectionParams) (bool, error) {
@@ -49,8 +49,8 @@ type CreateElectionVoteParams struct {
 	WardID                pgtype.Int4 `json:"ward_id"`
 	PollingUnitID         pgtype.Int4 `json:"polling_unit_id"`
 	UserID                int64       `json:"user_id"`
-	ElectionGroupID       int64       `json:"election_group_id"`
-	ElectionID            int64       `json:"election_id"`
+	ElectionGroupID       int16       `json:"election_group_id"`
+	ElectionID            int32       `json:"election_id"`
 	PartyID               int16       `json:"party_id"`
 }
 
@@ -93,7 +93,7 @@ WHERE user_id = $1 AND election_group_id = $2
 
 type DeleteUserVotesByElectionGroupParams struct {
 	UserID          int64 `json:"user_id"`
-	ElectionGroupID int64 `json:"election_group_id"`
+	ElectionGroupID int16 `json:"election_group_id"`
 }
 
 func (q *Queries) DeleteUserVotesByElectionGroup(ctx context.Context, arg DeleteUserVotesByElectionGroupParams) error {
@@ -121,7 +121,7 @@ ORDER BY e.rank ASC, e.id ASC
 `
 
 type GetEligibleElectionsForPollingUnitParams struct {
-	ElectionGroupID int64 `json:"election_group_id"`
+	ElectionGroupID int16 `json:"election_group_id"`
 	ID              int32 `json:"id"`
 }
 
@@ -189,7 +189,7 @@ ORDER BY e.rank ASC, e.id ASC
 
 type GetUserVotesByElectionGroupParams struct {
 	UserID          int64 `json:"user_id"`
-	ElectionGroupID int64 `json:"election_group_id"`
+	ElectionGroupID int16 `json:"election_group_id"`
 }
 
 type GetUserVotesByElectionGroupRow struct {

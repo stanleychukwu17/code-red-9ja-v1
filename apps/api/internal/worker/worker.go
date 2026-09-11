@@ -145,7 +145,7 @@ func (processor *RedisTaskProcessor) ProcessINECResultGrabberSync() {
 	}
 	var notifier inecgrabber.ResultNotifierFunc
 	if processor.taskDistributor != nil {
-		notifier = func(ctx context.Context, electionID int64, puID int32) {
+		notifier = func(ctx context.Context, electionID int32, puID int32) {
 			_ = processor.taskDistributor.DistributeTaskCalculateFinalResult(ctx, &CalculateFinalResultPayload{
 				ElectionID:    electionID,
 				PollingUnitID: puID,

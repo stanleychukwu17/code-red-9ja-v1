@@ -37,7 +37,7 @@ func (s *Service) SetEarningsService(es earningsService) {
 type CreateUpdateInput struct {
 	UserID          int64    `json:"user_id"`
 	PollingUnitID   int32    `json:"polling_unit_id"`
-	ElectionGroupID int64    `json:"election_group_id"`
+	ElectionGroupID int16    `json:"election_group_id"`
 	AssignmentID    *int64   `json:"assignment_id,omitempty"`
 	PartyID         *int16   `json:"party_id,omitempty"`
 	Message         string   `json:"message"`

@@ -55,7 +55,7 @@ WHERE id = $1;
 
 -- name: ListUnmatchedPollingUnitResults :many
 SELECT * FROM unmatched_polling_unit_results
-WHERE (sqlc.narg('election_id')::bigint IS NULL OR election_id = sqlc.narg('election_id'))
+WHERE (sqlc.narg('election_id')::int IS NULL OR election_id = sqlc.narg('election_id'))
   AND (sqlc.narg('resolution_status')::text IS NULL OR resolution_status = sqlc.narg('resolution_status'))
 ORDER BY id DESC
 LIMIT sqlc.arg('limit') OFFSET sqlc.arg('offset');

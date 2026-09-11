@@ -86,8 +86,8 @@ func (h *Handler) ListEarnings(w http.ResponseWriter, r *http.Request) {
 	}
 
 	q := r.URL.Query()
-	var userID, electionGroupID, cursor int64
-	var partyID int16
+	var userID, cursor int64
+	var partyID, electionGroupID int16
 	status := q.Get("status")
 	limit := int32(50)
 
@@ -97,8 +97,8 @@ func (h *Handler) ListEarnings(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if v := q.Get("election_group_id"); v != "" {
-		if p, err := strconv.ParseInt(v, 10, 64); err == nil {
-			electionGroupID = p
+		if p, err := strconv.ParseInt(v, 10, 16); err == nil {
+			electionGroupID = int16(p)
 		}
 	}
 	if v := q.Get("party_id"); v != "" {
@@ -362,11 +362,13 @@ func (h *Handler) EstimatePotentialPayout(w http.ResponseWriter, r *http.Request
 	}
 
 	role := q.Get("role")
-	var electionGroupID int64
+	var electionGroupID int16
 	var partyID int16
 
 	if v := q.Get("election_group_id"); v != "" {
-		electionGroupID, _ = strconv.ParseInt(v, 10, 64)
+		if eg, err := strconv.ParseInt(v, 10, 16); err == nil {
+			electionGroupID = int16(eg)
+		}
 	}
 	if v := q.Get("party_id"); v != "" {
 		if p, err := strconv.ParseInt(v, 10, 16); err == nil {
@@ -407,9 +409,12 @@ func (h *Handler) GetAllocations(w http.ResponseWriter, r *http.Request) {
 	}
 
 	q := r.URL.Query()
-	var electionGroupID, assignmentID int64
+	var electionGroupID int16
+	var assignmentID int64
 	if v := q.Get("election_group_id"); v != "" {
-		electionGroupID, _ = strconv.ParseInt(v, 10, 64)
+		if eg, err := strconv.ParseInt(v, 10, 16); err == nil {
+			electionGroupID = int16(eg)
+		}
 	}
 	if v := q.Get("assignment_id"); v != "" {
 		assignmentID, _ = strconv.ParseInt(v, 10, 64)
@@ -442,7 +447,7 @@ func TriggerCalculation(svc *earningsservice.Service, assignmentID int64) {
 }
 
 type RequestPayoutRequest struct {
-	ElectionGroupID int64  `json:"election_group_id"`
+	ElectionGroupID int16  `json:"election_group_id"`
 	RoleType        string `json:"role_type"`
 }
 
@@ -465,7 +470,7 @@ func (h *Handler) RequestPayout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		ElectionGroupID int64  `json:"election_group_id"`
+		ElectionGroupID int16  `json:"election_group_id"`
 		RoleType        string `json:"role_type"`
 	}
 	_ = json.NewDecoder(r.Body).Decode(&req)
@@ -527,8 +532,8 @@ func (h *Handler) GetAgentPerformanceStats(w http.ResponseWriter, r *http.Reques
 		roleType = "polling_agent"
 	}
 
-	var partyID int16
-	var electionGroupID, cursor int64
+	var partyID, electionGroupID int16
+	var cursor int64
 	var stateID int16
 	var lgaID, wardID int32
 	limit := int32(20)
@@ -539,8 +544,8 @@ func (h *Handler) GetAgentPerformanceStats(w http.ResponseWriter, r *http.Reques
 		}
 	}
 	if v := q.Get("election_group_id"); v != "" {
-		if p, err := strconv.ParseInt(v, 10, 64); err == nil {
-			electionGroupID = p
+		if p, err := strconv.ParseInt(v, 10, 16); err == nil {
+			electionGroupID = int16(p)
 		}
 	}
 	if v := q.Get("state_id"); v != "" {

@@ -19,7 +19,7 @@ import (
 )
 
 type CalculateFinalResultPayload struct {
-	ElectionID    int64 `json:"election_id"`
+	ElectionID    int32 `json:"election_id"`
 	PollingUnitID int32 `json:"polling_unit_id"`
 }
 

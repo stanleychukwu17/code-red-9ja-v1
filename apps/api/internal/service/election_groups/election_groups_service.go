@@ -27,7 +27,7 @@ func NewElectionGroupsService(q *queries.Queries, rdb *redis.Client, distributor
 	}
 }
 
-func (s *ElectionGroupsService) invalidateCache(ctx context.Context, id *int64) {
+func (s *ElectionGroupsService) invalidateCache(ctx context.Context, id *int16) {
 	s.rdb.Del(ctx, "election_groups:all")
 	s.rdb.Del(ctx, "elections:all")
 	if id != nil {
@@ -88,7 +88,7 @@ func (s *ElectionGroupsService) CreateElectionGroup(ctx context.Context, name st
 	return eg, nil
 }
 
-func (s *ElectionGroupsService) GetElectionGroupByID(ctx context.Context, id int64) (queries.ElectionGroup, error) {
+func (s *ElectionGroupsService) GetElectionGroupByID(ctx context.Context, id int16) (queries.ElectionGroup, error) {
 	cacheKey := fmt.Sprintf("election_group:%d", id)
 	val, err := s.rdb.Get(ctx, cacheKey).Result()
 	if err == nil {
@@ -132,7 +132,7 @@ func (s *ElectionGroupsService) ListElectionGroups(ctx context.Context) ([]queri
 	return groups, nil
 }
 
-func (s *ElectionGroupsService) UpdateElectionGroup(ctx context.Context, id int64, name string, rank int32, electionsCount, statesCount int32, electionDate time.Time) (queries.ElectionGroup, error) {
+func (s *ElectionGroupsService) UpdateElectionGroup(ctx context.Context, id int16, name string, rank int32, electionsCount, statesCount int32, electionDate time.Time) (queries.ElectionGroup, error) {
 	group, err := s.queries.UpdateElectionGroup(ctx, queries.UpdateElectionGroupParams{
 		ID:             id,
 		Name:           name,
@@ -156,7 +156,7 @@ func (s *ElectionGroupsService) UpdateElectionGroup(ctx context.Context, id int6
 	return group, nil
 }
 
-func (s *ElectionGroupsService) DeleteElectionGroup(ctx context.Context, id int64) error {
+func (s *ElectionGroupsService) DeleteElectionGroup(ctx context.Context, id int16) error {
 	err := s.queries.DeleteElectionGroup(ctx, id)
 	if err == nil {
 		s.invalidateCache(ctx, &id)
@@ -168,7 +168,7 @@ func (s *ElectionGroupsService) ListElectionGroupsWithPartyStats(ctx context.Con
 	return s.queries.ListElectionGroupsWithPartyStats(ctx, partyID)
 }
 
-func (s *ElectionGroupsService) UpsertPartyElectionGroupStats(ctx context.Context, partyID int16, electionGroupID int64, pollingAgentsCoverage []byte, electionsContesting int32) (queries.PartyElectionGroup, error) {
+func (s *ElectionGroupsService) UpsertPartyElectionGroupStats(ctx context.Context, partyID int16, electionGroupID int16, pollingAgentsCoverage []byte, electionsContesting int32) (queries.PartyElectionGroup, error) {
 	return s.queries.UpsertPartyElectionGroupStats(ctx, queries.UpsertPartyElectionGroupStatsParams{
 		PartyID:             partyID,
 		ElectionGroupID:     electionGroupID,
@@ -177,7 +177,7 @@ func (s *ElectionGroupsService) UpsertPartyElectionGroupStats(ctx context.Contex
 	})
 }
 
-func (s *ElectionGroupsService) ListGroupElections(ctx context.Context, electionGroupID int64) ([]queries.ListElectionsDetailedByGroupIDRow, error) {
+func (s *ElectionGroupsService) ListGroupElections(ctx context.Context, electionGroupID int16) ([]queries.ListElectionsDetailedByGroupIDRow, error) {
 	return s.queries.ListElectionsDetailedByGroupID(ctx, electionGroupID)
 }
 

@@ -67,14 +67,14 @@ func parseOptionalInt16(r *http.Request, key string) (int16, bool) {
 // @Security     BearerAuth
 // @Router       /election-groups/{id}/stats/polling-units [get]
 func (h *Handler) GetPollingUnitStats(w http.ResponseWriter, r *http.Request) {
-	groupID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	groupID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 16)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election group ID")
 		return
 	}
 
 	arg := queries.ListElectionGroupPollingUnitStatsByGroupParams{
-		ElectionGroupID: groupID,
+		ElectionGroupID: int16(groupID),
 	}
 	if stateID, ok := parseOptionalInt16(r, "state_id"); ok {
 		arg.StateID = pgtype.Int2{Int16: stateID, Valid: true}
@@ -106,14 +106,14 @@ func (h *Handler) GetPollingUnitStats(w http.ResponseWriter, r *http.Request) {
 // @Security     BearerAuth
 // @Router       /election-groups/{id}/stats/wards [get]
 func (h *Handler) GetWardStats(w http.ResponseWriter, r *http.Request) {
-	groupID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	groupID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 16)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election group ID")
 		return
 	}
 
 	arg := queries.ListElectionGroupWardStatsByGroupParams{
-		ElectionGroupID: groupID,
+		ElectionGroupID: int16(groupID),
 	}
 	if stateID, ok := parseOptionalInt16(r, "state_id"); ok {
 		arg.StateID = pgtype.Int2{Int16: stateID, Valid: true}
@@ -142,14 +142,14 @@ func (h *Handler) GetWardStats(w http.ResponseWriter, r *http.Request) {
 // @Security     BearerAuth
 // @Router       /election-groups/{id}/stats/lgas [get]
 func (h *Handler) GetLGAStats(w http.ResponseWriter, r *http.Request) {
-	groupID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	groupID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 16)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election group ID")
 		return
 	}
 
 	arg := queries.ListElectionGroupLGAStatsByGroupParams{
-		ElectionGroupID: groupID,
+		ElectionGroupID: int16(groupID),
 	}
 	if stateID, ok := parseOptionalInt16(r, "state_id"); ok {
 		arg.StateID = pgtype.Int2{Int16: stateID, Valid: true}
@@ -177,14 +177,14 @@ func (h *Handler) GetLGAStats(w http.ResponseWriter, r *http.Request) {
 // @Security     BearerAuth
 // @Router       /election-groups/{id}/stats/state-constituencies [get]
 func (h *Handler) GetStateConstituencyStats(w http.ResponseWriter, r *http.Request) {
-	groupID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	groupID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 16)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election group ID")
 		return
 	}
 
 	arg := queries.ListElectionGroupStateConstituencyStatsByGroupParams{
-		ElectionGroupID: groupID,
+		ElectionGroupID: int16(groupID),
 	}
 	if stateID, ok := parseOptionalInt16(r, "state_id"); ok {
 		arg.StateID = pgtype.Int2{Int16: stateID, Valid: true}
@@ -210,14 +210,14 @@ func (h *Handler) GetStateConstituencyStats(w http.ResponseWriter, r *http.Reque
 // @Security     BearerAuth
 // @Router       /election-groups/{id}/stats/federal-constituencies [get]
 func (h *Handler) GetFederalConstituencyStats(w http.ResponseWriter, r *http.Request) {
-	groupID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	groupID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 16)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election group ID")
 		return
 	}
 
 	arg := queries.ListElectionGroupFederalConstituencyStatsByGroupParams{
-		ElectionGroupID: groupID,
+		ElectionGroupID: int16(groupID),
 	}
 	if stateID, ok := parseOptionalInt16(r, "state_id"); ok {
 		arg.StateID = pgtype.Int2{Int16: stateID, Valid: true}
@@ -245,14 +245,14 @@ func (h *Handler) GetFederalConstituencyStats(w http.ResponseWriter, r *http.Req
 // @Security     BearerAuth
 // @Router       /election-groups/{id}/stats/senatorial-districts [get]
 func (h *Handler) GetSenatorialDistrictStats(w http.ResponseWriter, r *http.Request) {
-	groupID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	groupID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 16)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election group ID")
 		return
 	}
 
 	arg := queries.ListElectionGroupSenatorialDistrictStatsByGroupParams{
-		ElectionGroupID: groupID,
+		ElectionGroupID: int16(groupID),
 	}
 	if stateID, ok := parseOptionalInt16(r, "state_id"); ok {
 		arg.StateID = pgtype.Int2{Int16: stateID, Valid: true}
@@ -276,13 +276,13 @@ func (h *Handler) GetSenatorialDistrictStats(w http.ResponseWriter, r *http.Requ
 // @Security     BearerAuth
 // @Router       /election-groups/{id}/stats/states [get]
 func (h *Handler) GetStateStats(w http.ResponseWriter, r *http.Request) {
-	groupID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	groupID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 16)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election group ID")
 		return
 	}
 
-	stats, err := h.service.ListElectionGroupStateStatsByGroup(r.Context(), groupID)
+	stats, err := h.service.ListElectionGroupStateStatsByGroup(r.Context(), int16(groupID))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch stats: "+err.Error())
 		return
@@ -394,7 +394,7 @@ func sanitizeTargets(raw interface{}) map[string]interface{} {
 // @Security     BearerAuth
 // @Router       /election-groups/{id}/stats/states/{state_id}/parties/{party_id} [get]
 func (h *Handler) GetSingleStateStats(w http.ResponseWriter, r *http.Request) {
-	groupID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	groupID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 16)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election group ID")
 		return
@@ -411,7 +411,7 @@ func (h *Handler) GetSingleStateStats(w http.ResponseWriter, r *http.Request) {
 	}
 
 	arg := queries.GetElectionGroupStateStatsParams{
-		ElectionGroupID: groupID,
+		ElectionGroupID: int16(groupID),
 		StateID:         int16(stateID),
 	}
 	stats, err := h.service.GetElectionGroupStateStats(r.Context(), arg)
@@ -461,7 +461,7 @@ func (h *Handler) GetSingleStateStats(w http.ResponseWriter, r *http.Request) {
 // @Security     BearerAuth
 // @Router       /election-groups/{id}/stats/lgas/{lga_id}/parties/{party_id} [get]
 func (h *Handler) GetSingleLGAStats(w http.ResponseWriter, r *http.Request) {
-	groupID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	groupID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 16)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election group ID")
 		return
@@ -478,7 +478,7 @@ func (h *Handler) GetSingleLGAStats(w http.ResponseWriter, r *http.Request) {
 	}
 
 	arg := queries.GetElectionGroupLGAStatsParams{
-		ElectionGroupID: groupID,
+		ElectionGroupID: int16(groupID),
 		LgaID:           int32(lgaID),
 	}
 	stats, err := h.service.GetElectionGroupLGAStats(r.Context(), arg)
@@ -531,7 +531,7 @@ func (h *Handler) GetSingleLGAStats(w http.ResponseWriter, r *http.Request) {
 // @Security     BearerAuth
 // @Router       /election-groups/{id}/stats/wards/{ward_id}/parties/{party_id} [get]
 func (h *Handler) GetSingleWardStats(w http.ResponseWriter, r *http.Request) {
-	groupID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	groupID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 16)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election group ID")
 		return
@@ -548,7 +548,7 @@ func (h *Handler) GetSingleWardStats(w http.ResponseWriter, r *http.Request) {
 	}
 
 	arg := queries.GetElectionGroupWardStatsParams{
-		ElectionGroupID: groupID,
+		ElectionGroupID: int16(groupID),
 		WardID:          int32(wardID),
 	}
 	stats, err := h.service.GetElectionGroupWardStats(r.Context(), arg)
@@ -597,7 +597,7 @@ func (h *Handler) GetSingleWardStats(w http.ResponseWriter, r *http.Request) {
 // @Security     BearerAuth
 // @Router       /election-groups/{id}/stats/federal-constituencies/{fc_id}/parties/{party_id} [get]
 func (h *Handler) GetSingleFederalConstituencyStats(w http.ResponseWriter, r *http.Request) {
-	groupID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	groupID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 16)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election group ID")
 		return
@@ -614,7 +614,7 @@ func (h *Handler) GetSingleFederalConstituencyStats(w http.ResponseWriter, r *ht
 	}
 
 	arg := queries.GetElectionGroupFederalConstituencyStatsParams{
-		ElectionGroupID: groupID,
+		ElectionGroupID: int16(groupID),
 		FederalConstituencyID: int32(fcID),
 	}
 	stats, err := h.service.GetElectionGroupFederalConstituencyStats(r.Context(), arg)
@@ -666,7 +666,7 @@ func (h *Handler) GetSingleFederalConstituencyStats(w http.ResponseWriter, r *ht
 // @Security     BearerAuth
 // @Router       /election-groups/{id}/stats/state-constituencies/{sc_id}/parties/{party_id} [get]
 func (h *Handler) GetSingleStateConstituencyStats(w http.ResponseWriter, r *http.Request) {
-	groupID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	groupID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 16)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election group ID")
 		return
@@ -683,7 +683,7 @@ func (h *Handler) GetSingleStateConstituencyStats(w http.ResponseWriter, r *http
 	}
 
 	arg := queries.GetElectionGroupStateConstituencyStatsParams{
-		ElectionGroupID: groupID,
+		ElectionGroupID: int16(groupID),
 		StateConstituencyID: int32(scID),
 	}
 	stats, err := h.service.GetElectionGroupStateConstituencyStats(r.Context(), arg)
@@ -737,7 +737,7 @@ func (h *Handler) GetSingleStateConstituencyStats(w http.ResponseWriter, r *http
 // @Security     BearerAuth
 // @Router       /election-groups/{id}/stats/senatorial-districts/{sd_id}/parties/{party_id} [get]
 func (h *Handler) GetSingleSenatorialDistrictStats(w http.ResponseWriter, r *http.Request) {
-	groupID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	groupID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 16)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election group ID")
 		return
@@ -754,7 +754,7 @@ func (h *Handler) GetSingleSenatorialDistrictStats(w http.ResponseWriter, r *htt
 	}
 
 	arg := queries.GetElectionGroupSenatorialDistrictStatsParams{
-		ElectionGroupID: groupID,
+		ElectionGroupID: int16(groupID),
 		SenatorialDistrictID: int32(sdID),
 	}
 	stats, err := h.service.GetElectionGroupSenatorialDistrictStats(r.Context(), arg)
@@ -804,7 +804,7 @@ func (h *Handler) GetSingleSenatorialDistrictStats(w http.ResponseWriter, r *htt
 // @Security     BearerAuth
 // @Router       /election-groups/{id}/stats/parties/{party_id} [get]
 func (h *Handler) GetSingleElectionGroupStats(w http.ResponseWriter, r *http.Request) {
-	groupID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	groupID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 16)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election group ID")
 		return
@@ -815,7 +815,7 @@ func (h *Handler) GetSingleElectionGroupStats(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	stats, err := h.service.GetElectionGroupByID(r.Context(), groupID)
+	stats, err := h.service.GetElectionGroupByID(r.Context(), int16(groupID))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch stats: "+err.Error())
 		return
@@ -875,9 +875,12 @@ func (h *Handler) GetOperationsBreakdown(w http.ResponseWriter, r *http.Request)
 	ctx := r.Context()
 	qParams := r.URL.Query()
 
-	electionID, _ := strconv.ParseInt(qParams.Get("election_id"), 10, 64)
-	electionGroupID, _ := strconv.ParseInt(qParams.Get("election_group_id"), 10, 64)
-	partyID, _ := strconv.ParseInt(qParams.Get("party_id"), 10, 32)
+	electionIDParsed, _ := strconv.ParseInt(qParams.Get("election_id"), 10, 32)
+	electionID := int32(electionIDParsed)
+	egIDParsed, _ := strconv.ParseInt(qParams.Get("election_group_id"), 10, 16)
+	electionGroupID := int16(egIDParsed)
+	partyIDParsed, _ := strconv.ParseInt(qParams.Get("party_id"), 10, 16)
+	partyID := int16(partyIDParsed)
 
 	if electionGroupID == 0 && electionID > 0 && h.pool != nil {
 		_ = h.pool.QueryRow(ctx, "SELECT election_group_id FROM elections WHERE id = $1", electionID).Scan(&electionGroupID)
@@ -886,13 +889,20 @@ func (h *Handler) GetOperationsBreakdown(w http.ResponseWriter, r *http.Request)
 		_ = h.pool.QueryRow(ctx, "SELECT id FROM election_groups ORDER BY id DESC LIMIT 1").Scan(&electionGroupID)
 	}
 
-	puID, _ := strconv.ParseInt(qParams.Get("polling_unit_id"), 10, 64)
-	wardID, _ := strconv.ParseInt(qParams.Get("ward_id"), 10, 64)
-	stateConstID, _ := strconv.ParseInt(qParams.Get("state_constituency_id"), 10, 64)
-	lgaID, _ := strconv.ParseInt(qParams.Get("lga_id"), 10, 64)
-	fedConstID, _ := strconv.ParseInt(qParams.Get("federal_constituency_id"), 10, 64)
-	senatorialID, _ := strconv.ParseInt(qParams.Get("senatorial_district_id"), 10, 64)
-	stateID, _ := strconv.ParseInt(qParams.Get("state_id"), 10, 64)
+	puIDParsed, _ := strconv.ParseInt(qParams.Get("polling_unit_id"), 10, 32)
+	puID := int32(puIDParsed)
+	wardIDParsed, _ := strconv.ParseInt(qParams.Get("ward_id"), 10, 32)
+	wardID := int32(wardIDParsed)
+	stateConstIDParsed, _ := strconv.ParseInt(qParams.Get("state_constituency_id"), 10, 32)
+	stateConstID := int32(stateConstIDParsed)
+	lgaIDParsed, _ := strconv.ParseInt(qParams.Get("lga_id"), 10, 32)
+	lgaID := int32(lgaIDParsed)
+	fedConstIDParsed, _ := strconv.ParseInt(qParams.Get("federal_constituency_id"), 10, 32)
+	fedConstID := int32(fedConstIDParsed)
+	senatorialIDParsed, _ := strconv.ParseInt(qParams.Get("senatorial_district_id"), 10, 32)
+	senatorialID := int32(senatorialIDParsed)
+	stateIDParsed, _ := strconv.ParseInt(qParams.Get("state_id"), 10, 16)
+	stateID := int16(stateIDParsed)
 
 	var (
 		query           string
@@ -1439,9 +1449,12 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 	ctx := r.Context()
 	qParams := r.URL.Query()
 
-	electionID, _ := strconv.ParseInt(qParams.Get("election_id"), 10, 64)
-	electionGroupID, _ := strconv.ParseInt(qParams.Get("election_group_id"), 10, 64)
-	partyID, _ := strconv.ParseInt(qParams.Get("party_id"), 10, 32)
+	electionIDParsed, _ := strconv.ParseInt(qParams.Get("election_id"), 10, 32)
+	electionID := int32(electionIDParsed)
+	egIDParsed, _ := strconv.ParseInt(qParams.Get("election_group_id"), 10, 16)
+	electionGroupID := int16(egIDParsed)
+	partyIDParsed, _ := strconv.ParseInt(qParams.Get("party_id"), 10, 16)
+	partyID := int16(partyIDParsed)
 
 	if electionGroupID == 0 && electionID > 0 && h.pool != nil {
 		_ = h.pool.QueryRow(ctx, "SELECT election_group_id FROM elections WHERE id = $1", electionID).Scan(&electionGroupID)
@@ -1450,13 +1463,20 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 		_ = h.pool.QueryRow(ctx, "SELECT id FROM election_groups ORDER BY id DESC LIMIT 1").Scan(&electionGroupID)
 	}
 
-	puID, _ := strconv.ParseInt(qParams.Get("polling_unit_id"), 10, 64)
-	wardID, _ := strconv.ParseInt(qParams.Get("ward_id"), 10, 64)
-	stateConstID, _ := strconv.ParseInt(qParams.Get("state_constituency_id"), 10, 64)
-	lgaID, _ := strconv.ParseInt(qParams.Get("lga_id"), 10, 64)
-	fedConstID, _ := strconv.ParseInt(qParams.Get("federal_constituency_id"), 10, 64)
-	senatorialID, _ := strconv.ParseInt(qParams.Get("senatorial_district_id"), 10, 64)
-	stateID, _ := strconv.ParseInt(qParams.Get("state_id"), 10, 64)
+	puIDParsed, _ := strconv.ParseInt(qParams.Get("polling_unit_id"), 10, 32)
+	puID := int32(puIDParsed)
+	wardIDParsed, _ := strconv.ParseInt(qParams.Get("ward_id"), 10, 32)
+	wardID := int32(wardIDParsed)
+	stateConstIDParsed, _ := strconv.ParseInt(qParams.Get("state_constituency_id"), 10, 32)
+	stateConstID := int32(stateConstIDParsed)
+	lgaIDParsed, _ := strconv.ParseInt(qParams.Get("lga_id"), 10, 32)
+	lgaID := int32(lgaIDParsed)
+	fedConstIDParsed, _ := strconv.ParseInt(qParams.Get("federal_constituency_id"), 10, 32)
+	fedConstID := int32(fedConstIDParsed)
+	senatorialIDParsed, _ := strconv.ParseInt(qParams.Get("senatorial_district_id"), 10, 32)
+	senatorialID := int32(senatorialIDParsed)
+	stateIDParsed, _ := strconv.ParseInt(qParams.Get("state_id"), 10, 16)
+	stateID := int16(stateIDParsed)
 
 	var (
 		query           string

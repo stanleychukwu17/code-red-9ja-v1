@@ -37,7 +37,7 @@ type CreatePollingUnitUpdateParams struct {
 	AssignmentID                pgtype.Int8 `json:"assignment_id"`
 	UserID                      int64       `json:"user_id"`
 	PollingUnitID               int32       `json:"polling_unit_id"`
-	ElectionGroupID             int64       `json:"election_group_id"`
+	ElectionGroupID             int16       `json:"election_group_id"`
 	PartyID                     pgtype.Int2 `json:"party_id"`
 	StateID                     pgtype.Int2 `json:"state_id"`
 	LgaID                       pgtype.Int4 `json:"lga_id"`
@@ -123,7 +123,7 @@ WHERE id = $1
 `
 
 type IncrementElectionGroupMetricsParams struct {
-	ID             int64 `json:"id"`
+	ID             int16 `json:"id"`
 	PuReportsCount int32 `json:"pu_reports_count"`
 	PuUpdatesCount int32 `json:"pu_updates_count"`
 }
@@ -142,7 +142,7 @@ WHERE election_group_id = $1
 `
 
 type IncrementElectionMetricsByGroupParams struct {
-	ElectionGroupID int64 `json:"election_group_id"`
+	ElectionGroupID int16 `json:"election_group_id"`
 	ReportsCount    int32 `json:"reports_count"`
 	UpdatesCount    int32 `json:"updates_count"`
 }
@@ -162,7 +162,7 @@ WHERE party_id = $1 AND election_group_id = $2
 
 type IncrementPartyElectionGroupMetricsParams struct {
 	PartyID         int16 `json:"party_id"`
-	ElectionGroupID int64 `json:"election_group_id"`
+	ElectionGroupID int16 `json:"election_group_id"`
 	ReportsCount    int32 `json:"reports_count"`
 	UpdatesCount    int32 `json:"updates_count"`
 }
@@ -215,7 +215,7 @@ LEFT JOIN polling_units punits ON pu.polling_unit_id = punits.id
 LEFT JOIN c_states s ON pu.state_id = s.id
 LEFT JOIN lgas l ON pu.lga_id = l.id
 WHERE 
-  ($1::bigint IS NULL OR pu.election_group_id = $1)
+  ($1::smallint IS NULL OR pu.election_group_id = $1)
   AND ($2::smallint IS NULL OR pu.party_id = $2)
   AND ($3::int IS NULL OR pu.polling_unit_id = $3)
   AND ($4::bigint IS NULL OR pu.user_id = $4)
@@ -233,7 +233,7 @@ LIMIT $14
 `
 
 type ListPollingUnitUpdatesParams struct {
-	ElectionGroupID             pgtype.Int8 `json:"election_group_id"`
+	ElectionGroupID             pgtype.Int2 `json:"election_group_id"`
 	PartyID                     pgtype.Int2 `json:"party_id"`
 	PollingUnitID               pgtype.Int4 `json:"polling_unit_id"`
 	UserID                      pgtype.Int8 `json:"user_id"`
@@ -254,7 +254,7 @@ type ListPollingUnitUpdatesRow struct {
 	AssignmentID                pgtype.Int8        `json:"assignment_id"`
 	UserID                      int64              `json:"user_id"`
 	PollingUnitID               int32              `json:"polling_unit_id"`
-	ElectionGroupID             int64              `json:"election_group_id"`
+	ElectionGroupID             int16              `json:"election_group_id"`
 	PartyID                     pgtype.Int2        `json:"party_id"`
 	StateID                     pgtype.Int2        `json:"state_id"`
 	LgaID                       pgtype.Int4        `json:"lga_id"`

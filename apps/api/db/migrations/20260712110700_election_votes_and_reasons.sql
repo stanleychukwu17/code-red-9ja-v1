@@ -24,7 +24,7 @@ INSERT INTO non_voting_reasons (reason) VALUES
 CREATE TABLE did_not_vote_reasons (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  election_group_id BIGINT NOT NULL REFERENCES election_groups(id) ON DELETE CASCADE,
+  election_group_id SMALLINT NOT NULL REFERENCES election_groups(id) ON DELETE CASCADE,
   non_voting_reason_id SMALLINT REFERENCES non_voting_reasons(id) ON DELETE SET NULL,
   explanation TEXT,
 
@@ -48,8 +48,8 @@ CREATE TABLE election_votes (
   polling_unit_id INT REFERENCES polling_units(id) ON DELETE SET NULL,
   
   user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  election_group_id BIGINT NOT NULL REFERENCES election_groups(id) ON DELETE CASCADE,
-  election_id BIGINT NOT NULL REFERENCES elections(id) ON DELETE CASCADE,
+  election_group_id SMALLINT NOT NULL REFERENCES election_groups(id) ON DELETE CASCADE,
+  election_id INT NOT NULL REFERENCES elections(id) ON DELETE CASCADE,
   party_id SMALLINT NOT NULL REFERENCES parties(id) ON DELETE RESTRICT,
   
   created_at TIMESTAMPTZ DEFAULT NOW(),

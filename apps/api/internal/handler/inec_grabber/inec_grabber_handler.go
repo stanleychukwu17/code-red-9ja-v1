@@ -193,10 +193,11 @@ func (h *INECGrabberHandler) ListLogs(w http.ResponseWriter, r *http.Request) {
 // @Failure      500 {object} map[string]interface{} "Internal server error"
 // @Router       /admin/unmatched-polling-unit-results [get]
 func (h *INECGrabberHandler) ListUnmatchedResults(w http.ResponseWriter, r *http.Request) {
-	var electionID *int64
+	var electionID *int32
 	if eStr := r.URL.Query().Get("election_id"); eStr != "" {
-		if id, err := strconv.ParseInt(eStr, 10, 64); err == nil {
-			electionID = &id
+		if id, err := strconv.ParseInt(eStr, 10, 32); err == nil {
+			val := int32(id)
+			electionID = &val
 		}
 	}
 

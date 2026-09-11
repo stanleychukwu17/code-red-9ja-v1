@@ -31,7 +31,7 @@ func cleanStr(s string) string {
 	return strings.TrimSpace(s)
 }
 
-type ResultNotifierFunc func(ctx context.Context, electionID int64, pollingUnitID int32)
+type ResultNotifierFunc func(ctx context.Context, electionID int32, pollingUnitID int32)
 
 type INECGrabberService struct {
 	queries        *queries.Queries
@@ -818,10 +818,10 @@ func (s *INECGrabberService) ListLogs(ctx context.Context, grabberID int64, limi
 	})
 }
 
-func (s *INECGrabberService) ListUnmatchedResults(ctx context.Context, electionID *int64, status *string, limit, offset int32) ([]queries.UnmatchedPollingUnitResult, error) {
-	var elID pgtype.Int8
+func (s *INECGrabberService) ListUnmatchedResults(ctx context.Context, electionID *int32, status *string, limit, offset int32) ([]queries.UnmatchedPollingUnitResult, error) {
+	var elID pgtype.Int4
 	if electionID != nil {
-		elID = pgtype.Int8{Int64: *electionID, Valid: true}
+		elID = pgtype.Int4{Int32: *electionID, Valid: true}
 	}
 	var stText pgtype.Text
 	if status != nil {

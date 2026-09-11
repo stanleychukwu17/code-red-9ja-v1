@@ -120,7 +120,7 @@ type PollingUnitWithCapacity struct {
 	IsCapacityFull bool `json:"is_capacity_full"`
 }
 
-func (s *PollingUnitsService) GetPollingUnitsWithCapacity(ctx context.Context, wardID, localGovernmentID, stateID int32, partyID int16, electionGroupID int64) ([]PollingUnitWithCapacity, error) {
+func (s *PollingUnitsService) GetPollingUnitsWithCapacity(ctx context.Context, wardID, localGovernmentID, stateID int32, partyID int16, electionGroupID int16) ([]PollingUnitWithCapacity, error) {
 	// First, fetch the party to get its agent_acquisition_targets
 	party, err := s.queries.GetPartyByID(ctx, partyID)
 	if err != nil {

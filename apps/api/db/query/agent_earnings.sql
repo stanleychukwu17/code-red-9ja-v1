@@ -66,7 +66,7 @@ FROM agent_earnings ae
 JOIN users u ON ae.user_id = u.id
 WHERE
   ($1::bigint = 0 OR ae.user_id = $1) AND
-  ($2::bigint = 0 OR ae.election_group_id = $2) AND
+  ($2::smallint = 0 OR ae.election_group_id = $2) AND
   ($3::smallint = 0 OR ae.party_id = $3) AND
   ($4::varchar = '' OR ae.status = $4) AND
   ($5::bigint = 0 OR ae.id < $5)

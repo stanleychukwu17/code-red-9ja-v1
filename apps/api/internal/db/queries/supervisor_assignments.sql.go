@@ -79,7 +79,7 @@ type CreateLgaSupervisorParams struct {
 	UserID               int64       `json:"user_id"`
 	StateID              int16       `json:"state_id"`
 	LgaID                int32       `json:"lga_id"`
-	ElectionGroupID      int64       `json:"election_group_id"`
+	ElectionGroupID      int16       `json:"election_group_id"`
 	PartyID              int16       `json:"party_id"`
 	RoleType             pgtype.Text `json:"role_type"`
 	AssignedBy           pgtype.Int8 `json:"assigned_by"`
@@ -136,7 +136,7 @@ RETURNING id, user_id, state_id, election_group_id, party_id, role_type, assigne
 type CreateStateSupervisorParams struct {
 	UserID               int64       `json:"user_id"`
 	StateID              int16       `json:"state_id"`
-	ElectionGroupID      int64       `json:"election_group_id"`
+	ElectionGroupID      int16       `json:"election_group_id"`
 	PartyID              int16       `json:"party_id"`
 	RoleType             pgtype.Text `json:"role_type"`
 	AssignedBy           pgtype.Int8 `json:"assigned_by"`
@@ -195,7 +195,7 @@ type CreateWardSupervisorParams struct {
 	StateID              int16       `json:"state_id"`
 	LgaID                int32       `json:"lga_id"`
 	WardID               int32       `json:"ward_id"`
-	ElectionGroupID      int64       `json:"election_group_id"`
+	ElectionGroupID      int16       `json:"election_group_id"`
 	PartyID              int16       `json:"party_id"`
 	RoleType             pgtype.Text `json:"role_type"`
 	AssignedBy           pgtype.Int8 `json:"assigned_by"`
@@ -243,7 +243,7 @@ WHERE user_id = $1 AND election_group_id = $2 LIMIT 1
 
 type GetLgaSupervisorByElectionGroupParams struct {
 	UserID          int64 `json:"user_id"`
-	ElectionGroupID int64 `json:"election_group_id"`
+	ElectionGroupID int16 `json:"election_group_id"`
 }
 
 func (q *Queries) GetLgaSupervisorByElectionGroup(ctx context.Context, arg GetLgaSupervisorByElectionGroupParams) (LgaElectionSupervisor, error) {
@@ -276,7 +276,7 @@ WHERE user_id = $1 AND election_group_id = $2 LIMIT 1
 
 type GetStateSupervisorByElectionGroupParams struct {
 	UserID          int64 `json:"user_id"`
-	ElectionGroupID int64 `json:"election_group_id"`
+	ElectionGroupID int16 `json:"election_group_id"`
 }
 
 func (q *Queries) GetStateSupervisorByElectionGroup(ctx context.Context, arg GetStateSupervisorByElectionGroupParams) (StateElectionSupervisor, error) {
@@ -308,7 +308,7 @@ WHERE user_id = $1 AND election_group_id = $2 LIMIT 1
 
 type GetWardSupervisorByElectionGroupParams struct {
 	UserID          int64 `json:"user_id"`
-	ElectionGroupID int64 `json:"election_group_id"`
+	ElectionGroupID int16 `json:"election_group_id"`
 }
 
 func (q *Queries) GetWardSupervisorByElectionGroup(ctx context.Context, arg GetWardSupervisorByElectionGroupParams) (WardElectionSupervisor, error) {
@@ -346,7 +346,7 @@ RETURNING id, user_id, state_id, lga_id, election_group_id, party_id, role_type,
 type UpdateLgaSupervisorEarnedAmountKoboParams struct {
 	EarnedDeltaKobo int64 `json:"earned_delta_kobo"`
 	UserID          int64 `json:"user_id"`
-	ElectionGroupID int64 `json:"election_group_id"`
+	ElectionGroupID int16 `json:"election_group_id"`
 }
 
 func (q *Queries) UpdateLgaSupervisorEarnedAmountKobo(ctx context.Context, arg UpdateLgaSupervisorEarnedAmountKoboParams) (LgaElectionSupervisor, error) {
@@ -383,7 +383,7 @@ RETURNING id, user_id, state_id, election_group_id, party_id, role_type, assigne
 type UpdateStateSupervisorEarnedAmountKoboParams struct {
 	EarnedDeltaKobo int64 `json:"earned_delta_kobo"`
 	UserID          int64 `json:"user_id"`
-	ElectionGroupID int64 `json:"election_group_id"`
+	ElectionGroupID int16 `json:"election_group_id"`
 }
 
 func (q *Queries) UpdateStateSupervisorEarnedAmountKobo(ctx context.Context, arg UpdateStateSupervisorEarnedAmountKoboParams) (StateElectionSupervisor, error) {
@@ -419,7 +419,7 @@ RETURNING id, user_id, state_id, lga_id, ward_id, election_group_id, party_id, r
 type UpdateWardSupervisorEarnedAmountKoboParams struct {
 	EarnedDeltaKobo int64 `json:"earned_delta_kobo"`
 	UserID          int64 `json:"user_id"`
-	ElectionGroupID int64 `json:"election_group_id"`
+	ElectionGroupID int16 `json:"election_group_id"`
 }
 
 func (q *Queries) UpdateWardSupervisorEarnedAmountKobo(ctx context.Context, arg UpdateWardSupervisorEarnedAmountKoboParams) (WardElectionSupervisor, error) {

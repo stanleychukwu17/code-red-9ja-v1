@@ -109,7 +109,7 @@ LIMIT 1
 
 type GetAgentEarningsByUserAndElectionGroupAndRoleParams struct {
 	UserID          int64  `json:"user_id"`
-	ElectionGroupID int64  `json:"election_group_id"`
+	ElectionGroupID int16  `json:"election_group_id"`
 	RoleType        string `json:"role_type"`
 }
 
@@ -184,7 +184,7 @@ type GetAssignmentForEarningsRow struct {
 	ID                                      int64              `json:"id"`
 	UserID                                  int64              `json:"user_id"`
 	PartyID                                 int16              `json:"party_id"`
-	ElectionGroupID                         int64              `json:"election_group_id"`
+	ElectionGroupID                         int16              `json:"election_group_id"`
 	RoleType                                pgtype.Text        `json:"role_type"`
 	ArrivedAt                               pgtype.Timestamptz `json:"arrived_at"`
 	ElectionStartedAt                       pgtype.Timestamptz `json:"election_started_at"`
@@ -233,7 +233,7 @@ LIMIT 1
 
 type GetAssignmentIDByUserAndElectionGroupParams struct {
 	UserID          int64 `json:"user_id"`
-	ElectionGroupID int64 `json:"election_group_id"`
+	ElectionGroupID int16 `json:"election_group_id"`
 }
 
 func (q *Queries) GetAssignmentIDByUserAndElectionGroup(ctx context.Context, arg GetAssignmentIDByUserAndElectionGroupParams) (int64, error) {
@@ -249,7 +249,7 @@ FROM agent_earnings ae
 JOIN users u ON ae.user_id = u.id
 WHERE
   ($1::bigint = 0 OR ae.user_id = $1) AND
-  ($2::bigint = 0 OR ae.election_group_id = $2) AND
+  ($2::smallint = 0 OR ae.election_group_id = $2) AND
   ($3::smallint = 0 OR ae.party_id = $3) AND
   ($4::varchar = '' OR ae.status = $4) AND
   ($5::bigint = 0 OR ae.id < $5)
@@ -259,7 +259,7 @@ LIMIT $6::int
 
 type ListAgentEarningsParams struct {
 	Column1 int64  `json:"column_1"`
-	Column2 int64  `json:"column_2"`
+	Column2 int16  `json:"column_2"`
 	Column3 int16  `json:"column_3"`
 	Column4 string `json:"column_4"`
 	Column5 int64  `json:"column_5"`
@@ -270,7 +270,7 @@ type ListAgentEarningsRow struct {
 	ID                      int64              `json:"id"`
 	UserID                  int64              `json:"user_id"`
 	PartyID                 int16              `json:"party_id"`
-	ElectionGroupID         int64              `json:"election_group_id"`
+	ElectionGroupID         int16              `json:"election_group_id"`
 	RoleType                string             `json:"role_type"`
 	BasePaymentKobo         int64              `json:"base_payment_kobo"`
 	EarningsAllocation      []byte             `json:"earnings_allocation"`
@@ -420,7 +420,7 @@ RETURNING id, user_id, party_id, election_group_id, role_type, base_payment_kobo
 
 type RequestAgentEarningsPayoutParams struct {
 	UserID          int64  `json:"user_id"`
-	ElectionGroupID int64  `json:"election_group_id"`
+	ElectionGroupID int16  `json:"election_group_id"`
 	RoleType        string `json:"role_type"`
 }
 
@@ -564,7 +564,7 @@ RETURNING id, user_id, party_id, election_group_id, role_type, base_payment_kobo
 type UpsertAgentEarningsParams struct {
 	UserID                  int64          `json:"user_id"`
 	PartyID                 int16          `json:"party_id"`
-	ElectionGroupID         int64          `json:"election_group_id"`
+	ElectionGroupID         int16          `json:"election_group_id"`
 	RoleType                string         `json:"role_type"`
 	BasePaymentKobo         int64          `json:"base_payment_kobo"`
 	EarningsAllocation      []byte         `json:"earnings_allocation"`

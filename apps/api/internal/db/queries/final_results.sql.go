@@ -35,7 +35,7 @@ LIMIT COALESCE(NULLIF($2::int, 0), 200000)
 `
 
 type GetEligiblePollingUnitsForElectionParams struct {
-	ID      int64 `json:"id"`
+	ID      int32 `json:"id"`
 	Column2 int32 `json:"column_2"`
 }
 
@@ -83,7 +83,7 @@ WHERE election_id = $1 AND polling_unit_id = $2
 `
 
 type GetPollingUnitFinalResultParams struct {
-	ElectionID    int64 `json:"election_id"`
+	ElectionID    int32 `json:"election_id"`
 	PollingUnitID int32 `json:"polling_unit_id"`
 }
 
@@ -150,7 +150,7 @@ LEFT JOIN lgas l ON fr.lga_id = l.id
 LEFT JOIN polling_unit_results r ON fr.polling_unit_result_id = r.id
 LEFT JOIN users u ON r.submitted_by = u.id
 WHERE
-  ($1::bigint IS NULL OR fr.election_group_id = $1)
+  ($1::smallint IS NULL OR fr.election_group_id = $1)
   AND ($2::smallint IS NULL OR fr.state_id = $2)
   AND ($3::int IS NULL OR fr.senatorial_district_id = $3)
   AND ($4::int IS NULL OR fr.federal_constituency_id = $4)
@@ -164,7 +164,7 @@ LIMIT $10::int
 `
 
 type ListPollingUnitFinalResultsParams struct {
-	ElectionGroupID       pgtype.Int8 `json:"election_group_id"`
+	ElectionGroupID       pgtype.Int2 `json:"election_group_id"`
 	StateID               pgtype.Int2 `json:"state_id"`
 	SenatorialDistrictID  pgtype.Int4 `json:"senatorial_district_id"`
 	FederalConstituencyID pgtype.Int4 `json:"federal_constituency_id"`
@@ -178,8 +178,8 @@ type ListPollingUnitFinalResultsParams struct {
 
 type ListPollingUnitFinalResultsRow struct {
 	ID                    int64              `json:"id"`
-	ElectionID            int64              `json:"election_id"`
-	ElectionGroupID       int64              `json:"election_group_id"`
+	ElectionID            int32              `json:"election_id"`
+	ElectionGroupID       int16              `json:"election_group_id"`
 	PollingUnitID         int32              `json:"polling_unit_id"`
 	PollingUnitName       string             `json:"polling_unit_name"`
 	StateID               pgtype.Int2        `json:"state_id"`
@@ -303,9 +303,9 @@ ON CONFLICT (election_id, polling_unit_id) DO UPDATE SET
 `
 
 type RefreshPollingUnitLiveResultsParams struct {
-	ElectionID            int64       `json:"election_id"`
+	ElectionID            int32       `json:"election_id"`
 	PollingUnitID         int32       `json:"polling_unit_id"`
-	ElectionGroupID       int64       `json:"election_group_id"`
+	ElectionGroupID       int16       `json:"election_group_id"`
 	StateID               pgtype.Int2 `json:"state_id"`
 	SenatorialDistrictID  pgtype.Int4 `json:"senatorial_district_id"`
 	FederalConstituencyID pgtype.Int4 `json:"federal_constituency_id"`
@@ -1112,7 +1112,7 @@ DO UPDATE SET
     updated_at = NOW()
 `
 
-func (q *Queries) RollupSingleElectionFinalResults(ctx context.Context, electionID int64) error {
+func (q *Queries) RollupSingleElectionFinalResults(ctx context.Context, electionID int32) error {
 	_, err := q.db.Exec(ctx, rollupSingleElectionFinalResults, electionID)
 	return err
 }
@@ -1265,7 +1265,7 @@ DO UPDATE SET
 `
 
 type RollupSingleFederalConstituencyFinalResultsParams struct {
-	ElectionID            int64       `json:"election_id"`
+	ElectionID            int32       `json:"election_id"`
 	FederalConstituencyID pgtype.Int4 `json:"federal_constituency_id"`
 }
 
@@ -1437,7 +1437,7 @@ DO UPDATE SET
 `
 
 type RollupSingleLGAFinalResultsParams struct {
-	ElectionID int64       `json:"election_id"`
+	ElectionID int32       `json:"election_id"`
 	LgaID      pgtype.Int4 `json:"lga_id"`
 }
 
@@ -1617,7 +1617,7 @@ DO UPDATE SET
 `
 
 type RollupSingleSenatorialDistrictFinalResultsParams struct {
-	ElectionID           int64       `json:"election_id"`
+	ElectionID           int32       `json:"election_id"`
 	SenatorialDistrictID pgtype.Int4 `json:"senatorial_district_id"`
 }
 
@@ -1770,7 +1770,7 @@ DO UPDATE SET
 `
 
 type RollupSingleStateConstituencyFinalResultsParams struct {
-	ElectionID int64 `json:"election_id"`
+	ElectionID int32 `json:"election_id"`
 	ID         int32 `json:"id"`
 }
 
@@ -1926,7 +1926,7 @@ DO UPDATE SET
 `
 
 type RollupSingleStateFinalResultsParams struct {
-	ElectionID int64       `json:"election_id"`
+	ElectionID int32       `json:"election_id"`
 	StateID    pgtype.Int2 `json:"state_id"`
 }
 
@@ -2063,7 +2063,7 @@ DO UPDATE SET
 `
 
 type RollupSingleWardFinalResultsParams struct {
-	ElectionID int64       `json:"election_id"`
+	ElectionID int32       `json:"election_id"`
 	WardID     pgtype.Int4 `json:"ward_id"`
 }
 
@@ -2540,8 +2540,8 @@ RETURNING id, election_id, election_group_id, polling_unit_id, state_id, senator
 `
 
 type UpsertPollingUnitFinalResultParams struct {
-	ElectionID               int64       `json:"election_id"`
-	ElectionGroupID          int64       `json:"election_group_id"`
+	ElectionID               int32       `json:"election_id"`
+	ElectionGroupID          int16       `json:"election_group_id"`
 	PollingUnitID            int32       `json:"polling_unit_id"`
 	StateID                  pgtype.Int2 `json:"state_id"`
 	SenatorialDistrictID     pgtype.Int4 `json:"senatorial_district_id"`

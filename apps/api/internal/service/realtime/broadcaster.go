@@ -19,7 +19,7 @@ const (
 
 // ResultsUpdatedEvent represents a lightweight signal that election rollup results have updated.
 type ResultsUpdatedEvent struct {
-	ElectionID            int64     `json:"election_id"`
+	ElectionID            int32     `json:"election_id"`
 	Scope                 string    `json:"scope"` // "ward", "lga", "state_constituency", "federal_constituency", "senatorial_district", "state", "nationwide"
 	StateID               *int16    `json:"state_id,omitempty"`
 	LGAID                 *int32    `json:"lga_id,omitempty"`
@@ -32,7 +32,7 @@ type ResultsUpdatedEvent struct {
 
 // PUResultUploadedEvent represents a notification that a polling unit result was uploaded/updated.
 type PUResultUploadedEvent struct {
-	ElectionID    int64     `json:"election_id"`
+	ElectionID    int32     `json:"election_id"`
 	PollingUnitID int32     `json:"polling_unit_id"`
 	WardID        int32     `json:"ward_id"`
 	LGAID         int32     `json:"lga_id"`
@@ -48,35 +48,35 @@ type Broadcaster interface {
 }
 
 // Channel generator helpers
-func ElectionChannel(electionID int64) string {
+func ElectionChannel(electionID int32) string {
 	return fmt.Sprintf("election-%d", electionID)
 }
 
-func ElectionStateChannel(electionID int64, stateID int16) string {
+func ElectionStateChannel(electionID int32, stateID int16) string {
 	return fmt.Sprintf("election-%d-state-%d", electionID, stateID)
 }
 
-func ElectionLGAChannel(electionID int64, lgaID int32) string {
+func ElectionLGAChannel(electionID int32, lgaID int32) string {
 	return fmt.Sprintf("election-%d-lga-%d", electionID, lgaID)
 }
 
-func ElectionWardChannel(electionID int64, wardID int32) string {
+func ElectionWardChannel(electionID int32, wardID int32) string {
 	return fmt.Sprintf("election-%d-ward-%d", electionID, wardID)
 }
 
-func ElectionPUChannel(electionID int64, puID int32) string {
+func ElectionPUChannel(electionID int32, puID int32) string {
 	return fmt.Sprintf("election-%d-pu-%d", electionID, puID)
 }
 
-func ElectionStateConstituencyChannel(electionID int64, scID int32) string {
+func ElectionStateConstituencyChannel(electionID int32, scID int32) string {
 	return fmt.Sprintf("election-%d-sc-%d", electionID, scID)
 }
 
-func ElectionFederalConstituencyChannel(electionID int64, fcID int32) string {
+func ElectionFederalConstituencyChannel(electionID int32, fcID int32) string {
 	return fmt.Sprintf("election-%d-fc-%d", electionID, fcID)
 }
 
-func ElectionSenatorialDistrictChannel(electionID int64, sdID int32) string {
+func ElectionSenatorialDistrictChannel(electionID int32, sdID int32) string {
 	return fmt.Sprintf("election-%d-sd-%d", electionID, sdID)
 }
 

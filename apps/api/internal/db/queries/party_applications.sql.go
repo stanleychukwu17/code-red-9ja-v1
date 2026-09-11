@@ -29,7 +29,7 @@ INSERT INTO party_applications (
 type CreateApplicationParams struct {
 	UserID          int64       `json:"user_id"`
 	PartyID         int16       `json:"party_id"`
-	ElectionGroupID int64       `json:"election_group_id"`
+	ElectionGroupID int16       `json:"election_group_id"`
 	PollingUnitID   pgtype.Int4 `json:"polling_unit_id"`
 	StateID         pgtype.Int2 `json:"state_id"`
 	LgaID           pgtype.Int4 `json:"lga_id"`
@@ -86,14 +86,14 @@ LIMIT 1
 
 type GetAcceptedApplicationForUserParams struct {
 	UserID          int64 `json:"user_id"`
-	ElectionGroupID int64 `json:"election_group_id"`
+	ElectionGroupID int16 `json:"election_group_id"`
 }
 
 type GetAcceptedApplicationForUserRow struct {
 	ID              int64       `json:"id"`
 	UserID          int64       `json:"user_id"`
 	PartyID         int16       `json:"party_id"`
-	ElectionGroupID int64       `json:"election_group_id"`
+	ElectionGroupID int16       `json:"election_group_id"`
 	PollingUnitID   pgtype.Int4 `json:"polling_unit_id"`
 	StateID         pgtype.Int2 `json:"state_id"`
 	LgaID           pgtype.Int4 `json:"lga_id"`
@@ -167,13 +167,13 @@ LIMIT 1
 
 type GetPendingApplicationForAutoAcceptParams struct {
 	UserID          int64 `json:"user_id"`
-	ElectionGroupID int64 `json:"election_group_id"`
+	ElectionGroupID int16 `json:"election_group_id"`
 }
 
 type GetPendingApplicationForAutoAcceptRow struct {
 	ID                     int64       `json:"id"`
 	PartyID                int16       `json:"party_id"`
-	ElectionGroupID        int64       `json:"election_group_id"`
+	ElectionGroupID        int16       `json:"election_group_id"`
 	PollingUnitID          pgtype.Int4 `json:"polling_unit_id"`
 	Role                   string      `json:"role"`
 	StateID                pgtype.Int2 `json:"state_id"`
@@ -219,7 +219,7 @@ WHERE pa.user_id = $1
 type GetPendingApplicationsForUserAutoAcceptRow struct {
 	ID                     int64       `json:"id"`
 	PartyID                int16       `json:"party_id"`
-	ElectionGroupID        int64       `json:"election_group_id"`
+	ElectionGroupID        int16       `json:"election_group_id"`
 	PollingUnitID          pgtype.Int4 `json:"polling_unit_id"`
 	Role                   string      `json:"role"`
 	StateID                pgtype.Int2 `json:"state_id"`
@@ -274,7 +274,7 @@ SELECT
       FROM polling_unit_assignments pua
       WHERE pua.polling_unit_id = pu.id
         AND pua.party_id = $1::smallint
-        AND pua.election_group_id = $2::bigint
+        AND pua.election_group_id = $2::smallint
     ),
     0
   )::integer AS agents_count
@@ -288,7 +288,7 @@ LIMIT $5::integer
 
 type GetPollingUnitsWithAgentCountsParams struct {
 	PartyID         int16 `json:"party_id"`
-	ElectionGroupID int64 `json:"election_group_id"`
+	ElectionGroupID int16 `json:"election_group_id"`
 	LgaID           int32 `json:"lga_id"`
 	WardID          int32 `json:"ward_id"`
 	LimitVal        int32 `json:"limit_val"`
@@ -414,7 +414,7 @@ LEFT JOIN user_bank_accounts uba ON uba.user_id = u.id AND uba.is_primary = true
 WHERE 
   ($1::bigint = 0 OR pa.user_id = $1) AND
   ($2::smallint = 0 OR pa.party_id = $2) AND
-  ($3::bigint = 0 OR pa.election_group_id = $3) AND
+  ($3::smallint = 0 OR pa.election_group_id = $3) AND
   ($4::varchar = '' OR pa.status = $4) AND
   ($5::smallint = 0 OR COALESCE(pa.state_id, u.current_state, pu.state_id) = $5) AND
   ($6::integer = 0 OR COALESCE(pa.lga_id, u.current_lga, pu.lga_id) = $6) AND
@@ -427,7 +427,7 @@ LIMIT $9
 type ListApplicationsParams struct {
 	UserID          int64  `json:"user_id"`
 	PartyID         int16  `json:"party_id"`
-	ElectionGroupID int64  `json:"election_group_id"`
+	ElectionGroupID int16  `json:"election_group_id"`
 	Status          string `json:"status"`
 	StateID         int16  `json:"state_id"`
 	LgaID           int32  `json:"lga_id"`
@@ -440,7 +440,7 @@ type ListApplicationsRow struct {
 	ID                   int64              `json:"id"`
 	UserID               int64              `json:"user_id"`
 	PartyID              int16              `json:"party_id"`
-	ElectionGroupID      int64              `json:"election_group_id"`
+	ElectionGroupID      int16              `json:"election_group_id"`
 	PollingUnitID        pgtype.Int4        `json:"polling_unit_id"`
 	Role                 string             `json:"role"`
 	AppStateID           pgtype.Int2        `json:"app_state_id"`

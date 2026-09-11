@@ -57,7 +57,7 @@ type PartiesService interface {
 	// Marketing methods
 	GetMarketingPlansByType(ctx context.Context, campaignType string) ([]queries.Plan, error)
 	CreatePartyMarketingCampaign(ctx context.Context, arg queries.CreatePartyMarketingCampaignParams) (queries.PartyMarketingCampaign, error)
-	GetPartyMarketingCampaigns(ctx context.Context, partyID int32) ([]queries.GetPartyMarketingCampaignsRow, error)
+	GetPartyMarketingCampaigns(ctx context.Context, partyID int16) ([]queries.GetPartyMarketingCampaignsRow, error)
 	ListAllPartyMarketingCampaigns(ctx context.Context, arg queries.ListAllPartyMarketingCampaignsParams) ([]queries.ListAllPartyMarketingCampaignsRow, error)
 	UpdateMarketingCampaignStatus(ctx context.Context, id int32, status string) (queries.PartyMarketingCampaign, error)
 	DeletePartyMarketingCampaign(ctx context.Context, id int32) error
@@ -1403,7 +1403,7 @@ func (h *Handler) DepositTest(w http.ResponseWriter, r *http.Request) {
 
 // CreateMarketingCampaignRequest is the request payload for creating a marketing campaign
 type CreateMarketingCampaignRequest struct {
-	ElectionGroupID  int32           `json:"election_group_id"`
+	ElectionGroupID  int16           `json:"election_group_id"`
 	ElectionID       int32           `json:"election_id"`
 	PlanID           int32           `json:"plan_id"`
 	Type             string          `json:"type"`
@@ -1455,7 +1455,7 @@ func (h *Handler) GetMarketingPlansByType(w http.ResponseWriter, r *http.Request
 // @Router       /parties/{id}/agent-marketing-campaigns [post]
 func (h *Handler) CreatePartyMarketingCampaign(w http.ResponseWriter, r *http.Request) {
 	partyIDStr := chi.URLParam(r, "id")
-	partyID, err := strconv.ParseInt(partyIDStr, 10, 32)
+	partyID, err := strconv.ParseInt(partyIDStr, 10, 16)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID: "+err.Error())
 		return
@@ -1482,7 +1482,7 @@ func (h *Handler) CreatePartyMarketingCampaign(w http.ResponseWriter, r *http.Re
 	}
 
 	arg := queries.CreatePartyMarketingCampaignParams{
-		PartyID:            int32(partyID),
+		PartyID:            int16(partyID),
 		ElectionGroupID:    req.ElectionGroupID,
 		ElectionID:         req.ElectionID,
 		PlanID:             req.PlanID,
@@ -1518,13 +1518,13 @@ func (h *Handler) CreatePartyMarketingCampaign(w http.ResponseWriter, r *http.Re
 // @Router       /parties/{id}/agent-marketing-campaigns [get]
 func (h *Handler) GetPartyMarketingCampaigns(w http.ResponseWriter, r *http.Request) {
 	partyIDStr := chi.URLParam(r, "id")
-	partyID, err := strconv.ParseInt(partyIDStr, 10, 32)
+	partyID, err := strconv.ParseInt(partyIDStr, 10, 16)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID: "+err.Error())
 		return
 	}
 
-	campaigns, err := h.partiesService.GetPartyMarketingCampaigns(r.Context(), int32(partyID))
+	campaigns, err := h.partiesService.GetPartyMarketingCampaigns(r.Context(), int16(partyID))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to get marketing campaigns: "+err.Error())
 		return

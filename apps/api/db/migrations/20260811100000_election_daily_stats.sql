@@ -12,7 +12,7 @@
 -- CREATE TABLE IF NOT EXISTS election_group_daily_stats (
 --   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 
---   election_group_id         BIGINT    NOT NULL REFERENCES election_groups(id) ON DELETE CASCADE,
+--   election_group_id         SMALLINT    NOT NULL REFERENCES election_groups(id) ON DELETE CASCADE,
 --   stat_date                 DATE      NOT NULL, -- e.g. '2026-08-11'
 
 --   -- Explicit Foreign Keys (denormalized geography matching election_stats schema)

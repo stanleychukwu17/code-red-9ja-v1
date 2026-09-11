@@ -72,7 +72,7 @@ WITH election_pu_totals AS (
     COUNT(DISTINCT pur.polling_unit_id) AS uploaded_pus
   FROM polling_units pu
   LEFT JOIN polling_unit_results pur 
-    ON pu.id = pur.polling_unit_id AND pur.election_id = sqlc.arg('election_id')::bigint
+    ON pu.id = pur.polling_unit_id AND pur.election_id = sqlc.arg('election_id')::int
   GROUP BY pu.ward_id, pu.lga_id
 ),
 ward_completion AS (
@@ -90,7 +90,7 @@ lga_completion AS (
   GROUP BY lga_id
 )
 SELECT 
-  (SELECT COUNT(DISTINCT polling_unit_id) FROM polling_unit_results WHERE election_id = sqlc.arg('election_id')::bigint) AS uploaded_results_count,
+  (SELECT COUNT(DISTINCT polling_unit_id) FROM polling_unit_results WHERE election_id = sqlc.arg('election_id')::int) AS uploaded_results_count,
   (SELECT COUNT(*) FROM ward_completion WHERE is_ward_complete = true) AS wards_with_complete_results_count,
   (SELECT COUNT(*) FROM lga_completion WHERE is_lga_complete = true) AS lgas_with_complete_results_count,
   (SELECT COUNT(*) FROM ward_completion) AS total_wards_count,

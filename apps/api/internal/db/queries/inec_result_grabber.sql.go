@@ -20,7 +20,7 @@ WITH election_pu_totals AS (
     COUNT(DISTINCT pur.polling_unit_id) AS uploaded_pus
   FROM polling_units pu
   LEFT JOIN polling_unit_results pur 
-    ON pu.id = pur.polling_unit_id AND pur.election_id = $1::bigint
+    ON pu.id = pur.polling_unit_id AND pur.election_id = $1::int
   GROUP BY pu.ward_id, pu.lga_id
 ),
 ward_completion AS (
@@ -38,7 +38,7 @@ lga_completion AS (
   GROUP BY lga_id
 )
 SELECT 
-  (SELECT COUNT(DISTINCT polling_unit_id) FROM polling_unit_results WHERE election_id = $1::bigint) AS uploaded_results_count,
+  (SELECT COUNT(DISTINCT polling_unit_id) FROM polling_unit_results WHERE election_id = $1::int) AS uploaded_results_count,
   (SELECT COUNT(*) FROM ward_completion WHERE is_ward_complete = true) AS wards_with_complete_results_count,
   (SELECT COUNT(*) FROM lga_completion WHERE is_lga_complete = true) AS lgas_with_complete_results_count,
   (SELECT COUNT(*) FROM ward_completion) AS total_wards_count,
@@ -53,7 +53,7 @@ type CalculateElectionMetricsRow struct {
 	TotalLgasCount                int64 `json:"total_lgas_count"`
 }
 
-func (q *Queries) CalculateElectionMetrics(ctx context.Context, electionID int64) (CalculateElectionMetricsRow, error) {
+func (q *Queries) CalculateElectionMetrics(ctx context.Context, electionID int32) (CalculateElectionMetricsRow, error) {
 	row := q.db.QueryRow(ctx, calculateElectionMetrics, electionID)
 	var i CalculateElectionMetricsRow
 	err := row.Scan(
@@ -76,8 +76,8 @@ WHERE g.election_id = $1
 
 type GetINECResultGrabberByElectionIDRow struct {
 	ID                            int64              `json:"id"`
-	ElectionGroupID               int64              `json:"election_group_id"`
-	ElectionID                    int64              `json:"election_id"`
+	ElectionGroupID               int16              `json:"election_group_id"`
+	ElectionID                    int32              `json:"election_id"`
 	Name                          pgtype.Text        `json:"name"`
 	Scope                         string             `json:"scope"`
 	ElectionDate                  pgtype.Date        `json:"election_date"`
@@ -96,7 +96,7 @@ type GetINECResultGrabberByElectionIDRow struct {
 	OfficeName                    string             `json:"office_name"`
 }
 
-func (q *Queries) GetINECResultGrabberByElectionID(ctx context.Context, electionID int64) (GetINECResultGrabberByElectionIDRow, error) {
+func (q *Queries) GetINECResultGrabberByElectionID(ctx context.Context, electionID int32) (GetINECResultGrabberByElectionIDRow, error) {
 	row := q.db.QueryRow(ctx, getINECResultGrabberByElectionID, electionID)
 	var i GetINECResultGrabberByElectionIDRow
 	err := row.Scan(
@@ -133,8 +133,8 @@ WHERE g.id = $1
 
 type GetINECResultGrabberByIDRow struct {
 	ID                            int64              `json:"id"`
-	ElectionGroupID               int64              `json:"election_group_id"`
-	ElectionID                    int64              `json:"election_id"`
+	ElectionGroupID               int16              `json:"election_group_id"`
+	ElectionID                    int32              `json:"election_id"`
 	Name                          pgtype.Text        `json:"name"`
 	Scope                         string             `json:"scope"`
 	ElectionDate                  pgtype.Date        `json:"election_date"`
@@ -193,8 +193,8 @@ ORDER BY g.id ASC
 
 type ListActiveINECResultGrabbersRow struct {
 	ID                            int64              `json:"id"`
-	ElectionGroupID               int64              `json:"election_group_id"`
-	ElectionID                    int64              `json:"election_id"`
+	ElectionGroupID               int16              `json:"election_group_id"`
+	ElectionID                    int32              `json:"election_id"`
 	Name                          pgtype.Text        `json:"name"`
 	Scope                         string             `json:"scope"`
 	ElectionDate                  pgtype.Date        `json:"election_date"`
@@ -270,8 +270,8 @@ type ListINECResultGrabbersPaginatedParams struct {
 
 type ListINECResultGrabbersPaginatedRow struct {
 	ID                            int64              `json:"id"`
-	ElectionGroupID               int64              `json:"election_group_id"`
-	ElectionID                    int64              `json:"election_id"`
+	ElectionGroupID               int16              `json:"election_group_id"`
+	ElectionID                    int32              `json:"election_id"`
 	Name                          pgtype.Text        `json:"name"`
 	Scope                         string             `json:"scope"`
 	ElectionDate                  pgtype.Date        `json:"election_date"`

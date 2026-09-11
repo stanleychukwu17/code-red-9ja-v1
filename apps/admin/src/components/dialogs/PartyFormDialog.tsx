@@ -20,6 +20,7 @@ import { Loader2, Palette, Plus, Umbrella } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { PartyType } from "../tiles/party-tile";
 
+// Common color presets for parties
 const PARTY_COLOR_PRESETS = [
 	{ name: "APC (Cyan)", light: "#0284C7", dark: "#38BDF8" },
 	{ name: "PDP (Green)", light: "#16A34A", dark: "#4ADE80" },
@@ -31,25 +32,30 @@ const PARTY_COLOR_PRESETS = [
 	{ name: "YPP (Teal)", light: "#0D9488", dark: "#2DD4BF" },
 ];
 
+// Type definition for the dialog's props
+export type PartyFormDialogProps = {
+	party?: PartyType;
+	open: boolean;
+	onClose: () => void;
+	mode?: "create" | "update";
+	onSuccess?: () => void;
+};
+
+// Main dialog component for creating and updating a party
 export function PartyFormDialog({
 	party,
 	open,
 	onClose,
 	mode = "create",
 	onSuccess,
-}: {
-	party?: PartyType;
-	open: boolean;
-	onClose: () => void;
-	mode?: "create" | "update";
-	onSuccess?: () => void;
-}) {
+}: PartyFormDialogProps) {
 	const queryClient = useQueryClient();
 	const [logoUrl, setLogoUrl] = useState("");
 	const [selectedInputLogo, setSelectedInputLogo] = useState<File | null>(null);
 	const [isUploadingLogo, setIsUploadingLogo] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
+	// Reference to the file input element
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	// TanStack Form configuration
@@ -57,6 +63,7 @@ export function PartyFormDialog({
 		defaultValues: {
 			acronym: "",
 			fullName: "",
+			dateFounded: "",
 			displayOrder: 999,
 			colorHex: "",
 			darkColorHex: "",
@@ -72,6 +79,8 @@ export function PartyFormDialog({
 			if (mode === "update" && party) {
 				form.setFieldValue("acronym", party.short_name || "");
 				form.setFieldValue("fullName", party.name || "");
+				const rawDate = party.date_founded || (party as any).founded_date || "";
+				form.setFieldValue("dateFounded", rawDate ? rawDate.split("T")[0] : "");
 				form.setFieldValue("displayOrder", party.display_order ?? 999);
 				form.setFieldValue("colorHex", party.color_hex || "");
 				form.setFieldValue("darkColorHex", party.dark_color_hex || "");
@@ -79,6 +88,7 @@ export function PartyFormDialog({
 			} else {
 				form.setFieldValue("acronym", "");
 				form.setFieldValue("fullName", "");
+				form.setFieldValue("dateFounded", "");
 				form.setFieldValue("displayOrder", 999);
 				form.setFieldValue("colorHex", "");
 				form.setFieldValue("darkColorHex", "");
@@ -128,6 +138,7 @@ export function PartyFormDialog({
 		mutationFn: async (values: {
 			acronym: string;
 			fullName: string;
+			dateFounded: string;
 			displayOrder: number;
 			colorHex: string;
 			darkColorHex: string;
@@ -203,6 +214,7 @@ export function PartyFormDialog({
 						display_order: values.displayOrder,
 						color_hex: values.colorHex.trim() || undefined,
 						dark_color_hex: values.darkColorHex.trim() || undefined,
+						date_founded: values.dateFounded.trim() || undefined,
 					},
 				});
 			} else {
@@ -214,6 +226,7 @@ export function PartyFormDialog({
 						display_order: values.displayOrder,
 						color_hex: values.colorHex.trim() || undefined,
 						dark_color_hex: values.darkColorHex.trim() || undefined,
+						date_founded: values.dateFounded.trim() || undefined,
 					},
 				});
 			}
@@ -284,6 +297,42 @@ export function PartyFormDialog({
 							)}
 						/>
 
+						{/* Party Logo upload (Avatar section) */}
+						<div>
+							<label className="text-[14px] font-semibold text-c-50">Party Logo</label>
+							<div className="flex items-center gap-6 mt-2">
+								<div className="size-24 rounded-full bg-[#e2e8f0] flex items-center justify-center text-c-40 border border-[#dfdfdf] overflow-hidden shrink-0">
+									{logoUrl ? (
+										<img src={logoUrl} alt="Logo preview" className="size-full object-cover" />
+									) : isUploadingLogo ? (
+										<Loader2 className="size-8 animate-spin text-c-50" />
+									) : (
+										<Umbrella className="size-10 shrink-0" />
+									)}
+								</div>
+								<div className="flex items-center gap-3">
+									<button
+										type="button"
+										disabled={isUploadingLogo}
+										onClick={handleUploadClick}
+										className="flex h-11 items-center gap-2 rounded-12 bg-[#1a1a1a] hover:bg-black disabled:bg-[#ccc] disabled:cursor-not-allowed px-4 text-[15px] font-semibold text-white transition cursor-pointer"
+									>
+										<Plus className="size-5" />
+										<span>{isUploadingLogo ? "Uploading..." : "Upload image"}</span>
+									</button>
+									{logoUrl && (
+										<button
+											type="button"
+											onClick={() => handleRemoveImage("removing_logo")}
+											className="flex h-11 items-center rounded-12 border border-[#dfdfdf] px-4 text-[15px] font-semibold text-red-600 hover:bg-[#fafafa] transition cursor-pointer"
+										>
+											Remove image
+										</button>
+									)}
+								</div>
+							</div>
+						</div>
+
 						{/* Party full name input */}
 						<form.Field
 							name="fullName"
@@ -309,32 +358,49 @@ export function PartyFormDialog({
 							)}
 						/>
 
-						{/* Display Order input */}
-						<form.Field
-							name="displayOrder"
-							validators={{
-								onChange: ({ value }) => (value < 1 ? "Order must be at least 1" : undefined),
-							}}
-							children={(field) => (
-								<div>
-									<label className="text-[14px] font-semibold text-c-50">
-										Display Order (Rank)
-									</label>
-									<Input
-										type="number"
-										placeholder="E.g. 1 for most popular"
-										value={field.state.value}
-										onBlur={field.handleBlur}
-										onChange={(e) => field.handleChange(Number(e.target.value))}
-										errorMsg={
-											field.state.meta.isTouched && field.state.meta.errors.length
-												? (field.state.meta.errors[0] as string)
-												: undefined
-										}
-									/>
-								</div>
-							)}
-						/>
+						{/* Date Founded & Display Order */}
+						<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+							<form.Field
+								name="dateFounded"
+								children={(field) => (
+									<div>
+										<label className="text-[14px] font-semibold text-c-50">Date Founded</label>
+										<Input
+											type="date"
+											value={field.state.value}
+											onBlur={field.handleBlur}
+											onChange={(e) => field.handleChange(e.target.value)}
+										/>
+									</div>
+								)}
+							/>
+
+							<form.Field
+								name="displayOrder"
+								validators={{
+									onChange: ({ value }) => (value < 1 ? "Order must be at least 1" : undefined),
+								}}
+								children={(field) => (
+									<div>
+										<label className="text-[14px] font-semibold text-c-50">
+											Display Order (Rank)
+										</label>
+										<Input
+											type="number"
+											placeholder="E.g. 1 for most popular"
+											value={field.state.value}
+											onBlur={field.handleBlur}
+											onChange={(e) => field.handleChange(Number(e.target.value))}
+											errorMsg={
+												field.state.meta.isTouched && field.state.meta.errors.length
+													? (field.state.meta.errors[0] as string)
+													: undefined
+											}
+										/>
+									</div>
+								)}
+							/>
+						</div>
 
 						{/* Party Brand Colors */}
 						<div className="space-y-3">
@@ -458,42 +524,6 @@ export function PartyFormDialog({
 											<span>{preset.name.split(" ")[0]}</span>
 										</button>
 									))}
-								</div>
-							</div>
-						</div>
-
-						{/* Party Logo upload */}
-						<div>
-							<label className="text-[14px] font-semibold text-c-50">Party Logo</label>
-							<div className="flex items-center gap-6 mt-2">
-								<div className="size-28 rounded-full bg-[#e2e8f0] flex items-center justify-center text-c-40 border border-[#dfdfdf] overflow-hidden">
-									{logoUrl ? (
-										<img src={logoUrl} alt="Logo preview" className="size-full object-cover" />
-									) : isUploadingLogo ? (
-										<Loader2 className="size-8 animate-spin text-c-50" />
-									) : (
-										<Umbrella className="size-12 shrink-0" />
-									)}
-								</div>
-								<div className="flex items-center gap-3">
-									<button
-										type="button"
-										disabled={isUploadingLogo}
-										onClick={handleUploadClick}
-										className="flex h-11 items-center gap-2 rounded-12 bg-[#1a1a1a] hover:bg-black disabled:bg-[#ccc] disabled:cursor-not-allowed px-4 text-[15px] font-semibold text-white transition cursor-pointer"
-									>
-										<Plus className="size-5" />
-										<span>{isUploadingLogo ? "Uploading..." : "Upload image"}</span>
-									</button>
-									{logoUrl && (
-										<button
-											type="button"
-											onClick={() => handleRemoveImage("removing_logo")}
-											className="hidden h-11 items-center rounded-12 border border-[#dfdfdf] px-4 text-[15px] font-semibold text-red-600 hover:bg-[#fafafa] transition cursor-pointer"
-										>
-											Remove image
-										</button>
-									)}
 								</div>
 							</div>
 						</div>

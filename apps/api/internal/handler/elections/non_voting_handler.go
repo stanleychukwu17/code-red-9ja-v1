@@ -25,7 +25,7 @@ func (h *Handler) GetNonVotingReasons(w http.ResponseWriter, r *http.Request) {
 }
 
 type CreateDidNotVoteReasonRequest struct {
-	ElectionGroupID   int64   `json:"election_group_id"`
+	ElectionGroupID   int16   `json:"election_group_id"`
 	NonVotingReasonID *int16  `json:"non_voting_reason_id,omitempty"`
 	Explanation       *string `json:"explanation,omitempty"`
 }

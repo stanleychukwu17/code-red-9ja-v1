@@ -28,8 +28,8 @@ INSERT INTO inec_result_grabber_logs (
 
 type CreateINECResultGrabberLogParams struct {
 	InecResultGrabberID   int64              `json:"inec_result_grabber_id"`
-	ElectionGroupID       int64              `json:"election_group_id"`
-	ElectionID            int64              `json:"election_id"`
+	ElectionGroupID       int16              `json:"election_group_id"`
+	ElectionID            int32              `json:"election_id"`
 	ResultsCollectedCount int32              `json:"results_collected_count"`
 	Status                string             `json:"status"`
 	ErrorMessage          pgtype.Text        `json:"error_message"`
@@ -129,8 +129,8 @@ type ListINECResultGrabberLogsPaginatedParams struct {
 type ListINECResultGrabberLogsPaginatedRow struct {
 	ID                    int64              `json:"id"`
 	InecResultGrabberID   int64              `json:"inec_result_grabber_id"`
-	ElectionGroupID       int64              `json:"election_group_id"`
-	ElectionID            int64              `json:"election_id"`
+	ElectionGroupID       int16              `json:"election_group_id"`
+	ElectionID            int32              `json:"election_id"`
 	ResultsCollectedCount int32              `json:"results_collected_count"`
 	Status                string             `json:"status"`
 	ErrorMessage          pgtype.Text        `json:"error_message"`

@@ -19,7 +19,7 @@ SELECT EXISTS (
 `
 
 type CheckUnmatchedPollingUnitResultExistsParams struct {
-	ElectionID         int64       `json:"election_id"`
+	ElectionID         int32       `json:"election_id"`
 	RawPollingUnitCode pgtype.Text `json:"raw_polling_unit_code"`
 }
 
@@ -83,8 +83,8 @@ INSERT INTO unmatched_polling_unit_results (
 `
 
 type CreateUnmatchedPollingUnitResultParams struct {
-	ElectionID            int64       `json:"election_id"`
-	ElectionGroupID       int64       `json:"election_group_id"`
+	ElectionID            int32       `json:"election_id"`
+	ElectionGroupID       int16       `json:"election_group_id"`
 	SubmittedBy           pgtype.Int8 `json:"submitted_by"`
 	PartyID               pgtype.Int2 `json:"party_id"`
 	RawPollingUnitCode    pgtype.Text `json:"raw_polling_unit_code"`
@@ -217,14 +217,14 @@ func (q *Queries) GetUnmatchedPollingUnitResultByID(ctx context.Context, id int6
 
 const listUnmatchedPollingUnitResults = `-- name: ListUnmatchedPollingUnitResults :many
 SELECT id, election_id, election_group_id, submitted_by, party_id, raw_polling_unit_code, raw_polling_unit_name, raw_ward_name, raw_lga_name, raw_state_name, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, result_sheet_image_url, result_sheet_video_url, resolution_status, resolution_notes, resolved_polling_unit_id, resolved_result_id, resolved_by, resolved_at, created_at, updated_at FROM unmatched_polling_unit_results
-WHERE ($1::bigint IS NULL OR election_id = $1)
+WHERE ($1::int IS NULL OR election_id = $1)
   AND ($2::text IS NULL OR resolution_status = $2)
 ORDER BY id DESC
 LIMIT $4 OFFSET $3
 `
 
 type ListUnmatchedPollingUnitResultsParams struct {
-	ElectionID       pgtype.Int8 `json:"election_id"`
+	ElectionID       pgtype.Int4 `json:"election_id"`
 	ResolutionStatus pgtype.Text `json:"resolution_status"`
 	Offset           int32       `json:"offset"`
 	Limit            int32       `json:"limit"`

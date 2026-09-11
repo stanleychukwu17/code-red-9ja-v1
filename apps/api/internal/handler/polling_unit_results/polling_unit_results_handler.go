@@ -32,8 +32,8 @@ func NewHandler(s *pu_results.Service, u *utils.Utils, taskDistributor worker.Ta
 type SubmitResultRequest struct {
 	AssignmentID        *int64 `json:"assignment_id,omitempty"`
 	PartyID             *int16 `json:"party_id,omitempty"`
-	ElectionID          int64  `json:"election_id"`
-	ElectionGroupID     int64  `json:"election_group_id"`
+	ElectionID          int32  `json:"election_id"`
+	ElectionGroupID     int16  `json:"election_group_id"`
 	PollingUnitID       int32  `json:"polling_unit_id"`
 	ResultSheetImageURL string `json:"result_sheet_image_url"`
 	ResultSheetVideoURL string `json:"result_sheet_video_url"`
@@ -41,7 +41,7 @@ type SubmitResultRequest struct {
 }
 
 type SingleElectionSubmissionRequest struct {
-	ElectionID          int64  `json:"election_id"`
+	ElectionID          int32  `json:"election_id"`
 	ResultSheetImageURL string `json:"result_sheet_image_url"`
 	ResultSheetVideoURL string `json:"result_sheet_video_url,omitempty"`
 }
@@ -49,7 +49,7 @@ type SingleElectionSubmissionRequest struct {
 type SubmitBatchResultRequest struct {
 	AssignmentID    *int64                            `json:"assignment_id,omitempty"`
 	PartyID         *int16                            `json:"party_id,omitempty"`
-	ElectionGroupID int64                             `json:"election_group_id"`
+	ElectionGroupID int16                             `json:"election_group_id"`
 	PollingUnitID   int32                             `json:"polling_unit_id"`
 	UploadedByINEC  bool                              `json:"uploaded_by_inec"`
 	Submissions     []SingleElectionSubmissionRequest `json:"submissions"`
@@ -290,13 +290,13 @@ func (h *Handler) ListResults(w http.ResponseWriter, r *http.Request) {
 	var params queries.ListPollingUnitResultsParams
 
 	if val := r.URL.Query().Get("election_id"); val != "" {
-		if v, err := strconv.ParseInt(val, 10, 64); err == nil {
-			params.ElectionID = pgtype.Int8{Int64: v, Valid: true}
+		if v, err := strconv.ParseInt(val, 10, 32); err == nil {
+			params.ElectionID = pgtype.Int4{Int32: int32(v), Valid: true}
 		}
 	}
 	if val := r.URL.Query().Get("election_group_id"); val != "" {
-		if v, err := strconv.ParseInt(val, 10, 64); err == nil {
-			params.ElectionGroupID = pgtype.Int8{Int64: v, Valid: true}
+		if v, err := strconv.ParseInt(val, 10, 16); err == nil {
+			params.ElectionGroupID = pgtype.Int2{Int16: int16(v), Valid: true}
 		}
 	}
 	if val := r.URL.Query().Get("party_id"); val != "" {
@@ -407,8 +407,8 @@ func (h *Handler) ListFinalResults(w http.ResponseWriter, r *http.Request) {
 	var params queries.ListPollingUnitFinalResultsParams
 
 	if val := r.URL.Query().Get("election_group_id"); val != "" {
-		if v, err := strconv.ParseInt(val, 10, 64); err == nil {
-			params.ElectionGroupID = pgtype.Int8{Int64: v, Valid: true}
+		if v, err := strconv.ParseInt(val, 10, 16); err == nil {
+			params.ElectionGroupID = pgtype.Int2{Int16: int16(v), Valid: true}
 		}
 	}
 	if val := r.URL.Query().Get("state_id"); val != "" {

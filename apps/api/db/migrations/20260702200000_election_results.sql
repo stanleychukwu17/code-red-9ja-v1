@@ -8,8 +8,8 @@ CREATE TABLE IF NOT EXISTS unmatched_polling_unit_results (
   id                       BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 
   -- Core context
-  election_id              BIGINT   REFERENCES elections(id) ON DELETE CASCADE NOT NULL,
-  election_group_id        BIGINT   REFERENCES election_groups(id) ON DELETE CASCADE NOT NULL,
+  election_id              INT      REFERENCES elections(id) ON DELETE CASCADE NOT NULL,
+  election_group_id        SMALLINT REFERENCES election_groups(id) ON DELETE CASCADE NOT NULL,
   submitted_by             BIGINT   REFERENCES users(id) ON DELETE SET NULL,
   party_id                 SMALLINT REFERENCES parties(id) ON DELETE SET NULL,
 
@@ -67,8 +67,8 @@ CREATE TABLE polling_unit_results (
 
   -- Core relationships
   assignment_id            BIGINT   REFERENCES polling_unit_assignments(id) ON DELETE SET NULL,
-  election_id              BIGINT   REFERENCES elections(id) ON DELETE CASCADE NOT NULL,
-  election_group_id        BIGINT   REFERENCES election_groups(id) ON DELETE CASCADE NOT NULL,
+  election_id              INT      REFERENCES elections(id) ON DELETE CASCADE NOT NULL,
+  election_group_id        SMALLINT REFERENCES election_groups(id) ON DELETE CASCADE NOT NULL,
   polling_unit_id          INTEGER  REFERENCES polling_units(id) ON DELETE CASCADE NOT NULL,
   submitted_by             BIGINT   REFERENCES users(id) ON DELETE SET NULL,
   party_id                 SMALLINT   REFERENCES parties(id) ON DELETE SET NULL,  -- NULL for general users
@@ -147,8 +147,8 @@ CREATE INDEX idx_pu_results_status         ON polling_unit_results(status);
 CREATE TABLE election_polling_unit_final_results (
   id                       BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 
-  election_id              BIGINT   REFERENCES elections(id) ON DELETE CASCADE NOT NULL,
-  election_group_id        BIGINT   REFERENCES election_groups(id) ON DELETE CASCADE NOT NULL,
+  election_id              INT      REFERENCES elections(id) ON DELETE CASCADE NOT NULL,
+  election_group_id        SMALLINT REFERENCES election_groups(id) ON DELETE CASCADE NOT NULL,
   polling_unit_id          INTEGER  REFERENCES polling_units(id) ON DELETE CASCADE NOT NULL,
 
   -- Denormalized for fast geo-filtering
@@ -199,7 +199,7 @@ CREATE INDEX idx_pu_final_results_ward ON election_polling_unit_final_results(wa
 -- ============================================================
 CREATE TABLE election_ward_final_result (
   id                          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  election_id                 BIGINT   REFERENCES elections(id) ON DELETE CASCADE NOT NULL,
+  election_id                 INT      REFERENCES elections(id) ON DELETE CASCADE NOT NULL,
   ward_id                     INT      REFERENCES wards(id) ON DELETE CASCADE NOT NULL,
   -- Denormalized for fast geo-filtering
   state_id                    SMALLINT REFERENCES c_states(id) ON DELETE SET NULL,
@@ -236,7 +236,7 @@ CREATE INDEX idx_ward_final_result_lga ON election_ward_final_result(lga_id);
 -- ============================================================
 CREATE TABLE election_state_constituency_final_result (
   id                          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  election_id                 BIGINT   REFERENCES elections(id) ON DELETE CASCADE NOT NULL,
+  election_id                 INT      REFERENCES elections(id) ON DELETE CASCADE NOT NULL,
   state_constituency_id       INT      REFERENCES state_constituencies(id) ON DELETE CASCADE NOT NULL,
   -- Denormalized for fast geo-filtering
   state_id                    SMALLINT REFERENCES c_states(id) ON DELETE SET NULL,
@@ -271,7 +271,7 @@ CREATE INDEX idx_sc_final_result_lga ON election_state_constituency_final_result
 -- ============================================================
 CREATE TABLE election_lga_final_result (
   id                          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  election_id                 BIGINT   REFERENCES elections(id) ON DELETE CASCADE NOT NULL,
+  election_id                 INT      REFERENCES elections(id) ON DELETE CASCADE NOT NULL,
   lga_id                      INT      REFERENCES lgas(id) ON DELETE CASCADE NOT NULL,
   -- Denormalized for fast geo-filtering
   state_id                    SMALLINT REFERENCES c_states(id) ON DELETE SET NULL,
@@ -304,7 +304,7 @@ CREATE INDEX idx_lga_final_result_federal ON election_lga_final_result(federal_c
 -- ============================================================
 CREATE TABLE election_federal_constituency_final_result (
   id                          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  election_id                 BIGINT   REFERENCES elections(id) ON DELETE CASCADE NOT NULL,
+  election_id                 INT      REFERENCES elections(id) ON DELETE CASCADE NOT NULL,
   federal_constituency_id     INT      REFERENCES federal_constituencies(id) ON DELETE CASCADE NOT NULL,
   -- Denormalized for fast geo-filtering
   state_id                    SMALLINT REFERENCES c_states(id) ON DELETE SET NULL,
@@ -335,7 +335,7 @@ CREATE INDEX idx_fc_final_result_senatorial ON election_federal_constituency_fin
 -- ============================================================
 CREATE TABLE election_senatorial_district_final_result (
   id                          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  election_id                 BIGINT   REFERENCES elections(id) ON DELETE CASCADE NOT NULL,
+  election_id                 INT      REFERENCES elections(id) ON DELETE CASCADE NOT NULL,
   senatorial_district_id      INT      REFERENCES senatorial_districts(id) ON DELETE CASCADE NOT NULL,
   state_id                    SMALLINT REFERENCES c_states(id) ON DELETE SET NULL,
 
@@ -363,7 +363,7 @@ CREATE INDEX idx_sd_final_result_state ON election_senatorial_district_final_res
 -- ============================================================
 CREATE TABLE election_state_final_result (
   id                          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  election_id                 BIGINT   REFERENCES elections(id) ON DELETE CASCADE NOT NULL,
+  election_id                 INT      REFERENCES elections(id) ON DELETE CASCADE NOT NULL,
   state_id                    SMALLINT REFERENCES c_states(id) ON DELETE CASCADE NOT NULL,
 
   accredited_voters           INTEGER  NOT NULL DEFAULT 0 CHECK (accredited_voters >= 0),
@@ -388,7 +388,7 @@ CREATE INDEX idx_state_final_result_state ON election_state_final_result(state_i
 -- ============================================================
 CREATE TABLE election_final_result (
   id                          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  election_id                 BIGINT   REFERENCES elections(id) ON DELETE CASCADE NOT NULL,
+  election_id                 INT      REFERENCES elections(id) ON DELETE CASCADE NOT NULL,
 
   accredited_voters           INTEGER  NOT NULL DEFAULT 0 CHECK (accredited_voters >= 0),
   votes_cast                  INTEGER  NOT NULL DEFAULT 0 CHECK (votes_cast >= 0),

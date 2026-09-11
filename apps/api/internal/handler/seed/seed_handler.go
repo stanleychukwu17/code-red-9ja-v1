@@ -135,7 +135,7 @@ func (h *Handler) SimulateElectionResults(w http.ResponseWriter, r *http.Request
 	}
 
 	idStr := chi.URLParam(r, "id")
-	electionID, err := strconv.ParseInt(idStr, 10, 64)
+	electionID, err := strconv.ParseInt(idStr, 10, 32)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election ID")
 		return
@@ -149,7 +149,7 @@ func (h *Handler) SimulateElectionResults(w http.ResponseWriter, r *http.Request
 		}
 	}
 
-	res, err := h.seedService.SimulateElectionResults(r.Context(), electionID, req)
+	res, err := h.seedService.SimulateElectionResults(r.Context(), int32(electionID), req)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to simulate election results: "+err.Error())
 		return

@@ -14,12 +14,12 @@ import (
 
 // EligibleElectionResponse is the response shape for a single eligible election including its candidates.
 type EligibleElectionResponse struct {
-	ID                     int64                                             `json:"id"`
+	ID                     int32                                             `json:"id"`
 	Name                   string                                            `json:"name"`
 	Rank                   int32                                             `json:"rank"`
 	CandidatesCount        int32                                             `json:"candidates_count"`
 	ElectionDate           interface{}                                       `json:"election_date"`
-	ElectionGroupID        int64                                             `json:"election_group_id"`
+	ElectionGroupID        int16                                             `json:"election_group_id"`
 	ElectionGroupName      string                                            `json:"election_group_name"`
 	OfficeID               int16                                             `json:"office_id"`
 	OfficeName             string                                            `json:"office_name"`
@@ -48,19 +48,19 @@ func (h *Handler) GetEligibleElectionsForPollingUnit(w http.ResponseWriter, r *h
 		return
 	}
 
-	electionGroupID, err := strconv.ParseInt(electionGroupIDStr, 10, 64)
+	electionGroupID, err := strconv.ParseInt(electionGroupIDStr, 10, 16)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "invalid election_group_id")
 		return
 	}
 
-	pollingUnitID, err := strconv.ParseInt(pollingUnitIDStr, 10, 64)
+	pollingUnitID, err := strconv.ParseInt(pollingUnitIDStr, 10, 32)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "invalid polling_unit_id")
 		return
 	}
 
-	elections, err := h.service.GetEligibleElectionsForPollingUnit(ctx, electionGroupID, int32(pollingUnitID))
+	elections, err := h.service.GetEligibleElectionsForPollingUnit(ctx, int16(electionGroupID), int32(pollingUnitID))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch eligible elections")
 		return
@@ -72,8 +72,8 @@ func (h *Handler) GetEligibleElectionsForPollingUnit(w http.ResponseWriter, r *h
 }
 
 type SubmitElectionVotesRequest struct {
-	ElectionGroupID int64                        `json:"election_group_id"`
-	PollingUnitID   int64                        `json:"polling_unit_id"`
+	ElectionGroupID int16                        `json:"election_group_id"`
+	PollingUnitID   int32                        `json:"polling_unit_id"`
 	Votes           []electionsservice.VoteInput `json:"votes"`
 	VotersCardImage string                       `json:"voters_card_image"`
 }
@@ -135,13 +135,13 @@ func (h *Handler) GetUserElectionGroupVoteStatus(w http.ResponseWriter, r *http.
 	}
 
 	idStr := chi.URLParam(r, "id")
-	electionGroupID, err := strconv.ParseInt(idStr, 10, 64)
+	electionGroupID, err := strconv.ParseInt(idStr, 10, 16)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election group ID")
 		return
 	}
 
-	status, err := h.service.GetUserElectionGroupVoteStatus(ctx, claims.UserID, electionGroupID)
+	status, err := h.service.GetUserElectionGroupVoteStatus(ctx, claims.UserID, int16(electionGroupID))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch vote status: "+err.Error())
 		return

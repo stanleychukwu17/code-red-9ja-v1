@@ -19,7 +19,7 @@ AND status NOT IN ('nullified')
 `
 
 type GetAllPollingUnitResultsByPUParams struct {
-	ElectionID    int64 `json:"election_id"`
+	ElectionID    int32 `json:"election_id"`
 	PollingUnitID int32 `json:"polling_unit_id"`
 }
 
@@ -130,7 +130,7 @@ LIMIT 1
 `
 
 type GetPollingUnitResultByUserAndElectionParams struct {
-	ElectionID    int64       `json:"election_id"`
+	ElectionID    int32       `json:"election_id"`
 	PollingUnitID int32       `json:"polling_unit_id"`
 	SubmittedBy   pgtype.Int8 `json:"submitted_by"`
 }
@@ -184,7 +184,7 @@ LIMIT 1
 
 type GetUserPollingUnitResultInElectionGroupParams struct {
 	SubmittedBy     pgtype.Int8 `json:"submitted_by"`
-	ElectionGroupID int64       `json:"election_group_id"`
+	ElectionGroupID int16       `json:"election_group_id"`
 }
 
 func (q *Queries) GetUserPollingUnitResultInElectionGroup(ctx context.Context, arg GetUserPollingUnitResultInElectionGroupParams) (int32, error) {
@@ -224,7 +224,7 @@ SET
 WHERE id = $1
 `
 
-func (q *Queries) IncrementElectionGroupResultCount(ctx context.Context, id int64) error {
+func (q *Queries) IncrementElectionGroupResultCount(ctx context.Context, id int16) error {
 	_, err := q.db.Exec(ctx, incrementElectionGroupResultCount, id)
 	return err
 }
@@ -237,7 +237,7 @@ SET
 WHERE id = $1
 `
 
-func (q *Queries) IncrementElectionResultCount(ctx context.Context, id int64) error {
+func (q *Queries) IncrementElectionResultCount(ctx context.Context, id int32) error {
 	_, err := q.db.Exec(ctx, incrementElectionResultCount, id)
 	return err
 }
@@ -252,7 +252,7 @@ WHERE party_id = $1 AND election_group_id = $2
 
 type IncrementPartyElectionGroupResultCountParams struct {
 	PartyID         int16 `json:"party_id"`
-	ElectionGroupID int64 `json:"election_group_id"`
+	ElectionGroupID int16 `json:"election_group_id"`
 }
 
 func (q *Queries) IncrementPartyElectionGroupResultCount(ctx context.Context, arg IncrementPartyElectionGroupResultCountParams) error {
@@ -264,8 +264,8 @@ const listPollingUnitResults = `-- name: ListPollingUnitResults :many
 SELECT id, assignment_id, election_id, election_group_id, polling_unit_id, submitted_by, party_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, result_sheet_image_url, result_sheet_video_url, status, ai_extracted_data, result_is_ai_generated, ai_confidence_score, disputed_reason, confirmed_at, confirmed_by, up_votes, down_votes, uploaded_by_inec, created_at, updated_at
 FROM polling_unit_results
 WHERE
-  ($1::bigint    IS NULL OR election_id       = $1)
-  AND ($2::bigint IS NULL OR election_group_id = $2)
+  ($1::int    IS NULL OR election_id       = $1)
+  AND ($2::smallint IS NULL OR election_group_id = $2)
   AND ($3::smallint   IS NULL OR party_id          = $3)
   AND ($4::int IS NULL OR polling_unit_id = $4)
   AND ($5::bigint IS NULL OR submitted_by    = $5)
@@ -280,8 +280,8 @@ LIMIT $12
 `
 
 type ListPollingUnitResultsParams struct {
-	ElectionID      pgtype.Int8 `json:"election_id"`
-	ElectionGroupID pgtype.Int8 `json:"election_group_id"`
+	ElectionID      pgtype.Int4 `json:"election_id"`
+	ElectionGroupID pgtype.Int2 `json:"election_group_id"`
 	PartyID         pgtype.Int2 `json:"party_id"`
 	PollingUnitID   pgtype.Int4 `json:"polling_unit_id"`
 	SubmittedBy     pgtype.Int8 `json:"submitted_by"`
@@ -416,8 +416,8 @@ INSERT INTO polling_unit_results (
 
 type SubmitPollingUnitResultParams struct {
 	AssignmentID          pgtype.Int8    `json:"assignment_id"`
-	ElectionID            int64          `json:"election_id"`
-	ElectionGroupID       int64          `json:"election_group_id"`
+	ElectionID            int32          `json:"election_id"`
+	ElectionGroupID       int16          `json:"election_group_id"`
 	PollingUnitID         int32          `json:"polling_unit_id"`
 	SubmittedBy           pgtype.Int8    `json:"submitted_by"`
 	PartyID               pgtype.Int2    `json:"party_id"`

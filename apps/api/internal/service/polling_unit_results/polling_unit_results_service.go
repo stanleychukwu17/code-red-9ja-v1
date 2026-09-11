@@ -45,8 +45,8 @@ type CandidateResult struct {
 type SubmitResultInput struct {
 	UserFakeID          int64
 	AssignmentID        *int64
-	ElectionID          int64
-	ElectionGroupID     int64
+	ElectionID          int32
+	ElectionGroupID     int16
 	PollingUnitID       int32
 	PartyID             *int16
 	ResultSheetImageURL string
@@ -56,7 +56,7 @@ type SubmitResultInput struct {
 
 // SingleElectionSubmission is an item in a batch upload
 type SingleElectionSubmission struct {
-	ElectionID          int64  `json:"election_id"`
+	ElectionID          int32  `json:"election_id"`
 	ResultSheetImageURL string `json:"result_sheet_image_url"`
 	ResultSheetVideoURL string `json:"result_sheet_video_url,omitempty"`
 }
@@ -65,7 +65,7 @@ type SingleElectionSubmission struct {
 type SubmitBatchResultsInput struct {
 	UserFakeID      int64                      `json:"user_fake_id"`
 	AssignmentID    *int64                     `json:"assignment_id,omitempty"`
-	ElectionGroupID int64                      `json:"election_group_id"`
+	ElectionGroupID int16                      `json:"election_group_id"`
 	PollingUnitID   int32                      `json:"polling_unit_id"`
 	PartyID         *int16                     `json:"party_id,omitempty"`
 	UploadedByINEC  bool                       `json:"uploaded_by_inec"`
@@ -96,7 +96,7 @@ func (s *Service) validateUserEligibility(
 	qtx *queries.Queries,
 	userFakeID int64,
 	assignmentID *int64,
-	electionGroupID int64,
+	electionGroupID int16,
 	pollingUnitID int32,
 ) (queries.GetUserByFakeIDRow, queries.PollingUnit, queries.Lga, queries.Ward, error) {
 	// 1. Resolve real user from fake ID

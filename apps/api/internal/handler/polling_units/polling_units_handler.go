@@ -20,7 +20,7 @@ type PollingUnitsService interface {
 	UpdatePollingUnit(ctx context.Context, arg queries.UpdatePollingUnitParams) (queries.PollingUnit, error)
 	DeletePollingUnit(ctx context.Context, id int32) error
 	GetPollingUnits(ctx context.Context, wardID, localGovernmentID, stateID int32) ([]queries.PollingUnit, error)
-	GetPollingUnitsWithCapacity(ctx context.Context, wardID, localGovernmentID, stateID int32, partyID int16, electionGroupID int64) ([]pollingunitsservice.PollingUnitWithCapacity, error)
+	GetPollingUnitsWithCapacity(ctx context.Context, wardID, localGovernmentID, stateID int32, partyID int16, electionGroupID int16) ([]pollingunitsservice.PollingUnitWithCapacity, error)
 }
 
 type Handler struct {
@@ -448,7 +448,7 @@ func (h *Handler) GetPollingUnits(w http.ResponseWriter, r *http.Request) {
 	localGovernmentID := parseOptionalQueryInt(r, "lga_id")
 	stateID := parseOptionalQueryInt(r, "state_id")
 	partyID := int16(parseOptionalQueryInt(r, "party_id"))
-	electionGroupID := int64(parseOptionalQueryInt(r, "election_group_id"))
+	electionGroupID := int16(parseOptionalQueryInt(r, "election_group_id"))
 	limit, cursor := parsePaginationParams(r)
 
 	if partyID > 0 && electionGroupID > 0 {

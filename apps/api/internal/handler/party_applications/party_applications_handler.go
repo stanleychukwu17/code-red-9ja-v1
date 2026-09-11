@@ -21,11 +21,11 @@ type PartyApplicationsService interface {
 	SubmitApplication(ctx context.Context, input partyapplications.SubmitApplicationInput) ([]queries.PartyApplication, error)
 	SubmitSupervisorApplication(ctx context.Context, input partyapplications.SubmitSupervisorApplicationInput) (queries.PartyApplication, error)
 	GetApplicationByID(ctx context.Context, id int64) (queries.PartyApplication, error)
-	ListApplications(ctx context.Context, userID int64, partyID int16, electionGroupID int64, status string, stateID int16, lgaID, wardID int32, limit int32, cursor int64) ([]queries.ListApplicationsRow, error)
+	ListApplications(ctx context.Context, userID int64, partyID int16, electionGroupID int16, status string, stateID int16, lgaID, wardID int32, limit int32, cursor int64) ([]queries.ListApplicationsRow, error)
 	RejectApplication(ctx context.Context, id int64, reason string) (queries.PartyApplication, error)
 	CancelApplication(ctx context.Context, id int64) (queries.PartyApplication, error)
 	ApproveApplication(ctx context.Context, input partyapplications.ApproveApplicationInput) (queries.PartyApplication, error)
-	GetPollingUnitRecommendations(ctx context.Context, partyID int16, electionGroupID int64, lgaID, wardID, pollingUnitID int32) ([]queries.GetPollingUnitsWithAgentCountsRow, error)
+	GetPollingUnitRecommendations(ctx context.Context, partyID int16, electionGroupID int16, lgaID, wardID, pollingUnitID int32) ([]queries.GetPollingUnitsWithAgentCountsRow, error)
 }
 
 type UsersService interface {
@@ -48,9 +48,9 @@ func NewHandler(service PartyApplicationsService, usersService UsersService, uti
 }
 
 type SubmitApplicationRequest struct {
-	PartyID          int64   `json:"party_id"`
-	ElectionGroupID  int64   `json:"election_group_id"`
-	ElectionGroupIDs []int64 `json:"election_group_ids"`
+	PartyID          int16   `json:"party_id"`
+	ElectionGroupID  int16   `json:"election_group_id"`
+	ElectionGroupIDs []int16 `json:"election_group_ids"`
 	PollingUnitID    int32   `json:"polling_unit_id"`
 	Avatar           string  `json:"avatar"`
 	VotersCardImage  string  `json:"voters_card_image"`
@@ -105,7 +105,7 @@ func (h *Handler) SubmitApplication(w http.ResponseWriter, r *http.Request) {
 
 	electionGroupIDs := req.ElectionGroupIDs
 	if len(electionGroupIDs) == 0 && req.ElectionGroupID > 0 {
-		electionGroupIDs = []int64{req.ElectionGroupID}
+		electionGroupIDs = []int16{req.ElectionGroupID}
 	}
 
 	if req.PartyID <= 0 || len(electionGroupIDs) == 0 || req.PollingUnitID <= 0 || req.CurrentCountry <= 0 || req.CurrentState <= 0 || req.CurrentLga <= 0 {
@@ -115,7 +115,7 @@ func (h *Handler) SubmitApplication(w http.ResponseWriter, r *http.Request) {
 
 	apps, err := h.service.SubmitApplication(r.Context(), partyapplications.SubmitApplicationInput{
 		UserID:            requester.ID,
-		PartyID:           int16(req.PartyID),
+		PartyID:           req.PartyID,
 		ElectionGroupIDs:  electionGroupIDs,
 		PollingUnitID:     req.PollingUnitID,
 		Avatar:            req.Avatar,
@@ -157,7 +157,7 @@ func (h *Handler) SubmitApplication(w http.ResponseWriter, r *http.Request) {
 }
 
 type SubmitSupervisorApplicationRequest struct {
-	ElectionGroupID      int64  `json:"election_group_id"`
+	ElectionGroupID      int16  `json:"election_group_id"`
 	Role                 string `json:"role"`
 	StateID              int16  `json:"state_id"`
 	LgaID                int32  `json:"lga_id"`
@@ -178,6 +178,7 @@ type SubmitSupervisorApplicationRequest struct {
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Security     BearerAuth
 // @Router       /party-applications/supervisor [post]
+// func (h *Handler) SubmitSupervisorApplication(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) SubmitSupervisorApplication(w http.ResponseWriter, r *http.Request) {
 	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
 	if !ok {
@@ -260,7 +261,7 @@ func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var partyID int16
-	var electionGroupID int64
+	var electionGroupID int16
 	status := r.URL.Query().Get("status")
 
 	if val := r.URL.Query().Get("party_id"); val != "" {
@@ -269,7 +270,9 @@ func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if val := r.URL.Query().Get("election_group_id"); val != "" {
-		electionGroupID, _ = strconv.ParseInt(val, 10, 64)
+		if egID, _ := strconv.ParseInt(val, 10, 16); egID > 0 {
+			electionGroupID = int16(egID)
+		}
 	}
 
 	limit := int32(20)
@@ -380,8 +383,8 @@ func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 // @Security     BearerAuth
 // @Router       /party-applications/recommendations [get]
 func (h *Handler) GetPollingUnitRecommendations(w http.ResponseWriter, r *http.Request) {
-	partyID, _ := strconv.ParseInt(r.URL.Query().Get("party_id"), 10, 64)
-	electionGroupID, _ := strconv.ParseInt(r.URL.Query().Get("election_group_id"), 10, 64)
+	partyID, _ := strconv.ParseInt(r.URL.Query().Get("party_id"), 10, 16)
+	electionGroupID, _ := strconv.ParseInt(r.URL.Query().Get("election_group_id"), 10, 16)
 	lgaID, _ := strconv.ParseInt(r.URL.Query().Get("lga_id"), 10, 32)
 	wardID, _ := strconv.ParseInt(r.URL.Query().Get("ward_id"), 10, 32)
 	pollingUnitID, _ := strconv.ParseInt(r.URL.Query().Get("polling_unit_id"), 10, 32)
@@ -391,7 +394,7 @@ func (h *Handler) GetPollingUnitRecommendations(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	units, err := h.service.GetPollingUnitRecommendations(r.Context(), int16(partyID), electionGroupID, int32(lgaID), int32(wardID), int32(pollingUnitID))
+	units, err := h.service.GetPollingUnitRecommendations(r.Context(), int16(partyID), int16(electionGroupID), int32(lgaID), int32(wardID), int32(pollingUnitID))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch recommendations: "+err.Error())
 		return

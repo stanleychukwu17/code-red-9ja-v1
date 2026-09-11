@@ -28,9 +28,9 @@ func NewHandler(s *polling_unit_updates.Service, u *utils.Utils, taskDistributor
 
 type CreateUpdateRequest struct {
 	PollingUnitID   int32    `json:"polling_unit_id"`
-	ElectionGroupID int64    `json:"election_group_id"`
+	ElectionGroupID int16    `json:"election_group_id"`
 	AssignmentID    *int64   `json:"assignment_id,omitempty"`
-	PartyID         *int64   `json:"party_id,omitempty"`
+	PartyID         *int16   `json:"party_id,omitempty"`
 	Message         string   `json:"message"`
 	MediaUrls       []string `json:"media_urls"`
 	IsReport        bool     `json:"is_report"`
@@ -72,13 +72,7 @@ func (h *Handler) CreateUpdate(w http.ResponseWriter, r *http.Request) {
 		PollingUnitID:   req.PollingUnitID,
 		ElectionGroupID: req.ElectionGroupID,
 		AssignmentID:    req.AssignmentID,
-		PartyID: func() *int16 {
-			if req.PartyID == nil {
-				return nil
-			}
-			p := int16(*req.PartyID)
-			return &p
-		}(),
+		PartyID:         req.PartyID,
 		Message:     req.Message,
 		MediaUrls:   req.MediaUrls,
 		IsReport:    req.IsReport,
@@ -137,8 +131,8 @@ func (h *Handler) ListUpdates(w http.ResponseWriter, r *http.Request) {
 	var params queries.ListPollingUnitUpdatesParams
 
 	if val := r.URL.Query().Get("election_group_id"); val != "" {
-		if v, err := strconv.ParseInt(val, 10, 64); err == nil {
-			params.ElectionGroupID = pgtype.Int8{Int64: v, Valid: true}
+		if v, err := strconv.ParseInt(val, 10, 16); err == nil {
+			params.ElectionGroupID = pgtype.Int2{Int16: int16(v), Valid: true}
 		}
 	}
 	if val := r.URL.Query().Get("party_id"); val != "" {

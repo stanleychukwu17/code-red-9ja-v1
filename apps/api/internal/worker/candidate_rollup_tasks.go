@@ -29,7 +29,7 @@ const (
 // ─── Payload types ────────────────────────────────────────────────────────────
 
 type RollupSingleWardPayload struct {
-	ElectionID            int64 `json:"election_id"`
+	ElectionID            int32 `json:"election_id"`
 	WardID                int32 `json:"ward_id"`
 	LGAID                 int32 `json:"lga_id"`
 	StateID               int16 `json:"state_id"`
@@ -39,12 +39,12 @@ type RollupSingleWardPayload struct {
 }
 
 type RollupSingleStateConstituencyPayload struct {
-	ElectionID          int64 `json:"election_id"`
+	ElectionID          int32 `json:"election_id"`
 	StateConstituencyID int32 `json:"state_constituency_id"`
 }
 
 type RollupSingleLGAPayload struct {
-	ElectionID            int64 `json:"election_id"`
+	ElectionID            int32 `json:"election_id"`
 	LGAID                 int32 `json:"lga_id"`
 	StateID               int16 `json:"state_id"`
 	FederalConstituencyID int32 `json:"federal_constituency_id"`
@@ -52,23 +52,23 @@ type RollupSingleLGAPayload struct {
 }
 
 type RollupSingleFederalConstituencyPayload struct {
-	ElectionID            int64 `json:"election_id"`
+	ElectionID            int32 `json:"election_id"`
 	FederalConstituencyID int32 `json:"federal_constituency_id"`
 }
 
 type RollupSingleSenatorialDistrictPayload struct {
-	ElectionID           int64 `json:"election_id"`
+	ElectionID           int32 `json:"election_id"`
 	SenatorialDistrictID int32 `json:"senatorial_district_id"`
 	StateID              int16 `json:"state_id,omitempty"`
 }
 
 type RollupSingleStatePayload struct {
-	ElectionID int64 `json:"election_id"`
+	ElectionID int32 `json:"election_id"`
 	StateID    int16 `json:"state_id"`
 }
 
 type RollupSingleElectionPayload struct {
-	ElectionID int64 `json:"election_id"`
+	ElectionID int32 `json:"election_id"`
 }
 
 // ─── Distributors ─────────────────────────────────────────────────────────────

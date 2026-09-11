@@ -24,6 +24,29 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/": {
+            "get": {
+                "description": "get the API root message",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "root"
+                ],
+                "summary": "API Root",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/admin/agent-marketing-campaigns": {
             "get": {
                 "security": [
@@ -468,7 +491,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partieshandler.SetPartyDiscountRequest"
+                            "$ref": "#/definitions/internal_handler_parties.SetPartyDiscountRequest"
                         }
                     }
                 ],
@@ -515,7 +538,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partieshandler.ToggleVerificationRequest"
+                            "$ref": "#/definitions/internal_handler_parties.ToggleVerificationRequest"
                         }
                     }
                 ],
@@ -621,7 +644,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/referrals.createReferralRequest"
+                            "$ref": "#/definitions/internal_handler_referrals.createReferralRequest"
                         }
                     }
                 ],
@@ -682,7 +705,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/referrals.updateReferralRequest"
+                            "$ref": "#/definitions/internal_handler_referrals.updateReferralRequest"
                         }
                     }
                 ],
@@ -750,7 +773,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partieshandler.SetSlotPriceRequest"
+                            "$ref": "#/definitions/internal_handler_parties.SetSlotPriceRequest"
                         }
                     }
                 ],
@@ -798,13 +821,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/utils.SuccessResponse"
+                                    "$ref": "#/definitions/free9ja_api_internal_utils.SuccessResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/system_settings.SystemSettingResponse"
+                                            "$ref": "#/definitions/internal_handler_system_settings.SystemSettingResponse"
                                         }
                                     }
                                 }
@@ -814,19 +837,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/utils.ErrorResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/utils.ErrorResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/utils.ErrorResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
                         }
                     }
                 }
@@ -862,7 +885,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/system_settings.UpdateSystemSettingRequest"
+                            "$ref": "#/definitions/internal_handler_system_settings.UpdateSystemSettingRequest"
                         }
                     }
                 ],
@@ -872,13 +895,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/utils.SuccessResponse"
+                                    "$ref": "#/definitions/free9ja_api_internal_utils.SuccessResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/system_settings.SystemSettingResponse"
+                                            "$ref": "#/definitions/internal_handler_system_settings.SystemSettingResponse"
                                         }
                                     }
                                 }
@@ -888,13 +911,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/utils.ErrorResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/utils.ErrorResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
                         }
                     }
                 }
@@ -994,7 +1017,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/inecgrabber.ResolveUnmatchedRequest"
+                            "$ref": "#/definitions/internal_handler_inec_grabber.ResolveUnmatchedRequest"
                         }
                     }
                 ],
@@ -1151,7 +1174,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/usershandler.UpdateUserPhoneNumbersRequest"
+                            "$ref": "#/definitions/internal_handler_users.UpdateUserPhoneNumbersRequest"
                         }
                     }
                 ],
@@ -1205,7 +1228,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/pageverificationshandler.AssignVerificationRequest"
+                            "$ref": "#/definitions/internal_handler_page_verifications.AssignVerificationRequest"
                         }
                     }
                 ],
@@ -1298,6 +1321,488 @@ const docTemplate = `{
                 }
             }
         },
+        "/agent-earnings": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AgentEarnings"
+                ],
+                "summary": "List agent earnings",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Filter by user ID",
+                        "name": "user_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by election group",
+                        "name": "election_group_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by party",
+                        "name": "party_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by status (pending|approved|paid|disputed)",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size (default 50)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Cursor for pagination",
+                        "name": "cursor",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/free9ja_api_internal_utils.SuccessResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/agent-earnings/allocations": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AgentEarnings"
+                ],
+                "summary": "Get agent task percentage allocations and potential payouts in Kobo",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election Group ID",
+                        "name": "election_group_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Role Type (polling_agent|ward_supervisor|lga_supervisor|state_supervisor)",
+                        "name": "role_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Assignment ID",
+                        "name": "assignment_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/free9ja_api_internal_utils.SuccessResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/agent-earnings/assignment/{assignment_id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AgentEarnings"
+                ],
+                "summary": "Get earnings for a specific assignment",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Assignment ID",
+                        "name": "assignment_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/free9ja_api_internal_utils.SuccessResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/agent-earnings/calculate/{assignment_id}": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Computes and upserts the earnings record for a given assignment. Can be called repeatedly to refresh.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AgentEarnings"
+                ],
+                "summary": "Calculate agent earnings for an assignment",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Assignment ID",
+                        "name": "assignment_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/free9ja_api_internal_utils.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/agent-earnings/estimate-payout": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AgentEarnings"
+                ],
+                "summary": "Estimate potential payout in Kobo for a given task type without requiring an assignment ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Task Type (readiness|results|attendance|election_start|election_end|live_voters_referred|updates)",
+                        "name": "task_type",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Role (polling_agent|ward_supervisor|lga_supervisor|state_supervisor)",
+                        "name": "role",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Election Group ID",
+                        "name": "election_group_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Party ID",
+                        "name": "party_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/free9ja_api_internal_utils.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/agent-earnings/potential-payout": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AgentEarnings"
+                ],
+                "summary": "Get potential payout in Kobo for a given task type",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Assignment ID",
+                        "name": "assignment_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Task Type (readiness|results|attendance|election_start|election_end|live_voters_referred|updates)",
+                        "name": "task_type",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/free9ja_api_internal_utils.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/agent-earnings/request-payout": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AgentEarnings"
+                ],
+                "summary": "Request duty payout for an agent assignment / election group",
+                "parameters": [
+                    {
+                        "description": "Payout Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler_agent_earnings.RequestPayoutRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/free9ja_api_internal_utils.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/agent-earnings/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AgentEarnings"
+                ],
+                "summary": "Get a single agent earnings record",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Earnings ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/free9ja_api_internal_utils.SuccessResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/agent-earnings/{id}/approve": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AgentEarnings"
+                ],
+                "summary": "Approve earnings for payout (admin)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Earnings ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/free9ja_api_internal_utils.SuccessResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/agent-earnings/{id}/mark-paid": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AgentEarnings"
+                ],
+                "summary": "Mark approved earnings as paid (admin)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Earnings ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/free9ja_api_internal_utils.SuccessResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/agent-marketing-plans": {
             "get": {
                 "security": [
@@ -1333,6 +1838,139 @@ const docTemplate = `{
                 }
             }
         },
+        "/agent-performance": {
+            "get": {
+                "description": "Returns cursor-paginated performance stats for polling agents and supervisors.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AgentPerformance"
+                ],
+                "summary": "Get agent \u0026 supervisor performance stats",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Role type (polling_agent, ward_supervisor, lga_supervisor, state_supervisor)",
+                        "name": "role_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Party ID filter",
+                        "name": "party_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Election Group ID filter",
+                        "name": "election_group_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "State ID filter",
+                        "name": "state_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "LGA ID filter",
+                        "name": "lga_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Ward ID filter",
+                        "name": "ward_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search name or code",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Pagination cursor ID",
+                        "name": "cursor",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page limit (default 20, max 100)",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/free9ja_api_internal_utils.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/supervisor-assignments": {
+            "get": {
+                "description": "Get supervisor assignments for a user for a specific election group",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "SupervisorAssignments"
+                ],
+                "summary": "Get Supervisor Assignments",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "User ID",
+                        "name": "user_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Election Group ID",
+                        "name": "election_group_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/free9ja_api_internal_utils.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/admin/login": {
             "post": {
                 "description": "Authenticates an admin and returns access and refresh tokens",
@@ -1353,7 +1991,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/authhandler.AdminLoginRequest"
+                            "$ref": "#/definitions/internal_handler_auth.AdminLoginRequest"
                         }
                     }
                 ],
@@ -1361,7 +1999,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/authhandler.AdminLoginResponse"
+                            "$ref": "#/definitions/internal_handler_auth.AdminLoginResponse"
                         }
                     },
                     "400": {
@@ -1401,7 +2039,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/authhandler.ChangePasswordByEmailRequest"
+                            "$ref": "#/definitions/internal_handler_auth.ChangePasswordByEmailRequest"
                         }
                     }
                 ],
@@ -1450,7 +2088,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/authhandler.CheckNINRequest"
+                            "$ref": "#/definitions/internal_handler_auth.CheckNINRequest"
                         }
                     }
                 ],
@@ -1492,7 +2130,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/authhandler.CheckReferralCodeRequest"
+                            "$ref": "#/definitions/internal_handler_auth.CheckReferralCodeRequest"
                         }
                     }
                 ],
@@ -1534,7 +2172,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/authhandler.CheckUsernameRequest"
+                            "$ref": "#/definitions/internal_handler_auth.CheckUsernameRequest"
                         }
                     }
                 ],
@@ -1576,7 +2214,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/authhandler.LoginRequest"
+                            "$ref": "#/definitions/internal_handler_auth.LoginRequest"
                         }
                     }
                 ],
@@ -1625,7 +2263,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/authhandler.LogoutRequest"
+                            "$ref": "#/definitions/internal_handler_auth.LogoutRequest"
                         }
                     }
                 ],
@@ -1667,7 +2305,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/authhandler.PartyLoginRequest"
+                            "$ref": "#/definitions/internal_handler_auth.PartyLoginRequest"
                         }
                     }
                 ],
@@ -1675,7 +2313,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/authhandler.AdminLoginResponse"
+                            "$ref": "#/definitions/internal_handler_auth.AdminLoginResponse"
                         }
                     },
                     "400": {
@@ -1715,7 +2353,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/authhandler.RefreshRequest"
+                            "$ref": "#/definitions/internal_handler_auth.RefreshRequest"
                         }
                     }
                 ],
@@ -1764,7 +2402,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/authhandler.RegisterCandidatePlaceholderRequest"
+                            "$ref": "#/definitions/internal_handler_auth.RegisterCandidatePlaceholderRequest"
                         }
                     }
                 ],
@@ -1813,7 +2451,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/usershandler.UpdateUserRolesRequest"
+                            "$ref": "#/definitions/internal_handler_users.UpdateUserRolesRequest"
                         }
                     }
                 ],
@@ -1876,7 +2514,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/authhandler.SignupRequest"
+                            "$ref": "#/definitions/internal_handler_auth.SignupRequest"
                         }
                     }
                 ],
@@ -1918,7 +2556,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/usershandler.MakeUserSuperAdminRequest"
+                            "$ref": "#/definitions/internal_handler_users.MakeUserSuperAdminRequest"
                         }
                     }
                 ],
@@ -2139,7 +2777,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/bodieshandler.GetCountriesResponse"
+                            "$ref": "#/definitions/internal_handler_bodies.GetCountriesResponse"
                         }
                     },
                     "500": {
@@ -2177,7 +2815,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/bodieshandler.GetStatesResponse"
+                            "$ref": "#/definitions/internal_handler_bodies.GetStatesResponse"
                         }
                     },
                     "400": {
@@ -2264,7 +2902,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/electiongroupshandler.CreateElectionGroupRequest"
+                            "$ref": "#/definitions/internal_handler_election_groups.CreateElectionGroupRequest"
                         }
                     }
                 ],
@@ -2372,7 +3010,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/electiongroupshandler.UpdateElectionGroupRequest"
+                            "$ref": "#/definitions/internal_handler_election_groups.UpdateElectionGroupRequest"
                         }
                     }
                 ],
@@ -2531,7 +3169,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/electiongroupshandler.UpsertPartyElectionGroupStatsRequest"
+                            "$ref": "#/definitions/internal_handler_election_groups.UpsertPartyElectionGroupStatsRequest"
                         }
                     }
                 ],
@@ -2552,6 +3190,653 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/election-groups/{id}/stats/federal-constituencies": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Fetches pre-aggregated election statistics at the federal constituency level",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ElectionStats"
+                ],
+                "summary": "List federal constituency stats for an election group",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "State ID filter",
+                        "name": "state_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Senatorial District ID filter",
+                        "name": "senatorial_district_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/election-groups/{id}/stats/federal-constituencies/{fc_id}/parties/{party_id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Fetches pre-aggregated election statistics for a single federal constituency unit and party, extracting party stats from the parties JSONB array.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ElectionStats"
+                ],
+                "summary": "Get party federal constituency stats for a single geographic unit",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Federal Constituency ID",
+                        "name": "fc_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Party ID",
+                        "name": "party_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/election-groups/{id}/stats/lgas": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Fetches pre-aggregated election statistics at the LGA level",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ElectionStats"
+                ],
+                "summary": "List LGA stats for an election group",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "State ID filter",
+                        "name": "state_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Senatorial District ID filter",
+                        "name": "senatorial_district_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/election-groups/{id}/stats/lgas/{lga_id}/parties/{party_id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Fetches pre-aggregated election statistics for a single LGA unit and party, extracting party stats from the parties JSONB array.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ElectionStats"
+                ],
+                "summary": "Get party LGA stats for a single geographic unit",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "LGA ID",
+                        "name": "lga_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Party ID",
+                        "name": "party_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/election-groups/{id}/stats/parties/{party_id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Fetches pre-aggregated election statistics for an election group and party, extracting party stats from the parties JSONB array.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ElectionStats"
+                ],
+                "summary": "Get global party stats for a single election group",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Party ID",
+                        "name": "party_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/election-groups/{id}/stats/polling-units": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Fetches pre-aggregated election statistics at the polling unit level",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ElectionStats"
+                ],
+                "summary": "List polling unit stats for an election group",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "State ID filter",
+                        "name": "state_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "LGA ID filter",
+                        "name": "lga_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Ward ID filter",
+                        "name": "ward_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/election-groups/{id}/stats/senatorial-districts": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Fetches pre-aggregated election statistics at the senatorial district level",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ElectionStats"
+                ],
+                "summary": "List senatorial district stats for an election group",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "State ID filter",
+                        "name": "state_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/election-groups/{id}/stats/senatorial-districts/{sd_id}/parties/{party_id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Fetches pre-aggregated election statistics for a single senatorial district unit and party, extracting party stats from the parties JSONB array.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ElectionStats"
+                ],
+                "summary": "Get party senatorial district stats for a single geographic unit",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Senatorial District ID",
+                        "name": "sd_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Party ID",
+                        "name": "party_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/election-groups/{id}/stats/state-constituencies": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Fetches pre-aggregated election statistics at the state constituency level",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ElectionStats"
+                ],
+                "summary": "List state constituency stats for an election group",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "State ID filter",
+                        "name": "state_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/election-groups/{id}/stats/state-constituencies/{sc_id}/parties/{party_id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Fetches pre-aggregated election statistics for a single state constituency unit and party, extracting party stats from the parties JSONB array.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ElectionStats"
+                ],
+                "summary": "Get party state constituency stats for a single geographic unit",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "State Constituency ID",
+                        "name": "sc_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Party ID",
+                        "name": "party_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/election-groups/{id}/stats/states": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Fetches pre-aggregated election statistics at the state level",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ElectionStats"
+                ],
+                "summary": "List state stats for an election group",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/election-groups/{id}/stats/states/{state_id}/parties/{party_id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Fetches pre-aggregated election statistics for a single state unit and party, extracting party stats from the parties JSONB array.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ElectionStats"
+                ],
+                "summary": "Get party state stats for a single geographic unit",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "State ID",
+                        "name": "state_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Party ID",
+                        "name": "party_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/election-groups/{id}/stats/wards": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Fetches pre-aggregated election statistics at the ward level",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ElectionStats"
+                ],
+                "summary": "List ward stats for an election group",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "State ID filter",
+                        "name": "state_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "LGA ID filter",
+                        "name": "lga_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/election-groups/{id}/stats/wards/{ward_id}/parties/{party_id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Fetches pre-aggregated election statistics for a single ward unit and party, extracting party stats from the parties JSONB array.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ElectionStats"
+                ],
+                "summary": "Get party ward stats for a single geographic unit",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Ward ID",
+                        "name": "ward_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Party ID",
+                        "name": "party_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -2674,7 +3959,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/electionshandler.CreateElectionRequest"
+                            "$ref": "#/definitions/internal_handler_elections.CreateElectionRequest"
                         }
                     }
                 ],
@@ -2774,7 +4059,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/electionshandler.CreateFederalConstituencyElectionRequest"
+                            "$ref": "#/definitions/internal_handler_elections.CreateFederalConstituencyElectionRequest"
                         }
                     }
                 ],
@@ -2823,7 +4108,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/electionshandler.CreateLgaElectionRequest"
+                            "$ref": "#/definitions/internal_handler_elections.CreateLgaElectionRequest"
                         }
                     }
                 ],
@@ -2872,7 +4157,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/electionshandler.CreateNationwideElectionRequest"
+                            "$ref": "#/definitions/internal_handler_elections.CreateNationwideElectionRequest"
                         }
                     }
                 ],
@@ -3576,7 +4861,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/electionshandler.CreateSenatorialDistrictElectionRequest"
+                            "$ref": "#/definitions/internal_handler_elections.CreateSenatorialDistrictElectionRequest"
                         }
                     }
                 ],
@@ -3625,7 +4910,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/electionshandler.CreateStateElectionRequest"
+                            "$ref": "#/definitions/internal_handler_elections.CreateStateElectionRequest"
                         }
                     }
                 ],
@@ -3674,7 +4959,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/electionshandler.CreateStateConstituencyElectionRequest"
+                            "$ref": "#/definitions/internal_handler_elections.CreateStateConstituencyElectionRequest"
                         }
                     }
                 ],
@@ -3728,7 +5013,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/electionshandler.CreateWardElectionRequest"
+                            "$ref": "#/definitions/internal_handler_elections.CreateWardElectionRequest"
                         }
                     }
                 ],
@@ -3836,7 +5121,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/electionshandler.UpdateElectionRequest"
+                            "$ref": "#/definitions/internal_handler_elections.UpdateElectionRequest"
                         }
                     }
                 ],
@@ -3993,7 +5278,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/electionshandler.SyncCandidatesRequest"
+                            "$ref": "#/definitions/internal_handler_elections.SyncCandidatesRequest"
                         }
                     }
                 ],
@@ -4065,7 +5350,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/federalconstituencieshandler.GetFederalConstituenciesResponse"
+                            "$ref": "#/definitions/internal_handler_federal_constituencies.GetFederalConstituenciesResponse"
                         }
                     },
                     "500": {
@@ -4095,7 +5380,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/federalconstituencieshandler.CreateFederalConstituencyRequest"
+                            "$ref": "#/definitions/internal_handler_federal_constituencies.CreateFederalConstituencyRequest"
                         }
                     }
                 ],
@@ -4217,7 +5502,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/federalconstituencieshandler.UpdateFederalConstituencyRequest"
+                            "$ref": "#/definitions/internal_handler_federal_constituencies.UpdateFederalConstituencyRequest"
                         }
                     }
                 ],
@@ -4417,7 +5702,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/fileshandler.GenerateUploadURLRequest"
+                            "$ref": "#/definitions/internal_handler_files.GenerateUploadURLRequest"
                         }
                     }
                 ],
@@ -4606,6 +5891,29 @@ const docTemplate = `{
                 }
             }
         },
+        "/health": {
+            "get": {
+                "description": "get the status of the server",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "health"
+                ],
+                "summary": "Health check",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/lgas": {
             "get": {
                 "description": "Fetches LGAs with optional state_id filtering",
@@ -4631,7 +5939,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/bodieshandler.GetLGAsResponse"
+                            "$ref": "#/definitions/internal_handler_bodies.GetLGAsResponse"
                         }
                     },
                     "500": {
@@ -4706,7 +6014,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/officeshandler.CreateOfficeRequest"
+                            "$ref": "#/definitions/internal_handler_offices.CreateOfficeRequest"
                         }
                     }
                 ],
@@ -4814,7 +6122,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/officeshandler.UpdateOfficeRequest"
+                            "$ref": "#/definitions/internal_handler_offices.UpdateOfficeRequest"
                         }
                     }
                 ],
@@ -4977,7 +6285,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partieshandler.CreatePartyRequest"
+                            "$ref": "#/definitions/internal_handler_parties.CreatePartyRequest"
                         }
                     }
                 ],
@@ -5175,7 +6483,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partieshandler.UpdatePartyRequest"
+                            "$ref": "#/definitions/internal_handler_parties.UpdatePartyRequest"
                         }
                     }
                 ],
@@ -5356,7 +6664,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partieshandler.CreateMarketingCampaignRequest"
+                            "$ref": "#/definitions/internal_handler_parties.CreateMarketingCampaignRequest"
                         }
                     }
                 ],
@@ -5399,7 +6707,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Agent targets retrieved successfully",
                         "schema": {
-                            "$ref": "#/definitions/partieshandler.UpdateAgentTargetsRequest"
+                            "$ref": "#/definitions/internal_handler_parties.UpdateAgentTargetsRequest"
                         }
                     }
                 }
@@ -5435,7 +6743,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partieshandler.UpdateAgentTargetsRequest"
+                            "$ref": "#/definitions/internal_handler_parties.UpdateAgentTargetsRequest"
                         }
                     }
                 ],
@@ -5482,7 +6790,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partieshandler.DepositAllowanceRequest"
+                            "$ref": "#/definitions/internal_handler_parties.DepositAllowanceRequest"
                         }
                     }
                 ],
@@ -5562,7 +6870,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partieshandler.agentPaymentAllocation"
+                            "$ref": "#/definitions/internal_handler_parties.agentPaymentAllocation"
                         }
                     }
                 ],
@@ -5609,7 +6917,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partieshandler.BuySlotsRequest"
+                            "$ref": "#/definitions/internal_handler_parties.BuySlotsRequest"
                         }
                     }
                 ],
@@ -5797,7 +7105,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partieshandler.DepositAllowanceRequest"
+                            "$ref": "#/definitions/internal_handler_parties.DepositAllowanceRequest"
                         }
                     }
                 ],
@@ -5912,7 +7220,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partieshandler.WithdrawRequest"
+                            "$ref": "#/definitions/internal_handler_parties.WithdrawRequest"
                         }
                     }
                 ],
@@ -5985,7 +7293,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/utils.SuccessResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.SuccessResponse"
                         }
                     }
                 }
@@ -6089,7 +7397,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partyapplicationshandler.SubmitApplicationRequest"
+                            "$ref": "#/definitions/internal_handler_party_applications.SubmitApplicationRequest"
                         }
                     }
                 ],
@@ -6206,7 +7514,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partyapplicationshandler.SubmitSupervisorApplicationRequest"
+                            "$ref": "#/definitions/internal_handler_party_applications.SubmitSupervisorApplicationRequest"
                         }
                     }
                 ],
@@ -6326,7 +7634,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partyapplicationshandler.ApproveApplicationRequest"
+                            "$ref": "#/definitions/internal_handler_party_applications.ApproveApplicationRequest"
                         }
                     }
                 ],
@@ -6464,7 +7772,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partyapplicationshandler.RejectApplicationRequest"
+                            "$ref": "#/definitions/internal_handler_party_applications.RejectApplicationRequest"
                         }
                     }
                 ],
@@ -6565,7 +7873,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partieshandler.CreatePlanRequest"
+                            "$ref": "#/definitions/internal_handler_parties.CreatePlanRequest"
                         }
                     }
                 ],
@@ -6612,7 +7920,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partieshandler.UpdatePlanRequest"
+                            "$ref": "#/definitions/internal_handler_parties.UpdatePlanRequest"
                         }
                     }
                 ],
@@ -6695,7 +8003,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partieshandler.UpdatePlanDisplayOrderRequest"
+                            "$ref": "#/definitions/internal_handler_parties.UpdatePlanDisplayOrderRequest"
                         }
                     }
                 ],
@@ -6814,7 +8122,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/puassignmentshandler.CreateAssignmentRequest"
+                            "$ref": "#/definitions/internal_handler_polling_unit_assignments.CreateAssignmentRequest"
                         }
                     }
                 ],
@@ -6986,7 +8294,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/puassignmentshandler.UpdateAssignmentTrackingRequest"
+                            "$ref": "#/definitions/internal_handler_polling_unit_assignments.UpdateAssignmentTrackingRequest"
                         }
                     }
                 ],
@@ -7021,6 +8329,592 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/polling-unit-final-results": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Fetches a cursor-paginated list of final polling unit results with details",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Results"
+                ],
+                "summary": "List Polling Unit Final Results",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Filter by Election Group ID",
+                        "name": "election_group_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by State ID",
+                        "name": "state_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by Senatorial District ID",
+                        "name": "senatorial_district_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by Federal Constituency ID",
+                        "name": "federal_constituency_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by State Constituency ID",
+                        "name": "state_constituency_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by LGA ID",
+                        "name": "lga_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by Ward ID",
+                        "name": "ward_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Filter by presence of media",
+                        "name": "has_media",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Cursor (ID to paginate from)",
+                        "name": "cursor",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit (default 20, max 100)",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/polling-unit-results": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Fetches a cursor-paginated list of polling unit results with filters",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Results"
+                ],
+                "summary": "List Polling Unit Results",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Filter by Election ID",
+                        "name": "election_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by Election Group ID",
+                        "name": "election_group_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by Party ID",
+                        "name": "party_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by Polling Unit ID",
+                        "name": "polling_unit_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by Submitter User ID",
+                        "name": "submitted_by",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by State ID",
+                        "name": "state_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by LGA ID",
+                        "name": "lga_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by Ward ID",
+                        "name": "ward_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by status (submitted|ai_verified|confirmed|disputed|nullified)",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Filter by INEC upload flag",
+                        "name": "uploaded_by_inec",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Cursor (ID to paginate from)",
+                        "name": "cursor",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit (default 20, max 100)",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Submit official election results for a polling unit. Assigned agents include assignment_id; general users leave it null.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Results"
+                ],
+                "summary": "Submit Polling Unit Result",
+                "parameters": [
+                    {
+                        "description": "Result Details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler_polling_unit_results.SubmitResultRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/polling-unit-results/batch": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Submit multiple election results (e.g. Presidential, Senate, House of Reps) for a polling unit in a single request.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Results"
+                ],
+                "summary": "Submit Polling Unit Results in Batch",
+                "parameters": [
+                    {
+                        "description": "Batch Result Details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler_polling_unit_results.SubmitBatchResultRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/polling-unit-results/final": {
+            "get": {
+                "description": "Fetch the calculated final result for a given polling unit and election",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Results"
+                ],
+                "summary": "Get Polling Unit Final Result",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election ID",
+                        "name": "election_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Polling Unit ID",
+                        "name": "polling_unit_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/polling-unit-results/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Fetch a single polling unit result by ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Results"
+                ],
+                "summary": "Get Polling Unit Result",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Result ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/polling-unit-results/{id}/review": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Platform admin manually confirms or nullifies a polling unit result",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Results"
+                ],
+                "summary": "Review a Polling Unit Result (Admin)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Result ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Review Details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler_polling_unit_results.ReviewRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/polling-unit-results/{id}/vote": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Cast an up or down vote on a result. Switches vote if already cast in opposite direction.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Results"
+                ],
+                "summary": "Vote on a Polling Unit Result",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Result ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Vote Details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler_polling_unit_results.VoteRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -7157,7 +9051,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/polling_unit_updates.CreateUpdateRequest"
+                            "$ref": "#/definitions/internal_handler_polling_unit_updates.CreateUpdateRequest"
                         }
                     }
                 ],
@@ -7254,7 +9148,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/pollingunitshandler.GetPollingUnitsResponse"
+                            "$ref": "#/definitions/internal_handler_polling_units.GetPollingUnitsResponse"
                         }
                     },
                     "500": {
@@ -7284,7 +9178,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/pollingunitshandler.CreatePollingUnitRequest"
+                            "$ref": "#/definitions/internal_handler_polling_units.CreatePollingUnitRequest"
                         }
                     }
                 ],
@@ -7406,7 +9300,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/pollingunitshandler.UpdatePollingUnitRequest"
+                            "$ref": "#/definitions/internal_handler_polling_units.UpdatePollingUnitRequest"
                         }
                     }
                 ],
@@ -7573,7 +9467,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/utils.SuccessResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.SuccessResponse"
                         }
                     }
                 }
@@ -7602,7 +9496,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/practicetestshandler.SubmitPracticeTestRequest"
+                            "$ref": "#/definitions/internal_handler_practice_tests.SubmitPracticeTestRequest"
                         }
                     }
                 ],
@@ -7612,13 +9506,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/utils.SuccessResponse"
+                                    "$ref": "#/definitions/free9ja_api_internal_utils.SuccessResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/practicetestshandler.PracticeTestResponse"
+                                            "$ref": "#/definitions/internal_handler_practice_tests.PracticeTestResponse"
                                         }
                                     }
                                 }
@@ -7628,19 +9522,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/utils.ErrorResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/utils.ErrorResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/utils.ErrorResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
                         }
                     }
                 }
@@ -7680,19 +9574,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/utils.SuccessResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.SuccessResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/utils.ErrorResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/utils.ErrorResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
                         }
                     }
                 }
@@ -7760,7 +9654,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/seedservice.SeedAdminsRequest"
+                            "$ref": "#/definitions/free9ja_api_internal_service_seed.SeedAdminsRequest"
                         }
                     }
                 ],
@@ -7815,7 +9709,7 @@ const docTemplate = `{
                         "name": "request",
                         "in": "body",
                         "schema": {
-                            "$ref": "#/definitions/seedhandler.SimulateElectionRequest"
+                            "$ref": "#/definitions/internal_handler_seed.SimulateElectionRequest"
                         }
                     }
                 ],
@@ -7895,7 +9789,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/seedservice.SeedUserRequest"
+                            "$ref": "#/definitions/free9ja_api_internal_service_seed.SeedUserRequest"
                         }
                     }
                 ],
@@ -7961,7 +9855,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/senatorialdistrictshandler.GetSenatorialDistrictsResponse"
+                            "$ref": "#/definitions/internal_handler_senatorial_districts.GetSenatorialDistrictsResponse"
                         }
                     },
                     "500": {
@@ -7991,7 +9885,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/senatorialdistrictshandler.CreateSenatorialDistrictRequest"
+                            "$ref": "#/definitions/internal_handler_senatorial_districts.CreateSenatorialDistrictRequest"
                         }
                     }
                 ],
@@ -8113,7 +10007,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/senatorialdistrictshandler.UpdateSenatorialDistrictRequest"
+                            "$ref": "#/definitions/internal_handler_senatorial_districts.UpdateSenatorialDistrictRequest"
                         }
                     }
                 ],
@@ -8249,7 +10143,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/stateassemblyconstituencieshandler.CreateStateConstituencyRequest"
+                            "$ref": "#/definitions/internal_handler_state_constituencies.CreateStateConstituencyRequest"
                         }
                     }
                 ],
@@ -8371,7 +10265,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/stateassemblyconstituencieshandler.UpdateStateConstituencyRequest"
+                            "$ref": "#/definitions/internal_handler_state_constituencies.UpdateStateConstituencyRequest"
                         }
                     }
                 ],
@@ -8530,7 +10424,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/stateassemblyconstituencieshandler.GetStateConstituenciesResponse"
+                            "$ref": "#/definitions/internal_handler_state_constituencies.GetStateConstituenciesResponse"
                         }
                     },
                     "500": {
@@ -8562,7 +10456,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/stateshandler.CreateStateRequest"
+                            "$ref": "#/definitions/internal_handler_states.CreateStateRequest"
                         }
                     }
                 ],
@@ -8684,7 +10578,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/stateshandler.UpdateStateRequest"
+                            "$ref": "#/definitions/internal_handler_states.UpdateStateRequest"
                         }
                     }
                 ],
@@ -8826,7 +10720,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/bodieshandler.GetCitiesResponse"
+                            "$ref": "#/definitions/internal_handler_bodies.GetCitiesResponse"
                         }
                     },
                     "400": {
@@ -8910,7 +10804,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/usersservice.UpdateUserPreferencesParams"
+                            "$ref": "#/definitions/free9ja_api_internal_service_users.UpdateUserPreferencesParams"
                         }
                     }
                 ],
@@ -9207,7 +11101,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/usershandler.UserWithdrawRequest"
+                            "$ref": "#/definitions/internal_handler_users.UserWithdrawRequest"
                         }
                     }
                 ],
@@ -9275,7 +11169,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/usershandler.UpdateProfileRequest"
+                            "$ref": "#/definitions/internal_handler_users.UpdateProfileRequest"
                         }
                     }
                 ],
@@ -9531,7 +11425,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/wardshandler.GetWardsResponse"
+                            "$ref": "#/definitions/internal_handler_wards.GetWardsResponse"
                         }
                     },
                     "500": {
@@ -9561,7 +11455,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/wardshandler.CreateWardRequest"
+                            "$ref": "#/definitions/internal_handler_wards.CreateWardRequest"
                         }
                     }
                 ],
@@ -9683,7 +11577,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/wardshandler.UpdateWardRequest"
+                            "$ref": "#/definitions/internal_handler_wards.UpdateWardRequest"
                         }
                     }
                 ],
@@ -9798,1822 +11692,41 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/webhooks/monnify": {
+            "post": {
+                "description": "Receives and processes Monnify payment notification events. Verifies the HMAC-SHA512 signature, then credits the appropriate party wallet for SUCCESSFUL_TRANSACTION events.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Webhooks"
+                ],
+                "summary": "Monnify payment webhook",
+                "responses": {
+                    "200": {
+                        "description": "Event processed",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid signature or payload",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
-        "authhandler.AdminLoginData": {
-            "type": "object",
-            "properties": {
-                "accessToken": {
-                    "type": "string"
-                },
-                "refreshToken": {
-                    "type": "string"
-                },
-                "user": {
-                    "$ref": "#/definitions/authhandler.LoginUser"
-                }
-            }
-        },
-        "authhandler.AdminLoginRequest": {
-            "type": "object",
-            "required": [
-                "identifier",
-                "identifierType",
-                "password"
-            ],
-            "properties": {
-                "identifier": {
-                    "type": "string",
-                    "maxLength": 50,
-                    "minLength": 2
-                },
-                "identifierType": {
-                    "type": "string",
-                    "enum": [
-                        "email",
-                        "username",
-                        "phone"
-                    ]
-                },
-                "iso2": {
-                    "type": "string"
-                },
-                "password": {
-                    "type": "string",
-                    "minLength": 4
-                }
-            }
-        },
-        "authhandler.AdminLoginResponse": {
-            "type": "object",
-            "properties": {
-                "data": {
-                    "$ref": "#/definitions/authhandler.AdminLoginData"
-                },
-                "message": {
-                    "type": "string"
-                },
-                "success": {
-                    "type": "boolean"
-                }
-            }
-        },
-        "authhandler.ChangePasswordByEmailRequest": {
-            "type": "object",
-            "required": [
-                "email",
-                "otp",
-                "password"
-            ],
-            "properties": {
-                "email": {
-                    "type": "string"
-                },
-                "otp": {
-                    "type": "string"
-                },
-                "password": {
-                    "type": "string",
-                    "maxLength": 72,
-                    "minLength": 5
-                }
-            }
-        },
-        "authhandler.CheckNINRequest": {
-            "type": "object",
-            "required": [
-                "nin"
-            ],
-            "properties": {
-                "nin": {
-                    "type": "string"
-                }
-            }
-        },
-        "authhandler.CheckReferralCodeRequest": {
-            "type": "object",
-            "required": [
-                "code"
-            ],
-            "properties": {
-                "code": {
-                    "type": "string",
-                    "minLength": 5
-                }
-            }
-        },
-        "authhandler.CheckUsernameRequest": {
-            "type": "object",
-            "required": [
-                "username"
-            ],
-            "properties": {
-                "username": {
-                    "type": "string",
-                    "maxLength": 30,
-                    "minLength": 2
-                }
-            }
-        },
-        "authhandler.LoginRequest": {
-            "type": "object",
-            "required": [
-                "country",
-                "identifier",
-                "identifierType",
-                "password"
-            ],
-            "properties": {
-                "country": {
-                    "type": "string"
-                },
-                "identifier": {
-                    "description": "accepts email, username or phone",
-                    "type": "string",
-                    "maxLength": 50,
-                    "minLength": 2
-                },
-                "identifierType": {
-                    "type": "string",
-                    "enum": [
-                        "email",
-                        "username",
-                        "phone"
-                    ]
-                },
-                "iso2": {
-                    "type": "string"
-                },
-                "password": {
-                    "type": "string",
-                    "minLength": 4
-                }
-            }
-        },
-        "authhandler.LoginUser": {
-            "type": "object",
-            "properties": {
-                "avatar": {
-                    "type": "string"
-                },
-                "date_of_birth": {
-                    "type": "string"
-                },
-                "email": {
-                    "type": "string"
-                },
-                "fake_id": {
-                    "type": "integer"
-                },
-                "first_name": {
-                    "type": "string"
-                },
-                "gender": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "last_name": {
-                    "type": "string"
-                },
-                "middle_name": {
-                    "type": "string"
-                },
-                "phone": {
-                    "type": "string"
-                },
-                "referral_code": {
-                    "type": "string"
-                },
-                "roles": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "username": {
-                    "type": "string"
-                }
-            }
-        },
-        "authhandler.LogoutRequest": {
-            "type": "object",
-            "properties": {
-                "refreshToken": {
-                    "type": "string"
-                }
-            }
-        },
-        "authhandler.PartyLoginRequest": {
-            "type": "object",
-            "required": [
-                "identifier",
-                "identifierType",
-                "password"
-            ],
-            "properties": {
-                "identifier": {
-                    "type": "string",
-                    "maxLength": 50,
-                    "minLength": 2
-                },
-                "identifierType": {
-                    "type": "string",
-                    "enum": [
-                        "email",
-                        "username",
-                        "phone"
-                    ]
-                },
-                "iso2": {
-                    "type": "string"
-                },
-                "password": {
-                    "type": "string",
-                    "minLength": 4
-                }
-            }
-        },
-        "authhandler.RefreshRequest": {
-            "type": "object",
-            "properties": {
-                "refreshToken": {
-                    "type": "string"
-                }
-            }
-        },
-        "authhandler.RegisterCandidatePlaceholderRequest": {
-            "type": "object",
-            "required": [
-                "current_country",
-                "current_state",
-                "date_of_birth",
-                "first_name",
-                "gender",
-                "last_name",
-                "password"
-            ],
-            "properties": {
-                "avatar": {
-                    "type": "string"
-                },
-                "avatar_file_id": {
-                    "type": "integer"
-                },
-                "current_city": {
-                    "type": "integer"
-                },
-                "current_country": {
-                    "type": "integer"
-                },
-                "current_state": {
-                    "type": "integer"
-                },
-                "date_of_birth": {
-                    "description": "Expects YYYY-MM-DD",
-                    "type": "string"
-                },
-                "email": {
-                    "type": "string"
-                },
-                "first_name": {
-                    "type": "string",
-                    "maxLength": 30,
-                    "minLength": 2
-                },
-                "gender": {
-                    "type": "string",
-                    "enum": [
-                        "male",
-                        "female"
-                    ]
-                },
-                "last_name": {
-                    "type": "string",
-                    "maxLength": 30,
-                    "minLength": 2
-                },
-                "middle_name": {
-                    "type": "string",
-                    "maxLength": 30,
-                    "minLength": 2
-                },
-                "party_id": {
-                    "type": "integer"
-                },
-                "password": {
-                    "type": "string",
-                    "maxLength": 72,
-                    "minLength": 5
-                },
-                "state_of_origin": {
-                    "type": "integer"
-                },
-                "username": {
-                    "type": "string",
-                    "maxLength": 30,
-                    "minLength": 3
-                }
-            }
-        },
-        "authhandler.SignupRequest": {
-            "type": "object",
-            "required": [
-                "countryId",
-                "email",
-                "password",
-                "phoneNumber"
-            ],
-            "properties": {
-                "countryId": {
-                    "type": "integer"
-                },
-                "email": {
-                    "type": "string"
-                },
-                "password": {
-                    "type": "string",
-                    "maxLength": 72,
-                    "minLength": 5
-                },
-                "phoneNumber": {
-                    "type": "string"
-                }
-            }
-        },
-        "bodieshandler.CityResponse": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "type": "integer"
-                },
-                "name": {
-                    "type": "string"
-                }
-            }
-        },
-        "bodieshandler.CountryResponse": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "type": "integer"
-                },
-                "iso2": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "phone_code": {
-                    "type": "string"
-                }
-            }
-        },
-        "bodieshandler.GetCitiesData": {
-            "type": "object",
-            "properties": {
-                "cities": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/bodieshandler.CityResponse"
-                    }
-                }
-            }
-        },
-        "bodieshandler.GetCitiesResponse": {
-            "type": "object",
-            "properties": {
-                "data": {
-                    "$ref": "#/definitions/bodieshandler.GetCitiesData"
-                },
-                "message": {
-                    "type": "string"
-                },
-                "meta": {
-                    "$ref": "#/definitions/bodieshandler.PaginationMeta"
-                },
-                "success": {
-                    "type": "boolean"
-                }
-            }
-        },
-        "bodieshandler.GetCountriesData": {
-            "type": "object",
-            "properties": {
-                "countries": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/bodieshandler.CountryResponse"
-                    }
-                }
-            }
-        },
-        "bodieshandler.GetCountriesResponse": {
-            "type": "object",
-            "properties": {
-                "data": {
-                    "$ref": "#/definitions/bodieshandler.GetCountriesData"
-                },
-                "message": {
-                    "type": "string"
-                },
-                "success": {
-                    "type": "boolean"
-                }
-            }
-        },
-        "bodieshandler.GetLGAsData": {
-            "type": "object",
-            "properties": {
-                "lgas": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/bodieshandler.LGAResponse"
-                    }
-                }
-            }
-        },
-        "bodieshandler.GetLGAsResponse": {
-            "type": "object",
-            "properties": {
-                "data": {
-                    "$ref": "#/definitions/bodieshandler.GetLGAsData"
-                },
-                "message": {
-                    "type": "string"
-                },
-                "meta": {
-                    "$ref": "#/definitions/bodieshandler.PaginationMeta"
-                },
-                "success": {
-                    "type": "boolean"
-                }
-            }
-        },
-        "bodieshandler.GetStatesData": {
-            "type": "object",
-            "properties": {
-                "states": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/bodieshandler.StateResponse"
-                    }
-                }
-            }
-        },
-        "bodieshandler.GetStatesResponse": {
-            "type": "object",
-            "properties": {
-                "data": {
-                    "$ref": "#/definitions/bodieshandler.GetStatesData"
-                },
-                "message": {
-                    "type": "string"
-                },
-                "meta": {
-                    "$ref": "#/definitions/bodieshandler.PaginationMeta"
-                },
-                "success": {
-                    "type": "boolean"
-                }
-            }
-        },
-        "bodieshandler.LGAResponse": {
-            "type": "object",
-            "properties": {
-                "abbreviation": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "state_id": {
-                    "type": "integer"
-                },
-                "state_name": {
-                    "type": "string"
-                }
-            }
-        },
-        "bodieshandler.PaginationMeta": {
-            "type": "object",
-            "properties": {
-                "has_more": {
-                    "type": "boolean"
-                },
-                "next_cursor": {
-                    "type": "string"
-                }
-            }
-        },
-        "bodieshandler.StateResponse": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "type": "integer"
-                },
-                "name": {
-                    "type": "string"
-                }
-            }
-        },
-        "electiongroupshandler.CreateElectionGroupRequest": {
-            "type": "object",
-            "properties": {
-                "election_date": {
-                    "type": "string"
-                },
-                "elections_count": {
-                    "type": "integer"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "rank": {
-                    "type": "integer"
-                },
-                "states_count": {
-                    "type": "integer"
-                }
-            }
-        },
-        "electiongroupshandler.UpdateElectionGroupRequest": {
-            "type": "object",
-            "properties": {
-                "election_date": {
-                    "type": "string"
-                },
-                "elections_count": {
-                    "type": "integer"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "rank": {
-                    "type": "integer"
-                },
-                "states_count": {
-                    "type": "integer"
-                }
-            }
-        },
-        "electiongroupshandler.UpsertPartyElectionGroupStatsRequest": {
-            "type": "object",
-            "properties": {
-                "elections_contesting": {
-                    "type": "integer"
-                },
-                "party_id": {
-                    "type": "integer"
-                },
-                "polling_agents_coverage": {}
-            }
-        },
-        "electionshandler.CreateElectionRequest": {
-            "type": "object",
-            "properties": {
-                "candidates_count": {
-                    "type": "integer"
-                },
-                "election_date": {
-                    "type": "string"
-                },
-                "election_group_id": {
-                    "type": "integer"
-                },
-                "federal_constituency_id": {
-                    "type": "integer"
-                },
-                "lga_id": {
-                    "type": "integer"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "office_id": {
-                    "type": "integer"
-                },
-                "senatorial_district_id": {
-                    "type": "integer"
-                },
-                "state_constituency_id": {
-                    "type": "integer"
-                },
-                "state_id": {
-                    "type": "integer"
-                },
-                "ward_id": {
-                    "type": "integer"
-                }
-            }
-        },
-        "electionshandler.CreateFederalConstituencyElectionRequest": {
-            "type": "object",
-            "properties": {
-                "election_date": {
-                    "type": "string"
-                },
-                "election_group_id": {
-                    "type": "integer"
-                },
-                "federal_constituency_ids": {
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                },
-                "office_id": {
-                    "type": "integer"
-                }
-            }
-        },
-        "electionshandler.CreateLgaElectionRequest": {
-            "type": "object",
-            "properties": {
-                "election_date": {
-                    "type": "string"
-                },
-                "election_group_id": {
-                    "type": "integer"
-                },
-                "lga_ids": {
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                },
-                "office_id": {
-                    "type": "integer"
-                }
-            }
-        },
-        "electionshandler.CreateNationwideElectionRequest": {
-            "type": "object",
-            "properties": {
-                "candidates": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/electionshandler.ElectionCandidateInput"
-                    }
-                },
-                "election_date": {
-                    "type": "string"
-                },
-                "election_group_id": {
-                    "type": "integer"
-                },
-                "office_id": {
-                    "type": "integer"
-                }
-            }
-        },
-        "electionshandler.CreateSenatorialDistrictElectionRequest": {
-            "type": "object",
-            "properties": {
-                "election_date": {
-                    "type": "string"
-                },
-                "election_group_id": {
-                    "type": "integer"
-                },
-                "office_id": {
-                    "type": "integer"
-                },
-                "senatorial_district_ids": {
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                }
-            }
-        },
-        "electionshandler.CreateStateConstituencyElectionRequest": {
-            "type": "object",
-            "properties": {
-                "election_date": {
-                    "type": "string"
-                },
-                "election_group_id": {
-                    "type": "integer"
-                },
-                "office_id": {
-                    "type": "integer"
-                },
-                "state_constituency_ids": {
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                }
-            }
-        },
-        "electionshandler.CreateStateElectionRequest": {
-            "type": "object",
-            "properties": {
-                "election_date": {
-                    "type": "string"
-                },
-                "election_group_id": {
-                    "type": "integer"
-                },
-                "office_id": {
-                    "type": "integer"
-                },
-                "state_ids": {
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                }
-            }
-        },
-        "electionshandler.CreateWardElectionRequest": {
-            "type": "object",
-            "properties": {
-                "election_date": {
-                    "type": "string"
-                },
-                "election_group_id": {
-                    "type": "integer"
-                },
-                "office_id": {
-                    "type": "integer"
-                },
-                "ward_ids": {
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                }
-            }
-        },
-        "electionshandler.ElectionCandidateInput": {
-            "type": "object",
-            "required": [
-                "candidate_id",
-                "party_id",
-                "party_short_name"
-            ],
-            "properties": {
-                "candidate_id": {
-                    "type": "integer"
-                },
-                "party_id": {
-                    "type": "integer"
-                },
-                "party_short_name": {
-                    "type": "string"
-                }
-            }
-        },
-        "electionshandler.SyncCandidatesRequest": {
-            "type": "object",
-            "properties": {
-                "candidates": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/electionshandler.ElectionCandidateInput"
-                    }
-                }
-            }
-        },
-        "electionshandler.UpdateElectionRequest": {
-            "type": "object",
-            "properties": {
-                "candidates_count": {
-                    "type": "integer"
-                },
-                "election_date": {
-                    "type": "string"
-                },
-                "election_group_id": {
-                    "type": "integer"
-                },
-                "federal_constituency_id": {
-                    "type": "integer"
-                },
-                "lga_id": {
-                    "type": "integer"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "office_id": {
-                    "type": "integer"
-                },
-                "senatorial_district_id": {
-                    "type": "integer"
-                },
-                "state_constituency_id": {
-                    "type": "integer"
-                },
-                "state_id": {
-                    "type": "integer"
-                },
-                "ward_id": {
-                    "type": "integer"
-                }
-            }
-        },
-        "federalconstituencieshandler.CreateFederalConstituencyRequest": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "senatorial_district_id": {
-                    "type": "integer"
-                },
-                "state_id": {
-                    "type": "integer"
-                }
-            }
-        },
-        "federalconstituencieshandler.FederalConstituencyResponse": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "type": "integer"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "senatorial_district_id": {
-                    "type": "integer"
-                },
-                "senatorial_district_name": {
-                    "type": "string"
-                },
-                "state_id": {
-                    "type": "integer"
-                },
-                "state_name": {
-                    "type": "string"
-                }
-            }
-        },
-        "federalconstituencieshandler.GetFederalConstituenciesData": {
-            "type": "object",
-            "properties": {
-                "constituencies": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/federalconstituencieshandler.FederalConstituencyResponse"
-                    }
-                }
-            }
-        },
-        "federalconstituencieshandler.GetFederalConstituenciesResponse": {
-            "type": "object",
-            "properties": {
-                "data": {
-                    "$ref": "#/definitions/federalconstituencieshandler.GetFederalConstituenciesData"
-                },
-                "message": {
-                    "type": "string"
-                },
-                "meta": {
-                    "$ref": "#/definitions/federalconstituencieshandler.PaginationMeta"
-                },
-                "success": {
-                    "type": "boolean"
-                }
-            }
-        },
-        "federalconstituencieshandler.PaginationMeta": {
-            "type": "object",
-            "properties": {
-                "has_more": {
-                    "type": "boolean"
-                },
-                "next_cursor": {
-                    "type": "string"
-                }
-            }
-        },
-        "federalconstituencieshandler.UpdateFederalConstituencyRequest": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "senatorial_district_id": {
-                    "type": "integer"
-                },
-                "state_id": {
-                    "type": "integer"
-                }
-            }
-        },
-        "fileshandler.GenerateUploadURLRequest": {
-            "type": "object",
-            "properties": {
-                "file_size": {
-                    "type": "integer"
-                },
-                "folder": {
-                    "type": "string"
-                },
-                "is_public": {
-                    "type": "boolean"
-                },
-                "mime_type": {
-                    "type": "string"
-                },
-                "original_name": {
-                    "type": "string"
-                },
-                "owner_id": {
-                    "type": "integer"
-                }
-            }
-        },
-        "inecgrabber.ResolveUnmatchedRequest": {
-            "type": "object",
-            "properties": {
-                "notes": {
-                    "type": "string"
-                },
-                "polling_unit_id": {
-                    "type": "integer"
-                },
-                "status": {
-                    "description": "resolved_mapped, resolved_created_pu, rejected",
-                    "type": "string"
-                }
-            }
-        },
-        "officeshandler.CreateOfficeRequest": {
-            "type": "object",
-            "properties": {
-                "election": {
-                    "type": "string"
-                },
-                "inec_election_type_id": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "rank": {
-                    "type": "integer"
-                },
-                "scope": {
-                    "type": "string"
-                }
-            }
-        },
-        "officeshandler.UpdateOfficeRequest": {
-            "type": "object",
-            "properties": {
-                "election": {
-                    "type": "string"
-                },
-                "inec_election_type_id": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "rank": {
-                    "type": "integer"
-                },
-                "scope": {
-                    "type": "string"
-                }
-            }
-        },
-        "pageverificationshandler.AssignVerificationRequest": {
-            "type": "object",
-            "required": [
-                "for_who",
-                "page_id",
-                "verification_type_ids"
-            ],
-            "properties": {
-                "for_who": {
-                    "type": "string"
-                },
-                "page_id": {
-                    "type": "integer"
-                },
-                "verification_type_ids": {
-                    "type": "array",
-                    "minItems": 1,
-                    "items": {
-                        "type": "integer"
-                    }
-                }
-            }
-        },
-        "partieshandler.BuySlotsRequest": {
-            "type": "object",
-            "properties": {
-                "quantity": {
-                    "type": "integer"
-                }
-            }
-        },
-        "partieshandler.CreateMarketingCampaignRequest": {
-            "type": "object",
-            "properties": {
-                "budget": {
-                    "type": "number"
-                },
-                "budget_kobo": {
-                    "type": "integer"
-                },
-                "budget_per_day": {
-                    "description": "Support legacy naira fields as fallback if passed",
-                    "type": "number"
-                },
-                "budget_per_day_kobo": {
-                    "type": "integer"
-                },
-                "duration_in_days": {
-                    "type": "integer"
-                },
-                "election_group_id": {
-                    "type": "integer"
-                },
-                "election_id": {
-                    "type": "integer"
-                },
-                "plan_id": {
-                    "type": "integer"
-                },
-                "states": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "type": {
-                    "type": "string"
-                }
-            }
-        },
-        "partieshandler.CreatePartyRequest": {
-            "type": "object",
-            "properties": {
-                "color_hex": {
-                    "type": "string"
-                },
-                "dark_color_hex": {
-                    "type": "string"
-                },
-                "display_order": {
-                    "type": "integer"
-                },
-                "logo": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "short_name": {
-                    "type": "string"
-                }
-            }
-        },
-        "partieshandler.CreatePlanRequest": {
-            "type": "object",
-            "properties": {
-                "color_hex": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "features": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "name": {
-                    "type": "string"
-                },
-                "price": {
-                    "type": "number"
-                },
-                "price_kobo": {
-                    "type": "integer"
-                },
-                "scopes_recommendation": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "type": {
-                    "type": "string"
-                }
-            }
-        },
-        "partieshandler.DepositAllowanceRequest": {
-            "type": "object",
-            "properties": {
-                "amount_kobo": {
-                    "type": "integer"
-                }
-            }
-        },
-        "partieshandler.SetPartyDiscountRequest": {
-            "type": "object",
-            "properties": {
-                "discount_percentage": {
-                    "type": "number"
-                }
-            }
-        },
-        "partieshandler.SetSlotPriceRequest": {
-            "type": "object",
-            "properties": {
-                "price_kobo": {
-                    "type": "integer"
-                }
-            }
-        },
-        "partieshandler.ToggleVerificationRequest": {
-            "type": "object",
-            "properties": {
-                "is_verified": {
-                    "type": "boolean"
-                }
-            }
-        },
-        "partieshandler.UpdateAgentTargetsRequest": {
-            "type": "object",
-            "properties": {
-                "lga_election_supervisor": {
-                    "type": "integer"
-                },
-                "polling_agent": {
-                    "type": "integer"
-                },
-                "state_election_supervisor": {
-                    "type": "integer"
-                },
-                "ward_election_supervisor": {
-                    "type": "integer"
-                }
-            }
-        },
-        "partieshandler.UpdatePartyRequest": {
-            "type": "object",
-            "properties": {
-                "color_hex": {
-                    "type": "string"
-                },
-                "dark_color_hex": {
-                    "type": "string"
-                },
-                "display_order": {
-                    "type": "integer"
-                },
-                "logo": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "short_name": {
-                    "type": "string"
-                }
-            }
-        },
-        "partieshandler.UpdatePlanDisplayOrderRequest": {
-            "type": "object",
-            "properties": {
-                "display_order": {
-                    "type": "integer"
-                }
-            }
-        },
-        "partieshandler.UpdatePlanRequest": {
-            "type": "object",
-            "properties": {
-                "color_hex": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "features": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "is_active": {
-                    "type": "boolean"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "price": {
-                    "type": "number"
-                },
-                "price_kobo": {
-                    "type": "integer"
-                },
-                "scopes_recommendation": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "type": {
-                    "type": "string"
-                }
-            }
-        },
-        "partieshandler.WithdrawRequest": {
-            "type": "object",
-            "properties": {
-                "amount_kobo": {
-                    "description": "AmountKobo is the withdrawal amount in Kobo (1 NGN = 100 Kobo).",
-                    "type": "integer"
-                },
-                "bank_account_number": {
-                    "type": "string"
-                },
-                "bank_code": {
-                    "type": "string"
-                },
-                "narration": {
-                    "type": "string"
-                }
-            }
-        },
-        "partieshandler.agentPaymentAllocation": {
-            "type": "object",
-            "properties": {
-                "lga_election_supervisor": {
-                    "$ref": "#/definitions/partieshandler.agentPaymentConfig"
-                },
-                "polling_agent": {
-                    "$ref": "#/definitions/partieshandler.agentPaymentConfig"
-                },
-                "state_election_supervisor": {
-                    "$ref": "#/definitions/partieshandler.agentPaymentConfig"
-                },
-                "ward_election_supervisor": {
-                    "$ref": "#/definitions/partieshandler.agentPaymentConfig"
-                }
-            }
-        },
-        "partieshandler.agentPaymentConfig": {
-            "type": "object",
-            "properties": {
-                "default": {
-                    "type": "integer"
-                },
-                "states": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "integer",
-                        "format": "int64"
-                    }
-                }
-            }
-        },
-        "partyapplicationshandler.ApproveApplicationRequest": {
-            "type": "object",
-            "properties": {
-                "lga_id": {
-                    "type": "integer"
-                },
-                "polling_unit_id": {
-                    "type": "integer"
-                },
-                "role_type": {
-                    "type": "string"
-                },
-                "state_id": {
-                    "type": "integer"
-                },
-                "ward_id": {
-                    "type": "integer"
-                }
-            }
-        },
-        "partyapplicationshandler.RejectApplicationRequest": {
-            "type": "object",
-            "properties": {
-                "reason": {
-                    "type": "string"
-                }
-            }
-        },
-        "partyapplicationshandler.SubmitApplicationRequest": {
-            "type": "object",
-            "properties": {
-                "address": {
-                    "type": "string"
-                },
-                "avatar": {
-                    "type": "string"
-                },
-                "bank_account_number": {
-                    "type": "string"
-                },
-                "bank_code": {
-                    "type": "string"
-                },
-                "current_city": {
-                    "type": "integer"
-                },
-                "current_country": {
-                    "type": "integer"
-                },
-                "current_lga": {
-                    "type": "integer"
-                },
-                "current_state": {
-                    "type": "integer"
-                },
-                "current_ward": {
-                    "type": "integer"
-                },
-                "educational_status": {
-                    "type": "string"
-                },
-                "election_group_id": {
-                    "type": "integer"
-                },
-                "election_group_ids": {
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                },
-                "graduation_year": {
-                    "type": "string"
-                },
-                "highest_degree": {
-                    "type": "string"
-                },
-                "party_id": {
-                    "type": "integer"
-                },
-                "phone": {
-                    "type": "string"
-                },
-                "polling_unit_id": {
-                    "type": "integer"
-                },
-                "school_name": {
-                    "type": "string"
-                },
-                "voters_card_image": {
-                    "type": "string"
-                },
-                "whatsapp_phone": {
-                    "type": "string"
-                }
-            }
-        },
-        "partyapplicationshandler.SubmitSupervisorApplicationRequest": {
-            "type": "object",
-            "properties": {
-                "degree_certificate_url": {
-                    "type": "string"
-                },
-                "election_group_id": {
-                    "type": "integer"
-                },
-                "lga_id": {
-                    "type": "integer"
-                },
-                "role": {
-                    "type": "string"
-                },
-                "state_id": {
-                    "type": "integer"
-                },
-                "ward_id": {
-                    "type": "integer"
-                }
-            }
-        },
-        "polling_unit_updates.CreateUpdateRequest": {
-            "type": "object",
-            "properties": {
-                "assignment_id": {
-                    "type": "integer"
-                },
-                "election_group_id": {
-                    "type": "integer"
-                },
-                "is_report": {
-                    "type": "boolean"
-                },
-                "media_urls": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "message": {
-                    "type": "string"
-                },
-                "party_id": {
-                    "type": "integer"
-                },
-                "polling_unit_id": {
-                    "type": "integer"
-                },
-                "report_types": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                }
-            }
-        },
-        "pollingunitshandler.CreatePollingUnitRequest": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "string"
-                },
-                "formatted_address": {
-                    "type": "string"
-                },
-                "google_place_id": {
-                    "type": "string"
-                },
-                "latitude": {
-                    "type": "number"
-                },
-                "lga_id": {
-                    "type": "integer"
-                },
-                "longitude": {
-                    "type": "number"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "precise_location": {
-                    "type": "string"
-                },
-                "pu_code": {
-                    "type": "string"
-                },
-                "registration_area_id": {
-                    "type": "integer"
-                },
-                "state_id": {
-                    "type": "integer"
-                },
-                "ward_id": {
-                    "type": "integer"
-                }
-            }
-        },
-        "pollingunitshandler.GetPollingUnitsData": {
-            "type": "object",
-            "properties": {
-                "polling_units": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/pollingunitshandler.PollingUnitResponse"
-                    }
-                }
-            }
-        },
-        "pollingunitshandler.GetPollingUnitsResponse": {
-            "type": "object",
-            "properties": {
-                "data": {
-                    "$ref": "#/definitions/pollingunitshandler.GetPollingUnitsData"
-                },
-                "message": {
-                    "type": "string"
-                },
-                "meta": {
-                    "$ref": "#/definitions/pollingunitshandler.PaginationMeta"
-                },
-                "success": {
-                    "type": "boolean"
-                }
-            }
-        },
-        "pollingunitshandler.PaginationMeta": {
-            "type": "object",
-            "properties": {
-                "has_more": {
-                    "type": "boolean"
-                },
-                "next_cursor": {
-                    "type": "string"
-                }
-            }
-        },
-        "pollingunitshandler.PollingUnitResponse": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "string"
-                },
-                "formatted_address": {
-                    "type": "string"
-                },
-                "google_place_id": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "latitude": {
-                    "type": "number"
-                },
-                "lga_id": {
-                    "type": "integer"
-                },
-                "lga_name": {
-                    "type": "string"
-                },
-                "longitude": {
-                    "type": "number"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "precise_location": {
-                    "type": "string"
-                },
-                "pu_code": {
-                    "type": "string"
-                },
-                "registration_area_id": {
-                    "type": "integer"
-                },
-                "state_id": {
-                    "type": "integer"
-                },
-                "state_name": {
-                    "type": "string"
-                },
-                "ward_id": {
-                    "type": "integer"
-                },
-                "ward_name": {
-                    "type": "string"
-                }
-            }
-        },
-        "pollingunitshandler.UpdatePollingUnitRequest": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "string"
-                },
-                "formatted_address": {
-                    "type": "string"
-                },
-                "google_place_id": {
-                    "type": "string"
-                },
-                "latitude": {
-                    "type": "number"
-                },
-                "lga_id": {
-                    "type": "integer"
-                },
-                "longitude": {
-                    "type": "number"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "precise_location": {
-                    "type": "string"
-                },
-                "pu_code": {
-                    "type": "string"
-                },
-                "registration_area_id": {
-                    "type": "integer"
-                },
-                "state_id": {
-                    "type": "integer"
-                },
-                "ward_id": {
-                    "type": "integer"
-                }
-            }
-        },
-        "practicetestshandler.PracticeTestResponse": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "earned_amount_kobo": {
-                    "type": "integer"
-                },
-                "election_group_id": {
-                    "type": "integer"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "overall_score": {
-                    "type": "number"
-                },
-                "role": {
-                    "type": "string"
-                },
-                "test_attempts": {},
-                "updated_at": {
-                    "type": "string"
-                },
-                "user_id": {
-                    "type": "integer"
-                }
-            }
-        },
-        "practicetestshandler.SubmitPracticeTestRequest": {
-            "type": "object",
-            "properties": {
-                "election_group_id": {
-                    "type": "integer"
-                },
-                "final_score": {
-                    "type": "number"
-                },
-                "role": {
-                    "type": "string"
-                },
-                "task_stats": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/practicetestshandler.TaskStat"
-                    }
-                }
-            }
-        },
-        "practicetestshandler.TaskStat": {
-            "type": "object",
-            "properties": {
-                "completed": {
-                    "type": "boolean"
-                },
-                "failed_attempts": {
-                    "type": "integer"
-                },
-                "score": {
-                    "type": "number"
-                },
-                "task_id": {
-                    "type": "integer"
-                }
-            }
-        },
-        "puassignmentshandler.CreateAssignmentRequest": {
-            "type": "object",
-            "properties": {
-                "election_group_id": {
-                    "type": "integer"
-                },
-                "fake_id": {
-                    "type": "integer"
-                },
-                "party_id": {
-                    "type": "integer"
-                },
-                "polling_unit_id": {
-                    "type": "integer"
-                },
-                "role_type": {
-                    "type": "string"
-                }
-            }
-        },
-        "puassignmentshandler.UpdateAssignmentTrackingRequest": {
-            "type": "object",
-            "properties": {
-                "arrival_video_url": {
-                    "type": "string"
-                },
-                "arrived_at": {
-                    "type": "string"
-                },
-                "election_ended_at": {
-                    "type": "string"
-                },
-                "election_ended_video_url": {
-                    "type": "string"
-                },
-                "election_started_at": {
-                    "type": "string"
-                },
-                "election_started_video_url": {
-                    "type": "string"
-                }
-            }
-        },
-        "referrals.createReferralRequest": {
-            "type": "object",
-            "required": [
-                "milestone",
-                "referred_user_id",
-                "referrer_user_id"
-            ],
-            "properties": {
-                "milestone": {
-                    "type": "string"
-                },
-                "party_id": {
-                    "type": "integer"
-                },
-                "referred_user_id": {
-                    "type": "integer"
-                },
-                "referrer_user_id": {
-                    "type": "integer"
-                },
-                "status": {
-                    "type": "string"
-                }
-            }
-        },
-        "referrals.updateReferralRequest": {
-            "type": "object",
-            "properties": {
-                "milestone": {
-                    "type": "string"
-                },
-                "paid_at": {
-                    "description": "ISO8601 string",
-                    "type": "string"
-                },
-                "party_id": {
-                    "type": "integer"
-                },
-                "status": {
-                    "type": "string"
-                }
-            }
-        },
-        "seedhandler.SimulateElectionRequest": {
-            "type": "object",
-            "properties": {
-                "limit": {
-                    "type": "integer",
-                    "example": 1000
-                },
-                "max_votes_per_pu": {
-                    "type": "integer",
-                    "example": 750
-                },
-                "min_votes_per_pu": {
-                    "type": "integer",
-                    "example": 100
-                },
-                "party_shares": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/seedhandler.SimulatePartyShare"
-                    }
-                },
-                "run_full_rollup": {
-                    "type": "boolean"
-                },
-                "trigger_realtime": {
-                    "type": "boolean"
-                }
-            }
-        },
-        "seedhandler.SimulatePartyShare": {
-            "type": "object",
-            "properties": {
-                "party_short_name": {
-                    "type": "string",
-                    "example": "APC"
-                },
-                "vote_share": {
-                    "type": "number",
-                    "example": 35
-                }
-            }
-        },
-        "seedservice.PartyAdminsData": {
+        "free9ja_api_internal_service_seed.PartyAdminsData": {
             "type": "object",
             "properties": {
                 "id": {
@@ -11634,7 +11747,7 @@ const docTemplate = `{
                 }
             }
         },
-        "seedservice.SeedAdminsRequest": {
+        "free9ja_api_internal_service_seed.SeedAdminsRequest": {
             "type": "object",
             "properties": {
                 "admins": {
@@ -11648,7 +11761,7 @@ const docTemplate = `{
                     "items": {
                         "type": "object",
                         "additionalProperties": {
-                            "$ref": "#/definitions/seedservice.PartyAdminsData"
+                            "$ref": "#/definitions/free9ja_api_internal_service_seed.PartyAdminsData"
                         }
                     }
                 },
@@ -11660,7 +11773,7 @@ const docTemplate = `{
                 }
             }
         },
-        "seedservice.SeedUserRequest": {
+        "free9ja_api_internal_service_seed.SeedUserRequest": {
             "type": "object",
             "properties": {
                 "account_status": {
@@ -11743,7 +11856,1994 @@ const docTemplate = `{
                 }
             }
         },
-        "senatorialdistrictshandler.CreateSenatorialDistrictRequest": {
+        "free9ja_api_internal_service_users.PhonePayload": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "is_default": {
+                    "type": "boolean"
+                },
+                "on_whatsapp": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "phonecode": {
+                    "type": "string"
+                },
+                "raw_input": {
+                    "type": "string"
+                }
+            }
+        },
+        "free9ja_api_internal_service_users.UpdateUserPreferencesParams": {
+            "type": "object",
+            "properties": {
+                "pinned_links": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "sidebar_state": {
+                    "type": "string"
+                },
+                "theme": {
+                    "type": "string"
+                }
+            }
+        },
+        "free9ja_api_internal_utils.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "data": {},
+                "message": {
+                    "type": "string",
+                    "example": "Error message description"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": false
+                }
+            }
+        },
+        "free9ja_api_internal_utils.SuccessResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "object",
+                    "additionalProperties": true
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Operation successful"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "internal_handler_agent_earnings.RequestPayoutRequest": {
+            "type": "object",
+            "properties": {
+                "election_group_id": {
+                    "type": "integer"
+                },
+                "role_type": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler_auth.AdminLoginData": {
+            "type": "object",
+            "properties": {
+                "accessToken": {
+                    "type": "string"
+                },
+                "refreshToken": {
+                    "type": "string"
+                },
+                "user": {
+                    "$ref": "#/definitions/internal_handler_auth.LoginUser"
+                }
+            }
+        },
+        "internal_handler_auth.AdminLoginRequest": {
+            "type": "object",
+            "required": [
+                "identifier",
+                "identifierType",
+                "password"
+            ],
+            "properties": {
+                "identifier": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "minLength": 2
+                },
+                "identifierType": {
+                    "type": "string",
+                    "enum": [
+                        "email",
+                        "username",
+                        "phone"
+                    ]
+                },
+                "iso2": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string",
+                    "minLength": 4
+                }
+            }
+        },
+        "internal_handler_auth.AdminLoginResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/internal_handler_auth.AdminLoginData"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "internal_handler_auth.ChangePasswordByEmailRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "otp",
+                "password"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "otp": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string",
+                    "maxLength": 72,
+                    "minLength": 5
+                }
+            }
+        },
+        "internal_handler_auth.CheckNINRequest": {
+            "type": "object",
+            "required": [
+                "nin"
+            ],
+            "properties": {
+                "nin": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler_auth.CheckReferralCodeRequest": {
+            "type": "object",
+            "required": [
+                "code"
+            ],
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "minLength": 5
+                }
+            }
+        },
+        "internal_handler_auth.CheckUsernameRequest": {
+            "type": "object",
+            "required": [
+                "username"
+            ],
+            "properties": {
+                "username": {
+                    "type": "string",
+                    "maxLength": 30,
+                    "minLength": 2
+                }
+            }
+        },
+        "internal_handler_auth.LoginRequest": {
+            "type": "object",
+            "required": [
+                "country",
+                "identifier",
+                "identifierType",
+                "password"
+            ],
+            "properties": {
+                "country": {
+                    "type": "string"
+                },
+                "identifier": {
+                    "description": "accepts email, username or phone",
+                    "type": "string",
+                    "maxLength": 50,
+                    "minLength": 2
+                },
+                "identifierType": {
+                    "type": "string",
+                    "enum": [
+                        "email",
+                        "username",
+                        "phone"
+                    ]
+                },
+                "iso2": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string",
+                    "minLength": 4
+                }
+            }
+        },
+        "internal_handler_auth.LoginUser": {
+            "type": "object",
+            "properties": {
+                "avatar": {
+                    "type": "string"
+                },
+                "date_of_birth": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "fake_id": {
+                    "type": "integer"
+                },
+                "first_name": {
+                    "type": "string"
+                },
+                "gender": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "last_name": {
+                    "type": "string"
+                },
+                "middle_name": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "referral_code": {
+                    "type": "string"
+                },
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler_auth.LogoutRequest": {
+            "type": "object",
+            "properties": {
+                "refreshToken": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler_auth.PartyLoginRequest": {
+            "type": "object",
+            "required": [
+                "identifier",
+                "identifierType",
+                "password"
+            ],
+            "properties": {
+                "identifier": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "minLength": 2
+                },
+                "identifierType": {
+                    "type": "string",
+                    "enum": [
+                        "email",
+                        "username",
+                        "phone"
+                    ]
+                },
+                "iso2": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string",
+                    "minLength": 4
+                }
+            }
+        },
+        "internal_handler_auth.RefreshRequest": {
+            "type": "object",
+            "properties": {
+                "refreshToken": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler_auth.RegisterCandidatePlaceholderRequest": {
+            "type": "object",
+            "required": [
+                "current_country",
+                "current_state",
+                "date_of_birth",
+                "first_name",
+                "gender",
+                "last_name",
+                "password"
+            ],
+            "properties": {
+                "avatar": {
+                    "type": "string"
+                },
+                "avatar_file_id": {
+                    "type": "integer"
+                },
+                "current_city": {
+                    "type": "integer"
+                },
+                "current_country": {
+                    "type": "integer"
+                },
+                "current_state": {
+                    "type": "integer"
+                },
+                "date_of_birth": {
+                    "description": "Expects YYYY-MM-DD",
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "first_name": {
+                    "type": "string",
+                    "maxLength": 30,
+                    "minLength": 2
+                },
+                "gender": {
+                    "type": "string",
+                    "enum": [
+                        "male",
+                        "female"
+                    ]
+                },
+                "last_name": {
+                    "type": "string",
+                    "maxLength": 30,
+                    "minLength": 2
+                },
+                "middle_name": {
+                    "type": "string",
+                    "maxLength": 30,
+                    "minLength": 2
+                },
+                "party_id": {
+                    "type": "integer"
+                },
+                "password": {
+                    "type": "string",
+                    "maxLength": 72,
+                    "minLength": 5
+                },
+                "state_of_origin": {
+                    "type": "integer"
+                },
+                "username": {
+                    "type": "string",
+                    "maxLength": 30,
+                    "minLength": 3
+                }
+            }
+        },
+        "internal_handler_auth.SignupRequest": {
+            "type": "object",
+            "required": [
+                "countryId",
+                "email",
+                "password",
+                "phoneNumber"
+            ],
+            "properties": {
+                "countryId": {
+                    "type": "integer"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string",
+                    "maxLength": 72,
+                    "minLength": 5
+                },
+                "phoneNumber": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler_bodies.CityResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler_bodies.CountryResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "iso2": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "phone_code": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler_bodies.GetCitiesData": {
+            "type": "object",
+            "properties": {
+                "cities": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_handler_bodies.CityResponse"
+                    }
+                }
+            }
+        },
+        "internal_handler_bodies.GetCitiesResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/internal_handler_bodies.GetCitiesData"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "meta": {
+                    "$ref": "#/definitions/internal_handler_bodies.PaginationMeta"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "internal_handler_bodies.GetCountriesData": {
+            "type": "object",
+            "properties": {
+                "countries": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_handler_bodies.CountryResponse"
+                    }
+                }
+            }
+        },
+        "internal_handler_bodies.GetCountriesResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/internal_handler_bodies.GetCountriesData"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "internal_handler_bodies.GetLGAsData": {
+            "type": "object",
+            "properties": {
+                "lgas": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_handler_bodies.LGAResponse"
+                    }
+                }
+            }
+        },
+        "internal_handler_bodies.GetLGAsResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/internal_handler_bodies.GetLGAsData"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "meta": {
+                    "$ref": "#/definitions/internal_handler_bodies.PaginationMeta"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "internal_handler_bodies.GetStatesData": {
+            "type": "object",
+            "properties": {
+                "states": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_handler_bodies.StateResponse"
+                    }
+                }
+            }
+        },
+        "internal_handler_bodies.GetStatesResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/internal_handler_bodies.GetStatesData"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "meta": {
+                    "$ref": "#/definitions/internal_handler_bodies.PaginationMeta"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "internal_handler_bodies.LGAResponse": {
+            "type": "object",
+            "properties": {
+                "abbreviation": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "state_id": {
+                    "type": "integer"
+                },
+                "state_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler_bodies.PaginationMeta": {
+            "type": "object",
+            "properties": {
+                "has_more": {
+                    "type": "boolean"
+                },
+                "next_cursor": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler_bodies.StateResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler_election_groups.CreateElectionGroupRequest": {
+            "type": "object",
+            "properties": {
+                "election_date": {
+                    "type": "string"
+                },
+                "elections_count": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "rank": {
+                    "type": "integer"
+                },
+                "states_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_handler_election_groups.UpdateElectionGroupRequest": {
+            "type": "object",
+            "properties": {
+                "election_date": {
+                    "type": "string"
+                },
+                "elections_count": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "rank": {
+                    "type": "integer"
+                },
+                "states_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_handler_election_groups.UpsertPartyElectionGroupStatsRequest": {
+            "type": "object",
+            "properties": {
+                "elections_contesting": {
+                    "type": "integer"
+                },
+                "party_id": {
+                    "type": "integer"
+                },
+                "polling_agents_coverage": {}
+            }
+        },
+        "internal_handler_elections.CreateElectionRequest": {
+            "type": "object",
+            "properties": {
+                "candidates_count": {
+                    "type": "integer"
+                },
+                "election_date": {
+                    "type": "string"
+                },
+                "election_group_id": {
+                    "type": "integer"
+                },
+                "federal_constituency_id": {
+                    "type": "integer"
+                },
+                "lga_id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "office_id": {
+                    "type": "integer"
+                },
+                "senatorial_district_id": {
+                    "type": "integer"
+                },
+                "state_constituency_id": {
+                    "type": "integer"
+                },
+                "state_id": {
+                    "type": "integer"
+                },
+                "ward_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_handler_elections.CreateFederalConstituencyElectionRequest": {
+            "type": "object",
+            "properties": {
+                "election_date": {
+                    "type": "string"
+                },
+                "election_group_id": {
+                    "type": "integer"
+                },
+                "federal_constituency_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "office_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_handler_elections.CreateLgaElectionRequest": {
+            "type": "object",
+            "properties": {
+                "election_date": {
+                    "type": "string"
+                },
+                "election_group_id": {
+                    "type": "integer"
+                },
+                "lga_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "office_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_handler_elections.CreateNationwideElectionRequest": {
+            "type": "object",
+            "properties": {
+                "candidates": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_handler_elections.ElectionCandidateInput"
+                    }
+                },
+                "election_date": {
+                    "type": "string"
+                },
+                "election_group_id": {
+                    "type": "integer"
+                },
+                "office_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_handler_elections.CreateSenatorialDistrictElectionRequest": {
+            "type": "object",
+            "properties": {
+                "election_date": {
+                    "type": "string"
+                },
+                "election_group_id": {
+                    "type": "integer"
+                },
+                "office_id": {
+                    "type": "integer"
+                },
+                "senatorial_district_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
+        "internal_handler_elections.CreateStateConstituencyElectionRequest": {
+            "type": "object",
+            "properties": {
+                "election_date": {
+                    "type": "string"
+                },
+                "election_group_id": {
+                    "type": "integer"
+                },
+                "office_id": {
+                    "type": "integer"
+                },
+                "state_constituency_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
+        "internal_handler_elections.CreateStateElectionRequest": {
+            "type": "object",
+            "properties": {
+                "election_date": {
+                    "type": "string"
+                },
+                "election_group_id": {
+                    "type": "integer"
+                },
+                "office_id": {
+                    "type": "integer"
+                },
+                "state_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
+        "internal_handler_elections.CreateWardElectionRequest": {
+            "type": "object",
+            "properties": {
+                "election_date": {
+                    "type": "string"
+                },
+                "election_group_id": {
+                    "type": "integer"
+                },
+                "office_id": {
+                    "type": "integer"
+                },
+                "ward_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
+        "internal_handler_elections.ElectionCandidateInput": {
+            "type": "object",
+            "required": [
+                "candidate_id",
+                "party_id",
+                "party_short_name"
+            ],
+            "properties": {
+                "candidate_id": {
+                    "type": "integer"
+                },
+                "party_id": {
+                    "type": "integer"
+                },
+                "party_short_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler_elections.SyncCandidatesRequest": {
+            "type": "object",
+            "properties": {
+                "candidates": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_handler_elections.ElectionCandidateInput"
+                    }
+                }
+            }
+        },
+        "internal_handler_elections.UpdateElectionRequest": {
+            "type": "object",
+            "properties": {
+                "candidates_count": {
+                    "type": "integer"
+                },
+                "election_date": {
+                    "type": "string"
+                },
+                "election_group_id": {
+                    "type": "integer"
+                },
+                "federal_constituency_id": {
+                    "type": "integer"
+                },
+                "lga_id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "office_id": {
+                    "type": "integer"
+                },
+                "senatorial_district_id": {
+                    "type": "integer"
+                },
+                "state_constituency_id": {
+                    "type": "integer"
+                },
+                "state_id": {
+                    "type": "integer"
+                },
+                "ward_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_handler_federal_constituencies.CreateFederalConstituencyRequest": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "senatorial_district_id": {
+                    "type": "integer"
+                },
+                "state_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_handler_federal_constituencies.FederalConstituencyResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "senatorial_district_id": {
+                    "type": "integer"
+                },
+                "senatorial_district_name": {
+                    "type": "string"
+                },
+                "state_id": {
+                    "type": "integer"
+                },
+                "state_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler_federal_constituencies.GetFederalConstituenciesData": {
+            "type": "object",
+            "properties": {
+                "constituencies": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_handler_federal_constituencies.FederalConstituencyResponse"
+                    }
+                }
+            }
+        },
+        "internal_handler_federal_constituencies.GetFederalConstituenciesResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/internal_handler_federal_constituencies.GetFederalConstituenciesData"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "meta": {
+                    "$ref": "#/definitions/internal_handler_federal_constituencies.PaginationMeta"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "internal_handler_federal_constituencies.PaginationMeta": {
+            "type": "object",
+            "properties": {
+                "has_more": {
+                    "type": "boolean"
+                },
+                "next_cursor": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler_federal_constituencies.UpdateFederalConstituencyRequest": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "senatorial_district_id": {
+                    "type": "integer"
+                },
+                "state_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_handler_files.GenerateUploadURLRequest": {
+            "type": "object",
+            "properties": {
+                "file_size": {
+                    "type": "integer"
+                },
+                "folder": {
+                    "type": "string"
+                },
+                "is_public": {
+                    "type": "boolean"
+                },
+                "mime_type": {
+                    "type": "string"
+                },
+                "original_name": {
+                    "type": "string"
+                },
+                "owner_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_handler_inec_grabber.ResolveUnmatchedRequest": {
+            "type": "object",
+            "properties": {
+                "notes": {
+                    "type": "string"
+                },
+                "polling_unit_id": {
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "resolved_mapped, resolved_created_pu, rejected",
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler_offices.CreateOfficeRequest": {
+            "type": "object",
+            "properties": {
+                "election": {
+                    "type": "string"
+                },
+                "inec_election_type_id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "rank": {
+                    "type": "integer"
+                },
+                "scope": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler_offices.UpdateOfficeRequest": {
+            "type": "object",
+            "properties": {
+                "election": {
+                    "type": "string"
+                },
+                "inec_election_type_id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "rank": {
+                    "type": "integer"
+                },
+                "scope": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler_page_verifications.AssignVerificationRequest": {
+            "type": "object",
+            "required": [
+                "for_who",
+                "page_id",
+                "verification_type_ids"
+            ],
+            "properties": {
+                "for_who": {
+                    "type": "string"
+                },
+                "page_id": {
+                    "type": "integer"
+                },
+                "verification_type_ids": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
+        "internal_handler_parties.BuySlotsRequest": {
+            "type": "object",
+            "properties": {
+                "quantity": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_handler_parties.CreateMarketingCampaignRequest": {
+            "type": "object",
+            "properties": {
+                "budget": {
+                    "type": "number"
+                },
+                "budget_kobo": {
+                    "type": "integer"
+                },
+                "budget_per_day": {
+                    "description": "Support legacy naira fields as fallback if passed",
+                    "type": "number"
+                },
+                "budget_per_day_kobo": {
+                    "type": "integer"
+                },
+                "duration_in_days": {
+                    "type": "integer"
+                },
+                "election_group_id": {
+                    "type": "integer"
+                },
+                "election_id": {
+                    "type": "integer"
+                },
+                "plan_id": {
+                    "type": "integer"
+                },
+                "states": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler_parties.CreatePartyRequest": {
+            "type": "object",
+            "properties": {
+                "color_hex": {
+                    "type": "string"
+                },
+                "dark_color_hex": {
+                    "type": "string"
+                },
+                "display_order": {
+                    "type": "integer"
+                },
+                "logo": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "short_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler_parties.CreatePlanRequest": {
+            "type": "object",
+            "properties": {
+                "color_hex": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "features": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "name": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "number"
+                },
+                "price_kobo": {
+                    "type": "integer"
+                },
+                "scopes_recommendation": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler_parties.DepositAllowanceRequest": {
+            "type": "object",
+            "properties": {
+                "amount_kobo": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_handler_parties.SetPartyDiscountRequest": {
+            "type": "object",
+            "properties": {
+                "discount_percentage": {
+                    "type": "number"
+                }
+            }
+        },
+        "internal_handler_parties.SetSlotPriceRequest": {
+            "type": "object",
+            "properties": {
+                "price_kobo": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_handler_parties.ToggleVerificationRequest": {
+            "type": "object",
+            "properties": {
+                "is_verified": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "internal_handler_parties.UpdateAgentTargetsRequest": {
+            "type": "object",
+            "properties": {
+                "lga_election_supervisor": {
+                    "type": "integer"
+                },
+                "polling_agent": {
+                    "type": "integer"
+                },
+                "state_election_supervisor": {
+                    "type": "integer"
+                },
+                "ward_election_supervisor": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_handler_parties.UpdatePartyRequest": {
+            "type": "object",
+            "properties": {
+                "color_hex": {
+                    "type": "string"
+                },
+                "dark_color_hex": {
+                    "type": "string"
+                },
+                "display_order": {
+                    "type": "integer"
+                },
+                "logo": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "short_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler_parties.UpdatePlanDisplayOrderRequest": {
+            "type": "object",
+            "properties": {
+                "display_order": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_handler_parties.UpdatePlanRequest": {
+            "type": "object",
+            "properties": {
+                "color_hex": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "features": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "number"
+                },
+                "price_kobo": {
+                    "type": "integer"
+                },
+                "scopes_recommendation": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler_parties.WithdrawRequest": {
+            "type": "object",
+            "properties": {
+                "amount_kobo": {
+                    "description": "AmountKobo is the withdrawal amount in Kobo (1 NGN = 100 Kobo).",
+                    "type": "integer"
+                },
+                "bank_account_number": {
+                    "type": "string"
+                },
+                "bank_code": {
+                    "type": "string"
+                },
+                "narration": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler_parties.agentPaymentAllocation": {
+            "type": "object",
+            "properties": {
+                "lga_election_supervisor": {
+                    "$ref": "#/definitions/internal_handler_parties.agentPaymentConfig"
+                },
+                "polling_agent": {
+                    "$ref": "#/definitions/internal_handler_parties.agentPaymentConfig"
+                },
+                "state_election_supervisor": {
+                    "$ref": "#/definitions/internal_handler_parties.agentPaymentConfig"
+                },
+                "ward_election_supervisor": {
+                    "$ref": "#/definitions/internal_handler_parties.agentPaymentConfig"
+                }
+            }
+        },
+        "internal_handler_parties.agentPaymentConfig": {
+            "type": "object",
+            "properties": {
+                "default": {
+                    "type": "integer"
+                },
+                "states": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer",
+                        "format": "int64"
+                    }
+                }
+            }
+        },
+        "internal_handler_party_applications.ApproveApplicationRequest": {
+            "type": "object",
+            "properties": {
+                "lga_id": {
+                    "type": "integer"
+                },
+                "polling_unit_id": {
+                    "type": "integer"
+                },
+                "role_type": {
+                    "type": "string"
+                },
+                "state_id": {
+                    "type": "integer"
+                },
+                "ward_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_handler_party_applications.RejectApplicationRequest": {
+            "type": "object",
+            "properties": {
+                "reason": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler_party_applications.SubmitApplicationRequest": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "avatar": {
+                    "type": "string"
+                },
+                "bank_account_number": {
+                    "type": "string"
+                },
+                "bank_code": {
+                    "type": "string"
+                },
+                "current_city": {
+                    "type": "integer"
+                },
+                "current_country": {
+                    "type": "integer"
+                },
+                "current_lga": {
+                    "type": "integer"
+                },
+                "current_state": {
+                    "type": "integer"
+                },
+                "current_ward": {
+                    "type": "integer"
+                },
+                "educational_status": {
+                    "type": "string"
+                },
+                "election_group_id": {
+                    "type": "integer"
+                },
+                "election_group_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "graduation_year": {
+                    "type": "string"
+                },
+                "highest_degree": {
+                    "type": "string"
+                },
+                "party_id": {
+                    "type": "integer"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "polling_unit_id": {
+                    "type": "integer"
+                },
+                "school_name": {
+                    "type": "string"
+                },
+                "voters_card_image": {
+                    "type": "string"
+                },
+                "whatsapp_phone": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler_party_applications.SubmitSupervisorApplicationRequest": {
+            "type": "object",
+            "properties": {
+                "degree_certificate_url": {
+                    "type": "string"
+                },
+                "election_group_id": {
+                    "type": "integer"
+                },
+                "lga_id": {
+                    "type": "integer"
+                },
+                "role": {
+                    "type": "string"
+                },
+                "state_id": {
+                    "type": "integer"
+                },
+                "ward_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_handler_polling_unit_assignments.CreateAssignmentRequest": {
+            "type": "object",
+            "properties": {
+                "election_group_id": {
+                    "type": "integer"
+                },
+                "fake_id": {
+                    "type": "integer"
+                },
+                "party_id": {
+                    "type": "integer"
+                },
+                "polling_unit_id": {
+                    "type": "integer"
+                },
+                "role_type": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler_polling_unit_assignments.UpdateAssignmentTrackingRequest": {
+            "type": "object",
+            "properties": {
+                "arrival_video_url": {
+                    "type": "string"
+                },
+                "arrived_at": {
+                    "type": "string"
+                },
+                "election_ended_at": {
+                    "type": "string"
+                },
+                "election_ended_video_url": {
+                    "type": "string"
+                },
+                "election_started_at": {
+                    "type": "string"
+                },
+                "election_started_video_url": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler_polling_unit_results.ReviewRequest": {
+            "type": "object",
+            "properties": {
+                "disputed_reason": {
+                    "type": "string"
+                },
+                "status": {
+                    "description": "\"confirmed\" or \"nullified\"",
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler_polling_unit_results.SingleElectionSubmissionRequest": {
+            "type": "object",
+            "properties": {
+                "election_id": {
+                    "type": "integer"
+                },
+                "result_sheet_image_url": {
+                    "type": "string"
+                },
+                "result_sheet_video_url": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler_polling_unit_results.SubmitBatchResultRequest": {
+            "type": "object",
+            "properties": {
+                "assignment_id": {
+                    "type": "integer"
+                },
+                "election_group_id": {
+                    "type": "integer"
+                },
+                "party_id": {
+                    "type": "integer"
+                },
+                "polling_unit_id": {
+                    "type": "integer"
+                },
+                "submissions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_handler_polling_unit_results.SingleElectionSubmissionRequest"
+                    }
+                },
+                "uploaded_by_inec": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "internal_handler_polling_unit_results.SubmitResultRequest": {
+            "type": "object",
+            "properties": {
+                "assignment_id": {
+                    "type": "integer"
+                },
+                "election_group_id": {
+                    "type": "integer"
+                },
+                "election_id": {
+                    "type": "integer"
+                },
+                "party_id": {
+                    "type": "integer"
+                },
+                "polling_unit_id": {
+                    "type": "integer"
+                },
+                "result_sheet_image_url": {
+                    "type": "string"
+                },
+                "result_sheet_video_url": {
+                    "type": "string"
+                },
+                "uploaded_by_inec": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "internal_handler_polling_unit_results.VoteRequest": {
+            "type": "object",
+            "properties": {
+                "vote_type": {
+                    "description": "\"up\" or \"down\"",
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler_polling_unit_updates.CreateUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "assignment_id": {
+                    "type": "integer"
+                },
+                "election_group_id": {
+                    "type": "integer"
+                },
+                "is_report": {
+                    "type": "boolean"
+                },
+                "media_urls": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "message": {
+                    "type": "string"
+                },
+                "party_id": {
+                    "type": "integer"
+                },
+                "polling_unit_id": {
+                    "type": "integer"
+                },
+                "report_types": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "internal_handler_polling_units.CreatePollingUnitRequest": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "formatted_address": {
+                    "type": "string"
+                },
+                "google_place_id": {
+                    "type": "string"
+                },
+                "latitude": {
+                    "type": "number"
+                },
+                "lga_id": {
+                    "type": "integer"
+                },
+                "longitude": {
+                    "type": "number"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "precise_location": {
+                    "type": "string"
+                },
+                "pu_code": {
+                    "type": "string"
+                },
+                "registration_area_id": {
+                    "type": "integer"
+                },
+                "state_id": {
+                    "type": "integer"
+                },
+                "ward_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_handler_polling_units.GetPollingUnitsData": {
+            "type": "object",
+            "properties": {
+                "polling_units": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_handler_polling_units.PollingUnitResponse"
+                    }
+                }
+            }
+        },
+        "internal_handler_polling_units.GetPollingUnitsResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/internal_handler_polling_units.GetPollingUnitsData"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "meta": {
+                    "$ref": "#/definitions/internal_handler_polling_units.PaginationMeta"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "internal_handler_polling_units.PaginationMeta": {
+            "type": "object",
+            "properties": {
+                "has_more": {
+                    "type": "boolean"
+                },
+                "next_cursor": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler_polling_units.PollingUnitResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "formatted_address": {
+                    "type": "string"
+                },
+                "google_place_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "latitude": {
+                    "type": "number"
+                },
+                "lga_id": {
+                    "type": "integer"
+                },
+                "lga_name": {
+                    "type": "string"
+                },
+                "longitude": {
+                    "type": "number"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "precise_location": {
+                    "type": "string"
+                },
+                "pu_code": {
+                    "type": "string"
+                },
+                "registration_area_id": {
+                    "type": "integer"
+                },
+                "state_id": {
+                    "type": "integer"
+                },
+                "state_name": {
+                    "type": "string"
+                },
+                "ward_id": {
+                    "type": "integer"
+                },
+                "ward_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler_polling_units.UpdatePollingUnitRequest": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "formatted_address": {
+                    "type": "string"
+                },
+                "google_place_id": {
+                    "type": "string"
+                },
+                "latitude": {
+                    "type": "number"
+                },
+                "lga_id": {
+                    "type": "integer"
+                },
+                "longitude": {
+                    "type": "number"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "precise_location": {
+                    "type": "string"
+                },
+                "pu_code": {
+                    "type": "string"
+                },
+                "registration_area_id": {
+                    "type": "integer"
+                },
+                "state_id": {
+                    "type": "integer"
+                },
+                "ward_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_handler_practice_tests.PracticeTestResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "earned_amount_kobo": {
+                    "type": "integer"
+                },
+                "election_group_id": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "overall_score": {
+                    "type": "number"
+                },
+                "role": {
+                    "type": "string"
+                },
+                "test_attempts": {},
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_handler_practice_tests.SubmitPracticeTestRequest": {
+            "type": "object",
+            "properties": {
+                "election_group_id": {
+                    "type": "integer"
+                },
+                "final_score": {
+                    "type": "number"
+                },
+                "role": {
+                    "type": "string"
+                },
+                "task_stats": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_handler_practice_tests.TaskStat"
+                    }
+                }
+            }
+        },
+        "internal_handler_practice_tests.TaskStat": {
+            "type": "object",
+            "properties": {
+                "completed": {
+                    "type": "boolean"
+                },
+                "failed_attempts": {
+                    "type": "integer"
+                },
+                "score": {
+                    "type": "number"
+                },
+                "task_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_handler_referrals.createReferralRequest": {
+            "type": "object",
+            "required": [
+                "milestone",
+                "referred_user_id",
+                "referrer_user_id"
+            ],
+            "properties": {
+                "milestone": {
+                    "type": "string"
+                },
+                "party_id": {
+                    "type": "integer"
+                },
+                "referred_user_id": {
+                    "type": "integer"
+                },
+                "referrer_user_id": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler_referrals.updateReferralRequest": {
+            "type": "object",
+            "properties": {
+                "milestone": {
+                    "type": "string"
+                },
+                "paid_at": {
+                    "description": "ISO8601 string",
+                    "type": "string"
+                },
+                "party_id": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler_seed.SimulateElectionRequest": {
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "type": "integer",
+                    "example": 1000
+                },
+                "max_votes_per_pu": {
+                    "type": "integer",
+                    "example": 750
+                },
+                "min_votes_per_pu": {
+                    "type": "integer",
+                    "example": 100
+                },
+                "party_shares": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_handler_seed.SimulatePartyShare"
+                    }
+                },
+                "run_full_rollup": {
+                    "type": "boolean"
+                },
+                "trigger_realtime": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "internal_handler_seed.SimulatePartyShare": {
+            "type": "object",
+            "properties": {
+                "party_short_name": {
+                    "type": "string",
+                    "example": "APC"
+                },
+                "vote_share": {
+                    "type": "number",
+                    "example": 35
+                }
+            }
+        },
+        "internal_handler_senatorial_districts.CreateSenatorialDistrictRequest": {
             "type": "object",
             "properties": {
                 "coalition_center": {
@@ -11763,35 +13863,35 @@ const docTemplate = `{
                 }
             }
         },
-        "senatorialdistrictshandler.GetSenatorialDistrictsData": {
+        "internal_handler_senatorial_districts.GetSenatorialDistrictsData": {
             "type": "object",
             "properties": {
                 "districts": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/senatorialdistrictshandler.SenatorialDistrictResponse"
+                        "$ref": "#/definitions/internal_handler_senatorial_districts.SenatorialDistrictResponse"
                     }
                 }
             }
         },
-        "senatorialdistrictshandler.GetSenatorialDistrictsResponse": {
+        "internal_handler_senatorial_districts.GetSenatorialDistrictsResponse": {
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/senatorialdistrictshandler.GetSenatorialDistrictsData"
+                    "$ref": "#/definitions/internal_handler_senatorial_districts.GetSenatorialDistrictsData"
                 },
                 "message": {
                     "type": "string"
                 },
                 "meta": {
-                    "$ref": "#/definitions/senatorialdistrictshandler.PaginationMeta"
+                    "$ref": "#/definitions/internal_handler_senatorial_districts.PaginationMeta"
                 },
                 "success": {
                     "type": "boolean"
                 }
             }
         },
-        "senatorialdistrictshandler.PaginationMeta": {
+        "internal_handler_senatorial_districts.PaginationMeta": {
             "type": "object",
             "properties": {
                 "has_more": {
@@ -11802,7 +13902,7 @@ const docTemplate = `{
                 }
             }
         },
-        "senatorialdistrictshandler.SenatorialDistrictResponse": {
+        "internal_handler_senatorial_districts.SenatorialDistrictResponse": {
             "type": "object",
             "properties": {
                 "coalition_center": {
@@ -11825,7 +13925,7 @@ const docTemplate = `{
                 }
             }
         },
-        "senatorialdistrictshandler.UpdateSenatorialDistrictRequest": {
+        "internal_handler_senatorial_districts.UpdateSenatorialDistrictRequest": {
             "type": "object",
             "properties": {
                 "coalition_center": {
@@ -11845,7 +13945,7 @@ const docTemplate = `{
                 }
             }
         },
-        "stateassemblyconstituencieshandler.CreateStateConstituencyRequest": {
+        "internal_handler_state_constituencies.CreateStateConstituencyRequest": {
             "type": "object",
             "properties": {
                 "code": {
@@ -11868,35 +13968,35 @@ const docTemplate = `{
                 }
             }
         },
-        "stateassemblyconstituencieshandler.GetStateConstituenciesData": {
+        "internal_handler_state_constituencies.GetStateConstituenciesData": {
             "type": "object",
             "properties": {
                 "constituencies": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/stateassemblyconstituencieshandler.StateConstituencyResponse"
+                        "$ref": "#/definitions/internal_handler_state_constituencies.StateConstituencyResponse"
                     }
                 }
             }
         },
-        "stateassemblyconstituencieshandler.GetStateConstituenciesResponse": {
+        "internal_handler_state_constituencies.GetStateConstituenciesResponse": {
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/stateassemblyconstituencieshandler.GetStateConstituenciesData"
+                    "$ref": "#/definitions/internal_handler_state_constituencies.GetStateConstituenciesData"
                 },
                 "message": {
                     "type": "string"
                 },
                 "meta": {
-                    "$ref": "#/definitions/stateassemblyconstituencieshandler.PaginationMeta"
+                    "$ref": "#/definitions/internal_handler_state_constituencies.PaginationMeta"
                 },
                 "success": {
                     "type": "boolean"
                 }
             }
         },
-        "stateassemblyconstituencieshandler.PaginationMeta": {
+        "internal_handler_state_constituencies.PaginationMeta": {
             "type": "object",
             "properties": {
                 "has_more": {
@@ -11907,7 +14007,7 @@ const docTemplate = `{
                 }
             }
         },
-        "stateassemblyconstituencieshandler.StateConstituencyResponse": {
+        "internal_handler_state_constituencies.StateConstituencyResponse": {
             "type": "object",
             "properties": {
                 "code": {
@@ -11939,7 +14039,7 @@ const docTemplate = `{
                 }
             }
         },
-        "stateassemblyconstituencieshandler.UpdateStateConstituencyRequest": {
+        "internal_handler_state_constituencies.UpdateStateConstituencyRequest": {
             "type": "object",
             "properties": {
                 "code": {
@@ -11962,7 +14062,7 @@ const docTemplate = `{
                 }
             }
         },
-        "stateshandler.CreateStateRequest": {
+        "internal_handler_states.CreateStateRequest": {
             "type": "object",
             "properties": {
                 "country_code": {
@@ -11982,7 +14082,7 @@ const docTemplate = `{
                 }
             }
         },
-        "stateshandler.UpdateStateRequest": {
+        "internal_handler_states.UpdateStateRequest": {
             "type": "object",
             "properties": {
                 "country_code": {
@@ -12002,7 +14102,7 @@ const docTemplate = `{
                 }
             }
         },
-        "system_settings.SystemSettingResponse": {
+        "internal_handler_system_settings.SystemSettingResponse": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -12020,7 +14120,7 @@ const docTemplate = `{
                 "value": {}
             }
         },
-        "system_settings.UpdateSystemSettingRequest": {
+        "internal_handler_system_settings.UpdateSystemSettingRequest": {
             "type": "object",
             "required": [
                 "value"
@@ -12032,7 +14132,7 @@ const docTemplate = `{
                 "value": {}
             }
         },
-        "usershandler.MakeUserSuperAdminRequest": {
+        "internal_handler_users.MakeUserSuperAdminRequest": {
             "type": "object",
             "required": [
                 "name"
@@ -12044,7 +14144,7 @@ const docTemplate = `{
                 }
             }
         },
-        "usershandler.UpdateProfileRequest": {
+        "internal_handler_users.UpdateProfileRequest": {
             "type": "object",
             "required": [
                 "current_country",
@@ -12092,13 +14192,13 @@ const docTemplate = `{
                 }
             }
         },
-        "usershandler.UpdateUserPhoneNumbersRequest": {
+        "internal_handler_users.UpdateUserPhoneNumbersRequest": {
             "type": "object",
             "properties": {
                 "phones": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/usersservice.PhonePayload"
+                        "$ref": "#/definitions/free9ja_api_internal_service_users.PhonePayload"
                     }
                 },
                 "user_fid": {
@@ -12106,7 +14206,7 @@ const docTemplate = `{
                 }
             }
         },
-        "usershandler.UpdateUserRolesRequest": {
+        "internal_handler_users.UpdateUserRolesRequest": {
             "type": "object",
             "required": [
                 "roles"
@@ -12126,7 +14226,7 @@ const docTemplate = `{
                 }
             }
         },
-        "usershandler.UserWithdrawRequest": {
+        "internal_handler_users.UserWithdrawRequest": {
             "type": "object",
             "properties": {
                 "amount_kobo": {
@@ -12143,81 +14243,7 @@ const docTemplate = `{
                 }
             }
         },
-        "usersservice.PhonePayload": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "type": "integer"
-                },
-                "is_default": {
-                    "type": "boolean"
-                },
-                "on_whatsapp": {
-                    "type": "string"
-                },
-                "phone": {
-                    "type": "string"
-                },
-                "phonecode": {
-                    "type": "string"
-                },
-                "raw_input": {
-                    "type": "string"
-                }
-            }
-        },
-        "usersservice.UpdateUserPreferencesParams": {
-            "type": "object",
-            "properties": {
-                "pinned_links": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "array",
-                        "items": {
-                            "type": "string"
-                        }
-                    }
-                },
-                "sidebar_state": {
-                    "type": "string"
-                },
-                "theme": {
-                    "type": "string"
-                }
-            }
-        },
-        "utils.ErrorResponse": {
-            "type": "object",
-            "properties": {
-                "data": {},
-                "message": {
-                    "type": "string",
-                    "example": "Error message description"
-                },
-                "success": {
-                    "type": "boolean",
-                    "example": false
-                }
-            }
-        },
-        "utils.SuccessResponse": {
-            "type": "object",
-            "properties": {
-                "data": {
-                    "type": "object",
-                    "additionalProperties": true
-                },
-                "message": {
-                    "type": "string",
-                    "example": "Operation successful"
-                },
-                "success": {
-                    "type": "boolean",
-                    "example": true
-                }
-            }
-        },
-        "wardshandler.CreateWardRequest": {
+        "internal_handler_wards.CreateWardRequest": {
             "type": "object",
             "properties": {
                 "code": {
@@ -12234,35 +14260,35 @@ const docTemplate = `{
                 }
             }
         },
-        "wardshandler.GetWardsData": {
+        "internal_handler_wards.GetWardsData": {
             "type": "object",
             "properties": {
                 "wards": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/wardshandler.WardResponse"
+                        "$ref": "#/definitions/internal_handler_wards.WardResponse"
                     }
                 }
             }
         },
-        "wardshandler.GetWardsResponse": {
+        "internal_handler_wards.GetWardsResponse": {
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/wardshandler.GetWardsData"
+                    "$ref": "#/definitions/internal_handler_wards.GetWardsData"
                 },
                 "message": {
                     "type": "string"
                 },
                 "meta": {
-                    "$ref": "#/definitions/wardshandler.PaginationMeta"
+                    "$ref": "#/definitions/internal_handler_wards.PaginationMeta"
                 },
                 "success": {
                     "type": "boolean"
                 }
             }
         },
-        "wardshandler.PaginationMeta": {
+        "internal_handler_wards.PaginationMeta": {
             "type": "object",
             "properties": {
                 "has_more": {
@@ -12273,7 +14299,7 @@ const docTemplate = `{
                 }
             }
         },
-        "wardshandler.UpdateWardRequest": {
+        "internal_handler_wards.UpdateWardRequest": {
             "type": "object",
             "properties": {
                 "code": {
@@ -12290,7 +14316,7 @@ const docTemplate = `{
                 }
             }
         },
-        "wardshandler.WardResponse": {
+        "internal_handler_wards.WardResponse": {
             "type": "object",
             "properties": {
                 "code": {

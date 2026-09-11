@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS user_referrals (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   party_id SMALLINT REFERENCES parties(id) ON DELETE CASCADE,
-  election_group_id INT REFERENCES election_groups(id) ON DELETE CASCADE,
+  election_group_id SMALLINT REFERENCES election_groups(id) ON DELETE CASCADE,
   
   -- The Stats
   total_referrals INTEGER DEFAULT 0, -- updated after user applies to the this referrer's party and election group
@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS referrals (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   user_referral_id BIGINT REFERENCES user_referrals(id) ON DELETE SET NULL,
   party_id SMALLINT REFERENCES parties(id) ON DELETE SET NULL,
-  election_group_id INT REFERENCES election_groups(id) ON DELETE SET NULL,
+  election_group_id SMALLINT REFERENCES election_groups(id) ON DELETE SET NULL,
   referrer_user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   referred_user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   

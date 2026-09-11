@@ -35,8 +35,8 @@ WHERE NOT EXISTS (SELECT 1 FROM plans WHERE name = 'Premium Plus');
 
 CREATE TABLE IF NOT EXISTS party_marketing_campaigns (
     id SERIAL PRIMARY KEY,
-    party_id INT NOT NULL REFERENCES parties(id) ON DELETE CASCADE,
-    election_group_id INT NOT NULL REFERENCES election_groups(id) ON DELETE CASCADE,
+    party_id SMALLINT NOT NULL REFERENCES parties(id) ON DELETE CASCADE,
+    election_group_id SMALLINT NOT NULL REFERENCES election_groups(id) ON DELETE CASCADE,
     election_id INT NOT NULL REFERENCES elections(id) ON DELETE CASCADE,
     plan_id INT NOT NULL REFERENCES plans(id) ON DELETE RESTRICT,
     type VARCHAR(50) NOT NULL DEFAULT 'agent-campaign' CHECK (type IN ('agent-campaign', 'votes-campaign')),

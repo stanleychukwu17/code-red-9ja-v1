@@ -14,7 +14,7 @@ const TaskSeedElectionGroupStats = "election_group:seed_stats"
 
 // SeedElectionGroupStatsPayload carries the election group ID to seed.
 type SeedElectionGroupStatsPayload struct {
-	ElectionGroupID int64 `json:"election_group_id"`
+	ElectionGroupID int16 `json:"election_group_id"`
 }
 
 // DistributeTaskSeedElectionGroupStats enqueues a background job to seed

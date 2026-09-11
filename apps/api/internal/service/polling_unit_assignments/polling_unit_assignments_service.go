@@ -6,6 +6,7 @@ import (
 	"errors"
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/worker"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -35,7 +36,7 @@ func (s *Service) SetEarningsService(es earningsService) {
 	s.earningsSvc = es
 }
 
-func (s *Service) AssignAgent(ctx context.Context, userID, electionGroupID int64, partyID int16, assignedBy int64, pollingUnitID int32, roleType string) (queries.PollingUnitAssignment, error) {
+func (s *Service) AssignAgent(ctx context.Context, userID int64, electionGroupID int16, partyID int16, assignedBy int64, pollingUnitID int32, roleType string) (queries.PollingUnitAssignment, error) {
 	var assignedByVal pgtype.Int8
 	if assignedBy > 0 {
 		assignedByVal = pgtype.Int8{Int64: assignedBy, Valid: true}
@@ -43,10 +44,15 @@ func (s *Service) AssignAgent(ctx context.Context, userID, electionGroupID int64
 
 	var potentialPaymentKobo int64 = 0
 	party, err := s.queries.GetPartyByID(ctx, partyID)
-	if err == nil && party.AgentPaymentAllocationKobo != nil {
-		roleKey := roleType
-		if roleKey == "" {
-			roleKey = "polling_agent"
+	if err == nil && len(party.AgentPaymentAllocationKobo) > 0 {
+		roleKey := strings.ReplaceAll(roleType, "-", "_")
+		switch roleKey {
+		case "ward_supervisor":
+			roleKey = "ward_election_supervisor"
+		case "lga_supervisor":
+			roleKey = "lga_election_supervisor"
+		case "state_supervisor":
+			roleKey = "state_election_supervisor"
 		}
 		var allocs map[string]struct {
 			Default int64 `json:"default"`
@@ -75,7 +81,7 @@ func (s *Service) GetAssignmentByID(ctx context.Context, id int64) (queries.GetA
 	return s.queries.GetAssignmentByID(ctx, id)
 }
 
-func (s *Service) ListAssignments(ctx context.Context, electionGroupID int64, partyID int16, userID int64, pollingUnitID int32, limit, offset int32) ([]queries.ListAssignmentsRow, error) {
+func (s *Service) ListAssignments(ctx context.Context, electionGroupID int16, partyID int16, userID int64, pollingUnitID int32, limit, offset int32) ([]queries.ListAssignmentsRow, error) {
 	return s.queries.ListAssignments(ctx, queries.ListAssignmentsParams{
 		Limit:           limit,
 		Offset:          offset,

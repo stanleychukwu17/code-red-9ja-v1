@@ -39,7 +39,7 @@ func NewHandler(q *queries.Queries, u *utils.Utils, earningsSvc *earningsservice
 type PracticeTestResponse struct {
 	ID               int64       `json:"id"`
 	UserID           int64       `json:"user_id"`
-	ElectionGroupID  *int64      `json:"election_group_id,omitempty"`
+	ElectionGroupID  *int16      `json:"election_group_id,omitempty"`
 	Role             string      `json:"role"`
 	TestAttempts     interface{} `json:"test_attempts"`
 	OverallScore     float64     `json:"overall_score"`
@@ -60,9 +60,9 @@ func mapPracticeTest(t queries.UserPracticeTest) PracticeTestResponse {
 	if len(attempts) == 0 {
 		attempts = json.RawMessage("[]")
 	}
-	var egID *int64
+	var egID *int16
 	if t.ElectionGroupID.Valid {
-		egID = &t.ElectionGroupID.Int64
+		egID = &t.ElectionGroupID.Int16
 	}
 	scoreFloat, _ := t.OverallScore.Float64Value()
 
@@ -92,9 +92,9 @@ func mapPracticeTestRow(t queries.ListUserPracticeTestsRow) PracticeTestWithUser
 	if len(attempts) == 0 {
 		attempts = json.RawMessage("[]")
 	}
-	var egID *int64
+	var egID *int16
 	if t.ElectionGroupID.Valid {
-		egID = &t.ElectionGroupID.Int64
+		egID = &t.ElectionGroupID.Int16
 	}
 	scoreFloat, _ := t.OverallScore.Float64Value()
 
@@ -147,7 +147,7 @@ type TaskStat struct {
 }
 
 type SubmitPracticeTestRequest struct {
-	ElectionGroupID int64      `json:"election_group_id"`
+	ElectionGroupID int16      `json:"election_group_id"`
 	Role            string     `json:"role"`
 	FinalScore      float64    `json:"final_score"`
 	TaskStats       []TaskStat `json:"task_stats"`
@@ -193,9 +193,9 @@ func (h *Handler) SubmitPracticeTest(w http.ResponseWriter, r *http.Request) {
 		"tasksCount", len(req.TaskStats),
 	)
 
-	var electionGroupID pgtype.Int8
+	var electionGroupID pgtype.Int2
 	if req.ElectionGroupID != 0 {
-		electionGroupID = pgtype.Int8{Int64: req.ElectionGroupID, Valid: true}
+		electionGroupID = pgtype.Int2{Int16: req.ElectionGroupID, Valid: true}
 	}
 
 	// 1. Process auto-accept for any pending party applications first so assignment exists
@@ -358,11 +358,12 @@ func (h *Handler) GetPayoutPreview(w http.ResponseWriter, r *http.Request) {
 
 	q := r.URL.Query()
 
-	electionGroupID, _ := strconv.ParseInt(q.Get("election_group_id"), 10, 64)
-	if electionGroupID == 0 {
+	egIDParsed, _ := strconv.ParseInt(q.Get("election_group_id"), 10, 16)
+	if egIDParsed == 0 {
 		h.u.RespondError(w, http.StatusBadRequest, "election_group_id is required")
 		return
 	}
+	electionGroupID := int16(egIDParsed)
 
 	role := q.Get("role")
 	if role == "" {
@@ -498,7 +499,7 @@ func (h *Handler) GetPayoutPreview(w http.ResponseWriter, r *http.Request) {
 	testsTakenInWindow := 0
 	existingRecord, ptErr := h.q.GetPracticeTest(ctx, queries.GetPracticeTestParams{
 		UserID:          userID,
-		ElectionGroupID: pgtype.Int8{Int64: electionGroupID, Valid: true},
+		ElectionGroupID: pgtype.Int2{Int16: electionGroupID, Valid: true},
 		Role:            roleType,
 	})
 	if ptErr == nil && len(existingRecord.TestAttempts) > 0 {
@@ -611,10 +612,10 @@ func (h *Handler) ListPracticeTests(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	var electionGroupID int64
+	var electionGroupID int16
 	if v := q.Get("election_group_id"); v != "" {
-		if parsed, err := strconv.ParseInt(v, 10, 64); err == nil {
-			electionGroupID = parsed
+		if parsed, err := strconv.ParseInt(v, 10, 16); err == nil {
+			electionGroupID = int16(parsed)
 		}
 	}
 

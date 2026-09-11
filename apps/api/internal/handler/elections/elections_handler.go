@@ -17,26 +17,26 @@ import (
 )
 
 type ElectionsService interface {
-	CreateElection(ctx context.Context, name string, candidatesCount int32, electionDate time.Time, electionGroupID int64, officeID int16, stateID *int16, senatorialDistrictID, federalConstituencyID, stateConstituencyID, lgaID, wardID *int32) (queries.Election, error)
-	CreateNationwideElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID *int64, candidates []elections.CandidateInput) (queries.Election, error)
-	CreateStateElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID *int64, stateIDs []int16) ([]queries.Election, error)
-	CreateSenatorialDistrictElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID *int64, senatorialDistrictIDs []int32) ([]queries.Election, error)
-	CreateFederalConstituencyElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID *int64, federalConstituencyIDs []int32) ([]queries.Election, error)
-	CreateStateConstituencyElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID *int64, stateConstituencyIDs []int32) ([]queries.Election, error)
-	CreateLgaElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID *int64, lgaIDs []int32) ([]queries.Election, error)
-	CreateWardElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID *int64, wardIDs []int32) ([]queries.Election, error)
-	GetElectionByID(ctx context.Context, id int64) (queries.Election, error)
+	CreateElection(ctx context.Context, name string, candidatesCount int32, electionDate time.Time, electionGroupID int16, officeID int16, stateID *int16, senatorialDistrictID, federalConstituencyID, stateConstituencyID, lgaID, wardID *int32) (queries.Election, error)
+	CreateNationwideElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID *int16, candidates []elections.CandidateInput) (queries.Election, error)
+	CreateStateElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID *int16, stateIDs []int16) ([]queries.Election, error)
+	CreateSenatorialDistrictElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID *int16, senatorialDistrictIDs []int32) ([]queries.Election, error)
+	CreateFederalConstituencyElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID *int16, federalConstituencyIDs []int32) ([]queries.Election, error)
+	CreateStateConstituencyElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID *int16, stateConstituencyIDs []int32) ([]queries.Election, error)
+	CreateLgaElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID *int16, lgaIDs []int32) ([]queries.Election, error)
+	CreateWardElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID *int16, wardIDs []int32) ([]queries.Election, error)
+	GetElectionByID(ctx context.Context, id int32) (queries.Election, error)
 	ListElections(ctx context.Context) ([]queries.Election, error)
-	UpdateElection(ctx context.Context, id int64, name string, candidatesCount int32, electionDate time.Time, electionGroupID int64, officeID int16, stateID *int16, senatorialDistrictID, federalConstituencyID, stateConstituencyID, lgaID, wardID *int32) (queries.Election, error)
-	DeleteElection(ctx context.Context, id int64) error
-	GetElectionCandidates(ctx context.Context, electionID int64) ([]queries.ListElectionCandidatesDetailedByElectionIDRow, error)
-	SyncElectionCandidates(ctx context.Context, electionID int64, candidates []elections.CandidateInput) error
-	FieldPartyCandidate(ctx context.Context, electionID int64, partyID int16, candidateID int64) error
+	UpdateElection(ctx context.Context, id int32, name string, candidatesCount int32, electionDate time.Time, electionGroupID int16, officeID int16, stateID *int16, senatorialDistrictID, federalConstituencyID, stateConstituencyID, lgaID, wardID *int32) (queries.Election, error)
+	DeleteElection(ctx context.Context, id int32) error
+	GetElectionCandidates(ctx context.Context, electionID int32) ([]queries.ListElectionCandidatesDetailedByElectionIDRow, error)
+	SyncElectionCandidates(ctx context.Context, electionID int32, candidates []elections.CandidateInput) error
+	FieldPartyCandidate(ctx context.Context, electionID int32, partyID int16, candidateID int64) error
 	GetNonVotingReasons(ctx context.Context) ([]queries.NonVotingReason, error)
 	CreateDidNotVoteReason(ctx context.Context, arg queries.CreateDidNotVoteReasonParams) (queries.DidNotVoteReason, error)
-	GetEligibleElectionsForPollingUnit(ctx context.Context, electionGroupID int64, pollingUnitID int32) ([]elections.ElectionWithCandidates, error)
-	SubmitElectionVotes(ctx context.Context, userID int64, electionGroupID int64, pollingUnitID int32, votes []elections.VoteInput, votersCardImage string) error
-	GetUserElectionGroupVoteStatus(ctx context.Context, userID, electionGroupID int64) (elections.UserVoteStatus, error)
+	GetEligibleElectionsForPollingUnit(ctx context.Context, electionGroupID int16, pollingUnitID int32) ([]elections.ElectionWithCandidates, error)
+	SubmitElectionVotes(ctx context.Context, userID int64, electionGroupID int16, pollingUnitID int32, votes []elections.VoteInput, votersCardImage string) error
+	GetUserElectionGroupVoteStatus(ctx context.Context, userID int64, electionGroupID int16) (elections.UserVoteStatus, error)
 }
 
 type UsersService interface {
@@ -82,7 +82,7 @@ type CreateElectionRequest struct {
 	Name                  string         `json:"name"`
 	CandidatesCount       int32          `json:"candidates_count"`
 	ElectionDate          utils.JSONDate `json:"election_date"`
-	ElectionGroupID       int64          `json:"election_group_id"`
+	ElectionGroupID       int16          `json:"election_group_id"`
 	OfficeID              int16          `json:"office_id"`
 	StateID               *int16         `json:"state_id,omitempty"`
 	SenatorialDistrictID  *int32         `json:"senatorial_district_id,omitempty"`
@@ -96,7 +96,7 @@ type UpdateElectionRequest struct {
 	Name                  string         `json:"name"`
 	CandidatesCount       int32          `json:"candidates_count"`
 	ElectionDate          utils.JSONDate `json:"election_date"`
-	ElectionGroupID       int64          `json:"election_group_id"`
+	ElectionGroupID       int16          `json:"election_group_id"`
 	OfficeID              int16          `json:"office_id"`
 	StateID               *int16         `json:"state_id,omitempty"`
 	SenatorialDistrictID  *int32         `json:"senatorial_district_id,omitempty"`
@@ -115,49 +115,49 @@ type ElectionCandidateInput struct {
 type CreateNationwideElectionRequest struct {
 	OfficeID        int16                    `json:"office_id"`
 	ElectionDate    utils.JSONDate           `json:"election_date"`
-	ElectionGroupID *int64                   `json:"election_group_id,omitempty"`
+	ElectionGroupID *int16                   `json:"election_group_id,omitempty"`
 	Candidates      []ElectionCandidateInput `json:"candidates"`
 }
 
 type CreateStateElectionRequest struct {
 	OfficeID        int16          `json:"office_id"`
 	ElectionDate    utils.JSONDate `json:"election_date"`
-	ElectionGroupID *int64         `json:"election_group_id,omitempty"`
+	ElectionGroupID *int16         `json:"election_group_id,omitempty"`
 	StateIDs        []int16        `json:"state_ids"`
 }
 
 type CreateSenatorialDistrictElectionRequest struct {
 	OfficeID              int16          `json:"office_id"`
 	ElectionDate          utils.JSONDate `json:"election_date"`
-	ElectionGroupID       *int64         `json:"election_group_id,omitempty"`
+	ElectionGroupID       *int16         `json:"election_group_id,omitempty"`
 	SenatorialDistrictIDs []int32        `json:"senatorial_district_ids"`
 }
 
 type CreateFederalConstituencyElectionRequest struct {
 	OfficeID               int16          `json:"office_id"`
 	ElectionDate           utils.JSONDate `json:"election_date"`
-	ElectionGroupID        *int64         `json:"election_group_id,omitempty"`
+	ElectionGroupID        *int16         `json:"election_group_id,omitempty"`
 	FederalConstituencyIDs []int32        `json:"federal_constituency_ids"`
 }
 
 type CreateStateConstituencyElectionRequest struct {
 	OfficeID             int16          `json:"office_id"`
 	ElectionDate         utils.JSONDate `json:"election_date"`
-	ElectionGroupID      *int64         `json:"election_group_id,omitempty"`
+	ElectionGroupID      *int16         `json:"election_group_id,omitempty"`
 	StateConstituencyIDs []int32        `json:"state_constituency_ids"`
 }
 
 type CreateLgaElectionRequest struct {
 	OfficeID        int16          `json:"office_id"`
 	ElectionDate    utils.JSONDate `json:"election_date"`
-	ElectionGroupID *int64         `json:"election_group_id,omitempty"`
+	ElectionGroupID *int16         `json:"election_group_id,omitempty"`
 	LgaIDs          []int32        `json:"lga_ids"`
 }
 
 type CreateWardElectionRequest struct {
 	OfficeID        int16          `json:"office_id"`
 	ElectionDate    utils.JSONDate `json:"election_date"`
-	ElectionGroupID *int64         `json:"election_group_id,omitempty"`
+	ElectionGroupID *int16         `json:"election_group_id,omitempty"`
 	WardIDs         []int32        `json:"ward_ids"`
 }
 
@@ -497,7 +497,7 @@ func (h *Handler) ListElections(w http.ResponseWriter, r *http.Request) {
 	startIndex := 0
 	if cursor > 0 {
 		for i, ei := range elections {
-			if ei.ID == cursor {
+			if int64(ei.ID) == cursor {
 				startIndex = i + 1
 				break
 			}
@@ -516,7 +516,7 @@ func (h *Handler) ListElections(w http.ResponseWriter, r *http.Request) {
 		} else {
 			paginated = elections[startIndex:endIndex]
 			hasMore = true
-			nextCursor = strconv.FormatInt(paginated[len(paginated)-1].ID, 10)
+			nextCursor = strconv.FormatInt(int64(paginated[len(paginated)-1].ID), 10)
 		}
 	} else {
 		paginated = []queries.Election{}
@@ -545,13 +545,13 @@ func (h *Handler) ListElections(w http.ResponseWriter, r *http.Request) {
 // @Router       /elections/{id} [get]
 func (h *Handler) GetElection(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
+	id, err := strconv.ParseInt(idStr, 10, 32)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election ID")
 		return
 	}
 
-	ei, err := h.service.GetElectionByID(r.Context(), id)
+	ei, err := h.service.GetElectionByID(r.Context(), int32(id))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Election not found")
 		return
@@ -577,7 +577,7 @@ func (h *Handler) GetElection(w http.ResponseWriter, r *http.Request) {
 // @Router       /elections/{id} [put]
 func (h *Handler) UpdateElection(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
+	id, err := strconv.ParseInt(idStr, 10, 32)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election ID")
 		return
@@ -594,7 +594,7 @@ func (h *Handler) UpdateElection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = h.service.GetElectionByID(r.Context(), id)
+	_, err = h.service.GetElectionByID(r.Context(), int32(id))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Election not found")
 		return
@@ -602,7 +602,7 @@ func (h *Handler) UpdateElection(w http.ResponseWriter, r *http.Request) {
 
 	updated, err := h.service.UpdateElection(
 		r.Context(),
-		id,
+		int32(id),
 		req.Name,
 		req.CandidatesCount,
 		req.ElectionDate.Time(),
@@ -639,19 +639,19 @@ func (h *Handler) UpdateElection(w http.ResponseWriter, r *http.Request) {
 // @Router       /elections/{id} [delete]
 func (h *Handler) DeleteElection(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
+	id, err := strconv.ParseInt(idStr, 10, 32)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election ID")
 		return
 	}
 
-	_, err = h.service.GetElectionByID(r.Context(), id)
+	_, err = h.service.GetElectionByID(r.Context(), int32(id))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Election not found")
 		return
 	}
 
-	if err := h.service.DeleteElection(r.Context(), id); err != nil {
+	if err := h.service.DeleteElection(r.Context(), int32(id)); err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to delete election: "+err.Error())
 		return
 	}
@@ -671,7 +671,7 @@ func (h *Handler) DeleteElection(w http.ResponseWriter, r *http.Request) {
 // @Router       /elections/{id}/candidates [get]
 func (h *Handler) GetElectionCandidates(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
+	id, err := strconv.ParseInt(idStr, 10, 32)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election ID")
 		return
@@ -679,7 +679,7 @@ func (h *Handler) GetElectionCandidates(w http.ResponseWriter, r *http.Request) 
 
 	limit, cursor := parsePaginationParams(r)
 
-	candidates, err := h.service.GetElectionCandidates(r.Context(), id)
+	candidates, err := h.service.GetElectionCandidates(r.Context(), int32(id))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to get election candidates: "+err.Error())
 		return
@@ -688,7 +688,7 @@ func (h *Handler) GetElectionCandidates(w http.ResponseWriter, r *http.Request) 
 	startIndex := 0
 	if cursor > 0 {
 		for i, c := range candidates {
-			if c.ID == cursor {
+			if int64(c.ID) == cursor {
 				startIndex = i + 1
 				break
 			}
@@ -707,7 +707,7 @@ func (h *Handler) GetElectionCandidates(w http.ResponseWriter, r *http.Request) 
 		} else {
 			paginated = candidates[startIndex:endIndex]
 			hasMore = true
-			nextCursor = strconv.FormatInt(paginated[len(paginated)-1].ID, 10)
+			nextCursor = strconv.FormatInt(int64(paginated[len(paginated)-1].ID), 10)
 		}
 	} else {
 		paginated = []queries.ListElectionCandidatesDetailedByElectionIDRow{}
@@ -740,7 +740,7 @@ type SyncCandidatesRequest struct {
 // @Router       /elections/{id}/candidates [post]
 func (h *Handler) SyncElectionCandidates(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
+	id, err := strconv.ParseInt(idStr, 10, 32)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election ID")
 		return
@@ -761,7 +761,7 @@ func (h *Handler) SyncElectionCandidates(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
-	err = h.service.SyncElectionCandidates(r.Context(), id, candidateInputs)
+	err = h.service.SyncElectionCandidates(r.Context(), int32(id), candidateInputs)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to sync candidates: "+err.Error())
 		return
@@ -777,7 +777,7 @@ type FieldCandidateRequest struct {
 // FieldPartyCandidate handles POST /api/v1/elections/{id}/field-candidate
 func (h *Handler) FieldPartyCandidate(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
+	id, err := strconv.ParseInt(idStr, 10, 32)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election ID")
 		return
@@ -806,7 +806,7 @@ func (h *Handler) FieldPartyCandidate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.service.FieldPartyCandidate(r.Context(), id, user.PartyID.Int16, req.CandidateID)
+	err = h.service.FieldPartyCandidate(r.Context(), int32(id), user.PartyID.Int16, req.CandidateID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to field candidate: "+err.Error())
 		return

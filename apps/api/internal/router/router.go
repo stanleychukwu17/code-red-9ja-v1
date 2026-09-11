@@ -220,7 +220,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	}
 	var notifier inecgrabberservice.ResultNotifierFunc
 	if distributor != nil {
-		notifier = func(ctx context.Context, electionID int64, puID int32) {
+		notifier = func(ctx context.Context, electionID int32, puID int32) {
 			_ = distributor.DistributeTaskCalculateFinalResult(ctx, &worker.CalculateFinalResultPayload{
 				ElectionID:    electionID,
 				PollingUnitID: puID,

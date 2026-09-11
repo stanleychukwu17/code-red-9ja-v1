@@ -21,6 +21,7 @@ export type PartyType = {
   verifications?: any[];
   color_hex?: string;
   dark_color_hex?: string;
+  date_founded?: string;
 };
 
 export function PartyTableHeader() {

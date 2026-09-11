@@ -18,9 +18,9 @@ import (
 )
 
 type PollingUnitAssignmentsService interface {
-	AssignAgent(ctx context.Context, userID, electionGroupID int64, partyID int16, assignedBy int64, pollingUnitID int32, roleType string) (queries.PollingUnitAssignment, error)
+	AssignAgent(ctx context.Context, userID int64, electionGroupID int16, partyID int16, assignedBy int64, pollingUnitID int32, roleType string) (queries.PollingUnitAssignment, error)
 	GetAssignmentByID(ctx context.Context, id int64) (queries.GetAssignmentByIDRow, error)
-	ListAssignments(ctx context.Context, electionGroupID int64, partyID int16, userID int64, pollingUnitID int32, limit, offset int32) ([]queries.ListAssignmentsRow, error)
+	ListAssignments(ctx context.Context, electionGroupID int16, partyID int16, userID int64, pollingUnitID int32, limit, offset int32) ([]queries.ListAssignmentsRow, error)
 	DeleteAssignment(ctx context.Context, id int64) error
 	UpdateAssignmentTracking(ctx context.Context, id int64, arrivedAt, arrivalVideoUrl, electionStartedAt, electionStartedVideoUrl, electionEndedAt, electionEndedVideoUrl *string) (queries.UpdateAssignmentTrackingRow, error)
 }
@@ -53,7 +53,7 @@ func NewHandler(service PollingUnitAssignmentsService, usersService UsersService
 type CreateAssignmentRequest struct {
 	FakeID          int64  `json:"fake_id"`
 	PollingUnitID   int32  `json:"polling_unit_id"`
-	ElectionGroupID int64  `json:"election_group_id"`
+	ElectionGroupID int16  `json:"election_group_id"`
 	PartyID         int64  `json:"party_id"`
 	RoleType        string `json:"role_type"`
 }
@@ -199,14 +199,19 @@ func (h *Handler) ListAssignments(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse filtering query params
-	var electionGroupID, partyID, userID int64
+	var userID int64
+	var electionGroupID, partyID int16
 	var pollingUnitID int32
 
 	if val := r.URL.Query().Get("election_group_id"); val != "" {
-		electionGroupID, _ = strconv.ParseInt(val, 10, 64)
+		if eg, err := strconv.ParseInt(val, 10, 16); err == nil {
+			electionGroupID = int16(eg)
+		}
 	}
 	if val := r.URL.Query().Get("party_id"); val != "" {
-		partyID, _ = strconv.ParseInt(val, 10, 64)
+		if p, err := strconv.ParseInt(val, 10, 16); err == nil {
+			partyID = int16(p)
+		}
 	}
 	if val := r.URL.Query().Get("polling_unit_id"); val != "" {
 		pID, _ := strconv.ParseInt(val, 10, 32)
@@ -251,10 +256,10 @@ func (h *Handler) ListAssignments(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		// Force the filter to only their own party
-		partyID = int64(requesterPartyID)
+		partyID = requesterPartyID
 	}
 
-	assignments, err := h.service.ListAssignments(r.Context(), electionGroupID, int16(partyID), userID, pollingUnitID, limit, offset)
+	assignments, err := h.service.ListAssignments(r.Context(), electionGroupID, partyID, userID, pollingUnitID, limit, offset)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to list assignments: "+err.Error())
 		return

@@ -22,7 +22,7 @@ const (
 
 type ExtractPUResultAIPayload struct {
 	ResultID            int64  `json:"result_id"`
-	ElectionID          int64  `json:"election_id"`
+	ElectionID          int32  `json:"election_id"`
 	PollingUnitID       int32  `json:"polling_unit_id"`
 	ResultSheetImageURL string `json:"result_sheet_image_url"`
 }

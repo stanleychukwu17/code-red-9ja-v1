@@ -1077,7 +1077,7 @@ func (s *PartiesService) CreatePartyMarketingCampaign(ctx context.Context, arg q
 	qtx := s.queries.WithTx(tx)
 
 	// 0. Check election group date: cannot create campaign if election_date is today or in the past
-	electionGroup, err := s.queries.GetElectionGroupByID(ctx, int64(arg.ElectionGroupID))
+	electionGroup, err := s.queries.GetElectionGroupByID(ctx, arg.ElectionGroupID)
 	if err != nil {
 		return queries.PartyMarketingCampaign{}, fmt.Errorf("failed to get election group: %w", err)
 	}
@@ -1151,7 +1151,7 @@ func (s *PartiesService) CreatePartyMarketingCampaign(ctx context.Context, arg q
 }
 
 // GetPartyMarketingCampaigns retrieves all marketing campaigns for a party
-func (s *PartiesService) GetPartyMarketingCampaigns(ctx context.Context, partyID int32) ([]queries.GetPartyMarketingCampaignsRow, error) {
+func (s *PartiesService) GetPartyMarketingCampaigns(ctx context.Context, partyID int16) ([]queries.GetPartyMarketingCampaignsRow, error) {
 	return s.queries.GetPartyMarketingCampaigns(ctx, partyID)
 }
 
