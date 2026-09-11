@@ -51,7 +51,8 @@ func (s *ElectionsService) CreateElection(
 	name string,
 	candidatesCount int32,
 	electionDate time.Time,
-	electionGroupID, officeID int64,
+	electionGroupID int64,
+	officeID int16,
 	stateID *int16,
 	senatorialDistrictID, federalConstituencyID, stateConstituencyID, lgaID, wardID *int32,
 ) (queries.Election, error) {
@@ -236,7 +237,7 @@ type CandidateInput struct {
 	PartyShortName string
 }
 
-func (s *ElectionsService) CreateNationwideElection(ctx context.Context, officeID int64, electionDate time.Time, electionGroupID *int64, candidates []CandidateInput) (queries.Election, error) {
+func (s *ElectionsService) CreateNationwideElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID *int64, candidates []CandidateInput) (queries.Election, error) {
 	defer s.invalidateCache(ctx, nil)
 	// 1. Fetch office
 	et, err := s.queries.GetOfficeByID(ctx, officeID)
@@ -365,7 +366,7 @@ func (s *ElectionsService) CreateNationwideElection(ctx context.Context, officeI
 	return updatedElection, nil
 }
 
-func (s *ElectionsService) CreateStateElection(ctx context.Context, officeID int64, electionDate time.Time, electionGroupID *int64, stateIDs []int16) ([]queries.Election, error) {
+func (s *ElectionsService) CreateStateElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID *int64, stateIDs []int16) ([]queries.Election, error) {
 	defer s.invalidateCache(ctx, nil)
 	// 1. Fetch office
 	et, err := s.queries.GetOfficeByID(ctx, officeID)
@@ -504,7 +505,7 @@ func (s *ElectionsService) CreateStateElection(ctx context.Context, officeID int
 	return updatedElections, nil
 }
 
-func (s *ElectionsService) CreateSenatorialDistrictElection(ctx context.Context, officeID int64, electionDate time.Time, electionGroupID *int64, senatorialDistrictIDs []int32) ([]queries.Election, error) {
+func (s *ElectionsService) CreateSenatorialDistrictElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID *int64, senatorialDistrictIDs []int32) ([]queries.Election, error) {
 	defer s.invalidateCache(ctx, nil)
 	// 1. Fetch office
 	et, err := s.queries.GetOfficeByID(ctx, officeID)
@@ -654,7 +655,7 @@ func (s *ElectionsService) CreateSenatorialDistrictElection(ctx context.Context,
 	return updatedElections, nil
 }
 
-func (s *ElectionsService) CreateFederalConstituencyElection(ctx context.Context, officeID int64, electionDate time.Time, electionGroupID *int64, federalConstituencyIDs []int32) ([]queries.Election, error) {
+func (s *ElectionsService) CreateFederalConstituencyElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID *int64, federalConstituencyIDs []int32) ([]queries.Election, error) {
 	defer s.invalidateCache(ctx, nil)
 	// 1. Fetch office
 	et, err := s.queries.GetOfficeByID(ctx, officeID)
@@ -813,7 +814,7 @@ func (s *ElectionsService) CreateFederalConstituencyElection(ctx context.Context
 	return updatedElections, nil
 }
 
-func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, officeID int64, electionDate time.Time, electionGroupID *int64, stateConstituencyIDs []int32) ([]queries.Election, error) {
+func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID *int64, stateConstituencyIDs []int32) ([]queries.Election, error) {
 	defer s.invalidateCache(ctx, nil)
 	// 1. Fetch office
 	et, err := s.queries.GetOfficeByID(ctx, officeID)
@@ -982,7 +983,7 @@ func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, 
 	return updatedElections, nil
 }
 
-func (s *ElectionsService) CreateLgaElection(ctx context.Context, officeID int64, electionDate time.Time, electionGroupID *int64, lgaIDs []int32) ([]queries.Election, error) {
+func (s *ElectionsService) CreateLgaElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID *int64, lgaIDs []int32) ([]queries.Election, error) {
 	defer s.invalidateCache(ctx, nil)
 	// 1. Fetch office
 	et, err := s.queries.GetOfficeByID(ctx, officeID)
@@ -1143,7 +1144,7 @@ func (s *ElectionsService) CreateLgaElection(ctx context.Context, officeID int64
 	return updatedElections, nil
 }
 
-func (s *ElectionsService) CreateWardElection(ctx context.Context, officeID int64, electionDate time.Time, electionGroupID *int64, wardIDs []int32) ([]queries.Election, error) {
+func (s *ElectionsService) CreateWardElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID *int64, wardIDs []int32) ([]queries.Election, error) {
 	defer s.invalidateCache(ctx, nil)
 	// 1. Fetch office
 	et, err := s.queries.GetOfficeByID(ctx, officeID)
@@ -1380,7 +1381,8 @@ func (s *ElectionsService) UpdateElection(
 	name string,
 	candidatesCount int32,
 	electionDate time.Time,
-	electionGroupID, officeID int64,
+	electionGroupID int64,
+	officeID int16,
 	stateID *int16,
 	senatorialDistrictID, federalConstituencyID, stateConstituencyID, lgaID, wardID *int32,
 ) (queries.Election, error) {

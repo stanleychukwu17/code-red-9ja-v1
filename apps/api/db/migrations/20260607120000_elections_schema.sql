@@ -1,6 +1,6 @@
 -- +goose Up
 CREATE TABLE election_groups (
-  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  id SMALLINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   name VARCHAR(255) UNIQUE NOT NULL,
   rank INT NOT NULL,
   
@@ -89,15 +89,15 @@ CREATE TABLE election_groups (
 );
 
 CREATE TABLE elections (
-  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  election_group_id BIGINT REFERENCES election_groups(id) ON DELETE CASCADE NOT NULL,
+  id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  election_group_id SMALLINT REFERENCES election_groups(id) ON DELETE CASCADE NOT NULL,
   state_id SMALLINT REFERENCES c_states(id) ON DELETE SET NULL,
   senatorial_district_id INT REFERENCES senatorial_districts(id) ON DELETE SET NULL,
   federal_constituency_id INT REFERENCES federal_constituencies(id) ON DELETE SET NULL,
   state_constituency_id INT REFERENCES state_constituencies(id) ON DELETE SET NULL,
   lga_id INT REFERENCES lgas(id) ON DELETE SET NULL,
   ward_id INT REFERENCES wards(id) ON DELETE SET NULL,
-  office_id BIGINT REFERENCES offices(id) ON DELETE RESTRICT NOT NULL,
+  office_id SMALLINT REFERENCES offices(id) ON DELETE RESTRICT NOT NULL,
 
   name VARCHAR(255) NOT NULL,
   rank INT NOT NULL,
@@ -142,8 +142,8 @@ CREATE INDEX idx_elections_contesting_parties ON elections USING gin(contesting_
 COMMENT ON COLUMN elections.contesting_parties IS 'List of political parties contesting this election. Shape: [{"party_id": 1, "party_short_name": "APC", "party_name": "All Progressives Congress", "party_logo": "https://..."}]';
 
 CREATE TABLE election_candidates (
-  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  election_id BIGINT REFERENCES elections(id) ON DELETE CASCADE NOT NULL,
+  id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  election_id INT REFERENCES elections(id) ON DELETE CASCADE NOT NULL,
   candidate_id BIGINT REFERENCES users(id) ON DELETE CASCADE NOT NULL,
   party_id SMALLINT NOT NULL DEFAULT 7 REFERENCES parties(id) ON DELETE RESTRICT,
   party_short_name VARCHAR(50) NOT NULL DEFAULT 'N/A',

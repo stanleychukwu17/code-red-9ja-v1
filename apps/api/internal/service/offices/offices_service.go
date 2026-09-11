@@ -83,7 +83,7 @@ func (s *OfficesService) ListOffices(ctx context.Context) ([]queries.Office, err
 }
 
 // GetOfficeByID retrieves an office by ID from the cached master list.
-func (s *OfficesService) GetOfficeByID(ctx context.Context, id int64) (queries.Office, error) {
+func (s *OfficesService) GetOfficeByID(ctx context.Context, id int16) (queries.Office, error) {
 	// 1. Fetch cached list of offices (< 500 records)
 	offices, err := s.ListOffices(ctx)
 	if err != nil {
@@ -126,7 +126,7 @@ func (s *OfficesService) GetOfficeByName(ctx context.Context, name string) (quer
 }
 
 // UpdateOffice modifies an existing office record and invalidates the cached offices list.
-func (s *OfficesService) UpdateOffice(ctx context.Context, id int64, name, election, scope string, rank int32, inecElectionTypeID *string) (queries.Office, error) {
+func (s *OfficesService) UpdateOffice(ctx context.Context, id int16, name, election, scope string, rank int32, inecElectionTypeID *string) (queries.Office, error) {
 	// 1. Wrap optional INEC election type ID into a nullable pgtype.Text
 	var inecText pgtype.Text
 	if inecElectionTypeID != nil && *inecElectionTypeID != "" {
@@ -153,7 +153,7 @@ func (s *OfficesService) UpdateOffice(ctx context.Context, id int64, name, elect
 }
 
 // DeleteOffice removes an office by ID and invalidates the cached offices list.
-func (s *OfficesService) DeleteOffice(ctx context.Context, id int64) error {
+func (s *OfficesService) DeleteOffice(ctx context.Context, id int16) error {
 	// 1. Delete office from PostgreSQL
 	err := s.queries.DeleteOffice(ctx, id)
 	if err != nil {

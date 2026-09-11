@@ -21,7 +21,7 @@ type EligibleElectionResponse struct {
 	ElectionDate           interface{}                                       `json:"election_date"`
 	ElectionGroupID        int64                                             `json:"election_group_id"`
 	ElectionGroupName      string                                            `json:"election_group_name"`
-	OfficeID               int64                                             `json:"office_id"`
+	OfficeID               int16                                             `json:"office_id"`
 	OfficeName             string                                            `json:"office_name"`
 	Scope                  string                                            `json:"scope"`
 	Candidates             []queries.ListElectionCandidatesDetailedByElectionIDRow `json:"candidates"`

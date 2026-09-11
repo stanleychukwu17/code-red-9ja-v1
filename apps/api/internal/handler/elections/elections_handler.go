@@ -17,17 +17,17 @@ import (
 )
 
 type ElectionsService interface {
-	CreateElection(ctx context.Context, name string, candidatesCount int32, electionDate time.Time, electionGroupID, officeID int64, stateID *int16, senatorialDistrictID, federalConstituencyID, stateConstituencyID, lgaID, wardID *int32) (queries.Election, error)
-	CreateNationwideElection(ctx context.Context, officeID int64, electionDate time.Time, electionGroupID *int64, candidates []elections.CandidateInput) (queries.Election, error)
-	CreateStateElection(ctx context.Context, officeID int64, electionDate time.Time, electionGroupID *int64, stateIDs []int16) ([]queries.Election, error)
-	CreateSenatorialDistrictElection(ctx context.Context, officeID int64, electionDate time.Time, electionGroupID *int64, senatorialDistrictIDs []int32) ([]queries.Election, error)
-	CreateFederalConstituencyElection(ctx context.Context, officeID int64, electionDate time.Time, electionGroupID *int64, federalConstituencyIDs []int32) ([]queries.Election, error)
-	CreateStateConstituencyElection(ctx context.Context, officeID int64, electionDate time.Time, electionGroupID *int64, stateConstituencyIDs []int32) ([]queries.Election, error)
-	CreateLgaElection(ctx context.Context, officeID int64, electionDate time.Time, electionGroupID *int64, lgaIDs []int32) ([]queries.Election, error)
-	CreateWardElection(ctx context.Context, officeID int64, electionDate time.Time, electionGroupID *int64, wardIDs []int32) ([]queries.Election, error)
+	CreateElection(ctx context.Context, name string, candidatesCount int32, electionDate time.Time, electionGroupID int64, officeID int16, stateID *int16, senatorialDistrictID, federalConstituencyID, stateConstituencyID, lgaID, wardID *int32) (queries.Election, error)
+	CreateNationwideElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID *int64, candidates []elections.CandidateInput) (queries.Election, error)
+	CreateStateElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID *int64, stateIDs []int16) ([]queries.Election, error)
+	CreateSenatorialDistrictElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID *int64, senatorialDistrictIDs []int32) ([]queries.Election, error)
+	CreateFederalConstituencyElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID *int64, federalConstituencyIDs []int32) ([]queries.Election, error)
+	CreateStateConstituencyElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID *int64, stateConstituencyIDs []int32) ([]queries.Election, error)
+	CreateLgaElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID *int64, lgaIDs []int32) ([]queries.Election, error)
+	CreateWardElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID *int64, wardIDs []int32) ([]queries.Election, error)
 	GetElectionByID(ctx context.Context, id int64) (queries.Election, error)
 	ListElections(ctx context.Context) ([]queries.Election, error)
-	UpdateElection(ctx context.Context, id int64, name string, candidatesCount int32, electionDate time.Time, electionGroupID, officeID int64, stateID *int16, senatorialDistrictID, federalConstituencyID, stateConstituencyID, lgaID, wardID *int32) (queries.Election, error)
+	UpdateElection(ctx context.Context, id int64, name string, candidatesCount int32, electionDate time.Time, electionGroupID int64, officeID int16, stateID *int16, senatorialDistrictID, federalConstituencyID, stateConstituencyID, lgaID, wardID *int32) (queries.Election, error)
 	DeleteElection(ctx context.Context, id int64) error
 	GetElectionCandidates(ctx context.Context, electionID int64) ([]queries.ListElectionCandidatesDetailedByElectionIDRow, error)
 	SyncElectionCandidates(ctx context.Context, electionID int64, candidates []elections.CandidateInput) error
@@ -83,7 +83,7 @@ type CreateElectionRequest struct {
 	CandidatesCount       int32          `json:"candidates_count"`
 	ElectionDate          utils.JSONDate `json:"election_date"`
 	ElectionGroupID       int64          `json:"election_group_id"`
-	OfficeID        int64          `json:"office_id"`
+	OfficeID              int16          `json:"office_id"`
 	StateID               *int16         `json:"state_id,omitempty"`
 	SenatorialDistrictID  *int32         `json:"senatorial_district_id,omitempty"`
 	FederalConstituencyID *int32         `json:"federal_constituency_id,omitempty"`
@@ -97,7 +97,7 @@ type UpdateElectionRequest struct {
 	CandidatesCount       int32          `json:"candidates_count"`
 	ElectionDate          utils.JSONDate `json:"election_date"`
 	ElectionGroupID       int64          `json:"election_group_id"`
-	OfficeID        int64          `json:"office_id"`
+	OfficeID              int16          `json:"office_id"`
 	StateID               *int16         `json:"state_id,omitempty"`
 	SenatorialDistrictID  *int32         `json:"senatorial_district_id,omitempty"`
 	FederalConstituencyID *int32         `json:"federal_constituency_id,omitempty"`
@@ -113,49 +113,49 @@ type ElectionCandidateInput struct {
 }
 
 type CreateNationwideElectionRequest struct {
-	OfficeID        int64                    `json:"office_id"`
+	OfficeID        int16                    `json:"office_id"`
 	ElectionDate    utils.JSONDate           `json:"election_date"`
 	ElectionGroupID *int64                   `json:"election_group_id,omitempty"`
 	Candidates      []ElectionCandidateInput `json:"candidates"`
 }
 
 type CreateStateElectionRequest struct {
-	OfficeID  int64          `json:"office_id"`
+	OfficeID        int16          `json:"office_id"`
 	ElectionDate    utils.JSONDate `json:"election_date"`
 	ElectionGroupID *int64         `json:"election_group_id,omitempty"`
 	StateIDs        []int16        `json:"state_ids"`
 }
 
 type CreateSenatorialDistrictElectionRequest struct {
-	OfficeID        int64          `json:"office_id"`
+	OfficeID              int16          `json:"office_id"`
 	ElectionDate          utils.JSONDate `json:"election_date"`
 	ElectionGroupID       *int64         `json:"election_group_id,omitempty"`
 	SenatorialDistrictIDs []int32        `json:"senatorial_district_ids"`
 }
 
 type CreateFederalConstituencyElectionRequest struct {
-	OfficeID         int64          `json:"office_id"`
+	OfficeID               int16          `json:"office_id"`
 	ElectionDate           utils.JSONDate `json:"election_date"`
 	ElectionGroupID        *int64         `json:"election_group_id,omitempty"`
 	FederalConstituencyIDs []int32        `json:"federal_constituency_ids"`
 }
 
 type CreateStateConstituencyElectionRequest struct {
-	OfficeID       int64          `json:"office_id"`
+	OfficeID             int16          `json:"office_id"`
 	ElectionDate         utils.JSONDate `json:"election_date"`
 	ElectionGroupID      *int64         `json:"election_group_id,omitempty"`
 	StateConstituencyIDs []int32        `json:"state_constituency_ids"`
 }
 
 type CreateLgaElectionRequest struct {
-	OfficeID  int64          `json:"office_id"`
+	OfficeID        int16          `json:"office_id"`
 	ElectionDate    utils.JSONDate `json:"election_date"`
 	ElectionGroupID *int64         `json:"election_group_id,omitempty"`
 	LgaIDs          []int32        `json:"lga_ids"`
 }
 
 type CreateWardElectionRequest struct {
-	OfficeID  int64          `json:"office_id"`
+	OfficeID        int16          `json:"office_id"`
 	ElectionDate    utils.JSONDate `json:"election_date"`
 	ElectionGroupID *int64         `json:"election_group_id,omitempty"`
 	WardIDs         []int32        `json:"ward_ids"`

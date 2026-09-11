@@ -91,7 +91,7 @@ type GetINECResultGrabberByElectionIDRow struct {
 	Scope_2                       string             `json:"scope_2"`
 	ElectionDate_2                pgtype.Date        `json:"election_date_2"`
 	StateID                       pgtype.Int2        `json:"state_id"`
-	OfficeID                      int64              `json:"office_id"`
+	OfficeID                      int16              `json:"office_id"`
 	InecElectionTypeID            pgtype.Text        `json:"inec_election_type_id"`
 	OfficeName                    string             `json:"office_name"`
 }
@@ -148,7 +148,7 @@ type GetINECResultGrabberByIDRow struct {
 	Scope_2                       string             `json:"scope_2"`
 	ElectionDate_2                pgtype.Date        `json:"election_date_2"`
 	StateID                       pgtype.Int2        `json:"state_id"`
-	OfficeID                      int64              `json:"office_id"`
+	OfficeID                      int16              `json:"office_id"`
 	InecElectionTypeID            pgtype.Text        `json:"inec_election_type_id"`
 	OfficeName                    string             `json:"office_name"`
 }
@@ -208,7 +208,7 @@ type ListActiveINECResultGrabbersRow struct {
 	Scope_2                       string             `json:"scope_2"`
 	ElectionDate_2                pgtype.Date        `json:"election_date_2"`
 	StateID                       pgtype.Int2        `json:"state_id"`
-	OfficeID                      int64              `json:"office_id"`
+	OfficeID                      int16              `json:"office_id"`
 	InecElectionTypeID            pgtype.Text        `json:"inec_election_type_id"`
 	OfficeName                    string             `json:"office_name"`
 }
@@ -285,7 +285,7 @@ type ListINECResultGrabbersPaginatedRow struct {
 	ElectionName                  string             `json:"election_name"`
 	Scope_2                       string             `json:"scope_2"`
 	ElectionDate_2                pgtype.Date        `json:"election_date_2"`
-	OfficeID                      int64              `json:"office_id"`
+	OfficeID                      int16              `json:"office_id"`
 	OfficeName                    string             `json:"office_name"`
 }
 

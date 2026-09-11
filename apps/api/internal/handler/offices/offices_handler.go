@@ -15,11 +15,11 @@ import (
 
 type OfficesService interface {
 	CreateOffice(ctx context.Context, name, election, scope string, rank int32, inecElectionTypeID *string) (queries.Office, error)
-	GetOfficeByID(ctx context.Context, id int64) (queries.Office, error)
+	GetOfficeByID(ctx context.Context, id int16) (queries.Office, error)
 	GetOfficeByName(ctx context.Context, name string) (queries.Office, error)
 	ListOffices(ctx context.Context) ([]queries.Office, error)
-	UpdateOffice(ctx context.Context, id int64, name, election, scope string, rank int32, inecElectionTypeID *string) (queries.Office, error)
-	DeleteOffice(ctx context.Context, id int64) error
+	UpdateOffice(ctx context.Context, id int16, name, election, scope string, rank int32, inecElectionTypeID *string) (queries.Office, error)
+	DeleteOffice(ctx context.Context, id int16) error
 }
 
 type Handler struct {
@@ -34,7 +34,7 @@ func NewHandler(service OfficesService, utils *utils.Utils) *Handler {
 	}
 }
 
-func parsePaginationParams(r *http.Request) (int, int64) {
+func parsePaginationParams(r *http.Request) (int, int16) {
 	// 1. Default limit is 20; clamp between 1 and 100
 	limit := 20
 	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
@@ -48,10 +48,10 @@ func parsePaginationParams(r *http.Request) (int, int64) {
 	}
 
 	// 2. Parse optional integer cursor (ID of the last item from previous page)
-	var cursor int64
+	var cursor int16
 	if cursorStr := r.URL.Query().Get("cursor"); cursorStr != "" {
-		if c, err := strconv.ParseInt(cursorStr, 10, 64); err == nil {
-			cursor = c
+		if c, err := strconv.ParseInt(cursorStr, 10, 16); err == nil {
+			cursor = int16(c)
 		}
 	}
 	return limit, cursor
@@ -182,7 +182,7 @@ func (h *Handler) ListOffices(w http.ResponseWriter, r *http.Request) {
 		} else {
 			paginated = offices[startIndex:endIndex]
 			hasMore = true
-			nextCursor = strconv.FormatInt(paginated[len(paginated)-1].ID, 10)
+			nextCursor = strconv.FormatInt(int64(paginated[len(paginated)-1].ID), 10)
 		}
 	} else {
 		paginated = []queries.Office{}
@@ -213,14 +213,14 @@ func (h *Handler) ListOffices(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetOffice(w http.ResponseWriter, r *http.Request) {
 	// 1. Extract and parse office ID from URL path parameter
 	idStr := chi.URLParam(r, "id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
+	id, err := strconv.ParseInt(idStr, 10, 16)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid office ID")
 		return
 	}
 
 	// 2. Fetch office by ID via service
-	o, err := h.service.GetOfficeByID(r.Context(), id)
+	o, err := h.service.GetOfficeByID(r.Context(), int16(id))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Office not found")
 		return
@@ -248,7 +248,7 @@ func (h *Handler) GetOffice(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) UpdateOffice(w http.ResponseWriter, r *http.Request) {
 	// 1. Extract and parse office ID from URL path parameter
 	idStr := chi.URLParam(r, "id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
+	id, err := strconv.ParseInt(idStr, 10, 16)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid office ID")
 		return
@@ -268,14 +268,14 @@ func (h *Handler) UpdateOffice(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 4. Verify office exists before updating
-	_, err = h.service.GetOfficeByID(r.Context(), id)
+	_, err = h.service.GetOfficeByID(r.Context(), int16(id))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Office not found")
 		return
 	}
 
 	// 5. Update office details via service
-	updated, err := h.service.UpdateOffice(r.Context(), id, req.Name, req.Election, req.Scope, req.Rank, req.InecElectionTypeID)
+	updated, err := h.service.UpdateOffice(r.Context(), int16(id), req.Name, req.Election, req.Scope, req.Rank, req.InecElectionTypeID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update office: "+err.Error())
 		return
@@ -302,21 +302,21 @@ func (h *Handler) UpdateOffice(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) DeleteOffice(w http.ResponseWriter, r *http.Request) {
 	// 1. Extract and parse office ID from URL path parameter
 	idStr := chi.URLParam(r, "id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
+	id, err := strconv.ParseInt(idStr, 10, 16)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid office ID")
 		return
 	}
 
 	// 2. Verify office exists before deletion
-	_, err = h.service.GetOfficeByID(r.Context(), id)
+	_, err = h.service.GetOfficeByID(r.Context(), int16(id))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Office not found")
 		return
 	}
 
 	// 3. Delete office via service
-	if err := h.service.DeleteOffice(r.Context(), id); err != nil {
+	if err := h.service.DeleteOffice(r.Context(), int16(id)); err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to delete office: "+err.Error())
 		return
 	}

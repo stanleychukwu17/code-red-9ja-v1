@@ -62,7 +62,7 @@ type CreateElectionInstanceParams struct {
 	ElectionDate          pgtype.Date `json:"election_date"`
 	ElectionGroupID       int64       `json:"election_group_id"`
 	ElectionGroupName     string      `json:"election_group_name"`
-	OfficeID              int64       `json:"office_id"`
+	OfficeID              int16       `json:"office_id"`
 	OfficeName            string      `json:"office_name"`
 	Scope                 string      `json:"scope"`
 	StateID               pgtype.Int2 `json:"state_id"`
@@ -366,7 +366,7 @@ type ListElectionsDetailedByGroupIDRow struct {
 	StateConstituencyID   pgtype.Int4        `json:"state_constituency_id"`
 	LgaID                 pgtype.Int4        `json:"lga_id"`
 	WardID                pgtype.Int4        `json:"ward_id"`
-	OfficeID              int64              `json:"office_id"`
+	OfficeID              int16              `json:"office_id"`
 	Name                  string             `json:"name"`
 	Rank                  int32              `json:"rank"`
 	ElectionDate          pgtype.Date        `json:"election_date"`
@@ -521,7 +521,7 @@ type UpdateElectionInstanceParams struct {
 	ElectionDate          pgtype.Date `json:"election_date"`
 	ElectionGroupID       int64       `json:"election_group_id"`
 	ElectionGroupName     string      `json:"election_group_name"`
-	OfficeID              int64       `json:"office_id"`
+	OfficeID              int16       `json:"office_id"`
 	OfficeName            string      `json:"office_name"`
 	Scope                 string      `json:"scope"`
 	StateID               pgtype.Int2 `json:"state_id"`

@@ -52,7 +52,7 @@ const deleteOffice = `-- name: DeleteOffice :exec
 DELETE FROM offices WHERE id = $1
 `
 
-func (q *Queries) DeleteOffice(ctx context.Context, id int64) error {
+func (q *Queries) DeleteOffice(ctx context.Context, id int16) error {
 	_, err := q.db.Exec(ctx, deleteOffice, id)
 	return err
 }
@@ -61,7 +61,7 @@ const getOfficeByID = `-- name: GetOfficeByID :one
 SELECT id, name, election, scope, rank, instances_count, inec_election_type_id, created_at, updated_at FROM offices WHERE id = $1
 `
 
-func (q *Queries) GetOfficeByID(ctx context.Context, id int64) (Office, error) {
+func (q *Queries) GetOfficeByID(ctx context.Context, id int16) (Office, error) {
 	row := q.db.QueryRow(ctx, getOfficeByID, id)
 	var i Office
 	err := row.Scan(
@@ -147,7 +147,7 @@ type UpdateOfficeParams struct {
 	Scope              string      `json:"scope"`
 	Rank               int32       `json:"rank"`
 	InecElectionTypeID pgtype.Text `json:"inec_election_type_id"`
-	ID                 int64       `json:"id"`
+	ID                 int16       `json:"id"`
 }
 
 func (q *Queries) UpdateOffice(ctx context.Context, arg UpdateOfficeParams) (Office, error) {

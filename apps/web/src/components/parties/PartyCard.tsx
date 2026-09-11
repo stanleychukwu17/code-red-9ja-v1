@@ -61,9 +61,7 @@ function PartyAvatar({ party }: { party: Party }) {
 }
 
 /**
- * Renders verification checkmark badges for verified parties.
- * If specific verification rows exist in `party.verifications`, each is displayed;
- * otherwise defaults to verification type ID 3 (political party verified).
+ * Renders verification checkmark badge for verified parties.
  */
 function PartyVerificationBadges({ party }: { party: Party }) {
 	const isVerified = Boolean(party.is_verified ?? party.verified);
@@ -71,18 +69,7 @@ function PartyVerificationBadges({ party }: { party: Party }) {
 
 	return (
 		<div className="flex items-center gap-1 shrink-0 relative -bottom-px">
-			{party.verifications && party.verifications.length > 0 ? (
-				party.verifications.map((v) => (
-					<VerificationBadge
-						key={`${v.id}-${v.verification_type_id}`}
-						id={v.verification_type_id}
-						title={v.verification_title}
-						className="size-25"
-					/>
-				))
-			) : (
-				<VerificationBadge id={3} title="Verified Political Party" />
-			)}
+			<VerificationBadge id={3} title="Verified Political Party" />
 		</div>
 	);
 }

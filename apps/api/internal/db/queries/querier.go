@@ -125,7 +125,7 @@ type Querier interface {
 	DeleteElectionInstance(ctx context.Context, id int64) error
 	DeleteFederalConstituency(ctx context.Context, id int32) error
 	DeleteLGA(ctx context.Context, id int32) error
-	DeleteOffice(ctx context.Context, id int64) error
+	DeleteOffice(ctx context.Context, id int16) error
 	DeleteParty(ctx context.Context, id int16) error
 	DeletePartyMarketingCampaign(ctx context.Context, id int32) error
 	DeletePartyMembership(ctx context.Context, arg DeletePartyMembershipParams) ([]int32, error)
@@ -205,7 +205,7 @@ type Querier interface {
 	GetNationalMetrics(ctx context.Context) (NationalMetric, error)
 	GetNonVotingReasons(ctx context.Context) ([]NonVotingReason, error)
 	GetOccupations(ctx context.Context) ([]Occupation, error)
-	GetOfficeByID(ctx context.Context, id int64) (Office, error)
+	GetOfficeByID(ctx context.Context, id int16) (Office, error)
 	GetOfficeByName(ctx context.Context, name string) (Office, error)
 	// ============================================================
 	// QUERY: get current party agents_count in a PU for a given party

@@ -138,7 +138,7 @@ type Election struct {
 	StateConstituencyID   pgtype.Int4 `json:"state_constituency_id"`
 	LgaID                 pgtype.Int4 `json:"lga_id"`
 	WardID                pgtype.Int4 `json:"ward_id"`
-	OfficeID              int64       `json:"office_id"`
+	OfficeID              int16       `json:"office_id"`
 	Name                  string      `json:"name"`
 	Rank                  int32       `json:"rank"`
 	ElectionDate          pgtype.Date `json:"election_date"`
@@ -824,7 +824,7 @@ type Occupation struct {
 }
 
 type Office struct {
-	ID                 int64              `json:"id"`
+	ID                 int16              `json:"id"`
 	Name               string             `json:"name"`
 	Election           string             `json:"election"`
 	Scope              string             `json:"scope"`

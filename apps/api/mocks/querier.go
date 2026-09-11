@@ -1917,7 +1917,7 @@ func (_m *Querier) DeleteLGA(ctx context.Context, id int32) error {
 }
 
 // DeleteOffice provides a mock function with given fields: ctx, id
-func (_m *Querier) DeleteOffice(ctx context.Context, id int64) error {
+func (_m *Querier) DeleteOffice(ctx context.Context, id int16) error {
 	ret := _m.Called(ctx, id)
 
 	if len(ret) == 0 {
@@ -1925,7 +1925,7 @@ func (_m *Querier) DeleteOffice(ctx context.Context, id int64) error {
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64) error); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int16) error); ok {
 		r0 = rf(ctx, id)
 	} else {
 		r0 = ret.Error(0)
@@ -3555,7 +3555,7 @@ func (_m *Querier) GetOccupations(ctx context.Context) ([]queries.Occupation, er
 }
 
 // GetOfficeByID provides a mock function with given fields: ctx, id
-func (_m *Querier) GetOfficeByID(ctx context.Context, id int64) (queries.Office, error) {
+func (_m *Querier) GetOfficeByID(ctx context.Context, id int16) (queries.Office, error) {
 	ret := _m.Called(ctx, id)
 
 	if len(ret) == 0 {
@@ -3564,16 +3564,16 @@ func (_m *Querier) GetOfficeByID(ctx context.Context, id int64) (queries.Office,
 
 	var r0 queries.Office
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64) (queries.Office, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int16) (queries.Office, error)); ok {
 		return rf(ctx, id)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, int64) queries.Office); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int16) queries.Office); ok {
 		r0 = rf(ctx, id)
 	} else {
 		r0 = ret.Get(0).(queries.Office)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, int16) error); ok {
 		r1 = rf(ctx, id)
 	} else {
 		r1 = ret.Error(1)

@@ -1,6 +1,6 @@
 -- +goose Up
 CREATE TABLE offices (
-  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  id SMALLINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
   election VARCHAR(255) UNIQUE NOT NULL, -- presidential, governoship, senatorial, house_of_representatives, councilor, house_of_assembly, chairmanship
   scope VARCHAR(100) NOT NULL, -- nationwide, state, senatorial-district, federal-constituency, lga, state-constituency, ward

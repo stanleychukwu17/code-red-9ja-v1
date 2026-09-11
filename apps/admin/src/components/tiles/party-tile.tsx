@@ -78,19 +78,11 @@ export function PartyTableTile({ data }: { data: PartyType }) {
               {data.name}
             </Link>
           </p>
-          {data.is_verified &&
-            data.verifications &&
-            data.verifications.length > 0 && (
-              <div className="flex items-center gap-1 shrink-0 relative -bottom-px">
-                {data.verifications.map((v: any) => (
-                  <VerificationBadge
-                    key={`${v.id}-${v.verification_type_id}`}
-                    id={v.verification_type_id}
-                    title={v.verification_title}
-                  />
-                ))}
-              </div>
-            )}
+          {data.is_verified && (
+            <div className="flex items-center gap-1 shrink-0 relative -bottom-px">
+              <VerificationBadge id={3} title="Verified Political Party" />
+            </div>
+          )}
         </div>
       </TileLeft>
       <TileRight>
