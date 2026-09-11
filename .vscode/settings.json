@@ -1,6 +1,8 @@
 {
   "cSpell.words": [
+    "adminagentpaymentshandler",
     "agentearningshandler",
+    "agentperformancehandler",
     "apikey",
     "apimiddleware",
     "Asynq",
@@ -40,6 +42,8 @@
     "hibiken",
     "hostnames",
     "inec",
+    "inecgrabberhandler",
+    "inecgrabberservice",
     "jackc",
     "joho",
     "keepalive",
