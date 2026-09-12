@@ -118,45 +118,6 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		slog.Warn("Monnify not configured — party/user wallet creation will be unavailable", "reason", "MONNIFY_API_KEY or MONNIFY_SECRET_KEY is empty")
 	}
 
-	utilsInstance := utils.NewUtils(pool)
-	auditService := audit.NewAuditService(q)
-	wardsService := wardsservice.NewWardsService(q, rdb)
-	bodiesService := bodiesservice.NewBodiesService(q, rdb)
-	statesService := statesservice.NewStatesService(q, rdb)
-	pollingUnitUpdatesService := puupdates.NewService(q, pool)
-	officesService := officesservice.NewOfficesService(q, rdb)
-	permissionsService := permissionsservice.NewPermissionsService()
-	electionStatsService := electionstats.NewElectionStatsService(q)
-	partyApplicationsService := partyapplications.NewService(q, pool, rdb, distributor)
-	pollingUnitResultsService := puresults.NewService(q, pool, distributor)
-	pollingUnitsService := pollingunitsservice.NewPollingUnitsService(q, rdb)
-	supervisorAssignmentsService := supervisorassignmentsservice.NewService(q)
-	pollingUnitAssignmentsService := puassignments.NewService(q, rdb, distributor)
-	partiesService := partiesservice.NewPartiesService(q, pool, rdb, monnifyClient)
-	electionGroupsService := electiongroupsservice.NewElectionGroupsService(q, rdb, distributor)
-	electionsService := electionsservice.NewElectionsService(q, pool, rdb, distributor, electionGroupsService)
-	senatorialDistrictsService := senatorialdistrictsservice.NewSenatorialDistrictsService(q, rdb)
-	federalConstituenciesService := federalconstituenciesservice.NewFederalConstituenciesService(q, rdb)
-	stateAssemblyConstituenciesService := stateassemblyconstituenciesservice.NewStateConstituenciesService(q, rdb)
-	referralsService := referralsservice.NewReferralsService(q)
-
-	usersService := usersservice.NewUsersService(q, rdb, monnifyClient, bodiesService)
-	authService := authservice.NewAuthService(q, rdb, messagingService, usersService, partiesService, bodiesService, jwtSecret, accessExp, refreshExp)
-	seedService := seedservice.NewSeedService(q, pool, rdb, distributor, authService, bodiesService, usersService, partiesService)
-	pageVerificationsService := pageverificationsservice.NewPageVerificationsService(q, rdb, usersService, partiesService, auditService)
-	filesService := filesservice.NewFilesService(q)
-
-	usersService.SetPageVerificationsService(pageVerificationsService)
-	usersService.SetPartyService(partiesService)
-	partiesService.SetPageVerificationsService(pageVerificationsService)
-	partiesService.SetUsersService(usersService)
-
-	earningsService := earningsservice.NewService(q, pool)
-	pollingUnitAssignmentsService.SetEarningsService(earningsService)
-	pollingUnitUpdatesService.SetEarningsService(earningsService)
-	pollingUnitResultsService.SetEarningsService(earningsService)
-	electionsService.SetEarningsService(earningsService)
-
 	// Initialize the R2 service
 	var r2Svc *r2service.R2Service
 	var r2Err error
@@ -177,6 +138,39 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		slog.Warn("R2 service not configured", "reason", r2Err)
 	}
 
+	utilsInstance := utils.NewUtils(pool)
+	auditService := audit.NewAuditService(q)
+	earningsService := earningsservice.NewService(q, pool)
+	wardsService := wardsservice.NewWardsService(q, rdb)
+	bodiesService := bodiesservice.NewBodiesService(q, rdb)
+	statesService := statesservice.NewStatesService(q, rdb)
+	pollingUnitUpdatesService := puupdates.NewService(q, pool, earningsService)
+	officesService := officesservice.NewOfficesService(q, rdb)
+	permissionsService := permissionsservice.NewPermissionsService()
+	electionStatsService := electionstats.NewElectionStatsService(q)
+	partyApplicationsService := partyapplications.NewService(q, pool, rdb, distributor)
+	pollingUnitResultsService := puresults.NewService(q, pool, distributor, earningsService)
+	pollingUnitsService := pollingunitsservice.NewPollingUnitsService(q, rdb)
+	supervisorAssignmentsService := supervisorassignmentsservice.NewService(q)
+	pollingUnitAssignmentsService := puassignments.NewService(q, rdb, distributor, earningsService)
+	partiesService := partiesservice.NewPartiesService(q, pool, rdb, monnifyClient)
+	electionGroupsService := electiongroupsservice.NewElectionGroupsService(q, rdb, distributor)
+	electionsService := electionsservice.NewElectionsService(q, pool, rdb, distributor, electionGroupsService, earningsService)
+	senatorialDistrictsService := senatorialdistrictsservice.NewSenatorialDistrictsService(q, rdb)
+	federalConstituenciesService := federalconstituenciesservice.NewFederalConstituenciesService(q, rdb)
+	stateAssemblyConstituenciesService := stateassemblyconstituenciesservice.NewStateConstituenciesService(q, rdb)
+	referralsService := referralsservice.NewReferralsService(q)
+	usersService := usersservice.NewUsersService(q, rdb, monnifyClient, bodiesService)
+	authService := authservice.NewAuthService(q, rdb, messagingService, usersService, partiesService, bodiesService, jwtSecret, accessExp, refreshExp)
+	seedService := seedservice.NewSeedService(q, pool, rdb, distributor, authService, bodiesService, usersService, partiesService)
+	pageVerificationsService := pageverificationsservice.NewPageVerificationsService(q, rdb, usersService, partiesService, auditService)
+	filesService := filesservice.NewFilesService(q, r2Svc)
+
+	usersService.SetPageVerificationsService(pageVerificationsService)
+	usersService.SetPartyService(partiesService)
+	partiesService.SetPageVerificationsService(pageVerificationsService)
+	partiesService.SetUsersService(usersService)
+
 	authHandler := authhandler.NewHandler(authService, usersService, filesService, utilsInstance)
 	bodiesHandler := bodieshandler.NewHandler(bodiesService, q, utilsInstance, rdb)
 	partiesHandler := partieshandler.NewHandler(partiesService, auditService, filesService, utilsInstance, r2Svc)
@@ -190,10 +184,9 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	electionGroupsHandler := electiongroupshandler.NewHandler(electionGroupsService, utilsInstance)
 	electionStatsHandler := electionstatshandler.NewHandler(electionStatsService, pool, utilsInstance)
 	electionsHandler := electionshandler.NewHandler(electionsService, usersService, utilsInstance)
-	usersHandler := usershandler.NewHandler(usersService, auditService, bodiesService, permissionsService, partiesService, utilsInstance)
+	usersHandler := usershandler.NewHandler(usersService, auditService, bodiesService, permissionsService, partiesService, filesService, utilsInstance)
 	pageVerificationsHandler := pageverificationshandler.NewHandler(pageVerificationsService, utilsInstance)
-	earningsSvc := earningsservice.NewService(q, pool)
-	pollingUnitAssignmentsHandler := puassignmentshandler.NewHandler(pollingUnitAssignmentsService, usersService, pollingUnitUpdatesService, utilsInstance, distributor, earningsSvc)
+	pollingUnitAssignmentsHandler := puassignmentshandler.NewHandler(pollingUnitAssignmentsService, usersService, pollingUnitUpdatesService, utilsInstance, distributor, earningsService)
 	partyApplicationsHandler := partyapplicationshandler.NewHandler(partyApplicationsService, usersService, utilsInstance)
 	pollingUnitUpdatesHandler := puupdateshandler.NewHandler(pollingUnitUpdatesService, utilsInstance, distributor)
 	pollingUnitResultsHandler := puresultshandler.NewHandler(pollingUnitResultsService, utilsInstance, distributor)
@@ -202,15 +195,15 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	electionResultsHandler := electionresultshandler.NewHandler(pool, utilsInstance)
 	seedHandler := seedhandler.NewHandler(seedService, utilsInstance)
 	systemSettingsHandler := systemsettingshandler.NewHandler(q, utilsInstance)
-	practiceTestsHandler := practicetestshandler.NewHandler(q, utilsInstance, earningsSvc, partyApplicationsService)
-	agentEarningsHandler := agentearningshandler.NewHandler(q, earningsSvc, utilsInstance)
+	practiceTestsHandler := practicetestshandler.NewHandler(q, utilsInstance, earningsService, partyApplicationsService)
+	agentEarningsHandler := agentearningshandler.NewHandler(q, earningsService, utilsInstance)
 	agentPerformanceHandler := agentperformancehandler.NewHandler(q, pool, usersService, utilsInstance, distributor)
 	referralsHandler := referralshandler.NewHandler(referralsService, utilsInstance)
 	adminAgentPaymentsHandler := adminagentpaymentshandler.NewHandler(pool, utilsInstance)
 
 	var filesHandler *fileshandler.Handler
 	if r2Svc != nil {
-		filesHandler = fileshandler.NewHandler(q, r2Svc, rdb, utilsInstance, usersService, partiesService, auditService)
+		filesHandler = fileshandler.NewHandler(filesService, r2Svc, rdb, utilsInstance, usersService, partiesService, auditService)
 	}
 
 	geminiKey := ""

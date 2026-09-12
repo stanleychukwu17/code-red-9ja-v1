@@ -25,12 +25,8 @@ type earningsService interface {
 	ProcessTaskEarnings(ctx context.Context, assignmentID int64, taskType string, customNarration ...string) (int64, error)
 }
 
-func NewService(q *queries.Queries, pool *pgxpool.Pool, distributor worker.TaskDistributor) *Service {
-	return &Service{queries: q, pool: pool, distributor: distributor}
-}
-
-func (s *Service) SetEarningsService(es earningsService) {
-	s.earningsSvc = es
+func NewService(q *queries.Queries, pool *pgxpool.Pool, distributor worker.TaskDistributor, earningsSvc earningsService) *Service {
+	return &Service{queries: q, pool: pool, distributor: distributor, earningsSvc: earningsSvc}
 }
 
 // CandidateResult is the per-candidate entry stored in the JSONB column.

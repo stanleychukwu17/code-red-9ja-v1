@@ -18,6 +18,7 @@ import { useForm } from "@tanstack/react-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Camera, Check, Image as ImageIcon, Loader2, MoveVertical, Palette, Plus, Trash2, Umbrella, Upload } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { SelectDate } from "@repo/ui/components/selects/date-select";
 import type { PartyType } from "../tiles/party-tile";
 
 // Common color presets for parties
@@ -51,10 +52,12 @@ export function PartyFormDialog({
 }: PartyFormDialogProps) {
 	const queryClient = useQueryClient();
 	const [logoUrl, setLogoUrl] = useState("");
+	const [logoFileId, setLogoFileId] = useState<number | undefined>(party?.logo_file_id);
 	const [selectedInputLogo, setSelectedInputLogo] = useState<File | null>(null);
 	const [isUploadingLogo, setIsUploadingLogo] = useState(false);
 
 	const [coverUrl, setCoverUrl] = useState("");
+	const [coverFileId, setCoverFileId] = useState<number | undefined>(party?.cover_image_file_id);
 	const [selectedInputCover, setSelectedInputCover] = useState<File | null>(null);
 	const [isUploadingCover, setIsUploadingCover] = useState(false);
 	const [coverPositionY, setCoverPositionY] = useState(50);
@@ -96,8 +99,10 @@ export function PartyFormDialog({
 				form.setFieldValue("colorHex", party.color_hex || "");
 				form.setFieldValue("darkColorHex", party.dark_color_hex || "");
 				setLogoUrl(party.logo || "");
-				const rawCover = party.cover_image || party.background_image || (party as any).coverImage || "";
+				setLogoFileId(party.logo_file_id);
+				const rawCover = party.cover_image || "";
 				setCoverUrl(rawCover);
+				setCoverFileId(party.cover_image_file_id);
 				setCoverPositionY(party.cover_position_y ?? 50);
 			} else {
 				form.setFieldValue("acronym", "");
@@ -107,7 +112,9 @@ export function PartyFormDialog({
 				form.setFieldValue("colorHex", "");
 				form.setFieldValue("darkColorHex", "");
 				setLogoUrl("");
+				setLogoFileId(undefined);
 				setCoverUrl("");
+				setCoverFileId(undefined);
 				setCoverPositionY(50);
 			}
 
@@ -149,7 +156,7 @@ export function PartyFormDialog({
 		if (isDraggingCover) {
 			try {
 				(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-			} catch {}
+			} catch { }
 			setIsDraggingCover(false);
 		}
 	};
@@ -189,6 +196,7 @@ export function PartyFormDialog({
 	const handleRemoveImage = (which: "changing_logo" | "removing_logo") => {
 		if (which === "removing_logo") {
 			setLogoUrl("");
+			setLogoFileId(undefined);
 			setSelectedInputLogo(null);
 			if (logoFileInputRef.current) {
 				logoFileInputRef.current.value = "";
@@ -201,6 +209,7 @@ export function PartyFormDialog({
 	// Handle the removal of the background cover
 	const handleRemoveCover = () => {
 		setCoverUrl("");
+		setCoverFileId(undefined);
 		setSelectedInputCover(null);
 		setIsRepositioning(false);
 		setCoverPositionY(50);
@@ -220,7 +229,9 @@ export function PartyFormDialog({
 			darkColorHex: string;
 		}) => {
 			let finalLogoUrl = logoUrl;
+			let finalLogoFileId = logoFileId;
 			let finalCoverUrl = coverUrl;
+			let finalCoverFileId = coverFileId;
 
 			// 1. Upload the party logo if a new one was selected
 			if (selectedInputLogo) {
@@ -261,8 +272,10 @@ export function PartyFormDialog({
 					await confirmFileUpload({ data: { id: file_id, success: true } });
 
 					finalLogoUrl = public_url;
+					finalLogoFileId = file_id;
 					setSelectedInputLogo(null);
 					setLogoUrl(public_url);
+					setLogoFileId(file_id);
 				} finally {
 					setIsUploadingLogo(false);
 				}
@@ -292,9 +305,7 @@ export function PartyFormDialog({
 
 					const putRes = await fetch(upload_url, {
 						method: "PUT",
-						headers: {
-							"Content-Type": selectedInputCover.type,
-						},
+						headers: { "Content-Type": selectedInputCover.type },
 						body: selectedInputCover,
 					});
 
@@ -306,8 +317,10 @@ export function PartyFormDialog({
 					await confirmFileUpload({ data: { id: file_id, success: true } });
 
 					finalCoverUrl = public_url;
+					finalCoverFileId = file_id;
 					setSelectedInputCover(null);
 					setCoverUrl(public_url);
+					setCoverFileId(file_id);
 				} finally {
 					setIsUploadingCover(false);
 				}
@@ -324,12 +337,13 @@ export function PartyFormDialog({
 						short_name: values.acronym.trim().toUpperCase(),
 						name: values.fullName.trim(),
 						logo: finalLogoUrl,
+						logo_file_id: finalLogoFileId,
 						display_order: values.displayOrder,
 						color_hex: values.colorHex.trim() || undefined,
 						dark_color_hex: values.darkColorHex.trim() || undefined,
 						date_founded: values.dateFounded.trim() || undefined,
 						cover_image: finalCoverUrl || undefined,
-						background_image: finalCoverUrl || undefined,
+						cover_image_file_id: finalCoverFileId,
 						cover_position_y: coverPositionY,
 					},
 				});
@@ -339,12 +353,13 @@ export function PartyFormDialog({
 						short_name: values.acronym.trim().toUpperCase(),
 						name: values.fullName.trim(),
 						logo: finalLogoUrl,
+						logo_file_id: finalLogoFileId,
 						display_order: values.displayOrder,
 						color_hex: values.colorHex.trim() || undefined,
 						dark_color_hex: values.darkColorHex.trim() || undefined,
 						date_founded: values.dateFounded.trim() || undefined,
 						cover_image: finalCoverUrl || undefined,
-						background_image: finalCoverUrl || undefined,
+						cover_image_file_id: finalCoverFileId,
 						cover_position_y: coverPositionY,
 					},
 				});
@@ -355,8 +370,37 @@ export function PartyFormDialog({
 			}
 			return res;
 		},
-		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["parties"] });
+		onSuccess: (res) => {
+			const savedParty = res?.data?.party;
+			if (savedParty) {
+				queryClient.setQueryData(["parties"], (oldData: any) => {
+					if (!oldData) return oldData;
+
+					if (oldData?.data?.parties && Array.isArray(oldData.data.parties)) {
+						const parties = oldData.data.parties;
+						const updatedParties: PartyType[] =
+							mode === "update"
+								? parties.map((p: PartyType) =>
+										p.id === savedParty.id ? { ...p, ...savedParty } : p
+								  )
+								: [...parties, savedParty];
+
+						return {
+							...oldData,
+							data: {
+								...oldData.data,
+								parties: updatedParties,
+							},
+						};
+					}
+
+					return oldData;
+				});
+			} else {
+				// Fallback if no party object returned
+				queryClient.invalidateQueries({ queryKey: ["parties"] });
+			}
+
 			onSuccess?.();
 			onClose();
 		},
@@ -366,8 +410,18 @@ export function PartyFormDialog({
 	});
 
 	return (
-		<Dialog open={open} onOpenChange={onClose}>
-			<DialogContent className="max-w-145 p-0 rounded-2xl border-none shadow-2xl   overflow-visible">
+		<Dialog
+			open={open}
+			onOpenChange={(isOpen) => {
+				if (!isOpen) onClose();
+			}}
+		>
+			<DialogContent
+				className="max-w-145 p-0 rounded-2xl border-none shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
+				onPointerDownOutside={(e) => e.preventDefault()}
+				onInteractOutside={(e) => e.preventDefault()}
+				onEscapeKeyDown={(e) => e.preventDefault()}
+			>
 				<DialogHeader title={mode === "update" ? "Edit Party" : "Create Party"} />
 
 				<form
@@ -376,8 +430,10 @@ export function PartyFormDialog({
 						e.stopPropagation();
 						form.handleSubmit();
 					}}
+					className="flex flex-col flex-1 overflow-hidden min-h-0"
 				>
-					<DialogPadding className="space-y-6 pb-6">
+					<div className="flex-1 overflow-y-auto min-h-0">
+						<DialogPadding className="space-y-6 pb-6">
 						{error && (
 							<div className="p-3 text-[14px] font-medium text-red-600 bg-red-50 border border-red-100 rounded-xl">
 								{error}
@@ -407,11 +463,10 @@ export function PartyFormDialog({
 									onPointerDown={handleCoverPointerDown}
 									onPointerMove={handleCoverPointerMove}
 									onPointerUp={handleCoverPointerUp}
-									className={`relative h-40 w-full rounded-2xl border border-[#e5e7eb] dark:border-neutral-800 bg-[#f8fafc] dark:bg-neutral-800 overflow-hidden select-none touch-none ${
-										isRepositioning
-											? "cursor-grab active:cursor-grabbing ring-2 ring-blue-500"
-											: "cursor-default"
-									}`}
+									className={`relative h-55 w-full rounded-2xl border border-[#e5e7eb] dark:border-neutral-800 bg-[#f8fafc] dark:bg-neutral-800 overflow-hidden select-none touch-none ${isRepositioning
+										? "cursor-grab active:cursor-grabbing ring-2 ring-blue-500"
+										: "cursor-default"
+										}`}
 								>
 									<img
 										src={coverUrl}
@@ -455,11 +510,10 @@ export function PartyFormDialog({
 												e.stopPropagation();
 												setIsRepositioning((prev) => !prev);
 											}}
-											className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg backdrop-blur-md text-xs font-semibold transition cursor-pointer shadow-sm ${
-												isRepositioning
-													? "bg-blue-600 hover:bg-blue-700 text-white ring-2 ring-white/50 shadow-md"
-													: "bg-black/70 hover:bg-black/90 text-white"
-											}`}
+											className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg backdrop-blur-md text-xs font-semibold transition cursor-pointer shadow-sm ${isRepositioning
+												? "bg-blue-600 hover:bg-blue-700 text-white ring-2 ring-white/50 shadow-md"
+												: "bg-black/70 hover:bg-black/90 text-white"
+												}`}
 											title="Re-adjust background image position"
 										>
 											{isRepositioning ? (
@@ -496,33 +550,30 @@ export function PartyFormDialog({
 												<button
 													type="button"
 													onClick={() => setCoverPositionY(0)}
-													className={`px-2 py-0.5 rounded text-xs transition ${
-														coverPositionY === 0
-															? "bg-white text-black font-semibold"
-															: "bg-white/15 hover:bg-white/25 text-white"
-													}`}
+													className={`px-2 py-0.5 rounded text-xs transition ${coverPositionY === 0
+														? "bg-white text-black font-semibold"
+														: "bg-white/15 hover:bg-white/25 text-white"
+														}`}
 												>
 													Top
 												</button>
 												<button
 													type="button"
 													onClick={() => setCoverPositionY(50)}
-													className={`px-2 py-0.5 rounded text-xs transition ${
-														coverPositionY === 50
-															? "bg-white text-black font-semibold"
-															: "bg-white/15 hover:bg-white/25 text-white"
-													}`}
+													className={`px-2 py-0.5 rounded text-xs transition ${coverPositionY === 50
+														? "bg-white text-black font-semibold"
+														: "bg-white/15 hover:bg-white/25 text-white"
+														}`}
 												>
 													Center
 												</button>
 												<button
 													type="button"
 													onClick={() => setCoverPositionY(100)}
-													className={`px-2 py-0.5 rounded text-xs transition ${
-														coverPositionY === 100
-															? "bg-white text-black font-semibold"
-															: "bg-white/15 hover:bg-white/25 text-white"
-													}`}
+													className={`px-2 py-0.5 rounded text-xs transition ${coverPositionY === 100
+														? "bg-white text-black font-semibold"
+														: "bg-white/15 hover:bg-white/25 text-white"
+														}`}
 												>
 													Bottom
 												</button>
@@ -556,7 +607,7 @@ export function PartyFormDialog({
 							) : (
 								<div
 									onClick={handleUploadCoverClick}
-									className="relative h-40 w-full rounded-2xl border-2 border-dashed border-[#dfdfdf] hover:border-[#94a3b8] transition-all bg-[#f8fafc] dark:bg-neutral-800 overflow-hidden flex flex-col items-center justify-center cursor-pointer group"
+									className="relative h-55 w-full rounded-2xl border-2 border-dashed border-[#dfdfdf] hover:border-[#94a3b8] transition-all bg-[#f8fafc] dark:bg-neutral-800 overflow-hidden flex flex-col items-center justify-center cursor-pointer group"
 								>
 									{isUploadingCover ? (
 										<div className="flex flex-col items-center gap-2 text-c-40">
@@ -606,7 +657,7 @@ export function PartyFormDialog({
 											type="button"
 											disabled={isUploadingLogo}
 											onClick={handleUploadLogoClick}
-											className="flex h-9 items-center gap-1.5 rounded-lg bg-[#1a1a1a] hover:bg-black disabled:bg-[#ccc] px-3 text-[13px] font-medium text-white transition cursor-pointer"
+											className="flex h-9 items-center gap-1.5 rounded-lg bg-neutral-900 hover:bg-black dark:bg-white dark:hover:bg-neutral-100 text-white dark:text-neutral-900 disabled:opacity-50 disabled:cursor-not-allowed px-3 text-[13px] font-medium transition cursor-pointer shadow-xs"
 										>
 											<Plus className="size-3.5" />
 											<span>{logoUrl ? "Change logo" : "Upload logo"}</span>
@@ -615,7 +666,7 @@ export function PartyFormDialog({
 											<button
 												type="button"
 												onClick={() => handleRemoveImage("removing_logo")}
-												className="h-9 items-center rounded-lg border border-[#dfdfdf] px-3 text-[13px] font-medium text-red-600 hover:bg-[#fafafa] transition cursor-pointer"
+												className="inline-flex h-9 items-center rounded-lg border border-[#dfdfdf] dark:border-neutral-700/80 bg-transparent hover:bg-red-50 dark:hover:bg-red-950/30 hover:border-red-200 dark:hover:border-red-900/50 px-3 text-[13px] font-medium text-red-600 dark:text-red-400 transition cursor-pointer"
 											>
 												Remove logo
 											</button>
@@ -681,12 +732,14 @@ export function PartyFormDialog({
 								name="dateFounded"
 								children={(field) => (
 									<div>
-										<label className="text-[14px] font-semibold text-c-50">Date Founded</label>
-										<Input
-											type="date"
-											value={field.state.value}
-											onBlur={field.handleBlur}
-											onChange={(e) => field.handleChange(e.target.value)}
+										<label className="text-[14px] font-semibold text-c-50 mb-1 block">Date Founded</label>
+										<SelectDate
+											initialData={field.state.value}
+											selectedId={field.state.value}
+											update={(val) => field.handleChange(val)}
+											buttonText="Date founded"
+											startMonth={new Date(1900, 0)}
+											endMonth={new Date()}
 										/>
 									</div>
 								)}
@@ -699,7 +752,7 @@ export function PartyFormDialog({
 								}}
 								children={(field) => (
 									<div>
-										<label className="text-[14px] font-semibold text-c-50">
+										<label className="text-[14px] font-semibold text-c-50 mb-1 block">
 											Display Order (Rank)
 										</label>
 										<Input
@@ -819,32 +872,53 @@ export function PartyFormDialog({
 
 							{/* Quick Presets */}
 							<div>
-								<span className="text-[12px] font-medium text-c-40 block mb-1.5">
+								<span className="text-[12px] font-medium text-c-40 dark:text-c-50 block mb-1.5">
 									Popular Presets:
 								</span>
-								<div className="flex flex-wrap gap-1.5">
-									{PARTY_COLOR_PRESETS.map((preset) => (
-										<button
-											key={preset.name}
-											type="button"
-											onClick={() => {
-												form.setFieldValue("colorHex", preset.light);
-												form.setFieldValue("darkColorHex", preset.dark);
-											}}
-											className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[#e5e7eb] bg-white hover:bg-slate-50 text-[12px] text-c-60 transition cursor-pointer"
-											title={`${preset.name}: Light ${preset.light} / Dark ${preset.dark}`}
-										>
-											<span
-												className="size-3 rounded-full border border-black/10"
-												style={{ backgroundColor: preset.light }}
-											/>
-											<span>{preset.name.split(" ")[0]}</span>
-										</button>
-									))}
-								</div>
+								<form.Subscribe
+									selector={(state) => [state.values.colorHex, state.values.darkColorHex]}
+									children={([colorHex, darkColorHex]) => (
+										<div className="flex flex-wrap gap-1.5">
+											{PARTY_COLOR_PRESETS.map((preset) => {
+												const isSelected =
+													Boolean(colorHex) &&
+													colorHex?.toLowerCase() === preset.light.toLowerCase() &&
+													darkColorHex?.toLowerCase() === preset.dark.toLowerCase();
+
+												return (
+													<button
+														key={preset.name}
+														type="button"
+														onClick={() => {
+															form.setFieldValue("colorHex", preset.light);
+															form.setFieldValue("darkColorHex", preset.dark);
+														}}
+														className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[12px] transition cursor-pointer select-none ${isSelected
+																? "border-c-80 dark:border-white bg-c-5 dark:bg-neutral-700 text-c-90 dark:text-white font-medium ring-1 ring-c-80 dark:ring-white"
+																: "border-[#e5e7eb] dark:border-neutral-700/80 bg-white dark:bg-neutral-800 hover:bg-slate-50 dark:hover:bg-neutral-700/70 text-c-60 dark:text-c-70 hover:text-c-90 dark:hover:text-white"
+															}`}
+														title={`${preset.name}: Light ${preset.light} / Dark ${preset.dark}`}
+													>
+														<span
+															className="size-3 rounded-full border border-black/10 dark:border-white/20 shrink-0 bg-[var(--preset-light)] dark:bg-[var(--preset-dark)] transition-colors"
+															style={
+																{
+																	"--preset-light": preset.light,
+																	"--preset-dark": preset.dark,
+																} as React.CSSProperties
+															}
+														/>
+														<span>{preset.name.split(" ")[0]}</span>
+													</button>
+												);
+											})}
+										</div>
+									)}
+								/>
 							</div>
 						</div>
 					</DialogPadding>
+					</div>
 
 					<DialogFooter>
 						<form.Subscribe

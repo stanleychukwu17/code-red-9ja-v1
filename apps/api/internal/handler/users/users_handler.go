@@ -15,6 +15,7 @@ import (
 
 	"free9ja/api/internal/service/audit"
 	authservice "free9ja/api/internal/service/auth"
+	"free9ja/api/internal/service/files"
 	monnifyclient "free9ja/api/internal/service/monnify"
 	permissionsservice "free9ja/api/internal/service/permissions"
 	usersservice "free9ja/api/internal/service/users"
@@ -88,18 +89,20 @@ type Handler struct {
 	bodiesService      BodiesService
 	permissionsService PermissionsService
 	partiesService     PartiesService
+	filesService       files.FilesService
 	validate           *validator.Validate
 	utils              *utils.Utils
 }
 
 // NewHandler creates a new instance of the users handler
-func NewHandler(usersService UsersService, auditService audit.AuditService, bodiesService BodiesService, permissionsService PermissionsService, partiesService PartiesService, utilsInstance *utils.Utils) *Handler {
+func NewHandler(usersService UsersService, auditService audit.AuditService, bodiesService BodiesService, permissionsService PermissionsService, partiesService PartiesService, filesService files.FilesService, utilsInstance *utils.Utils) *Handler {
 	return &Handler{
 		usersService:       usersService,
 		auditService:       auditService,
 		bodiesService:      bodiesService,
 		permissionsService: permissionsService,
 		partiesService:     partiesService,
+		filesService:       filesService,
 		validate:           validator.New(),
 		utils:              utilsInstance,
 	}
@@ -256,6 +259,17 @@ func (h *Handler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// If the avatar is changing, clean up the old avatar from R2 and files table asynchronously
+	if req.Avatar != "" && req.Avatar != user.Avatar.String && user.Avatar.String != "" {
+		var oldAvatarFileID int64
+		if user.AvatarFileID.Valid {
+			oldAvatarFileID = user.AvatarFileID.Int64
+		}
+		if h.filesService != nil {
+			h.filesService.DeleteAssetAsync(user.Avatar.String, oldAvatarFileID)
+		}
+	}
+
 	err = h.usersService.UpdateUserProfile(
 		r.Context(),
 		user.ID,
@@ -273,6 +287,10 @@ func (h *Handler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update profile: "+err.Error())
 		return
+	}
+
+	if req.AvatarFileId != nil && *req.AvatarFileId > 0 && h.filesService != nil {
+		_, _ = h.filesService.UpdateFileOwner(r.Context(), *req.AvatarFileId, user.ID)
 	}
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Profile updated successfully", nil)
@@ -762,6 +780,17 @@ func (h *Handler) AdminUpdateUser(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// If the avatar is changing, clean up the old avatar from R2 and files table asynchronously
+	if req.Avatar != "" && req.Avatar != targetUserDetails.Avatar.String && targetUserDetails.Avatar.String != "" {
+		var oldAvatarFileID int64
+		if targetUserDetails.AvatarFileID.Valid {
+			oldAvatarFileID = targetUserDetails.AvatarFileID.Int64
+		}
+		if h.filesService != nil {
+			h.filesService.DeleteAssetAsync(targetUserDetails.Avatar.String, oldAvatarFileID)
+		}
+	}
+
 	// update the user
 	err = h.usersService.AdminUpdateUser(
 		r.Context(),
@@ -782,6 +811,10 @@ func (h *Handler) AdminUpdateUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update user: "+err.Error())
 		return
+	}
+
+	if req.AvatarFileId != nil && *req.AvatarFileId > 0 && h.filesService != nil {
+		_, _ = h.filesService.UpdateFileOwner(r.Context(), *req.AvatarFileId, targetUserDetails.ID)
 	}
 
 	// invalidate the old username cache if it changed

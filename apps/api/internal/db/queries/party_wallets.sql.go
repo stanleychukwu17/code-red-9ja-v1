@@ -254,7 +254,7 @@ func (q *Queries) GetWalletTransactionByReference(ctx context.Context, transacti
 }
 
 const listPartiesWithoutWallet = `-- name: ListPartiesWithoutWallet :many
-SELECT p.id, p.short_name, p.name, p.logo, p.logo_file_id, p.display_order, p.status, p.slots, p.is_verified, p.discount_percentage, p.agent_payment_balance_kobo, p.agent_payment_allocation_kobo, p.agent_acquisition_targets, p.auto_accept_applications, p.color_hex, p.dark_color_hex, p.created_at, p.updated_at FROM parties p
+SELECT p.id, p.short_name, p.name, p.logo, p.logo_file_id, p.cover_image, p.cover_image_file_id, p.cover_position_y, p.display_order, p.status, p.slots, p.is_verified, p.discount_percentage, p.agent_payment_balance_kobo, p.agent_payment_allocation_kobo, p.agent_acquisition_targets, p.auto_accept_applications, p.color_hex, p.dark_color_hex, p.date_founded, p.created_at, p.updated_at FROM parties p
 LEFT JOIN party_wallets pw ON pw.party_id = p.id
 WHERE pw.id IS NULL
 ORDER BY p.id ASC
@@ -275,6 +275,9 @@ func (q *Queries) ListPartiesWithoutWallet(ctx context.Context) ([]Party, error)
 			&i.Name,
 			&i.Logo,
 			&i.LogoFileID,
+			&i.CoverImage,
+			&i.CoverImageFileID,
+			&i.CoverPositionY,
 			&i.DisplayOrder,
 			&i.Status,
 			&i.Slots,
@@ -286,6 +289,7 @@ func (q *Queries) ListPartiesWithoutWallet(ctx context.Context) ([]Party, error)
 			&i.AutoAcceptApplications,
 			&i.ColorHex,
 			&i.DarkColorHex,
+			&i.DateFounded,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {

@@ -9,8 +9,8 @@ import (
 	apimiddleware "free9ja/api/internal/middleware"
 	"free9ja/api/internal/service/audit"
 	"free9ja/api/internal/service/files"
-	r2service "free9ja/api/internal/service/r2"
 	permissionsservice "free9ja/api/internal/service/permissions"
+	r2service "free9ja/api/internal/service/r2"
 	"free9ja/api/internal/utils"
 	"io"
 	"net/http"
@@ -25,12 +25,12 @@ import (
 )
 
 type PartiesService interface {
-	CreateParty(ctx context.Context, shortName, name, logo string, logoFileID *int64, displayOrder int32, colorHex, darkColorHex *string) (queries.Party, error)
+	CreateParty(ctx context.Context, shortName, name, logo string, logoFileID *int64, displayOrder int32, colorHex, darkColorHex, coverImage *string, coverImageFileID *int64, coverPositionY *int16, dateFounded *string) (queries.Party, error)
 	GetPartyInfo(ctx context.Context, partyID int16) *queries.PartyWithVerifications
 	GetPartyBasicInfo(ctx context.Context, partyID int16) *queries.PartyBasicInfoWithVerifications
 	GetPartyByShortName(ctx context.Context, shortName string) (queries.Party, error)
 	ListParties(ctx context.Context) ([]queries.PartyWithVerifications, error)
-	UpdateParty(ctx context.Context, id int64, shortName, name, logo string, logoFileID *int64, displayOrder int32, colorHex, darkColorHex *string) (queries.Party, error)
+	UpdateParty(ctx context.Context, id int64, shortName, name, logo string, logoFileID *int64, displayOrder int32, colorHex, darkColorHex, coverImage *string, coverImageFileID *int64, coverPositionY *int16, dateFounded *string) (queries.Party, error)
 	DeleteParty(ctx context.Context, id int64) error
 	UpdatePartyIsVerified(ctx context.Context, partyID int16, isVerified bool) error
 	// Wallet methods
@@ -125,22 +125,37 @@ func parseSortParams(r *http.Request, defaultOrderBy string, defaultOrderDir str
 	return orderBy, orderDir
 }
 
+// deleteOldAssetAsync delegates asynchronous R2 and DB asset cleanup to filesService.
+func (h *Handler) deleteOldAssetAsync(rawURL string, fileID int64) {
+	h.filesService.DeleteAssetAsync(rawURL, fileID)
+}
+
 type CreatePartyRequest struct {
-	ShortName    string `json:"short_name"`
-	Name         string `json:"name"`
-	Logo         string `json:"logo"`
-	DisplayOrder int32  `json:"display_order"`
-	ColorHex     string `json:"color_hex"`
-	DarkColorHex string `json:"dark_color_hex"`
+	ShortName        string  `json:"short_name"`
+	Name             string  `json:"name"`
+	Logo             string  `json:"logo"`
+	LogoFileID       *int64  `json:"logo_file_id"`
+	DisplayOrder     int32   `json:"display_order"`
+	ColorHex         string  `json:"color_hex"`
+	DarkColorHex     string  `json:"dark_color_hex"`
+	CoverImage       *string `json:"cover_image"`
+	CoverImageFileID *int64  `json:"cover_image_file_id"`
+	CoverPositionY   *int16  `json:"cover_position_y"`
+	DateFounded      *string `json:"date_founded"`
 }
 
 type UpdatePartyRequest struct {
-	ShortName    string `json:"short_name"`
-	Name         string `json:"name"`
-	Logo         string `json:"logo"`
-	DisplayOrder int32  `json:"display_order"`
-	ColorHex     string `json:"color_hex"`
-	DarkColorHex string `json:"dark_color_hex"`
+	ShortName        string  `json:"short_name"`
+	Name             string  `json:"name"`
+	Logo             string  `json:"logo"`
+	LogoFileID       *int64  `json:"logo_file_id"`
+	DisplayOrder     int32   `json:"display_order"`
+	ColorHex         string  `json:"color_hex"`
+	DarkColorHex     string  `json:"dark_color_hex"`
+	CoverImage       *string `json:"cover_image"`
+	CoverImageFileID *int64  `json:"cover_image_file_id"`
+	CoverPositionY   *int16  `json:"cover_position_y"`
+	DateFounded      *string `json:"date_founded"`
 }
 
 // CreateParty godoc
@@ -186,13 +201,18 @@ func (h *Handler) CreateParty(w http.ResponseWriter, r *http.Request) {
 	if req.DarkColorHex != "" {
 		darkColorHexPtr = &req.DarkColorHex
 	}
-	party, err := h.partiesService.CreateParty(r.Context(), req.ShortName, req.Name, req.Logo, nil, req.DisplayOrder, colorHexPtr, darkColorHexPtr)
+	party, err := h.partiesService.CreateParty(r.Context(), req.ShortName, req.Name, req.Logo, req.LogoFileID, req.DisplayOrder, colorHexPtr, darkColorHexPtr, req.CoverImage, req.CoverImageFileID, req.CoverPositionY, req.DateFounded)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create party: "+err.Error())
 		return
 	}
 
-
+	if req.LogoFileID != nil && *req.LogoFileID > 0 {
+		_, _ = h.filesService.UpdateFileOwner(r.Context(), *req.LogoFileID, int64(party.ID))
+	}
+	if req.CoverImageFileID != nil && *req.CoverImageFileID > 0 {
+		_, _ = h.filesService.UpdateFileOwner(r.Context(), *req.CoverImageFileID, int64(party.ID))
+	}
 
 	// --- Audit Logging ---
 	newValuesJSON, _ := json.Marshal(party)
@@ -208,6 +228,139 @@ func (h *Handler) CreateParty(w http.ResponseWriter, r *http.Request) {
 
 	h.utils.RespondSuccess(w, http.StatusCreated, "Party created successfully", map[string]interface{}{
 		"party": party,
+	})
+}
+
+// UpdateParty godoc
+// @Summary      Update a political party
+// @Description  Modifies the short name, full name, or logo URL of an existing political party
+// @Tags         Parties
+// @Accept       json
+// @Produce      json
+// @Param        id   path  int  true  "Party ID"
+// @Param        request body UpdatePartyRequest true "Update Party request payload"
+// @Success      200  {object} map[string]interface{} "Party updated successfully"
+// @Failure      400  {object} map[string]interface{} "Invalid payload or ID parameter"
+// @Failure      401  {object} map[string]interface{} "Unauthorized"
+// @Failure      403  {object} map[string]interface{} "Forbidden (Admin only)"
+// @Failure      404  {object} map[string]interface{} "Party not found"
+// @Failure      500  {object} map[string]interface{} "Internal server error"
+// @Router       /parties/{id} [put]
+func (h *Handler) UpdateParty(w http.ResponseWriter, r *http.Request) {
+	// Extract user claims to verify authorization
+	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
+	if !ok || claims == nil {
+		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	// Parse the party ID from the URL path
+	idStr := chi.URLParam(r, "id")
+	partyID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID")
+		return
+	}
+
+	// Decode the JSON request payload
+	var req UpdatePartyRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	// Ensure required fields are provided
+	if req.ShortName == "" || req.Name == "" {
+		h.utils.RespondError(w, http.StatusBadRequest, "short_name and name are required")
+		return
+	}
+
+	// Verify party exists
+	party := h.partiesService.GetPartyInfo(r.Context(), int16(partyID))
+	if party == nil {
+		h.utils.RespondError(w, http.StatusNotFound, "Party not found")
+		return
+	}
+
+	// check permissions to update this party
+	permsSvc := permissionsservice.NewPermissionsService()
+	allowed, perms, err := permsSvc.CheckPartyModificationPermission(claims, int16(partyID))
+	if !allowed {
+		h.utils.RespondError(w, http.StatusForbidden, err.Error())
+		return
+	}
+
+	// If the logo URL is changing, and the party already had a logo, delete the old logo from R2 and clean up the file record
+	if party.Logo != req.Logo && party.Logo != "" {
+		oldFileID := int64(0)
+		if party.LogoFileID.Valid {
+			oldFileID = party.LogoFileID.Int64
+		}
+		h.deleteOldAssetAsync(party.Logo, oldFileID)
+	}
+
+	// If the background cover image is changing, delete the old cover from R2 and clean up the file record
+	reqCover := ""
+	if req.CoverImage != nil {
+		reqCover = *req.CoverImage
+	}
+	if party.CoverImage.String != reqCover && party.CoverImage.String != "" {
+		oldCoverFileID := int64(0)
+		if party.CoverImageFileID.Valid {
+			oldCoverFileID = party.CoverImageFileID.Int64
+		}
+		h.deleteOldAssetAsync(party.CoverImage.String, oldCoverFileID)
+	}
+
+	// update the party info
+	var colorHexPtr, darkColorHexPtr *string
+	if req.ColorHex != "" {
+		colorHexPtr = &req.ColorHex
+	}
+	if req.DarkColorHex != "" {
+		darkColorHexPtr = &req.DarkColorHex
+	}
+	updatedParty, err := h.partiesService.UpdateParty(r.Context(), partyID, req.ShortName, req.Name, req.Logo, req.LogoFileID, req.DisplayOrder, colorHexPtr, darkColorHexPtr, req.CoverImage, req.CoverImageFileID, req.CoverPositionY, req.DateFounded)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update party: "+err.Error())
+		return
+	}
+
+	if req.LogoFileID != nil && *req.LogoFileID > 0 {
+		_, _ = h.filesService.UpdateFileOwner(r.Context(), *req.LogoFileID, partyID)
+	}
+	if req.CoverImageFileID != nil && *req.CoverImageFileID > 0 {
+		_, _ = h.filesService.UpdateFileOwner(r.Context(), *req.CoverImageFileID, partyID)
+	}
+
+	// --- Audit Logging ---
+	// Capture old and new values for audit logging
+	oldValuesJSON, _ := json.Marshal(party)
+	newValuesJSON, _ := json.Marshal(updatedParty)
+
+	moduleName := db.ModulePartyAdmin
+	actorRole := db.ActorRolePartyAdmin
+	if perms.IsBothAdmin {
+		moduleName = db.ModuleAdmin
+		if perms.IsSuperAdmin {
+			actorRole = db.ActorRoleSuperAdmin
+		} else {
+			actorRole = db.ActorRoleAdmin
+		}
+	}
+	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
+		Module:     audit.StringToText(moduleName),
+		Action:     db.ActionUpdateParty,
+		ActorID:    claims.UserID,
+		ActorRole:  audit.StringToText(actorRole),
+		EntityType: db.EntityTypeParty,
+		EntityID:   idStr,
+		OldValues:  oldValuesJSON,
+		NewValues:  newValuesJSON,
+	})
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Party updated successfully", map[string]interface{}{
+		"party": updatedParty,
 	})
 }
 
@@ -464,132 +617,6 @@ func (h *Handler) GetPartyProfile(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// UpdateParty godoc
-// @Summary      Update a political party
-// @Description  Modifies the short name, full name, or logo URL of an existing political party
-// @Tags         Parties
-// @Accept       json
-// @Produce      json
-// @Param        id   path  int  true  "Party ID"
-// @Param        request body UpdatePartyRequest true "Update Party request payload"
-// @Success      200  {object} map[string]interface{} "Party updated successfully"
-// @Failure      400  {object} map[string]interface{} "Invalid payload or ID parameter"
-// @Failure      401  {object} map[string]interface{} "Unauthorized"
-// @Failure      403  {object} map[string]interface{} "Forbidden (Admin only)"
-// @Failure      404  {object} map[string]interface{} "Party not found"
-// @Failure      500  {object} map[string]interface{} "Internal server error"
-// @Router       /parties/{id} [put]
-func (h *Handler) UpdateParty(w http.ResponseWriter, r *http.Request) {
-	// Extract user claims to verify authorization
-	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
-	if !ok || claims == nil {
-		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
-		return
-	}
-
-	// Parse the party ID from the URL path
-	idStr := chi.URLParam(r, "id")
-	partyID, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID")
-		return
-	}
-
-	// Decode the JSON request payload
-	var req UpdatePartyRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
-		return
-	}
-
-	// Ensure required fields are provided
-	if req.ShortName == "" || req.Name == "" {
-		h.utils.RespondError(w, http.StatusBadRequest, "short_name and name are required")
-		return
-	}
-
-	// Verify party exists
-	party := h.partiesService.GetPartyInfo(r.Context(), int16(partyID))
-	if party == nil {
-		h.utils.RespondError(w, http.StatusNotFound, "Party not found")
-		return
-	}
-
-	// check permissions to update this party
-	permsSvc := permissionsservice.NewPermissionsService()
-	allowed, perms, err := permsSvc.CheckPartyModificationPermission(claims, int16(partyID))
-	if !allowed {
-		h.utils.RespondError(w, http.StatusForbidden, err.Error())
-		return
-	}
-
-	// If the logo URL is changing, and the party already had a logo, delete the old logo from R2
-	if party.Logo != req.Logo && party.Logo != "" {
-		// Example URL: https://pub-xxx.r2.dev/parties/2026-07-13/A.webp
-		// We can extract the key by stripping the domain prefix. We'll find ".dev/" or ".com/" and take the rest.
-		var key string
-		if idx := strings.Index(party.Logo, ".dev/"); idx != -1 {
-			key = party.Logo[idx+5:]
-		} else if idx := strings.Index(party.Logo, ".com/"); idx != -1 {
-			key = party.Logo[idx+5:]
-		}
-		
-		if key != "" && h.r2Svc != nil {
-			go func(k string) {
-				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-				defer cancel()
-				if delErr := h.r2Svc.DeleteObject(ctx, k); delErr == nil {
-					_ = h.r2Svc.PurgeCloudflareCache(ctx, k)
-				}
-			}(key)
-		}
-	}
-
-	// update the party info
-	var colorHexPtr, darkColorHexPtr *string
-	if req.ColorHex != "" {
-		colorHexPtr = &req.ColorHex
-	}
-	if req.DarkColorHex != "" {
-		darkColorHexPtr = &req.DarkColorHex
-	}
-	updatedParty, err := h.partiesService.UpdateParty(r.Context(), partyID, req.ShortName, req.Name, req.Logo, nil, req.DisplayOrder, colorHexPtr, darkColorHexPtr)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update party: "+err.Error())
-		return
-	}
-
-	// --- Audit Logging ---
-	// Capture old and new values for audit logging
-	oldValuesJSON, _ := json.Marshal(party)
-	newValuesJSON, _ := json.Marshal(updatedParty)
-
-	moduleName := db.ModulePartyAdmin
-	actorRole := db.ActorRolePartyAdmin
-	if perms.IsBothAdmin {
-		moduleName = db.ModuleAdmin
-		if perms.IsSuperAdmin {
-			actorRole = db.ActorRoleSuperAdmin
-		} else {
-			actorRole = db.ActorRoleAdmin
-		}
-	}
-	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
-		Module:     audit.StringToText(moduleName),
-		Action:     db.ActionUpdateParty,
-		ActorID:    claims.UserID,
-		ActorRole:  audit.StringToText(actorRole),
-		EntityType: db.EntityTypeParty,
-		EntityID:   idStr,
-		OldValues:  oldValuesJSON,
-		NewValues:  newValuesJSON,
-	})
-
-	h.utils.RespondSuccess(w, http.StatusOK, "Party updated successfully", map[string]interface{}{
-		"party": updatedParty,
-	})
-}
-
 // JoinParty handles requests to join a party chapter.
 func (h *Handler) JoinParty(w http.ResponseWriter, r *http.Request) {
 	partyIDStr := chi.URLParam(r, "id")
@@ -661,11 +688,14 @@ func (h *Handler) LeaveParty(w http.ResponseWriter, r *http.Request) {
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Router       /parties/{id} [delete]
 func (h *Handler) DeleteParty(w http.ResponseWriter, r *http.Request) {
+	// get claims from the request context
+	// only super admin can delete a party
 	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey, "super_admin")
 	if !ok {
 		return
 	}
 
+	// get party id from the url request
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -673,15 +703,35 @@ func (h *Handler) DeleteParty(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// get party information
+	party := h.partiesService.GetPartyInfo(r.Context(), int16(id))
+
 	// Verify party exists
-	if party := h.partiesService.GetPartyInfo(r.Context(), int16(id)); party == nil {
+	if party == nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Party not found")
 		return
 	}
 
+	// delete the party
 	if err := h.partiesService.DeleteParty(r.Context(), id); err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to delete party: "+err.Error())
 		return
+	}
+
+	// Clean up party assets (logo and cover image) from R2 and files table asynchronously
+	if party.Logo != "" {
+		var oldLogoID int64
+		if party.LogoFileID.Valid {
+			oldLogoID = party.LogoFileID.Int64
+		}
+		h.deleteOldAssetAsync(party.Logo, oldLogoID)
+	}
+	if party.CoverImage.Valid && party.CoverImage.String != "" {
+		var oldCoverID int64
+		if party.CoverImageFileID.Valid {
+			oldCoverID = party.CoverImageFileID.Int64
+		}
+		h.deleteOldAssetAsync(party.CoverImage.String, oldCoverID)
 	}
 
 	// --- Audit Logging ---
@@ -1272,9 +1322,11 @@ type agentPaymentAllocation struct {
 // UpdateAgentPaymentAllocationKobo godoc
 // @Summary      Update agent payment allocation
 // @Description  Saves the polling agent allowance budget settings per role and state for a party.
-//               Body must be a JSON object with keys: pollingAgent, wardElectionSupervisor,
-//               lgaElectionSupervisor, stateElectionSupervisor. Each key holds
-//               {"default": <kobo amount>, "states": {"<state_name>": <kobo amount>}}.
+//
+//	Body must be a JSON object with keys: pollingAgent, wardElectionSupervisor,
+//	lgaElectionSupervisor, stateElectionSupervisor. Each key holds
+//	{"default": <kobo amount>, "states": {"<state_name>": <kobo amount>}}.
+//
 // @Tags         Parties
 // @Accept       json
 // @Produce      json
@@ -1486,14 +1538,14 @@ func (h *Handler) CreatePartyMarketingCampaign(w http.ResponseWriter, r *http.Re
 		ElectionGroupID:    req.ElectionGroupID,
 		ElectionID:         req.ElectionID,
 		PlanID:             req.PlanID,
-		Type:            req.Type,
+		Type:               req.Type,
 		States:             req.States,
 		DurationInDays:     req.DurationInDays,
 		BudgetPerDayKobo:   budgetPerDayKobo,
 		BudgetKobo:         budgetKobo,
 		ReferralAmountKobo: 0,
 		AmountSpentKobo:    0,
-		Status:          "pending",
+		Status:             "pending",
 	}
 
 	campaign, err := h.partiesService.CreatePartyMarketingCampaign(r.Context(), arg)
@@ -1680,12 +1732,12 @@ func (h *Handler) ListAllPartyMarketingCampaigns(w http.ResponseWriter, r *http.
 				"logo":       row.PartyLogo,
 			},
 			"plan": map[string]interface{}{
-				"id":               row.PlanID,
-				"name":             row.PlanName,
-				"description":      row.PlanDescription,
-				"price_kobo":       row.PlanPriceKobo,
-				"price":            float64(row.PlanPriceKobo) / 100.0,
-				"color_hex":        row.PlanColorHex.String,
+				"id":          row.PlanID,
+				"name":        row.PlanName,
+				"description": row.PlanDescription,
+				"price_kobo":  row.PlanPriceKobo,
+				"price":       float64(row.PlanPriceKobo) / 100.0,
+				"color_hex":   row.PlanColorHex.String,
 			},
 			"election_group": map[string]interface{}{
 				"id":   row.ElectionGroupID,
@@ -1960,21 +2012,21 @@ func (h *Handler) DeletePlan(w http.ResponseWriter, r *http.Request) {
 
 // PlanResponse is the JSON-friendly representation of a Plan with JSONB fields decoded.
 type PlanResponse struct {
-	ID                   int32                         `json:"id"`
-	Name                 string                        `json:"name"`
-	Description          string                        `json:"description"`
-	PriceKobo            int64                         `json:"price_kobo"`
-	Price                float64                       `json:"price"`
-	ReferralAmountKobo   int64                         `json:"referral_amount_kobo"`
-	ReferralAmount       float64                       `json:"referral_amount"`
-	Type                 string                  `json:"type"`
-	Features             json.RawMessage               `json:"features"`
-	ScopesRecommendation json.RawMessage               `json:"scopes_recommendation"`
-	ColorHex             pgtype.Text                   `json:"color_hex"`
-	IsActive             bool                          `json:"is_active"`
-	DisplayOrder         int32                         `json:"display_order"`
-	CreatedAt            pgtype.Timestamptz            `json:"created_at"`
-	UpdatedAt            pgtype.Timestamptz            `json:"updated_at"`
+	ID                   int32              `json:"id"`
+	Name                 string             `json:"name"`
+	Description          string             `json:"description"`
+	PriceKobo            int64              `json:"price_kobo"`
+	Price                float64            `json:"price"`
+	ReferralAmountKobo   int64              `json:"referral_amount_kobo"`
+	ReferralAmount       float64            `json:"referral_amount"`
+	Type                 string             `json:"type"`
+	Features             json.RawMessage    `json:"features"`
+	ScopesRecommendation json.RawMessage    `json:"scopes_recommendation"`
+	ColorHex             pgtype.Text        `json:"color_hex"`
+	IsActive             bool               `json:"is_active"`
+	DisplayOrder         int32              `json:"display_order"`
+	CreatedAt            pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
 }
 
 // mapPlanToResponse converts a queries.Plan to PlanResponse, decoding the JSONB []byte fields.
@@ -2170,7 +2222,7 @@ func (h *Handler) GetAgentAcquisitionTargets(w http.ResponseWriter, r *http.Requ
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to get agent targets: "+err.Error())
 		return
 	}
-	
+
 	var rawMap map[string]int32
 	if len(targetsJSON) > 0 {
 		_ = json.Unmarshal(targetsJSON, &rawMap)
@@ -2186,9 +2238,9 @@ func (h *Handler) GetAgentAcquisitionTargets(w http.ResponseWriter, r *http.Requ
 	}
 
 	resp := map[string]int32{
-		"polling_agent":            getVal("polling_agent", "pollingAgent", "pollingUnitAgent"),
-		"ward_election_supervisor": getVal("ward_election_supervisor", "wardElectionSupervisor", "ward-election-supervisor"),
-		"lga_election_supervisor":  getVal("lga_election_supervisor", "lgaElectionSupervisor", "lga-election-supervisor"),
+		"polling_agent":             getVal("polling_agent", "pollingAgent", "pollingUnitAgent"),
+		"ward_election_supervisor":  getVal("ward_election_supervisor", "wardElectionSupervisor", "ward-election-supervisor"),
+		"lga_election_supervisor":   getVal("lga_election_supervisor", "lgaElectionSupervisor", "lga-election-supervisor"),
 		"state_election_supervisor": getVal("state_election_supervisor", "stateElectionSupervisor", "state-election-supervisor"),
 	}
 
@@ -2196,4 +2248,3 @@ func (h *Handler) GetAgentAcquisitionTargets(w http.ResponseWriter, r *http.Requ
 		"targets": resp,
 	})
 }
-

@@ -23,7 +23,7 @@ export type PartyType = {
   dark_color_hex?: string;
   date_founded?: string;
   cover_image?: string;
-  background_image?: string;
+  cover_image_file_id?: number;
   cover_position_y?: number;
 };
 

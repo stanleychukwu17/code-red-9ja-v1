@@ -75,8 +75,18 @@ export function UserBadgeDialog({ open, onClose, page, forWho, onSuccess }: User
     } else if (forWho === "party") {
       // Update parties query cache with the new party details
       queryClient.setQueryData(["parties"], (oldData: any) => {
-        if (!oldData) return oldData;
-        return oldData.map((party: any) => party.id === updatedDetails.id ? updatedDetails : party);
+        if (!oldData?.data?.parties || !Array.isArray(oldData.data.parties)) {
+          return oldData;
+        }
+        return {
+          ...oldData,
+          data: {
+            ...oldData.data,
+            parties: oldData.data.parties.map((party: any) =>
+              party.id === updatedDetails.id ? { ...party, ...updatedDetails } : party
+            ),
+          },
+        };
       });
     }
   };

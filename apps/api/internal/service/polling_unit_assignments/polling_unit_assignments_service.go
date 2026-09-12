@@ -24,16 +24,13 @@ type earningsService interface {
 	ProcessTaskEarnings(ctx context.Context, assignmentID int64, taskType string, customNarration ...string) (int64, error)
 }
 
-func NewService(q *queries.Queries, rdb *redis.Client, taskDistributor worker.TaskDistributor) *Service {
+func NewService(q *queries.Queries, rdb *redis.Client, taskDistributor worker.TaskDistributor, earningsSvc earningsService) *Service {
 	return &Service{
 		queries:         q,
 		rdb:             rdb,
 		taskDistributor: taskDistributor,
+		earningsSvc:     earningsSvc,
 	}
-}
-
-func (s *Service) SetEarningsService(es earningsService) {
-	s.earningsSvc = es
 }
 
 func (s *Service) AssignAgent(ctx context.Context, userID int64, electionGroupID int32, partyID int16, assignedBy int64, pollingUnitID int32, roleType string) (queries.PollingUnitAssignment, error) {

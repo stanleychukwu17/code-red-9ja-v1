@@ -3,7 +3,7 @@
 # Navigate to the directory where the script is located
 cd "$(dirname "$0")" || exit 1
 
-BASE_URL="http://localhost:4000"
+BASE_URL="http://localhost:4100"
 
 # Flush Redis cache
 echo "Flushing Redis database at ${BASE_URL}/api/v1/seed/flush-redis..."

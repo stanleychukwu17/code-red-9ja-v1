@@ -5,6 +5,9 @@ CREATE TABLE parties (
   name VARCHAR(255) UNIQUE NOT NULL,
   logo VARCHAR(255) NOT NULL DEFAULT '',
   logo_file_id BIGINT,
+  cover_image VARCHAR(255) DEFAULT '',
+  cover_image_file_id BIGINT,
+  cover_position_y SMALLINT DEFAULT 50,
   display_order INTEGER NOT NULL DEFAULT 999,
   status VARCHAR(50) NOT NULL DEFAULT 'active',
   slots INTEGER NOT NULL DEFAULT 0 CHECK (slots >= 0),
@@ -19,6 +22,7 @@ CREATE TABLE parties (
   auto_accept_applications JSONB NOT NULL DEFAULT '{"polling_agent": true, "ward_election_supervisor": true, "lga_election_supervisor": true, "state_election_supervisor": true}'::jsonb,
   color_hex VARCHAR(50) DEFAULT NULL,
   dark_color_hex VARCHAR(50) DEFAULT NULL,
+  date_founded DATE,
 
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()

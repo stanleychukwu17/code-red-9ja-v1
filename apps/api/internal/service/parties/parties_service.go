@@ -71,7 +71,7 @@ func (s *PartiesService) SetUsersService(us UsersService) {
 
 // CreateParty inserts a party into the database and, if a Monnify client is
 // configured, immediately provisions a reserved virtual account (wallet) for it.
-func (s *PartiesService) CreateParty(ctx context.Context, shortName, name, logo string, logoFileID *int64, displayOrder int32, colorHex, darkColorHex *string) (queries.Party, error) {
+func (s *PartiesService) CreateParty(ctx context.Context, shortName, name, logo string, logoFileID *int64, displayOrder int32, colorHex, darkColorHex, coverImage *string, coverImageFileID *int64, coverPositionY *int16, dateFounded *string) (queries.Party, error) {
 	var logoFileIDPg pgtype.Int8
 	if logoFileID != nil {
 		logoFileIDPg = pgtype.Int8{Int64: *logoFileID, Valid: true}
@@ -87,14 +87,40 @@ func (s *PartiesService) CreateParty(ctx context.Context, shortName, name, logo 
 		darkColorHexPg = pgtype.Text{String: *darkColorHex, Valid: true}
 	}
 
+	var coverImagePg pgtype.Text
+	if coverImage != nil && *coverImage != "" {
+		coverImagePg = pgtype.Text{String: *coverImage, Valid: true}
+	}
+
+	var coverImageFileIDPg pgtype.Int8
+	if coverImageFileID != nil {
+		coverImageFileIDPg = pgtype.Int8{Int64: *coverImageFileID, Valid: true}
+	}
+
+	coverPositionYPg := pgtype.Int2{Int16: 50, Valid: true}
+	if coverPositionY != nil {
+		coverPositionYPg = pgtype.Int2{Int16: *coverPositionY, Valid: true}
+	}
+
+	var dateFoundedPg pgtype.Date
+	if dateFounded != nil && *dateFounded != "" {
+		if t, err := time.Parse("2006-01-02", *dateFounded); err == nil {
+			dateFoundedPg = pgtype.Date{Time: t, Valid: true}
+		}
+	}
+
 	party, err := s.queries.CreateParty(ctx, queries.CreatePartyParams{
-		ShortName:    shortName,
-		Name:         name,
-		Logo:         logo,
-		LogoFileID:   logoFileIDPg,
-		DisplayOrder: displayOrder,
-		ColorHex:     colorHexPg,
-		DarkColorHex: darkColorHexPg,
+		ShortName:        shortName,
+		Name:             name,
+		Logo:             logo,
+		LogoFileID:       logoFileIDPg,
+		DisplayOrder:     displayOrder,
+		ColorHex:         colorHexPg,
+		DarkColorHex:     darkColorHexPg,
+		CoverImage:       coverImagePg,
+		CoverImageFileID: coverImageFileIDPg,
+		CoverPositionY:   coverPositionYPg,
+		DateFounded:      dateFoundedPg,
 	})
 	if err != nil {
 		return queries.Party{}, err
@@ -209,7 +235,7 @@ func (s *PartiesService) GetPartyInfo(ctx context.Context, partyID int16) *queri
 		}
 	}
 
-	partyRow, err := s.queries.GetPartyByID(ctx, int16(partyID))
+	partyRow, err := s.GetPartyByID(ctx, int16(partyID))
 	if err == nil {
 		party := queries.PartyWithVerifications{
 			Party: partyRow,
@@ -278,8 +304,8 @@ func (s *PartiesService) ListParties(ctx context.Context) ([]queries.PartyWithVe
 	return parties, nil
 }
 
-// UpdateParty modifies the short name, name, and logo of an existing party.
-func (s *PartiesService) UpdateParty(ctx context.Context, id int64, shortName, name, logo string, logoFileID *int64, displayOrder int32, colorHex, darkColorHex *string) (queries.Party, error) {
+// UpdateParty modifies the short name, name, logo, cover, and details of an existing party.
+func (s *PartiesService) UpdateParty(ctx context.Context, id int64, shortName, name, logo string, logoFileID *int64, displayOrder int32, colorHex, darkColorHex, coverImage *string, coverImageFileID *int64, coverPositionY *int16, dateFounded *string) (queries.Party, error) {
 	defer s.InvalidatePartyCache(ctx, int16(id))
 	var logoFileIDPg pgtype.Int8
 	if logoFileID != nil {
@@ -296,15 +322,41 @@ func (s *PartiesService) UpdateParty(ctx context.Context, id int64, shortName, n
 		darkColorHexPg = pgtype.Text{String: *darkColorHex, Valid: true}
 	}
 
+	var coverImagePg pgtype.Text
+	if coverImage != nil && *coverImage != "" {
+		coverImagePg = pgtype.Text{String: *coverImage, Valid: true}
+	}
+
+	var coverImageFileIDPg pgtype.Int8
+	if coverImageFileID != nil {
+		coverImageFileIDPg = pgtype.Int8{Int64: *coverImageFileID, Valid: true}
+	}
+
+	coverPositionYPg := pgtype.Int2{Int16: 50, Valid: true}
+	if coverPositionY != nil {
+		coverPositionYPg = pgtype.Int2{Int16: *coverPositionY, Valid: true}
+	}
+
+	var dateFoundedPg pgtype.Date
+	if dateFounded != nil && *dateFounded != "" {
+		if t, err := time.Parse("2006-01-02", *dateFounded); err == nil {
+			dateFoundedPg = pgtype.Date{Time: t, Valid: true}
+		}
+	}
+
 	party, err := s.queries.UpdateParty(ctx, queries.UpdatePartyParams{
-		ID:           int16(id),
-		ShortName:    shortName,
-		Name:         name,
-		Logo:         logo,
-		LogoFileID:   logoFileIDPg,
-		DisplayOrder: displayOrder,
-		ColorHex:     colorHexPg,
-		DarkColorHex: darkColorHexPg,
+		ID:               int16(id),
+		ShortName:        shortName,
+		Name:             name,
+		Logo:             logo,
+		LogoFileID:       logoFileIDPg,
+		DisplayOrder:     displayOrder,
+		ColorHex:         colorHexPg,
+		DarkColorHex:     darkColorHexPg,
+		CoverImage:       coverImagePg,
+		CoverImageFileID: coverImageFileIDPg,
+		CoverPositionY:   coverPositionYPg,
+		DateFounded:      dateFoundedPg,
 	})
 
 	s.InvalidatePartyCache(ctx, int16(id))
@@ -525,7 +577,7 @@ func (s *PartiesService) GetPartySlotPrice(ctx context.Context, partyID int16) (
 		return 0, err
 	}
 
-	party, err := s.queries.GetPartyByID(ctx, partyID)
+	party, err := s.GetPartyByID(ctx, partyID)
 	if err != nil {
 		return 0, fmt.Errorf("failed to get party: %w", err)
 	}
@@ -762,7 +814,7 @@ func (s *PartiesService) UpdateAgentPaymentAllocationKobo(ctx context.Context, p
 
 // GetAgentPaymentAllocationKobo returns the agent_payment_allocation JSON for a party.
 func (s *PartiesService) GetAgentPaymentAllocationKobo(ctx context.Context, partyID int16) (json.RawMessage, error) {
-	party, err := s.queries.GetPartyByID(ctx, partyID)
+	party, err := s.GetPartyByID(ctx, partyID)
 	if err != nil {
 		return nil, fmt.Errorf("party not found: %w", err)
 	}
@@ -1215,7 +1267,7 @@ func (s *PartiesService) UpdatePartyAgentAcquisitionTargets(ctx context.Context,
 
 // GetPartyAgentAcquisitionTargets returns the agent_acquisition_targets JSON for a party.
 func (s *PartiesService) GetPartyAgentAcquisitionTargets(ctx context.Context, partyID int16) (json.RawMessage, error) {
-	party, err := s.queries.GetPartyByID(ctx, partyID)
+	party, err := s.GetPartyByID(ctx, partyID)
 	if err != nil {
 		return nil, fmt.Errorf("party not found: %w", err)
 	}
@@ -1224,3 +1276,15 @@ func (s *PartiesService) GetPartyAgentAcquisitionTargets(ctx context.Context, pa
 	}
 	return json.RawMessage(party.AgentAcquisitionTargets), nil
 }
+
+// GetPartyByID returns a party by its ID.
+func (s *PartiesService) GetPartyByID(ctx context.Context, partyID int16) (queries.Party, error) {
+	return s.queries.GetPartyByID(ctx, partyID)
+}
+
+// ResetPartyLogo resets the logo file ID of a party to NULL.
+func (s *PartiesService) ResetPartyLogo(ctx context.Context, partyID int16) error {
+	defer s.InvalidatePartyCache(ctx, partyID)
+	return s.queries.ResetPartyLogo(ctx, partyID)
+}
+

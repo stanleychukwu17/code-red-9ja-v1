@@ -858,6 +858,9 @@ type Party struct {
 	Name                       string             `json:"name"`
 	Logo                       string             `json:"logo"`
 	LogoFileID                 pgtype.Int8        `json:"logo_file_id"`
+	CoverImage                 pgtype.Text        `json:"cover_image"`
+	CoverImageFileID           pgtype.Int8        `json:"cover_image_file_id"`
+	CoverPositionY             pgtype.Int2        `json:"cover_position_y"`
 	DisplayOrder               int32              `json:"display_order"`
 	Status                     string             `json:"status"`
 	Slots                      int32              `json:"slots"`
@@ -869,6 +872,7 @@ type Party struct {
 	AutoAcceptApplications     []byte             `json:"auto_accept_applications"`
 	ColorHex                   pgtype.Text        `json:"color_hex"`
 	DarkColorHex               pgtype.Text        `json:"dark_color_hex"`
+	DateFounded                pgtype.Date        `json:"date_founded"`
 	CreatedAt                  pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt                  pgtype.Timestamptz `json:"updated_at"`
 }

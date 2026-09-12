@@ -23,15 +23,12 @@ type earningsService interface {
 	ProcessTaskEarnings(ctx context.Context, assignmentID int64, taskType string, customNarration ...string) (int64, error)
 }
 
-func NewService(q *queries.Queries, pool *pgxpool.Pool) *Service {
+func NewService(q *queries.Queries, pool *pgxpool.Pool, earningsSvc earningsService) *Service {
 	return &Service{
-		queries: q,
-		pool:    pool,
+		queries:     q,
+		pool:        pool,
+		earningsSvc: earningsSvc,
 	}
-}
-
-func (s *Service) SetEarningsService(es earningsService) {
-	s.earningsSvc = es
 }
 
 type CreateUpdateInput struct {

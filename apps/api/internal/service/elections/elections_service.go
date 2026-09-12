@@ -39,6 +39,7 @@ func NewElectionsService(
 	rdb *redis.Client,
 	taskDistributor worker.TaskDistributor,
 	egSvc electionGroupsService,
+	earningsSvc earningsService,
 ) *ElectionsService {
 	return &ElectionsService{
 		queries:         q,
@@ -46,12 +47,8 @@ func NewElectionsService(
 		rdb:             rdb,
 		taskDistributor: taskDistributor,
 		egSvc:           egSvc,
+		earningsSvc:     earningsSvc,
 	}
-}
-
-// SetEarningsService allows optional or circular injection of the earnings service.
-func (s *ElectionsService) SetEarningsService(es earningsService) {
-	s.earningsSvc = es
 }
 
 // SetElectionGroupsService sets or updates the injected election groups service.

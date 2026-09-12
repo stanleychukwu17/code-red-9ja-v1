@@ -19,6 +19,7 @@ import (
 	"free9ja/api/internal/db/queries"
 	apimiddleware "free9ja/api/internal/middleware"
 	"free9ja/api/internal/service/audit"
+	filesservice "free9ja/api/internal/service/files"
 	permissionsservice "free9ja/api/internal/service/permissions"
 	r2service "free9ja/api/internal/service/r2"
 	"free9ja/api/internal/utils"
@@ -40,29 +41,14 @@ type UsersService interface {
 }
 
 type PartiesService interface {
+	GetPartyInfo(ctx context.Context, partyID int16) *queries.PartyWithVerifications
+	ResetPartyLogo(ctx context.Context, partyID int16) error
 	InvalidatePartyCache(ctx context.Context, partyID int16)
-}
-
-// FilesDB is the narrow interface for file-related database operations.
-// Satisfied by *queries.Queries, but mockable in tests.
-type FilesDB interface {
-	GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (queries.GetUserByFakeIDRow, error)
-	UpdateUserAvatar(ctx context.Context, arg queries.UpdateUserAvatarParams) error
-	CreateFile(ctx context.Context, arg queries.CreateFileParams) (queries.File, error)
-	ConfirmUpload(ctx context.Context, arg queries.ConfirmUploadParams) (queries.File, error)
-	GetFileByID(ctx context.Context, id int64) (queries.File, error)
-	GetFileByKey(ctx context.Context, fileKey string) (queries.File, error)
-	ListFiles(ctx context.Context, arg queries.ListFilesParams) ([]queries.File, error)
-	MarkFileDeleted(ctx context.Context, id int64) (queries.File, error)
-	HardDeleteFile(ctx context.Context, id int64) error
-	CheckFileOwner(ctx context.Context, arg queries.CheckFileOwnerParams) (bool, error)
-	GetPartyByID(ctx context.Context, id int16) (queries.Party, error)
-	ResetPartyLogo(ctx context.Context, id int16) error
 }
 
 // Handler holds the dependencies needed to service file-related HTTP requests.
 type Handler struct {
-	db             FilesDB
+	filesService   filesservice.FilesService
 	r2             *r2service.R2Service
 	rdb            *redis.Client
 	utils          *utils.Utils
@@ -71,10 +57,10 @@ type Handler struct {
 	auditService   audit.AuditService
 }
 
-// NewHandler returns a Handler wired up with the provided database, R2 service, Redis,
+// NewHandler returns a Handler wired up with the provided files service, R2 service, Redis,
 // and shared utilities instance.
-func NewHandler(db FilesDB, r2Svc *r2service.R2Service, rdb *redis.Client, u *utils.Utils, usersSvc UsersService, partiesSvc PartiesService, auditSvc audit.AuditService) *Handler {
-	return &Handler{db: db, r2: r2Svc, rdb: rdb, utils: u, usersService: usersSvc, partiesService: partiesSvc, auditService: auditSvc}
+func NewHandler(filesSvc filesservice.FilesService, r2Svc *r2service.R2Service, rdb *redis.Client, u *utils.Utils, usersSvc UsersService, partiesSvc PartiesService, auditSvc audit.AuditService) *Handler {
+	return &Handler{filesService: filesSvc, r2: r2Svc, rdb: rdb, utils: u, usersService: usersSvc, partiesService: partiesSvc, auditService: auditSvc}
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -171,7 +157,7 @@ func (h *Handler) GenerateUploadURL(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// creates the file record in the database
-	file, err := h.db.CreateFile(r.Context(), queries.CreateFileParams{
+	file, err := h.filesService.CreateFile(r.Context(), queries.CreateFileParams{
 		OriginalName: req.OriginalName,
 		MimeType:     req.MimeType,
 		FileSize:     req.FileSize,
@@ -234,7 +220,7 @@ func (h *Handler) ConfirmUpload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update the file status in the database
-	file, err := h.db.ConfirmUpload(r.Context(), queries.ConfirmUploadParams{
+	file, err := h.filesService.ConfirmUpload(r.Context(), queries.ConfirmUploadParams{
 		ID:         id,
 		Success:    success,
 		UploadedBy: uploadedBy,
@@ -273,7 +259,7 @@ func (h *Handler) GetFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	file, err := h.db.GetFileByID(r.Context(), id)
+	file, err := h.filesService.GetFileByID(r.Context(), id)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "File not found")
 		return
@@ -326,7 +312,7 @@ func (h *Handler) ListFiles(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	files, err := h.db.ListFiles(r.Context(), queries.ListFilesParams{
+	files, err := h.filesService.ListFiles(r.Context(), queries.ListFilesParams{
 		Column1:    cursor,
 		Limit:      limit,
 		Folder:     r.URL.Query().Get("folder"),
@@ -447,8 +433,8 @@ func (h *Handler) DeleteFile(w http.ResponseWriter, r *http.Request) {
 		auditModuleName, auditActorRole = perms.GetAuditActorInfo()
 
 		// get the party Details
-		party, dbErr := h.db.GetPartyByID(r.Context(), int16(partyID))
-		if dbErr != nil {
+		party := h.partiesService.GetPartyInfo(r.Context(), int16(partyID))
+		if party == nil {
 			h.utils.RespondError(w, http.StatusNotFound, "Party details not found")
 			return
 		}
@@ -463,7 +449,7 @@ func (h *Handler) DeleteFile(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// update the party logo file ID to NULL
-		_ = h.db.ResetPartyLogo(r.Context(), party.ID)
+		_ = h.partiesService.ResetPartyLogo(r.Context(), party.ID)
 
 		// also invalidate party cache (optional, frontend refetch)
 		h.partiesService.InvalidatePartyCache(r.Context(), party.ID)
@@ -472,14 +458,14 @@ func (h *Handler) DeleteFile(w http.ResponseWriter, r *http.Request) {
 	// if the file_id is available, we delete from the r2 bucket
 	if fileID > 0 {
 		// Fetch record first so we have the R2 key.
-		file, err := h.db.GetFileByID(r.Context(), fileID)
+		file, err := h.filesService.GetFileByID(r.Context(), fileID)
 		if err != nil {
 			h.utils.RespondError(w, http.StatusNotFound, "File not found")
 			return
 		}
 
 		// Soft-delete first — prevents any new reads from seeing the record.
-		if _, err = h.db.MarkFileDeleted(r.Context(), fileID); err != nil {
+		if _, err = h.filesService.MarkFileDeleted(r.Context(), fileID); err != nil {
 			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to delete file: "+err.Error())
 			return
 		}
@@ -487,7 +473,7 @@ func (h *Handler) DeleteFile(w http.ResponseWriter, r *http.Request) {
 		// Purge from R2; only hard-delete the DB row once the bucket object is gone.
 		// If R2 deletion fails we log the error — a cleanup job can handle it later.
 		if err = h.r2.DeleteObject(r.Context(), file.FileKey); err == nil {
-			_ = h.db.HardDeleteFile(r.Context(), fileID)
+			_ = h.filesService.HardDeleteFile(r.Context(), fileID)
 
 			// Asynchronously purge Cloudflare Edge CDN cache
 			go func(key string) {

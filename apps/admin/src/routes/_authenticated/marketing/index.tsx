@@ -23,6 +23,7 @@ import { getElections } from "#/lib/server/elections";
 import { getStates } from "#/lib/server/states";
 import { Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import type { PartyType } from "#/components/tiles/party-tile";
 import { AgentMarketingSetupDialog } from "@repo/ui/components/dialogs/AgentMarketingSetupDialog";
 import { toast } from "sonner";
 
@@ -38,15 +39,19 @@ function RouteComponent() {
   >(undefined);
 
   // Fetch parties list for selecting active party when creating campaign
-  const { data: partiesData } = useQuery({
+  const { data: partiesData } = useQuery<{ data: { parties: PartyType[] } }>({
     queryKey: ["parties"],
     queryFn: async () => {
       const res = await getParties();
-      return res?.data?.parties || [];
+      if (res && res.success) {
+        return res;
+      }
+      throw new Error(res?.message || "Failed to load parties");
     },
+    staleTime: Infinity,
   });
 
-  const parties = partiesData || [];
+  const parties = partiesData?.data?.parties || [];
   const activePartyId =
     selectedPartyId ?? (parties[0]?.id ? Number(parties[0].id) : undefined);
 
