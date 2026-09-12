@@ -40,6 +40,8 @@ yarn-error.log*
 
 # Large database seed files
 states/polling-units.json
+apps/api/scripts/seeds/users/
+apps/api/.data/
 
 
 # DevOps, Terraform

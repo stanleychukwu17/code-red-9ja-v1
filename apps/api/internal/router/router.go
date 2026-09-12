@@ -115,8 +115,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 			ContractCode: cfg.Monnify.ContractCode,
 		})
 	} else {
-		slog.Warn("Monnify not configured — party/user wallet creation will be unavailable",
-			"reason", "MONNIFY_API_KEY or MONNIFY_SECRET_KEY is empty")
+		slog.Warn("Monnify not configured — party/user wallet creation will be unavailable", "reason", "MONNIFY_API_KEY or MONNIFY_SECRET_KEY is empty")
 	}
 
 	utilsInstance := utils.NewUtils(pool)

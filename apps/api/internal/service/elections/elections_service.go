@@ -62,17 +62,7 @@ func (s *ElectionsService) SetElectionGroupsService(egs electionGroupsService) {
 // getSafeNationalMetrics retrieves national administrative counts via the injected election
 // groups service (using Redis cache and DB), or returns standard hardcoded Nigerian metrics as a safe fallback.
 func (s *ElectionsService) getSafeNationalMetrics(ctx context.Context) queries.NationalMetric {
-	if s.egSvc != nil {
-		return s.egSvc.GetSafeNationalMetrics(ctx)
-	}
-	return queries.NationalMetric{
-		SenatorialDistrictsCount:   109,
-		FederalConstituenciesCount: 360,
-		LgasCount:                  774,
-		StateConstituenciesCount:   993,
-		WardsCount:                 8809,
-		PollingUnitsCount:          176846,
-	}
+	return s.egSvc.GetSafeNationalMetrics(ctx)
 }
 
 // invalidateCache clears Redis cached lists for elections and election groups, as well as single election details.
@@ -2385,5 +2375,3 @@ func (s *ElectionsService) syncExpectedResultsForElection(
 	// Roll up expected results upwards across all hierarchy levels of the election group
 	return txQueries.RollupElectionGroupExpectedResults(ctx, electionGroupID)
 }
-
-
