@@ -894,15 +894,15 @@ type PartyApplication struct {
 }
 
 type PartyChapter struct {
-	ID            int32       `json:"id"`
-	PartyID       int16       `json:"party_id"`
-	ChapterType   string      `json:"chapter_type"`
-	CountryID     pgtype.Int2 `json:"country_id"`
-	ZonalID       pgtype.Int2 `json:"zonal_id"`
-	StateID       pgtype.Int2 `json:"state_id"`
-	LgaID         pgtype.Int2 `json:"lga_id"`
-	WardID        pgtype.Int2 `json:"ward_id"`
-	PollingUnitID pgtype.Int4 `json:"polling_unit_id"`
+	ID          int32              `json:"id"`
+	PartyID     int16              `json:"party_id"`
+	ChapterType string             `json:"chapter_type"`
+	CountryID   pgtype.Int2        `json:"country_id"`
+	ZonalID     pgtype.Int2        `json:"zonal_id"`
+	StateID     pgtype.Int2        `json:"state_id"`
+	LgaID       pgtype.Int4        `json:"lga_id"`
+	WardID      pgtype.Int4        `json:"ward_id"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 }
 
 type PartyChapterSetting struct {

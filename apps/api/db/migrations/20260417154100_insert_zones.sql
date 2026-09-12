@@ -1,4 +1,10 @@
 -- +goose Up
+CREATE TABLE IF NOT EXISTS c_zones_nigeria (
+  id SMALLINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  name VARCHAR(50) NOT NULL,
+  state_ids SMALLINT[]
+);
+
 INSERT INTO c_zones_nigeria (name, state_ids) VALUES
 ('North West', ARRAY[17, 18, 19, 20, 21, 33, 36]::SMALLINT[]),
 ('North East', ARRAY[2, 5, 8, 15, 34, 35]::SMALLINT[]),

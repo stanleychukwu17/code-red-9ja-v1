@@ -55,6 +55,10 @@ const (
 	RedisPartyBasicInfo     = "parties:basic_info:"            // STRING: "parties:basic_info:<partyID>" is used to store and retrieve party basic info.
 	RedisChapterMemberCount = "parties:chapter:members_count:" // STRING: "parties:chapter:members_count:<chapterID>" is used to store and retrieve the number of members in each chapter of a party.
 	RedisNationalChapter    = "parties:national_chapter:"      // STRING: "parties:national_chapter:<partyID>:<countryID>" is used to store the national chapter ID.
+	RedisZonalChapter       = "parties:zonal_chapter:"         // STRING: "parties:zonal_chapter:<partyID>:<zonalID>" is used to store the zonal chapter ID.
+	RedisStateChapter       = "parties:state_chapter:"         // STRING: "parties:state_chapter:<partyID>:<stateID>" is used to store the state chapter ID.
+	RedisLGAChapter         = "parties:lga_chapter:"           // STRING: "parties:lga_chapter:<partyID>:<lgaID>" is used to store the LGA chapter ID.
+	RedisWardChapter        = "parties:ward_chapter:"          // STRING: "parties:ward_chapter:<partyID>:<wardID>" is used to store the ward chapter ID.
 	RedisChapterSettings    = "parties:chapter_settings:"      // STRING: "parties:chapter_settings:<partyID>:<chapterID>" is used to store the chapter settings.
 	//--END--
 
@@ -115,6 +119,10 @@ var AllRedisPrefixes = []string{
 	RedisPartyBasicInfo,
 	RedisChapterMemberCount,
 	RedisNationalChapter,
+	RedisZonalChapter,
+	RedisStateChapter,
+	RedisLGAChapter,
+	RedisWardChapter,
 	RedisChapterSettings,
 	RedisPageVerificationTypesList,
 	RedisPageVerificationTypeInfo,

@@ -46,10 +46,10 @@ curl -X POST ${BASE_URL}/api/v1/seed/users \
 sleep 1 # wait for 1 second
 
 # # seed 10k users
-# echo "Seeding 10k users to ${BASE_URL}/api/v1/seed/users..."
-# curl -X POST ${BASE_URL}/api/v1/seed/users \
-#   -H "Content-Type: application/json" \
-#   -d @"1.4-10kusers.json"
+echo "Seeding 10k users to ${BASE_URL}/api/v1/seed/users..."
+curl -X POST ${BASE_URL}/api/v1/seed/users \
+  -H "Content-Type: application/json" \
+  -d @"1.4-10kusers.json"
 
 # sleep 5 # wait for 5 second
 

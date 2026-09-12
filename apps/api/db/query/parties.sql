@@ -70,6 +70,71 @@ INSERT INTO party_chapters (party_id, chapter_type, country_id)
 VALUES ($1, 'national', $2)
 RETURNING id;
 
+-- name: GetPartyChapterByID :one
+SELECT * FROM party_chapters
+WHERE id = $1 LIMIT 1;
+
+-- name: GetOrCreateNationalChapter :one
+INSERT INTO party_chapters (party_id, chapter_type, country_id)
+VALUES ($1, 'national', $2)
+ON CONFLICT (party_id, country_id) WHERE chapter_type = 'national'
+DO UPDATE SET party_id = EXCLUDED.party_id
+RETURNING id;
+
+-- name: GetOrCreateZonalChapter :one
+INSERT INTO party_chapters (party_id, chapter_type, zonal_id)
+VALUES ($1, 'zonal', $2)
+ON CONFLICT (party_id, zonal_id) WHERE chapter_type = 'zonal'
+DO UPDATE SET party_id = EXCLUDED.party_id
+RETURNING id;
+
+-- name: GetOrCreateStateChapter :one
+INSERT INTO party_chapters (party_id, chapter_type, state_id)
+VALUES ($1, 'state', $2)
+ON CONFLICT (party_id, state_id) WHERE chapter_type = 'state'
+DO UPDATE SET party_id = EXCLUDED.party_id
+RETURNING id;
+
+-- name: GetOrCreateLGAChapter :one
+INSERT INTO party_chapters (party_id, chapter_type, state_id, lga_id)
+SELECT $1, 'lga', l.state_id, l.id
+FROM lgas l WHERE l.id = $2
+ON CONFLICT (party_id, lga_id) WHERE chapter_type = 'lga'
+DO UPDATE SET party_id = EXCLUDED.party_id
+RETURNING id;
+
+-- name: GetOrCreateWardChapter :one
+INSERT INTO party_chapters (party_id, chapter_type, state_id, lga_id, ward_id)
+SELECT $1, 'ward', w.state_id, w.lga_id, w.id
+FROM wards w WHERE w.id = $2
+ON CONFLICT (party_id, ward_id) WHERE chapter_type = 'ward'
+DO UPDATE SET party_id = EXCLUDED.party_id
+RETURNING id;
+
+-- name: GetStateChapter :one
+SELECT id FROM party_chapters
+WHERE party_id = $1 AND chapter_type = 'state' AND state_id = $2 LIMIT 1;
+
+-- name: GetZonalChapter :one
+SELECT id FROM party_chapters
+WHERE party_id = $1 AND chapter_type = 'zonal' AND zonal_id = $2 LIMIT 1;
+
+-- name: GetLGAChapter :one
+SELECT id FROM party_chapters
+WHERE party_id = $1 AND chapter_type = 'lga' AND lga_id = $2 LIMIT 1;
+
+-- name: GetWardChapter :one
+SELECT id FROM party_chapters
+WHERE party_id = $1 AND chapter_type = 'ward' AND ward_id = $2 LIMIT 1;
+
+-- name: ListPartyChapters :many
+SELECT * FROM party_chapters
+WHERE party_id = $1 
+  AND (sqlc.narg('chapter_type')::varchar IS NULL OR chapter_type = sqlc.narg('chapter_type'))
+  AND (sqlc.narg('state_id')::smallint IS NULL OR state_id = sqlc.narg('state_id'))
+  AND (sqlc.narg('lga_id')::int IS NULL OR lga_id = sqlc.narg('lga_id'))
+ORDER BY id ASC;
+
 -- name: AddPartyMembership :exec
 INSERT INTO party_membership (user_id, party_id, chapter_id, status)
 VALUES ($1, $2, $3, 'active');

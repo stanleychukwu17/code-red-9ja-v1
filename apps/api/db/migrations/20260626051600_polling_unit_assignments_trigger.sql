@@ -75,6 +75,7 @@ END;
 $$ LANGUAGE plpgsql;
 -- +goose StatementEnd
 
+DROP TRIGGER IF EXISTS trg_sync_polling_agents_coverage ON polling_unit_assignments;
 CREATE TRIGGER trg_sync_polling_agents_coverage
 AFTER INSERT OR UPDATE OR DELETE ON polling_unit_assignments
 FOR EACH ROW

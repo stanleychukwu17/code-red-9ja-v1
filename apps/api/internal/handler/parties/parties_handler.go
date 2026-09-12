@@ -51,6 +51,11 @@ type PartiesService interface {
 	DepositAllowance(ctx context.Context, partyID int16, amountKobo int64) (queries.Party, error)
 	JoinParty(ctx context.Context, partyID int16, chapterID int32, userID, userFid int64) error
 	LeaveParty(ctx context.Context, partyID int16, userID, userFid int64) error
+	GetOrCreateNationalChapter(ctx context.Context, partyID, countryID int16) (int32, error)
+	GetOrCreateZonalChapter(ctx context.Context, partyID, zonalID int16) (int32, error)
+	GetOrCreateStateChapter(ctx context.Context, partyID, stateID int16) (int32, error)
+	GetOrCreateLGAChapter(ctx context.Context, partyID int16, lgaID int32) (int32, error)
+	GetOrCreateWardChapter(ctx context.Context, partyID int16, wardID int32) (int32, error)
 	// Membership methods
 	UpdateAgentPaymentAllocationKobo(ctx context.Context, partyID int16, allowancesJSON []byte) (queries.Party, error)
 	GetAgentPaymentAllocationKobo(ctx context.Context, partyID int16) (json.RawMessage, error)
@@ -627,7 +632,10 @@ func (h *Handler) JoinParty(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		ChapterID int32 `json:"chapter_id"` // 0 will default to national chapter
+		ChapterID int32 `json:"chapter_id"` // 0 will default to user's ward/location or national
+		WardID    int32 `json:"ward_id"`
+		LgaID     int32 `json:"lga_id"`
+		StateID   int16 `json:"state_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil && err != io.EOF {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
@@ -640,7 +648,24 @@ func (h *Handler) JoinParty(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.partiesService.JoinParty(r.Context(), int16(partyID), req.ChapterID, claims.UserID, claims.FakeID)
+	chapterID := req.ChapterID
+	if chapterID == 0 {
+		if req.WardID > 0 {
+			if cid, err := h.partiesService.GetOrCreateWardChapter(r.Context(), int16(partyID), req.WardID); err == nil {
+				chapterID = cid
+			}
+		} else if req.LgaID > 0 {
+			if cid, err := h.partiesService.GetOrCreateLGAChapter(r.Context(), int16(partyID), req.LgaID); err == nil {
+				chapterID = cid
+			}
+		} else if req.StateID > 0 {
+			if cid, err := h.partiesService.GetOrCreateStateChapter(r.Context(), int16(partyID), req.StateID); err == nil {
+				chapterID = cid
+			}
+		}
+	}
+
+	err = h.partiesService.JoinParty(r.Context(), int16(partyID), chapterID, claims.UserID, claims.FakeID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, err.Error())
 		return

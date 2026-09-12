@@ -195,6 +195,7 @@ type Querier interface {
 	GetINECResultGrabberByElectionID(ctx context.Context, electionID int32) (GetINECResultGrabberByElectionIDRow, error)
 	GetINECResultGrabberByID(ctx context.Context, id int64) (GetINECResultGrabberByIDRow, error)
 	GetLGAByID(ctx context.Context, id int32) (Lga, error)
+	GetLGAChapter(ctx context.Context, arg GetLGAChapterParams) (int32, error)
 	// Returns the current count of LGA supervisors for a party in a given lga+election group.
 	GetLGASupervisorCount(ctx context.Context, arg GetLGASupervisorCountParams) (int32, error)
 	GetLGAs(ctx context.Context, stateID int32) ([]Lga, error)
@@ -207,6 +208,11 @@ type Querier interface {
 	GetOccupations(ctx context.Context) ([]Occupation, error)
 	GetOfficeByID(ctx context.Context, id int16) (Office, error)
 	GetOfficeByName(ctx context.Context, name string) (Office, error)
+	GetOrCreateLGAChapter(ctx context.Context, arg GetOrCreateLGAChapterParams) (int32, error)
+	GetOrCreateNationalChapter(ctx context.Context, arg GetOrCreateNationalChapterParams) (int32, error)
+	GetOrCreateStateChapter(ctx context.Context, arg GetOrCreateStateChapterParams) (int32, error)
+	GetOrCreateWardChapter(ctx context.Context, arg GetOrCreateWardChapterParams) (int32, error)
+	GetOrCreateZonalChapter(ctx context.Context, arg GetOrCreateZonalChapterParams) (int32, error)
 	// ============================================================
 	// QUERY: get current party agents_count in a PU for a given party
 	// Used by Go before calling the upsert to compute unique_pu_delta.
@@ -219,6 +225,7 @@ type Querier interface {
 	GetPartyBasicInfo(ctx context.Context, id int16) (GetPartyBasicInfoRow, error)
 	GetPartyByID(ctx context.Context, id int16) (Party, error)
 	GetPartyByShortName(ctx context.Context, shortName string) (Party, error)
+	GetPartyChapterByID(ctx context.Context, id int32) (PartyChapter, error)
 	GetPartyElectionGroupCoverageDistribution(ctx context.Context, arg GetPartyElectionGroupCoverageDistributionParams) ([]GetPartyElectionGroupCoverageDistributionRow, error)
 	GetPartyMarketingCampaigns(ctx context.Context, partyID int16) ([]GetPartyMarketingCampaignsRow, error)
 	GetPartyWalletByAccountReference(ctx context.Context, accountReference string) (PartyWallet, error)
@@ -248,6 +255,7 @@ type Querier interface {
 	GetSenatorialDistrictByID(ctx context.Context, id int32) (SenatorialDistrict, error)
 	GetSenatorialDistricts(ctx context.Context, stateID int32) ([]SenatorialDistrict, error)
 	GetStateByID(ctx context.Context, arg GetStateByIDParams) (GetStateByIDRow, error)
+	GetStateChapter(ctx context.Context, arg GetStateChapterParams) (int32, error)
 	GetStateConstituencies(ctx context.Context, arg GetStateConstituenciesParams) ([]StateConstituency, error)
 	GetStateConstituencyByID(ctx context.Context, id int32) (StateConstituency, error)
 	GetStateDetailsByID(ctx context.Context, id int16) (CState, error)
@@ -281,11 +289,13 @@ type Querier interface {
 	GetUserWalletTransactionByReference(ctx context.Context, transactionReference string) (UserWalletTransaction, error)
 	GetWalletTransactionByReference(ctx context.Context, transactionReference string) (PartyWalletTransaction, error)
 	GetWardByID(ctx context.Context, id int32) (Ward, error)
+	GetWardChapter(ctx context.Context, arg GetWardChapterParams) (int32, error)
 	GetWardSupervisorByElectionGroup(ctx context.Context, arg GetWardSupervisorByElectionGroupParams) (WardElectionSupervisor, error)
 	// Returns the current count of ward supervisors for a party in a given ward+election group.
 	// Used to determine unique_delta when assigning/removing a ward supervisor.
 	GetWardSupervisorCount(ctx context.Context, arg GetWardSupervisorCountParams) (int32, error)
 	GetWards(ctx context.Context, arg GetWardsParams) ([]Ward, error)
+	GetZonalChapter(ctx context.Context, arg GetZonalChapterParams) (int32, error)
 	HardDeleteFile(ctx context.Context, id int64) error
 	IncrementAssignmentIntervalUpdates(ctx context.Context, arg IncrementAssignmentIntervalUpdatesParams) error
 	IncrementAssignmentLiveVotersReferredCount(ctx context.Context, id int64) (PollingUnitAssignment, error)
@@ -343,6 +353,7 @@ type Querier interface {
 	ListOffices(ctx context.Context) ([]Office, error)
 	ListParties(ctx context.Context) ([]Party, error)
 	ListPartiesWithoutWallet(ctx context.Context) ([]Party, error)
+	ListPartyChapters(ctx context.Context, arg ListPartyChaptersParams) ([]PartyChapter, error)
 	ListPollingAgentPerformanceStats(ctx context.Context, arg ListPollingAgentPerformanceStatsParams) ([]ListPollingAgentPerformanceStatsRow, error)
 	ListPollingUnitFinalResults(ctx context.Context, arg ListPollingUnitFinalResultsParams) ([]ListPollingUnitFinalResultsRow, error)
 	ListPollingUnitResults(ctx context.Context, arg ListPollingUnitResultsParams) ([]PollingUnitResult, error)

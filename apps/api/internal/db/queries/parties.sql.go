@@ -262,6 +262,23 @@ func (q *Queries) GetChapterSettings(ctx context.Context, arg GetChapterSettings
 	return settings, err
 }
 
+const getLGAChapter = `-- name: GetLGAChapter :one
+SELECT id FROM party_chapters
+WHERE party_id = $1 AND chapter_type = 'lga' AND lga_id = $2 LIMIT 1
+`
+
+type GetLGAChapterParams struct {
+	PartyID int16       `json:"party_id"`
+	LgaID   pgtype.Int4 `json:"lga_id"`
+}
+
+func (q *Queries) GetLGAChapter(ctx context.Context, arg GetLGAChapterParams) (int32, error) {
+	row := q.db.QueryRow(ctx, getLGAChapter, arg.PartyID, arg.LgaID)
+	var id int32
+	err := row.Scan(&id)
+	return id, err
+}
+
 const getNationalChapter = `-- name: GetNationalChapter :one
 SELECT id FROM party_chapters 
 WHERE party_id = $1 AND chapter_type = 'national' AND country_id = $2 LIMIT 1
@@ -274,6 +291,108 @@ type GetNationalChapterParams struct {
 
 func (q *Queries) GetNationalChapter(ctx context.Context, arg GetNationalChapterParams) (int32, error) {
 	row := q.db.QueryRow(ctx, getNationalChapter, arg.PartyID, arg.CountryID)
+	var id int32
+	err := row.Scan(&id)
+	return id, err
+}
+
+const getOrCreateLGAChapter = `-- name: GetOrCreateLGAChapter :one
+INSERT INTO party_chapters (party_id, chapter_type, state_id, lga_id)
+SELECT $1, 'lga', l.state_id, l.id
+FROM lgas l WHERE l.id = $2
+ON CONFLICT (party_id, lga_id) WHERE chapter_type = 'lga'
+DO UPDATE SET party_id = EXCLUDED.party_id
+RETURNING id
+`
+
+type GetOrCreateLGAChapterParams struct {
+	PartyID int16 `json:"party_id"`
+	ID      int32 `json:"id"`
+}
+
+func (q *Queries) GetOrCreateLGAChapter(ctx context.Context, arg GetOrCreateLGAChapterParams) (int32, error) {
+	row := q.db.QueryRow(ctx, getOrCreateLGAChapter, arg.PartyID, arg.ID)
+	var id int32
+	err := row.Scan(&id)
+	return id, err
+}
+
+const getOrCreateNationalChapter = `-- name: GetOrCreateNationalChapter :one
+INSERT INTO party_chapters (party_id, chapter_type, country_id)
+VALUES ($1, 'national', $2)
+ON CONFLICT (party_id, country_id) WHERE chapter_type = 'national'
+DO UPDATE SET party_id = EXCLUDED.party_id
+RETURNING id
+`
+
+type GetOrCreateNationalChapterParams struct {
+	PartyID   int16       `json:"party_id"`
+	CountryID pgtype.Int2 `json:"country_id"`
+}
+
+func (q *Queries) GetOrCreateNationalChapter(ctx context.Context, arg GetOrCreateNationalChapterParams) (int32, error) {
+	row := q.db.QueryRow(ctx, getOrCreateNationalChapter, arg.PartyID, arg.CountryID)
+	var id int32
+	err := row.Scan(&id)
+	return id, err
+}
+
+const getOrCreateStateChapter = `-- name: GetOrCreateStateChapter :one
+INSERT INTO party_chapters (party_id, chapter_type, state_id)
+VALUES ($1, 'state', $2)
+ON CONFLICT (party_id, state_id) WHERE chapter_type = 'state'
+DO UPDATE SET party_id = EXCLUDED.party_id
+RETURNING id
+`
+
+type GetOrCreateStateChapterParams struct {
+	PartyID int16       `json:"party_id"`
+	StateID pgtype.Int2 `json:"state_id"`
+}
+
+func (q *Queries) GetOrCreateStateChapter(ctx context.Context, arg GetOrCreateStateChapterParams) (int32, error) {
+	row := q.db.QueryRow(ctx, getOrCreateStateChapter, arg.PartyID, arg.StateID)
+	var id int32
+	err := row.Scan(&id)
+	return id, err
+}
+
+const getOrCreateWardChapter = `-- name: GetOrCreateWardChapter :one
+INSERT INTO party_chapters (party_id, chapter_type, state_id, lga_id, ward_id)
+SELECT $1, 'ward', w.state_id, w.lga_id, w.id
+FROM wards w WHERE w.id = $2
+ON CONFLICT (party_id, ward_id) WHERE chapter_type = 'ward'
+DO UPDATE SET party_id = EXCLUDED.party_id
+RETURNING id
+`
+
+type GetOrCreateWardChapterParams struct {
+	PartyID int16 `json:"party_id"`
+	ID      int32 `json:"id"`
+}
+
+func (q *Queries) GetOrCreateWardChapter(ctx context.Context, arg GetOrCreateWardChapterParams) (int32, error) {
+	row := q.db.QueryRow(ctx, getOrCreateWardChapter, arg.PartyID, arg.ID)
+	var id int32
+	err := row.Scan(&id)
+	return id, err
+}
+
+const getOrCreateZonalChapter = `-- name: GetOrCreateZonalChapter :one
+INSERT INTO party_chapters (party_id, chapter_type, zonal_id)
+VALUES ($1, 'zonal', $2)
+ON CONFLICT (party_id, zonal_id) WHERE chapter_type = 'zonal'
+DO UPDATE SET party_id = EXCLUDED.party_id
+RETURNING id
+`
+
+type GetOrCreateZonalChapterParams struct {
+	PartyID int16       `json:"party_id"`
+	ZonalID pgtype.Int2 `json:"zonal_id"`
+}
+
+func (q *Queries) GetOrCreateZonalChapter(ctx context.Context, arg GetOrCreateZonalChapterParams) (int32, error) {
+	row := q.db.QueryRow(ctx, getOrCreateZonalChapter, arg.PartyID, arg.ZonalID)
 	var id int32
 	err := row.Scan(&id)
 	return id, err
@@ -374,6 +493,79 @@ func (q *Queries) GetPartyByShortName(ctx context.Context, shortName string) (Pa
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const getPartyChapterByID = `-- name: GetPartyChapterByID :one
+SELECT id, party_id, chapter_type, country_id, zonal_id, state_id, lga_id, ward_id, created_at FROM party_chapters
+WHERE id = $1 LIMIT 1
+`
+
+func (q *Queries) GetPartyChapterByID(ctx context.Context, id int32) (PartyChapter, error) {
+	row := q.db.QueryRow(ctx, getPartyChapterByID, id)
+	var i PartyChapter
+	err := row.Scan(
+		&i.ID,
+		&i.PartyID,
+		&i.ChapterType,
+		&i.CountryID,
+		&i.ZonalID,
+		&i.StateID,
+		&i.LgaID,
+		&i.WardID,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getStateChapter = `-- name: GetStateChapter :one
+SELECT id FROM party_chapters
+WHERE party_id = $1 AND chapter_type = 'state' AND state_id = $2 LIMIT 1
+`
+
+type GetStateChapterParams struct {
+	PartyID int16       `json:"party_id"`
+	StateID pgtype.Int2 `json:"state_id"`
+}
+
+func (q *Queries) GetStateChapter(ctx context.Context, arg GetStateChapterParams) (int32, error) {
+	row := q.db.QueryRow(ctx, getStateChapter, arg.PartyID, arg.StateID)
+	var id int32
+	err := row.Scan(&id)
+	return id, err
+}
+
+const getWardChapter = `-- name: GetWardChapter :one
+SELECT id FROM party_chapters
+WHERE party_id = $1 AND chapter_type = 'ward' AND ward_id = $2 LIMIT 1
+`
+
+type GetWardChapterParams struct {
+	PartyID int16       `json:"party_id"`
+	WardID  pgtype.Int4 `json:"ward_id"`
+}
+
+func (q *Queries) GetWardChapter(ctx context.Context, arg GetWardChapterParams) (int32, error) {
+	row := q.db.QueryRow(ctx, getWardChapter, arg.PartyID, arg.WardID)
+	var id int32
+	err := row.Scan(&id)
+	return id, err
+}
+
+const getZonalChapter = `-- name: GetZonalChapter :one
+SELECT id FROM party_chapters
+WHERE party_id = $1 AND chapter_type = 'zonal' AND zonal_id = $2 LIMIT 1
+`
+
+type GetZonalChapterParams struct {
+	PartyID int16       `json:"party_id"`
+	ZonalID pgtype.Int2 `json:"zonal_id"`
+}
+
+func (q *Queries) GetZonalChapter(ctx context.Context, arg GetZonalChapterParams) (int32, error) {
+	row := q.db.QueryRow(ctx, getZonalChapter, arg.PartyID, arg.ZonalID)
+	var id int32
+	err := row.Scan(&id)
+	return id, err
 }
 
 const listAcceptingParties = `-- name: ListAcceptingParties :many
@@ -498,6 +690,57 @@ func (q *Queries) ListParties(ctx context.Context) ([]Party, error) {
 			&i.DateFounded,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPartyChapters = `-- name: ListPartyChapters :many
+SELECT id, party_id, chapter_type, country_id, zonal_id, state_id, lga_id, ward_id, created_at FROM party_chapters
+WHERE party_id = $1 
+  AND ($2::varchar IS NULL OR chapter_type = $2)
+  AND ($3::smallint IS NULL OR state_id = $3)
+  AND ($4::int IS NULL OR lga_id = $4)
+ORDER BY id ASC
+`
+
+type ListPartyChaptersParams struct {
+	PartyID     int16       `json:"party_id"`
+	ChapterType pgtype.Text `json:"chapter_type"`
+	StateID     pgtype.Int2 `json:"state_id"`
+	LgaID       pgtype.Int4 `json:"lga_id"`
+}
+
+func (q *Queries) ListPartyChapters(ctx context.Context, arg ListPartyChaptersParams) ([]PartyChapter, error) {
+	rows, err := q.db.Query(ctx, listPartyChapters,
+		arg.PartyID,
+		arg.ChapterType,
+		arg.StateID,
+		arg.LgaID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PartyChapter
+	for rows.Next() {
+		var i PartyChapter
+		if err := rows.Scan(
+			&i.ID,
+			&i.PartyID,
+			&i.ChapterType,
+			&i.CountryID,
+			&i.ZonalID,
+			&i.StateID,
+			&i.LgaID,
+			&i.WardID,
+			&i.CreatedAt,
 		); err != nil {
 			return nil, err
 		}

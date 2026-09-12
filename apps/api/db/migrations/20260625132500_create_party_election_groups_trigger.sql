@@ -13,6 +13,7 @@ END;
 $$ LANGUAGE plpgsql;
 -- +goose StatementEnd
 
+DROP TRIGGER IF EXISTS trg_create_party_election_groups ON election_groups;
 CREATE TRIGGER trg_create_party_election_groups
 AFTER INSERT ON election_groups
 FOR EACH ROW

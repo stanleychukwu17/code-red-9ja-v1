@@ -864,36 +864,118 @@ func (s *PartiesService) GetOrCreateNationalChapter(ctx context.Context, partyID
 		}
 	}
 
-	natChapterID, err := s.queries.GetNationalChapter(ctx, queries.GetNationalChapterParams{
-		PartyID:   partyID,
-		CountryID: pgtype.Int2{Int16: countryID, Valid: true},
-	})
-
-	if err == nil {
-		// Cache and return
-		_ = s.rdb.Set(ctx, cacheKey, natChapterID, db.RedisTwoYearsTTL).Err()
-		return natChapterID, nil
-	}
-
-	// If not found, create it
-	natChapterID, err = s.queries.CreateNationalChapter(ctx, queries.CreateNationalChapterParams{
+	natChapterID, err := s.queries.GetOrCreateNationalChapter(ctx, queries.GetOrCreateNationalChapterParams{
 		PartyID:   partyID,
 		CountryID: pgtype.Int2{Int16: countryID, Valid: true},
 	})
 	if err != nil {
-		// If creation failed (likely due to a concurrent duplicate key insert), try fetching it again.
-		// when we called this function as we seeded, it failed with duplicate key insert error
-		if existingChapterID, fetchErr := s.queries.GetNationalChapter(ctx, queries.GetNationalChapterParams{
-			PartyID:   partyID,
-			CountryID: pgtype.Int2{Int16: countryID, Valid: true},
-		}); fetchErr == nil {
-			return existingChapterID, nil
-		}
-		return 0, fmt.Errorf("failed to create national chapter: %w", err)
+		return 0, fmt.Errorf("failed to get or create national chapter: %w", err)
 	}
+
 	// Cache and return
 	_ = s.rdb.Set(ctx, cacheKey, natChapterID, db.RedisTwoYearsTTL).Err()
 	return natChapterID, nil
+}
+
+// GetOrCreateZonalChapter retrieves the zonal chapter for a party in a specific geopolitical zone,
+// and creates one if it doesn't already exist.
+func (s *PartiesService) GetOrCreateZonalChapter(ctx context.Context, partyID, zonalID int16) (int32, error) {
+	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisZonalChapter, partyID, zonalID)
+
+	// Try to get from Redis
+	if valStr, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
+		if val, err := strconv.ParseInt(valStr, 10, 32); err == nil {
+			return int32(val), nil
+		}
+	}
+
+	zonalChapterID, err := s.queries.GetOrCreateZonalChapter(ctx, queries.GetOrCreateZonalChapterParams{
+		PartyID: partyID,
+		ZonalID: pgtype.Int2{Int16: zonalID, Valid: true},
+	})
+	if err != nil {
+		return 0, fmt.Errorf("failed to get or create zonal chapter: %w", err)
+	}
+
+	_ = s.rdb.Set(ctx, cacheKey, zonalChapterID, db.RedisTwoYearsTTL).Err()
+	return zonalChapterID, nil
+}
+
+// GetOrCreateStateChapter retrieves the state chapter for a party in a specific state,
+// and creates one if it doesn't already exist.
+func (s *PartiesService) GetOrCreateStateChapter(ctx context.Context, partyID, stateID int16) (int32, error) {
+	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisStateChapter, partyID, stateID)
+
+	// Try to get from Redis
+	if valStr, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
+		if val, err := strconv.ParseInt(valStr, 10, 32); err == nil {
+			return int32(val), nil
+		}
+	}
+
+	stateChapterID, err := s.queries.GetOrCreateStateChapter(ctx, queries.GetOrCreateStateChapterParams{
+		PartyID: partyID,
+		StateID: pgtype.Int2{Int16: stateID, Valid: true},
+	})
+	if err != nil {
+		return 0, fmt.Errorf("failed to get or create state chapter: %w", err)
+	}
+
+	_ = s.rdb.Set(ctx, cacheKey, stateChapterID, db.RedisTwoYearsTTL).Err()
+	return stateChapterID, nil
+}
+
+// GetOrCreateLGAChapter retrieves the LGA chapter for a party in a specific LGA,
+// and creates one if it doesn't already exist.
+func (s *PartiesService) GetOrCreateLGAChapter(ctx context.Context, partyID int16, lgaID int32) (int32, error) {
+	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisLGAChapter, partyID, lgaID)
+
+	// Try to get from Redis
+	if valStr, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
+		if val, err := strconv.ParseInt(valStr, 10, 32); err == nil {
+			return int32(val), nil
+		}
+	}
+
+	lgaChapterID, err := s.queries.GetOrCreateLGAChapter(ctx, queries.GetOrCreateLGAChapterParams{
+		PartyID: partyID,
+		ID:      lgaID,
+	})
+	if err != nil {
+		return 0, fmt.Errorf("failed to get or create LGA chapter: %w", err)
+	}
+
+	_ = s.rdb.Set(ctx, cacheKey, lgaChapterID, db.RedisTwoYearsTTL).Err()
+	return lgaChapterID, nil
+}
+
+// GetOrCreateWardChapter retrieves the Ward chapter for a party in a specific Ward,
+// and creates one (as well as ensuring its parent LGA chapter exists) if it doesn't already exist.
+func (s *PartiesService) GetOrCreateWardChapter(ctx context.Context, partyID int16, wardID int32) (int32, error) {
+	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisWardChapter, partyID, wardID)
+
+	// Try to get from Redis
+	if valStr, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
+		if val, err := strconv.ParseInt(valStr, 10, 32); err == nil {
+			return int32(val), nil
+		}
+	}
+
+	wardChapterID, err := s.queries.GetOrCreateWardChapter(ctx, queries.GetOrCreateWardChapterParams{
+		PartyID: partyID,
+		ID:      wardID,
+	})
+	if err != nil {
+		return 0, fmt.Errorf("failed to get or create Ward chapter: %w", err)
+	}
+
+	// Ensure parent LGA chapter also exists
+	if wardChapter, getErr := s.queries.GetPartyChapterByID(ctx, wardChapterID); getErr == nil && wardChapter.LgaID.Valid {
+		_, _ = s.GetOrCreateLGAChapter(ctx, partyID, wardChapter.LgaID.Int32)
+	}
+
+	_ = s.rdb.Set(ctx, cacheKey, wardChapterID, db.RedisTwoYearsTTL).Err()
+	return wardChapterID, nil
 }
 
 const defaultPartyChapterSettings = `{
@@ -1039,15 +1121,36 @@ func (s *PartiesService) JoinParty(ctx context.Context, partyID int16, chapterID
 	}
 
 	// 3. Resolve the chapter the user is joining.
-	// If no specific chapter was provided, default to joining the National chapter.
+	// If no specific chapter was provided, dynamically resolve based on user's location
+	// (Ward -> LGA -> State -> National).
 	var finalChapterID int32 = chapterID
 	if finalChapterID == 0 {
-		countryID := int16(161) // default national chapter should be nigeria
-		natChapterID, err := s.GetOrCreateNationalChapter(ctx, partyID, countryID)
-		if err != nil {
-			return fmt.Errorf("failed to resolve national chapter: %w", err)
+		if user.CurrentWard.Valid && user.CurrentWard.Int32 > 0 {
+			wardChapterID, err := s.GetOrCreateWardChapter(ctx, partyID, user.CurrentWard.Int32)
+			if err == nil && wardChapterID > 0 {
+				finalChapterID = wardChapterID
+			}
 		}
-		finalChapterID = natChapterID
+		if finalChapterID == 0 && user.CurrentLga.Valid && user.CurrentLga.Int32 > 0 {
+			lgaChapterID, err := s.GetOrCreateLGAChapter(ctx, partyID, user.CurrentLga.Int32)
+			if err == nil && lgaChapterID > 0 {
+				finalChapterID = lgaChapterID
+			}
+		}
+		if finalChapterID == 0 && user.CurrentState > 0 {
+			stateChapterID, err := s.GetOrCreateStateChapter(ctx, partyID, user.CurrentState)
+			if err == nil && stateChapterID > 0 {
+				finalChapterID = stateChapterID
+			}
+		}
+		if finalChapterID == 0 {
+			countryID := int16(161) // default national chapter should be nigeria
+			natChapterID, err := s.GetOrCreateNationalChapter(ctx, partyID, countryID)
+			if err != nil {
+				return fmt.Errorf("failed to resolve national chapter: %w", err)
+			}
+			finalChapterID = natChapterID
+		}
 	}
 
 	// 3a. Retrieve chapter settings. If none exist, create default settings.
