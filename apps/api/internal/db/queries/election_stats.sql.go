@@ -129,6 +129,7 @@ INSERT INTO election_group_lgas (
   lga_supervisor_applications_count, lga_supervisor_accepted_applications_count, lga_supervisor_rejected_applications_count,
   parties
 )
+
 SELECT
   $1::integer,
   $2::int,
@@ -311,7 +312,6 @@ func (q *Queries) AdjustElectionGroupLGALGASupervisorCounts(ctx context.Context,
 }
 
 const adjustElectionGroupLGAWardSupervisorCounts = `-- name: AdjustElectionGroupLGAWardSupervisorCounts :exec
-
 
 
 
@@ -669,13 +669,13 @@ const adjustElectionGroupPollingUnitApplicationCounts = `-- name: AdjustElection
 
 
 
-
 INSERT INTO election_group_polling_units (
   election_group_id, polling_unit_id, state_id, lga_id, ward_id,
   state_constituency_id, federal_constituency_id, senatorial_district_id,
   applications_count, accepted_applications_count, rejected_applications_count,
   parties
 )
+
 SELECT
   $1::integer,
   $2::int,
@@ -1258,6 +1258,7 @@ INSERT INTO election_group_wards (
   ward_supervisor_applications_count, ward_supervisor_accepted_applications_count, ward_supervisor_rejected_applications_count,
   parties
 )
+
 SELECT
   $1::integer,
   $2::int,
@@ -1541,7 +1542,6 @@ const getElectionGroupPollingUnitGeoIDs = `-- name: GetElectionGroupPollingUnitG
 
 
 
-
 SELECT
   ward_id,
   lga_id,
@@ -1590,7 +1590,6 @@ func (q *Queries) GetElectionGroupPollingUnitGeoIDs(ctx context.Context, arg Get
 }
 
 const getElectionGroupPollingUnitStats = `-- name: GetElectionGroupPollingUnitStats :one
-
 
 
 
@@ -1909,7 +1908,6 @@ func (q *Queries) GetLGASupervisorCount(ctx context.Context, arg GetLGASuperviso
 }
 
 const getPUPartyAgentsCount = `-- name: GetPUPartyAgentsCount :one
-
 
 
 
@@ -2616,6 +2614,7 @@ WITH src_agg AS (
   WHERE federal_constituency_id IS NOT NULL
   GROUP BY election_group_id, federal_constituency_id, state_id
 ),
+
 party_expanded AS (
   SELECT
     s.election_group_id, s.federal_constituency_id,
@@ -2644,6 +2643,7 @@ party_expanded AS (
        jsonb_array_elements(s.parties) AS p(value)
   WHERE s.federal_constituency_id IS NOT NULL
 ),
+
 party_agg AS (
   SELECT
     election_group_id, federal_constituency_id, party_id,
@@ -2670,6 +2670,7 @@ party_agg AS (
   FROM party_expanded
   GROUP BY election_group_id, federal_constituency_id, party_id
 ),
+
 party_json AS (
   SELECT
     election_group_id, federal_constituency_id,
@@ -2699,6 +2700,7 @@ party_json AS (
   FROM party_agg
   GROUP BY election_group_id, federal_constituency_id
 )
+
 INSERT INTO election_group_federal_constituencies (
   election_group_id, federal_constituency_id, state_id,
   unique_final_results_expected,
@@ -2713,6 +2715,7 @@ INSERT INTO election_group_federal_constituencies (
   total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters,
   parties
 )
+
 SELECT
   a.election_group_id, a.federal_constituency_id, a.state_id,
   a.unique_final_results_expected,
@@ -2785,6 +2788,7 @@ WITH src_agg AS (
   FROM election_group_states
   GROUP BY election_group_id
 ),
+
 party_expanded AS (
   SELECT
     s.election_group_id,
@@ -2817,6 +2821,7 @@ party_expanded AS (
   FROM election_group_states s,
        jsonb_array_elements(s.parties) AS p(value)
 ),
+
 party_agg AS (
   SELECT
     election_group_id, party_id,
@@ -2849,6 +2854,7 @@ party_agg AS (
   FROM party_expanded
   GROUP BY election_group_id, party_id
 ),
+
 party_json AS (
   SELECT
     election_group_id,
@@ -2884,6 +2890,7 @@ party_json AS (
   FROM party_agg
   GROUP BY election_group_id
 )
+
 UPDATE election_groups
 SET
   unique_final_results_expected = COALESCE(s.unique_final_results_expected, 0),
@@ -2973,6 +2980,7 @@ WITH src_agg AS (
   WHERE lga_id IS NOT NULL
   GROUP BY election_group_id, lga_id, state_id
 ),
+
 party_expanded AS (
   SELECT
     s.election_group_id, s.lga_id,
@@ -3002,6 +3010,7 @@ party_expanded AS (
        jsonb_array_elements(s.parties) AS p(value)
   WHERE s.lga_id IS NOT NULL
 ),
+
 party_agg AS (
   SELECT
     election_group_id, lga_id, party_id,
@@ -3030,6 +3039,7 @@ party_agg AS (
   FROM party_expanded
   GROUP BY election_group_id, lga_id, party_id
 ),
+
 party_json AS (
   SELECT
     election_group_id, lga_id,
@@ -3061,6 +3071,7 @@ party_json AS (
   FROM party_agg
   GROUP BY election_group_id, lga_id
 )
+
 INSERT INTO election_group_lgas (
   election_group_id, lga_id, state_id,
   unique_final_results_expected,
@@ -3076,6 +3087,7 @@ INSERT INTO election_group_lgas (
   ward_supervisors_count, unique_ward_supervisors_count,
   parties
 )
+
 SELECT
   a.election_group_id, a.lga_id, a.state_id,
   a.unique_final_results_expected,
@@ -3195,6 +3207,7 @@ referral_codes AS (
   FROM assignments
   GROUP BY election_group_id, polling_unit_id
 ),
+
 referral_counts AS (
   SELECT
     rc.election_group_id,
@@ -3241,6 +3254,7 @@ party_overall AS (
   FROM assignments
   GROUP BY election_group_id, polling_unit_id, party_id
 ),
+
 party_results AS (
   SELECT
     election_group_id, polling_unit_id, party_id,
@@ -3250,6 +3264,7 @@ party_results AS (
   WHERE party_id IS NOT NULL
   GROUP BY election_group_id, polling_unit_id, party_id
 ),
+
 update_gaps AS (
   SELECT
     election_group_id, polling_unit_id, party_id,
@@ -3259,6 +3274,7 @@ update_gaps AS (
   FROM polling_unit_updates
   WHERE party_id IS NOT NULL
 ),
+
 update_intervals AS (
   SELECT
     election_group_id, polling_unit_id, party_id,
@@ -3267,6 +3283,7 @@ update_intervals AS (
   WHERE gap_seconds IS NOT NULL
   GROUP BY election_group_id, polling_unit_id, party_id
 ),
+
 party_referral_counts AS (
   SELECT
     a.election_group_id, a.polling_unit_id, a.party_id,
@@ -3320,6 +3337,7 @@ INSERT INTO election_group_polling_units (
   pu_live_voters_referred_by_agent_count,
   parties
 )
+
 SELECT
   oa.election_group_id, oa.polling_unit_id,
   pu.state_id, pu.lga_id, pu.ward_id,
@@ -3424,6 +3442,7 @@ WITH src_agg AS (
   WHERE senatorial_district_id IS NOT NULL
   GROUP BY election_group_id, senatorial_district_id, state_id
 ),
+
 party_expanded AS (
   SELECT
     s.election_group_id, s.senatorial_district_id,
@@ -3452,6 +3471,7 @@ party_expanded AS (
        jsonb_array_elements(s.parties) AS p(value)
   WHERE s.senatorial_district_id IS NOT NULL
 ),
+
 party_agg AS (
   SELECT
     election_group_id, senatorial_district_id, party_id,
@@ -3478,6 +3498,7 @@ party_agg AS (
   FROM party_expanded
   GROUP BY election_group_id, senatorial_district_id, party_id
 ),
+
 party_json AS (
   SELECT
     election_group_id, senatorial_district_id,
@@ -3507,6 +3528,7 @@ party_json AS (
   FROM party_agg
   GROUP BY election_group_id, senatorial_district_id
 )
+
 INSERT INTO election_group_senatorial_districts (
   election_group_id, senatorial_district_id, state_id,
   unique_final_results_expected,
@@ -3521,6 +3543,7 @@ INSERT INTO election_group_senatorial_districts (
   total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters,
   parties
 )
+
 SELECT
   a.election_group_id, a.senatorial_district_id, a.state_id,
   a.unique_final_results_expected,
@@ -3594,6 +3617,7 @@ WITH src_agg AS (
   WHERE state_constituency_id IS NOT NULL
   GROUP BY election_group_id, state_constituency_id, state_id
 ),
+
 party_expanded AS (
   SELECT
     s.election_group_id, s.state_constituency_id,
@@ -3622,6 +3646,7 @@ party_expanded AS (
        jsonb_array_elements(s.parties) AS p(value)
   WHERE s.state_constituency_id IS NOT NULL
 ),
+
 party_agg AS (
   SELECT
     election_group_id, state_constituency_id, party_id,
@@ -3648,6 +3673,7 @@ party_agg AS (
   FROM party_expanded
   GROUP BY election_group_id, state_constituency_id, party_id
 ),
+
 party_json AS (
   SELECT
     election_group_id, state_constituency_id,
@@ -3677,6 +3703,7 @@ party_json AS (
   FROM party_agg
   GROUP BY election_group_id, state_constituency_id
 )
+
 INSERT INTO election_group_state_constituencies (
   election_group_id, state_constituency_id, state_id,
   unique_final_results_expected,
@@ -3691,6 +3718,7 @@ INSERT INTO election_group_state_constituencies (
   total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters,
   parties
 )
+
 SELECT
   a.election_group_id, a.state_constituency_id, a.state_id,
   a.unique_final_results_expected,
@@ -3768,6 +3796,7 @@ WITH src_agg AS (
   WHERE state_id IS NOT NULL
   GROUP BY election_group_id, state_id
 ),
+
 party_expanded AS (
   SELECT
     s.election_group_id, s.state_id,
@@ -3799,6 +3828,7 @@ party_expanded AS (
        jsonb_array_elements(s.parties) AS p(value)
   WHERE s.state_id IS NOT NULL
 ),
+
 party_agg AS (
   SELECT
     election_group_id, state_id, party_id,
@@ -3829,6 +3859,7 @@ party_agg AS (
   FROM party_expanded
   GROUP BY election_group_id, state_id, party_id
 ),
+
 party_json AS (
   SELECT
     election_group_id, state_id,
@@ -3862,6 +3893,7 @@ party_json AS (
   FROM party_agg
   GROUP BY election_group_id, state_id
 )
+
 INSERT INTO election_group_states (
   election_group_id, state_id,
   unique_final_results_expected,
@@ -3878,6 +3910,7 @@ INSERT INTO election_group_states (
   ward_supervisors_count, unique_ward_supervisors_count,
   parties
 )
+
 SELECT
   a.election_group_id, a.state_id,
   a.unique_final_results_expected,
@@ -3975,6 +4008,7 @@ WITH epu_agg AS (
   FROM election_group_polling_units
   GROUP BY election_group_id, ward_id, lga_id, state_id
 ),
+
 party_expanded AS (
   SELECT
     epu.election_group_id, epu.ward_id,
@@ -4002,6 +4036,7 @@ party_expanded AS (
   FROM election_group_polling_units epu,
        jsonb_array_elements(epu.parties) AS p(value)
 ),
+
 party_agg AS (
   SELECT
     election_group_id, ward_id, party_id,
@@ -4028,6 +4063,7 @@ party_agg AS (
   FROM party_expanded
   GROUP BY election_group_id, ward_id, party_id
 ),
+
 party_json AS (
   SELECT
     election_group_id, ward_id,
@@ -4057,6 +4093,7 @@ party_json AS (
   FROM party_agg
   GROUP BY election_group_id, ward_id
 )
+
 INSERT INTO election_group_wards (
   election_group_id, ward_id, lga_id, state_id,
   unique_final_results_expected,
@@ -4071,6 +4108,7 @@ INSERT INTO election_group_wards (
   total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters,
   parties
 )
+
 SELECT
   a.election_group_id, a.ward_id, a.lga_id, a.state_id,
   a.unique_final_results_expected,
@@ -4172,6 +4210,7 @@ WITH src_agg AS (
   WHERE election_group_id = $1::integer
   GROUP BY election_group_id
 ),
+
 party_expanded AS (
   SELECT
     s.election_group_id,
@@ -4205,6 +4244,7 @@ party_expanded AS (
        jsonb_array_elements(s.parties) AS p(value)
   WHERE s.election_group_id = $1::integer
 ),
+
 party_agg AS (
   SELECT
     election_group_id, party_id,
@@ -4237,6 +4277,7 @@ party_agg AS (
   FROM party_expanded
   GROUP BY election_group_id, party_id
 ),
+
 party_json AS (
   SELECT
     election_group_id,
@@ -4272,6 +4313,7 @@ party_json AS (
   FROM party_agg
   GROUP BY election_group_id
 )
+
 UPDATE election_groups
 SET
   unique_final_results_expected = COALESCE(s.unique_final_results_expected, 0),
@@ -4362,6 +4404,7 @@ WITH src_agg AS (
     AND lga_id = $2::int
   GROUP BY election_group_id, lga_id, state_id
 ),
+
 party_expanded AS (
   SELECT
     s.election_group_id, s.lga_id,
@@ -4392,6 +4435,7 @@ party_expanded AS (
   WHERE s.election_group_id = $1::integer
     AND s.lga_id = $2::int
 ),
+
 party_agg AS (
   SELECT
     election_group_id, lga_id, party_id,
@@ -4420,6 +4464,7 @@ party_agg AS (
   FROM party_expanded
   GROUP BY election_group_id, lga_id, party_id
 ),
+
 party_json AS (
   SELECT
     election_group_id, lga_id,
@@ -4451,6 +4496,7 @@ party_json AS (
   FROM party_agg
   GROUP BY election_group_id, lga_id
 )
+
 INSERT INTO election_group_lgas (
   election_group_id, lga_id, state_id,
   unique_final_results_expected,
@@ -4466,6 +4512,7 @@ INSERT INTO election_group_lgas (
   ward_supervisors_count, unique_ward_supervisors_count,
   parties
 )
+
 SELECT
   a.election_group_id, a.lga_id, a.state_id,
   a.unique_final_results_expected,
@@ -4557,6 +4604,7 @@ WITH assignments AS (
   FROM polling_unit_assignments
   WHERE polling_unit_assignments.election_group_id = $1 AND polling_unit_assignments.polling_unit_id = $2
 ),
+
 assignment_agg AS (
   SELECT
     election_group_id,
@@ -4571,6 +4619,7 @@ assignment_agg AS (
   FROM assignments
   GROUP BY election_group_id, polling_unit_id
 ),
+
 result_agg AS (
   SELECT
     election_group_id,
@@ -4581,6 +4630,7 @@ result_agg AS (
   WHERE polling_unit_results.election_group_id = $1 AND polling_unit_results.polling_unit_id = $2
   GROUP BY election_group_id, polling_unit_id
 ),
+
 referral_codes AS (
   SELECT
     election_group_id,
@@ -4589,6 +4639,7 @@ referral_codes AS (
   FROM assignments
   GROUP BY election_group_id, polling_unit_id
 ),
+
 party_expanded AS (
   SELECT
     a.election_group_id,
@@ -4606,6 +4657,7 @@ party_expanded AS (
   FROM assignments a
   GROUP BY a.election_group_id, a.polling_unit_id, a.party_id
 ),
+
 party_results AS (
   SELECT
     r.election_group_id,
@@ -4617,6 +4669,7 @@ party_results AS (
   WHERE r.election_group_id = $1 AND r.polling_unit_id = $2
   GROUP BY r.election_group_id, r.polling_unit_id, r.party_id
 ),
+
 party_intervals AS (
   SELECT
     sub.election_group_id,
@@ -4638,6 +4691,7 @@ party_intervals AS (
   WHERE gap_seconds > 0
   GROUP BY sub.election_group_id, sub.polling_unit_id, sub.party_id
 ),
+
 party_json AS (
   SELECT
     pe.election_group_id,
@@ -4662,6 +4716,7 @@ party_json AS (
   LEFT JOIN party_intervals pi ON pe.election_group_id = pi.election_group_id AND pe.polling_unit_id = pi.polling_unit_id AND pe.party_id = pi.party_id
   GROUP BY pe.election_group_id, pe.polling_unit_id
 )
+
 UPDATE election_group_polling_units
 SET
   pu_agents_count = COALESCE(aa.pu_agents_count, 0),
@@ -4723,6 +4778,7 @@ WITH src_agg AS (
     AND state_constituency_id = $2::int
   GROUP BY election_group_id, state_constituency_id, state_id
 ),
+
 party_expanded AS (
   SELECT
     s.election_group_id, s.state_constituency_id,
@@ -4752,6 +4808,7 @@ party_expanded AS (
   WHERE s.election_group_id = $1::integer
     AND s.state_constituency_id = $2::int
 ),
+
 party_agg AS (
   SELECT
     election_group_id, state_constituency_id, party_id,
@@ -4778,6 +4835,7 @@ party_agg AS (
   FROM party_expanded
   GROUP BY election_group_id, state_constituency_id, party_id
 ),
+
 party_json AS (
   SELECT
     election_group_id, state_constituency_id,
@@ -4807,6 +4865,7 @@ party_json AS (
   FROM party_agg
   GROUP BY election_group_id, state_constituency_id
 )
+
 INSERT INTO election_group_state_constituencies (
   election_group_id, state_constituency_id, state_id,
   unique_final_results_expected,
@@ -4821,6 +4880,7 @@ INSERT INTO election_group_state_constituencies (
   total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters,
   parties
 )
+
 SELECT
   a.election_group_id, a.state_constituency_id, a.state_id,
   a.unique_final_results_expected,
@@ -4904,6 +4964,7 @@ WITH src_agg AS (
     AND state_id = $2::smallint
   GROUP BY election_group_id, state_id
 ),
+
 party_expanded AS (
   SELECT
     s.election_group_id, s.state_id,
@@ -4936,6 +4997,7 @@ party_expanded AS (
   WHERE s.election_group_id = $1::integer
     AND s.state_id = $2::smallint
 ),
+
 party_agg AS (
   SELECT
     election_group_id, state_id, party_id,
@@ -4966,6 +5028,7 @@ party_agg AS (
   FROM party_expanded
   GROUP BY election_group_id, state_id, party_id
 ),
+
 party_json AS (
   SELECT
     election_group_id, state_id,
@@ -4999,6 +5062,7 @@ party_json AS (
   FROM party_agg
   GROUP BY election_group_id, state_id
 )
+
 INSERT INTO election_group_states (
   election_group_id, state_id,
   unique_final_results_expected,
@@ -5015,6 +5079,7 @@ INSERT INTO election_group_states (
   ward_supervisors_count, unique_ward_supervisors_count,
   parties
 )
+
 SELECT
   a.election_group_id, a.state_id,
   a.unique_final_results_expected,
@@ -5119,6 +5184,7 @@ WITH epu_agg AS (
     AND ward_id = $2::int
   GROUP BY election_group_id, ward_id, lga_id, state_id
 ),
+
 party_expanded AS (
   SELECT
     epu.election_group_id, epu.ward_id,
@@ -5148,6 +5214,7 @@ party_expanded AS (
   WHERE epu.election_group_id = $1::integer
     AND epu.ward_id = $2::int
 ),
+
 party_agg AS (
   SELECT
     election_group_id, ward_id, party_id,
@@ -5174,6 +5241,7 @@ party_agg AS (
   FROM party_expanded
   GROUP BY election_group_id, ward_id, party_id
 ),
+
 party_json AS (
   SELECT
     election_group_id, ward_id,
@@ -5203,6 +5271,7 @@ party_json AS (
   FROM party_agg
   GROUP BY election_group_id, ward_id
 )
+
 INSERT INTO election_group_wards (
   election_group_id, ward_id, lga_id, state_id,
   unique_final_results_expected,
@@ -5217,6 +5286,7 @@ INSERT INTO election_group_wards (
   total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters,
   parties
 )
+
 SELECT
   a.election_group_id, a.ward_id, a.lga_id, a.state_id,
   a.unique_final_results_expected,
@@ -5294,6 +5364,7 @@ INSERT INTO election_group_federal_constituencies (
   election_group_id, federal_constituency_id, state_id, senatorial_district_id,
   lgas_count, state_constituencies_count, wards_count, polling_units_count
 )
+
 SELECT DISTINCT $1::integer, fc.id, fc.state_id, fc.senatorial_district_id,
   fc.lgas_count, fc.state_constituencies_count, fc.wards_count, fc.polling_units_count
 FROM federal_constituencies fc
@@ -5323,6 +5394,7 @@ INSERT INTO election_group_lgas (
   election_group_id, lga_id, state_id, senatorial_district_id, federal_constituency_id,
   state_constituencies_count, wards_count, polling_units_count
 )
+
 SELECT DISTINCT $1::integer, l.id, l.state_id, l.senatorial_district_id, l.federal_constituency_id,
   l.state_constituencies_count, l.wards_count, l.polling_units_count
 FROM lgas l
@@ -5351,6 +5423,7 @@ INSERT INTO election_group_senatorial_districts (
   federal_constituencies_count, lgas_count,
   state_constituencies_count, wards_count, polling_units_count
 )
+
 SELECT DISTINCT $1::integer, sd.id, sd.state_id,
   sd.federal_constituencies_count, sd.lgas_count,
   sd.state_constituencies_count, sd.wards_count, sd.polling_units_count
@@ -5383,6 +5456,7 @@ INSERT INTO election_group_state_constituencies (
   election_group_id, state_constituency_id, state_id,
   wards_count, polling_units_count
 )
+
 SELECT DISTINCT $1::integer, sc.id, sc.state_id,
   sc.wards_count, sc.polling_units_count
 FROM state_constituencies sc
@@ -5410,12 +5484,12 @@ const seedElectionGroupStateStats = `-- name: SeedElectionGroupStateStats :exec
 
 
 
-
 INSERT INTO election_group_states (
   election_group_id, state_id,
   senatorial_districts_count, federal_constituencies_count, lgas_count,
   state_constituencies_count, wards_count, polling_units_count
 )
+
 SELECT DISTINCT $1::integer, s.id,
   s.senatorial_districts_count, s.federal_constituencies_count, s.lgas_count,
   s.state_constituencies_count, s.wards_count, s.polling_units_count
@@ -5455,6 +5529,7 @@ INSERT INTO election_group_wards (
   election_group_id, ward_id, lga_id, state_id,
   polling_units_count
 )
+
 SELECT DISTINCT $1::integer, w.id, w.lga_id, l.state_id,
   w.polling_units_count
 FROM wards w
@@ -5681,7 +5756,6 @@ func (q *Queries) UpsertElectionGroupNationalPartyEntry(ctx context.Context, arg
 }
 
 const upsertElectionGroupPUPartyEntry = `-- name: UpsertElectionGroupPUPartyEntry :exec
-
 
 
 
