@@ -55,12 +55,6 @@ WHERE
 ORDER BY id DESC
 LIMIT $2;
 
--- name: MarkFileDeleted :one
-UPDATE files
-SET status = 'deleted', updated_at = NOW()
-WHERE id = $1
-RETURNING *;
-
 -- name: HardDeleteFile :exec
 DELETE FROM files WHERE id = $1;
 

@@ -376,7 +376,6 @@ type Querier interface {
 	ListWalletTransactions(ctx context.Context, arg ListWalletTransactionsParams) ([]PartyWalletTransaction, error)
 	ListWardSupervisorPerformanceStats(ctx context.Context, arg ListWardSupervisorPerformanceStatsParams) ([]ListWardSupervisorPerformanceStatsRow, error)
 	MarkAgentEarningsPaid(ctx context.Context, id int64) (AgentEarning, error)
-	MarkFileDeleted(ctx context.Context, id int64) (File, error)
 	// Sets been_paid=true on every attempt that currently has been_paid=false and increments earned_amount_kobo.
 	MarkPracticeTestAttemptsPaid(ctx context.Context, arg MarkPracticeTestAttemptsPaidParams) (UserPracticeTest, error)
 	// Run once daily via cron to deduct budget_per_day_kobo, update amount_spent_kobo, and mark expired campaigns as completed.

@@ -17,7 +17,6 @@ type FilesService interface {
 	GetFileByID(ctx context.Context, id int64) (queries.File, error)
 	GetFileByKey(ctx context.Context, fileKey string) (queries.File, error)
 	ListFiles(ctx context.Context, arg queries.ListFilesParams) ([]queries.File, error)
-	MarkFileDeleted(ctx context.Context, id int64) (queries.File, error)
 	HardDeleteFile(ctx context.Context, id int64) error
 	CheckFileOwner(ctx context.Context, fileID int64, ownerID int64) (bool, error)
 	UpdateFileOwner(ctx context.Context, fileID int64, ownerID int64) (queries.File, error)
@@ -112,11 +111,6 @@ func (s *filesService) GetFileByKey(ctx context.Context, fileKey string) (querie
 // ListFiles lists files matching the provided filter parameters.
 func (s *filesService) ListFiles(ctx context.Context, arg queries.ListFilesParams) ([]queries.File, error) {
 	return s.queries.ListFiles(ctx, arg)
-}
-
-// MarkFileDeleted marks a file as deleted (soft delete).
-func (s *filesService) MarkFileDeleted(ctx context.Context, id int64) (queries.File, error) {
-	return s.queries.MarkFileDeleted(ctx, id)
 }
 
 // HardDeleteFile permanently deletes a file record from the database.

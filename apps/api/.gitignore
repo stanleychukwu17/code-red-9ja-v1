@@ -39,6 +39,8 @@ Thumbs.db
 # Environment and secrets
 .env
 .env.local
+.data/
+.data-postgres-redis/
 *.pem
 *.key
 *.crt
