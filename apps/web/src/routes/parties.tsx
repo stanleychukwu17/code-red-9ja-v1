@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { getPageHeader } from "#/lib/shared/meta";
 import {
 	PartiesEmptyState,
 	PartiesErrorState,
@@ -12,6 +13,12 @@ import { QUERY_KEYS } from "#/lib/config";
 import { getParties, type Party } from "#/lib/server/parties";
 
 export const Route = createFileRoute("/parties")({
+	head: () =>
+		getPageHeader({
+			title: "Political Parties",
+			description: "Explore registered political parties and details.",
+		}),
+
 	component: PartiesComponent,
 });
 

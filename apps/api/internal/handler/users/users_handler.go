@@ -265,9 +265,9 @@ func (h *Handler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		if user.AvatarFileID.Valid {
 			oldAvatarFileID = user.AvatarFileID.Int64
 		}
-		if h.filesService != nil {
-			h.filesService.DeleteAssetAsync(user.Avatar.String, oldAvatarFileID)
-		}
+
+		// Delete the old avatar from R2 and files table asynchronously
+		h.filesService.DeleteAssetAsync(user.Avatar.String, oldAvatarFileID)
 	}
 
 	err = h.usersService.UpdateUserProfile(
@@ -289,7 +289,7 @@ func (h *Handler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.AvatarFileId != nil && *req.AvatarFileId > 0 && h.filesService != nil {
+	if req.AvatarFileId != nil && *req.AvatarFileId > 0 {
 		_, _ = h.filesService.UpdateFileOwner(r.Context(), *req.AvatarFileId, user.ID)
 	}
 
@@ -786,9 +786,8 @@ func (h *Handler) AdminUpdateUser(w http.ResponseWriter, r *http.Request) {
 		if targetUserDetails.AvatarFileID.Valid {
 			oldAvatarFileID = targetUserDetails.AvatarFileID.Int64
 		}
-		if h.filesService != nil {
-			h.filesService.DeleteAssetAsync(targetUserDetails.Avatar.String, oldAvatarFileID)
-		}
+
+		h.filesService.DeleteAssetAsync(targetUserDetails.Avatar.String, oldAvatarFileID)
 	}
 
 	// update the user
@@ -813,7 +812,7 @@ func (h *Handler) AdminUpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.AvatarFileId != nil && *req.AvatarFileId > 0 && h.filesService != nil {
+	if req.AvatarFileId != nil && *req.AvatarFileId > 0 {
 		_, _ = h.filesService.UpdateFileOwner(r.Context(), *req.AvatarFileId, targetUserDetails.ID)
 	}
 

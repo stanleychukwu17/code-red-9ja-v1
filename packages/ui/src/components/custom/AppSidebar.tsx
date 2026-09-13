@@ -267,7 +267,7 @@ function EachLinkComponent({
         isActive={isActive}
         tooltip={item.label}
         className={cn(
-          "h-8 md:h-12 py-0! px-0 md:px-2 text-[15px] md:text-[18px] rounded-[16px] cursor-pointer transition-all duration-300",
+          "h-8 md:h-10 py-0! px-0 md:px-2 text-[15px] md:text-[16px] rounded-2xl cursor-pointer transition-all duration-300",
           "hover:bg-c-10 dark:hover:bg-black",
           isActive ? "md:bg-sidebar-active! " : "",
           sideBarState === "collapsed" && "justify-center my-3",
@@ -283,7 +283,7 @@ function EachLinkComponent({
             }
           }}
         >
-          <div className="relative -right-1 size-4 md:size-8 py-2 flex shrink-0 items-center justify-center">
+          <div className="relative -right-1 size-4 md:size-6 py-2 flex shrink-0 items-center justify-center">
             {isActive ? item.selectedIcon : item.icon}
           </div>
           <span
