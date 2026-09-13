@@ -53,20 +53,32 @@ func (s *filesService) DeleteAssetAsync(rawURL string, fileID int64) {
 		key = rawURL[idx+5:]
 	}
 
+	// If neither an R2 key nor a database file ID was resolved, nothing to clean up.
 	if key == "" && fileID <= 0 {
 		return
 	}
 
+	// Clean up storage and database records asynchronously so callers aren't blocked.
 	go func(k string, fID int64) {
+		// Isolated 10s deadline to prevent the background goroutine from hanging indefinitely
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
+		// If key wasn't derived from rawURL but fileID is given, resolve the key from DB
+		if k == "" && fID > 0 {
+			if file, err := s.GetFileByID(ctx, fID); err == nil {
+				k = file.FileKey
+			}
+		}
+
+		// 1. Delete object from R2 and purge CDN cache if key exists
 		if k != "" {
 			if delErr := s.r2Svc.DeleteObject(ctx, k); delErr == nil {
 				_ = s.r2Svc.PurgeCloudflareCache(ctx, k)
 			}
 		}
 
+		// 2. Hard-delete file record from DB by ID or fallback lookup by key
 		if fID > 0 {
 			_ = s.HardDeleteFile(ctx, fID)
 		} else if k != "" {
