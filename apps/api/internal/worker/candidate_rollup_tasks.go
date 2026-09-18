@@ -73,7 +73,7 @@ type RollupSingleElectionPayload struct {
 
 // ─── Distributors ─────────────────────────────────────────────────────────────
 
-func (d *RedisTaskDistributor) DistributeTaskRollupSingleWard(ctx context.Context, payload *RollupSingleWardPayload, opts ...asynq.Option) error {
+func (redisTaskDistributor *RedisTaskDistributor) DistributeTaskRollupSingleWard(ctx context.Context, payload *RollupSingleWardPayload, opts ...asynq.Option) error {
 	jsonPayload, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("failed to marshal rollup single ward payload: %w", err)
@@ -88,7 +88,7 @@ func (d *RedisTaskDistributor) DistributeTaskRollupSingleWard(ctx context.Contex
 	}
 	opts = append(defaults, opts...)
 	task := asynq.NewTask(TaskRollupSingleWard, jsonPayload, opts...)
-	info, err := d.asynqClient.EnqueueContext(ctx, task)
+	info, err := redisTaskDistributor.asynqClient.EnqueueContext(ctx, task)
 	if err != nil {
 		if errors.Is(err, asynq.ErrTaskIDConflict) || errors.Is(err, asynq.ErrDuplicateTask) {
 			slog.Debug("single ward rollup already queued", "election_id", payload.ElectionID, "ward_id", payload.WardID)
@@ -100,7 +100,7 @@ func (d *RedisTaskDistributor) DistributeTaskRollupSingleWard(ctx context.Contex
 	return nil
 }
 
-func (d *RedisTaskDistributor) DistributeTaskRollupSingleStateConstituency(ctx context.Context, payload *RollupSingleStateConstituencyPayload, opts ...asynq.Option) error {
+func (redisTaskDistributor *RedisTaskDistributor) DistributeTaskRollupSingleStateConstituency(ctx context.Context, payload *RollupSingleStateConstituencyPayload, opts ...asynq.Option) error {
 	jsonPayload, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("failed to marshal rollup single state constituency payload: %w", err)
@@ -115,7 +115,7 @@ func (d *RedisTaskDistributor) DistributeTaskRollupSingleStateConstituency(ctx c
 	}
 	opts = append(defaults, opts...)
 	task := asynq.NewTask(TaskRollupSingleStateConstituency, jsonPayload, opts...)
-	info, err := d.asynqClient.EnqueueContext(ctx, task)
+	info, err := redisTaskDistributor.asynqClient.EnqueueContext(ctx, task)
 	if err != nil {
 		if errors.Is(err, asynq.ErrTaskIDConflict) || errors.Is(err, asynq.ErrDuplicateTask) {
 			slog.Debug("single state constituency rollup already queued", "election_id", payload.ElectionID, "state_constituency_id", payload.StateConstituencyID)
@@ -127,7 +127,7 @@ func (d *RedisTaskDistributor) DistributeTaskRollupSingleStateConstituency(ctx c
 	return nil
 }
 
-func (d *RedisTaskDistributor) DistributeTaskRollupSingleLGA(ctx context.Context, payload *RollupSingleLGAPayload, opts ...asynq.Option) error {
+func (redisTaskDistributor *RedisTaskDistributor) DistributeTaskRollupSingleLGA(ctx context.Context, payload *RollupSingleLGAPayload, opts ...asynq.Option) error {
 	jsonPayload, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("failed to marshal rollup single lga payload: %w", err)
@@ -142,7 +142,7 @@ func (d *RedisTaskDistributor) DistributeTaskRollupSingleLGA(ctx context.Context
 	}
 	opts = append(defaults, opts...)
 	task := asynq.NewTask(TaskRollupSingleLGA, jsonPayload, opts...)
-	info, err := d.asynqClient.EnqueueContext(ctx, task)
+	info, err := redisTaskDistributor.asynqClient.EnqueueContext(ctx, task)
 	if err != nil {
 		if errors.Is(err, asynq.ErrTaskIDConflict) || errors.Is(err, asynq.ErrDuplicateTask) {
 			slog.Debug("single lga rollup already queued", "election_id", payload.ElectionID, "lga_id", payload.LGAID)
@@ -154,7 +154,7 @@ func (d *RedisTaskDistributor) DistributeTaskRollupSingleLGA(ctx context.Context
 	return nil
 }
 
-func (d *RedisTaskDistributor) DistributeTaskRollupSingleFederalConstituency(ctx context.Context, payload *RollupSingleFederalConstituencyPayload, opts ...asynq.Option) error {
+func (redisTaskDistributor *RedisTaskDistributor) DistributeTaskRollupSingleFederalConstituency(ctx context.Context, payload *RollupSingleFederalConstituencyPayload, opts ...asynq.Option) error {
 	jsonPayload, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("failed to marshal rollup single federal constituency payload: %w", err)
@@ -169,7 +169,7 @@ func (d *RedisTaskDistributor) DistributeTaskRollupSingleFederalConstituency(ctx
 	}
 	opts = append(defaults, opts...)
 	task := asynq.NewTask(TaskRollupSingleFederalConstituency, jsonPayload, opts...)
-	info, err := d.asynqClient.EnqueueContext(ctx, task)
+	info, err := redisTaskDistributor.asynqClient.EnqueueContext(ctx, task)
 	if err != nil {
 		if errors.Is(err, asynq.ErrTaskIDConflict) || errors.Is(err, asynq.ErrDuplicateTask) {
 			slog.Debug("single federal constituency rollup already queued", "election_id", payload.ElectionID, "federal_constituency_id", payload.FederalConstituencyID)
@@ -181,7 +181,7 @@ func (d *RedisTaskDistributor) DistributeTaskRollupSingleFederalConstituency(ctx
 	return nil
 }
 
-func (d *RedisTaskDistributor) DistributeTaskRollupSingleSenatorialDistrict(ctx context.Context, payload *RollupSingleSenatorialDistrictPayload, opts ...asynq.Option) error {
+func (redisTaskDistributor *RedisTaskDistributor) DistributeTaskRollupSingleSenatorialDistrict(ctx context.Context, payload *RollupSingleSenatorialDistrictPayload, opts ...asynq.Option) error {
 	jsonPayload, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("failed to marshal rollup single senatorial district payload: %w", err)
@@ -196,7 +196,7 @@ func (d *RedisTaskDistributor) DistributeTaskRollupSingleSenatorialDistrict(ctx 
 	}
 	opts = append(defaults, opts...)
 	task := asynq.NewTask(TaskRollupSingleSenatorialDistrict, jsonPayload, opts...)
-	info, err := d.asynqClient.EnqueueContext(ctx, task)
+	info, err := redisTaskDistributor.asynqClient.EnqueueContext(ctx, task)
 	if err != nil {
 		if errors.Is(err, asynq.ErrTaskIDConflict) || errors.Is(err, asynq.ErrDuplicateTask) {
 			slog.Debug("single senatorial district rollup already queued", "election_id", payload.ElectionID, "senatorial_district_id", payload.SenatorialDistrictID)
@@ -208,7 +208,7 @@ func (d *RedisTaskDistributor) DistributeTaskRollupSingleSenatorialDistrict(ctx 
 	return nil
 }
 
-func (d *RedisTaskDistributor) DistributeTaskRollupSingleState(ctx context.Context, payload *RollupSingleStatePayload, opts ...asynq.Option) error {
+func (redisTaskDistributor *RedisTaskDistributor) DistributeTaskRollupSingleState(ctx context.Context, payload *RollupSingleStatePayload, opts ...asynq.Option) error {
 	jsonPayload, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("failed to marshal rollup single state payload: %w", err)
@@ -223,7 +223,7 @@ func (d *RedisTaskDistributor) DistributeTaskRollupSingleState(ctx context.Conte
 	}
 	opts = append(defaults, opts...)
 	task := asynq.NewTask(TaskRollupSingleState, jsonPayload, opts...)
-	info, err := d.asynqClient.EnqueueContext(ctx, task)
+	info, err := redisTaskDistributor.asynqClient.EnqueueContext(ctx, task)
 	if err != nil {
 		if errors.Is(err, asynq.ErrTaskIDConflict) || errors.Is(err, asynq.ErrDuplicateTask) {
 			slog.Debug("single state rollup already queued", "election_id", payload.ElectionID, "state_id", payload.StateID)
@@ -235,7 +235,7 @@ func (d *RedisTaskDistributor) DistributeTaskRollupSingleState(ctx context.Conte
 	return nil
 }
 
-func (d *RedisTaskDistributor) DistributeTaskRollupSingleElection(ctx context.Context, payload *RollupSingleElectionPayload, opts ...asynq.Option) error {
+func (redisTaskDistributor *RedisTaskDistributor) DistributeTaskRollupSingleElection(ctx context.Context, payload *RollupSingleElectionPayload, opts ...asynq.Option) error {
 	jsonPayload, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("failed to marshal rollup single election payload: %w", err)
@@ -250,7 +250,7 @@ func (d *RedisTaskDistributor) DistributeTaskRollupSingleElection(ctx context.Co
 	}
 	opts = append(defaults, opts...)
 	task := asynq.NewTask(TaskRollupSingleElection, jsonPayload, opts...)
-	info, err := d.asynqClient.EnqueueContext(ctx, task)
+	info, err := redisTaskDistributor.asynqClient.EnqueueContext(ctx, task)
 	if err != nil {
 		if errors.Is(err, asynq.ErrTaskIDConflict) || errors.Is(err, asynq.ErrDuplicateTask) {
 			slog.Debug("single election rollup already queued", "election_id", payload.ElectionID)
@@ -264,13 +264,13 @@ func (d *RedisTaskDistributor) DistributeTaskRollupSingleElection(ctx context.Co
 
 // ─── Processors ───────────────────────────────────────────────────────────────
 
-func (processor *RedisTaskProcessor) ProcessTaskRollupSingleWard(ctx context.Context, task *asynq.Task) error {
+func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskRollupSingleWard(ctx context.Context, task *asynq.Task) error {
 	var payload RollupSingleWardPayload
 	if err := json.Unmarshal(task.Payload(), &payload); err != nil {
 		return fmt.Errorf("failed to unmarshal single ward payload: %w", err)
 	}
 
-	err := processor.q.RollupSingleWardFinalResults(ctx, queries.RollupSingleWardFinalResultsParams{
+	err := redisTaskProcessor.queries.RollupSingleWardFinalResults(ctx, queries.RollupSingleWardFinalResultsParams{
 		ElectionID: payload.ElectionID,
 		WardID:     pgtype.Int4{Int32: payload.WardID, Valid: true},
 	})
@@ -281,8 +281,8 @@ func (processor *RedisTaskProcessor) ProcessTaskRollupSingleWard(ctx context.Con
 	slog.Info("rolled up single ward final result", "election_id", payload.ElectionID, "ward_id", payload.WardID)
 
 	// Broadcast real-time results-updated event
-	if processor.broadcaster != nil {
-		_ = processor.broadcaster.BroadcastResultsUpdated(ctx, realtime.ResultsUpdatedEvent{
+	if redisTaskProcessor.broadcaster != nil {
+		_ = redisTaskProcessor.broadcaster.BroadcastResultsUpdated(ctx, realtime.ResultsUpdatedEvent{
 			ElectionID:            payload.ElectionID,
 			Scope:                 "ward",
 			WardID:                &payload.WardID,
@@ -296,8 +296,8 @@ func (processor *RedisTaskProcessor) ProcessTaskRollupSingleWard(ctx context.Con
 	}
 
 	// Cascade up to LGA
-	if processor.taskDistributor != nil && payload.LGAID > 0 {
-		_ = processor.taskDistributor.DistributeTaskRollupSingleLGA(ctx, &RollupSingleLGAPayload{
+	if redisTaskProcessor.taskDistributor != nil && payload.LGAID > 0 {
+		_ = redisTaskProcessor.taskDistributor.DistributeTaskRollupSingleLGA(ctx, &RollupSingleLGAPayload{
 			ElectionID:            payload.ElectionID,
 			LGAID:                 payload.LGAID,
 			StateID:               payload.StateID,
@@ -309,13 +309,13 @@ func (processor *RedisTaskProcessor) ProcessTaskRollupSingleWard(ctx context.Con
 	return nil
 }
 
-func (processor *RedisTaskProcessor) ProcessTaskRollupSingleStateConstituency(ctx context.Context, task *asynq.Task) error {
+func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskRollupSingleStateConstituency(ctx context.Context, task *asynq.Task) error {
 	var payload RollupSingleStateConstituencyPayload
 	if err := json.Unmarshal(task.Payload(), &payload); err != nil {
 		return fmt.Errorf("failed to unmarshal single state constituency payload: %w", err)
 	}
 
-	err := processor.q.RollupSingleStateConstituencyFinalResults(ctx, queries.RollupSingleStateConstituencyFinalResultsParams{
+	err := redisTaskProcessor.queries.RollupSingleStateConstituencyFinalResults(ctx, queries.RollupSingleStateConstituencyFinalResultsParams{
 		ElectionID: payload.ElectionID,
 		ID:         payload.StateConstituencyID,
 	})
@@ -326,8 +326,8 @@ func (processor *RedisTaskProcessor) ProcessTaskRollupSingleStateConstituency(ct
 	slog.Info("rolled up single state constituency final result", "election_id", payload.ElectionID, "state_constituency_id", payload.StateConstituencyID)
 
 	// Broadcast real-time results-updated event
-	if processor.broadcaster != nil {
-		_ = processor.broadcaster.BroadcastResultsUpdated(ctx, realtime.ResultsUpdatedEvent{
+	if redisTaskProcessor.broadcaster != nil {
+		_ = redisTaskProcessor.broadcaster.BroadcastResultsUpdated(ctx, realtime.ResultsUpdatedEvent{
 			ElectionID:          payload.ElectionID,
 			Scope:               "state_constituency",
 			StateConstituencyID: &payload.StateConstituencyID,
@@ -338,13 +338,13 @@ func (processor *RedisTaskProcessor) ProcessTaskRollupSingleStateConstituency(ct
 	return nil
 }
 
-func (processor *RedisTaskProcessor) ProcessTaskRollupSingleLGA(ctx context.Context, task *asynq.Task) error {
+func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskRollupSingleLGA(ctx context.Context, task *asynq.Task) error {
 	var payload RollupSingleLGAPayload
 	if err := json.Unmarshal(task.Payload(), &payload); err != nil {
 		return fmt.Errorf("failed to unmarshal single lga payload: %w", err)
 	}
 
-	err := processor.q.RollupSingleLGAFinalResults(ctx, queries.RollupSingleLGAFinalResultsParams{
+	err := redisTaskProcessor.queries.RollupSingleLGAFinalResults(ctx, queries.RollupSingleLGAFinalResultsParams{
 		ElectionID: payload.ElectionID,
 		LgaID:      pgtype.Int4{Int32: payload.LGAID, Valid: true},
 	})
@@ -355,8 +355,8 @@ func (processor *RedisTaskProcessor) ProcessTaskRollupSingleLGA(ctx context.Cont
 	slog.Info("rolled up single lga final result", "election_id", payload.ElectionID, "lga_id", payload.LGAID)
 
 	// Broadcast real-time results-updated event
-	if processor.broadcaster != nil {
-		_ = processor.broadcaster.BroadcastResultsUpdated(ctx, realtime.ResultsUpdatedEvent{
+	if redisTaskProcessor.broadcaster != nil {
+		_ = redisTaskProcessor.broadcaster.BroadcastResultsUpdated(ctx, realtime.ResultsUpdatedEvent{
 			ElectionID:            payload.ElectionID,
 			Scope:                 "lga",
 			LGAID:                 &payload.LGAID,
@@ -367,10 +367,10 @@ func (processor *RedisTaskProcessor) ProcessTaskRollupSingleLGA(ctx context.Cont
 		})
 	}
 
-	if processor.taskDistributor != nil {
+	if redisTaskProcessor.taskDistributor != nil {
 		// Cascade to Federal Constituency if LGA belongs to one
 		if payload.FederalConstituencyID > 0 {
-			_ = processor.taskDistributor.DistributeTaskRollupSingleFederalConstituency(ctx, &RollupSingleFederalConstituencyPayload{
+			_ = redisTaskProcessor.taskDistributor.DistributeTaskRollupSingleFederalConstituency(ctx, &RollupSingleFederalConstituencyPayload{
 				ElectionID:            payload.ElectionID,
 				FederalConstituencyID: payload.FederalConstituencyID,
 			})
@@ -378,14 +378,14 @@ func (processor *RedisTaskProcessor) ProcessTaskRollupSingleLGA(ctx context.Cont
 
 		// Cascade to Senatorial District if LGA belongs to one (which will then cascade to State)
 		if payload.SenatorialDistrictID > 0 {
-			_ = processor.taskDistributor.DistributeTaskRollupSingleSenatorialDistrict(ctx, &RollupSingleSenatorialDistrictPayload{
+			_ = redisTaskProcessor.taskDistributor.DistributeTaskRollupSingleSenatorialDistrict(ctx, &RollupSingleSenatorialDistrictPayload{
 				ElectionID:           payload.ElectionID,
 				SenatorialDistrictID: payload.SenatorialDistrictID,
 				StateID:              payload.StateID,
 			})
 		} else if payload.StateID > 0 {
 			// Fallback cascade directly to State if LGA does not belong to a senatorial district
-			_ = processor.taskDistributor.DistributeTaskRollupSingleState(ctx, &RollupSingleStatePayload{
+			_ = redisTaskProcessor.taskDistributor.DistributeTaskRollupSingleState(ctx, &RollupSingleStatePayload{
 				ElectionID: payload.ElectionID,
 				StateID:    payload.StateID,
 			})
@@ -395,13 +395,13 @@ func (processor *RedisTaskProcessor) ProcessTaskRollupSingleLGA(ctx context.Cont
 	return nil
 }
 
-func (processor *RedisTaskProcessor) ProcessTaskRollupSingleFederalConstituency(ctx context.Context, task *asynq.Task) error {
+func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskRollupSingleFederalConstituency(ctx context.Context, task *asynq.Task) error {
 	var payload RollupSingleFederalConstituencyPayload
 	if err := json.Unmarshal(task.Payload(), &payload); err != nil {
 		return fmt.Errorf("failed to unmarshal single federal constituency payload: %w", err)
 	}
 
-	err := processor.q.RollupSingleFederalConstituencyFinalResults(ctx, queries.RollupSingleFederalConstituencyFinalResultsParams{
+	err := redisTaskProcessor.queries.RollupSingleFederalConstituencyFinalResults(ctx, queries.RollupSingleFederalConstituencyFinalResultsParams{
 		ElectionID:            payload.ElectionID,
 		FederalConstituencyID: pgtype.Int4{Int32: payload.FederalConstituencyID, Valid: true},
 	})
@@ -412,8 +412,8 @@ func (processor *RedisTaskProcessor) ProcessTaskRollupSingleFederalConstituency(
 	slog.Info("rolled up single federal constituency final result", "election_id", payload.ElectionID, "federal_constituency_id", payload.FederalConstituencyID)
 
 	// Broadcast real-time results-updated event
-	if processor.broadcaster != nil {
-		_ = processor.broadcaster.BroadcastResultsUpdated(ctx, realtime.ResultsUpdatedEvent{
+	if redisTaskProcessor.broadcaster != nil {
+		_ = redisTaskProcessor.broadcaster.BroadcastResultsUpdated(ctx, realtime.ResultsUpdatedEvent{
 			ElectionID:            payload.ElectionID,
 			Scope:                 "federal_constituency",
 			FederalConstituencyID: &payload.FederalConstituencyID,
@@ -424,13 +424,13 @@ func (processor *RedisTaskProcessor) ProcessTaskRollupSingleFederalConstituency(
 	return nil
 }
 
-func (processor *RedisTaskProcessor) ProcessTaskRollupSingleSenatorialDistrict(ctx context.Context, task *asynq.Task) error {
+func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskRollupSingleSenatorialDistrict(ctx context.Context, task *asynq.Task) error {
 	var payload RollupSingleSenatorialDistrictPayload
 	if err := json.Unmarshal(task.Payload(), &payload); err != nil {
 		return fmt.Errorf("failed to unmarshal single senatorial district payload: %w", err)
 	}
 
-	err := processor.q.RollupSingleSenatorialDistrictFinalResults(ctx, queries.RollupSingleSenatorialDistrictFinalResultsParams{
+	err := redisTaskProcessor.queries.RollupSingleSenatorialDistrictFinalResults(ctx, queries.RollupSingleSenatorialDistrictFinalResultsParams{
 		ElectionID:           payload.ElectionID,
 		SenatorialDistrictID: pgtype.Int4{Int32: payload.SenatorialDistrictID, Valid: true},
 	})
@@ -441,8 +441,8 @@ func (processor *RedisTaskProcessor) ProcessTaskRollupSingleSenatorialDistrict(c
 	slog.Info("rolled up single senatorial district final result", "election_id", payload.ElectionID, "senatorial_district_id", payload.SenatorialDistrictID)
 
 	// Broadcast real-time results-updated event
-	if processor.broadcaster != nil {
-		_ = processor.broadcaster.BroadcastResultsUpdated(ctx, realtime.ResultsUpdatedEvent{
+	if redisTaskProcessor.broadcaster != nil {
+		_ = redisTaskProcessor.broadcaster.BroadcastResultsUpdated(ctx, realtime.ResultsUpdatedEvent{
 			ElectionID:           payload.ElectionID,
 			Scope:                "senatorial_district",
 			SenatorialDistrictID: &payload.SenatorialDistrictID,
@@ -453,14 +453,14 @@ func (processor *RedisTaskProcessor) ProcessTaskRollupSingleSenatorialDistrict(c
 	// Cascade up to State
 	stateID := payload.StateID
 	if stateID == 0 {
-		sd, err := processor.q.GetSenatorialDistrictByID(ctx, payload.SenatorialDistrictID)
+		sd, err := redisTaskProcessor.queries.GetSenatorialDistrictByID(ctx, payload.SenatorialDistrictID)
 		if err == nil {
 			stateID = int16(sd.StateID)
 		}
 	}
 
-	if processor.taskDistributor != nil && stateID > 0 {
-		_ = processor.taskDistributor.DistributeTaskRollupSingleState(ctx, &RollupSingleStatePayload{
+	if redisTaskProcessor.taskDistributor != nil && stateID > 0 {
+		_ = redisTaskProcessor.taskDistributor.DistributeTaskRollupSingleState(ctx, &RollupSingleStatePayload{
 			ElectionID: payload.ElectionID,
 			StateID:    stateID,
 		})
@@ -469,13 +469,13 @@ func (processor *RedisTaskProcessor) ProcessTaskRollupSingleSenatorialDistrict(c
 	return nil
 }
 
-func (processor *RedisTaskProcessor) ProcessTaskRollupSingleState(ctx context.Context, task *asynq.Task) error {
+func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskRollupSingleState(ctx context.Context, task *asynq.Task) error {
 	var payload RollupSingleStatePayload
 	if err := json.Unmarshal(task.Payload(), &payload); err != nil {
 		return fmt.Errorf("failed to unmarshal single state payload: %w", err)
 	}
 
-	err := processor.q.RollupSingleStateFinalResults(ctx, queries.RollupSingleStateFinalResultsParams{
+	err := redisTaskProcessor.queries.RollupSingleStateFinalResults(ctx, queries.RollupSingleStateFinalResultsParams{
 		ElectionID: payload.ElectionID,
 		StateID:    pgtype.Int2{Int16: payload.StateID, Valid: true},
 	})
@@ -486,8 +486,8 @@ func (processor *RedisTaskProcessor) ProcessTaskRollupSingleState(ctx context.Co
 	slog.Info("rolled up single state final result", "election_id", payload.ElectionID, "state_id", payload.StateID)
 
 	// Broadcast real-time results-updated event
-	if processor.broadcaster != nil {
-		_ = processor.broadcaster.BroadcastResultsUpdated(ctx, realtime.ResultsUpdatedEvent{
+	if redisTaskProcessor.broadcaster != nil {
+		_ = redisTaskProcessor.broadcaster.BroadcastResultsUpdated(ctx, realtime.ResultsUpdatedEvent{
 			ElectionID: payload.ElectionID,
 			Scope:      "state",
 			StateID:    &payload.StateID,
@@ -496,8 +496,8 @@ func (processor *RedisTaskProcessor) ProcessTaskRollupSingleState(ctx context.Co
 	}
 
 	// Cascade up to Nationwide Election
-	if processor.taskDistributor != nil {
-		_ = processor.taskDistributor.DistributeTaskRollupSingleElection(ctx, &RollupSingleElectionPayload{
+	if redisTaskProcessor.taskDistributor != nil {
+		_ = redisTaskProcessor.taskDistributor.DistributeTaskRollupSingleElection(ctx, &RollupSingleElectionPayload{
 			ElectionID: payload.ElectionID,
 		})
 	}
@@ -505,13 +505,13 @@ func (processor *RedisTaskProcessor) ProcessTaskRollupSingleState(ctx context.Co
 	return nil
 }
 
-func (processor *RedisTaskProcessor) ProcessTaskRollupSingleElection(ctx context.Context, task *asynq.Task) error {
+func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskRollupSingleElection(ctx context.Context, task *asynq.Task) error {
 	var payload RollupSingleElectionPayload
 	if err := json.Unmarshal(task.Payload(), &payload); err != nil {
 		return fmt.Errorf("failed to unmarshal single election payload: %w", err)
 	}
 
-	err := processor.q.RollupSingleElectionFinalResults(ctx, payload.ElectionID)
+	err := redisTaskProcessor.queries.RollupSingleElectionFinalResults(ctx, payload.ElectionID)
 	if err != nil {
 		return fmt.Errorf("failed to rollup single election results: %w", err)
 	}
@@ -519,8 +519,8 @@ func (processor *RedisTaskProcessor) ProcessTaskRollupSingleElection(ctx context
 	slog.Info("rolled up single nationwide election final result", "election_id", payload.ElectionID)
 
 	// Broadcast real-time results-updated event
-	if processor.broadcaster != nil {
-		_ = processor.broadcaster.BroadcastResultsUpdated(ctx, realtime.ResultsUpdatedEvent{
+	if redisTaskProcessor.broadcaster != nil {
+		_ = redisTaskProcessor.broadcaster.BroadcastResultsUpdated(ctx, realtime.ResultsUpdatedEvent{
 			ElectionID: payload.ElectionID,
 			Scope:      "nationwide",
 			Timestamp:  time.Now().UTC(),

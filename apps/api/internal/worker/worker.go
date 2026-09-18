@@ -49,7 +49,7 @@ type TaskProcessor interface {
 type RedisTaskProcessor struct {
 	asynqServer     *asynq.Server
 	cron            *cron.Cron
-	q               *queries.Queries
+	queries         *queries.Queries
 	pool            *pgxpool.Pool
 	rdb             *redis.Client
 	taskDistributor TaskDistributor
@@ -76,7 +76,7 @@ func NewRedisTaskProcessor(redisOpt asynq.RedisClientOpt, q *queries.Queries, po
 	return &RedisTaskProcessor{
 		asynqServer:     asynqServer,
 		cron:            cron.New(),
-		q:               q,
+		queries:         q,
 		pool:            pool,
 		rdb:             rdb,
 		taskDistributor: distributor,
@@ -86,59 +86,59 @@ func NewRedisTaskProcessor(redisOpt asynq.RedisClientOpt, q *queries.Queries, po
 	}
 }
 
-func (processor *RedisTaskProcessor) Start() error {
+func (redisTaskProcessor *RedisTaskProcessor) Start() error {
 	mux := asynq.NewServeMux()
-	mux.HandleFunc(TaskCalculateFinalResult, processor.ProcessTaskCalculateFinalResult)
-	mux.HandleFunc(TaskExtractPUResultAI, processor.ProcessTaskExtractPUResultAI)
-	mux.HandleFunc(TaskAggregateLiveVotes, processor.ProcessTaskAggregateLiveVotes)
-	mux.HandleFunc(TaskSeedElectionGroupStats, processor.ProcessTaskSeedElectionGroupStats)
-	mux.HandleFunc(TaskRefreshPollingUnitStats, processor.ProcessTaskRefreshPollingUnitStats)
+	mux.HandleFunc(TaskCalculateFinalResult, redisTaskProcessor.ProcessTaskCalculateFinalResult)
+	mux.HandleFunc(TaskExtractPUResultAI, redisTaskProcessor.ProcessTaskExtractPUResultAI)
+	mux.HandleFunc(TaskAggregateLiveVotes, redisTaskProcessor.ProcessTaskAggregateLiveVotes)
+	mux.HandleFunc(TaskSeedElectionGroupStats, redisTaskProcessor.ProcessTaskSeedElectionGroupStats)
+	mux.HandleFunc(TaskRefreshPollingUnitStats, redisTaskProcessor.ProcessTaskRefreshPollingUnitStats)
 
 	// Cascading stats refresh handlers (event-driven, per geographic unit).
-	mux.HandleFunc(TaskRefreshWardStats, processor.ProcessTaskRefreshWardStats)
-	mux.HandleFunc(TaskRefreshLGAStats, processor.ProcessTaskRefreshLGAStats)
-	mux.HandleFunc(TaskRefreshStateConstituencyStats, processor.ProcessTaskRefreshStateConstituencyStats)
-	mux.HandleFunc(TaskRefreshStateStats, processor.ProcessTaskRefreshStateStats)
-	mux.HandleFunc(TaskRefreshGlobalStats, processor.ProcessTaskRefreshGlobalStats)
+	mux.HandleFunc(TaskRefreshWardStats, redisTaskProcessor.ProcessTaskRefreshWardStats)
+	mux.HandleFunc(TaskRefreshLGAStats, redisTaskProcessor.ProcessTaskRefreshLGAStats)
+	mux.HandleFunc(TaskRefreshStateConstituencyStats, redisTaskProcessor.ProcessTaskRefreshStateConstituencyStats)
+	mux.HandleFunc(TaskRefreshStateStats, redisTaskProcessor.ProcessTaskRefreshStateStats)
+	mux.HandleFunc(TaskRefreshGlobalStats, redisTaskProcessor.ProcessTaskRefreshGlobalStats)
 
 	// Scoped candidate rollup handlers (event-driven, bottom-up cascading).
-	mux.HandleFunc(TaskRollupSingleWard, processor.ProcessTaskRollupSingleWard)
-	mux.HandleFunc(TaskRollupSingleStateConstituency, processor.ProcessTaskRollupSingleStateConstituency)
-	mux.HandleFunc(TaskRollupSingleLGA, processor.ProcessTaskRollupSingleLGA)
-	mux.HandleFunc(TaskRollupSingleFederalConstituency, processor.ProcessTaskRollupSingleFederalConstituency)
-	mux.HandleFunc(TaskRollupSingleSenatorialDistrict, processor.ProcessTaskRollupSingleSenatorialDistrict)
-	mux.HandleFunc(TaskRollupSingleState, processor.ProcessTaskRollupSingleState)
-	mux.HandleFunc(TaskRollupSingleElection, processor.ProcessTaskRollupSingleElection)
+	mux.HandleFunc(TaskRollupSingleWard, redisTaskProcessor.ProcessTaskRollupSingleWard)
+	mux.HandleFunc(TaskRollupSingleStateConstituency, redisTaskProcessor.ProcessTaskRollupSingleStateConstituency)
+	mux.HandleFunc(TaskRollupSingleLGA, redisTaskProcessor.ProcessTaskRollupSingleLGA)
+	mux.HandleFunc(TaskRollupSingleFederalConstituency, redisTaskProcessor.ProcessTaskRollupSingleFederalConstituency)
+	mux.HandleFunc(TaskRollupSingleSenatorialDistrict, redisTaskProcessor.ProcessTaskRollupSingleSenatorialDistrict)
+	mux.HandleFunc(TaskRollupSingleState, redisTaskProcessor.ProcessTaskRollupSingleState)
+	mux.HandleFunc(TaskRollupSingleElection, redisTaskProcessor.ProcessTaskRollupSingleElection)
 
 	// Daily Marketing Campaign Deductions & Auto-Completion Worker (runs every day at 00:05 AM)
 	// Recommended schedule: "5 0 * * *" (5 minutes past midnight) to process previous day's campaign allocations cleanly.
-	processor.cron.AddFunc("5 0 * * *", processor.ProcessDailyMarketingCampaignDeductions)
+	redisTaskProcessor.cron.AddFunc("5 0 * * *", redisTaskProcessor.ProcessDailyMarketingCampaignDeductions)
 
 	// INEC Result Grabber sync cron job (runs every 15 minutes)
-	processor.cron.AddFunc("*/15 * * * *", processor.ProcessINECResultGrabberSync)
+	redisTaskProcessor.cron.AddFunc("*/15 * * * *", redisTaskProcessor.ProcessINECResultGrabberSync)
 
-	processor.cron.Start()
+	redisTaskProcessor.cron.Start()
 	slog.Info("cron rollup scheduler started")
 
-	return processor.asynqServer.Start(mux)
+	return redisTaskProcessor.asynqServer.Start(mux)
 }
 
-func (processor *RedisTaskProcessor) ProcessINECResultGrabberSync() {
+func (redisTaskProcessor *RedisTaskProcessor) ProcessINECResultGrabberSync() {
 	ctx := context.Background()
 	geminiKey := ""
-	if processor.cfg != nil {
-		geminiKey = processor.cfg.GeminiAPIKey
+	if redisTaskProcessor.cfg != nil {
+		geminiKey = redisTaskProcessor.cfg.GeminiAPIKey
 	}
 	var notifier inecgrabber.ResultNotifierFunc
-	if processor.taskDistributor != nil {
+	if redisTaskProcessor.taskDistributor != nil {
 		notifier = func(ctx context.Context, electionID int32, puID int32) {
-			_ = processor.taskDistributor.DistributeTaskCalculateFinalResult(ctx, &CalculateFinalResultPayload{
+			_ = redisTaskProcessor.taskDistributor.DistributeTaskCalculateFinalResult(ctx, &CalculateFinalResultPayload{
 				ElectionID:    electionID,
 				PollingUnitID: puID,
 			})
 		}
 	}
-	grabberSvc := inecgrabber.NewINECGrabberService(processor.q, processor.pool, processor.rdb, processor.r2Svc, geminiKey, notifier)
+	grabberSvc := inecgrabber.NewINECGrabberService(redisTaskProcessor.queries, redisTaskProcessor.pool, redisTaskProcessor.rdb, redisTaskProcessor.r2Svc, geminiKey, notifier)
 
 	cfg, err := grabberSvc.GetINECAPIConfig(ctx)
 	if err != nil {
@@ -146,7 +146,7 @@ func (processor *RedisTaskProcessor) ProcessINECResultGrabberSync() {
 		return
 	}
 
-	activeGrabbers, err := processor.q.ListActiveINECResultGrabbers(ctx, int32(cfg.ActiveSyncDaysLimit))
+	activeGrabbers, err := redisTaskProcessor.queries.ListActiveINECResultGrabbers(ctx, int32(cfg.ActiveSyncDaysLimit))
 	if err != nil {
 		slog.Error("cron INEC grabber: failed to list active grabbers", "err", err)
 		return
@@ -166,7 +166,7 @@ func (processor *RedisTaskProcessor) ProcessINECResultGrabberSync() {
 	}
 }
 
-func (processor *RedisTaskProcessor) Shutdown() {
-	processor.cron.Stop()
-	processor.asynqServer.Shutdown()
+func (redisTaskProcessor *RedisTaskProcessor) Shutdown() {
+	redisTaskProcessor.cron.Stop()
+	redisTaskProcessor.asynqServer.Shutdown()
 }

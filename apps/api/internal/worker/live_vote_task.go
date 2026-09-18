@@ -19,7 +19,7 @@ type AggregateLiveVotesPayload struct {
 	Params queries.RefreshPollingUnitLiveResultsParams `json:"params"`
 }
 
-func (distributor *RedisTaskDistributor) DistributeTaskAggregateLiveVotes(ctx context.Context, payload *AggregateLiveVotesPayload, opts ...asynq.Option) error {
+func (redisTaskDistributor *RedisTaskDistributor) DistributeTaskAggregateLiveVotes(ctx context.Context, payload *AggregateLiveVotesPayload, opts ...asynq.Option) error {
 	jsonPayload, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("failed to marshal task payload: %w", err)
@@ -38,7 +38,7 @@ func (distributor *RedisTaskDistributor) DistributeTaskAggregateLiveVotes(ctx co
 
 	task := asynq.NewTask(TaskAggregateLiveVotes, jsonPayload, opts...)
 
-	info, err := distributor.asynqClient.EnqueueContext(ctx, task)
+	info, err := redisTaskDistributor.asynqClient.EnqueueContext(ctx, task)
 	if err != nil {
 		if errors.Is(err, asynq.ErrTaskIDConflict) || errors.Is(err, asynq.ErrDuplicateTask) {
 			slog.Debug("live vote aggregation task already queued, skipping duplicate",
@@ -52,7 +52,7 @@ func (distributor *RedisTaskDistributor) DistributeTaskAggregateLiveVotes(ctx co
 	return nil
 }
 
-func (processor *RedisTaskProcessor) ProcessTaskAggregateLiveVotes(ctx context.Context, task *asynq.Task) error {
+func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskAggregateLiveVotes(ctx context.Context, task *asynq.Task) error {
 	var payload AggregateLiveVotesPayload
 	if err := json.Unmarshal(task.Payload(), &payload); err != nil {
 		return fmt.Errorf("failed to unmarshal payload: %w", err)
@@ -60,7 +60,7 @@ func (processor *RedisTaskProcessor) ProcessTaskAggregateLiveVotes(ctx context.C
 
 	slog.Debug("processing live vote aggregation task", "election_id", payload.Params.ElectionID, "polling_unit_id", payload.Params.PollingUnitID)
 
-	err := processor.q.RefreshPollingUnitLiveResults(ctx, payload.Params)
+	err := redisTaskProcessor.queries.RefreshPollingUnitLiveResults(ctx, payload.Params)
 	if err != nil {
 		return fmt.Errorf("failed to upsert live vote aggregation: %w", err)
 	}

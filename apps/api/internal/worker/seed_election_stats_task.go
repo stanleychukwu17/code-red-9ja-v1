@@ -20,7 +20,7 @@ type SeedElectionGroupStatsPayload struct {
 // DistributeTaskSeedElectionGroupStats enqueues a background job to seed
 // zeroed geography stat rows for the given election group. It is idempotent
 // (uses ON CONFLICT DO NOTHING queries), so it is safe to call multiple times.
-func (distributor *RedisTaskDistributor) DistributeTaskSeedElectionGroupStats(ctx context.Context, payload *SeedElectionGroupStatsPayload, opts ...asynq.Option) error {
+func (redisTaskDistributor *RedisTaskDistributor) DistributeTaskSeedElectionGroupStats(ctx context.Context, payload *SeedElectionGroupStatsPayload, opts ...asynq.Option) error {
 	// 1. Serialize the payload (election_group_id) to JSON for Redis storage
 	jsonPayload, err := json.Marshal(payload)
 	if err != nil {
@@ -51,7 +51,7 @@ func (distributor *RedisTaskDistributor) DistributeTaskSeedElectionGroupStats(ct
 	// Enqueues the task with Redis using the provided options
 	// The task will be available for processing after the delay specified in opts
 	// This is the actual operation that puts the job onto the Redis queue
-	info, err := distributor.asynqClient.EnqueueContext(ctx, task)
+	info, err := redisTaskDistributor.asynqClient.EnqueueContext(ctx, task)
 	if err != nil && err != asynq.ErrTaskIDConflict {
 		return fmt.Errorf("failed to enqueue seed task: %w", err)
 	}
@@ -70,7 +70,7 @@ func (distributor *RedisTaskDistributor) DistributeTaskSeedElectionGroupStats(ct
 // given election group. Called by the asynq worker on behalf of the distributor.
 // Runs in top-down order (States -> Senatorial Districts -> Federal Constituencies -> LGAs -> State Constituencies -> Wards).
 // Polling units (~176k) are intentionally excluded here and seeded lazily on-demand.
-func (processor *RedisTaskProcessor) ProcessTaskSeedElectionGroupStats(ctx context.Context, task *asynq.Task) error {
+func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskSeedElectionGroupStats(ctx context.Context, task *asynq.Task) error {
 	// 1. Unmarshal payload from Redis to retrieve the target election group ID
 	var payload SeedElectionGroupStatsPayload
 	if err := json.Unmarshal(task.Payload(), &payload); err != nil {
@@ -88,22 +88,22 @@ func (processor *RedisTaskProcessor) ProcessTaskSeedElectionGroupStats(ctx conte
 		fn   func() error
 	}{
 		// Step A: Seed States (up to 37 states: 36 states + FCT)
-		{"states", func() error { return processor.q.SeedElectionGroupStateStats(ctx, egID) }},
+		{"states", func() error { return redisTaskProcessor.queries.SeedElectionGroupStateStats(ctx, egID) }},
 
 		// Step B: Seed Senatorial Districts (up to 109 districts across Nigeria)
-		{"senatorial_districts", func() error { return processor.q.SeedElectionGroupSenatorialDistrictStats(ctx, egID) }},
+		{"senatorial_districts", func() error { return redisTaskProcessor.queries.SeedElectionGroupSenatorialDistrictStats(ctx, egID) }},
 
 		// Step C: Seed Federal Constituencies (up to 360 House of Reps seats)
-		{"federal_constituencies", func() error { return processor.q.SeedElectionGroupFederalConstituencyStats(ctx, egID) }},
+		{"federal_constituencies", func() error { return redisTaskProcessor.queries.SeedElectionGroupFederalConstituencyStats(ctx, egID) }},
 
 		// Step D: Seed Local Government Areas (up to 774 LGAs)
-		{"lgas", func() error { return processor.q.SeedElectionGroupLGAStats(ctx, egID) }},
+		{"lgas", func() error { return redisTaskProcessor.queries.SeedElectionGroupLGAStats(ctx, egID) }},
 
 		// Step E: Seed State Constituencies (up to 993 State House of Assembly seats)
-		{"state_constituencies", func() error { return processor.q.SeedElectionGroupStateConstituencyStats(ctx, egID) }},
+		{"state_constituencies", func() error { return redisTaskProcessor.queries.SeedElectionGroupStateConstituencyStats(ctx, egID) }},
 
 		// Step F: Seed Electoral Wards (up to ~8,809 wards / registration areas)
-		{"wards", func() error { return processor.q.SeedElectionGroupWardStats(ctx, egID) }},
+		{"wards", func() error { return redisTaskProcessor.queries.SeedElectionGroupWardStats(ctx, egID) }},
 	}
 
 	// 3. Sequentially run each seed query and log progress; bail early if any query fails

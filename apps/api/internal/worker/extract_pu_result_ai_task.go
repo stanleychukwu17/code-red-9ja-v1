@@ -34,7 +34,7 @@ type ExtractedCandidateResult struct {
 	HasSignature   bool   `json:"has_signature"`
 }
 
-func (distributor *RedisTaskDistributor) DistributeTaskExtractPUResultAI(
+func (redisTaskDistributor *RedisTaskDistributor) DistributeTaskExtractPUResultAI(
 	ctx context.Context,
 	payload *ExtractPUResultAIPayload,
 	opts ...asynq.Option,
@@ -52,7 +52,7 @@ func (distributor *RedisTaskDistributor) DistributeTaskExtractPUResultAI(
 	opts = append(defaults, opts...)
 
 	task := asynq.NewTask(TaskExtractPUResultAI, jsonPayload, opts...)
-	info, err := distributor.asynqClient.EnqueueContext(ctx, task)
+	info, err := redisTaskDistributor.asynqClient.EnqueueContext(ctx, task)
 	if err != nil {
 		return fmt.Errorf("failed to enqueue extract PU result AI task: %w", err)
 	}
@@ -61,7 +61,7 @@ func (distributor *RedisTaskDistributor) DistributeTaskExtractPUResultAI(
 	return nil
 }
 
-func (processor *RedisTaskProcessor) ProcessTaskExtractPUResultAI(ctx context.Context, task *asynq.Task) error {
+func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskExtractPUResultAI(ctx context.Context, task *asynq.Task) error {
 	var payload ExtractPUResultAIPayload
 	if err := json.Unmarshal(task.Payload(), &payload); err != nil {
 		return fmt.Errorf("failed to unmarshal extract PU result payload: %w", err)
@@ -74,7 +74,7 @@ func (processor *RedisTaskProcessor) ProcessTaskExtractPUResultAI(ctx context.Co
 	if err != nil {
 		slog.Error("failed to extract PU result from image with Gemini", "result_id", payload.ResultID, "err", err)
 		// Mark as disputed with reason if failure persists
-		_, _ = processor.q.UpdateResultStatus(ctx, queries.UpdateResultStatusParams{
+		_, _ = redisTaskProcessor.queries.UpdateResultStatus(ctx, queries.UpdateResultStatusParams{
 			ID:             payload.ResultID,
 			Status:         "disputed",
 			DisputedReason: pgtype.Text{String: fmt.Sprintf("AI extraction failed: %v", err), Valid: true},
@@ -115,7 +115,7 @@ func (processor *RedisTaskProcessor) ProcessTaskExtractPUResultAI(ctx context.Co
 	_ = confidence.Scan("0.9500")
 
 	// Update the polling unit result record with extracted numbers
-	_, err = processor.q.UpdatePollingUnitResultAIExtraction(ctx, queries.UpdatePollingUnitResultAIExtractionParams{
+	_, err = redisTaskProcessor.queries.UpdatePollingUnitResultAIExtraction(ctx, queries.UpdatePollingUnitResultAIExtractionParams{
 		ID:                  payload.ResultID,
 		AccreditedVoters:    int32(extracted.AccreditedVoters),
 		VotesCast:           int32(extracted.VotesCast),
@@ -136,7 +136,7 @@ func (processor *RedisTaskProcessor) ProcessTaskExtractPUResultAI(ctx context.Co
 
 	// Trigger consensus calculation and hierarchical rollup
 	if status == "ai_verified" {
-		err = processor.taskDistributor.DistributeTaskCalculateFinalResult(ctx, &CalculateFinalResultPayload{
+		err = redisTaskProcessor.taskDistributor.DistributeTaskCalculateFinalResult(ctx, &CalculateFinalResultPayload{
 			ElectionID:    payload.ElectionID,
 			PollingUnitID: payload.PollingUnitID,
 		})

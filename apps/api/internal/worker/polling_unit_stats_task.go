@@ -19,7 +19,7 @@ type RefreshPollingUnitStatsPayload struct {
 	Params queries.RefreshSingleElectionGroupPollingUnitStatsParams `json:"params"`
 }
 
-func (distributor *RedisTaskDistributor) DistributeTaskRefreshPollingUnitStats(ctx context.Context, payload *RefreshPollingUnitStatsPayload, opts ...asynq.Option) error {
+func (redisTaskDistributor *RedisTaskDistributor) DistributeTaskRefreshPollingUnitStats(ctx context.Context, payload *RefreshPollingUnitStatsPayload, opts ...asynq.Option) error {
 	jsonPayload, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("failed to marshal task payload: %w", err)
@@ -38,7 +38,7 @@ func (distributor *RedisTaskDistributor) DistributeTaskRefreshPollingUnitStats(c
 
 	task := asynq.NewTask(TaskRefreshPollingUnitStats, jsonPayload, opts...)
 
-	info, err := distributor.asynqClient.EnqueueContext(ctx, task)
+	info, err := redisTaskDistributor.asynqClient.EnqueueContext(ctx, task)
 	if err != nil {
 		if errors.Is(err, asynq.ErrTaskIDConflict) || errors.Is(err, asynq.ErrDuplicateTask) {
 			slog.Debug("polling unit stats refresh task already queued, skipping duplicate",
@@ -52,7 +52,7 @@ func (distributor *RedisTaskDistributor) DistributeTaskRefreshPollingUnitStats(c
 	return nil
 }
 
-func (processor *RedisTaskProcessor) ProcessTaskRefreshPollingUnitStats(ctx context.Context, task *asynq.Task) error {
+func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskRefreshPollingUnitStats(ctx context.Context, task *asynq.Task) error {
 	var payload RefreshPollingUnitStatsPayload
 	if err := json.Unmarshal(task.Payload(), &payload); err != nil {
 		return fmt.Errorf("failed to unmarshal payload: %w", err)
@@ -61,7 +61,7 @@ func (processor *RedisTaskProcessor) ProcessTaskRefreshPollingUnitStats(ctx cont
 	slog.Info("refreshing polling unit stats",
 		"election_group_id", payload.Params.ElectionGroupID, "polling_unit_id", payload.Params.PollingUnitID)
 
-	if err := processor.q.RefreshSingleElectionGroupPollingUnitStats(ctx, payload.Params); err != nil {
+	if err := redisTaskProcessor.queries.RefreshSingleElectionGroupPollingUnitStats(ctx, payload.Params); err != nil {
 		slog.Error("failed to refresh polling unit stats",
 			"election_group_id", payload.Params.ElectionGroupID, "polling_unit_id", payload.Params.PollingUnitID, "error", err)
 		return fmt.Errorf("failed to refresh polling unit stats: %w", err)
@@ -69,7 +69,7 @@ func (processor *RedisTaskProcessor) ProcessTaskRefreshPollingUnitStats(ctx cont
 
 	// ── Cascade: enqueue Ward + StateConstituency refreshes ──────────────────
 	// Query the geo IDs stored on the PU row so we know what to enqueue next.
-	geoIDs, err := processor.q.GetElectionGroupPollingUnitGeoIDs(ctx, queries.GetElectionGroupPollingUnitGeoIDsParams{
+	geoIDs, err := redisTaskProcessor.queries.GetElectionGroupPollingUnitGeoIDs(ctx, queries.GetElectionGroupPollingUnitGeoIDsParams{
 		ElectionGroupID: payload.Params.ElectionGroupID,
 		PollingUnitID:   payload.Params.PollingUnitID,
 	})
@@ -90,7 +90,7 @@ func (processor *RedisTaskProcessor) ProcessTaskRefreshPollingUnitStats(ctx cont
 			if geoIDs.StateID.Valid {
 				stateID = geoIDs.StateID.Int16
 			}
-			_ = processor.taskDistributor.DistributeTaskRefreshWardStats(ctx, &RefreshWardStatsPayload{
+			_ = redisTaskProcessor.taskDistributor.DistributeTaskRefreshWardStats(ctx, &RefreshWardStatsPayload{
 				ElectionGroupID: payload.Params.ElectionGroupID,
 				WardID:          geoIDs.WardID.Int32,
 				LGAID:           lgaID,
@@ -100,7 +100,7 @@ func (processor *RedisTaskProcessor) ProcessTaskRefreshPollingUnitStats(ctx cont
 
 		// StateConstituency branch (independent of the Ward→LGA→State chain)
 		if geoIDs.StateConstituencyID.Valid {
-			_ = processor.taskDistributor.DistributeTaskRefreshStateConstituencyStats(ctx, &RefreshStateConstituencyStatsPayload{
+			_ = redisTaskProcessor.taskDistributor.DistributeTaskRefreshStateConstituencyStats(ctx, &RefreshStateConstituencyStatsPayload{
 				ElectionGroupID:     payload.Params.ElectionGroupID,
 				StateConstituencyID: geoIDs.StateConstituencyID.Int32,
 			})

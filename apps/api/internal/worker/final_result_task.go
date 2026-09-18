@@ -48,13 +48,13 @@ func hashCandidateResults(rawJSON []byte) string {
 }
 
 // ProcessTaskCalculateFinalResult processes a task to calculate the final result for a polling unit
-func (processor *RedisTaskProcessor) ProcessTaskCalculateFinalResult(ctx context.Context, task *asynq.Task) error {
+func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskCalculateFinalResult(ctx context.Context, task *asynq.Task) error {
 	var payload CalculateFinalResultPayload
 	if err := json.Unmarshal(task.Payload(), &payload); err != nil {
 		return fmt.Errorf("failed to unmarshal payload: %w", err)
 	}
 
-	results, err := processor.q.GetAllPollingUnitResultsByPU(ctx, queries.GetAllPollingUnitResultsByPUParams{
+	results, err := redisTaskProcessor.queries.GetAllPollingUnitResultsByPU(ctx, queries.GetAllPollingUnitResultsByPUParams{
 		ElectionID:    payload.ElectionID,
 		PollingUnitID: payload.PollingUnitID,
 	})
@@ -142,7 +142,7 @@ func (processor *RedisTaskProcessor) ProcessTaskCalculateFinalResult(ctx context
 		}
 	}
 
-	_, err = processor.q.UpsertPollingUnitFinalResult(ctx, queries.UpsertPollingUnitFinalResultParams{
+	_, err = redisTaskProcessor.queries.UpsertPollingUnitFinalResult(ctx, queries.UpsertPollingUnitFinalResultParams{
 		ElectionID:               r.ElectionID,
 		ElectionGroupID:          r.ElectionGroupID,
 		PollingUnitID:            r.PollingUnitID,
@@ -172,8 +172,8 @@ func (processor *RedisTaskProcessor) ProcessTaskCalculateFinalResult(ctx context
 		"total", len(results))
 
 	// Broadcast real-time PU result event
-	if processor.broadcaster != nil {
-		_ = processor.broadcaster.BroadcastPUResultUploaded(ctx, realtime.PUResultUploadedEvent{
+	if redisTaskProcessor.broadcaster != nil {
+		_ = redisTaskProcessor.broadcaster.BroadcastPUResultUploaded(ctx, realtime.PUResultUploadedEvent{
 			ElectionID:    r.ElectionID,
 			PollingUnitID: r.PollingUnitID,
 			WardID:        r.WardID.Int32,
@@ -185,8 +185,8 @@ func (processor *RedisTaskProcessor) ProcessTaskCalculateFinalResult(ctx context
 	}
 
 	// Trigger the cascading stats & geo refresh chain starting from this Polling Unit
-	if processor.taskDistributor != nil {
-		_ = processor.taskDistributor.DistributeTaskRefreshPollingUnitStats(ctx, &RefreshPollingUnitStatsPayload{
+	if redisTaskProcessor.taskDistributor != nil {
+		_ = redisTaskProcessor.taskDistributor.DistributeTaskRefreshPollingUnitStats(ctx, &RefreshPollingUnitStatsPayload{
 			Params: queries.RefreshSingleElectionGroupPollingUnitStatsParams{
 				ElectionGroupID: r.ElectionGroupID,
 				PollingUnitID:   r.PollingUnitID,
@@ -194,7 +194,7 @@ func (processor *RedisTaskProcessor) ProcessTaskCalculateFinalResult(ctx context
 		})
 
 		// Trigger the cascading candidate rollup chain starting from this Ward and State Constituency
-		_ = processor.taskDistributor.DistributeTaskRollupSingleWard(ctx, &RollupSingleWardPayload{
+		_ = redisTaskProcessor.taskDistributor.DistributeTaskRollupSingleWard(ctx, &RollupSingleWardPayload{
 			ElectionID:            r.ElectionID,
 			WardID:                r.WardID.Int32,
 			LGAID:                 r.LgaID.Int32,
@@ -204,7 +204,7 @@ func (processor *RedisTaskProcessor) ProcessTaskCalculateFinalResult(ctx context
 			SenatorialDistrictID:  r.SenatorialDistrictID.Int32,
 		})
 		if r.StateConstituencyID.Valid && r.StateConstituencyID.Int32 > 0 {
-			_ = processor.taskDistributor.DistributeTaskRollupSingleStateConstituency(ctx, &RollupSingleStateConstituencyPayload{
+			_ = redisTaskProcessor.taskDistributor.DistributeTaskRollupSingleStateConstituency(ctx, &RollupSingleStateConstituencyPayload{
 				ElectionID:          r.ElectionID,
 				StateConstituencyID: r.StateConstituencyID.Int32,
 			})
@@ -215,7 +215,7 @@ func (processor *RedisTaskProcessor) ProcessTaskCalculateFinalResult(ctx context
 }
 
 // DistributeTaskCalculateFinalResult enqueues a task to calculate the final result for a polling unit
-func (distributor *RedisTaskDistributor) DistributeTaskCalculateFinalResult(ctx context.Context, payload *CalculateFinalResultPayload, opts ...asynq.Option) error {
+func (redisTaskDistributor *RedisTaskDistributor) DistributeTaskCalculateFinalResult(ctx context.Context, payload *CalculateFinalResultPayload, opts ...asynq.Option) error {
 	jsonPayload, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("failed to marshal task payload: %w", err)
@@ -237,7 +237,7 @@ func (distributor *RedisTaskDistributor) DistributeTaskCalculateFinalResult(ctx 
 
 	task := asynq.NewTask(TaskCalculateFinalResult, jsonPayload, opts...)
 
-	info, err := distributor.asynqClient.EnqueueContext(ctx, task)
+	info, err := redisTaskDistributor.asynqClient.EnqueueContext(ctx, task)
 	if err != nil {
 		// Both ErrTaskIDConflict (same TaskID already queued) and ErrDuplicateTask
 		// (from the Unique() option) are expected during the debounce window — not real errors.

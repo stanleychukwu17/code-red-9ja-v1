@@ -81,9 +81,9 @@ All ECS tasks connect to the **same centralized Redis** (e.g., AWS ElastiCache f
 
 In [`worker.go`](file:///d:/Sz-projects/50-main-projects/3-free9ja/apps/api/internal/worker/worker.go):
 ```go
-processor.cron.AddFunc("5 0 * * *", processor.ProcessDailyMarketingCampaignDeductions)
-processor.cron.AddFunc("*/15 * * * *", processor.ProcessINECResultGrabberSync)
-processor.cron.Start()
+redisTaskProcessor.cron.AddFunc("5 0 * * *", redisTaskProcessor.ProcessDailyMarketingCampaignDeductions)
+redisTaskProcessor.cron.AddFunc("*/15 * * * *", redisTaskProcessor.ProcessINECResultGrabberSync)
+redisTaskProcessor.cron.Start()
 ```
 
 Because `processor.cron` is an **in-memory Go scheduler** (`robfig/cron`), each running ECS container has its own clock:
@@ -128,12 +128,12 @@ If you prefer running a single ECS Service where every container handles both HT
 2. **Cron Jobs**: Guard each cron function with a **Redis Distributed Lock (`SETNX`)** so only ONE container runs the job:
 
 ```go
-func (processor *RedisTaskProcessor) ProcessDailyMarketingCampaignDeductions() {
+func (redisTaskProcessor *RedisTaskProcessor) ProcessDailyMarketingCampaignDeductions() {
     ctx := context.Background()
 
     // 1. Attempt to acquire a distributed lock in Redis for 10 minutes
     lockKey := fmt.Sprintf("cron:lock:marketing_deductions:%s", time.Now().Format("2006-01-02"))
-    acquired, err := processor.rdb.SetNX(ctx, lockKey, "locked", 10*time.Minute).Result()
+    acquired, err := redisTaskProcessor.rdb.SetNX(ctx, lockKey, "locked", 10*time.Minute).Result()
     if err != nil || !acquired {
         // Another ECS task has already acquired the lock for today; skip
         slog.Info("marketing campaign deductions already running on another task, skipping")

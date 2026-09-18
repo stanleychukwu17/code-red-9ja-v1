@@ -52,7 +52,7 @@ if seedErr := s.distributor.DistributeTaskSeedElectionGroupStats(ctx, &worker.Se
 ### Step 2: Enqueueing into Redis
 Look at [seed_election_stats_task.go](file:///d:/Sz-projects/50-main-projects/3-free9ja/apps/api/internal/worker/seed_election_stats_task.go#L23):
 ```go
-func (distributor *RedisTaskDistributor) DistributeTaskSeedElectionGroupStats(
+func (redisTaskDistributor *RedisTaskDistributor) DistributeTaskSeedElectionGroupStats(
     ctx context.Context,
     payload *SeedElectionGroupStatsPayload,
     opts ...asynq.Option,
@@ -74,7 +74,7 @@ func (distributor *RedisTaskDistributor) DistributeTaskSeedElectionGroupStats(
 
     // 4. Send to Redis
     task := asynq.NewTask(TaskSeedElectionGroupStats, jsonPayload, opts...)
-    info, err := distributor.asynqClient.EnqueueContext(ctx, task)
+    info, err := redisTaskDistributor.asynqClient.EnqueueContext(ctx, task)
     ...
 }
 ```
@@ -88,11 +88,11 @@ Redis stores the task under Asynq's internal keys:
 ### Step 4: The Worker Picks Up the Task (Consumer)
 In [worker.go](file:///d:/Sz-projects/50-main-projects/3-free9ja/apps/api/internal/worker/worker.go#L94):
 ```go
-mux.HandleFunc(TaskSeedElectionGroupStats, processor.ProcessTaskSeedElectionGroupStats)
+mux.HandleFunc(TaskSeedElectionGroupStats, redisTaskProcessor.ProcessTaskSeedElectionGroupStats)
 ```
 1. One of the 10 concurrent worker goroutines inside `asynq.Server` atomically claims the task from `asynq:{default}:pending` and moves it to `asynq:{default}:active`.
 2. `asynq.ServeMux` looks up the handler registered for `"election_group:seed_stats"`.
-3. It calls `processor.ProcessTaskSeedElectionGroupStats(ctx, task)`.
+3. It calls `redisTaskProcessor.ProcessTaskSeedElectionGroupStats(ctx, task)`.
 
 ### Step 5: Task Execution & Lifecycle Resolution
 Inside [ProcessTaskSeedElectionGroupStats](file:///d:/Sz-projects/50-main-projects/3-free9ja/apps/api/internal/worker/seed_election_stats_task.go#L71):
@@ -313,13 +313,13 @@ type TaskDistributor interface {
     DistributeTaskSendSMS(ctx context.Context, payload *SendSMSPayload, opts ...asynq.Option) error
 }
 
-func (d *RedisTaskDistributor) DistributeTaskSendSMS(ctx context.Context, payload *SendSMSPayload, opts ...asynq.Option) error {
+func (redisTaskDistributor *RedisTaskDistributor) DistributeTaskSendSMS(ctx context.Context, payload *SendSMSPayload, opts ...asynq.Option) error {
     jsonPayload, err := json.Marshal(payload)
     if err != nil {
         return err
     }
     task := asynq.NewTask(TaskSendSMS, jsonPayload, opts...)
-    _, err = d.asynqClient.EnqueueContext(ctx, task)
+    _, err = redisTaskDistributor.asynqClient.EnqueueContext(ctx, task)
     return err
 }
 ```
@@ -327,7 +327,7 @@ func (d *RedisTaskDistributor) DistributeTaskSendSMS(ctx context.Context, payloa
 ### Step 3: Implement the Processor Method
 Add to `TaskProcessor` interface in `worker.go` and implement on `RedisTaskProcessor`:
 ```go
-func (p *RedisTaskProcessor) ProcessTaskSendSMS(ctx context.Context, task *asynq.Task) error {
+func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskSendSMS(ctx context.Context, task *asynq.Task) error {
     var payload SendSMSPayload
     if err := json.Unmarshal(task.Payload(), &payload); err != nil {
         return err
@@ -340,7 +340,7 @@ func (p *RedisTaskProcessor) ProcessTaskSendSMS(ctx context.Context, task *asynq
 ### Step 4: Register the Handler in `worker.go`
 In `worker.go` inside `Start()`:
 ```go
-mux.HandleFunc(TaskSendSMS, processor.ProcessTaskSendSMS)
+mux.HandleFunc(TaskSendSMS, redisTaskProcessor.ProcessTaskSendSMS)
 ```
 
 Done! Now any service can call:

@@ -114,13 +114,13 @@ At each step:
 
 ---
 
-## 5. Scheduled Safety-Net Crons
+## 5. Scheduled Background Crons
 
-Embedded in [worker.go](file:///d:/Sz-projects/50-main-projects/3-free9ja/apps/api/internal/worker/worker.go#L113):
+Embedded via `robfig/cron` in [worker.go](file:///d:/Sz-projects/50-main-projects/3-free9ja/apps/api/internal/worker/worker.go#L113):
 
 1. **Daily Marketing Campaign Deductions** (`5 0 * * *`):
-   Runs at 00:05 AM every day to settle agent marketing allowances and auto-complete campaigns.
+   - **File**: [marketing_campaign_task.go](file:///d:/Sz-projects/50-main-projects/3-free9ja/apps/api/internal/worker/marketing_campaign_task.go)
+   - Runs daily at 00:05 AM to deduct daily agent allowances from campaign budgets and auto-complete exhausted campaigns.
 2. **INEC Result Grabber Sync** (`*/15 * * * *`):
-   Runs every 15 minutes to poll the INEC IReV portal for newly published result sheets and enqueue reconciliation jobs.
-3. **Sequential Full Election Rollup** (optional fallback cron):
-   Periodically ensures full consistency across all regions even if a network partition or Redis failure occurred during real-time cascades.
+   - **File**: [worker.go](file:///d:/Sz-projects/50-main-projects/3-free9ja/apps/api/internal/worker/worker.go#L126)
+   - Runs every 15 minutes to sync active INEC result grabbers and trigger AI extraction / consensus rollup on newly discovered polling unit result sheets.
