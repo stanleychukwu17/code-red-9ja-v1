@@ -69,7 +69,7 @@ func (d *RedisTaskDistributor) DistributeTaskRefreshWardStats(ctx context.Contex
 	}
 	opts = append(defaults, opts...)
 	task := asynq.NewTask(TaskRefreshWardStats, jsonPayload, opts...)
-	info, err := d.client.EnqueueContext(ctx, task)
+	info, err := d.asynqClient.EnqueueContext(ctx, task)
 	if err != nil {
 		if errors.Is(err, asynq.ErrTaskIDConflict) || errors.Is(err, asynq.ErrDuplicateTask) {
 			slog.Debug("ward stats refresh already queued", "election_group_id", payload.ElectionGroupID, "ward_id", payload.WardID)
@@ -96,7 +96,7 @@ func (d *RedisTaskDistributor) DistributeTaskRefreshLGAStats(ctx context.Context
 	}
 	opts = append(defaults, opts...)
 	task := asynq.NewTask(TaskRefreshLGAStats, jsonPayload, opts...)
-	info, err := d.client.EnqueueContext(ctx, task)
+	info, err := d.asynqClient.EnqueueContext(ctx, task)
 	if err != nil {
 		if errors.Is(err, asynq.ErrTaskIDConflict) || errors.Is(err, asynq.ErrDuplicateTask) {
 			slog.Debug("lga stats refresh already queued", "election_group_id", payload.ElectionGroupID, "lga_id", payload.LGAID)
@@ -123,7 +123,7 @@ func (d *RedisTaskDistributor) DistributeTaskRefreshStateConstituencyStats(ctx c
 	}
 	opts = append(defaults, opts...)
 	task := asynq.NewTask(TaskRefreshStateConstituencyStats, jsonPayload, opts...)
-	info, err := d.client.EnqueueContext(ctx, task)
+	info, err := d.asynqClient.EnqueueContext(ctx, task)
 	if err != nil {
 		if errors.Is(err, asynq.ErrTaskIDConflict) || errors.Is(err, asynq.ErrDuplicateTask) {
 			slog.Debug("state constituency stats refresh already queued", "election_group_id", payload.ElectionGroupID, "state_constituency_id", payload.StateConstituencyID)
@@ -150,7 +150,7 @@ func (d *RedisTaskDistributor) DistributeTaskRefreshStateStats(ctx context.Conte
 	}
 	opts = append(defaults, opts...)
 	task := asynq.NewTask(TaskRefreshStateStats, jsonPayload, opts...)
-	info, err := d.client.EnqueueContext(ctx, task)
+	info, err := d.asynqClient.EnqueueContext(ctx, task)
 	if err != nil {
 		if errors.Is(err, asynq.ErrTaskIDConflict) || errors.Is(err, asynq.ErrDuplicateTask) {
 			slog.Debug("state stats refresh already queued", "election_group_id", payload.ElectionGroupID, "state_id", payload.StateID)
@@ -177,7 +177,7 @@ func (d *RedisTaskDistributor) DistributeTaskRefreshGlobalStats(ctx context.Cont
 	}
 	opts = append(defaults, opts...)
 	task := asynq.NewTask(TaskRefreshGlobalStats, jsonPayload, opts...)
-	info, err := d.client.EnqueueContext(ctx, task)
+	info, err := d.asynqClient.EnqueueContext(ctx, task)
 	if err != nil {
 		if errors.Is(err, asynq.ErrTaskIDConflict) || errors.Is(err, asynq.ErrDuplicateTask) {
 			slog.Debug("global stats refresh already queued", "election_group_id", payload.ElectionGroupID)

@@ -48,8 +48,10 @@ func (distributor *RedisTaskDistributor) DistributeTaskSeedElectionGroupStats(ct
 	// 4. Create the Asynq task with type TaskSeedElectionGroupStats and enqueue to Redis
 	task := asynq.NewTask(TaskSeedElectionGroupStats, jsonPayload, opts...)
 
-	//
-	info, err := distributor.client.EnqueueContext(ctx, task)
+	// Enqueues the task with Redis using the provided options
+	// The task will be available for processing after the delay specified in opts
+	// This is the actual operation that puts the job onto the Redis queue
+	info, err := distributor.asynqClient.EnqueueContext(ctx, task)
 	if err != nil && err != asynq.ErrTaskIDConflict {
 		return fmt.Errorf("failed to enqueue seed task: %w", err)
 	}

@@ -38,7 +38,7 @@ func (distributor *RedisTaskDistributor) DistributeTaskAggregateLiveVotes(ctx co
 
 	task := asynq.NewTask(TaskAggregateLiveVotes, jsonPayload, opts...)
 
-	info, err := distributor.client.EnqueueContext(ctx, task)
+	info, err := distributor.asynqClient.EnqueueContext(ctx, task)
 	if err != nil {
 		if errors.Is(err, asynq.ErrTaskIDConflict) || errors.Is(err, asynq.ErrDuplicateTask) {
 			slog.Debug("live vote aggregation task already queued, skipping duplicate",

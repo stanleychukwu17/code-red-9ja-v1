@@ -7,6 +7,9 @@ This directory contains complete documentation and crash courses on the asynchro
 1. [CRASH_COURSE.md](file:///d:/Sz-projects/50-main-projects/3-free9ja/apps/api/internal/worker/docs/CRASH_COURSE.md)
    - **Why queues exist**: The non-blocking background model vs synchronous blocking model.
    - **Code Trace**: Line-by-line trace of how `s.distributor.DistributeTaskSeedElectionGroupStats(...)` travels from service to Redis to worker.
+   - **Asynq & Redis Under the Hood**: The Redis state machine (pending, active, scheduled, retry, dead), key structures, scheduler/retrier/watchdog daemons, and eviction policies.
+   - **Advanced Codebase Patterns**: Hierarchical bottom-up cascades (tasks as producers), the "thundering herd" debouncing defense, dual-engine workers (Asynq vs `robfig/cron`), and Gemini Vision AI.
+   - **Observability**: Inspecting queues with `asynqmon` web dashboard and CLI.
    - **How to Add a Task**: 4-step developer recipe to create new asynchronous background jobs.
    - **Best Practices**: Deduplication, debouncing, idempotency, and graceful shutdowns.
 

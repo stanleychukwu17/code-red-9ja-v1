@@ -389,50 +389,6 @@ type Querier interface {
 	RecalculateStateMetrics(ctx context.Context) error
 	RecalculateWardMetrics(ctx context.Context) error
 	RecordPartyMembershipHistory(ctx context.Context, arg RecordPartyMembershipHistoryParams) error
-	// Aggregates from election_group_lgas grouped by federal_constituency_id.
-	RefreshAllElectionGroupFederalConstituencyStats(ctx context.Context) error
-	// Aggregates from election_group_states up to election_groups.
-	RefreshAllElectionGroupGlobalStats(ctx context.Context) error
-	// Aggregates from election_group_wards grouped by lga_id.
-	RefreshAllElectionGroupLGAStats(ctx context.Context) error
-	// Aggregates stats from source tables for every (election_group_id, polling_unit_id)
-	// that has at least one agent assignment. Designed for cron execution.
-	// -------------------------------------------------------
-	// 1. Agent-level data (assignments + referral codes)
-	// -------------------------------------------------------
-	// -------------------------------------------------------
-	// 2. Overall PU-level scalar aggregates (across all parties)
-	// -------------------------------------------------------
-	// -------------------------------------------------------
-	// 3. Final result submission counts
-	// -------------------------------------------------------
-	// -------------------------------------------------------
-	// 4. Referral codes per (election_group_id, polling_unit_id)
-	// -------------------------------------------------------
-	// Voters who used an agent code at this PU and then voted
-	// -------------------------------------------------------
-	// 5. How many elections this PU is eligible for in the group
-	// -------------------------------------------------------
-	// -------------------------------------------------------
-	// 6. Per-party aggregates
-	// -------------------------------------------------------
-	// Average time gap between consecutive updates per party per PU (in seconds)
-	// -------------------------------------------------------
-	// 7. Build per-party JSONB array
-	// -------------------------------------------------------
-	// -------------------------------------------------------
-	// 8. Final upsert
-	// -------------------------------------------------------
-	RefreshAllElectionGroupPollingUnitStats(ctx context.Context) error
-	// Aggregates from election_group_lgas grouped by senatorial_district_id.
-	RefreshAllElectionGroupSenatorialDistrictStats(ctx context.Context) error
-	// Aggregates from election_group_polling_units grouped by state_constituency_id.
-	RefreshAllElectionGroupStateConstituencyStats(ctx context.Context) error
-	// Aggregates from election_group_lgas grouped by state_id.
-	RefreshAllElectionGroupStateStats(ctx context.Context) error
-	// Aggregates from election_group_polling_units (one level up from PUs).
-	// Expand per-party JSONB from all PUs in each ward
-	RefreshAllElectionGroupWardStats(ctx context.Context) error
 	RefreshPollingUnitLiveResults(ctx context.Context, arg RefreshPollingUnitLiveResultsParams) error
 	// Aggregates from election_group_states for a single election group.
 	RefreshSingleElectionGroupGlobalStats(ctx context.Context, electionGroupID int32) error
@@ -482,7 +438,7 @@ type Querier interface {
 	// Called once when an election group is created. Inserts zeroed
 	// stat rows for all geographies that are in-scope for the group.
 	// Uses ON CONFLICT DO NOTHING so re-running is safe (idempotent).
-	// election_group_polling_units is excluded — those are seeded
+	// election_group_polling_units is excluded â€” those are seeded
 	// lazily by the RefreshAllElectionGroupPollingUnitStats cron.
 	// ============================================================
 	// Inserts one zeroed row per state that is in-scope for this election group.

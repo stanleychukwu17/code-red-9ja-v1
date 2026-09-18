@@ -47,7 +47,7 @@ type TaskProcessor interface {
 }
 
 type RedisTaskProcessor struct {
-	server          *asynq.Server
+	asynqServer     *asynq.Server
 	cron            *cron.Cron
 	q               *queries.Queries
 	pool            *pgxpool.Pool
@@ -63,7 +63,7 @@ func NewRedisTaskProcessor(redisOpt asynq.RedisClientOpt, q *queries.Queries, po
 		broadcaster = realtime.NewNoOpBroadcaster()
 	}
 
-	server := asynq.NewServer(
+	asynqServer := asynq.NewServer(
 		redisOpt,
 		asynq.Config{
 			Concurrency: 10,
@@ -74,7 +74,7 @@ func NewRedisTaskProcessor(redisOpt asynq.RedisClientOpt, q *queries.Queries, po
 	)
 
 	return &RedisTaskProcessor{
-		server:          server,
+		asynqServer:     asynqServer,
 		cron:            cron.New(),
 		q:               q,
 		pool:            pool,
@@ -110,20 +110,6 @@ func (processor *RedisTaskProcessor) Start() error {
 	mux.HandleFunc(TaskRollupSingleState, processor.ProcessTaskRollupSingleState)
 	mux.HandleFunc(TaskRollupSingleElection, processor.ProcessTaskRollupSingleElection)
 
-	// Register cron rollup safety-net jobs.
-	// Primary live updates happen via event-driven cascades; these crons act as safety-net reconciliation.
-	// In development, set STATS_REFRESH_ENABLED=false in your .env to skip scheduled safety-net crons.
-	statsEnabled := config.GetEnv("STATS_REFRESH_ENABLED", "true") == "true"
-	if !statsEnabled {
-		slog.Warn("STATS_REFRESH_ENABLED=false — skipping all stats cron registration (dev mode)")
-	} else {
-		// Single sequential rollup pipeline (runs every 15 minutes) bottom-up from Ward to Nationwide
-		// processor.cron.AddFunc("*/15 * * * *", processor.ProcessFullElectionRollup)
-
-		// Geographic Stats safety-net fallback (runs every 10 minutes)
-		// processor.cron.AddFunc("*/10 * * * *", processor.ProcessRefreshAllElectionStats)
-	}
-
 	// Daily Marketing Campaign Deductions & Auto-Completion Worker (runs every day at 00:05 AM)
 	// Recommended schedule: "5 0 * * *" (5 minutes past midnight) to process previous day's campaign allocations cleanly.
 	processor.cron.AddFunc("5 0 * * *", processor.ProcessDailyMarketingCampaignDeductions)
@@ -134,7 +120,7 @@ func (processor *RedisTaskProcessor) Start() error {
 	processor.cron.Start()
 	slog.Info("cron rollup scheduler started")
 
-	return processor.server.Start(mux)
+	return processor.asynqServer.Start(mux)
 }
 
 func (processor *RedisTaskProcessor) ProcessINECResultGrabberSync() {
@@ -182,5 +168,5 @@ func (processor *RedisTaskProcessor) ProcessINECResultGrabberSync() {
 
 func (processor *RedisTaskProcessor) Shutdown() {
 	processor.cron.Stop()
-	processor.server.Shutdown()
+	processor.asynqServer.Shutdown()
 }

@@ -73,7 +73,7 @@ flowchart TD
 - **Why an Interface?**
   - Allows services (`ElectionGroupsService`, `ElectionsService`, etc.) to depend on an abstraction.
   - In unit tests, services can be tested using mock distributors without needing a running Redis server.
-- **Implementation**: [RedisTaskDistributor](file:///d:/Sz-projects/50-main-projects/3-free9ja/apps/api/internal/worker/final_result_task.go#L242). Wraps `*asynq.Client`.
+- **Implementation**: [RedisTaskDistributor](file:///d:/Sz-projects/50-main-projects/3-free9ja/apps/api/internal/worker/distributor.go). Wraps `*asynq.Client`.
 
 ### Pillar 2: The Broker & Queue (`Asynq` on Redis)
 - **Role**: The **Message Broker**. Persists tasks, schedules execution delays, manages deduplication, handles timeouts, and tracks task states.

@@ -105,13 +105,11 @@ func (s *ElectionGroupsService) CreateElectionGroup(ctx context.Context, name st
 	// 3. Enqueue a background task to seed zeroed geography stat rows.
 	// It fires after a short delay so any elections belonging to this group
 	// can be created first (stats are scoped to the elections' scope fields).
-	if s.distributor != nil {
-		if seedErr := s.distributor.DistributeTaskSeedElectionGroupStats(ctx, &worker.SeedElectionGroupStatsPayload{
-			ElectionGroupID: eg.ID,
-		}); seedErr != nil {
-			// Non-fatal: log and continue — the cron refresh will eventually create the rows.
-			slog.Warn("failed to enqueue seed election group stats task", "election_group_id", eg.ID, "error", seedErr)
-		}
+	if seedErr := s.distributor.DistributeTaskSeedElectionGroupStats(ctx, &worker.SeedElectionGroupStatsPayload{
+		ElectionGroupID: eg.ID,
+	}); seedErr != nil {
+		// Non-fatal: log error and continue group creation without aborting the HTTP request.
+		slog.Warn("failed to enqueue seed election group stats task", "election_group_id", eg.ID, "error", seedErr)
 	}
 
 	// 4. Invalidate global election group caches

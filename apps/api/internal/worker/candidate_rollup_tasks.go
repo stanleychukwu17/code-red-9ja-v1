@@ -88,7 +88,7 @@ func (d *RedisTaskDistributor) DistributeTaskRollupSingleWard(ctx context.Contex
 	}
 	opts = append(defaults, opts...)
 	task := asynq.NewTask(TaskRollupSingleWard, jsonPayload, opts...)
-	info, err := d.client.EnqueueContext(ctx, task)
+	info, err := d.asynqClient.EnqueueContext(ctx, task)
 	if err != nil {
 		if errors.Is(err, asynq.ErrTaskIDConflict) || errors.Is(err, asynq.ErrDuplicateTask) {
 			slog.Debug("single ward rollup already queued", "election_id", payload.ElectionID, "ward_id", payload.WardID)
@@ -115,7 +115,7 @@ func (d *RedisTaskDistributor) DistributeTaskRollupSingleStateConstituency(ctx c
 	}
 	opts = append(defaults, opts...)
 	task := asynq.NewTask(TaskRollupSingleStateConstituency, jsonPayload, opts...)
-	info, err := d.client.EnqueueContext(ctx, task)
+	info, err := d.asynqClient.EnqueueContext(ctx, task)
 	if err != nil {
 		if errors.Is(err, asynq.ErrTaskIDConflict) || errors.Is(err, asynq.ErrDuplicateTask) {
 			slog.Debug("single state constituency rollup already queued", "election_id", payload.ElectionID, "state_constituency_id", payload.StateConstituencyID)
@@ -142,7 +142,7 @@ func (d *RedisTaskDistributor) DistributeTaskRollupSingleLGA(ctx context.Context
 	}
 	opts = append(defaults, opts...)
 	task := asynq.NewTask(TaskRollupSingleLGA, jsonPayload, opts...)
-	info, err := d.client.EnqueueContext(ctx, task)
+	info, err := d.asynqClient.EnqueueContext(ctx, task)
 	if err != nil {
 		if errors.Is(err, asynq.ErrTaskIDConflict) || errors.Is(err, asynq.ErrDuplicateTask) {
 			slog.Debug("single lga rollup already queued", "election_id", payload.ElectionID, "lga_id", payload.LGAID)
@@ -169,7 +169,7 @@ func (d *RedisTaskDistributor) DistributeTaskRollupSingleFederalConstituency(ctx
 	}
 	opts = append(defaults, opts...)
 	task := asynq.NewTask(TaskRollupSingleFederalConstituency, jsonPayload, opts...)
-	info, err := d.client.EnqueueContext(ctx, task)
+	info, err := d.asynqClient.EnqueueContext(ctx, task)
 	if err != nil {
 		if errors.Is(err, asynq.ErrTaskIDConflict) || errors.Is(err, asynq.ErrDuplicateTask) {
 			slog.Debug("single federal constituency rollup already queued", "election_id", payload.ElectionID, "federal_constituency_id", payload.FederalConstituencyID)
@@ -196,7 +196,7 @@ func (d *RedisTaskDistributor) DistributeTaskRollupSingleSenatorialDistrict(ctx 
 	}
 	opts = append(defaults, opts...)
 	task := asynq.NewTask(TaskRollupSingleSenatorialDistrict, jsonPayload, opts...)
-	info, err := d.client.EnqueueContext(ctx, task)
+	info, err := d.asynqClient.EnqueueContext(ctx, task)
 	if err != nil {
 		if errors.Is(err, asynq.ErrTaskIDConflict) || errors.Is(err, asynq.ErrDuplicateTask) {
 			slog.Debug("single senatorial district rollup already queued", "election_id", payload.ElectionID, "senatorial_district_id", payload.SenatorialDistrictID)
@@ -223,7 +223,7 @@ func (d *RedisTaskDistributor) DistributeTaskRollupSingleState(ctx context.Conte
 	}
 	opts = append(defaults, opts...)
 	task := asynq.NewTask(TaskRollupSingleState, jsonPayload, opts...)
-	info, err := d.client.EnqueueContext(ctx, task)
+	info, err := d.asynqClient.EnqueueContext(ctx, task)
 	if err != nil {
 		if errors.Is(err, asynq.ErrTaskIDConflict) || errors.Is(err, asynq.ErrDuplicateTask) {
 			slog.Debug("single state rollup already queued", "election_id", payload.ElectionID, "state_id", payload.StateID)
@@ -250,7 +250,7 @@ func (d *RedisTaskDistributor) DistributeTaskRollupSingleElection(ctx context.Co
 	}
 	opts = append(defaults, opts...)
 	task := asynq.NewTask(TaskRollupSingleElection, jsonPayload, opts...)
-	info, err := d.client.EnqueueContext(ctx, task)
+	info, err := d.asynqClient.EnqueueContext(ctx, task)
 	if err != nil {
 		if errors.Is(err, asynq.ErrTaskIDConflict) || errors.Is(err, asynq.ErrDuplicateTask) {
 			slog.Debug("single election rollup already queued", "election_id", payload.ElectionID)

@@ -52,7 +52,7 @@ func (distributor *RedisTaskDistributor) DistributeTaskExtractPUResultAI(
 	opts = append(defaults, opts...)
 
 	task := asynq.NewTask(TaskExtractPUResultAI, jsonPayload, opts...)
-	info, err := distributor.client.EnqueueContext(ctx, task)
+	info, err := distributor.asynqClient.EnqueueContext(ctx, task)
 	if err != nil {
 		return fmt.Errorf("failed to enqueue extract PU result AI task: %w", err)
 	}
