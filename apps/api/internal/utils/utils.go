@@ -3,6 +3,8 @@ package utils
 import (
 	"context"
 	cryptoRand "crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -17,7 +19,6 @@ import (
 	"github.com/nyaruka/phonenumbers"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type Utils struct {
@@ -167,6 +168,12 @@ func SetupRedisTestContainer(redis_port string) (string, testcontainers.Containe
 	return addr, container, nil
 }
 
+// HashOTP generates a SHA-256 hexadecimal hash for an OTP code.
+func HashOTP(otp string) string {
+	hash := sha256.Sum256([]byte(otp))
+	return hex.EncodeToString(hash[:])
+}
+
 func GenerateOTP() (string, string, error) {
 	n, err := cryptoRand.Int(cryptoRand.Reader, big.NewInt(1000000))
 	if err != nil {
@@ -174,13 +181,7 @@ func GenerateOTP() (string, string, error) {
 	}
 
 	otp := fmt.Sprintf("%06d", n.Int64())
-
-	hashedOTP, err := bcrypt.GenerateFromPassword([]byte(otp), bcrypt.DefaultCost)
-	if err != nil {
-		return "", "", err
-	}
-
-	return otp, string(hashedOTP), nil
+	return otp, HashOTP(otp), nil
 }
 
 // function: generates fake_id using the original id

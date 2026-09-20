@@ -49,6 +49,7 @@ type TaskProcessor interface {
 	ProcessTaskRollupSingleSenatorialDistrict(ctx context.Context, task *asynq.Task) error
 	ProcessTaskRollupSingleState(ctx context.Context, task *asynq.Task) error
 	ProcessTaskRollupSingleElection(ctx context.Context, task *asynq.Task) error
+	ProcessTaskDeleteAsset(ctx context.Context, task *asynq.Task) error
 	ProcessDailyMarketingCampaignDeductions()
 	ProcessINECResultGrabberSync()
 }
@@ -121,6 +122,7 @@ func (redisTaskProcessor *RedisTaskProcessor) Start() error {
 	mux.HandleFunc(TaskRollupSingleSenatorialDistrict, redisTaskProcessor.ProcessTaskRollupSingleSenatorialDistrict)
 	mux.HandleFunc(TaskRollupSingleState, redisTaskProcessor.ProcessTaskRollupSingleState)
 	mux.HandleFunc(TaskRollupSingleElection, redisTaskProcessor.ProcessTaskRollupSingleElection)
+	mux.HandleFunc(TaskDeleteAsset, redisTaskProcessor.ProcessTaskDeleteAsset)
 
 	// Daily Marketing Campaign Deductions & Auto-Completion Worker (runs every day at 00:05 AM)
 	// Recommended schedule: "5 0 * * *" (5 minutes past midnight) to process previous day's campaign allocations cleanly.

@@ -2,6 +2,7 @@ package authservice
 
 import (
 	"context"
+	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -955,7 +956,7 @@ const maxOTPAttempts = 5
 
 // StoredEmailOTP represents the OTP payload cached in Redis
 type StoredEmailOTP struct {
-	Hash     string `json:"hash"`     // bcrypt hash of the OTP code
+	Hash     string `json:"hash"`     // SHA-256 hash of the OTP code
 	Attempts int    `json:"attempts"` // count of failed verification attempts
 }
 
@@ -967,7 +968,7 @@ type EmailOTPResult struct {
 
 // generateAndSendEmailOTP generates a new OTP, emails it, and caches the hash in Redis
 func (s *AuthService) generateAndSendEmailOTP(ctx context.Context, email string) (EmailOTPResult, error) {
-	// 1. Generate plain 6-digit OTP and its bcrypt hash
+	// 1. Generate plain 6-digit OTP and its hash
 	otp, hashedOTP, err := utils.GenerateOTP()
 	if err != nil {
 		return EmailOTPResult{}, err
@@ -1058,8 +1059,8 @@ func (s *AuthService) verifyAndConsumeEmailOTP(ctx context.Context, email, otp s
 		return errors.New("too many failed attempts, please request a new code")
 	}
 
-	// 5. Compare the submitted OTP with the stored bcrypt hash
-	if err := bcrypt.CompareHashAndPassword([]byte(stored.Hash), []byte(otp)); err != nil {
+	// 5. Compare the submitted OTP with the stored SHA-256 hash
+	if subtle.ConstantTimeCompare([]byte(stored.Hash), []byte(utils.HashOTP(otp))) != 1 {
 		stored.Attempts++
 		// Invalidate OTP immediately on reaching the limit
 		if stored.Attempts >= maxOTPAttempts {

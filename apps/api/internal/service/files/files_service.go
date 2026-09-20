@@ -2,10 +2,11 @@ package files
 
 import (
 	"context"
+	"log/slog"
+
 	"free9ja/api/internal/db/queries"
 	r2service "free9ja/api/internal/service/r2"
-	"strings"
-	"time"
+	"free9ja/api/internal/worker"
 
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -24,68 +25,33 @@ type FilesService interface {
 }
 
 type filesService struct {
-	queries *queries.Queries
-	r2Svc   *r2service.R2Service
+	queries     *queries.Queries
+	r2Svc       *r2service.R2Service
+	distributor worker.TaskDistributor
 }
 
 // NewFilesService creates a new instance of FilesService.
-func NewFilesService(q *queries.Queries, r2Svc *r2service.R2Service) FilesService {
+func NewFilesService(q *queries.Queries, r2Svc *r2service.R2Service, distributor worker.TaskDistributor) FilesService {
 	return &filesService{
-		queries: q,
-		r2Svc:   r2Svc,
+		queries:     q,
+		r2Svc:       r2Svc,
+		distributor: distributor,
 	}
 }
 
-// DeleteAssetAsync extracts an R2 object key from a URL and asynchronously deletes
-// the object from Cloudflare R2, purges the CDN cache, and hard-deletes the DB file record.
+// DeleteAssetAsync extracts an R2 object key from a URL and enqueues a background task to
+// delete the object from Cloudflare R2, purge the CDN cache, and hard-delete the DB file record.
 func (s *filesService) DeleteAssetAsync(rawURL string, fileID int64) {
-	if (rawURL == "" && fileID <= 0) || s.r2Svc == nil {
+	if rawURL == "" && fileID <= 0 {
 		return
 	}
 
-	// Example URL: https://pub-xxx.r2.dev/parties/2026-07-13/A.webp
-	// We can extract the key by stripping the domain prefix. We'll find ".dev/" or ".com/" and take the rest.
-	var key string
-	if idx := strings.Index(rawURL, ".dev/"); idx != -1 {
-		key = rawURL[idx+5:]
-	} else if idx := strings.Index(rawURL, ".com/"); idx != -1 {
-		key = rawURL[idx+5:]
+	if err := s.distributor.DistributeTaskDeleteAsset(context.Background(), &worker.DeleteAssetPayload{
+		RawURL: rawURL,
+		FileID: fileID,
+	}); err != nil {
+		slog.Error("failed to enqueue delete asset task", "raw_url", rawURL, "file_id", fileID, "error", err)
 	}
-
-	// If neither an R2 key nor a database file ID was resolved, nothing to clean up.
-	if key == "" && fileID <= 0 {
-		return
-	}
-
-	// Clean up storage and database records asynchronously so callers aren't blocked.
-	go func(k string, fID int64) {
-		// Isolated 10s deadline to prevent the background goroutine from hanging indefinitely
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-
-		// If key wasn't derived from rawURL but fileID is given, resolve the key from DB
-		if k == "" && fID > 0 {
-			if file, err := s.GetFileByID(ctx, fID); err == nil {
-				k = file.FileKey
-			}
-		}
-
-		// 1. Delete object from R2 and purge CDN cache if key exists
-		if k != "" {
-			if delErr := s.r2Svc.DeleteObject(ctx, k); delErr == nil {
-				_ = s.r2Svc.PurgeCloudflareCache(ctx, k)
-			}
-		}
-
-		// 2. Hard-delete file record from DB by ID or fallback lookup by key
-		if fID > 0 {
-			_ = s.HardDeleteFile(ctx, fID)
-		} else if k != "" {
-			if oldFile, err := s.GetFileByKey(ctx, k); err == nil && oldFile.ID > 0 {
-				_ = s.HardDeleteFile(ctx, oldFile.ID)
-			}
-		}
-	}(key, fileID)
 }
 
 // CreateFile creates a new file record with uploading status.

@@ -28,6 +28,8 @@ type TaskDistributor interface {
 	DistributeTaskRollupSingleSenatorialDistrict(ctx context.Context, payload *RollupSingleSenatorialDistrictPayload, opts ...asynq.Option) error
 	DistributeTaskRollupSingleState(ctx context.Context, payload *RollupSingleStatePayload, opts ...asynq.Option) error
 	DistributeTaskRollupSingleElection(ctx context.Context, payload *RollupSingleElectionPayload, opts ...asynq.Option) error
+	// Asset cleanup task
+	DistributeTaskDeleteAsset(ctx context.Context, payload *DeleteAssetPayload, opts ...asynq.Option) error
 }
 
 // RedisTaskDistributor is a task distributor that uses Redis to enqueue tasks.

@@ -92,3 +92,24 @@ func TestValidatePhoneForCountry(t *testing.T) {
 		})
 	}
 }
+
+func TestGenerateOTP(t *testing.T) {
+	otp, hash, err := utils.GenerateOTP()
+	assert.NoError(t, err)
+	assert.Len(t, otp, 6)
+	assert.NotEmpty(t, hash)
+
+	// Hash should match HashOTP(otp)
+	assert.Equal(t, utils.HashOTP(otp), hash)
+}
+
+func TestHashOTP(t *testing.T) {
+	hash1 := utils.HashOTP("123456")
+	hash2 := utils.HashOTP("123456")
+	hash3 := utils.HashOTP("654321")
+
+	assert.Equal(t, hash1, hash2, "same OTP should produce identical SHA-256 hash")
+	assert.NotEqual(t, hash1, hash3, "different OTPs should produce different hashes")
+	assert.Len(t, hash1, 64, "SHA-256 hex string should be 64 chars")
+}
+

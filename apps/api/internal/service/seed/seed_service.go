@@ -91,6 +91,20 @@ type SeedUserRequest struct {
 // It handles password hashing, database insertion, generates fake IDs, caches user details in Redis,
 // and optionally appends user verification badges (e.g., for politicians).
 func (s *SeedService) SeedUsers(ctx context.Context, users []SeedUserRequest) (string, error) {
+	// Precompute bcrypt hashes for distinct passwords in the batch.
+	// This prevents hashing identical passwords (e.g. "password" or "stanl") thousands of times.
+	passwordHashes := make(map[string]string)
+	for i := range users {
+		pwd := users[i].Password
+		if _, exists := passwordHashes[pwd]; !exists {
+			hashed, err := bcrypt.GenerateFromPassword([]byte(pwd), bcrypt.DefaultCost)
+			if err != nil {
+				return "", fmt.Errorf("failed to hash password for seed users: %w", err)
+			}
+			passwordHashes[pwd] = string(hashed)
+		}
+	}
+
 	eg, ctx := errgroup.WithContext(ctx)
 	eg.SetLimit(25)
 
@@ -101,11 +115,8 @@ func (s *SeedService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 				return nil
 			}
 
-			// Hash password
-			hashed, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
-			if err != nil {
-				return err
-			}
+			// Use precomputed password hash
+			hashed := passwordHashes[u.Password]
 
 			// parse date of birth
 			dob, err := time.Parse(time.DateOnly, u.DateOfBirth)
