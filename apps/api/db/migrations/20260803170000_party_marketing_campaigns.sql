@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS party_marketing_campaigns (
     budget_kobo BIGINT NOT NULL,
     referral_amount_kobo BIGINT NOT NULL DEFAULT 0,
     amount_spent_kobo BIGINT NOT NULL DEFAULT 0,
+    last_deducted_date DATE DEFAULT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
 );

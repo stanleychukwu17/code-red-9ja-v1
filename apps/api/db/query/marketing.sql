@@ -60,9 +60,10 @@ INSERT INTO party_marketing_campaigns (
     budget_kobo,
     referral_amount_kobo,
     amount_spent_kobo,
-    status
+    status,
+    last_deducted_date
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, NOW(), NOW() + ($7::int * interval '1 day'), $8, $9, $10, $11, $12
+    $1, $2, $3, $4, $5, $6, $7, NOW(), NOW() + ($7::int * interval '1 day'), $8, $9, $10, $11, $12, CASE WHEN $12::text = 'active' THEN CURRENT_DATE ELSE NULL END
 )
 RETURNING *;
 
@@ -139,6 +140,7 @@ SET
     start_date = CASE WHEN sqlc.arg('status')::text = 'active' THEN NOW() ELSE start_date END,
     end_date = CASE WHEN sqlc.arg('status')::text = 'active' THEN NOW() + (duration_in_days::text || ' days')::interval ELSE end_date END,
     amount_spent_kobo = CASE WHEN sqlc.arg('status')::text = 'active' THEN amount_spent_kobo + budget_per_day_kobo ELSE amount_spent_kobo END,
+    last_deducted_date = CASE WHEN sqlc.arg('status')::text = 'active' THEN CURRENT_DATE ELSE last_deducted_date END,
     updated_at = NOW()
 WHERE id = $1
 RETURNING *;
@@ -149,12 +151,24 @@ WHERE id = $1;
 
 -- name: ProcessDailyMarketingCampaignDeductions :many
 -- Run once daily via cron to deduct budget_per_day_kobo, update amount_spent_kobo, and mark expired campaigns as completed.
--- Skips deduction if the campaign was activated today (start_date::date = CURRENT_DATE) to prevent double deduction on activation day.
+-- Idempotent: Skips deduction if already deducted today (last_deducted_date = CURRENT_DATE) or activated today.
 UPDATE party_marketing_campaigns
 SET 
     amount_spent_kobo = CASE 
-        WHEN status = 'active' AND NOW() < end_date AND (start_date IS NULL OR start_date::date < CURRENT_DATE) THEN amount_spent_kobo + budget_per_day_kobo 
+        WHEN status = 'active' 
+             AND NOW() < end_date 
+             AND (start_date IS NULL OR start_date::date < CURRENT_DATE)
+             AND (last_deducted_date IS NULL OR last_deducted_date < CURRENT_DATE)
+        THEN amount_spent_kobo + budget_per_day_kobo 
         ELSE amount_spent_kobo 
+    END,
+    last_deducted_date = CASE 
+        WHEN status = 'active' 
+             AND NOW() < end_date 
+             AND (start_date IS NULL OR start_date::date < CURRENT_DATE)
+             AND (last_deducted_date IS NULL OR last_deducted_date < CURRENT_DATE)
+        THEN CURRENT_DATE 
+        ELSE last_deducted_date 
     END,
     status = CASE 
         WHEN status = 'active' AND NOW() >= end_date THEN 'completed'

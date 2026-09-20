@@ -57,10 +57,8 @@ func (s *UsersService) GetUserPreferences(ctx context.Context, userID int64) (Us
 				PreferenceVersion: 0,
 			}
 			// Cache default preferences for 24 hours to prevent repeated DB misses
-			if s.rdb != nil {
-				if jsonBytes, err := json.Marshal(defaultPref); err == nil {
-					s.rdb.Set(ctx, redisKey, jsonBytes, 24*time.Hour)
-				}
+			if jsonBytes, err := json.Marshal(defaultPref); err == nil {
+				s.rdb.Set(ctx, redisKey, jsonBytes, 24*time.Hour)
 			}
 			return defaultPref, nil
 		}

@@ -88,6 +88,11 @@ const (
 	RedisElectionsAll      = "elections:all"       // STRING: used to store and retrieve all elections JSON.
 	RedisElectionInfo      = "election:"           // STRING: "election:<id>" used to store and retrieve single election JSON.
 	//--END--
+
+	//--START-- for background worker & cron distributed locks
+	RedisCronLockINECGrabberSync           = "cron:lock:inec_grabber_sync"     // STRING: distributed lock to prevent duplicate concurrent INEC IReV result syncing
+	RedisCronLockMarketingDeductionsPrefix = "cron:lock:marketing_deductions:" // STRING: "cron:lock:marketing_deductions:<YYYY-MM-DD>" daily marketing deductions lock
+	//--END--
 )
 
 // AllRedisPrefixes is a list of all key prefixes and static keys used across the application.
@@ -139,4 +144,6 @@ var AllRedisPrefixes = []string{
 	RedisElectionGroupInfo,
 	RedisElectionsAll,
 	RedisElectionInfo,
+	RedisCronLockINECGrabberSync,
+	RedisCronLockMarketingDeductionsPrefix,
 }

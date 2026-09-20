@@ -49,6 +49,8 @@
     "hibiken",
     "hostnames",
     "inec",
+    "INECAPI",
+    "inecgrabber",
     "inecgrabberhandler",
     "inecgrabberservice",
     "jackc",

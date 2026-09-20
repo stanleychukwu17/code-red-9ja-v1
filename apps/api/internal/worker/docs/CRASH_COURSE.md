@@ -279,11 +279,35 @@ Asynq comes with a first-class web management dashboard called **Asynqmon**. It 
 - Manually retry or delete tasks from the dead letter queue.
 - Cancel in-flight or scheduled tasks.
 
-### Running Asynqmon via Docker:
+### A. Local Development via Docker:
 ```bash
 docker run --rm -p 8080:8080 hibiken/asynqmon --redis-addr=host.docker.internal:6379
 ```
 Then open `http://localhost:8080` in your browser.
+
+### B. Live AWS ElastiCache via SSH Bastion Tunnel (Recommended for Production):
+Because AWS ElastiCache resides in a private VPC database subnet with no public internet access, connect securely from your laptop using your existing SSH Bastion Host:
+
+1. **Open an SSH Port Forwarding Tunnel** (forwards local port `6380` to private ElastiCache port `6379`):
+   ```bash
+   ssh -i ~/.ssh/terraform/free9ja/pgsql_redis_rsa \
+       -N -L 6380:<elasticache-endpoint>.cache.amazonaws.com:6379 \
+       ec2-user@<bastion-public-ip>
+   ```
+   *(Leave this terminal window open)*
+
+2. **Launch Asynqmon in Docker pointing to the local tunnel port**:
+   ```bash
+   docker run --rm -p 8080:8080 hibiken/asynqmon --redis-addr=host.docker.internal:6380
+   ```
+
+3. Open `http://localhost:8080` in your browser to inspect live production tasks, retry failed rollups, or clear queues with zero public exposure!
+
+### C. Live AWS ElastiCache as an Internal ECS Fargate Service (Optional):
+For permanent 24/7 web access across a team:
+- Deploy `hibiken/asynqmon:latest` as an internal ECS Fargate service in your private VPC subnet.
+- Pass `--redis-addr=<elasticache-endpoint>:6379` directly (no tunnels needed since it runs inside the VPC).
+- Protect the URL behind **Cloudflare Zero Trust Access** or ALB HTTP Basic Auth.
 
 ---
 
@@ -327,6 +351,13 @@ func (redisTaskDistributor *RedisTaskDistributor) DistributeTaskSendSMS(ctx cont
 ### Step 3: Implement the Processor Method
 Add to `TaskProcessor` interface in `worker.go` and implement on `RedisTaskProcessor`:
 ```go
+// In worker.go:
+type TaskProcessor interface {
+    ...
+    ProcessTaskSendSMS(ctx context.Context, task *asynq.Task) error
+}
+
+// In send_sms_task.go (or worker.go):
 func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskSendSMS(ctx context.Context, task *asynq.Task) error {
     var payload SendSMSPayload
     if err := json.Unmarshal(task.Payload(), &payload); err != nil {

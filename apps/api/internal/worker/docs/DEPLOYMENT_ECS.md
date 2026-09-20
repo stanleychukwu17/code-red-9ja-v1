@@ -120,30 +120,14 @@ ALB ────────────────────┤
 
 ---
 
-### Strategy B: Colocated Containers with Distributed Locks
+### Strategy B: Colocated Containers with Distributed Locks (Implemented)
 
-If you prefer running a single ECS Service where every container handles both HTTP traffic and background jobs:
+When running a unified container service where containers handle both HTTP traffic and background jobs:
 
-1. **Queue Jobs**: Work out of the box with zero modifications.
-2. **Cron Jobs**: Guard each cron function with a **Redis Distributed Lock (`SETNX`)** so only ONE container runs the job:
-
-```go
-func (redisTaskProcessor *RedisTaskProcessor) ProcessDailyMarketingCampaignDeductions() {
-    ctx := context.Background()
-
-    // 1. Attempt to acquire a distributed lock in Redis for 10 minutes
-    lockKey := fmt.Sprintf("cron:lock:marketing_deductions:%s", time.Now().Format("2006-01-02"))
-    acquired, err := redisTaskProcessor.rdb.SetNX(ctx, lockKey, "locked", 10*time.Minute).Result()
-    if err != nil || !acquired {
-        // Another ECS task has already acquired the lock for today; skip
-        slog.Info("marketing campaign deductions already running on another task, skipping")
-        return
-    }
-
-    // 2. Perform deductions
-    ...
-}
-```
+1. **Queue Jobs**: Handled natively across all containers by Asynq worker pools.
+2. **Cron Jobs**: Both cron jobs are strictly protected against concurrent execution across multiple ECS containers:
+   - **`ProcessDailyMarketingCampaignDeductions`**: Guarded by a 24-hour distributed lock on `cron:lock:marketing_deductions:YYYY-MM-DD` **and** database-level `last_deducted_date` idempotency.
+   - **`ProcessINECResultGrabberSync`**: Guarded by a 14-minute distributed lock on `cron:lock:inec_grabber_sync` (`SetArgs` with `Mode: "NX"`), ensuring only one container polls INEC IReV every 15-minute interval.
 
 ---
 
@@ -152,4 +136,5 @@ func (redisTaskProcessor *RedisTaskProcessor) ProcessDailyMarketingCampaignDeduc
 - [ ] Ensure all ECS tasks point to the same **ElastiCache Redis** cluster (not `localhost`).
 - [ ] Configure `asynq.Config.Concurrency` (default 10) appropriately based on ECS container vCPU/RAM.
 - [ ] Set `asynq.Config.ShutdownTimeout` to match your ECS container stop timeout (default 30s) for graceful task completion.
-- [ ] Guard cron jobs using Strategy A (separate worker service) or Strategy B (Redis `SETNX` distributed lock).
+- [x] Guard `ProcessDailyMarketingCampaignDeductions` using Redis `NX` distributed lock (`SetArgs`) and `last_deducted_date` idempotency (Implemented).
+- [x] Guard `ProcessINECResultGrabberSync` using Redis `NX` distributed lock (`SetArgs`) (Implemented).

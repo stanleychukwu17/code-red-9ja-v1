@@ -26,11 +26,12 @@ INSERT INTO party_marketing_campaigns (
     budget_kobo,
     referral_amount_kobo,
     amount_spent_kobo,
-    status
+    status,
+    last_deducted_date
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, NOW(), NOW() + ($7::int * interval '1 day'), $8, $9, $10, $11, $12
+    $1, $2, $3, $4, $5, $6, $7, NOW(), NOW() + ($7::int * interval '1 day'), $8, $9, $10, $11, $12, CASE WHEN $12::text = 'active' THEN CURRENT_DATE ELSE NULL END
 )
-RETURNING id, party_id, election_group_id, election_id, plan_id, type, states, duration_in_days, start_date, end_date, status, budget_per_day_kobo, budget_kobo, referral_amount_kobo, amount_spent_kobo, created_at, updated_at
+RETURNING id, party_id, election_group_id, election_id, plan_id, type, states, duration_in_days, start_date, end_date, status, budget_per_day_kobo, budget_kobo, referral_amount_kobo, amount_spent_kobo, created_at, updated_at, last_deducted_date
 `
 
 type CreatePartyMarketingCampaignParams struct {
@@ -82,6 +83,7 @@ func (q *Queries) CreatePartyMarketingCampaign(ctx context.Context, arg CreatePa
 		&i.AmountSpentKobo,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.LastDeductedDate,
 	)
 	return i, err
 }
@@ -152,7 +154,7 @@ func (q *Queries) DeletePlan(ctx context.Context, id int32) error {
 }
 
 const getActiveMarketingCampaignForElectionGroup = `-- name: GetActiveMarketingCampaignForElectionGroup :one
-SELECT id, party_id, election_group_id, election_id, plan_id, type, states, duration_in_days, start_date, end_date, status, budget_per_day_kobo, budget_kobo, referral_amount_kobo, amount_spent_kobo, created_at, updated_at FROM party_marketing_campaigns
+SELECT id, party_id, election_group_id, election_id, plan_id, type, states, duration_in_days, start_date, end_date, status, budget_per_day_kobo, budget_kobo, referral_amount_kobo, amount_spent_kobo, created_at, updated_at, last_deducted_date FROM party_marketing_campaigns
 WHERE party_id = $1
   AND election_group_id = $2
   AND status = 'active'
@@ -189,6 +191,7 @@ func (q *Queries) GetActiveMarketingCampaignForElectionGroup(ctx context.Context
 		&i.AmountSpentKobo,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.LastDeductedDate,
 	)
 	return i, err
 }
@@ -236,7 +239,7 @@ func (q *Queries) GetMarketingPlansByType(ctx context.Context, type_ string) ([]
 
 const getPartyMarketingCampaigns = `-- name: GetPartyMarketingCampaigns :many
 SELECT 
-    pmc.id, pmc.party_id, pmc.election_group_id, pmc.election_id, pmc.plan_id, pmc.type, pmc.states, pmc.duration_in_days, pmc.start_date, pmc.end_date, pmc.status, pmc.budget_per_day_kobo, pmc.budget_kobo, pmc.referral_amount_kobo, pmc.amount_spent_kobo, pmc.created_at, pmc.updated_at, 
+    pmc.id, pmc.party_id, pmc.election_group_id, pmc.election_id, pmc.plan_id, pmc.type, pmc.states, pmc.duration_in_days, pmc.start_date, pmc.end_date, pmc.status, pmc.budget_per_day_kobo, pmc.budget_kobo, pmc.referral_amount_kobo, pmc.amount_spent_kobo, pmc.created_at, pmc.updated_at, pmc.last_deducted_date, 
     p.name AS plan_name, 
     p.price_kobo AS plan_price_kobo, 
     p.color_hex AS plan_color,
@@ -268,6 +271,7 @@ type GetPartyMarketingCampaignsRow struct {
 	AmountSpentKobo    int64              `json:"amount_spent_kobo"`
 	CreatedAt          pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
+	LastDeductedDate   pgtype.Date        `json:"last_deducted_date"`
 	PlanName           string             `json:"plan_name"`
 	PlanPriceKobo      int64              `json:"plan_price_kobo"`
 	PlanColor          pgtype.Text        `json:"plan_color"`
@@ -302,6 +306,7 @@ func (q *Queries) GetPartyMarketingCampaigns(ctx context.Context, partyID int16)
 			&i.AmountSpentKobo,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.LastDeductedDate,
 			&i.PlanName,
 			&i.PlanPriceKobo,
 			&i.PlanColor,
@@ -529,8 +534,20 @@ const processDailyMarketingCampaignDeductions = `-- name: ProcessDailyMarketingC
 UPDATE party_marketing_campaigns
 SET 
     amount_spent_kobo = CASE 
-        WHEN status = 'active' AND NOW() < end_date AND (start_date IS NULL OR start_date::date < CURRENT_DATE) THEN amount_spent_kobo + budget_per_day_kobo 
+        WHEN status = 'active' 
+             AND NOW() < end_date 
+             AND (start_date IS NULL OR start_date::date < CURRENT_DATE)
+             AND (last_deducted_date IS NULL OR last_deducted_date < CURRENT_DATE)
+        THEN amount_spent_kobo + budget_per_day_kobo 
         ELSE amount_spent_kobo 
+    END,
+    last_deducted_date = CASE 
+        WHEN status = 'active' 
+             AND NOW() < end_date 
+             AND (start_date IS NULL OR start_date::date < CURRENT_DATE)
+             AND (last_deducted_date IS NULL OR last_deducted_date < CURRENT_DATE)
+        THEN CURRENT_DATE 
+        ELSE last_deducted_date 
     END,
     status = CASE 
         WHEN status = 'active' AND NOW() >= end_date THEN 'completed'
@@ -538,11 +555,11 @@ SET
     END,
     updated_at = NOW()
 WHERE status = 'active'
-RETURNING id, party_id, election_group_id, election_id, plan_id, type, states, duration_in_days, start_date, end_date, status, budget_per_day_kobo, budget_kobo, referral_amount_kobo, amount_spent_kobo, created_at, updated_at
+RETURNING id, party_id, election_group_id, election_id, plan_id, type, states, duration_in_days, start_date, end_date, status, budget_per_day_kobo, budget_kobo, referral_amount_kobo, amount_spent_kobo, created_at, updated_at, last_deducted_date
 `
 
 // Run once daily via cron to deduct budget_per_day_kobo, update amount_spent_kobo, and mark expired campaigns as completed.
-// Skips deduction if the campaign was activated today (start_date::date = CURRENT_DATE) to prevent double deduction on activation day.
+// Idempotent: Skips deduction if already deducted today (last_deducted_date = CURRENT_DATE) or activated today.
 func (q *Queries) ProcessDailyMarketingCampaignDeductions(ctx context.Context) ([]PartyMarketingCampaign, error) {
 	rows, err := q.db.Query(ctx, processDailyMarketingCampaignDeductions)
 	if err != nil {
@@ -570,6 +587,7 @@ func (q *Queries) ProcessDailyMarketingCampaignDeductions(ctx context.Context) (
 			&i.AmountSpentKobo,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.LastDeductedDate,
 		); err != nil {
 			return nil, err
 		}
@@ -588,9 +606,10 @@ SET
     start_date = CASE WHEN $2::text = 'active' THEN NOW() ELSE start_date END,
     end_date = CASE WHEN $2::text = 'active' THEN NOW() + (duration_in_days::text || ' days')::interval ELSE end_date END,
     amount_spent_kobo = CASE WHEN $2::text = 'active' THEN amount_spent_kobo + budget_per_day_kobo ELSE amount_spent_kobo END,
+    last_deducted_date = CASE WHEN $2::text = 'active' THEN CURRENT_DATE ELSE last_deducted_date END,
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, party_id, election_group_id, election_id, plan_id, type, states, duration_in_days, start_date, end_date, status, budget_per_day_kobo, budget_kobo, referral_amount_kobo, amount_spent_kobo, created_at, updated_at
+RETURNING id, party_id, election_group_id, election_id, plan_id, type, states, duration_in_days, start_date, end_date, status, budget_per_day_kobo, budget_kobo, referral_amount_kobo, amount_spent_kobo, created_at, updated_at, last_deducted_date
 `
 
 type UpdateMarketingCampaignStatusParams struct {
@@ -619,6 +638,7 @@ func (q *Queries) UpdateMarketingCampaignStatus(ctx context.Context, arg UpdateM
 		&i.AmountSpentKobo,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.LastDeductedDate,
 	)
 	return i, err
 }

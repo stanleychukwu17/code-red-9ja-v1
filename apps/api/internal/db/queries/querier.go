@@ -379,7 +379,7 @@ type Querier interface {
 	// Sets been_paid=true on every attempt that currently has been_paid=false and increments earned_amount_kobo.
 	MarkPracticeTestAttemptsPaid(ctx context.Context, arg MarkPracticeTestAttemptsPaidParams) (UserPracticeTest, error)
 	// Run once daily via cron to deduct budget_per_day_kobo, update amount_spent_kobo, and mark expired campaigns as completed.
-	// Skips deduction if the campaign was activated today (start_date::date = CURRENT_DATE) to prevent double deduction on activation day.
+	// Idempotent: Skips deduction if already deducted today (last_deducted_date = CURRENT_DATE) or activated today.
 	ProcessDailyMarketingCampaignDeductions(ctx context.Context) ([]PartyMarketingCampaign, error)
 	RecalculateFederalConstituencyMetrics(ctx context.Context) error
 	RecalculateLGAMetrics(ctx context.Context) error

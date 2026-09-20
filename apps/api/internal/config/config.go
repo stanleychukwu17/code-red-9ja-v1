@@ -76,6 +76,7 @@ type Config struct {
 	JWTSecret            string
 	JWTAccessExpiration  time.Duration
 	JWTRefreshExpiration time.Duration
+	WorkerConcurrency    int // Concurrency for Asynq background workers (default 10)
 }
 
 var (
@@ -186,40 +187,64 @@ func LoadConfig() (*Config, error) {
 	}
 
 	configInstance := &Config{
-		Env:  GetEnv("ENV", "development"),
+		// Environment tier: "development", "staging", or "production"
+		Env: GetEnv("ENV", "development"),
+
+		// HTTP server listener port (e.g., 4100)
 		Port: GetEnv("PORT", "4100"),
+
+		// Primary PostgreSQL connection pool settings
 		Database: DatabaseConfig{
-			URL: db_url,
+			URL: db_url, // Full connection string (e.g., postgres://user:pass@host:5432/dbname?sslmode=disable)
 		},
+
+		// Redis / AWS ElastiCache connection for Asynq job queue, distributed locks, and caching
 		Redis: RedisConfig{
-			Addr:     redis_addr,
-			Password: redis_password,
-			DB:       redis_db,
+			Addr:     redis_addr,     // Host:port (e.g., localhost:6379 or elastiCache-endpoint:6379)
+			Password: redis_password, // Auth token or password (leave empty if none configured)
+			DB:       redis_db,       // Redis logical database index (defaults to 0)
 		},
+
+		// Cloudflare R2 (S3-compatible) object storage for result sheet uploads, agent photos, and edge cache
 		R2: R2Config{
-			AccountID:       GetEnv("R2_ACCOUNT_ID", ""),
-			AccessKeyID:     GetEnv("R2_ACCESS_KEY_ID", ""),
-			SecretAccessKey: GetEnv("R2_SECRET_ACCESS_KEY", ""),
-			BucketName:      GetEnv("R2_BUCKET_NAME", ""),
-			PublicURL:       GetEnv("R2_PUBLIC_URL", ""),
-			ZoneID:          GetEnv("CLOUDFLARE_ZONE_ID", ""),
-			APIToken:        GetEnv("CLOUDFLARE_API_TOKEN", ""),
+			AccountID:       GetEnv("R2_ACCOUNT_ID", ""),        // Cloudflare account identifier
+			AccessKeyID:     GetEnv("R2_ACCESS_KEY_ID", ""),    // S3-compatible access key ID
+			SecretAccessKey: GetEnv("R2_SECRET_ACCESS_KEY", ""),// S3-compatible secret access key
+			BucketName:      GetEnv("R2_BUCKET_NAME", ""),       // Target R2 bucket name
+			PublicURL:       GetEnv("R2_PUBLIC_URL", ""),        // CDN / Public domain URL (e.g., https://files.free9ja.com)
+			ZoneID:          GetEnv("CLOUDFLARE_ZONE_ID", ""),   // Zone ID for Cloudflare cache purging
+			APIToken:        GetEnv("CLOUDFLARE_API_TOKEN", ""), // API token with cache purge permissions
 		},
+
+		// Monnify payment gateway for wallet deposits, virtual accounts, and webhook verification
 		Monnify: MonnifyConfig{
-			BaseURL:      GetEnv("MONNIFY_BASE_URL", "https://sandbox.monnify.com"),
-			APIKey:       GetEnv("MONNIFY_API_KEY", ""),
-			SecretKey:    GetEnv("MONNIFY_SECRET_KEY", ""),
-			ContractCode: GetEnv("MONNIFY_CONTRACT_CODE", ""),
+			BaseURL:      GetEnv("MONNIFY_BASE_URL", "https://sandbox.monnify.com"), // API root (sandbox vs production)
+			APIKey:       GetEnv("MONNIFY_API_KEY", ""),                             // Merchant API key
+			SecretKey:    GetEnv("MONNIFY_SECRET_KEY", ""),                          // Secret key for HMAC webhook verification
+			ContractCode: GetEnv("MONNIFY_CONTRACT_CODE", ""),                       // Monnify business contract code
 		},
-		GeminiAPIKey:         GetEnv("GEMINI_API_KEY", ""),
-		JWTSecret:            jwtSecret,
-		JWTAccessExpiration:  jwtAccessExp,
-		JWTRefreshExpiration: jwtRefreshExp,
+
+		// Google Gemini API key used by the INEC result grabber for OCR & result sheet parsing
+		GeminiAPIKey: GetEnv("GEMINI_API_KEY", ""),
+
+		// Authentication tokens & lifetime settings
+		JWTSecret:            jwtSecret,            // Secret key used to sign and verify HMAC-SHA256 JWT tokens
+		JWTAccessExpiration:  jwtAccessExp,         // Short-lived access token duration (default: 15m)
+		JWTRefreshExpiration: jwtRefreshExp,        // Long-lived refresh token duration (default: 720h / 30 days)
+
+		// Concurrency limit for Asynq background workers processing queue jobs on this instance
+		WorkerConcurrency: GetIntEnv("WORKER_CONCURRENCY", 10),
 	}
 
 	// Validation: Ensure critical variables are set
 	if configInstance.Database.URL == "" {
 		return nil, fmt.Errorf("DATABASE_URL is not set")
+	}
+	if configInstance.Redis.Addr == "" {
+		return nil, fmt.Errorf("REDIS_ADDR is not set")
+	}
+	if configInstance.GeminiAPIKey == "" {
+		return nil, fmt.Errorf("GEMINI_API_KEY is not set")
 	}
 
 	return configInstance, nil

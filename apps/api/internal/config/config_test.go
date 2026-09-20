@@ -76,6 +76,7 @@ func TestLoadConfig(t *testing.T) {
 	os.Setenv("DB_PORT", "5432")
 	os.Setenv("REDIS_ADDR", "localhost")
 	os.Setenv("REDIS_PORT", "6379")
+	os.Setenv("GEMINI_API_KEY", "test-gemini-key")
 	os.Setenv("IS_CI_CD", "true") // Skip .env loading
 
 	defer func() {
@@ -85,6 +86,7 @@ func TestLoadConfig(t *testing.T) {
 		os.Unsetenv("DB_PORT")
 		os.Unsetenv("REDIS_ADDR")
 		os.Unsetenv("REDIS_PORT")
+		os.Unsetenv("GEMINI_API_KEY")
 		os.Unsetenv("IS_CI_CD")
 	}()
 
@@ -93,6 +95,7 @@ func TestLoadConfig(t *testing.T) {
 	assert.NotNil(t, cfg)
 	assert.Equal(t, "4100", cfg.Port) // Default port
 	assert.Contains(t, cfg.Database.URL, "testuser:testpass@localhost:5432/testdb")
+	assert.Equal(t, "test-gemini-key", cfg.GeminiAPIKey)
 }
 
 func TestLoadConfig_Error(t *testing.T) {
@@ -106,6 +109,33 @@ func TestLoadConfig_Error(t *testing.T) {
 	assert.Nil(t, cfg)
 	assert.Contains(t, err.Error(), "must be set")
 }
+
+func TestLoadConfig_MissingGeminiKey(t *testing.T) {
+	os.Setenv("DB_USER", "testuser")
+	os.Setenv("DB_PASSWORD", "testpass")
+	os.Setenv("DB_NAME", "testdb")
+	os.Setenv("DB_PORT", "5432")
+	os.Setenv("REDIS_ADDR", "localhost")
+	os.Setenv("REDIS_PORT", "6379")
+	os.Unsetenv("GEMINI_API_KEY")
+	os.Setenv("IS_CI_CD", "true")
+
+	defer func() {
+		os.Unsetenv("DB_USER")
+		os.Unsetenv("DB_PASSWORD")
+		os.Unsetenv("DB_NAME")
+		os.Unsetenv("DB_PORT")
+		os.Unsetenv("REDIS_ADDR")
+		os.Unsetenv("REDIS_PORT")
+		os.Unsetenv("IS_CI_CD")
+	}()
+
+	cfg, err := config.LoadConfig()
+	assert.Error(t, err)
+	assert.Nil(t, cfg)
+	assert.Contains(t, err.Error(), "GEMINI_API_KEY is not set")
+}
+
 func TestLoad(t *testing.T) {
 	cfg := config.Load()
 	assert.NotNil(t, cfg)
@@ -125,6 +155,7 @@ func TestLoadConfig_Testing(t *testing.T) {
 	os.Setenv("DB_PORT", "5432")
 	os.Setenv("REDIS_ADDR", "localhost")
 	os.Setenv("REDIS_PORT", "6379")
+	os.Setenv("GEMINI_API_KEY", "test-gemini-key")
 	os.Setenv("IS_CI_CD", "true")
 	os.Setenv("IS_TESTING", "true")
 
@@ -135,6 +166,7 @@ func TestLoadConfig_Testing(t *testing.T) {
 		os.Unsetenv("DB_PORT")
 		os.Unsetenv("REDIS_ADDR")
 		os.Unsetenv("REDIS_PORT")
+		os.Unsetenv("GEMINI_API_KEY")
 		os.Unsetenv("IS_CI_CD")
 		os.Unsetenv("IS_TESTING")
 	}()

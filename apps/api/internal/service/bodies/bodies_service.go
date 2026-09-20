@@ -30,13 +30,11 @@ func (s *BodiesService) GetOccupations(ctx context.Context) ([]queries.Occupatio
 
 // GetNationalMetrics retrieves aggregated metrics for electoral bodies nationwide, using a cached version if available.
 func (s *BodiesService) GetNationalMetrics(ctx context.Context) (queries.NationalMetric, error) {
-	if s.rdb != nil {
-		val, err := s.rdb.Get(ctx, db.RedisNationalMetrics).Result()
-		if err == nil {
-			var metrics queries.NationalMetric
-			if err := json.Unmarshal([]byte(val), &metrics); err == nil {
-				return metrics, nil
-			}
+	val, err := s.rdb.Get(ctx, db.RedisNationalMetrics).Result()
+	if err == nil {
+		var metrics queries.NationalMetric
+		if err := json.Unmarshal([]byte(val), &metrics); err == nil {
+			return metrics, nil
 		}
 	}
 
@@ -45,10 +43,8 @@ func (s *BodiesService) GetNationalMetrics(ctx context.Context) (queries.Nationa
 		return queries.NationalMetric{}, err
 	}
 
-	if s.rdb != nil {
-		if jsonData, err := json.Marshal(metrics); err == nil {
-			s.rdb.Set(ctx, db.RedisNationalMetrics, jsonData, db.RedisOneYearTTL)
-		}
+	if jsonData, err := json.Marshal(metrics); err == nil {
+		s.rdb.Set(ctx, db.RedisNationalMetrics, jsonData, db.RedisOneYearTTL)
 	}
 
 	return metrics, nil
