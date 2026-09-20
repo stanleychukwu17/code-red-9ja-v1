@@ -12,11 +12,11 @@ services:
     ports:
       - "6379:6379"
     volumes:
-      - ${REDIS_DATA_VOLUME:-redis_data}:/data
+      - "${REDIS_DATA_VOLUME:-redis_data}:/data"
     restart: unless-stopped
     networks:
       - free9ja_network
-    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}"]
+    command: [ "redis-server", "--requirepass", "${REDIS_PASSWORD}" ]
 
   postgres_free9ja:
     container_name: postgres_free9ja
@@ -32,12 +32,11 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
       POSTGRES_DB: test_db
-    command: ["postgres", "-c", "shared_preload_libraries=pg_stat_statements"]
+    command: [ "postgres", "-c", "shared_preload_libraries=pg_stat_statements" ]
     volumes:
-      - ${POSTGRES_DATA_VOLUME:-pg_data}:/var/lib/postgresql/data
+      - "${POSTGRES_DATA_VOLUME:-pg_data}:/var/lib/postgresql/data"
     networks:
       - free9ja_network
-
   # pgadmin_free9ja:
   #   container_name: pgadmin_free9ja
   #   image: dpage/pgadmin4:latest

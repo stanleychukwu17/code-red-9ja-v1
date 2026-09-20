@@ -947,9 +947,9 @@ type PartyMarketingCampaign struct {
 	BudgetKobo         int64              `json:"budget_kobo"`
 	ReferralAmountKobo int64              `json:"referral_amount_kobo"`
 	AmountSpentKobo    int64              `json:"amount_spent_kobo"`
+	LastDeductedDate   pgtype.Date        `json:"last_deducted_date"`
 	CreatedAt          pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
-	LastDeductedDate   pgtype.Date        `json:"last_deducted_date"`
 }
 
 type PartyMembership struct {

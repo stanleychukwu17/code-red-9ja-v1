@@ -35,7 +35,7 @@ services:
     ports:
       - "6379:6379"
     volumes:
-      - redis_data:/data
+      - "${REDIS_DATA_VOLUME:-redis_data}:/data"
     restart: unless-stopped
     deploy:
       resources:
@@ -50,4 +50,3 @@ volumes:
 networks:
   free9ja-net:
     driver: bridge
-
