@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
 import { getPageHeader } from "#/lib/shared/meta";
 import {
 	PartiesEmptyState,
@@ -23,8 +22,6 @@ export const Route = createFileRoute("/parties")({
 });
 
 function PartiesComponent() {
-	const [searchQuery, setSearchQuery] = useState("");
-
 	const {
 		data: partiesRes,
 		isLoading,
@@ -43,16 +40,10 @@ function PartiesComponent() {
 
 	const parties: Party[] = partiesRes?.data?.parties || [];
 
-	const filteredParties = parties.filter(
-		(party) =>
-			party.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-			party.short_name.toLowerCase().includes(searchQuery.toLowerCase())
-	);
-
 	return (
 		<div className="min-h-screen bg-neutral-50/50 dark:bg-neutral-950 p-4 md:p-8">
 			<div className="max-w-6xl mx-auto space-y-8">
-				<PartiesHeader searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+				<PartiesHeader />
 
 				{isLoading ? (
 					<PartySkeletonGrid />
@@ -61,14 +52,14 @@ function PartiesComponent() {
 						message={error instanceof Error ? error.message : undefined}
 						onRetry={refetch}
 					/>
-				) : filteredParties.length > 0 ? (
+				) : parties.length > 0 ? (
 					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-						{filteredParties.map((party) => (
+						{parties.map((party) => (
 							<PartyCard key={party.id} party={party} />
 						))}
 					</div>
 				) : (
-					<PartiesEmptyState searchQuery={searchQuery} />
+					<PartiesEmptyState />
 				)}
 			</div>
 		</div>

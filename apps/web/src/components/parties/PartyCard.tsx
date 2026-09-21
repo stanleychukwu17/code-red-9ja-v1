@@ -28,7 +28,7 @@ function PartyCover({ coverImage, foundedYear, shortName, coverPositionY = 50 }:
 				src={coverImage}
 				alt={`${shortName} banner`}
 				style={{ objectPosition: `center ${coverPositionY}%` }}
-				className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+				className="w-full h-full object-cover"
 			/>
 			<div className="absolute top-3 right-3 bg-neutral-950/80 backdrop-blur-md text-white text-[11px] font-semibold px-3 py-1 rounded-full shadow-sm">
 				Founded in {foundedYear}
@@ -114,7 +114,7 @@ export function PartyCard({ party }: PartyCardProps) {
 	return (
 		<Link
 			to={APP_URL.party(party.short_name.toLowerCase(), party.id.toString())}
-			className="group flex flex-col items-center bg-sidebar-mobile dark:bg-neutral-900 rounded overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] hover:shadow-xl hover:shadow-neutral-200/60 dark:hover:shadow-neutral-950/60 transition-all duration-300 hover:-translate-y-1 pb-6"
+			className="group flex flex-col items-center bg-sidebar-mobile/50 dark:bg-neutral-900 rounded overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] hover:shadow-xl hover:shadow-neutral-200/60 dark:hover:shadow-neutral-950/60 transition-all duration-300 hover:-translate-y-1 pb-6"
 		>
 			{/* Banner / Cover Header */}
 			<PartyCover

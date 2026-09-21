@@ -531,7 +531,7 @@ export function PartyFormDialog({
 													e.stopPropagation();
 													handleRemoveCover();
 												}}
-												className="hidden !hidden size-7.5 rounded-lg bg-black/70 hover:bg-red-600 backdrop-blur-md text-white flex items-center justify-center transition cursor-pointer shadow-sm"
+												className=" 1flex hidden! size-7.5 rounded-lg bg-black/70 hover:bg-red-600 backdrop-blur-md text-white items-center justify-center transition cursor-pointer shadow-sm"
 												title="Remove background image"
 											>
 												<Trash2 className="size-3.5" />
@@ -666,7 +666,7 @@ export function PartyFormDialog({
 												<button
 													type="button"
 													onClick={() => handleRemoveImage("removing_logo")}
-													className="hidden !hidden inline-flex h-9 items-center rounded-lg border border-[#dfdfdf] dark:border-neutral-700/80 bg-transparent hover:bg-red-50 dark:hover:bg-red-950/30 hover:border-red-200 dark:hover:border-red-900/50 px-3 text-[13px] font-medium text-red-600 dark:text-red-400 transition cursor-pointer"
+													className="hidden! 1inline-flex h-9 items-center rounded-lg border border-[#dfdfdf] dark:border-neutral-700/80 bg-transparent hover:bg-red-50 dark:hover:bg-red-950/30 hover:border-red-200 dark:hover:border-red-900/50 px-3 text-[13px] font-medium text-red-600 dark:text-red-400 transition cursor-pointer"
 												>
 													Remove logo
 												</button>
