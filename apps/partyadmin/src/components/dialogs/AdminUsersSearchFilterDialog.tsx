@@ -29,33 +29,19 @@ export interface AdminUsersSearchFilterDialogProps {
 const ROLES = [
   { label: "Super Party Admin", value: "super_party_admin" },
   { label: "Party Admin", value: "party_admin" },
-  { label: "Polling Agent", value: "polling_agent" },
-  { label: "Ward Supervisor", value: "ward_supervisor" },
-  { label: "LGA Supervisor", value: "lga_supervisor" },
-  { label: "State Supervisor", value: "state_supervisor" },
 ];
 
 const STATUSES = [
-  { label: "Just Registered", value: "just_registered" },
-  { label: "Placeholder", value: "placeholder" },
   { label: "Active", value: "active" },
-  { label: "Inactive", value: "inactive" },
   { label: "Suspended", value: "suspended" },
   { label: "Banned", value: "banned" },
-  { label: "Deleted", value: "deleted" },
 ];
 
 const VERIFICATION_TYPES = [
   { label: "Verified Individual", value: "vip_verified" },
   { label: "Verified Celebrity", value: "celebrity_verified" },
-  { label: "Verified Political Party", value: "political_party_verified" },
   { label: "Verified Politician", value: "politician_verified" },
-  { label: "Verified Organization", value: "organization_verified" },
-  { label: "Verified Business", value: "business_verified" },
-  {
-    label: "Verified Party National Official",
-    value: "national_official_verified",
-  },
+  { label: "Verified Party National Official", value: "national_official_verified", },
   { label: "Verified Party Zonal Official", value: "zonal_official_verified" },
   { label: "Verified Party State Official", value: "state_official_verified" },
   { label: "Verified Party LGA Official", value: "lga_official_verified" },
@@ -155,7 +141,12 @@ export function AdminUsersSearchFilterDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-110 p-0 rounded-2xl border-none shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+      <DialogContent
+        className="max-w-110 p-0 rounded-2xl border-none shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+      >
         <DialogHeader title="Filter Party Members" />
 
         <DialogPadding className="flex-1 overflow-y-auto space-y-7 pb-6 pt-5 min-h-0">
@@ -251,10 +242,10 @@ export function AdminUsersSearchFilterDialog({
 
           <div className="h-px bg-[#f0f0f0] w-full" />
 
-          {/* Account Status Filter */}
+          {/* Membership Status Filter */}
           <div className="space-y-4">
             <h4 className="font-semibold text-c-90 text-[15px]">
-              Account Status
+              Membership Status
             </h4>
             <div className="grid grid-cols-2 gap-3">
               {STATUSES.map((status) => (

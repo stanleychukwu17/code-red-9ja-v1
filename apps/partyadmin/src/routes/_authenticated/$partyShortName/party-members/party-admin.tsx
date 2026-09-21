@@ -2,7 +2,7 @@
  * @file Party Admins Roster Page
  * @description Roster displaying party administrators belonging to the current political party.
  * Provides infinite scroll administrator listing, debounced search, scoped multi-criteria filters,
- * administrator creation modal (`UserFormDialog`), and server actions.
+ * and server actions.
  */
 
 import * as React from "react";
@@ -11,13 +11,11 @@ import {
   PageHeader,
   PageSearchLayer,
   FilterButton,
-  AddButton,
 } from "@repo/ui/components/custom/AdminLayouts";
 import { UsersTable } from "#/components/Tables";
 import { getPageHeader } from "#/lib/shared/meta";
 import { createFileRoute } from "@tanstack/react-router";
 import { getPartyAdminsTabs } from "./-data";
-import { UserFormDialog } from "@repo/ui/components/custom/UserFormDialog";
 import {
   AdminUsersSearchFilterDialog,
   type UsersFilters,
@@ -29,14 +27,7 @@ import { useUser } from "#/hooks/useUser";
 import { useUserParty } from "#/hooks/useUserParty";
 
 // Server Functions
-import { getAllCountries, getStates, getCities } from "#/lib/server/countries";
-import {
-  getParties,
-  getPresignedUploadURL,
-  confirmFileUpload,
-} from "#/lib/server/parties";
-import { registerCandidate } from "#/lib/server/auth/auth";
-import { updateUser, getUsersList } from "#/lib/server/users";
+import { getUsersList } from "#/lib/server/users";
 
 export const Route = createFileRoute(
   "/_authenticated/$partyShortName/party-members/party-admin",
@@ -48,11 +39,10 @@ export const Route = createFileRoute(
 /**
  * Party Admins Page Component
  * Handles infinite pagination of party admins, debounced search,
- * filtering dialog, observer sentinel triggers, and user creation dialog lifecycle.
+ * filtering dialog, observer sentinel triggers, and table roster display.
  */
 function RouteComponent() {
   const { partyShortName } = Route.useParams();
-  const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [debouncedSearchQuery] = useDebounceValue(searchQuery, 500);
@@ -76,7 +66,13 @@ function RouteComponent() {
     error,
     refetch,
   } = useInfiniteQuery({
-    queryKey: ["party-members", "party-admin", partyId, debouncedSearchQuery, filters],
+    queryKey: [
+      "party-members",
+      "party-admin",
+      partyId,
+      debouncedSearchQuery,
+      filters,
+    ],
     queryFn: async ({ pageParam }) => {
       const res = await getUsersList({
         data: {
@@ -142,10 +138,7 @@ function RouteComponent() {
         ariaLabel="Search party admins"
         placeholder="Search"
         rightComponent={
-          <>
-            <FilterButton onClick={() => setIsFilterOpen(true)} />
-            <AddButton onClick={() => setIsFormOpen(true)} />
-          </>
+          <FilterButton onClick={() => setIsFilterOpen(true)} />
         }
       />
 
@@ -183,21 +176,6 @@ function RouteComponent() {
           )}
         </>
       )}
-
-      <UserFormDialog
-        open={isFormOpen}
-        onClose={() => setIsFormOpen(false)}
-        onSuccess={() => refetch()}
-        partyShortName={partyShortName}
-        getAllCountries={getAllCountries}
-        getStates={getStates}
-        getCities={getCities}
-        getParties={getParties}
-        getPresignedUploadURL={getPresignedUploadURL}
-        confirmFileUpload={confirmFileUpload}
-        registerCandidate={registerCandidate}
-        updateUser={updateUser}
-      />
 
       <AdminUsersSearchFilterDialog
         open={isFilterOpen}

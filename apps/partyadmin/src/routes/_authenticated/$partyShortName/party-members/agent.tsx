@@ -1,7 +1,7 @@
 /**
  * @file Party Members Agent Roster Page
  * @description Filtered sub-roster displaying party members who also serve as active agents.
- * Lists political office, party office, and registration timestamps with creation dialog support.
+ * Lists political office, party office, and registration timestamps.
  */
 
 import * as React from "react";
@@ -9,24 +9,12 @@ import {
   Layout,
   PageHeader,
   PageSearchLayer,
-  AddButton,
 } from "@repo/ui/components/custom/AdminLayouts";
 import { PartyAdminsTable } from "#/components/Tables";
 import { getPageHeader } from "#/lib/shared/meta";
 import { createFileRoute } from "@tanstack/react-router";
 import { getPartyAdminsTabs, getAgentPartyAdmins } from "./-data";
 import { PartyAdminsActions } from "#/components/party-members/PartyMembersActions";
-import { UserFormDialog } from "@repo/ui/components/custom/UserFormDialog";
-
-// Server Functions
-import { getAllCountries, getStates, getCities } from "#/lib/server/countries";
-import {
-  getParties,
-  getPresignedUploadURL,
-  confirmFileUpload,
-} from "#/lib/server/parties";
-import { registerCandidate } from "#/lib/server/auth/auth";
-import { updateUser } from "#/lib/server/users";
 
 export const Route = createFileRoute(
   "/_authenticated/$partyShortName/party-members/agent",
@@ -41,7 +29,6 @@ export const Route = createFileRoute(
  */
 function RouteComponent() {
   const { partyShortName } = Route.useParams();
-  const [isFormOpen, setIsFormOpen] = React.useState(false);
 
   return (
     <Layout>
@@ -53,12 +40,7 @@ function RouteComponent() {
       <PageSearchLayer
         ariaLabel="Search party members"
         placeholder="Search"
-        rightComponent={
-          <>
-            <PartyAdminsActions showElectionFilter />
-            <AddButton onClick={() => setIsFormOpen(true)} />
-          </>
-        }
+        rightComponent={<PartyAdminsActions showElectionFilter />}
       />
 
       <PartyAdminsTable
@@ -69,20 +51,6 @@ function RouteComponent() {
           "Joined at",
         ]}
         items={getAgentPartyAdmins(partyShortName)}
-      />
-
-      <UserFormDialog
-        open={isFormOpen}
-        onClose={() => setIsFormOpen(false)}
-        partyShortName={partyShortName}
-        getAllCountries={getAllCountries}
-        getStates={getStates}
-        getCities={getCities}
-        getParties={getParties}
-        getPresignedUploadURL={getPresignedUploadURL}
-        confirmFileUpload={confirmFileUpload}
-        registerCandidate={registerCandidate}
-        updateUser={updateUser}
       />
     </Layout>
   );

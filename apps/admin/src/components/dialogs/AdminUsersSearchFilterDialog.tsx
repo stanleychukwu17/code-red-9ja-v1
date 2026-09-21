@@ -153,7 +153,12 @@ export function AdminUsersSearchFilterDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-110 p-0 rounded-2xl border-none shadow-2xl   overflow-hidden flex flex-col max-h-[85vh]">
+      <DialogContent
+        className="max-w-110 p-0 rounded-2xl border-none shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+      >
         <DialogHeader title="Filter Users" />
 
         <DialogPadding className="flex-1 overflow-y-auto space-y-7 pb-6 pt-5 min-h-0">

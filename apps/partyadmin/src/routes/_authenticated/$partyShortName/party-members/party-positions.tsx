@@ -1,7 +1,7 @@
 /**
  * @file Party Positions Roster Page
  * @description Roster displaying party officials, executive positions, and leadership offices.
- * Lists national, zonal, and state executive positions with creation dialog support.
+ * Lists national, zonal, and state executive positions with search filtering.
  */
 
 import * as React from "react";
@@ -9,28 +9,13 @@ import {
   Layout,
   PageHeader,
   PageSearchLayer,
-  AddButton,
 } from "@repo/ui/components/custom/AdminLayouts";
 import { PartyAdminsTable } from "#/components/Tables";
 import { getPageHeader } from "#/lib/shared/meta";
 import { createFileRoute } from "@tanstack/react-router";
 import { getPartyAdminsTabs, getAllPartyAdmins } from "./-data";
-import { PartyAdminsActions } from "#/components/party-members/PartyMembersActions";
-import { UserFormDialog } from "@repo/ui/components/custom/UserFormDialog";
 
-// Server Functions
-import { getAllCountries, getStates, getCities } from "#/lib/server/countries";
-import {
-  getParties,
-  getPresignedUploadURL,
-  confirmFileUpload,
-} from "#/lib/server/parties";
-import { registerCandidate } from "#/lib/server/auth/auth";
-import { updateUser } from "#/lib/server/users";
-
-export const Route = createFileRoute(
-  "/_authenticated/$partyShortName/party-members/party-positions",
-)({
+export const Route = createFileRoute("/_authenticated/$partyShortName/party-members/party-positions")({
   head: () => getPageHeader({ title: "Party positions" }),
   component: RouteComponent,
 });
@@ -41,7 +26,6 @@ export const Route = createFileRoute(
  */
 function RouteComponent() {
   const { partyShortName } = Route.useParams();
-  const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
 
   const allPositions = React.useMemo(() => {
@@ -68,12 +52,6 @@ function RouteComponent() {
         onChange={(e) => setSearchQuery(e.target.value)}
         ariaLabel="Search party positions"
         placeholder="Search positions or officials"
-        rightComponent={
-          <>
-            <PartyAdminsActions />
-            <AddButton onClick={() => setIsFormOpen(true)} />
-          </>
-        }
       />
 
       {allPositions.length === 0 ? (
@@ -91,20 +69,6 @@ function RouteComponent() {
           items={allPositions}
         />
       )}
-
-      <UserFormDialog
-        open={isFormOpen}
-        onClose={() => setIsFormOpen(false)}
-        partyShortName={partyShortName}
-        getAllCountries={getAllCountries}
-        getStates={getStates}
-        getCities={getCities}
-        getParties={getParties}
-        getPresignedUploadURL={getPresignedUploadURL}
-        confirmFileUpload={confirmFileUpload}
-        registerCandidate={registerCandidate}
-        updateUser={updateUser}
-      />
     </Layout>
   );
 }
