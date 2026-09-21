@@ -57,41 +57,14 @@ CREATE TABLE IF NOT EXISTS election_group_polling_units (
   -- Voters whose referred_by_code matches an agent assigned to this PU, who then voted
   pu_live_voters_referred_by_agent_count               INT         NOT NULL DEFAULT 0,
 
-  -- Per-party breakdown. Array of objects:
-  -- {
-  --   party_id,
-  --   applications_count,
-  --   accepted_applications_count,
-  --   rejected_applications_count,
-  --   pu_agents_count,
-  --   pu_agents_in_attendance_count,
-  --   pu_average_arrival_time,
-  --   pu_average_election_started_at,
-  --   pu_average_election_ended_at,
-  --   pu_updates_count,
-  --   pu_reports_count,
-  --   pu_final_results_uploaded_count,
-  --   unique_pu_final_results_uploaded_count,
-  --   last_update_given_at,
-  --   pu_average_update_time_interval_in_seconds,
-  --   pu_election_practice_test_readiness_percentage,
-  --   pu_live_voters_referred_by_agent_count
-  -- }
-  parties JSONB NOT NULL DEFAULT '[]'::jsonb,
-
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
 
   CONSTRAINT uq_election_group_polling_unit UNIQUE (election_group_id, polling_unit_id)
 );
 
-CREATE INDEX idx_egpu_polling_unit      ON election_group_polling_units(polling_unit_id);
-CREATE INDEX idx_egpu_state             ON election_group_polling_units(state_id);
-CREATE INDEX idx_egpu_lga               ON election_group_polling_units(lga_id);
-CREATE INDEX idx_egpu_ward              ON election_group_polling_units(ward_id);
-CREATE INDEX idx_egpu_state_const       ON election_group_polling_units(state_constituency_id);
-CREATE INDEX idx_egpu_federal_const     ON election_group_polling_units(federal_constituency_id);
-CREATE INDEX idx_egpu_senatorial        ON election_group_polling_units(senatorial_district_id);
+CREATE INDEX idx_egpu_group_ward        ON election_group_polling_units(election_group_id, ward_id);
+CREATE INDEX idx_egpu_group_state_const ON election_group_polling_units(election_group_id, state_constituency_id);
 
 
 -- ============================================================
@@ -144,39 +117,6 @@ CREATE TABLE IF NOT EXISTS election_group_wards (
 
   ward_supervisors_count                           INT NOT NULL DEFAULT 0, 
 
-  -- Per-party rollup. Array of objects, one per party:
-  -- {
-  --   party_id,
-  --   applications_count,
-  --   accepted_applications_count,
-  --   rejected_applications_count,
-  --   ward_supervisor_applications_count,
-  --   ward_supervisor_accepted_applications_count,
-  --   ward_supervisor_rejected_applications_count,
-  --   ward_supervisors_count,
-  --   pu_agents_count,
-  --   unique_pu_agents_count,
-  --   pu_agents_in_attendance_count,
-  --   updates_count,
-  --   reports_count,
-  --   pu_average_arrival_time,
-  --   pu_average_election_started_at,
-  --   pu_average_election_ended_at,
-  --   pu_final_results_uploaded_count,
-  --   unique_pu_final_results_uploaded_count,
-  --   pu_average_update_time_interval_in_seconds,
-  --   pu_election_practice_test_readiness_percentage,
-  --   pu_live_voters_referred_by_agent_count,
-  --   total_pu_with_reports,
-  --   total_pu_with_updates,
-  --   total_pu_with_agents_in_attendance,
-  --   total_pu_where_election_has_started,
-  --   total_pu_where_election_has_ended,
-  --   total_pu_unique_final_results_uploaded,
-  --   total_pu_where_agents_referred_live_voters
-  -- }
-  parties JSONB NOT NULL DEFAULT '[]'::jsonb,
-
   polling_units_count                               INT NOT NULL DEFAULT 0,
 
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -185,9 +125,8 @@ CREATE TABLE IF NOT EXISTS election_group_wards (
   CONSTRAINT uq_election_group_ward UNIQUE (election_group_id, ward_id)
 );
 
-CREATE INDEX idx_egw_ward           ON election_group_wards(ward_id);
-CREATE INDEX idx_egw_lga            ON election_group_wards(lga_id);
-CREATE INDEX idx_egw_state          ON election_group_wards(state_id);
+CREATE INDEX idx_egw_group_lga      ON election_group_wards(election_group_id, lga_id);
+CREATE INDEX idx_egw_group_state    ON election_group_wards(election_group_id, state_id);
 
 
 -- ============================================================
@@ -237,22 +176,13 @@ CREATE TABLE IF NOT EXISTS election_group_state_constituencies (
   wards_count                                       INT NOT NULL DEFAULT 0,
   polling_units_count                               INT NOT NULL DEFAULT 0,
 
-  -- Per-party rollup. Array of objects, one per party:
-  -- {
-  --   ... same object shape as outlined by the comment in election_group_wards,
-  --   ward_supervisors_count,
-  --   unique_ward_supervisors_count,
-  -- }
-  parties JSONB NOT NULL DEFAULT '[]'::jsonb,
-
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
 
   CONSTRAINT uq_election_group_state_constituency UNIQUE (election_group_id, state_constituency_id)
 );
 
-CREATE INDEX idx_egsc_state_constituency ON election_group_state_constituencies(state_constituency_id);
-CREATE INDEX idx_egsc_state              ON election_group_state_constituencies(state_id);
+CREATE INDEX idx_egsc_group_state   ON election_group_state_constituencies(election_group_id, state_id);
 
 
 -- ============================================================
@@ -309,23 +239,13 @@ CREATE TABLE IF NOT EXISTS election_group_lgas (
   wards_count                                      INT NOT NULL DEFAULT 0,
   polling_units_count                              INT NOT NULL DEFAULT 0,
 
-  -- Per-party rollup. Array of objects, one per party:
-  -- {
-  --   ... same object shape as outlined by the comment in election_group_wards,
-  --   lga_supervisors_count,
-  --   ward_supervisors_count,
-  --   unique_ward_supervisors_count,
-  -- }
-  parties JSONB NOT NULL DEFAULT '[]'::jsonb,
-
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
 
   CONSTRAINT uq_election_group_lga UNIQUE (election_group_id, lga_id)
 );
 
-CREATE INDEX idx_eglga_lga            ON election_group_lgas(lga_id);
-CREATE INDEX idx_eglga_state          ON election_group_lgas(state_id);
+CREATE INDEX idx_eglga_group_state    ON election_group_lgas(election_group_id, state_id);
 
 
 -- ============================================================
@@ -383,24 +303,13 @@ CREATE TABLE IF NOT EXISTS election_group_federal_constituencies (
   wards_count                                      INT NOT NULL DEFAULT 0,
   polling_units_count                              INT NOT NULL DEFAULT 0,
 
-  -- Per-party rollup. Array of objects, one per party:
-  -- {
-  --   ... same object shape as outlined by the comment in election_group_wards,
-  --   lga_supervisors_count,
-  --   unique_lga_supervisors_count,
-  --   ward_supervisors_count,
-  --   unique_ward_supervisors_count,
-  -- }
-  parties JSONB NOT NULL DEFAULT '[]'::jsonb,
-
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
 
   CONSTRAINT uq_election_group_federal_constituency UNIQUE (election_group_id, federal_constituency_id)
 );
 
-CREATE INDEX idx_egfc_federal_constituency ON election_group_federal_constituencies(federal_constituency_id);
-CREATE INDEX idx_egfc_state                ON election_group_federal_constituencies(state_id);
+CREATE INDEX idx_egfc_group_state   ON election_group_federal_constituencies(election_group_id, state_id);
 
 
 -- ============================================================
@@ -458,24 +367,13 @@ CREATE TABLE IF NOT EXISTS election_group_senatorial_districts (
   wards_count                                       INT NOT NULL DEFAULT 0,
   polling_units_count                               INT NOT NULL DEFAULT 0,
 
-  -- Per-party rollup. Array of objects, one per party:
-  -- {
-  --   ... same object shape as outlined by the comment in election_group_wards,
-  --   lga_supervisors_count,
-  --   unique_lga_supervisors_count,
-  --   ward_supervisors_count,
-  --   unique_ward_supervisors_count,
-  -- }
-  parties JSONB NOT NULL DEFAULT '[]'::jsonb,
-
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
 
   CONSTRAINT uq_election_group_senatorial_district UNIQUE (election_group_id, senatorial_district_id)
 );
 
-CREATE INDEX idx_egsd_senatorial_district ON election_group_senatorial_districts(senatorial_district_id);
-CREATE INDEX idx_egsd_state               ON election_group_senatorial_districts(state_id);
+CREATE INDEX idx_egsd_group_state   ON election_group_senatorial_districts(election_group_id, state_id);
 
 
 -- ============================================================
@@ -539,36 +437,12 @@ CREATE TABLE IF NOT EXISTS election_group_states (
   wards_count                                      INT NOT NULL DEFAULT 0,
   polling_units_count                              INT NOT NULL DEFAULT 0,
 
-  -- Per-party rollup. Array of objects, one per party:
-  -- {
-  --   party_id,
-  --   applications_count,
-  --   accepted_applications_count,
-  --   rejected_applications_count,
-  --   ward_supervisor_applications_count,
-  --   ward_supervisor_accepted_applications_count,
-  --   ward_supervisor_rejected_applications_count,
-  --   lga_supervisor_applications_count,
-  --   lga_supervisor_accepted_applications_count,
-  --   lga_supervisor_rejected_applications_count,
-  --   state_supervisor_applications_count,
-  --   state_supervisor_accepted_applications_count,
-  --   state_supervisor_rejected_applications_count,
-  --   lga_supervisors_count,
-  --   unique_lga_supervisors_count,
-  --   ward_supervisors_count,
-  --   unique_ward_supervisors_count,
-  --   state_supervisors_count,
-  -- }
-  parties JSONB NOT NULL DEFAULT '[]'::jsonb,
-
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
 
   CONSTRAINT uq_election_group_state UNIQUE (election_group_id, state_id)
 );
 
-CREATE INDEX idx_egstate_state          ON election_group_states(state_id);
 
 
 -- +goose Down

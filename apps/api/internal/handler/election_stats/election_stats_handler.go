@@ -290,20 +290,19 @@ func (h *Handler) GetStateStats(w http.ResponseWriter, r *http.Request) {
 	h.utils.RespondSuccess(w, http.StatusOK, "Stats fetched", map[string]interface{}{"stats": stats})
 }
 
-// extractPartyStats parses a JSONB array of party stats and returns the object for the given party ID.
-// If party_id is not present in the array, it returns a default zeroed party_stats map.
-func extractPartyStats(parties []byte, targetPartyID int32) map[string]interface{} {
-	if len(parties) > 0 {
-		var partySlice []map[string]interface{}
-		if err := json.Unmarshal(parties, &partySlice); err == nil {
-			for _, p := range partySlice {
-				if pid, ok := p["party_id"].(float64); ok && int32(pid) == targetPartyID {
-					return p
-				}
-			}
-		}
+func partyStatsToMap(raw interface{}, partyID int32) map[string]interface{} {
+	if raw == nil {
+		return defaultPartyStats(partyID)
 	}
-	return defaultPartyStats(targetPartyID)
+	b, err := json.Marshal(raw)
+	if err != nil {
+		return defaultPartyStats(partyID)
+	}
+	var m map[string]interface{}
+	if err := json.Unmarshal(b, &m); err != nil {
+		return defaultPartyStats(partyID)
+	}
+	return m
 }
 
 func defaultPartyStats(partyID int32) map[string]interface{} {
@@ -417,8 +416,6 @@ func (h *Handler) GetSingleStateStats(w http.ResponseWriter, r *http.Request) {
 	stats, err := h.service.GetElectionGroupStateStats(r.Context(), arg)
 
 	var targets map[string]interface{}
-	var partiesBytes []byte
-
 	if err != nil {
 		st, errState := h.service.GetStateByID(r.Context(), int16(stateID))
 		if errState != nil {
@@ -426,23 +423,33 @@ func (h *Handler) GetSingleStateStats(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		targets = map[string]interface{}{
-			"election_group_id":            groupID,
-			"state_id":                     st.ID,
-			"state_name":                   st.Name,
-			"senatorial_districts_count":   st.SenatorialDistrictsCount,
-			"federal_constituencies_count": st.FederalConstituenciesCount,
-			"lgas_count":                   st.LgasCount,
-			"state_constituencies_count":   st.StateConstituenciesCount,
-			"wards_count":                  st.WardsCount,
-			"polling_units_count":          st.PollingUnitsCount,
+			"election_group_id":             groupID,
+			"state_id":                      st.ID,
+			"state_name":                    st.Name,
+			"senatorial_districts_count":    st.SenatorialDistrictsCount,
+			"federal_constituencies_count":  st.FederalConstituenciesCount,
+			"lgas_count":                    st.LgasCount,
+			"state_constituencies_count":    st.StateConstituenciesCount,
+			"wards_count":                   st.WardsCount,
+			"polling_units_count":           st.PollingUnitsCount,
 			"unique_final_results_expected": st.PollingUnitsCount,
 		}
 	} else {
-		partiesBytes = stats.Parties
 		targets = sanitizeTargets(stats)
 	}
 
-	partyStats := extractPartyStats(partiesBytes, int32(partyID))
+	partyRow, errParty := h.service.GetElectionGroupPartyStateStats(r.Context(), queries.GetElectionGroupPartyStateStatsParams{
+		ElectionGroupID: int32(groupID),
+		StateID:         int16(stateID),
+		PartyID:         int16(partyID),
+	})
+	var partyStats map[string]interface{}
+	if errParty != nil {
+		partyStats = defaultPartyStats(int32(partyID))
+	} else {
+		partyStats = partyStatsToMap(partyRow, int32(partyID))
+	}
+
 	h.utils.RespondSuccess(w, http.StatusOK, "Stats fetched", map[string]interface{}{
 		"party_stats": partyStats,
 		"targets":     targets,
@@ -484,8 +491,6 @@ func (h *Handler) GetSingleLGAStats(w http.ResponseWriter, r *http.Request) {
 	stats, err := h.service.GetElectionGroupLGAStats(r.Context(), arg)
 
 	var targets map[string]interface{}
-	var partiesBytes []byte
-
 	if err != nil {
 		lga, errLga := h.service.GetLGAByID(r.Context(), int32(lgaID))
 		if errLga != nil {
@@ -493,26 +498,36 @@ func (h *Handler) GetSingleLGAStats(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		targets = map[string]interface{}{
-			"election_group_id":            groupID,
-			"lga_id":                       lga.ID,
-			"lga_name":                     lga.Name,
-			"state_id":                     lga.StateID,
-			"state_name":                   lga.StateName,
-			"senatorial_district_id":       lga.SenatorialDistrictID,
-			"senatorial_district_name":     lga.SenatorialDistrictName,
-			"federal_constituency_id":      lga.FederalConstituencyID,
+			"election_group_id":             groupID,
+			"lga_id":                        lga.ID,
+			"lga_name":                      lga.Name,
+			"state_id":                      lga.StateID,
+			"state_name":                    lga.StateName,
+			"senatorial_district_id":        lga.SenatorialDistrictID,
+			"senatorial_district_name":      lga.SenatorialDistrictName,
+			"federal_constituency_id":       lga.FederalConstituencyID,
 			"federal_constituency_name":     lga.FederalConstituencyName,
-			"state_constituencies_count":   lga.StateConstituenciesCount,
-			"wards_count":                  lga.WardsCount,
-			"polling_units_count":          lga.PollingUnitsCount,
+			"state_constituencies_count":    lga.StateConstituenciesCount,
+			"wards_count":                   lga.WardsCount,
+			"polling_units_count":           lga.PollingUnitsCount,
 			"unique_final_results_expected": lga.PollingUnitsCount,
 		}
 	} else {
-		partiesBytes = stats.Parties
 		targets = sanitizeTargets(stats)
 	}
 
-	partyStats := extractPartyStats(partiesBytes, int32(partyID))
+	partyRow, errParty := h.service.GetElectionGroupPartyLGAStats(r.Context(), queries.GetElectionGroupPartyLGAStatsParams{
+		ElectionGroupID: int32(groupID),
+		LgaID:           int32(lgaID),
+		PartyID:         int16(partyID),
+	})
+	var partyStats map[string]interface{}
+	if errParty != nil {
+		partyStats = defaultPartyStats(int32(partyID))
+	} else {
+		partyStats = partyStatsToMap(partyRow, int32(partyID))
+	}
+
 	h.utils.RespondSuccess(w, http.StatusOK, "Stats fetched", map[string]interface{}{
 		"party_stats": partyStats,
 		"targets":     targets,
@@ -554,8 +569,6 @@ func (h *Handler) GetSingleWardStats(w http.ResponseWriter, r *http.Request) {
 	stats, err := h.service.GetElectionGroupWardStats(r.Context(), arg)
 
 	var targets map[string]interface{}
-	var partiesBytes []byte
-
 	if err != nil {
 		wrd, errWard := h.service.GetWardByID(r.Context(), int32(wardID))
 		if errWard != nil {
@@ -563,22 +576,32 @@ func (h *Handler) GetSingleWardStats(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		targets = map[string]interface{}{
-			"election_group_id":            groupID,
-			"ward_id":                      wrd.ID,
-			"ward_name":                    wrd.Name,
-			"lga_id":                       wrd.LgaID,
-			"lga_name":                     wrd.LgaName,
-			"state_id":                     wrd.StateID,
-			"state_name":                   wrd.StateName,
-			"polling_units_count":          wrd.PollingUnitsCount,
+			"election_group_id":             groupID,
+			"ward_id":                       wrd.ID,
+			"ward_name":                     wrd.Name,
+			"lga_id":                        wrd.LgaID,
+			"lga_name":                      wrd.LgaName,
+			"state_id":                      wrd.StateID,
+			"state_name":                    wrd.StateName,
+			"polling_units_count":           wrd.PollingUnitsCount,
 			"unique_final_results_expected": wrd.PollingUnitsCount,
 		}
 	} else {
-		partiesBytes = stats.Parties
 		targets = sanitizeTargets(stats)
 	}
 
-	partyStats := extractPartyStats(partiesBytes, int32(partyID))
+	partyRow, errParty := h.service.GetElectionGroupPartyWardStats(r.Context(), queries.GetElectionGroupPartyWardStatsParams{
+		ElectionGroupID: int32(groupID),
+		WardID:          int32(wardID),
+		PartyID:         int16(partyID),
+	})
+	var partyStats map[string]interface{}
+	if errParty != nil {
+		partyStats = defaultPartyStats(int32(partyID))
+	} else {
+		partyStats = partyStatsToMap(partyRow, int32(partyID))
+	}
+
 	h.utils.RespondSuccess(w, http.StatusOK, "Stats fetched", map[string]interface{}{
 		"party_stats": partyStats,
 		"targets":     targets,
@@ -620,8 +643,6 @@ func (h *Handler) GetSingleFederalConstituencyStats(w http.ResponseWriter, r *ht
 	stats, err := h.service.GetElectionGroupFederalConstituencyStats(r.Context(), arg)
 
 	var targets map[string]interface{}
-	var partiesBytes []byte
-
 	if err != nil {
 		fc, errFc := h.service.GetFederalConstituencyByID(r.Context(), int32(fcID))
 		if errFc != nil {
@@ -629,25 +650,35 @@ func (h *Handler) GetSingleFederalConstituencyStats(w http.ResponseWriter, r *ht
 			return
 		}
 		targets = map[string]interface{}{
-			"election_group_id":            groupID,
-			"federal_constituency_id":      fc.ID,
+			"election_group_id":             groupID,
+			"federal_constituency_id":       fc.ID,
 			"federal_constituency_name":     fc.Name,
-			"state_id":                     fc.StateID,
-			"state_name":                   fc.StateName,
-			"senatorial_district_id":       fc.SenatorialDistrictID,
-			"senatorial_district_name":     fc.SenatorialDistrictName,
-			"lgas_count":                   fc.LgasCount,
-			"state_constituencies_count":   fc.StateConstituenciesCount,
-			"wards_count":                  fc.WardsCount,
-			"polling_units_count":          fc.PollingUnitsCount,
+			"state_id":                      fc.StateID,
+			"state_name":                    fc.StateName,
+			"senatorial_district_id":        fc.SenatorialDistrictID,
+			"senatorial_district_name":      fc.SenatorialDistrictName,
+			"lgas_count":                    fc.LgasCount,
+			"state_constituencies_count":    fc.StateConstituenciesCount,
+			"wards_count":                   fc.WardsCount,
+			"polling_units_count":           fc.PollingUnitsCount,
 			"unique_final_results_expected": fc.PollingUnitsCount,
 		}
 	} else {
-		partiesBytes = stats.Parties
 		targets = sanitizeTargets(stats)
 	}
 
-	partyStats := extractPartyStats(partiesBytes, int32(partyID))
+	partyRow, errParty := h.service.GetElectionGroupPartyFederalConstituencyStats(r.Context(), queries.GetElectionGroupPartyFederalConstituencyStatsParams{
+		ElectionGroupID:       int32(groupID),
+		FederalConstituencyID: int32(fcID),
+		PartyID:               int16(partyID),
+	})
+	var partyStats map[string]interface{}
+	if errParty != nil {
+		partyStats = defaultPartyStats(int32(partyID))
+	} else {
+		partyStats = partyStatsToMap(partyRow, int32(partyID))
+	}
+
 	h.utils.RespondSuccess(w, http.StatusOK, "Stats fetched", map[string]interface{}{
 		"party_stats": partyStats,
 		"targets":     targets,
@@ -689,8 +720,6 @@ func (h *Handler) GetSingleStateConstituencyStats(w http.ResponseWriter, r *http
 	stats, err := h.service.GetElectionGroupStateConstituencyStats(r.Context(), arg)
 
 	var targets map[string]interface{}
-	var partiesBytes []byte
-
 	if err != nil {
 		sc, errSc := h.service.GetStateConstituencyByID(r.Context(), int32(scID))
 		if errSc != nil {
@@ -698,27 +727,37 @@ func (h *Handler) GetSingleStateConstituencyStats(w http.ResponseWriter, r *http
 			return
 		}
 		targets = map[string]interface{}{
-			"election_group_id":            groupID,
-			"state_constituency_id":        sc.ID,
-			"state_constituency_name":      sc.Name,
-			"lga_id":                       sc.LgaID,
-			"lga_name":                     sc.LgaName,
-			"state_id":                     sc.StateID,
-			"state_name":                   sc.StateName,
-			"senatorial_district_id":       sc.SenatorialDistrictID,
-			"senatorial_district_name":     sc.SenatorialDistrictName,
-			"federal_constituency_id":      sc.FederalConstituencyID,
+			"election_group_id":             groupID,
+			"state_constituency_id":         sc.ID,
+			"state_constituency_name":       sc.Name,
+			"lga_id":                        sc.LgaID,
+			"lga_name":                      sc.LgaName,
+			"state_id":                      sc.StateID,
+			"state_name":                    sc.StateName,
+			"senatorial_district_id":        sc.SenatorialDistrictID,
+			"senatorial_district_name":      sc.SenatorialDistrictName,
+			"federal_constituency_id":       sc.FederalConstituencyID,
 			"federal_constituency_name":     sc.FederalConstituencyName,
-			"wards_count":                  sc.WardsCount,
-			"polling_units_count":          sc.PollingUnitsCount,
+			"wards_count":                   sc.WardsCount,
+			"polling_units_count":           sc.PollingUnitsCount,
 			"unique_final_results_expected": sc.PollingUnitsCount,
 		}
 	} else {
-		partiesBytes = stats.Parties
 		targets = sanitizeTargets(stats)
 	}
 
-	partyStats := extractPartyStats(partiesBytes, int32(partyID))
+	partyRow, errParty := h.service.GetElectionGroupPartyStateConstituencyStats(r.Context(), queries.GetElectionGroupPartyStateConstituencyStatsParams{
+		ElectionGroupID:     int32(groupID),
+		StateConstituencyID: int32(scID),
+		PartyID:             int16(partyID),
+	})
+	var partyStats map[string]interface{}
+	if errParty != nil {
+		partyStats = defaultPartyStats(int32(partyID))
+	} else {
+		partyStats = partyStatsToMap(partyRow, int32(partyID))
+	}
+
 	h.utils.RespondSuccess(w, http.StatusOK, "Stats fetched", map[string]interface{}{
 		"party_stats": partyStats,
 		"targets":     targets,
@@ -760,8 +799,6 @@ func (h *Handler) GetSingleSenatorialDistrictStats(w http.ResponseWriter, r *htt
 	stats, err := h.service.GetElectionGroupSenatorialDistrictStats(r.Context(), arg)
 
 	var targets map[string]interface{}
-	var partiesBytes []byte
-
 	if err != nil {
 		sd, errSd := h.service.GetSenatorialDistrictByID(r.Context(), int32(sdID))
 		if errSd != nil {
@@ -769,24 +806,34 @@ func (h *Handler) GetSingleSenatorialDistrictStats(w http.ResponseWriter, r *htt
 			return
 		}
 		targets = map[string]interface{}{
-			"election_group_id":            groupID,
-			"senatorial_district_id":       sd.ID,
-			"senatorial_district_name":     sd.Name,
-			"state_id":                     sd.StateID,
-			"state_name":                   sd.StateName,
-			"federal_constituencies_count": sd.FederalConstituenciesCount,
-			"lgas_count":                   sd.LgasCount,
-			"state_constituencies_count":   sd.StateConstituenciesCount,
-			"wards_count":                  sd.WardsCount,
-			"polling_units_count":          sd.PollingUnitsCount,
+			"election_group_id":             groupID,
+			"senatorial_district_id":        sd.ID,
+			"senatorial_district_name":      sd.Name,
+			"state_id":                      sd.StateID,
+			"state_name":                    sd.StateName,
+			"federal_constituencies_count":  sd.FederalConstituenciesCount,
+			"lgas_count":                    sd.LgasCount,
+			"state_constituencies_count":    sd.StateConstituenciesCount,
+			"wards_count":                   sd.WardsCount,
+			"polling_units_count":           sd.PollingUnitsCount,
 			"unique_final_results_expected": sd.PollingUnitsCount,
 		}
 	} else {
-		partiesBytes = stats.Parties
 		targets = sanitizeTargets(stats)
 	}
 
-	partyStats := extractPartyStats(partiesBytes, int32(partyID))
+	partyRow, errParty := h.service.GetElectionGroupPartySenatorialDistrictStats(r.Context(), queries.GetElectionGroupPartySenatorialDistrictStatsParams{
+		ElectionGroupID:      int32(groupID),
+		SenatorialDistrictID: int32(sdID),
+		PartyID:              int16(partyID),
+	})
+	var partyStats map[string]interface{}
+	if errParty != nil {
+		partyStats = defaultPartyStats(int32(partyID))
+	} else {
+		partyStats = partyStatsToMap(partyRow, int32(partyID))
+	}
+
 	h.utils.RespondSuccess(w, http.StatusOK, "Stats fetched", map[string]interface{}{
 		"party_stats": partyStats,
 		"targets":     targets,
@@ -821,7 +868,17 @@ func (h *Handler) GetSingleElectionGroupStats(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	partyStats := extractPartyStats(stats.Parties, int32(partyID))
+	partyRow, errParty := h.service.GetElectionGroupPartyNationalStats(r.Context(), queries.GetElectionGroupPartyNationalStatsParams{
+		ElectionGroupID: int32(groupID),
+		PartyID:         int16(partyID),
+	})
+	var partyStats map[string]interface{}
+	if errParty != nil {
+		partyStats = defaultPartyStats(int32(partyID))
+	} else {
+		partyStats = partyStatsToMap(partyRow, int32(partyID))
+	}
+
 	targets := sanitizeTargets(stats)
 	h.utils.RespondSuccess(w, http.StatusOK, "Stats fetched", map[string]interface{}{
 		"party_stats": partyStats,

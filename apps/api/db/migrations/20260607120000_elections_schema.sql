@@ -59,30 +59,6 @@ CREATE TABLE election_groups (
   total_pu_unique_final_results_uploaded INT NOT NULL DEFAULT 0,
   total_pu_where_agents_referred_live_voters INT NOT NULL DEFAULT 0,
   
-  -- Per-party rollup. Array of objects, one per party:
-  -- {
-  --   party_id,
-  --   applications_count,
-  --   accepted_applications_count,
-  --   rejected_applications_count,
-  --   ward_supervisor_applications_count,
-  --   ward_supervisor_accepted_applications_count,
-  --   ward_supervisor_rejected_applications_count,
-  --   lga_supervisor_applications_count,
-  --   lga_supervisor_accepted_applications_count,
-  --   lga_supervisor_rejected_applications_count,
-  --   state_supervisor_applications_count,
-  --   state_supervisor_accepted_applications_count,
-  --   state_supervisor_rejected_applications_count,
-  --   state_supervisors_count,
-  --   unique_state_supervisors_count,
-  --   lga_supervisors_count,
-  --   unique_lga_supervisors_count,
-  --   ward_supervisors_count,
-  --   unique_ward_supervisors_count,
-  -- }
-  parties JSONB NOT NULL DEFAULT '[]'::jsonb,
-  
   election_date DATE NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
