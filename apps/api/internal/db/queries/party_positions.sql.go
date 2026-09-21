@@ -13,25 +13,9 @@ import (
 
 const assignPartyPosition = `-- name: AssignPartyPosition :one
 INSERT INTO party_position_assignments (
-    party_id,
-    chapter_id,
-    position_id,
-    user_id,
-    appointment_type,
-    status,
-    tenure_start,
-    tenure_end,
-    appointed_by
+    party_id, chapter_id, position_id, user_id, appointment_type, status, tenure_start, tenure_end, appointed_by
 ) VALUES (
-    $1,
-    $2,
-    $3,
-    $4,
-    $5,
-    $6,
-    $7,
-    $8,
-    $9
+    $1, $2, $3, $4, $5, $6, $7, $8, $9
 ) RETURNING id, party_id, chapter_id, position_id, user_id, appointment_type, status, tenure_start, tenure_end, appointed_by, created_at, updated_at
 `
 
@@ -95,25 +79,8 @@ func (q *Queries) CountActivePositionOccupants(ctx context.Context, arg CountAct
 }
 
 const createPartyCustomPosition = `-- name: CreatePartyCustomPosition :one
-INSERT INTO party_positions (
-    party_id,
-    name,
-    code,
-    position_type,
-    description,
-    allowed_levels,
-    rank_order,
-    max_occupants
-) VALUES (
-    $1,
-    $2,
-    $3,
-    'custom',
-    $4,
-    $5,
-    $6,
-    $7
-) RETURNING id, party_id, name, code, position_type, description, allowed_levels, rank_order, max_occupants, created_at
+INSERT INTO party_positions ( party_id, name, code, position_type, description, allowed_levels, rank_order, max_occupants )
+VALUES ( $1, $2, $3, 'custom', $4, $5, $6, $7 ) RETURNING id, position_type, name, code, party_id, description, allowed_levels, rank_order, max_occupants, created_at
 `
 
 type CreatePartyCustomPositionParams struct {
@@ -139,10 +106,10 @@ func (q *Queries) CreatePartyCustomPosition(ctx context.Context, arg CreateParty
 	var i PartyPosition
 	err := row.Scan(
 		&i.ID,
-		&i.PartyID,
+		&i.PositionType,
 		&i.Name,
 		&i.Code,
-		&i.PositionType,
+		&i.PartyID,
 		&i.Description,
 		&i.AllowedLevels,
 		&i.RankOrder,
@@ -168,18 +135,7 @@ func (q *Queries) DeletePartyCustomPosition(ctx context.Context, arg DeleteParty
 }
 
 const getPartyPositionByID = `-- name: GetPartyPositionByID :one
-SELECT 
-    id,
-    party_id,
-    name,
-    code,
-    position_type,
-    description,
-    allowed_levels,
-    rank_order,
-    max_occupants,
-    created_at
-FROM party_positions
+SELECT id, position_type, name, code, party_id, description, allowed_levels, rank_order, max_occupants, created_at FROM party_positions
 WHERE id = $1 AND (party_id IS NULL OR party_id = $2)
 LIMIT 1
 `
@@ -194,10 +150,10 @@ func (q *Queries) GetPartyPositionByID(ctx context.Context, arg GetPartyPosition
 	var i PartyPosition
 	err := row.Scan(
 		&i.ID,
-		&i.PartyID,
+		&i.PositionType,
 		&i.Name,
 		&i.Code,
-		&i.PositionType,
+		&i.PartyID,
 		&i.Description,
 		&i.AllowedLevels,
 		&i.RankOrder,
@@ -616,18 +572,7 @@ func (q *Queries) ListPartyOfficials(ctx context.Context, arg ListPartyOfficials
 }
 
 const listPartyPositions = `-- name: ListPartyPositions :many
-SELECT 
-    id,
-    party_id,
-    name,
-    code,
-    position_type,
-    description,
-    allowed_levels,
-    rank_order,
-    max_occupants,
-    created_at
-FROM party_positions
+SELECT id, position_type, name, code, party_id, description, allowed_levels, rank_order, max_occupants, created_at FROM party_positions
 WHERE (party_id IS NULL OR party_id = $1)
   AND ($2::varchar IS NULL OR $2::varchar = ANY(allowed_levels))
 ORDER BY rank_order ASC, name ASC
@@ -649,10 +594,10 @@ func (q *Queries) ListPartyPositions(ctx context.Context, arg ListPartyPositions
 		var i PartyPosition
 		if err := rows.Scan(
 			&i.ID,
-			&i.PartyID,
+			&i.PositionType,
 			&i.Name,
 			&i.Code,
-			&i.PositionType,
+			&i.PartyID,
 			&i.Description,
 			&i.AllowedLevels,
 			&i.RankOrder,
@@ -679,7 +624,7 @@ SET
     rank_order = $7,
     max_occupants = $8
 WHERE id = $1 AND party_id = $2 AND position_type = 'custom'
-RETURNING id, party_id, name, code, position_type, description, allowed_levels, rank_order, max_occupants, created_at
+RETURNING id, position_type, name, code, party_id, description, allowed_levels, rank_order, max_occupants, created_at
 `
 
 type UpdatePartyCustomPositionParams struct {
@@ -707,10 +652,10 @@ func (q *Queries) UpdatePartyCustomPosition(ctx context.Context, arg UpdateParty
 	var i PartyPosition
 	err := row.Scan(
 		&i.ID,
-		&i.PartyID,
+		&i.PositionType,
 		&i.Name,
 		&i.Code,
-		&i.PositionType,
+		&i.PartyID,
 		&i.Description,
 		&i.AllowedLevels,
 		&i.RankOrder,

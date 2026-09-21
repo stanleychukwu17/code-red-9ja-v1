@@ -1,13 +1,11 @@
 -- name: ListPartyPositions :many
-SELECT id, party_id, name, code, position_type, description, allowed_levels, rank_order, max_occupants, created_at
-FROM party_positions
+SELECT * FROM party_positions
 WHERE (party_id IS NULL OR party_id = $1)
   AND (sqlc.narg('chapter_type')::varchar IS NULL OR sqlc.narg('chapter_type')::varchar = ANY(allowed_levels))
 ORDER BY rank_order ASC, name ASC;
 
 -- name: GetPartyPositionByID :one
-SELECT id, party_id, name, code, position_type, description, allowed_levels, rank_order, max_occupants, created_at
-FROM party_positions
+SELECT * FROM party_positions
 WHERE id = $1 AND (party_id IS NULL OR party_id = $2)
 LIMIT 1;
 
