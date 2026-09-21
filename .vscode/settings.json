@@ -139,6 +139,7 @@
     "Timestamptz",
     "trgm",
     "Unmarshal",
+    "UPSERTS",
     "usehooks",
     "usershandler",
     "usersservice",

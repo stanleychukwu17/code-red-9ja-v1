@@ -1217,7 +1217,7 @@ WHERE election_group_id = sqlc.arg(election_group_id)::integer
   AND state_id          = sqlc.arg(state_id)::smallint;
 
 
--- name: AdjustElectionGroupLGALGASupervisorCounts :exec
+-- name: AdjustElectionGroupLGASupervisorCounts :exec
 UPDATE election_group_lgas
 SET
   lga_supervisors_count = GREATEST(0, lga_supervisors_count + sqlc.arg(delta)::int),
@@ -1466,11 +1466,11 @@ WITH epu_agg AS (
   SELECT
     election_group_id, ward_id, lga_id, state_id,
     SUM(unique_final_results_expected)               AS unique_final_results_expected,
-    SUM(pu_agents_count)                          AS pu_agents_count,
-      COUNT(*) FILTER (WHERE pu_agents_count > 0)   AS unique_pu_agents_count,
-    SUM(pu_agents_in_attendance_count)            AS pu_agents_in_attendance_count,
-    SUM(pu_reports_count)                         AS pu_reports_count,
-    SUM(pu_updates_count)                         AS pu_updates_count,
+    SUM(pu_agents_count)                             AS pu_agents_count,
+    COUNT(*) FILTER (WHERE pu_agents_count > 0)      AS unique_pu_agents_count,
+    SUM(pu_agents_in_attendance_count)               AS pu_agents_in_attendance_count,
+    SUM(pu_reports_count)                            AS pu_reports_count,
+    SUM(pu_updates_count)                            AS pu_updates_count,
     to_timestamp(AVG(EXTRACT(epoch FROM pu_average_election_started_at)))                 AS pu_average_election_started_at,
     to_timestamp(AVG(EXTRACT(epoch FROM pu_average_election_ended_at)))                   AS pu_average_election_ended_at,
     COALESCE(AVG(pu_election_practice_test_readiness_percentage), 0) AS pu_election_practice_test_readiness_percentage,
