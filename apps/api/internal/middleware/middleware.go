@@ -40,8 +40,8 @@ func AuthMiddleware(jwtSecret string) func(http.Handler) http.Handler {
 			if tokenStr == "" {
 				authHeader := r.Header.Get("Authorization")
 				if authHeader != "" {
-					if strings.HasPrefix(authHeader, "Bearer ") {
-						tokenStr = strings.TrimPrefix(authHeader, "Bearer ")
+					if after, found := strings.CutPrefix(authHeader, "Bearer "); found {
+						tokenStr = after
 					} else {
 						tokenStr = authHeader
 					}
@@ -103,3 +103,43 @@ func RequireRole(allowedRoles ...string) func(http.Handler) http.Handler {
 		})
 	}
 }
+
+// OptionalAuthMiddleware extracts JWT claims from cookies or Authorization header if present and valid,
+// and sets claims in the request context. If no token is provided or the token is invalid,
+// it proceeds without setting claims instead of failing with 401.
+func OptionalAuthMiddleware(jwtSecret string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var tokenStr string
+
+			// 1. Try to get token from Cookie
+			cookie, err := r.Cookie("accessToken")
+			if err == nil {
+				tokenStr = cookie.Value
+			}
+
+			// 2. Try to get token from Authorization header if cookie not found or empty
+			if tokenStr == "" {
+				authHeader := r.Header.Get("Authorization")
+				if authHeader != "" {
+					if after, found := strings.CutPrefix(authHeader, "Bearer "); found {
+						tokenStr = after
+					} else {
+						tokenStr = authHeader
+					}
+				}
+			}
+
+			if tokenStr != "" {
+				if claims, err := utils.VerifyToken(tokenStr, jwtSecret); err == nil && claims != nil {
+					ctx := context.WithValue(r.Context(), ClaimsKey, claims)
+					next.ServeHTTP(w, r.WithContext(ctx))
+					return
+				}
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+

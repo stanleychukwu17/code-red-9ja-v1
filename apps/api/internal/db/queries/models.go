@@ -1226,12 +1226,6 @@ type PartyChapterSetting struct {
 	Settings  []byte `json:"settings"`
 }
 
-type PartyCustomPosition struct {
-	ID                 int32  `json:"id"`
-	PartyID            int16  `json:"party_id"`
-	CustomPositionName string `json:"custom_position_name"`
-}
-
 type PartyElectionGroup struct {
 	ID                    int32              `json:"id"`
 	PartyID               int16              `json:"party_id"`
@@ -1294,9 +1288,32 @@ type PartyMembershipRequest struct {
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
-type PartyPositionType struct {
-	ID           int16       `json:"id"`
-	PositionName pgtype.Text `json:"position_name"`
+type PartyPosition struct {
+	ID            int32              `json:"id"`
+	PartyID       pgtype.Int2        `json:"party_id"`
+	Name          string             `json:"name"`
+	Code          string             `json:"code"`
+	PositionType  string             `json:"position_type"`
+	Description   pgtype.Text        `json:"description"`
+	AllowedLevels []string           `json:"allowed_levels"`
+	RankOrder     int16              `json:"rank_order"`
+	MaxOccupants  int16              `json:"max_occupants"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+}
+
+type PartyPositionAssignment struct {
+	ID              int64              `json:"id"`
+	PartyID         int16              `json:"party_id"`
+	ChapterID       int32              `json:"chapter_id"`
+	PositionID      int32              `json:"position_id"`
+	UserID          int64              `json:"user_id"`
+	AppointmentType string             `json:"appointment_type"`
+	Status          string             `json:"status"`
+	TenureStart     pgtype.Date        `json:"tenure_start"`
+	TenureEnd       pgtype.Date        `json:"tenure_end"`
+	AppointedBy     pgtype.Int8        `json:"appointed_by"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 }
 
 type PartyWallet struct {

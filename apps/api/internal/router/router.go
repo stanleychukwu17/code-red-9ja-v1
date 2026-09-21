@@ -295,11 +295,16 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	mainRouter.Get("/api/v1/elections/results", electionResultsHandler.GetElectionFinalResult)
 
 	// political parties public routes
+	mainRouter.With(apimiddleware.OptionalAuthMiddleware(jwtSecret)).Get("/api/v1/parties/cards", partiesHandler.ListPartyCards)
 	mainRouter.Get("/api/v1/parties/public", partiesHandler.ListPartiesPublic)
 	mainRouter.Get("/api/v1/parties", partiesHandler.ListParties)
 	mainRouter.Get("/api/v1/parties/{id}", partiesHandler.GetParty)
 	mainRouter.Get("/api/v1/parties/{party_id}/{short_name}/profile", partiesHandler.GetPartyProfile)
 	mainRouter.Get("/api/v1/parties/{id}/wallet", partiesHandler.GetPartyWallet)
+	mainRouter.Get("/api/v1/parties/{id}/positions", partiesHandler.ListPartyPositions)
+	mainRouter.Get("/api/v1/parties/{id}/officials", partiesHandler.ListPartyOfficials)
+	mainRouter.Get("/api/v1/parties/{id}/chapters/{chapter_id}/officials", partiesHandler.ListChapterOfficials)
+	mainRouter.Get("/api/v1/parties/{id}/members/{user_id}/positions", partiesHandler.ListMemberPositions)
 
 	// marketing plans (public — anyone can browse available plans)
 	mainRouter.Get("/api/v1/plans", partiesHandler.GetPlans)
@@ -610,6 +615,15 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 
 		// party admins can view their own party's wallet transaction ledger
 		r.Get("/api/v1/parties/{id}/wallet/transactions", partiesHandler.ListPartyWalletTransactions)
+
+		// party positions and officials mutations
+		r.Post("/api/v1/parties/{id}/positions", partiesHandler.CreatePartyCustomPosition)
+		r.Put("/api/v1/parties/{id}/positions/{position_id}", partiesHandler.UpdatePartyCustomPosition)
+		r.Delete("/api/v1/parties/{id}/positions/{position_id}", partiesHandler.DeletePartyCustomPosition)
+		r.Post("/api/v1/parties/{id}/chapters/{chapter_id}/officials", partiesHandler.AssignPartyOfficial)
+		r.Patch("/api/v1/parties/{id}/officials/{assignment_id}/vacate", partiesHandler.VacatePositionAssignment)
+		r.Patch("/api/v1/parties/{id}/officials/{assignment_id}", partiesHandler.UpdatePositionAssignment)
+		r.Get("/api/v1/parties/{id}/chapters/resolve", partiesHandler.ResolveChapter)
 	})
 
 	// Agent earnings routes (authenticated users)

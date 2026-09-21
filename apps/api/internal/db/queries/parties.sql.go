@@ -398,6 +398,148 @@ func (q *Queries) GetOrCreateZonalChapter(ctx context.Context, arg GetOrCreateZo
 	return id, err
 }
 
+const getPartiesActiveMemberCounts = `-- name: GetPartiesActiveMemberCounts :many
+SELECT party_id::smallint, COUNT(DISTINCT user_id)::bigint AS member_count
+FROM party_membership
+WHERE status = 'active'
+GROUP BY party_id
+`
+
+type GetPartiesActiveMemberCountsRow struct {
+	PartyID     int16 `json:"party_id"`
+	MemberCount int64 `json:"member_count"`
+}
+
+func (q *Queries) GetPartiesActiveMemberCounts(ctx context.Context) ([]GetPartiesActiveMemberCountsRow, error) {
+	rows, err := q.db.Query(ctx, getPartiesActiveMemberCounts)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetPartiesActiveMemberCountsRow
+	for rows.Next() {
+		var i GetPartiesActiveMemberCountsRow
+		if err := rows.Scan(&i.PartyID, &i.MemberCount); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getPartiesSampleMemberAvatars = `-- name: GetPartiesSampleMemberAvatars :many
+SELECT party_id::smallint, user_id, first_name, last_name, username, avatar
+FROM (
+  SELECT pm.party_id, u.id AS user_id, u.first_name, u.last_name, u.username, u.avatar,
+         ROW_NUMBER() OVER (PARTITION BY pm.party_id ORDER BY pm.created_at DESC) as rn
+  FROM party_membership pm
+  JOIN users u ON u.id = pm.user_id
+  WHERE pm.status = 'active' AND u.avatar IS NOT NULL AND u.avatar != ''
+) sub
+WHERE rn <= 5
+`
+
+type GetPartiesSampleMemberAvatarsRow struct {
+	PartyID   int16       `json:"party_id"`
+	UserID    int64       `json:"user_id"`
+	FirstName pgtype.Text `json:"first_name"`
+	LastName  pgtype.Text `json:"last_name"`
+	Username  pgtype.Text `json:"username"`
+	Avatar    pgtype.Text `json:"avatar"`
+}
+
+func (q *Queries) GetPartiesSampleMemberAvatars(ctx context.Context) ([]GetPartiesSampleMemberAvatarsRow, error) {
+	rows, err := q.db.Query(ctx, getPartiesSampleMemberAvatars)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetPartiesSampleMemberAvatarsRow
+	for rows.Next() {
+		var i GetPartiesSampleMemberAvatarsRow
+		if err := rows.Scan(
+			&i.PartyID,
+			&i.UserID,
+			&i.FirstName,
+			&i.LastName,
+			&i.Username,
+			&i.Avatar,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getPartiesTopNationalOfficials = `-- name: GetPartiesTopNationalOfficials :many
+SELECT party_id, position_id, position_name, position_code, rank_order,
+       user_id, first_name, last_name, username, avatar, tenure_start
+FROM (
+  SELECT pa.party_id, pa.position_id, pos.name AS position_name, pos.code AS position_code, pos.rank_order,
+         pa.user_id, u.first_name, u.last_name, u.username, u.avatar, pa.tenure_start,
+         ROW_NUMBER() OVER (PARTITION BY pa.party_id ORDER BY pos.rank_order ASC, pa.tenure_start DESC) as rn
+  FROM party_position_assignments pa
+  JOIN party_positions pos ON pos.id = pa.position_id
+  JOIN party_chapters pc ON pc.id = pa.chapter_id AND pc.chapter_type = 'national'
+  JOIN users u ON u.id = pa.user_id
+  WHERE pa.status = 'active'
+) sub
+WHERE rn <= 2
+`
+
+type GetPartiesTopNationalOfficialsRow struct {
+	PartyID      int16       `json:"party_id"`
+	PositionID   int32       `json:"position_id"`
+	PositionName string      `json:"position_name"`
+	PositionCode string      `json:"position_code"`
+	RankOrder    int16       `json:"rank_order"`
+	UserID       int64       `json:"user_id"`
+	FirstName    pgtype.Text `json:"first_name"`
+	LastName     pgtype.Text `json:"last_name"`
+	Username     pgtype.Text `json:"username"`
+	Avatar       pgtype.Text `json:"avatar"`
+	TenureStart  pgtype.Date `json:"tenure_start"`
+}
+
+func (q *Queries) GetPartiesTopNationalOfficials(ctx context.Context) ([]GetPartiesTopNationalOfficialsRow, error) {
+	rows, err := q.db.Query(ctx, getPartiesTopNationalOfficials)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetPartiesTopNationalOfficialsRow
+	for rows.Next() {
+		var i GetPartiesTopNationalOfficialsRow
+		if err := rows.Scan(
+			&i.PartyID,
+			&i.PositionID,
+			&i.PositionName,
+			&i.PositionCode,
+			&i.RankOrder,
+			&i.UserID,
+			&i.FirstName,
+			&i.LastName,
+			&i.Username,
+			&i.Avatar,
+			&i.TenureStart,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getPartyBasicInfo = `-- name: GetPartyBasicInfo :one
 SELECT id, short_name, name, logo, is_verified, color_hex, dark_color_hex FROM parties WHERE id = $1 LIMIT 1
 `
@@ -532,6 +674,35 @@ func (q *Queries) GetStateChapter(ctx context.Context, arg GetStateChapterParams
 	var id int32
 	err := row.Scan(&id)
 	return id, err
+}
+
+const getUserActivePartyIDs = `-- name: GetUserActivePartyIDs :many
+SELECT DISTINCT p_id::smallint AS party_id
+FROM (
+  SELECT party_id AS p_id FROM party_membership WHERE user_id = $1 AND status = 'active'
+  UNION
+  SELECT party_id AS p_id FROM users WHERE id = $1 AND party_id IS NOT NULL
+) sub
+`
+
+func (q *Queries) GetUserActivePartyIDs(ctx context.Context, userID int64) ([]int16, error) {
+	rows, err := q.db.Query(ctx, getUserActivePartyIDs, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int16
+	for rows.Next() {
+		var party_id int16
+		if err := rows.Scan(&party_id); err != nil {
+			return nil, err
+		}
+		items = append(items, party_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getWardChapter = `-- name: GetWardChapter :one

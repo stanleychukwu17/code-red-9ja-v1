@@ -432,3 +432,234 @@ export const getPartyMarketingCampaigns = createServerFn({ method: "GET" })
       };
     }
   });
+
+export interface PartyPositionItem {
+  id: number;
+  party_id?: number | null;
+  name: string;
+  code: string;
+  position_type: "default" | "custom";
+  description?: string;
+  allowed_levels: string[];
+  rank_order: number;
+  max_occupants: number;
+  created_at?: string;
+}
+
+export interface PartyOfficialItem {
+  assignment_id: number;
+  party_id: number;
+  chapter_id: number;
+  position_id: number;
+  user_id: number;
+  appointment_type: "substantive" | "acting" | "caretaker" | "interim";
+  assignment_status: "active" | "suspended" | "vacated" | "past";
+  tenure_start?: string;
+  tenure_end?: string;
+  assigned_at?: string;
+  position_name: string;
+  position_code: string;
+  position_type: "default" | "custom";
+  rank_order: number;
+  max_occupants: number;
+  first_name?: string;
+  last_name?: string;
+  middle_name?: string;
+  username?: string;
+  avatar?: string;
+  email?: string;
+  phone?: string;
+  chapter_type: "national" | "zonal" | "state" | "lga" | "ward";
+  geo_name: string;
+  display_title: string;
+}
+
+export const getPartyPositions = createServerFn({ method: "GET" })
+  .inputValidator(
+    (data: { partyId: number | string; chapterType?: string }) => data,
+  )
+  .handler(async ({ data }) => {
+    try {
+      const response = await apiFetch(
+        API_URL.partyPositions(data.partyId, data.chapterType),
+      );
+      return await response.json();
+    } catch (error) {
+      return {
+        success: false,
+        message: "Failed to fetch party positions: " + (error as Error).message,
+      };
+    }
+  });
+
+export const getPartyOfficials = createServerFn({ method: "GET" })
+  .inputValidator(
+    (data: {
+      partyId: number | string;
+      chapterType?: string;
+      stateId?: number;
+      lgaId?: number;
+      wardId?: number;
+      status?: string;
+      search?: string;
+    }) => data,
+  )
+  .handler(async ({ data }) => {
+    try {
+      const response = await apiFetch(
+        API_URL.partyOfficials(data.partyId, {
+          chapter_type: data.chapterType,
+          state_id: data.stateId,
+          lga_id: data.lgaId,
+          ward_id: data.wardId,
+          status: data.status,
+          search: data.search,
+        }),
+      );
+      return await response.json();
+    } catch (error) {
+      return {
+        success: false,
+        message: "Failed to fetch party officials: " + (error as Error).message,
+      };
+    }
+  });
+
+export const getChapterOfficials = createServerFn({ method: "GET" })
+  .inputValidator(
+    (data: {
+      partyId: number | string;
+      chapterId: number | string;
+      status?: string;
+    }) => data,
+  )
+  .handler(async ({ data }) => {
+    try {
+      const response = await apiFetch(
+        API_URL.chapterOfficials(data.partyId, data.chapterId, data.status),
+      );
+      return await response.json();
+    } catch (error) {
+      return {
+        success: false,
+        message: "Failed to fetch chapter officials: " + (error as Error).message,
+      };
+    }
+  });
+
+export const assignPartyOfficial = createServerFn({ method: "POST" })
+  .inputValidator(
+    (data: {
+      partyId: number | string;
+      chapterId: number | string;
+      userId: number;
+      positionId: number;
+      appointmentType: string;
+      tenureStart?: string;
+      tenureEnd?: string;
+    }) => data,
+  )
+  .handler(async ({ data }) => {
+    try {
+      const response = await apiFetch(
+        API_URL.assignOfficial(data.partyId, data.chapterId),
+        {
+          method: "POST",
+          body: JSON.stringify({
+            user_id: data.userId,
+            position_id: data.positionId,
+            appointment_type: data.appointmentType,
+            tenure_start: data.tenureStart,
+            tenure_end: data.tenureEnd,
+          }),
+        },
+      );
+      return await response.json();
+    } catch (error) {
+      return {
+        success: false,
+        message: "Failed to assign party position: " + (error as Error).message,
+      };
+    }
+  });
+
+export const vacatePartyOfficial = createServerFn({ method: "POST" })
+  .inputValidator(
+    (data: { partyId: number | string; assignmentId: number | string }) => data,
+  )
+  .handler(async ({ data }) => {
+    try {
+      const response = await apiFetch(
+        API_URL.vacateOfficial(data.partyId, data.assignmentId),
+        {
+          method: "PATCH",
+        },
+      );
+      return await response.json();
+    } catch (error) {
+      return {
+        success: false,
+        message: "Failed to vacate party position: " + (error as Error).message,
+      };
+    }
+  });
+
+export const resolvePartyChapter = createServerFn({ method: "GET" })
+  .inputValidator(
+    (data: {
+      partyId: number | string;
+      chapterType: string;
+      entityId?: number;
+    }) => data,
+  )
+  .handler(async ({ data }) => {
+    try {
+      const response = await apiFetch(
+        API_URL.resolveChapter(data.partyId, data.chapterType, data.entityId),
+      );
+      return await response.json();
+    } catch (error) {
+      return {
+        success: false,
+        message: "Failed to resolve chapter: " + (error as Error).message,
+      };
+    }
+  });
+
+export const createPartyCustomPosition = createServerFn({ method: "POST" })
+  .inputValidator(
+    (data: {
+      partyId: number | string;
+      name: string;
+      code?: string;
+      description?: string;
+      allowedLevels?: string[];
+      rankOrder?: number;
+      maxOccupants?: number;
+    }) => data,
+  )
+  .handler(async ({ data }) => {
+    try {
+      const response = await apiFetch(
+        API_URL.partyCustomPosition(data.partyId),
+        {
+          method: "POST",
+          body: JSON.stringify({
+            name: data.name,
+            code: data.code,
+            description: data.description,
+            allowed_levels: data.allowedLevels,
+            rank_order: data.rankOrder,
+            max_occupants: data.maxOccupants,
+          }),
+        },
+      );
+      return await response.json();
+    } catch (error) {
+      return {
+        success: false,
+        message: "Failed to create custom position: " + (error as Error).message,
+      };
+    }
+  });
+

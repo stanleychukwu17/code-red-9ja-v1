@@ -10,6 +10,7 @@ import (
 	monnifyclient "free9ja/api/internal/service/monnify"
 	"log/slog"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgconn"
@@ -302,6 +303,243 @@ func (s *PartiesService) ListParties(ctx context.Context) ([]queries.PartyWithVe
 	}
 
 	return parties, nil
+}
+
+type PartyOfficialCardDTO struct {
+	PositionID   int32   `json:"position_id"`
+	PositionName string  `json:"position_name"`
+	PositionCode string  `json:"position_code"`
+	RankOrder    int16   `json:"rank_order"`
+	UserID       *int64  `json:"user_id,omitempty"`
+	Name         *string `json:"name,omitempty"`
+	Username     *string `json:"username,omitempty"`
+	Avatar       *string `json:"avatar,omitempty"`
+	Since        *string `json:"since,omitempty"`
+	IsVacant     bool    `json:"is_vacant"`
+}
+
+type PartySampleMemberDTO struct {
+	UserID    int64   `json:"user_id"`
+	FirstName *string `json:"first_name,omitempty"`
+	LastName  *string `json:"last_name,omitempty"`
+	Username  *string `json:"username,omitempty"`
+	Avatar    string  `json:"avatar"`
+}
+
+type PartyCardDTO struct {
+	ID             int16                  `json:"id"`
+	ShortName      string                 `json:"short_name"`
+	Name           string                 `json:"name"`
+	Logo           string                 `json:"logo"`
+	DisplayOrder   int32                  `json:"display_order"`
+	Status         string                 `json:"status"`
+	IsVerified     bool                   `json:"is_verified"`
+	ColorHex       *string                `json:"color_hex,omitempty"`
+	DarkColorHex   *string                `json:"dark_color_hex,omitempty"`
+	DateFounded    *string                `json:"date_founded,omitempty"`
+	CoverImage     *string                `json:"cover_image,omitempty"`
+	CoverPositionY *int16                 `json:"cover_position_y,omitempty"`
+	TotalMembers   int64                  `json:"total_members"`
+	SampleMembers  []PartySampleMemberDTO `json:"sample_members"`
+	Officials      []PartyOfficialCardDTO `json:"officials"`
+	IsUserMember   bool                   `json:"is_user_member"`
+}
+
+// GetPartyCards returns all active parties enriched with real member counts,
+// sample member avatars, top national leadership positions, and the user's membership status.
+func (s *PartiesService) GetPartyCards(ctx context.Context, currentUserID *int64) ([]PartyCardDTO, error) {
+	parties, err := s.ListParties(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// 1. Fetch active member counts per party
+	memberCountsMap := make(map[int16]int64)
+	if counts, err := s.queries.GetPartiesActiveMemberCounts(ctx); err == nil {
+		for _, c := range counts {
+			memberCountsMap[c.PartyID] = c.MemberCount
+		}
+	}
+
+	// 2. Fetch sample member avatars (up to 5 per party)
+	sampleAvatarsMap := make(map[int16][]PartySampleMemberDTO)
+	if avatars, err := s.queries.GetPartiesSampleMemberAvatars(ctx); err == nil {
+		for _, a := range avatars {
+			var fn, ln, un *string
+			if a.FirstName.Valid && a.FirstName.String != "" {
+				s := a.FirstName.String
+				fn = &s
+			}
+			if a.LastName.Valid && a.LastName.String != "" {
+				s := a.LastName.String
+				ln = &s
+			}
+			if a.Username.Valid && a.Username.String != "" {
+				s := a.Username.String
+				un = &s
+			}
+			sampleAvatarsMap[a.PartyID] = append(sampleAvatarsMap[a.PartyID], PartySampleMemberDTO{
+				UserID:    a.UserID,
+				FirstName: fn,
+				LastName:  ln,
+				Username:  un,
+				Avatar:    a.Avatar.String,
+			})
+		}
+	}
+
+	// 3. Fetch top national officials per party
+	officialsMap := make(map[int16][]PartyOfficialCardDTO)
+	if officialsRows, err := s.queries.GetPartiesTopNationalOfficials(ctx); err == nil {
+		for _, off := range officialsRows {
+			nameParts := []string{}
+			if off.FirstName.Valid && off.FirstName.String != "" {
+				nameParts = append(nameParts, off.FirstName.String)
+			}
+			if off.LastName.Valid && off.LastName.String != "" {
+				nameParts = append(nameParts, off.LastName.String)
+			}
+			fullName := strings.Join(nameParts, " ")
+			if fullName == "" && off.Username.Valid {
+				fullName = off.Username.String
+			}
+			var namePtr *string
+			if fullName != "" {
+				namePtr = &fullName
+			}
+
+			var unPtr *string
+			if off.Username.Valid && off.Username.String != "" {
+				unPtr = &off.Username.String
+			}
+
+			var avPtr *string
+			if off.Avatar.Valid && off.Avatar.String != "" {
+				avPtr = &off.Avatar.String
+			}
+
+			var sincePtr *string
+			if off.TenureStart.Valid {
+				s := fmt.Sprintf("since %d", off.TenureStart.Time.Year())
+				sincePtr = &s
+			}
+
+			uid := off.UserID
+			officialsMap[off.PartyID] = append(officialsMap[off.PartyID], PartyOfficialCardDTO{
+				PositionID:   off.PositionID,
+				PositionName: off.PositionName,
+				PositionCode: off.PositionCode,
+				RankOrder:    off.RankOrder,
+				UserID:       &uid,
+				Name:         namePtr,
+				Username:     unPtr,
+				Avatar:       avPtr,
+				Since:        sincePtr,
+				IsVacant:     false,
+			})
+		}
+	}
+
+	// 4. If current user is authenticated, retrieve their active party memberships
+	userPartiesMap := make(map[int16]bool)
+	if currentUserID != nil && *currentUserID > 0 {
+		if userPartyIDs, err := s.queries.GetUserActivePartyIDs(ctx, *currentUserID); err == nil {
+			for _, pid := range userPartyIDs {
+				userPartiesMap[pid] = true
+			}
+		}
+	}
+
+	// 5. Build final PartyCardDTO list
+	cards := make([]PartyCardDTO, 0, len(parties))
+	for _, p := range parties {
+		var colorHex, darkColorHex, dateFounded, coverImage *string
+		var coverPositionY *int16
+
+		if p.ColorHex.Valid && p.ColorHex.String != "" {
+			colorHex = &p.ColorHex.String
+		}
+		if p.DarkColorHex.Valid && p.DarkColorHex.String != "" {
+			darkColorHex = &p.DarkColorHex.String
+		}
+		if p.CoverImage.Valid && p.CoverImage.String != "" {
+			coverImage = &p.CoverImage.String
+		}
+		if p.CoverPositionY.Valid {
+			coverPositionY = &p.CoverPositionY.Int16
+		}
+		if p.DateFounded.Valid {
+			df := p.DateFounded.Time.Format("2006-01-02")
+			dateFounded = &df
+		}
+
+		sampleMembers := sampleAvatarsMap[p.ID]
+		if sampleMembers == nil {
+			sampleMembers = []PartySampleMemberDTO{}
+		}
+
+		// Prepare 2 national positions (with fallback to Vacant indicators)
+		assignedOfficials := officialsMap[p.ID]
+		officials := make([]PartyOfficialCardDTO, 0, 2)
+		if len(assignedOfficials) >= 2 {
+			officials = append(officials, assignedOfficials[0], assignedOfficials[1])
+		} else if len(assignedOfficials) == 1 {
+			officials = append(officials, assignedOfficials[0])
+			// Fallback second official to Vacant
+			if strings.EqualFold(assignedOfficials[0].PositionCode, "chairman") {
+				officials = append(officials, PartyOfficialCardDTO{
+					PositionName: "Secretary",
+					PositionCode: "secretary",
+					RankOrder:    4,
+					IsVacant:     true,
+				})
+			} else {
+				officials = append(officials, PartyOfficialCardDTO{
+					PositionName: "Chairman",
+					PositionCode: "chairman",
+					RankOrder:    1,
+					IsVacant:     true,
+				})
+			}
+		} else {
+			// Both positions vacant
+			officials = append(officials,
+				PartyOfficialCardDTO{
+					PositionName: "Chairman",
+					PositionCode: "chairman",
+					RankOrder:    1,
+					IsVacant:     true,
+				},
+				PartyOfficialCardDTO{
+					PositionName: "Secretary",
+					PositionCode: "secretary",
+					RankOrder:    4,
+					IsVacant:     true,
+				},
+			)
+		}
+
+		cards = append(cards, PartyCardDTO{
+			ID:             p.ID,
+			ShortName:      p.ShortName,
+			Name:           p.Name,
+			Logo:           p.Logo,
+			DisplayOrder:   p.DisplayOrder,
+			Status:         p.Status,
+			IsVerified:     p.IsVerified.Bool,
+			ColorHex:       colorHex,
+			DarkColorHex:   darkColorHex,
+			DateFounded:    dateFounded,
+			CoverImage:     coverImage,
+			CoverPositionY: coverPositionY,
+			TotalMembers:   memberCountsMap[p.ID],
+			SampleMembers:  sampleMembers,
+			Officials:      officials,
+			IsUserMember:   userPartiesMap[p.ID],
+		})
+	}
+
+	return cards, nil
 }
 
 // UpdateParty modifies the short name, name, logo, cover, and details of an existing party.
@@ -1390,4 +1628,109 @@ func (s *PartiesService) ResetPartyLogo(ctx context.Context, partyID int16) erro
 	defer s.InvalidatePartyCache(ctx, partyID)
 	return s.queries.ResetPartyLogo(ctx, partyID)
 }
+
+// --start-- party positions & officials
+
+// ListPartyPositions returns all positions (default and custom for this party), optionally filtered by chapter level.
+func (s *PartiesService) ListPartyPositions(ctx context.Context, partyID int16, chapterType *string) ([]queries.PartyPosition, error) {
+	arg := queries.ListPartyPositionsParams{
+		PartyID: pgtype.Int2{Int16: partyID, Valid: true},
+	}
+	if chapterType != nil && *chapterType != "" {
+		arg.ChapterType = pgtype.Text{String: *chapterType, Valid: true}
+	}
+	return s.queries.ListPartyPositions(ctx, arg)
+}
+
+// GetPartyPositionByID returns a single position by ID.
+func (s *PartiesService) GetPartyPositionByID(ctx context.Context, id int32, partyID int16) (queries.PartyPosition, error) {
+	return s.queries.GetPartyPositionByID(ctx, queries.GetPartyPositionByIDParams{
+		ID:      id,
+		PartyID: pgtype.Int2{Int16: partyID, Valid: true},
+	})
+}
+
+// CreatePartyCustomPosition creates a new custom position for the party.
+func (s *PartiesService) CreatePartyCustomPosition(ctx context.Context, arg queries.CreatePartyCustomPositionParams) (queries.PartyPosition, error) {
+	return s.queries.CreatePartyCustomPosition(ctx, arg)
+}
+
+// UpdatePartyCustomPosition updates an existing custom position owned by the party.
+func (s *PartiesService) UpdatePartyCustomPosition(ctx context.Context, arg queries.UpdatePartyCustomPositionParams) (queries.PartyPosition, error) {
+	return s.queries.UpdatePartyCustomPosition(ctx, arg)
+}
+
+// DeletePartyCustomPosition deletes a custom position owned by the party.
+func (s *PartiesService) DeletePartyCustomPosition(ctx context.Context, id int32, partyID int16) error {
+	return s.queries.DeletePartyCustomPosition(ctx, queries.DeletePartyCustomPositionParams{
+		ID:      id,
+		PartyID: pgtype.Int2{Int16: partyID, Valid: true},
+	})
+}
+
+// AssignPartyPosition assigns a member to a position in a chapter with occupancy checking.
+func (s *PartiesService) AssignPartyPosition(ctx context.Context, arg queries.AssignPartyPositionParams) (queries.PartyPositionAssignment, error) {
+	// Verify position exists and check max occupants
+	pos, err := s.queries.GetPartyPositionByID(ctx, queries.GetPartyPositionByIDParams{
+		ID:      arg.PositionID,
+		PartyID: pgtype.Int2{Int16: arg.PartyID, Valid: true},
+	})
+	if err != nil {
+		return queries.PartyPositionAssignment{}, fmt.Errorf("position not found: %w", err)
+	}
+
+	if pos.MaxOccupants > 0 {
+		count, err := s.queries.CountActivePositionOccupants(ctx, queries.CountActivePositionOccupantsParams{
+			ChapterID:  arg.ChapterID,
+			PositionID: arg.PositionID,
+		})
+		if err != nil {
+			return queries.PartyPositionAssignment{}, fmt.Errorf("failed checking position occupancy: %w", err)
+		}
+		if count >= int64(pos.MaxOccupants) {
+			return queries.PartyPositionAssignment{}, fmt.Errorf("position '%s' has reached maximum occupancy (%d) for this chapter", pos.Name, pos.MaxOccupants)
+		}
+	}
+
+	return s.queries.AssignPartyPosition(ctx, arg)
+}
+
+// UpdatePositionAssignment updates an assignment.
+func (s *PartiesService) UpdatePositionAssignment(ctx context.Context, arg queries.UpdatePositionAssignmentParams) (queries.PartyPositionAssignment, error) {
+	return s.queries.UpdatePositionAssignment(ctx, arg)
+}
+
+// VacatePositionAssignment vacates an active position assignment.
+func (s *PartiesService) VacatePositionAssignment(ctx context.Context, id int64, partyID int16) (queries.PartyPositionAssignment, error) {
+	return s.queries.VacatePositionAssignment(ctx, queries.VacatePositionAssignmentParams{
+		ID:      id,
+		PartyID: partyID,
+	})
+}
+
+// ListChapterOfficials lists all position assignments for a given chapter.
+func (s *PartiesService) ListChapterOfficials(ctx context.Context, partyID int16, chapterID int32, status *string) ([]queries.ListChapterOfficialsRow, error) {
+	arg := queries.ListChapterOfficialsParams{
+		PartyID:   partyID,
+		ChapterID: chapterID,
+	}
+	if status != nil && *status != "" {
+		arg.Status = pgtype.Text{String: *status, Valid: true}
+	}
+	return s.queries.ListChapterOfficials(ctx, arg)
+}
+
+// ListPartyOfficials lists officials across chapters with search and filters.
+func (s *PartiesService) ListPartyOfficials(ctx context.Context, arg queries.ListPartyOfficialsParams) ([]queries.ListPartyOfficialsRow, error) {
+	return s.queries.ListPartyOfficials(ctx, arg)
+}
+
+// ListMemberPositionAssignments lists positions held by a user in the party.
+func (s *PartiesService) ListMemberPositionAssignments(ctx context.Context, partyID int16, userID int64) ([]queries.ListMemberPositionAssignmentsRow, error) {
+	return s.queries.ListMemberPositionAssignments(ctx, queries.ListMemberPositionAssignmentsParams{
+		PartyID: partyID,
+		UserID:  userID,
+	})
+}
+
 

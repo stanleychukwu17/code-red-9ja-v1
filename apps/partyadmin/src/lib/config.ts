@@ -84,6 +84,60 @@ export const API_URL = {
     `${api}/parties/${id}/agent-payment-allocations`,
   partyAgentTargets: (id: string | number) =>
     `${api}/parties/${id}/agent-targets`,
+  partyPositions: (id: string | number, chapterType?: string) => {
+    const qs = chapterType ? `?chapter_type=${encodeURIComponent(chapterType)}` : "";
+    return `${api}/parties/${id}/positions${qs}`;
+  },
+  partyCustomPosition: (id: string | number, positionId?: string | number) =>
+    positionId ? `${api}/parties/${id}/positions/${positionId}` : `${api}/parties/${id}/positions`,
+  partyOfficials: (
+    id: string | number,
+    params?: {
+      chapter_type?: string;
+      state_id?: number;
+      lga_id?: number;
+      ward_id?: number;
+      status?: string;
+      search?: string;
+    },
+  ) => {
+    const sp = new URLSearchParams();
+    if (params?.chapter_type) sp.append("chapter_type", params.chapter_type);
+    if (params?.state_id) sp.append("state_id", String(params.state_id));
+    if (params?.lga_id) sp.append("lga_id", String(params.lga_id));
+    if (params?.ward_id) sp.append("ward_id", String(params.ward_id));
+    if (params?.status) sp.append("status", params.status);
+    if (params?.search) sp.append("search", params.search);
+    const qs = sp.toString();
+    return `${api}/parties/${id}/officials${qs ? `?${qs}` : ""}`;
+  },
+  chapterOfficials: (
+    id: string | number,
+    chapterId: string | number,
+    status?: string,
+  ) => {
+    const qs = status ? `?status=${encodeURIComponent(status)}` : "";
+    return `${api}/parties/${id}/chapters/${chapterId}/officials${qs}`;
+  },
+  assignOfficial: (id: string | number, chapterId: string | number) =>
+    `${api}/parties/${id}/chapters/${chapterId}/officials`,
+  vacateOfficial: (id: string | number, assignmentId: string | number) =>
+    `${api}/parties/${id}/officials/${assignmentId}/vacate`,
+  updateOfficialAssignment: (
+    id: string | number,
+    assignmentId: string | number,
+  ) => `${api}/parties/${id}/officials/${assignmentId}`,
+  memberPositions: (id: string | number, userId: string | number) =>
+    `${api}/parties/${id}/members/${userId}/positions`,
+  resolveChapter: (
+    id: string | number,
+    chapterType: string,
+    entityId?: number,
+  ) => {
+    const sp = new URLSearchParams({ chapter_type: chapterType });
+    if (entityId) sp.append("entity_id", String(entityId));
+    return `${api}/parties/${id}/chapters/resolve?${sp.toString()}`;
+  },
   uploadUrl: `${api}/files/upload-url`,
   confirmUpload: (id: string | number) => `${api}/files/${id}/confirm`,
   users: `${api}/users`,

@@ -81,6 +81,7 @@ export const API_URL = {
 		return `${api}/polling-units${qs ? `?${qs}` : ""}`;
 	},
 	parties: `${api}/parties`,
+	partyCards: `${api}/parties/cards`,
 	getPartyProfile: (partyId: number, shortName: string) =>
 		`${api}/parties/${partyId}/${shortName}/profile`,
 	userPreferences: `${api}/user_preferences`,
@@ -91,6 +92,7 @@ export const QUERY_KEYS = {
 		session: ["authSession"],
 	},
 	parties: ["parties"],
+	partyCards: ["partyCards"],
 	countries: ["countries"],
 	states: (countryId?: number) => ["states", countryId],
 	cities: (stateId?: number) => ["cities", stateId],

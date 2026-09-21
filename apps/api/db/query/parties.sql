@@ -172,3 +172,44 @@ SET agent_payment_balance_kobo = agent_payment_balance_kobo - $1,
     updated_at = NOW()
 WHERE id = $2 AND agent_payment_balance_kobo >= $1
 RETURNING *;
+
+-- name: GetPartiesActiveMemberCounts :many
+SELECT party_id::smallint, COUNT(DISTINCT user_id)::bigint AS member_count
+FROM party_membership
+WHERE status = 'active'
+GROUP BY party_id;
+
+-- name: GetPartiesSampleMemberAvatars :many
+SELECT party_id::smallint, user_id, first_name, last_name, username, avatar
+FROM (
+  SELECT pm.party_id, u.id AS user_id, u.first_name, u.last_name, u.username, u.avatar,
+         ROW_NUMBER() OVER (PARTITION BY pm.party_id ORDER BY pm.created_at DESC) as rn
+  FROM party_membership pm
+  JOIN users u ON u.id = pm.user_id
+  WHERE pm.status = 'active' AND u.avatar IS NOT NULL AND u.avatar != ''
+) sub
+WHERE rn <= 5;
+
+-- name: GetPartiesTopNationalOfficials :many
+SELECT party_id, position_id, position_name, position_code, rank_order,
+       user_id, first_name, last_name, username, avatar, tenure_start
+FROM (
+  SELECT pa.party_id, pa.position_id, pos.name AS position_name, pos.code AS position_code, pos.rank_order,
+         pa.user_id, u.first_name, u.last_name, u.username, u.avatar, pa.tenure_start,
+         ROW_NUMBER() OVER (PARTITION BY pa.party_id ORDER BY pos.rank_order ASC, pa.tenure_start DESC) as rn
+  FROM party_position_assignments pa
+  JOIN party_positions pos ON pos.id = pa.position_id
+  JOIN party_chapters pc ON pc.id = pa.chapter_id AND pc.chapter_type = 'national'
+  JOIN users u ON u.id = pa.user_id
+  WHERE pa.status = 'active'
+) sub
+WHERE rn <= 2;
+
+-- name: GetUserActivePartyIDs :many
+SELECT DISTINCT p_id::smallint AS party_id
+FROM (
+  SELECT party_id AS p_id FROM party_membership WHERE user_id = $1 AND status = 'active'
+  UNION
+  SELECT party_id AS p_id FROM users WHERE id = $1 AND party_id IS NOT NULL
+) sub;
+

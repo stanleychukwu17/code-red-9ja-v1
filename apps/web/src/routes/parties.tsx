@@ -9,7 +9,7 @@ import {
 	PartySkeletonGrid,
 } from "#/components/parties";
 import { QUERY_KEYS } from "#/lib/config";
-import { getParties, type Party } from "#/lib/server/parties";
+import { getPartyCards, type PartyCardData } from "#/lib/server/parties";
 
 export const Route = createFileRoute("/parties")({
 	head: () =>
@@ -22,15 +22,10 @@ export const Route = createFileRoute("/parties")({
 });
 
 function PartiesComponent() {
-	const {
-		data: partiesRes,
-		isLoading,
-		error,
-		refetch,
-	} = useQuery({
-		queryKey: QUERY_KEYS.parties,
+	const { data: partiesRes, isLoading, error, refetch } = useQuery({
+		queryKey: QUERY_KEYS.partyCards,
 		queryFn: async () => {
-			const res = await getParties();
+			const res = await getPartyCards();
 			if (res?.success) {
 				return res;
 			}
@@ -38,7 +33,7 @@ function PartiesComponent() {
 		},
 	});
 
-	const parties: Party[] = partiesRes?.data?.parties || [];
+	const parties: PartyCardData[] = partiesRes?.data?.parties || [];
 
 	return (
 		<div className="min-h-screen bg-neutral-50/50 dark:bg-neutral-950 p-4 md:p-8">

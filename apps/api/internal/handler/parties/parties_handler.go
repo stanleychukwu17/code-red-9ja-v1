@@ -9,6 +9,7 @@ import (
 	apimiddleware "free9ja/api/internal/middleware"
 	"free9ja/api/internal/service/audit"
 	"free9ja/api/internal/service/files"
+	partiesservice "free9ja/api/internal/service/parties"
 	permissionsservice "free9ja/api/internal/service/permissions"
 	r2service "free9ja/api/internal/service/r2"
 	"free9ja/api/internal/utils"
@@ -30,6 +31,7 @@ type PartiesService interface {
 	GetPartyBasicInfo(ctx context.Context, partyID int16) *queries.PartyBasicInfoWithVerifications
 	GetPartyByShortName(ctx context.Context, shortName string) (queries.Party, error)
 	ListParties(ctx context.Context) ([]queries.PartyWithVerifications, error)
+	GetPartyCards(ctx context.Context, currentUserID *int64) ([]partiesservice.PartyCardDTO, error)
 	UpdateParty(ctx context.Context, id int64, shortName, name, logo string, logoFileID *int64, displayOrder int32, colorHex, darkColorHex, coverImage *string, coverImageFileID *int64, coverPositionY *int16, dateFounded *string) (queries.Party, error)
 	DeleteParty(ctx context.Context, id int64) error
 	UpdatePartyIsVerified(ctx context.Context, partyID int16, isVerified bool) error
@@ -75,6 +77,18 @@ type PartiesService interface {
 	// Agent target methods
 	UpdatePartyAgentAcquisitionTargets(ctx context.Context, arg queries.UpdatePartyAgentAcquisitionTargetsParams) (queries.Party, error)
 	GetPartyAgentAcquisitionTargets(ctx context.Context, partyID int16) (json.RawMessage, error)
+	// Positions & Officials methods
+	ListPartyPositions(ctx context.Context, partyID int16, chapterType *string) ([]queries.PartyPosition, error)
+	GetPartyPositionByID(ctx context.Context, id int32, partyID int16) (queries.PartyPosition, error)
+	CreatePartyCustomPosition(ctx context.Context, arg queries.CreatePartyCustomPositionParams) (queries.PartyPosition, error)
+	UpdatePartyCustomPosition(ctx context.Context, arg queries.UpdatePartyCustomPositionParams) (queries.PartyPosition, error)
+	DeletePartyCustomPosition(ctx context.Context, id int32, partyID int16) error
+	AssignPartyPosition(ctx context.Context, arg queries.AssignPartyPositionParams) (queries.PartyPositionAssignment, error)
+	UpdatePositionAssignment(ctx context.Context, arg queries.UpdatePositionAssignmentParams) (queries.PartyPositionAssignment, error)
+	VacatePositionAssignment(ctx context.Context, id int64, partyID int16) (queries.PartyPositionAssignment, error)
+	ListChapterOfficials(ctx context.Context, partyID int16, chapterID int32, status *string) ([]queries.ListChapterOfficialsRow, error)
+	ListPartyOfficials(ctx context.Context, arg queries.ListPartyOfficialsParams) ([]queries.ListPartyOfficialsRow, error)
+	ListMemberPositionAssignments(ctx context.Context, partyID int16, userID int64) ([]queries.ListMemberPositionAssignmentsRow, error)
 }
 
 type Handler struct {
@@ -442,6 +456,32 @@ func (h *Handler) ListParties(w http.ResponseWriter, r *http.Request) {
 			"next_cursor": nextCursor,
 			"has_more":    hasMore,
 		},
+	})
+}
+
+// ListPartyCards godoc
+// @Summary      List political party cards with dynamic stats, avatars, and leadership
+// @Description  Fetches enriched political party cards including active member counts, sample member avatars, top national positions, and current user membership status.
+// @Tags         Parties
+// @Accept       json
+// @Produce      json
+// @Success      200  {object} map[string]interface{} "Party cards fetched successfully"
+// @Failure      500  {object} map[string]interface{} "Internal server error"
+// @Router       /parties/cards [get]
+func (h *Handler) ListPartyCards(w http.ResponseWriter, r *http.Request) {
+	var currentUserID *int64
+	if claims, ok := apimiddleware.GetClaims(r); ok && claims != nil {
+		currentUserID = &claims.UserID
+	}
+
+	cards, err := h.partiesService.GetPartyCards(r.Context(), currentUserID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch party cards: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Party cards fetched successfully", map[string]interface{}{
+		"parties": cards,
 	})
 }
 
@@ -2273,3 +2313,515 @@ func (h *Handler) GetAgentAcquisitionTargets(w http.ResponseWriter, r *http.Requ
 		"targets": resp,
 	})
 }
+
+// --start-- Party Positions & Officials Handlers
+
+// ListPartyPositions returns all positions (default + party custom)
+func (h *Handler) ListPartyPositions(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	partyID, err := strconv.ParseInt(idStr, 10, 16)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID: "+err.Error())
+		return
+	}
+
+	var chapterType *string
+	if ct := r.URL.Query().Get("chapter_type"); ct != "" {
+		chapterType = &ct
+	}
+
+	positions, err := h.partiesService.ListPartyPositions(r.Context(), int16(partyID), chapterType)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to list positions: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Positions retrieved successfully", map[string]interface{}{
+		"positions": positions,
+	})
+}
+
+// CreatePartyCustomPositionRequest represents payload to create a custom position
+type CreatePartyCustomPositionRequest struct {
+	Name          string   `json:"name"`
+	Code          string   `json:"code"`
+	Description   string   `json:"description"`
+	AllowedLevels []string `json:"allowed_levels"`
+	RankOrder     int16    `json:"rank_order"`
+	MaxOccupants  int16    `json:"max_occupants"`
+}
+
+// CreatePartyCustomPosition creates a new custom position for the party
+func (h *Handler) CreatePartyCustomPosition(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	partyID, err := strconv.ParseInt(idStr, 10, 16)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID: "+err.Error())
+		return
+	}
+
+	var req CreatePartyCustomPositionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+		return
+	}
+
+	if req.Name == "" {
+		h.utils.RespondError(w, http.StatusBadRequest, "Position name is required")
+		return
+	}
+	if req.Code == "" {
+		req.Code = strings.ToLower(strings.ReplaceAll(strings.TrimSpace(req.Name), " ", "_"))
+	}
+	if len(req.AllowedLevels) == 0 {
+		req.AllowedLevels = []string{"national", "zonal", "state", "lga", "ward"}
+	}
+	if req.RankOrder <= 0 {
+		req.RankOrder = 100
+	}
+	if req.MaxOccupants <= 0 {
+		req.MaxOccupants = 1
+	}
+
+	pos, err := h.partiesService.CreatePartyCustomPosition(r.Context(), queries.CreatePartyCustomPositionParams{
+		PartyID:       pgtype.Int2{Int16: int16(partyID), Valid: true},
+		Name:          req.Name,
+		Code:          req.Code,
+		Description:   pgtype.Text{String: req.Description, Valid: req.Description != ""},
+		AllowedLevels: req.AllowedLevels,
+		RankOrder:     req.RankOrder,
+		MaxOccupants:  req.MaxOccupants,
+	})
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create position: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusCreated, "Custom position created successfully", map[string]interface{}{
+		"position": pos,
+	})
+}
+
+// UpdatePartyCustomPosition updates a custom position
+func (h *Handler) UpdatePartyCustomPosition(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	partyID, err := strconv.ParseInt(idStr, 10, 16)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID: "+err.Error())
+		return
+	}
+
+	posIDStr := chi.URLParam(r, "position_id")
+	posID, err := strconv.ParseInt(posIDStr, 10, 32)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid position ID: "+err.Error())
+		return
+	}
+
+	var req CreatePartyCustomPositionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+		return
+	}
+
+	if len(req.AllowedLevels) == 0 {
+		req.AllowedLevels = []string{"national", "zonal", "state", "lga", "ward"}
+	}
+	if req.RankOrder <= 0 {
+		req.RankOrder = 100
+	}
+	if req.MaxOccupants <= 0 {
+		req.MaxOccupants = 1
+	}
+
+	pos, err := h.partiesService.UpdatePartyCustomPosition(r.Context(), queries.UpdatePartyCustomPositionParams{
+		ID:            int32(posID),
+		PartyID:       pgtype.Int2{Int16: int16(partyID), Valid: true},
+		Name:          req.Name,
+		Code:          req.Code,
+		Description:   pgtype.Text{String: req.Description, Valid: req.Description != ""},
+		AllowedLevels: req.AllowedLevels,
+		RankOrder:     req.RankOrder,
+		MaxOccupants:  req.MaxOccupants,
+	})
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update position: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Custom position updated successfully", map[string]interface{}{
+		"position": pos,
+	})
+}
+
+// DeletePartyCustomPosition deletes a custom position
+func (h *Handler) DeletePartyCustomPosition(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	partyID, err := strconv.ParseInt(idStr, 10, 16)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID: "+err.Error())
+		return
+	}
+
+	posIDStr := chi.URLParam(r, "position_id")
+	posID, err := strconv.ParseInt(posIDStr, 10, 32)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid position ID: "+err.Error())
+		return
+	}
+
+	if err := h.partiesService.DeletePartyCustomPosition(r.Context(), int32(posID), int16(partyID)); err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to delete position: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Custom position deleted successfully", nil)
+}
+
+// ListPartyOfficials lists officials across chapters with search and filters
+func (h *Handler) ListPartyOfficials(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	partyID, err := strconv.ParseInt(idStr, 10, 16)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID: "+err.Error())
+		return
+	}
+
+	q := r.URL.Query()
+	arg := queries.ListPartyOfficialsParams{
+		PartyID: int16(partyID),
+	}
+
+	if ct := q.Get("chapter_type"); ct != "" {
+		arg.ChapterType = pgtype.Text{String: ct, Valid: true}
+	}
+	if st := q.Get("status"); st != "" {
+		arg.Status = pgtype.Text{String: st, Valid: true}
+	}
+	if s := q.Get("search"); s != "" {
+		arg.Search = pgtype.Text{String: s, Valid: true}
+	}
+	if stateIDStr := q.Get("state_id"); stateIDStr != "" {
+		if sid, err := strconv.ParseInt(stateIDStr, 10, 16); err == nil {
+			arg.StateID = pgtype.Int2{Int16: int16(sid), Valid: true}
+		}
+	}
+	if lgaIDStr := q.Get("lga_id"); lgaIDStr != "" {
+		if lid, err := strconv.ParseInt(lgaIDStr, 10, 32); err == nil {
+			arg.LgaID = pgtype.Int4{Int32: int32(lid), Valid: true}
+		}
+	}
+	if wardIDStr := q.Get("ward_id"); wardIDStr != "" {
+		if wid, err := strconv.ParseInt(wardIDStr, 10, 32); err == nil {
+			arg.WardID = pgtype.Int4{Int32: int32(wid), Valid: true}
+		}
+	}
+
+	officials, err := h.partiesService.ListPartyOfficials(r.Context(), arg)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to list officials: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Party officials retrieved successfully", map[string]interface{}{
+		"officials": officials,
+	})
+}
+
+// ListChapterOfficials lists all position assignments for a given chapter
+func (h *Handler) ListChapterOfficials(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	partyID, err := strconv.ParseInt(idStr, 10, 16)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID: "+err.Error())
+		return
+	}
+
+	chapIDStr := chi.URLParam(r, "chapter_id")
+	chapID, err := strconv.ParseInt(chapIDStr, 10, 32)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid chapter ID: "+err.Error())
+		return
+	}
+
+	var status *string
+	if st := r.URL.Query().Get("status"); st != "" {
+		status = &st
+	}
+
+	officials, err := h.partiesService.ListChapterOfficials(r.Context(), int16(partyID), int32(chapID), status)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to list chapter officials: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Chapter officials retrieved successfully", map[string]interface{}{
+		"officials": officials,
+	})
+}
+
+// AssignPartyOfficialRequest payload to assign a member to a position in a chapter
+type AssignPartyOfficialRequest struct {
+	UserID          int64  `json:"user_id"`
+	PositionID      int32  `json:"position_id"`
+	AppointmentType string `json:"appointment_type"` // substantive, acting, caretaker, interim
+	TenureStart     string `json:"tenure_start"`
+	TenureEnd       string `json:"tenure_end"`
+}
+
+// AssignPartyOfficial assigns a member to a position within a chapter
+func (h *Handler) AssignPartyOfficial(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	partyID, err := strconv.ParseInt(idStr, 10, 16)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID: "+err.Error())
+		return
+	}
+
+	chapIDStr := chi.URLParam(r, "chapter_id")
+	chapID, err := strconv.ParseInt(chapIDStr, 10, 32)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid chapter ID: "+err.Error())
+		return
+	}
+
+	var req AssignPartyOfficialRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+		return
+	}
+
+	if req.UserID <= 0 || req.PositionID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "user_id and position_id are required")
+		return
+	}
+
+	appointmentType := strings.ToLower(strings.TrimSpace(req.AppointmentType))
+	switch appointmentType {
+	case "substantive", "acting", "caretaker", "interim":
+		// valid
+	default:
+		appointmentType = "substantive"
+	}
+
+	tenureStart := pgtype.Date{Time: time.Now(), Valid: true}
+	if req.TenureStart != "" {
+		if t, err := time.Parse("2006-01-02", req.TenureStart); err == nil {
+			tenureStart = pgtype.Date{Time: t, Valid: true}
+		}
+	}
+
+	var tenureEnd pgtype.Date
+	if req.TenureEnd != "" {
+		if t, err := time.Parse("2006-01-02", req.TenureEnd); err == nil {
+			tenureEnd = pgtype.Date{Time: t, Valid: true}
+		}
+	}
+
+	var appointedBy pgtype.Int8
+	if claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims); ok && claims != nil {
+		appointedBy = pgtype.Int8{Int64: claims.UserID, Valid: true}
+	}
+
+	assignment, err := h.partiesService.AssignPartyPosition(r.Context(), queries.AssignPartyPositionParams{
+		PartyID:         int16(partyID),
+		ChapterID:       int32(chapID),
+		PositionID:      req.PositionID,
+		UserID:          req.UserID,
+		AppointmentType: appointmentType,
+		Status:          "active",
+		TenureStart:     tenureStart,
+		TenureEnd:       tenureEnd,
+		AppointedBy:     appointedBy,
+	})
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Failed to assign position: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusCreated, "Position assigned successfully", map[string]interface{}{
+		"assignment": assignment,
+	})
+}
+
+// VacatePositionAssignment vacates an active official assignment
+func (h *Handler) VacatePositionAssignment(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	partyID, err := strconv.ParseInt(idStr, 10, 16)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID: "+err.Error())
+		return
+	}
+
+	assignIDStr := chi.URLParam(r, "assignment_id")
+	assignID, err := strconv.ParseInt(assignIDStr, 10, 64)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid assignment ID: "+err.Error())
+		return
+	}
+
+	assignment, err := h.partiesService.VacatePositionAssignment(r.Context(), assignID, int16(partyID))
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to vacate position: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Position assignment vacated successfully", map[string]interface{}{
+		"assignment": assignment,
+	})
+}
+
+// UpdatePositionAssignment updates appointment type, status, or tenure dates
+func (h *Handler) UpdatePositionAssignment(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	partyID, err := strconv.ParseInt(idStr, 10, 16)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID: "+err.Error())
+		return
+	}
+
+	assignIDStr := chi.URLParam(r, "assignment_id")
+	assignID, err := strconv.ParseInt(assignIDStr, 10, 64)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid assignment ID: "+err.Error())
+		return
+	}
+
+	var req struct {
+		AppointmentType string `json:"appointment_type"`
+		Status          string `json:"status"`
+		TenureStart     string `json:"tenure_start"`
+		TenureEnd       string `json:"tenure_end"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+		return
+	}
+
+	arg := queries.UpdatePositionAssignmentParams{
+		ID:      assignID,
+		PartyID: int16(partyID),
+	}
+	if req.AppointmentType != "" {
+		arg.AppointmentType = pgtype.Text{String: req.AppointmentType, Valid: true}
+	}
+	if req.Status != "" {
+		arg.Status = pgtype.Text{String: req.Status, Valid: true}
+	}
+	if req.TenureStart != "" {
+		if t, err := time.Parse("2006-01-02", req.TenureStart); err == nil {
+			arg.TenureStart = pgtype.Date{Time: t, Valid: true}
+		}
+	}
+	if req.TenureEnd != "" {
+		if t, err := time.Parse("2006-01-02", req.TenureEnd); err == nil {
+			arg.TenureEnd = pgtype.Date{Time: t, Valid: true}
+		}
+	}
+
+	assignment, err := h.partiesService.UpdatePositionAssignment(r.Context(), arg)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update assignment: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Assignment updated successfully", map[string]interface{}{
+		"assignment": assignment,
+	})
+}
+
+// ListMemberPositions returns all positions held by a specific member in the party
+func (h *Handler) ListMemberPositions(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	partyID, err := strconv.ParseInt(idStr, 10, 16)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID: "+err.Error())
+		return
+	}
+
+	userIDStr := chi.URLParam(r, "user_id")
+	userID, err := strconv.ParseInt(userIDStr, 10, 64)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid user ID: "+err.Error())
+		return
+	}
+
+	positions, err := h.partiesService.ListMemberPositionAssignments(r.Context(), int16(partyID), userID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to list member positions: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Member positions retrieved successfully", map[string]interface{}{
+		"positions": positions,
+	})
+}
+
+// ResolveChapter resolves or creates a chapter ID for a given tier and entity
+func (h *Handler) ResolveChapter(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	partyID, err := strconv.ParseInt(idStr, 10, 16)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID: "+err.Error())
+		return
+	}
+
+	chapterType := strings.ToLower(r.URL.Query().Get("chapter_type"))
+	if chapterType == "" {
+		chapterType = "national"
+	}
+
+	entityIDStr := r.URL.Query().Get("entity_id")
+	var entityID int64
+	if entityIDStr != "" {
+		entityID, _ = strconv.ParseInt(entityIDStr, 10, 32)
+	}
+
+	var chapterID int32
+	switch chapterType {
+	case "national":
+		countryID := int16(161)
+		if entityID > 0 {
+			countryID = int16(entityID)
+		}
+		chapterID, err = h.partiesService.GetOrCreateNationalChapter(r.Context(), int16(partyID), countryID)
+	case "zonal":
+		if entityID <= 0 {
+			h.utils.RespondError(w, http.StatusBadRequest, "entity_id (zonal_id) is required for zonal chapter")
+			return
+		}
+		chapterID, err = h.partiesService.GetOrCreateZonalChapter(r.Context(), int16(partyID), int16(entityID))
+	case "state":
+		if entityID <= 0 {
+			h.utils.RespondError(w, http.StatusBadRequest, "entity_id (state_id) is required for state chapter")
+			return
+		}
+		chapterID, err = h.partiesService.GetOrCreateStateChapter(r.Context(), int16(partyID), int16(entityID))
+	case "lga":
+		if entityID <= 0 {
+			h.utils.RespondError(w, http.StatusBadRequest, "entity_id (lga_id) is required for lga chapter")
+			return
+		}
+		chapterID, err = h.partiesService.GetOrCreateLGAChapter(r.Context(), int16(partyID), int32(entityID))
+	case "ward":
+		if entityID <= 0 {
+			h.utils.RespondError(w, http.StatusBadRequest, "entity_id (ward_id) is required for ward chapter")
+			return
+		}
+		chapterID, err = h.partiesService.GetOrCreateWardChapter(r.Context(), int16(partyID), int32(entityID))
+	default:
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid chapter_type: "+chapterType)
+		return
+	}
+
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to resolve chapter: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Chapter resolved successfully", map[string]interface{}{
+		"chapter_id":   chapterID,
+		"chapter_type": chapterType,
+	})
+}
+
