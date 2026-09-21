@@ -11,6 +11,7 @@ export interface PartyPreset {
 	founded: number;
 	members: string;
 	coverImage?: string;
+	coverPositionY?: number;
 	chairman?: OfficialInfo;
 	secretary?: OfficialInfo;
 }
@@ -177,6 +178,7 @@ export function getPartyMeta(party: Party) {
 		(party.created_at ? new Date(party.created_at).getFullYear() : 1998);
 	const coverImage =
 		party.cover_image || party.background_image || preset?.coverImage || DEFAULT_COVER;
+	const coverPositionY = party.cover_position_y ?? preset?.coverPositionY ?? 50;
 	const memberCount = preset?.members || "300k";
 	const chairman = preset?.chairman || DEFAULT_OFFICIAL;
 	const secretary = preset?.secretary || DEFAULT_OFFICIAL;
@@ -184,6 +186,7 @@ export function getPartyMeta(party: Party) {
 	return {
 		foundedYear,
 		coverImage,
+		coverPositionY,
 		memberCount,
 		chairman,
 		secretary,

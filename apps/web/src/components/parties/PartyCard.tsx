@@ -21,13 +21,14 @@ type PartyCoverProps = {
 /**
  * Banner image section displaying the cover photo and founded year badge.
  */
-function PartyCover({ coverImage, foundedYear, shortName, coverPositionY = 50 }: PartyCoverProps) {
+export function PartyCover({ coverImage, foundedYear, shortName, coverPositionY = 50 }: PartyCoverProps) {
+	const posY = coverPositionY ?? 50;
 	return (
 		<div className="relative h-44 w-full overflow-hidden bg-neutral-200 dark:bg-neutral-800">
 			<img
 				src={coverImage}
 				alt={`${shortName} banner`}
-				style={{ objectPosition: `center ${coverPositionY}%` }}
+				style={{ objectPosition: `center ${posY}%` }}
 				className="w-full h-full object-cover"
 			/>
 			<div className="absolute top-3 right-3 bg-neutral-950/80 backdrop-blur-md text-white text-[11px] font-semibold px-3 py-1 rounded-full shadow-sm">
@@ -109,7 +110,7 @@ function PartyActionPlus() {
  * verification badges, member avatars stack, party officials, and action button.
  */
 export function PartyCard({ party }: PartyCardProps) {
-	const { foundedYear, coverImage, memberCount, chairman, secretary } = getPartyMeta(party);
+	const { foundedYear, coverImage, coverPositionY, memberCount, chairman, secretary } = getPartyMeta(party);
 
 	return (
 		<Link
@@ -121,7 +122,7 @@ export function PartyCard({ party }: PartyCardProps) {
 				coverImage={coverImage}
 				foundedYear={foundedYear}
 				shortName={party.short_name}
-				coverPositionY={party.cover_position_y ?? 50}
+				coverPositionY={coverPositionY}
 			/>
 
 			{/* Center Overlapping Brand Avatar */}
