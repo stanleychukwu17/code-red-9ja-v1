@@ -27,39 +27,25 @@ func (redisTaskDistributor *RedisTaskDistributor) DistributeTaskSeedElectionGrou
 		return fmt.Errorf("failed to marshal seed payload: %w", err)
 	}
 
-	// 2. Build a unique task key so we don't accidentally run multiple seed jobs for the same election group concurrently
-	uniqueKey := fmt.Sprintf("election_group:seed_stats:%d", payload.ElectionGroupID)
-
-	// 3. Configure task options:
+	// 2. Configure task options:
 	defaults := []asynq.Option{
-		// Delay execution by 5 seconds so any child elections for this group can finish inserting first
-		asynq.ProcessIn(5 * time.Second),
-		// Prevent scheduling another seed job for this same group within 10 minutes
-		asynq.Unique(10 * time.Minute),
+		// Delay execution by 3 seconds so any bulk child election inserts can settle first
+		asynq.ProcessIn(3 * time.Second),
 		// Retry up to 5 times if database or Redis errors occur
 		asynq.MaxRetry(5),
 		// Set a 5-minute timeout window because inserting skeleton rows down to 8,800+ wards can take time
 		asynq.Timeout(5 * time.Minute),
-		// Dedup identifier tied to this election group ID
-		asynq.TaskID(uniqueKey),
 	}
 	opts = append(defaults, opts...)
 
-	// 4. Create the Asynq task with type TaskSeedElectionGroupStats and enqueue to Redis
+	// 3. Create the Asynq task with type TaskSeedElectionGroupStats and enqueue to Redis
 	task := asynq.NewTask(TaskSeedElectionGroupStats, jsonPayload, opts...)
 
 	// Enqueues the task with Redis using the provided options
 	// The task will be available for processing after the delay specified in opts
-	// This is the actual operation that puts the job onto the Redis queue
 	info, err := redisTaskDistributor.asynqClient.EnqueueContext(ctx, task)
-	if err != nil && err != asynq.ErrTaskIDConflict {
+	if err != nil {
 		return fmt.Errorf("failed to enqueue seed task: %w", err)
-	}
-
-	// 5. If another worker or request already enqueued this task, ignore the conflict safely (idempotent)
-	if err == asynq.ErrTaskIDConflict {
-		slog.Debug("seed election group stats task already queued, skipping duplicate", "election_group_id", payload.ElectionGroupID)
-		return nil
 	}
 
 	slog.Info("enqueued seed election group stats task", "type", task.Type(), "queue", info.Queue, "election_group_id", payload.ElectionGroupID)

@@ -5,11 +5,25 @@ import { APP_URL } from "#/lib/config";
 export const getPartyAdminsTabs = (
   partyShortName: string,
 ): PageHeaderTabProps[] => [
-  { id: "all", label: "Members", href: APP_URL.partyRoutes.members(partyShortName) },
+  {
+    id: "all",
+    label: "Members",
+    href: APP_URL.partyRoutes.members(partyShortName),
+  },
+  {
+    id: "party-admin",
+    label: "Party admins",
+    href: APP_URL.partyRoutes.partyAdmins(partyShortName),
+  },
   {
     id: "agent",
     label: "Polling agents",
     href: `${APP_URL.partyRoutes.members(partyShortName)}/agent`,
+  },
+  {
+    id: "party-positions",
+    label: "Party positions",
+    href: APP_URL.partyRoutes.partyPositions(partyShortName),
   },
 ];
 

@@ -126,8 +126,8 @@ When running a unified container service where containers handle both HTTP traff
 
 1. **Queue Jobs**: Handled natively across all containers by Asynq worker pools.
 2. **Cron Jobs**: Both cron jobs are strictly protected against concurrent execution across multiple ECS containers:
-   - **`ProcessDailyMarketingCampaignDeductions`**: Guarded by a 24-hour distributed lock on `cron:lock:marketing_deductions:YYYY-MM-DD` **and** database-level `last_deducted_date` idempotency.
-   - **`ProcessINECResultGrabberSync`**: Guarded by a 14-minute distributed lock on `cron:lock:inec_grabber_sync` (`SetArgs` with `Mode: "NX"`), ensuring only one container polls INEC IReV every 15-minute interval.
+   - **`ProcessDailyMarketingCampaignDeductions`**: Runs daily at 00:05 AM and on container boot (startup catch-up). Guarded by a 24-hour distributed lock on `cron:lock:marketing_deductions:YYYY-MM-DD` **and** database-level `last_deducted_date` idempotency. If an ECS task replacement happens at midnight and misses the cron tick, the newly booted container immediately processes the missed deduction.
+   - **`ProcessINECResultGrabberSync`**: Guarded by a 14-minute distributed lock on `cron:lock:inec_grabber_sync` (`SetArgs` with `Mode: "NX"`), ensuring only one container polls INEC IReV every 15-minute interval. 
 
 ---
 
@@ -136,5 +136,5 @@ When running a unified container service where containers handle both HTTP traff
 - [ ] Ensure all ECS tasks point to the same **ElastiCache Redis** cluster (not `localhost`).
 - [ ] Configure `asynq.Config.Concurrency` (default 10) appropriately based on ECS container vCPU/RAM.
 - [ ] Set `asynq.Config.ShutdownTimeout` to match your ECS container stop timeout (default 30s) for graceful task completion.
-- [x] Guard `ProcessDailyMarketingCampaignDeductions` using Redis `NX` distributed lock (`SetArgs`) and `last_deducted_date` idempotency (Implemented).
+- [x] Guard `ProcessDailyMarketingCampaignDeductions` using Redis `NX` distributed lock (`SetArgs`) and `last_deducted_date` idempotency + startup catch-up (Implemented).
 - [x] Guard `ProcessINECResultGrabberSync` using Redis `NX` distributed lock (`SetArgs`) (Implemented).

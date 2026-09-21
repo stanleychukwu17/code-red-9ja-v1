@@ -135,6 +135,12 @@ func (redisTaskProcessor *RedisTaskProcessor) Start() error {
 	redisTaskProcessor.cron.Start()
 	slog.Info("cron rollup scheduler started")
 
+	// Immediate startup catch-up:
+	// If an ECS rollout or task restart occurred around midnight and missed the 00:05 cron tick,
+	// execute today's campaign deductions immediately. If already executed, the Redis NX lock
+	// and DB-level last_deducted_date idempotency ensure this is a zero-cost no-op.
+	go redisTaskProcessor.ProcessDailyMarketingCampaignDeductions()
+
 	// Start the Asynq server worker loop: polls Redis queues and executes matched handlers in mux
 	return redisTaskProcessor.asynqServer.Start(mux)
 }

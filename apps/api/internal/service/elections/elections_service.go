@@ -7,6 +7,7 @@ import (
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/worker"
+	"log/slog"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -68,6 +69,20 @@ func (s *ElectionsService) invalidateCache(ctx context.Context, id *int32) {
 	s.rdb.Del(ctx, db.RedisElectionGroupsAll)
 	if id != nil {
 		s.rdb.Del(ctx, fmt.Sprintf("%s%d", db.RedisElectionInfo, *id))
+	}
+}
+
+// enqueueSeedElectionGroupStats enqueues an asynchronous task to seed zeroed geography
+// hierarchy stats for the parent election group. It is safe to call repeatedly due to
+// ON CONFLICT DO NOTHING queries.
+func (s *ElectionsService) enqueueSeedElectionGroupStats(ctx context.Context, electionGroupID int32) {
+	if s.taskDistributor == nil || electionGroupID <= 0 {
+		return
+	}
+	if err := s.taskDistributor.DistributeTaskSeedElectionGroupStats(ctx, &worker.SeedElectionGroupStatsPayload{
+		ElectionGroupID: electionGroupID,
+	}); err != nil {
+		slog.Warn("failed to enqueue seed election group stats task", "election_group_id", electionGroupID, "error", err)
 	}
 }
 
@@ -265,6 +280,9 @@ func (s *ElectionsService) CreateElection(
 		return queries.Election{}, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
+	// 10. Seed geographic hierarchy stats for this election group post-commit
+	s.enqueueSeedElectionGroupStats(ctx, electionGroupID)
+
 	return updatedElection, nil
 }
 
@@ -405,6 +423,9 @@ func (s *ElectionsService) CreateNationwideElection(ctx context.Context, officeI
 	if err := tx.Commit(ctx); err != nil {
 		return queries.Election{}, fmt.Errorf("failed to commit transaction: %w", err)
 	}
+
+	// 10. Seed geographic hierarchy stats for this election group post-commit
+	s.enqueueSeedElectionGroupStats(ctx, groupID)
 
 	return updatedElection, nil
 }
@@ -549,6 +570,9 @@ func (s *ElectionsService) CreateStateElection(ctx context.Context, officeID int
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
+
+	// 9. Seed geographic hierarchy stats for this election group post-commit
+	s.enqueueSeedElectionGroupStats(ctx, groupID)
 
 	return updatedElections, nil
 }
@@ -704,6 +728,9 @@ func (s *ElectionsService) CreateSenatorialDistrictElection(ctx context.Context,
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
+
+	// 10. Seed geographic hierarchy stats for this election group post-commit
+	s.enqueueSeedElectionGroupStats(ctx, groupID)
 
 	return updatedElections, nil
 }
@@ -868,6 +895,9 @@ func (s *ElectionsService) CreateFederalConstituencyElection(ctx context.Context
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
+
+	// 10. Seed geographic hierarchy stats for this election group post-commit
+	s.enqueueSeedElectionGroupStats(ctx, groupID)
 
 	return updatedElections, nil
 }
@@ -1043,6 +1073,9 @@ func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, 
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
+	// 10. Seed geographic hierarchy stats for this election group post-commit
+	s.enqueueSeedElectionGroupStats(ctx, groupID)
+
 	return updatedElections, nil
 }
 
@@ -1208,6 +1241,9 @@ func (s *ElectionsService) CreateLgaElection(ctx context.Context, officeID int16
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
+
+	// 10. Seed geographic hierarchy stats for this election group post-commit
+	s.enqueueSeedElectionGroupStats(ctx, groupID)
 
 	return updatedElections, nil
 }
@@ -1400,6 +1436,9 @@ func (s *ElectionsService) CreateWardElection(ctx context.Context, officeID int1
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
+
+	// 10. Seed geographic hierarchy stats for this election group post-commit
+	s.enqueueSeedElectionGroupStats(ctx, groupID)
 
 	return updatedElections, nil
 }

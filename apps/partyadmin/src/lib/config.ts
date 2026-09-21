@@ -1,7 +1,19 @@
 // lib/config.ts
 export const IP_SERVICE_URL = import.meta.env.VITE_IP_SERVICE_URL;
 export const APP_NAME = import.meta.env.VITE_APP_NAME;
+export const WEB_DNS = import.meta.env.VITE_WEB_URL;
 const API_BASE = import.meta.env.VITE_API_URL;
+
+const web = `${WEB_DNS}`;
+export const WEB_URL = {
+  users: {
+    profile: (username: string) => `${web}/users/profile/${username}`,
+  },
+  parties: {
+    profile: (shortName: string, id: number) =>
+      `${web}/party/${shortName}/${id}/home`,
+  },
+};
 
 export const APP_URL = {
   auth: {
@@ -15,6 +27,8 @@ export const APP_URL = {
     elections: (party: string) => `/${party}/elections`,
     applications: (party: string) => `/${party}/applications`,
     members: (party: string) => `/${party}/party-members`,
+    partyAdmins: (party: string) => `/${party}/party-members/party-admin`,
+    partyPositions: (party: string) => `/${party}/party-members/party-positions`,
     wallet: (party: string) => `/${party}/wallet`,
     marketing: (party: string) => `/${party}/marketing`,
     agents: (party: string) => `/${party}/agents`,

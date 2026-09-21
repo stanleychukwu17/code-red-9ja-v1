@@ -1,8 +1,8 @@
 /**
- * @file Party Members Directory Page
- * @description Master roster of all registered members belonging to the current political party.
- * Provides infinite scroll member listing, debounced search, scoped multi-criteria filters,
- * membership creation modal (`UserFormDialog`), and server actions.
+ * @file Party Admins Roster Page
+ * @description Roster displaying party administrators belonging to the current political party.
+ * Provides infinite scroll administrator listing, debounced search, scoped multi-criteria filters,
+ * administrator creation modal (`UserFormDialog`), and server actions.
  */
 
 import * as React from "react";
@@ -39,15 +39,15 @@ import { registerCandidate } from "#/lib/server/auth/auth";
 import { updateUser, getUsersList } from "#/lib/server/users";
 
 export const Route = createFileRoute(
-  "/_authenticated/$partyShortName/party-members/",
+  "/_authenticated/$partyShortName/party-members/party-admin",
 )({
-  head: () => getPageHeader({ title: "Party members" }),
+  head: () => getPageHeader({ title: "Party admins" }),
   component: RouteComponent,
 });
 
 /**
- * Party Members Page Component
- * Handles infinite pagination of party members, debounced search,
+ * Party Admins Page Component
+ * Handles infinite pagination of party admins, debounced search,
  * filtering dialog, observer sentinel triggers, and user creation dialog lifecycle.
  */
 function RouteComponent() {
@@ -76,7 +76,7 @@ function RouteComponent() {
     error,
     refetch,
   } = useInfiniteQuery({
-    queryKey: ["party-members", partyId, debouncedSearchQuery, filters],
+    queryKey: ["party-members", "party-admin", partyId, debouncedSearchQuery, filters],
     queryFn: async ({ pageParam }) => {
       const res = await getUsersList({
         data: {
@@ -84,7 +84,10 @@ function RouteComponent() {
           limit: 30,
           cursor: pageParam,
           search: debouncedSearchQuery || undefined,
-          roles: filters.roles.length > 0 ? filters.roles : undefined,
+          roles:
+            filters.roles.length > 0
+              ? filters.roles
+              : ["party_admin", "super_party_admin"],
           statuses: filters.statuses.length > 0 ? filters.statuses : undefined,
           verificationTypes:
             filters.verificationTypes.length > 0
@@ -97,7 +100,7 @@ function RouteComponent() {
       if (res && res.success && res.data) {
         return res;
       }
-      throw new Error(res?.message || "Failed to load party members");
+      throw new Error(res?.message || "Failed to load party admins");
     },
     initialPageParam: "",
     getNextPageParam: (lastPage) => {
@@ -122,7 +125,7 @@ function RouteComponent() {
   }, [isIntersecting, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   // Flatten to raw UserType array
-  const partyMembers = data
+  const partyAdmins = data
     ? data.pages.flatMap((page) => page.data?.users || [])
     : [];
 
@@ -130,13 +133,13 @@ function RouteComponent() {
     <Layout>
       <PageHeader
         title="Party members"
-        activeTab="all"
+        activeTab="party-admin"
         tabs={getPartyAdminsTabs(partyShortName)}
       />
       <PageSearchLayer
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
-        ariaLabel="Search party members"
+        ariaLabel="Search party admins"
         placeholder="Search"
         rightComponent={
           <>
@@ -146,7 +149,7 @@ function RouteComponent() {
         }
       />
 
-      {isLoading && partyMembers.length === 0 ? (
+      {isLoading && partyAdmins.length === 0 ? (
         <div className="w-full h-60 flex items-center justify-center">
           <Loader2 className="size-8 animate-spin text-c-50" />
         </div>
@@ -154,15 +157,15 @@ function RouteComponent() {
         <div className="w-full p-6 text-center text-red-600 font-medium">
           {error instanceof Error
             ? error.message
-            : "Failed to load party members"}
+            : "Failed to load party admins"}
         </div>
-      ) : partyMembers.length === 0 ? (
+      ) : partyAdmins.length === 0 ? (
         <div className="w-full p-12 text-center text-c-40 font-medium bg-white rounded-2xl border border-[#dfdfdf]">
-          No party members found.
+          No party admins found.
         </div>
       ) : (
         <>
-          <UsersTable items={partyMembers} refetch={refetch} />
+          <UsersTable items={partyAdmins} refetch={refetch} />
 
           {/* Sentinel element for infinite scroll */}
           {hasNextPage && (

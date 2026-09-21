@@ -7,7 +7,6 @@ import (
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/worker"
-	"log/slog"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -102,17 +101,7 @@ func (s *ElectionGroupsService) CreateElectionGroup(ctx context.Context, name st
 		return eg, err
 	}
 
-	// 3. Enqueue a background task to seed zeroed geography stat rows.
-	// It fires after a short delay so any elections belonging to this group
-	// can be created first (stats are scoped to the elections' scope fields).
-	if seedErr := s.distributor.DistributeTaskSeedElectionGroupStats(ctx, &worker.SeedElectionGroupStatsPayload{
-		ElectionGroupID: eg.ID,
-	}); seedErr != nil {
-		// Non-fatal: log error and continue group creation without aborting the HTTP request.
-		slog.Warn("failed to enqueue seed election group stats task", "election_group_id", eg.ID, "error", seedErr)
-	}
-
-	// 4. Invalidate global election group caches
+	// 3. Invalidate global election group caches
 	s.invalidateCache(ctx, nil)
 
 	return eg, nil

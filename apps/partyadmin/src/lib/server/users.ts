@@ -43,21 +43,42 @@ export const updateUser = createServerFn({ method: "POST" })
 
 export const getUsersList = createServerFn({ method: "GET" })
   .inputValidator(
-    (data: { limit?: number; cursor?: string | number; party_id?: number; search?: string } | undefined) => data,
+    (data: {
+      role?: string;
+      limit?: number;
+      cursor?: string | number;
+      party_id?: number;
+      search?: string;
+      parties?: number[];
+      roles?: string[];
+      statuses?: string[];
+      verificationTypes?: string[];
+      countryId?: string;
+      stateIds?: string[];
+    } | undefined) => data,
   )
   .handler(async ({ data }) => {
     try {
       const params = new URLSearchParams();
+      if (data?.role) params.append("role", data.role);
       if (data?.limit) params.append("limit", String(data.limit));
       if (data?.cursor) params.append("cursor", String(data.cursor));
       if (data?.party_id) params.append("party_id", String(data.party_id));
       if (data?.search) params.append("search", data.search);
+
+      if (data?.parties?.length) params.append("parties", data.parties.join(","));
+      if (data?.roles?.length) params.append("roles", data.roles.join(","));
+      if (data?.statuses?.length) params.append("statuses", data.statuses.join(","));
+      if (data?.verificationTypes?.length) params.append("verification_types", data.verificationTypes.join(","));
+      if (data?.countryId) params.append("country_id", data.countryId);
+      if (data?.stateIds?.length) params.append("state_ids", data.stateIds.join(","));
+
       const qs = params.toString();
 
       const response = await apiFetch(`${API_URL.users}${qs ? `?${qs}` : ""}`);
       const resData = await response.json();
       return resData;
-    } catch (error) {
+    } catch (_error) {
       return { success: false, message: "Failed to fetch users from API" };
     }
   });
