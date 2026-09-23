@@ -21,6 +21,7 @@ const buttonVariants = cva(
         black:
           "bg-c-90 hover:bg-[#111] text-white dark:text-black/80 [&_svg]:text-white",
         green: "bg-light-green text-white hover:bg-light-green/95",
+        lime: "bg-lime text-black hover:bg-lime-accent active:bg-lime-accent dark:text-white dark:border dark:border-[#383a40] [&_svg]:text-black dark:[&_svg]:text-white",
         tertiary:
           "bg-[#F6F8FA] dark:bg-[#1c1d1f] dark:hover:bg-[#292c33] text-c-90 font-medium border-0.8 border-border hover:bg-[#F1F3F5]",
         outline:

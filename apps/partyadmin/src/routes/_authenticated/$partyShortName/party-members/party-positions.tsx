@@ -19,6 +19,13 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useDebounceValue } from "usehooks-ts";
 import { Button } from "@repo/ui/components/button";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@repo/ui/components/select";
+import {
   PartyPositionTableHeader,
   PartyPositionTableTile,
 } from "#/components/tiles/party-position-tile";
@@ -177,7 +184,7 @@ function RouteComponent() {
       {/* Top Action Buttons & Filters Bar */}
       <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 mb-4">
         {/* Tier Tabs Navigation */}
-        <div className="flex items-center gap-1.5 p-1 bg-[#f3f4f6] rounded-xl overflow-x-auto">
+        <div className="flex items-center gap-1.5 p-1 bg-c-10 rounded-xl overflow-x-auto">
           {[
             { key: "all", label: "All Tiers" },
             { key: "national", label: "National" },
@@ -190,11 +197,10 @@ function RouteComponent() {
               key={tab.key}
               type="button"
               onClick={() => handleTierChange(tab.key)}
-              className={`px-3.5 py-1.5 rounded-lg text-[13px] font-medium transition whitespace-nowrap ${
-                chapterTier === tab.key
-                  ? "bg-white text-c-90 shadow-xs"
+              className={`px-3.5 py-1.5 rounded-lg text-[13px] font-medium transition whitespace-nowrap ${chapterTier === tab.key
+                  ? "bg-background text-c-90 shadow-xs"
                   : "text-c-60 hover:text-c-90"
-              }`}
+                }`}
             >
               {tab.label}
             </button>
@@ -215,8 +221,9 @@ function RouteComponent() {
 
           <Button
             type="button"
+            variant="lime"
             onClick={() => setIsAssignDialogOpen(true)}
-            className="h-10 px-4 rounded-xl bg-[#ff9a3c] hover:bg-[#e0832c] text-white text-[13px] font-medium flex items-center gap-2 shadow-xs"
+            className="h-10 px-4 rounded-xl text-[13px] font-medium flex items-center gap-2 shadow-xs"
           >
             <UserPlus className="size-4" />
             <span>Assign Position</span>
@@ -293,19 +300,21 @@ function RouteComponent() {
         ariaLabel="Search party positions"
         placeholder="Search by official name, @username, or display title..."
         rightComponent={
-          <div className="flex items-center gap-2">
-            <select
-              value={appointmentTypeFilter}
-              onChange={(e) => setAppointmentTypeFilter(e.target.value)}
-              className="h-11 px-3.5 text-[14px] rounded-xl border border-[#dfdfdf] bg-white text-c-70 focus:outline-none"
-            >
-              <option value="all">All Appointment Types</option>
-              <option value="substantive">Substantive</option>
-              <option value="acting">Acting</option>
-              <option value="caretaker">Caretaker</option>
-              <option value="interim">Interim</option>
-            </select>
-          </div>
+          <Select
+            value={appointmentTypeFilter}
+            onValueChange={(val) => setAppointmentTypeFilter(val)}
+          >
+            <SelectTrigger className="h-12 px-3.5 rounded-xl border border-border text-[14px] text-c-70 min-w-44">
+              <SelectValue placeholder="All Appointment Types" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Appointment Types</SelectItem>
+              <SelectItem value="substantive">Substantive</SelectItem>
+              <SelectItem value="acting">Acting</SelectItem>
+              <SelectItem value="caretaker">Caretaker</SelectItem>
+              <SelectItem value="interim">Interim</SelectItem>
+            </SelectContent>
+          </Select>
         }
       />
 
