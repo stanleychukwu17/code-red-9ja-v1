@@ -1705,19 +1705,6 @@ type UserRole struct {
 	WhoAssignedUserID int64              `json:"who_assigned_user_id"`
 }
 
-type UserVerification struct {
-	UserID                 int64              `json:"user_id"`
-	NinVerified            pgtype.Bool        `json:"nin_verified"`
-	PhoneVerified          pgtype.Bool        `json:"phone_verified"`
-	EmailVerified          pgtype.Bool        `json:"email_verified"`
-	VotersCardVerified     pgtype.Bool        `json:"voters_card_verified"`
-	EmailVerificationToken pgtype.Text        `json:"email_verification_token"`
-	EmailLastRemindedAt    pgtype.Timestamptz `json:"email_last_reminded_at"`
-	PhoneLastRemindedAt    pgtype.Timestamptz `json:"phone_last_reminded_at"`
-	CreatedAt              pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt              pgtype.Timestamptz `json:"updated_at"`
-}
-
 type UserWallet struct {
 	ID               int64              `json:"id"`
 	UserID           int64              `json:"user_id"`

@@ -44,7 +44,7 @@ func (s *BodiesService) GetNationalMetrics(ctx context.Context) (queries.Nationa
 	}
 
 	if jsonData, err := json.Marshal(metrics); err == nil {
-		s.rdb.Set(ctx, db.RedisNationalMetrics, jsonData, db.RedisOneYearTTL)
+		s.rdb.Set(ctx, db.RedisNationalMetrics, jsonData, db.RedisReferenceDataTTL)
 	}
 
 	return metrics, nil
@@ -69,7 +69,7 @@ func (s *BodiesService) GetAllCountries(ctx context.Context) ([]queries.ListCoun
 		}
 
 		jsonData, _ := json.Marshal(payload)
-		s.rdb.Set(ctx, db.RedisCountriesAll, jsonData, db.RedisFiveYearsTTL) // 5years TTL
+		s.rdb.Set(ctx, db.RedisCountriesAll, jsonData, db.RedisReferenceDataTTL)
 
 		return dbCountries, nil
 	case nil:
@@ -101,7 +101,7 @@ func (s *BodiesService) GetStatesByCountryID(ctx context.Context, countryID int1
 		}
 
 		jsonData, _ := json.Marshal(payload)
-		s.rdb.Set(ctx, redisKey, jsonData, db.RedisFiveYearsTTL) // 5years TTL
+		s.rdb.Set(ctx, redisKey, jsonData, db.RedisReferenceDataTTL)
 
 		return dbStates, nil
 	case nil:
@@ -133,7 +133,7 @@ func (s *BodiesService) GetCitiesByStateID(ctx context.Context, stateID int16) (
 		}
 
 		jsonData, _ := json.Marshal(payload)
-		s.rdb.Set(ctx, redisKey, jsonData, db.RedisFiveYearsTTL) // 5years TTL
+		s.rdb.Set(ctx, redisKey, jsonData, db.RedisReferenceDataTTL)
 
 		return dbCities, nil
 	case nil:
@@ -165,7 +165,7 @@ func (s *BodiesService) GetLGAs(ctx context.Context, stateID int32) ([]queries.L
 		}
 
 		jsonData, _ := json.Marshal(payload)
-		s.rdb.Set(ctx, redisKey, jsonData, db.RedisFiveYearsTTL) // 5years TTL
+		s.rdb.Set(ctx, redisKey, jsonData, db.RedisReferenceDataTTL)
 
 		return dbData, nil
 	case nil:
@@ -325,7 +325,7 @@ func (s *BodiesService) CheckState(ctx context.Context, country_id, state_id int
 	if state_dts.ID > 0 {
 		// save to redis
 		state_data, _ := json.Marshal(state_dts)
-		s.rdb.Set(ctx, redisStateKey, state_data, db.RedisFiveYearsTTL) // expires in 5years
+		s.rdb.Set(ctx, redisStateKey, state_data, db.RedisReferenceDataTTL)
 
 		return state_dts, nil
 	}
@@ -354,7 +354,7 @@ func (s *BodiesService) CheckCity(ctx context.Context, state_id int16, city_id i
 	if city_dts.ID > 0 {
 		// save to redis
 		city_data, _ := json.Marshal(city_dts)
-		s.rdb.Set(ctx, redisCityKey, city_data, db.RedisFiveYearsTTL) // expires in 5years
+		s.rdb.Set(ctx, redisCityKey, city_data, db.RedisReferenceDataTTL)
 
 		return city_dts, nil
 	}

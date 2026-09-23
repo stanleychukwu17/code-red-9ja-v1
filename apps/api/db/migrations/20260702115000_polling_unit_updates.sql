@@ -28,14 +28,8 @@ CREATE TABLE IF NOT EXISTS polling_unit_updates (
 );
 
 -- Indexes for fast querying by parties and on election day
-CREATE INDEX idx_pu_updates_assignment ON polling_unit_updates(assignment_id);
 CREATE INDEX idx_pu_updates_pu ON polling_unit_updates(polling_unit_id);
-CREATE INDEX idx_pu_updates_party_group ON polling_unit_updates(party_id, election_group_id);
-CREATE INDEX idx_pu_updates_created_at ON polling_unit_updates(created_at);
-CREATE INDEX idx_pu_updates_location ON polling_unit_updates(state_id, lga_id, ward_id);
-CREATE INDEX idx_pu_updates_senatorial ON polling_unit_updates(senatorial_district_id);
-CREATE INDEX idx_pu_updates_federal ON polling_unit_updates(federal_constituency_id);
-CREATE INDEX idx_pu_updates_state_assembly ON polling_unit_updates(state_assembly_constituency_id);
+CREATE INDEX idx_pu_updates_group_party_cursor ON polling_unit_updates(election_group_id, party_id, id DESC);
 
 -- +goose Down
 DROP TABLE IF EXISTS polling_unit_updates;

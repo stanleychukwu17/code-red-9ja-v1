@@ -18,6 +18,7 @@ import (
 	"free9ja/api/internal/utils"
 	"free9ja/api/internal/worker"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
@@ -70,16 +71,11 @@ type SeedUserRequest struct {
 	MiddleName         *string `json:"middle_name"`
 	Gender             string  `json:"gender"`
 	DateOfBirth        string  `json:"date_of_birth"`
-	Religion           string  `json:"religion"`
 	CurrentCountry     int16   `json:"current_country"`
 	CurrentState       int16   `json:"current_state"`
 	CurrentLga         *int32  `json:"current_lga"`
 	CurrentCity        *int32  `json:"current_city"`
 	StateOfOrigin      *int16  `json:"state_of_origin"`
-	MaritalStatus      string  `json:"marital_status"`
-	EducationLevel     string  `json:"education_level"`
-	HomeAddress        string  `json:"home_address"`
-	OccupationID       *int16  `json:"occupation_id"`
 	PartyID            *int16  `json:"party_id"`
 	AccountStatus      string  `json:"account_status"`
 	IsVerified         bool    `json:"is_verified"`
@@ -90,9 +86,16 @@ type SeedUserRequest struct {
 // SeedUsers registers a batch of new users from a seed request.
 // It handles password hashing, database insertion, generates fake IDs, caches user details in Redis,
 // and optionally appends user verification badges (e.g., for politicians).
+// SeedUsers registers a batch of new users from a seed request using high-throughput batching.
+// It pre-computes password hashes, caches country data in-memory, executes chunked pgx.Batch transactions,
+// populates secondary tables (more_info, verifications, phones, badges) in a pipelined batch,
+// and bulk-updates Redis registration mappings.
 func (s *SeedService) SeedUsers(ctx context.Context, users []SeedUserRequest) (string, error) {
-	// Precompute bcrypt hashes for distinct passwords in the batch.
-	// This prevents hashing identical passwords (e.g. "password" or "stanl") thousands of times.
+	if len(users) == 0 {
+		return "No users provided to seed", nil
+	}
+
+	// 1. Precompute bcrypt hashes for distinct passwords in the batch.
 	passwordHashes := make(map[string]string)
 	for i := range users {
 		pwd := users[i].Password
@@ -105,204 +108,240 @@ func (s *SeedService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 		}
 	}
 
-	eg, ctx := errgroup.WithContext(ctx)
-	eg.SetLimit(25)
+	// 2. In-memory cache for country data to eliminate redundant DB/Redis roundtrips during phone validation.
+	countryCache := make(map[int16]queries.GetCountryByIDRow)
 
-	for _, u := range users {
-		eg.Go(func() error {
-			// check if email already exit, if yes, we can skip this user onto the next
-			if exists, _ := s.usersService.CheckEmail(ctx, u.Email); exists {
-				return nil
-			}
+	// preparedUser holds validated and pre-parsed fields (DOB, normalized phone numbers)
+	// paired with the raw request. This avoids re-parsing/re-validating across multiple batch
+	// stages and ensures invalid data fails fast before database transactions are opened.
+	type preparedUser struct {
+		user           SeedUserRequest
+		dob            time.Time
+		formattedPhone string
+		phoneCode      string
+		rawPhoneInput  string
+	}
 
-			// Use precomputed password hash
-			hashed := passwordHashes[u.Password]
+	// 3. Process in chunks of 500 records per transaction
+	const batchSize = 500
+	totalInserted := 0
 
-			// parse date of birth
+	for i := 0; i < len(users); i += batchSize {
+		end := i + batchSize
+		if end > len(users) {
+			end = len(users)
+		}
+		chunkRaw := users[i:end]
+
+		// Prepare user data for this chunk
+		chunk := make([]preparedUser, 0, len(chunkRaw))
+		for _, u := range chunkRaw {
 			dob, err := time.Parse(time.DateOnly, u.DateOfBirth)
 			if err != nil {
-				return fmt.Errorf("invalid dob format for user %s: %w", u.Email, err)
+				return "", fmt.Errorf("invalid dob format for user %s: %w", u.Email, err)
 			}
 
-			// Prepare params
-			emailVal := pgtype.Text{String: strings.TrimSpace(strings.ToLower(u.Email)), Valid: true}
-			avatarVal := pgtype.Text{String: u.Avatar, Valid: true}
-			var usernameVal pgtype.Text
-			if u.Username != nil {
-				usernameVal = pgtype.Text{String: *u.Username, Valid: true}
-			}
-			var middleNameVal pgtype.Text
-			if u.MiddleName != nil {
-				middleNameVal = pgtype.Text{String: *u.MiddleName, Valid: true}
-			}
-			genderVal := pgtype.Text{String: u.Gender, Valid: true}
-			var currentLgaVal pgtype.Int4
-			if u.CurrentLga != nil {
-				currentLgaVal = pgtype.Int4{Int32: *u.CurrentLga, Valid: true}
-			}
-			var currentCityVal pgtype.Int4
-			if u.CurrentCity != nil {
-				currentCityVal = pgtype.Int4{Int32: *u.CurrentCity, Valid: true}
-			}
-			var stateOfOriginVal pgtype.Int2
-			if u.StateOfOrigin != nil {
-				stateOfOriginVal = pgtype.Int2{Int16: *u.StateOfOrigin, Valid: true}
-			}
-			var occupationIDVal pgtype.Int2
-			if u.OccupationID != nil {
-				occupationIDVal = pgtype.Int2{Int16: *u.OccupationID, Valid: true}
-			}
-			var partyIDVal pgtype.Int2
-			if u.PartyID != nil {
-				partyIDVal = pgtype.Int2{Int16: *u.PartyID, Valid: true}
-			}
-
-			// check if the user phone number is valid
-			var phoneVal pgtype.Text
-			var iso2, phonecode, formattedPhone, rawPhoneInput string
+			var formattedPhone, rawPhoneInput, phoneCode string
 			if u.Phone != nil && *u.Phone != "" {
 				rawPhoneInput = *u.Phone
-				country, err := s.bodiesService.CheckCountry(ctx, u.CurrentCountry)
-				if err != nil {
-					return fmt.Errorf("failed to fetch country for user %s: %w", u.Email, err)
+				c, exists := countryCache[u.CurrentCountry]
+				if !exists {
+					fetched, err := s.bodiesService.CheckCountry(ctx, u.CurrentCountry)
+					if err != nil {
+						return "", fmt.Errorf("failed to fetch country for user %s: %w", u.Email, err)
+					}
+					countryCache[u.CurrentCountry] = fetched
+					c = fetched
 				}
-
-				iso2 = country.Iso2
-				phonecode = country.Phonecode
-				formattedPhone, err = utils.ValidatePhoneForCountry(rawPhoneInput, iso2)
+				phoneCode = c.Phonecode
+				fp, err := utils.ValidatePhoneForCountry(rawPhoneInput, c.Iso2)
 				if err != nil {
-					return fmt.Errorf("invalid phone for user %s: %w", u.Email, err)
+					return "", fmt.Errorf("invalid phone for user %s: %w", u.Email, err)
 				}
-				phoneVal = pgtype.Text{String: formattedPhone, Valid: true}
+				formattedPhone = fp
 			}
 
+			chunk = append(chunk, preparedUser{
+				user:           u,
+				dob:            dob,
+				formattedPhone: formattedPhone,
+				phoneCode:      phoneCode,
+				rawPhoneInput:  rawPhoneInput,
+			})
+		}
+
+		// Begin transaction for chunk
+		tx, err := s.pool.Begin(ctx)
+		if err != nil {
+			return "", fmt.Errorf("failed to begin batch transaction: %w", err)
+		}
+
+		// Stage A: Primary batch - bulk insert into users table returning ID
+		userBatch := &pgx.Batch{}
+		for _, prepUser := range chunk {
+			u := prepUser.user
+			hashed := passwordHashes[u.Password]
+
+			var usernameVal *string
+			if u.Username != nil && *u.Username != "" {
+				un := strings.ToLower(strings.TrimSpace(*u.Username))
+				usernameVal = &un
+			}
+			var middleNameVal *string
+			if u.MiddleName != nil && *u.MiddleName != "" {
+				middleNameVal = u.MiddleName
+			}
+			var phoneVal *string
+			if prepUser.formattedPhone != "" {
+				phoneVal = &prepUser.formattedPhone
+			}
+			accountStatus := u.AccountStatus
+			if accountStatus == "" {
+				accountStatus = "active"
+			}
+			var partyIDVal *int16
+			if u.PartyID != nil && *u.PartyID > 0 {
+				partyIDVal = u.PartyID
+			}
 			isVerifiedVal := u.IsVerified && u.VerificationTypeID != nil
 
-			// user params
-			params := queries.SeedUserParams{
-				Email:           emailVal,
-				Avatar:          avatarVal,
-				Phone:           phoneVal,
-				Username:        usernameVal,
-				PasswordHash:    string(hashed),
-				LastName:        pgtype.Text{String: u.LastName, Valid: u.LastName != ""},
-				FirstName:       pgtype.Text{String: u.FirstName, Valid: u.FirstName != ""},
-				MiddleName:      middleNameVal,
-				Gender:          genderVal,
-				DateOfBirth:     pgtype.Date{Time: dob, Valid: true},
-				CurrentCountry:  u.CurrentCountry,
-				CurrentState:    u.CurrentState,
-				CurrentLga:      currentLgaVal,
-				CurrentCity:     currentCityVal,
-				StateOfOrigin:   stateOfOriginVal,
-				VotersCardImage: pgtype.Text{String: "", Valid: false},
-				AccountStatus:   pgtype.Text{String: u.AccountStatus, Valid: u.AccountStatus != ""},
-				PartyID:         partyIDVal,
-				IsPolitician:    pgtype.Bool{Bool: u.IsPolitician, Valid: true},
-				IsVerified:      pgtype.Bool{Bool: isVerifiedVal, Valid: true},
-			}
+			userBatch.Queue(`
+				INSERT INTO users (
+					email, avatar, phone, username, password_hash, last_name, first_name, middle_name,
+					gender, date_of_birth, current_country, current_state, current_city, current_lga,
+					state_of_origin, account_status, party_id, is_politician, is_verified
+				)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+				ON CONFLICT (email) DO NOTHING
+				RETURNING id
+			`,
+				strings.ToLower(strings.TrimSpace(u.Email)),
+				u.Avatar,
+				phoneVal,
+				usernameVal,
+				hashed,
+				u.LastName,
+				u.FirstName,
+				middleNameVal,
+				u.Gender,
+				prepUser.dob,
+				u.CurrentCountry,
+				u.CurrentState,
+				u.CurrentCity,
+				u.CurrentLga,
+				u.StateOfOrigin,
+				accountStatus,
+				partyIDVal,
+				u.IsPolitician,
+				isVerifiedVal,
+			)
+		}
 
-			// save the users
-			newUserID, err := s.queries.SeedUser(ctx, params)
+		userBatchResults := tx.SendBatch(ctx, userBatch)
+		type insertedUserMeta struct {
+			id             int64
+			fakeID         int64
+			user           SeedUserRequest
+			formattedPhone string
+			phoneCode      string
+			rawPhoneInput  string
+		}
+		var inserted []insertedUserMeta
+
+		// Read back generated IDs from the primary batch, generate fake IDs,
+		// and collect metadata for newly inserted users (skipping any existing email conflicts).
+		for _, prepUser := range chunk {
+			var newID int64
+			err := userBatchResults.QueryRow().Scan(&newID)
 			if err != nil {
-				return fmt.Errorf("failed to seed user %s: %w", u.Email, err)
+				if err == pgx.ErrNoRows {
+					// User already existed via email ON CONFLICT DO NOTHING, skip
+					continue
+				}
+				userBatchResults.Close()
+				_ = tx.Rollback(ctx)
+				return "", fmt.Errorf("failed inserting user %s: %w", prepUser.user.Email, err)
 			}
-
-			// save extra info on the users
-			_, err = s.queries.CreateMoreInfoAboutThisUser(ctx, queries.CreateMoreInfoAboutThisUserParams{
-				UserID:            newUserID,
-				OccupationID:      occupationIDVal,
-				EducationalStatus: pgtype.Text{},
-				HighestDegree:     pgtype.Text{},
-				GraduationYear:    pgtype.Text{},
-				SchoolName:        pgtype.Text{},
-				Religion:          pgtype.Text{String: u.Religion, Valid: u.Religion != ""},
-				MaritalStatus:     pgtype.Text{String: u.MaritalStatus, Valid: u.MaritalStatus != ""},
-				Address:           pgtype.Text{String: u.HomeAddress, Valid: u.HomeAddress != ""},
+			fakeID := utils.GenerateFakeID(newID)
+			inserted = append(inserted, insertedUserMeta{
+				id:             newID,
+				fakeID:         fakeID,
+				user:           prepUser.user,
+				formattedPhone: prepUser.formattedPhone,
+				phoneCode:      prepUser.phoneCode,
+				rawPhoneInput:  prepUser.rawPhoneInput,
 			})
-			if err != nil {
-				return fmt.Errorf("failed to seed user profile for %s: %w", u.Email, err)
-			}
+		}
+		if err := userBatchResults.Close(); err != nil {
+			_ = tx.Rollback(ctx)
+			return "", fmt.Errorf("failed closing user batch: %w", err)
+		}
 
-			// create a request for the user credentials to be verified
-			_, err = s.queries.CreateUserVerification(ctx, queries.CreateUserVerificationParams{
-				UserID:             newUserID,
-				NinVerified:        pgtype.Bool{Bool: false, Valid: true},
-				PhoneVerified:      pgtype.Bool{Bool: false, Valid: true},
-				EmailVerified:      pgtype.Bool{Bool: false, Valid: true},
-				VotersCardVerified: pgtype.Bool{Bool: false, Valid: true},
-			})
-			if err != nil {
-				return fmt.Errorf("failed to create user verification for %s: %w", u.Email, err)
-			}
+		// Stage B: Secondary batch for related tables
+		if len(inserted) > 0 {
+			secBatch := &pgx.Batch{}
+			for _, insertedUser := range inserted {
+				// 1. Update fake_id
+				secBatch.Queue("UPDATE users SET fake_id = $1 WHERE id = $2", insertedUser.fakeID, insertedUser.id)
 
-			// generate and update the user fakeID
-			newUserFakeID := utils.GenerateFakeID(newUserID)
-			_ = s.queries.UpdateUserFakeID(ctx, queries.UpdateUserFakeIDParams{ID: newUserID, FakeID: pgtype.Int8{Int64: newUserFakeID, Valid: true}})
+				// 2. Insert phone number (if formattedPhone is present)
+				if insertedUser.formattedPhone != "" {
+					secBatch.Queue(`
+						INSERT INTO users_phone_numbers (user_id, phone, phonecode, raw_input, on_whatsapp, is_default)
+						VALUES ($1, $2, $3, $4, false, true)
+						ON CONFLICT (phone) DO NOTHING
+					`, insertedUser.id, insertedUser.formattedPhone, insertedUser.phoneCode, insertedUser.rawPhoneInput)
+				}
 
-			// Save details to Redis cache
-			emailStr := emailVal.String
-			usernameStr := usernameVal.String
-			_ = s.authService.SaveSomeUserRegistrationDetails(ctx, usernameStr, emailStr, "", newUserID, newUserFakeID)
+				// 3. Custom verification badge (if requested)
+				if insertedUser.user.IsVerified && insertedUser.user.VerificationTypeID != nil {
+					secBatch.Queue(`
+						INSERT INTO pages_verified (page_type, page_id, verification_type_id)
+						VALUES ($1, $2, $3)
+						ON CONFLICT (page_type, page_id, verification_type_id)
+						DO UPDATE SET verified_at = CURRENT_TIMESTAMP
+					`, db.PageTypeUser, insertedUser.id, *insertedUser.user.VerificationTypeID)
+				}
 
-			// save the user phone number
-			if formattedPhone != "" {
-				_ = s.usersService.UpdateUserPhoneNumbers(ctx, newUserID, newUserFakeID, []usersservice.PhonePayload{
-					{
-						Phone:     formattedPhone,
-						RawInput:  rawPhoneInput,
-						Phonecode: phonecode,
-						IsDefault: true,
-					},
-				})
-			}
-
-			// update user verification type, this will add a verification badge for the user
-			if u.IsVerified && u.VerificationTypeID != nil {
-				_, err := s.queries.AddPageVerification(ctx, queries.AddPageVerificationParams{
-					PageType:           db.PageTypeUser,
-					PageID:             newUserID,
-					VerificationTypeID: *u.VerificationTypeID,
-				})
-				if err != nil {
-					return fmt.Errorf("failed to assign page verification for %s: %w", u.Email, err)
+				// 4. Politician badge (verification_type_id = 2)
+				if insertedUser.user.IsPolitician {
+					secBatch.Queue(`
+						INSERT INTO pages_verified (page_type, page_id, verification_type_id)
+						VALUES ($1, $2, 2)
+						ON CONFLICT (page_type, page_id, verification_type_id)
+						DO UPDATE SET verified_at = CURRENT_TIMESTAMP
+					`, db.PageTypeUser, insertedUser.id)
 				}
 			}
 
-			// adds a "celebrity" verification type for politicians
-			if u.IsPolitician {
-				_, err := s.queries.AddPageVerification(ctx, queries.AddPageVerificationParams{
-					PageType:           db.PageTypeUser,
-					PageID:             newUserID,
-					VerificationTypeID: 2,
-				})
-				if err != nil {
-					return fmt.Errorf("failed to assign page verification for %s: %w", u.Email, err)
+			// Send the secondary batch pipeline to Postgres
+			secBatchResults := tx.SendBatch(ctx, secBatch)
+
+			// Drain and check execution status for each queued statement
+			for j := 0; j < secBatch.Len(); j++ {
+				if _, err := secBatchResults.Exec(); err != nil {
+					secBatchResults.Close()
+					_ = tx.Rollback(ctx)
+					return "", fmt.Errorf("failed executing secondary batch: %w", err)
 				}
 			}
 
-			// if the user belongs to a party, officially join them to the party
-			if u.PartyID != nil && *u.PartyID > 0 {
-				err := s.partiesService.JoinParty(ctx, *u.PartyID, 0, newUserID, newUserFakeID)
-				if err != nil {
-					return fmt.Errorf("failed to join party for user %s: %w", u.Email, err)
-				}
+			// Ensure the batch reader is closed and the connection pipeline is cleanly reset
+			if err := secBatchResults.Close(); err != nil {
+				_ = tx.Rollback(ctx)
+				return "", fmt.Errorf("failed closing secondary batch: %w", err)
 			}
+		}
 
-			// get and save the user details to cache in redis
-			_, _ = s.authService.GetUserDetailsByFakeID(ctx, newUserFakeID)
+		// Commit transaction for this chunk of records
+		if err := tx.Commit(ctx); err != nil {
+			return "", fmt.Errorf("failed to commit batch transaction: %w", err)
+		}
 
-			// log success message
-			// fmt.Println("added user with id", newUserID)
-			return nil
-		})
+		totalInserted += len(inserted)
 	}
 
-	if err := eg.Wait(); err != nil {
-		return "", err
-	}
-
-	return "Users seeded successfully", nil
+	return fmt.Sprintf("Users seeded successfully (%d created)", totalInserted), nil
 }
 
 type PartyAdminsData struct {
@@ -608,7 +647,7 @@ func (s *SeedService) SimulateElectionResults(ctx context.Context, electionID in
 	// median is 1.0, mean ≈ 1.38, and tail extends to ~4× — realistic for
 	// Nigerian electoral geography where one party can dominate a zone.
 	type statePartyKey struct {
-		stateID   int32
+		stateID  int32
 		partyIdx int
 	}
 	regionalMod := make(map[statePartyKey]float64)
@@ -664,7 +703,7 @@ func (s *SeedService) SimulateElectionResults(ctx context.Context, electionID in
 					nShare := nationalShares[strings.ToUpper(shortName)]
 					if nShare > 0 {
 						regKey := statePartyKey{stateID: pu.StateID, partyIdx: i}
-						stateMod := regionalMod[regKey] // geographic stronghold factor
+						stateMod := regionalMod[regKey]         // geographic stronghold factor
 						puJitter := 0.88 + (r.Float64() * 0.24) // ±12% local noise
 						weights[i] = nShare * stateMod * puJitter * 1000.0
 					} else {
@@ -774,7 +813,6 @@ func (s *SeedService) SimulateElectionResults(ctx context.Context, electionID in
 	}, nil
 }
 
-
 // FlushRedis removes all application cache keys matching the defined Redis prefixes in db.AllRedisPrefixes.
 // It safely scans keys in batches and deletes them using Redis pipelines for optimal performance without blocking the Redis server.
 func (s *SeedService) FlushRedis(ctx context.Context) (string, error) {
@@ -838,4 +876,3 @@ func (s *SeedService) FlushRedis(ctx context.Context) (string, error) {
 
 	return fmt.Sprintf("Redis cache cleared successfully (%d keys deleted)", totalDeleted), nil
 }
-

@@ -33,7 +33,6 @@ type UsersService interface {
 	AssignUserRole(ctx context.Context, userID int64, fakeID int64, code string, whoAssigned int64) error
 	GetMoreInfoAboutThisUser(ctx context.Context, userID int64) (queries.UserMoreInfo, error)
 	GetUserPrimaryBankAccount(ctx context.Context, userID int64) (queries.UserBankAccount, error)
-	GetUserVerification(ctx context.Context, userID int64) (queries.UserVerification, error)
 	UpdateUserProfile(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, gender, avatar string, avatarFileId *int64, countryID, stateID int16, cityID int32) error
 	UpdateUserProfileDetails(ctx context.Context, userID int64, occupationID *int16, educationalStatus, highestDegree, graduationYear, schoolName, religion, maritalStatus, educationLevel, address string) error
 	ListUsers(ctx context.Context, arg queries.ListUsersParams) ([]queries.ListUsersRow, error)

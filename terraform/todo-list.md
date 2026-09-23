@@ -11,9 +11,9 @@ Free9ja uses Redis for **both** Asynq distributed background queues (`asynq:defa
 - If Redis is configured with an aggressive eviction policy like `allkeys-lru`, Redis will evict keys **without TTL** when RAM runs tight. 
 - Because Asynq's pending queue list has no TTL, **your pending vote tallying tasks will be deleted silently**, causing votes to vanish without any error log!
 
-- [ ] **Verify ElastiCache Eviction Policy**:
-  - Ensure `maxmemory-policy` remains **`volatile-lru`** (AWS ElastiCache default) or **`noeviction`**.
-  - **Why**: `volatile-lru` strictly evicts keys that have a TTL (like temporary cache or 15-second deduplication locks). It **never** evicts keys without TTL (`asynq:default:pending`), protecting your vote rollup queues.
+- [x] **Verify ElastiCache Eviction Policy**:
+  - Confirmed `parameter_group_name = "default.redis7"` in `modules/elasticache/main.tf` uses **`volatile-lru`**.
+  - **API Caching Layer Refactored**: All application cache keys now have explicit, finite TTLs (`RedisReferenceDataTTL` = 60d, `RedisUserProfileTTL` = 30d, `RedisFifteenMinutesTTL` = 15m), and infinite/0-TTL writes were eliminated. Under `volatile-lru`, Redis will safely evict application caches under RAM pressure while guaranteeing Asynq queue keys (which have no TTL) are never evicted.
   - **CRITICAL WARNING**: NEVER change the parameter group to `allkeys-lru` or `allkeys-lfu`.
 
 - [ ] **Add a CloudWatch Alarm for ElastiCache Memory Usage**:

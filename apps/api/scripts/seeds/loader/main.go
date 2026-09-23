@@ -33,7 +33,6 @@ type UserSeed struct {
 	MiddleName     string `json:"middle_name"`
 	Gender         string `json:"gender"`
 	DateOfBirth    string `json:"date_of_birth"`
-	Religion       string `json:"religion"`
 	CurrentCountry int16  `json:"current_country"`
 	CurrentState   int16  `json:"current_state"`
 	CurrentLga     int32  `json:"current_lga"`
@@ -41,10 +40,6 @@ type UserSeed struct {
 	CurrentCity    int32  `json:"current_city"`
 	PollingUnitID  int32  `json:"polling_unit_id"`
 	StateOfOrigin  int16  `json:"state_of_origin"`
-	MaritalStatus  string `json:"marital_status"`
-	EducationLevel string `json:"education_level"`
-	HomeAddress    string `json:"home_address"`
-	OccupationID   *int16 `json:"occupation_id"`
 	PartyID        *int16 `json:"party_id"`
 	AccountStatus  string `json:"account_status"`
 	IsVerified     bool   `json:"is_verified"`
@@ -230,10 +225,9 @@ func loadFile(ctx context.Context, filePath string, pool *pgxpool.Pool, batchSiz
 				INSERT INTO users (
 					email, avatar, phone, username, password_hash, last_name, first_name, middle_name,
 					gender, date_of_birth, current_country, current_state, current_city, current_lga,
-					polling_unit_id, state_of_origin, account_status, party_id, role, role_level,
-					nin_verified, phone_verified, email_verified
+					polling_unit_id, state_of_origin, account_status, party_id
 				)
-				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, 'user', 'user', 'false', 'false', 'false')
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
 				ON CONFLICT (email) DO NOTHING
 				RETURNING id
 			`,

@@ -74,9 +74,9 @@ func (s *OfficesService) ListOffices(ctx context.Context) ([]queries.Office, err
 		return nil, err
 	}
 
-	// 3. Cache the fetched list in Redis with a 5-year TTL
+	// 3. Cache the fetched list in Redis with reference data TTL
 	if officesBytes, err := json.Marshal(offices); err == nil {
-		s.rdb.Set(ctx, cacheKey, officesBytes, db.RedisFiveYearsTTL)
+		s.rdb.Set(ctx, cacheKey, officesBytes, db.RedisReferenceDataTTL)
 	}
 
 	return offices, nil

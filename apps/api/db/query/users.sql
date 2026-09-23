@@ -207,11 +207,6 @@ SET occupation_id = EXCLUDED.occupation_id,
 SELECT id FROM users
 WHERE referral_code = $1 LIMIT 1;
 
--- name: CreateUserVerification :one
-INSERT INTO user_verifications (user_id, nin_verified, phone_verified, email_verified, voters_card_verified)
-VALUES ($1, $2, $3, $4, $5)
-RETURNING user_id;
-
 -- name: GetReferrerNameByCode :one
 SELECT id, first_name, last_name 
 FROM users
@@ -284,10 +279,6 @@ UPDATE users
 SET has_role = $2,
     updated_at = NOW()
 WHERE id = $1;
-
--- name: GetUserVerification :one
-SELECT * FROM user_verifications
-WHERE user_id = $1 LIMIT 1;
 
 -- name: GetUserPhoneNumbersByUserID :many
 SELECT * FROM users_phone_numbers

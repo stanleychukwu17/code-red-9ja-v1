@@ -266,33 +266,6 @@ func (q *Queries) CreateUserNIN(ctx context.Context, arg CreateUserNINParams) (i
 	return id, err
 }
 
-const createUserVerification = `-- name: CreateUserVerification :one
-INSERT INTO user_verifications (user_id, nin_verified, phone_verified, email_verified, voters_card_verified)
-VALUES ($1, $2, $3, $4, $5)
-RETURNING user_id
-`
-
-type CreateUserVerificationParams struct {
-	UserID             int64       `json:"user_id"`
-	NinVerified        pgtype.Bool `json:"nin_verified"`
-	PhoneVerified      pgtype.Bool `json:"phone_verified"`
-	EmailVerified      pgtype.Bool `json:"email_verified"`
-	VotersCardVerified pgtype.Bool `json:"voters_card_verified"`
-}
-
-func (q *Queries) CreateUserVerification(ctx context.Context, arg CreateUserVerificationParams) (int64, error) {
-	row := q.db.QueryRow(ctx, createUserVerification,
-		arg.UserID,
-		arg.NinVerified,
-		arg.PhoneVerified,
-		arg.EmailVerified,
-		arg.VotersCardVerified,
-	)
-	var user_id int64
-	err := row.Scan(&user_id)
-	return user_id, err
-}
-
 const deleteUser = `-- name: DeleteUser :exec
 UPDATE users
 SET account_status = 'deleted'
@@ -663,29 +636,6 @@ func (q *Queries) GetUserPhoneNumbersByUserID(ctx context.Context, userID int64)
 		return nil, err
 	}
 	return items, nil
-}
-
-const getUserVerification = `-- name: GetUserVerification :one
-SELECT user_id, nin_verified, phone_verified, email_verified, voters_card_verified, email_verification_token, email_last_reminded_at, phone_last_reminded_at, created_at, updated_at FROM user_verifications
-WHERE user_id = $1 LIMIT 1
-`
-
-func (q *Queries) GetUserVerification(ctx context.Context, userID int64) (UserVerification, error) {
-	row := q.db.QueryRow(ctx, getUserVerification, userID)
-	var i UserVerification
-	err := row.Scan(
-		&i.UserID,
-		&i.NinVerified,
-		&i.PhoneVerified,
-		&i.EmailVerified,
-		&i.VotersCardVerified,
-		&i.EmailVerificationToken,
-		&i.EmailLastRemindedAt,
-		&i.PhoneLastRemindedAt,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
 }
 
 const listUsers = `-- name: ListUsers :many

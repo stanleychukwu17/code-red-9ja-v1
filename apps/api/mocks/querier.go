@@ -1454,34 +1454,6 @@ func (_m *Querier) CreateUserReferralRecord(ctx context.Context, arg queries.Cre
 	return r0
 }
 
-// CreateUserVerification provides a mock function with given fields: ctx, arg
-func (_m *Querier) CreateUserVerification(ctx context.Context, arg queries.CreateUserVerificationParams) (int64, error) {
-	ret := _m.Called(ctx, arg)
-
-	if len(ret) == 0 {
-		panic("no return value specified for CreateUserVerification")
-	}
-
-	var r0 int64
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, queries.CreateUserVerificationParams) (int64, error)); ok {
-		return rf(ctx, arg)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, queries.CreateUserVerificationParams) int64); ok {
-		r0 = rf(ctx, arg)
-	} else {
-		r0 = ret.Get(0).(int64)
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, queries.CreateUserVerificationParams) error); ok {
-		r1 = rf(ctx, arg)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // CreateUserWallet provides a mock function with given fields: ctx, arg
 func (_m *Querier) CreateUserWallet(ctx context.Context, arg queries.CreateUserWalletParams) (queries.UserWallet, error) {
 	ret := _m.Called(ctx, arg)
@@ -4885,34 +4857,6 @@ func (_m *Querier) GetUserRoles(ctx context.Context, userID int64) ([]queries.Ge
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]queries.GetUserRolesRow)
 		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
-		r1 = rf(ctx, userID)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// GetUserVerification provides a mock function with given fields: ctx, userID
-func (_m *Querier) GetUserVerification(ctx context.Context, userID int64) (queries.UserVerification, error) {
-	ret := _m.Called(ctx, userID)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetUserVerification")
-	}
-
-	var r0 queries.UserVerification
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64) (queries.UserVerification, error)); ok {
-		return rf(ctx, userID)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, int64) queries.UserVerification); ok {
-		r0 = rf(ctx, userID)
-	} else {
-		r0 = ret.Get(0).(queries.UserVerification)
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {

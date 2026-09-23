@@ -140,7 +140,7 @@ func (s *WardsService) GetWards(ctx context.Context, localGovernmentID, stateID 
 		}
 
 		jsonData, _ := json.Marshal(payload)
-		s.rdb.Set(ctx, redisKey, jsonData, db.RedisFiveYearsTTL)
+		s.rdb.Set(ctx, redisKey, jsonData, db.RedisReferenceDataTTL)
 
 		return dbData, nil
 	case nil:

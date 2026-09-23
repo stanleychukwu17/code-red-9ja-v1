@@ -147,7 +147,7 @@ func (s *SenatorialDistrictsService) GetSenatorialDistricts(ctx context.Context,
 		}
 
 		jsonData, _ := json.Marshal(payload)
-		s.rdb.Set(ctx, redisKey, jsonData, db.RedisFiveYearsTTL)
+		s.rdb.Set(ctx, redisKey, jsonData, db.RedisReferenceDataTTL)
 
 		return dbData, nil
 	case nil:

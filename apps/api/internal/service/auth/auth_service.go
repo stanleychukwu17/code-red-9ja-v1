@@ -861,23 +861,8 @@ func (s *AuthService) CompleteOnboarding(
 	return nil
 }
 
-// SaveSomeUserRegistrationDetails saves the user's registration details (username, email, nin) to Redis & DB
+// SaveSomeUserRegistrationDetails saves the user's registration details to DB
 func (s *AuthService) SaveSomeUserRegistrationDetails(ctx context.Context, username, email, nin string, userID int64, fakeID int64) error {
-	// batch redis commands
-	pipe := s.rdb.TxPipeline()
-
-	if username != "" {
-		pipe.Set(ctx, db.RedisUsernameFakeID+username, fakeID, db.RedisFiveYearsTTL)
-	}
-	if email != "" {
-		pipe.Set(ctx, db.RedisEmailFakeID+email, fakeID, db.RedisFiveYearsTTL)
-	}
-
-	_, err := pipe.Exec(ctx)
-	if err != nil {
-		return err
-	}
-
 	// save to db
 	if nin != "" {
 		if _, err := s.queries.CreateUserNIN(ctx, queries.CreateUserNINParams{

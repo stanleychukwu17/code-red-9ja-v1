@@ -10,7 +10,6 @@ import (
 	"free9ja/api/internal/db/queries"
 	monnifyclient "free9ja/api/internal/service/monnify"
 	"math/big"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -167,7 +166,7 @@ func (s *UsersService) GetUserByFakeID(ctx context.Context, fakeID int64) (queri
 	// cache the user data in redis
 	userJSON, err := json.Marshal(userWithPlacesForCache)
 	if err == nil {
-		s.rdb.Set(ctx, userInfoKey, userJSON, db.RedisFiveYearsTTL) // 5 years expires
+		s.rdb.Set(ctx, userInfoKey, userJSON, db.RedisUserProfileTTL)
 	}
 
 	return userWithPlacesForCache, nil
@@ -345,7 +344,7 @@ func (s *UsersService) GetUserRoles(ctx context.Context, userID int64) (queries.
 	// Cache it in Redis
 	rolesJSONBytes, err := json.Marshal(cachedRoles)
 	if err == nil {
-		s.rdb.Set(ctx, userRolesKey, rolesJSONBytes, db.RedisFiveYearsTTL) // expires in 5years
+		s.rdb.Set(ctx, userRolesKey, rolesJSONBytes, db.RedisUserProfileTTL)
 	}
 
 	return cachedRoles, nil
@@ -449,11 +448,6 @@ func (s *UsersService) ListUsers(ctx context.Context, arg queries.ListUsersParam
 	return s.queries.ListUsers(ctx, arg)
 }
 
-// GetUserVerification fetches the verification status/details for a specific user.
-func (s *UsersService) GetUserVerification(ctx context.Context, userID int64) (queries.UserVerification, error) {
-	return s.queries.GetUserVerification(ctx, userID)
-}
-
 // DeleteUserAccount removes a user by ID and invalidates their user info cache.
 func (s *UsersService) DeleteUserAccount(ctx context.Context, id int64, fakeID int64) error {
 	err := s.queries.DeleteUser(ctx, id)
@@ -491,7 +485,7 @@ func (s *UsersService) GetMoreInfoAboutThisUser(ctx context.Context, userID int6
 	// Cache it in Redis
 	profileJSONBytes, err := json.Marshal(profile)
 	if err == nil {
-		s.rdb.Set(ctx, userProfileKey, profileJSONBytes, db.RedisFiveYearsTTL)
+		s.rdb.Set(ctx, userProfileKey, profileJSONBytes, db.RedisUserProfileTTL)
 	}
 
 	return profile, nil
@@ -578,31 +572,9 @@ func (s *UsersService) UpdateUserProfileDetails(ctx context.Context, userID int6
 	return nil
 }
 
-// GetUserPhoneNumbersByUserID retrieves a user's phone numbers, prioritizing Redis cache.
+// GetUserPhoneNumbersByUserID retrieves a user's phone numbers directly from the database.
 func (s *UsersService) GetUserPhoneNumbersByUserID(ctx context.Context, userID int64) ([]queries.UsersPhoneNumber, error) {
-	// Check Redis
-	userPhoneNumbersKey := fmt.Sprintf("%s%d", db.RedisUserPhoneNumbers, userID)
-	phoneNumbersJSON, err := s.rdb.Get(ctx, userPhoneNumbersKey).Result()
-	if err == nil {
-		var phoneNumbers []queries.UsersPhoneNumber
-		if err := json.Unmarshal([]byte(phoneNumbersJSON), &phoneNumbers); err == nil {
-			return phoneNumbers, nil
-		}
-	}
-
-	// Fetch from DB if not in Redis
-	phoneNumbers, err := s.queries.GetUserPhoneNumbersByUserID(ctx, userID)
-	if err != nil {
-		return nil, err
-	}
-
-	// Cache it in Redis
-	phoneNumbersJSONBytes, err := json.Marshal(phoneNumbers)
-	if err == nil {
-		s.rdb.Set(ctx, userPhoneNumbersKey, phoneNumbersJSONBytes, db.RedisFiveYearsTTL) // 5years TTL
-	}
-
-	return phoneNumbers, nil
+	return s.queries.GetUserPhoneNumbersByUserID(ctx, userID)
 }
 
 // PhonePayload represents the incoming data structure for updating phone numbers.
@@ -685,11 +657,6 @@ func (s *UsersService) UpdateUserPhoneNumbers(ctx context.Context, userID int64,
 				return err
 			}
 
-			// Cache the new phone number to fakeID mapping
-			err = s.rdb.Set(ctx, db.RedisPhoneFakeID+p.Phone, fakeID, 0).Err()
-			if err != nil {
-				return err
-			}
 		} else {
 			// update the user's phone-number in the postgres db
 			err := s.queries.UpdatePhoneNumber(ctx, queries.UpdatePhoneNumberParams{
@@ -704,28 +671,15 @@ func (s *UsersService) UpdateUserPhoneNumbers(ctx context.Context, userID int64,
 		}
 	}
 
-	// Invalidate the active cached user phone-numbers
-	userPhoneNumbersKey := fmt.Sprintf("%s%d", db.RedisUserPhoneNumbers, userID)
-	s.rdb.Del(ctx, userPhoneNumbersKey)
-
 	return nil
 }
 
 // DeleteUserPhoneNumber removes a specific phone number record by its ID.
 func (s *UsersService) DeleteUserPhoneNumber(ctx context.Context, id int64, userID int64) error {
-	err := s.queries.DeleteUserPhoneNumber(ctx, queries.DeleteUserPhoneNumberParams{
+	return s.queries.DeleteUserPhoneNumber(ctx, queries.DeleteUserPhoneNumberParams{
 		ID:     id,
 		UserID: userID,
 	})
-	if err != nil {
-		return err
-	}
-
-	// Invalidate the active cached user phone-numbers
-	userPhoneNumbersKey := fmt.Sprintf("%s%d", db.RedisUserPhoneNumbers, userID)
-	s.rdb.Del(ctx, userPhoneNumbersKey)
-
-	return nil
 }
 
 // UpdateUserIsVerified updates the verified status of a user and invalidates their cache.
@@ -835,21 +789,12 @@ func (s *UsersService) MakeUserSuperAdmin(ctx context.Context, username string) 
 		return fmt.Errorf("username not authorized for superadmin promotion")
 	}
 
-	redisKey := fmt.Sprintf("%s%s", db.RedisUsernameFakeID, username)
-	val, err := s.rdb.Get(ctx, redisKey).Result()
-	if err != nil {
-		if err == redis.Nil {
-			return fmt.Errorf("user not found in registry")
-		}
-		return fmt.Errorf("redis error: %w", err)
+	fakeID, err := s.queries.GetFakeIDByUsername(ctx, pgtype.Text{String: username, Valid: true})
+	if err != nil || !fakeID.Valid {
+		return fmt.Errorf("user not found in database: %w", err)
 	}
 
-	fakeID, err := strconv.ParseInt(val, 10, 64)
-	if err != nil {
-		return fmt.Errorf("invalid fake id in redis: %w", err)
-	}
-
-	user, err := s.GetUserByFakeID(ctx, fakeID)
+	user, err := s.GetUserByFakeID(ctx, fakeID.Int64)
 	if err != nil {
 		return fmt.Errorf("failed to fetch user details: %w", err)
 	}
@@ -869,7 +814,7 @@ func (s *UsersService) MakeUserSuperAdmin(ctx context.Context, username string) 
 	}
 
 	// 3. Assign the role in DB
-	err = s.AssignUserRole(ctx, user.ID, fakeID, "super_admin", 0)
+	err = s.AssignUserRole(ctx, user.ID, fakeID.Int64, "super_admin", 0)
 	if err != nil {
 		return fmt.Errorf("failed to assign super_admin role: %w", err)
 	}
@@ -924,70 +869,32 @@ func (s *UsersService) UpdateUserRoles(ctx context.Context, userID int64, fakeID
 	return nil
 }
 
-// function: check if the username already exist in redis and in the postgres db
+// function: check if the username already exists in the postgres db
 func (s *UsersService) CheckUsername(ctx context.Context, username string) (bool, int64) {
-	cacheKey := db.RedisUsernameFakeID + username
-
-	// checks the cache first
-	cachedVal, err := s.rdb.Get(ctx, cacheKey).Int64()
-	if err == nil && cachedVal > 0 {
-		return true, cachedVal
-	}
-
-	// checks the users table
 	fakeID, err := s.queries.GetFakeIDByUsername(ctx, pgtype.Text{String: username, Valid: true})
 	if err == nil && fakeID.Valid {
-		s.rdb.Set(ctx, cacheKey, fakeID.Int64, db.RedisFiveYearsTTL)
 		return true, fakeID.Int64
 	}
-
 	return false, 0
 }
 
-// InvalidateUsernameCache deletes a specific username from Redis
+// InvalidateUsernameCache is a no-op kept for interface compatibility (usernames are queried directly from PostgreSQL)
 func (s *UsersService) InvalidateUsernameCache(ctx context.Context, username string) {
-	cacheKey := db.RedisUsernameFakeID + username
-	s.rdb.Del(ctx, cacheKey)
 }
 
-// function: checks if the email already exists in redis and in the postgres db
+// function: checks if the email already exists in the postgres db
 func (s *UsersService) CheckEmail(ctx context.Context, email string) (bool, int64) {
-	cacheKey := db.RedisEmailFakeID + email
-
-	// checks the cache first
-	cachedVal, err := s.rdb.Get(ctx, cacheKey).Int64()
-	if err == nil && cachedVal > 0 {
-		return true, cachedVal
-	}
-
-	// checks the users table
 	fakeID, err := s.queries.GetFakeIDByEmail(ctx, pgtype.Text{String: email, Valid: true})
 	if err == nil && fakeID.Valid {
-		s.rdb.Set(ctx, cacheKey, fakeID.Int64, db.RedisFiveYearsTTL)
 		return true, fakeID.Int64
 	}
-
 	return false, 0
 }
 
-// function: checks if the phone exists in redis and in the postgres db
+// function: checks if the phone exists in the postgres db
 func (s *UsersService) CheckPhone(ctx context.Context, phone string, userFakeID int64) (bool, int64) {
-	cacheKey := db.RedisPhoneFakeID + phone
-
-	// checks the cache first
-	cachedVal, err := s.rdb.Get(ctx, cacheKey).Int64()
-	if err == nil && cachedVal > 0 {
-		if userFakeID > 0 && cachedVal == userFakeID {
-			// cached phone belongs to the current user, not a collision
-		} else {
-			return true, cachedVal
-		}
-	}
-
-	// checks the users table
 	fakeID, err := s.queries.GetFakeIDByPhone(ctx, pgtype.Text{String: phone, Valid: true})
 	if err == nil && fakeID.Valid {
-		s.rdb.Set(ctx, cacheKey, fakeID.Int64, db.RedisFiveYearsTTL)
 		if userFakeID == 0 || fakeID.Int64 != userFakeID {
 			return true, fakeID.Int64
 		}
@@ -996,7 +903,6 @@ func (s *UsersService) CheckPhone(ctx context.Context, phone string, userFakeID 
 	// fallback: check the users_phone_numbers table
 	fakeID, err = s.queries.GetFakeIDByAdditionalPhone(ctx, phone)
 	if err == nil && fakeID.Valid {
-		s.rdb.Set(ctx, cacheKey, fakeID.Int64, db.RedisFiveYearsTTL)
 		if userFakeID == 0 || fakeID.Int64 != userFakeID {
 			return true, fakeID.Int64
 		}
@@ -1071,7 +977,7 @@ func (s *UsersService) cacheReferralCodeInfo(ctx context.Context, code string, u
 
 	if data, err := json.Marshal(info); err == nil {
 		cacheKey := db.RedisReferralCode + code
-		s.rdb.Set(ctx, cacheKey, string(data), db.RedisFiveYearsTTL)
+		s.rdb.Set(ctx, cacheKey, string(data), db.RedisUserProfileTTL)
 	}
 	return &info
 }

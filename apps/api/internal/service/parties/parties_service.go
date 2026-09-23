@@ -217,7 +217,7 @@ func (s *PartiesService) GetPartyBasicInfo(ctx context.Context, partyID int16) *
 
 	// Save to Redis
 	if partyData, err := json.Marshal(party); err == nil {
-		s.rdb.Set(ctx, redisKey, partyData, db.RedisOneYearTTL)
+		s.rdb.Set(ctx, redisKey, partyData, db.RedisReferenceDataTTL)
 	}
 
 	return &party
@@ -251,7 +251,7 @@ func (s *PartiesService) GetPartyInfo(ctx context.Context, partyID int16) *queri
 
 		// Save to Redis
 		if partyData, err := json.Marshal(party); err == nil {
-			s.rdb.Set(ctx, redisKey, partyData, db.RedisOneYearTTL)
+			s.rdb.Set(ctx, redisKey, partyData, db.RedisReferenceDataTTL)
 		}
 		return &party
 	}
@@ -299,7 +299,7 @@ func (s *PartiesService) ListParties(ctx context.Context) ([]queries.PartyWithVe
 
 	// Save to Redis
 	if partyData, err := json.Marshal(parties); err == nil {
-		s.rdb.Set(ctx, redisKey, partyData, db.RedisTwoYearsTTL)
+		s.rdb.Set(ctx, redisKey, partyData, db.RedisReferenceDataTTL)
 	}
 
 	return parties, nil
@@ -1111,7 +1111,7 @@ func (s *PartiesService) GetOrCreateNationalChapter(ctx context.Context, partyID
 	}
 
 	// Cache and return
-	_ = s.rdb.Set(ctx, cacheKey, natChapterID, db.RedisTwoYearsTTL).Err()
+	_ = s.rdb.Set(ctx, cacheKey, natChapterID, db.RedisReferenceDataTTL).Err()
 	return natChapterID, nil
 }
 
@@ -1135,7 +1135,7 @@ func (s *PartiesService) GetOrCreateZonalChapter(ctx context.Context, partyID, z
 		return 0, fmt.Errorf("failed to get or create zonal chapter: %w", err)
 	}
 
-	_ = s.rdb.Set(ctx, cacheKey, zonalChapterID, db.RedisTwoYearsTTL).Err()
+	_ = s.rdb.Set(ctx, cacheKey, zonalChapterID, db.RedisReferenceDataTTL).Err()
 	return zonalChapterID, nil
 }
 
@@ -1159,7 +1159,7 @@ func (s *PartiesService) GetOrCreateStateChapter(ctx context.Context, partyID, s
 		return 0, fmt.Errorf("failed to get or create state chapter: %w", err)
 	}
 
-	_ = s.rdb.Set(ctx, cacheKey, stateChapterID, db.RedisTwoYearsTTL).Err()
+	_ = s.rdb.Set(ctx, cacheKey, stateChapterID, db.RedisReferenceDataTTL).Err()
 	return stateChapterID, nil
 }
 
@@ -1183,7 +1183,7 @@ func (s *PartiesService) GetOrCreateLGAChapter(ctx context.Context, partyID int1
 		return 0, fmt.Errorf("failed to get or create LGA chapter: %w", err)
 	}
 
-	_ = s.rdb.Set(ctx, cacheKey, lgaChapterID, db.RedisTwoYearsTTL).Err()
+	_ = s.rdb.Set(ctx, cacheKey, lgaChapterID, db.RedisReferenceDataTTL).Err()
 	return lgaChapterID, nil
 }
 
@@ -1212,7 +1212,7 @@ func (s *PartiesService) GetOrCreateWardChapter(ctx context.Context, partyID int
 		_, _ = s.GetOrCreateLGAChapter(ctx, partyID, wardChapter.LgaID.Int32)
 	}
 
-	_ = s.rdb.Set(ctx, cacheKey, wardChapterID, db.RedisTwoYearsTTL).Err()
+	_ = s.rdb.Set(ctx, cacheKey, wardChapterID, db.RedisReferenceDataTTL).Err()
 	return wardChapterID, nil
 }
 
@@ -1243,7 +1243,7 @@ func (s *PartiesService) GetOrCreateChapterSettings(ctx context.Context, partyID
 		ChapterID: chapterID,
 	})
 	if err == nil {
-		_ = s.rdb.Set(ctx, cacheKey, settings, db.RedisTwoYearsTTL).Err()
+		_ = s.rdb.Set(ctx, cacheKey, settings, db.RedisReferenceDataTTL).Err()
 		return settings, nil
 	}
 
@@ -1265,7 +1265,7 @@ func (s *PartiesService) GetOrCreateChapterSettings(ctx context.Context, partyID
 		return nil, fmt.Errorf("failed to create default chapter settings: %w", err)
 	}
 
-	_ = s.rdb.Set(ctx, cacheKey, settings, db.RedisTwoYearsTTL).Err()
+	_ = s.rdb.Set(ctx, cacheKey, settings, db.RedisReferenceDataTTL).Err()
 	return settings, nil
 }
 
@@ -1291,7 +1291,7 @@ func (s *PartiesService) GetChapterMemberCount(ctx context.Context, chapterID in
 	}
 
 	// 3. Cache in Redis
-	err = s.rdb.Set(ctx, cacheKey, count, db.RedisTwoYearsTTL).Err()
+	err = s.rdb.Set(ctx, cacheKey, count, db.RedisReferenceDataTTL).Err()
 	if err != nil {
 		slog.Error("Failed to cache chapter member count in redis", "error", err, "chapterID", chapterID)
 	}

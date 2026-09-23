@@ -29,7 +29,6 @@ type UserSeed struct {
 	MiddleName     string `json:"middle_name"`
 	Gender         string `json:"gender"`
 	DateOfBirth    string `json:"date_of_birth"`
-	Religion       string `json:"religion"`
 	CurrentCountry int16  `json:"current_country"`
 	CurrentState   int16  `json:"current_state"`
 	CurrentLga     int32  `json:"current_lga"`
@@ -37,10 +36,6 @@ type UserSeed struct {
 	CurrentCity    int32  `json:"current_city"`
 	PollingUnitID  int32  `json:"polling_unit_id"`
 	StateOfOrigin  int16  `json:"state_of_origin"`
-	MaritalStatus  string `json:"marital_status"`
-	EducationLevel string `json:"education_level"`
-	HomeAddress    string `json:"home_address"`
-	OccupationID   *int16 `json:"occupation_id"`
 	PartyID        *int16 `json:"party_id"`
 	AccountStatus  string `json:"account_status"`
 	IsVerified     bool   `json:"is_verified"`
@@ -111,10 +106,6 @@ var lastNames = []string{
 	"Ibori", "Okowa", "Tompolo", "Asari", "Briggs", "Douglas", "Akpabio", "Attah",
 	"Donald", "Duke", "Imoke", "Ayade", "Mark", "Akume", "Suswam", "Ortom",
 }
-
-var maritalStatuses = []string{"single", "married", "single", "married", "divorced", "widowed"}
-var educationLevels = []string{"none", "primary", "secondary", "polytechnic", "bachelors", "bachelors", "masters", "phd"}
-var streetNames = []string{"Independent", "Broad", "Commercial", "Airport", "Market", "Marina", "Victoria", "Ahmadu Bello", "Nnamdi Azikiwe", "Awolowo", "Herbert Macaulay", "Yakubu Gowon", "Bourdillon", "Adeola Odeku", "Ring", "Hospital", "Station", "Mission", "Unity", "Peace"}
 
 func main() {
 	var (
@@ -413,21 +404,6 @@ func main() {
 			randomDays := minAgeDays + rng.Intn(maxAgeDays-minAgeDays)
 			dob := time.Now().AddDate(0, 0, -randomDays).Format(time.DateOnly)
 
-			// Determine Religion based on State (Northern states heavier Islam, Southern heavier Christianity)
-			religion := "christianity"
-			isNorthern := stateID == 19 || stateID == 18 || stateID == 20 || stateID == 33 || stateID == 35 || stateID == 36 || stateID == 8
-			if isNorthern {
-				if rng.Intn(100) < 85 {
-					religion = "islam"
-				}
-			} else {
-				if rng.Intn(100) < 18 {
-					religion = "islam"
-				} else if rng.Intn(100) < 3 {
-					religion = "traditional"
-				}
-			}
-
 			// Determine Party ID based on quotas
 			var partyID *int16
 			if currIdx < adcCount {
@@ -447,9 +423,6 @@ func main() {
 				partyID = nil // Non-Partisan
 			}
 
-			street := streetNames[rng.Intn(len(streetNames))]
-			homeAddr := fmt.Sprintf("%d %s Street", 1+rng.Intn(350), street)
-
 			user := UserSeed{
 				Num:            userSeq,
 				Email:          fmt.Sprintf("%s.%s.%d@mail.ng", strings.ToLower(firstName), strings.ToLower(lastName), 10000000+userSeq),
@@ -462,7 +435,6 @@ func main() {
 				MiddleName:     middleName,
 				Gender:         map[bool]string{true: "male", false: "female"}[isMale],
 				DateOfBirth:    dob,
-				Religion:       religion,
 				CurrentCountry: 161,
 				CurrentState:   stateID,
 				CurrentLga:     pu.LgaID,
@@ -470,10 +442,6 @@ func main() {
 				CurrentCity:    cityID,
 				PollingUnitID:  pu.ID,
 				StateOfOrigin:  stateID,
-				MaritalStatus:  maritalStatuses[rng.Intn(len(maritalStatuses))],
-				EducationLevel: educationLevels[rng.Intn(len(educationLevels))],
-				HomeAddress:    homeAddr,
-				OccupationID:   nil,
 				PartyID:        partyID,
 				AccountStatus:  "active",
 				IsVerified:     false,
