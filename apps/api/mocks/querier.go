@@ -62,34 +62,6 @@ func (_m *Querier) AddPartyMembership(ctx context.Context, arg queries.AddPartyM
 	return r0
 }
 
-// AddPartyMembershipRequest provides a mock function with given fields: ctx, arg
-func (_m *Querier) AddPartyMembershipRequest(ctx context.Context, arg queries.AddPartyMembershipRequestParams) (queries.PartyMembershipRequest, error) {
-	ret := _m.Called(ctx, arg)
-
-	if len(ret) == 0 {
-		panic("no return value specified for AddPartyMembershipRequest")
-	}
-
-	var r0 queries.PartyMembershipRequest
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, queries.AddPartyMembershipRequestParams) (queries.PartyMembershipRequest, error)); ok {
-		return rf(ctx, arg)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, queries.AddPartyMembershipRequestParams) queries.PartyMembershipRequest); ok {
-		r0 = rf(ctx, arg)
-	} else {
-		r0 = ret.Get(0).(queries.PartyMembershipRequest)
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, queries.AddPartyMembershipRequestParams) error); ok {
-		r1 = rf(ctx, arg)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // AddPartySlots provides a mock function with given fields: ctx, arg
 func (_m *Querier) AddPartySlots(ctx context.Context, arg queries.AddPartySlotsParams) (queries.Party, error) {
 	ret := _m.Called(ctx, arg)
@@ -670,36 +642,6 @@ func (_m *Querier) CreateCandidatePlaceholder(ctx context.Context, arg queries.C
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, queries.CreateCandidatePlaceholderParams) error); ok {
-		r1 = rf(ctx, arg)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// CreateChapterSettings provides a mock function with given fields: ctx, arg
-func (_m *Querier) CreateChapterSettings(ctx context.Context, arg queries.CreateChapterSettingsParams) ([]byte, error) {
-	ret := _m.Called(ctx, arg)
-
-	if len(ret) == 0 {
-		panic("no return value specified for CreateChapterSettings")
-	}
-
-	var r0 []byte
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, queries.CreateChapterSettingsParams) ([]byte, error)); ok {
-		return rf(ctx, arg)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, queries.CreateChapterSettingsParams) []byte); ok {
-		r0 = rf(ctx, arg)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]byte)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, queries.CreateChapterSettingsParams) error); ok {
 		r1 = rf(ctx, arg)
 	} else {
 		r1 = ret.Error(1)
@@ -2439,36 +2381,6 @@ func (_m *Querier) GetChapterMemberCount(ctx context.Context, chapterID int32) (
 
 	if rf, ok := ret.Get(1).(func(context.Context, int32) error); ok {
 		r1 = rf(ctx, chapterID)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// GetChapterSettings provides a mock function with given fields: ctx, arg
-func (_m *Querier) GetChapterSettings(ctx context.Context, arg queries.GetChapterSettingsParams) ([]byte, error) {
-	ret := _m.Called(ctx, arg)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetChapterSettings")
-	}
-
-	var r0 []byte
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, queries.GetChapterSettingsParams) ([]byte, error)); ok {
-		return rf(ctx, arg)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, queries.GetChapterSettingsParams) []byte); ok {
-		r0 = rf(ctx, arg)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]byte)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, queries.GetChapterSettingsParams) error); ok {
-		r1 = rf(ctx, arg)
 	} else {
 		r1 = ret.Error(1)
 	}

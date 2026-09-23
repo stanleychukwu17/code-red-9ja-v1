@@ -13,7 +13,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
@@ -1216,49 +1215,6 @@ func (s *PartiesService) GetOrCreateWardChapter(ctx context.Context, partyID int
 	return wardChapterID, nil
 }
 
-const defaultPartyChapterSettings = `{
-	"join_policy": {
-		"title": "Join policy",
-		"options": [
-			{"display": "auto approve", "value": "auto_approve"},
-			{"display": "manual approve", "value": "manual_approve"}
-		],
-		"default_value": "auto_approve",
-		"value": "auto_approve"
-	}
-}`
-
-// GetOrCreateChapterSettings retrieves the settings for a specific chapter.
-// If the settings do not exist, it creates and returns a default configuration.
-func (s *PartiesService) GetOrCreateChapterSettings(ctx context.Context, partyID int16, chapterID int32) ([]byte, error) {
-	settings, err := s.queries.GetChapterSettings(ctx, queries.GetChapterSettingsParams{
-		PartyID:   partyID,
-		ChapterID: chapterID,
-	})
-	if err == nil {
-		return settings, nil
-	}
-
-	// Create default settings if they don't exist
-	settings, err = s.queries.CreateChapterSettings(ctx, queries.CreateChapterSettingsParams{
-		PartyID:   partyID,
-		ChapterID: chapterID,
-		Settings:  []byte(defaultPartyChapterSettings),
-	})
-	if err != nil {
-		// If creation failed (likely due to a concurrent duplicate key insert), try fetching it again.
-		if existingSettings, fetchErr := s.queries.GetChapterSettings(ctx, queries.GetChapterSettingsParams{
-			PartyID:   partyID,
-			ChapterID: chapterID,
-		}); fetchErr == nil {
-			return existingSettings, nil
-		}
-		return nil, fmt.Errorf("failed to create default chapter settings: %w", err)
-	}
-
-	return settings, nil
-}
-
 // GetChapterMemberCount retrieves the number of active members in a chapter.
 // It checks Redis first and falls back to the database if not found.
 func (s *PartiesService) GetChapterMemberCount(ctx context.Context, chapterID int32) (int64, error) {
@@ -1381,41 +1337,7 @@ func (s *PartiesService) JoinParty(ctx context.Context, partyID int16, chapterID
 		}
 	}
 
-	// 3a. Retrieve chapter settings. If none exist, create default settings.
-	settings, err := s.GetOrCreateChapterSettings(ctx, partyID, finalChapterID)
-	if err != nil {
-		return fmt.Errorf("failed to retrieve or create chapter settings: %w", err)
-	}
-
-	// 4. Parse settings to determine the join policy.
-	var settingsData struct {
-		JoinPolicy struct {
-			Value string `json:"value"`
-		} `json:"join_policy"`
-	}
-	// Ignore unmarshal errors and fallback to auto_approve if parsing fails
-	_ = json.Unmarshal(settings, &settingsData)
-
-	// if the join policy is manual_approve, create a membership request
-	if settingsData.JoinPolicy.Value == "manual_approve" {
-		_, err = s.queries.AddPartyMembershipRequest(ctx, queries.AddPartyMembershipRequestParams{
-			UserID:    userID,
-			PartyID:   partyID,
-			ChapterID: finalChapterID,
-		})
-
-		if err != nil {
-			var pgErr *pgconn.PgError
-			if errors.As(err, &pgErr) && pgErr.Code == "23505" && pgErr.ConstraintName == "idx_unique_pending_party_req" {
-				return fmt.Errorf("you already have a pending membership request for this chapter")
-			}
-			return fmt.Errorf("failed to create membership request: %w", err)
-		}
-
-		return nil
-	}
-
-	// 5. If auto-approve, insert the new membership record directly.
+	// 4. Insert the new membership record directly.
 	err = s.queries.AddPartyMembership(ctx, queries.AddPartyMembershipParams{
 		UserID:    userID,
 		PartyID:   int32(partyID),
@@ -1427,7 +1349,7 @@ func (s *PartiesService) JoinParty(ctx context.Context, partyID int16, chapterID
 
 	s.InvalidateChapterMemberCount(ctx, finalChapterID)
 
-	// 6. Log the action in the membership history table for audit trails.
+	// 5. Log the action in the membership history table for audit trails.
 	_ = s.queries.RecordPartyMembershipHistory(ctx, queries.RecordPartyMembershipHistoryParams{
 		UserID:    userID,
 		PartyID:   partyID,
@@ -1435,7 +1357,7 @@ func (s *PartiesService) JoinParty(ctx context.Context, partyID int16, chapterID
 		Action:    "joined",
 	})
 
-	// 7. Update the user's active party affiliation in the users table
+	// 6. Update the user's active party affiliation in the users table
 	err = s.usersService.UpdateUserParty(ctx, userID, &partyID, userFid)
 	if err != nil {
 		return fmt.Errorf("failed to update user party_id: %w", err)

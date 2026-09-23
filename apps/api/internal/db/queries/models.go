@@ -1219,13 +1219,6 @@ type PartyChapter struct {
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 }
 
-type PartyChapterSetting struct {
-	ID        int32  `json:"id"`
-	PartyID   int16  `json:"party_id"`
-	ChapterID int32  `json:"chapter_id"`
-	Settings  []byte `json:"settings"`
-}
-
 type PartyElectionGroup struct {
 	ID                    int32              `json:"id"`
 	PartyID               int16              `json:"party_id"`
@@ -1276,16 +1269,6 @@ type PartyMembershipHistory struct {
 	ChapterID int32              `json:"chapter_id"`
 	Action    string             `json:"action"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
-}
-
-type PartyMembershipRequest struct {
-	ID        int64              `json:"id"`
-	PartyID   int16              `json:"party_id"`
-	ChapterID int32              `json:"chapter_id"`
-	UserID    int64              `json:"user_id"`
-	Status    string             `json:"status"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
 type PartyPosition struct {

@@ -18,6 +18,7 @@ export const APP_URL = {
 	notifications: "/notifications",
 	profile: "/profile",
 	search: "/search",
+	pollingUnits: "/polling-units",
 	party: (partyName: string, partyId: string) => `/party/${partyName}/${partyId}/home`,
 	parties: "/parties",
 };

@@ -27,52 +27,6 @@ func (q *Queries) AddPartyMembership(ctx context.Context, arg AddPartyMembership
 	return err
 }
 
-const addPartyMembershipRequest = `-- name: AddPartyMembershipRequest :one
-INSERT INTO party_membership_requests (user_id, party_id, chapter_id)
-VALUES ($1, $2, $3)
-RETURNING id, party_id, chapter_id, user_id, status, created_at, updated_at
-`
-
-type AddPartyMembershipRequestParams struct {
-	UserID    int64 `json:"user_id"`
-	PartyID   int16 `json:"party_id"`
-	ChapterID int32 `json:"chapter_id"`
-}
-
-func (q *Queries) AddPartyMembershipRequest(ctx context.Context, arg AddPartyMembershipRequestParams) (PartyMembershipRequest, error) {
-	row := q.db.QueryRow(ctx, addPartyMembershipRequest, arg.UserID, arg.PartyID, arg.ChapterID)
-	var i PartyMembershipRequest
-	err := row.Scan(
-		&i.ID,
-		&i.PartyID,
-		&i.ChapterID,
-		&i.UserID,
-		&i.Status,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const createChapterSettings = `-- name: CreateChapterSettings :one
-INSERT INTO party_chapter_settings (party_id, chapter_id, settings)
-VALUES ($1, $2, $3)
-RETURNING settings
-`
-
-type CreateChapterSettingsParams struct {
-	PartyID   int16  `json:"party_id"`
-	ChapterID int32  `json:"chapter_id"`
-	Settings  []byte `json:"settings"`
-}
-
-func (q *Queries) CreateChapterSettings(ctx context.Context, arg CreateChapterSettingsParams) ([]byte, error) {
-	row := q.db.QueryRow(ctx, createChapterSettings, arg.PartyID, arg.ChapterID, arg.Settings)
-	var settings []byte
-	err := row.Scan(&settings)
-	return settings, err
-}
-
 const createNationalChapter = `-- name: CreateNationalChapter :one
 INSERT INTO party_chapters (party_id, chapter_type, country_id)
 VALUES ($1, 'national', $2)
@@ -243,23 +197,6 @@ func (q *Queries) GetChapterMemberCount(ctx context.Context, chapterID int32) (i
 	var count int64
 	err := row.Scan(&count)
 	return count, err
-}
-
-const getChapterSettings = `-- name: GetChapterSettings :one
-SELECT settings FROM party_chapter_settings
-WHERE party_id = $1 AND chapter_id = $2 LIMIT 1
-`
-
-type GetChapterSettingsParams struct {
-	PartyID   int16 `json:"party_id"`
-	ChapterID int32 `json:"chapter_id"`
-}
-
-func (q *Queries) GetChapterSettings(ctx context.Context, arg GetChapterSettingsParams) ([]byte, error) {
-	row := q.db.QueryRow(ctx, getChapterSettings, arg.PartyID, arg.ChapterID)
-	var settings []byte
-	err := row.Scan(&settings)
-	return settings, err
 }
 
 const getLGAChapter = `-- name: GetLGAChapter :one

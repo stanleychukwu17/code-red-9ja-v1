@@ -25,6 +25,7 @@ import PartyIcon from "@repo/ui/icons/navbar/party-icon";
 import PartySolidIcon from "@repo/ui/icons/navbar/party-solid-icon";
 import CubeIcon from "@repo/ui/icons/navbar/cube-icon";
 import CubeSolidIcon from "@repo/ui/icons/navbar/cube-solid-icon";
+import PollingUnitIcon from "@repo/ui/icons/polling-unit-icon";
 
 const ICON_CLASS = "size-4! md:size-6!";
 const APP_SIDEBAR_ITEMS = [
@@ -55,6 +56,13 @@ const APP_SIDEBAR_ITEMS = [
     icon: <SearchIcon className={ICON_CLASS} />,
     selectedIcon: <SearchSolidIcon className={ICON_CLASS} />,
     href: APP_URL.search,
+  },
+  {
+    id: "polling-units",
+    label: "Polling Units",
+    icon: <PollingUnitIcon className={ICON_CLASS} />,
+    selectedIcon: <PollingUnitIcon className={ICON_CLASS} />,
+    href: APP_URL.pollingUnits,
   },
   {
     id: "notifications",

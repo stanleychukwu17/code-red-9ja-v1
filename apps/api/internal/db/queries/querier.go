@@ -13,7 +13,6 @@ import (
 type Querier interface {
 	AddPageVerification(ctx context.Context, arg AddPageVerificationParams) (PagesVerified, error)
 	AddPartyMembership(ctx context.Context, arg AddPartyMembershipParams) error
-	AddPartyMembershipRequest(ctx context.Context, arg AddPartyMembershipRequestParams) (PartyMembershipRequest, error)
 	AddPartySlots(ctx context.Context, arg AddPartySlotsParams) (Party, error)
 	AdjustElectionGroupFederalConstituencyLGASupervisorCounts(ctx context.Context, arg AdjustElectionGroupFederalConstituencyLGASupervisorCountsParams) error
 	AdjustElectionGroupFederalConstituencyWardSupervisorCounts(ctx context.Context, arg AdjustElectionGroupFederalConstituencyWardSupervisorCountsParams) error
@@ -60,7 +59,6 @@ type Querier interface {
 	CreateApplication(ctx context.Context, arg CreateApplicationParams) (PartyApplication, error)
 	CreateAssignment(ctx context.Context, arg CreateAssignmentParams) (PollingUnitAssignment, error)
 	CreateCandidatePlaceholder(ctx context.Context, arg CreateCandidatePlaceholderParams) (int64, error)
-	CreateChapterSettings(ctx context.Context, arg CreateChapterSettingsParams) ([]byte, error)
 	CreateDidNotVoteReason(ctx context.Context, arg CreateDidNotVoteReasonParams) (DidNotVoteReason, error)
 	CreateElectionCandidate(ctx context.Context, arg CreateElectionCandidateParams) (ElectionCandidate, error)
 	CreateElectionGroup(ctx context.Context, arg CreateElectionGroupParams) (ElectionGroup, error)
@@ -152,7 +150,6 @@ type Querier interface {
 	GetAssignmentForEarnings(ctx context.Context, id int64) (GetAssignmentForEarningsRow, error)
 	GetAssignmentIDByUserAndElectionGroup(ctx context.Context, arg GetAssignmentIDByUserAndElectionGroupParams) (int64, error)
 	GetChapterMemberCount(ctx context.Context, chapterID int32) (int64, error)
-	GetChapterSettings(ctx context.Context, arg GetChapterSettingsParams) ([]byte, error)
 	GetCitiesByStateID(ctx context.Context, stateID int16) ([]GetCitiesByStateIDRow, error)
 	GetCityByID(ctx context.Context, arg GetCityByIDParams) (GetCityByIDRow, error)
 	GetCountryByID(ctx context.Context, id int16) (GetCountryByIDRow, error)

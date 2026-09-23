@@ -361,19 +361,23 @@ export function PageSearchLayer({
   ariaLabel = "Search",
   value,
   onChange,
+  className,
+  inputClassName,
 }: {
   rightComponent?: ReactNode;
   placeholder?: string;
   ariaLabel?: string;
   value?: string;
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  className?: string;
+  inputClassName?: string;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3">
+    <div className={cn("flex items-center justify-between gap-3", className)}>
       <IconInput
         aria-label={ariaLabel}
         placeholder={placeholder}
-        className="w-full max-w-[490px]"
+        className={cn("w-full max-w-[490px]", inputClassName)}
         value={value}
         onChange={onChange}
       />

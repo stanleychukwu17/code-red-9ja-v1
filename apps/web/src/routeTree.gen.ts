@@ -16,9 +16,10 @@ import { Route as AuthSignupRouteImport } from './routes/auth/signup'
 import { Route as AuthOnboardingRouteImport } from './routes/auth/onboarding'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as AuthForgotPasswordRouteImport } from './routes/auth/forgot-password'
+import { Route as AuthenticatedSearchRouteImport } from './routes/_authenticated/search'
+import { Route as AuthenticatedPollingUnitsRouteImport } from './routes/_authenticated/polling-units'
 import { Route as AuthenticatedHomeRouteImport } from './routes/_authenticated/home'
 import { Route as AuthenticatedStatesIndexRouteImport } from './routes/_authenticated/states/index'
-import { Route as AuthenticatedSearchIndexRouteImport } from './routes/_authenticated/search/index'
 import { Route as AuthenticatedProfileIndexRouteImport } from './routes/_authenticated/profile/index'
 import { Route as AuthenticatedNotificationsIndexRouteImport } from './routes/_authenticated/notifications/index'
 import { Route as AuthenticatedFeedIndexRouteImport } from './routes/_authenticated/feed/index'
@@ -64,6 +65,17 @@ const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
   path: '/auth/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedSearchRoute = AuthenticatedSearchRouteImport.update({
+  id: '/search',
+  path: '/search',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedPollingUnitsRoute =
+  AuthenticatedPollingUnitsRouteImport.update({
+    id: '/polling-units',
+    path: '/polling-units',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedHomeRoute = AuthenticatedHomeRouteImport.update({
   id: '/home',
   path: '/home',
@@ -73,12 +85,6 @@ const AuthenticatedStatesIndexRoute =
   AuthenticatedStatesIndexRouteImport.update({
     id: '/states/',
     path: '/states/',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedSearchIndexRoute =
-  AuthenticatedSearchIndexRouteImport.update({
-    id: '/search/',
-    path: '/search/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedProfileIndexRoute =
@@ -145,6 +151,8 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/parties': typeof PartiesRoute
   '/home': typeof AuthenticatedHomeRoute
+  '/polling-units': typeof AuthenticatedPollingUnitsRoute
+  '/search': typeof AuthenticatedSearchRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/onboarding': typeof AuthOnboardingRoute
@@ -156,7 +164,6 @@ export interface FileRoutesByFullPath {
   '/feed/': typeof AuthenticatedFeedIndexRoute
   '/notifications/': typeof AuthenticatedNotificationsIndexRoute
   '/profile/': typeof AuthenticatedProfileIndexRoute
-  '/search/': typeof AuthenticatedSearchIndexRoute
   '/states/': typeof AuthenticatedStatesIndexRoute
   '/feed/$postId/': typeof AuthenticatedFeedPostIdIndexRoute
   '/states/$stateId/': typeof AuthenticatedStatesStateIdIndexRoute
@@ -166,6 +173,8 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/parties': typeof PartiesRoute
   '/home': typeof AuthenticatedHomeRoute
+  '/polling-units': typeof AuthenticatedPollingUnitsRoute
+  '/search': typeof AuthenticatedSearchRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/onboarding': typeof AuthOnboardingRoute
@@ -177,7 +186,6 @@ export interface FileRoutesByTo {
   '/feed': typeof AuthenticatedFeedIndexRoute
   '/notifications': typeof AuthenticatedNotificationsIndexRoute
   '/profile': typeof AuthenticatedProfileIndexRoute
-  '/search': typeof AuthenticatedSearchIndexRoute
   '/states': typeof AuthenticatedStatesIndexRoute
   '/feed/$postId': typeof AuthenticatedFeedPostIdIndexRoute
   '/states/$stateId': typeof AuthenticatedStatesStateIdIndexRoute
@@ -189,6 +197,8 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/parties': typeof PartiesRoute
   '/_authenticated/home': typeof AuthenticatedHomeRoute
+  '/_authenticated/polling-units': typeof AuthenticatedPollingUnitsRoute
+  '/_authenticated/search': typeof AuthenticatedSearchRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/onboarding': typeof AuthOnboardingRoute
@@ -200,7 +210,6 @@ export interface FileRoutesById {
   '/_authenticated/feed/': typeof AuthenticatedFeedIndexRoute
   '/_authenticated/notifications/': typeof AuthenticatedNotificationsIndexRoute
   '/_authenticated/profile/': typeof AuthenticatedProfileIndexRoute
-  '/_authenticated/search/': typeof AuthenticatedSearchIndexRoute
   '/_authenticated/states/': typeof AuthenticatedStatesIndexRoute
   '/_authenticated/feed/$postId/': typeof AuthenticatedFeedPostIdIndexRoute
   '/_authenticated/states/$stateId/': typeof AuthenticatedStatesStateIdIndexRoute
@@ -212,6 +221,8 @@ export interface FileRouteTypes {
     | '/'
     | '/parties'
     | '/home'
+    | '/polling-units'
+    | '/search'
     | '/auth/forgot-password'
     | '/auth/login'
     | '/auth/onboarding'
@@ -223,7 +234,6 @@ export interface FileRouteTypes {
     | '/feed/'
     | '/notifications/'
     | '/profile/'
-    | '/search/'
     | '/states/'
     | '/feed/$postId/'
     | '/states/$stateId/'
@@ -233,6 +243,8 @@ export interface FileRouteTypes {
     | '/'
     | '/parties'
     | '/home'
+    | '/polling-units'
+    | '/search'
     | '/auth/forgot-password'
     | '/auth/login'
     | '/auth/onboarding'
@@ -244,7 +256,6 @@ export interface FileRouteTypes {
     | '/feed'
     | '/notifications'
     | '/profile'
-    | '/search'
     | '/states'
     | '/feed/$postId'
     | '/states/$stateId'
@@ -255,6 +266,8 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/parties'
     | '/_authenticated/home'
+    | '/_authenticated/polling-units'
+    | '/_authenticated/search'
     | '/auth/forgot-password'
     | '/auth/login'
     | '/auth/onboarding'
@@ -266,7 +279,6 @@ export interface FileRouteTypes {
     | '/_authenticated/feed/'
     | '/_authenticated/notifications/'
     | '/_authenticated/profile/'
-    | '/_authenticated/search/'
     | '/_authenticated/states/'
     | '/_authenticated/feed/$postId/'
     | '/_authenticated/states/$stateId/'
@@ -334,6 +346,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/search': {
+      id: '/_authenticated/search'
+      path: '/search'
+      fullPath: '/search'
+      preLoaderRoute: typeof AuthenticatedSearchRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/polling-units': {
+      id: '/_authenticated/polling-units'
+      path: '/polling-units'
+      fullPath: '/polling-units'
+      preLoaderRoute: typeof AuthenticatedPollingUnitsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/home': {
       id: '/_authenticated/home'
       path: '/home'
@@ -346,13 +372,6 @@ declare module '@tanstack/react-router' {
       path: '/states'
       fullPath: '/states/'
       preLoaderRoute: typeof AuthenticatedStatesIndexRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/search/': {
-      id: '/_authenticated/search/'
-      path: '/search'
-      fullPath: '/search/'
-      preLoaderRoute: typeof AuthenticatedSearchIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/profile/': {
@@ -430,6 +449,8 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteChildren {
   AuthenticatedHomeRoute: typeof AuthenticatedHomeRoute
+  AuthenticatedPollingUnitsRoute: typeof AuthenticatedPollingUnitsRoute
+  AuthenticatedSearchRoute: typeof AuthenticatedSearchRoute
   AuthenticatedPollingUnitPollingUnitIdRoute: typeof AuthenticatedPollingUnitPollingUnitIdRoute
   AuthenticatedAppUsersIndexRoute: typeof AuthenticatedAppUsersIndexRoute
   AuthenticatedCandidatesIndexRoute: typeof AuthenticatedCandidatesIndexRoute
@@ -437,7 +458,6 @@ interface AuthenticatedRouteChildren {
   AuthenticatedFeedIndexRoute: typeof AuthenticatedFeedIndexRoute
   AuthenticatedNotificationsIndexRoute: typeof AuthenticatedNotificationsIndexRoute
   AuthenticatedProfileIndexRoute: typeof AuthenticatedProfileIndexRoute
-  AuthenticatedSearchIndexRoute: typeof AuthenticatedSearchIndexRoute
   AuthenticatedStatesIndexRoute: typeof AuthenticatedStatesIndexRoute
   AuthenticatedFeedPostIdIndexRoute: typeof AuthenticatedFeedPostIdIndexRoute
   AuthenticatedStatesStateIdIndexRoute: typeof AuthenticatedStatesStateIdIndexRoute
@@ -446,6 +466,8 @@ interface AuthenticatedRouteChildren {
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedHomeRoute: AuthenticatedHomeRoute,
+  AuthenticatedPollingUnitsRoute: AuthenticatedPollingUnitsRoute,
+  AuthenticatedSearchRoute: AuthenticatedSearchRoute,
   AuthenticatedPollingUnitPollingUnitIdRoute:
     AuthenticatedPollingUnitPollingUnitIdRoute,
   AuthenticatedAppUsersIndexRoute: AuthenticatedAppUsersIndexRoute,
@@ -454,7 +476,6 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedFeedIndexRoute: AuthenticatedFeedIndexRoute,
   AuthenticatedNotificationsIndexRoute: AuthenticatedNotificationsIndexRoute,
   AuthenticatedProfileIndexRoute: AuthenticatedProfileIndexRoute,
-  AuthenticatedSearchIndexRoute: AuthenticatedSearchIndexRoute,
   AuthenticatedStatesIndexRoute: AuthenticatedStatesIndexRoute,
   AuthenticatedFeedPostIdIndexRoute: AuthenticatedFeedPostIdIndexRoute,
   AuthenticatedStatesStateIdIndexRoute: AuthenticatedStatesStateIdIndexRoute,

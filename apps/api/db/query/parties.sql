@@ -138,23 +138,8 @@ ORDER BY id ASC;
 -- name: AddPartyMembership :exec
 INSERT INTO party_membership (user_id, party_id, chapter_id, status)
 VALUES ($1, $2, $3, 'active');
-
--- name: GetChapterSettings :one
-SELECT settings FROM party_chapter_settings
-WHERE party_id = $1 AND chapter_id = $2 LIMIT 1;
-
--- name: CreateChapterSettings :one
-INSERT INTO party_chapter_settings (party_id, chapter_id, settings)
-VALUES ($1, $2, $3)
-RETURNING settings;
-
 -- name: GetChapterMemberCount :one
 SELECT COUNT(*) FROM party_membership WHERE chapter_id = $1 AND status = 'active';
-
--- name: AddPartyMembershipRequest :one
-INSERT INTO party_membership_requests (user_id, party_id, chapter_id)
-VALUES ($1, $2, $3)
-RETURNING *;
 
 -- name: ResetPartyLogo :exec
 UPDATE parties
