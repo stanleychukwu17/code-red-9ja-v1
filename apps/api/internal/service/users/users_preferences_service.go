@@ -91,7 +91,7 @@ func (s *UsersService) GetUserPreferences(ctx context.Context, userID int64) (Us
 	// Cache the retrieved preferences in Redis
 	jsonBytes, err := json.Marshal(res)
 	if err == nil {
-		s.rdb.Set(ctx, redisKey, jsonBytes, db.RedisUserProfileTTL)
+		s.rdb.Set(ctx, redisKey, jsonBytes, db.RedisThirtyDaysTTL)
 	}
 
 	return res, nil
@@ -177,7 +177,7 @@ func (s *UsersService) UpdateUserPreferences(ctx context.Context, userID int64, 
 	redisKey := fmt.Sprintf("%s%d", db.RedisUserPreferences, userID)
 	jsonBytes, err := json.Marshal(finalResponse)
 	if err == nil {
-		s.rdb.Set(ctx, redisKey, jsonBytes, db.RedisUserProfileTTL)
+		s.rdb.Set(ctx, redisKey, jsonBytes, db.RedisThirtyDaysTTL)
 	}
 
 	return finalResponse, nil

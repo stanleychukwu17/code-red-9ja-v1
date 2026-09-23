@@ -166,7 +166,7 @@ func (s *UsersService) GetUserByFakeID(ctx context.Context, fakeID int64) (queri
 	// cache the user data in redis
 	userJSON, err := json.Marshal(userWithPlacesForCache)
 	if err == nil {
-		s.rdb.Set(ctx, userInfoKey, userJSON, db.RedisUserProfileTTL)
+		s.rdb.Set(ctx, userInfoKey, userJSON, db.RedisThirtyDaysTTL)
 	}
 
 	return userWithPlacesForCache, nil
@@ -344,7 +344,7 @@ func (s *UsersService) GetUserRoles(ctx context.Context, userID int64) (queries.
 	// Cache it in Redis
 	rolesJSONBytes, err := json.Marshal(cachedRoles)
 	if err == nil {
-		s.rdb.Set(ctx, userRolesKey, rolesJSONBytes, db.RedisUserProfileTTL)
+		s.rdb.Set(ctx, userRolesKey, rolesJSONBytes, db.RedisThirtyDaysTTL)
 	}
 
 	return cachedRoles, nil
@@ -485,7 +485,7 @@ func (s *UsersService) GetMoreInfoAboutThisUser(ctx context.Context, userID int6
 	// Cache it in Redis
 	profileJSONBytes, err := json.Marshal(profile)
 	if err == nil {
-		s.rdb.Set(ctx, userProfileKey, profileJSONBytes, db.RedisUserProfileTTL)
+		s.rdb.Set(ctx, userProfileKey, profileJSONBytes, db.RedisThirtyDaysTTL)
 	}
 
 	return profile, nil
@@ -913,22 +913,9 @@ func (s *UsersService) CheckPhone(ctx context.Context, phone string, userFakeID 
 
 // CheckNIN function checks if the nin already exists in the database
 func (s *UsersService) CheckNIN(ctx context.Context, nin string) bool {
-	cacheKey := db.RedisUserNINQuickSearch + nin
-
-	// checks the cache first
-	exists, _ := s.rdb.Exists(ctx, cacheKey).Result()
-	if exists > 0 {
-		return true
-	}
-
-	// checks the users table
+	// checks the users table directly (nin has a unique B-tree index in Postgres)
 	userID, err := s.queries.GetUserIDByNIN(ctx, nin)
-	if err == nil && userID > 0 {
-		s.rdb.Set(ctx, cacheKey, userID, db.RedisFifteenMinutesTTL)
-		return true
-	}
-
-	return false
+	return err == nil && userID > 0
 }
 
 // GetReferralCodeInfo retrieves referral code details from Redis or DB.
@@ -938,20 +925,12 @@ func (s *UsersService) GetReferralCodeInfo(ctx context.Context, code string) (*C
 
 	// Check Redis cache first
 	cachedData, err := s.rdb.Get(ctx, cacheKey).Result()
-	if err != nil {
-		if errors.Is(err, redis.Nil) {
-			return &CachedReferralCodeInfo{}, nil
-		}
-		return nil, err
-	}
-	if cachedData != "" {
-		err = json.Unmarshal([]byte(cachedData), &info)
-		if err != nil {
-			return nil, err
-		}
-		if info.ID > 0 {
+	if err == nil && cachedData != "" {
+		if err := json.Unmarshal([]byte(cachedData), &info); err == nil && info.ID > 0 {
 			return &info, nil
 		}
+	} else if err != nil && !errors.Is(err, redis.Nil) {
+		return nil, err
 	}
 
 	// Fetch from database if cache miss
@@ -977,7 +956,7 @@ func (s *UsersService) cacheReferralCodeInfo(ctx context.Context, code string, u
 
 	if data, err := json.Marshal(info); err == nil {
 		cacheKey := db.RedisReferralCode + code
-		s.rdb.Set(ctx, cacheKey, string(data), db.RedisUserProfileTTL)
+		s.rdb.Set(ctx, cacheKey, string(data), db.RedisThirtyDaysTTL)
 	}
 	return &info
 }

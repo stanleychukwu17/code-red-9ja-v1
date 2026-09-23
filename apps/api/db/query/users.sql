@@ -216,6 +216,13 @@ WHERE referral_code = $1 LIMIT 1;
 SELECT fake_id FROM users
 WHERE email = $1 LIMIT 1;
 
+-- name: GetUserForAuthByEmail :one
+SELECT u.id, u.fake_id, u.username, u.email, u.phone, u.password_hash, u.account_status, u.party_id, u.has_role,
+       u.first_name, u.last_name, u.middle_name, u.gender, u.avatar, u.voters_card_image,
+       u.current_country, u.current_state, u.current_city, u.current_lga, u.current_ward, u.polling_unit_id, u.referral_code
+FROM users u
+WHERE u.email = $1 LIMIT 1;
+
 -- name: GetUserPasswordHashByFakeID :one
 SELECT password_hash FROM users
 WHERE fake_id = $1 LIMIT 1;
@@ -224,9 +231,26 @@ WHERE fake_id = $1 LIMIT 1;
 SELECT fake_id FROM users
 WHERE phone = $1 LIMIT 1;
 
+-- name: GetUserForAuthByPhone :one
+SELECT u.id, u.fake_id, u.username, u.email, u.phone, u.password_hash, u.account_status, u.party_id, u.has_role,
+       u.first_name, u.last_name, u.middle_name, u.gender, u.avatar, u.voters_card_image,
+       u.current_country, u.current_state, u.current_city, u.current_lga, u.current_ward, u.polling_unit_id, u.referral_code
+FROM users u
+WHERE u.phone = $1 OR EXISTS (
+    SELECT 1 FROM users_phone_numbers upn WHERE upn.user_id = u.id AND upn.phone = $1
+)
+LIMIT 1;
+
 -- name: GetFakeIDByUsername :one
 SELECT fake_id FROM users
 WHERE username = $1 LIMIT 1;
+
+-- name: GetUserForAuthByUsername :one
+SELECT u.id, u.fake_id, u.username, u.email, u.phone, u.password_hash, u.account_status, u.party_id, u.has_role,
+       u.first_name, u.last_name, u.middle_name, u.gender, u.avatar, u.voters_card_image,
+       u.current_country, u.current_state, u.current_city, u.current_lga, u.current_ward, u.polling_unit_id, u.referral_code
+FROM users u
+WHERE u.username = $1 LIMIT 1;
 
 -- name: CountAllUserPhoneNumbers :one
 SELECT COUNT(*) FROM users_phone_numbers

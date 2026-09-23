@@ -3,12 +3,18 @@ package db
 import "time"
 
 const (
-	RedisReferenceDataTTL  = 60 * 24 * time.Hour // 60 days for geographic & administrative reference data
-	RedisUserProfileTTL    = 30 * 24 * time.Hour // 30 days for user profile, roles, preferences, referral codes
-	RedisFifteenMinutesTTL = 15 * time.Minute    // Short OTPs and ephemeral locks
+	// Reusable duration TTLs
+	RedisFifteenMinutesTTL = 15 * time.Minute
+	RedisOneHourTTL        = 1 * time.Hour
+	RedisOneDayTTL         = 24 * time.Hour
+	RedisSevenDaysTTL      = 7 * 24 * time.Hour
+	RedisThirtyDaysTTL     = 30 * 24 * time.Hour
+	RedisSixtyDaysTTL      = 60 * 24 * time.Hour
+	RedisNinetyDaysTTL     = 90 * 24 * time.Hour
+	RedisOneEightyDaysTTL  = 180 * 24 * time.Hour
+	RedisOneYearTTL        = 365 * 24 * time.Hour
 
 	//--START-- for registration
-	RedisUserNINQuickSearch       = "register:user_nin_quick_search:"
 	RedisRegisterEmailOtp         = "register:email_otp:"
 	RedisRegisterEmailOtpVerified = "register:email_otp_verified:"
 	//--END--
@@ -51,7 +57,6 @@ const (
 	RedisStateChapter       = "parties:state_chapter:"         // STRING: "parties:state_chapter:<partyID>:<stateID>" is used to store the state chapter ID.
 	RedisLGAChapter         = "parties:lga_chapter:"           // STRING: "parties:lga_chapter:<partyID>:<lgaID>" is used to store the LGA chapter ID.
 	RedisWardChapter        = "parties:ward_chapter:"          // STRING: "parties:ward_chapter:<partyID>:<wardID>" is used to store the ward chapter ID.
-	RedisChapterSettings    = "parties:chapter_settings:"      // STRING: "parties:chapter_settings:<partyID>:<chapterID>" is used to store the chapter settings.
 	//--END--
 
 	//--START-- for page verifications & badges
@@ -89,7 +94,6 @@ const (
 
 // AllRedisPrefixes is a list of all key prefixes and static keys used across the application.
 var AllRedisPrefixes = []string{
-	RedisUserNINQuickSearch,
 	RedisRegisterEmailOtp,
 	RedisRegisterEmailOtpVerified,
 	RedisJwtRefreshToken,
@@ -116,7 +120,6 @@ var AllRedisPrefixes = []string{
 	RedisStateChapter,
 	RedisLGAChapter,
 	RedisWardChapter,
-	RedisChapterSettings,
 	RedisPageVerificationTypesList,
 	RedisPageVerificationTypeInfo,
 	RedisPageVerifications,

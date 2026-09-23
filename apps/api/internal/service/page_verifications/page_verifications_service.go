@@ -7,7 +7,6 @@ import (
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/service/audit"
-	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/redis/go-redis/v9"
@@ -269,7 +268,7 @@ func (s *PageVerificationsService) GetPageVerifications(ctx context.Context, pag
 
 	// Save to Redis
 	if verificationsData, err := json.Marshal(verifications); err == nil {
-		s.rdb.Set(ctx, redisKey, verificationsData, 24*time.Hour)
+		s.rdb.Set(ctx, redisKey, verificationsData, db.RedisNinetyDaysTTL)
 	}
 
 	return verifications, nil
@@ -296,7 +295,7 @@ func (s *PageVerificationsService) GetVerificationTypeInfo(ctx context.Context, 
 
 	// Save to Redis
 	if vtData, err := json.Marshal(vt); err == nil {
-		s.rdb.Set(ctx, redisKey, vtData, 24*time.Hour)
+		s.rdb.Set(ctx, redisKey, vtData, db.RedisNinetyDaysTTL)
 	}
 
 	return &vt, nil

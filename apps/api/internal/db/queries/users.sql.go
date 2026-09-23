@@ -554,6 +554,198 @@ func (q *Queries) GetUserByID(ctx context.Context, id int64) (GetUserByIDRow, er
 	return i, err
 }
 
+const getUserForAuthByEmail = `-- name: GetUserForAuthByEmail :one
+SELECT u.id, u.fake_id, u.username, u.email, u.phone, u.password_hash, u.account_status, u.party_id, u.has_role,
+       u.first_name, u.last_name, u.middle_name, u.gender, u.avatar, u.voters_card_image,
+       u.current_country, u.current_state, u.current_city, u.current_lga, u.current_ward, u.polling_unit_id, u.referral_code
+FROM users u
+WHERE u.email = $1 LIMIT 1
+`
+
+type GetUserForAuthByEmailRow struct {
+	ID              int64       `json:"id"`
+	FakeID          pgtype.Int8 `json:"fake_id"`
+	Username        pgtype.Text `json:"username"`
+	Email           pgtype.Text `json:"email"`
+	Phone           pgtype.Text `json:"phone"`
+	PasswordHash    string      `json:"password_hash"`
+	AccountStatus   pgtype.Text `json:"account_status"`
+	PartyID         pgtype.Int2 `json:"party_id"`
+	HasRole         pgtype.Bool `json:"has_role"`
+	FirstName       pgtype.Text `json:"first_name"`
+	LastName        pgtype.Text `json:"last_name"`
+	MiddleName      pgtype.Text `json:"middle_name"`
+	Gender          pgtype.Text `json:"gender"`
+	Avatar          pgtype.Text `json:"avatar"`
+	VotersCardImage pgtype.Text `json:"voters_card_image"`
+	CurrentCountry  int16       `json:"current_country"`
+	CurrentState    int16       `json:"current_state"`
+	CurrentCity     pgtype.Int4 `json:"current_city"`
+	CurrentLga      pgtype.Int4 `json:"current_lga"`
+	CurrentWard     pgtype.Int4 `json:"current_ward"`
+	PollingUnitID   pgtype.Int4 `json:"polling_unit_id"`
+	ReferralCode    pgtype.Text `json:"referral_code"`
+}
+
+func (q *Queries) GetUserForAuthByEmail(ctx context.Context, email pgtype.Text) (GetUserForAuthByEmailRow, error) {
+	row := q.db.QueryRow(ctx, getUserForAuthByEmail, email)
+	var i GetUserForAuthByEmailRow
+	err := row.Scan(
+		&i.ID,
+		&i.FakeID,
+		&i.Username,
+		&i.Email,
+		&i.Phone,
+		&i.PasswordHash,
+		&i.AccountStatus,
+		&i.PartyID,
+		&i.HasRole,
+		&i.FirstName,
+		&i.LastName,
+		&i.MiddleName,
+		&i.Gender,
+		&i.Avatar,
+		&i.VotersCardImage,
+		&i.CurrentCountry,
+		&i.CurrentState,
+		&i.CurrentCity,
+		&i.CurrentLga,
+		&i.CurrentWard,
+		&i.PollingUnitID,
+		&i.ReferralCode,
+	)
+	return i, err
+}
+
+const getUserForAuthByPhone = `-- name: GetUserForAuthByPhone :one
+SELECT u.id, u.fake_id, u.username, u.email, u.phone, u.password_hash, u.account_status, u.party_id, u.has_role,
+       u.first_name, u.last_name, u.middle_name, u.gender, u.avatar, u.voters_card_image,
+       u.current_country, u.current_state, u.current_city, u.current_lga, u.current_ward, u.polling_unit_id, u.referral_code
+FROM users u
+WHERE u.phone = $1 OR EXISTS (
+    SELECT 1 FROM users_phone_numbers upn WHERE upn.user_id = u.id AND upn.phone = $1
+)
+LIMIT 1
+`
+
+type GetUserForAuthByPhoneRow struct {
+	ID              int64       `json:"id"`
+	FakeID          pgtype.Int8 `json:"fake_id"`
+	Username        pgtype.Text `json:"username"`
+	Email           pgtype.Text `json:"email"`
+	Phone           pgtype.Text `json:"phone"`
+	PasswordHash    string      `json:"password_hash"`
+	AccountStatus   pgtype.Text `json:"account_status"`
+	PartyID         pgtype.Int2 `json:"party_id"`
+	HasRole         pgtype.Bool `json:"has_role"`
+	FirstName       pgtype.Text `json:"first_name"`
+	LastName        pgtype.Text `json:"last_name"`
+	MiddleName      pgtype.Text `json:"middle_name"`
+	Gender          pgtype.Text `json:"gender"`
+	Avatar          pgtype.Text `json:"avatar"`
+	VotersCardImage pgtype.Text `json:"voters_card_image"`
+	CurrentCountry  int16       `json:"current_country"`
+	CurrentState    int16       `json:"current_state"`
+	CurrentCity     pgtype.Int4 `json:"current_city"`
+	CurrentLga      pgtype.Int4 `json:"current_lga"`
+	CurrentWard     pgtype.Int4 `json:"current_ward"`
+	PollingUnitID   pgtype.Int4 `json:"polling_unit_id"`
+	ReferralCode    pgtype.Text `json:"referral_code"`
+}
+
+func (q *Queries) GetUserForAuthByPhone(ctx context.Context, phone pgtype.Text) (GetUserForAuthByPhoneRow, error) {
+	row := q.db.QueryRow(ctx, getUserForAuthByPhone, phone)
+	var i GetUserForAuthByPhoneRow
+	err := row.Scan(
+		&i.ID,
+		&i.FakeID,
+		&i.Username,
+		&i.Email,
+		&i.Phone,
+		&i.PasswordHash,
+		&i.AccountStatus,
+		&i.PartyID,
+		&i.HasRole,
+		&i.FirstName,
+		&i.LastName,
+		&i.MiddleName,
+		&i.Gender,
+		&i.Avatar,
+		&i.VotersCardImage,
+		&i.CurrentCountry,
+		&i.CurrentState,
+		&i.CurrentCity,
+		&i.CurrentLga,
+		&i.CurrentWard,
+		&i.PollingUnitID,
+		&i.ReferralCode,
+	)
+	return i, err
+}
+
+const getUserForAuthByUsername = `-- name: GetUserForAuthByUsername :one
+SELECT u.id, u.fake_id, u.username, u.email, u.phone, u.password_hash, u.account_status, u.party_id, u.has_role,
+       u.first_name, u.last_name, u.middle_name, u.gender, u.avatar, u.voters_card_image,
+       u.current_country, u.current_state, u.current_city, u.current_lga, u.current_ward, u.polling_unit_id, u.referral_code
+FROM users u
+WHERE u.username = $1 LIMIT 1
+`
+
+type GetUserForAuthByUsernameRow struct {
+	ID              int64       `json:"id"`
+	FakeID          pgtype.Int8 `json:"fake_id"`
+	Username        pgtype.Text `json:"username"`
+	Email           pgtype.Text `json:"email"`
+	Phone           pgtype.Text `json:"phone"`
+	PasswordHash    string      `json:"password_hash"`
+	AccountStatus   pgtype.Text `json:"account_status"`
+	PartyID         pgtype.Int2 `json:"party_id"`
+	HasRole         pgtype.Bool `json:"has_role"`
+	FirstName       pgtype.Text `json:"first_name"`
+	LastName        pgtype.Text `json:"last_name"`
+	MiddleName      pgtype.Text `json:"middle_name"`
+	Gender          pgtype.Text `json:"gender"`
+	Avatar          pgtype.Text `json:"avatar"`
+	VotersCardImage pgtype.Text `json:"voters_card_image"`
+	CurrentCountry  int16       `json:"current_country"`
+	CurrentState    int16       `json:"current_state"`
+	CurrentCity     pgtype.Int4 `json:"current_city"`
+	CurrentLga      pgtype.Int4 `json:"current_lga"`
+	CurrentWard     pgtype.Int4 `json:"current_ward"`
+	PollingUnitID   pgtype.Int4 `json:"polling_unit_id"`
+	ReferralCode    pgtype.Text `json:"referral_code"`
+}
+
+func (q *Queries) GetUserForAuthByUsername(ctx context.Context, username pgtype.Text) (GetUserForAuthByUsernameRow, error) {
+	row := q.db.QueryRow(ctx, getUserForAuthByUsername, username)
+	var i GetUserForAuthByUsernameRow
+	err := row.Scan(
+		&i.ID,
+		&i.FakeID,
+		&i.Username,
+		&i.Email,
+		&i.Phone,
+		&i.PasswordHash,
+		&i.AccountStatus,
+		&i.PartyID,
+		&i.HasRole,
+		&i.FirstName,
+		&i.LastName,
+		&i.MiddleName,
+		&i.Gender,
+		&i.Avatar,
+		&i.VotersCardImage,
+		&i.CurrentCountry,
+		&i.CurrentState,
+		&i.CurrentCity,
+		&i.CurrentLga,
+		&i.CurrentWard,
+		&i.PollingUnitID,
+		&i.ReferralCode,
+	)
+	return i, err
+}
+
 const getUserIDByNIN = `-- name: GetUserIDByNIN :one
 SELECT user_id
 FROM users_nin

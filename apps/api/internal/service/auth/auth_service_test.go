@@ -1,7 +1,9 @@
 package authservice_test
 
 import (
+	"context"
 	"testing"
+	"time"
 
 	authservice "free9ja/api/internal/service/auth"
 )
@@ -41,5 +43,21 @@ func TestCleanUsername(t *testing.T) {
 				t.Errorf("CleanUsername() = %v, want %v", got, tt.expected)
 			}
 		})
+	}
+}
+
+func TestLogin_Validation(t *testing.T) {
+	svc := authservice.NewAuthService(nil, nil, nil, nil, nil, nil, nil, "secret", 15*time.Minute, 7*24*time.Hour)
+
+	// Test invalid identifier type
+	_, err := svc.Login(context.Background(), "invalid", "user@example.com", "pass123", "")
+	if err == nil || err.Error() != "invalid identifier type" {
+		t.Errorf("expected 'invalid identifier type', got %v", err)
+	}
+
+	// Test phone without iso2
+	_, err = svc.Login(context.Background(), "phone", "08012345678", "pass123", "")
+	if err == nil || err.Error() != "iso2 is required" {
+		t.Errorf("expected 'iso2 is required', got %v", err)
 	}
 }

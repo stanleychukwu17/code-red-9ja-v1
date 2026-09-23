@@ -211,9 +211,9 @@ function RouteComponent() {
         <div className="flex items-center gap-2.5">
           <Button
             type="button"
-            variant="outline"
+            variant="ghost"
             onClick={() => setIsCatalogDialogOpen(true)}
-            className="h-10 px-3.5 rounded-xl border-[#d1d5db] text-c-70 hover:bg-[#fafafa] text-[13px] font-medium flex items-center gap-2"
+            className="h-10 px-3.5 rounded-xl bg-sidebar-mobile hover:bg-sidebar-mobile/80 text-c-70 text-[13px] font-medium flex items-center gap-2"
           >
             <BookOpen className="size-4 text-c-50" />
             <span>Position Catalog</span>
@@ -333,8 +333,10 @@ function RouteComponent() {
           </p>
           <div className="pt-2">
             <Button
+              type="button"
+              variant="lime"
               onClick={() => setIsAssignDialogOpen(true)}
-              className="bg-[#ff9a3c] hover:bg-[#e0832c] text-white text-[13px]"
+              className="h-10 px-4 rounded-xl text-[13px] font-medium shadow-xs"
             >
               <UserPlus className="size-4 mr-2" />
               Assign an Official

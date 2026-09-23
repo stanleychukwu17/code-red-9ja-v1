@@ -60,7 +60,7 @@ func (s *ElectionGroupsService) GetSafeNationalMetrics(ctx context.Context) quer
 	metrics, err := s.queries.GetNationalMetrics(ctx)
 	if err == nil {
 		if data, err := json.Marshal(metrics); err == nil {
-			s.rdb.Set(ctx, db.RedisNationalMetrics, data, db.RedisReferenceDataTTL)
+			s.rdb.Set(ctx, db.RedisNationalMetrics, data, db.RedisOneEightyDaysTTL)
 		}
 		return metrics
 	}

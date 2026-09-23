@@ -133,7 +133,7 @@ func (s *FederalConstituenciesService) GetFederalConstituencies(ctx context.Cont
 		}
 
 		jsonData, _ := json.Marshal(payload)
-		s.rdb.Set(ctx, redisKey, jsonData, db.RedisReferenceDataTTL)
+		s.rdb.Set(ctx, redisKey, jsonData, db.RedisOneEightyDaysTTL)
 
 		return dbData, nil
 	case nil:
