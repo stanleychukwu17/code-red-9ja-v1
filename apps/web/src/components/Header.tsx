@@ -76,14 +76,14 @@ const APP_SIDEBAR_ITEMS = [
     label: "Profile",
     icon: <ProfileIcon className={ICON_CLASS} />,
     selectedIcon: <ProfileSolidIcon className={ICON_CLASS} />,
-    href: APP_URL.profile,
+    href: APP_URL.profile(),
   },
   {
     id: "party",
     label: "My Party",
     icon: <PartyIcon className={ICON_CLASS} />,
     selectedIcon: <PartySolidIcon className={ICON_CLASS} />,
-    href: APP_URL.party("apc", "1"),
+    href: APP_URL.myParty,
   },
   {
     id: "parties",

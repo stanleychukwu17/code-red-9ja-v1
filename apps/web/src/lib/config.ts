@@ -16,9 +16,11 @@ export const APP_URL = {
 	feed: "/feed",
 	home: "/home",
 	notifications: "/notifications",
-	profile: (username?: string) => (username ? `/profile/${username}` : "/profile"),
+	profile: (username?: string, tab?: string) =>
+		username ? (tab ? `/profile/${username}/${tab}` : `/profile/${username}`) : "/profile",
 	search: "/search",
 	pollingUnits: "/polling-units",
+	myParty: "/party",
 	party: (partyName: string, partyId: string) => `/party/${partyName}/${partyId}/home`,
 	parties: "/parties",
 };

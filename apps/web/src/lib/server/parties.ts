@@ -1,6 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { API_URL } from "../config";
 import { apiFetchJson } from "./fetch";
+
+/**
+ * Verification details badge associated with a registered political party.
+ */
 export type PartyVerification = {
 	id: number;
 	verification_type_id: number;
@@ -9,6 +13,9 @@ export type PartyVerification = {
 	verification_description?: string;
 };
 
+/**
+ * Core Political Party database entity representation.
+ */
 export type Party = {
 	id: number;
 	short_name: string;
@@ -31,6 +38,9 @@ export type Party = {
 	verifications?: PartyVerification[];
 };
 
+/**
+ * Leadership position or official assigned within a political party chapter.
+ */
 export type PartyOfficialCardInfo = {
 	position_id?: number;
 	position_name: string;
@@ -44,6 +54,9 @@ export type PartyOfficialCardInfo = {
 	is_vacant: boolean;
 };
 
+/**
+ * Lightweight member summary for rendering avatar stacks on party cards.
+ */
 export type PartySampleMember = {
 	user_id: number;
 	first_name?: string | null;
@@ -52,6 +65,10 @@ export type PartySampleMember = {
 	avatar: string;
 };
 
+/**
+ * Hydrated party card data returned by `/parties/cards`, including member stats,
+ * top leadership officials, and current user's membership status.
+ */
 export type PartyCardData = {
 	id: number;
 	short_name: string;
@@ -71,6 +88,10 @@ export type PartyCardData = {
 	is_user_member: boolean;
 };
 
+/**
+ * Server function to fetch all party cards with aggregated metrics,
+ * sample members, and officials for the public `/parties` directory.
+ */
 export const getPartyCards = createServerFn({ method: "GET" }).handler(async () => {
 	try {
 		return await apiFetchJson<{
@@ -88,6 +109,9 @@ export const getPartyCards = createServerFn({ method: "GET" }).handler(async () 
 	}
 });
 
+/**
+ * Server function to fetch the raw list of all registered political parties.
+ */
 export const getParties = createServerFn({ method: "GET" }).handler(async () => {
 	try {
 		return await apiFetchJson(API_URL.parties);
@@ -100,6 +124,10 @@ export const getParties = createServerFn({ method: "GET" }).handler(async () => 
 	}
 });
 
+/**
+ * Server function to fetch full public profile data for a specific party,
+ * including metrics, about info, leadership, and user membership status.
+ */
 export const getPartyProfile = createServerFn()
 	.inputValidator((data: { partyId: number; shortName: string }) => data)
 	.handler(async ({ data: { partyId, shortName } }) => {

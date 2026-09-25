@@ -195,30 +195,26 @@ export function ProfilePageComponent() {
   const [activeTab, setActiveTab] = useState<ActiveProfileTab>("history");
 
   return (
-    <div className="min-h-screen w-full bg-background text-foreground px-4 py-8 md:px-10 lg:px-16">
-      <div className="mx-auto max-w-6xl">
-        {/* Main Content Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-[380px_minmax(0,1fr)] gap-10 lg:gap-16 items-start">
-          {/* Left Column: Profile Card & Floating Tools */}
-          <div className="flex flex-col items-center">
-            <ProfileCard profile={profile} />
-            <ProfileFloatingToolbar />
-          </div>
+    <div className="min-h-screen w-full bg-background text-foreground px-2 md:px-8 lg:px-8 py-8">
+      {/* Main Content Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-[380px_minmax(0,1fr)] gap-10 lg:gap-16 items-start">
+        {/* Left Column: Profile Card & Floating Tools */}
+        <div className="flex flex-col items-center">
+          <ProfileCard profile={profile} />
+          <ProfileFloatingToolbar />
+        </div>
 
-          {/* Right Column: Navigation Tabs & Tab Content */}
-          <div className="flex flex-col gap-8 pt-2">
-            <ProfileTabs activeTab={activeTab} onTabChange={setActiveTab} />
-            <ProfileTabContent activeTab={activeTab} profile={profile} />
-          </div>
+        {/* Right Column: Navigation Tabs & Tab Content */}
+        <div className="flex flex-col gap-8 pt-2">
+          <ProfileTabs activeTab={activeTab} onTabChange={setActiveTab} />
+          <ProfileTabContent activeTab={activeTab} profile={profile} />
         </div>
       </div>
     </div>
   );
 }
 
-/* ========================================================================== */
-/*                             1. LEFT PROFILE CARD                           */
-/* ========================================================================== */
+export { ProfileCard, ProfileFloatingToolbar, PartyHistoryTimeline, FollowersList, FollowingList };
 
 function ProfileCard({ profile }: { profile: UserProfileData }) {
   return (

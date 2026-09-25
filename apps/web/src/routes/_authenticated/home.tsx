@@ -113,7 +113,7 @@ function Home() {
                 </div>
               </Link>
 
-              <Link to={APP_URL.profile} className="block group">
+              <Link to={APP_URL.profile()} className="block group">
                 <div className="p-6 h-full rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-sm hover:border-emerald-500/50 dark:hover:border-emerald-500/50 transition-all">
                   <ShieldCheck className="w-8 h-8 mb-4 text-emerald-500 group-hover:scale-110 transition-transform" />
                   <h3 className="text-lg font-semibold mb-2">Complete Membership</h3>

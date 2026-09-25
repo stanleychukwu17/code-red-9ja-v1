@@ -6,12 +6,12 @@ import { getPartyProfile } from "@/lib/server/parties";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
 export const Route = createFileRoute(
-  "/_authenticated/party/$partyName/$partyId/home",
+  "/_authenticated/party/old/$partyName/$partyId/home",
 )({
-  component: PartyHomeComponent,
+  component: PartyHomeOldComponent,
 });
 
-function PartyHomeComponent() {
+function PartyHomeOldComponent() {
   const { partyName, partyId } = Route.useParams();
 
   const { data: profileRes, isLoading } = useQuery({
@@ -54,7 +54,7 @@ function PartyHomeComponent() {
                     <Skeleton className="w-full h-full rounded-full" />
                   ) : (
                     <img
-                      src={partyDetails.logo}
+                      src={partyDetails?.logo}
                       alt={displayPartyName}
                       className="w-full h-full object-cover"
                     />
@@ -82,6 +82,7 @@ function PartyHomeComponent() {
             <div className="flex flex-wrap items-center gap-3 pb-2 w-full sm:w-auto mt-4 sm:mt-0">
               {/* Follow Button */}
               <button
+                type="button"
                 onClick={() => setIsFollowing(!isFollowing)}
                 className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-full font-bold transition-all duration-200 ${
                   isFollowing
@@ -104,6 +105,7 @@ function PartyHomeComponent() {
 
               {/* Membership Button */}
               <button
+                type="button"
                 onClick={() => setIsMember(!isMember)}
                 className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-full font-bold transition-all duration-200 ${
                   isMember
@@ -144,6 +146,7 @@ function PartyHomeComponent() {
               "Updates",
             ].map((tab, i) => (
               <button
+                type="button"
                 key={tab}
                 className={`pb-4 text-sm font-bold whitespace-nowrap border-b-2 transition-colors ${
                   i === 0

@@ -21,6 +21,7 @@ import { Route as AuthenticatedPollingUnitsRouteImport } from './routes/_authent
 import { Route as AuthenticatedHomeRouteImport } from './routes/_authenticated/home'
 import { Route as AuthenticatedStatesIndexRouteImport } from './routes/_authenticated/states/index'
 import { Route as AuthenticatedProfileIndexRouteImport } from './routes/_authenticated/profile/index'
+import { Route as AuthenticatedPartyIndexRouteImport } from './routes/_authenticated/party/index'
 import { Route as AuthenticatedNotificationsIndexRouteImport } from './routes/_authenticated/notifications/index'
 import { Route as AuthenticatedFeedIndexRouteImport } from './routes/_authenticated/feed/index'
 import { Route as AuthenticatedDashboardIndexRouteImport } from './routes/_authenticated/dashboard/index'
@@ -30,8 +31,23 @@ import { Route as AuthenticatedProfileUsernameRouteImport } from './routes/_auth
 import { Route as AuthenticatedProfileOldUsernameRouteImport } from './routes/_authenticated/profile-old/$username'
 import { Route as AuthenticatedPollingUnitPollingUnitIdRouteImport } from './routes/_authenticated/polling-unit/$pollingUnitId'
 import { Route as AuthenticatedStatesStateIdIndexRouteImport } from './routes/_authenticated/states/$stateId/index'
+import { Route as AuthenticatedProfileUsernameIndexRouteImport } from './routes/_authenticated/profile/$username/index'
 import { Route as AuthenticatedFeedPostIdIndexRouteImport } from './routes/_authenticated/feed/$postId/index'
-import { Route as AuthenticatedPartyPartyNamePartyIdHomeRouteImport } from './routes/_authenticated/party.$partyName.$partyId.home'
+import { Route as AuthenticatedProfileUsernameTimelineRouteImport } from './routes/_authenticated/profile/$username/timeline'
+import { Route as AuthenticatedProfileUsernameHomeRouteImport } from './routes/_authenticated/profile/$username/home'
+import { Route as AuthenticatedProfileUsernameHistoryRouteImport } from './routes/_authenticated/profile/$username/history'
+import { Route as AuthenticatedProfileUsernameFollowingRouteImport } from './routes/_authenticated/profile/$username/following'
+import { Route as AuthenticatedProfileUsernameFollowersRouteImport } from './routes/_authenticated/profile/$username/followers'
+import { Route as AuthenticatedPartyPartyNamePartyIdRouteImport } from './routes/_authenticated/party/$partyName.$partyId'
+import { Route as AuthenticatedPartyPartyNamePartyIdIndexRouteImport } from './routes/_authenticated/party/$partyName.$partyId/index'
+import { Route as AuthenticatedPartyPartyNamePartyIdTimelineRouteImport } from './routes/_authenticated/party/$partyName.$partyId/timeline'
+import { Route as AuthenticatedPartyPartyNamePartyIdSocialLinksRouteImport } from './routes/_authenticated/party/$partyName.$partyId/social-links'
+import { Route as AuthenticatedPartyPartyNamePartyIdMembersRouteImport } from './routes/_authenticated/party/$partyName.$partyId/members'
+import { Route as AuthenticatedPartyPartyNamePartyIdHomeRouteImport } from './routes/_authenticated/party/$partyName.$partyId/home'
+import { Route as AuthenticatedPartyPartyNamePartyIdGroupsRouteImport } from './routes/_authenticated/party/$partyName.$partyId/groups'
+import { Route as AuthenticatedPartyPartyNamePartyIdFollowersRouteImport } from './routes/_authenticated/party/$partyName.$partyId/followers'
+import { Route as AuthenticatedPartyPartyNamePartyIdAboutRouteImport } from './routes/_authenticated/party/$partyName.$partyId/about'
+import { Route as AuthenticatedPartyOldPartyNamePartyIdHomeRouteImport } from './routes/_authenticated/party/old/$partyName.$partyId.home'
 
 const PartiesRoute = PartiesRouteImport.update({
   id: '/parties',
@@ -95,6 +111,11 @@ const AuthenticatedProfileIndexRoute =
     path: '/profile/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedPartyIndexRoute = AuthenticatedPartyIndexRouteImport.update({
+  id: '/party/',
+  path: '/party/',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedNotificationsIndexRoute =
   AuthenticatedNotificationsIndexRouteImport.update({
     id: '/notifications/',
@@ -148,16 +169,106 @@ const AuthenticatedStatesStateIdIndexRoute =
     path: '/states/$stateId/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedProfileUsernameIndexRoute =
+  AuthenticatedProfileUsernameIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedProfileUsernameRoute,
+  } as any)
 const AuthenticatedFeedPostIdIndexRoute =
   AuthenticatedFeedPostIdIndexRouteImport.update({
     id: '/feed/$postId/',
     path: '/feed/$postId/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedProfileUsernameTimelineRoute =
+  AuthenticatedProfileUsernameTimelineRouteImport.update({
+    id: '/timeline',
+    path: '/timeline',
+    getParentRoute: () => AuthenticatedProfileUsernameRoute,
+  } as any)
+const AuthenticatedProfileUsernameHomeRoute =
+  AuthenticatedProfileUsernameHomeRouteImport.update({
+    id: '/home',
+    path: '/home',
+    getParentRoute: () => AuthenticatedProfileUsernameRoute,
+  } as any)
+const AuthenticatedProfileUsernameHistoryRoute =
+  AuthenticatedProfileUsernameHistoryRouteImport.update({
+    id: '/history',
+    path: '/history',
+    getParentRoute: () => AuthenticatedProfileUsernameRoute,
+  } as any)
+const AuthenticatedProfileUsernameFollowingRoute =
+  AuthenticatedProfileUsernameFollowingRouteImport.update({
+    id: '/following',
+    path: '/following',
+    getParentRoute: () => AuthenticatedProfileUsernameRoute,
+  } as any)
+const AuthenticatedProfileUsernameFollowersRoute =
+  AuthenticatedProfileUsernameFollowersRouteImport.update({
+    id: '/followers',
+    path: '/followers',
+    getParentRoute: () => AuthenticatedProfileUsernameRoute,
+  } as any)
+const AuthenticatedPartyPartyNamePartyIdRoute =
+  AuthenticatedPartyPartyNamePartyIdRouteImport.update({
+    id: '/party/$partyName/$partyId',
+    path: '/party/$partyName/$partyId',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedPartyPartyNamePartyIdIndexRoute =
+  AuthenticatedPartyPartyNamePartyIdIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedPartyPartyNamePartyIdRoute,
+  } as any)
+const AuthenticatedPartyPartyNamePartyIdTimelineRoute =
+  AuthenticatedPartyPartyNamePartyIdTimelineRouteImport.update({
+    id: '/timeline',
+    path: '/timeline',
+    getParentRoute: () => AuthenticatedPartyPartyNamePartyIdRoute,
+  } as any)
+const AuthenticatedPartyPartyNamePartyIdSocialLinksRoute =
+  AuthenticatedPartyPartyNamePartyIdSocialLinksRouteImport.update({
+    id: '/social-links',
+    path: '/social-links',
+    getParentRoute: () => AuthenticatedPartyPartyNamePartyIdRoute,
+  } as any)
+const AuthenticatedPartyPartyNamePartyIdMembersRoute =
+  AuthenticatedPartyPartyNamePartyIdMembersRouteImport.update({
+    id: '/members',
+    path: '/members',
+    getParentRoute: () => AuthenticatedPartyPartyNamePartyIdRoute,
+  } as any)
 const AuthenticatedPartyPartyNamePartyIdHomeRoute =
   AuthenticatedPartyPartyNamePartyIdHomeRouteImport.update({
-    id: '/party/$partyName/$partyId/home',
-    path: '/party/$partyName/$partyId/home',
+    id: '/home',
+    path: '/home',
+    getParentRoute: () => AuthenticatedPartyPartyNamePartyIdRoute,
+  } as any)
+const AuthenticatedPartyPartyNamePartyIdGroupsRoute =
+  AuthenticatedPartyPartyNamePartyIdGroupsRouteImport.update({
+    id: '/groups',
+    path: '/groups',
+    getParentRoute: () => AuthenticatedPartyPartyNamePartyIdRoute,
+  } as any)
+const AuthenticatedPartyPartyNamePartyIdFollowersRoute =
+  AuthenticatedPartyPartyNamePartyIdFollowersRouteImport.update({
+    id: '/followers',
+    path: '/followers',
+    getParentRoute: () => AuthenticatedPartyPartyNamePartyIdRoute,
+  } as any)
+const AuthenticatedPartyPartyNamePartyIdAboutRoute =
+  AuthenticatedPartyPartyNamePartyIdAboutRouteImport.update({
+    id: '/about',
+    path: '/about',
+    getParentRoute: () => AuthenticatedPartyPartyNamePartyIdRoute,
+  } as any)
+const AuthenticatedPartyOldPartyNamePartyIdHomeRoute =
+  AuthenticatedPartyOldPartyNamePartyIdHomeRouteImport.update({
+    id: '/party/old/$partyName/$partyId/home',
+    path: '/party/old/$partyName/$partyId/home',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 
@@ -173,17 +284,33 @@ export interface FileRoutesByFullPath {
   '/auth/signup': typeof AuthSignupRoute
   '/polling-unit/$pollingUnitId': typeof AuthenticatedPollingUnitPollingUnitIdRoute
   '/profile-old/$username': typeof AuthenticatedProfileOldUsernameRoute
-  '/profile/$username': typeof AuthenticatedProfileUsernameRoute
+  '/profile/$username': typeof AuthenticatedProfileUsernameRouteWithChildren
   '/app-users/': typeof AuthenticatedAppUsersIndexRoute
   '/candidates/': typeof AuthenticatedCandidatesIndexRoute
   '/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/feed/': typeof AuthenticatedFeedIndexRoute
   '/notifications/': typeof AuthenticatedNotificationsIndexRoute
+  '/party/': typeof AuthenticatedPartyIndexRoute
   '/profile/': typeof AuthenticatedProfileIndexRoute
   '/states/': typeof AuthenticatedStatesIndexRoute
+  '/party/$partyName/$partyId': typeof AuthenticatedPartyPartyNamePartyIdRouteWithChildren
+  '/profile/$username/followers': typeof AuthenticatedProfileUsernameFollowersRoute
+  '/profile/$username/following': typeof AuthenticatedProfileUsernameFollowingRoute
+  '/profile/$username/history': typeof AuthenticatedProfileUsernameHistoryRoute
+  '/profile/$username/home': typeof AuthenticatedProfileUsernameHomeRoute
+  '/profile/$username/timeline': typeof AuthenticatedProfileUsernameTimelineRoute
   '/feed/$postId/': typeof AuthenticatedFeedPostIdIndexRoute
+  '/profile/$username/': typeof AuthenticatedProfileUsernameIndexRoute
   '/states/$stateId/': typeof AuthenticatedStatesStateIdIndexRoute
+  '/party/$partyName/$partyId/about': typeof AuthenticatedPartyPartyNamePartyIdAboutRoute
+  '/party/$partyName/$partyId/followers': typeof AuthenticatedPartyPartyNamePartyIdFollowersRoute
+  '/party/$partyName/$partyId/groups': typeof AuthenticatedPartyPartyNamePartyIdGroupsRoute
   '/party/$partyName/$partyId/home': typeof AuthenticatedPartyPartyNamePartyIdHomeRoute
+  '/party/$partyName/$partyId/members': typeof AuthenticatedPartyPartyNamePartyIdMembersRoute
+  '/party/$partyName/$partyId/social-links': typeof AuthenticatedPartyPartyNamePartyIdSocialLinksRoute
+  '/party/$partyName/$partyId/timeline': typeof AuthenticatedPartyPartyNamePartyIdTimelineRoute
+  '/party/$partyName/$partyId/': typeof AuthenticatedPartyPartyNamePartyIdIndexRoute
+  '/party/old/$partyName/$partyId/home': typeof AuthenticatedPartyOldPartyNamePartyIdHomeRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -197,17 +324,31 @@ export interface FileRoutesByTo {
   '/auth/signup': typeof AuthSignupRoute
   '/polling-unit/$pollingUnitId': typeof AuthenticatedPollingUnitPollingUnitIdRoute
   '/profile-old/$username': typeof AuthenticatedProfileOldUsernameRoute
-  '/profile/$username': typeof AuthenticatedProfileUsernameRoute
   '/app-users': typeof AuthenticatedAppUsersIndexRoute
   '/candidates': typeof AuthenticatedCandidatesIndexRoute
   '/dashboard': typeof AuthenticatedDashboardIndexRoute
   '/feed': typeof AuthenticatedFeedIndexRoute
   '/notifications': typeof AuthenticatedNotificationsIndexRoute
+  '/party': typeof AuthenticatedPartyIndexRoute
   '/profile': typeof AuthenticatedProfileIndexRoute
   '/states': typeof AuthenticatedStatesIndexRoute
+  '/profile/$username/followers': typeof AuthenticatedProfileUsernameFollowersRoute
+  '/profile/$username/following': typeof AuthenticatedProfileUsernameFollowingRoute
+  '/profile/$username/history': typeof AuthenticatedProfileUsernameHistoryRoute
+  '/profile/$username/home': typeof AuthenticatedProfileUsernameHomeRoute
+  '/profile/$username/timeline': typeof AuthenticatedProfileUsernameTimelineRoute
   '/feed/$postId': typeof AuthenticatedFeedPostIdIndexRoute
+  '/profile/$username': typeof AuthenticatedProfileUsernameIndexRoute
   '/states/$stateId': typeof AuthenticatedStatesStateIdIndexRoute
+  '/party/$partyName/$partyId/about': typeof AuthenticatedPartyPartyNamePartyIdAboutRoute
+  '/party/$partyName/$partyId/followers': typeof AuthenticatedPartyPartyNamePartyIdFollowersRoute
+  '/party/$partyName/$partyId/groups': typeof AuthenticatedPartyPartyNamePartyIdGroupsRoute
   '/party/$partyName/$partyId/home': typeof AuthenticatedPartyPartyNamePartyIdHomeRoute
+  '/party/$partyName/$partyId/members': typeof AuthenticatedPartyPartyNamePartyIdMembersRoute
+  '/party/$partyName/$partyId/social-links': typeof AuthenticatedPartyPartyNamePartyIdSocialLinksRoute
+  '/party/$partyName/$partyId/timeline': typeof AuthenticatedPartyPartyNamePartyIdTimelineRoute
+  '/party/$partyName/$partyId': typeof AuthenticatedPartyPartyNamePartyIdIndexRoute
+  '/party/old/$partyName/$partyId/home': typeof AuthenticatedPartyOldPartyNamePartyIdHomeRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -223,17 +364,33 @@ export interface FileRoutesById {
   '/auth/signup': typeof AuthSignupRoute
   '/_authenticated/polling-unit/$pollingUnitId': typeof AuthenticatedPollingUnitPollingUnitIdRoute
   '/_authenticated/profile-old/$username': typeof AuthenticatedProfileOldUsernameRoute
-  '/_authenticated/profile/$username': typeof AuthenticatedProfileUsernameRoute
+  '/_authenticated/profile/$username': typeof AuthenticatedProfileUsernameRouteWithChildren
   '/_authenticated/app-users/': typeof AuthenticatedAppUsersIndexRoute
   '/_authenticated/candidates/': typeof AuthenticatedCandidatesIndexRoute
   '/_authenticated/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/_authenticated/feed/': typeof AuthenticatedFeedIndexRoute
   '/_authenticated/notifications/': typeof AuthenticatedNotificationsIndexRoute
+  '/_authenticated/party/': typeof AuthenticatedPartyIndexRoute
   '/_authenticated/profile/': typeof AuthenticatedProfileIndexRoute
   '/_authenticated/states/': typeof AuthenticatedStatesIndexRoute
+  '/_authenticated/party/$partyName/$partyId': typeof AuthenticatedPartyPartyNamePartyIdRouteWithChildren
+  '/_authenticated/profile/$username/followers': typeof AuthenticatedProfileUsernameFollowersRoute
+  '/_authenticated/profile/$username/following': typeof AuthenticatedProfileUsernameFollowingRoute
+  '/_authenticated/profile/$username/history': typeof AuthenticatedProfileUsernameHistoryRoute
+  '/_authenticated/profile/$username/home': typeof AuthenticatedProfileUsernameHomeRoute
+  '/_authenticated/profile/$username/timeline': typeof AuthenticatedProfileUsernameTimelineRoute
   '/_authenticated/feed/$postId/': typeof AuthenticatedFeedPostIdIndexRoute
+  '/_authenticated/profile/$username/': typeof AuthenticatedProfileUsernameIndexRoute
   '/_authenticated/states/$stateId/': typeof AuthenticatedStatesStateIdIndexRoute
+  '/_authenticated/party/$partyName/$partyId/about': typeof AuthenticatedPartyPartyNamePartyIdAboutRoute
+  '/_authenticated/party/$partyName/$partyId/followers': typeof AuthenticatedPartyPartyNamePartyIdFollowersRoute
+  '/_authenticated/party/$partyName/$partyId/groups': typeof AuthenticatedPartyPartyNamePartyIdGroupsRoute
   '/_authenticated/party/$partyName/$partyId/home': typeof AuthenticatedPartyPartyNamePartyIdHomeRoute
+  '/_authenticated/party/$partyName/$partyId/members': typeof AuthenticatedPartyPartyNamePartyIdMembersRoute
+  '/_authenticated/party/$partyName/$partyId/social-links': typeof AuthenticatedPartyPartyNamePartyIdSocialLinksRoute
+  '/_authenticated/party/$partyName/$partyId/timeline': typeof AuthenticatedPartyPartyNamePartyIdTimelineRoute
+  '/_authenticated/party/$partyName/$partyId/': typeof AuthenticatedPartyPartyNamePartyIdIndexRoute
+  '/_authenticated/party/old/$partyName/$partyId/home': typeof AuthenticatedPartyOldPartyNamePartyIdHomeRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -255,11 +412,27 @@ export interface FileRouteTypes {
     | '/dashboard/'
     | '/feed/'
     | '/notifications/'
+    | '/party/'
     | '/profile/'
     | '/states/'
+    | '/party/$partyName/$partyId'
+    | '/profile/$username/followers'
+    | '/profile/$username/following'
+    | '/profile/$username/history'
+    | '/profile/$username/home'
+    | '/profile/$username/timeline'
     | '/feed/$postId/'
+    | '/profile/$username/'
     | '/states/$stateId/'
+    | '/party/$partyName/$partyId/about'
+    | '/party/$partyName/$partyId/followers'
+    | '/party/$partyName/$partyId/groups'
     | '/party/$partyName/$partyId/home'
+    | '/party/$partyName/$partyId/members'
+    | '/party/$partyName/$partyId/social-links'
+    | '/party/$partyName/$partyId/timeline'
+    | '/party/$partyName/$partyId/'
+    | '/party/old/$partyName/$partyId/home'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -273,17 +446,31 @@ export interface FileRouteTypes {
     | '/auth/signup'
     | '/polling-unit/$pollingUnitId'
     | '/profile-old/$username'
-    | '/profile/$username'
     | '/app-users'
     | '/candidates'
     | '/dashboard'
     | '/feed'
     | '/notifications'
+    | '/party'
     | '/profile'
     | '/states'
+    | '/profile/$username/followers'
+    | '/profile/$username/following'
+    | '/profile/$username/history'
+    | '/profile/$username/home'
+    | '/profile/$username/timeline'
     | '/feed/$postId'
+    | '/profile/$username'
     | '/states/$stateId'
+    | '/party/$partyName/$partyId/about'
+    | '/party/$partyName/$partyId/followers'
+    | '/party/$partyName/$partyId/groups'
     | '/party/$partyName/$partyId/home'
+    | '/party/$partyName/$partyId/members'
+    | '/party/$partyName/$partyId/social-links'
+    | '/party/$partyName/$partyId/timeline'
+    | '/party/$partyName/$partyId'
+    | '/party/old/$partyName/$partyId/home'
   id:
     | '__root__'
     | '/'
@@ -304,11 +491,27 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard/'
     | '/_authenticated/feed/'
     | '/_authenticated/notifications/'
+    | '/_authenticated/party/'
     | '/_authenticated/profile/'
     | '/_authenticated/states/'
+    | '/_authenticated/party/$partyName/$partyId'
+    | '/_authenticated/profile/$username/followers'
+    | '/_authenticated/profile/$username/following'
+    | '/_authenticated/profile/$username/history'
+    | '/_authenticated/profile/$username/home'
+    | '/_authenticated/profile/$username/timeline'
     | '/_authenticated/feed/$postId/'
+    | '/_authenticated/profile/$username/'
     | '/_authenticated/states/$stateId/'
+    | '/_authenticated/party/$partyName/$partyId/about'
+    | '/_authenticated/party/$partyName/$partyId/followers'
+    | '/_authenticated/party/$partyName/$partyId/groups'
     | '/_authenticated/party/$partyName/$partyId/home'
+    | '/_authenticated/party/$partyName/$partyId/members'
+    | '/_authenticated/party/$partyName/$partyId/social-links'
+    | '/_authenticated/party/$partyName/$partyId/timeline'
+    | '/_authenticated/party/$partyName/$partyId/'
+    | '/_authenticated/party/old/$partyName/$partyId/home'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -407,6 +610,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProfileIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/party/': {
+      id: '/_authenticated/party/'
+      path: '/party'
+      fullPath: '/party/'
+      preLoaderRoute: typeof AuthenticatedPartyIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/notifications/': {
       id: '/_authenticated/notifications/'
       path: '/notifications'
@@ -470,6 +680,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStatesStateIdIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/profile/$username/': {
+      id: '/_authenticated/profile/$username/'
+      path: '/'
+      fullPath: '/profile/$username/'
+      preLoaderRoute: typeof AuthenticatedProfileUsernameIndexRouteImport
+      parentRoute: typeof AuthenticatedProfileUsernameRoute
+    }
     '/_authenticated/feed/$postId/': {
       id: '/_authenticated/feed/$postId/'
       path: '/feed/$postId'
@@ -477,15 +694,179 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedFeedPostIdIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/profile/$username/timeline': {
+      id: '/_authenticated/profile/$username/timeline'
+      path: '/timeline'
+      fullPath: '/profile/$username/timeline'
+      preLoaderRoute: typeof AuthenticatedProfileUsernameTimelineRouteImport
+      parentRoute: typeof AuthenticatedProfileUsernameRoute
+    }
+    '/_authenticated/profile/$username/home': {
+      id: '/_authenticated/profile/$username/home'
+      path: '/home'
+      fullPath: '/profile/$username/home'
+      preLoaderRoute: typeof AuthenticatedProfileUsernameHomeRouteImport
+      parentRoute: typeof AuthenticatedProfileUsernameRoute
+    }
+    '/_authenticated/profile/$username/history': {
+      id: '/_authenticated/profile/$username/history'
+      path: '/history'
+      fullPath: '/profile/$username/history'
+      preLoaderRoute: typeof AuthenticatedProfileUsernameHistoryRouteImport
+      parentRoute: typeof AuthenticatedProfileUsernameRoute
+    }
+    '/_authenticated/profile/$username/following': {
+      id: '/_authenticated/profile/$username/following'
+      path: '/following'
+      fullPath: '/profile/$username/following'
+      preLoaderRoute: typeof AuthenticatedProfileUsernameFollowingRouteImport
+      parentRoute: typeof AuthenticatedProfileUsernameRoute
+    }
+    '/_authenticated/profile/$username/followers': {
+      id: '/_authenticated/profile/$username/followers'
+      path: '/followers'
+      fullPath: '/profile/$username/followers'
+      preLoaderRoute: typeof AuthenticatedProfileUsernameFollowersRouteImport
+      parentRoute: typeof AuthenticatedProfileUsernameRoute
+    }
+    '/_authenticated/party/$partyName/$partyId': {
+      id: '/_authenticated/party/$partyName/$partyId'
+      path: '/party/$partyName/$partyId'
+      fullPath: '/party/$partyName/$partyId'
+      preLoaderRoute: typeof AuthenticatedPartyPartyNamePartyIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/party/$partyName/$partyId/': {
+      id: '/_authenticated/party/$partyName/$partyId/'
+      path: '/'
+      fullPath: '/party/$partyName/$partyId/'
+      preLoaderRoute: typeof AuthenticatedPartyPartyNamePartyIdIndexRouteImport
+      parentRoute: typeof AuthenticatedPartyPartyNamePartyIdRoute
+    }
+    '/_authenticated/party/$partyName/$partyId/timeline': {
+      id: '/_authenticated/party/$partyName/$partyId/timeline'
+      path: '/timeline'
+      fullPath: '/party/$partyName/$partyId/timeline'
+      preLoaderRoute: typeof AuthenticatedPartyPartyNamePartyIdTimelineRouteImport
+      parentRoute: typeof AuthenticatedPartyPartyNamePartyIdRoute
+    }
+    '/_authenticated/party/$partyName/$partyId/social-links': {
+      id: '/_authenticated/party/$partyName/$partyId/social-links'
+      path: '/social-links'
+      fullPath: '/party/$partyName/$partyId/social-links'
+      preLoaderRoute: typeof AuthenticatedPartyPartyNamePartyIdSocialLinksRouteImport
+      parentRoute: typeof AuthenticatedPartyPartyNamePartyIdRoute
+    }
+    '/_authenticated/party/$partyName/$partyId/members': {
+      id: '/_authenticated/party/$partyName/$partyId/members'
+      path: '/members'
+      fullPath: '/party/$partyName/$partyId/members'
+      preLoaderRoute: typeof AuthenticatedPartyPartyNamePartyIdMembersRouteImport
+      parentRoute: typeof AuthenticatedPartyPartyNamePartyIdRoute
+    }
     '/_authenticated/party/$partyName/$partyId/home': {
       id: '/_authenticated/party/$partyName/$partyId/home'
-      path: '/party/$partyName/$partyId/home'
+      path: '/home'
       fullPath: '/party/$partyName/$partyId/home'
       preLoaderRoute: typeof AuthenticatedPartyPartyNamePartyIdHomeRouteImport
+      parentRoute: typeof AuthenticatedPartyPartyNamePartyIdRoute
+    }
+    '/_authenticated/party/$partyName/$partyId/groups': {
+      id: '/_authenticated/party/$partyName/$partyId/groups'
+      path: '/groups'
+      fullPath: '/party/$partyName/$partyId/groups'
+      preLoaderRoute: typeof AuthenticatedPartyPartyNamePartyIdGroupsRouteImport
+      parentRoute: typeof AuthenticatedPartyPartyNamePartyIdRoute
+    }
+    '/_authenticated/party/$partyName/$partyId/followers': {
+      id: '/_authenticated/party/$partyName/$partyId/followers'
+      path: '/followers'
+      fullPath: '/party/$partyName/$partyId/followers'
+      preLoaderRoute: typeof AuthenticatedPartyPartyNamePartyIdFollowersRouteImport
+      parentRoute: typeof AuthenticatedPartyPartyNamePartyIdRoute
+    }
+    '/_authenticated/party/$partyName/$partyId/about': {
+      id: '/_authenticated/party/$partyName/$partyId/about'
+      path: '/about'
+      fullPath: '/party/$partyName/$partyId/about'
+      preLoaderRoute: typeof AuthenticatedPartyPartyNamePartyIdAboutRouteImport
+      parentRoute: typeof AuthenticatedPartyPartyNamePartyIdRoute
+    }
+    '/_authenticated/party/old/$partyName/$partyId/home': {
+      id: '/_authenticated/party/old/$partyName/$partyId/home'
+      path: '/party/old/$partyName/$partyId/home'
+      fullPath: '/party/old/$partyName/$partyId/home'
+      preLoaderRoute: typeof AuthenticatedPartyOldPartyNamePartyIdHomeRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
   }
 }
+
+interface AuthenticatedProfileUsernameRouteChildren {
+  AuthenticatedProfileUsernameFollowersRoute: typeof AuthenticatedProfileUsernameFollowersRoute
+  AuthenticatedProfileUsernameFollowingRoute: typeof AuthenticatedProfileUsernameFollowingRoute
+  AuthenticatedProfileUsernameHistoryRoute: typeof AuthenticatedProfileUsernameHistoryRoute
+  AuthenticatedProfileUsernameHomeRoute: typeof AuthenticatedProfileUsernameHomeRoute
+  AuthenticatedProfileUsernameTimelineRoute: typeof AuthenticatedProfileUsernameTimelineRoute
+  AuthenticatedProfileUsernameIndexRoute: typeof AuthenticatedProfileUsernameIndexRoute
+}
+
+const AuthenticatedProfileUsernameRouteChildren: AuthenticatedProfileUsernameRouteChildren =
+  {
+    AuthenticatedProfileUsernameFollowersRoute:
+      AuthenticatedProfileUsernameFollowersRoute,
+    AuthenticatedProfileUsernameFollowingRoute:
+      AuthenticatedProfileUsernameFollowingRoute,
+    AuthenticatedProfileUsernameHistoryRoute:
+      AuthenticatedProfileUsernameHistoryRoute,
+    AuthenticatedProfileUsernameHomeRoute:
+      AuthenticatedProfileUsernameHomeRoute,
+    AuthenticatedProfileUsernameTimelineRoute:
+      AuthenticatedProfileUsernameTimelineRoute,
+    AuthenticatedProfileUsernameIndexRoute:
+      AuthenticatedProfileUsernameIndexRoute,
+  }
+
+const AuthenticatedProfileUsernameRouteWithChildren =
+  AuthenticatedProfileUsernameRoute._addFileChildren(
+    AuthenticatedProfileUsernameRouteChildren,
+  )
+
+interface AuthenticatedPartyPartyNamePartyIdRouteChildren {
+  AuthenticatedPartyPartyNamePartyIdAboutRoute: typeof AuthenticatedPartyPartyNamePartyIdAboutRoute
+  AuthenticatedPartyPartyNamePartyIdFollowersRoute: typeof AuthenticatedPartyPartyNamePartyIdFollowersRoute
+  AuthenticatedPartyPartyNamePartyIdGroupsRoute: typeof AuthenticatedPartyPartyNamePartyIdGroupsRoute
+  AuthenticatedPartyPartyNamePartyIdHomeRoute: typeof AuthenticatedPartyPartyNamePartyIdHomeRoute
+  AuthenticatedPartyPartyNamePartyIdMembersRoute: typeof AuthenticatedPartyPartyNamePartyIdMembersRoute
+  AuthenticatedPartyPartyNamePartyIdSocialLinksRoute: typeof AuthenticatedPartyPartyNamePartyIdSocialLinksRoute
+  AuthenticatedPartyPartyNamePartyIdTimelineRoute: typeof AuthenticatedPartyPartyNamePartyIdTimelineRoute
+  AuthenticatedPartyPartyNamePartyIdIndexRoute: typeof AuthenticatedPartyPartyNamePartyIdIndexRoute
+}
+
+const AuthenticatedPartyPartyNamePartyIdRouteChildren: AuthenticatedPartyPartyNamePartyIdRouteChildren =
+  {
+    AuthenticatedPartyPartyNamePartyIdAboutRoute:
+      AuthenticatedPartyPartyNamePartyIdAboutRoute,
+    AuthenticatedPartyPartyNamePartyIdFollowersRoute:
+      AuthenticatedPartyPartyNamePartyIdFollowersRoute,
+    AuthenticatedPartyPartyNamePartyIdGroupsRoute:
+      AuthenticatedPartyPartyNamePartyIdGroupsRoute,
+    AuthenticatedPartyPartyNamePartyIdHomeRoute:
+      AuthenticatedPartyPartyNamePartyIdHomeRoute,
+    AuthenticatedPartyPartyNamePartyIdMembersRoute:
+      AuthenticatedPartyPartyNamePartyIdMembersRoute,
+    AuthenticatedPartyPartyNamePartyIdSocialLinksRoute:
+      AuthenticatedPartyPartyNamePartyIdSocialLinksRoute,
+    AuthenticatedPartyPartyNamePartyIdTimelineRoute:
+      AuthenticatedPartyPartyNamePartyIdTimelineRoute,
+    AuthenticatedPartyPartyNamePartyIdIndexRoute:
+      AuthenticatedPartyPartyNamePartyIdIndexRoute,
+  }
+
+const AuthenticatedPartyPartyNamePartyIdRouteWithChildren =
+  AuthenticatedPartyPartyNamePartyIdRoute._addFileChildren(
+    AuthenticatedPartyPartyNamePartyIdRouteChildren,
+  )
 
 interface AuthenticatedRouteChildren {
   AuthenticatedHomeRoute: typeof AuthenticatedHomeRoute
@@ -493,17 +874,19 @@ interface AuthenticatedRouteChildren {
   AuthenticatedSearchRoute: typeof AuthenticatedSearchRoute
   AuthenticatedPollingUnitPollingUnitIdRoute: typeof AuthenticatedPollingUnitPollingUnitIdRoute
   AuthenticatedProfileOldUsernameRoute: typeof AuthenticatedProfileOldUsernameRoute
-  AuthenticatedProfileUsernameRoute: typeof AuthenticatedProfileUsernameRoute
+  AuthenticatedProfileUsernameRoute: typeof AuthenticatedProfileUsernameRouteWithChildren
   AuthenticatedAppUsersIndexRoute: typeof AuthenticatedAppUsersIndexRoute
   AuthenticatedCandidatesIndexRoute: typeof AuthenticatedCandidatesIndexRoute
   AuthenticatedDashboardIndexRoute: typeof AuthenticatedDashboardIndexRoute
   AuthenticatedFeedIndexRoute: typeof AuthenticatedFeedIndexRoute
   AuthenticatedNotificationsIndexRoute: typeof AuthenticatedNotificationsIndexRoute
+  AuthenticatedPartyIndexRoute: typeof AuthenticatedPartyIndexRoute
   AuthenticatedProfileIndexRoute: typeof AuthenticatedProfileIndexRoute
   AuthenticatedStatesIndexRoute: typeof AuthenticatedStatesIndexRoute
+  AuthenticatedPartyPartyNamePartyIdRoute: typeof AuthenticatedPartyPartyNamePartyIdRouteWithChildren
   AuthenticatedFeedPostIdIndexRoute: typeof AuthenticatedFeedPostIdIndexRoute
   AuthenticatedStatesStateIdIndexRoute: typeof AuthenticatedStatesStateIdIndexRoute
-  AuthenticatedPartyPartyNamePartyIdHomeRoute: typeof AuthenticatedPartyPartyNamePartyIdHomeRoute
+  AuthenticatedPartyOldPartyNamePartyIdHomeRoute: typeof AuthenticatedPartyOldPartyNamePartyIdHomeRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
@@ -513,18 +896,22 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedPollingUnitPollingUnitIdRoute:
     AuthenticatedPollingUnitPollingUnitIdRoute,
   AuthenticatedProfileOldUsernameRoute: AuthenticatedProfileOldUsernameRoute,
-  AuthenticatedProfileUsernameRoute: AuthenticatedProfileUsernameRoute,
+  AuthenticatedProfileUsernameRoute:
+    AuthenticatedProfileUsernameRouteWithChildren,
   AuthenticatedAppUsersIndexRoute: AuthenticatedAppUsersIndexRoute,
   AuthenticatedCandidatesIndexRoute: AuthenticatedCandidatesIndexRoute,
   AuthenticatedDashboardIndexRoute: AuthenticatedDashboardIndexRoute,
   AuthenticatedFeedIndexRoute: AuthenticatedFeedIndexRoute,
   AuthenticatedNotificationsIndexRoute: AuthenticatedNotificationsIndexRoute,
+  AuthenticatedPartyIndexRoute: AuthenticatedPartyIndexRoute,
   AuthenticatedProfileIndexRoute: AuthenticatedProfileIndexRoute,
   AuthenticatedStatesIndexRoute: AuthenticatedStatesIndexRoute,
+  AuthenticatedPartyPartyNamePartyIdRoute:
+    AuthenticatedPartyPartyNamePartyIdRouteWithChildren,
   AuthenticatedFeedPostIdIndexRoute: AuthenticatedFeedPostIdIndexRoute,
   AuthenticatedStatesStateIdIndexRoute: AuthenticatedStatesStateIdIndexRoute,
-  AuthenticatedPartyPartyNamePartyIdHomeRoute:
-    AuthenticatedPartyPartyNamePartyIdHomeRoute,
+  AuthenticatedPartyOldPartyNamePartyIdHomeRoute:
+    AuthenticatedPartyOldPartyNamePartyIdHomeRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(

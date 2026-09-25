@@ -1,6 +1,7 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { ProfilePageComponent } from "#/components/profile/profile-page";
 import { getPageHeader } from "#/lib/shared/meta";
+import { APP_URL } from "#/lib/config";
 
 export const Route = createFileRoute("/_authenticated/profile/")({
   head: () =>
@@ -13,8 +14,7 @@ export const Route = createFileRoute("/_authenticated/profile/")({
     const username = context?.userDetails?.username;
     if (username) {
       throw redirect({
-        to: "/profile/$username",
-        params: { username },
+        to: APP_URL.profile(username),
       });
     }
   },
