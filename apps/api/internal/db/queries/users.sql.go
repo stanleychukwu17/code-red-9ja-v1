@@ -852,7 +852,9 @@ WHERE
   AND ($6::text IS NULL OR (
       u.first_name ILIKE '%' || $6::text || '%' OR
       u.last_name ILIKE '%' || $6::text || '%' OR
-      u.username ILIKE '%' || $6::text || '%'
+      u.username ILIKE '%' || $6::text || '%' OR
+      (u.first_name || ' ' || u.last_name) ILIKE '%' || $6::text || '%' OR
+      (u.last_name || ' ' || u.first_name) ILIKE '%' || $6::text || '%'
   ))
   AND ($7::text[] IS NULL OR u.account_status = ANY($7::text[]))
   AND ($8::smallint[] IS NULL OR u.current_country = ANY($8::smallint[]))
@@ -904,6 +906,73 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUse
 	var items []ListUsersRow
 	for rows.Next() {
 		var i ListUsersRow
+		if err := rows.Scan(&i.ID, &i.FakeID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const searchUsers = `-- name: SearchUsers :many
+SELECT u.id, u.fake_id FROM users u
+WHERE 
+  u.account_status = 'active'
+  AND ($1::bigint IS NULL OR u.id < $1::bigint)
+  AND ($2::text IS NULL OR (
+      u.first_name ILIKE '%' || $2::text || '%' OR
+      u.last_name ILIKE '%' || $2::text || '%' OR
+      u.username ILIKE '%' || $2::text || '%' OR
+      (u.first_name || ' ' || u.last_name) ILIKE '%' || $2::text || '%' OR
+      (u.last_name || ' ' || u.first_name) ILIKE '%' || $2::text || '%'
+  ))
+  AND ($3::smallint IS NULL OR u.current_country = $3::smallint)
+  AND ($4::smallint IS NULL OR u.current_state = $4::smallint)
+  AND ($5::smallint IS NULL OR u.party_id = $5::smallint)
+  AND ($6::boolean IS NULL OR u.is_politician = $6::boolean)
+  AND ($7::boolean IS NULL OR u.is_verified = $7::boolean)
+ORDER BY u.id DESC
+LIMIT $8::int
+`
+
+type SearchUsersParams struct {
+	Cursor       pgtype.Int8 `json:"cursor"`
+	Search       pgtype.Text `json:"search"`
+	CountryID    pgtype.Int2 `json:"country_id"`
+	StateID      pgtype.Int2 `json:"state_id"`
+	PartyID      pgtype.Int2 `json:"party_id"`
+	IsPolitician pgtype.Bool `json:"is_politician"`
+	IsVerified   pgtype.Bool `json:"is_verified"`
+	LimitNum     int32       `json:"limit_num"`
+}
+
+type SearchUsersRow struct {
+	ID     int64       `json:"id"`
+	FakeID pgtype.Int8 `json:"fake_id"`
+}
+
+// Citizen-facing user search: strictly requires active accounts and filters by text, state, party, politician, and verification.
+func (q *Queries) SearchUsers(ctx context.Context, arg SearchUsersParams) ([]SearchUsersRow, error) {
+	rows, err := q.db.Query(ctx, searchUsers,
+		arg.Cursor,
+		arg.Search,
+		arg.CountryID,
+		arg.StateID,
+		arg.PartyID,
+		arg.IsPolitician,
+		arg.IsVerified,
+		arg.LimitNum,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SearchUsersRow
+	for rows.Next() {
+		var i SearchUsersRow
 		if err := rows.Scan(&i.ID, &i.FakeID); err != nil {
 			return nil, err
 		}

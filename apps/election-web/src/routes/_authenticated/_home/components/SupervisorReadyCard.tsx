@@ -62,7 +62,7 @@ export function SupervisorStartDutyCard({
       <Button
         type="button"
         variant="purple"
-        className="rounded-[16px] mt-3 text-lg"
+        className="rounded-2xl mt-3 text-lg"
         size="4xl"
         onClick={onReadyClick}
       >

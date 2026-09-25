@@ -53,7 +53,7 @@ function RouteComponent() {
             <img
               src={post.image}
               alt={post.author}
-              className="h-[370px] w-full rounded-[16px] object-cover"
+              className="h-[370px] w-full rounded-2xl object-cover"
             />
           ) : null}
 

@@ -685,10 +685,10 @@ export function SelectElectionPage({
           {electionGroups.map((group: any) => {
             const formattedDate = group.election_date
               ? new Date(group.election_date).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                })
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              })
               : "TBD";
 
             return (
@@ -755,9 +755,9 @@ export function ApplicationAcceptedPage({
 
   const electionDateFormatted = assignment?.election_date
     ? new Date(assignment.election_date).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-      })
+      month: "short",
+      day: "numeric",
+    })
     : "Election day";
 
   const Todo = ({ text }: { text: string }) => (
@@ -1125,15 +1125,15 @@ export function FinalScorePage({
               practiceHistory.map((attempt, idx) => {
                 const isToday = attempt.completed_at
                   ? new Date(attempt.completed_at).toDateString() ===
-                    new Date().toDateString()
+                  new Date().toDateString()
                   : true;
 
                 const dateStr =
                   attempt.completed_at && !isToday
                     ? new Date(attempt.completed_at).toLocaleDateString(
-                        "en-US",
-                        { month: "short", day: "numeric", year: "2-digit" },
-                      )
+                      "en-US",
+                      { month: "short", day: "numeric", year: "2-digit" },
+                    )
                     : "Today";
 
                 const displayIndex = practiceHistory.length - idx;
@@ -1509,7 +1509,7 @@ export function DashboardPage({
                     key={item.title}
                     isCompleted={item.isCompleted}
                     title={item.title}
-                    // onClick={() => navigate({ to: "/give-update", search: { isReport: true } })}
+                  // onClick={() => navigate({ to: "/give-update", search: { isReport: true } })}
                   />
                 ))}
                 <div className="mb-2 mt-2 px-4">
@@ -1517,7 +1517,7 @@ export function DashboardPage({
                     type="button"
                     size="extra-large"
                     onClick={handleReportClick}
-                    className="w-full bg-[#2D2D2D] hover:bg-[#3D3D3D] active:bg-[#202020] text-white rounded-[12px]"
+                    className="w-full bg-[#2D2D2D] hover:bg-[#3D3D3D] active:bg-[#202020] text-white rounded-12"
                   >
                     <ReportIcon className="w-5 h-5 shrink-0" />
                     Report

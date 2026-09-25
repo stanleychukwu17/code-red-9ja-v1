@@ -172,7 +172,7 @@ export function PollingAgentPage() {
         currentPollingUnitAssignment?.results_submitted_count &&
         currentPollingUnitAssignment.results_submitted_count > 0 &&
         currentPollingUnitAssignment.results_submitted_count >=
-          (currentPollingUnitAssignment.results_expected_to_submit_count || 1)
+        (currentPollingUnitAssignment.results_expected_to_submit_count || 1)
       ),
     },
     {
@@ -274,7 +274,7 @@ export function PollingAgentPage() {
                           search: { isReport: true },
                         })
                       }
-                      className="w-full bg-[#2D2D2D] hover:bg-[#3D3D3D] active:bg-[#202020] text-white rounded-[12px]"
+                      className="w-full bg-[#2D2D2D] hover:bg-[#3D3D3D] active:bg-[#202020] text-white rounded-12"
                     >
                       <ReportIcon className="w-5 h-5 shrink-0" />
                       Report

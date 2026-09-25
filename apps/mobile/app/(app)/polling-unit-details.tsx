@@ -346,7 +346,7 @@ export default function PollingUnitDetailsScreen() {
               label="Upload Vote Result"
               variant="purple"
               size="lg"
-              className="mb-5 h-[60px] rounded-[16px]"
+              className="mb-5 h-[60px] rounded-2xl"
               onPress={() => setUploadSheetVisible(true)}
             />
 
@@ -354,7 +354,7 @@ export default function PollingUnitDetailsScreen() {
               label="Report this polling unit"
               variant="outlineDanger"
               size="lg"
-              className="mb-4 h-[60px] rounded-[16px]"
+              className="mb-4 h-[60px] rounded-2xl"
               onPress={() => setReportSheetVisible(true)}
               leftAdornment={
                 <MaterialIcons name="campaign" size={18} color="#F52828" />
@@ -465,10 +465,10 @@ function FeedPanel({ onPostPress }: { onPostPress: (id: string) => void }) {
   const posts =
     feedFilter === "All"
       ? [
-          ...POLLING_UNIT_POSTS,
-          ...POLLING_UNIT_REPORTS,
-          ...POLLING_UNIT_SITUATION_REPORTS,
-        ]
+        ...POLLING_UNIT_POSTS,
+        ...POLLING_UNIT_REPORTS,
+        ...POLLING_UNIT_SITUATION_REPORTS,
+      ]
       : feedFilter === "Reports"
         ? POLLING_UNIT_REPORTS
         : POLLING_UNIT_SITUATION_REPORTS;

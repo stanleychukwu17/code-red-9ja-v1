@@ -226,7 +226,7 @@ function LeaderboardCard({
         label="Show all"
         variant="neutral"
         size="lg"
-        className="h-16 rounded-[12px]"
+        className="h-16 rounded-12"
         onPress={onShowAllPress}
       />
     </View>
@@ -271,7 +271,7 @@ function PollingUnitSection({
         className="h-20 flex-row items-center rounded-[18px] bg-[#DDD0FF] px-5 py-5"
         onPress={onOpenDetails}
       >
-        <View className="mr-4 h-11 w-11 items-center justify-center rounded-[12px] bg-[#D0C0FF]">
+        <View className="mr-4 h-11 w-11 items-center justify-center rounded-12 bg-[#D0C0FF]">
           <MaterialIcons name="ballot" size={24} color="#F2A83B" />
         </View>
         <Text className="flex-1 text-[16px] font-medium text-[#222021]">
@@ -342,7 +342,7 @@ function StatesSection({ onShowAllPress }: { onShowAllPress: () => void }) {
           <Pressable
             key={item.state}
             className={cn(
-              "flex-row items-center rounded-[16px] px-3 py-4",
+              "flex-row items-center rounded-2xl px-3 py-4",
               item.highlighted && "bg-[#E6F4EE]",
             )}
             onPress={() =>
@@ -380,7 +380,7 @@ function StatesSection({ onShowAllPress }: { onShowAllPress: () => void }) {
             label="Show all"
             variant="neutral"
             size="lg"
-            className="h-[58px] rounded-[16px] bg-[#EFEFEF]"
+            className="h-[58px] rounded-2xl bg-[#EFEFEF]"
             textClassName="text-black"
             onPress={onShowAllPress}
           />

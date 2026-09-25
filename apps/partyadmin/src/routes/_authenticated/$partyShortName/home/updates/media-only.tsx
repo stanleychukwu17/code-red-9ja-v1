@@ -90,7 +90,7 @@ function UpdatesMediaOnlyComponent() {
   const mediaItems = React.useMemo(() => {
     const allUpdates =
       updatesData?.pages.flatMap((page: any) => page.data?.updates || []) || [];
-    
+
     // Some updates might have multiple media URLs, we can flatten them or just pick the first.
     // The screenshot implies a 1:1 mapping of grid cards to updates, so we'll just pick the first image,
     // or flatten if needed. We'll flatten them so every image gets its own card.
@@ -159,7 +159,7 @@ function UpdatesMediaOnlyComponent() {
 
           return (
             <div key={`${item.id}-${idx}`} className="flex flex-col gap-2">
-              <div className="relative aspect-[3/4] bg-[#e9e9e9] rounded-[16px] overflow-hidden group cursor-pointer">
+              <div className="relative aspect-[3/4] bg-[#e9e9e9] rounded-2xl overflow-hidden group cursor-pointer">
                 <img
                   src={item.mediaUrl}
                   alt="Update media"

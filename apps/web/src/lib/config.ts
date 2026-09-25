@@ -16,7 +16,7 @@ export const APP_URL = {
 	feed: "/feed",
 	home: "/home",
 	notifications: "/notifications",
-	profile: "/profile",
+	profile: (username?: string) => (username ? `/profile/${username}` : "/profile"),
 	search: "/search",
 	pollingUnits: "/polling-units",
 	party: (partyName: string, partyId: string) => `/party/${partyName}/${partyId}/home`,
@@ -86,6 +86,7 @@ export const API_URL = {
 	getPartyProfile: (partyId: number, shortName: string) =>
 		`${api}/parties/${partyId}/${shortName}/profile`,
 	userPreferences: `${api}/user_preferences`,
+	searchUsers: `${api}/users/search`,
 };
 
 export const QUERY_KEYS = {

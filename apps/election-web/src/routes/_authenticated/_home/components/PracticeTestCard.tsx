@@ -38,7 +38,7 @@ export function PracticeTestCard() {
       {/* Launcher action button */}
       <Button
         onClick={() => navigate({ to: "/practice" })}
-        className="w-full rounded-[16px] h-[52px] text-[17px] font-bold mt-1"
+        className="w-full rounded-2xl h-[52px] text-[17px] font-bold mt-1"
         variant="black"
       >
         Take test

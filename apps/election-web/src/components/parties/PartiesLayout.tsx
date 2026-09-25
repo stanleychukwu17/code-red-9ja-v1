@@ -22,13 +22,13 @@ export function PartiesLayout({ children }: PartiesLayoutProps) {
           Parties
         </h1>
 
-        <button className="flex h-12 items-center gap-2 rounded-[12px] bg-[#242424] px-5 text-[16px] text-white transition hover:bg-[#111]">
+        <button className="flex h-12 items-center gap-2 rounded-12 bg-[#242424] px-5 text-[16px] text-white transition hover:bg-[#111]">
           <Plus className="size-5" />
           <span>Add</span>
         </button>
       </div>
 
-      <div className="overflow-hidden rounded-[16px] border border-[#e9e9e9] bg-white">
+      <div className="overflow-hidden rounded-2xl border border-[#e9e9e9] bg-white">
         {children}
       </div>
     </main>

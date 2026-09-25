@@ -122,7 +122,7 @@ export function NotVotingDrawer({
             </Button>
 
             {/* Reminder note */}
-            <div className="bg-[#FDF2D4] rounded-[16px] p-4 flex items-start gap-3 mt-4">
+            <div className="bg-[#FDF2D4] rounded-2xl p-4 flex items-start gap-3 mt-4">
               <TriangleAlert
                 className="w-5 h-5 text-[#916719] shrink-0 mt-0.5"
                 strokeWidth={2.5}
@@ -143,11 +143,10 @@ export function NotVotingDrawer({
                   <button
                     key={r.id}
                     onClick={() => setSelectedReasonId(r.id)}
-                    className={`text-left px-5 py-5 rounded-[12px] text-[17px] transition ${
-                      isSelected
-                        ? "bg-secondary/20 text-c-90"
-                        : "bg-c-5 hover:bg-c-10 text-c-80"
-                    }`}
+                    className={`text-left px-5 py-5 rounded-12 text-[17px] transition ${isSelected
+                      ? "bg-secondary/20 text-c-90"
+                      : "bg-c-5 hover:bg-c-10 text-c-80"
+                      }`}
                   >
                     {r.reason}
                   </button>

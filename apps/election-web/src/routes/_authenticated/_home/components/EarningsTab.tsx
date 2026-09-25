@@ -46,10 +46,10 @@ export function TransactionCard({
 
   const dateStr = transaction.created_at
     ? getLocalDate(transaction.created_at, {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      })
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    })
     : "—";
 
   return (
@@ -128,7 +128,7 @@ export function EarningsTab() {
   return (
     <div className="flex flex-col gap-4">
       {/* Wallet balance highlight card */}
-      <div className="bg-yellow/20 rounded-[16px] pl-3 pr-5 py-3 flex items-center gap-2">
+      <div className="bg-yellow/20 rounded-2xl pl-3 pr-5 py-3 flex items-center gap-2">
         <FancyMoneyBagIcon className="shrink-0 size-7" />
         <div className="space-y-1 w-full">
           <div className="flex items-center text-lg">

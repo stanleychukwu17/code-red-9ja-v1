@@ -128,7 +128,7 @@ function PollingUnitsPage() {
 
   return (
     <div className="flex-1 px-4 pb-12 pt-6 md:px-12 md:pt-7">
-      <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-6">
+      <div className="mx-auto flex w-full max-w-300 flex-col gap-6">
         <AppPageHeader
           title="Find My Polling Unit"
           subtitle="Explore voting stations, live voter consensus, and polling reports"

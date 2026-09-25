@@ -427,6 +427,8 @@ type Querier interface {
 	RollupStateConstituencyFinalResults(ctx context.Context) error
 	RollupStateFinalResults(ctx context.Context) error
 	RollupWardFinalResults(ctx context.Context) error
+	// Citizen-facing user search: strictly requires active accounts and filters by text, state, party, politician, and verification.
+	SearchUsers(ctx context.Context, arg SearchUsersParams) ([]SearchUsersRow, error)
 	SeedElectionGroupFederalConstituencyStats(ctx context.Context, dollar_1 int32) error
 	SeedElectionGroupLGAStats(ctx context.Context, dollar_1 int32) error
 	SeedElectionGroupSenatorialDistrictStats(ctx context.Context, dollar_1 int32) error

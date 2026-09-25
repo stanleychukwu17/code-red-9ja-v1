@@ -254,7 +254,7 @@ export function UsersTable({
   return (
     <div className="w-full">
       <UserTableHeader />
-      <div>
+      <div className="flex flex-col gap-1.5 mt-1">
         {items.map((data, index) => (
           <UserTableTile
             key={`${data.name || data.id}-${index}`}

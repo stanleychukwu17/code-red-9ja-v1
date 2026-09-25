@@ -85,7 +85,7 @@ function RouteComponent() {
             <Metric value="3" label="Reports" />
           </div>
 
-          <div className="flex h-[48px] w-full max-w-[380px] items-center justify-between rounded-[12px] bg-[#ffe29a] px-4">
+          <div className="flex h-[48px] w-full max-w-[380px] items-center justify-between rounded-12 bg-[#ffe29a] px-4">
             <div className="flex items-center gap-3">
               <Flag className="size-4 fill-[#b06d12] text-[#b06d12]" />
               <span className="text-[16px] text-[#1b1a1b]">
@@ -263,7 +263,7 @@ function RouteComponent() {
                 </div>
               ) : (
                 <div className="space-y-6">
-                  <div className="flex items-center gap-3 rounded-[12px] bg-[#ffe29a] px-4 py-4">
+                  <div className="flex items-center gap-3 rounded-12 bg-[#ffe29a] px-4 py-4">
                     <Siren className="size-4 text-[#9a5b0f]" />
                     <p className="text-[16px] text-[#1f1a16]">
                       INEC upload does not match{" "}
@@ -345,8 +345,8 @@ function TopTabs({
             type="button"
             onClick={() => onChange(tab)}
             className={`flex-1 border-b-[3px] pb-4 pt-7 text-center text-[17px] font-bold transition ${active
-                ? "border-black text-[#171416]"
-                : "border-transparent text-[#b5b0b3]"
+              ? "border-black text-[#171416]"
+              : "border-transparent text-[#b5b0b3]"
               }`}
           >
             {tab}
@@ -374,8 +374,8 @@ function PillTabs({
           type="button"
           onClick={() => onChange(tab.key)}
           className={`rounded-full px-5 py-4 text-[16px] font-bold transition ${value === tab.key
-              ? "bg-[#e5e1e6] text-[#171416]"
-              : "bg-transparent text-[#171416]"
+            ? "bg-[#e5e1e6] text-[#171416]"
+            : "bg-transparent text-[#171416]"
             }`}
         >
           {tab.label}

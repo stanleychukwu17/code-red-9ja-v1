@@ -29,7 +29,7 @@ interface PartiesResponse {
  * A responsive select component for choosing a political party.
  * Uses react-query to fetch parties and supports both desktop (popover/command) and mobile (drawer) views.
  */
-export const SelectParty = ({ update, errorMsg, selectedId, className, align = "start", fetchParties }: SelectProps<Party> & {
+export const SelectParty = ({ update, errorMsg, selectedId, className, align = "start", fetchParties }: SelectProps<Party, number | string> & {
   fetchParties: () => Promise<any>;
 }) => {
   const [open, setOpen] = useState(false);

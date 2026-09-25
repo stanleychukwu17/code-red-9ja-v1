@@ -236,7 +236,7 @@ export function PostCard({ post, onPress, showBorder = true }: PostCardProps) {
               {post.tags.map((tag) => (
                 <StyledView
                   key={`${post.id}-${tag}`}
-                  className="rounded-[10px] bg-[#E8E4E8] px-3 py-2"
+                  className="rounded-10 bg-[#E8E4E8] px-3 py-2"
                 >
                   <StyledText className="text-[14px] leading-4 text-[#3A3739]">
                     {tag}

@@ -62,7 +62,7 @@ export default function StatesScreen() {
           showBackButton
         />
         <View className="pt-4">
-          <View className="mx-4 mb-4 flex-row items-center justify-between rounded-[12px] bg-[#E5ECFD] px-5 py-5">
+          <View className="mx-4 mb-4 flex-row items-center justify-between rounded-12 bg-[#E5ECFD] px-5 py-5">
             <Text className="text-[18px] font-medium text-[#1B1A1B]">
               5.5m total votes
             </Text>

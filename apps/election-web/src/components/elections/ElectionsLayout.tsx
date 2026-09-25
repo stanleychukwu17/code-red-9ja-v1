@@ -37,19 +37,19 @@ export function ElectionsLayout({
         </div>
 
         <div className="flex items-center gap-3">
-          <button className="flex h-11 items-center gap-2 rounded-[12px] border border-[#dedede] bg-white px-4 text-[16px] text-[#3b3b3b] transition hover:bg-[#fafafa]">
+          <button className="flex h-11 items-center gap-2 rounded-12 border border-[#dedede] bg-white px-4 text-[16px] text-[#3b3b3b] transition hover:bg-[#fafafa]">
             <SlidersHorizontal className="size-4" />
             <span>Filter</span>
             <span className="ml-1 text-[#8a8a8a]">0</span>
           </button>
-          <button className="flex h-11 items-center gap-2 rounded-[12px] bg-[#242424] px-4 text-[16px] text-white transition hover:bg-[#111]">
+          <button className="flex h-11 items-center gap-2 rounded-12 bg-[#242424] px-4 text-[16px] text-white transition hover:bg-[#111]">
             <Plus className="size-5" />
             <span>Add</span>
           </button>
         </div>
       </div>
 
-      <div className="flex max-w-[494px] items-center gap-3 rounded-[12px] bg-[#f2f2f2] px-4 py-3 text-[#8b8b8b]">
+      <div className="flex max-w-[494px] items-center gap-3 rounded-12 bg-[#f2f2f2] px-4 py-3 text-[#8b8b8b]">
         <Search className="size-5 shrink-0" />
         <input
           aria-label="Search elections"
@@ -58,7 +58,7 @@ export function ElectionsLayout({
         />
       </div>
 
-      <div className="overflow-hidden rounded-[16px] border border-[#e9e9e9] bg-white">
+      <div className="overflow-hidden rounded-2xl border border-[#e9e9e9] bg-white">
         {children}
       </div>
     </main>
@@ -67,7 +67,7 @@ export function ElectionsLayout({
 
 export function ElectionsTabs({ activeTab }: { activeTab: ElectionsLayoutProps["activeTab"] }) {
   return (
-    <div className="inline-flex rounded-[12px] bg-[#f2f2f2] p-1">
+    <div className="inline-flex rounded-12 bg-[#f2f2f2] p-1">
       {TABS.map((tab) => {
         const active = tab.id === activeTab;
         return (
@@ -75,7 +75,7 @@ export function ElectionsTabs({ activeTab }: { activeTab: ElectionsLayoutProps["
             key={tab.id}
             to={tab.href}
             className={cn(
-              "rounded-[10px] px-6 py-2 text-[16px] transition",
+              "rounded-10 px-6 py-2 text-[16px] transition",
               active
                 ? "bg-[#0d7a2f] text-white shadow-sm"
                 : "text-[#1d1d1d] hover:bg-white/70",

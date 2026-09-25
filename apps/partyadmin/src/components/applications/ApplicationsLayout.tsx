@@ -46,7 +46,7 @@ export function ApplicationsLayout({
             Applications
           </h1>
 
-          <div className="inline-flex rounded-[12px] bg-[#efefef] p-1 shadow-[0_1px_0_rgba(0,0,0,0.03)_inset]">
+          <div className="inline-flex rounded-12 bg-[#efefef] p-1 shadow-[0_1px_0_rgba(0,0,0,0.03)_inset]">
             {TABS.map((tab) => {
               const active = tab.id === activeTab;
               return (
@@ -54,7 +54,7 @@ export function ApplicationsLayout({
                   key={tab.id}
                   to={tab.href as never}
                   className={cn(
-                    "rounded-[10px] px-5 py-2 text-[16px] transition",
+                    "rounded-10 px-5 py-2 text-[16px] transition",
                     active
                       ? "bg-[#0f7a31] text-white shadow-sm"
                       : "text-[#141414] hover:bg-white/70",
@@ -73,7 +73,7 @@ export function ApplicationsLayout({
       </div>
 
       <div className="flex items-center justify-between gap-4">
-        <div className="flex w-full max-w-[490px] items-center gap-3 rounded-[12px] bg-[#f3f3f3] px-4 py-3 text-[#9a9a9a]">
+        <div className="flex w-full max-w-[490px] items-center gap-3 rounded-12 bg-[#f3f3f3] px-4 py-3 text-[#9a9a9a]">
           <Search className="size-5 shrink-0" />
           <input
             aria-label="Search applications"
@@ -83,14 +83,14 @@ export function ApplicationsLayout({
         </div>
 
         <div className="flex items-center gap-3">
-          <button className="flex h-11 items-center gap-2 rounded-[12px] bg-[#262626] px-5 text-[16px] font-medium text-white transition hover:bg-[#111]">
+          <button className="flex h-11 items-center gap-2 rounded-12 bg-[#262626] px-5 text-[16px] font-medium text-white transition hover:bg-[#111]">
             Accept all
           </button>
-          <button className="flex h-11 items-center gap-4 rounded-[12px] border border-[#dddddd] bg-white px-4 text-[16px] text-[#404040] transition hover:bg-[#fafafa]">
+          <button className="flex h-11 items-center gap-4 rounded-12 border border-[#dddddd] bg-white px-4 text-[16px] text-[#404040] transition hover:bg-[#fafafa]">
             Export
             <ExportIcon />
           </button>
-          <button className="flex h-11 items-center gap-3 rounded-[12px] border border-[#dddddd] bg-white px-4 text-[16px] text-[#404040] transition hover:bg-[#fafafa]">
+          <button className="flex h-11 items-center gap-3 rounded-12 border border-[#dddddd] bg-white px-4 text-[16px] text-[#404040] transition hover:bg-[#fafafa]">
             <span>Presidential</span>
             <span className="text-[#8d9690]">2027</span>
             <ChevronDown className="size-4 text-[#8d9690]" />
@@ -98,7 +98,7 @@ export function ApplicationsLayout({
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-[16px] bg-white">{children}</div>
+      <div className="overflow-hidden rounded-2xl bg-white">{children}</div>
     </main>
   );
 }
@@ -182,13 +182,13 @@ function DecisionPill({
   return (
     <button
       className={cn(
-        "h-9 rounded-[12px] px-4 text-[15px] font-semibold transition",
+        "h-9 rounded-12 px-4 text-[15px] font-semibold transition",
         variant === "accept" &&
-          "bg-[#10dd84] text-[#083b25] hover:bg-[#08cf79]",
+        "bg-[#10dd84] text-[#083b25] hover:bg-[#08cf79]",
         variant === "reject" &&
-          "bg-[#ececec] text-[#5e6a64] hover:bg-[#e6e6e6]",
+        "bg-[#ececec] text-[#5e6a64] hover:bg-[#e6e6e6]",
         variant === "neutral" &&
-          "bg-[#ececec] text-[#5e6a64] hover:bg-[#e6e6e6]",
+        "bg-[#ececec] text-[#5e6a64] hover:bg-[#e6e6e6]",
       )}
     >
       {children}

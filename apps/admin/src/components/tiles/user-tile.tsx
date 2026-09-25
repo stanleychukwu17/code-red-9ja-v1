@@ -8,7 +8,6 @@ import NoProfileImageIcon from "@repo/ui/icons/no-profile-image-icon";
 import { UserDropdown } from "../dropdowns/UserDropdown";
 import { WEB_URL } from "@/lib/config";
 import { Link } from "@tanstack/react-router";
-import { MapPin } from "lucide-react";
 import { VerificationBadge } from "@repo/ui/components/custom/verification-badge";
 import { Badge } from "@repo/ui/components/badge";
 import { cn } from "@repo/ui/lib/utils";
@@ -126,15 +125,15 @@ const formatDate = (dateString?: string) => {
 // UserTable Tile Header 
 export function UserTableHeader() {
   return (
-    <TileHeader>
+    <TileHeader className="h-10 text-[13px] font-semibold text-c-60">
       <TileLeft>
-        <span className="text-c-90">User</span>
+        <span className="text-c-90">User / Citizen</span>
       </TileLeft>
       <TileRight>
-        <span className="text-c-50 text-[14px] w-35 hidden md:block">
+        <span className="text-c-50 text-[13px] w-36 hidden md:block">
           Role level
         </span>
-        <span className="text-c-50 text-[14px] w-37.5">Date added</span>
+        <span className="text-c-50 text-[13px] w-32">Date added</span>
         <div className="ml-2 w-8 shrink-0" />
       </TileRight>
     </TileHeader>
@@ -148,75 +147,112 @@ export function UserTableTile({ data, refetch }: { data: UserType; refetch?: () 
   const username = getPgString(data.username);
   const verifications = (data.verifications || []) as any[];
 
-  const name = [firstName, lastName].filter(Boolean).join(" ") || username;
+  // Full display name (first_name and last_name are guaranteed present)
+  const name = `${firstName} ${lastName}`.trim();
+
+  // Registration date formatting
   const createdTime = getPgString(data.created_at);
   const dateAdded = formatDate(createdTime);
 
+  // Avatar URL
   const avatar = getPgString(data.avatar);
 
+  // Combined residential location (e.g., "Lagos, Nigeria")
   const state = getPgString(data.state_name);
   const country = getPgString(data.country_name);
   const location = [state, country].filter(Boolean).join(", ");
 
+  // Resolved user roles / permissions level
   let formattedRoleLevel: string = '';
   if (data.roles?.roles_code && data.roles.roles_code.length > 0) {
-    formattedRoleLevel = data.roles.roles_code.join(", ")
+    formattedRoleLevel = data.roles.roles_code.join(", ");
   } else {
-    formattedRoleLevel = "user"
+    formattedRoleLevel = "user";
   }
 
+  // Political party affiliation details
+  const partyLogo = data.party_basic_info?.logo;
+  const partyName = getPgString(data.party_basic_info?.name);
+
   return (
-    <TileRow className="py-10 border-b">
-      <TileLeft>
+    <div className="group flex items-center justify-between gap-4 py-2.5 px-3 rounded-2xl transition hover:bg-c-5">
+      {/* Left side: Avatar + Identity details */}
+      <div className="flex items-center gap-4 min-w-0 flex-1">
         <div className="relative shrink-0">
           {avatar ? (
-            <img src={avatar} alt={name} className="size-12 rounded-full object-cover border border-c-100/30" />
-          ) : (
-            <NoProfileImageIcon className="size-12 rounded-full " />
-          )}
-          {((data.party_id && data.party_id > 0) || data.party_basic_info) && data.party_basic_info?.logo && (
             <img
-              src={data.party_basic_info.logo}
+              src={avatar}
+              alt={name}
+              className="size-13 rounded-full object-cover"
+            />
+          ) : (
+            <NoProfileImageIcon className="size-13 rounded-full" />
+          )}
+          {((data.party_id && data.party_id > 0) || data.party_basic_info) && partyLogo && (
+            <img
+              src={partyLogo}
               alt="Party Logo"
-              title={getPgString(data.party_basic_info.name)}
-              className="absolute -bottom-1 -right-1 size-5.5 rounded-full object-cover border-2 border-white dark:border-c-0 shadow-sm"
+              title={partyName || "Party"}
+              className="absolute -bottom-1 -right-1 size-5 rounded-full object-cover border-2 border-background shadow-xs"
             />
           )}
         </div>
-        <div className="flex flex-col w-full min-w-0">
-          <div className="flex items-center w-full overflow-hidden">
-            <Link
-              to={WEB_URL.users.profile(username) as any} target="_blank"
-              className="capitalize truncate flex items-center gap-1 font-semibold text-[14px] text-c-90 hover:underline hover:text-c-100 transition-colors"
+
+        <div className="flex-1 min-w-0 space-y-0.5">
+          {/* Row 1: Full name + Verification badges + Politician tag */}
+          <div className="flex items-center gap-2 flex-wrap min-w-0">
+            <a
+              href={WEB_URL.users.profile(encodeURIComponent(username))}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-base font-semibold text-c-100 hover:text-primary transition-colors truncate"
             >
-              <span className="truncate">{name}</span>
-            </Link>
+              <span>{name}</span>
+            </a>
+
             {data.is_verified && verifications.length > 0 && (
-              verifications.map((v: any, i: number) => (
-                <VerificationBadge key={`${v.id}-${v.verification_type_id}`} id={v.verification_type_id} title={v.verification_title} />
-              ))
+              <p className="inline-flex items-center gap-0.5 shrink-0">
+                {verifications.map((v: any) => (
+                  <VerificationBadge
+                    key={`${v.id}-${v.verification_type_id}`}
+                    id={v.verification_type_id}
+                    title={v.verification_title}
+                    className="size-4 shrink-0"
+                  />
+                ))}
+              </p>
+            )}
+
+            {data.is_politician && (
+              <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300 shrink-0 leading-tight">
+                Politician
+              </span>
             )}
           </div>
-          <div className="pt-1 pb-0.5 w-full text-[11px] text-c-50 flex items-center gap-1.5 overflow-hidden">
+
+          {/* Row 2: Handle + Location + Account status badge */}
+          <div className="flex items-center gap-2 text-[13px] text-c-50 truncate">
             <span className="truncate">@{username}</span>
+            {location && (
+              <>
+                <span className="inline-block size-1 rounded-full bg-c-30 shrink-0" />
+                <span className="truncate">{location}</span>
+              </>
+            )}
             <UserAccountStatusBadge status={data.account_status} />
           </div>
-          {location && (
-            <div className="flex items-center gap-1 mt-1 text-[11px] text-c-50 w-full overflow-hidden">
-              <MapPin className="size-3 shrink-0" />
-              <span className="truncate">{location}</span>
-            </div>
-          )}
         </div>
-      </TileLeft>
-      <TileRight>
-        <span className="text-[13px] text-c-80 w-35 capitalize truncate">
+      </div>
+
+      {/* Right side: Role level + Date added + Admin action menu */}
+      <div className="flex items-center justify-end gap-3 shrink-0">
+        <span className="text-[13px] text-c-80 w-36 capitalize truncate hidden md:block">
           {formattedRoleLevel || "-"}
         </span>
-        <span className="text-[13px] text-c-70 w-37.5">{dateAdded}</span>
-        <UserDropdown data={data} refetch={refetch} className="ml-2" />
-      </TileRight>
-    </TileRow>
+        <span className="text-[13px] text-c-60 w-32 truncate">{dateAdded}</span>
+        <UserDropdown data={data} refetch={refetch} className="ml-1" />
+      </div>
+    </div>
   );
 }
 

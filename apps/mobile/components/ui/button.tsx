@@ -49,7 +49,7 @@ const buttonLoadingIndicatorColors = {
 } as const;
 
 const buttonSizeClassNames = {
-  md: "h-14 rounded-[16px] px-4",
+  md: "h-14 rounded-2xl px-4",
   lg: "h-16 rounded-[20px] px-5",
   xl: "h-[66px] rounded-[22px] px-6",
 } as const;

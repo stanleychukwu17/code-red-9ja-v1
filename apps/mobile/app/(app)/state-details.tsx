@@ -145,7 +145,7 @@ export default function StateDetailsScreen() {
             <Text className="text-[16px] font-bold text-[#9A5B0F]">302</Text>
           </View>
 
-          <View className="mb-5 flex-row rounded-[16px] bg-[#ECE8EC] py-1">
+          <View className="mb-5 flex-row rounded-2xl bg-[#ECE8EC] py-1">
             {(["Home", "Polling units"] as const).map((item) => {
               const active = tab === item;
 
@@ -153,7 +153,7 @@ export default function StateDetailsScreen() {
                 <Pressable
                   key={item}
                   className={cn(
-                    "flex-1 flex-row items-center justify-between rounded-[12px] px-4 py-3",
+                    "flex-1 flex-row items-center justify-between rounded-12 px-4 py-3",
                     active ? "bg-primary" : "bg-transparent",
                   )}
                   onPress={() => setTab(item)}

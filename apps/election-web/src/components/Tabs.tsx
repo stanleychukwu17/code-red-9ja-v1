@@ -23,7 +23,7 @@ const Tab = ({
 }) => (
   <button
     onClick={() => onTabChange(value)}
-    className={`flex-1 py-2.5 rounded-[10px] text-c-80 font-medium text-center text-[15px] transition cursor-pointer ${activeTab === value ? "bg-primary text-white shadow-sm" : "hover:text-neutral-800"}`}
+    className={`flex-1 py-2.5 rounded-10 text-c-80 font-medium text-center text-[15px] transition cursor-pointer ${activeTab === value ? "bg-primary text-white shadow-sm" : "hover:text-neutral-800"}`}
   >
     {label}
   </button>
@@ -32,7 +32,7 @@ const Tab = ({
 export function Tabs({ tabs, activeTab, onTabChange, className }: TabsProps) {
   return (
     <div
-      className={`bg-c-5 p-1 rounded-[12px] flex items-center justify-between ${className || ""}`}
+      className={`bg-c-5 p-1 rounded-12 flex items-center justify-between ${className || ""}`}
     >
       {tabs.map((tab) => (
         <Tab

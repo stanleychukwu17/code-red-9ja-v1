@@ -34,7 +34,7 @@ function RouteComponent() {
             Presidential Election
           </h2>
 
-          <div className="flex items-center justify-between rounded-[16px] bg-[#e5ecfd] px-5 py-5">
+          <div className="flex items-center justify-between rounded-2xl bg-[#e5ecfd] px-5 py-5">
             <span className="text-[18px] font-semibold text-[#1b1a1b]">
               5.5m total votes
             </span>

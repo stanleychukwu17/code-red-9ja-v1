@@ -143,7 +143,7 @@ export function ArrivalDrawer({
         ) : (
           /* Advisory warning displayed when user clicks 'No' */
           <div className="mt-4 px-1 flex flex-col gap-4">
-            <div className="bg-[#FDF2D4] rounded-[16px] p-4 flex items-start gap-3">
+            <div className="bg-[#FDF2D4] rounded-2xl p-4 flex items-start gap-3">
               <TriangleAlert
                 className="w-6 h-6 text-[#916719] shrink-0 mt-0.5"
                 strokeWidth={2.5}
@@ -155,7 +155,7 @@ export function ArrivalDrawer({
             </div>
             <button
               onClick={onDismiss}
-              className="bg-[#F5F5F5] hover:bg-[#EAEAEA] text-neutral-800 font-bold text-[18px] py-4 rounded-[16px] text-center cursor-pointer transition w-full mt-2"
+              className="bg-[#F5F5F5] hover:bg-[#EAEAEA] text-neutral-800 font-bold text-[18px] py-4 rounded-2xl text-center cursor-pointer transition w-full mt-2"
             >
               Dismiss
             </button>

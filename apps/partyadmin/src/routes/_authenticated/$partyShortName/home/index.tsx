@@ -773,7 +773,7 @@ function SubTab({
     <button
       onClick={onClick}
       className={cn(
-        "px-5 py-2 rounded-[10px] text-[15px] font-medium transition-all",
+        "px-5 py-2 rounded-10 text-[15px] font-medium transition-all",
         isActive
           ? "bg-[#333] text-white shadow-sm"
           : "text-c-60 hover:text-c-90",
@@ -1109,7 +1109,7 @@ function FinancialRow({
     >
       <p className="text-c-70 w-full">{label}</p>
       <span className="font-semibold text-[16px] text-c-80">{value}</span>
-      <Button variant="black" className="h-8 px-3 rounded-[10px]">
+      <Button variant="black" className="h-8 px-3 rounded-10">
         <ArrowHandleIcon className="-rotate-90 size-4" strokeWidth={2} />
       </Button>
     </div>

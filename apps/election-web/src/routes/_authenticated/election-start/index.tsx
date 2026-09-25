@@ -164,7 +164,7 @@ function ElectionStart() {
           parsedTime = d.toISOString();
         }
       }
-    } catch (e) {}
+    } catch (e) { }
 
     setIsUploading(true);
     try {
@@ -263,7 +263,7 @@ function ElectionStart() {
                   <SelectTime
                     initialData={startTime}
                     update={setStartTime}
-                    className="bg-white border-neutral-300 rounded-[12px] py-4"
+                    className="bg-white border-neutral-300 rounded-12 py-4"
                   />
                 </div>
               </div>

@@ -229,7 +229,7 @@ export function StateElectionSupervisorPage() {
                         search: { isReport: true },
                       })
                     }
-                    className="w-full bg-[#2D2D2D] hover:bg-[#3D3D3D] active:bg-[#202020] text-white rounded-[12px]"
+                    className="w-full bg-[#2D2D2D] hover:bg-[#3D3D3D] active:bg-[#202020] text-white rounded-12"
                   >
                     <ReportIcon className="w-5 h-5 shrink-0" />
                     Report
@@ -262,7 +262,7 @@ export function StateElectionSupervisorPage() {
                         search: { isReport: true },
                       })
                     }
-                    className="w-full bg-[#2D2D2D] hover:bg-[#3D3D3D] active:bg-[#202020] text-white rounded-[12px]"
+                    className="w-full bg-[#2D2D2D] hover:bg-[#3D3D3D] active:bg-[#202020] text-white rounded-12"
                   >
                     <ReportIcon className="w-5 h-5 shrink-0" />
                     Report

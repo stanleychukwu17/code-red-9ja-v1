@@ -58,7 +58,7 @@ export function ElectionsLayout({
         />
       </div>
 
-      <div className="overflow-hidden rounded-[16px] border border-[#e9e9e9] bg-white">
+      <div className="overflow-hidden rounded-2xl border border-[#e9e9e9] bg-white">
         {children}
       </div>
     </main>

@@ -26,6 +26,8 @@ import { Route as AuthenticatedFeedIndexRouteImport } from './routes/_authentica
 import { Route as AuthenticatedDashboardIndexRouteImport } from './routes/_authenticated/dashboard/index'
 import { Route as AuthenticatedCandidatesIndexRouteImport } from './routes/_authenticated/candidates/index'
 import { Route as AuthenticatedAppUsersIndexRouteImport } from './routes/_authenticated/app-users/index'
+import { Route as AuthenticatedProfileUsernameRouteImport } from './routes/_authenticated/profile/$username'
+import { Route as AuthenticatedProfileOldUsernameRouteImport } from './routes/_authenticated/profile-old/$username'
 import { Route as AuthenticatedPollingUnitPollingUnitIdRouteImport } from './routes/_authenticated/polling-unit/$pollingUnitId'
 import { Route as AuthenticatedStatesStateIdIndexRouteImport } from './routes/_authenticated/states/$stateId/index'
 import { Route as AuthenticatedFeedPostIdIndexRouteImport } from './routes/_authenticated/feed/$postId/index'
@@ -122,6 +124,18 @@ const AuthenticatedAppUsersIndexRoute =
     path: '/app-users/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedProfileUsernameRoute =
+  AuthenticatedProfileUsernameRouteImport.update({
+    id: '/profile/$username',
+    path: '/profile/$username',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedProfileOldUsernameRoute =
+  AuthenticatedProfileOldUsernameRouteImport.update({
+    id: '/profile-old/$username',
+    path: '/profile-old/$username',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedPollingUnitPollingUnitIdRoute =
   AuthenticatedPollingUnitPollingUnitIdRouteImport.update({
     id: '/polling-unit/$pollingUnitId',
@@ -158,6 +172,8 @@ export interface FileRoutesByFullPath {
   '/auth/onboarding': typeof AuthOnboardingRoute
   '/auth/signup': typeof AuthSignupRoute
   '/polling-unit/$pollingUnitId': typeof AuthenticatedPollingUnitPollingUnitIdRoute
+  '/profile-old/$username': typeof AuthenticatedProfileOldUsernameRoute
+  '/profile/$username': typeof AuthenticatedProfileUsernameRoute
   '/app-users/': typeof AuthenticatedAppUsersIndexRoute
   '/candidates/': typeof AuthenticatedCandidatesIndexRoute
   '/dashboard/': typeof AuthenticatedDashboardIndexRoute
@@ -180,6 +196,8 @@ export interface FileRoutesByTo {
   '/auth/onboarding': typeof AuthOnboardingRoute
   '/auth/signup': typeof AuthSignupRoute
   '/polling-unit/$pollingUnitId': typeof AuthenticatedPollingUnitPollingUnitIdRoute
+  '/profile-old/$username': typeof AuthenticatedProfileOldUsernameRoute
+  '/profile/$username': typeof AuthenticatedProfileUsernameRoute
   '/app-users': typeof AuthenticatedAppUsersIndexRoute
   '/candidates': typeof AuthenticatedCandidatesIndexRoute
   '/dashboard': typeof AuthenticatedDashboardIndexRoute
@@ -204,6 +222,8 @@ export interface FileRoutesById {
   '/auth/onboarding': typeof AuthOnboardingRoute
   '/auth/signup': typeof AuthSignupRoute
   '/_authenticated/polling-unit/$pollingUnitId': typeof AuthenticatedPollingUnitPollingUnitIdRoute
+  '/_authenticated/profile-old/$username': typeof AuthenticatedProfileOldUsernameRoute
+  '/_authenticated/profile/$username': typeof AuthenticatedProfileUsernameRoute
   '/_authenticated/app-users/': typeof AuthenticatedAppUsersIndexRoute
   '/_authenticated/candidates/': typeof AuthenticatedCandidatesIndexRoute
   '/_authenticated/dashboard/': typeof AuthenticatedDashboardIndexRoute
@@ -228,6 +248,8 @@ export interface FileRouteTypes {
     | '/auth/onboarding'
     | '/auth/signup'
     | '/polling-unit/$pollingUnitId'
+    | '/profile-old/$username'
+    | '/profile/$username'
     | '/app-users/'
     | '/candidates/'
     | '/dashboard/'
@@ -250,6 +272,8 @@ export interface FileRouteTypes {
     | '/auth/onboarding'
     | '/auth/signup'
     | '/polling-unit/$pollingUnitId'
+    | '/profile-old/$username'
+    | '/profile/$username'
     | '/app-users'
     | '/candidates'
     | '/dashboard'
@@ -273,6 +297,8 @@ export interface FileRouteTypes {
     | '/auth/onboarding'
     | '/auth/signup'
     | '/_authenticated/polling-unit/$pollingUnitId'
+    | '/_authenticated/profile-old/$username'
+    | '/_authenticated/profile/$username'
     | '/_authenticated/app-users/'
     | '/_authenticated/candidates/'
     | '/_authenticated/dashboard/'
@@ -416,6 +442,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppUsersIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/profile/$username': {
+      id: '/_authenticated/profile/$username'
+      path: '/profile/$username'
+      fullPath: '/profile/$username'
+      preLoaderRoute: typeof AuthenticatedProfileUsernameRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/profile-old/$username': {
+      id: '/_authenticated/profile-old/$username'
+      path: '/profile-old/$username'
+      fullPath: '/profile-old/$username'
+      preLoaderRoute: typeof AuthenticatedProfileOldUsernameRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/polling-unit/$pollingUnitId': {
       id: '/_authenticated/polling-unit/$pollingUnitId'
       path: '/polling-unit/$pollingUnitId'
@@ -452,6 +492,8 @@ interface AuthenticatedRouteChildren {
   AuthenticatedPollingUnitsRoute: typeof AuthenticatedPollingUnitsRoute
   AuthenticatedSearchRoute: typeof AuthenticatedSearchRoute
   AuthenticatedPollingUnitPollingUnitIdRoute: typeof AuthenticatedPollingUnitPollingUnitIdRoute
+  AuthenticatedProfileOldUsernameRoute: typeof AuthenticatedProfileOldUsernameRoute
+  AuthenticatedProfileUsernameRoute: typeof AuthenticatedProfileUsernameRoute
   AuthenticatedAppUsersIndexRoute: typeof AuthenticatedAppUsersIndexRoute
   AuthenticatedCandidatesIndexRoute: typeof AuthenticatedCandidatesIndexRoute
   AuthenticatedDashboardIndexRoute: typeof AuthenticatedDashboardIndexRoute
@@ -470,6 +512,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedSearchRoute: AuthenticatedSearchRoute,
   AuthenticatedPollingUnitPollingUnitIdRoute:
     AuthenticatedPollingUnitPollingUnitIdRoute,
+  AuthenticatedProfileOldUsernameRoute: AuthenticatedProfileOldUsernameRoute,
+  AuthenticatedProfileUsernameRoute: AuthenticatedProfileUsernameRoute,
   AuthenticatedAppUsersIndexRoute: AuthenticatedAppUsersIndexRoute,
   AuthenticatedCandidatesIndexRoute: AuthenticatedCandidatesIndexRoute,
   AuthenticatedDashboardIndexRoute: AuthenticatedDashboardIndexRoute,

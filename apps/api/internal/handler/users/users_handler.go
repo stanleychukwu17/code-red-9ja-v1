@@ -36,6 +36,7 @@ type UsersService interface {
 	UpdateUserProfile(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, gender, avatar string, avatarFileId *int64, countryID, stateID int16, cityID int32) error
 	UpdateUserProfileDetails(ctx context.Context, userID int64, occupationID *int16, educationalStatus, highestDegree, graduationYear, schoolName, religion, maritalStatus, educationLevel, address string) error
 	ListUsers(ctx context.Context, arg queries.ListUsersParams) ([]queries.ListUsersRow, error)
+	SearchUsers(ctx context.Context, arg queries.SearchUsersParams) ([]queries.SearchUsersRow, error)
 	DeleteUserAccount(ctx context.Context, id int64, fakeID int64) error
 	AdminUpdateUser(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, username, gender, avatar string, avatarFileId *int64, countryID, stateID int16, cityID int32, stateOfOrigin int16) error
 
@@ -534,6 +535,136 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.utils.RespondSuccess(w, http.StatusOK, "Users retrieved successfully", map[string]interface{}{
+		"users": fullUsers,
+		"meta": map[string]interface{}{
+			"next_cursor": nextCursor,
+			"has_more":    hasMore,
+		},
+	})
+}
+
+// SearchUsers handles GET /api/v1/users/search
+// @Summary      Search active users/citizens
+// @Description  Citizen-facing search: returns only active citizens filtered by search query, state, party, politician, or verification status.
+// @Tags         Users
+// @Produce      json
+// @Param        q              query     string  false  "Search term (name or username)"
+// @Param        state_id       query     int     false  "Filter by State ID"
+// @Param        party_id       query     int     false  "Filter by Party ID"
+// @Param        is_politician  query     bool    false  "Filter by politician status"
+// @Param        is_verified    query     bool    false  "Filter by verification status"
+// @Param        limit          query     int     false  "Limit (default 20, max 50)"
+// @Param        cursor         query     string  false  "Cursor (ID of last record)"
+// @Success      200            {object}  map[string]interface{}
+// @Failure      400            {object}  map[string]interface{}
+// @Security     BearerAuth
+// @Router       /users/search [get]
+func (h *Handler) SearchUsers(w http.ResponseWriter, r *http.Request) {
+	// Verify that the request is from an authenticated user
+	_, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
+	if !ok {
+		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	// Read search terms ('q' prioritized, fallback to 'search')
+	search := strings.TrimSpace(r.URL.Query().Get("q"))
+	if search == "" {
+		search = strings.TrimSpace(r.URL.Query().Get("search"))
+	}
+
+	// Extract query filter parameters
+	countryIDStr := strings.TrimSpace(r.URL.Query().Get("country_id"))
+	stateIDStr := strings.TrimSpace(r.URL.Query().Get("state_id"))
+	partyIDStr := strings.TrimSpace(r.URL.Query().Get("party_id"))
+	isPoliticianStr := strings.TrimSpace(r.URL.Query().Get("is_politician"))
+	isVerifiedStr := strings.TrimSpace(r.URL.Query().Get("is_verified"))
+
+	// A search query of at least 3 characters is required to prevent broad scans
+	if len(search) < 3 {
+		h.utils.RespondSuccess(w, http.StatusOK, "Search results", map[string]interface{}{
+			"users": []queries.UserWithPlaces{},
+			"meta": map[string]interface{}{
+				"next_cursor": "",
+				"has_more":    false,
+			},
+		})
+		return
+	}
+
+	// Parse pagination with a hard cap to avoid excessively large payloads
+	limit, cursor := parsePaginationParams(r)
+	if limit > 50 {
+		limit = 50
+	}
+
+	// Query for limit + 1 to accurately detect if more pages exist without a separate count
+	arg := queries.SearchUsersParams{
+		LimitNum: int32(limit + 1),
+	}
+
+	if cursor > 0 {
+		arg.Cursor = pgtype.Int8{Int64: cursor, Valid: true}
+	}
+	if search != "" {
+		arg.Search = pgtype.Text{String: search, Valid: true}
+	}
+	if countryIDStr != "" {
+		if cid, err := strconv.ParseInt(countryIDStr, 10, 16); err == nil && cid > 0 {
+			arg.CountryID = pgtype.Int2{Int16: int16(cid), Valid: true}
+		}
+	}
+	if stateIDStr != "" {
+		if sid, err := strconv.ParseInt(stateIDStr, 10, 16); err == nil && sid > 0 {
+			arg.StateID = pgtype.Int2{Int16: int16(sid), Valid: true}
+		}
+	}
+	if partyIDStr != "" {
+		if pid, err := strconv.ParseInt(partyIDStr, 10, 16); err == nil && pid > 0 {
+			arg.PartyID = pgtype.Int2{Int16: int16(pid), Valid: true}
+		}
+	}
+	if isPoliticianStr != "" {
+		if b, err := strconv.ParseBool(isPoliticianStr); err == nil {
+			arg.IsPolitician = pgtype.Bool{Bool: b, Valid: true}
+		}
+	}
+	if isVerifiedStr != "" {
+		if b, err := strconv.ParseBool(isVerifiedStr); err == nil {
+			arg.IsVerified = pgtype.Bool{Bool: b, Valid: true}
+		}
+	}
+
+	// Search matching active users
+	matchingUsers, err := h.usersService.SearchUsers(r.Context(), arg)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to search users: "+err.Error())
+		return
+	}
+
+	// Check if more pages exist (if DB returned limit + 1 items), and set cursor to the last fetched user
+	hasMore := len(matchingUsers) > limit
+	nextCursor := ""
+	if len(matchingUsers) > 0 {
+		nextCursor = strconv.FormatInt(matchingUsers[len(matchingUsers)-1].ID, 10)
+	}
+
+	// Collect fake IDs to hydrate full profiles including relations (places, badges, etc.)
+	fakeIDs := make([]int64, 0, len(matchingUsers))
+	for _, u := range matchingUsers {
+		if u.FakeID.Valid {
+			fakeIDs = append(fakeIDs, u.FakeID.Int64)
+		}
+	}
+
+	fullUsers, err := h.usersService.GetUsersByFakeIDs(r.Context(), fakeIDs)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch user profiles: "+err.Error())
+		return
+	}
+
+	// Return results and pagination metadata
 	h.utils.RespondSuccess(w, http.StatusOK, "Users retrieved successfully", map[string]interface{}{
 		"users": fullUsers,
 		"meta": map[string]interface{}{

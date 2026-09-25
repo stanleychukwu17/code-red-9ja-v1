@@ -114,6 +114,12 @@ func (s *UsersService) GetUserByFakeID(ctx context.Context, fakeID int64) (queri
 		}
 	}
 
+	return s.fetchAndCacheUserByFakeID(ctx, fakeID, userInfoKey)
+}
+
+// fetchAndCacheUserByFakeID fetches the full user profile from the database,
+// builds the UserWithPlaces struct, writes it to Redis, and returns the result.
+func (s *UsersService) fetchAndCacheUserByFakeID(ctx context.Context, fakeID int64, userInfoKey string) (queries.UserWithPlaces, error) {
 	// Fetch user info from DB
 	user, err := s.queries.GetUserByFakeID(ctx, pgtype.Int8{Int64: fakeID, Valid: true})
 	if err != nil {
@@ -215,15 +221,17 @@ func (s *UsersService) GetUsersByFakeIDs(ctx context.Context, fakeIDs []int64) (
 	}
 
 	if len(missedIndices) > 0 {
-		var g errgroup.Group // errgroup will run the GetUserByFakeID in a separate goroutine for each missed index
+		var g errgroup.Group // errgroup will run in a separate goroutine for each missed index
 		// Unleash full concurrency! RDS Proxy will handle the DB connections.
 		var mu sync.Mutex // mutex to protect the results slice from race conditions
 
 		for _, idx := range missedIndices {
 			fakeID := fakeIDs[idx]
+			key := keys[idx]
 			g.Go(func() error {
-				// s.GetUserByFakeID handles fetching from DB and caching it in Redis
-				user, err := s.GetUserByFakeID(ctx, fakeID)
+				// Bypass redundant Redis GET since MGET already confirmed this key was a miss;
+				// fetch directly from DB and cache back into Redis.
+				user, err := s.fetchAndCacheUserByFakeID(ctx, fakeID, key)
 				if err != nil {
 					// Return error to short-circuit if a critical failure occurs
 					return err
@@ -446,6 +454,11 @@ func (s *UsersService) UpdateUserProfile(ctx context.Context, id int64, fakeID i
 // ListUsers retrieves a paginated list of users based on provided parameters.
 func (s *UsersService) ListUsers(ctx context.Context, arg queries.ListUsersParams) ([]queries.ListUsersRow, error) {
 	return s.queries.ListUsers(ctx, arg)
+}
+
+// SearchUsers retrieves active users matching citizen search and filter criteria.
+func (s *UsersService) SearchUsers(ctx context.Context, arg queries.SearchUsersParams) ([]queries.SearchUsersRow, error) {
+	return s.queries.SearchUsers(ctx, arg)
 }
 
 // DeleteUserAccount removes a user by ID and invalidates their user info cache.

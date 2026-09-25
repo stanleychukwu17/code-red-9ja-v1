@@ -100,7 +100,7 @@ export function ApplicationsCard() {
         <Button
           type="button"
           variant="outline"
-          className="rounded-[16px] mt-3 text-lg"
+          className="rounded-2xl mt-3 text-lg"
           size="4xl"
           onClick={() => navigate({ to: "/applications" })}
         >
@@ -132,7 +132,7 @@ export function ApplicationsCard() {
       <Button
         type="button"
         variant="purple"
-        className="rounded-[16px] mt-3 text-lg"
+        className="rounded-2xl mt-3 text-lg"
         size="4xl"
         onClick={() => navigate({ to: "/applications/apply" })}
       >

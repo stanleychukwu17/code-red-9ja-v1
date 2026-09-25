@@ -123,7 +123,7 @@ function Segment({
     <Pressable
       onPress={onPress}
       className={cn(
-        "flex-1 flex-row items-center justify-between rounded-[12px] px-4 py-3",
+        "flex-1 flex-row items-center justify-between rounded-12 px-4 py-3",
         active ? "bg-primary" : "bg-transparent",
       )}
     >

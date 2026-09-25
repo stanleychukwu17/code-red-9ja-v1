@@ -40,7 +40,7 @@ export function PartyAdminsLayout({
           <h1 className="text-[26px] font-semibold tracking-[-0.03em] text-[#1d1d1d]">
             Party members
           </h1>
-          <div className="inline-flex rounded-[12px] bg-[#efefee] p-1">
+          <div className="inline-flex rounded-12 bg-[#efefee] p-1">
             {TABS.map((tab) => {
               const active = tab.id === activeTab;
               return (
@@ -48,7 +48,7 @@ export function PartyAdminsLayout({
                   key={tab.id}
                   to={tab.href as never}
                   className={cn(
-                    "rounded-[10px] px-6 py-2 text-[16px] transition",
+                    "rounded-10 px-6 py-2 text-[16px] transition",
                     active
                       ? "bg-[#0f7a31] text-white shadow-sm"
                       : "text-[#1d1d1d] hover:bg-white/70",
@@ -62,13 +62,13 @@ export function PartyAdminsLayout({
         </div>
 
         <div className="flex items-center gap-3">
-          <button className="flex h-11 items-center gap-4 rounded-[12px] border border-[#dfdfdf] bg-white px-4 text-[16px] text-[#3b3b3b] transition hover:bg-[#fafafa]">
+          <button className="flex h-11 items-center gap-4 rounded-12 border border-[#dfdfdf] bg-white px-4 text-[16px] text-[#3b3b3b] transition hover:bg-[#fafafa]">
             Export
             <ExportIcon />
           </button>
 
           {showElectionFilter ? (
-            <button className="flex h-11 items-center gap-3 rounded-[12px] border border-[#dfdfdf] bg-white px-4 text-[16px] text-[#404040] transition hover:bg-[#fafafa]">
+            <button className="flex h-11 items-center gap-3 rounded-12 border border-[#dfdfdf] bg-white px-4 text-[16px] text-[#404040] transition hover:bg-[#fafafa]">
               <span>Presidential</span>
               <span className="text-[#8d9690]">2027</span>
               <ChevronDown className="size-4 text-[#8d9690]" />
@@ -77,16 +77,16 @@ export function PartyAdminsLayout({
         </div>
       </div>
 
-      <div className="flex max-w-[490px] items-center gap-3 rounded-[12px] bg-[#f2f2f2] px-4 py-3 text-[#8b8b8b]">
-        <Search className="size-5 shrink-0 text-[#868686]" />
+      <div className="flex h-13 max-w-122.5 items-center gap-3 rounded-2xl bg-sidebar-softer px-4 text-c-50 transition">
+        <Search className="size-5 shrink-0 text-c-50" />
         <input
           aria-label="Search party members"
           placeholder="Search"
-          className="w-full bg-transparent text-[16px] outline-none placeholder:text-[#a3a3a3]"
+          className="w-full bg-transparent text-base text-c-90 outline-none placeholder:text-c-40"
         />
       </div>
 
-      <div className="overflow-hidden rounded-[16px] bg-white">{children}</div>
+      <div className="overflow-hidden rounded-2xl bg-white">{children}</div>
     </main>
   );
 }

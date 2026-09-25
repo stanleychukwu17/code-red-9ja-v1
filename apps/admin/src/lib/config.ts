@@ -50,7 +50,7 @@ export const APP_URL = {
 const web = `${WEB_DNS}`;
 export const WEB_URL = {
   users: {
-    profile: (username: string) => `${web}/users/profile/${username}`,
+    profile: (username: string) => `${web}/profile/${username}`,
   },
   parties: {
     profile: (shortName: string, id: number) =>

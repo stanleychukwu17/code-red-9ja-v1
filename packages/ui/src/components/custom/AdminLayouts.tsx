@@ -1,7 +1,7 @@
 import { IconInput } from "@repo/ui/components/input";
 import { cn } from "../../lib/utils";
 import { Link } from "@tanstack/react-router";
-import { Ellipsis, SlidersHorizontal } from "lucide-react";
+import { Ellipsis, Search, SlidersHorizontal } from "lucide-react";
 import type { ReactNode } from "react";
 import PlusIcon from "../../icons/plus-icon";
 
@@ -374,13 +374,38 @@ export function PageSearchLayer({
 }) {
   return (
     <div className={cn("flex items-center justify-between gap-3", className)}>
-      <IconInput
-        aria-label={ariaLabel}
-        placeholder={placeholder}
-        className={cn("w-full max-w-[490px]", inputClassName)}
-        value={value}
-        onChange={onChange}
-      />
+      <div
+        className={cn(
+          "flex h-13 w-full max-w-[490px] items-center gap-3 rounded-2xl bg-sidebar-softer px-4 transition",
+          inputClassName,
+        )}
+      >
+        <Search className="size-5 text-c-50 shrink-0" />
+        <input
+          type="text"
+          aria-label={ariaLabel}
+          placeholder={placeholder}
+          value={value}
+          onChange={onChange}
+          className="w-full bg-transparent text-base text-c-90 outline-none placeholder:text-c-40"
+        />
+        {value ? (
+          <button
+            type="button"
+            onClick={() => {
+              if (onChange) {
+                const syntheticEvent = {
+                  target: { value: "" },
+                } as React.ChangeEvent<HTMLInputElement>;
+                onChange(syntheticEvent);
+              }
+            }}
+            className="text-xs font-semibold text-c-50 hover:text-c-90 shrink-0 cursor-pointer transition-colors"
+          >
+            Clear
+          </button>
+        ) : null}
+      </div>
 
       <div className="flex items-center gap-3">{rightComponent}</div>
     </div>

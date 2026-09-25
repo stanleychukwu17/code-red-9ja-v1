@@ -44,7 +44,7 @@ export function PostFooter({
       <div className="flex flex-wrap items-center gap-3">
         <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
           <DrawerTrigger asChild>
-            <Button variant="outline" className="rounded-[12px] gap-2">
+            <Button variant="outline" className="rounded-12 gap-2">
               <Plus className="w-[18px] h-[18px]" strokeWidth={2.5} /> Report
               Type
             </Button>
@@ -67,11 +67,10 @@ export function PostFooter({
                       <button
                         key={tag}
                         onClick={() => toggleTag(tag)}
-                        className={`text-left p-4 rounded-[12px] font-medium text-[16px] transition ${
-                          selectedTags.includes(tag)
+                        className={`text-left p-4 rounded-12 font-medium text-[16px] transition ${selectedTags.includes(tag)
                             ? "bg-[#E6FBF2] text-[#0F4C3A] border border-[#00DF82]/30"
                             : "bg-[#F5F5F5] text-neutral-800 border border-transparent hover:bg-neutral-200"
-                        }`}
+                          }`}
                       >
                         {tag}
                       </button>
@@ -94,7 +93,7 @@ export function PostFooter({
 
         <Button
           variant="outline"
-          className="rounded-[12px] gap-2"
+          className="rounded-12 gap-2"
           onClick={onGalleryClick}
         >
           <ImageIcon className="w-[18px] h-[18px]" strokeWidth={2.5} />{" "}

@@ -63,6 +63,8 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 CREATE INDEX idx_users_first_name_trgm ON users USING gin (first_name gin_trgm_ops);
 CREATE INDEX idx_users_last_name_trgm ON users USING gin (last_name gin_trgm_ops);
 CREATE INDEX idx_users_username_trgm ON users USING gin (username gin_trgm_ops);
+CREATE INDEX idx_users_fullname_trgm ON users USING gin (((first_name || ' ' || last_name)) gin_trgm_ops);
+CREATE INDEX idx_users_reverse_fullname_trgm ON users USING gin (((last_name || ' ' || first_name)) gin_trgm_ops);
 
 
 -- USER BANK ACCOUNTS TABLE

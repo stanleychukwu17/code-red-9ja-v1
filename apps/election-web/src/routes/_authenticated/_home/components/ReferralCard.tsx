@@ -84,7 +84,7 @@ export function ReferralCard({ onClick, onCopyClick }: ReferralCardProps) {
       <Button
         type="button"
         variant="purple"
-        className="rounded-[16px] mt-1 text-lg font-bold h-[52px]"
+        className="rounded-2xl mt-1 text-lg font-bold h-[52px]"
         onClick={onClick}
       >
         View Referrals

@@ -157,7 +157,7 @@ export default function PostScreen() {
             ) : null}
 
             {text.length === 0 && (
-              <View className="mt-5 rounded-[12px] bg-[#CFECDD] px-4 py-3">
+              <View className="mt-5 rounded-12 bg-[#CFECDD] px-4 py-3">
                 <Text className="text-[16px] font-medium leading-7 text-[#203029]">
                   Tell us what&apos;s happening at your polling unit
                 </Text>
@@ -169,7 +169,7 @@ export default function PostScreen() {
             <View className="mt-auto flex-row gap-3">
               <Pressable
                 onPress={pickFromGallery}
-                className="flex-1 flex-row items-center justify-center gap-2 rounded-[16px] bg-[#E7E7E6] py-5"
+                className="flex-1 flex-row items-center justify-center gap-2 rounded-2xl bg-[#E7E7E6] py-5"
               >
                 <MaterialIcons name="image" size={26} color="#8E898B" />
 
@@ -179,7 +179,7 @@ export default function PostScreen() {
               </Pressable>
               <Pressable
                 onPress={takePhoto}
-                className="flex-1 flex-row items-center justify-center gap-2 rounded-[16px] bg-[#E7E7E6] py-5"
+                className="flex-1 flex-row items-center justify-center gap-2 rounded-2xl bg-[#E7E7E6] py-5"
               >
                 <MaterialIcons name="camera-alt" size={26} color="#8E898B" />
                 <Text className="text-center text-[18px] font-bold text-[#203029]">

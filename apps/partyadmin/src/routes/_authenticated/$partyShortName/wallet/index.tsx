@@ -126,11 +126,11 @@ export interface WalletTransaction {
   transaction_reference: string;
   type: "credit" | "debit";
   transaction_category:
-    | "wallet_funding"
-    | "wallet_withdrawal"
-    | "slot_purchase"
-    | "marketing_campaign"
-    | "allowance_deposit";
+  | "wallet_funding"
+  | "wallet_withdrawal"
+  | "slot_purchase"
+  | "marketing_campaign"
+  | "allowance_deposit";
   amount_kobo: number;
   balance_after_kobo: number;
   payer_name: string | null;
@@ -303,7 +303,7 @@ function WalletQuickStatCard({
   return (
     <div
       className={cn(
-        "rounded-[12px] px-5 py-4 flex flex-col justify-between flex-1",
+        "rounded-12 px-5 py-4 flex flex-col justify-between flex-1",
         bgColorClass,
       )}
     >
@@ -328,7 +328,7 @@ function WalletQuickStatCard({
 
             <button
               onClick={onClick}
-              className="h-10 px-5 rounded-[12px] bg-[#1f1f1f] hover:bg-black text-white text-[14px] font-semibold transition cursor-pointer shrink-0"
+              className="h-10 px-5 rounded-12 bg-[#1f1f1f] hover:bg-black text-white text-[14px] font-semibold transition cursor-pointer shrink-0"
             >
               {buttonLabel}
             </button>
@@ -482,10 +482,10 @@ export function TransactionCard({
 
   const dateStr = transaction.created_at
     ? getLocalDate(transaction.created_at, {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      })
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    })
     : "—";
 
   return (
@@ -538,7 +538,7 @@ function WalletAction({
     <button
       onClick={onClick}
       className={cn(
-        "flex h-10 items-center gap-2 rounded-[12px] px-4 font-medium transition cursor-pointer",
+        "flex h-10 items-center gap-2 rounded-12 px-4 font-medium transition cursor-pointer",
         variant === "success"
           ? "bg-[#10dd84] text-[#093920] hover:bg-[#09d57c]"
           : "bg-[#252525] text-white hover:bg-[#111]",

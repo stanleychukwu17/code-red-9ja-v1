@@ -502,6 +502,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Put("/api/v1/user_preferences", usersHandler.UpdateUserPreferences)
 		r.Patch("/api/v1/auth/onboarding", authHandler.CompleteOnboarding) // Complete onboarding step
 		r.Get(utils.ApiUrls.Users.ListUsers, usersHandler.ListUsers)
+		r.Get(utils.ApiUrls.Users.SearchUsers, usersHandler.SearchUsers)
 		r.Put("/api/v1/admin/users/{id}", usersHandler.AdminUpdateUser)
 		r.Get("/api/v1/admin/users/{id}/more-info", usersHandler.AdminGetUserMoreInfo)
 		r.Put("/api/v1/admin/users/{id}/more-info", usersHandler.AdminUpdateUserMoreInfo)

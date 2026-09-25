@@ -107,7 +107,7 @@ export function ElectionStatusCard({
       <Button
         type="button"
         variant="secondary"
-        className="rounded-[16px] mt-1 text-lg font-bold h-[52px]"
+        className="rounded-2xl mt-1 text-lg font-bold h-[52px]"
         onClick={hasStarted ? onEndClick : onStartClick}
       >
         {hasStarted ? "Yes, it has ended" : "Yes, it has started"}

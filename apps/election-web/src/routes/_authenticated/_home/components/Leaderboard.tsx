@@ -153,7 +153,7 @@ export function CandidatesLeaderboard({
 					type="button"
 					size="extra-large"
 					onClick={(e) => interceptClick(e)}
-					className="bg-[#2D2D2D] hover:bg-[#3D3D3D] active:bg-[#202020] text-white rounded-[12px]"
+					className="bg-[#2D2D2D] hover:bg-[#3D3D3D] active:bg-[#202020] text-white rounded-12"
 				>
 					Show all
 				</Button>
@@ -170,7 +170,7 @@ export function CandidatesLeaderboard({
 								navigate({ to: "/give-update", search: { isReport: true } });
 							}
 						}}
-						className="bg-[#2D2D2D] hover:bg-[#3D3D3D] active:bg-[#202020] text-white rounded-[12px]"
+						className="bg-[#2D2D2D] hover:bg-[#3D3D3D] active:bg-[#202020] text-white rounded-12"
 					>
 						<ReportIcon className="w-5 h-5 shrink-0" />
 						Report

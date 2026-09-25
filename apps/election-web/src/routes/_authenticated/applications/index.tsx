@@ -153,8 +153,8 @@ function ApplicationsIndexPage() {
           applied_on: formatDate(app.created_at) || "N/A",
           accepted_on:
             statusStr === "approved" ||
-            statusStr === "success" ||
-            statusStr === "accepted"
+              statusStr === "success" ||
+              statusStr === "accepted"
               ? formatDate(app.updated_at)
               : null,
           rejected_reason:
@@ -461,7 +461,7 @@ function ApplicationsIndexPage() {
                     <div
                       key={app.id}
                       onClick={() => setSelectedApp(app)}
-                      className="flex items-start gap-4 px-2 py-4 rounded-[16px] hover:bg-neutral-50 cursor-pointer transition"
+                      className="flex items-start gap-4 px-2 py-4 rounded-2xl hover:bg-neutral-50 cursor-pointer transition"
                     >
                       {bulletEl}
                       <div className="flex flex-col gap-1.5 select-none">

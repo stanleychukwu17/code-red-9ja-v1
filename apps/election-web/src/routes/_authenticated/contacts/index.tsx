@@ -48,7 +48,7 @@ function ContactsPage() {
 
       <div className="px-4 pb-24">
         {task && (
-          <div className="bg-[#D9F7E8] rounded-[12px] p-4 flex items-start gap-3 mb-6">
+          <div className="bg-[#D9F7E8] rounded-12 p-4 flex items-start gap-3 mb-6">
             <div className="size-4 rounded-full bg-[#B2D6C4] shrink-0 mt-1" />
             <p className="text-[#1A3325] text-[18px] font-bold leading-snug">
               {task}

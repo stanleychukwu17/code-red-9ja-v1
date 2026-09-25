@@ -106,7 +106,7 @@ function RouteComponent() {
                         params: { stateId: state.name },
                       })
                     }
-                    className={`grid grid-cols-[minmax(0,1fr)_auto_auto_auto] items-center gap-2 rounded-[16px] px-4 py-4 md:gap-4 md:px-5 ${state.highlighted ? "bg-[#def1e6]" : "bg-transparent"
+                    className={`grid grid-cols-[minmax(0,1fr)_auto_auto_auto] items-center gap-2 rounded-2xl px-4 py-4 md:gap-4 md:px-5 ${state.highlighted ? "bg-[#def1e6]" : "bg-transparent"
                       } text-left transition hover:bg-[#f5f1f3]`}
                   >
                     <span className="text-[17px] font-normal text-[#202020]">
@@ -129,7 +129,7 @@ function RouteComponent() {
 
               <Link
                 to="/states"
-                className="mt-4 flex h-[56px] w-full items-center justify-center rounded-[16px] bg-[#f3f3f3] text-[18px] font-semibold text-[#111111] transition hover:bg-[#ebebeb]"
+                className="mt-4 flex h-[56px] w-full items-center justify-center rounded-2xl bg-[#f3f3f3] text-[18px] font-semibold text-[#111111] transition hover:bg-[#ebebeb]"
               >
                 Show all
               </Link>

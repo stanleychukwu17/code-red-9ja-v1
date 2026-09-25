@@ -470,7 +470,7 @@ function DecisionPill({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "h-8 rounded-[10px] px-3 text-[14px] font-semibold transition truncate text-center cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed",
+        "h-8 rounded-10 px-3 text-[14px] font-semibold transition truncate text-center cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed",
         variant === "accept" &&
         "bg-[#10dd84] text-[#083b25] hover:bg-[#08cf79]",
         variant === "reject" &&

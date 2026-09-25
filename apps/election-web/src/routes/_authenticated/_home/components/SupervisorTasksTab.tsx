@@ -102,7 +102,7 @@ export function WardSupervisorTasksTab({
     <div className="flex flex-col gap-4">
       {/* Earnings incentive callout banner */}
       {isElectionDay && (
-        <section className="bg-yellow/20 rounded-[16px] px-4 py-3.5 flex items-start gap-3">
+        <section className="bg-yellow/20 rounded-2xl px-4 py-3.5 flex items-start gap-3">
           <AlertIcon className="size-5 text-yellow-600 shrink-0 mt-0.5" />
           <p className="text-c-80 text-[14px] font-semibold leading-snug">
             Call every single one of them till they do their duty and watch your
@@ -175,7 +175,7 @@ export function LgaSupervisorTasksTab({
     <div className="flex flex-col gap-4">
       {/* Earnings incentive banner */}
       {isElectionDay && (
-        <section className="bg-yellow/20 rounded-[16px] px-4 py-3.5 flex items-start gap-3">
+        <section className="bg-yellow/20 rounded-2xl px-4 py-3.5 flex items-start gap-3">
           <AlertIcon className="size-5 text-yellow-600 shrink-0 mt-0.5" />
           <p className="text-c-80 text-[14px] font-semibold leading-snug">
             Call every single one of them till they do their duty and watch your
@@ -247,7 +247,7 @@ export function StateSupervisorTasksTab({
     <div className="flex flex-col gap-4">
       {/* Incentive banner */}
       {isElectionDay && (
-        <section className="bg-yellow/20 rounded-[16px] px-4 py-3.5 flex items-start gap-3">
+        <section className="bg-yellow/20 rounded-2xl px-4 py-3.5 flex items-start gap-3">
           <AlertIcon className="size-5 text-yellow-600 shrink-0 mt-0.5" />
           <p className="text-c-80 text-[14px] font-semibold leading-snug">
             Call every single one of them till they do their duty and watch your
