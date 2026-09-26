@@ -41,21 +41,19 @@ export const Route = createFileRoute("/settings")({
   ),
 });
 
-const ICON_CLASS = "shrink-0 size-6";
-const SELECTED_ICON_CLASS = `${ICON_CLASS} text-c-90`;
 const APP_SIDEBAR_ITEMS: AppSidebarItem[] = [
   {
     id: "general",
     label: "General",
-    icon: <FilterIcon className={ICON_CLASS} />,
-    selectedIcon: <FilterSolidIcon className={SELECTED_ICON_CLASS} />,
+    icon: <FilterIcon />,
+    selectedIcon: <FilterSolidIcon className="text-c-90" />,
     href: APP_URL.settings.general,
   },
   {
     id: "partyadmin",
     label: "Partyadmin",
-    icon: <BalonIcon className={ICON_CLASS} />,
-    selectedIcon: <BalonSolidIcon className={SELECTED_ICON_CLASS} />,
+    icon: <BalonIcon />,
+    selectedIcon: <BalonSolidIcon className="text-c-90" />,
     href: APP_URL.settings.partyadmin,
   },
 ];

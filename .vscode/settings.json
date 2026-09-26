@@ -8,6 +8,7 @@
     "apimiddleware",
     "Asynq",
     "authhandler",
+    "balon",
     "blkid",
     "bodieshandler",
     "bodiesservice",

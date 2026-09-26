@@ -36,24 +36,22 @@ const APP_SIDEBAR_ITEMS: AppSidebarItem[] = [
   {
     id: "home",
     label: "Home",
-    icon: <HomeIcon className="shrink-0 size-6" />,
-    selectedIcon: <HomeSolidIcon className="shrink-0 size-6 text-c-90" />,
+    icon: <HomeIcon />,
+    selectedIcon: <HomeSolidIcon className="text-c-90" />,
     href: APP_URL.home,
   },
   {
     id: "applications",
     label: "Applications",
-    icon: <PaperIcon className="shrink-0 size-6" />,
-    selectedIcon: <PaperSolidIcon className="shrink-0 size-6 text-c-90" />,
+    icon: <PaperIcon />,
+    selectedIcon: <PaperSolidIcon className="text-c-90" />,
     href: APP_URL.applications,
   },
   {
     id: "notifications",
     label: "Notifications",
-    icon: <NotificationIcon className="shrink-0 size-6" />,
-    selectedIcon: (
-      <NotificationSolidIcon className="shrink-0 size-6 text-c-90" />
-    ),
+    icon: <NotificationIcon />,
+    selectedIcon: <NotificationSolidIcon className="text-c-90" />,
     href: APP_URL.notifications,
   },
 ];

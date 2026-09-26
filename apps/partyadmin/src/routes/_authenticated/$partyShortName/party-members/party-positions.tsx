@@ -6,11 +6,7 @@
  */
 
 import * as React from "react";
-import {
-  Layout,
-  PageHeader,
-  PageSearchLayer,
-} from "@repo/ui/components/custom/AdminLayouts";
+import { Layout, PageHeader, PageSearchLayer } from "@repo/ui/components/custom/AdminLayouts";
 import { getPageHeader } from "#/lib/shared/meta";
 import { createFileRoute } from "@tanstack/react-router";
 import { getPartyAdminsTabs } from "./-data";
@@ -18,36 +14,15 @@ import { useUserParty } from "#/hooks/useUserParty";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useDebounceValue } from "usehooks-ts";
 import { Button } from "@repo/ui/components/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@repo/ui/components/select";
-import {
-  PartyPositionTableHeader,
-  PartyPositionTableTile,
-} from "#/components/tiles/party-position-tile";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/components/select";
+import { PartyPositionTableHeader, PartyPositionTableTile } from "#/components/tiles/party-position-tile";
 import { AssignPositionDialog } from "#/components/dialogs/AssignPositionDialog";
 import { PartyPositionsCatalogDialog } from "#/components/dialogs/PartyPositionsCatalogDialog";
-import {
-  getPartyOfficials,
-  vacatePartyOfficial,
-  type PartyOfficialItem,
-} from "#/lib/server/parties";
+import { getPartyOfficials, vacatePartyOfficial, type PartyOfficialItem } from "#/lib/server/parties";
 import { getStates } from "#/lib/server/countries";
 import { getLGAs, getWards } from "#/lib/server/applications";
 import { toast } from "sonner";
-import {
-  Loader2,
-  Plus,
-  BookOpen,
-  UserPlus,
-  Filter,
-  MapPin,
-  CheckCircle2,
-} from "lucide-react";
+import { Loader2, Plus, BookOpen, UserPlus, Filter, MapPin, CheckCircle2 } from "lucide-react";
 
 export const Route = createFileRoute(
   "/_authenticated/$partyShortName/party-members/party-positions",

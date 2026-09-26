@@ -89,6 +89,8 @@ CREATE TABLE party_positions (
     allowed_levels VARCHAR(20)[] NOT NULL DEFAULT ARRAY['national', 'zonal', 'state', 'lga', 'ward'],
     rank_order SMALLINT NOT NULL DEFAULT 100,
     max_occupants SMALLINT NOT NULL DEFAULT 1,
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    is_executive BOOLEAN NOT NULL DEFAULT true,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -97,6 +99,7 @@ CREATE UNIQUE INDEX idx_party_positions_party_code ON party_positions (party_id,
 CREATE INDEX idx_party_positions_party_id ON party_positions (party_id);
 CREATE INDEX idx_party_positions_rank_order ON party_positions (rank_order ASC);
 CREATE INDEX idx_party_positions_type ON party_positions (position_type);
+CREATE INDEX idx_party_positions_active ON party_positions (is_active);
 
 -- 2. Party Position Assignments (Binds a member to a position within a chapter)
 CREATE TABLE party_position_assignments (
@@ -121,23 +124,27 @@ CREATE INDEX idx_pos_assign_user ON party_position_assignments (user_id, status)
 CREATE INDEX idx_pos_assign_position ON party_position_assignments (position_id);
 
 -- 3. Pre-seed Default Party Positions
-INSERT INTO party_positions (party_id, name, code, position_type, allowed_levels, rank_order, max_occupants) VALUES
-(NULL, 'Chairman', 'chairman', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 1, 1),
-(NULL, 'Deputy Chairman', 'deputy_chairman', 'default', ARRAY['national', 'state', 'lga'], 2, 2),
-(NULL, 'Vice Chairman', 'vice_chairman', 'default', ARRAY['zonal', 'ward'], 3, 1),
-(NULL, 'Secretary', 'secretary', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 4, 1),
-(NULL, 'Deputy Secretary', 'deputy_secretary', 'default', ARRAY['national', 'state'], 5, 1),
-(NULL, 'Assistant Secretary', 'assistant_secretary', 'default', ARRAY['zonal', 'lga', 'ward'], 6, 1),
-(NULL, 'Treasurer', 'treasurer', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 7, 1),
-(NULL, 'Financial Secretary', 'financial_secretary', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 8, 1),
-(NULL, 'Organizing Secretary', 'organizing_secretary', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 9, 1),
-(NULL, 'Publicity Secretary', 'publicity_secretary', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 10, 1),
-(NULL, 'Legal Adviser', 'legal_adviser', 'default', ARRAY['national', 'zonal', 'state', 'lga'], 11, 1),
-(NULL, 'Auditor', 'auditor', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 12, 1),
-(NULL, 'Women Leader', 'women_leader', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 13, 1),
-(NULL, 'Youth Leader', 'youth_leader', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 14, 1),
-(NULL, 'Welfare Secretary', 'welfare_secretary', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 15, 1),
-(NULL, 'Ex-Officio Member', 'ex_officio', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 16, 5);
+INSERT INTO party_positions (party_id, name, code, position_type, allowed_levels, rank_order, max_occupants, is_executive) VALUES
+(NULL, 'Chairman', 'chairman', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 1, 1, true),
+(NULL, 'Deputy Chairman', 'deputy_chairman', 'default', ARRAY['national', 'state', 'lga'], 2, 2, true),
+(NULL, 'Vice Chairman', 'vice_chairman', 'default', ARRAY['national', 'zonal', 'state', 'ward'], 3, 6, true),
+(NULL, 'Secretary', 'secretary', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 4, 1, true),
+(NULL, 'Deputy Secretary', 'deputy_secretary', 'default', ARRAY['national', 'state'], 5, 1, true),
+(NULL, 'Assistant Secretary', 'assistant_secretary', 'default', ARRAY['zonal', 'lga', 'ward'], 6, 1, true),
+(NULL, 'Treasurer', 'treasurer', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 7, 1, true),
+(NULL, 'Financial Secretary', 'financial_secretary', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 8, 1, true),
+(NULL, 'Organizing Secretary', 'organizing_secretary', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 9, 1, true),
+(NULL, 'Assistant Organizing Secretary', 'assistant_organizing_secretary', 'default', ARRAY['national', 'state', 'lga', 'ward'], 10, 1, true),
+(NULL, 'Publicity Secretary', 'publicity_secretary', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 11, 1, true),
+(NULL, 'Assistant Publicity Secretary', 'assistant_publicity_secretary', 'default', ARRAY['national', 'state', 'lga'], 12, 1, true),
+(NULL, 'Legal Adviser', 'legal_adviser', 'default', ARRAY['national', 'zonal', 'state', 'lga'], 13, 1, true),
+(NULL, 'Auditor', 'auditor', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 14, 1, true),
+(NULL, 'Welfare Secretary', 'welfare_secretary', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 15, 1, true),
+(NULL, 'Women Leader', 'women_leader', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 16, 1, true),
+(NULL, 'Youth Leader', 'youth_leader', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 17, 1, true),
+(NULL, 'Assistant Youth Leader', 'assistant_youth_leader', 'default', ARRAY['national', 'state', 'lga', 'ward'], 18, 1, true),
+(NULL, 'Persons with Disabilities (PWD) Leader', 'pwd_leader', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 19, 1, true),
+(NULL, 'Ex-Officio Member', 'ex_officio', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 20, 6, false);
 
 -- 4. Helper Function to Format Display Title with Geographic Context & Appointment Type
 -- +goose StatementBegin
