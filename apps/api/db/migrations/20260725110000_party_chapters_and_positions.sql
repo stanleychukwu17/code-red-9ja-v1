@@ -91,6 +91,7 @@ CREATE TABLE party_positions (
     max_occupants SMALLINT NOT NULL DEFAULT 1,
     is_active BOOLEAN NOT NULL DEFAULT true,
     is_executive BOOLEAN NOT NULL DEFAULT true,
+    category VARCHAR(50) NOT NULL DEFAULT 'executive',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -100,6 +101,7 @@ CREATE INDEX idx_party_positions_party_id ON party_positions (party_id);
 CREATE INDEX idx_party_positions_rank_order ON party_positions (rank_order ASC);
 CREATE INDEX idx_party_positions_type ON party_positions (position_type);
 CREATE INDEX idx_party_positions_active ON party_positions (is_active);
+CREATE INDEX idx_party_positions_category ON party_positions (category);
 
 -- 2. Party Position Assignments (Binds a member to a position within a chapter)
 CREATE TABLE party_position_assignments (
@@ -124,27 +126,55 @@ CREATE INDEX idx_pos_assign_user ON party_position_assignments (user_id, status)
 CREATE INDEX idx_pos_assign_position ON party_position_assignments (position_id);
 
 -- 3. Pre-seed Default Party Positions
-INSERT INTO party_positions (party_id, name, code, position_type, allowed_levels, rank_order, max_occupants, is_executive) VALUES
-(NULL, 'Chairman', 'chairman', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 1, 1, true),
-(NULL, 'Deputy Chairman', 'deputy_chairman', 'default', ARRAY['national', 'state', 'lga'], 2, 2, true),
-(NULL, 'Vice Chairman', 'vice_chairman', 'default', ARRAY['national', 'zonal', 'state', 'ward'], 3, 6, true),
-(NULL, 'Secretary', 'secretary', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 4, 1, true),
-(NULL, 'Deputy Secretary', 'deputy_secretary', 'default', ARRAY['national', 'state'], 5, 1, true),
-(NULL, 'Assistant Secretary', 'assistant_secretary', 'default', ARRAY['zonal', 'lga', 'ward'], 6, 1, true),
-(NULL, 'Treasurer', 'treasurer', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 7, 1, true),
-(NULL, 'Financial Secretary', 'financial_secretary', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 8, 1, true),
-(NULL, 'Organizing Secretary', 'organizing_secretary', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 9, 1, true),
-(NULL, 'Assistant Organizing Secretary', 'assistant_organizing_secretary', 'default', ARRAY['national', 'state', 'lga', 'ward'], 10, 1, true),
-(NULL, 'Publicity Secretary', 'publicity_secretary', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 11, 1, true),
-(NULL, 'Assistant Publicity Secretary', 'assistant_publicity_secretary', 'default', ARRAY['national', 'state', 'lga'], 12, 1, true),
-(NULL, 'Legal Adviser', 'legal_adviser', 'default', ARRAY['national', 'zonal', 'state', 'lga'], 13, 1, true),
-(NULL, 'Auditor', 'auditor', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 14, 1, true),
-(NULL, 'Welfare Secretary', 'welfare_secretary', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 15, 1, true),
-(NULL, 'Women Leader', 'women_leader', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 16, 1, true),
-(NULL, 'Youth Leader', 'youth_leader', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 17, 1, true),
-(NULL, 'Assistant Youth Leader', 'assistant_youth_leader', 'default', ARRAY['national', 'state', 'lga', 'ward'], 18, 1, true),
-(NULL, 'Persons with Disabilities (PWD) Leader', 'pwd_leader', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 19, 1, true),
-(NULL, 'Ex-Officio Member', 'ex_officio', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 20, 6, false);
+INSERT INTO party_positions (party_id, name, code, position_type, allowed_levels, rank_order, max_occupants, is_executive, category) VALUES
+-- Executive (Leadership & Secretariat)
+(NULL, 'Chairman', 'chairman', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 1, 1, true, 'executive'),
+(NULL, 'Deputy Chairman', 'deputy_chairman', 'default', ARRAY['national', 'state', 'lga'], 2, 2, true, 'executive'),
+(NULL, 'Vice Chairman', 'vice_chairman', 'default', ARRAY['national', 'zonal', 'state', 'ward'], 3, 6, true, 'executive'),
+(NULL, 'Secretary', 'secretary', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 4, 1, true, 'executive'),
+(NULL, 'Deputy Secretary', 'deputy_secretary', 'default', ARRAY['national', 'state'], 5, 1, true, 'executive'),
+(NULL, 'Assistant Secretary', 'assistant_secretary', 'default', ARRAY['zonal', 'lga', 'ward'], 6, 1, true, 'executive'),
+
+-- Operations (Party management, logistics, fieldwork)
+(NULL, 'Organizing Secretary', 'organizing_secretary', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 7, 1, true, 'operations'),
+(NULL, 'Assistant Organizing Secretary', 'assistant_organizing_secretary', 'default', ARRAY['national', 'state', 'lga', 'ward'], 8, 1, true, 'operations'),
+(NULL, 'Welfare Secretary', 'welfare_secretary', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 9, 1, true, 'operations'),
+(NULL, 'Protocol & Logistics Officer', 'protocol_logistics_officer', 'default', ARRAY['national', 'state', 'lga'], 10, 2, false, 'operations'),
+
+-- Campaign & Elections (Voter-facing mobilization & electoral planning)
+(NULL, 'Campaign Coordinator', 'campaign_coordinator', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 11, 2, false, 'campaign'),
+(NULL, 'Director of Mobilization', 'director_mobilization', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 12, 1, false, 'campaign'),
+(NULL, 'Election Planning Director', 'election_planning_director', 'default', ARRAY['national', 'state', 'lga'], 13, 1, false, 'campaign'),
+
+-- Media & Communications (Publicity, press & digital reach)
+(NULL, 'Publicity Secretary', 'publicity_secretary', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 14, 1, true, 'media'),
+(NULL, 'Assistant Publicity Secretary', 'assistant_publicity_secretary', 'default', ARRAY['national', 'state', 'lga'], 15, 1, true, 'media'),
+(NULL, 'New Media Director', 'new_media_director', 'default', ARRAY['national', 'state', 'lga'], 16, 1, false, 'media'),
+(NULL, 'Head of Press', 'head_of_press', 'default', ARRAY['national', 'state'], 17, 1, false, 'media'),
+
+-- Technology & ICT (Digital platforms, voter database, verification)
+(NULL, 'Head of ICT', 'head_of_ict', 'default', ARRAY['national', 'state', 'lga'], 18, 1, false, 'technology'),
+(NULL, 'Digital Strategy Lead', 'digital_strategy_lead', 'default', ARRAY['national', 'state'], 19, 1, false, 'technology'),
+(NULL, 'Database / Portal Administrator', 'database_portal_admin', 'default', ARRAY['national', 'state', 'lga'], 20, 1, false, 'technology'),
+
+-- Finance & Audit
+(NULL, 'Treasurer', 'treasurer', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 21, 1, true, 'finance'),
+(NULL, 'Financial Secretary', 'financial_secretary', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 22, 1, true, 'finance'),
+(NULL, 'Auditor', 'auditor', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 23, 1, true, 'finance'),
+
+-- Legal & Compliance
+(NULL, 'Legal Adviser', 'legal_adviser', 'default', ARRAY['national', 'zonal', 'state', 'lga'], 24, 1, true, 'legal'),
+
+-- Demographic & Special Wings
+(NULL, 'Women Leader', 'women_leader', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 25, 1, true, 'wings'),
+(NULL, 'Youth Leader', 'youth_leader', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 26, 1, true, 'wings'),
+(NULL, 'Assistant Youth Leader', 'assistant_youth_leader', 'default', ARRAY['national', 'state', 'lga', 'ward'], 27, 1, true, 'wings'),
+(NULL, 'Persons with Disabilities (PWD) Leader', 'pwd_leader', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 28, 1, true, 'wings'),
+
+-- Advisory & Non-Portfolio Roles
+(NULL, 'Ex-Officio Member', 'ex_officio', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 29, 6, false, 'advisory'),
+(NULL, 'Special Adviser to Chairman', 'special_adviser_chairman', 'default', ARRAY['national', 'state'], 30, 3, false, 'advisory'),
+(NULL, 'Elders Council Member', 'elders_council_member', 'default', ARRAY['national', 'state', 'lga'], 31, 10, false, 'advisory');
 
 -- 4. Helper Function to Format Display Title with Geographic Context & Appointment Type
 -- +goose StatementBegin
@@ -185,7 +215,43 @@ END;
 $$ LANGUAGE plpgsql IMMUTABLE;
 -- +goose StatementEnd
 
--- Auto-provision National, Zonal, and State chapters on party creation
+-- 5. Trigger to strictly enforce max_occupants for active position assignments
+-- +goose StatementBegin
+CREATE OR REPLACE FUNCTION check_party_position_max_occupants()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_max SMALLINT;
+    v_current BIGINT;
+BEGIN
+    IF NEW.status = 'active' THEN
+        SELECT max_occupants INTO v_max 
+        FROM party_positions 
+        WHERE id = NEW.position_id;
+
+        IF v_max > 0 THEN
+            SELECT COUNT(*) INTO v_current 
+            FROM party_position_assignments 
+            WHERE chapter_id = NEW.chapter_id 
+              AND position_id = NEW.position_id 
+              AND status = 'active' 
+              AND id != COALESCE(NEW.id, 0);
+
+            IF v_current >= v_max THEN
+                RAISE EXCEPTION 'Position has reached maximum occupancy of % for this chapter', v_max;
+            END IF;
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+-- +goose StatementEnd
+
+-- Trigger: Enforce maximum occupants for active position assignments on create or update
+CREATE TRIGGER trg_check_party_position_occupants
+BEFORE INSERT OR UPDATE ON party_position_assignments
+FOR EACH ROW EXECUTE FUNCTION check_party_position_max_occupants();
+
+-- 6. Auto-provision National, Zonal, and State chapters on party creation
 -- +goose StatementBegin
 CREATE OR REPLACE FUNCTION create_initial_party_chapters()
 RETURNS TRIGGER AS $$
@@ -213,6 +279,7 @@ END;
 $$ LANGUAGE plpgsql;
 -- +goose StatementEnd
 
+-- Trigger: Automatically provision top-level chapters (National, 6 Zonal, 37 States) upon registering a new party
 CREATE TRIGGER trg_create_party_top_chapters
 AFTER INSERT ON parties
 FOR EACH ROW
@@ -235,6 +302,8 @@ ON CONFLICT (party_id, state_id) WHERE chapter_type = 'state' DO NOTHING;
 -- END backfill
 
 -- +goose Down
+DROP TRIGGER IF EXISTS trg_check_party_position_occupants ON party_position_assignments;
+DROP FUNCTION IF EXISTS check_party_position_max_occupants();
 DROP FUNCTION IF EXISTS format_position_display_title(VARCHAR, VARCHAR, VARCHAR, VARCHAR);
 DROP TRIGGER IF EXISTS trg_create_party_top_chapters ON parties;
 DROP FUNCTION IF EXISTS create_initial_party_chapters();

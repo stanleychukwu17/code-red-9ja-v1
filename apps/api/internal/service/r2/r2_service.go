@@ -268,3 +268,121 @@ func (s *R2Service) PurgeCloudflareCache(ctx context.Context, key string) error 
 
 	return nil
 }
+
+// R2Object represents a summary of an object in Cloudflare R2.
+type R2Object struct {
+	Key          string
+	Size         int64
+	LastModified time.Time
+	ETag         string
+}
+
+// ListObjectsResult holds objects and common prefixes (folders) returned by ListObjects.
+type ListObjectsResult struct {
+	Objects        []R2Object
+	CommonPrefixes []string
+	NextToken      string
+	IsTruncated    bool
+}
+
+// ListObjects queries R2 for objects and virtual subfolders under a prefix.
+func (s *R2Service) ListObjects(ctx context.Context, prefix, delimiter string, continuationToken string, maxKeys int32) (*ListObjectsResult, error) {
+	if maxKeys <= 0 || maxKeys > 1000 {
+		maxKeys = 1000
+	}
+
+	input := &s3.ListObjectsV2Input{
+		Bucket:  aws.String(s.bucketName),
+		Prefix:  aws.String(prefix),
+		MaxKeys: aws.Int32(maxKeys),
+	}
+	if delimiter != "" {
+		input.Delimiter = aws.String(delimiter)
+	}
+	if continuationToken != "" {
+		input.ContinuationToken = aws.String(continuationToken)
+	}
+
+	out, err := s.client.ListObjectsV2(ctx, input)
+	if err != nil {
+		return nil, fmt.Errorf("r2service: failed to list objects with prefix %q: %w", prefix, err)
+	}
+
+	res := &ListObjectsResult{
+		IsTruncated: aws.ToBool(out.IsTruncated),
+	}
+	if out.NextContinuationToken != nil {
+		res.NextToken = *out.NextContinuationToken
+	}
+
+	for _, p := range out.CommonPrefixes {
+		if p.Prefix != nil {
+			res.CommonPrefixes = append(res.CommonPrefixes, *p.Prefix)
+		}
+	}
+
+	for _, obj := range out.Contents {
+		if obj.Key == nil {
+			continue
+		}
+		var modTime time.Time
+		if obj.LastModified != nil {
+			modTime = *obj.LastModified
+		}
+		res.Objects = append(res.Objects, R2Object{
+			Key:          *obj.Key,
+			Size:         aws.ToInt64(obj.Size),
+			LastModified: modTime,
+			ETag:         aws.ToString(obj.ETag),
+		})
+	}
+
+	return res, nil
+}
+
+// CreateFolderMarker creates an empty .keep object at prefix/.keep to persist an empty folder in R2.
+func (s *R2Service) CreateFolderMarker(ctx context.Context, prefix string) error {
+	prefix = strings.Trim(prefix, "/")
+	if prefix == "" {
+		return nil
+	}
+	key := prefix + "/.keep"
+	_, err := s.client.PutObject(ctx, &s3.PutObjectInput{
+		Bucket:        aws.String(s.bucketName),
+		Key:           aws.String(key),
+		Body:          bytes.NewReader([]byte{}),
+		ContentLength: aws.Int64(0),
+		ContentType:   aws.String("application/x-directory"),
+	})
+	if err != nil {
+		return fmt.Errorf("r2service: failed to create folder marker %q: %w", key, err)
+	}
+	return nil
+}
+
+// DeletePrefix removes all objects that share the given prefix (e.g. deleting a whole folder).
+func (s *R2Service) DeletePrefix(ctx context.Context, prefix string) error {
+	prefix = strings.TrimSuffix(prefix, "/") + "/"
+	var continuationToken string
+
+	for {
+		listRes, err := s.ListObjects(ctx, prefix, "", continuationToken, 1000)
+		if err != nil {
+			return err
+		}
+
+		for _, obj := range listRes.Objects {
+			if err := s.DeleteObject(ctx, obj.Key); err != nil {
+				return err
+			}
+		}
+
+		if !listRes.IsTruncated || listRes.NextToken == "" {
+			break
+		}
+		continuationToken = listRes.NextToken
+	}
+
+	return nil
+}
+

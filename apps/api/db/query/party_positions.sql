@@ -10,8 +10,8 @@ WHERE id = $1 AND (party_id IS NULL OR party_id = $2)
 LIMIT 1;
 
 -- name: CreatePartyCustomPosition :one
-INSERT INTO party_positions ( party_id, name, code, position_type, description, allowed_levels, rank_order, max_occupants )
-VALUES ( $1, $2, $3, 'custom', $4, $5, $6, $7 ) RETURNING *;
+INSERT INTO party_positions ( party_id, name, code, position_type, description, allowed_levels, rank_order, max_occupants, is_executive, category )
+VALUES ( $1, $2, $3, 'custom', $4, $5, $6, $7, COALESCE(sqlc.narg('is_executive')::boolean, true), COALESCE(sqlc.narg('category')::varchar, 'operations') ) RETURNING *;
 
 -- name: UpdatePartyCustomPosition :one
 UPDATE party_positions
@@ -21,7 +21,9 @@ SET
     description = $5,
     allowed_levels = $6,
     rank_order = $7,
-    max_occupants = $8
+    max_occupants = $8,
+    is_executive = COALESCE(sqlc.narg('is_executive')::boolean, is_executive),
+    category = COALESCE(sqlc.narg('category')::varchar, category)
 WHERE id = $1 AND party_id = $2 AND position_type = 'custom'
 RETURNING *;
 
@@ -62,166 +64,155 @@ WHERE chapter_id = $1 AND position_id = $2 AND status = 'active';
 
 -- name: ListChapterOfficials :many
 SELECT 
-    pa.id AS assignment_id,
-    pa.party_id,
-    pa.chapter_id,
-    pa.position_id,
-    pa.user_id,
-    pa.appointment_type,
-    pa.status AS assignment_status,
-    pa.tenure_start,
-    pa.tenure_end,
-    pa.appointed_by,
-    pa.created_at AS assigned_at,
-    
-    pos.name AS position_name,
-    pos.code AS position_code,
-    pos.position_type,
-    pos.rank_order,
-    pos.max_occupants,
-    
-    u.first_name,
-    u.last_name,
-    u.middle_name,
-    u.username,
-    u.avatar,
-    u.email,
-    u.phone,
+    party_position_assignments.id AS assignment_id,
+    party_position_assignments.party_id,
+    party_position_assignments.chapter_id,
+    party_position_assignments.position_id,
+    party_position_assignments.user_id,
+    party_position_assignments.appointment_type,
+    party_position_assignments.status AS assignment_status,
+    party_position_assignments.tenure_start,
+    party_position_assignments.tenure_end,
+    party_position_assignments.created_at AS assigned_at,
 
-    pc.chapter_type,
+    party_positions.name AS position_name,
+    party_positions.position_type,
+    party_positions.category AS position_category,
+    party_positions.rank_order,
+    
+    users.first_name,
+    users.last_name,
+    users.username,
+    users.avatar,
+
+    party_chapters.chapter_type,
     COALESCE(
-        c.name,
-        z.name,
-        s.name,
-        l.name,
-        w.name,
+        c_countries.name,
+        c_zones_nigeria.name,
+        c_states.name,
+        lgas.name,
+        wards.name,
         ''
     )::varchar AS geo_name,
     format_position_display_title(
-        pc.chapter_type,
-        COALESCE(c.name, z.name, s.name, l.name, w.name, '')::varchar,
-        pos.name,
-        pa.appointment_type
+        party_chapters.chapter_type,
+        COALESCE(c_countries.name, c_zones_nigeria.name, c_states.name, lgas.name, wards.name, '')::varchar,
+        party_positions.name,
+        party_position_assignments.appointment_type
     ) AS display_title
-FROM party_position_assignments pa
-JOIN party_positions pos ON pos.id = pa.position_id
-JOIN users u ON u.id = pa.user_id
-JOIN party_chapters pc ON pc.id = pa.chapter_id
-LEFT JOIN c_countries c ON c.id = pc.country_id AND pc.chapter_type = 'national'
-LEFT JOIN c_zones_nigeria z ON z.id = pc.zonal_id AND pc.chapter_type = 'zonal'
-LEFT JOIN c_states s ON s.id = pc.state_id AND pc.chapter_type = 'state'
-LEFT JOIN lgas l ON l.id = pc.lga_id AND pc.chapter_type = 'lga'
-LEFT JOIN wards w ON w.id = pc.ward_id AND pc.chapter_type = 'ward'
-WHERE pa.party_id = $1
-  AND pa.chapter_id = $2
-  AND (sqlc.narg('status')::varchar IS NULL OR pa.status = sqlc.narg('status'))
-ORDER BY pos.rank_order ASC, pa.tenure_start DESC;
+FROM party_position_assignments
+JOIN party_positions ON party_positions.id = party_position_assignments.position_id
+JOIN users ON users.id = party_position_assignments.user_id
+JOIN party_chapters ON party_chapters.id = party_position_assignments.chapter_id
+LEFT JOIN c_countries ON c_countries.id = party_chapters.country_id AND party_chapters.chapter_type = 'national'
+LEFT JOIN c_zones_nigeria ON c_zones_nigeria.id = party_chapters.zonal_id AND party_chapters.chapter_type = 'zonal'
+LEFT JOIN c_states ON c_states.id = party_chapters.state_id AND party_chapters.chapter_type = 'state'
+LEFT JOIN lgas ON lgas.id = party_chapters.lga_id AND party_chapters.chapter_type = 'lga'
+LEFT JOIN wards ON wards.id = party_chapters.ward_id AND party_chapters.chapter_type = 'ward'
+WHERE party_position_assignments.party_id = $1
+  AND party_position_assignments.chapter_id = $2
+  AND (sqlc.narg('status')::varchar IS NULL OR party_position_assignments.status = sqlc.narg('status'))
+ORDER BY party_positions.rank_order ASC, party_position_assignments.tenure_start DESC;
 
 -- name: ListPartyOfficials :many
 SELECT 
-    pa.id AS assignment_id,
-    pa.party_id,
-    pa.chapter_id,
-    pa.position_id,
-    pa.user_id,
-    pa.appointment_type,
-    pa.status AS assignment_status,
-    pa.tenure_start,
-    pa.tenure_end,
-    pa.appointed_by,
-    pa.created_at AS assigned_at,
+    party_position_assignments.id AS assignment_id,
+    party_position_assignments.party_id,
+    party_position_assignments.chapter_id,
+    party_position_assignments.position_id,
+    party_position_assignments.user_id,
+    party_position_assignments.appointment_type,
+    party_position_assignments.status AS assignment_status,
+    party_position_assignments.tenure_start,
+    party_position_assignments.tenure_end,
+    party_position_assignments.created_at AS assigned_at,
     
-    pos.name AS position_name,
-    pos.code AS position_code,
-    pos.position_type,
-    pos.rank_order,
-    pos.max_occupants,
+    party_positions.name AS position_name,
+    party_positions.position_type,
+    party_positions.category AS position_category,
+    party_positions.rank_order,
     
-    u.first_name,
-    u.last_name,
-    u.middle_name,
-    u.username,
-    u.avatar,
-    u.email,
-    u.phone,
+    users.first_name,
+    users.last_name,
+    users.username,
+    users.avatar,
 
-    pc.chapter_type,
+    party_chapters.chapter_type,
     COALESCE(
-        c.name,
-        z.name,
-        s.name,
-        l.name,
-        w.name,
+        c_countries.name,
+        c_zones_nigeria.name,
+        c_states.name,
+        lgas.name,
+        wards.name,
         ''
     )::varchar AS geo_name,
     format_position_display_title(
-        pc.chapter_type,
-        COALESCE(c.name, z.name, s.name, l.name, w.name, '')::varchar,
-        pos.name,
-        pa.appointment_type
+        party_chapters.chapter_type,
+        COALESCE(c_countries.name, c_zones_nigeria.name, c_states.name, lgas.name, wards.name, '')::varchar,
+        party_positions.name,
+        party_position_assignments.appointment_type
     ) AS display_title
-FROM party_position_assignments pa
-JOIN party_positions pos ON pos.id = pa.position_id
-JOIN users u ON u.id = pa.user_id
-JOIN party_chapters pc ON pc.id = pa.chapter_id
-LEFT JOIN c_countries c ON c.id = pc.country_id AND pc.chapter_type = 'national'
-LEFT JOIN c_zones_nigeria z ON z.id = pc.zonal_id AND pc.chapter_type = 'zonal'
-LEFT JOIN c_states s ON s.id = pc.state_id AND pc.chapter_type = 'state'
-LEFT JOIN lgas l ON l.id = pc.lga_id AND pc.chapter_type = 'lga'
-LEFT JOIN wards w ON w.id = pc.ward_id AND pc.chapter_type = 'ward'
-WHERE pa.party_id = $1
-  AND (sqlc.narg('chapter_type')::varchar IS NULL OR pc.chapter_type = sqlc.narg('chapter_type'))
-  AND (sqlc.narg('state_id')::smallint IS NULL OR pc.state_id = sqlc.narg('state_id'))
-  AND (sqlc.narg('lga_id')::int IS NULL OR pc.lga_id = sqlc.narg('lga_id'))
-  AND (sqlc.narg('ward_id')::int IS NULL OR pc.ward_id = sqlc.narg('ward_id'))
-  AND (sqlc.narg('status')::varchar IS NULL OR pa.status = sqlc.narg('status'))
+FROM party_position_assignments
+JOIN party_positions ON party_positions.id = party_position_assignments.position_id
+JOIN users ON users.id = party_position_assignments.user_id
+JOIN party_chapters ON party_chapters.id = party_position_assignments.chapter_id
+LEFT JOIN c_countries ON c_countries.id = party_chapters.country_id AND party_chapters.chapter_type = 'national'
+LEFT JOIN c_zones_nigeria ON c_zones_nigeria.id = party_chapters.zonal_id AND party_chapters.chapter_type = 'zonal'
+LEFT JOIN c_states ON c_states.id = party_chapters.state_id AND party_chapters.chapter_type = 'state'
+LEFT JOIN lgas ON lgas.id = party_chapters.lga_id AND party_chapters.chapter_type = 'lga'
+LEFT JOIN wards ON wards.id = party_chapters.ward_id AND party_chapters.chapter_type = 'ward'
+WHERE party_position_assignments.party_id = $1
+  AND (sqlc.narg('chapter_type')::varchar IS NULL OR party_chapters.chapter_type = sqlc.narg('chapter_type'))
+  AND (sqlc.narg('state_id')::smallint IS NULL OR party_chapters.state_id = sqlc.narg('state_id'))
+  AND (sqlc.narg('lga_id')::int IS NULL OR party_chapters.lga_id = sqlc.narg('lga_id'))
+  AND (sqlc.narg('ward_id')::int IS NULL OR party_chapters.ward_id = sqlc.narg('ward_id'))
+  AND (sqlc.narg('status')::varchar IS NULL OR party_position_assignments.status = sqlc.narg('status'))
   AND (sqlc.narg('search')::varchar IS NULL OR 
-       u.first_name ILIKE '%' || sqlc.narg('search') || '%' OR 
-       u.last_name ILIKE '%' || sqlc.narg('search') || '%' OR 
-       u.username ILIKE '%' || sqlc.narg('search') || '%' OR 
-       pos.name ILIKE '%' || sqlc.narg('search') || '%')
-ORDER BY pc.chapter_type ASC, pos.rank_order ASC, pa.tenure_start DESC;
+       users.first_name ILIKE '%' || sqlc.narg('search') || '%' OR 
+       users.last_name ILIKE '%' || sqlc.narg('search') || '%' OR 
+       users.username ILIKE '%' || sqlc.narg('search') || '%' OR 
+       party_positions.name ILIKE '%' || sqlc.narg('search') || '%')
+ORDER BY party_chapters.chapter_type ASC, party_positions.rank_order ASC, party_position_assignments.tenure_start DESC;
 
 -- name: ListMemberPositionAssignments :many
 SELECT 
-    pa.id AS assignment_id,
-    pa.party_id,
-    pa.chapter_id,
-    pa.position_id,
-    pa.user_id,
-    pa.appointment_type,
-    pa.status AS assignment_status,
-    pa.tenure_start,
-    pa.tenure_end,
-    pa.created_at AS assigned_at,
+    party_position_assignments.id AS assignment_id,
+    party_position_assignments.party_id,
+    party_position_assignments.chapter_id,
+    party_position_assignments.position_id,
+    party_position_assignments.user_id,
+    party_position_assignments.appointment_type,
+    party_position_assignments.status AS assignment_status,
+    party_position_assignments.tenure_start,
+    party_position_assignments.tenure_end,
+    party_position_assignments.created_at AS assigned_at,
     
-    pos.name AS position_name,
-    pos.code AS position_code,
-    pos.position_type,
-    pos.rank_order,
+    party_positions.name AS position_name,
+    party_positions.position_type,
+    party_positions.rank_order,
     
-    pc.chapter_type,
+    party_chapters.chapter_type,
     COALESCE(
-        c.name,
-        z.name,
-        s.name,
-        l.name,
-        w.name,
+        c_countries.name,
+        c_zones_nigeria.name,
+        c_states.name,
+        lgas.name,
+        wards.name,
         ''
     )::varchar AS geo_name,
     format_position_display_title(
-        pc.chapter_type,
-        COALESCE(c.name, z.name, s.name, l.name, w.name, '')::varchar,
-        pos.name,
-        pa.appointment_type
+        party_chapters.chapter_type,
+        COALESCE(c_countries.name, c_zones_nigeria.name, c_states.name, lgas.name, wards.name, '')::varchar,
+        party_positions.name,
+        party_position_assignments.appointment_type
     ) AS display_title
-FROM party_position_assignments pa
-JOIN party_positions pos ON pos.id = pa.position_id
-JOIN party_chapters pc ON pc.id = pa.chapter_id
-LEFT JOIN c_countries c ON c.id = pc.country_id AND pc.chapter_type = 'national'
-LEFT JOIN c_zones_nigeria z ON z.id = pc.zonal_id AND pc.chapter_type = 'zonal'
-LEFT JOIN c_states s ON s.id = pc.state_id AND pc.chapter_type = 'state'
-LEFT JOIN lgas l ON l.id = pc.lga_id AND pc.chapter_type = 'lga'
-LEFT JOIN wards w ON w.id = pc.ward_id AND pc.chapter_type = 'ward'
-WHERE pa.party_id = $1 AND pa.user_id = $2
-ORDER BY pa.status ASC, pa.tenure_start DESC;
+FROM party_position_assignments
+JOIN party_positions ON party_positions.id = party_position_assignments.position_id
+JOIN party_chapters ON party_chapters.id = party_position_assignments.chapter_id
+LEFT JOIN c_countries ON c_countries.id = party_chapters.country_id AND party_chapters.chapter_type = 'national'
+LEFT JOIN c_zones_nigeria ON c_zones_nigeria.id = party_chapters.zonal_id AND party_chapters.chapter_type = 'zonal'
+LEFT JOIN c_states ON c_states.id = party_chapters.state_id AND party_chapters.chapter_type = 'state'
+LEFT JOIN lgas ON lgas.id = party_chapters.lga_id AND party_chapters.chapter_type = 'lga'
+LEFT JOIN wards ON wards.id = party_chapters.ward_id AND party_chapters.chapter_type = 'ward'
+WHERE party_position_assignments.party_id = $1 AND party_position_assignments.user_id = $2
+ORDER BY party_position_assignments.status ASC, party_position_assignments.tenure_start DESC;

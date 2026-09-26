@@ -79,8 +79,8 @@ func (q *Queries) CountActivePositionOccupants(ctx context.Context, arg CountAct
 }
 
 const createPartyCustomPosition = `-- name: CreatePartyCustomPosition :one
-INSERT INTO party_positions ( party_id, name, code, position_type, description, allowed_levels, rank_order, max_occupants )
-VALUES ( $1, $2, $3, 'custom', $4, $5, $6, $7 ) RETURNING id, position_type, name, code, party_id, description, allowed_levels, rank_order, max_occupants, created_at
+INSERT INTO party_positions ( party_id, name, code, position_type, description, allowed_levels, rank_order, max_occupants, is_executive, category )
+VALUES ( $1, $2, $3, 'custom', $4, $5, $6, $7, COALESCE($8::boolean, true), COALESCE($9::varchar, 'operations') ) RETURNING id, position_type, name, code, party_id, description, allowed_levels, rank_order, max_occupants, is_active, is_executive, category, created_at
 `
 
 type CreatePartyCustomPositionParams struct {
@@ -91,6 +91,8 @@ type CreatePartyCustomPositionParams struct {
 	AllowedLevels []string    `json:"allowed_levels"`
 	RankOrder     int16       `json:"rank_order"`
 	MaxOccupants  int16       `json:"max_occupants"`
+	IsExecutive   pgtype.Bool `json:"is_executive"`
+	Category      pgtype.Text `json:"category"`
 }
 
 func (q *Queries) CreatePartyCustomPosition(ctx context.Context, arg CreatePartyCustomPositionParams) (PartyPosition, error) {
@@ -102,6 +104,8 @@ func (q *Queries) CreatePartyCustomPosition(ctx context.Context, arg CreateParty
 		arg.AllowedLevels,
 		arg.RankOrder,
 		arg.MaxOccupants,
+		arg.IsExecutive,
+		arg.Category,
 	)
 	var i PartyPosition
 	err := row.Scan(
@@ -114,6 +118,9 @@ func (q *Queries) CreatePartyCustomPosition(ctx context.Context, arg CreateParty
 		&i.AllowedLevels,
 		&i.RankOrder,
 		&i.MaxOccupants,
+		&i.IsActive,
+		&i.IsExecutive,
+		&i.Category,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -135,7 +142,7 @@ func (q *Queries) DeletePartyCustomPosition(ctx context.Context, arg DeleteParty
 }
 
 const getPartyPositionByID = `-- name: GetPartyPositionByID :one
-SELECT id, position_type, name, code, party_id, description, allowed_levels, rank_order, max_occupants, created_at FROM party_positions
+SELECT id, position_type, name, code, party_id, description, allowed_levels, rank_order, max_occupants, is_active, is_executive, category, created_at FROM party_positions
 WHERE id = $1 AND (party_id IS NULL OR party_id = $2)
 LIMIT 1
 `
@@ -158,6 +165,9 @@ func (q *Queries) GetPartyPositionByID(ctx context.Context, arg GetPartyPosition
 		&i.AllowedLevels,
 		&i.RankOrder,
 		&i.MaxOccupants,
+		&i.IsActive,
+		&i.IsExecutive,
+		&i.Category,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -165,60 +175,55 @@ func (q *Queries) GetPartyPositionByID(ctx context.Context, arg GetPartyPosition
 
 const listChapterOfficials = `-- name: ListChapterOfficials :many
 SELECT 
-    pa.id AS assignment_id,
-    pa.party_id,
-    pa.chapter_id,
-    pa.position_id,
-    pa.user_id,
-    pa.appointment_type,
-    pa.status AS assignment_status,
-    pa.tenure_start,
-    pa.tenure_end,
-    pa.appointed_by,
-    pa.created_at AS assigned_at,
-    
-    pos.name AS position_name,
-    pos.code AS position_code,
-    pos.position_type,
-    pos.rank_order,
-    pos.max_occupants,
-    
-    u.first_name,
-    u.last_name,
-    u.middle_name,
-    u.username,
-    u.avatar,
-    u.email,
-    u.phone,
+    party_position_assignments.id AS assignment_id,
+    party_position_assignments.party_id,
+    party_position_assignments.chapter_id,
+    party_position_assignments.position_id,
+    party_position_assignments.user_id,
+    party_position_assignments.appointment_type,
+    party_position_assignments.status AS assignment_status,
+    party_position_assignments.tenure_start,
+    party_position_assignments.tenure_end,
+    party_position_assignments.created_at AS assigned_at,
 
-    pc.chapter_type,
+    party_positions.name AS position_name,
+    party_positions.position_type,
+    party_positions.category AS position_category,
+    party_positions.rank_order,
+    
+    users.first_name,
+    users.last_name,
+    users.username,
+    users.avatar,
+
+    party_chapters.chapter_type,
     COALESCE(
-        c.name,
-        z.name,
-        s.name,
-        l.name,
-        w.name,
+        c_countries.name,
+        c_zones_nigeria.name,
+        c_states.name,
+        lgas.name,
+        wards.name,
         ''
     )::varchar AS geo_name,
     format_position_display_title(
-        pc.chapter_type,
-        COALESCE(c.name, z.name, s.name, l.name, w.name, '')::varchar,
-        pos.name,
-        pa.appointment_type
+        party_chapters.chapter_type,
+        COALESCE(c_countries.name, c_zones_nigeria.name, c_states.name, lgas.name, wards.name, '')::varchar,
+        party_positions.name,
+        party_position_assignments.appointment_type
     ) AS display_title
-FROM party_position_assignments pa
-JOIN party_positions pos ON pos.id = pa.position_id
-JOIN users u ON u.id = pa.user_id
-JOIN party_chapters pc ON pc.id = pa.chapter_id
-LEFT JOIN c_countries c ON c.id = pc.country_id AND pc.chapter_type = 'national'
-LEFT JOIN c_zones_nigeria z ON z.id = pc.zonal_id AND pc.chapter_type = 'zonal'
-LEFT JOIN c_states s ON s.id = pc.state_id AND pc.chapter_type = 'state'
-LEFT JOIN lgas l ON l.id = pc.lga_id AND pc.chapter_type = 'lga'
-LEFT JOIN wards w ON w.id = pc.ward_id AND pc.chapter_type = 'ward'
-WHERE pa.party_id = $1
-  AND pa.chapter_id = $2
-  AND ($3::varchar IS NULL OR pa.status = $3)
-ORDER BY pos.rank_order ASC, pa.tenure_start DESC
+FROM party_position_assignments
+JOIN party_positions ON party_positions.id = party_position_assignments.position_id
+JOIN users ON users.id = party_position_assignments.user_id
+JOIN party_chapters ON party_chapters.id = party_position_assignments.chapter_id
+LEFT JOIN c_countries ON c_countries.id = party_chapters.country_id AND party_chapters.chapter_type = 'national'
+LEFT JOIN c_zones_nigeria ON c_zones_nigeria.id = party_chapters.zonal_id AND party_chapters.chapter_type = 'zonal'
+LEFT JOIN c_states ON c_states.id = party_chapters.state_id AND party_chapters.chapter_type = 'state'
+LEFT JOIN lgas ON lgas.id = party_chapters.lga_id AND party_chapters.chapter_type = 'lga'
+LEFT JOIN wards ON wards.id = party_chapters.ward_id AND party_chapters.chapter_type = 'ward'
+WHERE party_position_assignments.party_id = $1
+  AND party_position_assignments.chapter_id = $2
+  AND ($3::varchar IS NULL OR party_position_assignments.status = $3)
+ORDER BY party_positions.rank_order ASC, party_position_assignments.tenure_start DESC
 `
 
 type ListChapterOfficialsParams struct {
@@ -237,20 +242,15 @@ type ListChapterOfficialsRow struct {
 	AssignmentStatus string             `json:"assignment_status"`
 	TenureStart      pgtype.Date        `json:"tenure_start"`
 	TenureEnd        pgtype.Date        `json:"tenure_end"`
-	AppointedBy      pgtype.Int8        `json:"appointed_by"`
 	AssignedAt       pgtype.Timestamptz `json:"assigned_at"`
 	PositionName     string             `json:"position_name"`
-	PositionCode     string             `json:"position_code"`
 	PositionType     string             `json:"position_type"`
+	PositionCategory string             `json:"position_category"`
 	RankOrder        int16              `json:"rank_order"`
-	MaxOccupants     int16              `json:"max_occupants"`
 	FirstName        pgtype.Text        `json:"first_name"`
 	LastName         pgtype.Text        `json:"last_name"`
-	MiddleName       pgtype.Text        `json:"middle_name"`
 	Username         pgtype.Text        `json:"username"`
 	Avatar           pgtype.Text        `json:"avatar"`
-	Email            pgtype.Text        `json:"email"`
-	Phone            pgtype.Text        `json:"phone"`
 	ChapterType      string             `json:"chapter_type"`
 	GeoName          string             `json:"geo_name"`
 	DisplayTitle     string             `json:"display_title"`
@@ -275,20 +275,15 @@ func (q *Queries) ListChapterOfficials(ctx context.Context, arg ListChapterOffic
 			&i.AssignmentStatus,
 			&i.TenureStart,
 			&i.TenureEnd,
-			&i.AppointedBy,
 			&i.AssignedAt,
 			&i.PositionName,
-			&i.PositionCode,
 			&i.PositionType,
+			&i.PositionCategory,
 			&i.RankOrder,
-			&i.MaxOccupants,
 			&i.FirstName,
 			&i.LastName,
-			&i.MiddleName,
 			&i.Username,
 			&i.Avatar,
-			&i.Email,
-			&i.Phone,
 			&i.ChapterType,
 			&i.GeoName,
 			&i.DisplayTitle,
@@ -305,47 +300,46 @@ func (q *Queries) ListChapterOfficials(ctx context.Context, arg ListChapterOffic
 
 const listMemberPositionAssignments = `-- name: ListMemberPositionAssignments :many
 SELECT 
-    pa.id AS assignment_id,
-    pa.party_id,
-    pa.chapter_id,
-    pa.position_id,
-    pa.user_id,
-    pa.appointment_type,
-    pa.status AS assignment_status,
-    pa.tenure_start,
-    pa.tenure_end,
-    pa.created_at AS assigned_at,
+    party_position_assignments.id AS assignment_id,
+    party_position_assignments.party_id,
+    party_position_assignments.chapter_id,
+    party_position_assignments.position_id,
+    party_position_assignments.user_id,
+    party_position_assignments.appointment_type,
+    party_position_assignments.status AS assignment_status,
+    party_position_assignments.tenure_start,
+    party_position_assignments.tenure_end,
+    party_position_assignments.created_at AS assigned_at,
     
-    pos.name AS position_name,
-    pos.code AS position_code,
-    pos.position_type,
-    pos.rank_order,
+    party_positions.name AS position_name,
+    party_positions.position_type,
+    party_positions.rank_order,
     
-    pc.chapter_type,
+    party_chapters.chapter_type,
     COALESCE(
-        c.name,
-        z.name,
-        s.name,
-        l.name,
-        w.name,
+        c_countries.name,
+        c_zones_nigeria.name,
+        c_states.name,
+        lgas.name,
+        wards.name,
         ''
     )::varchar AS geo_name,
     format_position_display_title(
-        pc.chapter_type,
-        COALESCE(c.name, z.name, s.name, l.name, w.name, '')::varchar,
-        pos.name,
-        pa.appointment_type
+        party_chapters.chapter_type,
+        COALESCE(c_countries.name, c_zones_nigeria.name, c_states.name, lgas.name, wards.name, '')::varchar,
+        party_positions.name,
+        party_position_assignments.appointment_type
     ) AS display_title
-FROM party_position_assignments pa
-JOIN party_positions pos ON pos.id = pa.position_id
-JOIN party_chapters pc ON pc.id = pa.chapter_id
-LEFT JOIN c_countries c ON c.id = pc.country_id AND pc.chapter_type = 'national'
-LEFT JOIN c_zones_nigeria z ON z.id = pc.zonal_id AND pc.chapter_type = 'zonal'
-LEFT JOIN c_states s ON s.id = pc.state_id AND pc.chapter_type = 'state'
-LEFT JOIN lgas l ON l.id = pc.lga_id AND pc.chapter_type = 'lga'
-LEFT JOIN wards w ON w.id = pc.ward_id AND pc.chapter_type = 'ward'
-WHERE pa.party_id = $1 AND pa.user_id = $2
-ORDER BY pa.status ASC, pa.tenure_start DESC
+FROM party_position_assignments
+JOIN party_positions ON party_positions.id = party_position_assignments.position_id
+JOIN party_chapters ON party_chapters.id = party_position_assignments.chapter_id
+LEFT JOIN c_countries ON c_countries.id = party_chapters.country_id AND party_chapters.chapter_type = 'national'
+LEFT JOIN c_zones_nigeria ON c_zones_nigeria.id = party_chapters.zonal_id AND party_chapters.chapter_type = 'zonal'
+LEFT JOIN c_states ON c_states.id = party_chapters.state_id AND party_chapters.chapter_type = 'state'
+LEFT JOIN lgas ON lgas.id = party_chapters.lga_id AND party_chapters.chapter_type = 'lga'
+LEFT JOIN wards ON wards.id = party_chapters.ward_id AND party_chapters.chapter_type = 'ward'
+WHERE party_position_assignments.party_id = $1 AND party_position_assignments.user_id = $2
+ORDER BY party_position_assignments.status ASC, party_position_assignments.tenure_start DESC
 `
 
 type ListMemberPositionAssignmentsParams struct {
@@ -365,7 +359,6 @@ type ListMemberPositionAssignmentsRow struct {
 	TenureEnd        pgtype.Date        `json:"tenure_end"`
 	AssignedAt       pgtype.Timestamptz `json:"assigned_at"`
 	PositionName     string             `json:"position_name"`
-	PositionCode     string             `json:"position_code"`
 	PositionType     string             `json:"position_type"`
 	RankOrder        int16              `json:"rank_order"`
 	ChapterType      string             `json:"chapter_type"`
@@ -394,7 +387,6 @@ func (q *Queries) ListMemberPositionAssignments(ctx context.Context, arg ListMem
 			&i.TenureEnd,
 			&i.AssignedAt,
 			&i.PositionName,
-			&i.PositionCode,
 			&i.PositionType,
 			&i.RankOrder,
 			&i.ChapterType,
@@ -413,68 +405,63 @@ func (q *Queries) ListMemberPositionAssignments(ctx context.Context, arg ListMem
 
 const listPartyOfficials = `-- name: ListPartyOfficials :many
 SELECT 
-    pa.id AS assignment_id,
-    pa.party_id,
-    pa.chapter_id,
-    pa.position_id,
-    pa.user_id,
-    pa.appointment_type,
-    pa.status AS assignment_status,
-    pa.tenure_start,
-    pa.tenure_end,
-    pa.appointed_by,
-    pa.created_at AS assigned_at,
+    party_position_assignments.id AS assignment_id,
+    party_position_assignments.party_id,
+    party_position_assignments.chapter_id,
+    party_position_assignments.position_id,
+    party_position_assignments.user_id,
+    party_position_assignments.appointment_type,
+    party_position_assignments.status AS assignment_status,
+    party_position_assignments.tenure_start,
+    party_position_assignments.tenure_end,
+    party_position_assignments.created_at AS assigned_at,
     
-    pos.name AS position_name,
-    pos.code AS position_code,
-    pos.position_type,
-    pos.rank_order,
-    pos.max_occupants,
+    party_positions.name AS position_name,
+    party_positions.position_type,
+    party_positions.category AS position_category,
+    party_positions.rank_order,
     
-    u.first_name,
-    u.last_name,
-    u.middle_name,
-    u.username,
-    u.avatar,
-    u.email,
-    u.phone,
+    users.first_name,
+    users.last_name,
+    users.username,
+    users.avatar,
 
-    pc.chapter_type,
+    party_chapters.chapter_type,
     COALESCE(
-        c.name,
-        z.name,
-        s.name,
-        l.name,
-        w.name,
+        c_countries.name,
+        c_zones_nigeria.name,
+        c_states.name,
+        lgas.name,
+        wards.name,
         ''
     )::varchar AS geo_name,
     format_position_display_title(
-        pc.chapter_type,
-        COALESCE(c.name, z.name, s.name, l.name, w.name, '')::varchar,
-        pos.name,
-        pa.appointment_type
+        party_chapters.chapter_type,
+        COALESCE(c_countries.name, c_zones_nigeria.name, c_states.name, lgas.name, wards.name, '')::varchar,
+        party_positions.name,
+        party_position_assignments.appointment_type
     ) AS display_title
-FROM party_position_assignments pa
-JOIN party_positions pos ON pos.id = pa.position_id
-JOIN users u ON u.id = pa.user_id
-JOIN party_chapters pc ON pc.id = pa.chapter_id
-LEFT JOIN c_countries c ON c.id = pc.country_id AND pc.chapter_type = 'national'
-LEFT JOIN c_zones_nigeria z ON z.id = pc.zonal_id AND pc.chapter_type = 'zonal'
-LEFT JOIN c_states s ON s.id = pc.state_id AND pc.chapter_type = 'state'
-LEFT JOIN lgas l ON l.id = pc.lga_id AND pc.chapter_type = 'lga'
-LEFT JOIN wards w ON w.id = pc.ward_id AND pc.chapter_type = 'ward'
-WHERE pa.party_id = $1
-  AND ($2::varchar IS NULL OR pc.chapter_type = $2)
-  AND ($3::smallint IS NULL OR pc.state_id = $3)
-  AND ($4::int IS NULL OR pc.lga_id = $4)
-  AND ($5::int IS NULL OR pc.ward_id = $5)
-  AND ($6::varchar IS NULL OR pa.status = $6)
+FROM party_position_assignments
+JOIN party_positions ON party_positions.id = party_position_assignments.position_id
+JOIN users ON users.id = party_position_assignments.user_id
+JOIN party_chapters ON party_chapters.id = party_position_assignments.chapter_id
+LEFT JOIN c_countries ON c_countries.id = party_chapters.country_id AND party_chapters.chapter_type = 'national'
+LEFT JOIN c_zones_nigeria ON c_zones_nigeria.id = party_chapters.zonal_id AND party_chapters.chapter_type = 'zonal'
+LEFT JOIN c_states ON c_states.id = party_chapters.state_id AND party_chapters.chapter_type = 'state'
+LEFT JOIN lgas ON lgas.id = party_chapters.lga_id AND party_chapters.chapter_type = 'lga'
+LEFT JOIN wards ON wards.id = party_chapters.ward_id AND party_chapters.chapter_type = 'ward'
+WHERE party_position_assignments.party_id = $1
+  AND ($2::varchar IS NULL OR party_chapters.chapter_type = $2)
+  AND ($3::smallint IS NULL OR party_chapters.state_id = $3)
+  AND ($4::int IS NULL OR party_chapters.lga_id = $4)
+  AND ($5::int IS NULL OR party_chapters.ward_id = $5)
+  AND ($6::varchar IS NULL OR party_position_assignments.status = $6)
   AND ($7::varchar IS NULL OR 
-       u.first_name ILIKE '%' || $7 || '%' OR 
-       u.last_name ILIKE '%' || $7 || '%' OR 
-       u.username ILIKE '%' || $7 || '%' OR 
-       pos.name ILIKE '%' || $7 || '%')
-ORDER BY pc.chapter_type ASC, pos.rank_order ASC, pa.tenure_start DESC
+       users.first_name ILIKE '%' || $7 || '%' OR 
+       users.last_name ILIKE '%' || $7 || '%' OR 
+       users.username ILIKE '%' || $7 || '%' OR 
+       party_positions.name ILIKE '%' || $7 || '%')
+ORDER BY party_chapters.chapter_type ASC, party_positions.rank_order ASC, party_position_assignments.tenure_start DESC
 `
 
 type ListPartyOfficialsParams struct {
@@ -497,20 +484,15 @@ type ListPartyOfficialsRow struct {
 	AssignmentStatus string             `json:"assignment_status"`
 	TenureStart      pgtype.Date        `json:"tenure_start"`
 	TenureEnd        pgtype.Date        `json:"tenure_end"`
-	AppointedBy      pgtype.Int8        `json:"appointed_by"`
 	AssignedAt       pgtype.Timestamptz `json:"assigned_at"`
 	PositionName     string             `json:"position_name"`
-	PositionCode     string             `json:"position_code"`
 	PositionType     string             `json:"position_type"`
+	PositionCategory string             `json:"position_category"`
 	RankOrder        int16              `json:"rank_order"`
-	MaxOccupants     int16              `json:"max_occupants"`
 	FirstName        pgtype.Text        `json:"first_name"`
 	LastName         pgtype.Text        `json:"last_name"`
-	MiddleName       pgtype.Text        `json:"middle_name"`
 	Username         pgtype.Text        `json:"username"`
 	Avatar           pgtype.Text        `json:"avatar"`
-	Email            pgtype.Text        `json:"email"`
-	Phone            pgtype.Text        `json:"phone"`
 	ChapterType      string             `json:"chapter_type"`
 	GeoName          string             `json:"geo_name"`
 	DisplayTitle     string             `json:"display_title"`
@@ -543,20 +525,15 @@ func (q *Queries) ListPartyOfficials(ctx context.Context, arg ListPartyOfficials
 			&i.AssignmentStatus,
 			&i.TenureStart,
 			&i.TenureEnd,
-			&i.AppointedBy,
 			&i.AssignedAt,
 			&i.PositionName,
-			&i.PositionCode,
 			&i.PositionType,
+			&i.PositionCategory,
 			&i.RankOrder,
-			&i.MaxOccupants,
 			&i.FirstName,
 			&i.LastName,
-			&i.MiddleName,
 			&i.Username,
 			&i.Avatar,
-			&i.Email,
-			&i.Phone,
 			&i.ChapterType,
 			&i.GeoName,
 			&i.DisplayTitle,
@@ -572,7 +549,7 @@ func (q *Queries) ListPartyOfficials(ctx context.Context, arg ListPartyOfficials
 }
 
 const listPartyPositions = `-- name: ListPartyPositions :many
-SELECT id, position_type, name, code, party_id, description, allowed_levels, rank_order, max_occupants, created_at FROM party_positions
+SELECT id, position_type, name, code, party_id, description, allowed_levels, rank_order, max_occupants, is_active, is_executive, category, created_at FROM party_positions
 WHERE (party_id IS NULL OR party_id = $1)
   AND ($2::varchar IS NULL OR $2::varchar = ANY(allowed_levels))
 ORDER BY rank_order ASC, name ASC
@@ -602,6 +579,9 @@ func (q *Queries) ListPartyPositions(ctx context.Context, arg ListPartyPositions
 			&i.AllowedLevels,
 			&i.RankOrder,
 			&i.MaxOccupants,
+			&i.IsActive,
+			&i.IsExecutive,
+			&i.Category,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -622,9 +602,11 @@ SET
     description = $5,
     allowed_levels = $6,
     rank_order = $7,
-    max_occupants = $8
+    max_occupants = $8,
+    is_executive = COALESCE($9::boolean, is_executive),
+    category = COALESCE($10::varchar, category)
 WHERE id = $1 AND party_id = $2 AND position_type = 'custom'
-RETURNING id, position_type, name, code, party_id, description, allowed_levels, rank_order, max_occupants, created_at
+RETURNING id, position_type, name, code, party_id, description, allowed_levels, rank_order, max_occupants, is_active, is_executive, category, created_at
 `
 
 type UpdatePartyCustomPositionParams struct {
@@ -636,6 +618,8 @@ type UpdatePartyCustomPositionParams struct {
 	AllowedLevels []string    `json:"allowed_levels"`
 	RankOrder     int16       `json:"rank_order"`
 	MaxOccupants  int16       `json:"max_occupants"`
+	IsExecutive   pgtype.Bool `json:"is_executive"`
+	Category      pgtype.Text `json:"category"`
 }
 
 func (q *Queries) UpdatePartyCustomPosition(ctx context.Context, arg UpdatePartyCustomPositionParams) (PartyPosition, error) {
@@ -648,6 +632,8 @@ func (q *Queries) UpdatePartyCustomPosition(ctx context.Context, arg UpdateParty
 		arg.AllowedLevels,
 		arg.RankOrder,
 		arg.MaxOccupants,
+		arg.IsExecutive,
+		arg.Category,
 	)
 	var i PartyPosition
 	err := row.Scan(
@@ -660,6 +646,9 @@ func (q *Queries) UpdatePartyCustomPosition(ctx context.Context, arg UpdateParty
 		&i.AllowedLevels,
 		&i.RankOrder,
 		&i.MaxOccupants,
+		&i.IsActive,
+		&i.IsExecutive,
+		&i.Category,
 		&i.CreatedAt,
 	)
 	return i, err

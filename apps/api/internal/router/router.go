@@ -37,6 +37,7 @@ import (
 	federalconstituencieshandler "free9ja/api/internal/handler/federal_constituencies"
 	fileshandler "free9ja/api/internal/handler/files"
 	inecgrabberhandler "free9ja/api/internal/handler/inec_grabber"
+	mediaassetshandler "free9ja/api/internal/handler/media_assets"
 	officeshandler "free9ja/api/internal/handler/offices"
 	pageverificationshandler "free9ja/api/internal/handler/page_verifications"
 	partieshandler "free9ja/api/internal/handler/parties"
@@ -66,6 +67,7 @@ import (
 	federalconstituenciesservice "free9ja/api/internal/service/federal_constituencies"
 	filesservice "free9ja/api/internal/service/files"
 	inecgrabberservice "free9ja/api/internal/service/inec_grabber"
+	mediaassetsservice "free9ja/api/internal/service/media_assets"
 	messagingservice "free9ja/api/internal/service/messaging"
 	monnifyservice "free9ja/api/internal/service/monnify"
 	officesservice "free9ja/api/internal/service/offices"
@@ -202,8 +204,11 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	adminAgentPaymentsHandler := adminagentpaymentshandler.NewHandler(pool, utilsInstance)
 
 	var filesHandler *fileshandler.Handler
+	var mediaAssetsHandler *mediaassetshandler.Handler
 	if r2Svc != nil {
 		filesHandler = fileshandler.NewHandler(filesService, r2Svc, rdb, utilsInstance, usersService, partiesService, auditService)
+		mediaAssetsSvc := mediaassetsservice.NewMediaAssetsService(q, r2Svc)
+		mediaAssetsHandler = mediaassetshandler.NewHandler(mediaAssetsSvc, utilsInstance)
 	}
 
 	geminiKey := ""
@@ -481,6 +486,19 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 
 		// only admins can permanently delete files
 		r.Delete("/api/v1/files/{id}", fileRoute(utilsInstance, filesHandler, func(h *fileshandler.Handler) http.HandlerFunc { return h.DeleteFile }))
+
+		// media assets & folders (admin only)
+		r.Get("/api/v1/admin/assets/folders", mediaAssetRoute(utilsInstance, mediaAssetsHandler, func(h *mediaassetshandler.Handler) http.HandlerFunc { return h.ListFolders }))
+		r.Post("/api/v1/admin/assets/folders", mediaAssetRoute(utilsInstance, mediaAssetsHandler, func(h *mediaassetshandler.Handler) http.HandlerFunc { return h.CreateFolder }))
+		r.Get("/api/v1/admin/assets/folders/{id}", mediaAssetRoute(utilsInstance, mediaAssetsHandler, func(h *mediaassetshandler.Handler) http.HandlerFunc { return h.GetFolder }))
+		r.Delete("/api/v1/admin/assets/folders/{id}", mediaAssetRoute(utilsInstance, mediaAssetsHandler, func(h *mediaassetshandler.Handler) http.HandlerFunc { return h.DeleteFolder }))
+
+		r.Get("/api/v1/admin/assets", mediaAssetRoute(utilsInstance, mediaAssetsHandler, func(h *mediaassetshandler.Handler) http.HandlerFunc { return h.ListAssets }))
+		r.Get("/api/v1/admin/assets/{id}", mediaAssetRoute(utilsInstance, mediaAssetsHandler, func(h *mediaassetshandler.Handler) http.HandlerFunc { return h.GetAsset }))
+		r.Post("/api/v1/admin/assets/upload-url", mediaAssetRoute(utilsInstance, mediaAssetsHandler, func(h *mediaassetshandler.Handler) http.HandlerFunc { return h.GetUploadPresignedURL }))
+		r.Post("/api/v1/admin/assets/confirm", mediaAssetRoute(utilsInstance, mediaAssetsHandler, func(h *mediaassetshandler.Handler) http.HandlerFunc { return h.ConfirmUpload }))
+		r.Delete("/api/v1/admin/assets/{id}", mediaAssetRoute(utilsInstance, mediaAssetsHandler, func(h *mediaassetshandler.Handler) http.HandlerFunc { return h.DeleteAsset }))
+		r.Post("/api/v1/admin/assets/sync", mediaAssetRoute(utilsInstance, mediaAssetsHandler, func(h *mediaassetshandler.Handler) http.HandlerFunc { return h.SyncR2 }))
 	})
 
 	// Auth-only routes (any authenticated user, regardless of role)
@@ -683,6 +701,22 @@ func fileRoute(
 			u.RespondError(w, http.StatusServiceUnavailable, "File storage is not configured")
 		}
 	}
+
+	return picker(h)
+}
+
+// mediaAssetRoute returns an http.HandlerFunc that is nil-safe for media assets.
+func mediaAssetRoute(
+	u *utils.Utils,
+	h *mediaassetshandler.Handler,
+	picker func(*mediaassetshandler.Handler) http.HandlerFunc,
+) http.HandlerFunc {
+	if h == nil {
+		return func(w http.ResponseWriter, r *http.Request) {
+			u.RespondError(w, http.StatusServiceUnavailable, "Cloudflare R2 media storage is not configured")
+		}
+	}
+
 	return picker(h)
 }
 

@@ -35,6 +35,7 @@ export const APP_URL = {
     referralPay: "/agent-payments/referral-pay",
   },
   marketing: "/marketing",
+  assets: "/assets",
   notifications: "/notifications",
   logs: "/logs",
   inecResultGrabber: {

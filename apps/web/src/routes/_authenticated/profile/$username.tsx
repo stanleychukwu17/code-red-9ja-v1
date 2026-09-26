@@ -44,4 +44,3 @@ function ProfileLayoutComponent() {
     </div>
   );
 }
-

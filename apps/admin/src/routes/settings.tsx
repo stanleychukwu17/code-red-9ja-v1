@@ -46,14 +46,14 @@ const APP_SIDEBAR_ITEMS: AppSidebarItem[] = [
     id: "general",
     label: "General",
     icon: <FilterIcon />,
-    selectedIcon: <FilterSolidIcon className="text-c-90" />,
+    selectedIcon: <FilterSolidIcon />,
     href: APP_URL.settings.general,
   },
   {
     id: "partyadmin",
     label: "Partyadmin",
     icon: <BalonIcon />,
-    selectedIcon: <BalonSolidIcon className="text-c-90" />,
+    selectedIcon: <BalonSolidIcon />,
     href: APP_URL.settings.partyadmin,
   },
 ];

@@ -42,6 +42,18 @@ type AgentEarning struct {
 	UpdatedAt               pgtype.Timestamptz `json:"updated_at"`
 }
 
+type AssetFolder struct {
+	ID          int32              `json:"id"`
+	Name        string             `json:"name"`
+	Slug        string             `json:"slug"`
+	ParentID    pgtype.Int4        `json:"parent_id"`
+	R2Prefix    string             `json:"r2_prefix"`
+	Description pgtype.Text        `json:"description"`
+	CreatedBy   pgtype.Int8        `json:"created_by"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
 type AuditLog struct {
 	ID         int64              `json:"id"`
 	Module     pgtype.Text        `json:"module"`
@@ -1111,6 +1123,24 @@ type LgaElectionSupervisor struct {
 	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
 }
 
+type MediaAsset struct {
+	ID              int32              `json:"id"`
+	FolderID        pgtype.Int4        `json:"folder_id"`
+	Name            string             `json:"name"`
+	R2Key           string             `json:"r2_key"`
+	PublicUrl       string             `json:"public_url"`
+	FileType        string             `json:"file_type"`
+	Extension       string             `json:"extension"`
+	MimeType        string             `json:"mime_type"`
+	FileSizeBytes   int64              `json:"file_size_bytes"`
+	Dimensions      pgtype.Text        `json:"dimensions"`
+	DurationSeconds pgtype.Int4        `json:"duration_seconds"`
+	Tags            []string           `json:"tags"`
+	UploadedBy      pgtype.Int8        `json:"uploaded_by"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
 type NationalMetric struct {
 	ID                         int32              `json:"id"`
 	StatesCount                int32              `json:"states_count"`
@@ -1281,6 +1311,9 @@ type PartyPosition struct {
 	AllowedLevels []string           `json:"allowed_levels"`
 	RankOrder     int16              `json:"rank_order"`
 	MaxOccupants  int16              `json:"max_occupants"`
+	IsActive      bool               `json:"is_active"`
+	IsExecutive   bool               `json:"is_executive"`
+	Category      string             `json:"category"`
 	CreatedAt     pgtype.Timestamptz `json:"created_at"`
 }
 

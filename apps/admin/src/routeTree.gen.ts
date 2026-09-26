@@ -19,6 +19,7 @@ import { Route as AuthenticatedPartiesRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedMarketingRouteImport } from './routes/_authenticated/marketing'
 import { Route as AuthenticatedElectionsRouteImport } from './routes/_authenticated/elections'
 import { Route as AuthenticatedBodiesRouteImport } from './routes/_authenticated/bodies'
+import { Route as AuthenticatedAssetsRouteImport } from './routes/_authenticated/assets'
 import { Route as AuthenticatedAgentPaymentsRouteImport } from './routes/_authenticated/agent-payments'
 import { Route as SettingsPartyadminIndexRouteImport } from './routes/settings/partyadmin/index'
 import { Route as SettingsGeneralIndexRouteImport } from './routes/settings/_general/index'
@@ -94,6 +95,11 @@ const AuthenticatedElectionsRoute = AuthenticatedElectionsRouteImport.update({
 const AuthenticatedBodiesRoute = AuthenticatedBodiesRouteImport.update({
   id: '/bodies',
   path: '/bodies',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedAssetsRoute = AuthenticatedAssetsRouteImport.update({
+  id: '/assets',
+  path: '/assets',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedAgentPaymentsRoute =
@@ -256,6 +262,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/settings': typeof SettingsRouteWithChildren
   '/agent-payments': typeof AuthenticatedAgentPaymentsRouteWithChildren
+  '/assets': typeof AuthenticatedAssetsRoute
   '/bodies': typeof AuthenticatedBodiesRouteWithChildren
   '/elections': typeof AuthenticatedElectionsRouteWithChildren
   '/marketing': typeof AuthenticatedMarketingRouteWithChildren
@@ -292,6 +299,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/assets': typeof AuthenticatedAssetsRoute
   '/bodies': typeof AuthenticatedBodiesRouteWithChildren
   '/parties': typeof AuthenticatedPartiesRoute
   '/users': typeof AuthenticatedUsersRouteWithChildren
@@ -330,6 +338,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/settings': typeof SettingsRouteWithChildren
   '/_authenticated/agent-payments': typeof AuthenticatedAgentPaymentsRouteWithChildren
+  '/_authenticated/assets': typeof AuthenticatedAssetsRoute
   '/_authenticated/bodies': typeof AuthenticatedBodiesRouteWithChildren
   '/_authenticated/elections': typeof AuthenticatedElectionsRouteWithChildren
   '/_authenticated/marketing': typeof AuthenticatedMarketingRouteWithChildren
@@ -370,6 +379,7 @@ export interface FileRouteTypes {
     | '/'
     | '/settings'
     | '/agent-payments'
+    | '/assets'
     | '/bodies'
     | '/elections'
     | '/marketing'
@@ -406,6 +416,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/assets'
     | '/bodies'
     | '/parties'
     | '/users'
@@ -443,6 +454,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/settings'
     | '/_authenticated/agent-payments'
+    | '/_authenticated/assets'
     | '/_authenticated/bodies'
     | '/_authenticated/elections'
     | '/_authenticated/marketing'
@@ -556,6 +568,13 @@ declare module '@tanstack/react-router' {
       path: '/bodies'
       fullPath: '/bodies'
       preLoaderRoute: typeof AuthenticatedBodiesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/assets': {
+      id: '/_authenticated/assets'
+      path: '/assets'
+      fullPath: '/assets'
+      preLoaderRoute: typeof AuthenticatedAssetsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/agent-payments': {
@@ -848,6 +867,7 @@ const AuthenticatedUsersRouteWithChildren =
 
 interface AuthenticatedRouteChildren {
   AuthenticatedAgentPaymentsRoute: typeof AuthenticatedAgentPaymentsRouteWithChildren
+  AuthenticatedAssetsRoute: typeof AuthenticatedAssetsRoute
   AuthenticatedBodiesRoute: typeof AuthenticatedBodiesRouteWithChildren
   AuthenticatedElectionsRoute: typeof AuthenticatedElectionsRouteWithChildren
   AuthenticatedMarketingRoute: typeof AuthenticatedMarketingRouteWithChildren
@@ -863,6 +883,7 @@ interface AuthenticatedRouteChildren {
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAgentPaymentsRoute: AuthenticatedAgentPaymentsRouteWithChildren,
+  AuthenticatedAssetsRoute: AuthenticatedAssetsRoute,
   AuthenticatedBodiesRoute: AuthenticatedBodiesRouteWithChildren,
   AuthenticatedElectionsRoute: AuthenticatedElectionsRouteWithChildren,
   AuthenticatedMarketingRoute: AuthenticatedMarketingRouteWithChildren,

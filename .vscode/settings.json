@@ -62,6 +62,8 @@
     "keepalive",
     "kusers",
     "lgas",
+    "mediaassetshandler",
+    "mediaassetsservice",
     "messagingservice",
     "MGET",
     "mmdb",

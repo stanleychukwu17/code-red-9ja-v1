@@ -21,7 +21,7 @@ import BrickIcon from "@repo/ui/icons/navbar/brick-icon";
 import BrickSolidIcon from "@repo/ui/icons/navbar/brick-solid-icon";
 import BalonIcon from "@repo/ui/icons/navbar/balon-icon";
 import BalonSolidIcon from "@repo/ui/icons/navbar/balon-solid-icon";
-import { Coins } from "lucide-react";
+import { Coins, FolderKanban } from "lucide-react";
 
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { updateSiteState } from "@/redux/slice/siteSlice";
@@ -64,14 +64,14 @@ const APP_SIDEBAR_ITEMS: AppSidebarItem[] = [
     id: "home",
     label: "Home",
     icon: <HomeIcon />,
-    selectedIcon: <HomeSolidIcon className="text-c-90" />,
+    selectedIcon: <HomeSolidIcon />,
     href: APP_URL.home,
   },
   {
     id: "elections",
     label: "Elections",
     icon: <CalendarIcon />,
-    selectedIcon: <CalendarSolidIcon className="text-c-90" />,
+    selectedIcon: <CalendarSolidIcon />,
     href: APP_URL.elections.root,
   },
   {
@@ -79,63 +79,70 @@ const APP_SIDEBAR_ITEMS: AppSidebarItem[] = [
     label: "Bodies",
     href: APP_URL.bodies,
     icon: <CubeIcon />,
-    selectedIcon: <CubeSolidIcon className="text-c-90" />,
+    selectedIcon: <CubeSolidIcon />,
   },
   {
     id: "users",
     label: "Users",
     icon: <UserIcon />,
-    selectedIcon: <UserSolidIcon className="text-c-90" />,
+    selectedIcon: <UserSolidIcon />,
     href: APP_URL.users.admins,
   },
   {
     id: "parties",
     label: "Parties",
     icon: <PartyIcon />,
-    selectedIcon: <PartySolidIcon className="text-c-90" />,
+    selectedIcon: <PartySolidIcon />,
     href: APP_URL.parties,
   },
   {
     id: "applications",
     label: "Applications",
     icon: <PaperIcon />,
-    selectedIcon: <PaperSolidIcon className="text-c-90" />,
+    selectedIcon: <PaperSolidIcon />,
     href: APP_URL.applications,
   },
   {
     id: "marketing",
     label: "Marketing",
     icon: <BalonIcon />,
-    selectedIcon: <BalonSolidIcon className="text-c-90" />,
+    selectedIcon: <BalonSolidIcon />,
     href: APP_URL.marketing,
   },
   {
     id: "agent-payments",
     label: "Agent Payments",
     icon: <Coins />,
-    selectedIcon: <Coins className="text-c-90" />,
+    selectedIcon: <Coins />,
     href: APP_URL.agentPayments.root,
   },
   // {
   //   id: "notifications",
   //   label: "Notifications",
   //   icon: <NotificationIcon />,
-  //   selectedIcon: <NotificationSolidIcon className="text-c-90" />,
+  //   selectedIcon: <NotificationSolidIcon />,
   //   href: APP_URL.notifications,
   // },
   {
     id: "logs",
     label: "Logs",
     icon: <BrickIcon />,
-    selectedIcon: <BrickSolidIcon className="text-c-90" />,
+    selectedIcon: <BrickSolidIcon />,
     href: APP_URL.logs,
   },
   {
     id: "inec-result-grabber",
     label: "INEC Results",
     icon: <PaperIcon />,
-    selectedIcon: <PaperSolidIcon className="text-c-90" />,
+    selectedIcon: <PaperSolidIcon />,
     href: APP_URL.inecResultGrabber.main,
+  },
+  {
+    id: "assets",
+    label: "Media Assets",
+    icon: <FolderKanban />,
+    selectedIcon: <FolderKanban />,
+    href: APP_URL.assets,
   },
 ];
 
@@ -148,7 +155,7 @@ function AuthenticatedRoutes() {
   const handleLogout = async () => {
     try {
       await logoutUser();
-    } catch (e) {}
+    } catch (e) { }
     dispatch(updateAuthState({ user: null }));
   };
 

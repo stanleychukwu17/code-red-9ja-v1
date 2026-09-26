@@ -56,7 +56,12 @@ type Querier interface {
 	ConfirmUpload(ctx context.Context, arg ConfirmUploadParams) (File, error)
 	CountActivePositionOccupants(ctx context.Context, arg CountActivePositionOccupantsParams) (int64, error)
 	CountAllUserPhoneNumbers(ctx context.Context, userID int64) (int64, error)
+	CountMediaAssetsByFolder(ctx context.Context, arg CountMediaAssetsByFolderParams) (int64, error)
 	CreateApplication(ctx context.Context, arg CreateApplicationParams) (PartyApplication, error)
+	// ============================================================================
+	// ASSET FOLDERS QUERIES
+	// ============================================================================
+	CreateAssetFolder(ctx context.Context, arg CreateAssetFolderParams) (AssetFolder, error)
 	CreateAssignment(ctx context.Context, arg CreateAssignmentParams) (PollingUnitAssignment, error)
 	CreateCandidatePlaceholder(ctx context.Context, arg CreateCandidatePlaceholderParams) (int64, error)
 	CreateDidNotVoteReason(ctx context.Context, arg CreateDidNotVoteReasonParams) (DidNotVoteReason, error)
@@ -69,6 +74,10 @@ type Querier interface {
 	CreateINECResultGrabberLog(ctx context.Context, arg CreateINECResultGrabberLogParams) (InecResultGrabberLog, error)
 	CreateLGA(ctx context.Context, arg CreateLGAParams) (Lga, error)
 	CreateLgaSupervisor(ctx context.Context, arg CreateLgaSupervisorParams) (LgaElectionSupervisor, error)
+	// ============================================================================
+	// MEDIA ASSETS QUERIES
+	// ============================================================================
+	CreateMediaAsset(ctx context.Context, arg CreateMediaAssetParams) (MediaAsset, error)
 	CreateMoreInfoAboutThisUser(ctx context.Context, arg CreateMoreInfoAboutThisUserParams) (int64, error)
 	CreateNationalChapter(ctx context.Context, arg CreateNationalChapterParams) (int32, error)
 	CreateOffice(ctx context.Context, arg CreateOfficeParams) (Office, error)
@@ -113,6 +122,7 @@ type Querier interface {
 	DecrementElectionGroupPollingUnitsForWardElection(ctx context.Context, arg DecrementElectionGroupPollingUnitsForWardElectionParams) error
 	DeductPartyAgentPaymentBalance(ctx context.Context, arg DeductPartyAgentPaymentBalanceParams) (Party, error)
 	DeductPartySlots(ctx context.Context, arg DeductPartySlotsParams) (Party, error)
+	DeleteAssetFolder(ctx context.Context, id int32) error
 	DeleteAssignment(ctx context.Context, id int64) error
 	DeleteElectionCandidateForParty(ctx context.Context, arg DeleteElectionCandidateForPartyParams) error
 	DeleteElectionCandidatesForElection(ctx context.Context, electionID int32) error
@@ -120,6 +130,8 @@ type Querier interface {
 	DeleteElectionInstance(ctx context.Context, id int32) error
 	DeleteFederalConstituency(ctx context.Context, id int32) error
 	DeleteLGA(ctx context.Context, id int32) error
+	DeleteMediaAsset(ctx context.Context, id int32) error
+	DeleteMediaAssetByKey(ctx context.Context, r2Key string) error
 	DeleteOffice(ctx context.Context, id int16) error
 	DeleteParty(ctx context.Context, id int16) error
 	DeletePartyCustomPosition(ctx context.Context, arg DeletePartyCustomPositionParams) error
@@ -146,6 +158,8 @@ type Querier interface {
 	GetApplicationByID(ctx context.Context, id int64) (PartyApplication, error)
 	// Returns all distinct election_group_ids for a user's applications under a party.
 	GetApplicationElectionGroupsByUserAndParty(ctx context.Context, arg GetApplicationElectionGroupsByUserAndPartyParams) ([]int32, error)
+	GetAssetFolderByID(ctx context.Context, id int32) (AssetFolder, error)
+	GetAssetFolderByPrefix(ctx context.Context, r2Prefix string) (AssetFolder, error)
 	GetAssignmentByID(ctx context.Context, id int64) (GetAssignmentByIDRow, error)
 	GetAssignmentForEarnings(ctx context.Context, id int64) (GetAssignmentForEarningsRow, error)
 	GetAssignmentIDByUserAndElectionGroup(ctx context.Context, arg GetAssignmentIDByUserAndElectionGroupParams) (int64, error)
@@ -199,6 +213,8 @@ type Querier interface {
 	GetLGAs(ctx context.Context, stateID int32) ([]Lga, error)
 	GetLgaSupervisorByElectionGroup(ctx context.Context, arg GetLgaSupervisorByElectionGroupParams) (LgaElectionSupervisor, error)
 	GetMarketingPlansByType(ctx context.Context, type_ string) ([]Plan, error)
+	GetMediaAssetByID(ctx context.Context, id int32) (MediaAsset, error)
+	GetMediaAssetByKey(ctx context.Context, r2Key string) (MediaAsset, error)
 	GetMoreInfoAboutThisUser(ctx context.Context, userID int64) (UserMoreInfo, error)
 	GetNationalChapter(ctx context.Context, arg GetNationalChapterParams) (int32, error)
 	GetNationalMetrics(ctx context.Context) (NationalMetric, error)
@@ -321,6 +337,7 @@ type Querier interface {
 	ListActiveINECResultGrabbers(ctx context.Context, activeSyncDaysLimit int32) ([]ListActiveINECResultGrabbersRow, error)
 	ListAgentEarnings(ctx context.Context, arg ListAgentEarningsParams) ([]ListAgentEarningsRow, error)
 	ListAllPartyMarketingCampaigns(ctx context.Context, arg ListAllPartyMarketingCampaignsParams) ([]ListAllPartyMarketingCampaignsRow, error)
+	ListAllR2Keys(ctx context.Context) ([]string, error)
 	ListAllStates(ctx context.Context) ([]CState, error)
 	ListApplications(ctx context.Context, arg ListApplicationsParams) ([]ListApplicationsRow, error)
 	ListAssignments(ctx context.Context, arg ListAssignmentsParams) ([]ListAssignmentsRow, error)
@@ -352,6 +369,7 @@ type Querier interface {
 	ListINECResultGrabberLogsPaginated(ctx context.Context, arg ListINECResultGrabberLogsPaginatedParams) ([]ListINECResultGrabberLogsPaginatedRow, error)
 	ListINECResultGrabbersPaginated(ctx context.Context, arg ListINECResultGrabbersPaginatedParams) ([]ListINECResultGrabbersPaginatedRow, error)
 	ListLGASupervisorPerformanceStats(ctx context.Context, arg ListLGASupervisorPerformanceStatsParams) ([]ListLGASupervisorPerformanceStatsRow, error)
+	ListMediaAssetsByFolder(ctx context.Context, arg ListMediaAssetsByFolderParams) ([]MediaAsset, error)
 	ListMemberPositionAssignments(ctx context.Context, arg ListMemberPositionAssignmentsParams) ([]ListMemberPositionAssignmentsRow, error)
 	ListOffices(ctx context.Context) ([]Office, error)
 	ListParties(ctx context.Context) ([]Party, error)
@@ -366,7 +384,9 @@ type Querier interface {
 	ListReferrals(ctx context.Context, arg ListReferralsParams) ([]Referral, error)
 	ListReferralsByReferrer(ctx context.Context, arg ListReferralsByReferrerParams) ([]Referral, error)
 	ListReferredUsersWithDetails(ctx context.Context, arg ListReferredUsersWithDetailsParams) ([]ListReferredUsersWithDetailsRow, error)
+	ListRootAssetFolders(ctx context.Context) ([]AssetFolder, error)
 	ListStateSupervisorPerformanceStats(ctx context.Context, arg ListStateSupervisorPerformanceStatsParams) ([]ListStateSupervisorPerformanceStatsRow, error)
+	ListSubFolders(ctx context.Context, parentID pgtype.Int4) ([]AssetFolder, error)
 	ListUnmatchedPollingUnitResults(ctx context.Context, arg ListUnmatchedPollingUnitResultsParams) ([]UnmatchedPollingUnitResult, error)
 	ListUserPracticeTests(ctx context.Context, arg ListUserPracticeTestsParams) ([]ListUserPracticeTestsRow, error)
 	ListUserWalletTransactions(ctx context.Context, arg ListUserWalletTransactionsParams) ([]UserWalletTransaction, error)
@@ -427,6 +447,8 @@ type Querier interface {
 	RollupStateConstituencyFinalResults(ctx context.Context) error
 	RollupStateFinalResults(ctx context.Context) error
 	RollupWardFinalResults(ctx context.Context) error
+	SearchAssetFolders(ctx context.Context, arg SearchAssetFoldersParams) ([]AssetFolder, error)
+	SearchMediaAssets(ctx context.Context, arg SearchMediaAssetsParams) ([]MediaAsset, error)
 	// Citizen-facing user search: strictly requires active accounts and filters by text, state, party, politician, and verification.
 	SearchUsers(ctx context.Context, arg SearchUsersParams) ([]SearchUsersRow, error)
 	SeedElectionGroupFederalConstituencyStats(ctx context.Context, dollar_1 int32) error
@@ -444,6 +466,7 @@ type Querier interface {
 	ToggleINECResultGrabberPause(ctx context.Context, id int64) (InecResultGrabber, error)
 	UpdateApplicationApproval(ctx context.Context, arg UpdateApplicationApprovalParams) (PartyApplication, error)
 	UpdateApplicationStatus(ctx context.Context, arg UpdateApplicationStatusParams) (PartyApplication, error)
+	UpdateAssetFolder(ctx context.Context, arg UpdateAssetFolderParams) (AssetFolder, error)
 	UpdateAssignmentReadinessPercentage(ctx context.Context, arg UpdateAssignmentReadinessPercentageParams) (UpdateAssignmentReadinessPercentageRow, error)
 	UpdateAssignmentTracking(ctx context.Context, arg UpdateAssignmentTrackingParams) (UpdateAssignmentTrackingRow, error)
 	UpdateElectionCandidatesCount(ctx context.Context, arg UpdateElectionCandidatesCountParams) error
