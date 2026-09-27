@@ -26,57 +26,34 @@ CREATE INDEX idx_party_chapters_state_id ON party_chapters (party_id, state_id);
 CREATE INDEX idx_party_chapters_lga_id ON party_chapters (party_id, lga_id);
 CREATE INDEX idx_party_chapters_ward_id ON party_chapters (party_id, ward_id);
 
-CREATE TABLE party_chapter_settings (
-    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    party_id SMALLINT NOT NULL REFERENCES parties(id) ON DELETE CASCADE,
-    chapter_id INT NOT NULL REFERENCES party_chapters(id) ON DELETE CASCADE,
-    settings JSONB NOT NULL DEFAULT '{}'::jsonb,
-    UNIQUE(party_id, chapter_id)
-);
-
 CREATE TABLE party_membership (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    party_id INT NOT NULL REFERENCES parties(id) ON DELETE CASCADE,
+    party_id SMALLINT NOT NULL REFERENCES parties(id) ON DELETE CASCADE,
     chapter_id INT NOT NULL REFERENCES party_chapters(id) ON DELETE CASCADE,
-    status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'suspended')),
+    status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'suspended')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE(user_id, party_id, chapter_id)
 );
-
-CREATE INDEX idx_party_membership_created_at ON party_membership(created_at);
+-- Indexes for party membership queries
 CREATE INDEX idx_party_membership_party_chapter ON party_membership(party_id, chapter_id);
-CREATE INDEX idx_party_membership_chapter_id ON party_membership(chapter_id);
 
-CREATE TABLE party_membership_requests (
+
+CREATE TABLE party_member_milestones (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    party_id SMALLINT NOT NULL REFERENCES parties(id) ON DELETE CASCADE,
-    chapter_id INT NOT NULL REFERENCES party_chapters(id) ON DELETE CASCADE,
-    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- Index for chapter admins to view/sort pending requests
-CREATE INDEX idx_party_reqs_chapter_status_date ON party_membership_requests(party_id, chapter_id, status, created_at);
--- Index for quickly finding a user's specific request
-CREATE INDEX idx_party_reqs_user_chapter ON party_membership_requests(user_id, party_id, chapter_id);
--- Prevent a user from having multiple 'pending' requests for the exact same chapter
-CREATE UNIQUE INDEX idx_unique_pending_party_req ON party_membership_requests(user_id, party_id, chapter_id) WHERE status = 'pending';
-
-
-CREATE TABLE party_membership_history (
-    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     party_id SMALLINT NOT NULL REFERENCES parties(id) ON DELETE CASCADE,
-    chapter_id INT NOT NULL REFERENCES party_chapters(id) ON DELETE CASCADE,
-    action VARCHAR(20) NOT NULL CHECK (action IN ('joined', 'left')),
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    chapter_id INT REFERENCES party_chapters(id) ON DELETE SET NULL,
+    milestone_type VARCHAR(50) NOT NULL, -- 'joined', 'left', 'appointed', 'promoted', 'donated', 'anniversary', 'custom'
+    metadata JSONB NOT NULL DEFAULT '{}'::jsonb, -- flexible attributes: { "position_id": 4, "amount_kobo": 5000000, etc. }
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+-- For member profile milestone timeline
+CREATE INDEX idx_party_member_milestones_user ON party_member_milestones(user_id, created_at DESC);
+-- For party or chapter activity feed
+CREATE INDEX idx_party_member_milestones_party ON party_member_milestones(party_id, chapter_id, created_at DESC);
 
--- Index for quickly retrieving a user's membership history in chronological order
-CREATE INDEX idx_party_membership_history_user_date ON party_membership_history(user_id, created_at);
+
 
 -- 1. Party Positions Catalog (Default pre-seeded positions + party custom positions)
 CREATE TABLE party_positions (
@@ -309,8 +286,6 @@ DROP TRIGGER IF EXISTS trg_create_party_top_chapters ON parties;
 DROP FUNCTION IF EXISTS create_initial_party_chapters();
 DROP TABLE IF EXISTS party_position_assignments;
 DROP TABLE IF EXISTS party_positions;
-DROP TABLE IF EXISTS party_membership_history;
-DROP TABLE IF EXISTS party_membership_requests;
+DROP TABLE IF EXISTS party_member_milestones;
 DROP TABLE IF EXISTS party_membership;
-DROP TABLE IF EXISTS party_chapter_settings;
 DROP TABLE IF EXISTS party_chapters;

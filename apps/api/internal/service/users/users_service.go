@@ -272,6 +272,13 @@ func (s *UsersService) InvalidateCachedUserRoles(ctx context.Context, userID int
 	return s.rdb.Del(ctx, userRolesKey).Err()
 }
 
+// InvalidateUserAuth invalidates cached roles, user info, and revokes all active sessions across devices.
+func (s *UsersService) InvalidateUserAuth(ctx context.Context, userID int64, fakeID int64) {
+	_ = s.InvalidateCachedUserRoles(ctx, userID)
+	_ = s.InvalidateCachedUserInfo(ctx, fakeID)
+	_ = s.RevokeAllUserSessions(ctx, fakeID)
+}
+
 // RevokeAllUserSessions revokes all active refresh tokens and sessions for a user across all devices.
 //
 // Redis Key Hierarchy:
@@ -372,6 +379,7 @@ func (s *UsersService) syncUserHasRole(ctx context.Context, userID int64) error 
 	if err != nil {
 		return err
 	}
+
 	return s.updateUserHasRole(ctx, userID, hasRole)
 }
 
@@ -394,9 +402,7 @@ func (s *UsersService) AssignUserRole(ctx context.Context, userID int64, fakeID 
 	// Update the user_table, updates has_role to true
 	_ = s.updateUserHasRole(ctx, userID, true)
 
-	_ = s.InvalidateCachedUserRoles(ctx, userID) // Invalidate the user-roles cache
-	_ = s.InvalidateCachedUserInfo(ctx, fakeID)  // Invalidate user info cache
-	_ = s.RevokeAllUserSessions(ctx, fakeID)     // Invalidate all active user sessions across all devices
+	s.InvalidateUserAuth(ctx, userID, fakeID)
 
 	return nil
 }
@@ -416,9 +422,8 @@ func (s *UsersService) RemoveUserRole(ctx context.Context, userID int64, fakeID 
 		return err
 	}
 
-	_ = s.InvalidateCachedUserRoles(ctx, userID) // Invalidate the roles cache
-	_ = s.InvalidateCachedUserInfo(ctx, fakeID)  // Invalidate user info cache
-	_ = s.RevokeAllUserSessions(ctx, fakeID)     // Invalidate all active user sessions across all devices
+	// Invalidate cached roles, user info, and revoke all active sessions across devices
+	s.InvalidateUserAuth(ctx, userID, fakeID)
 
 	return nil
 }
@@ -741,8 +746,10 @@ func (s *UsersService) UpdateUserParty(ctx context.Context, userID int64, partyI
 		return fmt.Errorf("failed to update user party: %w", err)
 	}
 
-	// Any party change (cleared or changed to another party) must revoke party-scoped admin roles
-	_ = s.StripPartyAdminRoles(ctx, userID, fakeID)
+	// Only revoke party-scoped admin roles if the user is leaving the party completely
+	if partyID == nil {
+		_ = s.StripPartyAdminRoles(ctx, userID, fakeID)
+	}
 
 	// invalidate the user cache
 	_ = s.InvalidateCachedUserInfo(ctx, fakeID)
@@ -784,9 +791,8 @@ func (s *UsersService) StripPartyAdminRoles(ctx context.Context, userID int64, f
 	// Check if user has any roles left and update has_role accordingly
 	_ = s.syncUserHasRole(ctx, userID)
 
-	_ = s.InvalidateCachedUserRoles(ctx, userID)
-	_ = s.InvalidateCachedUserInfo(ctx, fakeID)
-	_ = s.RevokeAllUserSessions(ctx, fakeID)
+	// Invalidate cached roles, user info, and revoke all active sessions across devices
+	s.InvalidateUserAuth(ctx, userID, fakeID)
 
 	return nil
 }
@@ -855,29 +861,47 @@ func (s *UsersService) UpdateUserRoles(ctx context.Context, userID int64, fakeID
 		newRolesMap[roleCode] = true
 	}
 
+	hasChanged := false
+
 	// Identify and assign roles to ADD
 	for roleCode := range newRolesMap {
 		if !currentRolesMap[roleCode] {
-			err = s.AssignUserRole(ctx, userID, fakeID, roleCode, whoAssigned)
+			role, err := s.queries.GetRoleByCode(ctx, roleCode)
+			if err != nil {
+				return fmt.Errorf("failed to get role %s: %w", roleCode, err)
+			}
+			err = s.queries.AssignUserRole(ctx, queries.AssignUserRoleParams{
+				UserID:            userID,
+				RoleID:            role.ID,
+				RoleCode:          role.Code,
+				WhoAssignedUserID: whoAssigned,
+			})
 			if err != nil {
 				return fmt.Errorf("failed to add role %s: %w", roleCode, err)
 			}
+			hasChanged = true
 		}
 	}
 
 	// 3. Identify and remove roles to DELETE
 	for roleCode := range currentRolesMap {
 		if !newRolesMap[roleCode] {
-			err = s.RemoveUserRole(ctx, userID, fakeID, roleCode)
+			err = s.queries.RemoveUserRole(ctx, queries.RemoveUserRoleParams{
+				UserID:   userID,
+				RoleCode: roleCode,
+			})
 			if err != nil {
 				return fmt.Errorf("failed to remove role %s: %w", roleCode, err)
 			}
+			hasChanged = true
 		}
 	}
 
-	// invalidate the user cache here
-	_ = s.InvalidateCachedUserInfo(ctx, fakeID)
-	_ = s.RevokeAllUserSessions(ctx, fakeID)
+	// If roles changed, sync has_role flag and invalidate all caches once
+	if hasChanged {
+		_ = s.syncUserHasRole(ctx, userID)
+		s.InvalidateUserAuth(ctx, userID, fakeID)
+	}
 
 	return nil
 }

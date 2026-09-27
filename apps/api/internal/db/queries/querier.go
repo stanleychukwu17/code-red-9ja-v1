@@ -12,6 +12,7 @@ import (
 
 type Querier interface {
 	AddPageVerification(ctx context.Context, arg AddPageVerificationParams) (PagesVerified, error)
+	AddPartyMemberMilestone(ctx context.Context, arg AddPartyMemberMilestoneParams) error
 	AddPartyMembership(ctx context.Context, arg AddPartyMembershipParams) error
 	AddPartySlots(ctx context.Context, arg AddPartySlotsParams) (Party, error)
 	AdjustElectionGroupFederalConstituencyLGASupervisorCounts(ctx context.Context, arg AdjustElectionGroupFederalConstituencyLGASupervisorCountsParams) error
@@ -80,10 +81,18 @@ type Querier interface {
 	CreateMediaAsset(ctx context.Context, arg CreateMediaAssetParams) (MediaAsset, error)
 	CreateMoreInfoAboutThisUser(ctx context.Context, arg CreateMoreInfoAboutThisUserParams) (int64, error)
 	CreateNationalChapter(ctx context.Context, arg CreateNationalChapterParams) (int32, error)
+	// ============================================================================
+	// USER NOTIFICATIONS
+	// ============================================================================
+	CreateNotification(ctx context.Context, arg CreateNotificationParams) (Notification, error)
 	CreateOffice(ctx context.Context, arg CreateOfficeParams) (Office, error)
 	CreateParty(ctx context.Context, arg CreatePartyParams) (Party, error)
 	CreatePartyCustomPosition(ctx context.Context, arg CreatePartyCustomPositionParams) (PartyPosition, error)
 	CreatePartyMarketingCampaign(ctx context.Context, arg CreatePartyMarketingCampaignParams) (PartyMarketingCampaign, error)
+	// ============================================================================
+	// PARTY NOTIFICATIONS
+	// ============================================================================
+	CreatePartyNotification(ctx context.Context, arg CreatePartyNotificationParams) (PartyNotification, error)
 	CreatePartyWallet(ctx context.Context, arg CreatePartyWalletParams) (PartyWallet, error)
 	CreatePhoneNumber(ctx context.Context, arg CreatePhoneNumberParams) (int64, error)
 	CreatePlan(ctx context.Context, arg CreatePlanParams) (Plan, error)
@@ -132,6 +141,7 @@ type Querier interface {
 	DeleteLGA(ctx context.Context, id int32) error
 	DeleteMediaAsset(ctx context.Context, id int32) error
 	DeleteMediaAssetByKey(ctx context.Context, r2Key string) error
+	DeleteNotification(ctx context.Context, arg DeleteNotificationParams) error
 	DeleteOffice(ctx context.Context, id int16) error
 	DeleteParty(ctx context.Context, id int16) error
 	DeletePartyCustomPosition(ctx context.Context, arg DeletePartyCustomPositionParams) error
@@ -163,7 +173,7 @@ type Querier interface {
 	GetAssignmentByID(ctx context.Context, id int64) (GetAssignmentByIDRow, error)
 	GetAssignmentForEarnings(ctx context.Context, id int64) (GetAssignmentForEarningsRow, error)
 	GetAssignmentIDByUserAndElectionGroup(ctx context.Context, arg GetAssignmentIDByUserAndElectionGroupParams) (int64, error)
-	GetChapterMemberCount(ctx context.Context, chapterID int32) (int64, error)
+	GetChapterMemberCount(ctx context.Context, arg GetChapterMemberCountParams) (int64, error)
 	GetCitiesByStateID(ctx context.Context, stateID int16) ([]GetCitiesByStateIDRow, error)
 	GetCityByID(ctx context.Context, arg GetCityByIDParams) (GetCityByIDRow, error)
 	GetCountryByID(ctx context.Context, id int16) (GetCountryByIDRow, error)
@@ -219,6 +229,11 @@ type Querier interface {
 	GetNationalChapter(ctx context.Context, arg GetNationalChapterParams) (int32, error)
 	GetNationalMetrics(ctx context.Context) (NationalMetric, error)
 	GetNonVotingReasons(ctx context.Context) ([]NonVotingReason, error)
+	GetNotificationByID(ctx context.Context, id int64) (Notification, error)
+	// ============================================================================
+	// NOTIFICATION PREFERENCES
+	// ============================================================================
+	GetNotificationPreferencesByUserID(ctx context.Context, userID int64) (NotificationPreference, error)
 	GetOccupations(ctx context.Context) ([]Occupation, error)
 	GetOfficeByID(ctx context.Context, id int16) (Office, error)
 	GetOfficeByName(ctx context.Context, name string) (Office, error)
@@ -230,7 +245,6 @@ type Querier interface {
 	GetPUPartyAgentsCount(ctx context.Context, arg GetPUPartyAgentsCountParams) (int32, error)
 	GetPageVerificationType(ctx context.Context, id int16) (PageVerificationType, error)
 	GetPageVerifications(ctx context.Context, arg GetPageVerificationsParams) ([]GetPageVerificationsRow, error)
-	GetPartiesActiveMemberCounts(ctx context.Context) ([]GetPartiesActiveMemberCountsRow, error)
 	GetPartiesSampleMemberAvatars(ctx context.Context) ([]GetPartiesSampleMemberAvatarsRow, error)
 	GetPartiesTopNationalOfficials(ctx context.Context) ([]GetPartiesTopNationalOfficialsRow, error)
 	GetPartyBasicInfo(ctx context.Context, id int16) (GetPartyBasicInfoRow, error)
@@ -276,6 +290,8 @@ type Querier interface {
 	GetStatesByCountryID(ctx context.Context, countryID int16) ([]CState, error)
 	GetSystemSetting(ctx context.Context, key string) (SystemSetting, error)
 	GetUnmatchedPollingUnitResultByID(ctx context.Context, id int64) (UnmatchedPollingUnitResult, error)
+	GetUnreadNotificationsCount(ctx context.Context, recipientUserID int64) (int64, error)
+	GetUnreadPartyNotificationsCountForUser(ctx context.Context, arg GetUnreadPartyNotificationsCountForUserParams) (int64, error)
 	GetUserActivePartyIDs(ctx context.Context, userID int64) ([]int16, error)
 	GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (GetUserByFakeIDRow, error)
 	GetUserByID(ctx context.Context, id int64) (GetUserByIDRow, error)
@@ -371,10 +387,13 @@ type Querier interface {
 	ListLGASupervisorPerformanceStats(ctx context.Context, arg ListLGASupervisorPerformanceStatsParams) ([]ListLGASupervisorPerformanceStatsRow, error)
 	ListMediaAssetsByFolder(ctx context.Context, arg ListMediaAssetsByFolderParams) ([]MediaAsset, error)
 	ListMemberPositionAssignments(ctx context.Context, arg ListMemberPositionAssignmentsParams) ([]ListMemberPositionAssignmentsRow, error)
+	ListNotificationsForUser(ctx context.Context, arg ListNotificationsForUserParams) ([]ListNotificationsForUserRow, error)
 	ListOffices(ctx context.Context) ([]Office, error)
 	ListParties(ctx context.Context) ([]Party, error)
 	ListPartiesWithoutWallet(ctx context.Context) ([]Party, error)
 	ListPartyChapters(ctx context.Context, arg ListPartyChaptersParams) ([]PartyChapter, error)
+	// Returns party notifications relevant to the user's active chapter positions
+	ListPartyNotificationsForUser(ctx context.Context, arg ListPartyNotificationsForUserParams) ([]ListPartyNotificationsForUserRow, error)
 	ListPartyOfficials(ctx context.Context, arg ListPartyOfficialsParams) ([]ListPartyOfficialsRow, error)
 	ListPartyPositions(ctx context.Context, arg ListPartyPositionsParams) ([]PartyPosition, error)
 	ListPollingAgentPerformanceStats(ctx context.Context, arg ListPollingAgentPerformanceStatsParams) ([]ListPollingAgentPerformanceStatsRow, error)
@@ -401,6 +420,9 @@ type Querier interface {
 	ListWalletTransactions(ctx context.Context, arg ListWalletTransactionsParams) ([]PartyWalletTransaction, error)
 	ListWardSupervisorPerformanceStats(ctx context.Context, arg ListWardSupervisorPerformanceStatsParams) ([]ListWardSupervisorPerformanceStatsRow, error)
 	MarkAgentEarningsPaid(ctx context.Context, id int64) (AgentEarning, error)
+	MarkAllNotificationsAsRead(ctx context.Context, recipientUserID int64) error
+	MarkNotificationAsRead(ctx context.Context, arg MarkNotificationAsReadParams) (Notification, error)
+	MarkPartyNotificationAsRead(ctx context.Context, arg MarkPartyNotificationAsReadParams) error
 	// Sets been_paid=true on every attempt that currently has been_paid=false and increments earned_amount_kobo.
 	MarkPracticeTestAttemptsPaid(ctx context.Context, arg MarkPracticeTestAttemptsPaidParams) (UserPracticeTest, error)
 	// Run once daily via cron to deduct budget_per_day_kobo, update amount_spent_kobo, and mark expired campaigns as completed.
@@ -413,7 +435,6 @@ type Querier interface {
 	RecalculateStateConstituencyMetrics(ctx context.Context) error
 	RecalculateStateMetrics(ctx context.Context) error
 	RecalculateWardMetrics(ctx context.Context) error
-	RecordPartyMembershipHistory(ctx context.Context, arg RecordPartyMembershipHistoryParams) error
 	RefreshPollingUnitLiveResults(ctx context.Context, arg RefreshPollingUnitLiveResultsParams) error
 	RefreshSingleElectionGroupGlobalStats(ctx context.Context, electionGroupID int32) error
 	RefreshSingleElectionGroupLGAStats(ctx context.Context, arg RefreshSingleElectionGroupLGAStatsParams) error
@@ -551,7 +572,10 @@ type Querier interface {
 	UpsertElectionGroupStatePartyEntry(ctx context.Context, arg UpsertElectionGroupStatePartyEntryParams) error
 	UpsertElectionGroupWardPartyEntry(ctx context.Context, arg UpsertElectionGroupWardPartyEntryParams) error
 	UpsertFederalConstituency(ctx context.Context, arg UpsertFederalConstituencyParams) (FederalConstituency, error)
+	UpsertGroupedNotification(ctx context.Context, arg UpsertGroupedNotificationParams) (Notification, error)
+	UpsertGroupedPartyNotification(ctx context.Context, arg UpsertGroupedPartyNotificationParams) (PartyNotification, error)
 	UpsertLGA(ctx context.Context, arg UpsertLGAParams) (Lga, error)
+	UpsertNotificationPreferences(ctx context.Context, arg UpsertNotificationPreferencesParams) (NotificationPreference, error)
 	UpsertPartyElectionGroupCoverage(ctx context.Context, arg UpsertPartyElectionGroupCoverageParams) (PartyElectionGroup, error)
 	UpsertPartyElectionGroupStats(ctx context.Context, arg UpsertPartyElectionGroupStatsParams) (PartyElectionGroup, error)
 	UpsertPollingUnit(ctx context.Context, arg UpsertPollingUnitParams) (PollingUnit, error)

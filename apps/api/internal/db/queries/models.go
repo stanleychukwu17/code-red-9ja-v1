@@ -1161,6 +1161,34 @@ type NonVotingReason struct {
 	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
 }
 
+type Notification struct {
+	ID              int64              `json:"id"`
+	RecipientUserID int64              `json:"recipient_user_id"`
+	ActorUserID     pgtype.Int8        `json:"actor_user_id"`
+	PartyID         pgtype.Int2        `json:"party_id"`
+	Category        string             `json:"category"`
+	Type            string             `json:"type"`
+	Priority        string             `json:"priority"`
+	GroupKey        pgtype.Text        `json:"group_key"`
+	ActorCount      int32              `json:"actor_count"`
+	Title           pgtype.Text        `json:"title"`
+	Body            pgtype.Text        `json:"body"`
+	ActionUrl       pgtype.Text        `json:"action_url"`
+	Metadata        []byte             `json:"metadata"`
+	ReadAt          pgtype.Timestamptz `json:"read_at"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+type NotificationPreference struct {
+	UserID              int64              `json:"user_id"`
+	InAppEnabled        bool               `json:"in_app_enabled"`
+	EmailEnabled        bool               `json:"email_enabled"`
+	SmsEnabled          bool               `json:"sms_enabled"`
+	CategoryPreferences []byte             `json:"category_preferences"`
+	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+}
+
 type Occupation struct {
 	ID       int16  `json:"id"`
 	Category string `json:"category"`
@@ -1283,22 +1311,47 @@ type PartyMarketingCampaign struct {
 	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
 }
 
+type PartyMemberMilestone struct {
+	ID            int64              `json:"id"`
+	UserID        int64              `json:"user_id"`
+	PartyID       int16              `json:"party_id"`
+	ChapterID     pgtype.Int4        `json:"chapter_id"`
+	MilestoneType string             `json:"milestone_type"`
+	Metadata      []byte             `json:"metadata"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+}
+
 type PartyMembership struct {
 	ID        int64              `json:"id"`
 	UserID    int64              `json:"user_id"`
-	PartyID   int32              `json:"party_id"`
+	PartyID   int16              `json:"party_id"`
 	ChapterID int32              `json:"chapter_id"`
 	Status    string             `json:"status"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
-type PartyMembershipHistory struct {
-	ID        int32              `json:"id"`
-	UserID    int64              `json:"user_id"`
-	PartyID   int16              `json:"party_id"`
-	ChapterID int32              `json:"chapter_id"`
-	Action    string             `json:"action"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
+type PartyNotification struct {
+	ID             int64              `json:"id"`
+	PartyID        int16              `json:"party_id"`
+	ChapterID      pgtype.Int4        `json:"chapter_id"`
+	TargetCategory pgtype.Text        `json:"target_category"`
+	Category       string             `json:"category"`
+	Type           string             `json:"type"`
+	Priority       string             `json:"priority"`
+	GroupKey       pgtype.Text        `json:"group_key"`
+	EventCount     int32              `json:"event_count"`
+	Title          pgtype.Text        `json:"title"`
+	Body           pgtype.Text        `json:"body"`
+	ActionUrl      pgtype.Text        `json:"action_url"`
+	Metadata       []byte             `json:"metadata"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
+type PartyNotificationRead struct {
+	PartyNotificationID int64              `json:"party_notification_id"`
+	UserID              int64              `json:"user_id"`
+	ReadAt              pgtype.Timestamptz `json:"read_at"`
 }
 
 type PartyPosition struct {

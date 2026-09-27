@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"free9ja/api/internal/constants"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	apimiddleware "free9ja/api/internal/middleware"
@@ -469,11 +470,13 @@ func (h *Handler) ListParties(w http.ResponseWriter, r *http.Request) {
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Router       /parties/cards [get]
 func (h *Handler) ListPartyCards(w http.ResponseWriter, r *http.Request) {
+	// Extract authenticated user ID if session exists (to flag 'is_user_member')
 	var currentUserID *int64
 	if claims, ok := apimiddleware.GetClaims(r); ok && claims != nil {
 		currentUserID = &claims.UserID
 	}
 
+	// Fetch enriched party cards with metrics, sample members, and leadership
 	cards, err := h.partiesService.GetPartyCards(r.Context(), currentUserID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch party cards: "+err.Error())
@@ -639,23 +642,20 @@ func (h *Handler) GetParty(w http.ResponseWriter, r *http.Request) {
 // @Success      200  {object}  utils.SuccessResponse
 // @Router       /parties/{party_id}/{short_name}/profile [get]
 func (h *Handler) GetPartyProfile(w http.ResponseWriter, r *http.Request) {
+	// Parse party ID parameter from URL route
 	partyIDStr := chi.URLParam(r, "party_id")
-	// shortName := chi.URLParam(r, "short_name") // can be used later for validation if needed
-
 	partyID, err := strconv.ParseInt(partyIDStr, 10, 64)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID")
 		return
 	}
 
-	// get the party basic info
+	// Fetch basic party info and verification badges
 	party := h.partiesService.GetPartyBasicInfo(r.Context(), int16(partyID))
 	if party == nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Party not found")
 		return
 	}
-
-	// get the national party chapter
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Party profile retrieved successfully", map[string]interface{}{
 		"data": party,
@@ -664,6 +664,7 @@ func (h *Handler) GetPartyProfile(w http.ResponseWriter, r *http.Request) {
 
 // JoinParty handles requests to join a party chapter.
 func (h *Handler) JoinParty(w http.ResponseWriter, r *http.Request) {
+	// Parse target party ID from URL parameter
 	partyIDStr := chi.URLParam(r, "id")
 	partyID, err := strconv.ParseInt(partyIDStr, 10, 16)
 	if err != nil {
@@ -671,41 +672,30 @@ func (h *Handler) JoinParty(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Parse optional chapter ID (0 lets the service auto-resolve to user's registered ward/location)
 	var req struct {
-		ChapterID int32 `json:"chapter_id"` // 0 will default to user's ward/location or national
-		WardID    int32 `json:"ward_id"`
-		LgaID     int32 `json:"lga_id"`
-		StateID   int16 `json:"state_id"`
+		ChapterID int32 `json:"chapter_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil && err != io.EOF {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
+	// Extract authenticated user credentials from context
 	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
 	if !ok {
 		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
-	chapterID := req.ChapterID
-	if chapterID == 0 {
-		if req.WardID > 0 {
-			if cid, err := h.partiesService.GetOrCreateWardChapter(r.Context(), int16(partyID), req.WardID); err == nil {
-				chapterID = cid
-			}
-		} else if req.LgaID > 0 {
-			if cid, err := h.partiesService.GetOrCreateLGAChapter(r.Context(), int16(partyID), req.LgaID); err == nil {
-				chapterID = cid
-			}
-		} else if req.StateID > 0 {
-			if cid, err := h.partiesService.GetOrCreateStateChapter(r.Context(), int16(partyID), req.StateID); err == nil {
-				chapterID = cid
-			}
-		}
+	// Guard: user must explicitly leave any existing party before joining a different one
+	if claims.PartyID > 0 && claims.PartyID != int16(partyID) {
+		h.utils.RespondError(w, http.StatusBadRequest, "You are already a member of a different political party. You must leave your current party before joining another one.")
+		return
 	}
 
-	err = h.partiesService.JoinParty(r.Context(), int16(partyID), chapterID, claims.UserID, claims.FakeID)
+	// Delegate membership assignment & hierarchy resolution to the service layer
+	err = h.partiesService.JoinParty(r.Context(), int16(partyID), req.ChapterID, claims.UserID, claims.FakeID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -716,6 +706,7 @@ func (h *Handler) JoinParty(w http.ResponseWriter, r *http.Request) {
 
 // LeaveParty handles requests to leave a party.
 func (h *Handler) LeaveParty(w http.ResponseWriter, r *http.Request) {
+	// Parse target party ID from URL parameter
 	partyIDStr := chi.URLParam(r, "id")
 	partyID, err := strconv.ParseInt(partyIDStr, 10, 16)
 	if err != nil {
@@ -723,12 +714,14 @@ func (h *Handler) LeaveParty(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Extract authenticated user credentials from context
 	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
 	if !ok {
 		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
+	// Remove memberships, revoke party admin roles, and update user party_id
 	err = h.partiesService.LeaveParty(r.Context(), int16(partyID), claims.UserID, claims.FakeID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, err.Error())
@@ -2780,7 +2773,7 @@ func (h *Handler) ResolveChapter(w http.ResponseWriter, r *http.Request) {
 	var chapterID int32
 	switch chapterType {
 	case "national":
-		countryID := int16(161)
+		countryID := constants.NigeriaCountryID
 		if entityID > 0 {
 			countryID = int16(entityID)
 		}

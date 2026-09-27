@@ -38,6 +38,7 @@ import (
 	fileshandler "free9ja/api/internal/handler/files"
 	inecgrabberhandler "free9ja/api/internal/handler/inec_grabber"
 	mediaassetshandler "free9ja/api/internal/handler/media_assets"
+	notificationshandler "free9ja/api/internal/handler/notifications"
 	officeshandler "free9ja/api/internal/handler/offices"
 	pageverificationshandler "free9ja/api/internal/handler/page_verifications"
 	partieshandler "free9ja/api/internal/handler/parties"
@@ -69,6 +70,7 @@ import (
 	inecgrabberservice "free9ja/api/internal/service/inec_grabber"
 	mediaassetsservice "free9ja/api/internal/service/media_assets"
 	messagingservice "free9ja/api/internal/service/messaging"
+	notificationsservice "free9ja/api/internal/service/notifications"
 	monnifyservice "free9ja/api/internal/service/monnify"
 	officesservice "free9ja/api/internal/service/offices"
 	pageverificationsservice "free9ja/api/internal/service/page_verifications"
@@ -80,6 +82,7 @@ import (
 	puupdates "free9ja/api/internal/service/polling_unit_updates"
 	pollingunitsservice "free9ja/api/internal/service/polling_units"
 	r2service "free9ja/api/internal/service/r2"
+	realtimeservice "free9ja/api/internal/service/realtime"
 	referralsservice "free9ja/api/internal/service/referrals"
 	seedservice "free9ja/api/internal/service/seed"
 	senatorialdistrictsservice "free9ja/api/internal/service/senatorial_districts"
@@ -202,6 +205,10 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	agentPerformanceHandler := agentperformancehandler.NewHandler(q, pool, usersService, utilsInstance, distributor)
 	referralsHandler := referralshandler.NewHandler(referralsService, utilsInstance)
 	adminAgentPaymentsHandler := adminagentpaymentshandler.NewHandler(pool, utilsInstance)
+
+	broadcaster := realtimeservice.NewBroadcasterFromEnv()
+	notificationsService := notificationsservice.NewService(q, rdb, broadcaster)
+	notificationsHandler := notificationshandler.NewHandler(notificationsService, utilsInstance)
 
 	var filesHandler *fileshandler.Handler
 	var mediaAssetsHandler *mediaassetshandler.Handler
@@ -621,6 +628,22 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Post("/api/v1/practice-tests", practiceTestsHandler.SubmitPracticeTest)
 		r.Get("/api/v1/practice-tests", practiceTestsHandler.ListPracticeTests)
 		// DEPRECATED: r.Get("/api/v1/practice-tests/payout-preview", practiceTestsHandler.GetPayoutPreview)
+
+		// Notifications routes (User)
+		r.Get("/api/v1/notifications", notificationsHandler.ListUserNotifications)
+		r.Get("/api/v1/notifications/unread-count", notificationsHandler.GetUnreadCount)
+		r.Patch("/api/v1/notifications/{id}/read", notificationsHandler.MarkAsRead)
+		r.Patch("/api/v1/notifications/mark-all-read", notificationsHandler.MarkAllAsRead)
+		r.Delete("/api/v1/notifications/{id}", notificationsHandler.DeleteNotification)
+
+		// Notification Preferences
+		r.Get("/api/v1/users/me/notification-preferences", notificationsHandler.GetPreferences)
+		r.Put("/api/v1/users/me/notification-preferences", notificationsHandler.UpdatePreferences)
+
+		// Party Notifications (for party members & officials)
+		r.Get("/api/v1/parties/{id}/notifications", notificationsHandler.ListPartyNotifications)
+		r.Get("/api/v1/parties/{id}/notifications/unread-count", notificationsHandler.GetPartyUnreadCount)
+		r.Patch("/api/v1/parties/{id}/notifications/{notification_id}/read", notificationsHandler.MarkPartyNotificationAsRead)
 	})
 
 	// Party-admin routes: authenticated users with role=party_admin AND roleLevel=admin

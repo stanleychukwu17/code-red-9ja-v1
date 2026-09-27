@@ -140,3 +140,21 @@ export const getPartyProfile = createServerFn()
 		}
 	});
 
+/**
+ * Server function to request joining a political party.
+ */
+export const joinParty = createServerFn({ method: "POST" })
+	.inputValidator((data: { partyId: number }) => data)
+	.handler(async ({ data: { partyId } }) => {
+		try {
+			const res = await apiFetchJson<{ success: boolean; message: string; data: any }>(API_URL.joinParty(partyId), {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({}),
+			});
+			return res;
+		} catch (error: unknown) {
+			const message = error instanceof Error ? error.message : "Failed to join party";
+			return { success: false, message, data: null };
+		}
+	});

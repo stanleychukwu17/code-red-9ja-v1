@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"free9ja/api/internal/constants"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	monnifyclient "free9ja/api/internal/service/monnify"
@@ -293,6 +294,8 @@ func (s *PartiesService) ListParties(ctx context.Context) ([]queries.PartyWithVe
 				party.Verifications = verifications
 			}
 		}
+
+		// append party to parties list
 		parties = append(parties, party)
 	}
 
@@ -352,11 +355,13 @@ func (s *PartiesService) GetPartyCards(ctx context.Context, currentUserID *int64
 		return nil, err
 	}
 
-	// 1. Fetch active member counts per party
-	memberCountsMap := make(map[int16]int64)
-	if counts, err := s.queries.GetPartiesActiveMemberCounts(ctx); err == nil {
-		for _, c := range counts {
-			memberCountsMap[c.PartyID] = c.MemberCount
+	// 1. Fetch active national member counts per party using cached chapter member counts
+	memberCountsMap := make(map[int16]int64, len(parties))
+	for _, p := range parties {
+		if natChapterID, err := s.GetOrCreateNationalChapter(ctx, p.ID, constants.NigeriaCountryID); err == nil {
+			if count, err := s.GetChapterMemberCount(ctx, p.ID, natChapterID); err == nil {
+				memberCountsMap[p.ID] = count
+			}
 		}
 	}
 
@@ -1217,8 +1222,8 @@ func (s *PartiesService) GetOrCreateWardChapter(ctx context.Context, partyID int
 
 // GetChapterMemberCount retrieves the number of active members in a chapter.
 // It checks Redis first and falls back to the database if not found.
-func (s *PartiesService) GetChapterMemberCount(ctx context.Context, chapterID int32) (int64, error) {
-	cacheKey := fmt.Sprintf("%s%d", db.RedisChapterMemberCount, chapterID)
+func (s *PartiesService) GetChapterMemberCount(ctx context.Context, partyID int16, chapterID int32) (int64, error) {
+	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisChapterMemberCount, partyID, chapterID)
 
 	// 1. Try to get count from Redis
 	countStr, err := s.rdb.Get(ctx, cacheKey).Result()
@@ -1227,11 +1232,14 @@ func (s *PartiesService) GetChapterMemberCount(ctx context.Context, chapterID in
 			return count, nil
 		}
 	} else if !errors.Is(err, redis.Nil) {
-		slog.Error("Failed to fetch chapter member count from redis", "error", err, "chapterID", chapterID)
+		slog.Error("Failed to fetch chapter member count from redis", "error", err, "partyID", partyID, "chapterID", chapterID)
 	}
 
 	// 2. Fallback to database
-	count, err := s.queries.GetChapterMemberCount(ctx, chapterID)
+	count, err := s.queries.GetChapterMemberCount(ctx, queries.GetChapterMemberCountParams{
+		PartyID:   partyID,
+		ChapterID: chapterID,
+	})
 	if err != nil {
 		return 0, fmt.Errorf("failed to get chapter member count from db: %w", err)
 	}
@@ -1239,18 +1247,18 @@ func (s *PartiesService) GetChapterMemberCount(ctx context.Context, chapterID in
 	// 3. Cache in Redis
 	err = s.rdb.Set(ctx, cacheKey, count, db.RedisOneEightyDaysTTL).Err()
 	if err != nil {
-		slog.Error("Failed to cache chapter member count in redis", "error", err, "chapterID", chapterID)
+		slog.Error("Failed to cache chapter member count in redis", "error", err, "partyID", partyID, "chapterID", chapterID)
 	}
 
 	return count, nil
 }
 
 // InvalidateChapterMemberCount removes the cached member count for a chapter.
-func (s *PartiesService) InvalidateChapterMemberCount(ctx context.Context, chapterID int32) {
-	cacheKey := fmt.Sprintf("%s%d", db.RedisChapterMemberCount, chapterID)
+func (s *PartiesService) InvalidateChapterMemberCount(ctx context.Context, partyID int16, chapterID int32) {
+	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisChapterMemberCount, partyID, chapterID)
 	err := s.rdb.Del(ctx, cacheKey).Err()
 	if err != nil {
-		slog.Error("Failed to invalidate chapter member count in redis", "error", err, "chapterID", chapterID)
+		slog.Error("Failed to invalidate chapter member count in redis", "error", err, "partyID", partyID, "chapterID", chapterID)
 	}
 }
 
@@ -1260,20 +1268,21 @@ func (s *PartiesService) InvalidateChapterMemberCount(ctx context.Context, chapt
 func (s *PartiesService) LeaveParty(ctx context.Context, partyID int16, userID, userFid int64) error {
 	chapterIDs, err := s.queries.DeletePartyMembership(ctx, queries.DeletePartyMembershipParams{
 		UserID:  userID,
-		PartyID: int32(partyID),
+		PartyID: partyID,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to remove user from party_membership: %w", err)
 	}
 
 	for _, chapterID := range chapterIDs {
-		_ = s.queries.RecordPartyMembershipHistory(ctx, queries.RecordPartyMembershipHistoryParams{
-			UserID:    userID,
-			PartyID:   partyID,
-			ChapterID: chapterID,
-			Action:    "left",
+		_ = s.queries.AddPartyMemberMilestone(ctx, queries.AddPartyMemberMilestoneParams{
+			UserID:        userID,
+			PartyID:       partyID,
+			ChapterID:     pgtype.Int4{Int32: chapterID, Valid: true},
+			MilestoneType: constants.MilestoneTypeLeft,
+			Metadata:      []byte("{}"),
 		})
-		s.InvalidateChapterMemberCount(ctx, chapterID)
+		s.InvalidateChapterMemberCount(ctx, partyID, chapterID)
 	}
 
 	// Revoke party-scoped administrative roles (party_admin, super_party_admin)
@@ -1296,71 +1305,53 @@ func (s *PartiesService) JoinParty(ctx context.Context, partyID int16, chapterID
 		return fmt.Errorf("failed to fetch user details: %w", err)
 	}
 
-	// 2. If the user is already in a party, enforce they leave it first.
-	// This ensures a user can only belong to one party at a time.
-	if user.PartyID.Valid {
-		if err := s.LeaveParty(ctx, user.PartyID.Int16, userID, userFid); err != nil {
-			return fmt.Errorf("failed to leave current party: %w", err)
-		}
+	// 2. Reject if user is affiliated with a different party.
+	// Users must explicitly leave their current party before joining a different one.
+	if user.PartyID.Valid && user.PartyID.Int16 != partyID {
+		return fmt.Errorf("you are already a member of a different party; you must leave your current party before joining another one")
 	}
 
 	// 3. Resolve the chapter the user is joining.
-	// If no specific chapter was provided, dynamically resolve based on user's location
-	// (Ward -> LGA -> State -> National).
+	// If chapterID is 0, default directly to the national chapter.
+	// Users can later drill down to state, LGA, or ward chapters via dialogs in the UI.
 	var finalChapterID int32 = chapterID
 	if finalChapterID == 0 {
-		if user.CurrentWard.Valid && user.CurrentWard.Int32 > 0 {
-			wardChapterID, err := s.GetOrCreateWardChapter(ctx, partyID, user.CurrentWard.Int32)
-			if err == nil && wardChapterID > 0 {
-				finalChapterID = wardChapterID
-			}
+		natChapterID, err := s.GetOrCreateNationalChapter(ctx, partyID, constants.NigeriaCountryID)
+		if err != nil {
+			return fmt.Errorf("failed to resolve national chapter: %w", err)
 		}
-		if finalChapterID == 0 && user.CurrentLga.Valid && user.CurrentLga.Int32 > 0 {
-			lgaChapterID, err := s.GetOrCreateLGAChapter(ctx, partyID, user.CurrentLga.Int32)
-			if err == nil && lgaChapterID > 0 {
-				finalChapterID = lgaChapterID
-			}
-		}
-		if finalChapterID == 0 && user.CurrentState > 0 {
-			stateChapterID, err := s.GetOrCreateStateChapter(ctx, partyID, user.CurrentState)
-			if err == nil && stateChapterID > 0 {
-				finalChapterID = stateChapterID
-			}
-		}
-		if finalChapterID == 0 {
-			countryID := int16(161) // default national chapter should be nigeria
-			natChapterID, err := s.GetOrCreateNationalChapter(ctx, partyID, countryID)
-			if err != nil {
-				return fmt.Errorf("failed to resolve national chapter: %w", err)
-			}
-			finalChapterID = natChapterID
-		}
+
+		finalChapterID = natChapterID
 	}
 
 	// 4. Insert the new membership record directly.
 	err = s.queries.AddPartyMembership(ctx, queries.AddPartyMembershipParams{
 		UserID:    userID,
-		PartyID:   int32(partyID),
+		PartyID:   partyID,
 		ChapterID: finalChapterID,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to add party membership: %w", err)
 	}
 
-	s.InvalidateChapterMemberCount(ctx, finalChapterID)
+	// Invalidate cache of chapter member count
+	s.InvalidateChapterMemberCount(ctx, partyID, finalChapterID)
 
-	// 5. Log the action in the membership history table for audit trails.
-	_ = s.queries.RecordPartyMembershipHistory(ctx, queries.RecordPartyMembershipHistoryParams{
-		UserID:    userID,
-		PartyID:   partyID,
-		ChapterID: finalChapterID,
-		Action:    "joined",
+	// 5. Log the milestone in party_member_milestones for audit trails and user activity timeline.
+	_ = s.queries.AddPartyMemberMilestone(ctx, queries.AddPartyMemberMilestoneParams{
+		UserID:        userID,
+		PartyID:       partyID,
+		ChapterID:     pgtype.Int4{Int32: finalChapterID, Valid: true},
+		MilestoneType: constants.MilestoneTypeJoined,
+		Metadata:      []byte("{}"),
 	})
 
-	// 6. Update the user's active party affiliation in the users table
-	err = s.usersService.UpdateUserParty(ctx, userID, &partyID, userFid)
-	if err != nil {
-		return fmt.Errorf("failed to update user party_id: %w", err)
+	// 6. Update the user's active party affiliation in the users table (if not already set)
+	if !user.PartyID.Valid || user.PartyID.Int16 != partyID {
+		err = s.usersService.UpdateUserParty(ctx, userID, &partyID, userFid)
+		if err != nil {
+			return fmt.Errorf("failed to update user party_id: %w", err)
+		}
 	}
 
 	return nil
@@ -1644,5 +1635,3 @@ func (s *PartiesService) ListMemberPositionAssignments(ctx context.Context, part
 		UserID:  userID,
 	})
 }
-
-

@@ -2360,9 +2360,9 @@ func (_m *Querier) GetAssignmentIDByUserAndElectionGroup(ctx context.Context, ar
 	return r0, r1
 }
 
-// GetChapterMemberCount provides a mock function with given fields: ctx, chapterID
-func (_m *Querier) GetChapterMemberCount(ctx context.Context, chapterID int32) (int64, error) {
-	ret := _m.Called(ctx, chapterID)
+// GetChapterMemberCount provides a mock function with given fields: ctx, arg
+func (_m *Querier) GetChapterMemberCount(ctx context.Context, arg queries.GetChapterMemberCountParams) (int64, error) {
+	ret := _m.Called(ctx, arg)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetChapterMemberCount")
@@ -2370,17 +2370,17 @@ func (_m *Querier) GetChapterMemberCount(ctx context.Context, chapterID int32) (
 
 	var r0 int64
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int32) (int64, error)); ok {
-		return rf(ctx, chapterID)
+	if rf, ok := ret.Get(0).(func(context.Context, queries.GetChapterMemberCountParams) (int64, error)); ok {
+		return rf(ctx, arg)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, int32) int64); ok {
-		r0 = rf(ctx, chapterID)
+	if rf, ok := ret.Get(0).(func(context.Context, queries.GetChapterMemberCountParams) int64); ok {
+		r0 = rf(ctx, arg)
 	} else {
 		r0 = ret.Get(0).(int64)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, int32) error); ok {
-		r1 = rf(ctx, chapterID)
+	if rf, ok := ret.Get(1).(func(context.Context, queries.GetChapterMemberCountParams) error); ok {
+		r1 = rf(ctx, arg)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -6584,16 +6584,16 @@ func (_m *Querier) RecalculateWardMetrics(ctx context.Context) error {
 	return r0
 }
 
-// RecordPartyMembershipHistory provides a mock function with given fields: ctx, arg
-func (_m *Querier) RecordPartyMembershipHistory(ctx context.Context, arg queries.RecordPartyMembershipHistoryParams) error {
+// AddPartyMemberMilestone provides a mock function with given fields: ctx, arg
+func (_m *Querier) AddPartyMemberMilestone(ctx context.Context, arg queries.AddPartyMemberMilestoneParams) error {
 	ret := _m.Called(ctx, arg)
 
 	if len(ret) == 0 {
-		panic("no return value specified for RecordPartyMembershipHistory")
+		panic("no return value specified for AddPartyMemberMilestone")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, queries.RecordPartyMembershipHistoryParams) error); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, queries.AddPartyMemberMilestoneParams) error); ok {
 		r0 = rf(ctx, arg)
 	} else {
 		r0 = ret.Error(0)

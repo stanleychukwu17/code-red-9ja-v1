@@ -13,9 +13,24 @@ import (
 
 // Event name constants
 const (
-	EventResultsUpdated   = "results-updated"
-	EventPUResultUploaded = "pu-result-uploaded"
+	EventResultsUpdated        = "results-updated"
+	EventPUResultUploaded      = "pu-result-uploaded"
+	EventNewNotification       = "new-notification"
+	EventNewPartyNotification  = "new-party-notification"
 )
+
+// Channel generator helpers for notifications
+func UserChannel(userID int64) string {
+	return fmt.Sprintf("user-%d", userID)
+}
+
+func PartyChannel(partyID int16) string {
+	return fmt.Sprintf("party-%d", partyID)
+}
+
+func PartyChapterChannel(partyID int16, chapterID int32) string {
+	return fmt.Sprintf("party-%d-chapter-%d", partyID, chapterID)
+}
 
 // ResultsUpdatedEvent represents a lightweight signal that election rollup results have updated.
 type ResultsUpdatedEvent struct {
@@ -45,6 +60,8 @@ type PUResultUploadedEvent struct {
 type Broadcaster interface {
 	BroadcastResultsUpdated(ctx context.Context, event ResultsUpdatedEvent) error
 	BroadcastPUResultUploaded(ctx context.Context, event PUResultUploadedEvent) error
+	BroadcastNotification(ctx context.Context, userID int64, data any) error
+	BroadcastPartyNotification(ctx context.Context, partyID int16, chapterID *int32, data any) error
 }
 
 // Channel generator helpers
@@ -163,6 +180,43 @@ func (p *PusherBroadcaster) BroadcastPUResultUploaded(ctx context.Context, event
 	return nil
 }
 
+// BroadcastNotification broadcasts a notification event to a specific user's private channel.
+func (p *PusherBroadcaster) BroadcastNotification(ctx context.Context, userID int64, data any) error {
+	if p.client == nil {
+		return nil
+	}
+
+	channel := UserChannel(userID)
+	err := p.client.Trigger(channel, EventNewNotification, data)
+	if err != nil {
+		slog.Warn("Failed to broadcast user notification pusher event", "channel", channel, "err", err)
+		return err
+	}
+	slog.Debug("Broadcasted user notification pusher event", "channel", channel, "user_id", userID)
+	return nil
+}
+
+// BroadcastPartyNotification broadcasts a notification event to party and/or chapter channels.
+func (p *PusherBroadcaster) BroadcastPartyNotification(ctx context.Context, partyID int16, chapterID *int32, data any) error {
+	if p.client == nil {
+		return nil
+	}
+
+	var channels []string
+	channels = append(channels, PartyChannel(partyID))
+	if chapterID != nil && *chapterID > 0 {
+		channels = append(channels, PartyChapterChannel(partyID, *chapterID))
+	}
+
+	err := p.client.TriggerMulti(channels, EventNewPartyNotification, data)
+	if err != nil {
+		slog.Warn("Failed to broadcast party notification pusher event", "channels", channels, "err", err)
+		return err
+	}
+	slog.Debug("Broadcasted party notification pusher event", "channels", channels, "party_id", partyID)
+	return nil
+}
+
 // NoOpBroadcaster is a fallback broadcaster that performs no operations (useful when Pusher is disabled/unconfigured).
 type NoOpBroadcaster struct{}
 
@@ -175,6 +229,14 @@ func (n *NoOpBroadcaster) BroadcastResultsUpdated(ctx context.Context, event Res
 }
 
 func (n *NoOpBroadcaster) BroadcastPUResultUploaded(ctx context.Context, event PUResultUploadedEvent) error {
+	return nil
+}
+
+func (n *NoOpBroadcaster) BroadcastNotification(ctx context.Context, userID int64, data any) error {
+	return nil
+}
+
+func (n *NoOpBroadcaster) BroadcastPartyNotification(ctx context.Context, partyID int16, chapterID *int32, data any) error {
 	return nil
 }
 

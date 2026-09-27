@@ -1,14 +1,17 @@
 import { VerificationBadge } from "@repo/ui/components/custom/verification-badge";
-import { Link } from "@tanstack/react-router";
-import { Check, Plus } from "lucide-react";
-import { APP_URL } from "#/lib/config";
-import type { PartyCardData } from "#/lib/server/parties";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { Check, Loader2, Plus } from "lucide-react";
+import { toast } from "sonner";
+import { APP_URL, QUERY_KEYS } from "#/lib/config";
+import { joinParty, type PartyCardData } from "#/lib/server/parties";
 import { PartyMembersStack } from "./PartyMembersStack";
 import { PartyOfficials } from "./PartyOfficials";
 import { DEFAULT_COVER, PARTY_PRESETS } from "./party-constants";
 
 type PartyCardProps = {
 	party: PartyCardData;
+	hasUserParty?: boolean;
 };
 
 type PartyCoverProps = {
@@ -17,6 +20,15 @@ type PartyCoverProps = {
 	shortName: string;
 	coverPositionY?: number;
 	partyHref: string;
+};
+
+// 
+type PartyActionButtonProps = {
+	isUserMember: boolean;
+	partyId: number;
+	partyName: string;
+	onJoin: (partyId: number) => void;
+	isJoining?: boolean;
 };
 
 /**
@@ -108,35 +120,36 @@ function PartyTitle({ party, partyHref }: { party: PartyCardData; partyHref: str
 /**
  * Action button at the bottom of the card:
  * Displays an active Checkmark / "Member" badge if the user is a member,
- * or the Plus button linking to the party profile if not.
+ * or an action button to join the party with loading state.
  */
-function PartyActionButton({
-	isUserMember,
-	partyHref,
-}: {
-	isUserMember: boolean;
-	partyHref: string;
-}) {
+function PartyActionButton({ isUserMember, partyId, partyName, onJoin, isJoining }: PartyActionButtonProps) {
 	return (
 		<div className="mt-8 mb-2 flex justify-center">
 			{isUserMember ? (
 				<div
 					title="You are a member of this party"
-					className="flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-600/10 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400 font-semibold text-xs border border-emerald-600/20 shadow-sm"
+					className="flex items-center gap-2 px-4 py-2 rounded-full bg-white text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400 font-semibold text-xs border border-emerald-600/20 shadow-sm"
 				>
 					<div className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center">
-						<Check className="w-3.5 h-3.5 stroke-[3]" />
+						<Check className="w-3.5 h-3.5 stroke-3" />
 					</div>
 					<span>Member</span>
 				</div>
 			) : (
-				<Link
-					to={partyHref}
-					title="View party and join"
-					className="w-12 h-12 rounded-full bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 flex items-center justify-center shadow-md hover:scale-110 active:scale-95 transition-transform duration-200"
+				<button
+					type="button"
+					onClick={() => onJoin(partyId)}
+					disabled={isJoining}
+					title={`Join ${partyName}`}
+					aria-label={`Join ${partyName}`}
+					className="w-12 h-12 rounded-full bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 flex items-center justify-center shadow-md hover:scale-110 active:scale-95 disabled:opacity-60 disabled:hover:scale-100 disabled:cursor-not-allowed transition-transform duration-200 cursor-pointer"
 				>
-					<Plus className="w-6 h-6 stroke-[2.5]" />
-				</Link>
+					{isJoining ? (
+						<Loader2 className="w-5 h-5 animate-spin" />
+					) : (
+						<Plus className="w-6 h-6 stroke-[2.5]" />
+					)}
+				</button>
 			)}
 		</div>
 	);
@@ -147,15 +160,36 @@ function PartyActionButton({
  * Displays banner, brand avatar, verification badges, member avatars stack,
  * party officials (or vacant indicators), and member checkmark / join action.
  */
-export function PartyCard({ party }: PartyCardProps) {
+export function PartyCard({ party, hasUserParty }: PartyCardProps) {
+	const queryClient = useQueryClient();
+	const navigate = useNavigate();
+
 	const preset = PARTY_PRESETS[party.short_name.toUpperCase()];
-	const foundedYear =
-		(party.date_founded ? new Date(party.date_founded).getFullYear() : undefined) ??
-		preset?.founded ??
-		1998;
+	const foundedYear = (party.date_founded ? new Date(party.date_founded).getFullYear() : undefined) ?? preset?.founded ?? 1998;
 	const coverImage = party.cover_image || preset?.coverImage || DEFAULT_COVER;
 	const coverPositionY = party.cover_position_y ?? preset?.coverPositionY ?? 50;
 	const partyHref = APP_URL.party(party.short_name.toLowerCase(), party.id.toString());
+
+	const joinMutation = useMutation({
+		mutationFn: async (partyId: number) => {
+			const res = await joinParty({ data: { partyId } });
+			if (!res?.success) {
+				throw new Error(res?.message || "Failed to join party");
+			}
+			return res;
+		},
+		onSuccess: () => {
+			toast.success(`You have successfully joined ${party.short_name.toUpperCase()}!`);
+			queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partyCards });
+			navigate({ to: partyHref });
+		},
+		onError: (err: Error) => {
+			toast.error(err.message || "Failed to join party. Please try again.");
+		},
+	});
+
+	// If the user already belongs to a party, do not show the join/plus action button on other parties
+	const showActionButton = party.is_user_member || !hasUserParty;
 
 	return (
 		<div className="group flex flex-col items-center bg-sidebar-mobile/50 dark:bg-neutral-900 rounded overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] hover:shadow-xl hover:shadow-neutral-200/60 dark:hover:shadow-neutral-950/60 transition-all duration-300 pb-6">
@@ -193,8 +227,16 @@ export function PartyCard({ party }: PartyCardProps) {
 			{/* Party Leadership (Top 2 National Positions or Vacant Indicators) */}
 			<PartyOfficials officials={party.officials} />
 
-			{/* Action Button (Member checkmark or Join plus) */}
-			<PartyActionButton isUserMember={party.is_user_member} partyHref={partyHref} />
+			{/* Action Button (Member checkmark or Join plus - hidden if user already has a party) */}
+			{showActionButton && (
+				<PartyActionButton
+					isUserMember={party.is_user_member}
+					partyId={party.id}
+					partyName={party.short_name}
+					onJoin={(id) => joinMutation.mutate(id)}
+					isJoining={joinMutation.isPending}
+				/>
+			)}
 		</div>
 	);
 }

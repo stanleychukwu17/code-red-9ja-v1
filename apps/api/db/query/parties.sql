@@ -57,9 +57,9 @@ UPDATE parties SET status = 'deleted' WHERE id = $1;
 -- name: DeletePartyMembership :many
 DELETE FROM party_membership WHERE user_id = $1 AND party_id = $2 RETURNING chapter_id;
 
--- name: RecordPartyMembershipHistory :exec
-INSERT INTO party_membership_history (user_id, party_id, chapter_id, action)
-VALUES ($1, $2, $3, $4);
+-- name: AddPartyMemberMilestone :exec
+INSERT INTO party_member_milestones (user_id, party_id, chapter_id, milestone_type, metadata)
+VALUES ($1, $2, $3, $4, $5);
 
 -- name: GetNationalChapter :one
 SELECT id FROM party_chapters 
@@ -139,7 +139,7 @@ ORDER BY id ASC;
 INSERT INTO party_membership (user_id, party_id, chapter_id, status)
 VALUES ($1, $2, $3, 'active');
 -- name: GetChapterMemberCount :one
-SELECT COUNT(*) FROM party_membership WHERE chapter_id = $1 AND status = 'active';
+SELECT COUNT(*) FROM party_membership WHERE party_id = $1 AND chapter_id = $2 AND status = 'active';
 
 -- name: ResetPartyLogo :exec
 UPDATE parties
@@ -158,11 +158,6 @@ SET agent_payment_balance_kobo = agent_payment_balance_kobo - $1,
 WHERE id = $2 AND agent_payment_balance_kobo >= $1
 RETURNING *;
 
--- name: GetPartiesActiveMemberCounts :many
-SELECT party_id::smallint, COUNT(DISTINCT user_id)::bigint AS member_count
-FROM party_membership
-WHERE status = 'active'
-GROUP BY party_id;
 
 -- name: GetPartiesSampleMemberAvatars :many
 SELECT party_id::smallint, user_id, first_name, last_name, username, avatar

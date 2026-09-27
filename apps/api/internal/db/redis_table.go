@@ -30,8 +30,9 @@ const (
 	RedisUserInfo        = "user:info:"        // STRING: user:info:<userFakeID> used to store and retrieve user info.
 	RedisUserMoreInfo    = "user:more_info:"   // STRING: user:more_info:<userID> used to store and retrieve user more_info.
 	RedisUserRoles       = "user:roles:"       // STRING: user:roles:<userID> used to store and retrieve user roles.
-	RedisUserPreferences = "user:preferences:" // STRING: user:preferences:<userID> used to store and retrieve user preferences.
-	RedisReferralCode    = "user:referral_code:" // STRING: user:referral_code:<code> used to store cached referrer info JSON (id, name).
+	RedisUserPreferences         = "user:preferences:"         // STRING: user:preferences:<userID> used to store and retrieve user preferences.
+	RedisNotificationPreferences = "user:notification_prefs:" // STRING: user:notification_prefs:<userID> used to store notification preferences.
+	RedisReferralCode            = "user:referral_code:"        // STRING: user:referral_code:<code> used to store cached referrer info JSON (id, name).
 	//--END--
 
 	//--START-- for countries and states
@@ -104,6 +105,7 @@ var AllRedisPrefixes = []string{
 	RedisUserMoreInfo,
 	RedisUserRoles,
 	RedisUserPreferences,
+	RedisNotificationPreferences,
 	RedisReferralCode,
 	RedisEachCountry,
 	RedisEachState,

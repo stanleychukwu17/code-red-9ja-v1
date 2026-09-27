@@ -11,6 +11,30 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const addPartyMemberMilestone = `-- name: AddPartyMemberMilestone :exec
+INSERT INTO party_member_milestones (user_id, party_id, chapter_id, milestone_type, metadata)
+VALUES ($1, $2, $3, $4, $5)
+`
+
+type AddPartyMemberMilestoneParams struct {
+	UserID        int64       `json:"user_id"`
+	PartyID       int16       `json:"party_id"`
+	ChapterID     pgtype.Int4 `json:"chapter_id"`
+	MilestoneType string      `json:"milestone_type"`
+	Metadata      []byte      `json:"metadata"`
+}
+
+func (q *Queries) AddPartyMemberMilestone(ctx context.Context, arg AddPartyMemberMilestoneParams) error {
+	_, err := q.db.Exec(ctx, addPartyMemberMilestone,
+		arg.UserID,
+		arg.PartyID,
+		arg.ChapterID,
+		arg.MilestoneType,
+		arg.Metadata,
+	)
+	return err
+}
+
 const addPartyMembership = `-- name: AddPartyMembership :exec
 INSERT INTO party_membership (user_id, party_id, chapter_id, status)
 VALUES ($1, $2, $3, 'active')
@@ -18,7 +42,7 @@ VALUES ($1, $2, $3, 'active')
 
 type AddPartyMembershipParams struct {
 	UserID    int64 `json:"user_id"`
-	PartyID   int32 `json:"party_id"`
+	PartyID   int16 `json:"party_id"`
 	ChapterID int32 `json:"chapter_id"`
 }
 
@@ -165,7 +189,7 @@ DELETE FROM party_membership WHERE user_id = $1 AND party_id = $2 RETURNING chap
 
 type DeletePartyMembershipParams struct {
 	UserID  int64 `json:"user_id"`
-	PartyID int32 `json:"party_id"`
+	PartyID int16 `json:"party_id"`
 }
 
 func (q *Queries) DeletePartyMembership(ctx context.Context, arg DeletePartyMembershipParams) ([]int32, error) {
@@ -189,11 +213,16 @@ func (q *Queries) DeletePartyMembership(ctx context.Context, arg DeletePartyMemb
 }
 
 const getChapterMemberCount = `-- name: GetChapterMemberCount :one
-SELECT COUNT(*) FROM party_membership WHERE chapter_id = $1 AND status = 'active'
+SELECT COUNT(*) FROM party_membership WHERE party_id = $1 AND chapter_id = $2 AND status = 'active'
 `
 
-func (q *Queries) GetChapterMemberCount(ctx context.Context, chapterID int32) (int64, error) {
-	row := q.db.QueryRow(ctx, getChapterMemberCount, chapterID)
+type GetChapterMemberCountParams struct {
+	PartyID   int16 `json:"party_id"`
+	ChapterID int32 `json:"chapter_id"`
+}
+
+func (q *Queries) GetChapterMemberCount(ctx context.Context, arg GetChapterMemberCountParams) (int64, error) {
+	row := q.db.QueryRow(ctx, getChapterMemberCount, arg.PartyID, arg.ChapterID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -333,38 +362,6 @@ func (q *Queries) GetOrCreateZonalChapter(ctx context.Context, arg GetOrCreateZo
 	var id int32
 	err := row.Scan(&id)
 	return id, err
-}
-
-const getPartiesActiveMemberCounts = `-- name: GetPartiesActiveMemberCounts :many
-SELECT party_id::smallint, COUNT(DISTINCT user_id)::bigint AS member_count
-FROM party_membership
-WHERE status = 'active'
-GROUP BY party_id
-`
-
-type GetPartiesActiveMemberCountsRow struct {
-	PartyID     int16 `json:"party_id"`
-	MemberCount int64 `json:"member_count"`
-}
-
-func (q *Queries) GetPartiesActiveMemberCounts(ctx context.Context) ([]GetPartiesActiveMemberCountsRow, error) {
-	rows, err := q.db.Query(ctx, getPartiesActiveMemberCounts)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetPartiesActiveMemberCountsRow
-	for rows.Next() {
-		var i GetPartiesActiveMemberCountsRow
-		if err := rows.Scan(&i.PartyID, &i.MemberCount); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const getPartiesSampleMemberAvatars = `-- name: GetPartiesSampleMemberAvatars :many
@@ -858,28 +855,6 @@ func (q *Queries) ListPartyChapters(ctx context.Context, arg ListPartyChaptersPa
 		return nil, err
 	}
 	return items, nil
-}
-
-const recordPartyMembershipHistory = `-- name: RecordPartyMembershipHistory :exec
-INSERT INTO party_membership_history (user_id, party_id, chapter_id, action)
-VALUES ($1, $2, $3, $4)
-`
-
-type RecordPartyMembershipHistoryParams struct {
-	UserID    int64  `json:"user_id"`
-	PartyID   int16  `json:"party_id"`
-	ChapterID int32  `json:"chapter_id"`
-	Action    string `json:"action"`
-}
-
-func (q *Queries) RecordPartyMembershipHistory(ctx context.Context, arg RecordPartyMembershipHistoryParams) error {
-	_, err := q.db.Exec(ctx, recordPartyMembershipHistory,
-		arg.UserID,
-		arg.PartyID,
-		arg.ChapterID,
-		arg.Action,
-	)
-	return err
 }
 
 const resetPartyLogo = `-- name: ResetPartyLogo :exec

@@ -22,6 +22,9 @@ export const Route = createFileRoute("/parties")({
 });
 
 function PartiesComponent() {
+	const { userDetails } = Route.useRouteContext();
+	const hasUserParty = Boolean(userDetails?.party_id);
+
 	const { data: partiesRes, isLoading, error, refetch } = useQuery({
 		queryKey: QUERY_KEYS.partyCards,
 		queryFn: async () => {
@@ -50,7 +53,11 @@ function PartiesComponent() {
 				) : parties.length > 0 ? (
 					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 						{parties.map((party) => (
-							<PartyCard key={party.id} party={party} />
+							<PartyCard
+								key={party.id}
+								party={party}
+								hasUserParty={hasUserParty}
+							/>
 						))}
 					</div>
 				) : (
