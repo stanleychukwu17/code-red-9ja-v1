@@ -22,7 +22,7 @@ export const HeaderAccent = React.forwardRef<HTMLDivElement, HeaderAccentProps>(
     return (
       <div
         ref={ref}
-        className={cn("absolute top-4 left-0 h-4 w-1/2 z-0 opacity-80", className)}
+        className={cn("absolute top-4 left-0 h-4 w-1/2 z-0", className)}
         style={{
           background: `linear-gradient(to right, ${fromColor}, ${accentColor})`,
           ...(opacity !== undefined ? { opacity } : {}),

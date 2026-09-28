@@ -70,10 +70,10 @@ export function PartyHeaderLayout({
           <div className="flex flex-col md:flex-row lg:items-center lg:justify-between gap-6 ">
 
             {/* Left Column: Avatar + Identity + Action Buttons */}
-            <div className="flex sm:flex-row items-start sm:items-center gap-5 sm:gap-6 mt-4 max-md:mb-7 max-lg:mb-9 sm:-mt-9 lg:-mt-11 xl:-mt-25">
+            <div className="flex sm:flex-row items-start sm:items-center gap-5 sm:gap-6 mt-4 max-md:mb-7 max-lg:mb-9 sm:-mt-9 lg:-mt-21">
               {/* Circular Avatar with blue gradient ring border (Hidden on small screens, visible on sm and up) */}
               <div className="relative shrink-0 hidden lg:block">
-                <div className="size-28 sm:size-32 md:size-44 rounded-full p-1 bg-linear-to-tr from-sky-400 via-blue-500 to-indigo-500 shadow-xl">
+                <div className="size-28 sm:size-32 md:size-44 rounded-full p-1 bg-linear-to-tr from-bg-sidebar-mobile via-blue-500 to-lime">
                   <div className="w-full h-full rounded-full overflow-hidden bg-background border-5 border-background ">
                     <img src={logo} alt={shortName} className="w-full h-full object-cover" />
                   </div>
@@ -106,7 +106,7 @@ export function PartyHeaderLayout({
                     type="button"
                     onClick={handleMemberClick}
                     className={cn(
-                      "flex items-center justify-center gap-1.5 px-4 sm:px-5 py-3 rounded-full text-xs lg:text-sm font-semibold transition-all duration-200 shadow-sm cursor-pointer",
+                      "flex items-center justify-center gap-1.5 px-4 sm:px-5 py-3 rounded-full text-xs xl:text-sm font-semibold transition-all duration-200 shadow-sm cursor-pointer",
                       isMember
                         ? "bg-lime-accent text-neutral-900 hover:bg-lime-accent-hover"
                         : "bg-lime hover:bg-lime-accent text-neutral-900 active:scale-95"
@@ -123,7 +123,7 @@ export function PartyHeaderLayout({
                     type="button"
                     onClick={handleFollowClick}
                     className={cn(
-                      "flex items-center justify-center gap-1.5 px-5 sm:px-6 py-3 rounded-full text-xs lg:text-sm font-semibold transition-all duration-200 active:scale-95 shadow-sm cursor-pointer",
+                      "flex items-center justify-center gap-1.5 px-5 sm:px-6 py-3 rounded-full text-xs xl:text-sm font-semibold transition-all duration-200 active:scale-95 shadow-sm cursor-pointer",
                       isFollowing
                         ? "bg-secondary text-secondary-foreground hover:bg-secondary/80"
                         : "bg-foreground text-background hover:bg-foreground/90"

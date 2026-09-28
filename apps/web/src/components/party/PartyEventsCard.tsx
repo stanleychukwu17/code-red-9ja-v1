@@ -38,7 +38,7 @@ export function PartyEventsCard({
         <div className="relative text-base sm:text-xl font-bold tracking-wide text-foreground z-2">
           {title}
         </div>
-        <HeaderAccent opacity={0.9} />
+        <HeaderAccent />
       </div>
 
       {/* Card container */}
