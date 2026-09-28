@@ -21,12 +21,10 @@ export function PartyTabContent({
           <PartyLeadersCard
             title="National leaders"
             leaders={col1Leaders}
-            accentColor="#A3E635"
           />
           <PartyLeadersCard
             title="National leaders"
             leaders={col2Leaders}
-            accentColor="#A3E635"
           />
         </div>
       );

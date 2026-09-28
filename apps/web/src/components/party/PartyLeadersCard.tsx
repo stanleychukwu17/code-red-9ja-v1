@@ -1,12 +1,12 @@
+import { HeaderAccent } from "@repo/ui/components/header-accent";
 import type { PartyLeader } from "./types";
 
 interface PartyLeadersCardProps {
   title?: string;
-  accentColor?: string;
   leaders: PartyLeader[];
 }
 
-export function PartyLeadersCard({ title = "National leaders", accentColor = "#A1FF59", leaders }: PartyLeadersCardProps) {
+export function PartyLeadersCard({ title = "National leaders", leaders }: PartyLeadersCardProps) {
   return (
     <div className="space-y-4">
       {/* Header with underline accent mark */}
@@ -14,12 +14,7 @@ export function PartyLeadersCard({ title = "National leaders", accentColor = "#A
         <div className="relative text-base sm:text-xl font-bold tracking-wide text-foreground z-2">
           {title}
         </div>
-        <div
-          className="absolute top-4 left-0 h-4 w-1/2 z-0 opacity-90"
-          style={{
-            background: `linear-gradient(to right, var(--sidebar-mobile), ${accentColor})`,
-          }}
-        />
+        <HeaderAccent opacity={0.8} />
       </div>
 
       {/* Card container */}

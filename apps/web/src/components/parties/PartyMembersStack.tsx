@@ -4,7 +4,6 @@ interface PartyMembersStackProps {
 	partyId: number;
 	totalMembers: number;
 	sampleMembers?: PartySampleMember[];
-	colorHex?: string | null;
 }
 
 function formatMemberCount(count: number): string {
@@ -22,14 +21,11 @@ export function PartyMembersStack({
 	partyId,
 	totalMembers,
 	sampleMembers = [],
-	colorHex,
 }: PartyMembersStackProps) {
-	const ringColor = colorHex || "#4ade80";
-
 	if (totalMembers === 0) {
 		return (
-			<div className="flex items-center justify-center mt-5 min-h-[36px]">
-				<span className="text-xs text-neutral-400 dark:text-neutral-500 font-medium">
+			<div className="flex items-center justify-center mt-5 min-h-9">
+				<span className="text-xs text-muted-foreground font-medium">
 					No members yet
 				</span>
 			</div>
@@ -37,7 +33,7 @@ export function PartyMembersStack({
 	}
 
 	return (
-		<div className="flex items-center justify-center mt-5 min-h-[36px]">
+		<div className="flex items-center justify-center mt-5 min-h-9">
 			{sampleMembers.length > 0 && (
 				<>
 					<div className="flex -space-x-2 overflow-hidden py-1.5 px-0.5">
@@ -46,17 +42,14 @@ export function PartyMembersStack({
 								key={`member-${partyId}-${item.user_id}`}
 								src={item.avatar}
 								alt={item.first_name || item.username || "Member"}
-								className="inline-block size-9 rounded-full ring-2 object-cover bg-neutral-200 dark:bg-neutral-800"
-								style={{
-									boxShadow: `0 0 0 2px ${ringColor}`,
-								}}
+								className="inline-block size-9 rounded-full ring-2 ring-background object-cover bg-muted"
 							/>
 						))}
 					</div>
-					<div className="h-6 w-0.5 bg-neutral-200 dark:bg-neutral-700 mx-2 rounded-full" />
+					<div className="h-6 w-0.5 bg-border mx-2 rounded-full" />
 				</>
 			)}
-			<span className="text-xs sm:text-xs font-bold text-neutral-900 dark:text-white">
+			<span className="text-xs sm:text-xs font-bold text-foreground">
 				{sampleMembers.length > 0 ? `+${formatMemberCount(totalMembers)} members` : `${formatMemberCount(totalMembers)} members`}
 			</span>
 		</div>

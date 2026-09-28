@@ -57,16 +57,14 @@ const DEFAULT_NATIONAL_LEADERS_2: PartyLeader[] = [
 
 function PartyHomeTabComponent() {
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 pb-16">
+    <div className="grid grid-cols-1 lg:grid-cols-2 3xl:grid-cols-3 gap-8 pb-16">
       <PartyLeadersCard
         title="National leaders"
         leaders={DEFAULT_NATIONAL_LEADERS_1}
-        accentColor="#A3E635"
       />
       <PartyLeadersCard
         title="National leaders"
         leaders={DEFAULT_NATIONAL_LEADERS_2}
-        accentColor="#A3E635"
       />
       <PartyEventsCard />
     </div>

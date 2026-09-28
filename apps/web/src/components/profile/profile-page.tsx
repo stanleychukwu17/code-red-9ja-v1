@@ -1,13 +1,8 @@
 import { useParams } from "@tanstack/react-router";
-import {
-  Activity,
-  Check,
-  MoreHorizontal,
-  Settings,
-  Wand2,
-} from "lucide-react";
+import { Activity, Check, MoreHorizontal, Settings, PencilRuler, Network, MessageCircleMore } from "lucide-react";
 import { useState } from "react";
 import { FaFacebook, FaXTwitter, FaYoutube } from "react-icons/fa6";
+import InstagramIcon from "@repo/ui/icons/instagram-icon";
 import { cn } from "@repo/ui/lib/utils";
 
 /* ========================================================================== */
@@ -53,7 +48,6 @@ export type ActiveProfileTab = "history" | "followers" | "following";
 /* ========================================================================== */
 /*                                 MOCK DATA                                  */
 /* ========================================================================== */
-
 const STANLEY_PROFILE: UserProfileData = {
   username: "chukwu_stanley",
   name: "Chukwu Stanley",
@@ -188,7 +182,6 @@ export function resolveProfile(username?: string): UserProfileData {
 /* ========================================================================== */
 /*                           PARENT PAGE COMPONENT                            */
 /* ========================================================================== */
-
 export function ProfilePageComponent() {
   const params = useParams({ strict: false }) as { username?: string };
   const profile = resolveProfile(params.username);
@@ -337,7 +330,7 @@ function ProfilePartyRoleGrid({
       {/* Role / Office Column (60%) */}
       <div className="flex items-center gap-2.5 min-w-0">
         <div className="shrink-0 text-c-80">
-          <OrgHierarchyIcon className="size-6" />
+          <Network className="size-6" />
         </div>
         <div className="min-w-0">
           <p className="font-medium text-[12px] leading-tight text-c-100 truncate">
@@ -391,9 +384,9 @@ function ProfileActions({ followersCount }: { followersCount: string }) {
       <button
         type="button"
         title="Send message"
-        className="size-10 rounded-full bg-c-100 text-background flex items-center justify-center hover:opacity-90 transition active:scale-95 shadow-xs cursor-pointer"
+        className="size-8 text-background hover:opacity-90 transition active:scale-95 cursor-pointer"
       >
-        <SpeechBubbleDotsIcon className="size-4.5" />
+        <MessageCircleMore className="size-full" fill="black" color="#fff" strokeWidth={2.5} />
       </button>
     </div>
   );
@@ -402,7 +395,6 @@ function ProfileActions({ followersCount }: { followersCount: string }) {
 /* ========================================================================== */
 /*                       3. FLOATING ACTION TOOLBAR                           */
 /* ========================================================================== */
-
 function ProfileFloatingToolbar() {
   const [copied, setCopied] = useState(false);
 
@@ -416,35 +408,35 @@ function ProfileFloatingToolbar() {
 
   return (
     <div className="mt-5 flex justify-center">
-      <div className="inline-flex items-center gap-5 rounded-full bg-hover-5 border border-border px-5 py-2.5 shadow-xs">
+      <div className="inline-flex items-center gap-2 rounded-full bg-sidebar-mobile/50 px-1 shadow-xs">
         <button
           type="button"
           title="Civic & Endorsement Actions"
-          className="text-c-70 hover:text-c-100 transition-colors cursor-pointer"
+          className="text-c-70 hover:text-c-100 transition-colors cursor-pointer bg-hover-10/50 size-10 rounded-full flex items-center justify-center"
         >
-          <Wand2 className="size-4.5" />
+          <PencilRuler className="size-5" />
         </button>
 
         <button
           type="button"
           title="Profile Settings"
-          className="text-c-70 hover:text-c-100 transition-colors cursor-pointer"
+          className="text-c-70 hover:text-c-100 transition-colors cursor-pointer bg-hover-10/50 size-10 rounded-full flex items-center justify-center"
         >
-          <Settings className="size-4.5" />
+          <Settings className="size-5" />
         </button>
 
         <button
           type="button"
           onClick={handleShare}
           title="Share profile link"
-          className="text-c-70 hover:text-c-100 transition-colors cursor-pointer relative"
+          className="text-c-70 hover:text-c-100 transition-colors cursor-pointer relative bg-hover-10/50 size-10 rounded-full flex items-center justify-center"
         >
           {copied ? (
             <span className="absolute -top-7 left-1/2 -translate-x-1/2 bg-c-100 text-background text-[10px] px-2 py-0.5 rounded shadow whitespace-nowrap">
               Copied!
             </span>
           ) : null}
-          <MoreHorizontal className="size-4.5" />
+          <MoreHorizontal className="size-5" />
         </button>
       </div>
     </div>
@@ -454,7 +446,6 @@ function ProfileFloatingToolbar() {
 /* ========================================================================== */
 /*                             4. NAVIGATION TABS                             */
 /* ========================================================================== */
-
 interface ProfileTabsProps {
   activeTab: ActiveProfileTab;
   onTabChange: (tab: ActiveProfileTab) => void;
@@ -516,7 +507,6 @@ function ProfileTabs({ activeTab, onTabChange }: ProfileTabsProps) {
 /* ========================================================================== */
 /*                             5. TAB CONTENT ROUTER                          */
 /* ========================================================================== */
-
 function ProfileTabContent({
   activeTab,
   profile,
@@ -537,7 +527,6 @@ function ProfileTabContent({
 /* ========================================================================== */
 /*                       6. PARTY HISTORY TIMELINE TREE                       */
 /* ========================================================================== */
-
 interface PartyHistoryTimelineProps {
   events: TimelineEvent[];
 }
@@ -627,7 +616,6 @@ function TimelineBranchItem({ branch }: { branch: TimelineBranch }) {
 /* ========================================================================== */
 /*                       7. FOLLOWERS & FOLLOWING LISTS                       */
 /* ========================================================================== */
-
 function FollowersList({ count }: { count: string }) {
   return (
     <div className="space-y-4 pt-2">
@@ -718,141 +706,6 @@ function FollowingList({ count }: { count: string }) {
 /* ========================================================================== */
 /*                             8. CUSTOM SVG ICONS                            */
 /* ========================================================================== */
-
-function XTwitterIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 71 64"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
-      aria-hidden="true"
-    >
-      <path
-        d="M55.1594 0H65.8536L42.4953 26.8761L70.075 63.3208H48.4052L31.5197 41.2288L12.1013 63.3208H1.40713L26.454 34.6153L0 0H22.2326L37.5703 20.2626L55.1594 0ZM51.3602 56.848H57.2701L18.9962 6.05065H12.5234L51.3602 56.848Z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-}
-
-function InstagramIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 71 71"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
-      aria-hidden="true"
-    >
-      <path
-        d="M35.0489 0C20.4211 0 16.143 0.0150962 15.3114 0.0840898C12.3096 0.333685 10.4416 0.806469 8.40657 1.81992C6.83828 2.59892 5.6014 3.50188 4.38071 4.76765C2.15761 7.07601 0.810263 9.91589 0.322515 13.2916C0.0853942 14.9305 0.0164001 15.2647 0.00238954 23.6356C-0.00298692 26.4259 0.00238954 30.0981 0.00238954 35.0237C0.00238954 49.6437 0.0185453 53.9186 0.0886247 54.7488C0.331148 57.6707 0.789233 59.5089 1.75933 61.5197C3.61328 65.3688 7.15406 68.2583 11.3255 69.3364C12.7698 69.7084 14.3651 69.9133 16.413 70.0103C17.2807 70.048 26.1247 70.075 34.974 70.075C43.8234 70.075 52.6727 70.0642 53.5188 70.0211C55.8902 69.9095 57.2671 69.7246 58.7896 69.331C62.988 68.2475 66.4641 65.4011 68.3558 61.4981C69.307 59.5359 69.7893 57.6275 70.0076 54.8582C70.055 54.2545 70.075 44.628 70.075 35.0146C70.075 25.3995 70.0534 15.7908 70.006 15.187C69.785 12.373 69.3027 10.4809 68.3207 8.48085C67.515 6.84365 66.6204 5.621 65.3216 4.3709C63.0036 2.15633 60.1688 0.808615 56.7907 0.32129C55.154 0.0846198 54.8279 0.0145403 46.4528 0H35.0489Z"
-        fill="url(#paint0_radial_2204_3)"
-      />
-      <path
-        d="M35.0489 0C20.4211 0 16.143 0.0150962 15.3114 0.0840898C12.3096 0.333685 10.4416 0.806469 8.40657 1.81992C6.83828 2.59892 5.6014 3.50188 4.38071 4.76765C2.15761 7.07601 0.810263 9.91589 0.322515 13.2916C0.0853942 14.9305 0.0164001 15.2647 0.00238954 23.6356C-0.00298692 26.4259 0.00238954 30.0981 0.00238954 35.0237C0.00238954 49.6437 0.0185453 53.9186 0.0886247 54.7488C0.331148 57.6707 0.789233 59.5089 1.75933 61.5197C3.61328 65.3688 7.15406 68.2583 11.3255 69.3364C12.7698 69.7084 14.3651 69.9133 16.413 70.0103C17.2807 70.048 26.1247 70.075 34.974 70.075C43.8234 70.075 52.6727 70.0642 53.5188 70.0211C55.8902 69.9095 57.2671 69.7246 58.7896 69.331C62.988 68.2475 66.4641 65.4011 68.3558 61.4981C69.307 59.5359 69.7893 57.6275 70.0076 54.8582C70.055 54.2545 70.075 44.628 70.075 35.0146C70.075 25.3995 70.0534 15.7908 70.006 15.187C69.785 12.373 69.3027 10.4809 68.3207 8.48085C67.515 6.84365 66.6204 5.621 65.3216 4.3709C63.0036 2.15633 60.1688 0.808615 56.7907 0.32129C55.154 0.0846198 54.8279 0.0145403 46.4528 0H35.0489Z"
-        fill="url(#paint1_radial_2204_3)"
-      />
-      <path
-        d="M35.0489 0C20.4211 0 16.143 0.0150962 15.3114 0.0840898C12.3096 0.333685 10.4416 0.806469 8.40657 1.81992C6.83828 2.59892 5.6014 3.50188 4.38071 4.76765C2.15761 7.07601 0.810263 9.91589 0.322515 13.2916C0.0853942 14.9305 0.0164001 15.2647 0.00238954 23.6356C-0.00298692 26.4259 0.00238954 30.0981 0.00238954 35.0237C0.00238954 49.6437 0.0185453 53.9186 0.0886247 54.7488C0.331148 57.6707 0.789233 59.5089 1.75933 61.5197C3.61328 65.3688 7.15406 68.2583 11.3255 69.3364C12.7698 69.7084 14.3651 69.9133 16.413 70.0103C17.2807 70.048 26.1247 70.075 34.974 70.075C43.8234 70.075 52.6727 70.0642 53.5188 70.0211C55.8902 69.9095 57.2671 69.7246 58.7896 69.331C62.988 68.2475 66.4641 65.4011 68.3558 61.4981C69.307 59.5359 69.7893 57.6275 70.0076 54.8582C70.055 54.2545 70.075 44.628 70.075 35.0146C70.075 25.3995 70.0534 15.7908 70.006 15.187C69.785 12.373 69.3027 10.4809 68.3207 8.48085C67.515 6.84365 66.6204 5.621 65.3216 4.3709C63.0036 2.15633 60.1688 0.808615 56.7907 0.32129C55.154 0.0846198 54.8279 0.0145403 46.4528 0H35.0489Z"
-        fill="url(#paint2_radial_2204_3)"
-      />
-      <path
-        d="M35.0489 0C20.4211 0 16.143 0.0150962 15.3114 0.0840898C12.3096 0.333685 10.4416 0.806469 8.40657 1.81992C6.83828 2.59892 5.6014 3.50188 4.38071 4.76765C2.15761 7.07601 0.810263 9.91589 0.322515 13.2916C0.0853942 14.9305 0.0164001 15.2647 0.00238954 23.6356C-0.00298692 26.4259 0.00238954 30.0981 0.00238954 35.0237C0.00238954 49.6437 0.0185453 53.9186 0.0886247 54.7488C0.331148 57.6707 0.789233 59.5089 1.75933 61.5197C3.61328 65.3688 7.15406 68.2583 11.3255 69.3364C12.7698 69.7084 14.3651 69.9133 16.413 70.0103C17.2807 70.048 26.1247 70.075 34.974 70.075C43.8234 70.075 52.6727 70.0642 53.5188 70.0211C55.8902 69.9095 57.2671 69.7246 58.7896 69.331C62.988 68.2475 66.4641 65.4011 68.3558 61.4981C69.307 59.5359 69.7893 57.6275 70.0076 54.8582C70.055 54.2545 70.075 44.628 70.075 35.0146C70.075 25.3995 70.0534 15.7908 70.006 15.187C69.785 12.373 69.3027 10.4809 68.3207 8.48085C67.515 6.84365 66.6204 5.621 65.3216 4.3709C63.0036 2.15633 60.1688 0.808615 56.7907 0.32129C55.154 0.0846198 54.8279 0.0145403 46.4528 0H35.0489Z"
-        fill="url(#paint3_radial_2204_3)"
-      />
-      <path
-        d="M35.0517 8.9978C27.9758 8.9978 27.0877 9.02871 24.3086 9.1551C21.5349 9.28201 19.6416 9.72082 17.985 10.3647C16.2713 11.0296 14.8177 11.9192 13.3695 13.3668C11.9203 14.8139 11.0301 16.2665 10.3624 17.9783C9.71649 19.6342 9.27681 21.5266 9.15199 24.2972C9.02769 27.0743 8.99512 27.9622 8.99512 35.0329C8.99512 42.1036 9.02661 42.9882 9.15252 45.7653C9.2801 48.5369 9.71922 50.4288 10.363 52.0842C11.029 53.7966 11.9192 55.2491 13.3679 56.6962C14.8156 58.1444 16.2692 59.0361 17.9817 59.7011C19.6394 60.3449 21.5333 60.7837 24.3064 60.9106C27.0856 61.037 27.973 61.0679 35.0484 61.0679C42.1249 61.0679 43.0102 61.037 45.7893 60.9106C48.5631 60.7837 50.4585 60.3449 52.1162 59.701C53.8293 59.0361 55.2808 58.1444 56.7284 56.6962C58.1777 55.2491 59.0679 53.7966 59.7355 52.0847C60.376 50.4288 60.8157 48.5364 60.946 45.7658C61.0708 42.9887 61.1034 42.1035 61.1034 35.0329C61.1034 27.9621 61.0708 27.0748 60.946 24.2977C60.8157 21.5261 60.376 19.6342 59.7355 17.9788C59.0679 16.2665 58.1777 14.8139 56.7284 13.3668C55.2791 11.9186 53.8298 11.0291 52.1146 10.3646C50.4536 9.72082 48.5593 9.28201 45.7856 9.1551C43.0064 9.02871 42.1216 8.9978 35.0435 8.9978H35.0517ZM32.7144 13.6895C33.4081 13.6885 34.1821 13.6895 35.0517 13.6895C42.0082 13.6895 42.8327 13.7145 45.5798 13.8392C48.1201 13.9553 49.4988 14.3795 50.4173 14.7358C51.6331 15.2077 52.5 15.7718 53.4113 16.683C54.3233 17.5943 54.8878 18.4621 55.3611 19.677C55.7177 20.5937 56.1427 21.9714 56.2583 24.5098C56.3832 27.2543 56.4103 28.0788 56.4103 35.0269C56.4103 41.975 56.3832 42.7995 56.2583 45.544C56.1422 48.0824 55.7177 49.4601 55.3611 50.3767C54.8889 51.5917 54.3233 52.4568 53.4113 53.3675C52.4995 54.2787 51.6337 54.8428 50.4173 55.3147C49.4999 55.6727 48.1201 56.0957 45.5798 56.2118C42.8333 56.3366 42.0082 56.3637 35.0517 56.3637C28.0946 56.3637 27.2701 56.3366 24.5235 56.2118C21.9832 56.0947 20.6045 55.6705 19.6856 55.3142C18.4697 54.8423 17.6012 54.2782 16.6893 53.367C15.7774 52.4557 15.2129 51.5901 14.7396 50.3746C14.3829 49.4579 13.9579 48.0802 13.8423 45.5418C13.7175 42.7973 13.6925 41.9728 13.6925 35.0204C13.6925 28.068 13.7175 27.2478 13.8423 24.5033C13.9585 21.9649 14.3829 20.5872 14.7396 19.6695C15.2118 18.4545 15.7774 17.5867 16.6893 16.6754C17.6012 15.7642 18.4697 15.2001 19.6856 14.7272C20.604 14.3692 21.9832 13.9461 24.5235 13.8295C26.927 13.721 27.8585 13.6885 32.7144 13.683L32.7144 13.6895ZM48.9593 18.0124C47.2332 18.0124 45.8328 19.4102 45.8328 21.1355C45.8328 22.8604 47.2332 24.2598 48.9593 24.2598C50.6854 24.2598 52.0858 22.8604 52.0858 21.1355C52.0858 19.4107 50.6854 18.0114 48.9593 18.0114L48.9593 18.0124ZM35.0517 21.6628C27.6625 21.6628 21.6717 27.6492 21.6717 35.0329C21.6717 42.4165 27.6625 48.4002 35.0517 48.4002C42.4408 48.4002 48.4295 42.4165 48.4295 35.0329C48.4295 27.6492 42.4403 21.6628 35.0511 21.6628H35.0517ZM35.0517 26.3545C39.8479 26.3545 43.7365 30.2397 43.7365 35.0329C43.7365 39.8255 39.8479 43.7112 35.0517 43.7112C30.255 43.7112 26.3669 39.8255 26.3669 35.0329C26.3669 30.2397 30.255 26.3545 35.0517 26.3545Z"
-        fill="white"
-      />
-      <defs>
-        <radialGradient
-          id="paint0_radial_2204_3"
-          cx="0"
-          cy="0"
-          r="1"
-          gradientTransform="matrix(-43.093 12.1532 -8.75594 -31.0464 67.8123 32.845)"
-          gradientUnits="userSpaceOnUse"
-        >
-          <stop stopColor="#FF005F" />
-          <stop offset="1" stopColor="#FC01D8" />
-        </radialGradient>
-        <radialGradient
-          id="paint1_radial_2204_3"
-          cx="0"
-          cy="0"
-          r="1"
-          gradientUnits="userSpaceOnUse"
-          gradientTransform="translate(18.6131 75.4722) rotate(-90) scale(55.9352 59.346)"
-        >
-          <stop stopColor="#FFCC00" />
-          <stop offset="0.1242" stopColor="#FFCC00" />
-          <stop offset="0.5672" stopColor="#FE4A05" />
-          <stop offset="0.6942" stopColor="#FF0F3F" />
-          <stop offset="1" stopColor="#FE0657" stopOpacity="0" />
-        </radialGradient>
-        <radialGradient
-          id="paint2_radial_2204_3"
-          cx="0"
-          cy="0"
-          r="1"
-          gradientTransform="matrix(11.6102 -20.0047 26.0438 15.1152 36.8082 69.0867)"
-          gradientUnits="userSpaceOnUse"
-        >
-          <stop stopColor="#FFCC00" />
-          <stop offset="1" stopColor="#FFCC00" stopOpacity="0" />
-        </radialGradient>
-        <radialGradient
-          id="paint3_radial_2204_3"
-          cx="0"
-          cy="0"
-          r="1"
-          gradientTransform="matrix(-42.6199 12.001 -4.0877 -14.5209 9.50767 2.85343)"
-          gradientUnits="userSpaceOnUse"
-        >
-          <stop stopColor="#780CFF" />
-          <stop offset="1" stopColor="#820BFF" stopOpacity="0" />
-        </radialGradient>
-      </defs>
-    </svg>
-  );
-}
-
-function OrgHierarchyIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      <rect x="9" y="3" width="6" height="5" rx="1" />
-      <rect x="3" y="16" width="6" height="5" rx="1" />
-      <rect x="15" y="16" width="6" height="5" rx="1" />
-      <path d="M12 8v4" />
-      <path d="M6 12h12" />
-      <path d="M6 12v4" />
-      <path d="M18 12v4" />
-    </svg>
-  );
-}
-
-function SpeechBubbleDotsIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      className={className}
-      aria-hidden="true"
-    >
-      <path d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h4l4 4 4-4h4c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM8.5 11.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm3.5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm3.5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z" />
-    </svg>
-  );
-}
 
 function PartyLogoBadge({ party }: { party: string }) {
   if (party === "APC") {

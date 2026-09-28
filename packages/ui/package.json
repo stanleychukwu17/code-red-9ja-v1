@@ -6,6 +6,10 @@
     "./styles/*": "./src/styles/*",
     "./hooks/*": "./src/hooks/*.ts",
     "./lib/*": "./src/lib/*.ts",
+    "./components/*": "./src/components/*.tsx",
+    "./components/custom/*": "./src/components/custom/*.tsx",
+    "./components/selects/*": "./src/components/selects/*.tsx",
+    "./icons/*": "./src/icons/*.tsx",
     "./*": "./src/*.tsx"
   },
   "scripts": {

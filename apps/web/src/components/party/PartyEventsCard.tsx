@@ -1,8 +1,8 @@
+import { HeaderAccent } from "@repo/ui/components/header-accent";
 import type { PartyEvent } from "./types";
 
 interface PartyEventsCardProps {
   title?: string;
-  accentColor?: string;
   events?: PartyEvent[];
 }
 
@@ -29,7 +29,6 @@ const DEFAULT_EVENTS: PartyEvent[] = [
 
 export function PartyEventsCard({
   title = "Events",
-  accentColor = "#A1FF59",
   events = DEFAULT_EVENTS,
 }: PartyEventsCardProps) {
   return (
@@ -39,12 +38,7 @@ export function PartyEventsCard({
         <div className="relative text-base sm:text-xl font-bold tracking-wide text-foreground z-2">
           {title}
         </div>
-        <div
-          className="absolute top-4 left-0 h-4 w-1/2 z-0 opacity-90"
-          style={{
-            background: `linear-gradient(to right, var(--sidebar-mobile), ${accentColor})`,
-          }}
-        />
+        <HeaderAccent opacity={0.9} />
       </div>
 
       {/* Card container */}

@@ -21,7 +21,7 @@ function ProfileLayoutComponent() {
   const profile = resolveProfile(username);
 
   return (
-    <div className="min-h-screen w-full bg-background text-foreground px-2 md:px-8 lg:px-8 py-8">
+    <div className="min-h-screen w-full bg-background text-foreground px-2 md:px-8 py-0 lg:py-8">
       {/* Main Content Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-[380px_minmax(0,1fr)] gap-10 lg:gap-16 items-start">
 

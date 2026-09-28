@@ -221,7 +221,6 @@ export function PartyCard({ party, hasUserParty }: PartyCardProps) {
 				partyId={party.id}
 				totalMembers={party.total_members}
 				sampleMembers={party.sample_members}
-				colorHex={party.color_hex}
 			/>
 
 			{/* Party Leadership (Top 2 National Positions or Vacant Indicators) */}

@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { getPageHeader } from "#/lib/shared/meta";
+import { useMemo, useState } from "react";
 import {
 	PartiesEmptyState,
 	PartiesErrorState,
@@ -10,6 +10,7 @@ import {
 } from "#/components/parties";
 import { QUERY_KEYS } from "#/lib/config";
 import { getPartyCards, type PartyCardData } from "#/lib/server/parties";
+import { getPageHeader } from "#/lib/shared/meta";
 
 export const Route = createFileRoute("/parties")({
 	head: () =>
@@ -24,8 +25,9 @@ export const Route = createFileRoute("/parties")({
 function PartiesComponent() {
 	const { userDetails } = Route.useRouteContext();
 	const hasUserParty = Boolean(userDetails?.party_id);
+	const [searchQuery, setSearchQuery] = useState("");
 
-	const { data: partiesRes, isLoading, error, refetch } = useQuery({
+	const { data: partiesRes, isLoading, error, refetch, data } = useQuery({
 		queryKey: QUERY_KEYS.partyCards,
 		queryFn: async () => {
 			const res = await getPartyCards();
@@ -38,10 +40,20 @@ function PartiesComponent() {
 
 	const parties: PartyCardData[] = partiesRes?.data?.parties || [];
 
+	const filteredParties = useMemo(() => {
+		const q = searchQuery.trim().toLowerCase();
+		if (!q) return parties;
+		return parties.filter((p) => {
+			const matchShortName = p.short_name?.toLowerCase().includes(q);
+			const matchName = p.name?.toLowerCase().includes(q);
+			return matchShortName || matchName;
+		});
+	}, [parties, searchQuery]);
+
 	return (
 		<div className="min-h-screen bg-neutral-50/50 dark:bg-neutral-950 p-4 md:p-8">
 			<div className="max-w-6xl mx-auto space-y-8">
-				<PartiesHeader />
+				<PartiesHeader searchQuery={searchQuery} onSearchChange={setSearchQuery} />
 
 				{isLoading ? (
 					<PartySkeletonGrid />
@@ -50,18 +62,19 @@ function PartiesComponent() {
 						message={error instanceof Error ? error.message : undefined}
 						onRetry={refetch}
 					/>
-				) : parties.length > 0 ? (
+				) : filteredParties.length > 0 ? (
 					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-						{parties.map((party) => (
-							<PartyCard
-								key={party.id}
-								party={party}
-								hasUserParty={hasUserParty}
-							/>
+						{filteredParties.map((party) => (
+							<PartyCard key={party.id} party={party} hasUserParty={hasUserParty} />
 						))}
 					</div>
 				) : (
-					<PartiesEmptyState />
+					<PartiesEmptyState
+						message={
+							searchQuery.trim()
+								? `No political parties found matching "${searchQuery.trim()}".` : undefined
+						}
+					/>
 				)}
 			</div>
 		</div>
