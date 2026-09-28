@@ -1,5 +1,6 @@
 // lib/config.ts
 export const APP_NAME = import.meta.env.VITE_APP_NAME;
+export const FRONTEND_APP = "election-web";
 const API_BASE = import.meta.env.VITE_API_URL;
 export const IP_SERVICE_URL = import.meta.env.VITE_IP_SERVICE_URL;
 

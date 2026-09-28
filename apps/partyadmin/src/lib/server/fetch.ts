@@ -1,5 +1,6 @@
 import { getCookie } from "@tanstack/react-start/server";
 import { refreshUserToken } from "./auth/auth";
+import { FRONTEND_APP } from "../config";
 
 /**
  * A wrapper around the native fetch API that automatically extracts the client's IP address
@@ -16,6 +17,9 @@ export async function apiFetch(
 
   // Determine headers object to modify
   const headers = new Headers(init?.headers);
+
+  // Identify frontend source application
+  headers.set("X-Frontend-App", FRONTEND_APP);
 
   // If a client IP exists, forward it via X-Forwarded-For header
   if (clientIp) {

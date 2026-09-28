@@ -1,25 +1,53 @@
+import { queryClient } from "@/routes/__root";
 import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { queryOptions, useQuery } from "@tanstack/react-query";
 import { getPartyProfile } from "@/lib/server/parties";
 import { PARTY_PRESETS } from "#/components/parties/party-constants";
 import { PartyEventsCard, PartyHeaderLayout, PartyNavTabs } from "#/components/party";
+import { getPageHeader } from "#/lib/shared/meta";
 
-export const Route = createFileRoute(
-  "/_authenticated/party/$partyName/$partyId",
-)({
+// 1. Define shared query options with staleTime: Infinity
+export const partyProfileQueryOptions = (partyId: string, partyName: string) => queryOptions({
+  queryKey: ["partyProfile", partyId, partyName],
+  queryFn: () =>
+    getPartyProfile({
+      data: { partyId: Number(partyId), shortName: partyName },
+    }),
+  staleTime: Infinity,
+  gcTime: 1000 * 60 * 60 * 24, // Keep in cache for 24h
+});
+
+export const Route = createFileRoute("/_authenticated/party/$partyName/$partyId")({
+  // 2. Load and cache data with staleTime: Infinity
+  loader: async ({ params }) => {
+    return queryClient.ensureQueryData(
+      partyProfileQueryOptions(params.partyId, params.partyName)
+    );
+  },
+
+  // 3. Read data directly in head() for SEO / Tab Title
+  head: ({ loaderData, params }) => {
+    const party = loaderData?.success ? loaderData.data.data : null;
+    const title = party?.name
+      ? `(${party.short_name}) ${party.name}`
+      : `${params.partyName.toUpperCase()} Profile`;
+
+    return getPageHeader({
+      title,
+      description: party?.description || `View party details for ${params.partyName}`,
+    });
+  },
+
   component: PartyLayoutComponent,
 });
 
 function PartyLayoutComponent() {
   const { partyName, partyId } = Route.useParams();
 
-  const { data: profileRes } = useQuery({
-    queryKey: ["partyProfile", partyId, partyName],
-    queryFn: () =>
-      getPartyProfile({
-        data: { partyId: Number(partyId), shortName: partyName },
-      }),
-  });
+  // 4. Component uses the exact same options (instant cache hit, no refetch)
+  const { data: profileRes } = useQuery(
+    partyProfileQueryOptions(partyId, partyName)
+  );
 
   const partyDetails = profileRes?.success ? profileRes.data.data : null;
 
@@ -36,10 +64,6 @@ function PartyLayoutComponent() {
     preset?.coverImage ||
     "https://images.unsplash.com/photo-1624383045192-cf512eb9d78c?q=80&w=1600&auto=format&fit=crop";
 
-  const logoImage =
-    partyDetails?.logo ||
-    "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop";
-
   return (
     <div className="min-h-screen bg-background text-foreground antialiased">
       {/* 
@@ -48,7 +72,7 @@ function PartyLayoutComponent() {
       */}
       <PartyHeaderLayout
         coverImage={bannerImage}
-        logo={logoImage}
+        logo={partyDetails?.logo || ""}
         shortName={displayShortName}
         fullName={displayName}
         followersDisplay="100k"

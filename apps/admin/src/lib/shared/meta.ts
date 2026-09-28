@@ -1,4 +1,4 @@
-import { APP_NAME } from "../config";
+import { APP_NAME, FRONTEND_APP } from "../config";
 
 /**
  * Returns the page header object for tanstack-start meta prop in the page layout.
@@ -14,12 +14,13 @@ export type GetPageHeaderProps = {
 };
 export function getPageHeader({ title, description, robotsAllowed = "yes" }: GetPageHeaderProps) {
   // Returns the page header object for tanstack-start meta prop in the page layout.
+  const appPrefix = FRONTEND_APP.charAt(0).toUpperCase() + FRONTEND_APP.slice(1);
   return {
     meta: [
       { charSet: 'utf-8' },
       { name: 'viewport', content: 'width=device-width, initial-scale=1' },
       { name: "robots", content: robotsAllowed === "yes" ? "index, follow" : "noindex, nofollow" },
-      ...(title ? [{ title: `Admin: ${title} - ${APP_NAME}` }] : []),
+      ...(title ? [{ title: `${appPrefix}: ${title} - ${APP_NAME}` }] : []),
       ...(description ? [{ name: "description", content: description }] : []),
     ]
   }

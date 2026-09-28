@@ -777,7 +777,7 @@ func corsMiddleware(next http.Handler) http.Handler {
 		)
 
 		// Set allowed headers
-		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, Cookie")
+		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, Cookie, X-Frontend-App")
 
 		// Handle preflight requests
 		if r.Method == http.MethodOptions {
@@ -799,8 +799,17 @@ func requestLoggerMiddleware(next http.Handler) http.Handler {
 			reqID = "unknown"
 		}
 
-		// Create a child logger with the request_id
-		log := slog.Default().With("request_id", reqID, "component", logger.ComponentRouter)
+		frontendApp := r.Header.Get("X-Frontend-App")
+		if frontendApp == "" {
+			frontendApp = "unknown"
+		}
+
+		// Create a child logger with the request_id, component, and frontend app
+		log := slog.Default().With(
+			"request_id", reqID,
+			"component", logger.ComponentRouter,
+			"app", frontendApp,
+		)
 
 		// Inject into context
 		ctx := logger.WithContext(r.Context(), log)
@@ -822,6 +831,7 @@ func requestLoggerMiddleware(next http.Handler) http.Handler {
 			log.Info(logger.EventHTTPRequest,
 				"method", r.Method,
 				"path", r.URL.Path,
+				"app", frontendApp,
 				"status", ww.Status(),
 				"duration", time.Since(start).String(),
 				"ip", r.RemoteAddr,
