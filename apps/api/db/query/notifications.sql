@@ -12,12 +12,9 @@ INSERT INTO notifications (
     priority,
     group_key,
     actor_count,
-    title,
-    body,
-    action_url,
     metadata
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
+    $1, $2, $3, $4, $5, $6, $7, $8, $9
 ) RETURNING *;
 
 -- name: UpsertGroupedNotification :one
@@ -30,22 +27,16 @@ INSERT INTO notifications (
     priority,
     group_key,
     actor_count,
-    title,
-    body,
-    action_url,
     metadata,
     created_at,
     updated_at
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, 1, $8, $9, $10, $11, NOW(), NOW()
+    $1, $2, $3, $4, $5, $6, $7, 1, $8, NOW(), NOW()
 )
 ON CONFLICT (recipient_user_id, group_key) WHERE read_at IS NULL AND group_key IS NOT NULL
 DO UPDATE SET
     actor_user_id = EXCLUDED.actor_user_id,
     actor_count = notifications.actor_count + 1,
-    title = COALESCE(EXCLUDED.title, notifications.title),
-    body = COALESCE(EXCLUDED.body, notifications.body),
-    action_url = COALESCE(EXCLUDED.action_url, notifications.action_url),
     metadata = EXCLUDED.metadata,
     updated_at = NOW()
 RETURNING *;
@@ -65,9 +56,6 @@ SELECT
     n.priority,
     n.group_key,
     n.actor_count,
-    n.title,
-    n.body,
-    n.action_url,
     n.metadata,
     n.read_at,
     n.created_at,
@@ -109,6 +97,7 @@ WHERE id = $1 AND recipient_user_id = $2;
 -- name: CreatePartyNotification :one
 INSERT INTO party_notifications (
     party_id,
+    actor_user_id,
     chapter_id,
     target_category,
     category,
@@ -116,17 +105,15 @@ INSERT INTO party_notifications (
     priority,
     group_key,
     event_count,
-    title,
-    body,
-    action_url,
     metadata
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
 ) RETURNING *;
 
 -- name: UpsertGroupedPartyNotification :one
 INSERT INTO party_notifications (
     party_id,
+    actor_user_id,
     chapter_id,
     target_category,
     category,
@@ -134,21 +121,16 @@ INSERT INTO party_notifications (
     priority,
     group_key,
     event_count,
-    title,
-    body,
-    action_url,
     metadata,
     created_at,
     updated_at
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, 1, $8, $9, $10, $11, NOW(), NOW()
+    $1, $2, $3, $4, $5, $6, $7, $8, 1, $9, NOW(), NOW()
 )
-ON CONFLICT (party_id, group_key) WHERE group_key IS NOT NULL
+ON CONFLICT (party_id, (COALESCE(chapter_id, 0)), group_key) WHERE group_key IS NOT NULL
 DO UPDATE SET
+    actor_user_id = COALESCE(EXCLUDED.actor_user_id, party_notifications.actor_user_id),
     event_count = party_notifications.event_count + 1,
-    title = COALESCE(EXCLUDED.title, party_notifications.title),
-    body = COALESCE(EXCLUDED.body, party_notifications.body),
-    action_url = COALESCE(EXCLUDED.action_url, party_notifications.action_url),
     metadata = EXCLUDED.metadata,
     updated_at = NOW()
 RETURNING *;
@@ -158,6 +140,7 @@ RETURNING *;
 SELECT 
     pn.id,
     pn.party_id,
+    pn.actor_user_id,
     pn.chapter_id,
     pn.target_category,
     pn.category,
@@ -165,14 +148,16 @@ SELECT
     pn.priority,
     pn.group_key,
     pn.event_count,
-    pn.title,
-    pn.body,
-    pn.action_url,
     pn.metadata,
     pn.created_at,
     pn.updated_at,
+    u.first_name AS actor_first_name,
+    u.last_name AS actor_last_name,
+    u.username AS actor_username,
+    u.avatar AS actor_avatar,
     (pnr.read_at IS NOT NULL)::boolean AS is_read
 FROM party_notifications pn
+LEFT JOIN users u ON u.id = pn.actor_user_id
 INNER JOIN party_position_assignments ppa 
     ON ppa.party_id = pn.party_id 
     AND ppa.user_id = $1 

@@ -70,8 +70,8 @@ import (
 	inecgrabberservice "free9ja/api/internal/service/inec_grabber"
 	mediaassetsservice "free9ja/api/internal/service/media_assets"
 	messagingservice "free9ja/api/internal/service/messaging"
-	notificationsservice "free9ja/api/internal/service/notifications"
 	monnifyservice "free9ja/api/internal/service/monnify"
+	notificationsservice "free9ja/api/internal/service/notifications"
 	officesservice "free9ja/api/internal/service/offices"
 	pageverificationsservice "free9ja/api/internal/service/page_verifications"
 	partiesservice "free9ja/api/internal/service/parties"
@@ -143,22 +143,26 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		slog.Warn("R2 service not configured", "reason", r2Err)
 	}
 
+	// Initialize real-time broadcaster (Redis pub/sub)
+	broadcaster := realtimeservice.NewBroadcasterFromEnv()
+
 	utilsInstance := utils.NewUtils(pool)
 	auditService := audit.NewAuditService(q)
 	earningsService := earningsservice.NewService(q, pool)
 	wardsService := wardsservice.NewWardsService(q, rdb)
 	bodiesService := bodiesservice.NewBodiesService(q, rdb)
 	statesService := statesservice.NewStatesService(q, rdb)
-	pollingUnitUpdatesService := puupdates.NewService(q, pool, earningsService)
 	officesService := officesservice.NewOfficesService(q, rdb)
 	permissionsService := permissionsservice.NewPermissionsService()
 	electionStatsService := electionstats.NewElectionStatsService(q)
+	notificationsService := notificationsservice.NewService(q, rdb, broadcaster)
+	pollingUnitUpdatesService := puupdates.NewService(q, pool, earningsService)
 	partyApplicationsService := partyapplications.NewService(q, pool, rdb, distributor)
 	pollingUnitResultsService := puresults.NewService(q, pool, distributor, earningsService)
 	pollingUnitsService := pollingunitsservice.NewPollingUnitsService(q, rdb)
 	supervisorAssignmentsService := supervisorassignmentsservice.NewService(q)
 	pollingUnitAssignmentsService := puassignments.NewService(q, rdb, distributor, earningsService)
-	partiesService := partiesservice.NewPartiesService(q, pool, rdb, monnifyClient)
+	partiesService := partiesservice.NewPartiesService(q, pool, rdb, monnifyClient, notificationsService)
 	electionGroupsService := electiongroupsservice.NewElectionGroupsService(q, rdb, distributor)
 	electionsService := electionsservice.NewElectionsService(q, pool, rdb, distributor, electionGroupsService, earningsService)
 	senatorialDistrictsService := senatorialdistrictsservice.NewSenatorialDistrictsService(q, rdb)
@@ -176,6 +180,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	partiesService.SetPageVerificationsService(pageVerificationsService)
 	partiesService.SetUsersService(usersService)
 
+	notificationsHandler := notificationshandler.NewHandler(notificationsService, utilsInstance)
 	authHandler := authhandler.NewHandler(authService, usersService, filesService, utilsInstance)
 	bodiesHandler := bodieshandler.NewHandler(bodiesService, q, utilsInstance, rdb)
 	partiesHandler := partieshandler.NewHandler(partiesService, auditService, filesService, utilsInstance, r2Svc)
@@ -205,10 +210,6 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	agentPerformanceHandler := agentperformancehandler.NewHandler(q, pool, usersService, utilsInstance, distributor)
 	referralsHandler := referralshandler.NewHandler(referralsService, utilsInstance)
 	adminAgentPaymentsHandler := adminagentpaymentshandler.NewHandler(pool, utilsInstance)
-
-	broadcaster := realtimeservice.NewBroadcasterFromEnv()
-	notificationsService := notificationsservice.NewService(q, rdb, broadcaster)
-	notificationsHandler := notificationshandler.NewHandler(notificationsService, utilsInstance)
 
 	var filesHandler *fileshandler.Handler
 	var mediaAssetsHandler *mediaassetshandler.Handler

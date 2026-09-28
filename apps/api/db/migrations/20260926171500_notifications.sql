@@ -9,31 +9,16 @@ CREATE TABLE IF NOT EXISTS notifications (
     recipient_user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     actor_user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
     party_id SMALLINT REFERENCES parties(id) ON DELETE CASCADE,
-    
-    category VARCHAR(50) NOT NULL CHECK (category IN (
-        'social',            -- comments, likes, follows, mentions
-        'election',          -- PU updates, voter accreditation, results
-        'party',             -- party membership, role assignments
-        'wallet',            -- allowance, withdrawals, earnings
-        'system'             -- platform announcements
-    )),
-    
-    type VARCHAR(100) NOT NULL, -- e.g. 'post_comment', 'new_follower', 'party_membership_approved', 'agent_payout'
-    
-    priority VARCHAR(20) NOT NULL DEFAULT 'normal' CHECK (priority IN (
-        'low', 'normal', 'high', 'urgent'
-    )),
+
+    category VARCHAR(50) NOT NULL, -- controlled dynamically at API/service level
+    type VARCHAR(100) NOT NULL,    -- e.g. 'post_comment', 'new_follower', 'agent_payout'
+    priority VARCHAR(20) NOT NULL DEFAULT 'normal', -- 'low', 'normal', 'high', 'urgent'
     
     -- Optional grouping for rollups (e.g. 'post:123:comment')
     group_key VARCHAR(150),
     actor_count INT NOT NULL DEFAULT 1,
     
-    -- Free-form text (Optional: only populated for custom admin/system broadcasts)
-    title VARCHAR(255),
-    body TEXT,
-    
-    -- Deep link & dynamic event payload
-    action_url VARCHAR(500),
+    -- Dynamic event payload & deep links (e.g. action_url, post_id, etc. all in metadata)
     metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
     
     read_at TIMESTAMPTZ,
@@ -62,6 +47,7 @@ CREATE TABLE IF NOT EXISTS party_notifications (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     
     party_id SMALLINT NOT NULL REFERENCES parties(id) ON DELETE CASCADE,
+    actor_user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
     
     -- Scoping: NULL = national / all party staff, or scoped to a specific chapter
     chapter_id INT REFERENCES party_chapters(id) ON DELETE CASCADE,
@@ -69,26 +55,13 @@ CREATE TABLE IF NOT EXISTS party_notifications (
     -- Optional role filtering: e.g. NULL (all positions), 'executive', 'operations', 'ict'
     target_category VARCHAR(50), 
     
-    category VARCHAR(50) NOT NULL CHECK (category IN (
-        'membership',         -- new members, membership requests
-        'agent_recruitment',  -- polling agent & supervisor applications
-        'election_ops',       -- PU results uploaded, discrepancies, incident alerts
-        'finance',            -- low wallet balance, agent disbursements
-        'system'
-    )),
-    
-    type VARCHAR(100) NOT NULL, -- e.g. 'new_agent_application', 'new_member_joined', 'pu_result_flagged'
-    
-    priority VARCHAR(20) NOT NULL DEFAULT 'normal' CHECK (priority IN (
-        'low', 'normal', 'high', 'urgent'
-    )),
+    category VARCHAR(50) NOT NULL, -- controlled dynamically at API/service level
+    type VARCHAR(100) NOT NULL,    -- e.g. 'new_agent_application', 'new_member_joined', 'pu_result_flagged'
+    priority VARCHAR(20) NOT NULL DEFAULT 'normal', -- 'low', 'normal', 'high', 'urgent'
     
     group_key VARCHAR(150),
     event_count INT NOT NULL DEFAULT 1,
     
-    title VARCHAR(255),
-    body TEXT,
-    action_url VARCHAR(500),
     metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
     
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -99,7 +72,7 @@ CREATE INDEX IF NOT EXISTS idx_party_notifications_lookup
     ON party_notifications(party_id, chapter_id, created_at DESC);
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_party_notifications_group 
-    ON party_notifications(party_id, group_key) 
+    ON party_notifications(party_id, COALESCE(chapter_id, 0), group_key) 
     WHERE group_key IS NOT NULL;
 
 
@@ -112,9 +85,6 @@ CREATE TABLE IF NOT EXISTS party_notification_reads (
     read_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY (party_notification_id, user_id)
 );
-
-CREATE INDEX IF NOT EXISTS idx_party_notif_reads_user 
-    ON party_notification_reads(user_id);
 
 
 -- ============================================================================

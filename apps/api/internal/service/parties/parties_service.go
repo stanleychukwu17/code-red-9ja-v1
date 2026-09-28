@@ -9,6 +9,7 @@ import (
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	monnifyclient "free9ja/api/internal/service/monnify"
+	"free9ja/api/internal/service/notifications"
 	"log/slog"
 	"strconv"
 	"strings"
@@ -35,6 +36,7 @@ type PartiesService struct {
 	monnify                  *monnifyclient.Client
 	pageVerificationsService PageVerificationsService
 	usersService             UsersService
+	notificationsService     NotificationsService
 }
 
 // UsersService interface defines the methods needed from the users service
@@ -49,14 +51,20 @@ type PageVerificationsService interface {
 	GetPageVerifications(ctx context.Context, pageType string, pageID int64) ([]queries.GetPageVerificationsRow, error)
 }
 
+// NotificationsService defines methods required for dispatching notifications
+type NotificationsService interface {
+	CreatePartyNotification(ctx context.Context, params notifications.CreatePartyNotificationInput) (*notifications.PartyNotificationItemResponse, error)
+}
+
 // NewPartiesService creates a new PartiesService.
 // monnify may be nil in test environments — wallet creation will be skipped.
-func NewPartiesService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client, monnify *monnifyclient.Client) *PartiesService {
+func NewPartiesService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client, monnify *monnifyclient.Client, ns NotificationsService) *PartiesService {
 	return &PartiesService{
-		queries: q,
-		pool:    pool,
-		rdb:     rdb,
-		monnify: monnify,
+		queries:              q,
+		pool:                 pool,
+		rdb:                  rdb,
+		monnify:              monnify,
+		notificationsService: ns,
 	}
 }
 
@@ -1299,6 +1307,10 @@ func (s *PartiesService) LeaveParty(ctx context.Context, partyID int16, userID, 
 
 // JoinParty allows a user to become a new party member.
 func (s *PartiesService) JoinParty(ctx context.Context, partyID int16, chapterID int32, userID, userFid int64) error {
+	if partyID <= 0 {
+		return fmt.Errorf("invalid party ID: must be greater than zero")
+	}
+
 	// 1. Fetch the user details to check their current party affiliation.
 	user, err := s.usersService.GetUserByFakeID(ctx, userFid)
 	if err != nil {
@@ -1353,6 +1365,27 @@ func (s *PartiesService) JoinParty(ctx context.Context, partyID int16, chapterID
 			return fmt.Errorf("failed to update user party_id: %w", err)
 		}
 	}
+
+	// 7. Notify party and chapter officials asynchronously
+	go func() {
+		bgCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		// Aggregate daily member joins under a single rollup alert
+		groupKey := constants.GroupKeyPartyNewMembers(partyID, finalChapterID)
+
+		// send notification to party and chapter officials asynchronously
+		_, _ = s.notificationsService.CreatePartyNotification(bgCtx, notifications.CreatePartyNotificationInput{
+			PartyID:     partyID,
+			ActorUserID: &userID,
+			ChapterID:   &finalChapterID,
+			Category:    constants.PartyNotificationCategoryMembership,
+			Type:        constants.NotificationTypeNewMemberJoined,
+			Priority:    constants.NotificationPriorityNormal,
+			GroupKey:    &groupKey,
+			Metadata:    map[string]any{},
+		})
+	}()
 
 	return nil
 }

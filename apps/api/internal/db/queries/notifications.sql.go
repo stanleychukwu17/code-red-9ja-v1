@@ -22,13 +22,10 @@ INSERT INTO notifications (
     priority,
     group_key,
     actor_count,
-    title,
-    body,
-    action_url,
     metadata
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
-) RETURNING id, recipient_user_id, actor_user_id, party_id, category, type, priority, group_key, actor_count, title, body, action_url, metadata, read_at, created_at, updated_at
+    $1, $2, $3, $4, $5, $6, $7, $8, $9
+) RETURNING id, recipient_user_id, actor_user_id, party_id, category, type, priority, group_key, actor_count, metadata, read_at, created_at, updated_at
 `
 
 type CreateNotificationParams struct {
@@ -40,9 +37,6 @@ type CreateNotificationParams struct {
 	Priority        string      `json:"priority"`
 	GroupKey        pgtype.Text `json:"group_key"`
 	ActorCount      int32       `json:"actor_count"`
-	Title           pgtype.Text `json:"title"`
-	Body            pgtype.Text `json:"body"`
-	ActionUrl       pgtype.Text `json:"action_url"`
 	Metadata        []byte      `json:"metadata"`
 }
 
@@ -59,9 +53,6 @@ func (q *Queries) CreateNotification(ctx context.Context, arg CreateNotification
 		arg.Priority,
 		arg.GroupKey,
 		arg.ActorCount,
-		arg.Title,
-		arg.Body,
-		arg.ActionUrl,
 		arg.Metadata,
 	)
 	var i Notification
@@ -75,9 +66,6 @@ func (q *Queries) CreateNotification(ctx context.Context, arg CreateNotification
 		&i.Priority,
 		&i.GroupKey,
 		&i.ActorCount,
-		&i.Title,
-		&i.Body,
-		&i.ActionUrl,
 		&i.Metadata,
 		&i.ReadAt,
 		&i.CreatedAt,
@@ -90,6 +78,7 @@ const createPartyNotification = `-- name: CreatePartyNotification :one
 
 INSERT INTO party_notifications (
     party_id,
+    actor_user_id,
     chapter_id,
     target_category,
     category,
@@ -97,17 +86,15 @@ INSERT INTO party_notifications (
     priority,
     group_key,
     event_count,
-    title,
-    body,
-    action_url,
     metadata
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
-) RETURNING id, party_id, chapter_id, target_category, category, type, priority, group_key, event_count, title, body, action_url, metadata, created_at, updated_at
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+) RETURNING id, party_id, actor_user_id, chapter_id, target_category, category, type, priority, group_key, event_count, metadata, created_at, updated_at
 `
 
 type CreatePartyNotificationParams struct {
 	PartyID        int16       `json:"party_id"`
+	ActorUserID    pgtype.Int8 `json:"actor_user_id"`
 	ChapterID      pgtype.Int4 `json:"chapter_id"`
 	TargetCategory pgtype.Text `json:"target_category"`
 	Category       string      `json:"category"`
@@ -115,9 +102,6 @@ type CreatePartyNotificationParams struct {
 	Priority       string      `json:"priority"`
 	GroupKey       pgtype.Text `json:"group_key"`
 	EventCount     int32       `json:"event_count"`
-	Title          pgtype.Text `json:"title"`
-	Body           pgtype.Text `json:"body"`
-	ActionUrl      pgtype.Text `json:"action_url"`
 	Metadata       []byte      `json:"metadata"`
 }
 
@@ -127,6 +111,7 @@ type CreatePartyNotificationParams struct {
 func (q *Queries) CreatePartyNotification(ctx context.Context, arg CreatePartyNotificationParams) (PartyNotification, error) {
 	row := q.db.QueryRow(ctx, createPartyNotification,
 		arg.PartyID,
+		arg.ActorUserID,
 		arg.ChapterID,
 		arg.TargetCategory,
 		arg.Category,
@@ -134,15 +119,13 @@ func (q *Queries) CreatePartyNotification(ctx context.Context, arg CreatePartyNo
 		arg.Priority,
 		arg.GroupKey,
 		arg.EventCount,
-		arg.Title,
-		arg.Body,
-		arg.ActionUrl,
 		arg.Metadata,
 	)
 	var i PartyNotification
 	err := row.Scan(
 		&i.ID,
 		&i.PartyID,
+		&i.ActorUserID,
 		&i.ChapterID,
 		&i.TargetCategory,
 		&i.Category,
@@ -150,9 +133,6 @@ func (q *Queries) CreatePartyNotification(ctx context.Context, arg CreatePartyNo
 		&i.Priority,
 		&i.GroupKey,
 		&i.EventCount,
-		&i.Title,
-		&i.Body,
-		&i.ActionUrl,
 		&i.Metadata,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -176,7 +156,7 @@ func (q *Queries) DeleteNotification(ctx context.Context, arg DeleteNotification
 }
 
 const getNotificationByID = `-- name: GetNotificationByID :one
-SELECT id, recipient_user_id, actor_user_id, party_id, category, type, priority, group_key, actor_count, title, body, action_url, metadata, read_at, created_at, updated_at FROM notifications
+SELECT id, recipient_user_id, actor_user_id, party_id, category, type, priority, group_key, actor_count, metadata, read_at, created_at, updated_at FROM notifications
 WHERE id = $1 LIMIT 1
 `
 
@@ -193,9 +173,6 @@ func (q *Queries) GetNotificationByID(ctx context.Context, id int64) (Notificati
 		&i.Priority,
 		&i.GroupKey,
 		&i.ActorCount,
-		&i.Title,
-		&i.Body,
-		&i.ActionUrl,
 		&i.Metadata,
 		&i.ReadAt,
 		&i.CreatedAt,
@@ -276,9 +253,6 @@ SELECT
     n.priority,
     n.group_key,
     n.actor_count,
-    n.title,
-    n.body,
-    n.action_url,
     n.metadata,
     n.read_at,
     n.created_at,
@@ -310,9 +284,6 @@ type ListNotificationsForUserRow struct {
 	Priority        string             `json:"priority"`
 	GroupKey        pgtype.Text        `json:"group_key"`
 	ActorCount      int32              `json:"actor_count"`
-	Title           pgtype.Text        `json:"title"`
-	Body            pgtype.Text        `json:"body"`
-	ActionUrl       pgtype.Text        `json:"action_url"`
 	Metadata        []byte             `json:"metadata"`
 	ReadAt          pgtype.Timestamptz `json:"read_at"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
@@ -342,9 +313,6 @@ func (q *Queries) ListNotificationsForUser(ctx context.Context, arg ListNotifica
 			&i.Priority,
 			&i.GroupKey,
 			&i.ActorCount,
-			&i.Title,
-			&i.Body,
-			&i.ActionUrl,
 			&i.Metadata,
 			&i.ReadAt,
 			&i.CreatedAt,
@@ -368,6 +336,7 @@ const listPartyNotificationsForUser = `-- name: ListPartyNotificationsForUser :m
 SELECT 
     pn.id,
     pn.party_id,
+    pn.actor_user_id,
     pn.chapter_id,
     pn.target_category,
     pn.category,
@@ -375,14 +344,16 @@ SELECT
     pn.priority,
     pn.group_key,
     pn.event_count,
-    pn.title,
-    pn.body,
-    pn.action_url,
     pn.metadata,
     pn.created_at,
     pn.updated_at,
+    u.first_name AS actor_first_name,
+    u.last_name AS actor_last_name,
+    u.username AS actor_username,
+    u.avatar AS actor_avatar,
     (pnr.read_at IS NOT NULL)::boolean AS is_read
 FROM party_notifications pn
+LEFT JOIN users u ON u.id = pn.actor_user_id
 INNER JOIN party_position_assignments ppa 
     ON ppa.party_id = pn.party_id 
     AND ppa.user_id = $1 
@@ -406,6 +377,7 @@ type ListPartyNotificationsForUserParams struct {
 type ListPartyNotificationsForUserRow struct {
 	ID             int64              `json:"id"`
 	PartyID        int16              `json:"party_id"`
+	ActorUserID    pgtype.Int8        `json:"actor_user_id"`
 	ChapterID      pgtype.Int4        `json:"chapter_id"`
 	TargetCategory pgtype.Text        `json:"target_category"`
 	Category       string             `json:"category"`
@@ -413,12 +385,13 @@ type ListPartyNotificationsForUserRow struct {
 	Priority       string             `json:"priority"`
 	GroupKey       pgtype.Text        `json:"group_key"`
 	EventCount     int32              `json:"event_count"`
-	Title          pgtype.Text        `json:"title"`
-	Body           pgtype.Text        `json:"body"`
-	ActionUrl      pgtype.Text        `json:"action_url"`
 	Metadata       []byte             `json:"metadata"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	ActorFirstName pgtype.Text        `json:"actor_first_name"`
+	ActorLastName  pgtype.Text        `json:"actor_last_name"`
+	ActorUsername  pgtype.Text        `json:"actor_username"`
+	ActorAvatar    pgtype.Text        `json:"actor_avatar"`
 	IsRead         bool               `json:"is_read"`
 }
 
@@ -440,6 +413,7 @@ func (q *Queries) ListPartyNotificationsForUser(ctx context.Context, arg ListPar
 		if err := rows.Scan(
 			&i.ID,
 			&i.PartyID,
+			&i.ActorUserID,
 			&i.ChapterID,
 			&i.TargetCategory,
 			&i.Category,
@@ -447,12 +421,13 @@ func (q *Queries) ListPartyNotificationsForUser(ctx context.Context, arg ListPar
 			&i.Priority,
 			&i.GroupKey,
 			&i.EventCount,
-			&i.Title,
-			&i.Body,
-			&i.ActionUrl,
 			&i.Metadata,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.ActorFirstName,
+			&i.ActorLastName,
+			&i.ActorUsername,
+			&i.ActorAvatar,
 			&i.IsRead,
 		); err != nil {
 			return nil, err
@@ -480,7 +455,7 @@ const markNotificationAsRead = `-- name: MarkNotificationAsRead :one
 UPDATE notifications
 SET read_at = NOW(), updated_at = NOW()
 WHERE id = $1 AND recipient_user_id = $2
-RETURNING id, recipient_user_id, actor_user_id, party_id, category, type, priority, group_key, actor_count, title, body, action_url, metadata, read_at, created_at, updated_at
+RETURNING id, recipient_user_id, actor_user_id, party_id, category, type, priority, group_key, actor_count, metadata, read_at, created_at, updated_at
 `
 
 type MarkNotificationAsReadParams struct {
@@ -501,9 +476,6 @@ func (q *Queries) MarkNotificationAsRead(ctx context.Context, arg MarkNotificati
 		&i.Priority,
 		&i.GroupKey,
 		&i.ActorCount,
-		&i.Title,
-		&i.Body,
-		&i.ActionUrl,
 		&i.Metadata,
 		&i.ReadAt,
 		&i.CreatedAt,
@@ -543,25 +515,19 @@ INSERT INTO notifications (
     priority,
     group_key,
     actor_count,
-    title,
-    body,
-    action_url,
     metadata,
     created_at,
     updated_at
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, 1, $8, $9, $10, $11, NOW(), NOW()
+    $1, $2, $3, $4, $5, $6, $7, 1, $8, NOW(), NOW()
 )
 ON CONFLICT (recipient_user_id, group_key) WHERE read_at IS NULL AND group_key IS NOT NULL
 DO UPDATE SET
     actor_user_id = EXCLUDED.actor_user_id,
     actor_count = notifications.actor_count + 1,
-    title = COALESCE(EXCLUDED.title, notifications.title),
-    body = COALESCE(EXCLUDED.body, notifications.body),
-    action_url = COALESCE(EXCLUDED.action_url, notifications.action_url),
     metadata = EXCLUDED.metadata,
     updated_at = NOW()
-RETURNING id, recipient_user_id, actor_user_id, party_id, category, type, priority, group_key, actor_count, title, body, action_url, metadata, read_at, created_at, updated_at
+RETURNING id, recipient_user_id, actor_user_id, party_id, category, type, priority, group_key, actor_count, metadata, read_at, created_at, updated_at
 `
 
 type UpsertGroupedNotificationParams struct {
@@ -572,9 +538,6 @@ type UpsertGroupedNotificationParams struct {
 	Type            string      `json:"type"`
 	Priority        string      `json:"priority"`
 	GroupKey        pgtype.Text `json:"group_key"`
-	Title           pgtype.Text `json:"title"`
-	Body            pgtype.Text `json:"body"`
-	ActionUrl       pgtype.Text `json:"action_url"`
 	Metadata        []byte      `json:"metadata"`
 }
 
@@ -587,9 +550,6 @@ func (q *Queries) UpsertGroupedNotification(ctx context.Context, arg UpsertGroup
 		arg.Type,
 		arg.Priority,
 		arg.GroupKey,
-		arg.Title,
-		arg.Body,
-		arg.ActionUrl,
 		arg.Metadata,
 	)
 	var i Notification
@@ -603,9 +563,6 @@ func (q *Queries) UpsertGroupedNotification(ctx context.Context, arg UpsertGroup
 		&i.Priority,
 		&i.GroupKey,
 		&i.ActorCount,
-		&i.Title,
-		&i.Body,
-		&i.ActionUrl,
 		&i.Metadata,
 		&i.ReadAt,
 		&i.CreatedAt,
@@ -617,6 +574,7 @@ func (q *Queries) UpsertGroupedNotification(ctx context.Context, arg UpsertGroup
 const upsertGroupedPartyNotification = `-- name: UpsertGroupedPartyNotification :one
 INSERT INTO party_notifications (
     party_id,
+    actor_user_id,
     chapter_id,
     target_category,
     category,
@@ -624,58 +582,50 @@ INSERT INTO party_notifications (
     priority,
     group_key,
     event_count,
-    title,
-    body,
-    action_url,
     metadata,
     created_at,
     updated_at
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, 1, $8, $9, $10, $11, NOW(), NOW()
+    $1, $2, $3, $4, $5, $6, $7, $8, 1, $9, NOW(), NOW()
 )
-ON CONFLICT (party_id, group_key) WHERE group_key IS NOT NULL
+ON CONFLICT (party_id, (COALESCE(chapter_id, 0)), group_key) WHERE group_key IS NOT NULL
 DO UPDATE SET
+    actor_user_id = COALESCE(EXCLUDED.actor_user_id, party_notifications.actor_user_id),
     event_count = party_notifications.event_count + 1,
-    title = COALESCE(EXCLUDED.title, party_notifications.title),
-    body = COALESCE(EXCLUDED.body, party_notifications.body),
-    action_url = COALESCE(EXCLUDED.action_url, party_notifications.action_url),
     metadata = EXCLUDED.metadata,
     updated_at = NOW()
-RETURNING id, party_id, chapter_id, target_category, category, type, priority, group_key, event_count, title, body, action_url, metadata, created_at, updated_at
+RETURNING id, party_id, actor_user_id, chapter_id, target_category, category, type, priority, group_key, event_count, metadata, created_at, updated_at
 `
 
 type UpsertGroupedPartyNotificationParams struct {
 	PartyID        int16       `json:"party_id"`
+	ActorUserID    pgtype.Int8 `json:"actor_user_id"`
 	ChapterID      pgtype.Int4 `json:"chapter_id"`
 	TargetCategory pgtype.Text `json:"target_category"`
 	Category       string      `json:"category"`
 	Type           string      `json:"type"`
 	Priority       string      `json:"priority"`
 	GroupKey       pgtype.Text `json:"group_key"`
-	Title          pgtype.Text `json:"title"`
-	Body           pgtype.Text `json:"body"`
-	ActionUrl      pgtype.Text `json:"action_url"`
 	Metadata       []byte      `json:"metadata"`
 }
 
 func (q *Queries) UpsertGroupedPartyNotification(ctx context.Context, arg UpsertGroupedPartyNotificationParams) (PartyNotification, error) {
 	row := q.db.QueryRow(ctx, upsertGroupedPartyNotification,
 		arg.PartyID,
+		arg.ActorUserID,
 		arg.ChapterID,
 		arg.TargetCategory,
 		arg.Category,
 		arg.Type,
 		arg.Priority,
 		arg.GroupKey,
-		arg.Title,
-		arg.Body,
-		arg.ActionUrl,
 		arg.Metadata,
 	)
 	var i PartyNotification
 	err := row.Scan(
 		&i.ID,
 		&i.PartyID,
+		&i.ActorUserID,
 		&i.ChapterID,
 		&i.TargetCategory,
 		&i.Category,
@@ -683,9 +633,6 @@ func (q *Queries) UpsertGroupedPartyNotification(ctx context.Context, arg Upsert
 		&i.Priority,
 		&i.GroupKey,
 		&i.EventCount,
-		&i.Title,
-		&i.Body,
-		&i.ActionUrl,
 		&i.Metadata,
 		&i.CreatedAt,
 		&i.UpdatedAt,

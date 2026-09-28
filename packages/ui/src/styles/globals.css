@@ -14,24 +14,29 @@
     from {
       height: 0;
     }
+
     to {
       height: var(--radix-accordion-content-height);
     }
   }
+
   @keyframes accordion-up {
     from {
       height: var(--radix-accordion-content-height);
     }
+
     to {
       height: 0;
     }
   }
 
   /* Define Inter as the default sans-serif font */
-  --font-sans: var(--font-inter), sans-serif;
+  --font-sans: var(--font-inter),
+  sans-serif;
 
   /* Define Gabarito as a separate custom font family */
-  --font-firasans: var(--font-firasans), sans-serif;
+  --font-firasans: var(--font-firasans),
+  sans-serif;
 
   --shadow-bullet: var(--shadow-bullet);
   --shadow-bullet-hover: 0px 0px 6px 0px rgba(84, 160, 255, 0.5);
@@ -74,6 +79,7 @@
 
   --color-lime: var(--lime);
   --color-lime-accent: var(--lime-accent);
+  --color-lime-accent-hover: var(--lime-accent-hover);
 
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
@@ -145,6 +151,9 @@
 
 @layer base {
   :root {
+    --font-firasans: 'Fira Sans';
+    --font-inter: 'Fira Sans';
+
     /* --background: rgb(251 246 250); */
     --background: rgb(255 255 255);
     --background-2: rgb(246, 246, 246);
@@ -194,8 +203,9 @@
     --red-accent: rgb(253 53 53);
     --light-green: rgb(0 226 135);
     --light-green-accent: rgb(5 184 101);
-    --lime: #D3FDA0;
-    --lime-accent: #c0f385;
+    --lime: #D8F999;
+    --lime-accent: #C4F27B;
+    --lime-accent-hover: #b8eb6a;
 
     /* text */
     --text-100: rgb(0 0 0);
@@ -222,7 +232,7 @@
     --hover-7: rgb(237 237 237);
     --hover-10: rgb(230 230 230);
 
-    /* fontsize */
+    /* font-size */
     --font-xs: 0.688rem;
     /* 11px */
     --font-xsl: 0.75rem;
@@ -296,6 +306,7 @@
     --success-hover: #00b568;
     --lime: #1f2023;
     --lime-accent: #2b2d31;
+    --lime-accent-hover: #35383d;
     --border: rgb(48 48 48);
     --input: rgb(235, 232, 236);
     --input-active: rgb(42, 42, 45);
@@ -359,7 +370,8 @@
   }
 
   body {
-    @apply bg-background text-foreground text-base leading-normal;
+    @apply m-0 bg-background text-foreground text-base leading-normal antialiased;
+    font-family: var(--font-firasans), sans-serif;
   }
 
   span,
@@ -410,3 +422,12 @@
 .selectElement button {
   border: 0px solid transparent !important;
 }
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}

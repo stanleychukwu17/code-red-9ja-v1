@@ -2,7 +2,7 @@ import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { getPartyProfile } from "@/lib/server/parties";
 import { PARTY_PRESETS } from "#/components/parties/party-constants";
-import { PartyHeaderLayout, PartyNavTabs } from "#/components/party";
+import { PartyEventsCard, PartyHeaderLayout, PartyNavTabs } from "#/components/party";
 
 export const Route = createFileRoute(
   "/_authenticated/party/$partyName/$partyId",
@@ -41,7 +41,7 @@ function PartyLayoutComponent() {
     "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop";
 
   return (
-    <div className="min-h-screen bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 antialiased">
+    <div className="min-h-screen bg-background text-foreground antialiased">
       {/* 
         Parent layout covering cover image, avatar, identity, member+follow buttons, 
         and follower statistics, encapsulating the inner navigation tabs.
@@ -57,7 +57,7 @@ function PartyLayoutComponent() {
         chapterMembers="200,000"
       >
         {/* Inner navigation bar embedded within the header layout */}
-        <div className="mt-4">
+        <div className="mt-0">
           <PartyNavTabs partyName={partyName} partyId={partyId} />
         </div>
       </PartyHeaderLayout>

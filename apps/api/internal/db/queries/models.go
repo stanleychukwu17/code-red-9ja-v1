@@ -1171,9 +1171,6 @@ type Notification struct {
 	Priority        string             `json:"priority"`
 	GroupKey        pgtype.Text        `json:"group_key"`
 	ActorCount      int32              `json:"actor_count"`
-	Title           pgtype.Text        `json:"title"`
-	Body            pgtype.Text        `json:"body"`
-	ActionUrl       pgtype.Text        `json:"action_url"`
 	Metadata        []byte             `json:"metadata"`
 	ReadAt          pgtype.Timestamptz `json:"read_at"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
@@ -1333,6 +1330,7 @@ type PartyMembership struct {
 type PartyNotification struct {
 	ID             int64              `json:"id"`
 	PartyID        int16              `json:"party_id"`
+	ActorUserID    pgtype.Int8        `json:"actor_user_id"`
 	ChapterID      pgtype.Int4        `json:"chapter_id"`
 	TargetCategory pgtype.Text        `json:"target_category"`
 	Category       string             `json:"category"`
@@ -1340,9 +1338,6 @@ type PartyNotification struct {
 	Priority       string             `json:"priority"`
 	GroupKey       pgtype.Text        `json:"group_key"`
 	EventCount     int32              `json:"event_count"`
-	Title          pgtype.Text        `json:"title"`
-	Body           pgtype.Text        `json:"body"`
-	ActionUrl      pgtype.Text        `json:"action_url"`
 	Metadata       []byte             `json:"metadata"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`

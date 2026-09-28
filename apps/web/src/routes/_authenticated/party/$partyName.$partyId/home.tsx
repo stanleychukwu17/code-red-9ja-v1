@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { PartyLeadersCard, type PartyLeader } from "#/components/party";
+import { PartyEventsCard, PartyLeadersCard, type PartyLeader } from "#/components/party";
 
 export const Route = createFileRoute(
   "/_authenticated/party/$partyName/$partyId/home",
@@ -68,6 +68,7 @@ function PartyHomeTabComponent() {
         leaders={DEFAULT_NATIONAL_LEADERS_2}
         accentColor="#A3E635"
       />
+      <PartyEventsCard />
     </div>
   );
 }

@@ -65,9 +65,6 @@ type CreateNotificationInput struct {
 	Type            string         `json:"type"`     // e.g. 'post_comment', 'new_follower'
 	Priority        string         `json:"priority"` // 'low', 'normal', 'high', 'urgent'
 	GroupKey        *string        `json:"group_key,omitempty"`
-	Title           *string        `json:"title,omitempty"`
-	Body            *string        `json:"body,omitempty"`
-	ActionURL       *string        `json:"action_url,omitempty"`
 	Metadata        map[string]any `json:"metadata,omitempty"`
 }
 
@@ -81,9 +78,6 @@ type NotificationItemResponse struct {
 	Priority        string         `json:"priority"`
 	GroupKey        *string        `json:"group_key,omitempty"`
 	ActorCount      int32          `json:"actor_count"`
-	Title           *string        `json:"title,omitempty"`
-	Body            *string        `json:"body,omitempty"`
-	ActionURL       *string        `json:"action_url,omitempty"`
 	Metadata        map[string]any `json:"metadata"`
 	ReadAt          *time.Time     `json:"read_at,omitempty"`
 	CreatedAt       time.Time      `json:"created_at"`
@@ -105,21 +99,24 @@ type PaginatedNotificationsResponse struct {
 
 type CreatePartyNotificationInput struct {
 	PartyID        int16          `json:"party_id"`
+	ActorUserID    *int64         `json:"actor_user_id,omitempty"`
 	ChapterID      *int32         `json:"chapter_id,omitempty"`
 	TargetCategory *string        `json:"target_category,omitempty"`
 	Category       string         `json:"category"` // 'membership', 'agent_recruitment', 'election_ops', 'finance', 'system'
 	Type           string         `json:"type"`
 	Priority       string         `json:"priority"`
 	GroupKey       *string        `json:"group_key,omitempty"`
-	Title          *string        `json:"title,omitempty"`
-	Body           *string        `json:"body,omitempty"`
-	ActionURL      *string        `json:"action_url,omitempty"`
 	Metadata       map[string]any `json:"metadata,omitempty"`
 }
 
 type PartyNotificationItemResponse struct {
 	ID             int64          `json:"id"`
 	PartyID        int16          `json:"party_id"`
+	ActorUserID    *int64         `json:"actor_user_id,omitempty"`
+	ActorFirstName *string        `json:"actor_first_name,omitempty"`
+	ActorLastName  *string        `json:"actor_last_name,omitempty"`
+	ActorUsername  *string        `json:"actor_username,omitempty"`
+	ActorAvatar    *string        `json:"actor_avatar,omitempty"`
 	ChapterID      *int32         `json:"chapter_id,omitempty"`
 	TargetCategory *string        `json:"target_category,omitempty"`
 	Category       string         `json:"category"`
@@ -127,9 +124,6 @@ type PartyNotificationItemResponse struct {
 	Priority       string         `json:"priority"`
 	GroupKey       *string        `json:"group_key,omitempty"`
 	EventCount     int32          `json:"event_count"`
-	Title          *string        `json:"title,omitempty"`
-	Body           *string        `json:"body,omitempty"`
-	ActionURL      *string        `json:"action_url,omitempty"`
 	Metadata       map[string]any `json:"metadata"`
 	CreatedAt      time.Time      `json:"created_at"`
 	UpdatedAt      time.Time      `json:"updated_at"`
@@ -164,6 +158,7 @@ type UpdatePreferencesInput struct {
 // ----------------------------------------------------------------------------
 
 func (s *service) CreateNotification(ctx context.Context, in CreateNotificationInput) (*NotificationItemResponse, error) {
+	// Set default priority and ensure valid JSON metadata
 	if in.Priority == "" {
 		in.Priority = "normal"
 	}
@@ -176,6 +171,7 @@ func (s *service) CreateNotification(ctx context.Context, in CreateNotificationI
 		metadataBytes = []byte("{}")
 	}
 
+	// Prepare nullable database types
 	var actorUserID pgtype.Int8
 	if in.ActorUserID != nil {
 		actorUserID = pgtype.Int8{Int64: *in.ActorUserID, Valid: true}
@@ -191,24 +187,9 @@ func (s *service) CreateNotification(ctx context.Context, in CreateNotificationI
 		groupKey = pgtype.Text{String: *in.GroupKey, Valid: true}
 	}
 
-	var title pgtype.Text
-	if in.Title != nil {
-		title = pgtype.Text{String: *in.Title, Valid: true}
-	}
-
-	var body pgtype.Text
-	if in.Body != nil {
-		body = pgtype.Text{String: *in.Body, Valid: true}
-	}
-
-	var actionURL pgtype.Text
-	if in.ActionURL != nil {
-		actionURL = pgtype.Text{String: *in.ActionURL, Valid: true}
-	}
-
+	// If group_key is set, upsert & increment actor_count on unread conflict; otherwise insert fresh
 	var n queries.Notification
 	if in.GroupKey != nil && *in.GroupKey != "" {
-		// Use upsert rollup
 		n, err = s.q.UpsertGroupedNotification(ctx, queries.UpsertGroupedNotificationParams{
 			RecipientUserID: in.RecipientUserID,
 			ActorUserID:     actorUserID,
@@ -217,9 +198,6 @@ func (s *service) CreateNotification(ctx context.Context, in CreateNotificationI
 			Type:            in.Type,
 			Priority:        in.Priority,
 			GroupKey:        groupKey,
-			Title:           title,
-			Body:            body,
-			ActionUrl:       actionURL,
 			Metadata:        metadataBytes,
 		})
 	} else {
@@ -232,9 +210,6 @@ func (s *service) CreateNotification(ctx context.Context, in CreateNotificationI
 			Priority:        in.Priority,
 			GroupKey:        groupKey,
 			ActorCount:      1,
-			Title:           title,
-			Body:            body,
-			ActionUrl:       actionURL,
 			Metadata:        metadataBytes,
 		})
 	}
@@ -245,7 +220,7 @@ func (s *service) CreateNotification(ctx context.Context, in CreateNotificationI
 
 	resp := mapNotificationToResponse(n)
 
-	// Broadcast live in-app notification via Pusher
+	// Broadcast in real-time via Pusher to the user's private channel
 	if s.broadcaster != nil {
 		_ = s.broadcaster.BroadcastNotification(ctx, in.RecipientUserID, resp)
 	}
@@ -254,6 +229,7 @@ func (s *service) CreateNotification(ctx context.Context, in CreateNotificationI
 }
 
 func (s *service) ListUserNotifications(ctx context.Context, userID int64, page, limit int32) (*PaginatedNotificationsResponse, error) {
+	// Apply pagination limits and calculate offset
 	if page < 1 {
 		page = 1
 	}
@@ -262,6 +238,7 @@ func (s *service) ListUserNotifications(ctx context.Context, userID int64, page,
 	}
 	offset := (page - 1) * limit
 
+	// Query paginated notifications joined with actor profile info
 	rows, err := s.q.ListNotificationsForUser(ctx, queries.ListNotificationsForUserParams{
 		RecipientUserID: userID,
 		Limit:           limit,
@@ -271,11 +248,13 @@ func (s *service) ListUserNotifications(ctx context.Context, userID int64, page,
 		return nil, fmt.Errorf("failed to list notifications: %w", err)
 	}
 
+	// Fetch current unread badge count for the header
 	unreadCount, err := s.q.GetUnreadNotificationsCount(ctx, userID)
 	if err != nil {
 		slog.Warn("Failed to fetch unread notifications count", "err", err, "user_id", userID)
 	}
 
+	// Map rows to API response items
 	items := make([]NotificationItemResponse, 0, len(rows))
 	for _, r := range rows {
 		var meta map[string]any
@@ -309,18 +288,6 @@ func (s *service) ListUserNotifications(ctx context.Context, userID int64, page,
 		if r.GroupKey.Valid {
 			gk := r.GroupKey.String
 			item.GroupKey = &gk
-		}
-		if r.Title.Valid {
-			t := r.Title.String
-			item.Title = &t
-		}
-		if r.Body.Valid {
-			b := r.Body.String
-			item.Body = &b
-		}
-		if r.ActionUrl.Valid {
-			u := r.ActionUrl.String
-			item.ActionURL = &u
 		}
 		if r.ReadAt.Valid {
 			rt := r.ReadAt.Time
@@ -356,10 +323,12 @@ func (s *service) ListUserNotifications(ctx context.Context, userID int64, page,
 }
 
 func (s *service) GetUnreadCount(ctx context.Context, userID int64) (int64, error) {
+	// Query database for the total unread user notifications count
 	return s.q.GetUnreadNotificationsCount(ctx, userID)
 }
 
 func (s *service) MarkAsRead(ctx context.Context, notificationID int64, userID int64) error {
+	// Mark a specific notification as read by setting read_at timestamp
 	_, err := s.q.MarkNotificationAsRead(ctx, queries.MarkNotificationAsReadParams{
 		ID:              notificationID,
 		RecipientUserID: userID,
@@ -371,10 +340,12 @@ func (s *service) MarkAsRead(ctx context.Context, notificationID int64, userID i
 }
 
 func (s *service) MarkAllAsRead(ctx context.Context, userID int64) error {
+	// Mark all unread notifications as read for the user in bulk
 	return s.q.MarkAllNotificationsAsRead(ctx, userID)
 }
 
 func (s *service) DeleteNotification(ctx context.Context, notificationID int64, userID int64) error {
+	// Soft/hard delete the notification ensuring recipient owns it
 	return s.q.DeleteNotification(ctx, queries.DeleteNotificationParams{
 		ID:              notificationID,
 		RecipientUserID: userID,
@@ -386,6 +357,7 @@ func (s *service) DeleteNotification(ctx context.Context, notificationID int64, 
 // ----------------------------------------------------------------------------
 
 func (s *service) CreatePartyNotification(ctx context.Context, in CreatePartyNotificationInput) (*PartyNotificationItemResponse, error) {
+	// Set default priority and ensure valid JSON metadata
 	if in.Priority == "" {
 		in.Priority = "normal"
 	}
@@ -396,6 +368,12 @@ func (s *service) CreatePartyNotification(ctx context.Context, in CreatePartyNot
 	metadataBytes, err := json.Marshal(in.Metadata)
 	if err != nil {
 		metadataBytes = []byte("{}")
+	}
+
+	// Prepare nullable database types
+	var actorUserID pgtype.Int8
+	if in.ActorUserID != nil && *in.ActorUserID > 0 {
+		actorUserID = pgtype.Int8{Int64: *in.ActorUserID, Valid: true}
 	}
 
 	var chapterID pgtype.Int4
@@ -413,39 +391,24 @@ func (s *service) CreatePartyNotification(ctx context.Context, in CreatePartyNot
 		groupKey = pgtype.Text{String: *in.GroupKey, Valid: true}
 	}
 
-	var title pgtype.Text
-	if in.Title != nil {
-		title = pgtype.Text{String: *in.Title, Valid: true}
-	}
-
-	var body pgtype.Text
-	if in.Body != nil {
-		body = pgtype.Text{String: *in.Body, Valid: true}
-	}
-
-	var actionURL pgtype.Text
-	if in.ActionURL != nil {
-		actionURL = pgtype.Text{String: *in.ActionURL, Valid: true}
-	}
-
+	// Upsert on group_key conflict (increment event_count) or insert fresh notification
 	var pn queries.PartyNotification
 	if in.GroupKey != nil && *in.GroupKey != "" {
 		pn, err = s.q.UpsertGroupedPartyNotification(ctx, queries.UpsertGroupedPartyNotificationParams{
 			PartyID:        in.PartyID,
+			ActorUserID:    actorUserID,
 			ChapterID:      chapterID,
 			TargetCategory: targetCategory,
 			Category:       in.Category,
 			Type:           in.Type,
 			Priority:       in.Priority,
 			GroupKey:       groupKey,
-			Title:          title,
-			Body:           body,
-			ActionUrl:      actionURL,
 			Metadata:       metadataBytes,
 		})
 	} else {
 		pn, err = s.q.CreatePartyNotification(ctx, queries.CreatePartyNotificationParams{
 			PartyID:        in.PartyID,
+			ActorUserID:    actorUserID,
 			ChapterID:      chapterID,
 			TargetCategory: targetCategory,
 			Category:       in.Category,
@@ -453,9 +416,6 @@ func (s *service) CreatePartyNotification(ctx context.Context, in CreatePartyNot
 			Priority:       in.Priority,
 			GroupKey:       groupKey,
 			EventCount:     1,
-			Title:          title,
-			Body:           body,
-			ActionUrl:      actionURL,
 			Metadata:       metadataBytes,
 		})
 	}
@@ -466,7 +426,7 @@ func (s *service) CreatePartyNotification(ctx context.Context, in CreatePartyNot
 
 	resp := mapPartyNotificationToResponse(pn, false)
 
-	// Broadcast to party & chapter realtime channels
+	// Broadcast to party & chapter realtime channels via Pusher
 	if s.broadcaster != nil {
 		_ = s.broadcaster.BroadcastPartyNotification(ctx, in.PartyID, in.ChapterID, resp)
 	}
@@ -475,6 +435,7 @@ func (s *service) CreatePartyNotification(ctx context.Context, in CreatePartyNot
 }
 
 func (s *service) ListPartyNotificationsForUser(ctx context.Context, userID int64, partyID int16, page, limit int32) (*PaginatedPartyNotificationsResponse, error) {
+	// Normalize pagination parameters
 	if page < 1 {
 		page = 1
 	}
@@ -483,6 +444,7 @@ func (s *service) ListPartyNotificationsForUser(ctx context.Context, userID int6
 	}
 	offset := (page - 1) * limit
 
+	// Query notifications visible to user based on their active chapter assignment
 	rows, err := s.q.ListPartyNotificationsForUser(ctx, queries.ListPartyNotificationsForUserParams{
 		UserID:  userID,
 		PartyID: partyID,
@@ -493,6 +455,7 @@ func (s *service) ListPartyNotificationsForUser(ctx context.Context, userID int6
 		return nil, fmt.Errorf("failed to list party notifications: %w", err)
 	}
 
+	// Fetch total unread count for badge indicators
 	unreadCount, err := s.q.GetUnreadPartyNotificationsCountForUser(ctx, queries.GetUnreadPartyNotificationsCountForUserParams{
 		UserID:  userID,
 		PartyID: partyID,
@@ -501,6 +464,7 @@ func (s *service) ListPartyNotificationsForUser(ctx context.Context, userID int6
 		slog.Warn("Failed to fetch unread party notifications count", "err", err, "party_id", partyID)
 	}
 
+	// Map database rows and optional actor/chapter fields into response DTOs
 	items := make([]PartyNotificationItemResponse, 0, len(rows))
 	for _, r := range rows {
 		var meta map[string]any
@@ -524,6 +488,27 @@ func (s *service) ListPartyNotificationsForUser(ctx context.Context, userID int6
 			IsRead:     r.IsRead,
 		}
 
+		if r.ActorUserID.Valid {
+			aID := r.ActorUserID.Int64
+			item.ActorUserID = &aID
+		}
+		if r.ActorFirstName.Valid {
+			fn := r.ActorFirstName.String
+			item.ActorFirstName = &fn
+		}
+		if r.ActorLastName.Valid {
+			ln := r.ActorLastName.String
+			item.ActorLastName = &ln
+		}
+		if r.ActorUsername.Valid {
+			un := r.ActorUsername.String
+			item.ActorUsername = &un
+		}
+		if r.ActorAvatar.Valid {
+			av := r.ActorAvatar.String
+			item.ActorAvatar = &av
+		}
+
 		if r.ChapterID.Valid {
 			cID := r.ChapterID.Int32
 			item.ChapterID = &cID
@@ -535,18 +520,6 @@ func (s *service) ListPartyNotificationsForUser(ctx context.Context, userID int6
 		if r.GroupKey.Valid {
 			gk := r.GroupKey.String
 			item.GroupKey = &gk
-		}
-		if r.Title.Valid {
-			t := r.Title.String
-			item.Title = &t
-		}
-		if r.Body.Valid {
-			b := r.Body.String
-			item.Body = &b
-		}
-		if r.ActionUrl.Valid {
-			u := r.ActionUrl.String
-			item.ActionURL = &u
 		}
 
 		items = append(items, item)
@@ -561,6 +534,7 @@ func (s *service) ListPartyNotificationsForUser(ctx context.Context, userID int6
 }
 
 func (s *service) GetPartyUnreadCount(ctx context.Context, userID int64, partyID int16) (int64, error) {
+	// Retrieve count of unread notifications matching user's position permissions
 	return s.q.GetUnreadPartyNotificationsCountForUser(ctx, queries.GetUnreadPartyNotificationsCountForUserParams{
 		UserID:  userID,
 		PartyID: partyID,
@@ -568,6 +542,7 @@ func (s *service) GetPartyUnreadCount(ctx context.Context, userID int64, partyID
 }
 
 func (s *service) MarkPartyNotificationAsRead(ctx context.Context, partyNotificationID int64, userID int64) error {
+	// Record read receipt in party_notification_reads for this user
 	return s.q.MarkPartyNotificationAsRead(ctx, queries.MarkPartyNotificationAsReadParams{
 		PartyNotificationID: partyNotificationID,
 		UserID:              userID,
@@ -581,7 +556,7 @@ func (s *service) MarkPartyNotificationAsRead(ctx context.Context, partyNotifica
 func (s *service) GetPreferences(ctx context.Context, userID int64) (*NotificationPreferencesResponse, error) {
 	redisKey := fmt.Sprintf("%s%d", db.RedisNotificationPreferences, userID)
 
-	// 1. Check Redis cache
+	// 1. Check Redis cache first
 	if s.rdb != nil {
 		if val, err := s.rdb.Get(ctx, redisKey).Result(); err == nil && val != "" {
 			var cached NotificationPreferencesResponse
@@ -591,11 +566,11 @@ func (s *service) GetPreferences(ctx context.Context, userID int64) (*Notificati
 		}
 	}
 
-	// 2. Query DB
+	// 2. Query database if cache miss
 	row, err := s.q.GetNotificationPreferencesByUserID(ctx, userID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			// Return default preferences
+			// Return sensible default preferences if user has not configured them yet
 			def := &NotificationPreferencesResponse{
 				UserID:       userID,
 				InAppEnabled: true,
@@ -632,7 +607,7 @@ func (s *service) GetPreferences(ctx context.Context, userID int64) (*Notificati
 		UpdatedAt:           row.UpdatedAt.Time,
 	}
 
-	// Cache in Redis for 24h
+	// 3. Cache populated preferences in Redis for 24h
 	if s.rdb != nil {
 		if b, err := json.Marshal(res); err == nil {
 			_ = s.rdb.Set(ctx, redisKey, string(b), db.RedisOneDayTTL).Err()
@@ -643,6 +618,7 @@ func (s *service) GetPreferences(ctx context.Context, userID int64) (*Notificati
 }
 
 func (s *service) UpdatePreferences(ctx context.Context, userID int64, req UpdatePreferencesInput) (*NotificationPreferencesResponse, error) {
+	// Fetch existing preferences to apply partial delta updates
 	current, err := s.GetPreferences(ctx, userID)
 	if err != nil {
 		return nil, err
@@ -676,6 +652,7 @@ func (s *service) UpdatePreferences(ctx context.Context, userID int64, req Updat
 		catBytes = []byte("{}")
 	}
 
+	// Persist preferences into database
 	row, err := s.q.UpsertNotificationPreferences(ctx, queries.UpsertNotificationPreferencesParams{
 		UserID:              userID,
 		InAppEnabled:        inApp,
@@ -696,7 +673,7 @@ func (s *service) UpdatePreferences(ctx context.Context, userID int64, req Updat
 		UpdatedAt:           row.UpdatedAt.Time,
 	}
 
-	// Invalidate/refresh Redis cache
+	// Refresh Redis cache with updated preferences
 	if s.rdb != nil {
 		redisKey := fmt.Sprintf("%s%d", db.RedisNotificationPreferences, userID)
 		if b, err := json.Marshal(res); err == nil {
@@ -712,6 +689,7 @@ func (s *service) UpdatePreferences(ctx context.Context, userID int64, req Updat
 // ----------------------------------------------------------------------------
 
 func mapNotificationToResponse(n queries.Notification) *NotificationItemResponse {
+	// Safely unmarshal JSONB metadata into generic map
 	var meta map[string]any
 	if len(n.Metadata) > 0 {
 		_ = json.Unmarshal(n.Metadata, &meta)
@@ -720,6 +698,7 @@ func mapNotificationToResponse(n queries.Notification) *NotificationItemResponse
 		meta = make(map[string]any)
 	}
 
+	// Build response DTO with core fields
 	resp := &NotificationItemResponse{
 		ID:              n.ID,
 		RecipientUserID: n.RecipientUserID,
@@ -732,6 +711,7 @@ func mapNotificationToResponse(n queries.Notification) *NotificationItemResponse
 		UpdatedAt:       n.UpdatedAt.Time,
 	}
 
+	// Populate optional nullable relational values
 	if n.ActorUserID.Valid {
 		id := n.ActorUserID.Int64
 		resp.ActorUserID = &id
@@ -744,18 +724,6 @@ func mapNotificationToResponse(n queries.Notification) *NotificationItemResponse
 		gk := n.GroupKey.String
 		resp.GroupKey = &gk
 	}
-	if n.Title.Valid {
-		t := n.Title.String
-		resp.Title = &t
-	}
-	if n.Body.Valid {
-		b := n.Body.String
-		resp.Body = &b
-	}
-	if n.ActionUrl.Valid {
-		u := n.ActionUrl.String
-		resp.ActionURL = &u
-	}
 	if n.ReadAt.Valid {
 		rt := n.ReadAt.Time
 		resp.ReadAt = &rt
@@ -765,6 +733,7 @@ func mapNotificationToResponse(n queries.Notification) *NotificationItemResponse
 }
 
 func mapPartyNotificationToResponse(pn queries.PartyNotification, isRead bool) *PartyNotificationItemResponse {
+	// Safely unmarshal JSONB metadata into generic map
 	var meta map[string]any
 	if len(pn.Metadata) > 0 {
 		_ = json.Unmarshal(pn.Metadata, &meta)
@@ -773,6 +742,7 @@ func mapPartyNotificationToResponse(pn queries.PartyNotification, isRead bool) *
 		meta = make(map[string]any)
 	}
 
+	// Build response DTO with core fields and per-official read state
 	resp := &PartyNotificationItemResponse{
 		ID:         pn.ID,
 		PartyID:    pn.PartyID,
@@ -786,6 +756,11 @@ func mapPartyNotificationToResponse(pn queries.PartyNotification, isRead bool) *
 		IsRead:     isRead,
 	}
 
+	// Populate optional nullable actor, chapter, and group identifiers
+	if pn.ActorUserID.Valid {
+		aID := pn.ActorUserID.Int64
+		resp.ActorUserID = &aID
+	}
 	if pn.ChapterID.Valid {
 		cID := pn.ChapterID.Int32
 		resp.ChapterID = &cID
@@ -797,18 +772,6 @@ func mapPartyNotificationToResponse(pn queries.PartyNotification, isRead bool) *
 	if pn.GroupKey.Valid {
 		gk := pn.GroupKey.String
 		resp.GroupKey = &gk
-	}
-	if pn.Title.Valid {
-		t := pn.Title.String
-		resp.Title = &t
-	}
-	if pn.Body.Valid {
-		b := pn.Body.String
-		resp.Body = &b
-	}
-	if pn.ActionUrl.Valid {
-		u := pn.ActionUrl.String
-		resp.ActionURL = &u
 	}
 
 	return resp
