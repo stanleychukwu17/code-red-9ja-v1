@@ -160,6 +160,7 @@ type Querier interface {
 	DepositPartyAllowance(ctx context.Context, arg DepositPartyAllowanceParams) (Party, error)
 	EnsureElectionGroupParentSkeletons(ctx context.Context, electionGroupID int32) error
 	GetAcceptedApplicationForUser(ctx context.Context, arg GetAcceptedApplicationForUserParams) (GetAcceptedApplicationForUserRow, error)
+	GetAcceptingPartyIDs(ctx context.Context) ([]int16, error)
 	// Returns the active campaign (if any) for a party + election group where NOW() is within start/end dates.
 	GetActiveMarketingCampaignForElectionGroup(ctx context.Context, arg GetActiveMarketingCampaignForElectionGroupParams) (PartyMarketingCampaign, error)
 	GetAgentEarningsByID(ctx context.Context, id int64) (AgentEarning, error)
@@ -248,7 +249,6 @@ type Querier interface {
 	GetPageVerifications(ctx context.Context, arg GetPageVerificationsParams) ([]GetPageVerificationsRow, error)
 	GetPartyBasicInfo(ctx context.Context, id int16) (GetPartyBasicInfoRow, error)
 	GetPartyByID(ctx context.Context, id int16) (Party, error)
-	GetPartyByShortName(ctx context.Context, shortName string) (Party, error)
 	GetPartyChapterByID(ctx context.Context, id int32) (PartyChapter, error)
 	GetPartyElectionGroupCoverageDistribution(ctx context.Context, arg GetPartyElectionGroupCoverageDistributionParams) ([]GetPartyElectionGroupCoverageDistributionRow, error)
 	GetPartyMarketingCampaigns(ctx context.Context, partyID int16) ([]GetPartyMarketingCampaignsRow, error)
@@ -292,7 +292,6 @@ type Querier interface {
 	GetUnmatchedPollingUnitResultByID(ctx context.Context, id int64) (UnmatchedPollingUnitResult, error)
 	GetUnreadNotificationsCount(ctx context.Context, recipientUserID int64) (int64, error)
 	GetUnreadPartyNotificationsCountForUser(ctx context.Context, arg GetUnreadPartyNotificationsCountForUserParams) (int64, error)
-	GetUserActivePartyIDs(ctx context.Context, userID int64) ([]int16, error)
 	GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (GetUserByFakeIDRow, error)
 	GetUserByID(ctx context.Context, id int64) (GetUserByIDRow, error)
 	GetUserDidNotVoteReason(ctx context.Context, arg GetUserDidNotVoteReasonParams) (GetUserDidNotVoteReasonRow, error)
@@ -349,6 +348,7 @@ type Querier interface {
 	InsertAuditLog(ctx context.Context, arg InsertAuditLogParams) (AuditLog, error)
 	InsertUserBankAccount(ctx context.Context, arg InsertUserBankAccountParams) (UserBankAccount, error)
 	InsertUserPreferences(ctx context.Context, arg InsertUserPreferencesParams) (UserPreference, error)
+	IsPartyAcceptingApplications(ctx context.Context, id int16) (bool, error)
 	ListAcceptingParties(ctx context.Context) ([]ListAcceptingPartiesRow, error)
 	ListActiveINECResultGrabbers(ctx context.Context, activeSyncDaysLimit int32) ([]ListActiveINECResultGrabbersRow, error)
 	ListAgentEarnings(ctx context.Context, arg ListAgentEarningsParams) ([]ListAgentEarningsRow, error)

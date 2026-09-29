@@ -32,7 +32,9 @@ type PartiesService interface {
 	GetPartyBasicInfo(ctx context.Context, partyID int16) *queries.PartyBasicInfoWithVerifications
 	GetPartyByShortName(ctx context.Context, shortName string) (*queries.PartyWithVerifications, error)
 	ListParties(ctx context.Context) ([]queries.PartyWithVerifications, error)
-	GetPartyCards(ctx context.Context, currentUserID *int64) ([]partiesservice.PartyCard, error)
+	GetAcceptingPartyIDs(ctx context.Context) (map[int16]bool, error)
+	IsPartyAcceptingApplications(ctx context.Context, partyID int16) (bool, error)
+	GetPartyCards(ctx context.Context, userPartyID int16) ([]partiesservice.PartyCard, error)
 	UpdateParty(ctx context.Context, id int64, shortName, name, logo string, logoFileID *int64, displayOrder int32, colorHex, darkColorHex, coverImage *string, coverImageFileID *int64, coverPositionY *int16, dateFounded *string) (queries.Party, error)
 	DeleteParty(ctx context.Context, id int64) error
 	UpdatePartyIsVerified(ctx context.Context, partyID int16, isVerified bool) error
@@ -470,14 +472,14 @@ func (h *Handler) ListParties(w http.ResponseWriter, r *http.Request) {
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Router       /parties/cards [get]
 func (h *Handler) ListPartyCards(w http.ResponseWriter, r *http.Request) {
-	// Extract authenticated user ID if session exists (to flag 'is_user_member')
-	var currentUserID *int64
+	// Extract authenticated user's party ID if session exists (to flag 'is_user_member')
+	var userPartyID int16
 	if claims, ok := apimiddleware.GetClaims(r); ok && claims != nil {
-		currentUserID = &claims.UserID
+		userPartyID = claims.PartyID
 	}
 
 	// Fetch enriched party cards with metrics, sample members, and leadership
-	cards, err := h.partiesService.GetPartyCards(r.Context(), currentUserID)
+	cards, err := h.partiesService.GetPartyCards(r.Context(), userPartyID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch party cards: "+err.Error())
 		return
@@ -537,6 +539,11 @@ func (h *Handler) ListPartiesPublic(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var publicParties []PartyPublic
+	acceptingMap, _ := h.partiesService.GetAcceptingPartyIDs(r.Context())
+	if acceptingMap == nil {
+		acceptingMap = make(map[int16]bool)
+	}
+
 	for _, p := range parties {
 		publicParties = append(publicParties, PartyPublic{
 			ID:                      p.ID,
@@ -546,7 +553,7 @@ func (h *Handler) ListPartiesPublic(w http.ResponseWriter, r *http.Request) {
 			DisplayOrder:            p.DisplayOrder,
 			Status:                  p.Status,
 			IsVerified:              p.IsVerified.Bool,
-			IsAcceptingApplications: p.IsAcceptingApplications,
+			IsAcceptingApplications: acceptingMap[p.ID],
 			ColorHex:                p.ColorHex.String,
 			DarkColorHex:            p.DarkColorHex.String,
 		})
@@ -558,6 +565,36 @@ func (h *Handler) ListPartiesPublic(w http.ResponseWriter, r *http.Request) {
 		"data": map[string]interface{}{
 			"parties": publicParties,
 		},
+	})
+}
+
+// GetPartyAcceptingStatus godoc
+// @Summary      Get party application acceptance status
+// @Description  Checks if a party currently meets all criteria to accept agent applications.
+// @Tags         Parties
+// @Produce      json
+// @Param        id   path  int  true  "Party ID"
+// @Success      200  {object} map[string]interface{} "Status fetched successfully"
+// @Failure      400  {object} map[string]interface{} "Invalid ID"
+// @Failure      500  {object} map[string]interface{} "Internal server error"
+// @Router       /parties/{id}/accepting-applications [get]
+func (h *Handler) GetPartyAcceptingStatus(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	partyID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID")
+		return
+	}
+
+	isAccepting, err := h.partiesService.IsPartyAcceptingApplications(r.Context(), int16(partyID))
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to check acceptance status: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Acceptance status fetched successfully", map[string]interface{}{
+		"party_id":                  partyID,
+		"is_accepting_applications": isAccepting,
 	})
 }
 
@@ -1361,16 +1398,9 @@ func (h *Handler) UpdateAgentPaymentAllocationKobo(w http.ResponseWriter, r *htt
 		return
 	}
 
-	var payload agentPaymentAllocation
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload: "+err.Error())
-		return
-	}
-
-	// Re-encode to canonical JSON so the stored bytes always match the documented shape.
-	bodyBytes, err := json.Marshal(payload)
+	bodyBytes, err := io.ReadAll(r.Body)
 	if err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to encode allocation")
+		h.utils.RespondError(w, http.StatusBadRequest, "Failed to read request body")
 		return
 	}
 

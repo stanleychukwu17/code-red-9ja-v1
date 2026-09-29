@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
+	"free9ja/api/internal/utils"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -32,10 +32,7 @@ func (s *OfficesService) invalidateCache(ctx context.Context) {
 // CreateOffice inserts a new political office and invalidates the cached offices list.
 func (s *OfficesService) CreateOffice(ctx context.Context, name, election, scope string, rank int32, inecElectionTypeID *string) (queries.Office, error) {
 	// 1. Wrap optional INEC election type ID into a nullable pgtype.Text
-	var inecText pgtype.Text
-	if inecElectionTypeID != nil && *inecElectionTypeID != "" {
-		inecText = pgtype.Text{String: *inecElectionTypeID, Valid: true}
-	}
+	inecText := utils.PgTextFromPtr(inecElectionTypeID)
 
 	// 2. Insert new office record into PostgreSQL
 	office, err := s.queries.CreateOffice(ctx, queries.CreateOfficeParams{
@@ -128,10 +125,7 @@ func (s *OfficesService) GetOfficeByName(ctx context.Context, name string) (quer
 // UpdateOffice modifies an existing office record and invalidates the cached offices list.
 func (s *OfficesService) UpdateOffice(ctx context.Context, id int16, name, election, scope string, rank int32, inecElectionTypeID *string) (queries.Office, error) {
 	// 1. Wrap optional INEC election type ID into a nullable pgtype.Text
-	var inecText pgtype.Text
-	if inecElectionTypeID != nil && *inecElectionTypeID != "" {
-		inecText = pgtype.Text{String: *inecElectionTypeID, Valid: true}
-	}
+	inecText := utils.PgTextFromPtr(inecElectionTypeID)
 
 	// 2. Update office in PostgreSQL
 	office, err := s.queries.UpdateOffice(ctx, queries.UpdateOfficeParams{

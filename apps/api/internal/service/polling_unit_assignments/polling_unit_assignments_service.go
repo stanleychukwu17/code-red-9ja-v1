@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"free9ja/api/internal/db/queries"
+	"free9ja/api/internal/utils"
 	"free9ja/api/internal/worker"
 	"strings"
 	"time"
@@ -68,7 +69,7 @@ func (s *Service) AssignAgent(ctx context.Context, userID int64, electionGroupID
 		PollingUnitID:        pollingUnitID,
 		ElectionGroupID:      electionGroupID,
 		PartyID:              partyID,
-		RoleType:             pgtype.Text{String: roleType, Valid: roleType != ""},
+		RoleType:             utils.PgTextFromString(roleType),
 		AssignedBy:           assignedByVal,
 		PotentialPaymentKobo: potentialPaymentKobo,
 	})
@@ -105,12 +106,6 @@ func parseTimeParam(timeStr *string) pgtype.Timestamptz {
 	return pgtype.Timestamptz{Time: t, Valid: true}
 }
 
-func parseTextParam(str *string) pgtype.Text {
-	if str == nil {
-		return pgtype.Text{Valid: false}
-	}
-	return pgtype.Text{String: *str, Valid: true}
-}
 
 func (s *Service) UpdateAssignmentTracking(ctx context.Context, id int64, arrivedAt, arrivalVideoUrl, electionStartedAt, electionStartedVideoUrl, electionEndedAt, electionEndedVideoUrl *string) (queries.UpdateAssignmentTrackingRow, error) {
 	assignment, err := s.queries.GetAssignmentByID(ctx, id)
@@ -132,11 +127,11 @@ func (s *Service) UpdateAssignmentTracking(ctx context.Context, id int64, arrive
 	updated, err := s.queries.UpdateAssignmentTracking(ctx, queries.UpdateAssignmentTrackingParams{
 		ID:                      id,
 		ArrivedAt:               parseTimeParam(arrivedAt),
-		ArrivalVideoUrl:         parseTextParam(arrivalVideoUrl),
+		ArrivalVideoUrl:         utils.PgTextFromPtr(arrivalVideoUrl),
 		ElectionStartedAt:       parseTimeParam(electionStartedAt),
-		ElectionStartedVideoUrl: parseTextParam(electionStartedVideoUrl),
+		ElectionStartedVideoUrl: utils.PgTextFromPtr(electionStartedVideoUrl),
 		ElectionEndedAt:         parseTimeParam(electionEndedAt),
-		ElectionEndedVideoUrl:   parseTextParam(electionEndedVideoUrl),
+		ElectionEndedVideoUrl:   utils.PgTextFromPtr(electionEndedVideoUrl),
 	})
 	if err != nil {
 		return updated, err

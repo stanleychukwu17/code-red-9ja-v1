@@ -10,6 +10,7 @@ import (
 	"free9ja/api/internal/db/queries"
 	monnifyclient "free9ja/api/internal/service/monnify"
 	"free9ja/api/internal/service/notifications"
+	"free9ja/api/internal/utils"
 	"log/slog"
 	"strconv"
 	"strings"
@@ -21,20 +22,13 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-// pgTextFromString converts a plain string to a nullable pgtype.Text.
-func pgTextFromString(s string) pgtype.Text {
-	if s == "" {
-		return pgtype.Text{Valid: false}
-	}
-	return pgtype.Text{String: s, Valid: true}
-}
-
 // PartiesService manages political parties and their Monnify-backed wallets.
 type PartiesService struct {
 	queries                  *queries.Queries
 	pool                     *pgxpool.Pool
 	rdb                      *redis.Client
 	monnify                  *monnifyclient.Client
+	utils                    *utils.Utils
 	pageVerificationsService PageVerificationsService
 	usersService             UsersService
 	notificationsService     NotificationsService
@@ -59,12 +53,13 @@ type NotificationsService interface {
 
 // NewPartiesService creates a new PartiesService.
 // monnify may be nil in test environments — wallet creation will be skipped.
-func NewPartiesService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client, monnify *monnifyclient.Client, ns NotificationsService) *PartiesService {
+func NewPartiesService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client, monnify *monnifyclient.Client, u *utils.Utils, ns NotificationsService) *PartiesService {
 	return &PartiesService{
 		queries:              q,
 		pool:                 pool,
 		rdb:                  rdb,
 		monnify:              monnify,
+		utils:                u,
 		notificationsService: ns,
 	}
 }
@@ -82,55 +77,18 @@ func (s *PartiesService) SetUsersService(us UsersService) {
 // CreateParty inserts a party into the database and, if a Monnify client is
 // configured, immediately provisions a reserved virtual account (wallet) for it.
 func (s *PartiesService) CreateParty(ctx context.Context, shortName, name, logo string, logoFileID *int64, displayOrder int32, colorHex, darkColorHex, coverImage *string, coverImageFileID *int64, coverPositionY *int16, dateFounded *string) (queries.Party, error) {
-	var logoFileIDPg pgtype.Int8
-	if logoFileID != nil {
-		logoFileIDPg = pgtype.Int8{Int64: *logoFileID, Valid: true}
-	}
-
-	var colorHexPg pgtype.Text
-	if colorHex != nil && *colorHex != "" {
-		colorHexPg = pgtype.Text{String: *colorHex, Valid: true}
-	}
-
-	var darkColorHexPg pgtype.Text
-	if darkColorHex != nil && *darkColorHex != "" {
-		darkColorHexPg = pgtype.Text{String: *darkColorHex, Valid: true}
-	}
-
-	var coverImagePg pgtype.Text
-	if coverImage != nil && *coverImage != "" {
-		coverImagePg = pgtype.Text{String: *coverImage, Valid: true}
-	}
-
-	var coverImageFileIDPg pgtype.Int8
-	if coverImageFileID != nil {
-		coverImageFileIDPg = pgtype.Int8{Int64: *coverImageFileID, Valid: true}
-	}
-
-	coverPositionYPg := pgtype.Int2{Int16: 50, Valid: true}
-	if coverPositionY != nil {
-		coverPositionYPg = pgtype.Int2{Int16: *coverPositionY, Valid: true}
-	}
-
-	var dateFoundedPg pgtype.Date
-	if dateFounded != nil && *dateFounded != "" {
-		if t, err := time.Parse("2006-01-02", *dateFounded); err == nil {
-			dateFoundedPg = pgtype.Date{Time: t, Valid: true}
-		}
-	}
-
 	party, err := s.queries.CreateParty(ctx, queries.CreatePartyParams{
 		ShortName:        shortName,
 		Name:             name,
 		Logo:             logo,
-		LogoFileID:       logoFileIDPg,
+		LogoFileID:       utils.PgInt8FromPtr(logoFileID),
 		DisplayOrder:     displayOrder,
-		ColorHex:         colorHexPg,
-		DarkColorHex:     darkColorHexPg,
-		CoverImage:       coverImagePg,
-		CoverImageFileID: coverImageFileIDPg,
-		CoverPositionY:   coverPositionYPg,
-		DateFounded:      dateFoundedPg,
+		ColorHex:         utils.PgTextFromPtr(colorHex),
+		DarkColorHex:     utils.PgTextFromPtr(darkColorHex),
+		CoverImage:       utils.PgTextFromPtr(coverImage),
+		CoverImageFileID: utils.PgInt8FromPtr(coverImageFileID),
+		CoverPositionY:   utils.PgInt2FromPtr(coverPositionY, 50),
+		DateFounded:      utils.PgDateFromPtr(dateFounded),
 	})
 	if err != nil {
 		return queries.Party{}, err
@@ -232,45 +190,22 @@ func (s *PartiesService) GetPartyBasicInfo(ctx context.Context, partyID int16) *
 	return &party
 }
 
-func isPartyAcceptingApplications(p queries.Party) bool {
-	if p.Status != "active" || !p.IsVerified.Bool || p.Slots <= 0 || p.AgentPaymentBalanceKobo <= 0 {
-		return false
+// IsPartyAcceptingApplications checks if a party meets all criteria to accept agent applications.
+func (s *PartiesService) IsPartyAcceptingApplications(ctx context.Context, partyID int16) (bool, error) {
+	return s.queries.IsPartyAcceptingApplications(ctx, partyID)
+}
+
+// GetAcceptingPartyIDs returns a set (as map[int16]bool) of party IDs currently accepting agent applications.
+func (s *PartiesService) GetAcceptingPartyIDs(ctx context.Context) (map[int16]bool, error) {
+	ids, err := s.queries.GetAcceptingPartyIDs(ctx)
+	if err != nil {
+		return nil, err
 	}
-	if len(p.AgentAcquisitionTargets) == 0 || string(p.AgentAcquisitionTargets) == "{}" || string(p.AgentAcquisitionTargets) == "null" {
-		return false
+	acceptingMap := make(map[int16]bool, len(ids))
+	for _, id := range ids {
+		acceptingMap[id] = true
 	}
-	if len(p.AgentPaymentAllocationKobo) == 0 || string(p.AgentPaymentAllocationKobo) == "{}" || string(p.AgentPaymentAllocationKobo) == "null" {
-		return false
-	}
-	var alloc map[string]struct {
-		Default *int64 `json:"default"`
-	}
-	if err := json.Unmarshal(p.AgentPaymentAllocationKobo, &alloc); err != nil {
-		return false
-	}
-	roles := []struct {
-		camel string
-		snake string
-	}{
-		{camel: "pollingAgent", snake: "polling_agent"},
-		{camel: "wardElectionSupervisor", snake: "ward_election_supervisor"},
-		{camel: "lgaElectionSupervisor", snake: "lga_election_supervisor"},
-		{camel: "stateElectionSupervisor", snake: "state_election_supervisor"},
-	}
-	var maxDefault int64 = -1
-	for _, rolePair := range roles {
-		cfg, exists := alloc[rolePair.camel]
-		if !exists {
-			cfg, exists = alloc[rolePair.snake]
-		}
-		if !exists || cfg.Default == nil || *cfg.Default <= 0 {
-			return false
-		}
-		if *cfg.Default > maxDefault {
-			maxDefault = *cfg.Default
-		}
-	}
-	return maxDefault > 0 && p.AgentPaymentBalanceKobo >= maxDefault
+	return acceptingMap, nil
 }
 
 // GetPartyInfo returns a party if the provided optional partyID is valid.
@@ -290,24 +225,23 @@ func (s *PartiesService) GetPartyInfo(ctx context.Context, partyID int16) *queri
 	if err == nil {
 		party := queries.PartyWithVerifications{
 			ListPartiesRow: queries.ListPartiesRow{
-				ID:                      partyRow.ID,
-				ShortName:               partyRow.ShortName,
-				Name:                    partyRow.Name,
-				Logo:                    partyRow.Logo,
-				LogoFileID:              partyRow.LogoFileID,
-				CoverImage:              partyRow.CoverImage,
-				CoverImageFileID:        partyRow.CoverImageFileID,
-				CoverPositionY:          partyRow.CoverPositionY,
-				DisplayOrder:            partyRow.DisplayOrder,
-				Status:                  partyRow.Status,
-				Slots:                   partyRow.Slots,
-				IsVerified:              partyRow.IsVerified,
-				ColorHex:                partyRow.ColorHex,
-				DarkColorHex:            partyRow.DarkColorHex,
-				DateFounded:             partyRow.DateFounded,
-				CreatedAt:               partyRow.CreatedAt,
-				UpdatedAt:               partyRow.UpdatedAt,
-				IsAcceptingApplications: isPartyAcceptingApplications(partyRow),
+				ID:               partyRow.ID,
+				ShortName:        partyRow.ShortName,
+				Name:             partyRow.Name,
+				Logo:             partyRow.Logo,
+				LogoFileID:       partyRow.LogoFileID,
+				CoverImage:       partyRow.CoverImage,
+				CoverImageFileID: partyRow.CoverImageFileID,
+				CoverPositionY:   partyRow.CoverPositionY,
+				DisplayOrder:     partyRow.DisplayOrder,
+				Status:           partyRow.Status,
+				Slots:            partyRow.Slots,
+				IsVerified:       partyRow.IsVerified,
+				ColorHex:         partyRow.ColorHex,
+				DarkColorHex:     partyRow.DarkColorHex,
+				DateFounded:      partyRow.DateFounded,
+				CreatedAt:        partyRow.CreatedAt,
+				UpdatedAt:        partyRow.UpdatedAt,
 			},
 		}
 
@@ -482,52 +416,61 @@ func (s *PartiesService) GetOnePartyChapterOfficial(ctx context.Context, chapter
 		}
 	}
 
+	// Fetch official assignment from DB
 	off, err := s.queries.GetOnePartyChapterOfficial(ctx, queries.GetOnePartyChapterOfficialParams{
 		ChapterID:  chapterID,
 		PositionID: positionID,
 	})
+
 	if err != nil {
+		// If position is unassigned, cache and return a vacant card
+		if errors.Is(err, pgx.ErrNoRows) {
+			posName := "Official"
+			if positionID == constants.PartyPositionChairmanID {
+				posName = "Chairman"
+			} else if positionID == constants.PartyPositionSecretaryID {
+				posName = "Secretary"
+			}
+
+			vacantOfficial := PartyOfficialCard{
+				PositionID:   positionID,
+				PositionName: posName,
+				IsVacant:     true,
+			}
+			// Cache vacant card
+			if data, marshalErr := json.Marshal(vacantOfficial); marshalErr == nil {
+				_ = s.rdb.Set(ctx, cacheKey, data, db.RedisSevenDaysTTL).Err()
+			}
+			return &vacantOfficial, nil
+		}
+
+		// Return other errors
 		return nil, err
 	}
 
-	nameParts := []string{}
-	if off.FirstName.Valid && off.FirstName.String != "" {
-		nameParts = append(nameParts, off.FirstName.String)
-	}
-	if off.LastName.Valid && off.LastName.String != "" {
-		nameParts = append(nameParts, off.LastName.String)
-	}
-	fullName := strings.Join(nameParts, " ")
-	if fullName == "" && off.Username.Valid {
-		fullName = off.Username.String
-	}
-	var namePtr *string
-	if fullName != "" {
-		namePtr = &fullName
-	}
+	// Format display name and username
+	fullName := strings.TrimSpace(off.FirstName.String + " " + off.LastName.String)
+	namePtr := &fullName
+	unPtr := &off.Username.String
 
-	var unPtr *string
-	if off.Username.Valid && off.Username.String != "" {
-		unPtr = &off.Username.String
-	}
-
+	// Format optional avatar
 	var avPtr *string
 	if off.Avatar.Valid && off.Avatar.String != "" {
 		avPtr = &off.Avatar.String
 	}
 
+	// Format tenure start year
 	var sincePtr *string
 	if off.TenureStart.Valid {
 		sStr := fmt.Sprintf("since %d", off.TenureStart.Time.Year())
 		sincePtr = &sStr
 	}
 
+	// Build official card
 	uid := off.UserID
 	official := PartyOfficialCard{
 		PositionID:   off.PositionID,
 		PositionName: off.PositionName,
-		PositionCode: off.PositionCode,
-		RankOrder:    off.RankOrder,
 		UserID:       &uid,
 		Name:         namePtr,
 		Username:     unPtr,
@@ -546,7 +489,7 @@ func (s *PartiesService) GetOnePartyChapterOfficial(ctx context.Context, chapter
 
 // GetPartyCards returns all active parties enriched with real member counts,
 // sample member avatars, top national leadership positions, and the user's membership status.
-func (s *PartiesService) GetPartyCards(ctx context.Context, currentUserID *int64) ([]PartyCard, error) {
+func (s *PartiesService) GetPartyCards(ctx context.Context, userPartyID int16) ([]PartyCard, error) {
 	parties, err := s.ListParties(ctx)
 	if err != nil {
 		return nil, err
@@ -589,83 +532,18 @@ func (s *PartiesService) GetPartyCards(ctx context.Context, currentUserID *int64
 		}
 	}
 
-	// 4. If current user is authenticated, retrieve their active party memberships
-	userPartiesMap := make(map[int16]bool)
-	if currentUserID != nil && *currentUserID > 0 {
-		if userPartyIDs, err := s.queries.GetUserActivePartyIDs(ctx, *currentUserID); err == nil {
-			for _, pid := range userPartyIDs {
-				userPartiesMap[pid] = true
-			}
-		}
-	}
-
-	// 5. Build final PartyCard list
+	// 4. Build final PartyCard list
 	cards := make([]PartyCard, 0, len(parties))
 	for _, p := range parties {
-		var colorHex, darkColorHex, dateFounded, coverImage *string
-		var coverPositionY *int16
-
-		if p.ColorHex.Valid && p.ColorHex.String != "" {
-			colorHex = &p.ColorHex.String
-		}
-		if p.DarkColorHex.Valid && p.DarkColorHex.String != "" {
-			darkColorHex = &p.DarkColorHex.String
-		}
-		if p.CoverImage.Valid && p.CoverImage.String != "" {
-			coverImage = &p.CoverImage.String
-		}
-		if p.CoverPositionY.Valid {
-			coverPositionY = &p.CoverPositionY.Int16
-		}
-		if p.DateFounded.Valid {
-			df := p.DateFounded.Time.Format("2006-01-02")
-			dateFounded = &df
-		}
-
 		sampleMembers := sampleAvatarsMap[p.ID]
 		if sampleMembers == nil {
 			sampleMembers = []PartySampleMember{}
 		}
 
-		// Prepare 2 national positions (with fallback to Vacant indicators)
-		assignedOfficials := officialsMap[p.ID]
-		officials := make([]PartyOfficialCard, 0, 2)
-		if len(assignedOfficials) >= 2 {
-			officials = append(officials, assignedOfficials[0], assignedOfficials[1])
-		} else if len(assignedOfficials) == 1 {
-			officials = append(officials, assignedOfficials[0])
-			// Fallback second official to Vacant
-			if strings.EqualFold(assignedOfficials[0].PositionCode, "chairman") {
-				officials = append(officials, PartyOfficialCard{
-					PositionName: "Secretary",
-					PositionCode: "secretary",
-					RankOrder:    4,
-					IsVacant:     true,
-				})
-			} else {
-				officials = append(officials, PartyOfficialCard{
-					PositionName: "Chairman",
-					PositionCode: "chairman",
-					RankOrder:    1,
-					IsVacant:     true,
-				})
-			}
-		} else {
-			// Both positions vacant
-			officials = append(officials,
-				PartyOfficialCard{
-					PositionName: "Chairman",
-					PositionCode: "chairman",
-					RankOrder:    1,
-					IsVacant:     true,
-				},
-				PartyOfficialCard{
-					PositionName: "Secretary",
-					PositionCode: "secretary",
-					RankOrder:    4,
-					IsVacant:     true,
-				},
-			)
+		// 2 national positions (Chairman & Secretary)
+		officials := officialsMap[p.ID]
+		if officials == nil {
+			officials = []PartyOfficialCard{}
 		}
 
 		cards = append(cards, PartyCard{
@@ -676,15 +554,15 @@ func (s *PartiesService) GetPartyCards(ctx context.Context, currentUserID *int64
 			DisplayOrder:   p.DisplayOrder,
 			Status:         p.Status,
 			IsVerified:     p.IsVerified.Bool,
-			ColorHex:       colorHex,
-			DarkColorHex:   darkColorHex,
-			DateFounded:    dateFounded,
-			CoverImage:     coverImage,
-			CoverPositionY: coverPositionY,
+			ColorHex:       utils.PtrFromPgText(p.ColorHex),
+			DarkColorHex:   utils.PtrFromPgText(p.DarkColorHex),
+			DateFounded:    utils.PtrFromPgDate(p.DateFounded),
+			CoverImage:     utils.PtrFromPgText(p.CoverImage),
+			CoverPositionY: utils.PtrFromPgInt2(p.CoverPositionY),
 			TotalMembers:   memberCountsMap[p.ID],
 			SampleMembers:  sampleMembers,
 			Officials:      officials,
-			IsUserMember:   userPartiesMap[p.ID],
+			IsUserMember:   userPartyID > 0 && p.ID == userPartyID,
 		})
 	}
 
@@ -694,56 +572,20 @@ func (s *PartiesService) GetPartyCards(ctx context.Context, currentUserID *int64
 // UpdateParty modifies the short name, name, logo, cover, and details of an existing party.
 func (s *PartiesService) UpdateParty(ctx context.Context, id int64, shortName, name, logo string, logoFileID *int64, displayOrder int32, colorHex, darkColorHex, coverImage *string, coverImageFileID *int64, coverPositionY *int16, dateFounded *string) (queries.Party, error) {
 	defer s.InvalidatePartyCache(ctx, int16(id))
-	var logoFileIDPg pgtype.Int8
-	if logoFileID != nil {
-		logoFileIDPg = pgtype.Int8{Int64: *logoFileID, Valid: true}
-	}
-
-	var colorHexPg pgtype.Text
-	if colorHex != nil && *colorHex != "" {
-		colorHexPg = pgtype.Text{String: *colorHex, Valid: true}
-	}
-
-	var darkColorHexPg pgtype.Text
-	if darkColorHex != nil && *darkColorHex != "" {
-		darkColorHexPg = pgtype.Text{String: *darkColorHex, Valid: true}
-	}
-
-	var coverImagePg pgtype.Text
-	if coverImage != nil && *coverImage != "" {
-		coverImagePg = pgtype.Text{String: *coverImage, Valid: true}
-	}
-
-	var coverImageFileIDPg pgtype.Int8
-	if coverImageFileID != nil {
-		coverImageFileIDPg = pgtype.Int8{Int64: *coverImageFileID, Valid: true}
-	}
-
-	coverPositionYPg := pgtype.Int2{Int16: 50, Valid: true}
-	if coverPositionY != nil {
-		coverPositionYPg = pgtype.Int2{Int16: *coverPositionY, Valid: true}
-	}
-
-	var dateFoundedPg pgtype.Date
-	if dateFounded != nil && *dateFounded != "" {
-		if t, err := time.Parse("2006-01-02", *dateFounded); err == nil {
-			dateFoundedPg = pgtype.Date{Time: t, Valid: true}
-		}
-	}
 
 	party, err := s.queries.UpdateParty(ctx, queries.UpdatePartyParams{
 		ID:               int16(id),
 		ShortName:        shortName,
 		Name:             name,
 		Logo:             logo,
-		LogoFileID:       logoFileIDPg,
+		LogoFileID:       utils.PgInt8FromPtr(logoFileID),
 		DisplayOrder:     displayOrder,
-		ColorHex:         colorHexPg,
-		DarkColorHex:     darkColorHexPg,
-		CoverImage:       coverImagePg,
-		CoverImageFileID: coverImageFileIDPg,
-		CoverPositionY:   coverPositionYPg,
-		DateFounded:      dateFoundedPg,
+		ColorHex:         utils.PgTextFromPtr(colorHex),
+		DarkColorHex:     utils.PgTextFromPtr(darkColorHex),
+		CoverImage:       utils.PgTextFromPtr(coverImage),
+		CoverImageFileID: utils.PgInt8FromPtr(coverImageFileID),
+		CoverPositionY:   utils.PgInt2FromPtr(coverPositionY, 50),
+		DateFounded:      utils.PgDateFromPtr(dateFounded),
 	})
 
 	s.InvalidatePartyCache(ctx, int16(id))
@@ -822,10 +664,10 @@ func (s *PartiesService) CreditWallet(
 		TransactionCategory:  "wallet_funding",
 		AmountKobo:           amountKobo,
 		BalanceAfterKobo:     updatedWallet.BalanceKobo,
-		PayerName:            pgTextFromString(payerName),
-		PayerAccountNumber:   pgTextFromString(payerAccountNumber),
-		PayerBankCode:        pgTextFromString(payerBankCode),
-		Narration:            pgTextFromString(narration),
+		PayerName:            utils.PgTextFromString(payerName),
+		PayerAccountNumber:   utils.PgTextFromString(payerAccountNumber),
+		PayerBankCode:        utils.PgTextFromString(payerBankCode),
+		Narration:            utils.PgTextFromString(narration),
 		RawPayload:           rawPayload,
 	})
 	if err != nil {
@@ -880,10 +722,10 @@ func (s *PartiesService) WithdrawFromWallet(
 		TransactionCategory:  "wallet_withdrawal",
 		AmountKobo:           amountKobo,
 		BalanceAfterKobo:     updatedWallet.BalanceKobo,
-		PayerName:            pgTextFromString(""),
-		PayerAccountNumber:   pgTextFromString(bankAccountNumber),
-		PayerBankCode:        pgTextFromString(bankCode),
-		Narration:            pgTextFromString(narration),
+		PayerName:            utils.PgTextFromString(""),
+		PayerAccountNumber:   utils.PgTextFromString(bankAccountNumber),
+		PayerBankCode:        utils.PgTextFromString(bankCode),
+		Narration:            utils.PgTextFromString(narration),
 		RawPayload:           nil,
 	})
 	if err != nil {
@@ -1061,10 +903,10 @@ func (s *PartiesService) BuySlots(ctx context.Context, partyID int16, quantity i
 		TransactionCategory:  "slot_purchase",
 		AmountKobo:           totalCost,
 		BalanceAfterKobo:     updatedWallet.BalanceKobo,
-		PayerName:            pgTextFromString(""),
-		PayerAccountNumber:   pgTextFromString(""),
-		PayerBankCode:        pgTextFromString(""),
-		Narration:            pgTextFromString(fmt.Sprintf("Purchased %d polling agent slots", quantity)),
+		PayerName:            utils.PgTextFromString(""),
+		PayerAccountNumber:   utils.PgTextFromString(""),
+		PayerBankCode:        utils.PgTextFromString(""),
+		Narration:            utils.PgTextFromString(fmt.Sprintf("Purchased %d polling agent slots", quantity)),
 		RawPayload:           []byte("{}"),
 	})
 	if err != nil {
@@ -1155,10 +997,10 @@ func (s *PartiesService) DepositAllowance(ctx context.Context, partyID int16, am
 		TransactionCategory:  "allowance_deposit",
 		AmountKobo:           amountKobo,
 		BalanceAfterKobo:     updatedWallet.BalanceKobo,
-		PayerName:            pgTextFromString(""),
-		PayerAccountNumber:   pgTextFromString(""),
-		PayerBankCode:        pgTextFromString(""),
-		Narration:            pgTextFromString(fmt.Sprintf("Deposited NGN %.2f to polling agent allowance budget", float64(amountKobo)/100.0)),
+		PayerName:            utils.PgTextFromString(""),
+		PayerAccountNumber:   utils.PgTextFromString(""),
+		PayerBankCode:        utils.PgTextFromString(""),
+		Narration:            utils.PgTextFromString(fmt.Sprintf("Deposited NGN %.2f to polling agent allowance budget", float64(amountKobo)/100.0)),
 		RawPayload:           []byte("{}"),
 	})
 	if err != nil {
@@ -1184,17 +1026,86 @@ func (s *PartiesService) DepositAllowance(ctx context.Context, partyID int16, am
 	return updatedParty, nil
 }
 
+// AgentPaymentRoleConfig holds the default allowance and any state-level overrides for a role.
+type AgentPaymentRoleConfig struct {
+	Default int64            `json:"default"`
+	States  map[string]int64 `json:"states"`
+}
+
+// CanonicalAgentPaymentAllocation is the normalized structure stored in the database.
+type CanonicalAgentPaymentAllocation struct {
+	PollingAgent            AgentPaymentRoleConfig `json:"polling_agent"`
+	WardElectionSupervisor  AgentPaymentRoleConfig `json:"ward_election_supervisor"`
+	LgaElectionSupervisor   AgentPaymentRoleConfig `json:"lga_election_supervisor"`
+	StateElectionSupervisor AgentPaymentRoleConfig `json:"state_election_supervisor"`
+}
+
+// HarmonizeAgentPaymentAllocation normalizes incoming allocation payloads (handling both camelCase
+// and snake_case role keys) and returns canonical JSON with guaranteed valid role configurations.
+func HarmonizeAgentPaymentAllocation(raw []byte) ([]byte, error) {
+	var rawMap map[string]struct {
+		Default *int64           `json:"default"`
+		States  map[string]int64 `json:"states"`
+	}
+	if err := json.Unmarshal(raw, &rawMap); err != nil {
+		return nil, fmt.Errorf("invalid allowances configuration: %w", err)
+	}
+
+	getRoleConfig := func(camel, snake string) (AgentPaymentRoleConfig, error) {
+		cfg, exists := rawMap[camel]
+		if !exists {
+			cfg, exists = rawMap[snake]
+		}
+		if !exists || cfg.Default == nil || *cfg.Default <= 0 {
+			return AgentPaymentRoleConfig{}, fmt.Errorf("missing or invalid default payment for role '%s' (must be > 0)", snake)
+		}
+		states := cfg.States
+		if states == nil {
+			states = make(map[string]int64)
+		}
+		return AgentPaymentRoleConfig{
+			Default: *cfg.Default,
+			States:  states,
+		}, nil
+	}
+
+	pa, err := getRoleConfig("pollingAgent", "polling_agent")
+	if err != nil {
+		return nil, err
+	}
+	ward, err := getRoleConfig("wardElectionSupervisor", "ward_election_supervisor")
+	if err != nil {
+		return nil, err
+	}
+	lga, err := getRoleConfig("lgaElectionSupervisor", "lga_election_supervisor")
+	if err != nil {
+		return nil, err
+	}
+	state, err := getRoleConfig("stateElectionSupervisor", "state_election_supervisor")
+	if err != nil {
+		return nil, err
+	}
+
+	canonical := CanonicalAgentPaymentAllocation{
+		PollingAgent:            pa,
+		WardElectionSupervisor:  ward,
+		LgaElectionSupervisor:   lga,
+		StateElectionSupervisor: state,
+	}
+
+	return json.Marshal(canonical)
+}
+
 // UpdateAgentPaymentAllocationKobo updates the state-by-state polling agent payment settings for a party.
 func (s *PartiesService) UpdateAgentPaymentAllocationKobo(ctx context.Context, partyID int16, allowancesJSON []byte) (queries.Party, error) {
-	// Simple validation to ensure valid JSON is supplied
-	var temp map[string]any
-	if err := json.Unmarshal(allowancesJSON, &temp); err != nil {
-		return queries.Party{}, fmt.Errorf("invalid allowances configuration: %w", err)
+	canonicalJSON, err := HarmonizeAgentPaymentAllocation(allowancesJSON)
+	if err != nil {
+		return queries.Party{}, err
 	}
 
 	defer s.InvalidatePartyCache(ctx, partyID)
 	return s.queries.UpdatePartyAgentPaymentAllocationKobo(ctx, queries.UpdatePartyAgentPaymentAllocationKoboParams{
-		AgentPaymentAllocationKobo: allowancesJSON,
+		AgentPaymentAllocationKobo: canonicalJSON,
 		ID:                         partyID,
 	})
 }
@@ -1586,10 +1497,10 @@ func (s *PartiesService) CreatePartyMarketingCampaign(ctx context.Context, arg q
 		TransactionCategory:  "marketing_campaign",
 		AmountKobo:           arg.BudgetKobo,
 		BalanceAfterKobo:     updatedWallet.BalanceKobo,
-		PayerName:            pgTextFromString(""),
-		PayerAccountNumber:   pgTextFromString(""),
-		PayerBankCode:        pgTextFromString(""),
-		Narration:            pgTextFromString("Payment for marketing campaign"),
+		PayerName:            utils.PgTextFromString(""),
+		PayerAccountNumber:   utils.PgTextFromString(""),
+		PayerBankCode:        utils.PgTextFromString(""),
+		Narration:            utils.PgTextFromString("Payment for marketing campaign"),
 		RawPayload:           nil,
 	})
 	if err != nil {

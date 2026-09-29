@@ -6,9 +6,6 @@ RETURNING *;
 -- name: GetPartyByID :one
 SELECT * FROM parties WHERE id = $1;
 
--- name: GetPartyByShortName :one
-SELECT * FROM parties WHERE short_name = $1;
-
 -- name: GetPartyBasicInfo :one
 SELECT id, short_name, name, logo, is_verified, color_hex, dark_color_hex FROM parties WHERE id = $1 LIMIT 1;
 
@@ -30,32 +27,47 @@ SELECT
   dark_color_hex,
   date_founded,
   created_at,
-  updated_at,
-  (
-    status = 'active'
-    AND is_verified = true
+  updated_at
+FROM parties
+WHERE status = 'active'
+ORDER BY display_order ASC, name ASC;
+
+-- name: GetAcceptingPartyIDs :many
+SELECT id FROM parties
+WHERE status = 'active'
+  AND slots > 0
+  AND agent_payment_balance_kobo > 0
+  AND agent_acquisition_targets IS NOT NULL 
+  AND agent_acquisition_targets != '{}'::jsonb
+  AND agent_payment_allocation_kobo IS NOT NULL 
+  AND agent_payment_allocation_kobo != '{}'::jsonb
+  AND agent_payment_balance_kobo >= COALESCE(
+    (
+      SELECT MAX((value->>'default')::bigint)
+      FROM jsonb_each(agent_payment_allocation_kobo)
+      WHERE value->>'default' IS NOT NULL
+    ), 0
+  );
+
+-- name: IsPartyAcceptingApplications :one
+SELECT EXISTS (
+  SELECT 1 FROM parties
+  WHERE id = $1
+    AND status = 'active'
     AND slots > 0
+    AND agent_payment_balance_kobo > 0
     AND agent_acquisition_targets IS NOT NULL 
     AND agent_acquisition_targets != '{}'::jsonb
     AND agent_payment_allocation_kobo IS NOT NULL 
     AND agent_payment_allocation_kobo != '{}'::jsonb
-    AND agent_payment_balance_kobo > 0
-    AND (
-      COALESCE((agent_payment_allocation_kobo->'pollingAgent'->>'default')::bigint, (agent_payment_allocation_kobo->'polling_agent'->>'default')::bigint, 0) > 0
-      AND COALESCE((agent_payment_allocation_kobo->'wardElectionSupervisor'->>'default')::bigint, (agent_payment_allocation_kobo->'ward_election_supervisor'->>'default')::bigint, 0) > 0
-      AND COALESCE((agent_payment_allocation_kobo->'lgaElectionSupervisor'->>'default')::bigint, (agent_payment_allocation_kobo->'lga_election_supervisor'->>'default')::bigint, 0) > 0
-      AND COALESCE((agent_payment_allocation_kobo->'stateElectionSupervisor'->>'default')::bigint, (agent_payment_allocation_kobo->'state_election_supervisor'->>'default')::bigint, 0) > 0
+    AND agent_payment_balance_kobo >= COALESCE(
+      (
+        SELECT MAX((value->>'default')::bigint)
+        FROM jsonb_each(agent_payment_allocation_kobo)
+        WHERE value->>'default' IS NOT NULL
+      ), 0
     )
-    AND agent_payment_balance_kobo >= GREATEST(
-      COALESCE((agent_payment_allocation_kobo->'pollingAgent'->>'default')::bigint, (agent_payment_allocation_kobo->'polling_agent'->>'default')::bigint, 0),
-      COALESCE((agent_payment_allocation_kobo->'wardElectionSupervisor'->>'default')::bigint, (agent_payment_allocation_kobo->'ward_election_supervisor'->>'default')::bigint, 0),
-      COALESCE((agent_payment_allocation_kobo->'lgaElectionSupervisor'->>'default')::bigint, (agent_payment_allocation_kobo->'lga_election_supervisor'->>'default')::bigint, 0),
-      COALESCE((agent_payment_allocation_kobo->'stateElectionSupervisor'->>'default')::bigint, (agent_payment_allocation_kobo->'state_election_supervisor'->>'default')::bigint, 0)
-    )
-  )::boolean AS is_accepting_applications
-FROM parties
-WHERE status = 'active'
-ORDER BY display_order ASC, name ASC;
+) AS is_accepting;
 
 -- name: ListAcceptingParties :many
 SELECT 
@@ -222,8 +234,6 @@ SELECT
     pa.tenure_start,
     pa.tenure_end,
     pos.name AS position_name,
-    pos.code AS position_code,
-    pos.rank_order,
     u.first_name,
     u.last_name,
     u.username,
@@ -235,12 +245,3 @@ WHERE pa.chapter_id = $1
   AND pa.position_id = $2 
   AND pa.status = 'active'
 LIMIT 1;
-
--- name: GetUserActivePartyIDs :many
-SELECT DISTINCT p_id::smallint AS party_id
-FROM (
-  SELECT party_id AS p_id FROM party_membership WHERE user_id = $1 AND status = 'active'
-  UNION
-  SELECT party_id AS p_id FROM users WHERE id = $1 AND party_id IS NOT NULL
-) sub;
-

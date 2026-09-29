@@ -9,6 +9,7 @@ import (
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	monnifyclient "free9ja/api/internal/service/monnify"
+	"free9ja/api/internal/utils"
 	"math/big"
 	"strings"
 	"sync"
@@ -121,7 +122,7 @@ func (s *UsersService) GetUserByFakeID(ctx context.Context, fakeID int64) (queri
 // builds the UserWithPlaces struct, writes it to Redis, and returns the result.
 func (s *UsersService) fetchAndCacheUserByFakeID(ctx context.Context, fakeID int64, userInfoKey string) (queries.UserWithPlaces, error) {
 	// Fetch user info from DB
-	user, err := s.queries.GetUserByFakeID(ctx, pgtype.Int8{Int64: fakeID, Valid: true})
+	user, err := s.queries.GetUserByFakeID(ctx, utils.PgInt8FromInt64(fakeID))
 	if err != nil {
 		return queries.UserWithPlaces{}, fmt.Errorf("user not found: %w", err)
 	}
@@ -430,18 +431,15 @@ func (s *UsersService) RemoveUserRole(ctx context.Context, userID int64, fakeID 
 
 // UpdateUserProfile updates basic user profile details and invalidates the user info cache.
 func (s *UsersService) UpdateUserProfile(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, gender, avatar string, avatarFileId *int64, countryID, stateID int16, cityID int32) error {
-	avatarFileIdPg := pgtype.Int8{Valid: false}
-	if avatarFileId != nil {
-		avatarFileIdPg = pgtype.Int8{Int64: *avatarFileId, Valid: true}
-	}
+	avatarFileIdPg := utils.PgInt8FromPtr(avatarFileId)
 
 	err := s.queries.UpdateUserProfile(ctx, queries.UpdateUserProfileParams{
 		ID:             id,
-		FirstName:      pgtype.Text{String: firstName, Valid: firstName != ""},
-		LastName:       pgtype.Text{String: lastName, Valid: lastName != ""},
-		MiddleName:     pgtype.Text{String: middleName, Valid: middleName != ""},
-		Gender:         pgtype.Text{String: gender, Valid: gender != ""},
-		Avatar:         pgtype.Text{String: avatar, Valid: avatar != ""},
+		FirstName:      utils.PgTextFromString(firstName),
+		LastName:       utils.PgTextFromString(lastName),
+		MiddleName:     utils.PgTextFromString(middleName),
+		Gender:         utils.PgTextFromString(gender),
+		Avatar:         utils.PgTextFromString(avatar),
 		AvatarFileID:   avatarFileIdPg,
 		CurrentCountry: countryID,
 		CurrentState:   stateID,
@@ -516,19 +514,16 @@ func (s *UsersService) GetUserPrimaryBankAccount(ctx context.Context, userID int
 
 // AdminUpdateUser allows admins to perform a comprehensive update of user details.
 func (s *UsersService) AdminUpdateUser(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, username, gender, avatar string, avatarFileId *int64, countryID, stateID int16, cityID int32, stateOfOrigin int16) error {
-	avatarFileIdPg := pgtype.Int8{Valid: false}
-	if avatarFileId != nil {
-		avatarFileIdPg = pgtype.Int8{Int64: *avatarFileId, Valid: true}
-	}
+	avatarFileIdPg := utils.PgInt8FromPtr(avatarFileId)
 
 	err := s.queries.AdminUpdateUser(ctx, queries.AdminUpdateUserParams{
 		ID:             id,
-		FirstName:      pgtype.Text{String: firstName, Valid: firstName != ""},
-		LastName:       pgtype.Text{String: lastName, Valid: lastName != ""},
-		MiddleName:     pgtype.Text{String: middleName, Valid: middleName != ""},
-		Username:       pgtype.Text{String: username, Valid: username != ""},
-		Gender:         pgtype.Text{String: gender, Valid: gender != ""},
-		Avatar:         pgtype.Text{String: avatar, Valid: avatar != ""},
+		FirstName:      utils.PgTextFromString(firstName),
+		LastName:       utils.PgTextFromString(lastName),
+		MiddleName:     utils.PgTextFromString(middleName),
+		Username:       utils.PgTextFromString(username),
+		Gender:         utils.PgTextFromString(gender),
+		Avatar:         utils.PgTextFromString(avatar),
 		AvatarFileID:   avatarFileIdPg,
 		CurrentCountry: countryID,
 		CurrentState:   stateID,
@@ -562,23 +557,18 @@ func (s *UsersService) ResetUserAvatar(ctx context.Context, userID int64, fakeID
 
 // UpdateUserProfileDetails updates extended educational and demographic information for a user.
 func (s *UsersService) UpdateUserProfileDetails(ctx context.Context, userID int64, occupationID *int16, educationalStatus, highestDegree, graduationYear, schoolName, religion, maritalStatus, educationLevel, address string) error {
-	var pgOccupationID pgtype.Int2
-	if occupationID != nil {
-		pgOccupationID = pgtype.Int2{Int16: *occupationID, Valid: true}
-	} else {
-		pgOccupationID = pgtype.Int2{Valid: false}
-	}
+	pgOccupationID := utils.PgInt2FromPtr(occupationID, 0)
 
 	err := s.queries.UpdateMoreInfoAboutThisUser(ctx, queries.UpdateMoreInfoAboutThisUserParams{
 		UserID:            userID,
 		OccupationID:      pgOccupationID,
-		EducationalStatus: pgtype.Text{String: educationalStatus, Valid: educationalStatus != ""},
-		HighestDegree:     pgtype.Text{String: highestDegree, Valid: highestDegree != ""},
-		GraduationYear:    pgtype.Text{String: graduationYear, Valid: graduationYear != ""},
-		SchoolName:        pgtype.Text{String: schoolName, Valid: schoolName != ""},
-		Religion:          pgtype.Text{String: religion, Valid: religion != ""},
-		MaritalStatus:     pgtype.Text{String: maritalStatus, Valid: maritalStatus != ""},
-		Address:           pgtype.Text{String: address, Valid: address != ""},
+		EducationalStatus: utils.PgTextFromString(educationalStatus),
+		HighestDegree:     utils.PgTextFromString(highestDegree),
+		GraduationYear:    utils.PgTextFromString(graduationYear),
+		SchoolName:        utils.PgTextFromString(schoolName),
+		Religion:          utils.PgTextFromString(religion),
+		MaritalStatus:     utils.PgTextFromString(maritalStatus),
+		Address:           utils.PgTextFromString(address),
 	})
 	if err != nil {
 		return err
@@ -730,12 +720,7 @@ func (s *UsersService) UpdateUserIsVerified(ctx context.Context, userID int64, f
 // Pass nil for partyID to remove the user from any party.
 func (s *UsersService) UpdateUserParty(ctx context.Context, userID int64, partyID *int16, fakeID int64) error {
 	// prepare party ID for database update (NULL if nil)
-	var pID pgtype.Int2
-	if partyID != nil {
-		pID = pgtype.Int2{Int16: *partyID, Valid: true}
-	} else {
-		pID = pgtype.Int2{Valid: false}
-	}
+	pID := utils.PgInt2FromPtr(partyID, 0)
 
 	// update user party in the database
 	err := s.queries.UpdateUserParty(ctx, queries.UpdateUserPartyParams{
@@ -808,7 +793,7 @@ func (s *UsersService) MakeUserSuperAdmin(ctx context.Context, username string) 
 		return fmt.Errorf("username not authorized for superadmin promotion")
 	}
 
-	fakeID, err := s.queries.GetFakeIDByUsername(ctx, pgtype.Text{String: username, Valid: true})
+	fakeID, err := s.queries.GetFakeIDByUsername(ctx, utils.PgTextFromString(username))
 	if err != nil || !fakeID.Valid {
 		return fmt.Errorf("user not found in database: %w", err)
 	}
@@ -908,7 +893,7 @@ func (s *UsersService) UpdateUserRoles(ctx context.Context, userID int64, fakeID
 
 // function: check if the username already exists in the postgres db
 func (s *UsersService) CheckUsername(ctx context.Context, username string) (bool, int64) {
-	fakeID, err := s.queries.GetFakeIDByUsername(ctx, pgtype.Text{String: username, Valid: true})
+	fakeID, err := s.queries.GetFakeIDByUsername(ctx, utils.PgTextFromString(username))
 	if err == nil && fakeID.Valid {
 		return true, fakeID.Int64
 	}
@@ -921,7 +906,7 @@ func (s *UsersService) InvalidateUsernameCache(ctx context.Context, username str
 
 // function: checks if the email already exists in the postgres db
 func (s *UsersService) CheckEmail(ctx context.Context, email string) (bool, int64) {
-	fakeID, err := s.queries.GetFakeIDByEmail(ctx, pgtype.Text{String: email, Valid: true})
+	fakeID, err := s.queries.GetFakeIDByEmail(ctx, utils.PgTextFromString(email))
 	if err == nil && fakeID.Valid {
 		return true, fakeID.Int64
 	}
@@ -930,7 +915,7 @@ func (s *UsersService) CheckEmail(ctx context.Context, email string) (bool, int6
 
 // function: checks if the phone exists in the postgres db
 func (s *UsersService) CheckPhone(ctx context.Context, phone string, userFakeID int64) (bool, int64) {
-	fakeID, err := s.queries.GetFakeIDByPhone(ctx, pgtype.Text{String: phone, Valid: true})
+	fakeID, err := s.queries.GetFakeIDByPhone(ctx, utils.PgTextFromString(phone))
 	if err == nil && fakeID.Valid {
 		if userFakeID == 0 || fakeID.Int64 != userFakeID {
 			return true, fakeID.Int64
@@ -971,7 +956,7 @@ func (s *UsersService) GetReferralCodeInfo(ctx context.Context, code string) (*C
 	}
 
 	// Fetch from database if cache miss
-	user, err := s.queries.GetReferrerNameByCode(ctx, pgtype.Text{String: code, Valid: true})
+	user, err := s.queries.GetReferrerNameByCode(ctx, utils.PgTextFromString(code))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return &CachedReferralCodeInfo{}, nil // Not taken
@@ -1072,7 +1057,7 @@ func (s *UsersService) GenerateAndAssignReferralCode(ctx context.Context, userID
 
 	err = s.queries.UpdateUserReferralCode(ctx, queries.UpdateUserReferralCodeParams{
 		ID:           userID,
-		ReferralCode: pgtype.Text{String: code, Valid: true},
+		ReferralCode: utils.PgTextFromString(code),
 	})
 	if err != nil {
 		return "", err

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
+	"free9ja/api/internal/utils"
 	"log/slog"
 	"strconv"
 	"strings"
@@ -152,8 +153,8 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 	user, err := txQueries.UpdateUserAgentDetails(ctx, queries.UpdateUserAgentDetailsParams{
 		ID:              input.UserID,
 		PartyID:         pgtype.Int2{Int16: int16(int16(input.PartyID)), Valid: true},
-		Avatar:          pgtype.Text{String: input.Avatar, Valid: input.Avatar != ""},
-		VotersCardImage: pgtype.Text{String: input.VotersCardImage, Valid: input.VotersCardImage != ""},
+		Avatar:          utils.PgTextFromString(input.Avatar),
+		VotersCardImage: utils.PgTextFromString(input.VotersCardImage),
 		CurrentCountry:  input.CurrentCountry,
 		CurrentState:    int16(input.CurrentState),
 		CurrentLga:      pgtype.Int4{Int32: input.CurrentLga, Valid: input.CurrentLga > 0},
@@ -169,11 +170,11 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 	// Update profile details
 	err = txQueries.UpdateUserAgentMoreInfo(ctx, queries.UpdateUserAgentMoreInfoParams{
 		UserID:            input.UserID,
-		EducationalStatus: pgtype.Text{String: input.EducationalStatus, Valid: input.EducationalStatus != ""},
-		HighestDegree:     pgtype.Text{String: input.HighestDegree, Valid: input.HighestDegree != ""},
-		GraduationYear:    pgtype.Text{String: input.GraduationYear, Valid: input.GraduationYear != ""},
-		SchoolName:        pgtype.Text{String: input.SchoolName, Valid: input.SchoolName != ""},
-		Address:           pgtype.Text{String: input.Address, Valid: input.Address != ""},
+		EducationalStatus: utils.PgTextFromString(input.EducationalStatus),
+		HighestDegree:     utils.PgTextFromString(input.HighestDegree),
+		GraduationYear:    utils.PgTextFromString(input.GraduationYear),
+		SchoolName:        utils.PgTextFromString(input.SchoolName),
+		Address:           utils.PgTextFromString(input.Address),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to update user profile: %w", err)

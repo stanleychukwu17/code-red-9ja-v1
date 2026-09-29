@@ -12,7 +12,6 @@ import (
 	"free9ja/api/internal/utils"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // UserPreferencesResponse represents the client-facing user preferences data structure.
@@ -65,15 +64,8 @@ func (s *UsersService) GetUserPreferences(ctx context.Context, userID int64) (Us
 		return UserPreferencesResponse{}, err
 	}
 
-	sidebarState := "expanded"
-	if pref.SidebarState.Valid && pref.SidebarState.String != "" {
-		sidebarState = pref.SidebarState.String
-	}
-
-	theme := "auto"
-	if pref.Theme.Valid && pref.Theme.String != "" {
-		theme = pref.Theme.String
-	}
+	sidebarState := utils.PgTextOrDefault(pref.SidebarState, "expanded")
+	theme := utils.PgTextOrDefault(pref.Theme, "auto")
 
 	pinnedLinks := make(map[string][]string)
 	if len(pref.PinnedLinks) > 0 {
@@ -141,25 +133,17 @@ func (s *UsersService) UpdateUserPreferences(ctx context.Context, userID int64, 
 	// Persist changes using UPSERT (handles insert on new, update on conflict)
 	res, err := s.queries.UpsertUserPreferences(ctx, queries.UpsertUserPreferencesParams{
 		UserID:            userID,
-		SidebarState:      pgtype.Text{String: sidebarState, Valid: true},
+		SidebarState:      utils.PgTextFromString(sidebarState),
 		PinnedLinks:       pinnedLinksBytes,
-		Theme:             pgtype.Text{String: theme, Valid: true},
+		Theme:             utils.PgTextFromString(theme),
 		PreferenceVersion: newVersion,
 	})
 	if err != nil {
 		return UserPreferencesResponse{}, err
 	}
 
-	// Format response values with safe defaults
-	resSidebarState := "expanded"
-	if res.SidebarState.Valid && res.SidebarState.String != "" {
-		resSidebarState = res.SidebarState.String
-	}
-
-	resTheme := "auto"
-	if res.Theme.Valid && res.Theme.String != "" {
-		resTheme = res.Theme.String
-	}
+	resSidebarState := utils.PgTextOrDefault(res.SidebarState, "expanded")
+	resTheme := utils.PgTextOrDefault(res.Theme, "auto")
 
 	resPinnedLinks := make(map[string][]string)
 	if len(res.PinnedLinks) > 0 {

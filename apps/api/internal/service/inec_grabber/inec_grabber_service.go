@@ -932,10 +932,7 @@ func (s *INECGrabberService) ListGrabbersPaginated(ctx context.Context, cursor *
 	if limit <= 0 {
 		limit = 20
 	}
-	var cur pgtype.Int8
-	if cursor != nil {
-		cur = pgtype.Int8{Int64: *cursor, Valid: true}
-	}
+	cur := utils.PgInt8FromPtr(cursor)
 	return s.queries.ListINECResultGrabbersPaginated(ctx, queries.ListINECResultGrabbersPaginatedParams{
 		Cursor: cur,
 		Limit:  limit,
@@ -946,14 +943,8 @@ func (s *INECGrabberService) ListLogsPaginated(ctx context.Context, grabberID *i
 	if limit <= 0 {
 		limit = 20
 	}
-	var gID pgtype.Int8
-	if grabberID != nil {
-		gID = pgtype.Int8{Int64: *grabberID, Valid: true}
-	}
-	var cur pgtype.Int8
-	if cursor != nil {
-		cur = pgtype.Int8{Int64: *cursor, Valid: true}
-	}
+	gID := utils.PgInt8FromPtr(grabberID)
+	cur := utils.PgInt8FromPtr(cursor)
 	return s.queries.ListINECResultGrabberLogsPaginated(ctx, queries.ListINECResultGrabberLogsPaginatedParams{
 		GrabberID: gID,
 		Cursor:    cur,

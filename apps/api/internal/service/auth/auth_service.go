@@ -883,7 +883,7 @@ func (s *AuthService) Signup(ctx context.Context, email, phone, password string,
 	fakeID := utils.GenerateFakeID(userID)
 	err = qtx.UpdateUserFakeID(ctx, queries.UpdateUserFakeIDParams{
 		ID:     userID,
-		FakeID: pgtype.Int8{Int64: fakeID, Valid: true},
+		FakeID: utils.PgInt8FromInt64(fakeID),
 	})
 	if err != nil {
 		return SignupResult{}, fmt.Errorf("failed to update user fake ID: %w", err)
@@ -1250,7 +1250,7 @@ func (s *AuthService) ChangePasswordByEmail(ctx context.Context, email, otp, new
 
 	// 4. Update password in DB
 	err = s.queries.UpdateUserPasswordByFid(ctx, queries.UpdateUserPasswordByFidParams{
-		FakeID:       pgtype.Int8{Int64: fakeID, Valid: true},
+		FakeID:       utils.PgInt8FromInt64(fakeID),
 		PasswordHash: string(hashedPassword),
 	})
 	if err != nil {
@@ -1303,25 +1303,22 @@ func (s *AuthService) RegisterCandidatePlaceholder(
 	}
 
 	// re-assert the avatar_file_id to pgtype
-	avatarFileIdPg := pgtype.Int8{Valid: false}
-	if avatarFileId != nil {
-		avatarFileIdPg = pgtype.Int8{Int64: *avatarFileId, Valid: true}
-	}
+	avatarFileIdPg := utils.PgInt8FromPtr(avatarFileId)
 
 	params := queries.CreateCandidatePlaceholderParams{
-		Email:          pgtype.Text{String: email, Valid: email != ""},
+		Email:          utils.PgTextFromString(email),
 		PasswordHash:   string(hashedPassword),
-		LastName:       pgtype.Text{String: lastName, Valid: lastName != ""},
-		FirstName:      pgtype.Text{String: firstName, Valid: firstName != ""},
-		MiddleName:     pgtype.Text{String: middleName, Valid: middleName != ""},
-		Username:       pgtype.Text{String: username, Valid: username != ""},
-		Gender:         pgtype.Text{String: gender, Valid: gender != ""},
+		LastName:       utils.PgTextFromString(lastName),
+		FirstName:      utils.PgTextFromString(firstName),
+		MiddleName:     utils.PgTextFromString(middleName),
+		Username:       utils.PgTextFromString(username),
+		Gender:         utils.PgTextFromString(gender),
 		DateOfBirth:    pgtype.Date{Time: dob, Valid: !dob.IsZero()},
 		CurrentCountry: countryID,
 		CurrentState:   stateID,
 		CurrentCity:    pgtype.Int4{Int32: currentCity, Valid: currentCity != 0},
 		StateOfOrigin:  pgtype.Int2{Int16: stateOfOrigin, Valid: stateOfOrigin != 0},
-		Avatar:         pgtype.Text{String: avatar, Valid: avatar != ""},
+		Avatar:         utils.PgTextFromString(avatar),
 		AvatarFileID:   avatarFileIdPg,
 	}
 
@@ -1340,7 +1337,7 @@ func (s *AuthService) RegisterCandidatePlaceholder(
 
 	// generate a fake_id using the user_id and update the user fake_id
 	fakeID := utils.GenerateFakeID(userID)
-	err = qtx.UpdateUserFakeID(ctx, queries.UpdateUserFakeIDParams{ID: userID, FakeID: pgtype.Int8{Int64: fakeID, Valid: true}})
+	err = qtx.UpdateUserFakeID(ctx, queries.UpdateUserFakeIDParams{ID: userID, FakeID: utils.PgInt8FromInt64(fakeID)})
 	if err != nil {
 		return RegisterResult{}, err
 	}

@@ -212,6 +212,44 @@ func (q *Queries) DeletePartyMembership(ctx context.Context, arg DeletePartyMemb
 	return items, nil
 }
 
+const getAcceptingPartyIDs = `-- name: GetAcceptingPartyIDs :many
+SELECT id FROM parties
+WHERE status = 'active'
+  AND slots > 0
+  AND agent_payment_balance_kobo > 0
+  AND agent_acquisition_targets IS NOT NULL 
+  AND agent_acquisition_targets != '{}'::jsonb
+  AND agent_payment_allocation_kobo IS NOT NULL 
+  AND agent_payment_allocation_kobo != '{}'::jsonb
+  AND agent_payment_balance_kobo >= COALESCE(
+    (
+      SELECT MAX((value->>'default')::bigint)
+      FROM jsonb_each(agent_payment_allocation_kobo)
+      WHERE value->>'default' IS NOT NULL
+    ), 0
+  )
+`
+
+func (q *Queries) GetAcceptingPartyIDs(ctx context.Context) ([]int16, error) {
+	rows, err := q.db.Query(ctx, getAcceptingPartyIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int16
+	for rows.Next() {
+		var id int16
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getChapterMemberCount = `-- name: GetChapterMemberCount :one
 SELECT COUNT(*) FROM party_membership WHERE party_id = $1 AND chapter_id = $2 AND status = 'active'
 `
@@ -274,8 +312,6 @@ SELECT
     pa.tenure_start,
     pa.tenure_end,
     pos.name AS position_name,
-    pos.code AS position_code,
-    pos.rank_order,
     u.first_name,
     u.last_name,
     u.username,
@@ -305,8 +341,6 @@ type GetOnePartyChapterOfficialRow struct {
 	TenureStart      pgtype.Date `json:"tenure_start"`
 	TenureEnd        pgtype.Date `json:"tenure_end"`
 	PositionName     string      `json:"position_name"`
-	PositionCode     string      `json:"position_code"`
-	RankOrder        int16       `json:"rank_order"`
 	FirstName        pgtype.Text `json:"first_name"`
 	LastName         pgtype.Text `json:"last_name"`
 	Username         pgtype.Text `json:"username"`
@@ -327,8 +361,6 @@ func (q *Queries) GetOnePartyChapterOfficial(ctx context.Context, arg GetOnePart
 		&i.TenureStart,
 		&i.TenureEnd,
 		&i.PositionName,
-		&i.PositionCode,
-		&i.RankOrder,
 		&i.FirstName,
 		&i.LastName,
 		&i.Username,
@@ -502,40 +534,6 @@ func (q *Queries) GetPartyByID(ctx context.Context, id int16) (Party, error) {
 	return i, err
 }
 
-const getPartyByShortName = `-- name: GetPartyByShortName :one
-SELECT id, short_name, name, logo, logo_file_id, cover_image, cover_image_file_id, cover_position_y, display_order, status, slots, is_verified, discount_percentage, agent_payment_balance_kobo, agent_payment_allocation_kobo, agent_acquisition_targets, auto_accept_applications, color_hex, dark_color_hex, date_founded, created_at, updated_at FROM parties WHERE short_name = $1
-`
-
-func (q *Queries) GetPartyByShortName(ctx context.Context, shortName string) (Party, error) {
-	row := q.db.QueryRow(ctx, getPartyByShortName, shortName)
-	var i Party
-	err := row.Scan(
-		&i.ID,
-		&i.ShortName,
-		&i.Name,
-		&i.Logo,
-		&i.LogoFileID,
-		&i.CoverImage,
-		&i.CoverImageFileID,
-		&i.CoverPositionY,
-		&i.DisplayOrder,
-		&i.Status,
-		&i.Slots,
-		&i.IsVerified,
-		&i.DiscountPercentage,
-		&i.AgentPaymentBalanceKobo,
-		&i.AgentPaymentAllocationKobo,
-		&i.AgentAcquisitionTargets,
-		&i.AutoAcceptApplications,
-		&i.ColorHex,
-		&i.DarkColorHex,
-		&i.DateFounded,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
 const getPartyChapterByID = `-- name: GetPartyChapterByID :one
 SELECT id, party_id, chapter_type, country_id, zonal_id, state_id, lga_id, ward_id, created_at FROM party_chapters
 WHERE id = $1 LIMIT 1
@@ -623,35 +621,6 @@ func (q *Queries) GetStateChapter(ctx context.Context, arg GetStateChapterParams
 	return id, err
 }
 
-const getUserActivePartyIDs = `-- name: GetUserActivePartyIDs :many
-SELECT DISTINCT p_id::smallint AS party_id
-FROM (
-  SELECT party_id AS p_id FROM party_membership WHERE user_id = $1 AND status = 'active'
-  UNION
-  SELECT party_id AS p_id FROM users WHERE id = $1 AND party_id IS NOT NULL
-) sub
-`
-
-func (q *Queries) GetUserActivePartyIDs(ctx context.Context, userID int64) ([]int16, error) {
-	rows, err := q.db.Query(ctx, getUserActivePartyIDs, userID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []int16
-	for rows.Next() {
-		var party_id int16
-		if err := rows.Scan(&party_id); err != nil {
-			return nil, err
-		}
-		items = append(items, party_id)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getWardChapter = `-- name: GetWardChapter :one
 SELECT id FROM party_chapters
 WHERE party_id = $1 AND chapter_type = 'ward' AND ward_id = $2 LIMIT 1
@@ -684,6 +653,34 @@ func (q *Queries) GetZonalChapter(ctx context.Context, arg GetZonalChapterParams
 	var id int32
 	err := row.Scan(&id)
 	return id, err
+}
+
+const isPartyAcceptingApplications = `-- name: IsPartyAcceptingApplications :one
+SELECT EXISTS (
+  SELECT 1 FROM parties
+  WHERE id = $1
+    AND status = 'active'
+    AND slots > 0
+    AND agent_payment_balance_kobo > 0
+    AND agent_acquisition_targets IS NOT NULL 
+    AND agent_acquisition_targets != '{}'::jsonb
+    AND agent_payment_allocation_kobo IS NOT NULL 
+    AND agent_payment_allocation_kobo != '{}'::jsonb
+    AND agent_payment_balance_kobo >= COALESCE(
+      (
+        SELECT MAX((value->>'default')::bigint)
+        FROM jsonb_each(agent_payment_allocation_kobo)
+        WHERE value->>'default' IS NOT NULL
+      ), 0
+    )
+) AS is_accepting
+`
+
+func (q *Queries) IsPartyAcceptingApplications(ctx context.Context, id int16) (bool, error) {
+	row := q.db.QueryRow(ctx, isPartyAcceptingApplications, id)
+	var is_accepting bool
+	err := row.Scan(&is_accepting)
+	return is_accepting, err
 }
 
 const listAcceptingParties = `-- name: ListAcceptingParties :many
@@ -788,53 +785,30 @@ SELECT
   dark_color_hex,
   date_founded,
   created_at,
-  updated_at,
-  (
-    status = 'active'
-    AND is_verified = true
-    AND slots > 0
-    AND agent_acquisition_targets IS NOT NULL 
-    AND agent_acquisition_targets != '{}'::jsonb
-    AND agent_payment_allocation_kobo IS NOT NULL 
-    AND agent_payment_allocation_kobo != '{}'::jsonb
-    AND agent_payment_balance_kobo > 0
-    AND (
-      COALESCE((agent_payment_allocation_kobo->'pollingAgent'->>'default')::bigint, (agent_payment_allocation_kobo->'polling_agent'->>'default')::bigint, 0) > 0
-      AND COALESCE((agent_payment_allocation_kobo->'wardElectionSupervisor'->>'default')::bigint, (agent_payment_allocation_kobo->'ward_election_supervisor'->>'default')::bigint, 0) > 0
-      AND COALESCE((agent_payment_allocation_kobo->'lgaElectionSupervisor'->>'default')::bigint, (agent_payment_allocation_kobo->'lga_election_supervisor'->>'default')::bigint, 0) > 0
-      AND COALESCE((agent_payment_allocation_kobo->'stateElectionSupervisor'->>'default')::bigint, (agent_payment_allocation_kobo->'state_election_supervisor'->>'default')::bigint, 0) > 0
-    )
-    AND agent_payment_balance_kobo >= GREATEST(
-      COALESCE((agent_payment_allocation_kobo->'pollingAgent'->>'default')::bigint, (agent_payment_allocation_kobo->'polling_agent'->>'default')::bigint, 0),
-      COALESCE((agent_payment_allocation_kobo->'wardElectionSupervisor'->>'default')::bigint, (agent_payment_allocation_kobo->'ward_election_supervisor'->>'default')::bigint, 0),
-      COALESCE((agent_payment_allocation_kobo->'lgaElectionSupervisor'->>'default')::bigint, (agent_payment_allocation_kobo->'lga_election_supervisor'->>'default')::bigint, 0),
-      COALESCE((agent_payment_allocation_kobo->'stateElectionSupervisor'->>'default')::bigint, (agent_payment_allocation_kobo->'state_election_supervisor'->>'default')::bigint, 0)
-    )
-  )::boolean AS is_accepting_applications
+  updated_at
 FROM parties
 WHERE status = 'active'
 ORDER BY display_order ASC, name ASC
 `
 
 type ListPartiesRow struct {
-	ID                      int16              `json:"id"`
-	ShortName               string             `json:"short_name"`
-	Name                    string             `json:"name"`
-	Logo                    string             `json:"logo"`
-	LogoFileID              pgtype.Int8        `json:"logo_file_id"`
-	CoverImage              pgtype.Text        `json:"cover_image"`
-	CoverImageFileID        pgtype.Int8        `json:"cover_image_file_id"`
-	CoverPositionY          pgtype.Int2        `json:"cover_position_y"`
-	DisplayOrder            int32              `json:"display_order"`
-	Status                  string             `json:"status"`
-	Slots                   int32              `json:"slots"`
-	IsVerified              pgtype.Bool        `json:"is_verified"`
-	ColorHex                pgtype.Text        `json:"color_hex"`
-	DarkColorHex            pgtype.Text        `json:"dark_color_hex"`
-	DateFounded             pgtype.Date        `json:"date_founded"`
-	CreatedAt               pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt               pgtype.Timestamptz `json:"updated_at"`
-	IsAcceptingApplications bool               `json:"is_accepting_applications"`
+	ID               int16              `json:"id"`
+	ShortName        string             `json:"short_name"`
+	Name             string             `json:"name"`
+	Logo             string             `json:"logo"`
+	LogoFileID       pgtype.Int8        `json:"logo_file_id"`
+	CoverImage       pgtype.Text        `json:"cover_image"`
+	CoverImageFileID pgtype.Int8        `json:"cover_image_file_id"`
+	CoverPositionY   pgtype.Int2        `json:"cover_position_y"`
+	DisplayOrder     int32              `json:"display_order"`
+	Status           string             `json:"status"`
+	Slots            int32              `json:"slots"`
+	IsVerified       pgtype.Bool        `json:"is_verified"`
+	ColorHex         pgtype.Text        `json:"color_hex"`
+	DarkColorHex     pgtype.Text        `json:"dark_color_hex"`
+	DateFounded      pgtype.Date        `json:"date_founded"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
 }
 
 func (q *Queries) ListParties(ctx context.Context) ([]ListPartiesRow, error) {
@@ -864,7 +838,6 @@ func (q *Queries) ListParties(ctx context.Context) ([]ListPartiesRow, error) {
 			&i.DateFounded,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.IsAcceptingApplications,
 		); err != nil {
 			return nil, err
 		}

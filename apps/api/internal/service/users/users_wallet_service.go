@@ -5,20 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"free9ja/api/internal/db/queries"
+	"free9ja/api/internal/utils"
 	monnifyclient "free9ja/api/internal/service/monnify"
 	"log/slog"
 	"strings"
-
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
-// pgTextFromString converts a plain string to a nullable pgtype.Text.
-func pgTextFromString(s string) pgtype.Text {
-	if s == "" {
-		return pgtype.Text{Valid: false}
-	}
-	return pgtype.Text{String: s, Valid: true}
-}
 
 // CreateUserWallet provisions a reserved virtual account via Monnify for the user
 // and creates the wallet entry in the database.
@@ -139,10 +131,10 @@ func (s *UsersService) CreditUserWallet(
 		Type:                 "credit",
 		AmountKobo:           amountKobo,
 		BalanceAfterKobo:     updatedWallet.BalanceKobo,
-		PayerName:            pgTextFromString(payerName),
-		PayerAccountNumber:   pgTextFromString(payerAccountNumber),
-		PayerBankCode:        pgTextFromString(payerBankCode),
-		Narration:            pgTextFromString(narration),
+		PayerName:            utils.PgTextFromString(payerName),
+		PayerAccountNumber:   utils.PgTextFromString(payerAccountNumber),
+		PayerBankCode:        utils.PgTextFromString(payerBankCode),
+		Narration:            utils.PgTextFromString(narration),
 		RawPayload:           rawPayload,
 	})
 	if err != nil {
@@ -192,10 +184,10 @@ func (s *UsersService) WithdrawFromUserWallet(
 		Type:                 "debit",
 		AmountKobo:           amountKobo,
 		BalanceAfterKobo:     updatedWallet.BalanceKobo,
-		PayerName:            pgTextFromString(""),
-		PayerAccountNumber:   pgTextFromString(bankAccountNumber),
-		PayerBankCode:        pgTextFromString(bankCode),
-		Narration:            pgTextFromString(narration),
+		PayerName:            utils.PgTextFromString(""),
+		PayerAccountNumber:   utils.PgTextFromString(bankAccountNumber),
+		PayerBankCode:        utils.PgTextFromString(bankCode),
+		Narration:            utils.PgTextFromString(narration),
 		RawPayload:           nil,
 	})
 	if err != nil {

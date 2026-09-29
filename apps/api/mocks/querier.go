@@ -5354,6 +5354,64 @@ func (_m *Querier) InsertUserBankAccount(ctx context.Context, arg queries.Insert
 	return r0, r1
 }
 
+// GetAcceptingPartyIDs provides a mock function with given fields: ctx
+func (_m *Querier) GetAcceptingPartyIDs(ctx context.Context) ([]int16, error) {
+	ret := _m.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetAcceptingPartyIDs")
+	}
+
+	var r0 []int16
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context) ([]int16, error)); ok {
+		return rf(ctx)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context) []int16); ok {
+		r0 = rf(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]int16)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// IsPartyAcceptingApplications provides a mock function with given fields: ctx, id
+func (_m *Querier) IsPartyAcceptingApplications(ctx context.Context, id int16) (bool, error) {
+	ret := _m.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for IsPartyAcceptingApplications")
+	}
+
+	var r0 bool
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int16) (bool, error)); ok {
+		return rf(ctx, id)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int16) bool); ok {
+		r0 = rf(ctx, id)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int16) error); ok {
+		r1 = rf(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // ListAcceptingParties provides a mock function with given fields: ctx
 func (_m *Querier) ListAcceptingParties(ctx context.Context) ([]queries.ListAcceptingPartiesRow, error) {
 	ret := _m.Called(ctx)

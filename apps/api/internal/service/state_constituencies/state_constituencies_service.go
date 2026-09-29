@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
+	"free9ja/api/internal/utils"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/redis/go-redis/v9"
@@ -38,15 +39,15 @@ func (s *StateConstituenciesService) CreateStateConstituency(
 ) (queries.StateConstituency, error) {
 	arg := queries.CreateStateConstituencyParams{
 		Name:                    name,
-		Code:                    pgtype.Text{String: code, Valid: code != ""},
+		Code:                    utils.PgTextFromString(code),
 		LgaID:                   lgaID,
 		LgaName:                 lgaName,
 		StateID:                 stateID,
 		StateName:               stateName,
 		SenatorialDistrictID:    pgtype.Int4{Int32: senatorialDistrictID, Valid: senatorialDistrictID != 0},
-		SenatorialDistrictName:  pgtype.Text{String: senatorialDistrictName, Valid: senatorialDistrictName != ""},
+		SenatorialDistrictName:  utils.PgTextFromString(senatorialDistrictName),
 		FederalConstituencyID:   pgtype.Int4{Int32: federalConstituencyID, Valid: federalConstituencyID != 0},
-		FederalConstituencyName: pgtype.Text{String: federalConstituencyName, Valid: federalConstituencyName != ""},
+		FederalConstituencyName: utils.PgTextFromString(federalConstituencyName),
 	}
 
 	sac, err := s.queries.CreateStateConstituency(ctx, arg)
@@ -87,15 +88,15 @@ func (s *StateConstituenciesService) UpdateStateConstituency(
 	arg := queries.UpdateStateConstituencyParams{
 		ID:                      id,
 		Name:                    name,
-		Code:                    pgtype.Text{String: code, Valid: code != ""},
+		Code:                    utils.PgTextFromString(code),
 		LgaID:                   lgaID,
 		LgaName:                 lgaName,
 		StateID:                 stateID,
 		StateName:               stateName,
 		SenatorialDistrictID:    pgtype.Int4{Int32: senatorialDistrictID, Valid: senatorialDistrictID != 0},
-		SenatorialDistrictName:  pgtype.Text{String: senatorialDistrictName, Valid: senatorialDistrictName != ""},
+		SenatorialDistrictName:  utils.PgTextFromString(senatorialDistrictName),
 		FederalConstituencyID:   pgtype.Int4{Int32: federalConstituencyID, Valid: federalConstituencyID != 0},
-		FederalConstituencyName: pgtype.Text{String: federalConstituencyName, Valid: federalConstituencyName != ""},
+		FederalConstituencyName: utils.PgTextFromString(federalConstituencyName),
 	}
 
 	sac, err := s.queries.UpdateStateConstituency(ctx, arg)

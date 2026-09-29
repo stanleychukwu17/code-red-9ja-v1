@@ -11,6 +11,7 @@ import (
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/service/realtime"
+	"free9ja/api/internal/utils"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -172,20 +173,9 @@ func (s *service) CreateNotification(ctx context.Context, in CreateNotificationI
 	}
 
 	// Prepare nullable database types
-	var actorUserID pgtype.Int8
-	if in.ActorUserID != nil {
-		actorUserID = pgtype.Int8{Int64: *in.ActorUserID, Valid: true}
-	}
-
-	var partyID pgtype.Int2
-	if in.PartyID != nil {
-		partyID = pgtype.Int2{Int16: *in.PartyID, Valid: true}
-	}
-
-	var groupKey pgtype.Text
-	if in.GroupKey != nil && *in.GroupKey != "" {
-		groupKey = pgtype.Text{String: *in.GroupKey, Valid: true}
-	}
+	actorUserID := utils.PgInt8FromPtr(in.ActorUserID)
+	partyID := utils.PgInt2FromPtr(in.PartyID, 0)
+	groupKey := utils.PgTextFromPtr(in.GroupKey)
 
 	// If group_key is set, upsert & increment actor_count on unread conflict; otherwise insert fresh
 	var n queries.Notification
@@ -371,25 +361,15 @@ func (s *service) CreatePartyNotification(ctx context.Context, in CreatePartyNot
 	}
 
 	// Prepare nullable database types
-	var actorUserID pgtype.Int8
-	if in.ActorUserID != nil && *in.ActorUserID > 0 {
-		actorUserID = pgtype.Int8{Int64: *in.ActorUserID, Valid: true}
-	}
+	actorUserID := utils.PgInt8FromPtr(in.ActorUserID)
 
 	var chapterID pgtype.Int4
 	if in.ChapterID != nil && *in.ChapterID > 0 {
 		chapterID = pgtype.Int4{Int32: *in.ChapterID, Valid: true}
 	}
 
-	var targetCategory pgtype.Text
-	if in.TargetCategory != nil && *in.TargetCategory != "" {
-		targetCategory = pgtype.Text{String: *in.TargetCategory, Valid: true}
-	}
-
-	var groupKey pgtype.Text
-	if in.GroupKey != nil && *in.GroupKey != "" {
-		groupKey = pgtype.Text{String: *in.GroupKey, Valid: true}
-	}
+	targetCategory := utils.PgTextFromPtr(in.TargetCategory)
+	groupKey := utils.PgTextFromPtr(in.GroupKey)
 
 	// Upsert on group_key conflict (increment event_count) or insert fresh notification
 	var pn queries.PartyNotification
