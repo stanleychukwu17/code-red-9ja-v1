@@ -156,9 +156,10 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	permissionsService := permissionsservice.NewPermissionsService()
 	electionStatsService := electionstats.NewElectionStatsService(q)
 	notificationsService := notificationsservice.NewService(q, rdb, broadcaster)
-	pollingUnitUpdatesService := puupdates.NewService(q, pool, earningsService)
+	usersService := usersservice.NewUsersService(q, rdb, monnifyClient, bodiesService)
+	pollingUnitUpdatesService := puupdates.NewService(q, pool, earningsService, usersService)
 	partyApplicationsService := partyapplications.NewService(q, pool, rdb, distributor)
-	pollingUnitResultsService := puresults.NewService(q, pool, distributor, earningsService)
+	pollingUnitResultsService := puresults.NewService(q, pool, distributor, earningsService, usersService)
 	pollingUnitsService := pollingunitsservice.NewPollingUnitsService(q, rdb)
 	supervisorAssignmentsService := supervisorassignmentsservice.NewService(q)
 	pollingUnitAssignmentsService := puassignments.NewService(q, rdb, distributor, earningsService)
@@ -169,7 +170,6 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	federalConstituenciesService := federalconstituenciesservice.NewFederalConstituenciesService(q, rdb)
 	stateAssemblyConstituenciesService := stateassemblyconstituenciesservice.NewStateConstituenciesService(q, rdb)
 	referralsService := referralsservice.NewReferralsService(q)
-	usersService := usersservice.NewUsersService(q, rdb, monnifyClient, bodiesService)
 	authService := authservice.NewAuthService(q, pool, rdb, messagingService, usersService, partiesService, bodiesService, jwtSecret, accessExp, refreshExp)
 	seedService := seedservice.NewSeedService(q, pool, rdb, distributor, authService, bodiesService, usersService, partiesService)
 	pageVerificationsService := pageverificationsservice.NewPageVerificationsService(q, rdb, usersService, partiesService, auditService)
@@ -831,7 +831,6 @@ func requestLoggerMiddleware(next http.Handler) http.Handler {
 			log.Info(logger.EventHTTPRequest,
 				"method", r.Method,
 				"path", r.URL.Path,
-				"app", frontendApp,
 				"status", ww.Status(),
 				"duration", time.Since(start).String(),
 				"ip", r.RemoteAddr,

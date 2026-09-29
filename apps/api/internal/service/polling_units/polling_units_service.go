@@ -103,7 +103,7 @@ func (s *PollingUnitsService) GetPollingUnits(ctx context.Context, wardID, local
 		}
 
 		jsonData, _ := json.Marshal(payload)
-		s.rdb.Set(ctx, redisKey, jsonData, db.RedisOneEightyDaysTTL)
+		s.rdb.Set(ctx, redisKey, jsonData, db.RedisSixtyDaysTTL)
 
 		return dbData, nil
 	case nil:

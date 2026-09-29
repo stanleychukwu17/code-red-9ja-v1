@@ -127,9 +127,9 @@ func (s *ElectionGroupsService) GetElectionGroupByID(ctx context.Context, id int
 		return eg, err
 	}
 
-	// 3. Serialize and populate Redis cache with a 24-hour expiration
+	// 3. Serialize and populate Redis cache
 	if egBytes, err := json.Marshal(eg); err == nil {
-		s.rdb.Set(ctx, cacheKey, egBytes, 24*time.Hour)
+		s.rdb.Set(ctx, cacheKey, egBytes, db.RedisNinetyDaysTTL)
 	}
 
 	return eg, nil
@@ -155,9 +155,9 @@ func (s *ElectionGroupsService) ListElectionGroups(ctx context.Context) ([]queri
 		return nil, err
 	}
 
-	// 3. Serialize and cache election groups in Redis for 24 hours
+	// 3. Serialize and cache election groups in Redis
 	if groupsBytes, err := json.Marshal(groups); err == nil {
-		s.rdb.Set(ctx, cacheKey, groupsBytes, 24*time.Hour)
+		s.rdb.Set(ctx, cacheKey, groupsBytes, db.RedisNinetyDaysTTL)
 	}
 
 	return groups, nil

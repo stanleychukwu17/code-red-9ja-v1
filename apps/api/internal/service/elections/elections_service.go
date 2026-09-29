@@ -1463,9 +1463,9 @@ func (s *ElectionsService) GetElectionByID(ctx context.Context, id int32) (queri
 		return el, err
 	}
 
-	// 3. Serialize and populate Redis cache with a 24-hour expiration
+	// 3. Serialize and populate Redis cache
 	if elBytes, err := json.Marshal(el); err == nil {
-		s.rdb.Set(ctx, cacheKey, elBytes, 24*time.Hour)
+		s.rdb.Set(ctx, cacheKey, elBytes, db.RedisNinetyDaysTTL)
 	}
 
 	return el, nil
@@ -1491,9 +1491,9 @@ func (s *ElectionsService) ListElections(ctx context.Context) ([]queries.Electio
 		return nil, err
 	}
 
-	// 3. Cache serialized election list in Redis for 24 hours
+	// 3. Cache serialized election list in Redis
 	if elsBytes, err := json.Marshal(els); err == nil {
-		s.rdb.Set(ctx, cacheKey, elsBytes, 24*time.Hour)
+		s.rdb.Set(ctx, cacheKey, elsBytes, db.RedisNinetyDaysTTL)
 	}
 
 	return els, nil

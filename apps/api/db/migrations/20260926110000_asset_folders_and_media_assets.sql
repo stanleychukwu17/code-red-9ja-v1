@@ -61,10 +61,15 @@ CREATE INDEX IF NOT EXISTS idx_media_assets_name_trgm ON media_assets USING gin 
 -- GIN index for fast tag filtering: WHERE tags @> ARRAY['campaign-2026']
 CREATE INDEX IF NOT EXISTS idx_media_assets_tags ON media_assets USING gin (tags);
 
+-- Helper function: array_to_string is STABLE in PostgreSQL, so wrap it in an IMMUTABLE function for index expressions
+CREATE OR REPLACE FUNCTION immutable_array_to_string(text[], text)
+RETURNS text LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT array_to_string($1, $2)';
+
 -- Full-text search index on name and tags
 CREATE INDEX IF NOT EXISTS idx_media_assets_fts ON media_assets 
-  USING gin (to_tsvector('english', coalesce(name, '') || ' ' || array_to_string(tags, ' ')));
+  USING gin (to_tsvector('english', coalesce(name, '') || ' ' || immutable_array_to_string(tags, ' ')));
 
 -- +goose Down
 DROP TABLE IF EXISTS media_assets;
 DROP TABLE IF EXISTS asset_folders;
+DROP FUNCTION IF EXISTS immutable_array_to_string(text[], text);

@@ -14,19 +14,24 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+type usersService interface {
+	GetUserByFakeID(ctx context.Context, fakeID int64) (queries.UserWithPlaces, error)
+}
+
 type Service struct {
 	queries     *queries.Queries
 	pool        *pgxpool.Pool
 	distributor worker.TaskDistributor
 	earningsSvc earningsService
+	usersSvc    usersService
 }
 
 type earningsService interface {
 	ProcessTaskEarnings(ctx context.Context, assignmentID int64, taskType string, customNarration ...string) (int64, error)
 }
 
-func NewService(q *queries.Queries, pool *pgxpool.Pool, distributor worker.TaskDistributor, earningsSvc earningsService) *Service {
-	return &Service{queries: q, pool: pool, distributor: distributor, earningsSvc: earningsSvc}
+func NewService(q *queries.Queries, pool *pgxpool.Pool, distributor worker.TaskDistributor, earningsSvc earningsService, usersSvc usersService) *Service {
+	return &Service{queries: q, pool: pool, distributor: distributor, earningsSvc: earningsSvc, usersSvc: usersSvc}
 }
 
 // CandidateResult is the per-candidate entry stored in the JSONB column.
@@ -90,49 +95,43 @@ type AIVerificationInput struct {
 func (s *Service) validateUserEligibility(
 	ctx context.Context,
 	qtx *queries.Queries,
-	userFakeID int64,
+	user queries.UserWithPlaces,
 	assignmentID *int64,
 	electionGroupID int32,
 	pollingUnitID int32,
-) (queries.GetUserByFakeIDRow, queries.PollingUnit, queries.Lga, queries.Ward, error) {
-	// 1. Resolve real user from fake ID
-	user, err := qtx.GetUserByFakeID(ctx, pgtype.Int8{Int64: userFakeID, Valid: true})
-	if err != nil {
-		return queries.GetUserByFakeIDRow{}, queries.PollingUnit{}, queries.Lga{}, queries.Ward{}, errors.New("user not found")
-	}
-
-	// 2. Fetch Polling Unit, LGA, and Ward
+) (queries.PollingUnit, queries.Lga, queries.Ward, error) {
+	// 1. Fetch Polling Unit, LGA, and Ward
 	pu, err := qtx.GetPollingUnitByID(ctx, pollingUnitID)
 	if err != nil {
-		return queries.GetUserByFakeIDRow{}, queries.PollingUnit{}, queries.Lga{}, queries.Ward{}, errors.New("invalid polling_unit_id")
+		return queries.PollingUnit{}, queries.Lga{}, queries.Ward{}, errors.New("invalid polling_unit_id")
 	}
 
 	lga, err := qtx.GetLGAByID(ctx, pu.LgaID)
 	if err != nil {
-		return queries.GetUserByFakeIDRow{}, queries.PollingUnit{}, queries.Lga{}, queries.Ward{}, errors.New("invalid lga for polling unit")
+		return queries.PollingUnit{}, queries.Lga{}, queries.Ward{}, errors.New("invalid lga for polling unit")
 	}
 
 	ward, err := qtx.GetWardByID(ctx, pu.WardID)
 	if err != nil {
-		return queries.GetUserByFakeIDRow{}, queries.PollingUnit{}, queries.Lga{}, queries.Ward{}, errors.New("invalid ward for polling unit")
+		return queries.PollingUnit{}, queries.Lga{}, queries.Ward{}, errors.New("invalid ward for polling unit")
 	}
 
 	// 3. Verify Polling Agent assignment OR Registered Voter polling unit
 	if assignmentID != nil {
 		assignment, err := qtx.GetAssignmentByID(ctx, *assignmentID)
 		if err != nil || assignment.UserID != user.ID {
-			return queries.GetUserByFakeIDRow{}, queries.PollingUnit{}, queries.Lga{}, queries.Ward{}, errors.New("invalid or unauthorized polling unit assignment")
+			return queries.PollingUnit{}, queries.Lga{}, queries.Ward{}, errors.New("invalid or unauthorized polling unit assignment")
 		}
 		if assignment.PollingUnitID != pollingUnitID {
-			return queries.GetUserByFakeIDRow{}, queries.PollingUnit{}, queries.Lga{}, queries.Ward{}, errors.New("you can only upload results for your assigned polling unit")
+			return queries.PollingUnit{}, queries.Lga{}, queries.Ward{}, errors.New("you can only upload results for your assigned polling unit")
 		}
 	} else {
 		// Registered Voter validation
 		if !user.PollingUnitID.Valid || user.PollingUnitID.Int32 == 0 {
-			return queries.GetUserByFakeIDRow{}, queries.PollingUnit{}, queries.Lga{}, queries.Ward{}, errors.New("you do not have a registered polling unit. Please update your profile with your polling unit to submit results")
+			return queries.PollingUnit{}, queries.Lga{}, queries.Ward{}, errors.New("you do not have a registered polling unit. Please update your profile with your polling unit to submit results")
 		}
 		if user.PollingUnitID.Int32 != pollingUnitID {
-			return queries.GetUserByFakeIDRow{}, queries.PollingUnit{}, queries.Lga{}, queries.Ward{}, errors.New("you can only upload election results for your registered polling unit")
+			return queries.PollingUnit{}, queries.Lga{}, queries.Ward{}, errors.New("you can only upload election results for your registered polling unit")
 		}
 	}
 
@@ -142,16 +141,21 @@ func (s *Service) validateUserEligibility(
 		ElectionGroupID: electionGroupID,
 	})
 	if err == nil && existingPUID > 0 && existingPUID != pollingUnitID {
-		return queries.GetUserByFakeIDRow{}, queries.PollingUnit{}, queries.Lga{}, queries.Ward{}, fmt.Errorf("you have already submitted election results for polling unit #%d and cannot submit for other polling units", existingPUID)
+		return queries.PollingUnit{}, queries.Lga{}, queries.Ward{}, fmt.Errorf("you have already submitted election results for polling unit #%d and cannot submit for other polling units", existingPUID)
 	}
 
-	return user, pu, lga, ward, nil
+	return pu, lga, ward, nil
 }
 
 // SubmitResult inserts a new polling unit result record rapidly (<20ms) and queues an asynchronous AI extraction task.
 func (s *Service) SubmitResult(ctx context.Context, input SubmitResultInput) (queries.PollingUnitResult, error) {
 	if input.ResultSheetImageURL == "" {
 		return queries.PollingUnitResult{}, errors.New("result_sheet_image_url is required")
+	}
+
+	user, err := s.usersSvc.GetUserByFakeID(ctx, input.UserFakeID)
+	if err != nil {
+		return queries.PollingUnitResult{}, errors.New("user not found")
 	}
 
 	tx, err := s.pool.Begin(ctx)
@@ -162,10 +166,10 @@ func (s *Service) SubmitResult(ctx context.Context, input SubmitResultInput) (qu
 
 	qtx := s.queries.WithTx(tx)
 
-	user, pu, lga, ward, err := s.validateUserEligibility(
+	pu, lga, ward, err := s.validateUserEligibility(
 		ctx,
 		qtx,
-		input.UserFakeID,
+		user,
 		input.AssignmentID,
 		input.ElectionGroupID,
 		input.PollingUnitID,
@@ -280,6 +284,11 @@ func (s *Service) SubmitBatchResults(ctx context.Context, input SubmitBatchResul
 		return nil, errors.New("submissions array cannot be empty")
 	}
 
+	user, err := s.usersSvc.GetUserByFakeID(ctx, input.UserFakeID)
+	if err != nil {
+		return nil, errors.New("user not found")
+	}
+
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return nil, err
@@ -288,10 +297,10 @@ func (s *Service) SubmitBatchResults(ctx context.Context, input SubmitBatchResul
 
 	qtx := s.queries.WithTx(tx)
 
-	user, pu, lga, ward, err := s.validateUserEligibility(
+	pu, lga, ward, err := s.validateUserEligibility(
 		ctx,
 		qtx,
-		input.UserFakeID,
+		user,
 		input.AssignmentID,
 		input.ElectionGroupID,
 		input.PollingUnitID,

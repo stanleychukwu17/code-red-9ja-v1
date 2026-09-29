@@ -69,7 +69,7 @@ func (s *BodiesService) GetAllCountries(ctx context.Context) ([]queries.ListCoun
 		}
 
 		jsonData, _ := json.Marshal(payload)
-		s.rdb.Set(ctx, db.RedisCountriesAll, jsonData, 0)
+		s.rdb.Set(ctx, db.RedisCountriesAll, jsonData, db.RedisOneYearTTL)
 
 		return dbCountries, nil
 	case nil:
@@ -101,7 +101,12 @@ func (s *BodiesService) GetStatesByCountryID(ctx context.Context, countryID int1
 		}
 
 		jsonData, _ := json.Marshal(payload)
-		s.rdb.Set(ctx, redisKey, jsonData, db.RedisOneEightyDaysTTL)
+		// Nigeria (161) states are extremely stable; all other countries expire sooner
+		stateTTL := db.RedisSevenDaysTTL
+		if countryID == 161 {
+			stateTTL = db.RedisOneEightyDaysTTL
+		}
+		s.rdb.Set(ctx, redisKey, jsonData, stateTTL)
 
 		return dbStates, nil
 	case nil:

@@ -607,10 +607,10 @@ func (s *service) GetPreferences(ctx context.Context, userID int64) (*Notificati
 		UpdatedAt:           row.UpdatedAt.Time,
 	}
 
-	// 3. Cache populated preferences in Redis for 24h
+	// 3. Cache populated preferences in Redis
 	if s.rdb != nil {
 		if b, err := json.Marshal(res); err == nil {
-			_ = s.rdb.Set(ctx, redisKey, string(b), db.RedisOneDayTTL).Err()
+			_ = s.rdb.Set(ctx, redisKey, string(b), db.RedisOneEightyDaysTTL).Err()
 		}
 	}
 
@@ -677,7 +677,7 @@ func (s *service) UpdatePreferences(ctx context.Context, userID int64, req Updat
 	if s.rdb != nil {
 		redisKey := fmt.Sprintf("%s%d", db.RedisNotificationPreferences, userID)
 		if b, err := json.Marshal(res); err == nil {
-			_ = s.rdb.Set(ctx, redisKey, string(b), db.RedisOneDayTTL).Err()
+			_ = s.rdb.Set(ctx, redisKey, string(b), db.RedisOneEightyDaysTTL).Err()
 		}
 	}
 

@@ -13,21 +13,27 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+type usersService interface {
+	GetUserByFakeID(ctx context.Context, fakeID int64) (queries.UserWithPlaces, error)
+}
+
 type Service struct {
 	queries     *queries.Queries
 	pool        *pgxpool.Pool
 	earningsSvc earningsService
+	usersSvc    usersService
 }
 
 type earningsService interface {
 	ProcessTaskEarnings(ctx context.Context, assignmentID int64, taskType string, customNarration ...string) (int64, error)
 }
 
-func NewService(q *queries.Queries, pool *pgxpool.Pool, earningsSvc earningsService) *Service {
+func NewService(q *queries.Queries, pool *pgxpool.Pool, earningsSvc earningsService, usersSvc usersService) *Service {
 	return &Service{
 		queries:     q,
 		pool:        pool,
 		earningsSvc: earningsSvc,
+		usersSvc:    usersSvc,
 	}
 }
 
@@ -71,6 +77,12 @@ func calcIntervalKey(t time.Time, cfg updateScheduleConfig) (string, error) {
 }
 
 func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (queries.PollingUnitUpdate, error) {
+	// Fetch real User ID by FakeID using cached/optimized user service outside transaction
+	user, err := s.usersSvc.GetUserByFakeID(ctx, input.UserID)
+	if err != nil {
+		return queries.PollingUnitUpdate{}, errors.New("user not found")
+	}
+
 	// Start a transaction since we are updating multiple tables
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -84,12 +96,6 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 	pu, err := qtx.GetPollingUnitByID(ctx, input.PollingUnitID)
 	if err != nil {
 		return queries.PollingUnitUpdate{}, errors.New("invalid polling unit id")
-	}
-
-	// Fetch real User ID by FakeID
-	user, err := qtx.GetUserByFakeID(ctx, pgtype.Int8{Int64: input.UserID, Valid: true})
-	if err != nil {
-		return queries.PollingUnitUpdate{}, errors.New("user not found")
 	}
 
 	// Fetch LGA and Ward to get constituency IDs

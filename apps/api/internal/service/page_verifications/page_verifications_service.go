@@ -268,7 +268,7 @@ func (s *PageVerificationsService) GetPageVerifications(ctx context.Context, pag
 
 	// Save to Redis
 	if verificationsData, err := json.Marshal(verifications); err == nil {
-		s.rdb.Set(ctx, redisKey, verificationsData, db.RedisNinetyDaysTTL)
+		s.rdb.Set(ctx, redisKey, verificationsData, db.RedisOneYearTTL)
 	}
 
 	return verifications, nil
@@ -295,7 +295,7 @@ func (s *PageVerificationsService) GetVerificationTypeInfo(ctx context.Context, 
 
 	// Save to Redis
 	if vtData, err := json.Marshal(vt); err == nil {
-		s.rdb.Set(ctx, redisKey, vtData, db.RedisNinetyDaysTTL)
+		s.rdb.Set(ctx, redisKey, vtData, db.RedisOneYearTTL)
 	}
 
 	return &vt, nil
@@ -320,7 +320,7 @@ func (s *PageVerificationsService) ListVerificationTypes(ctx context.Context) ([
 
 	// Cache in Redis
 	if data, jsonErr := json.Marshal(vt); jsonErr == nil {
-		s.rdb.Set(ctx, db.RedisPageVerificationTypesList, data, 0)
+		s.rdb.Set(ctx, db.RedisPageVerificationTypesList, data, db.RedisOneYearTTL)
 	}
 
 	return vt, nil

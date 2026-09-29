@@ -1253,7 +1253,7 @@ func (s *PartiesService) GetChapterMemberCount(ctx context.Context, partyID int1
 	}
 
 	// 3. Cache in Redis
-	err = s.rdb.Set(ctx, cacheKey, count, db.RedisOneEightyDaysTTL).Err()
+	err = s.rdb.Set(ctx, cacheKey, count, db.RedisSevenDaysTTL).Err()
 	if err != nil {
 		slog.Error("Failed to cache chapter member count in redis", "error", err, "partyID", partyID, "chapterID", chapterID)
 	}

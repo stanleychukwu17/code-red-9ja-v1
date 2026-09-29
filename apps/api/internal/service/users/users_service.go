@@ -359,7 +359,7 @@ func (s *UsersService) GetUserRoles(ctx context.Context, userID int64) (queries.
 	// Cache it in Redis
 	rolesJSONBytes, err := json.Marshal(cachedRoles)
 	if err == nil {
-		s.rdb.Set(ctx, userRolesKey, rolesJSONBytes, db.RedisThirtyDaysTTL)
+		s.rdb.Set(ctx, userRolesKey, rolesJSONBytes, db.RedisOneEightyDaysTTL)
 	}
 
 	return cachedRoles, nil
@@ -503,7 +503,7 @@ func (s *UsersService) GetMoreInfoAboutThisUser(ctx context.Context, userID int6
 	// Cache it in Redis
 	profileJSONBytes, err := json.Marshal(profile)
 	if err == nil {
-		s.rdb.Set(ctx, userProfileKey, profileJSONBytes, db.RedisThirtyDaysTTL)
+		s.rdb.Set(ctx, userProfileKey, profileJSONBytes, db.RedisNinetyDaysTTL)
 	}
 
 	return profile, nil
@@ -993,7 +993,7 @@ func (s *UsersService) cacheReferralCodeInfo(ctx context.Context, code string, u
 
 	if data, err := json.Marshal(info); err == nil {
 		cacheKey := db.RedisReferralCode + code
-		s.rdb.Set(ctx, cacheKey, string(data), db.RedisThirtyDaysTTL)
+		s.rdb.Set(ctx, cacheKey, string(data), db.RedisOneEightyDaysTTL)
 	}
 	return &info
 }
@@ -1057,7 +1057,7 @@ func (s *UsersService) GenerateUniqueReferralCode(ctx context.Context, firstName
 
 // GenerateAndAssignReferralCode generates and assigns a referral code to a user.
 func (s *UsersService) GenerateAndAssignReferralCode(ctx context.Context, userID int64, fakeID int64, firstName string) (string, error) {
-	user, err := s.queries.GetUserByFakeID(ctx, pgtype.Int8{Int64: fakeID, Valid: true})
+	user, err := s.GetUserByFakeID(ctx, fakeID)
 	if err != nil {
 		return "", err
 	}
