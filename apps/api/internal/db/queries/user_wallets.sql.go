@@ -251,7 +251,7 @@ func (q *Queries) GetUserWalletTransactionByReference(ctx context.Context, trans
 const listUserWalletTransactions = `-- name: ListUserWalletTransactions :many
 SELECT id, wallet_id, transaction_reference, type, amount_kobo, balance_after_kobo, payer_name, payer_account_number, payer_bank_code, narration, raw_payload, created_at FROM user_wallet_transactions
 WHERE wallet_id = $1
-ORDER BY created_at DESC
+ORDER BY id DESC
 LIMIT $2 OFFSET $3
 `
 

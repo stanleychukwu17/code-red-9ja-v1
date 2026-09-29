@@ -107,6 +107,7 @@
     "pollingunitshandler",
     "pollingunitsservice",
     "practicetestshandler",
+    "prefs",
     "presign",
     "promauto",
     "promhttp",

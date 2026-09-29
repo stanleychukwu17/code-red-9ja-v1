@@ -14,7 +14,7 @@ import (
 const getUserPrimaryBankAccount = `-- name: GetUserPrimaryBankAccount :one
 SELECT id, user_id, account_number, bank_code, is_primary, created_at, updated_at FROM user_bank_accounts
 WHERE user_id = $1 AND is_primary = true
-ORDER BY created_at DESC
+ORDER BY id DESC
 LIMIT 1
 `
 

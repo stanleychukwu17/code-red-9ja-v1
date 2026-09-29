@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS party_marketing_campaigns (
 );
 
 -- party_marketing_campaigns
-CREATE INDEX IF NOT EXISTS idx_pmc_party_created ON party_marketing_campaigns (party_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_pmc_party_id ON party_marketing_campaigns (party_id, id DESC);
 CREATE INDEX IF NOT EXISTS idx_pmc_party_eg_status ON party_marketing_campaigns (party_id, election_group_id, status);
 CREATE INDEX IF NOT EXISTS idx_pmc_status_active ON party_marketing_campaigns (status) WHERE status = 'active';
 CREATE INDEX IF NOT EXISTS idx_pmc_election_group_id ON party_marketing_campaigns (election_group_id);

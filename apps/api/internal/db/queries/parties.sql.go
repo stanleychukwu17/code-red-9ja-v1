@@ -262,6 +262,81 @@ func (q *Queries) GetNationalChapter(ctx context.Context, arg GetNationalChapter
 	return id, err
 }
 
+const getOnePartyChapterOfficial = `-- name: GetOnePartyChapterOfficial :one
+SELECT 
+    pa.id AS assignment_id,
+    pa.party_id,
+    pa.chapter_id,
+    pa.position_id,
+    pa.user_id,
+    pa.appointment_type,
+    pa.status AS assignment_status,
+    pa.tenure_start,
+    pa.tenure_end,
+    pos.name AS position_name,
+    pos.code AS position_code,
+    pos.rank_order,
+    u.first_name,
+    u.last_name,
+    u.username,
+    u.avatar
+FROM party_position_assignments pa
+JOIN party_positions pos ON pos.id = pa.position_id
+JOIN users u ON u.id = pa.user_id
+WHERE pa.chapter_id = $1 
+  AND pa.position_id = $2 
+  AND pa.status = 'active'
+LIMIT 1
+`
+
+type GetOnePartyChapterOfficialParams struct {
+	ChapterID  int32 `json:"chapter_id"`
+	PositionID int32 `json:"position_id"`
+}
+
+type GetOnePartyChapterOfficialRow struct {
+	AssignmentID     int64       `json:"assignment_id"`
+	PartyID          int16       `json:"party_id"`
+	ChapterID        int32       `json:"chapter_id"`
+	PositionID       int32       `json:"position_id"`
+	UserID           int64       `json:"user_id"`
+	AppointmentType  string      `json:"appointment_type"`
+	AssignmentStatus string      `json:"assignment_status"`
+	TenureStart      pgtype.Date `json:"tenure_start"`
+	TenureEnd        pgtype.Date `json:"tenure_end"`
+	PositionName     string      `json:"position_name"`
+	PositionCode     string      `json:"position_code"`
+	RankOrder        int16       `json:"rank_order"`
+	FirstName        pgtype.Text `json:"first_name"`
+	LastName         pgtype.Text `json:"last_name"`
+	Username         pgtype.Text `json:"username"`
+	Avatar           pgtype.Text `json:"avatar"`
+}
+
+func (q *Queries) GetOnePartyChapterOfficial(ctx context.Context, arg GetOnePartyChapterOfficialParams) (GetOnePartyChapterOfficialRow, error) {
+	row := q.db.QueryRow(ctx, getOnePartyChapterOfficial, arg.ChapterID, arg.PositionID)
+	var i GetOnePartyChapterOfficialRow
+	err := row.Scan(
+		&i.AssignmentID,
+		&i.PartyID,
+		&i.ChapterID,
+		&i.PositionID,
+		&i.UserID,
+		&i.AppointmentType,
+		&i.AssignmentStatus,
+		&i.TenureStart,
+		&i.TenureEnd,
+		&i.PositionName,
+		&i.PositionCode,
+		&i.RankOrder,
+		&i.FirstName,
+		&i.LastName,
+		&i.Username,
+		&i.Avatar,
+	)
+	return i, err
+}
+
 const getOrCreateLGAChapter = `-- name: GetOrCreateLGAChapter :one
 INSERT INTO party_chapters (party_id, chapter_type, state_id, lga_id)
 SELECT $1, 'lga', l.state_id, l.id
@@ -362,116 +437,6 @@ func (q *Queries) GetOrCreateZonalChapter(ctx context.Context, arg GetOrCreateZo
 	var id int32
 	err := row.Scan(&id)
 	return id, err
-}
-
-const getPartiesSampleMemberAvatars = `-- name: GetPartiesSampleMemberAvatars :many
-SELECT party_id::smallint, user_id, first_name, last_name, username, avatar
-FROM (
-  SELECT pm.party_id, u.id AS user_id, u.first_name, u.last_name, u.username, u.avatar,
-         ROW_NUMBER() OVER (PARTITION BY pm.party_id ORDER BY pm.created_at DESC) as rn
-  FROM party_membership pm
-  JOIN users u ON u.id = pm.user_id
-  WHERE pm.status = 'active' AND u.avatar IS NOT NULL AND u.avatar != ''
-) sub
-WHERE rn <= 5
-`
-
-type GetPartiesSampleMemberAvatarsRow struct {
-	PartyID   int16       `json:"party_id"`
-	UserID    int64       `json:"user_id"`
-	FirstName pgtype.Text `json:"first_name"`
-	LastName  pgtype.Text `json:"last_name"`
-	Username  pgtype.Text `json:"username"`
-	Avatar    pgtype.Text `json:"avatar"`
-}
-
-func (q *Queries) GetPartiesSampleMemberAvatars(ctx context.Context) ([]GetPartiesSampleMemberAvatarsRow, error) {
-	rows, err := q.db.Query(ctx, getPartiesSampleMemberAvatars)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetPartiesSampleMemberAvatarsRow
-	for rows.Next() {
-		var i GetPartiesSampleMemberAvatarsRow
-		if err := rows.Scan(
-			&i.PartyID,
-			&i.UserID,
-			&i.FirstName,
-			&i.LastName,
-			&i.Username,
-			&i.Avatar,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getPartiesTopNationalOfficials = `-- name: GetPartiesTopNationalOfficials :many
-SELECT party_id, position_id, position_name, position_code, rank_order,
-       user_id, first_name, last_name, username, avatar, tenure_start
-FROM (
-  SELECT pa.party_id, pa.position_id, pos.name AS position_name, pos.code AS position_code, pos.rank_order,
-         pa.user_id, u.first_name, u.last_name, u.username, u.avatar, pa.tenure_start,
-         ROW_NUMBER() OVER (PARTITION BY pa.party_id ORDER BY pos.rank_order ASC, pa.tenure_start DESC) as rn
-  FROM party_position_assignments pa
-  JOIN party_positions pos ON pos.id = pa.position_id
-  JOIN party_chapters pc ON pc.id = pa.chapter_id AND pc.chapter_type = 'national'
-  JOIN users u ON u.id = pa.user_id
-  WHERE pa.status = 'active'
-) sub
-WHERE rn <= 2
-`
-
-type GetPartiesTopNationalOfficialsRow struct {
-	PartyID      int16       `json:"party_id"`
-	PositionID   int32       `json:"position_id"`
-	PositionName string      `json:"position_name"`
-	PositionCode string      `json:"position_code"`
-	RankOrder    int16       `json:"rank_order"`
-	UserID       int64       `json:"user_id"`
-	FirstName    pgtype.Text `json:"first_name"`
-	LastName     pgtype.Text `json:"last_name"`
-	Username     pgtype.Text `json:"username"`
-	Avatar       pgtype.Text `json:"avatar"`
-	TenureStart  pgtype.Date `json:"tenure_start"`
-}
-
-func (q *Queries) GetPartiesTopNationalOfficials(ctx context.Context) ([]GetPartiesTopNationalOfficialsRow, error) {
-	rows, err := q.db.Query(ctx, getPartiesTopNationalOfficials)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetPartiesTopNationalOfficialsRow
-	for rows.Next() {
-		var i GetPartiesTopNationalOfficialsRow
-		if err := rows.Scan(
-			&i.PartyID,
-			&i.PositionID,
-			&i.PositionName,
-			&i.PositionCode,
-			&i.RankOrder,
-			&i.UserID,
-			&i.FirstName,
-			&i.LastName,
-			&i.Username,
-			&i.Avatar,
-			&i.TenureStart,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const getPartyBasicInfo = `-- name: GetPartyBasicInfo :one
@@ -591,6 +556,54 @@ func (q *Queries) GetPartyChapterByID(ctx context.Context, id int32) (PartyChapt
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const getPartySampleMemberAvatars = `-- name: GetPartySampleMemberAvatars :many
+SELECT pm.party_id, u.id AS user_id, u.first_name, u.last_name, u.username, u.avatar
+FROM party_membership pm
+JOIN users u ON u.id = pm.user_id
+WHERE pm.party_id = $1 
+  AND pm.status = 'active' 
+  AND u.avatar IS NOT NULL 
+  AND u.avatar != ''
+ORDER BY pm.id DESC
+LIMIT 5
+`
+
+type GetPartySampleMemberAvatarsRow struct {
+	PartyID   int16       `json:"party_id"`
+	UserID    int64       `json:"user_id"`
+	FirstName pgtype.Text `json:"first_name"`
+	LastName  pgtype.Text `json:"last_name"`
+	Username  pgtype.Text `json:"username"`
+	Avatar    pgtype.Text `json:"avatar"`
+}
+
+func (q *Queries) GetPartySampleMemberAvatars(ctx context.Context, partyID int16) ([]GetPartySampleMemberAvatarsRow, error) {
+	rows, err := q.db.Query(ctx, getPartySampleMemberAvatars, partyID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetPartySampleMemberAvatarsRow
+	for rows.Next() {
+		var i GetPartySampleMemberAvatarsRow
+		if err := rows.Scan(
+			&i.PartyID,
+			&i.UserID,
+			&i.FirstName,
+			&i.LastName,
+			&i.Username,
+			&i.Avatar,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getStateChapter = `-- name: GetStateChapter :one
@@ -758,20 +771,81 @@ func (q *Queries) ListAcceptingParties(ctx context.Context) ([]ListAcceptingPart
 }
 
 const listParties = `-- name: ListParties :many
-SELECT id, short_name, name, logo, logo_file_id, cover_image, cover_image_file_id, cover_position_y, display_order, status, slots, is_verified, discount_percentage, agent_payment_balance_kobo, agent_payment_allocation_kobo, agent_acquisition_targets, auto_accept_applications, color_hex, dark_color_hex, date_founded, created_at, updated_at FROM parties
+SELECT 
+  id,
+  short_name,
+  name,
+  logo,
+  logo_file_id,
+  cover_image,
+  cover_image_file_id,
+  cover_position_y,
+  display_order,
+  status,
+  slots,
+  is_verified,
+  color_hex,
+  dark_color_hex,
+  date_founded,
+  created_at,
+  updated_at,
+  (
+    status = 'active'
+    AND is_verified = true
+    AND slots > 0
+    AND agent_acquisition_targets IS NOT NULL 
+    AND agent_acquisition_targets != '{}'::jsonb
+    AND agent_payment_allocation_kobo IS NOT NULL 
+    AND agent_payment_allocation_kobo != '{}'::jsonb
+    AND agent_payment_balance_kobo > 0
+    AND (
+      COALESCE((agent_payment_allocation_kobo->'pollingAgent'->>'default')::bigint, (agent_payment_allocation_kobo->'polling_agent'->>'default')::bigint, 0) > 0
+      AND COALESCE((agent_payment_allocation_kobo->'wardElectionSupervisor'->>'default')::bigint, (agent_payment_allocation_kobo->'ward_election_supervisor'->>'default')::bigint, 0) > 0
+      AND COALESCE((agent_payment_allocation_kobo->'lgaElectionSupervisor'->>'default')::bigint, (agent_payment_allocation_kobo->'lga_election_supervisor'->>'default')::bigint, 0) > 0
+      AND COALESCE((agent_payment_allocation_kobo->'stateElectionSupervisor'->>'default')::bigint, (agent_payment_allocation_kobo->'state_election_supervisor'->>'default')::bigint, 0) > 0
+    )
+    AND agent_payment_balance_kobo >= GREATEST(
+      COALESCE((agent_payment_allocation_kobo->'pollingAgent'->>'default')::bigint, (agent_payment_allocation_kobo->'polling_agent'->>'default')::bigint, 0),
+      COALESCE((agent_payment_allocation_kobo->'wardElectionSupervisor'->>'default')::bigint, (agent_payment_allocation_kobo->'ward_election_supervisor'->>'default')::bigint, 0),
+      COALESCE((agent_payment_allocation_kobo->'lgaElectionSupervisor'->>'default')::bigint, (agent_payment_allocation_kobo->'lga_election_supervisor'->>'default')::bigint, 0),
+      COALESCE((agent_payment_allocation_kobo->'stateElectionSupervisor'->>'default')::bigint, (agent_payment_allocation_kobo->'state_election_supervisor'->>'default')::bigint, 0)
+    )
+  )::boolean AS is_accepting_applications
+FROM parties
 WHERE status = 'active'
 ORDER BY display_order ASC, name ASC
 `
 
-func (q *Queries) ListParties(ctx context.Context) ([]Party, error) {
+type ListPartiesRow struct {
+	ID                      int16              `json:"id"`
+	ShortName               string             `json:"short_name"`
+	Name                    string             `json:"name"`
+	Logo                    string             `json:"logo"`
+	LogoFileID              pgtype.Int8        `json:"logo_file_id"`
+	CoverImage              pgtype.Text        `json:"cover_image"`
+	CoverImageFileID        pgtype.Int8        `json:"cover_image_file_id"`
+	CoverPositionY          pgtype.Int2        `json:"cover_position_y"`
+	DisplayOrder            int32              `json:"display_order"`
+	Status                  string             `json:"status"`
+	Slots                   int32              `json:"slots"`
+	IsVerified              pgtype.Bool        `json:"is_verified"`
+	ColorHex                pgtype.Text        `json:"color_hex"`
+	DarkColorHex            pgtype.Text        `json:"dark_color_hex"`
+	DateFounded             pgtype.Date        `json:"date_founded"`
+	CreatedAt               pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt               pgtype.Timestamptz `json:"updated_at"`
+	IsAcceptingApplications bool               `json:"is_accepting_applications"`
+}
+
+func (q *Queries) ListParties(ctx context.Context) ([]ListPartiesRow, error) {
 	rows, err := q.db.Query(ctx, listParties)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Party
+	var items []ListPartiesRow
 	for rows.Next() {
-		var i Party
+		var i ListPartiesRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.ShortName,
@@ -785,16 +859,12 @@ func (q *Queries) ListParties(ctx context.Context) ([]Party, error) {
 			&i.Status,
 			&i.Slots,
 			&i.IsVerified,
-			&i.DiscountPercentage,
-			&i.AgentPaymentBalanceKobo,
-			&i.AgentPaymentAllocationKobo,
-			&i.AgentAcquisitionTargets,
-			&i.AutoAcceptApplications,
 			&i.ColorHex,
 			&i.DarkColorHex,
 			&i.DateFounded,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.IsAcceptingApplications,
 		); err != nil {
 			return nil, err
 		}

@@ -40,9 +40,9 @@ CREATE TABLE user_wallet_transactions (
 );
 
 -- Indexes for common lookups
-CREATE INDEX idx_user_wallet_tx_wallet_created ON user_wallet_transactions(wallet_id, created_at DESC);
+CREATE INDEX idx_user_wallet_tx_wallet_id ON user_wallet_transactions(wallet_id, id DESC);
 
 -- +goose Down
-DROP INDEX IF EXISTS idx_user_wallet_tx_wallet_created;
+DROP INDEX IF EXISTS idx_user_wallet_tx_wallet_id;
 DROP TABLE IF EXISTS user_wallet_transactions;
 DROP TABLE IF EXISTS user_wallets;

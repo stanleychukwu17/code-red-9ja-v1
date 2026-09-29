@@ -1,7 +1,7 @@
 -- name: GetUserPrimaryBankAccount :one
 SELECT * FROM user_bank_accounts
 WHERE user_id = $1 AND is_primary = true
-ORDER BY created_at DESC
+ORDER BY id DESC
 LIMIT 1;
 
 -- name: UpdateUserBankAccountsToNonPrimary :exec

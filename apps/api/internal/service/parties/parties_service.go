@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
@@ -231,6 +232,47 @@ func (s *PartiesService) GetPartyBasicInfo(ctx context.Context, partyID int16) *
 	return &party
 }
 
+func isPartyAcceptingApplications(p queries.Party) bool {
+	if p.Status != "active" || !p.IsVerified.Bool || p.Slots <= 0 || p.AgentPaymentBalanceKobo <= 0 {
+		return false
+	}
+	if len(p.AgentAcquisitionTargets) == 0 || string(p.AgentAcquisitionTargets) == "{}" || string(p.AgentAcquisitionTargets) == "null" {
+		return false
+	}
+	if len(p.AgentPaymentAllocationKobo) == 0 || string(p.AgentPaymentAllocationKobo) == "{}" || string(p.AgentPaymentAllocationKobo) == "null" {
+		return false
+	}
+	var alloc map[string]struct {
+		Default *int64 `json:"default"`
+	}
+	if err := json.Unmarshal(p.AgentPaymentAllocationKobo, &alloc); err != nil {
+		return false
+	}
+	roles := []struct {
+		camel string
+		snake string
+	}{
+		{camel: "pollingAgent", snake: "polling_agent"},
+		{camel: "wardElectionSupervisor", snake: "ward_election_supervisor"},
+		{camel: "lgaElectionSupervisor", snake: "lga_election_supervisor"},
+		{camel: "stateElectionSupervisor", snake: "state_election_supervisor"},
+	}
+	var maxDefault int64 = -1
+	for _, rolePair := range roles {
+		cfg, exists := alloc[rolePair.camel]
+		if !exists {
+			cfg, exists = alloc[rolePair.snake]
+		}
+		if !exists || cfg.Default == nil || *cfg.Default <= 0 {
+			return false
+		}
+		if *cfg.Default > maxDefault {
+			maxDefault = *cfg.Default
+		}
+	}
+	return maxDefault > 0 && p.AgentPaymentBalanceKobo >= maxDefault
+}
+
 // GetPartyInfo returns a party if the provided optional partyID is valid.
 func (s *PartiesService) GetPartyInfo(ctx context.Context, partyID int16) *queries.PartyWithVerifications {
 	redisKey := fmt.Sprintf("%s%d", db.RedisPartyInfo, partyID)
@@ -247,7 +289,26 @@ func (s *PartiesService) GetPartyInfo(ctx context.Context, partyID int16) *queri
 	partyRow, err := s.GetPartyByID(ctx, int16(partyID))
 	if err == nil {
 		party := queries.PartyWithVerifications{
-			Party: partyRow,
+			ListPartiesRow: queries.ListPartiesRow{
+				ID:                      partyRow.ID,
+				ShortName:               partyRow.ShortName,
+				Name:                    partyRow.Name,
+				Logo:                    partyRow.Logo,
+				LogoFileID:              partyRow.LogoFileID,
+				CoverImage:              partyRow.CoverImage,
+				CoverImageFileID:        partyRow.CoverImageFileID,
+				CoverPositionY:          partyRow.CoverPositionY,
+				DisplayOrder:            partyRow.DisplayOrder,
+				Status:                  partyRow.Status,
+				Slots:                   partyRow.Slots,
+				IsVerified:              partyRow.IsVerified,
+				ColorHex:                partyRow.ColorHex,
+				DarkColorHex:            partyRow.DarkColorHex,
+				DateFounded:             partyRow.DateFounded,
+				CreatedAt:               partyRow.CreatedAt,
+				UpdatedAt:               partyRow.UpdatedAt,
+				IsAcceptingApplications: isPartyAcceptingApplications(partyRow),
+			},
 		}
 
 		if partyRow.IsVerified.Bool && s.pageVerificationsService != nil {
@@ -266,9 +327,23 @@ func (s *PartiesService) GetPartyInfo(ctx context.Context, partyID int16) *queri
 	return nil
 }
 
-// GetPartyByShortName returns a party by its short name (e.g. "APC").
-func (s *PartiesService) GetPartyByShortName(ctx context.Context, shortName string) (queries.Party, error) {
-	return s.queries.GetPartyByShortName(ctx, shortName)
+// GetPartyByShortName returns a party matching the given short name from the cached parties list.
+func (s *PartiesService) GetPartyByShortName(ctx context.Context, shortName string) (*queries.PartyWithVerifications, error) {
+	// Retrieve all parties (cached)
+	parties, err := s.ListParties(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Match short name case-insensitively
+	for _, p := range parties {
+		if strings.EqualFold(p.ShortName, shortName) {
+			partyCopy := p
+			return &partyCopy, nil
+		}
+	}
+
+	return nil, pgx.ErrNoRows
 }
 
 // ListParties returns all parties ordered by ID ascending.
@@ -290,12 +365,14 @@ func (s *PartiesService) ListParties(ctx context.Context) ([]queries.PartyWithVe
 		return nil, err
 	}
 
+	// Transform rows into response models
 	var parties []queries.PartyWithVerifications
 	for _, p := range partyRows {
 		party := queries.PartyWithVerifications{
-			Party: p,
+			ListPartiesRow: p,
 		}
 
+		// Attach verification details if party is verified
 		if p.IsVerified.Bool && s.pageVerificationsService != nil {
 			verifications, _ := s.pageVerificationsService.GetPageVerifications(ctx, db.PageTypeParty, int64(p.ID))
 			if verifications != nil {
@@ -315,7 +392,7 @@ func (s *PartiesService) ListParties(ctx context.Context) ([]queries.PartyWithVe
 	return parties, nil
 }
 
-type PartyOfficialCardDTO struct {
+type PartyOfficialCard struct {
 	PositionID   int32   `json:"position_id"`
 	PositionName string  `json:"position_name"`
 	PositionCode string  `json:"position_code"`
@@ -328,36 +405,148 @@ type PartyOfficialCardDTO struct {
 	IsVacant     bool    `json:"is_vacant"`
 }
 
-type PartySampleMemberDTO struct {
-	UserID    int64   `json:"user_id"`
-	FirstName *string `json:"first_name,omitempty"`
-	LastName  *string `json:"last_name,omitempty"`
-	Username  *string `json:"username,omitempty"`
-	Avatar    string  `json:"avatar"`
+type PartySampleMember struct {
+	UserID    int64  `json:"user_id"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+	Username  string `json:"username"`
+	Avatar    string `json:"avatar"`
 }
 
-type PartyCardDTO struct {
-	ID             int16                  `json:"id"`
-	ShortName      string                 `json:"short_name"`
-	Name           string                 `json:"name"`
-	Logo           string                 `json:"logo"`
-	DisplayOrder   int32                  `json:"display_order"`
-	Status         string                 `json:"status"`
-	IsVerified     bool                   `json:"is_verified"`
-	ColorHex       *string                `json:"color_hex,omitempty"`
-	DarkColorHex   *string                `json:"dark_color_hex,omitempty"`
-	DateFounded    *string                `json:"date_founded,omitempty"`
-	CoverImage     *string                `json:"cover_image,omitempty"`
-	CoverPositionY *int16                 `json:"cover_position_y,omitempty"`
-	TotalMembers   int64                  `json:"total_members"`
-	SampleMembers  []PartySampleMemberDTO `json:"sample_members"`
-	Officials      []PartyOfficialCardDTO `json:"officials"`
-	IsUserMember   bool                   `json:"is_user_member"`
+type PartyCard struct {
+	ID             int16               `json:"id"`
+	ShortName      string              `json:"short_name"`
+	Name           string              `json:"name"`
+	Logo           string              `json:"logo"`
+	DisplayOrder   int32               `json:"display_order"`
+	Status         string              `json:"status"`
+	IsVerified     bool                `json:"is_verified"`
+	ColorHex       *string             `json:"color_hex,omitempty"`
+	DarkColorHex   *string             `json:"dark_color_hex,omitempty"`
+	DateFounded    *string             `json:"date_founded,omitempty"`
+	CoverImage     *string             `json:"cover_image,omitempty"`
+	CoverPositionY *int16              `json:"cover_position_y,omitempty"`
+	TotalMembers   int64               `json:"total_members"`
+	SampleMembers  []PartySampleMember `json:"sample_members"`
+	Officials      []PartyOfficialCard `json:"officials"`
+	IsUserMember   bool                `json:"is_user_member"`
+}
+
+// GetPartySampleMemberAvatars retrieves sample member avatars for a party, cached in Redis.
+func (s *PartiesService) GetPartySampleMemberAvatars(ctx context.Context, partyID int16) ([]PartySampleMember, error) {
+	cacheKey := fmt.Sprintf("%s%d", db.RedisParties5MemberAvatars, partyID)
+
+	// Try to get from Redis
+	if cachedData, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
+		var sampleMembers []PartySampleMember
+		if err := json.Unmarshal([]byte(cachedData), &sampleMembers); err == nil {
+			return sampleMembers, nil
+		}
+	}
+
+	// Fetch sample member avatars from the database
+	avatars, err := s.queries.GetPartySampleMemberAvatars(ctx, partyID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Map database records into PartySampleMember
+	sampleMembers := make([]PartySampleMember, 0, len(avatars))
+	for _, a := range avatars {
+		sampleMembers = append(sampleMembers, PartySampleMember{
+			UserID:    a.UserID,
+			FirstName: a.FirstName.String,
+			LastName:  a.LastName.String,
+			Username:  a.Username.String,
+			Avatar:    a.Avatar.String,
+		})
+	}
+
+	// Cache result in Redis
+	if data, err := json.Marshal(sampleMembers); err == nil {
+		_ = s.rdb.Set(ctx, cacheKey, data, db.RedisSevenDaysTTL).Err()
+	}
+
+	return sampleMembers, nil
+}
+
+// GetOnePartyChapterOfficial fetches a single active official in a chapter by position ID, cached in Redis.
+func (s *PartiesService) GetOnePartyChapterOfficial(ctx context.Context, chapterID int32, positionID int32) (*PartyOfficialCard, error) {
+	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisChapterOfficial, chapterID, positionID)
+
+	// Try to get from Redis
+	if cachedData, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
+		var official PartyOfficialCard
+		if err := json.Unmarshal([]byte(cachedData), &official); err == nil {
+			return &official, nil
+		}
+	}
+
+	off, err := s.queries.GetOnePartyChapterOfficial(ctx, queries.GetOnePartyChapterOfficialParams{
+		ChapterID:  chapterID,
+		PositionID: positionID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	nameParts := []string{}
+	if off.FirstName.Valid && off.FirstName.String != "" {
+		nameParts = append(nameParts, off.FirstName.String)
+	}
+	if off.LastName.Valid && off.LastName.String != "" {
+		nameParts = append(nameParts, off.LastName.String)
+	}
+	fullName := strings.Join(nameParts, " ")
+	if fullName == "" && off.Username.Valid {
+		fullName = off.Username.String
+	}
+	var namePtr *string
+	if fullName != "" {
+		namePtr = &fullName
+	}
+
+	var unPtr *string
+	if off.Username.Valid && off.Username.String != "" {
+		unPtr = &off.Username.String
+	}
+
+	var avPtr *string
+	if off.Avatar.Valid && off.Avatar.String != "" {
+		avPtr = &off.Avatar.String
+	}
+
+	var sincePtr *string
+	if off.TenureStart.Valid {
+		sStr := fmt.Sprintf("since %d", off.TenureStart.Time.Year())
+		sincePtr = &sStr
+	}
+
+	uid := off.UserID
+	official := PartyOfficialCard{
+		PositionID:   off.PositionID,
+		PositionName: off.PositionName,
+		PositionCode: off.PositionCode,
+		RankOrder:    off.RankOrder,
+		UserID:       &uid,
+		Name:         namePtr,
+		Username:     unPtr,
+		Avatar:       avPtr,
+		Since:        sincePtr,
+		IsVacant:     false,
+	}
+
+	// Cache in Redis
+	if data, err := json.Marshal(official); err == nil {
+		_ = s.rdb.Set(ctx, cacheKey, data, db.RedisSevenDaysTTL).Err()
+	}
+
+	return &official, nil
 }
 
 // GetPartyCards returns all active parties enriched with real member counts,
 // sample member avatars, top national leadership positions, and the user's membership status.
-func (s *PartiesService) GetPartyCards(ctx context.Context, currentUserID *int64) ([]PartyCardDTO, error) {
+func (s *PartiesService) GetPartyCards(ctx context.Context, currentUserID *int64) ([]PartyCard, error) {
 	parties, err := s.ListParties(ctx)
 	if err != nil {
 		return nil, err
@@ -365,90 +554,38 @@ func (s *PartiesService) GetPartyCards(ctx context.Context, currentUserID *int64
 
 	// 1. Fetch active national member counts per party using cached chapter member counts
 	memberCountsMap := make(map[int16]int64, len(parties))
+	nationalChapterIDs := make(map[int16]int32, len(parties))
 	for _, p := range parties {
 		if natChapterID, err := s.GetOrCreateNationalChapter(ctx, p.ID, constants.NigeriaCountryID); err == nil {
+			nationalChapterIDs[p.ID] = natChapterID
 			if count, err := s.GetChapterMemberCount(ctx, p.ID, natChapterID); err == nil {
 				memberCountsMap[p.ID] = count
 			}
 		}
 	}
 
-	// 2. Fetch sample member avatars (up to 5 per party)
-	sampleAvatarsMap := make(map[int16][]PartySampleMemberDTO)
-	if avatars, err := s.queries.GetPartiesSampleMemberAvatars(ctx); err == nil {
-		for _, a := range avatars {
-			var fn, ln, un *string
-			if a.FirstName.Valid && a.FirstName.String != "" {
-				s := a.FirstName.String
-				fn = &s
-			}
-			if a.LastName.Valid && a.LastName.String != "" {
-				s := a.LastName.String
-				ln = &s
-			}
-			if a.Username.Valid && a.Username.String != "" {
-				s := a.Username.String
-				un = &s
-			}
-			sampleAvatarsMap[a.PartyID] = append(sampleAvatarsMap[a.PartyID], PartySampleMemberDTO{
-				UserID:    a.UserID,
-				FirstName: fn,
-				LastName:  ln,
-				Username:  un,
-				Avatar:    a.Avatar.String,
-			})
+	// 2. Fetch sample member avatars (up to 5 per party, cached in Redis)
+	sampleAvatarsMap := make(map[int16][]PartySampleMember, len(parties))
+	for _, p := range parties {
+		if avatars, err := s.GetPartySampleMemberAvatars(ctx, p.ID); err == nil {
+			sampleAvatarsMap[p.ID] = avatars
 		}
 	}
 
-	// 3. Fetch top national officials per party
-	officialsMap := make(map[int16][]PartyOfficialCardDTO)
-	if officialsRows, err := s.queries.GetPartiesTopNationalOfficials(ctx); err == nil {
-		for _, off := range officialsRows {
-			nameParts := []string{}
-			if off.FirstName.Valid && off.FirstName.String != "" {
-				nameParts = append(nameParts, off.FirstName.String)
-			}
-			if off.LastName.Valid && off.LastName.String != "" {
-				nameParts = append(nameParts, off.LastName.String)
-			}
-			fullName := strings.Join(nameParts, " ")
-			if fullName == "" && off.Username.Valid {
-				fullName = off.Username.String
-			}
-			var namePtr *string
-			if fullName != "" {
-				namePtr = &fullName
-			}
-
-			var unPtr *string
-			if off.Username.Valid && off.Username.String != "" {
-				unPtr = &off.Username.String
-			}
-
-			var avPtr *string
-			if off.Avatar.Valid && off.Avatar.String != "" {
-				avPtr = &off.Avatar.String
-			}
-
-			var sincePtr *string
-			if off.TenureStart.Valid {
-				s := fmt.Sprintf("since %d", off.TenureStart.Time.Year())
-				sincePtr = &s
-			}
-
-			uid := off.UserID
-			officialsMap[off.PartyID] = append(officialsMap[off.PartyID], PartyOfficialCardDTO{
-				PositionID:   off.PositionID,
-				PositionName: off.PositionName,
-				PositionCode: off.PositionCode,
-				RankOrder:    off.RankOrder,
-				UserID:       &uid,
-				Name:         namePtr,
-				Username:     unPtr,
-				Avatar:       avPtr,
-				Since:        sincePtr,
-				IsVacant:     false,
-			})
+	// 3. Fetch top national officials per party (Chairman & Secretary)
+	officialsMap := make(map[int16][]PartyOfficialCard, len(parties))
+	for _, p := range parties {
+		natChapterID, ok := nationalChapterIDs[p.ID]
+		if !ok {
+			continue
+		}
+		// Chairman (Position ID 1)
+		if chair, err := s.GetOnePartyChapterOfficial(ctx, natChapterID, constants.PartyPositionChairmanID); err == nil && chair != nil {
+			officialsMap[p.ID] = append(officialsMap[p.ID], *chair)
+		}
+		// Secretary (Position ID 4)
+		if sec, err := s.GetOnePartyChapterOfficial(ctx, natChapterID, constants.PartyPositionSecretaryID); err == nil && sec != nil {
+			officialsMap[p.ID] = append(officialsMap[p.ID], *sec)
 		}
 	}
 
@@ -462,8 +599,8 @@ func (s *PartiesService) GetPartyCards(ctx context.Context, currentUserID *int64
 		}
 	}
 
-	// 5. Build final PartyCardDTO list
-	cards := make([]PartyCardDTO, 0, len(parties))
+	// 5. Build final PartyCard list
+	cards := make([]PartyCard, 0, len(parties))
 	for _, p := range parties {
 		var colorHex, darkColorHex, dateFounded, coverImage *string
 		var coverPositionY *int16
@@ -487,26 +624,26 @@ func (s *PartiesService) GetPartyCards(ctx context.Context, currentUserID *int64
 
 		sampleMembers := sampleAvatarsMap[p.ID]
 		if sampleMembers == nil {
-			sampleMembers = []PartySampleMemberDTO{}
+			sampleMembers = []PartySampleMember{}
 		}
 
 		// Prepare 2 national positions (with fallback to Vacant indicators)
 		assignedOfficials := officialsMap[p.ID]
-		officials := make([]PartyOfficialCardDTO, 0, 2)
+		officials := make([]PartyOfficialCard, 0, 2)
 		if len(assignedOfficials) >= 2 {
 			officials = append(officials, assignedOfficials[0], assignedOfficials[1])
 		} else if len(assignedOfficials) == 1 {
 			officials = append(officials, assignedOfficials[0])
 			// Fallback second official to Vacant
 			if strings.EqualFold(assignedOfficials[0].PositionCode, "chairman") {
-				officials = append(officials, PartyOfficialCardDTO{
+				officials = append(officials, PartyOfficialCard{
 					PositionName: "Secretary",
 					PositionCode: "secretary",
 					RankOrder:    4,
 					IsVacant:     true,
 				})
 			} else {
-				officials = append(officials, PartyOfficialCardDTO{
+				officials = append(officials, PartyOfficialCard{
 					PositionName: "Chairman",
 					PositionCode: "chairman",
 					RankOrder:    1,
@@ -516,13 +653,13 @@ func (s *PartiesService) GetPartyCards(ctx context.Context, currentUserID *int64
 		} else {
 			// Both positions vacant
 			officials = append(officials,
-				PartyOfficialCardDTO{
+				PartyOfficialCard{
 					PositionName: "Chairman",
 					PositionCode: "chairman",
 					RankOrder:    1,
 					IsVacant:     true,
 				},
-				PartyOfficialCardDTO{
+				PartyOfficialCard{
 					PositionName: "Secretary",
 					PositionCode: "secretary",
 					RankOrder:    4,
@@ -531,7 +668,7 @@ func (s *PartiesService) GetPartyCards(ctx context.Context, currentUserID *int64
 			)
 		}
 
-		cards = append(cards, PartyCardDTO{
+		cards = append(cards, PartyCard{
 			ID:             p.ID,
 			ShortName:      p.ShortName,
 			Name:           p.Name,

@@ -15,10 +15,10 @@ type UserWithPlaces struct {
 	Roles          CachedUserRoles                  `json:"roles"`
 }
 
-// PartyWithVerifications extends the base Party struct to include
-// a list of active verifications attached to the party.
+// PartyWithVerifications extends the ListPartiesRow struct to include
+// a list of active verifications attached to the party without leaking confidential fields.
 type PartyWithVerifications struct {
-	Party
+	ListPartiesRow
 	Verifications []GetPageVerificationsRow `json:"verifications"`
 }
 

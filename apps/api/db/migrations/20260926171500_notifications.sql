@@ -28,11 +28,11 @@ CREATE TABLE IF NOT EXISTS notifications (
 
 -- Fast unread queries for the notification bell badge & list
 CREATE INDEX IF NOT EXISTS idx_notifications_recipient_unread 
-    ON notifications(recipient_user_id, created_at DESC) 
+    ON notifications(recipient_user_id, id DESC) 
     WHERE read_at IS NULL;
 
 CREATE INDEX IF NOT EXISTS idx_notifications_recipient_all 
-    ON notifications(recipient_user_id, created_at DESC);
+    ON notifications(recipient_user_id, id DESC);
 
 -- Prevents duplicate unread notification rows for the same event group
 CREATE UNIQUE INDEX IF NOT EXISTS idx_notifications_group_unread 
@@ -69,7 +69,7 @@ CREATE TABLE IF NOT EXISTS party_notifications (
 );
 
 CREATE INDEX IF NOT EXISTS idx_party_notifications_lookup 
-    ON party_notifications(party_id, chapter_id, created_at DESC);
+    ON party_notifications(party_id, chapter_id, id DESC);
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_party_notifications_group 
     ON party_notifications(party_id, COALESCE(chapter_id, 0), group_key) 

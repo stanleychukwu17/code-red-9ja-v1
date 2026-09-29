@@ -42,11 +42,11 @@ CREATE TABLE party_wallet_transactions (
 );
 
 -- Indexes for common lookups
-CREATE INDEX idx_party_wallet_tx_wallet_created ON party_wallet_transactions(wallet_id, created_at DESC);
+CREATE INDEX idx_party_wallet_tx_wallet_id ON party_wallet_transactions(wallet_id, id DESC);
 CREATE INDEX idx_party_wallet_transactions_category ON party_wallet_transactions(transaction_category);
 
 -- +goose Down
 DROP INDEX IF EXISTS idx_party_wallet_transactions_category;
-DROP INDEX IF EXISTS idx_party_wallet_tx_wallet_created;
+DROP INDEX IF EXISTS idx_party_wallet_tx_wallet_id;
 DROP TABLE IF EXISTS party_wallet_transactions;
 DROP TABLE IF EXISTS party_wallets;

@@ -80,7 +80,7 @@ JOIN plans p ON pmc.plan_id = p.id
 JOIN election_groups eg ON pmc.election_group_id = eg.id
 JOIN elections e ON pmc.election_id = e.id
 WHERE pmc.party_id = $1
-ORDER BY pmc.created_at DESC;
+ORDER BY pmc.id DESC;
 
 -- name: ListAllPartyMarketingCampaigns :many
 SELECT 

@@ -30,9 +30,9 @@ type PartiesService interface {
 	CreateParty(ctx context.Context, shortName, name, logo string, logoFileID *int64, displayOrder int32, colorHex, darkColorHex, coverImage *string, coverImageFileID *int64, coverPositionY *int16, dateFounded *string) (queries.Party, error)
 	GetPartyInfo(ctx context.Context, partyID int16) *queries.PartyWithVerifications
 	GetPartyBasicInfo(ctx context.Context, partyID int16) *queries.PartyBasicInfoWithVerifications
-	GetPartyByShortName(ctx context.Context, shortName string) (queries.Party, error)
+	GetPartyByShortName(ctx context.Context, shortName string) (*queries.PartyWithVerifications, error)
 	ListParties(ctx context.Context) ([]queries.PartyWithVerifications, error)
-	GetPartyCards(ctx context.Context, currentUserID *int64) ([]partiesservice.PartyCardDTO, error)
+	GetPartyCards(ctx context.Context, currentUserID *int64) ([]partiesservice.PartyCard, error)
 	UpdateParty(ctx context.Context, id int64, shortName, name, logo string, logoFileID *int64, displayOrder int32, colorHex, darkColorHex, coverImage *string, coverImageFileID *int64, coverPositionY *int16, dateFounded *string) (queries.Party, error)
 	DeleteParty(ctx context.Context, id int64) error
 	UpdatePartyIsVerified(ctx context.Context, partyID int16, isVerified bool) error
@@ -538,46 +538,6 @@ func (h *Handler) ListPartiesPublic(w http.ResponseWriter, r *http.Request) {
 
 	var publicParties []PartyPublic
 	for _, p := range parties {
-		isAccepting := false
-		if p.Status == "active" && p.IsVerified.Bool && p.Slots > 0 && p.AgentPaymentBalanceKobo > 0 {
-			if len(p.AgentAcquisitionTargets) > 0 && string(p.AgentAcquisitionTargets) != "{}" && string(p.AgentAcquisitionTargets) != "null" {
-				if len(p.AgentPaymentAllocationKobo) > 0 && string(p.AgentPaymentAllocationKobo) != "{}" && string(p.AgentPaymentAllocationKobo) != "null" {
-					var alloc map[string]struct {
-						Default *int64 `json:"default"`
-					}
-					if err := json.Unmarshal(p.AgentPaymentAllocationKobo, &alloc); err == nil {
-						roles := []struct {
-							camel string
-							snake string
-						}{
-							{camel: "pollingAgent", snake: "polling_agent"},
-							{camel: "wardElectionSupervisor", snake: "ward_election_supervisor"},
-							{camel: "lgaElectionSupervisor", snake: "lga_election_supervisor"},
-							{camel: "stateElectionSupervisor", snake: "state_election_supervisor"},
-						}
-						var maxDefault int64 = -1
-						hasAllDefaults := true
-						for _, rolePair := range roles {
-							cfg, exists := alloc[rolePair.camel]
-							if !exists {
-								cfg, exists = alloc[rolePair.snake]
-							}
-							if !exists || cfg.Default == nil || *cfg.Default <= 0 {
-								hasAllDefaults = false
-								break
-							}
-							if *cfg.Default > maxDefault {
-								maxDefault = *cfg.Default
-							}
-						}
-						if hasAllDefaults && maxDefault > 0 && p.AgentPaymentBalanceKobo >= maxDefault {
-							isAccepting = true
-						}
-					}
-				}
-			}
-		}
-
 		publicParties = append(publicParties, PartyPublic{
 			ID:                      p.ID,
 			ShortName:               p.ShortName,
@@ -586,7 +546,7 @@ func (h *Handler) ListPartiesPublic(w http.ResponseWriter, r *http.Request) {
 			DisplayOrder:            p.DisplayOrder,
 			Status:                  p.Status,
 			IsVerified:              p.IsVerified.Bool,
-			IsAcceptingApplications: isAccepting,
+			IsAcceptingApplications: p.IsAcceptingApplications,
 			ColorHex:                p.ColorHex.String,
 			DarkColorHex:            p.DarkColorHex.String,
 		})
@@ -837,7 +797,7 @@ func (h *Handler) GetPartyWallet(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		wallet, err = h.partiesService.CreatePartyWallet(r.Context(), party.Party)
+		wallet, err = h.partiesService.CreatePartyWallet(r.Context(), queries.Party{ID: party.ID, Name: party.Name})
 		if err != nil {
 			if containsString(err.Error(), "unique") || containsString(err.Error(), "duplicate") {
 				// Edge case: someone just created it, try fetching one last time
@@ -1029,7 +989,7 @@ func (h *Handler) CreatePartyWalletHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	wallet, err := h.partiesService.CreatePartyWallet(r.Context(), party.Party)
+	wallet, err := h.partiesService.CreatePartyWallet(r.Context(), queries.Party{ID: party.ID, Name: party.Name})
 	if err != nil {
 		if containsString(err.Error(), "unique") || containsString(err.Error(), "duplicate") {
 			h.utils.RespondError(w, http.StatusConflict, "This party already has a wallet")

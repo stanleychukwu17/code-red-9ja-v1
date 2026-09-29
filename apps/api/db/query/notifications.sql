@@ -67,7 +67,7 @@ SELECT
 FROM notifications n
 LEFT JOIN users u ON u.id = n.actor_user_id
 WHERE n.recipient_user_id = $1
-ORDER BY n.created_at DESC
+ORDER BY n.id DESC
 LIMIT $2 OFFSET $3;
 
 -- name: GetUnreadNotificationsCount :one
@@ -167,7 +167,7 @@ LEFT JOIN party_notification_reads pnr
     ON pnr.party_notification_id = pn.id 
     AND pnr.user_id = $1
 WHERE pn.party_id = $2
-ORDER BY pn.created_at DESC
+ORDER BY pn.id DESC
 LIMIT $3 OFFSET $4;
 
 -- name: GetUnreadPartyNotificationsCountForUser :one

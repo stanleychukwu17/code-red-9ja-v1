@@ -306,7 +306,7 @@ func (q *Queries) ListPartiesWithoutWallet(ctx context.Context) ([]Party, error)
 const listWalletTransactions = `-- name: ListWalletTransactions :many
 SELECT id, wallet_id, transaction_reference, type, amount_kobo, balance_after_kobo, payer_name, payer_account_number, payer_bank_code, narration, transaction_category, raw_payload, created_at FROM party_wallet_transactions
 WHERE wallet_id = $1
-ORDER BY created_at DESC
+ORDER BY id DESC
 LIMIT $2 OFFSET $3
 `
 

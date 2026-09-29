@@ -37,7 +37,7 @@ RETURNING *;
 -- name: ListUserWalletTransactions :many
 SELECT * FROM user_wallet_transactions
 WHERE wallet_id = $1
-ORDER BY created_at DESC
+ORDER BY id DESC
 LIMIT $2 OFFSET $3;
 
 -- name: GetUserWalletTransactionByReference :one

@@ -27,12 +27,12 @@ const (
 	//--END--
 
 	//--START-- for user
-	RedisUserInfo        = "user:info:"        // STRING: user:info:<userFakeID> used to store and retrieve user info.
-	RedisUserMoreInfo    = "user:more_info:"   // STRING: user:more_info:<userID> used to store and retrieve user more_info.
-	RedisUserRoles       = "user:roles:"       // STRING: user:roles:<userID> used to store and retrieve user roles.
-	RedisUserPreferences         = "user:preferences:"         // STRING: user:preferences:<userID> used to store and retrieve user preferences.
+	RedisUserInfo                = "user:info:"               // STRING: user:info:<userFakeID> used to store and retrieve user info.
+	RedisUserMoreInfo            = "user:more_info:"          // STRING: user:more_info:<userID> used to store and retrieve user more_info.
+	RedisUserRoles               = "user:roles:"              // STRING: user:roles:<userID> used to store and retrieve user roles.
+	RedisUserPreferences         = "user:preferences:"        // STRING: user:preferences:<userID> used to store and retrieve user preferences.
 	RedisNotificationPreferences = "user:notification_prefs:" // STRING: user:notification_prefs:<userID> used to store notification preferences.
-	RedisReferralCode            = "user:referral_code:"        // STRING: user:referral_code:<code> used to store cached referrer info JSON (id, name).
+	RedisReferralCode            = "user:referral_code:"      // STRING: user:referral_code:<code> used to store cached referrer info JSON (id, name).
 	//--END--
 
 	//--START-- for countries and states
@@ -49,15 +49,17 @@ const (
 	//--END--
 
 	//--START-- for parties
-	RedisPartiesList        = "parties:list"                   // STRING: used to store and retrieve all parties and they details, the value is a JSON string of all parties.
-	RedisPartyInfo          = "parties:info:"                  // STRING: "parties:info:<partyID>" is used to store and retrieve party info.
-	RedisPartyBasicInfo     = "parties:basic_info:"            // STRING: "parties:basic_info:<partyID>" is used to store and retrieve party basic info.
-	RedisChapterMemberCount = "parties:chapter:members_count:" // STRING: "parties:chapter:members_count:<chapterID>" is used to store and retrieve the number of members in each chapter of a party.
-	RedisNationalChapter    = "parties:national_chapter:"      // STRING: "parties:national_chapter:<partyID>:<countryID>" is used to store the national chapter ID.
-	RedisZonalChapter       = "parties:zonal_chapter:"         // STRING: "parties:zonal_chapter:<partyID>:<zonalID>" is used to store the zonal chapter ID.
-	RedisStateChapter       = "parties:state_chapter:"         // STRING: "parties:state_chapter:<partyID>:<stateID>" is used to store the state chapter ID.
-	RedisLGAChapter         = "parties:lga_chapter:"           // STRING: "parties:lga_chapter:<partyID>:<lgaID>" is used to store the LGA chapter ID.
-	RedisWardChapter        = "parties:ward_chapter:"          // STRING: "parties:ward_chapter:<partyID>:<wardID>" is used to store the ward chapter ID.
+	RedisPartiesList           = "parties:list"                   // STRING: used to store and retrieve all parties and they details, the value is a JSON string of all parties.
+	RedisPartyInfo             = "parties:info:"                  // STRING: "parties:info:<partyID>" is used to store and retrieve party info.
+	RedisPartyBasicInfo        = "parties:basic_info:"            // STRING: "parties:basic_info:<partyID>" is used to store and retrieve party basic info.
+	RedisChapterMemberCount    = "parties:chapter:members_count:" // STRING: "parties:chapter:members_count:<chapterID>" is used to store and retrieve the number of members in each chapter of a party.
+	RedisNationalChapter       = "parties:national_chapter:"      // STRING: "parties:national_chapter:<partyID>:<countryID>" is used to store the national chapter ID.
+	RedisZonalChapter          = "parties:zonal_chapter:"         // STRING: "parties:zonal_chapter:<partyID>:<zonalID>" is used to store the zonal chapter ID.
+	RedisStateChapter          = "parties:state_chapter:"         // STRING: "parties:state_chapter:<partyID>:<stateID>" is used to store the state chapter ID.
+	RedisLGAChapter            = "parties:lga_chapter:"           // STRING: "parties:lga_chapter:<partyID>:<lgaID>" is used to store the LGA chapter ID.
+	RedisWardChapter           = "parties:ward_chapter:"          // STRING: "parties:ward_chapter:<partyID>:<wardID>" is used to store the ward chapter ID.
+	RedisParties5MemberAvatars = "parties:sample_member_avatars:" // STRING: "parties:sample_member_avatars:<partyID>" is used to store sample member avatars for a party.
+	RedisChapterOfficial       = "parties:chapter:official:"      // STRING: "parties:chapter:official:<chapterID>:<positionID>" is used to store active official for a chapter and position.
 	//--END--
 
 	//--START-- for page verifications & badges
@@ -122,6 +124,7 @@ var AllRedisPrefixes = []string{
 	RedisStateChapter,
 	RedisLGAChapter,
 	RedisWardChapter,
+	RedisParties5MemberAvatars,
 	RedisPageVerificationTypesList,
 	RedisPageVerificationTypeInfo,
 	RedisPageVerifications,

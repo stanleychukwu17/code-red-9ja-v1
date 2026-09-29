@@ -59,9 +59,9 @@ export type PartyOfficialCardInfo = {
  */
 export type PartySampleMember = {
 	user_id: number;
-	first_name?: string | null;
-	last_name?: string | null;
-	username?: string | null;
+	first_name: string;
+	last_name: string;
+	username: string;
 	avatar: string;
 };
 

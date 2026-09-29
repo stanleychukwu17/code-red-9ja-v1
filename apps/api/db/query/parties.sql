@@ -13,7 +13,47 @@ SELECT * FROM parties WHERE short_name = $1;
 SELECT id, short_name, name, logo, is_verified, color_hex, dark_color_hex FROM parties WHERE id = $1 LIMIT 1;
 
 -- name: ListParties :many
-SELECT * FROM parties
+SELECT 
+  id,
+  short_name,
+  name,
+  logo,
+  logo_file_id,
+  cover_image,
+  cover_image_file_id,
+  cover_position_y,
+  display_order,
+  status,
+  slots,
+  is_verified,
+  color_hex,
+  dark_color_hex,
+  date_founded,
+  created_at,
+  updated_at,
+  (
+    status = 'active'
+    AND is_verified = true
+    AND slots > 0
+    AND agent_acquisition_targets IS NOT NULL 
+    AND agent_acquisition_targets != '{}'::jsonb
+    AND agent_payment_allocation_kobo IS NOT NULL 
+    AND agent_payment_allocation_kobo != '{}'::jsonb
+    AND agent_payment_balance_kobo > 0
+    AND (
+      COALESCE((agent_payment_allocation_kobo->'pollingAgent'->>'default')::bigint, (agent_payment_allocation_kobo->'polling_agent'->>'default')::bigint, 0) > 0
+      AND COALESCE((agent_payment_allocation_kobo->'wardElectionSupervisor'->>'default')::bigint, (agent_payment_allocation_kobo->'ward_election_supervisor'->>'default')::bigint, 0) > 0
+      AND COALESCE((agent_payment_allocation_kobo->'lgaElectionSupervisor'->>'default')::bigint, (agent_payment_allocation_kobo->'lga_election_supervisor'->>'default')::bigint, 0) > 0
+      AND COALESCE((agent_payment_allocation_kobo->'stateElectionSupervisor'->>'default')::bigint, (agent_payment_allocation_kobo->'state_election_supervisor'->>'default')::bigint, 0) > 0
+    )
+    AND agent_payment_balance_kobo >= GREATEST(
+      COALESCE((agent_payment_allocation_kobo->'pollingAgent'->>'default')::bigint, (agent_payment_allocation_kobo->'polling_agent'->>'default')::bigint, 0),
+      COALESCE((agent_payment_allocation_kobo->'wardElectionSupervisor'->>'default')::bigint, (agent_payment_allocation_kobo->'ward_election_supervisor'->>'default')::bigint, 0),
+      COALESCE((agent_payment_allocation_kobo->'lgaElectionSupervisor'->>'default')::bigint, (agent_payment_allocation_kobo->'lga_election_supervisor'->>'default')::bigint, 0),
+      COALESCE((agent_payment_allocation_kobo->'stateElectionSupervisor'->>'default')::bigint, (agent_payment_allocation_kobo->'state_election_supervisor'->>'default')::bigint, 0)
+    )
+  )::boolean AS is_accepting_applications
+FROM parties
 WHERE status = 'active'
 ORDER BY display_order ASC, name ASC;
 
@@ -159,31 +199,42 @@ WHERE id = $2 AND agent_payment_balance_kobo >= $1
 RETURNING *;
 
 
--- name: GetPartiesSampleMemberAvatars :many
-SELECT party_id::smallint, user_id, first_name, last_name, username, avatar
-FROM (
-  SELECT pm.party_id, u.id AS user_id, u.first_name, u.last_name, u.username, u.avatar,
-         ROW_NUMBER() OVER (PARTITION BY pm.party_id ORDER BY pm.created_at DESC) as rn
-  FROM party_membership pm
-  JOIN users u ON u.id = pm.user_id
-  WHERE pm.status = 'active' AND u.avatar IS NOT NULL AND u.avatar != ''
-) sub
-WHERE rn <= 5;
+-- name: GetPartySampleMemberAvatars :many
+SELECT pm.party_id, u.id AS user_id, u.first_name, u.last_name, u.username, u.avatar
+FROM party_membership pm
+JOIN users u ON u.id = pm.user_id
+WHERE pm.party_id = $1 
+  AND pm.status = 'active' 
+  AND u.avatar IS NOT NULL 
+  AND u.avatar != ''
+ORDER BY pm.id DESC
+LIMIT 5;
 
--- name: GetPartiesTopNationalOfficials :many
-SELECT party_id, position_id, position_name, position_code, rank_order,
-       user_id, first_name, last_name, username, avatar, tenure_start
-FROM (
-  SELECT pa.party_id, pa.position_id, pos.name AS position_name, pos.code AS position_code, pos.rank_order,
-         pa.user_id, u.first_name, u.last_name, u.username, u.avatar, pa.tenure_start,
-         ROW_NUMBER() OVER (PARTITION BY pa.party_id ORDER BY pos.rank_order ASC, pa.tenure_start DESC) as rn
-  FROM party_position_assignments pa
-  JOIN party_positions pos ON pos.id = pa.position_id
-  JOIN party_chapters pc ON pc.id = pa.chapter_id AND pc.chapter_type = 'national'
-  JOIN users u ON u.id = pa.user_id
-  WHERE pa.status = 'active'
-) sub
-WHERE rn <= 2;
+-- name: GetOnePartyChapterOfficial :one
+SELECT 
+    pa.id AS assignment_id,
+    pa.party_id,
+    pa.chapter_id,
+    pa.position_id,
+    pa.user_id,
+    pa.appointment_type,
+    pa.status AS assignment_status,
+    pa.tenure_start,
+    pa.tenure_end,
+    pos.name AS position_name,
+    pos.code AS position_code,
+    pos.rank_order,
+    u.first_name,
+    u.last_name,
+    u.username,
+    u.avatar
+FROM party_position_assignments pa
+JOIN party_positions pos ON pos.id = pa.position_id
+JOIN users u ON u.id = pa.user_id
+WHERE pa.chapter_id = $1 
+  AND pa.position_id = $2 
+  AND pa.status = 'active'
+LIMIT 1;
 
 -- name: GetUserActivePartyIDs :many
 SELECT DISTINCT p_id::smallint AS party_id

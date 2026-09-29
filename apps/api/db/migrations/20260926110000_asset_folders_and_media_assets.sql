@@ -47,9 +47,9 @@ CREATE TABLE IF NOT EXISTS media_assets (
   updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Indexes for media_assets
 -- Index for listing contents of a folder
 CREATE INDEX IF NOT EXISTS idx_media_assets_folder ON media_assets(folder_id);
+CREATE INDEX IF NOT EXISTS idx_media_assets_folder_id ON media_assets(folder_id, id DESC);
 
 -- Filter by type or extension (e.g. show only videos, vectors, or 3d files)
 CREATE INDEX IF NOT EXISTS idx_media_assets_type ON media_assets(file_type);

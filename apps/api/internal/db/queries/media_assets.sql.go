@@ -332,7 +332,7 @@ WHERE
   )
   AND ($2::text IS NULL OR file_type = $2::text)
   AND ($3::text IS NULL OR name ILIKE '%' || $3::text || '%')
-ORDER BY created_at DESC
+ORDER BY id DESC
 LIMIT $5::int
 OFFSET $4::int
 `
@@ -508,7 +508,7 @@ SELECT id, folder_id, name, r2_key, public_url, file_type, extension, mime_type,
 WHERE
   name ILIKE '%' || $1::text || '%'
   OR $1::text = ANY(tags)
-ORDER BY created_at DESC
+ORDER BY id DESC
 LIMIT $2::int
 `
 

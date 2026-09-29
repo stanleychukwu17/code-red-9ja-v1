@@ -105,7 +105,7 @@ WHERE
   )
   AND (sqlc.narg(file_type)::text IS NULL OR file_type = sqlc.narg(file_type)::text)
   AND (sqlc.narg(search)::text IS NULL OR name ILIKE '%' || sqlc.narg(search)::text || '%')
-ORDER BY created_at DESC
+ORDER BY id DESC
 LIMIT sqlc.arg(limit_count)::int
 OFFSET sqlc.arg(offset_count)::int;
 
@@ -124,7 +124,7 @@ SELECT * FROM media_assets
 WHERE
   name ILIKE '%' || sqlc.arg(query)::text || '%'
   OR sqlc.arg(query)::text = ANY(tags)
-ORDER BY created_at DESC
+ORDER BY id DESC
 LIMIT sqlc.arg(limit_count)::int;
 
 -- name: DeleteMediaAsset :exec

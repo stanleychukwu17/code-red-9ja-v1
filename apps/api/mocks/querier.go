@@ -5955,23 +5955,23 @@ func (_m *Querier) ListOffices(ctx context.Context) ([]queries.Office, error) {
 }
 
 // ListParties provides a mock function with given fields: ctx
-func (_m *Querier) ListParties(ctx context.Context) ([]queries.Party, error) {
+func (_m *Querier) ListParties(ctx context.Context) ([]queries.ListPartiesRow, error) {
 	ret := _m.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListParties")
 	}
 
-	var r0 []queries.Party
+	var r0 []queries.ListPartiesRow
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context) ([]queries.Party, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context) ([]queries.ListPartiesRow, error)); ok {
 		return rf(ctx)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context) []queries.Party); ok {
+	if rf, ok := ret.Get(0).(func(context.Context) []queries.ListPartiesRow); ok {
 		r0 = rf(ctx)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]queries.Party)
+			r0 = ret.Get(0).([]queries.ListPartiesRow)
 		}
 	}
 
