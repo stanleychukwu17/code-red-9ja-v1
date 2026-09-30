@@ -2,6 +2,10 @@ import { getCookie } from "@tanstack/react-start/server";
 import { refreshUserToken } from "./auth/auth";
 import { FRONTEND_APP } from "../config";
 
+// Resolves input (string, URL, or Request) to a string URL
+const getRequestUrl = (input: string | URL | Request) =>
+  typeof input === "string" ? input : input instanceof URL ? input.toString() : (input as Request).url || "";
+
 /**
  * A wrapper around the native fetch API that automatically extracts the client's IP address
  * from the `client_ip` cookie and appends it to the `X-Forwarded-For` header.
@@ -40,8 +44,11 @@ export async function apiFetch(
   // sends the request to the backend api
   const response = await fetch(input, requestInit);
 
-  // If 401 Unauthorized occurs and this isn't already a retry attempt
-  if (response.status === 401 && !isRetry) {
+  // Avoid recursive refresh loops or refreshing tokens on login/logout failures
+  const isAuthEndpoint = getRequestUrl(input).match(/\/auth\/(refresh|login|logout)/);
+
+  // If 401 Unauthorized occurs, not an auth endpoint, and this isn't already a retry attempt
+  if (response.status === 401 && !isRetry && !isAuthEndpoint) {
     const clone = response.clone();
     try {
       const resData = await clone.json();

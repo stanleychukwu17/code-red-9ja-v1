@@ -1287,6 +1287,14 @@ type PartyElectionGroup struct {
 	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
 }
 
+type PartyFollow struct {
+	ID        int64              `json:"id"`
+	UserID    int64              `json:"user_id"`
+	PartyID   int16              `json:"party_id"`
+	ChapterID int32              `json:"chapter_id"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
 type PartyMarketingCampaign struct {
 	ID                 int32              `json:"id"`
 	PartyID            int16              `json:"party_id"`
@@ -1376,6 +1384,15 @@ type PartyPositionAssignment struct {
 	TenureStart     pgtype.Date        `json:"tenure_start"`
 	TenureEnd       pgtype.Date        `json:"tenure_end"`
 	AppointedBy     pgtype.Int8        `json:"appointed_by"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+type PartyUserBlock struct {
+	ID              int64              `json:"id"`
+	PartyID         int16              `json:"party_id"`
+	BlockedUserID   int64              `json:"blocked_user_id"`
+	BlockedByUserID pgtype.Int8        `json:"blocked_by_user_id"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 }
@@ -1701,6 +1718,20 @@ type UserBankAccount struct {
 	IsPrimary     pgtype.Bool        `json:"is_primary"`
 	CreatedAt     pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+}
+
+type UserBlock struct {
+	ID            int64              `json:"id"`
+	BlockerID     int64              `json:"blocker_id"`
+	BlockedUserID int64              `json:"blocked_user_id"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+}
+
+type UserFollow struct {
+	ID          int64              `json:"id"`
+	FollowerID  int64              `json:"follower_id"`
+	FollowingID int64              `json:"following_id"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 }
 
 type UserMoreInfo struct {

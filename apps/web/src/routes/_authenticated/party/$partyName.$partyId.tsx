@@ -3,7 +3,7 @@ import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { getPartyProfile } from "@/lib/server/parties";
 import { PARTY_PRESETS } from "#/components/parties/party-constants";
-import { PartyEventsCard, PartyHeaderLayout, PartyNavTabs } from "#/components/party";
+import { PartyHeaderLayout, PartyNavTabs } from "#/components/party";
 import { getPageHeader } from "#/lib/shared/meta";
 
 // 1. Define shared query options with staleTime: Infinity
@@ -54,8 +54,7 @@ function PartyLayoutComponent() {
   const partyUpper = (partyDetails?.short_name || partyName).toUpperCase();
   const preset = PARTY_PRESETS[partyUpper];
 
-  const displayName =
-    partyDetails?.name || preset?.chairman?.name || "Peoples Democratic Party";
+  const displayName = partyDetails?.name || preset?.chairman?.name || "Peoples Democratic Party";
   const displayShortName = partyUpper;
 
   const bannerImage =

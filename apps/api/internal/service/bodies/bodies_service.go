@@ -301,7 +301,7 @@ func (s *BodiesService) CheckCountry(ctx context.Context, country_id int16) (que
 	country_dts, _ := s.queries.GetCountryByID(ctx, country_id)
 	if country_dts.ID > 0 {
 		jsonBytes, _ := json.Marshal(country_dts)
-		s.rdb.Set(ctx, redisCountryKey, jsonBytes, 0)
+		s.rdb.Set(ctx, redisCountryKey, jsonBytes, db.RedisOneYearTTL)
 		return country_dts, nil
 	}
 

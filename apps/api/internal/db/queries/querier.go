@@ -44,6 +44,14 @@ type Querier interface {
 	ApproveAgentEarnings(ctx context.Context, id int64) (AgentEarning, error)
 	AssignPartyPosition(ctx context.Context, arg AssignPartyPositionParams) (PartyPositionAssignment, error)
 	AssignUserRole(ctx context.Context, arg AssignUserRoleParams) error
+	// ========================================================
+	// USER BLOCKS
+	// ========================================================
+	BlockUser(ctx context.Context, arg BlockUserParams) (UserBlock, error)
+	// ========================================================
+	// PARTY USER BLOCKS
+	// ========================================================
+	BlockUserByParty(ctx context.Context, arg BlockUserByPartyParams) (PartyUserBlock, error)
 	CalculateElectionMetrics(ctx context.Context, electionID int32) (CalculateElectionMetricsRow, error)
 	CheckAndUpdateLGASupervisorCompletion(ctx context.Context) error
 	CheckAndUpdateStateSupervisorCompletion(ctx context.Context) error
@@ -174,6 +182,8 @@ type Querier interface {
 	GetAssignmentByID(ctx context.Context, id int64) (GetAssignmentByIDRow, error)
 	GetAssignmentForEarnings(ctx context.Context, id int64) (GetAssignmentForEarningsRow, error)
 	GetAssignmentIDByUserAndElectionGroup(ctx context.Context, arg GetAssignmentIDByUserAndElectionGroupParams) (int64, error)
+	// Helper for filtering feeds / search results
+	GetBlockedUserIDsForUser(ctx context.Context, blockerID int64) ([]int64, error)
 	GetChapterMemberCount(ctx context.Context, arg GetChapterMemberCountParams) (int64, error)
 	GetCitiesByStateID(ctx context.Context, stateID int16) ([]GetCitiesByStateIDRow, error)
 	GetCityByID(ctx context.Context, arg GetCityByIDParams) (GetCityByIDRow, error)
@@ -349,6 +359,11 @@ type Querier interface {
 	InsertUserBankAccount(ctx context.Context, arg InsertUserBankAccountParams) (UserBankAccount, error)
 	InsertUserPreferences(ctx context.Context, arg InsertUserPreferencesParams) (UserPreference, error)
 	IsPartyAcceptingApplications(ctx context.Context, id int16) (bool, error)
+	// Checks if blocker_id has blocked blocked_user_id
+	IsUserBlocked(ctx context.Context, arg IsUserBlockedParams) (bool, error)
+	// Useful for chat/DMs/feed: true if either user has blocked the other
+	IsUserBlockedBidirectional(ctx context.Context, arg IsUserBlockedBidirectionalParams) (bool, error)
+	IsUserBlockedByParty(ctx context.Context, arg IsUserBlockedByPartyParams) (bool, error)
 	ListAcceptingParties(ctx context.Context) ([]ListAcceptingPartiesRow, error)
 	ListActiveINECResultGrabbers(ctx context.Context, activeSyncDaysLimit int32) ([]ListActiveINECResultGrabbersRow, error)
 	ListAgentEarnings(ctx context.Context, arg ListAgentEarningsParams) ([]ListAgentEarningsRow, error)
@@ -357,6 +372,8 @@ type Querier interface {
 	ListAllStates(ctx context.Context) ([]CState, error)
 	ListApplications(ctx context.Context, arg ListApplicationsParams) ([]ListApplicationsRow, error)
 	ListAssignments(ctx context.Context, arg ListAssignmentsParams) ([]ListAssignmentsRow, error)
+	ListBlockedUsersByParty(ctx context.Context, arg ListBlockedUsersByPartyParams) ([]ListBlockedUsersByPartyRow, error)
+	ListBlockedUsersByUser(ctx context.Context, arg ListBlockedUsersByUserParams) ([]ListBlockedUsersByUserRow, error)
 	ListChapterOfficials(ctx context.Context, arg ListChapterOfficialsParams) ([]ListChapterOfficialsRow, error)
 	ListCountries(ctx context.Context) ([]ListCountriesRow, error)
 	ListElectionCandidatesByElectionID(ctx context.Context, electionID int32) ([]ElectionCandidate, error)
@@ -485,6 +502,10 @@ type Querier interface {
 	SubmitPollingUnitResult(ctx context.Context, arg SubmitPollingUnitResultParams) (PollingUnitResult, error)
 	SubmitPracticeTest(ctx context.Context, arg SubmitPracticeTestParams) (UserPracticeTest, error)
 	ToggleINECResultGrabberPause(ctx context.Context, id int64) (InecResultGrabber, error)
+	UnblockUser(ctx context.Context, arg UnblockUserParams) error
+	UnblockUserByID(ctx context.Context, arg UnblockUserByIDParams) error
+	UnblockUserByParty(ctx context.Context, arg UnblockUserByPartyParams) error
+	UnblockUserByPartyBlockID(ctx context.Context, arg UnblockUserByPartyBlockIDParams) error
 	UpdateApplicationApproval(ctx context.Context, arg UpdateApplicationApprovalParams) (PartyApplication, error)
 	UpdateApplicationStatus(ctx context.Context, arg UpdateApplicationStatusParams) (PartyApplication, error)
 	UpdateAssetFolder(ctx context.Context, arg UpdateAssetFolderParams) (AssetFolder, error)
