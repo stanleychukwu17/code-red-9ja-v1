@@ -60,6 +60,7 @@ import (
 	webhookshandler "free9ja/api/internal/handler/webhooks"
 	apimiddleware "free9ja/api/internal/middleware"
 	authservice "free9ja/api/internal/service/auth"
+	blocksservice "free9ja/api/internal/service/blocks"
 	bodiesservice "free9ja/api/internal/service/bodies"
 	earningsservice "free9ja/api/internal/service/earnings"
 	electiongroupsservice "free9ja/api/internal/service/election_groups"
@@ -154,6 +155,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	statesService := statesservice.NewStatesService(q, rdb)
 	officesService := officesservice.NewOfficesService(q, rdb)
 	permissionsService := permissionsservice.NewPermissionsService()
+	blocksService := blocksservice.NewBlocksService(q, pool, rdb)
 	electionStatsService := electionstats.NewElectionStatsService(q)
 	notificationsService := notificationsservice.NewService(q, rdb, broadcaster)
 	usersService := usersservice.NewUsersService(q, rdb, monnifyClient, bodiesService)
@@ -163,7 +165,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	pollingUnitsService := pollingunitsservice.NewPollingUnitsService(q, rdb)
 	supervisorAssignmentsService := supervisorassignmentsservice.NewService(q)
 	pollingUnitAssignmentsService := puassignments.NewService(q, rdb, distributor, earningsService)
-	partiesService := partiesservice.NewPartiesService(q, pool, rdb, monnifyClient, utilsInstance, notificationsService)
+	partiesService := partiesservice.NewPartiesService(q, pool, rdb, monnifyClient, utilsInstance, notificationsService, blocksService)
 	electionGroupsService := electiongroupsservice.NewElectionGroupsService(q, rdb, distributor)
 	electionsService := electionsservice.NewElectionsService(q, pool, rdb, distributor, electionGroupsService, earningsService)
 	senatorialDistrictsService := senatorialdistrictsservice.NewSenatorialDistrictsService(q, rdb)

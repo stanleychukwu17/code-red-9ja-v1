@@ -406,7 +406,7 @@ function CollapsibleNavItem({ item, isActive }: { item: AppSidebarItem; isActive
               return (
                 <DropdownMenuItem key={sub.id} asChild className="focus:bg-c-10 dark:focus:bg-black">
                   <Link
-                    to={sub.href}
+                    to={sub.href as any}
                     className={cn(
                       "flex items-center gap-2 text-sm transition-all duration-200 cursor-pointer w-full px-2.5 py-1.5 rounded-xl",
                       "hover:text-c-100 dark:hover:text-logo",
@@ -480,7 +480,7 @@ function CollapsibleNavItem({ item, isActive }: { item: AppSidebarItem; isActive
                     )}
                   >
                     <Link
-                      to={sub.href}
+                      to={sub.href as any}
                       className="flex items-center w-full"
                       onClick={() => {
                         if (isMobile) {

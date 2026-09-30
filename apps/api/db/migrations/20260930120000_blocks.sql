@@ -32,6 +32,8 @@ CREATE TABLE IF NOT EXISTS party_user_blocks (
   CONSTRAINT uq_party_blocked_user UNIQUE (party_id, blocked_user_id)
 );
 
+CREATE INDEX IF NOT EXISTS idx_party_user_blocks_blocked_party ON party_user_blocks(blocked_user_id, party_id);
+
 -- +goose Down
 DROP TABLE IF EXISTS party_user_blocks;
 DROP TABLE IF EXISTS user_blocks;

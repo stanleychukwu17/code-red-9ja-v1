@@ -12,9 +12,10 @@ export const useMarketingCampaigns = (explicitPartyId?: number) => {
 	const partyId = explicitPartyId ?? party?.id;
 	const fetchMarketingCampaignsFn = useServerFn(getPartyMarketingCampaigns);
 
-	const { data: activeMarketingCampaigns, isLoading } = useQuery({
+	const { data: activeMarketingCampaigns, isLoading, refetch, isFetching } = useQuery({
 		queryKey: ["activeMarketingCampaigns", partyId],
 		enabled: !!partyId,
+		staleTime: 10 * 60 * 1000,
 		queryFn: async () => {
 			const res = await fetchMarketingCampaignsFn({
 				data: partyId as number,
@@ -32,5 +33,7 @@ export const useMarketingCampaigns = (explicitPartyId?: number) => {
 	return {
 		activeMarketingCampaigns: activeMarketingCampaigns || [],
 		isLoading,
+		isFetching,
+		refetch,
 	};
 };

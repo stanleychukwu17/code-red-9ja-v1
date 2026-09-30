@@ -26,7 +26,6 @@ import { Route as AuthenticatedPartyShortNameBodiesRouteImport } from './routes/
 import { Route as AuthenticatedPartyShortNameApplicationsRouteImport } from './routes/_authenticated/$partyShortName/applications'
 import { Route as AuthenticatedPartyShortNameAgentsRouteImport } from './routes/_authenticated/$partyShortName/agents'
 import { Route as AuthenticatedPartyShortNameWalletIndexRouteImport } from './routes/_authenticated/$partyShortName/wallet/index'
-import { Route as AuthenticatedPartyShortNamePartyMembersIndexRouteImport } from './routes/_authenticated/$partyShortName/party-members/index'
 import { Route as AuthenticatedPartyShortNameMarketingIndexRouteImport } from './routes/_authenticated/$partyShortName/marketing/index'
 import { Route as AuthenticatedPartyShortNameHomeIndexRouteImport } from './routes/_authenticated/$partyShortName/home/index'
 import { Route as AuthenticatedPartyShortNameElectionsIndexRouteImport } from './routes/_authenticated/$partyShortName/elections/index'
@@ -34,8 +33,10 @@ import { Route as AuthenticatedPartyShortNameElectionRaceIndexRouteImport } from
 import { Route as AuthenticatedPartyShortNameCoverageIndexRouteImport } from './routes/_authenticated/$partyShortName/coverage/index'
 import { Route as AuthenticatedPartyShortNameApplicationsIndexRouteImport } from './routes/_authenticated/$partyShortName/applications/index'
 import { Route as AuthenticatedPartyShortNameAgentsIndexRouteImport } from './routes/_authenticated/$partyShortName/agents/index'
+import { Route as AuthenticatedPartyShortNamePartyMembersSearchUsersRouteImport } from './routes/_authenticated/$partyShortName/party-members/search-users'
 import { Route as AuthenticatedPartyShortNamePartyMembersPartyPositionsRouteImport } from './routes/_authenticated/$partyShortName/party-members/party-positions'
 import { Route as AuthenticatedPartyShortNamePartyMembersPartyAdminRouteImport } from './routes/_authenticated/$partyShortName/party-members/party-admin'
+import { Route as AuthenticatedPartyShortNamePartyMembersMemberRouteImport } from './routes/_authenticated/$partyShortName/party-members/member'
 import { Route as AuthenticatedPartyShortNamePartyMembersAgentRouteImport } from './routes/_authenticated/$partyShortName/party-members/agent'
 import { Route as AuthenticatedPartyShortNameHomeElectionDayRouteImport } from './routes/_authenticated/$partyShortName/home/election-day'
 import { Route as AuthenticatedPartyShortNameElectionsInstancesRouteImport } from './routes/_authenticated/$partyShortName/elections/instances'
@@ -153,12 +154,6 @@ const AuthenticatedPartyShortNameWalletIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedPartyShortNameWalletRoute,
   } as any)
-const AuthenticatedPartyShortNamePartyMembersIndexRoute =
-  AuthenticatedPartyShortNamePartyMembersIndexRouteImport.update({
-    id: '/',
-    path: '/',
-    getParentRoute: () => AuthenticatedPartyShortNamePartyMembersRoute,
-  } as any)
 const AuthenticatedPartyShortNameMarketingIndexRoute =
   AuthenticatedPartyShortNameMarketingIndexRouteImport.update({
     id: '/',
@@ -201,6 +196,12 @@ const AuthenticatedPartyShortNameAgentsIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedPartyShortNameAgentsRoute,
   } as any)
+const AuthenticatedPartyShortNamePartyMembersSearchUsersRoute =
+  AuthenticatedPartyShortNamePartyMembersSearchUsersRouteImport.update({
+    id: '/search-users',
+    path: '/search-users',
+    getParentRoute: () => AuthenticatedPartyShortNamePartyMembersRoute,
+  } as any)
 const AuthenticatedPartyShortNamePartyMembersPartyPositionsRoute =
   AuthenticatedPartyShortNamePartyMembersPartyPositionsRouteImport.update({
     id: '/party-positions',
@@ -211,6 +212,12 @@ const AuthenticatedPartyShortNamePartyMembersPartyAdminRoute =
   AuthenticatedPartyShortNamePartyMembersPartyAdminRouteImport.update({
     id: '/party-admin',
     path: '/party-admin',
+    getParentRoute: () => AuthenticatedPartyShortNamePartyMembersRoute,
+  } as any)
+const AuthenticatedPartyShortNamePartyMembersMemberRoute =
+  AuthenticatedPartyShortNamePartyMembersMemberRouteImport.update({
+    id: '/member',
+    path: '/member',
     getParentRoute: () => AuthenticatedPartyShortNamePartyMembersRoute,
   } as any)
 const AuthenticatedPartyShortNamePartyMembersAgentRoute =
@@ -352,8 +359,10 @@ export interface FileRoutesByFullPath {
   '/$partyShortName/elections/instances': typeof AuthenticatedPartyShortNameElectionsInstancesRoute
   '/$partyShortName/home/election-day': typeof AuthenticatedPartyShortNameHomeElectionDayRoute
   '/$partyShortName/party-members/agent': typeof AuthenticatedPartyShortNamePartyMembersAgentRoute
+  '/$partyShortName/party-members/member': typeof AuthenticatedPartyShortNamePartyMembersMemberRoute
   '/$partyShortName/party-members/party-admin': typeof AuthenticatedPartyShortNamePartyMembersPartyAdminRoute
   '/$partyShortName/party-members/party-positions': typeof AuthenticatedPartyShortNamePartyMembersPartyPositionsRoute
+  '/$partyShortName/party-members/search-users': typeof AuthenticatedPartyShortNamePartyMembersSearchUsersRoute
   '/$partyShortName/agents/': typeof AuthenticatedPartyShortNameAgentsIndexRoute
   '/$partyShortName/applications/': typeof AuthenticatedPartyShortNameApplicationsIndexRoute
   '/$partyShortName/coverage/': typeof AuthenticatedPartyShortNameCoverageIndexRoute
@@ -361,7 +370,6 @@ export interface FileRoutesByFullPath {
   '/$partyShortName/elections/': typeof AuthenticatedPartyShortNameElectionsIndexRoute
   '/$partyShortName/home/': typeof AuthenticatedPartyShortNameHomeIndexRoute
   '/$partyShortName/marketing/': typeof AuthenticatedPartyShortNameMarketingIndexRoute
-  '/$partyShortName/party-members/': typeof AuthenticatedPartyShortNamePartyMembersIndexRoute
   '/$partyShortName/wallet/': typeof AuthenticatedPartyShortNameWalletIndexRoute
   '/$partyShortName/home/results/media-only': typeof AuthenticatedPartyShortNameHomeResultsMediaOnlyRoute
   '/$partyShortName/home/updates/media-only': typeof AuthenticatedPartyShortNameHomeUpdatesMediaOnlyRoute
@@ -375,6 +383,7 @@ export interface FileRoutesByTo {
   '/$partyShortName/bodies': typeof AuthenticatedPartyShortNameBodiesRoute
   '/$partyShortName/candidate-results': typeof AuthenticatedPartyShortNameCandidateResultsRoute
   '/$partyShortName/parties': typeof AuthenticatedPartyShortNamePartiesRoute
+  '/$partyShortName/party-members': typeof AuthenticatedPartyShortNamePartyMembersRouteWithChildren
   '/$partyShortName/users': typeof AuthenticatedPartyShortNameUsersRoute
   '/$partyShortName/agents/lga-supervisor': typeof AuthenticatedPartyShortNameAgentsLgaSupervisorRoute
   '/$partyShortName/agents/polling-agent': typeof AuthenticatedPartyShortNameAgentsPollingAgentRoute
@@ -388,8 +397,10 @@ export interface FileRoutesByTo {
   '/$partyShortName/elections/instances': typeof AuthenticatedPartyShortNameElectionsInstancesRoute
   '/$partyShortName/home/election-day': typeof AuthenticatedPartyShortNameHomeElectionDayRoute
   '/$partyShortName/party-members/agent': typeof AuthenticatedPartyShortNamePartyMembersAgentRoute
+  '/$partyShortName/party-members/member': typeof AuthenticatedPartyShortNamePartyMembersMemberRoute
   '/$partyShortName/party-members/party-admin': typeof AuthenticatedPartyShortNamePartyMembersPartyAdminRoute
   '/$partyShortName/party-members/party-positions': typeof AuthenticatedPartyShortNamePartyMembersPartyPositionsRoute
+  '/$partyShortName/party-members/search-users': typeof AuthenticatedPartyShortNamePartyMembersSearchUsersRoute
   '/$partyShortName/agents': typeof AuthenticatedPartyShortNameAgentsIndexRoute
   '/$partyShortName/applications': typeof AuthenticatedPartyShortNameApplicationsIndexRoute
   '/$partyShortName/coverage': typeof AuthenticatedPartyShortNameCoverageIndexRoute
@@ -397,7 +408,6 @@ export interface FileRoutesByTo {
   '/$partyShortName/elections': typeof AuthenticatedPartyShortNameElectionsIndexRoute
   '/$partyShortName/home': typeof AuthenticatedPartyShortNameHomeIndexRoute
   '/$partyShortName/marketing': typeof AuthenticatedPartyShortNameMarketingIndexRoute
-  '/$partyShortName/party-members': typeof AuthenticatedPartyShortNamePartyMembersIndexRoute
   '/$partyShortName/wallet': typeof AuthenticatedPartyShortNameWalletIndexRoute
   '/$partyShortName/home/results/media-only': typeof AuthenticatedPartyShortNameHomeResultsMediaOnlyRoute
   '/$partyShortName/home/updates/media-only': typeof AuthenticatedPartyShortNameHomeUpdatesMediaOnlyRoute
@@ -436,8 +446,10 @@ export interface FileRoutesById {
   '/_authenticated/$partyShortName/elections/instances': typeof AuthenticatedPartyShortNameElectionsInstancesRoute
   '/_authenticated/$partyShortName/home/election-day': typeof AuthenticatedPartyShortNameHomeElectionDayRoute
   '/_authenticated/$partyShortName/party-members/agent': typeof AuthenticatedPartyShortNamePartyMembersAgentRoute
+  '/_authenticated/$partyShortName/party-members/member': typeof AuthenticatedPartyShortNamePartyMembersMemberRoute
   '/_authenticated/$partyShortName/party-members/party-admin': typeof AuthenticatedPartyShortNamePartyMembersPartyAdminRoute
   '/_authenticated/$partyShortName/party-members/party-positions': typeof AuthenticatedPartyShortNamePartyMembersPartyPositionsRoute
+  '/_authenticated/$partyShortName/party-members/search-users': typeof AuthenticatedPartyShortNamePartyMembersSearchUsersRoute
   '/_authenticated/$partyShortName/agents/': typeof AuthenticatedPartyShortNameAgentsIndexRoute
   '/_authenticated/$partyShortName/applications/': typeof AuthenticatedPartyShortNameApplicationsIndexRoute
   '/_authenticated/$partyShortName/coverage/': typeof AuthenticatedPartyShortNameCoverageIndexRoute
@@ -445,7 +457,6 @@ export interface FileRoutesById {
   '/_authenticated/$partyShortName/elections/': typeof AuthenticatedPartyShortNameElectionsIndexRoute
   '/_authenticated/$partyShortName/home/': typeof AuthenticatedPartyShortNameHomeIndexRoute
   '/_authenticated/$partyShortName/marketing/': typeof AuthenticatedPartyShortNameMarketingIndexRoute
-  '/_authenticated/$partyShortName/party-members/': typeof AuthenticatedPartyShortNamePartyMembersIndexRoute
   '/_authenticated/$partyShortName/wallet/': typeof AuthenticatedPartyShortNameWalletIndexRoute
   '/_authenticated/$partyShortName/home/results/media-only': typeof AuthenticatedPartyShortNameHomeResultsMediaOnlyRoute
   '/_authenticated/$partyShortName/home/updates/media-only': typeof AuthenticatedPartyShortNameHomeUpdatesMediaOnlyRoute
@@ -484,8 +495,10 @@ export interface FileRouteTypes {
     | '/$partyShortName/elections/instances'
     | '/$partyShortName/home/election-day'
     | '/$partyShortName/party-members/agent'
+    | '/$partyShortName/party-members/member'
     | '/$partyShortName/party-members/party-admin'
     | '/$partyShortName/party-members/party-positions'
+    | '/$partyShortName/party-members/search-users'
     | '/$partyShortName/agents/'
     | '/$partyShortName/applications/'
     | '/$partyShortName/coverage/'
@@ -493,7 +506,6 @@ export interface FileRouteTypes {
     | '/$partyShortName/elections/'
     | '/$partyShortName/home/'
     | '/$partyShortName/marketing/'
-    | '/$partyShortName/party-members/'
     | '/$partyShortName/wallet/'
     | '/$partyShortName/home/results/media-only'
     | '/$partyShortName/home/updates/media-only'
@@ -507,6 +519,7 @@ export interface FileRouteTypes {
     | '/$partyShortName/bodies'
     | '/$partyShortName/candidate-results'
     | '/$partyShortName/parties'
+    | '/$partyShortName/party-members'
     | '/$partyShortName/users'
     | '/$partyShortName/agents/lga-supervisor'
     | '/$partyShortName/agents/polling-agent'
@@ -520,8 +533,10 @@ export interface FileRouteTypes {
     | '/$partyShortName/elections/instances'
     | '/$partyShortName/home/election-day'
     | '/$partyShortName/party-members/agent'
+    | '/$partyShortName/party-members/member'
     | '/$partyShortName/party-members/party-admin'
     | '/$partyShortName/party-members/party-positions'
+    | '/$partyShortName/party-members/search-users'
     | '/$partyShortName/agents'
     | '/$partyShortName/applications'
     | '/$partyShortName/coverage'
@@ -529,7 +544,6 @@ export interface FileRouteTypes {
     | '/$partyShortName/elections'
     | '/$partyShortName/home'
     | '/$partyShortName/marketing'
-    | '/$partyShortName/party-members'
     | '/$partyShortName/wallet'
     | '/$partyShortName/home/results/media-only'
     | '/$partyShortName/home/updates/media-only'
@@ -567,8 +581,10 @@ export interface FileRouteTypes {
     | '/_authenticated/$partyShortName/elections/instances'
     | '/_authenticated/$partyShortName/home/election-day'
     | '/_authenticated/$partyShortName/party-members/agent'
+    | '/_authenticated/$partyShortName/party-members/member'
     | '/_authenticated/$partyShortName/party-members/party-admin'
     | '/_authenticated/$partyShortName/party-members/party-positions'
+    | '/_authenticated/$partyShortName/party-members/search-users'
     | '/_authenticated/$partyShortName/agents/'
     | '/_authenticated/$partyShortName/applications/'
     | '/_authenticated/$partyShortName/coverage/'
@@ -576,7 +592,6 @@ export interface FileRouteTypes {
     | '/_authenticated/$partyShortName/elections/'
     | '/_authenticated/$partyShortName/home/'
     | '/_authenticated/$partyShortName/marketing/'
-    | '/_authenticated/$partyShortName/party-members/'
     | '/_authenticated/$partyShortName/wallet/'
     | '/_authenticated/$partyShortName/home/results/media-only'
     | '/_authenticated/$partyShortName/home/updates/media-only'
@@ -711,13 +726,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPartyShortNameWalletIndexRouteImport
       parentRoute: typeof AuthenticatedPartyShortNameWalletRoute
     }
-    '/_authenticated/$partyShortName/party-members/': {
-      id: '/_authenticated/$partyShortName/party-members/'
-      path: '/'
-      fullPath: '/$partyShortName/party-members/'
-      preLoaderRoute: typeof AuthenticatedPartyShortNamePartyMembersIndexRouteImport
-      parentRoute: typeof AuthenticatedPartyShortNamePartyMembersRoute
-    }
     '/_authenticated/$partyShortName/marketing/': {
       id: '/_authenticated/$partyShortName/marketing/'
       path: '/'
@@ -767,6 +775,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPartyShortNameAgentsIndexRouteImport
       parentRoute: typeof AuthenticatedPartyShortNameAgentsRoute
     }
+    '/_authenticated/$partyShortName/party-members/search-users': {
+      id: '/_authenticated/$partyShortName/party-members/search-users'
+      path: '/search-users'
+      fullPath: '/$partyShortName/party-members/search-users'
+      preLoaderRoute: typeof AuthenticatedPartyShortNamePartyMembersSearchUsersRouteImport
+      parentRoute: typeof AuthenticatedPartyShortNamePartyMembersRoute
+    }
     '/_authenticated/$partyShortName/party-members/party-positions': {
       id: '/_authenticated/$partyShortName/party-members/party-positions'
       path: '/party-positions'
@@ -779,6 +794,13 @@ declare module '@tanstack/react-router' {
       path: '/party-admin'
       fullPath: '/$partyShortName/party-members/party-admin'
       preLoaderRoute: typeof AuthenticatedPartyShortNamePartyMembersPartyAdminRouteImport
+      parentRoute: typeof AuthenticatedPartyShortNamePartyMembersRoute
+    }
+    '/_authenticated/$partyShortName/party-members/member': {
+      id: '/_authenticated/$partyShortName/party-members/member'
+      path: '/member'
+      fullPath: '/$partyShortName/party-members/member'
+      preLoaderRoute: typeof AuthenticatedPartyShortNamePartyMembersMemberRouteImport
       parentRoute: typeof AuthenticatedPartyShortNamePartyMembersRoute
     }
     '/_authenticated/$partyShortName/party-members/agent': {
@@ -1032,21 +1054,24 @@ const AuthenticatedPartyShortNameMarketingRouteWithChildren =
 
 interface AuthenticatedPartyShortNamePartyMembersRouteChildren {
   AuthenticatedPartyShortNamePartyMembersAgentRoute: typeof AuthenticatedPartyShortNamePartyMembersAgentRoute
+  AuthenticatedPartyShortNamePartyMembersMemberRoute: typeof AuthenticatedPartyShortNamePartyMembersMemberRoute
   AuthenticatedPartyShortNamePartyMembersPartyAdminRoute: typeof AuthenticatedPartyShortNamePartyMembersPartyAdminRoute
   AuthenticatedPartyShortNamePartyMembersPartyPositionsRoute: typeof AuthenticatedPartyShortNamePartyMembersPartyPositionsRoute
-  AuthenticatedPartyShortNamePartyMembersIndexRoute: typeof AuthenticatedPartyShortNamePartyMembersIndexRoute
+  AuthenticatedPartyShortNamePartyMembersSearchUsersRoute: typeof AuthenticatedPartyShortNamePartyMembersSearchUsersRoute
 }
 
 const AuthenticatedPartyShortNamePartyMembersRouteChildren: AuthenticatedPartyShortNamePartyMembersRouteChildren =
   {
     AuthenticatedPartyShortNamePartyMembersAgentRoute:
       AuthenticatedPartyShortNamePartyMembersAgentRoute,
+    AuthenticatedPartyShortNamePartyMembersMemberRoute:
+      AuthenticatedPartyShortNamePartyMembersMemberRoute,
     AuthenticatedPartyShortNamePartyMembersPartyAdminRoute:
       AuthenticatedPartyShortNamePartyMembersPartyAdminRoute,
     AuthenticatedPartyShortNamePartyMembersPartyPositionsRoute:
       AuthenticatedPartyShortNamePartyMembersPartyPositionsRoute,
-    AuthenticatedPartyShortNamePartyMembersIndexRoute:
-      AuthenticatedPartyShortNamePartyMembersIndexRoute,
+    AuthenticatedPartyShortNamePartyMembersSearchUsersRoute:
+      AuthenticatedPartyShortNamePartyMembersSearchUsersRoute,
   }
 
 const AuthenticatedPartyShortNamePartyMembersRouteWithChildren =

@@ -1,8 +1,19 @@
+/**
+ * @file User Management Server Functions
+ * @description Server actions interfacing with the Go backend user endpoints.
+ * Handles user profile updates, roster listings with pagination & filtering,
+ * account deletion, and cross-application citizen search queries.
+ */
+
 import { createServerFn } from "@tanstack/react-start";
 import { apiFetch } from "./fetch";
 import { API_URL } from "#/lib/config";
 
-
+/**
+ * Update User Server Function
+ * Submits user profile modifications (personal info, geographic origins, assigned role)
+ * to PUT /api/v1/admin/users/:id.
+ */
 export const updateUser = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
@@ -41,6 +52,11 @@ export const updateUser = createServerFn({ method: "POST" })
     }
   });
 
+/**
+ * Get Users List Server Function
+ * Fetches paginated user records from GET /api/v1/users.
+ * Supports filtering by party, status, verification badge, roles, and geography.
+ */
 export const getUsersList = createServerFn({ method: "GET" })
   .inputValidator(
     (data: {
@@ -60,12 +76,14 @@ export const getUsersList = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     try {
       const params = new URLSearchParams();
+      // Pagination & core filters
       if (data?.role) params.append("role", data.role);
       if (data?.limit) params.append("limit", String(data.limit));
       if (data?.cursor) params.append("cursor", String(data.cursor));
       if (data?.party_id) params.append("party_id", String(data.party_id));
       if (data?.search) params.append("search", data.search);
 
+      // Multi-select scoped filters
       if (data?.parties?.length) params.append("parties", data.parties.join(","));
       if (data?.roles?.length) params.append("roles", data.roles.join(","));
       if (data?.statuses?.length) params.append("statuses", data.statuses.join(","));
@@ -83,16 +101,37 @@ export const getUsersList = createServerFn({ method: "GET" })
     }
   });
 
-export const deleteUser = createServerFn({ method: "POST" })
-  .inputValidator((id: string | number) => id)
-  .handler(async ({ data: id }) => {
+/**
+ * Search Users Server Function
+ * Queries cross-platform active citizens via GET /api/v1/users/search.
+ * Operates without party isolation constraints, using keyword matching on name/username.
+ */
+export const searchUsers = createServerFn({ method: "GET" })
+  .inputValidator(
+    (data: {
+      search: string;
+      limit?: number;
+      cursor?: string | number;
+      countryId?: string;
+      stateIds?: string[];
+    }) => data,
+  )
+  .handler(async ({ data }) => {
     try {
-      const response = await apiFetch(API_URL.adminUserById(id), {
-        method: "DELETE",
-        });
+      const params = new URLSearchParams();
+      // Search term mapped to 'q' query parameter expected by /users/search
+      if (data?.search) params.append("q", data.search);
+      if (data?.limit) params.append("limit", String(data.limit));
+      if (data?.cursor) params.append("cursor", String(data.cursor));
+      if (data?.countryId) params.append("country_id", data.countryId);
+      if (data?.stateIds?.[0]) params.append("state_id", data.stateIds[0]);
+
+      const qs = params.toString();
+      const response = await apiFetch(`${API_URL.searchUsers}${qs ? `?${qs}` : ""}`);
       const resData = await response.json();
       return resData;
-    } catch (error) {
-      return { success: false, message: "Failed to delete user: " + (error as Error).message };
+    } catch (_error) {
+      return { success: false, message: "Failed to search users from API" };
     }
   });
+

@@ -113,3 +113,8 @@ LEFT JOIN users admin ON admin.id = pub.blocked_by_user_id
 WHERE pub.party_id = $1
 ORDER BY pub.created_at DESC
 LIMIT $2 OFFSET $3;
+
+-- name: GetBlockedPartyIDsForUser :many
+SELECT party_id
+FROM party_user_blocks
+WHERE blocked_user_id = $1;

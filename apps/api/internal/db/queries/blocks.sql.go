@@ -86,6 +86,32 @@ func (q *Queries) BlockUserByParty(ctx context.Context, arg BlockUserByPartyPara
 	return i, err
 }
 
+const getBlockedPartyIDsForUser = `-- name: GetBlockedPartyIDsForUser :many
+SELECT party_id
+FROM party_user_blocks
+WHERE blocked_user_id = $1
+`
+
+func (q *Queries) GetBlockedPartyIDsForUser(ctx context.Context, blockedUserID int64) ([]int16, error) {
+	rows, err := q.db.Query(ctx, getBlockedPartyIDsForUser, blockedUserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int16
+	for rows.Next() {
+		var party_id int16
+		if err := rows.Scan(&party_id); err != nil {
+			return nil, err
+		}
+		items = append(items, party_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getBlockedUserIDsForUser = `-- name: GetBlockedUserIDsForUser :many
 SELECT blocked_user_id
 FROM user_blocks

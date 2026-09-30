@@ -6,16 +6,10 @@
  * verification badges, account status badge, location pin, role levels, and user management dropdown.
  */
 
-import {
-  TileHeader,
-  TileLeft,
-  TileRight,
-  TileRow,
-} from "@repo/ui/components/tiles";
+import { TileHeader, TileLeft, TileRight } from "@repo/ui/components/tiles";
 import NoProfileImageIcon from "@repo/ui/icons/no-profile-image-icon";
 import { UserDropdown } from "../dropdowns/UserDropdown";
 import { WEB_URL } from "#/lib/config";
-import { Link } from "@tanstack/react-router";
 import { VerificationBadge } from "@repo/ui/components/custom/verification-badge";
 import { Badge } from "@repo/ui/components/badge";
 import { cn } from "@repo/ui/lib/utils";
@@ -31,7 +25,6 @@ export type UserType = {
   last_name?: string;
   first_name?: string;
   middle_name?: string;
-  name?: string;
   gender?: string;
   date_of_birth?: string;
   current_country?: number;
@@ -186,9 +179,11 @@ export function UserTableHeader() {
  */
 export function UserTableTile({
   data,
+  partyId,
   refetch,
 }: {
   data: UserType;
+  partyId?: number;
   refetch?: () => void;
 }) {
   const firstName = getPgString(data.first_name);
@@ -294,7 +289,7 @@ export function UserTableTile({
           {formattedRoleLevel || "-"}
         </span>
         <span className="text-[13px] text-c-60 w-32 truncate">{dateAdded}</span>
-        <UserDropdown data={data} refetch={refetch} className="ml-1" />
+        <UserDropdown data={data} partyId={partyId} refetch={refetch} className="ml-1" />
       </div>
     </div>
   );

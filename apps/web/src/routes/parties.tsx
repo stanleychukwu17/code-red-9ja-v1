@@ -12,6 +12,7 @@ import { QUERY_KEYS } from "#/lib/config";
 import { getPartyCards, type PartyCardData } from "#/lib/server/parties";
 import { getPageHeader } from "#/lib/shared/meta";
 
+// Route definition with page metadata
 export const Route = createFileRoute("/parties")({
 	head: () =>
 		getPageHeader({
@@ -23,10 +24,12 @@ export const Route = createFileRoute("/parties")({
 });
 
 function PartiesComponent() {
+	// Access user context and local search filter state
 	const { userDetails } = Route.useRouteContext();
 	const hasUserParty = Boolean(userDetails?.party_id);
 	const [searchQuery, setSearchQuery] = useState("");
 
+	// Fetch party cards data
 	const { data: partiesRes, isLoading, error, refetch, data } = useQuery({
 		queryKey: QUERY_KEYS.partyCards,
 		queryFn: async () => {
@@ -40,6 +43,7 @@ function PartiesComponent() {
 
 	const parties: PartyCardData[] = partiesRes?.data?.parties || [];
 
+	// Filter parties by name or short code matching search query
 	const filteredParties = useMemo(() => {
 		const q = searchQuery.trim().toLowerCase();
 		if (!q) return parties;
@@ -53,8 +57,10 @@ function PartiesComponent() {
 	return (
 		<div className="min-h-screen bg-neutral-50/50 dark:bg-neutral-950 p-4 md:p-8">
 			<div className="max-w-6xl mx-auto space-y-8">
+				{/* Search bar and header */}
 				<PartiesHeader searchQuery={searchQuery} onSearchChange={setSearchQuery} />
 
+				{/* Loading skeleton, error state, party cards grid, or empty state */}
 				{isLoading ? (
 					<PartySkeletonGrid />
 				) : error ? (

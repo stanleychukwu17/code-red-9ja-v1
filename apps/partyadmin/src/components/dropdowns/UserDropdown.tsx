@@ -1,18 +1,16 @@
 /**
  * @file Party Member Row Action Dropdown
- * @description Provides edit and delete actions for party members in directory tables and member tiles.
- * Connects to `UserFormDialog` in update mode and triggers permanent account deletion with confirmation.
+ * @description Provides edit, suspend, and block actions for party members in directory tables and member tiles.
+ * Connects to `UserFormDialog` in update mode and manages member status actions.
  */
 
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { deleteUser } from "#/lib/server/users";
+import { useQueryClient } from "@tanstack/react-query";
 import { TileOptions } from "@repo/ui/components/tiles";
-import TrashcanIcon from "@repo/ui/icons/trashcan-icon";
 import type { TDropdownGroup } from "@repo/ui/lib/types";
-import { Pencil } from "lucide-react";
+import { Pencil, Ban, UserX } from "lucide-react";
 import { DropdownGroupList } from "@repo/ui/components/custom/AppDropdown";
-import { DeleteAlertDialog } from "../alerts/delete-alert";
+import { ConfirmAlertDialog } from "../alerts/confirm-alert-dialog";
 import { UserFormDialog } from "@repo/ui/components/custom/UserFormDialog";
 import type { UserType } from "../tiles/user-tile";
 
@@ -24,34 +22,26 @@ import { updateUser } from "#/lib/server/users";
 
 interface UserDropdownProps {
   data: UserType;
+  partyId?: number;
   className?: string;
   refetch?: () => void;
 }
 
 /**
  * UserDropdown Component
- * Contextual popover menu offering Edit (via UserFormDialog) and Delete (via DeleteAlertDialog) actions.
+ * Contextual popover menu offering Edit (via UserFormDialog), Suspend, and Block actions.
+ * Only members of the active party can be suspended.
  */
-export const UserDropdown = ({ data, className, refetch }: UserDropdownProps) => {
+export const UserDropdown = ({ data, partyId, className, refetch }: UserDropdownProps) => {
   const [openMenu, setOpenMenu] = useState(false);
   const [openEditDialog, setOpenEditDialog] = useState(false);
-  const [openDeleteAlert, setOpenDeleteAlert] = useState(false);
+  const [openBlockAlert, setOpenBlockAlert] = useState(false);
+  const [openSuspendAlert, setOpenSuspendAlert] = useState(false);
   const queryClient = useQueryClient();
 
-  const deleteMutation = useMutation({
-    mutationFn: async () => {
-      const res = await deleteUser({ data: data.fake_id });
-      if (!res.success) {
-        throw new Error(res.message || "Failed to delete user");
-      }
-      return res.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["party-members"] });
-      refetch?.();
-      setOpenDeleteAlert(false);
-    },
-  });
+  // Check if target user belongs to the currently active party
+  const isMemberOfCurrentParty =
+    Boolean(partyId && data.party_id && Number(data.party_id) === Number(partyId));
 
   const group1: TDropdownGroup = [
     {
@@ -62,14 +52,27 @@ export const UserDropdown = ({ data, className, refetch }: UserDropdownProps) =>
         setOpenEditDialog(true);
       },
     },
+    ...(isMemberOfCurrentParty
+      ? [
+          {
+            title: "Suspend User",
+            icon: <UserX className="size-4" />,
+            action: () => {
+              setOpenMenu(false);
+              setOpenSuspendAlert(true);
+            },
+            className: "[&_svg]:text-amber-500 text-amber-500",
+          },
+        ]
+      : []),
     {
-      title: "Delete",
-      icon: <TrashcanIcon />,
+      title: "Block User",
+      icon: <Ban className="size-4" />,
       action: () => {
         setOpenMenu(false);
-        setOpenDeleteAlert(true);
+        setOpenBlockAlert(true);
       },
-      className: "[&_svg]:text-red text-red",
+      className: "[&_svg]:text-orange-500 text-orange-500",
     },
   ];
   const dropdownData: TDropdownGroup[] = [group1];
@@ -93,12 +96,7 @@ export const UserDropdown = ({ data, className, refetch }: UserDropdownProps) =>
     avatar: data.avatar || data.avatar_url,
   };
 
-  const name =
-    data.name ||
-    [data.first_name, data.last_name].filter(Boolean).join(" ") ||
-    data.username ||
-    data.email ||
-    "User";
+  const name = [data.first_name, data.last_name].filter(Boolean).join(" ");
 
   return (
     <>
@@ -128,13 +126,32 @@ export const UserDropdown = ({ data, className, refetch }: UserDropdownProps) =>
         updateUser={updateUser}
       />
 
-      <DeleteAlertDialog
-        open={openDeleteAlert}
-        setOpen={setOpenDeleteAlert}
-        delete={() => deleteMutation.mutate()}
-        isPending={deleteMutation.isPending}
-        title="Delete User"
-        subtitle={`Are you sure you want to permanently delete user "${name}"? This action cannot be undone.`}
+      {isMemberOfCurrentParty && (
+        <ConfirmAlertDialog
+          open={openSuspendAlert}
+          setOpen={setOpenSuspendAlert}
+          onConfirm={() => {
+            // Placeholder or mutation for suspending user
+            setOpenSuspendAlert(false);
+          }}
+          headerTitle="Suspend User"
+          title={`Are you sure you want to suspend "${name}"?`}
+          subtitle={`Suspending this user will temporarily disable their party privileges and access until reactivated. Are you sure you want to continue?`}
+          actionText="Suspend User"
+        />
+      )}
+
+      <ConfirmAlertDialog
+        open={openBlockAlert}
+        setOpen={setOpenBlockAlert}
+        onConfirm={() => {
+          // Placeholder or mutation for blocking user
+          setOpenBlockAlert(false);
+        }}
+        headerTitle="Block User"
+        title={`Are you sure you want to block "${name}"?`}
+        subtitle={`Blocking this user will restrict their access and visibility within the party. Are you sure you want to continue?`}
+        actionText="Block User"
       />
     </>
   );

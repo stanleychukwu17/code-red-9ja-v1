@@ -535,8 +535,16 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Exclude the currently authenticated user from the returned results
+	filteredUsers := make([]queries.UserWithPlaces, 0, len(fullUsers))
+	for _, u := range fullUsers {
+		if u.ID != claims.UserID {
+			filteredUsers = append(filteredUsers, u)
+		}
+	}
+
 	h.utils.RespondSuccess(w, http.StatusOK, "Users retrieved successfully", map[string]interface{}{
-		"users": fullUsers,
+		"users": filteredUsers,
 		"meta": map[string]interface{}{
 			"next_cursor": nextCursor,
 			"has_more":    hasMore,
@@ -562,7 +570,7 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 // @Router       /users/search [get]
 func (h *Handler) SearchUsers(w http.ResponseWriter, r *http.Request) {
 	// Verify that the request is from an authenticated user
-	_, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
+	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
 	if !ok {
 		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
 		return
@@ -664,9 +672,16 @@ func (h *Handler) SearchUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Return results and pagination metadata
+	// Return results and pagination metadata, excluding the currently authenticated user
+	filteredUsers := make([]queries.UserWithPlaces, 0, len(fullUsers))
+	for _, u := range fullUsers {
+		if u.ID != claims.UserID {
+			filteredUsers = append(filteredUsers, u)
+		}
+	}
+
 	h.utils.RespondSuccess(w, http.StatusOK, "Users retrieved successfully", map[string]interface{}{
-		"users": fullUsers,
+		"users": filteredUsers,
 		"meta": map[string]interface{}{
 			"next_cursor": nextCursor,
 			"has_more":    hasMore,

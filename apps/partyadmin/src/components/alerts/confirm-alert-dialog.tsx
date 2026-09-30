@@ -1,7 +1,7 @@
 /**
- * @file Generic Destructive Action Confirmation Dialog
- * @description Standard alert modal prompting confirmation prior to irreversible deletions or revocations
- * (e.g. deleting users, revoking agent assignments, removing campaigns).
+ * @file Generic Action Confirmation Alert Dialog
+ * @description Standard alert modal prompting confirmation prior to state-altering or destructive actions
+ * (e.g. suspending or blocking users, revoking agent assignments, removing campaigns).
  */
 
 import {
@@ -14,35 +14,41 @@ import {
 import { Button } from "@repo/ui/components/button";
 import { Loader2 } from "lucide-react";
 
-type DeleteAlertDialogProps = {
+export type ConfirmAlertDialogProps = {
   open: boolean;
-  delete: () => void;
+  onConfirm: () => void;
   title?: string;
   subtitle?: string;
   setOpen?: (v: boolean) => void;
   isPending?: boolean;
+  headerTitle?: string;
+  actionText?: string;
+  actionVariant?: "red" | "primary" | "secondary" | "destructive" | "default";
 };
 
 /**
- * DeleteAlertDialog Component
- * Reusable modal displaying custom title, warning subtitle, and red destructive action button.
+ * ConfirmAlertDialog Component
+ * Reusable modal displaying custom title, explanation subtitle, and confirmation action button.
  */
-export const DeleteAlertDialog = ({
+export const ConfirmAlertDialog = ({
   open,
-  delete: handleDelete,
+  onConfirm,
   title,
   subtitle,
   setOpen,
   isPending = false,
-}: DeleteAlertDialogProps) => {
+  headerTitle = "Confirm Action",
+  actionText = "Confirm",
+  actionVariant = "red",
+}: ConfirmAlertDialogProps) => {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="max-w-105 p-0 rounded-2xl border-none shadow-2xl bg-white overflow-hidden">
-        <DialogHeader title="Confirm Delete" />
+      <DialogContent className="max-w-105 p-0 rounded-2xl border border-border shadow-2xl bg-card text-card-foreground overflow-hidden">
+        <DialogHeader title={headerTitle} />
 
         <DialogPadding className="space-y-3 pb-4">
           <h1 className="text-[18px] font-semibold text-c-80 leading-tight">
-            {title ?? "Are you sure you want to delete this?"}
+            {title ?? "Are you sure you want to proceed?"}
           </h1>
           {subtitle && <p className="text-sm text-c-60">{subtitle}</p>}
         </DialogPadding>
@@ -56,12 +62,12 @@ export const DeleteAlertDialog = ({
             Cancel
           </Button>
           <Button
-            variant="red"
-            onClick={handleDelete}
+            variant={actionVariant as any}
+            onClick={onConfirm}
             disabled={isPending}
           >
             {isPending && <Loader2 className="size-4 animate-spin" />}
-            Delete
+            {actionText}
           </Button>
         </DialogFooter>
       </DialogContent>

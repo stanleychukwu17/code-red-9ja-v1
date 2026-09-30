@@ -82,10 +82,12 @@ export type PartyCardData = {
 	date_founded?: string | null;
 	cover_image?: string | null;
 	cover_position_y?: number | null;
+	chapter_id?: number;
 	total_members: number;
 	sample_members: PartySampleMember[];
 	officials: PartyOfficialCardInfo[];
 	is_user_member: boolean;
+	is_user_blocked?: boolean;
 };
 
 /**

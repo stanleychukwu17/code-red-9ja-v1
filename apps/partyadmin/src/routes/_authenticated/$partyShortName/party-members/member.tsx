@@ -25,22 +25,15 @@ import {
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { useIntersectionObserver, useDebounceValue } from "usehooks-ts";
-import { useUser } from "#/hooks/useUser";
 import { useUserParty } from "#/hooks/useUserParty";
 
 // Server Functions
 import { getAllCountries, getStates, getCities } from "#/lib/server/countries";
-import {
-  getParties,
-  getPresignedUploadURL,
-  confirmFileUpload,
-} from "#/lib/server/parties";
+import { getParties, getPresignedUploadURL, confirmFileUpload } from "#/lib/server/parties";
 import { registerCandidate } from "#/lib/server/auth/auth";
 import { updateUser, getUsersList } from "#/lib/server/users";
 
-export const Route = createFileRoute(
-  "/_authenticated/$partyShortName/party-members/",
-)({
+export const Route = createFileRoute("/_authenticated/$partyShortName/party-members/member")({
   head: () => getPageHeader({ title: "Party members" }),
   component: RouteComponent,
 });
@@ -63,19 +56,10 @@ function RouteComponent() {
     stateIds: [],
   });
 
-  const user = useUser();
   const { party } = useUserParty();
-  const partyId = party?.id ?? user?.party?.id ?? (user as any)?.party_id;
+  const partyId = party?.id;
 
-  const {
-    data,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoading,
-    error,
-    refetch,
-  } = useInfiniteQuery({
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, error, refetch } = useInfiniteQuery({
     queryKey: ["party-members", partyId, debouncedSearchQuery, filters],
     queryFn: async ({ pageParam }) => {
       const res = await getUsersList({
@@ -162,7 +146,7 @@ function RouteComponent() {
         </div>
       ) : (
         <>
-          <UsersTable items={partyMembers} refetch={refetch} />
+          <UsersTable items={partyMembers} partyId={partyId} refetch={refetch} />
 
           {/* Sentinel element for infinite scroll */}
           {hasNextPage && (

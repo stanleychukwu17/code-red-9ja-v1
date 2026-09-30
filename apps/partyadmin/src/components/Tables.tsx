@@ -100,9 +100,7 @@ export function ElectionGroupsTable({ items }: { items: ElectionGroupType[] }) {
  * ElectionInstancesTable Component
  * Renders table container for specific contested election ballots (e.g. Senatorial, Gubernatorial).
  */
-export function ElectionInstancesTable({
-  items,
-}: {
+export function ElectionInstancesTable({ items }: {
   items: ElectionInstanceType[];
 }) {
   return (
@@ -122,10 +120,7 @@ export function ElectionInstancesTable({
  * ApplicationsTable Component
  * Renders table container for incoming, accepted, or rejected membership applications.
  */
-export function ApplicationsTable({
-  items,
-  refetch,
-}: {
+export function ApplicationsTable({ items, refetch }: {
   items: readonly ApplicationType[];
   refetch?: () => void;
 }) {
@@ -152,10 +147,7 @@ export type { UserType, MarketingCampaignType };
  * PartyAdminsTable Component
  * Renders table container for party officials with dynamic column label support.
  */
-export function PartyAdminsTable({
-  columns,
-  items,
-}: {
+export function PartyAdminsTable({ columns, items }: {
   columns: string[];
   items: readonly PartyAdminType[];
 }) {
@@ -176,21 +168,20 @@ export function PartyAdminsTable({
  * UsersTable Component
  * Renders table container for party user accounts with refetch capability on updates.
  */
-export function UsersTable({
-  items,
-  refetch,
-}: {
+export function UsersTable({ items, partyId, refetch }: {
   items: UserType[];
+  partyId?: number;
   refetch?: () => void;
 }) {
   return (
     <div className="w-full">
       <UserTableHeader />
       <div className="flex flex-col gap-1.5 mt-1">
-        {items.map((data, index) => (
+        {items.map((data) => (
           <UserTableTile
-            key={`${data.name || data.id}-${index}`}
+            key={data.fake_id || data.id}
             data={data}
+            partyId={partyId}
             refetch={refetch}
           />
         ))}
@@ -203,7 +194,9 @@ export function UsersTable({
  * MarketingTable Component
  * Renders horizontally scrollable table container for marketing campaigns.
  */
-export function MarketingTable({ items }: { items: MarketingCampaignType[] }) {
+export function MarketingTable({ items }: {
+  items: MarketingCampaignType[];
+}) {
   const campaignsList = Array.isArray(items) ? items : [];
   return (
     <div className="w-full overflow-x-auto">
@@ -221,10 +214,7 @@ export function MarketingTable({ items }: { items: MarketingCampaignType[] }) {
  * PollingAgentsTable Component
  * Renders horizontally scrollable table container for polling unit agents.
  */
-export function PollingAgentsTable({
-  items,
-  refetch,
-}: {
+export function PollingAgentsTable({ items, refetch }: {
   items: AgentPerformanceItem[];
   refetch?: () => void;
 }) {
@@ -249,10 +239,7 @@ export function PollingAgentsTable({
  * WardSupervisorsTable Component
  * Renders horizontally scrollable table container for Ward-level coordinators.
  */
-export function WardSupervisorsTable({
-  items,
-  refetch,
-}: {
+export function WardSupervisorsTable({ items, refetch }: {
   items: AgentPerformanceItem[];
   refetch?: () => void;
 }) {
@@ -277,10 +264,7 @@ export function WardSupervisorsTable({
  * LGASupervisorsTable Component
  * Renders horizontally scrollable table container for LGA-level supervisors.
  */
-export function LGASupervisorsTable({
-  items,
-  refetch,
-}: {
+export function LGASupervisorsTable({ items, refetch }: {
   items: AgentPerformanceItem[];
   refetch?: () => void;
 }) {
@@ -305,10 +289,7 @@ export function LGASupervisorsTable({
  * StateSupervisorsTable Component
  * Renders horizontally scrollable table container for State-level directors.
  */
-export function StateSupervisorsTable({
-  items,
-  refetch,
-}: {
+export function StateSupervisorsTable({ items, refetch }: {
   items: AgentPerformanceItem[];
   refetch?: () => void;
 }) {

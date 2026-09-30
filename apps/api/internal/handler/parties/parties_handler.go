@@ -34,7 +34,7 @@ type PartiesService interface {
 	ListParties(ctx context.Context) ([]queries.PartyWithVerifications, error)
 	GetAcceptingPartyIDs(ctx context.Context) (map[int16]bool, error)
 	IsPartyAcceptingApplications(ctx context.Context, partyID int16) (bool, error)
-	GetPartyCards(ctx context.Context, userPartyID int16) ([]partiesservice.PartyCard, error)
+	GetPartyCards(ctx context.Context, userID int64, userPartyID int16) ([]partiesservice.PartyCard, error)
 	UpdateParty(ctx context.Context, id int64, shortName, name, logo string, logoFileID *int64, displayOrder int32, colorHex, darkColorHex, coverImage *string, coverImageFileID *int64, coverPositionY *int16, dateFounded *string) (queries.Party, error)
 	DeleteParty(ctx context.Context, id int64) error
 	UpdatePartyIsVerified(ctx context.Context, partyID int16, isVerified bool) error
@@ -472,14 +472,16 @@ func (h *Handler) ListParties(w http.ResponseWriter, r *http.Request) {
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Router       /parties/cards [get]
 func (h *Handler) ListPartyCards(w http.ResponseWriter, r *http.Request) {
-	// Extract authenticated user's party ID if session exists (to flag 'is_user_member')
+	// Extract authenticated user's ID and party ID if session exists (to flag 'is_user_member' and 'is_user_blocked')
+	var userID int64
 	var userPartyID int16
 	if claims, ok := apimiddleware.GetClaims(r); ok && claims != nil {
+		userID = claims.UserID
 		userPartyID = claims.PartyID
 	}
 
-	// Fetch enriched party cards with metrics, sample members, and leadership
-	cards, err := h.partiesService.GetPartyCards(r.Context(), userPartyID)
+	// Fetch enriched party cards with metrics, sample members, leadership, and block status
+	cards, err := h.partiesService.GetPartyCards(r.Context(), userID, userPartyID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch party cards: "+err.Error())
 		return

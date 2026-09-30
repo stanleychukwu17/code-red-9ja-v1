@@ -9,10 +9,10 @@ import { getPublicParties } from "#/lib/server/parties";
 export const useActiveParties = () => {
 	const fetchPublicParties = useServerFn(getPublicParties);
 
-	const { data: publicPartiesData, isLoading } = useQuery({
+	const { data: publicPartiesData, isLoading, refetch, isFetching } = useQuery({
 		queryKey: ["public-parties"],
 		queryFn: () => fetchPublicParties(),
-		staleTime: 5 * 60 * 1000,
+		staleTime: Infinity,
 	});
 
 	const activeParties = publicPartiesData?.data?.parties || [];
@@ -20,5 +20,7 @@ export const useActiveParties = () => {
 	return {
 		activeParties,
 		isLoading,
+		isFetching,
+		refetch,
 	};
 };

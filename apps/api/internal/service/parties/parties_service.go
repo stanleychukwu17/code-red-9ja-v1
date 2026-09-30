@@ -32,6 +32,12 @@ type PartiesService struct {
 	pageVerificationsService PageVerificationsService
 	usersService             UsersService
 	notificationsService     NotificationsService
+	blocksService            BlocksService
+}
+
+// BlocksService interface defines the methods needed from the blocks service
+type BlocksService interface {
+	GetUserBlockedPartyIDs(ctx context.Context, userID int64) map[int16]bool
 }
 
 // UsersService interface defines the methods needed from the users service
@@ -53,7 +59,7 @@ type NotificationsService interface {
 
 // NewPartiesService creates a new PartiesService.
 // monnify may be nil in test environments — wallet creation will be skipped.
-func NewPartiesService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client, monnify *monnifyclient.Client, u *utils.Utils, ns NotificationsService) *PartiesService {
+func NewPartiesService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client, monnify *monnifyclient.Client, u *utils.Utils, ns NotificationsService, bs BlocksService) *PartiesService {
 	return &PartiesService{
 		queries:              q,
 		pool:                 pool,
@@ -61,6 +67,7 @@ func NewPartiesService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client
 		monnify:              monnify,
 		utils:                u,
 		notificationsService: ns,
+		blocksService:        bs,
 	}
 }
 
@@ -360,10 +367,12 @@ type PartyCard struct {
 	DateFounded    *string             `json:"date_founded,omitempty"`
 	CoverImage     *string             `json:"cover_image,omitempty"`
 	CoverPositionY *int16              `json:"cover_position_y,omitempty"`
+	ChapterID      int32               `json:"chapter_id"`
 	TotalMembers   int64               `json:"total_members"`
 	SampleMembers  []PartySampleMember `json:"sample_members"`
 	Officials      []PartyOfficialCard `json:"officials"`
 	IsUserMember   bool                `json:"is_user_member"`
+	IsUserBlocked  bool                `json:"is_user_blocked"`
 }
 
 // GetPartySampleMemberAvatars retrieves sample member avatars for a party, cached in Redis.
@@ -488,8 +497,9 @@ func (s *PartiesService) GetOnePartyChapterOfficial(ctx context.Context, chapter
 }
 
 // GetPartyCards returns all active parties enriched with real member counts,
-// sample member avatars, top national leadership positions, and the user's membership status.
-func (s *PartiesService) GetPartyCards(ctx context.Context, userPartyID int16) ([]PartyCard, error) {
+// sample member avatars, top national leadership positions, the user's membership status,
+// and whether the user is blocked by the party.
+func (s *PartiesService) GetPartyCards(ctx context.Context, userID int64, userPartyID int16) ([]PartyCard, error) {
 	parties, err := s.ListParties(ctx)
 	if err != nil {
 		return nil, err
@@ -532,7 +542,10 @@ func (s *PartiesService) GetPartyCards(ctx context.Context, userPartyID int16) (
 		}
 	}
 
-	// 4. Build final PartyCard list
+	// 4. Fetch all parties that have blocked this user (cached 24h via BlocksService)
+	blockedPartiesMap := s.blocksService.GetUserBlockedPartyIDs(ctx, userID)
+
+	// 5. Build final PartyCard list
 	cards := make([]PartyCard, 0, len(parties))
 	for _, p := range parties {
 		sampleMembers := sampleAvatarsMap[p.ID]
@@ -544,6 +557,12 @@ func (s *PartiesService) GetPartyCards(ctx context.Context, userPartyID int16) (
 		officials := officialsMap[p.ID]
 		if officials == nil {
 			officials = []PartyOfficialCard{}
+		}
+
+		isUserMember := userPartyID > 0 && p.ID == userPartyID
+		isUserBlocked := false
+		if !isUserMember {
+			isUserBlocked = blockedPartiesMap[p.ID]
 		}
 
 		cards = append(cards, PartyCard{
@@ -559,10 +578,12 @@ func (s *PartiesService) GetPartyCards(ctx context.Context, userPartyID int16) (
 			DateFounded:    utils.PtrFromPgDate(p.DateFounded),
 			CoverImage:     utils.PtrFromPgText(p.CoverImage),
 			CoverPositionY: utils.PtrFromPgInt2(p.CoverPositionY),
+			ChapterID:      nationalChapterIDs[p.ID],
 			TotalMembers:   memberCountsMap[p.ID],
 			SampleMembers:  sampleMembers,
 			Officials:      officials,
-			IsUserMember:   userPartyID > 0 && p.ID == userPartyID,
+			IsUserMember:   isUserMember,
+			IsUserBlocked:  isUserBlocked,
 		})
 	}
 

@@ -93,6 +93,10 @@ const (
 	RedisCronLockINECGrabberSync           = "cron:lock:inec_grabber_sync"     // STRING: distributed lock to prevent duplicate concurrent INEC IReV result syncing
 	RedisCronLockMarketingDeductionsPrefix = "cron:lock:marketing_deductions:" // STRING: "cron:lock:marketing_deductions:<YYYY-MM-DD>" daily marketing deductions lock
 	//--END--
+
+	//--START-- for blocks
+	RedisUserBlockedPartyIDs = "blocks:user:blocked_party_ids:" // STRING: "blocks:user:blocked_party_ids:<userID>" used to store cached JSON slice of party IDs that have blocked this user.
+	//--END--
 )
 
 // AllRedisPrefixes is a list of all key prefixes and static keys used across the application.
@@ -142,4 +146,5 @@ var AllRedisPrefixes = []string{
 	RedisElectionInfo,
 	RedisCronLockINECGrabberSync,
 	RedisCronLockMarketingDeductionsPrefix,
+	RedisUserBlockedPartyIDs,
 }

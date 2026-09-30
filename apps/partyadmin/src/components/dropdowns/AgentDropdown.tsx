@@ -13,7 +13,7 @@ import TrashcanIcon from "@repo/ui/icons/trashcan-icon";
 import type { TDropdownGroup } from "@repo/ui/lib/types";
 import { UserCheck } from "lucide-react";
 import { DropdownGroupList } from "@repo/ui/components/custom/AppDropdown";
-import { DeleteAlertDialog } from "../alerts/delete-alert";
+import { ConfirmAlertDialog } from "../alerts/confirm-alert-dialog";
 import { ChangeRoleDialog } from "../dialogs/change-role-dialog";
 import { revokeAgentAssignment, type AgentPerformanceItem } from "#/lib/server/agents";
 
@@ -111,11 +111,13 @@ export const AgentDropdown = ({ data, className, refetch }: AgentDropdownProps) 
         refetch={refetch}
       />
 
-      <DeleteAlertDialog
+      <ConfirmAlertDialog
         open={openRevokeAlert}
         setOpen={setOpenRevokeAlert}
-        delete={() => revokeMutation.mutate()}
+        onConfirm={() => revokeMutation.mutate()}
         isPending={revokeMutation.isPending}
+        headerTitle="Revoke Assignment"
+        actionText="Revoke"
         title="Revoke Assignment"
         subtitle={`Are you sure you want to remove "${data.user_name}" from their role as ${getRoleTitle(data.role_type)}? This will free up the assignment.`}
       />

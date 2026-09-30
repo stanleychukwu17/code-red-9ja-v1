@@ -35,13 +35,18 @@ export interface GetPartyResponse {
 /**
  * Retrieves and normalizes the political party details associated with the current user.
  *
- * @returns The normalized PartyDetails object, or null if no party is associated.
+ * @returns An object containing the normalized party details, query loading states, and refetch handler.
  */
-export const usePartyDetails = (): PartyDetails | null => {
+export const usePartyDetails = () => {
 	const user = useUser();
 	const partyId = user?.party?.id ?? user?.party_id;
 
-	const { data: fetchedParty } = useQuery<BackendParty | null, Error>({
+	const {
+		data: fetchedParty,
+		isLoading,
+		isFetching,
+		refetch,
+	} = useQuery<BackendParty | null, Error>({
 		queryKey: ["party", partyId],
 		queryFn: async () => {
 			if (!partyId) return null;
@@ -52,10 +57,13 @@ export const usePartyDetails = (): PartyDetails | null => {
 			throw new Error(res?.message || "Failed to fetch party details");
 		},
 		enabled: !!partyId,
+		staleTime: Infinity,
 	});
 
+	let party: PartyDetails | null = null;
+
 	if (fetchedParty) {
-		return {
+		party = {
 			id: fetchedParty.id,
 			shortName: fetchedParty.short_name,
 			name: fetchedParty.name || "",
@@ -64,10 +72,8 @@ export const usePartyDetails = (): PartyDetails | null => {
 			agentPaymentBalanceKobo: fetchedParty.agent_payment_balance_kobo || 0,
 			agentPaymentAllocation: fetchedParty.agent_payment_allocation_kobo || {},
 		};
-	}
-
-	if (user?.party?.short_name) {
-		return {
+	} else if (user?.party?.short_name) {
+		party = {
 			id: user.party.id ?? user.party_id,
 			shortName: user.party.short_name,
 			name: user.party.name || "",
@@ -76,10 +82,8 @@ export const usePartyDetails = (): PartyDetails | null => {
 			agentPaymentBalanceKobo: user.party.agent_payment_balance_kobo || 0,
 			agentPaymentAllocation: user.party.agent_payment_allocation_kobo || {},
 		};
-	}
-
-	if (user?.party_id) {
-		return {
+	} else if (user?.party_id) {
+		party = {
 			id: user.party_id,
 			shortName: "",
 			name: "",
@@ -89,13 +93,17 @@ export const usePartyDetails = (): PartyDetails | null => {
 		};
 	}
 
-	return null;
+	return {
+		party,
+		isLoading,
+		isFetching,
+		refetch,
+	};
 };
 
 /**
- * Convenience wrapper hook returning { party } to match standard domain hook conventions.
+ * Convenience wrapper hook returning { party, isLoading, isFetching, refetch } to match standard domain hook conventions.
  */
 export const useUserParty = () => {
-	const party = usePartyDetails();
-	return { party };
+	return usePartyDetails();
 };

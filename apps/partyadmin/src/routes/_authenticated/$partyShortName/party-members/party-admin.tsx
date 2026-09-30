@@ -23,7 +23,6 @@ import {
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { useIntersectionObserver, useDebounceValue } from "usehooks-ts";
-import { useUser } from "#/hooks/useUser";
 import { useUserParty } from "#/hooks/useUserParty";
 
 // Server Functions
@@ -53,9 +52,8 @@ function RouteComponent() {
     stateIds: [],
   });
 
-  const user = useUser();
   const { party } = useUserParty();
-  const partyId = party?.id ?? user?.party?.id ?? (user as any)?.party_id;
+  const partyId = party?.id;
 
   const {
     data,
@@ -158,7 +156,7 @@ function RouteComponent() {
         </div>
       ) : (
         <>
-          <UsersTable items={partyAdmins} refetch={refetch} />
+          <UsersTable items={partyAdmins} partyId={partyId} refetch={refetch} />
 
           {/* Sentinel element for infinite scroll */}
           {hasNextPage && (

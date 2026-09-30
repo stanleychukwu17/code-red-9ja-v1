@@ -182,6 +182,7 @@ type Querier interface {
 	GetAssignmentByID(ctx context.Context, id int64) (GetAssignmentByIDRow, error)
 	GetAssignmentForEarnings(ctx context.Context, id int64) (GetAssignmentForEarningsRow, error)
 	GetAssignmentIDByUserAndElectionGroup(ctx context.Context, arg GetAssignmentIDByUserAndElectionGroupParams) (int64, error)
+	GetBlockedPartyIDsForUser(ctx context.Context, blockedUserID int64) ([]int16, error)
 	// Helper for filtering feeds / search results
 	GetBlockedUserIDsForUser(ctx context.Context, blockerID int64) ([]int64, error)
 	GetChapterMemberCount(ctx context.Context, arg GetChapterMemberCountParams) (int64, error)

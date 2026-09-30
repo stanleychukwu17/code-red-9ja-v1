@@ -1,8 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-export const Route = createFileRoute(
-  "/_authenticated/party/$partyName/$partyId/members",
-)({
+export const Route = createFileRoute("/_authenticated/party/$partyName/$partyId/members")({
   component: PartyMembersTabComponent,
 });
 

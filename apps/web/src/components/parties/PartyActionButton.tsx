@@ -51,9 +51,9 @@ export function PartyActionButton({ isUserMember, partyId, partyName, chapterId,
 			{isUserMember ? (
 				<div
 					title="You are a member of this party"
-					className="flex items-center gap-2 px-4 py-2 rounded-full bg-white text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400 font-semibold text-xs border border-emerald-600/20 shadow-sm"
+					className="flex items-center gap-2 px-4 py-2 rounded-full bg-card text-primary dark:bg-primary/10 dark:text-light-green font-semibold text-xs border border-primary/20 shadow-sm"
 				>
-					<div className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center">
+					<div className="w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
 						<Check className="w-3.5 h-3.5 stroke-3" />
 					</div>
 					<span>Member</span>
@@ -66,7 +66,7 @@ export function PartyActionButton({ isUserMember, partyId, partyName, chapterId,
 					disabled={isJoining}
 					title={`Join ${partyName}`}
 					aria-label={`Join ${partyName}`}
-					className="w-12 h-12 rounded-full bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 flex items-center justify-center shadow-md hover:scale-110 active:scale-95 disabled:opacity-60 disabled:hover:scale-100 disabled:cursor-not-allowed transition-transform duration-200 cursor-pointer"
+					className="w-12 h-12 rounded-full bg-foreground text-background flex items-center justify-center shadow-md hover:scale-110 active:scale-95 hover:bg-foreground/90 disabled:opacity-60 disabled:hover:scale-100 disabled:cursor-not-allowed transition-transform duration-200 cursor-pointer"
 				>
 					{isJoining ? (
 						<Loader2 className="w-5 h-5 animate-spin" />
