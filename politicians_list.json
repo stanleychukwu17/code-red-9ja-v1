@@ -1,0 +1,548 @@
+[
+  {
+    "num": 1,
+    "name": "Yemi Osinbajo",
+    "party_id": 1,
+    "username": "yemi_osinbajo"
+  },
+  {
+    "num": 2,
+    "name": "Kashim Shettima",
+    "party_id": 1,
+    "username": "kashim_shettima"
+  },
+  {
+    "num": 3,
+    "name": "Babatunde Fashola",
+    "party_id": 1,
+    "username": "babatunde_fashola"
+  },
+  {
+    "num": 4,
+    "name": "Nasir el-Rufai",
+    "party_id": 1,
+    "username": "nasir_elrufai"
+  },
+  {
+    "num": 5,
+    "name": "Rotimi Amaechi",
+    "party_id": 1,
+    "username": "rotimi_amaechi"
+  },
+  {
+    "num": 6,
+    "name": "Kayode Fayemi",
+    "party_id": 1,
+    "username": "kayode_fayemi"
+  },
+  {
+    "num": 7,
+    "name": "Abdullahi Ganduje",
+    "party_id": 1,
+    "username": "abdullahi_ganduje"
+  },
+  {
+    "num": 8,
+    "name": "Adams Oshiomhole",
+    "party_id": 1,
+    "username": "adams_oshiomhole"
+  },
+  {
+    "num": 9,
+    "name": "Rauf Aregbesola",
+    "party_id": 1,
+    "username": "rauf_aregbesola"
+  },
+  {
+    "num": 10,
+    "name": "Rochas Okorocha",
+    "party_id": 1,
+    "username": "rochas_okorocha"
+  },
+  {
+    "num": 11,
+    "name": "Yahaya Bello",
+    "party_id": 1,
+    "username": "yahaya_bello"
+  },
+  {
+    "num": 12,
+    "name": "Babagana Zulum",
+    "party_id": 1,
+    "username": "babagana_zulum"
+  },
+  {
+    "num": 13,
+    "name": "Hope Uzodinma",
+    "party_id": 1,
+    "username": "hope_uzodinma"
+  },
+  {
+    "num": 14,
+    "name": "Dapo Abiodun",
+    "party_id": 1,
+    "username": "dapo_abiodun"
+  },
+  {
+    "num": 15,
+    "name": "Babajide Sanwo-Olu",
+    "party_id": 1,
+    "username": "babajide_sanwoolu"
+  },
+  {
+    "num": 16,
+    "name": "Mai Mala Buni",
+    "party_id": 1,
+    "username": "mai_malabuni"
+  },
+  {
+    "num": 17,
+    "name": "AbdulRahman AbdulRazaq",
+    "party_id": 1,
+    "username": "abdulrahman_abdulrazaq"
+  },
+  {
+    "num": 18,
+    "name": "Inuwa Yahaya",
+    "party_id": 1,
+    "username": "inuwa_yahaya"
+  },
+  {
+    "num": 19,
+    "name": "Abdullahi Sule",
+    "party_id": 1,
+    "username": "abdullahi_sule"
+  },
+  {
+    "num": 20,
+    "name": "Godswill Akpabio",
+    "party_id": 1,
+    "username": "godswill_akpabio"
+  },
+  {
+    "num": 21,
+    "name": "Ahmad Lawan",
+    "party_id": 1,
+    "username": "ahmad_lawan"
+  },
+  {
+    "num": 22,
+    "name": "Femi Gbajabiamila",
+    "party_id": 1,
+    "username": "femi_gbajabiamila"
+  },
+  {
+    "num": 23,
+    "name": "Orji Uzor Kalu",
+    "party_id": 1,
+    "username": "orji_uzorkalu"
+  },
+  {
+    "num": 24,
+    "name": "Ovie Omo-Agege",
+    "party_id": 1,
+    "username": "ovie_omoagege"
+  },
+  {
+    "num": 25,
+    "name": "Aliyu Wamakko",
+    "party_id": 1,
+    "username": "aliyu_wamakko"
+  },
+  {
+    "num": 26,
+    "name": "Umar Ganduje",
+    "party_id": 1,
+    "username": "umar_ganduje"
+  },
+  {
+    "num": 27,
+    "name": "Abubakar Badaru",
+    "party_id": 1,
+    "username": "abubakar_badaru"
+  },
+  {
+    "num": 28,
+    "name": "Bello Matawalle",
+    "party_id": 1,
+    "username": "bello_matawalle"
+  },
+  {
+    "num": 29,
+    "name": "Ben Ayade",
+    "party_id": 1,
+    "username": "ben_ayade"
+  },
+  {
+    "num": 30,
+    "name": "Dave Umahi",
+    "party_id": 1,
+    "username": "dave_umahi"
+  },
+  {
+    "num": 31,
+    "name": "Muhammadu Buhari",
+    "party_id": 1,
+    "username": "muhammadu_buhari"
+  },
+  {
+    "num": 32,
+    "name": "Remi Tinubu",
+    "party_id": 1,
+    "username": "remi_tinubu"
+  },
+  {
+    "num": 33,
+    "name": "Pauline Tallen",
+    "party_id": 1,
+    "username": "pauline_tallen"
+  },
+  {
+    "num": 34,
+    "name": "Goodluck Jonathan",
+    "party_id": 10,
+    "username": "goodluck_jonathan"
+  },
+  {
+    "num": 35,
+    "name": "Nyesom Wike",
+    "party_id": 10,
+    "username": "nyesom_wike"
+  },
+  {
+    "num": 36,
+    "name": "Ifeanyi Okowa",
+    "party_id": 10,
+    "username": "ifeanyi_okowa"
+  },
+  {
+    "num": 37,
+    "name": "Bukola Saraki",
+    "party_id": 10,
+    "username": "bukola_saraki"
+  },
+  {
+    "num": 38,
+    "name": "Aminu Tambuwal",
+    "party_id": 10,
+    "username": "aminu_tambuwal"
+  },
+  {
+    "num": 39,
+    "name": "Udom Emmanuel",
+    "party_id": 10,
+    "username": "udom_emmanuel"
+  },
+  {
+    "num": 40,
+    "name": "Godwin Obaseki",
+    "party_id": 10,
+    "username": "godwin_obaseki"
+  },
+  {
+    "num": 41,
+    "name": "Seyi Makinde",
+    "party_id": 10,
+    "username": "seyi_makinde"
+  },
+  {
+    "num": 42,
+    "name": "Bala Mohammed",
+    "party_id": 10,
+    "username": "bala_mohammed"
+  },
+  {
+    "num": 43,
+    "name": "Ahmadu Fintiri",
+    "party_id": 10,
+    "username": "ahmadu_fintiri"
+  },
+  {
+    "num": 44,
+    "name": "Douye Diri",
+    "party_id": 10,
+    "username": "douye_diri"
+  },
+  {
+    "num": 45,
+    "name": "Peter Mbah",
+    "party_id": 10,
+    "username": "peter_mbah"
+  },
+  {
+    "num": 46,
+    "name": "Ademola Adeleke",
+    "party_id": 10,
+    "username": "candidate_osun"
+  },
+  {
+    "num": 47,
+    "name": "Sheriff Oborevwori",
+    "party_id": 10,
+    "username": "sheriff_oborevwori"
+  },
+  {
+    "num": 48,
+    "name": "Caleb Mutfwang",
+    "party_id": 10,
+    "username": "caleb_mutfwang"
+  },
+  {
+    "num": 49,
+    "name": "Siminalayi Fubara",
+    "party_id": 10,
+    "username": "siminalayi_fubara"
+  },
+  {
+    "num": 50,
+    "name": "Agbu Kefas",
+    "party_id": 10,
+    "username": "agbu_kefas"
+  },
+  {
+    "num": 51,
+    "name": "Dauda Lawal",
+    "party_id": 10,
+    "username": "dauda_lawal"
+  },
+  {
+    "num": 52,
+    "name": "Umar Bago",
+    "party_id": 1,
+    "username": "umar_bago"
+  },
+  {
+    "num": 53,
+    "name": "Samuel Ortom",
+    "party_id": 10,
+    "username": "samuel_ortom"
+  },
+  {
+    "num": 54,
+    "name": "Okezie Ikpeazu",
+    "party_id": 10,
+    "username": "okezie_ikpeazu"
+  },
+  {
+    "num": 55,
+    "name": "Ifeanyi Ugwuanyi",
+    "party_id": 10,
+    "username": "ifeanyi_ugwuanyi"
+  },
+  {
+    "num": 56,
+    "name": "Darius Ishaku",
+    "party_id": 10,
+    "username": "darius_ishaku"
+  },
+  {
+    "num": 57,
+    "name": "Iyorchia Ayu",
+    "party_id": 10,
+    "username": "iyorchia_ayu"
+  },
+  {
+    "num": 58,
+    "name": "Uche Secondus",
+    "party_id": 10,
+    "username": "uche_secondus"
+  },
+  {
+    "num": 59,
+    "name": "Jonah Jang",
+    "party_id": 10,
+    "username": "jonah_jang"
+  },
+  {
+    "num": 60,
+    "name": "Sule Lamido",
+    "party_id": 10,
+    "username": "sule_lamido"
+  },
+  {
+    "num": 61,
+    "name": "Olusegun Obasanjo",
+    "party_id": 10,
+    "username": "olusegun_obasanjo"
+  },
+  {
+    "num": 62,
+    "name": "Ngozi Okonjo-Iweala",
+    "party_id": 10,
+    "username": "ngozi_okonjoiweala"
+  },
+  {
+    "num": 63,
+    "name": "Datti Baba-Ahmed",
+    "party_id": 6,
+    "username": "datti_babaahmed"
+  },
+  {
+    "num": 64,
+    "name": "Alex Otti",
+    "party_id": 6,
+    "username": "alex_otti"
+  },
+  {
+    "num": 65,
+    "name": "Julius Abure",
+    "party_id": 6,
+    "username": "julius_abure"
+  },
+  {
+    "num": 66,
+    "name": "Aisha Yesufu",
+    "party_id": 6,
+    "username": "aisha_yesufu"
+  },
+  {
+    "num": 67,
+    "name": "Victor Umeh",
+    "party_id": 6,
+    "username": "victor_umeh"
+  },
+  {
+    "num": 68,
+    "name": "Gbadebo Rhodes-Vivour",
+    "party_id": 6,
+    "username": "gbadebo_rhodesvivour"
+  },
+  {
+    "num": 69,
+    "name": "Ireti Kingibe",
+    "party_id": 6,
+    "username": "ireti_kingibe"
+  },
+  {
+    "num": 70,
+    "name": "Chimaroke Nnamani",
+    "party_id": 1,
+    "username": "chimaroke_nnamani"
+  },
+  {
+    "num": 71,
+    "name": "Patrick Utomi",
+    "party_id": 6,
+    "username": "patrick_utomi"
+  },
+  {
+    "num": 72,
+    "name": "Yunusa Tanko",
+    "party_id": 6,
+    "username": "yunusa_tanko"
+  },
+  {
+    "num": 73,
+    "name": "Kenneth Okonkwo",
+    "party_id": 6,
+    "username": "kenneth_okonkwo"
+  },
+  {
+    "num": 74,
+    "name": "Valentine Ozigbo",
+    "party_id": 6,
+    "username": "valentine_ozigbo"
+  },
+  {
+    "num": 75,
+    "name": "Rabiu Kwankwaso",
+    "party_id": 8,
+    "username": "rabiu_kwankwaso"
+  },
+  {
+    "num": 76,
+    "name": "Abba Kabir Yusuf",
+    "party_id": 8,
+    "username": "abba_kabiryusuf"
+  },
+  {
+    "num": 77,
+    "name": "Buba Galadima",
+    "party_id": 8,
+    "username": "buba_galadima"
+  },
+  {
+    "num": 78,
+    "name": "Rufai Hanga",
+    "party_id": 8,
+    "username": "rufai_hanga"
+  },
+  {
+    "num": 79,
+    "name": "Alhassan Doguwa",
+    "party_id": 1,
+    "username": "alhassan_doguwa"
+  },
+  {
+    "num": 80,
+    "name": "Danjuma Goje",
+    "party_id": 1,
+    "username": "danjuma_goje"
+  },
+  {
+    "num": 81,
+    "name": "Chukwuma Soludo",
+    "party_id": 2,
+    "username": "chukwuma_soludo"
+  },
+  {
+    "num": 82,
+    "name": "Willie Obiano",
+    "party_id": 2,
+    "username": "willie_obiano"
+  },
+  {
+    "num": 83,
+    "name": "Enyinnaya Abaribe",
+    "party_id": 2,
+    "username": "enyinnaya_abaribe"
+  },
+  {
+    "num": 84,
+    "name": "Bianca Ojukwu",
+    "party_id": 2,
+    "username": "bianca_ojukwu"
+  },
+  {
+    "num": 85,
+    "name": "Donald Duke",
+    "party_id": 12,
+    "username": "donald_duke"
+  },
+  {
+    "num": 86,
+    "name": "David Mark",
+    "party_id": 17,
+    "username": "david_mark"
+  },
+  {
+    "num": 87,
+    "name": "Atiku Abubakar",
+    "party_id": 17,
+    "username": "candidate_adc"
+  },
+  {
+    "num": 88,
+    "name": "Peter Obi",
+    "party_id": 7,
+    "username": "candidate_pdp"
+  },
+  {
+    "num": 89,
+    "name": "Bola Ahmed Tinubu",
+    "party_id": 1,
+    "username": "candidate_apc"
+  },
+  {
+    "num": 90,
+    "name": "Bola Oyebamiji",
+    "party_id": 1,
+    "username": "bola_oyebamiji_apc"
+  },
+  {
+    "num": 91,
+    "name": "Salam Najeem",
+    "party_id": 13,
+    "username": "state_adc"
+  }
+]

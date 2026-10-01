@@ -506,6 +506,7 @@ type Querier interface {
 	SeedUser(ctx context.Context, arg SeedUserParams) (int64, error)
 	SubmitPollingUnitResult(ctx context.Context, arg SubmitPollingUnitResultParams) (PollingUnitResult, error)
 	SubmitPracticeTest(ctx context.Context, arg SubmitPracticeTestParams) (UserPracticeTest, error)
+	SuspendAllUserPositionsInParty(ctx context.Context, arg SuspendAllUserPositionsInPartyParams) error
 	SuspendPartyMembership(ctx context.Context, arg SuspendPartyMembershipParams) ([]int32, error)
 	ToggleINECResultGrabberPause(ctx context.Context, id int64) (InecResultGrabber, error)
 	UnblockUser(ctx context.Context, arg UnblockUserParams) error
@@ -612,6 +613,7 @@ type Querier interface {
 	UpsertUserPhoneNumber(ctx context.Context, arg UpsertUserPhoneNumberParams) (int64, error)
 	UpsertUserPreferences(ctx context.Context, arg UpsertUserPreferencesParams) (UserPreference, error)
 	UpsertWard(ctx context.Context, arg UpsertWardParams) (Ward, error)
+	ListSuspendedPartyMembers(ctx context.Context, arg ListSuspendedPartyMembersParams) ([]ListSuspendedPartyMembersRow, error)
 	VacateAllUserPositionsInParty(ctx context.Context, arg VacateAllUserPositionsInPartyParams) error
 	VacatePositionAssignment(ctx context.Context, arg VacatePositionAssignmentParams) (PartyPositionAssignment, error)
 	VoteOnResult(ctx context.Context, arg VoteOnResultParams) (PollingUnitResult, error)

@@ -69,6 +69,16 @@ export function PartyTabContent({
         </div>
       );
 
+    case "party-admins":
+      return (
+        <div className="py-12 text-center text-neutral-500 dark:text-neutral-400">
+          <h3 className="text-base font-semibold text-neutral-900 dark:text-white">
+            Party Admins
+          </h3>
+          <p className="mt-1 text-sm">Designated administrative officers and representatives of {partyName}.</p>
+        </div>
+      );
+
     case "about":
       return (
         <div className="py-12 text-center text-neutral-500 dark:text-neutral-400">

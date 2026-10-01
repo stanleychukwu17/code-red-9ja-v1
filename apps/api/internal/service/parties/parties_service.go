@@ -8,6 +8,7 @@ import (
 	"free9ja/api/internal/constants"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
+	"free9ja/api/internal/service/audit"
 	monnifyclient "free9ja/api/internal/service/monnify"
 	"free9ja/api/internal/service/notifications"
 	"free9ja/api/internal/utils"
@@ -33,6 +34,7 @@ type PartiesService struct {
 	usersService             UsersService
 	notificationsService     NotificationsService
 	blocksService            BlocksService
+	auditService             audit.AuditService
 }
 
 // BlocksService interface defines the methods needed from the blocks service
@@ -40,11 +42,13 @@ type BlocksService interface {
 	GetUserBlockedPartyIDs(ctx context.Context, userID int64) map[int16]bool
 	BlockUserByParty(ctx context.Context, partyID int16, blockedUserID int64, blockedByUserID *int64) (queries.PartyUserBlock, error)
 	UnblockUserByParty(ctx context.Context, partyID int16, blockedUserID int64) error
+	ListBlockedUsersByParty(ctx context.Context, partyID int16, limit int32, offset int32) ([]queries.ListBlockedUsersByPartyRow, error)
 }
 
 // UsersService interface defines the methods needed from the users service
 type UsersService interface {
 	GetUserByFakeID(ctx context.Context, fakeID int64) (queries.UserWithPlaces, error)
+	GetUsersByFakeIDs(ctx context.Context, fakeIDs []int64) ([]queries.UserWithPlaces, error)
 	UpdateUserParty(ctx context.Context, userID int64, partyID *int16, fakeID int64) error
 	StripPartyAdminRoles(ctx context.Context, userID int64, fakeID int64) error
 }
@@ -57,11 +61,14 @@ type PageVerificationsService interface {
 // NotificationsService defines methods required for dispatching notifications
 type NotificationsService interface {
 	CreatePartyNotification(ctx context.Context, params notifications.CreatePartyNotificationInput) (*notifications.PartyNotificationItemResponse, error)
+	CreatePartyNotificationAsync(ctx context.Context, params notifications.CreatePartyNotificationInput)
+	CreateNotification(ctx context.Context, params notifications.CreateNotificationInput) (*notifications.NotificationItemResponse, error)
+	CreateNotificationAsync(ctx context.Context, params notifications.CreateNotificationInput)
 }
 
 // NewPartiesService creates a new PartiesService.
 // monnify may be nil in test environments — wallet creation will be skipped.
-func NewPartiesService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client, monnify *monnifyclient.Client, u *utils.Utils, ns NotificationsService, bs BlocksService) *PartiesService {
+func NewPartiesService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client, monnify *monnifyclient.Client, u *utils.Utils, ns NotificationsService, bs BlocksService, as audit.AuditService) *PartiesService {
 	return &PartiesService{
 		queries:              q,
 		pool:                 pool,
@@ -70,6 +77,7 @@ func NewPartiesService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client
 		utils:                u,
 		notificationsService: ns,
 		blocksService:        bs,
+		auditService:         as,
 	}
 }
 
@@ -1444,25 +1452,18 @@ func (s *PartiesService) JoinParty(ctx context.Context, partyID int16, chapterID
 	}
 
 	// 7. Notify party and chapter officials asynchronously
-	go func() {
-		bgCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-
-		// Aggregate daily member joins under a single rollup alert
-		groupKey := constants.GroupKeyPartyNewMembers(partyID, finalChapterID)
-
-		// send notification to party and chapter officials asynchronously
-		_, _ = s.notificationsService.CreatePartyNotification(bgCtx, notifications.CreatePartyNotificationInput{
-			PartyID:     partyID,
-			ActorUserID: &userID,
-			ChapterID:   &finalChapterID,
-			Category:    constants.PartyNotificationCategoryMembership,
-			Type:        constants.NotificationTypeNewMemberJoined,
-			Priority:    constants.NotificationPriorityNormal,
-			GroupKey:    &groupKey,
-			Metadata:    map[string]any{},
-		})
-	}()
+	// Aggregate daily member joins under a single rollup alert
+	groupKey := constants.GroupKeyPartyNewMembers(partyID, finalChapterID)
+	s.notificationsService.CreatePartyNotificationAsync(ctx, notifications.CreatePartyNotificationInput{
+		PartyID:     partyID,
+		ActorUserID: &userID,
+		ChapterID:   &finalChapterID,
+		Category:    constants.PartyNotificationCategoryMembership,
+		Type:        constants.NotificationTypeNewMemberJoined,
+		Priority:    constants.NotificationPriorityNormal,
+		GroupKey:    &groupKey,
+		Metadata:    map[string]any{},
+	})
 
 	return nil
 }
@@ -1705,20 +1706,32 @@ func (s *PartiesService) AssignPartyPosition(ctx context.Context, arg queries.As
 		}
 	}
 
-	return s.queries.AssignPartyPosition(ctx, arg)
+	assignment, err := s.queries.AssignPartyPosition(ctx, arg)
+	if err == nil {
+		s.InvalidateMemberPositionAssignmentsCache(ctx, arg.PartyID, arg.UserID)
+	}
+	return assignment, err
 }
 
 // UpdatePositionAssignment updates an assignment.
 func (s *PartiesService) UpdatePositionAssignment(ctx context.Context, arg queries.UpdatePositionAssignmentParams) (queries.PartyPositionAssignment, error) {
-	return s.queries.UpdatePositionAssignment(ctx, arg)
+	assignment, err := s.queries.UpdatePositionAssignment(ctx, arg)
+	if err == nil {
+		s.InvalidateMemberPositionAssignmentsCache(ctx, assignment.PartyID, assignment.UserID)
+	}
+	return assignment, err
 }
 
 // VacatePositionAssignment vacates an active position assignment.
 func (s *PartiesService) VacatePositionAssignment(ctx context.Context, id int64, partyID int16) (queries.PartyPositionAssignment, error) {
-	return s.queries.VacatePositionAssignment(ctx, queries.VacatePositionAssignmentParams{
+	assignment, err := s.queries.VacatePositionAssignment(ctx, queries.VacatePositionAssignmentParams{
 		ID:      id,
 		PartyID: partyID,
 	})
+	if err == nil {
+		s.InvalidateMemberPositionAssignmentsCache(ctx, assignment.PartyID, assignment.UserID)
+	}
+	return assignment, err
 }
 
 // ListChapterOfficials lists all position assignments for a given chapter.
@@ -1739,11 +1752,39 @@ func (s *PartiesService) ListPartyOfficials(ctx context.Context, arg queries.Lis
 }
 
 // ListMemberPositionAssignments lists positions held by a user in the party.
+// Results are cached in Redis to minimize database lookups across frequent authorization checks.
 func (s *PartiesService) ListMemberPositionAssignments(ctx context.Context, partyID int16, userID int64) ([]queries.ListMemberPositionAssignmentsRow, error) {
-	return s.queries.ListMemberPositionAssignments(ctx, queries.ListMemberPositionAssignmentsParams{
+	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisPartyMemberPositions, partyID, userID)
+
+	// 1. Check Redis cache
+	if cachedVal, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
+		var cached []queries.ListMemberPositionAssignmentsRow
+		if jsonErr := json.Unmarshal([]byte(cachedVal), &cached); jsonErr == nil {
+			return cached, nil
+		}
+	}
+
+	// 2. Query DB
+	positions, err := s.queries.ListMemberPositionAssignments(ctx, queries.ListMemberPositionAssignmentsParams{
 		PartyID: partyID,
 		UserID:  userID,
 	})
+	if err != nil {
+		return nil, err
+	}
+
+	// Ensure empty results serialize to [] instead of null so we can cache empty sets
+	// and prevent cache penetration / repeated unnecessary hits to the database
+	if positions == nil {
+		positions = []queries.ListMemberPositionAssignmentsRow{}
+	}
+
+	// 3. Cache result (including empty slice) for 14 days or until positions are assigned/modified/vacated
+	if data, err := json.Marshal(positions); err == nil {
+		_ = s.rdb.Set(ctx, cacheKey, data, db.RedisFourteenDaysTTL).Err()
+	}
+
+	return positions, nil
 }
 
 // GetActivePartyMemberSuspension checks if a user is actively suspended from a party.
@@ -1801,6 +1842,14 @@ func (s *PartiesService) InvalidatePartyMemberSuspensionCache(ctx context.Contex
 	}
 }
 
+// InvalidateMemberPositionAssignmentsCache invalidates the Redis position assignments cache for a member.
+func (s *PartiesService) InvalidateMemberPositionAssignmentsCache(ctx context.Context, partyID int16, userID int64) {
+	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisPartyMemberPositions, partyID, userID)
+	if err := s.rdb.Del(ctx, cacheKey).Err(); err != nil {
+		slog.Error("Failed to invalidate party member positions cache", "error", err, "partyID", partyID, "userID", userID)
+	}
+}
+
 // SuspendPartyMemberInput defines the input for suspending a party member.
 type SuspendPartyMemberInput struct {
 	PartyID     int16
@@ -1830,7 +1879,19 @@ func (s *PartiesService) SuspendPartyMember(ctx context.Context, input SuspendPa
 	// set queries to use transaction
 	qtx := s.queries.WithTx(tx)
 
-	// 1. Create suspension record
+	// 1. Suspend party membership across all chapters
+	chapterIDs, err := qtx.SuspendPartyMembership(ctx, queries.SuspendPartyMembershipParams{
+		PartyID: input.PartyID,
+		UserID:  input.UserID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to update party membership status: %w", err)
+	}
+	if len(chapterIDs) == 0 {
+		return nil, fmt.Errorf("user is not an active member of this party")
+	}
+
+	// 2. Create suspension record
 	suspension, err := qtx.CreatePartyMemberSuspension(ctx, queries.CreatePartyMemberSuspensionParams{
 		PartyID:     input.PartyID,
 		UserID:      input.UserID,
@@ -1841,34 +1902,19 @@ func (s *PartiesService) SuspendPartyMember(ctx context.Context, input SuspendPa
 		return nil, fmt.Errorf("failed to create suspension record: %w", err)
 	}
 
-	// 2. Suspend party membership across all chapters
-	chapterIDs, err := qtx.SuspendPartyMembership(ctx, queries.SuspendPartyMembershipParams{
-		PartyID: input.PartyID,
-		UserID:  input.UserID,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to update party membership status: %w", err)
-	}
+	// marshal suspension record into json for metadata
+	suspensionJSON, _ := json.Marshal(suspension)
 
-	// 3. Vacate all active positions held by the user in this party
-	err = qtx.VacateAllUserPositionsInParty(ctx, queries.VacateAllUserPositionsInPartyParams{
+	// 3. Suspend all active positions held by the user in this party
+	err = qtx.SuspendAllUserPositionsInParty(ctx, queries.SuspendAllUserPositionsInPartyParams{
 		PartyID: input.PartyID,
 		UserID:  input.UserID,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to vacate user positions: %w", err)
+		return nil, fmt.Errorf("failed to suspend user positions: %w", err)
 	}
 
 	// 4. Log milestone (one milestone entry for the user in this party)
-	metaMap := map[string]interface{}{}
-	if input.Reason != nil && *input.Reason != "" {
-		metaMap["reason"] = *input.Reason
-	}
-	if input.SuspendedBy != nil {
-		metaMap["suspended_by"] = *input.SuspendedBy
-	}
-	metaJSON, _ := json.Marshal(metaMap)
-
 	// get just one chapterID (from the chapterIDs returned by SuspendPartyMembership) to log the milestone
 	var primaryChapterID pgtype.Int4
 	if len(chapterIDs) > 0 {
@@ -1881,44 +1927,76 @@ func (s *PartiesService) SuspendPartyMember(ctx context.Context, input SuspendPa
 		PartyID:       input.PartyID,
 		ChapterID:     primaryChapterID,
 		MilestoneType: constants.MilestoneTypeSuspended,
-		Metadata:      metaJSON,
+		Metadata:      suspensionJSON,
 	})
 
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("failed to commit suspension transaction: %w", err)
 	}
 
-	// Invalidate member suspension cache
+	// Invalidate member suspension and positions cache
 	s.InvalidatePartyMemberSuspensionCache(ctx, input.PartyID, input.UserID)
+	s.InvalidateMemberPositionAssignmentsCache(ctx, input.PartyID, input.UserID)
+
+	// Audit Logging
+	s.auditService.LogActionAsync(ctx, queries.InsertAuditLogParams{
+		Module:     audit.StringToText(db.ModulePartyAdmin),
+		Action:     db.ActionSuspendPartyMember,
+		ActorID:    *input.SuspendedBy,
+		ActorRole:  audit.StringToText(db.ActorRolePartyAdmin),
+		EntityType: db.EntityTypeUser,
+		EntityID:   strconv.FormatInt(input.UserID, 10),
+		NewValues:  suspensionJSON,
+	})
+
+	// Send notification to the suspended user asynchronously
+	notificationMetaData := map[string]any{
+		"party_id": input.PartyID,
+	}
+	if input.Reason != nil && *input.Reason != "" {
+		notificationMetaData["reason"] = *input.Reason
+	}
+	s.notificationsService.CreateNotificationAsync(ctx, notifications.CreateNotificationInput{
+		RecipientUserID: input.UserID,
+		ActorUserID:     input.SuspendedBy,
+		PartyID:         &input.PartyID,
+		Category:        constants.NotificationCategoryParty,
+		Type:            constants.NotificationTypePartyMemberSuspended,
+		Priority:        constants.NotificationPriorityHigh,
+		Metadata:        notificationMetaData,
+	})
 
 	return &suspension, nil
 }
 
 // UnsuspendPartyMemberInput defines the input for lifting a suspension.
 type UnsuspendPartyMemberInput struct {
-	PartyID    int16
-	UserID     int64
-	LiftedBy   *int64
-	LiftReason *string
+	PartyID    int16   `json:"party_id"`
+	UserID     int64   `json:"user_id"`
+	LiftedBy   *int64  `json:"lifted_by,omitempty"`
+	LiftReason *string `json:"lift_reason,omitempty"`
 }
 
 // UnsuspendPartyMember lifts an active suspension and reactivates party membership.
 func (s *PartiesService) UnsuspendPartyMember(ctx context.Context, input UnsuspendPartyMemberInput) (*queries.PartyMemberSuspension, error) {
+	// Check if actively suspended (utilizing Redis cache if available)
+	existing, err := s.GetActivePartyMemberSuspension(ctx, input.PartyID, input.UserID)
+	if err != nil {
+		return nil, err
+	}
+	if existing == nil || existing.ID == 0 {
+		return nil, fmt.Errorf("no active suspension found for this member")
+	}
+
+	// begin db transaction
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
 
+	// set queries to use transaction
 	qtx := s.queries.WithTx(tx)
-
-	// Verify active suspension exists
-	if _, err := qtx.GetActivePartyMemberSuspension(ctx, queries.GetActivePartyMemberSuspensionParams{
-		PartyID: input.PartyID,
-		UserID:  input.UserID,
-	}); err != nil {
-		return nil, fmt.Errorf("no active suspension found for this member")
-	}
 
 	// 1. Lift suspension record
 	updatedSuspension, err := qtx.LiftPartyMemberSuspension(ctx, queries.LiftPartyMemberSuspensionParams{
@@ -1941,14 +2019,8 @@ func (s *PartiesService) UnsuspendPartyMember(ctx context.Context, input Unsuspe
 	}
 
 	// 3. Log milestone (one milestone entry for the user in this party)
-	metaMap := map[string]interface{}{}
-	if input.LiftReason != nil && *input.LiftReason != "" {
-		metaMap["lift_reason"] = *input.LiftReason
-	}
-	if input.LiftedBy != nil {
-		metaMap["lifted_by"] = *input.LiftedBy
-	}
-	metaJSON, _ := json.Marshal(metaMap)
+	// Marshal input into JSON to use as metadata and for audit logging
+	reinstatedJSON, _ := json.Marshal(input)
 
 	// get just one chapterID (from the chapterIDs returned by ReactivatePartyMembership) to log the milestone
 	var primaryChapterID pgtype.Int4
@@ -1962,7 +2034,7 @@ func (s *PartiesService) UnsuspendPartyMember(ctx context.Context, input Unsuspe
 		PartyID:       input.PartyID,
 		ChapterID:     primaryChapterID,
 		MilestoneType: constants.MilestoneTypeReinstated,
-		Metadata:      metaJSON,
+		Metadata:      reinstatedJSON,
 	})
 
 	// commit db transaction
@@ -1972,6 +2044,32 @@ func (s *PartiesService) UnsuspendPartyMember(ctx context.Context, input Unsuspe
 
 	// Invalidate member suspension cache
 	s.InvalidatePartyMemberSuspensionCache(ctx, input.PartyID, input.UserID)
+
+	// Audit Logging
+	s.auditService.LogActionAsync(ctx, queries.InsertAuditLogParams{
+		Module:     audit.StringToText(db.ModulePartyAdmin),
+		Action:     db.ActionUnsuspendPartyMember,
+		ActorID:    *input.LiftedBy,
+		ActorRole:  audit.StringToText(db.ActorRolePartyAdmin),
+		EntityType: db.EntityTypeUser,
+		EntityID:   strconv.FormatInt(input.UserID, 10),
+		NewValues:  reinstatedJSON,
+	})
+
+	// Send notification to the reinstated user asynchronously
+	notificationMetadata := map[string]any{}
+	if input.LiftReason != nil && *input.LiftReason != "" {
+		notificationMetadata["reason"] = *input.LiftReason
+	}
+	s.notificationsService.CreateNotificationAsync(ctx, notifications.CreateNotificationInput{
+		RecipientUserID: input.UserID,
+		ActorUserID:     input.LiftedBy,
+		PartyID:         &input.PartyID,
+		Category:        constants.NotificationCategoryParty,
+		Type:            constants.NotificationTypePartyMemberReinstated,
+		Priority:        constants.NotificationPriorityHigh,
+		Metadata:        notificationMetadata,
+	})
 
 	return &updatedSuspension, nil
 }
@@ -2075,10 +2173,83 @@ func (s *PartiesService) BlockPartyUser(ctx context.Context, input BlockPartyUse
 		s.InvalidateChapterMemberCount(ctx, input.PartyID, chapterID)
 	}
 
+	// Audit Logging
+	if s.auditService != nil {
+		blockJSON, _ := json.Marshal(partyBlock)
+		var actorID int64
+		if input.BlockedBy != nil {
+			actorID = *input.BlockedBy
+		}
+		s.auditService.LogActionAsync(ctx, queries.InsertAuditLogParams{
+			Module:     audit.StringToText(db.ModulePartyAdmin),
+			Action:     db.ActionBlockPartyMember,
+			ActorID:    actorID,
+			ActorRole:  audit.StringToText(db.ActorRolePartyAdmin),
+			EntityType: db.EntityTypeUser,
+			EntityID:   strconv.FormatInt(input.BlockedUserID, 10),
+			NewValues:  blockJSON,
+		})
+	}
+
 	return &partyBlock, nil
 }
 
 // UnblockPartyUser removes a party block on a user.
 func (s *PartiesService) UnblockPartyUser(ctx context.Context, partyID int16, userID int64) error {
-	return s.blocksService.UnblockUserByParty(ctx, partyID, userID)
+	if err := s.blocksService.UnblockUserByParty(ctx, partyID, userID); err != nil {
+		return err
+	}
+
+	// Audit Logging
+	if s.auditService != nil {
+		s.auditService.LogActionAsync(ctx, queries.InsertAuditLogParams{
+			Module:     audit.StringToText(db.ModulePartyAdmin),
+			Action:     db.ActionUnblockPartyMember,
+			EntityType: db.EntityTypeUser,
+			EntityID:   strconv.FormatInt(userID, 10),
+		})
+	}
+
+	return nil
+}
+
+// ListBlockedPartyMembers lists blocked users for a party.
+func (s *PartiesService) ListBlockedPartyMembers(ctx context.Context, partyID int16, limit int32, offset int32) ([]queries.ListBlockedUsersByPartyRow, error) {
+	return s.blocksService.ListBlockedUsersByParty(ctx, partyID, limit, offset)
+}
+
+// ListSuspendedPartyMembers lists actively suspended members for a party.
+func (s *PartiesService) ListSuspendedPartyMembers(ctx context.Context, partyID int16, limit int32, offset int32) ([]queries.ListSuspendedPartyMembersRow, error) {
+	return s.queries.ListSuspendedPartyMembers(ctx, queries.ListSuspendedPartyMembersParams{
+		PartyID: partyID,
+		Limit:   limit,
+		Offset:  offset,
+	})
+}
+
+// ListPartyAdmins retrieves all administrators assigned to a given political party.
+func (s *PartiesService) ListPartyAdmins(ctx context.Context, partyID int16) ([]queries.UserWithPlaces, error) {
+	arg := queries.ListUsersParams{
+		PartyID:       pgtype.Int2{Int16: partyID, Valid: true},
+		RoleCodes:     []string{"party_admin", "super_party_admin"},
+		AccountStatus: []string{"active", "just_registered", "placeholder"},
+		LimitNum:      100,
+	}
+
+	userRows, err := s.queries.ListUsers(ctx, arg)
+	if err != nil {
+		return nil, err
+	}
+	if len(userRows) == 0 {
+		return []queries.UserWithPlaces{}, nil
+	}
+
+	fakeIDs := make([]int64, 0, len(userRows))
+	for _, u := range userRows {
+		if u.FakeID.Valid {
+			fakeIDs = append(fakeIDs, u.FakeID.Int64)
+		}
+	}
+
+	return s.usersService.GetUsersByFakeIDs(ctx, fakeIDs)
 }

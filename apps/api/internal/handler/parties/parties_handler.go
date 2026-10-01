@@ -97,23 +97,34 @@ type PartiesService interface {
 	UnsuspendPartyMember(ctx context.Context, input partiesservice.UnsuspendPartyMemberInput) (*queries.PartyMemberSuspension, error)
 	BlockPartyUser(ctx context.Context, input partiesservice.BlockPartyUserInput) (*queries.PartyUserBlock, error)
 	UnblockPartyUser(ctx context.Context, partyID int16, userID int64) error
+	ListBlockedPartyMembers(ctx context.Context, partyID int16, limit int32, offset int32) ([]queries.ListBlockedUsersByPartyRow, error)
+	ListSuspendedPartyMembers(ctx context.Context, partyID int16, limit int32, offset int32) ([]queries.ListSuspendedPartyMembersRow, error)
+	ListPartyAdmins(ctx context.Context, partyID int16) ([]queries.UserWithPlaces, error)
+}
+
+// PermissionsService defines methods for checking user permissions
+type PermissionsService interface {
+	CheckPartyModificationPermission(claims *utils.JWTClaims, partyID int16) (bool, permissionsservice.PartyModificationPermissions, error)
+	CheckPartyMemberSuspensionPermission(claims *utils.JWTClaims, partyID int16, targetUserID int64) (bool, permissionsservice.PartyModificationPermissions, error)
 }
 
 type Handler struct {
-	partiesService PartiesService
-	auditService   audit.AuditService
-	filesService   files.FilesService
-	utils          *utils.Utils
-	r2Svc          *r2service.R2Service
+	partiesService     PartiesService
+	auditService       audit.AuditService
+	permissionsService PermissionsService
+	filesService       files.FilesService
+	utils              *utils.Utils
+	r2Svc              *r2service.R2Service
 }
 
-func NewHandler(partiesService PartiesService, auditService audit.AuditService, filesService files.FilesService, utils *utils.Utils, r2Svc *r2service.R2Service) *Handler {
+func NewHandler(partiesService PartiesService, auditService audit.AuditService, permissionsService PermissionsService, filesService files.FilesService, utils *utils.Utils, r2Svc *r2service.R2Service) *Handler {
 	return &Handler{
-		partiesService: partiesService,
-		auditService:   auditService,
-		filesService:   filesService,
-		utils:          utils,
-		r2Svc:          r2Svc,
+		partiesService:     partiesService,
+		auditService:       auditService,
+		permissionsService: permissionsService,
+		filesService:       filesService,
+		utils:              utils,
+		r2Svc:              r2Svc,
 	}
 }
 
@@ -310,8 +321,7 @@ func (h *Handler) UpdateParty(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// check permissions to update this party
-	permsSvc := permissionsservice.NewPermissionsService()
-	allowed, perms, err := permsSvc.CheckPartyModificationPermission(claims, int16(partyID))
+	allowed, perms, err := h.permissionsService.CheckPartyModificationPermission(claims, int16(partyID))
 	if !allowed {
 		h.utils.RespondError(w, http.StatusForbidden, err.Error())
 		return
@@ -2518,6 +2528,61 @@ func (h *Handler) ListPartyOfficials(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// ListPartyAdmins lists the administrators for a given party.
+// Enforces authorization: only super_admin, admin, party_admin, super_party_admin,
+// or users holding an active leadership position in the party are permitted.
+func (h *Handler) ListPartyAdmins(w http.ResponseWriter, r *http.Request) {
+	// Parse and validate the party ID from the URL path
+	idStr := chi.URLParam(r, "id")
+	partyID, err := strconv.ParseInt(idStr, 10, 16)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID: "+err.Error())
+		return
+	}
+
+	// Extract authenticated caller claims from request context
+	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
+	if !ok || claims == nil {
+		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	// 1. Fast path: Check if caller is a platform admin (super_admin, admin) or an admin for this specific party
+	hasAccess, _, _ := h.permissionsService.CheckPartyModificationPermission(claims, int16(partyID))
+
+	// 2. Official path: If not an admin, verify caller belongs to this party and holds at least one active official position
+	// (ListMemberPositionAssignments leverages Redis caching to keep this check lightweight)
+	if !hasAccess && claims.PartyID == int16(partyID) {
+		positions, err := h.partiesService.ListMemberPositionAssignments(r.Context(), int16(partyID), claims.UserID)
+		if err == nil {
+			for _, pos := range positions {
+				if pos.AssignmentStatus == "active" {
+					hasAccess = true
+					break
+				}
+			}
+		}
+	}
+
+	// no access
+	if !hasAccess {
+		h.utils.RespondError(w, http.StatusForbidden, "Forbidden: only platform admins, party admins, and appointed officials can view party administrators")
+		return
+	}
+
+	// 3. Fetch and return list of party administrators
+	admins, err := h.partiesService.ListPartyAdmins(r.Context(), int16(partyID))
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to list party admins: "+err.Error())
+		return
+	}
+
+	// 4. Return response with JSON array (even if empty), not "null"
+	h.utils.RespondSuccess(w, http.StatusOK, "Party admins retrieved successfully", map[string]interface{}{
+		"admins": admins,
+	})
+}
+
 // ListChapterOfficials lists all position assignments for a given chapter
 func (h *Handler) ListChapterOfficials(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
@@ -2822,6 +2887,7 @@ type SuspendPartyMemberRequest struct {
 
 // SuspendPartyMember handles POST /api/v1/parties/{id}/members/{user_id}/suspend
 func (h *Handler) SuspendPartyMember(w http.ResponseWriter, r *http.Request) {
+	// 1. Extract and validate party ID URL parameter
 	idStr := chi.URLParam(r, "id")
 	partyID, err := strconv.ParseInt(idStr, 10, 16)
 	if err != nil {
@@ -2829,10 +2895,7 @@ func (h *Handler) SuspendPartyMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: add the suspension to audit_log
-	// TODO: in the handler, check if the logged in user has the right to suspend someone
-	// TODO: in the handler: check that the logged in user is not trying to suspend they selves
-
+	// 2. Extract and validate target user ID URL parameter
 	userIDStr := chi.URLParam(r, "user_id")
 	userID, err := strconv.ParseInt(userIDStr, 10, 64)
 	if err != nil {
@@ -2840,27 +2903,40 @@ func (h *Handler) SuspendPartyMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 3. Verify user authentication claims
+	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
+	if !ok || claims == nil {
+		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	// 4. Verify caller's administrative permission to suspend target member
+	allowed, _, err := h.permissionsService.CheckPartyMemberSuspensionPermission(claims, int16(partyID), userID)
+	if !allowed {
+		h.utils.RespondError(w, http.StatusForbidden, err.Error())
+		return
+	}
+
+	// 5. Decode optional request payload (e.g. reason)
 	var req SuspendPartyMemberRequest
 	if r.Body != nil && r.ContentLength > 0 {
 		_ = json.NewDecoder(r.Body).Decode(&req)
 	}
 
-	var suspendedBy *int64
-	if claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims); ok && claims != nil {
-		suspendedBy = &claims.UserID
-	}
-
+	// 6. Execute member suspension via service
 	suspension, err := h.partiesService.SuspendPartyMember(r.Context(), partiesservice.SuspendPartyMemberInput{
 		PartyID:     int16(partyID),
 		UserID:      userID,
-		SuspendedBy: suspendedBy,
+		SuspendedBy: &claims.UserID,
 		Reason:      req.Reason,
 	})
+	fmt.Printf("%+v\n", suspension)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
+	// 7. Return success response with suspension record
 	h.utils.RespondSuccess(w, http.StatusOK, "Member suspended successfully", map[string]interface{}{
 		"suspension": suspension,
 	})
@@ -2873,6 +2949,7 @@ type UnsuspendPartyMemberRequest struct {
 
 // UnsuspendPartyMember handles POST /api/v1/parties/{id}/members/{user_id}/unsuspend
 func (h *Handler) UnsuspendPartyMember(w http.ResponseWriter, r *http.Request) {
+	// 1. Extract and validate party ID URL parameter
 	idStr := chi.URLParam(r, "id")
 	partyID, err := strconv.ParseInt(idStr, 10, 16)
 	if err != nil {
@@ -2880,6 +2957,7 @@ func (h *Handler) UnsuspendPartyMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 2. Extract and validate target user ID URL parameter
 	userIDStr := chi.URLParam(r, "user_id")
 	userID, err := strconv.ParseInt(userIDStr, 10, 64)
 	if err != nil {
@@ -2887,20 +2965,31 @@ func (h *Handler) UnsuspendPartyMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 3. Verify user authentication claims
+	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
+	if !ok || claims == nil {
+		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	// 4. Verify caller's administrative permission to unsuspend target member
+	allowed, _, err := h.permissionsService.CheckPartyMemberSuspensionPermission(claims, int16(partyID), userID)
+	if !allowed {
+		h.utils.RespondError(w, http.StatusForbidden, err.Error())
+		return
+	}
+
+	// 5. Decode optional request payload (e.g. reason)
 	var req UnsuspendPartyMemberRequest
 	if r.Body != nil && r.ContentLength > 0 {
 		_ = json.NewDecoder(r.Body).Decode(&req)
 	}
 
-	var liftedBy *int64
-	if claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims); ok && claims != nil {
-		liftedBy = &claims.UserID
-	}
-
+	// 6. Execute member un-suspension via service
 	suspension, err := h.partiesService.UnsuspendPartyMember(r.Context(), partiesservice.UnsuspendPartyMemberInput{
 		PartyID:    int16(partyID),
 		UserID:     userID,
-		LiftedBy:   liftedBy,
+		LiftedBy:   &claims.UserID,
 		LiftReason: req.Reason,
 	})
 	if err != nil {
@@ -2908,6 +2997,7 @@ func (h *Handler) UnsuspendPartyMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 7. Return success response with suspension record
 	h.utils.RespondSuccess(w, http.StatusOK, "Member suspension lifted successfully", map[string]interface{}{
 		"suspension": suspension,
 	})
@@ -2983,4 +3073,80 @@ func (h *Handler) UnblockPartyUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.utils.RespondSuccess(w, http.StatusOK, "User unblocked from party successfully", nil)
+}
+
+// ListBlockedPartyMembers handles GET /api/v1/parties/{id}/members/blocked
+func (h *Handler) ListBlockedPartyMembers(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	partyID, err := strconv.ParseInt(idStr, 10, 16)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID: "+err.Error())
+		return
+	}
+
+	limit := int32(50)
+	if l := r.URL.Query().Get("limit"); l != "" {
+		if val, err := strconv.Atoi(l); err == nil && val > 0 {
+			if val > 100 {
+				limit = 100
+			} else {
+				limit = int32(val)
+			}
+		}
+	}
+
+	offset := int32(0)
+	if off := r.URL.Query().Get("offset"); off != "" {
+		if val, err := strconv.Atoi(off); err == nil && val >= 0 {
+			offset = int32(val)
+		}
+	}
+
+	blockedUsers, err := h.partiesService.ListBlockedPartyMembers(r.Context(), int16(partyID), limit, offset)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to list blocked users: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Blocked users retrieved successfully", map[string]interface{}{
+		"blocked_users": blockedUsers,
+	})
+}
+
+// ListSuspendedPartyMembers handles GET /api/v1/parties/{id}/members/suspended
+func (h *Handler) ListSuspendedPartyMembers(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	partyID, err := strconv.ParseInt(idStr, 10, 16)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID: "+err.Error())
+		return
+	}
+
+	limit := int32(50)
+	if l := r.URL.Query().Get("limit"); l != "" {
+		if val, err := strconv.Atoi(l); err == nil && val > 0 {
+			if val > 100 {
+				limit = 100
+			} else {
+				limit = int32(val)
+			}
+		}
+	}
+
+	offset := int32(0)
+	if off := r.URL.Query().Get("offset"); off != "" {
+		if val, err := strconv.Atoi(off); err == nil && val >= 0 {
+			offset = int32(val)
+		}
+	}
+
+	suspendedUsers, err := h.partiesService.ListSuspendedPartyMembers(r.Context(), int16(partyID), limit, offset)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to list suspended users: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Suspended users retrieved successfully", map[string]interface{}{
+		"suspended_users": suspendedUsers,
+	})
 }

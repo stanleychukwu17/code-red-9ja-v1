@@ -161,3 +161,26 @@ export const joinParty = createServerFn({ method: "POST" })
 			return { success: false, message, data: null };
 		}
 	});
+
+/**
+ * Server function to fetch administrators for a political party.
+ */
+export const getPartyAdmins = createServerFn({ method: "GET" })
+	.inputValidator((data: { partyId: number | string }) => data)
+	.handler(async ({ data: { partyId } }) => {
+		try {
+			return await apiFetchJson<{
+				success: boolean;
+				message?: string;
+				data: { admins: any[] };
+			}>(API_URL.partyAdmins(partyId));
+		} catch (error: unknown) {
+			const message = error instanceof Error ? error.message : "Failed to fetch party admins";
+			return {
+				success: false,
+				message,
+				data: { admins: [] },
+			};
+		}
+	});
+

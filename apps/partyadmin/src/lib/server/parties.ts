@@ -2,6 +2,11 @@ import { createServerFn } from "@tanstack/react-start";
 import { apiFetch } from "./fetch";
 import { API_URL } from "#/lib/config";
 
+// ========================================================
+// PARTIES
+// ========================================================
+
+// Fetch all parties
 export const getParties = createServerFn({ method: "POST" }).handler(
   async () => {
     try {
@@ -14,6 +19,7 @@ export const getParties = createServerFn({ method: "POST" }).handler(
   },
 );
 
+// Fetch public parties listing
 export const getPublicParties = createServerFn({ method: "POST" }).handler(
   async () => {
     try {
@@ -31,6 +37,7 @@ export const getPublicParties = createServerFn({ method: "POST" }).handler(
   },
 );
 
+// Fetch single party by ID
 export const getParty = createServerFn({ method: "POST" })
   .inputValidator((id: string | number) => id)
   .handler(async ({ data: id }) => {
@@ -46,6 +53,11 @@ export const getParty = createServerFn({ method: "POST" })
     }
   });
 
+// ========================================================
+// PARTY WALLET
+// ========================================================
+
+// Fetch party wallet details
 export const getPartyWallet = createServerFn({ method: "GET" })
   .inputValidator((id: string | number) => id)
   .handler(async ({ data: id }) => {
@@ -57,6 +69,7 @@ export const getPartyWallet = createServerFn({ method: "GET" })
     }
   });
 
+// Create party wallet
 export const createPartyWallet = createServerFn({ method: "POST" })
   .inputValidator((id: string | number) => id)
   .handler(async ({ data: id }) => {
@@ -70,6 +83,11 @@ export const createPartyWallet = createServerFn({ method: "POST" })
     }
   });
 
+// ========================================================
+// FILE UPLOADS
+// ========================================================
+
+// Request pre-signed upload URL for files
 export const getPresignedUploadURL = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
@@ -99,6 +117,7 @@ export const getPresignedUploadURL = createServerFn({ method: "POST" })
     }
   });
 
+// Confirm upload completion for uploaded file
 export const confirmFileUpload = createServerFn({ method: "POST" })
   .inputValidator((data: { id: string | number; success: boolean }) => data)
   .handler(async ({ data: { id, success } }) => {
@@ -116,7 +135,7 @@ export const confirmFileUpload = createServerFn({ method: "POST" })
     }
   });
 
-
+// Fetch paginated party wallet transaction ledger
 export const getPartyWalletTransactions = createServerFn({ method: "POST" })
   .inputValidator(
     (data: { partyID: string | number; limit?: number; offset?: number }) =>
@@ -143,6 +162,7 @@ export const getPartyWalletTransactions = createServerFn({ method: "POST" })
     }
   });
 
+// Withdraw funds from party wallet
 export const withdrawFromPartyWallet = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
@@ -174,6 +194,11 @@ export const withdrawFromPartyWallet = createServerFn({ method: "POST" })
     }
   });
 
+// ========================================================
+// PARTY SLOTS
+// ========================================================
+
+// Fetch current unit price for party slots
 export const getPartySlotPrice = createServerFn({ method: "POST" })
   .inputValidator((partyID: string | number) => partyID)
   .handler(async ({ data: partyID }) => {
@@ -189,6 +214,7 @@ export const getPartySlotPrice = createServerFn({ method: "POST" })
     }
   });
 
+// Purchase party slots
 export const buyPartySlots = createServerFn({ method: "POST" })
   .inputValidator(
     (data: { partyID: string | number; quantity: number }) => data,
@@ -213,6 +239,11 @@ export const buyPartySlots = createServerFn({ method: "POST" })
     }
   });
 
+// ========================================================
+// AGENT ALLOWANCES & TARGETS
+// ========================================================
+
+// Deposit allowance funds for party agents
 export const depositPartyAllowance = createServerFn({ method: "POST" })
   .inputValidator(
     (data: { partyID: string | number; amountKobo: number }) => data,
@@ -237,6 +268,7 @@ export const depositPartyAllowance = createServerFn({ method: "POST" })
     }
   });
 
+// Update state-level agent payment allocations
 export const updatePartyStateAllowances = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
@@ -266,6 +298,7 @@ export const updatePartyStateAllowances = createServerFn({ method: "POST" })
     }
   });
 
+// Fetch current agent payment allocations
 export const getPartyAgentPaymentAllocation = createServerFn({ method: "GET" })
   .inputValidator((partyId: string | number) => partyId)
   .handler(async ({ data: partyId }) => {
@@ -283,6 +316,7 @@ export const getPartyAgentPaymentAllocation = createServerFn({ method: "GET" })
     }
   });
 
+// Fetch party agent recruitment targets
 export const getPartyAgentTargets = createServerFn({ method: "GET" })
   .inputValidator((partyId: string | number) => partyId)
   .handler(async ({ data: partyId }) => {
@@ -300,6 +334,7 @@ export const getPartyAgentTargets = createServerFn({ method: "GET" })
     }
   });
 
+// Update party agent recruitment targets
 export const updatePartyAgentTargets = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
@@ -332,6 +367,7 @@ export const updatePartyAgentTargets = createServerFn({ method: "POST" })
     }
   });
 
+// Simulate funding party wallet (test environments)
 export const fundPartyWalletTest = createServerFn({ method: "POST" })
   .inputValidator(
     (data: { partyID: string | number; amountKobo: number }) => data,
@@ -357,6 +393,11 @@ export const fundPartyWalletTest = createServerFn({ method: "POST" })
     }
   });
 
+// ========================================================
+// MARKETING & PLANS
+// ========================================================
+
+// Fetch subscription/marketing plans
 export const getPlans = createServerFn({ method: "GET" })
   .inputValidator((data: { type?: string; isActive?: boolean } | undefined) => data)
   .handler(async ({ data }) => {
@@ -372,6 +413,7 @@ export const getPlans = createServerFn({ method: "GET" })
     }
   });
 
+// Create party marketing campaign
 export const createMarketingCampaign = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
@@ -415,6 +457,7 @@ export const createMarketingCampaign = createServerFn({ method: "POST" })
     }
   });
 
+// Fetch party marketing campaigns
 export const getPartyMarketingCampaigns = createServerFn({ method: "GET" })
   .inputValidator((partyId: number) => partyId)
   .handler(async ({ data: partyId }) => {
@@ -474,6 +517,11 @@ export interface PartyOfficialItem {
   display_title: string;
 }
 
+// ========================================================
+// PARTY POSITIONS & OFFICIALS
+// ========================================================
+
+// Fetch default and custom positions configured for a party
 export const getPartyPositions = createServerFn({ method: "GET" })
   .inputValidator(
     (data: { partyId: number | string; chapterType?: string }) => data,
@@ -492,6 +540,7 @@ export const getPartyPositions = createServerFn({ method: "GET" })
     }
   });
 
+// Fetch party officials roster matching filter criteria
 export const getPartyOfficials = createServerFn({ method: "GET" })
   .inputValidator(
     (data: {
@@ -525,6 +574,7 @@ export const getPartyOfficials = createServerFn({ method: "GET" })
     }
   });
 
+// Fetch officials for a specific chapter
 export const getChapterOfficials = createServerFn({ method: "GET" })
   .inputValidator(
     (data: {
@@ -547,6 +597,7 @@ export const getChapterOfficials = createServerFn({ method: "GET" })
     }
   });
 
+// Assign a party member to a chapter position
 export const assignPartyOfficial = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
@@ -583,6 +634,7 @@ export const assignPartyOfficial = createServerFn({ method: "POST" })
     }
   });
 
+// Vacate an official assignment
 export const vacatePartyOfficial = createServerFn({ method: "POST" })
   .inputValidator(
     (data: { partyId: number | string; assignmentId: number | string }) => data,
@@ -604,6 +656,7 @@ export const vacatePartyOfficial = createServerFn({ method: "POST" })
     }
   });
 
+// Resolve or create chapter by level/entity
 export const resolvePartyChapter = createServerFn({ method: "GET" })
   .inputValidator(
     (data: {
@@ -626,6 +679,7 @@ export const resolvePartyChapter = createServerFn({ method: "GET" })
     }
   });
 
+// Create custom position within a party
 export const createPartyCustomPosition = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
@@ -663,6 +717,11 @@ export const createPartyCustomPosition = createServerFn({ method: "POST" })
     }
   });
 
+// ========================================================
+// MEMBER SUSPENSION & BLOCKING
+// ========================================================
+
+// Suspend party member, vacating held positions and disabling membership privileges
 export const suspendPartyMember = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
@@ -691,6 +750,7 @@ export const suspendPartyMember = createServerFn({ method: "POST" })
     }
   });
 
+// Lift suspension and reinstate party member
 export const unsuspendPartyMember = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
@@ -719,6 +779,7 @@ export const unsuspendPartyMember = createServerFn({ method: "POST" })
     }
   });
 
+// Block user from party completely, stripping roles and vacating positions
 export const blockPartyMember = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
@@ -747,6 +808,7 @@ export const blockPartyMember = createServerFn({ method: "POST" })
     }
   });
 
+// Unblock user from party
 export const unblockPartyMember = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
@@ -770,6 +832,54 @@ export const unblockPartyMember = createServerFn({ method: "POST" })
       };
     }
   });
+
+// Fetch suspended party members list
+export const getSuspendedPartyMembers = createServerFn({ method: "GET" })
+  .inputValidator(
+    (data: {
+      partyId: number | string;
+      limit?: number;
+      offset?: number;
+    }) => data,
+  )
+  .handler(async ({ data }) => {
+    try {
+      const response = await apiFetch(
+        API_URL.suspendedMembers(data.partyId, data.limit, data.offset),
+      );
+      return await response.json();
+    } catch (error) {
+      return {
+        success: false,
+        message: "Failed to fetch suspended members: " + (error as Error).message,
+      };
+    }
+  });
+
+// Fetch blocked party members list
+export const getBlockedPartyMembers = createServerFn({ method: "GET" })
+  .inputValidator(
+    (data: {
+      partyId: number | string;
+      limit?: number;
+      offset?: number;
+    }) => data,
+  )
+  .handler(async ({ data }) => {
+    try {
+      const response = await apiFetch(
+        API_URL.blockedMembers(data.partyId, data.limit, data.offset),
+      );
+      return await response.json();
+    } catch (error) {
+      return {
+        success: false,
+        message: "Failed to fetch blocked members: " + (error as Error).message,
+      };
+    }
+  });
+
+
 
 
 

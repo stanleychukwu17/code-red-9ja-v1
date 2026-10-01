@@ -264,13 +264,20 @@ SET status = 'suspended'
 WHERE party_id = $1 AND user_id = $2
 RETURNING chapter_id;
 
+-- name: SuspendAllUserPositionsInParty :exec
+UPDATE party_position_assignments
+SET 
+    status = 'suspended',
+    updated_at = NOW()
+WHERE party_id = $1 AND user_id = $2 AND status = 'active';
+
 -- name: VacateAllUserPositionsInParty :exec
 UPDATE party_position_assignments
 SET 
     status = 'vacated',
     tenure_end = CURRENT_DATE,
     updated_at = NOW()
-WHERE party_id = $1 AND user_id = $2 AND status = 'active';
+WHERE party_id = $1 AND user_id = $2 AND status IN ('active', 'suspended');
 
 -- name: LiftPartyMemberSuspension :one
 UPDATE party_member_suspensions
@@ -288,4 +295,37 @@ UPDATE party_membership
 SET status = 'active'
 WHERE party_id = $1 AND user_id = $2
 RETURNING chapter_id;
+
+-- name: ListSuspendedPartyMembers :many
+SELECT
+    pms.id,
+    pms.party_id,
+    pms.user_id,
+    pms.suspended_by,
+    pms.reason,
+    pms.starts_at,
+    pms.ends_at,
+    pms.status,
+    pms.created_at,
+    pms.updated_at,
+    u.fake_id,
+    u.username,
+    u.first_name,
+    u.last_name,
+    u.avatar,
+    u.email,
+    u.phone,
+    u.current_country,
+    u.current_state,
+    u.current_city,
+    u.state_of_origin,
+    u.role_level,
+    admin.username AS suspended_by_username
+FROM party_member_suspensions pms
+JOIN users u ON u.id = pms.user_id
+LEFT JOIN users admin ON admin.id = pms.suspended_by
+WHERE pms.party_id = $1 AND pms.status = 'active'
+ORDER BY pms.created_at DESC
+LIMIT $2 OFFSET $3;
+
 

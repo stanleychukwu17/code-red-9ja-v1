@@ -46,6 +46,8 @@ const (
 	NotificationTypeAgentPayoutCredited      = "agent_payout_credited"
 	NotificationTypePUResultFlagged          = "pu_result_flagged"
 	NotificationTypeNewAgentApplication      = "new_agent_application"
+	NotificationTypePartyMemberSuspended     = "party_member_suspended"
+	NotificationTypePartyMemberReinstated    = "party_member_reinstated"
 )
 
 // DailyGroupKey formats a time-windowed daily rollup key (e.g. "prefix:2026-09-27")

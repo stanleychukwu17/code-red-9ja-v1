@@ -59,6 +59,7 @@ export const Route = createFileRoute("/_authenticated")({
     if (
       !user?.roles?.includes("super_party_admin") &&
       !user?.roles?.includes("party_admin") &&
+      !user?.roles?.includes("admin") &&
       !user?.roles?.includes("super_admin")
     ) {
       throw new Error("You do not have access to this platform.");
@@ -140,9 +141,14 @@ function AuthenticatedRoutes() {
           href: APP_URL.partyRoutes.partyPositions(partyShortName),
         },
         {
-          id: "agent",
-          label: "Polling agents",
-          href: APP_URL.partyRoutes.pollingAgents(partyShortName),
+          id: "suspended",
+          label: "Suspended",
+          href: APP_URL.partyRoutes.suspendedUsers(partyShortName),
+        },
+        {
+          id: "blocked",
+          label: "Blocked",
+          href: APP_URL.partyRoutes.blockedUsers(partyShortName),
         },
         {
           id: "search-users",

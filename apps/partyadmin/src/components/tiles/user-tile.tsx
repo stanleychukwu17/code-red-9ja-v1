@@ -96,6 +96,10 @@ export function UserAccountStatusBadge({
       variant = "destructive";
       label = "Suspended";
       break;
+    case "blocked":
+      variant = "destructive";
+      label = "Blocked";
+      break;
     case "banned":
       variant = "destructive";
       label = "Banned";
@@ -278,7 +282,7 @@ export function UserTableTile({
                 <span className="truncate">{location}</span>
               </>
             )}
-            <UserAccountStatusBadge status={data.account_status} />
+            <UserAccountStatusBadge status={data.status || data.account_status} />
           </div>
         </div>
       </div>

@@ -197,6 +197,43 @@ func loadFile(ctx context.Context, filePath string, pool *pgxpool.Pool, batchSiz
 	totalLoaded := 0
 	startTime := time.Now()
 
+	// In-memory cache for party chapters across tiers (national, state, lga, ward)
+	nationalChapters := make(map[int16]int32)
+	stateChapters := make(map[string]int32)
+	lgaChapters := make(map[string]int32)
+	wardChapters := make(map[string]int32)
+
+	chapRows, chapErr := pool.Query(ctx, `SELECT id, party_id, chapter_type, state_id, lga_id, ward_id FROM party_chapters`)
+	if chapErr == nil {
+		for chapRows.Next() {
+			var cid int32
+			var pid int16
+			var ctype string
+			var sid *int16
+			var lid *int32
+			var wid *int32
+			if err := chapRows.Scan(&cid, &pid, &ctype, &sid, &lid, &wid); err == nil {
+				switch ctype {
+				case "national":
+					nationalChapters[pid] = cid
+				case "state":
+					if sid != nil {
+						stateChapters[fmt.Sprintf("%d:%d", pid, *sid)] = cid
+					}
+				case "lga":
+					if lid != nil {
+						lgaChapters[fmt.Sprintf("%d:%d", pid, *lid)] = cid
+					}
+				case "ward":
+					if wid != nil {
+						wardChapters[fmt.Sprintf("%d:%d", pid, *wid)] = cid
+					}
+				}
+			}
+		}
+		chapRows.Close()
+	}
+
 	flushBatch := func(users []UserSeed) error {
 		if len(users) == 0 {
 			return nil
@@ -225,9 +262,9 @@ func loadFile(ctx context.Context, filePath string, pool *pgxpool.Pool, batchSiz
 				INSERT INTO users (
 					email, avatar, phone, username, password_hash, last_name, first_name, middle_name,
 					gender, date_of_birth, current_country, current_state, current_city, current_lga,
-					polling_unit_id, state_of_origin, account_status, party_id
+					current_ward, polling_unit_id, state_of_origin, account_status, party_id
 				)
-				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
 				ON CONFLICT (email) DO NOTHING
 				RETURNING id
 			`,
@@ -245,6 +282,7 @@ func loadFile(ctx context.Context, filePath string, pool *pgxpool.Pool, batchSiz
 				u.CurrentState,
 				u.CurrentCity,
 				u.CurrentLga,
+				u.CurrentWard,
 				u.PollingUnitID,
 				u.StateOfOrigin,
 				u.AccountStatus,
@@ -302,6 +340,118 @@ func loadFile(ctx context.Context, filePath string, pool *pgxpool.Pool, batchSiz
 				VALUES ($1, $2)
 				ON CONFLICT (user_id) DO NOTHING
 			`, iu.ID, ninStr)
+
+			// Multi-tier Party Membership Enrollment down to Ward level
+			if iu.User.PartyID != nil && *iu.User.PartyID > 0 {
+				pID := *iu.User.PartyID
+
+				// 5a. National Chapter
+				natID, exists := nationalChapters[pID]
+				if !exists {
+					var newNatID int32
+					err := tx.QueryRow(ctx, `
+						INSERT INTO party_chapters (party_id, chapter_type, country_id)
+						VALUES ($1, 'national', 161)
+						ON CONFLICT (party_id, country_id) WHERE chapter_type = 'national'
+						DO UPDATE SET party_id = EXCLUDED.party_id
+						RETURNING id
+					`, pID).Scan(&newNatID)
+					if err == nil {
+						nationalChapters[pID] = newNatID
+						natID = newNatID
+					}
+				}
+				if natID > 0 {
+					secBatch.Queue(`
+						INSERT INTO party_membership (user_id, party_id, chapter_id, status)
+						VALUES ($1, $2, $3, 'active')
+						ON CONFLICT (user_id, party_id, chapter_id) DO NOTHING
+					`, iu.ID, pID, natID)
+				}
+
+				// 5b. State Chapter
+				if iu.User.CurrentState > 0 {
+					stKey := fmt.Sprintf("%d:%d", pID, iu.User.CurrentState)
+					stID, exists := stateChapters[stKey]
+					if !exists {
+						var newStID int32
+						err := tx.QueryRow(ctx, `
+							INSERT INTO party_chapters (party_id, chapter_type, state_id)
+							VALUES ($1, 'state', $2)
+							ON CONFLICT (party_id, state_id) WHERE chapter_type = 'state'
+							DO UPDATE SET party_id = EXCLUDED.party_id
+							RETURNING id
+						`, pID, iu.User.CurrentState).Scan(&newStID)
+						if err == nil {
+							stateChapters[stKey] = newStID
+							stID = newStID
+						}
+					}
+					if stID > 0 {
+						secBatch.Queue(`
+							INSERT INTO party_membership (user_id, party_id, chapter_id, status)
+							VALUES ($1, $2, $3, 'active')
+							ON CONFLICT (user_id, party_id, chapter_id) DO NOTHING
+						`, iu.ID, pID, stID)
+					}
+				}
+
+				// 5c. LGA Chapter
+				if iu.User.CurrentLga > 0 {
+					lgaKey := fmt.Sprintf("%d:%d", pID, iu.User.CurrentLga)
+					lgaCID, exists := lgaChapters[lgaKey]
+					if !exists {
+						var newLgaCID int32
+						err := tx.QueryRow(ctx, `
+							INSERT INTO party_chapters (party_id, chapter_type, state_id, lga_id)
+							SELECT $1, 'lga', l.state_id, l.id
+							FROM lgas l WHERE l.id = $2
+							ON CONFLICT (party_id, lga_id) WHERE chapter_type = 'lga'
+							DO UPDATE SET party_id = EXCLUDED.party_id
+							RETURNING id
+						`, pID, iu.User.CurrentLga).Scan(&newLgaCID)
+						if err == nil {
+							lgaChapters[lgaKey] = newLgaCID
+							lgaCID = newLgaCID
+						}
+					}
+					if lgaCID > 0 {
+						secBatch.Queue(`
+							INSERT INTO party_membership (user_id, party_id, chapter_id, status)
+							VALUES ($1, $2, $3, 'active')
+							ON CONFLICT (user_id, party_id, chapter_id) DO NOTHING
+						`, iu.ID, pID, lgaCID)
+					}
+				}
+
+				// 5d. Ward Chapter
+				if iu.User.CurrentWard > 0 {
+					wardKey := fmt.Sprintf("%d:%d", pID, iu.User.CurrentWard)
+					wardCID, exists := wardChapters[wardKey]
+					if !exists {
+						var newWardCID int32
+						err := tx.QueryRow(ctx, `
+							INSERT INTO party_chapters (party_id, chapter_type, state_id, lga_id, ward_id)
+							SELECT $1, 'ward', w.state_id, w.lga_id, w.id
+							FROM wards w WHERE w.id = $2
+							ON CONFLICT (party_id, ward_id) WHERE chapter_type = 'ward'
+							DO UPDATE SET party_id = EXCLUDED.party_id
+							RETURNING id
+						`, pID, iu.User.CurrentWard).Scan(&newWardCID)
+						if err == nil {
+							wardChapters[wardKey] = newWardCID
+							wardCID = newWardCID
+						}
+					}
+					if wardCID > 0 {
+						secBatch.Queue(`
+							INSERT INTO party_membership (user_id, party_id, chapter_id, status)
+							VALUES ($1, $2, $3, 'active')
+							ON CONFLICT (user_id, party_id, chapter_id) DO NOTHING
+						`, iu.ID, pID, wardCID)
+					}
+				}
+			}
 		}
 
 		brSec := tx.SendBatch(ctx, secBatch)
@@ -360,7 +510,7 @@ func main() {
 
 	defaultDB := os.Getenv("DATABASE_URL")
 	if defaultDB == "" {
-		defaultDB = "postgres://postgres:password@localhost:5432/test_db?sslmode=disable"
+		defaultDB = "postgres://postgres:password@localhost:5432/free9ja_db?sslmode=disable"
 	}
 
 	flag.StringVar(&dbURL, "db", defaultDB, "PostgreSQL Database URL")
@@ -391,7 +541,14 @@ func main() {
 		}
 		files = append(files, absPath)
 	} else {
-		absDir, err := filepath.Abs(seedsDir)
+		resolvedSeedsDir := seedsDir
+		if _, err := os.Stat(resolvedSeedsDir); os.IsNotExist(err) {
+			alt := filepath.Join("scripts/seeds/users")
+			if _, err := os.Stat(alt); err == nil {
+				resolvedSeedsDir = alt
+			}
+		}
+		absDir, err := filepath.Abs(resolvedSeedsDir)
 		if err != nil {
 			log.Fatalf("Invalid dir path: %v", err)
 		}

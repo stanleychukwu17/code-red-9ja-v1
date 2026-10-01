@@ -7,6 +7,7 @@ import {
   FolderKanban,
   Info,
   Share2,
+  ShieldCheck,
 } from "lucide-react";
 
 export interface PartyLeader {
@@ -44,9 +45,10 @@ export interface PartyProfileData {
 export type PartyTabPath =
   | "home"
   | "timeline"
+  | "members"
+  | "party-admins"
   | "followers"
   | "groups"
-  | "members"
   | "about"
   | "social-links";
 
@@ -62,6 +64,7 @@ export const PARTY_NAV_TABS: PartyTabItem[] = [
   { path: "home", label: "Home", icon: Home },
   { path: "timeline", label: "Timeline", icon: Clock },
   { path: "members", label: "Members", icon: Users },
+  { path: "party-admins", label: "Party Admins", icon: ShieldCheck },
   { path: "followers", label: "Followers", icon: UserCheck },
   { path: "groups", label: "Groups", icon: FolderKanban },
   { path: "about", label: "About", icon: Info },

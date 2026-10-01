@@ -710,7 +710,7 @@ func (h *Handler) PartyLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := h.authService.Login(r.Context(), req.IdentifierType, req.Identifier, req.Password, req.Iso2, "party_admin", "super_party_admin")
+	result, err := h.authService.Login(r.Context(), req.IdentifierType, req.Identifier, req.Password, req.Iso2, "party_admin", "super_party_admin", "admin", "super_admin")
 	if err != nil {
 		h.utils.RespondError(w, http.StatusUnauthorized, err.Error())
 		return

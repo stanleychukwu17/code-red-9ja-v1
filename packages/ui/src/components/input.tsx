@@ -163,7 +163,7 @@ const Label = ({
 };
 
 const textareaClassName =
-  "resize-none bg-transparent hover:bg-transparent! focus-visible:ring-0 text-c-80 px-0";
+  "resize-none bg-transparent focus-visible:ring-0 text-c-80 px-0";
 
 const Textarea = React.forwardRef<
   HTMLTextAreaElement,
@@ -183,7 +183,7 @@ Textarea.displayName = "Textarea";
 const TextareaInput = React.forwardRef<
   HTMLTextAreaElement,
   React.ComponentProps<"textarea"> &
-    TextareaAutosizeProps & { errorMsg?: string }
+  TextareaAutosizeProps & { errorMsg?: string }
 >(({ className, errorMsg, ...props }, ref) => {
   return (
     <div
@@ -203,7 +203,7 @@ TextareaInput.displayName = "TextareaInput";
 export const TextareaInputComment = React.forwardRef<
   HTMLTextAreaElement,
   React.ComponentProps<"textarea"> &
-    TextareaAutosizeProps & { errorMsg?: string; onSubmit?: () => void }
+  TextareaAutosizeProps & { errorMsg?: string; onSubmit?: () => void }
 >(({ className, errorMsg, onSubmit, ...props }, ref) => {
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {

@@ -18,9 +18,14 @@ export const getPartyAdminsTabs = (partyShortName: string): PageHeaderTabProps[]
     href: APP_URL.partyRoutes.partyPositions(partyShortName),
   },
   {
-    id: "agent",
-    label: "Polling agents",
-    href: APP_URL.partyRoutes.pollingAgents(partyShortName),
+    id: "suspended",
+    label: "Suspended",
+    href: APP_URL.partyRoutes.suspendedUsers(partyShortName),
+  },
+  {
+    id: "blocked",
+    label: "Blocked",
+    href: APP_URL.partyRoutes.blockedUsers(partyShortName),
   },
   {
     id: "search-users",

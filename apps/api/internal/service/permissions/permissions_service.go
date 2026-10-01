@@ -122,3 +122,21 @@ func (s *PermissionsService) CheckPartyModificationPermission(claims *utils.JWTC
 
 	return true, perms, nil
 }
+
+// CheckPartyMemberSuspensionPermission verifies if the requester (claims) has permission to suspend a user in a party.
+// Rules:
+// - A user cannot suspend themselves.
+// - Super admins and normal admins can suspend members across parties.
+// - Party admins (party_admin, super_party_admin) can only suspend members in their assigned party.
+func (s *PermissionsService) CheckPartyMemberSuspensionPermission(claims *utils.JWTClaims, partyID int16, targetUserID int64) (bool, PartyModificationPermissions, error) {
+	if claims == nil {
+		return false, PartyModificationPermissions{}, errors.New("Unauthorized")
+	}
+
+	// Cannot suspend own account
+	if claims.UserID == targetUserID {
+		return false, PartyModificationPermissions{}, errors.New("Forbidden: you cannot suspend your own account")
+	}
+
+	return s.CheckPartyModificationPermission(claims, partyID)
+}

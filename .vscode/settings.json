@@ -154,6 +154,7 @@
     "Timestamptz",
     "trgm",
     "Unmarshal",
+    "Unsuspending",
     "UPSERTS",
     "usehooks",
     "usershandler",

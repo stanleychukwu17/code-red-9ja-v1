@@ -90,18 +90,12 @@ export type TileOptionsProps = {
   onOpenChange?: (open: boolean) => void;
 };
 export const TileOptions = ({
-  dropdown,
-  className,
-  disabled,
-  open: controlledOpen,
-  onOpenChange: controlledOnOpenChange,
+  dropdown, className, disabled, open: controlledOpen, onOpenChange: controlledOnOpenChange,
 }: TileOptionsProps) => {
   const [internalOpen, setInternalOpen] = useState(false);
   const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
   const setOpen =
-    controlledOnOpenChange !== undefined
-      ? controlledOnOpenChange
-      : setInternalOpen;
+    controlledOnOpenChange !== undefined ? controlledOnOpenChange : setInternalOpen;
 
   return (
     <div onClick={(e) => e.stopPropagation()} className={cn(className)}>

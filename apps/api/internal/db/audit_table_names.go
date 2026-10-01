@@ -24,6 +24,10 @@ const (
 	ActionCreateOffice           = "create_office"             // Action for creating a new political office
 	ActionUpdateOffice           = "update_office"             // Action for updating an existing political office
 	ActionDeleteOffice           = "delete_office"             // Action for deleting a political office
+	ActionSuspendPartyMember     = "suspend_party_member"      // Action when a party member is suspended
+	ActionUnsuspendPartyMember   = "unsuspend_party_member"    // Action when a party member's suspension is lifted
+	ActionBlockPartyMember       = "block_party_member"        // Action when a user is blocked from a party
+	ActionUnblockPartyMember     = "unblock_party_member"      // Action when a user is unblocked from a party
 
 	// -- Actor Roles --
 	ActorRoleSuperAdmin = "super_admin" // A super administrator of the system

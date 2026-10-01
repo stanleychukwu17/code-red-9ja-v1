@@ -24,6 +24,7 @@ export type ConfirmAlertDialogProps = {
   headerTitle?: string;
   actionText?: string;
   actionVariant?: "red" | "primary" | "secondary" | "destructive" | "default";
+  children?: React.ReactNode;
 };
 
 /**
@@ -40,6 +41,7 @@ export const ConfirmAlertDialog = ({
   headerTitle = "Confirm Action",
   actionText = "Confirm",
   actionVariant = "red",
+  children,
 }: ConfirmAlertDialogProps) => {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -51,6 +53,7 @@ export const ConfirmAlertDialog = ({
             {title ?? "Are you sure you want to proceed?"}
           </h1>
           {subtitle && <p className="text-sm text-c-60">{subtitle}</p>}
+          {children}
         </DialogPadding>
 
         <DialogFooter className="flex justify-end gap-3 px-6 pb-6">

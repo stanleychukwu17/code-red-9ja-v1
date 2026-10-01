@@ -119,7 +119,7 @@ func main() {
 
 	defaultDB := os.Getenv("DATABASE_URL")
 	if defaultDB == "" {
-		defaultDB = "postgres://postgres:password@localhost:5432/test_db?sslmode=disable"
+		defaultDB = "postgres://postgres:password@localhost:5432/free9ja_db?sslmode=disable"
 	}
 
 	flag.StringVar(&dbURL, "db", defaultDB, "Postgres Database URL")
@@ -137,7 +137,14 @@ func main() {
 	}
 
 	// Resolve output directory
-	absOutDir, err := filepath.Abs(outDir)
+	resolvedOutDir := outDir
+	if _, err := os.Stat(resolvedOutDir); os.IsNotExist(err) {
+		alt := filepath.Join("scripts/seeds/users")
+		if _, err := os.Stat(alt); err == nil {
+			resolvedOutDir = alt
+		}
+	}
+	absOutDir, err := filepath.Abs(resolvedOutDir)
 	if err != nil {
 		log.Fatalf("Failed to resolve output dir: %v", err)
 	}
@@ -316,16 +323,16 @@ func main() {
 
 	// Pre-calculate party targets scaled to totalUsers
 	// ADC: 35% (8.75M / 25M)
-	// APC: 22% (5.5M / 25M)
-	// NDC: 10% (2.5M / 25M)
-	// PDP: 5% (1.25M / 25M)
-	// Minor parties: 3% (750k / 25M)
-	// Non-partisan (nil): 25% (6.25M / 25M)
+	// APC: 25% (6.25M / 25M)
+	// NDC: 15% (3.75M / 25M)
+	// PDP: 8% (2.0M / 25M)
+	// Minor parties: 7% (1.75M / 25M)
+	// Non-partisan (nil): 10% (2.5M / 25M)
 	adcCount := int(8750000.0 * scale)
-	apcCount := int(5500000.0 * scale)
-	ndcCount := int(2500000.0 * scale)
-	pdpCount := int(1250000.0 * scale)
-	minorCount := int(750000.0 * scale)
+	apcCount := int(6250000.0 * scale)
+	ndcCount := int(3750000.0 * scale)
+	pdpCount := int(2000000.0 * scale)
+	minorCount := int(1750000.0 * scale)
 
 	adcID := int16(17)
 	apcID := int16(1)

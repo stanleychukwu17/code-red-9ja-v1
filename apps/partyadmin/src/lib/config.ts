@@ -30,7 +30,8 @@ export const APP_URL = {
     members: (party: string) => `/${party}/party-members/member`,
     partyAdmins: (party: string) => `/${party}/party-members/party-admin`,
     partyPositions: (party: string) => `/${party}/party-members/party-positions`,
-    pollingAgents: (party: string) => `/${party}/party-members/agent`,
+    suspendedUsers: (party: string) => `/${party}/party-members/suspended`,
+    blockedUsers: (party: string) => `/${party}/party-members/blocked`,
     searchUsers: (party: string) => `/${party}/party-members/search-users`,
     wallet: (party: string) => `/${party}/wallet`,
     marketing: (party: string) => `/${party}/marketing`,
@@ -132,6 +133,20 @@ export const API_URL = {
   ) => `${api}/parties/${id}/officials/${assignmentId}`,
   memberPositions: (id: string | number, userId: string | number) =>
     `${api}/parties/${id}/members/${userId}/positions`,
+  suspendedMembers: (id: string | number, limit?: number, offset?: number) => {
+    const sp = new URLSearchParams();
+    if (limit) sp.append("limit", String(limit));
+    if (offset) sp.append("offset", String(offset));
+    const qs = sp.toString();
+    return `${api}/parties/${id}/members/suspended${qs ? `?${qs}` : ""}`;
+  },
+  blockedMembers: (id: string | number, limit?: number, offset?: number) => {
+    const sp = new URLSearchParams();
+    if (limit) sp.append("limit", String(limit));
+    if (offset) sp.append("offset", String(offset));
+    const qs = sp.toString();
+    return `${api}/parties/${id}/members/blocked${qs ? `?${qs}` : ""}`;
+  },
   suspendMember: (id: string | number, userId: string | number) =>
     `${api}/parties/${id}/members/${userId}/suspend`,
   unsuspendMember: (id: string | number, userId: string | number) =>

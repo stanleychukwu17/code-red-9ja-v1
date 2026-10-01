@@ -165,7 +165,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	pollingUnitsService := pollingunitsservice.NewPollingUnitsService(q, rdb)
 	supervisorAssignmentsService := supervisorassignmentsservice.NewService(q)
 	pollingUnitAssignmentsService := puassignments.NewService(q, rdb, distributor, earningsService)
-	partiesService := partiesservice.NewPartiesService(q, pool, rdb, monnifyClient, utilsInstance, notificationsService, blocksService)
+	partiesService := partiesservice.NewPartiesService(q, pool, rdb, monnifyClient, utilsInstance, notificationsService, blocksService, auditService)
 	electionGroupsService := electiongroupsservice.NewElectionGroupsService(q, rdb, distributor)
 	electionsService := electionsservice.NewElectionsService(q, pool, rdb, distributor, electionGroupsService, earningsService)
 	senatorialDistrictsService := senatorialdistrictsservice.NewSenatorialDistrictsService(q, rdb)
@@ -185,7 +185,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	notificationsHandler := notificationshandler.NewHandler(notificationsService, utilsInstance)
 	authHandler := authhandler.NewHandler(authService, usersService, filesService, utilsInstance)
 	bodiesHandler := bodieshandler.NewHandler(bodiesService, q, utilsInstance, rdb)
-	partiesHandler := partieshandler.NewHandler(partiesService, auditService, filesService, utilsInstance, r2Svc)
+	partiesHandler := partieshandler.NewHandler(partiesService, auditService, permissionsService, filesService, utilsInstance, r2Svc)
 	statesHandler := stateshandler.NewHandler(statesService, utilsInstance)
 	senatorialDistrictsHandler := senatorialdistrictshandler.NewHandler(senatorialDistrictsService, q, utilsInstance)
 	stateAssemblyConstituenciesHandler := stateassemblyconstituencieshandler.NewHandler(stateAssemblyConstituenciesService, q, utilsInstance)
@@ -648,6 +648,9 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Get("/api/v1/parties/{id}/notifications", notificationsHandler.ListPartyNotifications)
 		r.Get("/api/v1/parties/{id}/notifications/unread-count", notificationsHandler.GetPartyUnreadCount)
 		r.Patch("/api/v1/parties/{id}/notifications/{notification_id}/read", notificationsHandler.MarkPartyNotificationAsRead)
+
+		// Party Admins (protected: platform admins, party admins, and members with position)
+		r.Get("/api/v1/parties/{id}/admins", partiesHandler.ListPartyAdmins)
 	})
 
 	// Party-admin routes: authenticated users with role=party_admin AND roleLevel=admin
@@ -657,7 +660,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 			jwtSecret = cfg.JWTSecret
 		}
 		r.Use(apimiddleware.AuthMiddleware(jwtSecret))
-		r.Use(apimiddleware.RequireRole("party_admin", "super_party_admin"))
+		r.Use(apimiddleware.RequireRole("party_admin", "super_party_admin", "admin", "super_admin"))
 
 		// party admins can view their own party's wallet transaction ledger
 		r.Get("/api/v1/parties/{id}/wallet/transactions", partiesHandler.ListPartyWalletTransactions)
@@ -672,10 +675,12 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Get("/api/v1/parties/{id}/chapters/resolve", partiesHandler.ResolveChapter)
 
 		// party member suspension & reactivation
+		r.Get("/api/v1/parties/{id}/members/suspended", partiesHandler.ListSuspendedPartyMembers)
 		r.Post("/api/v1/parties/{id}/members/{user_id}/suspend", partiesHandler.SuspendPartyMember)
 		r.Post("/api/v1/parties/{id}/members/{user_id}/unsuspend", partiesHandler.UnsuspendPartyMember)
 
 		// party member block & unblock
+		r.Get("/api/v1/parties/{id}/members/blocked", partiesHandler.ListBlockedPartyMembers)
 		r.Post("/api/v1/parties/{id}/members/{user_id}/block", partiesHandler.BlockPartyUser)
 		r.Post("/api/v1/parties/{id}/members/{user_id}/unblock", partiesHandler.UnblockPartyUser)
 	})

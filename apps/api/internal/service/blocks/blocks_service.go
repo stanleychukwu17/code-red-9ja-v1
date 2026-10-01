@@ -105,3 +105,13 @@ func (s *BlocksService) IsUserBlockedByParty(ctx context.Context, partyID int16,
 	blockedParties := s.GetUserBlockedPartyIDs(ctx, blockedUserID)
 	return blockedParties[partyID], nil
 }
+
+// ListBlockedUsersByParty lists blocked users for a party.
+func (s *BlocksService) ListBlockedUsersByParty(ctx context.Context, partyID int16, limit int32, offset int32) ([]queries.ListBlockedUsersByPartyRow, error) {
+	return s.queries.ListBlockedUsersByParty(ctx, queries.ListBlockedUsersByPartyParams{
+		PartyID: partyID,
+		Limit:   limit,
+		Offset:  offset,
+	})
+}
+

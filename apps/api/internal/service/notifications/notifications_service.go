@@ -22,6 +22,7 @@ import (
 type NotificationsService interface {
 	// User Notifications
 	CreateNotification(ctx context.Context, params CreateNotificationInput) (*NotificationItemResponse, error)
+	CreateNotificationAsync(ctx context.Context, params CreateNotificationInput)
 	ListUserNotifications(ctx context.Context, userID int64, page, limit int32) (*PaginatedNotificationsResponse, error)
 	GetUnreadCount(ctx context.Context, userID int64) (int64, error)
 	MarkAsRead(ctx context.Context, notificationID int64, userID int64) error
@@ -30,6 +31,7 @@ type NotificationsService interface {
 
 	// Party Notifications
 	CreatePartyNotification(ctx context.Context, params CreatePartyNotificationInput) (*PartyNotificationItemResponse, error)
+	CreatePartyNotificationAsync(ctx context.Context, params CreatePartyNotificationInput)
 	ListPartyNotificationsForUser(ctx context.Context, userID int64, partyID int16, page, limit int32) (*PaginatedPartyNotificationsResponse, error)
 	GetPartyUnreadCount(ctx context.Context, userID int64, partyID int16) (int64, error)
 	MarkPartyNotificationAsRead(ctx context.Context, partyNotificationID int64, userID int64) error
@@ -216,6 +218,18 @@ func (s *service) CreateNotification(ctx context.Context, in CreateNotificationI
 	}
 
 	return resp, nil
+}
+
+// CreateNotificationAsync dispatches a user notification asynchronously in a goroutine.
+func (s *service) CreateNotificationAsync(ctx context.Context, in CreateNotificationInput) {
+	go func(params CreateNotificationInput) {
+		bgCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		if _, err := s.CreateNotification(bgCtx, params); err != nil {
+			slog.Error("failed to create async notification", "error", err, "user_id", params.RecipientUserID)
+		}
+	}(in)
 }
 
 func (s *service) ListUserNotifications(ctx context.Context, userID int64, page, limit int32) (*PaginatedNotificationsResponse, error) {
@@ -412,6 +426,18 @@ func (s *service) CreatePartyNotification(ctx context.Context, in CreatePartyNot
 	}
 
 	return resp, nil
+}
+
+// CreatePartyNotificationAsync dispatches a party notification asynchronously in a goroutine.
+func (s *service) CreatePartyNotificationAsync(ctx context.Context, in CreatePartyNotificationInput) {
+	go func(params CreatePartyNotificationInput) {
+		bgCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		if _, err := s.CreatePartyNotification(bgCtx, params); err != nil {
+			slog.Error("failed to create async party notification", "error", err, "party_id", params.PartyID)
+		}
+	}(in)
 }
 
 func (s *service) ListPartyNotificationsForUser(ctx context.Context, userID int64, partyID int16, page, limit int32) (*PaginatedPartyNotificationsResponse, error) {

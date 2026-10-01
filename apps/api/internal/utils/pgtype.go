@@ -38,6 +38,14 @@ func PgInt2FromPtr(i *int16, defaultVal int16) pgtype.Int2 {
 	return pgtype.Int2{Int16: defaultVal, Valid: true}
 }
 
+// PgInt2FromPtrNullable converts an optional int16 pointer to a nullable pgtype.Int2 without fallback.
+func PgInt2FromPtrNullable(i *int16) pgtype.Int2 {
+	if i != nil {
+		return pgtype.Int2{Int16: *i, Valid: true}
+	}
+	return pgtype.Int2{}
+}
+
 // PgDateFromPtr parses an optional date string (YYYY-MM-DD) into a pgtype.Date.
 func PgDateFromPtr(dateStr *string) pgtype.Date {
 	if dateStr != nil && *dateStr != "" {

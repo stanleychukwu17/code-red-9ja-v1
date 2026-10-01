@@ -74,7 +74,9 @@ type SeedUserRequest struct {
 	CurrentCountry     int16   `json:"current_country"`
 	CurrentState       int16   `json:"current_state"`
 	CurrentLga         *int32  `json:"current_lga"`
+	CurrentWard        *int32  `json:"current_ward"`
 	CurrentCity        *int32  `json:"current_city"`
+	PollingUnitID      *int32  `json:"polling_unit_id"`
 	StateOfOrigin      *int16  `json:"state_of_origin"`
 	PartyID            *int16  `json:"party_id"`
 	AccountStatus      string  `json:"account_status"`
@@ -108,8 +110,45 @@ func (s *SeedService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 		}
 	}
 
-	// 2. In-memory cache for country data to eliminate redundant DB/Redis roundtrips during phone validation.
+	// 2. In-memory cache for country data to eliminate redundant DB/Redis round-trips during phone validation.
 	countryCache := make(map[int16]queries.GetCountryByIDRow)
+
+	// In-memory cache for party chapters across tiers (national, state, lga, ward)
+	nationalChapters := make(map[int16]int32)
+	stateChapters := make(map[string]int32)
+	lgaChapters := make(map[string]int32)
+	wardChapters := make(map[string]int32)
+
+	chapRows, chapErr := s.pool.Query(ctx, `SELECT id, party_id, chapter_type, state_id, lga_id, ward_id FROM party_chapters`)
+	if chapErr == nil {
+		for chapRows.Next() {
+			var cid int32
+			var pid int16
+			var cType string
+			var sid *int16
+			var lid *int32
+			var wid *int32
+			if err := chapRows.Scan(&cid, &pid, &cType, &sid, &lid, &wid); err == nil {
+				switch cType {
+				case "national":
+					nationalChapters[pid] = cid
+				case "state":
+					if sid != nil {
+						stateChapters[fmt.Sprintf("%d:%d", pid, *sid)] = cid
+					}
+				case "lga":
+					if lid != nil {
+						lgaChapters[fmt.Sprintf("%d:%d", pid, *lid)] = cid
+					}
+				case "ward":
+					if wid != nil {
+						wardChapters[fmt.Sprintf("%d:%d", pid, *wid)] = cid
+					}
+				}
+			}
+		}
+		chapRows.Close()
+	}
 
 	// preparedUser holds validated and pre-parsed fields (DOB, normalized phone numbers)
 	// paired with the raw request. This avoids re-parsing/re-validating across multiple batch
@@ -125,7 +164,6 @@ func (s *SeedService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 	// 3. Process in chunks of 500 records per transaction
 	const batchSize = 500
 	totalInserted := 0
-
 	for i := 0; i < len(users); i += batchSize {
 		end := i + batchSize
 		if end > len(users) {
@@ -182,26 +220,21 @@ func (s *SeedService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 			u := prepUser.user
 			hashed := passwordHashes[u.Password]
 
-			var usernameVal *string
-			if u.Username != nil && *u.Username != "" {
-				un := strings.ToLower(strings.TrimSpace(*u.Username))
-				usernameVal = &un
+			var usernameVal pgtype.Text
+			if u.Username != nil {
+				usernameVal = utils.PgTextFromString(strings.ToLower(strings.TrimSpace(*u.Username)))
 			}
-			var middleNameVal *string
-			if u.MiddleName != nil && *u.MiddleName != "" {
-				middleNameVal = u.MiddleName
-			}
-			var phoneVal *string
-			if prepUser.formattedPhone != "" {
-				phoneVal = &prepUser.formattedPhone
-			}
+			middleNameVal := utils.PgTextFromPtr(u.MiddleName)
+			phoneVal := utils.PgTextFromString(prepUser.formattedPhone)
+
 			accountStatus := u.AccountStatus
 			if accountStatus == "" {
 				accountStatus = "active"
 			}
-			var partyIDVal *int16
+
+			var partyIDVal pgtype.Int2
 			if u.PartyID != nil && *u.PartyID > 0 {
-				partyIDVal = u.PartyID
+				partyIDVal = utils.PgInt2FromPtrNullable(u.PartyID)
 			}
 			isVerifiedVal := u.IsVerified && u.VerificationTypeID != nil
 
@@ -209,9 +242,10 @@ func (s *SeedService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 				INSERT INTO users (
 					email, avatar, phone, username, password_hash, last_name, first_name, middle_name,
 					gender, date_of_birth, current_country, current_state, current_city, current_lga,
+					current_ward, polling_unit_id,
 					state_of_origin, account_status, party_id, is_politician, is_verified
 				)
-				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
 				ON CONFLICT (email) DO NOTHING
 				RETURNING id
 			`,
@@ -229,6 +263,8 @@ func (s *SeedService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 				u.CurrentState,
 				u.CurrentCity,
 				u.CurrentLga,
+				u.CurrentWard,
+				u.PollingUnitID,
 				u.StateOfOrigin,
 				accountStatus,
 				partyIDVal,
@@ -311,6 +347,118 @@ func (s *SeedService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 						ON CONFLICT (page_type, page_id, verification_type_id)
 						DO UPDATE SET verified_at = CURRENT_TIMESTAMP
 					`, db.PageTypeUser, insertedUser.id)
+				}
+
+				// 5. Multi-tier Party Membership Enrollment down to Ward level
+				if insertedUser.user.PartyID != nil && *insertedUser.user.PartyID > 0 {
+					pID := *insertedUser.user.PartyID
+
+					// 5a. National Chapter
+					natID, exists := nationalChapters[pID]
+					if !exists {
+						var newNatID int32
+						err := tx.QueryRow(ctx, `
+							INSERT INTO party_chapters (party_id, chapter_type, country_id)
+							VALUES ($1, 'national', 161)
+							ON CONFLICT (party_id, country_id) WHERE chapter_type = 'national'
+							DO UPDATE SET party_id = EXCLUDED.party_id
+							RETURNING id
+						`, pID).Scan(&newNatID)
+						if err == nil {
+							nationalChapters[pID] = newNatID
+							natID = newNatID
+						}
+					}
+					if natID > 0 {
+						secBatch.Queue(`
+							INSERT INTO party_membership (user_id, party_id, chapter_id, status)
+							VALUES ($1, $2, $3, 'active')
+							ON CONFLICT (user_id, party_id, chapter_id) DO NOTHING
+						`, insertedUser.id, pID, natID)
+					}
+
+					// 5b. State Chapter
+					if insertedUser.user.CurrentState > 0 {
+						stKey := fmt.Sprintf("%d:%d", pID, insertedUser.user.CurrentState)
+						stID, exists := stateChapters[stKey]
+						if !exists {
+							var newStID int32
+							err := tx.QueryRow(ctx, `
+								INSERT INTO party_chapters (party_id, chapter_type, state_id)
+								VALUES ($1, 'state', $2)
+								ON CONFLICT (party_id, state_id) WHERE chapter_type = 'state'
+								DO UPDATE SET party_id = EXCLUDED.party_id
+								RETURNING id
+							`, pID, insertedUser.user.CurrentState).Scan(&newStID)
+							if err == nil {
+								stateChapters[stKey] = newStID
+								stID = newStID
+							}
+						}
+						if stID > 0 {
+							secBatch.Queue(`
+								INSERT INTO party_membership (user_id, party_id, chapter_id, status)
+								VALUES ($1, $2, $3, 'active')
+								ON CONFLICT (user_id, party_id, chapter_id) DO NOTHING
+							`, insertedUser.id, pID, stID)
+						}
+					}
+
+					// 5c. LGA Chapter
+					if insertedUser.user.CurrentLga != nil && *insertedUser.user.CurrentLga > 0 {
+						lgaKey := fmt.Sprintf("%d:%d", pID, *insertedUser.user.CurrentLga)
+						lgaCID, exists := lgaChapters[lgaKey]
+						if !exists {
+							var newLgaCID int32
+							err := tx.QueryRow(ctx, `
+								INSERT INTO party_chapters (party_id, chapter_type, state_id, lga_id)
+								SELECT $1, 'lga', l.state_id, l.id
+								FROM lgas l WHERE l.id = $2
+								ON CONFLICT (party_id, lga_id) WHERE chapter_type = 'lga'
+								DO UPDATE SET party_id = EXCLUDED.party_id
+								RETURNING id
+							`, pID, *insertedUser.user.CurrentLga).Scan(&newLgaCID)
+							if err == nil {
+								lgaChapters[lgaKey] = newLgaCID
+								lgaCID = newLgaCID
+							}
+						}
+						if lgaCID > 0 {
+							secBatch.Queue(`
+								INSERT INTO party_membership (user_id, party_id, chapter_id, status)
+								VALUES ($1, $2, $3, 'active')
+								ON CONFLICT (user_id, party_id, chapter_id) DO NOTHING
+							`, insertedUser.id, pID, lgaCID)
+						}
+					}
+
+					// 5d. Ward Chapter
+					if insertedUser.user.CurrentWard != nil && *insertedUser.user.CurrentWard > 0 {
+						wardKey := fmt.Sprintf("%d:%d", pID, *insertedUser.user.CurrentWard)
+						wardCID, exists := wardChapters[wardKey]
+						if !exists {
+							var newWardCID int32
+							err := tx.QueryRow(ctx, `
+								INSERT INTO party_chapters (party_id, chapter_type, state_id, lga_id, ward_id)
+								SELECT $1, 'ward', w.state_id, w.lga_id, w.id
+								FROM wards w WHERE w.id = $2
+								ON CONFLICT (party_id, ward_id) WHERE chapter_type = 'ward'
+								DO UPDATE SET party_id = EXCLUDED.party_id
+								RETURNING id
+							`, pID, *insertedUser.user.CurrentWard).Scan(&newWardCID)
+							if err == nil {
+								wardChapters[wardKey] = newWardCID
+								wardCID = newWardCID
+							}
+						}
+						if wardCID > 0 {
+							secBatch.Queue(`
+								INSERT INTO party_membership (user_id, party_id, chapter_id, status)
+								VALUES ($1, $2, $3, 'active')
+								ON CONFLICT (user_id, party_id, chapter_id) DO NOTHING
+							`, insertedUser.id, pID, wardCID)
+						}
+					}
 				}
 			}
 

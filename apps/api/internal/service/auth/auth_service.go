@@ -11,6 +11,7 @@ import (
 	"free9ja/api/internal/logger"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -951,6 +952,19 @@ func (s *AuthService) CompleteOnboarding(
 		return fmt.Errorf("update profile: %w", err)
 	}
 
+	// If user does not have an avatar, assign a temporary avatar URL using their first and last name
+	if !updatedUser.Avatar.Valid || strings.TrimSpace(updatedUser.Avatar.String) == "" {
+		tempAvatarURL := GenerateTempAvatarURL(params.FirstName.String, params.LastName.String)
+		if err := s.queries.UpdateUserAvatar(ctx, queries.UpdateUserAvatarParams{
+			ID:           userID,
+			Avatar:       pgtype.Text{String: tempAvatarURL, Valid: true},
+			AvatarFileID: pgtype.Int8{Valid: false},
+		}); err != nil {
+			return fmt.Errorf("update temp avatar: %w", err)
+		}
+		updatedUser.Avatar = pgtype.Text{String: tempAvatarURL, Valid: true}
+	}
+
 	// record referrer user
 	if referrerUserID != nil && *referrerUserID > 0 && *referrerUserID != userID {
 		if _, err := s.queries.CreateReferral(ctx, queries.CreateReferralParams{
@@ -983,6 +997,23 @@ func (s *AuthService) CompleteOnboarding(
 	}
 
 	return nil
+}
+
+// GenerateTempAvatarURL generates a default placeholder avatar URL from the user's first and last name
+func GenerateTempAvatarURL(firstName, lastName string) string {
+	firstName = strings.TrimSpace(firstName)
+	lastName = strings.TrimSpace(lastName)
+	var nameParam string
+	if firstName != "" && lastName != "" {
+		nameParam = fmt.Sprintf("%s%%2B%s", url.QueryEscape(firstName), url.QueryEscape(lastName))
+	} else if firstName != "" {
+		nameParam = url.QueryEscape(firstName)
+	} else if lastName != "" {
+		nameParam = url.QueryEscape(lastName)
+	} else {
+		nameParam = "User"
+	}
+	return fmt.Sprintf("https://ui-avatars.com/api/?name=%s&background=random", nameParam)
 }
 
 // SaveSomeUserRegistrationDetails saves the user's registration details to DB

@@ -563,13 +563,7 @@ type ProfilePictureProps = {
 };
 
 function ProfilePicture({
-  userDetails,
-  avatarUrl,
-  username,
-  displayName,
-  onLogout,
-  homePageUrl,
-  profilePopoverExtraContent,
+  userDetails, avatarUrl, username, displayName, onLogout, homePageUrl,
 }: ProfilePictureProps) {
   const { state: sideBarState, isMobile, openMobile } = useSidebar();
 
