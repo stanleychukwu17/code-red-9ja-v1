@@ -8,6 +8,7 @@ const (
 	RedisOneHourTTL        = 1 * time.Hour
 	RedisOneDayTTL         = 24 * time.Hour
 	RedisSevenDaysTTL      = 7 * 24 * time.Hour
+	RedisFourteenDaysTTL   = 14 * 24 * time.Hour
 	RedisThirtyDaysTTL     = 30 * 24 * time.Hour
 	RedisSixtyDaysTTL      = 60 * 24 * time.Hour
 	RedisNinetyDaysTTL     = 90 * 24 * time.Hour
@@ -60,6 +61,7 @@ const (
 	RedisWardChapter           = "parties:ward_chapter:"          // STRING: "parties:ward_chapter:<partyID>:<wardID>" is used to store the ward chapter ID.
 	RedisParties5MemberAvatars = "parties:sample_member_avatars:" // STRING: "parties:sample_member_avatars:<partyID>" is used to store sample member avatars for a party.
 	RedisChapterOfficial       = "parties:chapter:official:"      // STRING: "parties:chapter:official:<chapterID>:<positionID>" is used to store active official for a chapter and position.
+	RedisPartyMemberSuspension = "parties:member_suspension:"     // STRING: "parties:member_suspension:<partyID>:<userID>" stores cached active suspension JSON (id > 0 if suspended, id = 0 if not)
 	//--END--
 
 	//--START-- for page verifications & badges

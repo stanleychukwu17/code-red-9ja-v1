@@ -131,6 +131,47 @@ func (q *Queries) CreateParty(ctx context.Context, arg CreatePartyParams) (Party
 	return i, err
 }
 
+const createPartyMemberSuspension = `-- name: CreatePartyMemberSuspension :one
+INSERT INTO party_member_suspensions (
+    party_id, user_id, suspended_by, reason, starts_at, ends_at, status
+) VALUES (
+    $1, $2, $3, $4, NOW(), NULL, 'active'
+) RETURNING id, party_id, user_id, suspended_by, reason, starts_at, ends_at, status, lifted_at, lifted_by, lift_reason, created_at, updated_at
+`
+
+type CreatePartyMemberSuspensionParams struct {
+	PartyID     int16       `json:"party_id"`
+	UserID      int64       `json:"user_id"`
+	SuspendedBy pgtype.Int8 `json:"suspended_by"`
+	Reason      pgtype.Text `json:"reason"`
+}
+
+func (q *Queries) CreatePartyMemberSuspension(ctx context.Context, arg CreatePartyMemberSuspensionParams) (PartyMemberSuspension, error) {
+	row := q.db.QueryRow(ctx, createPartyMemberSuspension,
+		arg.PartyID,
+		arg.UserID,
+		arg.SuspendedBy,
+		arg.Reason,
+	)
+	var i PartyMemberSuspension
+	err := row.Scan(
+		&i.ID,
+		&i.PartyID,
+		&i.UserID,
+		&i.SuspendedBy,
+		&i.Reason,
+		&i.StartsAt,
+		&i.EndsAt,
+		&i.Status,
+		&i.LiftedAt,
+		&i.LiftedBy,
+		&i.LiftReason,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const deductPartyAgentPaymentBalance = `-- name: DeductPartyAgentPaymentBalance :one
 UPDATE parties
 SET agent_payment_balance_kobo = agent_payment_balance_kobo - $1,
@@ -248,6 +289,38 @@ func (q *Queries) GetAcceptingPartyIDs(ctx context.Context) ([]int16, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const getActivePartyMemberSuspension = `-- name: GetActivePartyMemberSuspension :one
+SELECT id, party_id, user_id, suspended_by, reason, starts_at, ends_at, status, lifted_at, lifted_by, lift_reason, created_at, updated_at FROM party_member_suspensions
+WHERE party_id = $1 AND user_id = $2 AND status = 'active'
+LIMIT 1
+`
+
+type GetActivePartyMemberSuspensionParams struct {
+	PartyID int16 `json:"party_id"`
+	UserID  int64 `json:"user_id"`
+}
+
+func (q *Queries) GetActivePartyMemberSuspension(ctx context.Context, arg GetActivePartyMemberSuspensionParams) (PartyMemberSuspension, error) {
+	row := q.db.QueryRow(ctx, getActivePartyMemberSuspension, arg.PartyID, arg.UserID)
+	var i PartyMemberSuspension
+	err := row.Scan(
+		&i.ID,
+		&i.PartyID,
+		&i.UserID,
+		&i.SuspendedBy,
+		&i.Reason,
+		&i.StartsAt,
+		&i.EndsAt,
+		&i.Status,
+		&i.LiftedAt,
+		&i.LiftedBy,
+		&i.LiftReason,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const getChapterMemberCount = `-- name: GetChapterMemberCount :one
@@ -683,6 +756,51 @@ func (q *Queries) IsPartyAcceptingApplications(ctx context.Context, id int16) (b
 	return is_accepting, err
 }
 
+const liftPartyMemberSuspension = `-- name: LiftPartyMemberSuspension :one
+UPDATE party_member_suspensions
+SET 
+    status = 'lifted',
+    lifted_at = NOW(),
+    lifted_by = $3,
+    lift_reason = $4,
+    updated_at = NOW()
+WHERE party_id = $1 AND user_id = $2 AND status = 'active'
+RETURNING id, party_id, user_id, suspended_by, reason, starts_at, ends_at, status, lifted_at, lifted_by, lift_reason, created_at, updated_at
+`
+
+type LiftPartyMemberSuspensionParams struct {
+	PartyID    int16       `json:"party_id"`
+	UserID     int64       `json:"user_id"`
+	LiftedBy   pgtype.Int8 `json:"lifted_by"`
+	LiftReason pgtype.Text `json:"lift_reason"`
+}
+
+func (q *Queries) LiftPartyMemberSuspension(ctx context.Context, arg LiftPartyMemberSuspensionParams) (PartyMemberSuspension, error) {
+	row := q.db.QueryRow(ctx, liftPartyMemberSuspension,
+		arg.PartyID,
+		arg.UserID,
+		arg.LiftedBy,
+		arg.LiftReason,
+	)
+	var i PartyMemberSuspension
+	err := row.Scan(
+		&i.ID,
+		&i.PartyID,
+		&i.UserID,
+		&i.SuspendedBy,
+		&i.Reason,
+		&i.StartsAt,
+		&i.EndsAt,
+		&i.Status,
+		&i.LiftedAt,
+		&i.LiftedBy,
+		&i.LiftReason,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const listAcceptingParties = `-- name: ListAcceptingParties :many
 SELECT 
   id, short_name, name, logo, display_order, status, slots, is_verified,
@@ -900,6 +1018,38 @@ func (q *Queries) ListPartyChapters(ctx context.Context, arg ListPartyChaptersPa
 	return items, nil
 }
 
+const reactivatePartyMembership = `-- name: ReactivatePartyMembership :many
+UPDATE party_membership
+SET status = 'active'
+WHERE party_id = $1 AND user_id = $2
+RETURNING chapter_id
+`
+
+type ReactivatePartyMembershipParams struct {
+	PartyID int16 `json:"party_id"`
+	UserID  int64 `json:"user_id"`
+}
+
+func (q *Queries) ReactivatePartyMembership(ctx context.Context, arg ReactivatePartyMembershipParams) ([]int32, error) {
+	rows, err := q.db.Query(ctx, reactivatePartyMembership, arg.PartyID, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int32
+	for rows.Next() {
+		var chapter_id int32
+		if err := rows.Scan(&chapter_id); err != nil {
+			return nil, err
+		}
+		items = append(items, chapter_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const resetPartyLogo = `-- name: ResetPartyLogo :exec
 UPDATE parties
 SET logo = '', logo_file_id = NULL, updated_at = NOW()
@@ -909,6 +1059,38 @@ WHERE id = $1
 func (q *Queries) ResetPartyLogo(ctx context.Context, id int16) error {
 	_, err := q.db.Exec(ctx, resetPartyLogo, id)
 	return err
+}
+
+const suspendPartyMembership = `-- name: SuspendPartyMembership :many
+UPDATE party_membership
+SET status = 'suspended'
+WHERE party_id = $1 AND user_id = $2
+RETURNING chapter_id
+`
+
+type SuspendPartyMembershipParams struct {
+	PartyID int16 `json:"party_id"`
+	UserID  int64 `json:"user_id"`
+}
+
+func (q *Queries) SuspendPartyMembership(ctx context.Context, arg SuspendPartyMembershipParams) ([]int32, error) {
+	rows, err := q.db.Query(ctx, suspendPartyMembership, arg.PartyID, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int32
+	for rows.Next() {
+		var chapter_id int32
+		if err := rows.Scan(&chapter_id); err != nil {
+			return nil, err
+		}
+		items = append(items, chapter_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const updateParty = `-- name: UpdateParty :one
@@ -1017,4 +1199,23 @@ func (q *Queries) UpdatePartyAgentAcquisitionTargets(ctx context.Context, arg Up
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const vacateAllUserPositionsInParty = `-- name: VacateAllUserPositionsInParty :exec
+UPDATE party_position_assignments
+SET 
+    status = 'vacated',
+    tenure_end = CURRENT_DATE,
+    updated_at = NOW()
+WHERE party_id = $1 AND user_id = $2 AND status = 'active'
+`
+
+type VacateAllUserPositionsInPartyParams struct {
+	PartyID int16 `json:"party_id"`
+	UserID  int64 `json:"user_id"`
+}
+
+func (q *Queries) VacateAllUserPositionsInParty(ctx context.Context, arg VacateAllUserPositionsInPartyParams) error {
+	_, err := q.db.Exec(ctx, vacateAllUserPositionsInParty, arg.PartyID, arg.UserID)
+	return err
 }

@@ -6,6 +6,9 @@ const (
 	MilestoneTypeLeft             = "left_party"
 	MilestoneTypeReceivedPosition = "received_position"
 	MilestoneTypePositionRemoved  = "position_removed"
+	MilestoneTypeSuspended        = "suspended"
+	MilestoneTypeReinstated       = "reinstated"
+	MilestoneTypeBlocked          = "blocked"
 )
 
 // Default Party Position IDs

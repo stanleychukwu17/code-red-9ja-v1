@@ -245,3 +245,47 @@ WHERE pa.chapter_id = $1
   AND pa.position_id = $2 
   AND pa.status = 'active'
 LIMIT 1;
+
+-- name: CreatePartyMemberSuspension :one
+INSERT INTO party_member_suspensions (
+    party_id, user_id, suspended_by, reason, starts_at, ends_at, status
+) VALUES (
+    $1, $2, $3, $4, NOW(), NULL, 'active'
+) RETURNING *;
+
+-- name: GetActivePartyMemberSuspension :one
+SELECT * FROM party_member_suspensions
+WHERE party_id = $1 AND user_id = $2 AND status = 'active'
+LIMIT 1;
+
+-- name: SuspendPartyMembership :many
+UPDATE party_membership
+SET status = 'suspended'
+WHERE party_id = $1 AND user_id = $2
+RETURNING chapter_id;
+
+-- name: VacateAllUserPositionsInParty :exec
+UPDATE party_position_assignments
+SET 
+    status = 'vacated',
+    tenure_end = CURRENT_DATE,
+    updated_at = NOW()
+WHERE party_id = $1 AND user_id = $2 AND status = 'active';
+
+-- name: LiftPartyMemberSuspension :one
+UPDATE party_member_suspensions
+SET 
+    status = 'lifted',
+    lifted_at = NOW(),
+    lifted_by = $3,
+    lift_reason = $4,
+    updated_at = NOW()
+WHERE party_id = $1 AND user_id = $2 AND status = 'active'
+RETURNING *;
+
+-- name: ReactivatePartyMembership :many
+UPDATE party_membership
+SET status = 'active'
+WHERE party_id = $1 AND user_id = $2
+RETURNING chapter_id;
+

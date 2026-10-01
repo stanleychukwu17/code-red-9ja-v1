@@ -92,6 +92,11 @@ type PartiesService interface {
 	ListChapterOfficials(ctx context.Context, partyID int16, chapterID int32, status *string) ([]queries.ListChapterOfficialsRow, error)
 	ListPartyOfficials(ctx context.Context, arg queries.ListPartyOfficialsParams) ([]queries.ListPartyOfficialsRow, error)
 	ListMemberPositionAssignments(ctx context.Context, partyID int16, userID int64) ([]queries.ListMemberPositionAssignmentsRow, error)
+	GetActivePartyMemberSuspension(ctx context.Context, partyID int16, userID int64) (*queries.PartyMemberSuspension, error)
+	SuspendPartyMember(ctx context.Context, input partiesservice.SuspendPartyMemberInput) (*queries.PartyMemberSuspension, error)
+	UnsuspendPartyMember(ctx context.Context, input partiesservice.UnsuspendPartyMemberInput) (*queries.PartyMemberSuspension, error)
+	BlockPartyUser(ctx context.Context, input partiesservice.BlockPartyUserInput) (*queries.PartyUserBlock, error)
+	UnblockPartyUser(ctx context.Context, partyID int16, userID int64) error
 }
 
 type Handler struct {
@@ -2810,3 +2815,172 @@ func (h *Handler) ResolveChapter(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// SuspendPartyMemberRequest payload for suspending a party member
+type SuspendPartyMemberRequest struct {
+	Reason *string `json:"reason"`
+}
+
+// SuspendPartyMember handles POST /api/v1/parties/{id}/members/{user_id}/suspend
+func (h *Handler) SuspendPartyMember(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	partyID, err := strconv.ParseInt(idStr, 10, 16)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID: "+err.Error())
+		return
+	}
+
+	// TODO: add the suspension to audit_log
+	// TODO: in the handler, check if the logged in user has the right to suspend someone
+	// TODO: in the handler: check that the logged in user is not trying to suspend they selves
+
+	userIDStr := chi.URLParam(r, "user_id")
+	userID, err := strconv.ParseInt(userIDStr, 10, 64)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid user ID: "+err.Error())
+		return
+	}
+
+	var req SuspendPartyMemberRequest
+	if r.Body != nil && r.ContentLength > 0 {
+		_ = json.NewDecoder(r.Body).Decode(&req)
+	}
+
+	var suspendedBy *int64
+	if claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims); ok && claims != nil {
+		suspendedBy = &claims.UserID
+	}
+
+	suspension, err := h.partiesService.SuspendPartyMember(r.Context(), partiesservice.SuspendPartyMemberInput{
+		PartyID:     int16(partyID),
+		UserID:      userID,
+		SuspendedBy: suspendedBy,
+		Reason:      req.Reason,
+	})
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Member suspended successfully", map[string]interface{}{
+		"suspension": suspension,
+	})
+}
+
+// UnsuspendPartyMemberRequest payload for lifting suspension
+type UnsuspendPartyMemberRequest struct {
+	Reason *string `json:"reason"`
+}
+
+// UnsuspendPartyMember handles POST /api/v1/parties/{id}/members/{user_id}/unsuspend
+func (h *Handler) UnsuspendPartyMember(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	partyID, err := strconv.ParseInt(idStr, 10, 16)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID: "+err.Error())
+		return
+	}
+
+	userIDStr := chi.URLParam(r, "user_id")
+	userID, err := strconv.ParseInt(userIDStr, 10, 64)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid user ID: "+err.Error())
+		return
+	}
+
+	var req UnsuspendPartyMemberRequest
+	if r.Body != nil && r.ContentLength > 0 {
+		_ = json.NewDecoder(r.Body).Decode(&req)
+	}
+
+	var liftedBy *int64
+	if claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims); ok && claims != nil {
+		liftedBy = &claims.UserID
+	}
+
+	suspension, err := h.partiesService.UnsuspendPartyMember(r.Context(), partiesservice.UnsuspendPartyMemberInput{
+		PartyID:    int16(partyID),
+		UserID:     userID,
+		LiftedBy:   liftedBy,
+		LiftReason: req.Reason,
+	})
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Member suspension lifted successfully", map[string]interface{}{
+		"suspension": suspension,
+	})
+}
+
+// BlockPartyUserRequest defines the JSON payload for blocking a user from a party.
+type BlockPartyUserRequest struct {
+	Reason *string `json:"reason"`
+}
+
+// BlockPartyUser handles POST /api/v1/parties/{id}/members/{user_id}/block
+func (h *Handler) BlockPartyUser(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	partyID, err := strconv.ParseInt(idStr, 10, 16)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID: "+err.Error())
+		return
+	}
+
+	userIDStr := chi.URLParam(r, "user_id")
+	userID, err := strconv.ParseInt(userIDStr, 10, 64)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid user ID: "+err.Error())
+		return
+	}
+
+	var req BlockPartyUserRequest
+	if r.Body != nil && r.ContentLength > 0 {
+		_ = json.NewDecoder(r.Body).Decode(&req)
+	}
+
+	var blockedBy *int64
+	if claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims); ok && claims != nil {
+		blockedBy = &claims.UserID
+	}
+
+	block, err := h.partiesService.BlockPartyUser(r.Context(), partiesservice.BlockPartyUserInput{
+		PartyID:       int16(partyID),
+		BlockedUserID: userID,
+		BlockedBy:     blockedBy,
+		Reason:        req.Reason,
+	})
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "User blocked from party successfully", map[string]interface{}{
+		"block": block,
+	})
+}
+
+// UnblockPartyUser handles POST /api/v1/parties/{id}/members/{user_id}/unblock
+func (h *Handler) UnblockPartyUser(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	partyID, err := strconv.ParseInt(idStr, 10, 16)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID: "+err.Error())
+		return
+	}
+
+	userIDStr := chi.URLParam(r, "user_id")
+	userID, err := strconv.ParseInt(userIDStr, 10, 64)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid user ID: "+err.Error())
+		return
+	}
+
+	err = h.partiesService.UnblockPartyUser(r.Context(), int16(partyID), userID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "User unblocked from party successfully", nil)
+}

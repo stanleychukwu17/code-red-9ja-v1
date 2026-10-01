@@ -8,15 +8,23 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { TileOptions } from "@repo/ui/components/tiles";
 import type { TDropdownGroup } from "@repo/ui/lib/types";
-import { Pencil, Ban, UserX } from "lucide-react";
+import { Pencil, Ban, UserX, UserCheck } from "lucide-react";
 import { DropdownGroupList } from "@repo/ui/components/custom/AppDropdown";
 import { ConfirmAlertDialog } from "../alerts/confirm-alert-dialog";
 import { UserFormDialog } from "@repo/ui/components/custom/UserFormDialog";
 import type { UserType } from "../tiles/user-tile";
+import { toast } from "sonner";
 
-// Server Functions for UserFormDialog
+// Server Functions for UserFormDialog and Actions
 import { getAllCountries, getStates, getCities } from "#/lib/server/countries";
-import { getParties, getPresignedUploadURL, confirmFileUpload } from "#/lib/server/parties";
+import {
+  getParties,
+  getPresignedUploadURL,
+  confirmFileUpload,
+  suspendPartyMember,
+  unsuspendPartyMember,
+  blockPartyMember,
+} from "#/lib/server/parties";
 import { registerCandidate } from "#/lib/server/auth/auth";
 import { updateUser } from "#/lib/server/users";
 
@@ -29,19 +37,102 @@ interface UserDropdownProps {
 
 /**
  * UserDropdown Component
- * Contextual popover menu offering Edit (via UserFormDialog), Suspend, and Block actions.
- * Only members of the active party can be suspended.
+ * Contextual popover menu offering Edit (via UserFormDialog), Suspend/Unsuspend, and Block actions.
+ * Only members of the active party can be suspended or unsuspended.
  */
 export const UserDropdown = ({ data, partyId, className, refetch }: UserDropdownProps) => {
   const [openMenu, setOpenMenu] = useState(false);
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [openBlockAlert, setOpenBlockAlert] = useState(false);
   const [openSuspendAlert, setOpenSuspendAlert] = useState(false);
+  const [openUnsuspendAlert, setOpenUnsuspendAlert] = useState(false);
+  const [isSuspending, setIsSuspending] = useState(false);
+  const [isUnsuspending, setIsUnsuspending] = useState(false);
+  const [isBlocking, setIsBlocking] = useState(false);
   const queryClient = useQueryClient();
 
   // Check if target user belongs to the currently active party
   const isMemberOfCurrentParty =
     Boolean(partyId && data.party_id && Number(data.party_id) === Number(partyId));
+
+  const isSuspended =
+    data.account_status === "suspended" ||
+    data.status === "suspended";
+
+  const handleSuspend = async () => {
+    if (!partyId) return;
+    setIsSuspending(true);
+    try {
+      const res = await suspendPartyMember({
+        data: {
+          partyId,
+          userId: data.id,
+        },
+      });
+      if (res && res.success) {
+        toast.success("Member suspended successfully");
+        setOpenSuspendAlert(false);
+        queryClient.invalidateQueries({ queryKey: ["party-members"] });
+        refetch?.();
+      } else {
+        toast.error(res?.message || "Failed to suspend member");
+      }
+    } catch (err: any) {
+      toast.error(err?.message || "An error occurred while suspending member");
+    } finally {
+      setIsSuspending(false);
+    }
+  };
+
+  const handleUnsuspend = async () => {
+    if (!partyId) return;
+    setIsUnsuspending(true);
+    try {
+      const res = await unsuspendPartyMember({
+        data: {
+          partyId,
+          userId: data.id,
+        },
+      });
+      if (res && res.success) {
+        toast.success("Member reinstated successfully");
+        setOpenUnsuspendAlert(false);
+        queryClient.invalidateQueries({ queryKey: ["party-members"] });
+        refetch?.();
+      } else {
+        toast.error(res?.message || "Failed to reinstate member");
+      }
+    } catch (err: any) {
+      toast.error(err?.message || "An error occurred while reinstating member");
+    } finally {
+      setIsUnsuspending(false);
+    }
+  };
+
+  const handleBlock = async () => {
+    if (!partyId) return;
+    setIsBlocking(true);
+    try {
+      const res = await blockPartyMember({
+        data: {
+          partyId,
+          userId: data.id,
+        },
+      });
+      if (res && res.success) {
+        toast.success("User blocked from party successfully");
+        setOpenBlockAlert(false);
+        queryClient.invalidateQueries({ queryKey: ["party-members"] });
+        refetch?.();
+      } else {
+        toast.error(res?.message || "Failed to block user");
+      }
+    } catch (err: any) {
+      toast.error(err?.message || "An error occurred while blocking user");
+    } finally {
+      setIsBlocking(false);
+    }
+  };
 
   const group1: TDropdownGroup = [
     {
@@ -53,17 +144,29 @@ export const UserDropdown = ({ data, partyId, className, refetch }: UserDropdown
       },
     },
     ...(isMemberOfCurrentParty
-      ? [
-          {
-            title: "Suspend User",
-            icon: <UserX className="size-4" />,
-            action: () => {
-              setOpenMenu(false);
-              setOpenSuspendAlert(true);
+      ? isSuspended
+        ? [
+            {
+              title: "Reactivate User",
+              icon: <UserCheck className="size-4" />,
+              action: () => {
+                setOpenMenu(false);
+                setOpenUnsuspendAlert(true);
+              },
+              className: "[&_svg]:text-emerald-500 text-emerald-500",
             },
-            className: "[&_svg]:text-amber-500 text-amber-500",
-          },
-        ]
+          ]
+        : [
+            {
+              title: "Suspend User",
+              icon: <UserX className="size-4" />,
+              action: () => {
+                setOpenMenu(false);
+                setOpenSuspendAlert(true);
+              },
+              className: "[&_svg]:text-amber-500 text-amber-500",
+            },
+          ]
       : []),
     {
       title: "Block User",
@@ -127,32 +230,45 @@ export const UserDropdown = ({ data, partyId, className, refetch }: UserDropdown
       />
 
       {isMemberOfCurrentParty && (
-        <ConfirmAlertDialog
-          open={openSuspendAlert}
-          setOpen={setOpenSuspendAlert}
-          onConfirm={() => {
-            // Placeholder or mutation for suspending user
-            setOpenSuspendAlert(false);
-          }}
-          headerTitle="Suspend User"
-          title={`Are you sure you want to suspend "${name}"?`}
-          subtitle={`Suspending this user will temporarily disable their party privileges and access until reactivated. Are you sure you want to continue?`}
-          actionText="Suspend User"
-        />
+        <>
+          <ConfirmAlertDialog
+            open={openSuspendAlert}
+            setOpen={setOpenSuspendAlert}
+            onConfirm={handleSuspend}
+            isPending={isSuspending}
+            headerTitle="Suspend User"
+            title={`Are you sure you want to suspend "${name}"?`}
+            subtitle={`Suspending this user will remove them from all party positions they hold and temporarily disable their party privileges and access until reactivated. Are you sure you want to continue?`}
+            actionText={isSuspending ? "Suspending..." : "Suspend User"}
+            actionVariant="red"
+          />
+
+          <ConfirmAlertDialog
+            open={openUnsuspendAlert}
+            setOpen={setOpenUnsuspendAlert}
+            onConfirm={handleUnsuspend}
+            isPending={isUnsuspending}
+            headerTitle="Reactivate User"
+            title={`Are you sure you want to reactivate "${name}"?`}
+            subtitle={`Reactivating this user will restore their active party membership. Any previously vacated positions will need to be re-appointed.`}
+            actionText={isUnsuspending ? "Reactivating..." : "Reactivate User"}
+            actionVariant="primary"
+          />
+        </>
       )}
 
       <ConfirmAlertDialog
         open={openBlockAlert}
         setOpen={setOpenBlockAlert}
-        onConfirm={() => {
-          // Placeholder or mutation for blocking user
-          setOpenBlockAlert(false);
-        }}
+        onConfirm={handleBlock}
+        isPending={isBlocking}
         headerTitle="Block User"
         title={`Are you sure you want to block "${name}"?`}
-        subtitle={`Blocking this user will restrict their access and visibility within the party. Are you sure you want to continue?`}
-        actionText="Block User"
+        subtitle={`Blocking this user will remove them from the party entirely and revoke all party positions they hold. Are you sure you want to continue?`}
+        actionText={isBlocking ? "Blocking..." : "Block User"}
+        actionVariant="red"
       />
     </>
   );
 };
+

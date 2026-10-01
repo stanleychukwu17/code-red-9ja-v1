@@ -86,6 +86,19 @@ func PgInt8FromInt64(v int64) pgtype.Int8 {
 	return pgtype.Int8{Int64: v, Valid: true}
 }
 
+// PgInt4FromInt32 wraps a non-pointer int32 as an always-valid pgtype.Int4.
+func PgInt4FromInt32(v int32) pgtype.Int4 {
+	return pgtype.Int4{Int32: v, Valid: true}
+}
+
+// PgInt4FromPtr converts an optional int32 pointer to a pgtype.Int4.
+func PgInt4FromPtr(i *int32) pgtype.Int4 {
+	if i != nil {
+		return pgtype.Int4{Int32: *i, Valid: true}
+	}
+	return pgtype.Int4{}
+}
+
 // PgInt2FromInt16 wraps a non-pointer int16 as an always-valid pgtype.Int2.
 func PgInt2FromInt16(v int16) pgtype.Int2 {
 	return pgtype.Int2{Int16: v, Valid: true}

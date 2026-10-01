@@ -1326,6 +1326,22 @@ type PartyMemberMilestone struct {
 	CreatedAt     pgtype.Timestamptz `json:"created_at"`
 }
 
+type PartyMemberSuspension struct {
+	ID          int64              `json:"id"`
+	PartyID     int16              `json:"party_id"`
+	UserID      int64              `json:"user_id"`
+	SuspendedBy pgtype.Int8        `json:"suspended_by"`
+	Reason      pgtype.Text        `json:"reason"`
+	StartsAt    pgtype.Timestamptz `json:"starts_at"`
+	EndsAt      pgtype.Timestamptz `json:"ends_at"`
+	Status      string             `json:"status"`
+	LiftedAt    pgtype.Timestamptz `json:"lifted_at"`
+	LiftedBy    pgtype.Int8        `json:"lifted_by"`
+	LiftReason  pgtype.Text        `json:"lift_reason"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
 type PartyMembership struct {
 	ID        int64              `json:"id"`
 	UserID    int64              `json:"user_id"`

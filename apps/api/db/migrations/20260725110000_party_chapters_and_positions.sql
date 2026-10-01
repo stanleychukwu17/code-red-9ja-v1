@@ -1,6 +1,5 @@
 -- +goose Up
 
-
 CREATE TABLE party_chapters (
     id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     party_id SMALLINT NOT NULL REFERENCES parties(id) ON DELETE CASCADE,
@@ -26,6 +25,7 @@ CREATE INDEX idx_party_chapters_state_id ON party_chapters (party_id, state_id);
 CREATE INDEX idx_party_chapters_lga_id ON party_chapters (party_id, lga_id);
 CREATE INDEX idx_party_chapters_ward_id ON party_chapters (party_id, ward_id);
 
+
 CREATE TABLE party_membership (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -37,7 +37,31 @@ CREATE TABLE party_membership (
 );
 -- Indexes for party membership queries
 CREATE INDEX idx_party_membership_party_chapter ON party_membership(party_id, chapter_id);
+CREATE INDEX idx_party_membership_party_user ON party_membership(party_id, user_id);
 CREATE INDEX idx_party_membership_party_active_id ON party_membership(party_id, id DESC) WHERE status = 'active';
+
+
+CREATE TABLE party_member_suspensions (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    party_id SMALLINT NOT NULL REFERENCES parties(id) ON DELETE CASCADE,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    suspended_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+    reason TEXT,
+    starts_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    ends_at TIMESTAMPTZ,
+    status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'lifted', 'expired')),
+    lifted_at TIMESTAMPTZ,
+    lifted_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+    lift_reason TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Ensure a user can only have at most one active suspension per party at a time
+CREATE UNIQUE INDEX idx_active_party_suspension ON party_member_suspensions (party_id, user_id) WHERE status = 'active';
+-- Listing / audit indexes
+CREATE INDEX idx_party_member_suspensions_party ON party_member_suspensions (party_id, id DESC);
+CREATE INDEX idx_party_member_suspensions_user ON party_member_suspensions (user_id, id DESC);
 
 
 CREATE TABLE party_member_milestones (
@@ -100,6 +124,7 @@ CREATE TABLE party_position_assignments (
 -- Unique index to prevent duplicate active assignment for the same position, chapter, and user
 CREATE UNIQUE INDEX idx_unique_active_chapter_position_user ON party_position_assignments (chapter_id, position_id, user_id) WHERE status = 'active';
 CREATE INDEX idx_pos_assign_chapter_pos_active ON party_position_assignments (chapter_id, position_id) WHERE status = 'active';
+CREATE INDEX idx_pos_assign_party_user_active ON party_position_assignments (party_id, user_id) WHERE status = 'active';
 CREATE INDEX idx_pos_assign_chapter ON party_position_assignments (party_id, chapter_id, status);
 CREATE INDEX idx_pos_assign_user ON party_position_assignments (user_id, status);
 CREATE INDEX idx_pos_assign_position ON party_position_assignments (position_id);
@@ -291,6 +316,7 @@ DROP TRIGGER IF EXISTS trg_create_party_top_chapters ON parties;
 DROP FUNCTION IF EXISTS create_initial_party_chapters();
 DROP TABLE IF EXISTS party_position_assignments;
 DROP TABLE IF EXISTS party_positions;
+DROP TABLE IF EXISTS party_member_suspensions;
 DROP TABLE IF EXISTS party_member_milestones;
 DROP TABLE IF EXISTS party_membership;
 DROP TABLE IF EXISTS party_chapters;

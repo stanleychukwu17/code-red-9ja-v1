@@ -38,6 +38,8 @@ type PartiesService struct {
 // BlocksService interface defines the methods needed from the blocks service
 type BlocksService interface {
 	GetUserBlockedPartyIDs(ctx context.Context, userID int64) map[int16]bool
+	BlockUserByParty(ctx context.Context, partyID int16, blockedUserID int64, blockedByUserID *int64) (queries.PartyUserBlock, error)
+	UnblockUserByParty(ctx context.Context, partyID int16, blockedUserID int64) error
 }
 
 // UsersService interface defines the methods needed from the users service
@@ -1386,7 +1388,13 @@ func (s *PartiesService) JoinParty(ctx context.Context, partyID int16, chapterID
 		return fmt.Errorf("failed to fetch user details: %w", err)
 	}
 
-	// 2. Reject if user is affiliated with a different party.
+	// 2. Reject if user is blocked by the party
+	blockedParties := s.blocksService.GetUserBlockedPartyIDs(ctx, userID)
+	if blockedParties[partyID] {
+		return fmt.Errorf("you have been blocked from joining this party")
+	}
+
+	// 3. Reject if user is affiliated with a different party.
 	// Users must explicitly leave their current party before joining a different one.
 	if user.PartyID.Valid && user.PartyID.Int16 != partyID {
 		return fmt.Errorf("you are already a member of a different party; you must leave your current party before joining another one")
@@ -1736,4 +1744,341 @@ func (s *PartiesService) ListMemberPositionAssignments(ctx context.Context, part
 		PartyID: partyID,
 		UserID:  userID,
 	})
+}
+
+// GetActivePartyMemberSuspension checks if a user is actively suspended from a party.
+// Results are cached in Redis to minimize database lookups across frequent checks.
+// If the user is not suspended, a struct with ID = 0 is returned/cached (check if suspension.ID > 0).
+func (s *PartiesService) GetActivePartyMemberSuspension(ctx context.Context, partyID int16, userID int64) (*queries.PartyMemberSuspension, error) {
+	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisPartyMemberSuspension, partyID, userID)
+
+	// 1. Check Redis cache
+	cachedVal, err := s.rdb.Get(ctx, cacheKey).Result()
+	if err == nil {
+		var cached queries.PartyMemberSuspension
+		if jsonErr := json.Unmarshal([]byte(cachedVal), &cached); jsonErr == nil {
+			return &cached, nil
+		}
+	}
+
+	// 2. Query DB
+	suspension, err := s.queries.GetActivePartyMemberSuspension(ctx, queries.GetActivePartyMemberSuspensionParams{
+		PartyID: partyID,
+		UserID:  userID,
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			// Cache empty struct (ID = 0) for 7 days to indicate not suspended
+			emptySuspension := queries.PartyMemberSuspension{
+				ID:      0,
+				PartyID: partyID,
+				UserID:  userID,
+			}
+
+			if data, err := json.Marshal(emptySuspension); err == nil {
+				_ = s.rdb.Set(ctx, cacheKey, data, db.RedisFourteenDaysTTL).Err()
+			}
+
+			return &emptySuspension, nil
+		}
+
+		return nil, fmt.Errorf("failed to query active suspension: %w", err)
+	}
+
+	// 3. Cache positive result for 7 days (or until lifted/suspended)
+	if data, err := json.Marshal(suspension); err == nil {
+		_ = s.rdb.Set(ctx, cacheKey, data, db.RedisFourteenDaysTTL).Err()
+	}
+
+	return &suspension, nil
+}
+
+// InvalidatePartyMemberSuspensionCache invalidates the Redis suspension cache for a member.
+func (s *PartiesService) InvalidatePartyMemberSuspensionCache(ctx context.Context, partyID int16, userID int64) {
+	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisPartyMemberSuspension, partyID, userID)
+	if err := s.rdb.Del(ctx, cacheKey).Err(); err != nil {
+		slog.Error("Failed to invalidate party member suspension cache", "error", err, "partyID", partyID, "userID", userID)
+	}
+}
+
+// SuspendPartyMemberInput defines the input for suspending a party member.
+type SuspendPartyMemberInput struct {
+	PartyID     int16
+	UserID      int64
+	SuspendedBy *int64
+	Reason      *string
+}
+
+// SuspendPartyMember suspends a party member, vacates active positions, and records the suspension.
+func (s *PartiesService) SuspendPartyMember(ctx context.Context, input SuspendPartyMemberInput) (*queries.PartyMemberSuspension, error) {
+	// Check if already actively suspended (utilizing Redis cache if available)
+	existing, err := s.GetActivePartyMemberSuspension(ctx, input.PartyID, input.UserID)
+	if err != nil {
+		return nil, err
+	}
+	if existing != nil && existing.ID > 0 {
+		return nil, fmt.Errorf("user is already suspended from this party")
+	}
+
+	// begin db transaction
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	// set queries to use transaction
+	qtx := s.queries.WithTx(tx)
+
+	// 1. Create suspension record
+	suspension, err := qtx.CreatePartyMemberSuspension(ctx, queries.CreatePartyMemberSuspensionParams{
+		PartyID:     input.PartyID,
+		UserID:      input.UserID,
+		SuspendedBy: utils.PgInt8FromPtr(input.SuspendedBy),
+		Reason:      utils.PgTextFromPtr(input.Reason),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create suspension record: %w", err)
+	}
+
+	// 2. Suspend party membership across all chapters
+	chapterIDs, err := qtx.SuspendPartyMembership(ctx, queries.SuspendPartyMembershipParams{
+		PartyID: input.PartyID,
+		UserID:  input.UserID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to update party membership status: %w", err)
+	}
+
+	// 3. Vacate all active positions held by the user in this party
+	err = qtx.VacateAllUserPositionsInParty(ctx, queries.VacateAllUserPositionsInPartyParams{
+		PartyID: input.PartyID,
+		UserID:  input.UserID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to vacate user positions: %w", err)
+	}
+
+	// 4. Log milestone (one milestone entry for the user in this party)
+	metaMap := map[string]interface{}{}
+	if input.Reason != nil && *input.Reason != "" {
+		metaMap["reason"] = *input.Reason
+	}
+	if input.SuspendedBy != nil {
+		metaMap["suspended_by"] = *input.SuspendedBy
+	}
+	metaJSON, _ := json.Marshal(metaMap)
+
+	// get just one chapterID (from the chapterIDs returned by SuspendPartyMembership) to log the milestone
+	var primaryChapterID pgtype.Int4
+	if len(chapterIDs) > 0 {
+		primaryChapterID = utils.PgInt4FromInt32(chapterIDs[0])
+	}
+
+	// add one milestone for the user in this party
+	_ = qtx.AddPartyMemberMilestone(ctx, queries.AddPartyMemberMilestoneParams{
+		UserID:        input.UserID,
+		PartyID:       input.PartyID,
+		ChapterID:     primaryChapterID,
+		MilestoneType: constants.MilestoneTypeSuspended,
+		Metadata:      metaJSON,
+	})
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("failed to commit suspension transaction: %w", err)
+	}
+
+	// Invalidate member suspension cache
+	s.InvalidatePartyMemberSuspensionCache(ctx, input.PartyID, input.UserID)
+
+	return &suspension, nil
+}
+
+// UnsuspendPartyMemberInput defines the input for lifting a suspension.
+type UnsuspendPartyMemberInput struct {
+	PartyID    int16
+	UserID     int64
+	LiftedBy   *int64
+	LiftReason *string
+}
+
+// UnsuspendPartyMember lifts an active suspension and reactivates party membership.
+func (s *PartiesService) UnsuspendPartyMember(ctx context.Context, input UnsuspendPartyMemberInput) (*queries.PartyMemberSuspension, error) {
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	qtx := s.queries.WithTx(tx)
+
+	// Verify active suspension exists
+	if _, err := qtx.GetActivePartyMemberSuspension(ctx, queries.GetActivePartyMemberSuspensionParams{
+		PartyID: input.PartyID,
+		UserID:  input.UserID,
+	}); err != nil {
+		return nil, fmt.Errorf("no active suspension found for this member")
+	}
+
+	// 1. Lift suspension record
+	updatedSuspension, err := qtx.LiftPartyMemberSuspension(ctx, queries.LiftPartyMemberSuspensionParams{
+		PartyID:    input.PartyID,
+		UserID:     input.UserID,
+		LiftedBy:   utils.PgInt8FromPtr(input.LiftedBy),
+		LiftReason: utils.PgTextFromPtr(input.LiftReason),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to lift suspension: %w", err)
+	}
+
+	// 2. Reactivate party membership
+	chapterIDs, err := qtx.ReactivatePartyMembership(ctx, queries.ReactivatePartyMembershipParams{
+		PartyID: input.PartyID,
+		UserID:  input.UserID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to reactivate party membership: %w", err)
+	}
+
+	// 3. Log milestone (one milestone entry for the user in this party)
+	metaMap := map[string]interface{}{}
+	if input.LiftReason != nil && *input.LiftReason != "" {
+		metaMap["lift_reason"] = *input.LiftReason
+	}
+	if input.LiftedBy != nil {
+		metaMap["lifted_by"] = *input.LiftedBy
+	}
+	metaJSON, _ := json.Marshal(metaMap)
+
+	// get just one chapterID (from the chapterIDs returned by ReactivatePartyMembership) to log the milestone
+	var primaryChapterID pgtype.Int4
+	if len(chapterIDs) > 0 {
+		primaryChapterID = utils.PgInt4FromInt32(chapterIDs[0])
+	}
+
+	// add one milestone for the user in this party
+	_ = qtx.AddPartyMemberMilestone(ctx, queries.AddPartyMemberMilestoneParams{
+		UserID:        input.UserID,
+		PartyID:       input.PartyID,
+		ChapterID:     primaryChapterID,
+		MilestoneType: constants.MilestoneTypeReinstated,
+		Metadata:      metaJSON,
+	})
+
+	// commit db transaction
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("failed to commit unsuspend transaction: %w", err)
+	}
+
+	// Invalidate member suspension cache
+	s.InvalidatePartyMemberSuspensionCache(ctx, input.PartyID, input.UserID)
+
+	return &updatedSuspension, nil
+}
+
+// BlockPartyUserInput defines the input for blocking a user from a party.
+type BlockPartyUserInput struct {
+	PartyID       int16
+	BlockedUserID int64
+	BlockedBy     *int64
+	Reason        *string
+}
+
+// BlockPartyUser removes the user from the party entirely, vacates all their held positions,
+// strips party admin privileges, revokes active membership, and registers a party block.
+func (s *PartiesService) BlockPartyUser(ctx context.Context, input BlockPartyUserInput) (*queries.PartyUserBlock, error) {
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	qtx := s.queries.WithTx(tx)
+
+	// 1. Fetch user to check if they have fake_id and party affiliation
+	user, err := qtx.GetUserByID(ctx, input.BlockedUserID)
+	if err != nil {
+		return nil, fmt.Errorf("user not found: %w", err)
+	}
+
+	// 2. Vacate all positions held by the user in this party
+	err = qtx.VacateAllUserPositionsInParty(ctx, queries.VacateAllUserPositionsInPartyParams{
+		PartyID: input.PartyID,
+		UserID:  input.BlockedUserID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to vacate user positions: %w", err)
+	}
+
+	// 3. Remove party membership records if any exist
+	chapterIDs, err := qtx.DeletePartyMembership(ctx, queries.DeletePartyMembershipParams{
+		UserID:  input.BlockedUserID,
+		PartyID: input.PartyID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to delete party membership: %w", err)
+	}
+
+	// 4. Record milestone for audit trail
+	metaMap := map[string]interface{}{}
+	if input.Reason != nil && *input.Reason != "" {
+		metaMap["reason"] = *input.Reason
+	}
+	if input.BlockedBy != nil {
+		metaMap["blocked_by"] = *input.BlockedBy
+	}
+	metaJSON, _ := json.Marshal(metaMap)
+
+	for _, chapterID := range chapterIDs {
+		_ = qtx.AddPartyMemberMilestone(ctx, queries.AddPartyMemberMilestoneParams{
+			UserID:        input.BlockedUserID,
+			PartyID:       input.PartyID,
+			ChapterID:     pgtype.Int4{Int32: chapterID, Valid: true},
+			MilestoneType: constants.MilestoneTypeBlocked,
+			Metadata:      metaJSON,
+		})
+	}
+
+	// 5. If user's active party_id matches this party, clear it
+	if user.PartyID.Valid && user.PartyID.Int16 == input.PartyID {
+		var fakeID int64
+		if user.FakeID.Valid {
+			fakeID = user.FakeID.Int64
+		}
+		_ = s.usersService.StripPartyAdminRoles(ctx, input.BlockedUserID, fakeID)
+		_ = s.usersService.UpdateUserParty(ctx, input.BlockedUserID, nil, fakeID)
+	}
+
+	// 6. Record party-user block in party_user_blocks table
+	var blockedByPg pgtype.Int8
+	if input.BlockedBy != nil {
+		blockedByPg = pgtype.Int8{Int64: *input.BlockedBy, Valid: true}
+	}
+
+	partyBlock, err := qtx.BlockUserByParty(ctx, queries.BlockUserByPartyParams{
+		PartyID:         input.PartyID,
+		BlockedUserID:   input.BlockedUserID,
+		BlockedByUserID: blockedByPg,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to record party user block: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("failed to commit block user transaction: %w", err)
+	}
+
+	// Invalidate caches
+	s.blocksService.GetUserBlockedPartyIDs(ctx, input.BlockedUserID) // triggers cache refresh if needed
+	// Also explicitly invalidate using redis key via blocksService if available
+	for _, chapterID := range chapterIDs {
+		s.InvalidateChapterMemberCount(ctx, input.PartyID, chapterID)
+	}
+
+	return &partyBlock, nil
+}
+
+// UnblockPartyUser removes a party block on a user.
+func (s *PartiesService) UnblockPartyUser(ctx context.Context, partyID int16, userID int64) error {
+	return s.blocksService.UnblockUserByParty(ctx, partyID, userID)
 }

@@ -670,6 +670,14 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Patch("/api/v1/parties/{id}/officials/{assignment_id}/vacate", partiesHandler.VacatePositionAssignment)
 		r.Patch("/api/v1/parties/{id}/officials/{assignment_id}", partiesHandler.UpdatePositionAssignment)
 		r.Get("/api/v1/parties/{id}/chapters/resolve", partiesHandler.ResolveChapter)
+
+		// party member suspension & reactivation
+		r.Post("/api/v1/parties/{id}/members/{user_id}/suspend", partiesHandler.SuspendPartyMember)
+		r.Post("/api/v1/parties/{id}/members/{user_id}/unsuspend", partiesHandler.UnsuspendPartyMember)
+
+		// party member block & unblock
+		r.Post("/api/v1/parties/{id}/members/{user_id}/block", partiesHandler.BlockPartyUser)
+		r.Post("/api/v1/parties/{id}/members/{user_id}/unblock", partiesHandler.UnblockPartyUser)
 	})
 
 	// Agent earnings routes (authenticated users)

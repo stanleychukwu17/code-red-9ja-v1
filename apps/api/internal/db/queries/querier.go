@@ -97,6 +97,7 @@ type Querier interface {
 	CreateParty(ctx context.Context, arg CreatePartyParams) (Party, error)
 	CreatePartyCustomPosition(ctx context.Context, arg CreatePartyCustomPositionParams) (PartyPosition, error)
 	CreatePartyMarketingCampaign(ctx context.Context, arg CreatePartyMarketingCampaignParams) (PartyMarketingCampaign, error)
+	CreatePartyMemberSuspension(ctx context.Context, arg CreatePartyMemberSuspensionParams) (PartyMemberSuspension, error)
 	// ============================================================================
 	// PARTY NOTIFICATIONS
 	// ============================================================================
@@ -171,6 +172,7 @@ type Querier interface {
 	GetAcceptingPartyIDs(ctx context.Context) ([]int16, error)
 	// Returns the active campaign (if any) for a party + election group where NOW() is within start/end dates.
 	GetActiveMarketingCampaignForElectionGroup(ctx context.Context, arg GetActiveMarketingCampaignForElectionGroupParams) (PartyMarketingCampaign, error)
+	GetActivePartyMemberSuspension(ctx context.Context, arg GetActivePartyMemberSuspensionParams) (PartyMemberSuspension, error)
 	GetAgentEarningsByID(ctx context.Context, id int64) (AgentEarning, error)
 	GetAgentEarningsByUserAndElectionGroupAndRole(ctx context.Context, arg GetAgentEarningsByUserAndElectionGroupAndRoleParams) (AgentEarning, error)
 	GetAllPollingUnitResultsByPU(ctx context.Context, arg GetAllPollingUnitResultsByPUParams) ([]PollingUnitResult, error)
@@ -365,6 +367,7 @@ type Querier interface {
 	// Useful for chat/DMs/feed: true if either user has blocked the other
 	IsUserBlockedBidirectional(ctx context.Context, arg IsUserBlockedBidirectionalParams) (bool, error)
 	IsUserBlockedByParty(ctx context.Context, arg IsUserBlockedByPartyParams) (bool, error)
+	LiftPartyMemberSuspension(ctx context.Context, arg LiftPartyMemberSuspensionParams) (PartyMemberSuspension, error)
 	ListAcceptingParties(ctx context.Context) ([]ListAcceptingPartiesRow, error)
 	ListActiveINECResultGrabbers(ctx context.Context, activeSyncDaysLimit int32) ([]ListActiveINECResultGrabbersRow, error)
 	ListAgentEarnings(ctx context.Context, arg ListAgentEarningsParams) ([]ListAgentEarningsRow, error)
@@ -446,6 +449,7 @@ type Querier interface {
 	// Run once daily via cron to deduct budget_per_day_kobo, update amount_spent_kobo, and mark expired campaigns as completed.
 	// Idempotent: Skips deduction if already deducted today (last_deducted_date = CURRENT_DATE) or activated today.
 	ProcessDailyMarketingCampaignDeductions(ctx context.Context) ([]PartyMarketingCampaign, error)
+	ReactivatePartyMembership(ctx context.Context, arg ReactivatePartyMembershipParams) ([]int32, error)
 	RecalculateFederalConstituencyMetrics(ctx context.Context) error
 	RecalculateLGAMetrics(ctx context.Context) error
 	RecalculateNationalMetrics(ctx context.Context) error
@@ -502,6 +506,7 @@ type Querier interface {
 	SeedUser(ctx context.Context, arg SeedUserParams) (int64, error)
 	SubmitPollingUnitResult(ctx context.Context, arg SubmitPollingUnitResultParams) (PollingUnitResult, error)
 	SubmitPracticeTest(ctx context.Context, arg SubmitPracticeTestParams) (UserPracticeTest, error)
+	SuspendPartyMembership(ctx context.Context, arg SuspendPartyMembershipParams) ([]int32, error)
 	ToggleINECResultGrabberPause(ctx context.Context, id int64) (InecResultGrabber, error)
 	UnblockUser(ctx context.Context, arg UnblockUserParams) error
 	UnblockUserByID(ctx context.Context, arg UnblockUserByIDParams) error
@@ -607,6 +612,7 @@ type Querier interface {
 	UpsertUserPhoneNumber(ctx context.Context, arg UpsertUserPhoneNumberParams) (int64, error)
 	UpsertUserPreferences(ctx context.Context, arg UpsertUserPreferencesParams) (UserPreference, error)
 	UpsertWard(ctx context.Context, arg UpsertWardParams) (Ward, error)
+	VacateAllUserPositionsInParty(ctx context.Context, arg VacateAllUserPositionsInPartyParams) error
 	VacatePositionAssignment(ctx context.Context, arg VacatePositionAssignmentParams) (PartyPositionAssignment, error)
 	VoteOnResult(ctx context.Context, arg VoteOnResultParams) (PollingUnitResult, error)
 }

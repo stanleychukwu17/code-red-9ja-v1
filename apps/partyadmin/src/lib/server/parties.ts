@@ -663,3 +663,113 @@ export const createPartyCustomPosition = createServerFn({ method: "POST" })
     }
   });
 
+export const suspendPartyMember = createServerFn({ method: "POST" })
+  .inputValidator(
+    (data: {
+      partyId: number | string;
+      userId: number | string;
+      reason?: string;
+    }) => data,
+  )
+  .handler(async ({ data }) => {
+    try {
+      const response = await apiFetch(
+        API_URL.suspendMember(data.partyId, data.userId),
+        {
+          method: "POST",
+          body: JSON.stringify({
+            reason: data.reason,
+          }),
+        },
+      );
+      return await response.json();
+    } catch (error) {
+      return {
+        success: false,
+        message: "Failed to suspend member: " + (error as Error).message,
+      };
+    }
+  });
+
+export const unsuspendPartyMember = createServerFn({ method: "POST" })
+  .inputValidator(
+    (data: {
+      partyId: number | string;
+      userId: number | string;
+      reason?: string;
+    }) => data,
+  )
+  .handler(async ({ data }) => {
+    try {
+      const response = await apiFetch(
+        API_URL.unsuspendMember(data.partyId, data.userId),
+        {
+          method: "POST",
+          body: JSON.stringify({
+            reason: data.reason,
+          }),
+        },
+      );
+      return await response.json();
+    } catch (error) {
+      return {
+        success: false,
+        message: "Failed to unsuspend member: " + (error as Error).message,
+      };
+    }
+  });
+
+export const blockPartyMember = createServerFn({ method: "POST" })
+  .inputValidator(
+    (data: {
+      partyId: number | string;
+      userId: number | string;
+      reason?: string;
+    }) => data,
+  )
+  .handler(async ({ data }) => {
+    try {
+      const response = await apiFetch(
+        API_URL.blockMember(data.partyId, data.userId),
+        {
+          method: "POST",
+          body: JSON.stringify({
+            reason: data.reason,
+          }),
+        },
+      );
+      return await response.json();
+    } catch (error) {
+      return {
+        success: false,
+        message: "Failed to block member: " + (error as Error).message,
+      };
+    }
+  });
+
+export const unblockPartyMember = createServerFn({ method: "POST" })
+  .inputValidator(
+    (data: {
+      partyId: number | string;
+      userId: number | string;
+    }) => data,
+  )
+  .handler(async ({ data }) => {
+    try {
+      const response = await apiFetch(
+        API_URL.unblockMember(data.partyId, data.userId),
+        {
+          method: "POST",
+        },
+      );
+      return await response.json();
+    } catch (error) {
+      return {
+        success: false,
+        message: "Failed to unblock member: " + (error as Error).message,
+      };
+    }
+  });
+
+
+

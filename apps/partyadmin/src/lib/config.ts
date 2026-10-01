@@ -132,6 +132,14 @@ export const API_URL = {
   ) => `${api}/parties/${id}/officials/${assignmentId}`,
   memberPositions: (id: string | number, userId: string | number) =>
     `${api}/parties/${id}/members/${userId}/positions`,
+  suspendMember: (id: string | number, userId: string | number) =>
+    `${api}/parties/${id}/members/${userId}/suspend`,
+  unsuspendMember: (id: string | number, userId: string | number) =>
+    `${api}/parties/${id}/members/${userId}/unsuspend`,
+  blockMember: (id: string | number, userId: string | number) =>
+    `${api}/parties/${id}/members/${userId}/block`,
+  unblockMember: (id: string | number, userId: string | number) =>
+    `${api}/parties/${id}/members/${userId}/unblock`,
   resolveChapter: (
     id: string | number,
     chapterType: string,
