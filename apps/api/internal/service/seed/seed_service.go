@@ -569,6 +569,12 @@ func (s *SeedService) SeedAdmins(ctx context.Context, req SeedAdminsRequest) (st
 					}
 					fakeID := fakeIDData.Int64
 
+					// Check user details: if user is affiliated with a different party, leave it first
+					user, err := s.usersService.GetUserByFakeID(ctx, fakeID)
+					if err == nil && user.PartyID.Valid && user.PartyID.Int16 > 0 && user.PartyID.Int16 != partyID {
+						_ = s.partiesService.LeaveParty(ctx, user.PartyID.Int16, pAdminID, fakeID)
+					}
+
 					// join party
 					err = s.partiesService.JoinParty(ctx, partyID, 0, pAdminID, fakeID)
 					if err != nil {
@@ -594,6 +600,12 @@ func (s *SeedService) SeedAdmins(ctx context.Context, req SeedAdminsRequest) (st
 						return fmt.Errorf("failed to fetch fake ID for super party admin %d: %w", spAdminID, err)
 					}
 					fakeID := fakeIDData.Int64
+
+					// Check user details: if user is affiliated with a different party, leave it first
+					user, err := s.usersService.GetUserByFakeID(ctx, fakeID)
+					if err == nil && user.PartyID.Valid && user.PartyID.Int16 > 0 && user.PartyID.Int16 != partyID {
+						_ = s.partiesService.LeaveParty(ctx, user.PartyID.Int16, spAdminID, fakeID)
+					}
 
 					// join party
 					err = s.partiesService.JoinParty(ctx, partyID, 0, spAdminID, fakeID)

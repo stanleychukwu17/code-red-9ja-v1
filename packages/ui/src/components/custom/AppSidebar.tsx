@@ -90,11 +90,7 @@ export type AppSidebarShellProps = {
   logoText?: string;
   onLogout?: () => void | Promise<void>;
   onSidebarStateChange?: (state: "expanded" | "collapsed") => void;
-  avatarUrl?: string;
-  username?: string;
-  displayName?: string;
   homePageUrl?: string;
-  profilePopoverExtraContent?: ReactNode;
   defaultOpen?: boolean;
   showSidebarFooter?: boolean;
 };
@@ -110,11 +106,7 @@ export function AppSidebarShell({
   logoText,
   onLogout,
   onSidebarStateChange,
-  avatarUrl,
-  username,
-  displayName,
   homePageUrl,
-  profilePopoverExtraContent,
   defaultOpen = true,
   showSidebarFooter,
 }: AppSidebarShellProps) {
@@ -148,11 +140,7 @@ export function AppSidebarShell({
           logoText={logoText}
           onLogout={onLogout}
           onSidebarStateChange={onSidebarStateChange}
-          avatarUrl={avatarUrl}
-          username={username}
-          displayName={displayName}
           homePageUrl={homePageUrl}
-          profilePopoverExtraContent={profilePopoverExtraContent}
           showSidebarFooter={showSidebarFooter}
         />
       </TooltipProvider>
@@ -173,8 +161,7 @@ export function AppSidebarShell({
               <SidebarTrigger
                 className="w-8 h-8! py-0 rounded-full hover:bg-white opacity-100"
                 img={
-                  avatarUrl ??
-                  user?.avatar_url ??
+                  user?.avatar ??
                   "https://github.com/shadcn.png"
                 }
               />
@@ -201,11 +188,7 @@ export function AppSidebar({
   logoText,
   onLogout,
   onSidebarStateChange,
-  avatarUrl,
-  username,
-  displayName,
   homePageUrl,
-  profilePopoverExtraContent,
   showSidebarFooter = true,
 }: AppSidebarShellProps) {
   const { state: sideBarState } = useSidebar();
@@ -256,12 +239,8 @@ export function AppSidebar({
           <SidebarFooter className="py-4 px-0">
             <ProfilePicture
               userDetails={userDetails}
-              avatarUrl={avatarUrl}
-              username={username}
-              displayName={displayName}
               onLogout={onLogout}
               homePageUrl={homePageUrl}
-              profilePopoverExtraContent={profilePopoverExtraContent}
             />
           </SidebarFooter>
         )}
@@ -554,27 +533,23 @@ function LogoComponent({
 // ============================================================================
 type ProfilePictureProps = {
   userDetails?: any;
-  avatarUrl?: string;
-  username?: string;
-  displayName?: string;
   onLogout?: () => void | Promise<void>;
   homePageUrl?: string;
-  profilePopoverExtraContent?: ReactNode;
 };
 
 function ProfilePicture({
-  userDetails, avatarUrl, username, displayName, onLogout, homePageUrl,
+  userDetails,
+  onLogout,
+  homePageUrl,
 }: ProfilePictureProps) {
   const { state: sideBarState, isMobile, openMobile } = useSidebar();
 
   const user = userDetails;
-  const avatar = avatarUrl ?? user?.avatar_url;
-  const dname =
-    displayName ??
-    (user?.first_name
-      ? `${user.first_name} ${user.last_name}`
-      : (user?.displayName ?? "User"));
-  const uname = username ?? user?.username ?? "user";
+  const avatar = user?.avatar;
+  const dname = user?.first_name
+    ? `${user.first_name} ${user.last_name ?? ""}`.trim()
+    : (user?.displayName ?? user?.name ?? "User");
+  const uname = user?.username ?? "user";
 
   // Guest State: Show Login & Sign Up buttons
   if (user === null || user === undefined) {

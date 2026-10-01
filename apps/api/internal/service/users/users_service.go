@@ -557,7 +557,7 @@ func (s *UsersService) ResetUserAvatar(ctx context.Context, userID int64, fakeID
 
 // UpdateUserProfileDetails updates extended educational and demographic information for a user.
 func (s *UsersService) UpdateUserProfileDetails(ctx context.Context, userID int64, occupationID *int16, educationalStatus, highestDegree, graduationYear, schoolName, religion, maritalStatus, educationLevel, address string) error {
-	pgOccupationID := utils.PgInt2FromPtr(occupationID, 0)
+	pgOccupationID := utils.PgInt2FromPtrNullable(occupationID)
 
 	err := s.queries.UpdateMoreInfoAboutThisUser(ctx, queries.UpdateMoreInfoAboutThisUserParams{
 		UserID:            userID,
@@ -720,7 +720,7 @@ func (s *UsersService) UpdateUserIsVerified(ctx context.Context, userID int64, f
 // Pass nil for partyID to remove the user from any party.
 func (s *UsersService) UpdateUserParty(ctx context.Context, userID int64, partyID *int16, fakeID int64) error {
 	// prepare party ID for database update (NULL if nil)
-	pID := utils.PgInt2FromPtr(partyID, 0)
+	pID := utils.PgInt2FromPtrNullable(partyID)
 
 	// update user party in the database
 	err := s.queries.UpdateUserParty(ctx, queries.UpdateUserPartyParams{

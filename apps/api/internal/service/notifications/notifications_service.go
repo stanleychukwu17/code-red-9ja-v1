@@ -176,7 +176,7 @@ func (s *service) CreateNotification(ctx context.Context, in CreateNotificationI
 
 	// Prepare nullable database types
 	actorUserID := utils.PgInt8FromPtr(in.ActorUserID)
-	partyID := utils.PgInt2FromPtr(in.PartyID, 0)
+	partyID := utils.PgInt2FromPtrNullable(in.PartyID)
 	groupKey := utils.PgTextFromPtr(in.GroupKey)
 
 	// If group_key is set, upsert & increment actor_count on unread conflict; otherwise insert fresh

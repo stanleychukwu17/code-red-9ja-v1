@@ -241,6 +241,81 @@ func ensureGeoHierarchy(u UserRecord, geo *GeoData, rng *rand.Rand) {
 	}
 }
 
+var validPrefixes = []string{"0803", "0806", "0813", "0816", "0802", "0805", "0703", "0706", "0810", "0814", "0818", "0903"}
+var phoneCounter = 1000000
+
+func ensureValidPhone(u UserRecord, usedPhones map[string]bool, emailToPhone map[string]string, rng *rand.Rand) {
+	email, _ := u["email"].(string)
+	if email != "" && emailToPhone[email] != "" {
+		u["phone"] = emailToPhone[email]
+		return
+	}
+
+	if pVal, ok := u["phone"]; ok && pVal != nil {
+		if pStr, ok := pVal.(string); ok && pStr != "" {
+			num, err := phonenumbers.Parse(pStr, "NG")
+			if err == nil && phonenumbers.IsValidNumber(num) {
+				formatted := phonenumbers.Format(num, phonenumbers.E164)
+				if !usedPhones[formatted] {
+					usedPhones[formatted] = true
+					if email != "" {
+						emailToPhone[email] = pStr
+					}
+					return
+				}
+			}
+		}
+	}
+
+	// Generate a unique, valid Nigerian phone number
+	for {
+		prefix := validPrefixes[rng.Intn(len(validPrefixes))]
+		phoneCounter++
+		candidate := fmt.Sprintf("%s%07d", prefix, phoneCounter%10000000)
+		num, err := phonenumbers.Parse(candidate, "NG")
+		if err == nil && phonenumbers.IsValidNumber(num) {
+			formatted := phonenumbers.Format(num, phonenumbers.E164)
+			if !usedPhones[formatted] {
+				usedPhones[formatted] = true
+				u["phone"] = candidate
+				if email != "" {
+					emailToPhone[email] = candidate
+				}
+				return
+			}
+		}
+	}
+}
+
+func loadAdminParties(filePath string) map[int]int16 {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil
+	}
+	var req struct {
+		Parties []map[string]struct {
+			ID              int16   `json:"id"`
+			PartyAdmin      []int64 `json:"party_admin"`
+			SuperPartyAdmin []int64 `json:"super_party_admin"`
+		} `json:"parties"`
+	}
+	if err := json.Unmarshal(data, &req); err != nil {
+		return nil
+	}
+	res := make(map[int]int16)
+	for _, pMap := range req.Parties {
+		for _, pData := range pMap {
+			for _, id := range pData.PartyAdmin {
+				res[int(id)] = pData.ID
+			}
+			for _, id := range pData.SuperPartyAdmin {
+				res[int(id)] = pData.ID
+			}
+		}
+	}
+	return res
+}
+
 func main() {
 	defaultDB := os.Getenv("DATABASE_URL")
 	if defaultDB == "" {
@@ -268,27 +343,31 @@ func main() {
 		seedsDir = "apps/api/scripts/seeds"
 	}
 
-	// 1. Process 1.4-10kusers.json
-	process10kUsers(filepath.Join(seedsDir, "1.4-10kusers.json"), geo, minorPartyIDs, rng)
+	usedPhones := make(map[string]bool)
+	emailToPhone := make(map[string]string)
+	adminParties := loadAdminParties(filepath.Join(seedsDir, "1.5-admins.json"))
 
-	// 2. Process 1-users.json
-	processUsers(filepath.Join(seedsDir, "1-users.json"), geo, minorPartyIDs, rng)
+	// 1. Process 1.2-politicians.json (highest priority, preserve phones & affiliations)
+	processPoliticians(filepath.Join(seedsDir, "1.2-politicians.json"), geo, rng, usedPhones, emailToPhone)
 
-	// 3. Process 1.2-politicians.json
-	processPoliticians(filepath.Join(seedsDir, "1.2-politicians.json"), geo, rng)
+	// 2. Process 1.3-celebrities.json
+	processCelebrities(filepath.Join(seedsDir, "1.3-celebrities.json"), geo, rng, usedPhones, emailToPhone)
 
-	// 4. Process 1.3-celebrities.json
-	processCelebrities(filepath.Join(seedsDir, "1.3-celebrities.json"), geo, rng)
+	// 3. Process 1-users.json
+	processUsers(filepath.Join(seedsDir, "1-users.json"), geo, minorPartyIDs, rng, usedPhones, emailToPhone)
 
-	// 5. Process seed_users.json
+	// 4. Process seed_users.json
 	if _, err := os.Stat(filepath.Join(seedsDir, "seed_users.json")); err == nil {
-		processUsers(filepath.Join(seedsDir, "seed_users.json"), geo, minorPartyIDs, rng)
+		processUsers(filepath.Join(seedsDir, "seed_users.json"), geo, minorPartyIDs, rng, usedPhones, emailToPhone)
 	}
+
+	// 5. Process 1.4-10kusers.json
+	process10kUsers(filepath.Join(seedsDir, "1.4-10kusers.json"), geo, minorPartyIDs, rng, usedPhones, emailToPhone, adminParties)
 
 	log.Println("All target seed files successfully updated!")
 }
 
-func process10kUsers(filePath string, geo *GeoData, minorPartyIDs []int16, rng *rand.Rand) {
+func process10kUsers(filePath string, geo *GeoData, minorPartyIDs []int16, rng *rand.Rand, usedPhones map[string]bool, emailToPhone map[string]string, adminParties map[int]int16) {
 	log.Printf("Processing %s...", filepath.Base(filePath))
 	data, err := os.ReadFile(filePath)
 	if err != nil {
@@ -303,18 +382,30 @@ func process10kUsers(filePath string, geo *GeoData, minorPartyIDs []int16, rng *
 	partyCounts := make(map[string]int)
 
 	for _, u := range users {
-		// Assign party_id with dominant ADC, APC, NDC ratio
-		p := pickParty(rng, minorPartyIDs)
-		if p != nil {
-			u["party_id"] = *p
-			partyCounts[fmt.Sprintf("%d", *p)]++
+		// If user is designated as an admin in 1.5-admins.json, assign their respective party
+		if numVal, ok := u["num"].(float64); ok {
+			if targetPID, exists := adminParties[int(numVal)]; exists {
+				u["party_id"] = targetPID
+			}
+		}
+
+		// Keep existing party affiliation if already set, otherwise assign
+		if pVal, ok := u["party_id"]; !ok || pVal == nil {
+			p := pickParty(rng, minorPartyIDs)
+			if p != nil {
+				u["party_id"] = *p
+				partyCounts[fmt.Sprintf("%d", *p)]++
+			} else {
+				u["party_id"] = nil
+				partyCounts["null"]++
+			}
 		} else {
-			u["party_id"] = nil
-			partyCounts["null"]++
+			partyCounts[fmt.Sprintf("%v", u["party_id"])]++
 		}
 
 		// Ensure valid LGA, Ward, PU, City hierarchy
 		ensureGeoHierarchy(u, geo, rng)
+		ensureValidPhone(u, usedPhones, emailToPhone, rng)
 	}
 
 	out, err := json.MarshalIndent(users, "", "  ")
@@ -329,7 +420,7 @@ func process10kUsers(filePath string, geo *GeoData, minorPartyIDs []int16, rng *
 	log.Printf("Saved %s (%d records). Party distribution: %v\n", filepath.Base(filePath), len(users), partyCounts)
 }
 
-func processUsers(filePath string, geo *GeoData, minorPartyIDs []int16, rng *rand.Rand) {
+func processUsers(filePath string, geo *GeoData, minorPartyIDs []int16, rng *rand.Rand, usedPhones map[string]bool, emailToPhone map[string]string) {
 	log.Printf("Processing %s...", filepath.Base(filePath))
 	data, err := os.ReadFile(filePath)
 	if err != nil {
@@ -344,18 +435,21 @@ func processUsers(filePath string, geo *GeoData, minorPartyIDs []int16, rng *ran
 	partyCounts := make(map[string]int)
 
 	for _, u := range users {
-		// Ensure party_id with dominant ADC/APC/NDC ratio
-		p := pickParty(rng, minorPartyIDs)
-		if p != nil {
-			u["party_id"] = *p
-			partyCounts[fmt.Sprintf("%d", *p)]++
-		} else {
-			u["party_id"] = nil
-			partyCounts["null"]++
+		// Keep existing party affiliation if already set, otherwise assign
+		if pVal, ok := u["party_id"]; !ok || pVal == nil {
+			p := pickParty(rng, minorPartyIDs)
+			if p != nil {
+				u["party_id"] = *p
+				partyCounts[fmt.Sprintf("%d", *p)]++
+			} else {
+				u["party_id"] = nil
+				partyCounts["null"]++
+			}
 		}
 
 		// Ensure valid LGA, Ward, PU, City hierarchy
 		ensureGeoHierarchy(u, geo, rng)
+		ensureValidPhone(u, usedPhones, emailToPhone, rng)
 	}
 
 	out, err := json.MarshalIndent(users, "", "  ")
@@ -370,7 +464,7 @@ func processUsers(filePath string, geo *GeoData, minorPartyIDs []int16, rng *ran
 	log.Printf("Saved %s (%d records). Party distribution: %v\n", filepath.Base(filePath), len(users), partyCounts)
 }
 
-func processPoliticians(filePath string, geo *GeoData, rng *rand.Rand) {
+func processPoliticians(filePath string, geo *GeoData, rng *rand.Rand, usedPhones map[string]bool, emailToPhone map[string]string) {
 	log.Printf("Processing %s...", filepath.Base(filePath))
 	data, err := os.ReadFile(filePath)
 	if err != nil {
@@ -395,6 +489,7 @@ func processPoliticians(filePath string, geo *GeoData, rng *rand.Rand) {
 
 		// Ensure valid Ward and PU within their LGA
 		ensureGeoHierarchy(u, geo, rng)
+		ensureValidPhone(u, usedPhones, emailToPhone, rng)
 	}
 
 	out, err := json.MarshalIndent(users, "", "  ")
@@ -409,7 +504,7 @@ func processPoliticians(filePath string, geo *GeoData, rng *rand.Rand) {
 	log.Printf("Saved %s (%d records)\n", filepath.Base(filePath), len(users))
 }
 
-func processCelebrities(filePath string, geo *GeoData, rng *rand.Rand) {
+func processCelebrities(filePath string, geo *GeoData, rng *rand.Rand, usedPhones map[string]bool, emailToPhone map[string]string) {
 	log.Printf("Processing %s...", filepath.Base(filePath))
 	data, err := os.ReadFile(filePath)
 	if err != nil {
@@ -432,6 +527,7 @@ func processCelebrities(filePath string, geo *GeoData, rng *rand.Rand) {
 
 		// Ensure valid Ward and PU within their LGA
 		ensureGeoHierarchy(u, geo, rng)
+		ensureValidPhone(u, usedPhones, emailToPhone, rng)
 	}
 
 	out, err := json.MarshalIndent(users, "", "  ")

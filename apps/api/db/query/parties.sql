@@ -189,7 +189,8 @@ ORDER BY id ASC;
 
 -- name: AddPartyMembership :exec
 INSERT INTO party_membership (user_id, party_id, chapter_id, status)
-VALUES ($1, $2, $3, 'active');
+VALUES ($1, $2, $3, 'active')
+ON CONFLICT (user_id, party_id, chapter_id) DO UPDATE SET status = 'active';
 -- name: GetChapterMemberCount :one
 SELECT COUNT(*) FROM party_membership WHERE party_id = $1 AND chapter_id = $2 AND status = 'active';
 
@@ -216,9 +217,8 @@ SELECT pm.party_id, u.id AS user_id, u.first_name, u.last_name, u.username, u.av
 FROM party_membership pm
 JOIN users u ON u.id = pm.user_id
 WHERE pm.party_id = $1 
+  AND pm.chapter_id = $2
   AND pm.status = 'active' 
-  AND u.avatar IS NOT NULL 
-  AND u.avatar != ''
 ORDER BY pm.id DESC
 LIMIT 5;
 
@@ -319,7 +319,6 @@ SELECT
     u.current_state,
     u.current_city,
     u.state_of_origin,
-    u.role_level,
     admin.username AS suspended_by_username
 FROM party_member_suspensions pms
 JOIN users u ON u.id = pms.user_id

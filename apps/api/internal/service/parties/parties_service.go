@@ -385,9 +385,9 @@ type PartyCard struct {
 	IsUserBlocked  bool                `json:"is_user_blocked"`
 }
 
-// GetPartySampleMemberAvatars retrieves sample member avatars for a party, cached in Redis.
-func (s *PartiesService) GetPartySampleMemberAvatars(ctx context.Context, partyID int16) ([]PartySampleMember, error) {
-	cacheKey := fmt.Sprintf("%s%d", db.RedisParties5MemberAvatars, partyID)
+// GetPartySampleMemberAvatars retrieves sample member avatars for a party chapter, cached in Redis.
+func (s *PartiesService) GetPartySampleMemberAvatars(ctx context.Context, partyID int16, chapterID int32) ([]PartySampleMember, error) {
+	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisParties5MemberAvatars, partyID, chapterID)
 
 	// Try to get from Redis
 	if cachedData, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
@@ -398,7 +398,10 @@ func (s *PartiesService) GetPartySampleMemberAvatars(ctx context.Context, partyI
 	}
 
 	// Fetch sample member avatars from the database
-	avatars, err := s.queries.GetPartySampleMemberAvatars(ctx, partyID)
+	avatars, err := s.queries.GetPartySampleMemberAvatars(ctx, queries.GetPartySampleMemberAvatarsParams{
+		PartyID:   partyID,
+		ChapterID: chapterID,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -530,7 +533,11 @@ func (s *PartiesService) GetPartyCards(ctx context.Context, userID int64, userPa
 	// 2. Fetch sample member avatars (up to 5 per party, cached in Redis)
 	sampleAvatarsMap := make(map[int16][]PartySampleMember, len(parties))
 	for _, p := range parties {
-		if avatars, err := s.GetPartySampleMemberAvatars(ctx, p.ID); err == nil {
+		natChapterID, ok := nationalChapterIDs[p.ID]
+		if !ok {
+			continue
+		}
+		if avatars, err := s.GetPartySampleMemberAvatars(ctx, p.ID, natChapterID); err == nil {
 			sampleAvatarsMap[p.ID] = avatars
 		}
 	}
@@ -1404,7 +1411,7 @@ func (s *PartiesService) JoinParty(ctx context.Context, partyID int16, chapterID
 
 	// 3. Reject if user is affiliated with a different party.
 	// Users must explicitly leave their current party before joining a different one.
-	if user.PartyID.Valid && user.PartyID.Int16 != partyID {
+	if user.PartyID.Valid && user.PartyID.Int16 > 0 && user.PartyID.Int16 != partyID {
 		return fmt.Errorf("you are already a member of a different party; you must leave your current party before joining another one")
 	}
 

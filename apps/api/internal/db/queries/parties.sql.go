@@ -38,6 +38,7 @@ func (q *Queries) AddPartyMemberMilestone(ctx context.Context, arg AddPartyMembe
 const addPartyMembership = `-- name: AddPartyMembership :exec
 INSERT INTO party_membership (user_id, party_id, chapter_id, status)
 VALUES ($1, $2, $3, 'active')
+ON CONFLICT (user_id, party_id, chapter_id) DO UPDATE SET status = 'active'
 `
 
 type AddPartyMembershipParams struct {
@@ -634,12 +635,16 @@ SELECT pm.party_id, u.id AS user_id, u.first_name, u.last_name, u.username, u.av
 FROM party_membership pm
 JOIN users u ON u.id = pm.user_id
 WHERE pm.party_id = $1 
+  AND pm.chapter_id = $2
   AND pm.status = 'active' 
-  AND u.avatar IS NOT NULL 
-  AND u.avatar != ''
 ORDER BY pm.id DESC
 LIMIT 5
 `
+
+type GetPartySampleMemberAvatarsParams struct {
+	PartyID   int16 `json:"party_id"`
+	ChapterID int32 `json:"chapter_id"`
+}
 
 type GetPartySampleMemberAvatarsRow struct {
 	PartyID   int16       `json:"party_id"`
@@ -650,8 +655,8 @@ type GetPartySampleMemberAvatarsRow struct {
 	Avatar    pgtype.Text `json:"avatar"`
 }
 
-func (q *Queries) GetPartySampleMemberAvatars(ctx context.Context, partyID int16) ([]GetPartySampleMemberAvatarsRow, error) {
-	rows, err := q.db.Query(ctx, getPartySampleMemberAvatars, partyID)
+func (q *Queries) GetPartySampleMemberAvatars(ctx context.Context, arg GetPartySampleMemberAvatarsParams) ([]GetPartySampleMemberAvatarsRow, error) {
+	rows, err := q.db.Query(ctx, getPartySampleMemberAvatars, arg.PartyID, arg.ChapterID)
 	if err != nil {
 		return nil, err
 	}
@@ -1018,6 +1023,112 @@ func (q *Queries) ListPartyChapters(ctx context.Context, arg ListPartyChaptersPa
 	return items, nil
 }
 
+const listSuspendedPartyMembers = `-- name: ListSuspendedPartyMembers :many
+SELECT
+    pms.id,
+    pms.party_id,
+    pms.user_id,
+    pms.suspended_by,
+    pms.reason,
+    pms.starts_at,
+    pms.ends_at,
+    pms.status,
+    pms.created_at,
+    pms.updated_at,
+    u.fake_id,
+    u.username,
+    u.first_name,
+    u.last_name,
+    u.avatar,
+    u.email,
+    u.phone,
+    u.current_country,
+    u.current_state,
+    u.current_city,
+    u.state_of_origin,
+    admin.username AS suspended_by_username
+FROM party_member_suspensions pms
+JOIN users u ON u.id = pms.user_id
+LEFT JOIN users admin ON admin.id = pms.suspended_by
+WHERE pms.party_id = $1 AND pms.status = 'active'
+ORDER BY pms.created_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type ListSuspendedPartyMembersParams struct {
+	PartyID int16 `json:"party_id"`
+	Limit   int32 `json:"limit"`
+	Offset  int32 `json:"offset"`
+}
+
+type ListSuspendedPartyMembersRow struct {
+	ID                  int64              `json:"id"`
+	PartyID             int16              `json:"party_id"`
+	UserID              int64              `json:"user_id"`
+	SuspendedBy         pgtype.Int8        `json:"suspended_by"`
+	Reason              pgtype.Text        `json:"reason"`
+	StartsAt            pgtype.Timestamptz `json:"starts_at"`
+	EndsAt              pgtype.Timestamptz `json:"ends_at"`
+	Status              string             `json:"status"`
+	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+	FakeID              pgtype.Int8        `json:"fake_id"`
+	Username            pgtype.Text        `json:"username"`
+	FirstName           pgtype.Text        `json:"first_name"`
+	LastName            pgtype.Text        `json:"last_name"`
+	Avatar              pgtype.Text        `json:"avatar"`
+	Email               pgtype.Text        `json:"email"`
+	Phone               pgtype.Text        `json:"phone"`
+	CurrentCountry      int16              `json:"current_country"`
+	CurrentState        int16              `json:"current_state"`
+	CurrentCity         pgtype.Int4        `json:"current_city"`
+	StateOfOrigin       pgtype.Int2        `json:"state_of_origin"`
+	SuspendedByUsername pgtype.Text        `json:"suspended_by_username"`
+}
+
+func (q *Queries) ListSuspendedPartyMembers(ctx context.Context, arg ListSuspendedPartyMembersParams) ([]ListSuspendedPartyMembersRow, error) {
+	rows, err := q.db.Query(ctx, listSuspendedPartyMembers, arg.PartyID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListSuspendedPartyMembersRow
+	for rows.Next() {
+		var i ListSuspendedPartyMembersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.PartyID,
+			&i.UserID,
+			&i.SuspendedBy,
+			&i.Reason,
+			&i.StartsAt,
+			&i.EndsAt,
+			&i.Status,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.FakeID,
+			&i.Username,
+			&i.FirstName,
+			&i.LastName,
+			&i.Avatar,
+			&i.Email,
+			&i.Phone,
+			&i.CurrentCountry,
+			&i.CurrentState,
+			&i.CurrentCity,
+			&i.StateOfOrigin,
+			&i.SuspendedByUsername,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const reactivatePartyMembership = `-- name: ReactivatePartyMembership :many
 UPDATE party_membership
 SET status = 'active'
@@ -1237,113 +1348,3 @@ func (q *Queries) VacateAllUserPositionsInParty(ctx context.Context, arg VacateA
 	_, err := q.db.Exec(ctx, vacateAllUserPositionsInParty, arg.PartyID, arg.UserID)
 	return err
 }
-
-const listSuspendedPartyMembers = `-- name: ListSuspendedPartyMembers :many
-SELECT
-    pms.id,
-    pms.party_id,
-    pms.user_id,
-    pms.suspended_by,
-    pms.reason,
-    pms.starts_at,
-    pms.ends_at,
-    pms.status,
-    pms.created_at,
-    pms.updated_at,
-    u.fake_id,
-    u.username,
-    u.first_name,
-    u.last_name,
-    u.avatar,
-    u.email,
-    u.phone,
-    u.current_country,
-    u.current_state,
-    u.current_city,
-    u.state_of_origin,
-    u.role_level,
-    admin.username AS suspended_by_username
-FROM party_member_suspensions pms
-JOIN users u ON u.id = pms.user_id
-LEFT JOIN users admin ON admin.id = pms.suspended_by
-WHERE pms.party_id = $1 AND pms.status = 'active'
-ORDER BY pms.created_at DESC
-LIMIT $2 OFFSET $3
-`
-
-type ListSuspendedPartyMembersParams struct {
-	PartyID int16 `json:"party_id"`
-	Limit   int32 `json:"limit"`
-	Offset  int32 `json:"offset"`
-}
-
-type ListSuspendedPartyMembersRow struct {
-	ID                  int64              `json:"id"`
-	PartyID             int16              `json:"party_id"`
-	UserID              int64              `json:"user_id"`
-	SuspendedBy         pgtype.Int8        `json:"suspended_by"`
-	Reason              pgtype.Text        `json:"reason"`
-	StartsAt            pgtype.Timestamptz `json:"starts_at"`
-	EndsAt              pgtype.Timestamptz `json:"ends_at"`
-	Status              string             `json:"status"`
-	CreatedAt           pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
-	FakeID              pgtype.Int8        `json:"fake_id"`
-	Username            pgtype.Text        `json:"username"`
-	FirstName           pgtype.Text        `json:"first_name"`
-	LastName            pgtype.Text        `json:"last_name"`
-	Avatar              pgtype.Text        `json:"avatar"`
-	Email               pgtype.Text        `json:"email"`
-	Phone               pgtype.Text        `json:"phone"`
-	CurrentCountry      int16              `json:"current_country"`
-	CurrentState        int16              `json:"current_state"`
-	CurrentCity         pgtype.Int4        `json:"current_city"`
-	StateOfOrigin       pgtype.Int2        `json:"state_of_origin"`
-	RoleLevel           string             `json:"role_level"`
-	SuspendedByUsername pgtype.Text        `json:"suspended_by_username"`
-}
-
-func (q *Queries) ListSuspendedPartyMembers(ctx context.Context, arg ListSuspendedPartyMembersParams) ([]ListSuspendedPartyMembersRow, error) {
-	rows, err := q.db.Query(ctx, listSuspendedPartyMembers, arg.PartyID, arg.Limit, arg.Offset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListSuspendedPartyMembersRow
-	for rows.Next() {
-		var i ListSuspendedPartyMembersRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.PartyID,
-			&i.UserID,
-			&i.SuspendedBy,
-			&i.Reason,
-			&i.StartsAt,
-			&i.EndsAt,
-			&i.Status,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.FakeID,
-			&i.Username,
-			&i.FirstName,
-			&i.LastName,
-			&i.Avatar,
-			&i.Email,
-			&i.Phone,
-			&i.CurrentCountry,
-			&i.CurrentState,
-			&i.CurrentCity,
-			&i.StateOfOrigin,
-			&i.RoleLevel,
-			&i.SuspendedByUsername,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
