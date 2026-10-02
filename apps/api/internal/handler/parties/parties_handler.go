@@ -3121,6 +3121,7 @@ func (h *Handler) UnblockPartyUser(w http.ResponseWriter, r *http.Request) {
 
 // ListBlockedPartyMembers handles GET /api/v1/parties/{id}/members/blocked
 func (h *Handler) ListBlockedPartyMembers(w http.ResponseWriter, r *http.Request) {
+	// Parse party ID from route parameter
 	idStr := chi.URLParam(r, "id")
 	partyID, err := strconv.ParseInt(idStr, 10, 16)
 	if err != nil {
@@ -3128,6 +3129,7 @@ func (h *Handler) ListBlockedPartyMembers(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	// Parse pagination: limit (default 50, max 100)
 	limit := int32(50)
 	if l := r.URL.Query().Get("limit"); l != "" {
 		if val, err := strconv.Atoi(l); err == nil && val > 0 {
@@ -3139,6 +3141,7 @@ func (h *Handler) ListBlockedPartyMembers(w http.ResponseWriter, r *http.Request
 		}
 	}
 
+	// Parse pagination: offset (default 0)
 	offset := int32(0)
 	if off := r.URL.Query().Get("offset"); off != "" {
 		if val, err := strconv.Atoi(off); err == nil && val >= 0 {
@@ -3146,12 +3149,14 @@ func (h *Handler) ListBlockedPartyMembers(w http.ResponseWriter, r *http.Request
 		}
 	}
 
+	// Fetch blocked members from service
 	blockedUsers, err := h.partiesService.ListBlockedPartyMembers(r.Context(), int16(partyID), limit, offset)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to list blocked users: "+err.Error())
 		return
 	}
 
+	// Return successful response
 	h.utils.RespondSuccess(w, http.StatusOK, "Blocked users retrieved successfully", map[string]interface{}{
 		"blocked_users": blockedUsers,
 	})

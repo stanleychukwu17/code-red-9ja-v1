@@ -12,23 +12,38 @@ export const usePartyDetails = () => {
 	const user = useUser();
 	const params = useParams({ strict: false }) as { partyShortName?: string };
 	const routeShortName = params?.partyShortName?.toLowerCase();
-	const { activeParties, isLoading: isPartiesLoading } = useActiveParties();
+	const userPartyMatchesRoute = Boolean(
+		routeShortName &&
+		user?.party?.short_name &&
+		user.party.short_name.toLowerCase() === routeShortName
+	);
+
+	// Only query public parties if on a different party route than the user's current party
+	const shouldFetchActiveParties = Boolean(routeShortName && !userPartyMatchesRoute);
+
+	// if the routeShortName exists and the user's party does not match the routeShortName,
+	// then fetch the public parties, else don't fetch
+	const { activeParties, isLoading: isPartiesLoading } = useActiveParties({
+		enabled: shouldFetchActiveParties,
+	});
 
 	// Match active party from route param if provided
-	const matchingActiveParty: Party | undefined = routeShortName
-		? activeParties.find((p: any) => p.short_name?.toLowerCase() === routeShortName)
-		: undefined;
+	const matchingActiveParty: Party | undefined = userPartyMatchesRoute
+		? user?.party
+		: routeShortName
+			? activeParties.find((p: any) => p.short_name?.toLowerCase() === routeShortName)
+			: undefined;
 
 	let party: Party | null = null;
-	if (matchingActiveParty) {
-		party = matchingActiveParty;
+	if (routeShortName) {
+		party = matchingActiveParty || null;
 	} else if (user?.party) {
 		party = user.party;
 	} else if (user?.party_id) {
 		party = { id: user.party_id };
 	}
 
-	const isLoading = Boolean(routeShortName && isPartiesLoading && !party);
+	const isLoading = Boolean(shouldFetchActiveParties && isPartiesLoading && !party);
 
 	return { party, isLoading };
 };
