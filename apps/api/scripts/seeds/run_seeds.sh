@@ -67,6 +67,14 @@ curl -X POST ${BASE_URL}/api/v1/seed/users \
   -H "Content-Type: application/json" \
   -d @"1.6-dnc.json"
 
+sleep 1 # wait for 1 second
+
+# seed users with no party
+echo "Seeding users with no party to ${BASE_URL}/api/v1/seed/users..."
+curl -X POST ${BASE_URL}/api/v1/seed/users \
+  -H "Content-Type: application/json" \
+  -d @"1.7-users-with-no-party.json"
+
 echo ""
 echo "Done."
 
