@@ -376,6 +376,7 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 		roleSlice = strings.Split(roles, ",")
 	}
 
+	// sort based on user account status
 	var accountStatusSlice []string
 	if statuses != "" {
 		accountStatusSlice = strings.Split(statuses, ",")

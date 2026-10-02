@@ -2930,7 +2930,6 @@ func (h *Handler) SuspendPartyMember(w http.ResponseWriter, r *http.Request) {
 		SuspendedBy: &claims.UserID,
 		Reason:      req.Reason,
 	})
-	fmt.Printf("%+v\n", suspension)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
 		return

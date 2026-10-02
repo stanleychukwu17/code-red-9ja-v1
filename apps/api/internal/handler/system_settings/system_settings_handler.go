@@ -3,7 +3,6 @@ package system_settings
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -73,7 +72,6 @@ func (h *Handler) GetSystemSetting(w http.ResponseWriter, r *http.Request) {
 		h.u.RespondError(w, http.StatusBadRequest, "Setting key is required")
 		return
 	}
-	fmt.Printf("DEBUG GetSystemSetting called with key: '%s'\n", key)
 
 	setting, err := h.q.GetSystemSetting(r.Context(), key)
 	if err != nil {

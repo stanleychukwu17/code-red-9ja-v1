@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"free9ja/api/internal/db/queries"
 	apimiddleware "free9ja/api/internal/middleware"
 	partyapplications "free9ja/api/internal/service/party_applications"
@@ -92,7 +91,6 @@ func (h *Handler) SubmitApplication(w http.ResponseWriter, r *http.Request) {
 
 	requester, err := h.usersService.GetUserByFakeID(r.Context(), claims.FakeID)
 	if err != nil {
-		fmt.Printf("SubmitApplication: GetUserByFakeID failed for fake_id: %v, error: %v\n", claims.FakeID, err)
 		h.utils.RespondError(w, http.StatusUnauthorized, "User not found")
 		return
 	}
