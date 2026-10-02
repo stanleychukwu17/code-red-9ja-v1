@@ -41,6 +41,7 @@ import {
   getUserDetailsCookie,
 } from "#/lib/server/auth/auth";
 import { useUserParty } from "#/hooks/useUserParty";
+import { useUser } from "#/hooks/useUser";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { updateAuthState } from "@/redux/slice/authSlice";
 import { updateSiteState } from "@/redux/slice/siteSlice";
@@ -65,6 +66,7 @@ export const Route = createFileRoute("/_authenticated")({
       throw new Error("You do not have access to this platform.");
     }
   },
+
   component: AuthenticatedRoutes,
   errorComponent: ({ error }) => (
     <div className="p-8 text-center text-destructive">{error.message}</div>
@@ -78,8 +80,7 @@ export const Route = createFileRoute("/_authenticated")({
  */
 function AuthenticatedRoutes() {
   const [mounted, setMounted] = useState(false);
-  const { userDetails, sitePreference: initialSitePreference } =
-    Route.useRouteContext() as any;
+  const { userDetails, sitePreference: initialSitePreference } = Route.useRouteContext() as any;
 
   //redux site state
   const dispatch = useAppDispatch();
@@ -89,11 +90,15 @@ function AuthenticatedRoutes() {
     : initialSitePreference;
   const isExpanded = currentSitePreference?.sideBarState !== "collapsed";
 
-  //party shortname
+  //party shortname & auth user
   const params = useParams({ strict: false });
+  const user = useUser();
   const { party } = useUserParty();
-  const partyShortName =
-    party?.shortName || (params as any).partyShortName || "party";
+  const partyShortName = party?.short_name || "party";
+
+  const isAdminOrSuperAdmin = Boolean(
+    user?.roles?.includes("admin") || user?.roles?.includes("super_admin")
+  );
 
   //sidebar items
   const sidebarItems: AppSidebarItem[] = [
@@ -192,6 +197,17 @@ function AuthenticatedRoutes() {
       selectedIcon: <FeedSolidIcon />,
       href: APP_URL.partyRoutes.electionRace(partyShortName),
     },
+    ...(isAdminOrSuperAdmin
+      ? [
+        {
+          id: "parties",
+          label: "Parties",
+          icon: <BalonIcon />,
+          selectedIcon: <BalonSolidIcon />,
+          href: APP_URL.parties,
+        },
+      ]
+      : []),
   ];
 
   // handles the mounting of the component

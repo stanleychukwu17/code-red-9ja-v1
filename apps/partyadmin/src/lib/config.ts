@@ -22,6 +22,7 @@ export const APP_URL = {
     logout: "/auth/logout",
   },
   homePage: "/dashboard",
+  parties: "/parties",
   partyHome: "/$partyShortName/home",
   partyRoutes: {
     home: (party: string) => `/${party}/home`,

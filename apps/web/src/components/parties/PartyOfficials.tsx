@@ -22,7 +22,7 @@ export function PartyOfficials({ officials = [] }: PartyOfficialsProps) {
 							<div className="w-14 h-14 rounded-full bg-linear-to-br from-sidebar-mobile to-lime">
 							</div>
 							<span className="text-[11px] font-medium text-muted-foreground mt-2 line-clamp-1"> {official.position_name}</span>
-							<span className="text-xs sm:text-sm font-semibold text-muted-foreground mt-0.5 italic"> Vacant</span>
+							<span className="text-xs lg:text-sm font-semibold text-muted-foreground mt-0.5 italic"> Vacant</span>
 							<span className="text-[10px] text-muted-foreground/70 mt-0.5"> Unassigned</span>
 						</div>
 					);

@@ -8,34 +8,16 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useForm } from "@tanstack/react-form";
-import {
-  createFileRoute,
-  useNavigate,
-  redirect,
-  useRouter,
-} from "@tanstack/react-router";
+import { createFileRoute, useNavigate, redirect, useRouter } from "@tanstack/react-router";
 import LogoIcon from "@repo/ui/icons/logo-icon";
 import { Button } from "@repo/ui/components/button";
 import { FormInput, PasswordInput } from "@repo/ui/components/input";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@repo/ui/components/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@repo/ui/components/select";
 import { useAppDispatch, useAppSelector } from "#/redux/hooks";
 import { updateAuthState } from "#/redux/slice/authSlice";
-import store from "#/redux/store";
 
 import { APP_URL } from "#/lib/config";
-import {
-  loginPartyApp,
-  checkIfRefreshTokenInCookie,
-  getUserDetailsCookie,
-} from "#/lib/server/auth/auth";
+import { loginPartyApp, checkIfRefreshTokenInCookie, getUserDetailsCookie } from "#/lib/server/auth/auth";
 import { getPageHeader } from "@/lib/shared/meta";
 import { getAllCountries } from "#/lib/server/countries";
 
@@ -153,8 +135,7 @@ function LoginComponent() {
 
         if (response.success) {
           dispatch(updateAuthState({ user: response.data.user }));
-          const partyShortName =
-            response.data.user?.party?.short_name || "party";
+          const partyShortName = response.data.user?.party?.short_name || "party";
           await router.invalidate();
           navigate({ to: APP_URL.partyHome, params: { partyShortName } });
         } else {

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, Plus } from "lucide-react";
+import { Check, MessageCircleMore, Plus } from "lucide-react";
 import { cn } from "@repo/ui/lib/utils";
 
 interface PartyHeaderLayoutProps {
@@ -15,6 +15,7 @@ interface PartyHeaderLayoutProps {
   chapterMembers?: string;
   onMemberToggle?: (isMember: boolean) => void;
   onFollowToggle?: (isFollowing: boolean) => void;
+  onMessageClick?: () => void;
   children?: React.ReactNode;
 }
 
@@ -31,6 +32,7 @@ export function PartyHeaderLayout({
   chapterMembers = "200,000",
   onMemberToggle,
   onFollowToggle,
+  onMessageClick,
   children,
 }: PartyHeaderLayoutProps) {
   const [isMember, setIsMember] = useState(isMemberInitial);
@@ -67,7 +69,7 @@ export function PartyHeaderLayout({
       {/* 2. INNER HEADER SECTION */}
       <div className="max-w-9xl mx-auto px-4 sm:px-6 lg:px-7 ">
         <div className="relative">
-          <div className="flex flex-col md:flex-row lg:items-center lg:justify-between gap-6 ">
+          <div className="flex flex-col md:flex-row lg:items-center lg:justify-between gap-6 lg:min-w-250">
 
             {/* Left Column: Avatar + Identity + Action Buttons */}
             <div className="flex sm:flex-row items-start sm:items-center gap-5 sm:gap-6 mt-4 max-md:mb-7 max-lg:mb-9 sm:-mt-9 lg:-mt-21">
@@ -100,13 +102,13 @@ export function PartyHeaderLayout({
                   </div>
                 </div>
 
-                {/* Become member & Follow buttons */}
-                <div className="flex items-center gap-5">
+                {/* Become member, Follow & Message buttons */}
+                <div className="flex items-center gap-3 lg:gap-5">
                   <button
                     type="button"
                     onClick={handleMemberClick}
                     className={cn(
-                      "flex items-center justify-center gap-1.5 px-4 sm:px-5 py-3 rounded-full text-xs xl:text-sm font-semibold transition-all duration-200 shadow-sm cursor-pointer",
+                      "flex items-center justify-center gap-1.5 px-2 sm:px-4 py-3 rounded-full text-xs xl:text-sm font-semibold transition-all duration-200 shadow-sm cursor-pointer",
                       isMember
                         ? "bg-lime-accent text-neutral-900 hover:bg-lime-accent-hover"
                         : "bg-lime hover:bg-lime-accent text-neutral-900 active:scale-95"
@@ -123,7 +125,7 @@ export function PartyHeaderLayout({
                     type="button"
                     onClick={handleFollowClick}
                     className={cn(
-                      "flex items-center justify-center gap-1.5 px-5 sm:px-6 py-3 rounded-full text-xs xl:text-sm font-semibold transition-all duration-200 active:scale-95 shadow-sm cursor-pointer",
+                      "flex items-center justify-center gap-1.5 px-3 sm:px-4 py-3 rounded-full text-xs xl:text-sm font-semibold transition-all duration-200 active:scale-95 shadow-sm cursor-pointer",
                       isFollowing
                         ? "bg-secondary text-secondary-foreground hover:bg-secondary/80"
                         : "bg-foreground text-background hover:bg-foreground/90"
@@ -135,6 +137,16 @@ export function PartyHeaderLayout({
                       <> <Plus className="w-4 h-4" /> <span>Follow</span> </>
                     )}
                   </button>
+
+                  <button
+                    type="button"
+                    onClick={onMessageClick}
+                    title="Send message"
+                    aria-label="Send message"
+                    className="size-8 text-background hover:opacity-90 transition active:scale-95 cursor-pointer"
+                  >
+                    <MessageCircleMore className="size-full" fill="black" color="#fff" strokeWidth={2.5} />
+                  </button>
                 </div>
               </div>
             </div>
@@ -143,7 +155,7 @@ export function PartyHeaderLayout({
             <div className="hidden md:flex items-center self-start lg:self-center">
               {/* Followers Ring Gauge */}
               <div className="flex items-center">
-                <div className="relative size-28 md:size-40 lg:size-45 xl:size-50 flex items-center justify-center">
+                <div className="relative size-28 md:size-35 lg:size-45 xl:size-50 flex items-center justify-center">
                   <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
                     <circle
                       cx="50"
@@ -184,21 +196,21 @@ export function PartyHeaderLayout({
               {/* Member Counts */}
               <div className="flex flex-1 items-center gap-1 lg:gap-6 sm:min-w-75">
                 {/* Total Members */}
-                <div className="w-1/2 text-center">
+                <div className="w-1/2 text-center py-2">
                   <div className="text-md md:text-lg lg:text-xl xl:text-2xl font-medium tracking-tight text-foreground">
                     {totalMembers}
                   </div>
-                  <div className="text-[10px] sm:text-[11px] lg:text-xs font-semibold text-muted-foreground mt-0.5">
+                  <div className="text-[10px] sm:text-[11px] lg:text-xs font-semibold text-muted-foreground">
                     total members
                   </div>
                 </div>
 
                 {/* Members in Chapter */}
-                <div className="w-1/2 text-center">
+                <div className="w-1/2 text-center py-2">
                   <div className="text-md md:text-lg lg:text-xl xl:text-2xl font-medium tracking-tight text-foreground">
                     {chapterMembers}
                   </div>
-                  <div className="text-[10px] sm:text-[11px] lg:text-xs font-semibold text-muted-foreground mt-0.5">
+                  <div className="text-[10px] sm:text-[11px] lg:text-xs font-semibold text-muted-foreground">
                     members in this chapter
                   </div>
                 </div>

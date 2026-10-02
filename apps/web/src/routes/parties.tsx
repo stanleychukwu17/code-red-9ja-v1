@@ -39,6 +39,7 @@ function PartiesComponent() {
 			}
 			throw new Error(res?.message || "Failed to fetch parties");
 		},
+		staleTime: Infinity
 	});
 
 	const parties: PartyCardData[] = partiesRes?.data?.parties || [];

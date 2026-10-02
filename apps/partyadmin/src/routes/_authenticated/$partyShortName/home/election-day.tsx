@@ -222,7 +222,7 @@ function ElectionDayComponent() {
 								onClick={() =>
 									navigate({
 										to: "/$partyShortName/election-race",
-										params: { partyShortName: party!.shortName },
+										params: { partyShortName: party?.short_name || "" },
 									})
 								}
 							>

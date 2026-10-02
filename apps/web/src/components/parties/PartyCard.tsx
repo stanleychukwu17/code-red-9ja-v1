@@ -59,7 +59,7 @@ function PartyAvatar({ party, partyHref }: { party: PartyCardData; partyHref: st
 	return (
 		<Link
 			to={partyHref}
-			className="-mt-12 relative z-10 size-26 rounded-full border-4 border-white dark:border-neutral-900 overflow-hidden bg-white dark:bg-neutral-800 flex items-center justify-center shrink-0 ring-2 transition-transform duration-200 hover:scale-105"
+			className="-mt-12 relative z-10 size-20 md:size-23 lg:size-26 rounded-full border-4 border-white dark:border-neutral-900 overflow-hidden bg-white dark:bg-neutral-800 flex items-center justify-center shrink-0 ring-2 transition-transform duration-200 hover:scale-105"
 			style={{
 				boxShadow: `0 0 0 2px ${ringColor}`,
 			}}

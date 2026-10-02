@@ -108,7 +108,7 @@ function RouteComponent() {
       party_id: c.party_id,
       party_name: c.party_name || party?.name,
       party_short_name:
-        c.party_short_name || party?.shortName || partyShortName,
+        c.party_short_name || party?.short_name || partyShortName,
       party_logo: c.party_logo || party?.logo,
       election_group_id: c.election_group_id,
       election_group_name: c.election_group_name || c.election_group?.name,

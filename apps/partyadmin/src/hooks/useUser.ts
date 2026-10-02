@@ -1,6 +1,20 @@
 import { useRouteContext } from "@tanstack/react-router";
 import { useAppSelector } from "#/redux/hooks";
 
+export interface Party {
+	id?: number;
+	short_name?: string;
+	name?: string;
+	logo?: string;
+	color_hex?: string;
+	dark_color_hex?: string;
+	slots?: number;
+	agent_payment_balance_kobo?: number;
+	agent_payment_allocation_kobo?: Record<string, number>;
+	created_at?: string;
+	updated_at?: string;
+}
+
 /**
  * Shape of the authenticated party administrator or supervisor user entity.
  */
@@ -10,21 +24,11 @@ export interface UserDetails {
 	username: string;
 	first_name: string;
 	last_name: string;
-	role: string;
+	roles?: string[];
 	avatar_url?: string;
 	account_status: string;
 	party_id?: number;
-	party?: {
-		id?: number;
-		short_name?: string;
-		name?: string;
-		logo?: string;
-		slots?: number;
-		agent_payment_balance_kobo?: number;
-		agent_payment_allocation_kobo?: Record<string, number>;
-		created_at?: string;
-		updated_at?: string;
-	};
+	party?: Party;
 }
 
 /**
@@ -36,11 +40,13 @@ export interface UserDetails {
 export const useUser = (): UserDetails | null => {
 	const reduxUser = useAppSelector((state) => state.auth.user);
 	let routeUser: any = null;
+
 	try {
 		const context = useRouteContext({ from: "__root__" }) as any;
 		routeUser = context?.userDetails;
 	} catch (e) {
 		// Router context might not be available outside component tree
 	}
+
 	return (reduxUser || routeUser || null) as UserDetails | null;
 };

@@ -1,104 +1,36 @@
-import { useQuery } from "@tanstack/react-query";
-import { getParty } from "#/lib/server/parties";
-import { useUser } from "./useUser";
-
-export interface PartyDetails {
-	id?: number;
-	shortName: string;
-	name: string;
-	logo?: string;
-	slots?: number;
-	agentPaymentBalanceKobo?: number;
-	agentPaymentAllocation?: Record<string, number>;
-}
-
-export interface BackendParty {
-	id: number;
-	short_name: string;
-	name: string;
-	logo?: string;
-	slots?: number;
-	agent_payment_balance_kobo?: number;
-	agent_payment_allocation_kobo?: Record<string, number>;
-	created_at?: string;
-	updated_at?: string;
-}
-
-export interface GetPartyResponse {
-	success: boolean;
-	message: string;
-	data?: {
-		party: BackendParty;
-	};
-}
+import { useParams } from "@tanstack/react-router";
+import { useUser, type Party } from "./useUser";
+import { useActiveParties } from "./useActiveParties";
 
 /**
- * Retrieves and normalizes the political party details associated with the current user.
+ * Retrieves the political party details associated with the current user or active route parameter.
+ * Prioritizes the route's $partyShortName parameter so administrators switching parties see the active tenant's details.
  *
- * @returns An object containing the normalized party details, query loading states, and refetch handler.
+ * @returns An object containing party details, loading state, and refetch handler.
  */
 export const usePartyDetails = () => {
 	const user = useUser();
-	const partyId = user?.party?.id ?? user?.party_id;
+	const params = useParams({ strict: false }) as { partyShortName?: string };
+	const routeShortName = params?.partyShortName?.toLowerCase();
+	const { activeParties, isLoading: isPartiesLoading } = useActiveParties();
 
-	const {
-		data: fetchedParty,
-		isLoading,
-		isFetching,
-		refetch,
-	} = useQuery<BackendParty | null, Error>({
-		queryKey: ["party", partyId],
-		queryFn: async () => {
-			if (!partyId) return null;
-			const res = (await getParty({ data: partyId })) as GetPartyResponse;
-			if (res && res.success && res.data?.party) {
-				return res.data.party;
-			}
-			throw new Error(res?.message || "Failed to fetch party details");
-		},
-		enabled: !!partyId,
-		staleTime: Infinity,
-	});
+	// Match active party from route param if provided
+	const matchingActiveParty: Party | undefined = routeShortName
+		? activeParties.find((p: any) => p.short_name?.toLowerCase() === routeShortName)
+		: undefined;
 
-	let party: PartyDetails | null = null;
-
-	if (fetchedParty) {
-		party = {
-			id: fetchedParty.id,
-			shortName: fetchedParty.short_name,
-			name: fetchedParty.name || "",
-			logo: fetchedParty.logo,
-			slots: fetchedParty.slots || 0,
-			agentPaymentBalanceKobo: fetchedParty.agent_payment_balance_kobo || 0,
-			agentPaymentAllocation: fetchedParty.agent_payment_allocation_kobo || {},
-		};
-	} else if (user?.party?.short_name) {
-		party = {
-			id: user.party.id ?? user.party_id,
-			shortName: user.party.short_name,
-			name: user.party.name || "",
-			logo: user.party.logo,
-			slots: user.party.slots || 0,
-			agentPaymentBalanceKobo: user.party.agent_payment_balance_kobo || 0,
-			agentPaymentAllocation: user.party.agent_payment_allocation_kobo || {},
-		};
+	let party: Party | null = null;
+	if (matchingActiveParty) {
+		party = matchingActiveParty;
+	} else if (user?.party) {
+		party = user.party;
 	} else if (user?.party_id) {
-		party = {
-			id: user.party_id,
-			shortName: "",
-			name: "",
-			slots: 0,
-			agentPaymentBalanceKobo: 0,
-			agentPaymentAllocation: {},
-		};
+		party = { id: user.party_id };
 	}
 
-	return {
-		party,
-		isLoading,
-		isFetching,
-		refetch,
-	};
+	const isLoading = Boolean(routeShortName && isPartiesLoading && !party);
+
+	return { party, isLoading };
 };
 
 /**

@@ -7,7 +7,7 @@ import { API_URL } from "#/lib/config";
 // ========================================================
 
 // Fetch all parties
-export const getParties = createServerFn({ method: "POST" }).handler(
+export const getParties = createServerFn({ method: "GET" }).handler(
   async () => {
     try {
       const response = await apiFetch(API_URL.parties);
@@ -36,22 +36,6 @@ export const getPublicParties = createServerFn({ method: "POST" }).handler(
     }
   },
 );
-
-// Fetch single party by ID
-export const getParty = createServerFn({ method: "POST" })
-  .inputValidator((id: string | number) => id)
-  .handler(async ({ data: id }) => {
-    try {
-      const response = await apiFetch(API_URL.partyById(id));
-      const resData = await response.json();
-      return resData;
-    } catch (error) {
-      return {
-        success: false,
-        message: "Failed to fetch party from API: " + (error as Error).message,
-      };
-    }
-  });
 
 // ========================================================
 // PARTY WALLET

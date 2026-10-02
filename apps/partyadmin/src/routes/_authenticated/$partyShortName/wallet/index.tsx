@@ -104,7 +104,7 @@ function WalletHeader() {
       <h1 className="flex items-center gap-4">
         <FancyWalletIcon className="size-10 text-[#9b7b49]" />
         <p className="text-[26px] font-semibold text-c-90">
-          {party?.shortName || party?.name || "Party"} Wallet
+          {party?.short_name || party?.name || "Party"} Wallet
         </p>
       </h1>
     </section>
@@ -247,7 +247,7 @@ function WalletBillboard({
           icon={<Wallet className="size-4" />}
           onClick={() => setIsWalletDialogOpen(true)}
         >
-          {`Fund ${party?.shortName || "Party"} Wallet`}
+          {`Fund ${party?.short_name || "Party"} Wallet`}
         </WalletAction>
         <WalletAction
           variant="dark"
@@ -357,7 +357,7 @@ function WalletSlotsAllowanceSection({
     React.useState(false);
 
   const allowanceVal = (
-    (party?.agentPaymentBalanceKobo ?? 0) / 100
+    (party?.agent_payment_balance_kobo ?? 0) / 100
   ).toLocaleString("en-NG", {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,

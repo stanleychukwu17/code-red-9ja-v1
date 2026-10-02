@@ -254,10 +254,10 @@ function ReadinessComponent() {
           />
           <RequiredActionsSection
             hasSlots={(party?.slots ?? 0) > 0}
-            hasAgentPaymentBalance={(party?.agentPaymentBalanceKobo ?? 0) > 0}
+            hasAgentPaymentBalance={(party?.agent_payment_balance_kobo ?? 0) > 0}
             hasPaymentAllocation={
-              party?.agentPaymentAllocation
-                ? Object.values(party.agentPaymentAllocation).some(
+              party?.agent_payment_allocation_kobo
+                ? Object.values(party.agent_payment_allocation_kobo).some(
                   (role: any) => (role?.default ?? 0) > 0,
                 )
                 : false
@@ -282,7 +282,7 @@ function ReadinessComponent() {
           <FinancialOverallCard
             walletBalance={wallet?.balance_kobo || 0}
             slots={party?.slots || 0}
-            agentPaymentBalance={party?.agentPaymentBalanceKobo || 0}
+            agentPaymentBalance={party?.agent_payment_balance_kobo || 0}
             activeCampaignsCount={activeCampaignsCount}
             onOpenWallet={() => setIsWalletDialogOpen(true)}
             onBuySlots={() => setIsSlotsDialogOpen(true)}
@@ -361,7 +361,7 @@ function ReadinessComponent() {
         open={isPaymentDialogOpen}
         onClose={() => setIsPaymentDialogOpen(false)}
         walletBalanceNaira={(wallet?.balance_kobo ?? 0) / 100}
-        agentPaymentBalanceNaira={(party?.agentPaymentBalanceKobo ?? 0) / 100}
+        agentPaymentBalanceNaira={(party?.agent_payment_balance_kobo ?? 0) / 100}
         partyId={partyId}
         electionGroupId={selectedElectionGroup?.id}
         fetchElectionGroups={fetchGroups}
@@ -1257,7 +1257,7 @@ function AgentPaymentCard({
   onEdit: () => void;
   party: any;
 }) {
-  const allocations = party?.agentPaymentAllocation || {};
+  const allocations = party?.agent_payment_allocation_kobo || {};
   const pollingAgentPaymentKobo = allocations.polling_agent?.default || 0;
   const wardSupervisorPaymentKobo =
     allocations.ward_election_supervisor?.default || 0;

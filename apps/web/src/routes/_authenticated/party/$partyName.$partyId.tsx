@@ -1,4 +1,3 @@
-import { queryClient } from "@/routes/__root";
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { getPartyProfile } from "@/lib/server/parties";
@@ -18,33 +17,18 @@ export const partyProfileQueryOptions = (partyId: string, partyName: string) => 
 });
 
 export const Route = createFileRoute("/_authenticated/party/$partyName/$partyId")({
-  // 2. Load and cache data with staleTime: Infinity
-  loader: async ({ params }) => {
-    return queryClient.ensureQueryData(
-      partyProfileQueryOptions(params.partyId, params.partyName)
-    );
-  },
-
-  // 3. Read data directly in head() for SEO / Tab Title
-  head: ({ loaderData, params }) => {
-    const party = loaderData?.success ? loaderData.data.data : null;
-    const title = party?.name
-      ? `(${party.short_name}) ${party.name}`
-      : `${params.partyName.toUpperCase()} Profile`;
-
+  head: ({ params }) => {
     return getPageHeader({
-      title,
-      description: party?.description || `View party details for ${params.partyName}`,
+      title: `${params.partyName.toUpperCase()} Profile`,
+      description: `View party details for ${params.partyName}`,
     });
   },
-
   component: PartyLayoutComponent,
 });
 
 function PartyLayoutComponent() {
   const { partyName, partyId } = Route.useParams();
 
-  // 4. Component uses the exact same options (instant cache hit, no refetch)
   const { data: profileRes } = useQuery(
     partyProfileQueryOptions(partyId, partyName)
   );

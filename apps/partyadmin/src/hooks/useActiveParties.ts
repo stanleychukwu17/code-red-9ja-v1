@@ -17,10 +17,5 @@ export const useActiveParties = () => {
 
 	const activeParties = publicPartiesData?.data?.parties || [];
 
-	return {
-		activeParties,
-		isLoading,
-		isFetching,
-		refetch,
-	};
+	return { activeParties, isLoading, isFetching, refetch };
 };

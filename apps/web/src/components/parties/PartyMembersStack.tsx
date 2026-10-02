@@ -49,7 +49,7 @@ export function PartyMembersStack({
 					<div className="h-6 w-0.5 bg-border mx-2 rounded-full" />
 				</>
 			)}
-			<span className="text-xs sm:text-xs font-bold text-foreground">
+			<span className="text-xs font-bold text-foreground">
 				{sampleMembers.length > 0 ? `+${formatMemberCount(totalMembers)} members` : `${formatMemberCount(totalMembers)} members`}
 			</span>
 		</div>

@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
+import { Route as AuthenticatedPartiesRouteImport } from './routes/_authenticated/parties'
 import { Route as AuthenticatedPartyShortNameRouteImport } from './routes/_authenticated/$partyShortName'
 import { Route as AuthenticatedPartyShortNameWalletRouteImport } from './routes/_authenticated/$partyShortName/wallet'
 import { Route as AuthenticatedPartyShortNameUsersRouteImport } from './routes/_authenticated/$partyShortName/users'
@@ -70,6 +71,11 @@ const AuthLoginRoute = AuthLoginRouteImport.update({
   id: '/auth/login',
   path: '/auth/login',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedPartiesRoute = AuthenticatedPartiesRouteImport.update({
+  id: '/parties',
+  path: '/parties',
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedPartyShortNameRoute =
   AuthenticatedPartyShortNameRouteImport.update({
@@ -339,6 +345,7 @@ const AuthenticatedPartyShortNameHomeResultsMediaOnlyRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$partyShortName': typeof AuthenticatedPartyShortNameRouteWithChildren
+  '/parties': typeof AuthenticatedPartiesRoute
   '/auth/login': typeof AuthLoginRoute
   '/$partyShortName/agents': typeof AuthenticatedPartyShortNameAgentsRouteWithChildren
   '/$partyShortName/applications': typeof AuthenticatedPartyShortNameApplicationsRouteWithChildren
@@ -387,6 +394,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$partyShortName': typeof AuthenticatedPartyShortNameRouteWithChildren
+  '/parties': typeof AuthenticatedPartiesRoute
   '/auth/login': typeof AuthLoginRoute
   '/$partyShortName/bodies': typeof AuthenticatedPartyShortNameBodiesRoute
   '/$partyShortName/candidate-results': typeof AuthenticatedPartyShortNameCandidateResultsRoute
@@ -428,6 +436,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/_authenticated/$partyShortName': typeof AuthenticatedPartyShortNameRouteWithChildren
+  '/_authenticated/parties': typeof AuthenticatedPartiesRoute
   '/auth/login': typeof AuthLoginRoute
   '/_authenticated/$partyShortName/agents': typeof AuthenticatedPartyShortNameAgentsRouteWithChildren
   '/_authenticated/$partyShortName/applications': typeof AuthenticatedPartyShortNameApplicationsRouteWithChildren
@@ -478,6 +487,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/$partyShortName'
+    | '/parties'
     | '/auth/login'
     | '/$partyShortName/agents'
     | '/$partyShortName/applications'
@@ -526,6 +536,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/$partyShortName'
+    | '/parties'
     | '/auth/login'
     | '/$partyShortName/bodies'
     | '/$partyShortName/candidate-results'
@@ -566,6 +577,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/_authenticated/$partyShortName'
+    | '/_authenticated/parties'
     | '/auth/login'
     | '/_authenticated/$partyShortName/agents'
     | '/_authenticated/$partyShortName/applications'
@@ -640,6 +652,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/auth/login'
       preLoaderRoute: typeof AuthLoginRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/parties': {
+      id: '/_authenticated/parties'
+      path: '/parties'
+      fullPath: '/parties'
+      preLoaderRoute: typeof AuthenticatedPartiesRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/$partyShortName': {
       id: '/_authenticated/$partyShortName'
@@ -1215,11 +1234,13 @@ const AuthenticatedPartyShortNameRouteWithChildren =
 
 interface AuthenticatedRouteChildren {
   AuthenticatedPartyShortNameRoute: typeof AuthenticatedPartyShortNameRouteWithChildren
+  AuthenticatedPartiesRoute: typeof AuthenticatedPartiesRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedPartyShortNameRoute:
     AuthenticatedPartyShortNameRouteWithChildren,
+  AuthenticatedPartiesRoute: AuthenticatedPartiesRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
