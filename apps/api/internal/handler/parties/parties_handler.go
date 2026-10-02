@@ -97,7 +97,7 @@ type PartiesService interface {
 	UnsuspendPartyMember(ctx context.Context, input partiesservice.UnsuspendPartyMemberInput) (*queries.PartyMemberSuspension, error)
 	BlockUserFromThisParty(ctx context.Context, input partiesservice.BlockPartyUserInput) (*queries.PartyUserBlock, error)
 	UnblockPartyUser(ctx context.Context, input partiesservice.UnblockPartyUserInput) error
-	ListBlockedPartyMembers(ctx context.Context, partyID int16, limit int32, offset int32) ([]queries.ListBlockedUsersByPartyRow, error)
+	ListBlockedPartyMembers(ctx context.Context, partyID int16, limit int32, cursor int64) ([]queries.ListBlockedUsersByPartyRow, error)
 	ListSuspendedPartyMembers(ctx context.Context, partyID int16, limit int32, cursor int64) ([]queries.ListSuspendedPartyMembersRow, error)
 	ListPartyAdmins(ctx context.Context, partyID int16) ([]queries.UserWithPlaces, error)
 }
@@ -3121,7 +3121,7 @@ func (h *Handler) UnblockPartyUser(w http.ResponseWriter, r *http.Request) {
 
 // ListBlockedPartyMembers handles GET /api/v1/parties/{id}/members/blocked
 func (h *Handler) ListBlockedPartyMembers(w http.ResponseWriter, r *http.Request) {
-	// Parse party ID from route parameter
+	// Extract and validate the party ID from the URL path parameter
 	idStr := chi.URLParam(r, "id")
 	partyID, err := strconv.ParseInt(idStr, 10, 16)
 	if err != nil {
@@ -3129,36 +3129,33 @@ func (h *Handler) ListBlockedPartyMembers(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Parse pagination: limit (default 50, max 100)
-	limit := int32(50)
-	if l := r.URL.Query().Get("limit"); l != "" {
-		if val, err := strconv.Atoi(l); err == nil && val > 0 {
-			if val > 100 {
-				limit = 100
-			} else {
-				limit = int32(val)
-			}
-		}
-	}
+	// Parse pagination parameters (limit and cursor) from query params
+	limit, cursor := parsePaginationParams(r)
 
-	// Parse pagination: offset (default 0)
-	offset := int32(0)
-	if off := r.URL.Query().Get("offset"); off != "" {
-		if val, err := strconv.Atoi(off); err == nil && val >= 0 {
-			offset = int32(val)
-		}
-	}
-
-	// Fetch blocked members from service
-	blockedUsers, err := h.partiesService.ListBlockedPartyMembers(r.Context(), int16(partyID), limit, offset)
+	// Fetch blocked party members using pagination
+	blockedUsers, err := h.partiesService.ListBlockedPartyMembers(r.Context(), int16(partyID), int32(limit), cursor)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to list blocked users: "+err.Error())
 		return
 	}
 
-	// Return successful response
+	// Determine pagination metadata and cursor for the next page
+	hasMore := false
+	nextCursor := ""
+	if len(blockedUsers) == limit && len(blockedUsers) > 0 {
+		hasMore = true
+		lastUser := blockedUsers[len(blockedUsers)-1]
+		nextCursor = fmt.Sprintf("%d", lastUser.ID)
+	}
+
+	// Return successful response with the list of blocked users and pagination metadata
 	h.utils.RespondSuccess(w, http.StatusOK, "Blocked users retrieved successfully", map[string]interface{}{
 		"blocked_users": blockedUsers,
+		"meta": map[string]interface{}{
+			"limit":       limit,
+			"has_more":    hasMore,
+			"next_cursor": nextCursor,
+		},
 	})
 }
 

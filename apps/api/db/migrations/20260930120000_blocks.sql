@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS party_user_blocks (
 );
 
 CREATE INDEX IF NOT EXISTS idx_party_user_blocks_blocked_party ON party_user_blocks(blocked_user_id, party_id);
+CREATE INDEX IF NOT EXISTS idx_party_user_blocks_party_id_id_desc ON party_user_blocks (party_id, id DESC);
 
 -- +goose Down
 DROP TABLE IF EXISTS party_user_blocks;

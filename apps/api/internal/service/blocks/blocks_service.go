@@ -10,6 +10,7 @@ import (
 	"free9ja/api/internal/utils"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 )
@@ -108,11 +109,14 @@ func (s *BlocksService) IsUserBlockedByParty(ctx context.Context, partyID int16,
 	return blockedParties[partyID], nil
 }
 
-// ListBlockedUsersByParty lists blocked users for a party.
-func (s *BlocksService) ListBlockedUsersByParty(ctx context.Context, partyID int16, limit int32, offset int32) ([]queries.ListBlockedUsersByPartyRow, error) {
-	return s.queries.ListBlockedUsersByParty(ctx, queries.ListBlockedUsersByPartyParams{
-		PartyID: partyID,
-		Limit:   limit,
-		Offset:  offset,
-	})
+// ListBlockedUsersByParty lists blocked users for a party using cursor pagination.
+func (s *BlocksService) ListBlockedUsersByParty(ctx context.Context, partyID int16, limit int32, cursor int64) ([]queries.ListBlockedUsersByPartyRow, error) {
+	arg := queries.ListBlockedUsersByPartyParams{
+		PartyID:  partyID,
+		LimitNum: limit,
+	}
+	if cursor > 0 {
+		arg.Cursor = pgtype.Int8{Int64: cursor, Valid: true}
+	}
+	return s.queries.ListBlockedUsersByParty(ctx, arg)
 }

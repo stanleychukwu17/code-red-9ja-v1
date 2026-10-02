@@ -43,7 +43,7 @@ type BlocksService interface {
 	InvalidateUserBlockedPartiesCache(ctx context.Context, userID int64)
 	BlockUserByParty(ctx context.Context, partyID int16, blockedUserID int64, blockedByUserID *int64) (queries.PartyUserBlock, error)
 	UnblockUserByParty(ctx context.Context, partyID int16, blockedUserID int64) error
-	ListBlockedUsersByParty(ctx context.Context, partyID int16, limit int32, offset int32) ([]queries.ListBlockedUsersByPartyRow, error)
+	ListBlockedUsersByParty(ctx context.Context, partyID int16, limit int32, cursor int64) ([]queries.ListBlockedUsersByPartyRow, error)
 }
 
 // UsersService interface defines the methods needed from the users service
@@ -2283,9 +2283,9 @@ func (s *PartiesService) UnblockPartyUser(ctx context.Context, input UnblockPart
 	return nil
 }
 
-// ListBlockedPartyMembers lists blocked users for a party.
-func (s *PartiesService) ListBlockedPartyMembers(ctx context.Context, partyID int16, limit int32, offset int32) ([]queries.ListBlockedUsersByPartyRow, error) {
-	return s.blocksService.ListBlockedUsersByParty(ctx, partyID, limit, offset)
+// ListBlockedPartyMembers lists blocked users for a party using cursor pagination.
+func (s *PartiesService) ListBlockedPartyMembers(ctx context.Context, partyID int16, limit int32, cursor int64) ([]queries.ListBlockedUsersByPartyRow, error) {
+	return s.blocksService.ListBlockedUsersByParty(ctx, partyID, limit, cursor)
 }
 
 // ListSuspendedPartyMembers lists actively suspended members for a party with cursor pagination.

@@ -110,9 +110,10 @@ SELECT
 FROM party_user_blocks pub
 JOIN users u ON u.id = pub.blocked_user_id
 LEFT JOIN users admin ON admin.id = pub.blocked_by_user_id
-WHERE pub.party_id = $1
-ORDER BY pub.created_at DESC
-LIMIT $2 OFFSET $3;
+WHERE pub.party_id = sqlc.arg('party_id')::smallint
+  AND (sqlc.narg('cursor')::bigint IS NULL OR pub.id < sqlc.narg('cursor')::bigint)
+ORDER BY pub.id DESC
+LIMIT sqlc.arg('limit_num')::int;
 
 -- name: GetBlockedPartyIDsForUser :many
 SELECT party_id

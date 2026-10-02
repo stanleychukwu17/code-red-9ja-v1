@@ -141,10 +141,10 @@ export const API_URL = {
     const qs = sp.toString();
     return `${api}/parties/${id}/members/suspended${qs ? `?${qs}` : ""}`;
   },
-  blockedMembers: (id: string | number, limit?: number, offset?: number) => {
+  blockedMembers: (id: string | number, limit?: number, cursor?: string | number) => {
     const sp = new URLSearchParams();
     if (limit) sp.append("limit", String(limit));
-    if (offset) sp.append("offset", String(offset));
+    if (cursor) sp.append("cursor", String(cursor));
     const qs = sp.toString();
     return `${api}/parties/${id}/members/blocked${qs ? `?${qs}` : ""}`;
   },

@@ -30,31 +30,27 @@ export const Route = createFileRoute(
 
 function RouteComponent() {
   const { partyShortName } = Route.useParams();
+  // Search input state with debounce
   const [searchQuery, setSearchQuery] = React.useState("");
   const [debouncedSearchQuery] = useDebounceValue(searchQuery, 500);
 
+  // Current party context
   const { party } = useUserParty();
   const partyId = party?.id;
 
-  const {
-    data,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoading,
-    error,
-    refetch,
-  } = useInfiniteQuery({
+  // Infinite query for blocked members with cursor pagination
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, error, refetch } = useInfiniteQuery({
     queryKey: QUERY_KEYS.partyMembers.blocked(partyId),
-    queryFn: async ({ pageParam = 0 }) => {
+
+    queryFn: async ({ pageParam }) => {
       if (!partyId) {
-        return { success: true, data: { items: [], total: 0 } };
+        return { success: true, data: { blocked_users: [] } };
       }
       const res = await getBlockedPartyMembers({
         data: {
           partyId,
           limit: 30,
-          offset: pageParam,
+          cursor: pageParam || undefined,
         },
       });
       if (res && res.success && res.data) {
@@ -62,36 +58,38 @@ function RouteComponent() {
       }
       throw new Error(res?.message || "Failed to load blocked users");
     },
-    initialPageParam: 0,
-    getNextPageParam: (lastPage, allPages) => {
-      const currentCount = allPages.flatMap(
-        (page) => page.data?.items || [],
-      ).length;
-      const total = lastPage?.data?.total || 0;
-      if (currentCount < total) {
-        return currentCount;
+
+    initialPageParam: "",
+
+    getNextPageParam: (lastPage) => {
+      if (lastPage?.data?.meta?.has_more) {
+        return lastPage.data.meta.next_cursor || "";
       }
       return undefined;
     },
+
     enabled: partyId !== undefined,
     refetchOnWindowFocus: false,
+    staleTime: Infinity,
   });
 
+  // Intersection observer to trigger next page fetch on scroll
   const { ref: sentinelRef, isIntersecting } = useIntersectionObserver({
     threshold: 0.1,
   });
-
   React.useEffect(() => {
     if (isIntersecting && hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
     }
   }, [isIntersecting, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  // Flatten and map blocked items to UsersTable format
+  // Flatten paginated results into a single list
   const rawMembers = data
-    ? data.pages.flatMap((page) => page.data?.items || [])
+    ? data.pages.flatMap((page) => page.data?.blocked_users || [])
     : [];
 
+  // Map to table format and apply client-side search filter
+  // essentially for search for users
   const members = React.useMemo(() => {
     const list = rawMembers.map((item: any) => ({
       id: item.blocked_user_id || item.user_id,

@@ -215,15 +215,16 @@ SELECT
 FROM party_user_blocks pub
 JOIN users u ON u.id = pub.blocked_user_id
 LEFT JOIN users admin ON admin.id = pub.blocked_by_user_id
-WHERE pub.party_id = $1
-ORDER BY pub.created_at DESC
-LIMIT $2 OFFSET $3
+WHERE pub.party_id = $1::smallint
+  AND ($2::bigint IS NULL OR pub.id < $2::bigint)
+ORDER BY pub.id DESC
+LIMIT $3::int
 `
 
 type ListBlockedUsersByPartyParams struct {
-	PartyID int16 `json:"party_id"`
-	Limit   int32 `json:"limit"`
-	Offset  int32 `json:"offset"`
+	PartyID  int16       `json:"party_id"`
+	Cursor   pgtype.Int8 `json:"cursor"`
+	LimitNum int32       `json:"limit_num"`
 }
 
 type ListBlockedUsersByPartyRow struct {
@@ -241,7 +242,7 @@ type ListBlockedUsersByPartyRow struct {
 }
 
 func (q *Queries) ListBlockedUsersByParty(ctx context.Context, arg ListBlockedUsersByPartyParams) ([]ListBlockedUsersByPartyRow, error) {
-	rows, err := q.db.Query(ctx, listBlockedUsersByParty, arg.PartyID, arg.Limit, arg.Offset)
+	rows, err := q.db.Query(ctx, listBlockedUsersByParty, arg.PartyID, arg.Cursor, arg.LimitNum)
 	if err != nil {
 		return nil, err
 	}
