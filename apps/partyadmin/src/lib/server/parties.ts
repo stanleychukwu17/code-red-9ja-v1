@@ -823,13 +823,13 @@ export const getSuspendedPartyMembers = createServerFn({ method: "GET" })
     (data: {
       partyId: number | string;
       limit?: number;
-      offset?: number;
+      cursor?: string | number;
     }) => data,
   )
   .handler(async ({ data }) => {
     try {
       const response = await apiFetch(
-        API_URL.suspendedMembers(data.partyId, data.limit, data.offset),
+        API_URL.suspendedMembers(data.partyId, data.limit, data.cursor),
       );
       return await response.json();
     } catch (error) {

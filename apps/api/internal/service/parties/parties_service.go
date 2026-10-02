@@ -64,6 +64,9 @@ type NotificationsService interface {
 	CreatePartyNotificationAsync(ctx context.Context, params notifications.CreatePartyNotificationInput)
 	CreateNotification(ctx context.Context, params notifications.CreateNotificationInput) (*notifications.NotificationItemResponse, error)
 	CreateNotificationAsync(ctx context.Context, params notifications.CreateNotificationInput)
+	NotifyPartyMemberSuspended(ctx context.Context, params notifications.NotifyPartyMemberSuspendedParams)
+	NotifyPartyMemberReinstated(ctx context.Context, params notifications.NotifyPartyMemberReinstatedParams)
+	NotifyNewMemberJoined(ctx context.Context, params notifications.NotifyNewMemberJoinedParams)
 }
 
 // NewPartiesService creates a new PartiesService.
@@ -1459,17 +1462,10 @@ func (s *PartiesService) JoinParty(ctx context.Context, partyID int16, chapterID
 	}
 
 	// 7. Notify party and chapter officials asynchronously
-	// Aggregate daily member joins under a single rollup alert
-	groupKey := constants.GroupKeyPartyNewMembers(partyID, finalChapterID)
-	s.notificationsService.CreatePartyNotificationAsync(ctx, notifications.CreatePartyNotificationInput{
-		PartyID:     partyID,
-		ActorUserID: &userID,
-		ChapterID:   &finalChapterID,
-		Category:    constants.PartyNotificationCategoryMembership,
-		Type:        constants.NotificationTypeNewMemberJoined,
-		Priority:    constants.NotificationPriorityNormal,
-		GroupKey:    &groupKey,
-		Metadata:    map[string]any{},
+	s.notificationsService.NotifyNewMemberJoined(ctx, notifications.NotifyNewMemberJoinedParams{
+		PartyID:   partyID,
+		UserID:    userID,
+		ChapterID: finalChapterID,
 	})
 
 	return nil
@@ -1922,9 +1918,11 @@ func (s *PartiesService) SuspendPartyMember(ctx context.Context, input SuspendPa
 	}
 
 	// 4. Log milestone (one milestone entry for the user in this party)
-	// get just one chapterID (from the chapterIDs returned by SuspendPartyMembership) to log the milestone
+	// Use the national chapter ID for the primary chapter association, falling back to membership chapter
 	var primaryChapterID pgtype.Int4
-	if len(chapterIDs) > 0 {
+	if natChapterID, err := s.GetOrCreateNationalChapter(ctx, input.PartyID, constants.NigeriaCountryID); err == nil && natChapterID > 0 {
+		primaryChapterID = utils.PgInt4FromInt32(natChapterID)
+	} else if len(chapterIDs) > 0 {
 		primaryChapterID = utils.PgInt4FromInt32(chapterIDs[0])
 	}
 
@@ -1956,21 +1954,13 @@ func (s *PartiesService) SuspendPartyMember(ctx context.Context, input SuspendPa
 		NewValues:  suspensionJSON,
 	})
 
-	// Send notification to the suspended user asynchronously
-	notificationMetaData := map[string]any{
-		"party_id": input.PartyID,
-	}
-	if input.Reason != nil && *input.Reason != "" {
-		notificationMetaData["reason"] = *input.Reason
-	}
-	s.notificationsService.CreateNotificationAsync(ctx, notifications.CreateNotificationInput{
-		RecipientUserID: input.UserID,
-		ActorUserID:     input.SuspendedBy,
-		PartyID:         &input.PartyID,
-		Category:        constants.NotificationCategoryParty,
-		Type:            constants.NotificationTypePartyMemberSuspended,
-		Priority:        constants.NotificationPriorityHigh,
-		Metadata:        notificationMetaData,
+	// Send notification to the suspended user and party officials asynchronously
+	s.notificationsService.NotifyPartyMemberSuspended(ctx, notifications.NotifyPartyMemberSuspendedParams{
+		PartyID:      input.PartyID,
+		TargetUserID: input.UserID,
+		ActorID:      input.SuspendedBy,
+		ChapterID:    &primaryChapterID.Int32,
+		Reason:       input.Reason,
 	})
 
 	return &suspension, nil
@@ -2040,7 +2030,7 @@ func (s *PartiesService) UnsuspendPartyMember(ctx context.Context, input Unsuspe
 		UserID:        input.UserID,
 		PartyID:       input.PartyID,
 		ChapterID:     primaryChapterID,
-		MilestoneType: constants.MilestoneTypeReinstated,
+		MilestoneType: constants.MilestoneTypeReinstatedFromSuspension,
 		Metadata:      reinstatedJSON,
 	})
 
@@ -2064,18 +2054,11 @@ func (s *PartiesService) UnsuspendPartyMember(ctx context.Context, input Unsuspe
 	})
 
 	// Send notification to the reinstated user asynchronously
-	notificationMetadata := map[string]any{}
-	if input.LiftReason != nil && *input.LiftReason != "" {
-		notificationMetadata["reason"] = *input.LiftReason
-	}
-	s.notificationsService.CreateNotificationAsync(ctx, notifications.CreateNotificationInput{
-		RecipientUserID: input.UserID,
-		ActorUserID:     input.LiftedBy,
-		PartyID:         &input.PartyID,
-		Category:        constants.NotificationCategoryParty,
-		Type:            constants.NotificationTypePartyMemberReinstated,
-		Priority:        constants.NotificationPriorityHigh,
-		Metadata:        notificationMetadata,
+	s.notificationsService.NotifyPartyMemberReinstated(ctx, notifications.NotifyPartyMemberReinstatedParams{
+		PartyID:      input.PartyID,
+		TargetUserID: input.UserID,
+		ActorID:      input.LiftedBy,
+		Reason:       input.LiftReason,
 	})
 
 	return &updatedSuspension, nil
@@ -2125,14 +2108,9 @@ func (s *PartiesService) BlockPartyUser(ctx context.Context, input BlockPartyUse
 	}
 
 	// 4. Record milestone for audit trail
-	metaMap := map[string]interface{}{}
-	if input.Reason != nil && *input.Reason != "" {
-		metaMap["reason"] = *input.Reason
-	}
-	if input.BlockedBy != nil {
-		metaMap["blocked_by"] = *input.BlockedBy
-	}
-	metaJSON, _ := json.Marshal(metaMap)
+	metaJSON, _ := json.Marshal(utils.NewMetadata().
+		SetIfNonEmpty("reason", input.Reason).
+		SetIfPresent("blocked_by", input.BlockedBy))
 
 	for _, chapterID := range chapterIDs {
 		_ = qtx.AddPartyMemberMilestone(ctx, queries.AddPartyMemberMilestoneParams{
@@ -2225,13 +2203,17 @@ func (s *PartiesService) ListBlockedPartyMembers(ctx context.Context, partyID in
 	return s.blocksService.ListBlockedUsersByParty(ctx, partyID, limit, offset)
 }
 
-// ListSuspendedPartyMembers lists actively suspended members for a party.
-func (s *PartiesService) ListSuspendedPartyMembers(ctx context.Context, partyID int16, limit int32, offset int32) ([]queries.ListSuspendedPartyMembersRow, error) {
-	return s.queries.ListSuspendedPartyMembers(ctx, queries.ListSuspendedPartyMembersParams{
-		PartyID: partyID,
-		Limit:   limit,
-		Offset:  offset,
-	})
+// ListSuspendedPartyMembers lists actively suspended members for a party with cursor pagination.
+func (s *PartiesService) ListSuspendedPartyMembers(ctx context.Context, partyID int16, limit int32, cursor int64) ([]queries.ListSuspendedPartyMembersRow, error) {
+	arg := queries.ListSuspendedPartyMembersParams{
+		PartyID:  partyID,
+		LimitNum: limit,
+	}
+	if cursor > 0 {
+		arg.Cursor = pgtype.Int8{Int64: cursor, Valid: true}
+	}
+
+	return s.queries.ListSuspendedPartyMembers(ctx, arg)
 }
 
 // ListPartyAdmins retrieves all administrators assigned to a given political party.

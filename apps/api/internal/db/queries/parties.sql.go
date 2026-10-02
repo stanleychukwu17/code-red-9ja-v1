@@ -1050,15 +1050,17 @@ SELECT
 FROM party_member_suspensions pms
 JOIN users u ON u.id = pms.user_id
 LEFT JOIN users admin ON admin.id = pms.suspended_by
-WHERE pms.party_id = $1 AND pms.status = 'active'
-ORDER BY pms.created_at DESC
-LIMIT $2 OFFSET $3
+WHERE pms.party_id = $1::smallint
+  AND pms.status = 'active'
+  AND ($2::bigint IS NULL OR pms.id < $2::bigint)
+ORDER BY pms.id DESC
+LIMIT $3::int
 `
 
 type ListSuspendedPartyMembersParams struct {
-	PartyID int16 `json:"party_id"`
-	Limit   int32 `json:"limit"`
-	Offset  int32 `json:"offset"`
+	PartyID  int16       `json:"party_id"`
+	Cursor   pgtype.Int8 `json:"cursor"`
+	LimitNum int32       `json:"limit_num"`
 }
 
 type ListSuspendedPartyMembersRow struct {
@@ -1087,7 +1089,7 @@ type ListSuspendedPartyMembersRow struct {
 }
 
 func (q *Queries) ListSuspendedPartyMembers(ctx context.Context, arg ListSuspendedPartyMembersParams) ([]ListSuspendedPartyMembersRow, error) {
-	rows, err := q.db.Query(ctx, listSuspendedPartyMembers, arg.PartyID, arg.Limit, arg.Offset)
+	rows, err := q.db.Query(ctx, listSuspendedPartyMembers, arg.PartyID, arg.Cursor, arg.LimitNum)
 	if err != nil {
 		return nil, err
 	}

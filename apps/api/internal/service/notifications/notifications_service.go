@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"time"
 
+	"free9ja/api/internal/constants"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/service/realtime"
@@ -39,6 +40,11 @@ type NotificationsService interface {
 	// Preferences
 	GetPreferences(ctx context.Context, userID int64) (*NotificationPreferencesResponse, error)
 	UpdatePreferences(ctx context.Context, userID int64, req UpdatePreferencesInput) (*NotificationPreferencesResponse, error)
+
+	// Domain Dispatchers
+	NotifyPartyMemberSuspended(ctx context.Context, params NotifyPartyMemberSuspendedParams)
+	NotifyPartyMemberReinstated(ctx context.Context, params NotifyPartyMemberReinstatedParams)
+	NotifyNewMemberJoined(ctx context.Context, params NotifyNewMemberJoinedParams)
 }
 
 type service struct {
@@ -154,6 +160,27 @@ type UpdatePreferencesInput struct {
 	EmailEnabled        *bool           `json:"email_enabled,omitempty"`
 	SmsEnabled          *bool           `json:"sms_enabled,omitempty"`
 	CategoryPreferences map[string]bool `json:"category_preferences,omitempty"`
+}
+
+type NotifyPartyMemberSuspendedParams struct {
+	PartyID      int16
+	TargetUserID int64
+	ActorID      *int64
+	ChapterID    *int32
+	Reason       *string
+}
+
+type NotifyPartyMemberReinstatedParams struct {
+	PartyID      int16
+	TargetUserID int64
+	ActorID      *int64
+	Reason       *string
+}
+
+type NotifyNewMemberJoinedParams struct {
+	PartyID   int16
+	UserID    int64
+	ChapterID int32
 }
 
 // ----------------------------------------------------------------------------
@@ -359,7 +386,6 @@ func (s *service) DeleteNotification(ctx context.Context, notificationID int64, 
 // ----------------------------------------------------------------------------
 // PARTY NOTIFICATIONS IMPLEMENTATION
 // ----------------------------------------------------------------------------
-
 func (s *service) CreatePartyNotification(ctx context.Context, in CreatePartyNotificationInput) (*PartyNotificationItemResponse, error) {
 	// Set default priority and ensure valid JSON metadata
 	if in.Priority == "" {
@@ -438,6 +464,70 @@ func (s *service) CreatePartyNotificationAsync(ctx context.Context, in CreatePar
 			slog.Error("failed to create async party notification", "error", err, "party_id", params.PartyID)
 		}
 	}(in)
+}
+
+// NotifyPartyMemberSuspended dispatches notifications for member suspension to both the user and party admins.
+func (s *service) NotifyPartyMemberSuspended(ctx context.Context, params NotifyPartyMemberSuspendedParams) {
+	// 1. Notify the suspended member
+	userMeta := utils.NewMetadata().
+		Set("party_id", params.PartyID).
+		SetIfNonEmpty("reason", params.Reason)
+
+	s.CreateNotificationAsync(ctx, CreateNotificationInput{
+		RecipientUserID: params.TargetUserID,
+		ActorUserID:     params.ActorID,
+		PartyID:         &params.PartyID,
+		Category:        constants.NotificationCategoryParty,
+		Type:            constants.NotificationTypePartyMemberSuspended,
+		Priority:        constants.NotificationPriorityHigh,
+		Metadata:        userMeta,
+	})
+
+	// 2. Notify party administrators/officials
+	partyMeta := utils.NewMetadata().
+		Set("suspended_user_id", params.TargetUserID).
+		SetIfNonEmpty("reason", params.Reason)
+
+	s.CreatePartyNotificationAsync(ctx, CreatePartyNotificationInput{
+		PartyID:     params.PartyID,
+		ActorUserID: params.ActorID,
+		ChapterID:   params.ChapterID,
+		Category:    constants.PartyNotificationCategoryMembership,
+		Type:        constants.NotificationTypePartyMemberSuspended,
+		Priority:    constants.NotificationPriorityHigh,
+		Metadata:    partyMeta,
+	})
+}
+
+// NotifyPartyMemberReinstated dispatches notification to the reinstated member.
+func (s *service) NotifyPartyMemberReinstated(ctx context.Context, params NotifyPartyMemberReinstatedParams) {
+	meta := utils.NewMetadata().
+		SetIfNonEmpty("reason", params.Reason)
+
+	s.CreateNotificationAsync(ctx, CreateNotificationInput{
+		RecipientUserID: params.TargetUserID,
+		ActorUserID:     params.ActorID,
+		PartyID:         &params.PartyID,
+		Category:        constants.NotificationCategoryParty,
+		Type:            constants.NotificationTypePartyMemberReinstated,
+		Priority:        constants.NotificationPriorityHigh,
+		Metadata:        meta,
+	})
+}
+
+// NotifyNewMemberJoined dispatches aggregated notifications to party & chapter officials when a user joins.
+func (s *service) NotifyNewMemberJoined(ctx context.Context, params NotifyNewMemberJoinedParams) {
+	groupKey := constants.GroupKeyPartyNewMembers(params.PartyID, params.ChapterID)
+	s.CreatePartyNotificationAsync(ctx, CreatePartyNotificationInput{
+		PartyID:     params.PartyID,
+		ActorUserID: &params.UserID,
+		ChapterID:   &params.ChapterID,
+		Category:    constants.PartyNotificationCategoryMembership,
+		Type:        constants.NotificationTypeNewMemberJoined,
+		Priority:    constants.NotificationPriorityNormal,
+		GroupKey:    &groupKey,
+		Metadata:    utils.NewMetadata(),
+	})
 }
 
 func (s *service) ListPartyNotificationsForUser(ctx context.Context, userID int64, partyID int16, page, limit int32) (*PaginatedPartyNotificationsResponse, error) {
@@ -558,7 +648,6 @@ func (s *service) MarkPartyNotificationAsRead(ctx context.Context, partyNotifica
 // ----------------------------------------------------------------------------
 // PREFERENCES IMPLEMENTATION
 // ----------------------------------------------------------------------------
-
 func (s *service) GetPreferences(ctx context.Context, userID int64) (*NotificationPreferencesResponse, error) {
 	redisKey := fmt.Sprintf("%s%d", db.RedisNotificationPreferences, userID)
 
@@ -693,7 +782,6 @@ func (s *service) UpdatePreferences(ctx context.Context, userID int64, req Updat
 // ----------------------------------------------------------------------------
 // HELPERS
 // ----------------------------------------------------------------------------
-
 func mapNotificationToResponse(n queries.Notification) *NotificationItemResponse {
 	// Safely unmarshal JSONB metadata into generic map
 	var meta map[string]any

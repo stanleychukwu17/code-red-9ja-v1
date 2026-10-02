@@ -19,6 +19,7 @@ import { Loader2 } from "lucide-react";
 import { useIntersectionObserver, useDebounceValue } from "usehooks-ts";
 import { useUserParty } from "#/hooks/useUserParty";
 import { getBlockedPartyMembers } from "#/lib/server/parties";
+import { QUERY_KEYS } from "#/lib/config";
 
 export const Route = createFileRoute(
   "/_authenticated/$partyShortName/party-members/blocked",
@@ -44,7 +45,7 @@ function RouteComponent() {
     error,
     refetch,
   } = useInfiniteQuery({
-    queryKey: ["party-members", "blocked", partyId],
+    queryKey: QUERY_KEYS.partyMembers.blocked(partyId),
     queryFn: async ({ pageParam = 0 }) => {
       if (!partyId) {
         return { success: true, data: { items: [], total: 0 } };

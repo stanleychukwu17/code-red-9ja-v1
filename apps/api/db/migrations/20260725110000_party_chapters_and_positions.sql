@@ -37,7 +37,7 @@ CREATE TABLE party_membership (
 );
 -- Indexes for party membership queries
 CREATE INDEX idx_party_membership_party_chapter ON party_membership(party_id, chapter_id);
-CREATE INDEX idx_party_membership_party_user ON party_membership(party_id, user_id);
+CREATE INDEX idx_party_membership_party_user_status ON party_membership(party_id, user_id, status);
 CREATE INDEX idx_party_membership_party_active_id ON party_membership(party_id, id DESC) WHERE status = 'active';
 
 
@@ -59,9 +59,7 @@ CREATE TABLE party_member_suspensions (
 
 -- Ensure a user can only have at most one active suspension per party at a time
 CREATE UNIQUE INDEX idx_active_party_suspension ON party_member_suspensions (party_id, user_id) WHERE status = 'active';
--- Listing / audit indexes
-CREATE INDEX idx_party_member_suspensions_party ON party_member_suspensions (party_id, id DESC);
-CREATE INDEX idx_party_member_suspensions_user ON party_member_suspensions (user_id, id DESC);
+CREATE INDEX idx_party_member_suspensions_party ON party_member_suspensions (party_id, id DESC) WHERE status = 'active';
 
 
 CREATE TABLE party_member_milestones (

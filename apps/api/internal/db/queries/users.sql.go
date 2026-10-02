@@ -834,7 +834,15 @@ const listUsers = `-- name: ListUsers :many
 SELECT u.id, u.fake_id FROM users u
 WHERE 
   ($1::bigint IS NULL OR u.id < $1::bigint)
-  AND ($2::smallint IS NULL OR u.party_id = $2::smallint)
+  AND ($2::smallint IS NULL OR (
+      u.party_id = $2::smallint
+      AND EXISTS (
+          SELECT 1 FROM party_membership pm
+          WHERE pm.user_id = u.id
+            AND pm.party_id = $2::smallint
+            AND pm.status = 'active'
+      )
+  ))
   AND ($3::smallint[] IS NULL OR u.party_id = ANY($3::smallint[]))
   AND ($4::smallint[] IS NULL OR (
       u.is_verified = true AND EXISTS (

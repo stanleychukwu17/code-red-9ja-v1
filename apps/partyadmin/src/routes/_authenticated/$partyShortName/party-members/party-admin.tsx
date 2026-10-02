@@ -27,6 +27,7 @@ import { useUserParty } from "#/hooks/useUserParty";
 
 // Server Functions
 import { getUsersList } from "#/lib/server/users";
+import { QUERY_KEYS } from "#/lib/config";
 
 export const Route = createFileRoute(
   "/_authenticated/$partyShortName/party-members/party-admin",
@@ -64,13 +65,11 @@ function RouteComponent() {
     error,
     refetch,
   } = useInfiniteQuery({
-    queryKey: [
-      "party-members",
-      "party-admin",
+    queryKey: QUERY_KEYS.partyMembers.partyAdmins(
       partyId,
       debouncedSearchQuery,
       filters,
-    ],
+    ),
     queryFn: async ({ pageParam }) => {
       const res = await getUsersList({
         data: {

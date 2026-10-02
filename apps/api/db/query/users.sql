@@ -112,7 +112,15 @@ RETURNING *;
 SELECT u.id, u.fake_id FROM users u
 WHERE 
   (sqlc.narg('cursor')::bigint IS NULL OR u.id < sqlc.narg('cursor')::bigint)
-  AND (sqlc.narg('party_id')::smallint IS NULL OR u.party_id = sqlc.narg('party_id')::smallint)
+  AND (sqlc.narg('party_id')::smallint IS NULL OR (
+      u.party_id = sqlc.narg('party_id')::smallint
+      AND EXISTS (
+          SELECT 1 FROM party_membership pm
+          WHERE pm.user_id = u.id
+            AND pm.party_id = sqlc.narg('party_id')::smallint
+            AND pm.status = 'active'
+      )
+  ))
   AND (sqlc.narg('party_ids')::smallint[] IS NULL OR u.party_id = ANY(sqlc.narg('party_ids')::smallint[]))
   AND (sqlc.narg('verification_type_ids')::smallint[] IS NULL OR (
       u.is_verified = true AND EXISTS (

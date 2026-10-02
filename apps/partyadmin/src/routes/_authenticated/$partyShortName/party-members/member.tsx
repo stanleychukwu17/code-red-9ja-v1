@@ -33,6 +33,8 @@ import { getParties, getPresignedUploadURL, confirmFileUpload } from "#/lib/serv
 import { registerCandidate } from "#/lib/server/auth/auth";
 import { updateUser, getUsersList } from "#/lib/server/users";
 
+import { QUERY_KEYS } from "#/lib/config";
+
 export const Route = createFileRoute("/_authenticated/$partyShortName/party-members/member")({
   head: () => getPageHeader({ title: "Party members" }),
   component: RouteComponent,
@@ -60,7 +62,7 @@ function RouteComponent() {
   const partyId = party?.id;
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, error, refetch } = useInfiniteQuery({
-    queryKey: ["party-members", partyId, debouncedSearchQuery, filters],
+    queryKey: QUERY_KEYS.partyMembers.list(partyId, debouncedSearchQuery, filters),
     queryFn: async ({ pageParam }) => {
       const res = await getUsersList({
         data: {

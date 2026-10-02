@@ -134,10 +134,10 @@ export const API_URL = {
   ) => `${api}/parties/${id}/officials/${assignmentId}`,
   memberPositions: (id: string | number, userId: string | number) =>
     `${api}/parties/${id}/members/${userId}/positions`,
-  suspendedMembers: (id: string | number, limit?: number, offset?: number) => {
+  suspendedMembers: (id: string | number, limit?: number, cursor?: string | number) => {
     const sp = new URLSearchParams();
     if (limit) sp.append("limit", String(limit));
-    if (offset) sp.append("offset", String(offset));
+    if (cursor) sp.append("cursor", String(cursor));
     const qs = sp.toString();
     return `${api}/parties/${id}/members/suspended${qs ? `?${qs}` : ""}`;
   },
@@ -270,4 +270,21 @@ export const QUERY_KEYS = {
     session: ["authSession"],
   },
   countries: ["countries"],
+  partyMembers: {
+    root: ["party-members"] as const,
+    list: (
+      partyId?: number | string,
+      search?: string,
+      filters?: unknown,
+    ) => ["party-members", partyId, search, filters] as const,
+    partyAdmins: (
+      partyId?: number | string,
+      search?: string,
+      filters?: unknown,
+    ) => ["party-members", "party-admin", partyId, search, filters] as const,
+    suspended: (partyId?: number | string) =>
+      ["party-members", "suspended", partyId] as const,
+    blocked: (partyId?: number | string) =>
+      ["party-members", "blocked", partyId] as const,
+  },
 };

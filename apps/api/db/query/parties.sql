@@ -323,8 +323,10 @@ SELECT
 FROM party_member_suspensions pms
 JOIN users u ON u.id = pms.user_id
 LEFT JOIN users admin ON admin.id = pms.suspended_by
-WHERE pms.party_id = $1 AND pms.status = 'active'
-ORDER BY pms.created_at DESC
-LIMIT $2 OFFSET $3;
+WHERE pms.party_id = sqlc.arg('party_id')::smallint
+  AND pms.status = 'active'
+  AND (sqlc.narg('cursor')::bigint IS NULL OR pms.id < sqlc.narg('cursor')::bigint)
+ORDER BY pms.id DESC
+LIMIT sqlc.arg('limit_num')::int;
 
 

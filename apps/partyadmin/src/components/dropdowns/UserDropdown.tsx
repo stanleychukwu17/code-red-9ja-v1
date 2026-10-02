@@ -29,6 +29,7 @@ import {
 } from "#/lib/server/parties";
 import { registerCandidate } from "#/lib/server/auth/auth";
 import { updateUser } from "#/lib/server/users";
+import { QUERY_KEYS } from "#/lib/config";
 
 interface UserDropdownProps {
   data: UserType;
@@ -87,8 +88,34 @@ export const UserDropdown = ({ data, partyId, className, refetch }: UserDropdown
         toast.success("Member suspended successfully");
         setOpenSuspendAlert(false);
         setSuspendReason("");
-        queryClient.invalidateQueries({ queryKey: ["party-members"] });
-        refetch?.();
+
+        // Optimistically remove the suspended user from all cached party-members infinite queries
+        queryClient.setQueriesData(
+          { queryKey: QUERY_KEYS.partyMembers.root },
+          (oldData: any) => {
+            if (!oldData || !oldData.pages) return oldData;
+            return {
+              ...oldData,
+              pages: oldData.pages.map((page: any) => {
+                if (!page?.data?.users) return page;
+                return {
+                  ...page,
+                  data: {
+                    ...page.data,
+                    users: page.data.users.filter(
+                      (u: any) => u.id !== data.id && u.fake_id !== data.fake_id,
+                    ),
+                  },
+                };
+              }),
+            };
+          },
+        );
+
+        // Invalidate suspended members query so the Suspended tab stays fresh
+        queryClient.invalidateQueries({
+          queryKey: QUERY_KEYS.partyMembers.suspended(partyId),
+        });
       } else {
         toast.error(res?.message || "Failed to suspend member");
       }
@@ -116,8 +143,32 @@ export const UserDropdown = ({ data, partyId, className, refetch }: UserDropdown
       if (res && res.success) {
         toast.success("Member reinstated successfully");
         setOpenUnsuspendAlert(false);
-        queryClient.invalidateQueries({ queryKey: ["party-members"] });
-        refetch?.();
+
+        // Optimistically remove the reinstated member from the suspended queries cache
+        queryClient.setQueriesData(
+          { queryKey: QUERY_KEYS.partyMembers.suspended(partyId) },
+          (oldData: any) => {
+            if (!oldData || !oldData.pages) return oldData;
+            return {
+              ...oldData,
+              pages: oldData.pages.map((page: any) => {
+                if (!page?.data?.suspended_users) return page;
+                return {
+                  ...page,
+                  data: {
+                    ...page.data,
+                    suspended_users: page.data.suspended_users.filter(
+                      (u: any) => u.user_id !== data.id && u.fake_id !== data.fake_id,
+                    ),
+                  },
+                };
+              }),
+            };
+          },
+        );
+
+        // Invalidate active members and suspended list
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partyMembers.root });
       } else {
         toast.error(res?.message || "Failed to reinstate member");
       }
@@ -146,7 +197,31 @@ export const UserDropdown = ({ data, partyId, className, refetch }: UserDropdown
       if (res && res.success) {
         toast.success("User blocked from party successfully");
         setOpenBlockAlert(false);
-        queryClient.invalidateQueries({ queryKey: ["party-members"] });
+
+        // Optimistically remove the blocked user from all cached party-members infinite queries
+        queryClient.setQueriesData(
+          { queryKey: QUERY_KEYS.partyMembers.root },
+          (oldData: any) => {
+            if (!oldData || !oldData.pages) return oldData;
+            return {
+              ...oldData,
+              pages: oldData.pages.map((page: any) => {
+                if (!page?.data?.users) return page;
+                return {
+                  ...page,
+                  data: {
+                    ...page.data,
+                    users: page.data.users.filter(
+                      (u: any) => u.id !== data.id && u.fake_id !== data.fake_id,
+                    ),
+                  },
+                };
+              }),
+            };
+          },
+        );
+
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partyMembers.root });
         refetch?.();
       } else {
         toast.error(res?.message || "Failed to block user");
@@ -175,7 +250,7 @@ export const UserDropdown = ({ data, partyId, className, refetch }: UserDropdown
       if (res && res.success) {
         toast.success("User unblocked successfully");
         setOpenUnblockAlert(false);
-        queryClient.invalidateQueries({ queryKey: ["party-members"] });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partyMembers.root });
         refetch?.();
       } else {
         toast.error(res?.message || "Failed to unblock user");
@@ -288,7 +363,7 @@ export const UserDropdown = ({ data, partyId, className, refetch }: UserDropdown
         onClose={() => setOpenEditDialog(false)}
         user={userForDialog}
         onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: ["party-members"] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partyMembers.root });
           refetch?.();
         }}
         getAllCountries={getAllCountries}
