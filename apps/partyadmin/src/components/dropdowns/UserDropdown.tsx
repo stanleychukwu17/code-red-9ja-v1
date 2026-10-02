@@ -38,6 +38,35 @@ interface UserDropdownProps {
   refetch?: () => void;
 }
 
+interface ActionReasonInputProps {
+  label: string;
+  placeholder: string;
+  value: string;
+  onChange: (val: string) => void;
+  disabled?: boolean;
+}
+
+const ActionReasonInput = ({
+  label,
+  placeholder,
+  value,
+  onChange,
+  disabled,
+}: ActionReasonInputProps) => (
+  <div className="space-y-2 pt-2">
+    <Label title={label} className="text-sm font-medium text-c-70" />
+    <Textarea
+      placeholder={placeholder}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      minRows={3}
+      maxRows={6}
+      className="w-full rounded-xl bg-sidebar-mobile px-3.5 py-3 text-xs text-c-80 placeholder:text-c-50 focus-visible:ring-1 focus-visible:ring-primary/50 transition-all outline-none"
+      disabled={disabled}
+    />
+  </div>
+);
+
 /**
  * UserDropdown Component
  * Contextual popover menu offering Edit (via UserFormDialog), Suspend/Unsuspend, and Block actions.
@@ -52,6 +81,9 @@ export const UserDropdown = ({ data, partyId, className, refetch }: UserDropdown
   const [openSuspendAlert, setOpenSuspendAlert] = useState(false);
   const [openUnsuspendAlert, setOpenUnsuspendAlert] = useState(false);
   const [suspendReason, setSuspendReason] = useState("");
+  const [unsuspendReason, setUnsuspendReason] = useState("");
+  const [blockReason, setBlockReason] = useState("");
+  const [unblockReason, setUnblockReason] = useState("");
 
   // Async mutation pending states
   const [isSuspending, setIsSuspending] = useState(false);
@@ -138,11 +170,13 @@ export const UserDropdown = ({ data, partyId, className, refetch }: UserDropdown
         data: {
           partyId,
           userId: data.id,
+          reason: unsuspendReason.trim() || undefined,
         },
       });
       if (res && res.success) {
         toast.success("Member reinstated successfully");
         setOpenUnsuspendAlert(false);
+        setUnsuspendReason("");
 
         // Optimistically remove the reinstated member from the suspended queries cache
         queryClient.setQueriesData(
@@ -192,11 +226,13 @@ export const UserDropdown = ({ data, partyId, className, refetch }: UserDropdown
         data: {
           partyId,
           userId: data.id,
+          reason: blockReason.trim() || undefined,
         },
       });
       if (res && res.success) {
         toast.success("User blocked from party successfully");
         setOpenBlockAlert(false);
+        setBlockReason("");
 
         // Optimistically remove the blocked user from all cached party-members infinite queries
         queryClient.setQueriesData(
@@ -245,11 +281,13 @@ export const UserDropdown = ({ data, partyId, className, refetch }: UserDropdown
         data: {
           partyId,
           userId: data.id,
+          reason: unblockReason.trim() || undefined,
         },
       });
       if (res && res.success) {
         toast.success("User unblocked successfully");
         setOpenUnblockAlert(false);
+        setUnblockReason("");
         queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partyMembers.root });
         refetch?.();
       } else {
@@ -299,27 +337,27 @@ export const UserDropdown = ({ data, partyId, className, refetch }: UserDropdown
       : []),
     ...(data.status === "blocked"
       ? [
-          {
-            title: "Unblock User",
-            icon: <UserCheck className="size-4" />,
-            action: () => {
-              setOpenMenu(false);
-              setOpenUnblockAlert(true);
-            },
-            className: "[&_svg]:text-emerald-500 text-emerald-500",
+        {
+          title: "Unblock User",
+          icon: <UserCheck className="size-4" />,
+          action: () => {
+            setOpenMenu(false);
+            setOpenUnblockAlert(true);
           },
-        ]
+          className: "[&_svg]:text-emerald-500 text-emerald-500",
+        },
+      ]
       : [
-          {
-            title: "Block User",
-            icon: <Ban className="size-4" />,
-            action: () => {
-              setOpenMenu(false);
-              setOpenBlockAlert(true);
-            },
-            className: "[&_svg]:text-orange-500 text-orange-500",
+        {
+          title: "Block User",
+          icon: <Ban className="size-4" />,
+          action: () => {
+            setOpenMenu(false);
+            setOpenBlockAlert(true);
           },
-        ]),
+          className: "[&_svg]:text-orange-500 text-orange-500",
+        },
+      ]),
   ];
   const dropdownData: TDropdownGroup[] = [group1];
 
@@ -394,24 +432,22 @@ export const UserDropdown = ({ data, partyId, className, refetch }: UserDropdown
             actionText={isSuspending ? "Suspending..." : "Suspend User"}
             actionVariant="red"
           >
-            <div className="space-y-2 pt-2">
-              <Label title="Reason for suspension" className="text-sm font-medium text-c-70" />
-              <Textarea
-                placeholder="Explain why this member is being suspended (optional)..."
-                value={suspendReason}
-                onChange={(e) => setSuspendReason(e.target.value)}
-                minRows={3}
-                maxRows={6}
-                className="w-full rounded-xl bg-sidebar-mobile px-3.5 py-3 text-sm text-c-80 placeholder:text-c-50 focus-visible:ring-1 focus-visible:ring-primary/50 transition-all outline-none"
-                disabled={isSuspending}
-              />
-            </div>
+            <ActionReasonInput
+              label="Reason for suspension"
+              placeholder="Explain why this member is being suspended (optional)..."
+              value={suspendReason}
+              onChange={setSuspendReason}
+              disabled={isSuspending}
+            />
           </ConfirmAlertDialog>
 
           {/* Reactivate / Unsuspend member alert dialog */}
           <ConfirmAlertDialog
             open={openUnsuspendAlert}
-            setOpen={setOpenUnsuspendAlert}
+            setOpen={(open) => {
+              setOpenUnsuspendAlert(open);
+              if (!open) setUnsuspendReason("");
+            }}
             onConfirm={handleUnsuspend}
             isPending={isUnsuspending}
             headerTitle="Reactivate User"
@@ -419,14 +455,25 @@ export const UserDropdown = ({ data, partyId, className, refetch }: UserDropdown
             subtitle={`Reactivating this user will restore their active party membership. Any previously vacated positions will need to be re-appointed.`}
             actionText={isUnsuspending ? "Reactivating..." : "Reactivate User"}
             actionVariant="primary"
-          />
+          >
+            <ActionReasonInput
+              label="Reason for reactivation"
+              placeholder="Explain why this member is being reactivated (optional)..."
+              value={unsuspendReason}
+              onChange={setUnsuspendReason}
+              disabled={isUnsuspending}
+            />
+          </ConfirmAlertDialog>
         </>
       )}
 
       {/* Block user alert dialog (applicable to all users) */}
       <ConfirmAlertDialog
         open={openBlockAlert}
-        setOpen={setOpenBlockAlert}
+        setOpen={(open) => {
+          setOpenBlockAlert(open);
+          if (!open) setBlockReason("");
+        }}
         onConfirm={handleBlock}
         isPending={isBlocking}
         headerTitle="Block User"
@@ -434,12 +481,23 @@ export const UserDropdown = ({ data, partyId, className, refetch }: UserDropdown
         subtitle={`Blocking this user will remove them from the party entirely and revoke all party positions they hold. Are you sure you want to continue?`}
         actionText={isBlocking ? "Blocking..." : "Block User"}
         actionVariant="red"
-      />
+      >
+        <ActionReasonInput
+          label="Reason for block"
+          placeholder="Explain why this user is being blocked (optional)..."
+          value={blockReason}
+          onChange={setBlockReason}
+          disabled={isBlocking}
+        />
+      </ConfirmAlertDialog>
 
       {/* Unblock user alert dialog */}
       <ConfirmAlertDialog
         open={openUnblockAlert}
-        setOpen={setOpenUnblockAlert}
+        setOpen={(open) => {
+          setOpenUnblockAlert(open);
+          if (!open) setUnblockReason("");
+        }}
         onConfirm={handleUnblock}
         isPending={isUnblocking}
         headerTitle="Unblock User"
@@ -447,7 +505,15 @@ export const UserDropdown = ({ data, partyId, className, refetch }: UserDropdown
         subtitle={`Unblocking this user will allow them to interact with the party again. Are you sure you want to continue?`}
         actionText={isUnblocking ? "Unblocking..." : "Unblock User"}
         actionVariant="primary"
-      />
+      >
+        <ActionReasonInput
+          label="Reason for unblock"
+          placeholder="Explain why this user is being unblocked (optional)..."
+          value={unblockReason}
+          onChange={setUnblockReason}
+          disabled={isUnblocking}
+        />
+      </ConfirmAlertDialog>
     </>
   );
 };

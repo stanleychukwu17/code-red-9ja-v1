@@ -48,6 +48,8 @@ const (
 	NotificationTypeNewAgentApplication      = "new_agent_application"
 	NotificationTypePartyMemberSuspended     = "party_member_suspended"
 	NotificationTypePartyMemberReinstated    = "party_member_reinstated"
+	NotificationTypePartyUserBlocked         = "party_user_blocked"
+	NotificationTypePartyUserUnblocked       = "party_user_unblocked"
 )
 
 // DailyGroupKey formats a time-windowed daily rollup key (e.g. "prefix:2026-09-27")

@@ -40,6 +40,7 @@ type PartiesService struct {
 // BlocksService interface defines the methods needed from the blocks service
 type BlocksService interface {
 	GetUserBlockedPartyIDs(ctx context.Context, userID int64) map[int16]bool
+	InvalidateUserBlockedPartiesCache(ctx context.Context, userID int64)
 	BlockUserByParty(ctx context.Context, partyID int16, blockedUserID int64, blockedByUserID *int64) (queries.PartyUserBlock, error)
 	UnblockUserByParty(ctx context.Context, partyID int16, blockedUserID int64) error
 	ListBlockedUsersByParty(ctx context.Context, partyID int16, limit int32, offset int32) ([]queries.ListBlockedUsersByPartyRow, error)
@@ -66,6 +67,8 @@ type NotificationsService interface {
 	CreateNotificationAsync(ctx context.Context, params notifications.CreateNotificationInput)
 	NotifyPartyMemberSuspended(ctx context.Context, params notifications.NotifyPartyMemberSuspendedParams)
 	NotifyPartyMemberReinstated(ctx context.Context, params notifications.NotifyPartyMemberReinstatedParams)
+	NotifyPartyUserBlocked(ctx context.Context, params notifications.NotifyPartyUserBlockedParams)
+	NotifyPartyUserUnblocked(ctx context.Context, params notifications.NotifyPartyUserUnblockedParams)
 	NotifyNewMemberJoined(ctx context.Context, params notifications.NotifyNewMemberJoinedParams)
 }
 
@@ -1917,13 +1920,10 @@ func (s *PartiesService) SuspendPartyMember(ctx context.Context, input SuspendPa
 		return nil, fmt.Errorf("failed to suspend user positions: %w", err)
 	}
 
-	// 4. Log milestone (one milestone entry for the user in this party)
-	// Use the national chapter ID for the primary chapter association, falling back to membership chapter
+	// Get party's national chapterID to use for notifications and audit logging
 	var primaryChapterID pgtype.Int4
 	if natChapterID, err := s.GetOrCreateNationalChapter(ctx, input.PartyID, constants.NigeriaCountryID); err == nil && natChapterID > 0 {
 		primaryChapterID = utils.PgInt4FromInt32(natChapterID)
-	} else if len(chapterIDs) > 0 {
-		primaryChapterID = utils.PgInt4FromInt32(chapterIDs[0])
 	}
 
 	// add one milestone for the user in this party
@@ -2007,7 +2007,7 @@ func (s *PartiesService) UnsuspendPartyMember(ctx context.Context, input Unsuspe
 	}
 
 	// 2. Reactivate party membership
-	chapterIDs, err := qtx.ReactivatePartyMembership(ctx, queries.ReactivatePartyMembershipParams{
+	_, err = qtx.ReactivatePartyMembership(ctx, queries.ReactivatePartyMembershipParams{
 		PartyID: input.PartyID,
 		UserID:  input.UserID,
 	})
@@ -2019,10 +2019,10 @@ func (s *PartiesService) UnsuspendPartyMember(ctx context.Context, input Unsuspe
 	// Marshal input into JSON to use as metadata and for audit logging
 	reinstatedJSON, _ := json.Marshal(input)
 
-	// get just one chapterID (from the chapterIDs returned by ReactivatePartyMembership) to log the milestone
+	// Get party's national chapterID to use for notifications and audit logging
 	var primaryChapterID pgtype.Int4
-	if len(chapterIDs) > 0 {
-		primaryChapterID = utils.PgInt4FromInt32(chapterIDs[0])
+	if natChapterID, err := s.GetOrCreateNationalChapter(ctx, input.PartyID, constants.NigeriaCountryID); err == nil && natChapterID > 0 {
+		primaryChapterID = utils.PgInt4FromInt32(natChapterID)
 	}
 
 	// add one milestone for the user in this party
@@ -2053,11 +2053,12 @@ func (s *PartiesService) UnsuspendPartyMember(ctx context.Context, input Unsuspe
 		NewValues:  reinstatedJSON,
 	})
 
-	// Send notification to the reinstated user asynchronously
+	// Send notification to the reinstated user and party officials asynchronously
 	s.notificationsService.NotifyPartyMemberReinstated(ctx, notifications.NotifyPartyMemberReinstatedParams{
 		PartyID:      input.PartyID,
 		TargetUserID: input.UserID,
 		ActorID:      input.LiftedBy,
+		ChapterID:    &primaryChapterID.Int32,
 		Reason:       input.LiftReason,
 	})
 
@@ -2072,15 +2073,23 @@ type BlockPartyUserInput struct {
 	Reason        *string
 }
 
-// BlockPartyUser removes the user from the party entirely, vacates all their held positions,
+// BlockUserFromThisParty removes the user from the party entirely, vacates all their held positions,
 // strips party admin privileges, revokes active membership, and registers a party block.
-func (s *PartiesService) BlockPartyUser(ctx context.Context, input BlockPartyUserInput) (*queries.PartyUserBlock, error) {
+func (s *PartiesService) BlockUserFromThisParty(ctx context.Context, input BlockPartyUserInput) (*queries.PartyUserBlock, error) {
+	// Check if already blocked by this party
+	blockedParties := s.blocksService.GetUserBlockedPartyIDs(ctx, input.BlockedUserID)
+	if blockedParties[input.PartyID] {
+		return nil, fmt.Errorf("user is already blocked by this party")
+	}
+
+	// begin db transaction
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
 
+	// Set queries to use transaction
 	qtx := s.queries.WithTx(tx)
 
 	// 1. Fetch user to check if they have fake_id and party affiliation
@@ -2089,59 +2098,61 @@ func (s *PartiesService) BlockPartyUser(ctx context.Context, input BlockPartyUse
 		return nil, fmt.Errorf("user not found: %w", err)
 	}
 
-	// 2. Vacate all positions held by the user in this party
-	err = qtx.VacateAllUserPositionsInParty(ctx, queries.VacateAllUserPositionsInPartyParams{
-		PartyID: input.PartyID,
-		UserID:  input.BlockedUserID,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to vacate user positions: %w", err)
-	}
+	isMemberOfThisParty := user.PartyID.Valid && user.PartyID.Int16 == input.PartyID
+	var chapterIDs []int32
 
-	// 3. Remove party membership records if any exist
-	chapterIDs, err := qtx.DeletePartyMembership(ctx, queries.DeletePartyMembershipParams{
-		UserID:  input.BlockedUserID,
-		PartyID: input.PartyID,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to delete party membership: %w", err)
-	}
+	// Only vacate positions, strip roles, delete memberships, and log membership milestones
+	// if the user is currently affiliated with this party.
+	if isMemberOfThisParty {
+		// 2. Vacate all positions held by the user in this party
+		err = qtx.VacateAllUserPositionsInParty(ctx, queries.VacateAllUserPositionsInPartyParams{
+			PartyID: input.PartyID,
+			UserID:  input.BlockedUserID,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to vacate user positions: %w", err)
+		}
 
-	// 4. Record milestone for audit trail
-	metaJSON, _ := json.Marshal(utils.NewMetadata().
-		SetIfNonEmpty("reason", input.Reason).
-		SetIfPresent("blocked_by", input.BlockedBy))
+		// 3. Remove party membership records if any exist
+		chapterIDs, err = qtx.DeletePartyMembership(ctx, queries.DeletePartyMembershipParams{
+			UserID:  input.BlockedUserID,
+			PartyID: input.PartyID,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to delete party membership: %w", err)
+		}
 
-	for _, chapterID := range chapterIDs {
+		// 4. Record milestone for audit trail
+		metaJSON, _ := json.Marshal(utils.NewMetadata().
+			SetIfNonEmpty("reason", input.Reason).
+			SetIfPresent("blocked_by", input.BlockedBy))
+
+		// If user was not enrolled in chapters, record milestone against national chapter
+		var primaryChapterID pgtype.Int4
+		if natChapterID, err := s.GetOrCreateNationalChapter(ctx, input.PartyID, constants.NigeriaCountryID); err == nil && natChapterID > 0 {
+			primaryChapterID = utils.PgInt4FromInt32(natChapterID)
+		}
 		_ = qtx.AddPartyMemberMilestone(ctx, queries.AddPartyMemberMilestoneParams{
 			UserID:        input.BlockedUserID,
 			PartyID:       input.PartyID,
-			ChapterID:     pgtype.Int4{Int32: chapterID, Valid: true},
+			ChapterID:     primaryChapterID,
 			MilestoneType: constants.MilestoneTypeBlocked,
 			Metadata:      metaJSON,
 		})
-	}
 
-	// 5. If user's active party_id matches this party, clear it
-	if user.PartyID.Valid && user.PartyID.Int16 == input.PartyID {
+		// 5. Clear user's party affiliation (UpdateUserParty with nil automatically strips party admin roles and invalidates user cache)
 		var fakeID int64
 		if user.FakeID.Valid {
 			fakeID = user.FakeID.Int64
 		}
-		_ = s.usersService.StripPartyAdminRoles(ctx, input.BlockedUserID, fakeID)
 		_ = s.usersService.UpdateUserParty(ctx, input.BlockedUserID, nil, fakeID)
 	}
 
 	// 6. Record party-user block in party_user_blocks table
-	var blockedByPg pgtype.Int8
-	if input.BlockedBy != nil {
-		blockedByPg = pgtype.Int8{Int64: *input.BlockedBy, Valid: true}
-	}
-
 	partyBlock, err := qtx.BlockUserByParty(ctx, queries.BlockUserByPartyParams{
 		PartyID:         input.PartyID,
 		BlockedUserID:   input.BlockedUserID,
-		BlockedByUserID: blockedByPg,
+		BlockedByUserID: utils.PgInt8FromPtr(input.BlockedBy),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to record party user block: %w", err)
@@ -2151,49 +2162,123 @@ func (s *PartiesService) BlockPartyUser(ctx context.Context, input BlockPartyUse
 		return nil, fmt.Errorf("failed to commit block user transaction: %w", err)
 	}
 
-	// Invalidate caches
-	s.blocksService.GetUserBlockedPartyIDs(ctx, input.BlockedUserID) // triggers cache refresh if needed
-	// Also explicitly invalidate using redis key via blocksService if available
-	for _, chapterID := range chapterIDs {
-		s.InvalidateChapterMemberCount(ctx, input.PartyID, chapterID)
+	// Invalidate party related caches
+	s.blocksService.InvalidateUserBlockedPartiesCache(ctx, input.BlockedUserID)
+	if isMemberOfThisParty {
+		s.InvalidateMemberPositionAssignmentsCache(ctx, input.PartyID, input.BlockedUserID)
+		for _, chapterID := range chapterIDs {
+			s.InvalidateChapterMemberCount(ctx, input.PartyID, chapterID)
+		}
 	}
 
 	// Audit Logging
-	if s.auditService != nil {
-		blockJSON, _ := json.Marshal(partyBlock)
-		var actorID int64
-		if input.BlockedBy != nil {
-			actorID = *input.BlockedBy
-		}
-		s.auditService.LogActionAsync(ctx, queries.InsertAuditLogParams{
-			Module:     audit.StringToText(db.ModulePartyAdmin),
-			Action:     db.ActionBlockPartyMember,
-			ActorID:    actorID,
-			ActorRole:  audit.StringToText(db.ActorRolePartyAdmin),
-			EntityType: db.EntityTypeUser,
-			EntityID:   strconv.FormatInt(input.BlockedUserID, 10),
-			NewValues:  blockJSON,
-		})
+	blockJSON, _ := json.Marshal(partyBlock)
+	s.auditService.LogActionAsync(ctx, queries.InsertAuditLogParams{
+		Module:     audit.StringToText(db.ModulePartyAdmin),
+		Action:     db.ActionBlockPartyMember,
+		ActorID:    *input.BlockedBy,
+		ActorRole:  audit.StringToText(db.ActorRolePartyAdmin),
+		EntityType: db.EntityTypeUser,
+		EntityID:   strconv.FormatInt(input.BlockedUserID, 10),
+		NewValues:  blockJSON,
+	})
+
+	// Send notification to the blocked user and party leadership asynchronously
+	var chapterIDPtr *int32
+	if len(chapterIDs) > 0 {
+		chapterIDPtr = &chapterIDs[0]
 	}
+
+	s.notificationsService.NotifyPartyUserBlocked(ctx, notifications.NotifyPartyUserBlockedParams{
+		PartyID:      input.PartyID,
+		TargetUserID: input.BlockedUserID,
+		ActorID:      input.BlockedBy,
+		ChapterID:    chapterIDPtr,
+		Reason:       input.Reason,
+	})
 
 	return &partyBlock, nil
 }
 
-// UnblockPartyUser removes a party block on a user.
-func (s *PartiesService) UnblockPartyUser(ctx context.Context, partyID int16, userID int64) error {
-	if err := s.blocksService.UnblockUserByParty(ctx, partyID, userID); err != nil {
-		return err
+// UnblockPartyUserInput defines the input for lifting a party block on a user.
+type UnblockPartyUserInput struct {
+	PartyID     int16   `json:"party_id"`
+	UserID      int64   `json:"user_id"`
+	UnblockedBy *int64  `json:"unblocked_by,omitempty"`
+	Reason      *string `json:"reason,omitempty"`
+}
+
+// UnblockPartyUser removes a party block on a user and logs an unblock milestone.
+func (s *PartiesService) UnblockPartyUser(ctx context.Context, input UnblockPartyUserInput) error {
+	// Check if user is actually blocked by this party
+	blockedParties := s.blocksService.GetUserBlockedPartyIDs(ctx, input.UserID)
+	if !blockedParties[input.PartyID] {
+		return fmt.Errorf("user is not blocked by this party")
 	}
 
-	// Audit Logging
-	if s.auditService != nil {
-		s.auditService.LogActionAsync(ctx, queries.InsertAuditLogParams{
-			Module:     audit.StringToText(db.ModulePartyAdmin),
-			Action:     db.ActionUnblockPartyMember,
-			EntityType: db.EntityTypeUser,
-			EntityID:   strconv.FormatInt(userID, 10),
-		})
+	// begin db transaction
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
+	defer tx.Rollback(ctx)
+
+	// Set queries to use transaction
+	qtx := s.queries.WithTx(tx)
+
+	// 1. Remove party block record
+	if err := qtx.UnblockUserByParty(ctx, queries.UnblockUserByPartyParams{
+		PartyID:       input.PartyID,
+		BlockedUserID: input.UserID,
+	}); err != nil {
+		return fmt.Errorf("failed to unblock user: %w", err)
+	}
+
+	// 2. Record unblocked milestone
+	metaJSON, _ := json.Marshal(utils.NewMetadata().
+		SetIfNonEmpty("reason", input.Reason).
+		SetIfPresent("unblocked_by", input.UnblockedBy))
+
+	var primaryChapterID pgtype.Int4
+	if natChapterID, err := s.GetOrCreateNationalChapter(ctx, input.PartyID, constants.NigeriaCountryID); err == nil && natChapterID > 0 {
+		primaryChapterID = utils.PgInt4FromInt32(natChapterID)
+	}
+
+	// Add unblocked milestone
+	_ = qtx.AddPartyMemberMilestone(ctx, queries.AddPartyMemberMilestoneParams{
+		UserID:        input.UserID,
+		PartyID:       input.PartyID,
+		ChapterID:     primaryChapterID,
+		MilestoneType: constants.MilestoneTypeUnblocked,
+		Metadata:      metaJSON,
+	})
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("failed to commit unblock transaction: %w", err)
+	}
+
+	// Invalidate user blocked parties cache
+	s.blocksService.InvalidateUserBlockedPartiesCache(ctx, input.UserID)
+
+	// Audit Logging
+	unblockJSON, _ := json.Marshal(input)
+	s.auditService.LogActionAsync(ctx, queries.InsertAuditLogParams{
+		Module:     audit.StringToText(db.ModulePartyAdmin),
+		Action:     db.ActionUnblockPartyMember,
+		ActorID:    *input.UnblockedBy,
+		ActorRole:  audit.StringToText(db.ActorRolePartyAdmin),
+		EntityType: db.EntityTypeUser,
+		EntityID:   strconv.FormatInt(input.UserID, 10),
+		NewValues:  unblockJSON,
+	})
+
+	// Send notification ONLY to the unblocked user asynchronously
+	s.notificationsService.NotifyPartyUserUnblocked(ctx, notifications.NotifyPartyUserUnblockedParams{
+		PartyID:      input.PartyID,
+		TargetUserID: input.UserID,
+		ActorID:      input.UnblockedBy,
+		Reason:       input.Reason,
+	})
 
 	return nil
 }

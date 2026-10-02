@@ -9,6 +9,7 @@ const (
 	MilestoneTypeSuspended                = "suspended"
 	MilestoneTypeReinstatedFromSuspension = "reinstated_from_suspension"
 	MilestoneTypeBlocked                  = "blocked"
+	MilestoneTypeUnblocked                = "unblocked"
 )
 
 // Default Party Position IDs

@@ -140,3 +140,5 @@ func (s *PermissionsService) CheckPartyMemberSuspensionPermission(claims *utils.
 
 	return s.CheckPartyModificationPermission(claims, partyID)
 }
+
+

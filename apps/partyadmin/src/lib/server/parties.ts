@@ -798,6 +798,7 @@ export const unblockPartyMember = createServerFn({ method: "POST" })
     (data: {
       partyId: number | string;
       userId: number | string;
+      reason?: string;
     }) => data,
   )
   .handler(async ({ data }) => {
@@ -806,6 +807,9 @@ export const unblockPartyMember = createServerFn({ method: "POST" })
         API_URL.unblockMember(data.partyId, data.userId),
         {
           method: "POST",
+          body: JSON.stringify({
+            reason: data.reason,
+          }),
         },
       );
       return await response.json();

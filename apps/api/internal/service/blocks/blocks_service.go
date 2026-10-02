@@ -32,7 +32,7 @@ func NewBlocksService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client)
 }
 
 // GetUserBlockedPartyIDs returns a set (as map[int16]bool) of party IDs that have blocked the user.
-// Results are cached in Redis with a 7-day TTL (RedisSevenDaysTTL) to prevent database connection
+// Results are cached in Redis with a 7-day TTL (RedisThirtyDaysTTL) to prevent database connection
 // pool exhaustion during high concurrency or traffic spikes.
 func (s *BlocksService) GetUserBlockedPartyIDs(ctx context.Context, userID int64) map[int16]bool {
 	if userID <= 0 {
@@ -66,7 +66,7 @@ func (s *BlocksService) GetUserBlockedPartyIDs(ctx context.Context, userID int64
 
 	// 4. Cache map directly in Redis with 7-day TTL (caches "{}" when empty to prevent DB stampede)
 	if data, err := json.Marshal(result); err == nil {
-		_ = s.rdb.Set(ctx, cacheKey, data, db.RedisSevenDaysTTL).Err()
+		_ = s.rdb.Set(ctx, cacheKey, data, db.RedisThirtyDaysTTL).Err()
 	}
 
 	return result

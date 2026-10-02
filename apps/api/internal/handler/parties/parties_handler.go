@@ -95,8 +95,8 @@ type PartiesService interface {
 	GetActivePartyMemberSuspension(ctx context.Context, partyID int16, userID int64) (*queries.PartyMemberSuspension, error)
 	SuspendPartyMember(ctx context.Context, input partiesservice.SuspendPartyMemberInput) (*queries.PartyMemberSuspension, error)
 	UnsuspendPartyMember(ctx context.Context, input partiesservice.UnsuspendPartyMemberInput) (*queries.PartyMemberSuspension, error)
-	BlockPartyUser(ctx context.Context, input partiesservice.BlockPartyUserInput) (*queries.PartyUserBlock, error)
-	UnblockPartyUser(ctx context.Context, partyID int16, userID int64) error
+	BlockUserFromThisParty(ctx context.Context, input partiesservice.BlockPartyUserInput) (*queries.PartyUserBlock, error)
+	UnblockPartyUser(ctx context.Context, input partiesservice.UnblockPartyUserInput) error
 	ListBlockedPartyMembers(ctx context.Context, partyID int16, limit int32, offset int32) ([]queries.ListBlockedUsersByPartyRow, error)
 	ListSuspendedPartyMembers(ctx context.Context, partyID int16, limit int32, cursor int64) ([]queries.ListSuspendedPartyMembersRow, error)
 	ListPartyAdmins(ctx context.Context, partyID int16) ([]queries.UserWithPlaces, error)
@@ -3009,6 +3009,7 @@ type BlockPartyUserRequest struct {
 
 // BlockPartyUser handles POST /api/v1/parties/{id}/members/{user_id}/block
 func (h *Handler) BlockPartyUser(w http.ResponseWriter, r *http.Request) {
+	// 1. Extract and validate party ID URL parameter
 	idStr := chi.URLParam(r, "id")
 	partyID, err := strconv.ParseInt(idStr, 10, 16)
 	if err != nil {
@@ -3016,6 +3017,7 @@ func (h *Handler) BlockPartyUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 2. Extract and validate target user ID URL parameter
 	userIDStr := chi.URLParam(r, "user_id")
 	userID, err := strconv.ParseInt(userIDStr, 10, 64)
 	if err != nil {
@@ -3023,20 +3025,31 @@ func (h *Handler) BlockPartyUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 3. Verify user authentication claims
+	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
+	if !ok || claims == nil {
+		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	// 4. Verify caller's administrative permission to block target member
+	allowed, _, err := h.permissionsService.CheckPartyMemberSuspensionPermission(claims, int16(partyID), userID)
+	if !allowed {
+		h.utils.RespondError(w, http.StatusForbidden, err.Error())
+		return
+	}
+
+	// 5. Decode optional request payload (e.g. reason)
 	var req BlockPartyUserRequest
 	if r.Body != nil && r.ContentLength > 0 {
 		_ = json.NewDecoder(r.Body).Decode(&req)
 	}
 
-	var blockedBy *int64
-	if claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims); ok && claims != nil {
-		blockedBy = &claims.UserID
-	}
-
-	block, err := h.partiesService.BlockPartyUser(r.Context(), partiesservice.BlockPartyUserInput{
+	// 6. Execute member block via service
+	block, err := h.partiesService.BlockUserFromThisParty(r.Context(), partiesservice.BlockPartyUserInput{
 		PartyID:       int16(partyID),
 		BlockedUserID: userID,
-		BlockedBy:     blockedBy,
+		BlockedBy:     &claims.UserID,
 		Reason:        req.Reason,
 	})
 	if err != nil {
@@ -3044,6 +3057,7 @@ func (h *Handler) BlockPartyUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 7. Return success response with block record
 	h.utils.RespondSuccess(w, http.StatusOK, "User blocked from party successfully", map[string]interface{}{
 		"block": block,
 	})
@@ -3051,6 +3065,7 @@ func (h *Handler) BlockPartyUser(w http.ResponseWriter, r *http.Request) {
 
 // UnblockPartyUser handles POST /api/v1/parties/{id}/members/{user_id}/unblock
 func (h *Handler) UnblockPartyUser(w http.ResponseWriter, r *http.Request) {
+	// 1. Extract and validate party ID URL parameter
 	idStr := chi.URLParam(r, "id")
 	partyID, err := strconv.ParseInt(idStr, 10, 16)
 	if err != nil {
@@ -3058,6 +3073,7 @@ func (h *Handler) UnblockPartyUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 2. Extract and validate target user ID URL parameter
 	userIDStr := chi.URLParam(r, "user_id")
 	userID, err := strconv.ParseInt(userIDStr, 10, 64)
 	if err != nil {
@@ -3065,12 +3081,41 @@ func (h *Handler) UnblockPartyUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.partiesService.UnblockPartyUser(r.Context(), int16(partyID), userID)
+	// 3. Verify user authentication claims
+	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
+	if !ok || claims == nil {
+		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	// 4. Verify caller's administrative permission to unblock target member
+	allowed, _, err := h.permissionsService.CheckPartyMemberSuspensionPermission(claims, int16(partyID), userID)
+	if !allowed {
+		h.utils.RespondError(w, http.StatusForbidden, err.Error())
+		return
+	}
+
+	// 5. Decode optional request payload (e.g. reason)
+	var req struct {
+		Reason *string `json:"reason"`
+	}
+	if r.Body != nil && r.ContentLength > 0 {
+		_ = json.NewDecoder(r.Body).Decode(&req)
+	}
+
+	// 6. Execute member unblock via service
+	err = h.partiesService.UnblockPartyUser(r.Context(), partiesservice.UnblockPartyUserInput{
+		PartyID:     int16(partyID),
+		UserID:      userID,
+		UnblockedBy: &claims.UserID,
+		Reason:      req.Reason,
+	})
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
+	// 7. Return success response
 	h.utils.RespondSuccess(w, http.StatusOK, "User unblocked from party successfully", nil)
 }
 
