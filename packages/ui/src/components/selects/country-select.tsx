@@ -25,7 +25,7 @@ interface CountriesResponse {
 }
 
 export const SelectCountry = ({
-  align = "start", update, errorMsg, selectedId, className, disabled, fetchCountries,
+  align = "start", update, errorMsg, selectedId, className, disabled, fetchCountries, showAll, size = "select",
 }: SelectProps<Country, number | string> & {
   fetchCountries: () => Promise<any>;
 }) => {
@@ -69,6 +69,12 @@ export const SelectCountry = ({
     setOpen(false);
   };
 
+  const handleSelectAll = () => {
+    setSelectedItem(undefined);
+    update(undefined as any);
+    setOpen(false);
+  };
+
   const filteredCountries = countries.filter((c) =>
     c.name.toLowerCase().includes(desktopSearch.toLowerCase()),
   );
@@ -98,6 +104,8 @@ export const SelectCountry = ({
     </span>
   );
 
+  const isSmall = size === "sm" || size === "xs";
+
   if (isLoading && countries.length === 0) {
     return (
       <LoadingSelect
@@ -105,7 +113,10 @@ export const SelectCountry = ({
         setOpen={setOpen}
         errorMsg={errorMsg}
         placeholder="Country"
-        className={className}
+        className={cn(
+          isSmall && "h-9 md:h-9 text-[13px] md:text-[13px] px-3 rounded-lg ring-0 md:ring-0",
+          className,
+        )}
         align={align}
       />
     );
@@ -121,9 +132,11 @@ export const SelectCountry = ({
       trigger={
         <Button
           variant="select"
-          size="select"
+          size={isSmall ? "default" : size}
           className={cn(
             "justify-between w-full gap-2",
+            isSmall &&
+              "h-9 md:h-9 px-3 md:px-3 text-[13px] md:text-[13px] font-normal rounded-lg md:rounded-lg ring-0 md:ring-0 border border-[#d1d5db] bg-white shadow-none hover:shadow-none hover:border-[#ff9a3c]",
             errorMsg && "border-0.8 border-red",
             className,
           )}
@@ -135,16 +148,23 @@ export const SelectCountry = ({
               <span className="country shrink-0">
                 <img
                   src={`https://flagcdn.com/w40/${selectedItem.iso2.toLowerCase()}.png`}
-                  width="23"
+                  width={isSmall ? "18" : "23"}
                   alt=""
+                  className="rounded-xs"
                 />
               </span>
             )}
             <p className="whitespace-nowrap text-left truncate font-normal">
-              {selectedItem ? selectedItem.name : "Select Country"}
+              {selectedItem
+                ? selectedItem.name
+                : showAll
+                  ? "All countries"
+                  : "Select Country"}
             </p>
           </div>
-          <ArrowDownIcon className="ml-auto shrink-0 text-c-80" />
+          <ArrowDownIcon
+            className={cn("ml-auto shrink-0 text-c-80", isSmall ? "size-3.5" : "size-4")}
+          />
         </Button>
       }
       desktopContent={
@@ -156,6 +176,8 @@ export const SelectCountry = ({
           handleSelect={handleSelect}
           selectedId={currentSelectedId}
           onSearch={setDesktopSearch}
+          showAll={showAll}
+          onSelectAll={handleSelectAll}
         />
       }
       mobileContent={
@@ -168,6 +190,8 @@ export const SelectCountry = ({
           selectedId={currentSelectedId}
           searchValue={mobileSearch}
           onSearch={setMobileSearch}
+          showAll={showAll}
+          onSelectAll={handleSelectAll}
         />
       }
     />

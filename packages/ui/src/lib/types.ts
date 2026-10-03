@@ -30,12 +30,13 @@ export type BulletProps<T, TID = string | number> = {
   numberOfItems?: number;
   readOnly?: boolean;
   align?: "start" | "center" | "end";
-  showAll?: boolean;
+  showAll?: boolean | string;
   showNone?: boolean;
 };
 
 export type SelectProps<T, TID = string> = {
   className?: string;
+  size?: "select" | "sm" | "xs" | "default";
 } & BulletProps<T, TID>;
 
 export type DropdownProp<T> = {

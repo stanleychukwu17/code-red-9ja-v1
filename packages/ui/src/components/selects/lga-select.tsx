@@ -36,6 +36,7 @@ export const SelectLga = ({
   align = "start",
   fetchLGAs,
   showAll,
+  size = "select",
 }: SelectProps<Lga, number | string> & {
   stateId?: number;
   fetchLGAs: (args: {
@@ -114,6 +115,8 @@ export const SelectLga = ({
   const getId = (item: Lga) => `${item.id}`;
   const getName = (item: Lga) => item.name;
 
+  const isSmall = size === "sm" || size === "xs";
+
   if (lgas.length === 0 && isLoading && !disabled && stateId) {
     return (
       <LoadingSelect
@@ -121,7 +124,10 @@ export const SelectLga = ({
         setOpen={setOpen}
         errorMsg={errorMsg}
         placeholder="Select LGA"
-        className={className}
+        className={cn(
+          isSmall && "h-9 md:h-9 text-[13px] md:text-[13px] px-3 rounded-lg ring-0 md:ring-0",
+          className,
+        )}
         align={align}
       />
     );
@@ -137,13 +143,21 @@ export const SelectLga = ({
       trigger={
         <Button
           variant="select"
-          size="select"
-          className={cn("justify-between w-full gap-2", hasError && "border-0.8 border-red", className)}
+          size={isSmall ? "default" : size}
+          className={cn(
+            "justify-between w-full gap-2",
+            isSmall &&
+              "h-9 md:h-9 px-3 md:px-3 text-[13px] md:text-[13px] font-normal rounded-lg md:rounded-lg ring-0 md:ring-0 border border-[#d1d5db] bg-white shadow-none hover:shadow-none hover:border-[#ff9a3c]",
+            hasError && "border-0.8 border-red",
+            className,
+          )}
           type="button"
           disabled={disabled || !stateId}
         >
           <p className="whitespace-normal text-left line-clamp-1">{displayText}</p>
-          <ArrowDownIcon className="ml-auto text-c-80" />
+          <ArrowDownIcon
+            className={cn("ml-auto text-c-80", isSmall ? "size-3.5" : "size-4")}
+          />
         </Button>
       }
       desktopContent={

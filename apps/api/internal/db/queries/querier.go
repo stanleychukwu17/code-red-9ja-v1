@@ -441,6 +441,7 @@ type Querier interface {
 	ListVerificationTypes(ctx context.Context) ([]PageVerificationType, error)
 	ListWalletTransactions(ctx context.Context, arg ListWalletTransactionsParams) ([]PartyWalletTransaction, error)
 	ListWardSupervisorPerformanceStats(ctx context.Context, arg ListWardSupervisorPerformanceStatsParams) ([]ListWardSupervisorPerformanceStatsRow, error)
+	ListZones(ctx context.Context) ([]CZonesNigerium, error)
 	MarkAgentEarningsPaid(ctx context.Context, id int64) (AgentEarning, error)
 	MarkAllNotificationsAsRead(ctx context.Context, recipientUserID int64) error
 	MarkNotificationAsRead(ctx context.Context, arg MarkNotificationAsReadParams) (Notification, error)

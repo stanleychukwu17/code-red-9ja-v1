@@ -14,6 +14,10 @@ WHERE id = $1 and state_id = $2 LIMIT 1;
 SELECT id, name, iso2, phonecode FROM c_countries
 ORDER BY name ASC;
 
+-- name: ListZones :many
+SELECT id, name, state_ids FROM c_zones_nigeria
+ORDER BY id ASC;
+
 -- name: ListAllStates :many
 SELECT * FROM c_states
 ORDER BY name ASC;

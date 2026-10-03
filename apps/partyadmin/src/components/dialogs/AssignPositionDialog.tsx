@@ -13,9 +13,9 @@ import {
   DialogFooter,
 } from "@repo/ui/components/dialog";
 import { Button } from "@repo/ui/components/button";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2, UserCheck, ShieldCheck, MapPin, Search } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import {
   getPartyPositions,
   resolvePartyChapter,
@@ -25,6 +25,14 @@ import {
 import { getStates } from "#/lib/server/countries";
 import { getLGAs, getWards } from "#/lib/server/applications";
 import { getUsersList } from "#/lib/server/users";
+import {
+  ChapterHierarchySection,
+  PositionSelectSection,
+  MemberSearchSection,
+  AppointmentDetailsSection,
+  type ChapterType,
+  type AppointmentType,
+} from "./assign-position";
 
 export function AssignPositionDialog({
   open,
@@ -40,7 +48,7 @@ export function AssignPositionDialog({
   const queryClient = useQueryClient();
 
   // Step 1: Chapter Hierarchy Selection
-  const [chapterType, setChapterType] = React.useState<"national" | "zonal" | "state" | "lga" | "ward">("national");
+  const [chapterType, setChapterType] = React.useState<ChapterType>("national");
   const [selectedStateId, setSelectedStateId] = React.useState<number | undefined>(undefined);
   const [selectedLgaId, setSelectedLgaId] = React.useState<number | undefined>(undefined);
   const [selectedWardId, setSelectedWardId] = React.useState<number | undefined>(undefined);
@@ -52,7 +60,7 @@ export function AssignPositionDialog({
   const [selectedUserName, setSelectedUserName] = React.useState<string>("");
 
   // Step 3: Appointment Details
-  const [appointmentType, setAppointmentType] = React.useState<"substantive" | "acting" | "caretaker" | "interim">("substantive");
+  const [appointmentType, setAppointmentType] = React.useState<AppointmentType>("substantive");
   const [tenureStart, setTenureStart] = React.useState<string>(
     new Date().toISOString().split("T")[0] || ""
   );
@@ -111,7 +119,7 @@ export function AssignPositionDialog({
   const membersList = Array.isArray(membersRes?.data?.users) ? membersRes.data.users : [];
 
   // Reset dependent fields when chapterType changes
-  const handleChapterTypeChange = (type: "national" | "zonal" | "state" | "lga" | "ward") => {
+  const handleChapterTypeChange = (type: ChapterType) => {
     setChapterType(type);
     setSelectedStateId(undefined);
     setSelectedLgaId(undefined);
@@ -228,236 +236,67 @@ export function AssignPositionDialog({
         />
 
         <DialogPadding className="space-y-6 py-4">
-          {/* Chapter Level Selector */}
-          <div>
-            <label className="block text-[14px] font-semibold text-c-80 mb-2">
-              1. Select Chapter Tier
-            </label>
-            <div className="grid grid-cols-5 gap-2">
-              {(["national", "zonal", "state", "lga", "ward"] as const).map((tier) => (
-                <button
-                  key={tier}
-                  type="button"
-                  onClick={() => handleChapterTypeChange(tier)}
-                  className={`py-2 px-3 text-[13px] font-medium rounded-xl border transition capitalize ${
-                    chapterType === tier
-                      ? "bg-[#ff9a3c] text-white border-[#ff9a3c] shadow-sm"
-                      : "bg-[#f9fafb] text-c-70 border-[#e5e7eb] hover:bg-[#f3f4f6]"
-                  }`}
-                >
-                  {tier}
-                </button>
-              ))}
-            </div>
-          </div>
+          {/* Step 1: Chapter Hierarchy Selection */}
+          <ChapterHierarchySection
+            chapterType={chapterType}
+            onChapterTypeChange={handleChapterTypeChange}
+            selectedStateId={selectedStateId}
+            onStateChange={handleStateChange}
+            selectedLgaId={selectedLgaId}
+            onLgaChange={handleLgaChange}
+            selectedWardId={selectedWardId}
+            onWardChange={setSelectedWardId}
+            statesList={statesList}
+            lgasList={lgasList}
+            wardsList={wardsList}
+          />
 
-          {/* Geographic Entity Pickers (State / LGA / Ward) */}
-          {["state", "lga", "ward"].includes(chapterType) && (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 bg-[#fbfbfb] rounded-xl border border-[#ebebeb]">
-              <div>
-                <label className="block text-[12px] font-medium text-c-60 mb-1">State</label>
-                <select
-                  value={selectedStateId || ""}
-                  onChange={(e) => handleStateChange(Number(e.target.value))}
-                  className="w-full h-10 px-3 text-[14px] rounded-lg border border-[#d1d5db] bg-white focus:outline-none focus:ring-1 focus:ring-[#ff9a3c]"
-                >
-                  <option value="">Select State</option>
-                  {statesList.map((s: any) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+          {/* Step 2: Position Selection */}
+          <PositionSelectSection
+            chapterType={chapterType}
+            positions={positions}
+            isLoading={isPositionsLoading}
+            selectedPositionId={selectedPositionId}
+            onSelectPosition={setSelectedPositionId}
+          />
 
-              {["lga", "ward"].includes(chapterType) && (
-                <div>
-                  <label className="block text-[12px] font-medium text-c-60 mb-1">LGA</label>
-                  <select
-                    value={selectedLgaId || ""}
-                    onChange={(e) => handleLgaChange(Number(e.target.value))}
-                    disabled={!selectedStateId}
-                    className="w-full h-10 px-3 text-[14px] rounded-lg border border-[#d1d5db] bg-white focus:outline-none focus:ring-1 focus:ring-[#ff9a3c] disabled:opacity-50"
-                  >
-                    <option value="">Select LGA</option>
-                    {lgasList.map((l: any) => (
-                      <option key={l.id} value={l.id}>
-                        {l.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
+          {/* Step 3: Member Selection */}
+          <MemberSearchSection
+            searchQuery={memberSearch}
+            onSearchChange={setMemberSearch}
+            selectedUserId={selectedUserId}
+            selectedUserName={selectedUserName}
+            onSelectMember={(user) => {
+              setSelectedUserId(user.id);
+              setSelectedUserName(user.name);
+            }}
+            onClearMember={() => {
+              setSelectedUserId(undefined);
+              setSelectedUserName("");
+            }}
+            membersList={membersList}
+            isLoading={isMembersLoading}
+          />
 
-              {chapterType === "ward" && (
-                <div>
-                  <label className="block text-[12px] font-medium text-c-60 mb-1">Ward</label>
-                  <select
-                    value={selectedWardId || ""}
-                    onChange={(e) => setSelectedWardId(Number(e.target.value))}
-                    disabled={!selectedLgaId}
-                    className="w-full h-10 px-3 text-[14px] rounded-lg border border-[#d1d5db] bg-white focus:outline-none focus:ring-1 focus:ring-[#ff9a3c] disabled:opacity-50"
-                  >
-                    <option value="">Select Ward</option>
-                    {wardsList.map((w: any) => (
-                      <option key={w.id} value={w.id}>
-                        {w.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Position Selector */}
-          <div>
-            <label className="block text-[14px] font-semibold text-c-80 mb-2">
-              2. Select Position / Office
-            </label>
-            {isPositionsLoading ? (
-              <div className="flex items-center gap-2 text-c-50 text-[14px] py-2">
-                <Loader2 className="size-4 animate-spin" /> Loading positions...
-              </div>
-            ) : positions.length === 0 ? (
-              <p className="text-[13px] text-amber-600 bg-amber-50 p-3 rounded-lg">
-                No positions configured for the {chapterType} level.
-              </p>
-            ) : (
-              <select
-                value={selectedPositionId || ""}
-                onChange={(e) => setSelectedPositionId(Number(e.target.value))}
-                className="w-full h-11 px-3 text-[14px] rounded-xl border border-[#d1d5db] bg-white focus:outline-none focus:ring-1 focus:ring-[#ff9a3c]"
-              >
-                <option value="">Choose a position...</option>
-                {positions.map((pos) => (
-                  <option key={pos.id} value={pos.id}>
-                    {pos.name} ({pos.position_type === "custom" ? "Custom" : "Standard"} - Max: {pos.max_occupants})
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
-
-          {/* Member Picker */}
-          <div>
-            <label className="block text-[14px] font-semibold text-c-80 mb-2">
-              3. Select Party Member
-            </label>
-            <div className="relative mb-2">
-              <Search className="size-4 text-c-40 absolute left-3 top-3.5" />
-              <input
-                type="text"
-                value={memberSearch}
-                onChange={(e) => setMemberSearch(e.target.value)}
-                placeholder="Search member by name, username or email..."
-                className="w-full h-10 pl-9 pr-3 text-[14px] rounded-xl border border-[#d1d5db] bg-white focus:outline-none focus:ring-1 focus:ring-[#ff9a3c]"
-              />
-            </div>
-
-            {selectedUserId && (
-              <div className="flex items-center justify-between p-2.5 mb-2 bg-[#f0fdf4] border border-[#bbf7d0] rounded-xl text-[13px] text-[#166534]">
-                <span>Selected: <strong>{selectedUserName}</strong></span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedUserId(undefined);
-                    setSelectedUserName("");
-                  }}
-                  className="text-red-500 hover:text-red-700 font-medium"
-                >
-                  Clear
-                </button>
-              </div>
-            )}
-
-            <div className="max-h-36 overflow-y-auto rounded-xl border border-[#e5e7eb] divide-y divide-[#f3f4f6]">
-              {isMembersLoading ? (
-                <div className="p-3 text-center text-[13px] text-c-40">Loading members...</div>
-              ) : membersList.length === 0 ? (
-                <div className="p-3 text-center text-[13px] text-c-40">No members found.</div>
-              ) : (
-                membersList.map((user: any) => {
-                  const name = [user.first_name, user.middle_name, user.last_name].filter(Boolean).join(" ") || user.username || "User #" + user.id;
-                  const isSelected = selectedUserId === user.id;
-                  return (
-                    <div
-                      key={user.id}
-                      onClick={() => {
-                        setSelectedUserId(user.id);
-                        setSelectedUserName(name);
-                      }}
-                      className={`flex items-center justify-between p-2.5 cursor-pointer text-[13px] transition ${
-                        isSelected ? "bg-[#fff7ed] text-[#ea580c]" : "hover:bg-[#f9fafb] text-c-80"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 truncate">
-                        <div className="size-6 rounded-full bg-gray-200 text-[11px] font-bold flex items-center justify-center shrink-0">
-                          {user.first_name?.charAt(0) || "U"}
-                        </div>
-                        <span className="font-medium truncate">{name}</span>
-                        {user.username && <span className="text-c-40 truncate">@{user.username}</span>}
-                      </div>
-                      <span className="text-[12px] text-c-40 capitalize">{user.membership_status || user.account_status || "Active"}</span>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-
-          {/* Appointment Type & Tenure Dates */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-[13px] font-semibold text-c-70 mb-1">
-                Appointment Type
-              </label>
-              <select
-                value={appointmentType}
-                onChange={(e) => setAppointmentType(e.target.value as any)}
-                className="w-full h-10 px-3 text-[13px] rounded-xl border border-[#d1d5db] bg-white focus:outline-none focus:ring-1 focus:ring-[#ff9a3c]"
-              >
-                <option value="substantive">Substantive (Permanent)</option>
-                <option value="acting">Acting</option>
-                <option value="caretaker">Caretaker</option>
-                <option value="interim">Interim</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-[13px] font-semibold text-c-70 mb-1">
-                Tenure Start
-              </label>
-              <input
-                type="date"
-                value={tenureStart}
-                onChange={(e) => setTenureStart(e.target.value)}
-                className="w-full h-10 px-3 text-[13px] rounded-xl border border-[#d1d5db] bg-white focus:outline-none focus:ring-1 focus:ring-[#ff9a3c]"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[13px] font-semibold text-c-70 mb-1">
-                Tenure End <span className="text-c-40 font-normal">(Optional)</span>
-              </label>
-              <input
-                type="date"
-                value={tenureEnd}
-                onChange={(e) => setTenureEnd(e.target.value)}
-                className="w-full h-10 px-3 text-[13px] rounded-xl border border-[#d1d5db] bg-white focus:outline-none focus:ring-1 focus:ring-[#ff9a3c]"
-              />
-            </div>
-          </div>
+          {/* Step 4: Appointment Details & Tenure */}
+          <AppointmentDetailsSection
+            appointmentType={appointmentType}
+            onAppointmentTypeChange={setAppointmentType}
+            tenureStart={tenureStart}
+            onTenureStartChange={setTenureStart}
+            tenureEnd={tenureEnd}
+            onTenureEndChange={setTenureEnd}
+          />
         </DialogPadding>
 
-        <DialogFooter className="flex items-center justify-end gap-3 p-4 border-t border-[#ebebeb]">
+        <DialogFooter className="flex items-center justify-end gap-3 p-4 border-t border-border">
           <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
             Cancel
           </Button>
           <Button
+            variant="orange"
             onClick={handleAssign}
             disabled={isSubmitting || !selectedPositionId || !selectedUserId}
-            className="bg-[#ff9a3c] hover:bg-[#e0832c] text-white"
           >
             {isSubmitting ? (
               <>

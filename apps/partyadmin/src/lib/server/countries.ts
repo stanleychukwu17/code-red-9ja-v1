@@ -94,3 +94,20 @@ export const getStateConstituencies = createServerFn()
       return { status: "failed", error: "Failed to fetch state constituencies from API" };
     }
   });
+
+export const getZones = createServerFn().handler(async () => {
+  return {
+    success: true,
+    message: "Geopolitical zones fetched successfully",
+    data: {
+      zones: [
+        { id: 1, name: "North West" },
+        { id: 2, name: "North East" },
+        { id: 3, name: "North Central" },
+        { id: 4, name: "South West" },
+        { id: 5, name: "South East" },
+        { id: 6, name: "South South" },
+      ],
+    },
+  };
+});

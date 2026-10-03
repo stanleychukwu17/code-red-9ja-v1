@@ -9,115 +9,116 @@ import { LoadingSelect } from "./loading-select";
 import { useQuery } from "@tanstack/react-query";
 import ArrowDownIcon from "../../icons/arrow-down-icon";
 
-export interface State {
+export interface Zone {
   id: number;
   name: string;
 }
 
-interface StatesResponse {
+interface ZonesResponse {
   success: boolean;
   message: string;
   data: {
-    states: State[];
+    zones: Zone[];
   };
 }
 
-export const SelectState = ({
+export const SelectZone = ({
   update,
   errorMsg,
   selectedId,
   disabled,
-  countryOriginalId = 161, // Nigeria
   className,
   align = "start",
-  fetchStates,
+  fetchZones,
   showAll,
   size = "select",
-}: SelectProps<State, number | string> & {
-  countryOriginalId?: number;
-  fetchStates: (args: {
-    data: { countryId: number; limit?: number; cursor?: string };
-  }) => Promise<any>;
+}: SelectProps<Zone, number | string> & {
+  fetchZones: () => Promise<any>;
 }) => {
   const [open, setOpen] = useState(false);
   const [desktopSearch, setDesktopSearch] = useState("");
   const [mobileSearch, setMobileSearch] = useState("");
-  const [selectedItem, setSelectedItem] = useState<State | undefined>(
-    undefined,
-  );
+  const [selectedItem, setSelectedItem] = useState<Zone | undefined>(undefined);
 
-  const { data, isLoading } = useQuery<StatesResponse>({
-    queryKey: ["states", countryOriginalId],
+  const { data, isLoading } = useQuery<ZonesResponse>({
+    queryKey: ["geopolitical_zones"],
     queryFn: async () => {
-      const res = await fetchStates({ data: { countryId: countryOriginalId! } });
+      const res = await fetchZones();
       if (res && res.success && res.data) {
         return res;
       }
-      throw new Error(res?.message || "Failed to fetch states");
+      throw new Error(res?.message || "Failed to fetch geopolitical zones");
     },
     staleTime: Infinity,
-    enabled: !!countryOriginalId,
   });
 
-  const states = data?.data?.states || [];
+  const zones = data?.data?.zones || [];
 
   useEffect(() => {
     if (selectedId) {
-      const state = states.find((s) => String(s.id) === String(selectedId));
-      if (state) setSelectedItem(state);
+      const zone = zones.find(
+        (z) =>
+          String(z.id) === String(selectedId) ||
+          z.name.toLowerCase() === String(selectedId).toLowerCase(),
+      );
+      if (zone) setSelectedItem(zone);
     } else {
       setSelectedItem(undefined);
     }
-  }, [selectedId, states]);
+  }, [selectedId, zones]);
 
-  useEffect(() => {
-    if (!open) setMobileSearch("");
-  }, [open]);
-
-  const handleStateSelect = (state: State) => {
-    setSelectedItem(state);
-    update(state);
+  const handleZoneSelect = (zone: Zone) => {
+    setSelectedItem(zone);
+    update(zone);
     setOpen(false);
+    setDesktopSearch("");
+    setMobileSearch("");
   };
 
   const handleSelectAll = () => {
     setSelectedItem(undefined);
     update(undefined as any);
     setOpen(false);
+    setDesktopSearch("");
+    setMobileSearch("");
   };
 
-  const filteredStates = states.filter((s) =>
-    s.name.toLowerCase().includes(desktopSearch.toLowerCase()),
-  );
-  const mobileFiltered = states.filter((s) =>
-    s.name.toLowerCase().includes(mobileSearch.toLowerCase()),
+  const filteredZones = zones.filter((z) =>
+    z.name.toLowerCase().includes(desktopSearch.toLowerCase()),
   );
 
-  const displayText =
-    selectedItem?.name ||
-    (isLoading && !selectedItem
-      ? "Loading..."
-      : showAll
-        ? "All states"
-        : "Select state");
-  const hasError = Boolean(errorMsg);
+  const mobileFiltered = zones.filter((z) =>
+    z.name.toLowerCase().includes(mobileSearch.toLowerCase()),
+  );
+
+  const getId = (item: Zone) => `${item.id}`;
+  const getName = (item: Zone) => item.name;
+
   const currentSelectedId = selectedItem?.id
     ? `${selectedItem.id}`
     : selectedId
       ? `${selectedId}`
       : undefined;
-  const getId = (item: State) => `${item.id}`;
-  const getName = (item: State) => item.name;
+
+  const hasError = !!errorMsg;
+
+  const displayText = selectedItem
+    ? selectedItem.name
+    : showAll
+      ? typeof showAll === "string"
+        ? showAll
+        : "All Zones"
+      : "Select Zone";
 
   const isSmall = size === "sm" || size === "xs";
 
-  if (states.length === 0 && isLoading && !disabled) {
+  if (isLoading && zones.length === 0) {
     return (
       <LoadingSelect
         open={open}
         setOpen={setOpen}
         errorMsg={errorMsg}
-        placeholder="Select state"
+        placeholder="Select Zone"
         className={cn(
           isSmall && "h-9 md:h-9 text-[13px] md:text-[13px] px-3 rounded-lg ring-0 md:ring-0",
           className,
@@ -131,7 +132,7 @@ export const SelectState = ({
     <SelectResponsiveWrapper
       open={open}
       onOpenChange={setOpen}
-      placeholder="Select state"
+      placeholder="Select Zone"
       align={align}
       className={className}
       trigger={
@@ -158,10 +159,10 @@ export const SelectState = ({
       }
       desktopContent={
         <GeneralCommand
-          data={filteredStates}
+          data={filteredZones}
           getId={getId}
           getName={getName}
-          handleSelect={handleStateSelect}
+          handleSelect={handleZoneSelect}
           selectedId={currentSelectedId}
           onSearch={setDesktopSearch}
           showAll={showAll}
@@ -173,7 +174,7 @@ export const SelectState = ({
           data={mobileFiltered}
           getId={getId}
           getName={getName}
-          handleSelect={handleStateSelect}
+          handleSelect={handleZoneSelect}
           selectedId={currentSelectedId}
           searchValue={mobileSearch}
           onSearch={setMobileSearch}

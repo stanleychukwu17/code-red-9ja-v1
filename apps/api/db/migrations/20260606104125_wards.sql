@@ -19,12 +19,11 @@ CREATE TABLE IF NOT EXISTS wards (
     polling_units_count INTEGER DEFAULT 0
 );
 
-CREATE INDEX idx_wards_name ON wards (name);
-CREATE INDEX idx_wards_lga_id ON wards (lga_id);
+CREATE INDEX idx_wards_lga_id_name ON wards (lga_id, name);
+CREATE INDEX idx_wards_state_id_name ON wards (state_id, name);
 CREATE INDEX idx_wards_senatorial_district_id ON wards (senatorial_district_id);
 CREATE INDEX idx_wards_federal_constituency_id ON wards (federal_constituency_id);
 CREATE INDEX idx_wards_state_constituency_id ON wards (state_constituency_id);
-CREATE INDEX idx_wards_state_id ON wards (state_id);
 
 -- SEED DATA START
 INSERT INTO wards (id, name, code, lga_id, lga_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, state_constituency_id, state_constituency_name, state_id, state_name, status, mongo_id) VALUES
@@ -8866,10 +8865,9 @@ ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, code = EXCLUDED.code, lga_i
 -- SEED DATA END
 
 -- +goose Down
-DROP INDEX IF EXISTS idx_wards_name;
-DROP INDEX IF EXISTS idx_wards_lga_id;
+DROP INDEX IF EXISTS idx_wards_lga_id_name;
+DROP INDEX IF EXISTS idx_wards_state_id_name;
 DROP INDEX IF EXISTS idx_wards_senatorial_district_id;
 DROP INDEX IF EXISTS idx_wards_federal_constituency_id;
 DROP INDEX IF EXISTS idx_wards_state_constituency_id;
-DROP INDEX IF EXISTS idx_wards_state_id;
 DROP TABLE IF EXISTS wards;

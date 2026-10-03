@@ -452,21 +452,23 @@ LEFT JOIN lgas ON lgas.id = party_chapters.lga_id AND party_chapters.chapter_typ
 LEFT JOIN wards ON wards.id = party_chapters.ward_id AND party_chapters.chapter_type = 'ward'
 WHERE party_position_assignments.party_id = $1
   AND ($2::varchar IS NULL OR party_chapters.chapter_type = $2)
-  AND ($3::smallint IS NULL OR party_chapters.state_id = $3)
-  AND ($4::int IS NULL OR party_chapters.lga_id = $4)
-  AND ($5::int IS NULL OR party_chapters.ward_id = $5)
-  AND ($6::varchar IS NULL OR party_position_assignments.status = $6)
-  AND ($7::varchar IS NULL OR 
-       users.first_name ILIKE '%' || $7 || '%' OR 
-       users.last_name ILIKE '%' || $7 || '%' OR 
-       users.username ILIKE '%' || $7 || '%' OR 
-       party_positions.name ILIKE '%' || $7 || '%')
+  AND ($3::smallint IS NULL OR party_chapters.zonal_id = $3)
+  AND ($4::smallint IS NULL OR party_chapters.state_id = $4)
+  AND ($5::int IS NULL OR party_chapters.lga_id = $5)
+  AND ($6::int IS NULL OR party_chapters.ward_id = $6)
+  AND ($7::varchar IS NULL OR party_position_assignments.status = $7)
+  AND ($8::varchar IS NULL OR 
+       users.first_name ILIKE '%' || $8 || '%' OR 
+       users.last_name ILIKE '%' || $8 || '%' OR 
+       users.username ILIKE '%' || $8 || '%' OR 
+       party_positions.name ILIKE '%' || $8 || '%')
 ORDER BY party_chapters.chapter_type ASC, party_positions.rank_order ASC, party_position_assignments.tenure_start DESC
 `
 
 type ListPartyOfficialsParams struct {
 	PartyID     int16       `json:"party_id"`
 	ChapterType pgtype.Text `json:"chapter_type"`
+	ZonalID     pgtype.Int2 `json:"zonal_id"`
 	StateID     pgtype.Int2 `json:"state_id"`
 	LgaID       pgtype.Int4 `json:"lga_id"`
 	WardID      pgtype.Int4 `json:"ward_id"`
@@ -502,6 +504,7 @@ func (q *Queries) ListPartyOfficials(ctx context.Context, arg ListPartyOfficials
 	rows, err := q.db.Query(ctx, listPartyOfficials,
 		arg.PartyID,
 		arg.ChapterType,
+		arg.ZonalID,
 		arg.StateID,
 		arg.LgaID,
 		arg.WardID,

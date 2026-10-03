@@ -37,6 +37,7 @@ export const SelectWard = ({
   align = "start",
   fetchWards,
   showAll,
+  size = "select",
 }: SelectProps<Ward, number | string> & {
   lgaId?: number;
   stateId?: number;
@@ -161,6 +162,8 @@ export const SelectWard = ({
   const getId = (item: Ward) => `${item.id}`;
   const getName = (item: Ward) => item.name;
 
+  const isSmall = size === "sm" || size === "xs";
+
   if (wards.length === 0 && isLoading && !disabled && lgaId) {
     return (
       <LoadingSelect
@@ -168,7 +171,10 @@ export const SelectWard = ({
         setOpen={setOpen}
         errorMsg={errorMsg}
         placeholder="Select Ward"
-        className={className}
+        className={cn(
+          isSmall && "h-9 md:h-9 text-[13px] md:text-[13px] px-3 rounded-lg ring-0 md:ring-0",
+          className,
+        )}
         align={align}
       />
     );
@@ -184,9 +190,11 @@ export const SelectWard = ({
       trigger={
         <Button
           variant="select"
-          size="select"
+          size={isSmall ? "default" : size}
           className={cn(
             "justify-between w-full gap-2",
+            isSmall &&
+              "h-9 md:h-9 px-3 md:px-3 text-[13px] md:text-[13px] font-normal rounded-lg md:rounded-lg ring-0 md:ring-0 border border-[#d1d5db] bg-white shadow-none hover:shadow-none hover:border-[#ff9a3c]",
             hasError && "border-0.8 border-red",
             className,
           )}
@@ -196,7 +204,9 @@ export const SelectWard = ({
           <p className="whitespace-normal text-left line-clamp-1">
             {displayText}
           </p>
-          <ArrowDownIcon className="ml-auto text-c-80" />
+          <ArrowDownIcon
+            className={cn("ml-auto text-c-80", isSmall ? "size-3.5" : "size-4")}
+          />
         </Button>
       }
       desktopContent={

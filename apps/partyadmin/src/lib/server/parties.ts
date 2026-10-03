@@ -530,6 +530,8 @@ export const getPartyOfficials = createServerFn({ method: "GET" })
     (data: {
       partyId: number | string;
       chapterType?: string;
+      countryId?: number;
+      zonalId?: number;
       stateId?: number;
       lgaId?: number;
       wardId?: number;
@@ -542,6 +544,8 @@ export const getPartyOfficials = createServerFn({ method: "GET" })
       const response = await apiFetch(
         API_URL.partyOfficials(data.partyId, {
           chapter_type: data.chapterType,
+          country_id: data.countryId,
+          zonal_id: data.zonalId,
           state_id: data.stateId,
           lga_id: data.lgaId,
           ward_id: data.wardId,

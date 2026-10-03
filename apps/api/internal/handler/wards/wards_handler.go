@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"free9ja/api/internal/db/queries"
+	wardsservice "free9ja/api/internal/service/wards"
 	"free9ja/api/internal/utils"
 	"net/http"
 	"sort"
@@ -13,9 +14,9 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 type WardsService interface {
-	CreateWard(ctx context.Context, name string, code string, lgaID int32, lgaName string, stateID int32, stateName string) (queries.Ward, error)
+	CreateWard(ctx context.Context, params wardsservice.CreateWardParams) (queries.Ward, error)
 	GetWardByID(ctx context.Context, id int32) (queries.Ward, error)
-	UpdateWard(ctx context.Context, id int32, name string, code string, lgaID int32, lgaName string, stateID int32, stateName string) (queries.Ward, error)
+	UpdateWard(ctx context.Context, params wardsservice.UpdateWardParams) (queries.Ward, error)
 	DeleteWard(ctx context.Context, id int32) error
 	GetWards(ctx context.Context, localGovernmentID, stateID int32) ([]queries.Ward, error)
 }
@@ -92,12 +93,14 @@ func (h *Handler) CreateWard(w http.ResponseWriter, r *http.Request) {
 
 	ward, err := h.wardService.CreateWard(
 		r.Context(),
-		req.Name,
-		req.Code,
-		req.LgaID,
-		lga.Name,
-		req.StateID,
-		state.Name,
+		wardsservice.CreateWardParams{
+			Name:      req.Name,
+			Code:      req.Code,
+			LgaID:     req.LgaID,
+			LgaName:   lga.Name,
+			StateID:   req.StateID,
+			StateName: state.Name,
+		},
 	)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create ward: "+err.Error())
@@ -200,13 +203,15 @@ func (h *Handler) UpdateWard(w http.ResponseWriter, r *http.Request) {
 
 	updatedWard, err := h.wardService.UpdateWard(
 		r.Context(),
-		int32(id),
-		req.Name,
-		req.Code,
-		req.LgaID,
-		lga.Name,
-		req.StateID,
-		state.Name,
+		wardsservice.UpdateWardParams{
+			ID:        int32(id),
+			Name:      req.Name,
+			Code:      req.Code,
+			LgaID:     req.LgaID,
+			LgaName:   lga.Name,
+			StateID:   req.StateID,
+			StateName: state.Name,
+		},
 	)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update ward: "+err.Error())

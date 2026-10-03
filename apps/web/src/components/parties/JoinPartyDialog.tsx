@@ -1,13 +1,23 @@
+import React, { useState, useMemo } from "react";
 import {
 	Dialog,
 	DialogContent,
-	DialogFooter,
-	DialogHeader,
-	DialogPadding,
+	DialogTitle,
 } from "@repo/ui/components/dialog";
-import { AlertCircle, CheckCircle2, Globe2, Loader2, MapPin, ShieldCheck, UserCheck } from "lucide-react";
-import { Link } from "@tanstack/react-router";
-import { APP_URL } from "#/lib/config";
+import { Loader2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import {
+	getStatesForNigeria,
+	getLGAsByState,
+	getWardsByLGA,
+	type StateItem,
+	type LGAItem,
+	type WardItem,
+} from "#/lib/server/polling_units";
+// import { resolvePartyChapter } from "#/lib/server/parties";
+import { JoinPartyDrillDownHeader, type LevelTier } from "./JoinPartyDrillDownHeader";
+import { JoinPartyChapterCard } from "./JoinPartyChapterCard";
+import { JoinPartyDrillDownFooter } from "./JoinPartyDrillDownFooter";
 
 export type JoinPartyDialogProps = {
 	open: boolean;
@@ -18,7 +28,7 @@ export type JoinPartyDialogProps = {
 	partyLogo?: string;
 	colorHex?: string | null;
 	isJoining: boolean;
-	onConfirmJoin: () => void;
+	onConfirmJoin: (chapterId?: number) => void;
 	userLocation?: {
 		stateName?: string;
 		cityName?: string;
@@ -26,171 +36,293 @@ export type JoinPartyDialogProps = {
 	isAuthenticated?: boolean;
 };
 
-/**
- * JoinPartyDialog
- * 
- * Interactive modal presenting a detailed summary of the party,
- * explaining the membership enrollment (national and local chapter resolution),
- * displaying the user's registered area, and commitment guidelines before confirming.
- */
 export function JoinPartyDialog({
 	open,
 	onOpenChange,
 	partyId,
 	partyName,
-	partyFullName,
 	partyLogo,
-	colorHex,
 	isJoining,
 	onConfirmJoin,
-	userLocation,
-	isAuthenticated = true,
+	userLocation: _userLocation,
+	isAuthenticated: _isAuthenticated = true,
 }: JoinPartyDialogProps) {
-	const brandColor = colorHex || "#16a34a";
-	const displayName = partyFullName || partyName;
+	// Active level tier in the drill-down flow (starts at state level as in design mockup)
+	const [currentLevel, setCurrentLevel] = useState<LevelTier>("state");
+	const [searchQuery, setSearchQuery] = useState("");
+	const [isResolving, setIsResolving] = useState(false);
+
+	// Selections
+	const [selectedState, setSelectedState] = useState<StateItem | null>(null);
+	const [selectedLga, setSelectedLga] = useState<LGAItem | null>(null);
+	const [selectedWard, setSelectedWard] = useState<WardItem | null>(null);
+
+	// 1. Fetch States (National / Nigeria)
+	const { data: statesRes, isLoading: statesLoading } = useQuery({
+		queryKey: ["nigeria-states"],
+		queryFn: () => getStatesForNigeria(),
+		enabled: open,
+	});
+	const states: StateItem[] = statesRes?.data?.states || statesRes?.data || [];
+
+	// 2. Fetch LGAs when state is selected
+	const { data: lgasRes, isLoading: lgasLoading } = useQuery({
+		queryKey: ["lgas", selectedState?.id],
+		queryFn: () =>
+			getLGAsByState({
+				data: { stateId: Number(selectedState?.id) },
+			}),
+		enabled: open && Boolean(selectedState?.id),
+	});
+	const lgas: LGAItem[] = lgasRes?.data?.lgas || lgasRes?.data || [];
+
+	// 3. Fetch Wards when LGA is selected
+	const { data: wardsRes, isLoading: wardsLoading } = useQuery({
+		queryKey: ["wards", selectedLga?.id, selectedState?.id],
+		queryFn: () =>
+			getWardsByLGA({
+				data: {
+					lgaId: Number(selectedLga?.id),
+					stateId: selectedState?.id ? Number(selectedState.id) : undefined,
+				},
+			}),
+		enabled: open && Boolean(selectedLga?.id),
+	});
+	const wards: WardItem[] = wardsRes?.data?.wards || wardsRes?.data || [];
+
+	// Filtered items based on search query
+	const filteredStates = useMemo(() => {
+		if (!searchQuery.trim()) return states;
+		return states.filter((s) =>
+			s.name.toLowerCase().includes(searchQuery.toLowerCase().trim()),
+		);
+	}, [states, searchQuery]);
+
+	const filteredLgas = useMemo(() => {
+		if (!searchQuery.trim()) return lgas;
+		return lgas.filter((l) =>
+			l.name.toLowerCase().includes(searchQuery.toLowerCase().trim()),
+		);
+	}, [lgas, searchQuery]);
+
+	const filteredWards = useMemo(() => {
+		if (!searchQuery.trim()) return wards;
+		return wards.filter((w) =>
+			w.name.toLowerCase().includes(searchQuery.toLowerCase().trim()),
+		);
+	}, [wards, searchQuery]);
+
+	// Handlers for selecting chapters
+	const handleSelectNational = () => {
+		setCurrentLevel("state");
+	};
+
+	const handleSelectState = (state: StateItem) => {
+		setSelectedState(state);
+		setSelectedLga(null);
+		setSelectedWard(null);
+		setSearchQuery("");
+		setCurrentLevel("lga");
+	};
+
+	const handleSelectLga = (lga: LGAItem) => {
+		setSelectedLga(lga);
+		setSelectedWard(null);
+		setSearchQuery("");
+		setCurrentLevel("ward");
+	};
+
+	const handleSelectWard = (ward: WardItem) => {
+		setSelectedWard(ward);
+	};
+
+	// Save & Continue: resolve hierarchy and confirm join
+	const handleSaveAndContinue = async () => {
+		setIsResolving(true);
+
+		const AllSelected = [
+			{ partyId, chapterType: "ward", chapterId: selectedWard?.id },
+			{ partyId, chapterType: "lga", chapterId: selectedLga?.id },
+			{ partyId, chapterType: "state", chapterId: selectedState?.id },
+			{ partyId, chapterType: "national" },
+		]
+		// try {
+		// 	let resolvedChapterId: number | undefined;
+
+		// 	// Hierarchical resolution from most specific to general
+		// 	if (selectedWard) {
+		// 		const res = await resolvePartyChapter({
+		// 			data: { partyId, chapterType: "ward", entityId: selectedWard.id },
+		// 		});
+		// 		if (res?.success && res.data?.chapter_id) {
+		// 			resolvedChapterId = res.data.chapter_id;
+		// 		}
+		// 	} else if (selectedLga) {
+		// 		const res = await resolvePartyChapter({
+		// 			data: { partyId, chapterType: "lga", entityId: selectedLga.id },
+		// 		});
+		// 		if (res?.success && res.data?.chapter_id) {
+		// 			resolvedChapterId = res.data.chapter_id;
+		// 		}
+		// 	} else if (selectedState) {
+		// 		const res = await resolvePartyChapter({
+		// 			data: { partyId, chapterType: "state", entityId: selectedState.id },
+		// 		});
+		// 		if (res?.success && res.data?.chapter_id) {
+		// 			resolvedChapterId = res.data.chapter_id;
+		// 		}
+		// 	} else {
+		// 		const res = await resolvePartyChapter({
+		// 			data: { partyId, chapterType: "national" },
+		// 		});
+		// 		if (res?.success && res.data?.chapter_id) {
+		// 			resolvedChapterId = res.data.chapter_id;
+		// 		}
+		// 	}
+
+		// 	onConfirmJoin(resolvedChapterId);
+		// } catch (err) {
+		// 	console.error("Failed to resolve party chapter:", err);
+		// 	onConfirmJoin();
+		// } finally {
+		// 	setIsResolving(false);
+		// }
+	};
+
+	const isBusy = isJoining || isResolving;
 
 	return (
-		<Dialog open={open} onOpenChange={(val) => !isJoining && onOpenChange(val)}>
-			<DialogContent className="sm:max-w-md p-0 overflow-hidden border border-border shadow-2xl rounded-2xl bg-card">
-				{/* Top Branding Banner */}
-				<div 
-					className="relative h-20 w-full flex items-center justify-between px-6 overflow-hidden"
-					style={{
-						background: `linear-gradient(135deg, ${brandColor}22 0%, ${brandColor}44 100%)`,
-						borderBottom: `2px solid ${brandColor}40`,
-					}}
-				>
-					<div className="flex items-center gap-3 z-10">
-						<div 
-							className="size-13 rounded-full border-2 border-white/80 dark:border-neutral-800 bg-white dark:bg-neutral-900 flex items-center justify-center p-1 shadow-md shrink-0"
-							style={{ boxShadow: `0 0 0 2px ${brandColor}60` }}
-						>
-							{partyLogo ? (
-								<img src={partyLogo} alt={partyName} className="w-full h-full object-contain rounded-full" />
-							) : (
-								<span className="text-sm font-black" style={{ color: brandColor }}>
-									{partyName}
-								</span>
-							)}
-						</div>
-						<div>
-							<span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-								Party Membership
-							</span>
-							<h3 className="text-lg font-extrabold text-foreground leading-tight">
-								{partyName.toUpperCase()}
-							</h3>
-						</div>
-					</div>
+		<Dialog open={open} onOpenChange={(val) => !isBusy && onOpenChange(val)}>
+			<DialogContent className="min-w-[96vw] max-h-[95vh] p-0 overflow-hidden border border-border shadow-2xl rounded-3xl bg-background flex flex-col">
+				<DialogTitle className="sr-only">Drill it down - Select your chapters</DialogTitle>
 
-					<div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-background/80 backdrop-blur-xs text-[11px] font-medium text-foreground border border-border shadow-xs">
-						<ShieldCheck className="size-3.5 text-primary" />
-						<span>Official</span>
-					</div>
-				</div>
-
-				<DialogHeader
-					title="Confirm Membership"
-					description={`You are about to register your political affiliation with ${displayName}.`}
-					className="px-6 pt-4 pb-2"
+				{/* Top Section Header */}
+				<JoinPartyDrillDownHeader
+					currentLevel={currentLevel}
+					onLevelChange={setCurrentLevel}
+					selectedState={selectedState}
+					selectedLga={selectedLga}
+					selectedWard={selectedWard}
+					searchQuery={searchQuery}
+					onSearchChange={setSearchQuery}
 				/>
 
-				<DialogPadding className="px-6 py-2 space-y-4 max-h-[60vh] overflow-y-auto">
-					{!isAuthenticated ? (
-						<div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-900 dark:text-amber-200 text-xs sm:text-sm space-y-2">
-							<div className="flex items-center gap-2 font-semibold">
-								<AlertCircle className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
-								<span>Authentication Required</span>
-							</div>
-							<p className="text-xs text-muted-foreground">
-								You must be signed in to become a registered member of this party.
-							</p>
-							<div className="pt-2">
-								<Link
-									to={APP_URL.auth.login}
-									className="inline-block px-4 py-1.5 rounded-lg bg-primary text-primary-foreground font-semibold text-xs hover:bg-primary/90 transition-colors"
-								>
-									Sign In Now
-								</Link>
-							</div>
+				{/* Middle Cards Grid */}
+				<div className="px-6 sm:px-10 py-3 flex-1 overflow-y-auto min-h-75 max-h-[46vh]">
+					{/* National Level */}
+					{currentLevel === "national" && (
+						<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 py-2">
+							<JoinPartyChapterCard
+								title="Nigeria"
+								appendix="national chapter"
+								partyLogo={partyLogo}
+								isSelected={true}
+								onSelect={handleSelectNational}
+							/>
 						</div>
-					) : (
+					)}
+
+					{/* State Level */}
+					{currentLevel === "state" && (
 						<>
-							{/* Chapter Affiliation Info Card */}
-							<div className="p-3.5 rounded-xl bg-muted/50 border border-border/80 space-y-2.5">
-								<div className="flex items-center gap-2 text-xs font-semibold text-foreground">
-									<Globe2 className="size-4 text-primary" />
-									<span>Chapter Enrollment</span>
+							{statesLoading ? (
+								<div className="w-full h-48 flex items-center justify-center">
+									<Loader2 className="size-8 animate-spin text-muted-foreground" />
 								</div>
-								<p className="text-xs text-muted-foreground leading-relaxed">
-									You will be automatically enrolled into the <strong>National Chapter</strong> and affiliated with your registered ward and state constituency.
-								</p>
-
-								{userLocation?.stateName && (
-									<div className="flex items-center gap-1.5 text-[11px] font-medium text-foreground/80 bg-background/70 px-2.5 py-1.5 rounded-md border border-border/60">
-										<MapPin className="size-3.5 text-muted-foreground shrink-0" />
-										<span>Registered Area:</span>
-										<strong className="text-foreground">
-											{[userLocation.cityName, userLocation.stateName].filter(Boolean).join(", ")}
-										</strong>
-									</div>
-								)}
-							</div>
-
-							{/* Key Membership Rules */}
-							<div className="space-y-2 text-xs">
-								<span className="font-semibold text-foreground flex items-center gap-1.5">
-									<UserCheck className="size-3.5 text-primary" />
-									<span>Membership Guidelines</span>
-								</span>
-								<ul className="space-y-1.5 text-muted-foreground pl-1">
-									<li className="flex items-start gap-2">
-										<CheckCircle2 className="size-3.5 text-primary shrink-0 mt-0.5" />
-										<span>You cannot belong to multiple political parties concurrently.</span>
-									</li>
-									<li className="flex items-start gap-2">
-										<CheckCircle2 className="size-3.5 text-primary shrink-0 mt-0.5" />
-										<span>Your profile will reflect your active membership status across Free9ja.</span>
-									</li>
-									<li className="flex items-start gap-2">
-										<CheckCircle2 className="size-3.5 text-primary shrink-0 mt-0.5" />
-										<span>You can resign or transfer chapters at any time from your settings.</span>
-									</li>
-								</ul>
-							</div>
+							) : filteredStates.length === 0 ? (
+								<div className="w-full py-16 text-center text-xs text-muted-foreground">
+									No state chapters found matching &ldquo;{searchQuery}&rdquo;.
+								</div>
+							) : (
+								<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-5 py-2">
+									{filteredStates.map((state) => (
+										<JoinPartyChapterCard
+											key={state.id}
+											title={state.name}
+											appendix="state chapter"
+											partyLogo={partyLogo}
+											isSelected={selectedState?.id === state.id}
+											onSelect={() => handleSelectState(state)}
+										/>
+									))}
+								</div>
+							)}
 						</>
 					)}
-				</DialogPadding>
 
-				<DialogFooter className="px-6 py-4 bg-muted/20 border-t border-border flex items-center justify-end gap-2.5">
-					<button
-						type="button"
-						onClick={() => onOpenChange(false)}
-						disabled={isJoining}
-						className="px-4 py-2 text-xs sm:text-sm font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/60 rounded-xl transition-colors cursor-pointer disabled:opacity-50"
-					>
-						Cancel
-					</button>
-
-					{isAuthenticated && (
-						<button
-							type="button"
-							onClick={onConfirmJoin}
-							disabled={isJoining}
-							className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-xs sm:text-sm text-primary-foreground shadow-sm hover:opacity-95 active:scale-95 disabled:opacity-60 disabled:hover:scale-100 disabled:cursor-not-allowed transition-all duration-150 cursor-pointer"
-							style={{ backgroundColor: brandColor }}
-						>
-							{isJoining ? (
-								<>
-									<Loader2 className="size-4 animate-spin" />
-									<span>Joining {partyName}...</span>
-								</>
+					{/* LGA Level */}
+					{currentLevel === "lga" && (
+						<>
+							{lgasLoading ? (
+								<div className="w-full h-48 flex items-center justify-center">
+									<Loader2 className="size-8 animate-spin text-muted-foreground" />
+								</div>
+							) : filteredLgas.length === 0 ? (
+								<div className="w-full py-16 text-center text-xs text-muted-foreground">
+									{selectedState
+										? `No LGA chapters found in ${selectedState.name}.`
+										: "Please select a state first."}
+								</div>
 							) : (
-								<span>Join {partyName}</span>
+								<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-5 py-2">
+									{filteredLgas.map((lga) => (
+										<JoinPartyChapterCard
+											key={lga.id}
+											title={lga.name}
+											appendix="LGA chapter"
+											partyLogo={partyLogo}
+											isSelected={selectedLga?.id === lga.id}
+											onSelect={() => handleSelectLga(lga)}
+										/>
+									))}
+								</div>
 							)}
-						</button>
+						</>
 					)}
-				</DialogFooter>
+
+					{/* Ward Level */}
+					{currentLevel === "ward" && (
+						<>
+							{wardsLoading ? (
+								<div className="w-full h-48 flex items-center justify-center">
+									<Loader2 className="size-8 animate-spin text-muted-foreground" />
+								</div>
+							) : filteredWards.length === 0 ? (
+								<div className="w-full py-16 text-center text-xs text-muted-foreground">
+									{selectedLga
+										? `No ward chapters found in ${selectedLga.name}.`
+										: "Please select an LGA first."}
+								</div>
+							) : (
+								<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-5 py-2">
+									{filteredWards.map((ward) => (
+										<JoinPartyChapterCard
+											key={ward.id}
+											title={ward.name}
+											appendix="ward chapter"
+											partyLogo={partyLogo}
+											isSelected={selectedWard?.id === ward.id}
+											onSelect={() => handleSelectWard(ward)}
+										/>
+									))}
+								</div>
+							)}
+						</>
+					)}
+				</div>
+
+				{/* Bottom Selected Bar Footer */}
+				<JoinPartyDrillDownFooter
+					partyName={partyName}
+					partyLogo={partyLogo}
+					selectedState={selectedState}
+					selectedLga={selectedLga}
+					selectedWard={selectedWard}
+					onLevelChange={setCurrentLevel}
+					onCancel={() => onOpenChange(false)}
+					onSaveAndContinue={handleSaveAndContinue}
+					isBusy={isBusy}
+				/>
 			</DialogContent>
 		</Dialog>
 	);

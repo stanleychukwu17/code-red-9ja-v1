@@ -99,6 +99,8 @@ export const API_URL = {
     id: string | number,
     params?: {
       chapter_type?: string;
+      country_id?: number;
+      zonal_id?: number;
       state_id?: number;
       lga_id?: number;
       ward_id?: number;
@@ -108,6 +110,8 @@ export const API_URL = {
   ) => {
     const sp = new URLSearchParams();
     if (params?.chapter_type) sp.append("chapter_type", params.chapter_type);
+    if (params?.country_id) sp.append("country_id", String(params.country_id));
+    if (params?.zonal_id) sp.append("zonal_id", String(params.zonal_id));
     if (params?.state_id) sp.append("state_id", String(params.state_id));
     if (params?.lga_id) sp.append("lga_id", String(params.lga_id));
     if (params?.ward_id) sp.append("ward_id", String(params.ward_id));

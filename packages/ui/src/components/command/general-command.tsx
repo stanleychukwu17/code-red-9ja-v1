@@ -28,7 +28,7 @@ type GeneralCommandProps<T> = {
   onSearch?: (search: string) => void;
   beforeList?: ReactNode;
   children?: ReactNode;
-  showAll?: boolean;
+  showAll?: boolean | string;
   onSelectAll?: () => void;
 };
 
@@ -126,7 +126,7 @@ export function GeneralCommand<T>({
                 className="flex items-center gap-2 py-2 px-3 cursor-pointer"
               >
                 <div className="leading-5 font-[450] font-normal flex-1 min-w-0">
-                  All
+                  {typeof showAll === "string" ? showAll : "All"}
                 </div>
                 <Check
                   className={cn(

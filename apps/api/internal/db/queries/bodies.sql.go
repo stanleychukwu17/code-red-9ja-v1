@@ -1455,6 +1455,31 @@ func (q *Queries) ListCountries(ctx context.Context) ([]ListCountriesRow, error)
 	return items, nil
 }
 
+const listZones = `-- name: ListZones :many
+SELECT id, name, state_ids FROM c_zones_nigeria
+ORDER BY id ASC
+`
+
+func (q *Queries) ListZones(ctx context.Context) ([]CZonesNigerium, error) {
+	rows, err := q.db.Query(ctx, listZones)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []CZonesNigerium
+	for rows.Next() {
+		var i CZonesNigerium
+		if err := rows.Scan(&i.ID, &i.Name, &i.StateIds); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const recalculateFederalConstituencyMetrics = `-- name: RecalculateFederalConstituencyMetrics :exec
 UPDATE federal_constituencies fc
 SET lgas_count = COALESCE((SELECT COUNT(*) FROM lgas l WHERE l.federal_constituency_id = fc.id), 0),

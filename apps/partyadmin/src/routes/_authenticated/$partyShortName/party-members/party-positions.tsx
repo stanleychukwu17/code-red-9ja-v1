@@ -6,23 +6,26 @@
  */
 
 import * as React from "react";
-import { Layout, PageHeader, PageSearchLayer } from "@repo/ui/components/custom/AdminLayouts";
+import { Layout, PageHeader } from "@repo/ui/components/custom/AdminLayouts";
 import { getPageHeader } from "#/lib/shared/meta";
 import { createFileRoute } from "@tanstack/react-router";
 import { getPartyAdminsTabs } from "./-data";
 import { useUserParty } from "#/hooks/useUserParty";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useDebounceValue } from "usehooks-ts";
-import { Button } from "@repo/ui/components/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/components/select";
-import { PartyPositionTableHeader, PartyPositionTableTile } from "#/components/tiles/party-position-tile";
 import { AssignPositionDialog } from "#/components/dialogs/AssignPositionDialog";
 import { PartyPositionsCatalogDialog } from "#/components/dialogs/PartyPositionsCatalogDialog";
-import { getPartyOfficials, vacatePartyOfficial, type PartyOfficialItem } from "#/lib/server/parties";
-import { getStates } from "#/lib/server/countries";
-import { getLGAs, getWards } from "#/lib/server/applications";
+import {
+  PartyPositionsActionBar,
+  PartyPositionsFilterBar,
+  PartyPositionsRosterView,
+} from "./-party-positions-components";
+import {
+  getPartyOfficials,
+  vacatePartyOfficial,
+  type PartyOfficialItem,
+} from "#/lib/server/parties";
 import { toast } from "sonner";
-import { Loader2, Plus, BookOpen, UserPlus, Filter, MapPin, CheckCircle2 } from "lucide-react";
 
 export const Route = createFileRoute(
   "/_authenticated/$partyShortName/party-members/party-positions",
@@ -49,6 +52,8 @@ function RouteComponent() {
 
   // Chapter Hierarchy Filters
   const [chapterTier, setChapterTier] = React.useState<string>("all");
+  const [selectedCountryId, setSelectedCountryId] = React.useState<number | undefined>(undefined);
+  const [selectedZonalId, setSelectedZonalId] = React.useState<number | undefined>(undefined);
   const [selectedStateId, setSelectedStateId] = React.useState<number | undefined>(undefined);
   const [selectedLgaId, setSelectedLgaId] = React.useState<number | undefined>(undefined);
   const [selectedWardId, setSelectedWardId] = React.useState<number | undefined>(undefined);
@@ -56,36 +61,14 @@ function RouteComponent() {
   // Appointment Type Filter
   const [appointmentTypeFilter, setAppointmentTypeFilter] = React.useState<string>("all");
 
-  // Fetch States for Filter
-  const { data: statesRes } = useQuery({
-    queryKey: ["states", 161],
-    queryFn: () => getStates({ data: { countryId: 161, limit: 50 } }),
-    enabled: ["state", "lga", "ward"].includes(chapterTier),
-  });
-  const statesList = Array.isArray(statesRes?.data?.states) ? statesRes.data.states : [];
-
-  // Fetch LGAs for Filter
-  const { data: lgasRes } = useQuery({
-    queryKey: ["lgas", selectedStateId],
-    queryFn: () => getLGAs({ data: { stateId: selectedStateId } }),
-    enabled: ["lga", "ward"].includes(chapterTier) && !!selectedStateId,
-  });
-  const lgasList = Array.isArray(lgasRes?.data) ? lgasRes.data : [];
-
-  // Fetch Wards for Filter
-  const { data: wardsRes } = useQuery({
-    queryKey: ["wards", selectedLgaId],
-    queryFn: () => getWards({ data: { lga_id: selectedLgaId } }),
-    enabled: chapterTier === "ward" && !!selectedLgaId,
-  });
-  const wardsList = Array.isArray(wardsRes?.data) ? wardsRes.data : [];
-
   // Fetch Officials
   const { data: officialsRes, isLoading } = useQuery({
     queryKey: [
       "partyOfficials",
       party?.id,
       chapterTier,
+      selectedCountryId,
+      selectedZonalId,
       selectedStateId,
       selectedLgaId,
       selectedWardId,
@@ -96,6 +79,8 @@ function RouteComponent() {
         data: {
           partyId: party!.id!,
           chapterType: chapterTier !== "all" ? chapterTier : undefined,
+          countryId: selectedCountryId,
+          zonalId: selectedZonalId,
           stateId: selectedStateId,
           lgaId: selectedLgaId,
           wardId: selectedWardId,
@@ -143,6 +128,8 @@ function RouteComponent() {
 
   const handleTierChange = (tier: string) => {
     setChapterTier(tier);
+    setSelectedCountryId(undefined);
+    setSelectedZonalId(undefined);
     setSelectedStateId(undefined);
     setSelectedLgaId(undefined);
     setSelectedWardId(undefined);
@@ -157,181 +144,38 @@ function RouteComponent() {
       />
 
       {/* Top Action Buttons & Filters Bar */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 mb-4">
-        {/* Tier Tabs Navigation */}
-        <div className="flex items-center gap-1.5 p-1 bg-c-10 rounded-xl overflow-x-auto">
-          {[
-            { key: "all", label: "All Tiers" },
-            { key: "national", label: "National" },
-            { key: "zonal", label: "Zonal" },
-            { key: "state", label: "State" },
-            { key: "lga", label: "LGA" },
-            { key: "ward", label: "Ward" },
-          ].map((tab) => (
-            <button
-              key={tab.key}
-              type="button"
-              onClick={() => handleTierChange(tab.key)}
-              className={`px-3.5 py-1.5 rounded-lg text-[13px] font-medium transition whitespace-nowrap ${chapterTier === tab.key
-                  ? "bg-background text-c-90 shadow-xs"
-                  : "text-c-60 hover:text-c-90"
-                }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Action Buttons: Catalog & Assign */}
-        <div className="flex items-center gap-2.5">
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => setIsCatalogDialogOpen(true)}
-            className="h-10 px-3.5 rounded-xl bg-sidebar-mobile hover:bg-sidebar-mobile/80 text-c-70 text-[13px] font-medium flex items-center gap-2"
-          >
-            <BookOpen className="size-4 text-c-50" />
-            <span>Position Catalog</span>
-          </Button>
-
-          <Button
-            type="button"
-            variant="lime"
-            onClick={() => setIsAssignDialogOpen(true)}
-            className="h-10 px-4 rounded-xl text-[13px] font-medium flex items-center gap-2 shadow-xs"
-          >
-            <UserPlus className="size-4" />
-            <span>Assign Position</span>
-          </Button>
-        </div>
-      </div>
-
-      {/* Dynamic Geographic Entity Filters for State / LGA / Ward */}
-      {["state", "lga", "ward"].includes(chapterTier) && (
-        <div className="flex flex-wrap items-center gap-3 p-3 mb-4 bg-white rounded-xl border border-[#ebebeb]">
-          <div className="flex items-center gap-1.5 text-[13px] font-medium text-c-60 mr-1">
-            <MapPin className="size-4 text-c-40" />
-            <span>Chapter scope:</span>
-          </div>
-
-          <select
-            value={selectedStateId || ""}
-            onChange={(e) => {
-              setSelectedStateId(e.target.value ? Number(e.target.value) : undefined);
-              setSelectedLgaId(undefined);
-              setSelectedWardId(undefined);
-            }}
-            className="h-9 px-3 text-[13px] rounded-lg border border-[#d1d5db] bg-white focus:outline-none focus:ring-1 focus:ring-[#ff9a3c]"
-          >
-            <option value="">All States</option>
-            {statesList.map((s: any) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-
-          {["lga", "ward"].includes(chapterTier) && selectedStateId && (
-            <select
-              value={selectedLgaId || ""}
-              onChange={(e) => {
-                setSelectedLgaId(e.target.value ? Number(e.target.value) : undefined);
-                setSelectedWardId(undefined);
-              }}
-              className="h-9 px-3 text-[13px] rounded-lg border border-[#d1d5db] bg-white focus:outline-none focus:ring-1 focus:ring-[#ff9a3c]"
-            >
-              <option value="">All LGAs</option>
-              {lgasList.map((l: any) => (
-                <option key={l.id} value={l.id}>
-                  {l.name}
-                </option>
-              ))}
-            </select>
-          )}
-
-          {chapterTier === "ward" && selectedLgaId && (
-            <select
-              value={selectedWardId || ""}
-              onChange={(e) =>
-                setSelectedWardId(e.target.value ? Number(e.target.value) : undefined)
-              }
-              className="h-9 px-3 text-[13px] rounded-lg border border-[#d1d5db] bg-white focus:outline-none focus:ring-1 focus:ring-[#ff9a3c]"
-            >
-              <option value="">All Wards</option>
-              {wardsList.map((w: any) => (
-                <option key={w.id} value={w.id}>
-                  {w.name}
-                </option>
-              ))}
-            </select>
-          )}
-        </div>
-      )}
+      <PartyPositionsActionBar
+        chapterTier={chapterTier}
+        onTierChange={handleTierChange}
+        selectedCountryId={selectedCountryId}
+        onCountryChange={setSelectedCountryId}
+        selectedZonalId={selectedZonalId}
+        onZonalChange={setSelectedZonalId}
+        selectedStateId={selectedStateId}
+        onStateChange={setSelectedStateId}
+        selectedLgaId={selectedLgaId}
+        onLgaChange={setSelectedLgaId}
+        selectedWardId={selectedWardId}
+        onWardChange={setSelectedWardId}
+        onOpenCatalog={() => setIsCatalogDialogOpen(true)}
+        onOpenAssign={() => setIsAssignDialogOpen(true)}
+      />
 
       {/* Search Bar + Appointment Filter */}
-      <PageSearchLayer
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-        ariaLabel="Search party positions"
-        placeholder="Search by official name, @username, or display title..."
-        rightComponent={
-          <Select
-            value={appointmentTypeFilter}
-            onValueChange={(val) => setAppointmentTypeFilter(val)}
-          >
-            <SelectTrigger className="h-12 px-3.5 rounded-xl border border-border text-[14px] text-c-70 min-w-44">
-              <SelectValue placeholder="All Appointment Types" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Appointment Types</SelectItem>
-              <SelectItem value="substantive">Substantive</SelectItem>
-              <SelectItem value="acting">Acting</SelectItem>
-              <SelectItem value="caretaker">Caretaker</SelectItem>
-              <SelectItem value="interim">Interim</SelectItem>
-            </SelectContent>
-          </Select>
-        }
+      <PartyPositionsFilterBar
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        appointmentTypeFilter={appointmentTypeFilter}
+        onAppointmentTypeChange={setAppointmentTypeFilter}
       />
 
       {/* Main Officials Roster */}
-      {isLoading ? (
-        <div className="w-full p-16 flex flex-col items-center justify-center gap-3 text-c-50 bg-white rounded-2xl border border-[#dfdfdf]">
-          <Loader2 className="size-6 animate-spin text-[#ff9a3c]" />
-          <p className="text-[14px]">Loading chapter officials...</p>
-        </div>
-      ) : officials.length === 0 ? (
-        <div className="w-full p-16 text-center text-c-50 font-medium bg-white rounded-2xl border border-[#dfdfdf] space-y-3">
-          <p className="text-[16px] text-c-70">No party officials found.</p>
-          <p className="text-[13px] text-c-40 max-w-md mx-auto">
-            No officials have been appointed to positions matching your selected tier and filters.
-            Click &quot;Assign Position&quot; to appoint an official.
-          </p>
-          <div className="pt-2">
-            <Button
-              type="button"
-              variant="lime"
-              onClick={() => setIsAssignDialogOpen(true)}
-              className="h-10 px-4 rounded-xl text-[13px] font-medium shadow-xs"
-            >
-              <UserPlus className="size-4 mr-2" />
-              Assign an Official
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <div className="w-full overflow-hidden rounded-2xl border border-[#dfdfdf] bg-white">
-          <PartyPositionTableHeader />
-          <div className="divide-y divide-[#efefef]">
-            {officials.map((official) => (
-              <PartyPositionTableTile
-                key={official.assignment_id}
-                official={official}
-                onVacate={handleVacateOfficial}
-              />
-            ))}
-          </div>
-        </div>
-      )}
+      <PartyPositionsRosterView
+        isLoading={isLoading}
+        officials={officials}
+        onVacateOfficial={handleVacateOfficial}
+        onOpenAssign={() => setIsAssignDialogOpen(true)}
+      />
 
       {/* Dialogs */}
       <AssignPositionDialog

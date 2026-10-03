@@ -5,7 +5,7 @@ import { apiFetchJson } from "./fetch";
 /**
  * Represents a Polling Unit entity returned by the backend API.
  */
-export interface PollingUnitItem {
+export type PollingUnitItem = {
   id: number;
   name: string;
   code?: string;
@@ -22,35 +22,35 @@ export interface PollingUnitItem {
   precise_location?: string;
   formatted_address?: string;
   google_place_id?: string;
-}
+};
 
 /**
  * Represents a State entity within Nigeria.
  */
-export interface StateItem {
+export type StateItem = {
   id: number;
   name: string;
   country_id?: number;
-}
+};
 
 /**
  * Represents a Local Government Area (LGA) entity.
  */
-export interface LGAItem {
+export type LGAItem = {
   id: number;
   name: string;
   state_id: number;
-}
+};
 
 /**
  * Represents an Electoral Ward entity within an LGA.
  */
-export interface WardItem {
+export type WardItem = {
   id: number;
   name: string;
   lga_id: number;
   state_id: number;
-}
+};
 
 /**
  * Server function to fetch all States in Nigeria (country_id: 161).

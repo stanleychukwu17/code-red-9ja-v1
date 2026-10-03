@@ -22,27 +22,38 @@ func NewWardsService(q *queries.Queries, rdb *redis.Client) *WardsService {
 	}
 }
 
-func (s *WardsService) CreateWard(
-	ctx context.Context,
-	name string,
-	code string,
-	lgaID int32,
-	lgaName string,
-	stateID int32,
-	stateName string,
-) (queries.Ward, error) {
-	lga, _ := s.queries.GetLGAByID(ctx, lgaID)
+type CreateWardParams struct {
+	Name      string
+	Code      string
+	LgaID     int32
+	LgaName   string
+	StateID   int32
+	StateName string
+}
+
+type UpdateWardParams struct {
+	ID        int32
+	Name      string
+	Code      string
+	LgaID     int32
+	LgaName   string
+	StateID   int32
+	StateName string
+}
+
+func (s *WardsService) CreateWard(ctx context.Context, params CreateWardParams) (queries.Ward, error) {
+	lga, _ := s.queries.GetLGAByID(ctx, params.LgaID)
 	arg := queries.CreateWardParams{
-		Name:                    name,
-		Code:                    code,
-		LgaID:                   lgaID,
-		LgaName:                 lgaName,
+		Name:                    params.Name,
+		Code:                    params.Code,
+		LgaID:                   params.LgaID,
+		LgaName:                 params.LgaName,
 		SenatorialDistrictID:    lga.SenatorialDistrictID,
 		SenatorialDistrictName:  lga.SenatorialDistrictName,
 		FederalConstituencyID:   lga.FederalConstituencyID,
 		FederalConstituencyName: lga.FederalConstituencyName,
-		StateID:                 stateID,
-		StateName:               stateName,
+		StateID:                 params.StateID,
+		StateName:               params.StateName,
 	}
 
 	ward, err := s.queries.CreateWard(ctx, arg)
@@ -50,7 +61,7 @@ func (s *WardsService) CreateWard(
 		return queries.Ward{}, err
 	}
 
-	s.invalidateCache(ctx, stateID)
+	s.invalidateCache(ctx, params.StateID)
 
 	return ward, nil
 }
@@ -59,34 +70,25 @@ func (s *WardsService) GetWardByID(ctx context.Context, id int32) (queries.Ward,
 	return s.queries.GetWardByID(ctx, id)
 }
 
-func (s *WardsService) UpdateWard(
-	ctx context.Context,
-	id int32,
-	name string,
-	code string,
-	lgaID int32,
-	lgaName string,
-	stateID int32,
-	stateName string,
-) (queries.Ward, error) {
-	current, err := s.queries.GetWardByID(ctx, id)
+func (s *WardsService) UpdateWard(ctx context.Context, params UpdateWardParams) (queries.Ward, error) {
+	current, err := s.queries.GetWardByID(ctx, params.ID)
 	if err == nil {
 		s.invalidateCache(ctx, current.StateID)
 	}
 
-	lga, _ := s.queries.GetLGAByID(ctx, lgaID)
+	lga, _ := s.queries.GetLGAByID(ctx, params.LgaID)
 	arg := queries.UpdateWardParams{
-		ID:                      id,
-		Name:                    name,
-		Code:                    code,
-		LgaID:                   lgaID,
-		LgaName:                 lgaName,
+		ID:                      params.ID,
+		Name:                    params.Name,
+		Code:                    params.Code,
+		LgaID:                   params.LgaID,
+		LgaName:                 params.LgaName,
 		SenatorialDistrictID:    lga.SenatorialDistrictID,
 		SenatorialDistrictName:  lga.SenatorialDistrictName,
 		FederalConstituencyID:   lga.FederalConstituencyID,
 		FederalConstituencyName: lga.FederalConstituencyName,
-		StateID:                 stateID,
-		StateName:               stateName,
+		StateID:                 params.StateID,
+		StateName:               params.StateName,
 	}
 
 	ward, err := s.queries.UpdateWard(ctx, arg)
@@ -95,7 +97,7 @@ func (s *WardsService) UpdateWard(
 	}
 
 	// Invalidate cache for new LGA
-	s.invalidateCache(ctx, lgaID)
+	s.invalidateCache(ctx, params.LgaID)
 
 	return ward, nil
 }

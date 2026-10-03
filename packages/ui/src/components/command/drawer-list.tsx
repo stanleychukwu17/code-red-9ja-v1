@@ -26,7 +26,7 @@ export type DrawerListProps<T> = {
   loadMore?: () => void;
   disableSearch?: boolean;
   emptyText?: string;
-  showAll?: boolean;
+  showAll?: boolean | string;
   onSelectAll?: () => void;
 };
 
@@ -110,7 +110,9 @@ export function DrawerList<T>({
                   )}
                 >
                   <span className="flex-1 min-w-0">
-                    <span className="block text-base font-medium leading-snug">All</span>
+                    <span className="block text-base font-medium leading-snug">
+                      {typeof showAll === "string" ? showAll : "All"}
+                    </span>
                   </span>
                   <Check
                     className={cn(

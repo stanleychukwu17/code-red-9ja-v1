@@ -15,8 +15,7 @@ CREATE TABLE IF NOT EXISTS lgas (
     status VARCHAR(50) DEFAULT 'active'
 );
 
-CREATE INDEX idx_lgas_name ON lgas (name);
-CREATE INDEX idx_lgas_state_id ON lgas (state_id);
+CREATE INDEX idx_lgas_state_id_name ON lgas (state_id, name);
 CREATE INDEX idx_lgas_senatorial_district_id ON lgas (senatorial_district_id);
 CREATE INDEX idx_lgas_federal_constituency_id ON lgas (federal_constituency_id);
 
@@ -800,5 +799,5 @@ ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, code = EXCLUDED.code, state
 -- SEED DATA END
 
 -- +goose Down
-DROP INDEX IF EXISTS idx_lgas_name;
+DROP INDEX IF EXISTS idx_lgas_state_id_name;
 DROP TABLE IF EXISTS lgas;
