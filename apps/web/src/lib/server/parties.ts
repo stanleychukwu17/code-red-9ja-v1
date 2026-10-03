@@ -87,7 +87,6 @@ export type PartyCardData = {
 	sample_members: PartySampleMember[];
 	officials: PartyOfficialCardInfo[];
 	is_user_member: boolean;
-	is_user_blocked?: boolean;
 };
 
 /**

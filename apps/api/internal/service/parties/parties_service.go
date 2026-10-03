@@ -388,7 +388,6 @@ type PartyCard struct {
 	SampleMembers  []PartySampleMember `json:"sample_members"`
 	Officials      []PartyOfficialCard `json:"officials"`
 	IsUserMember   bool                `json:"is_user_member"`
-	IsUserBlocked  bool                `json:"is_user_blocked"`
 }
 
 // GetPartySampleMemberAvatars retrieves sample member avatars for a party chapter, cached in Redis.
@@ -583,9 +582,8 @@ func (s *PartiesService) GetPartyCards(ctx context.Context, userID int64, userPa
 		}
 
 		isUserMember := userPartyID > 0 && p.ID == userPartyID
-		isUserBlocked := false
-		if !isUserMember {
-			isUserBlocked = blockedPartiesMap[p.ID]
+		if !isUserMember && blockedPartiesMap[p.ID] {
+			continue
 		}
 
 		cards = append(cards, PartyCard{
@@ -606,7 +604,6 @@ func (s *PartiesService) GetPartyCards(ctx context.Context, userID int64, userPa
 			SampleMembers:  sampleMembers,
 			Officials:      officials,
 			IsUserMember:   isUserMember,
-			IsUserBlocked:  isUserBlocked,
 		})
 	}
 

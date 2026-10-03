@@ -118,8 +118,8 @@ export function PartyCard({ party, hasUserParty }: PartyCardProps) {
 	const coverPositionY = party.cover_position_y ?? preset?.coverPositionY ?? 50;
 	const partyHref = APP_URL.party(party.short_name.toLowerCase(), party.id.toString());
 
-	// If the user already belongs to a party or is blocked by this party, do not show the join/plus action button
-	const showActionButton = party.is_user_member || (!hasUserParty && !party.is_user_blocked);
+	// If the user already belongs to a party, do not show the join/plus action button
+	const showActionButton = party.is_user_member || !hasUserParty;
 
 	return (
 		<div className="group flex flex-col items-center bg-sidebar-mobile/50 dark:bg-neutral-900 rounded overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] hover:shadow-xl hover:shadow-neutral-200/60 dark:hover:shadow-neutral-950/60 transition-all duration-300 pb-6">
@@ -162,6 +162,9 @@ export function PartyCard({ party, hasUserParty }: PartyCardProps) {
 					isUserMember={party.is_user_member}
 					partyId={party.id}
 					partyName={party.short_name}
+					partyFullName={party.name}
+					partyLogo={party.logo}
+					colorHex={party.color_hex}
 					chapterId={party.chapter_id}
 				/>
 			)}
