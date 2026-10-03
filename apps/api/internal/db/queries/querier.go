@@ -380,6 +380,8 @@ type Querier interface {
 	ListBlockedUsersByUser(ctx context.Context, arg ListBlockedUsersByUserParams) ([]ListBlockedUsersByUserRow, error)
 	ListChapterOfficials(ctx context.Context, arg ListChapterOfficialsParams) ([]ListChapterOfficialsRow, error)
 	ListCountries(ctx context.Context) ([]ListCountriesRow, error)
+	ListCustomPartyPositions(ctx context.Context, arg ListCustomPartyPositionsParams) ([]PartyPosition, error)
+	ListDefaultPartyPositions(ctx context.Context, chapterType pgtype.Text) ([]PartyPosition, error)
 	ListElectionCandidatesByElectionID(ctx context.Context, electionID int32) ([]ElectionCandidate, error)
 	ListElectionCandidatesDetailedByElectionID(ctx context.Context, electionID int32) ([]ListElectionCandidatesDetailedByElectionIDRow, error)
 	ListElectionGroupFederalConstituencyStatsByGroup(ctx context.Context, arg ListElectionGroupFederalConstituencyStatsByGroupParams) ([]ElectionGroupFederalConstituency, error)
@@ -416,7 +418,6 @@ type Querier interface {
 	// Returns party notifications relevant to the user's active chapter positions
 	ListPartyNotificationsForUser(ctx context.Context, arg ListPartyNotificationsForUserParams) ([]ListPartyNotificationsForUserRow, error)
 	ListPartyOfficials(ctx context.Context, arg ListPartyOfficialsParams) ([]ListPartyOfficialsRow, error)
-	ListPartyPositions(ctx context.Context, arg ListPartyPositionsParams) ([]PartyPosition, error)
 	ListPollingAgentPerformanceStats(ctx context.Context, arg ListPollingAgentPerformanceStatsParams) ([]ListPollingAgentPerformanceStatsRow, error)
 	ListPollingUnitFinalResults(ctx context.Context, arg ListPollingUnitFinalResultsParams) ([]ListPollingUnitFinalResultsRow, error)
 	ListPollingUnitResults(ctx context.Context, arg ListPollingUnitResultsParams) ([]PollingUnitResult, error)

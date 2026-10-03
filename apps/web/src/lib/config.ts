@@ -87,6 +87,7 @@ export const API_URL = {
 	parties: `${api}/parties`,
 	partyCards: `${api}/parties/cards`,
 	joinParty: (partyId: number) => `${api}/parties/${partyId}/join`,
+	joinPartyHierarchy: (partyId: number) => `${api}/parties/${partyId}/join-hierarchy`,
 	getPartyProfile: (partyId: number, shortName: string) => `${api}/parties/${partyId}/${shortName}/profile`,
 	partyAdmins: (partyId: number | string) => `${api}/parties/${partyId}/admins`,
 	userPreferences: `${api}/user_preferences`,

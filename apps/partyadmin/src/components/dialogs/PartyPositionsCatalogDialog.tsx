@@ -54,7 +54,10 @@ export function PartyPositionsCatalogDialog({
     queryFn: () => getPartyPositions({ data: { partyId: partyId! } }),
     enabled: !!partyId && open,
   });
-  const positions: PartyPositionItem[] = positionsRes?.data?.positions || [];
+  const defaultPositions: PartyPositionItem[] = positionsRes?.data?.default || [];
+  const customPositions: PartyPositionItem[] = positionsRes?.data?.custom || [];
+  const positions: PartyPositionItem[] =
+    positionsRes?.data?.positions || [...defaultPositions, ...customPositions];
 
   const handleLevelToggle = (lvl: string) => {
     setAllowedLevels((prev) =>
@@ -194,11 +197,10 @@ export function PartyPositionsCatalogDialog({
                         key={lvl}
                         type="button"
                         onClick={() => handleLevelToggle(lvl)}
-                        className={`px-3 py-1.5 rounded-lg text-[13px] font-medium border transition capitalize flex items-center gap-1.5 ${
-                          active
+                        className={`px-3 py-1.5 rounded-lg text-[13px] font-medium border transition capitalize flex items-center gap-1.5 ${active
                             ? "bg-[#ff9a3c] text-white border-[#ff9a3c]"
                             : "bg-white text-c-60 border-[#e5e7eb] hover:bg-[#f3f4f6]"
-                        }`}
+                          }`}
                       >
                         {active && <Check className="size-3.5" />}
                         {lvl}
@@ -283,11 +285,10 @@ export function PartyPositionsCatalogDialog({
                         {pos.name}
                       </span>
                       <span
-                        className={`text-[11px] px-2 py-0.5 rounded-full font-medium border ${
-                          pos.position_type === "custom"
+                        className={`text-[11px] px-2 py-0.5 rounded-full font-medium border ${pos.position_type === "custom"
                             ? "bg-orange-50 border-orange-200 text-orange-700"
                             : "bg-gray-100 border-gray-200 text-gray-700"
-                        }`}
+                          }`}
                       >
                         {pos.position_type === "custom" ? "Custom" : "Constitutional"}
                       </span>

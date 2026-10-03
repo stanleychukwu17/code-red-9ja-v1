@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"free9ja/api/internal/constants"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	apimiddleware "free9ja/api/internal/middleware"
@@ -81,7 +80,7 @@ type PartiesService interface {
 	UpdatePartyAgentAcquisitionTargets(ctx context.Context, arg queries.UpdatePartyAgentAcquisitionTargetsParams) (queries.Party, error)
 	GetPartyAgentAcquisitionTargets(ctx context.Context, partyID int16) (json.RawMessage, error)
 	// Positions & Officials methods
-	ListPartyPositions(ctx context.Context, partyID int16, chapterType *string) ([]queries.PartyPosition, error)
+	ListPartyPositions(ctx context.Context, partyID int16, chapterType *string) (*partiesservice.PartyPositionsResult, error)
 	GetPartyPositionByID(ctx context.Context, id int32, partyID int16) (queries.PartyPosition, error)
 	CreatePartyCustomPosition(ctx context.Context, arg queries.CreatePartyCustomPositionParams) (queries.PartyPosition, error)
 	UpdatePartyCustomPosition(ctx context.Context, arg queries.UpdatePartyCustomPositionParams) (queries.PartyPosition, error)
@@ -676,9 +675,10 @@ func (h *Handler) GetPartyProfile(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// JoinParty handles requests to join a party chapter.
-func (h *Handler) JoinParty(w http.ResponseWriter, r *http.Request) {
-	// Parse target party ID from URL parameter
+
+// JoinPartyHierarchy handles requests to join a party with chapter hierarchy selections.
+func (h *Handler) JoinPartyHierarchy(w http.ResponseWriter, r *http.Request) {
+	// 1. Extract and validate the target party ID from URL parameters
 	partyIDStr := chi.URLParam(r, "id")
 	partyID, err := strconv.ParseInt(partyIDStr, 10, 16)
 	if err != nil {
@@ -686,35 +686,49 @@ func (h *Handler) JoinParty(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Parse optional chapter ID (0 lets the service auto-resolve to user's registered ward/location)
+	// 2. Decode the optional chapter hierarchy selections from the request body
 	var req struct {
-		ChapterID int32 `json:"chapter_id"`
+		Selections []struct {
+			PartyID     int64  `json:"partyId"`
+			ChapterType string `json:"chapterType"`
+			ChapterID   *int32 `json:"chapterId"`
+		} `json:"selections"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil && err != io.EOF {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
-	// Extract authenticated user credentials from context
+	// 3. Extract authenticated user claims from context
 	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
 	if !ok {
 		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
-	// Guard: user must explicitly leave any existing party before joining a different one
+	// 4. Ensure user is not already affiliated with a different political party
 	if claims.PartyID > 0 && claims.PartyID != int16(partyID) {
 		h.utils.RespondError(w, http.StatusBadRequest, "You are already a member of a different political party. You must leave your current party before joining another one.")
 		return
 	}
 
-	// Delegate membership assignment & hierarchy resolution to the service layer
-	err = h.partiesService.JoinParty(r.Context(), int16(partyID), req.ChapterID, claims.UserID, claims.FakeID)
+	// 5. Pick the first valid chapter ID from selections if provided
+	var targetChapterID int32
+	for _, sel := range req.Selections {
+		if sel.ChapterID != nil && *sel.ChapterID > 0 {
+			targetChapterID = *sel.ChapterID
+			break
+		}
+	}
+
+	// 6. Execute join party service logic
+	err = h.partiesService.JoinParty(r.Context(), int16(partyID), targetChapterID, claims.UserID, claims.FakeID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
+	// 7. Return success response
 	h.utils.RespondSuccess(w, http.StatusOK, "Membership request processed successfully", nil)
 }
 
@@ -2316,7 +2330,7 @@ func (h *Handler) GetAgentAcquisitionTargets(w http.ResponseWriter, r *http.Requ
 
 // --start-- Party Positions & Officials Handlers
 
-// ListPartyPositions returns all positions (default + party custom)
+// ListPartyPositions returns all positions (default and custom)
 func (h *Handler) ListPartyPositions(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	partyID, err := strconv.ParseInt(idStr, 10, 16)
@@ -2330,14 +2344,20 @@ func (h *Handler) ListPartyPositions(w http.ResponseWriter, r *http.Request) {
 		chapterType = &ct
 	}
 
-	positions, err := h.partiesService.ListPartyPositions(r.Context(), int16(partyID), chapterType)
+	res, err := h.partiesService.ListPartyPositions(r.Context(), int16(partyID), chapterType)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to list positions: "+err.Error())
 		return
 	}
 
+	allPositions := make([]queries.PartyPosition, 0, len(res.Default)+len(res.Custom))
+	allPositions = append(allPositions, res.Default...)
+	allPositions = append(allPositions, res.Custom...)
+
 	h.utils.RespondSuccess(w, http.StatusOK, "Positions retrieved successfully", map[string]interface{}{
-		"positions": positions,
+		"default":   res.Default,
+		"custom":    res.Custom,
+		"positions": allPositions,
 	})
 }
 
@@ -2809,74 +2829,6 @@ func (h *Handler) ListMemberPositions(w http.ResponseWriter, r *http.Request) {
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Member positions retrieved successfully", map[string]interface{}{
 		"positions": positions,
-	})
-}
-
-// ResolveChapter resolves or creates a chapter ID for a given tier and entity
-func (h *Handler) ResolveChapter(w http.ResponseWriter, r *http.Request) {
-	idStr := chi.URLParam(r, "id")
-	partyID, err := strconv.ParseInt(idStr, 10, 16)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID: "+err.Error())
-		return
-	}
-
-	chapterType := strings.ToLower(r.URL.Query().Get("chapter_type"))
-	if chapterType == "" {
-		chapterType = "national"
-	}
-
-	entityIDStr := r.URL.Query().Get("entity_id")
-	var entityID int64
-	if entityIDStr != "" {
-		entityID, _ = strconv.ParseInt(entityIDStr, 10, 32)
-	}
-
-	var chapterID int32
-	switch chapterType {
-	case "national":
-		countryID := constants.NigeriaCountryID
-		if entityID > 0 {
-			countryID = int16(entityID)
-		}
-		chapterID, err = h.partiesService.GetOrCreateNationalChapter(r.Context(), int16(partyID), countryID)
-	case "zonal":
-		if entityID <= 0 {
-			h.utils.RespondError(w, http.StatusBadRequest, "entity_id (zonal_id) is required for zonal chapter")
-			return
-		}
-		chapterID, err = h.partiesService.GetOrCreateZonalChapter(r.Context(), int16(partyID), int16(entityID))
-	case "state":
-		if entityID <= 0 {
-			h.utils.RespondError(w, http.StatusBadRequest, "entity_id (state_id) is required for state chapter")
-			return
-		}
-		chapterID, err = h.partiesService.GetOrCreateStateChapter(r.Context(), int16(partyID), int16(entityID))
-	case "lga":
-		if entityID <= 0 {
-			h.utils.RespondError(w, http.StatusBadRequest, "entity_id (lga_id) is required for lga chapter")
-			return
-		}
-		chapterID, err = h.partiesService.GetOrCreateLGAChapter(r.Context(), int16(partyID), int32(entityID))
-	case "ward":
-		if entityID <= 0 {
-			h.utils.RespondError(w, http.StatusBadRequest, "entity_id (ward_id) is required for ward chapter")
-			return
-		}
-		chapterID, err = h.partiesService.GetOrCreateWardChapter(r.Context(), int16(partyID), int32(entityID))
-	default:
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid chapter_type: "+chapterType)
-		return
-	}
-
-	if err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to resolve chapter: "+err.Error())
-		return
-	}
-
-	h.utils.RespondSuccess(w, http.StatusOK, "Chapter resolved successfully", map[string]interface{}{
-		"chapter_id":   chapterID,
-		"chapter_type": chapterType,
 	})
 }
 

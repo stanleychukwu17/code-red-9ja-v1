@@ -72,6 +72,9 @@ const (
 	//--END--
 
 	//--START-- for political and administrative bodies
+	RedisEachZone                     = "bodies:each_zone:"
+	RedisEachLGA                      = "bodies:each_lga:"
+	RedisEachWard                     = "bodies:each_ward:"
 	RedisSenatorialDistrictsByState   = "bodies:senatorial_districts:state:"
 	RedisFederalConstituenciesByState = "bodies:federal_constituencies:state:"
 	RedisStateConstituenciesByState   = "bodies:state_constituencies:state:"
@@ -138,6 +141,9 @@ var AllRedisPrefixes = []string{
 	RedisPageVerificationTypesList,
 	RedisPageVerificationTypeInfo,
 	RedisPageVerifications,
+	RedisEachZone,
+	RedisEachLGA,
+	RedisEachWard,
 	RedisSenatorialDistrictsByState,
 	RedisFederalConstituenciesByState,
 	RedisStateConstituenciesByState,

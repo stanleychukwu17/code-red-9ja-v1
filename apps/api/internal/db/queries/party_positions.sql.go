@@ -298,6 +298,93 @@ func (q *Queries) ListChapterOfficials(ctx context.Context, arg ListChapterOffic
 	return items, nil
 }
 
+const listCustomPartyPositions = `-- name: ListCustomPartyPositions :many
+SELECT id, position_type, name, code, party_id, description, allowed_levels, rank_order, max_occupants, is_active, is_executive, category, created_at FROM party_positions
+WHERE party_id = $1
+  AND ($2::varchar IS NULL OR $2::varchar = ANY(allowed_levels))
+ORDER BY rank_order ASC, name ASC
+`
+
+type ListCustomPartyPositionsParams struct {
+	PartyID     pgtype.Int2 `json:"party_id"`
+	ChapterType pgtype.Text `json:"chapter_type"`
+}
+
+func (q *Queries) ListCustomPartyPositions(ctx context.Context, arg ListCustomPartyPositionsParams) ([]PartyPosition, error) {
+	rows, err := q.db.Query(ctx, listCustomPartyPositions, arg.PartyID, arg.ChapterType)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PartyPosition
+	for rows.Next() {
+		var i PartyPosition
+		if err := rows.Scan(
+			&i.ID,
+			&i.PositionType,
+			&i.Name,
+			&i.Code,
+			&i.PartyID,
+			&i.Description,
+			&i.AllowedLevels,
+			&i.RankOrder,
+			&i.MaxOccupants,
+			&i.IsActive,
+			&i.IsExecutive,
+			&i.Category,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listDefaultPartyPositions = `-- name: ListDefaultPartyPositions :many
+SELECT id, position_type, name, code, party_id, description, allowed_levels, rank_order, max_occupants, is_active, is_executive, category, created_at FROM party_positions
+WHERE party_id IS NULL
+  AND ($1::varchar IS NULL OR $1::varchar = ANY(allowed_levels))
+ORDER BY rank_order ASC, name ASC
+`
+
+func (q *Queries) ListDefaultPartyPositions(ctx context.Context, chapterType pgtype.Text) ([]PartyPosition, error) {
+	rows, err := q.db.Query(ctx, listDefaultPartyPositions, chapterType)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PartyPosition
+	for rows.Next() {
+		var i PartyPosition
+		if err := rows.Scan(
+			&i.ID,
+			&i.PositionType,
+			&i.Name,
+			&i.Code,
+			&i.PartyID,
+			&i.Description,
+			&i.AllowedLevels,
+			&i.RankOrder,
+			&i.MaxOccupants,
+			&i.IsActive,
+			&i.IsExecutive,
+			&i.Category,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listMemberPositionAssignments = `-- name: ListMemberPositionAssignments :many
 SELECT 
     party_position_assignments.id AS assignment_id,
@@ -540,52 +627,6 @@ func (q *Queries) ListPartyOfficials(ctx context.Context, arg ListPartyOfficials
 			&i.ChapterType,
 			&i.GeoName,
 			&i.DisplayTitle,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listPartyPositions = `-- name: ListPartyPositions :many
-SELECT id, position_type, name, code, party_id, description, allowed_levels, rank_order, max_occupants, is_active, is_executive, category, created_at FROM party_positions
-WHERE (party_id IS NULL OR party_id = $1)
-  AND ($2::varchar IS NULL OR $2::varchar = ANY(allowed_levels))
-ORDER BY rank_order ASC, name ASC
-`
-
-type ListPartyPositionsParams struct {
-	PartyID     pgtype.Int2 `json:"party_id"`
-	ChapterType pgtype.Text `json:"chapter_type"`
-}
-
-func (q *Queries) ListPartyPositions(ctx context.Context, arg ListPartyPositionsParams) ([]PartyPosition, error) {
-	rows, err := q.db.Query(ctx, listPartyPositions, arg.PartyID, arg.ChapterType)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []PartyPosition
-	for rows.Next() {
-		var i PartyPosition
-		if err := rows.Scan(
-			&i.ID,
-			&i.PositionType,
-			&i.Name,
-			&i.Code,
-			&i.PartyID,
-			&i.Description,
-			&i.AllowedLevels,
-			&i.RankOrder,
-			&i.MaxOccupants,
-			&i.IsActive,
-			&i.IsExecutive,
-			&i.Category,
-			&i.CreatedAt,
 		); err != nil {
 			return nil, err
 		}

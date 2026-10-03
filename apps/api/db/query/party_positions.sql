@@ -1,6 +1,12 @@
--- name: ListPartyPositions :many
+-- name: ListDefaultPartyPositions :many
 SELECT * FROM party_positions
-WHERE (party_id IS NULL OR party_id = $1)
+WHERE party_id IS NULL
+  AND (sqlc.narg('chapter_type')::varchar IS NULL OR sqlc.narg('chapter_type')::varchar = ANY(allowed_levels))
+ORDER BY rank_order ASC, name ASC;
+
+-- name: ListCustomPartyPositions :many
+SELECT * FROM party_positions
+WHERE party_id = $1
   AND (sqlc.narg('chapter_type')::varchar IS NULL OR sqlc.narg('chapter_type')::varchar = ANY(allowed_levels))
 ORDER BY rank_order ASC, name ASC;
 

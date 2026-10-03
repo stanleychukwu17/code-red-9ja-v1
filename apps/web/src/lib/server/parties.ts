@@ -141,22 +141,30 @@ export const getPartyProfile = createServerFn()
 		}
 	});
 
+export type PartyHierarchySelection = {
+	partyId: number;
+	chapterType: string;
+	chapterId?: number;
+};
+
 /**
- * Server function to request joining a political party.
- * chapterId is optional; if omitted, backend auto-resolves to user's registered ward/location chapter.
+ * Server function to submit party chapter hierarchy selections for joining.
  */
-export const joinParty = createServerFn({ method: "POST" })
-	.inputValidator((data: { partyId: number; chapterId?: number }) => data)
-	.handler(async ({ data: { partyId, chapterId } }) => {
+export const joinPartyHierarchy = createServerFn({ method: "POST" })
+	.inputValidator((data: { partyId: number; selections: PartyHierarchySelection[] }) => data)
+	.handler(async ({ data: { partyId, selections } }) => {
 		try {
-			const res = await apiFetchJson<{ success: boolean; message: string; data: any }>(API_URL.joinParty(partyId), {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(chapterId ? { chapter_id: chapterId } : {}),
-			});
+			const res = await apiFetchJson<{ success: boolean; message: string; data: any }>(
+				API_URL.joinPartyHierarchy(partyId),
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ selections }),
+				}
+			);
 			return res;
 		} catch (error: unknown) {
-			const message = error instanceof Error ? error.message : "Failed to join party";
+			const message = error instanceof Error ? error.message : "Failed to join party hierarchy";
 			return { success: false, message, data: null };
 		}
 	});

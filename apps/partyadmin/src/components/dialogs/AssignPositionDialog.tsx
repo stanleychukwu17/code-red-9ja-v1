@@ -101,7 +101,11 @@ export function AssignPositionDialog({
       }),
     enabled: !!partyId && open,
   });
-  const positions: PartyPositionItem[] = positionsRes?.data?.positions || [];
+  const positions: PartyPositionItem[] =
+    positionsRes?.data?.positions || [
+      ...(positionsRes?.data?.default || []),
+      ...(positionsRes?.data?.custom || []),
+    ];
 
   // Fetch Party Members for selection
   const { data: membersRes, isLoading: isMembersLoading } = useQuery({

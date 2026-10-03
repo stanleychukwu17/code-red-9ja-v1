@@ -644,7 +644,7 @@ export const vacatePartyOfficial = createServerFn({ method: "POST" })
     }
   });
 
-// Resolve or create chapter by level/entity
+// Resolve or create chapter by tier and entity ID
 export const resolvePartyChapter = createServerFn({ method: "GET" })
   .inputValidator(
     (data: {

@@ -32,9 +32,19 @@ type PartiesService struct {
 	utils                    *utils.Utils
 	pageVerificationsService PageVerificationsService
 	usersService             UsersService
+	bodiesService            BodiesService
 	notificationsService     NotificationsService
 	blocksService            BlocksService
 	auditService             audit.AuditService
+}
+
+// BodiesService interface defines the methods needed from the bodies service
+type BodiesService interface {
+	CheckCountry(ctx context.Context, countryID int16) (queries.GetCountryByIDRow, error)
+	CheckZone(ctx context.Context, zoneID int16) (queries.CZonesNigerium, error)
+	CheckStateByID(ctx context.Context, stateID int16) (queries.CState, error)
+	CheckLGA(ctx context.Context, lgaID int32) (queries.Lga, error)
+	CheckWard(ctx context.Context, wardID int32) (queries.Ward, error)
 }
 
 // BlocksService interface defines the methods needed from the blocks service
@@ -95,6 +105,11 @@ func (s *PartiesService) SetPageVerificationsService(pvs PageVerificationsServic
 // SetUsersService sets the UsersService to avoid circular dependency in constructor.
 func (s *PartiesService) SetUsersService(us UsersService) {
 	s.usersService = us
+}
+
+// SetBodiesService sets the BodiesService for entity existence checks.
+func (s *PartiesService) SetBodiesService(bs BodiesService) {
+	s.bodiesService = bs
 }
 
 // CreateParty inserts a party into the database and, if a Monnify client is
@@ -1194,6 +1209,12 @@ func (s *PartiesService) InvalidatePartyCache(ctx context.Context, partyID int16
 // GetOrCreateNationalChapter retrieves the national chapter for a party in a specific country,
 // and creates one if it doesn't already exist.
 func (s *PartiesService) GetOrCreateNationalChapter(ctx context.Context, partyID, countryID int16) (int32, error) {
+	if s.bodiesService != nil {
+		if _, err := s.bodiesService.CheckCountry(ctx, countryID); err != nil {
+			return 0, fmt.Errorf("invalid country: %w", err)
+		}
+	}
+
 	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisNationalChapter, partyID, countryID)
 
 	// Try to get from Redis
@@ -1219,6 +1240,12 @@ func (s *PartiesService) GetOrCreateNationalChapter(ctx context.Context, partyID
 // GetOrCreateZonalChapter retrieves the zonal chapter for a party in a specific geopolitical zone,
 // and creates one if it doesn't already exist.
 func (s *PartiesService) GetOrCreateZonalChapter(ctx context.Context, partyID, zonalID int16) (int32, error) {
+	if s.bodiesService != nil {
+		if _, err := s.bodiesService.CheckZone(ctx, zonalID); err != nil {
+			return 0, fmt.Errorf("invalid zone: %w", err)
+		}
+	}
+
 	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisZonalChapter, partyID, zonalID)
 
 	// Try to get from Redis
@@ -1243,6 +1270,12 @@ func (s *PartiesService) GetOrCreateZonalChapter(ctx context.Context, partyID, z
 // GetOrCreateStateChapter retrieves the state chapter for a party in a specific state,
 // and creates one if it doesn't already exist.
 func (s *PartiesService) GetOrCreateStateChapter(ctx context.Context, partyID, stateID int16) (int32, error) {
+	if s.bodiesService != nil {
+		if _, err := s.bodiesService.CheckStateByID(ctx, stateID); err != nil {
+			return 0, fmt.Errorf("invalid state: %w", err)
+		}
+	}
+
 	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisStateChapter, partyID, stateID)
 
 	// Try to get from Redis
@@ -1267,6 +1300,12 @@ func (s *PartiesService) GetOrCreateStateChapter(ctx context.Context, partyID, s
 // GetOrCreateLGAChapter retrieves the LGA chapter for a party in a specific LGA,
 // and creates one if it doesn't already exist.
 func (s *PartiesService) GetOrCreateLGAChapter(ctx context.Context, partyID int16, lgaID int32) (int32, error) {
+	if s.bodiesService != nil {
+		if _, err := s.bodiesService.CheckLGA(ctx, lgaID); err != nil {
+			return 0, fmt.Errorf("invalid LGA: %w", err)
+		}
+	}
+
 	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisLGAChapter, partyID, lgaID)
 
 	// Try to get from Redis
@@ -1291,6 +1330,12 @@ func (s *PartiesService) GetOrCreateLGAChapter(ctx context.Context, partyID int1
 // GetOrCreateWardChapter retrieves the Ward chapter for a party in a specific Ward,
 // and creates one (as well as ensuring its parent LGA chapter exists) if it doesn't already exist.
 func (s *PartiesService) GetOrCreateWardChapter(ctx context.Context, partyID int16, wardID int32) (int32, error) {
+	if s.bodiesService != nil {
+		if _, err := s.bodiesService.CheckWard(ctx, wardID); err != nil {
+			return 0, fmt.Errorf("invalid ward: %w", err)
+		}
+	}
+
 	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisWardChapter, partyID, wardID)
 
 	// Try to get from Redis
@@ -1648,15 +1693,42 @@ func (s *PartiesService) ResetPartyLogo(ctx context.Context, partyID int16) erro
 
 // --start-- party positions & officials
 
+// PartyPositionsResult holds default and custom positions for a party.
+type PartyPositionsResult struct {
+	Default []queries.PartyPosition `json:"default"`
+	Custom  []queries.PartyPosition `json:"custom"`
+}
+
 // ListPartyPositions returns all positions (default and custom for this party), optionally filtered by chapter level.
-func (s *PartiesService) ListPartyPositions(ctx context.Context, partyID int16, chapterType *string) ([]queries.PartyPosition, error) {
-	arg := queries.ListPartyPositionsParams{
-		PartyID: pgtype.Int2{Int16: partyID, Valid: true},
-	}
+func (s *PartiesService) ListPartyPositions(ctx context.Context, partyID int16, chapterType *string) (*PartyPositionsResult, error) {
+	var ct pgtype.Text
 	if chapterType != nil && *chapterType != "" {
-		arg.ChapterType = pgtype.Text{String: *chapterType, Valid: true}
+		ct = pgtype.Text{String: *chapterType, Valid: true}
 	}
-	return s.queries.ListPartyPositions(ctx, arg)
+
+	defaultPositions, err := s.queries.ListDefaultPartyPositions(ctx, ct)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list default positions: %w", err)
+	}
+	if defaultPositions == nil {
+		defaultPositions = []queries.PartyPosition{}
+	}
+
+	customPositions, err := s.queries.ListCustomPartyPositions(ctx, queries.ListCustomPartyPositionsParams{
+		PartyID:     pgtype.Int2{Int16: partyID, Valid: true},
+		ChapterType: ct,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list custom positions: %w", err)
+	}
+	if customPositions == nil {
+		customPositions = []queries.PartyPosition{}
+	}
+
+	return &PartyPositionsResult{
+		Default: defaultPositions,
+		Custom:  customPositions,
+	}, nil
 }
 
 // GetPartyPositionByID returns a single position by ID.

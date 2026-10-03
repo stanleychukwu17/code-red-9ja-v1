@@ -5,7 +5,9 @@ import {
 	DialogTitle,
 } from "@repo/ui/components/dialog";
 import { Loader2 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { QUERY_KEYS } from "#/lib/config";
 import {
 	getStatesForNigeria,
 	getLGAsByState,
@@ -14,7 +16,7 @@ import {
 	type LGAItem,
 	type WardItem,
 } from "#/lib/server/polling_units";
-// import { resolvePartyChapter } from "#/lib/server/parties";
+import { joinPartyHierarchy } from "#/lib/server/parties";
 import { JoinPartyDrillDownHeader, type LevelTier } from "./JoinPartyDrillDownHeader";
 import { JoinPartyChapterCard } from "./JoinPartyChapterCard";
 import { JoinPartyDrillDownFooter } from "./JoinPartyDrillDownFooter";
@@ -24,16 +26,9 @@ export type JoinPartyDialogProps = {
 	onOpenChange: (open: boolean) => void;
 	partyId: number;
 	partyName: string;
-	partyFullName?: string;
 	partyLogo?: string;
-	colorHex?: string | null;
-	isJoining: boolean;
-	onConfirmJoin: (chapterId?: number) => void;
-	userLocation?: {
-		stateName?: string;
-		cityName?: string;
-	};
-	isAuthenticated?: boolean;
+	chapterId?: number;
+	onJoinSuccess?: (partyId: number) => void;
 };
 
 export function JoinPartyDialog({
@@ -42,11 +37,11 @@ export function JoinPartyDialog({
 	partyId,
 	partyName,
 	partyLogo,
-	isJoining,
-	onConfirmJoin,
-	userLocation: _userLocation,
-	isAuthenticated: _isAuthenticated = true,
+	chapterId,
+	onJoinSuccess,
 }: JoinPartyDialogProps) {
+	const queryClient = useQueryClient();
+
 	// Active level tier in the drill-down flow (starts at state level as in design mockup)
 	const [currentLevel, setCurrentLevel] = useState<LevelTier>("state");
 	const [searchQuery, setSearchQuery] = useState("");
@@ -138,58 +133,45 @@ export function JoinPartyDialog({
 
 	// Save & Continue: resolve hierarchy and confirm join
 	const handleSaveAndContinue = async () => {
+		// Show loading state while the join request is in flight
 		setIsResolving(true);
 
+		// Build the full chapter hierarchy selection (ward → lga → state → national)
 		const AllSelected = [
 			{ partyId, chapterType: "ward", chapterId: selectedWard?.id },
 			{ partyId, chapterType: "lga", chapterId: selectedLga?.id },
 			{ partyId, chapterType: "state", chapterId: selectedState?.id },
-			{ partyId, chapterType: "national" },
-		]
-		// try {
-		// 	let resolvedChapterId: number | undefined;
+			{ partyId, chapterType: "national", chapterId: chapterId },
+		];
 
-		// 	// Hierarchical resolution from most specific to general
-		// 	if (selectedWard) {
-		// 		const res = await resolvePartyChapter({
-		// 			data: { partyId, chapterType: "ward", entityId: selectedWard.id },
-		// 		});
-		// 		if (res?.success && res.data?.chapter_id) {
-		// 			resolvedChapterId = res.data.chapter_id;
-		// 		}
-		// 	} else if (selectedLga) {
-		// 		const res = await resolvePartyChapter({
-		// 			data: { partyId, chapterType: "lga", entityId: selectedLga.id },
-		// 		});
-		// 		if (res?.success && res.data?.chapter_id) {
-		// 			resolvedChapterId = res.data.chapter_id;
-		// 		}
-		// 	} else if (selectedState) {
-		// 		const res = await resolvePartyChapter({
-		// 			data: { partyId, chapterType: "state", entityId: selectedState.id },
-		// 		});
-		// 		if (res?.success && res.data?.chapter_id) {
-		// 			resolvedChapterId = res.data.chapter_id;
-		// 		}
-		// 	} else {
-		// 		const res = await resolvePartyChapter({
-		// 			data: { partyId, chapterType: "national" },
-		// 		});
-		// 		if (res?.success && res.data?.chapter_id) {
-		// 			resolvedChapterId = res.data.chapter_id;
-		// 		}
-		// 	}
+		try {
+			// Submit all chapter-level memberships in a single request
+			const res = await joinPartyHierarchy({
+				data: { partyId, selections: AllSelected },
+			});
+			if (!res?.success) {
+				throw new Error(res?.message || "Failed to join party");
+			}
+			toast.success(`You have successfully joined ${partyName.toUpperCase()}!`);
 
-		// 	onConfirmJoin(resolvedChapterId);
-		// } catch (err) {
-		// 	console.error("Failed to resolve party chapter:", err);
-		// 	onConfirmJoin();
-		// } finally {
-		// 	setIsResolving(false);
-		// }
+			// Refresh party cards and session so UI reflects the new membership
+			queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partyCards });
+			queryClient.invalidateQueries({ queryKey: QUERY_KEYS.auth.session });
+			onJoinSuccess?.(partyId);
+			onOpenChange(false);
+
+		} catch (err: unknown) {
+			// Surface a readable error message from the API or a generic fallback
+			const message = err instanceof Error ? err.message : "Failed to join party. Please try again.";
+			toast.error(message);
+
+		} finally {
+			// Always clear the loading state regardless of outcome
+			setIsResolving(false);
+		}
 	};
 
-	const isBusy = isJoining || isResolving;
+	const isBusy = isResolving;
 
 	return (
 		<Dialog open={open} onOpenChange={(val) => !isBusy && onOpenChange(val)}>

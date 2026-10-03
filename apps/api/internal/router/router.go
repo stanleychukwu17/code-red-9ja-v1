@@ -181,6 +181,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	usersService.SetPartyService(partiesService)
 	partiesService.SetPageVerificationsService(pageVerificationsService)
 	partiesService.SetUsersService(usersService)
+	partiesService.SetBodiesService(bodiesService)
 
 	notificationsHandler := notificationshandler.NewHandler(notificationsService, utilsInstance)
 	authHandler := authhandler.NewHandler(authService, usersService, filesService, utilsInstance)
@@ -580,7 +581,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Post("/api/v1/parties/{id}/slots/buy", partiesHandler.BuySlots)
 		r.Post("/api/v1/parties/{id}/allowances/deposit", partiesHandler.DepositAllowance)
 
-		r.Post("/api/v1/parties/{id}/join", partiesHandler.JoinParty)
+		r.Post("/api/v1/parties/{id}/join-hierarchy", partiesHandler.JoinPartyHierarchy)
 		r.Post("/api/v1/parties/{id}/leave", partiesHandler.LeaveParty)
 		r.Put("/api/v1/parties/{id}/allowances/settings", partiesHandler.UpdateAgentPaymentAllocationKobo)
 		r.Post("/api/v1/parties/{id}/agent-payment-deposits", partiesHandler.DepositAllowance)
@@ -672,7 +673,6 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Post("/api/v1/parties/{id}/chapters/{chapter_id}/officials", partiesHandler.AssignPartyOfficial)
 		r.Patch("/api/v1/parties/{id}/officials/{assignment_id}/vacate", partiesHandler.VacatePositionAssignment)
 		r.Patch("/api/v1/parties/{id}/officials/{assignment_id}", partiesHandler.UpdatePositionAssignment)
-		r.Get("/api/v1/parties/{id}/chapters/resolve", partiesHandler.ResolveChapter)
 
 		// party member suspension & reactivation
 		r.Get("/api/v1/parties/{id}/members/suspended", partiesHandler.ListSuspendedPartyMembers)

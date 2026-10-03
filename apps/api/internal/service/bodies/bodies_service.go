@@ -391,3 +391,104 @@ func (s *BodiesService) GetLocationNames(ctx context.Context, countryID, stateID
 
 	return countryName, stateName, cityName
 }
+
+// CheckZone checks if a geopolitical zone ID is valid (cached in Redis).
+func (s *BodiesService) CheckZone(ctx context.Context, zoneID int16) (queries.CZonesNigerium, error) {
+	redisZoneKey := fmt.Sprintf("%s%d", db.RedisEachZone, zoneID)
+
+	zoneData, err := s.rdb.Get(ctx, redisZoneKey).Result()
+	if err == nil {
+		var zone queries.CZonesNigerium
+		if json.Unmarshal([]byte(zoneData), &zone) == nil && zone.ID > 0 {
+			return zone, nil
+		}
+	}
+
+	zones, err := s.queries.ListZones(ctx)
+	if err != nil {
+		return queries.CZonesNigerium{}, fmt.Errorf("failed to fetch zones: %w", err)
+	}
+
+	for _, z := range zones {
+		if z.ID == zoneID {
+			if data, err := json.Marshal(z); err == nil {
+				s.rdb.Set(ctx, redisZoneKey, data, db.RedisOneYearTTL)
+			}
+			return z, nil
+		}
+	}
+
+	return queries.CZonesNigerium{}, errors.New("invalid zone ID")
+}
+
+// CheckStateByID checks if a state is valid by ID alone (cached in Redis).
+func (s *BodiesService) CheckStateByID(ctx context.Context, stateID int16) (queries.CState, error) {
+	redisStateKey := fmt.Sprintf("%s%d", db.RedisEachState, stateID)
+
+	stateData, err := s.rdb.Get(ctx, redisStateKey).Result()
+	if err == nil {
+		var state queries.CState
+		if json.Unmarshal([]byte(stateData), &state) == nil && state.ID > 0 {
+			return state, nil
+		}
+	}
+
+	state, err := s.queries.GetStateDetailsByID(ctx, stateID)
+	if err != nil {
+		return queries.CState{}, fmt.Errorf("invalid state ID: %w", err)
+	}
+
+	if data, err := json.Marshal(state); err == nil {
+		s.rdb.Set(ctx, redisStateKey, data, db.RedisOneEightyDaysTTL)
+	}
+
+	return state, nil
+}
+
+// CheckLGA checks if a Local Government Area ID is valid (cached in Redis).
+func (s *BodiesService) CheckLGA(ctx context.Context, lgaID int32) (queries.Lga, error) {
+	redisLGAKey := fmt.Sprintf("%s%d", db.RedisEachLGA, lgaID)
+
+	lgaData, err := s.rdb.Get(ctx, redisLGAKey).Result()
+	if err == nil {
+		var lga queries.Lga
+		if json.Unmarshal([]byte(lgaData), &lga) == nil && lga.ID > 0 {
+			return lga, nil
+		}
+	}
+
+	lga, err := s.queries.GetLGAByID(ctx, lgaID)
+	if err != nil {
+		return queries.Lga{}, fmt.Errorf("invalid LGA ID: %w", err)
+	}
+
+	if data, err := json.Marshal(lga); err == nil {
+		s.rdb.Set(ctx, redisLGAKey, data, db.RedisOneEightyDaysTTL)
+	}
+
+	return lga, nil
+}
+
+// CheckWard checks if a Ward ID is valid (cached in Redis).
+func (s *BodiesService) CheckWard(ctx context.Context, wardID int32) (queries.Ward, error) {
+	redisWardKey := fmt.Sprintf("%s%d", db.RedisEachWard, wardID)
+
+	wardData, err := s.rdb.Get(ctx, redisWardKey).Result()
+	if err == nil {
+		var ward queries.Ward
+		if json.Unmarshal([]byte(wardData), &ward) == nil && ward.ID > 0 {
+			return ward, nil
+		}
+	}
+
+	ward, err := s.queries.GetWardByID(ctx, wardID)
+	if err != nil {
+		return queries.Ward{}, fmt.Errorf("invalid ward ID: %w", err)
+	}
+
+	if data, err := json.Marshal(ward); err == nil {
+		s.rdb.Set(ctx, redisWardKey, data, db.RedisOneEightyDaysTTL)
+	}
+
+	return ward, nil
+}

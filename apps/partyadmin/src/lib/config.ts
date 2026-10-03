@@ -138,6 +138,15 @@ export const API_URL = {
   ) => `${api}/parties/${id}/officials/${assignmentId}`,
   memberPositions: (id: string | number, userId: string | number) =>
     `${api}/parties/${id}/members/${userId}/positions`,
+  resolveChapter: (
+    id: string | number,
+    chapterType: string,
+    entityId?: number,
+  ) => {
+    const sp = new URLSearchParams({ chapter_type: chapterType });
+    if (entityId) sp.append("entity_id", String(entityId));
+    return `${api}/parties/${id}/chapters/resolve?${sp.toString()}`;
+  },
   suspendedMembers: (id: string | number, limit?: number, cursor?: string | number) => {
     const sp = new URLSearchParams();
     if (limit) sp.append("limit", String(limit));
@@ -160,15 +169,6 @@ export const API_URL = {
     `${api}/parties/${id}/members/${userId}/block`,
   unblockMember: (id: string | number, userId: string | number) =>
     `${api}/parties/${id}/members/${userId}/unblock`,
-  resolveChapter: (
-    id: string | number,
-    chapterType: string,
-    entityId?: number,
-  ) => {
-    const sp = new URLSearchParams({ chapter_type: chapterType });
-    if (entityId) sp.append("entity_id", String(entityId));
-    return `${api}/parties/${id}/chapters/resolve?${sp.toString()}`;
-  },
   uploadUrl: `${api}/files/upload-url`,
   confirmUpload: (id: string | number) => `${api}/files/${id}/confirm`,
   users: `${api}/users`,
