@@ -7,6 +7,8 @@ interface PartyHeaderLayoutProps {
   logo: string;
   shortName: string;
   fullName: string;
+  chapterName?: string;
+  chapterLevel?: string;
   isMemberInitial?: boolean;
   isFollowingInitial?: boolean;
   followersDisplay?: string;
@@ -24,6 +26,8 @@ export function PartyHeaderLayout({
   logo,
   shortName,
   fullName,
+  chapterName,
+  chapterLevel,
   isMemberInitial = false,
   isFollowingInitial = false,
   followersDisplay = "100k",
@@ -85,7 +89,14 @@ export function PartyHeaderLayout({
               {/* Identity & Actions */}
               <div className="sm:mt-7 pt-2 sm:pt-6 space-y-4">
                 <div>
-                  <h1 className="text-2xl sm:text-3xl font-medium tracking-tight text-foreground">{shortName}</h1>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h1 className="text-2xl sm:text-3xl font-medium tracking-tight text-foreground">{shortName}</h1>
+                    {chapterName && (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-lime-100 text-lime-900 dark:bg-lime-900/40 dark:text-lime-300 border border-lime-300 dark:border-lime-700">
+                        {chapterName} {chapterLevel ? `(${chapterLevel})` : "Chapter"}
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs sm:text-sm font-medium text-muted-foreground/90 -translate-y-0.5">{fullName}</p>
 
                   {/* Membership stats (Visible only on mobile/small screens: max-md) */}

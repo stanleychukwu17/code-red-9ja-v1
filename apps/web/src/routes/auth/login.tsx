@@ -22,6 +22,7 @@ import { FormError } from "./_components/-form-error";
 import { getPageHeader } from "@/lib/shared/meta";
 import { getAllCountries } from "@/lib/server/countries";
 import { APP_URL, APP_NAME } from "#/lib/config";
+import { getAuthRedirect } from "#/lib/shared/auth-redirect";
 
 export type countriesType = {
   success: boolean;
@@ -45,11 +46,15 @@ type payloadType = {
 };
 
 export const Route = createFileRoute("/auth/login")({
-  // Check if user is already authenticated, if so redirect to home page
-  beforeLoad: async () => {
+  validateSearch: (search): { redirect?: string } => ({
+    redirect: getAuthRedirect(search.redirect),
+  }),
+
+  // Already authenticated users can continue to their intended destination.
+  beforeLoad: async ({ search }) => {
     const isAuthed = await checkIfRefreshTokenInCookie({});
     if (isAuthed.success) {
-      throw redirect({ to: APP_URL.home });
+      throw redirect({ href: search.redirect || APP_URL.home, replace: true });
     }
   },
 
@@ -71,6 +76,7 @@ export const Route = createFileRoute("/auth/login")({
 
 function RouteComponent() {
   const navigate = useNavigate();
+  const { redirect: returnTo } = Route.useSearch();
   const dispatch = useAppDispatch();
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const visitorDetails = useAppSelector((state) => state.site.visitorDetails);
@@ -133,8 +139,8 @@ function RouteComponent() {
         if (response.success) {
           dispatch(updateAuthState({ user: response.data.user }));
 
-          // login successful, redirect user to dashboard
-          navigate({ to: APP_URL.home });
+          // Restore the full destination URL, including its query string and hash.
+          await navigate({ href: returnTo || APP_URL.home, replace: true });
         } else {
           // login failed, show error message
           setErrorMsg(

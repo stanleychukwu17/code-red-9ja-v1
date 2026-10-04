@@ -68,6 +68,7 @@ import (
 	electionsservice "free9ja/api/internal/service/elections"
 	federalconstituenciesservice "free9ja/api/internal/service/federal_constituencies"
 	filesservice "free9ja/api/internal/service/files"
+	followsservice "free9ja/api/internal/service/follows"
 	inecgrabberservice "free9ja/api/internal/service/inec_grabber"
 	mediaassetsservice "free9ja/api/internal/service/media_assets"
 	messagingservice "free9ja/api/internal/service/messaging"
@@ -166,6 +167,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	supervisorAssignmentsService := supervisorassignmentsservice.NewService(q)
 	pollingUnitAssignmentsService := puassignments.NewService(q, rdb, distributor, earningsService)
 	partiesService := partiesservice.NewPartiesService(q, pool, rdb, monnifyClient, utilsInstance, notificationsService, blocksService, auditService)
+	followsService := followsservice.NewFollowsService(q, partiesService, notificationsService)
 	electionGroupsService := electiongroupsservice.NewElectionGroupsService(q, rdb, distributor)
 	electionsService := electionsservice.NewElectionsService(q, pool, rdb, distributor, electionGroupsService, earningsService)
 	senatorialDistrictsService := senatorialdistrictsservice.NewSenatorialDistrictsService(q, rdb)
@@ -182,6 +184,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	partiesService.SetPageVerificationsService(pageVerificationsService)
 	partiesService.SetUsersService(usersService)
 	partiesService.SetBodiesService(bodiesService)
+	partiesService.SetFollowsService(followsService)
 	bodiesService.SetPartiesService(partiesService)
 
 	notificationsHandler := notificationshandler.NewHandler(notificationsService, utilsInstance)

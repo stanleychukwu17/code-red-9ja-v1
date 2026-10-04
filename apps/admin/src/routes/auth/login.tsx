@@ -25,6 +25,7 @@ import {
 import { getPageHeader } from "@/lib/shared/meta";
 import { getAllCountries } from "#/lib/server/countries";
 import { APP_URL } from "#/lib/config";
+import { getAuthRedirect } from "#/lib/shared/auth-redirect";
 
 export type countriesType = {
   success: boolean;
@@ -48,10 +49,14 @@ type payloadType = {
 };
 
 export const Route = createFileRoute("/auth/login")({
-  beforeLoad: async () => {
+  validateSearch: (search): { redirect?: string } => ({
+    redirect: getAuthRedirect(search.redirect),
+  }),
+
+  beforeLoad: async ({ search }) => {
     const isAuthed = await checkIfRefreshTokenInCookie();
     if (isAuthed.success) {
-      throw redirect({ to: APP_URL.home });
+      throw redirect({ href: search.redirect || APP_URL.home, replace: true });
     }
   },
   head: () =>
@@ -68,6 +73,7 @@ export const Route = createFileRoute("/auth/login")({
 
 function LoginComponent() {
   const navigate = useNavigate();
+  const { redirect: returnTo } = Route.useSearch();
   const dispatch = useAppDispatch();
   const { data: countriesRes } = useQuery({
     queryKey: ["countries"],
@@ -89,9 +95,9 @@ function LoginComponent() {
       }
       return response;
     },
-    onSuccess: (response) => {
+    onSuccess: async (response) => {
       dispatch(updateAuthState({ user: response.data?.user }));
-      navigate({ to: "/home" });
+      await navigate({ href: returnTo || APP_URL.home, replace: true });
     },
     onError: (err: any) => {
       setErrorMsg(

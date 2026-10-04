@@ -130,10 +130,10 @@ export const getParties = createServerFn({ method: "GET" }).handler(async () => 
  * including metrics, about info, leadership, and user membership status.
  */
 export const getPartyProfile = createServerFn()
-	.inputValidator((data: { partyId: number; shortName: string }) => data)
-	.handler(async ({ data: { partyId, shortName } }) => {
+	.inputValidator((data: { partyId: number; shortName: string; chapterId?: number }) => data)
+	.handler(async ({ data: { partyId, shortName, chapterId } }) => {
 		try {
-			return await apiFetchJson(API_URL.getPartyProfile(partyId, shortName));
+			return await apiFetchJson(API_URL.getPartyProfile(partyId, shortName, chapterId));
 		} catch (error: unknown) {
 			const message =
 				error instanceof Error ? error.message : "Failed to fetch party profile from API";

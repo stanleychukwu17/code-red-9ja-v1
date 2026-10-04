@@ -644,29 +644,6 @@ export const vacatePartyOfficial = createServerFn({ method: "POST" })
     }
   });
 
-// Resolve or create chapter by tier and entity ID
-export const resolvePartyChapter = createServerFn({ method: "GET" })
-  .inputValidator(
-    (data: {
-      partyId: number | string;
-      chapterType: string;
-      entityId?: number;
-    }) => data,
-  )
-  .handler(async ({ data }) => {
-    try {
-      const response = await apiFetch(
-        API_URL.resolveChapter(data.partyId, data.chapterType, data.entityId),
-      );
-      return await response.json();
-    } catch (error) {
-      return {
-        success: false,
-        message: "Failed to resolve chapter: " + (error as Error).message,
-      };
-    }
-  });
-
 // Create custom position within a party
 export const createPartyCustomPosition = createServerFn({ method: "POST" })
   .inputValidator(

@@ -47,13 +47,16 @@ import { updateAuthState } from "@/redux/slice/authSlice";
 import { updateSiteState } from "@/redux/slice/siteSlice";
 
 export const Route = createFileRoute("/_authenticated")({
-  beforeLoad: async () => {
+  beforeLoad: async ({ location }) => {
     // 1. Verify existence of valid authentication refresh token
     const res = await checkIfRefreshTokenInCookie();
     const user = await getUserDetailsCookie();
 
     if (!res.success) {
-      throw redirect({ to: APP_URL.auth.login });
+      throw redirect({
+        to: APP_URL.auth.login,
+        search: { redirect: location.href },
+      });
     }
 
     // 2. Enforce strict party administrator role permission

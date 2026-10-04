@@ -5,18 +5,29 @@ import { PARTY_PRESETS } from "#/components/parties/party-constants";
 import { PartyHeaderLayout, PartyNavTabs } from "#/components/party";
 import { getPageHeader } from "#/lib/shared/meta";
 
+export type PartySearch = {
+  chapterId?: number;
+};
+
 // 1. Define shared query options with staleTime: Infinity
-export const partyProfileQueryOptions = (partyId: string, partyName: string) => queryOptions({
-  queryKey: ["partyProfile", partyId, partyName],
+export const partyProfileQueryOptions = (partyId: string, partyName: string, chapterId?: number) => queryOptions({
+  queryKey: ["partyProfile", partyId, partyName, chapterId],
   queryFn: () =>
     getPartyProfile({
-      data: { partyId: Number(partyId), shortName: partyName },
+      data: { partyId: Number(partyId), shortName: partyName, chapterId },
     }),
   staleTime: Infinity,
   gcTime: 1000 * 60 * 60 * 24, // Keep in cache for 24h
 });
 
 export const Route = createFileRoute("/_authenticated/party/$partyName/$partyId")({
+  validateSearch: (search: Record<string, unknown>): PartySearch => {
+    const rawChapterId = search?.chapterId;
+    const parsed = Number(rawChapterId);
+    return {
+      chapterId: Number.isFinite(parsed) && parsed > 0 ? parsed : undefined,
+    };
+  },
   head: ({ params }) => {
     return getPageHeader({
       title: `${params.partyName.toUpperCase()} Profile`,
@@ -28,9 +39,10 @@ export const Route = createFileRoute("/_authenticated/party/$partyName/$partyId"
 
 function PartyLayoutComponent() {
   const { partyName, partyId } = Route.useParams();
+  const { chapterId } = Route.useSearch();
 
   const { data: profileRes } = useQuery(
-    partyProfileQueryOptions(partyId, partyName)
+    partyProfileQueryOptions(partyId, partyName, chapterId)
   );
 
   const partyDetails = profileRes?.success ? profileRes.data.data : null;
@@ -58,14 +70,16 @@ function PartyLayoutComponent() {
         logo={partyDetails?.logo || ""}
         shortName={displayShortName}
         fullName={displayName}
+        chapterName={partyDetails?.chapter_name}
+        chapterLevel={partyDetails?.chapter_type}
         followersDisplay="100k"
         followersValue={100}
-        totalMembers="300,000"
-        chapterMembers="200,000"
+        totalMembers={partyDetails?.total_members ? String(partyDetails.total_members) : "300,000"}
+        chapterMembers={partyDetails?.chapter_members ? String(partyDetails.chapter_members) : "200,000"}
       >
         {/* Inner navigation bar embedded within the header layout */}
         <div className="mt-0">
-          <PartyNavTabs partyName={partyName} partyId={partyId} />
+          <PartyNavTabs partyName={partyName} partyId={partyId} chapterId={chapterId} />
         </div>
       </PartyHeaderLayout>
 

@@ -18,7 +18,6 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import {
   getPartyPositions,
-  resolvePartyChapter,
   assignPartyOfficial,
   type PartyPositionItem,
 } from "#/lib/server/parties";
@@ -182,22 +181,7 @@ export function AssignPositionDialog({
     try {
       setIsSubmitting(true);
 
-      // 1. Resolve or create the chapter ID
-      const chapterRes = await resolvePartyChapter({
-        data: {
-          partyId,
-          chapterType,
-          entityId,
-        },
-      });
-
-      if (!chapterRes?.success || !chapterRes?.data?.chapter_id) {
-        throw new Error(chapterRes?.message || "Failed to resolve chapter for this tier.");
-      }
-
-      const chapterId = chapterRes.data.chapter_id;
-
-      // 2. Assign the official
+      // Assign the official
       const assignRes = await assignPartyOfficial({
         data: {
           partyId,

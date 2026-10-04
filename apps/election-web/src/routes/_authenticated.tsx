@@ -17,15 +17,21 @@ import { APP_URL } from "#/lib/config";
 import LoadElectionSession from "#/components/LoadElectionSession";
 
 export const Route = createFileRoute("/_authenticated")({
-  beforeLoad: async ({ context }) => {
+  beforeLoad: async ({ context, location }) => {
     const res = await checkIfRefreshTokenInCookie();
 
     if (!res.success) {
-      throw redirect({ to: APP_URL.auth.login });
+      throw redirect({
+        to: APP_URL.auth.login,
+        search: { redirect: location.href },
+      });
     }
 
     if (context.userDetails && !context.userDetails.username) {
-      throw redirect({ to: APP_URL.auth.onboarding });
+      throw redirect({
+        to: APP_URL.auth.onboarding,
+        search: { step: "details", redirect: location.href },
+      });
     }
   },
   component: AuthenticatedRoutes,

@@ -22,7 +22,8 @@ export const APP_URL = {
 	search: "/search",
 	pollingUnits: "/polling-units",
 	myParty: "/party",
-	party: (partyName: string, partyId: string) => `/party/${partyName}/${partyId}/home`,
+	party: (partyName: string, partyId: string | number, chapterId?: string | number) =>
+		`/party/${partyName}/${partyId}/home${chapterId ? `?chapterId=${chapterId}` : ""}`,
 	parties: "/parties",
 };
 
@@ -88,7 +89,10 @@ export const API_URL = {
 	partyCards: `${api}/parties/cards`,
 	joinParty: (partyId: number) => `${api}/parties/${partyId}/join`,
 	joinPartyHierarchy: (partyId: number) => `${api}/parties/${partyId}/join-hierarchy`,
-	getPartyProfile: (partyId: number, shortName: string) => `${api}/parties/${partyId}/${shortName}/profile`,
+	getPartyProfile: (partyId: number, shortName: string, chapterId?: number) => {
+		const qs = chapterId ? `?chapter_id=${chapterId}` : "";
+		return `${api}/parties/${partyId}/${shortName}/profile${qs}`;
+	},
 	partyAdmins: (partyId: number | string) => `${api}/parties/${partyId}/admins`,
 	userPreferences: `${api}/user_preferences`,
 	searchUsers: `${api}/users/search`,

@@ -9,6 +9,7 @@ import {
 import { APP_URL } from "#/lib/config";
 import { getPageHeader } from "#/lib/shared/meta";
 import { checkIfRefreshTokenInCookie } from "#/lib/server/auth/auth";
+import { getAuthRedirect } from "#/lib/shared/auth-redirect";
 
 const STEP_TITLES: Record<OnboardingStep, string> = {
   username: "Onboarding: Choose your username",
@@ -19,31 +20,35 @@ const STEP_TITLES: Record<OnboardingStep, string> = {
 };
 
 export const Route = createFileRoute("/auth/onboarding")({
-  beforeLoad: async ({ context }) => {
-    const res = await checkIfRefreshTokenInCookie();
-
-    if (!res.success) {
-      throw redirect({ to: APP_URL.auth.login });
-    }
-
-    if (context.userDetails?.username) {
-      throw redirect({ to: APP_URL.home });
-    }
-  },
-
-  // Validate search params
-  validateSearch: (search): { step: OnboardingStep } => {
+  // Validate search params before using them in the authentication guard.
+  validateSearch: (search): { step: OnboardingStep; redirect?: string } => {
     const step = typeof search.step === "string" ? search.step : "details";
 
     return {
+      redirect: getAuthRedirect(search.redirect),
       step: ONBOARDING_STEPS.includes(step as OnboardingStep)
         ? (step as OnboardingStep)
         : "details",
     };
   },
 
+  beforeLoad: async ({ context, search, location }) => {
+    const res = await checkIfRefreshTokenInCookie();
+
+    if (!res.success) {
+      throw redirect({
+        to: APP_URL.auth.login,
+        search: { redirect: search.redirect || location.href },
+      });
+    }
+
+    if (context.userDetails?.username) {
+      throw redirect({ href: search.redirect || APP_URL.home, replace: true });
+    }
+  },
+
   // Loader deps
-  loaderDeps: ({ search }: { search: { step?: OnboardingStep } }) => ({
+  loaderDeps: ({ search }) => ({
     step: search?.step || "details",
   }),
 
@@ -62,16 +67,16 @@ export const Route = createFileRoute("/auth/onboarding")({
 });
 
 function RouteComponent() {
-  const { step } = Route.useSearch() as { step: OnboardingStep };
+  const { step, redirect: returnTo } = Route.useSearch();
   const user = useAppSelector((state) => state.auth.user);
   const navigate = useNavigate();
 
   useEffect(() => {
     // If the user has already provided these required details, they are done with onboarding.
     if (user?.username && user?.first_name) {
-      navigate({ to: APP_URL.home, replace: true });
+      navigate({ href: returnTo || APP_URL.home, replace: true });
     }
-  }, [user, navigate]);
+  }, [user, navigate, returnTo]);
 
-  return <OnboardingFlow step={step} />;
+  return <OnboardingFlow step={step} returnTo={returnTo} />;
 }

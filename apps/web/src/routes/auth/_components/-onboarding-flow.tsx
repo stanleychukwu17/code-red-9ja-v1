@@ -79,10 +79,11 @@ type OnboardingState = {
 
 type OnboardingFlowProps = {
   step: OnboardingStep;
+  returnTo?: string;
 };
 
 // Main component that orchestrates the multi‑step onboarding flow
-export function OnboardingFlow({ step }: OnboardingFlowProps) {
+export function OnboardingFlow({ step, returnTo }: OnboardingFlowProps) {
   const navigate = useNavigate();
   const { visitorDetails } = useAppSelector((state) => state.site);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -227,7 +228,7 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
     onSuccess: (result) => {
       if (result.success) {
         // Hard redirect without triggering any React state updates to prevent UI flashes
-        window.location.href = APP_URL.home;
+        window.location.href = returnTo || APP_URL.home;
       } else {
         setSubmitError(result.message || "Failed to complete onboarding.");
       }
@@ -245,10 +246,10 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
   const onStepChange = useCallback((nextStep: OnboardingStep) => {
     navigate({
       to: APP_URL.auth.onboarding,
-      search: { step: nextStep } as any,
+      search: { step: nextStep, redirect: returnTo },
       replace: true,
     });
-  }, [navigate]);
+  }, [navigate, returnTo]);
 
   // Move forward to the next onboarding step if available
   const goNext = useCallback(() => {

@@ -3,16 +3,22 @@ import { APP_URL } from '#/lib/config'
 import { checkIfRefreshTokenInCookie } from '#/lib/server/auth/auth'
 
 export const Route = createFileRoute('/_authenticated')({
-  beforeLoad: async ({ context }) => {
+  beforeLoad: async ({ context, location }) => {
     const isLoggedIn = await checkIfRefreshTokenInCookie()
 
     if (!isLoggedIn.success) {
       // redirect back to login page
-      throw redirect({ to: APP_URL.auth.login })
+      throw redirect({
+        to: APP_URL.auth.login,
+        search: { redirect: location.href },
+      })
     }
 
     if (context.userDetails && !context.userDetails.username) {
-      throw redirect({ to: APP_URL.auth.onboarding })
+      throw redirect({
+        to: APP_URL.auth.onboarding,
+        search: { step: 'details', redirect: location.href },
+      })
     }
 
     return { isLoggedIn }

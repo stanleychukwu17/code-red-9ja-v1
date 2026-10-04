@@ -116,7 +116,11 @@ export function PartyCard({ party, hasUserParty }: PartyCardProps) {
 	const foundedYear = (party.date_founded ? new Date(party.date_founded).getFullYear() : undefined) ?? preset?.founded ?? 1998;
 	const coverImage = party.cover_image || preset?.coverImage || DEFAULT_COVER;
 	const coverPositionY = party.cover_position_y ?? preset?.coverPositionY ?? 50;
-	const partyHref = APP_URL.party(party.short_name.toLowerCase(), party.id.toString());
+	const partyHref = APP_URL.party(
+		party.short_name.toLowerCase(),
+		party.id.toString(),
+		party.chapter_id,
+	);
 
 	// If the user already belongs to a party, do not show the join/plus action button
 	const showActionButton = party.is_user_member || !hasUserParty;

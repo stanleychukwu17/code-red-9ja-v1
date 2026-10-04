@@ -34,12 +34,15 @@ import {
 import { APP_URL } from "#/lib/config";
 
 export const Route = createFileRoute("/_authenticated")({
-  beforeLoad: async () => {
+  beforeLoad: async ({ location }) => {
     const res = await checkIfRefreshTokenInCookie();
     const user = await getUserDetailsCookie();
 
     if (!res.success) {
-      throw redirect({ to: APP_URL.auth.login });
+      throw redirect({
+        to: APP_URL.auth.login,
+        search: { redirect: location.href },
+      });
     }
 
     if (!user?.username) {

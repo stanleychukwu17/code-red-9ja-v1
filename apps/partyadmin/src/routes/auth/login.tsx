@@ -17,6 +17,7 @@ import { useAppDispatch, useAppSelector } from "#/redux/hooks";
 import { updateAuthState } from "#/redux/slice/authSlice";
 
 import { APP_URL } from "#/lib/config";
+import { getAuthRedirect } from "#/lib/shared/auth-redirect";
 import { loginPartyApp, checkIfRefreshTokenInCookie, getUserDetailsCookie } from "#/lib/server/auth/auth";
 import { getPageHeader } from "@/lib/shared/meta";
 import { getAllCountries } from "#/lib/server/countries";
@@ -43,15 +44,23 @@ type payloadType = {
 };
 
 export const Route = createFileRoute("/auth/login")({
-  beforeLoad: async () => {
-    // If already authenticated with active refresh token, redirect straight to party dashboard
+  validateSearch: (search): { redirect?: string } => ({
+    redirect: getAuthRedirect(search.redirect),
+  }),
+
+  beforeLoad: async ({ search }) => {
+    // Continue to the intended destination or the user's party dashboard.
     const isAuthed = await checkIfRefreshTokenInCookie();
     if (isAuthed.success) {
+      if (search.redirect) {
+        throw redirect({ href: search.redirect, replace: true });
+      }
       const userDetails = await getUserDetailsCookie();
       const partyShortName = userDetails?.party?.short_name || "party";
       throw redirect({
         to: APP_URL.partyHome,
         params: { partyShortName },
+        replace: true,
       });
     }
   },
@@ -75,6 +84,7 @@ export const Route = createFileRoute("/auth/login")({
  */
 function LoginComponent() {
   const navigate = useNavigate();
+  const { redirect: returnTo } = Route.useSearch();
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { data: countriesRes } = useQuery({
@@ -137,7 +147,15 @@ function LoginComponent() {
           dispatch(updateAuthState({ user: response.data.user }));
           const partyShortName = response.data.user?.party?.short_name || "party";
           await router.invalidate();
-          navigate({ to: APP_URL.partyHome, params: { partyShortName } });
+          if (returnTo) {
+            await navigate({ href: returnTo, replace: true });
+          } else {
+            await navigate({
+              to: APP_URL.partyHome,
+              params: { partyShortName },
+              replace: true,
+            });
+          }
         } else {
           setErrorMsg(response.message || "Invalid email or password.");
         }

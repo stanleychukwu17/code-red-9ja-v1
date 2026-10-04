@@ -35,7 +35,12 @@ type PartiesService struct {
 	bodiesService            BodiesService
 	notificationsService     NotificationsService
 	blocksService            BlocksService
+	followsService           FollowsService
 	auditService             audit.AuditService
+}
+
+type FollowsService interface {
+	FollowParty(ctx context.Context, userID int64, partyID int16, chapterID int32) error
 }
 
 // BodiesService interface defines the methods needed from the bodies service
@@ -110,6 +115,11 @@ func (s *PartiesService) SetUsersService(us UsersService) {
 // SetBodiesService sets the BodiesService for entity existence checks.
 func (s *PartiesService) SetBodiesService(bs BodiesService) {
 	s.bodiesService = bs
+}
+
+// SetFollowsService sets the service used to follow chapters after joining.
+func (s *PartiesService) SetFollowsService(fs FollowsService) {
+	s.followsService = fs
 }
 
 // CreateParty inserts a party into the database and, if a Monnify client is
@@ -1551,7 +1561,7 @@ func (s *PartiesService) JoinParty(ctx context.Context, params JoinPartyParams) 
 		return err
 	}
 	if isMember {
-		return nil
+		return s.followsService.FollowParty(ctx, params.UserID, params.PartyID, finalChapterID)
 	}
 
 	// Insert the new membership record directly.
@@ -1594,7 +1604,8 @@ func (s *PartiesService) JoinParty(ctx context.Context, params JoinPartyParams) 
 		ChapterID: finalChapterID,
 	})
 
-	return nil
+	// Follow the chapter after joining; follower notifications are asynchronous.
+	return s.followsService.FollowParty(ctx, params.UserID, params.PartyID, finalChapterID)
 }
 
 // GetMarketingPlansByType returns marketing plans of a specific type

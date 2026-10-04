@@ -11,6 +11,7 @@ import { loginUser, checkIfRefreshTokenInCookie } from "#/lib/server/auth/auth";
 import { getPageHeader } from "@/lib/shared/meta";
 import { getAllCountries } from "#/lib/server/countries";
 import { APP_URL } from "#/lib/config";
+import { getAuthRedirect } from "#/lib/shared/auth-redirect";
 import { AuthWrapper } from "./_components/-auth-wrapper";
 
 export type countriesType = {
@@ -40,11 +41,15 @@ type payloadType = {
  * Enforces guest-only access via beforeLoad redirect if refresh cookie exists.
  */
 export const Route = createFileRoute("/auth/login")({
-  beforeLoad: async () => {
+  validateSearch: (search): { redirect?: string } => ({
+    redirect: getAuthRedirect(search.redirect),
+  }),
+
+  beforeLoad: async ({ search }) => {
     // Redirect already authenticated users away from the login screen
     const isAuthed = await checkIfRefreshTokenInCookie();
     if (isAuthed.success) {
-      throw redirect({ to: APP_URL.home });
+      throw redirect({ href: search.redirect || APP_URL.home, replace: true });
     }
   },
   head: () =>
@@ -68,6 +73,7 @@ export const Route = createFileRoute("/auth/login")({
  */
 function LoginComponent() {
   const navigate = useNavigate();
+  const { redirect: returnTo } = Route.useSearch();
   const dispatch = useAppDispatch();
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -87,11 +93,11 @@ function LoginComponent() {
   // User authentication mutation
   const loginMutation = useMutation({
     mutationFn: loginUser,
-    onSuccess: (response) => {
+    onSuccess: async (response) => {
       if (response.success) {
-        // Cache user info in Redux and redirect to dashboard
+        // Cache user info in Redux and restore the intended destination.
         dispatch(updateAuthState({ user: response.data?.user }));
-        navigate({ to: "/" });
+        await navigate({ href: returnTo || APP_URL.home, replace: true });
       } else {
         setErrorMsg(response.message || "Invalid email or password.");
       }
