@@ -8,6 +8,7 @@ import (
 	"free9ja/api/internal/db/queries"
 	apimiddleware "free9ja/api/internal/middleware"
 	"free9ja/api/internal/service/audit"
+	bodiesservice "free9ja/api/internal/service/bodies"
 	"free9ja/api/internal/service/files"
 	partiesservice "free9ja/api/internal/service/parties"
 	permissionsservice "free9ja/api/internal/service/permissions"
@@ -53,7 +54,7 @@ type PartiesService interface {
 	UpdatePartyDiscount(ctx context.Context, partyID int16, discountPercentage float64) (queries.Party, error)
 	// Allowance methods
 	DepositAllowance(ctx context.Context, partyID int16, amountKobo int64) (queries.Party, error)
-	JoinParty(ctx context.Context, partyID int16, chapterID int32, userID, userFid int64) error
+	JoinParty(ctx context.Context, params partiesservice.JoinPartyParams) error
 	LeaveParty(ctx context.Context, partyID int16, userID, userFid int64) error
 	GetOrCreateNationalChapter(ctx context.Context, partyID, countryID int16) (int32, error)
 	GetOrCreateZonalChapter(ctx context.Context, partyID, zonalID int16) (int32, error)
@@ -107,7 +108,12 @@ type PermissionsService interface {
 	CheckPartyMemberSuspensionPermission(claims *utils.JWTClaims, partyID int16, targetUserID int64) (bool, permissionsservice.PartyModificationPermissions, error)
 }
 
+type BodiesService interface {
+	CompletePartyHierarchySelections(ctx context.Context, partyID int64, selections []bodiesservice.PartyHierarchySelection) (bodiesservice.PartyHierarchyResult, error)
+}
+
 type Handler struct {
+	bodiesService      BodiesService
 	partiesService     PartiesService
 	auditService       audit.AuditService
 	permissionsService PermissionsService
@@ -116,8 +122,9 @@ type Handler struct {
 	r2Svc              *r2service.R2Service
 }
 
-func NewHandler(partiesService PartiesService, auditService audit.AuditService, permissionsService PermissionsService, filesService files.FilesService, utils *utils.Utils, r2Svc *r2service.R2Service) *Handler {
+func NewHandler(partiesService PartiesService, bodiesService BodiesService, auditService audit.AuditService, permissionsService PermissionsService, filesService files.FilesService, utils *utils.Utils, r2Svc *r2service.R2Service) *Handler {
 	return &Handler{
+		bodiesService:      bodiesService,
 		partiesService:     partiesService,
 		auditService:       auditService,
 		permissionsService: permissionsService,
@@ -675,7 +682,6 @@ func (h *Handler) GetPartyProfile(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-
 // JoinPartyHierarchy handles requests to join a party with chapter hierarchy selections.
 func (h *Handler) JoinPartyHierarchy(w http.ResponseWriter, r *http.Request) {
 	// 1. Extract and validate the target party ID from URL parameters
@@ -686,49 +692,62 @@ func (h *Handler) JoinPartyHierarchy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 2. Decode the optional chapter hierarchy selections from the request body
-	var req struct {
-		Selections []struct {
-			PartyID     int64  `json:"partyId"`
-			ChapterType string `json:"chapterType"`
-			ChapterID   *int32 `json:"chapterId"`
-		} `json:"selections"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil && err != io.EOF {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
-		return
-	}
-
-	// 3. Extract authenticated user claims from context
+	// Extract authenticated user claims from context
 	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
 	if !ok {
 		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
-	// 4. Ensure user is not already affiliated with a different political party
+	// Ensure user is not already affiliated with a different political party
 	if claims.PartyID > 0 && claims.PartyID != int16(partyID) {
 		h.utils.RespondError(w, http.StatusBadRequest, "You are already a member of a different political party. You must leave your current party before joining another one.")
 		return
 	}
 
-	// 5. Pick the first valid chapter ID from selections if provided
-	var targetChapterID int32
-	for _, sel := range req.Selections {
-		if sel.ChapterID != nil && *sel.ChapterID > 0 {
-			targetChapterID = *sel.ChapterID
-			break
-		}
+	// Decode the optional chapter hierarchy selections from the request body
+	var req struct {
+		Selections []bodiesservice.PartyHierarchySelection `json:"selections"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil && err != io.EOF {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
+		return
 	}
 
-	// 6. Execute join party service logic
-	err = h.partiesService.JoinParty(r.Context(), int16(partyID), targetChapterID, claims.UserID, claims.FakeID)
+	// Ensure all parent/ancestor body selections in the hierarchy are present before proceeding
+	hierarchy, err := h.bodiesService.CompletePartyHierarchySelections(r.Context(), partyID, req.Selections)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	// 7. Return success response
+	// Join each resolved party chapter.
+	for _, chapter := range []struct {
+		chapterID   int32
+		chapterType string
+	}{
+		{hierarchy.Ward.ChapterID, "ward"},
+		{hierarchy.Lga.ChapterID, "lga"},
+		{hierarchy.State.ChapterID, "state"},
+		{hierarchy.National.ChapterID, "national"},
+	} {
+		if chapter.chapterID <= 0 {
+			continue
+		}
+		err = h.partiesService.JoinParty(r.Context(), partiesservice.JoinPartyParams{
+			PartyID:     int16(partyID),
+			ChapterID:   chapter.chapterID,
+			ChapterType: chapter.chapterType,
+			UserID:      claims.UserID,
+			UserFID:     claims.FakeID,
+		})
+		if err != nil {
+			h.utils.RespondError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+
+	// Return success response
 	h.utils.RespondSuccess(w, http.StatusOK, "Membership request processed successfully", nil)
 }
 

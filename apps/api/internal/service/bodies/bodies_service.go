@@ -12,9 +12,17 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+type PartiesService interface {
+	GetOrCreateWardChapter(ctx context.Context, partyID int16, wardID int32) (int32, error)
+	GetOrCreateLGAChapter(ctx context.Context, partyID int16, lgaID int32) (int32, error)
+	GetOrCreateStateChapter(ctx context.Context, partyID, stateID int16) (int32, error)
+	GetOrCreateNationalChapter(ctx context.Context, partyID, countryID int16) (int32, error)
+}
+
 type BodiesService struct {
-	queries *queries.Queries
-	rdb     *redis.Client
+	queries        *queries.Queries
+	rdb            *redis.Client
+	partiesService PartiesService
 }
 
 func NewBodiesService(q *queries.Queries, rdb *redis.Client) *BodiesService {
@@ -22,6 +30,144 @@ func NewBodiesService(q *queries.Queries, rdb *redis.Client) *BodiesService {
 		queries: q,
 		rdb:     rdb,
 	}
+}
+
+func (s *BodiesService) SetPartiesService(partiesService PartiesService) {
+	s.partiesService = partiesService
+}
+
+// PartyHierarchySelection identifies a selected party chapter.
+type PartyHierarchySelection struct {
+	PartyID     int64  `json:"partyId"`
+	ChapterType string `json:"chapterType"`
+	ChapterID   *int32 `json:"chapterId"`
+}
+
+// PartyHierarchyResult contains each body ID and its party chapter ID.
+type PartyHierarchyResult struct {
+	Ward struct {
+		WardID    int32 `json:"wardID"`
+		ChapterID int32 `json:"chapterID"`
+	} `json:"ward"`
+	Lga struct {
+		LgaID     int32 `json:"lgaID"`
+		ChapterID int32 `json:"chapterID"`
+	} `json:"lga"`
+	State struct {
+		StateID   int16 `json:"stateID"`
+		ChapterID int32 `json:"chapterID"`
+	} `json:"state"`
+	National struct {
+		NationalID int16 `json:"nationalID"`
+		ChapterID  int32 `json:"chapterID"`
+	} `json:"national"`
+}
+
+// CompletePartyHierarchySelections resolves body IDs from the most specific selection.
+func (s *BodiesService) CompletePartyHierarchySelections(ctx context.Context, partyID int64, selections []PartyHierarchySelection) (PartyHierarchyResult, error) {
+	var hasWard, hasLGA, hasState, hasNational bool
+	var wardID, lgaID int32
+	var stateID, nationalID int16
+
+	// Check which chapter types have selected IDs.
+	for _, sel := range selections {
+		if sel.ChapterID == nil || *sel.ChapterID <= 0 {
+			continue
+		}
+		switch sel.ChapterType {
+		case "ward":
+			hasWard, wardID = true, *sel.ChapterID
+		case "lga":
+			hasLGA, lgaID = true, *sel.ChapterID
+		case "state":
+			hasState, stateID = true, int16(*sel.ChapterID)
+		case "national":
+			hasNational, nationalID = true, int16(*sel.ChapterID)
+		}
+	}
+
+	result := PartyHierarchyResult{}
+	if hasWard {
+		ward, err := s.CheckWard(ctx, wardID)
+		if err != nil {
+			return PartyHierarchyResult{}, err
+		}
+		result.Ward.WardID, result.Lga.LgaID, result.State.StateID = ward.ID, ward.LgaID, int16(ward.StateID)
+
+		stateDetails, err := s.CheckStateByID(ctx, result.State.StateID)
+		if err != nil {
+			return PartyHierarchyResult{}, err
+		}
+
+		result.National.NationalID = int16(stateDetails.CountryID)
+	} else if hasLGA {
+		lga, err := s.CheckLGA(ctx, lgaID)
+		if err != nil {
+			return PartyHierarchyResult{}, err
+		}
+		result.Lga.LgaID, result.State.StateID = lga.ID, int16(lga.StateID)
+
+		stateDetails, err := s.CheckStateByID(ctx, result.State.StateID)
+		if err != nil {
+			return PartyHierarchyResult{}, err
+		}
+
+		result.National.NationalID = int16(stateDetails.CountryID)
+	} else if hasState {
+		result.State.StateID = stateID
+
+		stateDetails, err := s.CheckStateByID(ctx, result.State.StateID)
+		if err != nil {
+			return PartyHierarchyResult{}, err
+		}
+
+		result.National.NationalID = int16(stateDetails.CountryID)
+	} else if hasNational {
+		countryDts, err := s.CheckCountry(ctx, nationalID)
+		if err != nil {
+			return PartyHierarchyResult{}, err
+		}
+
+		result.National.NationalID = int16(countryDts.ID)
+	}
+
+	// Only Nigeria (country ID 161) is supported at this time.
+	if result.National.NationalID == 0 {
+		return PartyHierarchyResult{}, fmt.Errorf("a national/country ID is required")
+	}
+	if result.National.NationalID != 161 {
+		return PartyHierarchyResult{}, errors.New("only Nigerian chapters are supported at this time")
+	}
+
+	// Fetch party chapter IDs after resolving the body hierarchy.
+	var err error
+	if result.Ward.WardID > 0 {
+		result.Ward.ChapterID, err = s.partiesService.GetOrCreateWardChapter(ctx, int16(partyID), result.Ward.WardID)
+		if err != nil {
+			return PartyHierarchyResult{}, err
+		}
+	}
+	if result.Lga.LgaID > 0 {
+		result.Lga.ChapterID, err = s.partiesService.GetOrCreateLGAChapter(ctx, int16(partyID), result.Lga.LgaID)
+		if err != nil {
+			return PartyHierarchyResult{}, err
+		}
+	}
+	if result.State.StateID > 0 {
+		result.State.ChapterID, err = s.partiesService.GetOrCreateStateChapter(ctx, int16(partyID), result.State.StateID)
+		if err != nil {
+			return PartyHierarchyResult{}, err
+		}
+	}
+	if result.National.NationalID > 0 {
+		result.National.ChapterID, err = s.partiesService.GetOrCreateNationalChapter(ctx, int16(partyID), result.National.NationalID)
+		if err != nil {
+			return PartyHierarchyResult{}, err
+		}
+	}
+
+	return result, nil
+
 }
 
 func (s *BodiesService) GetOccupations(ctx context.Context) ([]queries.Occupation, error) {

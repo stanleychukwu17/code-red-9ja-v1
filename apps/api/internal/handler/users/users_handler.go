@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"free9ja/api/internal/db/queries"
 	apimiddleware "free9ja/api/internal/middleware"
+	partiesservice "free9ja/api/internal/service/parties"
 	"free9ja/api/internal/utils"
 	"net/http"
 	"strconv"
@@ -79,7 +80,7 @@ type PermissionsService interface {
 
 // PartiesService interface defines the methods needed from the parties service
 type PartiesService interface {
-	JoinParty(ctx context.Context, partyID int16, chapterID int32, userID, userFid int64) error
+	JoinParty(ctx context.Context, params partiesservice.JoinPartyParams) error
 }
 
 // Handler holds dependencies for the users handler
@@ -970,7 +971,9 @@ func (h *Handler) AdminUpdateUser(w http.ResponseWriter, r *http.Request) {
 
 	// if the partyID is fresh, send a request for the user to be a member of the partyID received
 	if !targetUserDetails.PartyID.Valid && req.PartyID > 0 {
-		err = h.partiesService.JoinParty(r.Context(), int16(req.PartyID), 0, targetUserDetails.ID, targetUserDetails.FakeID.Int64)
+		err = h.partiesService.JoinParty(r.Context(), partiesservice.JoinPartyParams{
+			PartyID: int16(req.PartyID), ChapterType: "national", UserID: targetUserDetails.ID, UserFID: targetUserDetails.FakeID.Int64,
+		})
 		if err != nil {
 			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to join party: "+err.Error())
 			return
@@ -978,6 +981,8 @@ func (h *Handler) AdminUpdateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Fetch the new user state for accurate logging
+	// the h.partiesService.JoinParty calls the userService to invalidate the userCache
+	// so rest assured, the h.usersService.GetUserByFakeID below will always fetch the latest user details
 	updatedUserDetails, err := h.usersService.GetUserByFakeID(r.Context(), targetUserDetails.FakeID.Int64)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to get user: "+err.Error())

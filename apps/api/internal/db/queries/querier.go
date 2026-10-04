@@ -168,6 +168,8 @@ type Querier interface {
 	DeleteWard(ctx context.Context, id int32) error
 	DepositPartyAllowance(ctx context.Context, arg DepositPartyAllowanceParams) (Party, error)
 	EnsureElectionGroupParentSkeletons(ctx context.Context, electionGroupID int32) error
+	FollowParty(ctx context.Context, arg FollowPartyParams) (int64, error)
+	FollowUser(ctx context.Context, arg FollowUserParams) error
 	GetAcceptedApplicationForUser(ctx context.Context, arg GetAcceptedApplicationForUserParams) (GetAcceptedApplicationForUserRow, error)
 	GetAcceptingPartyIDs(ctx context.Context) ([]int16, error)
 	// Returns the active campaign (if any) for a party + election group where NOW() is within start/end dates.
@@ -362,6 +364,7 @@ type Querier interface {
 	InsertUserBankAccount(ctx context.Context, arg InsertUserBankAccountParams) (UserBankAccount, error)
 	InsertUserPreferences(ctx context.Context, arg InsertUserPreferencesParams) (UserPreference, error)
 	IsPartyAcceptingApplications(ctx context.Context, id int16) (bool, error)
+	IsPartyChapterMember(ctx context.Context, arg IsPartyChapterMemberParams) (bool, error)
 	// Checks if blocker_id has blocked blocked_user_id
 	IsUserBlocked(ctx context.Context, arg IsUserBlockedParams) (bool, error)
 	// Useful for chat/DMs/feed: true if either user has blocked the other
@@ -516,6 +519,8 @@ type Querier interface {
 	UnblockUserByID(ctx context.Context, arg UnblockUserByIDParams) error
 	UnblockUserByParty(ctx context.Context, arg UnblockUserByPartyParams) error
 	UnblockUserByPartyBlockID(ctx context.Context, arg UnblockUserByPartyBlockIDParams) error
+	UnfollowParty(ctx context.Context, arg UnfollowPartyParams) error
+	UnfollowUser(ctx context.Context, arg UnfollowUserParams) error
 	UpdateApplicationApproval(ctx context.Context, arg UpdateApplicationApprovalParams) (PartyApplication, error)
 	UpdateApplicationStatus(ctx context.Context, arg UpdateApplicationStatusParams) (PartyApplication, error)
 	UpdateAssetFolder(ctx context.Context, arg UpdateAssetFolderParams) (AssetFolder, error)

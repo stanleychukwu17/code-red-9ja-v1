@@ -576,7 +576,9 @@ func (s *SeedService) SeedAdmins(ctx context.Context, req SeedAdminsRequest) (st
 					}
 
 					// join party
-					err = s.partiesService.JoinParty(ctx, partyID, 0, pAdminID, fakeID)
+					err = s.partiesService.JoinParty(ctx, partiesservice.JoinPartyParams{
+						PartyID: partyID, ChapterType: "national", UserID: pAdminID, UserFID: fakeID,
+					})
 					if err != nil {
 						return fmt.Errorf("failed to join party for user %d: %w", pAdminID, err)
 					}
@@ -608,7 +610,9 @@ func (s *SeedService) SeedAdmins(ctx context.Context, req SeedAdminsRequest) (st
 					}
 
 					// join party
-					err = s.partiesService.JoinParty(ctx, partyID, 0, spAdminID, fakeID)
+					err = s.partiesService.JoinParty(ctx, partiesservice.JoinPartyParams{
+						PartyID: partyID, ChapterType: "national", UserID: spAdminID, UserFID: fakeID,
+					})
 					if err != nil {
 						return fmt.Errorf("failed to join party for user %d: %w", spAdminID, err)
 					}

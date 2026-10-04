@@ -9,6 +9,7 @@ import (
 	"free9ja/api/internal/config"
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/logger"
+	partiesservice "free9ja/api/internal/service/parties"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -54,7 +55,7 @@ type UsersService interface {
 
 type PartyService interface {
 	GetPartyBasicInfo(ctx context.Context, partyID int16) *queries.PartyBasicInfoWithVerifications
-	JoinParty(ctx context.Context, partyID int16, chapterID int32, userID, userFid int64) error
+	JoinParty(ctx context.Context, params partiesservice.JoinPartyParams) error
 }
 
 type BodiesService interface {
@@ -1385,7 +1386,9 @@ func (s *AuthService) RegisterCandidatePlaceholder(
 
 	// if partyID is provided, we add the new user to the party provided
 	if partyID != 0 {
-		err = s.partyService.JoinParty(ctx, int16(partyID), 0, userID, fakeID)
+		err = s.partyService.JoinParty(ctx, partiesservice.JoinPartyParams{
+			PartyID: int16(partyID), ChapterType: "national", UserID: userID, UserFID: fakeID,
+		})
 		if err != nil {
 			return RegisterResult{}, err
 		}

@@ -194,6 +194,12 @@ ON CONFLICT (user_id, party_id, chapter_id) DO UPDATE SET status = 'active';
 -- name: GetChapterMemberCount :one
 SELECT COUNT(*) FROM party_membership WHERE party_id = $1 AND chapter_id = $2 AND status = 'active';
 
+-- name: IsPartyChapterMember :one
+SELECT EXISTS (
+    SELECT 1 FROM party_membership
+    WHERE user_id = $1 AND party_id = $2 AND chapter_id = $3
+);
+
 -- name: ResetPartyLogo :exec
 UPDATE parties
 SET logo = '', logo_file_id = NULL, updated_at = NOW()

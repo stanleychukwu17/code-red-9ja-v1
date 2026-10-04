@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { useRouter } from "@tanstack/react-router";
 import {
 	Dialog,
 	DialogContent,
@@ -7,7 +8,7 @@ import {
 import { Loader2 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { QUERY_KEYS } from "#/lib/config";
+import { QUERY_KEYS, APP_URL } from "#/lib/config";
 import {
 	getStatesForNigeria,
 	getLGAsByState,
@@ -41,6 +42,7 @@ export function JoinPartyDialog({
 	onJoinSuccess,
 }: JoinPartyDialogProps) {
 	const queryClient = useQueryClient();
+	const router = useRouter();
 
 	// Active level tier in the drill-down flow (starts at state level as in design mockup)
 	const [currentLevel, setCurrentLevel] = useState<LevelTier>("state");
@@ -158,6 +160,8 @@ export function JoinPartyDialog({
 			queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partyCards });
 			queryClient.invalidateQueries({ queryKey: QUERY_KEYS.auth.session });
 			onJoinSuccess?.(partyId);
+
+			await router.navigate({ to: APP_URL.party(partyName.toLowerCase(), String(partyId)) });
 			onOpenChange(false);
 
 		} catch (err: unknown) {
