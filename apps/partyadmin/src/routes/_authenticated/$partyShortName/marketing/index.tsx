@@ -1,3 +1,10 @@
+/**
+ * @file Agent Marketing Campaigns Page
+ * @description Manages promotional agent recruitment campaigns for the party.
+ * Provides views of active and past marketing campaigns, budget utilization, referral rewards,
+ * and allows creating new campaigns via the AgentMarketingSetupDialog.
+ */
+
 import * as React from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { getPageHeader } from "#/lib/shared/meta";
@@ -12,7 +19,8 @@ import {
   MarketingTable,
   type MarketingCampaignType,
 } from "#/components/Tables";
-import { useAuth } from "#/hooks/useAppContext";
+import { useUser } from "#/hooks/useUser";
+import { useUserParty } from "#/hooks/useUserParty";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -35,10 +43,16 @@ export const Route = createFileRoute(
   component: RouteComponent,
 });
 
+/**
+ * Marketing Campaigns Page Component
+ * Loads campaigns associated with the current party, coordinates election group/plan/state loaders,
+ * and handles new campaign submission.
+ */
 function RouteComponent() {
   const { partyShortName } = Route.useParams();
   const [isFormOpen, setIsFormOpen] = React.useState(false);
-  const { user, party } = useAuth();
+  const user = useUser();
+  const { party } = useUserParty();
   const partyId = party?.id ?? user?.party?.id ?? (user as any)?.party_id;
 
   const {

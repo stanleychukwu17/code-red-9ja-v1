@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { API_URL } from "#/lib/config";
-import { apiFetch } from "#/lib/server/fetch";
+import { apiFetch, apiFetchJson } from "#/lib/server/fetch";
 import {
   checkIfRefreshTokenInCookieImpl,
   getUserDetailsCookieImpl,
@@ -78,32 +78,40 @@ export const signupUser = createServerFn({ method: "POST" })
     return await signupUserImpl({ data });
   });
 
+export interface CompleteOnboardingPayload {
+  first_name: string;
+  last_name: string;
+  middle_name?: string;
+  gender: string;
+  date_of_birth?: string;
+  referrer_user_id?: number | null;
+  referral_code?: string;
+  nin: string;
+  username: string;
+  country_of_origin?: number;
+  state_of_origin?: number;
+  current_country?: number;
+  current_state?: number;
+  current_city?: number;
+}
+
 // Completes the onboarding flow — sends all collected data to PATCH /api/v1/auth/onboarding
 export const completeOnboarding = createServerFn({ method: "POST" })
-  .inputValidator((data: any) => data)
+  .inputValidator((data: CompleteOnboardingPayload) => data)
   .handler(async ({ data: payload }) => {
     try {
-      const { getCookie } = await import("@tanstack/react-start/server");
-      const accessToken = getCookie("access_token");
-
-      if (!accessToken) {
-        return {
-          success: false,
-          message: "Session expired. Please log in again.",
-        };
-      }
-
-      const response = await apiFetch(API_URL.auth.completeOnboarding, {
+      return await apiFetchJson(API_URL.auth.completeOnboarding, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify(payload),
       });
-      return await response.json();
-    } catch (error) {
-      return { success: false, message: "Failed to complete onboarding" };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error?.message || "Failed to complete onboarding",
+      };
     }
   });
 

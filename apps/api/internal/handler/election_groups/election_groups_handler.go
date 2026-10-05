@@ -39,6 +39,7 @@ func NewHandler(service ElectionGroupsService, utils *utils.Utils) *Handler {
 }
 
 func parsePaginationParams(r *http.Request) (int, int64) {
+	// 1. Default limit is 20; clamp between 1 and 100
 	limit := 20
 	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
 		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
@@ -50,6 +51,7 @@ func parsePaginationParams(r *http.Request) (int, int64) {
 		}
 	}
 
+	// 2. Parse optional integer cursor (ID of the last item in previous page)
 	var cursor int64
 	if cursorStr := r.URL.Query().Get("cursor"); cursorStr != "" {
 		if c, err := strconv.ParseInt(cursorStr, 10, 64); err == nil {
@@ -60,11 +62,13 @@ func parsePaginationParams(r *http.Request) (int, int64) {
 }
 
 func parseSortParams(r *http.Request, defaultOrderBy string, defaultOrderDir string) (string, string) {
+	// 1. Extract order_by column or fall back to default
 	orderBy := r.URL.Query().Get("order_by")
 	if orderBy == "" {
 		orderBy = defaultOrderBy
 	}
 
+	// 2. Extract direction, normalize to uppercase, and validate (defaulting if invalid)
 	orderDir := strings.ToUpper(r.URL.Query().Get("order"))
 	if orderDir != "ASC" && orderDir != "DESC" {
 		orderDir = defaultOrderDir
@@ -101,23 +105,27 @@ type UpdateElectionGroupRequest struct {
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Router       /election-groups [post]
 func (h *Handler) CreateElectionGroup(w http.ResponseWriter, r *http.Request) {
+	// 1. Decode incoming JSON request payload
 	var req CreateElectionGroupRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
+	// 2. Validate mandatory fields (name and election date)
 	if req.Name == "" || req.ElectionDate.IsZero() {
 		h.utils.RespondError(w, http.StatusBadRequest, "name and election_date are required")
 		return
 	}
 
+	// 3. Delegate creation to service (persists group, updates caches, and seeds national metrics in background)
 	eg, err := h.service.CreateElectionGroup(r.Context(), req.Name, req.Rank, req.ElectionsCount, req.StatesCount, req.ElectionDate.Time())
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create election group: "+err.Error())
 		return
 	}
 
+	// 4. Return 201 Created with the new election group record
 	h.utils.RespondSuccess(w, http.StatusCreated, "Election group created successfully", map[string]interface{}{
 		"election_group": eg,
 	})
@@ -149,8 +157,10 @@ type ElectionGroupResponse struct {
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Router       /election-groups [get]
 func (h *Handler) ListElectionGroups(w http.ResponseWriter, r *http.Request) {
+	// 1. Parse pagination query parameters (limit and last-seen cursor ID)
 	limit, cursor := parsePaginationParams(r)
 
+	// 2. Check for optional party_id to fetch party-specific stats (e.g. agent coverage)
 	var partyID int64
 	if partyIDStr := r.URL.Query().Get("party_id"); partyIDStr != "" {
 		if pid, err := strconv.ParseInt(partyIDStr, 10, 64); err == nil {
@@ -159,6 +169,8 @@ func (h *Handler) ListElectionGroups(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var responseGroups []ElectionGroupResponse
+
+	// 3. Fetch election groups: enriched with party metrics if partyID is supplied, otherwise standard cached list
 	if partyID > 0 {
 		rows, err := h.service.ListElectionGroupsWithPartyStats(r.Context(), int16(partyID))
 		if err != nil {
@@ -199,46 +211,52 @@ func (h *Handler) ListElectionGroups(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// 4. Optional filter: keep only election groups holding on or after today if upcoming=true
 	if r.URL.Query().Get("upcoming") == "true" {
 		var filteredGroups []ElectionGroupResponse
 		now := time.Now()
 		// keep only time component zeroed for comparison
 		today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-		for _, eg := range responseGroups {
-			if eg.ElectionDate.Valid && !eg.ElectionDate.Time.Before(today) {
-				filteredGroups = append(filteredGroups, eg)
+		for _, electionGroup := range responseGroups {
+			if electionGroup.ElectionDate.Valid && !electionGroup.ElectionDate.Time.Before(today) {
+				filteredGroups = append(filteredGroups, electionGroup)
 			}
 		}
 		responseGroups = filteredGroups
 	}
 
+	// 5. In-memory sorting based on requested column (name, rank, or ID) and direction (ASC/DESC)
 	orderBy, orderDir := parseSortParams(r, "rank", "ASC")
 
+	// sort using slice stable
 	sort.SliceStable(responseGroups, func(i, j int) bool {
-		var less bool
-		if orderBy == "name" {
-			less = responseGroups[i].Name < responseGroups[j].Name
-		} else if orderBy == "rank" {
-			less = responseGroups[i].Rank < responseGroups[j].Rank
-		} else {
-			less = responseGroups[i].ID < responseGroups[j].ID
-		}
+		// For descending order, swap indices (j < i) to maintain strict weak ordering without violating equality
 		if orderDir == "DESC" {
-			return !less
+			i, j = j, i
 		}
-		return less
+
+		switch orderBy {
+		case "name":
+			return responseGroups[i].Name < responseGroups[j].Name
+		case "rank":
+			return responseGroups[i].Rank < responseGroups[j].Rank
+		default:
+			return responseGroups[i].ID < responseGroups[j].ID
+		}
 	})
 
+	// 6. Cursor-based pagination: find the index after the cursor ID
 	startIndex := 0
 	if cursor > 0 {
-		for i, eg := range responseGroups {
-			if eg.ID == cursor {
+		for i, electionGroup := range responseGroups {
+			if electionGroup.ID == cursor {
 				startIndex = i + 1
 				break
 			}
 		}
 	}
 
+	// 7. Slice the requested page (limit items) and determine next_cursor / has_more
 	var paginated []ElectionGroupResponse
 	hasMore := false
 	nextCursor := ""
@@ -257,6 +275,7 @@ func (h *Handler) ListElectionGroups(w http.ResponseWriter, r *http.Request) {
 		paginated = []ElectionGroupResponse{}
 	}
 
+	// 8. Return the paginated election groups with pagination metadata
 	h.utils.RespondSuccess(w, http.StatusOK, "Election groups fetched successfully", map[string]interface{}{
 		"election_groups": paginated,
 		"meta": map[string]interface{}{
@@ -279,6 +298,7 @@ func (h *Handler) ListElectionGroups(w http.ResponseWriter, r *http.Request) {
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Router       /election-groups/{id} [get]
 func (h *Handler) GetElectionGroup(w http.ResponseWriter, r *http.Request) {
+	// 1. Extract and parse election group ID from URL path parameter
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -286,12 +306,14 @@ func (h *Handler) GetElectionGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 2. Fetch the election group by ID (service checks in-memory cache first, falls back to DB)
 	eg, err := h.service.GetElectionGroupByID(r.Context(), id)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Election group not found")
 		return
 	}
 
+	// 3. Return 200 OK with the election group details
 	h.utils.RespondSuccess(w, http.StatusOK, "Election group fetched successfully", map[string]interface{}{
 		"election_group": eg,
 	})
@@ -311,6 +333,7 @@ func (h *Handler) GetElectionGroup(w http.ResponseWriter, r *http.Request) {
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Router       /election-groups/{id} [put]
 func (h *Handler) UpdateElectionGroup(w http.ResponseWriter, r *http.Request) {
+	// 1. Extract and parse election group ID from URL path parameter
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -318,29 +341,34 @@ func (h *Handler) UpdateElectionGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 2. Decode incoming JSON update payload
 	var req UpdateElectionGroupRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
+	// 3. Validate mandatory fields (name and election date)
 	if req.Name == "" || req.ElectionDate.IsZero() {
 		h.utils.RespondError(w, http.StatusBadRequest, "name and election_date are required")
 		return
 	}
 
+	// 4. Verify the election group exists before attempting update
 	_, err = h.service.GetElectionGroupByID(r.Context(), id)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Election group not found")
 		return
 	}
 
+	// 5. Update election group via service (updates group, syncs date across child elections, and invalidates cache)
 	updated, err := h.service.UpdateElectionGroup(r.Context(), id, req.Name, req.Rank, req.ElectionsCount, req.StatesCount, req.ElectionDate.Time())
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update election group: "+err.Error())
 		return
 	}
 
+	// 6. Return 200 OK with the updated election group
 	h.utils.RespondSuccess(w, http.StatusOK, "Election group updated successfully", map[string]interface{}{
 		"election_group": updated,
 	})
@@ -359,6 +387,7 @@ func (h *Handler) UpdateElectionGroup(w http.ResponseWriter, r *http.Request) {
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Router       /election-groups/{id} [delete]
 func (h *Handler) DeleteElectionGroup(w http.ResponseWriter, r *http.Request) {
+	// 1. Extract and parse election group ID from URL path parameter
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -366,17 +395,20 @@ func (h *Handler) DeleteElectionGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 2. Verify election group exists before attempting deletion
 	_, err = h.service.GetElectionGroupByID(r.Context(), id)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Election group not found")
 		return
 	}
 
+	// 3. Delete election group via service (deletes record and invalidates cache)
 	if err := h.service.DeleteElectionGroup(r.Context(), id); err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to delete election group: "+err.Error())
 		return
 	}
 
+	// 4. Return 200 OK confirming deletion
 	h.utils.RespondSuccess(w, http.StatusOK, "Election group deleted successfully", nil)
 }
 
@@ -399,6 +431,7 @@ type UpsertPartyElectionGroupStatsRequest struct {
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Router       /election-groups/{id}/party-stats [put]
 func (h *Handler) UpsertPartyElectionGroupStats(w http.ResponseWriter, r *http.Request) {
+	// 1. Extract and parse election group ID from URL path parameter
 	idStr := chi.URLParam(r, "id")
 	electionGroupID, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -406,17 +439,20 @@ func (h *Handler) UpsertPartyElectionGroupStats(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	// 2. Decode incoming JSON request payload
 	var req UpsertPartyElectionGroupStatsRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
+	// 3. Validate required party ID
 	if req.PartyID <= 0 {
 		h.utils.RespondError(w, http.StatusBadRequest, "party_id is required and must be positive")
 		return
 	}
 
+	// 4. Marshal polling agent coverage into JSON bytes and upsert stats via service
 	coverageBytes, _ := json.Marshal(req.PollingAgentsCoverage)
 	stats, err := h.service.UpsertPartyElectionGroupStats(r.Context(), int16(req.PartyID), electionGroupID, coverageBytes, req.ElectionsContesting)
 	if err != nil {
@@ -424,6 +460,7 @@ func (h *Handler) UpsertPartyElectionGroupStats(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	// 5. Return 200 OK with the upserted party election group stats
 	h.utils.RespondSuccess(w, http.StatusOK, "Party election group stats upserted successfully", map[string]interface{}{
 		"party_election_group": stats,
 	})
@@ -440,6 +477,7 @@ func (h *Handler) UpsertPartyElectionGroupStats(w http.ResponseWriter, r *http.R
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Router       /election-groups/{id}/elections [get]
 func (h *Handler) ListGroupElections(w http.ResponseWriter, r *http.Request) {
+	// 1. Extract and parse election group ID from URL path parameter
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -447,14 +485,15 @@ func (h *Handler) ListGroupElections(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 2. Fetch all child elections associated with this election group via service
 	elections, err := h.service.ListGroupElections(r.Context(), id)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch group elections: "+err.Error())
 		return
 	}
 
+	// 3. Return 200 OK with the list of elections
 	h.utils.RespondSuccess(w, http.StatusOK, "Elections fetched successfully", map[string]interface{}{
 		"elections": elections,
 	})
 }
-

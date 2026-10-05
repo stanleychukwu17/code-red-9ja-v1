@@ -40,6 +40,7 @@ type PartiesService struct {
 type UsersService interface {
 	GetUserByFakeID(ctx context.Context, fakeID int64) (queries.UserWithPlaces, error)
 	UpdateUserParty(ctx context.Context, userID int64, partyID *int16, fakeID int64) error
+	StripPartyAdminRoles(ctx context.Context, userID int64, fakeID int64) error
 }
 
 // PageVerificationsService interface defines the methods needed from the page verifications service
@@ -728,7 +729,7 @@ func (s *PartiesService) DepositAllowance(ctx context.Context, partyID int16, am
 	// Add to allowance balance directly in parties table
 	updatedParty, err := txQueries.DepositPartyAllowance(ctx, queries.DepositPartyAllowanceParams{
 		AgentPaymentBalanceKobo: amountKobo,
-		ID:                   partyID,
+		ID:                      partyID,
 	})
 	if err != nil {
 		return queries.Party{}, fmt.Errorf("failed to deposit allowance: %w", err)
@@ -755,7 +756,7 @@ func (s *PartiesService) UpdateAgentPaymentAllocationKobo(ctx context.Context, p
 	defer s.InvalidatePartyCache(ctx, partyID)
 	return s.queries.UpdatePartyAgentPaymentAllocationKobo(ctx, queries.UpdatePartyAgentPaymentAllocationKoboParams{
 		AgentPaymentAllocationKobo: allowancesJSON,
-		ID:              partyID,
+		ID:                         partyID,
 	})
 }
 
@@ -956,6 +957,9 @@ func (s *PartiesService) LeaveParty(ctx context.Context, partyID int16, userID, 
 		})
 		s.InvalidateChapterMemberCount(ctx, chapterID)
 	}
+
+	// Revoke party-scoped administrative roles (party_admin, super_party_admin)
+	_ = s.usersService.StripPartyAdminRoles(ctx, userID, userFid)
 
 	// Remove the user's active party affiliation from the users table
 	err = s.usersService.UpdateUserParty(ctx, userID, nil, userFid)
@@ -1220,5 +1224,3 @@ func (s *PartiesService) GetPartyAgentAcquisitionTargets(ctx context.Context, pa
 	}
 	return json.RawMessage(party.AgentAcquisitionTargets), nil
 }
-
-

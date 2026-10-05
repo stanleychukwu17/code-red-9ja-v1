@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { getCookie } from "@tanstack/react-start/server";
 import { apiFetch } from "./fetch";
 import { API_URL } from "#/lib/config";
 
@@ -28,9 +29,6 @@ export const getElections = createServerFn({ method: "GET" })
       const limit = data?.limit || 20;
       const cursor = data?.cursor || "";
 
-      const { getCookie } = await import("@tanstack/react-start/server");
-      const accessToken = getCookie("access_token");
-      const refreshToken = getCookie("refresh_token");
       const userDetailsCookie = getCookie("user_details");
 
       let resolvedPartyShortName = data?.partyShortName || "";
@@ -39,15 +37,6 @@ export const getElections = createServerFn({ method: "GET" })
           const user = JSON.parse(userDetailsCookie);
           resolvedPartyShortName = user?.party?.short_name || "";
         } catch (e) {}
-      }
-
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-      if (accessToken) {
-        headers["Authorization"] = `Bearer ${accessToken}`;
-        headers["Cookie"] =
-          `accessToken=${accessToken}; refreshToken=${refreshToken || ""}`;
       }
 
       const params = new URLSearchParams();
@@ -71,7 +60,7 @@ export const getElections = createServerFn({ method: "GET" })
           elections.map(async (election: any) => {
             try {
               const candidatesUrl = `${API_URL.elections}/${election.id}/candidates`;
-              const candResp = await apiFetch(candidatesUrl, { headers });
+              const candResp = await apiFetch(candidatesUrl);
               if (candResp.ok) {
                 const candData = await candResp.json();
                 if (
@@ -117,24 +106,13 @@ export const fieldPartyCandidate = createServerFn({ method: "POST" })
   .inputValidator((data: { electionId: number; candidateId: number }) => data)
   .handler(async ({ data: { electionId, candidateId } }) => {
     try {
-      const { getCookie } = await import("@tanstack/react-start/server");
-      const accessToken = getCookie("access_token");
-      const refreshToken = getCookie("refresh_token");
-
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-      if (accessToken) {
-        headers["Authorization"] = `Bearer ${accessToken}`;
-        headers["Cookie"] =
-          `accessToken=${accessToken}; refreshToken=${refreshToken || ""}`;
-      }
-
       const response = await apiFetch(
         `${API_URL.elections}/${electionId}/field-candidate`,
         {
           method: "POST",
-          headers,
+          headers: {
+            "Content-Type": "application/json",
+          },
           body: JSON.stringify({ candidate_id: candidateId }),
         },
       );
@@ -156,24 +134,9 @@ export const getElectionCandidates = createServerFn({ method: "GET" })
     try {
       const limit = data.limit || 20;
       const cursor = data.cursor || "";
-      const { getCookie } = await import("@tanstack/react-start/server");
-      const accessToken = getCookie("access_token");
-      const refreshToken = getCookie("refresh_token");
-
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-      if (accessToken) {
-        headers["Authorization"] = `Bearer ${accessToken}`;
-        headers["Cookie"] =
-          `accessToken=${accessToken}; refreshToken=${refreshToken || ""}`;
-      }
 
       const response = await apiFetch(
         `${API_URL.elections}/${data.electionId}/candidates?limit=${limit}&cursor=${cursor}`,
-        {
-          headers,
-        },
       );
       const resData = await response.json();
       return resData;
@@ -204,19 +167,6 @@ export const getPollingUnitUpdates = createServerFn({ method: "GET" })
   )
   .handler(async ({ data }) => {
     try {
-      const { getCookie } = await import("@tanstack/react-start/server");
-      const accessToken = getCookie("access_token");
-      const refreshToken = getCookie("refresh_token");
-
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-      if (accessToken) {
-        headers["Authorization"] = `Bearer ${accessToken}`;
-        headers["Cookie"] =
-          `accessToken=${accessToken}; refreshToken=${refreshToken || ""}`;
-      }
-
       const params = new URLSearchParams();
       if (data.electionGroupId)
         params.append("election_group_id", data.electionGroupId.toString());
@@ -248,9 +198,6 @@ export const getPollingUnitUpdates = createServerFn({ method: "GET" })
 
       const response = await apiFetch(
         `${API_URL.pollingUnitUpdates}?${params.toString()}`,
-        {
-          headers,
-        },
       );
 
       const resData = await response.json();
@@ -281,19 +228,6 @@ export const getPollingUnitFinalResults = createServerFn({ method: "GET" })
   )
   .handler(async ({ data }) => {
     try {
-      const { getCookie } = await import("@tanstack/react-start/server");
-      const accessToken = getCookie("access_token");
-      const refreshToken = getCookie("refresh_token");
-
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-      if (accessToken) {
-        headers["Authorization"] = `Bearer ${accessToken}`;
-        headers["Cookie"] =
-          `accessToken=${accessToken}; refreshToken=${refreshToken || ""}`;
-      }
-
       const params = new URLSearchParams();
       if (data.electionGroupId)
         params.append("election_group_id", data.electionGroupId.toString());
@@ -323,9 +257,6 @@ export const getPollingUnitFinalResults = createServerFn({ method: "GET" })
 
       const response = await apiFetch(
         `${API_URL.pollingUnitFinalResults}?${params.toString()}`,
-        {
-          headers,
-        },
       );
 
       const resData = await response.json();
@@ -344,24 +275,8 @@ export const getElectionsByGroup = createServerFn({ method: "GET" })
   .inputValidator((groupId: string | number) => groupId)
   .handler(async ({ data: groupId }) => {
     try {
-      const { getCookie } = await import("@tanstack/react-start/server");
-      const accessToken = getCookie("access_token");
-      const refreshToken = getCookie("refresh_token");
-
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-      if (accessToken) {
-        headers["Authorization"] = `Bearer ${accessToken}`;
-        headers["Cookie"] =
-          `accessToken=${accessToken}; refreshToken=${refreshToken || ""}`;
-      }
-
       const response = await apiFetch(
         `${API_URL.electionGroups}/${groupId}/elections`,
-        {
-          headers,
-        },
       );
       const resData = await response.json();
       return resData;
@@ -388,19 +303,6 @@ export const getElectionStats = createServerFn({ method: "GET" })
   )
   .handler(async ({ data }) => {
     try {
-      const { getCookie } = await import("@tanstack/react-start/server");
-      const accessToken = getCookie("access_token");
-      const refreshToken = getCookie("refresh_token");
-
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-      if (accessToken) {
-        headers["Authorization"] = `Bearer ${accessToken}`;
-        headers["Cookie"] =
-          `accessToken=${accessToken}; refreshToken=${refreshToken || ""}`;
-      }
-
       let url = "";
       if (data.wardId) {
         url = API_URL.electionStats.singleWardStats(
@@ -445,7 +347,7 @@ export const getElectionStats = createServerFn({ method: "GET" })
         );
       }
 
-      const response = await apiFetch(url, { headers });
+      const response = await apiFetch(url);
       const resData = await response.json();
       return resData;
     } catch (error) {

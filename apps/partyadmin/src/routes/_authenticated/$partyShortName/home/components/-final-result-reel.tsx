@@ -12,19 +12,48 @@ import {
   useReelKeyboard,
 } from "./-reel-shared";
 
+/**
+ * FinalResultReel Component
+ *
+ * Full-screen modal designed for election night situation room operations.
+ * Displays official EC8A polling unit return sheets side-by-side with candidate vote tallies,
+ * uploader credentials, and consensus status across political party agents.
+ *
+ * Features:
+ * - High-resolution inspection of scanned or photographed Form EC8A.
+ * - Candidate vote count rankings merged with political party metadata.
+ * - Multi-agent consensus counter (e.g., verifying whether multiple party agents submitted identical numbers).
+ * - Keyboard shortcuts (ArrowLeft / ArrowRight to step through PUs, Escape to close).
+ */
+
 export type ResultOverlayItem = {
+  /** Name of the reporting polling unit */
   polling_unit_name?: string;
+  /** Local Government Area name */
   lga_name?: string;
+  /** State name */
   state_name?: string;
+  /** Ward name */
   ward_name?: string;
+  /** Avatar image URL of the submitting agent */
   user_avatar?: string;
+  /** Name of the submitting agent */
   uploader_name?: string;
+  /** Array of result sheet photos/scans */
   media_urls?: string[];
+  /** Timestamp of upload */
   created_at?: string;
+  /** Candidate vote tallies submitted by the agent */
   candidate_results?: any;
   [key: string]: any;
 };
 
+/**
+ * ResultReelSidebar Component
+ *
+ * Renders the candidate vote breakdown leaderboard alongside polling unit location
+ * and the verified agent who uploaded the Form EC8A sheet.
+ */
 function ResultReelSidebar({
   votesData,
   result,
@@ -94,6 +123,12 @@ function ResultReelSidebar({
   );
 }
 
+/**
+ * FinalResultReel Component
+ *
+ * Full-screen modal that merges election results with party metadata and presents
+ * Form EC8A sheet images with interactive candidate leaderboards.
+ */
 export function FinalResultReel({
   result,
   candidatesList,
@@ -115,15 +150,17 @@ export function FinalResultReel({
 }) {
   const [isSidebarVisible, setIsSidebarVisible] = useState(true);
 
+  // Bind keyboard arrow keys (left/right) and Escape key
   useReelKeyboard({ hasNext, hasPrev, onNext, onPrev, onClose });
 
+  // Normalize and rank candidate vote tallies against active political party logos
   const votesData = mergeElectionResults({
     candidates: candidatesList,
     electionFinalResults: {
       candidate_results: result.candidate_results,
     },
     parties: activeParties || [],
-    isLive: false, // assuming reel is always showing final (or we can pass isLive if needed, but it currently only looks at result.candidate_results)
+    isLive: false,
   });
 
   const displayTime = result.created_at

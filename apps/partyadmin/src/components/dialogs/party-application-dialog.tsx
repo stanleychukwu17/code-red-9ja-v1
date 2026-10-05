@@ -1,3 +1,13 @@
+/**
+ * @file Party Agent Application Review & Assignment Dialog
+ * @description Comprehensive decision modal for party administrators to:
+ * 1. Review applicant details (name, contact numbers, voter card, academic certificate, address).
+ * 2. Approve or reassign election roles (Polling Unit Agent, Ward Supervisor, LGA Supervisor, State Supervisor).
+ * 3. Review recommended polling units with active agent counts or search across units via `ChoosePollingUnitDialog`.
+ * 4. Reject applications with a mandatory reason prompt.
+ * 5. Update existing assignments for already accepted agents.
+ */
+
 import {
   approveApplication,
   getLGAs,
@@ -146,6 +156,11 @@ type PollingUnitOption = {
   ward: string;
 };
 
+/**
+ * PartyApplicationDialog Component
+ * Primary review dialog displaying applicant information, contact channels,
+ * geographic assignment selectors (State, LGA, Ward, Polling Unit), and accept/reject/reassign actions.
+ */
 export function PartyApplicationDialog({
   open,
   onClose,
@@ -1028,6 +1043,11 @@ type ChoosePollingUnitDialogProps = {
   }) => void;
 };
 
+/**
+ * ChoosePollingUnitDialog Component
+ * Secondary modal providing cascading State > LGA > Ward filters and an infinite-scrolling
+ * list of polling units to assign to an agent.
+ */
 export function ChoosePollingUnitDialog({
   open,
   onClose,

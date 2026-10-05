@@ -3,14 +3,25 @@ import { getFinalResult } from "#/lib/server/polling_unit_results";
 import { GreyCardTitle, GreyCardTopRow, GreyCardWrapper } from "./Shared";
 
 interface FinalResultCardProps {
+  /** Target election identifier */
   electionId?: number | null;
+  /** Target polling unit identifier */
   pollingUnitId?: number | null;
 }
 
+/**
+ * Polling Unit Final Result Card.
+ *
+ * Displays consensus election returns for a single polling unit:
+ * - Shows verification confidence level (e.g. HIGH/MEDIUM) and number of matching submissions.
+ * - Parses and ranks candidate results by vote count descending.
+ * - Renders the top 3 vote-getting political parties.
+ */
 export function FinalResultCard({
   electionId,
   pollingUnitId,
 }: FinalResultCardProps) {
+  // Query certified consensus result for this election and polling unit
   const { data: finalResultData, isLoading } = useQuery({
     queryKey: ["finalResult", electionId, pollingUnitId],
     enabled: !!electionId && !!pollingUnitId,
@@ -23,10 +34,12 @@ export function FinalResultCard({
     },
   });
 
+  // Guard: Render nothing if IDs missing or data unavailable
   if (!electionId || !pollingUnitId) return null;
   if (isLoading) return null;
   if (!finalResultData) return null;
 
+  // Safe parsing of candidate results (JSON string or object array)
   let candidates = [];
   try {
     if (typeof finalResultData.candidate_results === "string") {
@@ -45,6 +58,7 @@ export function FinalResultCard({
 
   return (
     <GreyCardWrapper>
+      {/* Header showing title and confidence level */}
       <GreyCardTopRow
         title="Polling Unit Final Result"
         subtitle={`Confidence: ${finalResultData.confidence_level?.toUpperCase()}`}
@@ -53,6 +67,7 @@ export function FinalResultCard({
         label={`Based on ${finalResultData.matching_submissions_count} matching submissions.`}
       />
 
+      {/* Top 3 candidate results */}
       <div className="mt-4 flex flex-col gap-2">
         {candidates.slice(0, 3).map((c: any, i: number) => (
           <div

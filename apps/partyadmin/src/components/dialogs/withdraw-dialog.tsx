@@ -1,3 +1,10 @@
+/**
+ * @file Party Treasury Withdrawal Dialog
+ * @description Modal allowing authorized party administrators to request payouts from the party treasury
+ * into external Nigerian commercial bank accounts. Validates recipient account numbers, bank selection,
+ * and available balance before triggering the withdrawal mutation.
+ */
+
 import * as React from "react";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -14,6 +21,7 @@ import { GeneralCommand } from "@repo/ui/components/command/general-command";
 import { useMutation } from "@tanstack/react-query";
 import { withdrawFromPartyWallet } from "#/lib/server/parties";
 
+/** Standard Nigerian commercial bank routing codes and institutions */
 const NIGERIAN_BANKS = [
   { code: "058", name: "Guaranty Trust Bank (GTBank)" },
   { code: "057", name: "Zenith Bank" },
@@ -34,6 +42,11 @@ const NIGERIAN_BANKS = [
   { code: "215", name: "Unity Bank" },
 ];
 
+/**
+ * WithdrawDialog Component
+ * Manages bank account destination details, payout amount in Naira,
+ * and calls the server-side withdrawal handler.
+ */
 export function WithdrawDialog({
   open,
   onClose,

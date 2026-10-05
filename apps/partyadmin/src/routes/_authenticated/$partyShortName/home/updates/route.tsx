@@ -5,7 +5,8 @@ import {
   useParams,
   useLocation,
 } from "@tanstack/react-router";
-import { useAppContext } from "#/hooks/useAppContext";
+import { useUserParty } from "#/hooks/useUserParty";
+import { useElection } from "#/hooks/useElection";
 import { getElectionGroups } from "#/lib/server/election_groups";
 import { getElectionsByGroup } from "#/lib/server/elections";
 import { useServerFn } from "@tanstack/react-start";
@@ -26,12 +27,22 @@ import { APP_URL } from "#/lib/config";
 import { zodValidator } from "@tanstack/zod-adapter";
 import { z } from "zod";
 
+/** Schema for validating URL query parameters: filters between general updates and formal incident reports */
 const updatesSearchSchema = z.object({
   is_report: z.union([z.boolean(), z.literal("true"), z.literal("false")])
     .transform((val) => val === "true" || val === true)
     .optional(),
 });
 
+/**
+ * Polling Unit Updates & Incidents Route Layout
+ *
+ * Master layout wrapper for field reports submitted by accredited polling agents:
+ * - Query Filters: `?is_report=true` (critical incidents) vs `?is_report=false` (routine updates).
+ * - Geographic Hierarchy Filter: Mounts `ElectionScopeSelector` for scoping by State/LGA/Ward.
+ * - Sub-view Tabs: Switches between chronological incident stream (`/updates`) and
+ *   evidence photos/videos gallery (`/updates/media-only`).
+ */
 export const Route = createFileRoute(
   "/_authenticated/$partyShortName/home/updates",
 )({
@@ -40,15 +51,20 @@ export const Route = createFileRoute(
   component: UpdatesLayoutComponent,
 });
 
+/**
+ * UpdatesLayoutComponent
+ *
+ * Coordinates header navigation, report categorization tabs, and geographical scope filters.
+ */
 function UpdatesLayoutComponent() {
   const { partyShortName } = useParams({ strict: false });
   const { is_report } = Route.useSearch();
+  const { party } = useUserParty();
   const {
-    party,
     selectedElectionGroup,
     setSelectedElectionGroup,
     setSelectedElection,
-  } = useAppContext();
+  } = useElection();
   const partyId = party?.id;
 
   const fetchGroups = useServerFn(getElectionGroups);

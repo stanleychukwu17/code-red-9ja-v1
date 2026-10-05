@@ -36,6 +36,7 @@ import { Route as AuthenticatedUsersAdminRouteImport } from './routes/_authentic
 import { Route as AuthenticatedInecResultGrabberLogsRouteImport } from './routes/_authenticated/inec-result-grabber/logs'
 import { Route as AuthenticatedElectionsOfficesRouteImport } from './routes/_authenticated/elections/offices'
 import { Route as AuthenticatedElectionsInstancesRouteImport } from './routes/_authenticated/elections/instances'
+import { Route as AuthenticatedElectionsExplanationRouteImport } from './routes/_authenticated/elections/explanation'
 import { Route as AuthenticatedBodiesWardsRouteImport } from './routes/_authenticated/bodies/wards'
 import { Route as AuthenticatedBodiesStatesRouteImport } from './routes/_authenticated/bodies/states'
 import { Route as AuthenticatedBodiesStateConstituenciesRouteImport } from './routes/_authenticated/bodies/state-constituencies'
@@ -191,6 +192,12 @@ const AuthenticatedElectionsInstancesRoute =
     path: '/instances',
     getParentRoute: () => AuthenticatedElectionsRoute,
   } as any)
+const AuthenticatedElectionsExplanationRoute =
+  AuthenticatedElectionsExplanationRouteImport.update({
+    id: '/explanation',
+    path: '/explanation',
+    getParentRoute: () => AuthenticatedElectionsRoute,
+  } as any)
 const AuthenticatedBodiesWardsRoute =
   AuthenticatedBodiesWardsRouteImport.update({
     id: '/wards',
@@ -265,6 +272,7 @@ export interface FileRoutesByFullPath {
   '/bodies/state-constituencies': typeof AuthenticatedBodiesStateConstituenciesRoute
   '/bodies/states': typeof AuthenticatedBodiesStatesRoute
   '/bodies/wards': typeof AuthenticatedBodiesWardsRoute
+  '/elections/explanation': typeof AuthenticatedElectionsExplanationRoute
   '/elections/instances': typeof AuthenticatedElectionsInstancesRoute
   '/elections/offices': typeof AuthenticatedElectionsOfficesRoute
   '/inec-result-grabber/logs': typeof AuthenticatedInecResultGrabberLogsRoute
@@ -298,6 +306,7 @@ export interface FileRoutesByTo {
   '/bodies/state-constituencies': typeof AuthenticatedBodiesStateConstituenciesRoute
   '/bodies/states': typeof AuthenticatedBodiesStatesRoute
   '/bodies/wards': typeof AuthenticatedBodiesWardsRoute
+  '/elections/explanation': typeof AuthenticatedElectionsExplanationRoute
   '/elections/instances': typeof AuthenticatedElectionsInstancesRoute
   '/elections/offices': typeof AuthenticatedElectionsOfficesRoute
   '/inec-result-grabber/logs': typeof AuthenticatedInecResultGrabberLogsRoute
@@ -337,6 +346,7 @@ export interface FileRoutesById {
   '/_authenticated/bodies/state-constituencies': typeof AuthenticatedBodiesStateConstituenciesRoute
   '/_authenticated/bodies/states': typeof AuthenticatedBodiesStatesRoute
   '/_authenticated/bodies/wards': typeof AuthenticatedBodiesWardsRoute
+  '/_authenticated/elections/explanation': typeof AuthenticatedElectionsExplanationRoute
   '/_authenticated/elections/instances': typeof AuthenticatedElectionsInstancesRoute
   '/_authenticated/elections/offices': typeof AuthenticatedElectionsOfficesRoute
   '/_authenticated/inec-result-grabber/logs': typeof AuthenticatedInecResultGrabberLogsRoute
@@ -376,6 +386,7 @@ export interface FileRouteTypes {
     | '/bodies/state-constituencies'
     | '/bodies/states'
     | '/bodies/wards'
+    | '/elections/explanation'
     | '/elections/instances'
     | '/elections/offices'
     | '/inec-result-grabber/logs'
@@ -409,6 +420,7 @@ export interface FileRouteTypes {
     | '/bodies/state-constituencies'
     | '/bodies/states'
     | '/bodies/wards'
+    | '/elections/explanation'
     | '/elections/instances'
     | '/elections/offices'
     | '/inec-result-grabber/logs'
@@ -447,6 +459,7 @@ export interface FileRouteTypes {
     | '/_authenticated/bodies/state-constituencies'
     | '/_authenticated/bodies/states'
     | '/_authenticated/bodies/wards'
+    | '/_authenticated/elections/explanation'
     | '/_authenticated/elections/instances'
     | '/_authenticated/elections/offices'
     | '/_authenticated/inec-result-grabber/logs'
@@ -664,6 +677,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedElectionsInstancesRouteImport
       parentRoute: typeof AuthenticatedElectionsRoute
     }
+    '/_authenticated/elections/explanation': {
+      id: '/_authenticated/elections/explanation'
+      path: '/explanation'
+      fullPath: '/elections/explanation'
+      preLoaderRoute: typeof AuthenticatedElectionsExplanationRouteImport
+      parentRoute: typeof AuthenticatedElectionsRoute
+    }
     '/_authenticated/bodies/wards': {
       id: '/_authenticated/bodies/wards'
       path: '/wards'
@@ -777,6 +797,7 @@ const AuthenticatedBodiesRouteWithChildren =
   AuthenticatedBodiesRoute._addFileChildren(AuthenticatedBodiesRouteChildren)
 
 interface AuthenticatedElectionsRouteChildren {
+  AuthenticatedElectionsExplanationRoute: typeof AuthenticatedElectionsExplanationRoute
   AuthenticatedElectionsInstancesRoute: typeof AuthenticatedElectionsInstancesRoute
   AuthenticatedElectionsOfficesRoute: typeof AuthenticatedElectionsOfficesRoute
   AuthenticatedElectionsIndexRoute: typeof AuthenticatedElectionsIndexRoute
@@ -784,6 +805,8 @@ interface AuthenticatedElectionsRouteChildren {
 
 const AuthenticatedElectionsRouteChildren: AuthenticatedElectionsRouteChildren =
   {
+    AuthenticatedElectionsExplanationRoute:
+      AuthenticatedElectionsExplanationRoute,
     AuthenticatedElectionsInstancesRoute: AuthenticatedElectionsInstancesRoute,
     AuthenticatedElectionsOfficesRoute: AuthenticatedElectionsOfficesRoute,
     AuthenticatedElectionsIndexRoute: AuthenticatedElectionsIndexRoute,

@@ -4,7 +4,8 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Loader2 } from "lucide-react";
 import { useIntersectionObserver } from "usehooks-ts";
-import { useAppContext } from "#/hooks/useAppContext";
+import { useElection } from "#/hooks/useElection";
+import { useElectionCandidates } from "#/hooks/useElectionResults";
 import {
   getStatesWithResults,
   getSenatorialDistrictsWithResults,
@@ -19,6 +20,22 @@ import {
   ElectionResultType,
 } from "#/components/tiles/election-result-tile";
 
+/**
+ * Tabular Election Results View
+ *
+ * Renders an infinite-scrolling collation table of election results, dynamically zooming
+ * between administrative tiers based on the active geographical filter:
+ * 1. Nationwide Scope: Displays all States and their overall vote totals.
+ * 2. State Scope: Drills down into Senatorial Districts or LGAs.
+ * 3. District / Constituency Scope: Drills down into constituent LGAs.
+ * 4. LGA / Assembly Scope: Drills down into constituent Wards.
+ * 5. Ward Scope: Drills down to individual Polling Units (PU returns).
+ *
+ * Each row calculates:
+ * - Winning/leading political party and nominated candidate.
+ * - Vote margin over the second-place runner-up (lead votes & percentage).
+ * - Total votes cast and valid votes counted.
+ */
 export const Route = createFileRoute(
   "/_authenticated/$partyShortName/home/results/",
 )({
@@ -27,12 +44,14 @@ export const Route = createFileRoute(
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+/** Safely extracts string values from nullable Postgres string objects ({ String: "...", Valid: true }) */
 function getPgString(val: any): string {
   if (val && typeof val === "object" && "String" in val)
     return val.String || "";
   return val || "";
 }
 
+/** Determines the winning political party by inspecting declared fields or candidate rankings */
 function getWinningPartyShortName(result: any): string | undefined {
   if (result?.winning_party_short_name)
     return getPgString(result.winning_party_short_name);
@@ -45,13 +64,14 @@ function getWinningPartyShortName(result: any): string | undefined {
   return undefined;
 }
 
+/** Extracts the total valid vote count or votes cast from an election result record */
 function getTotalVotes(result: any): number | undefined {
   if (result?.valid_votes !== undefined) return result.valid_votes;
   if (result?.votes_cast !== undefined) return result.votes_cast;
   return undefined;
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
+// ── Main Component ────────────────────────────────────────────────────────────
 
 function ResultsIndexComponent() {
   const {
@@ -63,8 +83,8 @@ function ResultsIndexComponent() {
     selectedStateConstituencyId,
     selectedLGAId,
     selectedWardId,
-    electionCandidates,
-  } = useAppContext();
+  } = useElection();
+  const electionCandidates = useElectionCandidates();
 
   // Server functions — new combined geo+result endpoints
   const fetchStatesWithResults = useServerFn(getStatesWithResults);

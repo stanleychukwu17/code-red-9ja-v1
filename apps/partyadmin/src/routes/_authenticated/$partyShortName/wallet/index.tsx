@@ -1,3 +1,14 @@
+/**
+ * @file Party Treasury and Wallet Dashboard
+ * @description Central treasury interface for the political party.
+ * Features:
+ * 1. Live treasury balance in Naira (converted from Kobo).
+ * 2. Liabilities breakdown (funding needed for unfilled agent slots vs election day allowances).
+ * 3. Dedicated agent slot purchase and allowance escrow deposit cards.
+ * 4. Transaction audit log with categorization (funding, withdrawal, slot buy, allowances, marketing).
+ * 5. Interactive modals for funding, withdrawal, and purchasing.
+ */
+
 import { createFileRoute } from "@tanstack/react-router";
 import { getPageHeader } from "#/lib/shared/meta";
 import { DashboardLayout } from "@repo/ui/components/custom/AdminLayouts";
@@ -18,7 +29,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useAppContext } from "#/hooks/useAppContext";
+import { useUserParty } from "#/hooks/useUserParty";
 import {
   getPartyWallet,
   getPartyWalletTransactions,
@@ -31,8 +42,13 @@ export const Route = createFileRoute("/_authenticated/$partyShortName/wallet/")(
   },
 );
 
+/**
+ * Party Wallet Page Component
+ * Coordinates party treasury data fetching, transactions history,
+ * and handles query invalidation upon successful financial actions.
+ */
 function RouteComponent() {
-  const { party } = useAppContext();
+  const { party } = useUserParty();
   const partyId = party?.id;
   const queryClient = useQueryClient();
 
@@ -82,7 +98,7 @@ function RouteComponent() {
 }
 
 function WalletHeader() {
-  const { party } = useAppContext();
+  const { party } = useUserParty();
   return (
     <section className="h-16 flex items-center justify-between gap-4 pt-5">
       <h1 className="flex items-center gap-4">
@@ -143,6 +159,11 @@ interface PartyWallet {
   updated_at: string;
 }
 
+/**
+ * WalletBillboard Component
+ * Prominent balance billboard displaying total party treasury in Naira,
+ * liability calculations for unstaffed units, and triggers for funding/withdrawing.
+ */
 function WalletBillboard({
   wallet,
   isLoading,
@@ -154,7 +175,7 @@ function WalletBillboard({
 }) {
   const [isWalletDialogOpen, setIsWalletDialogOpen] = React.useState(false);
   const [isWithdrawDialogOpen, setIsWithdrawDialogOpen] = React.useState(false);
-  const { party } = useAppContext();
+  const { party } = useUserParty();
 
   const balanceKobo = wallet?.balance_kobo ?? 0;
   const balanceNaira = balanceKobo / 100;
@@ -266,6 +287,11 @@ interface WalletQuickStatCardProps {
   bgColorClass: string;
 }
 
+/**
+ * WalletQuickStatCard Component
+ * Reusable banner card with action button for high-priority treasury allocations
+ * (such as purchasing agent slots or funding allowances).
+ */
 function WalletQuickStatCard({
   title,
   value,
@@ -313,6 +339,11 @@ function WalletQuickStatCard({
   );
 }
 
+/**
+ * WalletSlotsAllowanceSection Component
+ * Houses side-by-side quick stat action cards for purchasing polling agent slots
+ * and depositing polling agent election day allowances.
+ */
 function WalletSlotsAllowanceSection({
   wallet,
   onSuccess,
@@ -320,7 +351,7 @@ function WalletSlotsAllowanceSection({
   wallet: PartyWallet | undefined;
   onSuccess: () => void;
 }) {
-  const { party } = useAppContext();
+  const { party } = useUserParty();
   const [isSlotsDialogOpen, setIsSlotsDialogOpen] = React.useState(false);
   const [isAllowanceDialogOpen, setIsAllowanceDialogOpen] =
     React.useState(false);
@@ -370,6 +401,11 @@ function WalletSlotsAllowanceSection({
   );
 }
 
+/**
+ * WalletTransactions Component
+ * Lists the historical ledger of party wallet transactions, complete with category icons,
+ * formatted timestamps, and debit/credit styling.
+ */
 export function WalletTransactions({
   transactions,
   isLoading,
@@ -402,6 +438,11 @@ export function WalletTransactions({
   );
 }
 
+/**
+ * TransactionCard Component
+ * Displays an individual financial transaction entry with directional arrow indicators
+ * and category narration.
+ */
 export function TransactionCard({
   transaction,
 }: {

@@ -1,8 +1,19 @@
+/**
+ * @file Visitor Geo-IP Details Loader Component
+ * @description Headless component that detects client IP and geographical location via local IP service.
+ * Hydrates visitor details into the Redux site store and sets the client_ip cookie for
+ * localized server rendering and geolocation targeting.
+ */
+
 import { useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "#/redux/hooks";
 import { hydrateSiteState } from "#/redux/slice/siteSlice";
 import { fetchCountryDetailsFromLocalIPService } from "#/lib/client/ip";
 
+/**
+ * LoadVisitorDetails Component
+ * Detects visitor IP/country and synchronizes with Redux store and browser cookies.
+ */
 export default function LoadVisitorDetails() {
   const dispatch = useAppDispatch();
   const visitorDetails = useAppSelector((state) => state.site.visitorDetails);

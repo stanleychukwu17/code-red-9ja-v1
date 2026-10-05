@@ -2,11 +2,15 @@ import { Button } from "@repo/ui/components/button";
 import PollingUnitIcon from "@repo/ui/icons/polling-unit-icon";
 import PlusIcon from "@repo/ui/icons/plus-icon";
 import { useNavigate } from "@tanstack/react-router";
-import { useAppContext } from "#/hooks/useAppContext";
+import { useElection } from "#/hooks/useElection";
+import { useAssignments } from "#/hooks/useAssignments";
 import LockedIcon from "@repo/ui/icons/locked-icon";
 import UnLockedIcon from "@repo/ui/icons/unlocked-icon";
 import { cn } from "@repo/ui/lib/utils";
 
+/**
+ * Fallback padlock SVG icon used for locking state visualization.
+ */
 const LockIcon = ({ className }: { className?: string }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -18,15 +22,27 @@ const LockIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-export function MyPollingUnit({
-  onPracticeClick,
-}: {
+interface MyPollingUnitProps {
+  /** Optional interceptor callback fired during practice simulation sessions */
   onPracticeClick?: () => void;
-}) {
-  const navigate = useNavigate();
-  const { selectedAssignment, isLive, setIsLive, isLock, setIsLocked } =
-    useAppContext();
+}
 
+/**
+ * Dashboard Polling Unit Banner.
+ *
+ * Displays the agent's assigned polling unit name and geographic details.
+ * If no polling unit is associated with the user's assignment, renders a CTA
+ * button redirecting to the polling unit setup flow (`/update-polling-unit`).
+ *
+ * Also provides quick developer/admin toggle indicators for Live election mode
+ * and assignment lock status.
+ */
+export function MyPollingUnit({ onPracticeClick }: MyPollingUnitProps) {
+  const navigate = useNavigate();
+  const { isLive, setIsLive, isLock, setIsLocked } = useElection();
+  const { selectedAssignment } = useAssignments();
+
+  // Intercepts user interactions when inside a practice/training flow
   const interceptClick = (e: React.MouseEvent, action: () => void) => {
     if (onPracticeClick) {
       e.preventDefault();
@@ -37,11 +53,13 @@ export function MyPollingUnit({
     action();
   };
 
+  // Derive polling unit name from assignment record
   const pollingUnitName =
     selectedAssignment?.polling_unit_name ||
     selectedAssignment?.polling_unit?.name;
   const hasNoPollingUnit = !pollingUnitName;
 
+  // Unconfigured state: Show call-to-action to select/add a polling unit
   if (hasNoPollingUnit) {
     return (
       <div className="px-4 mb-3 flex items-center justify-between">
@@ -66,8 +84,10 @@ export function MyPollingUnit({
     );
   }
 
+  // Assigned state: Show polling unit details, live mode toggle, and lock indicator
   return (
     <div className="px-4 mb-3 flex items-center justify-between gap-3">
+      {/* Polling unit icon and geographic location tags */}
       <div className="flex items-center space-x-1">
         <PollingUnitIcon className="size-8 shrink-0" />
         <div className="">
@@ -79,6 +99,8 @@ export function MyPollingUnit({
           </div>
         </div>
       </div>
+
+      {/* Live / Simulated toggle button (L = Live, F = False/Simulated) */}
       <div
         onClick={(e) => interceptClick(e, () => setIsLive(!isLive))}
         className={cn(
@@ -88,6 +110,8 @@ export function MyPollingUnit({
       >
         <p className="text-lg">{isLive ? "L" : "F"}</p>
       </div>
+
+      {/* Lock / Unlock assignment status toggle badge */}
       <div
         onClick={(e) => interceptClick(e, () => setIsLocked(!isLock))}
         className={cn(

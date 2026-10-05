@@ -1,3 +1,10 @@
+/**
+ * @file Polling Agent Table Header & Tile Components
+ * @description Renders granular telemetry and performance audit rows for Polling Unit Agents.
+ * Details readiness rating, check-in timestamps, feed counts (updates, incidents, voter turnout),
+ * uploaded results, accrued payout earnings, payout approval statuses, and PU location.
+ */
+
 import type { AgentPerformanceItem } from "#/lib/server/agents";
 import { AppAvatar } from "@repo/ui/components/avatar";
 import { AgentDropdown } from "../dropdowns/AgentDropdown";
@@ -8,6 +15,10 @@ import {
   TileRow,
 } from "@repo/ui/components/tiles";
 
+/**
+ * StatusCheckIcon Component
+ * Renders a green circular checkmark badge if active/true, or a neutral muted circle if false.
+ */
 export function StatusCheckIcon({ active }: { active?: boolean }) {
   if (active) {
     return (
@@ -31,6 +42,11 @@ export function StatusCheckIcon({ active }: { active?: boolean }) {
   return <div className="w-5 h-5 rounded-full bg-c-20 dark:bg-c-80 shrink-0" />;
 }
 
+/**
+ * PollingAgentTableHeader Component
+ * Renders column headers for wide horizontal scrolling table: User, Readiness, Arrived at,
+ * Election Times, Feed Counts, Earnings, Completion Status, Payout, and Location hierarchy.
+ */
 export function PollingAgentTableHeader() {
   return (
     <TileHeader className="min-w-max">
@@ -46,7 +62,7 @@ export function PollingAgentTableHeader() {
         <span className="text-c-50 text-[14px] w-[120px]">Election ended</span>
         <span className="text-c-50 text-[14px] w-[110px]">Updates Given</span>
         <span className="text-c-50 text-[14px] w-[110px]">Reports Given</span>
-        <span className="text-c-50 text-[14px] w-[140px]">
+        <span className="text-c-50 text-[14px] w-35">
           Live voters referred
         </span>
         <span className="text-c-50 text-[14px] w-[120px]">
@@ -59,17 +75,22 @@ export function PollingAgentTableHeader() {
         <span className="text-c-50 text-[14px] w-[130px]">
           Requested Payout
         </span>
-        <span className="text-c-50 text-[14px] w-[80px]">Paid</span>
+        <span className="text-c-50 text-[14px] w-20">Paid</span>
         <span className="text-c-50 text-[14px] w-[120px]">State</span>
         <span className="text-c-50 text-[14px] w-[130px]">LGA</span>
         <span className="text-c-50 text-[14px] w-[130px]">Ward</span>
-        <span className="text-c-50 text-[14px] w-[180px]">Polling Unit</span>
+        <span className="text-c-50 text-[14px] w-45">Polling Unit</span>
         <div className="ml-2 w-8 shrink-0" />
       </TileRight>
     </TileHeader>
   );
 }
 
+/**
+ * PollingAgentTableTile Component
+ * Renders an individual polling unit agent performance row with full telemetry metrics
+ * and administrative action dropdown.
+ */
 export function PollingAgentTableTile({
   data,
   refetch,
@@ -100,7 +121,7 @@ export function PollingAgentTableTile({
         </span>
         <span className="w-[110px]">{data.updates_given ?? 0}</span>
         <span className="w-[110px]">{data.reports_given ?? 0}</span>
-        <span className="w-[140px]">{data.live_voters_referred ?? 0}</span>
+        <span className="w-35">{data.live_voters_referred ?? 0}</span>
         <span className="w-[120px] font-bold">
           {data.results_uploaded || "—"}
         </span>
@@ -113,13 +134,13 @@ export function PollingAgentTableTile({
         <div className="w-[130px] flex justify-start">
           <StatusCheckIcon active={data.requested_payout} />
         </div>
-        <div className="w-[80px] flex justify-start">
+        <div className="w-20 flex justify-start">
           <StatusCheckIcon active={data.paid} />
         </div>
         <span className="w-[120px] truncate">{data.state_name || "—"}</span>
         <span className="w-[130px] truncate">{data.lga_name || "—"}</span>
         <span className="w-[130px] truncate">{data.ward_name || "—"}</span>
-        <span className="w-[180px] truncate">
+        <span className="w-45 truncate">
           {data.polling_unit_name || data.polling_unit_code || "—"}
         </span>
         <AgentDropdown data={data} refetch={refetch} className="ml-2" />

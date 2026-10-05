@@ -35,7 +35,7 @@ export function ElectionInstanceTableHeader() {
   return (
     <TileHeader>
       <TileLeft>
-        <span className="text-c-90 w-[80px] shrink-0">Rank</span>
+        <span className="text-c-90 w-20 shrink-0">Rank</span>
         <span className="text-c-90">Election</span>
       </TileLeft>
       <TileRight>
@@ -65,7 +65,7 @@ export function ElectionInstanceTableTile({
   return (
     <TileRow>
       <TileLeft>
-        <div className="flex items-center gap-4 w-[80px] shrink-0">
+        <div className="flex items-center gap-4 w-20 shrink-0">
           <StarIcon
             className={cn(
               "size-4 shrink-0 fill-current",

@@ -4,12 +4,20 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { CandidateResultsTable } from "#/components/Tables";
 import type { CandidateResultItem } from "#/components/tiles/candidate-result-tile";
-import { useAppContext } from "#/hooks/useAppContext";
+import { useElection } from "#/hooks/useElection";
 import { getScopedElectionResult } from "#/lib/server/election-results";
 import { getPageHeader } from "#/lib/shared/meta";
 import { ElectionRaceFilterBar, ElectionRaceHeaderRight } from "./-components";
 import { getElectionRaceTabs } from "./-data";
 
+/**
+ * Candidate Race Standings View
+ *
+ * Displays a comparative table of candidates competing in the active election contest:
+ * - Shows candidate names, political party affiliations, vote tallies, and percentage of valid votes.
+ * - Supports live toggle (`isLive`): Real-time field tallies vs certified collation returns.
+ * - Filters automatically according to the active geographical scope.
+ */
 export const Route = createFileRoute(
   "/_authenticated/$partyShortName/election-race/candidates",
 )({
@@ -17,6 +25,11 @@ export const Route = createFileRoute(
   component: CandidatesPage,
 });
 
+/**
+ * CandidatesPage Component
+ *
+ * Queries scoped candidate results and renders CandidateResultsTable.
+ */
 function CandidatesPage() {
   const { partyShortName } = Route.useParams();
   const {
@@ -29,7 +42,7 @@ function CandidatesPage() {
     selectedWardId,
     isLive,
     setIsLive,
-  } = useAppContext();
+  } = useElection();
 
   const fetchScopedResult = useServerFn(getScopedElectionResult);
 

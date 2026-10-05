@@ -1551,7 +1551,7 @@ function PhoneNumbersTab({
                           <label className="text-[14px] text-c-50 flex-1">
                             Phone Number
                           </label>
-                          <label className="text-[14px] text-c-50 w-[140px]">
+                          <label className="text-[14px] text-c-50 w-35">
                             WhatsApp?
                           </label>
                           <label className="text-[14px] text-c-50 w-[60px] text-center">
@@ -1600,7 +1600,7 @@ function PhoneNumbersTab({
                         </div>
 
                         {/* WhatsApp Select */}
-                        <div className="flex items-center h-11 w-[140px] rounded-[10px] border border-[#dfdfdf] bg-[#fdfdfd] shrink-0">
+                        <div className="flex items-center h-11 w-35 rounded-[10px] border border-[#dfdfdf] bg-[#fdfdfd] shrink-0">
                           <select
                             value={phoneObj.on_whatsapp}
                             onChange={(e) => {

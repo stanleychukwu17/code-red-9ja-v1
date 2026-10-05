@@ -1,3 +1,10 @@
+/**
+ * @file Party Members Directory Page
+ * @description Master roster of all registered members belonging to the current political party.
+ * Provides infinite scroll member listing, membership creation modal (`UserFormDialog`),
+ * and server actions for candidate registration, profile updates, and role assignments.
+ */
+
 import * as React from "react";
 import {
   Layout,
@@ -14,7 +21,8 @@ import { UserFormDialog } from "@repo/ui/components/custom/UserFormDialog";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { useIntersectionObserver } from "usehooks-ts";
-import { useAuth } from "#/hooks/useAppContext";
+import { useUser } from "#/hooks/useUser";
+import { useUserParty } from "#/hooks/useUserParty";
 
 // Server Functions
 import { getAllCountries, getStates, getCities } from "#/lib/server/countries";
@@ -33,10 +41,16 @@ export const Route = createFileRoute(
   component: RouteComponent,
 });
 
+/**
+ * Party Members Page Component
+ * Handles infinite pagination of party members, observer sentinel triggers,
+ * and user creation dialog lifecycle.
+ */
 function RouteComponent() {
   const { partyShortName } = Route.useParams();
   const [isFormOpen, setIsFormOpen] = React.useState(false);
-  const { user, party } = useAuth();
+  const user = useUser();
+  const { party } = useUserParty();
   const partyId = party?.id ?? user?.party?.id ?? (user as any)?.party_id;
 
   const {

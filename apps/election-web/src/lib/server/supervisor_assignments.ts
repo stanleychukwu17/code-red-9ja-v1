@@ -1,21 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getCookie } from "@tanstack/react-start/server";
 import { API_URL } from "#/lib/config";
-
-function getAuthHeaders() {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-  const accessToken = getCookie("access_token");
-  const refreshToken = getCookie("refresh_token");
-
-  if (accessToken) {
-    headers["Authorization"] = `Bearer ${accessToken}`;
-    headers["Cookie"] = `accessToken=${accessToken}; refreshToken=${refreshToken || ""}`;
-  }
-
-  return headers;
-}
+import { apiFetchJson } from "./fetch";
 
 export const getSupervisorAssignments = createServerFn({ method: "GET" })
   .inputValidator(
@@ -35,15 +20,11 @@ export const getSupervisorAssignments = createServerFn({ method: "GET" })
         params.append("election_group_id", String(election_group_id));
       const qs = params.toString();
       const url = `${API_URL.supervisorAssignments}${qs ? `?${qs}` : ""}`;
-      const response = await fetch(url, {
-        headers: getAuthHeaders(),
-      });
-      const resData = await response.json();
-      return resData;
-    } catch (error) {
+      return await apiFetchJson(url);
+    } catch (error: any) {
       return {
         success: false,
-        message: "Failed to fetch supervisor assignments: " + (error as Error).message,
+        message: error?.message || "Failed to fetch supervisor assignments",
       };
     }
   });

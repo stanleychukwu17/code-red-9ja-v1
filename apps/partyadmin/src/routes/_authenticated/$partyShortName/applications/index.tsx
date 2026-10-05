@@ -1,3 +1,9 @@
+/**
+ * @file Pending Party Applications Page
+ * @description Primary queue for party administrators to review, approve, or reject incoming agent applications.
+ * Uses cursor-based infinite queries for the pending list and secondary count queries for tab badges.
+ */
+
 import {
   Layout,
   PageHeader,
@@ -21,6 +27,11 @@ export const Route = createFileRoute(
 
 const PAGE_LIMIT = 50;
 
+/**
+ * Pending Applications Page Component
+ * Renders the pending applications queue with tab count badges for accepted/rejected records,
+ * and passes the `refetchAll` callback to the table actions.
+ */
 function RouteComponent() {
   const { partyShortName } = Route.useParams();
 

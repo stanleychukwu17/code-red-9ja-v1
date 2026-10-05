@@ -35,7 +35,7 @@ export function INECGrabberTableHeader() {
         <span className="text-c-80 text-[14px]">Election</span>
       </TileLeft>
       <TileRight>
-        <span className="text-c-50 text-[14px] w-[140px]">
+        <span className="text-c-50 text-[14px] w-35">
           Results collected
         </span>
         <span className="text-c-50 text-[14px] w-[100px] hidden sm:block">
@@ -73,7 +73,7 @@ export function INECGrabberTableTile({
         <p className="truncate text-[16px] text-c-90">{electionName}</p>
       </TileLeft>
       <TileRight>
-        <span className="text-[15px] font-medium text-primary w-[140px]">
+        <span className="text-[15px] font-medium text-primary w-35">
           {resultsCountText}
         </span>
         <span className="text-[15px] text-c-70 w-[100px] hidden sm:block">

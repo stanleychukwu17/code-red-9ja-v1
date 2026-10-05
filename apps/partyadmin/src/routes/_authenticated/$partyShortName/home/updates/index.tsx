@@ -4,10 +4,18 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Loader2, AlertTriangle, AlertCircle } from "lucide-react";
 import { useIntersectionObserver } from "usehooks-ts";
-import { useAppContext } from "#/hooks/useAppContext";
+import { useElection } from "#/hooks/useElection";
 import { getPollingUnitUpdates } from "#/lib/server/polling-unit-updates";
 import { AppAvatar, Avatar, AvatarImage } from "@repo/ui/components/avatar";
 
+/**
+ * Polling Unit Incident & Activity Feed
+ *
+ * Chronological micro-feed of field observations and incident reports from party agents:
+ * - Scoped dynamically by the active election and geographical filter (Nationwide down to Ward).
+ * - Filtered by `is_report`: General polling unit updates vs urgent unresolved security/logistics reports.
+ * - Supports infinite scroll with intersection observer sentinel.
+ */
 export const Route = createFileRoute(
   "/_authenticated/$partyShortName/home/updates/",
 )({
@@ -24,7 +32,7 @@ function UpdatesFeedComponent() {
     selectedStateConstituencyId,
     selectedLGAId,
     selectedWardId,
-  } = useAppContext();
+  } = useElection();
 
   const fetchPollingUnitUpdatesFn = useServerFn(getPollingUnitUpdates);
 
@@ -141,6 +149,12 @@ function UpdatesFeedComponent() {
   );
 }
 
+/**
+ * UpdateFeedItem Component
+ *
+ * Renders an individual observation or incident post card with agent avatar,
+ * timestamp, polling unit location label, incident category tags, and media attachments.
+ */
 function UpdateFeedItem({ item }: { item: any }) {
   const timeString = item.created_at
     ? new Date(item.created_at).toLocaleTimeString([], {

@@ -1,3 +1,11 @@
+/**
+ * @file Agent Coverage Overview Page
+ * @description Renders party agent coverage statistics across the Nigerian electoral hierarchy.
+ * Displays staffing completeness, assigned supervisor readiness, and polling agent deployment percentages.
+ * Supports interactive drill-down from national/state level down to polling units, plus direct routing
+ * to assign supervisors or polling agents.
+ */
+
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Layout, PageHeader } from "@repo/ui/components/custom/AdminLayouts";
 import { useQuery } from "@tanstack/react-query";
@@ -7,7 +15,8 @@ import { Search, SlidersHorizontal, X } from "lucide-react";
 import { AgentCoverageTable } from "#/components/Tables";
 import type { AgentCoverageUnitItem } from "#/lib/server/agent-coverage";
 import { getAgentCoverageBreakdown } from "#/lib/server/agent-coverage";
-import { useAppContext } from "#/hooks/useAppContext";
+import { useUserParty } from "#/hooks/useUserParty";
+import { useElection } from "#/hooks/useElection";
 import { getPageHeader } from "#/lib/shared/meta";
 import { CoverageHeaderRight } from "./-components";
 import { ElectionScopeSelector } from "../home/components/-election-scope-selector";
@@ -19,14 +28,20 @@ export const Route = createFileRoute(
   component: AgentCoveragePage,
 });
 
+/**
+ * Agent Coverage Page Component
+ * Manages hierarchy drill-down state, electoral scope selectors, search filters,
+ * and passes aggregated unit coverage metrics to the AgentCoverageTable.
+ */
 function AgentCoveragePage() {
   const { partyShortName } = Route.useParams();
   const navigate = useNavigate();
+  // Filter search query for unit name / code
   const [search, setSearch] = useState("");
   const [showSearch, setShowSearch] = useState(false);
 
+  const { party } = useUserParty();
   const {
-    party,
     selectedElection,
     selectedElectionGroup,
     selectedStateId,
@@ -41,7 +56,7 @@ function AgentCoveragePage() {
     setSelectedLGAId,
     selectedWardId,
     setSelectedWardId,
-  } = useAppContext();
+  } = useElection();
 
   const fetchBreakdown = useServerFn(getAgentCoverageBreakdown);
 
@@ -110,6 +125,10 @@ function AgentCoveragePage() {
       )
     : items;
 
+  /**
+   * Drill-down handler: updates the active geographic selection state to narrow the view
+   * to children electoral units (e.g. clicking a State drills down to its Senatorial Districts).
+   */
   const handleSelectUnit = (item: AgentCoverageUnitItem) => {
     const unitId = Number(item.id);
     if (!unitId) return;
@@ -152,6 +171,10 @@ function AgentCoveragePage() {
     }
   };
 
+  /**
+   * Navigation handler to immediately assign supervisors or agents for the selected unit.
+   * Directs to the appropriate supervisor roster or polling unit agent view.
+   */
   const handleAssign = (item: AgentCoverageUnitItem) => {
     const unitId = Number(item.id);
     if (unitType === "states") {

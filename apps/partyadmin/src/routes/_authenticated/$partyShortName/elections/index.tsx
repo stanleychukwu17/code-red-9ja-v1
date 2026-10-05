@@ -1,3 +1,10 @@
+/**
+ * @file Election Groups Management Page
+ * @description Displays election groups (umbrella election events such as "2023 General Elections")
+ * that the political party is registered to contest. Features infinite scrolling, cursor-based pagination,
+ * agent coverage percentage stats, and contested races tally.
+ */
+
 import { createFileRoute } from "@tanstack/react-router";
 import { getPageHeader } from "#/lib/shared/meta";
 import { useEffect } from "react";
@@ -13,7 +20,7 @@ import { getElectionGroups } from "#/lib/server/election_groups";
 import { useIntersectionObserver } from "usehooks-ts";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import type { ElectionGroupType } from "#/components/tiles/election-group-tile";
-import { useAuth } from "#/hooks/useAppContext";
+import { useUser } from "#/hooks/useUser";
 
 export const Route = createFileRoute(
   "/_authenticated/$partyShortName/elections/",
@@ -22,9 +29,14 @@ export const Route = createFileRoute(
   component: RouteComponent,
 });
 
+/**
+ * Election Groups Page Component
+ * Queries server for party-specific election groups with infinite scrolling sentinel,
+ * maps backend response records to tile formats, and renders the ElectionGroupsTable.
+ */
 function RouteComponent() {
   const { partyShortName } = Route.useParams();
-  const { user } = useAuth();
+  const user = useUser();
   const partyId = user?.party?.id;
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =

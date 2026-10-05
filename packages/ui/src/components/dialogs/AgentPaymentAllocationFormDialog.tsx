@@ -185,7 +185,7 @@ export function AgentPaymentAllocationFormDialog({
                     symbol="₦"
                     value={values[role].default}
                     onValueChange={(num) => handleDefaultChange(role, num)}
-                    className="w-[140px]"
+                    className="w-35"
                     placeholder="0"
                   />
                 </div>

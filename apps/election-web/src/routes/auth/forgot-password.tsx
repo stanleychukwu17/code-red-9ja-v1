@@ -17,6 +17,10 @@ import { APP_URL } from "@/lib/config";
 
 type Step = "email" | "otp" | "password";
 
+/**
+ * Forgot Password Route Definition
+ * Enforces guest-only access before loading.
+ */
 export const Route = createFileRoute("/auth/forgot-password")({
   beforeLoad: async () => {
     const isLoggedIn = await checkIfRefreshTokenInCookie();
@@ -29,7 +33,16 @@ export const Route = createFileRoute("/auth/forgot-password")({
   component: RouteComponent,
 });
 
+/**
+ * RouteComponent
+ * 3-step password recovery workflow:
+ * 1. Email Entry: Requests a 6-digit reset OTP to the user's registered email.
+ * 2. OTP Verification: Validates code entry with a 60-second resend countdown timer.
+ * 3. Password Reset: Collects and confirms the new password, atomically submitting
+ *    the OTP + new credentials, then redirecting to login.
+ */
 function RouteComponent() {
+
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");

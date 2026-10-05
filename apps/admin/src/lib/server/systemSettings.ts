@@ -1,17 +1,14 @@
 import { createServerFn } from "@tanstack/react-start";
 import { API_URL } from "../config";
-import { apiFetch } from "./fetch";
+import { apiFetchJson } from "./fetch";
 
 export const getSystemSetting = createServerFn({ method: "GET" })
   .inputValidator((key: string) => key)
   .handler(async ({ data: key }) => {
-    console.log("SERVER FN getSystemSetting called with key:", key);
     try {
-      const response = await apiFetch(API_URL.systemSettings.get(key));
-      const resData = await response.json();
-      return resData;
-    } catch (error) {
-      return { success: false, message: "Failed to fetch system setting" };
+      return await apiFetchJson(API_URL.systemSettings.get(key));
+    } catch (error: any) {
+      return { success: false, message: error?.message || "Failed to fetch system setting" };
     }
   });
 
@@ -21,19 +18,17 @@ export const updateSystemSetting = createServerFn({ method: "POST" })
   )
   .handler(async ({ data: { key, value, description } }) => {
     try {
-      const response = await apiFetch(API_URL.systemSettings.update(key), {
+      return await apiFetchJson(API_URL.systemSettings.update(key), {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ value, description }),
       });
-      const resData = await response.json();
-      return resData;
-    } catch (error) {
+    } catch (error: any) {
       return {
         success: false,
-        message: "Failed to update system setting: " + (error as Error).message,
+        message: error?.message || "Failed to update system setting",
       };
     }
   });

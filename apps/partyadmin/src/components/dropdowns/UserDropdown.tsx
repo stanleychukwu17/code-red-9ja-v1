@@ -1,3 +1,9 @@
+/**
+ * @file Party Member Row Action Dropdown
+ * @description Provides edit and delete actions for party members in directory tables and member tiles.
+ * Connects to `UserFormDialog` in update mode and triggers permanent account deletion with confirmation.
+ */
+
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { deleteUser } from "#/lib/server/users";
@@ -22,7 +28,11 @@ interface UserDropdownProps {
   refetch?: () => void;
 }
 
-export const UserDropdown = ({ data, className, refetch }: UserDropdownProps) => { // Reload trigger
+/**
+ * UserDropdown Component
+ * Contextual popover menu offering Edit (via UserFormDialog) and Delete (via DeleteAlertDialog) actions.
+ */
+export const UserDropdown = ({ data, className, refetch }: UserDropdownProps) => {
   const [openMenu, setOpenMenu] = useState(false);
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [openDeleteAlert, setOpenDeleteAlert] = useState(false);

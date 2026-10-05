@@ -47,7 +47,7 @@ export function ProfileDropdown({
 
       <div className="flex items-center justify-between px-3 py-2 mt-2 gap-4">
         <span className="text-[15px] font-medium text-foreground">Theme</span>
-        <div className="flex items-center gap-1 bg-muted dark:bg-white/10 p-1 rounded-[12px] w-full max-w-[140px]">
+        <div className="flex items-center gap-1 bg-muted dark:bg-white/10 p-1 rounded-[12px] w-full max-w-35">
           <button
             onClick={() => setTheme("light")}
             className={cn(

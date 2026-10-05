@@ -370,16 +370,14 @@ func (h *Handler) GetWards(w http.ResponseWriter, r *http.Request) {
 	orderBy, orderDir := parseSortParams(r, "name", "ASC")
 
 	sort.SliceStable(wards, func(i, j int) bool {
-		var less bool
-		if orderBy == "name" {
-			less = wards[i].Name < wards[j].Name
-		} else {
-			less = wards[i].ID < wards[j].ID
-		}
 		if orderDir == "DESC" {
-			return !less
+			i, j = j, i
 		}
-		return less
+
+		if orderBy == "name" {
+			return wards[i].Name < wards[j].Name
+		}
+		return wards[i].ID < wards[j].ID
 	})
 
 	startIndex := 0

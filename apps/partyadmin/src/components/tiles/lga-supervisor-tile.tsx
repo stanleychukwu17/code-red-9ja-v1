@@ -1,9 +1,20 @@
+/**
+ * @file LGA Supervisor Table Header & Tile Components
+ * @description Renders supervisory data tiles for Local Government Area (LGA) coordinators.
+ * Displays operational readiness, subordinate agents at post, PU coverage metrics,
+ * aggregation of arrival times, ward reports, earnings summary, and payout states.
+ */
+
 import type { AgentPerformanceItem } from "#/lib/server/agents";
 import { AppAvatar } from "@repo/ui/components/avatar";
 import { TileHeader, TileLeft, TileRight, TileRow } from "@repo/ui/components/tiles";
 import { StatusCheckIcon } from "./polling-agent-tile";
 import { AgentDropdown } from "../dropdowns/AgentDropdown";
 
+/**
+ * LGASupervisorTableHeader Component
+ * Renders table column headers for LGA level supervisor monitoring across all operational metrics.
+ */
 export function LGASupervisorTableHeader() {
   return (
     <TileHeader className="min-w-max">
@@ -22,7 +33,7 @@ export function LGASupervisorTableHeader() {
         <span className="text-c-50 text-[14px] font-medium w-[110px]">
           PU coverage
         </span>
-        <span className="text-c-50 text-[14px] font-medium w-[140px]">
+        <span className="text-c-50 text-[14px] font-medium w-35">
           PU agent coverage
         </span>
         <span className="text-c-50 text-[14px] font-medium w-[130px]">
@@ -58,7 +69,7 @@ export function LGASupervisorTableHeader() {
         <span className="text-c-50 text-[14px] font-medium w-[130px]">
           Requested Payout
         </span>
-        <span className="text-c-50 text-[14px] font-medium w-[80px]">
+        <span className="text-c-50 text-[14px] font-medium w-20">
           Paid
         </span>
         <span className="text-c-50 text-[14px] font-medium w-[120px]">
@@ -73,6 +84,11 @@ export function LGASupervisorTableHeader() {
   );
 }
 
+/**
+ * LGASupervisorTableTile Component
+ * Renders an LGA coordinator's row showing subordinate coverage progress, reporting counts,
+ * and supervisory control actions.
+ */
 export function LGASupervisorTableTile({
   data,
   refetch,
@@ -92,7 +108,7 @@ export function LGASupervisorTableTile({
         <span className="w-[90px] font-medium">{data.readiness_pct ?? 0}%</span>
         <span className="w-[110px]">{data.agents_at_post || "—"}</span>
         <span className="w-[110px]">{data.pu_coverage || "—"}</span>
-        <span className="w-[140px]">{data.pu_agent_coverage || "—"}</span>
+        <span className="w-35">{data.pu_agent_coverage || "—"}</span>
         <span className="w-[130px] font-medium">
           {data.arrived_at || data.avg_arrival_time || "—"}
         </span>
@@ -116,7 +132,7 @@ export function LGASupervisorTableTile({
         <div className="w-[130px] flex justify-start">
           <StatusCheckIcon active={data.requested_payout} />
         </div>
-        <div className="w-[80px] flex justify-start">
+        <div className="w-20 flex justify-start">
           <StatusCheckIcon active={data.paid} />
         </div>
         <span className="w-[120px] truncate">{data.state_name || "—"}</span>

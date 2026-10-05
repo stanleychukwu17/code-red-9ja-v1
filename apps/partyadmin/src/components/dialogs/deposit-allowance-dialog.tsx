@@ -1,3 +1,10 @@
+/**
+ * @file Agent Allowance Escrow Deposit Dialog
+ * @description Modal enabling party treasurers to allocate funds from the primary party wallet
+ * into the dedicated polling agent allowance escrow account. Ensures funds are ring-fenced
+ * for post-election automated task-completion agent payouts.
+ */
+
 import * as React from "react";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -12,6 +19,7 @@ import { useMutation } from "@tanstack/react-query";
 import { depositPartyAllowance } from "#/lib/server/parties";
 import { toast } from "sonner";
 
+/** Formats numeric Naira value into localized currency string with decimals */
 function formatNairaWithDecimals(amount: number) {
   return `₦${amount.toLocaleString("en-NG", {
     minimumFractionDigits: 2,
@@ -19,6 +27,11 @@ function formatNairaWithDecimals(amount: number) {
   })}`;
 }
 
+/**
+ * DepositAllowanceDialog Component
+ * Manages numerical monetary input, checks balance sufficiency against available wallet Kobo,
+ * and transfers funds into the allowance escrow bucket.
+ */
 export function DepositAllowanceDialog({
   open,
   onClose,

@@ -1,3 +1,9 @@
+/**
+ * @file Generic Destructive Action Confirmation Dialog
+ * @description Standard alert modal prompting confirmation prior to irreversible deletions or revocations
+ * (e.g. deleting users, revoking agent assignments, removing campaigns).
+ */
+
 import {
   Dialog,
   DialogContent,
@@ -17,6 +23,10 @@ type DeleteAlertDialogProps = {
   isPending?: boolean;
 };
 
+/**
+ * DeleteAlertDialog Component
+ * Reusable modal displaying custom title, warning subtitle, and red destructive action button.
+ */
 export const DeleteAlertDialog = ({
   open,
   delete: handleDelete,

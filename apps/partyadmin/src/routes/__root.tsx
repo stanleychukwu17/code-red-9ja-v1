@@ -1,3 +1,13 @@
+/**
+ * @file Application Root Route Shell
+ * @description The absolute root document and shell for TanStack Router in `apps/partyadmin`.
+ * Responsible for:
+ * 1. Preloading user session details and site preferences on the server during `beforeLoad`.
+ * 2. Immediate inline theme resolution script to prevent flash-of-unstyled-content (FOUC).
+ * 3. Mounting the top-level providers (Redux Provider, React Query ClientProvider, Sonner Toaster).
+ * 4. Hydrating client-side stores via ClientOnly session loaders (`LoadAuthSession`, `LoadElectionSession`, etc.).
+ */
+
 import {
   ClientOnly,
   HeadContent,
@@ -18,13 +28,18 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import LoadVisitorDetails from "#/components/LoadVisitorDetails";
 import LoadElectionSession from "#/components/LoadElectionSession";
 
+/**
+ * Self-executing theme script injected in <head> to read stored theme from localStorage
+ * or system prefers-color-scheme before DOM render to prevent theme flashing.
+ */
 const THEME_INIT_SCRIPT = `(function(){try{var stored=window.localStorage.getItem('theme');var mode=(stored==='light'||stored==='dark'||stored==='auto')?stored:'auto';var prefersDark=window.matchMedia('(prefers-color-scheme: dark)').matches;var resolved=mode==='auto'?(prefersDark?'dark':'light'):mode;var root=document.documentElement;root.classList.remove('light','dark');root.classList.add(resolved);if(mode==='auto'){root.removeAttribute('data-theme')}else{root.setAttribute('data-theme',mode)}root.style.colorScheme=resolved;}catch(e){}})();`;
 
 export const Route = createRootRoute({
   beforeLoad: async () => {
+    // Read session cookies on server and pass down through route context
     const userDetails = await getUserDetailsCookie();
     const sitePreference = await getSitePreference();
-    return { userDetails, sitePreference }; // <-- Anything returned here enters the route context
+    return { userDetails, sitePreference };
   },
   head: () => ({
     meta: [
@@ -40,6 +55,10 @@ export const Route = createRootRoute({
   errorComponent: ErrorComponent,
 });
 
+/**
+ * RootLayout Component
+ * Wraps child routes in an animated/styled outlet wrapper.
+ */
 function RootLayout() {
   return (
     <OutletWrapper>
@@ -50,6 +69,11 @@ function RootLayout() {
 
 const queryClient = new QueryClient();
 
+/**
+ * RootDocument Shell
+ * Renders the overarching <html>, <head>, and <body> DOM structure.
+ * Hosts global providers and client session sync components.
+ */
 function RootDocument({ children }: { children: React.ReactNode }) {
   const { userDetails, sitePreference } = Route.useRouteContext();
 

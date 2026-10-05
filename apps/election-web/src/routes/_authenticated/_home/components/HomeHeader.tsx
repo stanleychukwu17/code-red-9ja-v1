@@ -1,7 +1,8 @@
 import NotificationSolidIcon from "@repo/ui/icons/navbar/notification-solid-icon";
 import { AppAvatar } from "@repo/ui/components/avatar";
 
-import { useAppContext } from "#/hooks/useAppContext";
+import { useUser } from "#/hooks/useUser";
+import { useElection } from "#/hooks/useElection";
 import {
   SelectElectionGroupAndElection,
   type Election,
@@ -14,13 +15,26 @@ import { TitleText } from "@repo/ui/components/custom/Texts";
 import { cn } from "@repo/ui/lib/utils";
 
 interface HomeHeaderProps {
+  /** Days remaining until scheduled election day */
   daysLeft?: number;
+  /** Custom avatar image URL override */
   avatarImage?: string;
+  /** Custom CSS classes for text elements */
   textClassName?: string;
+  /** Custom CSS classes for the header container */
   containerClassName?: string;
+  /** Optional practice simulation click interceptor */
   onPracticeClick?: () => void;
 }
 
+/**
+ * Main Top Navigation Header for Dashboard.
+ *
+ * Rendered across all role home dashboards:
+ * - Left: User/Agent profile avatar and inline election selector dropdown (`SelectElectionGroupAndElection`).
+ * - Right: Real-time election status badge ("LIVE" pulsing badge on election day vs "X days left" countdown)
+ *   and notification bell with unread count badge.
+ */
 export function HomeHeader({
   daysLeft,
   textClassName,
@@ -28,16 +42,17 @@ export function HomeHeader({
   containerClassName,
   onPracticeClick,
 }: HomeHeaderProps) {
+  const user = useUser();
   const {
-    user,
     selectedElectionGroup,
     selectedElection,
     setSelectedElectionGroup,
     setSelectedElection,
-  } = useAppContext();
+  } = useElection();
   const fetchGroups = useServerFn(getElectionGroups);
   const fetchElectionsByGroup = useServerFn(getElectionsByGroup);
 
+  // Prevents opening dropdown or navigating when inside practice test mode
   const interceptClick = (e: React.MouseEvent, action?: () => void) => {
     if (onPracticeClick) {
       e.preventDefault();
@@ -55,7 +70,7 @@ export function HomeHeader({
         containerClassName,
       )}
     >
-      {/* Left section: Dropdown Selector */}
+      {/* Left section: Avatar & Election Group/Ballot Dropdown Selector */}
       <div className="flex items-center gap-2 flex-1">
         <AppAvatar
           src={avatarImage ?? user?.avatar}
@@ -63,7 +78,7 @@ export function HomeHeader({
           className="size-7 shrink-0"
         />
         <div
-          className="flex-1 min-w-0 sm:max-w-[180px]"
+          className="flex-1 min-w-0 sm:max-w-45"
           onClickCapture={(e) => {
             if (onPracticeClick) {
               e.preventDefault();
@@ -86,8 +101,10 @@ export function HomeHeader({
           />
         </div>
       </div>
-      {/* Right section: Countdown & Notifications */}
+
+      {/* Right section: Countdown Badge & Notification Bell */}
       <div className="flex items-center gap-3 shrink-0">
+        {/* Pulsing LIVE tag on election day, or remaining days countdown */}
         {daysLeft !== undefined &&
           (daysLeft === 0 ? (
             <span className="text-blue-500 text-sm font-bold animate-pulse">
@@ -98,6 +115,8 @@ export function HomeHeader({
               {daysLeft} {daysLeft === 1 ? "day" : "days"} left
             </span>
           ))}
+
+        {/* Notifications Icon Button with Unread Badge */}
         <div
           className="relative cursor-pointer p-1"
           onClick={(e) => interceptClick(e)}
@@ -105,7 +124,7 @@ export function HomeHeader({
           <NotificationSolidIcon
             className={`size-7 transition ${textClassName || "text-neutral-950 hover:text-neutral-800"}`}
           />
-          {/* Red notification badge */}
+          {/* Unread notifications count badge */}
           <div className="absolute -top-1 -right-1 bg-red text-white text-sm font-medium rounded-lg px-1 min-w-6 h-5 flex items-center justify-center border-background">
             3
           </div>
@@ -115,6 +134,12 @@ export function HomeHeader({
   );
 }
 
+/**
+ * Secondary Section Subheader.
+ *
+ * Displays the active carousel card title (e.g. "Objectives", "Readiness")
+ * alongside the right-aligned metric or completion percentage.
+ */
 export function HomeHeader2({
   title,
   rightText,

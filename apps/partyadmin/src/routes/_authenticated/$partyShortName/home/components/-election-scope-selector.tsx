@@ -6,7 +6,7 @@ import {
   getFederalConstituencies,
   getStateConstituencies,
 } from "#/lib/server/countries";
-import { useAppContext } from "#/hooks/useAppContext";
+import { useElection } from "#/hooks/useElection";
 import { SelectCountry } from "@repo/ui/components/selects/country-select";
 import { SelectFederalConstituency } from "@repo/ui/components/selects/federal-constituency-select";
 import { SelectStateConstituency } from "@repo/ui/components/selects/state-constituency-select";
@@ -19,6 +19,22 @@ import { useServerFn } from "@tanstack/react-start";
 // I'll add placeholders here, you should replace them with actual imports.
 import { getLGAs, getWards } from "#/lib/server/applications";
 
+/**
+ * ElectionScopeSelector Component
+ *
+ * Provides a dynamic cascading geographic filter for the partyadmin situation room and dashboards.
+ * Adapts its input controls automatically to match Nigeria's electoral hierarchy and the scope
+ * of the currently active election contest (e.g. Nationwide, State Governorship, Senatorial District,
+ * Federal/State Constituency, LGA Chairmanship, or Ward Councillorship).
+ *
+ * Key Responsibilities:
+ * 1. Jurisdiction Pinning: Auto-populates and locks (disables) geographic levels that are predefined
+ *    by the active election's scope (e.g. a Lagos State Gubernatorial race locks "Lagos" as the state).
+ * 2. Cascading Drill-down: Allows administrators to filter downwards into constituent subunits
+ *    (e.g., drilling into specific LGAs and Wards within the election's jurisdiction).
+ * 3. Scope State Synchronization: Dispatches ID selections to Redux via `useElection()` to drive
+ *    real-time tallies, incident updates, and agent leaderboards throughout the dashboard.
+ */
 export const ElectionScopeSelector = () => {
   const {
     selectedElection,
@@ -36,9 +52,10 @@ export const ElectionScopeSelector = () => {
     setSelectedLGAId,
     selectedWardId,
     setSelectedWardId,
-  } = useAppContext();
+  } = useElection();
 
-  // Synchronize Redux selection states with the selected election's fixed scope boundaries
+  // Synchronize Redux selection states whenever the active election changes,
+  // pre-populating fixed geographic boundary IDs (state, district, constituency, LGA, ward).
   useEffect(() => {
     if (selectedElection) {
       if (selectedElection.state_id !== undefined) {
@@ -74,8 +91,10 @@ export const ElectionScopeSelector = () => {
   const fetchLGAsFn = useServerFn(getLGAs);
   const fetchWardsFn = useServerFn(getWards);
 
-  // This component implements the specific hierarchy requested.
-
+  /**
+   * Evaluates the active election's scope and renders the appropriate combination
+   * of enabled and pre-locked dropdown selectors.
+   */
   const renderSelects = () => {
     if (!scope)
       return (
@@ -84,15 +103,13 @@ export const ElectionScopeSelector = () => {
         </div>
       );
 
-    // Use selectedElection data to auto-select and disable if needed
-    // Assuming selectedElection has `state_id`, `senatorial_district_id`, `federal_constituency_id`, `lga_id`, `ward_id`
-    // These should ideally initialize the states in a useEffect if they exist, but for now we drive it based on scope logic directly.
-
     switch (scope) {
+      // 1. Nationwide Contests (e.g. Presidential Election)
+      // Open across all 36 States + FCT. Party admin can select any State -> LGA -> Ward.
       case "nationwide":
         return (
           <>
-            <div className="w-[180px]">
+            <div className="w-45">
               <SelectState
                 selectedId={selectedStateId}
                 update={(state) => {
@@ -109,7 +126,7 @@ export const ElectionScopeSelector = () => {
               />
             </div>
             {/* {selectedStateId && (
-              <div className="w-[180px]">
+              <div className="w-45">
                 <SelectSenatorialDistrict
                   selectedId={selectedDistrictId}
                   update={(district) => {
@@ -126,7 +143,7 @@ export const ElectionScopeSelector = () => {
               </div>
             )}
             {selectedDistrictId && (
-              <div className="w-[180px]">
+              <div className="w-45">
                 <SelectFederalConstituency
                   selectedId={selectedFederalConstituencyId}
                   update={(fc) => {
@@ -144,7 +161,7 @@ export const ElectionScopeSelector = () => {
               </div>
             )}
             {selectedFederalConstituencyId && (
-              <div className="w-[180px]">
+              <div className="w-45">
                 <SelectStateConstituency
                   selectedId={selectedStateConstituencyId}
                   update={(sc) => {
@@ -160,7 +177,7 @@ export const ElectionScopeSelector = () => {
               </div>
             )} */}
             {selectedStateId && (
-              <div className="w-[180px]">
+              <div className="w-45">
                 <SelectLga
                   selectedId={selectedLGAId}
                   update={(lga) => {
@@ -175,7 +192,7 @@ export const ElectionScopeSelector = () => {
               </div>
             )}
             {selectedLGAId && (
-              <div className="w-[180px]">
+              <div className="w-45">
                 <SelectWard
                   selectedId={selectedWardId}
                   update={(ward) => setSelectedWardId(ward?.id)}
@@ -190,21 +207,22 @@ export const ElectionScopeSelector = () => {
           </>
         );
 
+      // 2. State-Wide Contests (e.g. Gubernatorial Election)
+      // The State is locked to the election's jurisdiction; Party Admin can drill into constituent LGAs & Wards.
       case "state":
-        // For state elections (e.g. Governorship), the state is fixed to the election's state.
         return (
           <>
-            <div className="w-[180px]">
+            <div className="w-45">
               <SelectState
                 selectedId={selectedElection?.state_id || selectedStateId}
-                update={() => {}}
+                update={() => { }}
                 fetchStates={fetchStatesFn}
                 countryOriginalId={selectedCountryId}
                 disabled
                 className="bg-c-5 ring-0 md:ring-0 md:hover:ring"
               />
             </div>
-            <div className="w-[180px]">
+            <div className="w-45">
               <SelectLga
                 selectedId={selectedLGAId}
                 update={(lga) => {
@@ -218,7 +236,7 @@ export const ElectionScopeSelector = () => {
               />
             </div>
             {selectedLGAId && (
-              <div className="w-[180px]">
+              <div className="w-45">
                 <SelectWard
                   selectedId={selectedWardId}
                   update={(ward) => setSelectedWardId(ward?.id)}
@@ -233,33 +251,34 @@ export const ElectionScopeSelector = () => {
           </>
         );
 
+      // 3. Senatorial District Contests (e.g. Senatorial Zone: North/Central/South)
+      // Locks State and Senatorial District; allows drill-down into constituent LGAs and Wards.
       case "senatorial-district":
-        // Auto-select state and district
         return (
           <>
-            <div className="w-[180px]">
+            <div className="w-45">
               <SelectState
                 selectedId={selectedElection?.state_id || selectedStateId}
-                update={() => {}}
+                update={() => { }}
                 fetchStates={fetchStatesFn}
                 countryOriginalId={selectedCountryId}
                 disabled
                 className="bg-c-5 ring-0 md:ring-0 md:hover:ring"
               />
             </div>
-            <div className="w-[180px]">
+            <div className="w-45">
               <SelectSenatorialDistrict
                 selectedId={
                   selectedElection?.senatorial_district_id || selectedDistrictId
                 }
-                update={() => {}}
+                update={() => { }}
                 fetchSenatorialDistricts={fetchDistrictsFn}
                 stateId={selectedElection?.state_id || selectedStateId}
                 disabled
                 className="bg-c-5 ring-0 md:ring-0 md:hover:ring"
               />
             </div>
-            <div className="w-[180px]">
+            <div className="w-45">
               <SelectLga
                 selectedId={selectedLGAId}
                 update={(lga) => {
@@ -273,7 +292,7 @@ export const ElectionScopeSelector = () => {
               />
             </div>
             {selectedLGAId && (
-              <div className="w-[180px]">
+              <div className="w-45">
                 <SelectWard
                   selectedId={selectedWardId}
                   update={(ward) => setSelectedWardId(ward?.id)}
@@ -288,39 +307,40 @@ export const ElectionScopeSelector = () => {
           </>
         );
 
+      // 4. Federal Constituency Contests (House of Representatives)
+      // Locks State, Senatorial District, and Federal Constituency; allows drill-down into constituent LGAs & Wards.
       case "federal-constituency":
-        // Auto-select state, district, and federal constituency
         return (
           <>
-            <div className="w-[180px]">
+            <div className="w-45">
               <SelectState
                 selectedId={selectedElection?.state_id || selectedStateId}
-                update={() => {}}
+                update={() => { }}
                 fetchStates={fetchStatesFn}
                 countryOriginalId={selectedCountryId}
                 disabled
                 className="bg-c-5 ring-0 md:ring-0 md:hover:ring"
               />
             </div>
-            <div className="w-[180px]">
+            <div className="w-45">
               <SelectSenatorialDistrict
                 selectedId={
                   selectedElection?.senatorial_district_id || selectedDistrictId
                 }
-                update={() => {}}
+                update={() => { }}
                 fetchSenatorialDistricts={fetchDistrictsFn}
                 stateId={selectedElection?.state_id || selectedStateId}
                 disabled
                 className="bg-c-5 ring-0 md:ring-0 md:hover:ring"
               />
             </div>
-            <div className="w-[180px]">
+            <div className="w-45">
               <SelectFederalConstituency
                 selectedId={
                   selectedElection?.federal_constituency_id ||
                   selectedFederalConstituencyId
                 }
-                update={() => {}}
+                update={() => { }}
                 fetchFederalConstituencies={fetchFederalConstituenciesFn}
                 stateId={selectedElection?.state_id || selectedStateId}
                 senatorialDistrictId={
@@ -330,7 +350,7 @@ export const ElectionScopeSelector = () => {
                 className="bg-c-5 ring-0 md:ring-0 md:hover:ring"
               />
             </div>
-            <div className="w-[180px]">
+            <div className="w-45">
               <SelectLga
                 selectedId={selectedLGAId}
                 update={(lga) => {
@@ -344,7 +364,7 @@ export const ElectionScopeSelector = () => {
               />
             </div>
             {selectedLGAId && (
-              <div className="w-[180px]">
+              <div className="w-45">
                 <SelectWard
                   selectedId={selectedWardId}
                   update={(ward) => setSelectedWardId(ward?.id)}
@@ -359,34 +379,35 @@ export const ElectionScopeSelector = () => {
           </>
         );
 
+      // 5. State Constituency Contests (State House of Assembly)
+      // Locks State and State Constituency; allows drill-down into constituent LGAs & Wards.
       case "state-constituency":
-        // Auto-select state, and state constituency
         return (
           <>
-            <div className="w-[180px]">
+            <div className="w-45">
               <SelectState
                 selectedId={selectedElection?.state_id || selectedStateId}
-                update={() => {}}
+                update={() => { }}
                 fetchStates={fetchStatesFn}
                 countryOriginalId={selectedCountryId}
                 disabled
                 className="bg-c-5 ring-0 md:ring-0 md:hover:ring"
               />
             </div>
-            <div className="w-[180px]">
+            <div className="w-45">
               <SelectStateConstituency
                 selectedId={
                   selectedElection?.state_constituency_id ||
                   selectedStateConstituencyId
                 }
-                update={() => {}}
+                update={() => { }}
                 fetchStateConstituencies={fetchStateConstituenciesFn}
                 stateId={selectedElection?.state_id || selectedStateId}
                 disabled
                 className="bg-c-5 ring-0 md:ring-0 md:hover:ring"
               />
             </div>
-            <div className="w-[180px]">
+            <div className="w-45">
               <SelectLga
                 selectedId={selectedLGAId}
                 update={(lga) => {
@@ -400,7 +421,7 @@ export const ElectionScopeSelector = () => {
               />
             </div>
             {selectedLGAId && (
-              <div className="w-[180px]">
+              <div className="w-45">
                 <SelectWard
                   selectedId={selectedWardId}
                   update={(ward) => setSelectedWardId(ward?.id)}
@@ -415,31 +436,32 @@ export const ElectionScopeSelector = () => {
           </>
         );
 
+      // 6. Local Government Contests (LGA Chairman Election)
+      // Locks State and LGA; allows drill-down into constituent Wards.
       case "lga":
-        // Auto-select state, district, and lga
         return (
           <>
-            <div className="w-[180px]">
+            <div className="w-45">
               <SelectState
                 selectedId={selectedElection?.state_id || selectedStateId}
-                update={() => {}}
+                update={() => { }}
                 fetchStates={fetchStatesFn}
                 countryOriginalId={selectedCountryId}
                 disabled
                 className="bg-c-5 ring-0 md:ring-0 md:hover:ring"
               />
             </div>
-            <div className="w-[180px]">
+            <div className="w-45">
               <SelectLga
                 selectedId={selectedElection?.lga_id || selectedLGAId}
-                update={() => {}}
+                update={() => { }}
                 fetchLGAs={fetchLGAsFn}
                 stateId={selectedElection?.state_id || selectedStateId}
                 disabled
                 className="bg-c-5 ring-0 md:ring-0 md:hover:ring"
               />
             </div>
-            <div className="w-[180px]">
+            <div className="w-45">
               <SelectWard
                 selectedId={selectedWardId}
                 update={(ward) => setSelectedWardId(ward?.id)}
@@ -453,34 +475,35 @@ export const ElectionScopeSelector = () => {
           </>
         );
 
+      // 7. Ward Level Contests (Ward Councillor Election)
+      // Locks State, LGA, and Ward to the specific election jurisdiction.
       case "ward":
-        // Auto-select state, district, lga and ward
         return (
           <>
-            <div className="w-[180px]">
+            <div className="w-45">
               <SelectState
                 selectedId={selectedElection?.state_id || selectedStateId}
-                update={() => {}}
+                update={() => { }}
                 fetchStates={fetchStatesFn}
                 countryOriginalId={selectedCountryId}
                 disabled
                 className="bg-c-5 ring-0 md:ring-0 md:hover:ring"
               />
             </div>
-            <div className="w-[180px]">
+            <div className="w-45">
               <SelectLga
                 selectedId={selectedElection?.lga_id || selectedLGAId}
-                update={() => {}}
+                update={() => { }}
                 fetchLGAs={fetchLGAsFn}
                 stateId={selectedElection?.state_id || selectedStateId}
                 disabled
                 className="bg-c-5 ring-0 md:ring-0 md:hover:ring"
               />
             </div>
-            <div className="w-[180px]">
+            <div className="w-45">
               <SelectWard
                 selectedId={selectedElection?.ward_id || selectedWardId}
-                update={() => {}}
+                update={() => { }}
                 fetchWards={fetchWardsFn}
                 lgaId={selectedElection?.lga_id || selectedLGAId}
                 stateId={selectedElection?.state_id || selectedStateId}
@@ -502,8 +525,8 @@ export const ElectionScopeSelector = () => {
 
   return (
     <div className="flex items-center gap-3">
-      {/* Country Selection is common and often disabled/preset */}
-      <div className="w-[180px]">
+      {/* Country Selection: Defaults and locks to Nigeria (National Jurisdiction) */}
+      <div className="w-45">
         <SelectCountry
           selectedId={selectedCountryId?.toString()}
           update={(country) => {
@@ -516,6 +539,7 @@ export const ElectionScopeSelector = () => {
         />
       </div>
 
+      {/* Dynamic cascading hierarchical selectors based on scope */}
       {renderSelects()}
     </div>
   );

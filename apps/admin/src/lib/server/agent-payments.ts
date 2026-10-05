@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { API_URL } from "#/lib/config";
-import { apiFetch } from "./fetch";
+import { apiFetchJson } from "./fetch";
 
 export type ElectionPayItem = {
   id: number;
@@ -63,10 +63,11 @@ export const getAgentPaymentsOverview = createServerFn({ method: "GET" })
   .inputValidator((electionGroupId?: number | string) => electionGroupId)
   .handler(async ({ data: electionGroupId }) => {
     try {
-      const response = await apiFetch(API_URL.adminAgentPayments.overview(electionGroupId));
-      return (await response.json()) as { success: boolean; data: AgentPaymentsOverview; message?: string };
-    } catch (error) {
-      return { success: false, data: null as any, message: (error as Error).message };
+      return await apiFetchJson<{ success: boolean; data: AgentPaymentsOverview; message?: string }>(
+        API_URL.adminAgentPayments.overview(electionGroupId),
+      );
+    } catch (error: any) {
+      return { success: false, data: null as any, message: error?.message || "Failed to fetch overview" };
     }
   });
 
@@ -84,14 +85,13 @@ export const getElectionPayList = createServerFn({ method: "GET" })
   )
   .handler(async ({ data: args }) => {
     try {
-      const response = await apiFetch(API_URL.adminAgentPayments.electionPay(args));
-      return (await response.json()) as {
+      return await apiFetchJson<{
         success: boolean;
         data: { items: ElectionPayItem[]; total: number; limit: number; offset: number };
         message?: string;
-      };
-    } catch (error) {
-      return { success: false, data: { items: [], total: 0, limit: 50, offset: 0 }, message: (error as Error).message };
+      }>(API_URL.adminAgentPayments.electionPay(args));
+    } catch (error: any) {
+      return { success: false, data: { items: [], total: 0, limit: 50, offset: 0 }, message: error?.message || "Failed to fetch election pay list" };
     }
   });
 
@@ -108,14 +108,13 @@ export const getReferralPayList = createServerFn({ method: "GET" })
   )
   .handler(async ({ data: args }) => {
     try {
-      const response = await apiFetch(API_URL.adminAgentPayments.referralPay(args));
-      return (await response.json()) as {
+      return await apiFetchJson<{
         success: boolean;
         data: { items: ReferralPayItem[]; total: number; limit: number; offset: number };
         message?: string;
-      };
-    } catch (error) {
-      return { success: false, data: { items: [], total: 0, limit: 50, offset: 0 }, message: (error as Error).message };
+      }>(API_URL.adminAgentPayments.referralPay(args));
+    } catch (error: any) {
+      return { success: false, data: { items: [], total: 0, limit: 50, offset: 0 }, message: error?.message || "Failed to fetch referral pay list" };
     }
   });
 
@@ -123,12 +122,11 @@ export const payElectionAgent = createServerFn({ method: "POST" })
   .inputValidator((id: number | string) => id)
   .handler(async ({ data: id }) => {
     try {
-      const response = await apiFetch(API_URL.adminAgentPayments.payElection(id), {
+      return await apiFetchJson(API_URL.adminAgentPayments.payElection(id), {
         method: "POST",
       });
-      return await response.json();
-    } catch (error) {
-      return { success: false, message: (error as Error).message };
+    } catch (error: any) {
+      return { success: false, message: error?.message || "Failed to pay election agent" };
     }
   });
 
@@ -136,12 +134,11 @@ export const payReferralAgent = createServerFn({ method: "POST" })
   .inputValidator((id: number | string) => id)
   .handler(async ({ data: id }) => {
     try {
-      const response = await apiFetch(API_URL.adminAgentPayments.payReferral(id), {
+      return await apiFetchJson(API_URL.adminAgentPayments.payReferral(id), {
         method: "POST",
       });
-      return await response.json();
-    } catch (error) {
-      return { success: false, message: (error as Error).message };
+    } catch (error: any) {
+      return { success: false, message: error?.message || "Failed to pay referral agent" };
     }
   });
 
@@ -151,13 +148,12 @@ export const payAllAgentPayments = createServerFn({ method: "POST" })
   )
   .handler(async ({ data: body }) => {
     try {
-      const response = await apiFetch(API_URL.adminAgentPayments.payAll, {
+      return await apiFetchJson(API_URL.adminAgentPayments.payAll, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      return await response.json();
-    } catch (error) {
-      return { success: false, message: (error as Error).message };
+    } catch (error: any) {
+      return { success: false, message: error?.message || "Failed to process bulk payments" };
     }
   });

@@ -1,3 +1,10 @@
+/**
+ * @file Party Member & Administrator Table Header & Tile Components
+ * @description Renders table rows for registered party officials and administrators.
+ * Displays member avatar, name, assigned organizational role, office/jurisdiction,
+ * registration or election date, and row context actions.
+ */
+
 import { Ellipsis } from "lucide-react";
 import {
   TileHeader,
@@ -15,6 +22,10 @@ export type PartyAdminType = {
   office?: string;
 };
 
+/**
+ * PartyAdminTableHeader Component
+ * Renders configurable table header columns based on provided string array.
+ */
 export function PartyAdminTableHeader({ columns }: { columns: string[] }) {
   const [memberCol, roleCol, officeCol, dateCol] = columns;
 
@@ -28,7 +39,7 @@ export function PartyAdminTableHeader({ columns }: { columns: string[] }) {
         <p className="text-c-50 text-[14px] w-35 hidden md:block">
           {roleCol}
         </p>
-        <p className="text-c-50 text-[14px] w-[180px] hidden lg:block">
+        <p className="text-c-50 text-[14px] w-45 hidden lg:block">
           {officeCol}
         </p>
         <p className="text-c-50 text-[14px] w-35 hidden sm:block">
@@ -40,6 +51,10 @@ export function PartyAdminTableHeader({ columns }: { columns: string[] }) {
   );
 }
 
+/**
+ * PartyAdminTableTile Component
+ * Renders an individual party administrator or executive officer row.
+ */
 export function PartyAdminTableTile({ data }: { data: PartyAdminType }) {
   return (
     <TileRow>
@@ -56,7 +71,7 @@ export function PartyAdminTableTile({ data }: { data: PartyAdminType }) {
         <p className="w-35 truncate hidden md:block text-[#ff9a3c] font-medium">
           {data.role || "-"}
         </p>
-        <p className="w-[180px] truncate hidden lg:block text-[#313131]">
+        <p className="w-45 truncate hidden lg:block text-[#313131]">
           {data.partyOffice}
         </p>
         <p className="w-35 hidden sm:block text-[#313131]">

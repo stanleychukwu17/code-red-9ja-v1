@@ -1,9 +1,20 @@
+/**
+ * @file Site Preference Loader Component
+ * @description Headless component that hydrates the user's initial UI preferences (theme, sidebar mode)
+ * from server-rendered cookies or backend data into the client Redux store without firing redundant save requests.
+ * Also listens for client theme switch custom events to keep Redux and local storage in sync.
+ */
+
 import { useEffect } from "react";
 import { useDispatch } from "react-redux";
 import { hydrateSiteState, updateSiteState } from "@/redux/slice/siteSlice";
 import type { SiteState } from "@/redux/slice/siteSlice";
 import { applyThemeMode, type ThemeMode, ThemeModes } from "@repo/ui/hooks/use-theme";
 
+/**
+ * LoadSitePreference Component
+ * Hydrates server preferences into Redux and listens for runtime theme events.
+ */
 export default function LoadSitePreference({ sitePreference }: { sitePreference?: Partial<SiteState> }) {
   const dispatch = useDispatch();
 

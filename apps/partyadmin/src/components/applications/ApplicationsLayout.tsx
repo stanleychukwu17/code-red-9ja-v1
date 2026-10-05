@@ -1,3 +1,10 @@
+/**
+ * @file Applications Presentational Layout & Table Components
+ * @description Dedicated layout container and tabular components for the agent applications workflow.
+ * Provides tab headers with badge tallies, filter bars with bulk actions ("Accept all", "Export"),
+ * and decision pill buttons for quick approvals.
+ */
+
 import { Link } from "@tanstack/react-router";
 import { cn } from "@repo/ui/lib/utils";
 import { Download, Ellipsis, Search, Share2, ChevronDown } from "lucide-react";
@@ -22,6 +29,10 @@ const TABS: Array<{ id: ApplicationsTabId; label: string; href: string }> = [
   { id: "rejected", label: "Rejected (32)", href: "/applications/rejected" },
 ];
 
+/**
+ * ApplicationsLayout Component
+ * Standalone layout wrapper framing the application queue with status tabs and search controls.
+ */
 export function ApplicationsLayout({
   activeTab,
   slotsLeft,
@@ -104,6 +115,11 @@ type ApplicationsTableProps = {
   }>;
 };
 
+/**
+ * ApplicationsTable Component
+ * Presentational table displaying user profile avatar, name, targeted election,
+ * residence, and decision action button.
+ */
 export function ApplicationsTable({ rows }: ApplicationsTableProps) {
   return (
     <div className="w-full">

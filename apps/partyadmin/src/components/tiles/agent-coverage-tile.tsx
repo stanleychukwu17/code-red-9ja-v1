@@ -1,3 +1,10 @@
+/**
+ * @file Agent Coverage Table Tiles & Headers
+ * @description Provides row tile components and table headers for agent coverage breakdowns across
+ * geopolitical tiers (States, Senatorial Districts, Federal Constituencies, LGAs, Wards, Polling Units).
+ * Displays staffing fill rates, readiness color meters, supervisor avatars, and direct assignment action triggers.
+ */
+
 import {
   AppAvatar,
 } from "@repo/ui/components/avatar";
@@ -13,6 +20,12 @@ import type { AgentCoverageUnitItem } from "#/lib/server/agent-coverage";
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
+/**
+ * Returns color classes based on overall coverage readiness:
+ * - 0%: Red (urgent gap)
+ * - < 50%: Amber (partial coverage)
+ * - >= 50%: Neutral/theme (healthy coverage)
+ */
 function getReadinessColor(pct?: number) {
   if (pct === undefined || pct === null) return "text-c-80";
   if (pct === 0) return "text-[#EF4444] font-bold";
@@ -20,6 +33,9 @@ function getReadinessColor(pct?: number) {
   return "text-neutral-900 dark:text-neutral-100 font-bold";
 }
 
+/**
+ * Formats string numbers with percentages, bolding the primary count and muting the percentage
+ */
 function FormattedNumberWithPct({ value }: { value?: string }) {
   if (!value) return <span>—</span>;
   const match = value.match(/^([0-9,]+)\s*(\([0-9.]+%\))$/);
@@ -34,7 +50,10 @@ function FormattedNumberWithPct({ value }: { value?: string }) {
   return <span className="font-bold text-neutral-900 dark:text-neutral-100">{value}</span>;
 }
 
-// ─── Higher Level Agent Coverage Table Header (States -> Wards) ───────────────
+/**
+ * AgentCoverageTableHeader Component
+ * Renders the header row for electoral unit tiers (State through Ward level).
+ */
 export function AgentCoverageTableHeader({
   unitTitle = "States",
   unitType = "states",
@@ -53,7 +72,7 @@ export function AgentCoverageTableHeader({
 
   return (
     <TileHeader>
-      <TileLeft className="min-w-[180px]">
+      <TileLeft className="min-w-45">
         <span className="text-c-90 font-bold text-[14px]">{unitTitle}</span>
       </TileLeft>
       <TileRight className="text-sm text-c-50 font-medium">
@@ -65,15 +84,19 @@ export function AgentCoverageTableHeader({
         {isState && (
           <span className="w-[130px] text-left">State Supervisor</span>
         )}
-        <span className="w-[140px] text-left">Overall Readiness</span>
-        <span className="w-[140px] text-left">{supervisorTitle}</span>
+        <span className="w-35 text-left">Overall Readiness</span>
+        <span className="w-35 text-left">{supervisorTitle}</span>
         <div className="w-8 shrink-0" />
       </TileRight>
     </TileHeader>
   );
 }
 
-// ─── Higher Level Agent Coverage Table Tile (States -> Wards) ─────────────────
+/**
+ * AgentCoverageTableTile Component
+ * Higher-level row tile representing an electoral unit (State, Senatorial District, Fed Constituency, LGA, Ward).
+ * Displays staffing progress across tiers, overall readiness percentage, and supervisor avatar stack.
+ */
 export function AgentCoverageTableTile({
   data,
   unitType = "states",
@@ -96,7 +119,7 @@ export function AgentCoverageTableTile({
 
   return (
     <TileRow onClick={onClick}>
-      <TileLeft className="min-w-[180px]">
+      <TileLeft className="min-w-45">
         <span className="text-[14px] text-c-80 truncate">{data.name}</span>
       </TileLeft>
       <TileRight className="min-w-fit gap-4 items-center text-[13.5px]">
@@ -125,7 +148,7 @@ export function AgentCoverageTableTile({
         )}
 
         {/* Overall Readiness */}
-        <div className="flex items-center gap-2 w-[140px]">
+        <div className="flex items-center gap-2 w-35">
           <span className="size-2.5 rounded-full bg-neutral-300 dark:bg-neutral-600 shrink-0" />
           <span className={getReadinessColor(data.overall_readiness)}>
             {data.overall_readiness ?? 0}%
@@ -133,7 +156,7 @@ export function AgentCoverageTableTile({
         </div>
 
         {/* Supervisor Avatars + Add Button */}
-        <div className="w-[140px] flex items-center gap-1.5">
+        <div className="w-35 flex items-center gap-1.5">
           {supervisors.slice(0, 3).map((s, idx) => (
             <AppAvatar
               key={`${s.id}-${idx}`}
@@ -174,24 +197,30 @@ export function AgentCoverageTableTile({
   );
 }
 
-// ─── Polling Unit Agent Coverage Table Header ─────────────────────────────────
+/**
+ * PollingUnitAgentCoverageTableHeader Component
+ * Table header for the terminal polling unit coverage view.
+ */
 export function PollingUnitAgentCoverageTableHeader() {
   return (
     <TileHeader>
-      <TileLeft className="min-w-[180px]">
+      <TileLeft className="min-w-45">
         <span className="text-c-90 font-bold text-[14px]">Polling units</span>
       </TileLeft>
       <TileRight className="text-sm text-c-50 font-medium">
         <span className="w-[130px] text-left">Polling Agents</span>
-        <span className="w-[140px] text-left">Overall Readiness</span>
-        <span className="w-[140px] text-left">PU Agents</span>
+        <span className="w-35 text-left">Overall Readiness</span>
+        <span className="w-35 text-left">PU Agents</span>
         <div className="w-8 shrink-0" />
       </TileRight>
     </TileHeader>
   );
 }
 
-// ─── Polling Unit Agent Coverage Table Tile ───────────────────────────────────
+/**
+ * PollingUnitAgentCoverageTableTile Component
+ * Terminal row tile representing a single polling unit and its assigned agents.
+ */
 export function PollingUnitAgentCoverageTableTile({
   data,
   onAssign,
@@ -205,7 +234,7 @@ export function PollingUnitAgentCoverageTableTile({
 
   return (
     <TileRow>
-      <TileLeft className="min-w-[180px]">
+      <TileLeft className="min-w-45">
         <span className="text-[14px] text-c-80 truncate">{data.name}</span>
       </TileLeft>
       <TileRight className="min-w-fit gap-4 items-center text-[13.5px]">
@@ -217,7 +246,7 @@ export function PollingUnitAgentCoverageTableTile({
         </div>
 
         {/* Overall Readiness */}
-        <div className="flex items-center gap-2 w-[140px]">
+        <div className="flex items-center gap-2 w-35">
           <span className="size-2.5 rounded-full bg-neutral-300 dark:bg-neutral-600 shrink-0" />
           <span className={getReadinessColor(data.overall_readiness)}>
             {data.overall_readiness ?? 0}%
@@ -225,7 +254,7 @@ export function PollingUnitAgentCoverageTableTile({
         </div>
 
         {/* PU Agents Avatars + Add Button */}
-        <div className="w-[140px] flex items-center gap-1.5">
+        <div className="w-35 flex items-center gap-1.5">
           {agents.slice(0, 3).map((a, idx) => (
             <AppAvatar
               key={`${a.id}-${idx}`}

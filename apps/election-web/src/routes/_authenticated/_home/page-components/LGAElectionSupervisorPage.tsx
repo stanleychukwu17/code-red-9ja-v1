@@ -1,4 +1,5 @@
-import { useAppContext } from "#/hooks/useAppContext";
+import { useElection } from "#/hooks/useElection";
+import { useAssignments } from "#/hooks/useAssignments";
 import { useQuery } from "@tanstack/react-query";
 import { getSingleLgaStats } from "#/lib/server/election_stats";
 import { Button } from "@repo/ui/components/button";
@@ -32,23 +33,32 @@ import { DidYouVoteCard } from "../components/DidYouVoteCard";
 import { MyPollingUnit } from "../components/MyPollingUnit";
 import { Layout } from "@repo/ui/components/custom/AdminLayouts";
 
+/**
+ * Local Government Area (LGA) Election Supervisor Dashboard.
+ *
+ * Operational dashboard for LGA Supervisors responsible for overseeing election
+ * logistics across all wards within the LGA:
+ * - Monitors ward supervisor recruitment coverage (`unique_ward_supervisors_count`).
+ * - Tracks polling agent recruitment and training completion across all polling units.
+ * - Monitors election day turnouts, incident reports, and result sheet uploads.
+ * - Manages ward-level collation and supervisor task progress via `LgaSupervisorTasksTab`.
+ */
 export function LGAElectionSupervisorPage() {
   const navigate = useNavigate();
 
-  const {
-    selectedElectionGroup,
-    selectedElection,
-    selectedSupervisorAssignment,
-  } = useAppContext();
+  const { selectedElectionGroup, selectedElection } = useElection();
+  const { selectedSupervisorAssignment } = useAssignments();
 
   const currentAssignment = selectedSupervisorAssignment?.data;
 
+  // Active supervisor tab (Earnings vs Ward supervisor task tracker)
   const [activeTab, setActiveTab] = useState<"Earnings" | "Tasks">("Earnings");
   const [isArrivalDrawerOpen, setIsArrivalDrawerOpen] = useState(false);
   const [showNoInfo, setShowNoInfo] = useState(false);
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [carouselApi, setCarouselApi] = useState<CarouselApi>();
 
+  // Synchronize carousel slide index with active dot and title
   useEffect(() => {
     if (!carouselApi) return;
     setCarouselIndex(carouselApi.selectedScrollSnap());
@@ -57,6 +67,7 @@ export function LGAElectionSupervisorPage() {
     });
   }, [carouselApi]);
 
+  // Compute countdown to election day
   let daysLeft: number | undefined = undefined;
   if (selectedElectionGroup?.election_date) {
     const d = new Date(selectedElectionGroup.election_date);
@@ -70,6 +81,7 @@ export function LGAElectionSupervisorPage() {
     }
   }
 
+  // Query aggregated LGA statistics across all wards and polling units
   const { data: statsRes } = useQuery({
     queryKey: [
       "lgaStats",
@@ -94,6 +106,7 @@ export function LGAElectionSupervisorPage() {
   const partyStats = statsRes?.data?.party_stats || {};
   const targets = statsRes?.data?.targets || {};
 
+  // LGA pre-election readiness metrics (ward supervisors coverage & agent test passage)
   const readiness = [
     {
       title: "Ward supervisor coverage",
@@ -120,6 +133,7 @@ export function LGAElectionSupervisorPage() {
     },
   ];
 
+  // LGA election-day operations metrics across the LGA
   const objectives = [
     {
       title: "Agents that are at their PU",
@@ -155,6 +169,7 @@ export function LGAElectionSupervisorPage() {
     },
   ];
 
+  // Derive carousel slide title and percentage
   let headerTitle = "Readiness";
   let headerRightText = "";
   if (carouselIndex === 0) {
@@ -171,10 +186,17 @@ export function LGAElectionSupervisorPage() {
   }
 
   return (
+<<<<<<< HEAD
     <Layout className="px-0 gap-2">
+=======
+    <div className="w-full min-h-screen">
+      {/* Top dashboard header with election countdown and user polling unit summary */}
+>>>>>>> b53f3790a0d76b20dc1269bbe339bf4d6775a08c
       <HomeHeader daysLeft={daysLeft} />
       <MyPollingUnit />
       <HomeHeader2 title={headerTitle} rightText={headerRightText} />
+
+      {/* Primary Carousel: Readiness, Objectives, and Candidate Leaderboard */}
       <Carousel setApi={setCarouselApi} className="w-full">
         <CarouselContent>
           <CarouselItem>
@@ -249,13 +271,17 @@ export function LGAElectionSupervisorPage() {
           </CarouselItem>
         </CarouselContent>
       </Carousel>
+
+      {/* Pagination indicators */}
       <CarouselDotContent>
         <CarouselDot active={carouselIndex === 0} />
         <CarouselDot active={carouselIndex === 1} />
         <CarouselDot active={carouselIndex === 2} />
       </CarouselDotContent>
 
+      {/* Supervisor Action Body */}
       <HomeBody>
+        {/* On election day: prompt supervisor to start official monitoring duty */}
         {daysLeft === 0 && !currentAssignment?.arrived_at && (
           <SupervisorStartDutyCard
             onReadyClick={() => {
@@ -264,20 +290,26 @@ export function LGAElectionSupervisorPage() {
             }}
           />
         )}
+
+        {/* Voting check on election day */}
         {daysLeft === 0 && (
           <DidYouVoteCard onYesClick={() => navigate({ to: "/vote" })} />
         )}
 
+        {/* Applications, referrals, and practice tests */}
         {daysLeft !== undefined && daysLeft !== 0 && <ApplicationsCard />}
         <ReferralCard onClick={() => navigate({ to: "/referrals" })} />
         {daysLeft !== undefined && daysLeft !== 0 && <PracticeTestCard />}
 
+        {/* Supervisor Tabs: Earnings vs LGA supervisor task tracker */}
         <SupervisorTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
         {activeTab === "Earnings" && <EarningsTab />}
         {activeTab === "Tasks" && (
           <LgaSupervisorTasksTab isElectionDay={daysLeft === 0} />
         )}
+
+        {/* Emergency incident report FAB */}
         {daysLeft === 0 && (
           <GiveUpdateFloatingButton
             onClick={() => navigate({ to: "/give-update" })}

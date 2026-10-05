@@ -1,5 +1,12 @@
+/**
+ * @file Coverage Page Header Component
+ * @description Provides action components and filters for the agent coverage page header,
+ * primarily housing the dual election-group and election selector to switch context.
+ */
+
 import * as React from "react";
-import { useAppContext } from "#/hooks/useAppContext";
+import { useUserParty } from "#/hooks/useUserParty";
+import { useElection } from "#/hooks/useElection";
 import {
   SelectElectionGroupAndElection,
   type Election,
@@ -9,13 +16,18 @@ import { getElectionGroups } from "#/lib/server/election_groups";
 import { getElectionsByGroup } from "#/lib/server/elections";
 import { useServerFn } from "@tanstack/react-start";
 
+/**
+ * CoverageHeaderRight Component
+ * Mounts in the PageHeader's right slot to allow party admins to quickly switch
+ * between election groups (e.g. General Elections 2023) and specific election races (e.g. Presidential, Gubernatorial).
+ */
 export function CoverageHeaderRight() {
+  const { party } = useUserParty();
   const {
-    party,
     selectedElectionGroup,
     setSelectedElectionGroup,
     setSelectedElection,
-  } = useAppContext();
+  } = useElection();
   const partyId = party?.id;
 
   const fetchGroups = useServerFn(getElectionGroups);

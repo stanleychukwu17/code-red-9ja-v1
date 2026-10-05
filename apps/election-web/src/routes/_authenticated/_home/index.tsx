@@ -1,5 +1,10 @@
+<<<<<<< HEAD
 import { useState, useMemo, useEffect } from "react";
 import { useAppContext } from "#/hooks/useAppContext";
+=======
+import { useElection } from "#/hooks/useElection";
+import { useAssignments } from "#/hooks/useAssignments";
+>>>>>>> b53f3790a0d76b20dc1269bbe339bf4d6775a08c
 import { useElectionRealtime } from "@repo/ui/hooks/useElectionRealtime";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
@@ -20,6 +25,9 @@ export interface HomeSearch {
   redirect?: string;
 }
 
+/**
+ * Route definition for authenticated dashboard home (`/_authenticated/_home/`).
+ */
 export const Route = createFileRoute("/_authenticated/_home/")({
   validateSearch: (search: Record<string, unknown>): HomeSearch => {
     return {
@@ -33,7 +41,21 @@ export const Route = createFileRoute("/_authenticated/_home/")({
   component: RouteComponent,
 });
 
+/**
+ * Dashboard Home Route Orchestrator.
+ *
+ * Dynamically renders the appropriate dashboard view based on the user's role:
+ * 1. State Supervisor (`StateElectionSupervisorPage`)
+ * 2. LGA Supervisor (`LGAElectionSupervisorPage`)
+ * 3. Ward Supervisor (`WardElectionSupervisorPage`)
+ * 4. Polling Unit Agent (`PollingAgentPage`)
+ * 5. General Citizen / Voter (`GeneralPage`)
+ *
+ * Also initiates real-time WebSocket subscriptions via Pusher for live
+ * election results, incident alerts, and agent status broadcasts.
+ */
 function RouteComponent() {
+<<<<<<< HEAD
   const navigate = useNavigate();
   const search = Route.useSearch();
   const { user, selectedElection, selectedSupervisorAssignment, selectedAssignment } =
@@ -154,6 +176,10 @@ function RouteComponent() {
       });
     }
   };
+=======
+  const { selectedElection } = useElection();
+  const { selectedSupervisorAssignment, selectedAssignment } = useAssignments();
+>>>>>>> b53f3790a0d76b20dc1269bbe339bf4d6775a08c
 
   // Connect real-time WebSocket updates for election supervisor & voter dashboard
   useElectionRealtime({
@@ -173,8 +199,12 @@ function RouteComponent() {
     },
   });
 
+<<<<<<< HEAD
   let content = <GeneralPage />;
 
+=======
+  // Branch 1: Regional Supervisors (State, LGA, or Ward)
+>>>>>>> b53f3790a0d76b20dc1269bbe339bf4d6775a08c
   if (selectedSupervisorAssignment) {
     if (selectedSupervisorAssignment.type === "state") {
       content = <StateElectionSupervisorPage />;
@@ -187,6 +217,7 @@ function RouteComponent() {
     content = <PollingAgentPage />;
   }
 
+<<<<<<< HEAD
   return (
     <>
       {content}
@@ -207,5 +238,14 @@ function RouteComponent() {
       />
     </>
   );
+=======
+  // Branch 2: Assigned Polling Unit Agent
+  if (selectedAssignment) {
+    return <PollingAgentPage />;
+  }
+
+  // Branch 3: General Citizen / Unassigned Voter
+  return <GeneralPage />;
+>>>>>>> b53f3790a0d76b20dc1269bbe339bf4d6775a08c
 }
 

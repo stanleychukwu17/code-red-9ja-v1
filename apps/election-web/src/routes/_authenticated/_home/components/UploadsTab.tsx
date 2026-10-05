@@ -3,20 +3,32 @@ import { TitleText } from "@repo/ui/components/custom/Texts";
 import AlertIcon from "@repo/ui/icons/alert-icon";
 import CloudIcon from "@repo/ui/icons/cloud-icon";
 
+/**
+ * Uploads & Offline Queue Tab.
+ *
+ * Displays the sync queue of election day media uploads (result sheet photos,
+ * incident videos, interval status reports):
+ * - Alerts the agent if network connectivity is interrupted ("Waiting for network...").
+ * - Displays active background uploads with progress/status badges (`CloudIcon` vs `AlertIcon`).
+ * - Provides a "Retry" mechanism for failed transfers.
+ */
 export function UploadsTab() {
   return (
     <div className="flex flex-col gap-4">
+      {/* Network connectivity alert badge */}
       <InfoCard
         label="Waiting for network..."
         className="font-medium text-[#AA8C30] text-center"
         icon={<AlertIcon />}
       />
 
+      {/* Upload count progress header */}
       <div className="flex items-center justify-between">
         <TitleText text="Uploaded updates" size="md" />
         <span className="text-c-80 font-bold text-[20px]">4/8</span>
       </div>
 
+      {/* Queue of pending, uploading, and failed items */}
       <div className="flex flex-col mt-2 gap-5">
         {[
           {
@@ -34,6 +46,7 @@ export function UploadsTab() {
         ].map((upload, i) => (
           <div key={i} className="flex items-center justify-between">
             <div className="flex items-center gap-3">
+              {/* Media preview thumbnail */}
               <img
                 src={upload.img}
                 alt="Upload thumbnail"
@@ -61,6 +74,8 @@ export function UploadsTab() {
                 <span className="text-c-40 text-sm">{upload.time}</span>
               </div>
             </div>
+
+            {/* Manual retry button for failed uploads */}
             <button className="text-c-40 hover:text-c-50 transition">
               Retry
             </button>

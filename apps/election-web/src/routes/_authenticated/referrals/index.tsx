@@ -5,7 +5,9 @@ import { Link2 } from "lucide-react";
 import { useCopyToClipboard, useIntersectionObserver } from "usehooks-ts";
 import { toast } from "sonner";
 
-import { useAppContext } from "#/hooks/useAppContext";
+import { useUser } from "#/hooks/useUser";
+import { useUserParty } from "#/hooks/useUserParty";
+import { useElection } from "#/hooks/useElection";
 import { getPageHeader } from "#/lib/shared/meta";
 import { getReferralStats, getReferredUsers } from "#/lib/server/referrals";
 import {
@@ -19,11 +21,15 @@ import { AppAvatar, DoubleAvatar } from "@repo/ui/components/avatar";
 import { HomeHeader } from "../_home/components/HomeHeader";
 import FancyMoneyBagIcon from "@repo/ui/icons/fancy-money-bag-icon";
 
+/**
+ * Route definition for agent referral dashboard.
+ */
 export const Route = createFileRoute("/_authenticated/referrals/")({
   head: () => getPageHeader({ title: "Referrals" }),
   component: ReferralsPage,
 });
 
+/** Aggregate statistics on an agent's referral performance and earnings */
 type UserReferralStats = {
   id?: number;
   total_referrals?: number;
@@ -33,12 +39,14 @@ type UserReferralStats = {
   earned_amount?: string | number;
 };
 
+/** Active party referral campaign metadata specifying per-recruit reward amount */
 type ActiveCampaign = {
   id?: number;
   referral_amount?: string | number;
   title?: string;
 };
 
+/** Individual referred user record and their registration/agent recruitment milestone */
 type ReferredUserItem = {
   id: number;
   user_referral_id?: number;
@@ -56,6 +64,9 @@ type ReferredUserItem = {
   avatar?: string;
 };
 
+/**
+ * Stat display item for the dark referral dashboard header.
+ */
 function SummaryItem({
   icon,
   label,
@@ -78,15 +89,24 @@ function SummaryItem({
   );
 }
 
+/**
+ * Referrals Dashboard Page.
+ * Displays recruitment performance stats, referral code sharing tool,
+ * active reward campaigns, and a cursor-paginated list of recruits.
+ */
 function ReferralsPage() {
   const navigate = useNavigate();
-  const { party, selectedElectionGroup, user } = useAppContext();
+  const user = useUser();
+  const { party } = useUserParty();
+  const { selectedElectionGroup } = useElection();
   const [_, copy] = useCopyToClipboard();
 
+  // Intersection observer hook triggering next page loads on scroll
   const { ref: loadMoreRef, isIntersecting } = useIntersectionObserver({
     threshold: 0.1,
   });
 
+  // Calculate remaining countdown days to election date
   let daysLeft: number | undefined = undefined;
   if (selectedElectionGroup?.election_date) {
     const d = new Date(selectedElectionGroup.election_date);
@@ -100,7 +120,7 @@ function ReferralsPage() {
     }
   }
 
-  // React Query with server function: Fetch Referral Stats & Active Campaign
+  // Fetch referral totals and current active campaign rewards
   const { data: referralStatsData, isLoading: loadingStats } = useQuery({
     queryKey: ["referralStats", selectedElectionGroup?.id, party?.id],
     queryFn: async () => {
@@ -121,7 +141,7 @@ function ReferralsPage() {
   const stats = referralStatsData?.user_referral || null;
   const activeCampaign = referralStatsData?.active_campaign || null;
 
-  // React Query with server function: Fetch Referred Users with Infinite Scroll Cursor Pagination
+  // Infinite query fetching referred users list with cursor pagination
   const {
     data: infiniteData,
     isLoading: loadingList,
@@ -154,20 +174,21 @@ function ReferralsPage() {
         : undefined,
   });
 
+  // Flatten infinite query page batches into a single array of items
   const items = useMemo(() => {
     const rawItems =
       infiniteData?.pages.flatMap((page) => page?.items || []) || [];
     return rawItems.filter((item): item is ReferredUserItem => Boolean(item));
   }, [infiniteData]);
 
-  // Trigger infinite scroll when sentinel is intersecting
+  // Trigger loading next page when sentinel element scrolls into view
   useEffect(() => {
     if (isIntersecting && hasNextPage && !loadingMore && !loadingList) {
       fetchNextPage();
     }
   }, [isIntersecting, hasNextPage, loadingMore, loadingList, fetchNextPage]);
 
-  // Campaign referral bonus amount text
+  // Formatted campaign reward description (e.g. "₦1,000 per agent referred")
   const campaignBonusText = useMemo(() => {
     if (activeCampaign?.referral_amount) {
       const amt = Number(activeCampaign.referral_amount);
@@ -178,19 +199,20 @@ function ReferralsPage() {
     return "Bonus per agent referred";
   }, [activeCampaign]);
 
-  // Formatted potential earnings
+  // Formatted potential referral payout
   const formattedPotentialEarnings = useMemo(() => {
     const amt = Number(stats?.potential_earnings ?? 0);
     return `₦${amt.toLocaleString()}`;
   }, [stats?.potential_earnings]);
 
-  // Extract avatars of the first and second referred users (with fallback defaults)
+  // Profile avatars of recent recruits for the double-avatar summary icon
   const avatar1 = items[0]?.avatar || "";
   const avatar2 = items[1]?.avatar || items[0]?.avatar || "";
 
   return (
     <PageWrapper>
       <DarkBodyWrapper>
+        {/* Navigation header */}
         <PageHeader
           title="Referrals"
           className="px-2 pb-2 pt-3 text-white"
@@ -198,6 +220,7 @@ function ReferralsPage() {
           onBackClick={() => navigate({ to: "/" })}
         />
 
+        {/* Election countdown header with party badge */}
         <HomeHeader
           daysLeft={daysLeft}
           avatarImage={party?.logo}
@@ -205,6 +228,7 @@ function ReferralsPage() {
           containerClassName="pt-0"
         />
 
+        {/* High-level performance metric summaries */}
         <div className="mt-1 px-4">
           <SummaryItem
             icon={<DoubleAvatar src1={avatar1} src2={avatar2} />}
@@ -219,6 +243,7 @@ function ReferralsPage() {
           />
         </div>
 
+        {/* Referral code copy widget with active bonus incentive */}
         <div className="mt-3 space-y-2.5 px-4">
           <div className="flex items-center justify-between text-sm">
             <p className="text-white/50">Referral code:</p>
@@ -250,6 +275,7 @@ function ReferralsPage() {
           </Button>
         </div>
 
+        {/* White rounded bottom sheet listing referred recruits */}
         <RoundedTopWrapper>
           <div className="mt-6 space-y-6">
             {loadingList ? (
@@ -271,6 +297,7 @@ function ReferralsPage() {
                 const fullName =
                   `${item.first_name || ""} ${item.last_name || ""}`.trim() ||
                   "Referred User";
+                // Milestone classification: Full Agent, Applied, or Signed Up
                 const roleLabel =
                   item.milestone === "BECAME_AGENT"
                     ? "Agent"
@@ -289,6 +316,7 @@ function ReferralsPage() {
                     key={item.id}
                     className="flex items-center justify-between gap-3"
                   >
+                    {/* Recruit avatar and milestone status */}
                     <div className="flex min-w-0 items-center gap-3">
                       <AppAvatar
                         src={item.avatar}
@@ -304,6 +332,7 @@ function ReferralsPage() {
                         </p>
                       </div>
                     </div>
+                    {/* Registration timestamp & link action */}
                     <div className="flex shrink-0 items-center gap-3">
                       <span className="text-[13px] text-neutral-500">
                         {formattedTime}

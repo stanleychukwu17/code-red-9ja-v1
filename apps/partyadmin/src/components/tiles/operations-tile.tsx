@@ -1,3 +1,11 @@
+/**
+ * @file Operations Table Header & Tile Components
+ * @description Renders real-time operational telemetry across hierarchical election tiers
+ * (States -> LGAs -> Wards -> Polling Units).
+ * Tracks agent presence at post, arrival times, voting start/finish timelines, update frequencies,
+ * incident reports, voter turnout referral counters, and results upload completion.
+ */
+
 import {
   AppAvatar,
   AvatarGroup,
@@ -14,7 +22,10 @@ import { CheckCircle2, ChevronRight, MoreHorizontal } from "lucide-react";
 import type * as React from "react";
 import type { OperationsUnitItem } from "#/lib/server/election-operations";
 
-// ─── Higher Level Operations Table Header (States -> Wards) ───────────────────
+/**
+ * OperationsTableHeader Component
+ * Renders table headers for higher-level geopolitical units (States, LGAs, Wards).
+ */
 export function OperationsTableHeader({
   unitTitle = "States",
   supervisorTitle = "State Supervisors",
@@ -26,7 +37,7 @@ export function OperationsTableHeader({
 }) {
   return (
     <TileHeader>
-      <TileLeft className="min-w-[180px]">
+      <TileLeft className="min-w-45">
         <span className="text-c-90 font-bold text-[14px]">{unitTitle}</span>
       </TileLeft>
       <TileRight className="text-sm">
@@ -51,14 +62,18 @@ export function OperationsTableHeader({
         <span className="w-[115px] text-left">Total agents</span>
         <span className="w-[85px] text-left">Total PUs</span>
         <span className="w-[110px] text-left">Overall Readiness</span>
-        <span className="w-[140px] text-left">{supervisorTitle}</span>
+        <span className="w-35 text-left">{supervisorTitle}</span>
         <div className="w-8 shrink-0" />
       </TileRight>
     </TileHeader>
   );
 }
 
-// ─── Higher Level Operations Table Tile (States -> Wards) ─────────────────────
+/**
+ * OperationsTableTile Component
+ * Renders an aggregate operations row for a State, LGA, or Ward unit.
+ * Clicking the row drills down into the subordinate subdivision tier.
+ */
 export function OperationsTableTile({
   data,
   onClick,
@@ -67,13 +82,14 @@ export function OperationsTableTile({
   onClick?: () => void;
 }) {
   const isDrillable = !!onClick;
+  // Parse supervisor avatars list (sliced to first 3 with a remaining badge count)
   const supervisors = Array.isArray(data.supervisors) ? data.supervisors : [];
   const displaySupervisors = supervisors.slice(0, 3);
   const remainingCount = supervisors.length - 3;
 
   return (
     <TileRow onClick={onClick}>
-      <TileLeft className="min-w-[180px]">
+      <TileLeft className="min-w-45">
         <span className="text-[14px] text-c-80 truncate">{data.name}</span>
       </TileLeft>
       <TileRight className="min-w-fit gap-4 items-center text-[13.5px]">
@@ -171,7 +187,7 @@ export function OperationsTableTile({
         </span>
 
         {/* Supervisors Avatars */}
-        <div className="w-[140px] flex items-center">
+        <div className="w-35 flex items-center">
           {supervisors.length === 0 ? (
             <span className="text-c-40 text-[12px] italic">Unassigned</span>
           ) : (
@@ -210,7 +226,10 @@ export function OperationsTableTile({
   );
 }
 
-// ─── Polling Unit Operations Table Header ─────────────────────────────────────
+/**
+ * PollingUnitOperationsTableHeader Component
+ * Renders table headers for the leaf Polling Unit level operations table.
+ */
 export function PollingUnitOperationsTableHeader() {
   return (
     <TileHeader className="min-w-max">
@@ -224,8 +243,8 @@ export function PollingUnitOperationsTableHeader() {
         <span className="w-[120px] text-left">Avg Ele. end time</span>
         <span className="w-[95px] text-left">Updates given</span>
         <span className="w-[90px] text-left">Reports given</span>
-        <span className="w-[140px] text-left">Avg. update time interval</span>
-        <span className="w-[160px] text-left">
+        <span className="w-35 text-left">Avg. update time interval</span>
+        <span className="w-40 text-left">
           Live voters referred by agents
         </span>
         <span className="w-[110px] text-left">Results uploaded</span>
@@ -238,7 +257,12 @@ export function PollingUnitOperationsTableHeader() {
   );
 }
 
-// ─── Polling Unit Operations Table Tile ───────────────────────────────────────
+/**
+ * PollingUnitOperationsTableTile Component
+ * Renders an operational row for a specific Polling Unit, showing agents on site,
+ * start/end times, incident and status updates, and a green checkmark indicating
+ * complete result upload.
+ */
 export function PollingUnitOperationsTableTile({
   data,
 }: {
@@ -288,12 +312,12 @@ export function PollingUnitOperationsTableTile({
         </span>
 
         {/* Avg update time interval */}
-        <span className="w-[140px] text-c-80">
+        <span className="w-35 text-c-80">
           {data.avg_update_time_interval || "—"}
         </span>
 
         {/* Live voters referred */}
-        <span className="w-[160px] text-c-80">
+        <span className="w-40 text-c-80">
           {data.live_voters_referred?.toLocaleString() ?? 0}
         </span>
 

@@ -15,7 +15,13 @@ export const APP_URL = {
   },
   homePage: "/",
   home: "/home",
-  elections: "/elections",
+  elections: {
+    root: "/elections",
+    groups: "/elections",
+    instances: "/elections/instances",
+    offices: "/elections/offices",
+    explanation: "/elections/explanation",
+  },
   bodies: "/bodies/states",
   users: {
     admins: "/users/admin",

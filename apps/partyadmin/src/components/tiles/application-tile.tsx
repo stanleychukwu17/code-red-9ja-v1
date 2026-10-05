@@ -1,3 +1,10 @@
+/**
+ * @file Application Row Tile & Table Header Components
+ * @description Provides list row items for reviewing agent applications.
+ * Displays applicant avatar, full name, target election, role badge (Polling Agent, Ward Supervisor, etc.),
+ * assigned station, and direct decision action buttons (inline quick accept/reject or full modal review).
+ */
+
 import * as React from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Ellipsis, Check, X } from "lucide-react";
@@ -97,6 +104,10 @@ const formatDate = (dateString?: string) => {
   }
 };
 
+/**
+ * ApplicationTableHeader Component
+ * Renders the table column labels for applications: User, Election, Role, Assignment/PU, Agents Count, Make Decision.
+ */
 export function ApplicationTableHeader() {
   return (
     <TileHeader>
@@ -111,18 +122,23 @@ export function ApplicationTableHeader() {
         <p className="text-c-50 text-[14px] w-[130px] hidden md:block">
           Role
         </p>
-        <p className="text-c-50 text-[14px] w-[160px] hidden md:block">
+        <p className="text-c-50 text-[14px] w-40 hidden md:block">
           Assignment / PU
         </p>
         <p className="text-c-50 text-[14px] w-25 hidden xl:block">
           Agents Count
         </p>
-        <p className="text-c-50 text-[14px] w-[160px]">Make decision</p>
+        <p className="text-c-50 text-[14px] w-40">Make decision</p>
       </TileRight>
     </TileHeader>
   );
 }
 
+/**
+ * ApplicationTableTile Component
+ * List row component representing an individual application.
+ * Supports quick-action inline buttons (Accept/Reject) as well as clicking to open the detailed review modal.
+ */
 export function ApplicationTableTile({
   data,
   refetch,
@@ -381,7 +397,7 @@ export function ApplicationTableTile({
           </span>
         </div>
         <p
-          className="w-[160px] truncate hidden md:block text-[#313131]"
+          className="w-40 truncate hidden md:block text-[#313131]"
           title={assignmentLocation}
         >
           {assignmentLocation}
@@ -390,7 +406,7 @@ export function ApplicationTableTile({
           {isSupervisor ? "—" : agentsCount}
         </p>
         <div
-          className="w-[160px] flex gap-2 justify-center"
+          className="w-40 flex gap-2 justify-center"
           onClick={(e) => e.stopPropagation()}
         >
           {decisionVariant === "pending" ? (

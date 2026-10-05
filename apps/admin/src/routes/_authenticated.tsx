@@ -74,7 +74,7 @@ const APP_SIDEBAR_ITEMS: AppSidebarItem[] = [
     label: "Elections",
     icon: <CalendarIcon className={ICON_CLASS} />,
     selectedIcon: <CalendarSolidIcon className={SELECTED_ICON_CLASS} />,
-    href: APP_URL.elections,
+    href: APP_URL.elections.root,
   },
   {
     id: "bodies",

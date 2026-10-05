@@ -1,3 +1,10 @@
+/**
+ * @file Buy Agent Slots Dialog
+ * @description Modal allowing party administrators to purchase capacity slots for fielding polling agents
+ * and supervisors in upcoming elections. Pulls live unit slot pricing, calculates total cost,
+ * and validates against available party treasury balance.
+ */
+
 import * as React from "react";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -25,6 +32,11 @@ function formatNaira(amount: number) {
   })}`;
 }
 
+/**
+ * BuyAgentSlotsDialog Component
+ * Prompts user for quantity of slots, multiplies by server-provided unit slot rate,
+ * and submits the purchase transaction.
+ */
 export function BuyAgentSlotsDialog({
   open,
   onClose,

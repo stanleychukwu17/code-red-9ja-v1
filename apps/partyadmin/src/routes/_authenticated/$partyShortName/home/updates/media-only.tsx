@@ -4,9 +4,18 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Loader2 } from "lucide-react";
 import { useIntersectionObserver } from "usehooks-ts";
-import { useAppContext } from "#/hooks/useAppContext";
+import { useElection } from "#/hooks/useElection";
 import { getPollingUnitUpdates } from "#/lib/server/polling-unit-updates";
 
+/**
+ * Polling Unit Media Evidence Gallery
+ *
+ * Renders a visual photo/video evidence feed from accredited field agents:
+ * - Automatically filters updates where `hasMedia: true`.
+ * - Flattens multi-image submissions so each photo displays as an individual card with time badge.
+ * - Displays reporting agent avatar, full name, and polling unit location path.
+ * - Supports infinite scroll with intersection observer sentinel.
+ */
 export const Route = createFileRoute(
   "/_authenticated/$partyShortName/home/updates/media-only",
 )({
@@ -23,7 +32,7 @@ function UpdatesMediaOnlyComponent() {
     selectedStateConstituencyId,
     selectedLGAId,
     selectedWardId,
-  } = useAppContext();
+  } = useElection();
 
   const fetchPollingUnitUpdatesFn = useServerFn(getPollingUnitUpdates);
 

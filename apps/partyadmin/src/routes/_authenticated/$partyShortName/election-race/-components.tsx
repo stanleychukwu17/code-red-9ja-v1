@@ -1,26 +1,38 @@
+/**
+ * @file Election Race Header and Filter Components
+ * @description Provides navigation header controls, live tally indicators,
+ * result mode toggles (Live vs Official Final), election selectors, and geographic scope filters
+ * for the Election Race module.
+ */
+
 import {
 	type Election,
 	type ElectionGroup,
 	SelectElectionGroupAndElection,
 } from "@repo/ui/components/selects/election-group-and-election-select";
 import { useServerFn } from "@tanstack/react-start";
-import { useAppContext } from "#/hooks/useAppContext";
+import { useUserParty } from "#/hooks/useUserParty";
+import { useElection } from "#/hooks/useElection";
 import { getElectionGroups } from "#/lib/server/election_groups";
 import { getElectionsByGroup } from "#/lib/server/elections";
 import { ElectionScopeSelector } from "../home/components/-election-scope-selector";
 import { ResultModeToggle } from "../home/components/-result-mode-toggle";
 
-// ─── Electoral Race Custom Header (Design from mockup) ──────────────────────
+/**
+ * ElectionRaceHeader Component
+ * Standalone hero header bar featuring national branding ("Electoral Race In Nigeria"),
+ * live status pulse indicator, result mode switcher (live / certified), and election group picker.
+ */
 export function ElectionRaceHeader() {
+	const { party } = useUserParty();
 	const {
-		party,
 		selectedElectionGroup,
 		setSelectedElectionGroup,
 		selectedElection,
 		setSelectedElection,
 		isLive,
 		setIsLive,
-	} = useAppContext();
+	} = useElection();
 	const partyId = party?.id;
 
 	const fetchGroups = useServerFn(getElectionGroups);
@@ -73,7 +85,11 @@ export function ElectionRaceHeader() {
 	);
 }
 
-// ─── Candidate Results Header Right (For tabs with standard PageHeader) ──────
+/**
+ * ElectionRaceHeaderRight Component
+ * Slot element for the right side of the PageHeader in tabbed election-race pages.
+ * Houses the live result toggle and election selection dropdown.
+ */
 export function ElectionRaceHeaderRight({
 	isLive,
 	setIsLive,
@@ -81,8 +97,9 @@ export function ElectionRaceHeaderRight({
 	isLive: boolean;
 	setIsLive: (val: boolean) => void;
 }) {
-	const { party, selectedElectionGroup, setSelectedElectionGroup, setSelectedElection } =
-		useAppContext();
+	const { party } = useUserParty();
+	const { selectedElectionGroup, setSelectedElectionGroup, setSelectedElection } =
+		useElection();
 	const partyId = party?.id;
 
 	const fetchGroups = useServerFn(getElectionGroups);
@@ -107,7 +124,11 @@ export function ElectionRaceHeaderRight({
 	);
 }
 
-// ─── Scope Filter Bar ────────────────────────────────────────────────────────
+/**
+ * ElectionRaceFilterBar Component
+ * Renders the multi-tier cascading geopolitical scope selector bar
+ * for narrowing down election race metrics.
+ */
 export function ElectionRaceFilterBar() {
 	return (
 		<div className="flex items-center gap-3 flex-wrap">

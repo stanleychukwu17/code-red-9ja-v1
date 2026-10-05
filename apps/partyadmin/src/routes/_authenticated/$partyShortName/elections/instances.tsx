@@ -1,3 +1,10 @@
+/**
+ * @file Election Instances Page
+ * @description Renders individual contested election race instances (e.g. specific Senatorial,
+ * Gubernatorial, or Presidential ballots) with registered party candidates and election dates.
+ * Features cursor-based pagination and infinite scrolling.
+ */
+
 import { createFileRoute } from "@tanstack/react-router";
 import { getPageHeader } from "#/lib/shared/meta";
 import { useEffect } from "react";
@@ -19,6 +26,11 @@ export const Route = createFileRoute("/_authenticated/$partyShortName/elections/
   component: RouteComponent,
 });
 
+/**
+ * Election Instances Component
+ * Fetches and displays individual race ballots, supporting infinite scroll
+ * pagination and mapping to ElectionInstancesTable.
+ */
 function RouteComponent() {
   const { partyShortName } = Route.useParams();
 

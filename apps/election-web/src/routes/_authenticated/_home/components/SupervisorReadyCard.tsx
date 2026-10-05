@@ -1,21 +1,30 @@
-import { useAppContext } from "#/hooks/useAppContext";
+import { useAssignments } from "#/hooks/useAssignments";
 import { Button } from "@repo/ui/components/button";
 import MapPinIcon from "@repo/ui/icons/map-pin-icon";
 import { GreyCardTitle, GreyCardTopRow, GreyCardWrapper } from "./Shared";
 
+/**
+ * Props for `SupervisorStartDutyCard`.
+ */
 interface SupervisorReadyCardProps {
+  /** Callback invoked when the supervisor confirms they are ready to commence duties */
   onReadyClick: () => void;
 }
 
+/**
+ * Dashboard card prompting election supervisors (State, LGA, or Ward level)
+ * to begin their supervisory duties on election day.
+ */
 export function SupervisorStartDutyCard({
   onReadyClick,
 }: SupervisorReadyCardProps) {
-  const { selectedSupervisorAssignment } = useAppContext();
+  // Retrieve active supervisor assignment details from useAssignments hook
+  const { selectedSupervisorAssignment } = useAssignments();
 
   const data = selectedSupervisorAssignment?.data;
   const type = selectedSupervisorAssignment?.type;
 
-  // Build the location label depending on the supervisor level
+  // Dynamically construct jurisdictional label based on supervisor hierarchy level
   const locationLabel = (() => {
     if (!data) return "Your Area";
     if (type === "state") {
@@ -39,13 +48,17 @@ export function SupervisorStartDutyCard({
 
   return (
     <GreyCardWrapper>
+      {/* Top row with geographic area and election day badge */}
       <GreyCardTopRow
         title={locationLabel}
         subtitle={"It's Election Day"}
         icon={<MapPinIcon className="size-5 text-c-60" />}
       />
+
+      {/* Callout prompt */}
       <GreyCardTitle label="Are you ready to start your Election Duties?" />
 
+      {/* Action button confirming readiness to begin duties */}
       <Button
         type="button"
         variant="purple"

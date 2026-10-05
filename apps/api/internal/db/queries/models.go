@@ -780,17 +780,16 @@ type Lga struct {
 }
 
 type LgaElectionSupervisor struct {
-	ID              int64              `json:"id"`
-	UserID          int64              `json:"user_id"`
-	StateID         int16              `json:"state_id"`
-	LgaID           int32              `json:"lga_id"`
-	ElectionGroupID int64              `json:"election_group_id"`
-	PartyID         int16              `json:"party_id"`
-	RoleType        pgtype.Text        `json:"role_type"`
-	AssignedBy      pgtype.Int8        `json:"assigned_by"`
-	ArrivedAt       pgtype.Timestamptz `json:"arrived_at"`
-	ArrivalVideoUrl pgtype.Text        `json:"arrival_video_url"`
-	// Timestamp when LGA supervisor completed duties (all expected PU results in LGA submitted)
+	ID                   int64              `json:"id"`
+	UserID               int64              `json:"user_id"`
+	StateID              int16              `json:"state_id"`
+	LgaID                int32              `json:"lga_id"`
+	ElectionGroupID      int64              `json:"election_group_id"`
+	PartyID              int16              `json:"party_id"`
+	RoleType             pgtype.Text        `json:"role_type"`
+	AssignedBy           pgtype.Int8        `json:"assigned_by"`
+	ArrivedAt            pgtype.Timestamptz `json:"arrived_at"`
+	ArrivalVideoUrl      pgtype.Text        `json:"arrival_video_url"`
 	CompletedAt          pgtype.Timestamptz `json:"completed_at"`
 	PotentialPaymentKobo int64              `json:"potential_payment_kobo"`
 	EarnedAmountKobo     int64              `json:"earned_amount_kobo"`
@@ -1053,20 +1052,19 @@ type PollingUnit struct {
 }
 
 type PollingUnitAssignment struct {
-	ID                      int64              `json:"id"`
-	UserID                  int64              `json:"user_id"`
-	PollingUnitID           int32              `json:"polling_unit_id"`
-	ElectionGroupID         int64              `json:"election_group_id"`
-	PartyID                 int16              `json:"party_id"`
-	RoleType                pgtype.Text        `json:"role_type"`
-	AssignedBy              pgtype.Int8        `json:"assigned_by"`
-	ArrivedAt               pgtype.Timestamptz `json:"arrived_at"`
-	ArrivalVideoUrl         pgtype.Text        `json:"arrival_video_url"`
-	ElectionStartedAt       pgtype.Timestamptz `json:"election_started_at"`
-	ElectionStartedVideoUrl pgtype.Text        `json:"election_started_video_url"`
-	ElectionEndedAt         pgtype.Timestamptz `json:"election_ended_at"`
-	ElectionEndedVideoUrl   pgtype.Text        `json:"election_ended_video_url"`
-	// Timestamp when agent completed election day duties (all expected PU results submitted)
+	ID                                      int64              `json:"id"`
+	UserID                                  int64              `json:"user_id"`
+	PollingUnitID                           int32              `json:"polling_unit_id"`
+	ElectionGroupID                         int64              `json:"election_group_id"`
+	PartyID                                 int16              `json:"party_id"`
+	RoleType                                pgtype.Text        `json:"role_type"`
+	AssignedBy                              pgtype.Int8        `json:"assigned_by"`
+	ArrivedAt                               pgtype.Timestamptz `json:"arrived_at"`
+	ArrivalVideoUrl                         pgtype.Text        `json:"arrival_video_url"`
+	ElectionStartedAt                       pgtype.Timestamptz `json:"election_started_at"`
+	ElectionStartedVideoUrl                 pgtype.Text        `json:"election_started_video_url"`
+	ElectionEndedAt                         pgtype.Timestamptz `json:"election_ended_at"`
+	ElectionEndedVideoUrl                   pgtype.Text        `json:"election_ended_video_url"`
 	CompletedAt                             pgtype.Timestamptz `json:"completed_at"`
 	LastUpdateAt                            pgtype.Timestamptz `json:"last_update_at"`
 	ReportsCount                            int32              `json:"reports_count"`
@@ -1204,16 +1202,15 @@ type StateConstituency struct {
 }
 
 type StateElectionSupervisor struct {
-	ID              int64              `json:"id"`
-	UserID          int64              `json:"user_id"`
-	StateID         int16              `json:"state_id"`
-	ElectionGroupID int64              `json:"election_group_id"`
-	PartyID         int16              `json:"party_id"`
-	RoleType        pgtype.Text        `json:"role_type"`
-	AssignedBy      pgtype.Int8        `json:"assigned_by"`
-	ArrivedAt       pgtype.Timestamptz `json:"arrived_at"`
-	ArrivalVideoUrl pgtype.Text        `json:"arrival_video_url"`
-	// Timestamp when state supervisor completed duties (all expected PU results in state submitted)
+	ID                   int64              `json:"id"`
+	UserID               int64              `json:"user_id"`
+	StateID              int16              `json:"state_id"`
+	ElectionGroupID      int64              `json:"election_group_id"`
+	PartyID              int16              `json:"party_id"`
+	RoleType             pgtype.Text        `json:"role_type"`
+	AssignedBy           pgtype.Int8        `json:"assigned_by"`
+	ArrivedAt            pgtype.Timestamptz `json:"arrived_at"`
+	ArrivalVideoUrl      pgtype.Text        `json:"arrival_video_url"`
 	CompletedAt          pgtype.Timestamptz `json:"completed_at"`
 	PotentialPaymentKobo int64              `json:"potential_payment_kobo"`
 	EarnedAmountKobo     int64              `json:"earned_amount_kobo"`
@@ -1356,6 +1353,10 @@ type UserReferral struct {
 	DutiesCompletedAndUnpaidReferrals pgtype.Int4        `json:"duties_completed_and_unpaid_referrals"`
 	PotentialEarnings                 pgtype.Numeric     `json:"potential_earnings"`
 	EarnedAmount                      pgtype.Numeric     `json:"earned_amount"`
+	Status                            string             `json:"status"`
+	RequestedAt                       pgtype.Timestamptz `json:"requested_at"`
+	ApprovedAt                        pgtype.Timestamptz `json:"approved_at"`
+	PaidAt                            pgtype.Timestamptz `json:"paid_at"`
 	CreatedAt                         pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt                         pgtype.Timestamptz `json:"updated_at"`
 }
@@ -1446,18 +1447,17 @@ type Ward struct {
 }
 
 type WardElectionSupervisor struct {
-	ID              int64              `json:"id"`
-	UserID          int64              `json:"user_id"`
-	StateID         int16              `json:"state_id"`
-	LgaID           int32              `json:"lga_id"`
-	WardID          int32              `json:"ward_id"`
-	ElectionGroupID int64              `json:"election_group_id"`
-	PartyID         int16              `json:"party_id"`
-	RoleType        pgtype.Text        `json:"role_type"`
-	AssignedBy      pgtype.Int8        `json:"assigned_by"`
-	ArrivedAt       pgtype.Timestamptz `json:"arrived_at"`
-	ArrivalVideoUrl pgtype.Text        `json:"arrival_video_url"`
-	// Timestamp when ward supervisor completed duties (all expected PU results in ward submitted)
+	ID                   int64              `json:"id"`
+	UserID               int64              `json:"user_id"`
+	StateID              int16              `json:"state_id"`
+	LgaID                int32              `json:"lga_id"`
+	WardID               int32              `json:"ward_id"`
+	ElectionGroupID      int64              `json:"election_group_id"`
+	PartyID              int16              `json:"party_id"`
+	RoleType             pgtype.Text        `json:"role_type"`
+	AssignedBy           pgtype.Int8        `json:"assigned_by"`
+	ArrivedAt            pgtype.Timestamptz `json:"arrived_at"`
+	ArrivalVideoUrl      pgtype.Text        `json:"arrival_video_url"`
 	CompletedAt          pgtype.Timestamptz `json:"completed_at"`
 	PotentialPaymentKobo int64              `json:"potential_payment_kobo"`
 	EarnedAmountKobo     int64              `json:"earned_amount_kobo"`

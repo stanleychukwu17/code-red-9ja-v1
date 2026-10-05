@@ -1,3 +1,11 @@
+/**
+ * @file Election Redux Slice
+ * @description Manages global election selection state, active election group, current ballot race,
+ * country scope, hierarchical geographical unit selections (State, District, Federal/State Constituency, LGA, Ward),
+ * and live streaming mode toggle.
+ * Persists user selections locally to localStorage for consistent user experience across sessions.
+ */
+
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { RootState } from "../store";
 
@@ -18,6 +26,9 @@ export interface ElectionState {
   isLive: boolean;
 }
 
+/**
+ * Safely reads and parses a JSON value from window.localStorage with fallback
+ */
 const safeGetLocalStorage = <T>(key: string, defaultValue: T): T => {
   if (typeof window === "undefined") return defaultValue;
   try {
@@ -29,6 +40,9 @@ const safeGetLocalStorage = <T>(key: string, defaultValue: T): T => {
   }
 };
 
+/**
+ * Safely writes a JSON value to window.localStorage
+ */
 const safeSetLocalStorage = (key: string, value: any) => {
   if (typeof window === "undefined") return;
   try {

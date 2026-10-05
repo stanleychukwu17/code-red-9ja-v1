@@ -2,7 +2,8 @@ import * as React from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useAppContext } from "#/hooks/useAppContext";
+import { useElection } from "#/hooks/useElection";
+import { useElectionCandidates } from "#/hooks/useElectionResults";
 import { getPollingUnitFinalResults } from "#/lib/server/elections";
 import {
   GalleryItem,
@@ -14,6 +15,15 @@ import {
 import { Button } from "@repo/ui/components/button";
 import { Loader2 } from "lucide-react";
 
+/**
+ * Visual Results Media Gallery
+ *
+ * Renders a responsive visual thumbnail grid of Form EC8A election result sheets
+ * uploaded by accredited polling agents across Nigeria:
+ * - Filtered automatically by the active election and geographical scope.
+ * - Clicking any tile launches the immersive full-screen `FinalResultReel` viewer.
+ * - Supports pagination with automated prefetching as administrators browse through results.
+ */
 export const Route = createFileRoute(
   "/_authenticated/$partyShortName/home/results/media-only",
 )({
@@ -29,8 +39,8 @@ function ResultsMediaOnlyComponent() {
     selectedStateConstituencyId,
     selectedLGAId,
     selectedWardId,
-    electionCandidates,
-  } = useAppContext();
+  } = useElection();
+  const electionCandidates = useElectionCandidates();
 
   const [selectedResultIndex, setSelectedResultIndex] = React.useState<
     number | null

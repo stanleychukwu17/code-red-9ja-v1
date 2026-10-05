@@ -1,3 +1,10 @@
+/**
+ * @file Election Result Table Header & Tile Components
+ * @description Displays breakdown results by geographic location (State, LGA, District, or Ward).
+ * Shows leading candidate with avatar and political party affiliation, vote lead margin,
+ * lead percentage, and total aggregated votes.
+ */
+
 import {
   TileHeader,
   TileLeft,
@@ -19,11 +26,17 @@ export type ElectionResultType = {
   totalVotes?: number;
 };
 
+/**
+ * Formats numbers into localized comma-separated strings (e.g. 1,000,000)
+ */
 function formatNumber(n?: number) {
   if (n === undefined || n === null) return "0";
   return n.toLocaleString();
 }
 
+/**
+ * Formats decimal percentages to two decimal places with trailing '%'
+ */
 function formatPct(n?: number) {
   if (n === undefined || n === null) return "";
   return `${n.toFixed(2)}%`;
@@ -34,17 +47,22 @@ export type ElectionResultTableHeaderProps = {
   locationLabel?: string;
 };
 
+/**
+ * ElectionResultTableHeader Component
+ * Renders table headers for election results: Location/Subdivision, Leading Candidate,
+ * Vote Margin Lead, and Total Votes Cast.
+ */
 export function ElectionResultTableHeader({
   locationLabel = "Location",
 }: ElectionResultTableHeaderProps) {
   return (
     <TileHeader>
       <TileLeft>
-        <span className="text-c-90 w-[180px] shrink-0">{locationLabel}</span>
+        <span className="text-c-90 w-45 shrink-0">{locationLabel}</span>
       </TileLeft>
       <TileRight>
         <span className="w-[220px] text-c-50">Leading candidate</span>
-        <span className="w-[160px] text-c-50 text-[14px] hidden sm:block">
+        <span className="w-40 text-c-50 text-[14px] hidden sm:block">
           Leading by
         </span>
         <span className="w-28.5 text-c-50 text-[14px] hidden md:block">
@@ -55,6 +73,11 @@ export function ElectionResultTableHeader({
   );
 }
 
+/**
+ * ElectionResultTableTile Component
+ * Displays a single geographical unit's results row including leading candidate chip,
+ * margin metrics, and total vote count.
+ */
 export function ElectionResultTableTile({
   data,
 }: {
@@ -64,7 +87,7 @@ export function ElectionResultTableTile({
   return (
     <TileRow>
       <TileLeft>
-        <div className="w-[180px] shrink-0">
+        <div className="w-45 shrink-0">
           <span className="text-[16px] text-c-80">{data.label}</span>
         </div>
       </TileLeft>
@@ -88,7 +111,7 @@ export function ElectionResultTableTile({
             <p className="text-[15px] text-c-40 italic">No results yet</p>
           )}
         </div>
-        <div className="w-[160px] hidden sm:block">
+        <div className="w-40 hidden sm:block">
           {hasResult && data.leadingByVotes !== undefined ? (
             <span className="text-[15px] text-c-80">
               {formatNumber(data.leadingByVotes)}{" "}

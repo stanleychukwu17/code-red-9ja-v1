@@ -1,3 +1,12 @@
+/**
+ * @file Candidate Result & Electoral Unit Tile Components
+ * @description Provides presentation components for election race standings and geographic results:
+ * 1. `CandidateResultTableTile`: Displays candidate rankings, vote totals, won subunits across all 7 Nigerian tiers, and vote share bar.
+ * 2. `ElectoralUnitTableTile`: Displays geopolitical unit standings (leading candidate, vote count, drilldown actions).
+ * 3. `CandidateLeaderboardTile`: Overview leaderboard tile with background fill bar and margin lead metric.
+ * 4. Helper utilities for official party branding colors, dark mode variants, and candidate display normalization.
+ */
+
 import { AppAvatar } from "@repo/ui/components/avatar";
 import {
   TileHeader,
@@ -237,7 +246,7 @@ export function CandidateResultTableHeader() {
         <span className="text-c-50 text-[14px] w-[100px] text-right">
           Votes
         </span>
-        <span className="text-c-50 text-[14px] w-[160px] text-right pr-2">
+        <span className="text-c-50 text-[14px] w-40 text-right pr-2">
           Vote share
         </span>
       </TileRight>
@@ -269,10 +278,10 @@ export function getCandidateDisplayInfo(
     data.candidate !== undefined
       ? Boolean(data.candidate && data.candidate.name?.trim())
       : Boolean(
-          data.candidate_name?.trim() &&
-          data.candidate_name?.trim() !== partyFullName &&
-          data.candidate_name?.trim() !== partyShort,
-        );
+        data.candidate_name?.trim() &&
+        data.candidate_name?.trim() !== partyFullName &&
+        data.candidate_name?.trim() !== partyShort,
+      );
 
   const rawCandidateName = hasCandidate
     ? data.candidate?.name?.trim() || data.candidate_name?.trim() || ""
@@ -314,6 +323,11 @@ export function getCandidateDisplayInfo(
   };
 }
 
+/**
+ * CandidateResultTableTile Component
+ * Renders candidate ranking row with avatar, party name/code, subunit victory counts,
+ * overall vote tally, and a proportional vote share bar.
+ */
 export function CandidateResultTableTile({
   data,
   index,
@@ -376,7 +390,7 @@ export function CandidateResultTableTile({
         <span className="w-[100px] text-right text-[15px] text-c-90">
           {votes.toLocaleString()}
         </span>
-        <div className="w-[160px] flex justify-end">
+        <div className="w-40 flex justify-end">
           <CandidateVoteShareBar
             percentage={percentage}
             color={color}
@@ -417,6 +431,11 @@ export function ElectoralUnitTableHeader({
   );
 }
 
+/**
+ * ElectoralUnitTableTile Component
+ * Renders a geographic unit (e.g. State or LGA) showing the currently leading candidate,
+ * total votes tallied, and vote share bar, with hover tooltip support and drilldown click triggers.
+ */
 export function ElectoralUnitTableTile({
   data,
   index,
@@ -436,8 +455,8 @@ export function ElectoralUnitTableTile({
 }) {
   const candResults =
     isLive &&
-    data.candidate_results_live &&
-    data.candidate_results_live.length > 0
+      data.candidate_results_live &&
+      data.candidate_results_live.length > 0
       ? data.candidate_results_live
       : data.candidate_results && data.candidate_results.length > 0
         ? data.candidate_results
@@ -457,37 +476,37 @@ export function ElectoralUnitTableTile({
   const color =
     (isLive
       ? topCand?.color_hex ||
-        topCand?.party?.color_hex ||
-        data.leading_party_color_hex
+      topCand?.party?.color_hex ||
+      data.leading_party_color_hex
       : data.leading_party_color_hex ||
-        topCand?.color_hex ||
-        topCand?.party?.color_hex) || fallbackColor;
+      topCand?.color_hex ||
+      topCand?.party?.color_hex) || fallbackColor;
   const darkColor =
     (isLive
       ? topCand?.dark_color_hex ||
-        topCand?.party?.dark_color_hex ||
-        data.leading_party_dark_color_hex
+      topCand?.party?.dark_color_hex ||
+      data.leading_party_dark_color_hex
       : data.leading_party_dark_color_hex ||
-        topCand?.dark_color_hex ||
-        topCand?.party?.dark_color_hex) || fallbackDarkColor;
+      topCand?.dark_color_hex ||
+      topCand?.party?.dark_color_hex) || fallbackDarkColor;
 
   const hasCandidate =
     topCand?.candidate !== undefined
       ? Boolean(topCand?.candidate && topCand.candidate.name?.trim())
       : Boolean(
-          (topCand?.candidate_name?.trim() ||
-            data.leading_candidate_name?.trim()) &&
-          (topCand?.candidate_name?.trim() ||
-            data.leading_candidate_name?.trim()) !== partyFullName &&
-          (topCand?.candidate_name?.trim() ||
-            data.leading_candidate_name?.trim()) !== partyShort,
-        );
+        (topCand?.candidate_name?.trim() ||
+          data.leading_candidate_name?.trim()) &&
+        (topCand?.candidate_name?.trim() ||
+          data.leading_candidate_name?.trim()) !== partyFullName &&
+        (topCand?.candidate_name?.trim() ||
+          data.leading_candidate_name?.trim()) !== partyShort,
+      );
 
   const rawCandidateName = hasCandidate
     ? topCand?.candidate?.name?.trim() ||
-      topCand?.candidate_name?.trim() ||
-      data.leading_candidate_name?.trim() ||
-      ""
+    topCand?.candidate_name?.trim() ||
+    data.leading_candidate_name?.trim() ||
+    ""
     : "";
 
   const hasPartySuffix =
@@ -511,29 +530,29 @@ export function ElectoralUnitTableTile({
   const votes = Number(
     isLive
       ? (topCand?.vote_count ??
-          topCand?.votes ??
-          data.leading_votes ??
-          data.vote_count ??
-          0)
+        topCand?.votes ??
+        data.leading_votes ??
+        data.vote_count ??
+        0)
       : (data.leading_votes ??
-          topCand?.vote_count ??
-          topCand?.votes ??
-          data.vote_count ??
-          0),
+        topCand?.vote_count ??
+        topCand?.votes ??
+        data.vote_count ??
+        0),
   );
 
   const percentage = Number(
     isLive
       ? (topCand?.percentage ??
-          topCand?.vote_share ??
-          data.leading_percentage ??
-          data.percentage ??
-          0)
+        topCand?.vote_share ??
+        data.leading_percentage ??
+        data.percentage ??
+        0)
       : (data.leading_percentage ??
-          topCand?.percentage ??
-          topCand?.vote_share ??
-          data.percentage ??
-          0),
+        topCand?.percentage ??
+        topCand?.vote_share ??
+        data.percentage ??
+        0),
   );
 
   return (
@@ -586,7 +605,11 @@ export function ElectoralUnitTableTile({
   );
 }
 
-// ─── Candidate Leaderboard Tile (Overview Page) ───────────────────────────────
+/**
+ * CandidateLeaderboardTile Component
+ * High-level leaderboard entry featuring a proportional translucent party color background fill,
+ * solid vertical party stripe, candidate avatar, vote share percentage, and margin lead metric.
+ */
 export function CandidateLeaderboardTile({
   data,
   index,

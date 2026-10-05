@@ -1,3 +1,10 @@
+/**
+ * @file Rejected Party Applications Page
+ * @description Renders disqualified or declined party agent applications.
+ * Enables party admins to review rejected records, inspect past rejection history,
+ * and paginate through historical submissions.
+ */
+
 import {
   Layout,
   PageHeader,
@@ -21,6 +28,10 @@ export const Route = createFileRoute(
 
 const PAGE_LIMIT = 50;
 
+/**
+ * Rejected Applications Page Component
+ * Loads rejected applications via cursor-based infinite pagination and tracks count metrics.
+ */
 function RouteComponent() {
   const { partyShortName } = Route.useParams();
 

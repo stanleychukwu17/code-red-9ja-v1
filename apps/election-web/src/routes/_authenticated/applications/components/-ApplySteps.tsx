@@ -23,6 +23,7 @@ import { useIntersectionObserver } from "usehooks-ts";
 
 import { SelectBank } from "@repo/ui/components/selects/bank-select";
 
+/** Decorative banner illustration for agent onboarding */
 export const BossIllustration = () => (
   <div className="w-full flex justify-center py-6 select-none">
     <img
@@ -35,6 +36,7 @@ export const BossIllustration = () => (
   </div>
 );
 
+/** Generic responsive dropdown select component using mobile bottom sheet / desktop popover */
 const SelectDropdown = ({
   value,
   update,
@@ -83,6 +85,7 @@ const SelectDropdown = ({
   );
 };
 
+/** Reusable step heading with primary title and auxiliary subtitle */
 export const StepHeader = ({
   title,
   subtitle,
@@ -98,6 +101,7 @@ export const StepHeader = ({
   );
 };
 
+/** Illustrated spiral notebook card rendering election duty pledge statements */
 export const SpiralNotebook = ({
   text,
   color,
@@ -130,6 +134,7 @@ export const SpiralNotebook = ({
   );
 };
 
+/** Step 1: Agent role welcome splash */
 export const Step1 = () => (
   <div className="flex flex-col gap-2 px-4">
     <StepHeader
@@ -140,6 +145,7 @@ export const Step1 = () => (
   </div>
 );
 
+/** Step 2: Political party affiliation selection (locks to user's registered party if set) */
 export const Step2 = ({
   searchQuery,
   setSearchQuery,
@@ -269,6 +275,7 @@ export const Step2 = ({
   );
 };
 
+/** Step 3: Election ballot selection checklist */
 export const Step3 = ({
   elections,
   selectedElectionIds,
@@ -319,6 +326,7 @@ export const Step3 = ({
   );
 };
 
+/** Step 4: Clear passport photograph upload */
 export const Step4 = ({
   avatarUrl,
   isUploading,
@@ -332,6 +340,7 @@ export const Step4 = ({
       subtitle="Add a passport photograph of yourself. Please ensure that it is clear."
     />
     <div className="flex flex-col items-center gap-6 py-6 w-full">
+      {/* Clickable avatar preview container */}
       <div
         onClick={handleUploadClick}
         className="relative size-64 rounded-full flex items-center justify-center shrink-0 cursor-pointer group"
@@ -381,6 +390,7 @@ export const Step4 = ({
   </div>
 );
 
+/** Step 5: Residential address and geographic cascading selection (State -> LGA -> Ward -> Street) */
 export const Step5 = ({
   selectedStateId,
   setSelectedStateId,
@@ -452,6 +462,7 @@ export const Step5 = ({
   </div>
 );
 
+/** Step 6: Target polling unit selection with capacity limit checking and infinite scroll */
 export const Step6 = ({
   pollingUnits,
   selectedPollingUnitId,
@@ -497,43 +508,39 @@ export const Step6 = ({
             fetchWards={getWards}
           />
         </div>
-        {/* <IconInput
-          placeholder="Search polling units..."
-          className="h-14 rounded-full"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        /> */}
 
         <div className="space-y-3 mt-7">
           <Label title={`Polling Units (${targetWardName})`} className="" />
 
-          {pollingUnits
-            // .filter(
-            //   (unit: any) =>
-            //     unit.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            //     getWardName(unit)
-            //       .toLowerCase()
-            //       .includes(searchQuery.toLowerCase()),
-            // )
-            .map((unit: any) => {
-              const isSelected = selectedPollingUnitId === unit.id;
-              const wardName = getWardName(unit);
-              const isFull = unit.is_capacity_full;
+          {pollingUnits.map((unit: any) => {
+            const isSelected = selectedPollingUnitId === unit.id;
+            const wardName = getWardName(unit);
+            const isFull = unit.is_capacity_full;
 
-              return (
-                <SelectableCard
-                  key={unit.id}
-                  title={unit.name}
-                  subtitle={
-                    <div className="flex flex-col gap-1">
-                      <span>{wardName}</span>
-                      {isFull && (
-                        <span className="text-[13px] text-orange-500 font-medium">
-                          Capacity full for this polling unit
-                        </span>
-                      )}
-                    </div>
+            return (
+              <SelectableCard
+                key={unit.id}
+                title={unit.name}
+                subtitle={
+                  <div className="flex flex-col gap-1">
+                    <span>{wardName}</span>
+                    {isFull && (
+                      <span className="text-[13px] text-orange-500 font-medium">
+                        Capacity full for this polling unit
+                      </span>
+                    )}
+                  </div>
+                }
+                isSelected={isSelected}
+                disabled={isFull}
+                onClick={() => {
+                  if (isFull) {
+                    toast.error("This polling unit has reached its required number of polling agents.", {
+                      position: "top-center",
+                    });
+                    return;
                   }
+<<<<<<< HEAD
                   isSelected={isSelected}
                   disabled={isFull}
                   onClick={() => {
@@ -551,6 +558,13 @@ export const Step6 = ({
                 />
               );
             })}
+=======
+                  setSelectedPollingUnitId(unit.id);
+                }}
+              />
+            );
+          })}
+>>>>>>> b53f3790a0d76b20dc1269bbe339bf4d6775a08c
         </div>
 
         {/* Sentinel element for infinite scroll */}
@@ -572,6 +586,7 @@ export const Step6 = ({
   );
 };
 
+/** Step 7: Election day duty agreement — 7:00 AM arrival pledge */
 export const Step7 = () => (
   <div className="flex flex-col gap-4 w-full px-4 h-full">
     <StepHeader title="Do You Agree To Carry Out the Below Duties On Election Day?" />
@@ -582,6 +597,7 @@ export const Step7 = () => (
   </div>
 );
 
+/** Step 8: Election day duty agreement — Hourly situation updates pledge */
 export const Step8 = () => (
   <div className="flex flex-col gap-4 w-full px-4 h-full">
     <StepHeader title="Do You Agree To Carry Out the Below Duties On Election Day?" />
@@ -592,17 +608,18 @@ export const Step8 = () => (
   </div>
 );
 
+/** Step 9: Election day duty agreement — Malpractice reporting pledge */
 export const Step9 = () => (
   <div className="flex flex-col gap-4 w-full px-4 h-full">
     <StepHeader title="Do You Agree To Carry Out the Below Duties On Election Day?" />
     <SpiralNotebook
       text="I agree to report any irregularities that take place at my polling unit (e.g., Vote Buying, Ballot Box Snatching, & more)"
-      // color="text-[#EF4444]"
       color="red"
     />
   </div>
 );
 
+/** Step 10: Election day duty agreement — Result sheet upload pledge */
 export const Step10 = () => (
   <div className="flex flex-col gap-4 w-full px-4 h-full">
     <StepHeader title="Do You Agree To Carry Out the Below Duties On Election Day?" />
@@ -613,6 +630,7 @@ export const Step10 = () => (
   </div>
 );
 
+/** Step 11: Bank account details and automated Paystack/NIBSS account name verification */
 export const Step11 = ({
   bankAccountNumber,
   setBankAccountNumber,
@@ -730,6 +748,11 @@ export const Step11 = ({
     </div>
   );
 };
+/**
+ * ContactDetailsStep
+ * Collects voice and WhatsApp contact numbers to ensure supervisors and support
+ * teams can reach the agent during field deployment.
+ */
 export const ContactDetailsStep = ({
   phone,
   setPhone,
@@ -745,6 +768,7 @@ export const ContactDetailsStep = ({
       subtitle="Provide your phone details."
     />
     <div className="space-y-7 mt-2">
+      {/* Primary Voice Call Number - locks if verified on user profile */}
       <div className="flex flex-col gap-2">
         <Label title="Your Phone Number (for calls)" />
         <Input
@@ -756,16 +780,7 @@ export const ContactDetailsStep = ({
           className={`h-14 rounded-2xl ${!!userPhone ? "bg-gray-50" : ""}`}
         />
       </div>
-      {/* <div className="flex flex-col gap-2">
-        <Label title="Your Phone Number (for data subscription)" />
-        <Input
-          type="tel"
-          value={dataPhone}
-          onChange={(e) => setDataPhone(e.target.value)}
-          placeholder="Enter phone number used for data sub"
-          className="h-14 rounded-2xl"
-        />
-      </div> */}
+      {/* WhatsApp Number for real-time election group coordination */}
       <div className="flex flex-col gap-2">
         <Label title="Your Whatsapp Phone Number" />
         <Input
@@ -780,6 +795,11 @@ export const ContactDetailsStep = ({
   </div>
 );
 
+/**
+ * EducationalStatusStep
+ * Screens the applicant's current educational standing (graduate, student, none)
+ * to evaluate role eligibility (e.g., supervisor roles often require tertiary completion).
+ */
 export const EducationalStatusStep = ({
   educationalStatus,
   setEducationalStatus,
@@ -810,6 +830,11 @@ export const EducationalStatusStep = ({
   );
 };
 
+/**
+ * EducationalDetailsStep
+ * Collects academic credentials with dynamic labels and graduation year ranges
+ * tailored to whether the candidate is an enrolled student or an alumnus.
+ */
 export const EducationalDetailsStep = ({
   educationalStatus,
   highestDegree,
@@ -819,6 +844,7 @@ export const EducationalDetailsStep = ({
   schoolName,
   setSchoolName,
 }: any) => {
+  // Dynamically tailor text and choices for active students vs graduates
   const isStudent = educationalStatus === "student";
   const title = isStudent
     ? "Current Educational Details"
@@ -831,6 +857,7 @@ export const EducationalDetailsStep = ({
     <div className="flex flex-col gap-4 w-full px-4">
       <StepHeader title={title} subtitle={subtitle} />
       <div className="space-y-7 mt-2">
+        {/* Degree Certificate Level */}
         <div className="flex flex-col gap-2">
           <Label
             title={
@@ -860,6 +887,7 @@ export const EducationalDetailsStep = ({
             ]}
           />
         </div>
+        {/* Graduation Year - prospective years for students, retrospective for grads */}
         <div className="flex flex-col gap-2">
           <Label
             title={
@@ -885,6 +913,7 @@ export const EducationalDetailsStep = ({
             }
           />
         </div>
+        {/* Institution / College Name */}
         <div className="flex flex-col gap-2">
           <Label
             title={
@@ -904,3 +933,4 @@ export const EducationalDetailsStep = ({
     </div>
   );
 };
+

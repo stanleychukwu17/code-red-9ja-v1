@@ -1,3 +1,11 @@
+/**
+ * @file Electoral Unit Cursor Floating Tooltip
+ * @description Floating hover tooltip for interactive map cards and geographical hierarchy charts.
+ * Tracks cursor position with viewport boundary collision detection (auto-flipping left or upwards),
+ * displaying the top 5 candidates' live/final vote tallies, percentage shares, leader badges,
+ * and subunit collation completion progress.
+ */
+
 import { AppAvatar } from "@repo/ui/components/avatar";
 import { cn } from "@repo/ui/lib/utils";
 import { Check } from "lucide-react";
@@ -14,6 +22,10 @@ interface ElectoralUnitCursorTooltipProps {
 	isLive?: boolean;
 }
 
+/**
+ * ElectoralUnitCursorTooltip Component
+ * Renders floating cursor tooltip summarizing candidate race breakdown within an electoral unit.
+ */
 export function ElectoralUnitCursorTooltip({
 	isOpen,
 	x,

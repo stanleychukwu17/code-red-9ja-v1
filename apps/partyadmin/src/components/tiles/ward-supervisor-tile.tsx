@@ -1,9 +1,21 @@
+/**
+ * @file Ward Supervisor Table Header & Tile Components
+ * @description Displays supervisory performance metrics for Ward-level coordinators.
+ * Includes subordinate agent readiness, agents at post, PU agent coverage, aggregated arrival time,
+ * ward-wide updates/reports, PU reporting ratios, earnings, and payout states.
+ */
+
 import type { AgentPerformanceItem } from "#/lib/server/agents";
 import { AppAvatar } from "@repo/ui/components/avatar";
 import { TileHeader, TileLeft, TileRight, TileRow } from "@repo/ui/components/tiles";
 import { StatusCheckIcon } from "./polling-agent-tile";
 import { AgentDropdown } from "../dropdowns/AgentDropdown";
 
+/**
+ * WardSupervisorTableHeader Component
+ * Renders table headers for Ward Supervisor monitoring: User, Readiness, Agents at post,
+ * PU coverage, Arrival/Start/End times, Reports, Earnings, and Geographic Ward hierarchy.
+ */
 export function WardSupervisorTableHeader() {
   return (
     <TileHeader className="min-w-max">
@@ -19,7 +31,7 @@ export function WardSupervisorTableHeader() {
         <span className="text-c-50 text-[14px] font-medium w-[110px]">
           Agents at post
         </span>
-        <span className="text-c-50 text-[14px] font-medium w-[140px]">
+        <span className="text-c-50 text-[14px] font-medium w-35">
           PU agent coverage
         </span>
         <span className="text-c-50 text-[14px] font-medium w-[130px]">
@@ -55,7 +67,7 @@ export function WardSupervisorTableHeader() {
         <span className="text-c-50 text-[14px] font-medium w-[130px]">
           Requested Payout
         </span>
-        <span className="text-c-50 text-[14px] font-medium w-[80px]">
+        <span className="text-c-50 text-[14px] font-medium w-20">
           Paid
         </span>
         <span className="text-c-50 text-[14px] font-medium w-[120px]">
@@ -73,6 +85,11 @@ export function WardSupervisorTableHeader() {
   );
 }
 
+/**
+ * WardSupervisorTableTile Component
+ * Renders a data row displaying Ward Supervisor operational metrics, coverage statistics,
+ * and supervisor management actions.
+ */
 export function WardSupervisorTableTile({
   data,
   refetch,
@@ -91,7 +108,7 @@ export function WardSupervisorTableTile({
       <TileRight className="min-w-fit gap-4 items-center text-[14px]">
         <span className="w-[90px] font-medium">{data.readiness_pct ?? 0}%</span>
         <span className="w-[110px]">{data.agents_at_post || "—"}</span>
-        <span className="w-[140px]">{data.pu_agent_coverage || "—"}</span>
+        <span className="w-35">{data.pu_agent_coverage || "—"}</span>
         <span className="w-[130px] font-medium">
           {data.arrived_at || data.avg_arrival_time || "—"}
         </span>
@@ -115,7 +132,7 @@ export function WardSupervisorTableTile({
         <div className="w-[130px] flex justify-start">
           <StatusCheckIcon active={data.requested_payout} />
         </div>
-        <div className="w-[80px] flex justify-start">
+        <div className="w-20 flex justify-start">
           <StatusCheckIcon active={data.paid} />
         </div>
         <span className="w-[120px] truncate">{data.state_name || "—"}</span>

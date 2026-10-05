@@ -7,8 +7,16 @@ import { LGASupervisorsTable } from "#/components/Tables";
 import { getAgentsTabs } from "./-data";
 import { useQuery } from "@tanstack/react-query";
 import { getAgentPerformanceStats } from "#/lib/server/agents";
-import { useAppContext } from "#/hooks/useAppContext";
+import { useUserParty } from "#/hooks/useUserParty";
+import { useElection } from "#/hooks/useElection";
 
+/**
+ * Local Government Area (LGA) Supervisors Performance Roster
+ *
+ * Displays supervisory leadership for Local Government Areas:
+ * - Coordinates constituent ward supervisors and manages LGA-level emergency logistics.
+ * - Monitors collation center returns and dispute escalations.
+ */
 export const Route = createFileRoute(
   "/_authenticated/$partyShortName/agents/lga-supervisor",
 )({
@@ -16,14 +24,19 @@ export const Route = createFileRoute(
   component: RouteComponent,
 });
 
+/**
+ * RouteComponent (LGA Supervisors View)
+ *
+ * Queries LGA supervisor records and renders the LGASupervisorsTable.
+ */
 function RouteComponent() {
+  const { party } = useUserParty();
   const {
-    party,
     selectedElectionGroup,
     selectedElection,
     selectedStateId,
     selectedLGAId,
-  } = useAppContext();
+  } = useElection();
   const partyId = party?.id;
   const [search, setSearch] = useState("");
 

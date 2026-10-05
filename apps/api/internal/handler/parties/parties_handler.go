@@ -236,19 +236,18 @@ func (h *Handler) ListParties(w http.ResponseWriter, r *http.Request) {
 	orderBy, orderDir := parseSortParams(r, "display_order", "ASC")
 
 	sort.SliceStable(parties, func(i, j int) bool {
-		var less bool
+		if orderDir == "DESC" {
+			i, j = j, i
+		}
+
 		switch orderBy {
 		case "name":
-			less = parties[i].Name < parties[j].Name
+			return parties[i].Name < parties[j].Name
 		case "short_name":
-			less = parties[i].ShortName < parties[j].ShortName
+			return parties[i].ShortName < parties[j].ShortName
 		default:
-			less = parties[i].DisplayOrder < parties[j].DisplayOrder
+			return parties[i].DisplayOrder < parties[j].DisplayOrder
 		}
-		if orderDir == "DESC" {
-			return !less
-		}
-		return less
 	})
 
 	startIndex := 0
@@ -309,18 +308,18 @@ func (h *Handler) ListPartiesPublic(w http.ResponseWriter, r *http.Request) {
 	orderBy, orderDir := parseSortParams(r, "display_order", "ASC")
 
 	sort.SliceStable(parties, func(i, j int) bool {
-		var less bool
-		if orderBy == "name" {
-			less = parties[i].Name < parties[j].Name
-		} else if orderBy == "short_name" {
-			less = parties[i].ShortName < parties[j].ShortName
-		} else {
-			less = parties[i].DisplayOrder < parties[j].DisplayOrder
-		}
 		if orderDir == "DESC" {
-			return !less
+			i, j = j, i
 		}
-		return less
+
+		switch orderBy {
+		case "name":
+			return parties[i].Name < parties[j].Name
+		case "short_name":
+			return parties[i].ShortName < parties[j].ShortName
+		default:
+			return parties[i].DisplayOrder < parties[j].DisplayOrder
+		}
 	})
 
 	type PartyPublic struct {

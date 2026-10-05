@@ -23,14 +23,14 @@ export function OfficeTableHeader() {
   return (
     <TileHeader>
       <TileLeft>
-        <span className="text-c-90 w-[80px] shrink-0">Rank</span>
+        <span className="text-c-90 w-20 shrink-0">Rank</span>
         <span className="text-c-90">Office</span>
       </TileLeft>
       <TileRight>
         <span className="text-c-50 text-[14px] w-[200px] hidden md:block">
           Election
         </span>
-        <span className="text-c-50 text-[14px] w-[160px] hidden sm:block">
+        <span className="text-c-50 text-[14px] w-40 hidden sm:block">
           Scope
         </span>
         <div className="ml-2 w-8 shrink-0" />
@@ -47,7 +47,7 @@ export function OfficeTableTile({ data }: { data: OfficeType }) {
   return (
     <TileRow>
       <TileLeft>
-        <div className="flex items-center gap-4 w-[80px] shrink-0">
+        <div className="flex items-center gap-4 w-20 shrink-0">
           <StarIcon
             className={cn("size-4 shrink-0 fill-current", getRankColor(rank))}
           />
@@ -59,7 +59,7 @@ export function OfficeTableTile({ data }: { data: OfficeType }) {
         <span className="text-[15px] text-c-70 w-[200px] hidden md:block">
           {election}
         </span>
-        <span className="text-[15px] text-c-70 w-[160px] hidden sm:block">
+        <span className="text-[15px] text-c-70 w-40 hidden sm:block">
           {target}
         </span>
         <div className="ml-2 w-8 shrink-0" />

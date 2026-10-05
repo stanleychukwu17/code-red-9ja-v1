@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { API_URL } from "#/lib/config";
+import { apiFetchJson } from "#/lib/server/fetch";
 import {
   checkIfRefreshTokenInCookieImpl,
   getUserDetailsCookieImpl,
@@ -80,32 +81,40 @@ export const signupUser = createServerFn({ method: "POST" })
     return await signupUserImpl({ data });
   });
 
+export interface CompleteOnboardingPayload {
+  first_name: string;
+  last_name: string;
+  middle_name?: string;
+  gender: string;
+  date_of_birth?: string;
+  referrer_user_id?: number | null;
+  referral_code?: string;
+  nin: string;
+  username: string;
+  country_of_origin?: number;
+  state_of_origin?: number;
+  current_country?: number;
+  current_state?: number;
+  current_city?: number;
+}
+
 // Completes the onboarding flow — sends all collected data to PATCH /api/v1/auth/onboarding
 export const completeOnboarding = createServerFn({ method: "POST" })
-  .inputValidator((data: any) => data)
+  .inputValidator((data: CompleteOnboardingPayload) => data)
   .handler(async ({ data: payload }) => {
     try {
-      const { getCookie } = await import("@tanstack/react-start/server");
-      const accessToken = getCookie("access_token");
-
-      if (!accessToken) {
-        return {
-          success: false,
-          message: "Session expired. Please log in again.",
-        };
-      }
-
-      const response = await fetch(API_URL.auth.completeOnboarding, {
+      return await apiFetchJson(API_URL.auth.completeOnboarding, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify(payload),
       });
-      return await response.json();
-    } catch (error) {
-      return { success: false, message: "Failed to complete onboarding" };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error?.message || "Failed to complete onboarding",
+      };
     }
   });
 // Checks if a NIN (National Identity Number) is valid by sending a POST request to the server with the NIN.
@@ -243,50 +252,40 @@ export const changePasswordByEmail = createServerFn({ method: "POST" })
     return result;
   });
 
+export interface RegisterCandidatePayload {
+  email?: string;
+  password: string;
+  first_name: string;
+  last_name: string;
+  middle_name?: string;
+  username?: string;
+  gender: "male" | "female";
+  date_of_birth: string; // YYYY-MM-DD
+  current_country: number;
+  current_state: number;
+  current_city?: number;
+  state_of_origin?: number;
+  party_id?: number;
+  avatar?: string;
+  avatar_file_id?: number;
+}
+
 // Registers a candidate placeholder user account
 export const registerCandidate = createServerFn({ method: "POST" })
-  .inputValidator((data: any) => data)
+  .inputValidator((data: RegisterCandidatePayload) => data)
   .handler(async ({ data }) => {
     try {
-      const { getCookie } = await import("@tanstack/react-start/server");
-      const accessToken = getCookie("access_token");
-      const refreshToken = getCookie("refresh_token");
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-      if (accessToken) {
-        headers["Authorization"] = `Bearer ${accessToken}`;
-        headers["Cookie"] =
-          `accessToken=${accessToken}; refreshToken=${refreshToken || ""}`;
-      }
-
-      const response = await fetch(API_URL.auth.registerCandidate, {
+      return await apiFetchJson(API_URL.auth.registerCandidate, {
         method: "POST",
-        headers,
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-
-      const text = await response.text();
-
-      if (!response.ok) {
-        return {
-          success: false,
-          message: text || `HTTP error ${response.status}`,
-        };
-      }
-
-      try {
-        const result = JSON.parse(text);
-        return result;
-      } catch (err) {
-        return { success: true, data: text }; // Fallback if raw text success
-      }
-    } catch (error) {
+    } catch (error: any) {
       return {
         success: false,
         message:
-          "An unexpected error occurred during candidate registration: " +
-          (error as Error).message,
+          error?.message ||
+          "An unexpected error occurred during candidate registration.",
       };
     }
   });
@@ -295,27 +294,15 @@ export const registerCandidate = createServerFn({ method: "POST" })
 export const getAdminUsers = createServerFn({ method: "GET" }).handler(
   async () => {
     try {
-      const { getCookie } = await import("@tanstack/react-start/server");
-      const accessToken = getCookie("access_token");
-      const refreshToken = getCookie("refresh_token");
-      const headers: Record<string, string> = {};
-      if (accessToken) {
-        headers["Authorization"] = `Bearer ${accessToken}`;
-        headers["Cookie"] =
-          `accessToken=${accessToken}; refreshToken=${refreshToken || ""}`;
-      }
-
-      const response = await fetch(API_URL.adminUsers, {
+      return await apiFetchJson(API_URL.adminUsers, {
         method: "GET",
-        headers,
       });
-
-      const result = await response.json();
-      return result;
-    } catch (error) {
+    } catch (error: any) {
       return {
         success: false,
-        message: "An unexpected error occurred during fetching admin users",
+        message:
+          error?.message ||
+          "An unexpected error occurred during fetching admin users",
       };
     }
   },
