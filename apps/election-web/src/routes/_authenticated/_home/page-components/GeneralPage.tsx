@@ -27,11 +27,10 @@ import { ReferralCard } from "../components/ReferralCard";
 import { HomeBody } from "../components/Shared";
 import { UploadResultCard } from "../components/UploadResultCard";
 import { MyPollingUnit } from "../components/MyPollingUnit";
-import { Route } from "..";
+import { Layout } from "@repo/ui/components/custom/AdminLayouts";
 
 export function GeneralPage() {
   const navigate = useNavigate();
-  const search = Route.useSearch() as any;
 
   const { selectedElectionGroup, selectedElection } = useAppContext();
 
@@ -99,55 +98,11 @@ export function GeneralPage() {
   }
 
   return (
-    <div className="w-full min-h-screen">
+    <Layout className="px-0 gap-2">
       <HomeHeader daysLeft={daysLeft} />
-      {!search.isPractice && <MyPollingUnit />}
-      <HomeHeader2 title={headerTitle} rightText={headerRightText} />
-      <Carousel setApi={setCarouselApi} className="w-full">
-        <CarouselContent>
-          <CarouselItem>
-            <LeaderboardCardWrapper className="mx-2.5">
-              {objectives.map((item) => (
-                <ObjectiveTile
-                  key={item.title}
-                  isCompleted={item.isCompleted}
-                  title={item.title}
-                  rightText={item.rightText}
-                  onClick={() =>
-                    navigate({ to: "/give-update", search: { isReport: true } })
-                  }
-                />
-              ))}
-              {daysLeft === 0 && (
-                <div className="mb-2 mt-2 px-4">
-                  <Button
-                    type="button"
-                    variant="leaderboardGrey"
-                    size="extra-large"
-                    onClick={() =>
-                      navigate({
-                        to: "/give-update",
-                        search: { isReport: true },
-                      })
-                    }
-                    className="w-full"
-                  >
-                    <ReportIcon className="w-5 h-5 shrink-0" />
-                    Report
-                  </Button>
-                </div>
-              )}
-            </LeaderboardCardWrapper>
-          </CarouselItem>
-          <CarouselItem>
-            <CandidatesLeaderboard hideReportButton={daysLeft !== 0} />
-          </CarouselItem>
-        </CarouselContent>
-      </Carousel>
-      <CarouselDotContent>
-        <CarouselDot active={carouselIndex === 1} />
-        <CarouselDot active={carouselIndex === 0} />
-      </CarouselDotContent>
+      <MyPollingUnit />
+
+      <CandidatesLeaderboard hideReportButton={daysLeft !== 0} />
 
       <HomeBody>
         {daysLeft === 0 && (
@@ -168,6 +123,6 @@ export function GeneralPage() {
           />
         )}
       </HomeBody>
-    </div>
+    </Layout>
   );
 }

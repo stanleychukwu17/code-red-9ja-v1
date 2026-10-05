@@ -28,10 +28,19 @@ export type PageHeaderTabProps = {
  * Base layout wrapper for admin pages.
  * Centers content with a max width and provides consistent spacing.
  */
-export function Layout({ children }: { children: ReactNode }) {
+export function Layout({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
   return (
     <main
-      className="mx-auto flex w-full px-5 md:px-20 flex-col gap-4"
+      className={cn(
+        "mx-auto flex w-full px-5 md:px-20 flex-col gap-4",
+        className,
+      )}
       style={{ scrollbarGutter: "stable" }}
     >
       {children}

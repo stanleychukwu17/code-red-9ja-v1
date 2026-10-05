@@ -35,7 +35,16 @@ type payloadType = {
   iso2?: string;
 };
 
+export interface LoginSearch {
+  redirect?: string;
+}
+
 export const Route = createFileRoute("/auth/login")({
+  validateSearch: (search: Record<string, unknown>): LoginSearch => {
+    return {
+      redirect: typeof search.redirect === "string" ? search.redirect : undefined,
+    };
+  },
   beforeLoad: async () => {
     const isAuthed = await checkIfRefreshTokenInCookie();
     if (isAuthed.success) {
@@ -57,6 +66,7 @@ export const Route = createFileRoute("/auth/login")({
 
 function LoginComponent() {
   const navigate = useNavigate();
+  const search = Route.useSearch();
   const dispatch = useAppDispatch();
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const visitorDetails = useAppSelector((state) => state.site.visitorDetails);
@@ -75,7 +85,11 @@ function LoginComponent() {
     onSuccess: (response) => {
       if (response.success) {
         dispatch(updateAuthState({ user: response.data?.user }));
-        navigate({ to: "/" });
+        if (search.redirect) {
+          window.location.href = search.redirect;
+        } else {
+          navigate({ to: "/" });
+        }
       } else {
         setErrorMsg(response.message || "Invalid email or password.");
       }

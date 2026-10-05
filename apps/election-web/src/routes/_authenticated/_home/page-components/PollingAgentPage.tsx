@@ -35,14 +35,13 @@ import { UploadsTab } from "../components/UploadsTab";
 import { GiveUpdateFloatingButton } from "../components/GiveUpdateFloatingButton";
 import { HomeBody } from "../components/Shared";
 import { MyPollingUnit } from "../components/MyPollingUnit";
-import { Route } from "..";
+import { Layout } from "@repo/ui/components/custom/AdminLayouts";
 
 // Set this to true to bypass time restrictions for testing (defaults to true in dev)
 const BYPASS_TIME_CONSTRAINTS = process.env.NODE_ENV === "development";
 
 export function PollingAgentPage() {
   const navigate = useNavigate();
-  const search = Route.useSearch() as any;
 
   const {
     selectedElectionGroup,
@@ -71,7 +70,9 @@ export function PollingAgentPage() {
         const errData = await response.json().catch(() => ({}));
         throw new Error(errData.message || "Failed to submit payout request");
       }
-      toast.success("Payout request submitted successfully! Your party admin will review your duties.");
+      toast.success(
+        "Payout request submitted successfully! Your party admin will review your duties.",
+      );
     } catch (err: any) {
       toast.error(err.message || "Failed to request payout");
     }
@@ -212,9 +213,9 @@ export function PollingAgentPage() {
   }
 
   return (
-    <div className="w-full min-h-screen">
+    <Layout className="px-0 gap-2">
       <HomeHeader daysLeft={daysLeft} />
-      {!search.isPractice && <MyPollingUnit />}
+      <MyPollingUnit />
       <HomeHeader2 title={headerTitle} rightText={headerRightText} />
       <Carousel setApi={setCarouselApi} className="w-full">
         <CarouselContent>
@@ -364,9 +365,7 @@ export function PollingAgentPage() {
               <UploadResultCard
                 onClick={() => navigate({ to: "/upload-result" })}
               />
-              <RequestPayoutCard
-                onClick={handleRequestPayout}
-              />
+              <RequestPayoutCard onClick={handleRequestPayout} />
             </>
           )}
 
@@ -405,6 +404,6 @@ export function PollingAgentPage() {
           onClick={() => navigate({ to: "/give-update" })}
         />
       )}
-    </div>
+    </Layout>
   );
 }

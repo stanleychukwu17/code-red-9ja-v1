@@ -100,6 +100,31 @@ function DialogContent({
   );
 }
 
+interface DialogCloseButtonProps extends React.ComponentProps<"button"> {
+  iconClassName?: string;
+}
+
+function DialogCloseButton({
+  className,
+  iconClassName,
+  type = "button",
+  ...props
+}: DialogCloseButtonProps) {
+  return (
+    <button
+      type={type}
+      className={cn(
+        "size-10 flex items-center justify-center rounded-full text-c-50 hover:bg-c-5 hover:text-c-80 transition-colors duration-150 cursor-pointer shrink-0",
+        className,
+      )}
+      aria-label="Close"
+      {...props}
+    >
+      <X className={cn("size-6", iconClassName)} />
+    </button>
+  );
+}
+
 function DialogHeader({
   title,
   description,
@@ -124,12 +149,7 @@ function DialogHeader({
         {description && <p className="text-c-60 text-sm">{description}</p>}
       </div>
       <DialogClose asChild>
-        <button
-          className="size-10 flex items-center justify-center rounded-full text-c-50 hover:bg-c-5 hover:text-c-80 transition-colors duration-150 cursor-pointer"
-          aria-label="Close"
-        >
-          <X className="size-6" />
-        </button>
+        <DialogCloseButton />
       </DialogClose>
     </div>
   );
@@ -206,6 +226,8 @@ export {
   Dialog,
   DialogTrigger,
   DialogClose,
+  DialogCloseButton,
+  type DialogCloseButtonProps,
   DialogContent,
   DialogHeader,
   DialogFooter,

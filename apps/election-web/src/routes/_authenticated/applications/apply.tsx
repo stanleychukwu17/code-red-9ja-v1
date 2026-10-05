@@ -18,6 +18,7 @@ import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { AlertCircle } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import { ApplyFooter } from "./components/-ApplyFooter";
 import {
   ContactDetailsStep,
@@ -37,14 +38,30 @@ import {
 } from "./components/-ApplySteps";
 import { ApplySuccess } from "./components/-ApplySuccess";
 
+export interface ApplySearch {
+  partyId?: number;
+  party?: string;
+  step?: number;
+}
+
 export const Route = createFileRoute("/_authenticated/applications/apply")({
   head: () => getPageHeader({ title: "Apply as Polling Unit Agent" }),
+  validateSearch: (search: Record<string, unknown>): ApplySearch => {
+    return {
+      partyId: search.partyId ? Number(search.partyId) : undefined,
+      party: typeof search.party === "string" ? search.party : undefined,
+      step: search.step ? Number(search.step) : undefined,
+    };
+  },
   component: ApplyPage,
 });
 
 function ApplyPage() {
   const navigate = useNavigate();
+  const search = Route.useSearch();
   const { user } = useAppContext();
+
+  const [hasProcessedSearchParty, setHasProcessedSearchParty] = useState(false);
 
   // Form states
   const [selectedPartyId, setSelectedPartyId] = useState<number | null>(
@@ -216,6 +233,90 @@ function ApplyPage() {
       setSelectedPartyId(lockedPartyId);
     }
   }, [lockedPartyId, selectedPartyId, setSelectedPartyId]);
+
+  const selectedParty = useMemo(() => {
+    return parties.find((p: any) => p.id === selectedPartyId) || null;
+  }, [parties, selectedPartyId]);
+
+  // Handle party passed via URL search parameters (e.g. from marketing campaigns)
+  useEffect(() => {
+    if (hasProcessedSearchParty || partiesLoading || parties.length === 0) {
+      return;
+    }
+
+    if (!search.party && !search.partyId) {
+      setHasProcessedSearchParty(true);
+      return;
+    }
+
+    const matchedParty = parties.find((p: any) => {
+      if (search.partyId && Number(p.id) === Number(search.partyId)) return true;
+      if (
+        search.party &&
+        p.short_name &&
+        p.short_name.trim().toLowerCase() === search.party.trim().toLowerCase()
+      ) {
+        return true;
+      }
+      return false;
+    });
+
+    if (!matchedParty) {
+      toast.error(
+        `The requested party "${search.party || search.partyId}" was not found. Please choose an eligible party.`,
+        { position: "top-center" },
+      );
+      setStep(2);
+      setHasProcessedSearchParty(true);
+      return;
+    }
+
+    // Safeguard: Check if user is locked to a different party
+    if (lockedPartyId && lockedPartyId !== matchedParty.id) {
+      toast.error(
+        `You have an active application with another party and cannot apply for ${matchedParty.short_name}.`,
+        { position: "top-center" },
+      );
+      setStep(2);
+      setHasProcessedSearchParty(true);
+      return;
+    }
+
+    // Safeguard: Check if party is onboarded / verified
+    if (!matchedParty.is_verified) {
+      toast.error(
+        `${matchedParty.name} (${matchedParty.short_name}) is not yet onboarded. Please choose an eligible party.`,
+        { position: "top-center" },
+      );
+      setStep(2);
+      setHasProcessedSearchParty(true);
+      return;
+    }
+
+    // Safeguard: Check if party is accepting applications
+    if (!matchedParty.is_accepting_applications) {
+      toast.error(
+        `${matchedParty.name} (${matchedParty.short_name}) is currently not accepting applications. Please choose an eligible party.`,
+        { position: "top-center" },
+      );
+      setStep(2);
+      setHasProcessedSearchParty(true);
+      return;
+    }
+
+    // Party is valid, verified, and accepting applications!
+    setSelectedPartyId(matchedParty.id);
+    // Skip Step 1 (Boss splash) and Step 2 (Party selection) straight to Step 3 (Select Election)
+    setStep(3);
+    setHasProcessedSearchParty(true);
+  }, [
+    parties,
+    partiesLoading,
+    search.party,
+    search.partyId,
+    lockedPartyId,
+    hasProcessedSearchParty,
+  ]);
 
   const {
     data: pollingUnitsData,
@@ -483,6 +584,7 @@ function ApplyPage() {
             selectedElectionIds={selectedElectionIds}
             setSelectedElectionIds={setSelectedElectionIds}
             appliedElectionGroupIds={appliedElectionGroupIds}
+            selectedParty={selectedParty}
           />
         )}
         {step === 4 && (

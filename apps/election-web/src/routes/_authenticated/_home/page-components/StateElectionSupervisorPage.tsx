@@ -30,10 +30,9 @@ import { SupervisorStartDutyCard } from "../components/SupervisorReadyCard";
 import { StateSupervisorTasksTab } from "../components/SupervisorTasksTab";
 import { DidYouVoteCard } from "../components/DidYouVoteCard";
 import { MyPollingUnit } from "../components/MyPollingUnit";
-import { Route } from "..";
+import { Layout } from "@repo/ui/components/custom/AdminLayouts";
 export function StateElectionSupervisorPage() {
   const navigate = useNavigate();
-  const search = Route.useSearch() as any;
 
   const {
     selectedElectionGroup,
@@ -179,9 +178,9 @@ export function StateElectionSupervisorPage() {
   }
 
   return (
-    <div className="w-full min-h-screen">
+    <Layout className="px-0 gap-2">
       <HomeHeader daysLeft={daysLeft} />
-      {!search.isPractice && <MyPollingUnit />}
+      <MyPollingUnit />
 
       <HomeHeader2 title={headerTitle} rightText={headerRightText} />
       <Carousel setApi={setCarouselApi} className="w-full">
@@ -296,6 +295,6 @@ export function StateElectionSupervisorPage() {
           />
         )}
       </HomeBody>
-    </div>
+    </Layout>
   );
 }

@@ -16,11 +16,24 @@ import { logoutUser, checkIfRefreshTokenInCookie } from "#/lib/server/auth/auth"
 import { APP_URL } from "#/lib/config";
 
 export const Route = createFileRoute("/_authenticated")({
-  beforeLoad: async ({ context }) => {
+  beforeLoad: async ({ context, location }) => {
     const res = await checkIfRefreshTokenInCookie();
+    const isHome = location.pathname === "/" || location.pathname === "";
 
     if (!res.success) {
-      throw redirect({ to: APP_URL.auth.login });
+      // Allow open-world public access to the home page
+      if (isHome) {
+        return;
+      }
+
+      // For protected pages, redirect to home with authRequired query param and target redirect
+      throw redirect({
+        to: "/",
+        search: {
+          authRequired: true,
+          redirect: location.href,
+        },
+      });
     }
 
     if (context.userDetails && !context.userDetails.username) {
