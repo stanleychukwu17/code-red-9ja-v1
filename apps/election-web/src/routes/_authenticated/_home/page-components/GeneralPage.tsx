@@ -115,68 +115,11 @@ export function GeneralPage() {
   }
 
   return (
-<<<<<<< HEAD
     <Layout className="px-0 gap-2">
       <HomeHeader daysLeft={daysLeft} />
       <MyPollingUnit />
 
       <CandidatesLeaderboard hideReportButton={daysLeft !== 0} />
-=======
-    <div className="w-full min-h-screen">
-      {/* Top dashboard header with countdown and user polling unit summary */}
-      <HomeHeader daysLeft={daysLeft} />
-      {!search.isPractice && <MyPollingUnit />}
-      <HomeHeader2 title={headerTitle} rightText={headerRightText} />
-
-      {/* Main carousel: Voter objectives & live candidate leaderboard */}
-      <Carousel setApi={setCarouselApi} className="w-full">
-        <CarouselContent>
-          <CarouselItem>
-            <LeaderboardCardWrapper className="mx-2.5">
-              {objectives.map((item) => (
-                <ObjectiveTile
-                  key={item.title}
-                  isCompleted={item.isCompleted}
-                  title={item.title}
-                  rightText={item.rightText}
-                  onClick={() =>
-                    navigate({ to: "/give-update", search: { isReport: true } })
-                  }
-                />
-              ))}
-              {daysLeft === 0 && (
-                <div className="mb-2 mt-2 px-4">
-                  <Button
-                    type="button"
-                    variant="leaderboardGrey"
-                    size="extra-large"
-                    onClick={() =>
-                      navigate({
-                        to: "/give-update",
-                        search: { isReport: true },
-                      })
-                    }
-                    className="w-full"
-                  >
-                    <ReportIcon className="w-5 h-5 shrink-0" />
-                    Report
-                  </Button>
-                </div>
-              )}
-            </LeaderboardCardWrapper>
-          </CarouselItem>
-          <CarouselItem>
-            <CandidatesLeaderboard hideReportButton={daysLeft !== 0} />
-          </CarouselItem>
-        </CarouselContent>
-      </Carousel>
-
-      {/* Slide pagination dots */}
-      <CarouselDotContent>
-        <CarouselDot active={carouselIndex === 1} />
-        <CarouselDot active={carouselIndex === 0} />
-      </CarouselDotContent>
->>>>>>> b53f3790a0d76b20dc1269bbe339bf4d6775a08c
 
       {/* Action Cards Body */}
       <HomeBody>

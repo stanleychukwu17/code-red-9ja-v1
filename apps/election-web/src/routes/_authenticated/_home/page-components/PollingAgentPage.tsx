@@ -239,12 +239,7 @@ export function PollingAgentPage() {
   }
 
   return (
-<<<<<<< HEAD
     <Layout className="px-0 gap-2">
-=======
-    <div className="w-full min-h-screen">
-      {/* Top dashboard header with countdown and polling unit banner */}
->>>>>>> b53f3790a0d76b20dc1269bbe339bf4d6775a08c
       <HomeHeader daysLeft={daysLeft} />
       <MyPollingUnit />
       <HomeHeader2 title={headerTitle} rightText={headerRightText} />

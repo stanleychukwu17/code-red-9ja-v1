@@ -186,12 +186,7 @@ export function LGAElectionSupervisorPage() {
   }
 
   return (
-<<<<<<< HEAD
     <Layout className="px-0 gap-2">
-=======
-    <div className="w-full min-h-screen">
-      {/* Top dashboard header with election countdown and user polling unit summary */}
->>>>>>> b53f3790a0d76b20dc1269bbe339bf4d6775a08c
       <HomeHeader daysLeft={daysLeft} />
       <MyPollingUnit />
       <HomeHeader2 title={headerTitle} rightText={headerRightText} />

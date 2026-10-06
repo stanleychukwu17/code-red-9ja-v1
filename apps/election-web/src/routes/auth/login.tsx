@@ -35,17 +35,14 @@ type payloadType = {
   iso2?: string;
 };
 
-<<<<<<< HEAD
 export interface LoginSearch {
   redirect?: string;
 }
 
-=======
 /**
  * Login Route Definition
  * Enforces guest-only access via beforeLoad redirect if refresh cookie exists.
  */
->>>>>>> b53f3790a0d76b20dc1269bbe339bf4d6775a08c
 export const Route = createFileRoute("/auth/login")({
   validateSearch: (search: Record<string, unknown>): LoginSearch => {
     return {

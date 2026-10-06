@@ -31,10 +31,7 @@ import { SupervisorStartDutyCard } from "../components/SupervisorReadyCard";
 import { StateSupervisorTasksTab } from "../components/SupervisorTasksTab";
 import { DidYouVoteCard } from "../components/DidYouVoteCard";
 import { MyPollingUnit } from "../components/MyPollingUnit";
-<<<<<<< HEAD
 import { Layout } from "@repo/ui/components/custom/AdminLayouts";
-=======
-import { Route } from "..";
 /**
  * State Election Supervisor Dashboard.
  *
@@ -45,7 +42,6 @@ import { Route } from "..";
  * - Real-time election day operational monitoring (state-wide attendance, starts, reports, EC8A uploads).
  * - Manages LGA collation progression via `StateSupervisorTasksTab`.
  */
->>>>>>> b53f3790a0d76b20dc1269bbe339bf4d6775a08c
 export function StateElectionSupervisorPage() {
   const navigate = useNavigate();
 
@@ -197,12 +193,7 @@ export function StateElectionSupervisorPage() {
   }
 
   return (
-<<<<<<< HEAD
     <Layout className="px-0 gap-2">
-=======
-    <div className="w-full min-h-screen">
-      {/* Top dashboard header with election countdown and user polling unit summary */}
->>>>>>> b53f3790a0d76b20dc1269bbe339bf4d6775a08c
       <HomeHeader daysLeft={daysLeft} />
       <MyPollingUnit />
 

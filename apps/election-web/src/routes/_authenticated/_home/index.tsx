@@ -1,10 +1,5 @@
-<<<<<<< HEAD
-import { useState, useMemo, useEffect } from "react";
-import { useAppContext } from "#/hooks/useAppContext";
-=======
 import { useElection } from "#/hooks/useElection";
 import { useAssignments } from "#/hooks/useAssignments";
->>>>>>> b53f3790a0d76b20dc1269bbe339bf4d6775a08c
 import { useElectionRealtime } from "@repo/ui/hooks/useElectionRealtime";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
@@ -16,6 +11,8 @@ import { StateElectionSupervisorPage } from "./page-components/StateElectionSupe
 import { WardElectionSupervisorPage } from "./page-components/WardElectionSupervisorPage";
 import { PollingAgentCampaignModal } from "./components/PollingAgentCampaignModal";
 import { AuthModal } from "#/components/modals/AuthModal";
+import { useEffect, useMemo, useState } from "react";
+import { useUser } from "#/hooks/useUser";
 
 export interface HomeSearch {
   campaign?: string;
@@ -31,11 +28,14 @@ export interface HomeSearch {
 export const Route = createFileRoute("/_authenticated/_home/")({
   validateSearch: (search: Record<string, unknown>): HomeSearch => {
     return {
-      campaign: typeof search.campaign === "string" ? search.campaign : undefined,
+      campaign:
+        typeof search.campaign === "string" ? search.campaign : undefined,
       party: typeof search.party === "string" ? search.party : undefined,
       partyId: search.partyId ? Number(search.partyId) : undefined,
-      authRequired: search.authRequired === true || search.authRequired === "true",
-      redirect: typeof search.redirect === "string" ? search.redirect : undefined,
+      authRequired:
+        search.authRequired === true || search.authRequired === "true",
+      redirect:
+        typeof search.redirect === "string" ? search.redirect : undefined,
     };
   },
   component: RouteComponent,
@@ -55,15 +55,17 @@ export const Route = createFileRoute("/_authenticated/_home/")({
  * election results, incident alerts, and agent status broadcasts.
  */
 function RouteComponent() {
-<<<<<<< HEAD
   const navigate = useNavigate();
   const search = Route.useSearch();
-  const { user, selectedElection, selectedSupervisorAssignment, selectedAssignment } =
-    useAppContext();
+  const { selectedSupervisorAssignment, selectedAssignment } = useAssignments();
+  const user = useUser();
+  const { selectedElection } = useElection();
 
   const [modalDismissed, setModalDismissed] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [authRedirectUrl, setAuthRedirectUrl] = useState<string | undefined>(undefined);
+  const [authRedirectUrl, setAuthRedirectUrl] = useState<string | undefined>(
+    undefined,
+  );
 
   useEffect(() => {
     if (search.authRequired) {
@@ -89,11 +91,13 @@ function RouteComponent() {
     if (!search.party && !search.partyId) return null;
     return (
       parties.find((p: any) => {
-        if (search.partyId && Number(p.id) === Number(search.partyId)) return true;
+        if (search.partyId && Number(p.id) === Number(search.partyId))
+          return true;
         if (
           search.party &&
           p.short_name &&
-          p.short_name.trim().toLowerCase() === search.party.trim().toLowerCase()
+          p.short_name.trim().toLowerCase() ===
+            search.party.trim().toLowerCase()
         ) {
           return true;
         }
@@ -108,15 +112,15 @@ function RouteComponent() {
   // 3) Modal hasn't been dismissed in this view
   const isPartyEligible = Boolean(
     matchedParty &&
-      matchedParty.is_verified &&
-      matchedParty.is_accepting_applications,
+    matchedParty.is_verified &&
+    matchedParty.is_accepting_applications,
   );
 
   const isCampaignTriggered = Boolean(
     search.campaign === "polling-agent" ||
-      search.campaign === "agent" ||
-      search.party ||
-      search.partyId,
+    search.campaign === "agent" ||
+    search.party ||
+    search.partyId,
   );
 
   const isModalOpen = !modalDismissed && isCampaignTriggered && isPartyEligible;
@@ -176,10 +180,6 @@ function RouteComponent() {
       });
     }
   };
-=======
-  const { selectedElection } = useElection();
-  const { selectedSupervisorAssignment, selectedAssignment } = useAssignments();
->>>>>>> b53f3790a0d76b20dc1269bbe339bf4d6775a08c
 
   // Connect real-time WebSocket updates for election supervisor & voter dashboard
   useElectionRealtime({
@@ -199,12 +199,9 @@ function RouteComponent() {
     },
   });
 
-<<<<<<< HEAD
   let content = <GeneralPage />;
 
-=======
   // Branch 1: Regional Supervisors (State, LGA, or Ward)
->>>>>>> b53f3790a0d76b20dc1269bbe339bf4d6775a08c
   if (selectedSupervisorAssignment) {
     if (selectedSupervisorAssignment.type === "state") {
       content = <StateElectionSupervisorPage />;
@@ -217,7 +214,6 @@ function RouteComponent() {
     content = <PollingAgentPage />;
   }
 
-<<<<<<< HEAD
   return (
     <>
       {content}
@@ -238,14 +234,4 @@ function RouteComponent() {
       />
     </>
   );
-=======
-  // Branch 2: Assigned Polling Unit Agent
-  if (selectedAssignment) {
-    return <PollingAgentPage />;
-  }
-
-  // Branch 3: General Citizen / Unassigned Voter
-  return <GeneralPage />;
->>>>>>> b53f3790a0d76b20dc1269bbe339bf4d6775a08c
 }
-

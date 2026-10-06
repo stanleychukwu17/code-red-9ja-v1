@@ -540,31 +540,11 @@ export const Step6 = ({
                     });
                     return;
                   }
-<<<<<<< HEAD
-                  isSelected={isSelected}
-                  disabled={isFull}
-                  onClick={() => {
-                    if (isFull) {
-                      toast.error(
-                        "This polling unit has reached its required number of polling agents.",
-                        {
-                          position: "top-center",
-                        },
-                      );
-                      return;
-                    }
-                    setSelectedPollingUnitId(unit.id);
-                  }}
-                />
-              );
-            })}
-=======
                   setSelectedPollingUnitId(unit.id);
                 }}
               />
             );
           })}
->>>>>>> b53f3790a0d76b20dc1269bbe339bf4d6775a08c
         </div>
 
         {/* Sentinel element for infinite scroll */}

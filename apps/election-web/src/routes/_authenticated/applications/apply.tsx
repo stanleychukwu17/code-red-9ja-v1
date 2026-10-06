@@ -38,18 +38,12 @@ import {
 } from "./components/-ApplySteps";
 import { ApplySuccess } from "./components/-ApplySuccess";
 
-<<<<<<< HEAD
 export interface ApplySearch {
   partyId?: number;
   party?: string;
   step?: number;
 }
 
-=======
-/**
- * Route definition for polling unit agent registration wizard.
- */
->>>>>>> b53f3790a0d76b20dc1269bbe339bf4d6775a08c
 export const Route = createFileRoute("/_authenticated/applications/apply")({
   head: () => getPageHeader({ title: "Apply as Polling Unit Agent" }),
   validateSearch: (search: Record<string, unknown>): ApplySearch => {
@@ -83,18 +77,12 @@ export const Route = createFileRoute("/_authenticated/applications/apply")({
  */
 function ApplyPage() {
   const navigate = useNavigate();
-<<<<<<< HEAD
   const search = Route.useSearch();
-  const { user } = useAppContext();
+  const user = useUser();
 
   const [hasProcessedSearchParty, setHasProcessedSearchParty] = useState(false);
 
   // Form states
-=======
-  const user = useUser();
-
-  // --- Political Affiliation & Election Selection ---
->>>>>>> b53f3790a0d76b20dc1269bbe339bf4d6775a08c
   const [selectedPartyId, setSelectedPartyId] = useState<number | null>(
     user?.party_id || null,
   );
@@ -277,7 +265,6 @@ function ApplyPage() {
     }
   }, [lockedPartyId, selectedPartyId, setSelectedPartyId]);
 
-<<<<<<< HEAD
   const selectedParty = useMemo(() => {
     return parties.find((p: any) => p.id === selectedPartyId) || null;
   }, [parties, selectedPartyId]);
@@ -294,7 +281,8 @@ function ApplyPage() {
     }
 
     const matchedParty = parties.find((p: any) => {
-      if (search.partyId && Number(p.id) === Number(search.partyId)) return true;
+      if (search.partyId && Number(p.id) === Number(search.partyId))
+        return true;
       if (
         search.party &&
         p.short_name &&
@@ -362,9 +350,6 @@ function ApplyPage() {
     hasProcessedSearchParty,
   ]);
 
-=======
-  // Paginated infinite query for polling units within the agent's chosen jurisdiction
->>>>>>> b53f3790a0d76b20dc1269bbe339bf4d6775a08c
   const {
     data: pollingUnitsData,
     fetchNextPage: fetchNextUnits,

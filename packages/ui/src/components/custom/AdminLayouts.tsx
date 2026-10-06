@@ -37,19 +37,10 @@ export function Layout({
 }) {
   return (
     <main
-<<<<<<< HEAD
-      className={cn(
-        "mx-auto flex w-full px-5 md:px-20 flex-col gap-4",
-        className,
-      )}
-=======
       className="flex w-full overflow-x-auto px-5 md:px-7 flex-col gap-4"
->>>>>>> b53f3790a0d76b20dc1269bbe339bf4d6775a08c
       style={{ scrollbarGutter: "stable" }}
     >
-      <div className="w-full min-w-[800px] flex flex-col gap-4">
-        {children}
-      </div>
+      <div className="w-full min-w-[800px] flex flex-col gap-4">{children}</div>
     </main>
   );
 }
