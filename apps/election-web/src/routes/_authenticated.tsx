@@ -22,7 +22,6 @@ export const Route = createFileRoute("/_authenticated")({
     const isHome = location.pathname === "/" || location.pathname === "";
 
     if (!res.success) {
-      throw redirect({
       // Allow open-world public access to the home page
       if (isHome) {
         return;

@@ -3,7 +3,7 @@
  * @description Catalog viewer for standard constitutional positions and creator for custom party positions.
  */
 
-import * as React from "react";
+import { useState, type FormEvent } from "react";
 import {
   Dialog,
   DialogContent,
@@ -12,7 +12,7 @@ import {
   DialogFooter,
 } from "@repo/ui/components/dialog";
 import { Button } from "@repo/ui/components/button";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Loader2, Plus, Shield, Check, Trash2, ListFilter } from "lucide-react";
 import { cn } from "@repo/ui/lib/utils";
@@ -28,19 +28,19 @@ export function PartyPositionsCatalogDialog({ open, onClose, partyId }: {
   partyId?: number;
 }) {
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = React.useState<"default" | "custom">("default");
-  const [isCreating, setIsCreating] = React.useState(false);
+  const [activeTab, setActiveTab] = useState<"default" | "custom">("default");
+  const [isCreating, setIsCreating] = useState(false);
 
   // Form states for new custom position
-  const [name, setName] = React.useState("");
-  const [code, setCode] = React.useState("");
-  const [description, setDescription] = React.useState("");
-  const [allowedLevels, setAllowedLevels] = React.useState<string[]>([
+  const [name, setName] = useState("");
+  const [code, setCode] = useState("");
+  const [description, setDescription] = useState("");
+  const [allowedLevels, setAllowedLevels] = useState<string[]>([
     "national", "zonal", "state", "lga", "ward"
   ]);
-  const [maxOccupants, setMaxOccupants] = React.useState(1);
-  const [rankOrder, setRankOrder] = React.useState(50);
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [maxOccupants, setMaxOccupants] = useState(1);
+  const [rankOrder, setRankOrder] = useState(50);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Fetch pre-arranged positions (default + custom) with shared staleTime: Infinity
   const {
@@ -61,7 +61,7 @@ export function PartyPositionsCatalogDialog({ open, onClose, partyId }: {
   };
 
   // Submit and create a new custom party position
-  const handleCreatePosition = async (e: React.FormEvent) => {
+  const handleCreatePosition = async (e: FormEvent) => {
     e.preventDefault();
     if (!partyId) return;
 
