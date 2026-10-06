@@ -8,26 +8,29 @@ const (
 	ModuleFiles      = "files"       // Represents the files module of the system
 
 	// -- Actions --
-	ActionCreateParty            = "create_party"              // Action for creating a new party
-	ActionUpdateParty            = "update_party"              // Action for updating a party
-	ActionDeleteParty            = "delete_party"              // Action for deleting a party
-	ActionAssignPageVerification = "assign_page_verification"  // Action when a verification badge is assigned to a user's page
-	ActionRemovePageVerification = "remove_page_verification"  // Action when a verification badge is removed from a user's page
-	ActionUpdateUser             = "update_user"               // Action for updating a user's general profile
-	ActionDeleteUserAccount      = "delete_user_account"       // Action for soft deleting a user's account
-	ActionUpdateUserMoreInfo     = "update_user_more_info"     // Action for updating a user's more info
-	ActionUpdateUserRoles        = "update_user_roles"         // Action for updating a user's roles
-	ActionUpdateUserPhoneNumbers = "update_user_phone_numbers" // Action for updating a user's phone numbers
-	ActionViewUserPhoneNumbers   = "view_user_phone_numbers"   // Action when a user's phone numbers are viewed
-	ActionDeleteUserPhoneNumber  = "delete_user_phone_number"  // Action when a user's phone number is deleted
-	ActionDeleteFile             = "delete_file"               // Action for deleting a file
-	ActionCreateOffice           = "create_office"             // Action for creating a new political office
-	ActionUpdateOffice           = "update_office"             // Action for updating an existing political office
-	ActionDeleteOffice           = "delete_office"             // Action for deleting a political office
-	ActionSuspendPartyMember     = "suspend_party_member"      // Action when a party member is suspended
-	ActionUnsuspendPartyMember   = "unsuspend_party_member"    // Action when a party member's suspension is lifted
-	ActionBlockPartyMember       = "block_party_member"        // Action when a user is blocked from a party
-	ActionUnblockPartyMember     = "unblock_party_member"      // Action when a user is unblocked from a party
+	ActionCreateParty               = "create_party"                 // Action for creating a new party
+	ActionUpdateParty               = "update_party"                 // Action for updating a party
+	ActionDeleteParty               = "delete_party"                 // Action for deleting a party
+	ActionAssignPageVerification    = "assign_page_verification"     // Action when a verification badge is assigned to a user's page
+	ActionRemovePageVerification    = "remove_page_verification"     // Action when a verification badge is removed from a user's page
+	ActionUpdateUser                = "update_user"                  // Action for updating a user's general profile
+	ActionDeleteUserAccount         = "delete_user_account"          // Action for soft deleting a user's account
+	ActionUpdateUserMoreInfo        = "update_user_more_info"        // Action for updating a user's more info
+	ActionUpdateUserRoles           = "update_user_roles"            // Action for updating a user's roles
+	ActionUpdateUserPhoneNumbers    = "update_user_phone_numbers"    // Action for updating a user's phone numbers
+	ActionViewUserPhoneNumbers      = "view_user_phone_numbers"      // Action when a user's phone numbers are viewed
+	ActionDeleteUserPhoneNumber     = "delete_user_phone_number"     // Action when a user's phone number is deleted
+	ActionDeleteFile                = "delete_file"                  // Action for deleting a file
+	ActionCreateOffice              = "create_office"                // Action for creating a new political office
+	ActionUpdateOffice              = "update_office"                // Action for updating an existing political office
+	ActionDeleteOffice              = "delete_office"                // Action for deleting a political office
+	ActionCreatePartyCustomPosition = "create_party_custom_position" // Action when a party position is created
+	ActionUpdatePartyCustomPosition = "update_party_custom_position" // Action when a party position is updated
+	ActionDeletePartyCustomPosition = "delete_party_custom_position" // Action when a party position is deleted
+	ActionSuspendPartyMember        = "suspend_party_member"         // Action when a party member is suspended
+	ActionUnsuspendPartyMember      = "unsuspend_party_member"       // Action when a party member's suspension is lifted
+	ActionBlockPartyMember          = "block_party_member"           // Action when a user is blocked from a party
+	ActionUnblockPartyMember        = "unblock_party_member"         // Action when a user is unblocked from a party
 
 	// -- Actor Roles --
 	ActorRoleSuperAdmin = "super_admin" // A super administrator of the system

@@ -22,7 +22,7 @@ import {
   PartyPositionTableTile,
 } from "#/components/tiles/party-position-tile";
 import type { PartyOfficialItem } from "#/lib/server/parties";
-import { BookOpen, UserPlus, Loader2 } from "lucide-react";
+import { BookOpen, Loader2 } from "lucide-react";
 
 interface PartyPositionsActionBarProps {
   chapterTier: string;
@@ -38,11 +38,10 @@ interface PartyPositionsActionBarProps {
   selectedWardId?: number;
   onWardChange: (id?: number) => void;
   onOpenCatalog: () => void;
-  onOpenAssign: () => void;
 }
 
 /**
- * Top action bar with chapter tier navigation and action buttons (Catalog, Assign).
+ * Top action bar with chapter tier navigation and action buttons (Catalog).
  */
 export function PartyPositionsActionBar({
   chapterTier,
@@ -58,7 +57,6 @@ export function PartyPositionsActionBar({
   selectedWardId,
   onWardChange,
   onOpenCatalog,
-  onOpenAssign,
 }: PartyPositionsActionBarProps) {
   return (
     <div className="flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4 mb-4">
@@ -78,7 +76,7 @@ export function PartyPositionsActionBar({
         onWardChange={onWardChange}
       />
 
-      {/* Action Buttons: Catalog & Assign */}
+      {/* Action Buttons: Catalog */}
       <div className="flex items-center gap-2.5">
         <Button
           type="button"
@@ -88,16 +86,6 @@ export function PartyPositionsActionBar({
         >
           <BookOpen className="size-4 text-c-50" />
           <span>Position Catalog</span>
-        </Button>
-
-        <Button
-          type="button"
-          variant="lime"
-          onClick={onOpenAssign}
-          className="h-10 px-4 rounded-xl text-[13px] font-medium flex items-center gap-2 shadow-xs"
-        >
-          <UserPlus className="size-4" />
-          <span>Assign Position</span>
         </Button>
       </div>
     </div>
@@ -151,7 +139,6 @@ interface PartyPositionsRosterViewProps {
   isLoading: boolean;
   officials: PartyOfficialItem[];
   onVacateOfficial: (official: PartyOfficialItem) => void;
-  onOpenAssign: () => void;
 }
 
 /**
@@ -161,7 +148,6 @@ export function PartyPositionsRosterView({
   isLoading,
   officials,
   onVacateOfficial,
-  onOpenAssign,
 }: PartyPositionsRosterViewProps) {
   if (isLoading) {
     return (
@@ -178,19 +164,7 @@ export function PartyPositionsRosterView({
         <p className="text-[16px] text-c-70">No party officials found.</p>
         <p className="text-[13px] text-c-40 max-w-md mx-auto">
           No officials have been appointed to positions matching your selected tier and filters.
-          Click &quot;Assign Position&quot; to appoint an official.
         </p>
-        <div className="pt-2">
-          <Button
-            type="button"
-            variant="lime"
-            onClick={onOpenAssign}
-            className="h-10 px-4 rounded-xl text-[13px] font-medium shadow-xs"
-          >
-            <UserPlus className="size-4 mr-2" />
-            Assign an Official
-          </Button>
-        </div>
       </div>
     );
   }

@@ -95,8 +95,9 @@ CREATE TABLE party_positions (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE UNIQUE INDEX idx_party_positions_party_code ON party_positions (party_id, code) WHERE party_id IS NOT NULL;
-CREATE INDEX idx_party_positions_party_rank ON party_positions (party_id, rank_order ASC, name ASC);
+CREATE UNIQUE INDEX idx_party_positions_default_name ON party_positions (LOWER(name)) WHERE party_id IS NULL;
+CREATE INDEX idx_party_positions_party_rank ON party_positions (party_id, rank_order ASC, name ASC) WHERE is_active = true;
+CREATE INDEX idx_party_positions_default_rank ON party_positions (rank_order ASC, name ASC) WHERE party_id IS NULL AND is_active = true;
 
 -- 2. Party Position Assignments (Binds a member to a position within a chapter)
 CREATE TABLE party_position_assignments (
@@ -125,53 +126,54 @@ CREATE INDEX idx_pos_assign_position ON party_position_assignments (position_id)
 -- 3. Pre-seed Default Party Positions
 INSERT INTO party_positions (id, party_id, name, code, position_type, allowed_levels, rank_order, max_occupants, is_executive, category) VALUES
 -- Executive (Leadership & Secretariat)
-(1, NULL, 'Chairman', 'chairman', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 1, 1, true, 'executive'),
-(2, NULL, 'Deputy Chairman', 'deputy_chairman', 'default', ARRAY['national', 'state', 'lga'], 2, 2, true, 'executive'),
-(3, NULL, 'Vice Chairman', 'vice_chairman', 'default', ARRAY['national', 'zonal', 'state', 'ward'], 3, 6, true, 'executive'),
-(4, NULL, 'Secretary', 'secretary', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 4, 1, true, 'executive'),
-(5, NULL, 'Deputy Secretary', 'deputy_secretary', 'default', ARRAY['national', 'state'], 5, 1, true, 'executive'),
-(6, NULL, 'Assistant Secretary', 'assistant_secretary', 'default', ARRAY['zonal', 'lga', 'ward'], 6, 1, true, 'executive'),
+(1, NULL, 'Founder', 'founder', 'default', ARRAY['national'], 1, 1, true, 'executive'),
+(2, NULL, 'Chairman', 'chairman', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 2, 1, true, 'executive'),
+(3, NULL, 'Deputy Chairman', 'deputy_chairman', 'default', ARRAY['national', 'state', 'lga'], 3, 2, true, 'executive'),
+(4, NULL, 'Vice Chairman', 'vice_chairman', 'default', ARRAY['national', 'zonal', 'state', 'ward'], 4, 6, true, 'executive'),
+(5, NULL, 'Secretary', 'secretary', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 5, 1, true, 'executive'),
+(6, NULL, 'Deputy Secretary', 'deputy_secretary', 'default', ARRAY['national', 'state'], 6, 1, true, 'executive'),
+(7, NULL, 'Assistant Secretary', 'assistant_secretary', 'default', ARRAY['zonal', 'lga', 'ward'], 7, 1, true, 'executive'),
 
 -- Operations (Party management, logistics, fieldwork)
-(7, NULL, 'Organizing Secretary', 'organizing_secretary', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 7, 1, true, 'operations'),
-(8, NULL, 'Assistant Organizing Secretary', 'assistant_organizing_secretary', 'default', ARRAY['national', 'state', 'lga', 'ward'], 8, 1, true, 'operations'),
-(9, NULL, 'Welfare Secretary', 'welfare_secretary', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 9, 1, true, 'operations'),
-(10, NULL, 'Protocol & Logistics Officer', 'protocol_logistics_officer', 'default', ARRAY['national', 'state', 'lga'], 10, 2, false, 'operations'),
+(8, NULL, 'Organizing Secretary', 'organizing_secretary', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 8, 1, true, 'operations'),
+(9, NULL, 'Assistant Organizing Secretary', 'assistant_organizing_secretary', 'default', ARRAY['national', 'state', 'lga', 'ward'], 9, 1, true, 'operations'),
+(10, NULL, 'Welfare Secretary', 'welfare_secretary', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 10, 1, true, 'operations'),
+(11, NULL, 'Protocol & Logistics Officer', 'protocol_logistics_officer', 'default', ARRAY['national', 'state', 'lga'], 11, 2, false, 'operations'),
 
 -- Campaign & Elections (Voter-facing mobilization & electoral planning)
-(11, NULL, 'Campaign Coordinator', 'campaign_coordinator', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 11, 2, false, 'campaign'),
-(12, NULL, 'Director of Mobilization', 'director_mobilization', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 12, 1, false, 'campaign'),
-(13, NULL, 'Election Planning Director', 'election_planning_director', 'default', ARRAY['national', 'state', 'lga'], 13, 1, false, 'campaign'),
+(12, NULL, 'Campaign Coordinator', 'campaign_coordinator', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 12, 2, false, 'campaign'),
+(13, NULL, 'Director of Mobilization', 'director_mobilization', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 13, 1, false, 'campaign'),
+(14, NULL, 'Election Planning Director', 'election_planning_director', 'default', ARRAY['national', 'state', 'lga'], 14, 1, false, 'campaign'),
 
 -- Media & Communications (Publicity, press & digital reach)
-(14, NULL, 'Publicity Secretary', 'publicity_secretary', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 14, 1, true, 'media'),
-(15, NULL, 'Assistant Publicity Secretary', 'assistant_publicity_secretary', 'default', ARRAY['national', 'state', 'lga'], 15, 1, true, 'media'),
-(16, NULL, 'New Media Director', 'new_media_director', 'default', ARRAY['national', 'state', 'lga'], 16, 1, false, 'media'),
-(17, NULL, 'Head of Press', 'head_of_press', 'default', ARRAY['national', 'state'], 17, 1, false, 'media'),
+(15, NULL, 'Publicity Secretary', 'publicity_secretary', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 15, 1, true, 'media'),
+(16, NULL, 'Assistant Publicity Secretary', 'assistant_publicity_secretary', 'default', ARRAY['national', 'state', 'lga'], 16, 1, true, 'media'),
+(17, NULL, 'New Media Director', 'new_media_director', 'default', ARRAY['national', 'state', 'lga'], 17, 1, false, 'media'),
+(18, NULL, 'Head of Press', 'head_of_press', 'default', ARRAY['national', 'state'], 18, 1, false, 'media'),
 
 -- Technology & ICT (Digital platforms, voter database, verification)
-(18, NULL, 'Head of ICT', 'head_of_ict', 'default', ARRAY['national', 'state', 'lga'], 18, 1, false, 'technology'),
-(19, NULL, 'Digital Strategy Lead', 'digital_strategy_lead', 'default', ARRAY['national', 'state'], 19, 1, false, 'technology'),
-(20, NULL, 'Database / Portal Administrator', 'database_portal_admin', 'default', ARRAY['national', 'state', 'lga'], 20, 1, false, 'technology'),
+(19, NULL, 'Head of ICT', 'head_of_ict', 'default', ARRAY['national', 'state', 'lga'], 19, 1, false, 'technology'),
+(20, NULL, 'Digital Strategy Lead', 'digital_strategy_lead', 'default', ARRAY['national', 'state'], 20, 1, false, 'technology'),
+(21, NULL, 'Database / Portal Administrator', 'database_portal_admin', 'default', ARRAY['national', 'state', 'lga'], 21, 1, false, 'technology'),
 
 -- Finance & Audit
-(21, NULL, 'Treasurer', 'treasurer', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 21, 1, true, 'finance'),
-(22, NULL, 'Financial Secretary', 'financial_secretary', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 22, 1, true, 'finance'),
-(23, NULL, 'Auditor', 'auditor', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 23, 1, true, 'finance'),
+(22, NULL, 'Treasurer', 'treasurer', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 22, 1, true, 'finance'),
+(23, NULL, 'Financial Secretary', 'financial_secretary', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 23, 1, true, 'finance'),
+(24, NULL, 'Auditor', 'auditor', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 24, 1, true, 'finance'),
 
 -- Legal & Compliance
-(24, NULL, 'Legal Adviser', 'legal_adviser', 'default', ARRAY['national', 'zonal', 'state', 'lga'], 24, 1, true, 'legal'),
+(25, NULL, 'Legal Adviser', 'legal_adviser', 'default', ARRAY['national', 'zonal', 'state', 'lga'], 25, 1, true, 'legal'),
 
 -- Demographic & Special Wings
-(25, NULL, 'Women Leader', 'women_leader', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 25, 1, true, 'wings'),
-(26, NULL, 'Youth Leader', 'youth_leader', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 26, 1, true, 'wings'),
-(27, NULL, 'Assistant Youth Leader', 'assistant_youth_leader', 'default', ARRAY['national', 'state', 'lga', 'ward'], 27, 1, true, 'wings'),
-(28, NULL, 'Persons with Disabilities (PWD) Leader', 'pwd_leader', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 28, 1, true, 'wings'),
+(26, NULL, 'Women Leader', 'women_leader', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 26, 1, true, 'wings'),
+(27, NULL, 'Youth Leader', 'youth_leader', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 27, 1, true, 'wings'),
+(28, NULL, 'Assistant Youth Leader', 'assistant_youth_leader', 'default', ARRAY['national', 'state', 'lga', 'ward'], 28, 1, true, 'wings'),
+(29, NULL, 'Persons with Disabilities (PWD) Leader', 'pwd_leader', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 29, 1, true, 'wings'),
 
 -- Advisory & Non-Portfolio Roles
-(29, NULL, 'Ex-Officio Member', 'ex_officio', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 29, 6, false, 'advisory'),
-(30, NULL, 'Special Adviser to Chairman', 'special_adviser_chairman', 'default', ARRAY['national', 'state'], 30, 3, false, 'advisory'),
-(31, NULL, 'Elders Council Member', 'elders_council_member', 'default', ARRAY['national', 'state', 'lga'], 31, 10, false, 'advisory');
+(30, NULL, 'Ex-Officio Member', 'ex_officio', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 30, 6, false, 'advisory'),
+(31, NULL, 'Special Adviser to Chairman', 'special_adviser_chairman', 'default', ARRAY['national', 'state'], 31, 3, false, 'advisory'),
+(32, NULL, 'Elders Council Member', 'elders_council_member', 'default', ARRAY['national', 'state', 'lga'], 32, 10, false, 'advisory');
 
 -- Resets the party_positions table id column to the max value + 1
 SELECT setval(pg_get_serial_sequence('party_positions', 'id'), (SELECT MAX(id) FROM party_positions));

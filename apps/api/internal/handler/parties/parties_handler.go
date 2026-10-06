@@ -86,6 +86,7 @@ type PartiesService interface {
 	GetCustomPartyPositions(ctx context.Context, partyID int16) ([]queries.PartyPosition, error)
 	InvalidatePartyCustomPositionsCache(ctx context.Context, partyID int16)
 	GetPartyPositionByID(ctx context.Context, id int32, partyID int16) (queries.PartyPosition, error)
+	InvalidatePartyPositionCache(ctx context.Context, partyID int16, id int32)
 	CreatePartyCustomPosition(ctx context.Context, arg queries.CreatePartyCustomPositionParams) (queries.PartyPosition, error)
 	UpdatePartyCustomPosition(ctx context.Context, arg queries.UpdatePartyCustomPositionParams) (queries.PartyPosition, error)
 	DeletePartyCustomPosition(ctx context.Context, id int32, partyID int16) error
@@ -2355,8 +2356,8 @@ func (h *Handler) GetAgentAcquisitionTargets(w http.ResponseWriter, r *http.Requ
 func (h *Handler) ListPartyPositions(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	partyID, err := strconv.ParseInt(idStr, 10, 16)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID: "+err.Error())
+	if err != nil || partyID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID")
 		return
 	}
 
@@ -2380,38 +2381,90 @@ func (h *Handler) ListPartyPositions(w http.ResponseWriter, r *http.Request) {
 // CreatePartyCustomPositionRequest represents payload to create a custom position
 type CreatePartyCustomPositionRequest struct {
 	Name          string   `json:"name"`
-	Code          string   `json:"code"`
 	Description   string   `json:"description"`
 	AllowedLevels []string `json:"allowed_levels"`
 	RankOrder     int16    `json:"rank_order"`
 	MaxOccupants  int16    `json:"max_occupants"`
 }
 
+// Valid party chapter levels constants
+var validPartyChapterLevels = map[string]struct{}{
+	"national": {},
+	"zonal":    {},
+	"state":    {},
+	"lga":      {},
+	"ward":     {},
+}
+
+// sanitizePartyAllowedLevels validates and normalizes chapter administrative levels.
+func sanitizePartyAllowedLevels(levels []string) ([]string, error) {
+	if len(levels) == 0 {
+		return []string{"national", "zonal", "state", "lga", "ward"}, nil
+	}
+
+	seen := make(map[string]bool)
+	var cleaned []string
+	for _, lvl := range levels {
+		normalized := strings.ToLower(strings.TrimSpace(lvl))
+		if normalized == "" {
+			continue
+		}
+		if _, ok := validPartyChapterLevels[normalized]; !ok {
+			return nil, fmt.Errorf("invalid chapter level: '%s'. Allowed levels are: national, zonal, state, lga, ward", lvl)
+		}
+		if !seen[normalized] {
+			seen[normalized] = true
+			cleaned = append(cleaned, normalized)
+		}
+	}
+	if len(cleaned) == 0 {
+		return nil, fmt.Errorf("at least one valid chapter level must be provided")
+	}
+	return cleaned, nil
+}
+
 // CreatePartyCustomPosition creates a new custom position for the party
 func (h *Handler) CreatePartyCustomPosition(w http.ResponseWriter, r *http.Request) {
+	// Parse and validate party ID from URL parameters
 	idStr := chi.URLParam(r, "id")
 	partyID, err := strconv.ParseInt(idStr, 10, 16)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID: "+err.Error())
+	if err != nil || partyID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID")
 		return
 	}
 
+	// Decode request payload
 	var req CreatePartyCustomPositionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
 		return
 	}
 
-	if req.Name == "" {
+	// Validate required position name
+	name := strings.TrimSpace(req.Name)
+	if name == "" {
 		h.utils.RespondError(w, http.StatusBadRequest, "Position name is required")
 		return
 	}
-	if req.Code == "" {
-		req.Code = strings.ToLower(strings.ReplaceAll(strings.TrimSpace(req.Name), " ", "_"))
+
+	// Auto-generate code slug directly from position title
+	code := strings.ToLower(strings.ReplaceAll(name, " ", "_"))
+
+	// Trim description; leave null/invalid if empty
+	desc := strings.TrimSpace(req.Description)
+	var descParam pgtype.Text
+	if desc != "" {
+		descParam = pgtype.Text{String: desc, Valid: true}
 	}
-	if len(req.AllowedLevels) == 0 {
-		req.AllowedLevels = []string{"national", "zonal", "state", "lga", "ward"}
+
+	// Validate allowed levels against supported chapter levels
+	allowedLevels, err := sanitizePartyAllowedLevels(req.AllowedLevels)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
+		return
 	}
+
+	// Apply sensible defaults for rank and occupancy
 	if req.RankOrder <= 0 {
 		req.RankOrder = 100
 	}
@@ -2419,20 +2472,22 @@ func (h *Handler) CreatePartyCustomPosition(w http.ResponseWriter, r *http.Reque
 		req.MaxOccupants = 1
 	}
 
+	// Persist the custom position in the database
 	pos, err := h.partiesService.CreatePartyCustomPosition(r.Context(), queries.CreatePartyCustomPositionParams{
 		PartyID:       pgtype.Int2{Int16: int16(partyID), Valid: true},
-		Name:          req.Name,
-		Code:          req.Code,
-		Description:   pgtype.Text{String: req.Description, Valid: req.Description != ""},
-		AllowedLevels: req.AllowedLevels,
+		Name:          name,
+		Code:          code,
+		Description:   descParam,
+		AllowedLevels: allowedLevels,
 		RankOrder:     req.RankOrder,
 		MaxOccupants:  req.MaxOccupants,
 	})
 	if err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create position: "+err.Error())
+		h.utils.RespondError(w, http.StatusBadRequest, "Failed to create position: "+err.Error())
 		return
 	}
 
+	// Return successful creation response
 	h.utils.RespondSuccess(w, http.StatusCreated, "Custom position created successfully", map[string]interface{}{
 		"position": pos,
 	})
@@ -2442,15 +2497,15 @@ func (h *Handler) CreatePartyCustomPosition(w http.ResponseWriter, r *http.Reque
 func (h *Handler) UpdatePartyCustomPosition(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	partyID, err := strconv.ParseInt(idStr, 10, 16)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID: "+err.Error())
+	if err != nil || partyID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID")
 		return
 	}
 
 	posIDStr := chi.URLParam(r, "position_id")
 	posID, err := strconv.ParseInt(posIDStr, 10, 32)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid position ID: "+err.Error())
+	if err != nil || posID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid position ID")
 		return
 	}
 
@@ -2460,9 +2515,27 @@ func (h *Handler) UpdatePartyCustomPosition(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	if len(req.AllowedLevels) == 0 {
-		req.AllowedLevels = []string{"national", "zonal", "state", "lga", "ward"}
+	name := strings.TrimSpace(req.Name)
+	if name == "" {
+		h.utils.RespondError(w, http.StatusBadRequest, "Position name is required")
+		return
 	}
+
+	// Auto-generate code slug directly from position title
+	code := strings.ToLower(strings.ReplaceAll(name, " ", "_"))
+
+	desc := strings.TrimSpace(req.Description)
+	var descParam pgtype.Text
+	if desc != "" {
+		descParam = pgtype.Text{String: desc, Valid: true}
+	}
+
+	allowedLevels, err := sanitizePartyAllowedLevels(req.AllowedLevels)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	if req.RankOrder <= 0 {
 		req.RankOrder = 100
 	}
@@ -2473,10 +2546,10 @@ func (h *Handler) UpdatePartyCustomPosition(w http.ResponseWriter, r *http.Reque
 	pos, err := h.partiesService.UpdatePartyCustomPosition(r.Context(), queries.UpdatePartyCustomPositionParams{
 		ID:            int32(posID),
 		PartyID:       pgtype.Int2{Int16: int16(partyID), Valid: true},
-		Name:          req.Name,
-		Code:          req.Code,
-		Description:   pgtype.Text{String: req.Description, Valid: req.Description != ""},
-		AllowedLevels: req.AllowedLevels,
+		Name:          name,
+		Code:          code,
+		Description:   descParam,
+		AllowedLevels: allowedLevels,
 		RankOrder:     req.RankOrder,
 		MaxOccupants:  req.MaxOccupants,
 	})
@@ -2494,15 +2567,15 @@ func (h *Handler) UpdatePartyCustomPosition(w http.ResponseWriter, r *http.Reque
 func (h *Handler) DeletePartyCustomPosition(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	partyID, err := strconv.ParseInt(idStr, 10, 16)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID: "+err.Error())
+	if err != nil || partyID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID")
 		return
 	}
 
 	posIDStr := chi.URLParam(r, "position_id")
 	posID, err := strconv.ParseInt(posIDStr, 10, 32)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid position ID: "+err.Error())
+	if err != nil || posID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid position ID")
 		return
 	}
 
@@ -2518,8 +2591,8 @@ func (h *Handler) DeletePartyCustomPosition(w http.ResponseWriter, r *http.Reque
 func (h *Handler) ListPartyOfficials(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	partyID, err := strconv.ParseInt(idStr, 10, 16)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID: "+err.Error())
+	if err != nil || partyID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID")
 		return
 	}
 
@@ -2571,8 +2644,8 @@ func (h *Handler) ListPartyAdmins(w http.ResponseWriter, r *http.Request) {
 	// Parse and validate the party ID from the URL path
 	idStr := chi.URLParam(r, "id")
 	partyID, err := strconv.ParseInt(idStr, 10, 16)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID: "+err.Error())
+	if err != nil || partyID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID")
 		return
 	}
 
@@ -2623,15 +2696,15 @@ func (h *Handler) ListPartyAdmins(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ListChapterOfficials(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	partyID, err := strconv.ParseInt(idStr, 10, 16)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID: "+err.Error())
+	if err != nil || partyID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID")
 		return
 	}
 
 	chapIDStr := chi.URLParam(r, "chapter_id")
 	chapID, err := strconv.ParseInt(chapIDStr, 10, 32)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid chapter ID: "+err.Error())
+	if err != nil || chapID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid chapter ID")
 		return
 	}
 
@@ -2664,15 +2737,15 @@ type AssignPartyOfficialRequest struct {
 func (h *Handler) AssignPartyOfficial(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	partyID, err := strconv.ParseInt(idStr, 10, 16)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID: "+err.Error())
+	if err != nil || partyID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID")
 		return
 	}
 
 	chapIDStr := chi.URLParam(r, "chapter_id")
 	chapID, err := strconv.ParseInt(chapIDStr, 10, 32)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid chapter ID: "+err.Error())
+	if err != nil || chapID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid chapter ID")
 		return
 	}
 
@@ -2739,15 +2812,15 @@ func (h *Handler) AssignPartyOfficial(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) VacatePositionAssignment(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	partyID, err := strconv.ParseInt(idStr, 10, 16)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID: "+err.Error())
+	if err != nil || partyID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID")
 		return
 	}
 
 	assignIDStr := chi.URLParam(r, "assignment_id")
 	assignID, err := strconv.ParseInt(assignIDStr, 10, 64)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid assignment ID: "+err.Error())
+	if err != nil || assignID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid assignment ID")
 		return
 	}
 
@@ -2766,15 +2839,15 @@ func (h *Handler) VacatePositionAssignment(w http.ResponseWriter, r *http.Reques
 func (h *Handler) UpdatePositionAssignment(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	partyID, err := strconv.ParseInt(idStr, 10, 16)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID: "+err.Error())
+	if err != nil || partyID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID")
 		return
 	}
 
 	assignIDStr := chi.URLParam(r, "assignment_id")
 	assignID, err := strconv.ParseInt(assignIDStr, 10, 64)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid assignment ID: "+err.Error())
+	if err != nil || assignID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid assignment ID")
 		return
 	}
 
@@ -2825,15 +2898,15 @@ func (h *Handler) UpdatePositionAssignment(w http.ResponseWriter, r *http.Reques
 func (h *Handler) ListMemberPositions(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	partyID, err := strconv.ParseInt(idStr, 10, 16)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID: "+err.Error())
+	if err != nil || partyID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID")
 		return
 	}
 
 	userIDStr := chi.URLParam(r, "user_id")
 	userID, err := strconv.ParseInt(userIDStr, 10, 64)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid user ID: "+err.Error())
+	if err != nil || userID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid user ID")
 		return
 	}
 

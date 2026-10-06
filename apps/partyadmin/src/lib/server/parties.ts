@@ -646,7 +646,6 @@ export const createPartyCustomPosition = createServerFn({ method: "POST" })
     (data: {
       partyId: number | string;
       name: string;
-      code?: string;
       description?: string;
       allowedLevels?: string[];
       rankOrder?: number;
@@ -661,7 +660,6 @@ export const createPartyCustomPosition = createServerFn({ method: "POST" })
           method: "POST",
           body: JSON.stringify({
             name: data.name,
-            code: data.code,
             description: data.description,
             allowed_levels: data.allowedLevels,
             rank_order: data.rankOrder,

@@ -33,22 +33,15 @@ export function PartyPositionsCatalogDialog({ open, onClose, partyId }: {
 
   // Form states for new custom position
   const [name, setName] = useState("");
-  const [code, setCode] = useState("");
   const [description, setDescription] = useState("");
-  const [allowedLevels, setAllowedLevels] = useState<string[]>([
-    "national", "zonal", "state", "lga", "ward"
-  ]);
+  const [allowedLevels, setAllowedLevels] = useState<string[]>(["national", "zonal", "state", "lga", "ward"]);
   const [maxOccupants, setMaxOccupants] = useState(1);
   const [rankOrder, setRankOrder] = useState(50);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Fetch pre-arranged positions (default + custom) with shared staleTime: Infinity
-  const {
-    positions,
-    defaultPositions,
-    customPositions,
-    isLoading,
-  } = usePartyPositions({ partyId, enabled: open });
+  const { positions, defaultPositions, customPositions, isLoading, partyId: hookPartyId } = usePartyPositions({ enabled: open });
+  const activePartyId = partyId ?? hookPartyId;
 
   const displayedPositions: PartyPositionItem[] =
     activeTab === "default" ? defaultPositions : customPositions;
@@ -63,7 +56,7 @@ export function PartyPositionsCatalogDialog({ open, onClose, partyId }: {
   // Submit and create a new custom party position
   const handleCreatePosition = async (e: FormEvent) => {
     e.preventDefault();
-    if (!partyId) return;
+    if (!activePartyId) return;
 
     // Validate required fields
     if (!name.trim()) {
@@ -78,12 +71,11 @@ export function PartyPositionsCatalogDialog({ open, onClose, partyId }: {
     try {
       setIsSubmitting(true);
 
-      // Call API to create custom position
+      // Call API to create custom position (backend auto-generates slug code from name)
       const res = await createPartyCustomPosition({
         data: {
-          partyId,
+          partyId: activePartyId,
           name: name.trim(),
-          code: code.trim() || undefined,
           description: description.trim() || undefined,
           allowedLevels,
           maxOccupants,
@@ -101,7 +93,6 @@ export function PartyPositionsCatalogDialog({ open, onClose, partyId }: {
 
       // Reset form fields and switch to custom tab
       setName("");
-      setCode("");
       setDescription("");
       setIsCreating(false);
       setActiveTab("custom");
@@ -155,34 +146,19 @@ export function PartyPositionsCatalogDialog({ open, onClose, partyId }: {
                 Define Custom Position
               </h4>
 
-              {/* Position Title & Optional Internal Code */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[13px] font-medium text-c-70 mb-1">
-                    Position Name *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. Director of Diaspora Affairs"
-                    className="w-full h-10 px-3 text-[14px] rounded-xl border border-border bg-background text-c-90 placeholder:text-c-40 focus:ring-1 focus:ring-orange focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[13px] font-medium text-c-70 mb-1">
-                    Position Code <span className="text-c-40 font-normal">(Optional)</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={code}
-                    onChange={(e) => setCode(e.target.value)}
-                    placeholder="e.g. director_diaspora"
-                    className="w-full h-10 px-3 text-[14px] rounded-xl border border-border bg-background text-c-90 placeholder:text-c-40 focus:ring-1 focus:ring-orange focus:outline-none"
-                  />
-                </div>
+              {/* Position Title */}
+              <div>
+                <label className="block text-[13px] font-medium text-c-70 mb-1">
+                  Position Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. Director of Diaspora Affairs"
+                  className="w-full h-10 px-3 text-[14px] rounded-xl border border-border bg-background text-c-90 placeholder:text-c-40 focus:ring-1 focus:ring-orange focus:outline-none"
+                />
               </div>
 
               {/* Responsibilities & Mandate Description */}

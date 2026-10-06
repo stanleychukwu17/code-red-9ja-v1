@@ -13,7 +13,6 @@ import { getPartyAdminsTabs } from "./-data";
 import { useUserParty } from "#/hooks/useUserParty";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useDebounceValue } from "usehooks-ts";
-import { AssignPositionDialog } from "#/components/dialogs/AssignPositionDialog";
 import { PartyPositionsCatalogDialog } from "#/components/dialogs/PartyPositionsCatalogDialog";
 import {
   PartyPositionsActionBar,
@@ -47,7 +46,6 @@ function RouteComponent() {
   const [debouncedSearchQuery] = useDebounceValue(searchQuery, 400);
 
   // Dialog States
-  const [isAssignDialogOpen, setIsAssignDialogOpen] = React.useState(false);
   const [isCatalogDialogOpen, setIsCatalogDialogOpen] = React.useState(false);
 
   // Chapter Hierarchy Filters
@@ -158,7 +156,6 @@ function RouteComponent() {
         selectedWardId={selectedWardId}
         onWardChange={setSelectedWardId}
         onOpenCatalog={() => setIsCatalogDialogOpen(true)}
-        onOpenAssign={() => setIsAssignDialogOpen(true)}
       />
 
       {/* Search Bar + Appointment Filter */}
@@ -174,16 +171,9 @@ function RouteComponent() {
         isLoading={isLoading}
         officials={officials}
         onVacateOfficial={handleVacateOfficial}
-        onOpenAssign={() => setIsAssignDialogOpen(true)}
       />
 
       {/* Dialogs */}
-      <AssignPositionDialog
-        open={isAssignDialogOpen}
-        onClose={() => setIsAssignDialogOpen(false)}
-        partyId={party?.id}
-      />
-
       <PartyPositionsCatalogDialog
         open={isCatalogDialogOpen}
         onClose={() => setIsCatalogDialogOpen(false)}

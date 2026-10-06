@@ -1,11 +1,11 @@
 -- name: ListDefaultPartyPositions :many
 SELECT * FROM party_positions
-WHERE party_id IS NULL
+WHERE party_id IS NULL AND is_active = true
 ORDER BY rank_order ASC, name ASC;
 
 -- name: ListCustomPartyPositions :many
 SELECT * FROM party_positions
-WHERE party_id = $1
+WHERE party_id = $1 AND is_active = true
 ORDER BY rank_order ASC, name ASC;
 
 -- name: GetPartyPositionByID :one
@@ -27,12 +27,14 @@ SET
     rank_order = $7,
     max_occupants = $8,
     is_executive = COALESCE(sqlc.narg('is_executive')::boolean, is_executive),
-    category = COALESCE(sqlc.narg('category')::varchar, category)
+    category = COALESCE(sqlc.narg('category')::varchar, category),
+    is_active = COALESCE(sqlc.narg('is_active')::boolean, is_active)
 WHERE id = $1 AND party_id = $2 AND position_type = 'custom'
 RETURNING *;
 
 -- name: DeletePartyCustomPosition :exec
-DELETE FROM party_positions
+UPDATE party_positions
+SET is_active = false
 WHERE id = $1 AND party_id = $2 AND position_type = 'custom';
 
 -- name: AssignPartyPosition :one

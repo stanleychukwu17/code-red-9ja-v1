@@ -67,6 +67,7 @@ const (
 	RedisPartyChapterMember    = "parties:chapter_member:"         // STRING: "parties:chapter_member:<userID>:<partyID>:<chapterID>" stores cached membership booleans
 	RedisPartyDefaultPositions = "parties:default_party_positions" // STRING: "parties:default_party_positions" stores cached JSON array of default party positions
 	RedisPartyCustomPositions  = "parties:custom_party_positions:" // STRING: "parties:custom_party_positions:<partyID>" stores cached JSON array of custom party positions
+	RedisPartyPositionByID     = "parties:position_by_id:"         // STRING: "parties:position_by_id:<partyID>:<positionID>" stores cached single party position JSON
 	//--END--
 
 	//--START-- for page verifications & badges
@@ -146,6 +147,7 @@ var AllRedisPrefixes = []string{
 	RedisPartyChapterMember,
 	RedisPartyDefaultPositions,
 	RedisPartyCustomPositions,
+	RedisPartyPositionByID,
 	RedisPageVerificationTypesList,
 	RedisPageVerificationTypeInfo,
 	RedisPageVerifications,

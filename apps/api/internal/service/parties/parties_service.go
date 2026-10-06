@@ -1886,21 +1886,89 @@ func (s *PartiesService) ListPartyPositions(ctx context.Context, partyID int16) 
 	}, nil
 }
 
-// GetPartyPositionByID returns a single position by ID.
+// GetPartyPositionByID returns a single position by ID, cached in Redis.
 func (s *PartiesService) GetPartyPositionByID(ctx context.Context, id int32, partyID int16) (queries.PartyPosition, error) {
-	return s.queries.GetPartyPositionByID(ctx, queries.GetPartyPositionByIDParams{
+	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisPartyPositionByID, partyID, id)
+
+	// Try reading from Redis cache
+	if s.rdb != nil {
+		if cachedData, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
+			var pos queries.PartyPosition
+			if err := json.Unmarshal([]byte(cachedData), &pos); err == nil && pos.ID == id && pos.ID > 0 {
+				return pos, nil
+			}
+		}
+	}
+
+	// Fetch position from database
+	pos, err := s.queries.GetPartyPositionByID(ctx, queries.GetPartyPositionByIDParams{
 		ID:      id,
 		PartyID: pgtype.Int2{Int16: partyID, Valid: true},
 	})
+	if err != nil {
+		return queries.PartyPosition{}, err
+	}
+
+	// Cache result in Redis
+	if s.rdb != nil {
+		if data, err := json.Marshal(pos); err == nil {
+			_ = s.rdb.Set(ctx, cacheKey, data, db.RedisOneEightyDaysTTL).Err()
+		}
+	}
+
+	return pos, nil
+}
+
+// InvalidatePartyPositionCache invalidates the Redis cache for a single party position.
+func (s *PartiesService) InvalidatePartyPositionCache(ctx context.Context, partyID int16, id int32) {
+	if s.rdb == nil {
+		return
+	}
+	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisPartyPositionByID, partyID, id)
+	if err := s.rdb.Del(ctx, cacheKey).Err(); err != nil {
+		slog.Error("Failed to invalidate party position cache", "error", err, "partyID", partyID, "id", id)
+	}
 }
 
 // CreatePartyCustomPosition creates a new custom position for the party.
 func (s *PartiesService) CreatePartyCustomPosition(ctx context.Context, arg queries.CreatePartyCustomPositionParams) (queries.PartyPosition, error) {
-	pos, err := s.queries.CreatePartyCustomPosition(ctx, arg)
-	if err == nil && arg.PartyID.Valid {
-		s.InvalidatePartyCustomPositionsCache(ctx, arg.PartyID.Int16)
+	// MaxPartyCustomPositions is the maximum number of custom positions a party can create.
+	const MaxPartyCustomPositions = 200
+
+	if !arg.PartyID.Valid {
+		return queries.PartyPosition{}, errors.New("party ID is required to create a custom position")
 	}
-	return pos, err
+
+	// Check current custom positions limit
+	existing, err := s.GetCustomPartyPositions(ctx, arg.PartyID.Int16)
+	if err != nil {
+		return queries.PartyPosition{}, fmt.Errorf("failed to check existing custom positions: %w", err)
+	}
+	if len(existing) >= MaxPartyCustomPositions {
+		return queries.PartyPosition{}, fmt.Errorf("party has reached the maximum allowed custom positions (%d)", MaxPartyCustomPositions)
+	}
+
+	pos, err := s.queries.CreatePartyCustomPosition(ctx, arg)
+	if err != nil {
+		return queries.PartyPosition{}, err
+	}
+
+	// Invalidate the custom positions cache and log audit action
+	s.InvalidatePartyCustomPositionsCache(ctx, arg.PartyID.Int16)
+
+	actorID, actorRole := audit.ActorInfoFromContext(ctx)
+	posJSON, _ := json.Marshal(pos)
+	s.auditService.LogActionAsync(ctx, queries.InsertAuditLogParams{
+		Module:     audit.StringToText(db.ModulePartyAdmin),
+		Action:     db.ActionCreatePartyCustomPosition,
+		ActorID:    actorID,
+		ActorRole:  audit.StringToText(actorRole),
+		EntityType: db.EntityTypeParty,
+		EntityID:   strconv.FormatInt(int64(arg.PartyID.Int16), 10),
+		NewValues:  posJSON,
+	})
+
+	return pos, nil
 }
 
 // UpdatePartyCustomPosition updates an existing custom position owned by the party.
@@ -1908,6 +1976,19 @@ func (s *PartiesService) UpdatePartyCustomPosition(ctx context.Context, arg quer
 	pos, err := s.queries.UpdatePartyCustomPosition(ctx, arg)
 	if err == nil && arg.PartyID.Valid {
 		s.InvalidatePartyCustomPositionsCache(ctx, arg.PartyID.Int16)
+		s.InvalidatePartyPositionCache(ctx, arg.PartyID.Int16, arg.ID)
+
+		actorID, actorRole := audit.ActorInfoFromContext(ctx)
+		posJSON, _ := json.Marshal(pos)
+		s.auditService.LogActionAsync(ctx, queries.InsertAuditLogParams{
+			Module:     audit.StringToText(db.ModulePartyAdmin),
+			Action:     db.ActionUpdatePartyCustomPosition,
+			ActorID:    actorID,
+			ActorRole:  audit.StringToText(actorRole),
+			EntityType: db.EntityTypeParty,
+			EntityID:   strconv.FormatInt(int64(arg.PartyID.Int16), 10),
+			NewValues:  posJSON,
+		})
 	}
 	return pos, err
 }
@@ -1920,6 +2001,17 @@ func (s *PartiesService) DeletePartyCustomPosition(ctx context.Context, id int32
 	})
 	if err == nil {
 		s.InvalidatePartyCustomPositionsCache(ctx, partyID)
+		s.InvalidatePartyPositionCache(ctx, partyID, id)
+
+		actorID, actorRole := audit.ActorInfoFromContext(ctx)
+		s.auditService.LogActionAsync(ctx, queries.InsertAuditLogParams{
+			Module:     audit.StringToText(db.ModulePartyAdmin),
+			Action:     db.ActionDeletePartyCustomPosition,
+			ActorID:    actorID,
+			ActorRole:  audit.StringToText(actorRole),
+			EntityType: db.EntityTypeParty,
+			EntityID:   strconv.FormatInt(int64(partyID), 10),
+		})
 	}
 	return err
 }
@@ -1927,12 +2019,13 @@ func (s *PartiesService) DeletePartyCustomPosition(ctx context.Context, id int32
 // AssignPartyPosition assigns a member to a position in a chapter with occupancy checking.
 func (s *PartiesService) AssignPartyPosition(ctx context.Context, arg queries.AssignPartyPositionParams) (queries.PartyPositionAssignment, error) {
 	// Verify position exists and check max occupants
-	pos, err := s.queries.GetPartyPositionByID(ctx, queries.GetPartyPositionByIDParams{
-		ID:      arg.PositionID,
-		PartyID: pgtype.Int2{Int16: arg.PartyID, Valid: true},
-	})
+	pos, err := s.GetPartyPositionByID(ctx, arg.PositionID, arg.PartyID)
 	if err != nil {
 		return queries.PartyPositionAssignment{}, fmt.Errorf("position not found: %w", err)
+	}
+
+	if !pos.IsActive {
+		return queries.PartyPositionAssignment{}, fmt.Errorf("cannot assign member: position '%s' is inactive", pos.Name)
 	}
 
 	if pos.MaxOccupants > 0 {

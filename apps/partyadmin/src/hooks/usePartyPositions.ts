@@ -7,7 +7,6 @@ import {
 import { useUserParty } from "./useUserParty";
 
 export interface UsePartyPositionsOptions {
-  partyId?: number;
   enabled?: boolean;
 }
 
@@ -17,50 +16,26 @@ export interface UsePartyPositionsOptions {
  * Caches position catalogs with `staleTime: Infinity` because positions are static or infrequently modified.
  * Only re-fetches when query is explicitly invalidated (e.g. after creating, updating, or deleting a custom position).
  *
- * Automatically resolves `partyId` from `useUserParty` if not explicitly passed.
+ * Resolves `partyId` directly from the `useUserParty` hook.
  */
-export const usePartyPositions = (
-  explicitPartyIdOrOptions?: number | UsePartyPositionsOptions,
-  options?: { enabled?: boolean },
-) => {
+export const usePartyPositions = (options?: UsePartyPositionsOptions) => {
   const { party } = useUserParty();
-
-  let targetPartyId: number | undefined;
-  let isEnabled = true;
-
-  if (typeof explicitPartyIdOrOptions === "number") {
-    targetPartyId = explicitPartyIdOrOptions;
-    isEnabled = options?.enabled ?? true;
-  } else if (
-    typeof explicitPartyIdOrOptions === "object" &&
-    explicitPartyIdOrOptions !== null
-  ) {
-    targetPartyId = explicitPartyIdOrOptions.partyId;
-    isEnabled = explicitPartyIdOrOptions.enabled ?? true;
-  }
-
-  const partyId = targetPartyId ?? party?.id;
+  const partyId = party?.id;
+  const isEnabled = options?.enabled ?? true;
   const fetchPartyPositions = useServerFn(getPartyPositions);
 
-  const {
-    data: positionsRes,
-    isLoading,
-    isFetching,
-    error,
-    refetch,
-  } = useQuery({
+  const { data: positionsRes, isLoading, isFetching, error, refetch } = useQuery({
     queryKey: ["partyPositions", partyId],
     queryFn: () => fetchPartyPositions({ data: { partyId: partyId! } }),
+    // !! casts partyId to a strict boolean so we only query when partyId is present and enabled by caller
+    // if partyId is undefined, then !!partyId becomes false, and query is disabled
     enabled: !!partyId && isEnabled,
     staleTime: Infinity,
   });
 
-  const defaultPositions: PartyPositionItem[] =
-    positionsRes?.data?.default || [];
-  const customPositions: PartyPositionItem[] =
-    positionsRes?.data?.custom || [];
-  const positions: PartyPositionItem[] =
-    positionsRes?.data?.positions || [...defaultPositions, ...customPositions];
+  const defaultPositions: PartyPositionItem[] = positionsRes?.data?.default || [];
+  const customPositions: PartyPositionItem[] = positionsRes?.data?.custom || [];
+  const positions: PartyPositionItem[] = positionsRes?.data?.positions || [...defaultPositions, ...customPositions];
 
   return {
     positionsRes,
