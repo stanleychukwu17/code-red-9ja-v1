@@ -78,7 +78,6 @@ export const signupUserImpl = createServerOnlyFn(async ({ data }) => {
       delete result.data.accessToken;
     }
     return result;
-
   } catch (error) {
     return {
       success: false,
@@ -184,7 +183,12 @@ export const refreshUserTokenImpl = createServerOnlyFn(async () => {
 
     // If the refresh is successful, set the new access and refresh tokens in the cookies
     if (result.success && result.data) {
-      const { accessToken, refreshToken: newRefreshToken, user, preferences: sitePreference } = result.data;
+      const {
+        accessToken,
+        refreshToken: newRefreshToken,
+        user,
+        preferences: sitePreference,
+      } = result.data;
       if (newRefreshToken && accessToken) {
         setAuthCookies({ refreshToken: newRefreshToken, accessToken });
       }
@@ -230,7 +234,6 @@ export const checkIfRefreshTokenInCookieImpl = createServerOnlyFn(async () => {
     success: !!refreshToken,
   };
 });
-
 
 export const getUserDetailsCookieImpl = createServerOnlyFn(async () => {
   const userDetailsCookie = getCookie("user_details");
@@ -289,10 +292,13 @@ export const resetPasswordImpl = createServerOnlyFn(async ({ data }) => {
   }
 });
 
-
 // Changes the user's password using their email address
 export const changePasswordByEmailImpl = createServerOnlyFn(
-  async ({ data }: { data: { email: string; otp: string; password: string } }) => {
+  async ({
+    data,
+  }: {
+    data: { email: string; otp: string; password: string };
+  }) => {
     try {
       const response = await fetch(API_URL.auth.changePasswordByEmail, {
         method: "POST",

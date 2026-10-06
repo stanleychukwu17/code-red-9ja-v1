@@ -31,7 +31,7 @@ import { SupervisorStartDutyCard } from "../components/SupervisorReadyCard";
 import { WardSupervisorTasksTab } from "../components/SupervisorTasksTab";
 import { DidYouVoteCard } from "../components/DidYouVoteCard";
 import { MyPollingUnit } from "../components/MyPollingUnit";
-import { Route } from "..";
+import { Layout } from "@repo/ui/components/custom/AdminLayouts";
 
 /**
  * Ward Election Supervisor Dashboard.
@@ -45,7 +45,6 @@ import { Route } from "..";
  */
 export function WardElectionSupervisorPage() {
   const navigate = useNavigate();
-  const search = Route.useSearch() as any;
 
   const { selectedElectionGroup, selectedElection } = useElection();
   const { selectedSupervisorAssignment } = useAssignments();
@@ -179,10 +178,9 @@ export function WardElectionSupervisorPage() {
   }
 
   return (
-    <div className="w-full min-h-screen">
-      {/* Top dashboard header with election countdown and user polling unit summary */}
+    <Layout className="px-0 gap-2">
       <HomeHeader daysLeft={daysLeft} />
-      {!search.isPractice && <MyPollingUnit />}
+      <MyPollingUnit />
       <HomeHeader2 title={headerTitle} rightText={headerRightText} />
 
       {/* Primary Carousel: Readiness, Objectives, and Candidate Leaderboard */}
@@ -306,6 +304,6 @@ export function WardElectionSupervisorPage() {
           />
         )}
       </HomeBody>
-    </div>
+    </Layout>
   );
 }

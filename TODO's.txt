@@ -1,8 +1,34 @@
 TODO's
 
 Sept 7th
+⬜ 
+⬜ 
 - Agent application based on party ad they clicked on
 - if it's a month to a new election group holding in your state: auto select that election group
 - Application Flow: One can only apply to an election holding in their state
 - Upon landing in homepage: See popup saying "Make 40k as a polling unit agent come eleciton day"
 - Finalize Supervisor POV and functionalities and payment
+
+COST
+We Provide Structure
+- SERVER COST (4 Plans: 2.5B | 5B | 10B | 15B | 20B) [Payment Required 3 months to election]
+- AGENT FEE (50k: 5 agents per pu = 44B | 50k: 3 agents per pu = 26.4B) 
+- MARKETTING AGENT (10M per day per state: 3 months = 99.9B)
+- MARKETTING CAMPAIGN (10M per day per state: 3 months = 99.9B)
+
+TOTAL COST
+984B + 49.2B = 1.0331 Trillion Naira
+
+
+Oct 5th
+Prepare Proposal 
+- Tackle Structureless Issues 
+- Tackle Online Marketting 
+- In the past, agents have 
+Prepare How Demo Would Go 
+Prepare Quote 
+- Cost (Server, Marketing [Agent, Campaign], Agent Payments, etc) 
+
+
+
+

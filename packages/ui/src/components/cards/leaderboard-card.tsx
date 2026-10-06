@@ -126,7 +126,7 @@ export function ObjectiveTile({
       <TodoIcon />
       <p className="text-white w-full md:pl-2">{title}</p>
       {rightText && (
-        <p className="text-white shrink-0 md:w-32 text-right">{rightText}</p>
+        <p className="text-white shrink-0 text-right">{rightText}</p>
       )}
       {rightText2 && (
         <p className="text-white/50 shrink-0 md:w-28 text-right">

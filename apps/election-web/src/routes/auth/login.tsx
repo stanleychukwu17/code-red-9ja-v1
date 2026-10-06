@@ -36,6 +36,10 @@ type payloadType = {
   iso2?: string;
 };
 
+export interface LoginSearch {
+  redirect?: string;
+}
+
 /**
  * Login Route Definition
  * Enforces guest-only access via beforeLoad redirect if refresh cookie exists.

@@ -36,7 +36,7 @@ import { UploadsTab } from "../components/UploadsTab";
 import { GiveUpdateFloatingButton } from "../components/GiveUpdateFloatingButton";
 import { HomeBody } from "../components/Shared";
 import { MyPollingUnit } from "../components/MyPollingUnit";
-import { Route } from "..";
+import { Layout } from "@repo/ui/components/custom/AdminLayouts";
 
 // Development bypass flag: ignores 2PM/4PM constraints for local UI testing
 const BYPASS_TIME_CONSTRAINTS = process.env.NODE_ENV === "development";
@@ -61,7 +61,6 @@ const BYPASS_TIME_CONSTRAINTS = process.env.NODE_ENV === "development";
  */
 export function PollingAgentPage() {
   const navigate = useNavigate();
-  const search = Route.useSearch() as any;
 
   const { selectedElectionGroup, selectedElection } = useElection();
   const { selectedAssignment: currentPollingUnitAssignment } = useAssignments();
@@ -88,7 +87,9 @@ export function PollingAgentPage() {
         const errData = await response.json().catch(() => ({}));
         throw new Error(errData.message || "Failed to submit payout request");
       }
-      toast.success("Payout request submitted successfully! Your party admin will review your duties.");
+      toast.success(
+        "Payout request submitted successfully! Your party admin will review your duties.",
+      );
     } catch (err: any) {
       toast.error(err.message || "Failed to request payout");
     }
@@ -238,10 +239,9 @@ export function PollingAgentPage() {
   }
 
   return (
-    <div className="w-full min-h-screen">
-      {/* Top dashboard header with countdown and polling unit banner */}
+    <Layout className="px-0 gap-2">
       <HomeHeader daysLeft={daysLeft} />
-      {!search.isPractice && <MyPollingUnit />}
+      <MyPollingUnit />
       <HomeHeader2 title={headerTitle} rightText={headerRightText} />
 
       {/* Primary Carousel: Objectives, Readiness Drills, and Candidate Leaderboard */}
@@ -401,9 +401,7 @@ export function PollingAgentPage() {
               <UploadResultCard
                 onClick={() => navigate({ to: "/upload-result" })}
               />
-              <RequestPayoutCard
-                onClick={handleRequestPayout}
-              />
+              <RequestPayoutCard onClick={handleRequestPayout} />
             </>
           )}
 
@@ -447,6 +445,6 @@ export function PollingAgentPage() {
           onClick={() => navigate({ to: "/give-update" })}
         />
       )}
-    </div>
+    </Layout>
   );
 }

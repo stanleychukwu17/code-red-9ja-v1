@@ -25,7 +25,16 @@ import {
 import { SelectCountryCode } from "@repo/ui/components/selects/country-code-select";
 import type { countriesType } from "./login";
 
+export interface SignupSearch {
+  redirect?: string;
+}
+
 export const Route = createFileRoute("/auth/signup")({
+  validateSearch: (search: Record<string, unknown>): SignupSearch => {
+    return {
+      redirect: typeof search.redirect === "string" ? search.redirect : undefined,
+    };
+  },
   // Check if user is already authenticated, if so redirect to home page
   beforeLoad: async () => {
     const isLoggedIn = await checkIfRefreshTokenInCookie();

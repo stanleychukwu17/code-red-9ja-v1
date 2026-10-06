@@ -193,10 +193,14 @@ export const Step2 = ({
             {party.name} ({party.short_name})
           </p>
           {!party.is_verified && (
-            <span className="text-[13px] text-red-500 font-medium">Not onboarded yet</span>
+            <span className="text-[13px] text-red-500 font-medium">
+              Not onboarded yet
+            </span>
           )}
           {party.is_verified && !party.is_accepting_applications && (
-            <span className="text-[13px] text-orange-500 font-medium">Not accepting applications currently</span>
+            <span className="text-[13px] text-orange-500 font-medium">
+              Not accepting applications currently
+            </span>
           )}
         </div>
       </div>
@@ -224,7 +228,8 @@ export const Step2 = ({
             const isSelected = selectedPartyId === party.id;
             const isLocked = lockedPartyId && lockedPartyId !== party.id;
             const isNotVerified = !party.is_verified;
-            const isNotAccepting = party.is_verified && !party.is_accepting_applications;
+            const isNotAccepting =
+              party.is_verified && !party.is_accepting_applications;
             const isDisabled = isLocked || isNotVerified || isNotAccepting;
 
             return (
@@ -237,21 +242,21 @@ export const Step2 = ({
                   if (isLocked) {
                     toast.error(
                       "You can only change party if your existing application is either rejected or cancelled.",
-                      { position: "top-center" }
+                      { position: "top-center" },
                     );
                     return;
                   }
                   if (isNotVerified) {
                     toast.error(
                       "This party has not been onboarded yet. You cannot select it.",
-                      { position: "top-center" }
+                      { position: "top-center" },
                     );
                     return;
                   }
                   if (isNotAccepting) {
                     toast.error(
                       "This party is currently not accepting applications.",
-                      { position: "top-center" }
+                      { position: "top-center" },
                     );
                     return;
                   }
@@ -276,13 +281,16 @@ export const Step3 = ({
   selectedElectionIds,
   setSelectedElectionIds,
   appliedElectionGroupIds,
+  selectedParty,
 }: any) => {
   return (
     <div className="flex flex-col gap-4 w-full px-4">
-      <StepHeader
-        title="Choose an Election"
-        subtitle="Select all elections you would like to be a polling unit agent."
-      />
+      <div className="space-y-2">
+        <StepHeader
+          title="Choose an Election"
+          subtitle="Select all elections you would like to be a polling unit agent."
+        />
+      </div>
       <div className="space-y-3 pr-1">
         {elections.map((election: any) => {
           const isSelected = selectedElectionIds.includes(election.id);
