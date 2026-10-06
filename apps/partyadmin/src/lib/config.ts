@@ -89,10 +89,8 @@ export const API_URL = {
     `${api}/parties/${id}/agent-payment-allocations`,
   partyAgentTargets: (id: string | number) =>
     `${api}/parties/${id}/agent-targets`,
-  partyPositions: (id: string | number, chapterType?: string) => {
-    const qs = chapterType ? `?chapter_type=${encodeURIComponent(chapterType)}` : "";
-    return `${api}/parties/${id}/positions${qs}`;
-  },
+  partyPositions: (id: string | number) =>
+    `${api}/parties/${id}/positions`,
   partyCustomPosition: (id: string | number, positionId?: string | number) =>
     positionId ? `${api}/parties/${id}/positions/${positionId}` : `${api}/parties/${id}/positions`,
   partyOfficials: (

@@ -81,7 +81,10 @@ type PartiesService interface {
 	UpdatePartyAgentAcquisitionTargets(ctx context.Context, arg queries.UpdatePartyAgentAcquisitionTargetsParams) (queries.Party, error)
 	GetPartyAgentAcquisitionTargets(ctx context.Context, partyID int16) (json.RawMessage, error)
 	// Positions & Officials methods
-	ListPartyPositions(ctx context.Context, partyID int16, chapterType *string) (*partiesservice.PartyPositionsResult, error)
+	ListPartyPositions(ctx context.Context, partyID int16) (*partiesservice.PartyPositionsResult, error)
+	GetDefaultPartyPositions(ctx context.Context) ([]queries.PartyPosition, error)
+	GetCustomPartyPositions(ctx context.Context, partyID int16) ([]queries.PartyPosition, error)
+	InvalidatePartyCustomPositionsCache(ctx context.Context, partyID int16)
 	GetPartyPositionByID(ctx context.Context, id int32, partyID int16) (queries.PartyPosition, error)
 	CreatePartyCustomPosition(ctx context.Context, arg queries.CreatePartyCustomPositionParams) (queries.PartyPosition, error)
 	UpdatePartyCustomPosition(ctx context.Context, arg queries.UpdatePartyCustomPositionParams) (queries.PartyPosition, error)
@@ -2347,8 +2350,7 @@ func (h *Handler) GetAgentAcquisitionTargets(w http.ResponseWriter, r *http.Requ
 	})
 }
 
-// --start-- Party Positions & Officials Handlers
-
+// --START-- Party Positions & Officials Handlers
 // ListPartyPositions returns all positions (default and custom)
 func (h *Handler) ListPartyPositions(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
@@ -2358,12 +2360,7 @@ func (h *Handler) ListPartyPositions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var chapterType *string
-	if ct := r.URL.Query().Get("chapter_type"); ct != "" {
-		chapterType = &ct
-	}
-
-	res, err := h.partiesService.ListPartyPositions(r.Context(), int16(partyID), chapterType)
+	res, err := h.partiesService.ListPartyPositions(r.Context(), int16(partyID))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to list positions: "+err.Error())
 		return
@@ -2850,6 +2847,8 @@ func (h *Handler) ListMemberPositions(w http.ResponseWriter, r *http.Request) {
 		"positions": positions,
 	})
 }
+
+// --END-- Party Positions & Officials Handlers
 
 // SuspendPartyMemberRequest payload for suspending a party member
 type SuspendPartyMemberRequest struct {

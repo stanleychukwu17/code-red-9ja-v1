@@ -15,22 +15,20 @@ import { Button } from "@repo/ui/components/button";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Loader2, Plus, Shield, Check, Trash2, ListFilter } from "lucide-react";
+import { cn } from "@repo/ui/lib/utils";
 import {
-  getPartyPositions,
   createPartyCustomPosition,
   type PartyPositionItem,
 } from "#/lib/server/parties";
+import { usePartyPositions } from "#/hooks/usePartyPositions";
 
-export function PartyPositionsCatalogDialog({
-  open,
-  onClose,
-  partyId,
-}: {
+export function PartyPositionsCatalogDialog({ open, onClose, partyId }: {
   open: boolean;
   onClose: () => void;
   partyId?: number;
 }) {
   const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = React.useState<"default" | "custom">("default");
   const [isCreating, setIsCreating] = React.useState(false);
 
   // Form states for new custom position
@@ -38,36 +36,36 @@ export function PartyPositionsCatalogDialog({
   const [code, setCode] = React.useState("");
   const [description, setDescription] = React.useState("");
   const [allowedLevels, setAllowedLevels] = React.useState<string[]>([
-    "national",
-    "zonal",
-    "state",
-    "lga",
-    "ward",
+    "national", "zonal", "state", "lga", "ward"
   ]);
   const [maxOccupants, setMaxOccupants] = React.useState(1);
   const [rankOrder, setRankOrder] = React.useState(50);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
-  // Fetch all positions (default + custom)
-  const { data: positionsRes, isLoading } = useQuery({
-    queryKey: ["partyPositions", partyId, "all"],
-    queryFn: () => getPartyPositions({ data: { partyId: partyId! } }),
-    enabled: !!partyId && open,
-  });
-  const defaultPositions: PartyPositionItem[] = positionsRes?.data?.default || [];
-  const customPositions: PartyPositionItem[] = positionsRes?.data?.custom || [];
-  const positions: PartyPositionItem[] =
-    positionsRes?.data?.positions || [...defaultPositions, ...customPositions];
+  // Fetch pre-arranged positions (default + custom) with shared staleTime: Infinity
+  const {
+    positions,
+    defaultPositions,
+    customPositions,
+    isLoading,
+  } = usePartyPositions({ partyId, enabled: open });
 
+  const displayedPositions: PartyPositionItem[] =
+    activeTab === "default" ? defaultPositions : customPositions;
+
+  // Toggle selection of allowed administrative chapter levels
   const handleLevelToggle = (lvl: string) => {
     setAllowedLevels((prev) =>
       prev.includes(lvl) ? prev.filter((l) => l !== lvl) : [...prev, lvl],
     );
   };
 
+  // Submit and create a new custom party position
   const handleCreatePosition = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!partyId) return;
+
+    // Validate required fields
     if (!name.trim()) {
       toast.error("Please provide a position title");
       return;
@@ -79,6 +77,8 @@ export function PartyPositionsCatalogDialog({
 
     try {
       setIsSubmitting(true);
+
+      // Call API to create custom position
       const res = await createPartyCustomPosition({
         data: {
           partyId,
@@ -96,12 +96,15 @@ export function PartyPositionsCatalogDialog({
       }
 
       toast.success("Custom position added successfully!");
+      // Invalidate query to refresh catalog positions list
       queryClient.invalidateQueries({ queryKey: ["partyPositions"] });
-      // Reset form
+
+      // Reset form fields and switch to custom tab
       setName("");
       setCode("");
       setDescription("");
       setIsCreating(false);
+      setActiveTab("custom");
     } catch (err: any) {
       toast.error(err?.message || "Failed to create position");
     } finally {
@@ -117,19 +120,27 @@ export function PartyPositionsCatalogDialog({
         onEscapeKeyDown={(e) => e.preventDefault()}
         className="max-w-3xl max-h-[90vh] flex flex-col"
       >
+        {/* Dialog Header: Title and descriptive summary of positions catalog */}
         <DialogHeader
           title="Party Positions Catalog"
           description="View standard pre-seeded constitutional positions or create custom party-specific offices."
         />
 
-        <div className="flex items-center justify-between px-6 pt-2 pb-1 border-b border-[#f0f0f0]">
+        {/* Action Bar: Total available position count & toggle button for creating custom position */}
+        <div className="flex items-center justify-between px-6 pt-2 pb-1 border-b border-border">
           <div className="text-[14px] text-c-60 font-medium">
             {positions.length} Total Positions Available
           </div>
           <Button
             size="sm"
-            onClick={() => setIsCreating(!isCreating)}
-            className="bg-[#ff9a3c] hover:bg-[#e0832c] text-white text-[13px] h-9 gap-1.5"
+            onClick={() => {
+              setIsCreating((prev) => {
+                const next = !prev;
+                if (next) setActiveTab("custom");
+                return next;
+              });
+            }}
+            className="bg-orange hover:bg-orange-accent text-white dark:bg-black dark:border dark:border-border text-[13px] h-9 gap-1.5"
           >
             <Plus className="size-4" />
             {isCreating ? "View Positions" : "New Custom Position"}
@@ -137,12 +148,14 @@ export function PartyPositionsCatalogDialog({
         </div>
 
         <DialogPadding className="flex-1 overflow-y-auto space-y-4 py-4">
+          {/* Custom Position Creation Form: Form to define custom party position details */}
           {isCreating ? (
-            <form onSubmit={handleCreatePosition} className="space-y-4 p-4 bg-[#fafafa] rounded-2xl border border-[#ebebeb]">
+            <form onSubmit={handleCreatePosition} className="space-y-4 p-4 bg-sidebar-mobile/50 rounded-2xl">
               <h4 className="text-[15px] font-semibold text-c-80">
                 Define Custom Position
               </h4>
 
+              {/* Position Title & Optional Internal Code */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[13px] font-medium text-c-70 mb-1">
@@ -154,7 +167,7 @@ export function PartyPositionsCatalogDialog({
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="e.g. Director of Diaspora Affairs"
-                    className="w-full h-10 px-3 text-[14px] rounded-xl border border-[#d1d5db] bg-white focus:ring-1 focus:ring-[#ff9a3c] focus:outline-none"
+                    className="w-full h-10 px-3 text-[14px] rounded-xl border border-border bg-background text-c-90 placeholder:text-c-40 focus:ring-1 focus:ring-orange focus:outline-none"
                   />
                 </div>
 
@@ -167,11 +180,12 @@ export function PartyPositionsCatalogDialog({
                     value={code}
                     onChange={(e) => setCode(e.target.value)}
                     placeholder="e.g. director_diaspora"
-                    className="w-full h-10 px-3 text-[14px] rounded-xl border border-[#d1d5db] bg-white focus:ring-1 focus:ring-[#ff9a3c] focus:outline-none"
+                    className="w-full h-10 px-3 text-[14px] rounded-xl border border-border bg-background text-c-90 placeholder:text-c-40 focus:ring-1 focus:ring-orange focus:outline-none"
                   />
                 </div>
               </div>
 
+              {/* Responsibilities & Mandate Description */}
               <div>
                 <label className="block text-[13px] font-medium text-c-70 mb-1">
                   Description / Responsibilities
@@ -181,10 +195,11 @@ export function PartyPositionsCatalogDialog({
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Outline the responsibilities and mandate of this office..."
-                  className="w-full p-2.5 text-[13px] rounded-xl border border-[#d1d5db] bg-white focus:ring-1 focus:ring-[#ff9a3c] focus:outline-none"
+                  className="w-full p-2.5 text-[13px] rounded-xl border border-border bg-background text-c-90 placeholder:text-c-40 focus:ring-1 focus:ring-orange focus:outline-none"
                 />
               </div>
 
+              {/* Chapter Hierarchy Eligibility (Allowed Admin Tiers) */}
               <div>
                 <label className="block text-[13px] font-medium text-c-70 mb-1.5">
                   Allowed Chapter Levels
@@ -197,9 +212,10 @@ export function PartyPositionsCatalogDialog({
                         key={lvl}
                         type="button"
                         onClick={() => handleLevelToggle(lvl)}
-                        className={`px-3 py-1.5 rounded-lg text-[13px] font-medium border transition capitalize flex items-center gap-1.5 ${active
-                            ? "bg-[#ff9a3c] text-white border-[#ff9a3c]"
-                            : "bg-white text-c-60 border-[#e5e7eb] hover:bg-[#f3f4f6]"
+                        className={`px-3 py-1.5 rounded-lg text-[13px] font-medium transition capitalize flex items-center gap-1.5 border border-transparent cursor-pointer
+                          ${active
+                            ? "bg-black text-white"
+                            : "bg-sidebar-mobile text-c-60 border border-black!"
                           }`}
                       >
                         {active && <Check className="size-3.5" />}
@@ -210,6 +226,7 @@ export function PartyPositionsCatalogDialog({
                 </div>
               </div>
 
+              {/* Concurrency & Precedence (Max occupants per chapter & rank order) */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[13px] font-medium text-c-70 mb-1">
@@ -221,7 +238,7 @@ export function PartyPositionsCatalogDialog({
                     max={20}
                     value={maxOccupants}
                     onChange={(e) => setMaxOccupants(Number(e.target.value))}
-                    className="w-full h-10 px-3 text-[14px] rounded-xl border border-[#d1d5db] bg-white focus:ring-1 focus:ring-[#ff9a3c] focus:outline-none"
+                    className="w-full h-10 px-3 text-[14px] rounded-xl border border-border bg-background text-c-90 focus:ring-1 focus:ring-orange focus:outline-none"
                   />
                 </div>
 
@@ -235,11 +252,12 @@ export function PartyPositionsCatalogDialog({
                     max={999}
                     value={rankOrder}
                     onChange={(e) => setRankOrder(Number(e.target.value))}
-                    className="w-full h-10 px-3 text-[14px] rounded-xl border border-[#d1d5db] bg-white focus:ring-1 focus:ring-[#ff9a3c] focus:outline-none"
+                    className="w-full h-10 px-3 text-[14px] rounded-xl border border-border bg-background text-c-90 focus:ring-1 focus:ring-orange focus:outline-none"
                   />
                 </div>
               </div>
 
+              {/* Form Action Controls */}
               <div className="flex justify-end gap-2 pt-2">
                 <Button
                   type="button"
@@ -253,7 +271,7 @@ export function PartyPositionsCatalogDialog({
                   type="submit"
                   size="sm"
                   disabled={isSubmitting}
-                  className="bg-[#ff9a3c] hover:bg-[#e0832c] text-white"
+                  className="bg-orange hover:bg-orange-accent text-white dark:bg-black dark:border dark:border-border"
                 >
                   {isSubmitting ? (
                     <>
@@ -267,17 +285,107 @@ export function PartyPositionsCatalogDialog({
             </form>
           ) : null}
 
-          {/* Positions Table */}
+          {/* Tabs: Default Positions vs Custom Positions */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+            <div className="flex items-center p-1 bg-c-10/70 dark:bg-hover-3 rounded-xl border border-border w-fit gap-1">
+              <button
+                type="button"
+                onClick={() => setActiveTab("default")}
+                className={cn(
+                  "flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-[13px] font-medium transition",
+                  activeTab === "default"
+                    ? "bg-background text-c-90 shadow-xs font-semibold"
+                    : "text-c-60 hover:text-c-90"
+                )}
+              >
+                <Shield className="size-3.5 text-c-50" />
+                <span>Default Positions</span>
+                <span
+                  className={cn(
+                    "text-[11px] px-1.5 py-0.2 rounded-full font-semibold",
+                    activeTab === "default"
+                      ? "bg-hover-5 text-c-80"
+                      : "bg-hover-5/60 text-c-50"
+                  )}
+                >
+                  {defaultPositions.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab("custom")}
+                className={cn(
+                  "flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-[13px] font-medium transition",
+                  activeTab === "custom"
+                    ? "bg-background text-c-90 shadow-xs font-semibold"
+                    : "text-c-60 hover:text-c-90"
+                )}
+              >
+                <span>Custom Positions</span>
+                <span
+                  className={cn(
+                    "text-[11px] px-1.5 py-0.2 rounded-full font-semibold",
+                    activeTab === "custom"
+                      ? "bg-orange/15 text-orange"
+                      : "bg-hover-5/60 text-c-50"
+                  )}
+                >
+                  {customPositions.length}
+                </span>
+              </button>
+            </div>
+
+            <div className="text-[12px] text-c-50">
+              Showing {displayedPositions.length} {activeTab === "default" ? "standard" : "custom"} {displayedPositions.length === 1 ? "position" : "positions"}
+            </div>
+          </div>
+
+          {/* Positions Catalog Display */}
           {isLoading ? (
+            /* Loading State: Progress indicator while positions query resolves */
             <div className="py-12 flex justify-center items-center gap-2 text-c-50 text-[14px]">
               <Loader2 className="size-5 animate-spin" /> Loading catalog...
             </div>
+          ) : displayedPositions.length === 0 ? (
+            activeTab === "custom" ? (
+              /* Empty State: Custom Positions - encourages creating party-specific roles */
+              <div className="py-12 flex flex-col items-center justify-center text-center p-6 border border-dashed border-border rounded-xl">
+                <div className="size-10 rounded-full bg-orange/10 text-orange flex items-center justify-center mb-2.5">
+                  <Plus className="size-5" />
+                </div>
+                <p className="text-[14px] font-semibold text-c-80">No custom positions created yet</p>
+                <p className="text-[12px] text-c-50 max-w-sm mt-1">
+                  Define custom roles and offices specific to your party structure across national, state, or grassroots chapters.
+                </p>
+                {!isCreating && (
+                  <Button
+                    size="sm"
+                    onClick={() => setIsCreating(true)}
+                    className="mt-4 bg-orange hover:bg-orange-accent text-white dark:bg-black dark:border dark:border-border text-[13px] h-8.5 gap-1.5"
+                  >
+                    <Plus className="size-4" />
+                    Create Custom Position
+                  </Button>
+                )}
+              </div>
+            ) : (
+              /* Empty State: Default Constitutional Positions fallback */
+              <div className="py-12 flex flex-col items-center justify-center text-center p-6 border border-dashed border-border rounded-xl">
+                <Shield className="size-8 text-c-40 mb-2" />
+                <p className="text-[14px] font-semibold text-c-80">No default positions found</p>
+                <p className="text-[12px] text-c-50 max-w-sm mt-0.5">
+                  Standard constitutional positions could not be loaded.
+                </p>
+              </div>
+            )
           ) : (
-            <div className="rounded-xl border border-[#e5e7eb] divide-y divide-[#f3f4f6] overflow-hidden">
-              {positions.map((pos) => (
+            /* Positions List: Displays active positions with badges, occupancy rules, allowed chapter levels, and rank */
+            <div className="rounded-xl border border-border divide-y divide-border overflow-hidden">
+              {displayedPositions.map((pos) => (
                 <div
                   key={pos.id}
-                  className="p-3.5 flex items-center justify-between hover:bg-[#fafafa] transition"
+                  className="p-3.5 flex items-center justify-between hover:bg-hover-3 transition"
                 >
                   <div className="space-y-1 min-w-0 flex-1 pr-4">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -286,8 +394,8 @@ export function PartyPositionsCatalogDialog({
                       </span>
                       <span
                         className={`text-[11px] px-2 py-0.5 rounded-full font-medium border ${pos.position_type === "custom"
-                            ? "bg-orange-50 border-orange-200 text-orange-700"
-                            : "bg-gray-100 border-gray-200 text-gray-700"
+                          ? "bg-orange/10 border-orange/30 text-orange"
+                          : "bg-hover-5 border-border text-c-60"
                           }`}
                       >
                         {pos.position_type === "custom" ? "Custom" : "Constitutional"}
@@ -297,12 +405,18 @@ export function PartyPositionsCatalogDialog({
                       </span>
                     </div>
 
+                    {pos.description && (
+                      <p className="text-[12px] text-c-60 line-clamp-2">
+                        {pos.description}
+                      </p>
+                    )}
+
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="text-[12px] text-c-50">Allowed tiers:</span>
                       {pos.allowed_levels?.map((lvl) => (
                         <span
                           key={lvl}
-                          className="text-[11px] px-1.5 py-0.2 rounded bg-gray-100 text-gray-600 capitalize font-medium"
+                          className="text-[11px] px-1.5 py-0.2 rounded bg-hover-5 text-c-60 capitalize font-medium"
                         >
                           {lvl}
                         </span>
@@ -321,7 +435,8 @@ export function PartyPositionsCatalogDialog({
           )}
         </DialogPadding>
 
-        <DialogFooter className="p-4 border-t border-[#ebebeb]">
+        {/* Dialog Footer: Dismiss dialog action */}
+        <DialogFooter className="p-4 border-t border-border">
           <Button variant="outline" onClick={onClose}>
             Close Catalog
           </Button>

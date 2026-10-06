@@ -50,21 +50,23 @@ const (
 	//--END--
 
 	//--START-- for parties
-	RedisPartiesList           = "parties:list"                   // STRING: used to store and retrieve all parties and they details, the value is a JSON string of all parties.
-	RedisPartyInfo             = "parties:info:"                  // STRING: "parties:info:<partyID>" is used to store and retrieve party info.
-	RedisPartyBasicInfo        = "parties:basic_info:"            // STRING: "parties:basic_info:<partyID>" is used to store and retrieve party basic info.
-	RedisChapterMemberCount    = "parties:chapter:members_count:" // STRING: "parties:chapter:members_count:<chapterID>" is used to store and retrieve the number of members in each chapter of a party.
-	RedisNationalChapter       = "parties:national_chapter:"      // STRING: "parties:national_chapter:<partyID>:<countryID>" is used to store the national chapter ID.
-	RedisZonalChapter          = "parties:zonal_chapter:"         // STRING: "parties:zonal_chapter:<partyID>:<zonalID>" is used to store the zonal chapter ID.
-	RedisStateChapter          = "parties:state_chapter:"         // STRING: "parties:state_chapter:<partyID>:<stateID>" is used to store the state chapter ID.
-	RedisLGAChapter            = "parties:lga_chapter:"           // STRING: "parties:lga_chapter:<partyID>:<lgaID>" is used to store the LGA chapter ID.
-	RedisWardChapter           = "parties:ward_chapter:"          // STRING: "parties:ward_chapter:<partyID>:<wardID>" is used to store the ward chapter ID.
-	RedisPartyChapter          = "parties:chapter:"               // STRING: "parties:chapter:<chapterID>" stores cached party chapter details.
-	RedisParties5MemberAvatars = "parties:sample_member_avatars:" // STRING: "parties:sample_member_avatars:<partyID>:<chapterID>" is used to store sample member avatars for a party chapter.
-	RedisChapterOfficial       = "parties:chapter:official:"      // STRING: "parties:chapter:official:<chapterID>:<positionID>" is used to store active official for a chapter and position.
-	RedisPartyMemberSuspension = "parties:member_suspension:"     // STRING: "parties:member_suspension:<partyID>:<userID>" stores cached active suspension JSON (id > 0 if suspended, id = 0 if not)
-	RedisPartyMemberPositions  = "parties:member_positions:"      // STRING: "parties:member_positions:<partyID>:<userID>" stores cached JSON array of member position assignments
-	RedisPartyChapterMember    = "parties:chapter_member:"        // STRING: "parties:chapter_member:<userID>:<partyID>:<chapterID>" stores cached membership booleans
+	RedisPartiesList           = "parties:list"                    // STRING: used to store and retrieve all parties and they details, the value is a JSON string of all parties.
+	RedisPartyInfo             = "parties:info:"                   // STRING: "parties:info:<partyID>" is used to store and retrieve party info.
+	RedisPartyBasicInfo        = "parties:basic_info:"             // STRING: "parties:basic_info:<partyID>" is used to store and retrieve party basic info.
+	RedisChapterMemberCount    = "parties:chapter:members_count:"  // STRING: "parties:chapter:members_count:<chapterID>" is used to store and retrieve the number of members in each chapter of a party.
+	RedisNationalChapter       = "parties:national_chapter:"       // STRING: "parties:national_chapter:<partyID>:<countryID>" is used to store the national chapter ID.
+	RedisZonalChapter          = "parties:zonal_chapter:"          // STRING: "parties:zonal_chapter:<partyID>:<zonalID>" is used to store the zonal chapter ID.
+	RedisStateChapter          = "parties:state_chapter:"          // STRING: "parties:state_chapter:<partyID>:<stateID>" is used to store the state chapter ID.
+	RedisLGAChapter            = "parties:lga_chapter:"            // STRING: "parties:lga_chapter:<partyID>:<lgaID>" is used to store the LGA chapter ID.
+	RedisWardChapter           = "parties:ward_chapter:"           // STRING: "parties:ward_chapter:<partyID>:<wardID>" is used to store the ward chapter ID.
+	RedisPartyChapter          = "parties:chapter:"                // STRING: "parties:chapter:<chapterID>" stores cached party chapter details.
+	RedisParties5MemberAvatars = "parties:sample_member_avatars:"  // STRING: "parties:sample_member_avatars:<partyID>:<chapterID>" is used to store sample member avatars for a party chapter.
+	RedisChapterOfficial       = "parties:chapter:official:"       // STRING: "parties:chapter:official:<chapterID>:<positionID>" is used to store active official for a chapter and position.
+	RedisPartyMemberSuspension = "parties:member_suspension:"      // STRING: "parties:member_suspension:<partyID>:<userID>" stores cached active suspension JSON (id > 0 if suspended, id = 0 if not)
+	RedisPartyMemberPositions  = "parties:member_positions:"       // STRING: "parties:member_positions:<partyID>:<userID>" stores cached JSON array of member position assignments
+	RedisPartyChapterMember    = "parties:chapter_member:"         // STRING: "parties:chapter_member:<userID>:<partyID>:<chapterID>" stores cached membership booleans
+	RedisPartyDefaultPositions = "parties:default_party_positions" // STRING: "parties:default_party_positions" stores cached JSON array of default party positions
+	RedisPartyCustomPositions  = "parties:custom_party_positions:" // STRING: "parties:custom_party_positions:<partyID>" stores cached JSON array of custom party positions
 	//--END--
 
 	//--START-- for page verifications & badges
@@ -142,6 +144,8 @@ var AllRedisPrefixes = []string{
 	RedisPartyMemberSuspension,
 	RedisPartyMemberPositions,
 	RedisPartyChapterMember,
+	RedisPartyDefaultPositions,
+	RedisPartyCustomPositions,
 	RedisPageVerificationTypesList,
 	RedisPageVerificationTypeInfo,
 	RedisPageVerifications,

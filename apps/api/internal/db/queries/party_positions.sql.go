@@ -301,17 +301,11 @@ func (q *Queries) ListChapterOfficials(ctx context.Context, arg ListChapterOffic
 const listCustomPartyPositions = `-- name: ListCustomPartyPositions :many
 SELECT id, position_type, name, code, party_id, description, allowed_levels, rank_order, max_occupants, is_active, is_executive, category, created_at FROM party_positions
 WHERE party_id = $1
-  AND ($2::varchar IS NULL OR $2::varchar = ANY(allowed_levels))
 ORDER BY rank_order ASC, name ASC
 `
 
-type ListCustomPartyPositionsParams struct {
-	PartyID     pgtype.Int2 `json:"party_id"`
-	ChapterType pgtype.Text `json:"chapter_type"`
-}
-
-func (q *Queries) ListCustomPartyPositions(ctx context.Context, arg ListCustomPartyPositionsParams) ([]PartyPosition, error) {
-	rows, err := q.db.Query(ctx, listCustomPartyPositions, arg.PartyID, arg.ChapterType)
+func (q *Queries) ListCustomPartyPositions(ctx context.Context, partyID pgtype.Int2) ([]PartyPosition, error) {
+	rows, err := q.db.Query(ctx, listCustomPartyPositions, partyID)
 	if err != nil {
 		return nil, err
 	}
@@ -347,12 +341,11 @@ func (q *Queries) ListCustomPartyPositions(ctx context.Context, arg ListCustomPa
 const listDefaultPartyPositions = `-- name: ListDefaultPartyPositions :many
 SELECT id, position_type, name, code, party_id, description, allowed_levels, rank_order, max_occupants, is_active, is_executive, category, created_at FROM party_positions
 WHERE party_id IS NULL
-  AND ($1::varchar IS NULL OR $1::varchar = ANY(allowed_levels))
 ORDER BY rank_order ASC, name ASC
 `
 
-func (q *Queries) ListDefaultPartyPositions(ctx context.Context, chapterType pgtype.Text) ([]PartyPosition, error) {
-	rows, err := q.db.Query(ctx, listDefaultPartyPositions, chapterType)
+func (q *Queries) ListDefaultPartyPositions(ctx context.Context) ([]PartyPosition, error) {
+	rows, err := q.db.Query(ctx, listDefaultPartyPositions)
 	if err != nil {
 		return nil, err
 	}

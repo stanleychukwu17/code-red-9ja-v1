@@ -17,10 +17,10 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import {
-  getPartyPositions,
   assignPartyOfficial,
   type PartyPositionItem,
 } from "#/lib/server/parties";
+import { usePartyPositions } from "#/hooks/usePartyPositions";
 import { getStates } from "#/lib/server/countries";
 import { getLGAs, getWards } from "#/lib/server/applications";
 import { getUsersList } from "#/lib/server/users";
@@ -37,11 +37,13 @@ export function AssignPositionDialog({
   open,
   onClose,
   partyId,
+  chapterId,
   onSuccess,
 }: {
   open: boolean;
   onClose: () => void;
   partyId?: number;
+  chapterId?: number;
   onSuccess?: () => void;
 }) {
   const queryClient = useQueryClient();
@@ -91,20 +93,14 @@ export function AssignPositionDialog({
   });
   const wardsList = Array.isArray(wardsRes?.data) ? wardsRes.data : [];
 
-  // Fetch Positions applicable to current chapter tier
-  const { data: positionsRes, isLoading: isPositionsLoading } = useQuery({
-    queryKey: ["partyPositions", partyId, chapterType],
-    queryFn: () =>
-      getPartyPositions({
-        data: { partyId: partyId!, chapterType },
-      }),
-    enabled: !!partyId && open,
-  });
-  const positions: PartyPositionItem[] =
-    positionsRes?.data?.positions || [
-      ...(positionsRes?.data?.default || []),
-      ...(positionsRes?.data?.custom || []),
-    ];
+  // Fetch All Positions for the party (shared cache with staleTime: Infinity)
+  const { positions: allPositions, isLoading: isPositionsLoading } =
+    usePartyPositions({ partyId, enabled: open });
+
+  const positions: PartyPositionItem[] = React.useMemo(() => {
+    if (!chapterType) return allPositions;
+    return allPositions.filter((p) => p.allowed_levels?.includes(chapterType));
+  }, [allPositions, chapterType]);
 
   // Fetch Party Members for selection
   const { data: membersRes, isLoading: isMembersLoading } = useQuery({
@@ -185,7 +181,7 @@ export function AssignPositionDialog({
       const assignRes = await assignPartyOfficial({
         data: {
           partyId,
-          chapterId,
+          chapterId: chapterId ?? 0,
           userId: selectedUserId,
           positionId: selectedPositionId,
           appointmentType,

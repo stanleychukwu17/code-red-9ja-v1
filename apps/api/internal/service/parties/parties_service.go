@@ -1459,7 +1459,7 @@ func (s *PartiesService) InvalidatePartyChapterMembership(ctx context.Context, u
 	_ = s.rdb.Del(ctx, cacheKey).Err()
 }
 
-//--end-- party chapters
+//--END-- party chapters
 
 // LeaveParty allows a user to leave their current party.
 func (s *PartiesService) LeaveParty(ctx context.Context, partyID int16, userID, userFid int64) error {
@@ -1783,22 +1783,24 @@ func (s *PartiesService) ResetPartyLogo(ctx context.Context, partyID int16) erro
 	return s.queries.ResetPartyLogo(ctx, partyID)
 }
 
-// --start-- party positions & officials
+// --START-- party positions & officials
 
-// PartyPositionsResult holds default and custom positions for a party.
-type PartyPositionsResult struct {
-	Default []queries.PartyPosition `json:"default"`
-	Custom  []queries.PartyPosition `json:"custom"`
-}
+// GetDefaultPartyPositions returns default party positions, cached in Redis.
+func (s *PartiesService) GetDefaultPartyPositions(ctx context.Context) ([]queries.PartyPosition, error) {
+	cacheKey := db.RedisPartyDefaultPositions
 
-// ListPartyPositions returns all positions (default and custom for this party), optionally filtered by chapter level.
-func (s *PartiesService) ListPartyPositions(ctx context.Context, partyID int16, chapterType *string) (*PartyPositionsResult, error) {
-	var ct pgtype.Text
-	if chapterType != nil && *chapterType != "" {
-		ct = pgtype.Text{String: *chapterType, Valid: true}
+	// Try reading from Redis cache
+	if s.rdb != nil {
+		if cachedData, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
+			var positions []queries.PartyPosition
+			if err := json.Unmarshal([]byte(cachedData), &positions); err == nil {
+				return positions, nil
+			}
+		}
 	}
 
-	defaultPositions, err := s.queries.ListDefaultPartyPositions(ctx, ct)
+	// Fetch all default positions from database
+	defaultPositions, err := s.queries.ListDefaultPartyPositions(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list default positions: %w", err)
 	}
@@ -1806,15 +1808,76 @@ func (s *PartiesService) ListPartyPositions(ctx context.Context, partyID int16, 
 		defaultPositions = []queries.PartyPosition{}
 	}
 
-	customPositions, err := s.queries.ListCustomPartyPositions(ctx, queries.ListCustomPartyPositionsParams{
-		PartyID:     pgtype.Int2{Int16: partyID, Valid: true},
-		ChapterType: ct,
-	})
+	// Cache result in Redis (default positions are static)
+	if s.rdb != nil {
+		if data, err := json.Marshal(defaultPositions); err == nil {
+			_ = s.rdb.Set(ctx, cacheKey, data, db.RedisOneYearTTL).Err()
+		}
+	}
+
+	return defaultPositions, nil
+}
+
+// GetCustomPartyPositions returns custom party positions for a party, cached in Redis.
+func (s *PartiesService) GetCustomPartyPositions(ctx context.Context, partyID int16) ([]queries.PartyPosition, error) {
+	cacheKey := fmt.Sprintf("%s%d", db.RedisPartyCustomPositions, partyID)
+
+	// Try reading from Redis cache
+	if s.rdb != nil {
+		if cachedData, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
+			var positions []queries.PartyPosition
+			if err := json.Unmarshal([]byte(cachedData), &positions); err == nil {
+				return positions, nil
+			}
+		}
+	}
+
+	// Fetch all custom positions for this party from database
+	customPositions, err := s.queries.ListCustomPartyPositions(ctx, pgtype.Int2{Int16: partyID, Valid: true})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list custom positions: %w", err)
 	}
 	if customPositions == nil {
 		customPositions = []queries.PartyPosition{}
+	}
+
+	// Cache result in Redis
+	if s.rdb != nil {
+		if data, err := json.Marshal(customPositions); err == nil {
+			_ = s.rdb.Set(ctx, cacheKey, data, db.RedisOneEightyDaysTTL).Err()
+		}
+	}
+
+	return customPositions, nil
+}
+
+// InvalidatePartyCustomPositionsCache invalidates cached custom positions for a party.
+func (s *PartiesService) InvalidatePartyCustomPositionsCache(ctx context.Context, partyID int16) {
+	if s.rdb == nil {
+		return
+	}
+	cacheKey := fmt.Sprintf("%s%d", db.RedisPartyCustomPositions, partyID)
+	if err := s.rdb.Del(ctx, cacheKey).Err(); err != nil {
+		slog.Error("Failed to invalidate party custom positions cache", "error", err, "partyID", partyID)
+	}
+}
+
+// PartyPositionsResult holds default and custom positions for a party.
+type PartyPositionsResult struct {
+	Default []queries.PartyPosition `json:"default"`
+	Custom  []queries.PartyPosition `json:"custom"`
+}
+
+// ListPartyPositions returns all positions (default and custom) for a party.
+func (s *PartiesService) ListPartyPositions(ctx context.Context, partyID int16) (*PartyPositionsResult, error) {
+	defaultPositions, err := s.GetDefaultPartyPositions(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	customPositions, err := s.GetCustomPartyPositions(ctx, partyID)
+	if err != nil {
+		return nil, err
 	}
 
 	return &PartyPositionsResult{
@@ -1833,20 +1896,32 @@ func (s *PartiesService) GetPartyPositionByID(ctx context.Context, id int32, par
 
 // CreatePartyCustomPosition creates a new custom position for the party.
 func (s *PartiesService) CreatePartyCustomPosition(ctx context.Context, arg queries.CreatePartyCustomPositionParams) (queries.PartyPosition, error) {
-	return s.queries.CreatePartyCustomPosition(ctx, arg)
+	pos, err := s.queries.CreatePartyCustomPosition(ctx, arg)
+	if err == nil && arg.PartyID.Valid {
+		s.InvalidatePartyCustomPositionsCache(ctx, arg.PartyID.Int16)
+	}
+	return pos, err
 }
 
 // UpdatePartyCustomPosition updates an existing custom position owned by the party.
 func (s *PartiesService) UpdatePartyCustomPosition(ctx context.Context, arg queries.UpdatePartyCustomPositionParams) (queries.PartyPosition, error) {
-	return s.queries.UpdatePartyCustomPosition(ctx, arg)
+	pos, err := s.queries.UpdatePartyCustomPosition(ctx, arg)
+	if err == nil && arg.PartyID.Valid {
+		s.InvalidatePartyCustomPositionsCache(ctx, arg.PartyID.Int16)
+	}
+	return pos, err
 }
 
 // DeletePartyCustomPosition deletes a custom position owned by the party.
 func (s *PartiesService) DeletePartyCustomPosition(ctx context.Context, id int32, partyID int16) error {
-	return s.queries.DeletePartyCustomPosition(ctx, queries.DeletePartyCustomPositionParams{
+	err := s.queries.DeletePartyCustomPosition(ctx, queries.DeletePartyCustomPositionParams{
 		ID:      id,
 		PartyID: pgtype.Int2{Int16: partyID, Valid: true},
 	})
+	if err == nil {
+		s.InvalidatePartyCustomPositionsCache(ctx, partyID)
+	}
+	return err
 }
 
 // AssignPartyPosition assigns a member to a position in a chapter with occupancy checking.

@@ -507,14 +507,10 @@ export interface PartyOfficialItem {
 
 // Fetch default and custom positions configured for a party
 export const getPartyPositions = createServerFn({ method: "GET" })
-  .inputValidator(
-    (data: { partyId: number | string; chapterType?: string }) => data,
-  )
+  .inputValidator((data: { partyId: number | string }) => data)
   .handler(async ({ data }) => {
     try {
-      const response = await apiFetch(
-        API_URL.partyPositions(data.partyId, data.chapterType),
-      );
+      const response = await apiFetch(API_URL.partyPositions(data.partyId));
       return await response.json();
     } catch (error) {
       return {

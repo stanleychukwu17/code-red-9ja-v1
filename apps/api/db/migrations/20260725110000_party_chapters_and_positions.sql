@@ -95,13 +95,8 @@ CREATE TABLE party_positions (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE UNIQUE INDEX idx_party_positions_global_code ON party_positions (code) WHERE party_id IS NULL;
 CREATE UNIQUE INDEX idx_party_positions_party_code ON party_positions (party_id, code) WHERE party_id IS NOT NULL;
-CREATE INDEX idx_party_positions_party_id ON party_positions (party_id);
-CREATE INDEX idx_party_positions_rank_order ON party_positions (rank_order ASC);
-CREATE INDEX idx_party_positions_type ON party_positions (position_type);
-CREATE INDEX idx_party_positions_active ON party_positions (is_active);
-CREATE INDEX idx_party_positions_category ON party_positions (category);
+CREATE INDEX idx_party_positions_party_rank ON party_positions (party_id, rank_order ASC, name ASC);
 
 -- 2. Party Position Assignments (Binds a member to a position within a chapter)
 CREATE TABLE party_position_assignments (
