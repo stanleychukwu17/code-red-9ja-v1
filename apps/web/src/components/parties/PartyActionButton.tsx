@@ -32,12 +32,8 @@ export function PartyActionButton({
 	isUserMember,
 	partyId,
 	partyName,
-	partyFullName,
 	partyLogo,
-	colorHex,
 	chapterId,
-	userLocation,
-	isAuthenticated = true,
 	onJoinCompleted,
 }: PartyActionButtonProps) {
 	const [isDialogOpen, setIsDialogOpen] = useState(false);

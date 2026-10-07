@@ -2341,6 +2341,7 @@ func (h *Handler) GetAgentAcquisitionTargets(w http.ResponseWriter, r *http.Requ
 // --START-- Party Positions & Officials Handlers
 // ListPartyPositions returns all positions (default and custom)
 func (h *Handler) ListPartyPositions(w http.ResponseWriter, r *http.Request) {
+	// 1. Extract and validate party ID from URL parameters
 	idStr := chi.URLParam(r, "id")
 	partyID, err := strconv.ParseInt(idStr, 10, 16)
 	if err != nil || partyID <= 0 {
@@ -2348,15 +2349,26 @@ func (h *Handler) ListPartyPositions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 2. Fetch both pre-seeded default positions and party custom positions via service
 	res, err := h.partiesService.ListPartyPositions(r.Context(), int16(partyID))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to list positions: "+err.Error())
 		return
 	}
 
+	// 3. Merge default and custom positions into a single unified list
 	allPositions := make([]queries.PartyPosition, 0, len(res.Default)+len(res.Custom))
 	allPositions = append(allPositions, res.Default...)
 	allPositions = append(allPositions, res.Custom...)
+
+	// 4. Stable sort by RankOrder ASC (higher priority first), tie-breaking by ID ASC
+	sort.SliceStable(allPositions, func(i, j int) bool {
+		if allPositions[i].RankOrder != allPositions[j].RankOrder {
+			return allPositions[i].RankOrder < allPositions[j].RankOrder
+		}
+
+		return allPositions[i].ID < allPositions[j].ID
+	})
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Positions retrieved successfully", map[string]interface{}{
 		"default":   res.Default,
@@ -2581,6 +2593,7 @@ func (h *Handler) DeletePartyCustomPosition(w http.ResponseWriter, r *http.Reque
 
 // ListPartyOfficials lists officials across chapters with search and filters
 func (h *Handler) ListPartyOfficials(w http.ResponseWriter, r *http.Request) {
+	// 1. Extract and validate party ID from URL parameters
 	idStr := chi.URLParam(r, "id")
 	partyID, err := strconv.ParseInt(idStr, 10, 16)
 	if err != nil || partyID <= 0 {
@@ -2588,19 +2601,18 @@ func (h *Handler) ListPartyOfficials(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 2. Parse optional query parameters for chapter type, status, and geographic filters
 	q := r.URL.Query()
 	arg := queries.ListPartyOfficialsParams{
 		PartyID: int16(partyID),
 	}
 
-	if ct := q.Get("chapter_type"); ct != "" {
-		arg.ChapterType = pgtype.Text{String: ct, Valid: true}
-	}
 	if st := q.Get("status"); st != "" {
 		arg.Status = pgtype.Text{String: st, Valid: true}
 	}
-	if s := q.Get("search"); s != "" {
-		arg.Search = pgtype.Text{String: s, Valid: true}
+
+	if ct := q.Get("chapter_type"); ct != "" {
+		arg.ChapterType = pgtype.Text{String: ct, Valid: true}
 	}
 	if stateIDStr := q.Get("state_id"); stateIDStr != "" {
 		if sid, err := strconv.ParseInt(stateIDStr, 10, 16); err == nil {
@@ -2618,12 +2630,14 @@ func (h *Handler) ListPartyOfficials(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// 3. Query filtered party officials via service layer
 	officials, err := h.partiesService.ListPartyOfficials(r.Context(), arg)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to list officials: "+err.Error())
 		return
 	}
 
+	// 4. Return successful response containing matching officials
 	h.utils.RespondSuccess(w, http.StatusOK, "Party officials retrieved successfully", map[string]interface{}{
 		"officials": officials,
 	})

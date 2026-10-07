@@ -2,14 +2,28 @@ import * as React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useDebounceValue } from "usehooks-ts";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import {
+  Loader2,
+  MoreHorizontal,
+  MapPin,
+  Calendar,
+  UserX,
+  UserPlus,
+} from "lucide-react";
 import { useUserParty } from "#/hooks/useUserParty";
+import { usePartyPositions } from "#/hooks/usePartyPositions";
 import {
   getPartyOfficials,
   vacatePartyOfficial,
   type PartyOfficialItem,
+  type PartyPositionItem,
 } from "#/lib/server/parties";
-
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@repo/ui/components/dropdown-menu";
 
 export interface PartyPositionsRosterViewProps {
   chapterTier?: string;
@@ -21,11 +35,194 @@ export interface PartyPositionsRosterViewProps {
   searchQuery?: string;
   appointmentTypeFilter?: string;
   onVacateOfficial?: (official: PartyOfficialItem) => void;
+  onAppointPosition?: (position: PartyPositionItem) => void;
+}
+
+const APPOINTMENT_BADGE_STYLES: Record<string, string> = {
+  acting: "bg-[#5e5ce6] text-white",
+  substantive: "bg-[#10b981] text-white",
+  caretaker: "bg-[#f59e0b] text-white",
+  interim: "bg-[#8b5cf6] text-white",
+};
+
+/**
+ * Vacant Position Card
+ * Matches design with pastel lime-green gradient circle, position title, red 'Vacant' status, and 3-dots action.
+ */
+function VacantPositionCard({
+  position,
+  onAppoint,
+}: {
+  position: PartyPositionItem;
+  onAppoint?: (position: PartyPositionItem) => void;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-start text-center w-full max-w-[240px]">
+      {/* Vacant circular gradient avatar */}
+      <div
+        className="size-36 rounded-full shrink-0 shadow-xs"
+        style={{
+          background:
+            "radial-gradient(circle at 75% 75%, #b2f354 0%, #d5f997 45%, #f2fde2 80%, #ffffff 100%)",
+        }}
+      />
+
+      {/* Position title */}
+      <h3 className="mt-4 text-[17px] font-semibold text-gray-900 tracking-tight capitalize leading-tight">
+        {position.name}
+      </h3>
+
+      {/* Vacant text */}
+      <p className="mt-1 text-[14px] font-medium text-[#ef4444]">
+        Vacant
+      </p>
+
+      {/* Actions */}
+      <div className="mt-3">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="inline-flex items-center justify-center w-10 h-7 rounded-lg bg-[#f1f3f6] hover:bg-[#e4e7ec] text-gray-800 transition cursor-pointer"
+            >
+              <MoreHorizontal className="size-4" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="center" className="w-44">
+            <DropdownMenuItem
+              className="cursor-pointer flex items-center gap-2"
+              onClick={() => onAppoint?.(position)}
+            >
+              <UserPlus className="size-4" />
+              <span>Appoint official</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </div>
+  );
 }
 
 /**
- * Main roster view showing loading state, empty state, or table list.
- * Self-contained: manages fetching officials, appointment type filtering, and vacating officials in-house.
+ * Occupied Position Card
+ * Matches design with official avatar photo, position title, bold full name + appointment badge,
+ * chapter jurisdiction & tenure start date, and 3-dots action.
+ */
+function OccupiedPositionCard({
+  official,
+  positionTitle,
+  onVacate,
+}: {
+  official: PartyOfficialItem;
+  positionTitle: string;
+  onVacate: (official: PartyOfficialItem) => void;
+}) {
+  const fullName =
+    [official.first_name, official.middle_name, official.last_name]
+      .filter(Boolean)
+      .join(" ") || "Unnamed Official";
+
+  const badgeStyle =
+    APPOINTMENT_BADGE_STYLES[official.appointment_type?.toLowerCase()] ||
+    "bg-[#5e5ce6] text-white";
+
+  const tenureDate = official.tenure_start
+    ? new Date(official.tenure_start).toLocaleDateString("en-GB", {
+      month: "short",
+      year: "numeric",
+    })
+    : official.assigned_at
+      ? new Date(official.assigned_at).toLocaleDateString("en-GB", {
+        month: "short",
+        year: "numeric",
+      })
+      : "Active";
+
+  const chapterDisplay = official.chapter_type === "national"
+    ? "National chapter"
+    : official.geo_name
+      ? `${official.geo_name} (${official.chapter_type})`
+      : `${official.chapter_type} chapter`;
+
+  return (
+    <div className="flex flex-col items-center justify-start text-center w-full max-w-[260px]">
+      {/* Official Circular Avatar */}
+      <div className="size-36 rounded-full shrink-0 overflow-hidden border border-black/5 shadow-sm bg-gray-100 flex items-center justify-center">
+        {official.avatar ? (
+          <img
+            src={official.avatar}
+            alt={fullName}
+            className="size-full object-cover"
+          />
+        ) : (
+          <span className="text-2xl font-bold text-gray-500 uppercase">
+            {official.first_name?.[0] || ""}
+            {official.last_name?.[0] || ""}
+          </span>
+        )}
+      </div>
+
+      {/* Position title */}
+      <h4 className="mt-4 text-[16px] font-medium text-gray-900 tracking-tight capitalize leading-tight">
+        {positionTitle}
+      </h4>
+
+      {/* Official Name + Appointment Badge */}
+      <div className="mt-1 flex items-center justify-center gap-2 flex-wrap">
+        <span className="text-[18px] font-bold text-gray-900 capitalize">
+          {fullName}
+        </span>
+        <span
+          className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold capitalize leading-tight ${badgeStyle}`}
+        >
+          {official.appointment_type}
+        </span>
+      </div>
+
+      {/* Chapter Jurisdiction & Tenure */}
+      <div className="mt-2 flex items-center justify-center gap-2 text-[12px] text-gray-600">
+        <span className="inline-flex items-center gap-1 font-normal">
+          <MapPin className="size-3.5 text-gray-500 shrink-0" />
+          <span className="capitalize">{chapterDisplay}</span>
+        </span>
+        <span className="text-gray-300">|</span>
+        <span className="inline-flex items-center gap-1 font-normal">
+          <Calendar className="size-3.5 text-gray-500 shrink-0" />
+          <span>{tenureDate}</span>
+        </span>
+      </div>
+
+      {/* Actions */}
+      <div className="mt-3">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="inline-flex items-center justify-center w-10 h-7 rounded-lg bg-[#f1f3f6] hover:bg-[#e4e7ec] text-gray-800 transition cursor-pointer"
+            >
+              <MoreHorizontal className="size-4" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="center" className="w-40">
+            <DropdownMenuItem
+              className="text-red-600 focus:text-red-700 cursor-pointer flex items-center gap-2"
+              onClick={() => onVacate(official)}
+            >
+              <UserX className="size-4" />
+              <span>Vacate Office</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Main Roster View
+ * Fetches all arranged party positions & active officials.
+ * Matches officials to positions, displaying occupied cards (with multi-occupant support)
+ * or vacant cards as designed.
  */
 export function PartyPositionsRosterView({
   chapterTier = "national",
@@ -37,19 +234,31 @@ export function PartyPositionsRosterView({
   searchQuery = "",
   appointmentTypeFilter = "all",
   onVacateOfficial,
+  onAppointPosition,
 }: PartyPositionsRosterViewProps) {
   const { party } = useUserParty();
   const queryClient = useQueryClient();
   const partyId = party?.id;
 
-  // Fetch Party Officials in-house
+  // 1. Fetch positions catalog (already pre-sorted by rank_order and ID)
+  const {
+    positions,
+    isLoading: isPositionsLoading,
+  } = usePartyPositions();
+
+  // 2. Fetch appointed officials matching current geographic and chapter filters
   const [debouncedSearchQuery] = useDebounceValue(searchQuery, 400);
 
-  // Fetch Officials in-house
-  const { data: officialsRes, isLoading } = useQuery({
+  const { data: officialsRes, isLoading: isOfficialsLoading } = useQuery({
     queryKey: [
-      "partyOfficials", partyId, chapterTier, selectedCountryId, selectedZonalId, selectedStateId,
-      selectedLgaId, selectedWardId, debouncedSearchQuery,
+      "partyOfficials",
+      partyId,
+      chapterTier,
+      selectedCountryId,
+      selectedZonalId,
+      selectedStateId,
+      selectedLgaId,
+      selectedWardId,
     ],
     queryFn: () =>
       getPartyOfficials({
@@ -61,36 +270,27 @@ export function PartyPositionsRosterView({
           stateId: selectedStateId,
           lgaId: selectedLgaId,
           wardId: selectedWardId,
-          search: debouncedSearchQuery.trim() || undefined,
           status: "active",
         },
       }),
     enabled: !!partyId,
   });
 
+  // Extract list of officials from response; default empty array
   const rawOfficials: PartyOfficialItem[] = officialsRes?.data?.officials || [];
 
-  const displayOfficials = React.useMemo(() => {
-    let list = rawOfficials;
-    if (appointmentTypeFilter !== "all") {
-      list = list.filter(
-        (o) => o.appointment_type?.toLowerCase() === appointmentTypeFilter.toLowerCase(),
-      );
+  // Index active officials by position_id for O(1) slot matching
+  const officialsByPosition = React.useMemo(() => {
+    const map = new Map<number, PartyOfficialItem[]>();
+    for (const off of rawOfficials) {
+      const list = map.get(off.position_id) || [];
+      list.push(off);
+      map.set(off.position_id, list);
     }
-    if (debouncedSearchQuery.trim()) {
-      const q = debouncedSearchQuery.toLowerCase().trim();
-      list = list.filter(
-        (o) =>
-          o.display_title?.toLowerCase().includes(q) ||
-          o.position_name?.toLowerCase().includes(q) ||
-          `${o.first_name || ""} ${o.last_name || ""}`.toLowerCase().includes(q) ||
-          (o.username && o.username.toLowerCase().includes(q)),
-      );
-    }
-    return list;
-  }, [rawOfficials, appointmentTypeFilter, debouncedSearchQuery]);
+    return map;
+  }, [rawOfficials]);
 
-  // Handle Vacate Office
+  // Handle vacating an official from office (either via prop or built-in confirmation)
   const handleVacateOfficial = async (official: PartyOfficialItem) => {
     if (onVacateOfficial) {
       onVacateOfficial(official);
@@ -98,7 +298,7 @@ export function PartyPositionsRosterView({
     }
 
     const confirmVacate = window.confirm(
-      `Are you sure you want to vacate ${official.display_title || official.position_name} for ${official.first_name} ${official.last_name}?`,
+      `Are you sure you want to vacate ${official.position_name} for ${official.first_name} ${official.last_name}?`,
     );
     if (!confirmVacate || !partyId) return;
 
@@ -120,52 +320,147 @@ export function PartyPositionsRosterView({
     }
   };
 
-  if (isLoading) {
+  // Build the roster display list: merges position catalog with appointed occupants
+  const displayItems = React.useMemo(() => {
+    // Stable sort positions by rank_order ASC, then ID ASC
+    const sorted = [...positions].sort((a, b) => {
+      if (a.rank_order !== b.rank_order) return a.rank_order - b.rank_order;
+      return a.id - b.id;
+    });
+
+    // Filter positions valid for the active chapter tier (e.g. national, state, LGA)
+    const tierFiltered = sorted.filter((p) => {
+      if (!chapterTier || chapterTier === "all") return true;
+      if (!p.allowed_levels || p.allowed_levels.length === 0) return true;
+      return p.allowed_levels.some(
+        (lvl) =>
+          lvl.toLowerCase() === chapterTier.toLowerCase() ||
+          lvl.toLowerCase() === "all",
+      );
+    });
+
+    const searchLower = debouncedSearchQuery.toLowerCase().trim();
+
+    // Accumulated list of card items (occupied or vacant) to render in grid
+    const results: Array<
+      | { type: "occupied"; official: PartyOfficialItem; positionTitle: string; key: string }
+      | { type: "vacant"; position: PartyPositionItem; key: string }
+    > = [];
+
+    for (const pos of tierFiltered) {
+      let assigned = officialsByPosition.get(pos.id) || [];
+
+      // Filter occupants by appointment type (e.g. substantive, acting, caretaker)
+      if (appointmentTypeFilter !== "all") {
+        assigned = assigned.filter(
+          (o) =>
+            o.appointment_type?.toLowerCase() ===
+            appointmentTypeFilter.toLowerCase(),
+        );
+      }
+
+      // If active search query, match position name or official names/titles
+      if (searchLower) {
+        const posMatches = pos.name.toLowerCase().includes(searchLower);
+        const matchingOfficials = assigned.filter(
+          (o) =>
+            posMatches ||
+            o.position_name?.toLowerCase().includes(searchLower) ||
+            `${o.first_name || ""} ${o.last_name || ""}`
+              .toLowerCase()
+              .includes(searchLower) ||
+            (o.username && o.username.toLowerCase().includes(searchLower)),
+        );
+
+        if (matchingOfficials.length > 0) {
+          // Render cards for matching occupants
+          for (const off of matchingOfficials) {
+            results.push({
+              type: "occupied",
+              official: off,
+              positionTitle: off.position_name || pos.name,
+              key: `occupied-${off.assignment_id}`,
+            });
+          }
+        } else if (posMatches && appointmentTypeFilter === "all") {
+          // If position name matches but has no occupants, show vacant card
+          results.push({
+            type: "vacant",
+            position: pos,
+            key: `vacant-${pos.id}`,
+          });
+        }
+        continue;
+      }
+
+      // When not searching: render card for each occupant (supports multiple occupants)
+      if (assigned.length > 0) {
+        for (const off of assigned) {
+          results.push({
+            type: "occupied",
+            official: off,
+            positionTitle: off.position_name || pos.name,
+            key: `occupied-${off.assignment_id}`,
+          });
+        }
+      } else if (appointmentTypeFilter === "all") {
+        // Show vacant card only when not filtering by a specific appointment type
+        results.push({
+          type: "vacant",
+          position: pos,
+          key: `vacant-${pos.id}`,
+        });
+      }
+    }
+
+    return results;
+  }, [
+    positions,
+    chapterTier,
+    officialsByPosition,
+    appointmentTypeFilter,
+    debouncedSearchQuery,
+  ]);
+
+  if (isPositionsLoading || isOfficialsLoading) {
     return (
-      <div className="flex items-center justify-center p-16 text-c-40 bg-background rounded-2xl border border-border">
+      <div className="flex items-center justify-center p-20 text-c-40 bg-background rounded-2xl border border-border">
         <Loader2 className="size-6 animate-spin mr-2 text-primary" />
-        <span className="text-[14px]">Loading party officials...</span>
+        <span className="text-[14px]">Loading party positions & officials...</span>
       </div>
     );
   }
 
-  if (displayOfficials.length === 0) {
+  if (displayItems.length === 0) {
     return (
       <div className="w-full p-16 text-center text-c-50 font-medium bg-background rounded-2xl border border-border space-y-3">
-        <p className="text-[16px] text-c-70">No party officials found.</p>
+        <p className="text-[16px] text-c-70">No party positions or officials found.</p>
         <p className="text-[13px] text-c-40 max-w-md mx-auto">
-          No officials have been appointed to positions matching your selected tier and filters.
+          No positions or appointed officials match your selected tier and filter criteria.
         </p>
       </div>
     );
   }
 
   return (
-    <div className="w-full space-y-4">
-      {/* Container ready for custom party officials display technique */}
-      <div className="space-y-3">
-        {displayOfficials.map((official) => (
-          <div
-            key={official.assignment_id}
-            className="p-4 rounded-xl border border-border bg-background flex items-center justify-between"
-          >
-            <div>
-              <p className="font-semibold text-c-80">
-                {[official.first_name, official.last_name].filter(Boolean).join(" ") || "Unnamed Official"}
-              </p>
-              <p className="text-sm text-c-50">
-                {official.display_title || official.position_name}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => handleVacateOfficial(official)}
-              className="text-xs text-red-500 hover:underline"
-            >
-              Vacate
-            </button>
-          </div>
-        ))}
+    <div className="w-full rounded-2xl bg-sidebar-softer/5 p-8 md:p-12">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-12 justify-items-center">
+        {displayItems.map((item) =>
+          item.type === "occupied" ? (
+            <OccupiedPositionCard
+              key={item.key}
+              official={item.official}
+              positionTitle={item.positionTitle}
+              onVacate={handleVacateOfficial}
+            />
+          ) : (
+            <VacantPositionCard
+              key={item.key}
+              position={item.position}
+              onAppoint={onAppointPosition}
+            />
+          ),
+        )}
       </div>
     </div>
   );

@@ -514,30 +514,11 @@ SELECT
     users.username,
     users.avatar,
 
-    party_chapters.chapter_type,
-    COALESCE(
-        c_countries.name,
-        c_zones_nigeria.name,
-        c_states.name,
-        lgas.name,
-        wards.name,
-        ''
-    )::varchar AS geo_name,
-    format_position_display_title(
-        party_chapters.chapter_type,
-        COALESCE(c_countries.name, c_zones_nigeria.name, c_states.name, lgas.name, wards.name, '')::varchar,
-        party_positions.name,
-        party_position_assignments.appointment_type
-    ) AS display_title
+    party_chapters.chapter_type
 FROM party_position_assignments
 JOIN party_positions ON party_positions.id = party_position_assignments.position_id
 JOIN users ON users.id = party_position_assignments.user_id
 JOIN party_chapters ON party_chapters.id = party_position_assignments.chapter_id
-LEFT JOIN c_countries ON c_countries.id = party_chapters.country_id AND party_chapters.chapter_type = 'national'
-LEFT JOIN c_zones_nigeria ON c_zones_nigeria.id = party_chapters.zonal_id AND party_chapters.chapter_type = 'zonal'
-LEFT JOIN c_states ON c_states.id = party_chapters.state_id AND party_chapters.chapter_type = 'state'
-LEFT JOIN lgas ON lgas.id = party_chapters.lga_id AND party_chapters.chapter_type = 'lga'
-LEFT JOIN wards ON wards.id = party_chapters.ward_id AND party_chapters.chapter_type = 'ward'
 WHERE party_position_assignments.party_id = $1
   AND ($2::varchar IS NULL OR party_chapters.chapter_type = $2)
   AND ($3::smallint IS NULL OR party_chapters.zonal_id = $3)
@@ -545,11 +526,6 @@ WHERE party_position_assignments.party_id = $1
   AND ($5::int IS NULL OR party_chapters.lga_id = $5)
   AND ($6::int IS NULL OR party_chapters.ward_id = $6)
   AND ($7::varchar IS NULL OR party_position_assignments.status = $7)
-  AND ($8::varchar IS NULL OR 
-       users.first_name ILIKE '%' || $8 || '%' OR 
-       users.last_name ILIKE '%' || $8 || '%' OR 
-       users.username ILIKE '%' || $8 || '%' OR 
-       party_positions.name ILIKE '%' || $8 || '%')
 ORDER BY party_chapters.chapter_type ASC, party_positions.rank_order ASC, party_position_assignments.tenure_start DESC
 `
 
@@ -561,7 +537,6 @@ type ListPartyOfficialsParams struct {
 	LgaID       pgtype.Int4 `json:"lga_id"`
 	WardID      pgtype.Int4 `json:"ward_id"`
 	Status      pgtype.Text `json:"status"`
-	Search      pgtype.Text `json:"search"`
 }
 
 type ListPartyOfficialsRow struct {
@@ -584,8 +559,6 @@ type ListPartyOfficialsRow struct {
 	Username         pgtype.Text        `json:"username"`
 	Avatar           pgtype.Text        `json:"avatar"`
 	ChapterType      string             `json:"chapter_type"`
-	GeoName          string             `json:"geo_name"`
-	DisplayTitle     string             `json:"display_title"`
 }
 
 func (q *Queries) ListPartyOfficials(ctx context.Context, arg ListPartyOfficialsParams) ([]ListPartyOfficialsRow, error) {
@@ -597,7 +570,6 @@ func (q *Queries) ListPartyOfficials(ctx context.Context, arg ListPartyOfficials
 		arg.LgaID,
 		arg.WardID,
 		arg.Status,
-		arg.Search,
 	)
 	if err != nil {
 		return nil, err
@@ -626,8 +598,6 @@ func (q *Queries) ListPartyOfficials(ctx context.Context, arg ListPartyOfficials
 			&i.Username,
 			&i.Avatar,
 			&i.ChapterType,
-			&i.GeoName,
-			&i.DisplayTitle,
 		); err != nil {
 			return nil, err
 		}

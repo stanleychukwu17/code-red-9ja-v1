@@ -103,7 +103,6 @@ export const API_URL = {
       lga_id?: number;
       ward_id?: number;
       status?: string;
-      search?: string;
     },
   ) => {
     const sp = new URLSearchParams();
@@ -114,7 +113,6 @@ export const API_URL = {
     if (params?.lga_id) sp.append("lga_id", String(params.lga_id));
     if (params?.ward_id) sp.append("ward_id", String(params.ward_id));
     if (params?.status) sp.append("status", params.status);
-    if (params?.search) sp.append("search", params.search);
     const qs = sp.toString();
     return `${api}/parties/${id}/officials${qs ? `?${qs}` : ""}`;
   },

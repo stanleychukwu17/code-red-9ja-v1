@@ -495,8 +495,8 @@ export type PartyOfficialItem = {
   email?: string;
   phone?: string;
   chapter_type: "national" | "zonal" | "state" | "lga" | "ward";
-  geo_name: string;
-  display_title: string;
+  geo_name?: string;
+  display_title?: string;
 };
 
 // ========================================================
@@ -530,7 +530,6 @@ export const getPartyOfficials = createServerFn({ method: "GET" })
       lgaId?: number;
       wardId?: number;
       status?: string;
-      search?: string;
     }) => data,
   )
   .handler(async ({ data }) => {
@@ -544,7 +543,6 @@ export const getPartyOfficials = createServerFn({ method: "GET" })
           lga_id: data.lgaId,
           ward_id: data.wardId,
           status: data.status,
-          search: data.search,
         }),
       );
       return await response.json();
