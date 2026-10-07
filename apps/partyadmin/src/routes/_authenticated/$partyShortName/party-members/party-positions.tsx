@@ -107,7 +107,6 @@ function RouteComponent() {
       <PartyPositionsCatalogDialog
         open={isCatalogDialogOpen}
         onClose={() => setIsCatalogDialogOpen(false)}
-        partyId={party?.id}
       />
     </Layout>
   );

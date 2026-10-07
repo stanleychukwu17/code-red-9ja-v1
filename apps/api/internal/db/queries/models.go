@@ -1377,7 +1377,6 @@ type PartyPosition struct {
 	ID            int32              `json:"id"`
 	PositionType  string             `json:"position_type"`
 	Name          string             `json:"name"`
-	Code          string             `json:"code"`
 	PartyID       pgtype.Int2        `json:"party_id"`
 	Description   pgtype.Text        `json:"description"`
 	AllowedLevels []string           `json:"allowed_levels"`

@@ -79,14 +79,13 @@ func (q *Queries) CountActivePositionOccupants(ctx context.Context, arg CountAct
 }
 
 const createPartyCustomPosition = `-- name: CreatePartyCustomPosition :one
-INSERT INTO party_positions ( party_id, name, code, position_type, description, allowed_levels, rank_order, max_occupants, is_executive, category )
-VALUES ( $1, $2, $3, 'custom', $4, $5, $6, $7, COALESCE($8::boolean, true), COALESCE($9::varchar, 'operations') ) RETURNING id, position_type, name, code, party_id, description, allowed_levels, rank_order, max_occupants, is_active, is_executive, category, created_at
+INSERT INTO party_positions ( party_id, name, position_type, description, allowed_levels, rank_order, max_occupants, is_executive, category )
+VALUES ( $1, $2, 'custom', $3, $4, $5, $6, COALESCE($7::boolean, true), COALESCE($8::varchar, 'operations') ) RETURNING id, position_type, name, party_id, description, allowed_levels, rank_order, max_occupants, is_active, is_executive, category, created_at
 `
 
 type CreatePartyCustomPositionParams struct {
 	PartyID       pgtype.Int2 `json:"party_id"`
 	Name          string      `json:"name"`
-	Code          string      `json:"code"`
 	Description   pgtype.Text `json:"description"`
 	AllowedLevels []string    `json:"allowed_levels"`
 	RankOrder     int16       `json:"rank_order"`
@@ -99,7 +98,6 @@ func (q *Queries) CreatePartyCustomPosition(ctx context.Context, arg CreateParty
 	row := q.db.QueryRow(ctx, createPartyCustomPosition,
 		arg.PartyID,
 		arg.Name,
-		arg.Code,
 		arg.Description,
 		arg.AllowedLevels,
 		arg.RankOrder,
@@ -112,7 +110,6 @@ func (q *Queries) CreatePartyCustomPosition(ctx context.Context, arg CreateParty
 		&i.ID,
 		&i.PositionType,
 		&i.Name,
-		&i.Code,
 		&i.PartyID,
 		&i.Description,
 		&i.AllowedLevels,
@@ -127,7 +124,8 @@ func (q *Queries) CreatePartyCustomPosition(ctx context.Context, arg CreateParty
 }
 
 const deletePartyCustomPosition = `-- name: DeletePartyCustomPosition :exec
-DELETE FROM party_positions
+UPDATE party_positions
+SET is_active = false
 WHERE id = $1 AND party_id = $2 AND position_type = 'custom'
 `
 
@@ -142,7 +140,7 @@ func (q *Queries) DeletePartyCustomPosition(ctx context.Context, arg DeleteParty
 }
 
 const getPartyPositionByID = `-- name: GetPartyPositionByID :one
-SELECT id, position_type, name, code, party_id, description, allowed_levels, rank_order, max_occupants, is_active, is_executive, category, created_at FROM party_positions
+SELECT id, position_type, name, party_id, description, allowed_levels, rank_order, max_occupants, is_active, is_executive, category, created_at FROM party_positions
 WHERE id = $1 AND (party_id IS NULL OR party_id = $2)
 LIMIT 1
 `
@@ -159,7 +157,6 @@ func (q *Queries) GetPartyPositionByID(ctx context.Context, arg GetPartyPosition
 		&i.ID,
 		&i.PositionType,
 		&i.Name,
-		&i.Code,
 		&i.PartyID,
 		&i.Description,
 		&i.AllowedLevels,
@@ -299,8 +296,8 @@ func (q *Queries) ListChapterOfficials(ctx context.Context, arg ListChapterOffic
 }
 
 const listCustomPartyPositions = `-- name: ListCustomPartyPositions :many
-SELECT id, position_type, name, code, party_id, description, allowed_levels, rank_order, max_occupants, is_active, is_executive, category, created_at FROM party_positions
-WHERE party_id = $1
+SELECT id, position_type, name, party_id, description, allowed_levels, rank_order, max_occupants, is_active, is_executive, category, created_at FROM party_positions
+WHERE party_id = $1 AND is_active = true
 ORDER BY rank_order ASC, name ASC
 `
 
@@ -317,7 +314,6 @@ func (q *Queries) ListCustomPartyPositions(ctx context.Context, partyID pgtype.I
 			&i.ID,
 			&i.PositionType,
 			&i.Name,
-			&i.Code,
 			&i.PartyID,
 			&i.Description,
 			&i.AllowedLevels,
@@ -339,8 +335,8 @@ func (q *Queries) ListCustomPartyPositions(ctx context.Context, partyID pgtype.I
 }
 
 const listDefaultPartyPositions = `-- name: ListDefaultPartyPositions :many
-SELECT id, position_type, name, code, party_id, description, allowed_levels, rank_order, max_occupants, is_active, is_executive, category, created_at FROM party_positions
-WHERE party_id IS NULL
+SELECT id, position_type, name, party_id, description, allowed_levels, rank_order, max_occupants, is_active, is_executive, category, created_at FROM party_positions
+WHERE party_id IS NULL AND is_active = true
 ORDER BY rank_order ASC, name ASC
 `
 
@@ -357,7 +353,6 @@ func (q *Queries) ListDefaultPartyPositions(ctx context.Context) ([]PartyPositio
 			&i.ID,
 			&i.PositionType,
 			&i.Name,
-			&i.Code,
 			&i.PartyID,
 			&i.Description,
 			&i.AllowedLevels,
@@ -635,28 +630,28 @@ const updatePartyCustomPosition = `-- name: UpdatePartyCustomPosition :one
 UPDATE party_positions
 SET 
     name = $3,
-    code = $4,
-    description = $5,
-    allowed_levels = $6,
-    rank_order = $7,
-    max_occupants = $8,
-    is_executive = COALESCE($9::boolean, is_executive),
-    category = COALESCE($10::varchar, category)
+    description = $4,
+    allowed_levels = $5,
+    rank_order = $6,
+    max_occupants = $7,
+    is_executive = COALESCE($8::boolean, is_executive),
+    category = COALESCE($9::varchar, category),
+    is_active = COALESCE($10::boolean, is_active)
 WHERE id = $1 AND party_id = $2 AND position_type = 'custom'
-RETURNING id, position_type, name, code, party_id, description, allowed_levels, rank_order, max_occupants, is_active, is_executive, category, created_at
+RETURNING id, position_type, name, party_id, description, allowed_levels, rank_order, max_occupants, is_active, is_executive, category, created_at
 `
 
 type UpdatePartyCustomPositionParams struct {
 	ID            int32       `json:"id"`
 	PartyID       pgtype.Int2 `json:"party_id"`
 	Name          string      `json:"name"`
-	Code          string      `json:"code"`
 	Description   pgtype.Text `json:"description"`
 	AllowedLevels []string    `json:"allowed_levels"`
 	RankOrder     int16       `json:"rank_order"`
 	MaxOccupants  int16       `json:"max_occupants"`
 	IsExecutive   pgtype.Bool `json:"is_executive"`
 	Category      pgtype.Text `json:"category"`
+	IsActive      pgtype.Bool `json:"is_active"`
 }
 
 func (q *Queries) UpdatePartyCustomPosition(ctx context.Context, arg UpdatePartyCustomPositionParams) (PartyPosition, error) {
@@ -664,20 +659,19 @@ func (q *Queries) UpdatePartyCustomPosition(ctx context.Context, arg UpdateParty
 		arg.ID,
 		arg.PartyID,
 		arg.Name,
-		arg.Code,
 		arg.Description,
 		arg.AllowedLevels,
 		arg.RankOrder,
 		arg.MaxOccupants,
 		arg.IsExecutive,
 		arg.Category,
+		arg.IsActive,
 	)
 	var i PartyPosition
 	err := row.Scan(
 		&i.ID,
 		&i.PositionType,
 		&i.Name,
-		&i.Code,
 		&i.PartyID,
 		&i.Description,
 		&i.AllowedLevels,

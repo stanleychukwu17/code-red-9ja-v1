@@ -674,6 +674,68 @@ export const createPartyCustomPosition = createServerFn({ method: "POST" })
     }
   });
 
+// Update custom position within a party
+export const updatePartyCustomPosition = createServerFn({ method: "POST" })
+  .inputValidator(
+    (data: {
+      partyId: number | string;
+      positionId: number | string;
+      name: string;
+      description?: string;
+      allowedLevels?: string[];
+      rankOrder?: number;
+      maxOccupants?: number;
+    }) => data,
+  )
+  .handler(async ({ data }) => {
+    try {
+      const response = await apiFetch(
+        API_URL.partyCustomPosition(data.partyId, data.positionId),
+        {
+          method: "PUT",
+          body: JSON.stringify({
+            name: data.name,
+            description: data.description,
+            allowed_levels: data.allowedLevels,
+            rank_order: data.rankOrder,
+            max_occupants: data.maxOccupants,
+          }),
+        },
+      );
+      return await response.json();
+    } catch (error) {
+      return {
+        success: false,
+        message: "Failed to update custom position: " + (error as Error).message,
+      };
+    }
+  });
+
+// Delete custom position within a party
+export const deletePartyCustomPosition = createServerFn({ method: "POST" })
+  .inputValidator(
+    (data: {
+      partyId: number | string;
+      positionId: number | string;
+    }) => data,
+  )
+  .handler(async ({ data }) => {
+    try {
+      const response = await apiFetch(
+        API_URL.partyCustomPosition(data.partyId, data.positionId),
+        {
+          method: "DELETE",
+        },
+      );
+      return await response.json();
+    } catch (error) {
+      return {
+        success: false,
+        message: "Failed to delete custom position: " + (error as Error).message,
+      };
+    }
+  });
+
 // ========================================================
 // MEMBER SUSPENSION & BLOCKING
 // ========================================================
