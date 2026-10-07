@@ -44,7 +44,6 @@ export type Party = {
 export type PartyOfficialCardInfo = {
 	position_id?: number;
 	position_name: string;
-	position_code: string;
 	rank_order?: number;
 	user_id?: number | null;
 	name?: string | null;

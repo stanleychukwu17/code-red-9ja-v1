@@ -460,20 +460,19 @@ export const getPartyMarketingCampaigns = createServerFn({ method: "GET" })
     }
   });
 
-export interface PartyPositionItem {
+export type PartyPositionItem = {
   id: number;
   party_id?: number | null;
   name: string;
-  code: string;
   position_type: "default" | "custom";
   description?: string;
   allowed_levels: string[];
   rank_order: number;
   max_occupants: number;
   created_at?: string;
-}
+};
 
-export interface PartyOfficialItem {
+export type PartyOfficialItem = {
   assignment_id: number;
   party_id: number;
   chapter_id: number;
@@ -485,7 +484,6 @@ export interface PartyOfficialItem {
   tenure_end?: string;
   assigned_at?: string;
   position_name: string;
-  position_code: string;
   position_type: "default" | "custom";
   rank_order: number;
   max_occupants: number;
@@ -499,7 +497,7 @@ export interface PartyOfficialItem {
   chapter_type: "national" | "zonal" | "state" | "lga" | "ward";
   geo_name: string;
   display_title: string;
-}
+};
 
 // ========================================================
 // PARTY POSITIONS & OFFICIALS

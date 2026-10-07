@@ -2447,9 +2447,6 @@ func (h *Handler) CreatePartyCustomPosition(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// Auto-generate code slug directly from position title
-	code := strings.ToLower(strings.ReplaceAll(name, " ", "_"))
-
 	// Trim description; leave null/invalid if empty
 	desc := strings.TrimSpace(req.Description)
 	var descParam pgtype.Text
@@ -2476,7 +2473,6 @@ func (h *Handler) CreatePartyCustomPosition(w http.ResponseWriter, r *http.Reque
 	pos, err := h.partiesService.CreatePartyCustomPosition(r.Context(), queries.CreatePartyCustomPositionParams{
 		PartyID:       pgtype.Int2{Int16: int16(partyID), Valid: true},
 		Name:          name,
-		Code:          code,
 		Description:   descParam,
 		AllowedLevels: allowedLevels,
 		RankOrder:     req.RankOrder,
@@ -2521,9 +2517,6 @@ func (h *Handler) UpdatePartyCustomPosition(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// Auto-generate code slug directly from position title
-	code := strings.ToLower(strings.ReplaceAll(name, " ", "_"))
-
 	desc := strings.TrimSpace(req.Description)
 	var descParam pgtype.Text
 	if desc != "" {
@@ -2547,7 +2540,6 @@ func (h *Handler) UpdatePartyCustomPosition(w http.ResponseWriter, r *http.Reque
 		ID:            int32(posID),
 		PartyID:       pgtype.Int2{Int16: int16(partyID), Valid: true},
 		Name:          name,
-		Code:          code,
 		Description:   descParam,
 		AllowedLevels: allowedLevels,
 		RankOrder:     req.RankOrder,

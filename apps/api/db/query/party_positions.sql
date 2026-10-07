@@ -14,18 +14,17 @@ WHERE id = $1 AND (party_id IS NULL OR party_id = $2)
 LIMIT 1;
 
 -- name: CreatePartyCustomPosition :one
-INSERT INTO party_positions ( party_id, name, code, position_type, description, allowed_levels, rank_order, max_occupants, is_executive, category )
-VALUES ( $1, $2, $3, 'custom', $4, $5, $6, $7, COALESCE(sqlc.narg('is_executive')::boolean, true), COALESCE(sqlc.narg('category')::varchar, 'operations') ) RETURNING *;
+INSERT INTO party_positions ( party_id, name, position_type, description, allowed_levels, rank_order, max_occupants, is_executive, category )
+VALUES ( $1, $2, 'custom', $3, $4, $5, $6, COALESCE(sqlc.narg('is_executive')::boolean, true), COALESCE(sqlc.narg('category')::varchar, 'operations') ) RETURNING *;
 
 -- name: UpdatePartyCustomPosition :one
 UPDATE party_positions
 SET 
     name = $3,
-    code = $4,
-    description = $5,
-    allowed_levels = $6,
-    rank_order = $7,
-    max_occupants = $8,
+    description = $4,
+    allowed_levels = $5,
+    rank_order = $6,
+    max_occupants = $7,
     is_executive = COALESCE(sqlc.narg('is_executive')::boolean, is_executive),
     category = COALESCE(sqlc.narg('category')::varchar, category),
     is_active = COALESCE(sqlc.narg('is_active')::boolean, is_active)

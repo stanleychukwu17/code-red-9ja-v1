@@ -377,7 +377,6 @@ func (s *PartiesService) ListParties(ctx context.Context) ([]queries.PartyWithVe
 type PartyOfficialCard struct {
 	PositionID   int32   `json:"position_id"`
 	PositionName string  `json:"position_name"`
-	PositionCode string  `json:"position_code"`
 	RankOrder    int16   `json:"rank_order"`
 	UserID       *int64  `json:"user_id,omitempty"`
 	Name         *string `json:"name,omitempty"`

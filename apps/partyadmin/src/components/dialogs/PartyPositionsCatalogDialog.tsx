@@ -71,7 +71,7 @@ export function PartyPositionsCatalogDialog({ open, onClose, partyId }: {
     try {
       setIsSubmitting(true);
 
-      // Call API to create custom position (backend auto-generates slug code from name)
+      // Call API to create custom position
       const res = await createPartyCustomPosition({
         data: {
           partyId: activePartyId,

@@ -17,12 +17,7 @@ import {
 } from "@repo/ui/components/select";
 import { PageSearchLayer } from "@repo/ui/components/custom/AdminLayouts";
 import { PartyTierNav } from "./-party-tier-nav";
-import {
-  PartyPositionTableHeader,
-  PartyPositionTableTile,
-} from "#/components/tiles/party-position-tile";
-import type { PartyOfficialItem } from "#/lib/server/parties";
-import { BookOpen, Loader2 } from "lucide-react";
+import { BookOpen } from "lucide-react";
 
 interface PartyPositionsActionBarProps {
   chapterTier: string;
@@ -135,52 +130,8 @@ export function PartyPositionsFilterBar({
   );
 }
 
-interface PartyPositionsRosterViewProps {
-  isLoading: boolean;
-  officials: PartyOfficialItem[];
-  onVacateOfficial: (official: PartyOfficialItem) => void;
-}
+export {
+  PartyPositionsRosterView,
+  type PartyPositionsRosterViewProps,
+} from "./-party-positions-roster-view";
 
-/**
- * Main roster view showing loading state, empty state, or table list.
- */
-export function PartyPositionsRosterView({
-  isLoading,
-  officials,
-  onVacateOfficial,
-}: PartyPositionsRosterViewProps) {
-  if (isLoading) {
-    return (
-      <div className="w-full p-16 flex flex-col items-center justify-center gap-3 text-c-50 bg-background rounded-2xl border border-border">
-        <Loader2 className="size-6 animate-spin text-orange" />
-        <p className="text-[14px]">Loading chapter officials...</p>
-      </div>
-    );
-  }
-
-  if (officials.length === 0) {
-    return (
-      <div className="w-full p-16 text-center text-c-50 font-medium bg-background rounded-2xl border border-border space-y-3">
-        <p className="text-[16px] text-c-70">No party officials found.</p>
-        <p className="text-[13px] text-c-40 max-w-md mx-auto">
-          No officials have been appointed to positions matching your selected tier and filters.
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="w-full overflow-hidden rounded-2xl border border-border bg-background">
-      <PartyPositionTableHeader />
-      <div className="divide-y divide-border">
-        {officials.map((official) => (
-          <PartyPositionTableTile
-            key={official.assignment_id}
-            official={official}
-            onVacate={onVacateOfficial}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
