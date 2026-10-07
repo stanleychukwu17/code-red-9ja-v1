@@ -18,7 +18,6 @@ import (
 type OfficesService interface {
 	CreateOffice(ctx context.Context, name, election, scope string, rank int32, inecElectionTypeID *string) (queries.Office, error)
 	GetOfficeByID(ctx context.Context, id int16) (queries.Office, error)
-	GetOfficeByName(ctx context.Context, name string) (queries.Office, error)
 	ListOffices(ctx context.Context) ([]queries.Office, error)
 	UpdateOffice(ctx context.Context, id int16, name, election, scope string, rank int32, inecElectionTypeID *string) (queries.Office, error)
 	DeleteOffice(ctx context.Context, id int16) error

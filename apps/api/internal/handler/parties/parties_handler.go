@@ -30,7 +30,6 @@ type PartiesService interface {
 	CreateParty(ctx context.Context, shortName, name, logo string, logoFileID *int64, displayOrder int32, colorHex, darkColorHex, coverImage *string, coverImageFileID *int64, coverPositionY *int16, dateFounded *string) (queries.Party, error)
 	GetPartyInfo(ctx context.Context, partyID int16) *queries.PartyWithVerifications
 	GetPartyBasicInfo(ctx context.Context, partyID int16) *queries.PartyBasicInfoWithVerifications
-	GetPartyByShortName(ctx context.Context, shortName string) (*queries.PartyWithVerifications, error)
 	ListParties(ctx context.Context) ([]queries.PartyWithVerifications, error)
 	GetAcceptingPartyIDs(ctx context.Context) (map[int16]bool, error)
 	IsPartyAcceptingApplications(ctx context.Context, partyID int16) (bool, error)
@@ -43,7 +42,6 @@ type PartiesService interface {
 	GetPartyWalletTransactions(ctx context.Context, partyID int16, limit, offset int32) ([]queries.PartyWalletTransaction, error)
 	WithdrawFromWallet(ctx context.Context, partyID int16, amountKobo int64, transactionReference, bankAccountNumber, bankCode, narration string) (queries.PartyWalletTransaction, error)
 	CreatePartyWallet(ctx context.Context, party queries.Party) (queries.PartyWallet, error)
-	GetWalletByAccountReference(ctx context.Context, accountReference string) (queries.PartyWallet, error)
 	ProvisionMissingWallets(ctx context.Context) (int, int, error)
 	CreditWallet(ctx context.Context, walletID int64, amountKobo int64, transactionReference string, payerName, payerAccountNumber, payerBankCode, narration string, rawPayload []byte) (queries.PartyWalletTransaction, error)
 	// Slot methods
@@ -56,11 +54,6 @@ type PartiesService interface {
 	DepositAllowance(ctx context.Context, partyID int16, amountKobo int64) (queries.Party, error)
 	JoinParty(ctx context.Context, params partiesservice.JoinPartyParams) error
 	LeaveParty(ctx context.Context, partyID int16, userID, userFid int64) error
-	GetOrCreateNationalChapter(ctx context.Context, partyID, countryID int16) (int32, error)
-	GetOrCreateZonalChapter(ctx context.Context, partyID, zonalID int16) (int32, error)
-	GetOrCreateStateChapter(ctx context.Context, partyID, stateID int16) (int32, error)
-	GetOrCreateLGAChapter(ctx context.Context, partyID int16, lgaID int32) (int32, error)
-	GetOrCreateWardChapter(ctx context.Context, partyID int16, wardID int32) (int32, error)
 	// Membership methods
 	UpdateAgentPaymentAllocationKobo(ctx context.Context, partyID int16, allowancesJSON []byte) (queries.Party, error)
 	GetAgentPaymentAllocationKobo(ctx context.Context, partyID int16) (json.RawMessage, error)
@@ -82,11 +75,6 @@ type PartiesService interface {
 	GetPartyAgentAcquisitionTargets(ctx context.Context, partyID int16) (json.RawMessage, error)
 	// Positions & Officials methods
 	ListPartyPositions(ctx context.Context, partyID int16) (*partiesservice.PartyPositionsResult, error)
-	GetDefaultPartyPositions(ctx context.Context) ([]queries.PartyPosition, error)
-	GetCustomPartyPositions(ctx context.Context, partyID int16) ([]queries.PartyPosition, error)
-	InvalidatePartyCustomPositionsCache(ctx context.Context, partyID int16)
-	GetPartyPositionByID(ctx context.Context, id int32, partyID int16) (queries.PartyPosition, error)
-	InvalidatePartyPositionCache(ctx context.Context, partyID int16, id int32)
 	CreatePartyCustomPosition(ctx context.Context, arg queries.CreatePartyCustomPositionParams) (queries.PartyPosition, error)
 	UpdatePartyCustomPosition(ctx context.Context, arg queries.UpdatePartyCustomPositionParams) (queries.PartyPosition, error)
 	DeletePartyCustomPosition(ctx context.Context, id int32, partyID int16) error
@@ -96,7 +84,6 @@ type PartiesService interface {
 	ListChapterOfficials(ctx context.Context, partyID int16, chapterID int32, status *string) ([]queries.ListChapterOfficialsRow, error)
 	ListPartyOfficials(ctx context.Context, arg queries.ListPartyOfficialsParams) ([]queries.ListPartyOfficialsRow, error)
 	ListMemberPositionAssignments(ctx context.Context, partyID int16, userID int64) ([]queries.ListMemberPositionAssignmentsRow, error)
-	GetActivePartyMemberSuspension(ctx context.Context, partyID int16, userID int64) (*queries.PartyMemberSuspension, error)
 	SuspendPartyMember(ctx context.Context, input partiesservice.SuspendPartyMemberInput) (*queries.PartyMemberSuspension, error)
 	UnsuspendPartyMember(ctx context.Context, input partiesservice.UnsuspendPartyMemberInput) (*queries.PartyMemberSuspension, error)
 	BlockUserFromThisParty(ctx context.Context, input partiesservice.BlockPartyUserInput) (*queries.PartyUserBlock, error)
@@ -2491,6 +2478,7 @@ func (h *Handler) CreatePartyCustomPosition(w http.ResponseWriter, r *http.Reque
 
 // UpdatePartyCustomPosition updates a custom position
 func (h *Handler) UpdatePartyCustomPosition(w http.ResponseWriter, r *http.Request) {
+	// Parse and validate party ID from URL parameters
 	idStr := chi.URLParam(r, "id")
 	partyID, err := strconv.ParseInt(idStr, 10, 16)
 	if err != nil || partyID <= 0 {
@@ -2498,6 +2486,7 @@ func (h *Handler) UpdatePartyCustomPosition(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	// Parse and validate position ID from URL parameters
 	posIDStr := chi.URLParam(r, "position_id")
 	posID, err := strconv.ParseInt(posIDStr, 10, 32)
 	if err != nil || posID <= 0 {
@@ -2505,30 +2494,35 @@ func (h *Handler) UpdatePartyCustomPosition(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	// Decode request payload
 	var req CreatePartyCustomPositionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
 		return
 	}
 
+	// Validate required position name
 	name := strings.TrimSpace(req.Name)
 	if name == "" {
 		h.utils.RespondError(w, http.StatusBadRequest, "Position name is required")
 		return
 	}
 
+	// Trim description; leave null/invalid if empty
 	desc := strings.TrimSpace(req.Description)
 	var descParam pgtype.Text
 	if desc != "" {
 		descParam = pgtype.Text{String: desc, Valid: true}
 	}
 
+	// Validate allowed levels against supported chapter levels
 	allowedLevels, err := sanitizePartyAllowedLevels(req.AllowedLevels)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
+	// Apply sensible defaults for rank and occupancy
 	if req.RankOrder <= 0 {
 		req.RankOrder = 100
 	}
@@ -2536,6 +2530,7 @@ func (h *Handler) UpdatePartyCustomPosition(w http.ResponseWriter, r *http.Reque
 		req.MaxOccupants = 1
 	}
 
+	// Persist updated custom position in database and cache
 	pos, err := h.partiesService.UpdatePartyCustomPosition(r.Context(), queries.UpdatePartyCustomPositionParams{
 		ID:            int32(posID),
 		PartyID:       pgtype.Int2{Int16: int16(partyID), Valid: true},
@@ -2550,6 +2545,7 @@ func (h *Handler) UpdatePartyCustomPosition(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	// Return successful update response
 	h.utils.RespondSuccess(w, http.StatusOK, "Custom position updated successfully", map[string]interface{}{
 		"position": pos,
 	})
@@ -2557,6 +2553,7 @@ func (h *Handler) UpdatePartyCustomPosition(w http.ResponseWriter, r *http.Reque
 
 // DeletePartyCustomPosition deletes a custom position
 func (h *Handler) DeletePartyCustomPosition(w http.ResponseWriter, r *http.Request) {
+	// Parse and validate party ID from URL parameters
 	idStr := chi.URLParam(r, "id")
 	partyID, err := strconv.ParseInt(idStr, 10, 16)
 	if err != nil || partyID <= 0 {
@@ -2564,6 +2561,7 @@ func (h *Handler) DeletePartyCustomPosition(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	// Parse and validate position ID from URL parameters
 	posIDStr := chi.URLParam(r, "position_id")
 	posID, err := strconv.ParseInt(posIDStr, 10, 32)
 	if err != nil || posID <= 0 {
@@ -2571,11 +2569,13 @@ func (h *Handler) DeletePartyCustomPosition(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	// Delete the custom position via service layer
 	if err := h.partiesService.DeletePartyCustomPosition(r.Context(), int32(posID), int16(partyID)); err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to delete position: "+err.Error())
 		return
 	}
 
+	// Return successful deletion response
 	h.utils.RespondSuccess(w, http.StatusOK, "Custom position deleted successfully", nil)
 }
 

@@ -30,8 +30,6 @@ import (
 type UsersService interface {
 	GetUserByFakeID(ctx context.Context, fakeID int64) (queries.UserWithPlaces, error)
 	GetUsersByFakeIDs(ctx context.Context, fakeIDs []int64) ([]queries.UserWithPlaces, error)
-	GetUserRoles(ctx context.Context, userID int64) (queries.CachedUserRoles, error)
-	AssignUserRole(ctx context.Context, userID int64, fakeID int64, code string, whoAssigned int64) error
 	GetMoreInfoAboutThisUser(ctx context.Context, userID int64) (queries.UserMoreInfo, error)
 	GetUserPrimaryBankAccount(ctx context.Context, userID int64) (queries.UserBankAccount, error)
 	UpdateUserProfile(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, gender, avatar string, avatarFileId *int64, countryID, stateID int16, cityID int32) error
@@ -53,7 +51,6 @@ type UsersService interface {
 	GetUserPhoneNumbersByUserID(ctx context.Context, userID int64) ([]queries.UsersPhoneNumber, error)
 	UpdateUserPhoneNumbers(ctx context.Context, userID int64, fakeID int64, phones []usersservice.PhonePayload) error
 	DeleteUserPhoneNumber(ctx context.Context, id int64, userID int64) error
-	GetUserPageVerifications(ctx context.Context, userID int64) ([]queries.GetPageVerificationsRow, error)
 	MakeUserSuperAdmin(ctx context.Context, username string) error
 	CheckUsername(ctx context.Context, username string) (bool, int64)
 	InvalidateUsernameCache(ctx context.Context, username string)
@@ -68,9 +65,6 @@ type UsersService interface {
 // BodiesService interface defines the methods needed from the bodies service
 type BodiesService interface {
 	CheckCountry(ctx context.Context, country_id int16) (queries.GetCountryByIDRow, error)
-	CheckState(ctx context.Context, country_id, state_id int16) (queries.GetStateByIDRow, error)
-	CheckCity(ctx context.Context, state_id int16, city_id int32) (queries.GetCityByIDRow, error)
-	GetLocationNames(ctx context.Context, countryID, stateID int16, cityID int32) (string, string, string)
 }
 
 // PermissionsService interface defines the methods needed from the permissions service

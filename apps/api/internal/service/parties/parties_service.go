@@ -1918,8 +1918,8 @@ func (s *PartiesService) GetPartyPositionByID(ctx context.Context, id int32, par
 	return pos, nil
 }
 
-// InvalidatePartyPositionCache invalidates the Redis cache for a single party position.
-func (s *PartiesService) InvalidatePartyPositionCache(ctx context.Context, partyID int16, id int32) {
+// InvalidatePartyPositionByIDCache invalidates the Redis cache for a single party position.
+func (s *PartiesService) InvalidatePartyPositionByIDCache(ctx context.Context, partyID int16, id int32) {
 	if s.rdb == nil {
 		return
 	}
@@ -1973,9 +1973,10 @@ func (s *PartiesService) CreatePartyCustomPosition(ctx context.Context, arg quer
 // UpdatePartyCustomPosition updates an existing custom position owned by the party.
 func (s *PartiesService) UpdatePartyCustomPosition(ctx context.Context, arg queries.UpdatePartyCustomPositionParams) (queries.PartyPosition, error) {
 	pos, err := s.queries.UpdatePartyCustomPosition(ctx, arg)
+
 	if err == nil && arg.PartyID.Valid {
 		s.InvalidatePartyCustomPositionsCache(ctx, arg.PartyID.Int16)
-		s.InvalidatePartyPositionCache(ctx, arg.PartyID.Int16, arg.ID)
+		s.InvalidatePartyPositionByIDCache(ctx, arg.PartyID.Int16, arg.ID)
 
 		actorID, actorRole := audit.ActorInfoFromContext(ctx)
 		posJSON, _ := json.Marshal(pos)
@@ -1993,14 +1994,29 @@ func (s *PartiesService) UpdatePartyCustomPosition(ctx context.Context, arg quer
 }
 
 // DeletePartyCustomPosition deletes a custom position owned by the party.
+// If the position has been used at all in party_position_assignments, it is soft-deleted
+// (is_active = false) to preserve assignment history; otherwise, it is hard-deleted.
 func (s *PartiesService) DeletePartyCustomPosition(ctx context.Context, id int32, partyID int16) error {
-	err := s.queries.DeletePartyCustomPosition(ctx, queries.DeletePartyCustomPositionParams{
-		ID:      id,
-		PartyID: pgtype.Int2{Int16: partyID, Valid: true},
-	})
+	hasAssignments, err := s.queries.HasPositionBeenAssigned(ctx, id)
+	if err != nil {
+		return fmt.Errorf("failed to check position assignments: %w", err)
+	}
+
+	if hasAssignments {
+		err = s.queries.SoftDeletePartyCustomPosition(ctx, queries.SoftDeletePartyCustomPositionParams{
+			ID:      id,
+			PartyID: pgtype.Int2{Int16: partyID, Valid: true},
+		})
+	} else {
+		err = s.queries.HardDeletePartyCustomPosition(ctx, queries.HardDeletePartyCustomPositionParams{
+			ID:      id,
+			PartyID: pgtype.Int2{Int16: partyID, Valid: true},
+		})
+	}
+
 	if err == nil {
 		s.InvalidatePartyCustomPositionsCache(ctx, partyID)
-		s.InvalidatePartyPositionCache(ctx, partyID, id)
+		s.InvalidatePartyPositionByIDCache(ctx, partyID, id)
 
 		actorID, actorRole := audit.ActorInfoFromContext(ctx)
 		s.auditService.LogActionAsync(ctx, queries.InsertAuditLogParams{

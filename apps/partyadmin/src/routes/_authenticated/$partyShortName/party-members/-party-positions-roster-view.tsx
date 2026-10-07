@@ -9,11 +9,7 @@ import {
   vacatePartyOfficial,
   type PartyOfficialItem,
 } from "#/lib/server/parties";
-import {
-  PartyPositionTableHeader,
-  PartyPositionTableTile,
-} from "#/components/tiles/party-position-tile";
-import { MOCK_PARTY_OFFICIALS } from "./-mock-officials";
+
 
 export interface PartyPositionsRosterViewProps {
   chapterTier?: string;
@@ -74,26 +70,25 @@ export function PartyPositionsRosterView({
 
   const rawOfficials: PartyOfficialItem[] = officialsRes?.data?.officials || [];
 
-  // Use mock data for design preview of PartyPositionTableTile (filters responsive)
   const displayOfficials = React.useMemo(() => {
-    let list = MOCK_PARTY_OFFICIALS;
+    let list = rawOfficials;
     if (appointmentTypeFilter !== "all") {
       list = list.filter(
-        (o) => o.appointment_type.toLowerCase() === appointmentTypeFilter.toLowerCase(),
+        (o) => o.appointment_type?.toLowerCase() === appointmentTypeFilter.toLowerCase(),
       );
     }
     if (debouncedSearchQuery.trim()) {
       const q = debouncedSearchQuery.toLowerCase().trim();
       list = list.filter(
         (o) =>
-          o.display_title.toLowerCase().includes(q) ||
-          o.position_name.toLowerCase().includes(q) ||
+          o.display_title?.toLowerCase().includes(q) ||
+          o.position_name?.toLowerCase().includes(q) ||
           `${o.first_name || ""} ${o.last_name || ""}`.toLowerCase().includes(q) ||
           (o.username && o.username.toLowerCase().includes(q)),
       );
     }
     return list;
-  }, [appointmentTypeFilter, debouncedSearchQuery]);
+  }, [rawOfficials, appointmentTypeFilter, debouncedSearchQuery]);
 
   // Handle Vacate Office
   const handleVacateOfficial = async (official: PartyOfficialItem) => {
@@ -125,6 +120,15 @@ export function PartyPositionsRosterView({
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-16 text-c-40 bg-background rounded-2xl border border-border">
+        <Loader2 className="size-6 animate-spin mr-2 text-primary" />
+        <span className="text-[14px]">Loading party officials...</span>
+      </div>
+    );
+  }
+
   if (displayOfficials.length === 0) {
     return (
       <div className="w-full p-16 text-center text-c-50 font-medium bg-background rounded-2xl border border-border space-y-3">
@@ -137,15 +141,30 @@ export function PartyPositionsRosterView({
   }
 
   return (
-    <div className="w-full overflow-hidden rounded-2xl border border-border bg-background">
-      <PartyPositionTableHeader />
-      <div className="divide-y divide-border">
+    <div className="w-full space-y-4">
+      {/* Container ready for custom party officials display technique */}
+      <div className="space-y-3">
         {displayOfficials.map((official) => (
-          <PartyPositionTableTile
+          <div
             key={official.assignment_id}
-            official={official}
-            onVacate={handleVacateOfficial}
-          />
+            className="p-4 rounded-xl border border-border bg-background flex items-center justify-between"
+          >
+            <div>
+              <p className="font-semibold text-c-80">
+                {[official.first_name, official.last_name].filter(Boolean).join(" ") || "Unnamed Official"}
+              </p>
+              <p className="text-sm text-c-50">
+                {official.display_title || official.position_name}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleVacateOfficial(official)}
+              className="text-xs text-red-500 hover:underline"
+            >
+              Vacate
+            </button>
+          </div>
         ))}
       </div>
     </div>

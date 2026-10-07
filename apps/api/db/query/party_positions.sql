@@ -31,10 +31,20 @@ SET
 WHERE id = $1 AND party_id = $2 AND position_type = 'custom'
 RETURNING *;
 
--- name: DeletePartyCustomPosition :exec
+-- name: SoftDeletePartyCustomPosition :exec
 UPDATE party_positions
 SET is_active = false
 WHERE id = $1 AND party_id = $2 AND position_type = 'custom';
+
+-- name: HardDeletePartyCustomPosition :exec
+DELETE FROM party_positions
+WHERE id = $1 AND party_id = $2 AND position_type = 'custom';
+
+-- name: HasPositionBeenAssigned :one
+SELECT EXISTS (
+    SELECT 1 FROM party_position_assignments
+    WHERE position_id = $1
+);
 
 -- name: AssignPartyPosition :one
 INSERT INTO party_position_assignments (

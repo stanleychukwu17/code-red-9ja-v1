@@ -38,7 +38,6 @@ type UsersService interface {
 	CheckNIN(ctx context.Context, nin string) bool
 	CheckUsername(ctx context.Context, username string) (bool, int64)
 	CheckEmail(ctx context.Context, email string) (bool, int64)
-	CreateUserWallet(ctx context.Context, user queries.User) (queries.UserWallet, error)
 	GenerateUniqueReferralCode(ctx context.Context, firstName string) (string, error)
 }
 

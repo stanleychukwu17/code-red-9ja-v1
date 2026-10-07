@@ -123,22 +123,6 @@ func (q *Queries) CreatePartyCustomPosition(ctx context.Context, arg CreateParty
 	return i, err
 }
 
-const deletePartyCustomPosition = `-- name: DeletePartyCustomPosition :exec
-UPDATE party_positions
-SET is_active = false
-WHERE id = $1 AND party_id = $2 AND position_type = 'custom'
-`
-
-type DeletePartyCustomPositionParams struct {
-	ID      int32       `json:"id"`
-	PartyID pgtype.Int2 `json:"party_id"`
-}
-
-func (q *Queries) DeletePartyCustomPosition(ctx context.Context, arg DeletePartyCustomPositionParams) error {
-	_, err := q.db.Exec(ctx, deletePartyCustomPosition, arg.ID, arg.PartyID)
-	return err
-}
-
 const getPartyPositionByID = `-- name: GetPartyPositionByID :one
 SELECT id, position_type, name, party_id, description, allowed_levels, rank_order, max_occupants, is_active, is_executive, category, created_at FROM party_positions
 WHERE id = $1 AND (party_id IS NULL OR party_id = $2)
@@ -168,6 +152,35 @@ func (q *Queries) GetPartyPositionByID(ctx context.Context, arg GetPartyPosition
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const hardDeletePartyCustomPosition = `-- name: HardDeletePartyCustomPosition :exec
+DELETE FROM party_positions
+WHERE id = $1 AND party_id = $2 AND position_type = 'custom'
+`
+
+type HardDeletePartyCustomPositionParams struct {
+	ID      int32       `json:"id"`
+	PartyID pgtype.Int2 `json:"party_id"`
+}
+
+func (q *Queries) HardDeletePartyCustomPosition(ctx context.Context, arg HardDeletePartyCustomPositionParams) error {
+	_, err := q.db.Exec(ctx, hardDeletePartyCustomPosition, arg.ID, arg.PartyID)
+	return err
+}
+
+const hasPositionBeenAssigned = `-- name: HasPositionBeenAssigned :one
+SELECT EXISTS (
+    SELECT 1 FROM party_position_assignments
+    WHERE position_id = $1
+)
+`
+
+func (q *Queries) HasPositionBeenAssigned(ctx context.Context, positionID int32) (bool, error) {
+	row := q.db.QueryRow(ctx, hasPositionBeenAssigned, positionID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
 }
 
 const listChapterOfficials = `-- name: ListChapterOfficials :many
@@ -624,6 +637,22 @@ func (q *Queries) ListPartyOfficials(ctx context.Context, arg ListPartyOfficials
 		return nil, err
 	}
 	return items, nil
+}
+
+const softDeletePartyCustomPosition = `-- name: SoftDeletePartyCustomPosition :exec
+UPDATE party_positions
+SET is_active = false
+WHERE id = $1 AND party_id = $2 AND position_type = 'custom'
+`
+
+type SoftDeletePartyCustomPositionParams struct {
+	ID      int32       `json:"id"`
+	PartyID pgtype.Int2 `json:"party_id"`
+}
+
+func (q *Queries) SoftDeletePartyCustomPosition(ctx context.Context, arg SoftDeletePartyCustomPositionParams) error {
+	_, err := q.db.Exec(ctx, softDeletePartyCustomPosition, arg.ID, arg.PartyID)
+	return err
 }
 
 const updatePartyCustomPosition = `-- name: UpdatePartyCustomPosition :one

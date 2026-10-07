@@ -153,7 +153,6 @@ type Querier interface {
 	DeleteNotification(ctx context.Context, arg DeleteNotificationParams) error
 	DeleteOffice(ctx context.Context, id int16) error
 	DeleteParty(ctx context.Context, id int16) error
-	DeletePartyCustomPosition(ctx context.Context, arg DeletePartyCustomPositionParams) error
 	DeletePartyMarketingCampaign(ctx context.Context, id int32) error
 	DeletePartyMembership(ctx context.Context, arg DeletePartyMembershipParams) ([]int32, error)
 	DeletePlan(ctx context.Context, id int32) error
@@ -339,6 +338,8 @@ type Querier interface {
 	GetWards(ctx context.Context, arg GetWardsParams) ([]Ward, error)
 	GetZonalChapter(ctx context.Context, arg GetZonalChapterParams) (int32, error)
 	HardDeleteFile(ctx context.Context, id int64) error
+	HardDeletePartyCustomPosition(ctx context.Context, arg HardDeletePartyCustomPositionParams) error
+	HasPositionBeenAssigned(ctx context.Context, positionID int32) (bool, error)
 	IncrementAssignmentIntervalUpdates(ctx context.Context, arg IncrementAssignmentIntervalUpdatesParams) error
 	IncrementAssignmentLiveVotersReferredCount(ctx context.Context, id int64) (PollingUnitAssignment, error)
 	IncrementAssignmentResultCount(ctx context.Context, id int64) error
@@ -510,6 +511,7 @@ type Querier interface {
 	SeedElectionGroupStateStats(ctx context.Context, dollar_1 int32) error
 	SeedElectionGroupWardStats(ctx context.Context, dollar_1 int32) error
 	SeedUser(ctx context.Context, arg SeedUserParams) (int64, error)
+	SoftDeletePartyCustomPosition(ctx context.Context, arg SoftDeletePartyCustomPositionParams) error
 	SubmitPollingUnitResult(ctx context.Context, arg SubmitPollingUnitResultParams) (PollingUnitResult, error)
 	SubmitPracticeTest(ctx context.Context, arg SubmitPracticeTestParams) (UserPracticeTest, error)
 	SuspendAllUserPositionsInParty(ctx context.Context, arg SuspendAllUserPositionsInPartyParams) error

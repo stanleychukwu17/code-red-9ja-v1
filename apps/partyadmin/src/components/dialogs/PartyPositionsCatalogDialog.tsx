@@ -80,6 +80,52 @@ export function PartyPositionsCatalogDialog({ open, onClose }: {
     );
   };
 
+  // Synchronize party positions cache after creating, updating, or deleting a custom position
+  const updatePositionsCache = (
+    position: PartyPositionItem,
+    mode: "add" | "update" | "delete" = "add",
+  ) => {
+    queryClient.setQueryData(["partyPositions", partyId], (oldData: any) => {
+      // Nothing cached yet, skip manual cache mutation
+      if (!oldData) return oldData;
+
+      // Extract existing custom and aggregate position lists
+      const prevCustom = oldData.data?.custom || [];
+      const prevPositions = oldData.data?.positions || [];
+
+      let updatedCustom: PartyPositionItem[];
+      let updatedPositions: PartyPositionItem[];
+
+      if (mode === "delete") {
+        // Filter out the deleted position by ID
+        updatedCustom = prevCustom.filter((p: PartyPositionItem) => p.id !== position.id);
+        updatedPositions = prevPositions.filter((p: PartyPositionItem) => p.id !== position.id);
+      } else if (mode === "update") {
+        // Replace existing entry with updated position data
+        updatedCustom = prevCustom.map((p: PartyPositionItem) =>
+          p.id === position.id ? position : p,
+        );
+        updatedPositions = prevPositions.map((p: PartyPositionItem) =>
+          p.id === position.id ? position : p,
+        );
+      } else {
+        // Append newly created position to the end of lists
+        updatedCustom = [...prevCustom, position];
+        updatedPositions = [...prevPositions, position];
+      }
+
+      // Return immutably updated query state
+      return {
+        ...oldData,
+        data: {
+          ...oldData.data,
+          custom: updatedCustom,
+          positions: updatedPositions,
+        },
+      };
+    });
+  };
+
   // Submit and create or update a custom party position
   const handleSavePosition = async (e: FormEvent) => {
     e.preventDefault();
@@ -103,12 +149,12 @@ export function PartyPositionsCatalogDialog({ open, onClose }: {
         const res = await updatePartyCustomPosition({
           data: {
             partyId,
-            positionId: editingPosition.id,
-            name: name.trim(),
-            description: description.trim() || undefined,
             allowedLevels,
             maxOccupants,
             rankOrder,
+            name: name.trim(),
+            positionId: editingPosition.id,
+            description: description.trim() || undefined,
           },
         });
 
@@ -116,27 +162,8 @@ export function PartyPositionsCatalogDialog({ open, onClose }: {
           throw new Error(res?.message || "Failed to update custom position");
         }
 
-        const updatedPos: PartyPositionItem | undefined = res?.data?.position;
-        if (updatedPos) {
-          queryClient.setQueryData(["partyPositions", partyId], (oldData: any) => {
-            if (!oldData) return oldData;
-            const prevCustom = oldData.data?.custom || [];
-            const updatedCustom = prevCustom.map((p: PartyPositionItem) =>
-              p.id === updatedPos.id ? updatedPos : p,
-            );
-            const updatedPositions = (oldData.data?.positions || []).map((p: PartyPositionItem) =>
-              p.id === updatedPos.id ? updatedPos : p,
-            );
-
-            return {
-              ...oldData,
-              data: {
-                ...oldData.data,
-                custom: updatedCustom,
-                positions: updatedPositions,
-              },
-            };
-          });
+        if (res?.data?.position) {
+          updatePositionsCache(res.data.position, "update");
         }
 
         toast.success("Custom position updated successfully!");
@@ -157,30 +184,10 @@ export function PartyPositionsCatalogDialog({ open, onClose }: {
           throw new Error(res?.message || "Failed to create custom position");
         }
 
-        // Append new custom position directly to query cache without lazy refetching
-        const newPosition: PartyPositionItem | undefined = res?.data?.position;
-        if (newPosition) {
-          const updatePositionsCache = (oldData: any) => {
-            if (!oldData) return oldData;
-            const prevCustom = oldData.data?.custom || [];
-            const updatedCustom = [...prevCustom, newPosition];
-            const updatedPositions = [...(oldData.data?.positions || []), newPosition];
-
-            return {
-              ...oldData,
-              data: {
-                ...oldData.data,
-                custom: updatedCustom,
-                positions: updatedPositions,
-              },
-            };
-          };
-
-          // update party positions cache
-          queryClient.setQueryData(["partyPositions", partyId], updatePositionsCache);
+        if (res?.data?.position) {
+          updatePositionsCache(res.data.position, "add");
         }
 
-        // show success message
         toast.success("Custom position added successfully!");
       }
 
@@ -211,26 +218,7 @@ export function PartyPositionsCatalogDialog({ open, onClose }: {
         throw new Error(res?.message || "Failed to delete custom position");
       }
 
-      // Remove deleted custom position from query cache
-      queryClient.setQueryData(["partyPositions", partyId], (oldData: any) => {
-        if (!oldData) return oldData;
-        const updatedCustom = (oldData.data?.custom || []).filter(
-          (p: PartyPositionItem) => p.id !== positionToDelete.id,
-        );
-        const updatedPositions = (oldData.data?.positions || []).filter(
-          (p: PartyPositionItem) => p.id !== positionToDelete.id,
-        );
-
-        return {
-          ...oldData,
-          data: {
-            ...oldData.data,
-            custom: updatedCustom,
-            positions: updatedPositions,
-          },
-        };
-      });
-
+      updatePositionsCache(positionToDelete, "delete");
       toast.success("Custom position deleted successfully!");
       if (editingPosition?.id === positionToDelete.id) {
         resetForm();
@@ -545,12 +533,7 @@ interface PositionCatalogItemProps {
   isEditing?: boolean;
 }
 
-function PositionCatalogItem({
-  position,
-  onEdit,
-  onDelete,
-  isEditing,
-}: PositionCatalogItemProps) {
+function PositionCatalogItem({ position, onEdit, onDelete, isEditing }: PositionCatalogItemProps) {
   const isCustom = position.position_type === "custom";
 
   return (
@@ -566,11 +549,10 @@ function PositionCatalogItem({
             {position.name}
           </span>
           <span
-            className={`text-[11px] px-2 py-0.5 rounded-full font-medium border ${
-              isCustom
-                ? "bg-orange/10 border-orange/30 text-orange"
-                : "bg-hover-5 border-border text-c-60"
-            }`}
+            className={`text-[11px] px-2 py-0.5 rounded-full font-medium border ${isCustom
+              ? "bg-orange/10 border-orange/30 text-orange"
+              : "bg-hover-5 border-border text-c-60"
+              }`}
           >
             {isCustom ? "Custom" : "Constitutional"}
           </span>
@@ -611,7 +593,7 @@ function PositionCatalogItem({
               size="icon"
               onClick={() => onEdit?.(position)}
               title="Edit position"
-              className="size-7 text-c-60 hover:text-c-90 hover:bg-hover-4 rounded-lg cursor-pointer"
+              className="size-7 text-c-60 hover:text-black hover:bg-black/5 rounded-lg cursor-pointer"
             >
               <Pencil className="size-3.5" />
             </Button>
