@@ -589,24 +589,26 @@ func (q *Queries) GetCitiesByStateID(ctx context.Context, stateID int16) ([]GetC
 }
 
 const getCityByID = `-- name: GetCityByID :one
-SELECT id, name FROM c_cities
-WHERE id = $1 and state_id = $2 LIMIT 1
+SELECT id, name, state_id, country_id FROM c_cities
+WHERE id = $1 LIMIT 1
 `
 
-type GetCityByIDParams struct {
-	ID      int32 `json:"id"`
-	StateID int16 `json:"state_id"`
-}
-
 type GetCityByIDRow struct {
-	ID   int32  `json:"id"`
-	Name string `json:"name"`
+	ID        int32  `json:"id"`
+	Name      string `json:"name"`
+	StateID   int16  `json:"state_id"`
+	CountryID int16  `json:"country_id"`
 }
 
-func (q *Queries) GetCityByID(ctx context.Context, arg GetCityByIDParams) (GetCityByIDRow, error) {
-	row := q.db.QueryRow(ctx, getCityByID, arg.ID, arg.StateID)
+func (q *Queries) GetCityByID(ctx context.Context, id int32) (GetCityByIDRow, error) {
+	row := q.db.QueryRow(ctx, getCityByID, id)
 	var i GetCityByIDRow
-	err := row.Scan(&i.ID, &i.Name)
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.StateID,
+		&i.CountryID,
+	)
 	return i, err
 }
 
@@ -1129,28 +1131,6 @@ func (q *Queries) GetSenatorialDistricts(ctx context.Context, stateID int32) ([]
 		return nil, err
 	}
 	return items, nil
-}
-
-const getStateByID = `-- name: GetStateByID :one
-SELECT id, name FROM c_states
-WHERE id = $1 and country_id = $2 LIMIT 1
-`
-
-type GetStateByIDParams struct {
-	ID        int16 `json:"id"`
-	CountryID int16 `json:"country_id"`
-}
-
-type GetStateByIDRow struct {
-	ID   int16  `json:"id"`
-	Name string `json:"name"`
-}
-
-func (q *Queries) GetStateByID(ctx context.Context, arg GetStateByIDParams) (GetStateByIDRow, error) {
-	row := q.db.QueryRow(ctx, getStateByID, arg.ID, arg.CountryID)
-	var i GetStateByIDRow
-	err := row.Scan(&i.ID, &i.Name)
-	return i, err
 }
 
 const getStateConstituencies = `-- name: GetStateConstituencies :many

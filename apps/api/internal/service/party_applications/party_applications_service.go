@@ -1519,11 +1519,7 @@ func (s *Service) updateReferralOnApplicationSubmission(ctx context.Context, txQ
 	// Fetch state name for state check if currentStateID > 0
 	stateName := ""
 	if currentStateID > 0 {
-		countryID := currentCountryID
-		if countryID <= 0 {
-			countryID = 1
-		}
-		if stateObj, stateErr := txQueries.GetStateByID(ctx, queries.GetStateByIDParams{ID: currentStateID, CountryID: countryID}); stateErr == nil {
+		if stateObj, stateErr := txQueries.GetStateDetailsByID(ctx, currentStateID); stateErr == nil {
 			stateName = stateObj.Name
 		}
 	}

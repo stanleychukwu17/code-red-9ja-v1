@@ -122,10 +122,7 @@ func (s *ElectionsService) CreateElection(
 	// 3. Determine dynamic election display name based on geographic level
 	name = et.Election + " Election"
 	if stateID != nil {
-		stateRow, err := txQueries.GetStateByID(ctx, queries.GetStateByIDParams{
-			ID:        *stateID,
-			CountryID: 161,
-		})
+		stateRow, err := txQueries.GetStateDetailsByID(ctx, *stateID)
 		if err == nil {
 			name = fmt.Sprintf("%s Election (%s)", et.Election, stateRow.Name)
 		} else {
@@ -514,11 +511,8 @@ func (s *ElectionsService) CreateStateElection(ctx context.Context, officeID int
 
 	// 4. Create individual election records for each state
 	for _, stateID := range stateIDs {
-		// Fetch state name using GetStateByID (Nigeria country_id is 161)
-		stateRow, err := txQueries.GetStateByID(ctx, queries.GetStateByIDParams{
-			ID:        stateID,
-			CountryID: 161,
-		})
+		// Fetch state name using GetStateDetailsByID
+		stateRow, err := txQueries.GetStateDetailsByID(ctx, stateID)
 		stateName := fmt.Sprintf("State %d", stateID)
 		if err == nil {
 			stateName = stateRow.Name

@@ -111,3 +111,16 @@ func PgInt4FromPtr(i *int32) pgtype.Int4 {
 func PgInt2FromInt16(v int16) pgtype.Int2 {
 	return pgtype.Int2{Int16: v, Valid: true}
 }
+
+// PgFloat8FromFloat64 wraps a non-pointer float64 as an always-valid pgtype.Float8.
+func PgFloat8FromFloat64(v float64) pgtype.Float8 {
+	return pgtype.Float8{Float64: v, Valid: true}
+}
+
+// PgFloat8FromPtr converts an optional float64 pointer to a pgtype.Float8.
+func PgFloat8FromPtr(f *float64) pgtype.Float8 {
+	if f != nil {
+		return pgtype.Float8{Float64: *f, Valid: true}
+	}
+	return pgtype.Float8{}
+}

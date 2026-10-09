@@ -19,17 +19,23 @@ type StateConstituenciesService interface {
 	GetStateConstituencies(ctx context.Context, stateID, federalConstituencyID int32) ([]queries.StateConstituency, error)
 }
 
-type Handler struct {
-	sacService StateConstituenciesService
-	queries    *queries.Queries
-	utils      *utils.Utils
+type BodiesService interface {
+	CheckStateByID(ctx context.Context, stateID int16) (queries.CState, error)
 }
 
-func NewHandler(sacService StateConstituenciesService, q *queries.Queries, utils *utils.Utils) *Handler {
+type Handler struct {
+	stateConstituenciesService StateConstituenciesService
+	bodiesService              BodiesService
+	queries                    *queries.Queries
+	utils                      *utils.Utils
+}
+
+func NewHandler(stateConstituenciesService StateConstituenciesService, bodiesService BodiesService, q *queries.Queries, utils *utils.Utils) *Handler {
 	return &Handler{
-		sacService: sacService,
-		queries:    q,
-		utils:      utils,
+		stateConstituenciesService: stateConstituenciesService,
+		bodiesService:              bodiesService,
+		queries:                    q,
+		utils:                      utils,
 	}
 }
 
@@ -76,11 +82,8 @@ func (h *Handler) CreateStateConstituency(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Resolve state name (Nigeria country_id is 161)
-	state, err := h.queries.GetStateByID(r.Context(), queries.GetStateByIDParams{
-		ID:        int16(req.StateID),
-		CountryID: 161,
-	})
+	// Resolve state name
+	state, err := h.bodiesService.CheckStateByID(r.Context(), int16(req.StateID))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid state ID: "+err.Error())
 		return
@@ -112,7 +115,7 @@ func (h *Handler) CreateStateConstituency(w http.ResponseWriter, r *http.Request
 		codeStr = *req.Code
 	}
 
-	sac, err := h.sacService.CreateStateConstituency(
+	sac, err := h.stateConstituenciesService.CreateStateConstituency(
 		r.Context(),
 		req.Name,
 		codeStr,
@@ -155,7 +158,7 @@ func (h *Handler) GetStateConstituency(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sac, err := h.sacService.GetStateConstituencyByID(r.Context(), int32(id))
+	sac, err := h.stateConstituenciesService.GetStateConstituencyByID(r.Context(), int32(id))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "State assembly constituency not found")
 		return
@@ -201,17 +204,14 @@ func (h *Handler) UpdateStateConstituency(w http.ResponseWriter, r *http.Request
 	}
 
 	// Verify it exists
-	_, err = h.sacService.GetStateConstituencyByID(r.Context(), int32(id))
+	_, err = h.stateConstituenciesService.GetStateConstituencyByID(r.Context(), int32(id))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "State assembly constituency not found")
 		return
 	}
 
-	// Resolve state name (Nigeria country_id is 161)
-	state, err := h.queries.GetStateByID(r.Context(), queries.GetStateByIDParams{
-		ID:        int16(req.StateID),
-		CountryID: 161,
-	})
+	// Resolve state name
+	state, err := h.bodiesService.CheckStateByID(r.Context(), int16(req.StateID))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid state ID: "+err.Error())
 		return
@@ -243,7 +243,7 @@ func (h *Handler) UpdateStateConstituency(w http.ResponseWriter, r *http.Request
 		codeStr = *req.Code
 	}
 
-	updatedSAC, err := h.sacService.UpdateStateConstituency(
+	updatedSAC, err := h.stateConstituenciesService.UpdateStateConstituency(
 		r.Context(),
 		int32(id),
 		req.Name,
@@ -290,13 +290,13 @@ func (h *Handler) DeleteStateConstituency(w http.ResponseWriter, r *http.Request
 	}
 
 	// Verify it exists
-	_, err = h.sacService.GetStateConstituencyByID(r.Context(), int32(id))
+	_, err = h.stateConstituenciesService.GetStateConstituencyByID(r.Context(), int32(id))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "State assembly constituency not found")
 		return
 	}
 
-	if err := h.sacService.DeleteStateConstituency(r.Context(), int32(id)); err != nil {
+	if err := h.stateConstituenciesService.DeleteStateConstituency(r.Context(), int32(id)); err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to delete state assembly constituency: "+err.Error())
 		return
 	}
@@ -383,7 +383,7 @@ func (h *Handler) GetStateConstituencies(w http.ResponseWriter, r *http.Request)
 	federalConstituencyID := parseOptionalQueryInt(r, "federal_constituency_id")
 	limit, cursor := parsePaginationParamsWithMax(r, 1500)
 
-	constituencies, err := h.sacService.GetStateConstituencies(r.Context(), stateID, federalConstituencyID)
+	constituencies, err := h.stateConstituenciesService.GetStateConstituencies(r.Context(), stateID, federalConstituencyID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch state assembly constituencies: "+err.Error())
 		return

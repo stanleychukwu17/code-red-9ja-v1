@@ -60,7 +60,7 @@ type PartyService interface {
 
 type BodiesService interface {
 	CheckCountry(ctx context.Context, country_id int16) (queries.GetCountryByIDRow, error)
-	CheckState(ctx context.Context, country_id, state_id int16) (queries.GetStateByIDRow, error)
+	CheckState(ctx context.Context, country_id, state_id int16) (queries.CState, error)
 	CheckCity(ctx context.Context, state_id int16, city_id int32) (queries.GetCityByIDRow, error)
 }
 

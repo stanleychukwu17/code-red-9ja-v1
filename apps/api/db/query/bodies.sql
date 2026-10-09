@@ -2,13 +2,9 @@
 SELECT id, name, iso2, phonecode FROM c_countries
 WHERE id = $1 LIMIT 1;
 
--- name: GetStateByID :one
-SELECT id, name FROM c_states
-WHERE id = $1 and country_id = $2 LIMIT 1;
-
 -- name: GetCityByID :one
-SELECT id, name FROM c_cities
-WHERE id = $1 and state_id = $2 LIMIT 1;
+SELECT id, name, state_id, country_id FROM c_cities
+WHERE id = $1 LIMIT 1;
 
 -- name: ListCountries :many
 SELECT id, name, iso2, phonecode FROM c_countries

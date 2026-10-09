@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 )
+
 type SenatorialDistrictsService interface {
 	CreateSenatorialDistrict(ctx context.Context, name string, code string, description string, coalitionCenter string, stateID int32, stateName string) (queries.SenatorialDistrict, error)
 	GetSenatorialDistrictByID(ctx context.Context, id int32) (queries.SenatorialDistrict, error)
@@ -19,17 +20,23 @@ type SenatorialDistrictsService interface {
 	GetSenatorialDistricts(ctx context.Context, stateID int32) ([]queries.SenatorialDistrict, error)
 }
 
-type Handler struct {
-	sdService SenatorialDistrictsService
-	queries   *queries.Queries
-	utils     *utils.Utils
+type BodiesService interface {
+	CheckStateByID(ctx context.Context, stateID int16) (queries.CState, error)
 }
 
-func NewHandler(sdService SenatorialDistrictsService, q *queries.Queries, utils *utils.Utils) *Handler {
+type Handler struct {
+	senatorialDistrictsService SenatorialDistrictsService
+	bodiesService              BodiesService
+	queries                    *queries.Queries
+	utils                      *utils.Utils
+}
+
+func NewHandler(senatorialDistrictsService SenatorialDistrictsService, bodiesService BodiesService, q *queries.Queries, utils *utils.Utils) *Handler {
 	return &Handler{
-		sdService: sdService,
-		queries:   q,
-		utils:     utils,
+		senatorialDistrictsService: senatorialDistrictsService,
+		bodiesService:              bodiesService,
+		queries:                    q,
+		utils:                      utils,
 	}
 }
 
@@ -74,11 +81,8 @@ func (h *Handler) CreateSenatorialDistrict(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Resolve state name (Nigeria country_id is 161)
-	state, err := h.queries.GetStateByID(r.Context(), queries.GetStateByIDParams{
-		ID:        int16(req.StateID),
-		CountryID: 161,
-	})
+	// Resolve state name
+	state, err := h.bodiesService.CheckStateByID(r.Context(), int16(req.StateID))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid state ID: "+err.Error())
 		return
@@ -89,7 +93,7 @@ func (h *Handler) CreateSenatorialDistrict(w http.ResponseWriter, r *http.Reques
 		codeStr = *req.Code
 	}
 
-	sd, err := h.sdService.CreateSenatorialDistrict(r.Context(), req.Name, codeStr, req.Description, req.CoalitionCenter, req.StateID, state.Name)
+	sd, err := h.senatorialDistrictsService.CreateSenatorialDistrict(r.Context(), req.Name, codeStr, req.Description, req.CoalitionCenter, req.StateID, state.Name)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create senatorial district: "+err.Error())
 		return
@@ -120,7 +124,7 @@ func (h *Handler) GetSenatorialDistrict(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	sd, err := h.sdService.GetSenatorialDistrictByID(r.Context(), int32(id))
+	sd, err := h.senatorialDistrictsService.GetSenatorialDistrictByID(r.Context(), int32(id))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Senatorial district not found")
 		return
@@ -166,17 +170,14 @@ func (h *Handler) UpdateSenatorialDistrict(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Verify it exists
-	_, err = h.sdService.GetSenatorialDistrictByID(r.Context(), int32(id))
+	_, err = h.senatorialDistrictsService.GetSenatorialDistrictByID(r.Context(), int32(id))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Senatorial district not found")
 		return
 	}
 
-	// Resolve state name (Nigeria country_id is 161)
-	state, err := h.queries.GetStateByID(r.Context(), queries.GetStateByIDParams{
-		ID:        int16(req.StateID),
-		CountryID: 161,
-	})
+	// Resolve state name
+	state, err := h.bodiesService.CheckStateByID(r.Context(), int16(req.StateID))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid state ID: "+err.Error())
 		return
@@ -187,7 +188,7 @@ func (h *Handler) UpdateSenatorialDistrict(w http.ResponseWriter, r *http.Reques
 		codeStr = *req.Code
 	}
 
-	updatedSD, err := h.sdService.UpdateSenatorialDistrict(r.Context(), int32(id), req.Name, codeStr, req.Description, req.CoalitionCenter, req.StateID, state.Name)
+	updatedSD, err := h.senatorialDistrictsService.UpdateSenatorialDistrict(r.Context(), int32(id), req.Name, codeStr, req.Description, req.CoalitionCenter, req.StateID, state.Name)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update senatorial district: "+err.Error())
 		return
@@ -221,13 +222,13 @@ func (h *Handler) DeleteSenatorialDistrict(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Verify it exists
-	_, err = h.sdService.GetSenatorialDistrictByID(r.Context(), int32(id))
+	_, err = h.senatorialDistrictsService.GetSenatorialDistrictByID(r.Context(), int32(id))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Senatorial district not found")
 		return
 	}
 
-	if err := h.sdService.DeleteSenatorialDistrict(r.Context(), int32(id)); err != nil {
+	if err := h.senatorialDistrictsService.DeleteSenatorialDistrict(r.Context(), int32(id)); err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to delete senatorial district: "+err.Error())
 		return
 	}
@@ -309,7 +310,7 @@ func (h *Handler) GetSenatorialDistricts(w http.ResponseWriter, r *http.Request)
 	stateID := parseOptionalQueryInt(r, "state_id")
 	limit, cursor := parsePaginationParamsWithMax(r, 200)
 
-	districts, err := h.sdService.GetSenatorialDistricts(r.Context(), stateID)
+	districts, err := h.senatorialDistrictsService.GetSenatorialDistricts(r.Context(), stateID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch senatorial districts: "+err.Error())
 		return

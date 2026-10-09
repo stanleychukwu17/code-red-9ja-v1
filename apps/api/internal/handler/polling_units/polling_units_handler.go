@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	pollingunitsservice "free9ja/api/internal/service/polling_units"
 )
 type PollingUnitsService interface {
@@ -23,17 +22,23 @@ type PollingUnitsService interface {
 	GetPollingUnitsWithCapacity(ctx context.Context, wardID, localGovernmentID, stateID int32, partyID int16, electionGroupID int32) ([]pollingunitsservice.PollingUnitWithCapacity, error)
 }
 
-type Handler struct {
-	puService PollingUnitsService
-	queries   *queries.Queries
-	utils     *utils.Utils
+type BodiesService interface {
+	CheckStateByID(ctx context.Context, stateID int16) (queries.CState, error)
 }
 
-func NewHandler(puService PollingUnitsService, q *queries.Queries, utils *utils.Utils) *Handler {
+type Handler struct {
+	puService     PollingUnitsService
+	bodiesService BodiesService
+	queries       *queries.Queries
+	utils         *utils.Utils
+}
+
+func NewHandler(puService PollingUnitsService, bodiesService BodiesService, q *queries.Queries, utils *utils.Utils) *Handler {
 	return &Handler{
-		puService: puService,
-		queries:   q,
-		utils:     utils,
+		puService:     puService,
+		bodiesService: bodiesService,
+		queries:       q,
+		utils:         utils,
 	}
 }
 
@@ -67,26 +72,6 @@ type UpdatePollingUnitRequest struct {
 	GooglePlaceID      *string  `json:"google_place_id"`
 }
 
-func toText(s *string) pgtype.Text {
-	if s == nil {
-		return pgtype.Text{Valid: false}
-	}
-	return pgtype.Text{String: *s, Valid: true}
-}
-
-func toFloat8(f *float64) pgtype.Float8 {
-	if f == nil {
-		return pgtype.Float8{Valid: false}
-	}
-	return pgtype.Float8{Float64: *f, Valid: true}
-}
-
-func toInt4(i *int32) pgtype.Int4 {
-	if i == nil {
-		return pgtype.Int4{Valid: false}
-	}
-	return pgtype.Int4{Int32: *i, Valid: true}
-}
 
 // CreatePollingUnit godoc
 // @Summary      Create a new polling unit
@@ -113,11 +98,8 @@ func (h *Handler) CreatePollingUnit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Resolve state name (Nigeria country_id is 161)
-	state, err := h.queries.GetStateByID(r.Context(), queries.GetStateByIDParams{
-		ID:        int16(req.StateID),
-		CountryID: 161,
-	})
+	// Resolve state name
+	state, err := h.bodiesService.CheckStateByID(r.Context(), int16(req.StateID))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid state ID: "+err.Error())
 		return
@@ -139,9 +121,9 @@ func (h *Handler) CreatePollingUnit(w http.ResponseWriter, r *http.Request) {
 
 	arg := queries.CreatePollingUnitParams{
 		Name:                    req.Name,
-		Code:                    toText(req.Code),
-		PuCode:                  toText(req.PUCode),
-		RegistrationAreaID:      toInt4(req.RegistrationAreaID),
+		Code:                    utils.PgTextFromPtr(req.Code),
+		PuCode:                  utils.PgTextFromPtr(req.PUCode),
+		RegistrationAreaID:      utils.PgInt4FromPtr(req.RegistrationAreaID),
 		WardID:                  req.WardID,
 		WardName:                ward.Name,
 		LgaID:                   req.LgaID,
@@ -154,11 +136,11 @@ func (h *Handler) CreatePollingUnit(w http.ResponseWriter, r *http.Request) {
 		StateConstituencyName:   ward.StateConstituencyName,
 		StateID:                 req.StateID,
 		StateName:               state.Name,
-		Latitude:                toFloat8(req.Latitude),
-		Longitude:               toFloat8(req.Longitude),
-		PreciseLocation:         toText(req.PreciseLocation),
-		FormattedAddress:        toText(req.FormattedAddress),
-		GooglePlaceID:           toText(req.GooglePlaceID),
+		Latitude:                utils.PgFloat8FromPtr(req.Latitude),
+		Longitude:               utils.PgFloat8FromPtr(req.Longitude),
+		PreciseLocation:         utils.PgTextFromPtr(req.PreciseLocation),
+		FormattedAddress:        utils.PgTextFromPtr(req.FormattedAddress),
+		GooglePlaceID:           utils.PgTextFromPtr(req.GooglePlaceID),
 	}
 
 	pu, err := h.puService.CreatePollingUnit(r.Context(), arg)
@@ -244,11 +226,8 @@ func (h *Handler) UpdatePollingUnit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Resolve state name (Nigeria country_id is 161)
-	state, err := h.queries.GetStateByID(r.Context(), queries.GetStateByIDParams{
-		ID:        int16(req.StateID),
-		CountryID: 161,
-	})
+	// Resolve state name
+	state, err := h.bodiesService.CheckStateByID(r.Context(), int16(req.StateID))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid state ID: "+err.Error())
 		return
@@ -271,9 +250,9 @@ func (h *Handler) UpdatePollingUnit(w http.ResponseWriter, r *http.Request) {
 	arg := queries.UpdatePollingUnitParams{
 		ID:                      int32(id),
 		Name:                    req.Name,
-		Code:                    toText(req.Code),
-		PuCode:                  toText(req.PUCode),
-		RegistrationAreaID:      toInt4(req.RegistrationAreaID),
+		Code:                    utils.PgTextFromPtr(req.Code),
+		PuCode:                  utils.PgTextFromPtr(req.PUCode),
+		RegistrationAreaID:      utils.PgInt4FromPtr(req.RegistrationAreaID),
 		WardID:                  req.WardID,
 		WardName:                ward.Name,
 		LgaID:                   req.LgaID,
@@ -286,11 +265,11 @@ func (h *Handler) UpdatePollingUnit(w http.ResponseWriter, r *http.Request) {
 		StateConstituencyName:   ward.StateConstituencyName,
 		StateID:                 req.StateID,
 		StateName:               state.Name,
-		Latitude:                toFloat8(req.Latitude),
-		Longitude:               toFloat8(req.Longitude),
-		PreciseLocation:         toText(req.PreciseLocation),
-		FormattedAddress:        toText(req.FormattedAddress),
-		GooglePlaceID:           toText(req.GooglePlaceID),
+		Latitude:                utils.PgFloat8FromPtr(req.Latitude),
+		Longitude:               utils.PgFloat8FromPtr(req.Longitude),
+		PreciseLocation:         utils.PgTextFromPtr(req.PreciseLocation),
+		FormattedAddress:        utils.PgTextFromPtr(req.FormattedAddress),
+		GooglePlaceID:           utils.PgTextFromPtr(req.GooglePlaceID),
 	}
 
 	updatedPU, err := h.puService.UpdatePollingUnit(r.Context(), arg)

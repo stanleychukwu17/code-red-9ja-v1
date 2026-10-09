@@ -27,6 +27,7 @@ type BodiesService interface {
 	SyncElectoralUnits(ctx context.Context) (*bodiesservice.SyncReport, error)
 	SyncElectoralUnitsStateFlow(ctx context.Context) (*bodiesservice.SyncReport, error)
 	GetNationalMetrics(ctx context.Context) (queries.NationalMetric, error)
+	CheckStateByID(ctx context.Context, stateID int16) (queries.CState, error)
 }
 
 type Handler struct {
@@ -231,10 +232,7 @@ func (h *Handler) CreateLGA(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	state, err := h.queries.GetStateByID(r.Context(), queries.GetStateByIDParams{
-		ID:        int16(req.StateID),
-		CountryID: 161,
-	})
+	state, err := h.bodiesService.CheckStateByID(r.Context(), int16(req.StateID))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid state ID: "+err.Error())
 		return
@@ -296,10 +294,7 @@ func (h *Handler) UpdateLGA(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	state, err := h.queries.GetStateByID(r.Context(), queries.GetStateByIDParams{
-		ID:        int16(req.StateID),
-		CountryID: 161,
-	})
+	state, err := h.bodiesService.CheckStateByID(r.Context(), int16(req.StateID))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid state ID: "+err.Error())
 		return

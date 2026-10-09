@@ -10,7 +10,6 @@ import { Layout, PageHeader } from "@repo/ui/components/custom/AdminLayouts";
 import { getPageHeader } from "#/lib/shared/meta";
 import { createFileRoute } from "@tanstack/react-router";
 import { getPartyAdminsTabs } from "./-data";
-import { useUserParty } from "#/hooks/useUserParty";
 import { PartyPositionsCatalogDialog } from "#/components/dialogs/PartyPositionsCatalogDialog";
 import {
   PartyPositionsActionBar,
@@ -31,7 +30,6 @@ export const Route = createFileRoute(
  */
 function RouteComponent() {
   const { partyShortName } = Route.useParams();
-  const { party } = useUserParty();
 
   const [searchQuery, setSearchQuery] = React.useState("");
 

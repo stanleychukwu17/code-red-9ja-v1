@@ -19,17 +19,23 @@ type FederalConstituenciesService interface {
 	GetFederalConstituencies(ctx context.Context, stateID, senatorialDistrictID int32) ([]queries.FederalConstituency, error)
 }
 
-type Handler struct {
-	fcService FederalConstituenciesService
-	queries   *queries.Queries
-	utils     *utils.Utils
+type BodiesService interface {
+	CheckStateByID(ctx context.Context, stateID int16) (queries.CState, error)
 }
 
-func NewHandler(fcService FederalConstituenciesService, q *queries.Queries, utils *utils.Utils) *Handler {
+type Handler struct {
+	federalConstituenciesService FederalConstituenciesService
+	bodiesService                BodiesService
+	queries                      *queries.Queries
+	utils                        *utils.Utils
+}
+
+func NewHandler(federalConstituenciesService FederalConstituenciesService, bodiesService BodiesService, q *queries.Queries, utils *utils.Utils) *Handler {
 	return &Handler{
-		fcService: fcService,
-		queries:   q,
-		utils:     utils,
+		federalConstituenciesService: federalConstituenciesService,
+		bodiesService:                bodiesService,
+		queries:                      q,
+		utils:                        utils,
 	}
 }
 
@@ -72,11 +78,8 @@ func (h *Handler) CreateFederalConstituency(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// Resolve state name (Nigeria country_id is 161)
-	state, err := h.queries.GetStateByID(r.Context(), queries.GetStateByIDParams{
-		ID:        int16(req.StateID),
-		CountryID: 161,
-	})
+	// Resolve state name
+	state, err := h.bodiesService.CheckStateByID(r.Context(), int16(req.StateID))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid state ID: "+err.Error())
 		return
@@ -97,7 +100,7 @@ func (h *Handler) CreateFederalConstituency(w http.ResponseWriter, r *http.Reque
 		codeStr = *req.Code
 	}
 
-	fc, err := h.fcService.CreateFederalConstituency(r.Context(), req.Name, codeStr, req.StateID, state.Name, req.SenatorialDistrictID, districtName)
+	fc, err := h.federalConstituenciesService.CreateFederalConstituency(r.Context(), req.Name, codeStr, req.StateID, state.Name, req.SenatorialDistrictID, districtName)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create federal constituency: "+err.Error())
 		return
@@ -128,7 +131,7 @@ func (h *Handler) GetFederalConstituency(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	fc, err := h.fcService.GetFederalConstituencyByID(r.Context(), int32(id))
+	fc, err := h.federalConstituenciesService.GetFederalConstituencyByID(r.Context(), int32(id))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Federal constituency not found")
 		return
@@ -174,17 +177,14 @@ func (h *Handler) UpdateFederalConstituency(w http.ResponseWriter, r *http.Reque
 	}
 
 	// Verify it exists
-	_, err = h.fcService.GetFederalConstituencyByID(r.Context(), int32(id))
+	_, err = h.federalConstituenciesService.GetFederalConstituencyByID(r.Context(), int32(id))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Federal constituency not found")
 		return
 	}
 
-	// Resolve state name (Nigeria country_id is 161)
-	state, err := h.queries.GetStateByID(r.Context(), queries.GetStateByIDParams{
-		ID:        int16(req.StateID),
-		CountryID: 161,
-	})
+	// Resolve state name
+	state, err := h.bodiesService.CheckStateByID(r.Context(), int16(req.StateID))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid state ID: "+err.Error())
 		return
@@ -205,7 +205,7 @@ func (h *Handler) UpdateFederalConstituency(w http.ResponseWriter, r *http.Reque
 		codeStr = *req.Code
 	}
 
-	updatedFC, err := h.fcService.UpdateFederalConstituency(r.Context(), int32(id), req.Name, codeStr, req.StateID, state.Name, req.SenatorialDistrictID, districtName)
+	updatedFC, err := h.federalConstituenciesService.UpdateFederalConstituency(r.Context(), int32(id), req.Name, codeStr, req.StateID, state.Name, req.SenatorialDistrictID, districtName)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update federal constituency: "+err.Error())
 		return
@@ -239,13 +239,13 @@ func (h *Handler) DeleteFederalConstituency(w http.ResponseWriter, r *http.Reque
 	}
 
 	// Verify it exists
-	_, err = h.fcService.GetFederalConstituencyByID(r.Context(), int32(id))
+	_, err = h.federalConstituenciesService.GetFederalConstituencyByID(r.Context(), int32(id))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Federal constituency not found")
 		return
 	}
 
-	if err := h.fcService.DeleteFederalConstituency(r.Context(), int32(id)); err != nil {
+	if err := h.federalConstituenciesService.DeleteFederalConstituency(r.Context(), int32(id)); err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to delete federal constituency: "+err.Error())
 		return
 	}
@@ -329,7 +329,7 @@ func (h *Handler) GetFederalConstituencies(w http.ResponseWriter, r *http.Reques
 	senatorialDistrictID := parseOptionalQueryInt(r, "senatorial_district_id")
 	limit, cursor := parsePaginationParamsWithMax(r, 500)
 
-	constituencies, err := h.fcService.GetFederalConstituencies(r.Context(), stateID, senatorialDistrictID)
+	constituencies, err := h.federalConstituenciesService.GetFederalConstituencies(r.Context(), stateID, senatorialDistrictID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch federal constituencies: "+err.Error())
 		return

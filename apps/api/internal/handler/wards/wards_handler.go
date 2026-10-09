@@ -21,17 +21,23 @@ type WardsService interface {
 	GetWards(ctx context.Context, localGovernmentID, stateID int32) ([]queries.Ward, error)
 }
 
-type Handler struct {
-	wardService WardsService
-	queries     *queries.Queries
-	utils       *utils.Utils
+type BodiesService interface {
+	CheckStateByID(ctx context.Context, stateID int16) (queries.CState, error)
 }
 
-func NewHandler(wardService WardsService, q *queries.Queries, utils *utils.Utils) *Handler {
+type Handler struct {
+	wardService   WardsService
+	bodiesService BodiesService
+	queries       *queries.Queries
+	utils         *utils.Utils
+}
+
+func NewHandler(wardService WardsService, bodiesService BodiesService, q *queries.Queries, utils *utils.Utils) *Handler {
 	return &Handler{
-		wardService: wardService,
-		queries:     q,
-		utils:       utils,
+		wardService:   wardService,
+		bodiesService: bodiesService,
+		queries:       q,
+		utils:         utils,
 	}
 }
 
@@ -74,11 +80,8 @@ func (h *Handler) CreateWard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Resolve state name (Nigeria country_id is 161)
-	state, err := h.queries.GetStateByID(r.Context(), queries.GetStateByIDParams{
-		ID:        int16(req.StateID),
-		CountryID: 161,
-	})
+	// Resolve state name
+	state, err := h.bodiesService.CheckStateByID(r.Context(), int16(req.StateID))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid state ID: "+err.Error())
 		return
@@ -184,11 +187,8 @@ func (h *Handler) UpdateWard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Resolve state name (Nigeria country_id is 161)
-	state, err := h.queries.GetStateByID(r.Context(), queries.GetStateByIDParams{
-		ID:        int16(req.StateID),
-		CountryID: 161,
-	})
+	// Resolve state name
+	state, err := h.bodiesService.CheckStateByID(r.Context(), int16(req.StateID))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid state ID: "+err.Error())
 		return

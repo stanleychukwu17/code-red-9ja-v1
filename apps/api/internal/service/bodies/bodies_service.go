@@ -131,8 +131,6 @@ func (s *BodiesService) CompletePartyHierarchySelections(ctx context.Context, pa
 		result.National.NationalID = int16(countryDts.ID)
 	}
 
-	fmt.Printf("countryDts:: %v \n", result)
-
 	// Only Nigeria (country ID 161) is supported at this time.
 	if result.National.NationalID == 0 {
 		return PartyHierarchyResult{}, fmt.Errorf("a national/country ID is required")
@@ -456,58 +454,51 @@ func (s *BodiesService) CheckCountry(ctx context.Context, country_id int16) (que
 	return queries.GetCountryByIDRow{}, errors.New("invalid country ID")
 }
 
-// function: check if the state is valid
-func (s *BodiesService) CheckState(ctx context.Context, country_id, state_id int16) (queries.GetStateByIDRow, error) {
-	redisStateKey := fmt.Sprintf("%s%d", db.RedisEachState, state_id)
-
-	// get state details from redis
-	state_data, err := s.rdb.Get(ctx, redisStateKey).Result()
-	if err == nil {
-		var state_dts queries.GetStateByIDRow
-		json.Unmarshal([]byte(state_data), &state_dts)
-		if state_dts.ID > 0 {
-			return state_dts, nil
-		}
+// CheckState checks if the state is valid and belongs to the given country (if country_id > 0).
+func (s *BodiesService) CheckState(ctx context.Context, country_id, state_id int16) (queries.CState, error) {
+	state, err := s.CheckStateByID(ctx, state_id)
+	if err != nil {
+		return queries.CState{}, err
 	}
 
-	// get state details from db
-	state_dts, _ := s.queries.GetStateByID(ctx, queries.GetStateByIDParams{
-		ID:        state_id,
-		CountryID: country_id,
-	})
-	if state_dts.ID > 0 {
-		// save to redis
-		state_data, _ := json.Marshal(state_dts)
-		s.rdb.Set(ctx, redisStateKey, state_data, db.RedisOneEightyDaysTTL)
-
-		return state_dts, nil
+	if country_id > 0 && state.CountryID != country_id {
+		return queries.CState{}, fmt.Errorf("state does not belong to specified country")
 	}
-	return queries.GetStateByIDRow{}, fmt.Errorf("invalid state ID")
+
+	return state, nil
 }
 
-// function: check if the city is valid
+// CheckCity checks if the city is valid and belongs to state_id (if state_id > 0)
 func (s *BodiesService) CheckCity(ctx context.Context, state_id int16, city_id int32) (queries.GetCityByIDRow, error) {
 	redisCityKey := fmt.Sprintf("%s%d", db.RedisEachCity, city_id)
+	var city_dts queries.GetCityByIDRow
 
-	// get city details from redis
+	// 1. Try fetching city details from Redis cache
 	city_data, err := s.rdb.Get(ctx, redisCityKey).Result()
 	if err == nil {
-		var city_dts queries.GetCityByIDRow
-		json.Unmarshal([]byte(city_data), &city_dts)
-		if city_dts.ID > 0 {
+		if json.Unmarshal([]byte(city_data), &city_dts) == nil && city_dts.ID > 0 {
+
+			// Validate that the cached city belongs to the requested state
+			if state_id > 0 && city_dts.StateID != state_id {
+				return queries.GetCityByIDRow{}, fmt.Errorf("city does not belong to specified state")
+			}
+
 			return city_dts, nil
 		}
 	}
 
-	// get city details from db
-	city_dts, _ := s.queries.GetCityByID(ctx, queries.GetCityByIDParams{
-		ID:      city_id,
-		StateID: state_id,
-	})
-	if city_dts.ID > 0 {
-		// save to redis
-		city_data, _ := json.Marshal(city_dts)
-		s.rdb.Set(ctx, redisCityKey, city_data, db.RedisOneEightyDaysTTL)
+	// 2. Fetch city details from the database on cache miss
+	city_dts, err = s.queries.GetCityByID(ctx, city_id)
+	if err == nil && city_dts.ID > 0 {
+		// Populate Redis cache for future queries
+		if data, err := json.Marshal(city_dts); err == nil {
+			s.rdb.Set(ctx, redisCityKey, data, db.RedisOneEightyDaysTTL)
+		}
+
+		// Validate state association
+		if state_id > 0 && city_dts.StateID != state_id {
+			return queries.GetCityByIDRow{}, fmt.Errorf("city does not belong to specified state")
+		}
 
 		return city_dts, nil
 	}

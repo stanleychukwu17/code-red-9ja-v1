@@ -2418,9 +2418,9 @@ func (_m *Querier) GetCitiesByStateID(ctx context.Context, stateID int16) ([]que
 	return r0, r1
 }
 
-// GetCityByID provides a mock function with given fields: ctx, arg
-func (_m *Querier) GetCityByID(ctx context.Context, arg queries.GetCityByIDParams) (queries.GetCityByIDRow, error) {
-	ret := _m.Called(ctx, arg)
+// GetCityByID provides a mock function with given fields: ctx, id
+func (_m *Querier) GetCityByID(ctx context.Context, id int32) (queries.GetCityByIDRow, error) {
+	ret := _m.Called(ctx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetCityByID")
@@ -2428,17 +2428,17 @@ func (_m *Querier) GetCityByID(ctx context.Context, arg queries.GetCityByIDParam
 
 	var r0 queries.GetCityByIDRow
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, queries.GetCityByIDParams) (queries.GetCityByIDRow, error)); ok {
-		return rf(ctx, arg)
+	if rf, ok := ret.Get(0).(func(context.Context, int32) (queries.GetCityByIDRow, error)); ok {
+		return rf(ctx, id)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, queries.GetCityByIDParams) queries.GetCityByIDRow); ok {
-		r0 = rf(ctx, arg)
+	if rf, ok := ret.Get(0).(func(context.Context, int32) queries.GetCityByIDRow); ok {
+		r0 = rf(ctx, id)
 	} else {
 		r0 = ret.Get(0).(queries.GetCityByIDRow)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, queries.GetCityByIDParams) error); ok {
-		r1 = rf(ctx, arg)
+	if rf, ok := ret.Get(1).(func(context.Context, int32) error); ok {
+		r1 = rf(ctx, id)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -4347,34 +4347,6 @@ func (_m *Querier) GetStateConstituencyByID(ctx context.Context, id int32) (quer
 
 	if rf, ok := ret.Get(1).(func(context.Context, int32) error); ok {
 		r1 = rf(ctx, id)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// GetStateByID provides a mock function with given fields: ctx, arg
-func (_m *Querier) GetStateByID(ctx context.Context, arg queries.GetStateByIDParams) (queries.GetStateByIDRow, error) {
-	ret := _m.Called(ctx, arg)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetStateByID")
-	}
-
-	var r0 queries.GetStateByIDRow
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, queries.GetStateByIDParams) (queries.GetStateByIDRow, error)); ok {
-		return rf(ctx, arg)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, queries.GetStateByIDParams) queries.GetStateByIDRow); ok {
-		r0 = rf(ctx, arg)
-	} else {
-		r0 = ret.Get(0).(queries.GetStateByIDRow)
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, queries.GetStateByIDParams) error); ok {
-		r1 = rf(ctx, arg)
 	} else {
 		r1 = ret.Error(1)
 	}
