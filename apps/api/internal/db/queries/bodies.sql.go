@@ -236,24 +236,22 @@ func (q *Queries) CreateSenatorialDistrict(ctx context.Context, arg CreateSenato
 }
 
 const createState = `-- name: CreateState :one
-INSERT INTO c_states (name, country_id, country_code, latitude, longitude)
-VALUES ($1, $2, $3, $4, $5)
-RETURNING id, name, country_id, country_code, latitude, longitude, senatorial_districts_count, federal_constituencies_count, lgas_count, state_constituencies_count, wards_count, polling_units_count
+INSERT INTO c_states (name, country_id, latitude, longitude)
+VALUES ($1, $2, $3, $4)
+RETURNING id, name, country_id, latitude, longitude, senatorial_districts_count, federal_constituencies_count, lgas_count, state_constituencies_count, wards_count, polling_units_count
 `
 
 type CreateStateParams struct {
-	Name        string         `json:"name"`
-	CountryID   int16          `json:"country_id"`
-	CountryCode string         `json:"country_code"`
-	Latitude    pgtype.Numeric `json:"latitude"`
-	Longitude   pgtype.Numeric `json:"longitude"`
+	Name      string         `json:"name"`
+	CountryID int16          `json:"country_id"`
+	Latitude  pgtype.Numeric `json:"latitude"`
+	Longitude pgtype.Numeric `json:"longitude"`
 }
 
 func (q *Queries) CreateState(ctx context.Context, arg CreateStateParams) (CState, error) {
 	row := q.db.QueryRow(ctx, createState,
 		arg.Name,
 		arg.CountryID,
-		arg.CountryCode,
 		arg.Latitude,
 		arg.Longitude,
 	)
@@ -262,7 +260,6 @@ func (q *Queries) CreateState(ctx context.Context, arg CreateStateParams) (CStat
 		&i.ID,
 		&i.Name,
 		&i.CountryID,
-		&i.CountryCode,
 		&i.Latitude,
 		&i.Longitude,
 		&i.SenatorialDistrictsCount,
@@ -1207,7 +1204,7 @@ func (q *Queries) GetStateConstituencyByID(ctx context.Context, id int32) (State
 }
 
 const getStateDetailsByID = `-- name: GetStateDetailsByID :one
-SELECT id, name, country_id, country_code, latitude, longitude, senatorial_districts_count, federal_constituencies_count, lgas_count, state_constituencies_count, wards_count, polling_units_count FROM c_states
+SELECT id, name, country_id, latitude, longitude, senatorial_districts_count, federal_constituencies_count, lgas_count, state_constituencies_count, wards_count, polling_units_count FROM c_states
 WHERE id = $1 LIMIT 1
 `
 
@@ -1218,7 +1215,6 @@ func (q *Queries) GetStateDetailsByID(ctx context.Context, id int16) (CState, er
 		&i.ID,
 		&i.Name,
 		&i.CountryID,
-		&i.CountryCode,
 		&i.Latitude,
 		&i.Longitude,
 		&i.SenatorialDistrictsCount,
@@ -1232,7 +1228,7 @@ func (q *Queries) GetStateDetailsByID(ctx context.Context, id int16) (CState, er
 }
 
 const getStatesByCountryID = `-- name: GetStatesByCountryID :many
-SELECT id, name, country_id, country_code, latitude, longitude, senatorial_districts_count, federal_constituencies_count, lgas_count, state_constituencies_count, wards_count, polling_units_count FROM c_states
+SELECT id, name, country_id, latitude, longitude, senatorial_districts_count, federal_constituencies_count, lgas_count, state_constituencies_count, wards_count, polling_units_count FROM c_states
 WHERE country_id = $1
 ORDER BY name ASC
 `
@@ -1250,7 +1246,6 @@ func (q *Queries) GetStatesByCountryID(ctx context.Context, countryID int16) ([]
 			&i.ID,
 			&i.Name,
 			&i.CountryID,
-			&i.CountryCode,
 			&i.Latitude,
 			&i.Longitude,
 			&i.SenatorialDistrictsCount,
@@ -1361,7 +1356,7 @@ func (q *Queries) GetWards(ctx context.Context, arg GetWardsParams) ([]Ward, err
 }
 
 const listAllStates = `-- name: ListAllStates :many
-SELECT id, name, country_id, country_code, latitude, longitude, senatorial_districts_count, federal_constituencies_count, lgas_count, state_constituencies_count, wards_count, polling_units_count FROM c_states
+SELECT id, name, country_id, latitude, longitude, senatorial_districts_count, federal_constituencies_count, lgas_count, state_constituencies_count, wards_count, polling_units_count FROM c_states
 ORDER BY name ASC
 `
 
@@ -1378,7 +1373,6 @@ func (q *Queries) ListAllStates(ctx context.Context) ([]CState, error) {
 			&i.ID,
 			&i.Name,
 			&i.CountryID,
-			&i.CountryCode,
 			&i.Latitude,
 			&i.Longitude,
 			&i.SenatorialDistrictsCount,
@@ -1810,18 +1804,17 @@ func (q *Queries) UpdateSenatorialDistrict(ctx context.Context, arg UpdateSenato
 
 const updateState = `-- name: UpdateState :one
 UPDATE c_states
-SET name = $2, country_id = $3, country_code = $4, latitude = $5, longitude = $6
+SET name = $2, country_id = $3, latitude = $4, longitude = $5
 WHERE id = $1
-RETURNING id, name, country_id, country_code, latitude, longitude, senatorial_districts_count, federal_constituencies_count, lgas_count, state_constituencies_count, wards_count, polling_units_count
+RETURNING id, name, country_id, latitude, longitude, senatorial_districts_count, federal_constituencies_count, lgas_count, state_constituencies_count, wards_count, polling_units_count
 `
 
 type UpdateStateParams struct {
-	ID          int16          `json:"id"`
-	Name        string         `json:"name"`
-	CountryID   int16          `json:"country_id"`
-	CountryCode string         `json:"country_code"`
-	Latitude    pgtype.Numeric `json:"latitude"`
-	Longitude   pgtype.Numeric `json:"longitude"`
+	ID        int16          `json:"id"`
+	Name      string         `json:"name"`
+	CountryID int16          `json:"country_id"`
+	Latitude  pgtype.Numeric `json:"latitude"`
+	Longitude pgtype.Numeric `json:"longitude"`
 }
 
 func (q *Queries) UpdateState(ctx context.Context, arg UpdateStateParams) (CState, error) {
@@ -1829,7 +1822,6 @@ func (q *Queries) UpdateState(ctx context.Context, arg UpdateStateParams) (CStat
 		arg.ID,
 		arg.Name,
 		arg.CountryID,
-		arg.CountryCode,
 		arg.Latitude,
 		arg.Longitude,
 	)
@@ -1838,7 +1830,6 @@ func (q *Queries) UpdateState(ctx context.Context, arg UpdateStateParams) (CStat
 		&i.ID,
 		&i.Name,
 		&i.CountryID,
-		&i.CountryCode,
 		&i.Latitude,
 		&i.Longitude,
 		&i.SenatorialDistrictsCount,

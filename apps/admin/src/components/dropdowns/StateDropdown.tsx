@@ -60,7 +60,6 @@ export const StateDropdown = ({ data, className }: StateDropdownProps) => {
     id: data.id,
     name: data.name,
     country_id: data.country_id,
-    country_code: data.country_code,
     latitude: data.latitude,
     longitude: data.longitude,
   };

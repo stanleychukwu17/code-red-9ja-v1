@@ -8,7 +8,6 @@ export const createState = createServerFn({ method: "POST" })
     (data: {
       name: string;
       country_id: number;
-      country_code: string;
       latitude: number;
       longitude: number;
     }) => data,
@@ -35,7 +34,6 @@ export const updateState = createServerFn({ method: "POST" })
       id: string | number;
       name: string;
       country_id: number;
-      country_code: string;
       latitude: number;
       longitude: number;
     }) => data,

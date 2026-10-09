@@ -10,7 +10,6 @@ export type StateType = {
   id: number;
   name: string;
   country_id: number;
-  country_code: string;
   latitude: number;
   longitude: number;
   lgas_count?: number;

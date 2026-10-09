@@ -93,13 +93,13 @@ SELECT * FROM c_states
 WHERE id = $1 LIMIT 1;
 
 -- name: CreateState :one
-INSERT INTO c_states (name, country_id, country_code, latitude, longitude)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO c_states (name, country_id, latitude, longitude)
+VALUES ($1, $2, $3, $4)
 RETURNING *;
 
 -- name: UpdateState :one
 UPDATE c_states
-SET name = $2, country_id = $3, country_code = $4, latitude = $5, longitude = $6
+SET name = $2, country_id = $3, latitude = $4, longitude = $5
 WHERE id = $1
 RETURNING *;
 

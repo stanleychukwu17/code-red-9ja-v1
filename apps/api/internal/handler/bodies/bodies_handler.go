@@ -122,7 +122,7 @@ func (h *Handler) GetStates(w http.ResponseWriter, r *http.Request) {
 		searchLower := strings.ToLower(search)
 		var filtered []queries.CState
 		for _, s := range states {
-			if strings.Contains(strings.ToLower(s.Name), searchLower) || strings.Contains(strings.ToLower(s.CountryCode), searchLower) {
+			if strings.Contains(strings.ToLower(s.Name), searchLower) {
 				filtered = append(filtered, s)
 			}
 		}

@@ -12,9 +12,9 @@ import (
 )
 
 type StatesService interface {
-	CreateState(ctx context.Context, name string, countryID int16, countryCode string, latitude, longitude float64) (queries.CState, error)
+	CreateState(ctx context.Context, name string, countryID int16, latitude, longitude float64) (queries.CState, error)
 	GetStateByID(ctx context.Context, id int16) (queries.CState, error)
-	UpdateState(ctx context.Context, id int16, name string, countryID int16, countryCode string, latitude, longitude float64) (queries.CState, error)
+	UpdateState(ctx context.Context, id int16, name string, countryID int16, latitude, longitude float64) (queries.CState, error)
 	DeleteState(ctx context.Context, id int16) error
 }
 
@@ -31,19 +31,17 @@ func NewHandler(statesService StatesService, utils *utils.Utils) *Handler {
 }
 
 type CreateStateRequest struct {
-	Name        string  `json:"name"`
-	CountryID   int16   `json:"country_id"`
-	CountryCode string  `json:"country_code"`
-	Latitude    float64 `json:"latitude"`
-	Longitude   float64 `json:"longitude"`
+	Name      string  `json:"name"`
+	CountryID int16   `json:"country_id"`
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
 }
 
 type UpdateStateRequest struct {
-	Name        string  `json:"name"`
-	CountryID   int16   `json:"country_id"`
-	CountryCode string  `json:"country_code"`
-	Latitude    float64 `json:"latitude"`
-	Longitude   float64 `json:"longitude"`
+	Name      string  `json:"name"`
+	CountryID int16   `json:"country_id"`
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
 }
 
 // CreateState godoc
@@ -66,12 +64,12 @@ func (h *Handler) CreateState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Name == "" || req.CountryID == 0 || req.CountryCode == "" {
-		h.utils.RespondError(w, http.StatusBadRequest, "name, country_id, and country_code are required")
+	if req.Name == "" || req.CountryID == 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "name and country_id are required")
 		return
 	}
 
-	state, err := h.statesService.CreateState(r.Context(), req.Name, req.CountryID, req.CountryCode, req.Latitude, req.Longitude)
+	state, err := h.statesService.CreateState(r.Context(), req.Name, req.CountryID, req.Latitude, req.Longitude)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create state: "+err.Error())
 		return
@@ -142,8 +140,8 @@ func (h *Handler) UpdateState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Name == "" || req.CountryID == 0 || req.CountryCode == "" {
-		h.utils.RespondError(w, http.StatusBadRequest, "name, country_id, and country_code are required")
+	if req.Name == "" || req.CountryID == 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "name and country_id are required")
 		return
 	}
 
@@ -154,7 +152,7 @@ func (h *Handler) UpdateState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updatedState, err := h.statesService.UpdateState(r.Context(), int16(id), req.Name, req.CountryID, req.CountryCode, req.Latitude, req.Longitude)
+	updatedState, err := h.statesService.UpdateState(r.Context(), int16(id), req.Name, req.CountryID, req.Latitude, req.Longitude)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update state: "+err.Error())
 		return

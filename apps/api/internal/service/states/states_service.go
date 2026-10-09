@@ -22,7 +22,7 @@ func NewStatesService(q *queries.Queries, rdb *redis.Client) *StatesService {
 	}
 }
 
-func (s *StatesService) CreateState(ctx context.Context, name string, countryID int16, countryCode string, latitude, longitude float64) (queries.CState, error) {
+func (s *StatesService) CreateState(ctx context.Context, name string, countryID int16, latitude, longitude float64) (queries.CState, error) {
 	var latNumeric pgtype.Numeric
 	var lngNumeric pgtype.Numeric
 
@@ -30,11 +30,10 @@ func (s *StatesService) CreateState(ctx context.Context, name string, countryID 
 	_ = lngNumeric.Scan(fmt.Sprintf("%f", longitude))
 
 	arg := queries.CreateStateParams{
-		Name:        name,
-		CountryID:   countryID,
-		CountryCode: countryCode,
-		Latitude:    latNumeric,
-		Longitude:   lngNumeric,
+		Name:      name,
+		CountryID: countryID,
+		Latitude:  latNumeric,
+		Longitude: lngNumeric,
 	}
 
 	state, err := s.queries.CreateState(ctx, arg)
@@ -52,7 +51,7 @@ func (s *StatesService) GetStateByID(ctx context.Context, id int16) (queries.CSt
 	return s.queries.GetStateDetailsByID(ctx, id)
 }
 
-func (s *StatesService) UpdateState(ctx context.Context, id int16, name string, countryID int16, countryCode string, latitude, longitude float64) (queries.CState, error) {
+func (s *StatesService) UpdateState(ctx context.Context, id int16, name string, countryID int16, latitude, longitude float64) (queries.CState, error) {
 	var latNumeric pgtype.Numeric
 	var lngNumeric pgtype.Numeric
 
@@ -60,12 +59,11 @@ func (s *StatesService) UpdateState(ctx context.Context, id int16, name string, 
 	_ = lngNumeric.Scan(fmt.Sprintf("%f", longitude))
 
 	arg := queries.UpdateStateParams{
-		ID:          id,
-		Name:        name,
-		CountryID:   countryID,
-		CountryCode: countryCode,
-		Latitude:    latNumeric,
-		Longitude:   lngNumeric,
+		ID:        id,
+		Name:      name,
+		CountryID: countryID,
+		Latitude:  latNumeric,
+		Longitude: lngNumeric,
 	}
 
 	state, err := s.queries.UpdateState(ctx, arg)

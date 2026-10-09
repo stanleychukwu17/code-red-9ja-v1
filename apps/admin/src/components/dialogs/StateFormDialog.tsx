@@ -20,7 +20,6 @@ export interface State {
   id: number;
   name: string;
   country_id: number;
-  country_code: string;
   latitude: number;
   longitude: number;
 }
@@ -45,7 +44,6 @@ export function StateFormDialog({
     defaultValues: {
       name: "",
       countryId: undefined as number | undefined,
-      countryCode: "",
       latitude: "",
       longitude: "",
     },
@@ -59,13 +57,11 @@ export function StateFormDialog({
       if (mode === "update" && state) {
         form.setFieldValue("name", state.name || "");
         form.setFieldValue("countryId", state.country_id);
-        form.setFieldValue("countryCode", state.country_code || "");
         form.setFieldValue("latitude", String(state.latitude || ""));
         form.setFieldValue("longitude", String(state.longitude || ""));
       } else {
         form.setFieldValue("name", "");
         form.setFieldValue("countryId", undefined);
-        form.setFieldValue("countryCode", "");
         form.setFieldValue("latitude", "");
         form.setFieldValue("longitude", "");
       }
@@ -77,7 +73,6 @@ export function StateFormDialog({
     mutationFn: async (values: {
       name: string;
       countryId: number | undefined;
-      countryCode: string;
       latitude: string;
       longitude: string;
     }) => {
@@ -88,7 +83,6 @@ export function StateFormDialog({
       const payload = {
         name: values.name.trim(),
         country_id: values.countryId,
-        country_code: values.countryCode.trim(),
         latitude: Number(values.latitude) || 0,
         longitude: Number(values.longitude) || 0,
       };
@@ -164,63 +158,30 @@ export function StateFormDialog({
               />
             </div>
 
-            {/* Grid Layout for Country and Country Code */}
-            <div className="grid grid-cols-2 gap-4">
-              {/* Country Select */}
-              <div className="flex flex-col gap-1.5">
-                <Label title="Country" />
-                <form.Field
-                  name="countryId"
-                  validators={{
-                    onChange: ({ value }) =>
-                      !value ? "Country is required" : undefined,
-                  }}
-                  children={(field) => (
-                    <SelectCountry
-                      selectedId={
-                        field.state.value !== undefined
-                          ? String(field.state.value)
-                          : undefined
-                      }
-                      update={(item) => {
-                        field.handleChange(item.id);
-                        if (item.iso2) {
-                          form.setFieldValue("countryCode", item.iso2);
-                        }
-                      }}
-                      fetchCountries={getAllCountries}
-                      errorMsg={field.state.meta.errors?.join(", ")}
-                    />
-                  )}
-                />
-              </div>
-
-              {/* Country Code */}
-              <div className="flex flex-col gap-1.5">
-                <Label title="Country code" />
-                <form.Field
-                  name="countryCode"
-                  validators={{
-                    onChange: ({ value }) =>
-                      !value ? "Country code is required" : undefined,
-                  }}
-                  children={(field) => (
-                    <div>
-                      <Input
-                        type="text"
-                        placeholder="E.g., NG"
-                        value={field.state.value}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                      />
-                      {field.state.meta.errors && (
-                        <p className="text-red-500 text-xs mt-1">
-                          {field.state.meta.errors.join(", ")}
-                        </p>
-                      )}
-                    </div>
-                  )}
-                />
-              </div>
+            {/* Country Select */}
+            <div className="flex flex-col gap-1.5">
+              <Label title="Country" />
+              <form.Field
+                name="countryId"
+                validators={{
+                  onChange: ({ value }) =>
+                    !value ? "Country is required" : undefined,
+                }}
+                children={(field) => (
+                  <SelectCountry
+                    selectedId={
+                      field.state.value !== undefined
+                        ? String(field.state.value)
+                        : undefined
+                    }
+                    update={(item) => {
+                      field.handleChange(item.id);
+                    }}
+                    fetchCountries={getAllCountries}
+                    errorMsg={field.state.meta.errors?.join(", ")}
+                  />
+                )}
+              />
             </div>
 
             {/* Coordinates Grid Layout */}

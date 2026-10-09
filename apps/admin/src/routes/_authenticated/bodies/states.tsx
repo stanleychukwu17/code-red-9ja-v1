@@ -72,7 +72,6 @@ function StatesListComponent() {
           id: state.id,
           name: state.name,
           country_id: state.country_id ?? 161,
-          country_code: state.country_code ?? "NG",
           latitude: state.latitude ?? 0,
           longitude: state.longitude ?? 0,
           lgas_count: state.lgas_count,

@@ -17,7 +17,7 @@ import {
 	type LGAItem,
 	type WardItem,
 } from "#/lib/server/polling_units";
-import { joinPartyHierarchy } from "#/lib/server/parties";
+import { joinPartyHierarchy, type PartyCardData } from "#/lib/server/parties";
 import { JoinPartyDrillDownHeader, type LevelTier } from "./JoinPartyDrillDownHeader";
 import { JoinPartyChapterCard } from "./JoinPartyChapterCard";
 import { JoinPartyDrillDownFooter } from "./JoinPartyDrillDownFooter";
@@ -156,8 +156,30 @@ export function JoinPartyDialog({
 			}
 			toast.success(`You have successfully joined ${partyName.toUpperCase()}!`);
 
-			// Refresh party cards and session so UI reflects the new membership
-			queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partyCards });
+			// Directly update the party card in cache to avoid an extra network roundtrip
+			queryClient.setQueryData(
+				QUERY_KEYS.partyCards,
+				(oldData: { success: boolean; message?: string; data: { parties: PartyCardData[] } } | undefined) => {
+					if (!oldData?.data?.parties) return oldData;
+					return {
+						...oldData,
+						data: {
+							...oldData.data,
+							parties: oldData.data.parties.map((p) => {
+								if (p.id === partyId) {
+									return {
+										...p,
+										is_user_member: true,
+										total_members: (p.total_members || 0) + 1,
+									};
+								}
+
+								return p.is_user_member ? { ...p, is_user_member: false } : p;
+							}),
+						},
+					};
+				}
+			);
 			queryClient.invalidateQueries({ queryKey: QUERY_KEYS.auth.session });
 			onJoinSuccess?.(partyId);
 

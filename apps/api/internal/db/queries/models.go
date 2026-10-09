@@ -104,7 +104,6 @@ type CState struct {
 	ID                         int16          `json:"id"`
 	Name                       string         `json:"name"`
 	CountryID                  int16          `json:"country_id"`
-	CountryCode                string         `json:"country_code"`
 	Latitude                   pgtype.Numeric `json:"latitude"`
 	Longitude                  pgtype.Numeric `json:"longitude"`
 	SenatorialDistrictsCount   int32          `json:"senatorial_districts_count"`
