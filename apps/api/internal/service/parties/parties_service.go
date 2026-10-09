@@ -476,11 +476,14 @@ func (s *PartiesService) GetOnePartyChapterOfficial(ctx context.Context, chapter
 	if err != nil {
 		// If position is unassigned, cache and return a vacant card
 		if errors.Is(err, pgx.ErrNoRows) {
-			posName := "Official"
-			if positionID == constants.PartyPositionChairmanID {
+			var posName string
+			switch positionID {
+			case constants.PartyPositionChairmanID:
 				posName = "Chairman"
-			} else if positionID == constants.PartyPositionSecretaryID {
+			case constants.PartyPositionSecretaryID:
 				posName = "Secretary"
+			default:
+				posName = "Official"
 			}
 
 			vacantOfficial := PartyOfficialCard{

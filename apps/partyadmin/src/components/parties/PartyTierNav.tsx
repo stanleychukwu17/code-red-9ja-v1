@@ -52,16 +52,17 @@ export function PartyTierNav({
   onWardChange,
   className,
 }: PartyTierNavProps) {
-  // Handle tier changes and reset subordinate filters
+  // Handle tier switch and reset all subordinate filters
   const handleTierChange = (tier: string) => {
     onTierChange(tier);
-    onCountryChange?.(undefined);
+    onCountryChange?.(tier === "national" ? 161 : undefined);
     onZonalChange?.(undefined);
     onStateChange?.(undefined);
     onLgaChange?.(undefined);
     onWardChange?.(undefined);
   };
 
+  // Handle country selection and reset child region filters
   const handleCountryChange = (countryId?: number) => {
     onCountryChange?.(countryId);
     onStateChange?.(undefined);
@@ -69,12 +70,14 @@ export function PartyTierNav({
     onWardChange?.(undefined);
   };
 
+  // Handle state selection and reset downstream LGA and Ward filters
   const handleStateChange = (stateId?: number) => {
     onStateChange?.(stateId);
     onLgaChange?.(undefined);
     onWardChange?.(undefined);
   };
 
+  // Handle LGA selection and reset downstream Ward filter
   const handleLgaChange = (lgaId?: number) => {
     onLgaChange?.(lgaId);
     onWardChange?.(undefined);
@@ -89,9 +92,8 @@ export function PartyTierNav({
             key={tab.key}
             type="button"
             onClick={() => handleTierChange(tab.key)}
-            className={`grow px-3.5 py-1.5 rounded-lg text-[13px] font-medium transition whitespace-nowrap ${chapterTier === tab.key
-              ? "bg-background text-c-90 shadow-xs"
-              : "text-c-60 hover:text-c-90"
+            className={`grow px-3.5 py-1.5 rounded-lg text-[13px] font-medium transition whitespace-nowrap
+              ${chapterTier === tab.key ? "bg-background text-c-90 shadow-xs" : "text-c-60 hover:text-c-90"
               }`}
           >
             {tab.label}

@@ -1,5 +1,5 @@
 /**
- * @file Party Positions Page Subcomponents
+ * @file Party Positions Page SubComponents
  * @description Modular components for the Party Positions roster page:
  * - PartyPositionsActionBar: Tier navigation tabs and action buttons
  * - PartyPositionsFilterBar: Search layer and appointment type filter dropdown

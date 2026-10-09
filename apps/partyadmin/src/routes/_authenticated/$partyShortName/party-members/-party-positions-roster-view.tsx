@@ -57,13 +57,12 @@ function VacantPositionCard({
   onAppoint?: (position: PartyPositionItem) => void;
 }) {
   return (
-    <div className="flex flex-col items-center justify-start text-center w-full max-w-[240px]">
+    <div className="flex flex-col items-center justify-start text-center w-full max-w-60">
       {/* Vacant circular gradient avatar */}
       <div
         className="size-36 rounded-full shrink-0 shadow-xs"
         style={{
-          background:
-            "radial-gradient(circle at 75% 75%, #b2f354 0%, #d5f997 45%, #f2fde2 80%, #ffffff 100%)",
+          background: "radial-gradient(circle at 75% 75%, #b2f354 0%, #d5f997 45%, #f2fde2 80%, #ffffff 100%)",
         }}
       />
 
@@ -145,7 +144,7 @@ function OccupiedPositionCard({
       : `${official.chapter_type} chapter`;
 
   return (
-    <div className="flex flex-col items-center justify-start text-center w-full max-w-[260px]">
+    <div className="flex flex-col items-center justify-start text-center w-full max-w-65">
       {/* Official Circular Avatar */}
       <div className="size-36 rounded-full shrink-0 overflow-hidden border border-black/5 shadow-sm bg-gray-100 flex items-center justify-center">
         {official.avatar ? (
@@ -264,7 +263,7 @@ export function PartyPositionsRosterView({
       getPartyOfficials({
         data: {
           partyId: partyId!,
-          chapterType: chapterTier !== "all" ? chapterTier : undefined,
+          chapterType: chapterTier,
           countryId: selectedCountryId,
           zonalId: selectedZonalId,
           stateId: selectedStateId,
@@ -274,6 +273,7 @@ export function PartyPositionsRosterView({
         },
       }),
     enabled: !!partyId,
+    staleTime: Infinity,
   });
 
   // Extract list of officials from response; default empty array

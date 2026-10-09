@@ -38,7 +38,7 @@ function RouteComponent() {
 
   // Chapter Hierarchy Filters
   const [chapterTier, setChapterTier] = React.useState<string>("national");
-  const [selectedCountryId, setSelectedCountryId] = React.useState<number | undefined>(undefined);
+  const [selectedCountryId, setSelectedCountryId] = React.useState<number | undefined>(161);
   const [selectedZonalId, setSelectedZonalId] = React.useState<number | undefined>(undefined);
   const [selectedStateId, setSelectedStateId] = React.useState<number | undefined>(undefined);
   const [selectedLgaId, setSelectedLgaId] = React.useState<number | undefined>(undefined);
@@ -49,7 +49,7 @@ function RouteComponent() {
 
   const handleTierChange = (tier: string) => {
     setChapterTier(tier);
-    setSelectedCountryId(undefined);
+    setSelectedCountryId(tier === "national" ? 161 : undefined);
     setSelectedZonalId(undefined);
     setSelectedStateId(undefined);
     setSelectedLgaId(undefined);

@@ -949,14 +949,14 @@ func (h *Handler) ListPartyWalletTransactions(w http.ResponseWriter, r *http.Req
 
 	limit, offset := parsePaginationForWallet(r)
 
-	txns, err := h.partiesService.GetPartyWalletTransactions(r.Context(), int16(id), int32(limit), int32(offset))
+	tx, err := h.partiesService.GetPartyWalletTransactions(r.Context(), int16(id), int32(limit), int32(offset))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Could not fetch transactions: "+err.Error())
 		return
 	}
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Transactions fetched successfully", map[string]interface{}{
-		"transactions": txns,
+		"transactions": tx,
 	})
 }
 
@@ -2648,7 +2648,7 @@ func (h *Handler) ListPartyOfficials(w http.ResponseWriter, r *http.Request) {
 		// User selected a sub-national tier, but has not picked a specific jurisdiction yet
 		chapterID = 0
 	default:
-		cID := int16(1)
+		cID := int16(161)
 		if countryID > 0 {
 			cID = int16(countryID)
 		}

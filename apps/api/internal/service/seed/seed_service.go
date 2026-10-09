@@ -721,7 +721,7 @@ func (s *SeedService) SimulateElectionResults(ctx context.Context, electionID in
 	}
 
 	// ── Step 1: Resolve national target shares ──────────────────────────────
-	// Normalise the caller-supplied party_shares into fractions that sum to 1.0.
+	// Normalize the caller-supplied party_shares into fractions that sum to 1.0.
 	// Unspecified active parties share whatever fraction is left over equally.
 	nationalShares := make(map[string]float64) // upper(shortName) → [0,1]
 	if len(req.PartyShares) > 0 {
@@ -781,7 +781,7 @@ func (s *SeedService) SimulateElectionResults(ctx context.Context, electionID in
 				nationalShares[name] = val
 			}
 		} else {
-			// Specified shares exceed 100% — normalise proportionally
+			// Specified shares exceed 100% — normalize proportionally
 			var sumAll float64
 			for _, val := range specifiedMap {
 				sumAll += val
