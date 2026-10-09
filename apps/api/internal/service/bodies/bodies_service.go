@@ -13,10 +13,10 @@ import (
 )
 
 type PartiesService interface {
-	GetOrCreateWardChapter(ctx context.Context, partyID int16, wardID int32) (int32, error)
-	GetOrCreateLGAChapter(ctx context.Context, partyID int16, lgaID int32) (int32, error)
-	GetOrCreateStateChapter(ctx context.Context, partyID, stateID int16) (int32, error)
-	GetOrCreateNationalChapter(ctx context.Context, partyID, countryID int16) (int32, error)
+	GetOrCreateWardChapter(ctx context.Context, partyID int16, wardID int32, createIfMissing ...bool) (int32, error)
+	GetOrCreateLGAChapter(ctx context.Context, partyID int16, lgaID int32, createIfMissing ...bool) (int32, error)
+	GetOrCreateStateChapter(ctx context.Context, partyID, stateID int16, createIfMissing ...bool) (int32, error)
+	GetOrCreateNationalChapter(ctx context.Context, partyID, countryID int16, createIfMissing ...bool) (int32, error)
 }
 
 type BodiesService struct {
@@ -130,6 +130,8 @@ func (s *BodiesService) CompletePartyHierarchySelections(ctx context.Context, pa
 
 		result.National.NationalID = int16(countryDts.ID)
 	}
+
+	fmt.Printf("countryDts:: %v \n", result)
 
 	// Only Nigeria (country ID 161) is supported at this time.
 	if result.National.NationalID == 0 {

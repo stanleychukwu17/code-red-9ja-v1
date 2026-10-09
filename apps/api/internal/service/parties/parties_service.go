@@ -1238,24 +1238,50 @@ func (s *PartiesService) GetPartyChapterByID(ctx context.Context, chapterID int3
 	return chapter, nil
 }
 
-// GetOrCreateNationalChapter retrieves the national chapter for a party in a specific country,
-// and creates one if it doesn't already exist.
-func (s *PartiesService) GetOrCreateNationalChapter(ctx context.Context, partyID, countryID int16) (int32, error) {
+// GetOrCreateNationalChapter retrieves the national chapter for a party in a specific country.
+// When createIfMissing is true (default), it creates the chapter if it does not already exist.
+// When createIfMissing is false, it returns 0 without creating the chapter if it does not exist.
+func (s *PartiesService) GetOrCreateNationalChapter(ctx context.Context, partyID, countryID int16, createIfMissing ...bool) (int32, error) {
+	// 1. Resolve creation mode flag (defaults to true if omitted)
+	shouldCreate := true
+	if len(createIfMissing) > 0 {
+		shouldCreate = createIfMissing[0]
+	}
+
+	// 2. Validate that the country exists
 	if s.bodiesService != nil {
 		if _, err := s.bodiesService.CheckCountry(ctx, countryID); err != nil {
 			return 0, fmt.Errorf("invalid country: %w", err)
 		}
 	}
 
+	// 3. Fast-path: Check Redis cache
 	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisNationalChapter, partyID, countryID)
-
-	// Try to get from Redis
 	if valStr, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
 		if val, err := strconv.ParseInt(valStr, 10, 32); err == nil {
 			return int32(val), nil
 		}
 	}
 
+	// 4. Read-only lookup: query without inserting if creation is disabled
+	if !shouldCreate {
+		natChapterID, err := s.queries.GetNationalChapter(ctx, queries.GetNationalChapterParams{
+			PartyID:   partyID,
+			CountryID: pgtype.Int2{Int16: countryID, Valid: true},
+		})
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return 0, nil // Chapter does not exist yet
+			}
+			return 0, fmt.Errorf("failed to get national chapter: %w", err)
+		}
+
+		// Cache found chapter ID in Redis
+		_ = s.rdb.Set(ctx, cacheKey, natChapterID, db.RedisOneEightyDaysTTL).Err()
+		return natChapterID, nil
+	}
+
+	// 5. Read-or-create: Upsert national chapter record in the database
 	natChapterID, err := s.queries.GetOrCreateNationalChapter(ctx, queries.GetOrCreateNationalChapterParams{
 		PartyID:   partyID,
 		CountryID: pgtype.Int2{Int16: countryID, Valid: true},
@@ -1264,29 +1290,55 @@ func (s *PartiesService) GetOrCreateNationalChapter(ctx context.Context, partyID
 		return 0, fmt.Errorf("failed to get or create national chapter: %w", err)
 	}
 
-	// Cache and return
+	// 6. Cache newly resolved chapter ID in Redis
 	_ = s.rdb.Set(ctx, cacheKey, natChapterID, db.RedisOneEightyDaysTTL).Err()
 	return natChapterID, nil
 }
 
-// GetOrCreateZonalChapter retrieves the zonal chapter for a party in a specific geopolitical zone,
-// and creates one if it doesn't already exist.
-func (s *PartiesService) GetOrCreateZonalChapter(ctx context.Context, partyID, zonalID int16) (int32, error) {
+// GetOrCreateZonalChapter retrieves the zonal chapter for a party in a specific geopolitical zone.
+// When createIfMissing is true (default), it creates the chapter if it does not already exist.
+// When createIfMissing is false, it returns 0 without creating the chapter if it does not exist.
+func (s *PartiesService) GetOrCreateZonalChapter(ctx context.Context, partyID, zonalID int16, createIfMissing ...bool) (int32, error) {
+	// 1. Resolve creation mode flag (defaults to true if omitted)
+	shouldCreate := true
+	if len(createIfMissing) > 0 {
+		shouldCreate = createIfMissing[0]
+	}
+
+	// 2. Validate that the geopolitical zone exists
 	if s.bodiesService != nil {
 		if _, err := s.bodiesService.CheckZone(ctx, zonalID); err != nil {
 			return 0, fmt.Errorf("invalid zone: %w", err)
 		}
 	}
 
+	// 3. Fast-path: Check Redis cache
 	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisZonalChapter, partyID, zonalID)
-
-	// Try to get from Redis
 	if valStr, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
 		if val, err := strconv.ParseInt(valStr, 10, 32); err == nil {
 			return int32(val), nil
 		}
 	}
 
+	// 4. Read-only lookup: query without inserting if creation is disabled
+	if !shouldCreate {
+		zonalChapterID, err := s.queries.GetZonalChapter(ctx, queries.GetZonalChapterParams{
+			PartyID: partyID,
+			ZonalID: pgtype.Int2{Int16: zonalID, Valid: true},
+		})
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return 0, nil // Chapter does not exist yet
+			}
+			return 0, fmt.Errorf("failed to get zonal chapter: %w", err)
+		}
+
+		// Cache found chapter ID in Redis
+		_ = s.rdb.Set(ctx, cacheKey, zonalChapterID, db.RedisOneEightyDaysTTL).Err()
+		return zonalChapterID, nil
+	}
+
+	// 5. Read-or-create: Upsert zonal chapter record in the database
 	zonalChapterID, err := s.queries.GetOrCreateZonalChapter(ctx, queries.GetOrCreateZonalChapterParams{
 		PartyID: partyID,
 		ZonalID: pgtype.Int2{Int16: zonalID, Valid: true},
@@ -1295,28 +1347,55 @@ func (s *PartiesService) GetOrCreateZonalChapter(ctx context.Context, partyID, z
 		return 0, fmt.Errorf("failed to get or create zonal chapter: %w", err)
 	}
 
+	// 6. Cache newly resolved chapter ID in Redis
 	_ = s.rdb.Set(ctx, cacheKey, zonalChapterID, db.RedisOneEightyDaysTTL).Err()
 	return zonalChapterID, nil
 }
 
-// GetOrCreateStateChapter retrieves the state chapter for a party in a specific state,
-// and creates one if it doesn't already exist.
-func (s *PartiesService) GetOrCreateStateChapter(ctx context.Context, partyID, stateID int16) (int32, error) {
+// GetOrCreateStateChapter retrieves the state chapter for a party in a specific state.
+// When createIfMissing is true (default), it creates the chapter if it does not already exist.
+// When createIfMissing is false, it returns 0 without creating the chapter if it does not exist.
+func (s *PartiesService) GetOrCreateStateChapter(ctx context.Context, partyID, stateID int16, createIfMissing ...bool) (int32, error) {
+	// 1. Resolve creation mode flag (defaults to true if omitted)
+	shouldCreate := true
+	if len(createIfMissing) > 0 {
+		shouldCreate = createIfMissing[0]
+	}
+
+	// 2. Validate that the state exists
 	if s.bodiesService != nil {
 		if _, err := s.bodiesService.CheckStateByID(ctx, stateID); err != nil {
 			return 0, fmt.Errorf("invalid state: %w", err)
 		}
 	}
 
+	// 3. Fast-path: Check Redis cache
 	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisStateChapter, partyID, stateID)
-
-	// Try to get from Redis
 	if valStr, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
 		if val, err := strconv.ParseInt(valStr, 10, 32); err == nil {
 			return int32(val), nil
 		}
 	}
 
+	// 4. Read-only lookup: query without inserting if creation is disabled
+	if !shouldCreate {
+		stateChapterID, err := s.queries.GetStateChapter(ctx, queries.GetStateChapterParams{
+			PartyID: partyID,
+			StateID: pgtype.Int2{Int16: stateID, Valid: true},
+		})
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return 0, nil // Chapter does not exist yet
+			}
+			return 0, fmt.Errorf("failed to get state chapter: %w", err)
+		}
+
+		// Cache found chapter ID in Redis
+		_ = s.rdb.Set(ctx, cacheKey, stateChapterID, db.RedisOneEightyDaysTTL).Err()
+		return stateChapterID, nil
+	}
+
+	// 5. Read-or-create: Upsert state chapter record in the database
 	stateChapterID, err := s.queries.GetOrCreateStateChapter(ctx, queries.GetOrCreateStateChapterParams{
 		PartyID: partyID,
 		StateID: pgtype.Int2{Int16: stateID, Valid: true},
@@ -1325,28 +1404,55 @@ func (s *PartiesService) GetOrCreateStateChapter(ctx context.Context, partyID, s
 		return 0, fmt.Errorf("failed to get or create state chapter: %w", err)
 	}
 
+	// 6. Cache newly resolved chapter ID in Redis
 	_ = s.rdb.Set(ctx, cacheKey, stateChapterID, db.RedisOneEightyDaysTTL).Err()
 	return stateChapterID, nil
 }
 
-// GetOrCreateLGAChapter retrieves the LGA chapter for a party in a specific LGA,
-// and creates one if it doesn't already exist.
-func (s *PartiesService) GetOrCreateLGAChapter(ctx context.Context, partyID int16, lgaID int32) (int32, error) {
+// GetOrCreateLGAChapter retrieves the LGA chapter for a party in a specific LGA.
+// When createIfMissing is true (default), it creates the chapter if it does not already exist.
+// When createIfMissing is false, it returns 0 without creating the chapter if it does not exist.
+func (s *PartiesService) GetOrCreateLGAChapter(ctx context.Context, partyID int16, lgaID int32, createIfMissing ...bool) (int32, error) {
+	// 1. Resolve creation mode flag (defaults to true if omitted)
+	shouldCreate := true
+	if len(createIfMissing) > 0 {
+		shouldCreate = createIfMissing[0]
+	}
+
+	// 2. Validate that the LGA exists
 	if s.bodiesService != nil {
 		if _, err := s.bodiesService.CheckLGA(ctx, lgaID); err != nil {
 			return 0, fmt.Errorf("invalid LGA: %w", err)
 		}
 	}
 
+	// 3. Fast-path: Check Redis cache
 	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisLGAChapter, partyID, lgaID)
-
-	// Try to get from Redis
 	if valStr, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
 		if val, err := strconv.ParseInt(valStr, 10, 32); err == nil {
 			return int32(val), nil
 		}
 	}
 
+	// 4. Read-only lookup: query without inserting if creation is disabled
+	if !shouldCreate {
+		lgaChapterID, err := s.queries.GetLGAChapter(ctx, queries.GetLGAChapterParams{
+			PartyID: partyID,
+			LgaID:   pgtype.Int4{Int32: lgaID, Valid: true},
+		})
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return 0, nil // Chapter does not exist yet
+			}
+			return 0, fmt.Errorf("failed to get LGA chapter: %w", err)
+		}
+
+		// Cache found chapter ID in Redis
+		_ = s.rdb.Set(ctx, cacheKey, lgaChapterID, db.RedisOneEightyDaysTTL).Err()
+		return lgaChapterID, nil
+	}
+
+	// 5. Read-or-create: Upsert LGA chapter record in the database
 	lgaChapterID, err := s.queries.GetOrCreateLGAChapter(ctx, queries.GetOrCreateLGAChapterParams{
 		PartyID: partyID,
 		ID:      lgaID,
@@ -1355,28 +1461,55 @@ func (s *PartiesService) GetOrCreateLGAChapter(ctx context.Context, partyID int1
 		return 0, fmt.Errorf("failed to get or create LGA chapter: %w", err)
 	}
 
+	// 6. Cache newly resolved chapter ID in Redis
 	_ = s.rdb.Set(ctx, cacheKey, lgaChapterID, db.RedisOneEightyDaysTTL).Err()
 	return lgaChapterID, nil
 }
 
-// GetOrCreateWardChapter retrieves the Ward chapter for a party in a specific Ward,
-// and creates one (as well as ensuring its parent LGA chapter exists) if it doesn't already exist.
-func (s *PartiesService) GetOrCreateWardChapter(ctx context.Context, partyID int16, wardID int32) (int32, error) {
+// GetOrCreateWardChapter retrieves the Ward chapter for a party in a specific Ward.
+// When createIfMissing is true (default), it creates the chapter if it does not already exist.
+// When createIfMissing is false, it returns 0 without creating the chapter if it does not exist.
+func (s *PartiesService) GetOrCreateWardChapter(ctx context.Context, partyID int16, wardID int32, createIfMissing ...bool) (int32, error) {
+	// 1. Resolve creation mode flag (defaults to true if omitted)
+	shouldCreate := true
+	if len(createIfMissing) > 0 {
+		shouldCreate = createIfMissing[0]
+	}
+
+	// 2. Validate that the ward exists
 	if s.bodiesService != nil {
 		if _, err := s.bodiesService.CheckWard(ctx, wardID); err != nil {
 			return 0, fmt.Errorf("invalid ward: %w", err)
 		}
 	}
 
+	// 3. Fast-path: Check Redis cache
 	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisWardChapter, partyID, wardID)
-
-	// Try to get from Redis
 	if valStr, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
 		if val, err := strconv.ParseInt(valStr, 10, 32); err == nil {
 			return int32(val), nil
 		}
 	}
 
+	// 4. Read-only lookup: query without inserting if creation is disabled
+	if !shouldCreate {
+		wardChapterID, err := s.queries.GetWardChapter(ctx, queries.GetWardChapterParams{
+			PartyID: partyID,
+			WardID:  pgtype.Int4{Int32: wardID, Valid: true},
+		})
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return 0, nil // Chapter does not exist yet
+			}
+			return 0, fmt.Errorf("failed to get Ward chapter: %w", err)
+		}
+
+		// Cache found chapter ID in Redis
+		_ = s.rdb.Set(ctx, cacheKey, wardChapterID, db.RedisOneEightyDaysTTL).Err()
+		return wardChapterID, nil
+	}
+
+	// 5. Read-or-create: Upsert Ward chapter record in the database
 	wardChapterID, err := s.queries.GetOrCreateWardChapter(ctx, queries.GetOrCreateWardChapterParams{
 		PartyID: partyID,
 		ID:      wardID,
@@ -1385,6 +1518,7 @@ func (s *PartiesService) GetOrCreateWardChapter(ctx context.Context, partyID int
 		return 0, fmt.Errorf("failed to get or create Ward chapter: %w", err)
 	}
 
+	// 6. Cache newly resolved chapter ID in Redis
 	_ = s.rdb.Set(ctx, cacheKey, wardChapterID, db.RedisOneEightyDaysTTL).Err()
 	return wardChapterID, nil
 }
@@ -2096,9 +2230,25 @@ func (s *PartiesService) ListChapterOfficials(ctx context.Context, partyID int16
 	return s.queries.ListChapterOfficials(ctx, arg)
 }
 
-// ListPartyOfficials lists officials across chapters with search and filters.
-func (s *PartiesService) ListPartyOfficials(ctx context.Context, arg queries.ListPartyOfficialsParams) ([]queries.ListPartyOfficialsRow, error) {
-	return s.queries.ListPartyOfficials(ctx, arg)
+// ListPartyOfficials lists position assignments for a given chapter directly by chapter_id using idx_pos_assign_chapter.
+func (s *PartiesService) ListPartyOfficials(ctx context.Context, partyID int16, chapterID int32, status *string) ([]queries.ListPartyOfficialsRow, error) {
+	var st pgtype.Text
+	if status != nil && *status != "" {
+		st = pgtype.Text{String: *status, Valid: true}
+	}
+
+	officials, err := s.queries.ListPartyOfficials(ctx, queries.ListPartyOfficialsParams{
+		PartyID:   partyID,
+		ChapterID: chapterID,
+		Status:    st,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if officials == nil {
+		officials = []queries.ListPartyOfficialsRow{}
+	}
+	return officials, nil
 }
 
 // ListMemberPositionAssignments lists positions held by a user in the party.

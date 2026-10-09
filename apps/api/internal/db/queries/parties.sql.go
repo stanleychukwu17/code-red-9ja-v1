@@ -359,7 +359,9 @@ func (q *Queries) GetLGAChapter(ctx context.Context, arg GetLGAChapterParams) (i
 
 const getNationalChapter = `-- name: GetNationalChapter :one
 SELECT id FROM party_chapters 
-WHERE party_id = $1 AND chapter_type = 'national' AND country_id = $2 LIMIT 1
+WHERE party_id = $1 AND chapter_type = 'national'
+  AND ($2::smallint IS NULL OR country_id = $2)
+LIMIT 1
 `
 
 type GetNationalChapterParams struct {

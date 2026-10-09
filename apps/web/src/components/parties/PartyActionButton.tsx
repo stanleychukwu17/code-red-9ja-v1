@@ -1,5 +1,9 @@
 import { useState } from "react";
 import { Check, Plus } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
+import { toast } from "sonner";
+import { useAuth } from "#/hooks/useAuth";
+import { APP_URL } from "#/lib/config";
 import { JoinPartyDialog } from "./JoinPartyDialog";
 
 export type PartyActionButtonProps = {
@@ -34,9 +38,34 @@ export function PartyActionButton({
 	partyName,
 	partyLogo,
 	chapterId,
+	isAuthenticated,
 	onJoinCompleted,
 }: PartyActionButtonProps) {
 	const [isDialogOpen, setIsDialogOpen] = useState(false);
+	const { isLoggedIn } = useAuth();
+	const navigate = useNavigate();
+
+	// determine if user is authenticated
+	const isAuthed = isAuthenticated !== undefined ? isAuthenticated : isLoggedIn;
+
+	// handle action click
+	const handleActionClick = () => {
+		// if not authed, redirect to login
+		if (!isAuthed && typeof window !== "undefined") {
+			toast.info("Please log in to join a political party");
+
+			navigate({
+				to: APP_URL.auth.login,
+				search: {
+					redirect: window.location.pathname,
+				},
+			});
+
+			return;
+		}
+
+		setIsDialogOpen(true);
+	};
 
 	return (
 		<div className="mt-8 mb-2 flex justify-center">
@@ -56,7 +85,7 @@ export function PartyActionButton({
 				<>
 					<button
 						type="button"
-						onClick={() => setIsDialogOpen(true)}
+						onClick={handleActionClick}
 						title={`Join ${partyName}`}
 						aria-label={`Join ${partyName}`}
 						className="w-12 h-12 rounded-full bg-foreground text-background flex items-center justify-center shadow-md hover:scale-110 active:scale-95 hover:bg-foreground/90 transition-transform duration-200 cursor-pointer"

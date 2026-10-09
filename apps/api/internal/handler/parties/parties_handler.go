@@ -81,8 +81,13 @@ type PartiesService interface {
 	AssignPartyPosition(ctx context.Context, arg queries.AssignPartyPositionParams) (queries.PartyPositionAssignment, error)
 	UpdatePositionAssignment(ctx context.Context, arg queries.UpdatePositionAssignmentParams) (queries.PartyPositionAssignment, error)
 	VacatePositionAssignment(ctx context.Context, id int64, partyID int16) (queries.PartyPositionAssignment, error)
+	GetOrCreateWardChapter(ctx context.Context, partyID int16, wardID int32, createIfMissing ...bool) (int32, error)
+	GetOrCreateLGAChapter(ctx context.Context, partyID int16, lgaID int32, createIfMissing ...bool) (int32, error)
+	GetOrCreateStateChapter(ctx context.Context, partyID, stateID int16, createIfMissing ...bool) (int32, error)
+	GetOrCreateZonalChapter(ctx context.Context, partyID, zonalID int16, createIfMissing ...bool) (int32, error)
+	GetOrCreateNationalChapter(ctx context.Context, partyID, countryID int16, createIfMissing ...bool) (int32, error)
 	ListChapterOfficials(ctx context.Context, partyID int16, chapterID int32, status *string) ([]queries.ListChapterOfficialsRow, error)
-	ListPartyOfficials(ctx context.Context, arg queries.ListPartyOfficialsParams) ([]queries.ListPartyOfficialsRow, error)
+	ListPartyOfficials(ctx context.Context, partyID int16, chapterID int32, status *string) ([]queries.ListPartyOfficialsRow, error)
 	ListMemberPositionAssignments(ctx context.Context, partyID int16, userID int64) ([]queries.ListMemberPositionAssignmentsRow, error)
 	SuspendPartyMember(ctx context.Context, input partiesservice.SuspendPartyMemberInput) (*queries.PartyMemberSuspension, error)
 	UnsuspendPartyMember(ctx context.Context, input partiesservice.UnsuspendPartyMemberInput) (*queries.PartyMemberSuspension, error)
@@ -2591,7 +2596,7 @@ func (h *Handler) DeletePartyCustomPosition(w http.ResponseWriter, r *http.Reque
 	h.utils.RespondSuccess(w, http.StatusOK, "Custom position deleted successfully", nil)
 }
 
-// ListPartyOfficials lists officials across chapters with search and filters
+// ListPartyOfficials lists officials for a specific chapter
 func (h *Handler) ListPartyOfficials(w http.ResponseWriter, r *http.Request) {
 	// 1. Extract and validate party ID from URL parameters
 	idStr := chi.URLParam(r, "id")
@@ -2601,43 +2606,81 @@ func (h *Handler) ListPartyOfficials(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 2. Parse optional query parameters for chapter type, status, and geographic filters
+	// 2. Parse query parameters
 	q := r.URL.Query()
-	arg := queries.ListPartyOfficialsParams{
-		PartyID: int16(partyID),
+	chapterType := strings.ToLower(strings.TrimSpace(q.Get("chapter_type")))
+
+	var wardID int64
+	if widStr := q.Get("ward_id"); widStr != "" {
+		wardID, _ = strconv.ParseInt(widStr, 10, 32)
+	}
+	var lgaID int64
+	if lidStr := q.Get("lga_id"); lidStr != "" {
+		lgaID, _ = strconv.ParseInt(lidStr, 10, 32)
+	}
+	var stateID int64
+	if sidStr := q.Get("state_id"); sidStr != "" {
+		stateID, _ = strconv.ParseInt(sidStr, 10, 16)
+	}
+	var zonalID int64
+	if zidStr := q.Get("zonal_id"); zidStr != "" {
+		zonalID, _ = strconv.ParseInt(zidStr, 10, 16)
+	}
+	var countryID int64
+	if cidStr := q.Get("country_id"); cidStr != "" {
+		countryID, _ = strconv.ParseInt(cidStr, 10, 16)
 	}
 
+	// 3. Resolve chapter ID in order of specificity without creating missing chapters
+	var chapterID int32
+	ctx := r.Context()
+
+	switch {
+	case wardID > 0:
+		chapterID, err = h.partiesService.GetOrCreateWardChapter(ctx, int16(partyID), int32(wardID), false)
+	case lgaID > 0:
+		chapterID, err = h.partiesService.GetOrCreateLGAChapter(ctx, int16(partyID), int32(lgaID), false)
+	case stateID > 0:
+		chapterID, err = h.partiesService.GetOrCreateStateChapter(ctx, int16(partyID), int16(stateID), false)
+	case zonalID > 0:
+		chapterID, err = h.partiesService.GetOrCreateZonalChapter(ctx, int16(partyID), int16(zonalID), false)
+	case chapterType == "state" || chapterType == "lga" || chapterType == "ward" || chapterType == "zonal":
+		// User selected a sub-national tier, but has not picked a specific jurisdiction yet
+		chapterID = 0
+	default:
+		cID := int16(1)
+		if countryID > 0 {
+			cID = int16(countryID)
+		}
+		chapterID, err = h.partiesService.GetOrCreateNationalChapter(ctx, int16(partyID), cID, false)
+	}
+
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to resolve party chapter: "+err.Error())
+		return
+	}
+
+	// If chapter does not exist yet or no jurisdiction selected, return empty list immediately
+	if chapterID <= 0 {
+		h.utils.RespondSuccess(w, http.StatusOK, "Party officials retrieved successfully", map[string]interface{}{
+			"officials": []queries.ListPartyOfficialsRow{},
+		})
+		return
+	}
+
+	// 4. Query officials directly by chapter_id using idx_pos_assign_chapter
+	var status *string
 	if st := q.Get("status"); st != "" {
-		arg.Status = pgtype.Text{String: st, Valid: true}
+		status = &st
 	}
 
-	if ct := q.Get("chapter_type"); ct != "" {
-		arg.ChapterType = pgtype.Text{String: ct, Valid: true}
-	}
-	if stateIDStr := q.Get("state_id"); stateIDStr != "" {
-		if sid, err := strconv.ParseInt(stateIDStr, 10, 16); err == nil {
-			arg.StateID = pgtype.Int2{Int16: int16(sid), Valid: true}
-		}
-	}
-	if lgaIDStr := q.Get("lga_id"); lgaIDStr != "" {
-		if lid, err := strconv.ParseInt(lgaIDStr, 10, 32); err == nil {
-			arg.LgaID = pgtype.Int4{Int32: int32(lid), Valid: true}
-		}
-	}
-	if wardIDStr := q.Get("ward_id"); wardIDStr != "" {
-		if wid, err := strconv.ParseInt(wardIDStr, 10, 32); err == nil {
-			arg.WardID = pgtype.Int4{Int32: int32(wid), Valid: true}
-		}
-	}
-
-	// 3. Query filtered party officials via service layer
-	officials, err := h.partiesService.ListPartyOfficials(r.Context(), arg)
+	officials, err := h.partiesService.ListPartyOfficials(ctx, int16(partyID), chapterID, status)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to list officials: "+err.Error())
 		return
 	}
 
-	// 4. Return successful response containing matching officials
+	// 5. Return successful response containing matching officials
 	h.utils.RespondSuccess(w, http.StatusOK, "Party officials retrieved successfully", map[string]interface{}{
 		"officials": officials,
 	})

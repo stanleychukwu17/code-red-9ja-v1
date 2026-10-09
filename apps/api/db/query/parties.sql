@@ -115,7 +115,9 @@ VALUES ($1, $2, $3, $4, $5);
 
 -- name: GetNationalChapter :one
 SELECT id FROM party_chapters 
-WHERE party_id = $1 AND chapter_type = 'national' AND country_id = $2 LIMIT 1;
+WHERE party_id = $1 AND chapter_type = 'national'
+  AND (sqlc.narg('country_id')::smallint IS NULL OR country_id = sqlc.narg('country_id'))
+LIMIT 1;
 
 -- name: CreateNationalChapter :one
 INSERT INTO party_chapters (party_id, chapter_type, country_id)

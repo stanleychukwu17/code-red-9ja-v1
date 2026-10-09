@@ -158,13 +158,9 @@ JOIN party_positions ON party_positions.id = party_position_assignments.position
 JOIN users ON users.id = party_position_assignments.user_id
 JOIN party_chapters ON party_chapters.id = party_position_assignments.chapter_id
 WHERE party_position_assignments.party_id = $1
-  AND (sqlc.narg('chapter_type')::varchar IS NULL OR party_chapters.chapter_type = sqlc.narg('chapter_type'))
-  AND (sqlc.narg('zonal_id')::smallint IS NULL OR party_chapters.zonal_id = sqlc.narg('zonal_id'))
-  AND (sqlc.narg('state_id')::smallint IS NULL OR party_chapters.state_id = sqlc.narg('state_id'))
-  AND (sqlc.narg('lga_id')::int IS NULL OR party_chapters.lga_id = sqlc.narg('lga_id'))
-  AND (sqlc.narg('ward_id')::int IS NULL OR party_chapters.ward_id = sqlc.narg('ward_id'))
+  AND party_position_assignments.chapter_id = $2
   AND (sqlc.narg('status')::varchar IS NULL OR party_position_assignments.status = sqlc.narg('status'))
-ORDER BY party_chapters.chapter_type ASC, party_positions.rank_order ASC, party_position_assignments.tenure_start DESC;
+ORDER BY party_positions.rank_order ASC, party_position_assignments.tenure_start DESC;
 
 -- name: ListMemberPositionAssignments :many
 SELECT 

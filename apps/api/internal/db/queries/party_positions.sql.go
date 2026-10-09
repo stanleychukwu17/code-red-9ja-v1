@@ -520,23 +520,15 @@ JOIN party_positions ON party_positions.id = party_position_assignments.position
 JOIN users ON users.id = party_position_assignments.user_id
 JOIN party_chapters ON party_chapters.id = party_position_assignments.chapter_id
 WHERE party_position_assignments.party_id = $1
-  AND ($2::varchar IS NULL OR party_chapters.chapter_type = $2)
-  AND ($3::smallint IS NULL OR party_chapters.zonal_id = $3)
-  AND ($4::smallint IS NULL OR party_chapters.state_id = $4)
-  AND ($5::int IS NULL OR party_chapters.lga_id = $5)
-  AND ($6::int IS NULL OR party_chapters.ward_id = $6)
-  AND ($7::varchar IS NULL OR party_position_assignments.status = $7)
-ORDER BY party_chapters.chapter_type ASC, party_positions.rank_order ASC, party_position_assignments.tenure_start DESC
+  AND party_position_assignments.chapter_id = $2
+  AND ($3::varchar IS NULL OR party_position_assignments.status = $3)
+ORDER BY party_positions.rank_order ASC, party_position_assignments.tenure_start DESC
 `
 
 type ListPartyOfficialsParams struct {
-	PartyID     int16       `json:"party_id"`
-	ChapterType pgtype.Text `json:"chapter_type"`
-	ZonalID     pgtype.Int2 `json:"zonal_id"`
-	StateID     pgtype.Int2 `json:"state_id"`
-	LgaID       pgtype.Int4 `json:"lga_id"`
-	WardID      pgtype.Int4 `json:"ward_id"`
-	Status      pgtype.Text `json:"status"`
+	PartyID   int16       `json:"party_id"`
+	ChapterID int32       `json:"chapter_id"`
+	Status    pgtype.Text `json:"status"`
 }
 
 type ListPartyOfficialsRow struct {
@@ -562,15 +554,7 @@ type ListPartyOfficialsRow struct {
 }
 
 func (q *Queries) ListPartyOfficials(ctx context.Context, arg ListPartyOfficialsParams) ([]ListPartyOfficialsRow, error) {
-	rows, err := q.db.Query(ctx, listPartyOfficials,
-		arg.PartyID,
-		arg.ChapterType,
-		arg.ZonalID,
-		arg.StateID,
-		arg.LgaID,
-		arg.WardID,
-		arg.Status,
-	)
+	rows, err := q.db.Query(ctx, listPartyOfficials, arg.PartyID, arg.ChapterID, arg.Status)
 	if err != nil {
 		return nil, err
 	}
