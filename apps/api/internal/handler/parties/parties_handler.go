@@ -661,6 +661,9 @@ func (h *Handler) GetParty(w http.ResponseWriter, r *http.Request) {
 // @Success      200  {object}  utils.SuccessResponse
 // @Router       /parties/{party_id}/{short_name}/profile [get]
 func (h *Handler) GetPartyProfile(w http.ResponseWriter, r *http.Request) {
+	// get authenticated user
+	claims, ok := apimiddleware.GetClaims(r)
+
 	// Parse party ID parameter from URL route
 	partyIDStr := chi.URLParam(r, "party_id")
 	partyID, err := strconv.ParseInt(partyIDStr, 10, 64)
@@ -669,26 +672,38 @@ func (h *Handler) GetPartyProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Parse optional chapter_id query parameter and verify existence
+	// Initialize variables for optional chapter ID and chapter data
 	var chapterID *int32
+	var chapter queries.PartyChapter
+
+	// Parse optional chapter_id query parameter and verify existence
 	if cidStr := r.URL.Query().Get("chapter_id"); cidStr != "" {
+		// Validate and convert chapter ID string to an integer
 		cid, err := strconv.ParseInt(cidStr, 10, 32)
 		if err != nil || cid <= 0 {
 			h.utils.RespondError(w, http.StatusBadRequest, "Invalid chapter ID")
 			return
 		}
 		c := int32(cid)
+
+		// Fetch the chapter by ID and ensure it exists
 		chapter, err := h.partiesService.GetPartyChapterByID(r.Context(), c)
 		if err != nil || chapter.ID == 0 {
 			h.utils.RespondError(w, http.StatusNotFound, "Party chapter not found")
 			return
 		}
+
+		// Ensure the fetched chapter actually belongs to the specified party
 		if chapter.PartyID != int16(partyID) {
 			h.utils.RespondError(w, http.StatusBadRequest, "Chapter does not belong to the specified party")
 			return
 		}
+
+		// Assign validated chapter ID pointer for subsequent profile/membership checks
 		chapterID = &c
 	}
+
+	fmt.Printf("chapter: %+v\n", chapter)
 
 	// Fetch basic party info and verification badges
 	party := h.partiesService.GetPartyBasicInfo(r.Context(), int16(partyID))
@@ -700,14 +715,14 @@ func (h *Handler) GetPartyProfile(w http.ResponseWriter, r *http.Request) {
 	// Check authentication status and party/chapter membership
 	var isMember bool
 	var isChapterMember bool
-	if claims, ok := apimiddleware.GetClaims(r); ok && claims != nil {
-		if claims.PartyID == int16(partyID) {
-			isMember = true
-			if chapterID != nil {
-				isChapMember, err := h.partiesService.IsPartyChapterMember(r.Context(), claims.UserID, int16(partyID), *chapterID)
-				if err == nil && isChapMember {
-					isChapterMember = true
-				}
+
+	if ok && claims.PartyID == int16(partyID) {
+		isMember = true
+
+		if chapterID != nil {
+			isChapMember, err := h.partiesService.IsPartyChapterMember(r.Context(), claims.UserID, int16(partyID), *chapterID)
+			if err == nil && isChapMember {
+				isChapterMember = true
 			}
 		}
 	}

@@ -86,7 +86,7 @@ export function PartyTierNav({
   return (
     <div className={cn("gap-y-2", className)}>
       {/* Tier Tabs Navigation */}
-      <div className="min-w-140 flex items-center p-1 bg-c-10 rounded-xl overflow-x-auto">
+      <div className="min-w-140 flex items-center p-1 bg-c-10 dark:bg-card border border-transparent dark:border-border rounded-xl overflow-x-auto">
         {TIER_TABS.map((tab) => (
           <button
             key={tab.key}

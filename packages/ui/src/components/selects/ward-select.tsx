@@ -172,7 +172,8 @@ export const SelectWard = ({
         errorMsg={errorMsg}
         placeholder="Select Ward"
         className={cn(
-          isSmall && "h-9 md:h-9 text-[13px] md:text-[13px] px-3 rounded-lg ring-0 md:ring-0",
+          isSmall &&
+            "h-9 md:h-9 text-[13px] md:text-[13px] px-3 rounded-lg ring-0 md:ring-0 border border-border bg-sidebar-softer text-c-90 shadow-none",
           className,
         )}
         align={align}
@@ -194,7 +195,7 @@ export const SelectWard = ({
           className={cn(
             "justify-between w-full gap-2",
             isSmall &&
-              "h-9 md:h-9 px-3 md:px-3 text-[13px] md:text-[13px] font-normal rounded-lg md:rounded-lg ring-0 md:ring-0 border border-[#d1d5db] bg-white shadow-none hover:shadow-none hover:border-[#ff9a3c]",
+              "h-9 md:h-9 px-3 md:px-3 text-[13px] md:text-[13px] font-normal rounded-lg md:rounded-lg ring-0 md:ring-0 border border-border bg-sidebar-softer text-c-90 shadow-none hover:shadow-none hover:border-c-60",
             hasError && "border-0.8 border-red",
             className,
           )}

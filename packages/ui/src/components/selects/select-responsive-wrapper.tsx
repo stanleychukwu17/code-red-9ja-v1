@@ -51,7 +51,7 @@ export function SelectResponsiveWrapper({
             className="z-50 p-0 border-0 bg-transparent shadow-none outline-none"
             onOpenAutoFocus={(e) => e.preventDefault()}
           >
-            <div className="overflow-hidden rounded-xl bg-popover shadow-[0_18px_40px_rgba(16,24,40,0.08)] min-w-[var(--radix-popover-trigger-width)]">
+            <div className="overflow-hidden rounded-xl bg-popover border border-border shadow-[0_18px_40px_rgba(16,24,40,0.08)] min-w-[var(--radix-popover-trigger-width)]">
               {desktopContent ?? children}
             </div>
           </RadixPopover.Content>

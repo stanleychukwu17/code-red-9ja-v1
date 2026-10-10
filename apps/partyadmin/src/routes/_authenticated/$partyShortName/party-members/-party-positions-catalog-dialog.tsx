@@ -483,7 +483,7 @@ export function PartyPositionsCatalogDialog({ open, onClose }: {
             ) : null
           ) : (
             /* Positions List: Displays active positions with badges, occupancy rules, allowed chapter levels, and rank */
-            <div className="rounded-xl border border-border divide-y divide-border overflow-hidden">
+            <div className="rounded-xl border border-border divide-y border-border overflow-hidden">
               {displayedPositions.map((pos) => (
                 <PositionCatalogItem
                   key={pos.id}

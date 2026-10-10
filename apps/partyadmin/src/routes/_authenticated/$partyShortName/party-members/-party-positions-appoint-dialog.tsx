@@ -139,7 +139,7 @@ export function AppointOfficialDialog({
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="max-w-4xl max-h-[88vh] flex flex-col p-6 sm:p-8 overflow-hidden rounded-2xl">
+      <DialogContent className="max-w-[90vw] max-h-[88vh] flex flex-col p-6 sm:p-8 overflow-hidden rounded-2xl">
         {/* Header matching design */}
         <DialogHeader className="flex flex-row items-start justify-between pb-4 border-b border-border/50 text-left px-0 pt-0 w-full">
           <div>
