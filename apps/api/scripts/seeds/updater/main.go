@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"free9ja/api/internal/constants"
+
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/nyaruka/phonenumbers"
 )
@@ -39,7 +41,7 @@ func loadGeoData(db *sql.DB) (*GeoData, error) {
 	}
 
 	// 1. States (Nigeria = country_id 161)
-	sRows, err := db.Query("SELECT id FROM c_states WHERE country_id = 161 ORDER BY id")
+	sRows, err := db.Query("SELECT id FROM c_states WHERE country_id = $1 ORDER BY id", constants.NigeriaCountryID)
 	if err != nil {
 		return nil, fmt.Errorf("query states: %w", err)
 	}
@@ -53,7 +55,7 @@ func loadGeoData(db *sql.DB) (*GeoData, error) {
 	sRows.Close()
 
 	// 2. Cities
-	cRows, err := db.Query("SELECT id, state_id FROM c_cities WHERE country_id = 161 ORDER BY id")
+	cRows, err := db.Query("SELECT id, state_id FROM c_cities WHERE country_id = $1 ORDER BY id", constants.NigeriaCountryID)
 	if err != nil {
 		return nil, fmt.Errorf("query cities: %w", err)
 	}
@@ -148,7 +150,7 @@ func pickParty(rng *rand.Rand, minorPartyIDs []int16) *int16 {
 
 func ensureGeoHierarchy(u UserRecord, geo *GeoData, rng *rand.Rand) {
 	// Normalize country to 161 (Nigeria)
-	u["current_country"] = 161
+	u["current_country"] = constants.NigeriaCountryID
 
 	// Validate/assign current_state
 	var stateID int16

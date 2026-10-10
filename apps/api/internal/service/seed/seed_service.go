@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"free9ja/api/internal/constants"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	authservice "free9ja/api/internal/service/auth"
@@ -359,11 +360,11 @@ func (s *SeedService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 						var newNatID int32
 						err := tx.QueryRow(ctx, `
 							INSERT INTO party_chapters (party_id, chapter_type, country_id)
-							VALUES ($1, 'national', 161)
+							VALUES ($1, 'national', $2)
 							ON CONFLICT (party_id, country_id) WHERE chapter_type = 'national'
 							DO UPDATE SET party_id = EXCLUDED.party_id
 							RETURNING id
-						`, pID).Scan(&newNatID)
+						`, pID, constants.NigeriaCountryID).Scan(&newNatID)
 						if err == nil {
 							nationalChapters[pID] = newNatID
 							natID = newNatID

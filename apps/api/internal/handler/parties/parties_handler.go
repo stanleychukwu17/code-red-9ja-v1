@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"free9ja/api/internal/constants"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	apimiddleware "free9ja/api/internal/middleware"
@@ -82,6 +83,7 @@ type PartiesService interface {
 	UpdatePositionAssignment(ctx context.Context, arg queries.UpdatePositionAssignmentParams) (queries.PartyPositionAssignment, error)
 	VacatePositionAssignment(ctx context.Context, id int64, partyID int16) (queries.PartyPositionAssignment, error)
 	GetPartyChapterByID(ctx context.Context, chapterID int32) (queries.PartyChapter, error)
+	GetChapterMemberCount(ctx context.Context, partyID int16, chapterID int32) (int64, error)
 	IsPartyChapterMember(ctx context.Context, userID int64, partyID int16, chapterID int32) (bool, error)
 	GetOrCreateWardChapter(ctx context.Context, partyID int16, wardID int32, createIfMissing ...bool) (int32, error)
 	GetOrCreateLGAChapter(ctx context.Context, partyID int16, lgaID int32, createIfMissing ...bool) (int32, error)
@@ -728,12 +730,41 @@ func (h *Handler) GetPartyProfile(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Fetch total active members in this chapter
+	chapterMemberCount, _ := h.partiesService.GetChapterMemberCount(r.Context(), int16(partyID), *chapterID)
+
+	// Determine the national chapter ID for this party
+	var nationalChapterID int32
+	if chapter.ChapterType == "national" {
+		nationalChapterID = chapter.ID
+	} else {
+		countryID := constants.NigeriaCountryID
+		if chapter.CountryID.Valid && chapter.CountryID.Int16 > 0 {
+			countryID = chapter.CountryID.Int16
+		}
+		if natID, err := h.partiesService.GetOrCreateNationalChapter(r.Context(), int16(partyID), countryID); err == nil {
+			nationalChapterID = natID
+		}
+	}
+
+	// Fetch total active members in the national chapter (total party membership)
+	var nationalMemberCount int64
+	if chapter.ChapterType == "national" {
+		nationalMemberCount = chapterMemberCount
+	} else if nationalChapterID > 0 {
+		nationalMemberCount, _ = h.partiesService.GetChapterMemberCount(r.Context(), int16(partyID), nationalChapterID)
+	}
+
 	responseData := map[string]interface{}{
-		"data":              party,
-		"chapter":           chapter,
-		"chapter_type":      chapter.ChapterType,
-		"is_chapter_member": isChapterMember,
-		"is_following":      isFollowing,
+		"data":                  party,
+		"chapter":               chapter,
+		"chapter_type":          chapter.ChapterType,
+		"national_chapter_id":   nationalChapterID,
+		"national_member_count": nationalMemberCount,
+		"total_members":         nationalMemberCount,
+		"chapter_member_count":  chapterMemberCount,
+		"is_chapter_member":     isChapterMember,
+		"is_following":          isFollowing,
 	}
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Party profile retrieved successfully", responseData)
@@ -2705,7 +2736,7 @@ func (h *Handler) ListPartyOfficials(w http.ResponseWriter, r *http.Request) {
 	case zonalID > 0:
 		chapterID, err = h.partiesService.GetOrCreateZonalChapter(ctx, int16(partyID), int16(zonalID), false)
 	default:
-		cID := int16(161)
+		cID := constants.NigeriaCountryID
 		if countryID > 0 {
 			cID = int16(countryID)
 		}
@@ -2877,7 +2908,7 @@ func (h *Handler) AssignPartyOfficial(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		switch chapterType {
 		case "national":
-			countryID := int16(161)
+			countryID := constants.NigeriaCountryID
 			if req.TierID > 0 {
 				countryID = int16(req.TierID)
 			}

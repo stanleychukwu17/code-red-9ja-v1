@@ -6,7 +6,7 @@ import { GeneralCommand } from "../command/general-command";
 import { DrawerList } from "../command/drawer-list";
 import { SelectResponsiveWrapper } from "./select-responsive-wrapper";
 import { LoadingSelect } from "./loading-select";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import ArrowDownIcon from "../../icons/arrow-down-icon";
 
 export interface Lga {
@@ -19,10 +19,6 @@ interface LgasResponse {
   message: string;
   data: {
     lgas: Lga[];
-  };
-  meta: {
-    next_cursor: string;
-    has_more: boolean;
   };
 }
 
@@ -48,32 +44,20 @@ export const SelectLga = ({
   const [mobileSearch, setMobileSearch] = useState("");
   const [selectedItem, setSelectedItem] = useState<Lga | undefined>(undefined);
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
-    useInfiniteQuery<LgasResponse>({
-      queryKey: ["lgas", stateId],
-      queryFn: async ({ pageParam }) => {
-        const res = await fetchLGAs({
-          data: { stateId, limit: 50, cursor: pageParam as string },
-        });
-        if (res && res.success && res.data) return res;
-        throw new Error(res?.message || "Failed to fetch LGAs");
-      },
-      initialPageParam: "",
-      getNextPageParam: (lastPage) => {
-        if (lastPage && lastPage.meta && lastPage.meta.has_more) return lastPage.meta.next_cursor || "";
-        return undefined;
-      },
-      enabled: !!stateId,
-    });
+  const { data, isLoading } = useQuery<LgasResponse>({
+    queryKey: ["lgas", stateId],
+    queryFn: async () => {
+      const res = await fetchLGAs({
+        data: { stateId },
+      });
+      if (res && res.success && res.data) return res;
+      throw new Error(res?.message || "Failed to fetch LGAs");
+    },
+    staleTime: Infinity,
+    enabled: !!stateId,
+  });
 
-  const lgas = data ? data.pages.flatMap((page) => page.data?.lgas || []) : [];
-
-  useEffect(() => {
-    if (selectedId && stateId && hasNextPage && !isFetchingNextPage && !isLoading) {
-      const found = lgas.some((l) => String(l.id) === String(selectedId));
-      if (!found) fetchNextPage();
-    }
-  }, [selectedId, stateId, lgas, hasNextPage, isFetchingNextPage, isLoading, fetchNextPage]);
+  const lgas = data?.data?.lgas || [];
 
   useEffect(() => {
     if (selectedId) {
@@ -101,15 +85,13 @@ export const SelectLga = ({
   const filteredLgas = lgas.filter((l) => l.name.toLowerCase().includes(desktopSearch.toLowerCase()));
   const mobileFiltered = lgas.filter((l) => l.name.toLowerCase().includes(mobileSearch.toLowerCase()));
 
-  const getStatus = (): "CanLoadMore" | "LoadingMore" | "LoadingFirstPage" | "Exhausted" => {
-    if (isLoading && lgas.length === 0) return "LoadingFirstPage";
-    if (isFetchingNextPage) return "LoadingMore";
-    return hasNextPage ? "CanLoadMore" : "Exhausted";
-  };
-
-  const handleLoadMore = () => { if (hasNextPage && !isFetchingNextPage) fetchNextPage(); };
-
-  const displayText = selectedItem?.name || (isLoading && !selectedItem ? "Loading..." : showAll ? "All LGAs" : "Select LGA");
+  const displayText =
+    selectedItem?.name ||
+    (isLoading && !selectedItem
+      ? "Loading..."
+      : showAll
+        ? "All LGAs"
+        : "Select LGA");
   const hasError = Boolean(errorMsg);
   const currentSelectedId = selectedItem?.id ? `${selectedItem.id}` : selectedId ? `${selectedId}` : undefined;
   const getId = (item: Lga) => `${item.id}`;
@@ -168,8 +150,6 @@ export const SelectLga = ({
           getName={getName}
           handleSelect={handleLgaSelect}
           selectedId={currentSelectedId}
-          status={getStatus()}
-          loadMore={handleLoadMore}
           onSearch={setDesktopSearch}
           showAll={showAll}
           onSelectAll={handleSelectAll}
@@ -182,7 +162,6 @@ export const SelectLga = ({
           getName={getName}
           handleSelect={handleLgaSelect}
           selectedId={currentSelectedId}
-          status={getStatus()}
           searchValue={mobileSearch}
           onSearch={setMobileSearch}
           showAll={showAll}

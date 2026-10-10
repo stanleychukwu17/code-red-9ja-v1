@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"free9ja/api/internal/constants"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 
@@ -135,7 +136,7 @@ func (s *BodiesService) CompletePartyHierarchySelections(ctx context.Context, pa
 	if result.National.NationalID == 0 {
 		return PartyHierarchyResult{}, fmt.Errorf("a national/country ID is required")
 	}
-	if result.National.NationalID != 161 {
+	if result.National.NationalID != constants.NigeriaCountryID {
 		return PartyHierarchyResult{}, errors.New("only Nigerian chapters are supported at this time")
 	}
 
@@ -249,7 +250,7 @@ func (s *BodiesService) GetStatesByCountryID(ctx context.Context, countryID int1
 		jsonData, _ := json.Marshal(payload)
 		// Nigeria (161) states are extremely stable; all other countries expire sooner
 		stateTTL := db.RedisSevenDaysTTL
-		if countryID == 161 {
+		if countryID == constants.NigeriaCountryID {
 			stateTTL = db.RedisOneEightyDaysTTL
 		}
 		s.rdb.Set(ctx, redisKey, jsonData, stateTTL)

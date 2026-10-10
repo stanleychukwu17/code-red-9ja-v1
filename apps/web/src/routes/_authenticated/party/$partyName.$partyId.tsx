@@ -56,6 +56,21 @@ function PartyLayoutComponent() {
   const chapterType = profileRes?.success
     ? profileRes.data.chapter_type || profileRes.data.chapter?.chapter_type || partyDetails?.chapter_type
     : undefined;
+  const rawChapterMemberCount = profileRes?.success
+    ? profileRes.data?.chapter_member_count ?? partyDetails?.chapter_members
+    : undefined;
+  const chapterMemberCountDisplay =
+    rawChapterMemberCount !== undefined && rawChapterMemberCount !== null
+      ? Number(rawChapterMemberCount).toLocaleString()
+      : "0";
+
+  const rawTotalMemberCount = profileRes?.success
+    ? (profileRes.data?.national_member_count ?? profileRes.data?.total_members ?? partyDetails?.total_members)
+    : undefined;
+  const totalMemberCountDisplay =
+    rawTotalMemberCount !== undefined && rawTotalMemberCount !== null
+      ? Number(rawTotalMemberCount).toLocaleString()
+      : "0";
 
   const partyUpper = (partyDetails?.short_name || partyName).toUpperCase();
   const preset = PARTY_PRESETS[partyUpper];
@@ -87,8 +102,8 @@ function PartyLayoutComponent() {
         chapterType={chapterType || partyDetails?.chapter_type}
         followersDisplay="100k"
         followersValue={100}
-        totalMembers={partyDetails?.total_members ? String(partyDetails.total_members) : "300,000"}
-        chapterMembers={partyDetails?.chapter_members ? String(partyDetails.chapter_members) : "200,000"}
+        totalMembers={totalMemberCountDisplay}
+        chapterMembers={chapterMemberCountDisplay}
         isChapterMemberInitial={isChapterMember}
         isFollowingInitial={isFollowing}
       >

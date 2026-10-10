@@ -15,6 +15,8 @@ import (
 	"sync"
 	"time"
 
+	"free9ja/api/internal/constants"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -351,11 +353,11 @@ func loadFile(ctx context.Context, filePath string, pool *pgxpool.Pool, batchSiz
 					var newNatID int32
 					err := tx.QueryRow(ctx, `
 						INSERT INTO party_chapters (party_id, chapter_type, country_id)
-						VALUES ($1, 'national', 161)
+						VALUES ($1, 'national', $2)
 						ON CONFLICT (party_id, country_id) WHERE chapter_type = 'national'
 						DO UPDATE SET party_id = EXCLUDED.party_id
 						RETURNING id
-					`, pID).Scan(&newNatID)
+					`, pID, constants.NigeriaCountryID).Scan(&newNatID)
 					if err == nil {
 						nationalChapters[pID] = newNatID
 						natID = newNatID

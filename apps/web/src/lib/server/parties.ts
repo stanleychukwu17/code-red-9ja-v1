@@ -139,6 +139,10 @@ export const getPartyProfile = createServerFn()
 					data: any;
 					chapter?: any;
 					chapter_type?: string;
+					national_chapter_id?: number;
+					national_member_count?: number;
+					total_members?: number;
+					chapter_member_count?: number;
 					is_chapter_member: boolean;
 					is_following: boolean;
 				};

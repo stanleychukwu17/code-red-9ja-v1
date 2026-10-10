@@ -13,6 +13,8 @@ import (
 	"strings"
 	"time"
 
+	"free9ja/api/internal/constants"
+
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
@@ -166,7 +168,7 @@ func main() {
 
 	// 1. Fetch Nigerian States (country_id = 161)
 	log.Println("Loading Nigerian states from c_states...")
-	rows, err := db.Query("SELECT id, name FROM c_states WHERE country_id = 161 ORDER BY id")
+	rows, err := db.Query("SELECT id, name FROM c_states WHERE country_id = $1 ORDER BY id", constants.NigeriaCountryID)
 	if err != nil {
 		log.Fatalf("Failed to query states: %v", err)
 	}
@@ -185,7 +187,7 @@ func main() {
 
 	// 2. Fetch Cities
 	log.Println("Loading cities from c_cities...")
-	cityRows, err := db.Query("SELECT id, name, state_id FROM c_cities WHERE country_id = 161 ORDER BY id")
+	cityRows, err := db.Query("SELECT id, name, state_id FROM c_cities WHERE country_id = $1 ORDER BY id", constants.NigeriaCountryID)
 	if err != nil {
 		log.Fatalf("Failed to query cities: %v", err)
 	}
@@ -442,7 +444,7 @@ func main() {
 				MiddleName:     middleName,
 				Gender:         map[bool]string{true: "male", false: "female"}[isMale],
 				DateOfBirth:    dob,
-				CurrentCountry: 161,
+				CurrentCountry: constants.NigeriaCountryID,
 				CurrentState:   stateID,
 				CurrentLga:     pu.LgaID,
 				CurrentWard:    pu.WardID,

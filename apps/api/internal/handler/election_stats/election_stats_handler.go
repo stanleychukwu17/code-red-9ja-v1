@@ -3,6 +3,7 @@ package electionstatshandler
 import (
 	"encoding/json"
 	"fmt"
+	"free9ja/api/internal/constants"
 	"free9ja/api/internal/db/queries"
 	electionstats "free9ja/api/internal/service/election_stats"
 	"free9ja/api/internal/utils"
@@ -1321,9 +1322,9 @@ func (h *Handler) GetOperationsBreakdown(w http.ResponseWriter, r *http.Request)
 			FROM c_states s
 			LEFT JOIN election_group_states egs
 				ON egs.state_id = s.id AND egs.election_group_id = $1
-			WHERE s.country_id = 161
+			WHERE s.country_id = $3
 			ORDER BY s.name ASC`
-		args = []interface{}{electionGroupID, partyID}
+		args = []interface{}{electionGroupID, partyID, constants.NigeriaCountryID}
 	}
 
 	if h.pool == nil {
@@ -1892,9 +1893,9 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 			FROM c_states s
 			LEFT JOIN election_group_states egs
 				ON egs.state_id = s.id AND egs.election_group_id = $1
-			WHERE s.country_id = 161
+			WHERE s.country_id = $3
 			ORDER BY s.name ASC`
-		args = []interface{}{electionGroupID, partyID}
+		args = []interface{}{electionGroupID, partyID, constants.NigeriaCountryID}
 	}
 
 	if h.pool == nil {

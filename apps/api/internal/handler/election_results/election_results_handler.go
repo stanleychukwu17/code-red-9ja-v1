@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"free9ja/api/internal/constants"
 	"free9ja/api/internal/utils"
 
 	"github.com/go-chi/chi/v5"
@@ -110,10 +111,10 @@ func (h *Handler) GetStatesWithResults(w http.ResponseWriter, r *http.Request) {
 			fr.updated_at
 		FROM c_states s
 		LEFT JOIN election_state_final_result fr ON fr.state_id = s.id AND fr.election_id = $1
-		WHERE s.country_id = 161 AND s.id::int < $2
+		WHERE s.country_id = $2 AND s.id::int < $3
 		ORDER BY s.id DESC
-		LIMIT $3
-	`, electionID, cursor, limit)
+		LIMIT $4
+	`, electionID, constants.NigeriaCountryID, cursor, limit)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch states: "+err.Error())
 		return
@@ -1719,9 +1720,9 @@ func (h *Handler) GetElectoralUnitsBreakdown(w http.ResponseWriter, r *http.Requ
 			FROM c_states s
 			LEFT JOIN election_state_final_result fr
 				ON fr.state_id = s.id AND fr.election_id = $1
-			WHERE s.country_id = 161
+			WHERE s.country_id = $2
 			ORDER BY s.name ASC`
-		args = []interface{}{electionID}
+		args = []interface{}{electionID, constants.NigeriaCountryID}
 	}
 
 	partiesMap, _, candidatesMap, contestingPartyShortNames := h.loadPartyAndCandidateMetadata(r.Context(), electionID)

@@ -5,7 +5,7 @@
  * position/role handles, and a checkmark trigger dropdown to select the appointment type.
  */
 
-import * as React from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -30,15 +30,14 @@ import {
   type PartyPositionItem,
 } from "#/lib/server/parties";
 import type { UserType } from "#/components/tiles/user-tile";
+import { useSelectedTierTitle } from "./party-positions-helpers";
 
 export type AppointOfficialDialogProps = {
   open: boolean;
   onClose: () => void;
   position: PartyPositionItem | null;
   selectedTierId?: number;
-  chapterId?: number;
   chapterType: string;
-  chapterContextLabel: string;
   partyId?: number;
   onSuccess?: () => void;
 };
@@ -50,35 +49,50 @@ const APPOINTMENT_TYPES = [
   { value: "interim", label: "Interim" },
 ] as const;
 
+const MIN_SEARCH_LENGTH = 3;
+
 export function AppointOfficialDialog({
   open,
   onClose,
   position,
   selectedTierId,
-  chapterId,
   chapterType,
-  chapterContextLabel,
   partyId,
   onSuccess,
 }: AppointOfficialDialogProps) {
   const queryClient = useQueryClient();
-  const [searchQuery, setSearchQuery] = React.useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch] = useDebounceValue(searchQuery, 400);
+  const trimmedSearch = debouncedSearch.trim();
+  const hasSearched = trimmedSearch.length >= MIN_SEARCH_LENGTH;
+
+  // Resolve geographic entity name (e.g. State, LGA, Ward, or Zone) from TanStack Query cache
+  const tierTitle = useSelectedTierTitle({ chapterType, selectedTierId });
+
+  // Reset search query whenever dialog closes so each appointment session starts fresh
+  useEffect(() => {
+    if (!open) {
+      setSearchQuery("");
+    }
+  }, [open]);
+
+
+  console.log("appointDialog", { position, selectedTierId, chapterType, partyId, tierTitle });
 
   // Track which user is currently being appointed
-  const [submittingUserId, setSubmittingUserId] = React.useState<number | null>(null);
+  const [submittingUserId, setSubmittingUserId] = useState<number | null>(null);
 
   // Fetch party members
-  const { data, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage, } = useInfiniteQuery({
-    queryKey: ["appointPartyMembers", partyId, debouncedSearch],
+  const { data, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage } = useInfiniteQuery({
+    queryKey: ["appointPartyMembers", partyId, trimmedSearch],
     queryFn: async ({ pageParam }) => {
-      if (!partyId) return { success: true, data: { users: [] } };
+      if (!partyId || trimmedSearch.length < MIN_SEARCH_LENGTH) return { success: true, data: { users: [] } };
       const res = await getUsersList({
         data: {
           party_id: partyId,
           limit: 30,
           cursor: pageParam || undefined,
-          search: debouncedSearch.trim() || undefined,
+          search: trimmedSearch || undefined,
         },
       });
       if (res && res.success && res.data) {
@@ -93,11 +107,11 @@ export function AppointOfficialDialog({
       }
       return undefined;
     },
-    enabled: open && !!partyId,
+    enabled: open && !!partyId && hasSearched,
     staleTime: 60 * 1000,
   });
 
-  const members: UserType[] = React.useMemo(() => {
+  const members: UserType[] = useMemo(() => {
     return data ? data.pages.flatMap((page) => page.data?.users || []) : [];
   }, [data]);
 
@@ -113,7 +127,6 @@ export function AppointOfficialDialog({
       const res = await assignPartyOfficial({
         data: {
           partyId,
-          chapterId,
           chapterType,
           tierId: selectedTierId,
           userId,
@@ -155,7 +168,7 @@ export function AppointOfficialDialog({
             <div>
               <span className="block text-xs font-normal text-c-50">Working on</span>
               <span className="block text-sm font-semibold text-c-80 capitalize">
-                {chapterContextLabel || `${chapterType} chapter`}
+                {tierTitle ? `${tierTitle} (${chapterType}) chapter` : `${chapterType} chapter`}
               </span>
             </div>
             <DialogClose asChild>
@@ -181,37 +194,38 @@ export function AppointOfficialDialog({
 
         {/* Members Grid Container */}
         <div className="flex-1 overflow-y-auto pt-4 pb-2 pr-1">
-          {isLoading && members.length === 0 ? (
+          {!hasSearched ? (
+            <div className="py-24 text-center text-c-50 flex flex-col items-center justify-center">
+              <div className="size-12 rounded-full bg-sidebar-mobile text-c-60 flex items-center justify-center border border-border/50 mb-3">
+                <Search className="size-5 text-c-50" />
+              </div>
+              <p className="text-base font-semibold text-c-80">Search for party members</p>
+              <p className="text-xs text-c-40 mt-1 max-w-sm">
+                {searchQuery.trim().length > 0
+                  ? `Please enter at least ${MIN_SEARCH_LENGTH} characters to search.`
+                  : `Type at least ${MIN_SEARCH_LENGTH} characters of a name or username to find members.`}
+              </p>
+            </div>
+          ) : isLoading && members.length === 0 ? (
             <div className="py-24 flex flex-col items-center justify-center gap-2 text-c-40">
               <Loader2 className="size-8 animate-spin text-primary" />
-              <p className="text-sm">Loading party members...</p>
+              <p className="text-sm">Searching party members...</p>
             </div>
           ) : members.length === 0 ? (
             <div className="py-20 text-center text-c-50">
               <p className="text-base font-medium">No members found</p>
               <p className="text-xs text-c-40 mt-1">
-                {searchQuery
-                  ? "Try searching with a different name or username"
-                  : "No registered members found in this party"}
+                No members found matching &ldquo;{searchQuery}&rdquo;. Try searching with a different name or username.
               </p>
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-x-4 gap-y-8 justify-items-center">
               {members.map((member) => {
-                const fullName =
-                  [member.first_name, member.last_name].filter(Boolean).join(" ") ||
-                  member.username ||
-                  "Party Member";
+                const fullName = [member.first_name, member.last_name].filter(Boolean).join(" ");
+                const roleTag = `@${member.username}`;
 
                 const isSubmitting = submittingUserId === member.id;
 
-                // Handle tag: current leadership position if held, or username handle
-                const roleTag =
-                  member.role_level && member.role_level !== "member"
-                    ? `@ ${member.role_level.replace(/_/g, " ")}`
-                    : member.username
-                      ? `@${member.username}`
-                      : "@ member";
 
                 return (
                   <div
@@ -290,7 +304,7 @@ export function AppointOfficialDialog({
           )}
 
           {/* Infinite Scroll Trigger */}
-          {hasNextPage && (
+          {hasSearched && hasNextPage && (
             <div className="pt-6 pb-2 flex justify-center">
               <button
                 type="button"

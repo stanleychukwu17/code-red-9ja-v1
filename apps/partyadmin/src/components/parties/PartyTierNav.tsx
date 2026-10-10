@@ -10,7 +10,7 @@ import { cn } from "@repo/ui/lib/utils";
 
 export type PartyTierNavProps = {
   chapterType: string;
-  onTierChange: (tier: string) => void;
+  onChapterTypeChange: (chapterType: string) => void;
   selectedCountryId?: number;
   onCountryChange?: (countryId?: number) => void;
   selectedZonalId?: number;
@@ -39,7 +39,7 @@ export const TIER_TABS = [
  */
 export function PartyTierNav({
   chapterType,
-  onTierChange,
+  onChapterTypeChange,
   selectedCountryId,
   onCountryChange,
   selectedZonalId,
@@ -55,7 +55,7 @@ export function PartyTierNav({
 
   // Handle tier switch while preserving valid parent geographic hierarchy
   const handleTierChange = (tier: string) => {
-    onTierChange(tier);
+    onChapterTypeChange(tier);
     onCountryChange?.(tier === "national" ? (selectedCountryId || 161) : undefined);
 
     if (tier !== "zonal") {

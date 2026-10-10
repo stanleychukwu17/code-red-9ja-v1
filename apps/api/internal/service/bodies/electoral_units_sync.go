@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"free9ja/api/internal/constants"
 	"free9ja/api/internal/db/queries"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -160,7 +161,7 @@ func (s *BodiesService) SyncElectoralUnits(ctx context.Context) (*SyncReport, er
 	client := &http.Client{Timeout: 45 * time.Second}
 
 	// Fetch all states for Nigeria (country_id = 161)
-	states, err := s.queries.GetStatesByCountryID(syncCtx, 161)
+	states, err := s.queries.GetStatesByCountryID(syncCtx, constants.NigeriaCountryID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch states from DB: %w", err)
 	}

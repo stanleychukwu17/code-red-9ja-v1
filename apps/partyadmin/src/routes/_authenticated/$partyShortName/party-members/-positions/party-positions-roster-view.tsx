@@ -464,13 +464,6 @@ export function PartyPositionsRosterView({
     debouncedSearchQuery,
   ]);
 
-  const resolvedChapterLabel = React.useMemo(() => {
-    if (chapterType === "national") return "National chapter";
-    const geoName = rawOfficials[0]?.geo_name;
-    if (geoName) return `${geoName} (${chapterType}) chapter`;
-    return `${chapterType} chapter`;
-  }, [chapterType, rawOfficials]);
-
   if (!tierSelectionStatus.isComplete) {
     return (
       <div className="w-full p-16 text-center text-c-50 font-medium bg-background rounded-2xl border border-border flex flex-col items-center justify-center space-y-3">
@@ -543,7 +536,6 @@ export function PartyPositionsRosterView({
         position={appointingPosition}
         selectedTierId={tierSelectionStatus.selectedTierId}
         chapterType={chapterType}
-        chapterContextLabel={resolvedChapterLabel}
         partyId={partyId}
       />
     </>

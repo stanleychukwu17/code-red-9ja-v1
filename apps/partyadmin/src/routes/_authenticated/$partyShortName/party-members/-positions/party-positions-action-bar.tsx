@@ -10,7 +10,7 @@ import { PartyTierNav } from "../-party-tier-nav";
 
 export type PartyPositionsActionBarProps = {
   chapterType: string;
-  onTierChange: (tier: string) => void;
+  onChapterTypeChange: (chapterType: string) => void;
   selectedCountryId?: number;
   onCountryChange: (id?: number) => void;
   selectedZonalId?: number;
@@ -29,7 +29,7 @@ export type PartyPositionsActionBarProps = {
  */
 export function PartyPositionsActionBar({
   chapterType,
-  onTierChange,
+  onChapterTypeChange,
   selectedCountryId,
   onCountryChange,
   selectedZonalId,
@@ -47,7 +47,7 @@ export function PartyPositionsActionBar({
       {/* Tier Tabs Navigation with Inline Dynamic Geographic Selectors */}
       <PartyTierNav
         chapterType={chapterType}
-        onTierChange={onTierChange}
+        onChapterTypeChange={onChapterTypeChange}
         selectedCountryId={selectedCountryId}
         onCountryChange={onCountryChange}
         selectedZonalId={selectedZonalId}

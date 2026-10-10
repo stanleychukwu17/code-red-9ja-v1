@@ -47,26 +47,26 @@ function RouteComponent() {
   // Appointment Type Filter
   const [appointmentTypeFilter, setAppointmentTypeFilter] = React.useState<string>("all");
 
-  const handleTierChange = (tier: string) => {
-    setChapterType(tier);
-    setSelectedCountryId(tier === "national" ? (selectedCountryId || 161) : undefined);
+  const handleChapterTypeChange = (selectedType: string) => {
+    setChapterType(selectedType);
+    setSelectedCountryId(selectedType === "national" ? (selectedCountryId || 161) : undefined);
 
-    if (tier !== "zonal") {
+    if (selectedType !== "zonal") {
       setSelectedZonalId(undefined);
     }
 
     // Preserve state selection across state, LGA, and ward tiers
-    if (!["state", "lga", "ward"].includes(tier)) {
+    if (!["state", "lga", "ward"].includes(selectedType)) {
       setSelectedStateId(undefined);
     }
 
     // Preserve LGA selection across LGA and ward tiers
-    if (!["lga", "ward"].includes(tier)) {
+    if (!["lga", "ward"].includes(selectedType)) {
       setSelectedLgaId(undefined);
     }
 
     // Ward selection only applies to ward tier
-    if (tier !== "ward") {
+    if (selectedType !== "ward") {
       setSelectedWardId(undefined);
     }
   };
@@ -82,7 +82,7 @@ function RouteComponent() {
       {/* Top Action Buttons & Filters Bar */}
       <PartyPositionsActionBar
         chapterType={chapterType}
-        onTierChange={handleTierChange}
+        onChapterTypeChange={handleChapterTypeChange}
         selectedCountryId={selectedCountryId}
         onCountryChange={setSelectedCountryId}
         selectedZonalId={selectedZonalId}

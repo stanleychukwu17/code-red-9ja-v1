@@ -6,7 +6,7 @@ import { GeneralCommand } from "../command/general-command";
 import { DrawerList } from "../command/drawer-list";
 import { SelectResponsiveWrapper } from "./select-responsive-wrapper";
 import { LoadingSelect } from "./loading-select";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import ArrowDownIcon from "../../icons/arrow-down-icon";
 
 export interface Ward {
@@ -19,10 +19,6 @@ interface WardsResponse {
   message: string;
   data: {
     wards: Ward[];
-  };
-  meta: {
-    next_cursor: string;
-    has_more: boolean;
   };
 }
 
@@ -55,54 +51,23 @@ export const SelectWard = ({
   const [mobileSearch, setMobileSearch] = useState("");
   const [selectedItem, setSelectedItem] = useState<Ward | undefined>(undefined);
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
-    useInfiniteQuery<WardsResponse>({
-      queryKey: ["wards", lgaId, stateId],
-      queryFn: async ({ pageParam }) => {
-        const res = await fetchWards({
-          data: {
-            lga_id: lgaId,
-            stateId,
-            limit: 50,
-            cursor: pageParam as string,
-          },
-        });
-        if (res && res.success && res.data) return res;
-        throw new Error(res?.message || "Failed to fetch Wards");
-      },
-      initialPageParam: "",
-      getNextPageParam: (lastPage) => {
-        if (lastPage && lastPage.meta && lastPage.meta.has_more)
-          return lastPage.meta.next_cursor || "";
-        return undefined;
-      },
-      enabled: !!lgaId,
-    });
+  const { data, isLoading } = useQuery<WardsResponse>({
+    queryKey: ["wards", lgaId, stateId],
+    queryFn: async () => {
+      const res = await fetchWards({
+        data: {
+          lga_id: lgaId,
+          stateId,
+        },
+      });
+      if (res && res.success && res.data) return res;
+      throw new Error(res?.message || "Failed to fetch Wards");
+    },
+    staleTime: Infinity,
+    enabled: !!lgaId,
+  });
 
-  const wards = data
-    ? data.pages.flatMap((page) => page.data?.wards || [])
-    : [];
-
-  useEffect(() => {
-    if (
-      selectedId &&
-      lgaId &&
-      hasNextPage &&
-      !isFetchingNextPage &&
-      !isLoading
-    ) {
-      const found = wards.some((w) => String(w.id) === String(selectedId));
-      if (!found) fetchNextPage();
-    }
-  }, [
-    selectedId,
-    lgaId,
-    wards,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoading,
-    fetchNextPage,
-  ]);
+  const wards = data?.data?.wards || [];
 
   useEffect(() => {
     if (selectedId) {
@@ -135,20 +100,6 @@ export const SelectWard = ({
   const mobileFiltered = wards.filter((w) =>
     w.name.toLowerCase().includes(mobileSearch.toLowerCase()),
   );
-
-  const getStatus = ():
-    | "CanLoadMore"
-    | "LoadingMore"
-    | "LoadingFirstPage"
-    | "Exhausted" => {
-    if (isLoading && wards.length === 0) return "LoadingFirstPage";
-    if (isFetchingNextPage) return "LoadingMore";
-    return hasNextPage ? "CanLoadMore" : "Exhausted";
-  };
-
-  const handleLoadMore = () => {
-    if (hasNextPage && !isFetchingNextPage) fetchNextPage();
-  };
 
   const displayText =
     selectedItem?.name ||
@@ -217,8 +168,6 @@ export const SelectWard = ({
           getName={getName}
           handleSelect={handleWardSelect}
           selectedId={currentSelectedId}
-          status={getStatus()}
-          loadMore={handleLoadMore}
           onSearch={setDesktopSearch}
           showAll={showAll}
           onSelectAll={handleSelectAll}
@@ -231,7 +180,6 @@ export const SelectWard = ({
           getName={getName}
           handleSelect={handleWardSelect}
           selectedId={currentSelectedId}
-          status={getStatus()}
           searchValue={mobileSearch}
           onSearch={setMobileSearch}
           showAll={showAll}
