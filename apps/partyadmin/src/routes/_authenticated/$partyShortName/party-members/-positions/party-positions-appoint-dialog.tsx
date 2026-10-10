@@ -37,7 +37,7 @@ export type AppointOfficialDialogProps = {
   position: PartyPositionItem | null;
   selectedTierId?: number;
   chapterId?: number;
-  chapterTier: string;
+  chapterType: string;
   chapterContextLabel: string;
   partyId?: number;
   onSuccess?: () => void;
@@ -56,7 +56,7 @@ export function AppointOfficialDialog({
   position,
   selectedTierId,
   chapterId,
-  chapterTier,
+  chapterType,
   chapterContextLabel,
   partyId,
   onSuccess,
@@ -114,7 +114,7 @@ export function AppointOfficialDialog({
         data: {
           partyId,
           chapterId,
-          chapterTier,
+          chapterType,
           tierId: selectedTierId,
           userId,
           positionId: position.id,
@@ -155,7 +155,7 @@ export function AppointOfficialDialog({
             <div>
               <span className="block text-xs font-normal text-c-50">Working on</span>
               <span className="block text-sm font-semibold text-c-80 capitalize">
-                {chapterContextLabel || `${chapterTier} chapter`}
+                {chapterContextLabel || `${chapterType} chapter`}
               </span>
             </div>
             <DialogClose asChild>

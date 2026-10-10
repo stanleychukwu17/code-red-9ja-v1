@@ -33,44 +33,33 @@ function getChapterTypeBadgeConfig(type?: string) {
     case "national":
       return {
         label: "National Chapter",
-        className:
-          "bg-blue-600 text-white border-blue-500 dark:bg-blue-600 dark:text-white dark:border-blue-400",
-        dotClassName: "bg-white",
+        className: "bg-[#f1f2f6] text-black dark:bg-sidebar-mobile dark:text-c-80",
       };
     case "zonal":
       return {
         label: "Zonal Chapter",
-        className:
-          "bg-purple-600 text-white border-purple-500 dark:bg-purple-600 dark:text-white dark:border-purple-400",
-        dotClassName: "bg-white",
+        className: "bg-[#f4ff81] text-black dark:bg-sidebar-mobile dark:text-c-80",
       };
     case "state":
       return {
         label: "State Chapter",
-        className:
-          "bg-emerald-600 text-white border-emerald-500 dark:bg-emerald-600 dark:text-white dark:border-emerald-400",
-        dotClassName: "bg-white",
+        className: "bg-[#ffe57f] text-black dark:bg-sidebar-mobile dark:text-c-80",
       };
     case "lga":
       return {
         label: "LGA Chapter",
-        className:
-          "bg-orange-600 text-white border-orange-500 dark:bg-orange-600 dark:text-white dark:border-orange-400",
-        dotClassName: "bg-white",
+        className: "bg-[#efebe9] text-black dark:bg-sidebar-mobile dark:text-c-80",
       };
     case "ward":
       return {
         label: "Ward Chapter",
-        className:
-          "bg-rose-600 text-white border-rose-500 dark:bg-rose-600 dark:text-white dark:border-rose-400",
-        dotClassName: "bg-white",
+        className: "bg-[#ffea00] text-black dark:bg-sidebar-mobile dark:text-c-80",
       };
     default:
       return {
         label: `${normalized.charAt(0).toUpperCase() + normalized.slice(1)} Chapter`,
         className:
           "bg-zinc-800 text-white border-zinc-700 dark:bg-zinc-700 dark:text-white dark:border-zinc-600",
-        dotClassName: "bg-white",
       };
   }
 }
@@ -194,11 +183,11 @@ export function PartyHeaderLayout({
                     <div className="pt-2">
                       <span
                         className={cn(
-                          "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border shadow-xs",
+                          "inline-flex items-center gap-1.5 px-2.5 py-2 rounded-sm text-xs font-semibold shadow-xs dark:border dark:border-border",
                           chapterBadge.className
                         )}
                       >
-                        <span className={cn("size-1.5 rounded-full", chapterBadge.dotClassName)} />
+                        <span className={cn("size-1.5 rounded-full bg-black dark:bg-white")} />
                         <span>{chapterBadge.label}</span>
                       </span>
                     </div>

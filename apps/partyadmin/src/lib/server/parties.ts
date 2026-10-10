@@ -579,7 +579,6 @@ export const assignPartyOfficial = createServerFn({ method: "POST" })
     (data: {
       partyId: number | string;
       chapterId?: number | string;
-      chapterTier?: string;
       chapterType?: string;
       tierId?: number;
       userId: number;
@@ -599,8 +598,7 @@ export const assignPartyOfficial = createServerFn({ method: "POST" })
             user_id: data.userId,
             position_id: data.positionId,
             appointment_type: data.appointmentType,
-            chapter_tier: data.chapterTier || data.chapterType,
-            chapter_type: data.chapterType || data.chapterTier,
+            chapter_type: data.chapterType,
             tier_id: data.tierId,
             chapter_id: data.chapterId,
             tenure_start: data.tenureStart,

@@ -37,7 +37,7 @@ function RouteComponent() {
   const [isCatalogDialogOpen, setIsCatalogDialogOpen] = React.useState(false);
 
   // Chapter Hierarchy Filters
-  const [chapterTier, setChapterTier] = React.useState<string>("national");
+  const [chapterType, setChapterType] = React.useState<string>("national");
   const [selectedCountryId, setSelectedCountryId] = React.useState<number | undefined>(161);
   const [selectedZonalId, setSelectedZonalId] = React.useState<number | undefined>(undefined);
   const [selectedStateId, setSelectedStateId] = React.useState<number | undefined>(undefined);
@@ -48,7 +48,7 @@ function RouteComponent() {
   const [appointmentTypeFilter, setAppointmentTypeFilter] = React.useState<string>("all");
 
   const handleTierChange = (tier: string) => {
-    setChapterTier(tier);
+    setChapterType(tier);
     setSelectedCountryId(tier === "national" ? (selectedCountryId || 161) : undefined);
 
     if (tier !== "zonal") {
@@ -81,7 +81,7 @@ function RouteComponent() {
 
       {/* Top Action Buttons & Filters Bar */}
       <PartyPositionsActionBar
-        chapterTier={chapterTier}
+        chapterType={chapterType}
         onTierChange={handleTierChange}
         selectedCountryId={selectedCountryId}
         onCountryChange={setSelectedCountryId}
@@ -106,7 +106,7 @@ function RouteComponent() {
 
       {/* Main Officials Roster */}
       <PartyPositionsRosterView
-        chapterTier={chapterTier}
+        chapterType={chapterType}
         selectedCountryId={selectedCountryId}
         selectedZonalId={selectedZonalId}
         selectedStateId={selectedStateId}

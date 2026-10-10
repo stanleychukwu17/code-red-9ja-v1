@@ -670,7 +670,6 @@ func (h *Handler) GetPartyProfile(w http.ResponseWriter, r *http.Request) {
 	// get authenticated user
 	claims, ok := apimiddleware.GetClaims(r)
 	var chapterID *int32
-	// var chapter queries.PartyChapter
 
 	// Parse party ID parameter from URL route
 	partyIDStr := chi.URLParam(r, "party_id")
@@ -2833,8 +2832,7 @@ type AssignPartyOfficialRequest struct {
 	UserID          int64  `json:"user_id"`
 	PositionID      int32  `json:"position_id"`
 	AppointmentType string `json:"appointment_type"` // substantive, acting, caretaker, interim
-	ChapterType     string `json:"chapter_type"`    // national, zonal, state, lga, ward
-	ChapterTier     string `json:"chapter_tier"`    // alias for chapter_type
+	ChapterType     string `json:"chapter_type"`     // national, zonal, state, lga, ward
 	TierID          int64  `json:"tier_id"`
 	ChapterID       int32  `json:"chapter_id"`
 	TenureStart     string `json:"tenure_start"`
@@ -2861,7 +2859,7 @@ func (h *Handler) AssignPartyOfficial(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Resolve chapter ID from URL parameter, request body chapter_id, or resolve dynamically via chapter tier
+	// Resolve chapter ID from URL parameter, request body chapter_id, or resolve dynamically via chapter type
 	var chapID int32
 	if chapIDStr := chi.URLParam(r, "chapter_id"); chapIDStr != "" {
 		if cid, err := strconv.ParseInt(chapIDStr, 10, 32); err == nil && cid > 0 {
@@ -2873,11 +2871,8 @@ func (h *Handler) AssignPartyOfficial(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if chapID <= 0 {
-		// Resolve chapter dynamically using chapter_tier / chapter_type and tier_id
+		// Resolve chapter dynamically using chapter_type and tier_id
 		chapterType := strings.ToLower(strings.TrimSpace(req.ChapterType))
-		if chapterType == "" {
-			chapterType = strings.ToLower(strings.TrimSpace(req.ChapterTier))
-		}
 
 		ctx := r.Context()
 		switch chapterType {
@@ -2912,7 +2907,7 @@ func (h *Handler) AssignPartyOfficial(w http.ResponseWriter, r *http.Request) {
 			}
 			chapID, err = h.partiesService.GetOrCreateWardChapter(ctx, int16(partyID), int32(req.TierID), true)
 		default:
-			h.utils.RespondError(w, http.StatusBadRequest, "Valid chapter_id or chapter_tier with tier_id is required")
+			h.utils.RespondError(w, http.StatusBadRequest, "Valid chapter_id or chapter_type with tier_id is required")
 			return
 		}
 

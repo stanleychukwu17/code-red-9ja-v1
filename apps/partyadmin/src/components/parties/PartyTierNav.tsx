@@ -8,8 +8,8 @@ import { SelectLga } from "@repo/ui/components/selects/lga-select";
 import { SelectWard } from "@repo/ui/components/selects/ward-select";
 import { cn } from "@repo/ui/lib/utils";
 
-export interface PartyTierNavProps {
-  chapterTier: string;
+export type PartyTierNavProps = {
+  chapterType: string;
   onTierChange: (tier: string) => void;
   selectedCountryId?: number;
   onCountryChange?: (countryId?: number) => void;
@@ -22,7 +22,7 @@ export interface PartyTierNavProps {
   selectedWardId?: number;
   onWardChange?: (wardId?: number) => void;
   className?: string;
-}
+};
 
 export const TIER_TABS = [
   { key: "national", label: "National" },
@@ -38,7 +38,7 @@ export const TIER_TABS = [
  * geographic selectors (Country, Zone, State, LGA, Ward) using custom UI select components.
  */
 export function PartyTierNav({
-  chapterTier,
+  chapterType,
   onTierChange,
   selectedCountryId,
   onCountryChange,
@@ -52,6 +52,7 @@ export function PartyTierNav({
   onWardChange,
   className,
 }: PartyTierNavProps) {
+
   // Handle tier switch while preserving valid parent geographic hierarchy
   const handleTierChange = (tier: string) => {
     onTierChange(tier);
@@ -108,17 +109,17 @@ export function PartyTierNav({
             type="button"
             onClick={() => handleTierChange(tab.key)}
             className={`grow px-3.5 py-1.5 rounded-lg text-[13px] font-medium transition whitespace-nowrap
-              ${chapterTier === tab.key ? "bg-background text-c-90 shadow-xs" : "text-c-60 hover:text-c-90"}`}
+              ${chapterType === tab.key ? "bg-background text-c-90 shadow-xs" : "text-c-60 hover:text-c-90"}`}
           >
             {tab.label}
           </button>
         ))}
       </div>
 
-      {["national", "zonal", "state", "lga", "ward"].includes(chapterTier) && (
+      {["national", "zonal", "state", "lga", "ward"].includes(chapterType) && (
         <div className="mt-5 flex flex-wrap items-center gap-2">
           {/* Custom Select: Country (when National is selected) */}
-          {chapterTier === "national" && (
+          {chapterType === "national" && (
             <div className="w-44">
               <SelectCountry
                 selectedId={selectedCountryId}
@@ -134,7 +135,7 @@ export function PartyTierNav({
           )}
 
           {/* Custom Select: Zone (when Zonal is selected) */}
-          {chapterTier === "zonal" && (
+          {chapterType === "zonal" && (
             <div className="w-44">
               <SelectZone
                 selectedId={selectedZonalId}
@@ -150,7 +151,7 @@ export function PartyTierNav({
           )}
 
           {/* Custom Select: State (when State, LGA, or Ward is selected) */}
-          {["state", "lga", "ward"].includes(chapterTier) && (
+          {["state", "lga", "ward"].includes(chapterType) && (
             <div className="w-44">
               <SelectState
                 selectedId={selectedStateId}
@@ -167,7 +168,7 @@ export function PartyTierNav({
           )}
 
           {/* Custom Select: LGA (when LGA or Ward is selected) */}
-          {["lga", "ward"].includes(chapterTier) && (
+          {["lga", "ward"].includes(chapterType) && (
             <div className="w-44">
               <SelectLga
                 selectedId={selectedLgaId}
@@ -185,7 +186,7 @@ export function PartyTierNav({
           )}
 
           {/* Custom Select: Ward (when Ward is selected) */}
-          {chapterTier === "ward" && (
+          {chapterType === "ward" && (
             <div className="w-44">
               <SelectWard
                 selectedId={selectedWardId}

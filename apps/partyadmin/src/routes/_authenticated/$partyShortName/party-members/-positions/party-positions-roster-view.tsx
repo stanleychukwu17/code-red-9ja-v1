@@ -28,7 +28,7 @@ import { VacantPositionAvatar } from "@repo/ui/components/vacant-avatar";
 import { AppointOfficialDialog } from "./party-positions-appoint-dialog";
 
 export type PartyPositionsRosterViewProps = {
-  chapterTier?: string;
+  chapterType?: string;
   selectedCountryId?: number;
   selectedZonalId?: number;
   selectedStateId?: number;
@@ -40,104 +40,19 @@ export type PartyPositionsRosterViewProps = {
   onAppointPosition?: (position: PartyPositionItem) => void;
 };
 
-export type TierSelectionStatus = {
-  isComplete: boolean;
-  selectedTierId?: number;
-  missingTarget: string;
-  message: string;
+import {
+  getTierSelectionStatus,
+  type TierSelectionStatus,
+  type TierSelectionStatusProps,
+  type TierSelectionProps,
+} from "./party-positions-helpers";
+
+export {
+  getTierSelectionStatus,
+  type TierSelectionStatus,
+  type TierSelectionStatusProps,
+  type TierSelectionProps,
 };
-
-export type TierSelectionStatusProps = {
-  chapterTier?: string;
-  selectedCountryId?: number;
-  selectedZonalId?: number;
-  selectedStateId?: number;
-  selectedLgaId?: number;
-  selectedWardId?: number;
-};
-
-export type TierSelectionProps = TierSelectionStatusProps;
-
-/**
- * Validates whether the required geographic hierarchy for the active tier is fully selected.
- */
-export function getTierSelectionStatus({
-  chapterTier, selectedCountryId, selectedZonalId, selectedStateId, selectedLgaId, selectedWardId,
-}: TierSelectionStatusProps): TierSelectionStatus {
-  switch (chapterTier) {
-    case "national": {
-      const countryId = selectedCountryId || 161;
-      return {
-        isComplete: Boolean(countryId),
-        selectedTierId: countryId,
-        missingTarget: "Country",
-        message: "Please select a country to view national chapter officials.",
-      };
-    }
-    case "zonal":
-      return {
-        isComplete: Boolean(selectedZonalId),
-        selectedTierId: selectedZonalId,
-        missingTarget: "Geopolitical Zone",
-        message: "Please select a geopolitical zone to view zonal chapter officials.",
-      };
-    case "state":
-      return {
-        isComplete: Boolean(selectedStateId),
-        selectedTierId: selectedStateId,
-        missingTarget: "State",
-        message: "Please select a state to view state chapter officials.",
-      };
-    case "lga":
-      if (!selectedStateId) {
-        return {
-          isComplete: false,
-          selectedTierId: undefined,
-          missingTarget: "State",
-          message: "Please select a state first to view LGA chapter officials.",
-        };
-      }
-
-      return {
-        isComplete: Boolean(selectedLgaId),
-        selectedTierId: selectedLgaId,
-        missingTarget: "LGA",
-        message: "Please select a Local Government Area (LGA) to view LGA chapter officials.",
-      };
-    case "ward":
-      if (!selectedStateId) {
-        return {
-          isComplete: false,
-          selectedTierId: undefined,
-          missingTarget: "State",
-          message: "Please select a state first to view ward chapter officials.",
-        };
-      }
-
-      if (!selectedLgaId) {
-        return {
-          isComplete: false,
-          selectedTierId: undefined,
-          missingTarget: "LGA",
-          message: "Please select a Local Government Area (LGA) first to view ward chapter officials.",
-        };
-      }
-
-      return {
-        isComplete: Boolean(selectedWardId),
-        selectedTierId: selectedWardId,
-        missingTarget: "Ward",
-        message: "Please select an electoral ward to view ward chapter officials.",
-      };
-    default:
-      return {
-        isComplete: false,
-        selectedTierId: undefined,
-        missingTarget: "Tier",
-        message: "Please select a chapter tier.",
-      };
-  }
-}
 
 // colors for the appointment badges
 const APPOINTMENT_BADGE_STYLES: Record<string, string> = {
@@ -314,7 +229,7 @@ function OccupiedPositionCard({ official, positionTitle, onVacate }: {
  * or vacant cards as designed.
  */
 export function PartyPositionsRosterView({
-  chapterTier = "national",
+  chapterType = "national",
   selectedCountryId,
   selectedZonalId,
   selectedStateId,
@@ -336,7 +251,7 @@ export function PartyPositionsRosterView({
   const tierSelectionStatus = React.useMemo(
     () =>
       getTierSelectionStatus({
-        chapterTier,
+        chapterType,
         selectedCountryId,
         selectedZonalId,
         selectedStateId,
@@ -344,7 +259,7 @@ export function PartyPositionsRosterView({
         selectedWardId,
       }),
     [
-      chapterTier,
+      chapterType,
       selectedCountryId,
       selectedZonalId,
       selectedStateId,
@@ -361,7 +276,7 @@ export function PartyPositionsRosterView({
     queryKey: [
       "partyOfficials",
       partyId,
-      chapterTier,
+      chapterType,
       selectedCountryId,
       selectedZonalId,
       selectedStateId,
@@ -457,11 +372,11 @@ export function PartyPositionsRosterView({
 
     // Filter positions valid for the active chapter tier (e.g. national, state, LGA)
     const tierFiltered = sorted.filter((p) => {
-      if (!chapterTier || chapterTier === "all") return true;
+      if (!chapterType || chapterType === "all") return true;
       if (!p.allowed_levels || p.allowed_levels.length === 0) return true;
       return p.allowed_levels.some(
         (lvl) =>
-          lvl.toLowerCase() === chapterTier.toLowerCase() ||
+          lvl.toLowerCase() === chapterType.toLowerCase() ||
           lvl.toLowerCase() === "all",
       );
     });
@@ -543,18 +458,18 @@ export function PartyPositionsRosterView({
     return results;
   }, [
     positions,
-    chapterTier,
+    chapterType,
     officialsByPosition,
     appointmentTypeFilter,
     debouncedSearchQuery,
   ]);
 
   const resolvedChapterLabel = React.useMemo(() => {
-    if (chapterTier === "national") return "National chapter";
+    if (chapterType === "national") return "National chapter";
     const geoName = rawOfficials[0]?.geo_name;
-    if (geoName) return `${geoName} (${chapterTier}) chapter`;
-    return `${chapterTier} chapter`;
-  }, [chapterTier, rawOfficials]);
+    if (geoName) return `${geoName} (${chapterType}) chapter`;
+    return `${chapterType} chapter`;
+  }, [chapterType, rawOfficials]);
 
   if (!tierSelectionStatus.isComplete) {
     return (
@@ -627,7 +542,7 @@ export function PartyPositionsRosterView({
         onClose={() => setAppointingPosition(null)}
         position={appointingPosition}
         selectedTierId={tierSelectionStatus.selectedTierId}
-        chapterTier={chapterTier}
+        chapterType={chapterType}
         chapterContextLabel={resolvedChapterLabel}
         partyId={partyId}
       />

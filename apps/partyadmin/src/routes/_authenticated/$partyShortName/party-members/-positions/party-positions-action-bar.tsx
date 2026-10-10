@@ -8,8 +8,8 @@ import { Button } from "@repo/ui/components/button";
 import { BookOpen } from "lucide-react";
 import { PartyTierNav } from "../-party-tier-nav";
 
-export interface PartyPositionsActionBarProps {
-  chapterTier: string;
+export type PartyPositionsActionBarProps = {
+  chapterType: string;
   onTierChange: (tier: string) => void;
   selectedCountryId?: number;
   onCountryChange: (id?: number) => void;
@@ -22,13 +22,13 @@ export interface PartyPositionsActionBarProps {
   selectedWardId?: number;
   onWardChange: (id?: number) => void;
   onOpenCatalog: () => void;
-}
+};
 
 /**
  * Top action bar with chapter tier navigation and action buttons (Catalog).
  */
 export function PartyPositionsActionBar({
-  chapterTier,
+  chapterType,
   onTierChange,
   selectedCountryId,
   onCountryChange,
@@ -46,7 +46,7 @@ export function PartyPositionsActionBar({
     <div className="flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4 mb-4">
       {/* Tier Tabs Navigation with Inline Dynamic Geographic Selectors */}
       <PartyTierNav
-        chapterTier={chapterTier}
+        chapterType={chapterType}
         onTierChange={onTierChange}
         selectedCountryId={selectedCountryId}
         onCountryChange={onCountryChange}
