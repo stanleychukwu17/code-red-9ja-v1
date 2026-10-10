@@ -12,6 +12,7 @@ interface PartyHeaderLayoutProps {
   verifications?: any[];
   chapterName?: string;
   chapterLevel?: string;
+  chapterType?: string;
   isChapterMemberInitial?: boolean;
   isFollowingInitial?: boolean;
   followersDisplay?: string;
@@ -24,6 +25,56 @@ interface PartyHeaderLayoutProps {
   children?: React.ReactNode;
 }
 
+function getChapterTypeBadgeConfig(type?: string) {
+  if (!type) return null;
+  const normalized = type.toLowerCase().trim().replace(/\s*chapter\s*/gi, "");
+
+  switch (normalized) {
+    case "national":
+      return {
+        label: "National Chapter",
+        className:
+          "bg-blue-600 text-white border-blue-500 dark:bg-blue-600 dark:text-white dark:border-blue-400",
+        dotClassName: "bg-white",
+      };
+    case "zonal":
+      return {
+        label: "Zonal Chapter",
+        className:
+          "bg-purple-600 text-white border-purple-500 dark:bg-purple-600 dark:text-white dark:border-purple-400",
+        dotClassName: "bg-white",
+      };
+    case "state":
+      return {
+        label: "State Chapter",
+        className:
+          "bg-emerald-600 text-white border-emerald-500 dark:bg-emerald-600 dark:text-white dark:border-emerald-400",
+        dotClassName: "bg-white",
+      };
+    case "lga":
+      return {
+        label: "LGA Chapter",
+        className:
+          "bg-orange-600 text-white border-orange-500 dark:bg-orange-600 dark:text-white dark:border-orange-400",
+        dotClassName: "bg-white",
+      };
+    case "ward":
+      return {
+        label: "Ward Chapter",
+        className:
+          "bg-rose-600 text-white border-rose-500 dark:bg-rose-600 dark:text-white dark:border-rose-400",
+        dotClassName: "bg-white",
+      };
+    default:
+      return {
+        label: `${normalized.charAt(0).toUpperCase() + normalized.slice(1)} Chapter`,
+        className:
+          "bg-zinc-800 text-white border-zinc-700 dark:bg-zinc-700 dark:text-white dark:border-zinc-600",
+        dotClassName: "bg-white",
+      };
+  }
+}
+
 export function PartyHeaderLayout({
   coverImage,
   logo,
@@ -33,6 +84,7 @@ export function PartyHeaderLayout({
   verifications,
   chapterName,
   chapterLevel,
+  chapterType,
   isChapterMemberInitial = false,
   isFollowingInitial = false,
   followersDisplay = "100k",
@@ -46,17 +98,27 @@ export function PartyHeaderLayout({
 }: PartyHeaderLayoutProps) {
   const [isChapterMember, setIsChapterMember] = useState(isChapterMemberInitial);
   const [isFollowing, setIsFollowing] = useState(isFollowingInitial);
+  const resolvedChapterType = chapterType || chapterLevel;
+  const chapterBadge = getChapterTypeBadgeConfig(resolvedChapterType);
 
+  // Synchronize chapter membership state when initial prop changes (e.g. async fetch completes)
   useEffect(() => {
     setIsChapterMember(isChapterMemberInitial);
   }, [isChapterMemberInitial]);
 
+  // Synchronize following state when initial prop changes (e.g. async fetch completes)
+  useEffect(() => {
+    setIsFollowing(isFollowingInitial);
+  }, [isFollowingInitial]);
+
+  // Optimistically toggle chapter membership and notify parent callback
   const handleChapterMemberClick = () => {
     const next = !isChapterMember;
     setIsChapterMember(next);
     onChapterMemberToggle?.(next);
   };
 
+  // Optimistically toggle follow status and notify parent callback
   const handleFollowClick = () => {
     const next = !isFollowing;
     setIsFollowing(next);
@@ -127,6 +189,21 @@ export function PartyHeaderLayout({
                   </div>
                   <p className="text-xs sm:text-sm font-medium text-muted-foreground/90 -translate-y-0.5">{fullName}</p>
 
+                  {/* Chapter tier badge */}
+                  {chapterBadge && (
+                    <div className="pt-2">
+                      <span
+                        className={cn(
+                          "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border shadow-xs",
+                          chapterBadge.className
+                        )}
+                      >
+                        <span className={cn("size-1.5 rounded-full", chapterBadge.dotClassName)} />
+                        <span>{chapterBadge.label}</span>
+                      </span>
+                    </div>
+                  )}
+
                   {/* Membership stats (Visible only on mobile/small screens: max-md) */}
                   <div className="flex items-center gap-4 pt-2 md:hidden text-xs text-muted-foreground">
                     <span className="flex items-center gap-1.5">
@@ -149,8 +226,8 @@ export function PartyHeaderLayout({
                     className={cn(
                       "flex items-center justify-center gap-1.5 px-2 sm:px-4 py-3 rounded-full text-xs xl:text-sm font-semibold transition-all duration-200 shadow-sm cursor-pointer",
                       isChapterMember
-                        ? "bg-lime-accent text-neutral-900 hover:bg-lime-accent-hover"
-                        : "bg-lime hover:bg-lime-accent text-neutral-900 active:scale-95"
+                        ? "bg-lime-accent text-neutral-900 hover:bg-lime-accent-hover dark:bg-secondary dark:text-secondary-foreground dark:hover:bg-secondary/80"
+                        : "bg-lime hover:bg-lime-accent text-neutral-900 dark:bg-foreground dark:text-background dark:hover:bg-foreground/90 active:scale-95"
                     )}
                   >
                     {isChapterMember ? (

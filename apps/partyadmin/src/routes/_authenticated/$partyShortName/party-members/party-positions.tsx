@@ -49,11 +49,26 @@ function RouteComponent() {
 
   const handleTierChange = (tier: string) => {
     setChapterTier(tier);
-    setSelectedCountryId(tier === "national" ? 161 : undefined);
-    setSelectedZonalId(undefined);
-    setSelectedStateId(undefined);
-    setSelectedLgaId(undefined);
-    setSelectedWardId(undefined);
+    setSelectedCountryId(tier === "national" ? (selectedCountryId || 161) : undefined);
+
+    if (tier !== "zonal") {
+      setSelectedZonalId(undefined);
+    }
+
+    // Preserve state selection across state, LGA, and ward tiers
+    if (!["state", "lga", "ward"].includes(tier)) {
+      setSelectedStateId(undefined);
+    }
+
+    // Preserve LGA selection across LGA and ward tiers
+    if (!["lga", "ward"].includes(tier)) {
+      setSelectedLgaId(undefined);
+    }
+
+    // Ward selection only applies to ward tier
+    if (tier !== "ward") {
+      setSelectedWardId(undefined);
+    }
   };
 
   return (

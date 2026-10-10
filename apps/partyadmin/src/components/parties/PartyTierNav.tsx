@@ -52,14 +52,29 @@ export function PartyTierNav({
   onWardChange,
   className,
 }: PartyTierNavProps) {
-  // Handle tier switch and reset all subordinate filters
+  // Handle tier switch while preserving valid parent geographic hierarchy
   const handleTierChange = (tier: string) => {
     onTierChange(tier);
-    onCountryChange?.(tier === "national" ? 161 : undefined);
-    onZonalChange?.(undefined);
-    onStateChange?.(undefined);
-    onLgaChange?.(undefined);
-    onWardChange?.(undefined);
+    onCountryChange?.(tier === "national" ? (selectedCountryId || 161) : undefined);
+
+    if (tier !== "zonal") {
+      onZonalChange?.(undefined);
+    }
+
+    // Preserve state selection across state, LGA, and ward tiers
+    if (!["state", "lga", "ward"].includes(tier)) {
+      onStateChange?.(undefined);
+    }
+
+    // Preserve LGA selection across LGA and ward tiers
+    if (!["lga", "ward"].includes(tier)) {
+      onLgaChange?.(undefined);
+    }
+
+    // Ward selection only applies to ward tier
+    if (tier !== "ward") {
+      onWardChange?.(undefined);
+    }
   };
 
   // Handle country selection and reset child region filters
@@ -86,15 +101,14 @@ export function PartyTierNav({
   return (
     <div className={cn("gap-y-2", className)}>
       {/* Tier Tabs Navigation */}
-      <div className="min-w-140 flex items-center p-1 bg-c-10 dark:bg-card border border-transparent dark:border-border rounded-xl overflow-x-auto">
+      <div className="min-w-140 flex items-center p-1 bg-sidebar-mobile border border-transparent dark:border-border rounded-xl overflow-x-auto">
         {TIER_TABS.map((tab) => (
           <button
             key={tab.key}
             type="button"
             onClick={() => handleTierChange(tab.key)}
             className={`grow px-3.5 py-1.5 rounded-lg text-[13px] font-medium transition whitespace-nowrap
-              ${chapterTier === tab.key ? "bg-background text-c-90 shadow-xs" : "text-c-60 hover:text-c-90"
-              }`}
+              ${chapterTier === tab.key ? "bg-background text-c-90 shadow-xs" : "text-c-60 hover:text-c-90"}`}
           >
             {tab.label}
           </button>

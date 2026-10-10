@@ -53,6 +53,9 @@ function PartyLayoutComponent() {
   const partyDetails = profileRes?.success ? profileRes.data.data : null;
   const isChapterMember = profileRes?.success ? Boolean(profileRes.data?.is_chapter_member) : false;
   const isFollowing = profileRes?.success ? Boolean(profileRes.data?.is_following) : false;
+  const chapterType = profileRes?.success
+    ? profileRes.data.chapter_type || profileRes.data.chapter?.chapter_type || partyDetails?.chapter_type
+    : undefined;
 
   const partyUpper = (partyDetails?.short_name || partyName).toUpperCase();
   const preset = PARTY_PRESETS[partyUpper];
@@ -80,7 +83,8 @@ function PartyLayoutComponent() {
         isVerified={Boolean(partyDetails?.is_verified)}
         verifications={partyDetails?.verifications}
         chapterName={partyDetails?.chapter_name}
-        chapterLevel={partyDetails?.chapter_type}
+        chapterLevel={chapterType || partyDetails?.chapter_type}
+        chapterType={chapterType || partyDetails?.chapter_type}
         followersDisplay="100k"
         followersValue={100}
         totalMembers={partyDetails?.total_members ? String(partyDetails.total_members) : "300,000"}

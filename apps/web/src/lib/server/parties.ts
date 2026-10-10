@@ -137,6 +137,8 @@ export const getPartyProfile = createServerFn()
 				message?: string;
 				data: {
 					data: any;
+					chapter?: any;
+					chapter_type?: string;
 					is_chapter_member: boolean;
 					is_following: boolean;
 				};

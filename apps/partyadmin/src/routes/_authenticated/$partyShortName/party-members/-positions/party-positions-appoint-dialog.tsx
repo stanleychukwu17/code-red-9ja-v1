@@ -25,19 +25,23 @@ import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useDebounceValue } from "usehooks-ts";
 import { toast } from "sonner";
 import { getUsersList } from "#/lib/server/users";
-import { assignPartyOfficial, type PartyPositionItem } from "#/lib/server/parties";
+import {
+  assignPartyOfficial,
+  type PartyPositionItem,
+} from "#/lib/server/parties";
 import type { UserType } from "#/components/tiles/user-tile";
 
-export interface AppointOfficialDialogProps {
+export type AppointOfficialDialogProps = {
   open: boolean;
   onClose: () => void;
   position: PartyPositionItem | null;
+  selectedTierId?: number;
   chapterId?: number;
   chapterTier: string;
   chapterContextLabel: string;
   partyId?: number;
   onSuccess?: () => void;
-}
+};
 
 const APPOINTMENT_TYPES = [
   { value: "substantive", label: "Substantive" },
@@ -50,6 +54,7 @@ export function AppointOfficialDialog({
   open,
   onClose,
   position,
+  selectedTierId,
   chapterId,
   chapterTier,
   chapterContextLabel,
@@ -103,17 +108,14 @@ export function AppointOfficialDialog({
   ) => {
     if (!partyId || !position) return;
 
-    if (!chapterId || chapterId <= 0) {
-      toast.error("Unable to resolve chapter for appointment. Please try again.");
-      return;
-    }
-
     setSubmittingUserId(userId);
     try {
       const res = await assignPartyOfficial({
         data: {
           partyId,
           chapterId,
+          chapterTier,
+          tierId: selectedTierId,
           userId,
           positionId: position.id,
           appointmentType,

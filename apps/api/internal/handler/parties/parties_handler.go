@@ -731,6 +731,8 @@ func (h *Handler) GetPartyProfile(w http.ResponseWriter, r *http.Request) {
 
 	responseData := map[string]interface{}{
 		"data":              party,
+		"chapter":           chapter,
+		"chapter_type":      chapter.ChapterType,
 		"is_chapter_member": isChapterMember,
 		"is_following":      isFollowing,
 	}
@@ -2831,6 +2833,10 @@ type AssignPartyOfficialRequest struct {
 	UserID          int64  `json:"user_id"`
 	PositionID      int32  `json:"position_id"`
 	AppointmentType string `json:"appointment_type"` // substantive, acting, caretaker, interim
+	ChapterType     string `json:"chapter_type"`    // national, zonal, state, lga, ward
+	ChapterTier     string `json:"chapter_tier"`    // alias for chapter_type
+	TierID          int64  `json:"tier_id"`
+	ChapterID       int32  `json:"chapter_id"`
 	TenureStart     string `json:"tenure_start"`
 	TenureEnd       string `json:"tenure_end"`
 }
@@ -2844,13 +2850,6 @@ func (h *Handler) AssignPartyOfficial(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	chapIDStr := chi.URLParam(r, "chapter_id")
-	chapID, err := strconv.ParseInt(chapIDStr, 10, 32)
-	if err != nil || chapID <= 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid chapter ID")
-		return
-	}
-
 	var req AssignPartyOfficialRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
@@ -2859,6 +2858,72 @@ func (h *Handler) AssignPartyOfficial(w http.ResponseWriter, r *http.Request) {
 
 	if req.UserID <= 0 || req.PositionID <= 0 {
 		h.utils.RespondError(w, http.StatusBadRequest, "user_id and position_id are required")
+		return
+	}
+
+	// Resolve chapter ID from URL parameter, request body chapter_id, or resolve dynamically via chapter tier
+	var chapID int32
+	if chapIDStr := chi.URLParam(r, "chapter_id"); chapIDStr != "" {
+		if cid, err := strconv.ParseInt(chapIDStr, 10, 32); err == nil && cid > 0 {
+			chapID = int32(cid)
+		}
+	}
+	if chapID <= 0 && req.ChapterID > 0 {
+		chapID = req.ChapterID
+	}
+
+	if chapID <= 0 {
+		// Resolve chapter dynamically using chapter_tier / chapter_type and tier_id
+		chapterType := strings.ToLower(strings.TrimSpace(req.ChapterType))
+		if chapterType == "" {
+			chapterType = strings.ToLower(strings.TrimSpace(req.ChapterTier))
+		}
+
+		ctx := r.Context()
+		switch chapterType {
+		case "national":
+			countryID := int16(161)
+			if req.TierID > 0 {
+				countryID = int16(req.TierID)
+			}
+			chapID, err = h.partiesService.GetOrCreateNationalChapter(ctx, int16(partyID), countryID, true)
+		case "zonal":
+			if req.TierID <= 0 {
+				h.utils.RespondError(w, http.StatusBadRequest, "tier_id is required for zonal chapter")
+				return
+			}
+			chapID, err = h.partiesService.GetOrCreateZonalChapter(ctx, int16(partyID), int16(req.TierID), true)
+		case "state":
+			if req.TierID <= 0 {
+				h.utils.RespondError(w, http.StatusBadRequest, "tier_id is required for state chapter")
+				return
+			}
+			chapID, err = h.partiesService.GetOrCreateStateChapter(ctx, int16(partyID), int16(req.TierID), true)
+		case "lga":
+			if req.TierID <= 0 {
+				h.utils.RespondError(w, http.StatusBadRequest, "tier_id is required for LGA chapter")
+				return
+			}
+			chapID, err = h.partiesService.GetOrCreateLGAChapter(ctx, int16(partyID), int32(req.TierID), true)
+		case "ward":
+			if req.TierID <= 0 {
+				h.utils.RespondError(w, http.StatusBadRequest, "tier_id is required for ward chapter")
+				return
+			}
+			chapID, err = h.partiesService.GetOrCreateWardChapter(ctx, int16(partyID), int32(req.TierID), true)
+		default:
+			h.utils.RespondError(w, http.StatusBadRequest, "Valid chapter_id or chapter_tier with tier_id is required")
+			return
+		}
+
+		if err != nil {
+			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to resolve chapter: "+err.Error())
+			return
+		}
+	}
+
+	if chapID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid chapter ID")
 		return
 	}
 

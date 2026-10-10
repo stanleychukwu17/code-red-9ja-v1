@@ -578,7 +578,10 @@ export const assignPartyOfficial = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
       partyId: number | string;
-      chapterId: number | string;
+      chapterId?: number | string;
+      chapterTier?: string;
+      chapterType?: string;
+      tierId?: number;
       userId: number;
       positionId: number;
       appointmentType: string;
@@ -596,6 +599,10 @@ export const assignPartyOfficial = createServerFn({ method: "POST" })
             user_id: data.userId,
             position_id: data.positionId,
             appointment_type: data.appointmentType,
+            chapter_tier: data.chapterTier || data.chapterType,
+            chapter_type: data.chapterType || data.chapterTier,
+            tier_id: data.tierId,
+            chapter_id: data.chapterId,
             tenure_start: data.tenureStart,
             tenure_end: data.tenureEnd,
           }),

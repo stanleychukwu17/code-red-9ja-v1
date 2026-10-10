@@ -15,6 +15,10 @@ export {
 export {
   PartyPositionsRosterView,
   type PartyPositionsRosterViewProps,
+  getTierSelectionStatus,
+  type TierSelectionStatus,
+  type TierSelectionStatusProps,
+  type TierSelectionProps,
 } from "./party-positions-roster-view";
 
 export {
