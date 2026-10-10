@@ -62,6 +62,7 @@ const (
 	RedisPartyChapter          = "parties:chapter:"                // STRING: "parties:chapter:<chapterID>" stores cached party chapter details.
 	RedisParties5MemberAvatars = "parties:sample_member_avatars:"  // STRING: "parties:sample_member_avatars:<partyID>:<chapterID>" is used to store sample member avatars for a party chapter.
 	RedisChapterOfficial       = "parties:chapter:official:"       // STRING: "parties:chapter:official:<chapterID>:<positionID>" is used to store active official for a chapter and position.
+	RedisPartyChapterOfficials = "parties:chapter_officials:"      // STRING: "parties:chapter_officials:<partyID>:<chapterID>" stores cached JSON array of chapter officials
 	RedisPartyMemberSuspension = "parties:member_suspension:"      // STRING: "parties:member_suspension:<partyID>:<userID>" stores cached active suspension JSON (id > 0 if suspended, id = 0 if not)
 	RedisPartyMemberPositions  = "parties:member_positions:"       // STRING: "parties:member_positions:<partyID>:<userID>" stores cached JSON array of member position assignments
 	RedisPartyChapterMember    = "parties:chapter_member:"         // STRING: "parties:chapter_member:<userID>:<partyID>:<chapterID>" stores cached membership booleans
@@ -142,6 +143,7 @@ var AllRedisPrefixes = []string{
 	RedisPartyChapter,
 	RedisParties5MemberAvatars,
 	RedisChapterOfficial,
+	RedisPartyChapterOfficials,
 	RedisPartyMemberSuspension,
 	RedisPartyMemberPositions,
 	RedisPartyChapterMember,

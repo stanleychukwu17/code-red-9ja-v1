@@ -28,14 +28,17 @@ export const Route = createFileRoute("/_authenticated/party/$partyName/$partyId"
       chapterId: Number.isFinite(parsed) && parsed > 0 ? parsed : undefined,
     };
   },
+
   head: ({ params }) => {
     return getPageHeader({
       title: `${params.partyName.toUpperCase()} Profile`,
       description: `View party details for ${params.partyName}`,
     });
   },
+
   component: PartyLayoutComponent,
 });
+
 
 function PartyLayoutComponent() {
   const { partyName, partyId } = Route.useParams();
@@ -44,6 +47,8 @@ function PartyLayoutComponent() {
   const { data: profileRes } = useQuery(
     partyProfileQueryOptions(partyId, partyName, chapterId)
   );
+
+  console.log(profileRes)
 
   const partyDetails = profileRes?.success ? profileRes.data.data : null;
 
@@ -70,6 +75,8 @@ function PartyLayoutComponent() {
         logo={partyDetails?.logo || ""}
         shortName={displayShortName}
         fullName={displayName}
+        isVerified={Boolean(partyDetails?.is_verified)}
+        verifications={partyDetails?.verifications}
         chapterName={partyDetails?.chapter_name}
         chapterLevel={partyDetails?.chapter_type}
         followersDisplay="100k"

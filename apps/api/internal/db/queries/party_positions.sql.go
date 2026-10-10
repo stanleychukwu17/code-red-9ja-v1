@@ -521,14 +521,12 @@ JOIN users ON users.id = party_position_assignments.user_id
 JOIN party_chapters ON party_chapters.id = party_position_assignments.chapter_id
 WHERE party_position_assignments.party_id = $1
   AND party_position_assignments.chapter_id = $2
-  AND ($3::varchar IS NULL OR party_position_assignments.status = $3)
 ORDER BY party_positions.rank_order ASC, party_position_assignments.tenure_start DESC
 `
 
 type ListPartyOfficialsParams struct {
-	PartyID   int16       `json:"party_id"`
-	ChapterID int32       `json:"chapter_id"`
-	Status    pgtype.Text `json:"status"`
+	PartyID   int16 `json:"party_id"`
+	ChapterID int32 `json:"chapter_id"`
 }
 
 type ListPartyOfficialsRow struct {
@@ -554,7 +552,7 @@ type ListPartyOfficialsRow struct {
 }
 
 func (q *Queries) ListPartyOfficials(ctx context.Context, arg ListPartyOfficialsParams) ([]ListPartyOfficialsRow, error) {
-	rows, err := q.db.Query(ctx, listPartyOfficials, arg.PartyID, arg.ChapterID, arg.Status)
+	rows, err := q.db.Query(ctx, listPartyOfficials, arg.PartyID, arg.ChapterID)
 	if err != nil {
 		return nil, err
 	}

@@ -1,12 +1,15 @@
 import { useState } from "react";
 import { Check, MessageCircleMore, Plus } from "lucide-react";
 import { cn } from "@repo/ui/lib/utils";
+import { VerificationBadge } from "@repo/ui/components/custom/verification-badge";
 
 interface PartyHeaderLayoutProps {
   coverImage: string;
   logo: string;
   shortName: string;
   fullName: string;
+  isVerified?: boolean;
+  verifications?: any[];
   chapterName?: string;
   chapterLevel?: string;
   isMemberInitial?: boolean;
@@ -26,6 +29,8 @@ export function PartyHeaderLayout({
   logo,
   shortName,
   fullName,
+  isVerified,
+  verifications,
   chapterName,
   chapterLevel,
   isMemberInitial = false,
@@ -91,6 +96,11 @@ export function PartyHeaderLayout({
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <h1 className="text-2xl sm:text-3xl font-medium tracking-tight text-foreground">{shortName}</h1>
+                    {(isVerified || (verifications && verifications.length > 0)) && (
+                      <div className="flex items-center gap-1 shrink-0 relative -bottom-px">
+                        <VerificationBadge id={3} title="Verified Political Party" />
+                      </div>
+                    )}
                     {chapterName && (
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-lime-100 text-lime-900 dark:bg-lime-900/40 dark:text-lime-300 border border-lime-300 dark:border-lime-700">
                         {chapterName} {chapterLevel ? `(${chapterLevel})` : "Chapter"}

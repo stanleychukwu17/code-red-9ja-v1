@@ -111,8 +111,6 @@ CREATE TABLE party_position_assignments (
 
 -- Unique index to prevent duplicate active assignment for the same position, chapter, and user
 CREATE UNIQUE INDEX idx_unique_active_chapter_position_user ON party_position_assignments (chapter_id, position_id, user_id) WHERE status = 'active';
-CREATE INDEX idx_pos_assign_chapter_pos_active ON party_position_assignments (chapter_id, position_id) WHERE status = 'active';
-CREATE INDEX idx_pos_assign_party_user_active ON party_position_assignments (party_id, user_id) WHERE status IN ('active', 'suspended');
 CREATE INDEX idx_pos_assign_chapter ON party_position_assignments (party_id, chapter_id, status);
 CREATE INDEX idx_pos_assign_user ON party_position_assignments (user_id, status);
 CREATE INDEX idx_pos_assign_position ON party_position_assignments (position_id);

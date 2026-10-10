@@ -81,13 +81,15 @@ type PartiesService interface {
 	AssignPartyPosition(ctx context.Context, arg queries.AssignPartyPositionParams) (queries.PartyPositionAssignment, error)
 	UpdatePositionAssignment(ctx context.Context, arg queries.UpdatePositionAssignmentParams) (queries.PartyPositionAssignment, error)
 	VacatePositionAssignment(ctx context.Context, id int64, partyID int16) (queries.PartyPositionAssignment, error)
+	GetPartyChapterByID(ctx context.Context, chapterID int32) (queries.PartyChapter, error)
+	IsPartyChapterMember(ctx context.Context, userID int64, partyID int16, chapterID int32) (bool, error)
 	GetOrCreateWardChapter(ctx context.Context, partyID int16, wardID int32, createIfMissing ...bool) (int32, error)
 	GetOrCreateLGAChapter(ctx context.Context, partyID int16, lgaID int32, createIfMissing ...bool) (int32, error)
 	GetOrCreateStateChapter(ctx context.Context, partyID, stateID int16, createIfMissing ...bool) (int32, error)
 	GetOrCreateZonalChapter(ctx context.Context, partyID, zonalID int16, createIfMissing ...bool) (int32, error)
 	GetOrCreateNationalChapter(ctx context.Context, partyID, countryID int16, createIfMissing ...bool) (int32, error)
 	ListChapterOfficials(ctx context.Context, partyID int16, chapterID int32, status *string) ([]queries.ListChapterOfficialsRow, error)
-	ListPartyOfficials(ctx context.Context, partyID int16, chapterID int32, status *string) ([]queries.ListPartyOfficialsRow, error)
+	ListPartyOfficials(ctx context.Context, partyID int16, chapterID int32) ([]queries.ListPartyOfficialsRow, error)
 	ListMemberPositionAssignments(ctx context.Context, partyID int16, userID int64) ([]queries.ListMemberPositionAssignmentsRow, error)
 	SuspendPartyMember(ctx context.Context, input partiesservice.SuspendPartyMemberInput) (*queries.PartyMemberSuspension, error)
 	UnsuspendPartyMember(ctx context.Context, input partiesservice.UnsuspendPartyMemberInput) (*queries.PartyMemberSuspension, error)
@@ -655,6 +657,7 @@ func (h *Handler) GetParty(w http.ResponseWriter, r *http.Request) {
 // @Produce      json
 // @Param        party_id path int true "Party ID"
 // @Param        short_name path string true "Party Short Name"
+// @Param        chapter_id query int false "Chapter ID"
 // @Success      200  {object}  utils.SuccessResponse
 // @Router       /parties/{party_id}/{short_name}/profile [get]
 func (h *Handler) GetPartyProfile(w http.ResponseWriter, r *http.Request) {
@@ -666,6 +669,27 @@ func (h *Handler) GetPartyProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Parse optional chapter_id query parameter and verify existence
+	var chapterID *int32
+	if cidStr := r.URL.Query().Get("chapter_id"); cidStr != "" {
+		cid, err := strconv.ParseInt(cidStr, 10, 32)
+		if err != nil || cid <= 0 {
+			h.utils.RespondError(w, http.StatusBadRequest, "Invalid chapter ID")
+			return
+		}
+		c := int32(cid)
+		chapter, err := h.partiesService.GetPartyChapterByID(r.Context(), c)
+		if err != nil || chapter.ID == 0 {
+			h.utils.RespondError(w, http.StatusNotFound, "Party chapter not found")
+			return
+		}
+		if chapter.PartyID != int16(partyID) {
+			h.utils.RespondError(w, http.StatusBadRequest, "Chapter does not belong to the specified party")
+			return
+		}
+		chapterID = &c
+	}
+
 	// Fetch basic party info and verification badges
 	party := h.partiesService.GetPartyBasicInfo(r.Context(), int16(partyID))
 	if party == nil {
@@ -673,9 +697,28 @@ func (h *Handler) GetPartyProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.utils.RespondSuccess(w, http.StatusOK, "Party profile retrieved successfully", map[string]interface{}{
-		"data": party,
-	})
+	// Check authentication status and party/chapter membership
+	var isMember bool
+	var isChapterMember bool
+	if claims, ok := apimiddleware.GetClaims(r); ok && claims != nil {
+		if claims.PartyID == int16(partyID) {
+			isMember = true
+			if chapterID != nil {
+				isChapMember, err := h.partiesService.IsPartyChapterMember(r.Context(), claims.UserID, int16(partyID), *chapterID)
+				if err == nil && isChapMember {
+					isChapterMember = true
+				}
+			}
+		}
+	}
+
+	responseData := map[string]interface{}{
+		"data":              party,
+		"is_member":         isMember,
+		"is_chapter_member": isChapterMember,
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Party profile retrieved successfully", responseData)
 }
 
 // JoinPartyHierarchy handles requests to join a party with chapter hierarchy selections.
@@ -2608,7 +2651,6 @@ func (h *Handler) ListPartyOfficials(w http.ResponseWriter, r *http.Request) {
 
 	// 2. Parse query parameters
 	q := r.URL.Query()
-	chapterType := strings.ToLower(strings.TrimSpace(q.Get("chapter_type")))
 
 	var wardID int64
 	if widStr := q.Get("ward_id"); widStr != "" {
@@ -2644,9 +2686,6 @@ func (h *Handler) ListPartyOfficials(w http.ResponseWriter, r *http.Request) {
 		chapterID, err = h.partiesService.GetOrCreateStateChapter(ctx, int16(partyID), int16(stateID), false)
 	case zonalID > 0:
 		chapterID, err = h.partiesService.GetOrCreateZonalChapter(ctx, int16(partyID), int16(zonalID), false)
-	case chapterType == "state" || chapterType == "lga" || chapterType == "ward" || chapterType == "zonal":
-		// User selected a sub-national tier, but has not picked a specific jurisdiction yet
-		chapterID = 0
 	default:
 		cID := int16(161)
 		if countryID > 0 {
@@ -2662,19 +2701,14 @@ func (h *Handler) ListPartyOfficials(w http.ResponseWriter, r *http.Request) {
 
 	// If chapter does not exist yet or no jurisdiction selected, return empty list immediately
 	if chapterID <= 0 {
-		h.utils.RespondSuccess(w, http.StatusOK, "Party officials retrieved successfully", map[string]interface{}{
+		h.utils.RespondSuccess(w, http.StatusOK, "Party chapter has not been established yet", map[string]interface{}{
 			"officials": []queries.ListPartyOfficialsRow{},
 		})
 		return
 	}
 
 	// 4. Query officials directly by chapter_id using idx_pos_assign_chapter
-	var status *string
-	if st := q.Get("status"); st != "" {
-		status = &st
-	}
-
-	officials, err := h.partiesService.ListPartyOfficials(ctx, int16(partyID), chapterID, status)
+	officials, err := h.partiesService.ListPartyOfficials(ctx, int16(partyID), chapterID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to list officials: "+err.Error())
 		return

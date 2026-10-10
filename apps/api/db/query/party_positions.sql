@@ -159,7 +159,6 @@ JOIN users ON users.id = party_position_assignments.user_id
 JOIN party_chapters ON party_chapters.id = party_position_assignments.chapter_id
 WHERE party_position_assignments.party_id = $1
   AND party_position_assignments.chapter_id = $2
-  AND (sqlc.narg('status')::varchar IS NULL OR party_position_assignments.status = sqlc.narg('status'))
 ORDER BY party_positions.rank_order ASC, party_position_assignments.tenure_start DESC;
 
 -- name: ListMemberPositionAssignments :many

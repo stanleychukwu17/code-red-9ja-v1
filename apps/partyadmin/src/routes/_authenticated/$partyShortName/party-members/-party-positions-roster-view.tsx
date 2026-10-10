@@ -24,6 +24,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@repo/ui/components/dropdown-menu";
+import { VacantPositionAvatar } from "@repo/ui/components/vacant-avatar";
 
 export interface PartyPositionsRosterViewProps {
   chapterTier?: string;
@@ -39,40 +40,36 @@ export interface PartyPositionsRosterViewProps {
 }
 
 const APPOINTMENT_BADGE_STYLES: Record<string, string> = {
-  acting: "bg-[#5e5ce6] text-white",
-  substantive: "bg-[#10b981] text-white",
-  caretaker: "bg-[#f59e0b] text-white",
-  interim: "bg-[#8b5cf6] text-white",
+  acting:
+    "bg-blue-600 text-white dark:bg-blue-500/20 dark:text-blue-300 dark:border dark:border-blue-500/30",
+  substantive:
+    "bg-emerald-600 text-white dark:bg-emerald-500/20 dark:text-emerald-300 dark:border dark:border-emerald-500/30",
+  caretaker:
+    "bg-amber-600 text-white dark:bg-amber-500/20 dark:text-amber-300 dark:border dark:border-amber-500/30",
+  interim:
+    "bg-purple-600 text-white dark:bg-purple-500/20 dark:text-purple-300 dark:border dark:border-purple-500/30",
 };
 
 /**
  * Vacant Position Card
  * Matches design with pastel lime-green gradient circle, position title, red 'Vacant' status, and 3-dots action.
  */
-function VacantPositionCard({
-  position,
-  onAppoint,
-}: {
+function VacantPositionCard({ position, onAppoint }: {
   position: PartyPositionItem;
   onAppoint?: (position: PartyPositionItem) => void;
 }) {
   return (
     <div className="flex flex-col items-center justify-start text-center w-full max-w-60">
       {/* Vacant circular gradient avatar */}
-      <div
-        className="size-36 rounded-full shrink-0 shadow-xs"
-        style={{
-          background: "radial-gradient(circle at 75% 75%, #b2f354 0%, #d5f997 45%, #f2fde2 80%, #ffffff 100%)",
-        }}
-      />
+      <VacantPositionAvatar />
 
       {/* Position title */}
-      <h3 className="mt-4 text-[17px] font-semibold text-gray-900 tracking-tight capitalize leading-tight">
+      <h3 className="mt-4 text-[17px] font-semibold text-c-90 tracking-tight capitalize leading-tight">
         {position.name}
       </h3>
 
       {/* Vacant text */}
-      <p className="mt-1 text-[14px] font-medium text-[#ef4444]">
+      <p className="mt-1 text-[14px] font-semibold text-destructive">
         Vacant
       </p>
 
@@ -82,7 +79,7 @@ function VacantPositionCard({
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              className="inline-flex items-center justify-center w-10 h-7 rounded-lg bg-[#f1f3f6] hover:bg-[#e4e7ec] text-gray-800 transition cursor-pointer"
+              className="inline-flex items-center justify-center w-10 h-7 rounded-lg bg-sidebar-mobile hover:bg-hover-7 text-c-70 hover:text-c-90 border border-border/40 transition cursor-pointer"
             >
               <MoreHorizontal className="size-4" />
             </button>
@@ -107,11 +104,7 @@ function VacantPositionCard({
  * Matches design with official avatar photo, position title, bold full name + appointment badge,
  * chapter jurisdiction & tenure start date, and 3-dots action.
  */
-function OccupiedPositionCard({
-  official,
-  positionTitle,
-  onVacate,
-}: {
+function OccupiedPositionCard({ official, positionTitle, onVacate }: {
   official: PartyOfficialItem;
   positionTitle: string;
   onVacate: (official: PartyOfficialItem) => void;
@@ -123,7 +116,7 @@ function OccupiedPositionCard({
 
   const badgeStyle =
     APPOINTMENT_BADGE_STYLES[official.appointment_type?.toLowerCase()] ||
-    "bg-[#5e5ce6] text-white";
+    "bg-blue-600 text-white dark:bg-blue-500/20 dark:text-blue-300";
 
   const tenureDate = official.tenure_start
     ? new Date(official.tenure_start).toLocaleDateString("en-GB", {
@@ -146,7 +139,7 @@ function OccupiedPositionCard({
   return (
     <div className="flex flex-col items-center justify-start text-center w-full max-w-65">
       {/* Official Circular Avatar */}
-      <div className="size-36 rounded-full shrink-0 overflow-hidden border border-black/5 shadow-sm bg-gray-100 flex items-center justify-center">
+      <div className="size-36 rounded-full shrink-0 overflow-hidden border border-border/60 shadow-xs bg-sidebar-mobile dark:bg-card flex items-center justify-center">
         {official.avatar ? (
           <img
             src={official.avatar}
@@ -154,7 +147,7 @@ function OccupiedPositionCard({
             className="size-full object-cover"
           />
         ) : (
-          <span className="text-2xl font-bold text-gray-500 uppercase">
+          <span className="text-2xl font-bold text-c-50 uppercase">
             {official.first_name?.[0] || ""}
             {official.last_name?.[0] || ""}
           </span>
@@ -162,13 +155,13 @@ function OccupiedPositionCard({
       </div>
 
       {/* Position title */}
-      <h4 className="mt-4 text-[16px] font-medium text-gray-900 tracking-tight capitalize leading-tight">
+      <h4 className="mt-4 text-[16px] font-medium text-c-70 tracking-tight capitalize leading-tight">
         {positionTitle}
       </h4>
 
       {/* Official Name + Appointment Badge */}
       <div className="mt-1 flex items-center justify-center gap-2 flex-wrap">
-        <span className="text-[18px] font-bold text-gray-900 capitalize">
+        <span className="text-[18px] font-bold text-c-90 capitalize">
           {fullName}
         </span>
         <span
@@ -179,14 +172,14 @@ function OccupiedPositionCard({
       </div>
 
       {/* Chapter Jurisdiction & Tenure */}
-      <div className="mt-2 flex items-center justify-center gap-2 text-[12px] text-gray-600">
+      <div className="mt-2 flex items-center justify-center gap-2 text-[12px] text-c-60">
         <span className="inline-flex items-center gap-1 font-normal">
-          <MapPin className="size-3.5 text-gray-500 shrink-0" />
+          <MapPin className="size-3.5 text-c-50 shrink-0" />
           <span className="capitalize">{chapterDisplay}</span>
         </span>
-        <span className="text-gray-300">|</span>
+        <span className="text-c-30">|</span>
         <span className="inline-flex items-center gap-1 font-normal">
-          <Calendar className="size-3.5 text-gray-500 shrink-0" />
+          <Calendar className="size-3.5 text-c-50 shrink-0" />
           <span>{tenureDate}</span>
         </span>
       </div>
@@ -197,14 +190,14 @@ function OccupiedPositionCard({
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              className="inline-flex items-center justify-center w-10 h-7 rounded-lg bg-[#f1f3f6] hover:bg-[#e4e7ec] text-gray-800 transition cursor-pointer"
+              className="inline-flex items-center justify-center w-10 h-7 rounded-lg bg-sidebar-mobile hover:bg-hover-7 text-c-70 hover:text-c-90 border border-border/40 transition cursor-pointer"
             >
               <MoreHorizontal className="size-4" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="center" className="w-40">
             <DropdownMenuItem
-              className="text-red-600 focus:text-red-700 cursor-pointer flex items-center gap-2"
+              className="text-destructive focus:text-destructive cursor-pointer flex items-center gap-2"
               onClick={() => onVacate(official)}
             >
               <UserX className="size-4" />
@@ -263,13 +256,11 @@ export function PartyPositionsRosterView({
       getPartyOfficials({
         data: {
           partyId: partyId!,
-          chapterType: chapterTier,
           countryId: selectedCountryId,
           zonalId: selectedZonalId,
           stateId: selectedStateId,
           lgaId: selectedLgaId,
           wardId: selectedWardId,
-          status: "active",
         },
       }),
     enabled: !!partyId,
@@ -279,16 +270,33 @@ export function PartyPositionsRosterView({
   // Extract list of officials from response; default empty array
   const rawOfficials: PartyOfficialItem[] = officialsRes?.data?.officials || [];
 
+  // Sort officials in frontend (active status first, followed by tenure recency)
+  const sortedOfficials = React.useMemo(() => {
+    return [...rawOfficials].sort((a, b) => {
+      const aIsActive = (a.assignment_status || "active") === "active";
+      const bIsActive = (b.assignment_status || "active") === "active";
+      if (aIsActive !== bIsActive) {
+        return aIsActive ? -1 : 1;
+      }
+      const timeA = a.tenure_start ? new Date(a.tenure_start).getTime() : 0;
+      const timeB = b.tenure_start ? new Date(b.tenure_start).getTime() : 0;
+      return timeB - timeA;
+    });
+  }, [rawOfficials]);
+
   // Index active officials by position_id for O(1) slot matching
   const officialsByPosition = React.useMemo(() => {
     const map = new Map<number, PartyOfficialItem[]>();
-    for (const off of rawOfficials) {
+    for (const off of sortedOfficials) {
+      if ((off.assignment_status || "active") !== "active") {
+        continue;
+      }
       const list = map.get(off.position_id) || [];
       list.push(off);
       map.set(off.position_id, list);
     }
     return map;
-  }, [rawOfficials]);
+  }, [sortedOfficials]);
 
   // Handle vacating an official from office (either via prop or built-in confirmation)
   const handleVacateOfficial = async (official: PartyOfficialItem) => {
@@ -443,7 +451,7 @@ export function PartyPositionsRosterView({
   }
 
   return (
-    <div className="w-full rounded-2xl bg-sidebar-softer/5 p-8 md:p-12">
+    <div className="w-full rounded-2xl bg-sidebar-softer/5 dark:bg-card/40 p-8 md:p-12">
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-12 justify-items-center">
         {displayItems.map((item) =>
           item.type === "occupied" ? (
