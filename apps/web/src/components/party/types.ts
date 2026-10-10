@@ -2,8 +2,8 @@ import type { LucideIcon } from "lucide-react";
 import {
   Home,
   Clock,
+  Crown,
   Users,
-  UserCheck,
   FolderKanban,
   Info,
   Share2,
@@ -45,9 +45,9 @@ export interface PartyProfileData {
 export type PartyTabPath =
   | "home"
   | "timeline"
-  | "members"
+  | "leadership"
   | "party-admins"
-  | "followers"
+  | "members"
   | "groups"
   | "about"
   | "social-links";
@@ -63,9 +63,9 @@ export interface PartyTabItem {
 export const PARTY_NAV_TABS: PartyTabItem[] = [
   { path: "home", label: "Home", icon: Home },
   { path: "timeline", label: "Timeline", icon: Clock },
-  { path: "members", label: "Members", icon: Users },
+  { path: "leadership", label: "Leadership", icon: Crown },
   { path: "party-admins", label: "Party Admins", icon: ShieldCheck },
-  { path: "followers", label: "Followers", icon: UserCheck },
+  { path: "members", label: "Members", icon: Users },
   { path: "groups", label: "Groups", icon: FolderKanban },
   { path: "about", label: "About", icon: Info },
   { path: "social-links", label: "social links", icon: Share2 },

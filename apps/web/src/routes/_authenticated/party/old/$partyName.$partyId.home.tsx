@@ -52,12 +52,16 @@ function PartyHomeOldComponent() {
                 <div className="w-full h-full flex items-center justify-center bg-[#f2f2f2]">
                   {isLoading ? (
                     <Skeleton className="w-full h-full rounded-full" />
-                  ) : (
+                  ) : partyDetails?.logo ? (
                     <img
-                      src={partyDetails?.logo}
+                      src={partyDetails.logo}
                       alt={displayPartyName}
                       className="w-full h-full object-cover"
                     />
+                  ) : (
+                    <span className="text-2xl font-black text-muted-foreground select-none">
+                      {partyName.toUpperCase()}
+                    </span>
                   )}
                 </div>
               </div>

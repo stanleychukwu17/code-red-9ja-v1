@@ -25,6 +25,7 @@ import {
   DropdownMenuTrigger,
 } from "@repo/ui/components/dropdown-menu";
 import { VacantPositionAvatar } from "@repo/ui/components/vacant-avatar";
+import { AppointOfficialDialog } from "./-party-positions-appoint-dialog";
 
 export interface PartyPositionsRosterViewProps {
   chapterTier?: string;
@@ -238,9 +239,10 @@ export function PartyPositionsRosterView({
     isLoading: isPositionsLoading,
   } = usePartyPositions();
 
-  // 2. Fetch appointed officials matching current geographic and chapter filters
-  const [debouncedSearchQuery] = useDebounceValue(searchQuery, 400);
+  // Internal state for appointment dialog if not overridden by parent
+  const [appointingPosition, setAppointingPosition] = React.useState<PartyPositionItem | null>(null);
 
+  // 2. Fetch appointed officials matching current geographic and chapter filters
   const { data: officialsRes, isLoading: isOfficialsLoading } = useQuery({
     queryKey: [
       "partyOfficials",
@@ -327,6 +329,9 @@ export function PartyPositionsRosterView({
       toast.error(err?.message || "Failed to vacate office");
     }
   };
+
+  // Debounce client-side search query to avoid recalculating filtered cards on every keystroke
+  const [debouncedSearchQuery] = useDebounceValue(searchQuery, 300);
 
   // Build the roster display list: merges position catalog with appointed occupants
   const displayItems = React.useMemo(() => {
@@ -430,6 +435,16 @@ export function PartyPositionsRosterView({
     debouncedSearchQuery,
   ]);
 
+  const resolvedChapterId =
+    officialsRes?.data?.chapter_id || rawOfficials[0]?.chapter_id;
+
+  const resolvedChapterLabel = React.useMemo(() => {
+    if (chapterTier === "national") return "National chapter";
+    const geoName = rawOfficials[0]?.geo_name;
+    if (geoName) return `${geoName} (${chapterTier}) chapter`;
+    return `${chapterTier} chapter`;
+  }, [chapterTier, rawOfficials]);
+
   if (isPositionsLoading || isOfficialsLoading) {
     return (
       <div className="flex items-center justify-center p-20 text-c-40 bg-background rounded-2xl border border-border">
@@ -451,25 +466,44 @@ export function PartyPositionsRosterView({
   }
 
   return (
-    <div className="w-full rounded-2xl bg-sidebar-softer/5 dark:bg-card/40 p-8 md:p-12">
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-12 justify-items-center">
-        {displayItems.map((item) =>
-          item.type === "occupied" ? (
-            <OccupiedPositionCard
-              key={item.key}
-              official={item.official}
-              positionTitle={item.positionTitle}
-              onVacate={handleVacateOfficial}
-            />
-          ) : (
-            <VacantPositionCard
-              key={item.key}
-              position={item.position}
-              onAppoint={onAppointPosition}
-            />
-          ),
-        )}
+    <>
+      <div className="w-full rounded-2xl bg-sidebar-softer/5 dark:bg-card/40 p-8 md:p-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-12 justify-items-center">
+          {displayItems.map((item) =>
+            item.type === "occupied" ? (
+              <OccupiedPositionCard
+                key={item.key}
+                official={item.official}
+                positionTitle={item.positionTitle}
+                onVacate={handleVacateOfficial}
+              />
+            ) : (
+              <VacantPositionCard
+                key={item.key}
+                position={item.position}
+                onAppoint={(pos) => {
+                  if (onAppointPosition) {
+                    onAppointPosition(pos);
+                  } else {
+                    setAppointingPosition(pos);
+                  }
+                }}
+              />
+            ),
+          )}
+        </div>
       </div>
-    </div>
+
+      {/* Appoint Official Dialog */}
+      <AppointOfficialDialog
+        open={!!appointingPosition}
+        onClose={() => setAppointingPosition(null)}
+        position={appointingPosition}
+        chapterId={resolvedChapterId}
+        chapterTier={chapterTier}
+        chapterContextLabel={resolvedChapterLabel}
+        partyId={partyId}
+      />
+    </>
   );
 }

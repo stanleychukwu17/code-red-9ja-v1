@@ -39,13 +39,13 @@ export function PartyTabContent({
         </div>
       );
 
-    case "followers":
+    case "leadership":
       return (
         <div className="py-12 text-center text-neutral-500 dark:text-neutral-400">
           <h3 className="text-base font-semibold text-neutral-900 dark:text-white">
-            Party Followers
+            Party Leadership
           </h3>
-          <p className="mt-1 text-sm">Followers and supporters of {partyName}.</p>
+          <p className="mt-1 text-sm">National and executive leadership structure for {partyName}.</p>
         </div>
       );
 

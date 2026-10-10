@@ -128,6 +128,7 @@ function DialogCloseButton({
 function DialogHeader({
   title,
   description,
+  children,
   className,
   ...props
 }: React.HTMLAttributes<HTMLDivElement> & {
@@ -142,15 +143,21 @@ function DialogHeader({
       )}
       {...props}
     >
-      <div className="flex flex-col gap-1 text-left">
-        <DialogPrimitive.Title className="text-[20px] font-medium text-c-80 tracking-tight">
-          {title}
-        </DialogPrimitive.Title>
-        {description && <p className="text-c-60 text-sm">{description}</p>}
-      </div>
-      <DialogClose asChild>
-        <DialogCloseButton />
-      </DialogClose>
+      {children ? (
+        children
+      ) : (
+        <>
+          <div className="flex flex-col gap-1 text-left">
+            <DialogPrimitive.Title className="text-[20px] font-medium text-c-80 tracking-tight">
+              {title}
+            </DialogPrimitive.Title>
+            {description && <p className="text-c-60 text-sm">{description}</p>}
+          </div>
+          <DialogClose asChild>
+            <DialogCloseButton />
+          </DialogClose>
+        </>
+      )}
     </div>
   );
 }

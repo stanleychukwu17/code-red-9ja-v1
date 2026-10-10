@@ -37,7 +37,7 @@ function resolveProfile(username?: string): ProfileData {
   return PROFILE_USER;
 }
 
-export function ProfilePageComponent() {
+function ProfilePageComponent() {
   const params = useParams({ strict: false }) as { username?: string };
   const username = params.username;
 

@@ -48,14 +48,14 @@ function PartyLayoutComponent() {
     partyProfileQueryOptions(partyId, partyName, chapterId)
   );
 
-  console.log(profileRes)
+  console.log(profileRes);
 
   const partyDetails = profileRes?.success ? profileRes.data.data : null;
 
   const partyUpper = (partyDetails?.short_name || partyName).toUpperCase();
   const preset = PARTY_PRESETS[partyUpper];
 
-  const displayName = partyDetails?.name || preset?.chairman?.name || "Peoples Democratic Party";
+  const displayName = partyDetails?.name || "Nigerian Party";
   const displayShortName = partyUpper;
 
   const bannerImage =
@@ -72,7 +72,7 @@ function PartyLayoutComponent() {
       */}
       <PartyHeaderLayout
         coverImage={bannerImage}
-        logo={partyDetails?.logo || ""}
+        logo={partyDetails?.logo || null}
         shortName={displayShortName}
         fullName={displayName}
         isVerified={Boolean(partyDetails?.is_verified)}

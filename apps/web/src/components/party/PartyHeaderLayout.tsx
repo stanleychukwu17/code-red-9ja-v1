@@ -4,8 +4,8 @@ import { cn } from "@repo/ui/lib/utils";
 import { VerificationBadge } from "@repo/ui/components/custom/verification-badge";
 
 interface PartyHeaderLayoutProps {
-  coverImage: string;
-  logo: string;
+  coverImage?: string | null;
+  logo?: string | null;
   shortName: string;
   fullName: string;
   isVerified?: boolean;
@@ -63,13 +63,21 @@ export function PartyHeaderLayout({
     <header className="w-full bg-background">
       {/* 1. HERO COVER SECTION */}
       <div className="w-full h-44 sm:h-56 md:h-64 lg:h-72 relative overflow-hidden bg-muted">
-        <img src={coverImage} alt={`${shortName} Cover`} className="w-full h-full object-cover object-center" />
+        {coverImage ? (
+          <img src={coverImage} alt={`${shortName} Cover`} className="w-full h-full object-cover object-center" />
+        ) : null}
 
         {/* Small Screen Avatar: Centered in banner */}
         <div className="absolute inset-0 flex items-center justify-center lg:hidden pointer-events-none">
           <div className="size-26 md:size-35 rounded-full p-1 bg-transparent shadow-xl pointer-events-auto">
-            <div className="w-full h-full rounded-full overflow-hidden bg-background border-4 border-background">
-              <img src={logo} alt={shortName} className="w-full h-full object-cover" />
+            <div className="w-full h-full rounded-full overflow-hidden bg-background border-4 border-background flex items-center justify-center">
+              {logo ? (
+                <img src={logo} alt={shortName} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-xl md:text-2xl font-black text-muted-foreground select-none">
+                  {shortName}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -85,8 +93,14 @@ export function PartyHeaderLayout({
               {/* Circular Avatar with blue gradient ring border (Hidden on small screens, visible on sm and up) */}
               <div className="relative shrink-0 hidden lg:block">
                 <div className="size-28 sm:size-32 md:size-44 rounded-full p-1 bg-linear-to-tr from-bg-sidebar-mobile via-blue-500 to-lime">
-                  <div className="w-full h-full rounded-full overflow-hidden bg-background border-5 border-background ">
-                    <img src={logo} alt={shortName} className="w-full h-full object-cover" />
+                  <div className="w-full h-full rounded-full overflow-hidden bg-background border-5 border-background flex items-center justify-center">
+                    {logo ? (
+                      <img src={logo} alt={shortName} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-3xl font-black text-muted-foreground select-none">
+                        {shortName}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>

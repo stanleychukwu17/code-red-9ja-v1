@@ -11,10 +11,8 @@ import { getPageHeader } from "#/lib/shared/meta";
 import { createFileRoute } from "@tanstack/react-router";
 import { getPartyAdminsTabs } from "./-data";
 import { PartyPositionsCatalogDialog } from "#/components/dialogs/PartyPositionsCatalogDialog";
-import {
-  PartyPositionsActionBar,
-  PartyPositionsFilterBar,
-} from "./-party-positions-components";
+import { PartyPositionsActionBar } from "./-party-positions-action-bar";
+import { PartyPositionsFilterBar } from "./-party-positions-components";
 import { PartyPositionsRosterView } from "./-party-positions-roster-view";
 
 export const Route = createFileRoute(

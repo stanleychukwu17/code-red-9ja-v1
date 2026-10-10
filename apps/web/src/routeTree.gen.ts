@@ -44,9 +44,9 @@ import { Route as AuthenticatedPartyPartyNamePartyIdTimelineRouteImport } from '
 import { Route as AuthenticatedPartyPartyNamePartyIdSocialLinksRouteImport } from './routes/_authenticated/party/$partyName.$partyId/social-links'
 import { Route as AuthenticatedPartyPartyNamePartyIdPartyAdminsRouteImport } from './routes/_authenticated/party/$partyName.$partyId/party-admins'
 import { Route as AuthenticatedPartyPartyNamePartyIdMembersRouteImport } from './routes/_authenticated/party/$partyName.$partyId/members'
+import { Route as AuthenticatedPartyPartyNamePartyIdLeadershipRouteImport } from './routes/_authenticated/party/$partyName.$partyId/leadership'
 import { Route as AuthenticatedPartyPartyNamePartyIdHomeRouteImport } from './routes/_authenticated/party/$partyName.$partyId/home'
 import { Route as AuthenticatedPartyPartyNamePartyIdGroupsRouteImport } from './routes/_authenticated/party/$partyName.$partyId/groups'
-import { Route as AuthenticatedPartyPartyNamePartyIdFollowersRouteImport } from './routes/_authenticated/party/$partyName.$partyId/followers'
 import { Route as AuthenticatedPartyPartyNamePartyIdAboutRouteImport } from './routes/_authenticated/party/$partyName.$partyId/about'
 import { Route as AuthenticatedPartyOldPartyNamePartyIdHomeRouteImport } from './routes/_authenticated/party/old/$partyName.$partyId.home'
 
@@ -248,6 +248,12 @@ const AuthenticatedPartyPartyNamePartyIdMembersRoute =
     path: '/members',
     getParentRoute: () => AuthenticatedPartyPartyNamePartyIdRoute,
   } as any)
+const AuthenticatedPartyPartyNamePartyIdLeadershipRoute =
+  AuthenticatedPartyPartyNamePartyIdLeadershipRouteImport.update({
+    id: '/leadership',
+    path: '/leadership',
+    getParentRoute: () => AuthenticatedPartyPartyNamePartyIdRoute,
+  } as any)
 const AuthenticatedPartyPartyNamePartyIdHomeRoute =
   AuthenticatedPartyPartyNamePartyIdHomeRouteImport.update({
     id: '/home',
@@ -258,12 +264,6 @@ const AuthenticatedPartyPartyNamePartyIdGroupsRoute =
   AuthenticatedPartyPartyNamePartyIdGroupsRouteImport.update({
     id: '/groups',
     path: '/groups',
-    getParentRoute: () => AuthenticatedPartyPartyNamePartyIdRoute,
-  } as any)
-const AuthenticatedPartyPartyNamePartyIdFollowersRoute =
-  AuthenticatedPartyPartyNamePartyIdFollowersRouteImport.update({
-    id: '/followers',
-    path: '/followers',
     getParentRoute: () => AuthenticatedPartyPartyNamePartyIdRoute,
   } as any)
 const AuthenticatedPartyPartyNamePartyIdAboutRoute =
@@ -310,9 +310,9 @@ export interface FileRoutesByFullPath {
   '/profile/$username/': typeof AuthenticatedProfileUsernameIndexRoute
   '/states/$stateId/': typeof AuthenticatedStatesStateIdIndexRoute
   '/party/$partyName/$partyId/about': typeof AuthenticatedPartyPartyNamePartyIdAboutRoute
-  '/party/$partyName/$partyId/followers': typeof AuthenticatedPartyPartyNamePartyIdFollowersRoute
   '/party/$partyName/$partyId/groups': typeof AuthenticatedPartyPartyNamePartyIdGroupsRoute
   '/party/$partyName/$partyId/home': typeof AuthenticatedPartyPartyNamePartyIdHomeRoute
+  '/party/$partyName/$partyId/leadership': typeof AuthenticatedPartyPartyNamePartyIdLeadershipRoute
   '/party/$partyName/$partyId/members': typeof AuthenticatedPartyPartyNamePartyIdMembersRoute
   '/party/$partyName/$partyId/party-admins': typeof AuthenticatedPartyPartyNamePartyIdPartyAdminsRoute
   '/party/$partyName/$partyId/social-links': typeof AuthenticatedPartyPartyNamePartyIdSocialLinksRoute
@@ -349,9 +349,9 @@ export interface FileRoutesByTo {
   '/profile/$username': typeof AuthenticatedProfileUsernameIndexRoute
   '/states/$stateId': typeof AuthenticatedStatesStateIdIndexRoute
   '/party/$partyName/$partyId/about': typeof AuthenticatedPartyPartyNamePartyIdAboutRoute
-  '/party/$partyName/$partyId/followers': typeof AuthenticatedPartyPartyNamePartyIdFollowersRoute
   '/party/$partyName/$partyId/groups': typeof AuthenticatedPartyPartyNamePartyIdGroupsRoute
   '/party/$partyName/$partyId/home': typeof AuthenticatedPartyPartyNamePartyIdHomeRoute
+  '/party/$partyName/$partyId/leadership': typeof AuthenticatedPartyPartyNamePartyIdLeadershipRoute
   '/party/$partyName/$partyId/members': typeof AuthenticatedPartyPartyNamePartyIdMembersRoute
   '/party/$partyName/$partyId/party-admins': typeof AuthenticatedPartyPartyNamePartyIdPartyAdminsRoute
   '/party/$partyName/$partyId/social-links': typeof AuthenticatedPartyPartyNamePartyIdSocialLinksRoute
@@ -392,9 +392,9 @@ export interface FileRoutesById {
   '/_authenticated/profile/$username/': typeof AuthenticatedProfileUsernameIndexRoute
   '/_authenticated/states/$stateId/': typeof AuthenticatedStatesStateIdIndexRoute
   '/_authenticated/party/$partyName/$partyId/about': typeof AuthenticatedPartyPartyNamePartyIdAboutRoute
-  '/_authenticated/party/$partyName/$partyId/followers': typeof AuthenticatedPartyPartyNamePartyIdFollowersRoute
   '/_authenticated/party/$partyName/$partyId/groups': typeof AuthenticatedPartyPartyNamePartyIdGroupsRoute
   '/_authenticated/party/$partyName/$partyId/home': typeof AuthenticatedPartyPartyNamePartyIdHomeRoute
+  '/_authenticated/party/$partyName/$partyId/leadership': typeof AuthenticatedPartyPartyNamePartyIdLeadershipRoute
   '/_authenticated/party/$partyName/$partyId/members': typeof AuthenticatedPartyPartyNamePartyIdMembersRoute
   '/_authenticated/party/$partyName/$partyId/party-admins': typeof AuthenticatedPartyPartyNamePartyIdPartyAdminsRoute
   '/_authenticated/party/$partyName/$partyId/social-links': typeof AuthenticatedPartyPartyNamePartyIdSocialLinksRoute
@@ -435,9 +435,9 @@ export interface FileRouteTypes {
     | '/profile/$username/'
     | '/states/$stateId/'
     | '/party/$partyName/$partyId/about'
-    | '/party/$partyName/$partyId/followers'
     | '/party/$partyName/$partyId/groups'
     | '/party/$partyName/$partyId/home'
+    | '/party/$partyName/$partyId/leadership'
     | '/party/$partyName/$partyId/members'
     | '/party/$partyName/$partyId/party-admins'
     | '/party/$partyName/$partyId/social-links'
@@ -474,9 +474,9 @@ export interface FileRouteTypes {
     | '/profile/$username'
     | '/states/$stateId'
     | '/party/$partyName/$partyId/about'
-    | '/party/$partyName/$partyId/followers'
     | '/party/$partyName/$partyId/groups'
     | '/party/$partyName/$partyId/home'
+    | '/party/$partyName/$partyId/leadership'
     | '/party/$partyName/$partyId/members'
     | '/party/$partyName/$partyId/party-admins'
     | '/party/$partyName/$partyId/social-links'
@@ -516,9 +516,9 @@ export interface FileRouteTypes {
     | '/_authenticated/profile/$username/'
     | '/_authenticated/states/$stateId/'
     | '/_authenticated/party/$partyName/$partyId/about'
-    | '/_authenticated/party/$partyName/$partyId/followers'
     | '/_authenticated/party/$partyName/$partyId/groups'
     | '/_authenticated/party/$partyName/$partyId/home'
+    | '/_authenticated/party/$partyName/$partyId/leadership'
     | '/_authenticated/party/$partyName/$partyId/members'
     | '/_authenticated/party/$partyName/$partyId/party-admins'
     | '/_authenticated/party/$partyName/$partyId/social-links'
@@ -784,6 +784,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPartyPartyNamePartyIdMembersRouteImport
       parentRoute: typeof AuthenticatedPartyPartyNamePartyIdRoute
     }
+    '/_authenticated/party/$partyName/$partyId/leadership': {
+      id: '/_authenticated/party/$partyName/$partyId/leadership'
+      path: '/leadership'
+      fullPath: '/party/$partyName/$partyId/leadership'
+      preLoaderRoute: typeof AuthenticatedPartyPartyNamePartyIdLeadershipRouteImport
+      parentRoute: typeof AuthenticatedPartyPartyNamePartyIdRoute
+    }
     '/_authenticated/party/$partyName/$partyId/home': {
       id: '/_authenticated/party/$partyName/$partyId/home'
       path: '/home'
@@ -796,13 +803,6 @@ declare module '@tanstack/react-router' {
       path: '/groups'
       fullPath: '/party/$partyName/$partyId/groups'
       preLoaderRoute: typeof AuthenticatedPartyPartyNamePartyIdGroupsRouteImport
-      parentRoute: typeof AuthenticatedPartyPartyNamePartyIdRoute
-    }
-    '/_authenticated/party/$partyName/$partyId/followers': {
-      id: '/_authenticated/party/$partyName/$partyId/followers'
-      path: '/followers'
-      fullPath: '/party/$partyName/$partyId/followers'
-      preLoaderRoute: typeof AuthenticatedPartyPartyNamePartyIdFollowersRouteImport
       parentRoute: typeof AuthenticatedPartyPartyNamePartyIdRoute
     }
     '/_authenticated/party/$partyName/$partyId/about': {
@@ -854,9 +854,9 @@ const AuthenticatedProfileUsernameRouteWithChildren =
 
 interface AuthenticatedPartyPartyNamePartyIdRouteChildren {
   AuthenticatedPartyPartyNamePartyIdAboutRoute: typeof AuthenticatedPartyPartyNamePartyIdAboutRoute
-  AuthenticatedPartyPartyNamePartyIdFollowersRoute: typeof AuthenticatedPartyPartyNamePartyIdFollowersRoute
   AuthenticatedPartyPartyNamePartyIdGroupsRoute: typeof AuthenticatedPartyPartyNamePartyIdGroupsRoute
   AuthenticatedPartyPartyNamePartyIdHomeRoute: typeof AuthenticatedPartyPartyNamePartyIdHomeRoute
+  AuthenticatedPartyPartyNamePartyIdLeadershipRoute: typeof AuthenticatedPartyPartyNamePartyIdLeadershipRoute
   AuthenticatedPartyPartyNamePartyIdMembersRoute: typeof AuthenticatedPartyPartyNamePartyIdMembersRoute
   AuthenticatedPartyPartyNamePartyIdPartyAdminsRoute: typeof AuthenticatedPartyPartyNamePartyIdPartyAdminsRoute
   AuthenticatedPartyPartyNamePartyIdSocialLinksRoute: typeof AuthenticatedPartyPartyNamePartyIdSocialLinksRoute
@@ -868,12 +868,12 @@ const AuthenticatedPartyPartyNamePartyIdRouteChildren: AuthenticatedPartyPartyNa
   {
     AuthenticatedPartyPartyNamePartyIdAboutRoute:
       AuthenticatedPartyPartyNamePartyIdAboutRoute,
-    AuthenticatedPartyPartyNamePartyIdFollowersRoute:
-      AuthenticatedPartyPartyNamePartyIdFollowersRoute,
     AuthenticatedPartyPartyNamePartyIdGroupsRoute:
       AuthenticatedPartyPartyNamePartyIdGroupsRoute,
     AuthenticatedPartyPartyNamePartyIdHomeRoute:
       AuthenticatedPartyPartyNamePartyIdHomeRoute,
+    AuthenticatedPartyPartyNamePartyIdLeadershipRoute:
+      AuthenticatedPartyPartyNamePartyIdLeadershipRoute,
     AuthenticatedPartyPartyNamePartyIdMembersRoute:
       AuthenticatedPartyPartyNamePartyIdMembersRoute,
     AuthenticatedPartyPartyNamePartyIdPartyAdminsRoute:

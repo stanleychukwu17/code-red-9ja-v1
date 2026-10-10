@@ -114,7 +114,7 @@ const AppAvatar = ({
 }: AppAvatarProps) => {
   return (
     <Avatar {...props} className={cn("rounded-full", className)}>
-      <AvatarImage src={src} alt={alt} />
+      <AvatarImage src={src || undefined} alt={alt} />
       <AvatarFallback className={cn("text-sm rounded-full", fallbackClassName)}>
         <NoProfileImageIcon className="size-full" />
       </AvatarFallback>

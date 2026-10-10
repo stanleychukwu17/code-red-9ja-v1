@@ -2702,7 +2702,8 @@ func (h *Handler) ListPartyOfficials(w http.ResponseWriter, r *http.Request) {
 	// If chapter does not exist yet or no jurisdiction selected, return empty list immediately
 	if chapterID <= 0 {
 		h.utils.RespondSuccess(w, http.StatusOK, "Party chapter has not been established yet", map[string]interface{}{
-			"officials": []queries.ListPartyOfficialsRow{},
+			"chapter_id": 0,
+			"officials":  []queries.ListPartyOfficialsRow{},
 		})
 		return
 	}
@@ -2716,7 +2717,8 @@ func (h *Handler) ListPartyOfficials(w http.ResponseWriter, r *http.Request) {
 
 	// 5. Return successful response containing matching officials
 	h.utils.RespondSuccess(w, http.StatusOK, "Party officials retrieved successfully", map[string]interface{}{
-		"officials": officials,
+		"chapter_id": chapterID,
+		"officials":  officials,
 	})
 }
 
