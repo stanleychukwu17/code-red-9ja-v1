@@ -15,3 +15,9 @@ ON CONFLICT (user_id, party_id, chapter_id) DO NOTHING;
 -- name: UnfollowParty :exec
 DELETE FROM party_follows
 WHERE user_id = $1 AND party_id = $2 AND chapter_id = $3;
+
+-- name: IsFollowingParty :one
+SELECT EXISTS (
+    SELECT 1 FROM party_follows
+    WHERE user_id = $1 AND party_id = $2 AND chapter_id = $3
+);

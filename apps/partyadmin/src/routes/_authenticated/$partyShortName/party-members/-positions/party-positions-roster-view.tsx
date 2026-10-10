@@ -41,14 +41,10 @@ export interface PartyPositionsRosterViewProps {
 }
 
 const APPOINTMENT_BADGE_STYLES: Record<string, string> = {
-  acting:
-    "bg-blue-600 text-white dark:bg-blue-500/20 dark:text-blue-300 dark:border dark:border-blue-500/30",
-  substantive:
-    "bg-emerald-600 text-white dark:bg-emerald-500/20 dark:text-emerald-300 dark:border dark:border-emerald-500/30",
-  caretaker:
-    "bg-amber-600 text-white dark:bg-amber-500/20 dark:text-amber-300 dark:border dark:border-amber-500/30",
-  interim:
-    "bg-purple-600 text-white dark:bg-purple-500/20 dark:text-purple-300 dark:border dark:border-purple-500/30",
+  acting: "bg-blue-600 text-white dark:bg-blue-500/20 dark:text-blue-300 dark:border dark:border-blue-500/30",
+  substantive: "bg-emerald-600 text-white dark:bg-emerald-500/20 dark:text-emerald-300 dark:border dark:border-emerald-500/30",
+  caretaker: "bg-amber-600 text-white dark:bg-amber-500/20 dark:text-amber-300 dark:border dark:border-amber-500/30",
+  interim: "bg-purple-600 text-white dark:bg-purple-500/20 dark:text-purple-300 dark:border dark:border-purple-500/30",
 };
 
 /**
@@ -233,16 +229,13 @@ export function PartyPositionsRosterView({
   const queryClient = useQueryClient();
   const partyId = party?.id;
 
-  // 1. Fetch positions catalog (already pre-sorted by rank_order and ID)
-  const {
-    positions,
-    isLoading: isPositionsLoading,
-  } = usePartyPositions();
-
   // Internal state for appointment dialog if not overridden by parent
   const [appointingPosition, setAppointingPosition] = React.useState<PartyPositionItem | null>(null);
 
-  // 2. Fetch appointed officials matching current geographic and chapter filters
+  // Fetch positions catalog (already pre-sorted by rank_order and ID)
+  const { positions, isLoading: isPositionsLoading } = usePartyPositions();
+
+  // Fetch appointed officials matching current geographic and chapter filters
   const { data: officialsRes, isLoading: isOfficialsLoading } = useQuery({
     queryKey: [
       "partyOfficials",

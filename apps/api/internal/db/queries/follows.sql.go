@@ -45,6 +45,26 @@ func (q *Queries) FollowUser(ctx context.Context, arg FollowUserParams) error {
 	return err
 }
 
+const isFollowingParty = `-- name: IsFollowingParty :one
+SELECT EXISTS (
+    SELECT 1 FROM party_follows
+    WHERE user_id = $1 AND party_id = $2 AND chapter_id = $3
+)
+`
+
+type IsFollowingPartyParams struct {
+	UserID    int64 `json:"user_id"`
+	PartyID   int16 `json:"party_id"`
+	ChapterID int32 `json:"chapter_id"`
+}
+
+func (q *Queries) IsFollowingParty(ctx context.Context, arg IsFollowingPartyParams) (bool, error) {
+	row := q.db.QueryRow(ctx, isFollowingParty, arg.UserID, arg.PartyID, arg.ChapterID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const unfollowParty = `-- name: UnfollowParty :exec
 DELETE FROM party_follows
 WHERE user_id = $1 AND party_id = $2 AND chapter_id = $3

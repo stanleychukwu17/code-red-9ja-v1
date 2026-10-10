@@ -1,6 +1,6 @@
 /**
  * @file Party Positions Components
- * @description Central barrel export for all party positions page subcomponents and dialogs.
+ * @description Central barrel export for all party positions page sub-components and dialogs.
  */
 
 export {

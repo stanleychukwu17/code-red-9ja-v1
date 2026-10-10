@@ -110,6 +110,10 @@ type BodiesService interface {
 	CompletePartyHierarchySelections(ctx context.Context, partyID int64, selections []bodiesservice.PartyHierarchySelection) (bodiesservice.PartyHierarchyResult, error)
 }
 
+type FollowsService interface {
+	IsFollowingParty(ctx context.Context, userID int64, partyID int16, chapterID int32) (bool, error)
+}
+
 type Handler struct {
 	bodiesService      BodiesService
 	partiesService     PartiesService
@@ -118,9 +122,10 @@ type Handler struct {
 	filesService       files.FilesService
 	utils              *utils.Utils
 	r2Svc              *r2service.R2Service
+	followsService     FollowsService
 }
 
-func NewHandler(partiesService PartiesService, bodiesService BodiesService, auditService audit.AuditService, permissionsService PermissionsService, filesService files.FilesService, utils *utils.Utils, r2Svc *r2service.R2Service) *Handler {
+func NewHandler(partiesService PartiesService, bodiesService BodiesService, auditService audit.AuditService, permissionsService PermissionsService, filesService files.FilesService, utils *utils.Utils, r2Svc *r2service.R2Service, followsService FollowsService) *Handler {
 	return &Handler{
 		bodiesService:      bodiesService,
 		partiesService:     partiesService,
@@ -129,6 +134,7 @@ func NewHandler(partiesService PartiesService, bodiesService BodiesService, audi
 		filesService:       filesService,
 		utils:              utils,
 		r2Svc:              r2Svc,
+		followsService:     followsService,
 	}
 }
 
@@ -706,19 +712,27 @@ func (h *Handler) GetPartyProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check authentication status and chapter membership
+	// Check authentication status, chapter membership, and following status
 	var isChapterMember bool
-	if ok && claims != nil && claims.PartyID == int16(partyID) {
-		isChapMember, err := h.partiesService.IsPartyChapterMember(r.Context(), claims.UserID, int16(partyID), *chapterID)
-		if err == nil && isChapMember {
-			isChapterMember = true
+	var isFollowing bool
+	if ok && claims != nil {
+		if claims.PartyID == int16(partyID) {
+			isChapMember, err := h.partiesService.IsPartyChapterMember(r.Context(), claims.UserID, int16(partyID), *chapterID)
+			if err == nil && isChapMember {
+				isChapterMember = true
+			}
 		}
 
+		following, err := h.followsService.IsFollowingParty(r.Context(), claims.UserID, int16(partyID), *chapterID)
+		if err == nil && following {
+			isFollowing = true
+		}
 	}
 
 	responseData := map[string]interface{}{
 		"data":              party,
 		"is_chapter_member": isChapterMember,
+		"is_following":      isFollowing,
 	}
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Party profile retrieved successfully", responseData)

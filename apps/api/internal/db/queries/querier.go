@@ -363,6 +363,7 @@ type Querier interface {
 	InsertAuditLog(ctx context.Context, arg InsertAuditLogParams) (AuditLog, error)
 	InsertUserBankAccount(ctx context.Context, arg InsertUserBankAccountParams) (UserBankAccount, error)
 	InsertUserPreferences(ctx context.Context, arg InsertUserPreferencesParams) (UserPreference, error)
+	IsFollowingParty(ctx context.Context, arg IsFollowingPartyParams) (bool, error)
 	IsPartyAcceptingApplications(ctx context.Context, id int16) (bool, error)
 	IsPartyChapterMember(ctx context.Context, arg IsPartyChapterMemberParams) (bool, error)
 	// Checks if blocker_id has blocked blocked_user_id

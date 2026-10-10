@@ -138,6 +138,7 @@ export const getPartyProfile = createServerFn()
 				data: {
 					data: any;
 					is_chapter_member: boolean;
+					is_following: boolean;
 				};
 			}>(API_URL.getPartyProfile(partyId, shortName, chapterId));
 		} catch (error: unknown) {

@@ -66,6 +66,7 @@ const (
 	RedisPartyMemberSuspension = "parties:member_suspension:"      // STRING: "parties:member_suspension:<partyID>:<userID>" stores cached active suspension JSON (id > 0 if suspended, id = 0 if not)
 	RedisPartyMemberPositions  = "parties:member_positions:"       // STRING: "parties:member_positions:<partyID>:<userID>" stores cached JSON array of member position assignments
 	RedisPartyChapterMember    = "parties:chapter_member:"         // STRING: "parties:chapter_member:<userID>:<partyID>:<chapterID>" stores cached membership booleans
+	RedisPartyChapterFollower  = "parties:chapter_follower:"       // STRING: "parties:chapter_follower:<userID>:<partyID>:<chapterID>" stores cached following booleans
 	RedisPartyDefaultPositions = "parties:default_party_positions" // STRING: "parties:default_party_positions" stores cached JSON array of default party positions
 	RedisPartyCustomPositions  = "parties:custom_party_positions:" // STRING: "parties:custom_party_positions:<partyID>" stores cached JSON array of custom party positions
 	RedisPartyPositionByID     = "parties:position_by_id:"         // STRING: "parties:position_by_id:<partyID>:<positionID>" stores cached single party position JSON
@@ -147,6 +148,7 @@ var AllRedisPrefixes = []string{
 	RedisPartyMemberSuspension,
 	RedisPartyMemberPositions,
 	RedisPartyChapterMember,
+	RedisPartyChapterFollower,
 	RedisPartyDefaultPositions,
 	RedisPartyCustomPositions,
 	RedisPartyPositionByID,
