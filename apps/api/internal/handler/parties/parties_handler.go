@@ -657,12 +657,14 @@ func (h *Handler) GetParty(w http.ResponseWriter, r *http.Request) {
 // @Produce      json
 // @Param        party_id path int true "Party ID"
 // @Param        short_name path string true "Party Short Name"
-// @Param        chapter_id query int false "Chapter ID"
-// @Success      200  {object}  utils.SuccessResponse
+// @Param        chapter_id query int true "Chapter ID"
+// @Success      200  {object}  map[string]interface{} "Party profile retrieved successfully"
 // @Router       /parties/{party_id}/{short_name}/profile [get]
 func (h *Handler) GetPartyProfile(w http.ResponseWriter, r *http.Request) {
 	// get authenticated user
 	claims, ok := apimiddleware.GetClaims(r)
+	var chapterID *int32
+	// var chapter queries.PartyChapter
 
 	// Parse party ID parameter from URL route
 	partyIDStr := chi.URLParam(r, "party_id")
@@ -672,38 +674,30 @@ func (h *Handler) GetPartyProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Initialize variables for optional chapter ID and chapter data
-	var chapterID *int32
-	var chapter queries.PartyChapter
+	// Parse required chapter_id query parameter and verify existence
+	cidStr := r.URL.Query().Get("chapter_id")
+	cid, err := strconv.ParseInt(cidStr, 10, 32)
+	if err != nil || cid <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid chapter ID")
+		return
+	}
+	c := int32(cid)
 
-	// Parse optional chapter_id query parameter and verify existence
-	if cidStr := r.URL.Query().Get("chapter_id"); cidStr != "" {
-		// Validate and convert chapter ID string to an integer
-		cid, err := strconv.ParseInt(cidStr, 10, 32)
-		if err != nil || cid <= 0 {
-			h.utils.RespondError(w, http.StatusBadRequest, "Invalid chapter ID")
-			return
-		}
-		c := int32(cid)
-
-		// Fetch the chapter by ID and ensure it exists
-		chapter, err := h.partiesService.GetPartyChapterByID(r.Context(), c)
-		if err != nil || chapter.ID == 0 {
-			h.utils.RespondError(w, http.StatusNotFound, "Party chapter not found")
-			return
-		}
-
-		// Ensure the fetched chapter actually belongs to the specified party
-		if chapter.PartyID != int16(partyID) {
-			h.utils.RespondError(w, http.StatusBadRequest, "Chapter does not belong to the specified party")
-			return
-		}
-
-		// Assign validated chapter ID pointer for subsequent profile/membership checks
-		chapterID = &c
+	// Fetch the chapter by ID and ensure it exists
+	chapter, err := h.partiesService.GetPartyChapterByID(r.Context(), c)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusNotFound, "Party chapter not found")
+		return
 	}
 
-	fmt.Printf("chapter: %+v\n", chapter)
+	// Ensure the fetched chapter actually belongs to the specified party
+	if chapter.PartyID != int16(partyID) {
+		h.utils.RespondError(w, http.StatusBadRequest, "Chapter does not belong to the specified party")
+		return
+	}
+
+	// Assign validated chapter ID pointer for subsequent profile/membership checks
+	chapterID = &c
 
 	// Fetch basic party info and verification badges
 	party := h.partiesService.GetPartyBasicInfo(r.Context(), int16(partyID))
@@ -712,24 +706,18 @@ func (h *Handler) GetPartyProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check authentication status and party/chapter membership
-	var isMember bool
+	// Check authentication status and chapter membership
 	var isChapterMember bool
-
-	if ok && claims.PartyID == int16(partyID) {
-		isMember = true
-
-		if chapterID != nil {
-			isChapMember, err := h.partiesService.IsPartyChapterMember(r.Context(), claims.UserID, int16(partyID), *chapterID)
-			if err == nil && isChapMember {
-				isChapterMember = true
-			}
+	if ok && claims != nil && claims.PartyID == int16(partyID) {
+		isChapMember, err := h.partiesService.IsPartyChapterMember(r.Context(), claims.UserID, int16(partyID), *chapterID)
+		if err == nil && isChapMember {
+			isChapterMember = true
 		}
+
 	}
 
 	responseData := map[string]interface{}{
 		"data":              party,
-		"is_member":         isMember,
 		"is_chapter_member": isChapterMember,
 	}
 

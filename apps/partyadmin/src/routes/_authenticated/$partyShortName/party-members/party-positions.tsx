@@ -10,10 +10,12 @@ import { Layout, PageHeader } from "@repo/ui/components/custom/AdminLayouts";
 import { getPageHeader } from "#/lib/shared/meta";
 import { createFileRoute } from "@tanstack/react-router";
 import { getPartyAdminsTabs } from "./-data";
-import { PartyPositionsCatalogDialog } from "./-party-positions-catalog-dialog";
-import { PartyPositionsActionBar } from "./-party-positions-action-bar";
-import { PartyPositionsFilterBar } from "./-party-positions-components";
-import { PartyPositionsRosterView } from "./-party-positions-roster-view";
+import {
+  PartyPositionsActionBar,
+  PartyPositionsCatalogDialog,
+  PartyPositionsFilterBar,
+  PartyPositionsRosterView,
+} from "./-positions";
 
 export const Route = createFileRoute(
   "/_authenticated/$partyShortName/party-members/party-positions",

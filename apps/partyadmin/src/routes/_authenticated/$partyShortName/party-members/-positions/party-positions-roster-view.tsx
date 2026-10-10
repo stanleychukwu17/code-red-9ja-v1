@@ -25,7 +25,7 @@ import {
   DropdownMenuTrigger,
 } from "@repo/ui/components/dropdown-menu";
 import { VacantPositionAvatar } from "@repo/ui/components/vacant-avatar";
-import { AppointOfficialDialog } from "./-party-positions-appoint-dialog";
+import { AppointOfficialDialog } from "./party-positions-appoint-dialog";
 
 export interface PartyPositionsRosterViewProps {
   chapterTier?: string;

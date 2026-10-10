@@ -36,7 +36,7 @@ export interface PartyProfileData {
   followersValue: number;
   totalMembersCount: string;
   chapterMembersCount: string;
-  isMember: boolean;
+  isChapterMember: boolean;
   isFollowing: boolean;
   nationalLeadersCol1: PartyLeader[];
   nationalLeadersCol2: PartyLeader[];

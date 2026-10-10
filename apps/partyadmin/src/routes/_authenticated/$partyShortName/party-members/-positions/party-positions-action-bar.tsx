@@ -6,7 +6,7 @@
 import * as React from "react";
 import { Button } from "@repo/ui/components/button";
 import { BookOpen } from "lucide-react";
-import { PartyTierNav } from "./-party-tier-nav";
+import { PartyTierNav } from "../-party-tier-nav";
 
 export interface PartyPositionsActionBarProps {
   chapterTier: string;

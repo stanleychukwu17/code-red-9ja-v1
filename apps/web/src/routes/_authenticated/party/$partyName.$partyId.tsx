@@ -51,6 +51,7 @@ function PartyLayoutComponent() {
   console.log(profileRes);
 
   const partyDetails = profileRes?.success ? profileRes.data.data : null;
+  const isChapterMember = profileRes?.success ? Boolean(profileRes.data?.is_chapter_member) : false;
 
   const partyUpper = (partyDetails?.short_name || partyName).toUpperCase();
   const preset = PARTY_PRESETS[partyUpper];
@@ -83,6 +84,7 @@ function PartyLayoutComponent() {
         followersValue={100}
         totalMembers={partyDetails?.total_members ? String(partyDetails.total_members) : "300,000"}
         chapterMembers={partyDetails?.chapter_members ? String(partyDetails.chapter_members) : "200,000"}
+        isChapterMemberInitial={isChapterMember}
       >
         {/* Inner navigation bar embedded within the header layout */}
         <div className="mt-0">

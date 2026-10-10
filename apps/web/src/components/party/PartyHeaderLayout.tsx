@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Check, MessageCircleMore, Plus } from "lucide-react";
 import { cn } from "@repo/ui/lib/utils";
 import { VerificationBadge } from "@repo/ui/components/custom/verification-badge";
@@ -12,13 +12,13 @@ interface PartyHeaderLayoutProps {
   verifications?: any[];
   chapterName?: string;
   chapterLevel?: string;
-  isMemberInitial?: boolean;
+  isChapterMemberInitial?: boolean;
   isFollowingInitial?: boolean;
   followersDisplay?: string;
   followersValue?: number;
   totalMembers?: string;
   chapterMembers?: string;
-  onMemberToggle?: (isMember: boolean) => void;
+  onChapterMemberToggle?: (isChapterMember: boolean) => void;
   onFollowToggle?: (isFollowing: boolean) => void;
   onMessageClick?: () => void;
   children?: React.ReactNode;
@@ -33,24 +33,28 @@ export function PartyHeaderLayout({
   verifications,
   chapterName,
   chapterLevel,
-  isMemberInitial = false,
+  isChapterMemberInitial = false,
   isFollowingInitial = false,
   followersDisplay = "100k",
   followersValue = 100,
   totalMembers = "300,000",
   chapterMembers = "200,000",
-  onMemberToggle,
+  onChapterMemberToggle,
   onFollowToggle,
   onMessageClick,
   children,
 }: PartyHeaderLayoutProps) {
-  const [isMember, setIsMember] = useState(isMemberInitial);
+  const [isChapterMember, setIsChapterMember] = useState(isChapterMemberInitial);
   const [isFollowing, setIsFollowing] = useState(isFollowingInitial);
 
-  const handleMemberClick = () => {
-    const next = !isMember;
-    setIsMember(next);
-    onMemberToggle?.(next);
+  useEffect(() => {
+    setIsChapterMember(isChapterMemberInitial);
+  }, [isChapterMemberInitial]);
+
+  const handleChapterMemberClick = () => {
+    const next = !isChapterMember;
+    setIsChapterMember(next);
+    onChapterMemberToggle?.(next);
   };
 
   const handleFollowClick = () => {
@@ -141,15 +145,15 @@ export function PartyHeaderLayout({
                 <div className="flex items-center gap-3 lg:gap-5">
                   <button
                     type="button"
-                    onClick={handleMemberClick}
+                    onClick={handleChapterMemberClick}
                     className={cn(
                       "flex items-center justify-center gap-1.5 px-2 sm:px-4 py-3 rounded-full text-xs xl:text-sm font-semibold transition-all duration-200 shadow-sm cursor-pointer",
-                      isMember
+                      isChapterMember
                         ? "bg-lime-accent text-neutral-900 hover:bg-lime-accent-hover"
                         : "bg-lime hover:bg-lime-accent text-neutral-900 active:scale-95"
                     )}
                   >
-                    {isMember ? (
+                    {isChapterMember ? (
                       <> <Check className="w-4 h-4 stroke-[2.5]" /> <span>Member</span> </>
                     ) : (
                       <> <Plus className="w-4 h-4 stroke-[2.5]" /> <span>Become a member</span> </>
