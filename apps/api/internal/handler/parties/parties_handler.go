@@ -763,8 +763,28 @@ func (h *Handler) GetPartyProfile(w http.ResponseWriter, r *http.Request) {
 		nationalFollowersCount, _ = h.followsService.GetPartyFollowersCount(r.Context(), int16(partyID), nationalChapterID)
 	}
 
+	// Filter party info to only expose public-facing branding and verification details without leaking sensitive internal fields
+	verifications := party.Verifications
+	if verifications == nil {
+		verifications = []queries.GetPageVerificationsRow{}
+	}
+	filteredParty := map[string]interface{}{
+		"id":               party.ID,
+		"short_name":       party.ShortName,
+		"name":             party.Name,
+		"logo":             party.Logo,
+		"cover_image":      utils.PtrFromPgText(party.CoverImage),
+		"cover_position_y": utils.PtrFromPgInt2(party.CoverPositionY),
+		"is_verified":      party.IsVerified.Bool,
+		"color_hex":        utils.PtrFromPgText(party.ColorHex),
+		"dark_color_hex":   utils.PtrFromPgText(party.DarkColorHex),
+		"date_founded":     utils.PtrFromPgDate(party.DateFounded),
+		"verifications":    verifications,
+	}
+
+	// final response data
 	responseData := map[string]interface{}{
-		"data":                     party,
+		"data":                     filteredParty,
 		"chapter":                  chapter,
 		"chapter_type":             chapter.ChapterType,
 		"national_chapter_id":      nationalChapterID,
@@ -3005,6 +3025,7 @@ func (h *Handler) AssignPartyOfficial(w http.ResponseWriter, r *http.Request) {
 
 // VacatePositionAssignment vacates an active official assignment
 func (h *Handler) VacatePositionAssignment(w http.ResponseWriter, r *http.Request) {
+	// Parse and validate party ID from URL parameter
 	idStr := chi.URLParam(r, "id")
 	partyID, err := strconv.ParseInt(idStr, 10, 16)
 	if err != nil || partyID <= 0 {
@@ -3012,6 +3033,7 @@ func (h *Handler) VacatePositionAssignment(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	// Parse and validate assignment ID from URL parameter
 	assignIDStr := chi.URLParam(r, "assignment_id")
 	assignID, err := strconv.ParseInt(assignIDStr, 10, 64)
 	if err != nil || assignID <= 0 {
@@ -3019,12 +3041,14 @@ func (h *Handler) VacatePositionAssignment(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	// Vacate position assignment and invalidate member and chapter official caches
 	assignment, err := h.partiesService.VacatePositionAssignment(r.Context(), assignID, int16(partyID))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to vacate position: "+err.Error())
 		return
 	}
 
+	// Return updated assignment details to the client
 	h.utils.RespondSuccess(w, http.StatusOK, "Position assignment vacated successfully", map[string]interface{}{
 		"assignment": assignment,
 	})

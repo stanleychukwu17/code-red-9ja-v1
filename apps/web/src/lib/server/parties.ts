@@ -125,6 +125,23 @@ export const getParties = createServerFn({ method: "GET" }).handler(async () => 
 });
 
 /**
+ * Sanitized public party profile attributes returned by `/parties/{party_id}/{short_name}/profile`.
+ */
+export type PublicPartyProfile = {
+	id: number;
+	short_name: string;
+	name: string;
+	logo: string;
+	cover_image?: string | null;
+	cover_position_y?: number | null;
+	is_verified?: boolean;
+	color_hex?: string | null;
+	dark_color_hex?: string | null;
+	date_founded?: string | null;
+	verifications?: PartyVerification[];
+};
+
+/**
  * Server function to fetch full public profile data for a specific party,
  * including metrics, about info, leadership, and user membership status.
  */
@@ -136,7 +153,7 @@ export const getPartyProfile = createServerFn()
 				success: boolean;
 				message?: string;
 				data: {
-					data: any;
+					data: PublicPartyProfile;
 					chapter?: any;
 					chapter_type?: string;
 					national_chapter_id?: number;

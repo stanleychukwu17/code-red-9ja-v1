@@ -14,6 +14,6 @@ const (
 
 // Default Party Position IDs
 const (
-	PartyPositionChairmanID  int32 = 1
-	PartyPositionSecretaryID int32 = 4
+	PartyPositionChairmanID  int32 = 2
+	PartyPositionSecretaryID int32 = 5
 )

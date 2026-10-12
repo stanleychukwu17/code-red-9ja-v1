@@ -122,26 +122,16 @@ function OccupiedPositionCard({ official, positionTitle, onVacate }: {
   positionTitle: string;
   onVacate: (official: PartyOfficialItem) => void;
 }) {
-  const fullName =
-    [official.first_name, official.middle_name, official.last_name]
-      .filter(Boolean)
-      .join(" ") || "Unnamed Official";
+  const fullName = [official.first_name, official.last_name].filter(Boolean).join(" ");
 
   const badgeStyle =
     APPOINTMENT_BADGE_STYLES[official.appointment_type?.toLowerCase()] ||
     "bg-blue-600 text-white dark:bg-blue-500/20 dark:text-blue-300";
 
-  const tenureDate = official.tenure_start
-    ? new Date(official.tenure_start).toLocaleDateString("en-GB", {
-      month: "short",
-      year: "numeric",
-    })
-    : official.assigned_at
-      ? new Date(official.assigned_at).toLocaleDateString("en-GB", {
-        month: "short",
-        year: "numeric",
-      })
-      : "Active";
+  const tenureDate = new Date(official.tenure_start!).toLocaleDateString("en-GB", {
+    month: "short",
+    year: "numeric",
+  });
 
   const chapterDisplay = official.chapter_type === "national"
     ? "National chapter"
@@ -341,22 +331,23 @@ export function PartyPositionsRosterView({
     );
     if (!confirmVacate || !partyId) return;
 
-    try {
-      const res = await vacatePartyOfficial({
-        data: {
-          partyId,
-          assignmentId: official.assignment_id,
-        },
-      });
-      if (res?.success) {
-        toast.success("Office vacated successfully");
-        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partyOfficials.root });
-      } else {
-        toast.error(res?.message || "Failed to vacate office");
-      }
-    } catch (err: any) {
-      toast.error(err?.message || "Failed to vacate office");
-    }
+    console.log(official)
+    // try {
+    //   const res = await vacatePartyOfficial({
+    //     data: {
+    //       partyId,
+    //       assignmentId: official.assignment_id,
+    //     },
+    //   });
+    //   if (res?.success) {
+    //     toast.success("Office vacated successfully");
+    //     queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partyOfficials.root });
+    //   } else {
+    //     toast.error(res?.message || "Failed to vacate office");
+    //   }
+    // } catch (err: any) {
+    //   toast.error(err?.message || "Failed to vacate office");
+    // }
   };
 
   // Debounce client-side search query to avoid recalculating filtered cards on every keystroke

@@ -59,12 +59,12 @@ function PartyLayoutComponent() {
 
   // Resolve active chapter tier (e.g. 'national', 'state', 'lga', 'ward')
   const chapterType = profileRes?.success
-    ? profileRes.data.chapter_type || profileRes.data.chapter?.chapter_type || partyDetails?.chapter_type
+    ? profileRes.data.chapter_type || profileRes.data.chapter?.chapter_type
     : undefined;
 
   // Active chapter membership count: members enrolled specifically in this chapter
   const rawChapterMemberCount = profileRes?.success
-    ? profileRes.data?.chapter_member_count ?? partyDetails?.chapter_members
+    ? profileRes.data?.chapter_member_count
     : undefined;
   const chapterMemberCountDisplay =
     rawChapterMemberCount !== undefined && rawChapterMemberCount !== null
@@ -73,7 +73,7 @@ function PartyLayoutComponent() {
 
   // National membership count: total verified party members nationwide
   const rawTotalMemberCount = profileRes?.success
-    ? (profileRes.data?.national_member_count ?? profileRes.data?.total_members ?? partyDetails?.total_members)
+    ? (profileRes.data?.national_member_count ?? profileRes.data?.total_members)
     : undefined;
   const totalMemberCountDisplay =
     rawTotalMemberCount !== undefined && rawTotalMemberCount !== null
@@ -105,7 +105,6 @@ function PartyLayoutComponent() {
   const coverPositionY = partyDetails?.cover_position_y ?? preset?.coverPositionY ?? 50;
   const bannerImage =
     partyDetails?.cover_image ||
-    partyDetails?.background_image ||
     preset?.coverImage ||
     "https://images.unsplash.com/photo-1624383045192-cf512eb9d78c?q=80&w=1600&auto=format&fit=crop";
 
@@ -123,9 +122,9 @@ function PartyLayoutComponent() {
         fullName={displayName}
         isVerified={Boolean(partyDetails?.is_verified)}
         verifications={partyDetails?.verifications}
-        chapterName={partyDetails?.chapter_name}
-        chapterLevel={chapterType || partyDetails?.chapter_type}
-        chapterType={chapterType || partyDetails?.chapter_type}
+        chapterName={profileRes?.success ? profileRes.data.chapter?.name : undefined}
+        chapterLevel={chapterType}
+        chapterType={chapterType}
         followersDisplay={followersDisplay}
         followersValue={followersCount}
         totalMembers={totalMemberCountDisplay}

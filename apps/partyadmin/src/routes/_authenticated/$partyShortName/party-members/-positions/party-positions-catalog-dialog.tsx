@@ -81,52 +81,6 @@ export function PartyPositionsCatalogDialog({ open, onClose }: {
     );
   };
 
-  // Synchronize party positions cache after creating, updating, or deleting a custom position
-  const updatePositionsCache = (
-    position: PartyPositionItem,
-    mode: "add" | "update" | "delete" = "add",
-  ) => {
-    queryClient.setQueryData(QUERY_KEYS.partyPositions.byParty(partyId), (oldData: any) => {
-      // Nothing cached yet, skip manual cache mutation
-      if (!oldData) return oldData;
-
-      // Extract existing custom and aggregate position lists
-      const prevCustom = oldData.data?.custom || [];
-      const prevPositions = oldData.data?.positions || [];
-
-      let updatedCustom: PartyPositionItem[];
-      let updatedPositions: PartyPositionItem[];
-
-      if (mode === "delete") {
-        // Filter out the deleted position by ID
-        updatedCustom = prevCustom.filter((p: PartyPositionItem) => p.id !== position.id);
-        updatedPositions = prevPositions.filter((p: PartyPositionItem) => p.id !== position.id);
-      } else if (mode === "update") {
-        // Replace existing entry with updated position data
-        updatedCustom = prevCustom.map((p: PartyPositionItem) =>
-          p.id === position.id ? position : p,
-        );
-        updatedPositions = prevPositions.map((p: PartyPositionItem) =>
-          p.id === position.id ? position : p,
-        );
-      } else {
-        // Append newly created position to the end of lists
-        updatedCustom = [...prevCustom, position];
-        updatedPositions = [...prevPositions, position];
-      }
-
-      // Return immutably updated query state
-      return {
-        ...oldData,
-        data: {
-          ...oldData.data,
-          custom: updatedCustom,
-          positions: updatedPositions,
-        },
-      };
-    });
-  };
-
   // Submit and create or update a custom party position
   const handleSavePosition = async (e: FormEvent) => {
     e.preventDefault();
@@ -163,10 +117,7 @@ export function PartyPositionsCatalogDialog({ open, onClose }: {
           throw new Error(res?.message || "Failed to update custom position");
         }
 
-        if (res?.data?.position) {
-          updatePositionsCache(res.data.position, "update");
-        }
-
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partyPositions.root });
         toast.success("Custom position updated successfully!");
       } else {
         // Call API to create new custom position
@@ -185,10 +136,7 @@ export function PartyPositionsCatalogDialog({ open, onClose }: {
           throw new Error(res?.message || "Failed to create custom position");
         }
 
-        if (res?.data?.position) {
-          updatePositionsCache(res.data.position, "add");
-        }
-
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partyPositions.root });
         toast.success("Custom position added successfully!");
       }
 
@@ -219,8 +167,9 @@ export function PartyPositionsCatalogDialog({ open, onClose }: {
         throw new Error(res?.message || "Failed to delete custom position");
       }
 
-      updatePositionsCache(positionToDelete, "delete");
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partyPositions.root });
       toast.success("Custom position deleted successfully!");
+
       if (editingPosition?.id === positionToDelete.id) {
         resetForm();
       }

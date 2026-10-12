@@ -494,7 +494,7 @@ func (s *PartiesService) GetOnePartyChapterOfficial(ctx context.Context, chapter
 			}
 			// Cache vacant card
 			if data, marshalErr := json.Marshal(vacantOfficial); marshalErr == nil {
-				_ = s.rdb.Set(ctx, cacheKey, data, db.RedisSevenDaysTTL).Err()
+				_ = s.rdb.Set(ctx, cacheKey, data, db.RedisThirtyDaysTTL).Err()
 			}
 			return &vacantOfficial, nil
 		}
@@ -536,7 +536,7 @@ func (s *PartiesService) GetOnePartyChapterOfficial(ctx context.Context, chapter
 
 	// Cache in Redis
 	if data, err := json.Marshal(official); err == nil {
-		_ = s.rdb.Set(ctx, cacheKey, data, db.RedisSevenDaysTTL).Err()
+		_ = s.rdb.Set(ctx, cacheKey, data, db.RedisThirtyDaysTTL).Err()
 	}
 
 	return &official, nil
@@ -2204,9 +2204,10 @@ func (s *PartiesService) AssignPartyPosition(ctx context.Context, arg queries.As
 	// Create position assignment in database
 	assignment, err := s.queries.AssignPartyPosition(ctx, arg)
 	if err == nil {
-		// Invalidate member position assignments and chapter officials cache
+		// Invalidate member position assignments, chapter officials cache, and single official card cache
 		s.InvalidateMemberPositionAssignmentsCache(ctx, arg.PartyID, arg.UserID)
 		s.InvalidatePartyOfficialsCache(ctx, arg.PartyID, arg.ChapterID)
+		s.InvalidateChapterOfficialCache(ctx, arg.ChapterID, arg.PositionID)
 
 		// Record lightweight milestone in party member milestones timeline
 		milestoneMeta, _ := json.Marshal(map[string]any{
@@ -2258,6 +2259,7 @@ func (s *PartiesService) UpdatePositionAssignment(ctx context.Context, arg queri
 	if err == nil {
 		s.InvalidateMemberPositionAssignmentsCache(ctx, assignment.PartyID, assignment.UserID)
 		s.InvalidatePartyOfficialsCache(ctx, assignment.PartyID, assignment.ChapterID)
+		s.InvalidateChapterOfficialCache(ctx, assignment.ChapterID, assignment.PositionID)
 	}
 	return assignment, err
 }
@@ -2268,9 +2270,11 @@ func (s *PartiesService) VacatePositionAssignment(ctx context.Context, id int64,
 		ID:      id,
 		PartyID: partyID,
 	})
+
 	if err == nil {
 		s.InvalidateMemberPositionAssignmentsCache(ctx, assignment.PartyID, assignment.UserID)
 		s.InvalidatePartyOfficialsCache(ctx, assignment.PartyID, assignment.ChapterID)
+		s.InvalidateChapterOfficialCache(ctx, assignment.ChapterID, assignment.PositionID)
 	}
 	return assignment, err
 }
@@ -2499,9 +2503,11 @@ func (s *PartiesService) SuspendPartyMember(ctx context.Context, input SuspendPa
 	// invalidate party membership from redis
 	s.InvalidatePartyMembership(ctx, input.UserID, input.PartyID)
 
-	// invalidate party officials cache
+	// invalidate party officials cache and top official card caches
 	for _, chID := range chapterIDs {
 		s.InvalidatePartyOfficialsCache(ctx, input.PartyID, chID)
+		s.InvalidateChapterOfficialCache(ctx, chID, constants.PartyPositionChairmanID)
+		s.InvalidateChapterOfficialCache(ctx, chID, constants.PartyPositionSecretaryID)
 	}
 
 	// Audit Logging
@@ -2915,6 +2921,17 @@ func (s *PartiesService) InvalidatePartyOfficialsCache(ctx context.Context, part
 	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisPartyChapterOfficials, partyID, chapterID)
 	if err := s.rdb.Del(ctx, cacheKey).Err(); err != nil {
 		slog.Error("Failed to invalidate party chapter officials cache", "error", err, "partyID", partyID, "chapterID", chapterID)
+	}
+}
+
+// InvalidateChapterOfficialCache invalidates the Redis cache for a single chapter official by chapterID and positionID.
+func (s *PartiesService) InvalidateChapterOfficialCache(ctx context.Context, chapterID int32, positionID int32) {
+	if s.rdb == nil {
+		return
+	}
+	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisChapterOfficial, chapterID, positionID)
+	if err := s.rdb.Del(ctx, cacheKey).Err(); err != nil {
+		slog.Error("Failed to invalidate chapter official cache", "error", err, "chapterID", chapterID, "positionID", positionID)
 	}
 }
 
