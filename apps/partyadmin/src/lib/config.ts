@@ -123,22 +123,10 @@ export const API_URL = {
     const qs = sp.toString();
     return `${api}/parties/${id}/officials${qs ? `?${qs}` : ""}`;
   },
-  chapterOfficials: (
-    id: string | number,
-    chapterId: string | number,
-    status?: string,
-  ) => {
-    const qs = status ? `?status=${encodeURIComponent(status)}` : "";
-    return `${api}/parties/${id}/chapters/${chapterId}/officials${qs}`;
-  },
   assignOfficial: (id: string | number) =>
     `${api}/parties/${id}/officials`,
   vacateOfficial: (id: string | number, assignmentId: string | number) =>
     `${api}/parties/${id}/officials/${assignmentId}/vacate`,
-  updateOfficialAssignment: (
-    id: string | number,
-    assignmentId: string | number,
-  ) => `${api}/parties/${id}/officials/${assignmentId}`,
   memberPositions: (id: string | number, userId: string | number) =>
     `${api}/parties/${id}/members/${userId}/positions`,
   suspendedMembers: (id: string | number, limit?: number, cursor?: string | number) => {

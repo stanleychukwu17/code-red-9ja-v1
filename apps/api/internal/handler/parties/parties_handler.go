@@ -80,7 +80,6 @@ type PartiesService interface {
 	UpdatePartyCustomPosition(ctx context.Context, arg queries.UpdatePartyCustomPositionParams) (queries.PartyPosition, error)
 	DeletePartyCustomPosition(ctx context.Context, id int32, partyID int16) error
 	AssignPartyPosition(ctx context.Context, arg queries.AssignPartyPositionParams) (queries.PartyPositionAssignment, error)
-	UpdatePositionAssignment(ctx context.Context, arg queries.UpdatePositionAssignmentParams) (queries.PartyPositionAssignment, error)
 	VacatePositionAssignment(ctx context.Context, id int64, partyID int16) (queries.PartyPositionAssignment, error)
 	GetPartyChapterByID(ctx context.Context, chapterID int32) (queries.PartyChapter, error)
 	GetChapterMemberCount(ctx context.Context, partyID int16, chapterID int32) (int64, error)
@@ -3033,6 +3032,16 @@ func (h *Handler) VacatePositionAssignment(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	// Verify user authentication claims
+	claims, _ := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
+
+	// Verify caller has permissions to modify this party
+	allowed, _, err := h.permissionsService.CheckPartyModificationPermission(claims, int16(partyID))
+	if !allowed {
+		h.utils.RespondError(w, http.StatusForbidden, err.Error())
+		return
+	}
+
 	// Parse and validate assignment ID from URL parameter
 	assignIDStr := chi.URLParam(r, "assignment_id")
 	assignID, err := strconv.ParseInt(assignIDStr, 10, 64)
@@ -3044,72 +3053,18 @@ func (h *Handler) VacatePositionAssignment(w http.ResponseWriter, r *http.Reques
 	// Vacate position assignment and invalidate member and chapter official caches
 	assignment, err := h.partiesService.VacatePositionAssignment(r.Context(), assignID, int16(partyID))
 	if err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to vacate position: "+err.Error())
+		h.utils.RespondError(w, http.StatusBadRequest, "Failed to vacate position: "+err.Error())
 		return
 	}
 
-	// Return updated assignment details to the client
+	// Fetch updated officials roster for this chapter so the client can update its cache directly
+	officials, _ := h.partiesService.ListPartyOfficials(r.Context(), int16(partyID), assignment.ChapterID)
+
+	// Return updated assignment details and officials roster to the client
 	h.utils.RespondSuccess(w, http.StatusOK, "Position assignment vacated successfully", map[string]interface{}{
 		"assignment": assignment,
-	})
-}
-
-// UpdatePositionAssignment updates appointment type, status, or tenure dates
-func (h *Handler) UpdatePositionAssignment(w http.ResponseWriter, r *http.Request) {
-	idStr := chi.URLParam(r, "id")
-	partyID, err := strconv.ParseInt(idStr, 10, 16)
-	if err != nil || partyID <= 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID")
-		return
-	}
-
-	assignIDStr := chi.URLParam(r, "assignment_id")
-	assignID, err := strconv.ParseInt(assignIDStr, 10, 64)
-	if err != nil || assignID <= 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid assignment ID")
-		return
-	}
-
-	var req struct {
-		AppointmentType string `json:"appointment_type"`
-		Status          string `json:"status"`
-		TenureStart     string `json:"tenure_start"`
-		TenureEnd       string `json:"tenure_end"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
-		return
-	}
-
-	arg := queries.UpdatePositionAssignmentParams{
-		ID:      assignID,
-		PartyID: int16(partyID),
-	}
-	if req.AppointmentType != "" {
-		arg.AppointmentType = pgtype.Text{String: req.AppointmentType, Valid: true}
-	}
-	if req.Status != "" {
-		arg.Status = pgtype.Text{String: req.Status, Valid: true}
-	}
-	if req.TenureStart != "" {
-		if t, err := time.Parse("2006-01-02", req.TenureStart); err == nil {
-			arg.TenureStart = pgtype.Date{Time: t, Valid: true}
-		}
-	}
-	if req.TenureEnd != "" {
-		if t, err := time.Parse("2006-01-02", req.TenureEnd); err == nil {
-			arg.TenureEnd = pgtype.Date{Time: t, Valid: true}
-		}
-	}
-
-	assignment, err := h.partiesService.UpdatePositionAssignment(r.Context(), arg)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update assignment: "+err.Error())
-		return
-	}
-
-	h.utils.RespondSuccess(w, http.StatusOK, "Assignment updated successfully", map[string]interface{}{
-		"assignment": assignment,
+		"chapter_id": assignment.ChapterID,
+		"officials":  officials,
 	})
 }
 

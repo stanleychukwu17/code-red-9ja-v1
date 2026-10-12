@@ -666,61 +666,13 @@ func (q *Queries) UpdatePartyCustomPosition(ctx context.Context, arg UpdateParty
 	return i, err
 }
 
-const updatePositionAssignment = `-- name: UpdatePositionAssignment :one
-UPDATE party_position_assignments
-SET 
-    appointment_type = COALESCE($3::varchar, appointment_type),
-    status = COALESCE($4::varchar, status),
-    tenure_start = COALESCE($5::date, tenure_start),
-    tenure_end = $6::date,
-    updated_at = NOW()
-WHERE id = $1 AND party_id = $2
-RETURNING id, party_id, chapter_id, position_id, user_id, appointment_type, status, tenure_start, tenure_end, appointed_by, created_at, updated_at
-`
-
-type UpdatePositionAssignmentParams struct {
-	ID              int64       `json:"id"`
-	PartyID         int16       `json:"party_id"`
-	AppointmentType pgtype.Text `json:"appointment_type"`
-	Status          pgtype.Text `json:"status"`
-	TenureStart     pgtype.Date `json:"tenure_start"`
-	TenureEnd       pgtype.Date `json:"tenure_end"`
-}
-
-func (q *Queries) UpdatePositionAssignment(ctx context.Context, arg UpdatePositionAssignmentParams) (PartyPositionAssignment, error) {
-	row := q.db.QueryRow(ctx, updatePositionAssignment,
-		arg.ID,
-		arg.PartyID,
-		arg.AppointmentType,
-		arg.Status,
-		arg.TenureStart,
-		arg.TenureEnd,
-	)
-	var i PartyPositionAssignment
-	err := row.Scan(
-		&i.ID,
-		&i.PartyID,
-		&i.ChapterID,
-		&i.PositionID,
-		&i.UserID,
-		&i.AppointmentType,
-		&i.Status,
-		&i.TenureStart,
-		&i.TenureEnd,
-		&i.AppointedBy,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
 const vacatePositionAssignment = `-- name: VacatePositionAssignment :one
 UPDATE party_position_assignments
 SET 
     status = 'vacated',
     tenure_end = CURRENT_DATE,
     updated_at = NOW()
-WHERE id = $1 AND party_id = $2
+WHERE id = $1 AND party_id = $2 AND status = 'active'
 RETURNING id, party_id, chapter_id, position_id, user_id, appointment_type, status, tenure_start, tenure_end, appointed_by, created_at, updated_at
 `
 

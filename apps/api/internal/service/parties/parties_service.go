@@ -86,6 +86,7 @@ type NotificationsService interface {
 	NotifyPartyUserUnblocked(ctx context.Context, params notifications.NotifyPartyUserUnblockedParams)
 	NotifyNewMemberJoined(ctx context.Context, params notifications.NotifyNewMemberJoinedParams)
 	NotifyPartyOfficialAppointed(ctx context.Context, params notifications.NotifyPartyOfficialAppointedParams)
+	NotifyPartyOfficialVacated(ctx context.Context, params notifications.NotifyPartyOfficialVacatedParams)
 }
 
 // NewPartiesService creates a new PartiesService.
@@ -2253,30 +2254,76 @@ func (s *PartiesService) AssignPartyPosition(ctx context.Context, arg queries.As
 	return assignment, err
 }
 
-// UpdatePositionAssignment updates an assignment.
-func (s *PartiesService) UpdatePositionAssignment(ctx context.Context, arg queries.UpdatePositionAssignmentParams) (queries.PartyPositionAssignment, error) {
-	assignment, err := s.queries.UpdatePositionAssignment(ctx, arg)
-	if err == nil {
-		s.InvalidateMemberPositionAssignmentsCache(ctx, assignment.PartyID, assignment.UserID)
-		s.InvalidatePartyOfficialsCache(ctx, assignment.PartyID, assignment.ChapterID)
-		s.InvalidateChapterOfficialCache(ctx, assignment.ChapterID, assignment.PositionID)
-	}
-	return assignment, err
-}
-
 // VacatePositionAssignment vacates an active position assignment.
 func (s *PartiesService) VacatePositionAssignment(ctx context.Context, id int64, partyID int16) (queries.PartyPositionAssignment, error) {
 	assignment, err := s.queries.VacatePositionAssignment(ctx, queries.VacatePositionAssignmentParams{
 		ID:      id,
 		PartyID: partyID,
 	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return queries.PartyPositionAssignment{}, fmt.Errorf("active position assignment not found")
+		}
 
-	if err == nil {
-		s.InvalidateMemberPositionAssignmentsCache(ctx, assignment.PartyID, assignment.UserID)
-		s.InvalidatePartyOfficialsCache(ctx, assignment.PartyID, assignment.ChapterID)
-		s.InvalidateChapterOfficialCache(ctx, assignment.ChapterID, assignment.PositionID)
+		return queries.PartyPositionAssignment{}, err
 	}
-	return assignment, err
+
+	// Invalidate member position assignments, chapter officials cache, and single official card cache
+	s.InvalidateMemberPositionAssignmentsCache(ctx, assignment.PartyID, assignment.UserID)
+	s.InvalidatePartyOfficialsCache(ctx, assignment.PartyID, assignment.ChapterID)
+	s.InvalidateChapterOfficialCache(ctx, assignment.ChapterID, assignment.PositionID)
+
+	// Fetch position details for milestone and notification
+	posName := "Official Position"
+	if pos, err := s.GetPartyPositionByID(ctx, assignment.PositionID, assignment.PartyID); err == nil && pos.Name != "" {
+		posName = pos.Name
+	}
+
+	// Record milestone in party member milestones timeline
+	milestoneMeta, _ := json.Marshal(map[string]any{
+		"assignment_id":    assignment.ID,
+		"position_id":      assignment.PositionID,
+		"position_name":    posName,
+		"appointment_type": assignment.AppointmentType,
+	})
+	_ = s.queries.AddPartyMemberMilestone(ctx, queries.AddPartyMemberMilestoneParams{
+		UserID:        assignment.UserID,
+		PartyID:       assignment.PartyID,
+		ChapterID:     pgtype.Int4{Int32: assignment.ChapterID, Valid: true},
+		MilestoneType: constants.MilestoneTypePositionRemoved,
+		Metadata:      milestoneMeta,
+	})
+
+	// Log audit action for the administrator
+	assignmentJSON, _ := json.Marshal(assignment)
+	actorID, actorRole := audit.ActorInfoFromContext(ctx)
+	s.auditService.LogActionAsync(ctx, queries.InsertAuditLogParams{
+		Module:     audit.StringToText(db.ModulePartyAdmin),
+		Action:     db.ActionVacatePartyPosition,
+		ActorID:    actorID,
+		ActorRole:  audit.StringToText(actorRole),
+		EntityType: db.EntityTypeUser,
+		EntityID:   strconv.FormatInt(assignment.UserID, 10),
+		NewValues:  assignmentJSON,
+	})
+
+	// Dispatch notification to vacated member and chapter leadership asynchronously
+	var actorIDPointer *int64
+	if actorID != 0 {
+		actorIDPointer = &actorID
+	}
+	s.notificationsService.NotifyPartyOfficialVacated(ctx, notifications.NotifyPartyOfficialVacatedParams{
+		PartyID:         assignment.PartyID,
+		ChapterID:       assignment.ChapterID,
+		PositionID:      assignment.PositionID,
+		PositionName:    posName,
+		TargetUserID:    assignment.UserID,
+		ActorID:         actorIDPointer,
+		AppointmentType: assignment.AppointmentType,
+		AssignmentID:    assignment.ID,
+	})
+
+	return assignment, nil
 }
 
 // ListChapterOfficials lists all position assignments for a given chapter.
@@ -2440,7 +2487,13 @@ func (s *PartiesService) SuspendPartyMember(ctx context.Context, input SuspendPa
 	// set queries to use transaction
 	qtx := s.queries.WithTx(tx)
 
-	// 1. Suspend party membership across all chapters
+	// 1. Fetch user to verify existence and retrieve fake_id for session revocation
+	user, err := qtx.GetUserByID(ctx, input.UserID)
+	if err != nil {
+		return nil, fmt.Errorf("user not found: %w", err)
+	}
+
+	// 2. Suspend party membership across all chapters
 	chapterIDs, err := qtx.SuspendPartyMembership(ctx, queries.SuspendPartyMembershipParams{
 		PartyID: input.PartyID,
 		UserID:  input.UserID,
@@ -2452,7 +2505,7 @@ func (s *PartiesService) SuspendPartyMember(ctx context.Context, input SuspendPa
 		return nil, fmt.Errorf("user is not an active member of this party")
 	}
 
-	// 2. Create suspension record
+	// 3. Create suspension record
 	suspension, err := qtx.CreatePartyMemberSuspension(ctx, queries.CreatePartyMemberSuspensionParams{
 		PartyID:     input.PartyID,
 		UserID:      input.UserID,
@@ -2466,7 +2519,7 @@ func (s *PartiesService) SuspendPartyMember(ctx context.Context, input SuspendPa
 	// marshal suspension record into json for metadata
 	suspensionJSON, _ := json.Marshal(suspension)
 
-	// 3. Suspend all active positions held by the user in this party
+	// 4. Suspend all active positions held by the user in this party
 	err = qtx.SuspendAllUserPositionsInParty(ctx, queries.SuspendAllUserPositionsInPartyParams{
 		PartyID: input.PartyID,
 		UserID:  input.UserID,
@@ -2492,6 +2545,15 @@ func (s *PartiesService) SuspendPartyMember(ctx context.Context, input SuspendPa
 
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("failed to commit suspension transaction: %w", err)
+	}
+
+	// Strip party admin roles from suspended user and revoke all active sessions across devices
+	if s.usersService != nil {
+		var fakeID int64
+		if user.FakeID.Valid {
+			fakeID = user.FakeID.Int64
+		}
+		_ = s.usersService.StripPartyAdminRoles(ctx, input.UserID, fakeID)
 	}
 
 	// invalidate member suspension cache
@@ -2740,6 +2802,8 @@ func (s *PartiesService) BlockUserFromThisParty(ctx context.Context, input Block
 			s.InvalidateChapterMemberCount(ctx, input.PartyID, chapterID)
 			s.InvalidatePartyChapterMembership(ctx, input.BlockedUserID, input.PartyID, chapterID)
 			s.InvalidatePartyOfficialsCache(ctx, input.PartyID, chapterID)
+			s.InvalidateChapterOfficialCache(ctx, chapterID, constants.PartyPositionChairmanID)
+			s.InvalidateChapterOfficialCache(ctx, chapterID, constants.PartyPositionSecretaryID)
 		}
 	}
 
@@ -2926,9 +2990,6 @@ func (s *PartiesService) InvalidatePartyOfficialsCache(ctx context.Context, part
 
 // InvalidateChapterOfficialCache invalidates the Redis cache for a single chapter official by chapterID and positionID.
 func (s *PartiesService) InvalidateChapterOfficialCache(ctx context.Context, chapterID int32, positionID int32) {
-	if s.rdb == nil {
-		return
-	}
 	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisChapterOfficial, chapterID, positionID)
 	if err := s.rdb.Del(ctx, cacheKey).Err(); err != nil {
 		slog.Error("Failed to invalidate chapter official cache", "error", err, "chapterID", chapterID, "positionID", positionID)

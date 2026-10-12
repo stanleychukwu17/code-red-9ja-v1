@@ -331,23 +331,40 @@ export function PartyPositionsRosterView({
     );
     if (!confirmVacate || !partyId) return;
 
-    console.log(official)
-    // try {
-    //   const res = await vacatePartyOfficial({
-    //     data: {
-    //       partyId,
-    //       assignmentId: official.assignment_id,
-    //     },
-    //   });
-    //   if (res?.success) {
-    //     toast.success("Office vacated successfully");
-    //     queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partyOfficials.root });
-    //   } else {
-    //     toast.error(res?.message || "Failed to vacate office");
-    //   }
-    // } catch (err: any) {
-    //   toast.error(err?.message || "Failed to vacate office");
-    // }
+    try {
+      const res = await vacatePartyOfficial({
+        data: {
+          partyId,
+          assignmentId: official.assignment_id,
+        },
+      });
+      if (res?.success) {
+        toast.success("Office vacated successfully");
+
+        if (res?.data?.officials) {
+          queryClient.setQueriesData(
+            { queryKey: QUERY_KEYS.partyOfficials.byChapterType(partyId, chapterType) },
+            (old: any) => {
+              if (!old) return old;
+              return {
+                ...old,
+                data: {
+                  ...old.data,
+                  chapter_id: res.data.chapter_id,
+                  officials: res.data.officials,
+                },
+              };
+            },
+          );
+        } else {
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partyOfficials.root });
+        }
+      } else {
+        toast.error(res?.message || "Failed to vacate office");
+      }
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to vacate office");
+    }
   };
 
   // Debounce client-side search query to avoid recalculating filtered cards on every keystroke
@@ -362,16 +379,13 @@ export function PartyPositionsRosterView({
     });
 
     // Filter positions valid for the active chapter tier (e.g. national, state, LGA)
-    const tierFiltered = sorted.filter((p) => {
-      if (!chapterType || chapterType === "all") return true;
-      if (!p.allowed_levels || p.allowed_levels.length === 0) return true;
-      return p.allowed_levels.some(
-        (lvl) =>
-          lvl.toLowerCase() === chapterType.toLowerCase() ||
-          lvl.toLowerCase() === "all",
-      );
-    });
+    const chapterPositions = sorted.filter((p) =>
+      p.allowed_levels.some(
+        (lvl) => lvl.toLowerCase() === chapterType.toLowerCase(),
+      ),
+    );
 
+    // Normalize debounced search query for case-insensitive matching
     const searchLower = debouncedSearchQuery.toLowerCase().trim();
 
     // Accumulated list of card items (occupied or vacant) to render in grid
@@ -380,7 +394,8 @@ export function PartyPositionsRosterView({
       | { type: "vacant"; position: PartyPositionItem; key: string }
     > = [];
 
-    for (const pos of tierFiltered) {
+    // Iterate through chapter positions to build occupied cards and vacant slot placeholders
+    for (const pos of chapterPositions) {
       let assigned = officialsByPosition.get(pos.id) || [];
 
       // Filter occupants by appointment type (e.g. substantive, acting, caretaker)
@@ -399,14 +414,13 @@ export function PartyPositionsRosterView({
           (o) =>
             posMatches ||
             o.position_name?.toLowerCase().includes(searchLower) ||
-            `${o.first_name || ""} ${o.last_name || ""}`
-              .toLowerCase()
-              .includes(searchLower) ||
+            `${o.first_name} ${o.last_name}`.toLowerCase().includes(searchLower) ||
             (o.username && o.username.toLowerCase().includes(searchLower)),
         );
 
+        // Populate matching search results: either active occupants or vacant position cards
         if (matchingOfficials.length > 0) {
-          // Render cards for matching occupants
+          // Render individual cards for matching active occupants
           for (const off of matchingOfficials) {
             results.push({
               type: "occupied",
@@ -416,13 +430,14 @@ export function PartyPositionsRosterView({
             });
           }
         } else if (posMatches && appointmentTypeFilter === "all") {
-          // If position name matches but has no occupants, show vacant card
+          // Show vacant card placeholder when the position title matches but has no occupants
           results.push({
             type: "vacant",
             position: pos,
             key: `vacant-${pos.id}`,
           });
         }
+
         continue;
       }
 

@@ -53,24 +53,13 @@ INSERT INTO party_position_assignments (
     $1, $2, $3, $4, $5, $6, $7, $8, $9
 ) RETURNING *;
 
--- name: UpdatePositionAssignment :one
-UPDATE party_position_assignments
-SET 
-    appointment_type = COALESCE(sqlc.narg('appointment_type')::varchar, appointment_type),
-    status = COALESCE(sqlc.narg('status')::varchar, status),
-    tenure_start = COALESCE(sqlc.narg('tenure_start')::date, tenure_start),
-    tenure_end = sqlc.narg('tenure_end')::date,
-    updated_at = NOW()
-WHERE id = $1 AND party_id = $2
-RETURNING *;
-
 -- name: VacatePositionAssignment :one
 UPDATE party_position_assignments
 SET 
     status = 'vacated',
     tenure_end = CURRENT_DATE,
     updated_at = NOW()
-WHERE id = $1 AND party_id = $2
+WHERE id = $1 AND party_id = $2 AND status = 'active'
 RETURNING *;
 
 -- name: CountActivePositionOccupants :one

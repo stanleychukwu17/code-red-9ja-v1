@@ -1,20 +1,10 @@
 import type { PartySampleMember } from "#/lib/server/parties";
+import { formatNumber } from "@repo/ui/lib/number";
 
 interface PartyMembersStackProps {
 	partyId: number;
 	totalMembers: number;
 	sampleMembers?: PartySampleMember[];
-}
-
-function formatMemberCount(count: number): string {
-	if (!count || count <= 0) return "0";
-	if (count >= 1_000_000) {
-		return `${(count / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
-	}
-	if (count >= 1_000) {
-		return `${(count / 1_000).toFixed(1).replace(/\.0$/, "")}k`;
-	}
-	return count.toLocaleString();
 }
 
 export function PartyMembersStack({
@@ -50,7 +40,7 @@ export function PartyMembersStack({
 				</>
 			)}
 			<span className="text-xs font-medium text-foreground">
-				{sampleMembers.length > 0 ? `+${formatMemberCount(totalMembers)} members` : `${formatMemberCount(totalMembers)} members`}
+				{sampleMembers.length > 0 ? `+${formatNumber(totalMembers)} members` : `${formatNumber(totalMembers)} members`}
 			</span>
 		</div>
 	);

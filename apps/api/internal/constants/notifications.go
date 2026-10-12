@@ -51,6 +51,7 @@ const (
 	NotificationTypePartyUserBlocked         = "party_user_blocked"
 	NotificationTypePartyUserUnblocked       = "party_user_unblocked"
 	NotificationTypePartyOfficialAppointed   = "party_official_appointed"
+	NotificationTypePartyOfficialVacated     = "party_official_vacated"
 )
 
 // DailyGroupKey formats a time-windowed daily rollup key (e.g. "prefix:2026-09-27")

@@ -4,6 +4,7 @@ import { getPartyProfile } from "@/lib/server/parties";
 import { PARTY_PRESETS } from "#/components/parties/party-constants";
 import { PartyHeaderLayout, PartyNavTabs } from "#/components/party";
 import { getPageHeader } from "#/lib/shared/meta";
+import { formatNumber } from "@repo/ui/lib/number";
 
 export type PartySearch = {
   chapterId?: number;
@@ -63,35 +64,22 @@ function PartyLayoutComponent() {
     : undefined;
 
   // Active chapter membership count: members enrolled specifically in this chapter
-  const rawChapterMemberCount = profileRes?.success
-    ? profileRes.data?.chapter_member_count
-    : undefined;
-  const chapterMemberCountDisplay =
-    rawChapterMemberCount !== undefined && rawChapterMemberCount !== null
-      ? Number(rawChapterMemberCount).toLocaleString()
-      : "0";
+  const chapterMemberCount = profileRes?.success
+    ? Number(profileRes.data?.chapter_member_count ?? 0)
+    : 0;
+  const chapterMemberCountDisplay = chapterMemberCount.toLocaleString();
 
   // National membership count: total verified party members nationwide
-  const rawTotalMemberCount = profileRes?.success
-    ? (profileRes.data?.national_member_count ?? profileRes.data?.total_members)
-    : undefined;
-  const totalMemberCountDisplay =
-    rawTotalMemberCount !== undefined && rawTotalMemberCount !== null
-      ? Number(rawTotalMemberCount).toLocaleString()
-      : "0";
+  const totalMemberCount = profileRes?.success
+    ? Number(profileRes.data?.national_member_count ?? profileRes.data?.total_members ?? 0)
+    : 0;
+  const totalMemberCountDisplay = totalMemberCount.toLocaleString();
 
   // National follower count: total followers of the party's national chapter (formatted as e.g. '850', '1.2k', '2.5M')
-  const rawFollowersCount = profileRes?.success
-    ? profileRes.data?.national_followers_count
-    : undefined;
-  const followersCount =
-    rawFollowersCount !== undefined && rawFollowersCount !== null ? Number(rawFollowersCount) : 0;
-  const followersDisplay =
-    followersCount >= 1_000_000
-      ? `${(followersCount / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`
-      : followersCount >= 1_000
-        ? `${(followersCount / 1_000).toFixed(1).replace(/\.0$/, "")}k`
-        : followersCount.toLocaleString();
+  const followersCount = profileRes?.success
+    ? Number(profileRes.data?.national_followers_count ?? 0)
+    : 0;
+  const followersDisplay = formatNumber(followersCount);
 
   // Party branding, colors, preset themes, and hero banner fallback resolution
   const partyUpper = (partyDetails?.short_name || partyName).toUpperCase();

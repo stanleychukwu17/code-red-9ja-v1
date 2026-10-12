@@ -550,29 +550,6 @@ export const getPartyOfficials = createServerFn({ method: "GET" })
     }
   });
 
-// Fetch officials for a specific chapter
-export const getChapterOfficials = createServerFn({ method: "GET" })
-  .inputValidator(
-    (data: {
-      partyId: number | string;
-      chapterId: number | string;
-      status?: string;
-    }) => data,
-  )
-  .handler(async ({ data }) => {
-    try {
-      const response = await apiFetch(
-        API_URL.chapterOfficials(data.partyId, data.chapterId, data.status),
-      );
-      return await response.json();
-    } catch (error) {
-      return {
-        success: false,
-        message: "Failed to fetch chapter officials: " + (error as Error).message,
-      };
-    }
-  });
-
 // Assign a party member to a chapter position
 export const assignPartyOfficial = createServerFn({ method: "POST" })
   .inputValidator(

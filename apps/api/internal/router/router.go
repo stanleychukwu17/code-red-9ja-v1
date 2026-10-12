@@ -676,7 +676,6 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Delete("/api/v1/parties/{id}/positions/{position_id}", partiesHandler.DeletePartyCustomPosition)
 		r.Post("/api/v1/parties/{id}/officials", partiesHandler.AssignPartyOfficial)
 		r.Patch("/api/v1/parties/{id}/officials/{assignment_id}/vacate", partiesHandler.VacatePositionAssignment)
-		r.Patch("/api/v1/parties/{id}/officials/{assignment_id}", partiesHandler.UpdatePositionAssignment)
 
 		// party member suspension & reactivation
 		r.Get("/api/v1/parties/{id}/members/suspended", partiesHandler.ListSuspendedPartyMembers)

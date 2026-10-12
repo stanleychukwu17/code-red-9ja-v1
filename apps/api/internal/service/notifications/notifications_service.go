@@ -48,6 +48,7 @@ type NotificationsService interface {
 	NotifyPartyUserUnblocked(ctx context.Context, params NotifyPartyUserUnblockedParams)
 	NotifyNewMemberJoined(ctx context.Context, params NotifyNewMemberJoinedParams)
 	NotifyPartyOfficialAppointed(ctx context.Context, params NotifyPartyOfficialAppointedParams)
+	NotifyPartyOfficialVacated(ctx context.Context, params NotifyPartyOfficialVacatedParams)
 }
 
 type service struct {
@@ -199,6 +200,17 @@ type NotifyPartyOfficialAppointedParams struct {
 	AssignmentID    int64
 }
 
+type NotifyPartyOfficialVacatedParams struct {
+	PartyID         int16
+	ChapterID       int32
+	PositionID      int32
+	PositionName    string
+	TargetUserID    int64
+	ActorID         *int64
+	AppointmentType string
+	AssignmentID    int64
+}
+
 // ----------------------------------------------------------------------------
 // USER NOTIFICATIONS IMPLEMENTATION
 // ----------------------------------------------------------------------------
@@ -208,6 +220,7 @@ func (s *service) CreateNotification(ctx context.Context, in CreateNotificationI
 	if in.Priority == "" {
 		in.Priority = "normal"
 	}
+
 	// Initialize metadata map if nil to prevent nil pointer issues
 	if in.Metadata == nil {
 		in.Metadata = make(map[string]any)
@@ -696,6 +709,47 @@ func (s *service) NotifyPartyOfficialAppointed(ctx context.Context, params Notif
 		ChapterID:   &params.ChapterID,
 		Category:    constants.PartyNotificationCategoryMembership,
 		Type:        constants.NotificationTypePartyOfficialAppointed,
+		Priority:    constants.NotificationPriorityNormal,
+		Metadata:    partyMeta,
+	})
+}
+
+// NotifyPartyOfficialVacated dispatches notification to the vacated member and chapter leadership.
+func (s *service) NotifyPartyOfficialVacated(ctx context.Context, params NotifyPartyOfficialVacatedParams) {
+	// Build metadata payload for the vacated member
+	userMeta := utils.NewMetadata().
+		Set("party_id", params.PartyID).
+		Set("chapter_id", params.ChapterID).
+		Set("position_id", params.PositionID).
+		Set("position_name", params.PositionName).
+		Set("appointment_type", params.AppointmentType).
+		Set("assignment_id", params.AssignmentID)
+
+	// Send direct personal notification to the vacated user
+	s.CreateNotificationAsync(ctx, CreateNotificationInput{
+		RecipientUserID: params.TargetUserID,
+		ActorUserID:     params.ActorID,
+		PartyID:         &params.PartyID,
+		Category:        constants.NotificationCategoryParty,
+		Type:            constants.NotificationTypePartyOfficialVacated,
+		Priority:        constants.NotificationPriorityNormal,
+		Metadata:        userMeta,
+	})
+
+	// Also broadcast party notification to chapter leadership
+	partyMeta := utils.NewMetadata().
+		Set("vacated_user_id", params.TargetUserID).
+		Set("position_id", params.PositionID).
+		Set("position_name", params.PositionName).
+		Set("appointment_type", params.AppointmentType).
+		Set("assignment_id", params.AssignmentID)
+
+	s.CreatePartyNotificationAsync(ctx, CreatePartyNotificationInput{
+		PartyID:     params.PartyID,
+		ActorUserID: params.ActorID,
+		ChapterID:   &params.ChapterID,
+		Category:    constants.PartyNotificationCategoryMembership,
+		Type:        constants.NotificationTypePartyOfficialVacated,
 		Priority:    constants.NotificationPriorityNormal,
 		Metadata:    partyMeta,
 	})
