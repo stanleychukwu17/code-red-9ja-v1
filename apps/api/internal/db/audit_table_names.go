@@ -27,6 +27,8 @@ const (
 	ActionCreatePartyCustomPosition = "create_party_custom_position" // Action when a party position is created
 	ActionUpdatePartyCustomPosition = "update_party_custom_position" // Action when a party position is updated
 	ActionDeletePartyCustomPosition = "delete_party_custom_position" // Action when a party position is deleted
+	ActionAssignPartyPosition       = "assign_party_position"        // Action when a member is assigned to a party position
+	ActionVacatePartyPosition       = "vacate_party_position"        // Action when a party position assignment is vacated
 	ActionSuspendPartyMember        = "suspend_party_member"         // Action when a party member is suspended
 	ActionUnsuspendPartyMember      = "unsuspend_party_member"       // Action when a party member's suspension is lifted
 	ActionBlockPartyMember          = "block_party_member"           // Action when a user is blocked from a party

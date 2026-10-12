@@ -41,21 +41,28 @@ export const Route = createFileRoute("/_authenticated/party/$partyName/$partyId"
 
 
 function PartyLayoutComponent() {
+  // Extract route params (party ID & short name) and optional active chapter filter from query string
   const { partyName, partyId } = Route.useParams();
   const { chapterId } = Route.useSearch();
 
+  // Query full party profile and chapter metadata (cached with infinite staleTime for snappy navigation)
   const { data: profileRes } = useQuery(
     partyProfileQueryOptions(partyId, partyName, chapterId)
   );
 
   console.log(profileRes);
 
+  // Extract core party attributes and authenticated user affiliation state
   const partyDetails = profileRes?.success ? profileRes.data.data : null;
   const isChapterMember = profileRes?.success ? Boolean(profileRes.data?.is_chapter_member) : false;
   const isFollowing = profileRes?.success ? Boolean(profileRes.data?.is_following) : false;
+
+  // Resolve active chapter tier (e.g. 'national', 'state', 'lga', 'ward')
   const chapterType = profileRes?.success
     ? profileRes.data.chapter_type || profileRes.data.chapter?.chapter_type || partyDetails?.chapter_type
     : undefined;
+
+  // Active chapter membership count: members enrolled specifically in this chapter
   const rawChapterMemberCount = profileRes?.success
     ? profileRes.data?.chapter_member_count ?? partyDetails?.chapter_members
     : undefined;
@@ -64,6 +71,7 @@ function PartyLayoutComponent() {
       ? Number(rawChapterMemberCount).toLocaleString()
       : "0";
 
+  // National membership count: total verified party members nationwide
   const rawTotalMemberCount = profileRes?.success
     ? (profileRes.data?.national_member_count ?? profileRes.data?.total_members ?? partyDetails?.total_members)
     : undefined;
@@ -72,6 +80,7 @@ function PartyLayoutComponent() {
       ? Number(rawTotalMemberCount).toLocaleString()
       : "0";
 
+  // National follower count: total followers of the party's national chapter (formatted as e.g. '850', '1.2k', '2.5M')
   const rawFollowersCount = profileRes?.success
     ? profileRes.data?.national_followers_count
     : undefined;
@@ -84,12 +93,16 @@ function PartyLayoutComponent() {
         ? `${(followersCount / 1_000).toFixed(1).replace(/\.0$/, "")}k`
         : followersCount.toLocaleString();
 
+  // Party branding, colors, preset themes, and hero banner fallback resolution
   const partyUpper = (partyDetails?.short_name || partyName).toUpperCase();
   const preset = PARTY_PRESETS[partyUpper];
 
+  // party name and short name
   const displayName = partyDetails?.name || "Nigerian Party";
   const displayShortName = partyUpper;
 
+  // banner image and focal position
+  const coverPositionY = partyDetails?.cover_position_y ?? preset?.coverPositionY ?? 50;
   const bannerImage =
     partyDetails?.cover_image ||
     partyDetails?.background_image ||
@@ -104,6 +117,7 @@ function PartyLayoutComponent() {
       */}
       <PartyHeaderLayout
         coverImage={bannerImage}
+        coverPositionY={coverPositionY}
         logo={partyDetails?.logo || null}
         shortName={displayShortName}
         fullName={displayName}

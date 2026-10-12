@@ -29,6 +29,7 @@ import {
   assignPartyOfficial,
   type PartyPositionItem,
 } from "#/lib/server/parties";
+import { QUERY_KEYS } from "#/lib/config";
 import type { UserType } from "#/components/tiles/user-tile";
 import { useSelectedTierTitle } from "./party-positions-helpers";
 
@@ -133,11 +134,31 @@ export function AppointOfficialDialog({
         },
       });
 
+      // Show toast message on success
       if (res?.success) {
         toast.success(
           `Appointed as ${appointmentType !== "substantive" ? `${appointmentType} ` : ""}${position.name}`,
         );
-        queryClient.invalidateQueries({ queryKey: ["partyOfficials"] });
+
+        // update cache with officials
+        if (res?.data?.officials) {
+          queryClient.setQueriesData(
+            { queryKey: QUERY_KEYS.partyOfficials.byChapterType(partyId, chapterType) },
+            (old: any) => {
+              if (!old) return old;
+              return {
+                ...old,
+                data: {
+                  ...old.data,
+                  chapter_id: res.data.chapter_id,
+                  officials: res.data.officials,
+                },
+              };
+            },
+          );
+        } else {
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partyOfficials.root });
+        }
         onSuccess?.();
         onClose();
       } else {

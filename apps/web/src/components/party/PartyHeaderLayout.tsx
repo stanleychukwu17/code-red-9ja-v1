@@ -5,6 +5,7 @@ import { VerificationBadge } from "@repo/ui/components/custom/verification-badge
 
 interface PartyHeaderLayoutProps {
   coverImage?: string | null;
+  coverPositionY?: number | null;
   logo?: string | null;
   shortName: string;
   fullName: string;
@@ -66,6 +67,7 @@ function getChapterTypeBadgeConfig(type?: string) {
 
 export function PartyHeaderLayout({
   coverImage,
+  coverPositionY = 50,
   logo,
   shortName,
   fullName,
@@ -129,7 +131,12 @@ export function PartyHeaderLayout({
       {/* 1. HERO COVER SECTION */}
       <div className="w-full h-44 sm:h-56 md:h-64 lg:h-72 relative overflow-hidden bg-muted">
         {coverImage ? (
-          <img src={coverImage} alt={`${shortName} Cover`} className="w-full h-full object-cover object-center" />
+          <img
+            src={coverImage}
+            alt={`${shortName} Cover`}
+            style={{ objectPosition: `center ${coverPositionY ?? 50}%` }}
+            className="w-full h-full object-cover"
+          />
         ) : null}
 
         {/* Small Screen Avatar: Centered in banner */}

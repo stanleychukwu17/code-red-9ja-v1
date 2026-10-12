@@ -4,6 +4,7 @@ import {
   getPartyPositions,
   type PartyPositionItem,
 } from "#/lib/server/parties";
+import { QUERY_KEYS } from "#/lib/config";
 import { useUserParty } from "./useUserParty";
 
 export interface UsePartyPositionsOptions {
@@ -25,7 +26,7 @@ export const usePartyPositions = (options?: UsePartyPositionsOptions) => {
   const fetchPartyPositions = useServerFn(getPartyPositions);
 
   const { data: positionsRes, isLoading, isFetching, error, refetch } = useQuery({
-    queryKey: ["partyPositions", partyId],
+    queryKey: QUERY_KEYS.partyPositions.byParty(partyId),
     queryFn: () => fetchPartyPositions({ data: { partyId: partyId! } }),
     // !! casts partyId to a strict boolean so we only query when partyId is present and enabled by caller
     // if partyId is undefined, then !!partyId becomes false, and query is disabled

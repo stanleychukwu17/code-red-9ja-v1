@@ -18,6 +18,7 @@ import {
   type PartyOfficialItem,
   type PartyPositionItem,
 } from "#/lib/server/parties";
+import { QUERY_KEYS } from "#/lib/config";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -273,8 +274,7 @@ export function PartyPositionsRosterView({
 
   // Fetch appointed officials matching current geographic and chapter filters
   const { data: officialsRes, isLoading: isOfficialsLoading } = useQuery({
-    queryKey: [
-      "partyOfficials",
+    queryKey: QUERY_KEYS.partyOfficials.list(
       partyId,
       chapterType,
       selectedCountryId,
@@ -282,7 +282,7 @@ export function PartyPositionsRosterView({
       selectedStateId,
       selectedLgaId,
       selectedWardId,
-    ],
+    ),
     queryFn: () =>
       getPartyOfficials({
         data: {
@@ -350,7 +350,7 @@ export function PartyPositionsRosterView({
       });
       if (res?.success) {
         toast.success("Office vacated successfully");
-        queryClient.invalidateQueries({ queryKey: ["partyOfficials"] });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partyOfficials.root });
       } else {
         toast.error(res?.message || "Failed to vacate office");
       }

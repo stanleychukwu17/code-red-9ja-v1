@@ -22,6 +22,7 @@ import {
   deletePartyCustomPosition,
   type PartyPositionItem,
 } from "#/lib/server/parties";
+import { QUERY_KEYS } from "#/lib/config";
 import { usePartyPositions } from "#/hooks/usePartyPositions";
 import { ConfirmAlertDialog } from "#/components/alerts/confirm-alert-dialog";
 
@@ -85,7 +86,7 @@ export function PartyPositionsCatalogDialog({ open, onClose }: {
     position: PartyPositionItem,
     mode: "add" | "update" | "delete" = "add",
   ) => {
-    queryClient.setQueryData(["partyPositions", partyId], (oldData: any) => {
+    queryClient.setQueryData(QUERY_KEYS.partyPositions.byParty(partyId), (oldData: any) => {
       // Nothing cached yet, skip manual cache mutation
       if (!oldData) return oldData;
 

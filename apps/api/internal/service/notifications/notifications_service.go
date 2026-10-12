@@ -47,6 +47,7 @@ type NotificationsService interface {
 	NotifyPartyUserBlocked(ctx context.Context, params NotifyPartyUserBlockedParams)
 	NotifyPartyUserUnblocked(ctx context.Context, params NotifyPartyUserUnblockedParams)
 	NotifyNewMemberJoined(ctx context.Context, params NotifyNewMemberJoinedParams)
+	NotifyPartyOfficialAppointed(ctx context.Context, params NotifyPartyOfficialAppointedParams)
 }
 
 type service struct {
@@ -185,6 +186,17 @@ type NotifyNewMemberJoinedParams struct {
 	PartyID   int16
 	UserID    int64
 	ChapterID int32
+}
+
+type NotifyPartyOfficialAppointedParams struct {
+	PartyID         int16
+	ChapterID       int32
+	PositionID      int32
+	PositionName    string
+	TargetUserID    int64
+	ActorID         *int64
+	AppointmentType string
+	AssignmentID    int64
 }
 
 // ----------------------------------------------------------------------------
@@ -645,6 +657,47 @@ func (s *service) NotifyNewMemberJoined(ctx context.Context, params NotifyNewMem
 		Priority:    constants.NotificationPriorityNormal,
 		GroupKey:    &groupKey,
 		Metadata:    utils.NewMetadata(),
+	})
+}
+
+// NotifyPartyOfficialAppointed dispatches notification to the appointed member and chapter leadership.
+func (s *service) NotifyPartyOfficialAppointed(ctx context.Context, params NotifyPartyOfficialAppointedParams) {
+	// Build metadata payload for the appointed member
+	userMeta := utils.NewMetadata().
+		Set("party_id", params.PartyID).
+		Set("chapter_id", params.ChapterID).
+		Set("position_id", params.PositionID).
+		Set("position_name", params.PositionName).
+		Set("appointment_type", params.AppointmentType).
+		Set("assignment_id", params.AssignmentID)
+
+	// Send direct personal notification to the appointed user
+	s.CreateNotificationAsync(ctx, CreateNotificationInput{
+		RecipientUserID: params.TargetUserID,
+		ActorUserID:     params.ActorID,
+		PartyID:         &params.PartyID,
+		Category:        constants.NotificationCategoryParty,
+		Type:            constants.NotificationTypePartyOfficialAppointed,
+		Priority:        constants.NotificationPriorityNormal,
+		Metadata:        userMeta,
+	})
+
+	// Also broadcast party notification to chapter leadership
+	partyMeta := utils.NewMetadata().
+		Set("appointed_user_id", params.TargetUserID).
+		Set("position_id", params.PositionID).
+		Set("position_name", params.PositionName).
+		Set("appointment_type", params.AppointmentType).
+		Set("assignment_id", params.AssignmentID)
+
+	s.CreatePartyNotificationAsync(ctx, CreatePartyNotificationInput{
+		PartyID:     params.PartyID,
+		ActorUserID: params.ActorID,
+		ChapterID:   &params.ChapterID,
+		Category:    constants.PartyNotificationCategoryMembership,
+		Type:        constants.NotificationTypePartyOfficialAppointed,
+		Priority:    constants.NotificationPriorityNormal,
+		Metadata:    partyMeta,
 	})
 }
 

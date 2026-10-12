@@ -5,6 +5,9 @@ export const FRONTEND_APP = "partyadmin";
 export const WEB_DNS = import.meta.env.VITE_WEB_URL;
 const API_BASE = import.meta.env.VITE_API_URL;
 
+// ============================================================================
+// Web URLs
+// ============================================================================
 const web = `${WEB_DNS}`;
 export const WEB_URL = {
   users: {
@@ -16,6 +19,9 @@ export const WEB_URL = {
   },
 };
 
+// ============================================================================
+// App URLs
+// ============================================================================
 export const APP_URL = {
   auth: {
     login: "/auth/login",
@@ -43,6 +49,11 @@ export const APP_URL = {
   },
 } as const;
 
+
+
+// ============================================================================
+// API URLs
+// ============================================================================
 const api = `${API_BASE}/api/v1`;
 export const API_URL = {
   health: `${API_BASE}/health`,
@@ -252,26 +263,69 @@ export const API_URL = {
   userPreferences: `${api}/user_preferences`,
 };
 
+
+// ============================================================================
+// Query keys
+// ============================================================================
+
 export const QUERY_KEYS = {
   auth: {
     session: ["authSession"],
   },
   countries: ["countries"],
+
   partyMembers: {
     root: ["party-members"] as const,
+
     list: (
       partyId?: number | string,
       search?: string,
       filters?: unknown,
     ) => ["party-members", partyId, search, filters] as const,
+
     partyAdmins: (
       partyId?: number | string,
       search?: string,
       filters?: unknown,
     ) => ["party-members", "party-admin", partyId, search, filters] as const,
+
     suspended: (partyId?: number | string) =>
       ["party-members", "suspended", partyId] as const,
+
     blocked: (partyId?: number | string) =>
       ["party-members", "blocked", partyId] as const,
+  },
+
+  partyOfficials: {
+    root: ["partyOfficials"] as const,
+
+    byChapterType: (partyId?: number | string, chapterType?: string) =>
+      ["partyOfficials", partyId, chapterType] as const,
+
+    list: (
+      partyId?: number | string,
+      chapterType?: string,
+      countryId?: number,
+      zonalId?: number,
+      stateId?: number,
+      lgaId?: number,
+      wardId?: number,
+    ) =>
+      [
+        "partyOfficials",
+        partyId,
+        chapterType,
+        countryId,
+        zonalId,
+        stateId,
+        lgaId,
+        wardId,
+      ] as const,
+  },
+
+  partyPositions: {
+    root: ["partyPositions"] as const,
+    byParty: (partyId?: number | string) =>
+      ["partyPositions", partyId] as const,
   },
 };

@@ -64,7 +64,7 @@ const (
 	RedisChapterOfficial            = "parties:chapter:official:"        // STRING: "parties:chapter:official:<chapterID>:<positionID>" is used to store active official for a chapter and position.
 	RedisPartyChapterOfficials      = "parties:chapter_officials:"       // STRING: "parties:chapter_officials:<partyID>:<chapterID>" stores cached JSON array of chapter officials
 	RedisPartyMemberSuspension      = "parties:member_suspension:"       // STRING: "parties:member_suspension:<partyID>:<userID>" stores cached active suspension JSON (id > 0 if suspended, id = 0 if not)
-	RedisPartyMemberPositions       = "parties:member_positions:"        // STRING: "parties:member_positions:<partyID>:<userID>" stores cached JSON array of member position assignments
+	RedisPartyMemberPositions       = "parties:member_positions:"        // STRING: "parties:member_positions:<partyID>:<userID>" stores cached JSON array of member positions assignments
 	RedisPartyMember                = "parties:member:"                  // STRING: "parties:member:<userID>:<partyID>" stores cached party-wide membership booleans
 	RedisPartyChapterMember         = "parties:chapter_member:"          // STRING: "parties:chapter_member:<userID>:<partyID>:<chapterID>" stores cached membership booleans
 	RedisPartyChapterFollower       = "parties:chapter_follower:"        // STRING: "parties:chapter_follower:<userID>:<partyID>:<chapterID>" stores cached following booleans

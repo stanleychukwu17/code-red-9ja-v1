@@ -708,8 +708,8 @@ func (h *Handler) GetPartyProfile(w http.ResponseWriter, r *http.Request) {
 	// Assign validated chapter ID pointer for subsequent profile/membership checks
 	chapterID = &c
 
-	// Fetch basic party info and verification badges
-	party := h.partiesService.GetPartyBasicInfo(r.Context(), int16(partyID))
+	// Fetch full party info (including cover_image, cover_position_y, date_founded, and verifications)
+	party := h.partiesService.GetPartyInfo(r.Context(), int16(partyID))
 	if party == nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Party not found")
 		return
@@ -2975,6 +2975,7 @@ func (h *Handler) AssignPartyOfficial(w http.ResponseWriter, r *http.Request) {
 	tenureStart := pgtype.Date{Time: now, Valid: true}
 	tenureEnd := pgtype.Date{Time: now.AddDate(4, 0, 0), Valid: true}
 
+	// Assign the position to the member in the party
 	assignment, err := h.partiesService.AssignPartyPosition(r.Context(), queries.AssignPartyPositionParams{
 		PartyID:         int16(partyID),
 		ChapterID:       int32(chapID),
@@ -2991,8 +2992,14 @@ func (h *Handler) AssignPartyOfficial(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Fetch updated officials roster for this chapter so the client can update its cache directly
+	officials, _ := h.partiesService.ListPartyOfficials(r.Context(), int16(partyID), chapID)
+
+	// Respond to client with the assignment details and updated officials roster
 	h.utils.RespondSuccess(w, http.StatusCreated, "Position assigned successfully", map[string]interface{}{
 		"assignment": assignment,
+		"chapter_id": chapID,
+		"officials":  officials,
 	})
 }
 

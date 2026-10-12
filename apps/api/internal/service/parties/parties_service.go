@@ -85,6 +85,7 @@ type NotificationsService interface {
 	NotifyPartyUserBlocked(ctx context.Context, params notifications.NotifyPartyUserBlockedParams)
 	NotifyPartyUserUnblocked(ctx context.Context, params notifications.NotifyPartyUserUnblockedParams)
 	NotifyNewMemberJoined(ctx context.Context, params notifications.NotifyNewMemberJoinedParams)
+	NotifyPartyOfficialAppointed(ctx context.Context, params notifications.NotifyPartyOfficialAppointedParams)
 }
 
 // NewPartiesService creates a new PartiesService.
@@ -2181,10 +2182,12 @@ func (s *PartiesService) AssignPartyPosition(ctx context.Context, arg queries.As
 		return queries.PartyPositionAssignment{}, fmt.Errorf("position not found: %w", err)
 	}
 
+	// Ensure the position is active
 	if !pos.IsActive {
 		return queries.PartyPositionAssignment{}, fmt.Errorf("cannot assign member: position '%s' is inactive", pos.Name)
 	}
 
+	// Verify position occupancy limit for this chapter
 	if pos.MaxOccupants > 0 {
 		count, err := s.queries.CountActivePositionOccupants(ctx, queries.CountActivePositionOccupantsParams{
 			ChapterID:  arg.ChapterID,
@@ -2198,10 +2201,53 @@ func (s *PartiesService) AssignPartyPosition(ctx context.Context, arg queries.As
 		}
 	}
 
+	// Create position assignment in database
 	assignment, err := s.queries.AssignPartyPosition(ctx, arg)
 	if err == nil {
+		// Invalidate member position assignments and chapter officials cache
 		s.InvalidateMemberPositionAssignmentsCache(ctx, arg.PartyID, arg.UserID)
 		s.InvalidatePartyOfficialsCache(ctx, arg.PartyID, arg.ChapterID)
+
+		// Record lightweight milestone in party member milestones timeline
+		milestoneMeta, _ := json.Marshal(map[string]any{
+			"assignment_id":    assignment.ID,
+			"position_id":      arg.PositionID,
+			"position_name":    pos.Name,
+			"appointment_type": arg.AppointmentType,
+		})
+		_ = s.queries.AddPartyMemberMilestone(ctx, queries.AddPartyMemberMilestoneParams{
+			UserID:        arg.UserID,
+			PartyID:       arg.PartyID,
+			ChapterID:     pgtype.Int4{Int32: arg.ChapterID, Valid: true},
+			MilestoneType: constants.MilestoneTypeReceivedPosition,
+			Metadata:      milestoneMeta,
+		})
+
+		// Log audit action for the administrator
+		assignmentJSON, _ := json.Marshal(assignment)
+		_, actorRole := audit.ActorInfoFromContext(ctx)
+		s.auditService.LogActionAsync(ctx, queries.InsertAuditLogParams{
+			Module:     audit.StringToText(db.ModulePartyAdmin),
+			Action:     db.ActionAssignPartyPosition,
+			ActorID:    arg.AppointedBy.Int64,
+			ActorRole:  audit.StringToText(actorRole),
+			EntityType: db.EntityTypeUser,
+			EntityID:   strconv.FormatInt(arg.UserID, 10),
+			NewValues:  assignmentJSON,
+		})
+
+		// Dispatch notification to receiver and party leadership asynchronously
+		appointedByPointer := &arg.AppointedBy.Int64
+		s.notificationsService.NotifyPartyOfficialAppointed(ctx, notifications.NotifyPartyOfficialAppointedParams{
+			PartyID:         arg.PartyID,
+			ChapterID:       arg.ChapterID,
+			PositionID:      arg.PositionID,
+			PositionName:    pos.Name,
+			TargetUserID:    arg.UserID,
+			ActorID:         appointedByPointer,
+			AppointmentType: arg.AppointmentType,
+			AssignmentID:    assignment.ID,
+		})
 	}
 	return assignment, err
 }
