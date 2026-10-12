@@ -59,7 +59,6 @@ type PartiesService interface {
 	UpdateAgentPaymentAllocationKobo(ctx context.Context, partyID int16, allowancesJSON []byte) (queries.Party, error)
 	GetAgentPaymentAllocationKobo(ctx context.Context, partyID int16) (json.RawMessage, error)
 	// Marketing methods
-	GetMarketingPlansByType(ctx context.Context, campaignType string) ([]queries.Plan, error)
 	CreatePartyMarketingCampaign(ctx context.Context, arg queries.CreatePartyMarketingCampaignParams) (queries.PartyMarketingCampaign, error)
 	GetPartyMarketingCampaigns(ctx context.Context, partyID int16) ([]queries.GetPartyMarketingCampaignsRow, error)
 	ListAllPartyMarketingCampaigns(ctx context.Context, arg queries.ListAllPartyMarketingCampaignsParams) ([]queries.ListAllPartyMarketingCampaignsRow, error)
@@ -90,7 +89,6 @@ type PartiesService interface {
 	GetOrCreateStateChapter(ctx context.Context, partyID, stateID int16, createIfMissing ...bool) (int32, error)
 	GetOrCreateZonalChapter(ctx context.Context, partyID, zonalID int16, createIfMissing ...bool) (int32, error)
 	GetOrCreateNationalChapter(ctx context.Context, partyID, countryID int16, createIfMissing ...bool) (int32, error)
-	ListChapterOfficials(ctx context.Context, partyID int16, chapterID int32, status *string) ([]queries.ListChapterOfficialsRow, error)
 	ListPartyOfficials(ctx context.Context, partyID int16, chapterID int32) ([]queries.ListPartyOfficialsRow, error)
 	ListMemberPositionAssignments(ctx context.Context, partyID int16, userID int64) ([]queries.ListMemberPositionAssignmentsRow, error)
 	SuspendPartyMember(ctx context.Context, input partiesservice.SuspendPartyMemberInput) (*queries.PartyMemberSuspension, error)
@@ -1682,32 +1680,6 @@ type CreateMarketingCampaignRequest struct {
 	Budget       float64 `json:"budget"`
 }
 
-// GetMarketingPlansByType godoc
-// @Summary      Get plans by type
-// @Description  Returns all active marketing plans of the specified type (e.g. agent-campaign)
-// @Tags         Marketing
-// @Produce      json
-// @Param        type query string false "Campaign type" default(agent-campaign)
-// @Success      200  {object} map[string]interface{} "Marketing plans retrieved successfully"
-// @Security     BearerAuth
-// @Router       /agent-marketing-plans [get]
-func (h *Handler) GetMarketingPlansByType(w http.ResponseWriter, r *http.Request) {
-	campaignTypeStr := r.URL.Query().Get("type")
-	if campaignTypeStr == "" {
-		campaignTypeStr = "agent-campaign"
-	}
-
-	plans, err := h.partiesService.GetMarketingPlansByType(r.Context(), campaignTypeStr)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to Get plans: "+err.Error())
-		return
-	}
-
-	h.utils.RespondSuccess(w, http.StatusOK, "Marketing plans retrieved successfully", map[string]interface{}{
-		"plans": plans,
-	})
-}
-
 // CreatePartyMarketingCampaign godoc
 // @Summary      Create a marketing campaign for a party
 // @Description  Creates a new agent marketing campaign for the specified party, deducting the budget from their wallet
@@ -2851,38 +2823,6 @@ func (h *Handler) ListPartyAdmins(w http.ResponseWriter, r *http.Request) {
 	// 4. Return response with JSON array (even if empty), not "null"
 	h.utils.RespondSuccess(w, http.StatusOK, "Party admins retrieved successfully", map[string]interface{}{
 		"admins": admins,
-	})
-}
-
-// ListChapterOfficials lists all position assignments for a given chapter
-func (h *Handler) ListChapterOfficials(w http.ResponseWriter, r *http.Request) {
-	idStr := chi.URLParam(r, "id")
-	partyID, err := strconv.ParseInt(idStr, 10, 16)
-	if err != nil || partyID <= 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID")
-		return
-	}
-
-	chapIDStr := chi.URLParam(r, "chapter_id")
-	chapID, err := strconv.ParseInt(chapIDStr, 10, 32)
-	if err != nil || chapID <= 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid chapter ID")
-		return
-	}
-
-	var status *string
-	if st := r.URL.Query().Get("status"); st != "" {
-		status = &st
-	}
-
-	officials, err := h.partiesService.ListChapterOfficials(r.Context(), int16(partyID), int32(chapID), status)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to list chapter officials: "+err.Error())
-		return
-	}
-
-	h.utils.RespondSuccess(w, http.StatusOK, "Chapter officials retrieved successfully", map[string]interface{}{
-		"officials": officials,
 	})
 }
 

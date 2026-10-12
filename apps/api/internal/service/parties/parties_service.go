@@ -76,10 +76,6 @@ type PageVerificationsService interface {
 
 // NotificationsService defines methods required for dispatching notifications
 type NotificationsService interface {
-	CreatePartyNotification(ctx context.Context, params notifications.CreatePartyNotificationInput) (*notifications.PartyNotificationItemResponse, error)
-	CreatePartyNotificationAsync(ctx context.Context, params notifications.CreatePartyNotificationInput)
-	CreateNotification(ctx context.Context, params notifications.CreateNotificationInput) (*notifications.NotificationItemResponse, error)
-	CreateNotificationAsync(ctx context.Context, params notifications.CreateNotificationInput)
 	NotifyPartyMemberSuspended(ctx context.Context, params notifications.NotifyPartyMemberSuspendedParams)
 	NotifyPartyMemberReinstated(ctx context.Context, params notifications.NotifyPartyMemberReinstatedParams)
 	NotifyPartyUserBlocked(ctx context.Context, params notifications.NotifyPartyUserBlockedParams)
@@ -309,25 +305,6 @@ func (s *PartiesService) GetPartyInfo(ctx context.Context, partyID int16) *queri
 		return &party
 	}
 	return nil
-}
-
-// GetPartyByShortName returns a party matching the given short name from the cached parties list.
-func (s *PartiesService) GetPartyByShortName(ctx context.Context, shortName string) (*queries.PartyWithVerifications, error) {
-	// Retrieve all parties (cached)
-	parties, err := s.ListParties(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	// Match short name case-insensitively
-	for _, p := range parties {
-		if strings.EqualFold(p.ShortName, shortName) {
-			partyCopy := p
-			return &partyCopy, nil
-		}
-	}
-
-	return nil, pgx.ErrNoRows
 }
 
 // ListParties returns all parties ordered by ID ascending.
@@ -1773,11 +1750,6 @@ func (s *PartiesService) JoinParty(ctx context.Context, params JoinPartyParams) 
 	return s.followsService.FollowParty(ctx, params.UserID, params.PartyID, finalChapterID)
 }
 
-// GetMarketingPlansByType returns marketing plans of a specific type
-func (s *PartiesService) GetMarketingPlansByType(ctx context.Context, campaignType string) ([]queries.Plan, error) {
-	return s.queries.GetMarketingPlansByType(ctx, campaignType)
-}
-
 // CreatePartyMarketingCampaign creates a marketing campaign and deducts the budget from the party wallet
 func (s *PartiesService) CreatePartyMarketingCampaign(ctx context.Context, arg queries.CreatePartyMarketingCampaignParams) (queries.PartyMarketingCampaign, error) {
 	tx, err := s.pool.Begin(ctx)
@@ -1883,11 +1855,6 @@ func (s *PartiesService) UpdateMarketingCampaignStatus(ctx context.Context, id i
 // DeletePartyMarketingCampaign deletes a marketing campaign by ID (admin only).
 func (s *PartiesService) DeletePartyMarketingCampaign(ctx context.Context, id int32) error {
 	return s.queries.DeletePartyMarketingCampaign(ctx, id)
-}
-
-// ProcessDailyMarketingCampaignDeductions deducts daily marketing campaign budgets and marks expired campaigns as completed.
-func (s *PartiesService) ProcessDailyMarketingCampaignDeductions(ctx context.Context) ([]queries.PartyMarketingCampaign, error) {
-	return s.queries.ProcessDailyMarketingCampaignDeductions(ctx)
 }
 
 // CreatePlan creates a new marketing plan (admin only).
@@ -2324,18 +2291,6 @@ func (s *PartiesService) VacatePositionAssignment(ctx context.Context, id int64,
 	})
 
 	return assignment, nil
-}
-
-// ListChapterOfficials lists all position assignments for a given chapter.
-func (s *PartiesService) ListChapterOfficials(ctx context.Context, partyID int16, chapterID int32, status *string) ([]queries.ListChapterOfficialsRow, error) {
-	arg := queries.ListChapterOfficialsParams{
-		PartyID:   partyID,
-		ChapterID: chapterID,
-	}
-	if status != nil && *status != "" {
-		arg.Status = pgtype.Text{String: *status, Valid: true}
-	}
-	return s.queries.ListChapterOfficials(ctx, arg)
 }
 
 // ListPartyOfficials lists position assignments for a given chapter directly by chapter_id using idx_pos_assign_chapter.

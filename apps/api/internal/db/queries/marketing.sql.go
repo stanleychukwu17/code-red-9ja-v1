@@ -196,47 +196,6 @@ func (q *Queries) GetActiveMarketingCampaignForElectionGroup(ctx context.Context
 	return i, err
 }
 
-const getMarketingPlansByType = `-- name: GetMarketingPlansByType :many
-SELECT id, name, description, price_kobo, type, features, scopes_recommendation, color_hex, dark_color_hex, referral_amount_kobo, is_active, display_order, created_at, updated_at FROM plans
-WHERE is_active = true AND type = $1
-ORDER BY display_order ASC, price_kobo ASC
-`
-
-func (q *Queries) GetMarketingPlansByType(ctx context.Context, type_ string) ([]Plan, error) {
-	rows, err := q.db.Query(ctx, getMarketingPlansByType, type_)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Plan
-	for rows.Next() {
-		var i Plan
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.Description,
-			&i.PriceKobo,
-			&i.Type,
-			&i.Features,
-			&i.ScopesRecommendation,
-			&i.ColorHex,
-			&i.DarkColorHex,
-			&i.ReferralAmountKobo,
-			&i.IsActive,
-			&i.DisplayOrder,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getPartyMarketingCampaigns = `-- name: GetPartyMarketingCampaigns :many
 SELECT 
     pmc.id, pmc.party_id, pmc.election_group_id, pmc.election_id, pmc.plan_id, pmc.type, pmc.states, pmc.duration_in_days, pmc.start_date, pmc.end_date, pmc.status, pmc.budget_per_day_kobo, pmc.budget_kobo, pmc.referral_amount_kobo, pmc.amount_spent_kobo, pmc.last_deducted_date, pmc.created_at, pmc.updated_at, 

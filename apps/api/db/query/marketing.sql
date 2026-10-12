@@ -6,11 +6,6 @@ WHERE ($1::text = '' OR type::text = $1::text)
   AND ($2::text = '' OR is_active = ($2::text = 'true'))
 ORDER BY display_order ASC, price_kobo ASC;
 
--- name: GetMarketingPlansByType :many
-SELECT * FROM plans
-WHERE is_active = true AND type = $1
-ORDER BY display_order ASC, price_kobo ASC;
-
 -- name: UpdatePlanDisplayOrder :one
 UPDATE plans
 SET display_order = $2,

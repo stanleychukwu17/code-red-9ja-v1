@@ -324,7 +324,6 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	mainRouter.Get("/api/v1/parties/{id}/wallet", partiesHandler.GetPartyWallet)
 	mainRouter.Get("/api/v1/parties/{id}/positions", partiesHandler.ListPartyPositions)
 	mainRouter.Get("/api/v1/parties/{id}/officials", partiesHandler.ListPartyOfficials)
-	mainRouter.Get("/api/v1/parties/{id}/chapters/{chapter_id}/officials", partiesHandler.ListChapterOfficials)
 	mainRouter.Get("/api/v1/parties/{id}/members/{user_id}/positions", partiesHandler.ListMemberPositions)
 
 	// marketing plans (public — anyone can browse available plans)
