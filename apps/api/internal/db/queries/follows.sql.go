@@ -45,6 +45,23 @@ func (q *Queries) FollowUser(ctx context.Context, arg FollowUserParams) error {
 	return err
 }
 
+const getPartyFollowersCount = `-- name: GetPartyFollowersCount :one
+SELECT COUNT(*) FROM party_follows
+WHERE party_id = $1 AND chapter_id = $2
+`
+
+type GetPartyFollowersCountParams struct {
+	PartyID   int16 `json:"party_id"`
+	ChapterID int32 `json:"chapter_id"`
+}
+
+func (q *Queries) GetPartyFollowersCount(ctx context.Context, arg GetPartyFollowersCountParams) (int64, error) {
+	row := q.db.QueryRow(ctx, getPartyFollowersCount, arg.PartyID, arg.ChapterID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const isFollowingParty = `-- name: IsFollowingParty :one
 SELECT EXISTS (
     SELECT 1 FROM party_follows

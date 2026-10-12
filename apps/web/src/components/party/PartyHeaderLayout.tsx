@@ -76,8 +76,8 @@ export function PartyHeaderLayout({
   chapterType,
   isChapterMemberInitial = false,
   isFollowingInitial = false,
-  followersDisplay = "100k",
-  followersValue = 100,
+  followersDisplay = "0",
+  followersValue = 0,
   totalMembers = "000",
   chapterMembers = "000",
   onChapterMemberToggle,
@@ -89,6 +89,16 @@ export function PartyHeaderLayout({
   const [isFollowing, setIsFollowing] = useState(isFollowingInitial);
   const resolvedChapterType = chapterType || chapterLevel;
   const chapterBadge = getChapterTypeBadgeConfig(resolvedChapterType);
+
+  // Logarithmic progress for followers ring gauge (0% at 0 followers, 100% at 100,000+ followers)
+  const followersPercentage =
+    followersValue <= 0
+      ? 0
+      : Math.min(100, (Math.log10(followersValue + 1) / Math.log10(100_000)) * 100);
+  const followersStrokeOffset =
+    followersValue <= 0
+      ? 282.7
+      : Math.max(0, 282.7 - (282.7 * followersPercentage) / 100);
 
   // Synchronize chapter membership state when initial prop changes (e.g. async fetch completes)
   useEffect(() => {
@@ -277,22 +287,22 @@ export function PartyHeaderLayout({
                       fill="transparent"
                       strokeWidth="2"
                       strokeDasharray={282.7}
-                      strokeDashoffset={Math.max(0, 282.7 - (282.7 * (followersValue % 100 || 75)) / 100)}
+                      strokeDashoffset={followersStrokeOffset}
                       strokeLinecap="round"
-                      className="stroke-lime-500"
+                      className="stroke-lime-500 transition-all duration-500 ease-out"
                     />
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
                     <div className="flex items-baseline">
                       <span className="text-2xl md:text-4xl lg:text-5xl xl:text-6xl font-extralight tracking-tight text-foreground">
-                        {followersDisplay.replace(/[^0-9.]/g, "") || "100"}
+                        {followersDisplay.replace(/[^0-9.]/g, "") || "0"}
                       </span>
                       <span className="text-base font-medium text-foreground ml-0.5">
-                        {followersDisplay.replace(/[0-9.]/g, "") || "k"}
+                        {followersDisplay.replace(/[0-9.]/g, "")}
                       </span>
                     </div>
                     <span className="text-[10px] font-medium text-muted-foreground -mt-2.5">
-                      Followers
+                      National followers
                     </span>
                   </div>
                 </div>
@@ -306,7 +316,7 @@ export function PartyHeaderLayout({
                     {totalMembers}
                   </div>
                   <div className="text-[10px] sm:text-[11px] lg:text-xs font-semibold text-muted-foreground">
-                    total members
+                    national members
                   </div>
                 </div>
 

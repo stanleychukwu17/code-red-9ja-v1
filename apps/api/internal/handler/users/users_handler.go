@@ -456,6 +456,8 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch your details: "+err.Error())
 			return
 		}
+
+		// the admin user must have a party
 		if currentUser.PartyID.Valid {
 			partyID = int64(currentUser.PartyID.Int16)
 		} else {

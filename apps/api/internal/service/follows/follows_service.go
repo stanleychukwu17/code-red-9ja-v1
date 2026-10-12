@@ -2,7 +2,9 @@ package followsservice
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"log/slog"
 	"strconv"
 
 	"free9ja/api/internal/constants"
@@ -97,6 +99,9 @@ func (s *FollowsService) FollowParty(ctx context.Context, userID int64, partyID 
 	_ = s.rdb.Set(ctx, cacheKey, true, db.RedisFourteenDaysTTL).Err()
 
 	if rowsAffected > 0 {
+		// invalidate followers cache
+		s.InvalidatePartyFollowersCountCache(ctx, partyID, chapterID)
+
 		groupKey := constants.DailyGroupKey(fmt.Sprintf("new_followers:%d:%d", partyID, chapterID))
 		s.notificationsService.CreatePartyNotificationAsync(ctx, notifications.CreatePartyNotificationInput{
 			PartyID:     partyID,
@@ -129,6 +134,9 @@ func (s *FollowsService) UnfollowParty(ctx context.Context, userID int64, partyI
 	cacheKey := fmt.Sprintf("%s%d:%d:%d", db.RedisPartyChapterFollower, userID, partyID, chapterID)
 	_ = s.rdb.Set(ctx, cacheKey, false, db.RedisFourteenDaysTTL).Err()
 
+	// invalidate followers cache
+	s.InvalidatePartyFollowersCountCache(ctx, partyID, chapterID)
+
 	return nil
 }
 
@@ -160,8 +168,46 @@ func (s *FollowsService) IsFollowingParty(ctx context.Context, userID int64, par
 	return isFollowing, nil
 }
 
+// GetPartyFollowersCount retrieves the total number of followers for a party chapter.
+// It checks Redis first and falls back to the database if not found.
+func (s *FollowsService) GetPartyFollowersCount(ctx context.Context, partyID int16, chapterID int32) (int64, error) {
+	// Early return for invalid IDs
+	if partyID <= 0 || chapterID <= 0 {
+		return 0, nil
+	}
+
+	// Check Redis cache first
+	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisPartyChapterFollowersCount, partyID, chapterID)
+	if cachedStr, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
+		if count, parseErr := strconv.ParseInt(cachedStr, 10, 64); parseErr == nil {
+			return count, nil
+		}
+	} else if !errors.Is(err, redis.Nil) {
+		slog.Error("Failed to fetch party chapter followers count from redis", "error", err, "partyID", partyID, "chapterID", chapterID)
+	}
+
+	// Fallback to database query on cache miss
+	count, err := s.queries.GetPartyFollowersCount(ctx, queries.GetPartyFollowersCountParams{
+		PartyID:   partyID,
+		ChapterID: chapterID,
+	})
+	if err != nil {
+		return 0, fmt.Errorf("failed to get party chapter followers count from db: %w", err)
+	}
+
+	// Update Redis cache with 14-day TTL
+	_ = s.rdb.Set(ctx, cacheKey, count, db.RedisFourteenDaysTTL).Err()
+	return count, nil
+}
+
 // InvalidatePartyFollowCache removes the cached follow boolean from Redis.
 func (s *FollowsService) InvalidatePartyFollowCache(ctx context.Context, userID int64, partyID int16, chapterID int32) {
 	cacheKey := fmt.Sprintf("%s%d:%d:%d", db.RedisPartyChapterFollower, userID, partyID, chapterID)
+	_ = s.rdb.Del(ctx, cacheKey).Err()
+}
+
+// InvalidatePartyFollowersCountCache removes the cached followers count for a party chapter from Redis.
+func (s *FollowsService) InvalidatePartyFollowersCountCache(ctx context.Context, partyID int16, chapterID int32) {
+	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisPartyChapterFollowersCount, partyID, chapterID)
 	_ = s.rdb.Del(ctx, cacheKey).Err()
 }

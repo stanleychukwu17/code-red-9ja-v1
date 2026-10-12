@@ -143,6 +143,7 @@ export const getPartyProfile = createServerFn()
 					national_member_count?: number;
 					total_members?: number;
 					chapter_member_count?: number;
+					national_followers_count?: number;
 					is_chapter_member: boolean;
 					is_following: boolean;
 				};

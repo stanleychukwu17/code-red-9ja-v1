@@ -1334,8 +1334,17 @@ func (s *AuthService) RegisterCandidatePlaceholder(
 		}
 	}
 
+	// If user does not have an avatar, assign a temporary avatar URL using their first and last name
+	avatar = strings.TrimSpace(avatar)
+	if avatar == "" && (avatarFileId == nil || *avatarFileId <= 0) {
+		avatar = GenerateTempAvatarURL(firstName, lastName)
+	}
+
 	// re-assert the avatar_file_id to pgtype
-	avatarFileIdPg := utils.PgInt8FromPtr(avatarFileId)
+	var avatarFileIdPg pgtype.Int8
+	if avatarFileId != nil && *avatarFileId > 0 {
+		avatarFileIdPg = utils.PgInt8FromPtr(avatarFileId)
+	}
 
 	params := queries.CreateCandidatePlaceholderParams{
 		Email:          utils.PgTextFromString(email),

@@ -85,6 +85,7 @@ type PartiesService interface {
 	GetPartyChapterByID(ctx context.Context, chapterID int32) (queries.PartyChapter, error)
 	GetChapterMemberCount(ctx context.Context, partyID int16, chapterID int32) (int64, error)
 	IsPartyChapterMember(ctx context.Context, userID int64, partyID int16, chapterID int32) (bool, error)
+	IsPartyMember(ctx context.Context, userID int64, partyID int16) (bool, error)
 	GetOrCreateWardChapter(ctx context.Context, partyID int16, wardID int32, createIfMissing ...bool) (int32, error)
 	GetOrCreateLGAChapter(ctx context.Context, partyID int16, lgaID int32, createIfMissing ...bool) (int32, error)
 	GetOrCreateStateChapter(ctx context.Context, partyID, stateID int16, createIfMissing ...bool) (int32, error)
@@ -114,6 +115,7 @@ type BodiesService interface {
 
 type FollowsService interface {
 	IsFollowingParty(ctx context.Context, userID int64, partyID int16, chapterID int32) (bool, error)
+	GetPartyFollowersCount(ctx context.Context, partyID int16, chapterID int32) (int64, error)
 }
 
 type Handler struct {
@@ -755,16 +757,23 @@ func (h *Handler) GetPartyProfile(w http.ResponseWriter, r *http.Request) {
 		nationalMemberCount, _ = h.partiesService.GetChapterMemberCount(r.Context(), int16(partyID), nationalChapterID)
 	}
 
+	// Fetch total followers of the national chapter (total party followers)
+	var nationalFollowersCount int64
+	if nationalChapterID > 0 {
+		nationalFollowersCount, _ = h.followsService.GetPartyFollowersCount(r.Context(), int16(partyID), nationalChapterID)
+	}
+
 	responseData := map[string]interface{}{
-		"data":                  party,
-		"chapter":               chapter,
-		"chapter_type":          chapter.ChapterType,
-		"national_chapter_id":   nationalChapterID,
-		"national_member_count": nationalMemberCount,
-		"total_members":         nationalMemberCount,
-		"chapter_member_count":  chapterMemberCount,
-		"is_chapter_member":     isChapterMember,
-		"is_following":          isFollowing,
+		"data":                     party,
+		"chapter":                  chapter,
+		"chapter_type":             chapter.ChapterType,
+		"national_chapter_id":      nationalChapterID,
+		"national_member_count":    nationalMemberCount,
+		"total_members":            nationalMemberCount,
+		"chapter_member_count":     chapterMemberCount,
+		"national_followers_count": nationalFollowersCount,
+		"is_chapter_member":        isChapterMember,
+		"is_following":             isFollowing,
 	}
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Party profile retrieved successfully", responseData)
@@ -2865,13 +2874,11 @@ type AssignPartyOfficialRequest struct {
 	AppointmentType string `json:"appointment_type"` // substantive, acting, caretaker, interim
 	ChapterType     string `json:"chapter_type"`     // national, zonal, state, lga, ward
 	TierID          int64  `json:"tier_id"`
-	ChapterID       int32  `json:"chapter_id"`
-	TenureStart     string `json:"tenure_start"`
-	TenureEnd       string `json:"tenure_end"`
 }
 
 // AssignPartyOfficial assigns a member to a position within a chapter
 func (h *Handler) AssignPartyOfficial(w http.ResponseWriter, r *http.Request) {
+	// Extract and validate party ID from URL parameter
 	idStr := chi.URLParam(r, "id")
 	partyID, err := strconv.ParseInt(idStr, 10, 16)
 	if err != nil || partyID <= 0 {
@@ -2879,80 +2886,82 @@ func (h *Handler) AssignPartyOfficial(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Capture administrator performing the appointment from JWT claims
+	claims := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
+	appointedBy := pgtype.Int8{Int64: claims.UserID, Valid: true}
+
+	// Verify caller has permissions to modify this party
+	allowed, _, err := h.permissionsService.CheckPartyModificationPermission(claims, int16(partyID))
+	if !allowed {
+		h.utils.RespondError(w, http.StatusForbidden, err.Error())
+		return
+	}
+
+	// Decode appointment request payload
 	var req AssignPartyOfficialRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
 		return
 	}
 
+	// Ensure target member user_id and position_id are provided
 	if req.UserID <= 0 || req.PositionID <= 0 {
 		h.utils.RespondError(w, http.StatusBadRequest, "user_id and position_id are required")
 		return
 	}
 
-	// Resolve chapter ID from URL parameter, request body chapter_id, or resolve dynamically via chapter type
+	// Verify target user is an active member of this party
+	ctx := r.Context()
+	isMember, err := h.partiesService.IsPartyMember(ctx, req.UserID, int16(partyID))
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to verify membership: "+err.Error())
+		return
+	}
+	if !isMember {
+		h.utils.RespondError(w, http.StatusBadRequest, "User is not an active member of this party")
+		return
+	}
+
+	// Resolve chapter dynamically using chapter_type and tier_id
+	// tier_id could be the national_id, the zonal_id, the state_id, the lga_id, or the ward_id
 	var chapID int32
-	if chapIDStr := chi.URLParam(r, "chapter_id"); chapIDStr != "" {
-		if cid, err := strconv.ParseInt(chapIDStr, 10, 32); err == nil && cid > 0 {
-			chapID = int32(cid)
-		}
-	}
-	if chapID <= 0 && req.ChapterID > 0 {
-		chapID = req.ChapterID
+	chapterType := strings.ToLower(strings.TrimSpace(req.ChapterType))
+
+	if chapterType != "national" && req.TierID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "tier_id is required")
+		return
 	}
 
-	if chapID <= 0 {
-		// Resolve chapter dynamically using chapter_type and tier_id
-		chapterType := strings.ToLower(strings.TrimSpace(req.ChapterType))
-
-		ctx := r.Context()
-		switch chapterType {
-		case "national":
-			countryID := constants.NigeriaCountryID
-			if req.TierID > 0 {
-				countryID = int16(req.TierID)
-			}
-			chapID, err = h.partiesService.GetOrCreateNationalChapter(ctx, int16(partyID), countryID, true)
-		case "zonal":
-			if req.TierID <= 0 {
-				h.utils.RespondError(w, http.StatusBadRequest, "tier_id is required for zonal chapter")
-				return
-			}
-			chapID, err = h.partiesService.GetOrCreateZonalChapter(ctx, int16(partyID), int16(req.TierID), true)
-		case "state":
-			if req.TierID <= 0 {
-				h.utils.RespondError(w, http.StatusBadRequest, "tier_id is required for state chapter")
-				return
-			}
-			chapID, err = h.partiesService.GetOrCreateStateChapter(ctx, int16(partyID), int16(req.TierID), true)
-		case "lga":
-			if req.TierID <= 0 {
-				h.utils.RespondError(w, http.StatusBadRequest, "tier_id is required for LGA chapter")
-				return
-			}
-			chapID, err = h.partiesService.GetOrCreateLGAChapter(ctx, int16(partyID), int32(req.TierID), true)
-		case "ward":
-			if req.TierID <= 0 {
-				h.utils.RespondError(w, http.StatusBadRequest, "tier_id is required for ward chapter")
-				return
-			}
-			chapID, err = h.partiesService.GetOrCreateWardChapter(ctx, int16(partyID), int32(req.TierID), true)
-		default:
-			h.utils.RespondError(w, http.StatusBadRequest, "Valid chapter_id or chapter_type with tier_id is required")
-			return
-		}
-
-		if err != nil {
-			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to resolve chapter: "+err.Error())
-			return
-		}
+	switch chapterType {
+	case "national":
+		countryID := constants.NigeriaCountryID
+		// we allow only Nigeria for now
+		// if req.TierID > 0 { countryID = int16(req.TierID) }
+		chapID, err = h.partiesService.GetOrCreateNationalChapter(ctx, int16(partyID), countryID, true)
+	case "zonal":
+		chapID, err = h.partiesService.GetOrCreateZonalChapter(ctx, int16(partyID), int16(req.TierID), true)
+	case "state":
+		chapID, err = h.partiesService.GetOrCreateStateChapter(ctx, int16(partyID), int16(req.TierID), true)
+	case "lga":
+		chapID, err = h.partiesService.GetOrCreateLGAChapter(ctx, int16(partyID), int32(req.TierID), true)
+	case "ward":
+		chapID, err = h.partiesService.GetOrCreateWardChapter(ctx, int16(partyID), int32(req.TierID), true)
+	default:
+		h.utils.RespondError(w, http.StatusBadRequest, "Valid chapter_type with tier_id is required")
+		return
 	}
 
+	// Verify chapter resolution was successful
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to resolve chapter: "+err.Error())
+		return
+	}
 	if chapID <= 0 {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid chapter ID")
 		return
 	}
 
+	// Normalize and validate appointment type (defaults to 'substantive')
 	appointmentType := strings.ToLower(strings.TrimSpace(req.AppointmentType))
 	switch appointmentType {
 	case "substantive", "acting", "caretaker", "interim":
@@ -2961,24 +2970,10 @@ func (h *Handler) AssignPartyOfficial(w http.ResponseWriter, r *http.Request) {
 		appointmentType = "substantive"
 	}
 
-	tenureStart := pgtype.Date{Time: time.Now(), Valid: true}
-	if req.TenureStart != "" {
-		if t, err := time.Parse("2006-01-02", req.TenureStart); err == nil {
-			tenureStart = pgtype.Date{Time: t, Valid: true}
-		}
-	}
-
-	var tenureEnd pgtype.Date
-	if req.TenureEnd != "" {
-		if t, err := time.Parse("2006-01-02", req.TenureEnd); err == nil {
-			tenureEnd = pgtype.Date{Time: t, Valid: true}
-		}
-	}
-
-	var appointedBy pgtype.Int8
-	if claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims); ok && claims != nil {
-		appointedBy = pgtype.Int8{Int64: claims.UserID, Valid: true}
-	}
+	// Initialize tenure period: starts today with a standard 4-year term
+	now := time.Now()
+	tenureStart := pgtype.Date{Time: now, Valid: true}
+	tenureEnd := pgtype.Date{Time: now.AddDate(4, 0, 0), Valid: true}
 
 	assignment, err := h.partiesService.AssignPartyPosition(r.Context(), queries.AssignPartyPositionParams{
 		PartyID:         int16(partyID),

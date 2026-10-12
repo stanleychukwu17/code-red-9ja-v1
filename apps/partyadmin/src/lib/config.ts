@@ -120,10 +120,8 @@ export const API_URL = {
     const qs = status ? `?status=${encodeURIComponent(status)}` : "";
     return `${api}/parties/${id}/chapters/${chapterId}/officials${qs}`;
   },
-  assignOfficial: (id: string | number, chapterId?: string | number) =>
-    chapterId && Number(chapterId) > 0
-      ? `${api}/parties/${id}/chapters/${chapterId}/officials`
-      : `${api}/parties/${id}/officials`,
+  assignOfficial: (id: string | number) =>
+    `${api}/parties/${id}/officials`,
   vacateOfficial: (id: string | number, assignmentId: string | number) =>
     `${api}/parties/${id}/officials/${assignmentId}/vacate`,
   updateOfficialAssignment: (

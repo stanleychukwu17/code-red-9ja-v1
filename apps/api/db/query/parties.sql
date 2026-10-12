@@ -202,6 +202,12 @@ SELECT EXISTS (
     WHERE user_id = $1 AND party_id = $2 AND chapter_id = $3
 );
 
+-- name: IsPartyMember :one
+SELECT EXISTS (
+    SELECT 1 FROM party_membership
+    WHERE user_id = $1 AND party_id = $2 AND status = 'active'
+);
+
 -- name: ResetPartyLogo :exec
 UPDATE parties
 SET logo = '', logo_file_id = NULL, updated_at = NOW()

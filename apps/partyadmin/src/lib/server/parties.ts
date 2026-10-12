@@ -578,20 +578,17 @@ export const assignPartyOfficial = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
       partyId: number | string;
-      chapterId?: number | string;
       chapterType?: string;
       tierId?: number;
       userId: number;
       positionId: number;
       appointmentType: string;
-      tenureStart?: string;
-      tenureEnd?: string;
     }) => data,
   )
   .handler(async ({ data }) => {
     try {
       const response = await apiFetch(
-        API_URL.assignOfficial(data.partyId, data.chapterId),
+        API_URL.assignOfficial(data.partyId),
         {
           method: "POST",
           body: JSON.stringify({
@@ -600,9 +597,6 @@ export const assignPartyOfficial = createServerFn({ method: "POST" })
             appointment_type: data.appointmentType,
             chapter_type: data.chapterType,
             tier_id: data.tierId,
-            chapter_id: data.chapterId,
-            tenure_start: data.tenureStart,
-            tenure_end: data.tenureEnd,
           }),
         },
       );

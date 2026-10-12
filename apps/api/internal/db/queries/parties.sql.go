@@ -783,6 +783,25 @@ func (q *Queries) IsPartyChapterMember(ctx context.Context, arg IsPartyChapterMe
 	return exists, err
 }
 
+const isPartyMember = `-- name: IsPartyMember :one
+SELECT EXISTS (
+    SELECT 1 FROM party_membership
+    WHERE user_id = $1 AND party_id = $2 AND status = 'active'
+)
+`
+
+type IsPartyMemberParams struct {
+	UserID  int64 `json:"user_id"`
+	PartyID int16 `json:"party_id"`
+}
+
+func (q *Queries) IsPartyMember(ctx context.Context, arg IsPartyMemberParams) (bool, error) {
+	row := q.db.QueryRow(ctx, isPartyMember, arg.UserID, arg.PartyID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const liftPartyMemberSuspension = `-- name: LiftPartyMemberSuspension :one
 UPDATE party_member_suspensions
 SET 

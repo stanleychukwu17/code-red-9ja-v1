@@ -66,7 +66,7 @@ export function AppointOfficialDialog({
   const trimmedSearch = debouncedSearch.trim();
   const hasSearched = trimmedSearch.length >= MIN_SEARCH_LENGTH;
 
-  // Resolve geographic entity name (e.g. State, LGA, Ward, or Zone) from TanStack Query cache
+  // Resolve geographic entity name (e.g. National, Zonal, State, LGA, Ward) from TanStack Query cache
   const tierTitle = useSelectedTierTitle({ chapterType, selectedTierId });
 
   // Reset search query whenever dialog closes so each appointment session starts fresh
@@ -75,9 +75,6 @@ export function AppointOfficialDialog({
       setSearchQuery("");
     }
   }, [open]);
-
-
-  console.log("appointDialog", { position, selectedTierId, chapterType, partyId, tierTitle });
 
   // Track which user is currently being appointed
   const [submittingUserId, setSubmittingUserId] = useState<number | null>(null);
@@ -108,9 +105,10 @@ export function AppointOfficialDialog({
       return undefined;
     },
     enabled: open && !!partyId && hasSearched,
-    staleTime: 60 * 1000,
+    staleTime: Infinity,
   });
 
+  // Flatten paginated member results across all loaded pages into a single array
   const members: UserType[] = useMemo(() => {
     return data ? data.pages.flatMap((page) => page.data?.users || []) : [];
   }, [data]);
@@ -223,9 +221,7 @@ export function AppointOfficialDialog({
               {members.map((member) => {
                 const fullName = [member.first_name, member.last_name].filter(Boolean).join(" ");
                 const roleTag = `@${member.username}`;
-
                 const isSubmitting = submittingUserId === member.id;
-
 
                 return (
                   <div
@@ -233,19 +229,12 @@ export function AppointOfficialDialog({
                     className="flex flex-col items-center justify-start text-center w-full max-w-32 group"
                   >
                     {/* Member Avatar */}
-                    <div className="size-24 sm:size-26 rounded-full overflow-hidden border border-border/60 shadow-xs bg-sidebar-mobile dark:bg-card flex items-center justify-center shrink-0">
-                      {member.avatar || member.avatar_url ? (
-                        <img
-                          src={member.avatar || member.avatar_url}
-                          alt={fullName}
-                          className="size-full object-cover"
-                        />
-                      ) : (
-                        <span className="text-xl font-bold text-c-50 uppercase">
-                          {member.first_name?.[0] || ""}
-                          {member.last_name?.[0] || ""}
-                        </span>
-                      )}
+                    <div className="size-24 sm:size-26 rounded-full overflow-hidden shadow-xs bg-sidebar-mobile dark:bg-card flex items-center justify-center shrink-0">
+                      <img
+                        src={member.avatar || member.avatar_url}
+                        alt={fullName}
+                        className="size-full object-cover"
+                      />
                     </div>
 
                     {/* Member Full Name */}
@@ -270,7 +259,12 @@ export function AppointOfficialDialog({
                         <DropdownMenuTrigger asChild disabled={isSubmitting}>
                           <button
                             type="button"
-                            className="size-8 rounded-full border border-border/70 hover:border-primary hover:bg-primary/10 text-c-60 hover:text-primary flex items-center justify-center transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                            className={`
+                              flex items-center justify-center transition
+                              size-8 bg-sidebar-mobile rounded-full border border-transparent dark:border-border/70
+                              hover:border-primary hover:bg-primary/10 text-c-60 hover:text-primary
+                              cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed
+                            `}
                             title="Appoint member"
                           >
                             {isSubmitting ? (

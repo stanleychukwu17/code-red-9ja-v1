@@ -675,7 +675,6 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Put("/api/v1/parties/{id}/positions/{position_id}", partiesHandler.UpdatePartyCustomPosition)
 		r.Delete("/api/v1/parties/{id}/positions/{position_id}", partiesHandler.DeletePartyCustomPosition)
 		r.Post("/api/v1/parties/{id}/officials", partiesHandler.AssignPartyOfficial)
-		r.Post("/api/v1/parties/{id}/chapters/{chapter_id}/officials", partiesHandler.AssignPartyOfficial)
 		r.Patch("/api/v1/parties/{id}/officials/{assignment_id}/vacate", partiesHandler.VacatePositionAssignment)
 		r.Patch("/api/v1/parties/{id}/officials/{assignment_id}", partiesHandler.UpdatePositionAssignment)
 

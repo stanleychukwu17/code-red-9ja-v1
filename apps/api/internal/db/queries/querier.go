@@ -265,6 +265,7 @@ type Querier interface {
 	GetPartyByID(ctx context.Context, id int16) (Party, error)
 	GetPartyChapterByID(ctx context.Context, id int32) (PartyChapter, error)
 	GetPartyElectionGroupCoverageDistribution(ctx context.Context, arg GetPartyElectionGroupCoverageDistributionParams) ([]GetPartyElectionGroupCoverageDistributionRow, error)
+	GetPartyFollowersCount(ctx context.Context, arg GetPartyFollowersCountParams) (int64, error)
 	GetPartyMarketingCampaigns(ctx context.Context, partyID int16) ([]GetPartyMarketingCampaignsRow, error)
 	GetPartyPositionByID(ctx context.Context, arg GetPartyPositionByIDParams) (PartyPosition, error)
 	GetPartySampleMemberAvatars(ctx context.Context, arg GetPartySampleMemberAvatarsParams) ([]GetPartySampleMemberAvatarsRow, error)
@@ -366,6 +367,7 @@ type Querier interface {
 	IsFollowingParty(ctx context.Context, arg IsFollowingPartyParams) (bool, error)
 	IsPartyAcceptingApplications(ctx context.Context, id int16) (bool, error)
 	IsPartyChapterMember(ctx context.Context, arg IsPartyChapterMemberParams) (bool, error)
+	IsPartyMember(ctx context.Context, arg IsPartyMemberParams) (bool, error)
 	// Checks if blocker_id has blocked blocked_user_id
 	IsUserBlocked(ctx context.Context, arg IsUserBlockedParams) (bool, error)
 	// Useful for chat/DMs/feed: true if either user has blocked the other

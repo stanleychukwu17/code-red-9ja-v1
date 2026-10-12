@@ -1593,6 +1593,31 @@ func (s *PartiesService) IsPartyChapterMember(ctx context.Context, userID int64,
 	return isMember, nil
 }
 
+// IsPartyMember checks if a user is an active member of a party.
+func (s *PartiesService) IsPartyMember(ctx context.Context, userID int64, partyID int16) (bool, error) {
+	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisPartyMember, userID, partyID)
+	if s.rdb != nil {
+		if cached, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
+			if isMember, err := strconv.ParseBool(cached); err == nil {
+				return isMember, nil
+			}
+		}
+	}
+
+	isMember, err := s.queries.IsPartyMember(ctx, queries.IsPartyMemberParams{
+		UserID:  userID,
+		PartyID: partyID,
+	})
+	if err != nil {
+		return false, fmt.Errorf("failed to check party membership: %w", err)
+	}
+
+	if s.rdb != nil {
+		_ = s.rdb.Set(ctx, cacheKey, isMember, db.RedisThirtyDaysTTL).Err()
+	}
+	return isMember, nil
+}
+
 //--END-- party chapters
 
 // LeaveParty allows a user to leave their current party.
@@ -1616,6 +1641,9 @@ func (s *PartiesService) LeaveParty(ctx context.Context, partyID int16, userID, 
 		s.InvalidateChapterMemberCount(ctx, partyID, chapterID)
 		s.InvalidatePartyChapterMembership(ctx, userID, partyID, chapterID)
 	}
+
+	// invalidate party membership from redis
+	s.InvalidatePartyMembership(ctx, userID, partyID)
 
 	// Revoke party-scoped administrative roles (party_admin, super_party_admin)
 	_ = s.usersService.StripPartyAdminRoles(ctx, userID, userFid)
@@ -1711,6 +1739,7 @@ func (s *PartiesService) JoinParty(ctx context.Context, params JoinPartyParams) 
 	// Invalidate cache of chapter member count
 	s.InvalidateChapterMemberCount(ctx, params.PartyID, finalChapterID)                    // chapter member count invalidation
 	s.InvalidatePartyChapterMembership(ctx, params.UserID, params.PartyID, finalChapterID) // user party chapter membership invalidation
+	s.InvalidatePartyMembership(ctx, params.UserID, params.PartyID)                        // invalidate party membership
 
 	if params.ChapterType == "national" {
 		// Log the milestone in party_member_milestones for audit trails and user activity timeline.
@@ -2415,9 +2444,16 @@ func (s *PartiesService) SuspendPartyMember(ctx context.Context, input SuspendPa
 		return nil, fmt.Errorf("failed to commit suspension transaction: %w", err)
 	}
 
-	// Invalidate member suspension and positions cache
+	// invalidate member suspension cache
 	s.InvalidatePartyMemberSuspensionCache(ctx, input.PartyID, input.UserID)
+
+	// invalidate member position assignments cache
 	s.InvalidateMemberPositionAssignmentsCache(ctx, input.PartyID, input.UserID)
+
+	// invalidate party membership from redis
+	s.InvalidatePartyMembership(ctx, input.UserID, input.PartyID)
+
+	// invalidate party officials cache
 	for _, chID := range chapterIDs {
 		s.InvalidatePartyOfficialsCache(ctx, input.PartyID, chID)
 	}
@@ -2518,8 +2554,11 @@ func (s *PartiesService) UnsuspendPartyMember(ctx context.Context, input Unsuspe
 		return nil, fmt.Errorf("failed to commit unsuspend transaction: %w", err)
 	}
 
-	// Invalidate member suspension cache
+	// invalidate member suspension cache
 	s.InvalidatePartyMemberSuspensionCache(ctx, input.PartyID, input.UserID)
+
+	// invalidate party membership from redis
+	s.InvalidatePartyMembership(ctx, input.UserID, input.PartyID)
 
 	// Audit Logging
 	s.auditService.LogActionAsync(ctx, queries.InsertAuditLogParams{
@@ -2860,6 +2899,12 @@ func (s *PartiesService) InvalidatePartyChapterMembership(ctx context.Context, u
 	_ = s.rdb.Del(ctx, cacheKey).Err()
 }
 
+// InvalidatePartyMembership removes the cached party-wide membership boolean for a user.
+func (s *PartiesService) InvalidatePartyMembership(ctx context.Context, userID int64, partyID int16) {
+	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisPartyMember, userID, partyID)
+	_ = s.rdb.Del(ctx, cacheKey).Err()
+}
+
 // InvalidatePartyCustomPositionsCache invalidates cached custom positions for a party.
 func (s *PartiesService) InvalidatePartyCustomPositionsCache(ctx context.Context, partyID int16) {
 	if s.rdb == nil {
@@ -2881,5 +2926,3 @@ func (s *PartiesService) InvalidatePartyPositionByIDCache(ctx context.Context, p
 		slog.Error("Failed to invalidate party position cache", "error", err, "partyID", partyID, "id", id)
 	}
 }
-
-

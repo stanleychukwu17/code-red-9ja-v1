@@ -72,6 +72,18 @@ function PartyLayoutComponent() {
       ? Number(rawTotalMemberCount).toLocaleString()
       : "0";
 
+  const rawFollowersCount = profileRes?.success
+    ? profileRes.data?.national_followers_count
+    : undefined;
+  const followersCount =
+    rawFollowersCount !== undefined && rawFollowersCount !== null ? Number(rawFollowersCount) : 0;
+  const followersDisplay =
+    followersCount >= 1_000_000
+      ? `${(followersCount / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`
+      : followersCount >= 1_000
+        ? `${(followersCount / 1_000).toFixed(1).replace(/\.0$/, "")}k`
+        : followersCount.toLocaleString();
+
   const partyUpper = (partyDetails?.short_name || partyName).toUpperCase();
   const preset = PARTY_PRESETS[partyUpper];
 
@@ -100,8 +112,8 @@ function PartyLayoutComponent() {
         chapterName={partyDetails?.chapter_name}
         chapterLevel={chapterType || partyDetails?.chapter_type}
         chapterType={chapterType || partyDetails?.chapter_type}
-        followersDisplay="100k"
-        followersValue={100}
+        followersDisplay={followersDisplay}
+        followersValue={followersCount}
         totalMembers={totalMemberCountDisplay}
         chapterMembers={chapterMemberCountDisplay}
         isChapterMemberInitial={isChapterMember}
