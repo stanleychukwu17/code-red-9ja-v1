@@ -7,11 +7,11 @@ export const getElectionGroups = createServerFn({ method: "GET" })
     (
       data:
         | {
-            limit?: number;
-            cursor?: string | number;
-            orderBy?: string;
-            order?: string;
-          }
+          limit?: number;
+          cursor?: string | number;
+          orderBy?: string;
+          order?: string;
+        }
         | undefined,
     ) => data,
   )

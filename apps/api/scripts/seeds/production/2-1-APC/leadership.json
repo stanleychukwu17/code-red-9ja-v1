@@ -1,0 +1,152 @@
+[
+  {
+    "order": 1,
+    "username": "nentawe_yilwatda",
+    "position_name": "Chairman",
+    "position_id": 2
+  },
+  {
+    "order": 2,
+    "username": "ali_dalori",
+    "position_name": "Deputy Chairman",
+    "position_id": 3
+  },
+  {
+    "order": 3,
+    "username": "benjamin_nwoye",
+    "position_name": "Deputy Chairman",
+    "position_id": 3
+  },
+  {
+    "order": 4,
+    "username": "surajudeen_basiru",
+    "position_name": "Secretary",
+    "position_id": 5
+  },
+  {
+    "order": 5,
+    "username": "abdul_kana",
+    "position_name": "Deputy Secretary",
+    "position_id": 6
+  },
+  {
+    "order": 6,
+    "username": "garba_muhammad",
+    "position_name": "Vice Chairman",
+    "position_id": 4
+  },
+  {
+    "order": 7,
+    "username": "muazu_rijau",
+    "position_name": "Vice Chairman",
+    "position_id": 4
+  },
+  {
+    "order": 8,
+    "username": "idriss_shuaibu",
+    "position_name": "Vice Chairman",
+    "position_id": 4
+  },
+  {
+    "order": 9,
+    "username": "ijeoma_arodiogbu",
+    "position_name": "Vice Chairman",
+    "position_id": 4
+  },
+  {
+    "order": 10,
+    "username": "victor_giadom",
+    "position_name": "Vice Chairman",
+    "position_id": 4
+  },
+  {
+    "order": 11,
+    "username": "isaac_kekemeke",
+    "position_name": "Vice Chairman",
+    "position_id": 4
+  },
+  {
+    "order": 12,
+    "username": "murtala_kankia",
+    "position_name": "Legal Adviser",
+    "position_id": 28
+  },
+  {
+    "order": 13,
+    "username": "uguru_ofoke",
+    "position_name": "Treasurer",
+    "position_id": 22
+  },
+  {
+    "order": 14,
+    "username": "haruna_ginsau",
+    "position_name": "Financial Secretary",
+    "position_id": 24
+  },
+  {
+    "order": 15,
+    "username": "sulaiman_argungu",
+    "position_name": "Organizing Secretary",
+    "position_id": 8
+  },
+  {
+    "order": 16,
+    "username": "donatus_nwankpa",
+    "position_name": "Welfare Secretary",
+    "position_id": 10
+  },
+  {
+    "order": 17,
+    "username": "felix_morka",
+    "position_name": "Publicity Secretary",
+    "position_id": 15
+  },
+  {
+    "order": 18,
+    "username": "abubakar_maikafi",
+    "position_name": "Auditor",
+    "position_id": 26
+  },
+  {
+    "order": 19,
+    "username": "mary_idele",
+    "position_name": "Women Leader",
+    "position_id": 30
+  },
+  {
+    "order": 20,
+    "username": "abdullahi_israel",
+    "position_name": "Youth Leader",
+    "position_id": 32
+  },
+  {
+    "order": 21,
+    "username": "durotolu_bankole",
+    "position_name": "Persons with Disabilities (PWD) Leader",
+    "position_id": 34
+  },
+  {
+    "order": 22,
+    "username": "hammaadama_kumo",
+    "position_name": "Deputy Financial Secretary",
+    "position_id": 25
+  },
+  {
+    "order": 23,
+    "username": "emeka_okafor",
+    "position_name": "Assistant Organizing Secretary",
+    "position_id": 9
+  },
+  {
+    "order": 24,
+    "username": "durosinmi_meseko",
+    "position_name": "Assistant Publicity Secretary",
+    "position_id": 16
+  },
+  {
+    "order": 25,
+    "username": "zainab_ibrahim",
+    "position_name": "Deputy Women Leader",
+    "position_id": 31
+  }
+]

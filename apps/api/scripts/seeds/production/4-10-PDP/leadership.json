@@ -1,0 +1,128 @@
+[
+  {
+    "order": 1,
+    "username": "abdulrahman_mohammed",
+    "position_name": "Chairman",
+    "position_id": 2
+  },
+  {
+    "order": 2,
+    "username": "aaron_chukwuemeka",
+    "position_name": "Deputy Chairman",
+    "position_id": 3
+  },
+  {
+    "order": 3,
+    "username": "yusufu_akirikwen",
+    "position_name": "Deputy Chairman",
+    "position_id": 3
+  },
+  {
+    "order": 4,
+    "username": "samuel_anyanwu",
+    "position_name": "Secretary",
+    "position_id": 5
+  },
+  {
+    "order": 5,
+    "username": "olabisi_kolawole",
+    "position_name": "Deputy Secretary",
+    "position_id": 6
+  },
+  {
+    "order": 6,
+    "username": "oladiran_odeyemi",
+    "position_name": "Treasurer",
+    "position_id": 22
+  },
+  {
+    "order": 7,
+    "username": "lado_marke",
+    "position_name": "Deputy Treasurer",
+    "position_id": 23
+  },
+  {
+    "order": 8,
+    "username": "henry_eyim",
+    "position_name": "Financial Secretary",
+    "position_id": 24
+  },
+  {
+    "order": 9,
+    "username": "kyari_grema",
+    "position_name": "Deputy Financial Secretary",
+    "position_id": 25
+  },
+  {
+    "order": 10,
+    "username": "umar_bature",
+    "position_name": "Organizing Secretary",
+    "position_id": 8
+  },
+  {
+    "order": 11,
+    "username": "augustine_efere",
+    "position_name": "Assistant Organizing Secretary",
+    "position_id": 9
+  },
+  {
+    "order": 12,
+    "username": "jungudo_mohammed",
+    "position_name": "Publicity Secretary",
+    "position_id": 15
+  },
+  {
+    "order": 13,
+    "username": "chidiebere_egwu",
+    "position_name": "Assistant Publicity Secretary",
+    "position_id": 16
+  },
+  {
+    "order": 14,
+    "username": "kamaldeen_ajibade",
+    "position_name": "Legal Adviser",
+    "position_id": 28
+  },
+  {
+    "order": 15,
+    "username": "aloysius_uba",
+    "position_name": "Deputy Legal Adviser",
+    "position_id": 29
+  },
+  {
+    "order": 16,
+    "username": "donatus_osuoha",
+    "position_name": "Auditor",
+    "position_id": 26
+  },
+  {
+    "order": 17,
+    "username": "seri_yatu",
+    "position_name": "Deputy Auditor",
+    "position_id": 27
+  },
+  {
+    "order": 18,
+    "username": "adedayo_ogunshe",
+    "position_name": "Women Leader",
+    "position_id": 30
+  },
+  {
+    "order": 19,
+    "username": "hauwa_shinge",
+    "position_name": "Deputy Women Leader",
+    "position_id": 31
+  },
+  {
+    "order": 20,
+    "username": "ibrahim_aboki",
+    "position_name": "Youth Leader",
+    "position_id": 32
+  },
+  {
+    "order": 21,
+    "username": "bashir_momoh",
+    "position_name": "Assistant Youth Leader",
+    "position_id": 33
+  }
+]

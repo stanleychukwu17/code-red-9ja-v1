@@ -30,8 +30,8 @@ export async function apiFetch(
     headers.set("X-Forwarded-For", clientIp);
   }
 
-  // If access token exists, forward it via Authorization header
-  if (accessToken) {
+  // If access token exists and Authorization header not explicitly set, forward it
+  if (accessToken && !headers.has("Authorization")) {
     headers.set("Authorization", `Bearer ${accessToken}`);
   }
 
@@ -62,9 +62,12 @@ export async function apiFetch(
       if (isExpiredToken) {
         // Attempt silent refresh using refreshUserToken
         const refreshResult = await refreshUserToken();
-        if (refreshResult?.success) {
-          // Retry the original request with updated access_token cookie
-          return apiFetch(input, init, true);
+
+        if (refreshResult?.success && (refreshResult as any)?.accessToken) {
+          // Retry the original request with the freshly issued access token explicitly set in headers
+          const retryHeaders = new Headers(init?.headers);
+          retryHeaders.set("Authorization", `Bearer ${(refreshResult as any).accessToken}`);
+          return apiFetch(input, { ...init, headers: retryHeaders }, true);
         }
       }
     } catch {

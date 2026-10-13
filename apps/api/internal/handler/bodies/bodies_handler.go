@@ -3,6 +3,7 @@ package bodieshandler
 import (
 	"context"
 	"encoding/json"
+	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	bodiesservice "free9ja/api/internal/service/bodies"
 	"free9ja/api/internal/utils"
@@ -391,14 +392,8 @@ func (h *Handler) RecalculateBodyMetrics(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Invalidate cache for bodies and countries instead of the entire Redis database
-	prefixes := []string{"bodies:*", "countries:*"}
-	for _, prefix := range prefixes {
-		iter := h.rdb.Scan(ctx, 0, prefix, 0).Iterator()
-		for iter.Next(ctx) {
-			h.rdb.Del(ctx, iter.Val())
-		}
-	}
+	// Invalidate national metrics cache so subsequent reads fetch fresh metrics
+	h.rdb.Del(ctx, db.RedisNationalMetrics)
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Successfully recalculated all body metrics", nil)
 }

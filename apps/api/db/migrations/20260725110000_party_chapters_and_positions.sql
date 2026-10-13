@@ -150,22 +150,27 @@ INSERT INTO party_positions (id, party_id, name, position_type, allowed_levels, 
 
 -- Finance & Audit
 (22, NULL, 'Treasurer', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 22, 1, true, 'finance'),
-(23, NULL, 'Financial Secretary', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 23, 1, true, 'finance'),
-(24, NULL, 'Auditor', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 24, 1, true, 'finance'),
+(23, NULL, 'Deputy Treasurer', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 23, 1, true, 'finance'),
+(24, NULL, 'Financial Secretary', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 24, 1, true, 'finance'),
+(25, NULL, 'Deputy Financial Secretary', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 25, 1, true, 'finance'),
+(26, NULL, 'Auditor', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 26, 1, true, 'finance'),
+(27, NULL, 'Deputy Auditor', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 27, 1, true, 'finance'),
 
 -- Legal & Compliance
-(25, NULL, 'Legal Adviser', 'default', ARRAY['national', 'zonal', 'state', 'lga'], 25, 1, true, 'legal'),
+(28, NULL, 'Legal Adviser', 'default', ARRAY['national', 'zonal', 'state', 'lga'], 28, 1, true, 'legal'),
+(29, NULL, 'Deputy Legal Adviser', 'default', ARRAY['national', 'zonal', 'state', 'lga'], 29, 1, true, 'legal'),
 
 -- Demographic & Special Wings
-(26, NULL, 'Women Leader', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 26, 1, true, 'wings'),
-(27, NULL, 'Youth Leader', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 27, 1, true, 'wings'),
-(28, NULL, 'Assistant Youth Leader', 'default', ARRAY['national', 'state', 'lga', 'ward'], 28, 1, true, 'wings'),
-(29, NULL, 'Persons with Disabilities (PWD) Leader', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 29, 1, true, 'wings'),
+(30, NULL, 'Women Leader', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 30, 1, true, 'wings'),
+(31, NULL, 'Deputy Women Leader', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 31, 1, true, 'wings'),
+(32, NULL, 'Youth Leader', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 32, 1, true, 'wings'),
+(33, NULL, 'Assistant Youth Leader', 'default', ARRAY['national', 'state', 'lga', 'ward'], 33, 1, true, 'wings'),
+(34, NULL, 'Persons with Disabilities (PWD) Leader', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 34, 1, true, 'wings'),
 
 -- Advisory & Non-Portfolio Roles
-(30, NULL, 'Ex-Officio Member', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 30, 6, false, 'advisory'),
-(31, NULL, 'Special Adviser to Chairman', 'default', ARRAY['national', 'state'], 31, 3, false, 'advisory'),
-(32, NULL, 'Elders Council Member', 'default', ARRAY['national', 'state', 'lga'], 32, 10, false, 'advisory');
+(35, NULL, 'Ex-Officio Member', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 35, 6, false, 'advisory'),
+(36, NULL, 'Special Adviser to Chairman', 'default', ARRAY['national', 'state'], 36, 3, false, 'advisory'),
+(37, NULL, 'Elders Council Member', 'default', ARRAY['national', 'state', 'lga'], 37, 10, false, 'advisory');
 
 -- Resets the party_positions table id column to the max value + 1
 SELECT setval(pg_get_serial_sequence('party_positions', 'id'), (SELECT MAX(id) FROM party_positions));
@@ -191,7 +196,13 @@ BEGIN
     END IF;
 
     IF p_chapter_type = 'national' THEN
-        v_title := 'National ' || p_position_name;
+        IF p_position_name LIKE 'Deputy %' THEN
+            v_title := 'Deputy National ' || substring(p_position_name from 8);
+        ELSIF p_position_name LIKE 'Assistant %' THEN
+            v_title := 'Assistant National ' || substring(p_position_name from 11);
+        ELSE
+            v_title := 'National ' || p_position_name;
+        END IF;
     ELSIF p_chapter_type = 'zonal' THEN
         v_title := COALESCE(p_geo_name || ' Zonal ', '') || p_position_name;
     ELSIF p_chapter_type = 'state' THEN

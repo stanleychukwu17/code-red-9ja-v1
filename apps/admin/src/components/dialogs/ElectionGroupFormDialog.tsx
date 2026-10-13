@@ -1,4 +1,11 @@
-import * as React from "react";
+/**
+ * @file Election Group Form Dialog
+ * @description Modal dialog used in the admin portal to create or update an Election Group
+ * (e.g. "2027 General Elections"), managing its display name, priority rank order, and scheduled date.
+ * When updating, automatically cascades date changes to all child elections within the group.
+ */
+
+import { useState, useEffect } from "react";
 import { Button } from "@repo/ui/components/button";
 import {
   Dialog,
@@ -21,22 +28,19 @@ import { FancyInput } from "@repo/ui/components/input";
 import type { ElectionGroupType } from "../tiles/election-group-tile";
 import { TinyError } from "@repo/ui/components/custom/TinyError";
 
-export function ElectionGroupFormDialog({
-  electionGroup,
-  open,
-  onClose,
-  mode = "create",
-  onSuccess,
-}: {
+export type ElectionGroupFormDialogProps = {
   electionGroup?: ElectionGroupType;
   open: boolean;
   onClose: () => void;
   mode?: "create" | "update";
   onSuccess?: (groupId: number, electionDate?: string) => void;
-}) {
-  const queryClient = useQueryClient();
-  const [error, setError] = React.useState<string | null>(null);
+};
 
+export function ElectionGroupFormDialog({ electionGroup, open, onClose, mode = "create", onSuccess }: ElectionGroupFormDialogProps) {
+  const queryClient = useQueryClient();
+  const [error, setError] = useState<string | null>(null);
+
+  // TanStack Form configuration with default values and submit handler
   const form = useForm({
     defaultValues: {
       name: "",
@@ -48,9 +52,11 @@ export function ElectionGroupFormDialog({
     },
   });
 
-  React.useEffect(() => {
+  // Synchronize form fields whenever the modal opens or the target group changes
+  useEffect(() => {
     if (open) {
       if (mode === "update" && electionGroup) {
+        // Pre-fill form fields when editing an existing group
         const cleanDate = electionGroup.election_date
           ? (electionGroup.election_date.split("T")[0] ?? "")
           : "";
@@ -58,6 +64,7 @@ export function ElectionGroupFormDialog({
         form.setFieldValue("rank", String(electionGroup.rank || 1));
         form.setFieldValue("electionDate", cleanDate);
       } else {
+        // Reset form to blank defaults for creating a new group
         form.setFieldValue("name", "");
         form.setFieldValue("rank", "1");
         form.setFieldValue("electionDate", "");
@@ -66,12 +73,9 @@ export function ElectionGroupFormDialog({
     }
   }, [open, mode, electionGroup]);
 
+  // Mutation handling both group creation and updates with date cascading
   const saveMutation = useMutation({
-    mutationFn: async (values: {
-      name: string;
-      rank: string;
-      electionDate: string;
-    }) => {
+    mutationFn: async (values: { name: string; rank: string; electionDate: string; }) => {
       if (!values.electionDate) {
         throw new Error("Election date is required");
       }
@@ -85,6 +89,7 @@ export function ElectionGroupFormDialog({
         if (!electionGroup?.id) {
           throw new Error("Missing ID for update");
         }
+        // 1. Update the parent election group record
         res = await updateElectionGroup({
           data: {
             id: electionGroup.id,
@@ -96,7 +101,7 @@ export function ElectionGroupFormDialog({
           },
         });
 
-        // Iterate over all elections in this group and update their election dates as well
+        // 2. Cascade: if the group's date changed, update all child elections under this group
         const oldCleanDate = electionGroup.election_date
           ? (electionGroup.election_date.split("T")[0] ?? "")
           : "";
@@ -129,6 +134,7 @@ export function ElectionGroupFormDialog({
           }
         }
       } else {
+        // Create new election group
         res = await createElectionGroup({
           data: {
             name: values.name.trim(),
@@ -146,6 +152,7 @@ export function ElectionGroupFormDialog({
       return res.data;
     },
     onSuccess: (data, variables) => {
+      // Invalidate relevant caches to refresh tables and dropdowns across the portal
       queryClient.invalidateQueries({ queryKey: ["election-groups"] });
       queryClient.invalidateQueries({ queryKey: ["election-groups-select"] });
       queryClient.invalidateQueries({ queryKey: ["elections"] });
@@ -160,6 +167,7 @@ export function ElectionGroupFormDialog({
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-[580px] p-0 rounded-2xl border-none shadow-2xl   overflow-visible">
+        {/* Dynamic dialog title based on current operation mode */}
         <DialogHeader
           title={
             mode === "update"
@@ -176,9 +184,10 @@ export function ElectionGroupFormDialog({
           }}
         >
           <DialogPadding className="space-y-6 pb-6">
+            {/* Server / validation error display banner */}
             <TinyError error={error} />
 
-            {/* Group name input */}
+            {/* Large title input for election group name */}
             <div className="w-full">
               <form.Field
                 name="name"
@@ -202,7 +211,7 @@ export function ElectionGroupFormDialog({
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              {/* Rank select */}
+              {/* Hierarchy priority rank selector */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-[14px] font-semibold text-c-50">
                   Rank
@@ -218,7 +227,7 @@ export function ElectionGroupFormDialog({
                 />
               </div>
 
-              {/* Date select */}
+              {/* Scheduled election date picker */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-[14px] font-semibold text-c-50">
                   Election Date
@@ -240,6 +249,8 @@ export function ElectionGroupFormDialog({
               </div>
             </div>
           </DialogPadding>
+
+          {/* Form submit button with loading spinner */}
           <DialogFooter>
             <Button
               type="submit"

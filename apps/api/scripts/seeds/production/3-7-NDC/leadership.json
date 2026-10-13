@@ -1,0 +1,32 @@
+[
+  {
+    "order": 1,
+    "username": "cleopas_zuwoghe",
+    "position_name": "Chairman",
+    "position_id": 2
+  },
+  {
+    "order": 2,
+    "username": "ikenna_enekweizu",
+    "position_name": "Secretary",
+    "position_id": 5
+  },
+  {
+    "order": 3,
+    "username": "john_odey",
+    "position_name": "Treasurer",
+    "position_id": 22
+  },
+  {
+    "order": 4,
+    "username": "mainasara_sani",
+    "position_name": "Financial Secretary",
+    "position_id": 24
+  },
+  {
+    "order": 5,
+    "username": "reuben_egwuaba",
+    "position_name": "Legal Adviser",
+    "position_id": 28
+  }
+]

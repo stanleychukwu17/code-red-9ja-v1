@@ -122,7 +122,7 @@ export const refreshUserTokenImpl = createServerOnlyFn(async () => {
       if (sitePreference) {
         setSitePreferenceCookie(sitePreference);
       }
-      return { success: true, user, sitePreference };
+      return { success: true, accessToken, user, sitePreference };
     } else {
       // If the result is an error, check if the error is an invalid or expired refresh token, and clear the cookies if it is
       const logOutConditions = [

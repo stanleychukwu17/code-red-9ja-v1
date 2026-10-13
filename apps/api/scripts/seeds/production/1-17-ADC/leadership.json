@@ -1,0 +1,110 @@
+[
+  {
+    "order": 1,
+    "username": "ralph_nwosu",
+    "position_name": "Founder",
+    "position_id": 1
+  },
+  {
+    "order": 2,
+    "username": "david_mark",
+    "position_name": "Chairman",
+    "position_id": 2
+  },
+  {
+    "order": 3,
+    "username": "rauf_aregbesola",
+    "position_name": "Secretary",
+    "position_id": 5
+  },
+  {
+    "order": 4,
+    "username": "bolaji_abdullahi",
+    "position_name": "Publicity Secretary",
+    "position_id": 15
+  },
+  {
+    "order": 5,
+    "username": "babachir_lawal",
+    "position_name": "Deputy Chairman",
+    "position_id": 3
+  },
+  {
+    "order": 6,
+    "username": "chinonso_obasi",
+    "position_name": "Assistant Youth Leader",
+    "position_id": 33
+  },
+  {
+    "order": 7,
+    "username": "usani_usani",
+    "position_name": "Deputy Chairman",
+    "position_id": 3
+  },
+  {
+    "order": 8,
+    "username": "clever_ikisikpo",
+    "position_name": "Deputy Treasurer",
+    "position_id": 23
+  },
+  {
+    "order": 9,
+    "username": "jackie_wayas",
+    "position_name": "Assistant Publicity Secretary",
+    "position_id": 16
+  },
+  {
+    "order": 10,
+    "username": "nkem_ukandu",
+    "position_name": "Welfare Secretary",
+    "position_id": 10
+  },
+  {
+    "order": 11,
+    "username": "chike_okogwu",
+    "position_name": "Persons with Disabilities (PWD) Leader",
+    "position_id": 34
+  },
+  {
+    "order": 12,
+    "username": "musa_elayo",
+    "position_name": "Vice Chairman",
+    "position_id": 4
+  },
+  {
+    "order": 13,
+    "username": "chinedu_idigo",
+    "position_name": "Organizing Secretary",
+    "position_id": 8
+  },
+  {
+    "order": 14,
+    "username": "oserheimen_osunbor",
+    "position_name": "Legal Adviser",
+    "position_id": 28
+  },
+  {
+    "order": 15,
+    "username": "hauwa_yusuf",
+    "position_name": "Deputy Secretary",
+    "position_id": 6
+  },
+  {
+    "order": 16,
+    "username": "malami_galma",
+    "position_name": "Vice Chairman",
+    "position_id": 4
+  },
+  {
+    "order": 17,
+    "username": "balarabe_rufai",
+    "position_name": "Youth Leader",
+    "position_id": 32
+  },
+  {
+    "order": 18,
+    "username": "queen_okiyi",
+    "position_name": "New Media Director",
+    "position_id": 17
+  }
+]
