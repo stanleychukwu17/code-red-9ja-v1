@@ -51,8 +51,6 @@ function PartyLayoutComponent() {
     partyProfileQueryOptions(partyId, partyName, chapterId)
   );
 
-  console.log(profileRes);
-
   // Extract core party attributes and authenticated user affiliation state
   const partyDetails = profileRes?.success ? profileRes.data.data : null;
   const isChapterMember = profileRes?.success ? Boolean(profileRes.data?.is_chapter_member) : false;
@@ -71,7 +69,7 @@ function PartyLayoutComponent() {
 
   // National membership count: total verified party members nationwide
   const totalMemberCount = profileRes?.success
-    ? Number(profileRes.data?.national_member_count ?? profileRes.data?.total_members ?? 0)
+    ? Number(profileRes.data?.national_member_count ?? 0)
     : 0;
   const totalMemberCountDisplay = totalMemberCount.toLocaleString();
 

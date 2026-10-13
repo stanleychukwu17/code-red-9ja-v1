@@ -4,6 +4,7 @@ import (
 	"context"
 	"net"
 	"net/netip"
+	"strconv"
 
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
@@ -18,6 +19,17 @@ const (
 	contextKeyIP        contextKey = "request_ip"
 	contextKeyUserAgent contextKey = "request_user_agent"
 )
+
+// Integer represents any signed or unsigned integer type constraint.
+type Integer interface {
+	~int | ~int8 | ~int16 | ~int32 | ~int64 |
+		~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 | ~uintptr
+}
+
+// FormatID formats any integer identifier into its base-10 string representation for audit logs.
+func FormatID[T Integer](id T) string {
+	return strconv.FormatInt(int64(id), 10)
+}
 
 type AuditService interface {
 	LogAction(ctx context.Context, params queries.InsertAuditLogParams) error

@@ -1,0 +1,27 @@
+[
+  {
+    "account_status": "active",
+    "avatar": "https://ui-avatars.com/api/?name=Bala%20Mohammed&background=random",
+    "current_city": 157022,
+    "current_country": 161,
+    "current_lga": 3379,
+    "current_state": 15,
+    "current_ward": 20771,
+    "date_of_birth": "1960-01-01",
+    "email": "bala.mohammed@example.com",
+    "first_name": "Bala",
+    "gender": "male",
+    "is_politician": true,
+    "is_verified": true,
+    "last_name": "Mohammed",
+    "middle_name": "",
+    "num": 42,
+    "party_id": 3,
+    "password": "password",
+    "phone": "08057959227",
+    "polling_unit_id": 122717,
+    "state_of_origin": 34,
+    "username": "bala_mohammed",
+    "verification_type_id": 4
+  }
+]

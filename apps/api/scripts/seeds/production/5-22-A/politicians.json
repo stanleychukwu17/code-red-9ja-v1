@@ -1,0 +1,27 @@
+[
+  {
+    "account_status": "active",
+    "avatar": "https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/avatars/2026-08-06/Ademola-Adeleke-baa4b5da-316e-4245-80e0-1c04ceb8f3d3.webp",
+    "current_city": 157022,
+    "current_country": 161,
+    "current_lga": 3378,
+    "current_state": 15,
+    "current_ward": 20759,
+    "date_of_birth": "1960-01-01",
+    "email": "candidate-osun@accord.com",
+    "first_name": "Ademola",
+    "gender": "male",
+    "is_politician": true,
+    "is_verified": true,
+    "last_name": "Adeleke",
+    "middle_name": "",
+    "num": 46,
+    "party_id": 22,
+    "password": "password",
+    "phone": "08023629553",
+    "polling_unit_id": 41850,
+    "state_of_origin": 2,
+    "username": "candidate_osun",
+    "verification_type_id": 4
+  }
+]

@@ -18,7 +18,7 @@ import {
   type PartyOfficialItem,
   type PartyPositionItem,
 } from "#/lib/server/parties";
-import { QUERY_KEYS } from "#/lib/config";
+import { QUERY_KEYS, WEB_URL } from "#/lib/config";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -123,6 +123,7 @@ function OccupiedPositionCard({ official, positionTitle, onVacate }: {
   onVacate: (official: PartyOfficialItem) => void;
 }) {
   const fullName = [official.first_name, official.last_name].filter(Boolean).join(" ");
+  const profileUrl = WEB_URL.users.profile(encodeURIComponent(official.username!));
 
   const badgeStyle =
     APPOINTMENT_BADGE_STYLES[official.appointment_type?.toLowerCase()] ||
@@ -142,20 +143,18 @@ function OccupiedPositionCard({ official, positionTitle, onVacate }: {
   return (
     <div className="flex flex-col items-center justify-start text-center w-full max-w-65">
       {/* Official Circular Avatar */}
-      <div className="size-36 rounded-full shrink-0 overflow-hidden border border-border/60 shadow-xs bg-sidebar-mobile dark:bg-card flex items-center justify-center">
-        {official.avatar ? (
-          <img
-            src={official.avatar}
-            alt={fullName}
-            className="size-full object-cover"
-          />
-        ) : (
-          <span className="text-2xl font-bold text-c-50 uppercase">
-            {official.first_name?.[0] || ""}
-            {official.last_name?.[0] || ""}
-          </span>
-        )}
-      </div>
+      <a
+        href={profileUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="size-36 rounded-full shrink-0 overflow-hidden border border-border/60 shadow-xs bg-sidebar-mobile dark:bg-card flex items-center justify-center hover:opacity-90 transition-opacity"
+      >
+        <img
+          src={official.avatar!}
+          alt={fullName}
+          className="size-full object-cover"
+        />
+      </a>
 
       {/* Position title */}
       <h4 className="mt-4 text-[16px] font-medium text-c-70 tracking-tight capitalize leading-tight">
@@ -164,9 +163,14 @@ function OccupiedPositionCard({ official, positionTitle, onVacate }: {
 
       {/* Official Name + Appointment Badge */}
       <div className="mt-1 flex items-center justify-center gap-2 flex-wrap">
-        <span className="text-[18px] font-bold text-c-90 capitalize">
+        <a
+          href={profileUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[18px] font-bold text-c-90 capitalize hover:text-primary transition-colors"
+        >
           {fullName}
-        </span>
+        </a>
         <span
           className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold capitalize leading-tight ${badgeStyle}`}
         >

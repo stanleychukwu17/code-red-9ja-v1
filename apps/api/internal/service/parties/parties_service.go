@@ -2270,22 +2270,18 @@ func (s *PartiesService) VacatePositionAssignment(ctx context.Context, id int64,
 		ActorID:    actorID,
 		ActorRole:  audit.StringToText(actorRole),
 		EntityType: db.EntityTypeUser,
-		EntityID:   strconv.FormatInt(assignment.UserID, 10),
+		EntityID:   audit.FormatID(assignment.UserID),
 		NewValues:  assignmentJSON,
 	})
 
 	// Dispatch notification to vacated member and chapter leadership asynchronously
-	var actorIDPointer *int64
-	if actorID != 0 {
-		actorIDPointer = &actorID
-	}
 	s.notificationsService.NotifyPartyOfficialVacated(ctx, notifications.NotifyPartyOfficialVacatedParams{
 		PartyID:         assignment.PartyID,
 		ChapterID:       assignment.ChapterID,
 		PositionID:      assignment.PositionID,
 		PositionName:    posName,
 		TargetUserID:    assignment.UserID,
-		ActorID:         actorIDPointer,
+		ActorID:         &actorID,
 		AppointmentType: assignment.AppointmentType,
 		AssignmentID:    assignment.ID,
 	})
@@ -2503,13 +2499,7 @@ func (s *PartiesService) SuspendPartyMember(ctx context.Context, input SuspendPa
 	}
 
 	// Strip party admin roles from suspended user and revoke all active sessions across devices
-	if s.usersService != nil {
-		var fakeID int64
-		if user.FakeID.Valid {
-			fakeID = user.FakeID.Int64
-		}
-		_ = s.usersService.StripPartyAdminRoles(ctx, input.UserID, fakeID)
-	}
+	_ = s.usersService.StripPartyAdminRoles(ctx, input.UserID, user.FakeID.Int64)
 
 	// invalidate member suspension cache
 	s.InvalidatePartyMemberSuspensionCache(ctx, input.PartyID, input.UserID)
@@ -2523,8 +2513,6 @@ func (s *PartiesService) SuspendPartyMember(ctx context.Context, input SuspendPa
 	// invalidate party officials cache and top official card caches
 	for _, chID := range chapterIDs {
 		s.InvalidatePartyOfficialsCache(ctx, input.PartyID, chID)
-		s.InvalidateChapterOfficialCache(ctx, chID, constants.PartyPositionChairmanID)
-		s.InvalidateChapterOfficialCache(ctx, chID, constants.PartyPositionSecretaryID)
 	}
 
 	// Audit Logging
@@ -2728,11 +2716,7 @@ func (s *PartiesService) BlockUserFromThisParty(ctx context.Context, input Block
 		})
 
 		// 5. Clear user's party affiliation (UpdateUserParty with nil automatically strips party admin roles and invalidates user cache)
-		var fakeID int64
-		if user.FakeID.Valid {
-			fakeID = user.FakeID.Int64
-		}
-		_ = s.usersService.UpdateUserParty(ctx, input.BlockedUserID, nil, fakeID)
+		_ = s.usersService.UpdateUserParty(ctx, input.BlockedUserID, nil, user.FakeID.Int64)
 	}
 
 	// 6. Record party-user block in party_user_blocks table
@@ -2757,8 +2741,6 @@ func (s *PartiesService) BlockUserFromThisParty(ctx context.Context, input Block
 			s.InvalidateChapterMemberCount(ctx, input.PartyID, chapterID)
 			s.InvalidatePartyChapterMembership(ctx, input.BlockedUserID, input.PartyID, chapterID)
 			s.InvalidatePartyOfficialsCache(ctx, input.PartyID, chapterID)
-			s.InvalidateChapterOfficialCache(ctx, chapterID, constants.PartyPositionChairmanID)
-			s.InvalidateChapterOfficialCache(ctx, chapterID, constants.PartyPositionSecretaryID)
 		}
 	}
 
@@ -2935,12 +2917,15 @@ func (s *PartiesService) InvalidateMemberPositionAssignmentsCache(ctx context.Co
 	}
 }
 
-// InvalidatePartyOfficialsCache invalidates the Redis cache for chapter officials.
+// InvalidatePartyOfficialsCache invalidates the Redis cache for chapter officials and top official cards.
 func (s *PartiesService) InvalidatePartyOfficialsCache(ctx context.Context, partyID int16, chapterID int32) {
 	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisPartyChapterOfficials, partyID, chapterID)
 	if err := s.rdb.Del(ctx, cacheKey).Err(); err != nil {
 		slog.Error("Failed to invalidate party chapter officials cache", "error", err, "partyID", partyID, "chapterID", chapterID)
 	}
+
+	s.InvalidateChapterOfficialCache(ctx, chapterID, constants.PartyPositionChairmanID)
+	s.InvalidateChapterOfficialCache(ctx, chapterID, constants.PartyPositionSecretaryID)
 }
 
 // InvalidateChapterOfficialCache invalidates the Redis cache for a single chapter official by chapterID and positionID.

@@ -786,7 +786,6 @@ func (h *Handler) GetPartyProfile(w http.ResponseWriter, r *http.Request) {
 		"chapter_type":             chapter.ChapterType,
 		"national_chapter_id":      nationalChapterID,
 		"national_member_count":    nationalMemberCount,
-		"total_members":            nationalMemberCount,
 		"chapter_member_count":     chapterMemberCount,
 		"national_followers_count": nationalFollowersCount,
 		"is_chapter_member":        isChapterMember,

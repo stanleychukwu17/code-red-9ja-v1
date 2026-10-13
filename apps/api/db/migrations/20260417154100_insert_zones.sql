@@ -6,6 +6,8 @@ CREATE TABLE IF NOT EXISTS c_zones_nigeria (
 );
 
 INSERT INTO c_zones_nigeria (name, state_ids) VALUES
+('North', ARRAY[2, 5, 7, 8, 15, 17, 18, 19, 20, 21, 22, 23, 25, 26, 31, 33, 34, 35, 36, 37]::SMALLINT[]),
+('South', ARRAY[1, 3, 4, 6, 9, 10, 11, 12, 13, 14, 16, 24, 27, 28, 29, 30, 32]::SMALLINT[]),
 ('North West', ARRAY[17, 18, 19, 20, 21, 33, 36]::SMALLINT[]),
 ('North East', ARRAY[2, 5, 8, 15, 34, 35]::SMALLINT[]),
 ('North Central', ARRAY[7, 22, 23, 25, 26, 31, 37]::SMALLINT[]),

@@ -101,12 +101,14 @@ export const getZones = createServerFn().handler(async () => {
     message: "Geopolitical zones fetched successfully",
     data: {
       zones: [
-        { id: 1, name: "North West" },
-        { id: 2, name: "North East" },
-        { id: 3, name: "North Central" },
-        { id: 4, name: "South West" },
-        { id: 5, name: "South East" },
-        { id: 6, name: "South South" },
+        { id: 1, name: "North" },
+        { id: 2, name: "South" },
+        { id: 3, name: "North West" },
+        { id: 4, name: "North East" },
+        { id: 5, name: "North Central" },
+        { id: 6, name: "South West" },
+        { id: 7, name: "South East" },
+        { id: 8, name: "South South" },
       ],
     },
   };
