@@ -1,11 +1,11 @@
 -- name: CreateElectionInstance :one
 INSERT INTO elections (
-  name, rank, candidates_count, election_date, election_group_id,
-  election_group_name, office_id, office_name, scope,
+  name, candidates_count, election_date, election_group_id,
+  office_id, office_name, scope,
   state_id, senatorial_district_id, federal_constituency_id,
   state_constituency_id, lga_id, ward_id
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 RETURNING *;
 
 -- name: GetElectionInstanceByID :one
@@ -17,17 +17,12 @@ ORDER BY election_date DESC, id DESC;
 
 -- name: UpdateElectionInstance :one
 UPDATE elections
-SET name = $1, rank = $2, candidates_count = $3, election_date = $4, election_group_id = $5,
-    election_group_name = $6, office_id = $7, office_name = $8, scope = $9,
-    state_id = $10, senatorial_district_id = $11, federal_constituency_id = $12,
-    state_constituency_id = $13, lga_id = $14, ward_id = $15, updated_at = NOW()
-WHERE id = $16
+SET name = $1, candidates_count = $2, election_date = $3, election_group_id = $4,
+    office_id = $5, office_name = $6, scope = $7,
+    state_id = $8, senatorial_district_id = $9, federal_constituency_id = $10,
+    state_constituency_id = $11, lga_id = $12, ward_id = $13, updated_at = NOW()
+WHERE id = $14
 RETURNING *;
-
--- name: UpdateElectionGroupDetailsByGroup :exec
-UPDATE elections
-SET election_group_name = $1, election_date = $2, updated_at = NOW()
-WHERE election_group_id = $3;
 
 -- name: UpdateElectionContestingParties :one
 UPDATE elections
@@ -82,7 +77,8 @@ UPDATE elections SET candidates_count = $2 WHERE id = $1;
 SELECT 
   e.*,
   o.election AS office_election,
-  o.name AS office_name_full
+  o.name AS office_name_full,
+  o.rank AS office_rank
 FROM elections e
 JOIN offices o ON e.office_id = o.id
 WHERE e.election_group_id = $1;

@@ -232,7 +232,7 @@
     "current_lga": 3378,
     "current_state": 15,
     "current_ward": 20761,
-    "date_of_birth": "1996-11-06",
+    "date_of_birth": "1946-11-25",
     "email": "candidate@adc.com",
     "first_name": "Atiku",
     "gender": "male",
@@ -245,8 +245,8 @@
     "password": "password",
     "phone": "2024561282",
     "polling_unit_id": 122516,
-    "state_of_origin": 13,
-    "username": "candidate_adc",
+    "state_of_origin": 2,
+    "username": "atiku_abubakar",
     "verification_type_id": 4
   },
   {

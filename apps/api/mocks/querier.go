@@ -7558,23 +7558,34 @@ func (_m *Querier) CountCandidatesInElectionGroup(ctx context.Context, electionG
 	return r0, r1
 }
 
-// UpdateElectionGroupDetailsByGroup provides a mock function with given fields: ctx, arg
-func (_m *Querier) UpdateElectionGroupDetailsByGroup(ctx context.Context, arg queries.UpdateElectionGroupDetailsByGroupParams) error {
-	ret := _m.Called(ctx, arg)
+// CountParticipantsInElectionGroup provides a mock function with given fields: ctx, electionGroupID
+func (_m *Querier) CountParticipantsInElectionGroup(ctx context.Context, electionGroupID int32) (int64, error) {
+	ret := _m.Called(ctx, electionGroupID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for UpdateElectionGroupDetailsByGroup")
+		panic("no return value specified for CountParticipantsInElectionGroup")
 	}
 
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, queries.UpdateElectionGroupDetailsByGroupParams) error); ok {
-		r0 = rf(ctx, arg)
+	var r0 int64
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int32) (int64, error)); ok {
+		return rf(ctx, electionGroupID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int32) int64); ok {
+		r0 = rf(ctx, electionGroupID)
 	} else {
-		r0 = ret.Error(0)
+		r0 = ret.Get(0).(int64)
 	}
 
-	return r0
+	if rf, ok := ret.Get(1).(func(context.Context, int32) error); ok {
+		r1 = rf(ctx, electionGroupID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
+
 
 // UpdateElectionGroup provides a mock function with given fields: ctx, arg
 func (_m *Querier) UpdateElectionGroup(ctx context.Context, arg queries.UpdateElectionGroupParams) (queries.ElectionGroup, error) {

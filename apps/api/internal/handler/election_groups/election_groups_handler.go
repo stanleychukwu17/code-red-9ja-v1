@@ -7,17 +7,16 @@ import (
 	"free9ja/api/internal/utils"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type ElectionGroupsService interface {
-	CreateElectionGroup(ctx context.Context, name string, electionDate time.Time) (queries.ElectionGroup, error)
+	CreateElectionGroup(ctx context.Context, name string, year int16) (queries.ElectionGroup, error)
 	GetElectionGroupByID(ctx context.Context, id int32) (queries.ElectionGroup, error)
 	ListElectionGroups(ctx context.Context) ([]queries.ElectionGroup, error)
-	UpdateElectionGroup(ctx context.Context, id int32, name string, electionDate time.Time) (queries.ElectionGroup, error)
+	UpdateElectionGroup(ctx context.Context, id int32, name string, year int16) (queries.ElectionGroup, error)
 	DeleteElectionGroup(ctx context.Context, id int32) error
 	ListElectionGroupsWithPartyStats(ctx context.Context, partyID int16) ([]queries.ListElectionGroupsWithPartyStatsRow, error)
 	UpsertPartyElectionGroupStats(ctx context.Context, partyID int16, electionGroupID int32, pollingAgentsCoverage []byte, electionsContesting int32) (queries.PartyElectionGroup, error)
@@ -38,13 +37,13 @@ func NewHandler(service ElectionGroupsService, utils *utils.Utils) *Handler {
 
 
 type CreateElectionGroupRequest struct {
-	Name         string         `json:"name"`
-	ElectionDate utils.JSONDate `json:"election_date"`
+	Name string `json:"name"`
+	Year int16  `json:"year"`
 }
 
 type UpdateElectionGroupRequest struct {
-	Name         string         `json:"name"`
-	ElectionDate utils.JSONDate `json:"election_date"`
+	Name string `json:"name"`
+	Year int16  `json:"year"`
 }
 
 // CreateElectionGroup godoc
@@ -66,14 +65,14 @@ func (h *Handler) CreateElectionGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 2. Validate mandatory fields (name and election date)
-	if req.Name == "" || req.ElectionDate.IsZero() {
-		h.utils.RespondError(w, http.StatusBadRequest, "name and election_date are required")
+	// 2. Validate mandatory fields (name and year)
+	if req.Name == "" || req.Year <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "name and year are required")
 		return
 	}
 
 	// 3. Delegate creation to service (persists group, updates caches, and seeds national metrics in background)
-	eg, err := h.service.CreateElectionGroup(r.Context(), req.Name, req.ElectionDate.Time())
+	eg, err := h.service.CreateElectionGroup(r.Context(), req.Name, req.Year)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create election group: "+err.Error())
 		return
@@ -88,7 +87,7 @@ func (h *Handler) CreateElectionGroup(w http.ResponseWriter, r *http.Request) {
 type ElectionGroupResponse struct {
 	ID                                 int32              `json:"id"`
 	Name                               string             `json:"name"`
-	ElectionDate                       pgtype.Date        `json:"election_date"`
+	Year                               int16              `json:"year"`
 	CreatedAt                          pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt                          pgtype.Timestamptz `json:"updated_at"`
 	PollingAgentsCoverage              interface{}        `json:"polling_agents_coverage"`
@@ -127,7 +126,7 @@ func (h *Handler) ListElectionGroups(w http.ResponseWriter, r *http.Request) {
 			responseGroups = append(responseGroups, ElectionGroupResponse{
 				ID:                                 row.ID,
 				Name:                               row.Name,
-				ElectionDate:                       row.ElectionDate,
+				Year:                               row.Year,
 				CreatedAt:                          row.CreatedAt,
 				UpdatedAt:                          row.UpdatedAt,
 				PollingAgentsCoverage:              json.RawMessage(row.PollingAgentsCoverage),
@@ -143,11 +142,11 @@ func (h *Handler) ListElectionGroups(w http.ResponseWriter, r *http.Request) {
 
 		for _, g := range groups {
 			responseGroups = append(responseGroups, ElectionGroupResponse{
-				ID:           g.ID,
-				Name:         g.Name,
-				ElectionDate: g.ElectionDate,
-				CreatedAt:    g.CreatedAt,
-				UpdatedAt:    g.UpdatedAt,
+				ID:        g.ID,
+				Name:      g.Name,
+				Year:      g.Year,
+				CreatedAt: g.CreatedAt,
+				UpdatedAt: g.UpdatedAt,
 			})
 		}
 	}
@@ -225,9 +224,9 @@ func (h *Handler) UpdateElectionGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 3. Validate mandatory fields (name and election date)
-	if req.Name == "" || req.ElectionDate.IsZero() {
-		h.utils.RespondError(w, http.StatusBadRequest, "name and election_date are required")
+	// 3. Validate mandatory fields (name and year)
+	if req.Name == "" || req.Year <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "name and year are required")
 		return
 	}
 
@@ -238,8 +237,8 @@ func (h *Handler) UpdateElectionGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 5. Update election group via service (updates group, syncs date across child elections, and invalidates cache)
-	updated, err := h.service.UpdateElectionGroup(r.Context(), int32(id), req.Name, req.ElectionDate.Time())
+	// 5. Update election group via service (updates group and invalidates cache)
+	updated, err := h.service.UpdateElectionGroup(r.Context(), int32(id), req.Name, req.Year)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update election group: "+err.Error())
 		return

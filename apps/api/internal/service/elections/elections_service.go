@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
+	"free9ja/api/internal/utils"
 	"free9ja/api/internal/worker"
 	"log/slog"
 	"time"
@@ -105,8 +106,10 @@ func (s *ElectionsService) CreateElection(
 	if err != nil {
 		return queries.Election{}, err
 	}
-	eg, err := s.queries.GetElectionGroupByID(ctx, electionGroupID)
-	if err != nil {
+	if !et.IsContested {
+		return queries.Election{}, fmt.Errorf("office %s is not contestable in elections", et.Name)
+	}
+	if _, err := s.queries.GetElectionGroupByID(ctx, electionGroupID); err != nil {
 		return queries.Election{}, err
 	}
 
@@ -120,13 +123,14 @@ func (s *ElectionsService) CreateElection(
 	txQueries := s.queries.WithTx(tx)
 
 	// 3. Determine dynamic election display name based on geographic level
-	name = et.Election + " Election"
+	etElection := utils.PgTextOrDefault(et.Election, et.Name)
+	name = etElection + " Election"
 	if stateID != nil {
 		stateRow, err := txQueries.GetStateDetailsByID(ctx, *stateID)
 		if err == nil {
-			name = fmt.Sprintf("%s Election (%s)", et.Election, stateRow.Name)
+			name = fmt.Sprintf("%s Election (%s)", etElection, stateRow.Name)
 		} else {
-			name = fmt.Sprintf("%s Election (State %d)", et.Election, *stateID)
+			name = fmt.Sprintf("%s Election (State %d)", etElection, *stateID)
 		}
 	} else if senatorialDistrictID != nil {
 		districts, err := txQueries.GetSenatorialDistricts(ctx, 0)
@@ -139,12 +143,12 @@ func (s *ElectionsService) CreateElection(
 				}
 			}
 			if districtName != "" {
-				name = fmt.Sprintf("%s Election (%s)", et.Election, districtName)
+				name = fmt.Sprintf("%s Election (%s)", etElection, districtName)
 			} else {
-				name = fmt.Sprintf("%s Election (District %d)", et.Election, *senatorialDistrictID)
+				name = fmt.Sprintf("%s Election (District %d)", etElection, *senatorialDistrictID)
 			}
 		} else {
-			name = fmt.Sprintf("%s Election (District %d)", et.Election, *senatorialDistrictID)
+			name = fmt.Sprintf("%s Election (District %d)", etElection, *senatorialDistrictID)
 		}
 	} else if federalConstituencyID != nil {
 		constituencies, err := txQueries.GetFederalConstituencies(ctx, queries.GetFederalConstituenciesParams{
@@ -160,12 +164,12 @@ func (s *ElectionsService) CreateElection(
 				}
 			}
 			if constituencyName != "" {
-				name = fmt.Sprintf("%s Election (%s)", et.Election, constituencyName)
+				name = fmt.Sprintf("%s Election (%s)", etElection, constituencyName)
 			} else {
-				name = fmt.Sprintf("%s Election (Federal Constituency %d)", et.Election, *federalConstituencyID)
+				name = fmt.Sprintf("%s Election (Federal Constituency %d)", etElection, *federalConstituencyID)
 			}
 		} else {
-			name = fmt.Sprintf("%s Election (Federal Constituency %d)", et.Election, *federalConstituencyID)
+			name = fmt.Sprintf("%s Election (Federal Constituency %d)", etElection, *federalConstituencyID)
 		}
 	} else if stateConstituencyID != nil {
 		constituencies, err := txQueries.GetStateConstituencies(ctx, queries.GetStateConstituenciesParams{
@@ -181,12 +185,12 @@ func (s *ElectionsService) CreateElection(
 				}
 			}
 			if constituencyName != "" {
-				name = fmt.Sprintf("%s Election (%s)", et.Election, constituencyName)
+				name = fmt.Sprintf("%s Election (%s)", etElection, constituencyName)
 			} else {
-				name = fmt.Sprintf("%s Election (State Constituency %d)", et.Election, *stateConstituencyID)
+				name = fmt.Sprintf("%s Election (State Constituency %d)", etElection, *stateConstituencyID)
 			}
 		} else {
-			name = fmt.Sprintf("%s Election (State Constituency %d)", et.Election, *stateConstituencyID)
+			name = fmt.Sprintf("%s Election (State Constituency %d)", etElection, *stateConstituencyID)
 		}
 	} else if lgaID != nil {
 		lgas, err := txQueries.GetLGAs(ctx, 0)
@@ -199,12 +203,12 @@ func (s *ElectionsService) CreateElection(
 				}
 			}
 			if lgaName != "" {
-				name = fmt.Sprintf("%s Election (%s)", et.Election, lgaName)
+				name = fmt.Sprintf("%s Election (%s)", etElection, lgaName)
 			} else {
-				name = fmt.Sprintf("%s Election (LGA %d)", et.Election, *lgaID)
+				name = fmt.Sprintf("%s Election (LGA %d)", etElection, *lgaID)
 			}
 		} else {
-			name = fmt.Sprintf("%s Election (LGA %d)", et.Election, *lgaID)
+			name = fmt.Sprintf("%s Election (LGA %d)", etElection, *lgaID)
 		}
 	} else if wardID != nil {
 		wards, err := txQueries.GetWards(ctx, queries.GetWardsParams{
@@ -220,12 +224,12 @@ func (s *ElectionsService) CreateElection(
 				}
 			}
 			if wardName != "" {
-				name = fmt.Sprintf("%s Election (%s)", et.Election, wardName)
+				name = fmt.Sprintf("%s Election (%s)", etElection, wardName)
 			} else {
-				name = fmt.Sprintf("%s Election (Ward %d)", et.Election, *wardID)
+				name = fmt.Sprintf("%s Election (Ward %d)", etElection, *wardID)
 			}
 		} else {
-			name = fmt.Sprintf("%s Election (Ward %d)", et.Election, *wardID)
+			name = fmt.Sprintf("%s Election (Ward %d)", etElection, *wardID)
 		}
 	}
 
@@ -237,11 +241,9 @@ func (s *ElectionsService) CreateElection(
 	// 5. Persist the election instance record
 	election, err := txQueries.CreateElectionInstance(ctx, queries.CreateElectionInstanceParams{
 		Name:                  name,
-		Rank:                  et.Rank,
 		CandidatesCount:       candidatesCount,
 		ElectionDate:          pgtype.Date{Time: electionDate, Valid: true},
 		ElectionGroupID:       electionGroupID,
-		ElectionGroupName:     eg.Name,
 		OfficeID:              officeID,
 		OfficeName:            et.Name,
 		Scope:                 et.Scope,
@@ -257,7 +259,7 @@ func (s *ElectionsService) CreateElection(
 	}
 
 	// 6. Synchronize the election group rank and computed name across all child elections
-	if err := s.syncElectionGroupNameAndRank(ctx, txQueries, electionGroupID, electionDate.Year()); err != nil {
+	if err := s.syncElectionGroupName(ctx, txQueries, electionGroupID, electionDate.Year()); err != nil {
 		return queries.Election{}, err
 	}
 
@@ -266,21 +268,15 @@ func (s *ElectionsService) CreateElection(
 		return queries.Election{}, err
 	}
 
-	// 8. Re-fetch the election with newly synchronized denormalized group name
-	updatedElection, err := txQueries.GetElectionInstanceByID(ctx, election.ID)
-	if err != nil {
-		return queries.Election{}, err
-	}
-
-	// 9. Commit the transaction
+	// 8. Commit the transaction
 	if err := tx.Commit(ctx); err != nil {
 		return queries.Election{}, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	// 10. Seed geographic hierarchy stats for this election group post-commit
+	// 9. Seed geographic hierarchy stats for this election group post-commit
 	s.enqueueSeedElectionGroupStats(ctx, electionGroupID)
 
-	return updatedElection, nil
+	return election, nil
 }
 
 // CandidateInput holds candidate and party identification for election registration.
@@ -300,6 +296,10 @@ func (s *ElectionsService) CreateNationwideElection(ctx context.Context, officeI
 	if err != nil {
 		return queries.Election{}, fmt.Errorf("failed to fetch office: %w", err)
 	}
+	if !et.IsContested {
+		return queries.Election{}, fmt.Errorf("office %s is not contestable in elections", et.Name)
+	}
+	etElection := utils.PgTextOrDefault(et.Election, et.Name)
 
 	// 2. Begin database transaction
 	tx, err := s.pool.Begin(ctx)
@@ -311,20 +311,16 @@ func (s *ElectionsService) CreateNationwideElection(ctx context.Context, officeI
 	txQueries := s.queries.WithTx(tx)
 
 	var groupID int32
-	var groupName string
 
 	// 3. Resolve parent election group: either join an existing group or auto-create a new one
 	if electionGroupID != nil && *electionGroupID > 0 {
 		groupID = *electionGroupID
-		eg, err := txQueries.GetElectionGroupByID(ctx, groupID)
-		if err != nil {
+		if _, err := txQueries.GetElectionGroupByID(ctx, groupID); err != nil {
 			return queries.Election{}, fmt.Errorf("failed to fetch election group: %w", err)
 		}
-		groupName = eg.Name
-
 	} else {
 		// Auto-create election group with collision-safe naming (e.g., "2027 Presidential Election (1)")
-		baseGroupName := fmt.Sprintf("%d %s Election", electionDate.Year(), et.Election)
+		baseGroupName := fmt.Sprintf("%d %s Election", electionDate.Year(), etElection)
 		computedGroupName := baseGroupName
 		suffix := 1
 		for {
@@ -337,28 +333,25 @@ func (s *ElectionsService) CreateNationwideElection(ctx context.Context, officeI
 		}
 
 		newGroup, err := txQueries.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{
-			Name:         computedGroupName,
-			ElectionDate: pgtype.Date{Time: electionDate, Valid: true},
+			Name: computedGroupName,
+			Year: int16(electionDate.Year()),
 		})
 		if err != nil {
 			return queries.Election{}, fmt.Errorf("failed to create election group: %w", err)
 		}
 		groupID = newGroup.ID
-		groupName = newGroup.Name
 	}
 
 	// 4. Create election record (nationwide scope has no geographic sub-boundary IDs)
-	name := et.Election + " Election"
+	name := etElection + " Election"
 	election, err := txQueries.CreateElectionInstance(ctx, queries.CreateElectionInstanceParams{
-		Name:              name,
-		Rank:              et.Rank,
-		CandidatesCount:   int32(len(candidates)),
-		ElectionDate:      pgtype.Date{Time: electionDate, Valid: true},
-		ElectionGroupID:   groupID,
-		ElectionGroupName: groupName,
-		OfficeID:          officeID,
-		OfficeName:        et.Name,
-		Scope:             "nationwide",
+		Name:            name,
+		CandidatesCount: int32(len(candidates)),
+		ElectionDate:    pgtype.Date{Time: electionDate, Valid: true},
+		ElectionGroupID: groupID,
+		OfficeID:        officeID,
+		OfficeName:      et.Name,
+		Scope:           "nationwide",
 	})
 	if err != nil {
 		return queries.Election{}, fmt.Errorf("failed to create election: %w", err)
@@ -378,7 +371,7 @@ func (s *ElectionsService) CreateNationwideElection(ctx context.Context, officeI
 	}
 
 	// 6. Synchronize group rank and name across constituent elections
-	if err := s.syncElectionGroupNameAndRank(ctx, txQueries, groupID, electionDate.Year()); err != nil {
+	if err := s.syncElectionGroupName(ctx, txQueries, groupID, electionDate.Year()); err != nil {
 		return queries.Election{}, err
 	}
 
@@ -387,21 +380,15 @@ func (s *ElectionsService) CreateNationwideElection(ctx context.Context, officeI
 		return queries.Election{}, err
 	}
 
-	// 8. Fetch updated election with synchronized group name
-	updatedElection, err := txQueries.GetElectionInstanceByID(ctx, election.ID)
-	if err != nil {
-		return queries.Election{}, err
-	}
-
-	// 9. Commit transaction
+	// 8. Commit transaction
 	if err := tx.Commit(ctx); err != nil {
 		return queries.Election{}, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	// 10. Seed geographic hierarchy stats for this election group post-commit
+	// 9. Seed geographic hierarchy stats for this election group post-commit
 	s.enqueueSeedElectionGroupStats(ctx, groupID)
 
-	return updatedElection, nil
+	return election, nil
 }
 
 // CreateStateElection sets up multiple state-level elections (e.g., Governorship) under a shared or auto-created election group.
@@ -415,6 +402,8 @@ func (s *ElectionsService) CreateStateElection(ctx context.Context, officeID int
 		return nil, fmt.Errorf("failed to fetch office: %w", err)
 	}
 
+	etElection := utils.PgTextOrDefault(et.Election, et.Name)
+
 	// 2. Begin database transaction
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -425,20 +414,16 @@ func (s *ElectionsService) CreateStateElection(ctx context.Context, officeID int
 	txQueries := s.queries.WithTx(tx)
 
 	var groupID int32
-	var groupName string
 
 	// 3. Resolve parent election group: either join an existing group or auto-create a new one
 	if electionGroupID != nil && *electionGroupID > 0 {
 		groupID = *electionGroupID
-		eg, err := txQueries.GetElectionGroupByID(ctx, groupID)
-		if err != nil {
+		if _, err := txQueries.GetElectionGroupByID(ctx, groupID); err != nil {
 			return nil, fmt.Errorf("failed to fetch election group: %w", err)
 		}
-		groupName = eg.Name
-
 	} else {
 		// Auto-create election group with collision-safe naming
-		baseGroupName := fmt.Sprintf("%d %s Election", electionDate.Year(), et.Election)
+		baseGroupName := fmt.Sprintf("%d %s Election", electionDate.Year(), etElection)
 		computedGroupName := baseGroupName
 		suffix := 1
 		for {
@@ -451,14 +436,13 @@ func (s *ElectionsService) CreateStateElection(ctx context.Context, officeID int
 		}
 
 		newGroup, err := txQueries.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{
-			Name:         computedGroupName,
-			ElectionDate: pgtype.Date{Time: electionDate, Valid: true},
+			Name: computedGroupName,
+			Year: int16(electionDate.Year()),
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to create election group: %w", err)
 		}
 		groupID = newGroup.ID
-		groupName = newGroup.Name
 	}
 
 	createdElections := make([]queries.Election, 0, len(stateIDs))
@@ -472,18 +456,16 @@ func (s *ElectionsService) CreateStateElection(ctx context.Context, officeID int
 			stateName = stateRow.Name
 		}
 
-		name := fmt.Sprintf("%s Election (%s)", et.Election, stateName)
+		name := fmt.Sprintf("%s Election (%s)", etElection, stateName)
 		election, err := txQueries.CreateElectionInstance(ctx, queries.CreateElectionInstanceParams{
-			Name:              name,
-			Rank:              et.Rank,
-			CandidatesCount:   0,
-			ElectionDate:      pgtype.Date{Time: electionDate, Valid: true},
-			ElectionGroupID:   groupID,
-			ElectionGroupName: groupName,
-			OfficeID:          officeID,
-			OfficeName:        et.Name,
-			Scope:             "state",
-			StateID:           pgtype.Int2{Int16: stateID, Valid: true},
+			Name:            name,
+			CandidatesCount: 0,
+			ElectionDate:    pgtype.Date{Time: electionDate, Valid: true},
+			ElectionGroupID: groupID,
+			OfficeID:        officeID,
+			OfficeName:      et.Name,
+			Scope:           "state",
+			StateID:         pgtype.Int2{Int16: stateID, Valid: true},
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to create election for state %d: %w", stateID, err)
@@ -499,8 +481,8 @@ func (s *ElectionsService) CreateStateElection(ctx context.Context, officeID int
 		}
 	}
 
-	// 6. Synchronize group rank and name across constituent elections
-	if err := s.syncElectionGroupNameAndRank(ctx, txQueries, groupID, electionDate.Year()); err != nil {
+	// 6. Synchronize group title based on constituent elections
+	if err := s.syncElectionGroupName(ctx, txQueries, groupID, electionDate.Year()); err != nil {
 		return nil, err
 	}
 
@@ -535,6 +517,7 @@ func (s *ElectionsService) CreateSenatorialDistrictElection(ctx context.Context,
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch office: %w", err)
 	}
+	etElection := utils.PgTextOrDefault(et.Election, et.Name)
 
 	// 2. Begin database transaction
 	tx, err := s.pool.Begin(ctx)
@@ -546,20 +529,16 @@ func (s *ElectionsService) CreateSenatorialDistrictElection(ctx context.Context,
 	txQueries := s.queries.WithTx(tx)
 
 	var groupID int32
-	var groupName string
 
 	// 3. Resolve parent election group: either join an existing group or auto-create a new one
 	if electionGroupID != nil && *electionGroupID > 0 {
 		groupID = *electionGroupID
-		eg, err := txQueries.GetElectionGroupByID(ctx, groupID)
-		if err != nil {
+		if _, err := txQueries.GetElectionGroupByID(ctx, groupID); err != nil {
 			return nil, fmt.Errorf("failed to fetch election group: %w", err)
 		}
-		groupName = eg.Name
-
 	} else {
 		// Auto-create election group with collision-safe naming
-		baseGroupName := fmt.Sprintf("%d %s Election", electionDate.Year(), et.Election)
+		baseGroupName := fmt.Sprintf("%d %s Election", electionDate.Year(), etElection)
 		computedGroupName := baseGroupName
 		suffix := 1
 		for {
@@ -572,14 +551,13 @@ func (s *ElectionsService) CreateSenatorialDistrictElection(ctx context.Context,
 		}
 
 		newGroup, err := txQueries.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{
-			Name:         computedGroupName,
-			ElectionDate: pgtype.Date{Time: electionDate, Valid: true},
+			Name: computedGroupName,
+			Year: int16(electionDate.Year()),
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to create election group: %w", err)
 		}
 		groupID = newGroup.ID
-		groupName = newGroup.Name
 	}
 
 	createdElections := make([]queries.Election, 0, len(senatorialDistrictIDs))
@@ -606,14 +584,12 @@ func (s *ElectionsService) CreateSenatorialDistrictElection(ctx context.Context,
 			}
 		}
 
-		name := fmt.Sprintf("%s Election (%s)", et.Election, districtName)
+		name := fmt.Sprintf("%s Election (%s)", etElection, districtName)
 		election, err := txQueries.CreateElectionInstance(ctx, queries.CreateElectionInstanceParams{
 			Name:                 name,
-			Rank:                 et.Rank,
 			CandidatesCount:      0,
 			ElectionDate:         pgtype.Date{Time: electionDate, Valid: true},
 			ElectionGroupID:      groupID,
-			ElectionGroupName:    groupName,
 			OfficeID:             officeID,
 			OfficeName:           et.Name,
 			Scope:                "senatorial-district",
@@ -634,8 +610,8 @@ func (s *ElectionsService) CreateSenatorialDistrictElection(ctx context.Context,
 		}
 	}
 
-	// 7. Synchronize group rank and name across constituent elections
-	if err := s.syncElectionGroupNameAndRank(ctx, txQueries, groupID, electionDate.Year()); err != nil {
+	// 7. Synchronize group title based on constituent elections
+	if err := s.syncElectionGroupName(ctx, txQueries, groupID, electionDate.Year()); err != nil {
 		return nil, err
 	}
 
@@ -670,6 +646,7 @@ func (s *ElectionsService) CreateFederalConstituencyElection(ctx context.Context
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch office: %w", err)
 	}
+	etElection := utils.PgTextOrDefault(et.Election, et.Name)
 
 	// 2. Begin database transaction
 	tx, err := s.pool.Begin(ctx)
@@ -681,20 +658,16 @@ func (s *ElectionsService) CreateFederalConstituencyElection(ctx context.Context
 	txQueries := s.queries.WithTx(tx)
 
 	var groupID int32
-	var groupName string
 
 	// 3. Resolve parent election group: either join an existing group or auto-create a new one
 	if electionGroupID != nil && *electionGroupID > 0 {
 		groupID = *electionGroupID
-		eg, err := txQueries.GetElectionGroupByID(ctx, groupID)
-		if err != nil {
+		if _, err := txQueries.GetElectionGroupByID(ctx, groupID); err != nil {
 			return nil, fmt.Errorf("failed to fetch election group: %w", err)
 		}
-		groupName = eg.Name
-
 	} else {
 		// Auto-create election group with collision-safe naming
-		baseGroupName := fmt.Sprintf("%d %s Election", electionDate.Year(), et.Election)
+		baseGroupName := fmt.Sprintf("%d %s Election", electionDate.Year(), etElection)
 		computedGroupName := baseGroupName
 		suffix := 1
 		for {
@@ -707,14 +680,13 @@ func (s *ElectionsService) CreateFederalConstituencyElection(ctx context.Context
 		}
 
 		newGroup, err := txQueries.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{
-			Name:         computedGroupName,
-			ElectionDate: pgtype.Date{Time: electionDate, Valid: true},
+			Name: computedGroupName,
+			Year: int16(electionDate.Year()),
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to create election group: %w", err)
 		}
 		groupID = newGroup.ID
-		groupName = newGroup.Name
 	}
 
 	createdElections := make([]queries.Election, 0, len(federalConstituencyIDs))
@@ -749,14 +721,12 @@ func (s *ElectionsService) CreateFederalConstituencyElection(ctx context.Context
 			}
 		}
 
-		name := fmt.Sprintf("%s Election (%s)", et.Election, constituencyName)
+		name := fmt.Sprintf("%s Election (%s)", etElection, constituencyName)
 		election, err := txQueries.CreateElectionInstance(ctx, queries.CreateElectionInstanceParams{
 			Name:                  name,
-			Rank:                  et.Rank,
 			CandidatesCount:       0,
 			ElectionDate:          pgtype.Date{Time: electionDate, Valid: true},
 			ElectionGroupID:       groupID,
-			ElectionGroupName:     groupName,
 			OfficeID:              officeID,
 			OfficeName:            et.Name,
 			Scope:                 "federal-constituency",
@@ -778,8 +748,8 @@ func (s *ElectionsService) CreateFederalConstituencyElection(ctx context.Context
 		}
 	}
 
-	// 7. Synchronize group rank and name across constituent elections
-	if err := s.syncElectionGroupNameAndRank(ctx, txQueries, groupID, electionDate.Year()); err != nil {
+	// 7. Synchronize group title based on constituent elections
+	if err := s.syncElectionGroupName(ctx, txQueries, groupID, electionDate.Year()); err != nil {
 		return nil, err
 	}
 
@@ -814,6 +784,7 @@ func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, 
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch office: %w", err)
 	}
+	etElection := utils.PgTextOrDefault(et.Election, et.Name)
 
 	// 2. Begin database transaction
 	tx, err := s.pool.Begin(ctx)
@@ -825,20 +796,16 @@ func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, 
 	txQueries := s.queries.WithTx(tx)
 
 	var groupID int32
-	var groupName string
 
 	// 3. Resolve parent election group: either join an existing group or auto-create a new one
 	if electionGroupID != nil && *electionGroupID > 0 {
 		groupID = *electionGroupID
-		eg, err := txQueries.GetElectionGroupByID(ctx, groupID)
-		if err != nil {
+		if _, err := txQueries.GetElectionGroupByID(ctx, groupID); err != nil {
 			return nil, fmt.Errorf("failed to fetch election group: %w", err)
 		}
-		groupName = eg.Name
-
 	} else {
 		// Auto-create election group with collision-safe naming
-		baseGroupName := fmt.Sprintf("%d %s Election", electionDate.Year(), et.Election)
+		baseGroupName := fmt.Sprintf("%d %s Election", electionDate.Year(), etElection)
 		computedGroupName := baseGroupName
 		suffix := 1
 		for {
@@ -851,14 +818,13 @@ func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, 
 		}
 
 		newGroup, err := txQueries.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{
-			Name:         computedGroupName,
-			ElectionDate: pgtype.Date{Time: electionDate, Valid: true},
+			Name: computedGroupName,
+			Year: int16(electionDate.Year()),
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to create election group: %w", err)
 		}
 		groupID = newGroup.ID
-		groupName = newGroup.Name
 	}
 
 	createdElections := make([]queries.Election, 0, len(stateConstituencyIDs))
@@ -901,14 +867,12 @@ func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, 
 			}
 		}
 
-		name := fmt.Sprintf("%s Election (%s)", et.Election, constituencyName)
+		name := fmt.Sprintf("%s Election (%s)", etElection, constituencyName)
 		election, err := txQueries.CreateElectionInstance(ctx, queries.CreateElectionInstanceParams{
 			Name:                  name,
-			Rank:                  et.Rank,
 			CandidatesCount:       0,
 			ElectionDate:          pgtype.Date{Time: electionDate, Valid: true},
 			ElectionGroupID:       groupID,
-			ElectionGroupName:     groupName,
 			OfficeID:              officeID,
 			OfficeName:            et.Name,
 			Scope:                 "state-constituency",
@@ -932,8 +896,8 @@ func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, 
 		}
 	}
 
-	// 7. Synchronize group rank and name across constituent elections
-	if err := s.syncElectionGroupNameAndRank(ctx, txQueries, groupID, electionDate.Year()); err != nil {
+	// 7. Synchronize group title based on constituent elections
+	if err := s.syncElectionGroupName(ctx, txQueries, groupID, electionDate.Year()); err != nil {
 		return nil, err
 	}
 
@@ -968,6 +932,7 @@ func (s *ElectionsService) CreateLgaElection(ctx context.Context, officeID int16
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch office: %w", err)
 	}
+	etElection := utils.PgTextOrDefault(et.Election, et.Name)
 
 	// 2. Begin database transaction
 	tx, err := s.pool.Begin(ctx)
@@ -979,20 +944,16 @@ func (s *ElectionsService) CreateLgaElection(ctx context.Context, officeID int16
 	txQueries := s.queries.WithTx(tx)
 
 	var groupID int32
-	var groupName string
 
 	// 3. Resolve parent election group: either join an existing group or auto-create a new one
 	if electionGroupID != nil && *electionGroupID > 0 {
 		groupID = *electionGroupID
-		eg, err := txQueries.GetElectionGroupByID(ctx, groupID)
-		if err != nil {
+		if _, err := txQueries.GetElectionGroupByID(ctx, groupID); err != nil {
 			return nil, fmt.Errorf("failed to fetch election group: %w", err)
 		}
-		groupName = eg.Name
-
 	} else {
 		// Auto-create election group with collision-safe naming
-		baseGroupName := fmt.Sprintf("%d %s Election", electionDate.Year(), et.Election)
+		baseGroupName := fmt.Sprintf("%d %s Election", electionDate.Year(), etElection)
 		computedGroupName := baseGroupName
 		suffix := 1
 		for {
@@ -1005,14 +966,13 @@ func (s *ElectionsService) CreateLgaElection(ctx context.Context, officeID int16
 		}
 
 		newGroup, err := txQueries.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{
-			Name:         computedGroupName,
-			ElectionDate: pgtype.Date{Time: electionDate, Valid: true},
+			Name: computedGroupName,
+			Year: int16(electionDate.Year()),
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to create election group: %w", err)
 		}
 		groupID = newGroup.ID
-		groupName = newGroup.Name
 	}
 
 	createdElections := make([]queries.Election, 0, len(lgaIDs))
@@ -1048,14 +1008,12 @@ func (s *ElectionsService) CreateLgaElection(ctx context.Context, officeID int16
 			}
 		}
 
-		name := fmt.Sprintf("%s Election (%s)", et.Election, lgaName)
+		name := fmt.Sprintf("%s Election (%s)", etElection, lgaName)
 		election, err := txQueries.CreateElectionInstance(ctx, queries.CreateElectionInstanceParams{
 			Name:                  name,
-			Rank:                  et.Rank,
 			CandidatesCount:       0,
 			ElectionDate:          pgtype.Date{Time: electionDate, Valid: true},
 			ElectionGroupID:       groupID,
-			ElectionGroupName:     groupName,
 			OfficeID:              officeID,
 			OfficeName:            et.Name,
 			Scope:                 "lga",
@@ -1078,8 +1036,8 @@ func (s *ElectionsService) CreateLgaElection(ctx context.Context, officeID int16
 		}
 	}
 
-	// 7. Synchronize group rank and name across constituent elections
-	if err := s.syncElectionGroupNameAndRank(ctx, txQueries, groupID, electionDate.Year()); err != nil {
+	// 7. Synchronize group title based on constituent elections
+	if err := s.syncElectionGroupName(ctx, txQueries, groupID, electionDate.Year()); err != nil {
 		return nil, err
 	}
 
@@ -1114,6 +1072,7 @@ func (s *ElectionsService) CreateWardElection(ctx context.Context, officeID int1
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch office: %w", err)
 	}
+	etElection := utils.PgTextOrDefault(et.Election, et.Name)
 
 	// 2. Begin database transaction
 	tx, err := s.pool.Begin(ctx)
@@ -1125,20 +1084,16 @@ func (s *ElectionsService) CreateWardElection(ctx context.Context, officeID int1
 	txQueries := s.queries.WithTx(tx)
 
 	var groupID int32
-	var groupName string
 
 	// 3. Resolve parent election group: either join an existing group or auto-create a new one
 	if electionGroupID != nil && *electionGroupID > 0 {
 		groupID = *electionGroupID
-		eg, err := txQueries.GetElectionGroupByID(ctx, groupID)
-		if err != nil {
+		if _, err := txQueries.GetElectionGroupByID(ctx, groupID); err != nil {
 			return nil, fmt.Errorf("failed to fetch election group: %w", err)
 		}
-		groupName = eg.Name
-
 	} else {
 		// Auto-create election group with collision-safe naming
-		baseGroupName := fmt.Sprintf("%d %s Election", electionDate.Year(), et.Election)
+		baseGroupName := fmt.Sprintf("%d %s Election", electionDate.Year(), etElection)
 		computedGroupName := baseGroupName
 		suffix := 1
 		for {
@@ -1151,14 +1106,13 @@ func (s *ElectionsService) CreateWardElection(ctx context.Context, officeID int1
 		}
 
 		newGroup, err := txQueries.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{
-			Name:         computedGroupName,
-			ElectionDate: pgtype.Date{Time: electionDate, Valid: true},
+			Name: computedGroupName,
+			Year: int16(electionDate.Year()),
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to create election group: %w", err)
 		}
 		groupID = newGroup.ID
-		groupName = newGroup.Name
 	}
 
 	createdElections := make([]queries.Election, 0, len(wardIDs))
@@ -1218,14 +1172,12 @@ func (s *ElectionsService) CreateWardElection(ctx context.Context, officeID int1
 			}
 		}
 
-		name := fmt.Sprintf("%s Election (%s)", et.Election, wardName)
+		name := fmt.Sprintf("%s Election (%s)", etElection, wardName)
 		election, err := txQueries.CreateElectionInstance(ctx, queries.CreateElectionInstanceParams{
 			Name:                  name,
-			Rank:                  et.Rank,
 			CandidatesCount:       0,
 			ElectionDate:          pgtype.Date{Time: electionDate, Valid: true},
 			ElectionGroupID:       groupID,
-			ElectionGroupName:     groupName,
 			OfficeID:              officeID,
 			OfficeName:            et.Name,
 			Scope:                 "ward",
@@ -1250,8 +1202,8 @@ func (s *ElectionsService) CreateWardElection(ctx context.Context, officeID int1
 		}
 	}
 
-	// 7. Synchronize group rank and name across constituent elections
-	if err := s.syncElectionGroupNameAndRank(ctx, txQueries, groupID, electionDate.Year()); err != nil {
+	// 7. Synchronize group title based on constituent elections
+	if err := s.syncElectionGroupName(ctx, txQueries, groupID, electionDate.Year()); err != nil {
 		return nil, err
 	}
 
@@ -1350,8 +1302,7 @@ func (s *ElectionsService) UpdateElection(
 	if err != nil {
 		return queries.Election{}, err
 	}
-	eg, err := s.queries.GetElectionGroupByID(ctx, electionGroupID)
-	if err != nil {
+	if _, err := s.queries.GetElectionGroupByID(ctx, electionGroupID); err != nil {
 		return queries.Election{}, err
 	}
 
@@ -1364,11 +1315,9 @@ func (s *ElectionsService) UpdateElection(
 	el, err := s.queries.UpdateElectionInstance(ctx, queries.UpdateElectionInstanceParams{
 		ID:                    id,
 		Name:                  name,
-		Rank:                  et.Rank,
 		CandidatesCount:       candidatesCount,
 		ElectionDate:          pgtype.Date{Time: electionDate, Valid: true},
 		ElectionGroupID:       electionGroupID,
-		ElectionGroupName:     eg.Name,
 		OfficeID:              officeID,
 		OfficeName:            et.Name,
 		Scope:                 et.Scope,
@@ -1443,8 +1392,8 @@ func (s *ElectionsService) DeleteElection(ctx context.Context, id int32) error {
 			// If no elections remain in this group, clean up the empty group record
 			_ = txQueries.DeleteElectionGroup(ctx, el.ElectionGroupID)
 		} else {
-			// Otherwise resynchronize the group name, rank, and election count based on remaining elections
-			_ = s.syncElectionGroupNameAndRank(ctx, txQueries, el.ElectionGroupID, el.ElectionDate.Time.Year())
+			// Otherwise resynchronize the group name based on remaining elections
+			_ = s.syncElectionGroupName(ctx, txQueries, el.ElectionGroupID, el.ElectionDate.Time.Year())
 		}
 	}
 
@@ -1508,11 +1457,9 @@ func (s *ElectionsService) SyncElectionCandidates(ctx context.Context, electionI
 	_, err = txQueries.UpdateElectionInstance(ctx, queries.UpdateElectionInstanceParams{
 		ID:                    el.ID,
 		Name:                  el.Name,
-		Rank:                  el.Rank,
 		CandidatesCount:       int32(len(candidates)),
 		ElectionDate:          el.ElectionDate,
 		ElectionGroupID:       el.ElectionGroupID,
-		ElectionGroupName:     el.ElectionGroupName,
 		OfficeID:              el.OfficeID,
 		OfficeName:            el.OfficeName,
 		Scope:                 el.Scope,
@@ -1531,10 +1478,10 @@ func (s *ElectionsService) SyncElectionCandidates(ctx context.Context, electionI
 	return tx.Commit(ctx)
 }
 
-// syncElectionGroupNameAndRank recalculates and updates an election group's title and rank based on
-// its constituent elections. It picks the highest-ranked office (lowest numerical rank), resolves naming
-// collisions, updates the group record, and denormalizes the updated group name across all member elections.
-func (s *ElectionsService) syncElectionGroupNameAndRank(ctx context.Context, txQueries *queries.Queries, groupID int32, year int) error {
+// syncElectionGroupName recalculates and updates an election group's title based on
+// its constituent elections. It picks the highest-ranked office (lowest numerical rank)
+// and updates the group record.
+func (s *ElectionsService) syncElectionGroupName(ctx context.Context, txQueries *queries.Queries, groupID int32, year int) error {
 	// 1. Fetch all constituent elections in the group
 	elections, err := txQueries.ListElectionsDetailedByGroupID(ctx, groupID)
 	if err != nil {
@@ -1545,10 +1492,10 @@ func (s *ElectionsService) syncElectionGroupNameAndRank(ctx context.Context, txQ
 		return nil
 	}
 
-	// 2. Identify the highest-ranked election (lowest rank numerical value)
+	// 2. Identify the highest-ranked election (lowest rank numerical value from office)
 	highestRanked := elections[0]
 	for _, e := range elections {
-		if e.Rank < highestRanked.Rank {
+		if e.OfficeRank < highestRanked.OfficeRank {
 			highestRanked = e
 		}
 	}
@@ -1560,7 +1507,7 @@ func (s *ElectionsService) syncElectionGroupNameAndRank(ctx context.Context, txQ
 	if len(elections) == 1 {
 		baseGroupName = fmt.Sprintf("%d %s", year, highestRanked.Name)
 	} else {
-		baseGroupName = fmt.Sprintf("%d %s Election", year, highestRanked.OfficeElection)
+		baseGroupName = fmt.Sprintf("%d %s Election", year, utils.PgTextOrDefault(highestRanked.OfficeElection, highestRanked.Name))
 	}
 
 	// 4. Resolve naming collisions by appending an incremental suffix if needed
@@ -1578,47 +1525,19 @@ func (s *ElectionsService) syncElectionGroupNameAndRank(ctx context.Context, txQ
 		newGroupName = fmt.Sprintf("%s (%d)", baseGroupName, suffix)
 	}
 
-	// 5. Update the election group record with new title, rank, and election count
+	// 5. Update the election group record with new title
 	eg, err := txQueries.GetElectionGroupByID(ctx, groupID)
 	if err != nil {
 		return fmt.Errorf("failed to fetch election group: %w", err)
 	}
 
 	_, err = txQueries.UpdateElectionGroup(ctx, queries.UpdateElectionGroupParams{
-		ID:           groupID,
-		Name:         newGroupName,
-		ElectionDate: eg.ElectionDate,
+		ID:   groupID,
+		Name: newGroupName,
+		Year: eg.Year,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to update election group: %w", err)
-	}
-
-
-	// 6. Denormalize the updated group name onto each child election instance for consistent queries
-	for _, e := range elections {
-		if e.ElectionGroupName != newGroupName {
-			_, err = txQueries.UpdateElectionInstance(ctx, queries.UpdateElectionInstanceParams{
-				ID:                    e.ID,
-				Name:                  e.Name,
-				Rank:                  e.Rank,
-				CandidatesCount:       e.CandidatesCount,
-				ElectionDate:          e.ElectionDate,
-				ElectionGroupID:       e.ElectionGroupID,
-				ElectionGroupName:     newGroupName,
-				OfficeID:              e.OfficeID,
-				OfficeName:            e.OfficeName,
-				Scope:                 e.Scope,
-				StateID:               e.StateID,
-				SenatorialDistrictID:  e.SenatorialDistrictID,
-				FederalConstituencyID: e.FederalConstituencyID,
-				StateConstituencyID:   e.StateConstituencyID,
-				LgaID:                 e.LgaID,
-				WardID:                e.WardID,
-			})
-			if err != nil {
-				return fmt.Errorf("failed to update election group name on election instance: %w", err)
-			}
-		}
 	}
 
 	return nil
@@ -1756,10 +1675,9 @@ func (s *ElectionsService) SubmitElectionVotes(
 		return fmt.Errorf("invalid election group: %w", err)
 	}
 
-	now := time.Now().Truncate(24 * time.Hour)
-	egDate := eg.ElectionDate.Time.Truncate(24 * time.Hour)
-	if now.After(egDate) {
-		return fmt.Errorf("voting for this election has ended")
+	now := time.Now()
+	if int(eg.Year) < now.Year() {
+		return fmt.Errorf("voting for this election cycle has ended")
 	}
 
 	// 3. Fetch polling unit and parent LGA to resolve geographic hierarchy (State, LGA, Senatorial District, Federal Constituency)

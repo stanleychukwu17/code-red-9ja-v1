@@ -31,9 +31,9 @@ sleep 2 # wait for 5seconds
 
 # seed politicians
 echo "Seeding politicians to ${BASE_URL}/api/v1/seed/users..."
-curl -X POST ${BASE_URL}/api/v1/seed/users \
-  -H "Content-Type: application/json" \
-  -d @"1.2-politicians.json"
+# curl -X POST ${BASE_URL}/api/v1/seed/users \
+#   -H "Content-Type: application/json" \
+#   -d @"1.2-politicians.json"
 
 sleep 1 # wait for 1second
 

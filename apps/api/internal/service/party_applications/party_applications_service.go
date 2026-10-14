@@ -751,24 +751,21 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 		return queries.PartyApplication{}, fmt.Errorf("failed to get election group: %w", err)
 	}
 
-	if electionGroup.ElectionDate.Valid {
-		now := time.Now()
-		today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-		if electionGroup.ElectionDate.Time.Before(today) {
-			reason := "Please apply for an upcoming election (not in the past)"
-			updatedApp, cancelErr := txQueries.UpdateApplicationStatus(ctx, queries.UpdateApplicationStatusParams{
-				ID:             input.ApplicationID,
-				Status:         "cancelled",
-				RejectedReason: pgtype.Text{String: reason, Valid: true},
-			})
-			if cancelErr != nil {
-				return queries.PartyApplication{}, fmt.Errorf("failed to cancel application for past election: %w", cancelErr)
-			}
-			if commitErr := tx.Commit(ctx); commitErr != nil {
-				return queries.PartyApplication{}, fmt.Errorf("failed to commit cancellation: %w", commitErr)
-			}
-			return updatedApp, errors.New("cancelled_past_election")
+	now := time.Now()
+	if int(electionGroup.Year) < now.Year() {
+		reason := "Please apply for an upcoming election (not in the past)"
+		updatedApp, cancelErr := txQueries.UpdateApplicationStatus(ctx, queries.UpdateApplicationStatusParams{
+			ID:             input.ApplicationID,
+			Status:         "cancelled",
+			RejectedReason: pgtype.Text{String: reason, Valid: true},
+		})
+		if cancelErr != nil {
+			return queries.PartyApplication{}, fmt.Errorf("failed to cancel application for past election: %w", cancelErr)
 		}
+		if commitErr := tx.Commit(ctx); commitErr != nil {
+			return queries.PartyApplication{}, fmt.Errorf("failed to commit cancellation: %w", commitErr)
+		}
+		return updatedApp, errors.New("cancelled_past_election")
 	}
 
 	// Deduct 1 slot from the party's slots balance. Once accepted, it is permanently consumed (no refund).
@@ -1527,7 +1524,7 @@ func (s *Service) updateReferralOnApplicationSubmission(ctx context.Context, txQ
 	type candidateUR struct {
 		userReferral      queries.UserReferral
 		egID              int32
-		electionDate      pgtype.Date
+		year              int16
 		hasActiveCampaign bool
 	}
 	var candidates []candidateUR
@@ -1578,7 +1575,7 @@ func (s *Service) updateReferralOnApplicationSubmission(ctx context.Context, txQ
 		candidates = append(candidates, candidateUR{
 			userReferral:      ur,
 			egID:              egID,
-			electionDate:      eg.ElectionDate,
+			year:              eg.Year,
 			hasActiveCampaign: hasActiveCampaign,
 		})
 	}
@@ -1590,28 +1587,18 @@ func (s *Service) updateReferralOnApplicationSubmission(ctx context.Context, txQ
 	// 4. Select best candidate:
 	//    Filter for candidates with active marketing campaigns in user's state.
 	//    If 1 candidate -> select it.
-	//    If 2 or more -> select user_referral with nearest upcoming election date to today.
-	//    If none have active campaign -> fall back to nearest upcoming election date from all candidates.
-	now := time.Now()
-	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	//    If 2 or more -> select user_referral with nearest upcoming election cycle.
+	//    If none have active campaign -> fall back to nearest upcoming election cycle from all candidates.
+	currentYear := int16(time.Now().Year())
 
 	pickNearest := func(pool []candidateUR) candidateUR {
 		best := pool[0]
 		for _, c := range pool[1:] {
-			if !c.electionDate.Valid {
-				continue
-			}
-			if !best.electionDate.Valid {
-				best = c
-				continue
-			}
-			cDate := c.electionDate.Time
-			bDate := best.electionDate.Time
-			cUpcoming := !cDate.Before(today)
-			bUpcoming := !bDate.Before(today)
+			cUpcoming := c.year >= currentYear
+			bUpcoming := best.year >= currentYear
 			if cUpcoming && !bUpcoming {
 				best = c
-			} else if cUpcoming && bUpcoming && cDate.Before(bDate) {
+			} else if cUpcoming && bUpcoming && c.year < best.year {
 				best = c
 			}
 		}

@@ -16,10 +16,10 @@ import (
 )
 
 type OfficesService interface {
-	CreateOffice(ctx context.Context, name, election, scope string, rank int32, inecElectionTypeID *string) (queries.Office, error)
+	CreateOffice(ctx context.Context, name, category string, election *string, scope string, rank int32, inecElectionTypeID *string, isContested bool, parentOfficeID, appointingOfficeID *int16) (queries.Office, error)
 	GetOfficeByID(ctx context.Context, id int16) (queries.Office, error)
 	ListOffices(ctx context.Context) ([]queries.Office, error)
-	UpdateOffice(ctx context.Context, id int16, name, election, scope string, rank int32, inecElectionTypeID *string) (queries.Office, error)
+	UpdateOffice(ctx context.Context, id int16, name, category string, election *string, scope string, rank int32, inecElectionTypeID *string, isContested bool, parentOfficeID, appointingOfficeID *int16) (queries.Office, error)
 	DeleteOffice(ctx context.Context, id int16) error
 }
 
@@ -62,18 +62,26 @@ func parsePaginationParams(r *http.Request) (int, int16) {
 
 type CreateOfficeRequest struct {
 	Name               string  `json:"name"`
-	Election           string  `json:"election"`
+	Category           string  `json:"category"`
+	Election           *string `json:"election"`
 	Scope              string  `json:"scope"`
 	Rank               int32   `json:"rank"`
 	InecElectionTypeID *string `json:"inec_election_type_id"`
+	IsContested        *bool   `json:"is_contested"`
+	ParentOfficeID     *int16  `json:"parent_office_id"`
+	AppointingOfficeID *int16  `json:"appointing_office_id"`
 }
 
 type UpdateOfficeRequest struct {
 	Name               string  `json:"name"`
-	Election           string  `json:"election"`
+	Category           string  `json:"category"`
+	Election           *string `json:"election"`
 	Scope              string  `json:"scope"`
 	Rank               int32   `json:"rank"`
 	InecElectionTypeID *string `json:"inec_election_type_id"`
+	IsContested        *bool   `json:"is_contested"`
+	ParentOfficeID     *int16  `json:"parent_office_id"`
+	AppointingOfficeID *int16  `json:"appointing_office_id"`
 }
 
 // CreateOffice godoc
@@ -95,14 +103,25 @@ func (h *Handler) CreateOffice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 2. Validate mandatory fields (name, election category, scope, and positive rank)
-	if req.Name == "" || req.Election == "" || req.Scope == "" || req.Rank <= 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "name, election, scope, and rank are required")
+	// 2. Validate mandatory fields (name, scope, and positive rank)
+	if req.Name == "" || req.Scope == "" || req.Rank <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "name, scope, and rank are required")
 		return
 	}
 
+	category := req.Category
+	if category == "" {
+		category = "elective"
+	}
+	isContested := true
+	if req.IsContested != nil {
+		isContested = *req.IsContested
+	} else if category != "elective" {
+		isContested = false
+	}
+
 	// 3. Delegate office creation to service (persists record in DB)
-	o, err := h.service.CreateOffice(r.Context(), req.Name, req.Election, req.Scope, req.Rank, req.InecElectionTypeID)
+	o, err := h.service.CreateOffice(r.Context(), req.Name, category, req.Election, req.Scope, req.Rank, req.InecElectionTypeID, isContested, req.ParentOfficeID, req.AppointingOfficeID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create office: "+err.Error())
 		return
@@ -290,9 +309,20 @@ func (h *Handler) UpdateOffice(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 3. Validate mandatory fields
-	if req.Name == "" || req.Election == "" || req.Scope == "" || req.Rank <= 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "name, election, scope, and rank are required")
+	if req.Name == "" || req.Scope == "" || req.Rank <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "name, scope, and rank are required")
 		return
+	}
+
+	category := req.Category
+	if category == "" {
+		category = "elective"
+	}
+	isContested := true
+	if req.IsContested != nil {
+		isContested = *req.IsContested
+	} else if category != "elective" {
+		isContested = false
 	}
 
 	// 4. Verify office exists before updating
@@ -303,7 +333,7 @@ func (h *Handler) UpdateOffice(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 5. Update office details via service
-	updated, err := h.service.UpdateOffice(r.Context(), int16(id), req.Name, req.Election, req.Scope, req.Rank, req.InecElectionTypeID)
+	updated, err := h.service.UpdateOffice(r.Context(), int16(id), req.Name, category, req.Election, req.Scope, req.Rank, req.InecElectionTypeID, isContested, req.ParentOfficeID, req.AppointingOfficeID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update office: "+err.Error())
 		return
@@ -343,40 +373,5 @@ func (h *Handler) UpdateOffice(w http.ResponseWriter, r *http.Request) {
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Router       /offices/{id} [delete]
 func (h *Handler) DeleteOffice(w http.ResponseWriter, r *http.Request) {
-	// 1. Extract and parse office ID from URL path parameter
-	idStr := chi.URLParam(r, "id")
-	id, err := strconv.ParseInt(idStr, 10, 16)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid office ID")
-		return
-	}
-
-	// 2. Verify office exists before deletion
-	existingOffice, err := h.service.GetOfficeByID(r.Context(), int16(id))
-	if err != nil {
-		h.utils.RespondError(w, http.StatusNotFound, "Office not found")
-		return
-	}
-
-	// 3. Delete office via service
-	if err := h.service.DeleteOffice(r.Context(), int16(id)); err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to delete office: "+err.Error())
-		return
-	}
-
-	// --- Audit Logging ---
-	actorID, actorRole := audit.ActorInfoFromContext(r.Context())
-	oldValuesJSON, _ := json.Marshal(existingOffice)
-	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
-		Module:     audit.StringToText(db.ModuleAdmin),
-		Action:     db.ActionDeleteOffice,
-		ActorID:    actorID,
-		ActorRole:  audit.StringToText(actorRole),
-		EntityType: db.EntityTypeOffice,
-		EntityID:   idStr,
-		OldValues:  oldValuesJSON,
-	})
-
-	// 4. Return 200 OK confirming deletion
-	h.utils.RespondSuccess(w, http.StatusOK, "Office deleted successfully", nil)
+	h.utils.RespondError(w, http.StatusForbidden, "Offices are protected system definitions and cannot be deleted")
 }

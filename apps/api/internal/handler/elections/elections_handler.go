@@ -485,12 +485,12 @@ func (h *Handler) ListElections(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// In-memory sort based on orderBy and order
-	if orderBy == "rank" {
+	if orderBy == "date" || orderBy == "election_date" {
 		sort.SliceStable(elections, func(i, j int) bool {
 			if order == "ASC" {
-				return elections[i].Rank < elections[j].Rank
+				return elections[i].ElectionDate.Time.Before(elections[j].ElectionDate.Time)
 			}
-			return elections[i].Rank > elections[j].Rank
+			return elections[i].ElectionDate.Time.After(elections[j].ElectionDate.Time)
 		})
 	}
 

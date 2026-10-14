@@ -7,9 +7,7 @@ import (
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/worker"
-	"time"
 
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -78,11 +76,11 @@ func (s *ElectionGroupsService) GetSafeNationalMetrics(ctx context.Context) quer
 
 // CreateElectionGroup creates a new election group umbrella record with snapshotted national metrics
 // and invalidates related election group caches. Geographic stats seeding is deferred to child election creation.
-func (s *ElectionGroupsService) CreateElectionGroup(ctx context.Context, name string, electionDate time.Time) (queries.ElectionGroup, error) {
+func (s *ElectionGroupsService) CreateElectionGroup(ctx context.Context, name string, year int16) (queries.ElectionGroup, error) {
 	// Persist the new election group record
 	eg, err := s.queries.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{
-		Name:         name,
-		ElectionDate: pgtype.Date{Time: electionDate, Valid: true},
+		Name: name,
+		Year: year,
 	})
 	if err != nil {
 		return eg, err
@@ -150,29 +148,19 @@ func (s *ElectionGroupsService) ListElectionGroups(ctx context.Context) ([]queri
 	return groups, nil
 }
 
-// UpdateElectionGroup modifies an existing election group's metadata, cascades the group name and date
-// to all constituent elections within the group to maintain alignment, and invalidates related caches.
-func (s *ElectionGroupsService) UpdateElectionGroup(ctx context.Context, id int32, name string, electionDate time.Time) (queries.ElectionGroup, error) {
+// UpdateElectionGroup modifies an existing election group's metadata and invalidates related caches.
+func (s *ElectionGroupsService) UpdateElectionGroup(ctx context.Context, id int32, name string, year int16) (queries.ElectionGroup, error) {
 	// 1. Update the election group record in the database
 	group, err := s.queries.UpdateElectionGroup(ctx, queries.UpdateElectionGroupParams{
-		ID:           id,
-		Name:         name,
-		ElectionDate: pgtype.Date{Time: electionDate, Valid: true},
+		ID:   id,
+		Name: name,
+		Year: year,
 	})
 	if err != nil {
 		return group, err
 	}
 
-	// 2. Cascade group name and election date to all constituent child elections
-	if err := s.queries.UpdateElectionGroupDetailsByGroup(ctx, queries.UpdateElectionGroupDetailsByGroupParams{
-		ElectionGroupName: name,
-		ElectionDate:      pgtype.Date{Time: electionDate, Valid: true},
-		ElectionGroupID:   id,
-	}); err != nil {
-		return group, fmt.Errorf("failed to cascade election group updates to child elections: %w", err)
-	}
-
-	// 3. Invalidate Redis caches for this election group and global collections
+	// 2. Invalidate Redis caches for this election group and global collections
 	s.invalidateCache(ctx, &id)
 
 	return group, nil
@@ -181,13 +169,13 @@ func (s *ElectionGroupsService) UpdateElectionGroup(ctx context.Context, id int3
 // DeleteElectionGroup removes an election group record by its ID, preventing deletion if candidates are registered,
 // and purges associated Redis caches on success.
 func (s *ElectionGroupsService) DeleteElectionGroup(ctx context.Context, id int32) error {
-	// 1. Guard: Check if any child elections in this group already have registered candidates
-	candidatesCount, err := s.queries.CountCandidatesInElectionGroup(ctx, id)
+	// 1. Guard: Check if anyone has participated or is participating in this election group (candidates or voters)
+	participantsCount, err := s.queries.CountParticipantsInElectionGroup(ctx, id)
 	if err != nil {
-		return fmt.Errorf("failed to verify registered candidates in election group: %w", err)
+		return fmt.Errorf("failed to verify participants in election group: %w", err)
 	}
-	if candidatesCount > 0 {
-		return fmt.Errorf("cannot delete election group: %d active candidate(s) are registered. Please remove candidates first", candidatesCount)
+	if participantsCount > 0 {
+		return fmt.Errorf("cannot delete election group: people have already participated or are currently participating in it")
 	}
 
 	// 2. Execute deletion query on the election group

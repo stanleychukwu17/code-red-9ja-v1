@@ -3,6 +3,7 @@ package officesservice
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/utils"
@@ -30,17 +31,30 @@ func (s *OfficesService) invalidateCache(ctx context.Context) {
 }
 
 // CreateOffice inserts a new political office and invalidates the cached offices list.
-func (s *OfficesService) CreateOffice(ctx context.Context, name, election, scope string, rank int32, inecElectionTypeID *string) (queries.Office, error) {
-	// 1. Wrap optional INEC election type ID into a nullable pgtype.Text
-	inecText := utils.PgTextFromPtr(inecElectionTypeID)
+func (s *OfficesService) CreateOffice(
+	ctx context.Context,
+	name, category string,
+	election *string,
+	scope string,
+	rank int32,
+	inecElectionTypeID *string,
+	isContested bool,
+	parentOfficeID, appointingOfficeID *int16,
+) (queries.Office, error) {
+	if category == "" {
+		category = "elective"
+	}
 
-	// 2. Insert new office record into PostgreSQL
 	office, err := s.queries.CreateOffice(ctx, queries.CreateOfficeParams{
 		Name:               name,
-		Election:           election,
+		Category:           category,
+		Election:           utils.PgTextFromPtr(election),
 		Scope:              scope,
 		Rank:               rank,
-		InecElectionTypeID: inecText,
+		InecElectionTypeID: utils.PgTextFromPtr(inecElectionTypeID),
+		IsContested:        isContested,
+		ParentOfficeID:     utils.PgInt2FromPtrNullable(parentOfficeID),
+		AppointingOfficeID: utils.PgInt2FromPtrNullable(appointingOfficeID),
 	})
 	if err != nil {
 		return office, err
@@ -123,18 +137,32 @@ func (s *OfficesService) GetOfficeByName(ctx context.Context, name string) (quer
 }
 
 // UpdateOffice modifies an existing office record and invalidates the cached offices list.
-func (s *OfficesService) UpdateOffice(ctx context.Context, id int16, name, election, scope string, rank int32, inecElectionTypeID *string) (queries.Office, error) {
-	// 1. Wrap optional INEC election type ID into a nullable pgtype.Text
-	inecText := utils.PgTextFromPtr(inecElectionTypeID)
+func (s *OfficesService) UpdateOffice(
+	ctx context.Context,
+	id int16,
+	name, category string,
+	election *string,
+	scope string,
+	rank int32,
+	inecElectionTypeID *string,
+	isContested bool,
+	parentOfficeID, appointingOfficeID *int16,
+) (queries.Office, error) {
+	if category == "" {
+		category = "elective"
+	}
 
-	// 2. Update office in PostgreSQL
 	office, err := s.queries.UpdateOffice(ctx, queries.UpdateOfficeParams{
 		ID:                 id,
 		Name:               name,
-		Election:           election,
+		Category:           category,
+		Election:           utils.PgTextFromPtr(election),
 		Scope:              scope,
 		Rank:               rank,
-		InecElectionTypeID: inecText,
+		InecElectionTypeID: utils.PgTextFromPtr(inecElectionTypeID),
+		IsContested:        isContested,
+		ParentOfficeID:     utils.PgInt2FromPtrNullable(parentOfficeID),
+		AppointingOfficeID: utils.PgInt2FromPtrNullable(appointingOfficeID),
 	})
 	if err != nil {
 		return office, err
@@ -146,16 +174,8 @@ func (s *OfficesService) UpdateOffice(ctx context.Context, id int16, name, elect
 	return office, nil
 }
 
-// DeleteOffice removes an office by ID and invalidates the cached offices list.
+// DeleteOffice protects system offices from deletion. Political offices are foundational
+// constitutional definitions and cannot be removed.
 func (s *OfficesService) DeleteOffice(ctx context.Context, id int16) error {
-	// 1. Delete office from PostgreSQL
-	err := s.queries.DeleteOffice(ctx, id)
-	if err != nil {
-		return err
-	}
-
-	// 2. Invalidate Redis cache so the deleted office is removed on next read
-	s.invalidateCache(ctx)
-
-	return nil
+	return fmt.Errorf("offices are protected system definitions and cannot be deleted")
 }

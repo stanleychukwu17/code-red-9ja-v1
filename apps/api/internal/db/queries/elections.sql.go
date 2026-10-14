@@ -47,22 +47,20 @@ func (q *Queries) CreateElectionCandidate(ctx context.Context, arg CreateElectio
 
 const createElectionInstance = `-- name: CreateElectionInstance :one
 INSERT INTO elections (
-  name, rank, candidates_count, election_date, election_group_id,
-  election_group_name, office_id, office_name, scope,
+  name, candidates_count, election_date, election_group_id,
+  office_id, office_name, scope,
   state_id, senatorial_district_id, federal_constituency_id,
   state_constituency_id, lga_id, ward_id
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-RETURNING id, election_group_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, office_id, running_mate_office_id, name, rank, election_date, election_group_name, office_name, scope, status, candidates_count, reports_count, updates_count, results_submitted_count, contesting_parties, created_at, updated_at
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+RETURNING id, election_group_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, office_id, running_mate_office_id, name, election_date, office_name, scope, status, candidates_count, reports_count, updates_count, results_submitted_count, contesting_parties, created_at, updated_at
 `
 
 type CreateElectionInstanceParams struct {
 	Name                  string      `json:"name"`
-	Rank                  int32       `json:"rank"`
 	CandidatesCount       int32       `json:"candidates_count"`
 	ElectionDate          pgtype.Date `json:"election_date"`
 	ElectionGroupID       int32       `json:"election_group_id"`
-	ElectionGroupName     string      `json:"election_group_name"`
 	OfficeID              int16       `json:"office_id"`
 	OfficeName            string      `json:"office_name"`
 	Scope                 string      `json:"scope"`
@@ -77,11 +75,9 @@ type CreateElectionInstanceParams struct {
 func (q *Queries) CreateElectionInstance(ctx context.Context, arg CreateElectionInstanceParams) (Election, error) {
 	row := q.db.QueryRow(ctx, createElectionInstance,
 		arg.Name,
-		arg.Rank,
 		arg.CandidatesCount,
 		arg.ElectionDate,
 		arg.ElectionGroupID,
-		arg.ElectionGroupName,
 		arg.OfficeID,
 		arg.OfficeName,
 		arg.Scope,
@@ -105,9 +101,7 @@ func (q *Queries) CreateElectionInstance(ctx context.Context, arg CreateElection
 		&i.OfficeID,
 		&i.RunningMateOfficeID,
 		&i.Name,
-		&i.Rank,
 		&i.ElectionDate,
-		&i.ElectionGroupName,
 		&i.OfficeName,
 		&i.Scope,
 		&i.Status,
@@ -168,7 +162,7 @@ func (q *Queries) GetElectionCandidatesCount(ctx context.Context, electionID int
 }
 
 const getElectionInstanceByID = `-- name: GetElectionInstanceByID :one
-SELECT id, election_group_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, office_id, running_mate_office_id, name, rank, election_date, election_group_name, office_name, scope, status, candidates_count, reports_count, updates_count, results_submitted_count, contesting_parties, created_at, updated_at FROM elections WHERE id = $1
+SELECT id, election_group_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, office_id, running_mate_office_id, name, election_date, office_name, scope, status, candidates_count, reports_count, updates_count, results_submitted_count, contesting_parties, created_at, updated_at FROM elections WHERE id = $1
 `
 
 func (q *Queries) GetElectionInstanceByID(ctx context.Context, id int32) (Election, error) {
@@ -186,9 +180,7 @@ func (q *Queries) GetElectionInstanceByID(ctx context.Context, id int32) (Electi
 		&i.OfficeID,
 		&i.RunningMateOfficeID,
 		&i.Name,
-		&i.Rank,
 		&i.ElectionDate,
-		&i.ElectionGroupName,
 		&i.OfficeName,
 		&i.Scope,
 		&i.Status,
@@ -303,7 +295,7 @@ func (q *Queries) ListElectionCandidatesDetailedByElectionID(ctx context.Context
 }
 
 const listElectionInstances = `-- name: ListElectionInstances :many
-SELECT id, election_group_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, office_id, running_mate_office_id, name, rank, election_date, election_group_name, office_name, scope, status, candidates_count, reports_count, updates_count, results_submitted_count, contesting_parties, created_at, updated_at FROM elections
+SELECT id, election_group_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, office_id, running_mate_office_id, name, election_date, office_name, scope, status, candidates_count, reports_count, updates_count, results_submitted_count, contesting_parties, created_at, updated_at FROM elections
 ORDER BY election_date DESC, id DESC
 `
 
@@ -328,9 +320,7 @@ func (q *Queries) ListElectionInstances(ctx context.Context) ([]Election, error)
 			&i.OfficeID,
 			&i.RunningMateOfficeID,
 			&i.Name,
-			&i.Rank,
 			&i.ElectionDate,
-			&i.ElectionGroupName,
 			&i.OfficeName,
 			&i.Scope,
 			&i.Status,
@@ -354,9 +344,10 @@ func (q *Queries) ListElectionInstances(ctx context.Context) ([]Election, error)
 
 const listElectionsDetailedByGroupID = `-- name: ListElectionsDetailedByGroupID :many
 SELECT 
-  e.id, e.election_group_id, e.state_id, e.senatorial_district_id, e.federal_constituency_id, e.state_constituency_id, e.lga_id, e.ward_id, e.office_id, e.running_mate_office_id, e.name, e.rank, e.election_date, e.election_group_name, e.office_name, e.scope, e.status, e.candidates_count, e.reports_count, e.updates_count, e.results_submitted_count, e.contesting_parties, e.created_at, e.updated_at,
+  e.id, e.election_group_id, e.state_id, e.senatorial_district_id, e.federal_constituency_id, e.state_constituency_id, e.lga_id, e.ward_id, e.office_id, e.running_mate_office_id, e.name, e.election_date, e.office_name, e.scope, e.status, e.candidates_count, e.reports_count, e.updates_count, e.results_submitted_count, e.contesting_parties, e.created_at, e.updated_at,
   o.election AS office_election,
-  o.name AS office_name_full
+  o.name AS office_name_full,
+  o.rank AS office_rank
 FROM elections e
 JOIN offices o ON e.office_id = o.id
 WHERE e.election_group_id = $1
@@ -374,9 +365,7 @@ type ListElectionsDetailedByGroupIDRow struct {
 	OfficeID              int16              `json:"office_id"`
 	RunningMateOfficeID   pgtype.Int2        `json:"running_mate_office_id"`
 	Name                  string             `json:"name"`
-	Rank                  int32              `json:"rank"`
 	ElectionDate          pgtype.Date        `json:"election_date"`
-	ElectionGroupName     string             `json:"election_group_name"`
 	OfficeName            string             `json:"office_name"`
 	Scope                 string             `json:"scope"`
 	Status                string             `json:"status"`
@@ -387,8 +376,9 @@ type ListElectionsDetailedByGroupIDRow struct {
 	ContestingParties     []byte             `json:"contesting_parties"`
 	CreatedAt             pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
-	OfficeElection        string             `json:"office_election"`
+	OfficeElection        pgtype.Text        `json:"office_election"`
 	OfficeNameFull        string             `json:"office_name_full"`
+	OfficeRank            int32              `json:"office_rank"`
 }
 
 func (q *Queries) ListElectionsDetailedByGroupID(ctx context.Context, electionGroupID int32) ([]ListElectionsDetailedByGroupIDRow, error) {
@@ -412,9 +402,7 @@ func (q *Queries) ListElectionsDetailedByGroupID(ctx context.Context, electionGr
 			&i.OfficeID,
 			&i.RunningMateOfficeID,
 			&i.Name,
-			&i.Rank,
 			&i.ElectionDate,
-			&i.ElectionGroupName,
 			&i.OfficeName,
 			&i.Scope,
 			&i.Status,
@@ -427,6 +415,7 @@ func (q *Queries) ListElectionsDetailedByGroupID(ctx context.Context, electionGr
 			&i.UpdatedAt,
 			&i.OfficeElection,
 			&i.OfficeNameFull,
+			&i.OfficeRank,
 		); err != nil {
 			return nil, err
 		}
@@ -456,7 +445,7 @@ const updateElectionContestingParties = `-- name: UpdateElectionContestingPartie
 UPDATE elections
 SET contesting_parties = $2, updated_at = NOW()
 WHERE id = $1
-RETURNING id, election_group_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, office_id, running_mate_office_id, name, rank, election_date, election_group_name, office_name, scope, status, candidates_count, reports_count, updates_count, results_submitted_count, contesting_parties, created_at, updated_at
+RETURNING id, election_group_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, office_id, running_mate_office_id, name, election_date, office_name, scope, status, candidates_count, reports_count, updates_count, results_submitted_count, contesting_parties, created_at, updated_at
 `
 
 type UpdateElectionContestingPartiesParams struct {
@@ -479,9 +468,7 @@ func (q *Queries) UpdateElectionContestingParties(ctx context.Context, arg Updat
 		&i.OfficeID,
 		&i.RunningMateOfficeID,
 		&i.Name,
-		&i.Rank,
 		&i.ElectionDate,
-		&i.ElectionGroupName,
 		&i.OfficeName,
 		&i.Scope,
 		&i.Status,
@@ -496,40 +483,21 @@ func (q *Queries) UpdateElectionContestingParties(ctx context.Context, arg Updat
 	return i, err
 }
 
-const updateElectionGroupDetailsByGroup = `-- name: UpdateElectionGroupDetailsByGroup :exec
-UPDATE elections
-SET election_group_name = $1, election_date = $2, updated_at = NOW()
-WHERE election_group_id = $3
-`
-
-type UpdateElectionGroupDetailsByGroupParams struct {
-	ElectionGroupName string      `json:"election_group_name"`
-	ElectionDate      pgtype.Date `json:"election_date"`
-	ElectionGroupID   int32       `json:"election_group_id"`
-}
-
-func (q *Queries) UpdateElectionGroupDetailsByGroup(ctx context.Context, arg UpdateElectionGroupDetailsByGroupParams) error {
-	_, err := q.db.Exec(ctx, updateElectionGroupDetailsByGroup, arg.ElectionGroupName, arg.ElectionDate, arg.ElectionGroupID)
-	return err
-}
-
 const updateElectionInstance = `-- name: UpdateElectionInstance :one
 UPDATE elections
-SET name = $1, rank = $2, candidates_count = $3, election_date = $4, election_group_id = $5,
-    election_group_name = $6, office_id = $7, office_name = $8, scope = $9,
-    state_id = $10, senatorial_district_id = $11, federal_constituency_id = $12,
-    state_constituency_id = $13, lga_id = $14, ward_id = $15, updated_at = NOW()
-WHERE id = $16
-RETURNING id, election_group_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, office_id, running_mate_office_id, name, rank, election_date, election_group_name, office_name, scope, status, candidates_count, reports_count, updates_count, results_submitted_count, contesting_parties, created_at, updated_at
+SET name = $1, candidates_count = $2, election_date = $3, election_group_id = $4,
+    office_id = $5, office_name = $6, scope = $7,
+    state_id = $8, senatorial_district_id = $9, federal_constituency_id = $10,
+    state_constituency_id = $11, lga_id = $12, ward_id = $13, updated_at = NOW()
+WHERE id = $14
+RETURNING id, election_group_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, office_id, running_mate_office_id, name, election_date, office_name, scope, status, candidates_count, reports_count, updates_count, results_submitted_count, contesting_parties, created_at, updated_at
 `
 
 type UpdateElectionInstanceParams struct {
 	Name                  string      `json:"name"`
-	Rank                  int32       `json:"rank"`
 	CandidatesCount       int32       `json:"candidates_count"`
 	ElectionDate          pgtype.Date `json:"election_date"`
 	ElectionGroupID       int32       `json:"election_group_id"`
-	ElectionGroupName     string      `json:"election_group_name"`
 	OfficeID              int16       `json:"office_id"`
 	OfficeName            string      `json:"office_name"`
 	Scope                 string      `json:"scope"`
@@ -545,11 +513,9 @@ type UpdateElectionInstanceParams struct {
 func (q *Queries) UpdateElectionInstance(ctx context.Context, arg UpdateElectionInstanceParams) (Election, error) {
 	row := q.db.QueryRow(ctx, updateElectionInstance,
 		arg.Name,
-		arg.Rank,
 		arg.CandidatesCount,
 		arg.ElectionDate,
 		arg.ElectionGroupID,
-		arg.ElectionGroupName,
 		arg.OfficeID,
 		arg.OfficeName,
 		arg.Scope,
@@ -574,9 +540,7 @@ func (q *Queries) UpdateElectionInstance(ctx context.Context, arg UpdateElection
 		&i.OfficeID,
 		&i.RunningMateOfficeID,
 		&i.Name,
-		&i.Rank,
 		&i.ElectionDate,
-		&i.ElectionGroupName,
 		&i.OfficeName,
 		&i.Scope,
 		&i.Status,

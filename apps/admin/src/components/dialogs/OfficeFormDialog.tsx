@@ -19,12 +19,14 @@ import { TinyError } from "@repo/ui/components/custom/TinyError";
 export interface Office {
   id: number;
   name: string;
-  election: string;
+  category?: string;
+  election?: string | null;
   scope: string;
   rank: number;
   inec_election_type_id?: string;
   is_contested?: boolean;
   parent_office_id?: number | null;
+  appointing_office_id?: number | null;
   instances_count?: number;
   created_at?: string;
   updated_at?: string;

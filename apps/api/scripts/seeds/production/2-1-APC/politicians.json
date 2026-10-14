@@ -826,7 +826,7 @@
   },
   {
     "account_status": "active",
-    "avatar": "https://ui-avatars.com/api/?name=Sheriff%20Oborevwori&background=random",
+    "avatar": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c6/Sheriff_Oborevwori.jpg/500px-Sheriff_Oborevwori.jpg",
     "current_city": 157023,
     "current_country": 161,
     "current_lga": 3382,
@@ -901,7 +901,7 @@
   },
   {
     "account_status": "active",
-    "avatar": "https://ui-avatars.com/api/?name=Agbu%20Kefas&background=random",
+    "avatar": "https://upload.wikimedia.org/wikipedia/commons/c/c7/Agyin_Kefas.jpg",
     "current_city": 157029,
     "current_country": 161,
     "current_lga": 3378,
@@ -1026,7 +1026,7 @@
   },
   {
     "account_status": "active",
-    "avatar": "https://ui-avatars.com/api/?name=Abba%20Kabir%20Yusuf&background=random",
+    "avatar": "https://budget.kn.gov.ng/wp-content/uploads/2025/02/0-Abba-Potrait.jpg",
     "current_city": 157026,
     "current_country": 161,
     "current_lga": 3382,
@@ -1132,7 +1132,7 @@
     "current_lga": 3383,
     "current_state": 15,
     "current_ward": 20819,
-    "date_of_birth": "1996-11-06",
+    "date_of_birth": "1952-03-29",
     "email": "candidate@apc.com",
     "first_name": "Bola",
     "gender": "male",
@@ -1145,8 +1145,8 @@
     "password": "password",
     "phone": "2024561284",
     "polling_unit_id": 125195,
-    "state_of_origin": 22,
-    "username": "candidate_apc",
+    "state_of_origin": 24,
+    "username": "bola_ahmed_tinubu",
     "verification_type_id": 4
   },
   {

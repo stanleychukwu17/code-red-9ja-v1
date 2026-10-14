@@ -1,8 +1,7 @@
 /**
  * @file Election Group Form Dialog
  * @description Modal dialog used in the admin portal to create or update an Election Group
- * (e.g. "2027 General Elections"), managing its display name and scheduled date.
- * When updating, the backend automatically cascades date changes to all child elections within the group.
+ * (e.g. "2027 General Elections"), managing its display name and cycle year.
  */
 
 import { useState, useEffect } from "react";
@@ -16,13 +15,12 @@ import {
 } from "@repo/ui/components/dialog";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { SelectDate } from "@repo/ui/components/selects/date-select";
 import {
   createElectionGroup,
   updateElectionGroup,
 } from "#/lib/server/election_groups";
 import { Loader2 } from "lucide-react";
-import { FancyInput } from "@repo/ui/components/input";
+import { FancyInput, Input } from "@repo/ui/components/input";
 import type { ElectionGroupType } from "../tiles/election-group-tile";
 import { TinyError } from "@repo/ui/components/custom/TinyError";
 
@@ -31,7 +29,7 @@ export type ElectionGroupFormDialogProps = {
   open: boolean;
   onClose: () => void;
   mode?: "create" | "update";
-  onSuccess?: (groupId: number, electionDate?: string) => void;
+  onSuccess?: (groupId: number, year?: number) => void;
 };
 
 export function ElectionGroupFormDialog({ electionGroup, open, onClose, mode = "create", onSuccess }: ElectionGroupFormDialogProps) {
@@ -42,7 +40,7 @@ export function ElectionGroupFormDialog({ electionGroup, open, onClose, mode = "
   const form = useForm({
     defaultValues: {
       name: "",
-      electionDate: "",
+      year: new Date().getFullYear(),
     },
     onSubmit: async ({ value }) => {
       saveMutation.mutate(value);
@@ -53,51 +51,41 @@ export function ElectionGroupFormDialog({ electionGroup, open, onClose, mode = "
   useEffect(() => {
     if (open) {
       if (mode === "update" && electionGroup) {
-        // Pre-fill form fields when editing an existing group
-        const cleanDate = electionGroup.election_date
-          ? (electionGroup.election_date.split("T")[0] ?? "")
-          : "";
         form.setFieldValue("name", electionGroup.name || "");
-        form.setFieldValue("electionDate", cleanDate);
+        form.setFieldValue("year", electionGroup.year || new Date().getFullYear());
       } else {
-        // Reset form to blank defaults for creating a new group
         form.setFieldValue("name", "");
-        form.setFieldValue("electionDate", "");
+        form.setFieldValue("year", new Date().getFullYear());
       }
       setError(null);
     }
   }, [open, mode, electionGroup]);
 
-  // Mutation handling both group creation and updates with date cascading
+  // Mutation handling group creation and updates
   const saveMutation = useMutation({
-    mutationFn: async (values: { name: string; electionDate: string; }) => {
-      if (!values.electionDate) {
-        throw new Error("Election date is required");
+    mutationFn: async (values: { name: string; year: number }) => {
+      const yearNum = Number(values.year);
+      if (!yearNum || yearNum < 1900 || yearNum > 2100) {
+        throw new Error("A valid 4-digit election year is required (e.g. 2027)");
       }
-
-      const cleanDate = values.electionDate
-        ? (values.electionDate.split("T")[0] ?? "")
-        : "";
 
       let res;
       if (mode === "update") {
         if (!electionGroup?.id) {
           throw new Error("Missing ID for update");
         }
-        // 1. Update the election group record (backend cascades date to child elections automatically)
         res = await updateElectionGroup({
           data: {
             id: electionGroup.id,
             name: values.name.trim(),
-            election_date: cleanDate,
+            year: yearNum,
           },
         });
       } else {
-        // Create new election group
         res = await createElectionGroup({
           data: {
             name: values.name.trim(),
-            election_date: cleanDate,
+            year: yearNum,
           },
         });
       }
@@ -113,7 +101,7 @@ export function ElectionGroupFormDialog({ electionGroup, open, onClose, mode = "
       queryClient.invalidateQueries({ queryKey: ["election-groups"] });
       queryClient.invalidateQueries({ queryKey: ["election-groups-select"] });
       queryClient.invalidateQueries({ queryKey: ["elections"] });
-      onSuccess?.(data.id, variables.electionDate);
+      onSuccess?.(data.id, variables.year);
       onClose();
     },
     onError: (err: any) => {
@@ -123,7 +111,7 @@ export function ElectionGroupFormDialog({ electionGroup, open, onClose, mode = "
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-145 p-0 rounded-2xl border-none shadow-2xl   overflow-visible">
+      <DialogContent className="max-w-145 p-0 rounded-2xl border-none shadow-2xl overflow-visible">
         {/* Dynamic dialog title based on current operation mode */}
         <DialogHeader
           title={
@@ -167,21 +155,30 @@ export function ElectionGroupFormDialog({ electionGroup, open, onClose, mode = "
               />
             </div>
 
-            {/* Scheduled election date picker */}
+            {/* Election Cycle Year input */}
             <div className="flex flex-col gap-1.5">
               <label className="text-[14px] font-semibold text-c-50">
-                Election Date
+                Election Year
               </label>
               <form.Field
-                name="electionDate"
+                name="year"
                 validators={{
-                  onChange: ({ value }) =>
-                    !value ? "Election date is required" : undefined,
+                  onChange: ({ value }) => {
+                    const num = Number(value);
+                    if (!num || num < 1900 || num > 2100) {
+                      return "Valid 4-digit year required (e.g. 2027)";
+                    }
+                    return undefined;
+                  },
                 }}
                 children={(field) => (
-                  <SelectDate
-                    initialData={field.state.value}
-                    update={(val) => field.handleChange(val)}
+                  <Input
+                    type="number"
+                    placeholder="e.g. 2027"
+                    min={1900}
+                    max={2100}
+                    value={field.state.value || ""}
+                    onChange={(e) => field.handleChange(Number(e.target.value))}
                     errorMsg={field.state.meta.errors?.join(", ")}
                   />
                 )}

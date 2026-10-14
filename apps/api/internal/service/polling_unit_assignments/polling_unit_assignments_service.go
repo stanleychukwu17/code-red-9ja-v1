@@ -117,11 +117,9 @@ func (s *Service) UpdateAssignmentTracking(ctx context.Context, id int64, arrive
 	if err != nil {
 		return queries.UpdateAssignmentTrackingRow{}, errors.New("invalid election group")
 	}
-	if electionGroup.ElectionDate.Valid {
-		now := time.Now().UTC()
-		if now.Format("2006-01-02") != electionGroup.ElectionDate.Time.Format("2006-01-02") {
-			return queries.UpdateAssignmentTrackingRow{}, errors.New("updates can only be submitted on the election day")
-		}
+	now := time.Now().UTC()
+	if now.Year() > int(electionGroup.Year) {
+		return queries.UpdateAssignmentTrackingRow{}, errors.New("tracking can only be submitted during the election cycle")
 	}
 
 	updated, err := s.queries.UpdateAssignmentTracking(ctx, queries.UpdateAssignmentTrackingParams{

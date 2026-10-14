@@ -364,13 +364,8 @@ export function NationwideElectionFormDialog({
       <ElectionGroupFormDialog
         open={isGroupDialogOpen}
         onClose={() => setIsGroupDialogOpen(false)}
-        onSuccess={(newGroupId, electionDate) => {
+        onSuccess={(newGroupId) => {
           form.setFieldValue("electionGroupId", newGroupId);
-          if (electionDate) {
-            setSelectedGroupDate(electionDate);
-            form.setFieldValue("electionDate", electionDate);
-            setSelectedElectionDate(electionDate);
-          }
         }}
       />
 

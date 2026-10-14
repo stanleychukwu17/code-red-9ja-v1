@@ -11,7 +11,7 @@ import { ElectionGroupDropdown } from "../dropdowns/ElectionGroupDropdown";
 export type ElectionGroupType = {
   id: number;
   name: string;
-  election_date: string;
+  year: number;
   created_at?: string;
   updated_at?: string;
 };
@@ -24,7 +24,7 @@ export function ElectionGroupTableHeader() {
       </TileLeft>
       <TileRight>
         <span className="text-c-50 text-[14px] w-27.5 hidden sm:block">
-          Holds
+          Year
         </span>
         <div className="ml-2 w-8 shrink-0" />
       </TileRight>
@@ -33,10 +33,6 @@ export function ElectionGroupTableHeader() {
 }
 
 export function ElectionGroupTableTile({ data }: { data: ElectionGroupType }) {
-  const dateLabel = data.election_date
-    ? formatISODate(data.election_date)
-    : "—";
-
   return (
     <TileRow>
       <TileLeft>
@@ -47,7 +43,7 @@ export function ElectionGroupTableTile({ data }: { data: ElectionGroupType }) {
       </TileLeft>
       <TileRight>
         <span className="text-[15px] text-c-70 w-27.5 hidden sm:block">
-          {dateLabel}
+          {data.year ?? "—"}
         </span>
         <ElectionGroupDropdown data={data} className="ml-2 hidden md:block" />
       </TileRight>

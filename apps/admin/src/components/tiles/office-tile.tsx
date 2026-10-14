@@ -12,13 +12,15 @@ import { OfficeDropdown } from "../dropdowns/OfficeDropdown";
 export type OfficeType = {
   id: number;
   name: string;
-  election: string;
+  category?: string;
+  election?: string | null;
   scope: string;
   rank: number;
   instances_count: number;
   inec_election_type_id?: string;
   is_contested?: boolean;
   parent_office_id?: number | null;
+  appointing_office_id?: number | null;
   created_at?: string;
   updated_at?: string;
 };
@@ -69,10 +71,10 @@ export function OfficeTableTile({ data }: { data: OfficeType }) {
       </TileLeft>
       <TileRight>
         <span
-          title={election}
+          title={election || undefined}
           className="text-[15px] text-c-70 w-47 hidden md:block truncate"
         >
-          {election}
+          {election || "—"}
         </span>
         <span
           title={target}

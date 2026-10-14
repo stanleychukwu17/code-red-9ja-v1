@@ -13,11 +13,11 @@ import { ElectionInstanceDropdown } from "../dropdowns/ElectionInstanceDropdown"
 export type ElectionInstanceType = {
   id: number;
   name: string;
-  rank: number;
+  rank?: number;
   candidates_count: number;
   election_date: string;
   election_group_id: number;
-  election_group_name: string;
+  election_group_name?: string;
   office_id: number;
   office_name: string;
   scope: string;
@@ -65,15 +65,19 @@ export function ElectionInstanceTableTile({
   return (
     <TileRow>
       <TileLeft>
-        <div className="flex items-center gap-4 w-20 shrink-0">
-          <StarIcon
-            className={cn(
-              "size-4 shrink-0 fill-current",
-              getRankColor(data.rank),
-            )}
-          />
-          <span className="text-[16px] text-c-90">{data.rank}</span>
-        </div>
+        {data.rank != null ? (
+          <div className="flex items-center gap-4 w-20 shrink-0">
+            <StarIcon
+              className={cn(
+                "size-4 shrink-0 fill-current",
+                getRankColor(data.rank),
+              )}
+            />
+            <span className="text-[16px] text-c-90">{data.rank}</span>
+          </div>
+        ) : (
+          <div className="w-20 shrink-0" />
+        )}
         <p className="truncate w-full text-[16px] text-c-80">{data.name}</p>
       </TileLeft>
       <TileRight>

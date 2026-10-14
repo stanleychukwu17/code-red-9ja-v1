@@ -67,6 +67,7 @@ type Querier interface {
 	CountAllUserPhoneNumbers(ctx context.Context, userID int64) (int64, error)
 	CountCandidatesInElectionGroup(ctx context.Context, electionGroupID int32) (int64, error)
 	CountMediaAssetsByFolder(ctx context.Context, arg CountMediaAssetsByFolderParams) (int64, error)
+	CountParticipantsInElectionGroup(ctx context.Context, electionGroupID int32) (int64, error)
 	CreateApplication(ctx context.Context, arg CreateApplicationParams) (PartyApplication, error)
 	// ============================================================================
 	// ASSET FOLDERS QUERIES
@@ -418,6 +419,7 @@ type Querier interface {
 	ListMemberPositionAssignments(ctx context.Context, arg ListMemberPositionAssignmentsParams) ([]ListMemberPositionAssignmentsRow, error)
 	ListNotificationsForUser(ctx context.Context, arg ListNotificationsForUserParams) ([]ListNotificationsForUserRow, error)
 	ListOffices(ctx context.Context) ([]Office, error)
+	ListOfficesByCategory(ctx context.Context, category string) ([]Office, error)
 	ListParties(ctx context.Context) ([]ListPartiesRow, error)
 	ListPartiesWithoutWallet(ctx context.Context) ([]Party, error)
 	ListPartyChapters(ctx context.Context, arg ListPartyChaptersParams) ([]PartyChapter, error)
@@ -533,7 +535,6 @@ type Querier interface {
 	UpdateElectionCandidatesCount(ctx context.Context, arg UpdateElectionCandidatesCountParams) error
 	UpdateElectionContestingParties(ctx context.Context, arg UpdateElectionContestingPartiesParams) (Election, error)
 	UpdateElectionGroup(ctx context.Context, arg UpdateElectionGroupParams) (ElectionGroup, error)
-	UpdateElectionGroupDetailsByGroup(ctx context.Context, arg UpdateElectionGroupDetailsByGroupParams) error
 	UpdateElectionInstance(ctx context.Context, arg UpdateElectionInstanceParams) (Election, error)
 	UpdateFederalConstituency(ctx context.Context, arg UpdateFederalConstituencyParams) (FederalConstituency, error)
 	UpdateFileOwner(ctx context.Context, arg UpdateFileOwnerParams) (File, error)

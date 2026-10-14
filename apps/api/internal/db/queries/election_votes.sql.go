@@ -102,8 +102,9 @@ func (q *Queries) DeleteUserVotesByElectionGroup(ctx context.Context, arg Delete
 }
 
 const getEligibleElectionsForPollingUnit = `-- name: GetEligibleElectionsForPollingUnit :many
-SELECT e.id, e.election_group_id, e.state_id, e.senatorial_district_id, e.federal_constituency_id, e.state_constituency_id, e.lga_id, e.ward_id, e.office_id, e.running_mate_office_id, e.name, e.rank, e.election_date, e.election_group_name, e.office_name, e.scope, e.status, e.candidates_count, e.reports_count, e.updates_count, e.results_submitted_count, e.contesting_parties, e.created_at, e.updated_at
+SELECT e.id, e.election_group_id, e.state_id, e.senatorial_district_id, e.federal_constituency_id, e.state_constituency_id, e.lga_id, e.ward_id, e.office_id, e.running_mate_office_id, e.name, e.election_date, e.office_name, e.scope, e.status, e.candidates_count, e.reports_count, e.updates_count, e.results_submitted_count, e.contesting_parties, e.created_at, e.updated_at
 FROM elections e
+JOIN offices o ON e.office_id = o.id
 JOIN polling_units pu ON pu.id = $2
 JOIN wards w ON w.id = pu.ward_id
 JOIN lgas l ON l.id = pu.lga_id
@@ -117,7 +118,7 @@ WHERE e.election_group_id = $1
     (e.scope = 'state-constituency' AND e.state_constituency_id = w.state_constituency_id) OR
     (e.scope = 'ward' AND e.ward_id = pu.ward_id)
   )
-ORDER BY e.rank ASC, e.id ASC
+ORDER BY o.rank ASC, e.id ASC
 `
 
 type GetEligibleElectionsForPollingUnitParams struct {
@@ -146,9 +147,7 @@ func (q *Queries) GetEligibleElectionsForPollingUnit(ctx context.Context, arg Ge
 			&i.OfficeID,
 			&i.RunningMateOfficeID,
 			&i.Name,
-			&i.Rank,
 			&i.ElectionDate,
-			&i.ElectionGroupName,
 			&i.OfficeName,
 			&i.Scope,
 			&i.Status,
@@ -181,11 +180,12 @@ SELECT
     u.avatar as candidate_avatar
 FROM election_votes ev
 JOIN elections e ON e.id = ev.election_id
+JOIN offices o ON e.office_id = o.id
 JOIN parties p ON p.id = ev.party_id
 LEFT JOIN election_candidates ec ON ec.election_id = e.id AND ec.party_id = p.id
 LEFT JOIN users u ON u.id = ec.candidate_id
 WHERE ev.user_id = $1 AND ev.election_group_id = $2
-ORDER BY e.rank ASC, e.id ASC
+ORDER BY o.rank ASC, e.id ASC
 `
 
 type GetUserVotesByElectionGroupParams struct {

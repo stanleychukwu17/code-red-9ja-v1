@@ -71,7 +71,7 @@ SELECT
   up.degree_certificate_url,
   COALESCE(pa.ward_id, pu.ward_id, u.current_ward)::integer AS current_ward,
   eg.name AS election_group_name,
-  eg.election_date,
+  eg.year,
   p.name AS party_name,
   p.short_name AS party_short_name,
   p.logo AS party_logo,

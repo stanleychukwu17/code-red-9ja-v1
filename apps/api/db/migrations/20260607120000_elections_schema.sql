@@ -49,10 +49,12 @@ CREATE TABLE election_groups (
   total_pu_unique_final_results_uploaded INT NOT NULL DEFAULT 0,
   total_pu_where_agents_referred_live_voters INT NOT NULL DEFAULT 0,
   
-  election_date DATE NOT NULL,
+  year SMALLINT NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE INDEX idx_election_groups_year ON election_groups(year DESC);
 
 CREATE TABLE elections (
   id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -67,9 +69,7 @@ CREATE TABLE elections (
   running_mate_office_id SMALLINT REFERENCES offices(id) ON DELETE SET NULL,
 
   name VARCHAR(255) NOT NULL,
-  rank INT NOT NULL,
   election_date DATE NOT NULL,
-  election_group_name VARCHAR(100) NOT NULL, -- 2027 presidential election
   office_name VARCHAR(100) NOT NULL, -- President, Governor
   scope VARCHAR(50) NOT NULL, -- nationwide, state, senatorial-district, federal-constituency, lga, state-constituency, ward
   status VARCHAR(30) NOT NULL DEFAULT 'upcoming' CHECK (status IN ('upcoming', 'ongoing', 'ended', 'cancelled')),
@@ -97,7 +97,6 @@ CREATE TABLE elections (
 CREATE INDEX idx_elections_election_group_id ON elections(election_group_id);
 CREATE INDEX idx_elections_office_id ON elections(office_id);
 CREATE INDEX idx_elections_running_mate_office_id ON elections(running_mate_office_id);
-CREATE INDEX idx_elections_rank ON elections(rank);
 CREATE INDEX idx_elections_election_date ON elections(election_date);
 
 COMMENT ON COLUMN elections.contesting_parties IS 'List of political parties contesting this election. Shape: [{"party_id": 1, "party_short_name": "APC", "party_name": "All Progressives Congress", "party_logo": "https://..."}]';

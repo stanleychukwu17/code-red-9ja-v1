@@ -1766,14 +1766,8 @@ func (s *PartiesService) CreatePartyMarketingCampaign(ctx context.Context, arg q
 		return queries.PartyMarketingCampaign{}, fmt.Errorf("failed to get election group: %w", err)
 	}
 
-	if electionGroup.ElectionDate.Valid {
-		electionTime := electionGroup.ElectionDate.Time
-		today := time.Now().Truncate(24 * time.Hour)
-		electionDateOnly := electionTime.Truncate(24 * time.Hour)
-
-		if !electionDateOnly.After(today) {
-			return queries.PartyMarketingCampaign{}, fmt.Errorf("one can't create an agent marketing campaign for an election group with election_date as today or in the past")
-		}
+	if int(electionGroup.Year) < time.Now().Year() {
+		return queries.PartyMarketingCampaign{}, fmt.Errorf("one can't create an agent marketing campaign for a past election group")
 	}
 
 	// 1. Get the party wallet to check balance

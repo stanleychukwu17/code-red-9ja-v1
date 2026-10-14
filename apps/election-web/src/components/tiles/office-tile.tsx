@@ -11,12 +11,14 @@ import { cn } from "@repo/ui/lib/utils";
 export type OfficeType = {
   id: number;
   name: string;
-  election: string;
+  category?: string;
+  election?: string | null;
   scope: string;
   rank: number;
   instances_count: number;
   is_contested?: boolean;
   parent_office_id?: number | null;
+  appointing_office_id?: number | null;
   created_at?: string;
   updated_at?: string;
 };
@@ -59,7 +61,7 @@ export function OfficeTableTile({ data }: { data: OfficeType }) {
       </TileLeft>
       <TileRight>
         <span className="text-[15px] text-c-70 w-[200px] hidden md:block">
-          {election}
+          {election || "—"}
         </span>
         <span className="text-[15px] text-c-70 w-40 hidden sm:block">
           {target}

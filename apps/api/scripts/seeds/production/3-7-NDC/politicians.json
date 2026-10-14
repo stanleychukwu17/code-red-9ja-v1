@@ -132,7 +132,7 @@
     "current_lga": 3381,
     "current_state": 15,
     "current_ward": 20794,
-    "date_of_birth": "1996-11-06",
+    "date_of_birth": "1961-07-19",
     "email": "candidate@pdp.com",
     "first_name": "Peter",
     "gender": "male",
@@ -145,8 +145,8 @@
     "password": "password",
     "phone": "2024561283",
     "polling_unit_id": 42137,
-    "state_of_origin": 3,
-    "username": "candidate_pdp",
+    "state_of_origin": 4,
+    "username": "peter_obi",
     "verification_type_id": 4
   },
   {

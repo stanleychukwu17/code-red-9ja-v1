@@ -1,5 +1,5 @@
 -- name: CreateElectionGroup :one
-INSERT INTO election_groups (name, election_date)
+INSERT INTO election_groups (name, year)
 VALUES ($1, $2)
 RETURNING *;
 
@@ -11,11 +11,11 @@ SELECT * FROM election_groups WHERE name = $1;
 
 -- name: ListElectionGroups :many
 SELECT * FROM election_groups
-ORDER BY election_date DESC, id DESC;
+ORDER BY year DESC, id DESC;
 
 -- name: UpdateElectionGroup :one
 UPDATE election_groups
-SET name = $1, election_date = $2, updated_at = NOW()
+SET name = $1, year = $2, updated_at = NOW()
 WHERE id = $3
 RETURNING *;
 
@@ -25,6 +25,13 @@ FROM election_candidates ec
 JOIN elections e ON ec.election_id = e.id
 WHERE e.election_group_id = $1;
 
+-- name: CountParticipantsInElectionGroup :one
+SELECT (
+  (SELECT COUNT(*) FROM election_candidates ec JOIN elections e ON ec.election_id = e.id WHERE e.election_group_id = $1)
+  +
+  (SELECT COUNT(*) FROM election_votes ev WHERE ev.election_group_id = $1)
+)::bigint AS participants_count;
+
 -- name: DeleteElectionGroup :exec
 DELETE FROM election_groups WHERE id = $1;
 
@@ -32,7 +39,7 @@ DELETE FROM election_groups WHERE id = $1;
 SELECT 
     eg.id, 
     eg.name, 
-    eg.election_date, 
+    eg.year, 
     eg.created_at, 
     eg.updated_at,
     COALESCE(peg.polling_agents_coverage, '{}'::jsonb)::jsonb AS polling_agents_coverage,
@@ -40,7 +47,7 @@ SELECT
 FROM election_groups eg
 LEFT JOIN party_election_groups peg 
     ON eg.id = peg.election_group_id AND peg.party_id = $1
-ORDER BY eg.election_date DESC, eg.id DESC;
+ORDER BY eg.year DESC, eg.id DESC;
 
 -- name: UpsertPartyElectionGroupStats :one
 INSERT INTO party_election_groups (party_id, election_group_id, polling_agents_coverage, elections_contesting)

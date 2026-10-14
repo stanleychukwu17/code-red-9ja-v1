@@ -152,9 +152,7 @@ type Election struct {
 	OfficeID              int16       `json:"office_id"`
 	RunningMateOfficeID   pgtype.Int2 `json:"running_mate_office_id"`
 	Name                  string      `json:"name"`
-	Rank                  int32       `json:"rank"`
 	ElectionDate          pgtype.Date `json:"election_date"`
-	ElectionGroupName     string      `json:"election_group_name"`
 	OfficeName            string      `json:"office_name"`
 	Scope                 string      `json:"scope"`
 	Status                string      `json:"status"`
@@ -255,7 +253,7 @@ type ElectionGroup struct {
 	TotalPuWhereElectionHasEnded              int32              `json:"total_pu_where_election_has_ended"`
 	TotalPuUniqueFinalResultsUploaded         int32              `json:"total_pu_unique_final_results_uploaded"`
 	TotalPuWhereAgentsReferredLiveVoters      int32              `json:"total_pu_where_agents_referred_live_voters"`
-	ElectionDate                              pgtype.Date        `json:"election_date"`
+	Year                                      int16              `json:"year"`
 	CreatedAt                                 pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt                                 pgtype.Timestamptz `json:"updated_at"`
 }
@@ -1187,13 +1185,15 @@ type Occupation struct {
 type Office struct {
 	ID                 int16              `json:"id"`
 	Name               string             `json:"name"`
-	Election           string             `json:"election"`
+	Category           string             `json:"category"`
+	Election           pgtype.Text        `json:"election"`
 	Scope              string             `json:"scope"`
 	Rank               int32              `json:"rank"`
 	InstancesCount     int32              `json:"instances_count"`
 	InecElectionTypeID pgtype.Text        `json:"inec_election_type_id"`
 	IsContested        bool               `json:"is_contested"`
 	ParentOfficeID     pgtype.Int2        `json:"parent_office_id"`
+	AppointingOfficeID pgtype.Int2        `json:"appointing_office_id"`
 	CreatedAt          pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
 }

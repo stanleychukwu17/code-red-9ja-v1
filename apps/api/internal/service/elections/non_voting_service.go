@@ -26,10 +26,9 @@ func (s *ElectionsService) CreateDidNotVoteReason(ctx context.Context, arg queri
 		return queries.DidNotVoteReason{}, fmt.Errorf("invalid election group: %w", err)
 	}
 
-	// Validate date: cannot submit reasons after election day
-	now := time.Now().Truncate(24 * time.Hour)
-	egDate := eg.ElectionDate.Time.Truncate(24 * time.Hour)
-	if now.After(egDate) {
+	// Validate date: cannot submit reasons after election cycle has ended
+	now := time.Now()
+	if int(eg.Year) < now.Year() {
 		return queries.DidNotVoteReason{}, fmt.Errorf("voting for this election has ended")
 	}
 

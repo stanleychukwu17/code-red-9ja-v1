@@ -40,7 +40,7 @@ SELECT
   pu.lga_name,
   pu.state_name,
   eg.name AS election_group_name,
-  eg.election_date
+  eg.year
 FROM polling_unit_assignments a
 JOIN users u ON a.user_id = u.id
 JOIN polling_units pu ON a.polling_unit_id = pu.id
@@ -70,7 +70,7 @@ SELECT
   pu.lga_name,
   pu.state_name,
   eg.name AS election_group_name,
-  eg.election_date,
+  eg.year,
   a.arrived_at,
   a.arrival_video_url,
   a.election_started_at,

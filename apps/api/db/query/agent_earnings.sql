@@ -127,7 +127,7 @@ SELECT
   a.potential_payment_kobo,
   a.interval_updates,
   cs.name AS state_name,
-  eg.election_date
+  eg.year
 FROM polling_unit_assignments a
 JOIN election_groups eg ON a.election_group_id = eg.id
 JOIN polling_units pu ON a.polling_unit_id = pu.id

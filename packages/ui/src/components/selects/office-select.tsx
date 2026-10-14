@@ -12,12 +12,14 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 export interface Office {
   id: number;
   name: string;
+  category?: string;
   scope: string;
   rank: number;
-  election: string;
+  election?: string | null;
   instances_count: number;
   is_contested?: boolean;
   parent_office_id?: number | null;
+  appointing_office_id?: number | null;
 }
 
 interface OfficesResponse {
@@ -116,12 +118,16 @@ export const SelectOffice = ({
   const filteredOffices = offices.filter(
     (o) =>
       o.name.toLowerCase().includes(desktopSearch.toLowerCase()) ||
-      o.election.toLowerCase().includes(desktopSearch.toLowerCase()),
+      (o.election
+        ? o.election.toLowerCase().includes(desktopSearch.toLowerCase())
+        : false),
   );
   const mobileFiltered = offices.filter(
     (o) =>
       o.name.toLowerCase().includes(mobileSearch.toLowerCase()) ||
-      o.election.toLowerCase().includes(mobileSearch.toLowerCase()),
+      (o.election
+        ? o.election.toLowerCase().includes(mobileSearch.toLowerCase())
+        : false),
   );
 
   const getStatus = ():
@@ -139,7 +145,9 @@ export const SelectOffice = ({
   };
 
   const displayText = selectedItem?.name
-    ? `${selectedItem.name} (${selectedItem.election})`
+    ? selectedItem.election
+      ? `${selectedItem.name} (${selectedItem.election})`
+      : selectedItem.name
     : isLoading && !selectedItem
       ? "Loading..."
       : "Select Office";
@@ -150,7 +158,8 @@ export const SelectOffice = ({
       ? `${selectedId}`
       : undefined;
   const getId = (item: Office) => `${item.id}`;
-  const getName = (item: Office) => `${item.name} (${item.election})`;
+  const getName = (item: Office) =>
+    item.election ? `${item.name} (${item.election})` : item.name;
 
   if (offices.length === 0 && isLoading && !disabled) {
     return (
