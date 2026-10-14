@@ -56,9 +56,6 @@ export const createElectionGroup = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
       name: string;
-      rank: number;
-      elections_count: number;
-      states_count: number;
       election_date: string;
     }) => data,
   )
@@ -86,9 +83,6 @@ export const updateElectionGroup = createServerFn({ method: "POST" })
     (data: {
       id: string | number;
       name: string;
-      rank: number;
-      elections_count: number;
-      states_count: number;
       election_date: string;
     }) => data,
   )

@@ -65,6 +65,7 @@ type Querier interface {
 	ConfirmUpload(ctx context.Context, arg ConfirmUploadParams) (File, error)
 	CountActivePositionOccupants(ctx context.Context, arg CountActivePositionOccupantsParams) (int64, error)
 	CountAllUserPhoneNumbers(ctx context.Context, userID int64) (int64, error)
+	CountCandidatesInElectionGroup(ctx context.Context, electionGroupID int32) (int64, error)
 	CountMediaAssetsByFolder(ctx context.Context, arg CountMediaAssetsByFolderParams) (int64, error)
 	CreateApplication(ctx context.Context, arg CreateApplicationParams) (PartyApplication, error)
 	// ============================================================================
@@ -383,6 +384,7 @@ type Querier interface {
 	ListAssignments(ctx context.Context, arg ListAssignmentsParams) ([]ListAssignmentsRow, error)
 	ListBlockedUsersByParty(ctx context.Context, arg ListBlockedUsersByPartyParams) ([]ListBlockedUsersByPartyRow, error)
 	ListBlockedUsersByUser(ctx context.Context, arg ListBlockedUsersByUserParams) ([]ListBlockedUsersByUserRow, error)
+	ListContestedOffices(ctx context.Context) ([]Office, error)
 	ListCountries(ctx context.Context) ([]ListCountriesRow, error)
 	ListCustomPartyPositions(ctx context.Context, partyID pgtype.Int2) ([]PartyPosition, error)
 	ListDefaultPartyPositions(ctx context.Context) ([]PartyPosition, error)
@@ -530,8 +532,8 @@ type Querier interface {
 	UpdateAssignmentTracking(ctx context.Context, arg UpdateAssignmentTrackingParams) (UpdateAssignmentTrackingRow, error)
 	UpdateElectionCandidatesCount(ctx context.Context, arg UpdateElectionCandidatesCountParams) error
 	UpdateElectionContestingParties(ctx context.Context, arg UpdateElectionContestingPartiesParams) (Election, error)
-	UpdateElectionDatesByGroup(ctx context.Context, arg UpdateElectionDatesByGroupParams) error
 	UpdateElectionGroup(ctx context.Context, arg UpdateElectionGroupParams) (ElectionGroup, error)
+	UpdateElectionGroupDetailsByGroup(ctx context.Context, arg UpdateElectionGroupDetailsByGroupParams) error
 	UpdateElectionInstance(ctx context.Context, arg UpdateElectionInstanceParams) (Election, error)
 	UpdateFederalConstituency(ctx context.Context, arg UpdateFederalConstituencyParams) (FederalConstituency, error)
 	UpdateFileOwner(ctx context.Context, arg UpdateFileOwnerParams) (File, error)

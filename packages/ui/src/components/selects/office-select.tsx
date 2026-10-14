@@ -16,6 +16,8 @@ export interface Office {
   rank: number;
   election: string;
   instances_count: number;
+  is_contested?: boolean;
+  parent_office_id?: number | null;
 }
 
 interface OfficesResponse {
@@ -41,7 +43,7 @@ export const SelectOffice = ({
   filterScope,
 }: SelectProps<Office, number | string> & {
   fetchOffices: (args: {
-    data: { limit?: number; cursor?: string };
+    data: { limit?: number; cursor?: string; contested?: boolean };
   }) => Promise<any>;
   filterScope?: string;
 }) => {
@@ -57,7 +59,7 @@ export const SelectOffice = ({
       queryKey: ["offices-select", filterScope ?? "all"],
       queryFn: async ({ pageParam }) => {
         const res = await fetchOffices({
-          data: { limit: 50, cursor: pageParam as string },
+          data: { limit: 50, cursor: pageParam as string, contested: true },
         });
         if (res && res.success && res.data) return res;
         throw new Error(res?.message || "Failed to fetch offices");
@@ -73,9 +75,10 @@ export const SelectOffice = ({
   const allOffices = data
     ? data.pages.flatMap((page) => page.data?.offices || [])
     : [];
+  const contestedOffices = allOffices.filter((o) => o.is_contested !== false);
   const offices = filterScope
-    ? allOffices.filter((o) => o.scope === filterScope)
-    : allOffices;
+    ? contestedOffices.filter((o) => o.scope === filterScope)
+    : contestedOffices;
 
   useEffect(() => {
     if (selectedId && hasNextPage && !isFetchingNextPage && !isLoading) {

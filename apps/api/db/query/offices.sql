@@ -13,6 +13,11 @@ SELECT * FROM offices WHERE name = $1;
 SELECT * FROM offices
 ORDER BY id ASC;
 
+-- name: ListContestedOffices :many
+SELECT * FROM offices
+WHERE is_contested = true
+ORDER BY rank ASC;
+
 -- name: UpdateOffice :one
 UPDATE offices
 SET name = $1, election = $2, scope = $3, rank = $4, inec_election_type_id = $5, updated_at = NOW()

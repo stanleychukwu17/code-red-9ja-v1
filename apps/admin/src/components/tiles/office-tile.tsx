@@ -17,6 +17,8 @@ export type OfficeType = {
   rank: number;
   instances_count: number;
   inec_election_type_id?: string;
+  is_contested?: boolean;
+  parent_office_id?: number | null;
   created_at?: string;
   updated_at?: string;
 };

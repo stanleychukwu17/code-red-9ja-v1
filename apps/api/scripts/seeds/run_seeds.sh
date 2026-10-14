@@ -77,5 +77,3 @@ curl -X POST ${BASE_URL}/api/v1/seed/users \
 
 echo ""
 echo "Done."
-
-

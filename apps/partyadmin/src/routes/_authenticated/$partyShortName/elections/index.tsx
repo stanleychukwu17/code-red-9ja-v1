@@ -80,7 +80,7 @@ function RouteComponent() {
           : (eg.polling_agents_coverage?.percentage ?? 0),
         numberOfElectionsPartyIsContesting:
           eg.number_of_elections_party_is_contesting ?? 0,
-        instancesCount: eg.elections_count,
+        instancesCount: eg.elections_count ?? 0,
         electionDate: eg.election_date,
       })),
     )

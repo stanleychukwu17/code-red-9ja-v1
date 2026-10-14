@@ -15,6 +15,8 @@ export type OfficeType = {
   scope: string;
   rank: number;
   instances_count: number;
+  is_contested?: boolean;
+  parent_office_id?: number | null;
   created_at?: string;
   updated_at?: string;
 };

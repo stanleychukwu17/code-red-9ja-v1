@@ -153,11 +153,13 @@ func (q *Queries) IncrementElectionMetricsByGroup(ctx context.Context, arg Incre
 }
 
 const incrementPartyElectionGroupMetrics = `-- name: IncrementPartyElectionGroupMetrics :exec
-UPDATE party_election_groups
-SET 
-  reports_count = reports_count + $3,
-  updates_count = updates_count + $4
-WHERE party_id = $1 AND election_group_id = $2
+INSERT INTO party_election_groups (party_id, election_group_id, reports_count, updates_count)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT (party_id, election_group_id)
+DO UPDATE SET 
+  reports_count = party_election_groups.reports_count + EXCLUDED.reports_count,
+  updates_count = party_election_groups.updates_count + EXCLUDED.updates_count,
+  updated_at = NOW()
 `
 
 type IncrementPartyElectionGroupMetricsParams struct {

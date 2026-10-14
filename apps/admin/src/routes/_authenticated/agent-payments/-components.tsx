@@ -62,7 +62,7 @@ export function ElectionGroupSelect({
   const { data } = useQuery({
     queryKey: ["election-groups-select"],
     queryFn: async () => {
-      const res = await fetchGroups({ data: { limit: 50, orderBy: "rank", order: "ASC" } });
+      const res = await fetchGroups({ data: { limit: 50, orderBy: "election_date", order: "DESC" } });
       const raw = (res as any)?.data?.items || (res as any)?.data || res;
       return Array.isArray(raw) ? raw : [];
     },

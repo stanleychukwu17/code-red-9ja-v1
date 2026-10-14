@@ -322,18 +322,6 @@ func (s *ElectionsService) CreateNationwideElection(ctx context.Context, officeI
 		}
 		groupName = eg.Name
 
-		// Increment the number of elections contesting under this group
-		_, err = txQueries.UpdateElectionGroup(ctx, queries.UpdateElectionGroupParams{
-			ID:             eg.ID,
-			Name:           eg.Name,
-			Rank:           eg.Rank,
-			ElectionsCount: eg.ElectionsCount + 1,
-			StatesCount:    eg.StatesCount,
-			ElectionDate:   eg.ElectionDate,
-		})
-		if err != nil {
-			return queries.Election{}, fmt.Errorf("failed to update election group count: %w", err)
-		}
 	} else {
 		// Auto-create election group with collision-safe naming (e.g., "2027 Presidential Election (1)")
 		baseGroupName := fmt.Sprintf("%d %s Election", electionDate.Year(), et.Election)
@@ -348,20 +336,9 @@ func (s *ElectionsService) CreateNationwideElection(ctx context.Context, officeI
 			computedGroupName = fmt.Sprintf("%s (%d)", baseGroupName, suffix)
 		}
 
-		// Retrieve nationwide boundary metrics snapshot (from cache/DB)
-		metrics := s.getSafeNationalMetrics(ctx)
 		newGroup, err := txQueries.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{
-			Name:                       computedGroupName,
-			Rank:                       et.Rank,
-			ElectionsCount:             1,
-			StatesCount:                37, // Fixed 36 states + FCT for nationwide elections
-			ElectionDate:               pgtype.Date{Time: electionDate, Valid: true},
-			SenatorialDistrictsCount:   metrics.SenatorialDistrictsCount,
-			FederalConstituenciesCount: metrics.FederalConstituenciesCount,
-			LgasCount:                  metrics.LgasCount,
-			StateConstituenciesCount:   metrics.StateConstituenciesCount,
-			WardsCount:                 metrics.WardsCount,
-			PollingUnitsCount:          metrics.PollingUnitsCount,
+			Name:         computedGroupName,
+			ElectionDate: pgtype.Date{Time: electionDate, Valid: true},
 		})
 		if err != nil {
 			return queries.Election{}, fmt.Errorf("failed to create election group: %w", err)
@@ -459,18 +436,6 @@ func (s *ElectionsService) CreateStateElection(ctx context.Context, officeID int
 		}
 		groupName = eg.Name
 
-		// Increment elections_count by the number of states contesting
-		_, err = txQueries.UpdateElectionGroup(ctx, queries.UpdateElectionGroupParams{
-			ID:             eg.ID,
-			Name:           eg.Name,
-			Rank:           eg.Rank,
-			ElectionsCount: eg.ElectionsCount + int32(len(stateIDs)),
-			StatesCount:    eg.StatesCount,
-			ElectionDate:   eg.ElectionDate,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to update election group count: %w", err)
-		}
 	} else {
 		// Auto-create election group with collision-safe naming
 		baseGroupName := fmt.Sprintf("%d %s Election", electionDate.Year(), et.Election)
@@ -485,20 +450,9 @@ func (s *ElectionsService) CreateStateElection(ctx context.Context, officeID int
 			computedGroupName = fmt.Sprintf("%s (%d)", baseGroupName, suffix)
 		}
 
-		// Retrieve nationwide boundary metrics snapshot (from cache/DB)
-		metrics := s.getSafeNationalMetrics(ctx)
 		newGroup, err := txQueries.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{
-			Name:                       computedGroupName,
-			Rank:                       et.Rank,
-			ElectionsCount:             int32(len(stateIDs)),
-			StatesCount:                int32(len(stateIDs)),
-			ElectionDate:               pgtype.Date{Time: electionDate, Valid: true},
-			SenatorialDistrictsCount:   metrics.SenatorialDistrictsCount,
-			FederalConstituenciesCount: metrics.FederalConstituenciesCount,
-			LgasCount:                  metrics.LgasCount,
-			StateConstituenciesCount:   metrics.StateConstituenciesCount,
-			WardsCount:                 metrics.WardsCount,
-			PollingUnitsCount:          metrics.PollingUnitsCount,
+			Name:         computedGroupName,
+			ElectionDate: pgtype.Date{Time: electionDate, Valid: true},
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to create election group: %w", err)
@@ -603,18 +557,6 @@ func (s *ElectionsService) CreateSenatorialDistrictElection(ctx context.Context,
 		}
 		groupName = eg.Name
 
-		// Increment elections_count by the number of senatorial districts
-		_, err = txQueries.UpdateElectionGroup(ctx, queries.UpdateElectionGroupParams{
-			ID:             eg.ID,
-			Name:           eg.Name,
-			Rank:           eg.Rank,
-			ElectionsCount: eg.ElectionsCount + int32(len(senatorialDistrictIDs)),
-			StatesCount:    eg.StatesCount,
-			ElectionDate:   eg.ElectionDate,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to update election group count: %w", err)
-		}
 	} else {
 		// Auto-create election group with collision-safe naming
 		baseGroupName := fmt.Sprintf("%d %s Election", electionDate.Year(), et.Election)
@@ -629,20 +571,9 @@ func (s *ElectionsService) CreateSenatorialDistrictElection(ctx context.Context,
 			computedGroupName = fmt.Sprintf("%s (%d)", baseGroupName, suffix)
 		}
 
-		// Retrieve nationwide boundary metrics snapshot (from cache/DB)
-		metrics := s.getSafeNationalMetrics(ctx)
 		newGroup, err := txQueries.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{
-			Name:                       computedGroupName,
-			Rank:                       et.Rank,
-			ElectionsCount:             int32(len(senatorialDistrictIDs)),
-			StatesCount:                37,
-			ElectionDate:               pgtype.Date{Time: electionDate, Valid: true},
-			SenatorialDistrictsCount:   metrics.SenatorialDistrictsCount,
-			FederalConstituenciesCount: metrics.FederalConstituenciesCount,
-			LgasCount:                  metrics.LgasCount,
-			StateConstituenciesCount:   metrics.StateConstituenciesCount,
-			WardsCount:                 metrics.WardsCount,
-			PollingUnitsCount:          metrics.PollingUnitsCount,
+			Name:         computedGroupName,
+			ElectionDate: pgtype.Date{Time: electionDate, Valid: true},
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to create election group: %w", err)
@@ -761,18 +692,6 @@ func (s *ElectionsService) CreateFederalConstituencyElection(ctx context.Context
 		}
 		groupName = eg.Name
 
-		// Increment elections_count by the number of federal constituencies contesting
-		_, err = txQueries.UpdateElectionGroup(ctx, queries.UpdateElectionGroupParams{
-			ID:             eg.ID,
-			Name:           eg.Name,
-			Rank:           eg.Rank,
-			ElectionsCount: eg.ElectionsCount + int32(len(federalConstituencyIDs)),
-			StatesCount:    eg.StatesCount,
-			ElectionDate:   eg.ElectionDate,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to update election group count: %w", err)
-		}
 	} else {
 		// Auto-create election group with collision-safe naming
 		baseGroupName := fmt.Sprintf("%d %s Election", electionDate.Year(), et.Election)
@@ -787,20 +706,9 @@ func (s *ElectionsService) CreateFederalConstituencyElection(ctx context.Context
 			computedGroupName = fmt.Sprintf("%s (%d)", baseGroupName, suffix)
 		}
 
-		// Retrieve nationwide boundary metrics snapshot (from cache/DB)
-		metrics := s.getSafeNationalMetrics(ctx)
 		newGroup, err := txQueries.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{
-			Name:                       computedGroupName,
-			Rank:                       et.Rank,
-			ElectionsCount:             int32(len(federalConstituencyIDs)),
-			StatesCount:                37,
-			ElectionDate:               pgtype.Date{Time: electionDate, Valid: true},
-			SenatorialDistrictsCount:   metrics.SenatorialDistrictsCount,
-			FederalConstituenciesCount: metrics.FederalConstituenciesCount,
-			LgasCount:                  metrics.LgasCount,
-			StateConstituenciesCount:   metrics.StateConstituenciesCount,
-			WardsCount:                 metrics.WardsCount,
-			PollingUnitsCount:          metrics.PollingUnitsCount,
+			Name:         computedGroupName,
+			ElectionDate: pgtype.Date{Time: electionDate, Valid: true},
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to create election group: %w", err)
@@ -928,18 +836,6 @@ func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, 
 		}
 		groupName = eg.Name
 
-		// Increment elections_count by the number of state constituencies
-		_, err = txQueries.UpdateElectionGroup(ctx, queries.UpdateElectionGroupParams{
-			ID:             eg.ID,
-			Name:           eg.Name,
-			Rank:           eg.Rank,
-			ElectionsCount: eg.ElectionsCount + int32(len(stateConstituencyIDs)),
-			StatesCount:    eg.StatesCount,
-			ElectionDate:   eg.ElectionDate,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to update election group count: %w", err)
-		}
 	} else {
 		// Auto-create election group with collision-safe naming
 		baseGroupName := fmt.Sprintf("%d %s Election", electionDate.Year(), et.Election)
@@ -954,20 +850,9 @@ func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, 
 			computedGroupName = fmt.Sprintf("%s (%d)", baseGroupName, suffix)
 		}
 
-		// Retrieve nationwide boundary metrics snapshot (from cache/DB)
-		metrics := s.getSafeNationalMetrics(ctx)
 		newGroup, err := txQueries.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{
-			Name:                       computedGroupName,
-			Rank:                       et.Rank,
-			ElectionsCount:             int32(len(stateConstituencyIDs)),
-			StatesCount:                37,
-			ElectionDate:               pgtype.Date{Time: electionDate, Valid: true},
-			SenatorialDistrictsCount:   metrics.SenatorialDistrictsCount,
-			FederalConstituenciesCount: metrics.FederalConstituenciesCount,
-			LgasCount:                  metrics.LgasCount,
-			StateConstituenciesCount:   metrics.StateConstituenciesCount,
-			WardsCount:                 metrics.WardsCount,
-			PollingUnitsCount:          metrics.PollingUnitsCount,
+			Name:         computedGroupName,
+			ElectionDate: pgtype.Date{Time: electionDate, Valid: true},
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to create election group: %w", err)
@@ -1105,18 +990,6 @@ func (s *ElectionsService) CreateLgaElection(ctx context.Context, officeID int16
 		}
 		groupName = eg.Name
 
-		// Increment elections_count by the number of LGAs contesting
-		_, err = txQueries.UpdateElectionGroup(ctx, queries.UpdateElectionGroupParams{
-			ID:             eg.ID,
-			Name:           eg.Name,
-			Rank:           eg.Rank,
-			ElectionsCount: eg.ElectionsCount + int32(len(lgaIDs)),
-			StatesCount:    eg.StatesCount,
-			ElectionDate:   eg.ElectionDate,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to update election group count: %w", err)
-		}
 	} else {
 		// Auto-create election group with collision-safe naming
 		baseGroupName := fmt.Sprintf("%d %s Election", electionDate.Year(), et.Election)
@@ -1131,20 +1004,9 @@ func (s *ElectionsService) CreateLgaElection(ctx context.Context, officeID int16
 			computedGroupName = fmt.Sprintf("%s (%d)", baseGroupName, suffix)
 		}
 
-		// Retrieve nationwide boundary metrics snapshot (from cache/DB)
-		metrics := s.getSafeNationalMetrics(ctx)
 		newGroup, err := txQueries.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{
-			Name:                       computedGroupName,
-			Rank:                       et.Rank,
-			ElectionsCount:             int32(len(lgaIDs)),
-			StatesCount:                37,
-			ElectionDate:               pgtype.Date{Time: electionDate, Valid: true},
-			SenatorialDistrictsCount:   metrics.SenatorialDistrictsCount,
-			FederalConstituenciesCount: metrics.FederalConstituenciesCount,
-			LgasCount:                  metrics.LgasCount,
-			StateConstituenciesCount:   metrics.StateConstituenciesCount,
-			WardsCount:                 metrics.WardsCount,
-			PollingUnitsCount:          metrics.PollingUnitsCount,
+			Name:         computedGroupName,
+			ElectionDate: pgtype.Date{Time: electionDate, Valid: true},
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to create election group: %w", err)
@@ -1274,18 +1136,6 @@ func (s *ElectionsService) CreateWardElection(ctx context.Context, officeID int1
 		}
 		groupName = eg.Name
 
-		// Increment elections_count by the number of wards contesting
-		_, err = txQueries.UpdateElectionGroup(ctx, queries.UpdateElectionGroupParams{
-			ID:             eg.ID,
-			Name:           eg.Name,
-			Rank:           eg.Rank,
-			ElectionsCount: eg.ElectionsCount + int32(len(wardIDs)),
-			StatesCount:    eg.StatesCount,
-			ElectionDate:   eg.ElectionDate,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to update election group count: %w", err)
-		}
 	} else {
 		// Auto-create election group with collision-safe naming
 		baseGroupName := fmt.Sprintf("%d %s Election", electionDate.Year(), et.Election)
@@ -1300,20 +1150,9 @@ func (s *ElectionsService) CreateWardElection(ctx context.Context, officeID int1
 			computedGroupName = fmt.Sprintf("%s (%d)", baseGroupName, suffix)
 		}
 
-		// Retrieve nationwide boundary metrics snapshot (from cache/DB)
-		metrics := s.getSafeNationalMetrics(ctx)
 		newGroup, err := txQueries.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{
-			Name:                       computedGroupName,
-			Rank:                       et.Rank,
-			ElectionsCount:             int32(len(wardIDs)),
-			StatesCount:                37,
-			ElectionDate:               pgtype.Date{Time: electionDate, Valid: true},
-			SenatorialDistrictsCount:   metrics.SenatorialDistrictsCount,
-			FederalConstituenciesCount: metrics.FederalConstituenciesCount,
-			LgasCount:                  metrics.LgasCount,
-			StateConstituenciesCount:   metrics.StateConstituenciesCount,
-			WardsCount:                 metrics.WardsCount,
-			PollingUnitsCount:          metrics.PollingUnitsCount,
+			Name:         computedGroupName,
+			ElectionDate: pgtype.Date{Time: electionDate, Valid: true},
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to create election group: %w", err)
@@ -1746,16 +1585,14 @@ func (s *ElectionsService) syncElectionGroupNameAndRank(ctx context.Context, txQ
 	}
 
 	_, err = txQueries.UpdateElectionGroup(ctx, queries.UpdateElectionGroupParams{
-		ID:             groupID,
-		Name:           newGroupName,
-		Rank:           highestRanked.Rank,
-		ElectionsCount: int32(len(elections)),
-		StatesCount:    eg.StatesCount, // preserve existing states count
-		ElectionDate:   eg.ElectionDate,
+		ID:           groupID,
+		Name:         newGroupName,
+		ElectionDate: eg.ElectionDate,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to update election group: %w", err)
 	}
+
 
 	// 6. Denormalize the updated group name onto each child election instance for consistent queries
 	for _, e := range elections {

@@ -6,9 +6,7 @@ import (
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/utils"
 	"net/http"
-	"sort"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -16,10 +14,10 @@ import (
 )
 
 type ElectionGroupsService interface {
-	CreateElectionGroup(ctx context.Context, name string, rank int32, electionsCount, statesCount int32, electionDate time.Time) (queries.ElectionGroup, error)
+	CreateElectionGroup(ctx context.Context, name string, electionDate time.Time) (queries.ElectionGroup, error)
 	GetElectionGroupByID(ctx context.Context, id int32) (queries.ElectionGroup, error)
 	ListElectionGroups(ctx context.Context) ([]queries.ElectionGroup, error)
-	UpdateElectionGroup(ctx context.Context, id int32, name string, rank int32, electionsCount, statesCount int32, electionDate time.Time) (queries.ElectionGroup, error)
+	UpdateElectionGroup(ctx context.Context, id int32, name string, electionDate time.Time) (queries.ElectionGroup, error)
 	DeleteElectionGroup(ctx context.Context, id int32) error
 	ListElectionGroupsWithPartyStats(ctx context.Context, partyID int16) ([]queries.ListElectionGroupsWithPartyStatsRow, error)
 	UpsertPartyElectionGroupStats(ctx context.Context, partyID int16, electionGroupID int32, pollingAgentsCoverage []byte, electionsContesting int32) (queries.PartyElectionGroup, error)
@@ -38,59 +36,15 @@ func NewHandler(service ElectionGroupsService, utils *utils.Utils) *Handler {
 	}
 }
 
-func parsePaginationParams(r *http.Request) (int, int64) {
-	// 1. Default limit is 20; clamp between 1 and 100
-	limit := 20
-	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
-		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
-			if l > 100 {
-				limit = 100
-			} else {
-				limit = l
-			}
-		}
-	}
-
-	// 2. Parse optional integer cursor (ID of the last item in previous page)
-	var cursor int64
-	if cursorStr := r.URL.Query().Get("cursor"); cursorStr != "" {
-		if c, err := strconv.ParseInt(cursorStr, 10, 64); err == nil {
-			cursor = c
-		}
-	}
-	return limit, cursor
-}
-
-func parseSortParams(r *http.Request, defaultOrderBy string, defaultOrderDir string) (string, string) {
-	// 1. Extract order_by column or fall back to default
-	orderBy := r.URL.Query().Get("order_by")
-	if orderBy == "" {
-		orderBy = defaultOrderBy
-	}
-
-	// 2. Extract direction, normalize to uppercase, and validate (defaulting if invalid)
-	orderDir := strings.ToUpper(r.URL.Query().Get("order"))
-	if orderDir != "ASC" && orderDir != "DESC" {
-		orderDir = defaultOrderDir
-	}
-
-	return orderBy, orderDir
-}
 
 type CreateElectionGroupRequest struct {
-	Name           string         `json:"name"`
-	Rank           int32          `json:"rank"`
-	ElectionsCount int32          `json:"elections_count"`
-	StatesCount    int32          `json:"states_count"`
-	ElectionDate   utils.JSONDate `json:"election_date"`
+	Name         string         `json:"name"`
+	ElectionDate utils.JSONDate `json:"election_date"`
 }
 
 type UpdateElectionGroupRequest struct {
-	Name           string         `json:"name"`
-	Rank           int32          `json:"rank"`
-	ElectionsCount int32          `json:"elections_count"`
-	StatesCount    int32          `json:"states_count"`
-	ElectionDate   utils.JSONDate `json:"election_date"`
+	Name         string         `json:"name"`
+	ElectionDate utils.JSONDate `json:"election_date"`
 }
 
 // CreateElectionGroup godoc
@@ -119,7 +73,7 @@ func (h *Handler) CreateElectionGroup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 3. Delegate creation to service (persists group, updates caches, and seeds national metrics in background)
-	eg, err := h.service.CreateElectionGroup(r.Context(), req.Name, req.Rank, req.ElectionsCount, req.StatesCount, req.ElectionDate.Time())
+	eg, err := h.service.CreateElectionGroup(r.Context(), req.Name, req.ElectionDate.Time())
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create election group: "+err.Error())
 		return
@@ -134,9 +88,6 @@ func (h *Handler) CreateElectionGroup(w http.ResponseWriter, r *http.Request) {
 type ElectionGroupResponse struct {
 	ID                                 int32              `json:"id"`
 	Name                               string             `json:"name"`
-	Rank                               int32              `json:"rank"`
-	ElectionsCount                     int32              `json:"elections_count"`
-	StatesCount                        int32              `json:"states_count"`
 	ElectionDate                       pgtype.Date        `json:"election_date"`
 	CreatedAt                          pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt                          pgtype.Timestamptz `json:"updated_at"`
@@ -146,21 +97,16 @@ type ElectionGroupResponse struct {
 
 // ListElectionGroups godoc
 // @Summary      List election groups
-// @Description  Fetches a paginated list of election groups using cursor pagination
+// @Description  Fetches all election groups ordered by election date descending
 // @Tags         ElectionGroups
 // @Accept       json
 // @Produce      json
-// @Param        limit    query int    false "Limit (default 20, max 100)"
-// @Param        cursor   query string false "Cursor (ID of last record)"
-// @Param        party_id query int    false "Party ID for stats"
+// @Param        party_id query int false "Party ID for stats"
 // @Success      200  {object} map[string]interface{} "Election groups fetched successfully"
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Router       /election-groups [get]
 func (h *Handler) ListElectionGroups(w http.ResponseWriter, r *http.Request) {
-	// 1. Parse pagination query parameters (limit and last-seen cursor ID)
-	limit, cursor := parsePaginationParams(r)
-
-	// 2. Check for optional party_id to fetch party-specific stats (e.g. agent coverage)
+	// 1. Check for optional party_id to fetch party-specific stats (e.g. agent coverage)
 	var partyID int64
 	if partyIDStr := r.URL.Query().Get("party_id"); partyIDStr != "" {
 		if pid, err := strconv.ParseInt(partyIDStr, 10, 64); err == nil {
@@ -168,9 +114,9 @@ func (h *Handler) ListElectionGroups(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	var responseGroups []ElectionGroupResponse
+	responseGroups := make([]ElectionGroupResponse, 0)
 
-	// 3. Fetch election groups: enriched with party metrics if partyID is supplied, otherwise standard cached list
+	// 2. Fetch election groups: enriched with party metrics if partyID is supplied, otherwise standard list
 	if partyID > 0 {
 		rows, err := h.service.ListElectionGroupsWithPartyStats(r.Context(), int16(partyID))
 		if err != nil {
@@ -181,9 +127,6 @@ func (h *Handler) ListElectionGroups(w http.ResponseWriter, r *http.Request) {
 			responseGroups = append(responseGroups, ElectionGroupResponse{
 				ID:                                 row.ID,
 				Name:                               row.Name,
-				Rank:                               row.Rank,
-				ElectionsCount:                     row.ElectionsCount,
-				StatesCount:                        row.StatesCount,
 				ElectionDate:                       row.ElectionDate,
 				CreatedAt:                          row.CreatedAt,
 				UpdatedAt:                          row.UpdatedAt,
@@ -197,91 +140,24 @@ func (h *Handler) ListElectionGroups(w http.ResponseWriter, r *http.Request) {
 			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch election groups: "+err.Error())
 			return
 		}
+
 		for _, g := range groups {
 			responseGroups = append(responseGroups, ElectionGroupResponse{
-				ID:             g.ID,
-				Name:           g.Name,
-				Rank:           g.Rank,
-				ElectionsCount: g.ElectionsCount,
-				StatesCount:    g.StatesCount,
-				ElectionDate:   g.ElectionDate,
-				CreatedAt:      g.CreatedAt,
-				UpdatedAt:      g.UpdatedAt,
+				ID:           g.ID,
+				Name:         g.Name,
+				ElectionDate: g.ElectionDate,
+				CreatedAt:    g.CreatedAt,
+				UpdatedAt:    g.UpdatedAt,
 			})
 		}
 	}
 
-	// 4. Optional filter: keep only election groups holding on or after today if upcoming=true
-	if r.URL.Query().Get("upcoming") == "true" {
-		var filteredGroups []ElectionGroupResponse
-		now := time.Now()
-		// keep only time component zeroed for comparison
-		today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-		for _, electionGroup := range responseGroups {
-			if electionGroup.ElectionDate.Valid && !electionGroup.ElectionDate.Time.Before(today) {
-				filteredGroups = append(filteredGroups, electionGroup)
-			}
-		}
-		responseGroups = filteredGroups
-	}
-
-	// 5. In-memory sorting based on requested column (name, rank, or ID) and direction (ASC/DESC)
-	orderBy, orderDir := parseSortParams(r, "rank", "ASC")
-
-	// sort using slice stable
-	sort.SliceStable(responseGroups, func(i, j int) bool {
-		// For descending order, swap indices (j < i) to maintain strict weak ordering without
-		// violating equality
-		if orderDir == "DESC" {
-			i, j = j, i
-		}
-
-		switch orderBy {
-		case "name":
-			return responseGroups[i].Name < responseGroups[j].Name
-		case "rank":
-			return responseGroups[i].Rank < responseGroups[j].Rank
-		default:
-			return responseGroups[i].ID < responseGroups[j].ID
-		}
-	})
-
-	// 6. Cursor-based pagination: find the index after the cursor ID
-	startIndex := 0
-	if cursor > 0 {
-		for i, electionGroup := range responseGroups {
-			if int64(electionGroup.ID) == cursor {
-				startIndex = i + 1
-				break
-			}
-		}
-	}
-
-	// 7. Slice the requested page (limit items) and determine next_cursor / has_more
-	var paginated []ElectionGroupResponse
-	hasMore := false
-	nextCursor := ""
-
-	if startIndex < len(responseGroups) {
-		endIndex := startIndex + limit
-		if endIndex >= len(responseGroups) {
-			endIndex = len(responseGroups)
-			paginated = responseGroups[startIndex:endIndex]
-		} else {
-			paginated = responseGroups[startIndex:endIndex]
-			hasMore = true
-			nextCursor = strconv.FormatInt(int64(paginated[len(paginated)-1].ID), 10)
-		}
-	} else {
-		paginated = []ElectionGroupResponse{}
-	}
-
-	// 8. Return the paginated election groups with pagination metadata
+	// 3. Return the election groups with backward-compatible meta
 	h.utils.RespondSuccess(w, http.StatusOK, "Election groups fetched successfully", map[string]interface{}{
-		"election_groups": paginated,
+		"election_groups": responseGroups,
 		"meta": map[string]interface{}{
-			"next_cursor": nextCursor,
-			"has_more":    hasMore,
+			"next_cursor": "",
+			"has_more":    false,
 		},
 	})
 }
@@ -322,7 +198,7 @@ func (h *Handler) GetElectionGroup(w http.ResponseWriter, r *http.Request) {
 
 // UpdateElectionGroup godoc
 // @Summary      Update an election group
-// @Description  Modifies name, rank, counts, or election date of an existing election group
+// @Description  Modifies name or election date of an existing election group
 // @Tags         ElectionGroups
 // @Accept       json
 // @Produce      json
@@ -363,7 +239,7 @@ func (h *Handler) UpdateElectionGroup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 5. Update election group via service (updates group, syncs date across child elections, and invalidates cache)
-	updated, err := h.service.UpdateElectionGroup(r.Context(), int32(id), req.Name, req.Rank, req.ElectionsCount, req.StatesCount, req.ElectionDate.Time())
+	updated, err := h.service.UpdateElectionGroup(r.Context(), int32(id), req.Name, req.ElectionDate.Time())
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update election group: "+err.Error())
 		return
@@ -403,9 +279,9 @@ func (h *Handler) DeleteElectionGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 3. Delete election group via service (deletes record and invalidates cache)
+	// 3. Delete election group via service (checks for active candidates, deletes record, and invalidates cache)
 	if err := h.service.DeleteElectionGroup(r.Context(), int32(id)); err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to delete election group: "+err.Error())
+		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 

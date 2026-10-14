@@ -157,11 +157,12 @@ SET
 WHERE id = $1;
 
 -- name: IncrementPartyElectionGroupResultCount :exec
-UPDATE party_election_groups
-SET
-  results_submitted_count = results_submitted_count + 1,
-  updated_at              = NOW()
-WHERE party_id = $1 AND election_group_id = $2;
+INSERT INTO party_election_groups (party_id, election_group_id, results_submitted_count)
+VALUES ($1, $2, 1)
+ON CONFLICT (party_id, election_group_id)
+DO UPDATE SET
+  results_submitted_count = party_election_groups.results_submitted_count + 1,
+  updated_at              = NOW();
 
 -- name: UpdatePollingUnitResultAIExtraction :one
 UPDATE polling_unit_results

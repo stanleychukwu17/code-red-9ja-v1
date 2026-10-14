@@ -4,17 +4,24 @@ import { API_URL } from "../config";
 
 
 export const getOffices = createServerFn({ method: "GET" })
-  .inputValidator((data: { limit?: number; cursor?: string | number } | undefined) => data)
+  .inputValidator((data: { limit?: number; cursor?: string | number; contested?: boolean } | undefined) => data)
   .handler(async ({ data }) => {
     try {
       const limit = data?.limit || 20;
       const cursor = data?.cursor || "";
-      const response = await apiFetch(`${API_URL.offices}?limit=${limit}&cursor=${cursor}`);
+      const contestedParam = data?.contested !== undefined ? `&contested=${data.contested}` : "";
+      const response = await apiFetch(`${API_URL.offices}?limit=${limit}&cursor=${cursor}${contestedParam}`);
       const resData = await response.json();
       return resData;
     } catch (error) {
       return { success: false, message: "Failed to fetch offices from API" };
     }
+  });
+
+export const getContestedOffices = createServerFn({ method: "GET" })
+  .inputValidator((data: { limit?: number; cursor?: string | number } | undefined) => data)
+  .handler(async ({ data }) => {
+    return await getOffices({ data: { ...data, contested: true } });
   });
 
 export const getOfficeById = createServerFn({ method: "GET" })

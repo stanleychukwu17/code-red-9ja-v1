@@ -252,10 +252,6 @@ function ExplanationRouteComponent() {
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                      <span><strong>Ranking:</strong> The rank determines display priority in dropdowns, public portals, and overview lists.</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
                       <span><strong>Statistics:</strong> Displays aggregated counts of associated elections and impacted states.</span>
                     </li>
                   </ul>

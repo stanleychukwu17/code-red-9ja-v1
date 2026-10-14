@@ -35,6 +35,7 @@ export const ElectionGroupDropdown = ({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["election-groups"] });
       queryClient.invalidateQueries({ queryKey: ["election-groups-select"] });
+      queryClient.invalidateQueries({ queryKey: ["elections"] });
       setOpenDeleteAlert(false);
     },
   });

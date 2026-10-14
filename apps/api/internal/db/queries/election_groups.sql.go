@@ -11,53 +11,37 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countCandidatesInElectionGroup = `-- name: CountCandidatesInElectionGroup :one
+SELECT COUNT(*)::bigint
+FROM election_candidates ec
+JOIN elections e ON ec.election_id = e.id
+WHERE e.election_group_id = $1
+`
+
+func (q *Queries) CountCandidatesInElectionGroup(ctx context.Context, electionGroupID int32) (int64, error) {
+	row := q.db.QueryRow(ctx, countCandidatesInElectionGroup, electionGroupID)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const createElectionGroup = `-- name: CreateElectionGroup :one
-INSERT INTO election_groups (name, rank, elections_count, states_count, election_date, senatorial_districts_count, federal_constituencies_count, lgas_count, state_constituencies_count, wards_count, polling_units_count)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-RETURNING id, name, rank, elections_count, states_count, senatorial_districts_count, federal_constituencies_count, lgas_count, state_constituencies_count, wards_count, polling_units_count, state_supervisors_count, unique_state_supervisors_count, lga_supervisors_count, unique_lga_supervisors_count, ward_supervisors_count, unique_ward_supervisors_count, applications_count, accepted_applications_count, rejected_applications_count, ward_supervisor_applications_count, ward_supervisor_accepted_applications_count, ward_supervisor_rejected_applications_count, lga_supervisor_applications_count, lga_supervisor_accepted_applications_count, lga_supervisor_rejected_applications_count, state_supervisor_applications_count, state_supervisor_accepted_applications_count, state_supervisor_rejected_applications_count, pu_reports_count, pu_updates_count, results_submitted_count, unique_final_results_expected, pu_agents_count, unique_pu_agents_count, pu_agents_in_attendance_count, pu_average_arrival_time, pu_average_election_started_at, pu_average_election_ended_at, pu_election_practice_test_readiness_percentage, pu_final_results_uploaded_count, unique_pu_final_results_uploaded_count, pu_average_update_time_interval_in_seconds, pu_live_voters_referred_by_agent_count, total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance, total_pu_where_election_has_started, total_pu_where_election_has_ended, total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters, election_date, created_at, updated_at
+INSERT INTO election_groups (name, election_date)
+VALUES ($1, $2)
+RETURNING id, name, state_supervisors_count, unique_state_supervisors_count, lga_supervisors_count, unique_lga_supervisors_count, ward_supervisors_count, unique_ward_supervisors_count, applications_count, accepted_applications_count, rejected_applications_count, ward_supervisor_applications_count, ward_supervisor_accepted_applications_count, ward_supervisor_rejected_applications_count, lga_supervisor_applications_count, lga_supervisor_accepted_applications_count, lga_supervisor_rejected_applications_count, state_supervisor_applications_count, state_supervisor_accepted_applications_count, state_supervisor_rejected_applications_count, pu_reports_count, pu_updates_count, results_submitted_count, unique_final_results_expected, pu_agents_count, unique_pu_agents_count, pu_agents_in_attendance_count, pu_average_arrival_time, pu_average_election_started_at, pu_average_election_ended_at, pu_election_practice_test_readiness_percentage, pu_final_results_uploaded_count, unique_pu_final_results_uploaded_count, pu_average_update_time_interval_in_seconds, pu_live_voters_referred_by_agent_count, total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance, total_pu_where_election_has_started, total_pu_where_election_has_ended, total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters, election_date, created_at, updated_at
 `
 
 type CreateElectionGroupParams struct {
-	Name                       string      `json:"name"`
-	Rank                       int32       `json:"rank"`
-	ElectionsCount             int32       `json:"elections_count"`
-	StatesCount                int32       `json:"states_count"`
-	ElectionDate               pgtype.Date `json:"election_date"`
-	SenatorialDistrictsCount   int32       `json:"senatorial_districts_count"`
-	FederalConstituenciesCount int32       `json:"federal_constituencies_count"`
-	LgasCount                  int32       `json:"lgas_count"`
-	StateConstituenciesCount   int32       `json:"state_constituencies_count"`
-	WardsCount                 int32       `json:"wards_count"`
-	PollingUnitsCount          int32       `json:"polling_units_count"`
+	Name         string      `json:"name"`
+	ElectionDate pgtype.Date `json:"election_date"`
 }
 
 func (q *Queries) CreateElectionGroup(ctx context.Context, arg CreateElectionGroupParams) (ElectionGroup, error) {
-	row := q.db.QueryRow(ctx, createElectionGroup,
-		arg.Name,
-		arg.Rank,
-		arg.ElectionsCount,
-		arg.StatesCount,
-		arg.ElectionDate,
-		arg.SenatorialDistrictsCount,
-		arg.FederalConstituenciesCount,
-		arg.LgasCount,
-		arg.StateConstituenciesCount,
-		arg.WardsCount,
-		arg.PollingUnitsCount,
-	)
+	row := q.db.QueryRow(ctx, createElectionGroup, arg.Name, arg.ElectionDate)
 	var i ElectionGroup
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
-		&i.Rank,
-		&i.ElectionsCount,
-		&i.StatesCount,
-		&i.SenatorialDistrictsCount,
-		&i.FederalConstituenciesCount,
-		&i.LgasCount,
-		&i.StateConstituenciesCount,
-		&i.WardsCount,
-		&i.PollingUnitsCount,
 		&i.StateSupervisorsCount,
 		&i.UniqueStateSupervisorsCount,
 		&i.LgaSupervisorsCount,
@@ -115,7 +99,7 @@ func (q *Queries) DeleteElectionGroup(ctx context.Context, id int32) error {
 }
 
 const getElectionGroupByID = `-- name: GetElectionGroupByID :one
-SELECT id, name, rank, elections_count, states_count, senatorial_districts_count, federal_constituencies_count, lgas_count, state_constituencies_count, wards_count, polling_units_count, state_supervisors_count, unique_state_supervisors_count, lga_supervisors_count, unique_lga_supervisors_count, ward_supervisors_count, unique_ward_supervisors_count, applications_count, accepted_applications_count, rejected_applications_count, ward_supervisor_applications_count, ward_supervisor_accepted_applications_count, ward_supervisor_rejected_applications_count, lga_supervisor_applications_count, lga_supervisor_accepted_applications_count, lga_supervisor_rejected_applications_count, state_supervisor_applications_count, state_supervisor_accepted_applications_count, state_supervisor_rejected_applications_count, pu_reports_count, pu_updates_count, results_submitted_count, unique_final_results_expected, pu_agents_count, unique_pu_agents_count, pu_agents_in_attendance_count, pu_average_arrival_time, pu_average_election_started_at, pu_average_election_ended_at, pu_election_practice_test_readiness_percentage, pu_final_results_uploaded_count, unique_pu_final_results_uploaded_count, pu_average_update_time_interval_in_seconds, pu_live_voters_referred_by_agent_count, total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance, total_pu_where_election_has_started, total_pu_where_election_has_ended, total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters, election_date, created_at, updated_at FROM election_groups WHERE id = $1
+SELECT id, name, state_supervisors_count, unique_state_supervisors_count, lga_supervisors_count, unique_lga_supervisors_count, ward_supervisors_count, unique_ward_supervisors_count, applications_count, accepted_applications_count, rejected_applications_count, ward_supervisor_applications_count, ward_supervisor_accepted_applications_count, ward_supervisor_rejected_applications_count, lga_supervisor_applications_count, lga_supervisor_accepted_applications_count, lga_supervisor_rejected_applications_count, state_supervisor_applications_count, state_supervisor_accepted_applications_count, state_supervisor_rejected_applications_count, pu_reports_count, pu_updates_count, results_submitted_count, unique_final_results_expected, pu_agents_count, unique_pu_agents_count, pu_agents_in_attendance_count, pu_average_arrival_time, pu_average_election_started_at, pu_average_election_ended_at, pu_election_practice_test_readiness_percentage, pu_final_results_uploaded_count, unique_pu_final_results_uploaded_count, pu_average_update_time_interval_in_seconds, pu_live_voters_referred_by_agent_count, total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance, total_pu_where_election_has_started, total_pu_where_election_has_ended, total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters, election_date, created_at, updated_at FROM election_groups WHERE id = $1
 `
 
 func (q *Queries) GetElectionGroupByID(ctx context.Context, id int32) (ElectionGroup, error) {
@@ -124,15 +108,6 @@ func (q *Queries) GetElectionGroupByID(ctx context.Context, id int32) (ElectionG
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
-		&i.Rank,
-		&i.ElectionsCount,
-		&i.StatesCount,
-		&i.SenatorialDistrictsCount,
-		&i.FederalConstituenciesCount,
-		&i.LgasCount,
-		&i.StateConstituenciesCount,
-		&i.WardsCount,
-		&i.PollingUnitsCount,
 		&i.StateSupervisorsCount,
 		&i.UniqueStateSupervisorsCount,
 		&i.LgaSupervisorsCount,
@@ -181,7 +156,7 @@ func (q *Queries) GetElectionGroupByID(ctx context.Context, id int32) (ElectionG
 }
 
 const getElectionGroupByName = `-- name: GetElectionGroupByName :one
-SELECT id, name, rank, elections_count, states_count, senatorial_districts_count, federal_constituencies_count, lgas_count, state_constituencies_count, wards_count, polling_units_count, state_supervisors_count, unique_state_supervisors_count, lga_supervisors_count, unique_lga_supervisors_count, ward_supervisors_count, unique_ward_supervisors_count, applications_count, accepted_applications_count, rejected_applications_count, ward_supervisor_applications_count, ward_supervisor_accepted_applications_count, ward_supervisor_rejected_applications_count, lga_supervisor_applications_count, lga_supervisor_accepted_applications_count, lga_supervisor_rejected_applications_count, state_supervisor_applications_count, state_supervisor_accepted_applications_count, state_supervisor_rejected_applications_count, pu_reports_count, pu_updates_count, results_submitted_count, unique_final_results_expected, pu_agents_count, unique_pu_agents_count, pu_agents_in_attendance_count, pu_average_arrival_time, pu_average_election_started_at, pu_average_election_ended_at, pu_election_practice_test_readiness_percentage, pu_final_results_uploaded_count, unique_pu_final_results_uploaded_count, pu_average_update_time_interval_in_seconds, pu_live_voters_referred_by_agent_count, total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance, total_pu_where_election_has_started, total_pu_where_election_has_ended, total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters, election_date, created_at, updated_at FROM election_groups WHERE name = $1
+SELECT id, name, state_supervisors_count, unique_state_supervisors_count, lga_supervisors_count, unique_lga_supervisors_count, ward_supervisors_count, unique_ward_supervisors_count, applications_count, accepted_applications_count, rejected_applications_count, ward_supervisor_applications_count, ward_supervisor_accepted_applications_count, ward_supervisor_rejected_applications_count, lga_supervisor_applications_count, lga_supervisor_accepted_applications_count, lga_supervisor_rejected_applications_count, state_supervisor_applications_count, state_supervisor_accepted_applications_count, state_supervisor_rejected_applications_count, pu_reports_count, pu_updates_count, results_submitted_count, unique_final_results_expected, pu_agents_count, unique_pu_agents_count, pu_agents_in_attendance_count, pu_average_arrival_time, pu_average_election_started_at, pu_average_election_ended_at, pu_election_practice_test_readiness_percentage, pu_final_results_uploaded_count, unique_pu_final_results_uploaded_count, pu_average_update_time_interval_in_seconds, pu_live_voters_referred_by_agent_count, total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance, total_pu_where_election_has_started, total_pu_where_election_has_ended, total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters, election_date, created_at, updated_at FROM election_groups WHERE name = $1
 `
 
 func (q *Queries) GetElectionGroupByName(ctx context.Context, name string) (ElectionGroup, error) {
@@ -190,15 +165,6 @@ func (q *Queries) GetElectionGroupByName(ctx context.Context, name string) (Elec
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
-		&i.Rank,
-		&i.ElectionsCount,
-		&i.StatesCount,
-		&i.SenatorialDistrictsCount,
-		&i.FederalConstituenciesCount,
-		&i.LgasCount,
-		&i.StateConstituenciesCount,
-		&i.WardsCount,
-		&i.PollingUnitsCount,
 		&i.StateSupervisorsCount,
 		&i.UniqueStateSupervisorsCount,
 		&i.LgaSupervisorsCount,
@@ -247,7 +213,7 @@ func (q *Queries) GetElectionGroupByName(ctx context.Context, name string) (Elec
 }
 
 const listElectionGroups = `-- name: ListElectionGroups :many
-SELECT id, name, rank, elections_count, states_count, senatorial_districts_count, federal_constituencies_count, lgas_count, state_constituencies_count, wards_count, polling_units_count, state_supervisors_count, unique_state_supervisors_count, lga_supervisors_count, unique_lga_supervisors_count, ward_supervisors_count, unique_ward_supervisors_count, applications_count, accepted_applications_count, rejected_applications_count, ward_supervisor_applications_count, ward_supervisor_accepted_applications_count, ward_supervisor_rejected_applications_count, lga_supervisor_applications_count, lga_supervisor_accepted_applications_count, lga_supervisor_rejected_applications_count, state_supervisor_applications_count, state_supervisor_accepted_applications_count, state_supervisor_rejected_applications_count, pu_reports_count, pu_updates_count, results_submitted_count, unique_final_results_expected, pu_agents_count, unique_pu_agents_count, pu_agents_in_attendance_count, pu_average_arrival_time, pu_average_election_started_at, pu_average_election_ended_at, pu_election_practice_test_readiness_percentage, pu_final_results_uploaded_count, unique_pu_final_results_uploaded_count, pu_average_update_time_interval_in_seconds, pu_live_voters_referred_by_agent_count, total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance, total_pu_where_election_has_started, total_pu_where_election_has_ended, total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters, election_date, created_at, updated_at FROM election_groups
+SELECT id, name, state_supervisors_count, unique_state_supervisors_count, lga_supervisors_count, unique_lga_supervisors_count, ward_supervisors_count, unique_ward_supervisors_count, applications_count, accepted_applications_count, rejected_applications_count, ward_supervisor_applications_count, ward_supervisor_accepted_applications_count, ward_supervisor_rejected_applications_count, lga_supervisor_applications_count, lga_supervisor_accepted_applications_count, lga_supervisor_rejected_applications_count, state_supervisor_applications_count, state_supervisor_accepted_applications_count, state_supervisor_rejected_applications_count, pu_reports_count, pu_updates_count, results_submitted_count, unique_final_results_expected, pu_agents_count, unique_pu_agents_count, pu_agents_in_attendance_count, pu_average_arrival_time, pu_average_election_started_at, pu_average_election_ended_at, pu_election_practice_test_readiness_percentage, pu_final_results_uploaded_count, unique_pu_final_results_uploaded_count, pu_average_update_time_interval_in_seconds, pu_live_voters_referred_by_agent_count, total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance, total_pu_where_election_has_started, total_pu_where_election_has_ended, total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters, election_date, created_at, updated_at FROM election_groups
 ORDER BY election_date DESC, id DESC
 `
 
@@ -263,15 +229,6 @@ func (q *Queries) ListElectionGroups(ctx context.Context) ([]ElectionGroup, erro
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
-			&i.Rank,
-			&i.ElectionsCount,
-			&i.StatesCount,
-			&i.SenatorialDistrictsCount,
-			&i.FederalConstituenciesCount,
-			&i.LgasCount,
-			&i.StateConstituenciesCount,
-			&i.WardsCount,
-			&i.PollingUnitsCount,
 			&i.StateSupervisorsCount,
 			&i.UniqueStateSupervisorsCount,
 			&i.LgaSupervisorsCount,
@@ -330,9 +287,6 @@ const listElectionGroupsWithPartyStats = `-- name: ListElectionGroupsWithPartySt
 SELECT 
     eg.id, 
     eg.name, 
-    eg.rank, 
-    eg.elections_count, 
-    eg.states_count, 
     eg.election_date, 
     eg.created_at, 
     eg.updated_at,
@@ -347,9 +301,6 @@ ORDER BY eg.election_date DESC, eg.id DESC
 type ListElectionGroupsWithPartyStatsRow struct {
 	ID                    int32              `json:"id"`
 	Name                  string             `json:"name"`
-	Rank                  int32              `json:"rank"`
-	ElectionsCount        int32              `json:"elections_count"`
-	StatesCount           int32              `json:"states_count"`
 	ElectionDate          pgtype.Date        `json:"election_date"`
 	CreatedAt             pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
@@ -369,9 +320,6 @@ func (q *Queries) ListElectionGroupsWithPartyStats(ctx context.Context, partyID 
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
-			&i.Rank,
-			&i.ElectionsCount,
-			&i.StatesCount,
 			&i.ElectionDate,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -390,42 +338,23 @@ func (q *Queries) ListElectionGroupsWithPartyStats(ctx context.Context, partyID 
 
 const updateElectionGroup = `-- name: UpdateElectionGroup :one
 UPDATE election_groups
-SET name = $1, rank = $2, elections_count = $3, states_count = $4, election_date = $5, updated_at = NOW()
-WHERE id = $6
-RETURNING id, name, rank, elections_count, states_count, senatorial_districts_count, federal_constituencies_count, lgas_count, state_constituencies_count, wards_count, polling_units_count, state_supervisors_count, unique_state_supervisors_count, lga_supervisors_count, unique_lga_supervisors_count, ward_supervisors_count, unique_ward_supervisors_count, applications_count, accepted_applications_count, rejected_applications_count, ward_supervisor_applications_count, ward_supervisor_accepted_applications_count, ward_supervisor_rejected_applications_count, lga_supervisor_applications_count, lga_supervisor_accepted_applications_count, lga_supervisor_rejected_applications_count, state_supervisor_applications_count, state_supervisor_accepted_applications_count, state_supervisor_rejected_applications_count, pu_reports_count, pu_updates_count, results_submitted_count, unique_final_results_expected, pu_agents_count, unique_pu_agents_count, pu_agents_in_attendance_count, pu_average_arrival_time, pu_average_election_started_at, pu_average_election_ended_at, pu_election_practice_test_readiness_percentage, pu_final_results_uploaded_count, unique_pu_final_results_uploaded_count, pu_average_update_time_interval_in_seconds, pu_live_voters_referred_by_agent_count, total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance, total_pu_where_election_has_started, total_pu_where_election_has_ended, total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters, election_date, created_at, updated_at
+SET name = $1, election_date = $2, updated_at = NOW()
+WHERE id = $3
+RETURNING id, name, state_supervisors_count, unique_state_supervisors_count, lga_supervisors_count, unique_lga_supervisors_count, ward_supervisors_count, unique_ward_supervisors_count, applications_count, accepted_applications_count, rejected_applications_count, ward_supervisor_applications_count, ward_supervisor_accepted_applications_count, ward_supervisor_rejected_applications_count, lga_supervisor_applications_count, lga_supervisor_accepted_applications_count, lga_supervisor_rejected_applications_count, state_supervisor_applications_count, state_supervisor_accepted_applications_count, state_supervisor_rejected_applications_count, pu_reports_count, pu_updates_count, results_submitted_count, unique_final_results_expected, pu_agents_count, unique_pu_agents_count, pu_agents_in_attendance_count, pu_average_arrival_time, pu_average_election_started_at, pu_average_election_ended_at, pu_election_practice_test_readiness_percentage, pu_final_results_uploaded_count, unique_pu_final_results_uploaded_count, pu_average_update_time_interval_in_seconds, pu_live_voters_referred_by_agent_count, total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance, total_pu_where_election_has_started, total_pu_where_election_has_ended, total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters, election_date, created_at, updated_at
 `
 
 type UpdateElectionGroupParams struct {
-	Name           string      `json:"name"`
-	Rank           int32       `json:"rank"`
-	ElectionsCount int32       `json:"elections_count"`
-	StatesCount    int32       `json:"states_count"`
-	ElectionDate   pgtype.Date `json:"election_date"`
-	ID             int32       `json:"id"`
+	Name         string      `json:"name"`
+	ElectionDate pgtype.Date `json:"election_date"`
+	ID           int32       `json:"id"`
 }
 
 func (q *Queries) UpdateElectionGroup(ctx context.Context, arg UpdateElectionGroupParams) (ElectionGroup, error) {
-	row := q.db.QueryRow(ctx, updateElectionGroup,
-		arg.Name,
-		arg.Rank,
-		arg.ElectionsCount,
-		arg.StatesCount,
-		arg.ElectionDate,
-		arg.ID,
-	)
+	row := q.db.QueryRow(ctx, updateElectionGroup, arg.Name, arg.ElectionDate, arg.ID)
 	var i ElectionGroup
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
-		&i.Rank,
-		&i.ElectionsCount,
-		&i.StatesCount,
-		&i.SenatorialDistrictsCount,
-		&i.FederalConstituenciesCount,
-		&i.LgasCount,
-		&i.StateConstituenciesCount,
-		&i.WardsCount,
-		&i.PollingUnitsCount,
 		&i.StateSupervisorsCount,
 		&i.UniqueStateSupervisorsCount,
 		&i.LgaSupervisorsCount,

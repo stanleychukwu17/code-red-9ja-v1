@@ -14,9 +14,6 @@ import { LoadingBullet } from "./loading-bullet";
 export interface ElectionGroup {
   id: number;
   name: string;
-  rank: number;
-  elections_count: number;
-  states_count: number;
   election_date: string;
 }
 

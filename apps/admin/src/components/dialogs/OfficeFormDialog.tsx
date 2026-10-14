@@ -23,6 +23,8 @@ export interface Office {
   scope: string;
   rank: number;
   inec_election_type_id?: string;
+  is_contested?: boolean;
+  parent_office_id?: number | null;
   instances_count?: number;
   created_at?: string;
   updated_at?: string;

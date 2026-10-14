@@ -98,9 +98,9 @@ const (
 	//--END--
 
 	//--START-- for elections and election groups
-	RedisElectionGroupsAll = "election_groups:all" // STRING: used to store and retrieve all election groups JSON.
-	RedisElectionGroupInfo = "election_group:"     // STRING: "election_group:<id>" used to store and retrieve single election group JSON.
-	RedisElectionsAll      = "elections:all"       // STRING: used to store and retrieve all elections JSON.
+	RedisElectionGroupsAll  = "election_groups:all" // STRING: used to store and retrieve all election groups JSON.
+	RedisElectionGroupByID  = "election_group:"     // STRING: "election_group:<id>" used to store and retrieve single election group JSON.
+	RedisElectionsAll       = "elections:all"       // STRING: used to store and retrieve all elections JSON.
 	RedisElectionInfo      = "election:"           // STRING: "election:<id>" used to store and retrieve single election JSON.
 	//--END--
 
@@ -171,7 +171,7 @@ var AllRedisPrefixes = []string{
 	RedisNationalMetrics,
 	RedisOfficesAll,
 	RedisElectionGroupsAll,
-	RedisElectionGroupInfo,
+	RedisElectionGroupByID,
 	RedisElectionsAll,
 	RedisElectionInfo,
 	RedisCronLockINECGrabberSync,

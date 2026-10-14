@@ -1,8 +1,8 @@
 /**
  * @file Election Group Form Dialog
  * @description Modal dialog used in the admin portal to create or update an Election Group
- * (e.g. "2027 General Elections"), managing its display name, priority rank order, and scheduled date.
- * When updating, automatically cascades date changes to all child elections within the group.
+ * (e.g. "2027 General Elections"), managing its display name and scheduled date.
+ * When updating, the backend automatically cascades date changes to all child elections within the group.
  */
 
 import { useState, useEffect } from "react";
@@ -16,13 +16,11 @@ import {
 } from "@repo/ui/components/dialog";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { SelectRank } from "@repo/ui/components/selects/rank-select";
 import { SelectDate } from "@repo/ui/components/selects/date-select";
 import {
   createElectionGroup,
   updateElectionGroup,
 } from "#/lib/server/election_groups";
-import { getElections, updateElection } from "#/lib/server/elections";
 import { Loader2 } from "lucide-react";
 import { FancyInput } from "@repo/ui/components/input";
 import type { ElectionGroupType } from "../tiles/election-group-tile";
@@ -44,7 +42,6 @@ export function ElectionGroupFormDialog({ electionGroup, open, onClose, mode = "
   const form = useForm({
     defaultValues: {
       name: "",
-      rank: "1",
       electionDate: "",
     },
     onSubmit: async ({ value }) => {
@@ -61,12 +58,10 @@ export function ElectionGroupFormDialog({ electionGroup, open, onClose, mode = "
           ? (electionGroup.election_date.split("T")[0] ?? "")
           : "";
         form.setFieldValue("name", electionGroup.name || "");
-        form.setFieldValue("rank", String(electionGroup.rank || 1));
         form.setFieldValue("electionDate", cleanDate);
       } else {
         // Reset form to blank defaults for creating a new group
         form.setFieldValue("name", "");
-        form.setFieldValue("rank", "1");
         form.setFieldValue("electionDate", "");
       }
       setError(null);
@@ -75,11 +70,11 @@ export function ElectionGroupFormDialog({ electionGroup, open, onClose, mode = "
 
   // Mutation handling both group creation and updates with date cascading
   const saveMutation = useMutation({
-    mutationFn: async (values: { name: string; rank: string; electionDate: string; }) => {
+    mutationFn: async (values: { name: string; electionDate: string; }) => {
       if (!values.electionDate) {
         throw new Error("Election date is required");
       }
-      const rankNum = Number(values.rank) || 1;
+
       const cleanDate = values.electionDate
         ? (values.electionDate.split("T")[0] ?? "")
         : "";
@@ -89,58 +84,19 @@ export function ElectionGroupFormDialog({ electionGroup, open, onClose, mode = "
         if (!electionGroup?.id) {
           throw new Error("Missing ID for update");
         }
-        // 1. Update the parent election group record
+        // 1. Update the election group record (backend cascades date to child elections automatically)
         res = await updateElectionGroup({
           data: {
             id: electionGroup.id,
             name: values.name.trim(),
-            rank: rankNum,
-            elections_count: electionGroup.elections_count,
-            states_count: electionGroup.states_count,
             election_date: cleanDate,
           },
         });
-
-        // 2. Cascade: if the group's date changed, update all child elections under this group
-        const oldCleanDate = electionGroup.election_date
-          ? (electionGroup.election_date.split("T")[0] ?? "")
-          : "";
-        if (cleanDate && cleanDate !== oldCleanDate) {
-          const electionsRes = await getElections({
-            data: { election_group_id: electionGroup.id, limit: 1000 },
-          });
-          if (electionsRes?.success && electionsRes.data?.elections) {
-            const electionsList = electionsRes.data.elections;
-            await Promise.all(
-              electionsList.map((item: any) =>
-                updateElection({
-                  data: {
-                    id: item.id,
-                    name: item.name,
-                    candidates_count: item.candidates_count || 0,
-                    election_date: cleanDate,
-                    election_group_id: electionGroup.id,
-                    office_id: item.office_id,
-                    state_id: item.state_id,
-                    senatorial_district_id: item.senatorial_district_id,
-                    federal_constituency_id: item.federal_constituency_id,
-                    state_constituency_id: item.state_constituency_id,
-                    lga_id: item.lga_id,
-                    ward_id: item.ward_id,
-                  },
-                }),
-              ),
-            );
-          }
-        }
       } else {
         // Create new election group
         res = await createElectionGroup({
           data: {
             name: values.name.trim(),
-            rank: rankNum,
-            elections_count: 0,
-            states_count: 0,
             election_date: cleanDate,
           },
         });
@@ -151,6 +107,7 @@ export function ElectionGroupFormDialog({ electionGroup, open, onClose, mode = "
       }
       return res.data;
     },
+
     onSuccess: (data, variables) => {
       // Invalidate relevant caches to refresh tables and dropdowns across the portal
       queryClient.invalidateQueries({ queryKey: ["election-groups"] });
@@ -166,7 +123,7 @@ export function ElectionGroupFormDialog({ electionGroup, open, onClose, mode = "
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-[580px] p-0 rounded-2xl border-none shadow-2xl   overflow-visible">
+      <DialogContent className="max-w-145 p-0 rounded-2xl border-none shadow-2xl   overflow-visible">
         {/* Dynamic dialog title based on current operation mode */}
         <DialogHeader
           title={
@@ -210,43 +167,25 @@ export function ElectionGroupFormDialog({ electionGroup, open, onClose, mode = "
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              {/* Hierarchy priority rank selector */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[14px] font-semibold text-c-50">
-                  Rank
-                </label>
-                <form.Field
-                  name="rank"
-                  children={(field) => (
-                    <SelectRank
-                      selectedId={field.state.value}
-                      update={(val) => field.handleChange(val)}
-                    />
-                  )}
-                />
-              </div>
-
-              {/* Scheduled election date picker */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[14px] font-semibold text-c-50">
-                  Election Date
-                </label>
-                <form.Field
-                  name="electionDate"
-                  validators={{
-                    onChange: ({ value }) =>
-                      !value ? "Election date is required" : undefined,
-                  }}
-                  children={(field) => (
-                    <SelectDate
-                      initialData={field.state.value}
-                      update={(val) => field.handleChange(val)}
-                      errorMsg={field.state.meta.errors?.join(", ")}
-                    />
-                  )}
-                />
-              </div>
+            {/* Scheduled election date picker */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[14px] font-semibold text-c-50">
+                Election Date
+              </label>
+              <form.Field
+                name="electionDate"
+                validators={{
+                  onChange: ({ value }) =>
+                    !value ? "Election date is required" : undefined,
+                }}
+                children={(field) => (
+                  <SelectDate
+                    initialData={field.state.value}
+                    update={(val) => field.handleChange(val)}
+                    errorMsg={field.state.meta.errors?.join(", ")}
+                  />
+                )}
+              />
             </div>
           </DialogPadding>
 

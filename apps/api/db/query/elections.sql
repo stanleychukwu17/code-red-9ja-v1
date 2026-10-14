@@ -24,10 +24,10 @@ SET name = $1, rank = $2, candidates_count = $3, election_date = $4, election_gr
 WHERE id = $16
 RETURNING *;
 
--- name: UpdateElectionDatesByGroup :exec
+-- name: UpdateElectionGroupDetailsByGroup :exec
 UPDATE elections
-SET election_date = $1, updated_at = NOW()
-WHERE election_group_id = $2;
+SET election_group_name = $1, election_date = $2, updated_at = NOW()
+WHERE election_group_id = $3;
 
 -- name: UpdateElectionContestingParties :one
 UPDATE elections

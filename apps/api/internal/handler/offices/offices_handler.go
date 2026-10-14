@@ -135,6 +135,7 @@ func (h *Handler) CreateOffice(w http.ResponseWriter, r *http.Request) {
 // @Produce      json
 // @Param        limit  query int    false "Limit (default 20, max 100)"
 // @Param        cursor query string false "Cursor (ID of last record)"
+// @Param        contested query bool false "Filter contested offices only"
 // @Success      200  {object} map[string]interface{} "Offices fetched successfully"
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Router       /offices [get]
@@ -157,6 +158,17 @@ func (h *Handler) ListOffices(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch offices: "+err.Error())
 		return
+	}
+
+	// Filter by contested status if requested (e.g., ?contested=true for elections)
+	if strings.EqualFold(r.URL.Query().Get("contested"), "true") {
+		filtered := make([]queries.Office, 0, len(offices))
+		for _, o := range offices {
+			if o.IsContested {
+				filtered = append(filtered, o)
+			}
+		}
+		offices = filtered
 	}
 
 	// 4. In-memory sorting based on requested column (name or rank) and direction (ASC/DESC)

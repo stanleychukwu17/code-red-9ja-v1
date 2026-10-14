@@ -14,7 +14,7 @@ import (
 const createOffice = `-- name: CreateOffice :one
 INSERT INTO offices (name, election, scope, rank, inec_election_type_id)
 VALUES ($1, $2, $3, $4, $5)
-RETURNING id, name, election, scope, rank, instances_count, inec_election_type_id, created_at, updated_at
+RETURNING id, name, election, scope, rank, instances_count, inec_election_type_id, is_contested, parent_office_id, created_at, updated_at
 `
 
 type CreateOfficeParams struct {
@@ -42,6 +42,8 @@ func (q *Queries) CreateOffice(ctx context.Context, arg CreateOfficeParams) (Off
 		&i.Rank,
 		&i.InstancesCount,
 		&i.InecElectionTypeID,
+		&i.IsContested,
+		&i.ParentOfficeID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -58,7 +60,7 @@ func (q *Queries) DeleteOffice(ctx context.Context, id int16) error {
 }
 
 const getOfficeByID = `-- name: GetOfficeByID :one
-SELECT id, name, election, scope, rank, instances_count, inec_election_type_id, created_at, updated_at FROM offices WHERE id = $1
+SELECT id, name, election, scope, rank, instances_count, inec_election_type_id, is_contested, parent_office_id, created_at, updated_at FROM offices WHERE id = $1
 `
 
 func (q *Queries) GetOfficeByID(ctx context.Context, id int16) (Office, error) {
@@ -72,6 +74,8 @@ func (q *Queries) GetOfficeByID(ctx context.Context, id int16) (Office, error) {
 		&i.Rank,
 		&i.InstancesCount,
 		&i.InecElectionTypeID,
+		&i.IsContested,
+		&i.ParentOfficeID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -79,7 +83,7 @@ func (q *Queries) GetOfficeByID(ctx context.Context, id int16) (Office, error) {
 }
 
 const getOfficeByName = `-- name: GetOfficeByName :one
-SELECT id, name, election, scope, rank, instances_count, inec_election_type_id, created_at, updated_at FROM offices WHERE name = $1
+SELECT id, name, election, scope, rank, instances_count, inec_election_type_id, is_contested, parent_office_id, created_at, updated_at FROM offices WHERE name = $1
 `
 
 func (q *Queries) GetOfficeByName(ctx context.Context, name string) (Office, error) {
@@ -93,14 +97,54 @@ func (q *Queries) GetOfficeByName(ctx context.Context, name string) (Office, err
 		&i.Rank,
 		&i.InstancesCount,
 		&i.InecElectionTypeID,
+		&i.IsContested,
+		&i.ParentOfficeID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
 }
 
+const listContestedOffices = `-- name: ListContestedOffices :many
+SELECT id, name, election, scope, rank, instances_count, inec_election_type_id, is_contested, parent_office_id, created_at, updated_at FROM offices
+WHERE is_contested = true
+ORDER BY rank ASC
+`
+
+func (q *Queries) ListContestedOffices(ctx context.Context) ([]Office, error) {
+	rows, err := q.db.Query(ctx, listContestedOffices)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Office
+	for rows.Next() {
+		var i Office
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Election,
+			&i.Scope,
+			&i.Rank,
+			&i.InstancesCount,
+			&i.InecElectionTypeID,
+			&i.IsContested,
+			&i.ParentOfficeID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listOffices = `-- name: ListOffices :many
-SELECT id, name, election, scope, rank, instances_count, inec_election_type_id, created_at, updated_at FROM offices
+SELECT id, name, election, scope, rank, instances_count, inec_election_type_id, is_contested, parent_office_id, created_at, updated_at FROM offices
 ORDER BY id ASC
 `
 
@@ -121,6 +165,8 @@ func (q *Queries) ListOffices(ctx context.Context) ([]Office, error) {
 			&i.Rank,
 			&i.InstancesCount,
 			&i.InecElectionTypeID,
+			&i.IsContested,
+			&i.ParentOfficeID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -138,7 +184,7 @@ const updateOffice = `-- name: UpdateOffice :one
 UPDATE offices
 SET name = $1, election = $2, scope = $3, rank = $4, inec_election_type_id = $5, updated_at = NOW()
 WHERE id = $6
-RETURNING id, name, election, scope, rank, instances_count, inec_election_type_id, created_at, updated_at
+RETURNING id, name, election, scope, rank, instances_count, inec_election_type_id, is_contested, parent_office_id, created_at, updated_at
 `
 
 type UpdateOfficeParams struct {
@@ -168,6 +214,8 @@ func (q *Queries) UpdateOffice(ctx context.Context, arg UpdateOfficeParams) (Off
 		&i.Rank,
 		&i.InstancesCount,
 		&i.InecElectionTypeID,
+		&i.IsContested,
+		&i.ParentOfficeID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

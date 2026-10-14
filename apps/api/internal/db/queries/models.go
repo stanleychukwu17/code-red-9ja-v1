@@ -150,6 +150,7 @@ type Election struct {
 	LgaID                 pgtype.Int4 `json:"lga_id"`
 	WardID                pgtype.Int4 `json:"ward_id"`
 	OfficeID              int16       `json:"office_id"`
+	RunningMateOfficeID   pgtype.Int2 `json:"running_mate_office_id"`
 	Name                  string      `json:"name"`
 	Rank                  int32       `json:"rank"`
 	ElectionDate          pgtype.Date `json:"election_date"`
@@ -171,6 +172,7 @@ type ElectionCandidate struct {
 	ID             int32              `json:"id"`
 	ElectionID     int32              `json:"election_id"`
 	CandidateID    int64              `json:"candidate_id"`
+	RunningMateID  pgtype.Int8        `json:"running_mate_id"`
 	PartyID        int16              `json:"party_id"`
 	PartyShortName string             `json:"party_short_name"`
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
@@ -213,15 +215,6 @@ type ElectionFinalResult struct {
 type ElectionGroup struct {
 	ID                                        int32              `json:"id"`
 	Name                                      string             `json:"name"`
-	Rank                                      int32              `json:"rank"`
-	ElectionsCount                            int32              `json:"elections_count"`
-	StatesCount                               int32              `json:"states_count"`
-	SenatorialDistrictsCount                  int32              `json:"senatorial_districts_count"`
-	FederalConstituenciesCount                int32              `json:"federal_constituencies_count"`
-	LgasCount                                 int32              `json:"lgas_count"`
-	StateConstituenciesCount                  int32              `json:"state_constituencies_count"`
-	WardsCount                                int32              `json:"wards_count"`
-	PollingUnitsCount                         int32              `json:"polling_units_count"`
 	StateSupervisorsCount                     int32              `json:"state_supervisors_count"`
 	UniqueStateSupervisorsCount               int32              `json:"unique_state_supervisors_count"`
 	LgaSupervisorsCount                       int32              `json:"lga_supervisors_count"`
@@ -1199,6 +1192,8 @@ type Office struct {
 	Rank               int32              `json:"rank"`
 	InstancesCount     int32              `json:"instances_count"`
 	InecElectionTypeID pgtype.Text        `json:"inec_election_type_id"`
+	IsContested        bool               `json:"is_contested"`
+	ParentOfficeID     pgtype.Int2        `json:"parent_office_id"`
 	CreatedAt          pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
 }

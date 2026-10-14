@@ -76,7 +76,7 @@ function RouteComponent() {
   // Helpers for AgentMarketingSetupDialog
   const fetchGroups = async () => {
     const res = await getElectionGroups({
-      data: { limit: 100, orderBy: "rank", order: "ASC" },
+      data: { limit: 100, orderBy: "election_date", order: "DESC" },
     });
     return res?.data?.election_groups || [];
   };

@@ -2,16 +2,6 @@
 CREATE TABLE election_groups (
   id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   name VARCHAR(255) UNIQUE NOT NULL,
-  rank INT NOT NULL,
-  
-  elections_count INT NOT NULL DEFAULT 0,
-  states_count INT NOT NULL DEFAULT 0,
-  senatorial_districts_count INT NOT NULL DEFAULT 0,
-  federal_constituencies_count INT NOT NULL DEFAULT 0,
-  lgas_count INT NOT NULL DEFAULT 0,
-  state_constituencies_count INT NOT NULL DEFAULT 0,
-  wards_count INT NOT NULL DEFAULT 0,
-  polling_units_count INT NOT NULL DEFAULT 0,
   
   state_supervisors_count INT NOT NULL DEFAULT 0,
   unique_state_supervisors_count INT NOT NULL DEFAULT 0,
@@ -74,6 +64,7 @@ CREATE TABLE elections (
   lga_id INT REFERENCES lgas(id) ON DELETE SET NULL,
   ward_id INT REFERENCES wards(id) ON DELETE SET NULL,
   office_id SMALLINT REFERENCES offices(id) ON DELETE RESTRICT NOT NULL,
+  running_mate_office_id SMALLINT REFERENCES offices(id) ON DELETE SET NULL,
 
   name VARCHAR(255) NOT NULL,
   rank INT NOT NULL,
@@ -105,6 +96,7 @@ CREATE TABLE elections (
 
 CREATE INDEX idx_elections_election_group_id ON elections(election_group_id);
 CREATE INDEX idx_elections_office_id ON elections(office_id);
+CREATE INDEX idx_elections_running_mate_office_id ON elections(running_mate_office_id);
 CREATE INDEX idx_elections_rank ON elections(rank);
 CREATE INDEX idx_elections_election_date ON elections(election_date);
 
@@ -114,6 +106,7 @@ CREATE TABLE election_candidates (
   id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   election_id INT REFERENCES elections(id) ON DELETE CASCADE NOT NULL,
   candidate_id BIGINT REFERENCES users(id) ON DELETE CASCADE NOT NULL,
+  running_mate_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
   party_id SMALLINT NOT NULL DEFAULT 7 REFERENCES parties(id) ON DELETE RESTRICT,
   party_short_name VARCHAR(50) NOT NULL DEFAULT 'N/A',
   updated_at TIMESTAMPTZ DEFAULT NOW(),
@@ -122,6 +115,7 @@ CREATE TABLE election_candidates (
 );
 
 CREATE INDEX idx_election_candidates_candidate_id ON election_candidates(candidate_id);
+CREATE INDEX idx_election_candidates_running_mate_id ON election_candidates(running_mate_id);
 CREATE INDEX idx_election_candidates_party_id ON election_candidates(party_id);
 
 -- +goose Down

@@ -11,6 +11,7 @@ export const getOffices = createServerFn({ method: "GET" })
             cursor?: string | number;
             orderBy?: string;
             order?: string;
+            contested?: boolean;
           }
         | undefined,
     ) => data,
@@ -19,12 +20,30 @@ export const getOffices = createServerFn({ method: "GET" })
     try {
       const limit = data?.limit || 20;
       const cursor = data?.cursor || "";
+      const contestedParam = data?.contested !== undefined ? `&contested=${data.contested}` : "";
       return await apiFetchJson(
-        `${API_URL.offices}?limit=${limit}&cursor=${cursor}`,
+        `${API_URL.offices}?limit=${limit}&cursor=${cursor}${contestedParam}`,
       );
     } catch (error: any) {
       return { success: false, message: error?.message || "Failed to fetch offices from API" };
     }
+  });
+
+export const getContestedOffices = createServerFn({ method: "GET" })
+  .inputValidator(
+    (
+      data:
+        | {
+            limit?: number;
+            cursor?: string | number;
+            orderBy?: string;
+            order?: string;
+          }
+        | undefined,
+    ) => data,
+  )
+  .handler(async ({ data }) => {
+    return await getOffices({ data: { ...data, contested: true } });
   });
 
 export const getOfficeById = createServerFn({ method: "GET" })
