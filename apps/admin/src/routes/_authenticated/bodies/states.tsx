@@ -10,14 +10,15 @@ import {
 import { StatesTable } from "#/components/Tables";
 import type { StateType } from "#/components/Tables";
 import { BODIES_TABS } from "./-data";
-import { useEffect, useState } from "react";
+import { useState, useMemo } from "react";
 import { getStates } from "#/lib/server/states";
 import { useBodiesDialogs } from "#/components/dialogs/useBodiesDialogs";
-import { useIntersectionObserver, useDebounceValue } from "usehooks-ts";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { BodiesDropdown } from "#/components/dropdowns/BodiesDropdown";
 import { Loader2 } from "lucide-react";
+import { QUERY_KEYS } from "#/lib/config";
 
+// Route definition for the Admin Bodies - States view
 export const Route = createFileRoute("/_authenticated/bodies/states")({
   head: () => getPageHeader({ title: "Bodies - States" }),
   component: RouteComponent,
@@ -28,64 +29,60 @@ function RouteComponent() {
 }
 
 function StatesListComponent() {
+  // Dialog management for creating/editing geographic entities
   const { dialogProps, renderDialogs } = useBodiesDialogs();
   const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearchQuery] = useDebounceValue(searchQuery, 500);
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, error } = useInfiniteQuery({
-    queryKey: ["states", debouncedSearchQuery],
-    queryFn: async ({ pageParam }) => {
+  // Fetch all 37 states for Nigeria (countryId: 161).
+  // Uses a shared query key across admin dialogs/views with infinite stale time,
+  // since states rarely change and are invalidated explicitly upon mutations.
+  const { data, isLoading, error } = useQuery({
+    queryKey: QUERY_KEYS.states,
+    queryFn: async () => {
       const res = await getStates({
-        data: { countryId: 161, limit: 20, cursor: pageParam, search: debouncedSearchQuery || undefined },
+        data: { countryId: 161 },
       });
       if (res && res.success && res.data) {
         return res;
       }
       throw new Error(res?.message || "Failed to fetch states");
     },
-    initialPageParam: "",
-    getNextPageParam: (lastPage) => {
-      if (lastPage && lastPage.meta && lastPage.meta.has_more) {
-        return lastPage.meta.next_cursor || "";
-      }
-      return undefined;
-    },
     refetchOnWindowFocus: false,
+    staleTime: Infinity,
+    gcTime: Infinity,
   });
 
-  const { ref: sentinelRef, isIntersecting } = useIntersectionObserver({
-    threshold: 0.1,
-  });
+  // Normalize API response into StateType table items
+  const allStates: StateType[] = useMemo(() =>
+    (data?.data?.states || []).map((state: any) => ({
+      id: state.id,
+      name: state.name,
+      country_id: state.country_id ?? 161,
+      latitude: state.latitude ?? 0,
+      longitude: state.longitude ?? 0,
+      lgas_count: state.lgas_count,
+      senatorial_districts_count: state.senatorial_districts_count,
+      federal_constituencies_count: state.federal_constituencies_count,
+      state_constituencies_count: state.state_constituencies_count,
+      wards_count: state.wards_count,
+      polling_units_count: state.polling_units_count,
+    })),
+    [data?.data?.states],
+  );
 
-  // Infinite Scroll Trigger
-  useEffect(() => {
-    if (isIntersecting && hasNextPage && !isFetchingNextPage) {
-      fetchNextPage();
-    }
-  }, [isIntersecting, hasNextPage, isFetchingNextPage, fetchNextPage]);
-
-  // Flatten pages to items — preserve full entity data
-  const states: StateType[] = data
-    ? data.pages.flatMap((page) =>
-      (page.data?.states || []).map((state: any) => ({
-        id: state.id,
-        name: state.name,
-        country_id: state.country_id ?? 161,
-        latitude: state.latitude ?? 0,
-        longitude: state.longitude ?? 0,
-        lgas_count: state.lgas_count,
-        senatorial_districts_count: state.senatorial_districts_count,
-        federal_constituencies_count: state.federal_constituencies_count,
-        state_constituencies_count: state.state_constituencies_count,
-        wards_count: state.wards_count,
-        polling_units_count: state.polling_units_count,
-      })),
-    )
-    : [];
+  // Fast client-side filtering (37 static records - eliminates network debounce latency)
+  const states = useMemo(() => {
+    const trimmed = searchQuery.trim().toLowerCase();
+    if (!trimmed) return allStates;
+    return allStates.filter((s) => s.name.toLowerCase().includes(trimmed));
+  }, [allStates, searchQuery]);
 
   return (
     <Layout>
+      {/* Top navigation tabs and title */}
       <PageHeader title="Bodies" activeTab="states" tabs={BODIES_TABS} />
+
+      {/* Instant search input and action buttons (filter, dropdown actions, create) */}
       <PageSearchLayer
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
@@ -98,7 +95,8 @@ function StatesListComponent() {
         }
       />
 
-      {isLoading && states.length === 0 ? (
+      {/* Main Content: Loading, Error, Empty, or Data Table */}
+      {isLoading ? (
         <div className="w-full h-60 flex items-center justify-center">
           <Loader2 className="size-8 animate-spin text-c-50" />
         </div>
@@ -111,24 +109,10 @@ function StatesListComponent() {
           No states found.
         </div>
       ) : (
-        <>
-          <StatesTable items={states} />
-          {hasNextPage && (
-            <div
-              ref={sentinelRef}
-              className="py-6 flex items-center justify-center text-c-50 text-[14px]"
-            >
-              {isFetchingNextPage ? (
-                <Loader2 className="size-5 animate-spin mr-2" />
-              ) : null}
-              {isFetchingNextPage
-                ? "Loading more states..."
-                : "Scroll down to load more"}
-            </div>
-          )}
-        </>
+        <StatesTable items={states} />
       )}
 
+      {/* Create / Edit Dialog Modals */}
       {renderDialogs()}
     </Layout>
   );

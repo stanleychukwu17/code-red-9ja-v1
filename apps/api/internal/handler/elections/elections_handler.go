@@ -16,13 +16,13 @@ import (
 
 type ElectionsService interface {
 	CreateElection(ctx context.Context, name string, electionDate time.Time, electionGroupID int32, officeID int16, stateID *int16, senatorialDistrictID, federalConstituencyID, stateConstituencyID, lgaID, wardID *int32) (queries.Election, error)
-	CreateNationwideElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID *int32, candidates []elections.CandidateInput) (queries.Election, error)
-	CreateStateElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID *int32, stateIDs []int16) ([]queries.Election, error)
-	CreateSenatorialDistrictElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID *int32, senatorialDistrictIDs []int32) ([]queries.Election, error)
-	CreateFederalConstituencyElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID *int32, federalConstituencyIDs []int32) ([]queries.Election, error)
-	CreateStateConstituencyElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID *int32, stateConstituencyIDs []int32) ([]queries.Election, error)
-	CreateLgaElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID *int32, lgaIDs []int32) ([]queries.Election, error)
-	CreateWardElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID *int32, wardIDs []int32) ([]queries.Election, error)
+	CreateNationwideElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32) (queries.Election, error)
+	CreateStateElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, stateIDs []int16) ([]queries.Election, error)
+	CreateSenatorialDistrictElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, senatorialDistrictIDs []int32) ([]queries.Election, error)
+	CreateFederalConstituencyElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, federalConstituencyIDs []int32) ([]queries.Election, error)
+	CreateStateConstituencyElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, stateConstituencyIDs []int32) ([]queries.Election, error)
+	CreateLgaElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, lgaIDs []int32) ([]queries.Election, error)
+	CreateWardElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, wardIDs []int32) ([]queries.Election, error)
 	GetElectionByID(ctx context.Context, id int32) (queries.Election, error)
 	ListElections(ctx context.Context, limit int32, cursor int64) ([]queries.ListElectionInstancesRow, error)
 	UpdateElection(ctx context.Context, id int32, name string, electionDate time.Time, electionGroupID int32, officeID int16, stateID *int16, senatorialDistrictID, federalConstituencyID, stateConstituencyID, lgaID, wardID *int32) (queries.Election, error)
@@ -109,51 +109,50 @@ type ElectionCandidateInput struct {
 }
 
 type CreateNationwideElectionRequest struct {
-	OfficeID        int16                    `json:"office_id"`
-	ElectionDate    utils.JSONDate           `json:"election_date"`
-	ElectionGroupID *int32                   `json:"election_group_id,omitempty"`
-	Candidates      []ElectionCandidateInput `json:"candidates"`
+	OfficeID        int16          `json:"office_id"`
+	ElectionDate    utils.JSONDate `json:"election_date"`
+	ElectionGroupID int32          `json:"election_group_id"`
 }
 
 type CreateStateElectionRequest struct {
 	OfficeID        int16          `json:"office_id"`
 	ElectionDate    utils.JSONDate `json:"election_date"`
-	ElectionGroupID *int32         `json:"election_group_id,omitempty"`
+	ElectionGroupID int32          `json:"election_group_id"`
 	StateIDs        []int16        `json:"state_ids"`
 }
 
 type CreateSenatorialDistrictElectionRequest struct {
 	OfficeID              int16          `json:"office_id"`
 	ElectionDate          utils.JSONDate `json:"election_date"`
-	ElectionGroupID       *int32         `json:"election_group_id,omitempty"`
+	ElectionGroupID       int32          `json:"election_group_id"`
 	SenatorialDistrictIDs []int32        `json:"senatorial_district_ids"`
 }
 
 type CreateFederalConstituencyElectionRequest struct {
 	OfficeID               int16          `json:"office_id"`
 	ElectionDate           utils.JSONDate `json:"election_date"`
-	ElectionGroupID        *int32         `json:"election_group_id,omitempty"`
+	ElectionGroupID        int32          `json:"election_group_id"`
 	FederalConstituencyIDs []int32        `json:"federal_constituency_ids"`
 }
 
 type CreateStateConstituencyElectionRequest struct {
 	OfficeID             int16          `json:"office_id"`
 	ElectionDate         utils.JSONDate `json:"election_date"`
-	ElectionGroupID      *int32         `json:"election_group_id,omitempty"`
+	ElectionGroupID      int32          `json:"election_group_id"`
 	StateConstituencyIDs []int32        `json:"state_constituency_ids"`
 }
 
 type CreateLgaElectionRequest struct {
 	OfficeID        int16          `json:"office_id"`
 	ElectionDate    utils.JSONDate `json:"election_date"`
-	ElectionGroupID *int32         `json:"election_group_id,omitempty"`
+	ElectionGroupID int32          `json:"election_group_id"`
 	LgaIDs          []int32        `json:"lga_ids"`
 }
 
 type CreateWardElectionRequest struct {
 	OfficeID        int16          `json:"office_id"`
 	ElectionDate    utils.JSONDate `json:"election_date"`
-	ElectionGroupID *int32         `json:"election_group_id,omitempty"`
+	ElectionGroupID int32          `json:"election_group_id"`
 	WardIDs         []int32        `json:"ward_ids"`
 }
 
@@ -169,17 +168,20 @@ type CreateWardElectionRequest struct {
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Router       /elections [post]
 func (h *Handler) CreateElection(w http.ResponseWriter, r *http.Request) {
+	// Parse and decode incoming JSON request payload
 	var req CreateElectionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
+	// Validate mandatory fields
 	if req.Name == "" || req.ElectionDate.IsZero() || req.ElectionGroupID <= 0 || req.OfficeID <= 0 {
 		h.utils.RespondError(w, http.StatusBadRequest, "name, election_date, election_group_id, and office_id are required")
 		return
 	}
 
+	// Create single election instance with associated geographic boundaries
 	ei, err := h.service.CreateElection(
 		r.Context(),
 		req.Name,
@@ -198,6 +200,7 @@ func (h *Handler) CreateElection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Return successful response with the created election entity
 	h.utils.RespondSuccess(w, http.StatusCreated, "Election created successfully", map[string]interface{}{
 		"election": ei,
 	})
@@ -215,32 +218,27 @@ func (h *Handler) CreateElection(w http.ResponseWriter, r *http.Request) {
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Router       /elections/nationwide [post]
 func (h *Handler) CreateNationwideElection(w http.ResponseWriter, r *http.Request) {
+	// Parse and decode incoming JSON request payload
 	var req CreateNationwideElectionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
-	if req.OfficeID <= 0 || req.ElectionDate.IsZero() {
-		h.utils.RespondError(w, http.StatusBadRequest, "office_id and election_date are required")
+	// Validate mandatory fields
+	if req.OfficeID <= 0 || req.ElectionDate.IsZero() || req.ElectionGroupID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "office_id, election_date, and election_group_id are required")
 		return
 	}
 
-	candidates := make([]elections.CandidateInput, len(req.Candidates))
-	for i, c := range req.Candidates {
-		candidates[i] = elections.CandidateInput{
-			CandidateID:    c.CandidateID,
-			PartyID:        int16(c.PartyID),
-			PartyShortName: c.PartyShortName,
-		}
-	}
-
-	election, err := h.service.CreateNationwideElection(r.Context(), req.OfficeID, req.ElectionDate.Time(), req.ElectionGroupID, candidates)
+	// Create election instance, resolve election group, and seed skeleton results
+	election, err := h.service.CreateNationwideElection(r.Context(), req.OfficeID, req.ElectionDate.Time(), req.ElectionGroupID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create nationwide election: "+err.Error())
 		return
 	}
 
+	// Return successful response with the created election entity
 	h.utils.RespondSuccess(w, http.StatusCreated, "Nationwide election created successfully", map[string]interface{}{
 		"election": election,
 	})
@@ -258,23 +256,27 @@ func (h *Handler) CreateNationwideElection(w http.ResponseWriter, r *http.Reques
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Router       /elections/state [post]
 func (h *Handler) CreateStateElection(w http.ResponseWriter, r *http.Request) {
+	// Parse and decode incoming JSON request payload
 	var req CreateStateElectionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
-	if req.OfficeID <= 0 || req.ElectionDate.IsZero() || len(req.StateIDs) == 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "office_id, election_date and state_ids are required")
+	// Validate mandatory fields (office, date, target election group, and target states list)
+	if req.OfficeID <= 0 || req.ElectionDate.IsZero() || req.ElectionGroupID <= 0 || len(req.StateIDs) == 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "office_id, election_date, election_group_id, and state_ids are required")
 		return
 	}
 
+	// Batch create election instances for each state, resolve election group, and seed skeleton results
 	elections, err := h.service.CreateStateElection(r.Context(), req.OfficeID, req.ElectionDate.Time(), req.ElectionGroupID, req.StateIDs)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create state elections: "+err.Error())
 		return
 	}
 
+	// Return successful response with the list of created state election entities
 	h.utils.RespondSuccess(w, http.StatusCreated, "State elections created successfully", map[string]interface{}{
 		"elections": elections,
 	})
@@ -292,23 +294,27 @@ func (h *Handler) CreateStateElection(w http.ResponseWriter, r *http.Request) {
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Router       /elections/senatorial-district [post]
 func (h *Handler) CreateSenatorialDistrictElection(w http.ResponseWriter, r *http.Request) {
+	// Parse and decode incoming JSON request payload
 	var req CreateSenatorialDistrictElectionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
-	if req.OfficeID <= 0 || req.ElectionDate.IsZero() || len(req.SenatorialDistrictIDs) == 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "office_id, election_date and senatorial_district_ids are required")
+	// Validate mandatory fields (office, date, target election group, and target senatorial district IDs)
+	if req.OfficeID <= 0 || req.ElectionDate.IsZero() || req.ElectionGroupID <= 0 || len(req.SenatorialDistrictIDs) == 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "office_id, election_date, election_group_id, and senatorial_district_ids are required")
 		return
 	}
 
+	// Batch create elections across selected senatorial districts, resolve group, and seed skeleton results
 	elections, err := h.service.CreateSenatorialDistrictElection(r.Context(), req.OfficeID, req.ElectionDate.Time(), req.ElectionGroupID, req.SenatorialDistrictIDs)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create senatorial district elections: "+err.Error())
 		return
 	}
 
+	// Return successful response with list of created senatorial district elections
 	h.utils.RespondSuccess(w, http.StatusCreated, "Senatorial district elections created successfully", map[string]interface{}{
 		"elections": elections,
 	})
@@ -326,23 +332,27 @@ func (h *Handler) CreateSenatorialDistrictElection(w http.ResponseWriter, r *htt
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Router       /elections/federal-constituency [post]
 func (h *Handler) CreateFederalConstituencyElection(w http.ResponseWriter, r *http.Request) {
+	// Parse and decode incoming JSON request payload
 	var req CreateFederalConstituencyElectionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
-	if req.OfficeID <= 0 || req.ElectionDate.IsZero() || len(req.FederalConstituencyIDs) == 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "office_id, election_date and federal_constituency_ids are required")
+	// Validate mandatory fields (office, date, target election group, and target federal constituency IDs)
+	if req.OfficeID <= 0 || req.ElectionDate.IsZero() || req.ElectionGroupID <= 0 || len(req.FederalConstituencyIDs) == 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "office_id, election_date, election_group_id, and federal_constituency_ids are required")
 		return
 	}
 
+	// Batch create elections across selected federal constituencies, resolve group, and seed skeleton results
 	elections, err := h.service.CreateFederalConstituencyElection(r.Context(), req.OfficeID, req.ElectionDate.Time(), req.ElectionGroupID, req.FederalConstituencyIDs)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create federal constituency elections: "+err.Error())
 		return
 	}
 
+	// Return successful response with list of created federal constituency elections
 	h.utils.RespondSuccess(w, http.StatusCreated, "Federal constituency elections created successfully", map[string]interface{}{
 		"elections": elections,
 	})
@@ -360,23 +370,27 @@ func (h *Handler) CreateFederalConstituencyElection(w http.ResponseWriter, r *ht
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Router       /elections/state-constituency [post]
 func (h *Handler) CreateStateConstituencyElection(w http.ResponseWriter, r *http.Request) {
+	// Parse and decode incoming JSON request payload
 	var req CreateStateConstituencyElectionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
-	if req.OfficeID <= 0 || req.ElectionDate.IsZero() || len(req.StateConstituencyIDs) == 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "office_id, election_date and state_constituency_ids are required")
+	// Validate mandatory fields (office, date, target election group, and target state constituency IDs)
+	if req.OfficeID <= 0 || req.ElectionDate.IsZero() || req.ElectionGroupID <= 0 || len(req.StateConstituencyIDs) == 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "office_id, election_date, election_group_id, and state_constituency_ids are required")
 		return
 	}
 
+	// Batch create elections across selected state assembly constituencies, resolve group, and seed skeleton results
 	elections, err := h.service.CreateStateConstituencyElection(r.Context(), req.OfficeID, req.ElectionDate.Time(), req.ElectionGroupID, req.StateConstituencyIDs)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create state constituency elections: "+err.Error())
 		return
 	}
 
+	// Return successful response with list of created state constituency elections
 	h.utils.RespondSuccess(w, http.StatusCreated, "State constituency elections created successfully", map[string]interface{}{
 		"elections": elections,
 	})
@@ -394,23 +408,27 @@ func (h *Handler) CreateStateConstituencyElection(w http.ResponseWriter, r *http
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Router       /elections/lga [post]
 func (h *Handler) CreateLgaElection(w http.ResponseWriter, r *http.Request) {
+	// Parse and decode incoming JSON request payload
 	var req CreateLgaElectionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
-	if req.OfficeID <= 0 || req.ElectionDate.IsZero() || len(req.LgaIDs) == 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "office_id, election_date and lga_ids are required")
+	// Validate mandatory fields (office, date, target election group, and target LGA IDs)
+	if req.OfficeID <= 0 || req.ElectionDate.IsZero() || req.ElectionGroupID <= 0 || len(req.LgaIDs) == 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "office_id, election_date, election_group_id, and lga_ids are required")
 		return
 	}
 
+	// Batch create elections across selected LGAs, resolve group, and seed skeleton results
 	elections, err := h.service.CreateLgaElection(r.Context(), req.OfficeID, req.ElectionDate.Time(), req.ElectionGroupID, req.LgaIDs)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create LGA elections: "+err.Error())
 		return
 	}
 
+	// Return successful response with list of created LGA elections
 	h.utils.RespondSuccess(w, http.StatusCreated, "LGA elections created successfully", map[string]interface{}{
 		"elections": elections,
 	})
@@ -429,23 +447,27 @@ func (h *Handler) CreateLgaElection(w http.ResponseWriter, r *http.Request) {
 // @Router       /elections/ward [post]
 // @Security     BearerAuth
 func (h *Handler) CreateWardElection(w http.ResponseWriter, r *http.Request) {
+	// Parse and decode incoming JSON request payload
 	var req CreateWardElectionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
-	if req.OfficeID <= 0 || req.ElectionDate.IsZero() || len(req.WardIDs) == 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "office_id, election_date and ward_ids are required")
+	// Validate mandatory fields (office, date, target election group, and target Ward IDs)
+	if req.OfficeID <= 0 || req.ElectionDate.IsZero() || req.ElectionGroupID <= 0 || len(req.WardIDs) == 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "office_id, election_date, election_group_id, and ward_ids are required")
 		return
 	}
 
+	// Batch create elections across selected Wards, resolve group, and seed skeleton results
 	elections, err := h.service.CreateWardElection(r.Context(), req.OfficeID, req.ElectionDate.Time(), req.ElectionGroupID, req.WardIDs)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create Ward elections: "+err.Error())
 		return
 	}
 
+	// Return successful response with list of created Ward elections
 	h.utils.RespondSuccess(w, http.StatusCreated, "Ward elections created successfully", map[string]interface{}{
 		"elections": elections,
 	})
@@ -505,6 +527,7 @@ func (h *Handler) ListElections(w http.ResponseWriter, r *http.Request) {
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Router       /elections/{id} [get]
 func (h *Handler) GetElection(w http.ResponseWriter, r *http.Request) {
+	// Parse and validate election ID from URL parameter
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 32)
 	if err != nil {
@@ -512,12 +535,14 @@ func (h *Handler) GetElection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Fetch election entity by primary key
 	ei, err := h.service.GetElectionByID(r.Context(), int32(id))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Election not found")
 		return
 	}
 
+	// Return election details
 	h.utils.RespondSuccess(w, http.StatusOK, "Election fetched successfully", map[string]interface{}{
 		"election": ei,
 	})
@@ -537,6 +562,7 @@ func (h *Handler) GetElection(w http.ResponseWriter, r *http.Request) {
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Router       /elections/{id} [put]
 func (h *Handler) UpdateElection(w http.ResponseWriter, r *http.Request) {
+	// Parse and validate election ID from URL parameter
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 32)
 	if err != nil {
@@ -544,23 +570,27 @@ func (h *Handler) UpdateElection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Parse JSON update payload
 	var req UpdateElectionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
+	// Validate mandatory fields
 	if req.Name == "" || req.ElectionDate.IsZero() || req.ElectionGroupID <= 0 || req.OfficeID <= 0 {
 		h.utils.RespondError(w, http.StatusBadRequest, "name, election_date, election_group_id, and office_id are required")
 		return
 	}
 
+	// Verify election exists prior to executing update
 	_, err = h.service.GetElectionByID(r.Context(), int32(id))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Election not found")
 		return
 	}
 
+	// Update election fields and linkages
 	updated, err := h.service.UpdateElection(
 		r.Context(),
 		int32(id),
@@ -580,6 +610,7 @@ func (h *Handler) UpdateElection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Return updated election entity
 	h.utils.RespondSuccess(w, http.StatusOK, "Election updated successfully", map[string]interface{}{
 		"election": updated,
 	})
@@ -598,6 +629,7 @@ func (h *Handler) UpdateElection(w http.ResponseWriter, r *http.Request) {
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Router       /elections/{id} [delete]
 func (h *Handler) DeleteElection(w http.ResponseWriter, r *http.Request) {
+	// Parse and validate election ID from URL parameter
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 32)
 	if err != nil {
@@ -605,17 +637,20 @@ func (h *Handler) DeleteElection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Verify election exists prior to deletion
 	_, err = h.service.GetElectionByID(r.Context(), int32(id))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Election not found")
 		return
 	}
 
+	// Delete election and cascade associated records
 	if err := h.service.DeleteElection(r.Context(), int32(id)); err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to delete election: "+err.Error())
 		return
 	}
 
+	// Return successful deletion response
 	h.utils.RespondSuccess(w, http.StatusOK, "Election deleted successfully", nil)
 }
 
@@ -630,6 +665,7 @@ func (h *Handler) DeleteElection(w http.ResponseWriter, r *http.Request) {
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Router       /elections/{id}/candidates [get]
 func (h *Handler) GetElectionCandidates(w http.ResponseWriter, r *http.Request) {
+	// Parse and validate election ID from URL parameter
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 32)
 	if err != nil {
@@ -637,14 +673,17 @@ func (h *Handler) GetElectionCandidates(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	// Parse pagination parameters
 	limit, cursor := parsePaginationParams(r)
 
+	// Fetch full candidate roster for the specified election
 	candidates, err := h.service.GetElectionCandidates(r.Context(), int32(id))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to get election candidates: "+err.Error())
 		return
 	}
 
+	// Find starting index matching the cursor
 	startIndex := 0
 	if cursor > 0 {
 		for i, c := range candidates {
@@ -659,6 +698,7 @@ func (h *Handler) GetElectionCandidates(w http.ResponseWriter, r *http.Request) 
 	hasMore := false
 	nextCursor := ""
 
+	// Slice page items and determine next cursor
 	if startIndex < len(candidates) {
 		endIndex := startIndex + limit
 		if endIndex >= len(candidates) {
@@ -673,6 +713,7 @@ func (h *Handler) GetElectionCandidates(w http.ResponseWriter, r *http.Request) 
 		paginated = []queries.ListElectionCandidatesDetailedByElectionIDRow{}
 	}
 
+	// Return paginated candidate list with metadata
 	h.utils.RespondSuccess(w, http.StatusOK, "Candidates fetched successfully", map[string]interface{}{
 		"candidates": paginated,
 		"meta": map[string]interface{}{
@@ -699,6 +740,7 @@ type SyncCandidatesRequest struct {
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Router       /elections/{id}/candidates [post]
 func (h *Handler) SyncElectionCandidates(w http.ResponseWriter, r *http.Request) {
+	// Parse and validate election ID from URL parameter
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 32)
 	if err != nil {
@@ -706,12 +748,14 @@ func (h *Handler) SyncElectionCandidates(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	// Parse JSON candidates payload
 	var req SyncCandidatesRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
+	// Map candidates payload into service input structs
 	candidateInputs := make([]elections.CandidateInput, len(req.Candidates))
 	for i, c := range req.Candidates {
 		candidateInputs[i] = elections.CandidateInput{
@@ -721,12 +765,14 @@ func (h *Handler) SyncElectionCandidates(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
+	// Synchronize full candidate roster for this election in a transaction
 	err = h.service.SyncElectionCandidates(r.Context(), int32(id), candidateInputs)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to sync candidates: "+err.Error())
 		return
 	}
 
+	// Return success response
 	h.utils.RespondSuccess(w, http.StatusOK, "Candidates synced successfully", nil)
 }
 
@@ -736,6 +782,7 @@ type FieldCandidateRequest struct {
 
 // FieldPartyCandidate handles POST /api/v1/elections/{id}/field-candidate
 func (h *Handler) FieldPartyCandidate(w http.ResponseWriter, r *http.Request) {
+	// Parse and validate election ID from URL parameter
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 32)
 	if err != nil {
@@ -743,11 +790,13 @@ func (h *Handler) FieldPartyCandidate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Verify user authentication claims
 	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
 	if !ok {
 		return
 	}
 
+	// Parse optional candidate ID payload
 	var req FieldCandidateRequest
 	if r.ContentLength > 0 {
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -756,6 +805,7 @@ func (h *Handler) FieldPartyCandidate(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Retrieve user account and verify political party membership
 	user, err := h.usersService.GetUserByFakeID(r.Context(), claims.FakeID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusUnauthorized, "User not found")
@@ -766,11 +816,13 @@ func (h *Handler) FieldPartyCandidate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Field candidate under the authenticated user's party
 	err = h.service.FieldPartyCandidate(r.Context(), int32(id), user.PartyID.Int16, req.CandidateID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to field candidate: "+err.Error())
 		return
 	}
 
+	// Return success response
 	h.utils.RespondSuccess(w, http.StatusOK, "Candidate fielded successfully", nil)
 }

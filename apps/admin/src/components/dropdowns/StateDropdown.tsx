@@ -9,6 +9,7 @@ import { DropdownGroupList } from "@repo/ui/components/custom/AppDropdown";
 import { DeleteAlertDialog } from "../alerts/delete-alert";
 import { StateFormDialog } from "../dialogs/StateFormDialog";
 import type { StateType } from "../tiles/state-tile";
+import { QUERY_KEYS } from "#/lib/config";
 
 interface StateDropdownProps {
   data: StateType;
@@ -30,7 +31,7 @@ export const StateDropdown = ({ data, className }: StateDropdownProps) => {
       return res.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["states"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.states });
       setOpenDeleteAlert(false);
     },
   });

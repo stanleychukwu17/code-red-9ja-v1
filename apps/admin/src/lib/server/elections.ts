@@ -129,11 +129,6 @@ export const createNationwideElection = createServerFn({ method: "POST" })
       office_id: number;
       election_date: string;
       election_group_id?: number;
-      candidates?: {
-        candidate_id: number;
-        party_id: number;
-        party_short_name: string;
-      }[];
     }) => data,
   )
   .handler(async ({ data }) => {

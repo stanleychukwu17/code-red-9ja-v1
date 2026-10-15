@@ -15,6 +15,7 @@ import { SelectCountry } from "@repo/ui/components/selects/country-select";
 import { getAllCountries } from "#/lib/server/countries";
 import { createState, updateState } from "#/lib/server/states";
 import { TinyError } from "@repo/ui/components/custom/TinyError";
+import { QUERY_KEYS } from "#/lib/config";
 
 export interface State {
   id: number;
@@ -110,7 +111,7 @@ export function StateFormDialog({
       return res.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["states"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.states });
       onSuccess?.();
       onClose();
     },

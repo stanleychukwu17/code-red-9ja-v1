@@ -23,6 +23,7 @@ import { getElections } from "#/lib/server/elections";
 import { getStates } from "#/lib/server/states";
 import { Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { QUERY_KEYS } from "#/lib/config";
 import type { PartyType } from "#/components/tiles/party-tile";
 import { AgentMarketingSetupDialog } from "@repo/ui/components/dialogs/AgentMarketingSetupDialog";
 import { toast } from "sonner";
@@ -96,11 +97,12 @@ function RouteComponent() {
   };
 
   const { data: statesData } = useQuery({
-    queryKey: ["states-nigeria"],
+    queryKey: QUERY_KEYS.states,
     queryFn: async () => {
-      const res = await getStates({ data: { countryId: 161, limit: 100 } });
+      const res = await getStates({ data: { countryId: 161 } });
       return res?.data?.states || [];
     },
+    staleTime: 1000 * 60 * 60,
   });
 
   const campaigns: MarketingCampaignType[] = (campaignsData || []).map(

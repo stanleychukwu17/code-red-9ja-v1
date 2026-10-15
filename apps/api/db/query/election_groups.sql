@@ -6,9 +6,6 @@ RETURNING *;
 -- name: GetElectionGroupByID :one
 SELECT * FROM election_groups WHERE id = $1;
 
--- name: GetElectionGroupByName :one
-SELECT * FROM election_groups WHERE name = $1;
-
 -- name: ListElectionGroups :many
 SELECT * FROM election_groups
 ORDER BY year DESC, id DESC;

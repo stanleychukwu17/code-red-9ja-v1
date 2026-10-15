@@ -69,15 +69,16 @@ export function StateConstituencyElectionFormDialog({
 
   // Fetch states of Nigeria
   const { data: statesData } = useQuery({
-    queryKey: ["nigeria-states"],
+    queryKey: QUERY_KEYS.states,
     queryFn: async () => {
-      const res = await getStates({ data: { countryId: 161, limit: 50 } });
+      const res = await getStates({ data: { countryId: 161 } });
       if (res && res.success && res.data?.states) {
         return res.data.states as StateItem[];
       }
       return [];
     },
     enabled: open,
+    staleTime: 1000 * 60 * 60,
   });
 
   // Fetch all State Assembly Constituencies in Nigeria

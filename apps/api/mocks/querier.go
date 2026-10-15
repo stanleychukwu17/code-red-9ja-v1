@@ -2530,34 +2530,6 @@ func (_m *Querier) GetElectionGroupByID(ctx context.Context, id int64) (queries.
 	return r0, r1
 }
 
-// GetElectionGroupByName provides a mock function with given fields: ctx, name
-func (_m *Querier) GetElectionGroupByName(ctx context.Context, name string) (queries.ElectionGroup, error) {
-	ret := _m.Called(ctx, name)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetElectionGroupByName")
-	}
-
-	var r0 queries.ElectionGroup
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string) (queries.ElectionGroup, error)); ok {
-		return rf(ctx, name)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, string) queries.ElectionGroup); ok {
-		r0 = rf(ctx, name)
-	} else {
-		r0 = ret.Get(0).(queries.ElectionGroup)
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = rf(ctx, name)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // GetElectionGroupFederalConstituencyStats provides a mock function with given fields: ctx, arg
 func (_m *Querier) GetElectionGroupFederalConstituencyStats(ctx context.Context, arg queries.GetElectionGroupFederalConstituencyStatsParams) (queries.ElectionGroupFederalConstituency, error) {
 	ret := _m.Called(ctx, arg)

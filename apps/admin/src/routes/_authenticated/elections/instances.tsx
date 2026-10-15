@@ -48,29 +48,29 @@ function RouteComponent() {
   const [isWardOpen, setIsWardOpen] = useState(false);
 
   // Paginated query: loads elections sorted by hierarchy rank with keyset cursor pagination
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
-    useInfiniteQuery({
-      queryKey: ["elections"],
-      queryFn: async ({ pageParam }) => {
-        const res = await getElections({
-          data: { limit: 20, cursor: pageParam as string, orderBy: "rank", order: "ASC" },
-        });
-        if (res && res.success && res.data) {
-          return res;
-        }
-        throw new Error(res?.message || "Failed to fetch elections");
-      },
-      initialPageParam: "",
-      getNextPageParam: (lastPage) => {
-        // Keyset cursor pagination check: return next_cursor if additional records remain
-        if (lastPage && lastPage.meta && lastPage.meta.has_more) {
-          return lastPage.meta.next_cursor || "";
-        }
-        return undefined;
-      },
-      staleTime: 60 * 1000,
-      refetchOnWindowFocus: false,
-    });
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteQuery({
+    queryKey: ["elections"],
+    queryFn: async ({ pageParam }) => {
+      const res = await getElections({
+        data: { limit: 20, cursor: pageParam as string, orderBy: "rank", order: "ASC" },
+      });
+      if (res && res.success && res.data) {
+        return res;
+      }
+      throw new Error(res?.message || "Failed to fetch elections");
+    },
+    initialPageParam: "",
+    getNextPageParam: (lastPage) => {
+      // Keyset cursor pagination check: return next_cursor if additional records remain
+      if (lastPage && lastPage.meta && lastPage.meta.has_more) {
+        return lastPage.meta.next_cursor || "";
+      }
+      return undefined;
+    },
+    staleTime: Infinity,
+    gcTime: Infinity,
+    refetchOnWindowFocus: false,
+  });
 
   // Intersection observer sentinel for auto-triggering the next page fetch when scrolled into view
   const { ref: sentinelRef, isIntersecting } = useIntersectionObserver({

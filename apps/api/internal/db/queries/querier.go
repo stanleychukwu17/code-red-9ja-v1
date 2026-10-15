@@ -196,7 +196,6 @@ type Querier interface {
 	GetCountryByID(ctx context.Context, id int16) (GetCountryByIDRow, error)
 	GetElectionCandidatesCount(ctx context.Context, electionID int32) (int64, error)
 	GetElectionGroupByID(ctx context.Context, id int32) (ElectionGroup, error)
-	GetElectionGroupByName(ctx context.Context, name string) (ElectionGroup, error)
 	GetElectionGroupFederalConstituencyStats(ctx context.Context, arg GetElectionGroupFederalConstituencyStatsParams) (ElectionGroupFederalConstituency, error)
 	GetElectionGroupLGAStats(ctx context.Context, arg GetElectionGroupLGAStatsParams) (ElectionGroupLga, error)
 	GetElectionGroupPartyFederalConstituencyStats(ctx context.Context, arg GetElectionGroupPartyFederalConstituencyStatsParams) (ElectionGroupPartiesFederalConstituency, error)

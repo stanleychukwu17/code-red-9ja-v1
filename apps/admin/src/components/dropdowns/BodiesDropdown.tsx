@@ -15,6 +15,7 @@ import {
   syncElectoralUnits,
   syncElectoralUnitsStateFlow,
 } from "#/lib/server/states";
+import { QUERY_KEYS } from "#/lib/config";
 
 interface BodiesDropdownProps {
   className?: string;
@@ -33,7 +34,7 @@ export const BodiesDropdown = ({ className }: BodiesDropdownProps) => {
       return res;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["states"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.states });
       queryClient.invalidateQueries({ queryKey: ["senatorial_districts"] });
       queryClient.invalidateQueries({ queryKey: ["federal_constituencies"] });
       queryClient.invalidateQueries({
@@ -54,7 +55,7 @@ export const BodiesDropdown = ({ className }: BodiesDropdownProps) => {
       return res;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["states"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.states });
       queryClient.invalidateQueries({ queryKey: ["senatorial_districts"] });
       queryClient.invalidateQueries({ queryKey: ["federal_constituencies"] });
       queryClient.invalidateQueries({
@@ -77,7 +78,7 @@ export const BodiesDropdown = ({ className }: BodiesDropdownProps) => {
       return res;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["states"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.states });
       queryClient.invalidateQueries({ queryKey: ["senatorial_districts"] });
       queryClient.invalidateQueries({ queryKey: ["federal_constituencies"] });
       queryClient.invalidateQueries({

@@ -1,111 +1,53 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Folder } from "lucide-react";
 import { SelectProps } from "../../lib/types";
-import { SelectResponsiveWrapper } from "../selects/select-responsive-wrapper";
+import { Bullet } from "../button";
 import { GeneralCommand } from "../command/general-command";
-import { LoadingSelect } from "../selects/loading-select";
-import { Button, Bullet } from "../button";
-import { cn } from "../../lib/utils";
-import ArrowDownIcon from "../../icons/arrow-down-icon";
-import { useInfiniteQuery } from "@tanstack/react-query";
-import { Plus, Folder } from "lucide-react";
+import { SelectResponsiveWrapper } from "../selects/select-responsive-wrapper";
 import FancyFolderIcon from "../../icons/fancy-folder-icon";
 import { LoadingBullet } from "./loading-bullet";
 
-export interface ElectionGroup {
+export type ElectionGroup = {
   id: number;
   name: string;
   election_date: string;
-}
+};
 
-interface ElectionGroupsResponse {
-  success: boolean;
-  message: string;
-  data: {
-    election_groups: ElectionGroup[];
-  };
-  meta: {
-    next_cursor: string;
-    has_more: boolean;
-  };
-}
-
-export const ElectionGroupBullet = ({
-  update,
-  errorMsg,
-  selectedId,
-  disabled,
-  className,
-  align = "start",
-  buttonText,
-  fetchElectionGroups,
-}: SelectProps<ElectionGroup, number | string> & {
-  fetchElectionGroups: (args: {
-    data: { limit?: number; cursor?: string };
+export type ElectionGroupBulletProps = SelectProps<ElectionGroup, number | string> & {
+  fetchElectionGroups: (args?: {
+    data?: { limit?: number; cursor?: string };
   }) => Promise<any>;
   variant?: "select" | "bullet";
-}) => {
+};
+
+export const ElectionGroupBullet = ({
+  update, errorMsg, selectedId, disabled, className, align = "start", buttonText, fetchElectionGroups,
+}: ElectionGroupBulletProps) => {
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedItem, setSelectedItem] = useState<ElectionGroup | undefined>(
-    undefined,
-  );
+  const [selectedItem, setSelectedItem] = useState<ElectionGroup | undefined>(undefined);
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
-    useInfiniteQuery<ElectionGroupsResponse>({
-      queryKey: ["election-groups-select"],
-      queryFn: async ({ pageParam }) => {
-        const res = await fetchElectionGroups({
-          data: { limit: 50, cursor: pageParam as string },
-        });
-        if (res && res.success && res.data) {
-          return res;
-        }
-        throw new Error(res?.message || "Failed to fetch election groups");
-      },
-      initialPageParam: "",
-      getNextPageParam: (lastPage) => {
-        if (lastPage && lastPage.meta && lastPage.meta.has_more) {
-          return lastPage.meta.next_cursor || "";
-        }
-        return undefined;
-      },
-      staleTime: Infinity,
-      gcTime: Infinity,
-      refetchOnWindowFocus: false,
-    });
-
-  const electionGroups = data
-    ? data.pages.flatMap((page) => page.data?.election_groups || [])
-    : [];
-
-  // Keep fetching until selectedId is found in the list, if it exists
-  useEffect(() => {
-    if (selectedId && hasNextPage && !isFetchingNextPage && !isLoading) {
-      const found = electionGroups.some(
-        (eg) => String(eg.id) === String(selectedId),
-      );
-      if (!found) {
-        fetchNextPage();
+  // Fetch election groups (cached indefinitely, invalidated when a group is created or updated)
+  const { data: electionGroups = [], isLoading } = useQuery<ElectionGroup[]>({
+    queryKey: ["election-groups-select"],
+    queryFn: async () => {
+      const res = await fetchElectionGroups();
+      if (res && res.success && res.data?.election_groups) {
+        return res.data.election_groups;
       }
-    }
-  }, [
-    selectedId,
-    electionGroups,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoading,
-    fetchNextPage,
-  ]);
+      return [];
+    },
+    staleTime: Infinity,
+    gcTime: Infinity,
+    refetchOnWindowFocus: false,
+  });
 
-  // Sync selected item with selectedId prop once the matching item is loaded
+  // Keep internal selected item in sync with incoming selectedId prop
   useEffect(() => {
     if (selectedId) {
-      const item = electionGroups.find(
-        (eg) => String(eg.id) === String(selectedId),
-      );
-      if (item) {
-        setSelectedItem(item);
-      }
+      const match = electionGroups.find((eg) => String(eg.id) === String(selectedId));
+      setSelectedItem(match);
     } else {
       setSelectedItem(undefined);
     }
@@ -117,35 +59,23 @@ export const ElectionGroupBullet = ({
     setOpen(false);
   };
 
-  const filteredElectionGroups = electionGroups.filter((eg) =>
-    eg.name.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+  // Filter election groups matching search query
+  const filteredElectionGroups = useMemo(() =>
+    electionGroups.filter((eg) =>
+      eg.name.toLowerCase().includes(searchQuery.toLowerCase()),
+    ),
+    [electionGroups, searchQuery]);
 
-  const getStatus = ():
-    | "CanLoadMore"
-    | "LoadingMore"
-    | "LoadingFirstPage"
-    | "Exhausted" => {
-    if (isLoading && electionGroups.length === 0) {
-      return "LoadingFirstPage";
-    }
-    if (isFetchingNextPage) {
-      return "LoadingMore";
-    }
-    return hasNextPage ? "CanLoadMore" : "Exhausted";
-  };
+  // Resolve active selection ID string and validation error state
+  const currentSelectedId = selectedItem?.id
+    ? `${selectedItem.id}`
+    : selectedId
+      ? `${selectedId}`
+      : undefined;
 
-  const handleLoadMore = () => {
-    if (hasNextPage && !isFetchingNextPage) {
-      fetchNextPage();
-    }
-  };
-
-  const displayText =
-    selectedItem?.name ||
-    (isLoading && !selectedItem ? "Loading..." : "Select Group");
   const hasError = Boolean(errorMsg);
 
+  // Loading skeleton before initial data arrives
   if (electionGroups.length === 0 && isLoading && !disabled) {
     return (
       <LoadingBullet
@@ -190,15 +120,9 @@ export const ElectionGroupBullet = ({
           </div>
         )}
         handleSelect={handleSelect}
-        selectedId={
-          selectedItem?.id
-            ? `${selectedItem.id}`
-            : selectedId
-              ? `${selectedId}`
-              : undefined
-        }
-        status={getStatus()}
-        loadMore={handleLoadMore}
+        selectedId={currentSelectedId}
+        status={isLoading && electionGroups.length === 0 ? "LoadingFirstPage" : "Exhausted"}
+        loadMore={() => { }}
         onSearch={setSearchQuery}
       />
     </SelectResponsiveWrapper>

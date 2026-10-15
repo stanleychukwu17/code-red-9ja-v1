@@ -28,6 +28,12 @@ export type NationwideElectionFormDialogProps = {
   onSuccess?: () => void;
 };
 
+export type NationwideElectionFormValues = {
+  electionGroupId: number | undefined;
+  electionDate: string;
+  officeId: number | undefined;
+};
+
 /**
  * Modal dialog for creating a nationwide election (e.g. Presidential election)
  * with office selection, election date, and optional election group.
@@ -116,23 +122,19 @@ export function NationwideElectionFormDialog({
 
   // Submit mutation to create the nationwide election
   const saveMutation = useMutation({
-    mutationFn: async (values: {
-      electionGroupId: number | undefined;
-      electionDate: string;
-      officeId: number | undefined;
-    }) => {
-      if (!values.electionDate) {
+    mutationFn: async ({ electionGroupId, electionDate, officeId }: NationwideElectionFormValues) => {
+      if (!electionDate) {
         throw new Error("Election date is required");
       }
-      if (!values.officeId) {
+      if (!officeId) {
         throw new Error("Office is required");
       }
 
       const res = await createNationwideElection({
         data: {
-          office_id: values.officeId,
-          election_date: values.electionDate,
-          election_group_id: values.electionGroupId,
+          office_id: officeId,
+          election_date: electionDate,
+          election_group_id: electionGroupId,
         },
       });
 
@@ -141,11 +143,13 @@ export function NationwideElectionFormDialog({
       }
       return res.data;
     },
+
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["elections"] });
       onSuccess?.();
       onClose();
     },
+
     onError: (err: any) => {
       setError(err.message || "Something went wrong. Please try again.");
     },
