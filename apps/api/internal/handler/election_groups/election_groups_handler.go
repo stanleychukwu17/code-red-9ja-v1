@@ -3,7 +3,9 @@ package electiongroupshandler
 import (
 	"context"
 	"encoding/json"
+	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
+	"free9ja/api/internal/service/audit"
 	"free9ja/api/internal/utils"
 	"net/http"
 	"strconv"
@@ -24,14 +26,16 @@ type ElectionGroupsService interface {
 }
 
 type Handler struct {
-	service ElectionGroupsService
-	utils   *utils.Utils
+	service      ElectionGroupsService
+	auditService audit.AuditService
+	utils        *utils.Utils
 }
 
-func NewHandler(service ElectionGroupsService, utils *utils.Utils) *Handler {
+func NewHandler(service ElectionGroupsService, auditService audit.AuditService, utils *utils.Utils) *Handler {
 	return &Handler{
-		service: service,
-		utils:   utils,
+		service:      service,
+		auditService: auditService,
+		utils:        utils,
 	}
 }
 
@@ -77,6 +81,19 @@ func (h *Handler) CreateElectionGroup(w http.ResponseWriter, r *http.Request) {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create election group: "+err.Error())
 		return
 	}
+
+	// --- Audit Logging ---
+	actorID, actorRole := audit.ActorInfoFromContext(r.Context())
+	newValuesJSON, _ := json.Marshal(eg)
+	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
+		Module:     audit.StringToText(db.ModuleAdmin),
+		Action:     db.ActionCreateElectionGroup,
+		ActorID:    actorID,
+		ActorRole:  audit.StringToText(actorRole),
+		EntityType: db.EntityTypeElections,
+		EntityID:   strconv.FormatInt(int64(eg.ID), 10),
+		NewValues:  newValuesJSON,
+	})
 
 	// 4. Return 201 Created with the new election group record
 	h.utils.RespondSuccess(w, http.StatusCreated, "Election group created successfully", map[string]interface{}{
@@ -231,7 +248,7 @@ func (h *Handler) UpdateElectionGroup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 4. Verify the election group exists before attempting update
-	_, err = h.service.GetElectionGroupByID(r.Context(), int32(id))
+	existingGroup, err := h.service.GetElectionGroupByID(r.Context(), int32(id))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Election group not found")
 		return
@@ -243,6 +260,21 @@ func (h *Handler) UpdateElectionGroup(w http.ResponseWriter, r *http.Request) {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update election group: "+err.Error())
 		return
 	}
+
+	// --- Audit Logging ---
+	actorID, actorRole := audit.ActorInfoFromContext(r.Context())
+	oldValuesJSON, _ := json.Marshal(existingGroup)
+	newValuesJSON, _ := json.Marshal(updated)
+	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
+		Module:     audit.StringToText(db.ModuleAdmin),
+		Action:     db.ActionUpdateElectionGroup,
+		ActorID:    actorID,
+		ActorRole:  audit.StringToText(actorRole),
+		EntityType: db.EntityTypeElections,
+		EntityID:   idStr,
+		OldValues:  oldValuesJSON,
+		NewValues:  newValuesJSON,
+	})
 
 	// 6. Return 200 OK with the updated election group
 	h.utils.RespondSuccess(w, http.StatusOK, "Election group updated successfully", map[string]interface{}{
@@ -272,7 +304,7 @@ func (h *Handler) DeleteElectionGroup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 2. Verify election group exists before attempting deletion
-	_, err = h.service.GetElectionGroupByID(r.Context(), int32(id))
+	existingGroup, err := h.service.GetElectionGroupByID(r.Context(), int32(id))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Election group not found")
 		return
@@ -283,6 +315,21 @@ func (h *Handler) DeleteElectionGroup(w http.ResponseWriter, r *http.Request) {
 		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+
+	// --- Audit Logging ---
+	actorID, actorRole := audit.ActorInfoFromContext(r.Context())
+	oldValuesJSON, _ := json.Marshal(existingGroup)
+	newValuesJSON, _ := json.Marshal(map[string]string{"status": "deleted"})
+	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
+		Module:     audit.StringToText(db.ModuleAdmin),
+		Action:     db.ActionDeleteElectionGroup,
+		ActorID:    actorID,
+		ActorRole:  audit.StringToText(actorRole),
+		EntityType: db.EntityTypeElections,
+		EntityID:   idStr,
+		OldValues:  oldValuesJSON,
+		NewValues:  newValuesJSON,
+	})
 
 	// 4. Return 200 OK confirming deletion
 	h.utils.RespondSuccess(w, http.StatusOK, "Election group deleted successfully", nil)

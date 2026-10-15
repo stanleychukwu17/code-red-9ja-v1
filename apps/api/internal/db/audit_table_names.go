@@ -24,6 +24,9 @@ const (
 	ActionCreateOffice              = "create_office"                // Action for creating a new political office
 	ActionUpdateOffice              = "update_office"                // Action for updating an existing political office
 	ActionDeleteOffice              = "delete_office"                // Action for deleting a political office
+	ActionCreateElectionGroup       = "create_election_group"        // Action for creating a new election group
+	ActionUpdateElectionGroup       = "update_election_group"        // Action for updating an existing election group
+	ActionDeleteElectionGroup       = "delete_election_group"        // Action for deleting an election group
 	ActionCreatePartyCustomPosition = "create_party_custom_position" // Action when a party position is created
 	ActionUpdatePartyCustomPosition = "update_party_custom_position" // Action when a party position is updated
 	ActionDeletePartyCustomPosition = "delete_party_custom_position" // Action when a party position is deleted
@@ -41,7 +44,8 @@ const (
 	ActorRoleUser       = "user"        // A regular user acting on their own account
 
 	// -- Entity Types --
-	EntityTypeUser   = "user"   // Entity type representing a regular user
-	EntityTypeParty  = "party"  // Entity type representing a political party
-	EntityTypeOffice = "office" // Entity type representing a political office
+	EntityTypeUser      = "user"      // Entity type representing a regular user
+	EntityTypeParty     = "party"     // Entity type representing a political party
+	EntityTypeOffice    = "office"    // Entity type representing a political office
+	EntityTypeElections = "elections" // Entity type representing elections
 )
