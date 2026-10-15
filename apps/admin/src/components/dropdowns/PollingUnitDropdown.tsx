@@ -9,6 +9,7 @@ import { DropdownGroupList } from "@repo/ui/components/custom/AppDropdown";
 import { DeleteAlertDialog } from "../alerts/delete-alert";
 import { PollingUnitFormDialog } from "../dialogs/PollingUnitFormDialog";
 import type { PollingUnitType } from "../tiles/polling-unit-tile";
+import { QUERY_KEYS } from "#/lib/config";
 
 interface PollingUnitDropdownProps {
   data: PollingUnitType;
@@ -30,7 +31,7 @@ export const PollingUnitDropdown = ({ data, className }: PollingUnitDropdownProp
       return res.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["polling-units"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.bodies.pollingUnits });
       setOpenDeleteAlert(false);
     },
   });

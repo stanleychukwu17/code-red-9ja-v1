@@ -18,6 +18,7 @@ import {
   updateSenatorialDistrict,
 } from "#/lib/server/senatorial_districts";
 import { TinyError } from "@repo/ui/components/custom/TinyError";
+import { QUERY_KEYS } from "#/lib/config";
 
 export interface SenatorialDistrict {
   id: number;
@@ -123,7 +124,7 @@ export function SenatorialDistrictFormDialog({
       return res.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["senatorial-districts"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.bodies.senatorialDistricts });
       onSuccess?.();
       onClose();
     },

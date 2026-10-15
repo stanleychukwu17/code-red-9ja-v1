@@ -19,6 +19,7 @@ import { getSenatorialDistricts } from "#/lib/server/senatorial_districts";
 import { getFederalConstituencies } from "#/lib/server/federal_constituencies";
 import { createLga, updateLga } from "#/lib/server/lgas";
 import { TinyError } from "@repo/ui/components/custom/TinyError";
+import { QUERY_KEYS } from "#/lib/config";
 
 export interface Lga {
   id: number;
@@ -136,7 +137,7 @@ export function LgaFormDialog({
       return res.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["lgas"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.bodies.lgas });
       onSuccess?.();
       onClose();
     },

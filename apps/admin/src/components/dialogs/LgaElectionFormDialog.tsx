@@ -77,7 +77,7 @@ export function LgaElectionFormDialog({
 
   // Fetch all LGAs in Nigeria
   const { data: lgasData } = useQuery({
-    queryKey: ["lgas-all"],
+    queryKey: [...QUERY_KEYS.bodies.lgas, "all"],
     queryFn: async () => {
       const res = await getLGAs({ data: { limit: 800 } });
       if (res && res.success && res.data?.lgas) {

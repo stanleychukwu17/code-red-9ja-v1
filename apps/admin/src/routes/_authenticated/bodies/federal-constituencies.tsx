@@ -17,6 +17,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { BodiesDropdown } from "#/components/dropdowns/BodiesDropdown";
 import type { FederalConstituencyType } from "#/components/tiles/federal-constituency-tile";
 import { Loader2 } from "lucide-react";
+import { QUERY_KEYS } from "#/lib/config";
 
 export const Route = createFileRoute(
   "/_authenticated/bodies/federal-constituencies",
@@ -32,7 +33,7 @@ function RouteComponent() {
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, error } =
     useInfiniteQuery({
-      queryKey: ["federal_constituencies", debouncedSearchQuery],
+      queryKey: [...QUERY_KEYS.bodies.federalConstituencies, debouncedSearchQuery],
       queryFn: async ({ pageParam }) => {
         const res = await getFederalConstituencies({
           data: { limit: 20, cursor: pageParam, search: debouncedSearchQuery || undefined },

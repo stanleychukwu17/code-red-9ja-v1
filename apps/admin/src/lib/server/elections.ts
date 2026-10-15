@@ -7,12 +7,12 @@ export const getElections = createServerFn({ method: "GET" })
     (
       data:
         | {
-            election_group_id?: number;
-            limit?: number;
-            cursor?: string | number;
-            orderBy?: string;
-            order?: string;
-          }
+          election_group_id?: number;
+          limit?: number;
+          cursor?: string | number;
+          orderBy?: string;
+          order?: string;
+        }
         | undefined,
     ) => data,
   )
@@ -40,38 +40,6 @@ export const getElectionById = createServerFn({ method: "GET" })
       return await apiFetchJson(API_URL.electionById(id));
     } catch (error: any) {
       return { success: false, message: error?.message || "Failed to fetch election details" };
-    }
-  });
-
-export const createElection = createServerFn({ method: "POST" })
-  .inputValidator(
-    (data: {
-      name: string;
-      election_date: string;
-      election_group_id: number;
-      office_id: number;
-      state_id?: number | null;
-      senatorial_district_id?: number | null;
-      federal_constituency_id?: number | null;
-      state_constituency_id?: number | null;
-      lga_id?: number | null;
-      ward_id?: number | null;
-    }) => data,
-  )
-  .handler(async ({ data }) => {
-    try {
-      return await apiFetchJson(API_URL.elections, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
-    } catch (error: any) {
-      return {
-        success: false,
-        message: error?.message || "Failed to create election",
-      };
     }
   });
 

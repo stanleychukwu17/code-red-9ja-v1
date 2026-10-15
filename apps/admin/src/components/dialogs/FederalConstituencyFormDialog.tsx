@@ -20,6 +20,7 @@ import {
   updateFederalConstituency,
 } from "#/lib/server/federal_constituencies";
 import { TinyError } from "@repo/ui/components/custom/TinyError";
+import { QUERY_KEYS } from "#/lib/config";
 
 export interface FederalConstituency {
   id: number;
@@ -123,7 +124,7 @@ export function FederalConstituencyFormDialog({
       return res.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["federal-constituencies"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.bodies.federalConstituencies });
       onSuccess?.();
       onClose();
     },

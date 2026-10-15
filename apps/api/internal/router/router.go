@@ -166,10 +166,10 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	pollingUnitsService := pollingunitsservice.NewPollingUnitsService(q, rdb)
 	supervisorAssignmentsService := supervisorassignmentsservice.NewService(q)
 	pollingUnitAssignmentsService := puassignments.NewService(q, rdb, distributor, earningsService)
-	partiesService := partiesservice.NewPartiesService(q, pool, rdb, monnifyClient, utilsInstance, notificationsService, blocksService, auditService)
+	partiesService := partiesservice.NewPartiesService(q, pool, rdb, monnifyClient, utilsInstance, notificationsService, blocksService, auditService, bodiesService, usersService)
 	followsService := followsservice.NewFollowsService(q, rdb, partiesService, notificationsService)
 	electionGroupsService := electiongroupsservice.NewElectionGroupsService(q, rdb, distributor)
-	electionsService := electionsservice.NewElectionsService(q, pool, rdb, distributor, electionGroupsService, earningsService, officesService)
+	electionsService := electionsservice.NewElectionsService(q, pool, rdb, distributor, electionGroupsService, earningsService, officesService, bodiesService)
 	senatorialDistrictsService := senatorialdistrictsservice.NewSenatorialDistrictsService(q, rdb)
 	federalConstituenciesService := federalconstituenciesservice.NewFederalConstituenciesService(q, rdb)
 	stateAssemblyConstituenciesService := stateassemblyconstituenciesservice.NewStateConstituenciesService(q, rdb)
@@ -182,8 +182,6 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	usersService.SetPageVerificationsService(pageVerificationsService)
 	usersService.SetPartyService(partiesService)
 	partiesService.SetPageVerificationsService(pageVerificationsService)
-	partiesService.SetUsersService(usersService)
-	partiesService.SetBodiesService(bodiesService)
 	partiesService.SetFollowsService(followsService)
 	bodiesService.SetPartiesService(partiesService)
 
@@ -472,7 +470,6 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Delete("/api/v1/election-groups/{id}", electionGroupsHandler.DeleteElectionGroup)
 
 		// elections admin mutations
-		r.Post("/api/v1/elections", electionsHandler.CreateElection)
 		r.Post("/api/v1/elections/nationwide", electionsHandler.CreateNationwideElection)
 		r.Post("/api/v1/elections/state", electionsHandler.CreateStateElection)
 		r.Post("/api/v1/elections/senatorial-district", electionsHandler.CreateSenatorialDistrictElection)

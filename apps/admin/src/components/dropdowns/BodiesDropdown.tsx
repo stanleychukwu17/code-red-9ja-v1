@@ -25,6 +25,12 @@ export const BodiesDropdown = ({ className }: BodiesDropdownProps) => {
   const [openMenu, setOpenMenu] = useState(false);
   const queryClient = useQueryClient();
 
+  const invalidateAllBodies = () => {
+    QUERY_KEYS.bodies.all.forEach((queryKey) => {
+      queryClient.invalidateQueries({ queryKey });
+    });
+  };
+
   const mutation = useMutation({
     mutationFn: async () => {
       const res = await recalculateBodies();
@@ -33,17 +39,7 @@ export const BodiesDropdown = ({ className }: BodiesDropdownProps) => {
       }
       return res;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.states });
-      queryClient.invalidateQueries({ queryKey: ["senatorial_districts"] });
-      queryClient.invalidateQueries({ queryKey: ["federal_constituencies"] });
-      queryClient.invalidateQueries({
-        queryKey: ["state_constituencies"],
-      });
-      queryClient.invalidateQueries({ queryKey: ["lgas"] });
-      queryClient.invalidateQueries({ queryKey: ["wards"] });
-      queryClient.invalidateQueries({ queryKey: ["polling_units"] });
-    },
+    onSuccess: invalidateAllBodies,
   });
 
   const syncMutation = useMutation({
@@ -54,17 +50,7 @@ export const BodiesDropdown = ({ className }: BodiesDropdownProps) => {
       }
       return res;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.states });
-      queryClient.invalidateQueries({ queryKey: ["senatorial_districts"] });
-      queryClient.invalidateQueries({ queryKey: ["federal_constituencies"] });
-      queryClient.invalidateQueries({
-        queryKey: ["state_constituencies"],
-      });
-      queryClient.invalidateQueries({ queryKey: ["lgas"] });
-      queryClient.invalidateQueries({ queryKey: ["wards"] });
-      queryClient.invalidateQueries({ queryKey: ["polling_units"] });
-    },
+    onSuccess: invalidateAllBodies,
   });
 
   const syncStateFlowMutation = useMutation({
@@ -77,17 +63,7 @@ export const BodiesDropdown = ({ className }: BodiesDropdownProps) => {
       }
       return res;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.states });
-      queryClient.invalidateQueries({ queryKey: ["senatorial_districts"] });
-      queryClient.invalidateQueries({ queryKey: ["federal_constituencies"] });
-      queryClient.invalidateQueries({
-        queryKey: ["state_constituencies"],
-      });
-      queryClient.invalidateQueries({ queryKey: ["lgas"] });
-      queryClient.invalidateQueries({ queryKey: ["wards"] });
-      queryClient.invalidateQueries({ queryKey: ["polling_units"] });
-    },
+    onSuccess: invalidateAllBodies,
   });
 
   const handleRecalculate = () => {

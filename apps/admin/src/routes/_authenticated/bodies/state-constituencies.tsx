@@ -16,6 +16,7 @@ import { useBodiesDialogs } from "#/components/dialogs/useBodiesDialogs";
 import { useIntersectionObserver, useDebounceValue } from "usehooks-ts";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
+import { QUERY_KEYS } from "#/lib/config";
 
 export const Route = createFileRoute(
   "/_authenticated/bodies/state-constituencies",
@@ -37,7 +38,7 @@ function RouteComponent() {
     isLoading,
     error,
   } = useInfiniteQuery({
-    queryKey: ["state-constituencies", debouncedSearchQuery],
+    queryKey: [...QUERY_KEYS.bodies.stateConstituencies, debouncedSearchQuery],
     queryFn: async ({ pageParam }) => {
       const res = await getStateConstituencies({
         data: {

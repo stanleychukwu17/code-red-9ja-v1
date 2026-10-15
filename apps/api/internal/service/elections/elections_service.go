@@ -4,11 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"free9ja/api/internal/constants"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/utils"
 	"free9ja/api/internal/worker"
-	"log/slog"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -28,6 +28,10 @@ type officesService interface {
 	GetOfficeByID(ctx context.Context, id int16) (queries.Office, error)
 }
 
+type bodiesService interface {
+	GetStatesByCountryID(ctx context.Context, countryID int16) ([]queries.CState, error)
+}
+
 type ElectionsService struct {
 	queries               *queries.Queries
 	pool                  *pgxpool.Pool
@@ -36,10 +40,11 @@ type ElectionsService struct {
 	earningsService       earningsService
 	electionGroupsService electionGroupsService
 	officeService         officesService
+	bodiesService         bodiesService
 }
 
 // NewElectionsService initializes a new ElectionsService with its required database pool,
-// query handlers, Redis client, task distributor, election groups service, and offices service dependency.
+// query handlers, Redis client, task distributor, election groups service, offices service, and bodies service dependency.
 func NewElectionsService(
 	q *queries.Queries,
 	pool *pgxpool.Pool,
@@ -48,6 +53,7 @@ func NewElectionsService(
 	electionGroupsService electionGroupsService,
 	earningsService earningsService,
 	officeService officesService,
+	bodiesService bodiesService,
 ) *ElectionsService {
 	return &ElectionsService{
 		queries:               q,
@@ -57,12 +63,8 @@ func NewElectionsService(
 		electionGroupsService: electionGroupsService,
 		earningsService:       earningsService,
 		officeService:         officeService,
+		bodiesService:         bodiesService,
 	}
-}
-
-// SetElectionGroupsService sets or updates the injected election groups service.
-func (s *ElectionsService) SetElectionGroupsService(electionGroupsService electionGroupsService) {
-	s.electionGroupsService = electionGroupsService
 }
 
 // getSafeNationalMetrics retrieves national administrative counts via the injected election
@@ -79,199 +81,6 @@ func (s *ElectionsService) invalidateCache(ctx context.Context, id *int32) {
 	}
 }
 
-// enqueueSeedElectionGroupStats enqueues an asynchronous task to seed zeroed geography
-// hierarchy stats for the parent election group. It is safe to call repeatedly due to
-// ON CONFLICT DO NOTHING queries.
-func (s *ElectionsService) enqueueSeedElectionGroupStats(ctx context.Context, electionGroupID int32) {
-	if s.taskDistributor == nil || electionGroupID <= 0 {
-		return
-	}
-	if err := s.taskDistributor.DistributeTaskSeedElectionGroupStats(ctx, &worker.SeedElectionGroupStatsPayload{
-		ElectionGroupID: electionGroupID,
-	}); err != nil {
-		slog.Warn("failed to enqueue seed election group stats task", "election_group_id", electionGroupID, "error", err)
-	}
-}
-
-// CreateElection creates an individual election instance under an existing election group with full geographic resolution.
-func (s *ElectionsService) CreateElection(
-	ctx context.Context,
-	name string,
-	electionDate time.Time,
-	electionGroupID int32,
-	officeID int16,
-	stateID *int16,
-	senatorialDistrictID, federalConstituencyID, stateConstituencyID, lgaID, wardID *int32,
-) (queries.Election, error) {
-	// Invalidate election list caches when this function exits
-	defer s.invalidateCache(ctx, nil)
-
-	// 1. Verify office definition and parent election group exist
-	et, err := s.officeService.GetOfficeByID(ctx, officeID)
-	if err != nil {
-		return queries.Election{}, err
-	}
-	if !et.IsContested {
-		return queries.Election{}, fmt.Errorf("office %s is not contestable in elections", et.Name)
-	}
-	if _, err := s.queries.GetElectionGroupByID(ctx, electionGroupID); err != nil {
-		return queries.Election{}, err
-	}
-
-	// 2. Begin database transaction
-	tx, err := s.pool.Begin(ctx)
-	if err != nil {
-		return queries.Election{}, fmt.Errorf("failed to begin transaction: %w", err)
-	}
-	defer tx.Rollback(ctx)
-
-	txQueries := s.queries.WithTx(tx)
-
-	// 3. Determine dynamic election display name based on geographic level
-	etElection := utils.PgTextOrDefault(et.Election, et.Name)
-	name = etElection + " Election"
-	if stateID != nil {
-		stateRow, err := txQueries.GetStateDetailsByID(ctx, *stateID)
-		if err == nil {
-			name = fmt.Sprintf("%s Election (%s)", etElection, stateRow.Name)
-		} else {
-			name = fmt.Sprintf("%s Election (State %d)", etElection, *stateID)
-		}
-	} else if senatorialDistrictID != nil {
-		districts, err := txQueries.GetSenatorialDistricts(ctx, 0)
-		if err == nil {
-			var districtName string
-			for _, d := range districts {
-				if d.ID == *senatorialDistrictID {
-					districtName = d.Name
-					break
-				}
-			}
-			if districtName != "" {
-				name = fmt.Sprintf("%s Election (%s)", etElection, districtName)
-			} else {
-				name = fmt.Sprintf("%s Election (District %d)", etElection, *senatorialDistrictID)
-			}
-		} else {
-			name = fmt.Sprintf("%s Election (District %d)", etElection, *senatorialDistrictID)
-		}
-	} else if federalConstituencyID != nil {
-		constituencies, err := txQueries.GetFederalConstituencies(ctx, queries.GetFederalConstituenciesParams{
-			StateID:              0,
-			SenatorialDistrictID: 0,
-		})
-		if err == nil {
-			var constituencyName string
-			for _, c := range constituencies {
-				if c.ID == *federalConstituencyID {
-					constituencyName = c.Name
-					break
-				}
-			}
-			if constituencyName != "" {
-				name = fmt.Sprintf("%s Election (%s)", etElection, constituencyName)
-			} else {
-				name = fmt.Sprintf("%s Election (Federal Constituency %d)", etElection, *federalConstituencyID)
-			}
-		} else {
-			name = fmt.Sprintf("%s Election (Federal Constituency %d)", etElection, *federalConstituencyID)
-		}
-	} else if stateConstituencyID != nil {
-		constituencies, err := txQueries.GetStateConstituencies(ctx, queries.GetStateConstituenciesParams{
-			StateID:               0,
-			FederalConstituencyID: 0,
-		})
-		if err == nil {
-			var constituencyName string
-			for _, c := range constituencies {
-				if c.ID == *stateConstituencyID {
-					constituencyName = c.Name
-					break
-				}
-			}
-			if constituencyName != "" {
-				name = fmt.Sprintf("%s Election (%s)", etElection, constituencyName)
-			} else {
-				name = fmt.Sprintf("%s Election (State Constituency %d)", etElection, *stateConstituencyID)
-			}
-		} else {
-			name = fmt.Sprintf("%s Election (State Constituency %d)", etElection, *stateConstituencyID)
-		}
-	} else if lgaID != nil {
-		lgas, err := txQueries.GetLGAs(ctx, 0)
-		if err == nil {
-			var lgaName string
-			for _, l := range lgas {
-				if l.ID == *lgaID {
-					lgaName = l.Name
-					break
-				}
-			}
-			if lgaName != "" {
-				name = fmt.Sprintf("%s Election (%s)", etElection, lgaName)
-			} else {
-				name = fmt.Sprintf("%s Election (LGA %d)", etElection, *lgaID)
-			}
-		} else {
-			name = fmt.Sprintf("%s Election (LGA %d)", etElection, *lgaID)
-		}
-	} else if wardID != nil {
-		wards, err := txQueries.GetWards(ctx, queries.GetWardsParams{
-			LgaID:   0,
-			StateID: 0,
-		})
-		if err == nil {
-			var wardName string
-			for _, w := range wards {
-				if w.ID == *wardID {
-					wardName = w.Name
-					break
-				}
-			}
-			if wardName != "" {
-				name = fmt.Sprintf("%s Election (%s)", etElection, wardName)
-			} else {
-				name = fmt.Sprintf("%s Election (Ward %d)", etElection, *wardID)
-			}
-		} else {
-			name = fmt.Sprintf("%s Election (Ward %d)", etElection, *wardID)
-		}
-	}
-
-	// 4. Resolve full geographic hierarchy (filling missing parent administrative IDs from bottom up)
-	stateID2, senatorialDistrictID4, federalConstituencyID4, stateConstituencyID4, lgaID4, wardID4 := s.resolveGeographicHierarchy(
-		ctx, txQueries, stateID, senatorialDistrictID, federalConstituencyID, stateConstituencyID, lgaID, wardID,
-	)
-
-	// 5. Persist the election instance record
-	election, err := txQueries.CreateElectionInstance(ctx, queries.CreateElectionInstanceParams{
-		Name:                  name,
-		ElectionDate:          pgtype.Date{Time: electionDate, Valid: true},
-		ElectionGroupID:       electionGroupID,
-		OfficeID:              officeID,
-		Scope:                 et.Scope,
-		StateID:               stateID2,
-		SenatorialDistrictID:  senatorialDistrictID4,
-		FederalConstituencyID: federalConstituencyID4,
-		StateConstituencyID:   stateConstituencyID4,
-		LgaID:                 lgaID4,
-		WardID:                wardID4,
-	})
-	if err != nil {
-		return queries.Election{}, err
-	}
-
-	// 8. Commit the transaction
-	if err := tx.Commit(ctx); err != nil {
-		return queries.Election{}, fmt.Errorf("failed to commit transaction: %w", err)
-	}
-
-	// 9. Seed geographic hierarchy stats for this election group post-commit
-	s.enqueueSeedElectionGroupStats(ctx, electionGroupID)
-
-	return election, nil
-}
-
 // CandidateInput holds candidate and party identification for election registration.
 type CandidateInput struct {
 	CandidateID    int64
@@ -281,9 +90,6 @@ type CandidateInput struct {
 
 // CreateNationwideElection sets up a country-wide election (e.g., Presidential).
 func (s *ElectionsService) CreateNationwideElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32) (queries.Election, error) {
-	// Invalidate election list caches when this function exits
-	defer s.invalidateCache(ctx, nil)
-
 	// Fetch and validate the target office definition
 	office, err := s.officeService.GetOfficeByID(ctx, officeID)
 	if err != nil {
@@ -310,7 +116,7 @@ func (s *ElectionsService) CreateNationwideElection(ctx context.Context, officeI
 	}
 
 	// Create election record (nationwide scope has no geographic sub-boundary IDs)
-	name := officeElection + " Election"
+	name := fmt.Sprintf("%d %s Election", electionDate.Year(), officeElection)
 	election, err := txQueries.CreateElectionInstance(ctx, queries.CreateElectionInstanceParams{
 		Name:            name,
 		ElectionDate:    pgtype.Date{Time: electionDate, Valid: true},
@@ -327,17 +133,14 @@ func (s *ElectionsService) CreateNationwideElection(ctx context.Context, officeI
 		return queries.Election{}, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	// Seed geographic hierarchy stats for this election group post-commit
-	s.enqueueSeedElectionGroupStats(ctx, electionGroupID)
+	// Invalidate election list caches on successful creation
+	s.invalidateCache(ctx, nil)
 
 	return election, nil
 }
 
 // CreateStateElection sets up multiple state-level elections (e.g., Governorship) under a shared election group.
 func (s *ElectionsService) CreateStateElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, stateIDs []int16) ([]queries.Election, error) {
-	// Invalidate election list caches when this function exits
-	defer s.invalidateCache(ctx, nil)
-
 	// Fetch and validate the target office definition
 	office, err := s.officeService.GetOfficeByID(ctx, officeID)
 	if err != nil {
@@ -365,16 +168,25 @@ func (s *ElectionsService) CreateStateElection(ctx context.Context, officeID int
 
 	createdElections := make([]queries.Election, 0, len(stateIDs))
 
-	// Create individual election records for each state
+	// Pre-fetch all states into map for O(1) in-memory lookups via bodiesService Redis cache
+	states, err := s.bodiesService.GetStatesByCountryID(ctx, constants.NigeriaCountryID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch states: %w", err)
+	}
+	stateMap := make(map[int16]string, len(states))
+	for _, s := range states {
+		stateMap[s.ID] = s.Name
+	}
+
+	// Create individual election records for each state (skipping non-existent states)
 	for _, stateID := range stateIDs {
-		// Fetch state name using GetStateDetailsByID
-		stateRow, err := txQueries.GetStateDetailsByID(ctx, stateID)
-		stateName := fmt.Sprintf("State %d", stateID)
-		if err == nil {
-			stateName = stateRow.Name
+		stateName, found := stateMap[stateID]
+		if !found {
+			// Skip state IDs that do not exist
+			continue
 		}
 
-		name := fmt.Sprintf("%s Election (%s)", officeElection, stateName)
+		name := fmt.Sprintf("%d %s Election (%s)", electionDate.Year(), officeElection, stateName)
 		election, err := txQueries.CreateElectionInstance(ctx, queries.CreateElectionInstanceParams{
 			Name:            name,
 			ElectionDate:    pgtype.Date{Time: electionDate, Valid: true},
@@ -394,16 +206,14 @@ func (s *ElectionsService) CreateStateElection(ctx context.Context, officeID int
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	// Seed geographic hierarchy stats for this election group post-commit
-	s.enqueueSeedElectionGroupStats(ctx, electionGroupID)
+	// Invalidate election list caches on successful creation
+	s.invalidateCache(ctx, nil)
 
 	return createdElections, nil
 }
 
 // CreateSenatorialDistrictElection sets up elections across one or more Senatorial Districts.
 func (s *ElectionsService) CreateSenatorialDistrictElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, senatorialDistrictIDs []int32) ([]queries.Election, error) {
-	// Invalidate election list caches when this function exits
-	defer s.invalidateCache(ctx, nil)
 
 	// Fetch and validate the target office definition
 	office, err := s.officeService.GetOfficeByID(ctx, officeID)
@@ -442,19 +252,20 @@ func (s *ElectionsService) CreateSenatorialDistrictElection(ctx context.Context,
 		districtMap[d.ID] = d
 	}
 
-	// Create election records for each senatorial district
+	// Create election records for each senatorial district (skipping non-existent districts)
 	for _, districtID := range senatorialDistrictIDs {
 		districtRow, found := districtMap[districtID]
-		districtName := fmt.Sprintf("District %d", districtID)
-		var stateID pgtype.Int2
-		if found {
-			districtName = districtRow.Name
-			if districtRow.StateID > 0 {
-				stateID = pgtype.Int2{Int16: int16(districtRow.StateID), Valid: true}
-			}
+		if !found {
+			// Skip district IDs that do not exist
+			continue
 		}
 
-		name := fmt.Sprintf("%s Election (%s)", officeElection, districtName)
+		var stateID pgtype.Int2
+		if districtRow.StateID > 0 {
+			stateID = pgtype.Int2{Int16: int16(districtRow.StateID), Valid: true}
+		}
+
+		name := fmt.Sprintf("%d %s Election (%s)", electionDate.Year(), officeElection, districtRow.Name)
 		election, err := txQueries.CreateElectionInstance(ctx, queries.CreateElectionInstanceParams{
 			Name:                 name,
 			ElectionDate:         pgtype.Date{Time: electionDate, Valid: true},
@@ -475,16 +286,14 @@ func (s *ElectionsService) CreateSenatorialDistrictElection(ctx context.Context,
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	// Seed geographic hierarchy stats for this election group post-commit
-	s.enqueueSeedElectionGroupStats(ctx, electionGroupID)
+	// Invalidate election list caches on successful creation
+	s.invalidateCache(ctx, nil)
 
 	return createdElections, nil
 }
 
 // CreateFederalConstituencyElection sets up elections across one or more Federal Constituencies (House of Representatives).
 func (s *ElectionsService) CreateFederalConstituencyElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, federalConstituencyIDs []int32) ([]queries.Election, error) {
-	// Invalidate election list caches when this function exits
-	defer s.invalidateCache(ctx, nil)
 
 	// Fetch and validate the target office definition
 	office, err := s.officeService.GetOfficeByID(ctx, officeID)
@@ -526,24 +335,25 @@ func (s *ElectionsService) CreateFederalConstituencyElection(ctx context.Context
 		fcMap[c.ID] = c
 	}
 
-	// Create election records for each federal constituency
+	// Create election records for each federal constituency (skipping non-existent constituencies)
 	for _, constituencyID := range federalConstituencyIDs {
 		cRow, found := fcMap[constituencyID]
-		constituencyName := fmt.Sprintf("Federal Constituency %d", constituencyID)
+		if !found {
+			// Skip constituency IDs that do not exist
+			continue
+		}
+
 		var stateID pgtype.Int2
 		var senatorialDistrictID pgtype.Int4
 
-		if found {
-			constituencyName = cRow.Name
-			if cRow.StateID > 0 {
-				stateID = pgtype.Int2{Int16: int16(cRow.StateID), Valid: true}
-			}
-			if cRow.SenatorialDistrictID.Valid && cRow.SenatorialDistrictID.Int32 > 0 {
-				senatorialDistrictID = cRow.SenatorialDistrictID
-			}
+		if cRow.StateID > 0 {
+			stateID = pgtype.Int2{Int16: int16(cRow.StateID), Valid: true}
+		}
+		if cRow.SenatorialDistrictID.Valid && cRow.SenatorialDistrictID.Int32 > 0 {
+			senatorialDistrictID = cRow.SenatorialDistrictID
 		}
 
-		name := fmt.Sprintf("%s Election (%s)", officeElection, constituencyName)
+		name := fmt.Sprintf("%d %s Election (%s)", electionDate.Year(), officeElection, cRow.Name)
 		election, err := txQueries.CreateElectionInstance(ctx, queries.CreateElectionInstanceParams{
 			Name:                  name,
 			ElectionDate:          pgtype.Date{Time: electionDate, Valid: true},
@@ -565,16 +375,14 @@ func (s *ElectionsService) CreateFederalConstituencyElection(ctx context.Context
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	// Seed geographic hierarchy stats for this election group post-commit
-	s.enqueueSeedElectionGroupStats(ctx, electionGroupID)
+	// Invalidate election list caches on successful creation
+	s.invalidateCache(ctx, nil)
 
 	return createdElections, nil
 }
 
 // CreateStateConstituencyElection sets up elections across one or more State Assembly Constituencies.
 func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, stateConstituencyIDs []int32) ([]queries.Election, error) {
-	// Invalidate election list caches when this function exits
-	defer s.invalidateCache(ctx, nil)
 
 	// Fetch and validate the target office definition
 	office, err := s.officeService.GetOfficeByID(ctx, officeID)
@@ -616,32 +424,33 @@ func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, 
 		scMap[c.ID] = c
 	}
 
-	// Create election records for each state constituency
+	// Create election records for each state constituency (skipping non-existent constituencies)
 	for _, constituencyID := range stateConstituencyIDs {
 		cRow, found := scMap[constituencyID]
-		constituencyName := fmt.Sprintf("State Constituency %d", constituencyID)
+		if !found {
+			// Skip constituency IDs that do not exist
+			continue
+		}
+
 		var stateID pgtype.Int2
 		var senatorialDistrictID pgtype.Int4
 		var federalConstituencyID pgtype.Int4
 		var lgaID pgtype.Int4
 
-		if found {
-			constituencyName = cRow.Name
-			if cRow.StateID > 0 {
-				stateID = pgtype.Int2{Int16: int16(cRow.StateID), Valid: true}
-			}
-			if cRow.SenatorialDistrictID.Valid && cRow.SenatorialDistrictID.Int32 > 0 {
-				senatorialDistrictID = cRow.SenatorialDistrictID
-			}
-			if cRow.FederalConstituencyID.Valid && cRow.FederalConstituencyID.Int32 > 0 {
-				federalConstituencyID = cRow.FederalConstituencyID
-			}
-			if cRow.LgaID > 0 {
-				lgaID = pgtype.Int4{Int32: cRow.LgaID, Valid: true}
-			}
+		if cRow.StateID > 0 {
+			stateID = pgtype.Int2{Int16: int16(cRow.StateID), Valid: true}
+		}
+		if cRow.SenatorialDistrictID.Valid && cRow.SenatorialDistrictID.Int32 > 0 {
+			senatorialDistrictID = cRow.SenatorialDistrictID
+		}
+		if cRow.FederalConstituencyID.Valid && cRow.FederalConstituencyID.Int32 > 0 {
+			federalConstituencyID = cRow.FederalConstituencyID
+		}
+		if cRow.LgaID > 0 {
+			lgaID = pgtype.Int4{Int32: cRow.LgaID, Valid: true}
 		}
 
-		name := fmt.Sprintf("%s Election (%s)", officeElection, constituencyName)
+		name := fmt.Sprintf("%d %s Election (%s)", electionDate.Year(), officeElection, cRow.Name)
 		election, err := txQueries.CreateElectionInstance(ctx, queries.CreateElectionInstanceParams{
 			Name:                  name,
 			ElectionDate:          pgtype.Date{Time: electionDate, Valid: true},
@@ -665,16 +474,14 @@ func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, 
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	// Seed geographic hierarchy stats for this election group post-commit
-	s.enqueueSeedElectionGroupStats(ctx, electionGroupID)
+	// Invalidate election list caches on successful creation
+	s.invalidateCache(ctx, nil)
 
 	return createdElections, nil
 }
 
 // CreateLgaElection sets up elections across one or more Local Government Areas (LGAs) (e.g., LGA Chairmanship).
 func (s *ElectionsService) CreateLgaElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, lgaIDs []int32) ([]queries.Election, error) {
-	// Invalidate election list caches when this function exits
-	defer s.invalidateCache(ctx, nil)
 
 	// Fetch and validate the target office definition
 	office, err := s.officeService.GetOfficeByID(ctx, officeID)
@@ -713,28 +520,29 @@ func (s *ElectionsService) CreateLgaElection(ctx context.Context, officeID int16
 		lgaMap[l.ID] = l
 	}
 
-	// Create election records for each LGA
+	// Create election records for each LGA (skipping non-existent LGAs)
 	for _, lgaID := range lgaIDs {
 		lgaRow, found := lgaMap[lgaID]
-		lgaName := fmt.Sprintf("LGA %d", lgaID)
+		if !found {
+			// Skip LGA IDs that do not exist
+			continue
+		}
+
 		var stateID pgtype.Int2
 		var senatorialDistrictID pgtype.Int4
 		var federalConstituencyID pgtype.Int4
 
-		if found {
-			lgaName = lgaRow.Name
-			if lgaRow.StateID > 0 {
-				stateID = pgtype.Int2{Int16: int16(lgaRow.StateID), Valid: true}
-			}
-			if lgaRow.SenatorialDistrictID.Valid && lgaRow.SenatorialDistrictID.Int32 > 0 {
-				senatorialDistrictID = lgaRow.SenatorialDistrictID
-			}
-			if lgaRow.FederalConstituencyID.Valid && lgaRow.FederalConstituencyID.Int32 > 0 {
-				federalConstituencyID = lgaRow.FederalConstituencyID
-			}
+		if lgaRow.StateID > 0 {
+			stateID = pgtype.Int2{Int16: int16(lgaRow.StateID), Valid: true}
+		}
+		if lgaRow.SenatorialDistrictID.Valid && lgaRow.SenatorialDistrictID.Int32 > 0 {
+			senatorialDistrictID = lgaRow.SenatorialDistrictID
+		}
+		if lgaRow.FederalConstituencyID.Valid && lgaRow.FederalConstituencyID.Int32 > 0 {
+			federalConstituencyID = lgaRow.FederalConstituencyID
 		}
 
-		name := fmt.Sprintf("%s Election (%s)", officeElection, lgaName)
+		name := fmt.Sprintf("%d %s Election (%s)", electionDate.Year(), officeElection, lgaRow.Name)
 		election, err := txQueries.CreateElectionInstance(ctx, queries.CreateElectionInstanceParams{
 			Name:                  name,
 			ElectionDate:          pgtype.Date{Time: electionDate, Valid: true},
@@ -757,16 +565,14 @@ func (s *ElectionsService) CreateLgaElection(ctx context.Context, officeID int16
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	// Seed geographic hierarchy stats for this election group post-commit
-	s.enqueueSeedElectionGroupStats(ctx, electionGroupID)
+	// Invalidate election list caches on successful creation
+	s.invalidateCache(ctx, nil)
 
 	return createdElections, nil
 }
 
 // CreateWardElection sets up elections across one or more Wards (e.g., Councillorship).
 func (s *ElectionsService) CreateWardElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, wardIDs []int32) ([]queries.Election, error) {
-	// Invalidate election list caches when this function exits
-	defer s.invalidateCache(ctx, nil)
 
 	// Fetch and validate the target office definition
 	office, err := s.officeService.GetOfficeByID(ctx, officeID)
@@ -818,10 +624,13 @@ func (s *ElectionsService) CreateWardElection(ctx context.Context, officeID int1
 		lgaMap[l.ID] = l
 	}
 
-	// Create election records for each Ward with full ancestral resolution
+	// Create election records for each Ward with full ancestral resolution (skipping non-existent wards)
 	for _, wardID := range wardIDs {
 		wardRow, foundWard := wardMap[wardID]
-		wardName := fmt.Sprintf("Ward %d", wardID)
+		if !foundWard {
+			// Skip ward IDs that do not exist
+			continue
+		}
 
 		var stateID pgtype.Int2
 		var senatorialDistrictID pgtype.Int4
@@ -829,28 +638,25 @@ func (s *ElectionsService) CreateWardElection(ctx context.Context, officeID int1
 		var stateConstituencyID pgtype.Int4
 		var lgaID pgtype.Int4
 
-		if foundWard {
-			wardName = wardRow.Name
-			if wardRow.StateID > 0 {
-				stateID = pgtype.Int2{Int16: int16(wardRow.StateID), Valid: true}
-			}
-			if wardRow.LgaID > 0 {
-				lgaID = pgtype.Int4{Int32: wardRow.LgaID, Valid: true}
-				if lgaRow, foundLga := lgaMap[wardRow.LgaID]; foundLga {
-					if lgaRow.SenatorialDistrictID.Valid && lgaRow.SenatorialDistrictID.Int32 > 0 {
-						senatorialDistrictID = lgaRow.SenatorialDistrictID
-					}
-					if lgaRow.FederalConstituencyID.Valid && lgaRow.FederalConstituencyID.Int32 > 0 {
-						federalConstituencyID = lgaRow.FederalConstituencyID
-					}
+		if wardRow.StateID > 0 {
+			stateID = pgtype.Int2{Int16: int16(wardRow.StateID), Valid: true}
+		}
+		if wardRow.LgaID > 0 {
+			lgaID = pgtype.Int4{Int32: wardRow.LgaID, Valid: true}
+			if lgaRow, foundLga := lgaMap[wardRow.LgaID]; foundLga {
+				if lgaRow.SenatorialDistrictID.Valid && lgaRow.SenatorialDistrictID.Int32 > 0 {
+					senatorialDistrictID = lgaRow.SenatorialDistrictID
+				}
+				if lgaRow.FederalConstituencyID.Valid && lgaRow.FederalConstituencyID.Int32 > 0 {
+					federalConstituencyID = lgaRow.FederalConstituencyID
 				}
 			}
-			if wardRow.StateConstituencyID.Valid {
-				stateConstituencyID = wardRow.StateConstituencyID
-			}
+		}
+		if wardRow.StateConstituencyID.Valid {
+			stateConstituencyID = wardRow.StateConstituencyID
 		}
 
-		name := fmt.Sprintf("%s Election (%s)", officeElection, wardName)
+		name := fmt.Sprintf("%d %s Election (%s)", electionDate.Year(), officeElection, wardRow.Name)
 		election, err := txQueries.CreateElectionInstance(ctx, queries.CreateElectionInstanceParams{
 			Name:                  name,
 			ElectionDate:          pgtype.Date{Time: electionDate, Valid: true},
@@ -875,8 +681,8 @@ func (s *ElectionsService) CreateWardElection(ctx context.Context, officeID int1
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	// Seed geographic hierarchy stats for this election group post-commit
-	s.enqueueSeedElectionGroupStats(ctx, electionGroupID)
+	// Invalidate election list caches on successful creation
+	s.invalidateCache(ctx, nil)
 
 	return createdElections, nil
 }

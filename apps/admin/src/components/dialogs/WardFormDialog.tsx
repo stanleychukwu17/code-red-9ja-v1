@@ -17,6 +17,7 @@ import { getLGAs } from "#/lib/server/countries";
 import { getStates } from "#/lib/server/states";
 import { createWard, updateWard } from "#/lib/server/wards";
 import { TinyError } from "@repo/ui/components/custom/TinyError";
+import { QUERY_KEYS } from "#/lib/config";
 
 export interface Ward {
   id: number;
@@ -127,7 +128,7 @@ export function WardFormDialog({
       return res.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["wards"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.bodies.wards });
       onSuccess?.();
       onClose();
     },

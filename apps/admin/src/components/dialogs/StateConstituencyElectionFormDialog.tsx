@@ -83,7 +83,7 @@ export function StateConstituencyElectionFormDialog({
 
   // Fetch all State Assembly Constituencies in Nigeria
   const { data: constituenciesData } = useQuery({
-    queryKey: ["state-constituencies-all"],
+    queryKey: [...QUERY_KEYS.bodies.stateConstituencies, "all"],
     queryFn: async () => {
       const res = await getStateConstituencies({
         data: { limit: 1000 },

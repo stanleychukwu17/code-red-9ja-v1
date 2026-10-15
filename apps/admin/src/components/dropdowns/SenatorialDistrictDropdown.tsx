@@ -9,6 +9,7 @@ import { DropdownGroupList } from "@repo/ui/components/custom/AppDropdown";
 import { DeleteAlertDialog } from "../alerts/delete-alert";
 import { SenatorialDistrictFormDialog } from "../dialogs/SenatorialDistrictFormDialog";
 import type { DistrictType } from "../tiles/district-tile";
+import { QUERY_KEYS } from "#/lib/config";
 
 interface SenatorialDistrictDropdownProps {
   data: DistrictType;
@@ -33,7 +34,7 @@ export const SenatorialDistrictDropdown = ({
       return res.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["senatorial-districts"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.bodies.senatorialDistricts });
       setOpenDeleteAlert(false);
     },
   });

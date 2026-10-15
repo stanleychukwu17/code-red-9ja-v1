@@ -9,6 +9,7 @@ import { DropdownGroupList } from "@repo/ui/components/custom/AppDropdown";
 import { DeleteAlertDialog } from "../alerts/delete-alert";
 import { LgaFormDialog } from "../dialogs/LgaFormDialog";
 import type { LgaType } from "../tiles/lga-tile";
+import { QUERY_KEYS } from "#/lib/config";
 
 interface LgaDropdownProps {
   data: LgaType;
@@ -30,7 +31,7 @@ export const LgaDropdown = ({ data, className }: LgaDropdownProps) => {
       return res.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["lgas"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.bodies.lgas });
       setOpenDeleteAlert(false);
     },
   });

@@ -17,6 +17,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { BodiesDropdown } from "#/components/dropdowns/BodiesDropdown";
 import type { DistrictType } from "#/components/tiles/district-tile";
 import { Loader2 } from "lucide-react";
+import { QUERY_KEYS } from "#/lib/config";
 
 export const Route = createFileRoute(
   "/_authenticated/bodies/senatorial-districts",
@@ -32,7 +33,7 @@ function RouteComponent() {
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, error } =
     useInfiniteQuery({
-      queryKey: ["senatorial-districts", debouncedSearchQuery],
+      queryKey: [...QUERY_KEYS.bodies.senatorialDistricts, debouncedSearchQuery],
       queryFn: async ({ pageParam }) => {
         const res = await getSenatorialDistricts({
           data: { limit: 20, cursor: pageParam, search: debouncedSearchQuery || undefined },

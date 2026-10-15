@@ -24,6 +24,7 @@ import {
   updateStateConstituency,
 } from "#/lib/server/state_constituencies";
 import { TinyError } from "@repo/ui/components/custom/TinyError";
+import { QUERY_KEYS } from "#/lib/config";
 
 export interface StateConstituency {
   id: number;
@@ -157,7 +158,7 @@ export function StateConstituencyFormDialog({
       return res.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["state-constituencies"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.bodies.stateConstituencies });
       onSuccess?.();
       onClose();
     },

@@ -9,6 +9,7 @@ import { DropdownGroupList } from "@repo/ui/components/custom/AppDropdown";
 import { DeleteAlertDialog } from "../alerts/delete-alert";
 import { FederalConstituencyFormDialog } from "../dialogs/FederalConstituencyFormDialog";
 import type { FederalConstituencyType } from "../tiles/federal-constituency-tile";
+import { QUERY_KEYS } from "#/lib/config";
 
 interface FederalConstituencyDropdownProps {
   data: FederalConstituencyType;
@@ -33,7 +34,7 @@ export const FederalConstituencyDropdown = ({
       return res.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["federal-constituencies"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.bodies.federalConstituencies });
       setOpenDeleteAlert(false);
     },
   });

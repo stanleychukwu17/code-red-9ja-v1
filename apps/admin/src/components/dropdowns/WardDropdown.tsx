@@ -9,6 +9,7 @@ import { DeleteAlertDialog } from "../alerts/delete-alert";
 import { WardFormDialog } from "../dialogs/WardFormDialog";
 import type { WardType } from "../tiles/ward-tile";
 import { deleteWard } from "#/lib/server/wards";
+import { QUERY_KEYS } from "#/lib/config";
 
 interface WardDropdownProps {
   data: WardType;
@@ -30,7 +31,7 @@ export const WardDropdown = ({ data, className }: WardDropdownProps) => {
       return res.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["wards"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.bodies.wards });
       setOpenDeleteAlert(false);
     },
   });

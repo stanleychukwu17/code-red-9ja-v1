@@ -83,7 +83,7 @@ export function SenatorialDistrictElectionFormDialog({
 
   // Fetch all Senatorial Districts in Nigeria
   const { data: districtsData } = useQuery({
-    queryKey: ["senatorial-districts-all"],
+    queryKey: [...QUERY_KEYS.bodies.senatorialDistricts, "all"],
     queryFn: async () => {
       const res = await getSenatorialDistricts({ data: { limit: 150 } });
       if (res && res.success && res.data?.districts) {

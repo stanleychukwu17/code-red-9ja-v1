@@ -22,6 +22,7 @@ import {
   updatePollingUnit,
 } from "#/lib/server/polling_units";
 import { TinyError } from "@repo/ui/components/custom/TinyError";
+import { QUERY_KEYS } from "#/lib/config";
 
 export interface PollingUnit {
   id: number;
@@ -197,7 +198,7 @@ export function PollingUnitFormDialog({
       return res.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["polling-units"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.bodies.pollingUnits });
       onSuccess?.();
       onClose();
     },

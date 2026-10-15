@@ -86,7 +86,7 @@ export function WardElectionFormDialog({
 
   // Fetch LGAs in Nigeria
   const { data: lgasData } = useQuery({
-    queryKey: ["lgas-all"],
+    queryKey: [...QUERY_KEYS.bodies.lgas, "all"],
     queryFn: async () => {
       const res = await getLGAs({ data: { limit: 800 } });
       if (res && res.success && res.data?.lgas) {
@@ -99,7 +99,7 @@ export function WardElectionFormDialog({
 
   // Fetch Wards in Nigeria
   const { data: wardsData } = useQuery({
-    queryKey: ["wards-all"],
+    queryKey: [...QUERY_KEYS.bodies.wards, "all"],
     queryFn: async () => {
       const res = await getWards({ data: { limit: 10000 } });
       if (res && res.success && res.data?.wards) {

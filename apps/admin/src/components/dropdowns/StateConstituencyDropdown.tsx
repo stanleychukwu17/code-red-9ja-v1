@@ -9,6 +9,7 @@ import { DropdownGroupList } from "@repo/ui/components/custom/AppDropdown";
 import { DeleteAlertDialog } from "../alerts/delete-alert";
 import { StateConstituencyFormDialog } from "../dialogs/StateConstituencyFormDialog";
 import type { StateConstituencyType } from "../tiles/state-constituency-tile";
+import { QUERY_KEYS } from "#/lib/config";
 
 interface StateConstituencyDropdownProps {
   data: StateConstituencyType;
@@ -33,7 +34,7 @@ export const StateConstituencyDropdown = ({
       return res.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["state-constituencies"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.bodies.stateConstituencies });
       setOpenDeleteAlert(false);
     },
   });

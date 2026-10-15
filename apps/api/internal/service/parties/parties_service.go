@@ -87,7 +87,7 @@ type NotificationsService interface {
 
 // NewPartiesService creates a new PartiesService.
 // monnify may be nil in test environments — wallet creation will be skipped.
-func NewPartiesService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client, monnify *monnifyclient.Client, u *utils.Utils, ns NotificationsService, bs BlocksService, as audit.AuditService) *PartiesService {
+func NewPartiesService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client, monnify *monnifyclient.Client, u *utils.Utils, ns NotificationsService, bs BlocksService, as audit.AuditService, bodiesService BodiesService, usersService UsersService) *PartiesService {
 	return &PartiesService{
 		queries:              q,
 		pool:                 pool,
@@ -97,22 +97,14 @@ func NewPartiesService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client
 		notificationsService: ns,
 		blocksService:        bs,
 		auditService:         as,
+		bodiesService:        bodiesService,
+		usersService:         usersService,
 	}
 }
 
 // SetPageVerificationsService sets the PageVerificationsService to avoid circular dependency in constructor.
 func (s *PartiesService) SetPageVerificationsService(pvs PageVerificationsService) {
 	s.pageVerificationsService = pvs
-}
-
-// SetUsersService sets the UsersService to avoid circular dependency in constructor.
-func (s *PartiesService) SetUsersService(us UsersService) {
-	s.usersService = us
-}
-
-// SetBodiesService sets the BodiesService for entity existence checks.
-func (s *PartiesService) SetBodiesService(bs BodiesService) {
-	s.bodiesService = bs
 }
 
 // SetFollowsService sets the service used to follow chapters after joining.
@@ -1243,10 +1235,8 @@ func (s *PartiesService) GetOrCreateNationalChapter(ctx context.Context, partyID
 	}
 
 	// 2. Validate that the country exists
-	if s.bodiesService != nil {
-		if _, err := s.bodiesService.CheckCountry(ctx, countryID); err != nil {
-			return 0, fmt.Errorf("invalid country: %w", err)
-		}
+	if _, err := s.bodiesService.CheckCountry(ctx, countryID); err != nil {
+		return 0, fmt.Errorf("invalid country: %w", err)
 	}
 
 	// 3. Fast-path: Check Redis cache
@@ -1300,10 +1290,8 @@ func (s *PartiesService) GetOrCreateZonalChapter(ctx context.Context, partyID, z
 	}
 
 	// 2. Validate that the geopolitical zone exists
-	if s.bodiesService != nil {
-		if _, err := s.bodiesService.CheckZone(ctx, zonalID); err != nil {
-			return 0, fmt.Errorf("invalid zone: %w", err)
-		}
+	if _, err := s.bodiesService.CheckZone(ctx, zonalID); err != nil {
+		return 0, fmt.Errorf("invalid zone: %w", err)
 	}
 
 	// 3. Fast-path: Check Redis cache
@@ -1357,10 +1345,8 @@ func (s *PartiesService) GetOrCreateStateChapter(ctx context.Context, partyID, s
 	}
 
 	// 2. Validate that the state exists
-	if s.bodiesService != nil {
-		if _, err := s.bodiesService.CheckStateByID(ctx, stateID); err != nil {
-			return 0, fmt.Errorf("invalid state: %w", err)
-		}
+	if _, err := s.bodiesService.CheckStateByID(ctx, stateID); err != nil {
+		return 0, fmt.Errorf("invalid state: %w", err)
 	}
 
 	// 3. Fast-path: Check Redis cache
@@ -1414,10 +1400,8 @@ func (s *PartiesService) GetOrCreateLGAChapter(ctx context.Context, partyID int1
 	}
 
 	// 2. Validate that the LGA exists
-	if s.bodiesService != nil {
-		if _, err := s.bodiesService.CheckLGA(ctx, lgaID); err != nil {
-			return 0, fmt.Errorf("invalid LGA: %w", err)
-		}
+	if _, err := s.bodiesService.CheckLGA(ctx, lgaID); err != nil {
+		return 0, fmt.Errorf("invalid LGA: %w", err)
 	}
 
 	// 3. Fast-path: Check Redis cache
@@ -1471,10 +1455,8 @@ func (s *PartiesService) GetOrCreateWardChapter(ctx context.Context, partyID int
 	}
 
 	// 2. Validate that the ward exists
-	if s.bodiesService != nil {
-		if _, err := s.bodiesService.CheckWard(ctx, wardID); err != nil {
-			return 0, fmt.Errorf("invalid ward: %w", err)
-		}
+	if _, err := s.bodiesService.CheckWard(ctx, wardID); err != nil {
+		return 0, fmt.Errorf("invalid ward: %w", err)
 	}
 
 	// 3. Fast-path: Check Redis cache

@@ -83,7 +83,7 @@ export function FederalConstituencyElectionFormDialog({
 
   // Fetch all Federal Constituencies in Nigeria
   const { data: constituenciesData } = useQuery({
-    queryKey: ["federal-constituencies-all"],
+    queryKey: [...QUERY_KEYS.bodies.federalConstituencies, "all"],
     queryFn: async () => {
       const res = await getFederalConstituencies({ data: { limit: 400 } });
       if (res && res.success && res.data?.constituencies) {

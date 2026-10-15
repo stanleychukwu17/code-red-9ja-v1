@@ -7,6 +7,7 @@ import (
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/worker"
+	"log/slog"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -73,8 +74,8 @@ func (s *ElectionGroupsService) GetSafeNationalMetrics(ctx context.Context) quer
 	}
 }
 
-// CreateElectionGroup creates a new election group umbrella record with snapshotted national metrics
-// and invalidates related election group caches. Geographic stats seeding is deferred to child election creation.
+// CreateElectionGroup creates a new election group umbrella record,
+// invalidates related election group caches, and enqueues a background task to seed its geographic hierarchy stats.
 func (s *ElectionGroupsService) CreateElectionGroup(ctx context.Context, name string, year int16) (queries.ElectionGroup, error) {
 	// Persist the new election group record
 	eg, err := s.queries.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{
@@ -87,6 +88,15 @@ func (s *ElectionGroupsService) CreateElectionGroup(ctx context.Context, name st
 
 	// Invalidate global election group caches
 	s.invalidateCache(ctx, nil)
+
+	// Seed geographic hierarchy stats for this new election group asynchronously in the background
+	if s.distributor != nil && eg.ID > 0 {
+		if err := s.distributor.DistributeTaskSeedElectionGroupStats(ctx, &worker.SeedElectionGroupStatsPayload{
+			ElectionGroupID: eg.ID,
+		}); err != nil {
+			slog.Warn("failed to enqueue seed election group stats task", "election_group_id", eg.ID, "error", err)
+		}
+	}
 
 	return eg, nil
 }

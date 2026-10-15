@@ -17,6 +17,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { BodiesDropdown } from "#/components/dropdowns/BodiesDropdown";
 import type { LgaType } from "#/components/tiles/lga-tile";
 import { Loader2 } from "lucide-react";
+import { QUERY_KEYS } from "#/lib/config";
 
 export const Route = createFileRoute("/_authenticated/bodies/lgas")({
   head: () => getPageHeader({ title: "Bodies - LGAs" }),
@@ -30,7 +31,7 @@ function RouteComponent() {
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, error } =
     useInfiniteQuery({
-      queryKey: ["lgas", debouncedSearchQuery],
+      queryKey: [...QUERY_KEYS.bodies.lgas, debouncedSearchQuery],
       queryFn: async ({ pageParam }) => {
         const res = await getLGAs({
           data: { limit: 20, cursor: pageParam, search: debouncedSearchQuery || undefined },

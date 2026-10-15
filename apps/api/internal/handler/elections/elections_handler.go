@@ -15,7 +15,6 @@ import (
 )
 
 type ElectionsService interface {
-	CreateElection(ctx context.Context, name string, electionDate time.Time, electionGroupID int32, officeID int16, stateID *int16, senatorialDistrictID, federalConstituencyID, stateConstituencyID, lgaID, wardID *int32) (queries.Election, error)
 	CreateNationwideElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32) (queries.Election, error)
 	CreateStateElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, stateIDs []int16) ([]queries.Election, error)
 	CreateSenatorialDistrictElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, senatorialDistrictIDs []int32) ([]queries.Election, error)
@@ -74,19 +73,6 @@ func parsePaginationParams(r *http.Request) (int, int64) {
 		}
 	}
 	return limit, cursor
-}
-
-type CreateElectionRequest struct {
-	Name                  string         `json:"name"`
-	ElectionDate          utils.JSONDate `json:"election_date"`
-	ElectionGroupID       int32          `json:"election_group_id"`
-	OfficeID              int16          `json:"office_id"`
-	StateID               *int16         `json:"state_id,omitempty"`
-	SenatorialDistrictID  *int32         `json:"senatorial_district_id,omitempty"`
-	FederalConstituencyID *int32         `json:"federal_constituency_id,omitempty"`
-	StateConstituencyID   *int32         `json:"state_constituency_id,omitempty"`
-	LgaID                 *int32         `json:"lga_id,omitempty"`
-	WardID                *int32         `json:"ward_id,omitempty"`
 }
 
 type UpdateElectionRequest struct {
@@ -154,56 +140,6 @@ type CreateWardElectionRequest struct {
 	ElectionDate    utils.JSONDate `json:"election_date"`
 	ElectionGroupID int32          `json:"election_group_id"`
 	WardIDs         []int32        `json:"ward_ids"`
-}
-
-// CreateElection godoc
-// @Summary      Create a new election
-// @Description  Creates a new election with name, candidates count, date, group ID, and type ID
-// @Tags         Elections
-// @Accept       json
-// @Produce      json
-// @Param        request body CreateElectionRequest true "Create Election payload"
-// @Success      201  {object} map[string]interface{} "Election created successfully"
-// @Failure      400  {object} map[string]interface{} "Invalid request payload or missing fields"
-// @Failure      500  {object} map[string]interface{} "Internal server error"
-// @Router       /elections [post]
-func (h *Handler) CreateElection(w http.ResponseWriter, r *http.Request) {
-	// Parse and decode incoming JSON request payload
-	var req CreateElectionRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
-		return
-	}
-
-	// Validate mandatory fields
-	if req.Name == "" || req.ElectionDate.IsZero() || req.ElectionGroupID <= 0 || req.OfficeID <= 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "name, election_date, election_group_id, and office_id are required")
-		return
-	}
-
-	// Create single election instance with associated geographic boundaries
-	ei, err := h.service.CreateElection(
-		r.Context(),
-		req.Name,
-		req.ElectionDate.Time(),
-		req.ElectionGroupID,
-		req.OfficeID,
-		req.StateID,
-		req.SenatorialDistrictID,
-		req.FederalConstituencyID,
-		req.StateConstituencyID,
-		req.LgaID,
-		req.WardID,
-	)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create election: "+err.Error())
-		return
-	}
-
-	// Return successful response with the created election entity
-	h.utils.RespondSuccess(w, http.StatusCreated, "Election created successfully", map[string]interface{}{
-		"election": ei,
-	})
 }
 
 // CreateNationwideElection godoc
