@@ -100,8 +100,7 @@ const (
 	//--START-- for elections and election groups
 	RedisElectionGroupsAll  = "election_groups:all" // STRING: used to store and retrieve all election groups JSON.
 	RedisElectionGroupByID  = "election_group:"     // STRING: "election_group:<id>" used to store and retrieve single election group JSON.
-	RedisElectionsAll       = "elections:all"       // STRING: used to store and retrieve all elections JSON.
-	RedisElectionInfo      = "election:"           // STRING: "election:<id>" used to store and retrieve single election JSON.
+	RedisElectionByID       = "election:"           // STRING: "election:<id>" used to store and retrieve single election JSON.
 	//--END--
 
 	//--START-- for background worker & cron distributed locks
@@ -172,8 +171,7 @@ var AllRedisPrefixes = []string{
 	RedisOfficesAll,
 	RedisElectionGroupsAll,
 	RedisElectionGroupByID,
-	RedisElectionsAll,
-	RedisElectionInfo,
+	RedisElectionByID,
 	RedisCronLockINECGrabberSync,
 	RedisCronLockMarketingDeductionsPrefix,
 	RedisUserBlockedPartyIDs,

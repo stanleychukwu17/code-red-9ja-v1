@@ -30,9 +30,8 @@ func NewElectionGroupsService(q *queries.Queries, rdb *redis.Client, distributor
 // invalidateCache purges the cached collections for all election groups and elections,
 // as well as the individual election group cache entry if a specific group ID is provided.
 func (s *ElectionGroupsService) invalidateCache(ctx context.Context, id *int32) {
-	// 1. Clear global collections for election groups and elections
+	// 1. Clear global collections for election groups
 	s.rdb.Del(ctx, db.RedisElectionGroupsAll)
-	s.rdb.Del(ctx, db.RedisElectionsAll)
 
 	// 2. If a specific group ID is provided, invalidate its individual cache key
 	if id != nil {

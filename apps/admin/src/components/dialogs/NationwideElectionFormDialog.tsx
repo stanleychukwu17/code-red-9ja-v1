@@ -1,6 +1,7 @@
+import { useEffect, useMemo, useState } from "react";
 import { getElectionGroups } from "#/lib/server/election_groups";
 import { createNationwideElection } from "#/lib/server/elections";
-import { getOffices } from "#/lib/server/offices";
+import { getContestedOffices } from "#/lib/server/offices";
 import { ElectionGroupBullet } from "@repo/ui/components/bullets/election-group-bullet";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -15,43 +16,40 @@ import { SelectDate } from "@repo/ui/components/selects/date-select";
 import { SelectOffice } from "@repo/ui/components/selects/office-select";
 import { useForm, useStore } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plus } from "lucide-react";
-import * as React from "react";
-import type { UserResult } from "./UserFormDialog";
-import { UserFormDialog } from "./UserFormDialog";
+import { Loader2 } from "lucide-react";
 import { ElectionGroupFormDialog } from "./ElectionGroupFormDialog";
 import { Label } from "@repo/ui/components/input";
-import { CandidateRow } from "./CandidateRow";
-import { UserFinderCommand } from "@repo/ui/components/custom/UserFinderCommand";
-import { getUsersList } from "#/lib/server/users";
 import { TinyError } from "@repo/ui/components/custom/TinyError";
+import { QUERY_KEYS } from "#/lib/config";
 
+export type NationwideElectionFormDialogProps = {
+  open: boolean;
+  onClose: () => void;
+  onSuccess?: () => void;
+};
+
+/**
+ * Modal dialog for creating a nationwide election (e.g. Presidential election)
+ * with office selection, election date, and optional election group.
+ * Candidates are managed separately via ManageCandidatesDialog.
+ */
 export function NationwideElectionFormDialog({
   open,
   onClose,
   onSuccess,
-}: {
-  open: boolean;
-  onClose: () => void;
-  onSuccess?: () => void;
-}) {
+}: NationwideElectionFormDialogProps) {
   const queryClient = useQueryClient();
-  const [error, setError] = React.useState<string | null>(null);
-  const [isGroupDialogOpen, setIsGroupDialogOpen] = React.useState(false);
-  const [isCandidateDialogOpen, setIsCandidateDialogOpen] =
-    React.useState(false);
-  const [isExistingDialogOpen, setIsExistingDialogOpen] = React.useState(false);
-  const [candidates, setCandidates] = React.useState<any[]>([]);
-  const [selectedOfficeName, setSelectedOfficeName] = React.useState<
-    string | null
-  >(null);
-  const [selectedElectionDate, setSelectedElectionDate] = React.useState<
-    string | null
-  >(null);
-  const [selectedGroupDate, setSelectedGroupDate] = React.useState<
-    string | null
-  >(null);
+  const [error, setError] = useState<string | null>(null);
 
+  // Sub-dialog visibility controls
+  const [isGroupDialogOpen, setIsGroupDialogOpen] = useState(false);
+
+  // Form display metadata
+  const [selectedOfficeName, setSelectedOfficeName] = useState<string | null>(null);
+  const [selectedElectionDate, setSelectedElectionDate] = useState<string | null>(null);
+  const [selectedGroupDate, setSelectedGroupDate] = useState<string | null>(null);
+
+  // Form management
   const form = useForm({
     defaultValues: {
       electionGroupId: undefined as number | undefined,
@@ -63,29 +61,30 @@ export function NationwideElectionFormDialog({
     },
   });
 
-  const selectedOfficeId = useStore(
-    form.store,
-    (state) => state.values.officeId,
-  );
+  // Track currently selected office ID from form store
+  const selectedOfficeId = useStore(form.store, (state) => state.values.officeId);
 
+  // Fetch available contested offices
   const { data: officesData } = useQuery({
-    queryKey: ["election-types", "list"],
+    queryKey: QUERY_KEYS.offices.contested,
     queryFn: async () => {
-      const res = await getOffices();
+      const res = await getContestedOffices({ data: { limit: 100 } });
       if (res && res.success && res.data?.offices) {
         return res.data.offices;
       }
       return [];
     },
+    staleTime: Infinity,
+    gcTime: Infinity,
     enabled: open,
   });
 
-  React.useEffect(() => {
+  // Reset all state when the dialog is opened
+  useEffect(() => {
     if (open) {
       form.setFieldValue("electionGroupId", undefined);
       form.setFieldValue("electionDate", "");
       form.setFieldValue("officeId", undefined);
-      setCandidates([]);
       setError(null);
       setSelectedOfficeName(null);
       setSelectedElectionDate(null);
@@ -93,8 +92,8 @@ export function NationwideElectionFormDialog({
     }
   }, [open]);
 
-  // Auto-select matching Nationwide office (President) when offices data loads
-  React.useEffect(() => {
+  // Auto-select matching Nationwide office (e.g. President) when offices data loads
+  useEffect(() => {
     if (open && officesData && officesData.length > 0 && !selectedOfficeId) {
       const matching = officesData.find((o: any) => o.scope === "nationwide");
       if (matching) {
@@ -104,7 +103,8 @@ export function NationwideElectionFormDialog({
     }
   }, [open, officesData, selectedOfficeId]);
 
-  const electionGroupButtonText = React.useMemo(() => {
+  // Compute label text for the election group trigger button
+  const electionGroupButtonText = useMemo(() => {
     const year = selectedElectionDate
       ? new Date(selectedElectionDate).getFullYear()
       : null;
@@ -114,6 +114,7 @@ export function NationwideElectionFormDialog({
     return undefined;
   }, [selectedElectionDate, selectedOfficeName]);
 
+  // Submit mutation to create the nationwide election
   const saveMutation = useMutation({
     mutationFn: async (values: {
       electionGroupId: number | undefined;
@@ -127,23 +128,11 @@ export function NationwideElectionFormDialog({
         throw new Error("Office is required");
       }
 
-      const missingPartyIndex = candidates.findIndex((c) => !c.party_id);
-      if (missingPartyIndex !== -1) {
-        throw new Error(
-          `Please select a party for candidate: ${candidates[missingPartyIndex].first_name}`,
-        );
-      }
-
       const res = await createNationwideElection({
         data: {
           office_id: values.officeId,
           election_date: values.electionDate,
           election_group_id: values.electionGroupId,
-          candidates: candidates.map((c) => ({
-            candidate_id: c.id,
-            party_id: c.party_id!,
-            party_short_name: c.party_short_name,
-          })),
         },
       });
 
@@ -162,50 +151,10 @@ export function NationwideElectionFormDialog({
     },
   });
 
-  const handleAddNewCandidateSuccess = (newCand: UserResult) => {
-    setCandidates((prev) => [...prev, newCand]);
-  };
-
-  const handleRemoveCandidate = (index: number) => {
-    setCandidates((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const handleAddMultipleExistingCandidates = (selectedUsers: any[]) => {
-    setCandidates((prev) => {
-      const updated = [...prev];
-      selectedUsers.forEach((userItem) => {
-        if (!updated.some((c) => c.id === userItem.id)) {
-          updated.push({
-            id: userItem.id,
-            first_name: `${userItem.first_name} ${userItem.last_name}`,
-            avatar_url: userItem.avatar || undefined,
-            party_id: userItem.party_id || undefined,
-          });
-        }
-      });
-      return updated;
-    });
-  };
-
-  const handleUpdateCandidateParty = async (index: number, newParty: any) => {
-    setCandidates((prev) =>
-      prev.map((c, i) =>
-        i === index
-          ? {
-              ...c,
-              party_id: newParty.id,
-              party_short_name: newParty.short_name,
-              party_logo: newParty.logo,
-            }
-          : c,
-      ),
-    );
-  };
-
   return (
     <>
       <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent className="max-w-[580px] p-0 rounded-2xl border-none shadow-2xl   overflow-visible">
+        <DialogContent className="max-w-145 p-0 rounded-2xl border-none shadow-2xl overflow-visible">
           <DialogHeader title="Nationwide Election" />
 
           <form
@@ -235,7 +184,7 @@ export function NationwideElectionFormDialog({
                           field.handleChange(item.id);
                           setSelectedOfficeName(item.name);
                         }}
-                        fetchOffices={getOffices}
+                        fetchOffices={getContestedOffices}
                         filterScope="nationwide"
                         errorMsg={field.state.meta.errors?.join(", ")}
                       />
@@ -269,61 +218,10 @@ export function NationwideElectionFormDialog({
                   />
                 </div>
               </div>
-
-              {/* Candidates Section */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-[15px] font-semibold text-c-70">
-                    Candidates
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      type="button"
-                      variant="black"
-                      size="lg"
-                      className="px-4"
-                      onClick={() => setIsExistingDialogOpen(true)}
-                    >
-                      <Plus className="size-4" />
-                      <span>Existing</span>
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="black"
-                      size="lg"
-                      className="px-4"
-                      onClick={() => setIsCandidateDialogOpen(true)}
-                    >
-                      <Plus className="size-4" />
-                      <span>New</span>
-                    </Button>
-                  </div>
-                </div>
-
-                {candidates.length === 0 ? (
-                  <div className="h-32 rounded-xl bg-[#f7f7f7] border border-dashed border-[#e2e8f0] flex items-center justify-center">
-                    <span className="text-[15px] text-c-40 font-semibold">
-                      0 candidates
-                    </span>
-                  </div>
-                ) : (
-                  <div className="space-y-2 max-h-60 overflow-y-auto p-1">
-                    {candidates.map((cand, idx) => (
-                      <CandidateRow
-                        key={cand.id}
-                        candidate={cand}
-                        index={idx}
-                        onUpdateParty={handleUpdateCandidateParty}
-                        onRemove={handleRemoveCandidate}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
             </DialogPadding>
-            {/* Election Group & Election Date dropdowns side by side */}
+
+            {/* Election Group selector */}
             <DialogToolbelt>
-              {/* Election Group */}
               <form.Field
                 name="electionGroupId"
                 children={(field) => (
@@ -345,6 +243,7 @@ export function NationwideElectionFormDialog({
                 )}
               />
             </DialogToolbelt>
+
             <DialogFooter>
               <Button
                 type="submit"
@@ -361,40 +260,13 @@ export function NationwideElectionFormDialog({
         </DialogContent>
       </Dialog>
 
+      {/* Sub-dialog for creating an election group on the fly */}
       <ElectionGroupFormDialog
         open={isGroupDialogOpen}
         onClose={() => setIsGroupDialogOpen(false)}
         onSuccess={(newGroupId) => {
           form.setFieldValue("electionGroupId", newGroupId);
         }}
-      />
-
-      <UserFormDialog
-        open={isCandidateDialogOpen}
-        onClose={() => setIsCandidateDialogOpen(false)}
-        onSuccess={handleAddNewCandidateSuccess}
-      />
-
-      <UserFinderCommand
-        open={isExistingDialogOpen}
-        onClose={() => setIsExistingDialogOpen(false)}
-        onAddUsers={handleAddMultipleExistingCandidates}
-        alreadySelectedIds={candidates.map((c) => c.id)}
-        fetchUsers={async ({ cursor, search }) => {
-          const res = await getUsersList({
-            data: { cursor, search, limit: 20 },
-          });
-          if (res && res.success && res.data?.users) {
-            return {
-              users: res.data.users,
-              nextCursor: res.data.meta?.next_cursor,
-            };
-          }
-          return { users: [] };
-        }}
-        title="Search Candidates"
-        placeholder="Search candidates to add"
-        selectMode="multiple"
       />
     </>
   );

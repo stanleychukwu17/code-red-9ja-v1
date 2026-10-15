@@ -1,27 +1,40 @@
 -- name: CreateElectionInstance :one
 INSERT INTO elections (
-  name, candidates_count, election_date, election_group_id,
-  office_id, office_name, scope,
+  name, election_date, election_group_id,
+  office_id, scope,
   state_id, senatorial_district_id, federal_constituency_id,
   state_constituency_id, lga_id, ward_id
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 RETURNING *;
 
 -- name: GetElectionInstanceByID :one
 SELECT * FROM elections WHERE id = $1;
 
 -- name: ListElectionInstances :many
-SELECT * FROM elections
-ORDER BY election_date DESC, id DESC;
+SELECT 
+  e.*,
+  o.name AS office_name,
+  o.rank AS office_rank,
+  eg.name AS election_group_name
+FROM elections e
+JOIN offices o ON e.office_id = o.id
+JOIN election_groups eg ON e.election_group_id = eg.id
+WHERE (
+  sqlc.narg('cursor_election_date')::date IS NULL 
+  OR (e.election_date < sqlc.narg('cursor_election_date')::date)
+  OR (e.election_date = sqlc.narg('cursor_election_date')::date AND e.id < sqlc.arg('cursor_id')::int)
+)
+ORDER BY e.election_date DESC, e.id DESC
+LIMIT sqlc.arg('limit_count')::int;
 
 -- name: UpdateElectionInstance :one
 UPDATE elections
-SET name = $1, candidates_count = $2, election_date = $3, election_group_id = $4,
-    office_id = $5, office_name = $6, scope = $7,
-    state_id = $8, senatorial_district_id = $9, federal_constituency_id = $10,
-    state_constituency_id = $11, lga_id = $12, ward_id = $13, updated_at = NOW()
-WHERE id = $14
+SET name = $1, election_date = $2, election_group_id = $3,
+    office_id = $4, scope = $5,
+    state_id = $6, senatorial_district_id = $7, federal_constituency_id = $8,
+    state_constituency_id = $9, lga_id = $10, ward_id = $11, updated_at = NOW()
+WHERE id = $12
 RETURNING *;
 
 -- name: UpdateElectionContestingParties :one
@@ -71,13 +84,11 @@ AND candidate_id IN (SELECT users.id FROM users WHERE users.party_id = $2);
 -- name: GetElectionCandidatesCount :one
 SELECT COUNT(*) FROM election_candidates WHERE election_id = $1;
 
--- name: UpdateElectionCandidatesCount :exec
-UPDATE elections SET candidates_count = $2 WHERE id = $1;
 -- name: ListElectionsDetailedByGroupID :many
 SELECT 
   e.*,
   o.election AS office_election,
-  o.name AS office_name_full,
+  o.name AS office_name,
   o.rank AS office_rank
 FROM elections e
 JOIN offices o ON e.office_id = o.id

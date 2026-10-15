@@ -66,10 +66,9 @@ func (s *ElectionsService) getSafeNationalMetrics(ctx context.Context) queries.N
 
 // invalidateCache clears Redis cached lists for elections and election groups, as well as single election details.
 func (s *ElectionsService) invalidateCache(ctx context.Context, id *int32) {
-	s.rdb.Del(ctx, db.RedisElectionsAll)
 	s.rdb.Del(ctx, db.RedisElectionGroupsAll)
 	if id != nil {
-		s.rdb.Del(ctx, fmt.Sprintf("%s%d", db.RedisElectionInfo, *id))
+		s.rdb.Del(ctx, fmt.Sprintf("%s%d", db.RedisElectionByID, *id))
 	}
 }
 
@@ -91,7 +90,6 @@ func (s *ElectionsService) enqueueSeedElectionGroupStats(ctx context.Context, el
 func (s *ElectionsService) CreateElection(
 	ctx context.Context,
 	name string,
-	candidatesCount int32,
 	electionDate time.Time,
 	electionGroupID int32,
 	officeID int16,
@@ -241,11 +239,9 @@ func (s *ElectionsService) CreateElection(
 	// 5. Persist the election instance record
 	election, err := txQueries.CreateElectionInstance(ctx, queries.CreateElectionInstanceParams{
 		Name:                  name,
-		CandidatesCount:       candidatesCount,
 		ElectionDate:          pgtype.Date{Time: electionDate, Valid: true},
 		ElectionGroupID:       electionGroupID,
 		OfficeID:              officeID,
-		OfficeName:            et.Name,
 		Scope:                 et.Scope,
 		StateID:               stateID2,
 		SenatorialDistrictID:  senatorialDistrictID4,
@@ -346,11 +342,9 @@ func (s *ElectionsService) CreateNationwideElection(ctx context.Context, officeI
 	name := etElection + " Election"
 	election, err := txQueries.CreateElectionInstance(ctx, queries.CreateElectionInstanceParams{
 		Name:            name,
-		CandidatesCount: int32(len(candidates)),
 		ElectionDate:    pgtype.Date{Time: electionDate, Valid: true},
 		ElectionGroupID: groupID,
 		OfficeID:        officeID,
-		OfficeName:      et.Name,
 		Scope:           "nationwide",
 	})
 	if err != nil {
@@ -459,11 +453,9 @@ func (s *ElectionsService) CreateStateElection(ctx context.Context, officeID int
 		name := fmt.Sprintf("%s Election (%s)", etElection, stateName)
 		election, err := txQueries.CreateElectionInstance(ctx, queries.CreateElectionInstanceParams{
 			Name:            name,
-			CandidatesCount: 0,
 			ElectionDate:    pgtype.Date{Time: electionDate, Valid: true},
 			ElectionGroupID: groupID,
 			OfficeID:        officeID,
-			OfficeName:      et.Name,
 			Scope:           "state",
 			StateID:         pgtype.Int2{Int16: stateID, Valid: true},
 		})
@@ -587,11 +579,9 @@ func (s *ElectionsService) CreateSenatorialDistrictElection(ctx context.Context,
 		name := fmt.Sprintf("%s Election (%s)", etElection, districtName)
 		election, err := txQueries.CreateElectionInstance(ctx, queries.CreateElectionInstanceParams{
 			Name:                 name,
-			CandidatesCount:      0,
 			ElectionDate:         pgtype.Date{Time: electionDate, Valid: true},
 			ElectionGroupID:      groupID,
 			OfficeID:             officeID,
-			OfficeName:           et.Name,
 			Scope:                "senatorial-district",
 			StateID:              stateID,
 			SenatorialDistrictID: pgtype.Int4{Int32: districtID, Valid: true},
@@ -724,11 +714,9 @@ func (s *ElectionsService) CreateFederalConstituencyElection(ctx context.Context
 		name := fmt.Sprintf("%s Election (%s)", etElection, constituencyName)
 		election, err := txQueries.CreateElectionInstance(ctx, queries.CreateElectionInstanceParams{
 			Name:                  name,
-			CandidatesCount:       0,
 			ElectionDate:          pgtype.Date{Time: electionDate, Valid: true},
 			ElectionGroupID:       groupID,
 			OfficeID:              officeID,
-			OfficeName:            et.Name,
 			Scope:                 "federal-constituency",
 			StateID:               stateID,
 			SenatorialDistrictID:  senatorialDistrictID,
@@ -870,11 +858,9 @@ func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, 
 		name := fmt.Sprintf("%s Election (%s)", etElection, constituencyName)
 		election, err := txQueries.CreateElectionInstance(ctx, queries.CreateElectionInstanceParams{
 			Name:                  name,
-			CandidatesCount:       0,
 			ElectionDate:          pgtype.Date{Time: electionDate, Valid: true},
 			ElectionGroupID:       groupID,
 			OfficeID:              officeID,
-			OfficeName:            et.Name,
 			Scope:                 "state-constituency",
 			StateID:               stateID,
 			SenatorialDistrictID:  senatorialDistrictID,
@@ -1011,11 +997,9 @@ func (s *ElectionsService) CreateLgaElection(ctx context.Context, officeID int16
 		name := fmt.Sprintf("%s Election (%s)", etElection, lgaName)
 		election, err := txQueries.CreateElectionInstance(ctx, queries.CreateElectionInstanceParams{
 			Name:                  name,
-			CandidatesCount:       0,
 			ElectionDate:          pgtype.Date{Time: electionDate, Valid: true},
 			ElectionGroupID:       groupID,
 			OfficeID:              officeID,
-			OfficeName:            et.Name,
 			Scope:                 "lga",
 			StateID:               stateID,
 			SenatorialDistrictID:  senatorialDistrictID,
@@ -1175,11 +1159,9 @@ func (s *ElectionsService) CreateWardElection(ctx context.Context, officeID int1
 		name := fmt.Sprintf("%s Election (%s)", etElection, wardName)
 		election, err := txQueries.CreateElectionInstance(ctx, queries.CreateElectionInstanceParams{
 			Name:                  name,
-			CandidatesCount:       0,
 			ElectionDate:          pgtype.Date{Time: electionDate, Valid: true},
 			ElectionGroupID:       groupID,
 			OfficeID:              officeID,
-			OfficeName:            et.Name,
 			Scope:                 "ward",
 			StateID:               stateID,
 			SenatorialDistrictID:  senatorialDistrictID,
@@ -1231,7 +1213,7 @@ func (s *ElectionsService) CreateWardElection(ctx context.Context, officeID int1
 // GetElectionByID fetches an election instance by its unique identifier.
 // It leverages Redis caching with a 24-hour TTL to minimize database queries for election metadata.
 func (s *ElectionsService) GetElectionByID(ctx context.Context, id int32) (queries.Election, error) {
-	cacheKey := fmt.Sprintf("%s%d", db.RedisElectionInfo, id)
+	cacheKey := fmt.Sprintf("%s%d", db.RedisElectionByID, id)
 
 	// 1. Attempt to fetch pre-cached election from Redis
 	val, err := s.rdb.Get(ctx, cacheKey).Result()
@@ -1256,32 +1238,36 @@ func (s *ElectionsService) GetElectionByID(ctx context.Context, id int32) (queri
 	return el, nil
 }
 
-// ListElections returns all election instances in the system.
-// Results are cached in Redis under db.RedisElectionsAll with a 24-hour TTL.
-func (s *ElectionsService) ListElections(ctx context.Context) ([]queries.Election, error) {
-	cacheKey := db.RedisElectionsAll
+// ListElections returns paginated election instances in the system using keyset cursor pagination.
+// Each row includes joined office and election group metadata.
+func (s *ElectionsService) ListElections(ctx context.Context, limit int32, cursor int64) ([]queries.ListElectionInstancesRow, error) {
+	if limit <= 0 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
 
-	// 1. Attempt to fetch pre-cached election list from Redis
-	val, err := s.rdb.Get(ctx, cacheKey).Result()
-	if err == nil {
-		var els []queries.Election
-		if err := json.Unmarshal([]byte(val), &els); err == nil {
-			return els, nil
+	var cursorElectionDate pgtype.Date
+	var cursorID int32
+
+	// If cursor is provided, fetch its election_date and id to seek the next page
+	if cursor > 0 {
+		cursorEl, err := s.queries.GetElectionInstanceByID(ctx, int32(cursor))
+		if err == nil {
+			cursorElectionDate = cursorEl.ElectionDate
+			cursorID = cursorEl.ID
 		}
 	}
 
-	// 2. Cache miss: retrieve all election instances from the database
-	els, err := s.queries.ListElectionInstances(ctx)
-	if err != nil {
-		return nil, err
+	// Fetch limit + 1 to determine if there are more records
+	params := queries.ListElectionInstancesParams{
+		CursorElectionDate: cursorElectionDate,
+		CursorID:           cursorID,
+		LimitCount:         limit + 1,
 	}
 
-	// 3. Cache serialized election list in Redis
-	if elsBytes, err := json.Marshal(els); err == nil {
-		s.rdb.Set(ctx, cacheKey, elsBytes, db.RedisNinetyDaysTTL)
-	}
-
-	return els, nil
+	return s.queries.ListElectionInstances(ctx, params)
 }
 
 // UpdateElection modifies an existing election instance, resolves any implied geographic ancestor IDs,
@@ -1290,7 +1276,6 @@ func (s *ElectionsService) UpdateElection(
 	ctx context.Context,
 	id int32,
 	name string,
-	candidatesCount int32,
 	electionDate time.Time,
 	electionGroupID int32,
 	officeID int16,
@@ -1315,11 +1300,9 @@ func (s *ElectionsService) UpdateElection(
 	el, err := s.queries.UpdateElectionInstance(ctx, queries.UpdateElectionInstanceParams{
 		ID:                    id,
 		Name:                  name,
-		CandidatesCount:       candidatesCount,
 		ElectionDate:          pgtype.Date{Time: electionDate, Valid: true},
 		ElectionGroupID:       electionGroupID,
 		OfficeID:              officeID,
-		OfficeName:            et.Name,
 		Scope:                 et.Scope,
 		StateID:               stateID2,
 		SenatorialDistrictID:  senatorialDistrictID4,
@@ -1447,34 +1430,8 @@ func (s *ElectionsService) SyncElectionCandidates(ctx context.Context, electionI
 		}
 	}
 
-	// 4. Fetch the election instance
-	el, err := txQueries.GetElectionInstanceByID(ctx, electionID)
-	if err != nil {
-		return err
-	}
-
-	// 5. Update candidates count on the election instance
-	_, err = txQueries.UpdateElectionInstance(ctx, queries.UpdateElectionInstanceParams{
-		ID:                    el.ID,
-		Name:                  el.Name,
-		CandidatesCount:       int32(len(candidates)),
-		ElectionDate:          el.ElectionDate,
-		ElectionGroupID:       el.ElectionGroupID,
-		OfficeID:              el.OfficeID,
-		OfficeName:            el.OfficeName,
-		Scope:                 el.Scope,
-		StateID:               el.StateID,
-		SenatorialDistrictID:  el.SenatorialDistrictID,
-		FederalConstituencyID: el.FederalConstituencyID,
-		StateConstituencyID:   el.StateConstituencyID,
-		LgaID:                 el.LgaID,
-		WardID:                el.WardID,
-	})
-	if err != nil {
-		return err
-	}
-
-	// 6. Commit transaction
+	// 4. Invalidate Redis caches and commit
+	s.invalidateCache(ctx, &electionID)
 	return tx.Commit(ctx)
 }
 
@@ -1583,22 +1540,8 @@ func (s *ElectionsService) FieldPartyCandidate(ctx context.Context, electionID i
 		}
 	}
 
-	// 4. Count remaining active candidates for the election
-	count, err := txQueries.GetElectionCandidatesCount(ctx, electionID)
-	if err != nil {
-		return err
-	}
-
-	// 5. Update candidates_count in elections table
-	err = txQueries.UpdateElectionCandidatesCount(ctx, queries.UpdateElectionCandidatesCountParams{
-		ID:              electionID,
-		CandidatesCount: int32(count),
-	})
-	if err != nil {
-		return err
-	}
-
-	// 6. Commit transaction
+	// 4. Commit transaction
+	s.invalidateCache(ctx, &electionID)
 	return tx.Commit(ctx)
 }
 

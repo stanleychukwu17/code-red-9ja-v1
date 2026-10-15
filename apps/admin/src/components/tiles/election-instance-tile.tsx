@@ -14,12 +14,12 @@ export type ElectionInstanceType = {
   id: number;
   name: string;
   rank?: number;
-  candidates_count: number;
+  candidates_count?: number;
   election_date: string;
   election_group_id: number;
   election_group_name?: string;
   office_id: number;
-  office_name: string;
+  office_name?: string;
   scope: string;
   state_id?: number | null;
   senatorial_district_id?: number | null;

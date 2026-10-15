@@ -96,7 +96,9 @@ export function AddButton({
   onAddWard,
   onAddPollingUnit,
 }: {
+  /** Fallback click handler triggered when no dropdown action props are provided */
   onClick?: () => void;
+  // Election-related action handlers
   onAddElection?: () => void;
   onAddElectionType?: () => void;
   onAddNationwideElection?: () => void;
@@ -106,6 +108,7 @@ export function AddButton({
   onAddStateConstituencyElection?: () => void;
   onAddLgaElection?: () => void;
   onAddWardElection?: () => void;
+  // Geographic and administrative boundary action handlers
   onAddState?: () => void;
   onAddDistrict?: () => void;
   onAddLga?: () => void;
@@ -114,43 +117,51 @@ export function AddButton({
   onAddWard?: () => void;
   onAddPollingUnit?: () => void;
 }) {
+  // Dropdown open/closed visibility state
   const [open, setOpen] = useState(false);
+  // Ref for detecting outside clicks to dismiss the dropdown menu
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // Close the dropdown when clicking anywhere outside of this component
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setOpen(false);
       }
     }
+
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const hasDropdown = !!(
-    onAddElection ||
-    onAddElectionType ||
-    onAddNationwideElection ||
-    onAddStateElection ||
-    onAddSenatorialElection ||
-    onAddFederalConstituencyElection ||
-    onAddStateConstituencyElection ||
-    onAddLgaElection ||
-    onAddWardElection ||
-    onAddState ||
-    onAddDistrict ||
-    onAddLga ||
-    onAddFederalConstituency ||
-    onAddStateConstituency ||
-    onAddWard ||
-    onAddPollingUnit
-  );
+  // Filter list of active dropdown options based on provided action props
+  const menuItems = [
+    // Election actions
+    { label: "Add Election", action: onAddElection },
+    { label: "New Nationwide Election", action: onAddNationwideElection },
+    { label: "New State Election", action: onAddStateElection },
+    { label: "New Senatorial District Election", action: onAddSenatorialElection },
+    { label: "New Federal Constituency Election", action: onAddFederalConstituencyElection },
+    { label: "New State Constituency Election", action: onAddStateConstituencyElection },
+    { label: "New LGA Election", action: onAddLgaElection },
+    { label: "New Ward Election", action: onAddWardElection },
+    { label: "Add Election Type", action: onAddElectionType },
+    // Geographic / Administrative boundary actions
+    { label: "New State", action: onAddState },
+    { label: "New District", action: onAddDistrict },
+    { label: "New LGA", action: onAddLga },
+    { label: "New Federal Constituency", action: onAddFederalConstituency },
+    { label: "New State Constituency", action: onAddStateConstituency },
+    { label: "New Ward", action: onAddWard },
+    { label: "New Polling Unit", action: onAddPollingUnit },
+  ].filter((item): item is { label: string; action: () => void } => Boolean(item.action));
+
+  // Dropdown is present if at least one specialized action is provided
+  const hasDropdown = menuItems.length > 0;
 
   return (
     <div className="relative" ref={dropdownRef}>
+      {/* Main trigger button: toggles menu if action callbacks exist, otherwise invokes onClick */}
       <button
         onClick={() => {
           if (hasDropdown) {
@@ -165,184 +176,21 @@ export function AddButton({
         <span>Add</span>
       </button>
 
+      {/* Dropdown menu list */}
       {hasDropdown && open && (
         <div className="absolute right-0 mt-2 w-64 rounded-[16px] bg-white p-2 shadow-[0px_4px_20px_rgba(0,0,0,0.08)] border border-[#f0f0f0] z-50">
-          {onAddElection && (
+          {menuItems.map((item) => (
             <button
+              key={item.label}
               onClick={() => {
-                onAddElection();
+                item.action();
                 setOpen(false);
               }}
               className="w-full text-left px-4 py-3 text-[15px] font-medium hover:bg-[#fafafa] rounded-[10px] text-[#1a1a1a] transition cursor-pointer"
             >
-              Add Election
+              {item.label}
             </button>
-          )}
-          {onAddNationwideElection && (
-            <button
-              onClick={() => {
-                onAddNationwideElection();
-                setOpen(false);
-              }}
-              className="w-full text-left px-4 py-3 text-[15px] font-medium hover:bg-[#fafafa] rounded-[10px] text-[#1a1a1a] transition cursor-pointer"
-            >
-              New Nationwide Election
-            </button>
-          )}
-          {onAddStateElection && (
-            <button
-              onClick={() => {
-                onAddStateElection();
-                setOpen(false);
-              }}
-              className="w-full text-left px-4 py-3 text-[15px] font-medium hover:bg-[#fafafa] rounded-[10px] text-[#1a1a1a] transition cursor-pointer"
-            >
-              New State Election
-            </button>
-          )}
-          {onAddSenatorialElection && (
-            <button
-              onClick={() => {
-                onAddSenatorialElection();
-                setOpen(false);
-              }}
-              className="w-full text-left px-4 py-3 text-[15px] font-medium hover:bg-[#fafafa] rounded-[10px] text-[#1a1a1a] transition cursor-pointer"
-            >
-              New Senatorial District Election
-            </button>
-          )}
-          {onAddFederalConstituencyElection && (
-            <button
-              onClick={() => {
-                onAddFederalConstituencyElection();
-                setOpen(false);
-              }}
-              className="w-full text-left px-4 py-3 text-[15px] font-medium hover:bg-[#fafafa] rounded-[10px] text-[#1a1a1a] transition cursor-pointer"
-            >
-              New Federal Constituency Election
-            </button>
-          )}
-          {onAddStateConstituencyElection && (
-            <button
-              onClick={() => {
-                onAddStateConstituencyElection();
-                setOpen(false);
-              }}
-              className="w-full text-left px-4 py-3 text-[15px] font-medium hover:bg-[#fafafa] rounded-[10px] text-[#1a1a1a] transition cursor-pointer"
-            >
-              New State Constituency Election
-            </button>
-          )}
-          {onAddLgaElection && (
-            <button
-              onClick={() => {
-                onAddLgaElection();
-                setOpen(false);
-              }}
-              className="w-full text-left px-4 py-3 text-[15px] font-medium hover:bg-[#fafafa] rounded-[10px] text-[#1a1a1a] transition cursor-pointer"
-            >
-              New LGA Election
-            </button>
-          )}
-          {onAddWardElection && (
-            <button
-              onClick={() => {
-                onAddWardElection();
-                setOpen(false);
-              }}
-              className="w-full text-left px-4 py-3 text-[15px] font-medium hover:bg-[#fafafa] rounded-[10px] text-[#1a1a1a] transition cursor-pointer"
-            >
-              New Ward Election
-            </button>
-          )}
-          {onAddElectionType && (
-            <button
-              onClick={() => {
-                onAddElectionType();
-                setOpen(false);
-              }}
-              className="w-full text-left px-4 py-3 text-[15px] font-medium hover:bg-[#fafafa] rounded-[10px] text-[#1a1a1a] transition cursor-pointer"
-            >
-              Add Election Type
-            </button>
-          )}
-          {onAddState && (
-            <button
-              onClick={() => {
-                onAddState();
-                setOpen(false);
-              }}
-              className="w-full text-left px-4 py-3 text-[15px] font-medium hover:bg-[#fafafa] rounded-[10px] text-[#1a1a1a] transition cursor-pointer"
-            >
-              New State
-            </button>
-          )}
-          {onAddDistrict && (
-            <button
-              onClick={() => {
-                onAddDistrict();
-                setOpen(false);
-              }}
-              className="w-full text-left px-4 py-3 text-[15px] font-medium hover:bg-[#fafafa] rounded-[10px] text-[#1a1a1a] transition cursor-pointer"
-            >
-              New District
-            </button>
-          )}
-          {onAddLga && (
-            <button
-              onClick={() => {
-                onAddLga();
-                setOpen(false);
-              }}
-              className="w-full text-left px-4 py-3 text-[15px] font-medium hover:bg-[#fafafa] rounded-[10px] text-[#1a1a1a] transition cursor-pointer"
-            >
-              New LGA
-            </button>
-          )}
-          {onAddFederalConstituency && (
-            <button
-              onClick={() => {
-                onAddFederalConstituency();
-                setOpen(false);
-              }}
-              className="w-full text-left px-4 py-3 text-[15px] font-medium hover:bg-[#fafafa] rounded-[10px] text-[#1a1a1a] transition cursor-pointer"
-            >
-              New Federal Constituency
-            </button>
-          )}
-          {onAddStateConstituency && (
-            <button
-              onClick={() => {
-                onAddStateConstituency();
-                setOpen(false);
-              }}
-              className="w-full text-left px-4 py-3 text-[15px] font-medium hover:bg-[#fafafa] rounded-[10px] text-[#1a1a1a] transition cursor-pointer"
-            >
-              New State Constituency
-            </button>
-          )}
-          {onAddWard && (
-            <button
-              onClick={() => {
-                onAddWard();
-                setOpen(false);
-              }}
-              className="w-full text-left px-4 py-3 text-[15px] font-medium hover:bg-[#fafafa] rounded-[10px] text-[#1a1a1a] transition cursor-pointer"
-            >
-              New Ward
-            </button>
-          )}
-          {onAddPollingUnit && (
-            <button
-              onClick={() => {
-                onAddPollingUnit();
-                setOpen(false);
-              }}
-              className="w-full text-left px-4 py-3 text-[15px] font-medium hover:bg-[#fafafa] rounded-[10px] text-[#1a1a1a] transition cursor-pointer"
-            >
-              New Polling Unit
-            </button>
-          )}
+          ))}
         </div>
       )}
     </div>

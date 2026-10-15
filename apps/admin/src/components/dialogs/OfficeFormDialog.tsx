@@ -12,6 +12,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { SelectElectionScope } from "@repo/ui/components/selects/election-scope-select";
 import { SelectRank } from "@repo/ui/components/selects/rank-select";
 import { createOffice, updateOffice } from "#/lib/server/offices";
+import { QUERY_KEYS } from "#/lib/config";
 import { Loader2 } from "lucide-react";
 import { FancyInput, Input } from "@repo/ui/components/input";
 import { TinyError } from "@repo/ui/components/custom/TinyError";
@@ -124,7 +125,7 @@ export function OfficeFormDialog({
       return res.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["offices"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.offices.all });
       onSuccess?.();
       onClose();
     },

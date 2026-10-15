@@ -408,7 +408,7 @@ type Querier interface {
 	ListElectionGroupWardStatsByGroup(ctx context.Context, arg ListElectionGroupWardStatsByGroupParams) ([]ElectionGroupWard, error)
 	ListElectionGroups(ctx context.Context) ([]ElectionGroup, error)
 	ListElectionGroupsWithPartyStats(ctx context.Context, partyID int16) ([]ListElectionGroupsWithPartyStatsRow, error)
-	ListElectionInstances(ctx context.Context) ([]Election, error)
+	ListElectionInstances(ctx context.Context, arg ListElectionInstancesParams) ([]ListElectionInstancesRow, error)
 	ListElectionsDetailedByGroupID(ctx context.Context, electionGroupID int32) ([]ListElectionsDetailedByGroupIDRow, error)
 	ListFiles(ctx context.Context, arg ListFilesParams) ([]File, error)
 	ListINECResultGrabberLogs(ctx context.Context, arg ListINECResultGrabberLogsParams) ([]InecResultGrabberLog, error)
@@ -532,7 +532,6 @@ type Querier interface {
 	UpdateAssetFolder(ctx context.Context, arg UpdateAssetFolderParams) (AssetFolder, error)
 	UpdateAssignmentReadinessPercentage(ctx context.Context, arg UpdateAssignmentReadinessPercentageParams) (UpdateAssignmentReadinessPercentageRow, error)
 	UpdateAssignmentTracking(ctx context.Context, arg UpdateAssignmentTrackingParams) (UpdateAssignmentTrackingRow, error)
-	UpdateElectionCandidatesCount(ctx context.Context, arg UpdateElectionCandidatesCountParams) error
 	UpdateElectionContestingParties(ctx context.Context, arg UpdateElectionContestingPartiesParams) (Election, error)
 	UpdateElectionGroup(ctx context.Context, arg UpdateElectionGroupParams) (ElectionGroup, error)
 	UpdateElectionInstance(ctx context.Context, arg UpdateElectionInstanceParams) (Election, error)

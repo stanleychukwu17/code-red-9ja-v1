@@ -8,16 +8,14 @@ import (
 	elections "free9ja/api/internal/service/elections"
 	"free9ja/api/internal/utils"
 	"net/http"
-	"sort"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 )
 
 type ElectionsService interface {
-	CreateElection(ctx context.Context, name string, candidatesCount int32, electionDate time.Time, electionGroupID int32, officeID int16, stateID *int16, senatorialDistrictID, federalConstituencyID, stateConstituencyID, lgaID, wardID *int32) (queries.Election, error)
+	CreateElection(ctx context.Context, name string, electionDate time.Time, electionGroupID int32, officeID int16, stateID *int16, senatorialDistrictID, federalConstituencyID, stateConstituencyID, lgaID, wardID *int32) (queries.Election, error)
 	CreateNationwideElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID *int32, candidates []elections.CandidateInput) (queries.Election, error)
 	CreateStateElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID *int32, stateIDs []int16) ([]queries.Election, error)
 	CreateSenatorialDistrictElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID *int32, senatorialDistrictIDs []int32) ([]queries.Election, error)
@@ -26,8 +24,8 @@ type ElectionsService interface {
 	CreateLgaElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID *int32, lgaIDs []int32) ([]queries.Election, error)
 	CreateWardElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID *int32, wardIDs []int32) ([]queries.Election, error)
 	GetElectionByID(ctx context.Context, id int32) (queries.Election, error)
-	ListElections(ctx context.Context) ([]queries.Election, error)
-	UpdateElection(ctx context.Context, id int32, name string, candidatesCount int32, electionDate time.Time, electionGroupID int32, officeID int16, stateID *int16, senatorialDistrictID, federalConstituencyID, stateConstituencyID, lgaID, wardID *int32) (queries.Election, error)
+	ListElections(ctx context.Context, limit int32, cursor int64) ([]queries.ListElectionInstancesRow, error)
+	UpdateElection(ctx context.Context, id int32, name string, electionDate time.Time, electionGroupID int32, officeID int16, stateID *int16, senatorialDistrictID, federalConstituencyID, stateConstituencyID, lgaID, wardID *int32) (queries.Election, error)
 	DeleteElection(ctx context.Context, id int32) error
 	GetElectionCandidates(ctx context.Context, electionID int32) ([]queries.ListElectionCandidatesDetailedByElectionIDRow, error)
 	SyncElectionCandidates(ctx context.Context, electionID int32, candidates []elections.CandidateInput) error
@@ -80,7 +78,6 @@ func parsePaginationParams(r *http.Request) (int, int64) {
 
 type CreateElectionRequest struct {
 	Name                  string         `json:"name"`
-	CandidatesCount       int32          `json:"candidates_count"`
 	ElectionDate          utils.JSONDate `json:"election_date"`
 	ElectionGroupID       int32          `json:"election_group_id"`
 	OfficeID              int16          `json:"office_id"`
@@ -94,7 +91,6 @@ type CreateElectionRequest struct {
 
 type UpdateElectionRequest struct {
 	Name                  string         `json:"name"`
-	CandidatesCount       int32          `json:"candidates_count"`
 	ElectionDate          utils.JSONDate `json:"election_date"`
 	ElectionGroupID       int32          `json:"election_group_id"`
 	OfficeID              int16          `json:"office_id"`
@@ -187,7 +183,6 @@ func (h *Handler) CreateElection(w http.ResponseWriter, r *http.Request) {
 	ei, err := h.service.CreateElection(
 		r.Context(),
 		req.Name,
-		req.CandidatesCount,
 		req.ElectionDate.Time(),
 		req.ElectionGroupID,
 		req.OfficeID,
@@ -468,62 +463,28 @@ func (h *Handler) CreateWardElection(w http.ResponseWriter, r *http.Request) {
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Router       /elections [get]
 func (h *Handler) ListElections(w http.ResponseWriter, r *http.Request) {
+	// Parse pagination limit and optional starting cursor ID from query params
 	limit, cursor := parsePaginationParams(r)
-	orderBy := r.URL.Query().Get("orderBy")
-	if orderBy == "" {
-		orderBy = "rank"
-	}
-	order := strings.ToUpper(r.URL.Query().Get("order"))
-	if order != "DESC" {
-		order = "ASC"
-	}
 
-	elections, err := h.service.ListElections(r.Context())
+	// Fetch limit + 1 records from database using keyset cursor pagination
+	rows, err := h.service.ListElections(r.Context(), int32(limit), cursor)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch elections: "+err.Error())
 		return
 	}
 
-	// In-memory sort based on orderBy and order
-	if orderBy == "date" || orderBy == "election_date" {
-		sort.SliceStable(elections, func(i, j int) bool {
-			if order == "ASC" {
-				return elections[i].ElectionDate.Time.Before(elections[j].ElectionDate.Time)
-			}
-			return elections[i].ElectionDate.Time.After(elections[j].ElectionDate.Time)
-		})
-	}
-
-	startIndex := 0
-	if cursor > 0 {
-		for i, ei := range elections {
-			if int64(ei.ID) == cursor {
-				startIndex = i + 1
-				break
-			}
-		}
-	}
-
-	var paginated []queries.Election
 	hasMore := false
 	nextCursor := ""
 
-	if startIndex < len(elections) {
-		endIndex := startIndex + limit
-		if endIndex >= len(elections) {
-			endIndex = len(elections)
-			paginated = elections[startIndex:endIndex]
-		} else {
-			paginated = elections[startIndex:endIndex]
-			hasMore = true
-			nextCursor = strconv.FormatInt(int64(paginated[len(paginated)-1].ID), 10)
-		}
-	} else {
-		paginated = []queries.Election{}
+	// If extra record exists, trim it and capture next cursor ID for infinite scrolling
+	if len(rows) > limit {
+		hasMore = true
+		rows = rows[:limit]
+		nextCursor = strconv.FormatInt(int64(rows[len(rows)-1].ID), 10)
 	}
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Elections fetched successfully", map[string]interface{}{
-		"elections": paginated,
+		"elections": rows,
 		"meta": map[string]interface{}{
 			"next_cursor": nextCursor,
 			"has_more":    hasMore,
@@ -604,7 +565,6 @@ func (h *Handler) UpdateElection(w http.ResponseWriter, r *http.Request) {
 		r.Context(),
 		int32(id),
 		req.Name,
-		req.CandidatesCount,
 		req.ElectionDate.Time(),
 		req.ElectionGroupID,
 		req.OfficeID,

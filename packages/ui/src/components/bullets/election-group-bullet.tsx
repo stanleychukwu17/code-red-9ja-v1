@@ -69,6 +69,9 @@ export const ElectionGroupBullet = ({
         }
         return undefined;
       },
+      staleTime: Infinity,
+      gcTime: Infinity,
+      refetchOnWindowFocus: false,
     });
 
   const electionGroups = data

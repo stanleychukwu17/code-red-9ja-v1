@@ -12,7 +12,8 @@ import { useForm, useStore } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus, X } from "lucide-react";
 import { ElectionGroupBullet } from "@repo/ui/components/bullets/election-group-bullet";
-import { getOffices } from "#/lib/server/offices";
+import { getContestedOffices } from "#/lib/server/offices";
+import { QUERY_KEYS } from "#/lib/config";
 import { getElectionGroups } from "#/lib/server/election_groups";
 import { createStateElection } from "#/lib/server/elections";
 import { getStates } from "#/lib/server/states";
@@ -91,16 +92,18 @@ export function StateElectionFormDialog({
     (state) => state.values.officeId,
   );
 
-  // Fetch offices to compute the preview group name
+  // Fetch available contested offices to compute the preview group name
   const { data: officesData } = useQuery({
-    queryKey: ["election-types", "list"],
+    queryKey: QUERY_KEYS.offices.contested,
     queryFn: async () => {
-      const res = await getOffices();
+      const res = await getContestedOffices({ data: { limit: 100 } });
       if (res && res.success && res.data?.offices) {
         return res.data.offices;
       }
       return [];
     },
+    staleTime: Infinity,
+    gcTime: Infinity,
     enabled: open,
   });
 
@@ -234,7 +237,7 @@ export function StateElectionFormDialog({
                       <SelectOffice
                         selectedId={field.state.value}
                         update={(item) => field.handleChange(item.id)}
-                        fetchOffices={getOffices}
+                        fetchOffices={getContestedOffices}
                         filterScope="state"
                         errorMsg={field.state.meta.errors?.join(", ")}
                       />

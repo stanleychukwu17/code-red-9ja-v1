@@ -47,7 +47,6 @@ export const createElection = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
       name: string;
-      candidates_count: number;
       election_date: string;
       election_group_id: number;
       office_id: number;
@@ -81,7 +80,6 @@ export const updateElection = createServerFn({ method: "POST" })
     (data: {
       id: string | number;
       name: string;
-      candidates_count: number;
       election_date: string;
       election_group_id: number;
       office_id: number;
@@ -131,7 +129,7 @@ export const createNationwideElection = createServerFn({ method: "POST" })
       office_id: number;
       election_date: string;
       election_group_id?: number;
-      candidates: {
+      candidates?: {
         candidate_id: number;
         party_id: number;
         party_short_name: string;

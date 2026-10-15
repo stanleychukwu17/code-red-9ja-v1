@@ -12,6 +12,7 @@ import { OfficesTable } from "#/components/Tables";
 import { OfficeFormDialog } from "#/components/dialogs/OfficeFormDialog";
 import { ELECTION_TABS } from "./-data";
 import { getOffices } from "#/lib/server/offices";
+import { QUERY_KEYS } from "#/lib/config";
 import { useQuery } from "@tanstack/react-query";
 import { DateBullet } from "@repo/ui/components/bullets/date-bullet";
 
@@ -27,7 +28,7 @@ function RouteComponent() {
 
   // Query to fetch political offices (e.g. President, Governor, Senator)
   const { data: offices = [], isLoading } = useQuery({
-    queryKey: ["offices"],
+    queryKey: QUERY_KEYS.offices.all,
     staleTime: Infinity,
     queryFn: async () => {
       const res = await getOffices({

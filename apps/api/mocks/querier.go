@@ -7512,23 +7512,6 @@ func (_m *Querier) UpdateCandidatesFromWardElections(ctx context.Context) error 
 	return r0
 }
 
-// UpdateElectionCandidatesCount provides a mock function with given fields: ctx, arg
-func (_m *Querier) UpdateElectionCandidatesCount(ctx context.Context, arg queries.UpdateElectionCandidatesCountParams) error {
-	ret := _m.Called(ctx, arg)
-
-	if len(ret) == 0 {
-		panic("no return value specified for UpdateElectionCandidatesCount")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, queries.UpdateElectionCandidatesCountParams) error); ok {
-		r0 = rf(ctx, arg)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
 
 // CountCandidatesInElectionGroup provides a mock function with given fields: ctx, electionGroupID
 func (_m *Querier) CountCandidatesInElectionGroup(ctx context.Context, electionGroupID int32) (int64, error) {

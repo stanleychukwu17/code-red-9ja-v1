@@ -364,4 +364,8 @@ export const QUERY_KEYS = {
     session: ["authSession"],
   },
   countries: ["countries"],
+  offices: {
+    all: ["offices"],
+    contested: ["offices", "contested"],
+  },
 };

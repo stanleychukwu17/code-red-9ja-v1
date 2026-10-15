@@ -66,15 +66,12 @@ CREATE TABLE elections (
   lga_id INT REFERENCES lgas(id) ON DELETE SET NULL,
   ward_id INT REFERENCES wards(id) ON DELETE SET NULL,
   office_id SMALLINT REFERENCES offices(id) ON DELETE RESTRICT NOT NULL,
-  running_mate_office_id SMALLINT REFERENCES offices(id) ON DELETE SET NULL,
 
   name VARCHAR(255) NOT NULL,
   election_date DATE NOT NULL,
-  office_name VARCHAR(100) NOT NULL, -- President, Governor
   scope VARCHAR(50) NOT NULL, -- nationwide, state, senatorial-district, federal-constituency, lga, state-constituency, ward
   status VARCHAR(30) NOT NULL DEFAULT 'upcoming' CHECK (status IN ('upcoming', 'ongoing', 'ended', 'cancelled')),
 
-  candidates_count INT NOT NULL DEFAULT 0,
   reports_count INT NOT NULL DEFAULT 0,
   updates_count INT NOT NULL DEFAULT 0,
   results_submitted_count INT NOT NULL DEFAULT 0,
@@ -94,12 +91,12 @@ CREATE TABLE elections (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+COMMENT ON COLUMN elections.contesting_parties IS 'List of political parties contesting this election. Shape: [{"party_id": 1, "party_short_name": "APC", "party_name": "All Progressives Congress", "party_logo": "https://..."}]';
+
 CREATE INDEX idx_elections_election_group_id ON elections(election_group_id);
 CREATE INDEX idx_elections_office_id ON elections(office_id);
-CREATE INDEX idx_elections_running_mate_office_id ON elections(running_mate_office_id);
-CREATE INDEX idx_elections_election_date ON elections(election_date);
+CREATE INDEX idx_elections_election_date_id ON elections(election_date DESC, id DESC);
 
-COMMENT ON COLUMN elections.contesting_parties IS 'List of political parties contesting this election. Shape: [{"party_id": 1, "party_short_name": "APC", "party_name": "All Progressives Congress", "party_logo": "https://..."}]';
 
 CREATE TABLE election_candidates (
   id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,

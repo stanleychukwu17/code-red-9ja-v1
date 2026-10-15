@@ -15,7 +15,7 @@ import { FancyInput, Input, Label } from "@repo/ui/components/input";
 import { SelectDate } from "@repo/ui/components/selects/date-select";
 import { SelectOffice } from "@repo/ui/components/selects/office-select";
 import { ElectionGroupBullet } from "@repo/ui/components/bullets/election-group-bullet";
-import { getOffices } from "#/lib/server/offices";
+import { getContestedOffices } from "#/lib/server/offices";
 import { updateElection } from "#/lib/server/elections";
 import { getElectionGroups } from "#/lib/server/election_groups";
 import type { ElectionInstanceType } from "../tiles/election-instance-tile";
@@ -41,7 +41,6 @@ export function ElectionInstanceFormDialog({
   const form = useForm({
     defaultValues: {
       name: "",
-      candidatesCount: 0,
       electionDate: "",
       electionGroupId: undefined as number | undefined,
       officeId: undefined as number | undefined,
@@ -62,10 +61,6 @@ export function ElectionInstanceFormDialog({
         ? (electionInstance.election_date.split("T")[0] ?? "")
         : "";
       form.setFieldValue("name", electionInstance.name || "");
-      form.setFieldValue(
-        "candidatesCount",
-        electionInstance.candidates_count || 0,
-      );
       form.setFieldValue("electionDate", cleanDate);
       form.setFieldValue(
         "electionGroupId",
@@ -83,7 +78,6 @@ export function ElectionInstanceFormDialog({
   const saveMutation = useMutation({
     mutationFn: async (values: {
       name: string;
-      candidatesCount: number;
       electionDate: string;
       electionGroupId: number | undefined;
       officeId: number | undefined;
@@ -105,7 +99,6 @@ export function ElectionInstanceFormDialog({
         data: {
           id: electionInstance.id,
           name: values.name.trim(),
-          candidates_count: Number(values.candidatesCount) || 0,
           election_date: values.electionDate,
           election_group_id: values.electionGroupId,
           office_id: values.officeId,
@@ -171,21 +164,6 @@ export function ElectionInstanceFormDialog({
               />
             </div>
 
-            {/* Candidates Count */}
-            <div className="flex flex-col gap-1.5">
-              <Label title="Candidates Count" />
-              <form.Field
-                name="candidatesCount"
-                children={(field) => (
-                  <Input
-                    type="number"
-                    value={field.state.value ?? 0}
-                    onChange={(e) => field.handleChange(Number(e.target.value))}
-                  />
-                )}
-              />
-            </div>
-
             <div className="grid grid-cols-2 gap-4">
               {/* Election Type */}
               <div className="flex flex-col gap-1.5">
@@ -200,7 +178,7 @@ export function ElectionInstanceFormDialog({
                     <SelectOffice
                       selectedId={field.state.value}
                       update={(val) => field.handleChange(val.id)}
-                      fetchOffices={getOffices}
+                      fetchOffices={getContestedOffices}
                       errorMsg={field.state.meta.errors?.join(", ")}
                     />
                   )}

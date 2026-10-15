@@ -32,27 +32,26 @@ function StatesListComponent() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery] = useDebounceValue(searchQuery, 500);
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, error } =
-    useInfiniteQuery({
-      queryKey: ["states", debouncedSearchQuery],
-      queryFn: async ({ pageParam }) => {
-        const res = await getStates({
-          data: { countryId: 161, limit: 20, cursor: pageParam, search: debouncedSearchQuery || undefined },
-        });
-        if (res && res.success && res.data) {
-          return res;
-        }
-        throw new Error(res?.message || "Failed to fetch states");
-      },
-      initialPageParam: "",
-      getNextPageParam: (lastPage) => {
-        if (lastPage && lastPage.meta && lastPage.meta.has_more) {
-          return lastPage.meta.next_cursor || "";
-        }
-        return undefined;
-      },
-      refetchOnWindowFocus: false,
-    });
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, error } = useInfiniteQuery({
+    queryKey: ["states", debouncedSearchQuery],
+    queryFn: async ({ pageParam }) => {
+      const res = await getStates({
+        data: { countryId: 161, limit: 20, cursor: pageParam, search: debouncedSearchQuery || undefined },
+      });
+      if (res && res.success && res.data) {
+        return res;
+      }
+      throw new Error(res?.message || "Failed to fetch states");
+    },
+    initialPageParam: "",
+    getNextPageParam: (lastPage) => {
+      if (lastPage && lastPage.meta && lastPage.meta.has_more) {
+        return lastPage.meta.next_cursor || "";
+      }
+      return undefined;
+    },
+    refetchOnWindowFocus: false,
+  });
 
   const { ref: sentinelRef, isIntersecting } = useIntersectionObserver({
     threshold: 0.1,
@@ -68,20 +67,20 @@ function StatesListComponent() {
   // Flatten pages to items — preserve full entity data
   const states: StateType[] = data
     ? data.pages.flatMap((page) =>
-        (page.data?.states || []).map((state: any) => ({
-          id: state.id,
-          name: state.name,
-          country_id: state.country_id ?? 161,
-          latitude: state.latitude ?? 0,
-          longitude: state.longitude ?? 0,
-          lgas_count: state.lgas_count,
-          senatorial_districts_count: state.senatorial_districts_count,
-          federal_constituencies_count: state.federal_constituencies_count,
-          state_constituencies_count: state.state_constituencies_count,
-          wards_count: state.wards_count,
-          polling_units_count: state.polling_units_count,
-        })),
-      )
+      (page.data?.states || []).map((state: any) => ({
+        id: state.id,
+        name: state.name,
+        country_id: state.country_id ?? 161,
+        latitude: state.latitude ?? 0,
+        longitude: state.longitude ?? 0,
+        lgas_count: state.lgas_count,
+        senatorial_districts_count: state.senatorial_districts_count,
+        federal_constituencies_count: state.federal_constituencies_count,
+        state_constituencies_count: state.state_constituencies_count,
+        wards_count: state.wards_count,
+        polling_units_count: state.polling_units_count,
+      })),
+    )
     : [];
 
   return (

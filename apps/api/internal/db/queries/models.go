@@ -150,13 +150,10 @@ type Election struct {
 	LgaID                 pgtype.Int4 `json:"lga_id"`
 	WardID                pgtype.Int4 `json:"ward_id"`
 	OfficeID              int16       `json:"office_id"`
-	RunningMateOfficeID   pgtype.Int2 `json:"running_mate_office_id"`
 	Name                  string      `json:"name"`
 	ElectionDate          pgtype.Date `json:"election_date"`
-	OfficeName            string      `json:"office_name"`
 	Scope                 string      `json:"scope"`
 	Status                string      `json:"status"`
-	CandidatesCount       int32       `json:"candidates_count"`
 	ReportsCount          int32       `json:"reports_count"`
 	UpdatesCount          int32       `json:"updates_count"`
 	ResultsSubmittedCount int32       `json:"results_submitted_count"`

@@ -1,15 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { SelectProps } from "../../lib/types";
-import { SelectResponsiveWrapper } from "./select-responsive-wrapper";
-import { GeneralCommand } from "../command/general-command";
-import { DrawerList } from "../command/drawer-list";
-import { LoadingSelect } from "./loading-select";
-import { Button } from "../button";
 import { cn } from "../../lib/utils";
 import ArrowDownIcon from "../../icons/arrow-down-icon";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { Button } from "../button";
+import { GeneralCommand } from "../command/general-command";
+import { DrawerList } from "../command/drawer-list";
+import { SelectResponsiveWrapper } from "./select-responsive-wrapper";
+import { LoadingSelect } from "./loading-select";
 
-export interface Office {
+export type Office = {
   id: number;
   name: string;
   category?: string;
@@ -20,91 +20,55 @@ export interface Office {
   is_contested?: boolean;
   parent_office_id?: number | null;
   appointing_office_id?: number | null;
-}
+};
 
-interface OfficesResponse {
-  success: boolean;
-  message: string;
-  data: {
-    offices: Office[];
-  };
-  meta: {
-    next_cursor: string;
-    has_more: boolean;
-  };
-}
-
-export const SelectOffice = ({
-  update,
-  errorMsg,
-  selectedId,
-  disabled,
-  className,
-  align = "start",
-  fetchOffices,
-  filterScope,
-}: SelectProps<Office, number | string> & {
+export type SelectOfficeProps = SelectProps<Office, number | string> & {
   fetchOffices: (args: {
     data: { limit?: number; cursor?: string; contested?: boolean };
   }) => Promise<any>;
   filterScope?: string;
-}) => {
+};
+
+export const SelectOffice = ({
+  update, errorMsg, selectedId, disabled, className, align = "start", fetchOffices, filterScope,
+}: SelectOfficeProps) => {
   const [open, setOpen] = useState(false);
   const [desktopSearch, setDesktopSearch] = useState("");
   const [mobileSearch, setMobileSearch] = useState("");
-  const [selectedItem, setSelectedItem] = useState<Office | undefined>(
-    undefined,
-  );
+  const [selectedItem, setSelectedItem] = useState<Office | undefined>(undefined);
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
-    useInfiniteQuery<OfficesResponse>({
-      queryKey: ["offices-select", filterScope ?? "all"],
-      queryFn: async ({ pageParam }) => {
-        const res = await fetchOffices({
-          data: { limit: 50, cursor: pageParam as string, contested: true },
-        });
-        if (res && res.success && res.data) return res;
-        throw new Error(res?.message || "Failed to fetch offices");
-      },
-      initialPageParam: "",
-      getNextPageParam: (lastPage) => {
-        if (lastPage && lastPage.meta && lastPage.meta.has_more)
-          return lastPage.meta.next_cursor || "";
-        return undefined;
-      },
-    });
+  // Fetch and cache contested political offices indefinitely
+  const { data: rawOffices = [], isLoading } = useQuery<Office[]>({
+    queryKey: ["offices", "contested"],
+    queryFn: async () => {
+      const res = await fetchOffices({
+        data: { limit: 100, contested: true },
+      });
+      if (res && res.success && res.data?.offices) {
+        return res.data.offices;
+      }
+      return [];
+    },
+    staleTime: Infinity,
+    gcTime: Infinity,
+  });
 
-  const allOffices = data
-    ? data.pages.flatMap((page) => page.data?.offices || [])
-    : [];
-  const contestedOffices = allOffices.filter((o) => o.is_contested !== false);
-  const offices = filterScope
-    ? contestedOffices.filter((o) => o.scope === filterScope)
-    : contestedOffices;
+  // Filter offices, optionally constrained by geographic scope
+  const offices = useMemo(() => {
+    return filterScope ? rawOffices.filter((o) => o.scope === filterScope) : rawOffices;
+  }, [rawOffices, filterScope]);
 
-  useEffect(() => {
-    if (selectedId && hasNextPage && !isFetchingNextPage && !isLoading) {
-      const found = offices.some((o) => String(o.id) === String(selectedId));
-      if (!found) fetchNextPage();
-    }
-  }, [
-    selectedId,
-    offices,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoading,
-    fetchNextPage,
-  ]);
-
+  // Keep internal selected item in sync with incoming selectedId prop
   useEffect(() => {
     if (selectedId) {
-      const item = offices.find((o) => String(o.id) === String(selectedId));
-      if (item) setSelectedItem(item);
+      const match = offices.find((o) => String(o.id) === String(selectedId));
+      setSelectedItem(match);
     } else {
       setSelectedItem(undefined);
     }
   }, [selectedId, offices]);
 
+  // Reset mobile search query whenever drawer closes
   useEffect(() => {
     if (!open) setMobileSearch("");
   }, [open]);
@@ -115,34 +79,35 @@ export const SelectOffice = ({
     setOpen(false);
   };
 
-  const filteredOffices = offices.filter(
-    (o) =>
-      o.name.toLowerCase().includes(desktopSearch.toLowerCase()) ||
-      (o.election
-        ? o.election.toLowerCase().includes(desktopSearch.toLowerCase())
-        : false),
-  );
-  const mobileFiltered = offices.filter(
-    (o) =>
-      o.name.toLowerCase().includes(mobileSearch.toLowerCase()) ||
-      (o.election
-        ? o.election.toLowerCase().includes(mobileSearch.toLowerCase())
-        : false),
-  );
-
-  const getStatus = ():
-    | "CanLoadMore"
-    | "LoadingMore"
-    | "LoadingFirstPage"
-    | "Exhausted" => {
-    if (isLoading && offices.length === 0) return "LoadingFirstPage";
-    if (isFetchingNextPage) return "LoadingMore";
-    return hasNextPage ? "CanLoadMore" : "Exhausted";
+  // Search filter matching office name or election description
+  const matchesSearch = (item: Office, query: string) => {
+    if (!query) return true;
+    const q = query.toLowerCase();
+    return (
+      item.name.toLowerCase().includes(q) ||
+      Boolean(item.election && item.election.toLowerCase().includes(q))
+    );
   };
 
-  const handleLoadMore = () => {
-    if (hasNextPage && !isFetchingNextPage) fetchNextPage();
-  };
+  const filteredOffices = useMemo(
+    () => offices.filter((o) => matchesSearch(o, desktopSearch)),
+    [offices, desktopSearch],
+  );
+
+  const mobileFiltered = useMemo(
+    () => offices.filter((o) => matchesSearch(o, mobileSearch)),
+    [offices, mobileSearch],
+  );
+
+  const getId = (item: Office) => `${item.id}`;
+  const getName = (item: Office) =>
+    item.election ? `${item.name} (${item.election})` : item.name;
+
+  const currentSelectedId = selectedItem?.id
+    ? `${selectedItem.id}`
+    : selectedId
+      ? `${selectedId}`
+      : undefined;
 
   const displayText = selectedItem?.name
     ? selectedItem.election
@@ -151,16 +116,10 @@ export const SelectOffice = ({
     : isLoading && !selectedItem
       ? "Loading..."
       : "Select Office";
-  const hasError = Boolean(errorMsg);
-  const currentSelectedId = selectedItem?.id
-    ? `${selectedItem.id}`
-    : selectedId
-      ? `${selectedId}`
-      : undefined;
-  const getId = (item: Office) => `${item.id}`;
-  const getName = (item: Office) =>
-    item.election ? `${item.name} (${item.election})` : item.name;
 
+  const status = isLoading && offices.length === 0 ? "LoadingFirstPage" : "Exhausted";
+
+  // Loading skeleton while initial offices are being retrieved
   if (offices.length === 0 && isLoading && !disabled) {
     return (
       <LoadingSelect
@@ -187,15 +146,13 @@ export const SelectOffice = ({
           size="select"
           className={cn(
             "justify-between w-full gap-2",
-            hasError && "border-0.8 border-red",
+            errorMsg && "border-0.8 border-red",
             className,
           )}
           type="button"
           disabled={disabled}
         >
-          <p className="whitespace-normal text-left line-clamp-1">
-            {displayText}
-          </p>
+          <p className="whitespace-normal text-left line-clamp-1">{displayText}</p>
           <ArrowDownIcon className="ml-auto text-c-80" />
         </Button>
       }
@@ -206,8 +163,8 @@ export const SelectOffice = ({
           getName={getName}
           handleSelect={handleSelect}
           selectedId={currentSelectedId}
-          status={getStatus()}
-          loadMore={handleLoadMore}
+          status={status}
+          loadMore={() => { }}
           onSearch={setDesktopSearch}
         />
       }
@@ -218,7 +175,7 @@ export const SelectOffice = ({
           getName={getName}
           handleSelect={handleSelect}
           selectedId={currentSelectedId}
-          status={getStatus()}
+          status={status}
           searchValue={mobileSearch}
           onSearch={setMobileSearch}
         />

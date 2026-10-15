@@ -68,6 +68,8 @@ function RouteComponent() {
         }
         return undefined;
       },
+      staleTime: 60 * 1000,
+      refetchOnWindowFocus: false,
     });
 
   // Intersection observer sentinel for auto-triggering the next page fetch when scrolled into view
@@ -136,34 +138,48 @@ function RouteComponent() {
       )}
 
       {/* Creation form dialogs for each geographic/administrative level */}
-      <NationwideElectionFormDialog
-        open={isNationwideOpen}
-        onClose={() => setIsNationwideOpen(false)}
-      />
-      <StateElectionFormDialog
-        open={isStateOpen}
-        onClose={() => setIsStateOpen(false)}
-      />
-      <SenatorialDistrictElectionFormDialog
-        open={isSenatorialOpen}
-        onClose={() => setIsSenatorialOpen(false)}
-      />
-      <FederalConstituencyElectionFormDialog
-        open={isFederalOpen}
-        onClose={() => setIsFederalOpen(false)}
-      />
-      <StateConstituencyElectionFormDialog
-        open={isStateConstOpen}
-        onClose={() => setIsStateConstOpen(false)}
-      />
-      <LgaElectionFormDialog
-        open={isLgaOpen}
-        onClose={() => setIsLgaOpen(false)}
-      />
-      <WardElectionFormDialog
-        open={isWardOpen}
-        onClose={() => setIsWardOpen(false)}
-      />
+      {isNationwideOpen && (
+        <NationwideElectionFormDialog
+          open={isNationwideOpen}
+          onClose={() => setIsNationwideOpen(false)}
+        />
+      )}
+      {isStateOpen && (
+        <StateElectionFormDialog
+          open={isStateOpen}
+          onClose={() => setIsStateOpen(false)}
+        />
+      )}
+      {isSenatorialOpen && (
+        <SenatorialDistrictElectionFormDialog
+          open={isSenatorialOpen}
+          onClose={() => setIsSenatorialOpen(false)}
+        />
+      )}
+      {isFederalOpen && (
+        <FederalConstituencyElectionFormDialog
+          open={isFederalOpen}
+          onClose={() => setIsFederalOpen(false)}
+        />
+      )}
+      {isStateConstOpen && (
+        <StateConstituencyElectionFormDialog
+          open={isStateConstOpen}
+          onClose={() => setIsStateConstOpen(false)}
+        />
+      )}
+      {isLgaOpen && (
+        <LgaElectionFormDialog
+          open={isLgaOpen}
+          onClose={() => setIsLgaOpen(false)}
+        />
+      )}
+      {isWardOpen && (
+        <WardElectionFormDialog
+          open={isWardOpen}
+          onClose={() => setIsWardOpen(false)}
+        />
+      )}
     </Layout>
   );
 }

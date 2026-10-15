@@ -155,6 +155,7 @@
     "systemsettingshandler",
     "tfstate",
     "Timestamptz",
+    "Toolbelt",
     "trgm",
     "Unmarshal",
     "Unsuspending",

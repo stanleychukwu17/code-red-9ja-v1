@@ -17,7 +17,6 @@ type EligibleElectionResponse struct {
 	ID                     int32                                             `json:"id"`
 	Name                   string                                            `json:"name"`
 	Rank                   int32                                             `json:"rank"`
-	CandidatesCount        int32                                             `json:"candidates_count"`
 	ElectionDate           interface{}                                       `json:"election_date"`
 	ElectionGroupID        int32                                             `json:"election_group_id"`
 	ElectionGroupName      string                                            `json:"election_group_name"`
