@@ -26,6 +26,8 @@ type BodiesService interface {
 	DeleteLGA(ctx context.Context, id int32) error
 	SyncElectoralUnits(ctx context.Context) (*bodiesservice.SyncReport, error)
 	SyncElectoralUnitsStateFlow(ctx context.Context) (*bodiesservice.SyncReport, error)
+	StartSyncElectoralUnits(ctx context.Context, stateFlow bool) (*bodiesservice.SyncStatusResponse, error)
+	GetSyncStatus(ctx context.Context) (*bodiesservice.SyncStatusResponse, error)
 	GetNationalMetrics(ctx context.Context) (queries.NationalMetric, error)
 	CheckStateByID(ctx context.Context, stateID int16) (queries.CState, error)
 	RecalculateBodyMetrics(ctx context.Context) error
@@ -391,33 +393,61 @@ func (h *Handler) GetNationalMetrics(w http.ResponseWriter, r *http.Request) {
 
 // SyncElectoralUnits godoc
 // @Summary      Synchronize electoral units from INEC API
-// @Description  Fetches and synchronizes all electoral units from INEC API (admin only)
+// @Description  Starts background synchronization of all electoral units from INEC API (admin only)
 // @Tags         Bodies
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
-// @Success      200  {object} map[string]interface{}
+// @Success      202  {object} map[string]interface{}
 // @Failure      401  {string} string "Unauthorized"
 // @Failure      403  {string} string "Forbidden"
+// @Failure      409  {string} string "Conflict - sync in progress or rate limited"
 // @Failure      500  {string} string
 // @Router       /bodies/sync-electoral-units [post]
 func (h *Handler) SyncElectoralUnits(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	report, err := h.bodiesService.SyncElectoralUnits(ctx)
+	status, err := h.bodiesService.StartSyncElectoralUnits(ctx, false)
 	if err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to synchronize electoral units: "+err.Error())
+		h.utils.RespondError(w, http.StatusConflict, err.Error())
 		return
 	}
 
-	h.utils.RespondSuccess(w, http.StatusOK, "Successfully synchronized electoral units from INEC API", map[string]interface{}{
-		"report": report,
+	h.utils.RespondSuccess(w, http.StatusAccepted, "Electoral units synchronization started in background", map[string]interface{}{
+		"status": status,
 	})
 }
 
 // SyncElectoralUnitsStateFlow godoc
 // @Summary      Synchronize electoral units from INEC API using State (Governorship) Flow
-// @Description  Fetches and synchronizes all electoral units from INEC API using Governorship election state flow (admin only)
+// @Description  Starts background synchronization of all electoral units from INEC API using Governorship election state flow (admin only)
+// @Tags         Bodies
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Success      202  {object} map[string]interface{}
+// @Failure      401  {string} string "Unauthorized"
+// @Failure      403  {string} string "Forbidden"
+// @Failure      409  {string} string "Conflict - sync in progress or rate limited"
+// @Failure      500  {string} string
+// @Router       /bodies/sync-electoral-units-state-flow [post]
+func (h *Handler) SyncElectoralUnitsStateFlow(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	status, err := h.bodiesService.StartSyncElectoralUnits(ctx, true)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusConflict, err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusAccepted, "Electoral units synchronization (State Flow) started in background", map[string]interface{}{
+		"status": status,
+	})
+}
+
+// GetSyncStatus godoc
+// @Summary      Get synchronization status and rate limit of electoral units
+// @Description  Returns current live synchronization progress, report, and remaining cooldown (admin only)
 // @Tags         Bodies
 // @Accept       json
 // @Produce      json
@@ -426,18 +456,18 @@ func (h *Handler) SyncElectoralUnits(w http.ResponseWriter, r *http.Request) {
 // @Failure      401  {string} string "Unauthorized"
 // @Failure      403  {string} string "Forbidden"
 // @Failure      500  {string} string
-// @Router       /bodies/sync-electoral-units-state-flow [post]
-func (h *Handler) SyncElectoralUnitsStateFlow(w http.ResponseWriter, r *http.Request) {
+// @Router       /bodies/sync-status [get]
+func (h *Handler) GetSyncStatus(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	report, err := h.bodiesService.SyncElectoralUnitsStateFlow(ctx)
+	status, err := h.bodiesService.GetSyncStatus(ctx)
 	if err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to synchronize electoral units (State Flow): "+err.Error())
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch sync status: "+err.Error())
 		return
 	}
 
-	h.utils.RespondSuccess(w, http.StatusOK, "Successfully synchronized electoral units from INEC API (State Flow)", map[string]interface{}{
-		"report": report,
+	h.utils.RespondSuccess(w, http.StatusOK, "Successfully fetched sync status", map[string]interface{}{
+		"status": status,
 	})
 }
 

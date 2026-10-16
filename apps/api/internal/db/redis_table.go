@@ -107,6 +107,8 @@ const (
 	//--START-- for background worker & cron distributed locks
 	RedisCronLockINECGrabberSync           = "cron:lock:inec_grabber_sync"     // STRING: distributed lock to prevent duplicate concurrent INEC IReV result syncing
 	RedisCronLockMarketingDeductionsPrefix = "cron:lock:marketing_deductions:" // STRING: "cron:lock:marketing_deductions:<YYYY-MM-DD>" daily marketing deductions lock
+	RedisLockElectoralUnitsSync            = "bodies:lock:electoral_units_sync"   // STRING: distributed lock to prevent duplicate electoral units sync (24h in prod, 30m in dev)
+	RedisElectoralUnitsSyncStatus          = "bodies:status:electoral_units_sync" // STRING: holds current/last sync status JSON
 	//--END--
 
 	//--START-- for blocks
@@ -176,5 +178,7 @@ var AllRedisPrefixes = []string{
 	RedisElectionByID,
 	RedisCronLockINECGrabberSync,
 	RedisCronLockMarketingDeductionsPrefix,
+	RedisLockElectoralUnitsSync,
+	RedisElectoralUnitsSyncStatus,
 	RedisUserBlockedPartyIDs,
 }

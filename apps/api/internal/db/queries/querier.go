@@ -125,12 +125,12 @@ type Querier interface {
 	CreateWardSupervisor(ctx context.Context, arg CreateWardSupervisorParams) (WardElectionSupervisor, error)
 	CreditPartyWallet(ctx context.Context, arg CreditPartyWalletParams) (PartyWallet, error)
 	CreditUserWallet(ctx context.Context, arg CreditUserWalletParams) (UserWallet, error)
-	DeactivateMissingFederalConstituencies(ctx context.Context, arg DeactivateMissingFederalConstituenciesParams) error
-	DeactivateMissingLGAs(ctx context.Context, arg DeactivateMissingLGAsParams) error
-	DeactivateMissingPollingUnits(ctx context.Context, arg DeactivateMissingPollingUnitsParams) error
-	DeactivateMissingSenatorialDistricts(ctx context.Context, arg DeactivateMissingSenatorialDistrictsParams) error
-	DeactivateMissingStateConstituencies(ctx context.Context, arg DeactivateMissingStateConstituenciesParams) error
-	DeactivateMissingWards(ctx context.Context, arg DeactivateMissingWardsParams) error
+	DeactivateMissingFederalConstituencies(ctx context.Context, arg DeactivateMissingFederalConstituenciesParams) (int64, error)
+	DeactivateMissingLGAs(ctx context.Context, arg DeactivateMissingLGAsParams) (int64, error)
+	DeactivateMissingPollingUnits(ctx context.Context, arg DeactivateMissingPollingUnitsParams) (int64, error)
+	DeactivateMissingSenatorialDistricts(ctx context.Context, arg DeactivateMissingSenatorialDistrictsParams) (int64, error)
+	DeactivateMissingStateConstituencies(ctx context.Context, arg DeactivateMissingStateConstituenciesParams) (int64, error)
+	DeactivateMissingWards(ctx context.Context, arg DeactivateMissingWardsParams) (int64, error)
 	DebitPartyWallet(ctx context.Context, arg DebitPartyWalletParams) (PartyWallet, error)
 	DebitUserWallet(ctx context.Context, arg DebitUserWalletParams) (UserWallet, error)
 	DecrementElectionGroupPollingUnitsForFederalConstituencyElection(ctx context.Context, arg DecrementElectionGroupPollingUnitsForFederalConstituencyElectionParams) error

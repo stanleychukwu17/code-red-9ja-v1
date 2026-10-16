@@ -261,6 +261,7 @@ export const API_URL = {
   recalculateBodies: `${api}/bodies/recalculate`,
   syncElectoralUnits: `${api}/bodies/sync-electoral-units`,
   syncElectoralUnitsStateFlow: `${api}/bodies/sync-electoral-units-state-flow`,
+  syncElectoralUnitsStatus: `${api}/bodies/sync-status`,
   verificationTypes: `${api}/verifications/types`,
   adminVerifications: `${api}/admin/verifications`,
   occupations: `${api}/getOccupations`,

@@ -321,7 +321,7 @@ ON CONFLICT (id) DO UPDATE SET
   status = EXCLUDED.status
 RETURNING *;
 
--- name: DeactivateMissingSenatorialDistricts :exec
+-- name: DeactivateMissingSenatorialDistricts :execrows
 UPDATE senatorial_districts
 SET status = 'inactive'
 WHERE state_id = $1 AND NOT (id = ANY($2::int[]));
@@ -339,7 +339,7 @@ ON CONFLICT (id) DO UPDATE SET
   status = EXCLUDED.status
 RETURNING *;
 
--- name: DeactivateMissingFederalConstituencies :exec
+-- name: DeactivateMissingFederalConstituencies :execrows
 UPDATE federal_constituencies
 SET status = 'inactive'
 WHERE state_id = $1 AND NOT (id = ANY($2::int[]));
@@ -376,7 +376,7 @@ ON CONFLICT (id) DO UPDATE SET
   status = EXCLUDED.status
 RETURNING *;
 
--- name: DeactivateMissingLGAs :exec
+-- name: DeactivateMissingLGAs :execrows
 UPDATE lgas
 SET status = 'inactive'
 WHERE state_id = $1 AND NOT (id = ANY($2::int[]));
@@ -398,7 +398,7 @@ ON CONFLICT (id) DO UPDATE SET
   status = EXCLUDED.status
 RETURNING *;
 
--- name: DeactivateMissingStateConstituencies :exec
+-- name: DeactivateMissingStateConstituencies :execrows
 UPDATE state_constituencies
 SET status = 'inactive'
 WHERE state_id = $1 AND NOT (id = ANY($2::int[]));
@@ -423,7 +423,7 @@ ON CONFLICT (id) DO UPDATE SET
   mongo_id = COALESCE(EXCLUDED.mongo_id, wards.mongo_id)
 RETURNING *;
 
--- name: DeactivateMissingWards :exec
+-- name: DeactivateMissingWards :execrows
 UPDATE wards
 SET status = 'inactive'
 WHERE lga_id = $1 AND NOT (id = ANY($2::int[]));
@@ -452,7 +452,7 @@ ON CONFLICT (id) DO UPDATE SET
   status = EXCLUDED.status
 RETURNING *;
 
--- name: DeactivateMissingPollingUnits :exec
+-- name: DeactivateMissingPollingUnits :execrows
 UPDATE polling_units
 SET status = 'inactive'
 WHERE ward_id = $1 AND NOT (id = ANY($2::int[]));

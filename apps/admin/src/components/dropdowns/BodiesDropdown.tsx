@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { TDropdownGroup } from "@repo/ui/lib/types";
 import { DropdownGroupList } from "@repo/ui/components/custom/AppDropdown";
 import { Calculator, Ellipsis, RefreshCw } from "lucide-react";
@@ -11,6 +11,7 @@ import {
 import { Button } from "@repo/ui/components/button";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
+  getSyncStatus,
   recalculateBodies,
   syncElectoralUnits,
   syncElectoralUnitsStateFlow,
@@ -33,6 +34,7 @@ interface BodiesDropdownProps {
 export const BodiesDropdown = ({ className }: BodiesDropdownProps) => {
   const [openMenu, setOpenMenu] = useState(false);
   const queryClient = useQueryClient();
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Invalidates all cached body queries (states, LGAs, wards, PUs, constituencies, districts)
   // so that all open views/tables immediately reflect updated counts and records.
@@ -41,6 +43,76 @@ export const BodiesDropdown = ({ className }: BodiesDropdownProps) => {
       queryClient.invalidateQueries({ queryKey });
     });
   };
+
+  // Polls backend sync status periodically and keeps the toast notification updated
+  const pollSyncProgress = (initialStep?: string) => {
+    const toastId = "bodies-sync-toast";
+    toast.loading(initialStep || "Syncing electoral units in background...", { id: toastId });
+
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+    }
+
+    pollIntervalRef.current = setInterval(async () => {
+      try {
+        const res = await getSyncStatus();
+        const status = res?.data?.status;
+        if (!status) return;
+
+        if (status.is_running) {
+          toast.loading(status.current_step || "Syncing electoral units in background...", {
+            id: toastId,
+          });
+        } else {
+          if (pollIntervalRef.current) {
+            clearInterval(pollIntervalRef.current);
+            pollIntervalRef.current = null;
+          }
+          invalidateAllBodies();
+
+          if (status.error) {
+            toast.error(`Sync finished with error: ${status.error}`, {
+              id: toastId,
+              duration: 8000,
+            });
+          } else {
+            const puCount = status.last_report?.polling_units_processed?.toLocaleString() || "all";
+            const dur = status.duration_seconds
+              ? ` in ${status.duration_seconds.toFixed(0)}s`
+              : "";
+            toast.success(
+              `Electoral units synchronized successfully (${puCount} PUs processed${dur})`,
+              {
+                id: toastId,
+                duration: 9000,
+              }
+            );
+          }
+        }
+      } catch {
+        // Suppress transient network poll errors
+      }
+    }, 4000);
+  };
+
+  // Check on mount if a synchronization job is already running from before
+  useEffect(() => {
+    let isMounted = true;
+    getSyncStatus().then((res) => {
+      if (!isMounted) return;
+      const status = res?.data?.status;
+      if (status?.is_running) {
+        pollSyncProgress(status.current_step);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+      }
+    };
+  }, []);
 
   // Mutation 1: Recalculate rollup counts across all political/geographic bodies
   const mutation = useMutation({
@@ -59,11 +131,10 @@ export const BodiesDropdown = ({ className }: BodiesDropdownProps) => {
     mutationFn: async () => {
       const res = await syncElectoralUnits();
       if (res && res.success === false) {
-        throw new Error(res.message || "Failed to sync electoral units");
+        throw new Error(res.message || "Failed to start electoral units sync");
       }
       return res;
     },
-    onSuccess: invalidateAllBodies,
   });
 
   // Mutation 3: Synchronize electoral units using the state-by-state hierarchy flow
@@ -72,12 +143,11 @@ export const BodiesDropdown = ({ className }: BodiesDropdownProps) => {
       const res = await syncElectoralUnitsStateFlow();
       if (res && res.success === false) {
         throw new Error(
-          res.message || "Failed to sync electoral units (State Flow)"
+          res.message || "Failed to start electoral units sync (State Flow)"
         );
       }
       return res;
     },
-    onSuccess: invalidateAllBodies,
   });
 
   // Action handlers: close the menu and display toast notifications for async progress
@@ -90,22 +160,30 @@ export const BodiesDropdown = ({ className }: BodiesDropdownProps) => {
     });
   };
 
-  const handleSyncElectoralUnits = () => {
+  const handleSyncElectoralUnits = async () => {
     setOpenMenu(false);
-    toast.promise(syncMutation.mutateAsync(), {
-      loading: "Syncing electoral units...",
-      success: "Successfully synced electoral units",
-      error: (error: any) => error.message || "An error occurred",
-    });
+    try {
+      const res = await syncMutation.mutateAsync();
+      const status = res?.data?.status;
+      pollSyncProgress(status?.current_step || "Starting electoral units sync...");
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to start electoral units sync");
+    }
   };
 
-  const handleSyncElectoralUnitsStateFlow = () => {
+  const handleSyncElectoralUnitsStateFlow = async () => {
     setOpenMenu(false);
-    toast.promise(syncStateFlowMutation.mutateAsync(), {
-      loading: "Syncing electoral units (State Flow)...",
-      success: "Successfully synced electoral units (State Flow)",
-      error: (error: any) => error.message || "An error occurred",
-    });
+    try {
+      const res = await syncStateFlowMutation.mutateAsync();
+      const status = res?.data?.status;
+      pollSyncProgress(
+        status?.current_step || "Starting electoral units sync (State Flow)..."
+      );
+    } catch (error: any) {
+      toast.error(
+        error?.message || "Failed to start electoral units sync (State Flow)"
+      );
+    }
   };
 
   // Dropdown menu items configuration

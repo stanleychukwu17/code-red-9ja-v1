@@ -26,7 +26,6 @@ INSERT INTO elections (
   state_constituency_id, lga_id, ward_id
 )
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-RETURNING id, election_group_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, office_id, name, election_date, scope, status, reports_count, updates_count, results_submitted_count, contesting_parties, created_at, updated_at
 `
 
 type earningsService interface {
@@ -93,68 +92,72 @@ func (s *ElectionsService) validateElectionGroup(ctx context.Context, q *queries
 	return eg, nil
 }
 
-// batchCreateElections pipelines multiple election inserts into the active transaction using pgx.Batch,
-// avoiding sequential roundtrips for large batches (e.g. LGAs, State Constituencies, Wards).
-func (s *ElectionsService) batchCreateElections(ctx context.Context, tx pgx.Tx, paramsList []queries.CreateElectionInstanceParams) ([]queries.Election, error) {
-	if len(paramsList) == 0 {
-		return []queries.Election{}, nil
+// dedupeSlice returns a new slice with duplicate elements removed, preserving original order.
+func dedupeSlice[T comparable](slice []T) []T {
+	if len(slice) == 0 {
+		return slice
 	}
-
-	batch := &pgx.Batch{}
-	for _, p := range paramsList {
-		batch.Queue(createElectionInstanceSQL,
-			p.Name,
-			p.ElectionDate,
-			p.ElectionGroupID,
-			p.OfficeID,
-			p.Scope,
-			p.StateID,
-			p.SenatorialDistrictID,
-			p.FederalConstituencyID,
-			p.StateConstituencyID,
-			p.LgaID,
-			p.WardID,
-		)
-	}
-
-	batchResults := tx.SendBatch(ctx, batch)
-	defer batchResults.Close()
-
-	createdElections := make([]queries.Election, 0, len(paramsList))
-	for _, p := range paramsList {
-		var el queries.Election
-		err := batchResults.QueryRow().Scan(
-			&el.ID,
-			&el.ElectionGroupID,
-			&el.StateID,
-			&el.SenatorialDistrictID,
-			&el.FederalConstituencyID,
-			&el.StateConstituencyID,
-			&el.LgaID,
-			&el.WardID,
-			&el.OfficeID,
-			&el.Name,
-			&el.ElectionDate,
-			&el.Scope,
-			&el.Status,
-			&el.ReportsCount,
-			&el.UpdatesCount,
-			&el.ResultsSubmittedCount,
-			&el.ContestingParties,
-			&el.CreatedAt,
-			&el.UpdatedAt,
-		)
-		if err != nil {
-			return nil, fmt.Errorf("failed to insert batch election %q: %w", p.Name, err)
+	seen := make(map[T]struct{}, len(slice))
+	result := make([]T, 0, len(slice))
+	for _, v := range slice {
+		if _, ok := seen[v]; !ok {
+			seen[v] = struct{}{}
+			result = append(result, v)
 		}
-		createdElections = append(createdElections, el)
+	}
+	return result
+}
+
+// batchCreateElections pipelines multiple election inserts into the active transaction using pgx.Batch in chunks of 1000,
+// without returning full rows for maximum throughput. Returns the number of inserted elections.
+func (s *ElectionsService) batchCreateElections(ctx context.Context, tx pgx.Tx, paramsList []queries.CreateElectionInstanceParams) (int, error) {
+	if len(paramsList) == 0 {
+		return 0, nil
 	}
 
-	if err := batchResults.Close(); err != nil {
-		return nil, fmt.Errorf("failed to close batch results: %w", err)
+	const chunkSize = 1000
+	totalInserted := 0
+
+	for i := 0; i < len(paramsList); i += chunkSize {
+		end := i + chunkSize
+		if end > len(paramsList) {
+			end = len(paramsList)
+		}
+		chunk := paramsList[i:end]
+
+		batch := &pgx.Batch{}
+		for _, p := range chunk {
+			batch.Queue(createElectionInstanceSQL,
+				p.Name,
+				p.ElectionDate,
+				p.ElectionGroupID,
+				p.OfficeID,
+				p.Scope,
+				p.StateID,
+				p.SenatorialDistrictID,
+				p.FederalConstituencyID,
+				p.StateConstituencyID,
+				p.LgaID,
+				p.WardID,
+			)
+		}
+
+		batchResults := tx.SendBatch(ctx, batch)
+		for _, p := range chunk {
+			ct, err := batchResults.Exec()
+			if err != nil {
+				batchResults.Close()
+				return totalInserted, fmt.Errorf("failed to insert batch election %q: %w", p.Name, err)
+			}
+			totalInserted += int(ct.RowsAffected())
+		}
+
+		if err := batchResults.Close(); err != nil {
+			return totalInserted, fmt.Errorf("failed to close batch results: %w", err)
+		}
 	}
 
-	return createdElections, nil
+	return totalInserted, nil
 }
 
 // CandidateInput holds candidate and party identification for election registration.
@@ -173,6 +176,9 @@ func (s *ElectionsService) CreateNationwideElection(ctx context.Context, officeI
 	}
 	if !office.IsContested {
 		return queries.Election{}, fmt.Errorf("office %s is not contestable in elections", office.Name)
+	}
+	if office.Scope != "nationwide" {
+		return queries.Election{}, fmt.Errorf("office %s is not a nationwide office (expected scope 'nationwide', got '%s')", office.Name, office.Scope)
 	}
 	officeElection := utils.PgTextOrDefault(office.Election, office.Name)
 
@@ -213,21 +219,32 @@ func (s *ElectionsService) CreateNationwideElection(ctx context.Context, officeI
 }
 
 // CreateStateElection sets up multiple state-level elections (e.g., Governorship) under a shared election group.
-func (s *ElectionsService) CreateStateElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, stateIDs []int16) ([]queries.Election, error) {
+func (s *ElectionsService) CreateStateElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, stateIDs []int16) (int, error) {
+	// Early return if no states provided
+	if len(stateIDs) == 0 {
+		return 0, nil
+	}
+
+	// In-memory deduplication of state IDs
+	stateIDs = dedupeSlice(stateIDs)
+
 	// Fetch and validate the target office definition
 	office, err := s.officeService.GetOfficeByID(ctx, officeID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch office: %w", err)
+		return 0, fmt.Errorf("failed to fetch office: %w", err)
 	}
 	if !office.IsContested {
-		return nil, fmt.Errorf("office %s is not contestable in elections", office.Name)
+		return 0, fmt.Errorf("office %s is not contestable in elections", office.Name)
+	}
+	if office.Scope != "state" {
+		return 0, fmt.Errorf("office %s is not a state-level office (expected scope 'state', got '%s')", office.Name, office.Scope)
 	}
 	officeElection := utils.PgTextOrDefault(office.Election, office.Name)
 
 	// Begin database transaction
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+		return 0, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
 
@@ -236,22 +253,21 @@ func (s *ElectionsService) CreateStateElection(ctx context.Context, officeID int
 
 	// Verify target election group exists and is active
 	if _, err := s.validateElectionGroup(ctx, txQueries, electionGroupID); err != nil {
-		return nil, err
+		return 0, err
 	}
-
-	createdElections := make([]queries.Election, 0, len(stateIDs))
 
 	// Pre-fetch all states into map for O(1) in-memory lookups via bodiesService Redis cache
 	states, err := s.bodiesService.GetStatesByCountryID(ctx, constants.NigeriaCountryID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch states: %w", err)
+		return 0, fmt.Errorf("failed to fetch states: %w", err)
 	}
 	stateMap := make(map[int16]string, len(states))
 	for _, s := range states {
 		stateMap[s.ID] = s.Name
 	}
 
-	// Create individual election records for each state (skipping non-existent states)
+	// Build election parameters for each state (skipping non-existent states)
+	paramsList := make([]queries.CreateElectionInstanceParams, 0, len(stateIDs))
 	for _, stateID := range stateIDs {
 		stateName, found := stateMap[stateID]
 		if !found {
@@ -260,7 +276,7 @@ func (s *ElectionsService) CreateStateElection(ctx context.Context, officeID int
 		}
 
 		name := fmt.Sprintf("%d %s Election (%s)", electionDate.Year(), officeElection, stateName)
-		election, err := txQueries.CreateElectionInstance(ctx, queries.CreateElectionInstanceParams{
+		paramsList = append(paramsList, queries.CreateElectionInstanceParams{
 			Name:            name,
 			ElectionDate:    pgtype.Date{Time: electionDate, Valid: true},
 			ElectionGroupID: electionGroupID,
@@ -268,37 +284,48 @@ func (s *ElectionsService) CreateStateElection(ctx context.Context, officeID int
 			Scope:           "state",
 			StateID:         pgtype.Int2{Int16: stateID, Valid: true},
 		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to create election for state %d: %w", stateID, err)
-		}
-		createdElections = append(createdElections, election)
+	}
+
+	count, err := s.batchCreateElections(ctx, tx, paramsList)
+	if err != nil {
+		return 0, err
 	}
 
 	// Commit transaction
 	if err := tx.Commit(ctx); err != nil {
-		return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		return 0, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return createdElections, nil
+	return count, nil
 }
 
 // CreateSenatorialDistrictElection sets up elections across one or more Senatorial Districts.
-func (s *ElectionsService) CreateSenatorialDistrictElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, senatorialDistrictIDs []int32) ([]queries.Election, error) {
+func (s *ElectionsService) CreateSenatorialDistrictElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, senatorialDistrictIDs []int32) (int, error) {
+	// Early return if no senatorial districts provided
+	if len(senatorialDistrictIDs) == 0 {
+		return 0, nil
+	}
+
+	// In-memory deduplication of senatorial district IDs
+	senatorialDistrictIDs = dedupeSlice(senatorialDistrictIDs)
 
 	// Fetch and validate the target office definition
 	office, err := s.officeService.GetOfficeByID(ctx, officeID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch office: %w", err)
+		return 0, fmt.Errorf("failed to fetch office: %w", err)
 	}
 	if !office.IsContested {
-		return nil, fmt.Errorf("office %s is not contestable in elections", office.Name)
+		return 0, fmt.Errorf("office %s is not contestable in elections", office.Name)
+	}
+	if office.Scope != "senatorial-district" {
+		return 0, fmt.Errorf("office %s is not a senatorial district office (expected scope 'senatorial-district', got '%s')", office.Name, office.Scope)
 	}
 	officeElection := utils.PgTextOrDefault(office.Election, office.Name)
 
 	// Begin database transaction
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+		return 0, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
 
@@ -307,22 +334,21 @@ func (s *ElectionsService) CreateSenatorialDistrictElection(ctx context.Context,
 
 	// Verify target election group exists and is active
 	if _, err := s.validateElectionGroup(ctx, txQueries, electionGroupID); err != nil {
-		return nil, err
+		return 0, err
 	}
-
-	createdElections := make([]queries.Election, 0, len(senatorialDistrictIDs))
 
 	// Pre-fetch all senatorial districts into map for O(1) in-memory lookups
 	districts, err := txQueries.GetSenatorialDistricts(ctx, 0)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch senatorial districts: %w", err)
+		return 0, fmt.Errorf("failed to fetch senatorial districts: %w", err)
 	}
 	districtMap := make(map[int32]queries.SenatorialDistrict, len(districts))
 	for _, d := range districts {
 		districtMap[d.ID] = d
 	}
 
-	// Create election records for each senatorial district (skipping non-existent districts)
+	// Build election parameters for each senatorial district (skipping non-existent districts)
+	paramsList := make([]queries.CreateElectionInstanceParams, 0, len(senatorialDistrictIDs))
 	for _, districtID := range senatorialDistrictIDs {
 		districtRow, found := districtMap[districtID]
 		if !found {
@@ -336,7 +362,7 @@ func (s *ElectionsService) CreateSenatorialDistrictElection(ctx context.Context,
 		}
 
 		name := fmt.Sprintf("%d %s Election (%s)", electionDate.Year(), officeElection, districtRow.Name)
-		election, err := txQueries.CreateElectionInstance(ctx, queries.CreateElectionInstanceParams{
+		paramsList = append(paramsList, queries.CreateElectionInstanceParams{
 			Name:                 name,
 			ElectionDate:         pgtype.Date{Time: electionDate, Valid: true},
 			ElectionGroupID:      electionGroupID,
@@ -345,37 +371,48 @@ func (s *ElectionsService) CreateSenatorialDistrictElection(ctx context.Context,
 			StateID:              stateID,
 			SenatorialDistrictID: pgtype.Int4{Int32: districtID, Valid: true},
 		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to create election for district %d: %w", districtID, err)
-		}
-		createdElections = append(createdElections, election)
+	}
+
+	count, err := s.batchCreateElections(ctx, tx, paramsList)
+	if err != nil {
+		return 0, err
 	}
 
 	// Commit transaction
 	if err := tx.Commit(ctx); err != nil {
-		return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		return 0, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return createdElections, nil
+	return count, nil
 }
 
 // CreateFederalConstituencyElection sets up elections across one or more Federal Constituencies (House of Representatives).
-func (s *ElectionsService) CreateFederalConstituencyElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, federalConstituencyIDs []int32) ([]queries.Election, error) {
+func (s *ElectionsService) CreateFederalConstituencyElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, federalConstituencyIDs []int32) (int, error) {
+	// Early return if no federal constituencies provided
+	if len(federalConstituencyIDs) == 0 {
+		return 0, nil
+	}
+
+	// In-memory deduplication of federal constituency IDs
+	federalConstituencyIDs = dedupeSlice(federalConstituencyIDs)
 
 	// Fetch and validate the target office definition
 	office, err := s.officeService.GetOfficeByID(ctx, officeID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch office: %w", err)
+		return 0, fmt.Errorf("failed to fetch office: %w", err)
 	}
 	if !office.IsContested {
-		return nil, fmt.Errorf("office %s is not contestable in elections", office.Name)
+		return 0, fmt.Errorf("office %s is not contestable in elections", office.Name)
+	}
+	if office.Scope != "federal-constituency" {
+		return 0, fmt.Errorf("office %s is not a federal constituency office (expected scope 'federal-constituency', got '%s')", office.Name, office.Scope)
 	}
 	officeElection := utils.PgTextOrDefault(office.Election, office.Name)
 
 	// Begin database transaction
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+		return 0, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
 
@@ -384,10 +421,8 @@ func (s *ElectionsService) CreateFederalConstituencyElection(ctx context.Context
 
 	// Verify target election group exists and is active
 	if _, err := s.validateElectionGroup(ctx, txQueries, electionGroupID); err != nil {
-		return nil, err
+		return 0, err
 	}
-
-	createdElections := make([]queries.Election, 0, len(federalConstituencyIDs))
 
 	// Pre-fetch all federal constituencies into map for O(1) in-memory lookups
 	constituencies, err := txQueries.GetFederalConstituencies(ctx, queries.GetFederalConstituenciesParams{
@@ -395,14 +430,15 @@ func (s *ElectionsService) CreateFederalConstituencyElection(ctx context.Context
 		SenatorialDistrictID: 0,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch federal constituencies: %w", err)
+		return 0, fmt.Errorf("failed to fetch federal constituencies: %w", err)
 	}
 	fcMap := make(map[int32]queries.FederalConstituency, len(constituencies))
 	for _, c := range constituencies {
 		fcMap[c.ID] = c
 	}
 
-	// Create election records for each federal constituency (skipping non-existent constituencies)
+	// Build election parameters for each federal constituency (skipping non-existent constituencies)
+	paramsList := make([]queries.CreateElectionInstanceParams, 0, len(federalConstituencyIDs))
 	for _, constituencyID := range federalConstituencyIDs {
 		cRow, found := fcMap[constituencyID]
 		if !found {
@@ -421,7 +457,7 @@ func (s *ElectionsService) CreateFederalConstituencyElection(ctx context.Context
 		}
 
 		name := fmt.Sprintf("%d %s Election (%s)", electionDate.Year(), officeElection, cRow.Name)
-		election, err := txQueries.CreateElectionInstance(ctx, queries.CreateElectionInstanceParams{
+		paramsList = append(paramsList, queries.CreateElectionInstanceParams{
 			Name:                  name,
 			ElectionDate:          pgtype.Date{Time: electionDate, Valid: true},
 			ElectionGroupID:       electionGroupID,
@@ -431,37 +467,48 @@ func (s *ElectionsService) CreateFederalConstituencyElection(ctx context.Context
 			SenatorialDistrictID:  senatorialDistrictID,
 			FederalConstituencyID: pgtype.Int4{Int32: constituencyID, Valid: true},
 		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to create election for federal constituency %d: %w", constituencyID, err)
-		}
-		createdElections = append(createdElections, election)
+	}
+
+	count, err := s.batchCreateElections(ctx, tx, paramsList)
+	if err != nil {
+		return 0, err
 	}
 
 	// Commit transaction
 	if err := tx.Commit(ctx); err != nil {
-		return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		return 0, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return createdElections, nil
+	return count, nil
 }
 
 // CreateStateConstituencyElection sets up elections across one or more State Assembly Constituencies.
-func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, stateConstituencyIDs []int32) ([]queries.Election, error) {
+func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, stateConstituencyIDs []int32) (int, error) {
+	// Early return if no state constituencies provided
+	if len(stateConstituencyIDs) == 0 {
+		return 0, nil
+	}
+
+	// In-memory deduplication of state constituency IDs
+	stateConstituencyIDs = dedupeSlice(stateConstituencyIDs)
 
 	// Fetch and validate the target office definition
 	office, err := s.officeService.GetOfficeByID(ctx, officeID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch office: %w", err)
+		return 0, fmt.Errorf("failed to fetch office: %w", err)
 	}
 	if !office.IsContested {
-		return nil, fmt.Errorf("office %s is not contestable in elections", office.Name)
+		return 0, fmt.Errorf("office %s is not contestable in elections", office.Name)
+	}
+	if office.Scope != "state-constituency" {
+		return 0, fmt.Errorf("office %s is not a state constituency office (expected scope 'state-constituency', got '%s')", office.Name, office.Scope)
 	}
 	officeElection := utils.PgTextOrDefault(office.Election, office.Name)
 
 	// Begin database transaction
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+		return 0, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
 
@@ -470,7 +517,7 @@ func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, 
 
 	// Verify target election group exists and is active
 	if _, err := s.validateElectionGroup(ctx, txQueries, electionGroupID); err != nil {
-		return nil, err
+		return 0, err
 	}
 
 	// Pre-fetch all state constituencies into map for O(1) in-memory lookups
@@ -479,7 +526,7 @@ func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, 
 		FederalConstituencyID: 0,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch state constituencies: %w", err)
+		return 0, fmt.Errorf("failed to fetch state constituencies: %w", err)
 	}
 	scMap := make(map[int32]queries.StateConstituency, len(constituencies))
 	for _, c := range constituencies {
@@ -528,36 +575,46 @@ func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, 
 		})
 	}
 
-	createdElections, err := s.batchCreateElections(ctx, tx, paramsList)
+	count, err := s.batchCreateElections(ctx, tx, paramsList)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 
 	// Commit transaction
 	if err := tx.Commit(ctx); err != nil {
-		return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		return 0, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return createdElections, nil
+	return count, nil
 }
 
 // CreateLgaElection sets up elections across one or more Local Government Areas (LGAs) (e.g., LGA Chairmanship).
-func (s *ElectionsService) CreateLgaElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, lgaIDs []int32) ([]queries.Election, error) {
+func (s *ElectionsService) CreateLgaElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, lgaIDs []int32) (int, error) {
+	// Early return if no LGAs provided
+	if len(lgaIDs) == 0 {
+		return 0, nil
+	}
+
+	// In-memory deduplication of LGA IDs
+	lgaIDs = dedupeSlice(lgaIDs)
 
 	// Fetch and validate the target office definition
 	office, err := s.officeService.GetOfficeByID(ctx, officeID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch office: %w", err)
+		return 0, fmt.Errorf("failed to fetch office: %w", err)
 	}
 	if !office.IsContested {
-		return nil, fmt.Errorf("office %s is not contestable in elections", office.Name)
+		return 0, fmt.Errorf("office %s is not contestable in elections", office.Name)
+	}
+	if office.Scope != "lga" {
+		return 0, fmt.Errorf("office %s is not an LGA office (expected scope 'lga', got '%s')", office.Name, office.Scope)
 	}
 	officeElection := utils.PgTextOrDefault(office.Election, office.Name)
 
 	// Begin database transaction
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+		return 0, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
 
@@ -566,13 +623,13 @@ func (s *ElectionsService) CreateLgaElection(ctx context.Context, officeID int16
 
 	// Verify target election group exists and is active
 	if _, err := s.validateElectionGroup(ctx, txQueries, electionGroupID); err != nil {
-		return nil, err
+		return 0, err
 	}
 
 	// Pre-fetch all LGAs into map for O(1) in-memory lookups
 	lgas, err := txQueries.GetLGAs(ctx, 0)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch LGAs: %w", err)
+		return 0, fmt.Errorf("failed to fetch LGAs: %w", err)
 	}
 	lgaMap := make(map[int32]queries.Lga, len(lgas))
 	for _, l := range lgas {
@@ -616,36 +673,46 @@ func (s *ElectionsService) CreateLgaElection(ctx context.Context, officeID int16
 		})
 	}
 
-	createdElections, err := s.batchCreateElections(ctx, tx, paramsList)
+	count, err := s.batchCreateElections(ctx, tx, paramsList)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 
 	// Commit transaction
 	if err := tx.Commit(ctx); err != nil {
-		return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		return 0, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return createdElections, nil
+	return count, nil
 }
 
 // CreateWardElection sets up elections across one or more Wards (e.g., Councillorship).
-func (s *ElectionsService) CreateWardElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, wardIDs []int32) ([]queries.Election, error) {
+func (s *ElectionsService) CreateWardElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, wardIDs []int32) (int, error) {
+	// Early return if no wards provided
+	if len(wardIDs) == 0 {
+		return 0, nil
+	}
+
+	// In-memory deduplication of ward IDs
+	wardIDs = dedupeSlice(wardIDs)
 
 	// Fetch and validate the target office definition
 	office, err := s.officeService.GetOfficeByID(ctx, officeID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch office: %w", err)
+		return 0, fmt.Errorf("failed to fetch office: %w", err)
 	}
 	if !office.IsContested {
-		return nil, fmt.Errorf("office %s is not contestable in elections", office.Name)
+		return 0, fmt.Errorf("office %s is not contestable in elections", office.Name)
+	}
+	if office.Scope != "ward" {
+		return 0, fmt.Errorf("office %s is not a ward office (expected scope 'ward', got '%s')", office.Name, office.Scope)
 	}
 	officeElection := utils.PgTextOrDefault(office.Election, office.Name)
 
 	// Begin database transaction
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+		return 0, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
 
@@ -654,7 +721,7 @@ func (s *ElectionsService) CreateWardElection(ctx context.Context, officeID int1
 
 	// Verify target election group exists and is active
 	if _, err := s.validateElectionGroup(ctx, txQueries, electionGroupID); err != nil {
-		return nil, err
+		return 0, err
 	}
 
 	// Pre-fetch all wards once to resolve parent IDs in memory
@@ -663,7 +730,7 @@ func (s *ElectionsService) CreateWardElection(ctx context.Context, officeID int1
 		StateID: 0,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch wards: %w", err)
+		return 0, fmt.Errorf("failed to fetch wards: %w", err)
 	}
 	wardMap := make(map[int32]queries.Ward, len(wards))
 	for _, w := range wards {
@@ -673,7 +740,7 @@ func (s *ElectionsService) CreateWardElection(ctx context.Context, officeID int1
 	// Pre-fetch LGAs to resolve senatorial district & federal constituency for wards via parent LGA
 	lgas, err := txQueries.GetLGAs(ctx, 0)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch LGAs for ward parent resolution: %w", err)
+		return 0, fmt.Errorf("failed to fetch LGAs for ward parent resolution: %w", err)
 	}
 	lgaMap := make(map[int32]queries.Lga, len(lgas))
 	for _, l := range lgas {
@@ -729,17 +796,17 @@ func (s *ElectionsService) CreateWardElection(ctx context.Context, officeID int1
 		})
 	}
 
-	createdElections, err := s.batchCreateElections(ctx, tx, paramsList)
+	count, err := s.batchCreateElections(ctx, tx, paramsList)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 
 	// Commit transaction
 	if err := tx.Commit(ctx); err != nil {
-		return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		return 0, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return createdElections, nil
+	return count, nil
 }
 
 // GetElectionByID fetches an election instance by its unique identifier.

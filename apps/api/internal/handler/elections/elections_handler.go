@@ -18,12 +18,12 @@ import (
 
 type ElectionsService interface {
 	CreateNationwideElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32) (queries.Election, error)
-	CreateStateElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, stateIDs []int16) ([]queries.Election, error)
-	CreateSenatorialDistrictElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, senatorialDistrictIDs []int32) ([]queries.Election, error)
-	CreateFederalConstituencyElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, federalConstituencyIDs []int32) ([]queries.Election, error)
-	CreateStateConstituencyElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, stateConstituencyIDs []int32) ([]queries.Election, error)
-	CreateLgaElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, lgaIDs []int32) ([]queries.Election, error)
-	CreateWardElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, wardIDs []int32) ([]queries.Election, error)
+	CreateStateElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, stateIDs []int16) (int, error)
+	CreateSenatorialDistrictElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, senatorialDistrictIDs []int32) (int, error)
+	CreateFederalConstituencyElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, federalConstituencyIDs []int32) (int, error)
+	CreateStateConstituencyElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, stateConstituencyIDs []int32) (int, error)
+	CreateLgaElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, lgaIDs []int32) (int, error)
+	CreateWardElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, wardIDs []int32) (int, error)
 	GetElectionByID(ctx context.Context, id int32) (queries.Election, error)
 	ListElections(ctx context.Context, limit int32, cursor int64) ([]queries.ListElectionInstancesRow, error)
 	UpdateElection(ctx context.Context, id int32, name string, electionDate time.Time, electionGroupID int32) (queries.Election, error)
@@ -228,23 +228,19 @@ func (h *Handler) CreateStateElection(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Batch create election instances for each state, resolve election group, and seed skeleton results
-	elections, err := h.service.CreateStateElection(r.Context(), req.OfficeID, req.ElectionDate.Time(), req.ElectionGroupID, req.StateIDs)
+	count, err := h.service.CreateStateElection(r.Context(), req.OfficeID, req.ElectionDate.Time(), req.ElectionGroupID, req.StateIDs)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create state elections: "+err.Error())
 		return
 	}
 
-	var firstElectionID int32
-	if len(elections) > 0 {
-		firstElectionID = elections[0].ID
-	}
-	h.logElectionCreationAudit(r, "state", req.ElectionGroupID, req.OfficeID, len(elections), firstElectionID, map[string]interface{}{
+	h.logElectionCreationAudit(r, "state", req.ElectionGroupID, req.OfficeID, count, 0, map[string]interface{}{
 		"state_ids": req.StateIDs,
 	})
 
-	// Return successful response with the list of created state election entities
+	// Return successful response with the count of created state election entities
 	h.utils.RespondSuccess(w, http.StatusCreated, "State elections created successfully", map[string]interface{}{
-		"elections": elections,
+		"count": count,
 	})
 }
 
@@ -274,23 +270,19 @@ func (h *Handler) CreateSenatorialDistrictElection(w http.ResponseWriter, r *htt
 	}
 
 	// Batch create elections across selected senatorial districts, resolve group, and seed skeleton results
-	elections, err := h.service.CreateSenatorialDistrictElection(r.Context(), req.OfficeID, req.ElectionDate.Time(), req.ElectionGroupID, req.SenatorialDistrictIDs)
+	count, err := h.service.CreateSenatorialDistrictElection(r.Context(), req.OfficeID, req.ElectionDate.Time(), req.ElectionGroupID, req.SenatorialDistrictIDs)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create senatorial district elections: "+err.Error())
 		return
 	}
 
-	var firstElectionID int32
-	if len(elections) > 0 {
-		firstElectionID = elections[0].ID
-	}
-	h.logElectionCreationAudit(r, "senatorial-district", req.ElectionGroupID, req.OfficeID, len(elections), firstElectionID, map[string]interface{}{
+	h.logElectionCreationAudit(r, "senatorial-district", req.ElectionGroupID, req.OfficeID, count, 0, map[string]interface{}{
 		"senatorial_district_ids": req.SenatorialDistrictIDs,
 	})
 
-	// Return successful response with list of created senatorial district elections
+	// Return successful response with count of created senatorial district elections
 	h.utils.RespondSuccess(w, http.StatusCreated, "Senatorial district elections created successfully", map[string]interface{}{
-		"elections": elections,
+		"count": count,
 	})
 }
 
@@ -320,23 +312,19 @@ func (h *Handler) CreateFederalConstituencyElection(w http.ResponseWriter, r *ht
 	}
 
 	// Batch create elections across selected federal constituencies, resolve group, and seed skeleton results
-	elections, err := h.service.CreateFederalConstituencyElection(r.Context(), req.OfficeID, req.ElectionDate.Time(), req.ElectionGroupID, req.FederalConstituencyIDs)
+	count, err := h.service.CreateFederalConstituencyElection(r.Context(), req.OfficeID, req.ElectionDate.Time(), req.ElectionGroupID, req.FederalConstituencyIDs)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create federal constituency elections: "+err.Error())
 		return
 	}
 
-	var firstElectionID int32
-	if len(elections) > 0 {
-		firstElectionID = elections[0].ID
-	}
-	h.logElectionCreationAudit(r, "federal-constituency", req.ElectionGroupID, req.OfficeID, len(elections), firstElectionID, map[string]interface{}{
+	h.logElectionCreationAudit(r, "federal-constituency", req.ElectionGroupID, req.OfficeID, count, 0, map[string]interface{}{
 		"federal_constituency_ids": req.FederalConstituencyIDs,
 	})
 
-	// Return successful response with list of created federal constituency elections
+	// Return successful response with count of created federal constituency elections
 	h.utils.RespondSuccess(w, http.StatusCreated, "Federal constituency elections created successfully", map[string]interface{}{
-		"elections": elections,
+		"count": count,
 	})
 }
 
@@ -366,23 +354,19 @@ func (h *Handler) CreateStateConstituencyElection(w http.ResponseWriter, r *http
 	}
 
 	// Batch create elections across selected state assembly constituencies, resolve group, and seed skeleton results
-	elections, err := h.service.CreateStateConstituencyElection(r.Context(), req.OfficeID, req.ElectionDate.Time(), req.ElectionGroupID, req.StateConstituencyIDs)
+	count, err := h.service.CreateStateConstituencyElection(r.Context(), req.OfficeID, req.ElectionDate.Time(), req.ElectionGroupID, req.StateConstituencyIDs)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create state constituency elections: "+err.Error())
 		return
 	}
 
-	var firstElectionID int32
-	if len(elections) > 0 {
-		firstElectionID = elections[0].ID
-	}
-	h.logElectionCreationAudit(r, "state-constituency", req.ElectionGroupID, req.OfficeID, len(elections), firstElectionID, map[string]interface{}{
+	h.logElectionCreationAudit(r, "state-constituency", req.ElectionGroupID, req.OfficeID, count, 0, map[string]interface{}{
 		"state_constituency_ids": req.StateConstituencyIDs,
 	})
 
-	// Return successful response with list of created state constituency elections
+	// Return successful response with count of created state constituency elections
 	h.utils.RespondSuccess(w, http.StatusCreated, "State constituency elections created successfully", map[string]interface{}{
-		"elections": elections,
+		"count": count,
 	})
 }
 
@@ -412,23 +396,19 @@ func (h *Handler) CreateLgaElection(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Batch create elections across selected LGAs, resolve group, and seed skeleton results
-	elections, err := h.service.CreateLgaElection(r.Context(), req.OfficeID, req.ElectionDate.Time(), req.ElectionGroupID, req.LgaIDs)
+	count, err := h.service.CreateLgaElection(r.Context(), req.OfficeID, req.ElectionDate.Time(), req.ElectionGroupID, req.LgaIDs)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create LGA elections: "+err.Error())
 		return
 	}
 
-	var firstElectionID int32
-	if len(elections) > 0 {
-		firstElectionID = elections[0].ID
-	}
-	h.logElectionCreationAudit(r, "lga", req.ElectionGroupID, req.OfficeID, len(elections), firstElectionID, map[string]interface{}{
+	h.logElectionCreationAudit(r, "lga", req.ElectionGroupID, req.OfficeID, count, 0, map[string]interface{}{
 		"lga_ids": req.LgaIDs,
 	})
 
-	// Return successful response with list of created LGA elections
+	// Return successful response with count of created LGA elections
 	h.utils.RespondSuccess(w, http.StatusCreated, "LGA elections created successfully", map[string]interface{}{
-		"elections": elections,
+		"count": count,
 	})
 }
 
@@ -459,23 +439,19 @@ func (h *Handler) CreateWardElection(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Batch create elections across selected Wards, resolve group, and seed skeleton results
-	elections, err := h.service.CreateWardElection(r.Context(), req.OfficeID, req.ElectionDate.Time(), req.ElectionGroupID, req.WardIDs)
+	count, err := h.service.CreateWardElection(r.Context(), req.OfficeID, req.ElectionDate.Time(), req.ElectionGroupID, req.WardIDs)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create Ward elections: "+err.Error())
 		return
 	}
 
-	var firstElectionID int32
-	if len(elections) > 0 {
-		firstElectionID = elections[0].ID
-	}
-	h.logElectionCreationAudit(r, "ward", req.ElectionGroupID, req.OfficeID, len(elections), firstElectionID, map[string]interface{}{
+	h.logElectionCreationAudit(r, "ward", req.ElectionGroupID, req.OfficeID, count, 0, map[string]interface{}{
 		"ward_ids": req.WardIDs,
 	})
 
-	// Return successful response with list of created Ward elections
+	// Return successful response with count of created Ward elections
 	h.utils.RespondSuccess(w, http.StatusCreated, "Ward elections created successfully", map[string]interface{}{
-		"elections": elections,
+		"count": count,
 	})
 }
 

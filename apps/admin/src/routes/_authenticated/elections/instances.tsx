@@ -59,7 +59,7 @@ function RouteComponent() {
     queryFn: async ({ pageParam }) => {
       const res = await getElections({
         data: {
-          limit: 20,
+          limit: 40,
           cursor: pageParam as string,
         },
       });

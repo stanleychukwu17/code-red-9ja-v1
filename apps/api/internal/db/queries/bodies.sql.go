@@ -388,7 +388,7 @@ func (q *Queries) CreateWard(ctx context.Context, arg CreateWardParams) (Ward, e
 	return i, err
 }
 
-const deactivateMissingFederalConstituencies = `-- name: DeactivateMissingFederalConstituencies :exec
+const deactivateMissingFederalConstituencies = `-- name: DeactivateMissingFederalConstituencies :execrows
 UPDATE federal_constituencies
 SET status = 'inactive'
 WHERE state_id = $1 AND NOT (id = ANY($2::int[]))
@@ -399,12 +399,15 @@ type DeactivateMissingFederalConstituenciesParams struct {
 	Column2 []int32 `json:"column_2"`
 }
 
-func (q *Queries) DeactivateMissingFederalConstituencies(ctx context.Context, arg DeactivateMissingFederalConstituenciesParams) error {
-	_, err := q.db.Exec(ctx, deactivateMissingFederalConstituencies, arg.StateID, arg.Column2)
-	return err
+func (q *Queries) DeactivateMissingFederalConstituencies(ctx context.Context, arg DeactivateMissingFederalConstituenciesParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deactivateMissingFederalConstituencies, arg.StateID, arg.Column2)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
-const deactivateMissingLGAs = `-- name: DeactivateMissingLGAs :exec
+const deactivateMissingLGAs = `-- name: DeactivateMissingLGAs :execrows
 UPDATE lgas
 SET status = 'inactive'
 WHERE state_id = $1 AND NOT (id = ANY($2::int[]))
@@ -415,12 +418,15 @@ type DeactivateMissingLGAsParams struct {
 	Column2 []int32 `json:"column_2"`
 }
 
-func (q *Queries) DeactivateMissingLGAs(ctx context.Context, arg DeactivateMissingLGAsParams) error {
-	_, err := q.db.Exec(ctx, deactivateMissingLGAs, arg.StateID, arg.Column2)
-	return err
+func (q *Queries) DeactivateMissingLGAs(ctx context.Context, arg DeactivateMissingLGAsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deactivateMissingLGAs, arg.StateID, arg.Column2)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
-const deactivateMissingPollingUnits = `-- name: DeactivateMissingPollingUnits :exec
+const deactivateMissingPollingUnits = `-- name: DeactivateMissingPollingUnits :execrows
 UPDATE polling_units
 SET status = 'inactive'
 WHERE ward_id = $1 AND NOT (id = ANY($2::int[]))
@@ -431,12 +437,15 @@ type DeactivateMissingPollingUnitsParams struct {
 	Column2 []int32 `json:"column_2"`
 }
 
-func (q *Queries) DeactivateMissingPollingUnits(ctx context.Context, arg DeactivateMissingPollingUnitsParams) error {
-	_, err := q.db.Exec(ctx, deactivateMissingPollingUnits, arg.WardID, arg.Column2)
-	return err
+func (q *Queries) DeactivateMissingPollingUnits(ctx context.Context, arg DeactivateMissingPollingUnitsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deactivateMissingPollingUnits, arg.WardID, arg.Column2)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
-const deactivateMissingSenatorialDistricts = `-- name: DeactivateMissingSenatorialDistricts :exec
+const deactivateMissingSenatorialDistricts = `-- name: DeactivateMissingSenatorialDistricts :execrows
 UPDATE senatorial_districts
 SET status = 'inactive'
 WHERE state_id = $1 AND NOT (id = ANY($2::int[]))
@@ -447,12 +456,15 @@ type DeactivateMissingSenatorialDistrictsParams struct {
 	Column2 []int32 `json:"column_2"`
 }
 
-func (q *Queries) DeactivateMissingSenatorialDistricts(ctx context.Context, arg DeactivateMissingSenatorialDistrictsParams) error {
-	_, err := q.db.Exec(ctx, deactivateMissingSenatorialDistricts, arg.StateID, arg.Column2)
-	return err
+func (q *Queries) DeactivateMissingSenatorialDistricts(ctx context.Context, arg DeactivateMissingSenatorialDistrictsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deactivateMissingSenatorialDistricts, arg.StateID, arg.Column2)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
-const deactivateMissingStateConstituencies = `-- name: DeactivateMissingStateConstituencies :exec
+const deactivateMissingStateConstituencies = `-- name: DeactivateMissingStateConstituencies :execrows
 UPDATE state_constituencies
 SET status = 'inactive'
 WHERE state_id = $1 AND NOT (id = ANY($2::int[]))
@@ -463,12 +475,15 @@ type DeactivateMissingStateConstituenciesParams struct {
 	Column2 []int32 `json:"column_2"`
 }
 
-func (q *Queries) DeactivateMissingStateConstituencies(ctx context.Context, arg DeactivateMissingStateConstituenciesParams) error {
-	_, err := q.db.Exec(ctx, deactivateMissingStateConstituencies, arg.StateID, arg.Column2)
-	return err
+func (q *Queries) DeactivateMissingStateConstituencies(ctx context.Context, arg DeactivateMissingStateConstituenciesParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deactivateMissingStateConstituencies, arg.StateID, arg.Column2)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
-const deactivateMissingWards = `-- name: DeactivateMissingWards :exec
+const deactivateMissingWards = `-- name: DeactivateMissingWards :execrows
 UPDATE wards
 SET status = 'inactive'
 WHERE lga_id = $1 AND NOT (id = ANY($2::int[]))
@@ -479,9 +494,12 @@ type DeactivateMissingWardsParams struct {
 	Column2 []int32 `json:"column_2"`
 }
 
-func (q *Queries) DeactivateMissingWards(ctx context.Context, arg DeactivateMissingWardsParams) error {
-	_, err := q.db.Exec(ctx, deactivateMissingWards, arg.LgaID, arg.Column2)
-	return err
+func (q *Queries) DeactivateMissingWards(ctx context.Context, arg DeactivateMissingWardsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deactivateMissingWards, arg.LgaID, arg.Column2)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const deleteFederalConstituency = `-- name: DeleteFederalConstituency :exec

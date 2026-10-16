@@ -154,6 +154,10 @@ type wardCache struct {
 
 // SyncElectoralUnits orchestrates fetching, updating, creating, and deactivating electoral units across all 6 levels.
 func (s *BodiesService) SyncElectoralUnits(ctx context.Context) (*SyncReport, error) {
+	return s.runSyncElectoralUnits(ctx, nil)
+}
+
+func (s *BodiesService) runSyncElectoralUnits(ctx context.Context, liveStatus *SyncStatusResponse) (*SyncReport, error) {
 	syncCtx := context.WithoutCancel(ctx)
 	startTime := time.Now()
 	report := &SyncReport{}
@@ -177,6 +181,8 @@ func (s *BodiesService) SyncElectoralUnits(ctx context.Context) (*SyncReport, er
 	wardNameMap := make(map[int32]string)
 	wardMongoMap := make(map[int32]string)
 
+	// Geographic state -> LGA mapping to ensure fallbacks are always scoped to the correct state
+	stateLGAsMap := make(map[int32][]int32)
 	scMetaMap := make(map[int32]scMeta)
 
 	// Pre-populate lookup maps from existing DB tables
@@ -191,6 +197,7 @@ func (s *BodiesService) SyncElectoralUnits(ctx context.Context) (*SyncReport, er
 	existingLGAs, _ := s.queries.GetLGAs(syncCtx, 0)
 	for _, item := range existingLGAs {
 		lgaNameMap[item.ID] = item.Name
+		stateLGAsMap[item.StateID] = append(stateLGAsMap[item.StateID], item.ID)
 	}
 	existingSCs, _ := s.queries.GetStateConstituencies(syncCtx, queries.GetStateConstituenciesParams{StateID: 0, FederalConstituencyID: 0})
 	for _, item := range existingSCs {
@@ -203,6 +210,11 @@ func (s *BodiesService) SyncElectoralUnits(ctx context.Context) (*SyncReport, er
 
 	// LEVEL 1: Senatorial Districts
 	slog.Info("Syncing Level 1: Senatorial Districts...")
+	if liveStatus != nil {
+		liveStatus.CurrentStep = "Level 1: Syncing Senatorial Districts..."
+		s.updateSyncStatus(syncCtx, *liveStatus)
+	}
+
 	for _, state := range states {
 		urlStr := fmt.Sprintf("%s/elections?election_type=5f129a04df41d910dcdc1d52&state_id=%d", inecBaseURL, state.ID)
 		body, err := fetchINECData(syncCtx, client, urlStr)
@@ -250,16 +262,24 @@ func (s *BodiesService) SyncElectoralUnits(ctx context.Context) (*SyncReport, er
 			}
 		}
 
-		if err := s.queries.DeactivateMissingSenatorialDistricts(syncCtx, queries.DeactivateMissingSenatorialDistrictsParams{
+		deactivated, err := s.queries.DeactivateMissingSenatorialDistricts(syncCtx, queries.DeactivateMissingSenatorialDistrictsParams{
 			StateID: int32(state.ID),
 			Column2: activeIDs,
-		}); err != nil {
+		})
+		if err != nil {
 			slog.Warn("Failed to deactivate missing senatorial districts", "state_id", state.ID, "error", err)
+		} else {
+			report.SenatorialDistrictsDeactivated += int(deactivated)
 		}
 	}
 
 	// LEVEL 2: Federal Constituencies
 	slog.Info("Syncing Level 2: Federal Constituencies...")
+	if liveStatus != nil {
+		liveStatus.CurrentStep = "Level 2: Syncing Federal Constituencies..."
+		s.updateSyncStatus(syncCtx, *liveStatus)
+	}
+
 	for _, state := range states {
 		urlStr := fmt.Sprintf("%s/elections?election_type=5f129a04df41d910dcdc1d53&state_id=%d", inecBaseURL, state.ID)
 		body, err := fetchINECData(syncCtx, client, urlStr)
@@ -311,16 +331,24 @@ func (s *BodiesService) SyncElectoralUnits(ctx context.Context) (*SyncReport, er
 			}
 		}
 
-		if err := s.queries.DeactivateMissingFederalConstituencies(syncCtx, queries.DeactivateMissingFederalConstituenciesParams{
+		deactivated, err := s.queries.DeactivateMissingFederalConstituencies(syncCtx, queries.DeactivateMissingFederalConstituenciesParams{
 			StateID: int32(state.ID),
 			Column2: activeIDs,
-		}); err != nil {
+		})
+		if err != nil {
 			slog.Warn("Failed to deactivate missing federal constituencies", "state_id", state.ID, "error", err)
+		} else {
+			report.FederalConstituenciesDeactivated += int(deactivated)
 		}
 	}
 
 	// LEVEL 3: LGAs
 	slog.Info("Syncing Level 3: LGAs...")
+	if liveStatus != nil {
+		liveStatus.CurrentStep = "Level 3: Syncing LGAs..."
+		s.updateSyncStatus(syncCtx, *liveStatus)
+	}
+
 	var pendingWards []wardCache
 
 	for _, state := range states {
@@ -346,6 +374,9 @@ func (s *BodiesService) SyncElectoralUnits(ctx context.Context) (*SyncReport, er
 			if lgaInfo.ID == 0 {
 				continue
 			}
+
+			// Add to state-scoped LGAs map
+			stateLGAsMap[int32(state.ID)] = append(stateLGAsMap[int32(state.ID)], lgaInfo.ID)
 
 			lgaStatus := "active"
 			if !strings.EqualFold(lgaInfo.Status, "ACTIVE") {
@@ -405,11 +436,14 @@ func (s *BodiesService) SyncElectoralUnits(ctx context.Context) (*SyncReport, er
 			}
 		}
 
-		if err := s.queries.DeactivateMissingLGAs(syncCtx, queries.DeactivateMissingLGAsParams{
+		deactivated, err := s.queries.DeactivateMissingLGAs(syncCtx, queries.DeactivateMissingLGAsParams{
 			StateID: int32(state.ID),
 			Column2: activeLGAIDs,
-		}); err != nil {
+		})
+		if err != nil {
 			slog.Warn("Failed to deactivate missing LGAs", "state_id", state.ID, "error", err)
+		} else {
+			report.LGAsDeactivated += int(deactivated)
 		}
 	}
 
@@ -421,6 +455,11 @@ func (s *BodiesService) SyncElectoralUnits(ctx context.Context) (*SyncReport, er
 
 	// LEVEL 4: State Constituencies
 	slog.Info("Syncing Level 4: State Constituencies...")
+	if liveStatus != nil {
+		liveStatus.CurrentStep = "Level 4: Syncing State Constituencies..."
+		s.updateSyncStatus(syncCtx, *liveStatus)
+	}
+
 	for _, state := range states {
 		urlStr := fmt.Sprintf("%s/elections?election_type=5f129a04df41d910dcdc1d54&state_id=%d", inecBaseURL, state.ID)
 		body, err := fetchINECData(syncCtx, client, urlStr)
@@ -455,13 +494,10 @@ func (s *BodiesService) SyncElectoralUnits(ctx context.Context) (*SyncReport, er
 			meta := scMetaMap[domain.ID]
 			lgaID := meta.lgaID
 
-			// Fallback: If lgaID wasn't mapped via Wards, pick an LGA from the state to avoid NOT NULL FK violation
+			// Fallback: If lgaID wasn't mapped via Wards, pick an LGA from this specific state to avoid cross-state mismatch
 			if lgaID == 0 {
-				for lID, lName := range lgaNameMap {
-					if lID > 0 && lName != "" {
-						lgaID = lID
-						break
-					}
+				if lgas := stateLGAsMap[int32(state.ID)]; len(lgas) > 0 {
+					lgaID = lgas[0]
 				}
 			}
 
@@ -500,16 +536,24 @@ func (s *BodiesService) SyncElectoralUnits(ctx context.Context) (*SyncReport, er
 			}
 		}
 
-		if err := s.queries.DeactivateMissingStateConstituencies(syncCtx, queries.DeactivateMissingStateConstituenciesParams{
+		deactivated, err := s.queries.DeactivateMissingStateConstituencies(syncCtx, queries.DeactivateMissingStateConstituenciesParams{
 			StateID: int32(state.ID),
 			Column2: activeIDs,
-		}); err != nil {
+		})
+		if err != nil {
 			slog.Warn("Failed to deactivate missing state constituencies", "state_id", state.ID, "error", err)
+		} else {
+			report.StateConstituenciesDeactivated += int(deactivated)
 		}
 	}
 
 	// LEVEL 5: Wards
 	slog.Info("Syncing Level 5: Wards...")
+	if liveStatus != nil {
+		liveStatus.CurrentStep = "Level 5: Syncing Wards..."
+		s.updateSyncStatus(syncCtx, *liveStatus)
+	}
+
 	activeWardIDsByLGA := make(map[int32][]int32)
 
 	for _, wItem := range pendingWards {
@@ -556,11 +600,14 @@ func (s *BodiesService) SyncElectoralUnits(ctx context.Context) (*SyncReport, er
 	}
 
 	for lgaID, activeWards := range activeWardIDsByLGA {
-		if err := s.queries.DeactivateMissingWards(syncCtx, queries.DeactivateMissingWardsParams{
+		deactivated, err := s.queries.DeactivateMissingWards(syncCtx, queries.DeactivateMissingWardsParams{
 			LgaID:   lgaID,
 			Column2: activeWards,
-		}); err != nil {
+		})
+		if err != nil {
 			slog.Warn("Failed to deactivate missing wards for LGA", "lga_id", lgaID, "error", err)
+		} else {
+			report.WardsDeactivated += int(deactivated)
 		}
 	}
 
@@ -570,6 +617,11 @@ func (s *BodiesService) SyncElectoralUnits(ctx context.Context) (*SyncReport, er
 	if err != nil {
 		slog.Warn("Failed to fetch DB wards for polling unit sync", "error", err)
 	} else {
+		if liveStatus != nil {
+			liveStatus.CurrentStep = fmt.Sprintf("Level 6: Syncing Polling Units (0/%d wards)...", len(allDBWards))
+			s.updateSyncStatus(syncCtx, *liveStatus)
+		}
+
 		var wg sync.WaitGroup
 		wardChan := make(chan queries.Ward, len(allDBWards))
 		for _, w := range allDBWards {
@@ -579,6 +631,7 @@ func (s *BodiesService) SyncElectoralUnits(ctx context.Context) (*SyncReport, er
 
 		workers := 8
 		var mu sync.Mutex
+		wardsCompleted := 0
 
 		for i := 0; i < workers; i++ {
 			wg.Add(1)
@@ -692,15 +745,25 @@ func (s *BodiesService) SyncElectoralUnits(ctx context.Context) (*SyncReport, er
 						}
 					}
 
-					if err := s.queries.DeactivateMissingPollingUnits(syncCtx, queries.DeactivateMissingPollingUnitsParams{
+					deactivated, err := s.queries.DeactivateMissingPollingUnits(syncCtx, queries.DeactivateMissingPollingUnitsParams{
 						WardID:  ward.ID,
 						Column2: activePUIDs,
-					}); err != nil {
+					})
+					if err != nil {
 						slog.Warn("Failed to deactivate missing polling units", "ward_id", ward.ID, "error", err)
+					} else {
+						mu.Lock()
+						report.PollingUnitsDeactivated += int(deactivated)
+						mu.Unlock()
 					}
 
 					mu.Lock()
 					report.PollingUnitsProcessed += puCount
+					wardsCompleted++
+					if liveStatus != nil && (wardsCompleted%250 == 0 || wardsCompleted == len(allDBWards)) {
+						liveStatus.CurrentStep = fmt.Sprintf("Level 6: Syncing Polling Units (%d/%d wards)...", wardsCompleted, len(allDBWards))
+						s.updateSyncStatus(syncCtx, *liveStatus)
+					}
 					mu.Unlock()
 				}
 			}()
@@ -710,6 +773,11 @@ func (s *BodiesService) SyncElectoralUnits(ctx context.Context) (*SyncReport, er
 
 	// STEP 7: Recalculate Metrics across all levels atomically and invalidate caches
 	slog.Info("Recalculating metrics across all administrative levels...")
+	if liveStatus != nil {
+		liveStatus.CurrentStep = "Step 7: Recalculating Metrics and Clearing Caches..."
+		s.updateSyncStatus(syncCtx, *liveStatus)
+	}
+
 	if err := s.RecalculateBodyMetrics(syncCtx); err != nil {
 		slog.Warn("Failed to recalculate metrics after sync", "error", err)
 	}

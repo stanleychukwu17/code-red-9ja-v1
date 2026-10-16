@@ -394,6 +394,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Post("/api/v1/bodies/recalculate", bodiesHandler.RecalculateBodyMetrics)
 		r.Post("/api/v1/bodies/sync-electoral-units", bodiesHandler.SyncElectoralUnits)
 		r.Post("/api/v1/bodies/sync-electoral-units-state-flow", bodiesHandler.SyncElectoralUnitsStateFlow)
+		r.Get("/api/v1/bodies/sync-status", bodiesHandler.GetSyncStatus)
 
 		// political parties admin mutations
 		r.Post("/api/v1/parties", partiesHandler.CreateParty)

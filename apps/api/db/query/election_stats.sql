@@ -299,7 +299,7 @@ JOIN elections e ON e.election_group_id = $1
     OR (e.scope = 'senatorial-district' AND e.senatorial_district_id = l.senatorial_district_id)
     OR (e.scope = 'federal-constituency' AND e.federal_constituency_id = l.federal_constituency_id)
     OR (e.scope = 'lga'                 AND e.lga_id = w.lga_id)
-    OR (e.scope = 'state-constituency'  AND e.state_constituency_id = w.state_assembly_constituency_id)
+    OR (e.scope = 'state-constituency'  AND e.state_constituency_id = w.state_constituency_id)
     OR (e.scope = 'ward'                AND e.ward_id = w.id)
   )
 ON CONFLICT (election_group_id, ward_id) DO NOTHING;

@@ -114,5 +114,15 @@ export const syncElectoralUnitsStateFlow = createServerFn({ method: "POST" })
     }
   });
 
+export const getSyncStatus = createServerFn({ method: "GET" })
+  .handler(async () => {
+    try {
+      return await apiFetchJson(API_URL.syncElectoralUnitsStatus);
+    } catch (error: any) {
+      return { success: false, message: error?.message || "Failed to fetch sync status" };
+    }
+  });
+
+
 
 
