@@ -10,6 +10,7 @@ import (
 	"free9ja/api/internal/db/queries"
 
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -22,13 +23,15 @@ type PartiesService interface {
 
 type BodiesService struct {
 	queries        *queries.Queries
+	pool           *pgxpool.Pool
 	rdb            *redis.Client
 	partiesService PartiesService
 }
 
-func NewBodiesService(q *queries.Queries, rdb *redis.Client) *BodiesService {
+func NewBodiesService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client) *BodiesService {
 	return &BodiesService{
 		queries: q,
+		pool:    pool,
 		rdb:     rdb,
 	}
 }
@@ -631,4 +634,90 @@ func (s *BodiesService) CheckWard(ctx context.Context, wardID int32) (queries.Wa
 	}
 
 	return ward, nil
+}
+
+// InvalidateAllBodiesCache invalidates national metrics, Nigeria states list,
+// and scans and removes any cached electoral body lists (senatorial districts, LGAs, wards, constituencies).
+func (s *BodiesService) InvalidateAllBodiesCache(ctx context.Context) {
+	// 1. Delete high-level aggregate keys directly:
+	// - Nigeria states cache (countries:states:161) so admin lists and state-level dropdowns fetch fresh metrics.
+	// - National metrics cache (bodies:national_metrics) so dashboard summary cards update immediately.
+	nigeriaStatesKey := fmt.Sprintf("%s%d", db.RedisStatesByCountry, constants.NigeriaCountryID)
+	s.rdb.Del(ctx, db.RedisNationalMetrics, nigeriaStatesKey)
+
+	// 2. Non-blocking SCAN for sub-electoral bodies:
+	// Use SCAN with a non-blocking cursor instead of KEYS to avoid blocking the Redis server in production.
+	// We scan in batches of 500 for keys matching "bodies:*" (senatorial districts, constituencies, LGAs, wards, PUs).
+	var bodyKeys []string
+	iter := s.rdb.Scan(ctx, 0, "bodies:*", 500).Iterator()
+	for iter.Next(ctx) {
+		bodyKeys = append(bodyKeys, iter.Val())
+	}
+
+	// 3. Batch delete all discovered body cache keys in a single command
+	if len(bodyKeys) > 0 {
+		s.rdb.Del(ctx, bodyKeys...)
+	}
+}
+
+// RecalculateBodyMetrics runs bottom-up recalculation across all administrative levels
+// in a single atomic database transaction and invalidates all corresponding Redis caches.
+func (s *BodiesService) RecalculateBodyMetrics(ctx context.Context) error {
+	// 1. Begin atomic database transaction:
+	// If any recalculation query fails, rollback ensures we don't leave the database in an inconsistent state.
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to start transaction: %w", err)
+	}
+	defer tx.Rollback(ctx) // Safe: becomes a no-op once tx.Commit() succeeds
+
+	// Bind sqlc generated queries to the active transaction
+	qtx := s.queries.WithTx(tx)
+
+	// 2. Execute bottom-up recalculation:
+	// We aggregate hierarchically from the smallest electoral unit (polling units) up to national totals.
+
+	// Step 2a: Count polling units assigned to each ward
+	if err := qtx.RecalculateWardMetrics(ctx); err != nil {
+		return fmt.Errorf("failed to recalculate ward metrics: %w", err)
+	}
+
+	// Step 2b: Count wards and polling units for each state assembly constituency
+	if err := qtx.RecalculateStateConstituencyMetrics(ctx); err != nil {
+		return fmt.Errorf("failed to recalculate state constituency metrics: %w", err)
+	}
+
+	// Step 2c: Count constituencies, wards, and polling units for each LGA
+	if err := qtx.RecalculateLGAMetrics(ctx); err != nil {
+		return fmt.Errorf("failed to recalculate LGA metrics: %w", err)
+	}
+
+	// Step 2d: Count LGAs, constituencies, wards, and polling units for each federal constituency
+	if err := qtx.RecalculateFederalConstituencyMetrics(ctx); err != nil {
+		return fmt.Errorf("failed to recalculate federal constituency metrics: %w", err)
+	}
+
+	// Step 2e: Count federal constituencies, LGAs, wards, and polling units for each senatorial district
+	if err := qtx.RecalculateSenatorialDistrictMetrics(ctx); err != nil {
+		return fmt.Errorf("failed to recalculate senatorial district metrics: %w", err)
+	}
+
+	// Step 2f: Aggregate senatorial districts, federal/state constituencies, LGAs, wards, and PUs for each state
+	if err := qtx.RecalculateStateMetrics(ctx); err != nil {
+		return fmt.Errorf("failed to recalculate state metrics: %w", err)
+	}
+
+	// Step 2g: Aggregate country-wide totals into the national_metrics table
+	if err := qtx.RecalculateNationalMetrics(ctx); err != nil {
+		return fmt.Errorf("failed to recalculate national metrics: %w", err)
+	}
+
+	// 3. Commit the transaction to persist all recalculated counts atomically
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("failed to commit metrics recalculation: %w", err)
+	}
+
+	// 4. Invalidate all Redis caches across all electoral levels so readers fetch fresh metrics
+	s.InvalidateAllBodiesCache(ctx)
+	return nil
 }

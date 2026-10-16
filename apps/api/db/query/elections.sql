@@ -15,7 +15,6 @@ SELECT * FROM elections WHERE id = $1;
 SELECT 
   e.*,
   o.name AS office_name,
-  o.rank AS office_rank,
   eg.name AS election_group_name
 FROM elections e
 JOIN offices o ON e.office_id = o.id
@@ -44,8 +43,8 @@ RETURNING *;
 DELETE FROM elections WHERE id = $1;
 
 -- name: CreateElectionCandidate :one
-INSERT INTO election_candidates (election_id, candidate_id, party_id, party_short_name)
-VALUES ($1, $2, $3, $4)
+INSERT INTO election_candidates (election_id, election_group_id, candidate_id, party_id, party_short_name)
+VALUES ($1, $2, $3, $4, $5)
 RETURNING *;
 
 -- name: ListElectionCandidatesByElectionID :many
@@ -55,6 +54,7 @@ SELECT * FROM election_candidates WHERE election_id = $1;
 SELECT 
     ec.id,
     ec.election_id,
+    ec.election_group_id,
     ec.candidate_id,
     u.first_name,
     u.last_name,
@@ -85,8 +85,7 @@ SELECT COUNT(*) FROM election_candidates WHERE election_id = $1;
 SELECT 
   e.*,
   o.election AS office_election,
-  o.name AS office_name,
-  o.rank AS office_rank
+  o.name AS office_name
 FROM elections e
 JOIN offices o ON e.office_id = o.id
 WHERE e.election_group_id = $1;

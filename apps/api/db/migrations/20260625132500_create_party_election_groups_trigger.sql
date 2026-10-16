@@ -8,26 +8,22 @@ DECLARE
   var_party_id SMALLINT;
   var_contesting_count INT;
 BEGIN
-  -- Determine affected election and party
+  -- Determine affected election, group, and party
   IF TG_OP = 'DELETE' THEN
     var_election_id := OLD.election_id;
+    var_election_group_id := OLD.election_group_id;
     var_party_id := OLD.party_id;
   ELSE
     var_election_id := NEW.election_id;
+    var_election_group_id := NEW.election_group_id;
     var_party_id := NEW.party_id;
   END IF;
-
-  -- Get the election group id for this election
-  SELECT election_group_id INTO var_election_group_id
-  FROM elections
-  WHERE id = var_election_id;
 
   IF var_election_group_id IS NOT NULL AND var_party_id IS NOT NULL THEN
     -- Count distinct elections this party is fielding candidates for in this election group
     SELECT COUNT(DISTINCT ec.election_id)::integer INTO var_contesting_count
     FROM election_candidates ec
-    JOIN elections e ON e.id = ec.election_id
-    WHERE e.election_group_id = var_election_group_id
+    WHERE ec.election_group_id = var_election_group_id
       AND ec.party_id = var_party_id;
 
     IF var_contesting_count > 0 THEN
@@ -50,8 +46,7 @@ BEGIN
   IF TG_OP = 'UPDATE' AND OLD.party_id IS DISTINCT FROM NEW.party_id AND var_election_group_id IS NOT NULL THEN
     SELECT COUNT(DISTINCT ec.election_id)::integer INTO var_contesting_count
     FROM election_candidates ec
-    JOIN elections e ON e.id = ec.election_id
-    WHERE e.election_group_id = var_election_group_id
+    WHERE ec.election_group_id = var_election_group_id
       AND ec.party_id = OLD.party_id;
 
     IF var_contesting_count > 0 THEN

@@ -15,7 +15,7 @@ import {
   DialogPadding,
   DialogToolbelt,
 } from "@repo/ui/components/dialog";
-import { useForm, useStore } from "@tanstack/react-form";
+import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, MapPin } from "lucide-react";
 import { FancyInput, Input, Label } from "@repo/ui/components/input";
@@ -96,12 +96,6 @@ export function ElectionInstanceFormDialog({ electionInstance, open, onClose, on
     },
   });
 
-  // Reactive subscription to election date value
-  const selectedDateStr = useStore(
-    form.store,
-    (state) => state.values.electionDate,
-  );
-
   // Synchronize form values whenever dialog opens or election instance changes
   useEffect(() => {
     if (open && electionInstance) {
@@ -153,7 +147,6 @@ export function ElectionInstanceFormDialog({ electionInstance, open, onClose, on
     onSuccess: () => {
       // Invalidate cached election queries to refresh lists and tables
       queryClient.invalidateQueries({ queryKey: ["elections"] });
-      queryClient.invalidateQueries({ queryKey: ["election-groups"] });
       onSuccess?.();
       onClose();
     },

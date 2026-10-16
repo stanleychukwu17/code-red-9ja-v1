@@ -53,36 +53,33 @@ function RouteComponent() {
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
   const [isBulkGroupOpen, setIsBulkGroupOpen] = useState(false);
 
-  // Paginated query: loads elections sorted by hierarchy rank with keyset cursor pagination
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
-    useInfiniteQuery({
-      queryKey: ["elections"],
-      queryFn: async ({ pageParam }) => {
-        const res = await getElections({
-          data: {
-            limit: 20,
-            cursor: pageParam as string,
-            orderBy: "rank",
-            order: "ASC",
-          },
-        });
-        if (res && res.success && res.data) {
-          return res;
-        }
-        throw new Error(res?.message || "Failed to fetch elections");
-      },
-      initialPageParam: "",
-      getNextPageParam: (lastPage) => {
-        // Keyset cursor pagination check: return next_cursor if additional records remain
-        if (lastPage && lastPage.meta && lastPage.meta.has_more) {
-          return lastPage.meta.next_cursor || "";
-        }
-        return undefined;
-      },
-      staleTime: Infinity,
-      gcTime: Infinity,
-      refetchOnWindowFocus: false,
-    });
+  // Paginated query: loads elections using keyset cursor pagination
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteQuery({
+    queryKey: ["elections"],
+    queryFn: async ({ pageParam }) => {
+      const res = await getElections({
+        data: {
+          limit: 20,
+          cursor: pageParam as string,
+        },
+      });
+      if (res && res.success && res.data) {
+        return res;
+      }
+      throw new Error(res?.message || "Failed to fetch elections");
+    },
+    initialPageParam: "",
+    getNextPageParam: (lastPage) => {
+      // Keyset cursor pagination check: return next_cursor if additional records remain
+      if (lastPage && lastPage.meta && lastPage.meta.has_more) {
+        return lastPage.meta.next_cursor || "";
+      }
+      return undefined;
+    },
+    staleTime: Infinity,
+    gcTime: Infinity,
+    refetchOnWindowFocus: false,
+  });
 
   // Intersection observer sentinel for auto-triggering the next page fetch when scrolled into view
   const { ref: sentinelRef, isIntersecting } = useIntersectionObserver({
@@ -104,6 +101,10 @@ function RouteComponent() {
   const selectedElections = useMemo(() => {
     return elections.filter((e) => selectedIds.has(e.id));
   }, [elections, selectedIds]);
+
+  const electionsWithCandidates = useMemo(() => {
+    return selectedElections.filter((e) => (e.candidates_count ?? 0) > 0);
+  }, [selectedElections]);
 
   const handleToggleSelect = (id: number) => {
     setSelectedIds((prev) => {
@@ -127,6 +128,11 @@ function RouteComponent() {
 
   const bulkDeleteMutation = useMutation({
     mutationFn: async () => {
+      if (electionsWithCandidates.length > 0) {
+        throw new Error(
+          `Cannot delete: ${electionsWithCandidates.length} election(s) already have registered candidates.`,
+        );
+      }
       const res = await bulkDeleteElections({
         data: { ids: Array.from(selectedIds) },
       });
@@ -138,7 +144,7 @@ function RouteComponent() {
     onSuccess: (res) => {
       toast.success(
         res.message ||
-          `Successfully deleted ${selectedIds.size} election instances.`,
+        `Successfully deleted ${selectedIds.size} election instances.`,
       );
       queryClient.invalidateQueries({ queryKey: ["elections"] });
       queryClient.invalidateQueries({ queryKey: ["election-groups"] });
@@ -233,7 +239,15 @@ function RouteComponent() {
               type="button"
               variant="red"
               size="sm"
-              onClick={() => setIsBulkDeleteOpen(true)}
+              onClick={() => {
+                if (electionsWithCandidates.length > 0) {
+                  toast.error(
+                    `Cannot delete: ${electionsWithCandidates.length} of the ${selectedIds.size} selected election(s) have registered candidates. Please remove candidates before deleting.`,
+                  );
+                  return;
+                }
+                setIsBulkDeleteOpen(true);
+              }}
               className="h-8.5 px-3 text-xs font-semibold flex items-center gap-1.5 rounded-lg"
             >
               <TrashcanIcon className="size-3.5" />

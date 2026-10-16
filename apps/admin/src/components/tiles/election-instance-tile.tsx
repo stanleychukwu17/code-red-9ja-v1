@@ -12,7 +12,6 @@ import { ElectionInstanceDropdown } from "../dropdowns/ElectionInstanceDropdown"
 export type ElectionInstanceType = {
   id: number;
   name: string;
-  rank?: number;
   candidates_count?: number;
   election_date: string;
   election_group_id: number;

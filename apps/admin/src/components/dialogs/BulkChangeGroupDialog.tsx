@@ -66,7 +66,6 @@ export function BulkChangeGroupDialog({
         `Successfully reassigned ${selectedElections.length} elections.`,
       );
       queryClient.invalidateQueries({ queryKey: ["elections"] });
-      queryClient.invalidateQueries({ queryKey: ["election-groups"] });
       onSuccess?.();
       onClose();
     },

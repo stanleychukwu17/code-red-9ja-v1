@@ -164,14 +164,15 @@ type Election struct {
 }
 
 type ElectionCandidate struct {
-	ID             int32              `json:"id"`
-	ElectionID     int32              `json:"election_id"`
-	CandidateID    int64              `json:"candidate_id"`
-	RunningMateID  pgtype.Int8        `json:"running_mate_id"`
-	PartyID        int16              `json:"party_id"`
-	PartyShortName string             `json:"party_short_name"`
-	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
-	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	ID              int32              `json:"id"`
+	ElectionID      int32              `json:"election_id"`
+	ElectionGroupID int32              `json:"election_group_id"`
+	CandidateID     int64              `json:"candidate_id"`
+	RunningMateID   pgtype.Int8        `json:"running_mate_id"`
+	PartyID         int16              `json:"party_id"`
+	PartyShortName  string             `json:"party_short_name"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 }
 
 type ElectionFederalConstituencyFinalResult struct {

@@ -152,7 +152,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	auditService := audit.NewAuditService(q)
 	earningsService := earningsservice.NewService(q, pool)
 	wardsService := wardsservice.NewWardsService(q, rdb)
-	bodiesService := bodiesservice.NewBodiesService(q, rdb)
+	bodiesService := bodiesservice.NewBodiesService(q, pool, rdb)
 	statesService := statesservice.NewStatesService(q, rdb)
 	officesService := officesservice.NewOfficesService(q, rdb)
 	permissionsService := permissionsservice.NewPermissionsService()
@@ -187,7 +187,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 
 	notificationsHandler := notificationshandler.NewHandler(notificationsService, utilsInstance)
 	authHandler := authhandler.NewHandler(authService, usersService, filesService, utilsInstance)
-	bodiesHandler := bodieshandler.NewHandler(bodiesService, q, utilsInstance, rdb, pool)
+	bodiesHandler := bodieshandler.NewHandler(bodiesService, q, utilsInstance, rdb)
 	partiesHandler := partieshandler.NewHandler(partiesService, bodiesService, auditService, permissionsService, filesService, utilsInstance, r2Svc, followsService)
 	statesHandler := stateshandler.NewHandler(statesService, utilsInstance)
 	senatorialDistrictsHandler := senatorialdistrictshandler.NewHandler(senatorialDistrictsService, bodiesService, q, utilsInstance)

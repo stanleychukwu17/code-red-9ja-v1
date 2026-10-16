@@ -78,7 +78,8 @@ export function WardElectionFormDialog({
       return [];
     },
     enabled: open,
-    staleTime: 1000 * 60 * 60,
+    staleTime: Infinity,
+    gcTime: Infinity,
   });
 
   // Fetch LGAs in Nigeria
@@ -92,6 +93,8 @@ export function WardElectionFormDialog({
       return [];
     },
     enabled: open,
+    staleTime: Infinity,
+    gcTime: Infinity,
   });
 
   // Fetch Wards in Nigeria
@@ -105,6 +108,8 @@ export function WardElectionFormDialog({
       return [];
     },
     enabled: open,
+    staleTime: Infinity,
+    gcTime: Infinity,
   });
 
   const allNigeriaStates = statesData || [];
@@ -145,17 +150,12 @@ export function WardElectionFormDialog({
     },
   });
 
-  const selectedDateStr = useStore(
-    form.store,
-    (state) => state.values.electionDate,
-  );
-
   const selectedOfficeId = useStore(
     form.store,
     (state) => state.values.officeId,
   );
 
-  // Fetch available contested offices to compute the preview group name
+  // Fetch available contested offices for auto-selection and dialog metadata
   const { data: officesData } = useQuery({
     queryKey: QUERY_KEYS.offices.contested,
     queryFn: async () => {
@@ -209,6 +209,9 @@ export function WardElectionFormDialog({
       electionDate: string;
       officeId: number | undefined;
     }) => {
+      if (!values.electionGroupId) {
+        throw new Error("Election group is required");
+      }
       if (!values.officeId) {
         throw new Error("Office is required");
       }
@@ -234,7 +237,6 @@ export function WardElectionFormDialog({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["elections"] });
-      queryClient.invalidateQueries({ queryKey: ["election-groups"] });
       onSuccess?.();
       onClose();
     },

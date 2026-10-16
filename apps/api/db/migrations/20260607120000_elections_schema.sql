@@ -55,8 +55,8 @@ CREATE TABLE election_groups (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_election_groups_year ON election_groups(year DESC);
-CREATE INDEX idx_election_groups_active ON election_groups(active);
+CREATE INDEX idx_election_groups_year ON election_groups(year DESC, id DESC);
+CREATE INDEX idx_election_groups_active_year ON election_groups(active, year DESC, id DESC);
 
 CREATE TABLE elections (
   id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -90,7 +90,8 @@ CREATE TABLE elections (
   contesting_parties JSONB NOT NULL DEFAULT '[]'::jsonb,
 
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT uq_elections_id_group UNIQUE (id, election_group_id)
 );
 
 COMMENT ON COLUMN elections.contesting_parties IS 'List of political parties contesting this election. Shape: [{"party_id": 1, "party_short_name": "APC", "party_name": "All Progressives Congress", "party_logo": "https://..."}]';
@@ -102,19 +103,25 @@ CREATE INDEX idx_elections_election_date_id ON elections(election_date DESC, id 
 
 CREATE TABLE election_candidates (
   id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  election_id INT REFERENCES elections(id) ON DELETE CASCADE NOT NULL,
+  election_id INT NOT NULL,
+  election_group_id INT NOT NULL,
   candidate_id BIGINT REFERENCES users(id) ON DELETE CASCADE NOT NULL,
   running_mate_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
   party_id SMALLINT NOT NULL DEFAULT 7 REFERENCES parties(id) ON DELETE RESTRICT,
   party_short_name VARCHAR(50) NOT NULL DEFAULT 'N/A',
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(election_id, candidate_id)
+  FOREIGN KEY (election_id, election_group_id) REFERENCES elections(id, election_group_id) ON DELETE CASCADE,
+  UNIQUE(election_group_id, candidate_id),
+  UNIQUE(election_id, party_id)
 );
 
+CREATE INDEX idx_election_candidates_election_id ON election_candidates(election_id);
+CREATE INDEX idx_election_candidates_election_group_id ON election_candidates(election_group_id);
 CREATE INDEX idx_election_candidates_candidate_id ON election_candidates(candidate_id);
 CREATE INDEX idx_election_candidates_running_mate_id ON election_candidates(running_mate_id);
 CREATE INDEX idx_election_candidates_party_id ON election_candidates(party_id);
+CREATE UNIQUE INDEX uq_election_candidates_running_mate_group ON election_candidates (election_group_id, running_mate_id) WHERE running_mate_id IS NOT NULL;
 
 -- +goose Down
 DROP TABLE IF EXISTS election_candidates;

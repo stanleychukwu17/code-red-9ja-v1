@@ -708,17 +708,11 @@ func (s *BodiesService) SyncElectoralUnits(ctx context.Context) (*SyncReport, er
 		wg.Wait()
 	}
 
-	// STEP 7: Recalculate Metrics across all levels
+	// STEP 7: Recalculate Metrics across all levels atomically and invalidate caches
 	slog.Info("Recalculating metrics across all administrative levels...")
-	_ = s.queries.RecalculateWardMetrics(syncCtx)
-	_ = s.queries.RecalculateStateConstituencyMetrics(syncCtx)
-	_ = s.queries.RecalculateLGAMetrics(syncCtx)
-	_ = s.queries.RecalculateFederalConstituencyMetrics(syncCtx)
-	_ = s.queries.RecalculateSenatorialDistrictMetrics(syncCtx)
-	_ = s.queries.RecalculateStateMetrics(syncCtx)
-	_ = s.queries.RecalculateNationalMetrics(syncCtx)
-
-	s.invalidateCache(syncCtx, 0)
+	if err := s.RecalculateBodyMetrics(syncCtx); err != nil {
+		slog.Warn("Failed to recalculate metrics after sync", "error", err)
+	}
 
 	report.DurationSeconds = time.Since(startTime).Seconds()
 	slog.Info("Electoral units synchronization completed", "duration_seconds", report.DurationSeconds)

@@ -10,6 +10,7 @@ import { DeleteAlertDialog } from "../alerts/delete-alert";
 import { ElectionInstanceFormDialog } from "../dialogs/ElectionInstanceFormDialog";
 import { ManageCandidatesDialog } from "../dialogs/ManageCandidatesDialog";
 import type { ElectionInstanceType } from "../tiles/election-instance-tile";
+import { toast } from "sonner";
 
 interface ElectionInstanceDropdownProps {
   data: ElectionInstanceType;
@@ -26,6 +27,8 @@ export const ElectionInstanceDropdown = ({
   const [openDeleteAlert, setOpenDeleteAlert] = useState(false);
   const queryClient = useQueryClient();
 
+  const hasCandidates = (data.candidates_count ?? 0) > 0;
+
   const deleteMutation = useMutation({
     mutationFn: async () => {
       const res = await deleteElection({ data: data.id });
@@ -35,9 +38,13 @@ export const ElectionInstanceDropdown = ({
       return res.data;
     },
     onSuccess: () => {
+      toast.success("Election deleted successfully");
       queryClient.invalidateQueries({ queryKey: ["elections"] });
       queryClient.invalidateQueries({ queryKey: ["election-groups"] });
       setOpenDeleteAlert(false);
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || "Failed to delete election");
     },
   });
 
@@ -62,13 +69,17 @@ export const ElectionInstanceDropdown = ({
       },
     },
     {
-      title: "Delete",
+      title: hasCandidates ? "Delete (has candidates)" : "Delete",
       icon: <TrashcanIcon />,
+      disabled: hasCandidates,
       action: () => {
+        if (hasCandidates) return;
         setOpenMenu(false);
         setOpenDeleteAlert(true);
       },
-      className: "[&_svg]:text-red text-red",
+      className: hasCandidates
+        ? "opacity-40 cursor-not-allowed text-c-40"
+        : "[&_svg]:text-red text-red",
     },
   ];
   const dropdownData: TDropdownGroup[] = [group1, group2];

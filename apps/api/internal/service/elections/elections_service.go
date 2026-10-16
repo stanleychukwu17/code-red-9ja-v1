@@ -3,6 +3,7 @@ package electionsservice
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"free9ja/api/internal/constants"
 	"free9ja/api/internal/db"
@@ -75,6 +76,21 @@ func NewElectionsService(
 // invalidateCache purges the Redis cache for a specific election instance by ID.
 func (s *ElectionsService) invalidateCache(ctx context.Context, electionID int32) {
 	s.rdb.Del(ctx, fmt.Sprintf("%s%d", db.RedisElectionByID, electionID))
+}
+
+// validateElectionGroup ensures that the target election group exists and is active.
+func (s *ElectionsService) validateElectionGroup(ctx context.Context, q *queries.Queries, groupID int32) (queries.ElectionGroup, error) {
+	eg, err := q.GetElectionGroupByID(ctx, groupID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return queries.ElectionGroup{}, fmt.Errorf("election group with ID %d does not exist", groupID)
+		}
+		return queries.ElectionGroup{}, fmt.Errorf("failed to verify election group: %w", err)
+	}
+	if !eg.Active {
+		return queries.ElectionGroup{}, fmt.Errorf("election group '%s' is not active", eg.Name)
+	}
+	return eg, nil
 }
 
 // batchCreateElections pipelines multiple election inserts into the active transaction using pgx.Batch,
@@ -170,9 +186,9 @@ func (s *ElectionsService) CreateNationwideElection(ctx context.Context, officeI
 	// Bind queries to active transaction
 	txQueries := s.queries.WithTx(tx)
 
-	// Verify target election group exists
-	if _, err := txQueries.GetElectionGroupByID(ctx, electionGroupID); err != nil {
-		return queries.Election{}, fmt.Errorf("failed to fetch election group: %w", err)
+	// Verify target election group exists and is active
+	if _, err := s.validateElectionGroup(ctx, txQueries, electionGroupID); err != nil {
+		return queries.Election{}, err
 	}
 
 	// Create election record (nationwide scope has no geographic sub-boundary IDs)
@@ -218,9 +234,9 @@ func (s *ElectionsService) CreateStateElection(ctx context.Context, officeID int
 	// Bind queries to active transaction
 	txQueries := s.queries.WithTx(tx)
 
-	// Verify target election group exists
-	if _, err := txQueries.GetElectionGroupByID(ctx, electionGroupID); err != nil {
-		return nil, fmt.Errorf("failed to fetch election group: %w", err)
+	// Verify target election group exists and is active
+	if _, err := s.validateElectionGroup(ctx, txQueries, electionGroupID); err != nil {
+		return nil, err
 	}
 
 	createdElections := make([]queries.Election, 0, len(stateIDs))
@@ -289,9 +305,9 @@ func (s *ElectionsService) CreateSenatorialDistrictElection(ctx context.Context,
 	// Bind queries to active transaction
 	txQueries := s.queries.WithTx(tx)
 
-	// Verify target election group exists
-	if _, err := txQueries.GetElectionGroupByID(ctx, electionGroupID); err != nil {
-		return nil, fmt.Errorf("failed to fetch election group: %w", err)
+	// Verify target election group exists and is active
+	if _, err := s.validateElectionGroup(ctx, txQueries, electionGroupID); err != nil {
+		return nil, err
 	}
 
 	createdElections := make([]queries.Election, 0, len(senatorialDistrictIDs))
@@ -366,9 +382,9 @@ func (s *ElectionsService) CreateFederalConstituencyElection(ctx context.Context
 	// Bind queries to active transaction
 	txQueries := s.queries.WithTx(tx)
 
-	// Verify target election group exists
-	if _, err := txQueries.GetElectionGroupByID(ctx, electionGroupID); err != nil {
-		return nil, fmt.Errorf("failed to fetch election group: %w", err)
+	// Verify target election group exists and is active
+	if _, err := s.validateElectionGroup(ctx, txQueries, electionGroupID); err != nil {
+		return nil, err
 	}
 
 	createdElections := make([]queries.Election, 0, len(federalConstituencyIDs))
@@ -452,9 +468,9 @@ func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, 
 	// Bind queries to active transaction
 	txQueries := s.queries.WithTx(tx)
 
-	// Verify target election group exists
-	if _, err := txQueries.GetElectionGroupByID(ctx, electionGroupID); err != nil {
-		return nil, fmt.Errorf("failed to fetch election group: %w", err)
+	// Verify target election group exists and is active
+	if _, err := s.validateElectionGroup(ctx, txQueries, electionGroupID); err != nil {
+		return nil, err
 	}
 
 	// Pre-fetch all state constituencies into map for O(1) in-memory lookups
@@ -548,9 +564,9 @@ func (s *ElectionsService) CreateLgaElection(ctx context.Context, officeID int16
 	// Bind queries to active transaction
 	txQueries := s.queries.WithTx(tx)
 
-	// Verify target election group exists
-	if _, err := txQueries.GetElectionGroupByID(ctx, electionGroupID); err != nil {
-		return nil, fmt.Errorf("failed to fetch election group: %w", err)
+	// Verify target election group exists and is active
+	if _, err := s.validateElectionGroup(ctx, txQueries, electionGroupID); err != nil {
+		return nil, err
 	}
 
 	// Pre-fetch all LGAs into map for O(1) in-memory lookups
@@ -636,9 +652,9 @@ func (s *ElectionsService) CreateWardElection(ctx context.Context, officeID int1
 	// Bind queries to active transaction
 	txQueries := s.queries.WithTx(tx)
 
-	// Verify target election group exists
-	if _, err := txQueries.GetElectionGroupByID(ctx, electionGroupID); err != nil {
-		return nil, fmt.Errorf("failed to fetch election group: %w", err)
+	// Verify target election group exists and is active
+	if _, err := s.validateElectionGroup(ctx, txQueries, electionGroupID); err != nil {
+		return nil, err
 	}
 
 	// Pre-fetch all wards once to resolve parent IDs in memory
@@ -795,8 +811,8 @@ func (s *ElectionsService) UpdateElection(
 	electionDate time.Time,
 	electionGroupID int32,
 ) (queries.Election, error) {
-	// 1. Validate that the election group exists
-	if _, err := s.queries.GetElectionGroupByID(ctx, electionGroupID); err != nil {
+	// 1. Validate that the election group exists and is active
+	if _, err := s.validateElectionGroup(ctx, s.queries, electionGroupID); err != nil {
 		return queries.Election{}, err
 	}
 
@@ -816,7 +832,17 @@ func (s *ElectionsService) UpdateElection(
 }
 
 // DeleteElection removes an election instance and invalidates the cache.
+// It prevents deletion if candidates are already registered for the election.
 func (s *ElectionsService) DeleteElection(ctx context.Context, id int32) error {
+	// Guard: Do not allow deletion if the election already has candidates registered
+	candidateCount, err := s.queries.GetElectionCandidatesCount(ctx, id)
+	if err != nil {
+		return fmt.Errorf("failed to verify election candidates: %w", err)
+	}
+	if candidateCount > 0 {
+		return fmt.Errorf("cannot delete election: %d candidate(s) are already registered for this election", candidateCount)
+	}
+
 	// Ensure Redis cache invalidation occurs when the operation completes
 	defer s.invalidateCache(ctx, id)
 
@@ -842,19 +868,26 @@ func (s *ElectionsService) SyncElectionCandidates(ctx context.Context, electionI
 
 	txQueries := s.queries.WithTx(tx)
 
-	// 2. Remove all existing candidates associated with this election
+	// 2. Fetch the election to obtain its election_group_id
+	election, err := txQueries.GetElectionInstanceByID(ctx, electionID)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve election for candidate sync: %w", err)
+	}
+
+	// 3. Remove all existing candidates associated with this election
 	err = txQueries.DeleteElectionCandidatesForElection(ctx, electionID)
 	if err != nil {
 		return err
 	}
 
-	// 3. Link new candidates to the election and synchronize their user party affiliation
+	// 4. Link new candidates to the election and synchronize their user party affiliation
 	for _, cand := range candidates {
 		_, err = txQueries.CreateElectionCandidate(ctx, queries.CreateElectionCandidateParams{
-			ElectionID:     electionID,
-			CandidateID:    cand.CandidateID,
-			PartyID:        int16(cand.PartyID),
-			PartyShortName: cand.PartyShortName,
+			ElectionID:      electionID,
+			ElectionGroupID: election.ElectionGroupID,
+			CandidateID:     cand.CandidateID,
+			PartyID:         int16(cand.PartyID),
+			PartyShortName:  cand.PartyShortName,
 		})
 		if err != nil {
 			return err
@@ -869,7 +902,7 @@ func (s *ElectionsService) SyncElectionCandidates(ctx context.Context, electionI
 		}
 	}
 
-	// 4. Invalidate Redis caches and commit
+	// 5. Invalidate Redis caches and commit
 	s.invalidateCache(ctx, electionID)
 	return tx.Commit(ctx)
 }
@@ -898,16 +931,22 @@ func (s *ElectionsService) FieldPartyCandidate(ctx context.Context, electionID i
 
 	// 3. If a valid candidateID is provided (> 0), insert the candidate record
 	if candidateID > 0 {
+		election, err := txQueries.GetElectionInstanceByID(ctx, electionID)
+		if err != nil {
+			return fmt.Errorf("failed to retrieve election for fielding candidate: %w", err)
+		}
+
 		party, err := txQueries.GetPartyByID(ctx, partyID)
 		if err != nil {
 			return fmt.Errorf("party not found: %w", err)
 		}
 
 		_, err = txQueries.CreateElectionCandidate(ctx, queries.CreateElectionCandidateParams{
-			ElectionID:     electionID,
-			CandidateID:    candidateID,
-			PartyID:        partyID,
-			PartyShortName: party.ShortName,
+			ElectionID:      electionID,
+			ElectionGroupID: election.ElectionGroupID,
+			CandidateID:     candidateID,
+			PartyID:         partyID,
+			PartyShortName:  party.ShortName,
 		})
 		if err != nil {
 			return err
@@ -986,8 +1025,8 @@ func (s *ElectionsService) SubmitElectionVotes(
 
 	qtx := s.queries.WithTx(tx)
 
-	// 2. Fetch election group and validate election date (voting closes after election day)
-	eg, err := qtx.GetElectionGroupByID(ctx, electionGroupID)
+	// 2. Fetch election group, ensure active, and validate election date (voting closes after election day)
+	eg, err := s.validateElectionGroup(ctx, qtx, electionGroupID)
 	if err != nil {
 		return fmt.Errorf("invalid election group: %w", err)
 	}

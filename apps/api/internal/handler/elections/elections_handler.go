@@ -655,7 +655,7 @@ func (h *Handler) DeleteElection(w http.ResponseWriter, r *http.Request) {
 
 	// Delete election and cascade associated records
 	if err := h.service.DeleteElection(r.Context(), int32(id)); err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to delete election: "+err.Error())
+		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 

@@ -14,8 +14,7 @@ import (
 const countCandidatesInElectionGroup = `-- name: CountCandidatesInElectionGroup :one
 SELECT COUNT(*)::bigint
 FROM election_candidates ec
-JOIN elections e ON ec.election_id = e.id
-WHERE e.election_group_id = $1
+WHERE ec.election_group_id = $1
 `
 
 func (q *Queries) CountCandidatesInElectionGroup(ctx context.Context, electionGroupID int32) (int64, error) {
@@ -27,7 +26,7 @@ func (q *Queries) CountCandidatesInElectionGroup(ctx context.Context, electionGr
 
 const countParticipantsInElectionGroup = `-- name: CountParticipantsInElectionGroup :one
 SELECT (
-  (SELECT COUNT(*) FROM election_candidates ec JOIN elections e ON ec.election_id = e.id WHERE e.election_group_id = $1)
+  (SELECT COUNT(*) FROM election_candidates ec WHERE ec.election_group_id = $1)
   +
   (SELECT COUNT(*) FROM election_votes ev WHERE ev.election_group_id = $1)
 )::bigint AS participants_count

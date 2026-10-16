@@ -1,3 +1,10 @@
+/**
+ * @file State Election Form Dialog
+ * @description Modal dialog used in the admin portal to configure and create state-level
+ * elections (such as Gubernatorial elections) across one or multiple Nigerian states.
+ * Features smart cycle presets for 28 regular states, 8 off-cycle states, and custom filtering.
+ */
+
 import { useState, useMemo, useEffect } from "react";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -30,11 +37,12 @@ import {
 import { Label, IconInput } from "@repo/ui/components/input";
 import { TinyError } from "@repo/ui/components/custom/TinyError";
 
-interface StateItem {
+type StateItem = {
   id: number;
   name: string;
-}
+};
 
+/** State selection presets based on Nigerian constitutional election timing */
 export type StateSelectionMode = "regular" | "off_cycle" | "all" | "custom";
 
 // The 8 Nigerian states that conduct off-cycle gubernatorial elections due to historical court rulings
@@ -49,10 +57,12 @@ export const OFF_CYCLE_GOVERNORSHIP_STATES = new Set([
   "osun",
 ]);
 
+/** Checks if a state name belongs to the 8 off-cycle governorship states */
 export const isOffCycleState = (name: string): boolean => {
   return OFF_CYCLE_GOVERNORSHIP_STATES.has(name.toLowerCase().trim());
 };
 
+/** Identifies the Federal Capital Territory (FCT) which has no state governor */
 export const isFctOrNonState = (name: string): boolean => {
   const lower = name.toLowerCase().trim();
   return lower === "fct" || lower.includes("federal capital") || lower.includes("abuja");
@@ -64,12 +74,10 @@ export type StateElectionFormDialogProps = {
   onSuccess?: () => void;
 };
 
-export function StateElectionFormDialog({
-  open,
-  onClose,
-  onSuccess,
-}: StateElectionFormDialogProps) {
+export function StateElectionFormDialog({ open, onClose, onSuccess }: StateElectionFormDialogProps) {
   const queryClient = useQueryClient();
+
+  // Local UI state for errors, picker dialog, and selected states
   const [error, setError] = useState<string | null>(null);
   const [isStateSelectorOpen, setIsStateSelectorOpen] = useState(false);
   const [statesMode, setStatesMode] = useState<StateSelectionMode>("regular");
@@ -80,16 +88,34 @@ export function StateElectionFormDialog({
     queryKey: QUERY_KEYS.states,
     queryFn: async () => {
       const res = await getStates({ data: { countryId: 161 } });
+
       if (res && res.success && res.data?.states) {
         return res.data.states as StateItem[];
       }
+
       return [];
     },
     enabled: open,
-    staleTime: 1000 * 60 * 60,
+    staleTime: Infinity,
+    gcTime: Infinity,
+  });
+  const allNigeriaStates = statesData || [];
+
+  // Fetch available contested offices for auto-selection and dialog metadata
+  const { data: officesData } = useQuery({
+    queryKey: QUERY_KEYS.offices.contested,
+    queryFn: async () => {
+      const res = await getContestedOffices({ data: { limit: 100 } });
+      if (res && res.success && res.data?.offices) {
+        return res.data.offices;
+      }
+      return [];
+    },
+    staleTime: Infinity,
+    gcTime: Infinity,
+    enabled: open,
   });
 
-  const allNigeriaStates = statesData || [];
 
   // 28 regular states holding elections during the General Elections
   const regularStates = useMemo(() => {
@@ -108,6 +134,7 @@ export function StateElectionFormDialog({
     return allNigeriaStates.filter((s) => !isFctOrNonState(s.name));
   }, [allNigeriaStates]);
 
+  // TanStack Form instance for state election creation
   const form = useForm({
     defaultValues: {
       electionGroupId: undefined as number | undefined,
@@ -119,31 +146,10 @@ export function StateElectionFormDialog({
     },
   });
 
-  const selectedDateStr = useStore(
-    form.store,
-    (state) => state.values.electionDate,
-  );
+  // Track reactive office field value for dialog preview
+  const selectedOfficeId = useStore(form.store, (state) => state.values.officeId);
 
-  const selectedOfficeId = useStore(
-    form.store,
-    (state) => state.values.officeId,
-  );
-
-  // Fetch available contested offices to compute the preview group name
-  const { data: officesData } = useQuery({
-    queryKey: QUERY_KEYS.offices.contested,
-    queryFn: async () => {
-      const res = await getContestedOffices({ data: { limit: 100 } });
-      if (res && res.success && res.data?.offices) {
-        return res.data.offices;
-      }
-      return [];
-    },
-    staleTime: Infinity,
-    gcTime: Infinity,
-    enabled: open,
-  });
-
+  // Currently selected office metadata
   const selectedType = useMemo(() => {
     if (!selectedOfficeId || !officesData) return null;
     return officesData.find((t: any) => t.id === selectedOfficeId);
@@ -162,6 +168,7 @@ export function StateElectionFormDialog({
     }
   }, [open, statesMode, regularStates, offCycleStates, allStatesWithoutFct]);
 
+  // Reset form values and selection mode when dialog opens
   useEffect(() => {
     if (open) {
       form.setFieldValue("electionGroupId", undefined);
@@ -182,22 +189,31 @@ export function StateElectionFormDialog({
     }
   }, [open, officesData, selectedOfficeId]);
 
+  // Mutation to create state elections across all selected states
   const saveMutation = useMutation({
     mutationFn: async (values: {
       electionGroupId: number | undefined;
       electionDate: string;
       officeId: number | undefined;
     }) => {
+      // Validate election group selection
+      if (!values.electionGroupId) {
+        throw new Error("Election group is required");
+      }
+      // Validate office selection
       if (!values.officeId) {
         throw new Error("Office is required");
       }
+      // Validate election date
       if (!values.electionDate) {
         throw new Error("Election date is required");
       }
+      // Validate state selection
       if (selectedStates.length === 0) {
         throw new Error("At least one state must be selected");
       }
 
+      // Call server mutation to persist records
       const res = await createStateElection({
         data: {
           office_id: values.officeId,
@@ -212,8 +228,8 @@ export function StateElectionFormDialog({
       }
     },
     onSuccess: () => {
+      // Invalidate relevant queries to refresh listings
       queryClient.invalidateQueries({ queryKey: ["elections"] });
-      queryClient.invalidateQueries({ queryKey: ["election-groups"] });
       onSuccess?.();
       onClose();
     },
@@ -222,6 +238,7 @@ export function StateElectionFormDialog({
     },
   });
 
+  // Toggle selection for an individual state and auto-detect matching preset mode
   const handleToggleStateSelection = (state: StateItem) => {
     setSelectedStates((prev) => {
       const exists = prev.some((s) => s.id === state.id);
@@ -229,6 +246,7 @@ export function StateElectionFormDialog({
         ? prev.filter((s) => s.id !== state.id)
         : [...prev, state];
 
+      // Auto-update preset mode pill if selection matches a known cycle
       if (
         next.length === regularStates.length &&
         next.every((s) => !isOffCycleState(s.name) && !isFctOrNonState(s.name))
@@ -258,6 +276,7 @@ export function StateElectionFormDialog({
         <DialogContent className="max-w-145 p-0 rounded-2xl border-none shadow-2xl   overflow-visible">
           <DialogHeader title="State Election" />
 
+          {/* Main State Election Form */}
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -268,8 +287,9 @@ export function StateElectionFormDialog({
             <DialogPadding className="space-y-6 pb-6">
               <TinyError error={error} />
 
+              {/* Office and Election Date fields */}
               <div className="flex items-center gap-4">
-                {/* Office */}
+                {/* Office selection (restricted to state scope) */}
                 <div className="flex flex-col gap-1.5 w-full">
                   <Label title="Office" />
                   <form.Field
@@ -312,7 +332,7 @@ export function StateElectionFormDialog({
                 </div>
               </div>
 
-              {/* States section */}
+              {/* States selection section */}
               <div className="space-y-3">
                 <SelectionHeader
                   label="States"
@@ -322,6 +342,7 @@ export function StateElectionFormDialog({
 
                 {/* Smart Selection Preset Pills */}
                 <div className="flex items-center gap-1.5 flex-wrap">
+                  {/* Regular States Preset (28 states) */}
                   <button
                     type="button"
                     onClick={() => {
@@ -341,6 +362,7 @@ export function StateElectionFormDialog({
                     </span>
                   </button>
 
+                  {/* Off-Cycle States Preset (8 states) */}
                   <button
                     type="button"
                     onClick={() => {
@@ -360,6 +382,7 @@ export function StateElectionFormDialog({
                     </span>
                   </button>
 
+                  {/* All 36 States Preset */}
                   <button
                     type="button"
                     onClick={() => {
@@ -379,6 +402,7 @@ export function StateElectionFormDialog({
                     </span>
                   </button>
 
+                  {/* Custom selection mode */}
                   <button
                     type="button"
                     onClick={() => {
@@ -396,9 +420,9 @@ export function StateElectionFormDialog({
                   </button>
                 </div>
 
+                {/* Selected States Chip List */}
                 <SelectedItemsContainer
                   items={selectedStates}
-                  onRemove={handleToggleStateSelection}
                   emptyPlaceholder="0 states added"
                 >
                   {selectedStates.length > 0 && (
@@ -409,7 +433,7 @@ export function StateElectionFormDialog({
                           <div
                             key={item.id}
                             className={cn(
-                              "h-9 flex items-center gap-2 pl-3 pr-2 bg-background rounded-[10px] text-sm text-c-80 border",
+                              "h-9 flex items-center gap-2 pl-3 pr-2 bg-background rounded-10 text-sm text-c-80 border",
                               isOffCycle
                                 ? "border-amber-400/60 bg-amber-50/50 dark:bg-amber-950/20"
                                 : "border-border/40",
@@ -437,7 +461,7 @@ export function StateElectionFormDialog({
               </div>
             </DialogPadding>
 
-            {/* Election Group & Election Date previews */}
+            {/* Bottom Toolbelt with Election Group Selector */}
             <DialogToolbelt>
               <form.Field
                 name="electionGroupId"
@@ -454,6 +478,7 @@ export function StateElectionFormDialog({
               />
             </DialogToolbelt>
 
+            {/* Submit Button */}
             <DialogFooter>
               <Button
                 type="submit"
@@ -470,6 +495,7 @@ export function StateElectionFormDialog({
         </DialogContent>
       </Dialog>
 
+      {/* State Selector Modal */}
       <StateSelectorDialog
         open={isStateSelectorOpen}
         onOpenChange={setIsStateSelectorOpen}
@@ -482,15 +508,19 @@ export function StateElectionFormDialog({
   );
 }
 
-interface StateSelectorDialogProps {
+/** Props for the multi-state picker dialog */
+export type StateSelectorDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selectedType: { id: number; name: string } | null;
   allNigeriaStates: StateItem[];
   selectedStates: StateItem[];
   onToggleStateSelection: (state: StateItem) => void;
-}
+};
 
+/**
+ * Modal dialog for searching and toggling states in bulk
+ */
 function StateSelectorDialog({
   open,
   onOpenChange,
@@ -499,14 +529,17 @@ function StateSelectorDialog({
   selectedStates,
   onToggleStateSelection,
 }: StateSelectorDialogProps) {
+  // Search query filter
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Clear search on dialog open
   useEffect(() => {
     if (open) {
       setSearchQuery("");
     }
   }, [open]);
 
+  // Filter states based on user search term
   const filteredStates = useMemo(() => {
     if (!searchQuery.trim()) return allNigeriaStates;
     const q = searchQuery.toLowerCase();
@@ -515,7 +548,7 @@ function StateSelectorDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[620px] p-0 rounded-2xl border-none shadow-2xl  ">
+      <DialogContent className="max-w-155 p-0 rounded-2xl border-none shadow-2xl  ">
         <DialogHeader title="Select States" />
         <DialogPadding className="space-y-4 pb-6">
           <p className="text-sm text-c-60">
@@ -524,12 +557,14 @@ function StateSelectorDialog({
             to hold in.
           </p>
 
+          {/* Search Input */}
           <IconInput
             placeholder="Search states..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
 
+          {/* Selectable Chip Grid */}
           <div className="flex flex-wrap gap-2.5 max-h-[50vh] overflow-y-auto pr-1 pt-2">
             {filteredStates.length === 0 ? (
               <p className="text-sm text-c-50 py-4 w-full text-center">
