@@ -182,7 +182,7 @@ export function EarningsAllocationDialog({
             }}
           >
             <DialogPadding className="space-y-4 pb-2">
-              <p className="text-c-50 leading-[22px]">{`This determines the allocation for how much ${roleName.toLowerCase()} per task completion.`}</p>
+              <p className="text-c-50 leading-5.5">{`This determines the allocation for how much ${roleName.toLowerCase()} per task completion.`}</p>
 
               {error && (
                 <div className="p-3 text-[14px] font-medium text-red-600 bg-red-50 rounded-xl">

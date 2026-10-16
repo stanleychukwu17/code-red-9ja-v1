@@ -265,7 +265,7 @@ export function StateConstituencyElectionFormDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent className="max-w-[580px] p-0 rounded-2xl border-none shadow-2xl   overflow-visible">
+        <DialogContent className="max-w-145 p-0 rounded-2xl border-none shadow-2xl   overflow-visible">
           <DialogHeader title="State Constituency Election" />
 
           <form

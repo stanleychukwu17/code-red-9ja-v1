@@ -85,7 +85,7 @@ export function DepositAllowanceDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-[580px] p-0 rounded-2xl border-none shadow-2xl overflow-hidden">
+      <DialogContent className="max-w-145 p-0 rounded-2xl border-none shadow-2xl overflow-hidden">
         <DialogHeader title="Deposit Polling Agent Allowance" />
 
         <DialogPadding className="space-y-4 pb-6">

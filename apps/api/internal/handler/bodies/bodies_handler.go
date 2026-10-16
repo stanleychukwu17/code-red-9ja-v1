@@ -359,63 +359,82 @@ func (h *Handler) DeleteLGA(w http.ResponseWriter, r *http.Request) {
 	h.utils.RespondSuccess(w, http.StatusOK, "LGA deleted successfully", nil)
 }
 
+// RecalculateBodyMetrics recalculates counts across all electoral hierarchy levels
+// (wards -> constituencies/LGAs -> senatorial districts -> states -> national)
+// in a single atomic database transaction and invalidates corresponding Redis caches.
 func (h *Handler) RecalculateBodyMetrics(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
+	// 1. Begin an atomic database transaction.
+	// If any recalculation step fails, Rollback ensures the database is not left in a partial/corrupted count state.
 	tx, err := h.pool.Begin(ctx)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to start transaction: "+err.Error())
 		return
 	}
-	defer tx.Rollback(ctx)
+	defer tx.Rollback(ctx) // Safe: a no-op once tx.Commit() succeeds
 
+	// Bind the sqlc queries to this transaction
 	qtx := h.queries.WithTx(tx)
 
+	// 2. Perform bottom-up recalculation (from base electoral units up to national totals)
+
+	// Recalculate polling unit counts on wards
 	if err := qtx.RecalculateWardMetrics(ctx); err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to recalculate ward metrics: "+err.Error())
 		return
 	}
 
+	// Recalculate ward & polling unit counts on state constituencies
 	if err := qtx.RecalculateStateConstituencyMetrics(ctx); err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to recalculate state constituency metrics: "+err.Error())
 		return
 	}
 
+	// Recalculate constituency, ward & polling unit counts on LGAs
 	if err := qtx.RecalculateLGAMetrics(ctx); err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to recalculate LGA metrics: "+err.Error())
 		return
 	}
 
+	// Recalculate LGA, constituency, ward & polling unit counts on federal constituencies
 	if err := qtx.RecalculateFederalConstituencyMetrics(ctx); err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to recalculate federal constituency metrics: "+err.Error())
 		return
 	}
 
+	// Recalculate constituency, LGA, ward & polling unit counts on senatorial districts
 	if err := qtx.RecalculateSenatorialDistrictMetrics(ctx); err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to recalculate senatorial district metrics: "+err.Error())
 		return
 	}
 
+	// Recalculate aggregated electoral body counts on states (c_states)
 	if err := qtx.RecalculateStateMetrics(ctx); err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to recalculate state metrics: "+err.Error())
 		return
 	}
 
+	// Recalculate country-wide aggregated counts (national_metrics)
 	if err := qtx.RecalculateNationalMetrics(ctx); err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to recalculate national metrics: "+err.Error())
 		return
 	}
 
+	// 3. Commit the transaction after all recalculations succeed
 	if err := tx.Commit(ctx); err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to commit metrics recalculation: "+err.Error())
 		return
 	}
 
-	// Invalidate national metrics and states caches so subsequent reads fetch fresh metrics
+	// 4. Redis Cache Invalidation:
+	// Invalidate national metrics and Nigeria states cache ("countries:states:161")
+	// so the admin tables and public pages fetch fresh counts immediately.
 	nigeriaStatesKey := fmt.Sprintf("%s%d", db.RedisStatesByCountry, constants.NigeriaCountryID)
 	h.rdb.Del(ctx, db.RedisNationalMetrics, nigeriaStatesKey)
 
-	// Scan and invalidate any cached electoral body lists (senatorial districts, LGAs, wards, constituencies)
+	// Non-blocking cursor scan to invalidate any cached electoral body lists
+	// (e.g. bodies:senatorial_districts:*, bodies:lgas:*, bodies:wards:*, etc.)
 	var bodyKeys []string
 	iter := h.rdb.Scan(ctx, 0, "bodies:*", 500).Iterator()
 	for iter.Next(ctx) {
@@ -425,6 +444,7 @@ func (h *Handler) RecalculateBodyMetrics(w http.ResponseWriter, r *http.Request)
 		h.rdb.Del(ctx, bodyKeys...)
 	}
 
+	// 5. Return success response
 	h.utils.RespondSuccess(w, http.StatusOK, "Successfully recalculated all body metrics", nil)
 }
 

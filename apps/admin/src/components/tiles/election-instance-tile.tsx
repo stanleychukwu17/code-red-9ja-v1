@@ -1,5 +1,4 @@
 import { cn } from "@repo/ui/lib/utils";
-import { getRankColor } from "@repo/ui/lib/rank-color";
 import {
   TileHeader,
   TileLeft,
@@ -7,7 +6,6 @@ import {
   TileRow,
 } from "@repo/ui/components/tiles";
 import { formatISODate } from "@repo/ui/lib/date";
-import StarIcon from "@repo/ui/icons/star-icon";
 import { Checkbox } from "@repo/ui/components/checkbox";
 import { ElectionInstanceDropdown } from "../dropdowns/ElectionInstanceDropdown";
 
@@ -55,7 +53,6 @@ export function ElectionInstanceTableHeader({
               aria-label="Select all elections"
             />
           )}
-          <span className="text-c-90 w-16 shrink-0">Rank</span>
         </div>
         <span className="text-c-90">Election</span>
       </TileLeft>
@@ -106,19 +103,6 @@ export function ElectionInstanceTableTile({
               onCheckedChange={() => onToggleSelect(data.id)}
               aria-label={`Select ${data.name}`}
             />
-          )}
-          {data.rank != null ? (
-            <div className="flex items-center gap-2.5 w-16 shrink-0">
-              <StarIcon
-                className={cn(
-                  "size-4 shrink-0 fill-current",
-                  getRankColor(data.rank),
-                )}
-              />
-              <span className="text-[16px] text-c-90">{data.rank}</span>
-            </div>
-          ) : (
-            <div className="w-16 shrink-0" />
           )}
         </div>
         <p className="truncate w-full text-[16px] text-c-80">{data.name}</p>
