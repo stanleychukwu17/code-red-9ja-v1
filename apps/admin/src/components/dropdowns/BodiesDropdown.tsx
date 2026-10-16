@@ -21,16 +21,28 @@ interface BodiesDropdownProps {
   className?: string;
 }
 
+/**
+ * BodiesDropdown
+ * 
+ * An administrative action menu (ellipsis icon) rendered in the bodies header.
+ * Allows administrators to trigger backend jobs for:
+ *  1. Recalculating aggregate counts across all geographic bodies.
+ *  2. Syncing electoral units (full flow).
+ *  3. Syncing electoral units (state-level flow).
+ */
 export const BodiesDropdown = ({ className }: BodiesDropdownProps) => {
   const [openMenu, setOpenMenu] = useState(false);
   const queryClient = useQueryClient();
 
+  // Invalidates all cached body queries (states, LGAs, wards, PUs, constituencies, districts)
+  // so that all open views/tables immediately reflect updated counts and records.
   const invalidateAllBodies = () => {
     QUERY_KEYS.bodies.all.forEach((queryKey) => {
       queryClient.invalidateQueries({ queryKey });
     });
   };
 
+  // Mutation 1: Recalculate rollup counts across all political/geographic bodies
   const mutation = useMutation({
     mutationFn: async () => {
       const res = await recalculateBodies();
@@ -42,6 +54,7 @@ export const BodiesDropdown = ({ className }: BodiesDropdownProps) => {
     onSuccess: invalidateAllBodies,
   });
 
+  // Mutation 2: Synchronize electoral units from source data
   const syncMutation = useMutation({
     mutationFn: async () => {
       const res = await syncElectoralUnits();
@@ -53,6 +66,7 @@ export const BodiesDropdown = ({ className }: BodiesDropdownProps) => {
     onSuccess: invalidateAllBodies,
   });
 
+  // Mutation 3: Synchronize electoral units using the state-by-state hierarchy flow
   const syncStateFlowMutation = useMutation({
     mutationFn: async () => {
       const res = await syncElectoralUnitsStateFlow();
@@ -66,6 +80,7 @@ export const BodiesDropdown = ({ className }: BodiesDropdownProps) => {
     onSuccess: invalidateAllBodies,
   });
 
+  // Action handlers: close the menu and display toast notifications for async progress
   const handleRecalculate = () => {
     setOpenMenu(false);
     toast.promise(mutation.mutateAsync(), {
@@ -93,6 +108,7 @@ export const BodiesDropdown = ({ className }: BodiesDropdownProps) => {
     });
   };
 
+  // Dropdown menu items configuration
   const group1: TDropdownGroup = [
     {
       title: "Recalculate Counts",
@@ -116,6 +132,7 @@ export const BodiesDropdown = ({ className }: BodiesDropdownProps) => {
   return (
     <div className={className}>
       <DropdownMenu modal={true} open={openMenu} onOpenChange={setOpenMenu}>
+        {/* Three-dots icon trigger button */}
         <DropdownMenuTrigger asChild>
           <Button
             size="icon-xl"
@@ -125,6 +142,8 @@ export const BodiesDropdown = ({ className }: BodiesDropdownProps) => {
             <Ellipsis className="size-5 text-c-90" />
           </Button>
         </DropdownMenuTrigger>
+
+        {/* Dropdown menu action list */}
         <DropdownMenuContent align="end" className="w-64">
           <DropdownGroupList groups={dropdownData} />
         </DropdownMenuContent>

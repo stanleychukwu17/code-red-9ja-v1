@@ -34,9 +34,6 @@ export function ElectionInstanceFormDialog({
 }) {
   const queryClient = useQueryClient();
   const [error, setError] = React.useState<string | null>(null);
-  const [selectedGroupDate, setSelectedGroupDate] = React.useState<
-    string | null
-  >(null);
 
   const form = useForm({
     defaultValues: {
@@ -70,7 +67,6 @@ export function ElectionInstanceFormDialog({
         "officeId",
         (electionInstance.office_id || undefined) as number | undefined,
       );
-      setSelectedGroupDate(cleanDate || null);
       setError(null);
     }
   }, [open, electionInstance]);
@@ -199,20 +195,7 @@ export function ElectionInstanceFormDialog({
                       selectedId={field.state.value}
                       update={(value) => {
                         const cleanVal = value ? (value.split("T")[0] ?? "") : "";
-                        const cleanSelectedGroupDate = selectedGroupDate
-                          ? (selectedGroupDate.split("T")[0] ?? "")
-                          : "";
                         field.handleChange(cleanVal);
-                        if (
-                          cleanSelectedGroupDate &&
-                          cleanVal !== cleanSelectedGroupDate
-                        ) {
-                          form.setFieldValue(
-                            "electionGroupId",
-                            undefined as number | undefined,
-                          );
-                          setSelectedGroupDate(null);
-                        }
                       }}
                       errorMsg={field.state.meta.errors?.join(", ")}
                     />
@@ -236,14 +219,7 @@ export function ElectionInstanceFormDialog({
                   variant="bullet"
                   errorMsg={field.state.meta.errors?.join(", ")}
                   update={(item) => {
-                    const cleanDate = item.election_date
-                      ? (item.election_date.split("T")[0] ?? null)
-                      : null;
                     field.handleChange(item.id);
-                    setSelectedGroupDate(cleanDate);
-                    if (cleanDate) {
-                      form.setFieldValue("electionDate", cleanDate);
-                    }
                   }}
                   fetchElectionGroups={getElectionGroups}
                 />

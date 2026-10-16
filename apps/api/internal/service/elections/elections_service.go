@@ -11,17 +11,25 @@ import (
 	"free9ja/api/internal/worker"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 )
 
+const createElectionInstanceSQL = `
+INSERT INTO elections (
+  name, election_date, election_group_id,
+  office_id, scope,
+  state_id, senatorial_district_id, federal_constituency_id,
+  state_constituency_id, lga_id, ward_id
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+RETURNING id, election_group_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, office_id, name, election_date, scope, status, reports_count, updates_count, results_submitted_count, contesting_parties, created_at, updated_at
+`
+
 type earningsService interface {
 	ProcessTaskEarnings(ctx context.Context, assignmentID int64, taskType string, customNarration ...string) (int64, error)
-}
-
-type electionGroupsService interface {
-	GetSafeNationalMetrics(ctx context.Context) queries.NationalMetric
 }
 
 type officesService interface {
@@ -33,52 +41,104 @@ type bodiesService interface {
 }
 
 type ElectionsService struct {
-	queries               *queries.Queries
-	pool                  *pgxpool.Pool
-	rdb                   *redis.Client
-	taskDistributor       worker.TaskDistributor
-	earningsService       earningsService
-	electionGroupsService electionGroupsService
-	officeService         officesService
-	bodiesService         bodiesService
+	queries         *queries.Queries
+	pool            *pgxpool.Pool
+	rdb             *redis.Client
+	taskDistributor worker.TaskDistributor
+	earningsService earningsService
+	officeService   officesService
+	bodiesService   bodiesService
 }
 
 // NewElectionsService initializes a new ElectionsService with its required database pool,
-// query handlers, Redis client, task distributor, election groups service, offices service, and bodies service dependency.
+// query handlers, Redis client, task distributor, earnings service, offices service, and bodies service dependency.
 func NewElectionsService(
 	q *queries.Queries,
 	pool *pgxpool.Pool,
 	rdb *redis.Client,
 	taskDistributor worker.TaskDistributor,
-	electionGroupsService electionGroupsService,
 	earningsService earningsService,
 	officeService officesService,
 	bodiesService bodiesService,
 ) *ElectionsService {
 	return &ElectionsService{
-		queries:               q,
-		pool:                  pool,
-		rdb:                   rdb,
-		taskDistributor:       taskDistributor,
-		electionGroupsService: electionGroupsService,
-		earningsService:       earningsService,
-		officeService:         officeService,
-		bodiesService:         bodiesService,
+		queries:         q,
+		pool:            pool,
+		rdb:             rdb,
+		taskDistributor: taskDistributor,
+		earningsService: earningsService,
+		officeService:   officeService,
+		bodiesService:   bodiesService,
 	}
 }
 
-// getSafeNationalMetrics retrieves national administrative counts via the injected election
-// groups service (using Redis cache and DB), or returns standard hardcoded Nigerian metrics as a safe fallback.
-func (s *ElectionsService) getSafeNationalMetrics(ctx context.Context) queries.NationalMetric {
-	return s.electionGroupsService.GetSafeNationalMetrics(ctx)
+// invalidateCache purges the Redis cache for a specific election instance by ID.
+func (s *ElectionsService) invalidateCache(ctx context.Context, electionID int32) {
+	s.rdb.Del(ctx, fmt.Sprintf("%s%d", db.RedisElectionByID, electionID))
 }
 
-// invalidateCache clears Redis cached lists for elections and election groups, as well as single election details.
-func (s *ElectionsService) invalidateCache(ctx context.Context, id *int32) {
-	s.rdb.Del(ctx, db.RedisElectionGroupsAll)
-	if id != nil {
-		s.rdb.Del(ctx, fmt.Sprintf("%s%d", db.RedisElectionByID, *id))
+// batchCreateElections pipelines multiple election inserts into the active transaction using pgx.Batch,
+// avoiding sequential roundtrips for large batches (e.g. LGAs, State Constituencies, Wards).
+func (s *ElectionsService) batchCreateElections(ctx context.Context, tx pgx.Tx, paramsList []queries.CreateElectionInstanceParams) ([]queries.Election, error) {
+	if len(paramsList) == 0 {
+		return []queries.Election{}, nil
 	}
+
+	batch := &pgx.Batch{}
+	for _, p := range paramsList {
+		batch.Queue(createElectionInstanceSQL,
+			p.Name,
+			p.ElectionDate,
+			p.ElectionGroupID,
+			p.OfficeID,
+			p.Scope,
+			p.StateID,
+			p.SenatorialDistrictID,
+			p.FederalConstituencyID,
+			p.StateConstituencyID,
+			p.LgaID,
+			p.WardID,
+		)
+	}
+
+	batchResults := tx.SendBatch(ctx, batch)
+	defer batchResults.Close()
+
+	createdElections := make([]queries.Election, 0, len(paramsList))
+	for _, p := range paramsList {
+		var el queries.Election
+		err := batchResults.QueryRow().Scan(
+			&el.ID,
+			&el.ElectionGroupID,
+			&el.StateID,
+			&el.SenatorialDistrictID,
+			&el.FederalConstituencyID,
+			&el.StateConstituencyID,
+			&el.LgaID,
+			&el.WardID,
+			&el.OfficeID,
+			&el.Name,
+			&el.ElectionDate,
+			&el.Scope,
+			&el.Status,
+			&el.ReportsCount,
+			&el.UpdatesCount,
+			&el.ResultsSubmittedCount,
+			&el.ContestingParties,
+			&el.CreatedAt,
+			&el.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to insert batch election %q: %w", p.Name, err)
+		}
+		createdElections = append(createdElections, el)
+	}
+
+	if err := batchResults.Close(); err != nil {
+		return nil, fmt.Errorf("failed to close batch results: %w", err)
+	}
+
+	return createdElections, nil
 }
 
 // CandidateInput holds candidate and party identification for election registration.
@@ -132,9 +192,6 @@ func (s *ElectionsService) CreateNationwideElection(ctx context.Context, officeI
 	if err := tx.Commit(ctx); err != nil {
 		return queries.Election{}, fmt.Errorf("failed to commit transaction: %w", err)
 	}
-
-	// Invalidate election list caches on successful creation
-	s.invalidateCache(ctx, nil)
 
 	return election, nil
 }
@@ -205,9 +262,6 @@ func (s *ElectionsService) CreateStateElection(ctx context.Context, officeID int
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
-
-	// Invalidate election list caches on successful creation
-	s.invalidateCache(ctx, nil)
 
 	return createdElections, nil
 }
@@ -285,9 +339,6 @@ func (s *ElectionsService) CreateSenatorialDistrictElection(ctx context.Context,
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
-
-	// Invalidate election list caches on successful creation
-	s.invalidateCache(ctx, nil)
 
 	return createdElections, nil
 }
@@ -375,9 +426,6 @@ func (s *ElectionsService) CreateFederalConstituencyElection(ctx context.Context
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	// Invalidate election list caches on successful creation
-	s.invalidateCache(ctx, nil)
-
 	return createdElections, nil
 }
 
@@ -409,8 +457,6 @@ func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, 
 		return nil, fmt.Errorf("failed to fetch election group: %w", err)
 	}
 
-	createdElections := make([]queries.Election, 0, len(stateConstituencyIDs))
-
 	// Pre-fetch all state constituencies into map for O(1) in-memory lookups
 	constituencies, err := txQueries.GetStateConstituencies(ctx, queries.GetStateConstituenciesParams{
 		StateID:               0,
@@ -424,7 +470,8 @@ func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, 
 		scMap[c.ID] = c
 	}
 
-	// Create election records for each state constituency (skipping non-existent constituencies)
+	// Build election parameters for each state constituency (skipping non-existent constituencies)
+	paramsList := make([]queries.CreateElectionInstanceParams, 0, len(stateConstituencyIDs))
 	for _, constituencyID := range stateConstituencyIDs {
 		cRow, found := scMap[constituencyID]
 		if !found {
@@ -451,7 +498,7 @@ func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, 
 		}
 
 		name := fmt.Sprintf("%d %s Election (%s)", electionDate.Year(), officeElection, cRow.Name)
-		election, err := txQueries.CreateElectionInstance(ctx, queries.CreateElectionInstanceParams{
+		paramsList = append(paramsList, queries.CreateElectionInstanceParams{
 			Name:                  name,
 			ElectionDate:          pgtype.Date{Time: electionDate, Valid: true},
 			ElectionGroupID:       electionGroupID,
@@ -463,19 +510,17 @@ func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, 
 			LgaID:                 lgaID,
 			StateConstituencyID:   pgtype.Int4{Int32: constituencyID, Valid: true},
 		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to create election for state constituency %d: %w", constituencyID, err)
-		}
-		createdElections = append(createdElections, election)
+	}
+
+	createdElections, err := s.batchCreateElections(ctx, tx, paramsList)
+	if err != nil {
+		return nil, err
 	}
 
 	// Commit transaction
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
-
-	// Invalidate election list caches on successful creation
-	s.invalidateCache(ctx, nil)
 
 	return createdElections, nil
 }
@@ -508,8 +553,6 @@ func (s *ElectionsService) CreateLgaElection(ctx context.Context, officeID int16
 		return nil, fmt.Errorf("failed to fetch election group: %w", err)
 	}
 
-	createdElections := make([]queries.Election, 0, len(lgaIDs))
-
 	// Pre-fetch all LGAs into map for O(1) in-memory lookups
 	lgas, err := txQueries.GetLGAs(ctx, 0)
 	if err != nil {
@@ -520,7 +563,8 @@ func (s *ElectionsService) CreateLgaElection(ctx context.Context, officeID int16
 		lgaMap[l.ID] = l
 	}
 
-	// Create election records for each LGA (skipping non-existent LGAs)
+	// Build election parameters for each LGA (skipping non-existent LGAs)
+	paramsList := make([]queries.CreateElectionInstanceParams, 0, len(lgaIDs))
 	for _, lgaID := range lgaIDs {
 		lgaRow, found := lgaMap[lgaID]
 		if !found {
@@ -543,7 +587,7 @@ func (s *ElectionsService) CreateLgaElection(ctx context.Context, officeID int16
 		}
 
 		name := fmt.Sprintf("%d %s Election (%s)", electionDate.Year(), officeElection, lgaRow.Name)
-		election, err := txQueries.CreateElectionInstance(ctx, queries.CreateElectionInstanceParams{
+		paramsList = append(paramsList, queries.CreateElectionInstanceParams{
 			Name:                  name,
 			ElectionDate:          pgtype.Date{Time: electionDate, Valid: true},
 			ElectionGroupID:       electionGroupID,
@@ -554,19 +598,17 @@ func (s *ElectionsService) CreateLgaElection(ctx context.Context, officeID int16
 			FederalConstituencyID: federalConstituencyID,
 			LgaID:                 pgtype.Int4{Int32: lgaID, Valid: true},
 		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to create election for LGA %d: %w", lgaID, err)
-		}
-		createdElections = append(createdElections, election)
+	}
+
+	createdElections, err := s.batchCreateElections(ctx, tx, paramsList)
+	if err != nil {
+		return nil, err
 	}
 
 	// Commit transaction
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
-
-	// Invalidate election list caches on successful creation
-	s.invalidateCache(ctx, nil)
 
 	return createdElections, nil
 }
@@ -599,8 +641,6 @@ func (s *ElectionsService) CreateWardElection(ctx context.Context, officeID int1
 		return nil, fmt.Errorf("failed to fetch election group: %w", err)
 	}
 
-	createdElections := make([]queries.Election, 0, len(wardIDs))
-
 	// Pre-fetch all wards once to resolve parent IDs in memory
 	wards, err := txQueries.GetWards(ctx, queries.GetWardsParams{
 		LgaID:   0,
@@ -624,7 +664,8 @@ func (s *ElectionsService) CreateWardElection(ctx context.Context, officeID int1
 		lgaMap[l.ID] = l
 	}
 
-	// Create election records for each Ward with full ancestral resolution (skipping non-existent wards)
+	// Build election parameters for each Ward with full ancestral resolution (skipping non-existent wards)
+	paramsList := make([]queries.CreateElectionInstanceParams, 0, len(wardIDs))
 	for _, wardID := range wardIDs {
 		wardRow, foundWard := wardMap[wardID]
 		if !foundWard {
@@ -657,7 +698,7 @@ func (s *ElectionsService) CreateWardElection(ctx context.Context, officeID int1
 		}
 
 		name := fmt.Sprintf("%d %s Election (%s)", electionDate.Year(), officeElection, wardRow.Name)
-		election, err := txQueries.CreateElectionInstance(ctx, queries.CreateElectionInstanceParams{
+		paramsList = append(paramsList, queries.CreateElectionInstanceParams{
 			Name:                  name,
 			ElectionDate:          pgtype.Date{Time: electionDate, Valid: true},
 			ElectionGroupID:       electionGroupID,
@@ -670,19 +711,17 @@ func (s *ElectionsService) CreateWardElection(ctx context.Context, officeID int1
 			StateConstituencyID:   stateConstituencyID,
 			WardID:                pgtype.Int4{Int32: wardID, Valid: true},
 		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to create election for Ward %d: %w", wardID, err)
-		}
-		createdElections = append(createdElections, election)
+	}
+
+	createdElections, err := s.batchCreateElections(ctx, tx, paramsList)
+	if err != nil {
+		return nil, err
 	}
 
 	// Commit transaction
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
-
-	// Invalidate election list caches on successful creation
-	s.invalidateCache(ctx, nil)
 
 	return createdElections, nil
 }
@@ -791,7 +830,7 @@ func (s *ElectionsService) UpdateElection(
 
 	// 4. Invalidate Redis caches on successful update
 	if err == nil {
-		s.invalidateCache(ctx, &id)
+		s.invalidateCache(ctx, id)
 	}
 	return el, err
 }
@@ -799,7 +838,7 @@ func (s *ElectionsService) UpdateElection(
 // DeleteElection removes an election instance and invalidates the cache.
 func (s *ElectionsService) DeleteElection(ctx context.Context, id int32) error {
 	// Ensure Redis cache invalidation occurs when the operation completes
-	defer s.invalidateCache(ctx, &id)
+	defer s.invalidateCache(ctx, id)
 
 	return s.queries.DeleteElectionInstance(ctx, id)
 }
@@ -851,7 +890,7 @@ func (s *ElectionsService) SyncElectionCandidates(ctx context.Context, electionI
 	}
 
 	// 4. Invalidate Redis caches and commit
-	s.invalidateCache(ctx, &electionID)
+	s.invalidateCache(ctx, electionID)
 	return tx.Commit(ctx)
 }
 
@@ -896,7 +935,7 @@ func (s *ElectionsService) FieldPartyCandidate(ctx context.Context, electionID i
 	}
 
 	// 4. Commit transaction
-	s.invalidateCache(ctx, &electionID)
+	s.invalidateCache(ctx, electionID)
 	return tx.Commit(ctx)
 }
 

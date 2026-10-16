@@ -63,9 +63,6 @@ export function StateConstituencyElectionFormDialog({
   const [selectedConstituencies, setSelectedConstituencies] = React.useState<
     StateConstituencyItem[]
   >([]);
-  const [selectedGroupDate, setSelectedGroupDate] = React.useState<
-    string | null
-  >(null);
 
   // Fetch states of Nigeria
   const { data: statesData } = useQuery({
@@ -173,7 +170,6 @@ export function StateConstituencyElectionFormDialog({
       setConstituenciesMode("custom");
       setSelectedConstituencies([]);
       setError(null);
-      setSelectedGroupDate(null);
     }
   }, [open]);
 
@@ -252,13 +248,6 @@ export function StateConstituencyElectionFormDialog({
     });
   };
 
-  const groupPreviewName = React.useMemo(() => {
-    if (selectedDateStr && selectedType) {
-      const year = new Date(selectedDateStr).getFullYear();
-      return `${year} ${selectedType.name} Election`;
-    }
-  }, [selectedDateStr, selectedType]);
-
   // Group selected constituencies by state for rendering
   const selectedConstituenciesByState = React.useMemo(() => {
     const groups: { [stateName: string]: StateConstituencyItem[] } = {};
@@ -327,10 +316,6 @@ export function StateConstituencyElectionFormDialog({
                         selectedId={field.state.value}
                         update={(value) => {
                           field.handleChange(value);
-                          if (value !== selectedGroupDate) {
-                            form.setFieldValue("electionGroupId", undefined);
-                            setSelectedGroupDate(null);
-                          }
                         }}
                         errorMsg={field.state.meta.errors?.join(", ")}
                       />
@@ -406,15 +391,8 @@ export function StateConstituencyElectionFormDialog({
                     variant="bullet"
                     update={(item) => {
                       field.handleChange(item.id);
-                      setSelectedGroupDate(item.election_date || null);
-                      if (item.election_date) {
-                        form.setFieldValue("electionDate", item.election_date);
-                      }
                     }}
                     fetchElectionGroups={getElectionGroups}
-                    buttonText={
-                      field.state.value ? undefined : groupPreviewName
-                    }
                   />
                 )}
               />

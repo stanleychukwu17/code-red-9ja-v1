@@ -423,11 +423,14 @@ func (h *Handler) GetNationalMetrics(w http.ResponseWriter, r *http.Request) {
 
 // SyncElectoralUnits godoc
 // @Summary      Synchronize electoral units from INEC API
-// @Description  Fetches and synchronizes all electoral units from INEC API (unauthenticated)
+// @Description  Fetches and synchronizes all electoral units from INEC API (admin only)
 // @Tags         Bodies
 // @Accept       json
 // @Produce      json
+// @Security     BearerAuth
 // @Success      200  {object} map[string]interface{}
+// @Failure      401  {string} string "Unauthorized"
+// @Failure      403  {string} string "Forbidden"
 // @Failure      500  {string} string
 // @Router       /bodies/sync-electoral-units [post]
 func (h *Handler) SyncElectoralUnits(w http.ResponseWriter, r *http.Request) {
@@ -446,11 +449,14 @@ func (h *Handler) SyncElectoralUnits(w http.ResponseWriter, r *http.Request) {
 
 // SyncElectoralUnitsStateFlow godoc
 // @Summary      Synchronize electoral units from INEC API using State (Governorship) Flow
-// @Description  Fetches and synchronizes all electoral units from INEC API using Governorship election state flow (unauthenticated)
+// @Description  Fetches and synchronizes all electoral units from INEC API using Governorship election state flow (admin only)
 // @Tags         Bodies
 // @Accept       json
 // @Produce      json
+// @Security     BearerAuth
 // @Success      200  {object} map[string]interface{}
+// @Failure      401  {string} string "Unauthorized"
+// @Failure      403  {string} string "Forbidden"
 // @Failure      500  {string} string
 // @Router       /bodies/sync-electoral-units-state-flow [post]
 func (h *Handler) SyncElectoralUnitsStateFlow(w http.ResponseWriter, r *http.Request) {

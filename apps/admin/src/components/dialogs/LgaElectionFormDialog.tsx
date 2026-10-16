@@ -57,9 +57,6 @@ export function LgaElectionFormDialog({
   const [isLgaSelectorOpen, setIsLgaSelectorOpen] = React.useState(false);
   const [lgasMode, setLgasMode] = React.useState<"custom" | "all">("custom");
   const [selectedLgas, setSelectedLgas] = React.useState<LgaItem[]>([]);
-  const [selectedGroupDate, setSelectedGroupDate] = React.useState<
-    string | null
-  >(null);
 
   // Fetch states of Nigeria
   const { data: statesData } = useQuery({
@@ -161,7 +158,6 @@ export function LgaElectionFormDialog({
       setLgasMode("custom");
       setSelectedLgas([]);
       setError(null);
-      setSelectedGroupDate(null);
     }
   }, [open]);
 
@@ -234,13 +230,6 @@ export function LgaElectionFormDialog({
     });
   };
 
-  const groupPreviewName = React.useMemo(() => {
-    if (selectedDateStr && selectedType) {
-      const year = new Date(selectedDateStr).getFullYear();
-      return `${year} ${selectedType.name} Election`;
-    }
-  }, [selectedDateStr, selectedType]);
-
   // Group selected LGAs by state for rendering
   const selectedLgasByState = React.useMemo(() => {
     const groups: { [stateName: string]: LgaItem[] } = {};
@@ -308,10 +297,6 @@ export function LgaElectionFormDialog({
                         selectedId={field.state.value}
                         update={(value) => {
                           field.handleChange(value);
-                          if (value !== selectedGroupDate) {
-                            form.setFieldValue("electionGroupId", undefined);
-                            setSelectedGroupDate(null);
-                          }
                         }}
                         errorMsg={field.state.meta.errors?.join(", ")}
                       />
@@ -383,13 +368,8 @@ export function LgaElectionFormDialog({
                     variant="bullet"
                     update={(item) => {
                       field.handleChange(item.id);
-                      setSelectedGroupDate(item.election_date || null);
-                      if (item.election_date) {
-                        form.setFieldValue("electionDate", item.election_date);
-                      }
                     }}
                     fetchElectionGroups={getElectionGroups}
-                    buttonText={groupPreviewName}
                   />
                 )}
               />

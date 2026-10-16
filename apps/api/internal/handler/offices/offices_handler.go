@@ -128,13 +128,10 @@ func (h *Handler) CreateOffice(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 4. Audit Logging
-	actorID, actorRole := audit.ActorInfoFromContext(r.Context())
 	newValuesJSON, _ := json.Marshal(o)
 	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
 		Module:     audit.StringToText(db.ModuleAdmin),
 		Action:     db.ActionCreateOffice,
-		ActorID:    actorID,
-		ActorRole:  audit.StringToText(actorRole),
 		EntityType: db.EntityTypeOffice,
 		EntityID:   strconv.FormatInt(int64(o.ID), 10),
 		NewValues:  newValuesJSON,
@@ -340,14 +337,11 @@ func (h *Handler) UpdateOffice(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// --- Audit Logging ---
-	actorID, actorRole := audit.ActorInfoFromContext(r.Context())
 	oldValuesJSON, _ := json.Marshal(existingOffice)
 	newValuesJSON, _ := json.Marshal(updated)
 	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
 		Module:     audit.StringToText(db.ModuleAdmin),
 		Action:     db.ActionUpdateOffice,
-		ActorID:    actorID,
-		ActorRole:  audit.StringToText(actorRole),
 		EntityType: db.EntityTypeOffice,
 		EntityID:   idStr,
 		OldValues:  oldValuesJSON,

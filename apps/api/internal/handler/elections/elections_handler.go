@@ -3,8 +3,10 @@ package electionshandler
 import (
 	"context"
 	"encoding/json"
+	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	apimiddleware "free9ja/api/internal/middleware"
+	"free9ja/api/internal/service/audit"
 	elections "free9ja/api/internal/service/elections"
 	"free9ja/api/internal/utils"
 	"net/http"
@@ -43,15 +45,40 @@ type UsersService interface {
 type Handler struct {
 	service      ElectionsService
 	usersService UsersService
+	auditService audit.AuditService
 	utils        *utils.Utils
 }
 
-func NewHandler(service ElectionsService, usersService UsersService, utils *utils.Utils) *Handler {
+func NewHandler(service ElectionsService, usersService UsersService, auditService audit.AuditService, utils *utils.Utils) *Handler {
 	return &Handler{
 		service:      service,
 		usersService: usersService,
+		auditService: auditService,
 		utils:        utils,
 	}
+}
+
+func (h *Handler) logElectionCreationAudit(r *http.Request, scope string, electionGroupID int32, officeID int16, createdCount int, firstElectionID int32, details any) {
+	newValuesJSON, _ := json.Marshal(map[string]interface{}{
+		"scope":             scope,
+		"election_group_id": electionGroupID,
+		"office_id":         officeID,
+		"created_count":     createdCount,
+		"details":           details,
+	})
+
+	entityID := strconv.FormatInt(int64(firstElectionID), 10)
+	if firstElectionID == 0 {
+		entityID = strconv.FormatInt(int64(electionGroupID), 10)
+	}
+
+	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
+		Module:     audit.StringToText(db.ModuleAdmin),
+		Action:     db.ActionCreateElection,
+		EntityType: db.EntityTypeElections,
+		EntityID:   entityID,
+		NewValues:  newValuesJSON,
+	})
 }
 
 func parsePaginationParams(r *http.Request) (int, int64) {
@@ -174,6 +201,8 @@ func (h *Handler) CreateNationwideElection(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	h.logElectionCreationAudit(r, "nationwide", req.ElectionGroupID, req.OfficeID, 1, election.ID, election)
+
 	// Return successful response with the created election entity
 	h.utils.RespondSuccess(w, http.StatusCreated, "Nationwide election created successfully", map[string]interface{}{
 		"election": election,
@@ -211,6 +240,14 @@ func (h *Handler) CreateStateElection(w http.ResponseWriter, r *http.Request) {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create state elections: "+err.Error())
 		return
 	}
+
+	var firstElectionID int32
+	if len(elections) > 0 {
+		firstElectionID = elections[0].ID
+	}
+	h.logElectionCreationAudit(r, "state", req.ElectionGroupID, req.OfficeID, len(elections), firstElectionID, map[string]interface{}{
+		"state_ids": req.StateIDs,
+	})
 
 	// Return successful response with the list of created state election entities
 	h.utils.RespondSuccess(w, http.StatusCreated, "State elections created successfully", map[string]interface{}{
@@ -250,6 +287,14 @@ func (h *Handler) CreateSenatorialDistrictElection(w http.ResponseWriter, r *htt
 		return
 	}
 
+	var firstElectionID int32
+	if len(elections) > 0 {
+		firstElectionID = elections[0].ID
+	}
+	h.logElectionCreationAudit(r, "senatorial-district", req.ElectionGroupID, req.OfficeID, len(elections), firstElectionID, map[string]interface{}{
+		"senatorial_district_ids": req.SenatorialDistrictIDs,
+	})
+
 	// Return successful response with list of created senatorial district elections
 	h.utils.RespondSuccess(w, http.StatusCreated, "Senatorial district elections created successfully", map[string]interface{}{
 		"elections": elections,
@@ -287,6 +332,14 @@ func (h *Handler) CreateFederalConstituencyElection(w http.ResponseWriter, r *ht
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create federal constituency elections: "+err.Error())
 		return
 	}
+
+	var firstElectionID int32
+	if len(elections) > 0 {
+		firstElectionID = elections[0].ID
+	}
+	h.logElectionCreationAudit(r, "federal-constituency", req.ElectionGroupID, req.OfficeID, len(elections), firstElectionID, map[string]interface{}{
+		"federal_constituency_ids": req.FederalConstituencyIDs,
+	})
 
 	// Return successful response with list of created federal constituency elections
 	h.utils.RespondSuccess(w, http.StatusCreated, "Federal constituency elections created successfully", map[string]interface{}{
@@ -326,6 +379,14 @@ func (h *Handler) CreateStateConstituencyElection(w http.ResponseWriter, r *http
 		return
 	}
 
+	var firstElectionID int32
+	if len(elections) > 0 {
+		firstElectionID = elections[0].ID
+	}
+	h.logElectionCreationAudit(r, "state-constituency", req.ElectionGroupID, req.OfficeID, len(elections), firstElectionID, map[string]interface{}{
+		"state_constituency_ids": req.StateConstituencyIDs,
+	})
+
 	// Return successful response with list of created state constituency elections
 	h.utils.RespondSuccess(w, http.StatusCreated, "State constituency elections created successfully", map[string]interface{}{
 		"elections": elections,
@@ -363,6 +424,14 @@ func (h *Handler) CreateLgaElection(w http.ResponseWriter, r *http.Request) {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create LGA elections: "+err.Error())
 		return
 	}
+
+	var firstElectionID int32
+	if len(elections) > 0 {
+		firstElectionID = elections[0].ID
+	}
+	h.logElectionCreationAudit(r, "lga", req.ElectionGroupID, req.OfficeID, len(elections), firstElectionID, map[string]interface{}{
+		"lga_ids": req.LgaIDs,
+	})
 
 	// Return successful response with list of created LGA elections
 	h.utils.RespondSuccess(w, http.StatusCreated, "LGA elections created successfully", map[string]interface{}{
@@ -402,6 +471,14 @@ func (h *Handler) CreateWardElection(w http.ResponseWriter, r *http.Request) {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create Ward elections: "+err.Error())
 		return
 	}
+
+	var firstElectionID int32
+	if len(elections) > 0 {
+		firstElectionID = elections[0].ID
+	}
+	h.logElectionCreationAudit(r, "ward", req.ElectionGroupID, req.OfficeID, len(elections), firstElectionID, map[string]interface{}{
+		"ward_ids": req.WardIDs,
+	})
 
 	// Return successful response with list of created Ward elections
 	h.utils.RespondSuccess(w, http.StatusCreated, "Ward elections created successfully", map[string]interface{}{
@@ -546,6 +623,16 @@ func (h *Handler) UpdateElection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	newValuesJSON, _ := json.Marshal(updated)
+
+	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
+		Module:     audit.StringToText(db.ModuleAdmin),
+		Action:     db.ActionUpdateElection,
+		EntityType: db.EntityTypeElections,
+		EntityID:   strconv.FormatInt(int64(id), 10),
+		NewValues:  newValuesJSON,
+	})
+
 	// Return updated election entity
 	h.utils.RespondSuccess(w, http.StatusOK, "Election updated successfully", map[string]interface{}{
 		"election": updated,
@@ -585,6 +672,13 @@ func (h *Handler) DeleteElection(w http.ResponseWriter, r *http.Request) {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to delete election: "+err.Error())
 		return
 	}
+
+	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
+		Module:     audit.StringToText(db.ModuleAdmin),
+		Action:     db.ActionDeleteElection,
+		EntityType: db.EntityTypeElections,
+		EntityID:   strconv.FormatInt(int64(id), 10),
+	})
 
 	// Return successful deletion response
 	h.utils.RespondSuccess(w, http.StatusOK, "Election deleted successfully", nil)

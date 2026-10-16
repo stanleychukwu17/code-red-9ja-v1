@@ -17,7 +17,6 @@ import { SelectOffice } from "@repo/ui/components/selects/office-select";
 import { useForm, useStore } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
-import { ElectionGroupFormDialog } from "./ElectionGroupFormDialog";
 import { Label } from "@repo/ui/components/input";
 import { TinyError } from "@repo/ui/components/custom/TinyError";
 import { QUERY_KEYS } from "#/lib/config";
@@ -47,13 +46,8 @@ export function NationwideElectionFormDialog({
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
 
-  // Sub-dialog visibility controls
-  const [isGroupDialogOpen, setIsGroupDialogOpen] = useState(false);
-
   // Form display metadata
   const [selectedOfficeName, setSelectedOfficeName] = useState<string | null>(null);
-  const [selectedElectionDate, setSelectedElectionDate] = useState<string | null>(null);
-  const [selectedGroupDate, setSelectedGroupDate] = useState<string | null>(null);
 
   // Form management
   const form = useForm({
@@ -93,8 +87,6 @@ export function NationwideElectionFormDialog({
       form.setFieldValue("officeId", undefined);
       setError(null);
       setSelectedOfficeName(null);
-      setSelectedElectionDate(null);
-      setSelectedGroupDate(null);
     }
   }, [open]);
 
@@ -108,17 +100,6 @@ export function NationwideElectionFormDialog({
       }
     }
   }, [open, officesData, selectedOfficeId]);
-
-  // Compute label text for the election group trigger button
-  const electionGroupButtonText = useMemo(() => {
-    const year = selectedElectionDate
-      ? new Date(selectedElectionDate).getFullYear()
-      : null;
-    if (year && selectedOfficeName) {
-      return `${year} ${selectedOfficeName} Election`;
-    }
-    return undefined;
-  }, [selectedElectionDate, selectedOfficeName]);
 
   // Submit mutation to create the nationwide election
   const saveMutation = useMutation({
@@ -210,11 +191,6 @@ export function NationwideElectionFormDialog({
                         selectedId={field.state.value}
                         update={(value) => {
                           field.handleChange(value);
-                          setSelectedElectionDate(value);
-                          if (value !== selectedGroupDate) {
-                            form.setFieldValue("electionGroupId", undefined);
-                            setSelectedGroupDate(null);
-                          }
                         }}
                         errorMsg={field.state.meta.errors?.join(", ")}
                       />
@@ -232,14 +208,8 @@ export function NationwideElectionFormDialog({
                   <ElectionGroupBullet
                     selectedId={field.state.value}
                     variant="bullet"
-                    buttonText={electionGroupButtonText}
                     update={(item) => {
                       field.handleChange(item.id);
-                      setSelectedGroupDate(item.election_date || null);
-                      if (item.election_date) {
-                        form.setFieldValue("electionDate", item.election_date);
-                        setSelectedElectionDate(item.election_date);
-                      }
                     }}
                     fetchElectionGroups={getElectionGroups}
                     errorMsg={field.state.meta.errors?.join(", ")}
@@ -263,15 +233,6 @@ export function NationwideElectionFormDialog({
           </form>
         </DialogContent>
       </Dialog>
-
-      {/* Sub-dialog for creating an election group on the fly */}
-      <ElectionGroupFormDialog
-        open={isGroupDialogOpen}
-        onClose={() => setIsGroupDialogOpen(false)}
-        onSuccess={(newGroupId) => {
-          form.setFieldValue("electionGroupId", newGroupId);
-        }}
-      />
     </>
   );
 }

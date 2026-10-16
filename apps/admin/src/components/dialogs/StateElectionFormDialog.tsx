@@ -52,9 +52,6 @@ export function StateElectionFormDialog({
     "custom",
   );
   const [selectedStates, setSelectedStates] = React.useState<StateItem[]>([]);
-  const [selectedGroupDate, setSelectedGroupDate] = React.useState<
-    string | null
-  >(null);
 
   // Fetch states of Nigeria (country ID: 161)
   const { data: statesData } = useQuery({
@@ -128,7 +125,6 @@ export function StateElectionFormDialog({
       setStatesMode("custom");
       setSelectedStates([]);
       setError(null);
-      setSelectedGroupDate(null);
     }
   }, [open]);
 
@@ -201,13 +197,6 @@ export function StateElectionFormDialog({
     });
   };
 
-  const groupPreviewName = React.useMemo(() => {
-    if (selectedDateStr && selectedType) {
-      const year = new Date(selectedDateStr).getFullYear();
-      return `${year} ${selectedType.name} Election`;
-    }
-  }, [selectedDateStr, selectedType]);
-
   return (
     <>
       <Dialog open={open} onOpenChange={onClose}>
@@ -260,10 +249,6 @@ export function StateElectionFormDialog({
                         selectedId={field.state.value}
                         update={(value) => {
                           field.handleChange(value);
-                          if (value !== selectedGroupDate) {
-                            form.setFieldValue("electionGroupId", undefined);
-                            setSelectedGroupDate(null);
-                          }
                         }}
                         errorMsg={field.state.meta.errors?.join(", ")}
                       />
@@ -307,13 +292,8 @@ export function StateElectionFormDialog({
                     variant="bullet"
                     update={(item) => {
                       field.handleChange(item.id);
-                      setSelectedGroupDate(item.election_date || null);
-                      if (item.election_date) {
-                        form.setFieldValue("electionDate", item.election_date);
-                      }
                     }}
                     fetchElectionGroups={getElectionGroups}
-                    buttonText={groupPreviewName}
                   />
                 )}
               />

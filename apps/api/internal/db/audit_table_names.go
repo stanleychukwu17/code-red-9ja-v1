@@ -27,6 +27,9 @@ const (
 	ActionCreateElectionGroup       = "create_election_group"        // Action for creating a new election group
 	ActionUpdateElectionGroup       = "update_election_group"        // Action for updating an existing election group
 	ActionDeleteElectionGroup       = "delete_election_group"        // Action for deleting an election group
+	ActionCreateElection            = "create_election"              // Action for creating one or more elections
+	ActionUpdateElection            = "update_election"              // Action for updating an existing election
+	ActionDeleteElection            = "delete_election"              // Action for deleting an election
 	ActionCreatePartyCustomPosition = "create_party_custom_position" // Action when a party position is created
 	ActionUpdatePartyCustomPosition = "update_party_custom_position" // Action when a party position is updated
 	ActionDeletePartyCustomPosition = "delete_party_custom_position" // Action when a party position is deleted

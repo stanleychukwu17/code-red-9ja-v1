@@ -12,6 +12,7 @@ export type ElectionGroupType = {
   id: number;
   name: string;
   year: number;
+  active?: boolean;
   created_at?: string;
   updated_at?: string;
 };
@@ -23,7 +24,10 @@ export function ElectionGroupTableHeader() {
         <span className="text-c-90">Group</span>
       </TileLeft>
       <TileRight>
-        <span className="text-c-50 text-[14px] w-27.5 hidden sm:block">
+        <span className="text-c-50 text-[14px] w-24 hidden sm:block">
+          Status
+        </span>
+        <span className="text-c-50 text-[14px] w-20 hidden sm:block">
           Year
         </span>
         <div className="ml-2 w-8 shrink-0" />
@@ -33,6 +37,8 @@ export function ElectionGroupTableHeader() {
 }
 
 export function ElectionGroupTableTile({ data }: { data: ElectionGroupType }) {
+  const isActive = data.active !== false;
+
   return (
     <TileRow>
       <TileLeft>
@@ -42,7 +48,18 @@ export function ElectionGroupTableTile({ data }: { data: ElectionGroupType }) {
         </p>
       </TileLeft>
       <TileRight>
-        <span className="text-[15px] text-c-70 w-27.5 hidden sm:block">
+        <div className="w-24 hidden sm:flex items-center">
+          <span
+            className={`inline-flex items-center px-2 py-0.5 rounded-full text-[12px] font-medium ${
+              isActive
+                ? "bg-green-500/10 text-green-600 dark:text-green-400"
+                : "bg-c-20 text-c-50"
+            }`}
+          >
+            {isActive ? "Active" : "Inactive"}
+          </span>
+        </div>
+        <span className="text-[15px] text-c-70 w-20 hidden sm:block">
           {data.year ?? "—"}
         </span>
         <ElectionGroupDropdown data={data} className="ml-2 hidden md:block" />

@@ -1,10 +1,13 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { deleteElectionGroup } from "#/lib/server/election_groups";
+import {
+  deleteElectionGroup,
+  updateElectionGroup,
+} from "#/lib/server/election_groups";
 import { TileOptions } from "@repo/ui/components/tiles";
 import TrashcanIcon from "@repo/ui/icons/trashcan-icon";
 import type { TDropdownGroup } from "@repo/ui/lib/types";
-import { Pencil } from "lucide-react";
+import { Pencil, CheckCircle2, XCircle } from "lucide-react";
 import { DropdownGroupList } from "@repo/ui/components/custom/AppDropdown";
 import { DeleteAlertDialog } from "../alerts/delete-alert";
 import { ElectionGroupFormDialog } from "../dialogs/ElectionGroupFormDialog";
@@ -23,6 +26,28 @@ export const ElectionGroupDropdown = ({
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [openDeleteAlert, setOpenDeleteAlert] = useState(false);
   const queryClient = useQueryClient();
+
+  const isActive = data.active !== false;
+
+  const toggleActiveMutation = useMutation({
+    mutationFn: async () => {
+      const res = await updateElectionGroup({
+        data: {
+          id: data.id,
+          active: !isActive,
+        },
+      });
+      if (!res.success) {
+        throw new Error(res.message || "Failed to update election group status");
+      }
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["election-groups"] });
+      queryClient.invalidateQueries({ queryKey: ["election-groups-select"] });
+      queryClient.invalidateQueries({ queryKey: ["elections"] });
+    },
+  });
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
@@ -47,6 +72,18 @@ export const ElectionGroupDropdown = ({
       action: () => {
         setOpenMenu(false);
         setOpenEditDialog(true);
+      },
+    },
+    {
+      title: isActive ? "Set as Inactive" : "Set as Active",
+      icon: isActive ? (
+        <XCircle className="size-4 text-amber-500" />
+      ) : (
+        <CheckCircle2 className="size-4 text-green-500" />
+      ),
+      action: () => {
+        setOpenMenu(false);
+        toggleActiveMutation.mutate();
       },
     },
     {

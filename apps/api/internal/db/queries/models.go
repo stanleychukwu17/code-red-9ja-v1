@@ -253,6 +253,7 @@ type ElectionGroup struct {
 	Year                                      int16              `json:"year"`
 	CreatedAt                                 pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt                                 pgtype.Timestamptz `json:"updated_at"`
+	Active                                    bool               `json:"active"`
 }
 
 type ElectionGroupFederalConstituency struct {

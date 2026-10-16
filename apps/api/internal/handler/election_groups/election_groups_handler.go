@@ -17,10 +17,10 @@ import (
 type ElectionGroupsService interface {
 	CreateElectionGroup(ctx context.Context, name string, year int16) (queries.ElectionGroup, error)
 	GetElectionGroupByID(ctx context.Context, id int32) (queries.ElectionGroup, error)
-	ListElectionGroups(ctx context.Context) ([]queries.ElectionGroup, error)
-	UpdateElectionGroup(ctx context.Context, id int32, name string, year int16) (queries.ElectionGroup, error)
+	ListElectionGroups(ctx context.Context, active *bool) ([]queries.ElectionGroup, error)
+	UpdateElectionGroup(ctx context.Context, id int32, name string, year int16, active bool) (queries.ElectionGroup, error)
 	DeleteElectionGroup(ctx context.Context, id int32) error
-	ListElectionGroupsWithPartyStats(ctx context.Context, partyID int16) ([]queries.ListElectionGroupsWithPartyStatsRow, error)
+	ListElectionGroupsWithPartyStats(ctx context.Context, partyID int16, active *bool) ([]queries.ListElectionGroupsWithPartyStatsRow, error)
 	UpsertPartyElectionGroupStats(ctx context.Context, partyID int16, electionGroupID int32, pollingAgentsCoverage []byte, electionsContesting int32) (queries.PartyElectionGroup, error)
 	ListGroupElections(ctx context.Context, electionGroupID int32) ([]queries.ListElectionsDetailedByGroupIDRow, error)
 }
@@ -46,8 +46,9 @@ type CreateElectionGroupRequest struct {
 }
 
 type UpdateElectionGroupRequest struct {
-	Name string `json:"name"`
-	Year int16  `json:"year"`
+	Name   *string `json:"name"`
+	Year   *int16  `json:"year"`
+	Active *bool   `json:"active"`
 }
 
 // CreateElectionGroup godoc
@@ -83,13 +84,10 @@ func (h *Handler) CreateElectionGroup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// --- Audit Logging ---
-	actorID, actorRole := audit.ActorInfoFromContext(r.Context())
 	newValuesJSON, _ := json.Marshal(eg)
 	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
 		Module:     audit.StringToText(db.ModuleAdmin),
 		Action:     db.ActionCreateElectionGroup,
-		ActorID:    actorID,
-		ActorRole:  audit.StringToText(actorRole),
 		EntityType: db.EntityTypeElections,
 		EntityID:   strconv.FormatInt(int64(eg.ID), 10),
 		NewValues:  newValuesJSON,
@@ -105,6 +103,7 @@ type ElectionGroupResponse struct {
 	ID                                 int32              `json:"id"`
 	Name                               string             `json:"name"`
 	Year                               int16              `json:"year"`
+	Active                             bool               `json:"active"`
 	CreatedAt                          pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt                          pgtype.Timestamptz `json:"updated_at"`
 	PollingAgentsCoverage              interface{}        `json:"polling_agents_coverage"`
@@ -118,6 +117,7 @@ type ElectionGroupResponse struct {
 // @Accept       json
 // @Produce      json
 // @Param        party_id query int false "Party ID for stats"
+// @Param        active query bool false "Filter by active status"
 // @Success      200  {object} map[string]interface{} "Election groups fetched successfully"
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Router       /election-groups [get]
@@ -130,11 +130,19 @@ func (h *Handler) ListElectionGroups(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// 2. Check for optional active filter (e.g. ?active=true)
+	var activeFilter *bool
+	if activeStr := r.URL.Query().Get("active"); activeStr != "" {
+		if b, err := strconv.ParseBool(activeStr); err == nil {
+			activeFilter = &b
+		}
+	}
+
 	responseGroups := make([]ElectionGroupResponse, 0)
 
-	// 2. Fetch election groups: enriched with party metrics if partyID is supplied, otherwise standard list
+	// 3. Fetch election groups: enriched with party metrics if partyID is supplied, otherwise standard list
 	if partyID > 0 {
-		rows, err := h.service.ListElectionGroupsWithPartyStats(r.Context(), int16(partyID))
+		rows, err := h.service.ListElectionGroupsWithPartyStats(r.Context(), int16(partyID), activeFilter)
 		if err != nil {
 			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch election groups with party stats: "+err.Error())
 			return
@@ -144,6 +152,7 @@ func (h *Handler) ListElectionGroups(w http.ResponseWriter, r *http.Request) {
 				ID:                                 row.ID,
 				Name:                               row.Name,
 				Year:                               row.Year,
+				Active:                             row.Active,
 				CreatedAt:                          row.CreatedAt,
 				UpdatedAt:                          row.UpdatedAt,
 				PollingAgentsCoverage:              json.RawMessage(row.PollingAgentsCoverage),
@@ -151,7 +160,7 @@ func (h *Handler) ListElectionGroups(w http.ResponseWriter, r *http.Request) {
 			})
 		}
 	} else {
-		groups, err := h.service.ListElectionGroups(r.Context())
+		groups, err := h.service.ListElectionGroups(r.Context(), activeFilter)
 		if err != nil {
 			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch election groups: "+err.Error())
 			return
@@ -162,13 +171,14 @@ func (h *Handler) ListElectionGroups(w http.ResponseWriter, r *http.Request) {
 				ID:        g.ID,
 				Name:      g.Name,
 				Year:      g.Year,
+				Active:    g.Active,
 				CreatedAt: g.CreatedAt,
 				UpdatedAt: g.UpdatedAt,
 			})
 		}
 	}
 
-	// 3. Return the election groups with backward-compatible meta
+	// 4. Return the election groups with backward-compatible meta
 	h.utils.RespondSuccess(w, http.StatusOK, "Election groups fetched successfully", map[string]interface{}{
 		"election_groups": responseGroups,
 		"meta": map[string]interface{}{
@@ -241,35 +251,42 @@ func (h *Handler) UpdateElectionGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 3. Validate mandatory fields (name and year)
-	if req.Name == "" || req.Year <= 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "name and year are required")
-		return
-	}
-
-	// 4. Verify the election group exists before attempting update
+	// 3. Verify the election group exists before attempting update
 	existingGroup, err := h.service.GetElectionGroupByID(r.Context(), int32(id))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Election group not found")
 		return
 	}
 
+	// 4. Resolve update values (fallback to existing values if not provided in payload)
+	name := existingGroup.Name
+	if req.Name != nil && *req.Name != "" {
+		name = *req.Name
+	}
+
+	year := existingGroup.Year
+	if req.Year != nil && *req.Year > 0 {
+		year = *req.Year
+	}
+
+	active := existingGroup.Active
+	if req.Active != nil {
+		active = *req.Active
+	}
+
 	// 5. Update election group via service (updates group and invalidates cache)
-	updated, err := h.service.UpdateElectionGroup(r.Context(), int32(id), req.Name, req.Year)
+	updated, err := h.service.UpdateElectionGroup(r.Context(), int32(id), name, year, active)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update election group: "+err.Error())
 		return
 	}
 
 	// --- Audit Logging ---
-	actorID, actorRole := audit.ActorInfoFromContext(r.Context())
 	oldValuesJSON, _ := json.Marshal(existingGroup)
 	newValuesJSON, _ := json.Marshal(updated)
 	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
 		Module:     audit.StringToText(db.ModuleAdmin),
 		Action:     db.ActionUpdateElectionGroup,
-		ActorID:    actorID,
-		ActorRole:  audit.StringToText(actorRole),
 		EntityType: db.EntityTypeElections,
 		EntityID:   idStr,
 		OldValues:  oldValuesJSON,
@@ -317,14 +334,11 @@ func (h *Handler) DeleteElectionGroup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// --- Audit Logging ---
-	actorID, actorRole := audit.ActorInfoFromContext(r.Context())
 	oldValuesJSON, _ := json.Marshal(existingGroup)
 	newValuesJSON, _ := json.Marshal(map[string]string{"status": "deleted"})
 	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
 		Module:     audit.StringToText(db.ModuleAdmin),
 		Action:     db.ActionDeleteElectionGroup,
-		ActorID:    actorID,
-		ActorRole:  audit.StringToText(actorRole),
 		EntityType: db.EntityTypeElections,
 		EntityID:   idStr,
 		OldValues:  oldValuesJSON,

@@ -11,6 +11,7 @@ export const getElectionGroups = createServerFn({ method: "GET" })
             cursor?: string | number;
             upcoming?: boolean;
             partyId?: number;
+            active?: boolean;
           }
         | undefined,
     ) => data,
@@ -25,6 +26,9 @@ export const getElectionGroups = createServerFn({ method: "GET" })
       }
       if (data?.partyId) {
         url += `&party_id=${data.partyId}`;
+      }
+      if (data?.active !== undefined) {
+        url += `&active=${data.active}`;
       }
       const response = await apiFetch(url);
       const resData = await response.json();

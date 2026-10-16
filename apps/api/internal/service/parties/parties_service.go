@@ -2042,13 +2042,10 @@ func (s *PartiesService) CreatePartyCustomPosition(ctx context.Context, arg quer
 	// Invalidate the custom positions cache and log audit action
 	s.InvalidatePartyCustomPositionsCache(ctx, arg.PartyID.Int16)
 
-	actorID, actorRole := audit.ActorInfoFromContext(ctx)
 	posJSON, _ := json.Marshal(pos)
 	s.auditService.LogActionAsync(ctx, queries.InsertAuditLogParams{
 		Module:     audit.StringToText(db.ModulePartyAdmin),
 		Action:     db.ActionCreatePartyCustomPosition,
-		ActorID:    actorID,
-		ActorRole:  audit.StringToText(actorRole),
 		EntityType: db.EntityTypeParty,
 		EntityID:   strconv.FormatInt(int64(arg.PartyID.Int16), 10),
 		NewValues:  posJSON,
@@ -2065,13 +2062,10 @@ func (s *PartiesService) UpdatePartyCustomPosition(ctx context.Context, arg quer
 		s.InvalidatePartyCustomPositionsCache(ctx, arg.PartyID.Int16)
 		s.InvalidatePartyPositionByIDCache(ctx, arg.PartyID.Int16, arg.ID)
 
-		actorID, actorRole := audit.ActorInfoFromContext(ctx)
 		posJSON, _ := json.Marshal(pos)
 		s.auditService.LogActionAsync(ctx, queries.InsertAuditLogParams{
 			Module:     audit.StringToText(db.ModulePartyAdmin),
 			Action:     db.ActionUpdatePartyCustomPosition,
-			ActorID:    actorID,
-			ActorRole:  audit.StringToText(actorRole),
 			EntityType: db.EntityTypeParty,
 			EntityID:   strconv.FormatInt(int64(arg.PartyID.Int16), 10),
 			NewValues:  posJSON,
@@ -2105,12 +2099,9 @@ func (s *PartiesService) DeletePartyCustomPosition(ctx context.Context, id int32
 		s.InvalidatePartyCustomPositionsCache(ctx, partyID)
 		s.InvalidatePartyPositionByIDCache(ctx, partyID, id)
 
-		actorID, actorRole := audit.ActorInfoFromContext(ctx)
 		s.auditService.LogActionAsync(ctx, queries.InsertAuditLogParams{
 			Module:     audit.StringToText(db.ModulePartyAdmin),
 			Action:     db.ActionDeletePartyCustomPosition,
-			ActorID:    actorID,
-			ActorRole:  audit.StringToText(actorRole),
 			EntityType: db.EntityTypeParty,
 			EntityID:   strconv.FormatInt(int64(partyID), 10),
 		})
@@ -2170,12 +2161,10 @@ func (s *PartiesService) AssignPartyPosition(ctx context.Context, arg queries.As
 
 		// Log audit action for the administrator
 		assignmentJSON, _ := json.Marshal(assignment)
-		_, actorRole := audit.ActorInfoFromContext(ctx)
 		s.auditService.LogActionAsync(ctx, queries.InsertAuditLogParams{
 			Module:     audit.StringToText(db.ModulePartyAdmin),
 			Action:     db.ActionAssignPartyPosition,
 			ActorID:    arg.AppointedBy.Int64,
-			ActorRole:  audit.StringToText(actorRole),
 			EntityType: db.EntityTypeUser,
 			EntityID:   strconv.FormatInt(arg.UserID, 10),
 			NewValues:  assignmentJSON,
@@ -2239,12 +2228,10 @@ func (s *PartiesService) VacatePositionAssignment(ctx context.Context, id int64,
 
 	// Log audit action for the administrator
 	assignmentJSON, _ := json.Marshal(assignment)
-	actorID, actorRole := audit.ActorInfoFromContext(ctx)
+	actorID, _ := audit.ActorInfoFromContext(ctx)
 	s.auditService.LogActionAsync(ctx, queries.InsertAuditLogParams{
 		Module:     audit.StringToText(db.ModulePartyAdmin),
 		Action:     db.ActionVacatePartyPosition,
-		ActorID:    actorID,
-		ActorRole:  audit.StringToText(actorRole),
 		EntityType: db.EntityTypeUser,
 		EntityID:   audit.FormatID(assignment.UserID),
 		NewValues:  assignmentJSON,

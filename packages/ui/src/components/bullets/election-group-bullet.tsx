@@ -11,18 +11,21 @@ import { LoadingBullet } from "./loading-bullet";
 export type ElectionGroup = {
   id: number;
   name: string;
-  election_date: string;
+  election_date?: string;
+  year?: number;
+  active?: boolean;
 };
 
 export type ElectionGroupBulletProps = SelectProps<ElectionGroup, number | string> & {
   fetchElectionGroups: (args?: {
-    data?: { limit?: number; cursor?: string };
+    data?: { limit?: number; cursor?: string; active?: boolean };
   }) => Promise<any>;
   variant?: "select" | "bullet";
+  activeOnly?: boolean;
 };
 
 export const ElectionGroupBullet = ({
-  update, errorMsg, selectedId, disabled, className, align = "start", buttonText, fetchElectionGroups,
+  update, errorMsg, selectedId, disabled, className, align = "start", buttonText, fetchElectionGroups, activeOnly = true,
 }: ElectionGroupBulletProps) => {
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -30,11 +33,12 @@ export const ElectionGroupBullet = ({
 
   // Fetch election groups (cached indefinitely, invalidated when a group is created or updated)
   const { data: electionGroups = [], isLoading } = useQuery<ElectionGroup[]>({
-    queryKey: ["election-groups-select"],
+    queryKey: ["election-groups-select", activeOnly],
     queryFn: async () => {
-      const res = await fetchElectionGroups();
+      const res = await fetchElectionGroups(activeOnly ? { data: { active: true } } : undefined);
       if (res && res.success && res.data?.election_groups) {
-        return res.data.election_groups;
+        const groups: ElectionGroup[] = res.data.election_groups;
+        return activeOnly ? groups.filter((eg) => eg.active !== false) : groups;
       }
       return [];
     },
@@ -102,9 +106,7 @@ export const ElectionGroupBullet = ({
           <p>
             {selectedItem
               ? `Group: ${selectedItem.name}`
-              : buttonText
-                ? `New Group: ${buttonText}`
-                : "Election Group"}
+              : (buttonText || "Select an election group")}
           </p>
         </Bullet>
       }

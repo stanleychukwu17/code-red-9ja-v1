@@ -41,6 +41,7 @@ export function ElectionGroupFormDialog({ electionGroup, open, onClose, mode = "
     defaultValues: {
       name: "",
       year: new Date().getFullYear(),
+      active: true,
     },
     onSubmit: async ({ value }) => {
       saveMutation.mutate(value);
@@ -53,9 +54,11 @@ export function ElectionGroupFormDialog({ electionGroup, open, onClose, mode = "
       if (mode === "update" && electionGroup) {
         form.setFieldValue("name", electionGroup.name || "");
         form.setFieldValue("year", electionGroup.year || new Date().getFullYear());
+        form.setFieldValue("active", electionGroup.active !== false);
       } else {
         form.setFieldValue("name", "");
         form.setFieldValue("year", new Date().getFullYear());
+        form.setFieldValue("active", true);
       }
       setError(null);
     }
@@ -63,7 +66,7 @@ export function ElectionGroupFormDialog({ electionGroup, open, onClose, mode = "
 
   // Mutation handling group creation and updates
   const saveMutation = useMutation({
-    mutationFn: async (values: { name: string; year: number }) => {
+    mutationFn: async (values: { name: string; year: number; active: boolean }) => {
       const yearNum = Number(values.year);
       if (!yearNum || yearNum < 1900 || yearNum > 2100) {
         throw new Error("A valid 4-digit election year is required (e.g. 2027)");
@@ -79,6 +82,7 @@ export function ElectionGroupFormDialog({ electionGroup, open, onClose, mode = "
             id: electionGroup.id,
             name: values.name.trim(),
             year: yearNum,
+            active: values.active,
           },
         });
       } else {
@@ -184,6 +188,47 @@ export function ElectionGroupFormDialog({ electionGroup, open, onClose, mode = "
                 )}
               />
             </div>
+
+            {/* Active Status toggle (when updating) */}
+            {mode === "update" && (
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[14px] font-semibold text-c-50">
+                  Status
+                </label>
+                <form.Field
+                  name="active"
+                  children={(field) => (
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => field.handleChange(true)}
+                        className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-colors cursor-pointer ${
+                          field.state.value
+                            ? "border-green-500 bg-green-500/10 text-green-600 dark:text-green-400 font-semibold"
+                            : "border-c-20 text-c-50 hover:bg-c-10"
+                        }`}
+                      >
+                        Active
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => field.handleChange(false)}
+                        className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-colors cursor-pointer ${
+                          !field.state.value
+                            ? "border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-semibold"
+                            : "border-c-20 text-c-50 hover:bg-c-10"
+                        }`}
+                      >
+                        Inactive
+                      </button>
+                    </div>
+                  )}
+                />
+                <p className="text-[12px] text-c-40">
+                  Inactive election groups are excluded from creation dropdown menus.
+                </p>
+              </div>
+            )}
           </DialogPadding>
 
           {/* Form submit button with loading spinner */}

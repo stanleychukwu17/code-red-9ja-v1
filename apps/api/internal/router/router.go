@@ -169,7 +169,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	partiesService := partiesservice.NewPartiesService(q, pool, rdb, monnifyClient, utilsInstance, notificationsService, blocksService, auditService, bodiesService, usersService)
 	followsService := followsservice.NewFollowsService(q, rdb, partiesService, notificationsService)
 	electionGroupsService := electiongroupsservice.NewElectionGroupsService(q, rdb, distributor)
-	electionsService := electionsservice.NewElectionsService(q, pool, rdb, distributor, electionGroupsService, earningsService, officesService, bodiesService)
+	electionsService := electionsservice.NewElectionsService(q, pool, rdb, distributor, earningsService, officesService, bodiesService)
 	senatorialDistrictsService := senatorialdistrictsservice.NewSenatorialDistrictsService(q, rdb)
 	federalConstituenciesService := federalconstituenciesservice.NewFederalConstituenciesService(q, rdb)
 	stateAssemblyConstituenciesService := stateassemblyconstituenciesservice.NewStateConstituenciesService(q, rdb)
@@ -198,7 +198,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	officesHandler := officeshandler.NewHandler(officesService, auditService, utilsInstance)
 	electionGroupsHandler := electiongroupshandler.NewHandler(electionGroupsService, auditService, utilsInstance)
 	electionStatsHandler := electionstatshandler.NewHandler(electionStatsService, pool, utilsInstance)
-	electionsHandler := electionshandler.NewHandler(electionsService, usersService, utilsInstance)
+	electionsHandler := electionshandler.NewHandler(electionsService, usersService, auditService, utilsInstance)
 	usersHandler := usershandler.NewHandler(usersService, auditService, bodiesService, permissionsService, partiesService, filesService, utilsInstance)
 	pageVerificationsHandler := pageverificationshandler.NewHandler(pageVerificationsService, utilsInstance)
 	pollingUnitAssignmentsHandler := puassignmentshandler.NewHandler(pollingUnitAssignmentsService, usersService, pollingUnitUpdatesService, utilsInstance, distributor, earningsService)
@@ -340,8 +340,6 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 
 	// bodies national metrics (public)
 	mainRouter.Get("/api/v1/bodies/metrics", bodiesHandler.GetNationalMetrics)
-	mainRouter.Post("/api/v1/bodies/sync-electoral-units", bodiesHandler.SyncElectoralUnits)
-	mainRouter.Post("/api/v1/bodies/sync-electoral-units-state-flow", bodiesHandler.SyncElectoralUnitsStateFlow)
 
 	// states public routes
 	mainRouter.Get("/api/v1/states/{id}", statesHandler.GetState)
@@ -394,6 +392,8 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 
 		r.Post("/api/v1/auth/roles/update", usersHandler.UpdateUserRoles)
 		r.Post("/api/v1/bodies/recalculate", bodiesHandler.RecalculateBodyMetrics)
+		r.Post("/api/v1/bodies/sync-electoral-units", bodiesHandler.SyncElectoralUnits)
+		r.Post("/api/v1/bodies/sync-electoral-units-state-flow", bodiesHandler.SyncElectoralUnitsStateFlow)
 
 		// political parties admin mutations
 		r.Post("/api/v1/parties", partiesHandler.CreateParty)

@@ -9,6 +9,7 @@ import (
 	"free9ja/api/internal/worker"
 	"log/slog"
 
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -31,8 +32,8 @@ func NewElectionGroupsService(q *queries.Queries, rdb *redis.Client, distributor
 // invalidateCache purges the cached collections for all election groups and elections,
 // as well as the individual election group cache entry if a specific group ID is provided.
 func (s *ElectionGroupsService) invalidateCache(ctx context.Context, id *int32) {
-	// 1. Clear global collections for election groups
-	s.rdb.Del(ctx, db.RedisElectionGroupsAll)
+	// 1. Clear global collections for election groups (all and active)
+	s.rdb.Del(ctx, db.RedisElectionGroupsAll, db.RedisElectionGroupsActive)
 
 	// 2. If a specific group ID is provided, invalidate its individual cache key
 	if id != nil {
@@ -129,10 +130,17 @@ func (s *ElectionGroupsService) GetElectionGroupByID(ctx context.Context, id int
 	return eg, nil
 }
 
-// ListElectionGroups returns all election group records across the platform.
-// Results are cached in Redis under db.RedisElectionGroupsAll with a 24-hour TTL.
-func (s *ElectionGroupsService) ListElectionGroups(ctx context.Context) ([]queries.ElectionGroup, error) {
+// ListElectionGroups returns election group records across the platform, optionally filtered by active status.
+// Results are cached in Redis with a 90-day TTL.
+func (s *ElectionGroupsService) ListElectionGroups(ctx context.Context, active *bool) ([]queries.ElectionGroup, error) {
 	cacheKey := db.RedisElectionGroupsAll
+	if active != nil {
+		if *active {
+			cacheKey = db.RedisElectionGroupsActive
+		} else {
+			cacheKey = fmt.Sprintf("%s:inactive", db.RedisElectionGroupsAll)
+		}
+	}
 
 	// 1. Attempt to fetch pre-cached election group list from Redis
 	val, err := s.rdb.Get(ctx, cacheKey).Result()
@@ -143,8 +151,12 @@ func (s *ElectionGroupsService) ListElectionGroups(ctx context.Context) ([]queri
 		}
 	}
 
-	// 2. Cache miss: retrieve all election groups from the database
-	groups, err := s.queries.ListElectionGroups(ctx)
+	// 2. Cache miss: retrieve election groups from the database
+	var pgActive pgtype.Bool
+	if active != nil {
+		pgActive = pgtype.Bool{Bool: *active, Valid: true}
+	}
+	groups, err := s.queries.ListElectionGroups(ctx, pgActive)
 	if err != nil {
 		return nil, err
 	}
@@ -157,13 +169,14 @@ func (s *ElectionGroupsService) ListElectionGroups(ctx context.Context) ([]queri
 	return groups, nil
 }
 
-// UpdateElectionGroup modifies an existing election group's metadata and invalidates related caches.
-func (s *ElectionGroupsService) UpdateElectionGroup(ctx context.Context, id int32, name string, year int16) (queries.ElectionGroup, error) {
+// UpdateElectionGroup modifies an existing election group's metadata and active status, then invalidates related caches.
+func (s *ElectionGroupsService) UpdateElectionGroup(ctx context.Context, id int32, name string, year int16, active bool) (queries.ElectionGroup, error) {
 	// 1. Update the election group record in the database
 	group, err := s.queries.UpdateElectionGroup(ctx, queries.UpdateElectionGroupParams{
-		ID:   id,
-		Name: name,
-		Year: year,
+		ID:     id,
+		Name:   name,
+		Year:   year,
+		Active: active,
 	})
 	if err != nil {
 		return group, err
@@ -198,10 +211,17 @@ func (s *ElectionGroupsService) DeleteElectionGroup(ctx context.Context, id int3
 }
 
 // ListElectionGroupsWithPartyStats retrieves all election groups enriched with specific political party metrics,
-// such as polling agent coverage percentages and number of contested elections.
-func (s *ElectionGroupsService) ListElectionGroupsWithPartyStats(ctx context.Context, partyID int16) ([]queries.ListElectionGroupsWithPartyStatsRow, error) {
+// such as polling agent coverage percentages and number of contested elections, optionally filtered by active status.
+func (s *ElectionGroupsService) ListElectionGroupsWithPartyStats(ctx context.Context, partyID int16, active *bool) ([]queries.ListElectionGroupsWithPartyStatsRow, error) {
+	var pgActive pgtype.Bool
+	if active != nil {
+		pgActive = pgtype.Bool{Bool: *active, Valid: true}
+	}
 	// Query database for election groups joined with the specified party's statistics
-	return s.queries.ListElectionGroupsWithPartyStats(ctx, partyID)
+	return s.queries.ListElectionGroupsWithPartyStats(ctx, queries.ListElectionGroupsWithPartyStatsParams{
+		PartyID: partyID,
+		Active:  pgActive,
+	})
 }
 
 // UpsertPartyElectionGroupStats creates or updates party-specific election group statistics,

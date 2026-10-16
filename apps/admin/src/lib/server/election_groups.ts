@@ -11,6 +11,7 @@ export const getElectionGroups = createServerFn({ method: "GET" })
           cursor?: string | number;
           orderBy?: string;
           order?: string;
+          active?: boolean;
         }
         | undefined,
     ) => data,
@@ -24,6 +25,7 @@ export const getElectionGroups = createServerFn({ method: "GET" })
       let url = `${API_URL.electionGroups}?limit=${limit}&cursor=${cursor}`;
       if (orderBy) url += `&order_by=${orderBy}`;
       if (order) url += `&order=${order}`;
+      if (data?.active !== undefined) url += `&active=${data.active}`;
       return await apiFetchJson(url);
     } catch (error: any) {
       return {
@@ -74,8 +76,9 @@ export const updateElectionGroup = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
       id: string | number;
-      name: string;
-      year: number;
+      name?: string;
+      year?: number;
+      active?: boolean;
     }) => data,
   )
   .handler(async ({ data: { id, ...body } }) => {

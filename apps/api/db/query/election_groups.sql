@@ -8,12 +8,13 @@ SELECT * FROM election_groups WHERE id = $1;
 
 -- name: ListElectionGroups :many
 SELECT * FROM election_groups
+WHERE (sqlc.narg('active')::boolean IS NULL OR active = sqlc.narg('active')::boolean)
 ORDER BY year DESC, id DESC;
 
 -- name: UpdateElectionGroup :one
 UPDATE election_groups
-SET name = $1, year = $2, updated_at = NOW()
-WHERE id = $3
+SET name = $1, year = $2, active = $3, updated_at = NOW()
+WHERE id = $4
 RETURNING *;
 
 -- name: CountCandidatesInElectionGroup :one
@@ -37,6 +38,7 @@ SELECT
     eg.id, 
     eg.name, 
     eg.year, 
+    eg.active, 
     eg.created_at, 
     eg.updated_at,
     COALESCE(peg.polling_agents_coverage, '{}'::jsonb)::jsonb AS polling_agents_coverage,
@@ -44,6 +46,7 @@ SELECT
 FROM election_groups eg
 LEFT JOIN party_election_groups peg 
     ON eg.id = peg.election_group_id AND peg.party_id = $1
+WHERE (sqlc.narg('active')::boolean IS NULL OR eg.active = sqlc.narg('active')::boolean)
 ORDER BY eg.year DESC, eg.id DESC;
 
 -- name: UpsertPartyElectionGroupStats :one
