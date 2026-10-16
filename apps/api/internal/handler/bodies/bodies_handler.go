@@ -3,6 +3,8 @@ package bodieshandler
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"free9ja/api/internal/constants"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	bodiesservice "free9ja/api/internal/service/bodies"
@@ -12,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -36,14 +39,16 @@ type Handler struct {
 	queries       *queries.Queries
 	utils         *utils.Utils
 	rdb           *redis.Client
+	pool          *pgxpool.Pool
 }
 
-func NewHandler(bodiesService BodiesService, q *queries.Queries, utils *utils.Utils, rdb *redis.Client) *Handler {
+func NewHandler(bodiesService BodiesService, q *queries.Queries, utils *utils.Utils, rdb *redis.Client, pool *pgxpool.Pool) *Handler {
 	return &Handler{
 		bodiesService: bodiesService,
 		queries:       q,
 		utils:         utils,
 		rdb:           rdb,
+		pool:          pool,
 	}
 }
 
@@ -357,43 +362,68 @@ func (h *Handler) DeleteLGA(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) RecalculateBodyMetrics(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	if err := h.queries.RecalculateWardMetrics(ctx); err != nil {
+	tx, err := h.pool.Begin(ctx)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to start transaction: "+err.Error())
+		return
+	}
+	defer tx.Rollback(ctx)
+
+	qtx := h.queries.WithTx(tx)
+
+	if err := qtx.RecalculateWardMetrics(ctx); err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to recalculate ward metrics: "+err.Error())
 		return
 	}
 
-	if err := h.queries.RecalculateStateConstituencyMetrics(ctx); err != nil {
+	if err := qtx.RecalculateStateConstituencyMetrics(ctx); err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to recalculate state constituency metrics: "+err.Error())
 		return
 	}
 
-	if err := h.queries.RecalculateLGAMetrics(ctx); err != nil {
+	if err := qtx.RecalculateLGAMetrics(ctx); err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to recalculate LGA metrics: "+err.Error())
 		return
 	}
 
-	if err := h.queries.RecalculateFederalConstituencyMetrics(ctx); err != nil {
+	if err := qtx.RecalculateFederalConstituencyMetrics(ctx); err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to recalculate federal constituency metrics: "+err.Error())
 		return
 	}
 
-	if err := h.queries.RecalculateSenatorialDistrictMetrics(ctx); err != nil {
+	if err := qtx.RecalculateSenatorialDistrictMetrics(ctx); err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to recalculate senatorial district metrics: "+err.Error())
 		return
 	}
 
-	if err := h.queries.RecalculateStateMetrics(ctx); err != nil {
+	if err := qtx.RecalculateStateMetrics(ctx); err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to recalculate state metrics: "+err.Error())
 		return
 	}
 
-	if err := h.queries.RecalculateNationalMetrics(ctx); err != nil {
+	if err := qtx.RecalculateNationalMetrics(ctx); err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to recalculate national metrics: "+err.Error())
 		return
 	}
 
-	// Invalidate national metrics cache so subsequent reads fetch fresh metrics
-	h.rdb.Del(ctx, db.RedisNationalMetrics)
+	if err := tx.Commit(ctx); err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to commit metrics recalculation: "+err.Error())
+		return
+	}
+
+	// Invalidate national metrics and states caches so subsequent reads fetch fresh metrics
+	nigeriaStatesKey := fmt.Sprintf("%s%d", db.RedisStatesByCountry, constants.NigeriaCountryID)
+	h.rdb.Del(ctx, db.RedisNationalMetrics, nigeriaStatesKey)
+
+	// Scan and invalidate any cached electoral body lists (senatorial districts, LGAs, wards, constituencies)
+	var bodyKeys []string
+	iter := h.rdb.Scan(ctx, 0, "bodies:*", 500).Iterator()
+	for iter.Next(ctx) {
+		bodyKeys = append(bodyKeys, iter.Val())
+	}
+	if len(bodyKeys) > 0 {
+		h.rdb.Del(ctx, bodyKeys...)
+	}
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Successfully recalculated all body metrics", nil)
 }

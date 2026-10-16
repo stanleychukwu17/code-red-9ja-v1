@@ -50,11 +50,13 @@ CREATE TABLE election_groups (
   total_pu_where_agents_referred_live_voters INT NOT NULL DEFAULT 0,
   
   year SMALLINT NOT NULL,
+  active BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE INDEX idx_election_groups_year ON election_groups(year DESC);
+CREATE INDEX idx_election_groups_active ON election_groups(active);
 
 CREATE TABLE elections (
   id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,

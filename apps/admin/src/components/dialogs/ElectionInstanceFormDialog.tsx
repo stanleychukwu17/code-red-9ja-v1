@@ -1,4 +1,11 @@
-import * as React from "react";
+/**
+ * @file Election Instance Form Dialog
+ * @description Modal dialog used in the admin portal to update an existing Election Instance.
+ * Displays locked contested office and territory context while allowing edits to the election
+ * name, scheduled election date, and parent election group.
+ */
+
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@repo/ui/components/button";
 import {
   Dialog,
@@ -9,50 +16,94 @@ import {
   DialogToolbelt,
 } from "@repo/ui/components/dialog";
 import { useForm, useStore } from "@tanstack/react-form";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Loader2, MapPin } from "lucide-react";
 import { FancyInput, Input, Label } from "@repo/ui/components/input";
+import { Badge } from "@repo/ui/components/badge";
 import { SelectDate } from "@repo/ui/components/selects/date-select";
-import { SelectOffice } from "@repo/ui/components/selects/office-select";
 import { ElectionGroupBullet } from "@repo/ui/components/bullets/election-group-bullet";
-import { getContestedOffices } from "#/lib/server/offices";
 import { updateElection } from "#/lib/server/elections";
 import { getElectionGroups } from "#/lib/server/election_groups";
+import { getStates } from "#/lib/server/states";
+import { QUERY_KEYS } from "#/lib/config";
 import type { ElectionInstanceType } from "../tiles/election-instance-tile";
 import { TinyError } from "@repo/ui/components/custom/TinyError";
 
-export function ElectionInstanceFormDialog({
-  electionInstance,
-  open,
-  onClose,
-  onSuccess,
-}: {
+/** Formats geographic scope identifier into a clean, human-readable label */
+const formatScopeLabel = (scope?: string): string => {
+  switch (scope?.toLowerCase()) {
+    case "nationwide":
+      return "Nationwide";
+    case "state":
+      return "State";
+    case "senatorial_district":
+      return "Senatorial District";
+    case "federal_constituency":
+      return "Federal Constituency";
+    case "state_constituency":
+      return "State Constituency";
+    case "lga":
+      return "Local Government Area (LGA)";
+    case "ward":
+      return "Ward";
+    default:
+      return scope || "General";
+  }
+};
+
+export type ElectionInstanceFormDialogProps = {
   electionInstance?: ElectionInstanceType;
   open: boolean;
   onClose: () => void;
   onSuccess?: () => void;
-}) {
-  const queryClient = useQueryClient();
-  const [error, setError] = React.useState<string | null>(null);
+};
 
+export function ElectionInstanceFormDialog({ electionInstance, open, onClose, onSuccess }: ElectionInstanceFormDialogProps) {
+  const queryClient = useQueryClient();
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch states of Nigeria if this election instance has an associated state_id
+  const { data: statesData } = useQuery({
+    queryKey: QUERY_KEYS.states,
+    queryFn: async () => {
+      const res = await getStates({ data: { countryId: 161 } });
+      if (res && res.success && res.data?.states) {
+        return res.data.states;
+      }
+      return [];
+    },
+    staleTime: Infinity,
+    gcTime: Infinity,
+    enabled: open && Boolean(electionInstance?.state_id),
+  });
+
+  // Resolve readable state name for geographic context banner
+  const stateName = useMemo(() => {
+    if (!electionInstance?.state_id || !statesData) return null;
+    const match = statesData.find((s: any) => s.id === electionInstance.state_id);
+    return match ? match.name : null;
+  }, [electionInstance?.state_id, statesData]);
+
+  // Configure TanStack Form for instance updates
   const form = useForm({
     defaultValues: {
       name: "",
       electionDate: "",
       electionGroupId: undefined as number | undefined,
-      officeId: undefined as number | undefined,
     },
     onSubmit: async ({ value }) => {
       saveMutation.mutate(value);
     },
   });
 
+  // Reactive subscription to election date value
   const selectedDateStr = useStore(
     form.store,
     (state) => state.values.electionDate,
   );
 
-  React.useEffect(() => {
+  // Synchronize form values whenever dialog opens or election instance changes
+  useEffect(() => {
     if (open && electionInstance) {
       const cleanDate: string = electionInstance.election_date
         ? (electionInstance.election_date.split("T")[0] ?? "")
@@ -63,26 +114,19 @@ export function ElectionInstanceFormDialog({
         "electionGroupId",
         (electionInstance.election_group_id || undefined) as number | undefined,
       );
-      form.setFieldValue(
-        "officeId",
-        (electionInstance.office_id || undefined) as number | undefined,
-      );
       setError(null);
     }
   }, [open, electionInstance]);
 
+  // Mutation to persist updated election instance data
   const saveMutation = useMutation({
     mutationFn: async (values: {
       name: string;
       electionDate: string;
       electionGroupId: number | undefined;
-      officeId: number | undefined;
     }) => {
       if (!electionInstance?.id) {
         throw new Error("Missing ID for update");
-      }
-      if (!values.officeId) {
-        throw new Error("Office is required");
       }
       if (!values.electionDate) {
         throw new Error("Election date is required");
@@ -91,19 +135,13 @@ export function ElectionInstanceFormDialog({
         throw new Error("Election group is required");
       }
 
+      // Delegate update to server function (office and territory mappings remain immutable)
       const res = await updateElection({
         data: {
           id: electionInstance.id,
           name: values.name.trim(),
           election_date: values.electionDate,
           election_group_id: values.electionGroupId,
-          office_id: values.officeId,
-          state_id: electionInstance.state_id,
-          senatorial_district_id: electionInstance.senatorial_district_id,
-          federal_constituency_id: electionInstance.federal_constituency_id,
-          state_constituency_id: electionInstance.state_constituency_id,
-          lga_id: electionInstance.lga_id,
-          ward_id: electionInstance.ward_id,
         },
       });
 
@@ -113,6 +151,7 @@ export function ElectionInstanceFormDialog({
       return res.data;
     },
     onSuccess: () => {
+      // Invalidate cached election queries to refresh lists and tables
       queryClient.invalidateQueries({ queryKey: ["elections"] });
       queryClient.invalidateQueries({ queryKey: ["election-groups"] });
       onSuccess?.();
@@ -125,7 +164,7 @@ export function ElectionInstanceFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-[580px] p-0 rounded-2xl border-none shadow-2xl   overflow-visible">
+      <DialogContent className="max-w-[580px] p-0 rounded-2xl border-none shadow-2xl overflow-visible">
         <DialogHeader title="Update Election Instance" />
 
         <form
@@ -136,9 +175,39 @@ export function ElectionInstanceFormDialog({
           }}
         >
           <DialogPadding className="space-y-6 pb-6">
+            {/* Server & Validation Error Message Display */}
             <TinyError error={error} />
 
-            {/* Name input */}
+            {/* Geographic Scope & Office Context Banner (Read-only territory metadata) */}
+            {electionInstance && (
+              <div className="rounded-xl border border-border/70 bg-muted/30 p-3.5 flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-primary/10 text-primary shrink-0 mt-0.5">
+                  <MapPin className="size-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {electionInstance.office_name && (
+                      <Badge variant="purple" className="text-[11px] font-medium py-0">
+                        {electionInstance.office_name}
+                      </Badge>
+                    )}
+                    <Badge variant="info" className="text-[11px] font-medium py-0">
+                      {formatScopeLabel(electionInstance.scope)}
+                    </Badge>
+                    {stateName && (
+                      <Badge variant="secondary" className="text-[11px] font-medium py-0">
+                        {stateName}
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+                    This election is permanently locked to this contested office and territory. Election name, date, and group can be modified below.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Election Title / Name Input */}
             <div className="w-full">
               <form.Field
                 name="name"
@@ -160,52 +229,30 @@ export function ElectionInstanceFormDialog({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              {/* Election Type */}
-              <div className="flex flex-col gap-1.5">
-                <Label title="Election Type" />
-                <form.Field
-                  name="officeId"
-                  validators={{
-                    onChange: ({ value }) =>
-                      !value ? "Office is required" : undefined,
-                  }}
-                  children={(field) => (
-                    <SelectOffice
-                      selectedId={field.state.value}
-                      update={(val) => field.handleChange(val.id)}
-                      fetchOffices={getContestedOffices}
-                      errorMsg={field.state.meta.errors?.join(", ")}
-                    />
-                  )}
-                />
-              </div>
-
-              {/* Election Date */}
-              <div className="flex flex-col gap-1.5">
-                <Label title="Election Date" />
-                <form.Field
-                  name="electionDate"
-                  validators={{
-                    onChange: ({ value }) =>
-                      !value ? "Election date is required" : undefined,
-                  }}
-                  children={(field) => (
-                    <SelectDate
-                      selectedId={field.state.value}
-                      update={(value) => {
-                        const cleanVal = value ? (value.split("T")[0] ?? "") : "";
-                        field.handleChange(cleanVal);
-                      }}
-                      errorMsg={field.state.meta.errors?.join(", ")}
-                    />
-                  )}
-                />
-              </div>
+            {/* Scheduled Election Date Selector */}
+            <div className="flex flex-col gap-1.5 w-full">
+              <Label title="Election Date" />
+              <form.Field
+                name="electionDate"
+                validators={{
+                  onChange: ({ value }) =>
+                    !value ? "Election date is required" : undefined,
+                }}
+                children={(field) => (
+                  <SelectDate
+                    selectedId={field.state.value}
+                    update={(value) => {
+                      const cleanVal = value ? (value.split("T")[0] ?? "") : "";
+                      field.handleChange(cleanVal);
+                    }}
+                    errorMsg={field.state.meta.errors?.join(", ")}
+                  />
+                )}
+              />
             </div>
           </DialogPadding>
 
-          {/* Election Group selector */}
+          {/* Bottom Toolbelt: Umbrella Election Group Selector */}
           <DialogToolbelt>
             <form.Field
               name="electionGroupId"
@@ -227,6 +274,7 @@ export function ElectionInstanceFormDialog({
             />
           </DialogToolbelt>
 
+          {/* Dialog Action Buttons */}
           <DialogFooter>
             <Button
               type="submit"

@@ -496,27 +496,16 @@ func (q *Queries) UpdateElectionContestingParties(ctx context.Context, arg Updat
 
 const updateElectionInstance = `-- name: UpdateElectionInstance :one
 UPDATE elections
-SET name = $1, election_date = $2, election_group_id = $3,
-    office_id = $4, scope = $5,
-    state_id = $6, senatorial_district_id = $7, federal_constituency_id = $8,
-    state_constituency_id = $9, lga_id = $10, ward_id = $11, updated_at = NOW()
-WHERE id = $12
+SET name = $1, election_date = $2, election_group_id = $3, updated_at = NOW()
+WHERE id = $4
 RETURNING id, election_group_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, office_id, name, election_date, scope, status, reports_count, updates_count, results_submitted_count, contesting_parties, created_at, updated_at
 `
 
 type UpdateElectionInstanceParams struct {
-	Name                  string      `json:"name"`
-	ElectionDate          pgtype.Date `json:"election_date"`
-	ElectionGroupID       int32       `json:"election_group_id"`
-	OfficeID              int16       `json:"office_id"`
-	Scope                 string      `json:"scope"`
-	StateID               pgtype.Int2 `json:"state_id"`
-	SenatorialDistrictID  pgtype.Int4 `json:"senatorial_district_id"`
-	FederalConstituencyID pgtype.Int4 `json:"federal_constituency_id"`
-	StateConstituencyID   pgtype.Int4 `json:"state_constituency_id"`
-	LgaID                 pgtype.Int4 `json:"lga_id"`
-	WardID                pgtype.Int4 `json:"ward_id"`
-	ID                    int32       `json:"id"`
+	Name            string      `json:"name"`
+	ElectionDate    pgtype.Date `json:"election_date"`
+	ElectionGroupID int32       `json:"election_group_id"`
+	ID              int32       `json:"id"`
 }
 
 func (q *Queries) UpdateElectionInstance(ctx context.Context, arg UpdateElectionInstanceParams) (Election, error) {
@@ -524,14 +513,6 @@ func (q *Queries) UpdateElectionInstance(ctx context.Context, arg UpdateElection
 		arg.Name,
 		arg.ElectionDate,
 		arg.ElectionGroupID,
-		arg.OfficeID,
-		arg.Scope,
-		arg.StateID,
-		arg.SenatorialDistrictID,
-		arg.FederalConstituencyID,
-		arg.StateConstituencyID,
-		arg.LgaID,
-		arg.WardID,
 		arg.ID,
 	)
 	var i Election

@@ -8,6 +8,7 @@ import {
 } from "@repo/ui/components/tiles";
 import { formatISODate } from "@repo/ui/lib/date";
 import StarIcon from "@repo/ui/icons/star-icon";
+import { Checkbox } from "@repo/ui/components/checkbox";
 import { ElectionInstanceDropdown } from "../dropdowns/ElectionInstanceDropdown";
 
 export type ElectionInstanceType = {
@@ -31,11 +32,31 @@ export type ElectionInstanceType = {
   updated_at?: string;
 };
 
-export function ElectionInstanceTableHeader() {
+export function ElectionInstanceTableHeader({
+  selectedCount = 0,
+  totalCount = 0,
+  onToggleSelectAll,
+}: {
+  selectedCount?: number;
+  totalCount?: number;
+  onToggleSelectAll?: () => void;
+}) {
+  const isAll = totalCount > 0 && selectedCount === totalCount;
+  const isIndeterminate = selectedCount > 0 && selectedCount < totalCount;
+
   return (
     <TileHeader>
       <TileLeft>
-        <span className="text-c-90 w-20 shrink-0">Rank</span>
+        <div className="flex items-center gap-3 shrink-0">
+          {onToggleSelectAll && (
+            <Checkbox
+              checked={isAll ? true : isIndeterminate ? "indeterminate" : false}
+              onCheckedChange={onToggleSelectAll}
+              aria-label="Select all elections"
+            />
+          )}
+          <span className="text-c-90 w-16 shrink-0">Rank</span>
+        </div>
         <span className="text-c-90">Election</span>
       </TileLeft>
       <TileRight>
@@ -55,29 +76,51 @@ export function ElectionInstanceTableHeader() {
 
 export function ElectionInstanceTableTile({
   data,
+  isSelected = false,
+  onToggleSelect,
 }: {
   data: ElectionInstanceType;
+  isSelected?: boolean;
+  onToggleSelect?: (id: number) => void;
 }) {
   const dateLabel = data.election_date
     ? formatISODate(data.election_date)
     : "—";
 
   return (
-    <TileRow>
+    <TileRow
+      className={cn(
+        "transition-colors",
+        isSelected && "bg-primary/5 hover:bg-primary/10",
+      )}
+      onClick={() => onToggleSelect?.(data.id)}
+    >
       <TileLeft>
-        {data.rank != null ? (
-          <div className="flex items-center gap-4 w-20 shrink-0">
-            <StarIcon
-              className={cn(
-                "size-4 shrink-0 fill-current",
-                getRankColor(data.rank),
-              )}
+        <div
+          className="flex items-center gap-3 shrink-0"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {onToggleSelect && (
+            <Checkbox
+              checked={isSelected}
+              onCheckedChange={() => onToggleSelect(data.id)}
+              aria-label={`Select ${data.name}`}
             />
-            <span className="text-[16px] text-c-90">{data.rank}</span>
-          </div>
-        ) : (
-          <div className="w-20 shrink-0" />
-        )}
+          )}
+          {data.rank != null ? (
+            <div className="flex items-center gap-2.5 w-16 shrink-0">
+              <StarIcon
+                className={cn(
+                  "size-4 shrink-0 fill-current",
+                  getRankColor(data.rank),
+                )}
+              />
+              <span className="text-[16px] text-c-90">{data.rank}</span>
+            </div>
+          ) : (
+            <div className="w-16 shrink-0" />
+          )}
+        </div>
         <p className="truncate w-full text-[16px] text-c-80">{data.name}</p>
       </TileLeft>
       <TileRight>
@@ -87,10 +130,12 @@ export function ElectionInstanceTableTile({
         <span className="text-[15px] text-c-70 w-27.5 hidden sm:block">
           {dateLabel}
         </span>
-        <ElectionInstanceDropdown
-          data={data}
-          className="ml-2 hidden md:block"
-        />
+        <div onClick={(e) => e.stopPropagation()}>
+          <ElectionInstanceDropdown
+            data={data}
+            className="ml-2 hidden md:block"
+          />
+        </div>
       </TileRight>
     </TileRow>
   );

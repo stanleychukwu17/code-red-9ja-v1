@@ -1,4 +1,4 @@
-import * as React from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@repo/ui/components/button";
 import {
   Dialog,
@@ -10,7 +10,7 @@ import {
 } from "@repo/ui/components/dialog";
 import { useForm, useStore } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plus, X } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 import { ElectionGroupBullet } from "@repo/ui/components/bullets/election-group-bullet";
 import { getContestedOffices } from "#/lib/server/offices";
 import { QUERY_KEYS } from "#/lib/config";
@@ -24,7 +24,6 @@ import { cn } from "@repo/ui/lib/utils";
 
 import {
   SelectionHeader,
-  SelectionTabs,
   SelectedItemsContainer,
   SelectableChip,
 } from "./SelectionCommon";
@@ -36,22 +35,45 @@ interface StateItem {
   name: string;
 }
 
+export type StateSelectionMode = "regular" | "off_cycle" | "all" | "custom";
+
+// The 8 Nigerian states that conduct off-cycle gubernatorial elections due to historical court rulings
+export const OFF_CYCLE_GOVERNORSHIP_STATES = new Set([
+  "anambra",
+  "bayelsa",
+  "edo",
+  "ekiti",
+  "imo",
+  "kogi",
+  "ondo",
+  "osun",
+]);
+
+export const isOffCycleState = (name: string): boolean => {
+  return OFF_CYCLE_GOVERNORSHIP_STATES.has(name.toLowerCase().trim());
+};
+
+export const isFctOrNonState = (name: string): boolean => {
+  const lower = name.toLowerCase().trim();
+  return lower === "fct" || lower.includes("federal capital") || lower.includes("abuja");
+};
+
+export type StateElectionFormDialogProps = {
+  open: boolean;
+  onClose: () => void;
+  onSuccess?: () => void;
+};
+
 export function StateElectionFormDialog({
   open,
   onClose,
   onSuccess,
-}: {
-  open: boolean;
-  onClose: () => void;
-  onSuccess?: () => void;
-}) {
+}: StateElectionFormDialogProps) {
   const queryClient = useQueryClient();
-  const [error, setError] = React.useState<string | null>(null);
-  const [isStateSelectorOpen, setIsStateSelectorOpen] = React.useState(false);
-  const [statesMode, setStatesMode] = React.useState<"custom" | "all">(
-    "custom",
-  );
-  const [selectedStates, setSelectedStates] = React.useState<StateItem[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [isStateSelectorOpen, setIsStateSelectorOpen] = useState(false);
+  const [statesMode, setStatesMode] = useState<StateSelectionMode>("regular");
+  const [selectedStates, setSelectedStates] = useState<StateItem[]>([]);
 
   // Fetch states of Nigeria (country ID: 161)
   const { data: statesData } = useQuery({
@@ -68,6 +90,23 @@ export function StateElectionFormDialog({
   });
 
   const allNigeriaStates = statesData || [];
+
+  // 28 regular states holding elections during the General Elections
+  const regularStates = useMemo(() => {
+    return allNigeriaStates.filter(
+      (s) => !isOffCycleState(s.name) && !isFctOrNonState(s.name),
+    );
+  }, [allNigeriaStates]);
+
+  // 8 off-cycle states (Anambra, Bayelsa, Edo, Ekiti, Imo, Kogi, Ondo, Osun)
+  const offCycleStates = useMemo(() => {
+    return allNigeriaStates.filter((s) => isOffCycleState(s.name));
+  }, [allNigeriaStates]);
+
+  // All 36 states (excluding FCT which has no governor)
+  const allStatesWithoutFct = useMemo(() => {
+    return allNigeriaStates.filter((s) => !isFctOrNonState(s.name));
+  }, [allNigeriaStates]);
 
   const form = useForm({
     defaultValues: {
@@ -105,31 +144,36 @@ export function StateElectionFormDialog({
     enabled: open,
   });
 
-  const selectedType = React.useMemo(() => {
+  const selectedType = useMemo(() => {
     if (!selectedOfficeId || !officesData) return null;
     return officesData.find((t: any) => t.id === selectedOfficeId);
   }, [selectedOfficeId, officesData]);
 
-  // Auto-fill all states when "all" mode is selected and data is loaded
-  React.useEffect(() => {
-    if (statesMode === "all" && statesData && statesData.length > 0) {
-      setSelectedStates(statesData);
-    }
-  }, [statesMode, statesData]);
+  // Sync selectedStates whenever preset mode changes or data arrives
+  useEffect(() => {
+    if (!open || allNigeriaStates.length === 0) return;
 
-  React.useEffect(() => {
+    if (statesMode === "regular") {
+      setSelectedStates(regularStates);
+    } else if (statesMode === "off_cycle") {
+      setSelectedStates(offCycleStates);
+    } else if (statesMode === "all") {
+      setSelectedStates(allStatesWithoutFct);
+    }
+  }, [open, statesMode, regularStates, offCycleStates, allStatesWithoutFct]);
+
+  useEffect(() => {
     if (open) {
       form.setFieldValue("electionGroupId", undefined);
       form.setFieldValue("electionDate", "");
       form.setFieldValue("officeId", undefined);
-      setStatesMode("custom");
-      setSelectedStates([]);
+      setStatesMode("regular");
       setError(null);
     }
   }, [open]);
 
   // Auto-select matching State office (Governor) when offices data loads
-  React.useEffect(() => {
+  useEffect(() => {
     if (open && officesData && officesData.length > 0 && !selectedOfficeId) {
       const matching = officesData.find((o: any) => o.scope === "state");
       if (matching) {
@@ -181,19 +225,30 @@ export function StateElectionFormDialog({
   const handleToggleStateSelection = (state: StateItem) => {
     setSelectedStates((prev) => {
       const exists = prev.some((s) => s.id === state.id);
-      if (exists) {
-        const next = prev.filter((s) => s.id !== state.id);
-        if (next.length !== allNigeriaStates.length) {
-          setStatesMode("custom");
-        }
-        return next;
+      const next = exists
+        ? prev.filter((s) => s.id !== state.id)
+        : [...prev, state];
+
+      if (
+        next.length === regularStates.length &&
+        next.every((s) => !isOffCycleState(s.name) && !isFctOrNonState(s.name))
+      ) {
+        setStatesMode("regular");
+      } else if (
+        next.length === offCycleStates.length &&
+        next.every((s) => isOffCycleState(s.name))
+      ) {
+        setStatesMode("off_cycle");
+      } else if (
+        next.length === allStatesWithoutFct.length &&
+        next.every((s) => !isFctOrNonState(s.name))
+      ) {
+        setStatesMode("all");
       } else {
-        const next = [...prev, state];
-        if (next.length === allNigeriaStates.length) {
-          setStatesMode("all");
-        }
-        return next;
+        setStatesMode("custom");
       }
+
+      return next;
     });
   };
 
@@ -265,20 +320,120 @@ export function StateElectionFormDialog({
                   onOpenSelector={() => setIsStateSelectorOpen(true)}
                 />
 
-                <SelectionTabs
-                  mode={statesMode}
-                  setMode={setStatesMode}
-                  items={selectedStates}
-                  allItems={allNigeriaStates}
-                  setItems={setSelectedStates}
-                  allLabel={`All states (${allNigeriaStates.length || 36})`}
-                />
+                {/* Smart Selection Preset Pills */}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStatesMode("regular");
+                      setSelectedStates(regularStates);
+                    }}
+                    className={cn(
+                      "h-8 px-3 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1.5",
+                      statesMode === "regular"
+                        ? "bg-primary text-white"
+                        : "bg-secondary/40 text-c-80 hover:bg-secondary/60",
+                    )}
+                  >
+                    <span>Regular States</span>
+                    <span className="opacity-75">
+                      ({regularStates.length || 28})
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStatesMode("off_cycle");
+                      setSelectedStates(offCycleStates);
+                    }}
+                    className={cn(
+                      "h-8 px-3 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1.5",
+                      statesMode === "off_cycle"
+                        ? "bg-amber-600 text-white"
+                        : "bg-amber-500/10 text-amber-700 hover:bg-amber-500/20",
+                    )}
+                  >
+                    <span>Off-Cycle</span>
+                    <span className="opacity-75">
+                      ({offCycleStates.length || 8})
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStatesMode("all");
+                      setSelectedStates(allStatesWithoutFct);
+                    }}
+                    className={cn(
+                      "h-8 px-3 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1.5",
+                      statesMode === "all"
+                        ? "bg-primary text-white"
+                        : "bg-secondary/40 text-c-80 hover:bg-secondary/60",
+                    )}
+                  >
+                    <span>All States</span>
+                    <span className="opacity-75">
+                      ({allStatesWithoutFct.length || 36})
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStatesMode("custom");
+                      setSelectedStates([]);
+                    }}
+                    className={cn(
+                      "h-8 px-3 rounded-lg text-xs font-semibold transition cursor-pointer",
+                      statesMode === "custom"
+                        ? "bg-secondary/30 text-c-80 font-bold"
+                        : "bg-transparent text-c-60 hover:bg-black/5",
+                    )}
+                  >
+                    Custom
+                  </button>
+                </div>
 
                 <SelectedItemsContainer
                   items={selectedStates}
                   onRemove={handleToggleStateSelection}
                   emptyPlaceholder="0 states added"
-                />
+                >
+                  {selectedStates.length > 0 && (
+                    <div className="flex flex-wrap gap-2 w-full">
+                      {selectedStates.map((item) => {
+                        const isOffCycle = isOffCycleState(item.name);
+                        return (
+                          <div
+                            key={item.id}
+                            className={cn(
+                              "h-9 flex items-center gap-2 pl-3 pr-2 bg-background rounded-[10px] text-sm text-c-80 border",
+                              isOffCycle
+                                ? "border-amber-400/60 bg-amber-50/50 dark:bg-amber-950/20"
+                                : "border-border/40",
+                            )}
+                          >
+                            <span>{item.name}</span>
+                            {isOffCycle && (
+                              <span className="text-[10px] uppercase font-bold text-amber-700 dark:text-amber-400 px-1.5 py-0.5 rounded bg-amber-100/80 dark:bg-amber-900/40">
+                                Off-cycle
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleToggleStateSelection(item)}
+                              className="text-c-40 hover:text-red transition cursor-pointer ml-0.5"
+                            >
+                              <X className="size-3.5" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </SelectedItemsContainer>
               </div>
             </DialogPadding>
 
@@ -319,12 +474,21 @@ export function StateElectionFormDialog({
         open={isStateSelectorOpen}
         onOpenChange={setIsStateSelectorOpen}
         selectedType={selectedType}
-        allNigeriaStates={allNigeriaStates}
+        allNigeriaStates={allStatesWithoutFct}
         selectedStates={selectedStates}
         onToggleStateSelection={handleToggleStateSelection}
       />
     </>
   );
+}
+
+interface StateSelectorDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  selectedType: { id: number; name: string } | null;
+  allNigeriaStates: StateItem[];
+  selectedStates: StateItem[];
+  onToggleStateSelection: (state: StateItem) => void;
 }
 
 function StateSelectorDialog({
@@ -334,23 +498,16 @@ function StateSelectorDialog({
   allNigeriaStates,
   selectedStates,
   onToggleStateSelection,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  selectedType: any;
-  allNigeriaStates: StateItem[];
-  selectedStates: StateItem[];
-  onToggleStateSelection: (state: StateItem) => void;
-}) {
-  const [searchQuery, setSearchQuery] = React.useState("");
+}: StateSelectorDialogProps) {
+  const [searchQuery, setSearchQuery] = useState("");
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (open) {
       setSearchQuery("");
     }
   }, [open]);
 
-  const filteredStates = React.useMemo(() => {
+  const filteredStates = useMemo(() => {
     if (!searchQuery.trim()) return allNigeriaStates;
     const q = searchQuery.toLowerCase();
     return allNigeriaStates.filter((s) => s.name.toLowerCase().includes(q));
@@ -383,10 +540,11 @@ function StateSelectorDialog({
                 const isSelected = selectedStates.some(
                   (s) => s.id === state.id,
                 );
+                const isOffCycle = isOffCycleState(state.name);
                 return (
                   <SelectableChip
                     key={state.id}
-                    label={state.name}
+                    label={isOffCycle ? `${state.name} • Off-cycle` : state.name}
                     isSelected={isSelected}
                     onClick={() => onToggleStateSelection(state)}
                   />
@@ -398,11 +556,10 @@ function StateSelectorDialog({
         <DialogFooter>
           <Button
             type="button"
-            variant="black"
-            size="lg"
             onClick={() => onOpenChange(false)}
+            className="h-11 px-6 bg-success hover:bg-success-hover text-[16px] font-bold text-white rounded-xl cursor-pointer"
           >
-            Add
+            Close
           </Button>
         </DialogFooter>
       </DialogContent>

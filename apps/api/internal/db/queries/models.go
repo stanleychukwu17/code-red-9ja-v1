@@ -251,9 +251,9 @@ type ElectionGroup struct {
 	TotalPuUniqueFinalResultsUploaded         int32              `json:"total_pu_unique_final_results_uploaded"`
 	TotalPuWhereAgentsReferredLiveVoters      int32              `json:"total_pu_where_agents_referred_live_voters"`
 	Year                                      int16              `json:"year"`
+	Active                                    bool               `json:"active"`
 	CreatedAt                                 pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt                                 pgtype.Timestamptz `json:"updated_at"`
-	Active                                    bool               `json:"active"`
 }
 
 type ElectionGroupFederalConstituency struct {

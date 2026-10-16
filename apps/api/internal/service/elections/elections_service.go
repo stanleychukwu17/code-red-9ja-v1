@@ -786,7 +786,7 @@ func (s *ElectionsService) ListElections(ctx context.Context, limit int32, curso
 	return s.queries.ListElectionInstances(ctx, params)
 }
 
-// UpdateElection modifies an existing election instance, resolves any implied geographic ancestor IDs,
+// UpdateElection modifies an existing election instance's name, date, and election group,
 // and invalidates the related Redis cache keys upon success.
 func (s *ElectionsService) UpdateElection(
 	ctx context.Context,
@@ -794,41 +794,21 @@ func (s *ElectionsService) UpdateElection(
 	name string,
 	electionDate time.Time,
 	electionGroupID int32,
-	officeID int16,
-	stateID *int16,
-	senatorialDistrictID, federalConstituencyID, stateConstituencyID, lgaID, wardID *int32,
 ) (queries.Election, error) {
-	// 1. Fetch office and election group definitions to validate existence and get metadata
-	et, err := s.officeService.GetOfficeByID(ctx, officeID)
-	if err != nil {
-		return queries.Election{}, err
-	}
+	// 1. Validate that the election group exists
 	if _, err := s.queries.GetElectionGroupByID(ctx, electionGroupID); err != nil {
 		return queries.Election{}, err
 	}
 
-	// 2. Resolve complete geographic hierarchy upwards from the most specific geographic scope
-	stateID2, senatorialDistrictID4, federalConstituencyID4, stateConstituencyID4, lgaID4, wardID4 := s.resolveGeographicHierarchy(
-		ctx, s.queries, stateID, senatorialDistrictID, federalConstituencyID, stateConstituencyID, lgaID, wardID,
-	)
-
-	// 3. Update election instance in database
+	// 2. Update election instance in database
 	el, err := s.queries.UpdateElectionInstance(ctx, queries.UpdateElectionInstanceParams{
-		ID:                    id,
-		Name:                  name,
-		ElectionDate:          pgtype.Date{Time: electionDate, Valid: true},
-		ElectionGroupID:       electionGroupID,
-		OfficeID:              officeID,
-		Scope:                 et.Scope,
-		StateID:               stateID2,
-		SenatorialDistrictID:  senatorialDistrictID4,
-		FederalConstituencyID: federalConstituencyID4,
-		StateConstituencyID:   stateConstituencyID4,
-		LgaID:                 lgaID4,
-		WardID:                wardID4,
+		ID:              id,
+		Name:            name,
+		ElectionDate:    pgtype.Date{Time: electionDate, Valid: true},
+		ElectionGroupID: electionGroupID,
 	})
 
-	// 4. Invalidate Redis caches on successful update
+	// 3. Invalidate Redis caches on successful update
 	if err == nil {
 		s.invalidateCache(ctx, id)
 	}

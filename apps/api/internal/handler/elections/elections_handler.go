@@ -26,7 +26,7 @@ type ElectionsService interface {
 	CreateWardElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, wardIDs []int32) ([]queries.Election, error)
 	GetElectionByID(ctx context.Context, id int32) (queries.Election, error)
 	ListElections(ctx context.Context, limit int32, cursor int64) ([]queries.ListElectionInstancesRow, error)
-	UpdateElection(ctx context.Context, id int32, name string, electionDate time.Time, electionGroupID int32, officeID int16, stateID *int16, senatorialDistrictID, federalConstituencyID, stateConstituencyID, lgaID, wardID *int32) (queries.Election, error)
+	UpdateElection(ctx context.Context, id int32, name string, electionDate time.Time, electionGroupID int32) (queries.Election, error)
 	DeleteElection(ctx context.Context, id int32) error
 	GetElectionCandidates(ctx context.Context, electionID int32) ([]queries.ListElectionCandidatesDetailedByElectionIDRow, error)
 	SyncElectionCandidates(ctx context.Context, electionID int32, candidates []elections.CandidateInput) error
@@ -103,16 +103,9 @@ func parsePaginationParams(r *http.Request) (int, int64) {
 }
 
 type UpdateElectionRequest struct {
-	Name                  string         `json:"name"`
-	ElectionDate          utils.JSONDate `json:"election_date"`
-	ElectionGroupID       int32          `json:"election_group_id"`
-	OfficeID              int16          `json:"office_id"`
-	StateID               *int16         `json:"state_id,omitempty"`
-	SenatorialDistrictID  *int32         `json:"senatorial_district_id,omitempty"`
-	FederalConstituencyID *int32         `json:"federal_constituency_id,omitempty"`
-	StateConstituencyID   *int32         `json:"state_constituency_id,omitempty"`
-	LgaID                 *int32         `json:"lga_id,omitempty"`
-	WardID                *int32         `json:"ward_id,omitempty"`
+	Name            string         `json:"name"`
+	ElectionDate    utils.JSONDate `json:"election_date"`
+	ElectionGroupID int32          `json:"election_group_id"`
 }
 
 type ElectionCandidateInput struct {
@@ -591,8 +584,8 @@ func (h *Handler) UpdateElection(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate mandatory fields
-	if req.Name == "" || req.ElectionDate.IsZero() || req.ElectionGroupID <= 0 || req.OfficeID <= 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "name, election_date, election_group_id, and office_id are required")
+	if req.Name == "" || req.ElectionDate.IsZero() || req.ElectionGroupID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "name, election_date, and election_group_id are required")
 		return
 	}
 
@@ -603,20 +596,13 @@ func (h *Handler) UpdateElection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Update election fields and linkages
+	// Update election fields
 	updated, err := h.service.UpdateElection(
 		r.Context(),
 		int32(id),
 		req.Name,
 		req.ElectionDate.Time(),
 		req.ElectionGroupID,
-		req.OfficeID,
-		req.StateID,
-		req.SenatorialDistrictID,
-		req.FederalConstituencyID,
-		req.StateConstituencyID,
-		req.LgaID,
-		req.WardID,
 	)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update election: "+err.Error())

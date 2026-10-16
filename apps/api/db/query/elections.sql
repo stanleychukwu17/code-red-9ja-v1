@@ -30,11 +30,8 @@ LIMIT sqlc.arg('limit_count')::int;
 
 -- name: UpdateElectionInstance :one
 UPDATE elections
-SET name = $1, election_date = $2, election_group_id = $3,
-    office_id = $4, scope = $5,
-    state_id = $6, senatorial_district_id = $7, federal_constituency_id = $8,
-    state_constituency_id = $9, lga_id = $10, ward_id = $11, updated_at = NOW()
-WHERE id = $12
+SET name = $1, election_date = $2, election_group_id = $3, updated_at = NOW()
+WHERE id = $4
 RETURNING *;
 
 -- name: UpdateElectionContestingParties :one

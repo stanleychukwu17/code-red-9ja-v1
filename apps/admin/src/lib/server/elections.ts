@@ -50,13 +50,6 @@ export const updateElection = createServerFn({ method: "POST" })
       name: string;
       election_date: string;
       election_group_id: number;
-      office_id: number;
-      state_id?: number | null;
-      senatorial_district_id?: number | null;
-      federal_constituency_id?: number | null;
-      state_constituency_id?: number | null;
-      lga_id?: number | null;
-      ward_id?: number | null;
     }) => data,
   )
   .handler(async ({ data: { id, ...body } }) => {
@@ -87,6 +80,87 @@ export const deleteElection = createServerFn({ method: "POST" })
       return {
         success: false,
         message: error?.message || "Failed to delete election",
+      };
+    }
+  });
+
+export const bulkDeleteElections = createServerFn({ method: "POST" })
+  .inputValidator((data: { ids: (string | number)[] }) => data)
+  .handler(async ({ data: { ids } }) => {
+    try {
+      const results = await Promise.allSettled(
+        ids.map((id) =>
+          apiFetchJson(API_URL.electionById(id), {
+            method: "DELETE",
+          }),
+        ),
+      );
+      const failed = results.filter(
+        (r) =>
+          r.status === "rejected" ||
+          (r.status === "fulfilled" && !r.value?.success),
+      );
+      if (failed.length > 0) {
+        return {
+          success: false,
+          message: `Failed to delete ${failed.length} of ${ids.length} elections.`,
+        };
+      }
+      return {
+        success: true,
+        message: `Successfully deleted ${ids.length} elections.`,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error?.message || "Failed to delete elections",
+      };
+    }
+  });
+
+export const bulkUpdateElectionGroup = createServerFn({ method: "POST" })
+  .inputValidator(
+    (data: {
+      items: { id: string | number; name: string; election_date: string }[];
+      election_group_id: number;
+    }) => data,
+  )
+  .handler(async ({ data: { items, election_group_id } }) => {
+    try {
+      const results = await Promise.allSettled(
+        items.map((item) =>
+          apiFetchJson(API_URL.electionById(item.id), {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              name: item.name,
+              election_date: item.election_date,
+              election_group_id,
+            }),
+          }),
+        ),
+      );
+      const failed = results.filter(
+        (r) =>
+          r.status === "rejected" ||
+          (r.status === "fulfilled" && !r.value?.success),
+      );
+      if (failed.length > 0) {
+        return {
+          success: false,
+          message: `Failed to update ${failed.length} of ${items.length} elections.`,
+        };
+      }
+      return {
+        success: true,
+        message: `Successfully reassigned ${items.length} elections to new group.`,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error?.message || "Failed to update election groups",
       };
     }
   });

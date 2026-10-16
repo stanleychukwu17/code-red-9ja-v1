@@ -114,16 +114,31 @@ export function ElectionGroupsTable({ items }: { items: ElectionGroupType[] }) {
 
 export function ElectionInstancesTable({
   items,
+  selectedIds = new Set<number>(),
+  onToggleSelect,
+  onToggleSelectAll,
 }: {
   items: ElectionInstanceType[];
+  selectedIds?: Set<number>;
+  onToggleSelect?: (id: number) => void;
+  onToggleSelectAll?: () => void;
 }) {
   return (
     <div className="w-full">
-      <ElectionInstanceTableHeader />
+      <ElectionInstanceTableHeader
+        selectedCount={selectedIds.size}
+        totalCount={items.length}
+        onToggleSelectAll={onToggleSelectAll}
+      />
 
       <div>
         {items.map((data) => (
-          <ElectionInstanceTableTile key={data.id} data={data} />
+          <ElectionInstanceTableTile
+            key={data.id}
+            data={data}
+            isSelected={selectedIds.has(data.id)}
+            onToggleSelect={onToggleSelect}
+          />
         ))}
       </div>
     </div>
