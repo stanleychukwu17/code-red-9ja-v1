@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { QUERY_KEYS } from "#/lib/config";
 import { deleteElection } from "#/lib/server/elections";
 import { TileOptions } from "@repo/ui/components/tiles";
 import TrashcanIcon from "@repo/ui/icons/trashcan-icon";
@@ -10,7 +12,6 @@ import { DeleteAlertDialog } from "../alerts/delete-alert";
 import { ElectionInstanceFormDialog } from "../dialogs/ElectionInstanceFormDialog";
 import { ManageCandidatesDialog } from "../dialogs/ManageCandidatesDialog";
 import type { ElectionInstanceType } from "../tiles/election-instance-tile";
-import { toast } from "sonner";
 
 interface ElectionInstanceDropdownProps {
   data: ElectionInstanceType;
@@ -39,8 +40,8 @@ export const ElectionInstanceDropdown = ({
     },
     onSuccess: () => {
       toast.success("Election deleted successfully");
-      queryClient.invalidateQueries({ queryKey: ["elections"] });
-      queryClient.invalidateQueries({ queryKey: ["election-groups"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.elections.all });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.electionGroups.all });
       setOpenDeleteAlert(false);
     },
     onError: (err: any) => {

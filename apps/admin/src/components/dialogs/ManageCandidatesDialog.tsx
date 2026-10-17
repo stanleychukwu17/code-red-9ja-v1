@@ -19,6 +19,7 @@ import { CandidateRow } from "./CandidateRow";
 import { UserFinderCommand } from "@repo/ui/components/custom/UserFinderCommand";
 import { getUsersList } from "#/lib/server/users";
 import { TinyError } from "@repo/ui/components/custom/TinyError";
+import { QUERY_KEYS } from "#/lib/config";
 
 interface ManageCandidatesDialogProps {
   electionId: number;
@@ -41,7 +42,7 @@ export function ManageCandidatesDialog({
 
   // Fetch detailed candidates for the election
   const { data: candidatesRes, isLoading } = useQuery({
-    queryKey: ["election-candidates", electionId],
+    queryKey: QUERY_KEYS.elections.candidates(electionId),
     queryFn: async () => {
       const res = await getElectionCandidates({ data: electionId });
       if (res && res.success && res.data?.candidates) {
@@ -85,10 +86,8 @@ export function ManageCandidatesDialog({
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["elections"] });
-      queryClient.invalidateQueries({
-        queryKey: ["election-candidates", electionId],
-      });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.elections.all });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.elections.candidates(electionId) });
       onClose();
     },
     onError: (err: any) => {
@@ -132,11 +131,11 @@ export function ManageCandidatesDialog({
       prev.map((c, i) =>
         i === index
           ? {
-              ...c,
-              party_id: newParty.id,
-              party_short_name: newParty.short_name,
-              party_logo: newParty.logo,
-            }
+            ...c,
+            party_id: newParty.id,
+            party_short_name: newParty.short_name,
+            party_logo: newParty.logo,
+          }
           : c,
       ),
     );

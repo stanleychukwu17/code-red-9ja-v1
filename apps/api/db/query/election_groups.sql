@@ -29,6 +29,11 @@ SELECT (
   (SELECT COUNT(*) FROM election_votes ev WHERE ev.election_group_id = $1)
 )::bigint AS participants_count;
 
+-- name: CountElectionsInElectionGroup :one
+SELECT COUNT(*)::bigint
+FROM elections e
+WHERE e.election_group_id = $1;
+
 -- name: DeleteElectionGroup :exec
 DELETE FROM election_groups WHERE id = $1;
 

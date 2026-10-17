@@ -24,6 +24,19 @@ func (q *Queries) CountCandidatesInElectionGroup(ctx context.Context, electionGr
 	return column_1, err
 }
 
+const countElectionsInElectionGroup = `-- name: CountElectionsInElectionGroup :one
+SELECT COUNT(*)::bigint
+FROM elections e
+WHERE e.election_group_id = $1
+`
+
+func (q *Queries) CountElectionsInElectionGroup(ctx context.Context, electionGroupID int32) (int64, error) {
+	row := q.db.QueryRow(ctx, countElectionsInElectionGroup, electionGroupID)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const countParticipantsInElectionGroup = `-- name: CountParticipantsInElectionGroup :one
 SELECT (
   (SELECT COUNT(*) FROM election_candidates ec WHERE ec.election_group_id = $1)

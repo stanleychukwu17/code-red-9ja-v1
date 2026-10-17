@@ -23,9 +23,9 @@ import { Badge } from "@repo/ui/components/badge";
 import { SelectDate } from "@repo/ui/components/selects/date-select";
 import { ElectionGroupBullet } from "@repo/ui/components/bullets/election-group-bullet";
 import { updateElection } from "#/lib/server/elections";
+import { QUERY_KEYS } from "#/lib/config";
 import { getElectionGroups } from "#/lib/server/election_groups";
 import { getStates } from "#/lib/server/states";
-import { QUERY_KEYS } from "#/lib/config";
 import type { ElectionInstanceType } from "../tiles/election-instance-tile";
 import { TinyError } from "@repo/ui/components/custom/TinyError";
 
@@ -146,7 +146,7 @@ export function ElectionInstanceFormDialog({ electionInstance, open, onClose, on
     },
     onSuccess: () => {
       // Invalidate cached election queries to refresh lists and tables
-      queryClient.invalidateQueries({ queryKey: ["elections"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.elections.all });
       onSuccess?.();
       onClose();
     },

@@ -21,6 +21,8 @@ export const getElections = createServerFn({ method: "GET" })
           cursor?: string | number;
           search?: string;
           election_group_ids?: number[];
+          group_id?: number;
+          election_group_id?: number;
           scopes?: string[];
           statuses?: string[];
           state_ids?: number[];
@@ -39,7 +41,15 @@ export const getElections = createServerFn({ method: "GET" })
       if (data?.limit) params.append("limit", String(data.limit));
       if (data?.cursor) params.append("cursor", String(data.cursor));
       if (data?.search) params.append("search", data.search);
-      if (data?.election_group_ids?.length) params.append("election_group_ids", data.election_group_ids.join(","));
+      if (data?.election_group_ids?.length) {
+        params.append("election_group_ids", data.election_group_ids.join(","));
+      } else if (data?.group_id) {
+        params.append("election_group_ids", String(data.group_id));
+        params.append("group_id", String(data.group_id));
+      } else if (data?.election_group_id) {
+        params.append("election_group_ids", String(data.election_group_id));
+        params.append("election_group_id", String(data.election_group_id));
+      }
       if (data?.scopes?.length) params.append("scopes", data.scopes.join(","));
       if (data?.statuses?.length) params.append("statuses", data.statuses.join(","));
       if (data?.state_ids?.length) params.append("state_ids", data.state_ids.join(","));

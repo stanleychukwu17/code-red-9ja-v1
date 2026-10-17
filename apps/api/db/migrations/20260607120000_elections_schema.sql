@@ -60,7 +60,7 @@ CREATE INDEX idx_election_groups_active_year ON election_groups(active, year DES
 
 CREATE TABLE elections (
   id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  election_group_id INT REFERENCES election_groups(id) ON DELETE CASCADE NOT NULL,
+  election_group_id INT REFERENCES election_groups(id) ON DELETE RESTRICT NOT NULL,
   state_id SMALLINT REFERENCES c_states(id) ON DELETE SET NULL,
   senatorial_district_id INT REFERENCES senatorial_districts(id) ON DELETE SET NULL,
   federal_constituency_id INT REFERENCES federal_constituencies(id) ON DELETE SET NULL,
@@ -79,8 +79,7 @@ CREATE TABLE elections (
   results_submitted_count INT NOT NULL DEFAULT 0,
 
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  CONSTRAINT uq_elections_id_group UNIQUE (id, election_group_id)
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
@@ -94,15 +93,14 @@ CREATE INDEX idx_elections_name_trgm ON elections USING gin (name gin_trgm_ops);
 
 CREATE TABLE election_candidates (
   id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  election_id INT NOT NULL,
-  election_group_id INT NOT NULL,
+  election_id INT REFERENCES elections(id) ON DELETE CASCADE NOT NULL,
+  election_group_id INT REFERENCES election_groups(id) ON DELETE CASCADE NOT NULL,
   candidate_id BIGINT REFERENCES users(id) ON DELETE CASCADE NOT NULL,
   running_mate_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
   party_id SMALLINT NOT NULL DEFAULT 7 REFERENCES parties(id) ON DELETE RESTRICT,
   party_short_name VARCHAR(50) NOT NULL DEFAULT 'N/A',
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  FOREIGN KEY (election_id, election_group_id) REFERENCES elections(id, election_group_id) ON DELETE CASCADE,
   UNIQUE(election_group_id, candidate_id),
   UNIQUE(election_id, party_id)
 );

@@ -66,6 +66,7 @@ type Querier interface {
 	CountActivePositionOccupants(ctx context.Context, arg CountActivePositionOccupantsParams) (int64, error)
 	CountAllUserPhoneNumbers(ctx context.Context, userID int64) (int64, error)
 	CountCandidatesInElectionGroup(ctx context.Context, electionGroupID int32) (int64, error)
+	CountElectionsInElectionGroup(ctx context.Context, electionGroupID int32) (int64, error)
 	CountMediaAssetsByFolder(ctx context.Context, arg CountMediaAssetsByFolderParams) (int64, error)
 	CountParticipantsInElectionGroup(ctx context.Context, electionGroupID int32) (int64, error)
 	CreateApplication(ctx context.Context, arg CreateApplicationParams) (PartyApplication, error)

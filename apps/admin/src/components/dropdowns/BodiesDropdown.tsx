@@ -55,7 +55,7 @@ export const BodiesDropdown = ({ className }: BodiesDropdownProps) => {
       clearInterval(pollIntervalRef.current);
     }
 
-    // Poll backend status every 4 seconds
+    // Poll backend status every 5 seconds
     pollIntervalRef.current = setInterval(async () => {
       try {
         const res = await getSyncStatus();
@@ -99,7 +99,7 @@ export const BodiesDropdown = ({ className }: BodiesDropdownProps) => {
       } catch {
         // Suppress transient network poll errors to keep polling alive
       }
-    }, 4000);
+    }, 5000);
   };
 
   // Check on mount if a synchronization job is already running from before
@@ -180,7 +180,7 @@ export const BodiesDropdown = ({ className }: BodiesDropdownProps) => {
       const res = await syncMutation.mutateAsync();
       const status = res?.data?.status;
 
-      // Start polling backend every 4s to track progress and update the toast notification
+      // Start polling backend every 5s to track progress and update the toast notification
       pollSyncProgress(status?.current_step || "Starting electoral units sync...");
     } catch (error: any) {
       toast.error(error?.message || "Failed to start electoral units sync");
@@ -195,7 +195,7 @@ export const BodiesDropdown = ({ className }: BodiesDropdownProps) => {
       // Dispatch API request to kick off the state-flow background sync job
       const res = await syncStateFlowMutation.mutateAsync();
       const status = res?.data?.status;
-      // Start polling backend every 4s to track progress and update the toast notification
+      // Start polling backend every 5s to track progress and update the toast notification
       pollSyncProgress(status?.current_step || "Starting electoral units sync (State Flow)...");
     } catch (error: any) {
       toast.error(error?.message || "Failed to start electoral units sync (State Flow)");

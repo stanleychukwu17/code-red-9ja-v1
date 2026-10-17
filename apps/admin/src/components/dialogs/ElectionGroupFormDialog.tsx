@@ -15,6 +15,7 @@ import {
 } from "@repo/ui/components/dialog";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { QUERY_KEYS } from "#/lib/config";
 import {
   createElectionGroup,
   updateElectionGroup,
@@ -102,9 +103,9 @@ export function ElectionGroupFormDialog({ electionGroup, open, onClose, mode = "
 
     onSuccess: (data, variables) => {
       // Invalidate relevant caches to refresh tables and dropdowns across the portal
-      queryClient.invalidateQueries({ queryKey: ["election-groups"] });
-      queryClient.invalidateQueries({ queryKey: ["election-groups-select"] });
-      queryClient.invalidateQueries({ queryKey: ["elections"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.electionGroups.all });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.electionGroups.select });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.elections.all });
       onSuccess?.(data.id, variables.year);
       onClose();
     },

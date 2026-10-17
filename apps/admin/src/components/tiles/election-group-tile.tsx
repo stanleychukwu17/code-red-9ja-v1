@@ -7,6 +7,7 @@ import {
 import FancyFolderIcon from "@repo/ui/icons/fancy-folder-icon";
 import { formatISODate } from "@repo/ui/lib/date";
 import { ElectionGroupDropdown } from "../dropdowns/ElectionGroupDropdown";
+import { Link } from "@tanstack/react-router";
 
 export type ElectionGroupType = {
   id: number;
@@ -43,9 +44,13 @@ export function ElectionGroupTableTile({ data }: { data: ElectionGroupType }) {
     <TileRow>
       <TileLeft>
         <FancyFolderIcon />
-        <p className="truncate w-full text-[16px] text-c-90">
+        <Link
+          to="/elections/instances"
+          search={{ group_id: data.id }}
+          className="truncate w-full text-[16px] text-c-90 hover:text-primary hover:underline transition-colors"
+        >
           {data.name ?? "—"}
-        </p>
+        </Link>
       </TileLeft>
       <TileRight>
         <div className="w-24 hidden sm:flex items-center">

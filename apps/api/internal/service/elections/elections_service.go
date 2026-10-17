@@ -93,19 +93,26 @@ func (s *ElectionsService) validateElectionGroup(ctx context.Context, q *queries
 	return eg, nil
 }
 
-// dedupeSlice returns a new slice with duplicate elements removed, preserving original order.
-func dedupeSlice[T comparable](slice []T) []T {
+// deDupeSlice returns a new slice with duplicate elements removed, preserving original order.
+func deDupeSlice[T comparable](slice []T) []T {
+	// Return early if the slice is empty or nil
 	if len(slice) == 0 {
 		return slice
 	}
+
+	// Track seen elements using a hash set for O(1) membership checks
 	seen := make(map[T]struct{}, len(slice))
+	// Preallocate result slice capacity to minimize heap allocations
 	result := make([]T, 0, len(slice))
+
+	// Iterate and append only elements encountered for the first time
 	for _, v := range slice {
 		if _, ok := seen[v]; !ok {
 			seen[v] = struct{}{}
 			result = append(result, v)
 		}
 	}
+
 	return result
 }
 
@@ -227,7 +234,7 @@ func (s *ElectionsService) CreateStateElection(ctx context.Context, officeID int
 	}
 
 	// In-memory deduplication of state IDs
-	stateIDs = dedupeSlice(stateIDs)
+	stateIDs = deDupeSlice(stateIDs)
 
 	// Fetch and validate the target office definition
 	office, err := s.officeService.GetOfficeByID(ctx, officeID)
@@ -308,7 +315,7 @@ func (s *ElectionsService) CreateSenatorialDistrictElection(ctx context.Context,
 	}
 
 	// In-memory deduplication of senatorial district IDs
-	senatorialDistrictIDs = dedupeSlice(senatorialDistrictIDs)
+	senatorialDistrictIDs = deDupeSlice(senatorialDistrictIDs)
 
 	// Fetch and validate the target office definition
 	office, err := s.officeService.GetOfficeByID(ctx, officeID)
@@ -395,7 +402,7 @@ func (s *ElectionsService) CreateFederalConstituencyElection(ctx context.Context
 	}
 
 	// In-memory deduplication of federal constituency IDs
-	federalConstituencyIDs = dedupeSlice(federalConstituencyIDs)
+	federalConstituencyIDs = deDupeSlice(federalConstituencyIDs)
 
 	// Fetch and validate the target office definition
 	office, err := s.officeService.GetOfficeByID(ctx, officeID)
@@ -491,7 +498,7 @@ func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, 
 	}
 
 	// In-memory deduplication of state constituency IDs
-	stateConstituencyIDs = dedupeSlice(stateConstituencyIDs)
+	stateConstituencyIDs = deDupeSlice(stateConstituencyIDs)
 
 	// Fetch and validate the target office definition
 	office, err := s.officeService.GetOfficeByID(ctx, officeID)
@@ -597,7 +604,7 @@ func (s *ElectionsService) CreateLgaElection(ctx context.Context, officeID int16
 	}
 
 	// In-memory deduplication of LGA IDs
-	lgaIDs = dedupeSlice(lgaIDs)
+	lgaIDs = deDupeSlice(lgaIDs)
 
 	// Fetch and validate the target office definition
 	office, err := s.officeService.GetOfficeByID(ctx, officeID)
@@ -695,7 +702,7 @@ func (s *ElectionsService) CreateWardElection(ctx context.Context, officeID int1
 	}
 
 	// In-memory deduplication of ward IDs
-	wardIDs = dedupeSlice(wardIDs)
+	wardIDs = deDupeSlice(wardIDs)
 
 	// Fetch and validate the target office definition
 	office, err := s.officeService.GetOfficeByID(ctx, officeID)
@@ -897,33 +904,36 @@ func (s *ElectionsService) ListElections(ctx context.Context, filter ListElectio
 	return s.queries.ListElectionInstances(ctx, params)
 }
 
+// UpdateElectionParams encapsulates the attributes that can be modified on an existing election.
+type UpdateElectionParams struct {
+	ID              int32
+	Name            string
+	ElectionDate    time.Time
+	ElectionGroupID int32
+}
+
 // UpdateElection modifies an existing election instance's name, date, and election group,
 // and invalidates the related Redis cache keys upon success.
-func (s *ElectionsService) UpdateElection(
-	ctx context.Context,
-	id int32,
-	name string,
-	electionDate time.Time,
-	electionGroupID int32,
-) (queries.Election, error) {
-	// 1. Validate that the election group exists and is active
-	if _, err := s.validateElectionGroup(ctx, s.queries, electionGroupID); err != nil {
+func (s *ElectionsService) UpdateElection(ctx context.Context, params UpdateElectionParams) (queries.Election, error) {
+	// 1. Validate that the target election group exists and is active
+	if _, err := s.validateElectionGroup(ctx, s.queries, params.ElectionGroupID); err != nil {
 		return queries.Election{}, err
 	}
 
 	// 2. Update election instance in database
 	el, err := s.queries.UpdateElectionInstance(ctx, queries.UpdateElectionInstanceParams{
-		ID:              id,
-		Name:            name,
-		ElectionDate:    pgtype.Date{Time: electionDate, Valid: true},
-		ElectionGroupID: electionGroupID,
+		ID:              params.ID,
+		Name:            params.Name,
+		ElectionDate:    pgtype.Date{Time: params.ElectionDate, Valid: true},
+		ElectionGroupID: params.ElectionGroupID,
 	})
+	if err != nil {
+		return queries.Election{}, err
+	}
 
 	// 3. Invalidate Redis caches on successful update
-	if err == nil {
-		s.invalidateCache(ctx, id)
-	}
-	return el, err
+	s.invalidateCache(ctx, params.ID)
+	return el, nil
 }
 
 // DeleteElection removes an election instance and invalidates the cache.

@@ -388,4 +388,19 @@ export const QUERY_KEYS = {
     all: ["offices"],
     contested: ["offices", "contested"],
   },
+  electionGroups: {
+    all: ["election-groups"],
+    select: ["election-groups-select"],
+  },
+  elections: {
+    all: ["elections"],
+    instances: (searchQuery?: string, filters?: unknown) =>
+      filters !== undefined
+        ? ["elections", searchQuery, filters]
+        : searchQuery !== undefined
+          ? ["elections", searchQuery]
+          : ["elections"],
+    candidates: (electionId?: number) =>
+      electionId !== undefined ? ["election-candidates", electionId] : ["election-candidates"],
+  },
 };

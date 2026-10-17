@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-playground/validator/v10"
 )
 
 type ElectionsService interface {
@@ -27,7 +28,7 @@ type ElectionsService interface {
 	CreateWardElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, wardIDs []int32) (int, error)
 	GetElectionByID(ctx context.Context, id int32) (queries.Election, error)
 	ListElections(ctx context.Context, filter elections.ListElectionsFilter) ([]queries.ListElectionInstancesRow, error)
-	UpdateElection(ctx context.Context, id int32, name string, electionDate time.Time, electionGroupID int32) (queries.Election, error)
+	UpdateElection(ctx context.Context, params elections.UpdateElectionParams) (queries.Election, error)
 	DeleteElection(ctx context.Context, id int32) error
 	GetElectionCandidates(ctx context.Context, electionID int32) ([]queries.ListElectionCandidatesDetailedByElectionIDRow, error)
 	SyncElectionCandidates(ctx context.Context, electionID int32, candidates []elections.CandidateInput) error
@@ -47,6 +48,7 @@ type Handler struct {
 	service      ElectionsService
 	usersService UsersService
 	auditService audit.AuditService
+	validate     *validator.Validate
 	utils        *utils.Utils
 }
 
@@ -55,6 +57,7 @@ func NewHandler(service ElectionsService, usersService UsersService, auditServic
 		service:      service,
 		usersService: usersService,
 		auditService: auditService,
+		validate:     validator.New(),
 		utils:        utils,
 	}
 }
@@ -146,9 +149,9 @@ func parseCommaSeparatedInt16(val string) []int16 {
 }
 
 type UpdateElectionRequest struct {
-	Name            string         `json:"name"`
-	ElectionDate    utils.JSONDate `json:"election_date"`
-	ElectionGroupID int32          `json:"election_group_id"`
+	Name            string         `json:"name" validate:"required"`
+	ElectionDate    utils.JSONDate `json:"election_date" validate:"required"`
+	ElectionGroupID int32          `json:"election_group_id" validate:"required,gt=0"`
 }
 
 type ElectionCandidateInput struct {
@@ -158,51 +161,51 @@ type ElectionCandidateInput struct {
 }
 
 type CreateNationwideElectionRequest struct {
-	OfficeID        int16          `json:"office_id"`
-	ElectionDate    utils.JSONDate `json:"election_date"`
-	ElectionGroupID int32          `json:"election_group_id"`
+	OfficeID        int16          `json:"office_id" validate:"required,gt=0"`
+	ElectionDate    utils.JSONDate `json:"election_date" validate:"required"`
+	ElectionGroupID int32          `json:"election_group_id" validate:"required,gt=0"`
 }
 
 type CreateStateElectionRequest struct {
-	OfficeID        int16          `json:"office_id"`
-	ElectionDate    utils.JSONDate `json:"election_date"`
-	ElectionGroupID int32          `json:"election_group_id"`
-	StateIDs        []int16        `json:"state_ids"`
+	OfficeID        int16          `json:"office_id" validate:"required,gt=0"`
+	ElectionDate    utils.JSONDate `json:"election_date" validate:"required"`
+	ElectionGroupID int32          `json:"election_group_id" validate:"required,gt=0"`
+	StateIDs        []int16        `json:"state_ids" validate:"required,min=1"`
 }
 
 type CreateSenatorialDistrictElectionRequest struct {
-	OfficeID              int16          `json:"office_id"`
-	ElectionDate          utils.JSONDate `json:"election_date"`
-	ElectionGroupID       int32          `json:"election_group_id"`
-	SenatorialDistrictIDs []int32        `json:"senatorial_district_ids"`
+	OfficeID              int16          `json:"office_id" validate:"required,gt=0"`
+	ElectionDate          utils.JSONDate `json:"election_date" validate:"required"`
+	ElectionGroupID       int32          `json:"election_group_id" validate:"required,gt=0"`
+	SenatorialDistrictIDs []int32        `json:"senatorial_district_ids" validate:"required,min=1"`
 }
 
 type CreateFederalConstituencyElectionRequest struct {
-	OfficeID               int16          `json:"office_id"`
-	ElectionDate           utils.JSONDate `json:"election_date"`
-	ElectionGroupID        int32          `json:"election_group_id"`
-	FederalConstituencyIDs []int32        `json:"federal_constituency_ids"`
+	OfficeID               int16          `json:"office_id" validate:"required,gt=0"`
+	ElectionDate           utils.JSONDate `json:"election_date" validate:"required"`
+	ElectionGroupID        int32          `json:"election_group_id" validate:"required,gt=0"`
+	FederalConstituencyIDs []int32        `json:"federal_constituency_ids" validate:"required,min=1"`
 }
 
 type CreateStateConstituencyElectionRequest struct {
-	OfficeID             int16          `json:"office_id"`
-	ElectionDate         utils.JSONDate `json:"election_date"`
-	ElectionGroupID      int32          `json:"election_group_id"`
-	StateConstituencyIDs []int32        `json:"state_constituency_ids"`
+	OfficeID             int16          `json:"office_id" validate:"required,gt=0"`
+	ElectionDate         utils.JSONDate `json:"election_date" validate:"required"`
+	ElectionGroupID      int32          `json:"election_group_id" validate:"required,gt=0"`
+	StateConstituencyIDs []int32        `json:"state_constituency_ids" validate:"required,min=1"`
 }
 
 type CreateLgaElectionRequest struct {
-	OfficeID        int16          `json:"office_id"`
-	ElectionDate    utils.JSONDate `json:"election_date"`
-	ElectionGroupID int32          `json:"election_group_id"`
-	LgaIDs          []int32        `json:"lga_ids"`
+	OfficeID        int16          `json:"office_id" validate:"required,gt=0"`
+	ElectionDate    utils.JSONDate `json:"election_date" validate:"required"`
+	ElectionGroupID int32          `json:"election_group_id" validate:"required,gt=0"`
+	LgaIDs          []int32        `json:"lga_ids" validate:"required,min=1"`
 }
 
 type CreateWardElectionRequest struct {
-	OfficeID        int16          `json:"office_id"`
-	ElectionDate    utils.JSONDate `json:"election_date"`
-	ElectionGroupID int32          `json:"election_group_id"`
-	WardIDs         []int32        `json:"ward_ids"`
+	OfficeID        int16          `json:"office_id" validate:"required,gt=0"`
+	ElectionDate    utils.JSONDate `json:"election_date" validate:"required"`
+	ElectionGroupID int32          `json:"election_group_id" validate:"required,gt=0"`
+	WardIDs         []int32        `json:"ward_ids" validate:"required,min=1"`
 }
 
 // CreateNationwideElection godoc
@@ -225,8 +228,8 @@ func (h *Handler) CreateNationwideElection(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Validate mandatory fields
-	if req.OfficeID <= 0 || req.ElectionDate.IsZero() || req.ElectionGroupID <= 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "office_id, election_date, and election_group_id are required")
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
 		return
 	}
 
@@ -265,8 +268,8 @@ func (h *Handler) CreateStateElection(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate mandatory fields (office, date, target election group, and target states list)
-	if req.OfficeID <= 0 || req.ElectionDate.IsZero() || req.ElectionGroupID <= 0 || len(req.StateIDs) == 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "office_id, election_date, election_group_id, and state_ids are required")
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
 		return
 	}
 
@@ -307,8 +310,8 @@ func (h *Handler) CreateSenatorialDistrictElection(w http.ResponseWriter, r *htt
 	}
 
 	// Validate mandatory fields (office, date, target election group, and target senatorial district IDs)
-	if req.OfficeID <= 0 || req.ElectionDate.IsZero() || req.ElectionGroupID <= 0 || len(req.SenatorialDistrictIDs) == 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "office_id, election_date, election_group_id, and senatorial_district_ids are required")
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
 		return
 	}
 
@@ -349,8 +352,8 @@ func (h *Handler) CreateFederalConstituencyElection(w http.ResponseWriter, r *ht
 	}
 
 	// Validate mandatory fields (office, date, target election group, and target federal constituency IDs)
-	if req.OfficeID <= 0 || req.ElectionDate.IsZero() || req.ElectionGroupID <= 0 || len(req.FederalConstituencyIDs) == 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "office_id, election_date, election_group_id, and federal_constituency_ids are required")
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
 		return
 	}
 
@@ -391,8 +394,8 @@ func (h *Handler) CreateStateConstituencyElection(w http.ResponseWriter, r *http
 	}
 
 	// Validate mandatory fields (office, date, target election group, and target state constituency IDs)
-	if req.OfficeID <= 0 || req.ElectionDate.IsZero() || req.ElectionGroupID <= 0 || len(req.StateConstituencyIDs) == 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "office_id, election_date, election_group_id, and state_constituency_ids are required")
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
 		return
 	}
 
@@ -433,8 +436,8 @@ func (h *Handler) CreateLgaElection(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate mandatory fields (office, date, target election group, and target LGA IDs)
-	if req.OfficeID <= 0 || req.ElectionDate.IsZero() || req.ElectionGroupID <= 0 || len(req.LgaIDs) == 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "office_id, election_date, election_group_id, and lga_ids are required")
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
 		return
 	}
 
@@ -476,8 +479,8 @@ func (h *Handler) CreateWardElection(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate mandatory fields (office, date, target election group, and target Ward IDs)
-	if req.OfficeID <= 0 || req.ElectionDate.IsZero() || req.ElectionGroupID <= 0 || len(req.WardIDs) == 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "office_id, election_date, election_group_id, and ward_ids are required")
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
 		return
 	}
 
@@ -514,11 +517,20 @@ func (h *Handler) ListElections(w http.ResponseWriter, r *http.Request) {
 	limit, cursor := parsePaginationParams(r)
 	query := r.URL.Query()
 
+	electionGroupIDs := parseCommaSeparatedInt32(query.Get("election_group_ids"))
+	if len(electionGroupIDs) == 0 {
+		if gid := query.Get("group_id"); gid != "" {
+			electionGroupIDs = parseCommaSeparatedInt32(gid)
+		} else if gid := query.Get("election_group_id"); gid != "" {
+			electionGroupIDs = parseCommaSeparatedInt32(gid)
+		}
+	}
+
 	filter := elections.ListElectionsFilter{
 		Limit:            int32(limit),
 		Cursor:           cursor,
 		Search:           query.Get("search"),
-		ElectionGroupIDs: parseCommaSeparatedInt32(query.Get("election_group_ids")),
+		ElectionGroupIDs: electionGroupIDs,
 		Scopes:           parseCommaSeparatedStrings(query.Get("scopes")),
 		Statuses:         parseCommaSeparatedStrings(query.Get("statuses")),
 		StateIDs:         parseCommaSeparatedInt16(query.Get("state_ids")),
@@ -617,38 +629,39 @@ func (h *Handler) UpdateElection(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate mandatory fields
-	if req.Name == "" || req.ElectionDate.IsZero() || req.ElectionGroupID <= 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "name, election_date, and election_group_id are required")
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
 		return
 	}
 
-	// Verify election exists prior to executing update
-	_, err = h.service.GetElectionByID(r.Context(), int32(id))
+	// Verify election exists prior to executing update and capture previous state for audit logging
+	existingElection, err := h.service.GetElectionByID(r.Context(), int32(id))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Election not found")
 		return
 	}
 
 	// Update election fields
-	updated, err := h.service.UpdateElection(
-		r.Context(),
-		int32(id),
-		req.Name,
-		req.ElectionDate.Time(),
-		req.ElectionGroupID,
-	)
+	updated, err := h.service.UpdateElection(r.Context(), elections.UpdateElectionParams{
+		ID:              int32(id),
+		Name:            req.Name,
+		ElectionDate:    req.ElectionDate.Time(),
+		ElectionGroupID: req.ElectionGroupID,
+	})
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update election: "+err.Error())
 		return
 	}
 
+	// Record previous state and updated state in the audit log
+	oldValuesJSON, _ := json.Marshal(existingElection)
 	newValuesJSON, _ := json.Marshal(updated)
-
 	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
 		Module:     audit.StringToText(db.ModuleAdmin),
 		Action:     db.ActionUpdateElection,
 		EntityType: db.EntityTypeElections,
 		EntityID:   strconv.FormatInt(int64(id), 10),
+		OldValues:  oldValuesJSON,
 		NewValues:  newValuesJSON,
 	})
 
@@ -679,8 +692,8 @@ func (h *Handler) DeleteElection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verify election exists prior to deletion
-	_, err = h.service.GetElectionByID(r.Context(), int32(id))
+	// Verify election exists prior to deletion and capture state for audit logging
+	existingElection, err := h.service.GetElectionByID(r.Context(), int32(id))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Election not found")
 		return
@@ -692,11 +705,13 @@ func (h *Handler) DeleteElection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	oldValuesJSON, _ := json.Marshal(existingElection)
 	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
 		Module:     audit.StringToText(db.ModuleAdmin),
 		Action:     db.ActionDeleteElection,
 		EntityType: db.EntityTypeElections,
 		EntityID:   strconv.FormatInt(int64(id), 10),
+		OldValues:  oldValuesJSON,
 	})
 
 	// Return successful deletion response

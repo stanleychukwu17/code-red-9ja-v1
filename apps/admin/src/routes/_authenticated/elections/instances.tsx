@@ -33,15 +33,33 @@ import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-q
 import { Layers, X } from "lucide-react";
 import TrashcanIcon from "@repo/ui/icons/trashcan-icon";
 import { toast } from "sonner";
+import { QUERY_KEYS } from "#/lib/config";
 
-// Route definition with page metadata for the TanStack router
+// Route search parameter shape for filtering by election group
+export type InstancesSearch = {
+  group_id?: number;
+};
+
+// Route definition with page metadata and search param validation for the TanStack router
 export const Route = createFileRoute("/_authenticated/elections/instances")({
+  validateSearch: (search: Record<string, unknown>): InstancesSearch => {
+    const rawGroupId = search.group_id ?? search.election_group_id;
+    const num =
+      rawGroupId !== undefined && rawGroupId !== null && rawGroupId !== ""
+        ? Number(rawGroupId)
+        : undefined;
+    return {
+      group_id: num && !isNaN(num) ? num : undefined,
+    };
+  },
   head: () => getPageHeader({ title: "Elections" }),
   component: RouteComponent,
 });
 
 function RouteComponent() {
   const queryClient = useQueryClient();
+  const { group_id } = Route.useSearch();
+  const navigate = Route.useNavigate();
 
   // Modal dialog visibility states for creating elections at each administrative hierarchy tier
   const [isNationwideOpen, setIsNationwideOpen] = useState(false);
@@ -57,12 +75,12 @@ function RouteComponent() {
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
   const [isBulkGroupOpen, setIsBulkGroupOpen] = useState(false);
 
-  // Search and filter states
+  // Search and filter states (initialized with group_id from URL query param if present)
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery] = useDebounceValue(searchQuery, 400);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filters, setFilters] = useState<ElectionFilters>({
-    election_group_ids: [],
+    election_group_ids: group_id ? [group_id] : [],
     scopes: [],
     statuses: [],
     state_ids: [],
@@ -70,6 +88,24 @@ function RouteComponent() {
     date_from: undefined,
     date_to: undefined,
   });
+
+  // Synchronize URL search params with active election group filter if changed externally
+  useEffect(() => {
+    if (group_id) {
+      setFilters((prev) => {
+        if (
+          prev.election_group_ids.length === 1 &&
+          prev.election_group_ids[0] === group_id
+        ) {
+          return prev;
+        }
+        return {
+          ...prev,
+          election_group_ids: [group_id],
+        };
+      });
+    }
+  }, [group_id]);
 
   // Calculate total number of applied filters for badge indicator
   const activeFiltersCount = useMemo(() => {
@@ -86,7 +122,7 @@ function RouteComponent() {
 
   // Paginated query: loads elections using keyset cursor pagination and active search/filters
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteQuery({
-    queryKey: ["elections", debouncedSearchQuery, filters],
+    queryKey: QUERY_KEYS.elections.instances(debouncedSearchQuery, filters),
     queryFn: async ({ pageParam }) => {
       const res = await getElections({
         data: {
@@ -185,8 +221,8 @@ function RouteComponent() {
         res.message ||
         `Successfully deleted ${selectedIds.size} election instances.`,
       );
-      queryClient.invalidateQueries({ queryKey: ["elections"] });
-      queryClient.invalidateQueries({ queryKey: ["election-groups"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.elections.all });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.electionGroups.all });
       setSelectedIds(new Set());
       setIsBulkDeleteOpen(false);
     },
@@ -257,6 +293,15 @@ function RouteComponent() {
                   date_from: undefined,
                   date_to: undefined,
                 });
+                if (group_id) {
+                  navigate({
+                    search: (prev) => ({
+                      ...prev,
+                      group_id: undefined,
+                    }),
+                    replace: true,
+                  });
+                }
               }}
             >
               Clear filters and search
@@ -409,6 +454,19 @@ function RouteComponent() {
         filters={filters}
         onApply={(newFilters) => {
           setFilters(newFilters);
+          const newGroupId =
+            newFilters.election_group_ids.length === 1
+              ? newFilters.election_group_ids[0]
+              : undefined;
+          if (newGroupId !== group_id) {
+            navigate({
+              search: (prev) => ({
+                ...prev,
+                group_id: newGroupId,
+              }),
+              replace: true,
+            });
+          }
         }}
       />
     </Layout>

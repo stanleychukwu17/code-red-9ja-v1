@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { QUERY_KEYS } from "#/lib/config";
 import {
   deleteElectionGroup,
   updateElectionGroup,
@@ -43,9 +45,13 @@ export const ElectionGroupDropdown = ({
       return res.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["election-groups"] });
-      queryClient.invalidateQueries({ queryKey: ["election-groups-select"] });
-      queryClient.invalidateQueries({ queryKey: ["elections"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.electionGroups.all });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.electionGroups.select });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.elections.all });
+      toast.success(isActive ? "Election group deactivated" : "Election group activated");
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || "Failed to update election group status");
     },
   });
 
@@ -58,10 +64,14 @@ export const ElectionGroupDropdown = ({
       return res.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["election-groups"] });
-      queryClient.invalidateQueries({ queryKey: ["election-groups-select"] });
-      queryClient.invalidateQueries({ queryKey: ["elections"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.electionGroups.all });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.electionGroups.select });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.elections.all });
       setOpenDeleteAlert(false);
+      toast.success("Election group deleted successfully");
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || "Failed to delete election group");
     },
   });
 

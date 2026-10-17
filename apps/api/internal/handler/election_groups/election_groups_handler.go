@@ -11,6 +11,7 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-playground/validator/v10"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -28,6 +29,7 @@ type ElectionGroupsService interface {
 type Handler struct {
 	service      ElectionGroupsService
 	auditService audit.AuditService
+	validate     *validator.Validate
 	utils        *utils.Utils
 }
 
@@ -35,19 +37,19 @@ func NewHandler(service ElectionGroupsService, auditService audit.AuditService, 
 	return &Handler{
 		service:      service,
 		auditService: auditService,
+		validate:     validator.New(),
 		utils:        utils,
 	}
 }
 
-
 type CreateElectionGroupRequest struct {
-	Name string `json:"name"`
-	Year int16  `json:"year"`
+	Name string `json:"name" validate:"required"`
+	Year int16  `json:"year" validate:"required,gt=0"`
 }
 
 type UpdateElectionGroupRequest struct {
-	Name   *string `json:"name"`
-	Year   *int16  `json:"year"`
+	Name   *string `json:"name" validate:"omitempty,min=1"`
+	Year   *int16  `json:"year" validate:"omitempty,gt=0"`
 	Active *bool   `json:"active"`
 }
 
@@ -71,8 +73,8 @@ func (h *Handler) CreateElectionGroup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 2. Validate mandatory fields (name and year)
-	if req.Name == "" || req.Year <= 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "name and year are required")
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
 		return
 	}
 
@@ -251,6 +253,12 @@ func (h *Handler) UpdateElectionGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validate payload fields if provided
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
+		return
+	}
+
 	// 3. Verify the election group exists before attempting update
 	existingGroup, err := h.service.GetElectionGroupByID(r.Context(), int32(id))
 	if err != nil {
@@ -350,7 +358,7 @@ func (h *Handler) DeleteElectionGroup(w http.ResponseWriter, r *http.Request) {
 }
 
 type UpsertPartyElectionGroupStatsRequest struct {
-	PartyID               int64       `json:"party_id"`
+	PartyID               int64       `json:"party_id" validate:"required,gt=0"`
 	PollingAgentsCoverage interface{} `json:"polling_agents_coverage"`
 	ElectionsContesting   int32       `json:"elections_contesting"`
 }
@@ -383,9 +391,9 @@ func (h *Handler) UpsertPartyElectionGroupStats(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	// 3. Validate required party ID
-	if req.PartyID <= 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "party_id is required and must be positive")
+	// 3. Validate required fields
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
 		return
 	}
 

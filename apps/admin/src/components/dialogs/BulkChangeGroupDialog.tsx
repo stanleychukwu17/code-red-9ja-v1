@@ -15,6 +15,7 @@ import { bulkUpdateElectionGroup } from "#/lib/server/elections";
 import { TinyError } from "@repo/ui/components/custom/TinyError";
 import type { ElectionInstanceType } from "../tiles/election-instance-tile";
 import { toast } from "sonner";
+import { QUERY_KEYS } from "#/lib/config";
 
 interface BulkChangeGroupDialogProps {
   open: boolean;
@@ -65,7 +66,8 @@ export function BulkChangeGroupDialog({
         res.message ||
         `Successfully reassigned ${selectedElections.length} elections.`,
       );
-      queryClient.invalidateQueries({ queryKey: ["elections"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.elections.all });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.electionGroups.all });
       onSuccess?.();
       onClose();
     },

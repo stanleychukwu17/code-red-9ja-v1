@@ -13,6 +13,7 @@ import { getContestedOffices } from "#/lib/server/offices";
 import { getStates } from "#/lib/server/states";
 import { Loader2, Search } from "lucide-react";
 import { cn } from "@repo/ui/lib/utils";
+import { QUERY_KEYS } from "#/lib/config";
 
 // Filter criteria state shape passed to the parent query
 export type ElectionFilters = {
@@ -98,7 +99,7 @@ export function ElectionInstancesFilterDialog({
 
   // Fetch election groups (e.g. 2027 General Elections)
   const { data: groupsData, isLoading: isLoadingGroups } = useQuery({
-    queryKey: ["election-groups"],
+    queryKey: QUERY_KEYS.electionGroups.all,
     queryFn: async () => {
       const res = await getElectionGroups({ data: { limit: 100 } });
       if (res && res.success) return res;
@@ -110,7 +111,7 @@ export function ElectionInstancesFilterDialog({
 
   // Fetch only contested/elective offices (e.g. President, Governor, Senator)
   const { data: officesData, isLoading: isLoadingOffices } = useQuery({
-    queryKey: ["offices", "contested"],
+    queryKey: QUERY_KEYS.offices.contested,
     queryFn: async () => {
       const res = await getContestedOffices({ data: { limit: 100 } });
       if (res && res.success) return res;

@@ -7513,6 +7513,34 @@ func (_m *Querier) CountCandidatesInElectionGroup(ctx context.Context, electionG
 	return r0, r1
 }
 
+// CountElectionsInElectionGroup provides a mock function with given fields: ctx, electionGroupID
+func (_m *Querier) CountElectionsInElectionGroup(ctx context.Context, electionGroupID int32) (int64, error) {
+	ret := _m.Called(ctx, electionGroupID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CountElectionsInElectionGroup")
+	}
+
+	var r0 int64
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int32) (int64, error)); ok {
+		return rf(ctx, electionGroupID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int32) int64); ok {
+		r0 = rf(ctx, electionGroupID)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int32) error); ok {
+		r1 = rf(ctx, electionGroupID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // CountParticipantsInElectionGroup provides a mock function with given fields: ctx, electionGroupID
 func (_m *Querier) CountParticipantsInElectionGroup(ctx context.Context, electionGroupID int32) (int64, error) {
 	ret := _m.Called(ctx, electionGroupID)

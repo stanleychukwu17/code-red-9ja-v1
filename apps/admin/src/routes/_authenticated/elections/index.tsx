@@ -16,6 +16,7 @@ import { ELECTION_TABS } from "./-data";
 import { ElectionGroupFormDialog } from "#/components/dialogs/ElectionGroupFormDialog";
 import { getElectionGroups } from "#/lib/server/election_groups";
 import { useQuery } from "@tanstack/react-query";
+import { QUERY_KEYS } from "#/lib/config";
 
 // Define the route for /elections under the _authenticated layout
 export const Route = createFileRoute("/_authenticated/elections/")({
@@ -29,7 +30,7 @@ function RouteComponent() {
 
   // Fetch election groups with standard query and infinite staleTime
   const { data, isLoading } = useQuery({
-    queryKey: ["election-groups"],
+    queryKey: QUERY_KEYS.electionGroups.all,
     queryFn: async () => {
       const res = await getElectionGroups({
         data: { limit: 100, orderBy: "election_date", order: "DESC" },

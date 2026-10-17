@@ -188,8 +188,8 @@ func (s *ElectionGroupsService) UpdateElectionGroup(ctx context.Context, id int3
 	return group, nil
 }
 
-// DeleteElectionGroup removes an election group record by its ID, preventing deletion if candidates are registered,
-// and purges associated Redis caches on success.
+// DeleteElectionGroup removes an election group record by its ID, preventing deletion if candidates/voters
+// have participated or if any election instances are attached to it, and purges associated Redis caches on success.
 func (s *ElectionGroupsService) DeleteElectionGroup(ctx context.Context, id int32) error {
 	// 1. Guard: Check if anyone has participated or is participating in this election group (candidates or voters)
 	participantsCount, err := s.queries.CountParticipantsInElectionGroup(ctx, id)
@@ -200,12 +200,21 @@ func (s *ElectionGroupsService) DeleteElectionGroup(ctx context.Context, id int3
 		return fmt.Errorf("cannot delete election group: people have already participated or are currently participating in it")
 	}
 
-	// 2. Execute deletion query on the election group
+	// 2. Guard: Check if any election instances are attached to this election group
+	electionsCount, err := s.queries.CountElectionsInElectionGroup(ctx, id)
+	if err != nil {
+		return fmt.Errorf("failed to verify election instances in election group: %w", err)
+	}
+	if electionsCount > 0 {
+		return fmt.Errorf("cannot delete election group: %d election instance(s) are attached to it. Please delete the election instances first or deactivate the group", electionsCount)
+	}
+
+	// 3. Execute deletion query on the election group
 	if err := s.queries.DeleteElectionGroup(ctx, id); err != nil {
 		return err
 	}
 
-	// 3. Invalidate cache on successful deletion
+	// 4. Invalidate cache on successful deletion
 	s.invalidateCache(ctx, &id)
 	return nil
 }
