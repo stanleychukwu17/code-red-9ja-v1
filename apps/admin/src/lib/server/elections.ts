@@ -21,7 +21,6 @@ export const getElections = createServerFn({ method: "GET" })
           cursor?: string | number;
           search?: string;
           election_group_ids?: number[];
-          group_id?: number;
           election_group_id?: number;
           scopes?: string[];
           statuses?: string[];
@@ -43,9 +42,6 @@ export const getElections = createServerFn({ method: "GET" })
       if (data?.search) params.append("search", data.search);
       if (data?.election_group_ids?.length) {
         params.append("election_group_ids", data.election_group_ids.join(","));
-      } else if (data?.group_id) {
-        params.append("election_group_ids", String(data.group_id));
-        params.append("group_id", String(data.group_id));
       } else if (data?.election_group_id) {
         params.append("election_group_ids", String(data.election_group_id));
         params.append("election_group_id", String(data.election_group_id));

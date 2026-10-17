@@ -519,9 +519,7 @@ func (h *Handler) ListElections(w http.ResponseWriter, r *http.Request) {
 
 	electionGroupIDs := parseCommaSeparatedInt32(query.Get("election_group_ids"))
 	if len(electionGroupIDs) == 0 {
-		if gid := query.Get("group_id"); gid != "" {
-			electionGroupIDs = parseCommaSeparatedInt32(gid)
-		} else if gid := query.Get("election_group_id"); gid != "" {
+		if gid := query.Get("election_group_id"); gid != "" {
 			electionGroupIDs = parseCommaSeparatedInt32(gid)
 		}
 	}

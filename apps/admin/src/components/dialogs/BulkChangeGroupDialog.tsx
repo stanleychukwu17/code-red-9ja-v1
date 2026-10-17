@@ -17,6 +17,7 @@ import type { ElectionInstanceType } from "../tiles/election-instance-tile";
 import { toast } from "sonner";
 import { QUERY_KEYS } from "#/lib/config";
 
+// Props for the dialog handling bulk reassignment of election instances to a new group
 interface BulkChangeGroupDialogProps {
   open: boolean;
   onClose: () => void;
@@ -24,20 +25,25 @@ interface BulkChangeGroupDialogProps {
   onSuccess?: () => void;
 }
 
+// Modal dialog allowing administrators to reassign multiple selected elections to a target election group
 export function BulkChangeGroupDialog({
   open,
   onClose,
   selectedElections,
   onSuccess,
 }: BulkChangeGroupDialogProps) {
+  // Target election group selected by the admin
   const [selectedGroupId, setSelectedGroupId] = useState<number | undefined>(
     undefined,
   );
+  // Submission or validation error message
   const [error, setError] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
+  // Mutation to batch-reassign selected elections to the new election group
   const updateMutation = useMutation({
     mutationFn: async () => {
+      // Validate that an election group and at least one election are selected
       if (!selectedGroupId) {
         throw new Error("Please select an election group");
       }
@@ -45,6 +51,7 @@ export function BulkChangeGroupDialog({
         throw new Error("No elections selected");
       }
 
+      // Send the bulk update payload to the backend
       const res = await bulkUpdateElectionGroup({
         data: {
           items: selectedElections.map((e) => ({
@@ -62,6 +69,7 @@ export function BulkChangeGroupDialog({
       return res;
     },
     onSuccess: (res) => {
+      // Notify admin and invalidate relevant TanStack Query caches
       toast.success(
         res.message ||
         `Successfully reassigned ${selectedElections.length} elections.`,
@@ -72,6 +80,7 @@ export function BulkChangeGroupDialog({
       onClose();
     },
     onError: (err: any) => {
+      // Display error banner on failure
       setError(err?.message || "Something went wrong. Please try again.");
     },
   });
@@ -79,11 +88,14 @@ export function BulkChangeGroupDialog({
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-120 p-0 rounded-2xl border-none shadow-2xl overflow-visible">
+        {/* Modal title */}
         <DialogHeader title="Change Election Group" />
 
         <DialogPadding className="space-y-4 pb-6">
+          {/* Error alert banner */}
           <TinyError error={error} />
 
+          {/* Description summary of selected items */}
           <p className="text-sm text-c-60 leading-relaxed">
             Reassign{" "}
             <span className="font-bold text-c-90">
@@ -93,6 +105,7 @@ export function BulkChangeGroupDialog({
             different Election Group.
           </p>
 
+          {/* Target election group picker */}
           <div className="pt-2 flex flex-col gap-2">
             <span className="text-xs font-semibold text-c-70 uppercase tracking-wide">
               Target Election Group
@@ -111,6 +124,7 @@ export function BulkChangeGroupDialog({
           </div>
         </DialogPadding>
 
+        {/* Modal actions */}
         <DialogFooter className="flex items-center justify-end gap-3 px-6 pb-6">
           <Button
             type="button"

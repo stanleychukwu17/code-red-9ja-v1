@@ -46,7 +46,7 @@ export function ElectionGroupTableTile({ data }: { data: ElectionGroupType }) {
         <FancyFolderIcon />
         <Link
           to="/elections/instances"
-          search={{ group_id: data.id }}
+          search={{ election_group_id: data.id }}
           className="truncate w-full text-[16px] text-c-90 hover:text-primary hover:underline transition-colors"
         >
           {data.name ?? "—"}

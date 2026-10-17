@@ -37,19 +37,17 @@ import { QUERY_KEYS } from "#/lib/config";
 
 // Route search parameter shape for filtering by election group
 export type InstancesSearch = {
-  group_id?: number;
+  election_group_id?: number;
 };
 
 // Route definition with page metadata and search param validation for the TanStack router
 export const Route = createFileRoute("/_authenticated/elections/instances")({
   validateSearch: (search: Record<string, unknown>): InstancesSearch => {
-    const rawGroupId = search.group_id ?? search.election_group_id;
+    const raw = search.election_group_id;
     const num =
-      rawGroupId !== undefined && rawGroupId !== null && rawGroupId !== ""
-        ? Number(rawGroupId)
-        : undefined;
+      raw !== undefined && raw !== null && raw !== "" ? Number(raw) : undefined;
     return {
-      group_id: num && !isNaN(num) ? num : undefined,
+      election_group_id: num && !isNaN(num) ? num : undefined,
     };
   },
   head: () => getPageHeader({ title: "Elections" }),
@@ -58,7 +56,7 @@ export const Route = createFileRoute("/_authenticated/elections/instances")({
 
 function RouteComponent() {
   const queryClient = useQueryClient();
-  const { group_id } = Route.useSearch();
+  const { election_group_id } = Route.useSearch();
   const navigate = Route.useNavigate();
 
   // Modal dialog visibility states for creating elections at each administrative hierarchy tier
@@ -75,12 +73,12 @@ function RouteComponent() {
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
   const [isBulkGroupOpen, setIsBulkGroupOpen] = useState(false);
 
-  // Search and filter states (initialized with group_id from URL query param if present)
+  // Search and filter states (initialized with election_group_id from URL query param if present)
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery] = useDebounceValue(searchQuery, 400);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filters, setFilters] = useState<ElectionFilters>({
-    election_group_ids: group_id ? [group_id] : [],
+    election_group_ids: election_group_id ? [election_group_id] : [],
     scopes: [],
     statuses: [],
     state_ids: [],
@@ -91,21 +89,21 @@ function RouteComponent() {
 
   // Synchronize URL search params with active election group filter if changed externally
   useEffect(() => {
-    if (group_id) {
+    if (election_group_id) {
       setFilters((prev) => {
         if (
           prev.election_group_ids.length === 1 &&
-          prev.election_group_ids[0] === group_id
+          prev.election_group_ids[0] === election_group_id
         ) {
           return prev;
         }
         return {
           ...prev,
-          election_group_ids: [group_id],
+          election_group_ids: [election_group_id],
         };
       });
     }
-  }, [group_id]);
+  }, [election_group_id]);
 
   // Calculate total number of applied filters for badge indicator
   const activeFiltersCount = useMemo(() => {
@@ -293,11 +291,11 @@ function RouteComponent() {
                   date_from: undefined,
                   date_to: undefined,
                 });
-                if (group_id) {
+                if (election_group_id) {
                   navigate({
                     search: (prev) => ({
                       ...prev,
-                      group_id: undefined,
+                      election_group_id: undefined,
                     }),
                     replace: true,
                   });
@@ -454,15 +452,17 @@ function RouteComponent() {
         filters={filters}
         onApply={(newFilters) => {
           setFilters(newFilters);
+
+          // Keep URL query param in sync when exactly one election group is selected (for shareability and bookmarks)
           const newGroupId =
             newFilters.election_group_ids.length === 1
-              ? newFilters.election_group_ids[0]
-              : undefined;
-          if (newGroupId !== group_id) {
+              ? newFilters.election_group_ids[0] : undefined;
+
+          if (newGroupId !== election_group_id) {
             navigate({
               search: (prev) => ({
                 ...prev,
-                group_id: newGroupId,
+                election_group_id: newGroupId,
               }),
               replace: true,
             });

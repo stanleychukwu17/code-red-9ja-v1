@@ -8,7 +8,6 @@ import (
 	apimiddleware "free9ja/api/internal/middleware"
 	partyapplications "free9ja/api/internal/service/party_applications"
 	"free9ja/api/internal/utils"
-	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -331,20 +330,6 @@ func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	slog.Info("ListApplications query params",
-		"filterUserID", filterUserID,
-		"partyID", partyID,
-		"electionGroupID", electionGroupID,
-		"status", status,
-		"stateID", stateID,
-		"lgaID", lgaID,
-		"wardID", wardID,
-		"limit", limit,
-		"cursor", cursor,
-		"requester.PartyID", requester.PartyID,
-		"isPlatformAdmin", isPlatformAdmin,
-		"isPartyAdmin", isPartyAdmin,
-	)
 	apps, err := h.service.ListApplications(r.Context(), filterUserID, partyID, electionGroupID, status, stateID, lgaID, wardID, limit, cursor)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to list applications: "+err.Error())
