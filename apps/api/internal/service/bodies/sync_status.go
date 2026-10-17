@@ -3,6 +3,7 @@ package bodiesservice
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -66,16 +67,20 @@ func (s *BodiesService) updateSyncStatus(ctx context.Context, status SyncStatusR
 
 // acquireSyncLock checks and acquires the distributed lock (24h in production, 30m in dev).
 func (s *BodiesService) acquireSyncLock(ctx context.Context) error {
+	// Set lock cooldown: 24 hours in production to prevent frequent INEC API scrapes, 30 min in dev
 	lockTTL := 30 * time.Minute
 	if os.Getenv("ENV") == "production" {
 		lockTTL = 24 * time.Hour
 	}
 
-	ok, err := s.rdb.SetNX(ctx, db.RedisLockElectoralUnitsSync, "locked", lockTTL).Result()
-	if err != nil {
-		return fmt.Errorf("failed to check sync lock: %w", err)
-	}
-	if !ok {
+	// Atomically acquire lock only if key does not exist (Mode: NX)
+	err := s.rdb.SetArgs(ctx, db.RedisLockElectoralUnitsSync, "locked", redis.SetArgs{
+		Mode: "NX",
+		TTL:  lockTTL,
+	}).Err()
+
+	// redis.Nil means key already exists: sync is active or in cooldown window
+	if errors.Is(err, redis.Nil) {
 		ttl, _ := s.rdb.TTL(ctx, db.RedisLockElectoralUnitsSync).Result()
 		remaining := ttl.Round(time.Minute).String()
 		if ttl <= 0 {
@@ -83,6 +88,12 @@ func (s *BodiesService) acquireSyncLock(ctx context.Context) error {
 		}
 		return fmt.Errorf("electoral units synchronization is currently running or was recently completed; please wait %s before retrying", remaining)
 	}
+
+	// Check for unexpected Redis communication failures
+	if err != nil {
+		return fmt.Errorf("failed to check sync lock: %w", err)
+	}
+
 	return nil
 }
 

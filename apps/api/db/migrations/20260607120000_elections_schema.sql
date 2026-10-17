@@ -78,27 +78,18 @@ CREATE TABLE elections (
   updates_count INT NOT NULL DEFAULT 0,
   results_submitted_count INT NOT NULL DEFAULT 0,
 
-  -- Shape of contesting_parties:
-  -- [
-  --   {
-  --     "party_id": 1,
-  --     "party_short_name": "APC",
-  --     "party_name": "All Progressives Congress",
-  --     "party_logo": "https://..."
-  --   }
-  -- ]
-  contesting_parties JSONB NOT NULL DEFAULT '[]'::jsonb,
-
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   CONSTRAINT uq_elections_id_group UNIQUE (id, election_group_id)
 );
 
-COMMENT ON COLUMN elections.contesting_parties IS 'List of political parties contesting this election. Shape: [{"party_id": 1, "party_short_name": "APC", "party_name": "All Progressives Congress", "party_logo": "https://..."}]';
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
-CREATE INDEX idx_elections_election_group_id ON elections(election_group_id);
+CREATE INDEX idx_elections_group_date_id ON elections(election_group_id, election_date DESC, id DESC);
 CREATE INDEX idx_elections_office_id ON elections(office_id);
 CREATE INDEX idx_elections_election_date_id ON elections(election_date DESC, id DESC);
+CREATE INDEX idx_elections_state_id ON elections(state_id) WHERE state_id IS NOT NULL;
+CREATE INDEX idx_elections_name_trgm ON elections USING gin (name gin_trgm_ops);
 
 
 CREATE TABLE election_candidates (

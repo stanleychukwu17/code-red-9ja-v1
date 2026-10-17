@@ -2,14 +2,31 @@ import { createServerFn } from "@tanstack/react-start";
 import { API_URL } from "../config";
 import { apiFetchJson } from "./fetch";
 
+export type ElectionsFilters = {
+  election_group_ids: number[];
+  scopes: string[];
+  statuses: string[];
+  state_ids: number[];
+  office_ids: number[];
+  date_from?: string;
+  date_to?: string;
+};
+
 export const getElections = createServerFn({ method: "GET" })
   .inputValidator(
     (
       data:
         | {
-          election_group_id?: number;
           limit?: number;
           cursor?: string | number;
+          search?: string;
+          election_group_ids?: number[];
+          scopes?: string[];
+          statuses?: string[];
+          state_ids?: number[];
+          office_ids?: number[];
+          date_from?: string;
+          date_to?: string;
           orderBy?: string;
           order?: string;
         }
@@ -19,9 +36,16 @@ export const getElections = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     try {
       const params = new URLSearchParams();
-      if (data?.election_group_id) params.append("election_group_id", String(data.election_group_id));
       if (data?.limit) params.append("limit", String(data.limit));
       if (data?.cursor) params.append("cursor", String(data.cursor));
+      if (data?.search) params.append("search", data.search);
+      if (data?.election_group_ids?.length) params.append("election_group_ids", data.election_group_ids.join(","));
+      if (data?.scopes?.length) params.append("scopes", data.scopes.join(","));
+      if (data?.statuses?.length) params.append("statuses", data.statuses.join(","));
+      if (data?.state_ids?.length) params.append("state_ids", data.state_ids.join(","));
+      if (data?.office_ids?.length) params.append("office_ids", data.office_ids.join(","));
+      if (data?.date_from) params.append("date_from", data.date_from);
+      if (data?.date_to) params.append("date_to", data.date_to);
       if (data?.orderBy) params.append("orderBy", data.orderBy);
       if (data?.order) params.append("order", data.order);
       const qs = params.toString();

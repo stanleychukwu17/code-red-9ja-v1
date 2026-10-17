@@ -23,8 +23,12 @@ import { WardElectionFormDialog } from "#/components/dialogs/WardElectionFormDia
 import { DeleteAlertDialog } from "#/components/alerts/delete-alert";
 import { BulkChangeGroupDialog } from "#/components/dialogs/BulkChangeGroupDialog";
 import { ELECTION_TABS } from "./-data";
+import {
+  ElectionInstancesFilterDialog,
+  type ElectionFilters,
+} from "#/components/dialogs/ElectionInstancesFilterDialog";
 import { getElections, bulkDeleteElections } from "#/lib/server/elections";
-import { useIntersectionObserver } from "usehooks-ts";
+import { useIntersectionObserver, useDebounceValue } from "usehooks-ts";
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Layers, X } from "lucide-react";
 import TrashcanIcon from "@repo/ui/icons/trashcan-icon";
@@ -53,14 +57,49 @@ function RouteComponent() {
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
   const [isBulkGroupOpen, setIsBulkGroupOpen] = useState(false);
 
-  // Paginated query: loads elections using keyset cursor pagination
+  // Search and filter states
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery] = useDebounceValue(searchQuery, 400);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [filters, setFilters] = useState<ElectionFilters>({
+    election_group_ids: [],
+    scopes: [],
+    statuses: [],
+    state_ids: [],
+    office_ids: [],
+    date_from: undefined,
+    date_to: undefined,
+  });
+
+  // Calculate total number of applied filters for badge indicator
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (filters.election_group_ids.length > 0) count += filters.election_group_ids.length;
+    if (filters.scopes.length > 0) count += filters.scopes.length;
+    if (filters.statuses.length > 0) count += filters.statuses.length;
+    if (filters.state_ids.length > 0) count += filters.state_ids.length;
+    if (filters.office_ids.length > 0) count += filters.office_ids.length;
+    if (filters.date_from) count += 1;
+    if (filters.date_to) count += 1;
+    return count;
+  }, [filters]);
+
+  // Paginated query: loads elections using keyset cursor pagination and active search/filters
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteQuery({
-    queryKey: ["elections"],
+    queryKey: ["elections", debouncedSearchQuery, filters],
     queryFn: async ({ pageParam }) => {
       const res = await getElections({
         data: {
           limit: 40,
           cursor: pageParam as string,
+          search: debouncedSearchQuery || undefined,
+          election_group_ids: filters.election_group_ids.length > 0 ? filters.election_group_ids : undefined,
+          scopes: filters.scopes.length > 0 ? filters.scopes : undefined,
+          statuses: filters.statuses.length > 0 ? filters.statuses : undefined,
+          state_ids: filters.state_ids.length > 0 ? filters.state_ids : undefined,
+          office_ids: filters.office_ids.length > 0 ? filters.office_ids : undefined,
+          date_from: filters.date_from || undefined,
+          date_to: filters.date_to || undefined,
         },
       });
       if (res && res.success && res.data) {
@@ -167,9 +206,19 @@ function RouteComponent() {
 
       {/* Action bar: Search input, filter trigger, and creation dialog dropdown options */}
       <PageSearchLayer
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        placeholder="Search elections..."
         rightComponent={
           <>
-            <FilterButton />
+            <div className="relative">
+              <FilterButton onClick={() => setIsFilterOpen(true)} />
+              {activeFiltersCount > 0 && (
+                <span className="absolute -top-1 -right-1 size-5 rounded-full bg-[#00cf79] text-white text-[11px] font-bold flex items-center justify-center pointer-events-none shadow-sm">
+                  {activeFiltersCount}
+                </span>
+              )}
+            </div>
             <AddButton
               onAddNationwideElection={() => setIsNationwideOpen(true)}
               onAddStateElection={() => setIsStateOpen(true)}
@@ -183,10 +232,36 @@ function RouteComponent() {
         }
       />
 
-      {/* Main elections roster table with initial loading state */}
+      {/* Main elections roster table with initial loading state and empty state */}
       {isLoading && elections.length === 0 ? (
         <div className="py-12 text-center text-c-50 text-[15px]">
           Loading elections...
+        </div>
+      ) : elections.length === 0 ? (
+        <div className="py-16 text-center bg-white rounded-2xl border border-[#dfdfdf] space-y-3">
+          <p className="text-c-50 text-[15px]">
+            No election instances found matching your search and filter criteria.
+          </p>
+          {(searchQuery || activeFiltersCount > 0) && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setSearchQuery("");
+                setFilters({
+                  election_group_ids: [],
+                  scopes: [],
+                  statuses: [],
+                  state_ids: [],
+                  office_ids: [],
+                  date_from: undefined,
+                  date_to: undefined,
+                });
+              }}
+            >
+              Clear filters and search
+            </Button>
+          )}
         </div>
       ) : (
         <ElectionInstancesTable
@@ -326,6 +401,16 @@ function RouteComponent() {
           onClose={() => setIsWardOpen(false)}
         />
       )}
+
+      {/* Filter modal dialog */}
+      <ElectionInstancesFilterDialog
+        open={isFilterOpen}
+        onClose={() => setIsFilterOpen(false)}
+        filters={filters}
+        onApply={(newFilters) => {
+          setFilters(newFilters);
+        }}
+      />
     </Layout>
   );
 }

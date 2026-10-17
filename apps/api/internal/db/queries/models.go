@@ -141,26 +141,24 @@ type DidNotVoteReason struct {
 }
 
 type Election struct {
-	ID                    int32       `json:"id"`
-	ElectionGroupID       int32       `json:"election_group_id"`
-	StateID               pgtype.Int2 `json:"state_id"`
-	SenatorialDistrictID  pgtype.Int4 `json:"senatorial_district_id"`
-	FederalConstituencyID pgtype.Int4 `json:"federal_constituency_id"`
-	StateConstituencyID   pgtype.Int4 `json:"state_constituency_id"`
-	LgaID                 pgtype.Int4 `json:"lga_id"`
-	WardID                pgtype.Int4 `json:"ward_id"`
-	OfficeID              int16       `json:"office_id"`
-	Name                  string      `json:"name"`
-	ElectionDate          pgtype.Date `json:"election_date"`
-	Scope                 string      `json:"scope"`
-	Status                string      `json:"status"`
-	ReportsCount          int32       `json:"reports_count"`
-	UpdatesCount          int32       `json:"updates_count"`
-	ResultsSubmittedCount int32       `json:"results_submitted_count"`
-	// List of political parties contesting this election. Shape: [{"party_id": 1, "party_short_name": "APC", "party_name": "All Progressives Congress", "party_logo": "https://..."}]
-	ContestingParties []byte             `json:"contesting_parties"`
-	CreatedAt         pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	ID                    int32              `json:"id"`
+	ElectionGroupID       int32              `json:"election_group_id"`
+	StateID               pgtype.Int2        `json:"state_id"`
+	SenatorialDistrictID  pgtype.Int4        `json:"senatorial_district_id"`
+	FederalConstituencyID pgtype.Int4        `json:"federal_constituency_id"`
+	StateConstituencyID   pgtype.Int4        `json:"state_constituency_id"`
+	LgaID                 pgtype.Int4        `json:"lga_id"`
+	WardID                pgtype.Int4        `json:"ward_id"`
+	OfficeID              int16              `json:"office_id"`
+	Name                  string             `json:"name"`
+	ElectionDate          pgtype.Date        `json:"election_date"`
+	Scope                 string             `json:"scope"`
+	Status                string             `json:"status"`
+	ReportsCount          int32              `json:"reports_count"`
+	UpdatesCount          int32              `json:"updates_count"`
+	ResultsSubmittedCount int32              `json:"results_submitted_count"`
+	CreatedAt             pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
 }
 
 type ElectionCandidate struct {

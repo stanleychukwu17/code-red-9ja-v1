@@ -14,16 +14,25 @@ SELECT * FROM elections WHERE id = $1;
 -- name: ListElectionInstances :many
 SELECT 
   e.*,
-  o.name AS office_name,
-  eg.name AS election_group_name
+  o.name AS office_name
 FROM elections e
 JOIN offices o ON e.office_id = o.id
-JOIN election_groups eg ON e.election_group_id = eg.id
 WHERE (
   sqlc.narg('cursor_election_date')::date IS NULL 
   OR (e.election_date < sqlc.narg('cursor_election_date')::date)
   OR (e.election_date = sqlc.narg('cursor_election_date')::date AND e.id < sqlc.arg('cursor_id')::int)
 )
+AND (sqlc.narg('search')::text IS NULL OR (
+  e.name ILIKE '%' || sqlc.narg('search')::text || '%' OR
+  o.name ILIKE '%' || sqlc.narg('search')::text || '%'
+))
+AND (sqlc.narg('election_group_ids')::int[] IS NULL OR e.election_group_id = ANY(sqlc.narg('election_group_ids')::int[]))
+AND (sqlc.narg('scopes')::text[] IS NULL OR e.scope = ANY(sqlc.narg('scopes')::text[]))
+AND (sqlc.narg('statuses')::text[] IS NULL OR e.status = ANY(sqlc.narg('statuses')::text[]))
+AND (sqlc.narg('state_ids')::smallint[] IS NULL OR e.state_id = ANY(sqlc.narg('state_ids')::smallint[]))
+AND (sqlc.narg('office_ids')::smallint[] IS NULL OR e.office_id = ANY(sqlc.narg('office_ids')::smallint[]))
+AND (sqlc.narg('date_from')::date IS NULL OR e.election_date >= sqlc.narg('date_from')::date)
+AND (sqlc.narg('date_to')::date IS NULL OR e.election_date <= sqlc.narg('date_to')::date)
 ORDER BY e.election_date DESC, e.id DESC
 LIMIT sqlc.arg('limit_count')::int;
 
@@ -31,12 +40,6 @@ LIMIT sqlc.arg('limit_count')::int;
 UPDATE elections
 SET name = $1, election_date = $2, election_group_id = $3, updated_at = NOW()
 WHERE id = $4
-RETURNING *;
-
--- name: UpdateElectionContestingParties :one
-UPDATE elections
-SET contesting_parties = $2, updated_at = NOW()
-WHERE id = $1
 RETURNING *;
 
 -- name: DeleteElectionInstance :exec

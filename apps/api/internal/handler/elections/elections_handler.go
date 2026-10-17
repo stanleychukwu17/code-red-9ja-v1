@@ -11,6 +11,7 @@ import (
 	"free9ja/api/internal/utils"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -25,7 +26,7 @@ type ElectionsService interface {
 	CreateLgaElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, lgaIDs []int32) (int, error)
 	CreateWardElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, wardIDs []int32) (int, error)
 	GetElectionByID(ctx context.Context, id int32) (queries.Election, error)
-	ListElections(ctx context.Context, limit int32, cursor int64) ([]queries.ListElectionInstancesRow, error)
+	ListElections(ctx context.Context, filter elections.ListElectionsFilter) ([]queries.ListElectionInstancesRow, error)
 	UpdateElection(ctx context.Context, id int32, name string, electionDate time.Time, electionGroupID int32) (queries.Election, error)
 	DeleteElection(ctx context.Context, id int32) error
 	GetElectionCandidates(ctx context.Context, electionID int32) ([]queries.ListElectionCandidatesDetailedByElectionIDRow, error)
@@ -100,6 +101,48 @@ func parsePaginationParams(r *http.Request) (int, int64) {
 		}
 	}
 	return limit, cursor
+}
+
+func parseCommaSeparatedStrings(val string) []string {
+	if val == "" {
+		return nil
+	}
+	var res []string
+	for _, s := range strings.Split(val, ",") {
+		s = strings.TrimSpace(s)
+		if s != "" {
+			res = append(res, s)
+		}
+	}
+	return res
+}
+
+func parseCommaSeparatedInt32(val string) []int32 {
+	if val == "" {
+		return nil
+	}
+	var res []int32
+	for _, s := range strings.Split(val, ",") {
+		s = strings.TrimSpace(s)
+		if id, err := strconv.ParseInt(s, 10, 32); err == nil {
+			res = append(res, int32(id))
+		}
+	}
+	return res
+}
+
+func parseCommaSeparatedInt16(val string) []int16 {
+	if val == "" {
+		return nil
+	}
+	var res []int16
+	for _, s := range strings.Split(val, ",") {
+		s = strings.TrimSpace(s)
+		if id, err := strconv.ParseInt(s, 10, 16); err == nil {
+			res = append(res, int16(id))
+		}
+	}
+	return res
 }
 
 type UpdateElectionRequest struct {
@@ -469,9 +512,23 @@ func (h *Handler) CreateWardElection(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ListElections(w http.ResponseWriter, r *http.Request) {
 	// Parse pagination limit and optional starting cursor ID from query params
 	limit, cursor := parsePaginationParams(r)
+	query := r.URL.Query()
 
-	// Fetch limit + 1 records from database using keyset cursor pagination
-	rows, err := h.service.ListElections(r.Context(), int32(limit), cursor)
+	filter := elections.ListElectionsFilter{
+		Limit:            int32(limit),
+		Cursor:           cursor,
+		Search:           query.Get("search"),
+		ElectionGroupIDs: parseCommaSeparatedInt32(query.Get("election_group_ids")),
+		Scopes:           parseCommaSeparatedStrings(query.Get("scopes")),
+		Statuses:         parseCommaSeparatedStrings(query.Get("statuses")),
+		StateIDs:         parseCommaSeparatedInt16(query.Get("state_ids")),
+		OfficeIDs:        parseCommaSeparatedInt16(query.Get("office_ids")),
+		DateFrom:         query.Get("date_from"),
+		DateTo:           query.Get("date_to"),
+	}
+
+	// Fetch limit + 1 records from database using keyset cursor pagination with filters
+	rows, err := h.service.ListElections(r.Context(), filter)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch elections: "+err.Error())
 		return

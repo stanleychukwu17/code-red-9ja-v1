@@ -122,22 +122,22 @@ func (h *Handler) GetStatesWithResults(w http.ResponseWriter, r *http.Request) {
 	defer rows.Close()
 
 	type StateFR struct {
-		ID                         int64            `json:"id"`
-		ElectionID                 int64            `json:"election_id"`
-		StateID                    int16            `json:"state_id"`
-		AccreditedVoters           int32            `json:"accredited_voters"`
-		VotesCast                  int32            `json:"votes_cast"`
-		ValidVotes                 int32            `json:"valid_votes"`
-		RejectedVotes              int32            `json:"rejected_votes"`
-		CandidateResults           json.RawMessage  `json:"candidate_results"`
-		SenatorialDistrictsCounted int32            `json:"senatorial_districts_counted"`
-		TotalSenatorialDistricts   int32            `json:"total_senatorial_districts"`
-		CreatedAt                  *time.Time       `json:"created_at"`
-		UpdatedAt                  *time.Time       `json:"updated_at"`
+		ID                         int64           `json:"id"`
+		ElectionID                 int64           `json:"election_id"`
+		StateID                    int16           `json:"state_id"`
+		AccreditedVoters           int32           `json:"accredited_voters"`
+		VotesCast                  int32           `json:"votes_cast"`
+		ValidVotes                 int32           `json:"valid_votes"`
+		RejectedVotes              int32           `json:"rejected_votes"`
+		CandidateResults           json.RawMessage `json:"candidate_results"`
+		SenatorialDistrictsCounted int32           `json:"senatorial_districts_counted"`
+		TotalSenatorialDistricts   int32           `json:"total_senatorial_districts"`
+		CreatedAt                  *time.Time      `json:"created_at"`
+		UpdatedAt                  *time.Time      `json:"updated_at"`
 	}
 	type Row struct {
-		ID               int16    `json:"id"`
-		Name             string   `json:"name"`
+		ID                       int16    `json:"id"`
+		Name                     string   `json:"name"`
 		ElectionStateFinalResult *StateFR `json:"election_state_final_result"`
 	}
 
@@ -145,14 +145,14 @@ func (h *Handler) GetStatesWithResults(w http.ResponseWriter, r *http.Request) {
 	var lastID int16
 	for rows.Next() {
 		var (
-			sID   int16
-			sName string
-			frID, frElectionID *int64
-			frStateID          *int16
+			sID                                                      int16
+			sName                                                    string
+			frID, frElectionID                                       *int64
+			frStateID                                                *int16
 			frAccredited, frVotesCast, frValidVotes, frRejectedVotes *int32
-			frCandidateResults []byte
-			frSDCounted, frTotalSD *int32
-			frCreatedAt, frUpdatedAt   *time.Time
+			frCandidateResults                                       []byte
+			frSDCounted, frTotalSD                                   *int32
+			frCreatedAt, frUpdatedAt                                 *time.Time
 		)
 		if err := rows.Scan(
 			&sID, &sName,
@@ -175,7 +175,7 @@ func (h *Handler) GetStatesWithResults(w http.ResponseWriter, r *http.Request) {
 				ID: *frID, ElectionID: *frElectionID, StateID: *frStateID,
 				AccreditedVoters: *frAccredited, VotesCast: *frVotesCast,
 				ValidVotes: *frValidVotes, RejectedVotes: *frRejectedVotes,
-				CandidateResults: cr,
+				CandidateResults:           cr,
 				SenatorialDistrictsCounted: *frSDCounted, TotalSenatorialDistricts: *frTotalSD,
 				CreatedAt: frCreatedAt, UpdatedAt: frUpdatedAt,
 			}
@@ -256,31 +256,31 @@ func (h *Handler) GetSenatorialDistrictsWithResults(w http.ResponseWriter, r *ht
 		ValidVotes           int32           `json:"valid_votes"`
 		RejectedVotes        int32           `json:"rejected_votes"`
 		CandidateResults     json.RawMessage `json:"candidate_results"`
-		CreatedAt        *time.Time      `json:"created_at"`
-		UpdatedAt        *time.Time      `json:"updated_at"`
+		CreatedAt            *time.Time      `json:"created_at"`
+		UpdatedAt            *time.Time      `json:"updated_at"`
 	}
 	type Row struct {
-		ID                              int32   `json:"id"`
-		Name                            string  `json:"name"`
-		StateID                         int32   `json:"state_id"`
-		StateName                       string  `json:"state_name"`
-		ElectionSenatorialDistrictFinalResult   *SDFR   `json:"election_senatorial_district_final_result"`
+		ID                                    int32  `json:"id"`
+		Name                                  string `json:"name"`
+		StateID                               int32  `json:"state_id"`
+		StateName                             string `json:"state_name"`
+		ElectionSenatorialDistrictFinalResult *SDFR  `json:"election_senatorial_district_final_result"`
 	}
 
 	var results []Row
 	var lastID int32
 	for rows.Next() {
 		var (
-			sdID      int32
-			sdName    string
-			sdStateID int32
-			sdStateName string
-			frID, frElectionID *int64
-			frSDID             *int32
-			frStateID          *int16
+			sdID                                                     int32
+			sdName                                                   string
+			sdStateID                                                int32
+			sdStateName                                              string
+			frID, frElectionID                                       *int64
+			frSDID                                                   *int32
+			frStateID                                                *int16
 			frAccredited, frVotesCast, frValidVotes, frRejectedVotes *int32
-			frCandidateResults                                         []byte
-			frCreatedAt, frUpdatedAt                                   *time.Time
+			frCandidateResults                                       []byte
+			frCreatedAt, frUpdatedAt                                 *time.Time
 		)
 		if err := rows.Scan(
 			&sdID, &sdName, &sdStateID, &sdStateName,
@@ -383,31 +383,31 @@ func (h *Handler) GetFederalConstituenciesWithResults(w http.ResponseWriter, r *
 		ValidVotes            int32           `json:"valid_votes"`
 		RejectedVotes         int32           `json:"rejected_votes"`
 		CandidateResults      json.RawMessage `json:"candidate_results"`
-		CreatedAt        *time.Time      `json:"created_at"`
-		UpdatedAt        *time.Time      `json:"updated_at"`
+		CreatedAt             *time.Time      `json:"created_at"`
+		UpdatedAt             *time.Time      `json:"updated_at"`
 	}
 	type Row struct {
-		ID                             int32  `json:"id"`
-		Name                           string `json:"name"`
-		SenatorialDistrictID           int32  `json:"senatorial_district_id"`
-		StateID                        int16  `json:"state_id"`
-		ElectionFederalConstituencyFinalResult  *FCFR  `json:"election_federal_constituency_final_result"`
+		ID                                     int32  `json:"id"`
+		Name                                   string `json:"name"`
+		SenatorialDistrictID                   int32  `json:"senatorial_district_id"`
+		StateID                                int16  `json:"state_id"`
+		ElectionFederalConstituencyFinalResult *FCFR  `json:"election_federal_constituency_final_result"`
 	}
 
 	var results []Row
 	var lastID int32
 	for rows.Next() {
 		var (
-			fcID      int32
-			fcName    string
-			fcSDID    int32
-			fcStateID int16
-			frID, frElectionID *int64
-			frFCID, frFCSDID   *int32
-			frStateID          *int16
+			fcID                                                     int32
+			fcName                                                   string
+			fcSDID                                                   int32
+			fcStateID                                                int16
+			frID, frElectionID                                       *int64
+			frFCID, frFCSDID                                         *int32
+			frStateID                                                *int16
 			frAccredited, frVotesCast, frValidVotes, frRejectedVotes *int32
-			frCandidateResults                                         []byte
-			frCreatedAt, frUpdatedAt                                   *time.Time
+			frCandidateResults                                       []byte
+			frCreatedAt, frUpdatedAt                                 *time.Time
 		)
 		if err := rows.Scan(
 			&fcID, &fcName, &fcSDID, &fcStateID,
@@ -555,38 +555,38 @@ func (h *Handler) GetStateConstituenciesWithResults(w http.ResponseWriter, r *ht
 		UpdatedAt           *time.Time      `json:"updated_at"`
 	}
 	type Row struct {
-		ID                                   int32   `json:"id"`
-		Name                                 string  `json:"name"`
-		Code                                 string  `json:"code"`
-		LgaID                                int32   `json:"lga_id"`
-		LgaName                              string  `json:"lga_name"`
-		StateID                              int32   `json:"state_id"`
-		StateName                            string  `json:"state_name"`
-		SenatorialDistrictID                 *int32  `json:"senatorial_district_id,omitempty"`
-		FederalConstituencyID                *int32  `json:"federal_constituency_id,omitempty"`
-		ElectionStateConstituencyFinalResult *SCFR   `json:"election_state_constituency_final_result"`
+		ID                                   int32  `json:"id"`
+		Name                                 string `json:"name"`
+		Code                                 string `json:"code"`
+		LgaID                                int32  `json:"lga_id"`
+		LgaName                              string `json:"lga_name"`
+		StateID                              int32  `json:"state_id"`
+		StateName                            string `json:"state_name"`
+		SenatorialDistrictID                 *int32 `json:"senatorial_district_id,omitempty"`
+		FederalConstituencyID                *int32 `json:"federal_constituency_id,omitempty"`
+		ElectionStateConstituencyFinalResult *SCFR  `json:"election_state_constituency_final_result"`
 	}
 
 	var results []Row
 	var lastID int32
 	for rows.Next() {
 		var (
-			scID        int32
-			scName      string
-			scCode      *string
-			scLgaID     int32
-			scLgaName   string
-			scStateID   int32
-			scStateName string
-			scSDID      *int32
-			scFCID      *int32
-			frID, frElectionID *int64
-			frSCID             *int32
-			frStateID          *int16
+			scID                                                     int32
+			scName                                                   string
+			scCode                                                   *string
+			scLgaID                                                  int32
+			scLgaName                                                string
+			scStateID                                                int32
+			scStateName                                              string
+			scSDID                                                   *int32
+			scFCID                                                   *int32
+			frID, frElectionID                                       *int64
+			frSCID                                                   *int32
+			frStateID                                                *int16
 			frAccredited, frVotesCast, frValidVotes, frRejectedVotes *int32
-			frCandidateResults                                         []byte
-			frWardsCounted, frTotalWards                               *int32
-			frCreatedAt, frUpdatedAt                                   *time.Time
+			frCandidateResults                                       []byte
+			frWardsCounted, frTotalWards                             *int32
+			frCreatedAt, frUpdatedAt                                 *time.Time
 		)
 		if err := rows.Scan(
 			&scID, &scName, &scCode, &scLgaID, &scLgaName, &scStateID, &scStateName,
@@ -604,14 +604,14 @@ func (h *Handler) GetStateConstituenciesWithResults(w http.ResponseWriter, r *ht
 			codeStr = *scCode
 		}
 		row := Row{
-			ID:                   scID,
-			Name:                 scName,
-			Code:                 codeStr,
-			LgaID:                scLgaID,
-			LgaName:              scLgaName,
-			StateID:              scStateID,
-			StateName:            scStateName,
-			SenatorialDistrictID: scSDID,
+			ID:                    scID,
+			Name:                  scName,
+			Code:                  codeStr,
+			LgaID:                 scLgaID,
+			LgaName:               scLgaName,
+			StateID:               scStateID,
+			StateName:             scStateName,
+			SenatorialDistrictID:  scSDID,
 			FederalConstituencyID: scFCID,
 		}
 		if frID != nil {
@@ -722,27 +722,27 @@ func (h *Handler) GetLGAsWithResults(w http.ResponseWriter, r *http.Request) {
 		UpdatedAt        *time.Time      `json:"updated_at"`
 	}
 	type Row struct {
-		ID                    int32   `json:"id"`
-		Name                  string  `json:"name"`
-		StateID               int16   `json:"state_id"`
-		FederalConstituencyID int32   `json:"federal_constituency_id"`
-		ElectionLgaFinalResult        *LGAFR  `json:"election_lga_final_result"`
+		ID                     int32  `json:"id"`
+		Name                   string `json:"name"`
+		StateID                int16  `json:"state_id"`
+		FederalConstituencyID  int32  `json:"federal_constituency_id"`
+		ElectionLgaFinalResult *LGAFR `json:"election_lga_final_result"`
 	}
 
 	var results []Row
 	var lastID int32
 	for rows.Next() {
 		var (
-			lID      int32
-			lName    string
-			lStateID int16
-			lFCID    int32
-			frID, frElectionID *int64
-			frLgaID            *int32
-			frStateID          *int16
+			lID                                                      int32
+			lName                                                    string
+			lStateID                                                 int16
+			lFCID                                                    int32
+			frID, frElectionID                                       *int64
+			frLgaID                                                  *int32
+			frStateID                                                *int16
 			frAccredited, frVotesCast, frValidVotes, frRejectedVotes *int32
-			frCandidateResults                                         []byte
-			frCreatedAt, frUpdatedAt                                   *time.Time
+			frCandidateResults                                       []byte
+			frCreatedAt, frUpdatedAt                                 *time.Time
 		)
 		if err := rows.Scan(
 			&lID, &lName, &lStateID, &lFCID,
@@ -861,29 +861,29 @@ func (h *Handler) GetWardsWithResults(w http.ResponseWriter, r *http.Request) {
 		UpdatedAt        *time.Time      `json:"updated_at"`
 	}
 	type Row struct {
-		ID                            int32   `json:"id"`
-		Name                          string  `json:"name"`
-		LgaID                         *int32  `json:"lga_id"`
-		StateID                       int16   `json:"state_id"`
-		StateConstituencyID   *int32  `json:"state_constituency_id"`
-		ElectionWardFinalResult               *WardFR `json:"election_ward_final_result"`
+		ID                      int32   `json:"id"`
+		Name                    string  `json:"name"`
+		LgaID                   *int32  `json:"lga_id"`
+		StateID                 int16   `json:"state_id"`
+		StateConstituencyID     *int32  `json:"state_constituency_id"`
+		ElectionWardFinalResult *WardFR `json:"election_ward_final_result"`
 	}
 
 	var results []Row
 	var lastID int32
 	for rows.Next() {
 		var (
-			wID      int32
-			wName    string
-			wLgaID   *int32
-			wStateID int16
-			wSACID   *int32
-			frID, frElectionID      *int64
-			frWardID, frLgaID       *int32
-			frStateID               *int16
+			wID                                                      int32
+			wName                                                    string
+			wLgaID                                                   *int32
+			wStateID                                                 int16
+			wSACID                                                   *int32
+			frID, frElectionID                                       *int64
+			frWardID, frLgaID                                        *int32
+			frStateID                                                *int16
 			frAccredited, frVotesCast, frValidVotes, frRejectedVotes *int32
-			frCandidateResults                                         []byte
-			frCreatedAt, frUpdatedAt                                   *time.Time
+			frCandidateResults                                       []byte
+			frCreatedAt, frUpdatedAt                                 *time.Time
 		)
 		if err := rows.Scan(
 			&wID, &wName, &wLgaID, &wStateID, &wSACID,
@@ -990,11 +990,11 @@ func (h *Handler) GetPollingUnitsWithResults(w http.ResponseWriter, r *http.Requ
 		UpdatedAt        *time.Time      `json:"updated_at"`
 	}
 	type Row struct {
-		ID                     int32  `json:"id"`
-		Name                   string `json:"name"`
-		WardID                 int32  `json:"ward_id"`
-		LgaID                  *int32 `json:"lga_id"`
-		StateID                *int16 `json:"state_id"`
+		ID                             int32  `json:"id"`
+		Name                           string `json:"name"`
+		WardID                         int32  `json:"ward_id"`
+		LgaID                          *int32 `json:"lga_id"`
+		StateID                        *int16 `json:"state_id"`
 		ElectionPollingUnitFinalResult *PUFR  `json:"polling_unit_final_result"`
 	}
 
@@ -1002,18 +1002,18 @@ func (h *Handler) GetPollingUnitsWithResults(w http.ResponseWriter, r *http.Requ
 	var lastID int32
 	for rows.Next() {
 		var (
-			puID      int32
-			puName    string
-			puWardID  int32
-			puLgaID   *int32
-			puStateID *int16
-			frID, frElectionID   *int64
-			frPUID, frWardID     *int32
-			frLgaID              *int32
-			frStateID            *int16
+			puID                                                     int32
+			puName                                                   string
+			puWardID                                                 int32
+			puLgaID                                                  *int32
+			puStateID                                                *int16
+			frID, frElectionID                                       *int64
+			frPUID, frWardID                                         *int32
+			frLgaID                                                  *int32
+			frStateID                                                *int16
 			frAccredited, frVotesCast, frValidVotes, frRejectedVotes *int32
-			frCandidateResults                                         []byte
-			frCreatedAt, frUpdatedAt                                   *time.Time
+			frCandidateResults                                       []byte
+			frCreatedAt, frUpdatedAt                                 *time.Time
 		)
 		if err := rows.Scan(
 			&puID, &puName, &puWardID, &puLgaID, &puStateID,
@@ -1121,62 +1121,8 @@ func (h *Handler) loadPartyAndCandidateMetadata(ctx context.Context, electionID 
 	}
 
 	var contestingPartyShortNames []string
-	var contestingJSON []byte
-	if err := h.pool.QueryRow(ctx, "SELECT contesting_parties FROM elections WHERE id = $1", electionID).Scan(&contestingJSON); err == nil && len(contestingJSON) > 0 {
-		var rawList []map[string]interface{}
-		if err := json.Unmarshal(contestingJSON, &rawList); err == nil {
-			for _, p := range rawList {
-				sn, _ := p["party_short_name"].(string)
-				if sn == "" {
-					sn, _ = p["short_name"].(string)
-				}
-				cleanSN := strings.TrimSpace(sn)
-				if cleanSN != "" {
-					contestingPartyShortNames = append(contestingPartyShortNames, cleanSN)
-					pUpper := strings.ToUpper(cleanSN)
-					if existing, found := partiesMap[pUpper]; !found || existing.Name == "" || existing.Logo == "" {
-						var pID int16
-						if idVal, ok := p["party_id"].(float64); ok {
-							pID = int16(idVal)
-						} else if idVal, ok := p["id"].(float64); ok {
-							pID = int16(idVal)
-						} else if found {
-							pID = existing.ID
-						}
-						pName, _ := p["party_name"].(string)
-						if pName == "" {
-							pName, _ = p["name"].(string)
-						}
-						if pName == "" && found {
-							pName = existing.Name
-						}
-						pLogo, _ := p["party_logo"].(string)
-						if pLogo == "" {
-							pLogo, _ = p["logo"].(string)
-						}
-						if pLogo == "" && found {
-							pLogo = existing.Logo
-						}
-						pColor, _ := p["color_hex"].(string)
-						if pColor == "" && found {
-							pColor = existing.ColorHex
-						}
-						pDarkColor, _ := p["dark_color_hex"].(string)
-						if pDarkColor == "" && found {
-							pDarkColor = existing.DarkColorHex
-						}
-						partiesMap[pUpper] = PartyDetail{
-							ID:           pID,
-							ShortName:    cleanSN,
-							Name:         pName,
-							Logo:         pLogo,
-							ColorHex:     pColor,
-							DarkColorHex: pDarkColor,
-						}
-					}
-				}
-			}
-		}
+	for partyShort := range candidatesMap {
+		contestingPartyShortNames = append(contestingPartyShortNames, partyShort)
 	}
 
 	if len(contestingPartyShortNames) == 0 {
@@ -1203,44 +1149,44 @@ func buildDefaultCandidateResults(
 		}
 		seen[pUpper] = true
 
-		var candPtr *CandidateDetail
-		if cand, ok := candidatesMap[pUpper]; ok {
-			candCopy := cand
-			candPtr = &candCopy
+		var candidate *CandidateDetail
+		if cd, ok := candidatesMap[pUpper]; ok {
+			candidateCopy := cd
+			candidate = &candidateCopy
 		}
 
-		var partyPtr *PartyDetail
+		var party *PartyDetail
 		var colorHex, darkColorHex string
 		if pDetail, ok := partiesMap[pUpper]; ok {
 			pCopy := pDetail
-			partyPtr = &pCopy
+			party = &pCopy
 			colorHex = pDetail.ColorHex
 			darkColorHex = pDetail.DarkColorHex
 		} else {
-			partyPtr = &PartyDetail{
+			party = &PartyDetail{
 				ShortName: pShort,
 				Name:      pShort,
 			}
 		}
 
-		var candName, candAvatar string
-		if candPtr != nil && candPtr.Name != "" {
-			candName = candPtr.Name
-			candAvatar = candPtr.Avatar
-			if candAvatar == "" && partyPtr != nil {
-				candAvatar = partyPtr.Logo
+		var candidateName, candidateAvatar string
+		if candidate != nil && candidate.Name != "" {
+			candidateName = candidate.Name
+			candidateAvatar = candidate.Avatar
+			if candidateAvatar == "" && party != nil {
+				candidateAvatar = party.Logo
 			}
-		} else if partyPtr != nil {
-			candName = partyPtr.Name
-			candAvatar = partyPtr.Logo
+		} else if party != nil {
+			candidateName = party.Name
+			candidateAvatar = party.Logo
 		}
 
 		item := map[string]interface{}{
 			"party_short_name":                     pShort,
-			"party_name":                           partyPtr.Name,
-			"party_logo":                           partyPtr.Logo,
-			"candidate_name":                       candName,
-			"candidate_avatar":                     candAvatar,
+			"party_name":                           party.Name,
+			"party_logo":                           party.Logo,
+			"candidate_name":                       candidateName,
+			"candidate_avatar":                     candidateAvatar,
 			"color_hex":                            colorHex,
 			"dark_color_hex":                       darkColorHex,
 			"vote_count":                           0,
@@ -1252,8 +1198,8 @@ func buildDefaultCandidateResults(
 			"federal_constituencies_winning_count": 0,
 			"senatorial_districts_winning_count":   0,
 			"states_winning_count":                 0,
-			"candidate":                            candPtr,
-			"party":                                partyPtr,
+			"candidate":                            candidate,
+			"party":                                party,
 		}
 		list = append(list, item)
 	}
@@ -1280,43 +1226,43 @@ func enrichCandidateList(
 		partyShortName, _ := item["party_short_name"].(string)
 		pUpper := strings.ToUpper(strings.TrimSpace(partyShortName))
 
-		var candPtr *CandidateDetail
+		var candidate *CandidateDetail
 		if cand, ok := candidatesMap[pUpper]; ok {
-			candCopy := cand
-			candPtr = &candCopy
+			candidateCopy := cand
+			candidate = &candidateCopy
 		}
-		item["candidate"] = candPtr
+		item["candidate"] = candidate
 
-		var partyPtr *PartyDetail
+		var party *PartyDetail
 		if pDetail, ok := partiesMap[pUpper]; ok {
 			pCopy := pDetail
-			partyPtr = &pCopy
+			party = &pCopy
 			item["color_hex"] = pDetail.ColorHex
 			item["dark_color_hex"] = pDetail.DarkColorHex
 		} else if partyShortName != "" {
-			partyPtr = &PartyDetail{
+			party = &PartyDetail{
 				ShortName: partyShortName,
 				Name:      partyShortName,
 			}
 		}
-		item["party"] = partyPtr
+		item["party"] = party
 
-		var candName, candAvatar string
-		if candPtr != nil && candPtr.Name != "" {
-			candName = candPtr.Name
-			candAvatar = candPtr.Avatar
-			if candAvatar == "" && partyPtr != nil {
-				candAvatar = partyPtr.Logo
+		var candidateName, candidateAvatar string
+		if candidate != nil && candidate.Name != "" {
+			candidateName = candidate.Name
+			candidateAvatar = candidate.Avatar
+			if candidateAvatar == "" && party != nil {
+				candidateAvatar = party.Logo
 			}
-		} else if partyPtr != nil {
-			candName = partyPtr.Name
-			candAvatar = partyPtr.Logo
+		} else if party != nil {
+			candidateName = party.Name
+			candidateAvatar = party.Logo
 		}
-		item["candidate_name"] = candName
-		item["candidate_avatar"] = candAvatar
-		if partyPtr != nil {
-			item["party_name"] = partyPtr.Name
-			item["party_logo"] = partyPtr.Logo
+		item["candidate_name"] = candidateName
+		item["candidate_avatar"] = candidateAvatar
+		if party != nil {
+			item["party_name"] = party.Name
+			item["party_logo"] = party.Logo
 		}
 	}
 	return items
@@ -1840,5 +1786,3 @@ func (h *Handler) GetElectoralUnitsBreakdown(w http.ResponseWriter, r *http.Requ
 		"total":      len(units),
 	})
 }
-
-

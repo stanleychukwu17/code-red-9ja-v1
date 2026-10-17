@@ -46,13 +46,16 @@ export const BodiesDropdown = ({ className }: BodiesDropdownProps) => {
 
   // Polls backend sync status periodically and keeps the toast notification updated
   const pollSyncProgress = (initialStep?: string) => {
+    // Use a fixed ID so the same toast is updated in-place rather than stacking
     const toastId = "bodies-sync-toast";
     toast.loading(initialStep || "Syncing electoral units in background...", { id: toastId });
 
+    // Clear any previous interval before starting a new one
     if (pollIntervalRef.current) {
       clearInterval(pollIntervalRef.current);
     }
 
+    // Poll backend status every 4 seconds
     pollIntervalRef.current = setInterval(async () => {
       try {
         const res = await getSyncStatus();
@@ -60,16 +63,20 @@ export const BodiesDropdown = ({ className }: BodiesDropdownProps) => {
         if (!status) return;
 
         if (status.is_running) {
+          // Sync is still in progress: update the toast with the active step
           toast.loading(status.current_step || "Syncing electoral units in background...", {
             id: toastId,
           });
         } else {
+          // Sync finished: stop polling
           if (pollIntervalRef.current) {
             clearInterval(pollIntervalRef.current);
             pollIntervalRef.current = null;
           }
+          // Invalidate React Query caches so UI updates with fresh electoral data
           invalidateAllBodies();
 
+          // Show final result (error or success summary with PU count and duration)
           if (status.error) {
             toast.error(`Sync finished with error: ${status.error}`, {
               id: toastId,
@@ -90,7 +97,7 @@ export const BodiesDropdown = ({ className }: BodiesDropdownProps) => {
           }
         }
       } catch {
-        // Suppress transient network poll errors
+        // Suppress transient network poll errors to keep polling alive
       }
     }, 4000);
   };
@@ -98,9 +105,11 @@ export const BodiesDropdown = ({ className }: BodiesDropdownProps) => {
   // Check on mount if a synchronization job is already running from before
   useEffect(() => {
     let isMounted = true;
+
     getSyncStatus().then((res) => {
       if (!isMounted) return;
       const status = res?.data?.status;
+
       if (status?.is_running) {
         pollSyncProgress(status.current_step);
       }
@@ -108,6 +117,7 @@ export const BodiesDropdown = ({ className }: BodiesDropdownProps) => {
 
     return () => {
       isMounted = false;
+
       if (pollIntervalRef.current) {
         clearInterval(pollIntervalRef.current);
       }
@@ -160,29 +170,35 @@ export const BodiesDropdown = ({ className }: BodiesDropdownProps) => {
     });
   };
 
+  // Triggers the standard background electoral units sync and starts live progress polling
   const handleSyncElectoralUnits = async () => {
+    // Close the dropdown immediately so user can continue interacting with the page
     setOpenMenu(false);
+
     try {
+      // Dispatch API request to kick off the background sync job
       const res = await syncMutation.mutateAsync();
       const status = res?.data?.status;
+
+      // Start polling backend every 4s to track progress and update the toast notification
       pollSyncProgress(status?.current_step || "Starting electoral units sync...");
     } catch (error: any) {
       toast.error(error?.message || "Failed to start electoral units sync");
     }
   };
 
+  // Triggers the state-by-state hierarchy background sync and starts live progress polling
   const handleSyncElectoralUnitsStateFlow = async () => {
+    // Close the dropdown immediately
     setOpenMenu(false);
     try {
+      // Dispatch API request to kick off the state-flow background sync job
       const res = await syncStateFlowMutation.mutateAsync();
       const status = res?.data?.status;
-      pollSyncProgress(
-        status?.current_step || "Starting electoral units sync (State Flow)..."
-      );
+      // Start polling backend every 4s to track progress and update the toast notification
+      pollSyncProgress(status?.current_step || "Starting electoral units sync (State Flow)...");
     } catch (error: any) {
-      toast.error(
-        error?.message || "Failed to start electoral units sync (State Flow)"
-      );
+      toast.error(error?.message || "Failed to start electoral units sync (State Flow)");
     }
   };
 

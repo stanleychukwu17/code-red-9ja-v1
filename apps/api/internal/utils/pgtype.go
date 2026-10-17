@@ -56,6 +56,16 @@ func PgDateFromPtr(dateStr *string) pgtype.Date {
 	return pgtype.Date{}
 }
 
+// PgDateFromString parses an optional date string (YYYY-MM-DD) into a pgtype.Date.
+func PgDateFromString(dateStr string) pgtype.Date {
+	if dateStr != "" {
+		if t, err := time.Parse("2006-01-02", dateStr); err == nil {
+			return pgtype.Date{Time: t, Valid: true}
+		}
+	}
+	return pgtype.Date{}
+}
+
 // PtrFromPgText converts a pgtype.Text to an optional string pointer.
 func PtrFromPgText(t pgtype.Text) *string {
 	if t.Valid && t.String != "" {

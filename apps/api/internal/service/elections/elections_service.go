@@ -10,6 +10,7 @@ import (
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/utils"
 	"free9ja/api/internal/worker"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -837,9 +838,24 @@ func (s *ElectionsService) GetElectionByID(ctx context.Context, id int32) (queri
 	return el, nil
 }
 
-// ListElections returns paginated election instances in the system using keyset cursor pagination.
+// ListElectionsFilter defines the filtering and pagination criteria for listing elections.
+type ListElectionsFilter struct {
+	Limit            int32
+	Cursor           int64
+	Search           string
+	ElectionGroupIDs []int32
+	Scopes           []string
+	Statuses         []string
+	StateIDs         []int16
+	OfficeIDs        []int16
+	DateFrom         string
+	DateTo           string
+}
+
+// ListElections returns paginated election instances in the system using keyset cursor pagination and optional multi-criteria filters.
 // Each row includes joined office and election group metadata.
-func (s *ElectionsService) ListElections(ctx context.Context, limit int32, cursor int64) ([]queries.ListElectionInstancesRow, error) {
+func (s *ElectionsService) ListElections(ctx context.Context, filter ListElectionsFilter) ([]queries.ListElectionInstancesRow, error) {
+	limit := filter.Limit
 	if limit <= 0 {
 		limit = 20
 	}
@@ -851,18 +867,30 @@ func (s *ElectionsService) ListElections(ctx context.Context, limit int32, curso
 	var cursorID int32
 
 	// If cursor is provided, fetch its election_date and id to seek the next page
-	if cursor > 0 {
-		cursorEl, err := s.queries.GetElectionInstanceByID(ctx, int32(cursor))
+	if filter.Cursor > 0 {
+		cursorEl, err := s.queries.GetElectionInstanceByID(ctx, int32(filter.Cursor))
 		if err == nil {
 			cursorElectionDate = cursorEl.ElectionDate
 			cursorID = cursorEl.ID
 		}
 	}
 
+	search := utils.PgTextFromString(strings.TrimSpace(filter.Search))
+	dateFrom := utils.PgDateFromString(filter.DateFrom)
+	dateTo := utils.PgDateFromString(filter.DateTo)
+
 	// Fetch limit + 1 to determine if there are more records
 	params := queries.ListElectionInstancesParams{
 		CursorElectionDate: cursorElectionDate,
 		CursorID:           cursorID,
+		Search:             search,
+		ElectionGroupIds:   filter.ElectionGroupIDs,
+		Scopes:             filter.Scopes,
+		Statuses:           filter.Statuses,
+		StateIds:           filter.StateIDs,
+		OfficeIds:          filter.OfficeIDs,
+		DateFrom:           dateFrom,
+		DateTo:             dateTo,
 		LimitCount:         limit + 1,
 	}
 

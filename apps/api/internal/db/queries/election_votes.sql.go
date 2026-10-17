@@ -102,7 +102,7 @@ func (q *Queries) DeleteUserVotesByElectionGroup(ctx context.Context, arg Delete
 }
 
 const getEligibleElectionsForPollingUnit = `-- name: GetEligibleElectionsForPollingUnit :many
-SELECT e.id, e.election_group_id, e.state_id, e.senatorial_district_id, e.federal_constituency_id, e.state_constituency_id, e.lga_id, e.ward_id, e.office_id, e.name, e.election_date, e.scope, e.status, e.reports_count, e.updates_count, e.results_submitted_count, e.contesting_parties, e.created_at, e.updated_at
+SELECT e.id, e.election_group_id, e.state_id, e.senatorial_district_id, e.federal_constituency_id, e.state_constituency_id, e.lga_id, e.ward_id, e.office_id, e.name, e.election_date, e.scope, e.status, e.reports_count, e.updates_count, e.results_submitted_count, e.created_at, e.updated_at
 FROM elections e
 JOIN offices o ON e.office_id = o.id
 JOIN polling_units pu ON pu.id = $2
@@ -152,7 +152,6 @@ func (q *Queries) GetEligibleElectionsForPollingUnit(ctx context.Context, arg Ge
 			&i.ReportsCount,
 			&i.UpdatesCount,
 			&i.ResultsSubmittedCount,
-			&i.ContestingParties,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {

@@ -84,7 +84,7 @@ function RouteComponent() {
 
   const fetchElectionsWrapper = async (egId: number) => {
     const res = await getElections({
-      data: { election_group_id: egId, limit: 100 },
+      data: { election_group_ids: [egId], limit: 100 },
     });
     return res?.data?.elections || [];
   };
