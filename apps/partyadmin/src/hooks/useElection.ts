@@ -40,7 +40,7 @@ export const isBeforeEndOfDay = (): boolean => {
 };
 
 /**
- * Hook providing global election state, geographic electoral scopes,
+ * Pure hook providing global election state, geographic electoral scopes,
  * active contest selections, and dispatch actions from Redux.
  */
 export const useElection = () => {

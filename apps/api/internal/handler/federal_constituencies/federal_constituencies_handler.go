@@ -348,16 +348,19 @@ func parseOptionalQueryInt(r *http.Request, param string) int32 {
 // @Failure      500                     {string}  failed to fetch constituencies
 // @Router       /federal-constituencies [get]
 func (h *Handler) GetFederalConstituencies(w http.ResponseWriter, r *http.Request) {
+	// Parse optional filter and pagination parameters (allowing up to 500 limit)
 	stateID := parseOptionalQueryInt(r, "state_id")
 	senatorialDistrictID := parseOptionalQueryInt(r, "senatorial_district_id")
 	limit, cursor := parsePaginationParamsWithMax(r, 500)
 
+	// Fetch cached or database constituencies matching geographic filters
 	constituencies, err := h.federalConstituenciesService.GetFederalConstituencies(r.Context(), stateID, senatorialDistrictID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch federal constituencies: "+err.Error())
 		return
 	}
 
+	// Apply case-insensitive text search across name, code, state name, and senatorial district
 	search := strings.TrimSpace(r.URL.Query().Get("search"))
 	if search != "" {
 		searchLower := strings.ToLower(search)
@@ -377,6 +380,7 @@ func (h *Handler) GetFederalConstituencies(w http.ResponseWriter, r *http.Reques
 		constituencies = filtered
 	}
 
+	// Locate start position based on cursor ID
 	startIndex := 0
 	if cursor > 0 {
 		for i, c := range constituencies {
@@ -387,6 +391,7 @@ func (h *Handler) GetFederalConstituencies(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
+	// Paginate the in-memory slice and compute next cursor
 	var paginated []queries.FederalConstituency
 	hasMore := false
 	nextCursor := ""
@@ -405,6 +410,7 @@ func (h *Handler) GetFederalConstituencies(w http.ResponseWriter, r *http.Reques
 		paginated = []queries.FederalConstituency{}
 	}
 
+	// Return response envelope with paginated items and cursor metadata
 	h.utils.RespondSuccess(w, http.StatusOK, "Federal constituencies fetched successfully", map[string]interface{}{
 		"constituencies": paginated,
 		"meta": map[string]interface{}{

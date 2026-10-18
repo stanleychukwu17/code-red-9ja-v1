@@ -975,56 +975,6 @@ func (q *Queries) GetPollingUnits(ctx context.Context, arg GetPollingUnitsParams
 	return items, nil
 }
 
-const getPollingUnitsByWardID = `-- name: GetPollingUnitsByWardID :many
-SELECT id, name, code, pu_code, registration_area_id, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, state_constituency_id, state_constituency_name, lga_id, lga_name, ward_id, ward_name, latitude, longitude, precise_location, formatted_address, google_place_id, status FROM polling_units
-WHERE ward_id = $1::int
-ORDER BY name ASC
-`
-
-func (q *Queries) GetPollingUnitsByWardID(ctx context.Context, wardID int32) ([]PollingUnit, error) {
-	rows, err := q.db.Query(ctx, getPollingUnitsByWardID, wardID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []PollingUnit
-	for rows.Next() {
-		var i PollingUnit
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.Code,
-			&i.PuCode,
-			&i.RegistrationAreaID,
-			&i.StateID,
-			&i.StateName,
-			&i.SenatorialDistrictID,
-			&i.SenatorialDistrictName,
-			&i.FederalConstituencyID,
-			&i.FederalConstituencyName,
-			&i.StateConstituencyID,
-			&i.StateConstituencyName,
-			&i.LgaID,
-			&i.LgaName,
-			&i.WardID,
-			&i.WardName,
-			&i.Latitude,
-			&i.Longitude,
-			&i.PreciseLocation,
-			&i.FormattedAddress,
-			&i.GooglePlaceID,
-			&i.Status,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getPollingUnitsPaginated = `-- name: GetPollingUnitsPaginated :many
 SELECT id, name, code, pu_code, registration_area_id, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, state_constituency_id, state_constituency_name, lga_id, lga_name, ward_id, ward_name, latitude, longitude, precise_location, formatted_address, google_place_id, status FROM polling_units
 WHERE ($1::int = 0 OR ward_id = $1::int)

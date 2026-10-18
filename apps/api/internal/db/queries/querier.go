@@ -290,7 +290,6 @@ type Querier interface {
 	GetPollingUnitResult(ctx context.Context, id int64) (PollingUnitResult, error)
 	GetPollingUnitResultByUserAndElection(ctx context.Context, arg GetPollingUnitResultByUserAndElectionParams) (PollingUnitResult, error)
 	GetPollingUnits(ctx context.Context, arg GetPollingUnitsParams) ([]PollingUnit, error)
-	GetPollingUnitsByWardID(ctx context.Context, wardID int32) ([]PollingUnit, error)
 	GetPollingUnitsPaginated(ctx context.Context, arg GetPollingUnitsPaginatedParams) ([]PollingUnit, error)
 	GetPollingUnitsWithAgentCounts(ctx context.Context, arg GetPollingUnitsWithAgentCountsParams) ([]GetPollingUnitsWithAgentCountsRow, error)
 	GetPollingUnitsWithPartyCount(ctx context.Context, arg GetPollingUnitsWithPartyCountParams) ([]GetPollingUnitsWithPartyCountRow, error)

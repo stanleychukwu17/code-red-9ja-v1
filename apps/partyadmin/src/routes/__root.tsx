@@ -26,7 +26,6 @@ import { getUserDetailsCookie } from "@/lib/server/auth/auth";
 import { getSitePreference } from "@/lib/server/sitePreference";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import LoadVisitorDetails from "#/components/LoadVisitorDetails";
-import LoadElectionSession from "#/components/LoadElectionSession";
 
 /**
  * Self-executing theme script injected in <head> to read stored theme from localStorage
@@ -67,7 +66,13 @@ function RootLayout() {
   );
 }
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 /**
  * RootDocument Shell
@@ -91,7 +96,6 @@ function RootDocument({ children }: { children: React.ReactNode }) {
               <LoadSitePreference sitePreference={sitePreference} />
               <LoadAuthSession />
               <LoadVisitorDetails />
-              <LoadElectionSession />
             </ClientOnly>
             {children}
           </QueryClientProvider>

@@ -21,7 +21,6 @@ type PollingUnitsService interface {
 	GetPollingUnitByID(ctx context.Context, id int32) (queries.PollingUnit, error)
 	UpdatePollingUnit(ctx context.Context, arg queries.UpdatePollingUnitParams) (queries.PollingUnit, error)
 	DeletePollingUnit(ctx context.Context, id int32) error
-	GetPollingUnitsByWardID(ctx context.Context, wardID int32) ([]queries.PollingUnit, error)
 	GetPollingUnitsPaginated(ctx context.Context, arg queries.GetPollingUnitsPaginatedParams) ([]queries.PollingUnit, error)
 	GetPollingUnits(ctx context.Context, arg queries.GetPollingUnitsParams) ([]queries.PollingUnit, error)
 	GetPollingUnitsWithCapacity(ctx context.Context, wardID, localGovernmentID, stateID int32, partyID int16, electionGroupID int32) ([]pollingunitsservice.PollingUnitWithCapacity, error)

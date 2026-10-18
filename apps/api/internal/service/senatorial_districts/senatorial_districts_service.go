@@ -62,8 +62,8 @@ func (s *SenatorialDistrictsService) CreateSenatorialDistrict(ctx context.Contex
 		return queries.SenatorialDistrict{}, err
 	}
 
-	// Invalidate cached senatorial districts for the state
-	s.invalidateCache(ctx, params.StateID)
+	// Invalidate cached senatorial districts for the state and nationwide
+	s.invalidateCache(ctx, params.StateID, sd.ID)
 
 	return sd, nil
 }
@@ -138,13 +138,20 @@ func (s *SenatorialDistrictsService) DeleteSenatorialDistrict(ctx context.Contex
 	return nil
 }
 
-// GetSenatorialDistricts retrieves all senatorial districts for a state, utilizing Redis cache when available.
+// GetSenatorialDistricts retrieves all senatorial districts for a state or nationwide, utilizing Redis cache when available.
 func (s *SenatorialDistrictsService) GetSenatorialDistricts(ctx context.Context, stateID int32) ([]queries.SenatorialDistrict, error) {
 	type Response struct {
 		Districts []queries.SenatorialDistrict `json:"districts"`
 	}
 
-	redisKey := fmt.Sprintf("%s%d", db.RedisSenatorialDistrictsByState, stateID)
+	// Determine cache key: state-specific list or nationwide all list
+	var redisKey string
+	if stateID > 0 {
+		redisKey = fmt.Sprintf("%s%d", db.RedisSenatorialDistrictsByState, stateID)
+	} else {
+		redisKey = db.RedisSenatorialDistrictsAll
+	}
+
 	data, err := s.rdb.Get(ctx, redisKey).Result()
 	switch err {
 	case redis.Nil:
@@ -180,14 +187,10 @@ func (s *SenatorialDistrictsService) invalidateCache(ctx context.Context, stateI
 	}
 
 	// Invalidate state-level district list cache
-	redisKey := fmt.Sprintf("%s%d", db.RedisSenatorialDistrictsByState, stateID)
-	s.rdb.Del(ctx, redisKey)
-
-	// Invalidate national/all-districts list cache (state:0)
-	if stateID != 0 {
-		s.rdb.Del(ctx, fmt.Sprintf("%s0", db.RedisSenatorialDistrictsByState))
+	if stateID > 0 {
+		s.rdb.Del(ctx, fmt.Sprintf("%s%d", db.RedisSenatorialDistrictsByState, stateID))
 	}
 
-	// Invalidate national metrics cache
-	s.rdb.Del(ctx, db.RedisNationalMetrics)
+	// Invalidate national/all-districts list cache and national metrics
+	s.rdb.Del(ctx, db.RedisSenatorialDistrictsAll, db.RedisNationalMetrics)
 }

@@ -35,9 +35,11 @@ function RouteComponent() {
       const res = await getFederalConstituencies({
         data: { limit: 30, cursor: pageParam, search: debouncedSearchQuery || undefined },
       });
+
       if (res && res.success && res.data) {
         return res;
       }
+
       throw new Error(
         res?.message || "Failed to fetch federal constituencies",
       );
@@ -49,6 +51,7 @@ function RouteComponent() {
       }
       return undefined;
     },
+    staleTime: Infinity,
     refetchOnWindowFocus: false,
   });
 

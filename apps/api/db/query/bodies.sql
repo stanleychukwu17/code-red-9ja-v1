@@ -67,10 +67,6 @@ WHERE (sqlc.arg(ward_id)::int = 0 OR ward_id = sqlc.arg(ward_id))
   AND (sqlc.narg(state_constituency_id)::int IS NULL OR state_constituency_id = sqlc.narg(state_constituency_id))
 ORDER BY name ASC;
 
--- name: GetPollingUnitsByWardID :many
-SELECT * FROM polling_units
-WHERE ward_id = sqlc.arg('ward_id')::int
-ORDER BY name ASC;
 
 -- name: GetPollingUnitsPaginated :many
 SELECT * FROM polling_units

@@ -88,12 +88,16 @@ const (
 	RedisEachFederalConstituency      = "bodies:each_federal_constituency:"
 	RedisEachStateConstituency        = "bodies:each_state_constituency:"
 	RedisEachPollingUnit              = "bodies:each_polling_unit:"
-	RedisSenatorialDistrictsByState   = "bodies:senatorial_districts:state:"   // STRING: "bodies:senatorial_districts:state:<stateID>"
-	RedisFederalConstituenciesByState = "bodies:federal_constituencies:state:" // STRING: "bodies:federal_constituencies:state:<stateID>:<senatorialDistrictID>"
-	RedisStateConstituenciesByState   = "bodies:state_constituencies:state:"   // STRING: "bodies:state_constituencies:state:<stateID>:<federalConstituencyID>"
+	RedisSenatorialDistrictsAll       = "bodies:senatorial_districts:all"            // STRING: "bodies:senatorial_districts:all"
+	RedisSenatorialDistrictsByState   = "bodies:senatorial_districts:state:"        // STRING: "bodies:senatorial_districts:state:<stateID>"
+	RedisFederalConstituenciesAll          = "bodies:federal_constituencies:all"          // STRING: "bodies:federal_constituencies:all"
+	RedisFederalConstituenciesByState      = "bodies:federal_constituencies:state:"      // STRING: "bodies:federal_constituencies:state:<stateID>"
+	RedisFederalConstituenciesBySenatorial = "bodies:federal_constituencies:senatorial:" // STRING: "bodies:federal_constituencies:senatorial:<senatorialDistrictID>"
+	RedisStateConstituenciesByState        = "bodies:state_constituencies:state:"        // STRING: "bodies:state_constituencies:state:<stateID>:<federalConstituencyID>"
 	RedisLGAsByState                  = "bodies:lgas:state:"                  // STRING: "bodies:lgas:state:<stateID>"
 	RedisWardsByLGA                   = "bodies:wards:lga:"                   // STRING: "bodies:wards:lga:<lgaID>:<stateID>"
 	RedisPollingUnitsByWard           = "bodies:polling_units:ward:"           // STRING: "bodies:polling_units:ward:<wardID>"
+	RedisPollingUnitsByLGA            = "bodies:polling_units:lga:"            // STRING: "bodies:polling_units:lga:<lgaID>"
 	RedisNationalMetrics              = "bodies:national_metrics"
 	//--END--
 
@@ -169,12 +173,16 @@ var AllRedisPrefixes = []string{
 	RedisEachLGA,
 	RedisEachWard,
 	RedisEachSenatorialDistrict,
+	RedisSenatorialDistrictsAll,
 	RedisSenatorialDistrictsByState,
+	RedisFederalConstituenciesAll,
 	RedisFederalConstituenciesByState,
+	RedisFederalConstituenciesBySenatorial,
 	RedisStateConstituenciesByState,
 	RedisLGAsByState,
 	RedisWardsByLGA,
 	RedisPollingUnitsByWard,
+	RedisPollingUnitsByLGA,
 	RedisNationalMetrics,
 	RedisOfficesAll,
 	RedisElectionGroupsAll,

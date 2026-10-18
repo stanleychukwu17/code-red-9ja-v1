@@ -9,7 +9,7 @@ export type BodiesTabId =
 
 export const BODIES_TABS = [
   { id: "states", label: "States", href: "/bodies/states" },
-  { id: "districts", label: "Districts", href: "/bodies/senatorial-districts" },
+  { id: "districts", label: "Sen. Districts", href: "/bodies/senatorial-districts" },
   {
     id: "federal-constituencies",
     label: "Federal Con.",

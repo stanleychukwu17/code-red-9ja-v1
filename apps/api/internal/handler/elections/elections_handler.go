@@ -795,17 +795,20 @@ func (h *Handler) BulkUpdateElectionGroup(w http.ResponseWriter, r *http.Request
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Router       /elections/bulk [delete]
 func (h *Handler) BulkDeleteElections(w http.ResponseWriter, r *http.Request) {
+	// Decode incoming JSON request payload
 	var req BulkDeleteElectionsRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
+	// Validate struct constraints (e.g. required election_ids array)
 	if err := h.validate.Struct(req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
 		return
 	}
 
+	// Execute bulk deletion across target elections within the service
 	result, err := h.service.BulkDeleteElections(r.Context(), elections.BulkDeleteElectionsParams{
 		ElectionIDs:     req.ElectionIDs,
 		ElectionGroupID: req.ElectionGroupID,
@@ -815,21 +818,15 @@ func (h *Handler) BulkDeleteElections(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Build audit metadata and record the primary election group as entity ID
+	entityID := strconv.FormatInt(int64(result.ElectionGroupIDs[0]), 10)
 	metadata := map[string]interface{}{
-		"election_ids": req.ElectionIDs,
-		"count":        len(req.ElectionIDs),
+		"election_ids":       req.ElectionIDs,
+		"count":              len(req.ElectionIDs),
+		"election_group_ids": result.ElectionGroupIDs,
 	}
-	entityID := ""
-	if req.ElectionGroupID != nil && *req.ElectionGroupID > 0 {
-		metadata["election_group_id"] = *req.ElectionGroupID
-		entityID = strconv.FormatInt(int64(*req.ElectionGroupID), 10)
-	} else if len(result.ElectionGroupIDs) > 0 {
-		metadata["election_group_id"] = result.ElectionGroupIDs[0]
-		entityID = strconv.FormatInt(int64(result.ElectionGroupIDs[0]), 10)
-		if len(result.ElectionGroupIDs) > 1 {
-			metadata["election_group_ids"] = result.ElectionGroupIDs
-		}
-	}
+
+	// Asynchronously record the bulk deletion in the administrative audit log
 	metadataJSON, _ := json.Marshal(metadata)
 	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
 		Module:     audit.StringToText(db.ModuleAdmin),
@@ -839,6 +836,7 @@ func (h *Handler) BulkDeleteElections(w http.ResponseWriter, r *http.Request) {
 		NewValues:  metadataJSON,
 	})
 
+	// Return successful deletion response with the count of removed elections
 	h.utils.RespondSuccess(w, http.StatusOK, "Elections deleted successfully", map[string]interface{}{
 		"count": len(req.ElectionIDs),
 	})

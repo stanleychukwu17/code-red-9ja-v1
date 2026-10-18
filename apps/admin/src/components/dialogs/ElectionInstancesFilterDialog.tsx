@@ -213,7 +213,7 @@ export function ElectionInstancesFilterDialog({
                 {electionGroups.map((group: any) => (
                   <label
                     key={group.id}
-                    className="flex items-center gap-3 cursor-pointer group hover:bg-black/[0.02] p-1.5 rounded-lg transition"
+                    className="flex items-center gap-3 cursor-pointer group hover:bg-black/2 p-1.5 rounded-lg transition"
                   >
                     {/* Selection checkbox */}
                     <input
@@ -252,7 +252,7 @@ export function ElectionInstancesFilterDialog({
               {SCOPE_OPTIONS.map((scope) => (
                 <label
                   key={scope.value}
-                  className="flex items-center gap-3 cursor-pointer group hover:bg-black/[0.02] p-1.5 rounded-lg transition"
+                  className="flex items-center gap-3 cursor-pointer group hover:bg-black/2 p-1.5 rounded-lg transition"
                 >
                   <input
                     type="checkbox"
@@ -278,7 +278,7 @@ export function ElectionInstancesFilterDialog({
               {STATUS_OPTIONS.map((status) => (
                 <label
                   key={status.value}
-                  className="flex items-center gap-3 cursor-pointer group hover:bg-black/[0.02] p-1.5 rounded-lg transition"
+                  className="flex items-center gap-3 cursor-pointer group hover:bg-black/2 p-1.5 rounded-lg transition"
                 >
                   <input
                     type="checkbox"
@@ -339,7 +339,7 @@ export function ElectionInstancesFilterDialog({
                 {filteredOffices.map((office: any) => (
                   <label
                     key={office.id}
-                    className="flex items-center gap-3 cursor-pointer group hover:bg-black/[0.02] p-1.5 rounded-lg transition"
+                    className="flex items-center gap-3 cursor-pointer group hover:bg-black/2 p-1.5 rounded-lg transition"
                   >
                     <input
                       type="checkbox"
@@ -401,7 +401,7 @@ export function ElectionInstancesFilterDialog({
                 {filteredStates.map((state: any) => (
                   <label
                     key={state.id}
-                    className="flex items-center gap-3 cursor-pointer group hover:bg-black/[0.02] p-1.5 rounded-lg transition"
+                    className="flex items-center gap-3 cursor-pointer group hover:bg-black/2 p-1.5 rounded-lg transition"
                   >
                     <input
                       type="checkbox"
