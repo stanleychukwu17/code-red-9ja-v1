@@ -29,7 +29,9 @@ type ElectionsService interface {
 	GetElectionByID(ctx context.Context, id int32) (queries.Election, error)
 	ListElections(ctx context.Context, filter elections.ListElectionsFilter) ([]queries.ListElectionInstancesRow, error)
 	UpdateElection(ctx context.Context, params elections.UpdateElectionParams) (queries.Election, error)
+	BulkUpdateElectionGroup(ctx context.Context, electionIDs []int32, electionGroupID int32) error
 	DeleteElection(ctx context.Context, id int32) error
+	BulkDeleteElections(ctx context.Context, electionIDs []int32) error
 	GetElectionCandidates(ctx context.Context, electionID int32) ([]queries.ListElectionCandidatesDetailedByElectionIDRow, error)
 	SyncElectionCandidates(ctx context.Context, electionID int32, candidates []elections.CandidateInput) error
 	FieldPartyCandidate(ctx context.Context, electionID int32, partyID int16, candidateID int64) error
@@ -152,6 +154,15 @@ type UpdateElectionRequest struct {
 	Name            string         `json:"name" validate:"required"`
 	ElectionDate    utils.JSONDate `json:"election_date" validate:"required"`
 	ElectionGroupID int32          `json:"election_group_id" validate:"required,gt=0"`
+}
+
+type BulkUpdateElectionGroupRequest struct {
+	ElectionIDs     []int32 `json:"election_ids" validate:"required,min=1"`
+	ElectionGroupID int32   `json:"election_group_id" validate:"required,gt=0"`
+}
+
+type BulkDeleteElectionsRequest struct {
+	ElectionIDs []int32 `json:"election_ids" validate:"required,min=1"`
 }
 
 type ElectionCandidateInput struct {
@@ -714,6 +725,96 @@ func (h *Handler) DeleteElection(w http.ResponseWriter, r *http.Request) {
 
 	// Return successful deletion response
 	h.utils.RespondSuccess(w, http.StatusOK, "Election deleted successfully", nil)
+}
+
+// BulkUpdateElectionGroup godoc
+// @Summary      Bulk update election group
+// @Description  Reassigns multiple elections to a target election group in a single atomic transaction
+// @Tags         Elections
+// @Accept       json
+// @Produce      json
+// @Param        request body BulkUpdateElectionGroupRequest true "Bulk Update Election Group payload"
+// @Success      200  {object} map[string]interface{} "Election group updated successfully"
+// @Failure      400  {object} map[string]interface{} "Invalid request payload or validation failed"
+// @Failure      500  {object} map[string]interface{} "Internal server error"
+// @Router       /elections/bulk-group [put]
+func (h *Handler) BulkUpdateElectionGroup(w http.ResponseWriter, r *http.Request) {
+	var req BulkUpdateElectionGroupRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
+		return
+	}
+
+	if err := h.service.BulkUpdateElectionGroup(r.Context(), req.ElectionIDs, req.ElectionGroupID); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	metadataJSON, _ := json.Marshal(map[string]interface{}{
+		"election_ids":      req.ElectionIDs,
+		"election_group_id": req.ElectionGroupID,
+		"count":             len(req.ElectionIDs),
+	})
+	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
+		Module:     audit.StringToText(db.ModuleAdmin),
+		Action:     db.ActionBulkUpdateElectionGroup,
+		EntityType: db.EntityTypeElections,
+		EntityID:   strconv.FormatInt(int64(req.ElectionGroupID), 10),
+		NewValues:  metadataJSON,
+	})
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Election group updated successfully for selected elections", map[string]interface{}{
+		"count": len(req.ElectionIDs),
+	})
+}
+
+// BulkDeleteElections godoc
+// @Summary      Bulk delete elections
+// @Description  Deletes multiple elections from the database in a single atomic query
+// @Tags         Elections
+// @Accept       json
+// @Produce      json
+// @Param        request body BulkDeleteElectionsRequest true "Bulk Delete Elections payload"
+// @Success      200  {object} map[string]interface{} "Elections deleted successfully"
+// @Failure      400  {object} map[string]interface{} "Invalid request payload or validation failed"
+// @Failure      500  {object} map[string]interface{} "Internal server error"
+// @Router       /elections/bulk [delete]
+func (h *Handler) BulkDeleteElections(w http.ResponseWriter, r *http.Request) {
+	var req BulkDeleteElectionsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
+		return
+	}
+
+	if err := h.service.BulkDeleteElections(r.Context(), req.ElectionIDs); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	metadataJSON, _ := json.Marshal(map[string]interface{}{
+		"election_ids": req.ElectionIDs,
+		"count":        len(req.ElectionIDs),
+	})
+	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
+		Module:     audit.StringToText(db.ModuleAdmin),
+		Action:     db.ActionBulkDeleteElections,
+		EntityType: db.EntityTypeElections,
+		NewValues:  metadataJSON,
+	})
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Elections deleted successfully", map[string]interface{}{
+		"count": len(req.ElectionIDs),
+	})
 }
 
 // GetElectionCandidates godoc

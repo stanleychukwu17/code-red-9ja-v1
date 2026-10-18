@@ -52,6 +52,9 @@ type Querier interface {
 	// PARTY USER BLOCKS
 	// ========================================================
 	BlockUserByParty(ctx context.Context, arg BlockUserByPartyParams) (PartyUserBlock, error)
+	BulkDeleteElectionInstances(ctx context.Context, electionIds []int32) error
+	BulkUpdateElectionCandidatesGroup(ctx context.Context, arg BulkUpdateElectionCandidatesGroupParams) error
+	BulkUpdateElectionGroup(ctx context.Context, arg BulkUpdateElectionGroupParams) error
 	CalculateElectionMetrics(ctx context.Context, electionID int32) (CalculateElectionMetricsRow, error)
 	CheckAndUpdateLGASupervisorCompletion(ctx context.Context) error
 	CheckAndUpdateStateSupervisorCompletion(ctx context.Context) error
@@ -191,6 +194,7 @@ type Querier interface {
 	GetBlockedPartyIDsForUser(ctx context.Context, blockedUserID int64) ([]int16, error)
 	// Helper for filtering feeds / search results
 	GetBlockedUserIDsForUser(ctx context.Context, blockerID int64) ([]int64, error)
+	GetCandidateCountsForElections(ctx context.Context, electionIds []int32) ([]GetCandidateCountsForElectionsRow, error)
 	GetChapterMemberCount(ctx context.Context, arg GetChapterMemberCountParams) (int64, error)
 	GetCitiesByStateID(ctx context.Context, stateID int16) ([]GetCitiesByStateIDRow, error)
 	GetCityByID(ctx context.Context, id int32) (GetCityByIDRow, error)

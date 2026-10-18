@@ -78,6 +78,18 @@ func (s *ElectionsService) invalidateCache(ctx context.Context, electionID int32
 	s.rdb.Del(ctx, fmt.Sprintf("%s%d", db.RedisElectionByID, electionID))
 }
 
+// invalidateBulkCache purges the Redis cache for multiple election instances in a single Del call.
+func (s *ElectionsService) invalidateBulkCache(ctx context.Context, electionIDs []int32) {
+	if len(electionIDs) == 0 {
+		return
+	}
+	keys := make([]string, len(electionIDs))
+	for i, id := range electionIDs {
+		keys[i] = fmt.Sprintf("%s%d", db.RedisElectionByID, id)
+	}
+	s.rdb.Del(ctx, keys...)
+}
+
 // validateElectionGroup ensures that the target election group exists and is active.
 func (s *ElectionsService) validateElectionGroup(ctx context.Context, q *queries.Queries, groupID int32) (queries.ElectionGroup, error) {
 	eg, err := q.GetElectionGroupByID(ctx, groupID)
@@ -952,6 +964,77 @@ func (s *ElectionsService) DeleteElection(ctx context.Context, id int32) error {
 	defer s.invalidateCache(ctx, id)
 
 	return s.queries.DeleteElectionInstance(ctx, id)
+}
+
+// BulkUpdateElectionGroup reassigns multiple election instances to a new election group within a transaction.
+func (s *ElectionsService) BulkUpdateElectionGroup(ctx context.Context, electionIDs []int32, electionGroupID int32) error {
+	if len(electionIDs) == 0 {
+		return nil
+	}
+
+	electionIDs = deDupeSlice(electionIDs)
+
+	// Validate target election group exists and is active
+	if _, err := s.validateElectionGroup(ctx, s.queries, electionGroupID); err != nil {
+		return err
+	}
+
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	txQueries := s.queries.WithTx(tx)
+
+	// Reassign elections to the target election group
+	if err := txQueries.BulkUpdateElectionGroup(ctx, queries.BulkUpdateElectionGroupParams{
+		ElectionGroupID: electionGroupID,
+		ElectionIds:     electionIDs,
+	}); err != nil {
+		return fmt.Errorf("failed to bulk update elections: %w", err)
+	}
+
+	// Reassign any candidates on these elections to the target election group
+	if err := txQueries.BulkUpdateElectionCandidatesGroup(ctx, queries.BulkUpdateElectionCandidatesGroupParams{
+		ElectionGroupID: electionGroupID,
+		ElectionIds:     electionIDs,
+	}); err != nil {
+		return fmt.Errorf("failed to bulk update election candidates group: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	s.invalidateBulkCache(ctx, electionIDs)
+	return nil
+}
+
+// BulkDeleteElections deletes multiple election instances.
+// It prevents deletion if any candidates are already registered for any of the selected elections.
+func (s *ElectionsService) BulkDeleteElections(ctx context.Context, electionIDs []int32) error {
+	if len(electionIDs) == 0 {
+		return nil
+	}
+
+	electionIDs = deDupeSlice(electionIDs)
+
+	// Guard: Do not allow deletion if any of the elections have candidates registered
+	candidateCounts, err := s.queries.GetCandidateCountsForElections(ctx, electionIDs)
+	if err != nil {
+		return fmt.Errorf("failed to verify candidate counts for elections: %w", err)
+	}
+	if len(candidateCounts) > 0 {
+		return fmt.Errorf("cannot delete elections: %d election(s) already have registered candidates", len(candidateCounts))
+	}
+
+	if err := s.queries.BulkDeleteElectionInstances(ctx, electionIDs); err != nil {
+		return fmt.Errorf("failed to bulk delete elections: %w", err)
+	}
+
+	s.invalidateBulkCache(ctx, electionIDs)
+	return nil
 }
 
 // GetElectionCandidates retrieves all candidate records associated with an election,

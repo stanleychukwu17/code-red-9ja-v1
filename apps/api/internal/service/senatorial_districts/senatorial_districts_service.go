@@ -68,9 +68,27 @@ func (s *SenatorialDistrictsService) CreateSenatorialDistrict(ctx context.Contex
 	return sd, nil
 }
 
-// GetSenatorialDistrictByID retrieves a senatorial district by its ID.
+// GetSenatorialDistrictByID retrieves a senatorial district by its ID, utilizing Redis cache when available.
 func (s *SenatorialDistrictsService) GetSenatorialDistrictByID(ctx context.Context, id int32) (queries.SenatorialDistrict, error) {
-	return s.queries.GetSenatorialDistrictByID(ctx, id)
+	redisKey := fmt.Sprintf("%s%d", db.RedisEachSenatorialDistrict, id)
+	cached, err := s.rdb.Get(ctx, redisKey).Result()
+	if err == nil {
+		var sd queries.SenatorialDistrict
+		if json.Unmarshal([]byte(cached), &sd) == nil && sd.ID > 0 {
+			return sd, nil
+		}
+	}
+
+	sd, err := s.queries.GetSenatorialDistrictByID(ctx, id)
+	if err != nil {
+		return queries.SenatorialDistrict{}, err
+	}
+
+	if data, err := json.Marshal(sd); err == nil {
+		s.rdb.Set(ctx, redisKey, data, db.RedisOneEightyDaysTTL)
+	}
+
+	return sd, nil
 }
 
 // UpdateSenatorialDistrict updates an existing district and invalidates both old and new state caches.
@@ -78,7 +96,7 @@ func (s *SenatorialDistrictsService) UpdateSenatorialDistrict(ctx context.Contex
 	// Fetch current to invalidate old state cache in case stateID changed
 	current, err := s.queries.GetSenatorialDistrictByID(ctx, params.ID)
 	if err == nil {
-		s.invalidateCache(ctx, current.StateID)
+		s.invalidateCache(ctx, current.StateID, params.ID)
 	}
 
 	arg := queries.UpdateSenatorialDistrictParams{
@@ -96,8 +114,8 @@ func (s *SenatorialDistrictsService) UpdateSenatorialDistrict(ctx context.Contex
 		return queries.SenatorialDistrict{}, err
 	}
 
-	// Invalidate cache for new state
-	s.invalidateCache(ctx, params.StateID)
+	// Invalidate cache for new state and district
+	s.invalidateCache(ctx, params.StateID, params.ID)
 
 	return sd, nil
 }
@@ -114,8 +132,8 @@ func (s *SenatorialDistrictsService) DeleteSenatorialDistrict(ctx context.Contex
 		return err
 	}
 
-	// Invalidate cache for the state
-	s.invalidateCache(ctx, sd.StateID)
+	// Invalidate cache for the state and district
+	s.invalidateCache(ctx, sd.StateID, id)
 
 	return nil
 }
@@ -152,9 +170,24 @@ func (s *SenatorialDistrictsService) GetSenatorialDistricts(ctx context.Context,
 	}
 }
 
-// invalidateCache clears Redis cache entries for a state's senatorial districts and national metrics.
-func (s *SenatorialDistrictsService) invalidateCache(ctx context.Context, stateID int32) {
+// invalidateCache clears Redis cache entries for a state's senatorial districts, the national all-districts cache, national metrics, and individual district cache.
+func (s *SenatorialDistrictsService) invalidateCache(ctx context.Context, stateID int32, districtIDs ...int32) {
+	// Invalidate individual district record cache(s) if provided
+	for _, id := range districtIDs {
+		if id > 0 {
+			s.rdb.Del(ctx, fmt.Sprintf("%s%d", db.RedisEachSenatorialDistrict, id))
+		}
+	}
+
+	// Invalidate state-level district list cache
 	redisKey := fmt.Sprintf("%s%d", db.RedisSenatorialDistrictsByState, stateID)
 	s.rdb.Del(ctx, redisKey)
+
+	// Invalidate national/all-districts list cache (state:0)
+	if stateID != 0 {
+		s.rdb.Del(ctx, fmt.Sprintf("%s0", db.RedisSenatorialDistrictsByState))
+	}
+
+	// Invalidate national metrics cache
 	s.rdb.Del(ctx, db.RedisNationalMetrics)
 }

@@ -92,3 +92,23 @@ SELECT
 FROM elections e
 JOIN offices o ON e.office_id = o.id
 WHERE e.election_group_id = $1;
+
+-- name: BulkUpdateElectionGroup :exec
+UPDATE elections
+SET election_group_id = sqlc.arg('election_group_id')::int, updated_at = NOW()
+WHERE id = ANY(sqlc.arg('election_ids')::int[]);
+
+-- name: BulkUpdateElectionCandidatesGroup :exec
+UPDATE election_candidates
+SET election_group_id = sqlc.arg('election_group_id')::int, updated_at = NOW()
+WHERE election_id = ANY(sqlc.arg('election_ids')::int[]);
+
+-- name: GetCandidateCountsForElections :many
+SELECT election_id, COUNT(*)::bigint AS candidate_count
+FROM election_candidates
+WHERE election_id = ANY(sqlc.arg('election_ids')::int[])
+GROUP BY election_id;
+
+-- name: BulkDeleteElectionInstances :exec
+DELETE FROM elections
+WHERE id = ANY(sqlc.arg('election_ids')::int[]);

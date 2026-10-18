@@ -115,31 +115,31 @@ export const deleteElection = createServerFn({ method: "POST" })
   });
 
 export const bulkDeleteElections = createServerFn({ method: "POST" })
-  .inputValidator((data: { ids: (string | number)[] }) => data)
-  .handler(async ({ data: { ids } }) => {
-    try {
-      const results = await Promise.allSettled(
-        ids.map((id) =>
-          apiFetchJson(API_URL.electionById(id), {
-            method: "DELETE",
-          }),
-        ),
-      );
-      const failed = results.filter(
-        (r) =>
-          r.status === "rejected" ||
-          (r.status === "fulfilled" && !r.value?.success),
-      );
-      if (failed.length > 0) {
-        return {
-          success: false,
-          message: `Failed to delete ${failed.length} of ${ids.length} elections.`,
-        };
-      }
+  .inputValidator(
+    (data: {
+      election_ids?: (string | number)[];
+      ids?: (string | number)[];
+    }) => {
+      const rawIds = data.election_ids ?? data.ids ?? [];
       return {
-        success: true,
-        message: `Successfully deleted ${ids.length} elections.`,
+        election_ids: rawIds
+          .map((id) => Number(id))
+          .filter((id) => !isNaN(id) && id > 0),
       };
+    },
+  )
+  .handler(async ({ data: { election_ids } }) => {
+    try {
+      if (election_ids.length === 0) {
+        return { success: false, message: "No election IDs provided" };
+      }
+      return await apiFetchJson(API_URL.electionsBulk, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ election_ids }),
+      });
     } catch (error: any) {
       return {
         success: false,
@@ -151,46 +151,36 @@ export const bulkDeleteElections = createServerFn({ method: "POST" })
 export const bulkUpdateElectionGroup = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
-      items: { id: string | number; name: string; election_date: string }[];
+      election_ids?: (string | number)[];
+      items?: { id: string | number }[];
       election_group_id: number;
-    }) => data,
-  )
-  .handler(async ({ data: { items, election_group_id } }) => {
-    try {
-      const results = await Promise.allSettled(
-        items.map((item) =>
-          apiFetchJson(API_URL.electionById(item.id), {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              name: item.name,
-              election_date: item.election_date,
-              election_group_id,
-            }),
-          }),
-        ),
-      );
-      const failed = results.filter(
-        (r) =>
-          r.status === "rejected" ||
-          (r.status === "fulfilled" && !r.value?.success),
-      );
-      if (failed.length > 0) {
-        return {
-          success: false,
-          message: `Failed to update ${failed.length} of ${items.length} elections.`,
-        };
-      }
+    }) => {
+      const rawIds =
+        data.election_ids ?? data.items?.map((item) => item.id) ?? [];
       return {
-        success: true,
-        message: `Successfully reassigned ${items.length} elections to new group.`,
+        election_ids: rawIds
+          .map((id) => Number(id))
+          .filter((id) => !isNaN(id) && id > 0),
+        election_group_id: Number(data.election_group_id),
       };
+    },
+  )
+  .handler(async ({ data: { election_ids, election_group_id } }) => {
+    try {
+      if (election_ids.length === 0) {
+        return { success: false, message: "No election IDs provided" };
+      }
+      return await apiFetchJson(API_URL.electionsBulkGroup, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ election_ids, election_group_id }),
+      });
     } catch (error: any) {
       return {
         success: false,
-        message: error?.message || "Failed to update election groups",
+        message: error?.message || "Failed to update election group",
       };
     }
   });

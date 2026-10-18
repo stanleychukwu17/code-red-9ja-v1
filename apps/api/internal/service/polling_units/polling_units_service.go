@@ -22,10 +22,7 @@ func NewPollingUnitsService(q *queries.Queries, rdb *redis.Client) *PollingUnits
 	}
 }
 
-func (s *PollingUnitsService) CreatePollingUnit(
-	ctx context.Context,
-	arg queries.CreatePollingUnitParams,
-) (queries.PollingUnit, error) {
+func (s *PollingUnitsService) CreatePollingUnit(ctx context.Context, arg queries.CreatePollingUnitParams) (queries.PollingUnit, error) {
 	pu, err := s.queries.CreatePollingUnit(ctx, arg)
 	if err != nil {
 		return queries.PollingUnit{}, err
@@ -37,10 +34,30 @@ func (s *PollingUnitsService) CreatePollingUnit(
 	return pu, nil
 }
 
+// GetPollingUnitByID retrieves a single polling unit by its ID, utilizing Redis cache when available.
 func (s *PollingUnitsService) GetPollingUnitByID(ctx context.Context, id int32) (queries.PollingUnit, error) {
-	return s.queries.GetPollingUnitByID(ctx, id)
+	redisKey := fmt.Sprintf("%s%d", db.RedisEachPollingUnit, id)
+	cached, err := s.rdb.Get(ctx, redisKey).Result()
+	if err == nil {
+		var pu queries.PollingUnit
+		if json.Unmarshal([]byte(cached), &pu) == nil && pu.ID > 0 {
+			return pu, nil
+		}
+	}
+
+	pu, err := s.queries.GetPollingUnitByID(ctx, id)
+	if err != nil {
+		return queries.PollingUnit{}, err
+	}
+
+	if data, err := json.Marshal(pu); err == nil {
+		s.rdb.Set(ctx, redisKey, data, db.RedisSixtyDaysTTL)
+	}
+
+	return pu, nil
 }
 
+// UpdatePollingUnit updates an existing polling unit and invalidates relevant caches.
 func (s *PollingUnitsService) UpdatePollingUnit(
 	ctx context.Context,
 	arg queries.UpdatePollingUnitParams,
@@ -48,7 +65,7 @@ func (s *PollingUnitsService) UpdatePollingUnit(
 	// Fetch current to invalidate old Ward cache in case wardID changed
 	current, err := s.queries.GetPollingUnitByID(ctx, arg.ID)
 	if err == nil {
-		s.invalidateCache(ctx, current.WardID)
+		s.invalidateCache(ctx, current.WardID, arg.ID)
 	}
 
 	pu, err := s.queries.UpdatePollingUnit(ctx, arg)
@@ -56,12 +73,13 @@ func (s *PollingUnitsService) UpdatePollingUnit(
 		return queries.PollingUnit{}, err
 	}
 
-	// Invalidate cache for new Ward
-	s.invalidateCache(ctx, arg.WardID)
+	// Invalidate cache for new Ward and polling unit
+	s.invalidateCache(ctx, arg.WardID, arg.ID)
 
 	return pu, nil
 }
 
+// DeletePollingUnit deletes a polling unit by its ID and invalidates the Ward cache.
 func (s *PollingUnitsService) DeletePollingUnit(ctx context.Context, id int32) error {
 	pu, err := s.queries.GetPollingUnitByID(ctx, id)
 	if err != nil {
@@ -73,26 +91,34 @@ func (s *PollingUnitsService) DeletePollingUnit(ctx context.Context, id int32) e
 		return err
 	}
 
-	// Invalidate cache for the Ward
-	s.invalidateCache(ctx, pu.WardID)
+	// Invalidate cache for the Ward and polling unit
+	s.invalidateCache(ctx, pu.WardID, id)
 
 	return nil
 }
 
+// GetPollingUnits retrieves polling units filtered by ward, LGA, or state.
+// When wardID > 0, it utilizes Redis caching by wardID; when wardID is 0, it queries the database directly.
 func (s *PollingUnitsService) GetPollingUnits(ctx context.Context, wardID, localGovernmentID, stateID int32) ([]queries.PollingUnit, error) {
+	arg := queries.GetPollingUnitsParams{
+		WardID:  wardID,
+		LgaID:   localGovernmentID,
+		StateID: stateID,
+	}
+
+	// Bypass Redis caching for broad/unfiltered queries (LGA/State/National) to keep Redis lean
+	if wardID <= 0 {
+		return s.queries.GetPollingUnits(ctx, arg)
+	}
+
 	type Response struct {
 		PollingUnits []queries.PollingUnit `json:"polling_units"`
 	}
 
-	redisKey := fmt.Sprintf("%s%d_%d_%d", db.RedisPollingUnitsByWard, wardID, localGovernmentID, stateID)
+	redisKey := fmt.Sprintf("%s%d", db.RedisPollingUnitsByWard, wardID)
 	data, err := s.rdb.Get(ctx, redisKey).Result()
 	switch err {
 	case redis.Nil:
-		arg := queries.GetPollingUnitsParams{
-			WardID:  wardID,
-			LgaID:   localGovernmentID,
-			StateID: stateID,
-		}
 		dbData, err := s.queries.GetPollingUnits(ctx, arg)
 		if err != nil {
 			return nil, err
@@ -164,8 +190,20 @@ func (s *PollingUnitsService) GetPollingUnitsWithCapacity(ctx context.Context, w
 	return results, nil
 }
 
-func (s *PollingUnitsService) invalidateCache(ctx context.Context, wardID int32) {
-	redisKey := fmt.Sprintf("%s%d", db.RedisPollingUnitsByWard, wardID)
-	s.rdb.Del(ctx, redisKey)
+// invalidateCache clears Redis cache entries for a ward's polling units, national metrics, and individual polling unit cache.
+func (s *PollingUnitsService) invalidateCache(ctx context.Context, wardID int32, puIDs ...int32) {
+	// Invalidate individual polling unit record cache(s) if provided
+	for _, id := range puIDs {
+		if id > 0 {
+			s.rdb.Del(ctx, fmt.Sprintf("%s%d", db.RedisEachPollingUnit, id))
+		}
+	}
+
+	// Invalidate ward-level polling units list cache directly
+	if wardID > 0 {
+		s.rdb.Del(ctx, fmt.Sprintf("%s%d", db.RedisPollingUnitsByWard, wardID))
+	}
+
+	// Invalidate national metrics cache
 	s.rdb.Del(ctx, db.RedisNationalMetrics)
 }

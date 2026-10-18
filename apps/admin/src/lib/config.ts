@@ -249,6 +249,8 @@ export const API_URL = {
   electionsStateConstituency: `${api}/elections/state-constituency`,
   electionsLga: `${api}/elections/lga`,
   electionsWard: `${api}/elections/ward`,
+  electionsBulkGroup: `${api}/elections/bulk-group`,
+  electionsBulk: `${api}/elections/bulk`,
 
   manageUserById: (id: string | number) => `${api}/admin/users/${id}`,
   manageUserMoreInfo: (id: string | number) =>

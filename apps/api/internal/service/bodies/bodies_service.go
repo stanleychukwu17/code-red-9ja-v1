@@ -335,26 +335,26 @@ func (s *BodiesService) GetLGAs(ctx context.Context, stateID int32) ([]queries.L
 
 // CreateLGAParams defines the attributes required to create a Local Government Area.
 type CreateLGAParams struct {
-	Name                   string
-	Code                   string
-	StateID                int32
-	StateName              string
-	SenatorialDistrictID   int32
-	SenatorialDistrictName string
-	FederalConstituencyID  int32
+	Name                    string
+	Code                    string
+	StateID                 int32
+	StateName               string
+	SenatorialDistrictID    int32
+	SenatorialDistrictName  string
+	FederalConstituencyID   int32
 	FederalConstituencyName string
 }
 
 // UpdateLGAParams defines the attributes required to update an existing Local Government Area.
 type UpdateLGAParams struct {
-	ID                     int32
-	Name                   string
-	Code                   string
-	StateID                int32
-	StateName              string
-	SenatorialDistrictID   int32
-	SenatorialDistrictName string
-	FederalConstituencyID  int32
+	ID                      int32
+	Name                    string
+	Code                    string
+	StateID                 int32
+	StateName               string
+	SenatorialDistrictID    int32
+	SenatorialDistrictName  string
+	FederalConstituencyID   int32
 	FederalConstituencyName string
 }
 
@@ -381,16 +381,34 @@ func (s *BodiesService) CreateLGA(ctx context.Context, params CreateLGAParams) (
 	return lga, nil
 }
 
-// GetLGAByID retrieves a single Local Government Area by its ID.
+// GetLGAByID retrieves a single Local Government Area by its ID, utilizing Redis cache when available.
 func (s *BodiesService) GetLGAByID(ctx context.Context, id int32) (queries.Lga, error) {
-	return s.queries.GetLGAByID(ctx, id)
+	redisKey := fmt.Sprintf("%s%d", db.RedisEachLGA, id)
+	cached, err := s.rdb.Get(ctx, redisKey).Result()
+	if err == nil {
+		var lga queries.Lga
+		if json.Unmarshal([]byte(cached), &lga) == nil && lga.ID > 0 {
+			return lga, nil
+		}
+	}
+
+	lga, err := s.queries.GetLGAByID(ctx, id)
+	if err != nil {
+		return queries.Lga{}, err
+	}
+
+	if data, err := json.Marshal(lga); err == nil {
+		s.rdb.Set(ctx, redisKey, data, db.RedisOneEightyDaysTTL)
+	}
+
+	return lga, nil
 }
 
 // UpdateLGA updates an existing Local Government Area and invalidates relevant caches.
 func (s *BodiesService) UpdateLGA(ctx context.Context, params UpdateLGAParams) (queries.Lga, error) {
 	current, err := s.queries.GetLGAByID(ctx, params.ID)
 	if err == nil {
-		s.invalidateCache(ctx, current.StateID)
+		s.invalidateCache(ctx, current.StateID, params.ID)
 	}
 
 	arg := queries.UpdateLGAParams{
@@ -410,7 +428,7 @@ func (s *BodiesService) UpdateLGA(ctx context.Context, params UpdateLGAParams) (
 		return queries.Lga{}, err
 	}
 
-	s.invalidateCache(ctx, params.StateID)
+	s.invalidateCache(ctx, params.StateID, params.ID)
 
 	return lga, nil
 }
@@ -427,14 +445,30 @@ func (s *BodiesService) DeleteLGA(ctx context.Context, id int32) error {
 		return err
 	}
 
-	s.invalidateCache(ctx, lga.StateID)
+	s.invalidateCache(ctx, lga.StateID, id)
 
 	return nil
 }
 
-func (s *BodiesService) invalidateCache(ctx context.Context, stateID int32) {
+// invalidateCache clears Redis cache entries for a state's LGAs, the national all-LGAs cache, national metrics, and individual LGA cache.
+func (s *BodiesService) invalidateCache(ctx context.Context, stateID int32, lgaIDs ...int32) {
+	// Invalidate individual LGA record cache(s) if provided
+	for _, id := range lgaIDs {
+		if id > 0 {
+			s.rdb.Del(ctx, fmt.Sprintf("%s%d", db.RedisEachLGA, id))
+		}
+	}
+
+	// Invalidate state-level LGA list cache
 	redisKey := fmt.Sprintf("%s%d", db.RedisLGAsByState, stateID)
 	s.rdb.Del(ctx, redisKey)
+
+	// Invalidate national/all-LGAs list cache (state:0)
+	if stateID != 0 {
+		s.rdb.Del(ctx, fmt.Sprintf("%s0", db.RedisLGAsByState))
+	}
+
+	// Invalidate national metrics cache
 	s.rdb.Del(ctx, db.RedisNationalMetrics)
 }
 

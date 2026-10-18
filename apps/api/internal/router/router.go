@@ -479,6 +479,8 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Post("/api/v1/elections/state-constituency", electionsHandler.CreateStateConstituencyElection)
 		r.Post("/api/v1/elections/lga", electionsHandler.CreateLgaElection)
 		r.Post("/api/v1/elections/ward", electionsHandler.CreateWardElection)
+		r.Put("/api/v1/elections/bulk-group", electionsHandler.BulkUpdateElectionGroup)
+		r.Delete("/api/v1/elections/bulk", electionsHandler.BulkDeleteElections)
 		r.Put("/api/v1/elections/{id}", electionsHandler.UpdateElection)
 		r.Delete("/api/v1/elections/{id}", electionsHandler.DeleteElection)
 		r.Post("/api/v1/elections/{id}/candidates", electionsHandler.SyncElectionCandidates)

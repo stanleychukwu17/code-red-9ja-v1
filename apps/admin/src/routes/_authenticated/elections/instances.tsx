@@ -207,7 +207,7 @@ function RouteComponent() {
         );
       }
       const res = await bulkDeleteElections({
-        data: { ids: Array.from(selectedIds) },
+        data: { election_ids: Array.from(selectedIds) },
       });
       if (!res.success) {
         throw new Error(res.message || "Failed to delete elections");

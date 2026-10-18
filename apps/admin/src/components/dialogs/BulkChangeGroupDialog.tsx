@@ -18,12 +18,12 @@ import { toast } from "sonner";
 import { QUERY_KEYS } from "#/lib/config";
 
 // Props for the dialog handling bulk reassignment of election instances to a new group
-interface BulkChangeGroupDialogProps {
+export type BulkChangeGroupDialogProps = {
   open: boolean;
   onClose: () => void;
   selectedElections: ElectionInstanceType[];
   onSuccess?: () => void;
-}
+};
 
 // Modal dialog allowing administrators to reassign multiple selected elections to a target election group
 export function BulkChangeGroupDialog({ open, onClose, selectedElections, onSuccess }: BulkChangeGroupDialogProps) {
@@ -49,17 +49,13 @@ export function BulkChangeGroupDialog({ open, onClose, selectedElections, onSucc
       // Send the bulk update payload to the backend
       const res = await bulkUpdateElectionGroup({
         data: {
-          items: selectedElections.map((e) => ({
-            id: e.id,
-            name: e.name,
-            election_date: e.election_date,
-          })),
+          election_ids: selectedElections.map((e) => e.id),
           election_group_id: selectedGroupId,
         },
       });
 
       if (!res.success) {
-        throw new Error(res.message || "Failed to update election groups");
+        throw new Error(res.message || "Failed to update election group");
       }
       return res;
     },

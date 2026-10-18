@@ -11,6 +11,48 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const bulkDeleteElectionInstances = `-- name: BulkDeleteElectionInstances :exec
+DELETE FROM elections
+WHERE id = ANY($1::int[])
+`
+
+func (q *Queries) BulkDeleteElectionInstances(ctx context.Context, electionIds []int32) error {
+	_, err := q.db.Exec(ctx, bulkDeleteElectionInstances, electionIds)
+	return err
+}
+
+const bulkUpdateElectionCandidatesGroup = `-- name: BulkUpdateElectionCandidatesGroup :exec
+UPDATE election_candidates
+SET election_group_id = $1::int, updated_at = NOW()
+WHERE election_id = ANY($2::int[])
+`
+
+type BulkUpdateElectionCandidatesGroupParams struct {
+	ElectionGroupID int32   `json:"election_group_id"`
+	ElectionIds     []int32 `json:"election_ids"`
+}
+
+func (q *Queries) BulkUpdateElectionCandidatesGroup(ctx context.Context, arg BulkUpdateElectionCandidatesGroupParams) error {
+	_, err := q.db.Exec(ctx, bulkUpdateElectionCandidatesGroup, arg.ElectionGroupID, arg.ElectionIds)
+	return err
+}
+
+const bulkUpdateElectionGroup = `-- name: BulkUpdateElectionGroup :exec
+UPDATE elections
+SET election_group_id = $1::int, updated_at = NOW()
+WHERE id = ANY($2::int[])
+`
+
+type BulkUpdateElectionGroupParams struct {
+	ElectionGroupID int32   `json:"election_group_id"`
+	ElectionIds     []int32 `json:"election_ids"`
+}
+
+func (q *Queries) BulkUpdateElectionGroup(ctx context.Context, arg BulkUpdateElectionGroupParams) error {
+	_, err := q.db.Exec(ctx, bulkUpdateElectionGroup, arg.ElectionGroupID, arg.ElectionIds)
+	return err
+}
+
 const createElectionCandidate = `-- name: CreateElectionCandidate :one
 INSERT INTO election_candidates (election_id, election_group_id, candidate_id, party_id, party_short_name)
 VALUES ($1, $2, $3, $4, $5)
@@ -143,6 +185,38 @@ DELETE FROM elections WHERE id = $1
 func (q *Queries) DeleteElectionInstance(ctx context.Context, id int32) error {
 	_, err := q.db.Exec(ctx, deleteElectionInstance, id)
 	return err
+}
+
+const getCandidateCountsForElections = `-- name: GetCandidateCountsForElections :many
+SELECT election_id, COUNT(*)::bigint AS candidate_count
+FROM election_candidates
+WHERE election_id = ANY($1::int[])
+GROUP BY election_id
+`
+
+type GetCandidateCountsForElectionsRow struct {
+	ElectionID     int32 `json:"election_id"`
+	CandidateCount int64 `json:"candidate_count"`
+}
+
+func (q *Queries) GetCandidateCountsForElections(ctx context.Context, electionIds []int32) ([]GetCandidateCountsForElectionsRow, error) {
+	rows, err := q.db.Query(ctx, getCandidateCountsForElections, electionIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetCandidateCountsForElectionsRow
+	for rows.Next() {
+		var i GetCandidateCountsForElectionsRow
+		if err := rows.Scan(&i.ElectionID, &i.CandidateCount); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getElectionCandidatesCount = `-- name: GetElectionCandidatesCount :one

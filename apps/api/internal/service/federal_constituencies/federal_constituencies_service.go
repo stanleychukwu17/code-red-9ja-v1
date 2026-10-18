@@ -69,9 +69,27 @@ func (s *FederalConstituenciesService) CreateFederalConstituency(ctx context.Con
 	return fc, nil
 }
 
-// GetFederalConstituencyByID retrieves a federal constituency by its ID.
+// GetFederalConstituencyByID retrieves a federal constituency by its ID, utilizing Redis cache when available.
 func (s *FederalConstituenciesService) GetFederalConstituencyByID(ctx context.Context, id int32) (queries.FederalConstituency, error) {
-	return s.queries.GetFederalConstituencyByID(ctx, id)
+	redisKey := fmt.Sprintf("%s%d", db.RedisEachFederalConstituency, id)
+	cached, err := s.rdb.Get(ctx, redisKey).Result()
+	if err == nil {
+		var fc queries.FederalConstituency
+		if json.Unmarshal([]byte(cached), &fc) == nil && fc.ID > 0 {
+			return fc, nil
+		}
+	}
+
+	fc, err := s.queries.GetFederalConstituencyByID(ctx, id)
+	if err != nil {
+		return queries.FederalConstituency{}, err
+	}
+
+	if data, err := json.Marshal(fc); err == nil {
+		s.rdb.Set(ctx, redisKey, data, db.RedisOneEightyDaysTTL)
+	}
+
+	return fc, nil
 }
 
 // UpdateFederalConstituency updates an existing federal constituency and invalidates state caches.
@@ -79,7 +97,7 @@ func (s *FederalConstituenciesService) UpdateFederalConstituency(ctx context.Con
 	// Fetch current to invalidate its cache state, in case stateID is changed
 	current, err := s.queries.GetFederalConstituencyByID(ctx, params.ID)
 	if err == nil {
-		s.invalidateCache(ctx, current.StateID)
+		s.invalidateCache(ctx, current.StateID, params.ID)
 	}
 
 	arg := queries.UpdateFederalConstituencyParams{
@@ -97,8 +115,8 @@ func (s *FederalConstituenciesService) UpdateFederalConstituency(ctx context.Con
 		return queries.FederalConstituency{}, err
 	}
 
-	// Invalidate cache for the new state
-	s.invalidateCache(ctx, params.StateID)
+	// Invalidate cache for the new state and constituency
+	s.invalidateCache(ctx, params.StateID, params.ID)
 
 	return fc, nil
 }
@@ -115,8 +133,8 @@ func (s *FederalConstituenciesService) DeleteFederalConstituency(ctx context.Con
 		return err
 	}
 
-	// Invalidate cache for the state
-	s.invalidateCache(ctx, fc.StateID)
+	// Invalidate cache for the state and constituency
+	s.invalidateCache(ctx, fc.StateID, id)
 
 	return nil
 }
@@ -127,7 +145,7 @@ func (s *FederalConstituenciesService) GetFederalConstituencies(ctx context.Cont
 		Constituencies []queries.FederalConstituency `json:"constituencies"`
 	}
 
-	redisKey := fmt.Sprintf("%s%d_%d", db.RedisFederalConstituenciesByState, stateID, senatorialDistrictID)
+	redisKey := fmt.Sprintf("%s%d:%d", db.RedisFederalConstituenciesByState, stateID, senatorialDistrictID)
 	data, err := s.rdb.Get(ctx, redisKey).Result()
 	switch err {
 	case redis.Nil:
@@ -157,9 +175,27 @@ func (s *FederalConstituenciesService) GetFederalConstituencies(ctx context.Cont
 	}
 }
 
-// invalidateCache clears Redis cache entries for a state's federal constituencies and national metrics.
-func (s *FederalConstituenciesService) invalidateCache(ctx context.Context, stateID int32) {
-	redisKey := fmt.Sprintf("%s%d", db.RedisFederalConstituenciesByState, stateID)
-	s.rdb.Del(ctx, redisKey)
+// invalidateCache clears Redis cache entries for a state's federal constituencies, the national cache, national metrics, and individual constituency cache.
+func (s *FederalConstituenciesService) invalidateCache(ctx context.Context, stateID int32, constituencyIDs ...int32) {
+	// Invalidate individual constituency record cache(s) if provided
+	for _, id := range constituencyIDs {
+		if id > 0 {
+			s.rdb.Del(ctx, fmt.Sprintf("%s%d", db.RedisEachFederalConstituency, id))
+		}
+	}
+
+	// Invalidate state-level constituency list caches (matches compound stateID:senatorialDistrictID keys)
+	pattern := fmt.Sprintf("%s%d:*", db.RedisFederalConstituenciesByState, stateID)
+	iter := s.rdb.Scan(ctx, 0, pattern, 100).Iterator()
+	for iter.Next(ctx) {
+		s.rdb.Del(ctx, iter.Val())
+	}
+
+	// Invalidate national/all-constituencies list cache (state:0:0)
+	if stateID != 0 {
+		s.rdb.Del(ctx, fmt.Sprintf("%s0:0", db.RedisFederalConstituenciesByState))
+	}
+
+	// Invalidate national metrics cache
 	s.rdb.Del(ctx, db.RedisNationalMetrics)
 }
