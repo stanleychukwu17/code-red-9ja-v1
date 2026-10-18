@@ -28,7 +28,7 @@ export type PollingUnitType = {
 export function PollingUnitTableHeader() {
   return (
     <TileHeader>
-      <TileLeft>
+      <TileLeft className="w-[450px] shrink-0">
         <span className="font-semibold text-c-80 w-35 shrink-0">
           PU Code
         </span>
@@ -53,12 +53,12 @@ export function PollingUnitTableHeader() {
 export function PollingUnitTableTile({ data }: { data: PollingUnitType }) {
   const puCode = data.pu_code || data.code || "-";
   return (
-    <TileRow>
-      <TileLeft>
+    <TileRow className="h-auto min-h-14 py-2">
+      <TileLeft className="w-[450px] shrink-0">
         <span className="text-[16px] text-c-80 font-semibold w-35 shrink-0">
           {puCode}
         </span>
-        <p className="truncate w-full text-[16px] text-c-80 font-medium">
+        <p className="w-full text-[16px] text-c-80 font-medium whitespace-normal wrap-break-word leading-snug">
           {data.name}
         </p>
       </TileLeft>

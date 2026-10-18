@@ -42,7 +42,7 @@ function RouteComponent() {
     queryFn: async ({ pageParam }) => {
       const res = await getStateConstituencies({
         data: {
-          limit: 20,
+          limit: 35,
           cursor: pageParam,
           search: debouncedSearchQuery || undefined,
         },

@@ -23,7 +23,7 @@ export type FederalConstituencyType = {
 export function FederalConstituencyTableHeader() {
   return (
     <TileHeader>
-      <TileLeft>
+      <TileLeft className="w-64 shrink-0">
         <span className="font-semibold text-c-80">Federal Constituency</span>
       </TileLeft>
       <TileRight>
@@ -37,7 +37,7 @@ export function FederalConstituencyTableHeader() {
           Wards
         </span>
         <span className="text-c-50 text-[14px] w-22.5">PUs</span>
-        <span className="text-c-50 text-[14px] w-[150px] hidden xl:block">
+        <span className="text-c-50 text-[14px] w-37.5 hidden xl:block">
           District
         </span>
         <span className="text-c-50 text-[14px] w-28.5 hidden md:block">
@@ -55,9 +55,9 @@ export function FederalConstituencyTableTile({
   data: FederalConstituencyType;
 }) {
   return (
-    <TileRow>
-      <TileLeft>
-        <p className="truncate w-full text-[16px] text-c-80 font-medium">
+    <TileRow className="h-auto min-h-14 py-2">
+      <TileLeft className="w-64 shrink-0">
+        <p className="w-full text-[16px] text-c-80 font-medium whitespace-normal wrap-break-word leading-snug">
           {data.name}
         </p>
       </TileLeft>
@@ -74,7 +74,7 @@ export function FederalConstituencyTableTile({
         <span className="text-[15px] text-c-80 w-22.5 font-semibold">
           {data.polling_units_count ?? "-"}
         </span>
-        <span className="text-[15px] text-c-70 w-[150px] truncate hidden xl:block">
+        <span className="text-[15px] text-c-70 w-37.5 truncate hidden xl:block">
           {data.senatorial_district_name}
         </span>
         <span className="text-[15px] text-c-70 w-28.5 truncate hidden md:block">

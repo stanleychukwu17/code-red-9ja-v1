@@ -34,7 +34,7 @@ function RouteComponent() {
       queryKey: [...QUERY_KEYS.bodies.pollingUnits, debouncedSearchQuery],
       queryFn: async ({ pageParam }) => {
         const res = await getPollingUnits({
-          data: { limit: 20, cursor: pageParam, search: debouncedSearchQuery || undefined },
+          data: { limit: 35, cursor: pageParam, search: debouncedSearchQuery || undefined },
         });
         if (res && res.success && res.data) {
           return res;

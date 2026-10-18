@@ -33,7 +33,7 @@ function RouteComponent() {
     queryKey: [...QUERY_KEYS.bodies.federalConstituencies, debouncedSearchQuery],
     queryFn: async ({ pageParam }) => {
       const res = await getFederalConstituencies({
-        data: { limit: 30, cursor: pageParam, search: debouncedSearchQuery || undefined },
+        data: { limit: 35, cursor: pageParam, search: debouncedSearchQuery || undefined },
       });
 
       if (res && res.success && res.data) {

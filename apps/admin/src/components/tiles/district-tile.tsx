@@ -24,7 +24,7 @@ export type DistrictType = {
 export function DistrictTableHeader() {
   return (
     <TileHeader>
-      <TileLeft>
+      <TileLeft className="w-64 shrink-0">
         <span className="font-semibold text-c-80">District</span>
       </TileLeft>
       <TileRight>
@@ -52,9 +52,9 @@ export function DistrictTableHeader() {
 
 export function DistrictTableTile({ data }: { data: DistrictType }) {
   return (
-    <TileRow>
-      <TileLeft>
-        <p className="truncate w-full text-[16px] text-c-80 font-medium">
+    <TileRow className="h-auto min-h-14 py-2">
+      <TileLeft className="w-64 shrink-0">
+        <p className="w-full text-[16px] text-c-80 font-medium whitespace-normal wrap-break-word leading-snug">
           {data.name}
         </p>
       </TileLeft>

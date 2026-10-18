@@ -24,7 +24,7 @@ export type LgaType = {
 export function LgaTableHeader() {
   return (
     <TileHeader>
-      <TileLeft>
+      <TileLeft className="w-64 shrink-0">
         <span className="font-semibold text-c-80">LGA</span>
       </TileLeft>
       <TileRight>
@@ -46,9 +46,9 @@ export function LgaTableHeader() {
 
 export function LgaTableTile({ data }: { data: LgaType }) {
   return (
-    <TileRow>
-      <TileLeft>
-        <p className="truncate w-full text-[16px] text-c-80 font-medium">
+    <TileRow className="h-auto min-h-14 py-2">
+      <TileLeft className="w-64 shrink-0">
+        <p className="w-full text-[16px] text-c-80 font-medium whitespace-normal wrap-break-word leading-snug">
           {data.name}
         </p>
       </TileLeft>

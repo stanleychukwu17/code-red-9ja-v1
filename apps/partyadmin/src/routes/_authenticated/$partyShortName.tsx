@@ -7,7 +7,6 @@
 
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { APP_URL } from "#/lib/config";
-import { useInitializeElectionSession } from "#/hooks/useInitializeElectionSession";
 
 export const Route = createFileRoute("/_authenticated/$partyShortName")({
   beforeLoad: ({ params, context }) => {
@@ -33,6 +32,5 @@ export const Route = createFileRoute("/_authenticated/$partyShortName")({
  * Passes through to nested child routes within the validated party scope.
  */
 function RouteComponent() {
-  useInitializeElectionSession();
   return <Outlet />;
 }
