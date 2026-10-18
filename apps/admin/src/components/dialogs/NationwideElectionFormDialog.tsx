@@ -127,7 +127,6 @@ export function NationwideElectionFormDialog({
 
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.elections.all });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.electionGroups.all });
       onSuccess?.();
       onClose();
     },

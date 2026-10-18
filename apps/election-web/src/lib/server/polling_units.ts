@@ -83,13 +83,86 @@ export const getPollingUnitById = createServerFn({ method: "GET" })
   });
 
 export const getPollingUnits = createServerFn()
-  .inputValidator((data: { wardId?: number; localGovernmentId?: number; stateId?: number; limit?: number; cursor?: string | number; partyId?: number | string; electionGroupId?: number | string }) => data)
-  .handler(async ({ data: { wardId, localGovernmentId, stateId, limit, cursor, partyId, electionGroupId } }) => {
-    try {
-      const response = await apiFetch(API_URL.getPollingUnits(wardId, localGovernmentId, stateId, limit, cursor, partyId, electionGroupId));
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      return { status: "failed", error: "Failed to fetch polling units from API" };
-    }
-  });
+  .inputValidator(
+    (data: {
+      wardId?: number;
+      localGovernmentId?: number;
+      stateId?: number;
+      limit?: number;
+      cursor?: string | number;
+      search?: string;
+    }) => data,
+  )
+  .handler(
+    async ({
+      data: { wardId, localGovernmentId, stateId, limit, cursor, search },
+    }) => {
+      try {
+        const response = await apiFetch(
+          API_URL.getPollingUnits(
+            wardId,
+            localGovernmentId,
+            stateId,
+            limit,
+            cursor,
+            search,
+          ),
+        );
+        const data = await response.json();
+        return data;
+      } catch (error) {
+        return {
+          status: "failed",
+          error: "Failed to fetch polling units from API",
+        };
+      }
+    },
+  );
+
+export const getPollingUnitsWithCapacity = createServerFn()
+  .inputValidator(
+    (data: {
+      partyId: number | string;
+      electionGroupId: number | string;
+      wardId?: number;
+      localGovernmentId?: number;
+      stateId?: number;
+      limit?: number;
+      cursor?: string | number;
+    }) => data,
+  )
+  .handler(
+    async ({
+      data: {
+        partyId,
+        electionGroupId,
+        wardId,
+        localGovernmentId,
+        stateId,
+        limit,
+        cursor,
+      },
+    }) => {
+      try {
+        const response = await apiFetch(
+          API_URL.getPollingUnitsWithCapacity(
+            partyId,
+            electionGroupId,
+            wardId,
+            localGovernmentId,
+            stateId,
+            limit,
+            cursor,
+          ),
+        );
+        const data = await response.json();
+        return data;
+      } catch (error) {
+        return {
+          status: "failed",
+          error: "Failed to fetch polling units with capacity from API",
+        };
+      }
+    },
+  );
+

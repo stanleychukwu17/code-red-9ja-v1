@@ -72,7 +72,7 @@ CREATE TABLE elections (
   name VARCHAR(255) NOT NULL,
   election_date DATE NOT NULL,
   scope VARCHAR(50) NOT NULL, -- nationwide, state, senatorial-district, federal-constituency, lga, state-constituency, ward
-  status VARCHAR(30) NOT NULL DEFAULT 'upcoming' CHECK (status IN ('upcoming', 'ongoing', 'ended', 'cancelled')),
+  status VARCHAR(30) NOT NULL DEFAULT 'upcoming' CHECK (status IN ('upcoming', 'ongoing', 'ended')),
 
   reports_count INT NOT NULL DEFAULT 0,
   updates_count INT NOT NULL DEFAULT 0,

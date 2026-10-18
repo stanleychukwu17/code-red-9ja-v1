@@ -117,18 +117,20 @@ export const deleteElection = createServerFn({ method: "POST" })
 export const bulkDeleteElections = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
-      election_ids?: (string | number)[];
-      ids?: (string | number)[];
+      election_ids: (string | number)[];
+      election_group_id?: number;
     }) => {
-      const rawIds = data.election_ids ?? data.ids ?? [];
       return {
-        election_ids: rawIds
+        election_ids: data.election_ids
           .map((id) => Number(id))
           .filter((id) => !isNaN(id) && id > 0),
+        election_group_id: data.election_group_id
+          ? Number(data.election_group_id)
+          : undefined,
       };
     },
   )
-  .handler(async ({ data: { election_ids } }) => {
+  .handler(async ({ data: { election_ids, election_group_id } }) => {
     try {
       if (election_ids.length === 0) {
         return { success: false, message: "No election IDs provided" };
@@ -138,7 +140,7 @@ export const bulkDeleteElections = createServerFn({ method: "POST" })
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ election_ids }),
+        body: JSON.stringify({ election_ids, election_group_id }),
       });
     } catch (error: any) {
       return {
@@ -151,39 +153,48 @@ export const bulkDeleteElections = createServerFn({ method: "POST" })
 export const bulkUpdateElectionGroup = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
-      election_ids?: (string | number)[];
-      items?: { id: string | number }[];
+      election_ids: (string | number)[];
       election_group_id: number;
+      from_election_group_id?: number;
     }) => {
-      const rawIds =
-        data.election_ids ?? data.items?.map((item) => item.id) ?? [];
       return {
-        election_ids: rawIds
+        election_ids: data.election_ids
           .map((id) => Number(id))
           .filter((id) => !isNaN(id) && id > 0),
         election_group_id: Number(data.election_group_id),
+        from_election_group_id: data.from_election_group_id
+          ? Number(data.from_election_group_id)
+          : undefined,
       };
     },
   )
-  .handler(async ({ data: { election_ids, election_group_id } }) => {
-    try {
-      if (election_ids.length === 0) {
-        return { success: false, message: "No election IDs provided" };
+  .handler(
+    async ({
+      data: { election_ids, election_group_id, from_election_group_id },
+    }) => {
+      try {
+        if (election_ids.length === 0) {
+          return { success: false, message: "No election IDs provided" };
+        }
+        return await apiFetchJson(API_URL.electionsBulkGroup, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            election_ids,
+            election_group_id,
+            from_election_group_id,
+          }),
+        });
+      } catch (error: any) {
+        return {
+          success: false,
+          message: error?.message || "Failed to update election group",
+        };
       }
-      return await apiFetchJson(API_URL.electionsBulkGroup, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ election_ids, election_group_id }),
-      });
-    } catch (error: any) {
-      return {
-        success: false,
-        message: error?.message || "Failed to update election group",
-      };
-    }
-  });
+    },
+  );
 
 export const createNationwideElection = createServerFn({ method: "POST" })
   .inputValidator(

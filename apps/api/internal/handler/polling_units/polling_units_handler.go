@@ -10,15 +10,20 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/go-chi/chi/v5"
 	pollingunitsservice "free9ja/api/internal/service/polling_units"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 )
+
 type PollingUnitsService interface {
 	CreatePollingUnit(ctx context.Context, arg queries.CreatePollingUnitParams) (queries.PollingUnit, error)
 	GetPollingUnitByID(ctx context.Context, id int32) (queries.PollingUnit, error)
 	UpdatePollingUnit(ctx context.Context, arg queries.UpdatePollingUnitParams) (queries.PollingUnit, error)
 	DeletePollingUnit(ctx context.Context, id int32) error
-	GetPollingUnits(ctx context.Context, wardID, localGovernmentID, stateID int32) ([]queries.PollingUnit, error)
+	GetPollingUnitsByWardID(ctx context.Context, wardID int32) ([]queries.PollingUnit, error)
+	GetPollingUnitsPaginated(ctx context.Context, arg queries.GetPollingUnitsPaginatedParams) ([]queries.PollingUnit, error)
+	GetPollingUnits(ctx context.Context, arg queries.GetPollingUnitsParams) ([]queries.PollingUnit, error)
 	GetPollingUnitsWithCapacity(ctx context.Context, wardID, localGovernmentID, stateID int32, partyID int16, electionGroupID int32) ([]pollingunitsservice.PollingUnitWithCapacity, error)
 }
 
@@ -27,18 +32,18 @@ type BodiesService interface {
 }
 
 type Handler struct {
-	puService     PollingUnitsService
-	bodiesService BodiesService
-	queries       *queries.Queries
-	utils         *utils.Utils
+	pollingUnitsService PollingUnitsService
+	bodiesService       BodiesService
+	queries             *queries.Queries
+	utils               *utils.Utils
 }
 
-func NewHandler(puService PollingUnitsService, bodiesService BodiesService, q *queries.Queries, utils *utils.Utils) *Handler {
+func NewHandler(pollingUnitsService PollingUnitsService, bodiesService BodiesService, q *queries.Queries, utils *utils.Utils) *Handler {
 	return &Handler{
-		puService:     puService,
-		bodiesService: bodiesService,
-		queries:       q,
-		utils:         utils,
+		pollingUnitsService: pollingUnitsService,
+		bodiesService:       bodiesService,
+		queries:             q,
+		utils:               utils,
 	}
 }
 
@@ -71,7 +76,6 @@ type UpdatePollingUnitRequest struct {
 	FormattedAddress   *string  `json:"formatted_address"`
 	GooglePlaceID      *string  `json:"google_place_id"`
 }
-
 
 // CreatePollingUnit godoc
 // @Summary      Create a new polling unit
@@ -143,7 +147,7 @@ func (h *Handler) CreatePollingUnit(w http.ResponseWriter, r *http.Request) {
 		GooglePlaceID:           utils.PgTextFromPtr(req.GooglePlaceID),
 	}
 
-	pu, err := h.puService.CreatePollingUnit(r.Context(), arg)
+	pu, err := h.pollingUnitsService.CreatePollingUnit(r.Context(), arg)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create polling unit: "+err.Error())
 		return
@@ -174,7 +178,7 @@ func (h *Handler) GetPollingUnit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pu, err := h.puService.GetPollingUnitByID(r.Context(), int32(id))
+	pu, err := h.pollingUnitsService.GetPollingUnitByID(r.Context(), int32(id))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Polling unit not found")
 		return
@@ -220,7 +224,7 @@ func (h *Handler) UpdatePollingUnit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify it exists
-	_, err = h.puService.GetPollingUnitByID(r.Context(), int32(id))
+	_, err = h.pollingUnitsService.GetPollingUnitByID(r.Context(), int32(id))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Polling unit not found")
 		return
@@ -272,7 +276,7 @@ func (h *Handler) UpdatePollingUnit(w http.ResponseWriter, r *http.Request) {
 		GooglePlaceID:           utils.PgTextFromPtr(req.GooglePlaceID),
 	}
 
-	updatedPU, err := h.puService.UpdatePollingUnit(r.Context(), arg)
+	updatedPU, err := h.pollingUnitsService.UpdatePollingUnit(r.Context(), arg)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update polling unit: "+err.Error())
 		return
@@ -306,13 +310,13 @@ func (h *Handler) DeletePollingUnit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify it exists
-	_, err = h.puService.GetPollingUnitByID(r.Context(), int32(id))
+	_, err = h.pollingUnitsService.GetPollingUnitByID(r.Context(), int32(id))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Polling unit not found")
 		return
 	}
 
-	if err := h.puService.DeletePollingUnit(r.Context(), int32(id)); err != nil {
+	if err := h.pollingUnitsService.DeletePollingUnit(r.Context(), int32(id)); err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to delete polling unit: "+err.Error())
 		return
 	}
@@ -326,29 +330,29 @@ type PaginationMeta struct {
 }
 
 type PollingUnitResponse struct {
-	ID                  int32    `json:"id"`
-	Name                string   `json:"name"`
-	Code                string   `json:"code"`
-	PUCode              string   `json:"pu_code"`
-	RegistrationAreaID  int32    `json:"registration_area_id"`
-	WardID              int32    `json:"ward_id"`
-	WardName            string   `json:"ward_name"`
-	LocalGovernmentID   int32    `json:"lga_id"`
-	LocalGovernmentName string   `json:"lga_name"`
-	StateID             int32    `json:"state_id"`
-	StateName           string   `json:"state_name"`
-	Latitude            float64  `json:"latitude"`
-	Longitude           float64  `json:"longitude"`
-	PreciseLocation     string   `json:"precise_location"`
-	FormattedAddress    string   `json:"formatted_address"`
-	GooglePlaceID       string   `json:"google_place_id"`
+	ID                  int32   `json:"id"`
+	Name                string  `json:"name"`
+	Code                string  `json:"code"`
+	PUCode              string  `json:"pu_code"`
+	RegistrationAreaID  int32   `json:"registration_area_id"`
+	WardID              int32   `json:"ward_id"`
+	WardName            string  `json:"ward_name"`
+	LocalGovernmentID   int32   `json:"lga_id"`
+	LocalGovernmentName string  `json:"lga_name"`
+	StateID             int32   `json:"state_id"`
+	StateName           string  `json:"state_name"`
+	Latitude            float64 `json:"latitude"`
+	Longitude           float64 `json:"longitude"`
+	PreciseLocation     string  `json:"precise_location"`
+	FormattedAddress    string  `json:"formatted_address"`
+	GooglePlaceID       string  `json:"google_place_id"`
 }
 
 type GetPollingUnitsResponse struct {
-	Success bool                 `json:"success"`
-	Message string               `json:"message"`
-	Data    GetPollingUnitsData  `json:"data"`
-	Meta    *PaginationMeta      `json:"meta,omitempty"`
+	Success bool                `json:"success"`
+	Message string              `json:"message"`
+	Data    GetPollingUnitsData `json:"data"`
+	Meta    *PaginationMeta     `json:"meta,omitempty"`
 }
 
 type GetPollingUnitsData struct {
@@ -413,10 +417,9 @@ func parseOptionalQueryInt(r *http.Request, param string) int32 {
 // @Accept       json
 // @Produce      json
 // @Param        ward_id              query     int     false  "Ward ID to filter by"
-// @Param        lga_id  query     int     false  "LGA ID to filter by"
+// @Param        lga_id               query     int     false  "LGA ID to filter by"
 // @Param        state_id             query     int     false  "State ID to filter by"
-// @Param        party_id             query     int     false  "Party ID for capacity check"
-// @Param        election_group_id    query     int     false  "Election Group ID for capacity check"
+// @Param        search               query     string  false  "Search query for polling unit name or code"
 // @Param        limit                query     int     false  "Limit (default 20, max 100)"
 // @Param        cursor               query     string  false  "Cursor (ID of last record)"
 // @Success      200                  {object}  GetPollingUnitsResponse
@@ -426,92 +429,84 @@ func (h *Handler) GetPollingUnits(w http.ResponseWriter, r *http.Request) {
 	wardID := parseOptionalQueryInt(r, "ward_id")
 	localGovernmentID := parseOptionalQueryInt(r, "lga_id")
 	stateID := parseOptionalQueryInt(r, "state_id")
-	partyID := int16(parseOptionalQueryInt(r, "party_id"))
-	electionGroupID := int32(parseOptionalQueryInt(r, "election_group_id"))
 	limit, cursor := parsePaginationParams(r)
+	search := strings.TrimSpace(r.URL.Query().Get("search"))
 
-	if partyID > 0 && electionGroupID > 0 {
-		units, err := h.puService.GetPollingUnitsWithCapacity(r.Context(), wardID, localGovernmentID, stateID, partyID, electionGroupID)
-		if err != nil {
-			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch polling units with capacity: "+err.Error())
-			return
-		}
-		
-		orderBy, orderDir := parseSortParams(r, "name", "ASC")
+	// Fetch limit + 1 records to check if additional pages exist without an extra COUNT query
+	fetchLimit := limit + 1
 
-		sort.SliceStable(units, func(i, j int) bool {
-			if orderDir == "DESC" {
-				i, j = j, i
-			}
-
-			if orderBy == "name" {
-				return units[i].Name < units[j].Name
-			}
-			return units[i].ID < units[j].ID
-		})
-
-		startIndex := 0
-		if cursor > 0 {
-			for i, pu := range units {
-				if int64(pu.ID) == cursor {
-					startIndex = i + 1
-					break
-				}
-			}
-		}
-
-		var paginated []pollingunitsservice.PollingUnitWithCapacity
-		hasMore := false
-		nextCursor := ""
-
-		if startIndex < len(units) {
-			endIndex := startIndex + limit
-			if endIndex >= len(units) {
-				endIndex = len(units)
-				paginated = units[startIndex:endIndex]
-			} else {
-				paginated = units[startIndex:endIndex]
-				hasMore = true
-				nextCursor = strconv.FormatInt(int64(paginated[len(paginated)-1].ID), 10)
-			}
-		} else {
-			paginated = []pollingunitsservice.PollingUnitWithCapacity{}
-		}
-
-		h.utils.RespondSuccess(w, http.StatusOK, "Polling units fetched successfully", map[string]interface{}{
-			"polling_units": paginated,
-			"meta": map[string]interface{}{
-				"next_cursor": nextCursor,
-				"has_more":    hasMore,
-			},
-		})
-		return
-	}
-
-	units, err := h.puService.GetPollingUnits(r.Context(), wardID, localGovernmentID, stateID)
+	// Query PostgreSQL using indexed filters, case-insensitive I-LIKE search, and cursor pagination
+	units, err := h.pollingUnitsService.GetPollingUnitsPaginated(r.Context(), queries.GetPollingUnitsPaginatedParams{
+		WardID:   wardID,
+		LgaID:    localGovernmentID,
+		StateID:  stateID,
+		Search:   utils.PgTextFromString(search),
+		Cursor:   pgtype.Int4{Int32: int32(cursor), Valid: cursor > 0},
+		LimitNum: int32(fetchLimit),
+	})
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch polling units: "+err.Error())
 		return
 	}
 
-	search := strings.TrimSpace(r.URL.Query().Get("search"))
-	if search != "" {
-		searchLower := strings.ToLower(search)
-		var filtered []queries.PollingUnit
-		for _, pu := range units {
-			puCodeStr := ""
-			if pu.PuCode.Valid {
-				puCodeStr = pu.PuCode.String
-			}
-			if strings.Contains(strings.ToLower(pu.Name), searchLower) ||
-				strings.Contains(strings.ToLower(puCodeStr), searchLower) ||
-				strings.Contains(strings.ToLower(pu.WardName), searchLower) ||
-				strings.Contains(strings.ToLower(pu.LgaName), searchLower) ||
-				strings.Contains(strings.ToLower(pu.StateName), searchLower) {
-				filtered = append(filtered, pu)
-			}
-		}
-		units = filtered
+	// Determine if more records exist and trim the slice back to requested limit
+	hasMore := false
+	nextCursor := ""
+	if len(units) > limit {
+		hasMore = true
+		units = units[:limit]
+	}
+	if len(units) > 0 {
+		// Use ID of the last record in current page as cursor for next page
+		nextCursor = strconv.FormatInt(int64(units[len(units)-1].ID), 10)
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Polling units fetched successfully", map[string]interface{}{
+		"polling_units": units,
+		"meta": map[string]interface{}{
+			"next_cursor": nextCursor,
+			"has_more":    hasMore,
+		},
+	})
+}
+
+// GetPollingUnitsWithCapacity godoc
+// @Summary      Get polling units with recruitment capacity
+// @Description  Fetches polling units with agent recruitment capacity for a given party and election group
+// @Tags         Polling Units
+// @Accept       json
+// @Produce      json
+// @Param        party_id             query     int     true   "Party ID for capacity check"
+// @Param        election_group_id    query     int     true   "Election Group ID for capacity check"
+// @Param        ward_id              query     int     false  "Ward ID to filter by"
+// @Param        lga_id               query     int     false  "LGA ID to filter by"
+// @Param        state_id             query     int     false  "State ID to filter by"
+// @Param        limit                query     int     false  "Limit (default 20, max 100)"
+// @Param        cursor               query     string  false  "Cursor (ID of last record)"
+// @Param        order_by             query     string  false  "Sort column (name or id)"
+// @Param        order_dir            query     string  false  "Sort direction (ASC or DESC)"
+// @Success      200                  {object}  GetPollingUnitsResponse
+// @Failure      400                  {string}  party_id and election_group_id are required
+// @Failure      500                  {string}  failed to fetch polling units with capacity
+// @Router       /polling-units/capacity [get]
+func (h *Handler) GetPollingUnitsWithCapacity(w http.ResponseWriter, r *http.Request) {
+	partyID := int16(parseOptionalQueryInt(r, "party_id"))
+	electionGroupID := int32(parseOptionalQueryInt(r, "election_group_id"))
+
+	if partyID <= 0 || electionGroupID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "party_id and election_group_id are required")
+		return
+	}
+
+	wardID := parseOptionalQueryInt(r, "ward_id")
+	localGovernmentID := parseOptionalQueryInt(r, "lga_id")
+	stateID := parseOptionalQueryInt(r, "state_id")
+	limit, cursor := parsePaginationParams(r)
+
+	units, err := h.pollingUnitsService.GetPollingUnitsWithCapacity(r.Context(), wardID, localGovernmentID, stateID, partyID, electionGroupID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch polling units with capacity: "+err.Error())
+		return
 	}
 
 	orderBy, orderDir := parseSortParams(r, "name", "ASC")
@@ -537,7 +532,7 @@ func (h *Handler) GetPollingUnits(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	var paginated []queries.PollingUnit
+	var paginated []pollingunitsservice.PollingUnitWithCapacity
 	hasMore := false
 	nextCursor := ""
 
@@ -552,7 +547,7 @@ func (h *Handler) GetPollingUnits(w http.ResponseWriter, r *http.Request) {
 			nextCursor = strconv.FormatInt(int64(paginated[len(paginated)-1].ID), 10)
 		}
 	} else {
-		paginated = []queries.PollingUnit{}
+		paginated = []pollingunitsservice.PollingUnitWithCapacity{}
 	}
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Polling units fetched successfully", map[string]interface{}{

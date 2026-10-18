@@ -35,6 +35,15 @@ export function BulkChangeGroupDialog({ open, onClose, selectedElections, onSucc
   const [error, setError] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
+  // Determine if all selected elections share a common current election group
+  const commonGroupId =
+    selectedElections.length > 0 &&
+    selectedElections.every(
+      (e) => e.election_group_id === selectedElections[0]?.election_group_id,
+    )
+      ? selectedElections[0]?.election_group_id
+      : undefined;
+
   // Mutation to batch-reassign selected elections to the new election group
   const updateMutation = useMutation({
     mutationFn: async () => {
@@ -45,12 +54,18 @@ export function BulkChangeGroupDialog({ open, onClose, selectedElections, onSucc
       if (selectedElections.length === 0) {
         throw new Error("No elections selected");
       }
+      if (commonGroupId && selectedGroupId === commonGroupId) {
+        throw new Error(
+          "Selected elections are already assigned to this election group",
+        );
+      }
 
       // Send the bulk update payload to the backend
       const res = await bulkUpdateElectionGroup({
         data: {
           election_ids: selectedElections.map((e) => e.id),
           election_group_id: selectedGroupId,
+          from_election_group_id: commonGroupId,
         },
       });
 
@@ -66,7 +81,6 @@ export function BulkChangeGroupDialog({ open, onClose, selectedElections, onSucc
         `Successfully reassigned ${selectedElections.length} elections.`,
       );
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.elections.all });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.electionGroups.all });
       onSuccess?.();
       onClose();
     },
@@ -128,7 +142,11 @@ export function BulkChangeGroupDialog({ open, onClose, selectedElections, onSucc
           <Button
             type="button"
             onClick={() => updateMutation.mutate()}
-            disabled={!selectedGroupId || updateMutation.isPending}
+            disabled={
+              !selectedGroupId ||
+              selectedGroupId === commonGroupId ||
+              updateMutation.isPending
+            }
             className="h-11 px-6 bg-success hover:bg-success-hover text-[16px] font-bold text-white rounded-xl cursor-pointer flex items-center gap-2"
           >
             {updateMutation.isPending && (

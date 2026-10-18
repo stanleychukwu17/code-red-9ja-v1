@@ -11,7 +11,7 @@ import {
   getParties,
   getPresignedUploadURL,
 } from "#/lib/server/parties";
-import { getPollingUnits } from "#/lib/server/polling_units";
+import { getPollingUnitsWithCapacity } from "#/lib/server/polling_units";
 import { getUserMe } from "#/lib/server/users";
 import { getPageHeader } from "#/lib/shared/meta";
 import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query";
@@ -365,15 +365,15 @@ function ApplyPage() {
       selectedElectionIds?.[0],
     ],
     queryFn: async ({ pageParam }) => {
-      const res = await getPollingUnits({
+      const res = await getPollingUnitsWithCapacity({
         data: {
           stateId: selectedStateId || undefined,
           localGovernmentId: selectedLgaId || undefined,
           wardId: selectedWardId || undefined,
           limit: 20,
           cursor: pageParam || undefined,
-          partyId: selectedPartyId || undefined,
-          electionGroupId: selectedElectionIds?.[0] || undefined,
+          partyId: selectedPartyId!,
+          electionGroupId: selectedElectionIds?.[0]!,
         },
       });
       if (res && res.success && res.data) {
@@ -388,7 +388,10 @@ function ApplyPage() {
       }
       return undefined;
     },
-    enabled: !!selectedStateId || !!selectedLgaId || !!selectedWardId,
+    enabled:
+      (!!selectedStateId || !!selectedLgaId || !!selectedWardId) &&
+      !!selectedPartyId &&
+      !!selectedElectionIds?.[0],
   });
 
   // Flattened array of polling units across all fetched pages

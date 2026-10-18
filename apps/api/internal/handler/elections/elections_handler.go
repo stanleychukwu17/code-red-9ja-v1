@@ -29,9 +29,9 @@ type ElectionsService interface {
 	GetElectionByID(ctx context.Context, id int32) (queries.Election, error)
 	ListElections(ctx context.Context, filter elections.ListElectionsFilter) ([]queries.ListElectionInstancesRow, error)
 	UpdateElection(ctx context.Context, params elections.UpdateElectionParams) (queries.Election, error)
-	BulkUpdateElectionGroup(ctx context.Context, electionIDs []int32, electionGroupID int32) error
+	BulkUpdateElectionGroup(ctx context.Context, params elections.BulkUpdateElectionGroupParams) error
 	DeleteElection(ctx context.Context, id int32) error
-	BulkDeleteElections(ctx context.Context, electionIDs []int32) error
+	BulkDeleteElections(ctx context.Context, params elections.BulkDeleteElectionsParams) (elections.BulkDeleteElectionsResult, error)
 	GetElectionCandidates(ctx context.Context, electionID int32) ([]queries.ListElectionCandidatesDetailedByElectionIDRow, error)
 	SyncElectionCandidates(ctx context.Context, electionID int32, candidates []elections.CandidateInput) error
 	FieldPartyCandidate(ctx context.Context, electionID int32, partyID int16, candidateID int64) error
@@ -157,12 +157,14 @@ type UpdateElectionRequest struct {
 }
 
 type BulkUpdateElectionGroupRequest struct {
-	ElectionIDs     []int32 `json:"election_ids" validate:"required,min=1"`
-	ElectionGroupID int32   `json:"election_group_id" validate:"required,gt=0"`
+	ElectionIDs         []int32 `json:"election_ids" validate:"required,min=1"`
+	ElectionGroupID     int32   `json:"election_group_id" validate:"required,gt=0"`
+	FromElectionGroupID *int32  `json:"from_election_group_id,omitempty"`
 }
 
 type BulkDeleteElectionsRequest struct {
-	ElectionIDs []int32 `json:"election_ids" validate:"required,min=1"`
+	ElectionIDs     []int32 `json:"election_ids" validate:"required,min=1"`
+	ElectionGroupID *int32  `json:"election_group_id,omitempty"`
 }
 
 type ElectionCandidateInput struct {
@@ -750,16 +752,24 @@ func (h *Handler) BulkUpdateElectionGroup(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if err := h.service.BulkUpdateElectionGroup(r.Context(), req.ElectionIDs, req.ElectionGroupID); err != nil {
+	if err := h.service.BulkUpdateElectionGroup(r.Context(), elections.BulkUpdateElectionGroupParams{
+		ElectionIDs:         req.ElectionIDs,
+		ElectionGroupID:     req.ElectionGroupID,
+		FromElectionGroupID: req.FromElectionGroupID,
+	}); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	metadataJSON, _ := json.Marshal(map[string]interface{}{
+	metadata := map[string]interface{}{
 		"election_ids":      req.ElectionIDs,
 		"election_group_id": req.ElectionGroupID,
 		"count":             len(req.ElectionIDs),
-	})
+	}
+	if req.FromElectionGroupID != nil && *req.FromElectionGroupID > 0 {
+		metadata["from_election_group_id"] = *req.FromElectionGroupID
+	}
+	metadataJSON, _ := json.Marshal(metadata)
 	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
 		Module:     audit.StringToText(db.ModuleAdmin),
 		Action:     db.ActionBulkUpdateElectionGroup,
@@ -796,19 +806,36 @@ func (h *Handler) BulkDeleteElections(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.service.BulkDeleteElections(r.Context(), req.ElectionIDs); err != nil {
+	result, err := h.service.BulkDeleteElections(r.Context(), elections.BulkDeleteElectionsParams{
+		ElectionIDs:     req.ElectionIDs,
+		ElectionGroupID: req.ElectionGroupID,
+	})
+	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	metadataJSON, _ := json.Marshal(map[string]interface{}{
+	metadata := map[string]interface{}{
 		"election_ids": req.ElectionIDs,
 		"count":        len(req.ElectionIDs),
-	})
+	}
+	entityID := ""
+	if req.ElectionGroupID != nil && *req.ElectionGroupID > 0 {
+		metadata["election_group_id"] = *req.ElectionGroupID
+		entityID = strconv.FormatInt(int64(*req.ElectionGroupID), 10)
+	} else if len(result.ElectionGroupIDs) > 0 {
+		metadata["election_group_id"] = result.ElectionGroupIDs[0]
+		entityID = strconv.FormatInt(int64(result.ElectionGroupIDs[0]), 10)
+		if len(result.ElectionGroupIDs) > 1 {
+			metadata["election_group_ids"] = result.ElectionGroupIDs
+		}
+	}
+	metadataJSON, _ := json.Marshal(metadata)
 	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
 		Module:     audit.StringToText(db.ModuleAdmin),
 		Action:     db.ActionBulkDeleteElections,
 		EntityType: db.EntityTypeElections,
+		EntityID:   entityID,
 		NewValues:  metadataJSON,
 	})
 

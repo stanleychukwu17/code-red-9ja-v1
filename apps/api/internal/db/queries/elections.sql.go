@@ -260,6 +260,44 @@ func (q *Queries) GetElectionInstanceByID(ctx context.Context, id int32) (Electi
 	return i, err
 }
 
+const getElectionsByIDs = `-- name: GetElectionsByIDs :many
+SELECT id, name, election_group_id, status
+FROM elections
+WHERE id = ANY($1::int[])
+`
+
+type GetElectionsByIDsRow struct {
+	ID              int32  `json:"id"`
+	Name            string `json:"name"`
+	ElectionGroupID int32  `json:"election_group_id"`
+	Status          string `json:"status"`
+}
+
+func (q *Queries) GetElectionsByIDs(ctx context.Context, electionIds []int32) ([]GetElectionsByIDsRow, error) {
+	rows, err := q.db.Query(ctx, getElectionsByIDs, electionIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetElectionsByIDsRow
+	for rows.Next() {
+		var i GetElectionsByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.ElectionGroupID,
+			&i.Status,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listElectionCandidatesByElectionID = `-- name: ListElectionCandidatesByElectionID :many
 SELECT id, election_id, election_group_id, candidate_id, running_mate_id, party_id, party_short_name, updated_at, created_at FROM election_candidates WHERE election_id = $1
 `

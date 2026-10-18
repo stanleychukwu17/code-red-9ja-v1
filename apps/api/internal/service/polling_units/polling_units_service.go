@@ -3,6 +3,7 @@ package pollingunitsservice
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
@@ -58,10 +59,7 @@ func (s *PollingUnitsService) GetPollingUnitByID(ctx context.Context, id int32) 
 }
 
 // UpdatePollingUnit updates an existing polling unit and invalidates relevant caches.
-func (s *PollingUnitsService) UpdatePollingUnit(
-	ctx context.Context,
-	arg queries.UpdatePollingUnitParams,
-) (queries.PollingUnit, error) {
+func (s *PollingUnitsService) UpdatePollingUnit(ctx context.Context, arg queries.UpdatePollingUnitParams) (queries.PollingUnit, error) {
 	// Fetch current to invalidate old Ward cache in case wardID changed
 	current, err := s.queries.GetPollingUnitByID(ctx, arg.ID)
 	if err == nil {
@@ -97,18 +95,10 @@ func (s *PollingUnitsService) DeletePollingUnit(ctx context.Context, id int32) e
 	return nil
 }
 
-// GetPollingUnits retrieves polling units filtered by ward, LGA, or state.
-// When wardID > 0, it utilizes Redis caching by wardID; when wardID is 0, it queries the database directly.
-func (s *PollingUnitsService) GetPollingUnits(ctx context.Context, wardID, localGovernmentID, stateID int32) ([]queries.PollingUnit, error) {
-	arg := queries.GetPollingUnitsParams{
-		WardID:  wardID,
-		LgaID:   localGovernmentID,
-		StateID: stateID,
-	}
-
-	// Bypass Redis caching for broad/unfiltered queries (LGA/State/National) to keep Redis lean
+// GetPollingUnitsByWardID retrieves all polling units for a specific ward with Redis cache protection.
+func (s *PollingUnitsService) GetPollingUnitsByWardID(ctx context.Context, wardID int32) ([]queries.PollingUnit, error) {
 	if wardID <= 0 {
-		return s.queries.GetPollingUnits(ctx, arg)
+		return nil, errors.New("invalid ward ID")
 	}
 
 	type Response struct {
@@ -119,7 +109,7 @@ func (s *PollingUnitsService) GetPollingUnits(ctx context.Context, wardID, local
 	data, err := s.rdb.Get(ctx, redisKey).Result()
 	switch err {
 	case redis.Nil:
-		dbData, err := s.queries.GetPollingUnits(ctx, arg)
+		dbData, err := s.queries.GetPollingUnitsByWardID(ctx, wardID)
 		if err != nil {
 			return nil, err
 		}
@@ -141,12 +131,38 @@ func (s *PollingUnitsService) GetPollingUnits(ctx context.Context, wardID, local
 	}
 }
 
+// GetPollingUnitsPaginated executes a database-level filtered, searched, and paginated query.
+func (s *PollingUnitsService) GetPollingUnitsPaginated(ctx context.Context, arg queries.GetPollingUnitsPaginatedParams) ([]queries.PollingUnit, error) {
+	return s.queries.GetPollingUnitsPaginated(ctx, arg)
+}
+
+// GetPollingUnits retrieves polling units directly from the database based on arbitrary filter parameters.
+// It requires at least one geographic filter to prevent fetching all nationwide polling units at once.
+func (s *PollingUnitsService) GetPollingUnits(ctx context.Context, arg queries.GetPollingUnitsParams) ([]queries.PollingUnit, error) {
+	hasFilter := arg.WardID > 0 ||
+		arg.LgaID > 0 ||
+		arg.StateID > 0 ||
+		(arg.SenatorialDistrictID.Valid && arg.SenatorialDistrictID.Int32 > 0) ||
+		(arg.FederalConstituencyID.Valid && arg.FederalConstituencyID.Int32 > 0) ||
+		(arg.StateConstituencyID.Valid && arg.StateConstituencyID.Int32 > 0)
+
+	if !hasFilter {
+		return nil, errors.New("at least one geographic filter (ward_id, lga_id, state_id, or constituency) must be provided")
+	}
+
+	return s.queries.GetPollingUnits(ctx, arg)
+}
+
 type PollingUnitWithCapacity struct {
 	queries.GetPollingUnitsWithPartyCountRow
 	IsCapacityFull bool `json:"is_capacity_full"`
 }
 
 func (s *PollingUnitsService) GetPollingUnitsWithCapacity(ctx context.Context, wardID, localGovernmentID, stateID int32, partyID int16, electionGroupID int32) ([]PollingUnitWithCapacity, error) {
+	if wardID <= 0 && localGovernmentID <= 0 && stateID <= 0 {
+		return nil, errors.New("at least one geographic filter (ward_id, lga_id, or state_id) must be provided")
+	}
+
 	// First, fetch the party to get its agent_acquisition_targets
 	party, err := s.queries.GetPartyByID(ctx, partyID)
 	if err != nil {

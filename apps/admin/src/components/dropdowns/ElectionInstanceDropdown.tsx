@@ -41,7 +41,6 @@ export const ElectionInstanceDropdown = ({
     onSuccess: () => {
       toast.success("Election deleted successfully");
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.elections.all });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.electionGroups.all });
       setOpenDeleteAlert(false);
     },
     onError: (err: any) => {

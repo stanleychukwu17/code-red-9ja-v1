@@ -27,6 +27,7 @@ type BodiesURLMap struct {
 	GetLGAs                        string
 	GetWards                       string
 	GetPollingUnits                string
+	GetPollingUnitsWithCapacity    string
 }
 
 type UsersURLMap struct {
@@ -73,6 +74,7 @@ var ApiUrls = URLMap{
 		GetLGAs:                        "/api/v1/lgas",
 		GetWards:                       "/api/v1/wards",
 		GetPollingUnits:                "/api/v1/polling-units",
+		GetPollingUnitsWithCapacity:    "/api/v1/polling-units/capacity",
 	},
 	Users: UsersURLMap{
 		GetMe:         "/api/v1/users/me",

@@ -50,7 +50,6 @@ const STATUS_OPTIONS = [
   { label: "Upcoming", value: "upcoming" },
   { label: "Ongoing", value: "ongoing" },
   { label: "Ended", value: "ended" },
-  { label: "Cancelled", value: "cancelled" },
 ];
 
 export function ElectionInstancesFilterDialog({

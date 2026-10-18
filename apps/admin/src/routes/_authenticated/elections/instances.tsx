@@ -207,7 +207,12 @@ function RouteComponent() {
         );
       }
       const res = await bulkDeleteElections({
-        data: { election_ids: Array.from(selectedIds) },
+        data: {
+          election_ids: Array.from(selectedIds),
+          election_group_id: election_group_id
+            ? Number(election_group_id)
+            : undefined,
+        },
       });
       if (!res.success) {
         throw new Error(res.message || "Failed to delete elections");
@@ -220,7 +225,6 @@ function RouteComponent() {
         `Successfully deleted ${selectedIds.size} election instances.`,
       );
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.elections.all });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.electionGroups.all });
       setSelectedIds(new Set());
       setIsBulkDeleteOpen(false);
     },

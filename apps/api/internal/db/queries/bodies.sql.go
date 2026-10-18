@@ -975,6 +975,144 @@ func (q *Queries) GetPollingUnits(ctx context.Context, arg GetPollingUnitsParams
 	return items, nil
 }
 
+const getPollingUnitsByWardID = `-- name: GetPollingUnitsByWardID :many
+SELECT id, name, code, pu_code, registration_area_id, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, state_constituency_id, state_constituency_name, lga_id, lga_name, ward_id, ward_name, latitude, longitude, precise_location, formatted_address, google_place_id, status FROM polling_units
+WHERE ward_id = $1::int
+ORDER BY name ASC
+`
+
+func (q *Queries) GetPollingUnitsByWardID(ctx context.Context, wardID int32) ([]PollingUnit, error) {
+	rows, err := q.db.Query(ctx, getPollingUnitsByWardID, wardID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PollingUnit
+	for rows.Next() {
+		var i PollingUnit
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Code,
+			&i.PuCode,
+			&i.RegistrationAreaID,
+			&i.StateID,
+			&i.StateName,
+			&i.SenatorialDistrictID,
+			&i.SenatorialDistrictName,
+			&i.FederalConstituencyID,
+			&i.FederalConstituencyName,
+			&i.StateConstituencyID,
+			&i.StateConstituencyName,
+			&i.LgaID,
+			&i.LgaName,
+			&i.WardID,
+			&i.WardName,
+			&i.Latitude,
+			&i.Longitude,
+			&i.PreciseLocation,
+			&i.FormattedAddress,
+			&i.GooglePlaceID,
+			&i.Status,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getPollingUnitsPaginated = `-- name: GetPollingUnitsPaginated :many
+SELECT id, name, code, pu_code, registration_area_id, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, state_constituency_id, state_constituency_name, lga_id, lga_name, ward_id, ward_name, latitude, longitude, precise_location, formatted_address, google_place_id, status FROM polling_units
+WHERE ($1::int = 0 OR ward_id = $1::int)
+  AND ($2::int = 0 OR lga_id = $2::int)
+  AND ($3::int = 0 OR state_id = $3::int)
+  AND ($4::int IS NULL OR senatorial_district_id = $4::int)
+  AND ($5::int IS NULL OR federal_constituency_id = $5::int)
+  AND ($6::int IS NULL OR state_constituency_id = $6::int)
+  AND (
+    $7::text IS NULL OR $7::text = '' OR
+    name ILIKE '%' || $7::text || '%' OR
+    pu_code ILIKE '%' || $7::text || '%' OR
+    code ILIKE '%' || $7::text || '%' OR
+    ward_name ILIKE '%' || $7::text || '%' OR
+    lga_name ILIKE '%' || $7::text || '%' OR
+    state_name ILIKE '%' || $7::text || '%'
+  )
+  AND ($8::int IS NULL OR $8::int = 0 OR id > $8::int)
+ORDER BY id ASC
+LIMIT $9::int
+`
+
+type GetPollingUnitsPaginatedParams struct {
+	WardID                int32       `json:"ward_id"`
+	LgaID                 int32       `json:"lga_id"`
+	StateID               int32       `json:"state_id"`
+	SenatorialDistrictID  pgtype.Int4 `json:"senatorial_district_id"`
+	FederalConstituencyID pgtype.Int4 `json:"federal_constituency_id"`
+	StateConstituencyID   pgtype.Int4 `json:"state_constituency_id"`
+	Search                pgtype.Text `json:"search"`
+	Cursor                pgtype.Int4 `json:"cursor"`
+	LimitNum              int32       `json:"limit_num"`
+}
+
+func (q *Queries) GetPollingUnitsPaginated(ctx context.Context, arg GetPollingUnitsPaginatedParams) ([]PollingUnit, error) {
+	rows, err := q.db.Query(ctx, getPollingUnitsPaginated,
+		arg.WardID,
+		arg.LgaID,
+		arg.StateID,
+		arg.SenatorialDistrictID,
+		arg.FederalConstituencyID,
+		arg.StateConstituencyID,
+		arg.Search,
+		arg.Cursor,
+		arg.LimitNum,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PollingUnit
+	for rows.Next() {
+		var i PollingUnit
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Code,
+			&i.PuCode,
+			&i.RegistrationAreaID,
+			&i.StateID,
+			&i.StateName,
+			&i.SenatorialDistrictID,
+			&i.SenatorialDistrictName,
+			&i.FederalConstituencyID,
+			&i.FederalConstituencyName,
+			&i.StateConstituencyID,
+			&i.StateConstituencyName,
+			&i.LgaID,
+			&i.LgaName,
+			&i.WardID,
+			&i.WardName,
+			&i.Latitude,
+			&i.Longitude,
+			&i.PreciseLocation,
+			&i.FormattedAddress,
+			&i.GooglePlaceID,
+			&i.Status,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getPollingUnitsWithPartyCount = `-- name: GetPollingUnitsWithPartyCount :many
 SELECT
   pu.id, pu.name, pu.code, pu.pu_code, pu.registration_area_id, pu.state_id, pu.state_name, pu.senatorial_district_id, pu.senatorial_district_name, pu.federal_constituency_id, pu.federal_constituency_name, pu.state_constituency_id, pu.state_constituency_name, pu.lga_id, pu.lga_name, pu.ward_id, pu.ward_name, pu.latitude, pu.longitude, pu.precise_location, pu.formatted_address, pu.google_place_id, pu.status,

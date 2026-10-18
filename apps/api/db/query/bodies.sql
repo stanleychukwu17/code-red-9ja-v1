@@ -67,6 +67,32 @@ WHERE (sqlc.arg(ward_id)::int = 0 OR ward_id = sqlc.arg(ward_id))
   AND (sqlc.narg(state_constituency_id)::int IS NULL OR state_constituency_id = sqlc.narg(state_constituency_id))
 ORDER BY name ASC;
 
+-- name: GetPollingUnitsByWardID :many
+SELECT * FROM polling_units
+WHERE ward_id = sqlc.arg('ward_id')::int
+ORDER BY name ASC;
+
+-- name: GetPollingUnitsPaginated :many
+SELECT * FROM polling_units
+WHERE (sqlc.arg('ward_id')::int = 0 OR ward_id = sqlc.arg('ward_id')::int)
+  AND (sqlc.arg('lga_id')::int = 0 OR lga_id = sqlc.arg('lga_id')::int)
+  AND (sqlc.arg('state_id')::int = 0 OR state_id = sqlc.arg('state_id')::int)
+  AND (sqlc.narg('senatorial_district_id')::int IS NULL OR senatorial_district_id = sqlc.narg('senatorial_district_id')::int)
+  AND (sqlc.narg('federal_constituency_id')::int IS NULL OR federal_constituency_id = sqlc.narg('federal_constituency_id')::int)
+  AND (sqlc.narg('state_constituency_id')::int IS NULL OR state_constituency_id = sqlc.narg('state_constituency_id')::int)
+  AND (
+    sqlc.narg('search')::text IS NULL OR sqlc.narg('search')::text = '' OR
+    name ILIKE '%' || sqlc.narg('search')::text || '%' OR
+    pu_code ILIKE '%' || sqlc.narg('search')::text || '%' OR
+    code ILIKE '%' || sqlc.narg('search')::text || '%' OR
+    ward_name ILIKE '%' || sqlc.narg('search')::text || '%' OR
+    lga_name ILIKE '%' || sqlc.narg('search')::text || '%' OR
+    state_name ILIKE '%' || sqlc.narg('search')::text || '%'
+  )
+  AND (sqlc.narg('cursor')::int IS NULL OR sqlc.narg('cursor')::int = 0 OR id > sqlc.narg('cursor')::int)
+ORDER BY id ASC
+LIMIT sqlc.arg('limit_num')::int;
+
 -- name: GetPollingUnitsWithPartyCount :many
 SELECT
   pu.*,

@@ -112,3 +112,8 @@ GROUP BY election_id;
 -- name: BulkDeleteElectionInstances :exec
 DELETE FROM elections
 WHERE id = ANY(sqlc.arg('election_ids')::int[]);
+
+-- name: GetElectionsByIDs :many
+SELECT id, name, election_group_id, status
+FROM elections
+WHERE id = ANY(sqlc.arg('election_ids')::int[]);

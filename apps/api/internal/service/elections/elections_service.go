@@ -966,16 +966,31 @@ func (s *ElectionsService) DeleteElection(ctx context.Context, id int32) error {
 	return s.queries.DeleteElectionInstance(ctx, id)
 }
 
+// BulkUpdateElectionGroupParams encapsulates parameters for bulk reassigning elections to a new election group.
+type BulkUpdateElectionGroupParams struct {
+	ElectionIDs         []int32
+	ElectionGroupID     int32
+	FromElectionGroupID *int32
+}
+
 // BulkUpdateElectionGroup reassigns multiple election instances to a new election group within a transaction.
-func (s *ElectionsService) BulkUpdateElectionGroup(ctx context.Context, electionIDs []int32, electionGroupID int32) error {
-	if len(electionIDs) == 0 {
+// It verifies:
+// 1. Target election group exists and is active.
+// 2. All target election IDs exist.
+// 3. None of the elections are already in the target group.
+// 4. None of the elections are in 'ongoing' or 'ended' status.
+// 5. If FromElectionGroupID is provided, all elections must belong to that group.
+func (s *ElectionsService) BulkUpdateElectionGroup(ctx context.Context, params BulkUpdateElectionGroupParams) error {
+	if len(params.ElectionIDs) == 0 {
 		return nil
 	}
 
-	electionIDs = deDupeSlice(electionIDs)
+	// In-memory deduplication of election IDs
+	// remove duplicate ids
+	electionIDs := deDupeSlice(params.ElectionIDs)
 
 	// Validate target election group exists and is active
-	if _, err := s.validateElectionGroup(ctx, s.queries, electionGroupID); err != nil {
+	if _, err := s.validateElectionGroup(ctx, s.queries, params.ElectionGroupID); err != nil {
 		return err
 	}
 
@@ -987,9 +1002,33 @@ func (s *ElectionsService) BulkUpdateElectionGroup(ctx context.Context, election
 
 	txQueries := s.queries.WithTx(tx)
 
+	// Fetch existing elections to perform validation checks
+	existing, err := txQueries.GetElectionsByIDs(ctx, electionIDs)
+	if err != nil {
+		return fmt.Errorf("failed to fetch elections: %w", err)
+	}
+	if len(existing) != len(electionIDs) {
+		return fmt.Errorf("found %d of %d requested elections: one or more election IDs are invalid", len(existing), len(electionIDs))
+	}
+
+	for _, el := range existing {
+		// Guard: Cannot move ongoing or ended elections
+		if el.Status == "ongoing" || el.Status == "ended" {
+			return fmt.Errorf("cannot reassign election %q: status is '%s'", el.Name, el.Status)
+		}
+		// Guard: Already assigned to the target election group
+		if el.ElectionGroupID == params.ElectionGroupID {
+			return fmt.Errorf("election %q is already assigned to target election group", el.Name)
+		}
+		// Guard: Source election group mismatch
+		if params.FromElectionGroupID != nil && *params.FromElectionGroupID > 0 && el.ElectionGroupID != *params.FromElectionGroupID {
+			return fmt.Errorf("election %q belongs to election group %d, expected %d", el.Name, el.ElectionGroupID, *params.FromElectionGroupID)
+		}
+	}
+
 	// Reassign elections to the target election group
 	if err := txQueries.BulkUpdateElectionGroup(ctx, queries.BulkUpdateElectionGroupParams{
-		ElectionGroupID: electionGroupID,
+		ElectionGroupID: params.ElectionGroupID,
 		ElectionIds:     electionIDs,
 	}); err != nil {
 		return fmt.Errorf("failed to bulk update elections: %w", err)
@@ -997,7 +1036,7 @@ func (s *ElectionsService) BulkUpdateElectionGroup(ctx context.Context, election
 
 	// Reassign any candidates on these elections to the target election group
 	if err := txQueries.BulkUpdateElectionCandidatesGroup(ctx, queries.BulkUpdateElectionCandidatesGroupParams{
-		ElectionGroupID: electionGroupID,
+		ElectionGroupID: params.ElectionGroupID,
 		ElectionIds:     electionIDs,
 	}); err != nil {
 		return fmt.Errorf("failed to bulk update election candidates group: %w", err)
@@ -1011,30 +1050,74 @@ func (s *ElectionsService) BulkUpdateElectionGroup(ctx context.Context, election
 	return nil
 }
 
+// BulkDeleteElectionsParams encapsulates parameters for bulk deleting election instances.
+type BulkDeleteElectionsParams struct {
+	ElectionIDs     []int32
+	ElectionGroupID *int32
+}
+
+// BulkDeleteElectionsResult encapsulates the result of bulk deletion, including affected election groups for audit logging.
+type BulkDeleteElectionsResult struct {
+	ElectionGroupIDs []int32
+}
+
 // BulkDeleteElections deletes multiple election instances.
-// It prevents deletion if any candidates are already registered for any of the selected elections.
-func (s *ElectionsService) BulkDeleteElections(ctx context.Context, electionIDs []int32) error {
-	if len(electionIDs) == 0 {
-		return nil
+// It verifies:
+// 1. All target election IDs exist.
+// 2. None of the elections are in 'ongoing' or 'ended' status.
+// 3. If ElectionGroupID is provided, all elections must belong to that group.
+// 4. None of the elections have candidates registered.
+func (s *ElectionsService) BulkDeleteElections(ctx context.Context, params BulkDeleteElectionsParams) (BulkDeleteElectionsResult, error) {
+	result := BulkDeleteElectionsResult{}
+	if len(params.ElectionIDs) == 0 {
+		return result, nil
 	}
 
-	electionIDs = deDupeSlice(electionIDs)
+	// In-memory deduplication of election IDs
+	electionIDs := deDupeSlice(params.ElectionIDs)
+
+	// Fetch existing elections to perform validation checks
+	existing, err := s.queries.GetElectionsByIDs(ctx, electionIDs)
+	if err != nil {
+		return result, fmt.Errorf("failed to fetch elections: %w", err)
+	}
+	if len(existing) != len(electionIDs) {
+		return result, fmt.Errorf("found %d of %d requested elections: one or more election IDs are invalid", len(existing), len(electionIDs))
+	}
+
+	groupIDsMap := make(map[int32]struct{})
+	for _, el := range existing {
+		// Guard: Cannot delete ongoing or ended elections
+		if el.Status == "ongoing" || el.Status == "ended" {
+			return result, fmt.Errorf("cannot delete election %q: status is '%s'", el.Name, el.Status)
+		}
+		// Guard: Source election group mismatch
+		if params.ElectionGroupID != nil && *params.ElectionGroupID > 0 && el.ElectionGroupID != *params.ElectionGroupID {
+			return result, fmt.Errorf("election %q belongs to election group %d, expected %d", el.Name, el.ElectionGroupID, *params.ElectionGroupID)
+		}
+		groupIDsMap[el.ElectionGroupID] = struct{}{}
+	}
+
+	result.ElectionGroupIDs = make([]int32, 0, len(groupIDsMap))
+	for gid := range groupIDsMap {
+		result.ElectionGroupIDs = append(result.ElectionGroupIDs, gid)
+	}
 
 	// Guard: Do not allow deletion if any of the elections have candidates registered
 	candidateCounts, err := s.queries.GetCandidateCountsForElections(ctx, electionIDs)
 	if err != nil {
-		return fmt.Errorf("failed to verify candidate counts for elections: %w", err)
+		return result, fmt.Errorf("failed to verify candidate counts for elections: %w", err)
 	}
 	if len(candidateCounts) > 0 {
-		return fmt.Errorf("cannot delete elections: %d election(s) already have registered candidates", len(candidateCounts))
+		return result, fmt.Errorf("cannot delete elections: %d election(s) already have registered candidates", len(candidateCounts))
 	}
 
 	if err := s.queries.BulkDeleteElectionInstances(ctx, electionIDs); err != nil {
-		return fmt.Errorf("failed to bulk delete elections: %w", err)
+		return result, fmt.Errorf("failed to bulk delete elections: %w", err)
 	}
 
 	s.invalidateBulkCache(ctx, electionIDs)
-	return nil
+	return result, nil
 }
 
 // GetElectionCandidates retrieves all candidate records associated with an election,
