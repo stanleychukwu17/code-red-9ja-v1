@@ -26,12 +26,7 @@ interface BulkChangeGroupDialogProps {
 }
 
 // Modal dialog allowing administrators to reassign multiple selected elections to a target election group
-export function BulkChangeGroupDialog({
-  open,
-  onClose,
-  selectedElections,
-  onSuccess,
-}: BulkChangeGroupDialogProps) {
+export function BulkChangeGroupDialog({ open, onClose, selectedElections, onSuccess }: BulkChangeGroupDialogProps) {
   // Target election group selected by the admin
   const [selectedGroupId, setSelectedGroupId] = useState<number | undefined>(
     undefined,

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"free9ja/api/internal/db/queries"
+	stateassemblyconstituenciesservice "free9ja/api/internal/service/state_constituencies"
 	"free9ja/api/internal/utils"
 	"net/http"
 	"strconv"
@@ -11,10 +12,11 @@ import (
 
 	"github.com/go-chi/chi/v5"
 )
+
 type StateConstituenciesService interface {
-	CreateStateConstituency(ctx context.Context, name string, code string, lgaID int32, lgaName string, stateID int32, stateName string, senatorialDistrictID int32, senatorialDistrictName string, federalConstituencyID int32, federalConstituencyName string) (queries.StateConstituency, error)
+	CreateStateConstituency(ctx context.Context, params stateassemblyconstituenciesservice.CreateStateConstituencyParams) (queries.StateConstituency, error)
 	GetStateConstituencyByID(ctx context.Context, id int32) (queries.StateConstituency, error)
-	UpdateStateConstituency(ctx context.Context, id int32, name string, code string, lgaID int32, lgaName string, stateID int32, stateName string, senatorialDistrictID int32, senatorialDistrictName string, federalConstituencyID int32, federalConstituencyName string) (queries.StateConstituency, error)
+	UpdateStateConstituency(ctx context.Context, params stateassemblyconstituenciesservice.UpdateStateConstituencyParams) (queries.StateConstituency, error)
 	DeleteStateConstituency(ctx context.Context, id int32) error
 	GetStateConstituencies(ctx context.Context, stateID, federalConstituencyID int32) ([]queries.StateConstituency, error)
 }
@@ -117,16 +119,18 @@ func (h *Handler) CreateStateConstituency(w http.ResponseWriter, r *http.Request
 
 	sac, err := h.stateConstituenciesService.CreateStateConstituency(
 		r.Context(),
-		req.Name,
-		codeStr,
-		req.LgaID,
-		lga.Name,
-		req.StateID,
-		state.Name,
-		req.SenatorialDistrictID,
-		district.Name,
-		req.FederalConstituencyID,
-		fc.Name,
+		stateassemblyconstituenciesservice.CreateStateConstituencyParams{
+			Name:                    req.Name,
+			Code:                    codeStr,
+			LgaID:                   req.LgaID,
+			LgaName:                 lga.Name,
+			StateID:                 req.StateID,
+			StateName:               state.Name,
+			SenatorialDistrictID:    req.SenatorialDistrictID,
+			SenatorialDistrictName:  district.Name,
+			FederalConstituencyID:   req.FederalConstituencyID,
+			FederalConstituencyName: fc.Name,
+		},
 	)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create state assembly constituency: "+err.Error())
@@ -245,17 +249,19 @@ func (h *Handler) UpdateStateConstituency(w http.ResponseWriter, r *http.Request
 
 	updatedSAC, err := h.stateConstituenciesService.UpdateStateConstituency(
 		r.Context(),
-		int32(id),
-		req.Name,
-		codeStr,
-		req.LgaID,
-		lga.Name,
-		req.StateID,
-		state.Name,
-		req.SenatorialDistrictID,
-		district.Name,
-		req.FederalConstituencyID,
-		fc.Name,
+		stateassemblyconstituenciesservice.UpdateStateConstituencyParams{
+			ID:                      int32(id),
+			Name:                    req.Name,
+			Code:                    codeStr,
+			LgaID:                   req.LgaID,
+			LgaName:                 lga.Name,
+			StateID:                 req.StateID,
+			StateName:               state.Name,
+			SenatorialDistrictID:    req.SenatorialDistrictID,
+			SenatorialDistrictName:  district.Name,
+			FederalConstituencyID:   req.FederalConstituencyID,
+			FederalConstituencyName: fc.Name,
+		},
 	)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update state assembly constituency: "+err.Error())

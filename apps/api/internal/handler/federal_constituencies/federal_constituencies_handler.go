@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"free9ja/api/internal/db/queries"
+	federalconstituenciesservice "free9ja/api/internal/service/federal_constituencies"
 	"free9ja/api/internal/utils"
 	"net/http"
 	"strconv"
@@ -11,10 +12,11 @@ import (
 
 	"github.com/go-chi/chi/v5"
 )
+
 type FederalConstituenciesService interface {
-	CreateFederalConstituency(ctx context.Context, name string, code string, stateID int32, stateName string, senatorialDistrictID int32, senatorialDistrictName string) (queries.FederalConstituency, error)
+	CreateFederalConstituency(ctx context.Context, params federalconstituenciesservice.CreateFederalConstituencyParams) (queries.FederalConstituency, error)
 	GetFederalConstituencyByID(ctx context.Context, id int32) (queries.FederalConstituency, error)
-	UpdateFederalConstituency(ctx context.Context, id int32, name string, code string, stateID int32, stateName string, senatorialDistrictID int32, senatorialDistrictName string) (queries.FederalConstituency, error)
+	UpdateFederalConstituency(ctx context.Context, params federalconstituenciesservice.UpdateFederalConstituencyParams) (queries.FederalConstituency, error)
 	DeleteFederalConstituency(ctx context.Context, id int32) error
 	GetFederalConstituencies(ctx context.Context, stateID, senatorialDistrictID int32) ([]queries.FederalConstituency, error)
 }
@@ -100,7 +102,17 @@ func (h *Handler) CreateFederalConstituency(w http.ResponseWriter, r *http.Reque
 		codeStr = *req.Code
 	}
 
-	fc, err := h.federalConstituenciesService.CreateFederalConstituency(r.Context(), req.Name, codeStr, req.StateID, state.Name, req.SenatorialDistrictID, districtName)
+	fc, err := h.federalConstituenciesService.CreateFederalConstituency(
+		r.Context(),
+		federalconstituenciesservice.CreateFederalConstituencyParams{
+			Name:                   req.Name,
+			Code:                   codeStr,
+			StateID:                req.StateID,
+			StateName:              state.Name,
+			SenatorialDistrictID:   req.SenatorialDistrictID,
+			SenatorialDistrictName: districtName,
+		},
+	)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create federal constituency: "+err.Error())
 		return
@@ -205,7 +217,18 @@ func (h *Handler) UpdateFederalConstituency(w http.ResponseWriter, r *http.Reque
 		codeStr = *req.Code
 	}
 
-	updatedFC, err := h.federalConstituenciesService.UpdateFederalConstituency(r.Context(), int32(id), req.Name, codeStr, req.StateID, state.Name, req.SenatorialDistrictID, districtName)
+	updatedFC, err := h.federalConstituenciesService.UpdateFederalConstituency(
+		r.Context(),
+		federalconstituenciesservice.UpdateFederalConstituencyParams{
+			ID:                     int32(id),
+			Name:                   req.Name,
+			Code:                   codeStr,
+			StateID:                req.StateID,
+			StateName:              state.Name,
+			SenatorialDistrictID:   req.SenatorialDistrictID,
+			SenatorialDistrictName: districtName,
+		},
+	)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update federal constituency: "+err.Error())
 		return

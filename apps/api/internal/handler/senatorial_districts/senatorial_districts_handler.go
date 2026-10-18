@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"free9ja/api/internal/db/queries"
+	senatorialdistrictsservice "free9ja/api/internal/service/senatorial_districts"
 	"free9ja/api/internal/utils"
 	"net/http"
 	"strconv"
@@ -13,9 +14,9 @@ import (
 )
 
 type SenatorialDistrictsService interface {
-	CreateSenatorialDistrict(ctx context.Context, name string, code string, description string, coalitionCenter string, stateID int32, stateName string) (queries.SenatorialDistrict, error)
+	CreateSenatorialDistrict(ctx context.Context, params senatorialdistrictsservice.CreateSenatorialDistrictParams) (queries.SenatorialDistrict, error)
 	GetSenatorialDistrictByID(ctx context.Context, id int32) (queries.SenatorialDistrict, error)
-	UpdateSenatorialDistrict(ctx context.Context, id int32, name string, code string, description string, coalitionCenter string, stateID int32, stateName string) (queries.SenatorialDistrict, error)
+	UpdateSenatorialDistrict(ctx context.Context, params senatorialdistrictsservice.UpdateSenatorialDistrictParams) (queries.SenatorialDistrict, error)
 	DeleteSenatorialDistrict(ctx context.Context, id int32) error
 	GetSenatorialDistricts(ctx context.Context, stateID int32) ([]queries.SenatorialDistrict, error)
 }
@@ -93,7 +94,17 @@ func (h *Handler) CreateSenatorialDistrict(w http.ResponseWriter, r *http.Reques
 		codeStr = *req.Code
 	}
 
-	sd, err := h.senatorialDistrictsService.CreateSenatorialDistrict(r.Context(), req.Name, codeStr, req.Description, req.CoalitionCenter, req.StateID, state.Name)
+	sd, err := h.senatorialDistrictsService.CreateSenatorialDistrict(
+		r.Context(),
+		senatorialdistrictsservice.CreateSenatorialDistrictParams{
+			Name:            req.Name,
+			Code:            codeStr,
+			Description:     req.Description,
+			CoalitionCenter: req.CoalitionCenter,
+			StateID:         req.StateID,
+			StateName:       state.Name,
+		},
+	)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create senatorial district: "+err.Error())
 		return
@@ -188,7 +199,18 @@ func (h *Handler) UpdateSenatorialDistrict(w http.ResponseWriter, r *http.Reques
 		codeStr = *req.Code
 	}
 
-	updatedSD, err := h.senatorialDistrictsService.UpdateSenatorialDistrict(r.Context(), int32(id), req.Name, codeStr, req.Description, req.CoalitionCenter, req.StateID, state.Name)
+	updatedSD, err := h.senatorialDistrictsService.UpdateSenatorialDistrict(
+		r.Context(),
+		senatorialdistrictsservice.UpdateSenatorialDistrictParams{
+			ID:              int32(id),
+			Name:            req.Name,
+			Code:            codeStr,
+			Description:     req.Description,
+			CoalitionCenter: req.CoalitionCenter,
+			StateID:         req.StateID,
+			StateName:       state.Name,
+		},
+	)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update senatorial district: "+err.Error())
 		return

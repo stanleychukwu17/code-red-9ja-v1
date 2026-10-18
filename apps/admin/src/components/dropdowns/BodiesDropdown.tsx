@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { TDropdownGroup } from "@repo/ui/lib/types";
 import { DropdownGroupList } from "@repo/ui/components/custom/AppDropdown";
-import { Calculator, Ellipsis, RefreshCw } from "lucide-react";
+import { Calculator, Ellipsis, Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import {
   DropdownMenu,
@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@repo/ui/components/dropdown-menu";
 import { Button } from "@repo/ui/components/button";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getSyncStatus,
   recalculateBodies,
@@ -34,7 +34,7 @@ interface BodiesDropdownProps {
 export const BodiesDropdown = ({ className }: BodiesDropdownProps) => {
   const [openMenu, setOpenMenu] = useState(false);
   const queryClient = useQueryClient();
-  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const wasRunningRef = useRef(false);
 
   // Invalidates all cached body queries (states, LGAs, wards, PUs, constituencies, districts)
   // so that all open views/tables immediately reflect updated counts and records.
@@ -44,85 +44,57 @@ export const BodiesDropdown = ({ className }: BodiesDropdownProps) => {
     });
   };
 
-  // Polls backend sync status periodically and keeps the toast notification updated
-  const pollSyncProgress = (initialStep?: string) => {
-    // Use a fixed ID so the same toast is updated in-place rather than stacking
-    const toastId = "bodies-sync-toast";
-    toast.loading(initialStep || "Syncing electoral units in background...", { id: toastId });
-
-    // Clear any previous interval before starting a new one
-    if (pollIntervalRef.current) {
-      clearInterval(pollIntervalRef.current);
-    }
-
-    // Poll backend status every 5 seconds
-    pollIntervalRef.current = setInterval(async () => {
-      try {
-        const res = await getSyncStatus();
-        const status = res?.data?.status;
-        if (!status) return;
-
-        if (status.is_running) {
-          // Sync is still in progress: update the toast with the active step
-          toast.loading(status.current_step || "Syncing electoral units in background...", {
-            id: toastId,
-          });
-        } else {
-          // Sync finished: stop polling
-          if (pollIntervalRef.current) {
-            clearInterval(pollIntervalRef.current);
-            pollIntervalRef.current = null;
-          }
-          // Invalidate React Query caches so UI updates with fresh electoral data
-          invalidateAllBodies();
-
-          // Show final result (error or success summary with PU count and duration)
-          if (status.error) {
-            toast.error(`Sync finished with error: ${status.error}`, {
-              id: toastId,
-              duration: 8000,
-            });
-          } else {
-            const puCount = status.last_report?.polling_units_processed?.toLocaleString() || "all";
-            const dur = status.duration_seconds
-              ? ` in ${status.duration_seconds.toFixed(0)}s`
-              : "";
-            toast.success(
-              `Electoral units synchronized successfully (${puCount} PUs processed${dur})`,
-              {
-                id: toastId,
-                duration: 9000,
-              }
-            );
-          }
-        }
-      } catch {
-        // Suppress transient network poll errors to keep polling alive
+  // TanStack Query to manage and poll electoral units background synchronization status
+  const { data: syncStatusResponse } = useQuery({
+    queryKey: QUERY_KEYS.bodies.syncStatus,
+    queryFn: async () => {
+      const res = await getSyncStatus();
+      if (res && res.success === false) {
+        throw new Error(res.message || "Failed to fetch sync status");
       }
-    }, 5000);
-  };
+      return res;
+    },
+    refetchOnWindowFocus: false,
+    staleTime: Infinity,
+    refetchInterval: (query) => {
+      const isRunning = query.state.data?.data?.status?.is_running;
+      return isRunning ? 4000 : false;
+    },
+  });
 
-  // Check on mount if a synchronization job is already running from before
+  // Sync status helpers
+  const syncStatus = syncStatusResponse?.data?.status;
+  const isSyncRunning = Boolean(syncStatus?.is_running);
+
+  // Reactively updates the toast notification and invalidates cached data on sync completion
   useEffect(() => {
-    let isMounted = true;
+    if (!syncStatus) return;
+    const toastId = "bodies-sync-toast";
 
-    getSyncStatus().then((res) => {
-      if (!isMounted) return;
-      const status = res?.data?.status;
+    if (isSyncRunning) {
+      // Show or update progress toast while syncing
+      wasRunningRef.current = true;
+      toast.loading(syncStatus.current_step, { id: toastId });
 
-      if (status?.is_running) {
-        pollSyncProgress(status.current_step);
+    } else if (wasRunningRef.current) {
+      // Just completed: reset tracking ref and refresh all body tables
+      wasRunningRef.current = false;
+      invalidateAllBodies();
+
+      if (syncStatus.error) {
+        toast.error(`Sync finished with error: ${syncStatus.error}`, { id: toastId, duration: 8000 });
+      } else {
+        // Format sync metrics (processed counts & elapsed time)
+        const puCount = syncStatus.last_report?.polling_units_processed?.toLocaleString() || "all";
+        const dur = syncStatus.duration_seconds ? ` in ${syncStatus.duration_seconds.toFixed(0)}s` : "";
+
+        toast.success(
+          `Electoral units synchronized successfully (${puCount} PUs processed${dur})`,
+          { id: toastId, duration: 9000 }
+        );
       }
-    });
-
-    return () => {
-      isMounted = false;
-
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-      }
-    };
-  }, []);
+    }
+  }, [syncStatus, isSyncRunning]);
 
   // Mutation 1: Recalculate rollup counts across all political/geographic bodies
   const mutation = useMutation({
@@ -170,54 +142,83 @@ export const BodiesDropdown = ({ className }: BodiesDropdownProps) => {
     });
   };
 
-  // Triggers the standard background electoral units sync and starts live progress polling
+  // Triggers the standard background electoral units sync and updates status query
   const handleSyncElectoralUnits = async () => {
-    // Close the dropdown immediately so user can continue interacting with the page
     setOpenMenu(false);
+    const toastId = "bodies-sync-toast";
+    toast.loading("Starting electoral units sync...", { id: toastId });
 
     try {
-      // Dispatch API request to kick off the background sync job
       const res = await syncMutation.mutateAsync();
-      const status = res?.data?.status;
-
-      // Start polling backend every 5s to track progress and update the toast notification
-      pollSyncProgress(status?.current_step || "Starting electoral units sync...");
+      if (res?.data?.status) {
+        queryClient.setQueryData(QUERY_KEYS.bodies.syncStatus, res);
+      } else {
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.bodies.syncStatus });
+      }
     } catch (error: any) {
-      toast.error(error?.message || "Failed to start electoral units sync");
+      toast.error(error?.message || "Failed to start electoral units sync", {
+        id: toastId,
+      });
     }
   };
 
-  // Triggers the state-by-state hierarchy background sync and starts live progress polling
+  // Triggers the state-by-state hierarchy background sync and updates status query
   const handleSyncElectoralUnitsStateFlow = async () => {
-    // Close the dropdown immediately
     setOpenMenu(false);
+    const toastId = "bodies-sync-toast";
+    toast.loading("Starting electoral units sync (State Flow)...", { id: toastId });
+
     try {
-      // Dispatch API request to kick off the state-flow background sync job
       const res = await syncStateFlowMutation.mutateAsync();
-      const status = res?.data?.status;
-      // Start polling backend every 5s to track progress and update the toast notification
-      pollSyncProgress(status?.current_step || "Starting electoral units sync (State Flow)...");
+      if (res?.data?.status) {
+        queryClient.setQueryData(QUERY_KEYS.bodies.syncStatus, res);
+      } else {
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.bodies.syncStatus });
+      }
     } catch (error: any) {
-      toast.error(error?.message || "Failed to start electoral units sync (State Flow)");
+      toast.error(
+        error?.message || "Failed to start electoral units sync (State Flow)",
+        { id: toastId }
+      );
     }
   };
+
+  const isSyncPending =
+    isSyncRunning || syncMutation.isPending || syncStateFlowMutation.isPending;
 
   // Dropdown menu items configuration
   const group1: TDropdownGroup = [
     {
       title: "Recalculate Counts",
-      icon: <Calculator className="size-4" />,
+      icon: mutation.isPending ? (
+        <Loader2 className="size-4 animate-spin" />
+      ) : (
+        <Calculator className="size-4" />
+      ),
       action: handleRecalculate,
+      disabled: mutation.isPending || isSyncPending,
     },
     {
-      title: "Sync Electoral Units",
-      icon: <RefreshCw className="size-4" />,
+      title: isSyncRunning ? "Syncing Electoral Units..." : "Sync Electoral Units",
+      icon: isSyncRunning ? (
+        <RefreshCw className="size-4 animate-spin text-primary" />
+      ) : (
+        <RefreshCw className="size-4" />
+      ),
       action: handleSyncElectoralUnits,
+      disabled: isSyncPending,
     },
     {
-      title: "Sync Electoral Units (State Flow)",
-      icon: <RefreshCw className="size-4" />,
+      title: isSyncRunning
+        ? "Syncing (State Flow)..."
+        : "Sync Electoral Units (State Flow)",
+      icon: isSyncRunning ? (
+        <RefreshCw className="size-4 animate-spin text-primary" />
+      ) : (
+        <RefreshCw className="size-4" />
+      ),
       action: handleSyncElectoralUnitsStateFlow,
+      disabled: isSyncPending,
     },
   ];
 
@@ -233,7 +234,11 @@ export const BodiesDropdown = ({ className }: BodiesDropdownProps) => {
             variant="outline"
             className="size-10 p-0 flex items-center justify-center rounded-full transition hover:[&_svg]:text-c-90"
           >
-            <Ellipsis className="size-5 text-c-90" />
+            {isSyncRunning ? (
+              <RefreshCw className="size-5 text-primary animate-spin" />
+            ) : (
+              <Ellipsis className="size-5 text-c-90" />
+            )}
           </Button>
         </DropdownMenuTrigger>
 

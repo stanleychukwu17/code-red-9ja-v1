@@ -20,9 +20,9 @@ type BodiesService interface {
 	GetStatesByCountryID(ctx context.Context, countryID int16) ([]queries.CState, error)
 	GetCitiesByStateID(ctx context.Context, stateID int16) ([]queries.GetCitiesByStateIDRow, error)
 	GetLGAs(ctx context.Context, stateID int32) ([]queries.Lga, error)
-	CreateLGA(ctx context.Context, name string, code string, stateID int32, stateName string, senatorialDistrictID int32, senatorialDistrictName string, federalConstituencyID int32, federalConstituencyName string) (queries.Lga, error)
+	CreateLGA(ctx context.Context, params bodiesservice.CreateLGAParams) (queries.Lga, error)
 	GetLGAByID(ctx context.Context, id int32) (queries.Lga, error)
-	UpdateLGA(ctx context.Context, id int32, name string, code string, stateID int32, stateName string, senatorialDistrictID int32, senatorialDistrictName string, federalConstituencyID int32, federalConstituencyName string) (queries.Lga, error)
+	UpdateLGA(ctx context.Context, params bodiesservice.UpdateLGAParams) (queries.Lga, error)
 	DeleteLGA(ctx context.Context, id int32) error
 	SyncElectoralUnits(ctx context.Context) (*bodiesservice.SyncReport, error)
 	SyncElectoralUnitsStateFlow(ctx context.Context) (*bodiesservice.SyncReport, error)
@@ -262,7 +262,19 @@ func (h *Handler) CreateLGA(w http.ResponseWriter, r *http.Request) {
 		fcName = fc.Name
 	}
 
-	lga, err := h.bodiesService.CreateLGA(r.Context(), req.Name, req.Code, req.StateID, state.Name, req.SenatorialDistrictID, sdName, req.FederalConstituencyID, fcName)
+	lga, err := h.bodiesService.CreateLGA(
+		r.Context(),
+		bodiesservice.CreateLGAParams{
+			Name:                   req.Name,
+			Code:                   req.Code,
+			StateID:                req.StateID,
+			StateName:              state.Name,
+			SenatorialDistrictID:   req.SenatorialDistrictID,
+			SenatorialDistrictName: sdName,
+			FederalConstituencyID:  req.FederalConstituencyID,
+			FederalConstituencyName: fcName,
+		},
+	)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create LGA: "+err.Error())
 		return
@@ -324,7 +336,20 @@ func (h *Handler) UpdateLGA(w http.ResponseWriter, r *http.Request) {
 		fcName = fc.Name
 	}
 
-	lga, err := h.bodiesService.UpdateLGA(r.Context(), int32(id), req.Name, req.Code, req.StateID, state.Name, req.SenatorialDistrictID, sdName, req.FederalConstituencyID, fcName)
+	lga, err := h.bodiesService.UpdateLGA(
+		r.Context(),
+		bodiesservice.UpdateLGAParams{
+			ID:                     int32(id),
+			Name:                   req.Name,
+			Code:                   req.Code,
+			StateID:                req.StateID,
+			StateName:              state.Name,
+			SenatorialDistrictID:   req.SenatorialDistrictID,
+			SenatorialDistrictName: sdName,
+			FederalConstituencyID:  req.FederalConstituencyID,
+			FederalConstituencyName: fcName,
+		},
+	)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update LGA: "+err.Error())
 		return

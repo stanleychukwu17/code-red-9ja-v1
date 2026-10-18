@@ -19,9 +19,7 @@ import type { FederalConstituencyType } from "#/components/tiles/federal-constit
 import { Loader2 } from "lucide-react";
 import { QUERY_KEYS } from "#/lib/config";
 
-export const Route = createFileRoute(
-  "/_authenticated/bodies/federal-constituencies",
-)({
+export const Route = createFileRoute("/_authenticated/bodies/federal-constituencies")({
   head: () => getPageHeader({ title: "Bodies - Federal Constituencies" }),
   component: RouteComponent,
 });
@@ -31,29 +29,28 @@ function RouteComponent() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery] = useDebounceValue(searchQuery, 500);
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, error } =
-    useInfiniteQuery({
-      queryKey: [...QUERY_KEYS.bodies.federalConstituencies, debouncedSearchQuery],
-      queryFn: async ({ pageParam }) => {
-        const res = await getFederalConstituencies({
-          data: { limit: 20, cursor: pageParam, search: debouncedSearchQuery || undefined },
-        });
-        if (res && res.success && res.data) {
-          return res;
-        }
-        throw new Error(
-          res?.message || "Failed to fetch federal constituencies",
-        );
-      },
-      initialPageParam: "",
-      getNextPageParam: (lastPage) => {
-        if (lastPage && lastPage.meta && lastPage.meta.has_more) {
-          return lastPage.meta.next_cursor || "";
-        }
-        return undefined;
-      },
-      refetchOnWindowFocus: false,
-    });
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, error } = useInfiniteQuery({
+    queryKey: [...QUERY_KEYS.bodies.federalConstituencies, debouncedSearchQuery],
+    queryFn: async ({ pageParam }) => {
+      const res = await getFederalConstituencies({
+        data: { limit: 30, cursor: pageParam, search: debouncedSearchQuery || undefined },
+      });
+      if (res && res.success && res.data) {
+        return res;
+      }
+      throw new Error(
+        res?.message || "Failed to fetch federal constituencies",
+      );
+    },
+    initialPageParam: "",
+    getNextPageParam: (lastPage) => {
+      if (lastPage && lastPage.meta && lastPage.meta.has_more) {
+        return lastPage.meta.next_cursor || "";
+      }
+      return undefined;
+    },
+    refetchOnWindowFocus: false,
+  });
 
   const { ref: sentinelRef, isIntersecting } = useIntersectionObserver({
     threshold: 0.1,
@@ -67,20 +64,20 @@ function RouteComponent() {
 
   const constituencies: FederalConstituencyType[] = data
     ? data.pages.flatMap((page) =>
-        (page.data?.constituencies || []).map((constituency: any) => ({
-          id: constituency.id,
-          name: constituency.name,
-          code: constituency.code,
-          state_id: constituency.state_id,
-          state_name: constituency.state_name,
-          senatorial_district_id: constituency.senatorial_district_id,
-          senatorial_district_name: constituency.senatorial_district_name,
-          lgas_count: constituency.lgas_count,
-          state_constituencies_count: constituency.state_constituencies_count,
-          wards_count: constituency.wards_count,
-          polling_units_count: constituency.polling_units_count,
-        })),
-      )
+      (page.data?.constituencies || []).map((constituency: any) => ({
+        id: constituency.id,
+        name: constituency.name,
+        code: constituency.code,
+        state_id: constituency.state_id,
+        state_name: constituency.state_name,
+        senatorial_district_id: constituency.senatorial_district_id,
+        senatorial_district_name: constituency.senatorial_district_name,
+        lgas_count: constituency.lgas_count,
+        state_constituencies_count: constituency.state_constituencies_count,
+        wards_count: constituency.wards_count,
+        polling_units_count: constituency.polling_units_count,
+      })),
+    )
     : [];
 
   return (

@@ -374,6 +374,7 @@ export const QUERY_KEYS = {
     lgas: ["lgas"],
     wards: ["wards"],
     pollingUnits: ["polling-units"],
+    syncStatus: ["bodies", "sync-status"],
     all: [
       ["states"],
       ["senatorial-districts"],

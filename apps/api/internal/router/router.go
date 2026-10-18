@@ -247,6 +247,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	mainRouter.Use(requestLoggerMiddleware)            // Logs the start and end time of each HTTP request
 	mainRouter.Use(apimiddleware.PrometheusMiddleware) // Tracks metrics for Prometheus (request duration, counts)
 	mainRouter.Use(middleware.Recoverer)               // Recovers from panics without crashing the entire server
+	mainRouter.Use(middleware.Compress(5))             // Compresses responses with gzip (level 5)
 
 	// Swagger documentation (Dev only)
 	if os.Getenv("ENV") != "production" {

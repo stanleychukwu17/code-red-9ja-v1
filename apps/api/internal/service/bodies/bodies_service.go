@@ -8,6 +8,7 @@ import (
 	"free9ja/api/internal/constants"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
+	"free9ja/api/internal/utils"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -332,27 +333,42 @@ func (s *BodiesService) GetLGAs(ctx context.Context, stateID int32) ([]queries.L
 	}
 }
 
+// CreateLGAParams defines the attributes required to create a Local Government Area.
+type CreateLGAParams struct {
+	Name                   string
+	Code                   string
+	StateID                int32
+	StateName              string
+	SenatorialDistrictID   int32
+	SenatorialDistrictName string
+	FederalConstituencyID  int32
+	FederalConstituencyName string
+}
+
+// UpdateLGAParams defines the attributes required to update an existing Local Government Area.
+type UpdateLGAParams struct {
+	ID                     int32
+	Name                   string
+	Code                   string
+	StateID                int32
+	StateName              string
+	SenatorialDistrictID   int32
+	SenatorialDistrictName string
+	FederalConstituencyID  int32
+	FederalConstituencyName string
+}
+
 // CreateLGA creates a new Local Government Area and invalidates the state's LGA cache.
-func (s *BodiesService) CreateLGA(
-	ctx context.Context,
-	name string,
-	code string,
-	stateID int32,
-	stateName string,
-	senatorialDistrictID int32,
-	senatorialDistrictName string,
-	federalConstituencyID int32,
-	federalConstituencyName string,
-) (queries.Lga, error) {
+func (s *BodiesService) CreateLGA(ctx context.Context, params CreateLGAParams) (queries.Lga, error) {
 	arg := queries.CreateLGAParams{
-		Name:                    name,
-		Code:                    code,
-		StateID:                 stateID,
-		StateName:               stateName,
-		SenatorialDistrictID:    pgtype.Int4{Int32: senatorialDistrictID, Valid: senatorialDistrictID != 0},
-		SenatorialDistrictName:  pgtype.Text{String: senatorialDistrictName, Valid: senatorialDistrictName != ""},
-		FederalConstituencyID:   pgtype.Int4{Int32: federalConstituencyID, Valid: federalConstituencyID != 0},
-		FederalConstituencyName: pgtype.Text{String: federalConstituencyName, Valid: federalConstituencyName != ""},
+		Name:                    params.Name,
+		Code:                    params.Code,
+		StateID:                 params.StateID,
+		StateName:               params.StateName,
+		SenatorialDistrictID:    pgtype.Int4{Int32: params.SenatorialDistrictID, Valid: params.SenatorialDistrictID != 0},
+		SenatorialDistrictName:  utils.PgTextFromString(params.SenatorialDistrictName),
+		FederalConstituencyID:   pgtype.Int4{Int32: params.FederalConstituencyID, Valid: params.FederalConstituencyID != 0},
+		FederalConstituencyName: utils.PgTextFromString(params.FederalConstituencyName),
 	}
 
 	lga, err := s.queries.CreateLGA(ctx, arg)
@@ -360,7 +376,7 @@ func (s *BodiesService) CreateLGA(
 		return queries.Lga{}, err
 	}
 
-	s.invalidateCache(ctx, stateID)
+	s.invalidateCache(ctx, params.StateID)
 
 	return lga, nil
 }
@@ -371,33 +387,22 @@ func (s *BodiesService) GetLGAByID(ctx context.Context, id int32) (queries.Lga, 
 }
 
 // UpdateLGA updates an existing Local Government Area and invalidates relevant caches.
-func (s *BodiesService) UpdateLGA(
-	ctx context.Context,
-	id int32,
-	name string,
-	code string,
-	stateID int32,
-	stateName string,
-	senatorialDistrictID int32,
-	senatorialDistrictName string,
-	federalConstituencyID int32,
-	federalConstituencyName string,
-) (queries.Lga, error) {
-	current, err := s.queries.GetLGAByID(ctx, id)
+func (s *BodiesService) UpdateLGA(ctx context.Context, params UpdateLGAParams) (queries.Lga, error) {
+	current, err := s.queries.GetLGAByID(ctx, params.ID)
 	if err == nil {
 		s.invalidateCache(ctx, current.StateID)
 	}
 
 	arg := queries.UpdateLGAParams{
-		ID:                      id,
-		Name:                    name,
-		Code:                    code,
-		StateID:                 stateID,
-		StateName:               stateName,
-		SenatorialDistrictID:    pgtype.Int4{Int32: senatorialDistrictID, Valid: senatorialDistrictID != 0},
-		SenatorialDistrictName:  pgtype.Text{String: senatorialDistrictName, Valid: senatorialDistrictName != ""},
-		FederalConstituencyID:   pgtype.Int4{Int32: federalConstituencyID, Valid: federalConstituencyID != 0},
-		FederalConstituencyName: pgtype.Text{String: federalConstituencyName, Valid: federalConstituencyName != ""},
+		ID:                      params.ID,
+		Name:                    params.Name,
+		Code:                    params.Code,
+		StateID:                 params.StateID,
+		StateName:               params.StateName,
+		SenatorialDistrictID:    pgtype.Int4{Int32: params.SenatorialDistrictID, Valid: params.SenatorialDistrictID != 0},
+		SenatorialDistrictName:  utils.PgTextFromString(params.SenatorialDistrictName),
+		FederalConstituencyID:   pgtype.Int4{Int32: params.FederalConstituencyID, Valid: params.FederalConstituencyID != 0},
+		FederalConstituencyName: utils.PgTextFromString(params.FederalConstituencyName),
 	}
 
 	lga, err := s.queries.UpdateLGA(ctx, arg)
@@ -405,7 +410,7 @@ func (s *BodiesService) UpdateLGA(
 		return queries.Lga{}, err
 	}
 
-	s.invalidateCache(ctx, stateID)
+	s.invalidateCache(ctx, params.StateID)
 
 	return lga, nil
 }
