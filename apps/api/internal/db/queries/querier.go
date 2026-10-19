@@ -343,6 +343,7 @@ type Querier interface {
 	GetWardSupervisorByElectionGroup(ctx context.Context, arg GetWardSupervisorByElectionGroupParams) (WardElectionSupervisor, error)
 	GetWardSupervisorCount(ctx context.Context, arg GetWardSupervisorCountParams) (int32, error)
 	GetWards(ctx context.Context, arg GetWardsParams) ([]Ward, error)
+	GetWardsPaginated(ctx context.Context, arg GetWardsPaginatedParams) ([]Ward, error)
 	GetZonalChapter(ctx context.Context, arg GetZonalChapterParams) (int32, error)
 	HardDeleteFile(ctx context.Context, id int64) error
 	HardDeletePartyCustomPosition(ctx context.Context, arg HardDeletePartyCustomPositionParams) error

@@ -61,7 +61,7 @@ func (s *WardsService) CreateWard(ctx context.Context, params CreateWardParams) 
 		return queries.Ward{}, err
 	}
 
-	s.invalidateCache(ctx, params.LgaID)
+	s.invalidateCache(ctx, params.LgaID, params.StateID)
 
 	return ward, nil
 }
@@ -93,7 +93,7 @@ func (s *WardsService) GetWardByID(ctx context.Context, id int32) (queries.Ward,
 func (s *WardsService) UpdateWard(ctx context.Context, params UpdateWardParams) (queries.Ward, error) {
 	current, err := s.queries.GetWardByID(ctx, params.ID)
 	if err == nil {
-		s.invalidateCache(ctx, current.LgaID, params.ID)
+		s.invalidateCache(ctx, current.LgaID, current.StateID, params.ID)
 	}
 
 	lga, _ := s.queries.GetLGAByID(ctx, params.LgaID)
@@ -116,8 +116,8 @@ func (s *WardsService) UpdateWard(ctx context.Context, params UpdateWardParams) 
 		return queries.Ward{}, err
 	}
 
-	// Invalidate cache for new LGA and ward
-	s.invalidateCache(ctx, params.LgaID, params.ID)
+	// Invalidate cache for new LGA, state, and ward
+	s.invalidateCache(ctx, params.LgaID, params.StateID, params.ID)
 
 	return ward, nil
 }
@@ -134,49 +134,69 @@ func (s *WardsService) DeleteWard(ctx context.Context, id int32) error {
 		return err
 	}
 
-	// Invalidate cache for the LGA and ward
-	s.invalidateCache(ctx, ward.LgaID, id)
+	// Invalidate cache for the LGA, state, and ward
+	s.invalidateCache(ctx, ward.LgaID, ward.StateID, id)
 
 	return nil
 }
 
+// GetWards retrieves wards for an LGA or State, using Redis cache when available.
 func (s *WardsService) GetWards(ctx context.Context, lgaID, stateID int32) ([]queries.Ward, error) {
 	type Response struct {
 		Wards []queries.Ward `json:"wards"`
 	}
 
-	redisKey := fmt.Sprintf("%s%d:%d", db.RedisWardsByLGA, lgaID, stateID)
-	data, err := s.rdb.Get(ctx, redisKey).Result()
-	switch err {
-	case redis.Nil:
-		arg := queries.GetWardsParams{
-			LgaID:   lgaID,
-			StateID: stateID,
-		}
-		dbData, err := s.queries.GetWards(ctx, arg)
-		if err != nil {
+	var redisKey string
+	if lgaID > 0 {
+		redisKey = fmt.Sprintf("%s%d", db.RedisWardsByLGA, lgaID)
+	} else if stateID > 0 {
+		redisKey = fmt.Sprintf("%s%d", db.RedisWardsByState, stateID)
+	}
+
+	if redisKey != "" {
+		data, err := s.rdb.Get(ctx, redisKey).Result()
+		switch err {
+		case redis.Nil:
+			arg := queries.GetWardsParams{
+				LgaID:   lgaID,
+				StateID: stateID,
+			}
+			dbData, err := s.queries.GetWards(ctx, arg)
+			if err != nil {
+				return nil, err
+			}
+
+			payload := Response{
+				Wards: dbData,
+			}
+
+			jsonData, _ := json.Marshal(payload)
+			s.rdb.Set(ctx, redisKey, jsonData, db.RedisOneEightyDaysTTL)
+
+			return dbData, nil
+		case nil:
+			var payload Response
+			err = json.Unmarshal([]byte(data), &payload)
+			return payload.Wards, nil
+		default:
 			return nil, err
 		}
-
-		payload := Response{
-			Wards: dbData,
-		}
-
-		jsonData, _ := json.Marshal(payload)
-		s.rdb.Set(ctx, redisKey, jsonData, db.RedisOneEightyDaysTTL)
-
-		return dbData, nil
-	case nil:
-		var payload Response
-		err = json.Unmarshal([]byte(data), &payload)
-		return payload.Wards, nil
-	default:
-		return nil, err
 	}
+
+	arg := queries.GetWardsParams{
+		LgaID:   lgaID,
+		StateID: stateID,
+	}
+	return s.queries.GetWards(ctx, arg)
 }
 
-// invalidateCache clears Redis cache entries for an LGA's wards, national metrics, and individual ward cache.
-func (s *WardsService) invalidateCache(ctx context.Context, lgaID int32, wardIDs ...int32) {
+// GetWardsPaginated retrieves a paginated slice of wards directly from PostgreSQL.
+func (s *WardsService) GetWardsPaginated(ctx context.Context, arg queries.GetWardsPaginatedParams) ([]queries.Ward, error) {
+	return s.queries.GetWardsPaginated(ctx, arg)
+}
+
+// invalidateCache clears Redis cache entries for an LGA's wards, State's wards, national metrics, and individual ward cache.
+func (s *WardsService) invalidateCache(ctx context.Context, lgaID, stateID int32, wardIDs ...int32) {
 	// Invalidate individual ward record cache(s) if provided
 	for _, id := range wardIDs {
 		if id > 0 {
@@ -184,14 +204,14 @@ func (s *WardsService) invalidateCache(ctx context.Context, lgaID int32, wardIDs
 		}
 	}
 
-	// Invalidate LGA-level ward list caches (matches compound lgaID:stateID keys)
-	pattern := fmt.Sprintf("%s%d:*", db.RedisWardsByLGA, lgaID)
-	iter := s.rdb.Scan(ctx, 0, pattern, 100).Iterator()
-	for iter.Next(ctx) {
-		s.rdb.Del(ctx, iter.Val())
+	// Invalidate LGA-level ward list cache
+	if lgaID > 0 {
+		s.rdb.Del(ctx, fmt.Sprintf("%s%d", db.RedisWardsByLGA, lgaID))
 	}
-	if lgaID != 0 {
-		s.rdb.Del(ctx, fmt.Sprintf("%s0:0", db.RedisWardsByLGA))
+
+	// Invalidate state-level ward list cache
+	if stateID > 0 {
+		s.rdb.Del(ctx, fmt.Sprintf("%s%d", db.RedisWardsByState, stateID))
 	}
 
 	// Invalidate national metrics cache

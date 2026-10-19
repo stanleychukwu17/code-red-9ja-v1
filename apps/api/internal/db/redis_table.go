@@ -81,25 +81,28 @@ const (
 	//--END--
 
 	//--START-- for political and administrative bodies
-	RedisEachZone                     = "bodies:each_zone:"
-	RedisEachLGA                      = "bodies:each_lga:"
-	RedisEachWard                     = "bodies:each_ward:"
-	RedisEachSenatorialDistrict       = "bodies:each_senatorial_district:"
-	RedisEachFederalConstituency      = "bodies:each_federal_constituency:"
-	RedisEachStateConstituency        = "bodies:each_state_constituency:"
-	RedisEachPollingUnit              = "bodies:each_polling_unit:"
-	RedisSenatorialDistrictsAll       = "bodies:senatorial_districts:all"            // STRING: "bodies:senatorial_districts:all"
-	RedisSenatorialDistrictsByState   = "bodies:senatorial_districts:state:"        // STRING: "bodies:senatorial_districts:state:<stateID>"
-	RedisFederalConstituenciesAll          = "bodies:federal_constituencies:all"          // STRING: "bodies:federal_constituencies:all"
+	RedisEachZone                          = "bodies:each_zone:"
+	RedisEachLGA                           = "bodies:each_lga:"
+	RedisEachWard                          = "bodies:each_ward:"
+	RedisEachSenatorialDistrict            = "bodies:each_senatorial_district:"
+	RedisEachFederalConstituency           = "bodies:each_federal_constituency:"
+	RedisEachStateConstituency             = "bodies:each_state_constituency:"
+	RedisEachPollingUnit                   = "bodies:each_polling_unit:"
+	RedisSenatorialDistrictsAll            = "bodies:senatorial_districts:all"           // STRING: "bodies:senatorial_districts:all"
+	RedisSenatorialDistrictsByState        = "bodies:senatorial_districts:state:"        // STRING: "bodies:senatorial_districts:state:<stateID>"
+	RedisFederalConstituenciesAll          = "bodies:federal_constituencies:all"         // STRING: "bodies:federal_constituencies:all"
 	RedisFederalConstituenciesByState      = "bodies:federal_constituencies:state:"      // STRING: "bodies:federal_constituencies:state:<stateID>"
 	RedisFederalConstituenciesBySenatorial = "bodies:federal_constituencies:senatorial:" // STRING: "bodies:federal_constituencies:senatorial:<senatorialDistrictID>"
-	RedisStateConstituenciesByState        = "bodies:state_constituencies:state:"        // STRING: "bodies:state_constituencies:state:<stateID>:<federalConstituencyID>"
+	RedisStateConstituenciesAll            = "bodies:state_constituencies:all"           // STRING: "bodies:state_constituencies:all"
+	RedisStateConstituenciesByState        = "bodies:state_constituencies:state:"        // STRING: "bodies:state_constituencies:state:<stateID>"
+	RedisStateConstituenciesByFederal      = "bodies:state_constituencies:federal:"      // STRING: "bodies:state_constituencies:federal:<federalConstituencyID>"
 	RedisLGAsAll                           = "bodies:lgas:all"                           // STRING: "bodies:lgas:all"
 	RedisLGAsByState                       = "bodies:lgas:state:"                        // STRING: "bodies:lgas:state:<stateID>"
-	RedisWardsByLGA                   = "bodies:wards:lga:"                   // STRING: "bodies:wards:lga:<lgaID>:<stateID>"
-	RedisPollingUnitsByWard           = "bodies:polling_units:ward:"           // STRING: "bodies:polling_units:ward:<wardID>"
-	RedisPollingUnitsByLGA            = "bodies:polling_units:lga:"            // STRING: "bodies:polling_units:lga:<lgaID>"
-	RedisNationalMetrics              = "bodies:national_metrics"
+	RedisWardsByState                      = "bodies:wards:state:"                       // STRING: "bodies:wards:state:<stateID>"
+	RedisWardsByLGA                        = "bodies:wards:lga:"                         // STRING: "bodies:wards:lga:<lgaID>"
+	RedisPollingUnitsByWard                = "bodies:polling_units:ward:"                // STRING: "bodies:polling_units:ward:<wardID>"
+	RedisPollingUnitsByLGA                 = "bodies:polling_units:lga:"                 // STRING: "bodies:polling_units:lga:<lgaID>"
+	RedisNationalMetrics                   = "bodies:national_metrics"
 	//--END--
 
 	//--START-- for offices
@@ -114,8 +117,8 @@ const (
 	//--END--
 
 	//--START-- for background worker & cron distributed locks
-	RedisCronLockINECGrabberSync           = "cron:lock:inec_grabber_sync"     // STRING: distributed lock to prevent duplicate concurrent INEC IReV result syncing
-	RedisCronLockMarketingDeductionsPrefix = "cron:lock:marketing_deductions:" // STRING: "cron:lock:marketing_deductions:<YYYY-MM-DD>" daily marketing deductions lock
+	RedisCronLockINECGrabberSync           = "cron:lock:inec_grabber_sync"        // STRING: distributed lock to prevent duplicate concurrent INEC IReV result syncing
+	RedisCronLockMarketingDeductionsPrefix = "cron:lock:marketing_deductions:"    // STRING: "cron:lock:marketing_deductions:<YYYY-MM-DD>" daily marketing deductions lock
 	RedisLockElectoralUnitsSync            = "bodies:lock:electoral_units_sync"   // STRING: distributed lock to prevent duplicate electoral units sync (24h in prod, 30m in dev)
 	RedisElectoralUnitsSyncStatus          = "bodies:status:electoral_units_sync" // STRING: holds current/last sync status JSON
 	//--END--
@@ -179,9 +182,12 @@ var AllRedisPrefixes = []string{
 	RedisFederalConstituenciesAll,
 	RedisFederalConstituenciesByState,
 	RedisFederalConstituenciesBySenatorial,
+	RedisStateConstituenciesAll,
 	RedisStateConstituenciesByState,
+	RedisStateConstituenciesByFederal,
 	RedisLGAsAll,
 	RedisLGAsByState,
+	RedisWardsByState,
 	RedisWardsByLGA,
 	RedisPollingUnitsByWard,
 	RedisPollingUnitsByLGA,

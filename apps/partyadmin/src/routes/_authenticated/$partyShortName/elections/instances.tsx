@@ -27,9 +27,7 @@ export type InstancesSearch = {
   election_group_id?: number;
 };
 
-export const Route = createFileRoute(
-  "/_authenticated/$partyShortName/elections/instances",
-)({
+export const Route = createFileRoute("/_authenticated/$partyShortName/elections/instances")({
   validateSearch: (search: Record<string, unknown>): InstancesSearch => {
     const raw = search.election_group_id;
     const num =

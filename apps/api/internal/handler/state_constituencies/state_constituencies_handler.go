@@ -328,10 +328,10 @@ type StateConstituencyResponse struct {
 }
 
 type GetStateConstituenciesResponse struct {
-	Success bool                               `json:"success"`
-	Message string                             `json:"message"`
+	Success bool                       `json:"success"`
+	Message string                     `json:"message"`
 	Data    GetStateConstituenciesData `json:"data"`
-	Meta    *PaginationMeta                    `json:"meta,omitempty"`
+	Meta    *PaginationMeta            `json:"meta,omitempty"`
 }
 
 type GetStateConstituenciesData struct {
@@ -379,22 +379,25 @@ func parseOptionalQueryInt(r *http.Request, param string) int32 {
 // @Produce      json
 // @Param        state_id                 query     int     false  "State ID to filter by"
 // @Param        federal_constituency_id  query     int     false  "Federal Constituency ID to filter by"
-// @Param        limit                    query     int     false  "Limit (default 20, max 100)"
+// @Param        limit                    query     int     false  "Limit (default 20, max 1500)"
 // @Param        cursor                   query     string  false  "Cursor (ID of last record)"
 // @Success      200                      {object}  GetStateConstituenciesResponse
 // @Failure      500                      {string}  failed to fetch constituencies
 // @Router       /state-constituencies [get]
 func (h *Handler) GetStateConstituencies(w http.ResponseWriter, r *http.Request) {
+	// Parse optional filter and pagination parameters (up to 1500 max)
 	stateID := parseOptionalQueryInt(r, "state_id")
 	federalConstituencyID := parseOptionalQueryInt(r, "federal_constituency_id")
 	limit, cursor := parsePaginationParamsWithMax(r, 1500)
 
+	// Fetch cached or database state constituencies matching filters (or nationwide)
 	constituencies, err := h.stateConstituenciesService.GetStateConstituencies(r.Context(), stateID, federalConstituencyID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch state assembly constituencies: "+err.Error())
 		return
 	}
 
+	// Apply case-insensitive text search across name, code, state, LGA, federal constituency, and senatorial district
 	search := strings.TrimSpace(r.URL.Query().Get("search"))
 	if search != "" {
 		searchLower := strings.ToLower(search)
@@ -416,6 +419,7 @@ func (h *Handler) GetStateConstituencies(w http.ResponseWriter, r *http.Request)
 		constituencies = filtered
 	}
 
+	// Locate start position based on cursor ID
 	startIndex := 0
 	if cursor > 0 {
 		for i, c := range constituencies {
@@ -426,6 +430,7 @@ func (h *Handler) GetStateConstituencies(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
+	// Paginate the in-memory slice and compute next cursor
 	var paginated []queries.StateConstituency
 	hasMore := false
 	nextCursor := ""
@@ -444,6 +449,7 @@ func (h *Handler) GetStateConstituencies(w http.ResponseWriter, r *http.Request)
 		paginated = []queries.StateConstituency{}
 	}
 
+	// Return response envelope with paginated items and cursor metadata
 	h.utils.RespondSuccess(w, http.StatusOK, "State constituencies fetched successfully", map[string]interface{}{
 		"constituencies": paginated,
 		"meta": map[string]interface{}{

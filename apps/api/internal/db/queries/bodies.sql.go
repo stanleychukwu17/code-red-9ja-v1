@@ -1461,6 +1461,82 @@ func (q *Queries) GetWards(ctx context.Context, arg GetWardsParams) ([]Ward, err
 	return items, nil
 }
 
+const getWardsPaginated = `-- name: GetWardsPaginated :many
+SELECT id, name, code, lga_id, lga_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, state_constituency_id, state_constituency_name, state_id, state_name, mongo_id, status, polling_units_count FROM wards
+WHERE ($1::int = 0 OR lga_id = $1::int)
+  AND ($2::int = 0 OR state_id = $2::int)
+  AND ($3::int IS NULL OR senatorial_district_id = $3::int)
+  AND ($4::int IS NULL OR federal_constituency_id = $4::int)
+  AND ($5::int IS NULL OR state_constituency_id = $5::int)
+  AND (
+    $6::text IS NULL OR $6::text = '' OR
+    name ILIKE '%' || $6::text || '%' OR
+    code ILIKE '%' || $6::text || '%' OR
+    lga_name ILIKE '%' || $6::text || '%' OR
+    state_name ILIKE '%' || $6::text || '%'
+  )
+  AND ($7::int IS NULL OR $7::int = 0 OR id > $7::int)
+ORDER BY id ASC
+LIMIT $8::int
+`
+
+type GetWardsPaginatedParams struct {
+	LgaID                 int32       `json:"lga_id"`
+	StateID               int32       `json:"state_id"`
+	SenatorialDistrictID  pgtype.Int4 `json:"senatorial_district_id"`
+	FederalConstituencyID pgtype.Int4 `json:"federal_constituency_id"`
+	StateConstituencyID   pgtype.Int4 `json:"state_constituency_id"`
+	Search                pgtype.Text `json:"search"`
+	Cursor                pgtype.Int4 `json:"cursor"`
+	LimitNum              int32       `json:"limit_num"`
+}
+
+func (q *Queries) GetWardsPaginated(ctx context.Context, arg GetWardsPaginatedParams) ([]Ward, error) {
+	rows, err := q.db.Query(ctx, getWardsPaginated,
+		arg.LgaID,
+		arg.StateID,
+		arg.SenatorialDistrictID,
+		arg.FederalConstituencyID,
+		arg.StateConstituencyID,
+		arg.Search,
+		arg.Cursor,
+		arg.LimitNum,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Ward
+	for rows.Next() {
+		var i Ward
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Code,
+			&i.LgaID,
+			&i.LgaName,
+			&i.SenatorialDistrictID,
+			&i.SenatorialDistrictName,
+			&i.FederalConstituencyID,
+			&i.FederalConstituencyName,
+			&i.StateConstituencyID,
+			&i.StateConstituencyName,
+			&i.StateID,
+			&i.StateName,
+			&i.MongoID,
+			&i.Status,
+			&i.PollingUnitsCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listAllStates = `-- name: ListAllStates :many
 SELECT id, name, country_id, latitude, longitude, senatorial_districts_count, federal_constituencies_count, lgas_count, state_constituencies_count, wards_count, polling_units_count FROM c_states
 ORDER BY name ASC

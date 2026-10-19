@@ -18,9 +18,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { QUERY_KEYS } from "#/lib/config";
 
-export const Route = createFileRoute(
-  "/_authenticated/bodies/state-constituencies",
-)({
+export const Route = createFileRoute("/_authenticated/bodies/state-constituencies")({
   head: () => getPageHeader({ title: "Bodies - State Constituencies" }),
   component: RouteComponent,
 });
@@ -54,6 +52,7 @@ function RouteComponent() {
       }
       return undefined;
     },
+    staleTime: Infinity,
     refetchOnWindowFocus: false,
   });
 

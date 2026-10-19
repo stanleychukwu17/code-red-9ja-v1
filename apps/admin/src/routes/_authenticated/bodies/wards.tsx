@@ -48,6 +48,7 @@ function RouteComponent() {
         }
         return undefined;
       },
+      staleTime: Infinity,
       refetchOnWindowFocus: false,
     });
 
@@ -63,17 +64,17 @@ function RouteComponent() {
 
   const wards: WardType[] = data
     ? data.pages.flatMap((page) =>
-        (page.data?.wards || []).map((w: any) => ({
-          id: w.id,
-          name: w.name,
-          code: w.code ?? "",
-          lga_id: w.lga_id,
-          lga_name: w.lga_name,
-          state_id: w.state_id,
-          state_name: w.state_name,
-          polling_units_count: w.polling_units_count,
-        })),
-      )
+      (page.data?.wards || []).map((w: any) => ({
+        id: w.id,
+        name: w.name,
+        code: w.code ?? "",
+        lga_id: w.lga_id,
+        lga_name: w.lga_name,
+        state_id: w.state_id,
+        state_name: w.state_name,
+        polling_units_count: w.polling_units_count,
+      })),
+    )
     : [];
 
   return (

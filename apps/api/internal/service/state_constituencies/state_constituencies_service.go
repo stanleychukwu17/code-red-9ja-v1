@@ -75,8 +75,8 @@ func (s *StateConstituenciesService) CreateStateConstituency(ctx context.Context
 		return queries.StateConstituency{}, err
 	}
 
-	// Invalidate cache for the state
-	s.invalidateCache(ctx, params.StateID)
+	// Invalidate cache for the state, federal constituency, nationwide list, and metrics
+	s.invalidateCache(ctx, params.StateID, params.FederalConstituencyID)
 
 	return sac, nil
 }
@@ -106,10 +106,14 @@ func (s *StateConstituenciesService) GetStateConstituencyByID(ctx context.Contex
 
 // UpdateStateConstituency updates an existing state assembly constituency and invalidates state caches.
 func (s *StateConstituenciesService) UpdateStateConstituency(ctx context.Context, params UpdateStateConstituencyParams) (queries.StateConstituency, error) {
-	// Fetch current to invalidate old state cache in case stateID changed
+	// Fetch current to invalidate old state and federal constituency cache in case they changed
 	current, err := s.queries.GetStateConstituencyByID(ctx, params.ID)
 	if err == nil {
-		s.invalidateCache(ctx, current.StateID, params.ID)
+		var oldFedID int32
+		if current.FederalConstituencyID.Valid {
+			oldFedID = current.FederalConstituencyID.Int32
+		}
+		s.invalidateCache(ctx, current.StateID, oldFedID, params.ID)
 	}
 
 	arg := queries.UpdateStateConstituencyParams{
@@ -131,8 +135,8 @@ func (s *StateConstituenciesService) UpdateStateConstituency(ctx context.Context
 		return queries.StateConstituency{}, err
 	}
 
-	// Invalidate cache for new state and constituency
-	s.invalidateCache(ctx, params.StateID, params.ID)
+	// Invalidate cache for new state, federal constituency, and constituency ID
+	s.invalidateCache(ctx, params.StateID, params.FederalConstituencyID, params.ID)
 
 	return sac, nil
 }
@@ -149,22 +153,38 @@ func (s *StateConstituenciesService) DeleteStateConstituency(ctx context.Context
 		return err
 	}
 
-	// Invalidate cache for the state and constituency
-	s.invalidateCache(ctx, sac.StateID, id)
+	var fedID int32
+	if sac.FederalConstituencyID.Valid {
+		fedID = sac.FederalConstituencyID.Int32
+	}
+
+	// Invalidate cache for the state, federal constituency, and constituency ID
+	s.invalidateCache(ctx, sac.StateID, fedID, id)
 
 	return nil
 }
 
-// GetStateConstituencies retrieves all state assembly constituencies for a state/federal constituency, using Redis cache when available.
+// GetStateConstituencies retrieves state assembly constituencies for a state/federal constituency or nationwide, using Redis cache when available.
 func (s *StateConstituenciesService) GetStateConstituencies(ctx context.Context, stateID, federalConstituencyID int32) ([]queries.StateConstituency, error) {
+	// Response shape envelope for caching constituency list
 	type Response struct {
 		Constituencies []queries.StateConstituency `json:"constituencies"`
 	}
 
-	redisKey := fmt.Sprintf("%s%d:%d", db.RedisStateConstituenciesByState, stateID, federalConstituencyID)
+	// Determine cache key based on the most specific filter available
+	var redisKey string
+	if federalConstituencyID > 0 {
+		redisKey = fmt.Sprintf("%s%d", db.RedisStateConstituenciesByFederal, federalConstituencyID)
+	} else if stateID > 0 {
+		redisKey = fmt.Sprintf("%s%d", db.RedisStateConstituenciesByState, stateID)
+	} else {
+		redisKey = db.RedisStateConstituenciesAll
+	}
+
 	data, err := s.rdb.Get(ctx, redisKey).Result()
 	switch err {
 	case redis.Nil:
+		// Cache miss: query PostgreSQL for constituencies matching filter parameters
 		arg := queries.GetStateConstituenciesParams{
 			StateID:               stateID,
 			FederalConstituencyID: federalConstituencyID,
@@ -183,16 +203,18 @@ func (s *StateConstituenciesService) GetStateConstituencies(ctx context.Context,
 
 		return dbData, nil
 	case nil:
+		// Cache hit: deserialize cached JSON directly into constituency slice
 		var payload Response
 		err = json.Unmarshal([]byte(data), &payload)
 		return payload.Constituencies, nil
 	default:
+		// Return unexpected Redis error
 		return nil, err
 	}
 }
 
-// invalidateCache clears Redis cache entries for a state's state constituencies, the national cache, national metrics, and individual constituency cache.
-func (s *StateConstituenciesService) invalidateCache(ctx context.Context, stateID int32, constituencyIDs ...int32) {
+// invalidateCache clears Redis cache entries for a constituency's state list, federal constituency list, nationwide list, national metrics, and individual constituency cache.
+func (s *StateConstituenciesService) invalidateCache(ctx context.Context, stateID, federalConstituencyID int32, constituencyIDs ...int32) {
 	// Invalidate individual constituency record cache(s) if provided
 	for _, id := range constituencyIDs {
 		if id > 0 {
@@ -200,18 +222,16 @@ func (s *StateConstituenciesService) invalidateCache(ctx context.Context, stateI
 		}
 	}
 
-	// Invalidate state-level constituency list caches (matches compound stateID:senatorialDistrictID:federalConstituencyID keys)
-	pattern := fmt.Sprintf("%s%d:*", db.RedisStateConstituenciesByState, stateID)
-	iter := s.rdb.Scan(ctx, 0, pattern, 100).Iterator()
-	for iter.Next(ctx) {
-		s.rdb.Del(ctx, iter.Val())
+	// Invalidate federal constituency list cache
+	if federalConstituencyID > 0 {
+		s.rdb.Del(ctx, fmt.Sprintf("%s%d", db.RedisStateConstituenciesByFederal, federalConstituencyID))
 	}
 
-	// Invalidate national/all-constituencies list cache (state:0:0)
-	if stateID != 0 {
-		s.rdb.Del(ctx, fmt.Sprintf("%s0:0", db.RedisStateConstituenciesByState))
+	// Invalidate state-level constituency list cache
+	if stateID > 0 {
+		s.rdb.Del(ctx, fmt.Sprintf("%s%d", db.RedisStateConstituenciesByState, stateID))
 	}
 
-	// Invalidate national metrics cache
-	s.rdb.Del(ctx, db.RedisNationalMetrics)
+	// Invalidate nationwide list and national metrics cache
+	s.rdb.Del(ctx, db.RedisStateConstituenciesAll, db.RedisNationalMetrics)
 }

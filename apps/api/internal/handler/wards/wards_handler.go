@@ -7,18 +7,20 @@ import (
 	wardsservice "free9ja/api/internal/service/wards"
 	"free9ja/api/internal/utils"
 	"net/http"
-	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 )
+
 type WardsService interface {
 	CreateWard(ctx context.Context, params wardsservice.CreateWardParams) (queries.Ward, error)
 	GetWardByID(ctx context.Context, id int32) (queries.Ward, error)
 	UpdateWard(ctx context.Context, params wardsservice.UpdateWardParams) (queries.Ward, error)
 	DeleteWard(ctx context.Context, id int32) error
 	GetWards(ctx context.Context, localGovernmentID, stateID int32) ([]queries.Ward, error)
+	GetWardsPaginated(ctx context.Context, arg queries.GetWardsPaginatedParams) ([]queries.Ward, error)
 }
 
 type BodiesService interface {
@@ -42,15 +44,15 @@ func NewHandler(wardService WardsService, bodiesService BodiesService, q *querie
 }
 
 type CreateWardRequest struct {
-	Name string `json:"name"`
-	Code string `json:"code"`
+	Name    string `json:"name"`
+	Code    string `json:"code"`
 	LgaID   int32  `json:"lga_id"`
 	StateID int32  `json:"state_id"`
 }
 
 type UpdateWardRequest struct {
-	Name string `json:"name"`
-	Code string `json:"code"`
+	Name    string `json:"name"`
+	Code    string `json:"code"`
 	LgaID   int32  `json:"lga_id"`
 	StateID int32  `json:"state_id"`
 }
@@ -339,82 +341,71 @@ func parseOptionalQueryInt(r *http.Request, param string) int32 {
 // @Tags         Wards
 // @Accept       json
 // @Produce      json
-// @Param        lga_id  query     int     false  "LGA ID to filter by"
+// @Param        lga_id               query     int     false  "LGA ID to filter by"
 // @Param        state_id             query     int     false  "State ID to filter by"
-// @Param        limit                query     int     false  "Limit (default 20, max 100)"
+// @Param        search               query     string  false  "Search query for ward name, code, LGA, or state"
+// @Param        limit                query     int     false  "Limit (default 20, max 10000)"
 // @Param        cursor               query     string  false  "Cursor (ID of last record)"
 // @Success      200                  {object}  GetWardsResponse
 // @Failure      500                  {string}  failed to fetch wards
 // @Router       /wards [get]
 func (h *Handler) GetWards(w http.ResponseWriter, r *http.Request) {
+	// Parse optional filter and pagination parameters (up to 10000 max)
 	localGovernmentID := parseOptionalQueryInt(r, "lga_id")
 	stateID := parseOptionalQueryInt(r, "state_id")
 	limit, cursor := parsePaginationParamsWithMax(r, 10000)
+	search := strings.TrimSpace(r.URL.Query().Get("search"))
 
-	wards, err := h.wardService.GetWards(r.Context(), localGovernmentID, stateID)
+	// For specific LGA dropdown requests without search or pagination cursor, serve from Redis LGA cache
+	if localGovernmentID > 0 && cursor == 0 && search == "" {
+		wards, err := h.wardService.GetWards(r.Context(), localGovernmentID, stateID)
+		if err != nil {
+			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch wards: "+err.Error())
+			return
+		}
+
+		h.utils.RespondSuccess(w, http.StatusOK, "Wards fetched successfully", map[string]interface{}{
+			"wards": wards,
+			"meta": map[string]interface{}{
+				"next_cursor": "",
+				"has_more":    false,
+			},
+		})
+
+		return
+	}
+
+	// Fetch limit + 1 records to check if additional pages exist without an extra COUNT query
+	fetchLimit := limit + 1
+
+	// Query PostgreSQL using indexed filters, case-insensitive ILIKE search, and cursor pagination
+	wards, err := h.wardService.GetWardsPaginated(r.Context(), queries.GetWardsPaginatedParams{
+		LgaID:    localGovernmentID,
+		StateID:  stateID,
+		Search:   utils.PgTextFromString(search),
+		Cursor:   pgtype.Int4{Int32: int32(cursor), Valid: cursor > 0},
+		LimitNum: int32(fetchLimit),
+	})
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch wards: "+err.Error())
 		return
 	}
 
-	search := strings.TrimSpace(r.URL.Query().Get("search"))
-	if search != "" {
-		searchLower := strings.ToLower(search)
-		var filtered []queries.Ward
-		for _, w := range wards {
-			if strings.Contains(strings.ToLower(w.Name), searchLower) ||
-				strings.Contains(strings.ToLower(w.Code), searchLower) ||
-				strings.Contains(strings.ToLower(w.LgaName), searchLower) ||
-				strings.Contains(strings.ToLower(w.StateName), searchLower) {
-				filtered = append(filtered, w)
-			}
-		}
-		wards = filtered
-	}
-
-	orderBy, orderDir := parseSortParams(r, "name", "ASC")
-
-	sort.SliceStable(wards, func(i, j int) bool {
-		if orderDir == "DESC" {
-			i, j = j, i
-		}
-
-		if orderBy == "name" {
-			return wards[i].Name < wards[j].Name
-		}
-		return wards[i].ID < wards[j].ID
-	})
-
-	startIndex := 0
-	if cursor > 0 {
-		for i, w := range wards {
-			if int64(w.ID) == cursor {
-				startIndex = i + 1
-				break
-			}
-		}
-	}
-
-	var paginated []queries.Ward
+	// Determine if more records exist and trim the slice back to requested limit
 	hasMore := false
 	nextCursor := ""
-
-	if startIndex < len(wards) {
-		endIndex := startIndex + limit
-		if endIndex >= len(wards) {
-			endIndex = len(wards)
-			paginated = wards[startIndex:endIndex]
-		} else {
-			paginated = wards[startIndex:endIndex]
-			hasMore = true
-			nextCursor = strconv.FormatInt(int64(paginated[len(paginated)-1].ID), 10)
-		}
-	} else {
-		paginated = []queries.Ward{}
+	if len(wards) > limit {
+		hasMore = true
+		wards = wards[:limit]
+	}
+	if len(wards) > 0 {
+		// Use ID of the last record in current page as cursor for next page
+		nextCursor = strconv.FormatInt(int64(wards[len(wards)-1].ID), 10)
 	}
 
+	// Return response envelope with paginated items and cursor metadata
 	h.utils.RespondSuccess(w, http.StatusOK, "Wards fetched successfully", map[string]interface{}{
-		"wards": paginated,
+		"wards": wards,
 		"meta": map[string]interface{}{
 			"next_cursor": nextCursor,
 			"has_more":    hasMore,
