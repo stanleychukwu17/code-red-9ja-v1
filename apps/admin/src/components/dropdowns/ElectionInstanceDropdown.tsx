@@ -93,17 +93,21 @@ export const ElectionInstanceDropdown = ({
         className={className}
       />
 
-      <ElectionInstanceFormDialog
-        open={openEditDialog}
-        onClose={() => setOpenEditDialog(false)}
-        electionInstance={data}
-      />
+      {openEditDialog && (
+        <ElectionInstanceFormDialog
+          open={openEditDialog}
+          onClose={() => setOpenEditDialog(false)}
+          electionInstance={data}
+        />
+      )}
 
-      <ManageCandidatesDialog
-        electionId={data.id}
-        open={openCandidatesDialog}
-        onClose={() => setOpenCandidatesDialog(false)}
-      />
+      {openCandidatesDialog && (
+        <ManageCandidatesDialog
+          electionId={data.id}
+          open={openCandidatesDialog}
+          onClose={() => setOpenCandidatesDialog(false)}
+        />
+      )}
 
       <DeleteAlertDialog
         open={openDeleteAlert}

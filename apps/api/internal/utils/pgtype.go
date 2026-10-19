@@ -122,6 +122,22 @@ func PgInt2FromInt16(v int16) pgtype.Int2 {
 	return pgtype.Int2{Int16: v, Valid: true}
 }
 
+// PgInt2FromPositive converts an integer to a valid pgtype.Int2 if > 0, otherwise null.
+func PgInt2FromPositive[T ~int | ~int16 | ~int32 | ~int64](id T) pgtype.Int2 {
+	if id > 0 {
+		return pgtype.Int2{Int16: int16(id), Valid: true}
+	}
+	return pgtype.Int2{}
+}
+
+// PgInt4FromPositive converts an integer to a valid pgtype.Int4 if > 0, otherwise null.
+func PgInt4FromPositive[T ~int | ~int16 | ~int32 | ~int64](id T) pgtype.Int4 {
+	if id > 0 {
+		return pgtype.Int4{Int32: int32(id), Valid: true}
+	}
+	return pgtype.Int4{}
+}
+
 // PgFloat8FromFloat64 wraps a non-pointer float64 as an always-valid pgtype.Float8.
 func PgFloat8FromFloat64(v float64) pgtype.Float8 {
 	return pgtype.Float8{Float64: v, Valid: true}

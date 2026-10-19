@@ -21,6 +21,8 @@ import {
 import { getElectionGroups } from "#/lib/server/election_groups";
 import { getElections } from "#/lib/server/elections";
 import { getStates } from "#/lib/server/states";
+import { useNigeriaStates } from "#/hooks/useNigeriaStates";
+import { useParties } from "#/hooks/useParties";
 import { Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { QUERY_KEYS } from "#/lib/config";
@@ -40,19 +42,7 @@ function RouteComponent() {
   >(undefined);
 
   // Fetch parties list for selecting active party when creating campaign
-  const { data: partiesData } = useQuery<{ data: { parties: PartyType[] } }>({
-    queryKey: ["parties"],
-    queryFn: async () => {
-      const res = await getParties();
-      if (res && res.success) {
-        return res;
-      }
-      throw new Error(res?.message || "Failed to load parties");
-    },
-    staleTime: Infinity,
-  });
-
-  const parties = partiesData?.data?.parties || [];
+  const { data: parties = [] } = useParties();
   const activePartyId =
     selectedPartyId ?? (parties[0]?.id ? Number(parties[0].id) : undefined);
 
@@ -96,14 +86,7 @@ function RouteComponent() {
     return res?.data?.plans || [];
   };
 
-  const { data: statesData } = useQuery({
-    queryKey: QUERY_KEYS.states,
-    queryFn: async () => {
-      const res = await getStates({ data: { countryId: 161 } });
-      return res?.data?.states || [];
-    },
-    staleTime: 1000 * 60 * 60,
-  });
+  const { data: statesData = [] } = useNigeriaStates();
 
   const campaigns: MarketingCampaignType[] = (campaignsData || []).map(
     (c: any) => ({

@@ -11,12 +11,10 @@ import { DistrictsTable } from "#/components/Tables";
 import type { DistrictType } from "#/components/tiles/district-tile";
 import { BODIES_TABS } from "./-data";
 import { useState, useMemo } from "react";
-import { getSenatorialDistricts } from "#/lib/server/senatorial_districts";
 import { useBodiesDialogs } from "#/components/dialogs/useBodiesDialogs";
-import { useQuery } from "@tanstack/react-query";
+import { useSenatorialDistricts } from "#/hooks/useSenatorialDistricts";
 import { BodiesDropdown } from "#/components/dropdowns/BodiesDropdown";
 import { Loader2 } from "lucide-react";
-import { QUERY_KEYS } from "#/lib/config";
 
 export const Route = createFileRoute("/_authenticated/bodies/senatorial-districts")({
   head: () => getPageHeader({ title: "Bodies - Senatorial Districts" }),
@@ -27,27 +25,12 @@ function RouteComponent() {
   const { dialogProps, renderDialogs } = useBodiesDialogs();
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Fetch all 109 senatorial districts for Nigeria.
-  // Cached with infinite stale time and invalidated upon mutations or sync jobs.
-  const { data, isLoading, error } = useQuery({
-    queryKey: QUERY_KEYS.bodies.senatorialDistricts,
-    queryFn: async () => {
-      const res = await getSenatorialDistricts({
-        data: { limit: 150 },
-      });
-      if (res && res.data) {
-        return res;
-      }
-      throw new Error(res?.error || res?.message || "Failed to fetch senatorial districts");
-    },
-    refetchOnWindowFocus: false,
-    staleTime: Infinity,
-    gcTime: Infinity,
-  });
+  // Fetch all 109 senatorial districts for Nigeria using centralized hook
+  const { data: rawDistricts = [], isLoading, error } = useSenatorialDistricts();
 
   // Normalize API response into DistrictType table items
   const allDistricts: DistrictType[] = useMemo(() =>
-    (data?.data?.districts || []).map((district: any) => ({
+    rawDistricts.map((district: any) => ({
       id: district.id,
       name: district.name,
       code: district.code,
@@ -61,7 +44,7 @@ function RouteComponent() {
       wards_count: district.wards_count,
       polling_units_count: district.polling_units_count,
     })),
-    [data?.data?.districts],
+    [rawDistricts],
   );
 
   // Fast client-side filtering across name, state, code, and description

@@ -1461,6 +1461,49 @@ func (q *Queries) GetWards(ctx context.Context, arg GetWardsParams) ([]Ward, err
 	return items, nil
 }
 
+const getWardsByIDs = `-- name: GetWardsByIDs :many
+SELECT id, name, code, lga_id, lga_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, state_constituency_id, state_constituency_name, state_id, state_name, mongo_id, status, polling_units_count FROM wards
+WHERE id = ANY($1::int[])
+ORDER BY name ASC
+`
+
+func (q *Queries) GetWardsByIDs(ctx context.Context, wardIds []int32) ([]Ward, error) {
+	rows, err := q.db.Query(ctx, getWardsByIDs, wardIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Ward
+	for rows.Next() {
+		var i Ward
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Code,
+			&i.LgaID,
+			&i.LgaName,
+			&i.SenatorialDistrictID,
+			&i.SenatorialDistrictName,
+			&i.FederalConstituencyID,
+			&i.FederalConstituencyName,
+			&i.StateConstituencyID,
+			&i.StateConstituencyName,
+			&i.StateID,
+			&i.StateName,
+			&i.MongoID,
+			&i.Status,
+			&i.PollingUnitsCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getWardsPaginated = `-- name: GetWardsPaginated :many
 SELECT id, name, code, lga_id, lga_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, state_constituency_id, state_constituency_name, state_id, state_name, mongo_id, status, polling_units_count FROM wards
 WHERE ($1::int = 0 OR lga_id = $1::int)

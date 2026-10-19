@@ -309,20 +309,6 @@ func parsePaginationParamsWithMax(r *http.Request, maxLimit int) (int, int64) {
 	return limit, cursor
 }
 
-func parseSortParams(r *http.Request, defaultOrderBy string, defaultOrderDir string) (string, string) {
-	orderBy := r.URL.Query().Get("order_by")
-	if orderBy == "" {
-		orderBy = defaultOrderBy
-	}
-
-	orderDir := strings.ToUpper(r.URL.Query().Get("order"))
-	if orderDir != "ASC" && orderDir != "DESC" {
-		orderDir = defaultOrderDir
-	}
-
-	return orderBy, orderDir
-}
-
 func parseOptionalQueryInt(r *http.Request, param string) int32 {
 	valStr := r.URL.Query().Get(param)
 	if valStr == "" {
@@ -336,51 +322,68 @@ func parseOptionalQueryInt(r *http.Request, param string) int32 {
 }
 
 // GetWards godoc
-// @Summary      Get wards
-// @Description  Fetches wards with optional lga_id and state_id filtering and cursor pagination
+// @Summary      Get wards (dropdown)
+// @Description  Fetches wards for a specific LGA or State (cached in Redis, required for dropdown selectors)
+// @Tags         Wards
+// @Accept       json
+// @Produce      json
+// @Param        lga_id               query     int     false  "LGA ID to filter by"
+// @Param        state_id             query     int     false  "State ID to filter by"
+// @Success      200                  {object}  GetWardsResponse
+// @Failure      400                  {string}  at least one geographic filter is required
+// @Failure      500                  {string}  failed to fetch wards
+// @Router       /wards [get]
+func (h *Handler) GetWards(w http.ResponseWriter, r *http.Request) {
+	// Parse required geographic filter parameters for dropdown selection
+	localGovernmentID := parseOptionalQueryInt(r, "lga_id")
+	stateID := parseOptionalQueryInt(r, "state_id")
+
+	// Ensure at least one geographic filter is provided to prevent accidental full-database dumps
+	if localGovernmentID <= 0 && stateID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "At least one geographic filter (lga_id or state_id) is required for ward dropdown selection")
+		return
+	}
+
+	// Fetch cached or database wards for the specified LGA/State
+	wards, err := h.wardService.GetWards(r.Context(), localGovernmentID, stateID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch wards: "+err.Error())
+		return
+	}
+
+	// Return response envelope with cached wards
+	h.utils.RespondSuccess(w, http.StatusOK, "Wards fetched successfully", map[string]interface{}{
+		"wards": wards,
+	})
+}
+
+// GetWardsPaginated godoc
+// @Summary      Get paginated wards (table listing)
+// @Description  Fetches paginated wards directly from PostgreSQL with optional filters, search, and cursor pagination
 // @Tags         Wards
 // @Accept       json
 // @Produce      json
 // @Param        lga_id               query     int     false  "LGA ID to filter by"
 // @Param        state_id             query     int     false  "State ID to filter by"
 // @Param        search               query     string  false  "Search query for ward name, code, LGA, or state"
-// @Param        limit                query     int     false  "Limit (default 20, max 10000)"
+// @Param        limit                query     int     false  "Limit (default 20, max 100)"
 // @Param        cursor               query     string  false  "Cursor (ID of last record)"
 // @Success      200                  {object}  GetWardsResponse
 // @Failure      500                  {string}  failed to fetch wards
-// @Router       /wards [get]
-func (h *Handler) GetWards(w http.ResponseWriter, r *http.Request) {
-	// Parse optional filter and pagination parameters (up to 10000 max)
-	localGovernmentID := parseOptionalQueryInt(r, "lga_id")
+// @Router       /wards/paginated [get]
+func (h *Handler) GetWardsPaginated(w http.ResponseWriter, r *http.Request) {
+	// Parse optional filter and pagination parameters (up to 100 max for table listing)
+	lgaID := parseOptionalQueryInt(r, "lga_id")
 	stateID := parseOptionalQueryInt(r, "state_id")
-	limit, cursor := parsePaginationParamsWithMax(r, 10000)
+	limit, cursor := parsePaginationParamsWithMax(r, 100)
 	search := strings.TrimSpace(r.URL.Query().Get("search"))
-
-	// For specific LGA dropdown requests without search or pagination cursor, serve from Redis LGA cache
-	if localGovernmentID > 0 && cursor == 0 && search == "" {
-		wards, err := h.wardService.GetWards(r.Context(), localGovernmentID, stateID)
-		if err != nil {
-			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch wards: "+err.Error())
-			return
-		}
-
-		h.utils.RespondSuccess(w, http.StatusOK, "Wards fetched successfully", map[string]interface{}{
-			"wards": wards,
-			"meta": map[string]interface{}{
-				"next_cursor": "",
-				"has_more":    false,
-			},
-		})
-
-		return
-	}
 
 	// Fetch limit + 1 records to check if additional pages exist without an extra COUNT query
 	fetchLimit := limit + 1
 
 	// Query PostgreSQL using indexed filters, case-insensitive ILIKE search, and cursor pagination
 	wards, err := h.wardService.GetWardsPaginated(r.Context(), queries.GetWardsPaginatedParams{
-		LgaID:    localGovernmentID,
+		LgaID:    lgaID,
 		StateID:  stateID,
 		Search:   utils.PgTextFromString(search),
 		Cursor:   pgtype.Int4{Int32: int32(cursor), Valid: cursor > 0},

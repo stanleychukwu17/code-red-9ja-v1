@@ -7,13 +7,11 @@ import {
   DialogPadding,
 } from "@repo/ui/components/dialog";
 import { Button } from "@repo/ui/components/button";
-import { useQuery } from "@tanstack/react-query";
-import { getElectionGroups } from "#/lib/server/election_groups";
-import { getContestedOffices } from "#/lib/server/offices";
-import { getStates } from "#/lib/server/states";
+import { useElectionGroups } from "#/hooks/useElectionGroups";
+import { useContestedOffices } from "#/hooks/useContestedOffices";
+import { useNigeriaStates } from "#/hooks/useNigeriaStates";
 import { Loader2, Search } from "lucide-react";
 import { cn } from "@repo/ui/lib/utils";
-import { QUERY_KEYS } from "#/lib/config";
 
 // Filter criteria state shape passed to the parent query
 export type ElectionFilters = {
@@ -97,45 +95,19 @@ export function ElectionInstancesFilterDialog({
   }, [open, filters]);
 
   // Fetch election groups (e.g. 2027 General Elections)
-  const { data: groupsData, isLoading: isLoadingGroups } = useQuery({
-    queryKey: QUERY_KEYS.electionGroups.all,
-    queryFn: async () => {
-      const res = await getElectionGroups({ data: { limit: 100 } });
-      if (res && res.success) return res;
-      throw new Error(res?.message || "Failed to load election groups");
-    },
+  const { data: electionGroups = [], isLoading: isLoadingGroups } = useElectionGroups({
     enabled: open,
-    staleTime: 60_000,
   });
 
   // Fetch only contested/elective offices (e.g. President, Governor, Senator)
-  const { data: officesData, isLoading: isLoadingOffices } = useQuery({
-    queryKey: QUERY_KEYS.offices.contested,
-    queryFn: async () => {
-      const res = await getContestedOffices({ data: { limit: 100 } });
-      if (res && res.success) return res;
-      throw new Error(res?.message || "Failed to load contested offices");
-    },
+  const { data: offices = [], isLoading: isLoadingOffices } = useContestedOffices({
     enabled: open,
-    staleTime: 60_000,
   });
 
   // Fetch Nigerian states (country ID 161)
-  const { data: statesData, isLoading: isLoadingStates } = useQuery({
-    queryKey: ["states", 161],
-    queryFn: async () => {
-      const res = await getStates({ data: { countryId: 161, limit: 50 } });
-      if (res && res.success && res.data) return res.data;
-      throw new Error("Failed to load states");
-    },
+  const { data: states = [], isLoading: isLoadingStates } = useNigeriaStates({
     enabled: open,
-    staleTime: Infinity,
   });
-
-  // Extract raw lists from query responses
-  const electionGroups = groupsData?.data?.election_groups || [];
-  const offices = officesData?.data?.offices || [];
-  const states = statesData?.states || [];
 
   // Filter office choices by in-modal search query
   const filteredOffices = React.useMemo(() => {

@@ -57,6 +57,11 @@ WHERE (sqlc.arg(lga_id)::int = 0 OR lga_id = sqlc.arg(lga_id))
   AND (sqlc.narg(state_constituency_id)::int IS NULL OR state_constituency_id = sqlc.narg(state_constituency_id))
 ORDER BY name ASC;
 
+-- name: GetWardsByIDs :many
+SELECT * FROM wards
+WHERE id = ANY(sqlc.arg('ward_ids')::int[])
+ORDER BY name ASC;
+
 -- name: GetWardsPaginated :many
 SELECT * FROM wards
 WHERE (sqlc.arg('lga_id')::int = 0 OR lga_id = sqlc.arg('lga_id')::int)

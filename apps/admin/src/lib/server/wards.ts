@@ -81,3 +81,13 @@ export const getWards = createServerFn()
     }
   });
 
+export const getWardsPaginated = createServerFn()
+  .inputValidator((data: { localGovernmentId?: number; stateId?: number; limit?: number; cursor?: string | number; search?: string }) => data)
+  .handler(async ({ data: { localGovernmentId, stateId, limit, cursor, search } }) => {
+    try {
+      return await apiFetchJson(API_URL.getWardsPaginated(localGovernmentId, stateId, limit, cursor, search));
+    } catch (error: any) {
+      return { status: "failed", error: error?.message || "Failed to fetch wards from API" };
+    }
+  });
+

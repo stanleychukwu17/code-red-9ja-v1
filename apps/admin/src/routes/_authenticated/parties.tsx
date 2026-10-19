@@ -10,9 +10,8 @@ import {
 } from "@repo/ui/components/custom/AdminLayouts";
 import { PartiesTable, type PartyType } from "#/components/Tables";
 import { PartyFormDialog } from "#/components/dialogs/PartyFormDialog";
-import { getParties } from "#/lib/server/parties";
 import { Loader2 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useParties } from "#/hooks/useParties";
 
 export const Route = createFileRoute("/_authenticated/parties")({
   head: () => getPageHeader({ title: "Parties" }),
@@ -20,17 +19,7 @@ export const Route = createFileRoute("/_authenticated/parties")({
 });
 
 function RouteComponent() {
-  const { data: parties, isLoading, error, refetch, } = useQuery<{ data: { parties: PartyType[] } }>({
-    queryKey: ["parties"],
-    queryFn: async () => {
-      const res = await getParties();
-      if (res && res.success) {
-        return res;
-      }
-      throw new Error(res?.message || "Failed to load parties");
-    },
-    staleTime: Infinity
-  });
+  const { data: partiesList = [], isLoading, error, refetch } = useParties();
 
   // Dialog state for creating a new party
   const [createDialogOpen, setCreateDialogOpen] = React.useState(false);
@@ -59,12 +48,12 @@ function RouteComponent() {
         <div className="w-full p-6 text-center text-red-600 font-medium">
           {error instanceof Error ? error.message : "Failed to load parties"}
         </div>
-      ) : parties?.data?.parties.length === 0 ? (
+      ) : partiesList.length === 0 ? (
         <div className="w-full p-12 text-center text-c-40 font-medium bg-white rounded-2xl border border-[#dfdfdf]">
           No parties found. Click the + button to add one.
         </div>
       ) : (
-        <PartiesTable items={parties?.data?.parties || []} />
+        <PartiesTable items={partiesList} />
       )}
 
       {/* Create dialog only — edit/delete now handled by PartyDropdown in each tile */}

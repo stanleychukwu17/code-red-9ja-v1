@@ -20,10 +20,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, X } from "lucide-react";
 import { ElectionGroupBullet } from "@repo/ui/components/bullets/election-group-bullet";
 import { getContestedOffices } from "#/lib/server/offices";
+import { useContestedOffices } from "#/hooks/useContestedOffices";
 import { QUERY_KEYS } from "#/lib/config";
 import { getElectionGroups } from "#/lib/server/election_groups";
 import { createStateElection } from "#/lib/server/elections";
-import { getStates } from "#/lib/server/states";
+import { useNigeriaStates } from "#/hooks/useNigeriaStates";
 import { SelectDate } from "@repo/ui/components/selects/date-select";
 import { SelectOffice } from "@repo/ui/components/selects/office-select";
 
@@ -84,37 +85,10 @@ export function StateElectionFormDialog({ open, onClose, onSuccess }: StateElect
   const [selectedStates, setSelectedStates] = useState<StateItem[]>([]);
 
   // Fetch states of Nigeria (country ID: 161)
-  const { data: statesData } = useQuery({
-    queryKey: QUERY_KEYS.states,
-    queryFn: async () => {
-      const res = await getStates({ data: { countryId: 161 } });
-
-      if (res && res.success && res.data?.states) {
-        return res.data.states as StateItem[];
-      }
-
-      return [];
-    },
-    enabled: open,
-    staleTime: Infinity,
-    gcTime: Infinity,
-  });
-  const allNigeriaStates = statesData || [];
+  const { data: allNigeriaStates = [] } = useNigeriaStates({ enabled: open });
 
   // Fetch available contested offices for auto-selection and dialog metadata
-  const { data: officesData } = useQuery({
-    queryKey: QUERY_KEYS.offices.contested,
-    queryFn: async () => {
-      const res = await getContestedOffices({ data: { limit: 100 } });
-      if (res && res.success && res.data?.offices) {
-        return res.data.offices;
-      }
-      return [];
-    },
-    staleTime: Infinity,
-    gcTime: Infinity,
-    enabled: open,
-  });
+  const { data: officesData } = useContestedOffices({ enabled: open });
 
 
   // 28 regular states holding elections during the General Elections
@@ -152,7 +126,7 @@ export function StateElectionFormDialog({ open, onClose, onSuccess }: StateElect
   // Currently selected office metadata
   const selectedType = useMemo(() => {
     if (!selectedOfficeId || !officesData) return null;
-    return officesData.find((t: any) => t.id === selectedOfficeId);
+    return officesData.find((t: any) => t.id === selectedOfficeId) ?? null;
   }, [selectedOfficeId, officesData]);
 
   // Sync selectedStates whenever preset mode changes or data arrives

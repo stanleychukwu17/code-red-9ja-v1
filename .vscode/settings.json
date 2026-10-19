@@ -61,6 +61,7 @@
     "godotenv",
     "hibiken",
     "hostnames",
+    "ILIKE",
     "inec",
     "INECAPI",
     "inecgrabber",

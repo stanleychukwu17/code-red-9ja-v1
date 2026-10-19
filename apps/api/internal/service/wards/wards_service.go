@@ -3,6 +3,7 @@ package wardsservice
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
@@ -141,11 +142,18 @@ func (s *WardsService) DeleteWard(ctx context.Context, id int32) error {
 }
 
 // GetWards retrieves wards for an LGA or State, using Redis cache when available.
+// It requires at least one geographic filter (lgaID or stateID) to prevent dumping all nationwide wards.
 func (s *WardsService) GetWards(ctx context.Context, lgaID, stateID int32) ([]queries.Ward, error) {
+	// Guard check: require at least one geographic filter to prevent unbounded full-table scans
+	if lgaID <= 0 && stateID <= 0 {
+		return nil, errors.New("at least one geographic filter (lga_id or state_id) must be provided")
+	}
+
 	type Response struct {
 		Wards []queries.Ward `json:"wards"`
 	}
 
+	// Resolve the Redis cache key prioritized by LGA, then State
 	var redisKey string
 	if lgaID > 0 {
 		redisKey = fmt.Sprintf("%s%d", db.RedisWardsByLGA, lgaID)
@@ -153,41 +161,38 @@ func (s *WardsService) GetWards(ctx context.Context, lgaID, stateID int32) ([]qu
 		redisKey = fmt.Sprintf("%s%d", db.RedisWardsByState, stateID)
 	}
 
-	if redisKey != "" {
-		data, err := s.rdb.Get(ctx, redisKey).Result()
-		switch err {
-		case redis.Nil:
-			arg := queries.GetWardsParams{
-				LgaID:   lgaID,
-				StateID: stateID,
-			}
-			dbData, err := s.queries.GetWards(ctx, arg)
-			if err != nil {
-				return nil, err
-			}
-
-			payload := Response{
-				Wards: dbData,
-			}
-
-			jsonData, _ := json.Marshal(payload)
-			s.rdb.Set(ctx, redisKey, jsonData, db.RedisOneEightyDaysTTL)
-
-			return dbData, nil
-		case nil:
-			var payload Response
-			err = json.Unmarshal([]byte(data), &payload)
-			return payload.Wards, nil
-		default:
+	// Check Redis cache first
+	data, err := s.rdb.Get(ctx, redisKey).Result()
+	switch err {
+	case redis.Nil:
+		// Cache miss: fetch from PostgreSQL database
+		arg := queries.GetWardsParams{
+			LgaID:   lgaID,
+			StateID: stateID,
+		}
+		dbData, err := s.queries.GetWards(ctx, arg)
+		if err != nil {
 			return nil, err
 		}
-	}
 
-	arg := queries.GetWardsParams{
-		LgaID:   lgaID,
-		StateID: stateID,
+		payload := Response{
+			Wards: dbData,
+		}
+
+		// Cache result in Redis with 180-day TTL
+		jsonData, _ := json.Marshal(payload)
+		s.rdb.Set(ctx, redisKey, jsonData, db.RedisOneEightyDaysTTL)
+
+		return dbData, nil
+	case nil:
+		// Cache hit: unmarshal and return cached payload
+		var payload Response
+		err = json.Unmarshal([]byte(data), &payload)
+		return payload.Wards, nil
+	default:
+		// Return unexpected Redis error
+		return nil, err
 	}
-	return s.queries.GetWards(ctx, arg)
 }
 
 // GetWardsPaginated retrieves a paginated slice of wards directly from PostgreSQL.

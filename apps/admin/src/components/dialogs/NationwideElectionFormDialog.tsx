@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { getElectionGroups } from "#/lib/server/election_groups";
 import { createNationwideElection } from "#/lib/server/elections";
 import { getContestedOffices } from "#/lib/server/offices";
+import { useContestedOffices } from "#/hooks/useContestedOffices";
 import { ElectionGroupBullet } from "@repo/ui/components/bullets/election-group-bullet";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -65,19 +66,7 @@ export function NationwideElectionFormDialog({
   const selectedOfficeId = useStore(form.store, (state) => state.values.officeId);
 
   // Fetch available contested offices
-  const { data: officesData } = useQuery({
-    queryKey: QUERY_KEYS.offices.contested,
-    queryFn: async () => {
-      const res = await getContestedOffices({ data: { limit: 100 } });
-      if (res && res.success && res.data?.offices) {
-        return res.data.offices;
-      }
-      return [];
-    },
-    staleTime: Infinity,
-    gcTime: Infinity,
-    enabled: open,
-  });
+  const { data: officesData } = useContestedOffices({ enabled: open });
 
   // Reset all state when the dialog is opened
   useEffect(() => {

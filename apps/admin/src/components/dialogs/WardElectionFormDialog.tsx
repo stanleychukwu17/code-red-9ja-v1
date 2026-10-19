@@ -1,4 +1,4 @@
-import * as React from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@repo/ui/components/button";
 import {
   Dialog,
@@ -8,136 +8,69 @@ import {
   DialogPadding,
   DialogToolbelt,
 } from "@repo/ui/components/dialog";
+import { cn } from "@repo/ui/lib/utils";
 import { useForm, useStore } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, X } from "lucide-react";
+import { Check, Loader2, Plus, X } from "lucide-react";
 import { getContestedOffices } from "#/lib/server/offices";
+import { useContestedOffices } from "#/hooks/useContestedOffices";
 import { QUERY_KEYS } from "#/lib/config";
 import { getElectionGroups } from "#/lib/server/election_groups";
 import { getLGAs } from "#/lib/server/countries";
+import { useLGAs } from "#/hooks/useLGAs";
 import { getStates } from "#/lib/server/states";
+import { useNigeriaStates } from "#/hooks/useNigeriaStates";
 import { getWards } from "#/lib/server/wards";
 import { SelectDate } from "@repo/ui/components/selects/date-select";
 import { SelectOffice } from "@repo/ui/components/selects/office-select";
+import { SelectState } from "@repo/ui/components/selects/state-select";
+import { SelectLga } from "@repo/ui/components/selects/lga-select";
 import { ElectionGroupBullet } from "@repo/ui/components/bullets/election-group-bullet";
 import { createWardElection } from "#/lib/server/elections";
-import {
-  SelectionHeader,
-  SelectionTabs,
-  SelectedItemsContainer,
-  GroupSectionTitle,
-  SelectableChip,
-} from "./SelectionCommon";
+import { SelectedItemsContainer, SelectableChip } from "./SelectionCommon";
 import { Label, IconInput } from "@repo/ui/components/input";
 import { TinyError } from "@repo/ui/components/custom/TinyError";
 
-interface StateItem {
+type StateItem = {
   id: number;
   name: string;
-}
+};
 
-interface LgaItem {
+type LgaItem = {
   id: number;
   name: string;
   state_id: number;
-}
+};
 
-interface WardItem {
+type WardItem = {
   id: number;
   name: string;
   lga_id: number;
   lga_name?: string;
   state_id?: number;
   state_name?: string;
-}
+};
 
-export function WardElectionFormDialog({
-  open,
-  onClose,
-  onSuccess,
-}: {
+export type WardElectionFormDialogProps = {
   open: boolean;
   onClose: () => void;
   onSuccess?: () => void;
-}) {
+};
+
+export function WardElectionFormDialog({ open, onClose, onSuccess }: WardElectionFormDialogProps) {
   const queryClient = useQueryClient();
-  const [error, setError] = React.useState<string | null>(null);
-  const [isWardSelectorOpen, setIsWardSelectorOpen] = React.useState(false);
-  const [wardsMode, setWardsMode] = React.useState<"custom" | "all">("custom");
-  const [selectedWards, setSelectedWards] = React.useState<WardItem[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [isWardSelectorOpen, setIsWardSelectorOpen] = useState(false);
+  const [wardsMode, setWardsMode] = useState<"custom" | "all">("custom");
+  const [selectedWards, setSelectedWards] = useState<WardItem[]>([]);
 
   // Fetch states of Nigeria
-  const { data: statesData } = useQuery({
-    queryKey: QUERY_KEYS.states,
-    queryFn: async () => {
-      const res = await getStates({ data: { countryId: 161 } });
-      if (res && res.success && res.data?.states) {
-        return res.data.states as StateItem[];
-      }
-      return [];
-    },
-    enabled: open,
-    staleTime: Infinity,
-    gcTime: Infinity,
-  });
+  const { data: allNigeriaStates = [] } = useNigeriaStates({ enabled: open });
 
-  // Fetch LGAs in Nigeria
-  const { data: lgasData } = useQuery({
-    queryKey: [...QUERY_KEYS.bodies.lgas, "all"],
-    queryFn: async () => {
-      const res = await getLGAs({ data: { limit: 800 } });
-      if (res && res.success && res.data?.lgas) {
-        return res.data.lgas as LgaItem[];
-      }
-      return [];
-    },
-    enabled: open,
-    staleTime: Infinity,
-    gcTime: Infinity,
-  });
+  // Fetch LGAs in Nigeria (for label enrichment)
+  const { data: allLgas = [] } = useLGAs({ enabled: open });
 
-  // Fetch Wards in Nigeria
-  const { data: wardsData } = useQuery({
-    queryKey: [...QUERY_KEYS.bodies.wards, "all"],
-    queryFn: async () => {
-      const res = await getWards({ data: { limit: 10000 } });
-      if (res && res.success && res.data?.wards) {
-        return res.data.wards as WardItem[];
-      }
-      return [];
-    },
-    enabled: open,
-    staleTime: Infinity,
-    gcTime: Infinity,
-  });
-
-  const allNigeriaStates = statesData || [];
-  const allLgas = lgasData || [];
-  const allWards = wardsData || [];
-
-  // Group Wards by State and LGA names
-  const groupedAllWards = React.useMemo(() => {
-    const groups: { [stateName: string]: { [lgaName: string]: WardItem[] } } =
-      {};
-    for (const w of allWards) {
-      const lga = allLgas.find((l) => l.id === w.lga_id);
-      const state = lga
-        ? allNigeriaStates.find((s) => s.id === lga.state_id)
-        : null;
-      const stateName = state?.name || w.state_name || "Unknown State";
-      const lgaName = lga?.name || w.lga_name || "Unknown LGA";
-
-      if (!groups[stateName]) {
-        groups[stateName] = {};
-      }
-      if (!groups[stateName][lgaName]) {
-        groups[stateName][lgaName] = [];
-      }
-      groups[stateName][lgaName].push(w);
-    }
-    return groups;
-  }, [allWards, allLgas, allNigeriaStates]);
-
+  // Form instance for managing election metadata
   const form = useForm({
     defaultValues: {
       electionGroupId: undefined as number | undefined,
@@ -149,39 +82,14 @@ export function WardElectionFormDialog({
     },
   });
 
-  const selectedOfficeId = useStore(
-    form.store,
-    (state) => state.values.officeId,
-  );
+  // Track reactive office field value from form store
+  const selectedOfficeId = useStore(form.store, (state) => state.values.officeId,);
 
   // Fetch available contested offices for auto-selection and dialog metadata
-  const { data: officesData } = useQuery({
-    queryKey: QUERY_KEYS.offices.contested,
-    queryFn: async () => {
-      const res = await getContestedOffices({ data: { limit: 100 } });
-      if (res && res.success && res.data?.offices) {
-        return res.data.offices;
-      }
-      return [];
-    },
-    staleTime: Infinity,
-    gcTime: Infinity,
-    enabled: open,
-  });
+  const { data: officesData } = useContestedOffices({ enabled: open });
 
-  const selectedType = React.useMemo(() => {
-    if (!selectedOfficeId || !officesData) return null;
-    return officesData.find((t: any) => t.id === selectedOfficeId);
-  }, [selectedOfficeId, officesData]);
-
-  // Handle Wards Mode change
-  React.useEffect(() => {
-    if (wardsMode === "all" && wardsData && wardsData.length > 0) {
-      setSelectedWards(wardsData);
-    }
-  }, [wardsMode, wardsData]);
-
-  React.useEffect(() => {
+  // Reset form values and selection state when dialog opens
+  useEffect(() => {
     if (open) {
       form.setFieldValue("electionGroupId", undefined);
       form.setFieldValue("electionDate", "");
@@ -193,7 +101,7 @@ export function WardElectionFormDialog({
   }, [open]);
 
   // Auto-select matching Ward office when offices data loads
-  React.useEffect(() => {
+  useEffect(() => {
     if (open && officesData && officesData.length > 0 && !selectedOfficeId) {
       const matching = officesData.find((o: any) => o.scope === "ward");
       if (matching) {
@@ -202,31 +110,38 @@ export function WardElectionFormDialog({
     }
   }, [open, officesData, selectedOfficeId]);
 
+  // Mutation to validate inputs and persist ward election records
   const saveMutation = useMutation({
     mutationFn: async (values: {
       electionGroupId: number | undefined;
       electionDate: string;
       officeId: number | undefined;
     }) => {
+      // Validate election group selection
       if (!values.electionGroupId) {
         throw new Error("Election group is required");
       }
+      // Validate office selection
       if (!values.officeId) {
         throw new Error("Office is required");
       }
+      // Validate election date
       if (!values.electionDate) {
         throw new Error("Election date is required");
       }
-      if (selectedWards.length === 0) {
-        throw new Error("At least one Ward must be selected");
+      // Validate ward selection when custom mode is active
+      if (wardsMode === "custom" && selectedWards.length === 0) {
+        throw new Error("At least one Ward must be selected (or select 'All Wards')");
       }
 
+      // Call server mutation to create ward elections
       const res = await createWardElection({
         data: {
           office_id: values.officeId,
           election_date: values.electionDate,
           election_group_id: values.electionGroupId,
-          ward_ids: selectedWards.map((w) => w.id),
+          all_wards: wardsMode === "all",
+          ward_ids: wardsMode === "all" ? [] : selectedWards.map((w) => w.id),
         },
       });
 
@@ -235,6 +150,7 @@ export function WardElectionFormDialog({
       }
     },
     onSuccess: () => {
+      // Invalidate relevant queries to refresh election listings
       queryClient.invalidateQueries({ queryKey: ["elections"] });
       onSuccess?.();
       onClose();
@@ -244,38 +160,53 @@ export function WardElectionFormDialog({
     },
   });
 
+  // Toggle selection for an individual Ward
   const handleToggleWardSelection = (ward: WardItem) => {
     setSelectedWards((prev) => {
       const exists = prev.some((w) => w.id === ward.id);
       if (exists) {
-        const next = prev.filter((w) => w.id !== ward.id);
-        if (next.length !== allWards.length) {
-          setWardsMode("custom");
-        }
-        return next;
-      } else {
-        const next = [...prev, ward];
-        if (next.length === allWards.length) {
-          setWardsMode("all");
-        }
-        return next;
+        return prev.filter((w) => w.id !== ward.id);
       }
+      return [...prev, ward];
     });
   };
 
-  // Group selected Wards by State name for rendering
-  const selectedWardsByState = React.useMemo(() => {
+  // Batch add multiple Wards to the selection without duplicates
+  const handleAddWards = (wards: WardItem[]) => {
+    setSelectedWards((prev) => {
+      const map = new Map(prev.map((w) => [w.id, w]));
+      for (const w of wards) {
+        map.set(w.id, w);
+      }
+      return Array.from(map.values());
+    });
+  };
+
+  // Batch remove selected Wards by IDs
+  const handleRemoveWards = (wardIds: number[]) => {
+    const idSet = new Set(wardIds);
+    setSelectedWards((prev) => prev.filter((w) => !idSet.has(w.id)));
+  };
+
+  // Group selected Wards by State and LGA for structured display
+  const selectedWardsByState = useMemo(() => {
     const groups: { [stateName: string]: WardItem[] } = {};
     for (const w of selectedWards) {
       const lga = allLgas.find((l) => l.id === w.lga_id);
       const state = lga
         ? allNigeriaStates.find((s) => s.id === lga.state_id)
-        : null;
-      const stateName = state?.name || w.state_name || "Unknown State";
+        : w.state_id
+          ? allNigeriaStates.find((s) => s.id === w.state_id)
+          : null;
+      const stateName = state?.name || w.state_name || "Selected State";
       if (!groups[stateName]) {
         groups[stateName] = [];
       }
-      groups[stateName].push(w);
+      groups[stateName].push({
+        ...w,
+        lga_name: w.lga_name || lga?.name,
+        state_name: w.state_name || state?.name,
+      });
     }
     return groups;
   }, [selectedWards, allLgas, allNigeriaStates]);
@@ -283,7 +214,7 @@ export function WardElectionFormDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent className="max-w-[580px] p-0 rounded-2xl border-none shadow-2xl   overflow-visible">
+        <DialogContent className="max-w-[580px] p-0 rounded-2xl border-none shadow-2xl overflow-visible">
           <DialogHeader title="Ward Election" />
 
           <form
@@ -342,56 +273,128 @@ export function WardElectionFormDialog({
 
               {/* Wards Section */}
               <div className="space-y-3">
-                <SelectionHeader
-                  label="Wards"
-                  buttonLabel="Ward"
-                  onOpenSelector={() => setIsWardSelectorOpen(true)}
-                />
-
-                <SelectionTabs
-                  mode={wardsMode}
-                  setMode={setWardsMode}
-                  items={selectedWards}
-                  allItems={allWards}
-                  setItems={setSelectedWards}
-                  allLabel={`All Wards (${allWards.length || "8,809"})`}
-                />
-
-                <SelectedItemsContainer
-                  items={selectedWards}
-                  emptyPlaceholder="0 Wards added"
-                >
-                  <div className="space-y-4 w-full text-left">
-                    {Object.entries(selectedWardsByState).map(
-                      ([stateName, stateWards]) => (
-                        <div key={stateName} className="space-y-2">
-                          <h4 className="text-[13px] font-bold text-c-50 tracking-wide uppercase">
-                            {stateName}
-                          </h4>
-                          <div className="flex flex-wrap gap-2">
-                            {stateWards.map((ward) => (
-                              <div
-                                key={ward.id}
-                                className="h-9 flex items-center gap-2.5 pl-3 pr-2 bg-background rounded-[10px] text-sm text-c-80"
-                              >
-                                <span>{ward.name}</span>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handleToggleWardSelection(ward)
-                                  }
-                                  className="text-c-40 hover:text-red transition cursor-pointer"
-                                >
-                                  <X className="size-3.5" />
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ),
-                    )}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-[15px] font-semibold text-c-70">
+                      Wards
+                    </span>
+                    <p className="text-xs text-c-50">
+                      {wardsMode === "all"
+                        ? "All 8,809 wards nationwide will be added"
+                        : selectedWards.length > 0
+                          ? `${selectedWards.length} ward${selectedWards.length > 1 ? "s" : ""} selected`
+                          : "Select wards participating in this election"}
+                    </p>
                   </div>
-                </SelectedItemsContainer>
+                  {wardsMode === "custom" && (
+                    <div className="flex items-center gap-2">
+                      {selectedWards.length > 0 && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectedWards([])}
+                          className="text-xs text-c-60 hover:text-red h-8 px-2.5 cursor-pointer"
+                        >
+                          Clear All
+                        </Button>
+                      )}
+                      <Button
+                        type="button"
+                        variant="black"
+                        size="lg"
+                        onClick={() => setIsWardSelectorOpen(true)}
+                        className="px-5 cursor-pointer flex items-center gap-1.5"
+                      >
+                        <Plus className="size-4" />
+                        <span>Select Wards</span>
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Mode Selector Tabs: Custom vs All Wards (8,809) */}
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setWardsMode("custom")}
+                    className={cn(
+                      "h-9 px-4 rounded-lg text-sm font-semibold transition cursor-pointer",
+                      wardsMode === "custom"
+                        ? "bg-secondary/20 text-c-80"
+                        : "bg-transparent text-c-80 hover:bg-black/5"
+                    )}
+                  >
+                    Custom
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setWardsMode("all")}
+                    className={cn(
+                      "h-9 px-4 rounded-lg text-sm font-semibold transition cursor-pointer flex items-center gap-1.5",
+                      wardsMode === "all"
+                        ? "bg-secondary/20 text-c-80"
+                        : "bg-transparent text-c-80 hover:bg-black/5"
+                    )}
+                  >
+                    <span>All Wards (8,809)</span>
+                  </button>
+                </div>
+
+                {wardsMode === "all" ? (
+                  <div className="rounded-xl border border-secondary/30 bg-secondary/10 p-4 space-y-1.5 text-left">
+                    <div className="flex items-center gap-2 text-sm font-bold text-c-90">
+                      <Check className="size-4 text-success" />
+                      <span>Nationwide Councillorship Mode</span>
+                    </div>
+                    <p className="text-xs text-c-60 leading-relaxed">
+                      This will create election instances for all{" "}
+                      <strong className="text-c-80">8,809 wards</strong> across
+                      all 774 LGAs in the 36 states and FCT.
+                    </p>
+                  </div>
+                ) : (
+                  <SelectedItemsContainer
+                    items={selectedWards}
+                    emptyPlaceholder="No wards selected yet. Click 'Select Wards' to add."
+                  >
+                    <div className="space-y-4 w-full text-left">
+                      {Object.entries(selectedWardsByState).map(
+                        ([stateName, stateWards]) => (
+                          <div key={stateName} className="space-y-2">
+                            <h4 className="text-[13px] font-bold text-c-50 tracking-wide uppercase">
+                              {stateName} ({stateWards.length})
+                            </h4>
+                            <div className="flex flex-wrap gap-2">
+                              {stateWards.map((ward) => (
+                                <div
+                                  key={ward.id}
+                                  className="h-9 flex items-center gap-2.5 pl-3 pr-2 bg-background rounded-[10px] text-sm text-c-80"
+                                >
+                                  <span>{ward.name}</span>
+                                  {ward.lga_name && (
+                                    <span className="text-[11px] text-c-40">
+                                      ({ward.lga_name})
+                                    </span>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleToggleWardSelection(ward)
+                                    }
+                                    className="text-c-40 hover:text-red transition cursor-pointer"
+                                  >
+                                    <X className="size-3.5" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ),
+                      )}
+                    </div>
+                  </SelectedItemsContainer>
+                )}
               </div>
             </DialogPadding>
 
@@ -427,133 +430,297 @@ export function WardElectionFormDialog({
         </DialogContent>
       </Dialog>
 
-      {/* Sub-dialog: Ward Selector */}
+      {/* Sub-dialog: Cascading Ward Selector */}
       <WardSelectorDialog
         open={isWardSelectorOpen}
         onOpenChange={setIsWardSelectorOpen}
-        groupedAllWards={groupedAllWards}
         selectedWards={selectedWards}
         onToggleWardSelection={handleToggleWardSelection}
+        onAddWards={handleAddWards}
+        onRemoveWards={handleRemoveWards}
+        allLgas={allLgas}
       />
     </>
   );
 }
 
-interface WardSelectorDialogProps {
+type WardSelectorDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  groupedAllWards: Record<string, Record<string, WardItem[]>>;
   selectedWards: WardItem[];
   onToggleWardSelection: (ward: WardItem) => void;
-}
+  onAddWards: (wards: WardItem[]) => void;
+  onRemoveWards: (wardIds: number[]) => void;
+  allLgas: LgaItem[];
+};
 
 function WardSelectorDialog({
   open,
   onOpenChange,
-  groupedAllWards,
   selectedWards,
   onToggleWardSelection,
+  onAddWards,
+  onRemoveWards,
+  allLgas,
 }: WardSelectorDialogProps) {
-  const [searchQuery, setSearchQuery] = React.useState("");
+  const [selectedStateId, setSelectedStateId] = useState<number | undefined>(undefined);
+  const [selectedStateName, setSelectedStateName] = useState<string>("");
+  const [selectedLgaId, setSelectedLgaId] = useState<number | undefined>(undefined);
+  const [selectedLgaName, setSelectedLgaName] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState("");
 
-  React.useEffect(() => {
+  // Reset search query whenever dialog opens
+  useEffect(() => {
     if (open) {
       setSearchQuery("");
     }
   }, [open]);
 
-  const filteredGroupedWards = React.useMemo(() => {
-    if (!searchQuery.trim()) return groupedAllWards;
+  // Query wards for the selected LGA directly (Redis-backed, <1ms)
+  const { data: lgaWards = [], isLoading: isLoadingLgaWards } = useQuery({
+    queryKey: [...QUERY_KEYS.bodies.wards, "lga", selectedLgaId],
+    queryFn: async () => {
+      if (!selectedLgaId) return [];
+      const res = await getWards({ data: { localGovernmentId: selectedLgaId } });
+      if (res && res.success && res.data?.wards) {
+        return (res.data.wards as WardItem[]).map((w) => ({
+          ...w,
+          lga_id: selectedLgaId,
+          lga_name: selectedLgaName,
+          state_id: selectedStateId,
+          state_name: selectedStateName,
+        }));
+      }
+      return [];
+    },
+    enabled: !!selectedLgaId,
+    staleTime: Infinity,
+  });
+
+  // Query all wards for the selected State directly (cached with TanStack Query)
+  const { data: stateWards = [], isLoading: isLoadingStateWards } = useQuery({
+    queryKey: [...QUERY_KEYS.bodies.wards, "state", selectedStateId],
+    queryFn: async () => {
+      if (!selectedStateId) return [];
+      const res = await getWards({ data: { stateId: selectedStateId } });
+      if (res && res.success && res.data?.wards) {
+        return (res.data.wards as WardItem[]).map((w) => {
+          const lga = allLgas.find((l) => l.id === w.lga_id);
+          return {
+            ...w,
+            lga_name: lga?.name || w.lga_name,
+            state_id: selectedStateId,
+            state_name: selectedStateName,
+          };
+        });
+      }
+      return [];
+    },
+    enabled: !!selectedStateId,
+    staleTime: Infinity,
+  });
+
+  // Filter currently displayed LGA wards by search input
+  const filteredLgaWards = useMemo(() => {
+    if (!searchQuery.trim()) return lgaWards;
     const q = searchQuery.toLowerCase();
-    const result: Record<string, Record<string, WardItem[]>> = {};
+    return lgaWards.filter((w) => w.name.toLowerCase().includes(q));
+  }, [lgaWards, searchQuery]);
 
-    for (const [stateName, lgasMap] of Object.entries(groupedAllWards)) {
-      const stateMatches = stateName.toLowerCase().includes(q);
-      const filteredLgas: Record<string, WardItem[]> = {};
+  // Check if all wards in currently active LGA are selected
+  const areAllLgaWardsSelected =
+    lgaWards.length > 0 &&
+    lgaWards.every((w) => selectedWards.some((sw) => sw.id === w.id));
 
-      for (const [lgaName, wards] of Object.entries(lgasMap)) {
-        const lgaMatches = lgaName.toLowerCase().includes(q);
-        if (stateMatches || lgaMatches) {
-          filteredLgas[lgaName] = wards;
-        } else {
-          const filteredWards = wards.filter((w) =>
-            w.name.toLowerCase().includes(q),
-          );
-          if (filteredWards.length > 0) {
-            filteredLgas[lgaName] = filteredWards;
-          }
-        }
-      }
-
-      if (Object.keys(filteredLgas).length > 0) {
-        result[stateName] = filteredLgas;
-      }
+  // Toggle selection for all wards in current LGA
+  const handleToggleAllLgaWards = () => {
+    if (areAllLgaWardsSelected) {
+      onRemoveWards(lgaWards.map((w) => w.id));
+    } else {
+      onAddWards(lgaWards);
     }
-    return result;
-  }, [groupedAllWards, searchQuery]);
+  };
 
-  const hasResults = Object.keys(filteredGroupedWards).length > 0;
+  // Check if all wards in currently active State are selected
+  const areAllStateWardsSelected =
+    stateWards.length > 0 &&
+    stateWards.every((w) => selectedWards.some((sw) => sw.id === w.id));
+
+  // Toggle selection for all wards in current State
+  const handleToggleAllStateWards = () => {
+    if (areAllStateWardsSelected) {
+      onRemoveWards(stateWards.map((w) => w.id));
+    } else {
+      onAddWards(stateWards);
+      onOpenChange(false);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[620px] p-0 rounded-2xl border-none shadow-2xl  ">
+      <DialogContent className="max-w-155 p-0 rounded-2xl border-none shadow-2xl overflow-visible">
         <DialogHeader title="Select Wards" />
         <DialogPadding className="space-y-4 pb-6">
           <p className="text-sm text-c-60">
-            Select the Wards to add to this election.
+            Pick a State and Local Government Area to browse and select wards.
           </p>
 
-          <IconInput
-            placeholder="Search wards, LGAs, or states..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+          {/* Cascading State & LGA Selectors */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1.5">
+              <Label title="State" />
+              <SelectState
+                selectedId={selectedStateId}
+                countryOriginalId={161}
+                update={(item) => {
+                  setSelectedStateId(Number(item.id));
+                  setSelectedStateName(item.name);
+                  setSelectedLgaId(undefined);
+                  setSelectedLgaName("");
+                }}
+                fetchStates={getStates}
+              />
+            </div>
 
-          <div className="space-y-6 max-h-[50vh] overflow-y-auto pr-1 pt-2 text-left">
-            {!hasResults ? (
-              <p className="text-sm text-c-50 py-4 text-center">
-                No wards found matching your search.
-              </p>
+            <div className="flex flex-col gap-1.5">
+              <Label title="LGA" />
+              <SelectLga
+                selectedId={selectedLgaId}
+                stateId={selectedStateId}
+                disabled={!selectedStateId}
+                update={(item) => {
+                  setSelectedLgaId(Number(item.id));
+                  setSelectedLgaName(item.name);
+                }}
+                fetchLGAs={getLGAs}
+              />
+            </div>
+          </div>
+
+          {/* Quick Actions Bar (when State or LGA is chosen) */}
+          {selectedStateId && (
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-c-10">
+              <div className="flex items-center gap-2">
+                {selectedLgaId && lgaWards.length > 0 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleToggleAllLgaWards}
+                    className="text-xs font-semibold h-8 cursor-pointer"
+                  >
+                    {areAllLgaWardsSelected
+                      ? `Remove All in ${selectedLgaName}`
+                      : `+ Add All ${lgaWards.length} in ${selectedLgaName}`}
+                  </Button>
+                )}
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={isLoadingStateWards || stateWards.length === 0}
+                  onClick={handleToggleAllStateWards}
+                  className="text-xs font-semibold h-8 cursor-pointer flex items-center gap-1.5"
+                >
+                  {isLoadingStateWards ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : areAllStateWardsSelected ? (
+                    <X className="size-3.5" />
+                  ) : (
+                    <Plus className="size-3.5" />
+                  )}
+                  <span>
+                    {areAllStateWardsSelected
+                      ? `Remove All in ${selectedStateName}`
+                      : `+ Add All ${stateWards.length > 0 ? stateWards.length : ""} in ${selectedStateName}`}
+                  </span>
+                </Button>
+              </div>
+
+              <span className="text-xs font-medium text-c-50">
+                {selectedWards.length} selected
+              </span>
+            </div>
+          )}
+
+          {/* Search Box (Active once an LGA is selected) */}
+          {selectedLgaId && lgaWards.length > 0 && (
+            <IconInput
+              placeholder={`Search wards in ${selectedLgaName}...`}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          )}
+
+          {/* Wards Chips Container */}
+          <div className="min-h-40 max-h-[45vh] overflow-y-auto pr-1 pt-1 text-left">
+            {!selectedStateId ? (
+              <div className="h-40 flex flex-col items-center justify-center text-center p-4">
+                <p className="text-sm font-medium text-c-60">
+                  Select a State and LGA above
+                </p>
+                <p className="text-xs text-c-40 mt-1 max-w-xs">
+                  Choose a State and Local Government Area to browse and select wards dynamically.
+                </p>
+              </div>
+            ) : !selectedLgaId ? (
+              <div className="h-40 flex flex-col items-center justify-center text-center p-4">
+                <p className="text-sm font-medium text-c-60">
+                  Now select an LGA in {selectedStateName}
+                </p>
+                <p className="text-xs text-c-40 mt-1 max-w-xs">
+                  Or click "Add All in {selectedStateName}" above to include all wards across the state.
+                </p>
+              </div>
+            ) : isLoadingLgaWards ? (
+              <div className="h-40 flex items-center justify-center">
+                <Loader2 className="size-6 animate-spin text-c-40" />
+              </div>
+            ) : filteredLgaWards.length === 0 ? (
+              <div className="h-40 flex items-center justify-center text-center">
+                <p className="text-sm text-c-50">
+                  No wards found matching "{searchQuery}" in {selectedLgaName}.
+                </p>
+              </div>
             ) : (
-              Object.entries(filteredGroupedWards).map(
-                ([stateName, stateLgas]) => (
-                  <div key={stateName} className="space-y-4">
-                    <h3 className="text-base font-medium text-c-50 pb-1">
-                      {stateName}
-                    </h3>
-                    {Object.entries(stateLgas).map(([lgaName, lgaWards]) => (
-                      <div key={lgaName} className="space-y-2">
-                        <GroupSectionTitle title={`${lgaName} LGA`} />
-                        <div className="flex flex-wrap gap-2">
-                          {lgaWards.map((ward) => {
-                            const isSelected = selectedWards.some(
-                              (w) => w.id === ward.id,
-                            );
-                            return (
-                              <SelectableChip
-                                key={ward.id}
-                                label={ward.name}
-                                isSelected={isSelected}
-                                onClick={() => onToggleWardSelection(ward)}
-                              />
-                            );
-                          })}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ),
-              )
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-[14px] font-bold text-c-75">
+                    {selectedLgaName} LGA ({filteredLgaWards.length} Wards)
+                  </h4>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {filteredLgaWards.map((ward) => {
+                    const isSelected = selectedWards.some(
+                      (w) => w.id === ward.id,
+                    );
+                    return (
+                      <SelectableChip
+                        key={ward.id}
+                        label={ward.name}
+                        isSelected={isSelected}
+                        onClick={() => onToggleWardSelection(ward)}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
             )}
           </div>
         </DialogPadding>
-        <DialogFooter>
+
+        <DialogFooter className="flex items-center justify-between">
+          <span className="text-sm font-medium text-c-60">
+            Total Selected:{" "}
+            <span className="font-bold text-c-90">{selectedWards.length}</span>
+          </span>
           <Button
             type="button"
             onClick={() => onOpenChange(false)}
             className="h-11 px-6 bg-success hover:bg-success-hover text-[16px] font-bold text-white rounded-xl cursor-pointer"
           >
-            Close
+            Done
           </Button>
         </DialogFooter>
       </DialogContent>

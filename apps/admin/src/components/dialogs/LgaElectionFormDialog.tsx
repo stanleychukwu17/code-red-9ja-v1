@@ -9,16 +9,16 @@ import {
   DialogToolbelt,
 } from "@repo/ui/components/dialog";
 import { useForm, useStore } from "@tanstack/react-form";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus, X } from "lucide-react";
 import { getContestedOffices } from "#/lib/server/offices";
+import { useContestedOffices } from "#/hooks/useContestedOffices";
 import { QUERY_KEYS } from "#/lib/config";
 import { getElectionGroups } from "#/lib/server/election_groups";
-import { getStates } from "#/lib/server/states";
-import { getLGAs } from "#/lib/server/countries";
+import { useNigeriaStates } from "#/hooks/useNigeriaStates";
+import { useLGAs } from "#/hooks/useLGAs";
 import { SelectDate } from "@repo/ui/components/selects/date-select";
 import { SelectOffice } from "@repo/ui/components/selects/office-select";
-import { cn } from "@repo/ui/lib/utils";
 import { ElectionGroupBullet } from "@repo/ui/components/bullets/election-group-bullet";
 import { createLgaElection } from "#/lib/server/elections";
 import {
@@ -43,11 +43,7 @@ interface LgaItem {
   state_name?: string;
 }
 
-export function LgaElectionFormDialog({
-  open,
-  onClose,
-  onSuccess,
-}: {
+export function LgaElectionFormDialog({ open, onClose, onSuccess }: {
   open: boolean;
   onClose: () => void;
   onSuccess?: () => void;
@@ -59,36 +55,10 @@ export function LgaElectionFormDialog({
   const [selectedLgas, setSelectedLgas] = React.useState<LgaItem[]>([]);
 
   // Fetch states of Nigeria
-  const { data: statesData } = useQuery({
-    queryKey: QUERY_KEYS.states,
-    queryFn: async () => {
-      const res = await getStates({ data: { countryId: 161 } });
-      if (res && res.success && res.data?.states) {
-        return res.data.states as StateItem[];
-      }
-      return [];
-    },
-    enabled: open,
-    staleTime: Infinity,
-    gcTime: Infinity,
-  });
+  const { data: allNigeriaStates = [] } = useNigeriaStates({ enabled: open });
 
   // Fetch all LGAs in Nigeria
-  const { data: lgasData } = useQuery({
-    queryKey: [...QUERY_KEYS.bodies.lgas, "all"],
-    queryFn: async () => {
-      const res = await getLGAs({ data: { limit: 800 } });
-      if (res && res.success && res.data?.lgas) {
-        return res.data.lgas as LgaItem[];
-      }
-      return [];
-    },
-    enabled: open,
-    staleTime: Infinity,
-    gcTime: Infinity,
-  });
-
-  const allNigeriaStates = statesData || [];
+  const { data: lgasData } = useLGAs({ enabled: open });
   const allLgas = lgasData || [];
 
   // Group LGAs by state name
@@ -122,23 +92,11 @@ export function LgaElectionFormDialog({
   );
 
   // Fetch available contested offices for auto-selection and dialog metadata
-  const { data: officesData } = useQuery({
-    queryKey: QUERY_KEYS.offices.contested,
-    queryFn: async () => {
-      const res = await getContestedOffices({ data: { limit: 100 } });
-      if (res && res.success && res.data?.offices) {
-        return res.data.offices;
-      }
-      return [];
-    },
-    staleTime: Infinity,
-    gcTime: Infinity,
-    enabled: open,
-  });
+  const { data: officesData } = useContestedOffices({ enabled: open });
 
   const selectedType = React.useMemo(() => {
     if (!selectedOfficeId || !officesData) return null;
-    return officesData.find((t: any) => t.id === selectedOfficeId);
+    return officesData.find((t: any) => t.id === selectedOfficeId) ?? null;
   }, [selectedOfficeId, officesData]);
 
   // Handle LGAs Mode change

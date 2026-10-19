@@ -306,7 +306,8 @@ export const createWardElection = createServerFn({ method: "POST" })
       office_id: number;
       election_date: string;
       election_group_id?: number;
-      ward_ids: number[];
+      all_wards?: boolean;
+      ward_ids?: number[];
     }) => data,
   )
   .handler(async ({ data }) => {

@@ -9,14 +9,15 @@ import {
   DialogToolbelt,
 } from "@repo/ui/components/dialog";
 import { useForm, useStore } from "@tanstack/react-form";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus, X } from "lucide-react";
 import { ElectionGroupBullet } from "@repo/ui/components/bullets/election-group-bullet";
 import { getContestedOffices } from "#/lib/server/offices";
+import { useContestedOffices } from "#/hooks/useContestedOffices";
 import { QUERY_KEYS } from "#/lib/config";
 import { getElectionGroups } from "#/lib/server/election_groups";
-import { getStates } from "#/lib/server/states";
-import { getFederalConstituencies } from "#/lib/server/federal_constituencies";
+import { useNigeriaStates } from "#/hooks/useNigeriaStates";
+import { useFederalConstituencies } from "#/hooks/useFederalConstituencies";
 import { SelectDate } from "@repo/ui/components/selects/date-select";
 import { SelectOffice } from "@repo/ui/components/selects/office-select";
 import { createFederalConstituencyElection } from "#/lib/server/elections";
@@ -65,36 +66,10 @@ export function FederalConstituencyElectionFormDialog({
   >([]);
 
   // Fetch states of Nigeria
-  const { data: statesData } = useQuery({
-    queryKey: QUERY_KEYS.states,
-    queryFn: async () => {
-      const res = await getStates({ data: { countryId: 161 } });
-      if (res && res.success && res.data?.states) {
-        return res.data.states as StateItem[];
-      }
-      return [];
-    },
-    enabled: open,
-    staleTime: Infinity,
-    gcTime: Infinity,
-  });
+  const { data: allNigeriaStates = [] } = useNigeriaStates({ enabled: open });
 
   // Fetch all Federal Constituencies in Nigeria
-  const { data: constituenciesData } = useQuery({
-    queryKey: [...QUERY_KEYS.bodies.federalConstituencies, "all"],
-    queryFn: async () => {
-      const res = await getFederalConstituencies({ data: { limit: 400 } });
-      if (res && res.success && res.data?.constituencies) {
-        return res.data.constituencies as FederalConstituencyItem[];
-      }
-      return [];
-    },
-    enabled: open,
-    staleTime: Infinity,
-    gcTime: Infinity,
-  });
-
-  const allNigeriaStates = statesData || [];
+  const { data: constituenciesData } = useFederalConstituencies({ enabled: open });
   const allConstituencies = constituenciesData || [];
 
   // Group constituencies by state name
@@ -128,23 +103,11 @@ export function FederalConstituencyElectionFormDialog({
   );
 
   // Fetch available contested offices for auto-selection and dialog metadata
-  const { data: officesData } = useQuery({
-    queryKey: QUERY_KEYS.offices.contested,
-    queryFn: async () => {
-      const res = await getContestedOffices({ data: { limit: 100 } });
-      if (res && res.success && res.data?.offices) {
-        return res.data.offices;
-      }
-      return [];
-    },
-    staleTime: Infinity,
-    gcTime: Infinity,
-    enabled: open,
-  });
+  const { data: officesData } = useContestedOffices({ enabled: open });
 
   const selectedType = React.useMemo(() => {
     if (!selectedOfficeId || !officesData) return null;
-    return officesData.find((t: any) => t.id === selectedOfficeId);
+    return officesData.find((t: any) => t.id === selectedOfficeId) ?? null;
   }, [selectedOfficeId, officesData]);
 
   // Handle Constituencies Mode change

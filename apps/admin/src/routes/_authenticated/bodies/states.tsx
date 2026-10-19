@@ -11,12 +11,10 @@ import { StatesTable } from "#/components/Tables";
 import type { StateType } from "#/components/Tables";
 import { BODIES_TABS } from "./-data";
 import { useState, useMemo } from "react";
-import { getStates } from "#/lib/server/states";
+import { useNigeriaStates } from "#/hooks/useNigeriaStates";
 import { useBodiesDialogs } from "#/components/dialogs/useBodiesDialogs";
-import { useQuery } from "@tanstack/react-query";
 import { BodiesDropdown } from "#/components/dropdowns/BodiesDropdown";
 import { Loader2 } from "lucide-react";
-import { QUERY_KEYS } from "#/lib/config";
 
 // Route definition for the Admin Bodies - States view
 export const Route = createFileRoute("/_authenticated/bodies/states")({
@@ -33,28 +31,12 @@ function StatesListComponent() {
   const { dialogProps, renderDialogs } = useBodiesDialogs();
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Fetch all 37 states for Nigeria (countryId: 161).
-  // Uses a shared query key across admin dialogs/views with infinite stale time,
-  // since states rarely change and are invalidated explicitly upon mutations.
-  const { data, isLoading, error } = useQuery({
-    queryKey: QUERY_KEYS.states,
-    queryFn: async () => {
-      const res = await getStates({
-        data: { countryId: 161 },
-      });
-      if (res && res.success && res.data) {
-        return res;
-      }
-      throw new Error(res?.message || "Failed to fetch states");
-    },
-    refetchOnWindowFocus: false,
-    staleTime: Infinity,
-    gcTime: Infinity,
-  });
+  // Fetch all 37 states for Nigeria using centralized hook
+  const { data: rawStates = [], isLoading, error } = useNigeriaStates();
 
   // Normalize API response into StateType table items
   const allStates: StateType[] = useMemo(() =>
-    (data?.data?.states || []).map((state: any) => ({
+    rawStates.map((state: any) => ({
       id: state.id,
       name: state.name,
       country_id: state.country_id ?? 161,
@@ -67,7 +49,7 @@ function StatesListComponent() {
       wards_count: state.wards_count,
       polling_units_count: state.polling_units_count,
     })),
-    [data?.data?.states],
+    [rawStates],
   );
 
   // Fast client-side filtering (37 static records - eliminates network debounce latency)

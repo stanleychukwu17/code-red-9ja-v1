@@ -10,7 +10,7 @@ import {
 import { WardsTable } from "#/components/Tables";
 import { BODIES_TABS } from "./-data";
 import { useEffect, useState } from "react";
-import { getWards } from "#/lib/server/wards";
+import { getWardsPaginated } from "#/lib/server/wards";
 import { useBodiesDialogs } from "#/components/dialogs/useBodiesDialogs";
 import { useIntersectionObserver, useDebounceValue } from "usehooks-ts";
 import { useInfiniteQuery } from "@tanstack/react-query";
@@ -33,7 +33,7 @@ function RouteComponent() {
     useInfiniteQuery({
       queryKey: [...QUERY_KEYS.bodies.wards, debouncedSearchQuery],
       queryFn: async ({ pageParam }) => {
-        const res = await getWards({
+        const res = await getWardsPaginated({
           data: { limit: 35, cursor: pageParam, search: debouncedSearchQuery || undefined },
         });
         if (res && res.success && res.data) {

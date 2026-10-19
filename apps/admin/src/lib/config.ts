@@ -165,6 +165,22 @@ export const API_URL = {
     const qs = params.toString();
     return `${api}/wards${qs ? `?${qs}` : ""}`;
   },
+  getWardsPaginated: (
+    localGovernmentId?: number,
+    stateId?: number,
+    limit?: number,
+    cursor?: string | number,
+    search?: string,
+  ) => {
+    const params = new URLSearchParams();
+    if (localGovernmentId) params.append("lga_id", String(localGovernmentId));
+    if (stateId) params.append("state_id", String(stateId));
+    if (limit) params.append("limit", String(limit));
+    if (cursor) params.append("cursor", String(cursor));
+    if (search) params.append("search", search);
+    const qs = params.toString();
+    return `${api}/wards/paginated${qs ? `?${qs}` : ""}`;
+  },
   getPollingUnits: (
     wardId?: number,
     localGovernmentId?: number,
@@ -368,6 +384,7 @@ export const QUERY_KEYS = {
   },
   countries: ["countries"],
   states: ["states"],
+  parties: ["parties"],
   bodies: {
     states: ["states"],
     senatorialDistricts: ["senatorial-districts"],

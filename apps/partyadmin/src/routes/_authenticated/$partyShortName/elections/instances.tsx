@@ -30,8 +30,7 @@ export type InstancesSearch = {
 export const Route = createFileRoute("/_authenticated/$partyShortName/elections/instances")({
   validateSearch: (search: Record<string, unknown>): InstancesSearch => {
     const raw = search.election_group_id;
-    const num =
-      raw !== undefined && raw !== null && raw !== "" ? Number(raw) : undefined;
+    const num = raw !== undefined && raw !== null && raw !== "" ? Number(raw) : undefined;
     return {
       election_group_id: num && !isNaN(num) ? num : undefined,
     };
@@ -74,6 +73,7 @@ function RouteComponent() {
         ) {
           return prev;
         }
+
         return {
           ...prev,
           election_group_ids: [election_group_id],
@@ -85,8 +85,7 @@ function RouteComponent() {
   // Calculate total number of applied filters for badge indicator
   const activeFiltersCount = useMemo(() => {
     let count = 0;
-    if (filters.election_group_ids.length > 0)
-      count += filters.election_group_ids.length;
+    if (filters.election_group_ids.length > 0) count += filters.election_group_ids.length;
     if (filters.scopes.length > 0) count += filters.scopes.length;
     if (filters.statuses.length > 0) count += filters.statuses.length;
     if (filters.state_ids.length > 0) count += filters.state_ids.length;
@@ -96,49 +95,46 @@ function RouteComponent() {
     return count;
   }, [filters]);
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
-    useInfiniteQuery({
-      queryKey: [
-        "elections",
-        partyShortName,
-        debouncedSearchQuery,
-        filters,
-      ],
-      queryFn: async ({ pageParam }) => {
-        const res = await getElections({
-          data: {
-            limit: 20,
-            cursor: pageParam as string,
-            partyShortName,
-            search: debouncedSearchQuery || undefined,
-            election_group_ids:
-              filters.election_group_ids.length > 0
-                ? filters.election_group_ids
-                : undefined,
-            scopes: filters.scopes.length > 0 ? filters.scopes : undefined,
-            statuses:
-              filters.statuses.length > 0 ? filters.statuses : undefined,
-            state_ids:
-              filters.state_ids.length > 0 ? filters.state_ids : undefined,
-            office_ids:
-              filters.office_ids.length > 0 ? filters.office_ids : undefined,
-            date_from: filters.date_from || undefined,
-            date_to: filters.date_to || undefined,
-          },
-        });
-        if (res && res.success && res.data) {
-          return res;
-        }
-        throw new Error(res?.message || "Failed to fetch elections");
-      },
-      initialPageParam: "",
-      getNextPageParam: (lastPage: any) => {
-        if (lastPage && lastPage.meta && lastPage.meta.has_more) {
-          return lastPage.meta.next_cursor || "";
-        }
-        return undefined;
-      },
-    });
+  // fetch the election instances
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteQuery({
+    queryKey: ["elections", partyShortName, debouncedSearchQuery, filters],
+    queryFn: async ({ pageParam }) => {
+      const res = await getElections({
+        data: {
+          limit: 35,
+          cursor: pageParam as string,
+          partyShortName,
+          search: debouncedSearchQuery || undefined,
+          election_group_ids:
+            filters.election_group_ids.length > 0
+              ? filters.election_group_ids
+              : undefined,
+          scopes: filters.scopes.length > 0 ? filters.scopes : undefined,
+          statuses:
+            filters.statuses.length > 0 ? filters.statuses : undefined,
+          state_ids:
+            filters.state_ids.length > 0 ? filters.state_ids : undefined,
+          office_ids:
+            filters.office_ids.length > 0 ? filters.office_ids : undefined,
+          date_from: filters.date_from || undefined,
+          date_to: filters.date_to || undefined,
+        },
+      });
+      if (res && res.success && res.data) {
+        return res;
+      }
+      throw new Error(res?.message || "Failed to fetch elections");
+    },
+    initialPageParam: "",
+    getNextPageParam: (lastPage: any) => {
+      if (lastPage && lastPage.meta && lastPage.meta.has_more) {
+        return lastPage.meta.next_cursor || "";
+      }
+      return undefined;
+    },
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+  });
 
   const { ref: sentinelRef, isIntersecting } = useIntersectionObserver({
     threshold: 0.1,
@@ -157,7 +153,10 @@ function RouteComponent() {
         rank: el.rank,
         title: el.name,
         candidate: el.candidate,
+        runningMate: el.running_mate || el.runningMate,
         electionDate: el.election_date,
+        officeName: el.office_name,
+        scope: el.scope,
       })),
     )
     : [];

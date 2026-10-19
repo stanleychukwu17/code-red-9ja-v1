@@ -25,7 +25,7 @@ type ElectionsService interface {
 	CreateFederalConstituencyElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, federalConstituencyIDs []int32) (int, error)
 	CreateStateConstituencyElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, stateConstituencyIDs []int32) (int, error)
 	CreateLgaElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, lgaIDs []int32) (int, error)
-	CreateWardElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, wardIDs []int32) (int, error)
+	CreateWardElection(ctx context.Context, params elections.CreateWardElectionParams) (int, error)
 	GetElectionByID(ctx context.Context, id int32) (queries.Election, error)
 	ListElections(ctx context.Context, filter elections.ListElectionsFilter) ([]queries.ListElectionInstancesRow, error)
 	UpdateElection(ctx context.Context, params elections.UpdateElectionParams) (queries.Election, error)
@@ -218,7 +218,8 @@ type CreateWardElectionRequest struct {
 	OfficeID        int16          `json:"office_id" validate:"required,gt=0"`
 	ElectionDate    utils.JSONDate `json:"election_date" validate:"required"`
 	ElectionGroupID int32          `json:"election_group_id" validate:"required,gt=0"`
-	WardIDs         []int32        `json:"ward_ids" validate:"required,min=1"`
+	AllWards        bool           `json:"all_wards"`
+	WardIDs         []int32        `json:"ward_ids"`
 }
 
 // CreateNationwideElection godoc
@@ -491,21 +492,33 @@ func (h *Handler) CreateWardElection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate mandatory fields (office, date, target election group, and target Ward IDs)
+	// Validate mandatory fields (office, date, target election group)
 	if err := h.validate.Struct(req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
 		return
 	}
 
+	if !req.AllWards && len(req.WardIDs) == 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: at least one ward_id must be provided or all_wards must be true")
+		return
+	}
+
 	// Batch create elections across selected Wards, resolve group, and seed skeleton results
-	count, err := h.service.CreateWardElection(r.Context(), req.OfficeID, req.ElectionDate.Time(), req.ElectionGroupID, req.WardIDs)
+	count, err := h.service.CreateWardElection(r.Context(), elections.CreateWardElectionParams{
+		OfficeID:        req.OfficeID,
+		ElectionDate:    req.ElectionDate.Time(),
+		ElectionGroupID: req.ElectionGroupID,
+		AllWards:        req.AllWards,
+		WardIDs:         req.WardIDs,
+	})
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create Ward elections: "+err.Error())
 		return
 	}
 
 	h.logElectionCreationAudit(r, "ward", req.ElectionGroupID, req.OfficeID, count, 0, map[string]interface{}{
-		"ward_ids": req.WardIDs,
+		"all_wards": req.AllWards,
+		"ward_ids":  req.WardIDs,
 	})
 
 	// Return successful response with count of created Ward elections

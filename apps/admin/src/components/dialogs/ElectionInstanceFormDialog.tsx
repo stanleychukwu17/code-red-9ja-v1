@@ -16,7 +16,7 @@ import {
   DialogToolbelt,
 } from "@repo/ui/components/dialog";
 import { useForm } from "@tanstack/react-form";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, MapPin } from "lucide-react";
 import { FancyInput, Input, Label } from "@repo/ui/components/input";
 import { Badge } from "@repo/ui/components/badge";
@@ -25,7 +25,7 @@ import { ElectionGroupBullet } from "@repo/ui/components/bullets/election-group-
 import { updateElection } from "#/lib/server/elections";
 import { QUERY_KEYS } from "#/lib/config";
 import { getElectionGroups } from "#/lib/server/election_groups";
-import { getStates } from "#/lib/server/states";
+import { useNigeriaStates } from "#/hooks/useNigeriaStates";
 import type { ElectionInstanceType } from "../tiles/election-instance-tile";
 import { TinyError } from "@repo/ui/components/custom/TinyError";
 
@@ -63,24 +63,17 @@ export function ElectionInstanceFormDialog({ electionInstance, open, onClose, on
   const [error, setError] = useState<string | null>(null);
 
   // Fetch states of Nigeria if this election instance has an associated state_id
-  const { data: statesData } = useQuery({
-    queryKey: QUERY_KEYS.states,
-    queryFn: async () => {
-      const res = await getStates({ data: { countryId: 161 } });
-      if (res && res.success && res.data?.states) {
-        return res.data.states;
-      }
-      return [];
-    },
-    staleTime: Infinity,
-    gcTime: Infinity,
+  const { data: statesData = [] } = useNigeriaStates({
     enabled: open && Boolean(electionInstance?.state_id),
   });
 
   // Resolve readable state name for geographic context banner
   const stateName = useMemo(() => {
     if (!electionInstance?.state_id || !statesData) return null;
-    const match = statesData.find((s: any) => s.id === electionInstance.state_id);
+    const statesList: any[] = Array.isArray(statesData)
+      ? statesData
+      : (statesData as any)?.data?.states || (statesData as any)?.states || [];
+    const match = statesList.find((s: any) => s.id === electionInstance.state_id);
     return match ? match.name : null;
   }, [electionInstance?.state_id, statesData]);
 

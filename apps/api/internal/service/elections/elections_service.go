@@ -376,10 +376,7 @@ func (s *ElectionsService) CreateSenatorialDistrictElection(ctx context.Context,
 			continue
 		}
 
-		var stateID pgtype.Int2
-		if districtRow.StateID > 0 {
-			stateID = pgtype.Int2{Int16: int16(districtRow.StateID), Valid: true}
-		}
+		stateID := utils.PgInt2FromPositive(districtRow.StateID)
 
 		name := fmt.Sprintf("%d %s Election (%s)", electionDate.Year(), officeElection, districtRow.Name)
 		paramsList = append(paramsList, queries.CreateElectionInstanceParams{
@@ -466,12 +463,8 @@ func (s *ElectionsService) CreateFederalConstituencyElection(ctx context.Context
 			continue
 		}
 
-		var stateID pgtype.Int2
+		stateID := utils.PgInt2FromPositive(cRow.StateID)
 		var senatorialDistrictID pgtype.Int4
-
-		if cRow.StateID > 0 {
-			stateID = pgtype.Int2{Int16: int16(cRow.StateID), Valid: true}
-		}
 		if cRow.SenatorialDistrictID.Valid && cRow.SenatorialDistrictID.Int32 > 0 {
 			senatorialDistrictID = cRow.SenatorialDistrictID
 		}
@@ -562,22 +555,16 @@ func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, 
 			continue
 		}
 
-		var stateID pgtype.Int2
+		stateID := utils.PgInt2FromPositive(cRow.StateID)
+		lgaID := utils.PgInt4FromPositive(cRow.LgaID)
 		var senatorialDistrictID pgtype.Int4
 		var federalConstituencyID pgtype.Int4
-		var lgaID pgtype.Int4
 
-		if cRow.StateID > 0 {
-			stateID = pgtype.Int2{Int16: int16(cRow.StateID), Valid: true}
-		}
 		if cRow.SenatorialDistrictID.Valid && cRow.SenatorialDistrictID.Int32 > 0 {
 			senatorialDistrictID = cRow.SenatorialDistrictID
 		}
 		if cRow.FederalConstituencyID.Valid && cRow.FederalConstituencyID.Int32 > 0 {
 			federalConstituencyID = cRow.FederalConstituencyID
-		}
-		if cRow.LgaID > 0 {
-			lgaID = pgtype.Int4{Int32: cRow.LgaID, Valid: true}
 		}
 
 		name := fmt.Sprintf("%d %s Election (%s)", electionDate.Year(), officeElection, cRow.Name)
@@ -665,13 +652,9 @@ func (s *ElectionsService) CreateLgaElection(ctx context.Context, officeID int16
 			continue
 		}
 
-		var stateID pgtype.Int2
+		stateID := utils.PgInt2FromPositive(lgaRow.StateID)
 		var senatorialDistrictID pgtype.Int4
 		var federalConstituencyID pgtype.Int4
-
-		if lgaRow.StateID > 0 {
-			stateID = pgtype.Int2{Int16: int16(lgaRow.StateID), Valid: true}
-		}
 		if lgaRow.SenatorialDistrictID.Valid && lgaRow.SenatorialDistrictID.Int32 > 0 {
 			senatorialDistrictID = lgaRow.SenatorialDistrictID
 		}
@@ -706,18 +689,29 @@ func (s *ElectionsService) CreateLgaElection(ctx context.Context, officeID int16
 	return count, nil
 }
 
+type CreateWardElectionParams struct {
+	OfficeID        int16
+	ElectionDate    time.Time
+	ElectionGroupID int32
+	AllWards        bool
+	WardIDs         []int32
+}
+
 // CreateWardElection sets up elections across one or more Wards (e.g., Councillorship).
-func (s *ElectionsService) CreateWardElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, wardIDs []int32) (int, error) {
-	// Early return if no wards provided
-	if len(wardIDs) == 0 {
+func (s *ElectionsService) CreateWardElection(ctx context.Context, params CreateWardElectionParams) (int, error) {
+	// Early return if not all wards and no wards provided
+	if !params.AllWards && len(params.WardIDs) == 0 {
 		return 0, nil
 	}
 
-	// In-memory deduplication of ward IDs
-	wardIDs = deDupeSlice(wardIDs)
+	wardIDs := params.WardIDs
+	if !params.AllWards {
+		// In-memory deduplication of ward IDs
+		wardIDs = deDupeSlice(wardIDs)
+	}
 
 	// Fetch and validate the target office definition
-	office, err := s.officeService.GetOfficeByID(ctx, officeID)
+	office, err := s.officeService.GetOfficeByID(ctx, params.OfficeID)
 	if err != nil {
 		return 0, fmt.Errorf("failed to fetch office: %w", err)
 	}
@@ -740,79 +734,47 @@ func (s *ElectionsService) CreateWardElection(ctx context.Context, officeID int1
 	txQueries := s.queries.WithTx(tx)
 
 	// Verify target election group exists and is active
-	if _, err := s.validateElectionGroup(ctx, txQueries, electionGroupID); err != nil {
+	if _, err := s.validateElectionGroup(ctx, txQueries, params.ElectionGroupID); err != nil {
 		return 0, err
 	}
 
-	// Pre-fetch all wards once to resolve parent IDs in memory
-	wards, err := txQueries.GetWards(ctx, queries.GetWardsParams{
-		LgaID:   0,
-		StateID: 0,
-	})
-	if err != nil {
-		return 0, fmt.Errorf("failed to fetch wards: %w", err)
-	}
-	wardMap := make(map[int32]queries.Ward, len(wards))
-	for _, w := range wards {
-		wardMap[w.ID] = w
-	}
-
-	// Pre-fetch LGAs to resolve senatorial district & federal constituency for wards via parent LGA
-	lgas, err := txQueries.GetLGAs(ctx, 0)
-	if err != nil {
-		return 0, fmt.Errorf("failed to fetch LGAs for ward parent resolution: %w", err)
-	}
-	lgaMap := make(map[int32]queries.Lga, len(lgas))
-	for _, l := range lgas {
-		lgaMap[l.ID] = l
+	// Resolve target wards: fetch all nationwide wards if requested, or only the selected wards
+	var targetWards []queries.Ward
+	if params.AllWards {
+		// Fetch all nationwide wards when AllWards preset is active
+		var err error
+		targetWards, err = txQueries.GetWards(ctx, queries.GetWardsParams{
+			LgaID:   0,
+			StateID: 0,
+		})
+		if err != nil {
+			return 0, fmt.Errorf("failed to fetch all wards: %w", err)
+		}
+	} else {
+		// Query only the specifically selected wards by IDs to avoid dumping all nationwide records
+		var err error
+		targetWards, err = txQueries.GetWardsByIDs(ctx, wardIDs)
+		if err != nil {
+			return 0, fmt.Errorf("failed to fetch selected wards: %w", err)
+		}
 	}
 
-	// Build election parameters for each Ward with full ancestral resolution (skipping non-existent wards)
-	paramsList := make([]queries.CreateElectionInstanceParams, 0, len(wardIDs))
-	for _, wardID := range wardIDs {
-		wardRow, foundWard := wardMap[wardID]
-		if !foundWard {
-			// Skip ward IDs that do not exist
-			continue
-		}
-
-		var stateID pgtype.Int2
-		var senatorialDistrictID pgtype.Int4
-		var federalConstituencyID pgtype.Int4
-		var stateConstituencyID pgtype.Int4
-		var lgaID pgtype.Int4
-
-		if wardRow.StateID > 0 {
-			stateID = pgtype.Int2{Int16: int16(wardRow.StateID), Valid: true}
-		}
-		if wardRow.LgaID > 0 {
-			lgaID = pgtype.Int4{Int32: wardRow.LgaID, Valid: true}
-			if lgaRow, foundLga := lgaMap[wardRow.LgaID]; foundLga {
-				if lgaRow.SenatorialDistrictID.Valid && lgaRow.SenatorialDistrictID.Int32 > 0 {
-					senatorialDistrictID = lgaRow.SenatorialDistrictID
-				}
-				if lgaRow.FederalConstituencyID.Valid && lgaRow.FederalConstituencyID.Int32 > 0 {
-					federalConstituencyID = lgaRow.FederalConstituencyID
-				}
-			}
-		}
-		if wardRow.StateConstituencyID.Valid {
-			stateConstituencyID = wardRow.StateConstituencyID
-		}
-
-		name := fmt.Sprintf("%d %s Election (%s)", electionDate.Year(), officeElection, wardRow.Name)
+	// Build election parameters for each Ward directly using its stored ancestral IDs (State, LGA, Senatorial, Constituency)
+	paramsList := make([]queries.CreateElectionInstanceParams, 0, len(targetWards))
+	for _, wardRow := range targetWards {
+		name := fmt.Sprintf("%d %s Election (%s)", params.ElectionDate.Year(), officeElection, wardRow.Name)
 		paramsList = append(paramsList, queries.CreateElectionInstanceParams{
 			Name:                  name,
-			ElectionDate:          pgtype.Date{Time: electionDate, Valid: true},
-			ElectionGroupID:       electionGroupID,
-			OfficeID:              officeID,
+			ElectionDate:          pgtype.Date{Time: params.ElectionDate, Valid: true},
+			ElectionGroupID:       params.ElectionGroupID,
+			OfficeID:              params.OfficeID,
 			Scope:                 "ward",
-			StateID:               stateID,
-			SenatorialDistrictID:  senatorialDistrictID,
-			FederalConstituencyID: federalConstituencyID,
-			LgaID:                 lgaID,
-			StateConstituencyID:   stateConstituencyID,
-			WardID:                pgtype.Int4{Int32: wardID, Valid: true},
+			StateID:               utils.PgInt2FromPositive(wardRow.StateID),
+			SenatorialDistrictID:  wardRow.SenatorialDistrictID,
+			FederalConstituencyID: wardRow.FederalConstituencyID,
+			LgaID:                 utils.PgInt4FromPositive(wardRow.LgaID),
+			StateConstituencyID:   wardRow.StateConstituencyID,
+			WardID:                pgtype.Int4{Int32: wardRow.ID, Valid: true},
 		})
 	}
 

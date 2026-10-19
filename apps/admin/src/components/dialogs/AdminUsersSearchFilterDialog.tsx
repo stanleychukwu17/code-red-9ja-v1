@@ -8,7 +8,7 @@ import {
 } from "@repo/ui/components/dialog";
 import { Button } from "@repo/ui/components/button";
 import { useQuery } from "@tanstack/react-query";
-import { getParties } from "#/lib/server/parties";
+import { useParties } from "#/hooks/useParties";
 import { Loader2 } from "lucide-react";
 import { SelectCountry } from "@repo/ui/components/selects/country-select";
 import { SelectState } from "@repo/ui/components/selects/state-select";
@@ -80,20 +80,9 @@ export function AdminUsersSearchFilterDialog({
   >(undefined);
   const [selectedStateIds, setSelectedStateIds] = React.useState<string[]>([]);
 
-  const { data: partiesData, isLoading: isLoadingParties } = useQuery({
-    queryKey: ["parties"],
-    queryFn: async () => {
-      const res = await getParties();
-      if (res && res.success) {
-        return res;
-      }
-      throw new Error(res?.message || "Failed to load parties");
-    },
+  const { data: partiesArray = [], isLoading: isLoadingParties } = useParties({
     enabled: open,
-    staleTime: Infinity,
   });
-
-  const partiesArray = partiesData?.data?.parties || [];
 
   const toggleParty = (id: number) => {
     setSelectedParties((prev) =>

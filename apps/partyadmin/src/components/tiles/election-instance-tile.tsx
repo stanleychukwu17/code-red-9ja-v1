@@ -6,12 +6,7 @@
  */
 
 import { cn } from "@repo/ui/lib/utils";
-import {
-  TileHeader,
-  TileLeft,
-  TileRight,
-  TileRow,
-} from "@repo/ui/components/tiles";
+import { TileHeader, TileLeft, TileRight, TileRow } from "@repo/ui/components/tiles";
 import { formatISODate } from "@repo/ui/lib/date";
 import StarIcon from "@repo/ui/icons/star-icon";
 import { AppAvatar, Avatar, AvatarImage } from "@repo/ui/components/avatar";
@@ -26,7 +21,14 @@ export type ElectionInstanceType = {
     avatar?: string;
     name: string;
   };
+  runningMate?: {
+    id: string | number;
+    avatar?: string;
+    name: string;
+  };
   electionDate: string;
+  officeName?: string;
+  scope?: string;
 };
 
 const getPartyAdminRankColor = (rank: number) => {
@@ -54,7 +56,7 @@ export function ElectionInstanceTableHeader() {
         <span className="text-c-90">Election</span>
       </TileLeft>
       <TileRight>
-        <span className="text-c-50 text-[14px] w-[200px] hidden lg:block">
+        <span className="text-c-50 text-[14px] w-50 hidden lg:block">
           Candidates
         </span>
         <span className="text-c-50 text-[14px] w-27.5 hidden sm:block">
@@ -72,11 +74,7 @@ export function ElectionInstanceTableHeader() {
  * election title, candidate badge (or "Add candidate" placeholder), formatted date,
  * and contextual party election instance dropdown actions.
  */
-export function ElectionInstanceTableTile({
-  data,
-}: {
-  data: ElectionInstanceType;
-}) {
+export function ElectionInstanceTableTile({ data }: { data: ElectionInstanceType }) {
   // Format the ISO election date string or fallback to em-dash
   const dateLabel = data.electionDate ? formatISODate(data.electionDate) : "—";
 
@@ -96,7 +94,7 @@ export function ElectionInstanceTableTile({
       </TileLeft>
       <TileRight>
         {data.candidate ? (
-          <div className="hidden lg:flex items-center gap-2 w-[200px]">
+          <div className="hidden lg:flex items-center gap-2 w-50">
             <AppAvatar
               src={data.candidate.avatar}
               alt={data.candidate.name}
@@ -107,7 +105,7 @@ export function ElectionInstanceTableTile({
             </p>
           </div>
         ) : (
-          <div className="hidden lg:flex items-center gap-2 w-[200px]">
+          <div className="hidden lg:flex items-center gap-2 w-50">
             <AppAvatar src={""} alt={""} className="size-6 shrink-0" />
             <p className="text-c-40 text-[15px] font-medium">Add candidate</p>
           </div>
