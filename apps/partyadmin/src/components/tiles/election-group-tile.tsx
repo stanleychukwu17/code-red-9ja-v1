@@ -6,6 +6,7 @@
  */
 
 import { Ellipsis } from "lucide-react";
+import { Link, useParams } from "@tanstack/react-router";
 import {
   TileHeader,
   TileLeft,
@@ -58,15 +59,22 @@ export function ElectionGroupTableHeader() {
  * List row component rendering an individual election event group.
  */
 export function ElectionGroupTableTile({ data }: { data: ElectionGroupType }) {
+  const params = useParams({ strict: false }) as { partyShortName?: string };
+  const partyShortName = params.partyShortName || "";
   const dateLabel = data.electionDate ? formatISODate(data.electionDate) : "—";
 
   return (
     <TileRow>
       <TileLeft>
         <FancyFolderIcon />
-        <p className="truncate w-full text-[16px] text-c-90">
+        <Link
+          to="/$partyShortName/elections/instances"
+          params={{ partyShortName }}
+          search={{ election_group_id: data.id }}
+          className="truncate w-full text-[16px] text-c-90 hover:text-primary hover:underline transition-colors"
+        >
           {data.title ?? "—"}
-        </p>
+        </Link>
       </TileLeft>
       <TileRight>
         <span className="text-[15px] text-c-70 w-35 hidden xl:block">

@@ -48,6 +48,7 @@ function RouteComponent() {
         }
         return undefined;
       },
+      staleTime: Infinity,
       refetchOnWindowFocus: false,
     });
 
@@ -63,21 +64,21 @@ function RouteComponent() {
 
   const lgas: LgaType[] = data
     ? data.pages.flatMap((page) =>
-        (page.data?.lgas || []).map((lga: any) => ({
-          id: lga.id,
-          name: lga.name,
-          code: lga.code ?? "",
-          state_id: lga.state_id,
-          state_name: lga.state_name,
-          senatorial_district_id: lga.senatorial_district_id,
-          senatorial_district_name: lga.senatorial_district_name,
-          federal_constituency_id: lga.federal_constituency_id,
-          federal_constituency_name: lga.federal_constituency_name,
-          state_constituencies_count: lga.state_constituencies_count,
-          wards_count: lga.wards_count,
-          polling_units_count: lga.polling_units_count,
-        })),
-      )
+      (page.data?.lgas || []).map((lga: any) => ({
+        id: lga.id,
+        name: lga.name,
+        code: lga.code ?? "",
+        state_id: lga.state_id,
+        state_name: lga.state_name,
+        senatorial_district_id: lga.senatorial_district_id,
+        senatorial_district_name: lga.senatorial_district_name,
+        federal_constituency_id: lga.federal_constituency_id,
+        federal_constituency_name: lga.federal_constituency_name,
+        state_constituencies_count: lga.state_constituencies_count,
+        wards_count: lga.wards_count,
+        polling_units_count: lga.polling_units_count,
+      })),
+    )
     : [];
 
   return (

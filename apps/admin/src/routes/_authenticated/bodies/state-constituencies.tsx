@@ -30,14 +30,7 @@ function RouteComponent() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery] = useDebounceValue(searchQuery, 500);
 
-  const {
-    data,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoading,
-    error,
-  } = useInfiniteQuery({
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, error } = useInfiniteQuery({
     queryKey: [...QUERY_KEYS.bodies.stateConstituencies, debouncedSearchQuery],
     queryFn: async ({ pageParam }) => {
       const res = await getStateConstituencies({
@@ -76,43 +69,43 @@ function RouteComponent() {
 
   const constituencies: StateConstituencyType[] = data
     ? data.pages.flatMap((page) =>
-        (page.data?.constituencies || []).map(
-          (c: {
-            id: number;
-            name: string;
-            code?: string | { String: string; Valid: boolean } | null;
-            lga_id: number;
-            lga_name: string;
-            state_id: number;
-            state_name: string;
-            senatorial_district_id: number;
-            senatorial_district_name: string;
-            federal_constituency_id: number;
-            federal_constituency_name: string;
-            wards_count: number;
-            polling_units_count: number;
-          }) => ({
-            id: c.id,
-            name: c.name,
-            code:
-              typeof c.code === "object" && c.code && "Valid" in c.code
-                ? c.code.Valid
-                  ? c.code.String
-                  : null
-                : ((c.code as string | null) ?? null),
-            lga_id: c.lga_id,
-            lga_name: c.lga_name,
-            state_id: c.state_id,
-            state_name: c.state_name,
-            senatorial_district_id: c.senatorial_district_id,
-            senatorial_district_name: c.senatorial_district_name,
-            federal_constituency_id: c.federal_constituency_id,
-            federal_constituency_name: c.federal_constituency_name,
-            wards_count: c.wards_count,
-            polling_units_count: c.polling_units_count,
-          }),
-        ),
-      )
+      (page.data?.constituencies || []).map(
+        (c: {
+          id: number;
+          name: string;
+          code?: string | { String: string; Valid: boolean } | null;
+          lga_id: number;
+          lga_name: string;
+          state_id: number;
+          state_name: string;
+          senatorial_district_id: number;
+          senatorial_district_name: string;
+          federal_constituency_id: number;
+          federal_constituency_name: string;
+          wards_count: number;
+          polling_units_count: number;
+        }) => ({
+          id: c.id,
+          name: c.name,
+          code:
+            typeof c.code === "object" && c.code && "Valid" in c.code
+              ? c.code.Valid
+                ? c.code.String
+                : null
+              : ((c.code as string | null) ?? null),
+          lga_id: c.lga_id,
+          lga_name: c.lga_name,
+          state_id: c.state_id,
+          state_name: c.state_name,
+          senatorial_district_id: c.senatorial_district_id,
+          senatorial_district_name: c.senatorial_district_name,
+          federal_constituency_id: c.federal_constituency_id,
+          federal_constituency_name: c.federal_constituency_name,
+          wards_count: c.wards_count,
+          polling_units_count: c.polling_units_count,
+        }),
+      ),
+    )
     : [];
 
   return (

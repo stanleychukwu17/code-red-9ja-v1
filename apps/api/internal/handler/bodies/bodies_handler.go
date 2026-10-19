@@ -50,6 +50,27 @@ func NewHandler(bodiesService BodiesService, q *queries.Queries, utils *utils.Ut
 	}
 }
 
+func parsePaginationParamsWithMax(r *http.Request, maxLimit int) (int, int64) {
+	limit := 20
+	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
+			if l > maxLimit {
+				limit = maxLimit
+			} else {
+				limit = l
+			}
+		}
+	}
+
+	var cursor int64
+	if cursorStr := r.URL.Query().Get("cursor"); cursorStr != "" {
+		if c, err := strconv.ParseInt(cursorStr, 10, 64); err == nil {
+			cursor = c
+		}
+	}
+	return limit, cursor
+}
+
 func parseOptionalQueryInt(r *http.Request, param string) int32 {
 	valStr := r.URL.Query().Get(param)
 	if valStr == "" {
@@ -170,23 +191,29 @@ func (h *Handler) GetCities(w http.ResponseWriter, r *http.Request) {
 
 // GetLGAs godoc
 // @Summary      Get local government areas (LGAs)
-// @Description  Fetches LGAs with optional state_id filtering
+// @Description  Fetches LGAs with optional state_id filtering and cursor pagination
 // @Tags         Bodies
 // @Accept       json
 // @Produce      json
 // @Param        state_id   query     int     false  "State ID to filter by"
+// @Param        limit      query     int     false  "Limit (default 20, max 800)"
+// @Param        cursor     query     string  false  "Cursor (ID of last record)"
 // @Success      200        {object}  GetLGAsResponse
 // @Failure      500        {string}  failed to fetch lgas
 // @Router       /lgas [get]
 func (h *Handler) GetLGAs(w http.ResponseWriter, r *http.Request) {
+	// Parse optional state filter and pagination parameters (up to 800 max)
 	stateID := parseOptionalQueryInt(r, "state_id")
+	limit, cursor := parsePaginationParamsWithMax(r, 800)
 
+	// Fetch cached or database LGAs matching state filter (or nationwide)
 	lgas, err := h.bodiesService.GetLGAs(r.Context(), stateID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch LGAs: "+err.Error())
 		return
 	}
 
+	// Apply case-insensitive text search across name, code, state, senatorial district, and federal constituency
 	search := strings.TrimSpace(r.URL.Query().Get("search"))
 	if search != "" {
 		searchLower := strings.ToLower(search)
@@ -203,8 +230,43 @@ func (h *Handler) GetLGAs(w http.ResponseWriter, r *http.Request) {
 		lgas = filtered
 	}
 
+	// Locate start position based on cursor ID
+	startIndex := 0
+	if cursor > 0 {
+		for i, l := range lgas {
+			if int64(l.ID) == cursor {
+				startIndex = i + 1
+				break
+			}
+		}
+	}
+
+	// Paginate the in-memory slice and compute next cursor
+	var paginated []queries.Lga
+	hasMore := false
+	nextCursor := ""
+
+	if startIndex < len(lgas) {
+		endIndex := startIndex + limit
+		if endIndex >= len(lgas) {
+			endIndex = len(lgas)
+			paginated = lgas[startIndex:endIndex]
+		} else {
+			paginated = lgas[startIndex:endIndex]
+			hasMore = true
+			nextCursor = strconv.FormatInt(int64(paginated[len(paginated)-1].ID), 10)
+		}
+	} else {
+		paginated = []queries.Lga{}
+	}
+
+	// Return response envelope with paginated items and cursor metadata
 	h.utils.RespondSuccess(w, http.StatusOK, "LGAs fetched successfully", map[string]interface{}{
-		"lgas": lgas,
+		"lgas": paginated,
+		"meta": map[string]interface{}{
+			"next_cursor": nextCursor,
+			"has_more":    hasMore,
+		},
 	})
 }
 
@@ -265,13 +327,13 @@ func (h *Handler) CreateLGA(w http.ResponseWriter, r *http.Request) {
 	lga, err := h.bodiesService.CreateLGA(
 		r.Context(),
 		bodiesservice.CreateLGAParams{
-			Name:                   req.Name,
-			Code:                   req.Code,
-			StateID:                req.StateID,
-			StateName:              state.Name,
-			SenatorialDistrictID:   req.SenatorialDistrictID,
-			SenatorialDistrictName: sdName,
-			FederalConstituencyID:  req.FederalConstituencyID,
+			Name:                    req.Name,
+			Code:                    req.Code,
+			StateID:                 req.StateID,
+			StateName:               state.Name,
+			SenatorialDistrictID:    req.SenatorialDistrictID,
+			SenatorialDistrictName:  sdName,
+			FederalConstituencyID:   req.FederalConstituencyID,
 			FederalConstituencyName: fcName,
 		},
 	)
@@ -339,14 +401,14 @@ func (h *Handler) UpdateLGA(w http.ResponseWriter, r *http.Request) {
 	lga, err := h.bodiesService.UpdateLGA(
 		r.Context(),
 		bodiesservice.UpdateLGAParams{
-			ID:                     int32(id),
-			Name:                   req.Name,
-			Code:                   req.Code,
-			StateID:                req.StateID,
-			StateName:              state.Name,
-			SenatorialDistrictID:   req.SenatorialDistrictID,
-			SenatorialDistrictName: sdName,
-			FederalConstituencyID:  req.FederalConstituencyID,
+			ID:                      int32(id),
+			Name:                    req.Name,
+			Code:                    req.Code,
+			StateID:                 req.StateID,
+			StateName:               state.Name,
+			SenatorialDistrictID:    req.SenatorialDistrictID,
+			SenatorialDistrictName:  sdName,
+			FederalConstituencyID:   req.FederalConstituencyID,
 			FederalConstituencyName: fcName,
 		},
 	)
@@ -495,6 +557,3 @@ func (h *Handler) GetSyncStatus(w http.ResponseWriter, r *http.Request) {
 		"status": status,
 	})
 }
-
-
-

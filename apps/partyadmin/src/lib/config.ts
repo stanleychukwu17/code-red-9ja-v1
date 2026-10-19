@@ -160,6 +160,8 @@ export const API_URL = {
   electionGroupById: (id: string | number) => `${api}/election-groups/${id}`,
   elections: `${api}/elections`,
   electionById: (id: string | number) => `${api}/elections/${id}`,
+  offices: `${api}/offices`,
+  officeById: (id: string | number) => `${api}/offices/${id}`,
   partyApplications: `${api}/party-applications`,
   partyApplicationsRecommendations: `${api}/party-applications/recommendations`,
   pollingUnits: `${api}/polling-units`,

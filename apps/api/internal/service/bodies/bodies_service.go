@@ -301,13 +301,19 @@ func (s *BodiesService) GetCitiesByStateID(ctx context.Context, stateID int16) (
 	}
 }
 
-// GetLGAs retrieves a list of Local Government Areas (LGAs) for a given state ID, using a cached version if available.
+// GetLGAs retrieves a list of Local Government Areas (LGAs) for a given state ID or nationwide, using Redis cache when available.
 func (s *BodiesService) GetLGAs(ctx context.Context, stateID int32) ([]queries.Lga, error) {
 	type Response struct {
 		LGAs []queries.Lga `json:"lgas"`
 	}
 
-	redisKey := fmt.Sprintf("%s%d", db.RedisLGAsByState, stateID)
+	var redisKey string
+	if stateID > 0 {
+		redisKey = fmt.Sprintf("%s%d", db.RedisLGAsByState, stateID)
+	} else {
+		redisKey = db.RedisLGAsAll
+	}
+
 	data, err := s.rdb.Get(ctx, redisKey).Result()
 	switch err {
 	case redis.Nil:
@@ -376,7 +382,7 @@ func (s *BodiesService) CreateLGA(ctx context.Context, params CreateLGAParams) (
 		return queries.Lga{}, err
 	}
 
-	s.invalidateCache(ctx, params.StateID)
+	s.invalidateCache(ctx, params.StateID, lga.ID)
 
 	return lga, nil
 }
@@ -450,7 +456,7 @@ func (s *BodiesService) DeleteLGA(ctx context.Context, id int32) error {
 	return nil
 }
 
-// invalidateCache clears Redis cache entries for a state's LGAs, the national all-LGAs cache, national metrics, and individual LGA cache.
+// invalidateCache clears Redis cache entries for a state's LGAs, the nationwide all-LGAs cache, national metrics, and individual LGA cache.
 func (s *BodiesService) invalidateCache(ctx context.Context, stateID int32, lgaIDs ...int32) {
 	// Invalidate individual LGA record cache(s) if provided
 	for _, id := range lgaIDs {
@@ -460,16 +466,12 @@ func (s *BodiesService) invalidateCache(ctx context.Context, stateID int32, lgaI
 	}
 
 	// Invalidate state-level LGA list cache
-	redisKey := fmt.Sprintf("%s%d", db.RedisLGAsByState, stateID)
-	s.rdb.Del(ctx, redisKey)
-
-	// Invalidate national/all-LGAs list cache (state:0)
-	if stateID != 0 {
-		s.rdb.Del(ctx, fmt.Sprintf("%s0", db.RedisLGAsByState))
+	if stateID > 0 {
+		s.rdb.Del(ctx, fmt.Sprintf("%s%d", db.RedisLGAsByState, stateID))
 	}
 
-	// Invalidate national metrics cache
-	s.rdb.Del(ctx, db.RedisNationalMetrics)
+	// Invalidate nationwide/all-LGAs list cache and national metrics
+	s.rdb.Del(ctx, db.RedisLGAsAll, db.RedisNationalMetrics)
 }
 
 // function: check if the user country is valid
