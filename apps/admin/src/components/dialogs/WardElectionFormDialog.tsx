@@ -214,7 +214,7 @@ export function WardElectionFormDialog({ open, onClose, onSuccess }: WardElectio
   return (
     <>
       <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent className="max-w-[580px] p-0 rounded-2xl border-none shadow-2xl overflow-visible">
+        <DialogContent className="max-w-145 p-0 rounded-2xl border-none shadow-2xl overflow-visible">
           <DialogHeader title="Ward Election" />
 
           <form
@@ -369,7 +369,7 @@ export function WardElectionFormDialog({ open, onClose, onSuccess }: WardElectio
                               {stateWards.map((ward) => (
                                 <div
                                   key={ward.id}
-                                  className="h-9 flex items-center gap-2.5 pl-3 pr-2 bg-background rounded-[10px] text-sm text-c-80"
+                                  className="h-9 flex items-center gap-2.5 pl-3 pr-2 bg-background rounded-10 text-sm text-c-80"
                                 >
                                   <span>{ward.name}</span>
                                   {ward.lga_name && (

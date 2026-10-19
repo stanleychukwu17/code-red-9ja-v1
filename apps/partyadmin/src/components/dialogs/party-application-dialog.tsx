@@ -516,7 +516,7 @@ export function PartyApplicationDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent className="max-w-[620px] p-0 rounded-2xl border-none shadow-2xl   overflow-hidden">
+        <DialogContent className="max-w-155 p-0 rounded-2xl border-none shadow-2xl   overflow-hidden">
           <DialogHeader
             title={
               isAccepted
@@ -546,15 +546,15 @@ export function PartyApplicationDialog({
                         {getRoleLabel(application.role || "polling_agent")}
                       </span>
                       {application.pollingUnitName &&
-                      application.role === "polling_agent"
+                        application.role === "polling_agent"
                         ? ` at ${application.pollingUnitName}`
                         : application.wardName &&
-                            (application.role === "ward_election_supervisor" ||
-                              application.role === "ward_supervisor")
+                          (application.role === "ward_election_supervisor" ||
+                            application.role === "ward_supervisor")
                           ? ` in ${application.wardName} Ward`
                           : application.lgaName &&
-                              (application.role === "lga_election_supervisor" ||
-                                application.role === "lga_supervisor")
+                            (application.role === "lga_election_supervisor" ||
+                              application.role === "lga_supervisor")
                             ? ` in ${application.lgaName} LGA`
                             : application.stateName
                               ? ` in ${application.stateName} State`
@@ -722,10 +722,10 @@ export function PartyApplicationDialog({
                   </span>
                   {(role === "ward_election_supervisor" ||
                     role === "lga_election_supervisor") && (
-                    <span className="bg-c-10 px-2 py-0.5 rounded font-medium">
-                      LGA: {application.lgaName || "Selected LGA"}
-                    </span>
-                  )}
+                      <span className="bg-c-10 px-2 py-0.5 rounded font-medium">
+                        LGA: {application.lgaName || "Selected LGA"}
+                      </span>
+                    )}
                   {role === "ward_election_supervisor" && (
                     <span className="bg-c-10 px-2 py-0.5 rounded font-medium">
                       Ward: {application.wardName || "Selected Ward"}
@@ -799,49 +799,49 @@ export function PartyApplicationDialog({
                   {(role === "lga_election_supervisor" ||
                     role === "ward_election_supervisor" ||
                     role === "polling_agent") && (
-                    <div className="space-y-1">
-                      <label className="text-[12px] font-semibold text-c-50 uppercase tracking-wider">
-                        LGA
-                      </label>
-                      <SelectLga
-                        selectedId={
-                          selectedLga ? String(selectedLga) : undefined
-                        }
-                        stateId={
-                          selectedState ? Number(selectedState) : undefined
-                        }
-                        fetchLGAs={fetchLgasAdapter}
-                        update={(lga) => {
-                          setSelectedLga(lga.id);
-                          setSelectedWard("");
-                          if (role === "polling_agent") setSelectedUnitId("");
-                        }}
-                      />
-                    </div>
-                  )}
+                      <div className="space-y-1">
+                        <label className="text-[12px] font-semibold text-c-50 uppercase tracking-wider">
+                          LGA
+                        </label>
+                        <SelectLga
+                          selectedId={
+                            selectedLga ? String(selectedLga) : undefined
+                          }
+                          stateId={
+                            selectedState ? Number(selectedState) : undefined
+                          }
+                          fetchLGAs={fetchLgasAdapter}
+                          update={(lga) => {
+                            setSelectedLga(lga.id);
+                            setSelectedWard("");
+                            if (role === "polling_agent") setSelectedUnitId("");
+                          }}
+                        />
+                      </div>
+                    )}
 
                   {(role === "ward_election_supervisor" ||
                     role === "polling_agent") && (
-                    <div className="space-y-1">
-                      <label className="text-[12px] font-semibold text-c-50 uppercase tracking-wider">
-                        Ward
-                      </label>
-                      <SelectWard
-                        selectedId={
-                          selectedWard ? String(selectedWard) : undefined
-                        }
-                        lgaId={selectedLga ? Number(selectedLga) : undefined}
-                        stateId={
-                          selectedState ? Number(selectedState) : undefined
-                        }
-                        fetchWards={fetchWardsAdapter}
-                        update={(ward) => {
-                          setSelectedWard(ward.id);
-                          if (role === "polling_agent") setSelectedUnitId("");
-                        }}
-                      />
-                    </div>
-                  )}
+                      <div className="space-y-1">
+                        <label className="text-[12px] font-semibold text-c-50 uppercase tracking-wider">
+                          Ward
+                        </label>
+                        <SelectWard
+                          selectedId={
+                            selectedWard ? String(selectedWard) : undefined
+                          }
+                          lgaId={selectedLga ? Number(selectedLga) : undefined}
+                          stateId={
+                            selectedState ? Number(selectedState) : undefined
+                          }
+                          fetchWards={fetchWardsAdapter}
+                          update={(ward) => {
+                            setSelectedWard(ward.id);
+                            if (role === "polling_agent") setSelectedUnitId("");
+                          }}
+                        />
+                      </div>
+                    )}
                 </div>
               )}
             </div>

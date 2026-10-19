@@ -295,7 +295,7 @@ export function LgaElectionFormDialog({ open, onClose, onSuccess }: {
                             {stateLgas.map((lga) => (
                               <div
                                 key={lga.id}
-                                className="h-9 flex items-center gap-2.5 pl-3 pr-2 bg-background rounded-[10px] text-sm text-c-80"
+                                className="h-9 flex items-center gap-2.5 pl-3 pr-2 bg-background rounded-10 text-sm text-c-80"
                               >
                                 <span>{lga.name}</span>
                                 <button
@@ -407,7 +407,7 @@ function LgaSelectorDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[620px] p-0 rounded-2xl border-none shadow-2xl  ">
+      <DialogContent className="max-w-155 p-0 rounded-2xl border-none shadow-2xl  ">
         <DialogHeader title="Select LGAs" />
         <DialogPadding className="space-y-4 pb-6">
           <p className="text-sm text-c-60">
