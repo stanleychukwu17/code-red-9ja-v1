@@ -59,33 +59,30 @@ export function UserFinderCommand({
   }, [searchQuery]);
 
   // Fetch users list with infinite scrolling
-  const { data, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage } =
-    useInfiniteQuery<{ users: User[]; nextCursor?: string | number | null }>({
-      queryKey: ["users-select-existing", filterRole, filterPartyId, debouncedSearchQuery],
-      queryFn: async ({ pageParam }) => {
-        return fetchUsers({ cursor: pageParam as string | number | undefined, search: debouncedSearchQuery });
-      },
-      getNextPageParam: (lastPage) => lastPage?.nextCursor || undefined,
-      initialPageParam: undefined as string | number | undefined,
-      enabled: open,
+  const { data, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage } = useInfiniteQuery<{ users: User[]; nextCursor?: string | number | null }>({
+    queryKey: ["users-select-existing", filterRole, filterPartyId, debouncedSearchQuery],
+    queryFn: async ({ pageParam }) => {
+      return fetchUsers({ cursor: pageParam as string | number | undefined, search: debouncedSearchQuery });
+    },
+    getNextPageParam: (lastPage) => lastPage?.nextCursor || undefined,
+    initialPageParam: undefined as string | number | undefined,
+    enabled: open,
+  });
+
+  // Auto-fetch next page on scroll via Intersection Observer
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const loadMoreRef = useCallback((node: HTMLDivElement | null) => {
+    if (isLoading || isFetchingNextPage) return;
+    if (observerRef.current) observerRef.current.disconnect();
+
+    observerRef.current = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting && hasNextPage) {
+        fetchNextPage();
+      }
     });
 
-  const observerRef = useRef<IntersectionObserver | null>(null);
-  const loadMoreRef = useCallback(
-    (node: HTMLDivElement | null) => {
-      if (isLoading || isFetchingNextPage) return;
-      if (observerRef.current) observerRef.current.disconnect();
-
-      observerRef.current = new IntersectionObserver((entries) => {
-        if (entries[0]?.isIntersecting && hasNextPage) {
-          fetchNextPage();
-        }
-      });
-
-      if (node) observerRef.current.observe(node);
-    },
-    [isLoading, isFetchingNextPage, hasNextPage, fetchNextPage],
-  );
+    if (node) observerRef.current.observe(node);
+  }, [isLoading, isFetchingNextPage, hasNextPage, fetchNextPage]);
 
   // Reset local state when dialog opens
   useEffect(() => {
@@ -95,10 +92,8 @@ export function UserFinderCommand({
     }
   }, [open]);
 
-  const users = useMemo(
-    () => (data?.pages ? data.pages.flatMap((p) => p.users) : []),
-    [data],
-  );
+  // Flatten paginated results into a single array
+  const users = useMemo(() => (data?.pages ? data.pages.flatMap((p) => p.users) : []), [data]);
 
   // Filter users by already added check. 
   // (Search, role, and party filtering is now handled natively by the backend via fetchUsers).
@@ -106,13 +101,16 @@ export function UserFinderCommand({
     return !alreadySelectedIds.includes(u.id);
   });
 
+  // Handle user selection: immediate dispatch for single mode, or toggle within buffer for multiple mode
   const handleToggleSelect = (user: User) => {
+    // In single-select mode, immediately confirm selection and dismiss dialog
     if (selectMode === "single") {
       onAddUsers([user]);
       onClose();
       return;
     }
 
+    // In multi-select mode, toggle inclusion in the staging buffer
     if (selectedUsers.some((u) => u.id === user.id)) {
       setSelectedUsers((prev) => prev.filter((u) => u.id !== user.id));
     } else {
@@ -120,10 +118,12 @@ export function UserFinderCommand({
     }
   };
 
+  // Remove a specific user chip from the staged selections
   const handleRemoveSelectedTag = (userId: number) => {
     setSelectedUsers((prev) => prev.filter((u) => u.id !== userId));
   };
 
+  // Finalize and submit all staged users in multi-select mode
   const handleAddAll = () => {
     onAddUsers(selectedUsers);
     onClose();

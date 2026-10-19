@@ -1,3 +1,7 @@
+// Package pollingunitshandler provides HTTP handlers and controllers for managing
+// Nigerian Polling Units (the base electoral/geographical unit in Nigeria).
+// It supports full CRUD operations, hierarchical cascade validation (State -> LGA -> Ward),
+// high-performance cursor pagination with debounced search, and election agent recruitment capacity checks.
 package pollingunitshandler
 
 import (
@@ -16,6 +20,8 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+// PollingUnitsService defines the business logic contract for polling unit persistence,
+// pagination, and capacity aggregations.
 type PollingUnitsService interface {
 	CreatePollingUnit(ctx context.Context, arg queries.CreatePollingUnitParams) (queries.PollingUnit, error)
 	GetPollingUnitByID(ctx context.Context, id int32) (queries.PollingUnit, error)
@@ -26,10 +32,13 @@ type PollingUnitsService interface {
 	GetPollingUnitsWithCapacity(ctx context.Context, wardID, localGovernmentID, stateID int32, partyID int16, electionGroupID int32) ([]pollingunitsservice.PollingUnitWithCapacity, error)
 }
 
+// BodiesService defines the interface for verifying administrative boundary entities (e.g., states).
 type BodiesService interface {
 	CheckStateByID(ctx context.Context, stateID int16) (queries.CState, error)
 }
 
+// Handler orchestrates HTTP endpoints for polling units, delegating business logic
+// to PollingUnitsService and utilizing sqlc Queries for direct boundary entity lookups.
 type Handler struct {
 	pollingUnitsService PollingUnitsService
 	bodiesService       BodiesService
@@ -37,6 +46,7 @@ type Handler struct {
 	utils               *utils.Utils
 }
 
+// NewHandler constructs a new Handler instance with required service dependencies.
 func NewHandler(pollingUnitsService PollingUnitsService, bodiesService BodiesService, q *queries.Queries, utils *utils.Utils) *Handler {
 	return &Handler{
 		pollingUnitsService: pollingUnitsService,
@@ -46,6 +56,8 @@ func NewHandler(pollingUnitsService PollingUnitsService, bodiesService BodiesSer
 	}
 }
 
+// CreatePollingUnitRequest represents the inbound JSON body required to register a polling unit.
+// Name, StateID, LgaID, and WardID are mandatory to anchor the unit into Nigeria's electoral hierarchy.
 type CreatePollingUnitRequest struct {
 	Name               string   `json:"name"`
 	Code               *string  `json:"code"`
@@ -61,6 +73,7 @@ type CreatePollingUnitRequest struct {
 	GooglePlaceID      *string  `json:"google_place_id"`
 }
 
+// UpdatePollingUnitRequest represents the inbound JSON body for updating an existing polling unit.
 type UpdatePollingUnitRequest struct {
 	Name               string   `json:"name"`
 	Code               *string  `json:"code"`
@@ -96,32 +109,34 @@ func (h *Handler) CreatePollingUnit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validate presence of the full geographic hierarchy chain
 	if req.Name == "" || req.StateID == 0 || req.LgaID == 0 || req.WardID == 0 {
 		h.utils.RespondError(w, http.StatusBadRequest, "name, state_id, lga_id, and ward_id are required")
 		return
 	}
 
-	// Resolve state name
+	// 1. Resolve State to verify existence and capture official StateName
 	state, err := h.bodiesService.CheckStateByID(r.Context(), int16(req.StateID))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid state ID: "+err.Error())
 		return
 	}
 
-	// Resolve LGA name
+	// 2. Resolve LGA to verify existence and extract LGA name along with Senatorial/Federal Constituencies
 	lga, err := h.queries.GetLGAByID(r.Context(), req.LgaID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid LGA ID: "+err.Error())
 		return
 	}
 
-	// Resolve Ward name
+	// 3. Resolve Ward to verify existence and extract Ward name and State Constituency
 	ward, err := h.queries.GetWardByID(r.Context(), req.WardID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid Ward ID: "+err.Error())
 		return
 	}
 
+	// Assemble params denormalizing parent administrative entity names for optimal read-query speed
 	arg := queries.CreatePollingUnitParams{
 		Name:                    req.Name,
 		Code:                    utils.PgTextFromPtr(req.Code),
@@ -222,28 +237,26 @@ func (h *Handler) UpdatePollingUnit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verify it exists
+	// Verify existing record before attempting updates
 	_, err = h.pollingUnitsService.GetPollingUnitByID(r.Context(), int32(id))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Polling unit not found")
 		return
 	}
 
-	// Resolve state name
+	// Re-resolve administrative hierarchy names in case boundary assignment shifted
 	state, err := h.bodiesService.CheckStateByID(r.Context(), int16(req.StateID))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid state ID: "+err.Error())
 		return
 	}
 
-	// Resolve LGA name
 	lga, err := h.queries.GetLGAByID(r.Context(), req.LgaID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid LGA ID: "+err.Error())
 		return
 	}
 
-	// Resolve Ward name
 	ward, err := h.queries.GetWardByID(r.Context(), req.WardID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid Ward ID: "+err.Error())
@@ -308,7 +321,7 @@ func (h *Handler) DeletePollingUnit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verify it exists
+	// Verify presence before invoking deletion
 	_, err = h.pollingUnitsService.GetPollingUnitByID(r.Context(), int32(id))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Polling unit not found")
@@ -323,11 +336,13 @@ func (h *Handler) DeletePollingUnit(w http.ResponseWriter, r *http.Request) {
 	h.utils.RespondSuccess(w, http.StatusOK, "Polling unit deleted successfully", nil)
 }
 
+// PaginationMeta conveys cursor state to frontend infinite-scroll and paginated tables.
 type PaginationMeta struct {
 	NextCursor string `json:"next_cursor"`
 	HasMore    bool   `json:"has_more"`
 }
 
+// PollingUnitResponse represents a normalized polling unit returned in API responses.
 type PollingUnitResponse struct {
 	ID                  int32   `json:"id"`
 	Name                string  `json:"name"`
@@ -347,6 +362,7 @@ type PollingUnitResponse struct {
 	GooglePlaceID       string  `json:"google_place_id"`
 }
 
+// GetPollingUnitsResponse represents the standard API envelope for polling unit listings.
 type GetPollingUnitsResponse struct {
 	Success bool                `json:"success"`
 	Message string              `json:"message"`
@@ -354,14 +370,18 @@ type GetPollingUnitsResponse struct {
 	Meta    *PaginationMeta     `json:"meta,omitempty"`
 }
 
+// GetPollingUnitsData holds the collection of polling units in API responses.
 type GetPollingUnitsData struct {
 	PollingUnits []PollingUnitResponse `json:"polling_units"`
 }
 
+// parsePaginationParams extracts limit (max 100) and cursor from request query parameters.
 func parsePaginationParams(r *http.Request) (int, int64) {
 	return parsePaginationParamsWithMax(r, 100)
 }
 
+// parsePaginationParamsWithMax extracts and enforces an upper ceiling on pagination limit,
+// preventing client requests from triggering memory exhaustion or large DB scans.
 func parsePaginationParamsWithMax(r *http.Request, maxLimit int) (int, int64) {
 	limit := 20
 	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
@@ -383,6 +403,7 @@ func parsePaginationParamsWithMax(r *http.Request, maxLimit int) (int, int64) {
 	return limit, cursor
 }
 
+// parseSortParams extracts ordering column and direction, defaulting safely if parameters are omitted or invalid.
 func parseSortParams(r *http.Request, defaultOrderBy string, defaultOrderDir string) (string, string) {
 	orderBy := r.URL.Query().Get("order_by")
 	if orderBy == "" {
@@ -397,6 +418,8 @@ func parseSortParams(r *http.Request, defaultOrderBy string, defaultOrderDir str
 	return orderBy, orderDir
 }
 
+// parseOptionalQueryInt extracts an optional integer parameter from the query string,
+// returning 0 if the parameter is absent or cannot be parsed.
 func parseOptionalQueryInt(r *http.Request, param string) int32 {
 	valStr := r.URL.Query().Get(param)
 	if valStr == "" {
@@ -425,7 +448,8 @@ func (h *Handler) GetPollingUnits(w http.ResponseWriter, r *http.Request) {
 	wardID := parseOptionalQueryInt(r, "ward_id")
 	lgaID := parseOptionalQueryInt(r, "lga_id")
 
-	// Guard against un-scoped scans; dropdowns require a parent geographic scope
+	// Guard against un-scoped scans; dropdown lookups require a parent geographic scope (ward or LGA)
+	// to prevent dumping 176k+ records into memory.
 	if wardID <= 0 && lgaID <= 0 {
 		h.utils.RespondError(w, http.StatusBadRequest, "at least one geographic filter (ward_id or lga_id) must be provided")
 		return
@@ -461,16 +485,18 @@ func (h *Handler) GetPollingUnits(w http.ResponseWriter, r *http.Request) {
 // @Failure      500                  {string}  failed to fetch polling units
 // @Router       /polling-units/paginated [get]
 func (h *Handler) GetPollingUnitsPaginated(w http.ResponseWriter, r *http.Request) {
+	// Parse cascading filter parameters (State -> LGA -> Ward)
 	wardID := parseOptionalQueryInt(r, "ward_id")
 	localGovernmentID := parseOptionalQueryInt(r, "lga_id")
 	stateID := parseOptionalQueryInt(r, "state_id")
 	limit, cursor := parsePaginationParams(r)
 	search := strings.TrimSpace(r.URL.Query().Get("search"))
 
-	// Fetch limit + 1 records to check if additional pages exist without an extra COUNT query
+	// Fetch limit + 1 records: this sentinel pattern allows us to determine if additional pages
+	// exist without executing a costly COUNT(*) table scan over Nigeria's ~176,846 polling units.
 	fetchLimit := limit + 1
 
-	// Query PostgreSQL using indexed filters, case-insensitive I-LIKE search, and cursor pagination
+	// Execute indexed cursor query with optional search term (case-insensitive substring match on name/code)
 	units, err := h.pollingUnitsService.GetPollingUnitsPaginated(r.Context(), queries.GetPollingUnitsPaginatedParams{
 		WardID:   wardID,
 		LgaID:    localGovernmentID,
@@ -484,7 +510,7 @@ func (h *Handler) GetPollingUnitsPaginated(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Determine if more records exist and trim the slice back to requested limit
+	// If fetchLimit was met, additional records exist. Slice back to requested limit size.
 	hasMore := false
 	nextCursor := ""
 	if len(units) > limit {
@@ -492,7 +518,7 @@ func (h *Handler) GetPollingUnitsPaginated(w http.ResponseWriter, r *http.Reques
 		units = units[:limit]
 	}
 	if len(units) > 0 {
-		// Use ID of the last record in current page as cursor for next page
+		// Assign the primary key ID of the terminal record as the subsequent page cursor
 		nextCursor = strconv.FormatInt(int64(units[len(units)-1].ID), 10)
 	}
 
@@ -525,6 +551,7 @@ func (h *Handler) GetPollingUnitsPaginated(w http.ResponseWriter, r *http.Reques
 // @Failure      500                  {string}  failed to fetch polling units with capacity
 // @Router       /polling-units/capacity [get]
 func (h *Handler) GetPollingUnitsWithCapacity(w http.ResponseWriter, r *http.Request) {
+	// Mandatory scope for election party recruitment quotas
 	partyID := int16(parseOptionalQueryInt(r, "party_id"))
 	electionGroupID := int32(parseOptionalQueryInt(r, "election_group_id"))
 
@@ -538,12 +565,14 @@ func (h *Handler) GetPollingUnitsWithCapacity(w http.ResponseWriter, r *http.Req
 	stateID := parseOptionalQueryInt(r, "state_id")
 	limit, cursor := parsePaginationParams(r)
 
+	// Fetch aggregated units joining agent assignments against current election group capacity
 	units, err := h.pollingUnitsService.GetPollingUnitsWithCapacity(r.Context(), wardID, localGovernmentID, stateID, partyID, electionGroupID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch polling units with capacity: "+err.Error())
 		return
 	}
 
+	// Apply requested sorting criteria stably in memory
 	orderBy, orderDir := parseSortParams(r, "name", "ASC")
 
 	sort.SliceStable(units, func(i, j int) bool {
@@ -557,6 +586,7 @@ func (h *Handler) GetPollingUnitsWithCapacity(w http.ResponseWriter, r *http.Req
 		return units[i].ID < units[j].ID
 	})
 
+	// Locate start position based on cursor ID
 	startIndex := 0
 	if cursor > 0 {
 		for i, pu := range units {
@@ -567,6 +597,7 @@ func (h *Handler) GetPollingUnitsWithCapacity(w http.ResponseWriter, r *http.Req
 		}
 	}
 
+	// Slice memory buffer for cursor-based windowing
 	var paginated []pollingunitsservice.PollingUnitWithCapacity
 	hasMore := false
 	nextCursor := ""

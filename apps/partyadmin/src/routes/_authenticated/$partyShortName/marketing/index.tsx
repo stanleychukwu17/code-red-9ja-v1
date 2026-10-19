@@ -19,7 +19,6 @@ import {
   MarketingTable,
   type MarketingCampaignType,
 } from "#/components/Tables";
-import { useUser } from "#/hooks/useUser";
 import { useUserParty } from "#/hooks/useUserParty";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
@@ -51,9 +50,8 @@ export const Route = createFileRoute(
 function RouteComponent() {
   const { partyShortName } = Route.useParams();
   const [isFormOpen, setIsFormOpen] = React.useState(false);
-  const user = useUser();
   const { party } = useUserParty();
-  const partyId = party?.id ?? user?.party?.id ?? (user as any)?.party_id;
+  const partyId = party?.id;
 
   const {
     data: campaignsData,

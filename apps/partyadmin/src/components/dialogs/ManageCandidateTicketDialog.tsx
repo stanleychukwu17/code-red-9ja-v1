@@ -14,7 +14,7 @@ import { UsersIcon, Trash2, UserPlus, RefreshCw, UserCheck } from "lucide-react"
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { fieldPartyCandidate } from "#/lib/server/elections";
 import { getUsersList } from "#/lib/server/users";
-import { useUser } from "#/hooks/useUser";
+import { useUserParty } from "#/hooks/useUserParty";
 import type { ElectionInstanceType } from "../tiles/election-instance-tile";
 
 export type ManageCandidateTicketDialogProps = {
@@ -65,9 +65,9 @@ export function ManageCandidateTicketDialog({ open, onClose, data }: ManageCandi
   // TanStack Query client used to invalidate the elections cache on update
   const queryClient = useQueryClient();
 
-  // Retrieve current party admin user to scope member searches to this party
-  const user = useUser();
-  const userPartyId = user?.party?.id ?? (user as any)?.party_id;
+  // Retrieve active tenant party to scope member searches to this party
+  const { party } = useUserParty();
+  const userPartyId = party?.id;
 
   // Active slot being picked via UserFinderCommand: 'candidate' | 'running_mate' | null
   const [targetSlot, setTargetSlot] = useState<"candidate" | "running_mate" | null>(null);

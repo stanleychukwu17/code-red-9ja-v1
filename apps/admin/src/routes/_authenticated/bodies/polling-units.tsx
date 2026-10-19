@@ -18,6 +18,11 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { BodiesDropdown } from "#/components/dropdowns/BodiesDropdown";
 import { Loader2 } from "lucide-react";
 import { QUERY_KEYS } from "#/lib/config";
+import { Button } from "@repo/ui/components/button";
+import {
+  PollingUnitsFilterDialog,
+  type PollingUnitsFilters,
+} from "#/components/dialogs/PollingUnitsFilterDialog";
 
 // Raw response payload item returned by the polling units API (supports sqlc NullString envelopes)
 type RawPollingUnitApiItem = {
@@ -77,12 +82,36 @@ function RouteComponent() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery] = useDebounceValue(searchQuery, 500);
 
-  // Infinite query for paginated polling units with debounced search
+  // Cascading geographic filters (State -> LGA -> Ward)
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [filters, setFilters] = useState<PollingUnitsFilters>({});
+
+  // Count active filters for badge indicator
+  const activeFiltersCount = [
+    filters.stateId,
+    filters.lgaId,
+    filters.wardId,
+  ].filter(Boolean).length;
+
+  // Infinite query for paginated polling units with debounced search and cascading filters
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, error } = useInfiniteQuery({
-    queryKey: [...QUERY_KEYS.bodies.pollingUnits, debouncedSearchQuery],
+    queryKey: [
+      ...QUERY_KEYS.bodies.pollingUnits,
+      debouncedSearchQuery,
+      filters.stateId,
+      filters.lgaId,
+      filters.wardId,
+    ],
     queryFn: async ({ pageParam }) => {
       const res = await getPollingUnitsPaginated({
-        data: { limit: 35, cursor: pageParam, search: debouncedSearchQuery || undefined },
+        data: {
+          limit: 35,
+          cursor: pageParam,
+          search: debouncedSearchQuery || undefined,
+          stateId: filters.stateId,
+          localGovernmentId: filters.lgaId,
+          wardId: filters.wardId,
+        },
       });
       if (res && res.success && res.data) {
         return res;
@@ -124,9 +153,17 @@ function RouteComponent() {
       <PageSearchLayer
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
+        placeholder="Search polling units by name or code..."
         rightComponent={
           <>
-            <FilterButton />
+            <div className="relative">
+              <FilterButton onClick={() => setIsFilterOpen(true)} />
+              {activeFiltersCount > 0 && (
+                <span className="absolute -top-1 -right-1 size-5 rounded-full bg-[#00cf79] text-white text-[11px] font-bold flex items-center justify-center pointer-events-none shadow-sm">
+                  {activeFiltersCount}
+                </span>
+              )}
+            </div>
             <BodiesDropdown />
             <AddButton {...dialogProps} />
           </>
@@ -142,8 +179,23 @@ function RouteComponent() {
           {error instanceof Error ? error.message : "Failed to load polling units"}
         </div>
       ) : units.length === 0 ? (
-        <div className="w-full p-12 text-center text-c-40 font-medium bg-white rounded-2xl border border-[#dfdfdf]">
-          No polling units found.
+        <div className="w-full p-12 text-center bg-white rounded-2xl border border-[#dfdfdf] space-y-3">
+          <p className="text-c-50 text-[15px] font-medium">
+            No polling units found matching your search and filter criteria.
+          </p>
+          {(searchQuery || activeFiltersCount > 0) && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setSearchQuery("");
+                setFilters({});
+              }}
+              className="text-c-70 hover:text-black font-medium"
+            >
+              Clear filters and search
+            </Button>
+          )}
         </div>
       ) : (
         <>
@@ -163,6 +215,14 @@ function RouteComponent() {
           )}
         </>
       )}
+
+      {/* Cascading State / LGA / Ward Filter Modal */}
+      <PollingUnitsFilterDialog
+        open={isFilterOpen}
+        onClose={() => setIsFilterOpen(false)}
+        filters={filters}
+        onApply={setFilters}
+      />
 
       {renderDialogs()}
     </Layout>

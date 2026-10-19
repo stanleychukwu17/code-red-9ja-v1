@@ -53,23 +53,17 @@ export function JoinPartyDialog({
 	const [selectedWard, setSelectedWard] = useState<WardItem | null>(null);
 
 	// 1. Fetch States (National / Nigeria)
-	const { data: states = [], isLoading: statesLoading } = useNigeriaStates({
-		enabled: open,
-	});
+	const { data: states = [], isLoading: statesLoading } = useNigeriaStates({ enabled: open, });
 
 	// 2. Fetch LGAs when state is selected
-	const { data: lgas = [], isLoading: lgasLoading } = useLGAs(selectedState?.id, {
-		enabled: open,
-	});
+	const { data: lgas = [], isLoading: lgasLoading } = useLGAs(selectedState?.id, { enabled: open, });
 
 	// 3. Fetch Wards when LGA is selected
 	const { data: wards = [], isLoading: wardsLoading } = useWards(
-		selectedLga?.id,
-		selectedState?.id,
-		{ enabled: open },
+		selectedLga?.id, selectedState?.id, { enabled: open },
 	);
 
-	// Filtered items based on search query
+	// Filter States across Nigeria by search query
 	const filteredStates = useMemo(() => {
 		if (!searchQuery.trim()) return states;
 		return states.filter((s) =>
@@ -77,6 +71,7 @@ export function JoinPartyDialog({
 		);
 	}, [states, searchQuery]);
 
+	// Filter LGAs within the selected State by search query
 	const filteredLgas = useMemo(() => {
 		if (!searchQuery.trim()) return lgas;
 		return lgas.filter((l) =>
@@ -84,6 +79,7 @@ export function JoinPartyDialog({
 		);
 	}, [lgas, searchQuery]);
 
+	// Filter Wards within the selected LGA by search query
 	const filteredWards = useMemo(() => {
 		if (!searchQuery.trim()) return wards;
 		return wards.filter((w) =>
@@ -91,11 +87,12 @@ export function JoinPartyDialog({
 		);
 	}, [wards, searchQuery]);
 
-	// Handlers for selecting chapters
+	// Navigate back to the State level
 	const handleSelectNational = () => {
 		setCurrentLevel("state");
 	};
 
+	// Select a state, reset downstream LGA/Ward selections, and advance to LGA level
 	const handleSelectState = (state: StateItem) => {
 		setSelectedState(state);
 		setSelectedLga(null);
@@ -104,6 +101,7 @@ export function JoinPartyDialog({
 		setCurrentLevel("lga");
 	};
 
+	// Select an LGA, reset downstream Ward selection, and advance to Ward level
 	const handleSelectLga = (lga: LGAItem) => {
 		setSelectedLga(lga);
 		setSelectedWard(null);
@@ -111,6 +109,7 @@ export function JoinPartyDialog({
 		setCurrentLevel("ward");
 	};
 
+	// Select the terminal Ward chapter in the electoral hierarchy
 	const handleSelectWard = (ward: WardItem) => {
 		setSelectedWard(ward);
 	};
