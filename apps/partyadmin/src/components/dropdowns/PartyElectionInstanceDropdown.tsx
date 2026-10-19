@@ -21,10 +21,7 @@ type PartyElectionInstanceDropdownProps = {
  * PartyElectionInstanceDropdown Component
  * Contextual popover menu triggering nomination ticket management.
  */
-export const PartyElectionInstanceDropdown = ({
-  data,
-  className,
-}: PartyElectionInstanceDropdownProps) => {
+export const PartyElectionInstanceDropdown = ({ data, className }: PartyElectionInstanceDropdownProps) => {
   const [openMenu, setOpenMenu] = useState(false);
   const [openTicketDialog, setOpenTicketDialog] = useState(false);
 

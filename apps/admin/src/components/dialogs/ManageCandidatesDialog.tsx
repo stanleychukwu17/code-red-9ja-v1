@@ -1,18 +1,9 @@
-import {
-  getElectionCandidates,
-  syncElectionCandidates,
-} from "#/lib/server/elections";
+import { getElectionCandidates, syncElectionCandidates } from "#/lib/server/elections";
 import { Button } from "@repo/ui/components/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogPadding,
-} from "@repo/ui/components/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogPadding } from "@repo/ui/components/dialog";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus, Search } from "lucide-react";
-import * as React from "react";
+import { useState, useEffect } from "react";
 import type { UserResult } from "./UserFormDialog";
 import { UserFormDialog } from "./UserFormDialog";
 import { CandidateRow } from "./CandidateRow";
@@ -21,24 +12,19 @@ import { getUsersList } from "#/lib/server/users";
 import { TinyError } from "@repo/ui/components/custom/TinyError";
 import { QUERY_KEYS } from "#/lib/config";
 
-interface ManageCandidatesDialogProps {
+type ManageCandidatesDialogProps = {
   electionId: number;
   open: boolean;
   onClose: () => void;
 }
 
-export function ManageCandidatesDialog({
-  electionId,
-  open,
-  onClose,
-}: ManageCandidatesDialogProps) {
+export function ManageCandidatesDialog({ electionId, open, onClose }: ManageCandidatesDialogProps) {
   const queryClient = useQueryClient();
-  const [error, setError] = React.useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = React.useState("");
-  const [isCandidateDialogOpen, setIsCandidateDialogOpen] =
-    React.useState(false);
-  const [isExistingDialogOpen, setIsExistingDialogOpen] = React.useState(false);
-  const [candidates, setCandidates] = React.useState<any[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isCandidateDialogOpen, setIsCandidateDialogOpen] = useState(false);
+  const [isExistingDialogOpen, setIsExistingDialogOpen] = useState(false);
+  const [candidates, setCandidates] = useState<any[]>([]);
 
   // Fetch detailed candidates for the election
   const { data: candidatesRes, isLoading } = useQuery({
@@ -54,7 +40,7 @@ export function ManageCandidatesDialog({
   });
 
   // Sync state with query result
-  React.useEffect(() => {
+  useEffect(() => {
     if (candidatesRes) {
       setCandidates(
         candidatesRes.map((c: any) => ({
@@ -153,7 +139,7 @@ export function ManageCandidatesDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent className="max-w-[580px] p-0 rounded-2xl border-none shadow-2xl   overflow-visible max-h-[90vh] flex flex-col">
+        <DialogContent className="max-w-145 p-0 rounded-2xl border-none shadow-2xl   overflow-visible max-h-[90vh] flex flex-col">
           <DialogHeader title="Manage candidates" />
 
           <DialogPadding className="flex-1 overflow-y-auto space-y-6 pb-6 pt-4 min-h-0">
@@ -209,10 +195,10 @@ export function ManageCandidatesDialog({
               </div>
             ) : (
               <div className="space-y-1 pr-1 py-2 max-h-[40vh] overflow-y-auto">
-                {filteredCandidates.map((cand, idx) => (
+                {filteredCandidates.map((canD, idx) => (
                   <CandidateRow
-                    key={cand.id}
-                    candidate={cand}
+                    key={canD.id}
+                    candidate={canD}
                     index={idx}
                     onUpdateParty={handleUpdateCandidateParty}
                     onRemove={handleRemoveCandidate}

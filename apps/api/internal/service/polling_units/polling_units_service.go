@@ -100,63 +100,52 @@ func (s *PollingUnitsService) GetPollingUnitsPaginated(ctx context.Context, arg 
 	return s.queries.GetPollingUnitsPaginated(ctx, arg)
 }
 
-// GetPollingUnits retrieves polling units directly from the database based on arbitrary filter parameters,
-// caching results by the least-available (most specific) geographic filter (Ward > LGA).
-// It requires at least one geographic filter to prevent fetching all nationwide polling units at once.
+// GetPollingUnits retrieves polling units for selector dropdowns, caching results by
+// geographic scope (Ward > LGA). It strictly requires ward_id or lga_id to prevent
+// massive, un-cached memory dumps of nationwide or statewide polling units.
 func (s *PollingUnitsService) GetPollingUnits(ctx context.Context, arg queries.GetPollingUnitsParams) ([]queries.PollingUnit, error) {
-	hasFilter := arg.WardID > 0 ||
-		arg.LgaID > 0 ||
-		arg.StateID > 0 ||
-		(arg.SenatorialDistrictID.Valid && arg.SenatorialDistrictID.Int32 > 0) ||
-		(arg.FederalConstituencyID.Valid && arg.FederalConstituencyID.Int32 > 0) ||
-		(arg.StateConstituencyID.Valid && arg.StateConstituencyID.Int32 > 0)
-
-	if !hasFilter {
-		return nil, errors.New("at least one geographic filter (ward_id, lga_id, state_id, or constituency) must be provided")
+	if arg.WardID <= 0 && arg.LgaID <= 0 {
+		return nil, errors.New("at least one geographic filter (ward_id or lga_id) must be provided")
 	}
 
 	type Response struct {
 		PollingUnits []queries.PollingUnit `json:"polling_units"`
 	}
 
-	// Cache key selection: choose the most granular (least-available) filter available
+	// Cache key selection: prioritize ward (most granular, ~10-30 PUs) then LGA (~200-500 PUs)
 	var redisKey string
 	if arg.WardID > 0 {
 		redisKey = fmt.Sprintf("%s%d", db.RedisPollingUnitsByWard, arg.WardID)
-	} else if arg.LgaID > 0 {
+	} else {
 		redisKey = fmt.Sprintf("%s%d", db.RedisPollingUnitsByLGA, arg.LgaID)
 	}
 
-	if redisKey != "" {
-		data, err := s.rdb.Get(ctx, redisKey).Result()
-		switch err {
-		case redis.Nil:
-			dbData, err := s.queries.GetPollingUnits(ctx, arg)
-			if err != nil {
-				return nil, err
-			}
-
-			payload := Response{
-				PollingUnits: dbData,
-			}
-
-			jsonData, _ := json.Marshal(payload)
-			s.rdb.Set(ctx, redisKey, jsonData, db.RedisSixtyDaysTTL)
-
-			return dbData, nil
-		case nil:
-			var payload Response
-			err = json.Unmarshal([]byte(data), &payload)
-			if err != nil {
-				return nil, err
-			}
-			return payload.PollingUnits, nil
-		default:
+	data, err := s.rdb.Get(ctx, redisKey).Result()
+	switch err {
+	case redis.Nil:
+		dbData, err := s.queries.GetPollingUnits(ctx, arg)
+		if err != nil {
 			return nil, err
 		}
-	}
 
-	return s.queries.GetPollingUnits(ctx, arg)
+		payload := Response{
+			PollingUnits: dbData,
+		}
+
+		jsonData, _ := json.Marshal(payload)
+		s.rdb.Set(ctx, redisKey, jsonData, db.RedisSixtyDaysTTL)
+
+		return dbData, nil
+	case nil:
+		var payload Response
+		err = json.Unmarshal([]byte(data), &payload)
+		if err != nil {
+			return nil, err
+		}
+		return payload.PollingUnits, nil
+	default:
+		return nil, err
+	}
 }
 
 type PollingUnitWithCapacity struct {

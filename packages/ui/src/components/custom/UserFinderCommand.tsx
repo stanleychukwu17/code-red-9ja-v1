@@ -1,20 +1,14 @@
-import * as React from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Check, Loader2, Search, X } from "lucide-react";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandItem,
-  CommandList,
-} from "../command";
-import { Dialog, DialogContent, DialogFooter, DialogPadding } from "../dialog";
+import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from "../command";
+import { Dialog, DialogContent, DialogFooter, DialogPadding, DialogTitle } from "../dialog";
 import { Button } from "../button";
 import { AppAvatar } from "../avatar";
 import { IconInput } from "../input";
 import FancyCheckIcon from "../../icons/fancy-check-icon";
 
-export interface User {
+export type User = {
   id: number;
   first_name: string;
   last_name: string;
@@ -23,20 +17,20 @@ export interface User {
   party_short_name?: string;
   party_logo?: string;
   role?: string;
-}
+};
 
-interface UserFinderCommandProps {
+type UserFinderCommandProps = {
   open: boolean;
   onClose: () => void;
   onAddUsers: (selectedUsers: User[]) => void;
   alreadySelectedIds: number[];
-  fetchUsers: (params: { cursor?: string | number, search?: string }) => Promise<{ users: User[], nextCursor?: string | number | null }>;
+  fetchUsers: (params: { cursor?: string | number; search?: string }) => Promise<{ users: User[]; nextCursor?: string | number | null }>;
   filterRole?: string;
   filterPartyId?: number;
   title?: string;
   placeholder?: string;
   selectMode?: "single" | "multiple";
-}
+};
 
 export function UserFinderCommand({
   open,
@@ -50,38 +44,34 @@ export function UserFinderCommand({
   placeholder = "Search",
   selectMode = "single",
 }: UserFinderCommandProps) {
-  const [searchQuery, setSearchQuery] = React.useState("");
-  const [selectedUsers, setSelectedUsers] = React.useState<User[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
 
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = React.useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
 
   // Debounce search query
-  React.useEffect(() => {
+  useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearchQuery(searchQuery);
     }, 300);
+
     return () => clearTimeout(handler);
   }, [searchQuery]);
 
   // Fetch users list with infinite scrolling
-  const {
-    data,
-    isLoading,
-    isFetchingNextPage,
-    hasNextPage,
-    fetchNextPage,
-  } = useInfiniteQuery<{ users: User[]; nextCursor?: string | number | null }>({
-    queryKey: ["users-select-existing", filterRole, filterPartyId, debouncedSearchQuery],
-    queryFn: async ({ pageParam }) => {
-      return fetchUsers({ cursor: pageParam as string | number | undefined, search: debouncedSearchQuery });
-    },
-    getNextPageParam: (lastPage) => lastPage?.nextCursor || undefined,
-    initialPageParam: undefined as string | number | undefined,
-    enabled: open,
-  });
+  const { data, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage } =
+    useInfiniteQuery<{ users: User[]; nextCursor?: string | number | null }>({
+      queryKey: ["users-select-existing", filterRole, filterPartyId, debouncedSearchQuery],
+      queryFn: async ({ pageParam }) => {
+        return fetchUsers({ cursor: pageParam as string | number | undefined, search: debouncedSearchQuery });
+      },
+      getNextPageParam: (lastPage) => lastPage?.nextCursor || undefined,
+      initialPageParam: undefined as string | number | undefined,
+      enabled: open,
+    });
 
-  const observerRef = React.useRef<IntersectionObserver | null>(null);
-  const loadMoreRef = React.useCallback(
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const loadMoreRef = useCallback(
     (node: HTMLDivElement | null) => {
       if (isLoading || isFetchingNextPage) return;
       if (observerRef.current) observerRef.current.disconnect();
@@ -98,14 +88,14 @@ export function UserFinderCommand({
   );
 
   // Reset local state when dialog opens
-  React.useEffect(() => {
+  useEffect(() => {
     if (open) {
       setSearchQuery("");
       setSelectedUsers([]);
     }
   }, [open]);
 
-  const users = React.useMemo(
+  const users = useMemo(
     () => (data?.pages ? data.pages.flatMap((p) => p.users) : []),
     [data],
   );
@@ -147,6 +137,12 @@ export function UserFinderCommand({
           shouldFilter={false}
         >
           <DialogPadding className="py-5 flex flex-col gap-3 flex-1 min-h-0">
+            {title && (
+              <DialogTitle className="text-[18px] font-semibold text-c-90 px-0.5">
+                {title}
+              </DialogTitle>
+            )}
+
             <IconInput
               placeholder={placeholder}
               value={searchQuery}

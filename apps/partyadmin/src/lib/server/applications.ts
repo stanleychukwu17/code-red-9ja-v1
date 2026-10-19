@@ -133,7 +133,7 @@ export const getPollingUnits = createServerFn({ method: "GET" })
       if (data?.cursor) params.append("cursor", String(data.cursor));
       const qs = params.toString();
 
-      const url = `${API_URL.pollingUnits}${qs ? `?${qs}` : ""}`;
+      const url = `${API_URL.pollingUnitsPaginated}${qs ? `?${qs}` : ""}`;
       const response = await apiFetch(url);
       const resData = await response.json();
       return resData;

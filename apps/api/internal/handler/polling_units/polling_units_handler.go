@@ -410,8 +410,44 @@ func parseOptionalQueryInt(r *http.Request, param string) int32 {
 }
 
 // GetPollingUnits godoc
-// @Summary      Get polling units
-// @Description  Fetches polling units with optional ward_id, lga_id, and state_id filtering and cursor pagination
+// @Summary      Get polling units for dropdowns
+// @Description  Fetches cached polling units for a specific ward or LGA. Requires ward_id or lga_id.
+// @Tags         Polling Units
+// @Accept       json
+// @Produce      json
+// @Param        ward_id              query     int     false  "Ward ID to filter by"
+// @Param        lga_id               query     int     false  "LGA ID to filter by"
+// @Success      200                  {object}  GetPollingUnitsResponse
+// @Failure      400                  {string}  at least ward_id or lga_id is required
+// @Failure      500                  {string}  failed to fetch polling units
+// @Router       /polling-units [get]
+func (h *Handler) GetPollingUnits(w http.ResponseWriter, r *http.Request) {
+	wardID := parseOptionalQueryInt(r, "ward_id")
+	lgaID := parseOptionalQueryInt(r, "lga_id")
+
+	// Guard against un-scoped scans; dropdowns require a parent geographic scope
+	if wardID <= 0 && lgaID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "at least one geographic filter (ward_id or lga_id) must be provided")
+		return
+	}
+
+	units, err := h.pollingUnitsService.GetPollingUnits(r.Context(), queries.GetPollingUnitsParams{
+		WardID: wardID,
+		LgaID:  lgaID,
+	})
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch polling units: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Polling units fetched successfully", map[string]interface{}{
+		"polling_units": units,
+	})
+}
+
+// GetPollingUnitsPaginated godoc
+// @Summary      Get polling units paginated
+// @Description  Fetches polling units with optional geographic filters, search, and cursor pagination for table views
 // @Tags         Polling Units
 // @Accept       json
 // @Produce      json
@@ -423,8 +459,8 @@ func parseOptionalQueryInt(r *http.Request, param string) int32 {
 // @Param        cursor               query     string  false  "Cursor (ID of last record)"
 // @Success      200                  {object}  GetPollingUnitsResponse
 // @Failure      500                  {string}  failed to fetch polling units
-// @Router       /polling-units [get]
-func (h *Handler) GetPollingUnits(w http.ResponseWriter, r *http.Request) {
+// @Router       /polling-units/paginated [get]
+func (h *Handler) GetPollingUnitsPaginated(w http.ResponseWriter, r *http.Request) {
 	wardID := parseOptionalQueryInt(r, "ward_id")
 	localGovernmentID := parseOptionalQueryInt(r, "lga_id")
 	stateID := parseOptionalQueryInt(r, "state_id")

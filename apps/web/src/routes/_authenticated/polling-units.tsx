@@ -4,33 +4,15 @@ import { useMemo, useState } from "react";
 import { AppPageHeader } from "#/components/AppPageHeader";
 import { getPageHeader } from "#/lib/shared/meta";
 import { useAppSelector } from "@/redux/hooks";
-import {
-  getStatesForNigeria,
-  getLGAsByState,
-  getWardsByLGA,
-  getPollingUnitsList,
-  type StateItem,
-  type LGAItem,
-  type WardItem,
-  type PollingUnitItem,
-} from "#/lib/server/polling_units";
-import {
-  Search,
-  MapPin,
-  Vote,
-  ChevronRight,
-  Filter,
-  CheckCircle2,
-  RotateCcw,
-  Building,
-} from "lucide-react";
+import { useNigeriaStates, useLGAs, useWards } from "#/hooks";
+import { getPollingUnitsList, type PollingUnitItem } from "#/lib/server/polling_units";
+import { Search, MapPin, Vote, ChevronRight, Filter, CheckCircle2, RotateCcw, Building } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/polling-units")({
-  head: () =>
-    getPageHeader({
-      title: "Find My Polling Unit",
-      description: "Search and explore official polling units across Nigeria.",
-    }),
+  head: () => getPageHeader({
+    title: "Find My Polling Unit",
+    description: "Search and explore official polling units across Nigeria.",
+  }),
   component: PollingUnitsPage,
 });
 
@@ -45,56 +27,27 @@ function PollingUnitsPage() {
   const [selectedWardId, setSelectedWardId] = useState<number | "">("");
 
   // 1. Fetch States
-  const { data: statesRes, isLoading: statesLoading } = useQuery({
-    queryKey: ["nigeria-states"],
-    queryFn: () => getStatesForNigeria(),
-  });
-
-  const states: StateItem[] = statesRes?.data?.states || [];
+  const { data: states = [], isLoading: statesLoading } = useNigeriaStates();
 
   // 2. Fetch LGAs when state is selected
-  const { data: lgasRes, isLoading: lgasLoading } = useQuery({
-    queryKey: ["lgas", selectedStateId],
-    queryFn: () =>
-      getLGAsByState({
-        data: { stateId: Number(selectedStateId) },
-      }),
-    enabled: Boolean(selectedStateId),
-  });
-
-  const lgas: LGAItem[] = lgasRes?.data?.lgas || [];
+  const { data: lgas = [], isLoading: lgasLoading } = useLGAs(selectedStateId);
 
   // 3. Fetch Wards when LGA is selected
-  const { data: wardsRes, isLoading: wardsLoading } = useQuery({
-    queryKey: ["wards", selectedLgaId, selectedStateId],
-    queryFn: () =>
-      getWardsByLGA({
-        data: {
-          lgaId: Number(selectedLgaId),
-          stateId: selectedStateId ? Number(selectedStateId) : undefined,
-        },
-      }),
-    enabled: Boolean(selectedLgaId),
-  });
+  const { data: wards = [], isLoading: wardsLoading } = useWards(selectedLgaId, selectedStateId);
 
-  const wards: WardItem[] = wardsRes?.data?.wards || [];
-
-  // 4. Fetch Polling Units based on selected location
-  const {
-    data: pollingUnitsRes,
-    isLoading: puLoading,
-    isFetching: puFetching,
-  } = useQuery({
-    queryKey: ["polling-units-list", selectedStateId, selectedLgaId, selectedWardId],
+  // 4. Fetch Polling Units based on selected location (requires ward selection)
+  const { data: pollingUnitsRes, isLoading: puLoading, isFetching: puFetching } = useQuery({
+    queryKey: ["polling-units-list", selectedWardId],
     queryFn: () =>
       getPollingUnitsList({
         data: {
-          stateId: selectedStateId ? Number(selectedStateId) : undefined,
+          wardId: Number(selectedWardId),
           localGovernmentId: selectedLgaId ? Number(selectedLgaId) : undefined,
-          wardId: selectedWardId ? Number(selectedWardId) : undefined,
-          limit: 100,
+          stateId: selectedStateId ? Number(selectedStateId) : undefined,
         },
       }),
+    enabled: Boolean(selectedWardId),
+    staleTime: Infinity,
   });
 
   const pollingUnits: PollingUnitItem[] =
@@ -135,22 +88,22 @@ function PollingUnitsPage() {
         />
 
         {/* Search & Location Filter Box */}
-        <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-neutral-900 space-y-4">
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-xs space-y-4">
           {/* Main search bar */}
-          <div className="flex h-13 items-center gap-3 rounded-full bg-[#f4f2f4] px-5 dark:bg-neutral-800">
-            <Search className="size-5 text-[#8e898b]" />
+          <div className="flex h-13 items-center gap-3 rounded-full bg-muted px-5">
+            <Search className="size-5 text-muted-foreground" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by PU Code (e.g. 24-01-01-002), station name, or landmark..."
-              className="w-full bg-transparent text-[16px] text-[#242123] outline-none placeholder:text-[#a3a0a4] dark:text-neutral-100"
+              className="w-full bg-transparent text-base text-foreground outline-none placeholder:text-muted-foreground"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery("")}
-                className="text-xs font-semibold text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200"
+                className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
               >
                 Clear
               </button>
@@ -161,7 +114,7 @@ function PollingUnitsPage() {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {/* State Selector */}
             <div className="space-y-1.5">
-              <label className="text-[13px] font-medium text-neutral-600 dark:text-neutral-300 flex items-center gap-1.5">
+              <label className="text-[13px] font-medium text-muted-foreground flex items-center gap-1.5">
                 <Building className="size-3.5" /> State
               </label>
               <select
@@ -172,7 +125,7 @@ function PollingUnitsPage() {
                   setSelectedLgaId("");
                   setSelectedWardId("");
                 }}
-                className="w-full rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm font-medium text-[#242123] outline-none transition focus:border-[#2f6f57] dark:border-white/10 dark:bg-neutral-800 dark:text-neutral-100"
+                className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm font-medium text-foreground outline-none transition focus:border-primary focus:ring-1 focus:ring-primary dark:bg-card"
               >
                 <option value="">All States</option>
                 {states.map((st) => (
@@ -185,7 +138,7 @@ function PollingUnitsPage() {
 
             {/* LGA Selector */}
             <div className="space-y-1.5">
-              <label className="text-[13px] font-medium text-neutral-600 dark:text-neutral-300 flex items-center gap-1.5">
+              <label className="text-[13px] font-medium text-muted-foreground flex items-center gap-1.5">
                 <Filter className="size-3.5" /> Local Government (LGA)
               </label>
               <select
@@ -196,7 +149,7 @@ function PollingUnitsPage() {
                   setSelectedLgaId(val);
                   setSelectedWardId("");
                 }}
-                className="w-full rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm font-medium text-[#242123] outline-none transition disabled:opacity-50 focus:border-[#2f6f57] dark:border-white/10 dark:bg-neutral-800 dark:text-neutral-100"
+                className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm font-medium text-foreground outline-none transition disabled:opacity-50 focus:border-primary focus:ring-1 focus:ring-primary dark:bg-card"
               >
                 <option value="">
                   {!selectedStateId
@@ -215,7 +168,7 @@ function PollingUnitsPage() {
 
             {/* Ward Selector */}
             <div className="space-y-1.5">
-              <label className="text-[13px] font-medium text-neutral-600 dark:text-neutral-300 flex items-center gap-1.5">
+              <label className="text-[13px] font-medium text-muted-foreground flex items-center gap-1.5">
                 <MapPin className="size-3.5" /> Electoral Ward
               </label>
               <select
@@ -225,7 +178,7 @@ function PollingUnitsPage() {
                   const val = e.target.value ? Number(e.target.value) : "";
                   setSelectedWardId(val);
                 }}
-                className="w-full rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm font-medium text-[#242123] outline-none transition disabled:opacity-50 focus:border-[#2f6f57] dark:border-white/10 dark:bg-neutral-800 dark:text-neutral-100"
+                className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm font-medium text-foreground outline-none transition disabled:opacity-50 focus:border-primary focus:ring-1 focus:ring-primary dark:bg-card"
               >
                 <option value="">
                   {!selectedLgaId
@@ -245,12 +198,12 @@ function PollingUnitsPage() {
 
           {/* Filter Status & Reset */}
           {hasActiveFilters && (
-            <div className="flex items-center justify-between pt-1 border-t border-black/5 dark:border-white/5 text-xs text-neutral-500">
+            <div className="flex items-center justify-between pt-1 border-t border-border text-xs text-muted-foreground">
               <span>Filters active</span>
               <button
                 type="button"
                 onClick={resetFilters}
-                className="inline-flex items-center gap-1 text-[#2f6f57] hover:underline font-semibold"
+                className="inline-flex items-center gap-1 text-primary hover:underline font-semibold"
               >
                 <RotateCcw className="size-3" /> Reset all
               </button>
@@ -260,10 +213,12 @@ function PollingUnitsPage() {
 
         {/* Results Header */}
         <div className="flex items-center justify-between">
-          <p className="text-sm font-semibold text-neutral-600 dark:text-neutral-400">
+          <p className="text-sm font-semibold text-muted-foreground">
             {puLoading || puFetching
               ? "Fetching polling units..."
-              : `Found ${filteredUnits.length} polling unit${filteredUnits.length === 1 ? "" : "s"}`}
+              : selectedWardId
+                ? `Found ${filteredUnits.length} polling unit${filteredUnits.length === 1 ? "" : "s"}`
+                : "Select an Electoral Ward to browse stations"}
           </p>
         </div>
 
@@ -273,11 +228,11 @@ function PollingUnitsPage() {
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <div
                 key={i}
-                className="animate-pulse rounded-2xl border border-black/5 bg-white p-5 space-y-3 dark:border-white/5 dark:bg-neutral-900"
+                className="animate-pulse rounded-2xl border border-border bg-card p-5 space-y-3"
               >
-                <div className="h-5 w-2/3 rounded bg-neutral-200 dark:bg-neutral-800" />
-                <div className="h-4 w-1/3 rounded bg-neutral-100 dark:bg-neutral-800/60" />
-                <div className="h-4 w-full rounded bg-neutral-100 dark:bg-neutral-800/40" />
+                <div className="h-5 w-2/3 rounded bg-muted" />
+                <div className="h-4 w-1/3 rounded bg-muted/60" />
+                <div className="h-4 w-full rounded bg-muted/40" />
               </div>
             ))}
           </div>
@@ -296,40 +251,40 @@ function PollingUnitsPage() {
                       params: { pollingUnitId: String(pu.id) },
                     })
                   }
-                  className="group relative flex flex-col justify-between rounded-2xl border border-black/10 bg-white p-5 shadow-xs transition hover:border-[#2f6f57] hover:shadow-md cursor-pointer dark:border-white/10 dark:bg-neutral-900"
+                  className="group relative flex flex-col justify-between rounded-2xl border border-border bg-card p-5 shadow-xs transition hover:border-primary hover:shadow-md cursor-pointer"
                 >
                   <div className="space-y-2.5">
                     {/* Header: Title & Badges */}
                     <div className="flex items-start justify-between gap-3">
-                      <h3 className="text-[17px] font-bold text-[#161315] group-hover:text-[#2f6f57] transition-colors dark:text-neutral-100">
+                      <h3 className="text-[17px] font-bold text-card-foreground group-hover:text-primary transition-colors">
                         {pu.name}
                       </h3>
                       {isUserPU && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 shrink-0">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary shrink-0 border border-primary/20">
                           <CheckCircle2 className="size-3" /> My Unit
                         </span>
                       )}
                     </div>
 
                     {/* Hierarchy tags */}
-                    <div className="flex flex-wrap items-center gap-1.5 text-xs text-neutral-600 dark:text-neutral-400">
+                    <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
                       {puCodeDisplay && (
-                        <span className="rounded-md bg-neutral-100 px-2 py-0.5 font-mono font-semibold text-neutral-800 dark:bg-neutral-800 dark:text-neutral-200">
+                        <span className="rounded-md bg-muted px-2 py-0.5 font-mono font-semibold text-foreground">
                           {puCodeDisplay}
                         </span>
                       )}
                       {pu.ward_name && (
-                        <span className="rounded-md bg-[#eaf2ee] px-2 py-0.5 font-medium text-[#2f6f57] dark:bg-[#1a382c] dark:text-emerald-300">
+                        <span className="rounded-md bg-primary/10 px-2 py-0.5 font-medium text-primary">
                           Ward: {pu.ward_name}
                         </span>
                       )}
                       {pu.lga_name && (
-                        <span className="rounded-md bg-neutral-100 px-2 py-0.5 font-medium text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300">
+                        <span className="rounded-md bg-muted px-2 py-0.5 font-medium text-muted-foreground">
                           {pu.lga_name} LGA
                         </span>
                       )}
                       {pu.state_name && (
-                        <span className="rounded-md bg-neutral-100 px-2 py-0.5 font-medium text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300">
+                        <span className="rounded-md bg-muted px-2 py-0.5 font-medium text-muted-foreground">
                           {pu.state_name}
                         </span>
                       )}
@@ -337,8 +292,8 @@ function PollingUnitsPage() {
 
                     {/* Address / Location */}
                     {(pu.formatted_address || pu.precise_location) && (
-                      <p className="text-xs text-neutral-500 flex items-start gap-1.5 pt-1 dark:text-neutral-400">
-                        <MapPin className="size-3.5 shrink-0 mt-0.5 text-neutral-400" />
+                      <p className="text-xs text-muted-foreground flex items-start gap-1.5 pt-1">
+                        <MapPin className="size-3.5 shrink-0 mt-0.5 text-muted-foreground" />
                         <span className="line-clamp-2">
                           {pu.formatted_address || pu.precise_location}
                         </span>
@@ -347,11 +302,11 @@ function PollingUnitsPage() {
                   </div>
 
                   {/* Card Footer Action */}
-                  <div className="mt-4 flex items-center justify-between border-t border-black/5 pt-3 dark:border-white/5">
-                    <span className="text-xs font-medium text-neutral-500 group-hover:text-[#2f6f57] transition-colors flex items-center gap-1">
+                  <div className="mt-4 flex items-center justify-between border-t border-border/60 pt-3">
+                    <span className="text-xs font-medium text-muted-foreground group-hover:text-primary transition-colors flex items-center gap-1">
                       <Vote className="size-3.5" /> View Results & Feed
                     </span>
-                    <div className="flex size-7 items-center justify-center rounded-full bg-neutral-100 text-neutral-600 group-hover:bg-[#2f6f57] group-hover:text-white transition dark:bg-neutral-800 dark:text-neutral-300">
+                    <div className="flex size-7 items-center justify-center rounded-full bg-muted text-muted-foreground group-hover:bg-primary group-hover:text-primary-foreground transition">
                       <ChevronRight className="size-4" />
                     </div>
                   </div>
@@ -360,23 +315,25 @@ function PollingUnitsPage() {
             })}
           </div>
         ) : (
-          <div className="rounded-2xl border border-dashed border-neutral-300 bg-white py-16 text-center dark:border-neutral-800 dark:bg-neutral-900 space-y-3">
-            <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-emerald-50 text-[#2f6f57] dark:bg-emerald-950/50">
+          <div className="rounded-2xl border border-dashed border-border bg-card py-16 text-center space-y-3">
+            <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
               <Vote className="size-6" />
             </div>
-            <h4 className="text-base font-bold text-neutral-800 dark:text-neutral-100">
-              No polling units found
+            <h4 className="text-base font-bold text-card-foreground">
+              {selectedWardId ? "No polling units found" : "Select an Electoral Ward"}
             </h4>
-            <p className="mx-auto max-w-md text-xs text-neutral-500 dark:text-neutral-400">
-              {hasActiveFilters
-                ? "Try selecting a different State/LGA or clearing your search keywords."
-                : "Select a State or type a polling unit keyword above to start browsing."}
+            <p className="mx-auto max-w-md text-xs text-muted-foreground">
+              {selectedWardId
+                ? hasActiveFilters && searchQuery
+                  ? "No polling units in this ward match your search keywords. Try adjusting your query."
+                  : "No polling units are registered under this ward."
+                : "Select your State, Local Government (LGA), and Electoral Ward above to view all official polling stations."}
             </p>
             {hasActiveFilters && (
               <button
                 type="button"
                 onClick={resetFilters}
-                className="mt-2 rounded-full bg-neutral-100 px-4 py-1.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300"
+                className="mt-2 rounded-full bg-muted px-4 py-1.5 text-xs font-semibold text-foreground hover:bg-muted/80 transition-colors"
               >
                 Reset Filters
               </button>

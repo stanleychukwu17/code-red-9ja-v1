@@ -6,13 +6,11 @@ import {
 	DialogTitle,
 } from "@repo/ui/components/dialog";
 import { Loader2 } from "lucide-react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { QUERY_KEYS, APP_URL } from "#/lib/config";
+import { useNigeriaStates, useLGAs, useWards } from "#/hooks";
 import {
-	getStatesForNigeria,
-	getLGAsByState,
-	getWardsByLGA,
 	type StateItem,
 	type LGAItem,
 	type WardItem,
@@ -55,37 +53,21 @@ export function JoinPartyDialog({
 	const [selectedWard, setSelectedWard] = useState<WardItem | null>(null);
 
 	// 1. Fetch States (National / Nigeria)
-	const { data: statesRes, isLoading: statesLoading } = useQuery({
-		queryKey: ["nigeria-states"],
-		queryFn: () => getStatesForNigeria(),
+	const { data: states = [], isLoading: statesLoading } = useNigeriaStates({
 		enabled: open,
 	});
-	const states: StateItem[] = statesRes?.data?.states || statesRes?.data || [];
 
 	// 2. Fetch LGAs when state is selected
-	const { data: lgasRes, isLoading: lgasLoading } = useQuery({
-		queryKey: ["lgas", selectedState?.id],
-		queryFn: () =>
-			getLGAsByState({
-				data: { stateId: Number(selectedState?.id) },
-			}),
-		enabled: open && Boolean(selectedState?.id),
+	const { data: lgas = [], isLoading: lgasLoading } = useLGAs(selectedState?.id, {
+		enabled: open,
 	});
-	const lgas: LGAItem[] = lgasRes?.data?.lgas || lgasRes?.data || [];
 
 	// 3. Fetch Wards when LGA is selected
-	const { data: wardsRes, isLoading: wardsLoading } = useQuery({
-		queryKey: ["wards", selectedLga?.id, selectedState?.id],
-		queryFn: () =>
-			getWardsByLGA({
-				data: {
-					lgaId: Number(selectedLga?.id),
-					stateId: selectedState?.id ? Number(selectedState.id) : undefined,
-				},
-			}),
-		enabled: open && Boolean(selectedLga?.id),
-	});
-	const wards: WardItem[] = wardsRes?.data?.wards || wardsRes?.data || [];
+	const { data: wards = [], isLoading: wardsLoading } = useWards(
+		selectedLga?.id,
+		selectedState?.id,
+		{ enabled: open },
+	);
 
 	// Filtered items based on search query
 	const filteredStates = useMemo(() => {

@@ -184,6 +184,16 @@ export const API_URL = {
   getPollingUnits: (
     wardId?: number,
     localGovernmentId?: number,
+  ) => {
+    const params = new URLSearchParams();
+    if (wardId) params.append("ward_id", String(wardId));
+    if (localGovernmentId) params.append("lga_id", String(localGovernmentId));
+    const qs = params.toString();
+    return `${api}/polling-units${qs ? `?${qs}` : ""}`;
+  },
+  getPollingUnitsPaginated: (
+    wardId?: number,
+    localGovernmentId?: number,
     stateId?: number,
     limit?: number,
     cursor?: string | number,
@@ -197,7 +207,7 @@ export const API_URL = {
     if (cursor) params.append("cursor", String(cursor));
     if (search) params.append("search", search);
     const qs = params.toString();
-    return `${api}/polling-units${qs ? `?${qs}` : ""}`;
+    return `${api}/polling-units/paginated${qs ? `?${qs}` : ""}`;
   },
   lgas: `${api}/lgas`,
   lgaById: (id: string | number) => `${api}/lgas/${id}`,

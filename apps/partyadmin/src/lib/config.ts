@@ -165,6 +165,7 @@ export const API_URL = {
   partyApplications: `${api}/party-applications`,
   partyApplicationsRecommendations: `${api}/party-applications/recommendations`,
   pollingUnits: `${api}/polling-units`,
+  pollingUnitsPaginated: `${api}/polling-units/paginated`,
   approveApplication: (id: string | number) =>
     `${api}/party-applications/${id}/approve`,
   rejectApplication: (id: string | number) =>

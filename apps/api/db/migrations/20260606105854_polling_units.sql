@@ -26,7 +26,9 @@ CREATE TABLE IF NOT EXISTS polling_units (
     status VARCHAR(50) DEFAULT 'active'
 );
 
-CREATE INDEX idx_polling_units_name ON polling_units (name);
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+CREATE INDEX idx_polling_units_name_trgm ON polling_units USING gin (name gin_trgm_ops);
 CREATE INDEX idx_polling_units_pu_code ON polling_units (pu_code);
 CREATE INDEX idx_polling_units_state_id ON polling_units (state_id);
 CREATE INDEX idx_polling_units_senatorial_district_id ON polling_units (senatorial_district_id);
@@ -177751,6 +177753,7 @@ ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, code = EXCLUDED.code, pu_co
 -- SEED DATA END
 
 -- +goose Down
+DROP INDEX IF EXISTS idx_polling_units_name_trgm;
 DROP INDEX IF EXISTS idx_polling_units_name;
 DROP INDEX IF EXISTS idx_polling_units_ward_id;
 DROP INDEX IF EXISTS idx_polling_units_lga_id;

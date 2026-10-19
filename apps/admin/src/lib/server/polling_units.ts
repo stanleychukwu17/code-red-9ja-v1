@@ -74,12 +74,22 @@ export const getPollingUnitById = createServerFn({ method: "GET" })
   });
 
 export const getPollingUnits = createServerFn()
+  .inputValidator((data: { wardId?: number; localGovernmentId?: number }) => data)
+  .handler(async ({ data: { wardId, localGovernmentId } }) => {
+    try {
+      return await apiFetchJson(API_URL.getPollingUnits(wardId, localGovernmentId));
+    } catch (error: any) {
+      return { status: "failed", error: error?.message || "Failed to fetch polling units from API" };
+    }
+  });
+
+export const getPollingUnitsPaginated = createServerFn()
   .inputValidator((data: { wardId?: number; localGovernmentId?: number; stateId?: number; limit?: number; cursor?: string | number; search?: string }) => data)
   .handler(async ({ data: { wardId, localGovernmentId, stateId, limit, cursor, search } }) => {
     try {
-      return await apiFetchJson(API_URL.getPollingUnits(wardId, localGovernmentId, stateId, limit, cursor, search));
+      return await apiFetchJson(API_URL.getPollingUnitsPaginated(wardId, localGovernmentId, stateId, limit, cursor, search));
     } catch (error: any) {
-      return { status: "failed", error: error?.message || "Failed to fetch polling units from API" };
+      return { status: "failed", error: error?.message || "Failed to fetch paginated polling units from API" };
     }
   });
 

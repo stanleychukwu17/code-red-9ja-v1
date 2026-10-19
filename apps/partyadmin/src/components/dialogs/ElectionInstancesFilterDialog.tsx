@@ -1,11 +1,11 @@
-import * as React from "react";
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogPadding,
-} from "@repo/ui/components/dialog";
+  useState,
+  useEffect,
+  useMemo,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogPadding } from "@repo/ui/components/dialog";
 import { Button } from "@repo/ui/components/button";
 import { useQuery } from "@tanstack/react-query";
 import { getElectionGroups } from "#/lib/server/election_groups";
@@ -46,30 +46,30 @@ export function ElectionInstancesFilterDialog({
   filters,
   onApply,
 }: ElectionInstancesFilterDialogProps) {
-  const [selectedGroupIds, setSelectedGroupIds] = React.useState<number[]>(
+  const [selectedGroupIds, setSelectedGroupIds] = useState<number[]>(
     filters.election_group_ids,
   );
-  const [selectedScopes, setSelectedScopes] = React.useState<string[]>(
+  const [selectedScopes, setSelectedScopes] = useState<string[]>(
     filters.scopes,
   );
-  const [selectedStatuses, setSelectedStatuses] = React.useState<string[]>(
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>(
     filters.statuses,
   );
-  const [selectedStateIds, setSelectedStateIds] = React.useState<number[]>(
+  const [selectedStateIds, setSelectedStateIds] = useState<number[]>(
     filters.state_ids,
   );
-  const [selectedOfficeIds, setSelectedOfficeIds] = React.useState<number[]>(
+  const [selectedOfficeIds, setSelectedOfficeIds] = useState<number[]>(
     filters.office_ids,
   );
-  const [dateFrom, setDateFrom] = React.useState<string>(
+  const [dateFrom, setDateFrom] = useState<string>(
     filters.date_from || "",
   );
-  const [dateTo, setDateTo] = React.useState<string>(filters.date_to || "");
+  const [dateTo, setDateTo] = useState<string>(filters.date_to || "");
 
-  const [stateSearch, setStateSearch] = React.useState("");
-  const [officeSearch, setOfficeSearch] = React.useState("");
+  const [stateSearch, setStateSearch] = useState("");
+  const [officeSearch, setOfficeSearch] = useState("");
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (open) {
       setSelectedGroupIds(filters.election_group_ids);
       setSelectedScopes(filters.scopes);
@@ -123,13 +123,13 @@ export function ElectionInstancesFilterDialog({
   const offices = officesData?.data?.offices || officesData?.offices || [];
   const states = statesData?.states || statesData?.data?.states || [];
 
-  const filteredOffices = React.useMemo(() => {
+  const filteredOffices = useMemo(() => {
     if (!officeSearch.trim()) return offices;
     const q = officeSearch.toLowerCase();
     return offices.filter((o: any) => o.name?.toLowerCase().includes(q));
   }, [offices, officeSearch]);
 
-  const filteredStates = React.useMemo(() => {
+  const filteredStates = useMemo(() => {
     if (!stateSearch.trim()) return states;
     const q = stateSearch.toLowerCase();
     return states.filter((s: any) => s.name?.toLowerCase().includes(q));
@@ -138,7 +138,7 @@ export function ElectionInstancesFilterDialog({
   const toggleItem = <T,>(
     list: T[],
     item: T,
-    setter: React.Dispatch<React.SetStateAction<T[]>>,
+    setter: Dispatch<SetStateAction<T[]>>,
   ) => {
     setter(
       list.includes(item) ? list.filter((x) => x !== item) : [...list, item],

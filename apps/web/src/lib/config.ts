@@ -106,5 +106,8 @@ export const QUERY_KEYS = {
 	partyCards: ["partyCards"],
 	countries: ["countries"],
 	states: (countryId?: number) => ["states", countryId],
+	nigeriaStates: ["nigeria-states"],
+	lgas: (stateId?: number) => ["lgas", stateId],
+	wards: (lgaId?: number, stateId?: number) => ["wards", lgaId, stateId],
 	cities: (stateId?: number) => ["cities", stateId],
 };

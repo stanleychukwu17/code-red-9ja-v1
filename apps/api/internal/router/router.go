@@ -299,6 +299,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	mainRouter.Get(utils.ApiUrls.Bodies.GetWards, wardsHandler.GetWards)
 	mainRouter.Get(utils.ApiUrls.Bodies.GetWardsPaginated, wardsHandler.GetWardsPaginated)
 	mainRouter.Get(utils.ApiUrls.Bodies.GetPollingUnits, pollingUnitsHandler.GetPollingUnits)
+	mainRouter.Get(utils.ApiUrls.Bodies.GetPollingUnitsPaginated, pollingUnitsHandler.GetPollingUnitsPaginated)
 	mainRouter.Get(utils.ApiUrls.Bodies.GetPollingUnitsWithCapacity, pollingUnitsHandler.GetPollingUnitsWithCapacity)
 
 	// election geo-results endpoints (geography joined with final results)

@@ -28,6 +28,7 @@ type BodiesURLMap struct {
 	GetWards                       string
 	GetWardsPaginated              string
 	GetPollingUnits                string
+	GetPollingUnitsPaginated       string
 	GetPollingUnitsWithCapacity    string
 }
 
@@ -76,6 +77,7 @@ var ApiUrls = URLMap{
 		GetWards:                       "/api/v1/wards",
 		GetWardsPaginated:              "/api/v1/wards/paginated",
 		GetPollingUnits:                "/api/v1/polling-units",
+		GetPollingUnitsPaginated:       "/api/v1/polling-units/paginated",
 		GetPollingUnitsWithCapacity:    "/api/v1/polling-units/capacity",
 	},
 	Users: UsersURLMap{

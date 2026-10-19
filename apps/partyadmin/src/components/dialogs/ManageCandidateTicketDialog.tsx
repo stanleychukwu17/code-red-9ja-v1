@@ -6,12 +6,7 @@
  */
 
 import { useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogPadding,
-} from "@repo/ui/components/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogPadding } from "@repo/ui/components/dialog";
 import { Button } from "@repo/ui/components/button";
 import { AppAvatar } from "@repo/ui/components/avatar";
 import { UserFinderCommand } from "@repo/ui/components/custom/UserFinderCommand";
@@ -31,11 +26,7 @@ export type ManageCandidateTicketDialogProps = {
 /**
  * Resolves joint-ticket configuration and role labels based on election title or office.
  */
-export const getTicketConfig = (
-  electionTitle: string,
-  officeName?: string,
-  scope?: string,
-) => {
+export const getTicketConfig = (electionTitle: string, officeName?: string, scope?: string) => {
   const t = `${electionTitle} ${officeName || ""} ${scope || ""}`.toLowerCase();
 
   if (t.includes("president")) {
@@ -52,11 +43,7 @@ export const getTicketConfig = (
       runningMateRole: "Deputy Governor Candidate (Running Mate)",
     };
   }
-  if (
-    t.includes("chairman") ||
-    t.includes("chairmanship") ||
-    (t.includes("lga") && !t.includes("councill"))
-  ) {
+  if (t.includes("chairman") || t.includes("chairmanship")) {
     return {
       hasRunningMate: true,
       principalRole: "Local Government Chairman Candidate",
@@ -71,31 +58,27 @@ export const getTicketConfig = (
   };
 };
 
-export function ManageCandidateTicketDialog({
-  open,
-  onClose,
-  data,
-}: ManageCandidateTicketDialogProps) {
+export function ManageCandidateTicketDialog({ open, onClose, data }: ManageCandidateTicketDialogProps) {
+  // Debug log election instance payload (id, title, office, candidate details)
+  console.log(data);
+
+  // TanStack Query client used to invalidate the elections cache on update
   const queryClient = useQueryClient();
+
+  // Retrieve current party admin user to scope member searches to this party
   const user = useUser();
   const userPartyId = user?.party?.id ?? (user as any)?.party_id;
 
   // Active slot being picked via UserFinderCommand: 'candidate' | 'running_mate' | null
-  const [targetSlot, setTargetSlot] = useState<
-    "candidate" | "running_mate" | null
-  >(null);
+  const [targetSlot, setTargetSlot] = useState<"candidate" | "running_mate" | null>(null);
 
+  // Detect whether this race requires a joint ticket (e.g. President, Governor, LGA Chairman)
   const ticketConfig = getTicketConfig(data.title, data.officeName, data.scope);
 
-  // Mutation to update candidate ticket
+  // Mutation to persist candidate ticket updates on the server
   const mutation = useMutation({
-    mutationFn: async ({
-      candidateId,
-      runningMateId,
-    }: {
-      candidateId?: number;
-      runningMateId?: number;
-    }) => {
+    mutationFn: async ({ candidateId, runningMateId }: { candidateId?: number; runningMateId?: number }) => {
+      // Calls server action with election ID and updated candidate ID
       const res = await fieldPartyCandidate({
         data: {
           electionId: data.id,
@@ -108,22 +91,28 @@ export function ManageCandidateTicketDialog({
       return res.data;
     },
     onSuccess: () => {
+      // Refresh election instances list so the table updates immediately
       queryClient.invalidateQueries({ queryKey: ["elections"] });
     },
   });
 
+  // Handles member selection from the UserFinderCommand dialog
   const handleSelectUser = (selectedUsers: any[]) => {
     if (selectedUsers.length > 0) {
       const chosenId = selectedUsers[0].id;
+      // Assign selected user to the active ticket slot
       if (targetSlot === "candidate") {
         mutation.mutate({ candidateId: chosenId });
       }
+      // Close the member picker dialog
       setTargetSlot(null);
     }
   };
 
+  // Removes/un-fields the assigned candidate from the ticket
   const handleRemoveCandidate = (slot: "candidate" | "running_mate") => {
     if (slot === "candidate") {
+      // Passing candidateId: 0 removes the candidate assignment
       mutation.mutate({ candidateId: 0 });
     }
   };
