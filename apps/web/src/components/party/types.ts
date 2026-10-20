@@ -8,6 +8,7 @@ import {
   Info,
   Share2,
   ShieldCheck,
+  Landmark,
 } from "lucide-react";
 
 export interface PartyLeader {
@@ -46,6 +47,7 @@ export type PartyTabPath =
   | "home"
   | "timeline"
   | "leadership"
+  | "party-chapters"
   | "party-admins"
   | "members"
   | "groups"
@@ -64,6 +66,7 @@ export const PARTY_NAV_TABS: PartyTabItem[] = [
   { path: "home", label: "Home", icon: Home },
   { path: "timeline", label: "Timeline", icon: Clock },
   { path: "leadership", label: "Leadership", icon: Crown },
+  { path: "party-chapters", label: "Party chapters", icon: Landmark },
   { path: "party-admins", label: "Party Admins", icon: ShieldCheck },
   { path: "members", label: "Members", icon: Users },
   { path: "groups", label: "Groups", icon: FolderKanban },

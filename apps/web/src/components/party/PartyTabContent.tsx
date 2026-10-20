@@ -49,6 +49,16 @@ export function PartyTabContent({
         </div>
       );
 
+    case "party-chapters":
+      return (
+        <div className="py-12 text-center text-neutral-500 dark:text-neutral-400">
+          <h3 className="text-base font-semibold text-neutral-900 dark:text-white">
+            Party Chapters
+          </h3>
+          <p className="mt-1 text-sm">Find and explore registered chapters for {partyName}.</p>
+        </div>
+      );
+
     case "groups":
       return (
         <div className="py-12 text-center text-neutral-500 dark:text-neutral-400">

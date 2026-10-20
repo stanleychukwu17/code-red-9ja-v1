@@ -189,7 +189,6 @@ WHERE ec.election_id = ANY(sqlc.arg('election_ids')::int[]);
 
 -- name: CheckIfUserEverContested :one
 SELECT EXISTS (
-    SELECT 1 FROM election_candidates WHERE candidate_id = $1
-    UNION ALL
-    SELECT 1 FROM election_candidates WHERE running_mate_id = $1
+    SELECT 1 FROM election_candidates
+    WHERE candidate_id = $1 OR running_mate_id = $1
 ) AS has_contested;

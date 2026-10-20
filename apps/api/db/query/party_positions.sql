@@ -140,3 +140,11 @@ LEFT JOIN lgas ON lgas.id = party_chapters.lga_id AND party_chapters.chapter_typ
 LEFT JOIN wards ON wards.id = party_chapters.ward_id AND party_chapters.chapter_type = 'ward'
 WHERE party_position_assignments.party_id = $1 AND party_position_assignments.user_id = $2
 ORDER BY party_position_assignments.status ASC, party_position_assignments.tenure_start DESC;
+
+-- name: CheckIfUserHasActivePositionByChapterType :one
+SELECT EXISTS (
+    SELECT 1
+    FROM party_position_assignments ppa
+    JOIN party_chapters pc ON pc.id = ppa.chapter_id
+    WHERE ppa.user_id = $1 AND ppa.status = 'active' AND pc.chapter_type = $2
+) AS has_position;

@@ -61,6 +61,27 @@ func (q *Queries) AssignPartyPosition(ctx context.Context, arg AssignPartyPositi
 	return i, err
 }
 
+const checkIfUserHasActivePositionByChapterType = `-- name: CheckIfUserHasActivePositionByChapterType :one
+SELECT EXISTS (
+    SELECT 1
+    FROM party_position_assignments ppa
+    JOIN party_chapters pc ON pc.id = ppa.chapter_id
+    WHERE ppa.user_id = $1 AND ppa.status = 'active' AND pc.chapter_type = $2
+) AS has_position
+`
+
+type CheckIfUserHasActivePositionByChapterTypeParams struct {
+	UserID      int64  `json:"user_id"`
+	ChapterType string `json:"chapter_type"`
+}
+
+func (q *Queries) CheckIfUserHasActivePositionByChapterType(ctx context.Context, arg CheckIfUserHasActivePositionByChapterTypeParams) (bool, error) {
+	row := q.db.QueryRow(ctx, checkIfUserHasActivePositionByChapterType, arg.UserID, arg.ChapterType)
+	var has_position bool
+	err := row.Scan(&has_position)
+	return has_position, err
+}
+
 const countActivePositionOccupants = `-- name: CountActivePositionOccupants :one
 SELECT COUNT(*) FROM party_position_assignments
 WHERE chapter_id = $1 AND position_id = $2 AND status = 'active'

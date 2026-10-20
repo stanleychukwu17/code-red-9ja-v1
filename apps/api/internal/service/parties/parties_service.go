@@ -11,6 +11,7 @@ import (
 	"free9ja/api/internal/service/audit"
 	monnifyclient "free9ja/api/internal/service/monnify"
 	"free9ja/api/internal/service/notifications"
+	pageverificationsservice "free9ja/api/internal/service/page_verifications"
 	"free9ja/api/internal/utils"
 	"log/slog"
 	"strconv"
@@ -72,6 +73,9 @@ type UsersService interface {
 // PageVerificationsService interface defines the methods needed from the page verifications service
 type PageVerificationsService interface {
 	GetPageVerifications(ctx context.Context, pageType string, pageID int64) ([]queries.GetPageVerificationsRow, error)
+	EnsureOfficialVerification(ctx context.Context, userID int64, verificationTypeID int16) error
+	RevokeOfficialVerificationIfNoActivePosition(ctx context.Context, userID int64, chapterType string, verificationTypeID int16) error
+	RevokeAllOfficialVerificationsIfNoActivePosition(ctx context.Context, userID int64) error
 }
 
 // NotificationsService defines methods required for dispatching notifications
@@ -2182,6 +2186,17 @@ func (s *PartiesService) AssignPartyPosition(ctx context.Context, arg queries.As
 			AppointmentType: arg.AppointmentType,
 			AssignmentID:    assignment.ID,
 		})
+
+		// Grant official verification badge if chapter corresponds to an official level
+		if s.pageVerificationsService != nil {
+			if chapter, err := s.queries.GetPartyChapterByID(ctx, arg.ChapterID); err == nil {
+				if vTypeID, err := pageverificationsservice.ChapterTypeToOfficialVerificationType(chapter.ChapterType); err == nil {
+					if err := s.pageVerificationsService.EnsureOfficialVerification(ctx, arg.UserID, vTypeID); err != nil {
+						slog.Warn("failed to ensure official verification for user", "userID", arg.UserID, "vTypeID", vTypeID, "error", err)
+					}
+				}
+			}
+		}
 	}
 	return assignment, err
 }
@@ -2246,6 +2261,17 @@ func (s *PartiesService) VacatePositionAssignment(ctx context.Context, id int64,
 		AppointmentType: assignment.AppointmentType,
 		AssignmentID:    assignment.ID,
 	})
+
+	// Revoke official verification badge if user has no remaining active position at this chapter level
+	if s.pageVerificationsService != nil {
+		if chapter, err := s.queries.GetPartyChapterByID(ctx, assignment.ChapterID); err == nil {
+			if vTypeID, err := pageverificationsservice.ChapterTypeToOfficialVerificationType(chapter.ChapterType); err == nil {
+				if err := s.pageVerificationsService.RevokeOfficialVerificationIfNoActivePosition(ctx, assignment.UserID, chapter.ChapterType, vTypeID); err != nil {
+					slog.Warn("failed to revoke official verification for user", "userID", assignment.UserID, "chapterType", chapter.ChapterType, "vTypeID", vTypeID, "error", err)
+				}
+			}
+		}
+	}
 
 	return assignment, nil
 }
@@ -2496,6 +2522,11 @@ func (s *PartiesService) SuspendPartyMember(ctx context.Context, input SuspendPa
 		Reason:       input.Reason,
 	})
 
+	// Revoke official badges if user has no remaining active positions
+	if s.pageVerificationsService != nil {
+		_ = s.pageVerificationsService.RevokeAllOfficialVerificationsIfNoActivePosition(ctx, input.UserID)
+	}
+
 	return &suspension, nil
 }
 
@@ -2712,6 +2743,11 @@ func (s *PartiesService) BlockUserFromThisParty(ctx context.Context, input Block
 			s.InvalidateChapterMemberCount(ctx, input.PartyID, chapterID)
 			s.InvalidatePartyChapterMembership(ctx, input.BlockedUserID, input.PartyID, chapterID)
 			s.InvalidatePartyOfficialsCache(ctx, input.PartyID, chapterID)
+		}
+
+		// Revoke official badges if user has no remaining active positions
+		if s.pageVerificationsService != nil {
+			_ = s.pageVerificationsService.RevokeAllOfficialVerificationsIfNoActivePosition(ctx, input.BlockedUserID)
 		}
 	}
 

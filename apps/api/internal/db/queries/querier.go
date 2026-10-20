@@ -62,6 +62,7 @@ type Querier interface {
 	CheckFileOwner(ctx context.Context, arg CheckFileOwnerParams) (bool, error)
 	CheckIfPageHasAnyVerification(ctx context.Context, arg CheckIfPageHasAnyVerificationParams) (bool, error)
 	CheckIfUserEverContested(ctx context.Context, candidateID int64) (bool, error)
+	CheckIfUserHasActivePositionByChapterType(ctx context.Context, arg CheckIfUserHasActivePositionByChapterTypeParams) (bool, error)
 	CheckIfUserVotedInElection(ctx context.Context, arg CheckIfUserVotedInElectionParams) (bool, error)
 	CheckReferralCodeExists(ctx context.Context, referralCode pgtype.Text) (bool, error)
 	CheckUnmatchedPollingUnitResultExists(ctx context.Context, arg CheckUnmatchedPollingUnitResultExistsParams) (bool, error)
