@@ -6,12 +6,14 @@ import "encoding/json"
 // stored or calculated by the database; services populate it with the shared helper.
 type ElectionDetails struct {
 	Election
-	Status string `json:"status"`
+	Status          string `json:"status"`
+	NominationsOpen bool   `json:"nominations_open"`
 }
 
 type ElectionListItem struct {
 	ListElectionInstancesRow
-	Status string `json:"status"`
+	Status          string `json:"status"`
+	NominationsOpen bool   `json:"nominations_open"`
 }
 
 type ElectionGroupListItem struct {

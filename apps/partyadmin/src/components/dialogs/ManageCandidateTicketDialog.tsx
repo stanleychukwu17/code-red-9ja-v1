@@ -80,6 +80,7 @@ export function ManageCandidateTicketDialog({ open, onClose, data }: ManageCandi
         data: {
           electionId: data.id,
           candidateId: candidateId !== undefined ? candidateId : Number(data.candidate?.id || 0),
+          partyId: userPartyId || 0,
         },
       });
       if (!res.success) {

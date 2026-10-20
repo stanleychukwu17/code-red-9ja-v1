@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Layout, PageHeader } from "@repo/ui/components/custom/AdminLayouts";
 import { useQuery } from "@tanstack/react-query";
@@ -34,34 +35,43 @@ function ElectoralUnitsPage() {
   const { partyShortName } = Route.useParams();
   const {
     selectedElection,
-    selectedStateId,
-    setSelectedStateId,
-    selectedDistrictId,
-    setSelectedDistrictId,
-    selectedFederalConstituencyId,
-    setSelectedFederalConstituencyId,
-    selectedStateConstituencyId,
-    setSelectedStateConstituencyId,
-    selectedLGAId,
-    setSelectedLGAId,
-    selectedWardId,
-    setSelectedWardId,
     isLive,
     setIsLive,
   } = useElection();
 
+  const [drillDown, setDrillDown] = useState<{
+    stateId?: number;
+    districtId?: number;
+    federalConstituencyId?: number;
+    stateConstituencyId?: number;
+    lgaId?: number;
+    wardId?: number;
+  }>({});
+
+  // Reset local drill-down when active election changes
+  useEffect(() => {
+    setDrillDown({});
+  }, [selectedElection?.id]);
+
+  const stateId = drillDown.stateId ?? (selectedElection?.state_id as number | undefined) ?? undefined;
+  const districtId = drillDown.districtId ?? (selectedElection?.senatorial_district_id as number | undefined) ?? undefined;
+  const federalConstituencyId = drillDown.federalConstituencyId ?? (selectedElection?.federal_constituency_id as number | undefined) ?? undefined;
+  const stateConstituencyId = drillDown.stateConstituencyId ?? (selectedElection?.state_constituency_id as number | undefined) ?? undefined;
+  const lgaId = drillDown.lgaId ?? (selectedElection?.lga_id as number | undefined) ?? undefined;
+  const wardId = drillDown.wardId ?? (selectedElection?.ward_id as number | undefined) ?? undefined;
+
   const fetchBreakdown = useServerFn(getElectoralUnitsBreakdown);
 
   // Fallback title based on scope
-  const computedTitle = selectedWardId
+  const computedTitle = wardId
     ? "Polling Units"
-    : selectedStateConstituencyId || selectedLGAId
+    : stateConstituencyId || lgaId
       ? "Wards"
-      : selectedFederalConstituencyId
+      : federalConstituencyId
         ? "LGAs"
-        : selectedDistrictId
+        : districtId
           ? "Federal Constituencies"
-          : selectedStateId
+          : stateId
             ? "Senatorial Districts"
             : "States";
 
@@ -69,12 +79,12 @@ function ElectoralUnitsPage() {
     queryKey: [
       "electoral-units-breakdown",
       selectedElection?.id,
-      selectedWardId,
-      selectedLGAId,
-      selectedStateConstituencyId,
-      selectedFederalConstituencyId,
-      selectedDistrictId,
-      selectedStateId,
+      wardId,
+      lgaId,
+      stateConstituencyId,
+      federalConstituencyId,
+      districtId,
+      stateId,
       isLive,
     ],
     queryFn: async () => {
@@ -82,12 +92,12 @@ function ElectoralUnitsPage() {
       return fetchBreakdown({
         data: {
           electionId: selectedElection.id,
-          stateId: selectedStateId || undefined,
-          senatorialDistrictId: selectedDistrictId || undefined,
-          federalConstituencyId: selectedFederalConstituencyId || undefined,
-          stateConstituencyId: selectedStateConstituencyId || undefined,
-          lgaId: selectedLGAId || undefined,
-          wardId: selectedWardId || undefined,
+          stateId,
+          senatorialDistrictId: districtId,
+          federalConstituencyId,
+          stateConstituencyId,
+          lgaId,
+          wardId,
           limit: 150,
         },
       });
@@ -109,45 +119,56 @@ function ElectoralUnitsPage() {
     if (!unitId) return;
 
     if (unitType === "states" || (!unitType && unitTitle === "States")) {
-      setSelectedStateId(unitId);
-      setSelectedDistrictId(undefined);
-      setSelectedFederalConstituencyId(undefined);
-      setSelectedStateConstituencyId(undefined);
-      setSelectedLGAId(undefined);
-      setSelectedWardId(undefined);
+      setDrillDown({ stateId: unitId });
     } else if (
       unitType === "senatorial_districts" ||
       unitTitle === "Senatorial Districts"
     ) {
-      setSelectedDistrictId(unitId);
-      setSelectedFederalConstituencyId(undefined);
-      setSelectedStateConstituencyId(undefined);
-      setSelectedLGAId(undefined);
-      setSelectedWardId(undefined);
+      setDrillDown((prev) => ({
+        ...prev,
+        districtId: unitId,
+        federalConstituencyId: undefined,
+        stateConstituencyId: undefined,
+        lgaId: undefined,
+        wardId: undefined,
+      }));
     } else if (
       unitType === "federal_constituencies" ||
       unitTitle === "Federal Constituencies"
     ) {
-      setSelectedFederalConstituencyId(unitId);
-      setSelectedStateConstituencyId(undefined);
-      setSelectedLGAId(undefined);
-      setSelectedWardId(undefined);
+      setDrillDown((prev) => ({
+        ...prev,
+        federalConstituencyId: unitId,
+        stateConstituencyId: undefined,
+        lgaId: undefined,
+        wardId: undefined,
+      }));
     } else if (
       unitType === "state_constituencies" ||
       unitTitle === "State Constituencies"
     ) {
-      setSelectedStateConstituencyId(unitId);
-      setSelectedWardId(undefined);
+      setDrillDown((prev) => ({
+        ...prev,
+        stateConstituencyId: unitId,
+        wardId: undefined,
+      }));
     } else if (unitType === "lgas" || unitTitle === "LGAs") {
-      setSelectedLGAId(unitId);
-      setSelectedWardId(undefined);
+      setDrillDown((prev) => ({
+        ...prev,
+        lgaId: unitId,
+        wardId: undefined,
+      }));
     } else if (unitType === "wards" || unitTitle === "Wards") {
-      setSelectedWardId(unitId);
+      setDrillDown((prev) => ({
+        ...prev,
+        wardId: unitId,
+      }));
     }
   };
 
   const isDrillable =
     unitType !== "polling_units" && unitTitle !== "Polling Units";
+  const hasDrillDown = Object.values(drillDown).some((v) => v !== undefined);
 
   return (
     <Layout>
@@ -159,6 +180,17 @@ function ElectoralUnitsPage() {
           <ElectionRaceHeaderRight isLive={isLive} setIsLive={setIsLive} />
         }
       />
+      {hasDrillDown && (
+        <div className="flex items-center gap-2 py-2">
+          <button
+            type="button"
+            onClick={() => setDrillDown({})}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-md border border-c-20 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 transition-colors"
+          >
+            ← Reset to top-level view
+          </button>
+        </div>
+      )}
       {isLoading ? (
         <div className="py-16 text-center text-c-50 text-[15px]">
           Loading electoral units results...

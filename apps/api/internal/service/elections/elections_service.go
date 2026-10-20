@@ -792,10 +792,9 @@ func (s *ElectionsService) CreateWardElection(ctx context.Context, params Create
 }
 
 // GetElectionByID fetches an election instance by its unique identifier.
-// Cached derived status expires at the next Lagos midnight.
+// Raw election record is cached for RedisOneEightyDaysTTL; derived status is evaluated dynamically on each read.
 func (s *ElectionsService) GetElectionByID(ctx context.Context, id int32) (queries.ElectionDetails, error) {
 	now := time.Now()
-	cacheDeadline := utils.NextLagosMidnight(now)
 	cacheKey := fmt.Sprintf("%s%d", db.RedisElectionByID, id)
 
 	// 1. Attempt to fetch pre-cached election from Redis
@@ -815,10 +814,45 @@ func (s *ElectionsService) GetElectionByID(ctx context.Context, id int32) (queri
 
 	// 3. Serialize and populate Redis cache
 	if elBytes, err := json.Marshal(el); err == nil {
-		s.rdb.SetArgs(ctx, cacheKey, elBytes, redis.SetArgs{ExpireAt: cacheDeadline})
+		s.rdb.Set(ctx, cacheKey, elBytes, db.RedisOneEightyDaysTTL)
 	}
 
 	return electionDetails(el, now), nil
+}
+
+func electionDetails(election queries.Election, now time.Time) queries.ElectionDetails {
+	return queries.ElectionDetails{
+		Election:        election,
+		Status:          utils.ElectionStatusForDate(election.ElectionDate.Time, now),
+		NominationsOpen: utils.IsElectionNominationOpen(election.ElectionDate.Time, now),
+	}
+}
+
+// GetElectionGroupByID retrieves an election group record by its unique identifier, utilizing Redis caching.
+func (s *ElectionsService) GetElectionGroupByID(ctx context.Context, id int32) (queries.ElectionGroup, error) {
+	cacheKey := fmt.Sprintf("%s%d", db.RedisElectionGroupByID, id)
+
+	// 1. Attempt to fetch pre-cached election group from Redis
+	val, err := s.rdb.Get(ctx, cacheKey).Result()
+	if err == nil {
+		var eg queries.ElectionGroup
+		if err := json.Unmarshal([]byte(val), &eg); err == nil {
+			return eg, nil
+		}
+	}
+
+	// 2. Cache miss: fetch election group directly from the database
+	eg, err := s.queries.GetElectionGroupByID(ctx, id)
+	if err != nil {
+		return eg, err
+	}
+
+	// 3. Serialize and populate Redis cache
+	if egBytes, err := json.Marshal(eg); err == nil {
+		s.rdb.Set(ctx, cacheKey, egBytes, db.RedisNinetyDaysTTL)
+	}
+
+	return eg, nil
 }
 
 // ListElectionsFilter defines the filtering and pagination criteria for listing elections.
@@ -888,6 +922,7 @@ func (s *ElectionsService) ListElections(ctx context.Context, filter ListElectio
 		items = append(items, queries.ElectionListItem{
 			ListElectionInstancesRow: row,
 			Status:                   utils.ElectionStatusForDate(row.ElectionDate.Time, now),
+			NominationsOpen:          utils.IsElectionNominationOpen(row.ElectionDate.Time, now),
 		})
 	}
 	return items, nil
@@ -1529,7 +1564,6 @@ func (s *ElectionsService) GetUserElectionGroupVoteStatus(ctx context.Context, u
 // Results are cached in Redis to minimize database lookups.
 func (s *ElectionsService) GetUserActiveCandidacies(ctx context.Context, candidateID int64) ([]queries.UserActiveCandidacy, error) {
 	now := time.Now()
-	cacheDeadline := utils.NextLagosMidnight(now)
 	cacheKey := fmt.Sprintf("%s%d", db.RedisUserActiveCandidacies, candidateID)
 
 	// 1. Check Redis cache
@@ -1554,9 +1588,9 @@ func (s *ElectionsService) GetUserActiveCandidacies(ctx context.Context, candida
 		})
 	}
 
-	// Both status and active membership can change when the Lagos date changes.
+	// Cache candidacies with 30-day TTL
 	if jsonBytes, err := json.Marshal(candidacies); err == nil {
-		_ = s.rdb.SetArgs(ctx, cacheKey, jsonBytes, redis.SetArgs{ExpireAt: cacheDeadline}).Err()
+		_ = s.rdb.Set(ctx, cacheKey, jsonBytes, db.RedisThirtyDaysTTL).Err()
 	}
 
 	return candidacies, nil

@@ -61,10 +61,12 @@ function ReadinessComponent() {
     selectedLGAId,
     selectedWardId,
   } = useElection();
+  // Party context & marketing
   const { activeMarketingCampaigns } = useMarketingCampaigns(party?.id);
   const partyId = party?.id;
   const queryClient = useQueryClient();
 
+  // Dialog visibility states
   const [isWalletDialogOpen, setIsWalletDialogOpen] = useState(false);
   const [isSlotsDialogOpen, setIsSlotsDialogOpen] = useState(false);
   const [isBudgetDialogOpen, setIsBudgetDialogOpen] = useState(false);
@@ -73,18 +75,21 @@ function ReadinessComponent() {
 
   const fetchElectionStatsFn = useServerFn(getElectionStats);
 
+  // Party wallet query
   const { data: walletRes, refetch: refetchWallet } = useQuery({
     queryKey: ["partyWallet", partyId],
     queryFn: () => getPartyWallet({ data: partyId! }),
     enabled: !!partyId,
   });
 
+  // Marketing campaigns query
   const { data: campaignsRes } = useQuery({
     queryKey: ["partyMarketingCampaigns", partyId],
     queryFn: () => getPartyMarketingCampaigns({ data: Number(partyId) }),
     enabled: !!partyId,
   });
 
+  // Determine active marketing campaigns setup
   const campaigns = campaignsRes?.data?.campaigns || [];
   const activeCampaignsCount = campaigns.filter((c: any) => {
     if (!c.end_date) return true;

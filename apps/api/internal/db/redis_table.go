@@ -114,8 +114,8 @@ const (
 	RedisElectionGroupsAll     = "election_groups:all"         // STRING: used to store and retrieve all election groups JSON.
 	RedisElectionGroupsActive  = "election_groups:active"      // STRING: used to store and retrieve active election groups JSON.
 	RedisElectionGroupByID     = "election_group:"             // STRING: "election_group:<id>" used to store and retrieve single election group JSON.
-	RedisElectionByID          = "election:"                   // Derived status; expires at Lagos midnight.
-	RedisUserActiveCandidacies = "elections:user_candidacies:" // Derived status; expires at Lagos midnight.
+	RedisElectionByID          = "election:"                   // Raw election record; cached for 180 days.
+	RedisUserActiveCandidacies = "elections:user_candidacies:" // Active candidacies for user; cached for 30 days.
 	//--END--
 
 	//--START-- for background worker & cron distributed locks

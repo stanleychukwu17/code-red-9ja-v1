@@ -9,7 +9,6 @@ import (
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/testutil"
-	"free9ja/api/internal/utils"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/redis/go-redis/v9"
@@ -37,11 +36,13 @@ VALUES (1,1,1,3,1);`)
 	}
 	_, err = s.GetElectionByID(ctx, 1)
 	require.NoError(t, err)
-	for _, key := range []string{db.RedisElectionByID + "1", db.RedisUserActiveCandidacies + "1"} {
-		ttl := rdb.TTL(ctx, key).Val()
-		require.Positive(t, ttl)
-		require.InDelta(t, time.Until(utils.NextLagosMidnight(time.Now())).Seconds(), ttl.Seconds(), 2)
-	}
+	ttlElection := rdb.TTL(ctx, db.RedisElectionByID+"1").Val()
+	require.Positive(t, ttlElection)
+	require.InDelta(t, db.RedisOneEightyDaysTTL.Seconds(), ttlElection.Seconds(), 2)
+
+	ttlCandidacy := rdb.TTL(ctx, db.RedisUserActiveCandidacies+"1").Val()
+	require.Positive(t, ttlCandidacy)
+	require.InDelta(t, db.RedisThirtyDaysTTL.Seconds(), ttlCandidacy.Seconds(), 2)
 	// A failed insert must roll back the deletion and preserve the existing caches.
 	err = s.FieldPartyCandidate(ctx, 1, 1, 999999)
 	require.Error(t, err)

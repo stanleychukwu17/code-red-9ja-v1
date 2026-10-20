@@ -137,8 +137,11 @@ export const getElections = createServerFn({ method: "GET" })
   });
 
 export const fieldPartyCandidate = createServerFn({ method: "POST" })
-  .inputValidator((data: { electionId: number; candidateId: number }) => data)
-  .handler(async ({ data: { electionId, candidateId } }) => {
+  .inputValidator(
+    (data: { electionId: number; candidateId: number; partyId: number }) =>
+      data,
+  )
+  .handler(async ({ data: { electionId, candidateId, partyId } }) => {
     try {
       const response = await apiFetch(
         `${API_URL.elections}/${electionId}/field-candidate`,
@@ -147,7 +150,10 @@ export const fieldPartyCandidate = createServerFn({ method: "POST" })
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ candidate_id: candidateId }),
+          body: JSON.stringify({
+            candidate_id: candidateId,
+            party_id: partyId,
+          }),
         },
       );
       const resData = await response.json();

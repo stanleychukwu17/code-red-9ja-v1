@@ -27,6 +27,7 @@ type ElectionsService interface {
 	CreateLgaElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, lgaIDs []int32) (int, error)
 	CreateWardElection(ctx context.Context, params elections.CreateWardElectionParams) (int, error)
 	GetElectionByID(ctx context.Context, id int32) (queries.ElectionDetails, error)
+	GetElectionGroupByID(ctx context.Context, id int32) (queries.ElectionGroup, error)
 	ListElections(ctx context.Context, filter elections.ListElectionsFilter) ([]queries.ElectionListItem, error)
 	UpdateElection(ctx context.Context, params elections.UpdateElectionParams) (queries.ElectionDetails, error)
 	BulkUpdateElectionGroup(ctx context.Context, params elections.BulkUpdateElectionGroupParams) error
@@ -46,21 +47,27 @@ type UsersService interface {
 	GetUserByFakeID(ctx context.Context, fakeID int64) (queries.UserWithPlaces, error)
 }
 
-type Handler struct {
-	service      ElectionsService
-	usersService UsersService
-	auditService audit.AuditService
-	validate     *validator.Validate
-	utils        *utils.Utils
+type PartiesService interface {
+	GetActivePartyMemberSuspension(ctx context.Context, partyID int16, userID int64) (*queries.PartyMemberSuspension, error)
 }
 
-func NewHandler(service ElectionsService, usersService UsersService, auditService audit.AuditService, utils *utils.Utils) *Handler {
+type Handler struct {
+	service        ElectionsService
+	usersService   UsersService
+	partiesService PartiesService
+	auditService   audit.AuditService
+	validate       *validator.Validate
+	utils          *utils.Utils
+}
+
+func NewHandler(service ElectionsService, usersService UsersService, auditService audit.AuditService, utils *utils.Utils, partiesService PartiesService) *Handler {
 	return &Handler{
-		service:      service,
-		usersService: usersService,
-		auditService: auditService,
-		validate:     validator.New(),
-		utils:        utils,
+		service:        service,
+		usersService:   usersService,
+		partiesService: partiesService,
+		auditService:   auditService,
+		validate:       validator.New(),
+		utils:          utils,
 	}
 }
 
@@ -979,14 +986,14 @@ func (h *Handler) SyncElectionCandidates(w http.ResponseWriter, r *http.Request)
 
 type FieldCandidateRequest struct {
 	CandidateID int64 `json:"candidate_id"`
-	PartyID     int16 `json:"party_id,omitempty"`
+	PartyID     int16 `json:"party_id"`
 }
 
 // FieldPartyCandidate handles POST /api/v1/elections/{id}/field-candidate
 func (h *Handler) FieldPartyCandidate(w http.ResponseWriter, r *http.Request) {
 	// Parse and validate election ID from URL parameter
 	idStr := chi.URLParam(r, "id")
-	id, err := strconv.ParseInt(idStr, 10, 32)
+	electionID, err := strconv.ParseInt(idStr, 10, 32)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election ID")
 		return
@@ -998,11 +1005,40 @@ func (h *Handler) FieldPartyCandidate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Parse optional candidate ID payload
+	// Parse candidate ID and party ID payload
 	var req FieldCandidateRequest
-	if r.ContentLength > 0 {
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	// partyID must be valid
+	if req.PartyID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "Party ID is required")
+		return
+	}
+
+	// Verify election exists
+	election, err := h.service.GetElectionByID(r.Context(), int32(electionID))
+	if err != nil {
+		h.utils.RespondError(w, http.StatusNotFound, "Election not found")
+		return
+	}
+
+	// Verify election group is active and nominations are open (can be skipped for platform admins / super_admins)
+	if !claims.HasAnyRole("super_admin", "admin") {
+		electionGroup, err := h.service.GetElectionGroupByID(r.Context(), election.ElectionGroupID)
+		if err != nil {
+			h.utils.RespondError(w, http.StatusBadRequest, "Failed to verify election group: "+err.Error())
+			return
+		}
+		if !electionGroup.Active {
+			h.utils.RespondError(w, http.StatusForbidden, "Election group is not active")
+			return
+		}
+
+		if !election.NominationsOpen {
+			h.utils.RespondError(w, http.StatusForbidden, "Candidate nomination is closed: elections within 15 days cannot be modified")
 			return
 		}
 	}
@@ -1014,20 +1050,50 @@ func (h *Handler) FieldPartyCandidate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	partyID := int16(0)
-	if user.PartyID.Valid {
-		partyID = user.PartyID.Int16
-	} else if claims.HasAnyRole("super_admin", "admin") && req.PartyID > 0 {
-		partyID = req.PartyID
-	}
-
-	if partyID == 0 {
-		h.utils.RespondError(w, http.StatusForbidden, "User is not associated with a party")
+	// Verify user account status is active
+	if !user.AccountStatus.Valid || user.AccountStatus.String != "active" {
+		h.utils.RespondError(w, http.StatusForbidden, "User account is not active")
 		return
 	}
 
+	// Verify user is associated with a party and matches the received party ID (unless super_admin/admin)
+	if !claims.HasAnyRole("super_admin", "admin") {
+		if !user.PartyID.Valid {
+			h.utils.RespondError(w, http.StatusForbidden, "User is not associated with a party")
+			return
+		}
+		if user.PartyID.Int16 != req.PartyID {
+			h.utils.RespondError(w, http.StatusForbidden, "Party ID does not match user's party")
+			return
+		}
+
+		// Verify user is not suspended from the party
+		suspension, err := h.partiesService.GetActivePartyMemberSuspension(r.Context(), req.PartyID, user.ID)
+		if err != nil {
+			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to check party suspension status: "+err.Error())
+			return
+		}
+		if suspension != nil && suspension.ID > 0 {
+			h.utils.RespondError(w, http.StatusForbidden, "User is suspended from this party")
+			return
+		}
+	}
+
+	// If fielding a candidate, also verify the candidate is not suspended from the party
+	if req.CandidateID > 0 {
+		candSuspension, err := h.partiesService.GetActivePartyMemberSuspension(r.Context(), req.PartyID, req.CandidateID)
+		if err != nil {
+			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to check candidate suspension status: "+err.Error())
+			return
+		}
+		if candSuspension != nil && candSuspension.ID > 0 {
+			h.utils.RespondError(w, http.StatusForbidden, "Candidate is suspended from this party")
+			return
+		}
+	}
+
 	// Field candidate under the party
-	err = h.service.FieldPartyCandidate(r.Context(), int32(id), partyID, req.CandidateID)
+	err = h.service.FieldPartyCandidate(r.Context(), int32(electionID), req.PartyID, req.CandidateID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to field candidate: "+err.Error())
 		return

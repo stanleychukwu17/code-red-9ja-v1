@@ -10,7 +10,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Layout, PageHeader } from "@repo/ui/components/custom/AdminLayouts";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search, SlidersHorizontal, X } from "lucide-react";
 import { AgentCoverageTable } from "#/components/Tables";
 import type { AgentCoverageUnitItem } from "#/lib/server/agent-coverage";
@@ -43,32 +43,41 @@ function AgentCoveragePage() {
   const {
     selectedElection,
     selectedElectionGroup,
-    selectedStateId,
-    setSelectedStateId,
-    selectedDistrictId,
-    setSelectedDistrictId,
-    selectedFederalConstituencyId,
-    setSelectedFederalConstituencyId,
-    selectedStateConstituencyId,
-    setSelectedStateConstituencyId,
-    selectedLGAId,
-    setSelectedLGAId,
-    selectedWardId,
-    setSelectedWardId,
   } = useElection();
+
+  const [drillDown, setDrillDown] = useState<{
+    stateId?: number;
+    districtId?: number;
+    federalConstituencyId?: number;
+    stateConstituencyId?: number;
+    lgaId?: number;
+    wardId?: number;
+  }>({});
+
+  // Reset local drill-down when active election or group changes
+  useEffect(() => {
+    setDrillDown({});
+  }, [selectedElection?.id, selectedElectionGroup?.id]);
+
+  const stateId = drillDown.stateId ?? (selectedElection?.state_id as number | undefined) ?? undefined;
+  const districtId = drillDown.districtId ?? (selectedElection?.senatorial_district_id as number | undefined) ?? undefined;
+  const federalConstituencyId = drillDown.federalConstituencyId ?? (selectedElection?.federal_constituency_id as number | undefined) ?? undefined;
+  const stateConstituencyId = drillDown.stateConstituencyId ?? (selectedElection?.state_constituency_id as number | undefined) ?? undefined;
+  const lgaId = drillDown.lgaId ?? (selectedElection?.lga_id as number | undefined) ?? undefined;
+  const wardId = drillDown.wardId ?? (selectedElection?.ward_id as number | undefined) ?? undefined;
 
   const fetchBreakdown = useServerFn(getAgentCoverageBreakdown);
 
   // Fallback title based on scope
-  const computedTitle = selectedWardId
+  const computedTitle = wardId
     ? "Polling Units"
-    : selectedStateConstituencyId || selectedLGAId
+    : stateConstituencyId || lgaId
       ? "Wards"
-      : selectedFederalConstituencyId
+      : federalConstituencyId
         ? "LGAs"
-        : selectedDistrictId
+        : districtId
           ? "Federal Constituencies"
-          : selectedStateId
+          : stateId
             ? "Senatorial Districts"
             : "States";
 
@@ -78,12 +87,12 @@ function AgentCoveragePage() {
       selectedElection?.id,
       selectedElectionGroup?.id,
       party?.id,
-      selectedWardId,
-      selectedLGAId,
-      selectedStateConstituencyId,
-      selectedFederalConstituencyId,
-      selectedDistrictId,
-      selectedStateId,
+      wardId,
+      lgaId,
+      stateConstituencyId,
+      federalConstituencyId,
+      districtId,
+      stateId,
     ],
     queryFn: async () => {
       if (!selectedElection?.id && !selectedElectionGroup?.id) return null;
@@ -92,12 +101,12 @@ function AgentCoveragePage() {
           electionId: selectedElection?.id,
           electionGroupId: selectedElectionGroup?.id,
           partyId: party?.id,
-          stateId: selectedStateId || undefined,
-          senatorialDistrictId: selectedDistrictId || undefined,
-          federalConstituencyId: selectedFederalConstituencyId || undefined,
-          stateConstituencyId: selectedStateConstituencyId || undefined,
-          lgaId: selectedLGAId || undefined,
-          wardId: selectedWardId || undefined,
+          stateId,
+          senatorialDistrictId: districtId,
+          federalConstituencyId,
+          stateConstituencyId,
+          lgaId,
+          wardId,
           limit: 150,
         },
       });
@@ -125,7 +134,7 @@ function AgentCoveragePage() {
     : items;
 
   /**
-   * Drill-down handler: updates the active geographic selection state to narrow the view
+   * Drill-down handler: updates the local geographic selection state to narrow the view
    * to children electoral units (e.g. clicking a State drills down to its Senatorial Districts).
    */
   const handleSelectUnit = (item: AgentCoverageUnitItem) => {
@@ -133,40 +142,50 @@ function AgentCoveragePage() {
     if (!unitId) return;
 
     if (unitType === "states" || (!unitType && unitTitle === "States")) {
-      setSelectedStateId(unitId);
-      setSelectedDistrictId(undefined);
-      setSelectedFederalConstituencyId(undefined);
-      setSelectedStateConstituencyId(undefined);
-      setSelectedLGAId(undefined);
-      setSelectedWardId(undefined);
+      setDrillDown({ stateId: unitId });
     } else if (
       unitType === "senatorial_districts" ||
       unitTitle === "Senatorial Districts"
     ) {
-      setSelectedDistrictId(unitId);
-      setSelectedFederalConstituencyId(undefined);
-      setSelectedStateConstituencyId(undefined);
-      setSelectedLGAId(undefined);
-      setSelectedWardId(undefined);
+      setDrillDown((prev) => ({
+        ...prev,
+        districtId: unitId,
+        federalConstituencyId: undefined,
+        stateConstituencyId: undefined,
+        lgaId: undefined,
+        wardId: undefined,
+      }));
     } else if (
       unitType === "federal_constituencies" ||
       unitTitle === "Federal Constituencies"
     ) {
-      setSelectedFederalConstituencyId(unitId);
-      setSelectedStateConstituencyId(undefined);
-      setSelectedLGAId(undefined);
-      setSelectedWardId(undefined);
+      setDrillDown((prev) => ({
+        ...prev,
+        federalConstituencyId: unitId,
+        stateConstituencyId: undefined,
+        lgaId: undefined,
+        wardId: undefined,
+      }));
     } else if (
       unitType === "state_constituencies" ||
       unitTitle === "State Constituencies"
     ) {
-      setSelectedStateConstituencyId(unitId);
-      setSelectedWardId(undefined);
+      setDrillDown((prev) => ({
+        ...prev,
+        stateConstituencyId: unitId,
+        wardId: undefined,
+      }));
     } else if (unitType === "lgas" || unitTitle === "LGAs") {
-      setSelectedLGAId(unitId);
-      setSelectedWardId(undefined);
+      setDrillDown((prev) => ({
+        ...prev,
+        lgaId: unitId,
+        wardId: undefined,
+      }));
     } else if (unitType === "wards" || unitTitle === "Wards") {
-      setSelectedWardId(unitId);
+      setDrillDown((prev) => ({
+        ...prev,
+        wardId: unitId,
+      }));
     }
   };
 
@@ -175,21 +194,17 @@ function AgentCoveragePage() {
    * Directs to the appropriate supervisor roster or polling unit agent view.
    */
   const handleAssign = (item: AgentCoverageUnitItem) => {
-    const unitId = Number(item.id);
     if (unitType === "states") {
-      setSelectedStateId(unitId);
       navigate({
         to: "/$partyShortName/agents/state-supervisor",
         params: { partyShortName },
       });
     } else if (unitType === "lgas") {
-      setSelectedLGAId(unitId);
       navigate({
         to: "/$partyShortName/agents/lga-supervisor",
         params: { partyShortName },
       });
     } else if (unitType === "wards" || unitType === "state_constituencies") {
-      setSelectedWardId(unitId);
       navigate({
         to: "/$partyShortName/agents/ward-supervisor",
         params: { partyShortName },
@@ -203,6 +218,7 @@ function AgentCoveragePage() {
   };
 
   const isDrillable = !isPU;
+  const hasDrillDown = Object.values(drillDown).some((v) => v !== undefined);
 
   return (
     <Layout>
@@ -211,6 +227,18 @@ function AgentCoveragePage() {
         activeTab=""
         rightComponent={<CoverageHeaderRight />}
       />
+
+      {hasDrillDown && (
+        <div className="flex items-center gap-2 py-2">
+          <button
+            type="button"
+            onClick={() => setDrillDown({})}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-md border border-c-20 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 transition-colors"
+          >
+            ← Reset to top-level view
+          </button>
+        </div>
+      )}
 
       <div className="flex items-center justify-end gap-4 flex-wrap py-2">
         <div className="flex items-center gap-2">

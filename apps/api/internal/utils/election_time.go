@@ -27,10 +27,10 @@ func ElectionStatusForDate(scheduledDate, now time.Time) string {
 	return "upcoming"
 }
 
-// NextLagosMidnight is the cache deadline for data whose meaning changes daily.
-// Capture now before querying so a query spanning midnight cannot cache yesterday's
-// result for another day.
-func NextLagosMidnight(now time.Time) time.Time {
-	local := now.In(lagosLocation)
-	return time.Date(local.Year(), local.Month(), local.Day()+1, 0, 0, 0, 0, lagosLocation)
+// IsElectionNominationOpen returns true if the election is scheduled more than 15 days from today in Lagos calendar time.
+func IsElectionNominationOpen(scheduledDate, now time.Time) bool {
+	date := time.Date(scheduledDate.Year(), scheduledDate.Month(), scheduledDate.Day(), 0, 0, 0, 0, time.UTC)
+	today := LagosDate(now)
+	deadline := today.AddDate(0, 0, 15)
+	return date.After(deadline)
 }
