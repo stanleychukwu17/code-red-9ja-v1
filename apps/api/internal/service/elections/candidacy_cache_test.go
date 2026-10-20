@@ -8,6 +8,7 @@ import (
 
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
+	"free9ja/api/internal/service/notifications"
 	"free9ja/api/internal/testutil"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -15,12 +16,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type mockNotifications struct{}
+
+func (mockNotifications) NotifyCandidateNominated(context.Context, notifications.NotifyCandidateNominatedParams) {}
+func (mockNotifications) NotifyCandidateWithdrawn(context.Context, notifications.NotifyCandidateWithdrawnParams) {}
+
 func TestCandidacyReplacementRollbackAndRescheduling(t *testing.T) {
 	ctx := context.Background()
 	pool := testutil.ElectionDB(t)
 	rdb := testutil.Redis(t, 3)
 	q := queries.New(pool)
-	s := &ElectionsService{queries: q, pool: pool, rdb: rdb}
+	s := &ElectionsService{queries: q, pool: pool, rdb: rdb, notificationsService: mockNotifications{}}
 	_, err := pool.Exec(ctx, `
 INSERT INTO users (fake_id,password_hash,current_country,current_state,party_id)
 VALUES (101,'test',1,1,2),(102,'test',1,1,1),(103,'test',1,1,2);
@@ -44,7 +50,7 @@ VALUES (1,1,1,3,1);`)
 	require.Positive(t, ttlCandidacy)
 	require.InDelta(t, db.RedisThirtyDaysTTL.Seconds(), ttlCandidacy.Seconds(), 2)
 	// A failed insert must roll back the deletion and preserve the existing caches.
-	err = s.FieldPartyCandidate(ctx, 1, 1, 999999)
+	err = s.FieldPartyCandidate(ctx, 1, 1, 999999, nil)
 	require.Error(t, err)
 	require.EqualValues(t, 1, rdb.Exists(ctx, db.RedisUserActiveCandidacies+"1").Val())
 	old, err := q.ListElectionCandidatesByElectionID(ctx, 1)
@@ -63,7 +69,7 @@ VALUES (1,1,1,3,1);`)
 		require.EqualValues(t, 2, visible[0].CandidateID)
 		observed = true
 	}})
-	require.NoError(t, s.FieldPartyCandidate(ctx, 1, 1, 2))
+	require.NoError(t, s.FieldPartyCandidate(ctx, 1, 1, 2, nil))
 	require.True(t, observed)
 	// The principal's current party differs from the registered ballot party.
 	// Replacement still deletes the correct nomination and clears its running mate.
@@ -102,7 +108,7 @@ VALUES (1,1,1,3,1);`)
 	_, err = s.BulkDeleteElections(ctx, BulkDeleteElectionsParams{ElectionIDs: []int32{1}})
 	require.ErrorContains(t, err, "ended")
 	// Explicit removal also clears the departing nominee's populated cache.
-	require.NoError(t, s.FieldPartyCandidate(ctx, 1, 1, 0))
+	require.NoError(t, s.FieldPartyCandidate(ctx, 1, 1, 0, nil))
 	require.Zero(t, rdb.Exists(ctx, db.RedisUserActiveCandidacies+"2").Val())
 	// The public bulk-sync endpoint keeps its pre-existing disabled behavior.
 	err = s.SyncElectionCandidates(ctx, 1, []CandidateInput{{CandidateID: 1, PartyID: 1}})

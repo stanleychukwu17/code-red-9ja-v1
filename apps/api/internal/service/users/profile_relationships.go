@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
+	"sync"
 
 	"golang.org/x/sync/errgroup"
 )
@@ -35,162 +36,184 @@ func coreProfile(user queries.UserWithPlaces) cachedCoreProfile {
 	}
 }
 
-// profileRelation manages parsing cached bytes and fallback database fetching.
-type profileRelation struct {
-	apply []func([]byte) error  // assigns unmarshaled data to user structs
-	load  func() ([]byte, error) // database fallback when cache misses
+type userPartyPair struct {
+	userID  int64
+	partyID int16
 }
 
-// hydrateUserRelationships performs one MGET across the whole result set.
-// Shared parties and duplicate users are read/loaded once. Only misses invoke
-// their owning services; responses are never written back into the core cache.
+// hydrateUserRelationships resolves candidacies, party info, and party chapters.
+// It batches Redis lookups into a single MGET, deduplicates shared party requests,
+// and fetches any cache misses concurrently directly from the respective services.
 func (s *UsersService) hydrateUserRelationships(ctx context.Context, users []queries.UserWithPlaces) error {
-	// Deduplicate relationship fetches by cache key
-	relations := make(map[string]*profileRelation)
+	if len(users) == 0 {
+		return nil
+	}
 
-	// add registers a relationship loader and its target assignment callback
-	add := func(key string, apply func([]byte) error, load func() ([]byte, error)) {
-		if r, ok := relations[key]; ok {
-			r.apply = append(r.apply, apply) // share same key across users
-		} else {
-			relations[key] = &profileRelation{
-				apply: []func([]byte) error{apply},
-				load:  load,
-			}
+	// 1. Initialize empty states and collect keys to look up
+	type keyKind int // identifies the relationship type for dispatching cache parsing or loading
+	const (
+		kindCandidacy keyKind = iota
+		kindPartyBasic
+		kindChapters
+	)
+
+	// keyMeta associates each cache key with its lookup parameters
+	type keyMeta struct {
+		kind    keyKind
+		userID  int64
+		partyID int16
+	}
+
+	keyIndex := make(map[string]int)
+	var keys []string
+	var metas []keyMeta
+
+	// trackKey deduplicates Redis keys while maintaining indexed metadata
+	trackKey := func(key string, meta keyMeta) {
+		if _, exists := keyIndex[key]; !exists {
+			keyIndex[key] = len(keys)
+			keys = append(keys, key)
+			metas = append(metas, meta)
 		}
 	}
 
-	// Build relationship keys and targets for every user
+	// Register relationship keys for each user
 	for i := range users {
-		user := &users[i]
+		u := &users[i]
+		u.PartyBasicInfo = nil
+		u.Chapters = []queries.GetUserPartyChaptersRow{}
+		u.Candidacies = []queries.UserActiveCandidacy{}
 
-		// Set default empty states
-		user.PartyBasicInfo = nil
-		user.Chapters = []queries.GetUserPartyChaptersRow{}
-		user.Candidacies = []queries.UserActiveCandidacy{}
+		candKey := fmt.Sprintf("%s%d", db.RedisUserActiveCandidacies, u.ID)
+		trackKey(candKey, keyMeta{kind: kindCandidacy, userID: u.ID})
 
-		// Candidacy belongs to its registered party, independently of a user's
-		// current party affiliation (and includes running mates).
-		if s.electionsService != nil {
-			add(
-				fmt.Sprintf("%s%d", db.RedisUserActiveCandidacies, user.ID),
-				func(raw []byte) error {
-					return json.Unmarshal(raw, &user.Candidacies) // parse candidacy JSON
-				},
-				func() ([]byte, error) {
-					// Fallback to elections database query
-					rows, err := s.electionsService.GetUserActiveCandidacies(ctx, user.ID)
+		if u.PartyID.Valid && u.PartyID.Int16 > 0 {
+			pID := u.PartyID.Int16
+			partyKey := fmt.Sprintf("%s%d", db.RedisPartyBasicInfo, pID)
+			trackKey(partyKey, keyMeta{kind: kindPartyBasic, partyID: pID})
+
+			chapKey := fmt.Sprintf("%s%d:%d", db.RedisUserPartyChapters, pID, u.ID)
+			trackKey(chapKey, keyMeta{kind: kindChapters, userID: u.ID, partyID: pID})
+		}
+	}
+
+	if len(keys) == 0 {
+		return nil
+	}
+
+	// 2. Batch read from Redis
+	values, err := s.rdb.MGet(ctx, keys...).Result()
+	if err != nil {
+		values = make([]interface{}, len(keys))
+	}
+
+	// 3. Parse cached results and identify misses
+	candidaciesByUserID := make(map[int64][]queries.UserActiveCandidacy)
+	partyBasicByID := make(map[int16]*queries.PartyBasicInfoWithVerifications)
+	chaptersByKey := make(map[userPartyPair][]queries.GetUserPartyChaptersRow)
+
+	var missingMetas []keyMeta
+
+	for i, rawVal := range values {
+		meta := metas[i]
+		parsed := false
+
+		if str, ok := rawVal.(string); ok && str != "" && str != "null" {
+			data := []byte(str)
+			switch meta.kind {
+			case kindCandidacy:
+				var c []queries.UserActiveCandidacy
+				if json.Unmarshal(data, &c) == nil {
+					candidaciesByUserID[meta.userID] = c
+					parsed = true
+				}
+			case kindPartyBasic:
+				var p queries.PartyBasicInfoWithVerifications
+				if json.Unmarshal(data, &p) == nil {
+					partyBasicByID[meta.partyID] = &p
+					parsed = true
+				}
+			case kindChapters:
+				var ch []queries.GetUserPartyChaptersRow
+				if json.Unmarshal(data, &ch) == nil {
+					chaptersByKey[userPartyPair{userID: meta.userID, partyID: meta.partyID}] = ch
+					parsed = true
+				}
+			}
+		}
+
+		if !parsed {
+			missingMetas = append(missingMetas, meta)
+		}
+	}
+
+	// 4. Fetch misses from services concurrently (without JSON serialization roundtrip)
+	if len(missingMetas) > 0 {
+		var mu sync.Mutex
+		var group errgroup.Group
+		group.SetLimit(16)
+
+		for _, m := range missingMetas {
+			meta := m
+			group.Go(func() error {
+				switch meta.kind {
+				case kindCandidacy:
+					rows, err := s.electionsService.GetUserActiveCandidacies(ctx, meta.userID)
 					if err != nil {
-						return nil, err
+						return fmt.Errorf("load candidacies: %w", err)
 					}
 					if rows == nil {
 						rows = []queries.UserActiveCandidacy{}
 					}
-					return json.Marshal(rows)
-				},
-			)
+					mu.Lock()
+					candidaciesByUserID[meta.userID] = rows
+					mu.Unlock()
+
+				case kindPartyBasic:
+					info := s.partyService.GetPartyBasicInfo(ctx, meta.partyID)
+					mu.Lock()
+					partyBasicByID[meta.partyID] = info
+					mu.Unlock()
+
+				case kindChapters:
+					rows, err := s.partyService.GetUserPartyChapters(ctx, meta.userID, meta.partyID)
+					if err != nil {
+						return fmt.Errorf("load party chapters: %w", err)
+					}
+					if rows == nil {
+						rows = []queries.GetUserPartyChaptersRow{}
+					}
+					mu.Lock()
+					chaptersByKey[userPartyPair{userID: meta.userID, partyID: meta.partyID}] = rows
+					mu.Unlock()
+				}
+				return nil
+			})
 		}
 
-		// Skip party data if user is unaffiliated or party service is disabled
-		if !user.PartyID.Valid || user.PartyID.Int16 <= 0 || s.partyService == nil {
-			continue
+		if err := group.Wait(); err != nil {
+			return err
+		}
+	}
+
+	// 5. Populate user structs directly
+	for i := range users {
+		u := &users[i]
+
+		if c, ok := candidaciesByUserID[u.ID]; ok {
+			u.Candidacies = c
 		}
 
-		partyID := user.PartyID.Int16
-
-		// Party basic info
-		add(
-			fmt.Sprintf("%s%d", db.RedisPartyBasicInfo, partyID),
-			func(raw []byte) error {
-				return json.Unmarshal(raw, &user.PartyBasicInfo) // parse party info JSON
-			},
-			func() ([]byte, error) {
-				// Fallback to party service
-				return json.Marshal(s.partyService.GetPartyBasicInfo(ctx, partyID))
-			},
-		)
-
-		// User chapter affiliations within the party
-		add(
-			fmt.Sprintf("%s%d:%d", db.RedisUserPartyChapters, partyID, user.ID),
-			func(raw []byte) error {
-				return json.Unmarshal(raw, &user.Chapters) // parse chapters JSON
-			},
-			func() ([]byte, error) {
-				// Fallback to chapter database query
-				rows, err := s.partyService.GetUserPartyChapters(ctx, user.ID, partyID)
-				if err != nil {
-					return nil, err
-				}
-				if rows == nil {
-					rows = []queries.GetUserPartyChaptersRow{}
-				}
-				return json.Marshal(rows)
-			},
-		)
-	}
-
-	// Nothing to fetch
-	if len(relations) == 0 {
-		return nil
-	}
-
-	// Collect unique cache keys
-	keys := make([]string, 0, len(relations))
-	for key := range relations {
-		keys = append(keys, key)
-	}
-
-	// Batch fetch all keys in one Redis command
-	values, err := s.rdb.MGet(ctx, keys...).Result()
-	if err != nil {
-		// Redis is a cache: owning services can still load from the database.
-		values = make([]interface{}, len(keys))
-	}
-
-	// Concurrently resolve any cache misses
-	var group errgroup.Group
-	group.SetLimit(16) // cap parallel database lookups
-
-	for i, key := range keys {
-		relation := relations[key]
-
-		// Check if Redis returned valid cached data
-		if raw, ok := values[i].(string); ok && raw != "null" {
-			valid := true
-
-			// Apply cached data to all mapped users
-			for _, apply := range relation.apply {
-				if err := apply([]byte(raw)); err != nil {
-					valid = false
-					break
-				}
+		if u.PartyID.Valid && u.PartyID.Int16 > 0 {
+			pID := u.PartyID.Int16
+			if p, ok := partyBasicByID[pID]; ok {
+				u.PartyBasicInfo = p
 			}
-
-			// If unmarshaling succeeded, skip database load
-			if valid {
-				continue
+			if ch, ok := chaptersByKey[userPartyPair{userID: u.ID, partyID: pID}]; ok {
+				u.Chapters = ch
 			}
 		}
-
-		// Cache miss or invalid payload: fetch from source database concurrently
-		group.Go(func() error {
-			raw, err := relation.load() // fetch fresh bytes
-			if err != nil {
-				return fmt.Errorf("load profile relationship: %w", err)
-			}
-
-			// Apply freshly loaded data to all mapped users
-			for _, apply := range relation.apply {
-				if err := apply(raw); err != nil {
-					return err
-				}
-			}
-
-			return nil
-		})
 	}
 
-	// Wait for all missing loads to complete
-	return group.Wait()
+	return nil
 }

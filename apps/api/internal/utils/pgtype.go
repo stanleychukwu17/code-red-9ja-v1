@@ -91,6 +91,22 @@ func PtrFromPgInt2(i pgtype.Int2) *int16 {
 	return nil
 }
 
+// PtrFromPgInt8 converts a pgtype.Int8 to an optional int64 pointer.
+func PtrFromPgInt8(i pgtype.Int8) *int64 {
+	if i.Valid {
+		return &i.Int64
+	}
+	return nil
+}
+
+// PgInt8OrDefault reads a pgtype.Int8, returning def when the value is null.
+func PgInt8OrDefault(i pgtype.Int8, def int64) int64 {
+	if i.Valid {
+		return i.Int64
+	}
+	return def
+}
+
 // PgTextOrDefault reads a pgtype.Text, returning def when the value is null or empty.
 func PgTextOrDefault(t pgtype.Text, def string) string {
 	if t.Valid && t.String != "" {

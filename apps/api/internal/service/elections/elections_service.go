@@ -8,6 +8,7 @@ import (
 	"free9ja/api/internal/constants"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
+	"free9ja/api/internal/service/notifications"
 	"free9ja/api/internal/utils"
 	"free9ja/api/internal/worker"
 	"strings"
@@ -41,18 +42,24 @@ type bodiesService interface {
 	GetStatesByCountryID(ctx context.Context, countryID int16) ([]queries.CState, error)
 }
 
+type notificationsService interface {
+	NotifyCandidateNominated(ctx context.Context, params notifications.NotifyCandidateNominatedParams)
+	NotifyCandidateWithdrawn(ctx context.Context, params notifications.NotifyCandidateWithdrawnParams)
+}
+
 type ElectionsService struct {
-	queries         *queries.Queries
-	pool            *pgxpool.Pool
-	rdb             *redis.Client
-	taskDistributor worker.TaskDistributor
-	earningsService earningsService
-	officeService   officesService
-	bodiesService   bodiesService
+	queries              *queries.Queries
+	pool                 *pgxpool.Pool
+	rdb                  *redis.Client
+	taskDistributor      worker.TaskDistributor
+	earningsService      earningsService
+	officeService        officesService
+	bodiesService        bodiesService
+	notificationsService notificationsService
 }
 
 // NewElectionsService initializes a new ElectionsService with its required database pool,
-// query handlers, Redis client, task distributor, earnings service, offices service, and bodies service dependency.
+// query handlers, Redis client, task distributor, earnings service, offices service, bodies service, and notifications service dependency.
 func NewElectionsService(
 	q *queries.Queries,
 	pool *pgxpool.Pool,
@@ -61,15 +68,17 @@ func NewElectionsService(
 	earningsService earningsService,
 	officeService officesService,
 	bodiesService bodiesService,
+	notificationsService notificationsService,
 ) *ElectionsService {
 	return &ElectionsService{
-		queries:         q,
-		pool:            pool,
-		rdb:             rdb,
-		taskDistributor: taskDistributor,
-		earningsService: earningsService,
-		officeService:   officeService,
-		bodiesService:   bodiesService,
+		queries:              q,
+		pool:                 pool,
+		rdb:                  rdb,
+		taskDistributor:      taskDistributor,
+		earningsService:      earningsService,
+		officeService:        officeService,
+		bodiesService:        bodiesService,
+		notificationsService: notificationsService,
 	}
 }
 
@@ -1236,61 +1245,201 @@ func (s *ElectionsService) syncElectionCandidates(ctx context.Context, electionI
 	return nil
 }
 
-// FieldPartyCandidate assigns or replaces a political party's candidate for an election within a transaction.
-// It removes any existing candidate for the party, inserts the new nominee if candidateID > 0,
-// and updates the election's candidates_count.
-func (s *ElectionsService) FieldPartyCandidate(ctx context.Context, electionID int32, partyID int16, candidateID int64) error {
-	// 1. Begin database transaction
-	tx, err := s.pool.Begin(ctx)
+// FieldPartyCandidate assigns, updates, or un-fields a political party's candidate or running mate for an election.
+// slot can be "candidate" (default) or "running_mate".
+func (s *ElectionsService) FieldPartyCandidate(ctx context.Context, electionID int32, partyID int16, candidateID int64, actorUserID *int64, slot ...string) error {
+	targetSlot := "candidate"
+	if len(slot) > 0 && slot[0] == "running_mate" {
+		targetSlot = "running_mate"
+	}
+
+	// Fetch current candidacy users for cache invalidation
+	affected, err := s.queries.ListElectionCandidacyUsers(ctx, []int32{electionID})
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback(ctx)
 
-	txQueries := s.queries.WithTx(tx)
-
-	// 2. Delete any existing candidate of this party on the election
-	affected, err := txQueries.ListElectionCandidacyUsers(ctx, []int32{electionID})
-	if err != nil {
-		return err
-	}
-	err = txQueries.DeleteElectionCandidateForParty(ctx, queries.DeleteElectionCandidateForPartyParams{
+	// Retrieve any existing ballot ticket for this party in the election
+	existingTicket, err := s.queries.GetElectionCandidateForParty(ctx, queries.GetElectionCandidateForPartyParams{
 		ElectionID: electionID,
 		PartyID:    partyID,
 	})
-	if err != nil {
-		return err
-	}
+	ticketExists := err == nil
 
-	// 3. If a valid candidateID is provided (> 0), insert the candidate record
-	if candidateID > 0 {
-		affected = append(affected, queries.ListElectionCandidacyUsersRow{ID: candidateID})
-		election, err := txQueries.GetElectionInstanceByID(ctx, electionID)
-		if err != nil {
-			return fmt.Errorf("failed to retrieve election for fielding candidate: %w", err)
+	if targetSlot == "running_mate" {
+		if !ticketExists {
+			return fmt.Errorf("cannot assign running mate: ticket has no principal candidate yet")
 		}
 
-		_, err = txQueries.GetPartyByID(ctx, partyID)
-		if err != nil {
-			return fmt.Errorf("party not found: %w", err)
+		// Track previous running mate for replacement/withdrawal notifications
+		previousRunningMateID := utils.PgInt8OrDefault(existingTicket.RunningMateID, 0)
+
+		if candidateID > 0 {
+			// Ensure running mate is not the same user as the principal candidate
+			if existingTicket.CandidateID == candidateID {
+				return fmt.Errorf("running mate cannot be the same person as the principal candidate")
+			}
+
+			// Track new running mate for candidacy cache eviction
+			affected = append(affected, queries.ListElectionCandidacyUsersRow{ID: candidateID})
+			_, err = s.queries.UpdateElectionCandidateRunningMate(ctx, queries.UpdateElectionCandidateRunningMateParams{
+				RunningMateID: pgtype.Int8{Int64: candidateID, Valid: true},
+				ElectionID:    electionID,
+				PartyID:       partyID,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to update running mate: %w", err)
+			}
+
+			// Notify replaced running mate and freshly nominated running mate
+			if previousRunningMateID > 0 && previousRunningMateID != candidateID {
+				s.notificationsService.NotifyCandidateWithdrawn(ctx, notifications.NotifyCandidateWithdrawnParams{
+					PartyID:      partyID,
+					ElectionID:   electionID,
+					TargetUserID: previousRunningMateID,
+					ActorID:      actorUserID,
+					Slot:         "running_mate",
+				})
+			}
+			if candidateID != previousRunningMateID {
+				s.notificationsService.NotifyCandidateNominated(ctx, notifications.NotifyCandidateNominatedParams{
+					PartyID:      partyID,
+					ElectionID:   electionID,
+					TargetUserID: candidateID,
+					ActorID:      actorUserID,
+					Slot:         "running_mate",
+				})
+			}
+		} else if previousRunningMateID > 0 {
+			// remove the current running mate
+			_, err = s.queries.UpdateElectionCandidateRunningMate(ctx, queries.UpdateElectionCandidateRunningMateParams{
+				RunningMateID: pgtype.Int8{Valid: false},
+				ElectionID:    electionID,
+				PartyID:       partyID,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to remove running mate: %w", err)
+			}
+
+			s.notificationsService.NotifyCandidateWithdrawn(ctx, notifications.NotifyCandidateWithdrawnParams{
+				PartyID:      partyID,
+				ElectionID:   electionID,
+				TargetUserID: previousRunningMateID,
+				ActorID:      actorUserID,
+				Slot:         "running_mate",
+			})
+		}
+	} else {
+		// Retain existing ticket nominees if present
+		var currentCandidateID int64
+		var currentRunningMateID int64
+		if ticketExists {
+			currentCandidateID = existingTicket.CandidateID
+			currentRunningMateID = utils.PgInt8OrDefault(existingTicket.RunningMateID, 0)
 		}
 
-		_, err = txQueries.CreateElectionCandidate(ctx, queries.CreateElectionCandidateParams{
-			ElectionID:      electionID,
-			ElectionGroupID: election.ElectionGroupID,
-			CandidateID:     candidateID,
-			PartyID:         partyID,
-		})
-		if err != nil {
-			return err
+		if candidateID > 0 {
+			affected = append(affected, queries.ListElectionCandidacyUsersRow{ID: candidateID})
+			if ticketExists {
+				// Prevent principal candidate from colliding with current running mate
+				if currentRunningMateID == candidateID {
+					return fmt.Errorf("principal candidate cannot be the same person as the running mate")
+				}
+
+				// Update principal candidate on existing ticket
+				_, err = s.queries.UpdateElectionCandidatePrincipal(ctx, queries.UpdateElectionCandidatePrincipalParams{
+					CandidateID: candidateID,
+					ElectionID:  electionID,
+					PartyID:     partyID,
+				})
+				if err != nil {
+					return fmt.Errorf("failed to update principal candidate: %w", err)
+				}
+
+				// Notify departing candidate if replaced
+				if currentCandidateID > 0 && currentCandidateID != candidateID {
+					s.notificationsService.NotifyCandidateWithdrawn(ctx, notifications.NotifyCandidateWithdrawnParams{
+						PartyID:      partyID,
+						ElectionID:   electionID,
+						TargetUserID: currentCandidateID,
+						ActorID:      actorUserID,
+						Slot:         "candidate",
+					})
+				}
+
+				// Notify newly nominated candidate
+				if candidateID != currentCandidateID {
+					s.notificationsService.NotifyCandidateNominated(ctx, notifications.NotifyCandidateNominatedParams{
+						PartyID:      partyID,
+						ElectionID:   electionID,
+						TargetUserID: candidateID,
+						ActorID:      actorUserID,
+						Slot:         "candidate",
+					})
+				}
+			} else {
+				election, err := s.queries.GetElectionInstanceByID(ctx, electionID)
+				if err != nil {
+					return fmt.Errorf("failed to retrieve election for fielding candidate: %w", err)
+				}
+
+				_, err = s.queries.GetPartyByID(ctx, partyID)
+				if err != nil {
+					return fmt.Errorf("party not found: %w", err)
+				}
+
+				_, err = s.queries.CreateElectionCandidate(ctx, queries.CreateElectionCandidateParams{
+					ElectionID:      electionID,
+					ElectionGroupID: election.ElectionGroupID,
+					CandidateID:     candidateID,
+					PartyID:         partyID,
+				})
+				if err != nil {
+					return err
+				}
+
+				s.notificationsService.NotifyCandidateNominated(ctx, notifications.NotifyCandidateNominatedParams{
+					PartyID:      partyID,
+					ElectionID:   electionID,
+					TargetUserID: candidateID,
+					ActorID:      actorUserID,
+					Slot:         "candidate",
+				})
+			}
+		} else {
+			// Unfield principal candidate removes the entire party ticket
+			if ticketExists {
+				err = s.queries.DeleteElectionCandidateForParty(ctx, queries.DeleteElectionCandidateForPartyParams{
+					ElectionID: electionID,
+					PartyID:    partyID,
+				})
+				if err != nil {
+					return err
+				}
+
+				if currentCandidateID > 0 {
+					s.notificationsService.NotifyCandidateWithdrawn(ctx, notifications.NotifyCandidateWithdrawnParams{
+						PartyID:      partyID,
+						ElectionID:   electionID,
+						TargetUserID: currentCandidateID,
+						ActorID:      actorUserID,
+						Slot:         "candidate",
+					})
+				}
+
+				if currentRunningMateID > 0 {
+					s.notificationsService.NotifyCandidateWithdrawn(ctx, notifications.NotifyCandidateWithdrawnParams{
+						PartyID:      partyID,
+						ElectionID:   electionID,
+						TargetUserID: currentRunningMateID,
+						ActorID:      actorUserID,
+						Slot:         "running_mate",
+					})
+				}
+			}
 		}
 	}
 
-	// 4. Commit transaction
-	if err := tx.Commit(ctx); err != nil {
-		return err
-	}
-	s.invalidateCache(ctx, electionID)
 	s.invalidateCandidacyUsers(ctx, affected, false)
 	return nil
 }

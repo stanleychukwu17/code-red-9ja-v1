@@ -74,13 +74,14 @@ export function ManageCandidateTicketDialog({ open, onClose, data }: ManageCandi
 
   // Mutation to persist candidate ticket updates on the server
   const mutation = useMutation({
-    mutationFn: async ({ candidateId, runningMateId }: { candidateId?: number; runningMateId?: number }) => {
-      // Calls server action with election ID and updated candidate ID
+    mutationFn: async ({ candidateId, slot }: { candidateId: number; slot: "candidate" | "running_mate" }) => {
+      // Calls server action with election ID, slot, and updated candidate ID
       const res = await fieldPartyCandidate({
         data: {
           electionId: data.id,
-          candidateId: candidateId !== undefined ? candidateId : Number(data.candidate?.id || 0),
+          candidateId,
           partyId: userPartyId || 0,
+          slot,
         },
       });
       if (!res.success) {
@@ -96,12 +97,10 @@ export function ManageCandidateTicketDialog({ open, onClose, data }: ManageCandi
 
   // Handles member selection from the UserFinderCommand dialog
   const handleSelectUser = (selectedUsers: any[]) => {
-    if (selectedUsers.length > 0) {
+    if (selectedUsers.length > 0 && targetSlot) {
       const chosenId = selectedUsers[0].id;
       // Assign selected user to the active ticket slot
-      if (targetSlot === "candidate") {
-        mutation.mutate({ candidateId: chosenId });
-      }
+      mutation.mutate({ candidateId: chosenId, slot: targetSlot });
       // Close the member picker dialog
       setTargetSlot(null);
     }
@@ -109,10 +108,8 @@ export function ManageCandidateTicketDialog({ open, onClose, data }: ManageCandi
 
   // Removes/un-fields the assigned candidate from the ticket
   const handleRemoveCandidate = (slot: "candidate" | "running_mate") => {
-    if (slot === "candidate") {
-      // Passing candidateId: 0 removes the candidate assignment
-      mutation.mutate({ candidateId: 0 });
-    }
+    // Passing candidateId: 0 removes the candidate assignment for that slot
+    mutation.mutate({ candidateId: 0, slot });
   };
 
   return (
@@ -284,7 +281,9 @@ export function ManageCandidateTicketDialog({ open, onClose, data }: ManageCandi
                           No running mate assigned
                         </p>
                         <p className="text-xs text-c-40">
-                          Select a vice candidate to complete the nomination ticket.
+                          {data.candidate
+                            ? "Select a vice candidate to complete the nomination ticket."
+                            : "Field a principal candidate first before selecting a running mate."}
                         </p>
                       </div>
                     </div>
@@ -292,6 +291,7 @@ export function ManageCandidateTicketDialog({ open, onClose, data }: ManageCandi
                     <Button
                       variant="outline"
                       size="sm"
+                      disabled={!data.candidate}
                       onClick={() => setTargetSlot("running_mate")}
                       className="text-xs h-9 shrink-0 flex items-center gap-1.5"
                     >

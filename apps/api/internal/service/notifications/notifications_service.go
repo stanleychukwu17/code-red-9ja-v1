@@ -49,6 +49,8 @@ type NotificationsService interface {
 	NotifyNewMemberJoined(ctx context.Context, params NotifyNewMemberJoinedParams)
 	NotifyPartyOfficialAppointed(ctx context.Context, params NotifyPartyOfficialAppointedParams)
 	NotifyPartyOfficialVacated(ctx context.Context, params NotifyPartyOfficialVacatedParams)
+	NotifyCandidateNominated(ctx context.Context, params NotifyCandidateNominatedParams)
+	NotifyCandidateWithdrawn(ctx context.Context, params NotifyCandidateWithdrawnParams)
 }
 
 type service struct {
@@ -209,6 +211,22 @@ type NotifyPartyOfficialVacatedParams struct {
 	ActorID         *int64
 	AppointmentType string
 	AssignmentID    int64
+}
+
+type NotifyCandidateNominatedParams struct {
+	PartyID      int16
+	ElectionID   int32
+	TargetUserID int64
+	ActorID      *int64
+	Slot         string
+}
+
+type NotifyCandidateWithdrawnParams struct {
+	PartyID      int16
+	ElectionID   int32
+	TargetUserID int64
+	ActorID      *int64
+	Slot         string
 }
 
 // ----------------------------------------------------------------------------
@@ -752,6 +770,42 @@ func (s *service) NotifyPartyOfficialVacated(ctx context.Context, params NotifyP
 		Type:        constants.NotificationTypePartyOfficialVacated,
 		Priority:    constants.NotificationPriorityNormal,
 		Metadata:    partyMeta,
+	})
+}
+
+// NotifyCandidateNominated dispatches a notification to the fielded candidate or running mate.
+func (s *service) NotifyCandidateNominated(ctx context.Context, params NotifyCandidateNominatedParams) {
+	meta := utils.NewMetadata().
+		Set("election_id", params.ElectionID).
+		Set("party_id", params.PartyID).
+		Set("slot", params.Slot)
+
+	s.CreateNotificationAsync(ctx, CreateNotificationInput{
+		RecipientUserID: params.TargetUserID,
+		ActorUserID:     params.ActorID,
+		PartyID:         &params.PartyID,
+		Category:        constants.NotificationCategoryElection,
+		Type:            constants.NotificationTypeCandidateNominated,
+		Priority:        constants.NotificationPriorityHigh,
+		Metadata:        meta,
+	})
+}
+
+// NotifyCandidateWithdrawn dispatches a notification to the withdrawn candidate or running mate.
+func (s *service) NotifyCandidateWithdrawn(ctx context.Context, params NotifyCandidateWithdrawnParams) {
+	meta := utils.NewMetadata().
+		Set("election_id", params.ElectionID).
+		Set("party_id", params.PartyID).
+		Set("slot", params.Slot)
+
+	s.CreateNotificationAsync(ctx, CreateNotificationInput{
+		RecipientUserID: params.TargetUserID,
+		ActorUserID:     params.ActorID,
+		PartyID:         &params.PartyID,
+		Category:        constants.NotificationCategoryElection,
+		Type:            constants.NotificationTypeCandidateWithdrawn,
+		Priority:        constants.NotificationPriorityHigh,
+		Metadata:        meta,
 	})
 }
 

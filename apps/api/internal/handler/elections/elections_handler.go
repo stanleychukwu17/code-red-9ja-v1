@@ -3,6 +3,7 @@ package electionshandler
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	apimiddleware "free9ja/api/internal/middleware"
@@ -35,7 +36,8 @@ type ElectionsService interface {
 	BulkDeleteElections(ctx context.Context, params elections.BulkDeleteElectionsParams) (elections.BulkDeleteElectionsResult, error)
 	GetElectionCandidates(ctx context.Context, electionID int32) ([]queries.ListElectionCandidatesDetailedByElectionIDRow, error)
 	SyncElectionCandidates(ctx context.Context, electionID int32, candidates []elections.CandidateInput) error
-	FieldPartyCandidate(ctx context.Context, electionID int32, partyID int16, candidateID int64) error
+	FieldPartyCandidate(ctx context.Context, electionID int32, partyID int16, candidateID int64, actorUserID *int64, slot ...string) error
+	GetUserActiveCandidacies(ctx context.Context, candidateID int64) ([]queries.UserActiveCandidacy, error)
 	GetNonVotingReasons(ctx context.Context) ([]queries.NonVotingReason, error)
 	CreateDidNotVoteReason(ctx context.Context, arg queries.CreateDidNotVoteReasonParams) (queries.DidNotVoteReason, error)
 	GetEligibleElectionsForPollingUnit(ctx context.Context, electionGroupID int32, pollingUnitID int32) ([]elections.ElectionWithCandidates, error)
@@ -985,8 +987,9 @@ func (h *Handler) SyncElectionCandidates(w http.ResponseWriter, r *http.Request)
 }
 
 type FieldCandidateRequest struct {
-	CandidateID int64 `json:"candidate_id"`
-	PartyID     int16 `json:"party_id"`
+	CandidateID int64  `json:"candidate_id"`
+	PartyID     int16  `json:"party_id"`
+	Slot        string `json:"slot,omitempty"`
 }
 
 // FieldPartyCandidate handles POST /api/v1/elections/{id}/field-candidate
@@ -1090,10 +1093,32 @@ func (h *Handler) FieldPartyCandidate(w http.ResponseWriter, r *http.Request) {
 			h.utils.RespondError(w, http.StatusForbidden, "Candidate is suspended from this party")
 			return
 		}
+
+		// Verify candidate is not already running in this election cycle / election group
+		candidacies, err := h.service.GetUserActiveCandidacies(r.Context(), req.CandidateID)
+		if err != nil {
+			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to verify candidate eligibility: "+err.Error())
+			return
+		}
+		// Reject if the user is already contesting another election in this cycle
+		for _, c := range candidacies {
+			if c.ElectionGroupID == election.ElectionGroupID && c.ElectionID != int32(electionID) {
+				role := "a candidate"
+				if c.CandidacyType == "running_mate" {
+					role = "a running mate"
+				}
+				h.utils.RespondError(w, http.StatusConflict, fmt.Sprintf("User is already running as %s in %s for this election cycle", role, c.ElectionName))
+				return
+			}
+		}
 	}
 
 	// Field candidate under the party
-	err = h.service.FieldPartyCandidate(r.Context(), int32(electionID), req.PartyID, req.CandidateID)
+	var actorID *int64
+	if user.ID > 0 {
+		actorID = &user.ID
+	}
+	err = h.service.FieldPartyCandidate(r.Context(), int32(electionID), req.PartyID, req.CandidateID, actorID, req.Slot)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to field candidate: "+err.Error())
 		return

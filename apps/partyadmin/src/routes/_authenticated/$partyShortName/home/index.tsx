@@ -76,31 +76,37 @@ function ReadinessComponent() {
   const fetchElectionStatsFn = useServerFn(getElectionStats);
 
   // Party wallet query
-  const { data: walletRes, refetch: refetchWallet } = useQuery({
-    queryKey: ["partyWallet", partyId],
-    queryFn: () => getPartyWallet({ data: partyId! }),
-    enabled: !!partyId,
-  });
+  // const { data: walletRes, refetch: refetchWallet } = useQuery({
+  //   queryKey: ["partyWallet", partyId],
+  //   queryFn: () => getPartyWallet({ data: partyId! }),
+  //   enabled: !!partyId,
+  // });
 
   // Marketing campaigns query
-  const { data: campaignsRes } = useQuery({
-    queryKey: ["partyMarketingCampaigns", partyId],
-    queryFn: () => getPartyMarketingCampaigns({ data: Number(partyId) }),
-    enabled: !!partyId,
-  });
+  // const { data: campaignsRes } = useQuery({
+  //   queryKey: ["partyMarketingCampaigns", partyId],
+  //   queryFn: () => getPartyMarketingCampaigns({ data: Number(partyId) }),
+  //   enabled: !!partyId,
+  // });
 
   // Determine active marketing campaigns setup
-  const campaigns = campaignsRes?.data?.campaigns || [];
-  const activeCampaignsCount = campaigns.filter((c: any) => {
-    if (!c.end_date) return true;
-    return new Date(c.end_date) > new Date();
-  }).length;
-  const hasMarketingSetup = activeCampaignsCount > 0;
+  // const campaigns = campaignsRes?.data?.campaigns || [];
+  // const activeCampaignsCount = campaigns.filter((c: any) => {
+  //   if (!c.end_date) return true;
+  //   return new Date(c.end_date) > new Date();
+  // }).length;
+  // const hasMarketingSetup = activeCampaignsCount > 0;
 
   // Safely extract the wallet, handling the case where it might be returned unwrapped from the cache
-  const wallet =
-    walletRes?.data?.wallet ||
-    ((walletRes as any)?.id ? (walletRes as any) : undefined);
+  // const wallet =
+  //   walletRes?.data?.wallet ||
+  //   ((walletRes as any)?.id ? (walletRes as any) : undefined);
+
+  // Temporary fallbacks while backend integration is updated
+  const wallet = undefined;
+  const activeCampaignsCount = 0;
+  const hasMarketingSetup = false;
+  const refetchWallet = () => { };
 
 
   const { data: electionStatsData, isLoading: isStatsLoading } = useQuery({
@@ -185,7 +191,8 @@ function ReadinessComponent() {
         {/* Right Hand Column */}
         <div className="space-y-6">
           <FinancialOverallCard
-            walletBalance={wallet?.balance_kobo || 0}
+            // walletBalance={wallet?.balance_kobo || 0}
+            walletBalance={+60}
             slots={party?.slots || 0}
             agentPaymentBalance={party?.agent_payment_balance_kobo || 0}
             activeCampaignsCount={activeCampaignsCount}

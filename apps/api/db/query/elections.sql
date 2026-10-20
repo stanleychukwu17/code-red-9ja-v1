@@ -67,6 +67,10 @@ SELECT
     u.first_name,
     u.last_name,
     u.avatar,
+    ec.running_mate_id,
+    rm.first_name AS running_mate_first_name,
+    rm.last_name AS running_mate_last_name,
+    rm.avatar AS running_mate_avatar,
     ec.party_id,
     p.short_name AS party_short_name,
     p.logo AS party_logo,
@@ -74,9 +78,26 @@ SELECT
     p.dark_color_hex AS party_dark_color_hex
 FROM election_candidates ec
 JOIN users u ON ec.candidate_id = u.id
+LEFT JOIN users rm ON ec.running_mate_id = rm.id
 LEFT JOIN parties p ON ec.party_id = p.id
 WHERE ec.election_id = $1
 ORDER BY ec.id ASC;
+
+-- name: GetElectionCandidateForParty :one
+SELECT * FROM election_candidates
+WHERE election_id = $1 AND party_id = $2;
+
+-- name: UpdateElectionCandidateRunningMate :one
+UPDATE election_candidates
+SET running_mate_id = $1, updated_at = NOW()
+WHERE election_id = $2 AND party_id = $3
+RETURNING *;
+
+-- name: UpdateElectionCandidatePrincipal :one
+UPDATE election_candidates
+SET candidate_id = $1, updated_at = NOW()
+WHERE election_id = $2 AND party_id = $3
+RETURNING *;
 
 -- name: DeleteElectionCandidatesForElection :exec
 DELETE FROM election_candidates WHERE election_id = $1;

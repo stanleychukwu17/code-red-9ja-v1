@@ -107,6 +107,10 @@ export const getElections = createServerFn({ method: "GET" })
                       resolvedPartyShortName.toLowerCase(),
                   );
                   if (partyCand) {
+                    const runningMateId = partyCand.running_mate_id?.Int64 ?? (typeof partyCand.running_mate_id === "number" ? partyCand.running_mate_id : undefined);
+                    const runningMateFirstName = getVal(partyCand.running_mate_first_name);
+                    const runningMateLastName = getVal(partyCand.running_mate_last_name);
+                    const runningMateName = `${runningMateFirstName} ${runningMateLastName}`.trim();
                     return {
                       ...election,
                       candidate: {
@@ -114,6 +118,11 @@ export const getElections = createServerFn({ method: "GET" })
                         name: `${getVal(partyCand.first_name)} ${getVal(partyCand.last_name)}`.trim(),
                         avatar: getVal(partyCand.avatar),
                       },
+                      runningMate: runningMateId ? {
+                        id: runningMateId,
+                        name: runningMateName,
+                        avatar: getVal(partyCand.running_mate_avatar),
+                      } : undefined,
                     };
                   }
                 }
@@ -138,10 +147,10 @@ export const getElections = createServerFn({ method: "GET" })
 
 export const fieldPartyCandidate = createServerFn({ method: "POST" })
   .inputValidator(
-    (data: { electionId: number; candidateId: number; partyId: number }) =>
+    (data: { electionId: number; candidateId: number; partyId: number; slot?: "candidate" | "running_mate" }) =>
       data,
   )
-  .handler(async ({ data: { electionId, candidateId, partyId } }) => {
+  .handler(async ({ data: { electionId, candidateId, partyId, slot = "candidate" } }) => {
     try {
       const response = await apiFetch(
         `${API_URL.elections}/${electionId}/field-candidate`,
@@ -153,6 +162,7 @@ export const fieldPartyCandidate = createServerFn({ method: "POST" })
           body: JSON.stringify({
             candidate_id: candidateId,
             party_id: partyId,
+            slot,
           }),
         },
       );

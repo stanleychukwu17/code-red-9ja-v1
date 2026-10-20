@@ -452,6 +452,10 @@ SELECT
     u.first_name,
     u.last_name,
     u.avatar,
+    ec.running_mate_id,
+    rm.first_name AS running_mate_first_name,
+    rm.last_name AS running_mate_last_name,
+    rm.avatar AS running_mate_avatar,
     ec.party_id,
     p.short_name AS party_short_name,
     p.logo AS party_logo,
@@ -459,24 +463,29 @@ SELECT
     p.dark_color_hex AS party_dark_color_hex
 FROM election_candidates ec
 JOIN users u ON ec.candidate_id = u.id
+LEFT JOIN users rm ON ec.running_mate_id = rm.id
 LEFT JOIN parties p ON ec.party_id = p.id
 WHERE ec.election_id = $1
 ORDER BY ec.id ASC
 `
 
 type ListElectionCandidatesDetailedByElectionIDRow struct {
-	ID                int32       `json:"id"`
-	ElectionID        int32       `json:"election_id"`
-	ElectionGroupID   int32       `json:"election_group_id"`
-	CandidateID       int64       `json:"candidate_id"`
-	FirstName         pgtype.Text `json:"first_name"`
-	LastName          pgtype.Text `json:"last_name"`
-	Avatar            pgtype.Text `json:"avatar"`
-	PartyID           int16       `json:"party_id"`
-	PartyShortName    pgtype.Text `json:"party_short_name"`
-	PartyLogo         pgtype.Text `json:"party_logo"`
-	PartyColorHex     pgtype.Text `json:"party_color_hex"`
-	PartyDarkColorHex pgtype.Text `json:"party_dark_color_hex"`
+	ID                   int32       `json:"id"`
+	ElectionID           int32       `json:"election_id"`
+	ElectionGroupID      int32       `json:"election_group_id"`
+	CandidateID          int64       `json:"candidate_id"`
+	FirstName            pgtype.Text `json:"first_name"`
+	LastName             pgtype.Text `json:"last_name"`
+	Avatar               pgtype.Text `json:"avatar"`
+	RunningMateID        pgtype.Int8 `json:"running_mate_id"`
+	RunningMateFirstName pgtype.Text `json:"running_mate_first_name"`
+	RunningMateLastName  pgtype.Text `json:"running_mate_last_name"`
+	RunningMateAvatar    pgtype.Text `json:"running_mate_avatar"`
+	PartyID              int16       `json:"party_id"`
+	PartyShortName       pgtype.Text `json:"party_short_name"`
+	PartyLogo            pgtype.Text `json:"party_logo"`
+	PartyColorHex        pgtype.Text `json:"party_color_hex"`
+	PartyDarkColorHex    pgtype.Text `json:"party_dark_color_hex"`
 }
 
 func (q *Queries) ListElectionCandidatesDetailedByElectionID(ctx context.Context, electionID int32) ([]ListElectionCandidatesDetailedByElectionIDRow, error) {
@@ -496,6 +505,10 @@ func (q *Queries) ListElectionCandidatesDetailedByElectionID(ctx context.Context
 			&i.FirstName,
 			&i.LastName,
 			&i.Avatar,
+			&i.RunningMateID,
+			&i.RunningMateFirstName,
+			&i.RunningMateLastName,
+			&i.RunningMateAvatar,
 			&i.PartyID,
 			&i.PartyShortName,
 			&i.PartyLogo,
@@ -510,6 +523,90 @@ func (q *Queries) ListElectionCandidatesDetailedByElectionID(ctx context.Context
 		return nil, err
 	}
 	return items, nil
+}
+
+const getElectionCandidateForParty = `-- name: GetElectionCandidateForParty :one
+SELECT id, election_id, election_group_id, candidate_id, running_mate_id, party_id, updated_at, created_at FROM election_candidates
+WHERE election_id = $1 AND party_id = $2
+`
+
+type GetElectionCandidateForPartyParams struct {
+	ElectionID int32 `json:"election_id"`
+	PartyID    int16 `json:"party_id"`
+}
+
+func (q *Queries) GetElectionCandidateForParty(ctx context.Context, arg GetElectionCandidateForPartyParams) (ElectionCandidate, error) {
+	row := q.db.QueryRow(ctx, getElectionCandidateForParty, arg.ElectionID, arg.PartyID)
+	var i ElectionCandidate
+	err := row.Scan(
+		&i.ID,
+		&i.ElectionID,
+		&i.ElectionGroupID,
+		&i.CandidateID,
+		&i.RunningMateID,
+		&i.PartyID,
+		&i.UpdatedAt,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const updateElectionCandidateRunningMate = `-- name: UpdateElectionCandidateRunningMate :one
+UPDATE election_candidates
+SET running_mate_id = $1, updated_at = NOW()
+WHERE election_id = $2 AND party_id = $3
+RETURNING id, election_id, election_group_id, candidate_id, running_mate_id, party_id, updated_at, created_at
+`
+
+type UpdateElectionCandidateRunningMateParams struct {
+	RunningMateID pgtype.Int8 `json:"running_mate_id"`
+	ElectionID    int32       `json:"election_id"`
+	PartyID       int16       `json:"party_id"`
+}
+
+func (q *Queries) UpdateElectionCandidateRunningMate(ctx context.Context, arg UpdateElectionCandidateRunningMateParams) (ElectionCandidate, error) {
+	row := q.db.QueryRow(ctx, updateElectionCandidateRunningMate, arg.RunningMateID, arg.ElectionID, arg.PartyID)
+	var i ElectionCandidate
+	err := row.Scan(
+		&i.ID,
+		&i.ElectionID,
+		&i.ElectionGroupID,
+		&i.CandidateID,
+		&i.RunningMateID,
+		&i.PartyID,
+		&i.UpdatedAt,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const updateElectionCandidatePrincipal = `-- name: UpdateElectionCandidatePrincipal :one
+UPDATE election_candidates
+SET candidate_id = $1, updated_at = NOW()
+WHERE election_id = $2 AND party_id = $3
+RETURNING id, election_id, election_group_id, candidate_id, running_mate_id, party_id, updated_at, created_at
+`
+
+type UpdateElectionCandidatePrincipalParams struct {
+	CandidateID int64 `json:"candidate_id"`
+	ElectionID  int32 `json:"election_id"`
+	PartyID     int16 `json:"party_id"`
+}
+
+func (q *Queries) UpdateElectionCandidatePrincipal(ctx context.Context, arg UpdateElectionCandidatePrincipalParams) (ElectionCandidate, error) {
+	row := q.db.QueryRow(ctx, updateElectionCandidatePrincipal, arg.CandidateID, arg.ElectionID, arg.PartyID)
+	var i ElectionCandidate
+	err := row.Scan(
+		&i.ID,
+		&i.ElectionID,
+		&i.ElectionGroupID,
+		&i.CandidateID,
+		&i.RunningMateID,
+		&i.PartyID,
+		&i.UpdatedAt,
+		&i.CreatedAt,
+	)
+	return i, err
 }
 
 const listElectionInstances = `-- name: ListElectionInstances :many
