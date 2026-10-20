@@ -9,7 +9,6 @@ import {
 import { getElectionGroups } from "#/lib/server/election_groups";
 import { getElectionsByGroup } from "#/lib/server/elections";
 import { useServerFn } from "@tanstack/react-start";
-import { ElectionScopeSelector } from "../home/components/-election-scope-selector";
 import { IconInput } from "@repo/ui/components/input";
 
 /**
@@ -68,8 +67,7 @@ export function AgentsFilterBar({
   setSearch: (val: string) => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-4 flex-wrap">
-      <ElectionScopeSelector />
+    <div className="flex items-center justify-end gap-4 flex-wrap">
       <IconInput
         type="text"
         placeholder="Search"

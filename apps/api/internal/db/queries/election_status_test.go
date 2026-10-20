@@ -63,7 +63,7 @@ VALUES (101,'test',1,1,1),(102,'test',1,1,1)`)
 	}
 	// Principal and running-mate lookups use the same indexed active date range.
 	for userID, kind := range map[int64]string{1: "principal", 2: "running_mate"} {
-		rows, err := q.GetUserActiveCandidacies(ctx, queries.GetUserActiveCandidaciesParams{CandidateID: userID, Today: date})
+		rows, err := q.GetUserActiveCandidacies(ctx, userID)
 		require.NoError(t, err)
 		names := make([]string, 0, len(rows))
 		for _, row := range rows {

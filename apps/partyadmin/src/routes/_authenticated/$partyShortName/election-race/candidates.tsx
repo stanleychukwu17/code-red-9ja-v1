@@ -7,7 +7,7 @@ import type { CandidateResultItem } from "#/components/tiles/candidate-result-ti
 import { useElection } from "#/hooks/useElection";
 import { getScopedElectionResult } from "#/lib/server/election-results";
 import { getPageHeader } from "#/lib/shared/meta";
-import { ElectionRaceFilterBar, ElectionRaceHeaderRight } from "./-components";
+import { ElectionRaceHeaderRight } from "./-components";
 import { getElectionRaceTabs } from "./-data";
 
 /**
@@ -92,7 +92,6 @@ function CandidatesPage() {
           <ElectionRaceHeaderRight isLive={isLive} setIsLive={setIsLive} />
         }
       />
-      <ElectionRaceFilterBar />
 
       {isLoading ? (
         <div className="py-16 text-center text-c-50 text-[15px]">

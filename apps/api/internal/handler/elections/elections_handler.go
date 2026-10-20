@@ -979,6 +979,7 @@ func (h *Handler) SyncElectionCandidates(w http.ResponseWriter, r *http.Request)
 
 type FieldCandidateRequest struct {
 	CandidateID int64 `json:"candidate_id"`
+	PartyID     int16 `json:"party_id,omitempty"`
 }
 
 // FieldPartyCandidate handles POST /api/v1/elections/{id}/field-candidate
@@ -991,8 +992,8 @@ func (h *Handler) FieldPartyCandidate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verify user authentication claims
-	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
+	// Verify user authentication claims and enforce party admin roles
+	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey, "party_admin", "super_party_admin", "admin", "super_admin")
 	if !ok {
 		return
 	}
@@ -1012,13 +1013,21 @@ func (h *Handler) FieldPartyCandidate(w http.ResponseWriter, r *http.Request) {
 		h.utils.RespondError(w, http.StatusUnauthorized, "User not found")
 		return
 	}
-	if !user.PartyID.Valid {
+
+	partyID := int16(0)
+	if user.PartyID.Valid {
+		partyID = user.PartyID.Int16
+	} else if claims.HasAnyRole("super_admin", "admin") && req.PartyID > 0 {
+		partyID = req.PartyID
+	}
+
+	if partyID == 0 {
 		h.utils.RespondError(w, http.StatusForbidden, "User is not associated with a party")
 		return
 	}
 
-	// Field candidate under the authenticated user's party
-	err = h.service.FieldPartyCandidate(r.Context(), int32(id), user.PartyID.Int16, req.CandidateID)
+	// Field candidate under the party
+	err = h.service.FieldPartyCandidate(r.Context(), int32(id), partyID, req.CandidateID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to field candidate: "+err.Error())
 		return

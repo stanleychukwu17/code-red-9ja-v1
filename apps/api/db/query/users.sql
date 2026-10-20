@@ -145,7 +145,14 @@ WHERE
   AND (sqlc.narg('account_status')::text[] IS NULL OR u.account_status = ANY(sqlc.narg('account_status')::text[]))
   AND (sqlc.narg('country_ids')::smallint[] IS NULL OR u.current_country = ANY(sqlc.narg('country_ids')::smallint[]))
   AND (sqlc.narg('state_ids')::smallint[] IS NULL OR u.current_state = ANY(sqlc.narg('state_ids')::smallint[]))
-ORDER BY u.id DESC
+ORDER BY 
+  CASE 
+    WHEN sqlc.narg('search')::text IS NOT NULL AND (LOWER(u.username) = LOWER(sqlc.narg('search')::text) OR LOWER(u.username) = LOWER(LTRIM(sqlc.narg('search')::text, '@'))) THEN 1
+    WHEN sqlc.narg('search')::text IS NOT NULL AND (u.username ILIKE sqlc.narg('search')::text || '%' OR u.username ILIKE LTRIM(sqlc.narg('search')::text, '@') || '%') THEN 2
+    WHEN sqlc.narg('search')::text IS NOT NULL AND (LOWER(u.first_name) = LOWER(sqlc.narg('search')::text) OR LOWER(u.last_name) = LOWER(sqlc.narg('search')::text) OR LOWER(u.first_name || ' ' || u.last_name) = LOWER(sqlc.narg('search')::text)) THEN 3
+    ELSE 4
+  END ASC,
+  u.id DESC
 LIMIT sqlc.arg('limit_num')::int;
 
 -- name: SearchUsers :many
@@ -166,7 +173,14 @@ WHERE
   AND (sqlc.narg('party_id')::smallint IS NULL OR u.party_id = sqlc.narg('party_id')::smallint)
   AND (sqlc.narg('is_politician')::boolean IS NULL OR u.is_politician = sqlc.narg('is_politician')::boolean)
   AND (sqlc.narg('is_verified')::boolean IS NULL OR u.is_verified = sqlc.narg('is_verified')::boolean)
-ORDER BY u.id DESC
+ORDER BY 
+  CASE 
+    WHEN sqlc.narg('search')::text IS NOT NULL AND (LOWER(u.username) = LOWER(sqlc.narg('search')::text) OR LOWER(u.username) = LOWER(LTRIM(sqlc.narg('search')::text, '@'))) THEN 1
+    WHEN sqlc.narg('search')::text IS NOT NULL AND (u.username ILIKE sqlc.narg('search')::text || '%' OR u.username ILIKE LTRIM(sqlc.narg('search')::text, '@') || '%') THEN 2
+    WHEN sqlc.narg('search')::text IS NOT NULL AND (LOWER(u.first_name) = LOWER(sqlc.narg('search')::text) OR LOWER(u.last_name) = LOWER(sqlc.narg('search')::text) OR LOWER(u.first_name || ' ' || u.last_name) = LOWER(sqlc.narg('search')::text)) THEN 3
+    ELSE 4
+  END ASC,
+  u.id DESC
 LIMIT sqlc.arg('limit_num')::int;
 
 -- name: DeleteUser :exec

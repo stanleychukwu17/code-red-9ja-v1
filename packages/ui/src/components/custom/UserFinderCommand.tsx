@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useDebounceValue, useIntersectionObserver } from "usehooks-ts";
 import { Check, Loader2, Search, X } from "lucide-react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from "../command";
@@ -69,6 +70,47 @@ type UserFinderCommandProps = {
   selectMode?: "single" | "multiple";
 };
 
+/**
+ * Renders user's geopolitical party chapter affiliations (State, LGA, Ward)
+ * in a responsive 3-column horizontal split.
+ */
+function UserChaptersList({ chapters }: { chapters?: UserChapter[] }) {
+  if (!chapters || chapters.length === 0) return null;
+
+  // Extract the specific geopolitical chapter levels
+  const stateName = chapters.find((ch) => ch.state_name)?.state_name;
+  const lgaName = chapters.find((ch) => ch.lga_name)?.lga_name;
+  const wardName = chapters.find((ch) => ch.ward_name)?.ward_name;
+
+  if (!stateName && !lgaName && !wardName) return null;
+
+  return (
+    <div className="w-full flex items-center mt-2">
+      {/* State Chapter */}
+      {stateName && (
+        <div className="text-xs w-[33%] min-w-0 pr-2">
+          <div className="text-[11px] text-c-50 leading-tight truncate">State chapter</div>
+          <div className="pt-1 text-xs font-medium text-c-80 leading-tight truncate">{stateName}</div>
+        </div>
+      )}
+      {/* LGA Chapter */}
+      {lgaName && (
+        <div className="text-xs w-[33%] min-w-0 pr-2">
+          <div className="text-[11px] text-c-50 leading-tight truncate">LGA chapter</div>
+          <div className="pt-1 text-xs font-medium text-c-80 leading-tight truncate">{lgaName}</div>
+        </div>
+      )}
+      {/* Ward Chapter */}
+      {wardName && (
+        <div className="text-xs w-[33%] min-w-0">
+          <div className="text-[11px] text-c-50 leading-tight truncate">Ward chapter</div>
+          <div className="pt-1 text-xs font-medium text-c-80 leading-tight truncate">{wardName}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function UserFinderCommand({
   open,
   onClose,
@@ -83,17 +125,7 @@ export function UserFinderCommand({
 }: UserFinderCommandProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
-
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
-
-  // Debounce search query
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearchQuery(searchQuery);
-    }, 300);
-
-    return () => clearTimeout(handler);
-  }, [searchQuery]);
+  const [debouncedSearchQuery] = useDebounceValue(searchQuery, 300);
 
   // Fetch users list with infinite scrolling
   const { data, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage } = useInfiniteQuery<{ users: User[]; nextCursor?: string | number | null }>({
@@ -104,22 +136,20 @@ export function UserFinderCommand({
     getNextPageParam: (lastPage) => lastPage?.nextCursor || undefined,
     initialPageParam: undefined as string | number | undefined,
     enabled: open,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
   });
 
-  // Auto-fetch next page on scroll via Intersection Observer
-  const observerRef = useRef<IntersectionObserver | null>(null);
-  const loadMoreRef = useCallback((node: HTMLDivElement | null) => {
-    if (isLoading || isFetchingNextPage) return;
-    if (observerRef.current) observerRef.current.disconnect();
+  // Auto-fetch next page on scroll via useIntersectionObserver
+  const { ref: sentinelRef, isIntersecting } = useIntersectionObserver({
+    threshold: 0.1,
+  });
 
-    observerRef.current = new IntersectionObserver((entries) => {
-      if (entries[0]?.isIntersecting && hasNextPage) {
-        fetchNextPage();
-      }
-    });
-
-    if (node) observerRef.current.observe(node);
-  }, [isLoading, isFetchingNextPage, hasNextPage, fetchNextPage]);
+  useEffect(() => {
+    if (isIntersecting && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [isIntersecting, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   // Reset local state when dialog opens
   useEffect(() => {
@@ -167,6 +197,7 @@ export function UserFinderCommand({
   };
 
   return (
+    // Main modal dialog wrapper with backdrop and 85vh max height
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-[680px] p-0 rounded-[24px] border-none shadow-2xl bg-white overflow-hidden max-h-[85vh] flex flex-col gap-0">
         <Command
@@ -174,12 +205,14 @@ export function UserFinderCommand({
           shouldFilter={false}
         >
           <DialogPadding className="py-5 flex flex-col gap-3 flex-1 min-h-0">
+            {/* Title Header (if provided) */}
             {title && (
               <DialogTitle className="text-[18px] font-semibold text-c-90 px-0.5">
                 {title}
               </DialogTitle>
             )}
 
+            {/* Search bar input that takes the query and debounces it (300ms) before querying fetchUsers */}
             <IconInput
               placeholder={placeholder}
               value={searchQuery}
@@ -187,6 +220,7 @@ export function UserFinderCommand({
               className="h-12 shrink-0"
             />
 
+            {/* Horizontal tags list showing pills of selected members with remove (X) buttons (multi-select mode only) */}
             {selectMode === "multiple" && selectedUsers.length > 0 && (
               <div className="flex flex-wrap gap-2.5 shrink-0 max-h-[100px] overflow-y-auto">
                 {selectedUsers.map((u) => (
@@ -202,16 +236,20 @@ export function UserFinderCommand({
               </div>
             )}
 
+            {/* Scrollable container (max-h-[70vh]) for results */}
             <CommandList className="flex-1 overflow-y-auto min-h-[250px] max-h-[70vh] pointer-events-auto pb-10">
+              {/* Loading spinner */}
               {isLoading ? (
                 <div className="py-12 flex justify-center items-center">
                   <Loader2 className="size-8 text-[#00cf79] animate-spin" />
                 </div>
               ) : filteredUsers.length === 0 ? (
+                /* Empty state when no users match */
                 <CommandEmpty className="py-12 text-center text-[15px] text-gray-400 font-semibold">
                   No users found
                 </CommandEmpty>
               ) : (
+                /* Result list mapping through filteredUsers */
                 <CommandGroup className="p-0">
                   <div className="space-y-1">
                     {filteredUsers.map((user) => {
@@ -224,55 +262,38 @@ export function UserFinderCommand({
                           value={user.id.toString()}
                           onSelect={() => handleToggleSelect(user)}
                         >
-                          <div className="flex items-center gap-3.5 md:gap-4 w-full min-w-0">
+                          <div className="flex items-center gap-3.5 md:gap-4 py-1.5 w-full min-w-0 cursor-pointer">
+                            {/* Avatar with party logo overlay badge */}
                             <div className="relative shrink-0">
                               <AppAvatar
                                 src={user.avatar}
                                 alt={`${user.first_name} ${user.last_name}`}
-                                fallbackText={user.first_name
-                                  .charAt(0)
-                                  .toUpperCase()}
-                                className="size-11 rounded-full aspect-square object-cover"
+                                className="size-17 rounded-full aspect-square object-cover"
                               />
                               {(user.party_logo || user.party_basic_info?.logo) && (
                                 <img
                                   src={user.party_logo || user.party_basic_info?.logo}
                                   alt={user.party_short_name || user.party_basic_info?.short_name || "Party"}
-                                  className="size-4.5 rounded-full absolute -bottom-0.5 -right-0.5 border border-white bg-white shadow-xs object-contain"
+                                  className="size-6 rounded-full absolute -bottom-0.5 -right-0.5 border border-white bg-white shadow-xs object-contain"
                                 />
                               )}
                             </div>
-                            <div className="flex flex-col min-w-0 flex-1 text-left">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="font-semibold text-[15px] text-c-90 truncate">
-                                  {`${user.first_name} ${user.last_name}`}
-                                </span>
-                                {(user.party_short_name || user.party_basic_info?.short_name) && (
-                                  <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-c-10 text-c-70 uppercase tracking-wider">
-                                    {user.party_short_name || user.party_basic_info?.short_name}
-                                  </span>
-                                )}
-                              </div>
 
-                              {/* Chapters Display */}
-                              {user.chapters && user.chapters.length > 0 && (
-                                <p className="text-xs text-c-50 truncate mt-0.5">
-                                  {user.chapters
-                                    .map((ch) =>
-                                      ch.ward_name
-                                        ? `${ch.ward_name} Ward`
-                                        : ch.lga_name
-                                          ? `${ch.lga_name} LGA`
-                                          : ch.state_name
-                                            ? `${ch.state_name} State`
-                                            : `${ch.chapter_type.toUpperCase()} Chapter`
-                                    )
-                                    .slice(0, 2)
-                                    .join(" • ")}
-                                </p>
+                            {/* Candidate details: Full name, party code, chapters, and active candidacies */}
+                            <div className="flex flex-col min-w-0 flex-1 text-left">
+                              <span className="font-semibold text-[15px] text-c-90 truncate leading-snug">
+                                {`${user.first_name} ${user.last_name}`}
+                              </span>
+                              {user.username && (
+                                <span className="text-[11px] text-c-40 font-normal leading-none truncate mt-0.5">
+                                  @{user.username.replace(/^@/, "")}
+                                </span>
                               )}
 
-                              {/* Active Candidacies Display Warning */}
+                              {/* Geopolitical Chapter Affiliations (State, LGA, and Ward tiers) */}
+                              <UserChaptersList chapters={user.chapters} />
+
+                              {/* Active Candidacies Warning Badge (if running in other elections) */}
                               {user.candidacies && user.candidacies.length > 0 && (
                                 <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                                   {user.candidacies.map((can) => (
@@ -292,6 +313,7 @@ export function UserFinderCommand({
                             </div>
                           </div>
 
+                          {/* Checkmark icon when a user is selected in multiple mode */}
                           {selectMode === "multiple" && isSelected && (
                             <div className="shrink-0 [&_svg]:size-6">
                               <FancyCheckIcon />
@@ -301,18 +323,15 @@ export function UserFinderCommand({
                       );
                     })}
                   </div>
-                  {/* Sentinel element for infinite scroll */}
+
+                  {/* Intersection observer sentinel element at the bottom of the list that triggers fetchNextPage() as you scroll down */}
                   {hasNextPage && (
                     <div
-                      ref={loadMoreRef}
+                      ref={sentinelRef}
                       className="py-6 flex items-center justify-center text-c-50 text-[14px]"
                     >
-                      {isFetchingNextPage ? (
-                        <Loader2 className="size-5 animate-spin mr-2" />
-                      ) : null}
-                      {isFetchingNextPage
-                        ? "Loading more..."
-                        : "Scroll down to load more"}
+                      {isFetchingNextPage ? (<Loader2 className="size-5 animate-spin mr-2" />) : null}
+                      {isFetchingNextPage ? "Loading more..." : "Scroll down to load more"}
                     </div>
                   )}
                 </CommandGroup>
@@ -321,7 +340,7 @@ export function UserFinderCommand({
           </DialogPadding>
         </Command>
 
-        {/* Footer with primary black button (only in multiple selection mode) */}
+        {/* Footer containing the "Add all selected" button (only visible when selectMode === "multiple") */}
         {selectMode === "multiple" && (
           <DialogFooter>
             <Button

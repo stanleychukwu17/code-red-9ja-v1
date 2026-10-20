@@ -369,6 +369,11 @@ func loadFile(ctx context.Context, filePath string, pool *pgxpool.Pool, batchSiz
 						VALUES ($1, $2, $3, 'active')
 						ON CONFLICT (user_id, party_id, chapter_id) DO NOTHING
 					`, iu.ID, pID, natID)
+					secBatch.Queue(`
+						INSERT INTO party_follows (user_id, party_id, chapter_id)
+						VALUES ($1, $2, $3)
+						ON CONFLICT (user_id, party_id, chapter_id) DO NOTHING
+					`, iu.ID, pID, natID)
 				}
 
 				// 5b. State Chapter
@@ -393,6 +398,11 @@ func loadFile(ctx context.Context, filePath string, pool *pgxpool.Pool, batchSiz
 						secBatch.Queue(`
 							INSERT INTO party_membership (user_id, party_id, chapter_id, status)
 							VALUES ($1, $2, $3, 'active')
+							ON CONFLICT (user_id, party_id, chapter_id) DO NOTHING
+						`, iu.ID, pID, stID)
+						secBatch.Queue(`
+							INSERT INTO party_follows (user_id, party_id, chapter_id)
+							VALUES ($1, $2, $3)
 							ON CONFLICT (user_id, party_id, chapter_id) DO NOTHING
 						`, iu.ID, pID, stID)
 					}
@@ -423,6 +433,11 @@ func loadFile(ctx context.Context, filePath string, pool *pgxpool.Pool, batchSiz
 							VALUES ($1, $2, $3, 'active')
 							ON CONFLICT (user_id, party_id, chapter_id) DO NOTHING
 						`, iu.ID, pID, lgaCID)
+						secBatch.Queue(`
+							INSERT INTO party_follows (user_id, party_id, chapter_id)
+							VALUES ($1, $2, $3)
+							ON CONFLICT (user_id, party_id, chapter_id) DO NOTHING
+						`, iu.ID, pID, lgaCID)
 					}
 				}
 
@@ -449,6 +464,11 @@ func loadFile(ctx context.Context, filePath string, pool *pgxpool.Pool, batchSiz
 						secBatch.Queue(`
 							INSERT INTO party_membership (user_id, party_id, chapter_id, status)
 							VALUES ($1, $2, $3, 'active')
+							ON CONFLICT (user_id, party_id, chapter_id) DO NOTHING
+						`, iu.ID, pID, wardCID)
+						secBatch.Queue(`
+							INSERT INTO party_follows (user_id, party_id, chapter_id)
+							VALUES ($1, $2, $3)
 							ON CONFLICT (user_id, party_id, chapter_id) DO NOTHING
 						`, iu.ID, pID, wardCID)
 					}

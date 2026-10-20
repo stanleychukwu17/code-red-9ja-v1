@@ -313,7 +313,7 @@ type Querier interface {
 	GetUnmatchedPollingUnitResultByID(ctx context.Context, id int64) (UnmatchedPollingUnitResult, error)
 	GetUnreadNotificationsCount(ctx context.Context, recipientUserID int64) (int64, error)
 	GetUnreadPartyNotificationsCountForUser(ctx context.Context, arg GetUnreadPartyNotificationsCountForUserParams) (int64, error)
-	GetUserActiveCandidacies(ctx context.Context, arg GetUserActiveCandidaciesParams) ([]GetUserActiveCandidaciesRow, error)
+	GetUserActiveCandidacies(ctx context.Context, candidateID int64) ([]GetUserActiveCandidaciesRow, error)
 	GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (GetUserByFakeIDRow, error)
 	GetUserByID(ctx context.Context, id int64) (GetUserByIDRow, error)
 	GetUserDidNotVoteReason(ctx context.Context, arg GetUserDidNotVoteReasonParams) (GetUserDidNotVoteReasonRow, error)

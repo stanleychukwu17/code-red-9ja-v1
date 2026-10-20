@@ -582,7 +582,6 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Get("/api/v1/election-groups/{id}/stats/lgas/{lga_id}/parties/{party_id}", electionStatsHandler.GetSingleLGAStats)
 		r.Get("/api/v1/election-groups/{id}/stats/wards/{ward_id}/parties/{party_id}", electionStatsHandler.GetSingleWardStats)
 
-		r.Post("/api/v1/elections/{id}/field-candidate", electionsHandler.FieldPartyCandidate)
 		r.Post("/api/v1/parties/{id}/wallet/withdraw", partiesHandler.WithdrawFromPartyWallet)
 		r.Get("/api/v1/parties/{id}/slots/price", partiesHandler.GetPartySlotPrice)
 		r.Post("/api/v1/parties/{id}/slots/buy", partiesHandler.BuySlots)
@@ -669,6 +668,9 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		}
 		r.Use(apimiddleware.AuthMiddleware(jwtSecret))
 		r.Use(apimiddleware.RequireRole("party_admin", "super_party_admin", "admin", "super_admin"))
+
+		// party candidate nomination
+		r.Post("/api/v1/elections/{id}/field-candidate", electionsHandler.FieldPartyCandidate)
 
 		// party admins can view their own party's wallet transaction ledger
 		r.Get("/api/v1/parties/{id}/wallet/transactions", partiesHandler.ListPartyWalletTransactions)

@@ -19,7 +19,6 @@ import { useUserParty } from "#/hooks/useUserParty";
 import { useElection } from "#/hooks/useElection";
 import { getPageHeader } from "#/lib/shared/meta";
 import { CoverageHeaderRight } from "./-components";
-import { ElectionScopeSelector } from "../home/components/-election-scope-selector";
 
 export const Route = createFileRoute(
   "/_authenticated/$partyShortName/coverage/",
@@ -213,8 +212,7 @@ function AgentCoveragePage() {
         rightComponent={<CoverageHeaderRight />}
       />
 
-      <div className="flex items-center justify-between gap-4 flex-wrap py-2">
-        <ElectionScopeSelector />
+      <div className="flex items-center justify-end gap-4 flex-wrap py-2">
         <div className="flex items-center gap-2">
           {showSearch && (
             <div className="relative flex items-center">

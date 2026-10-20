@@ -302,7 +302,7 @@ WITH user_candidacies AS (
         ec.party_id,
         'principal'::text AS candidacy_type
     FROM election_candidates ec
-    WHERE ec.candidate_id = $2
+    WHERE ec.candidate_id = $1
 
     UNION ALL
 
@@ -313,14 +313,13 @@ WITH user_candidacies AS (
         ec.party_id,
         'running_mate'::text AS candidacy_type
     FROM election_candidates ec
-    WHERE ec.running_mate_id = $2
+    WHERE ec.running_mate_id = $1
 )
 SELECT
     uc.id,
     uc.election_id,
     uc.election_group_id,
     uc.party_id,
-    coalesce(p.short_name, '') AS party_short_name,
     coalesce(p.logo, '') AS party_logo,
     e.name AS election_name,
     e.election_date,
@@ -331,21 +330,15 @@ FROM user_candidacies uc
 JOIN elections e ON uc.election_id = e.id
 LEFT JOIN parties p ON uc.party_id = p.id
 LEFT JOIN offices o ON e.office_id = o.id
-WHERE e.election_date >= $1::date
+WHERE e.election_date >= (CURRENT_TIMESTAMP AT TIME ZONE 'Africa/Lagos')::date
 ORDER BY e.election_date ASC
 `
-
-type GetUserActiveCandidaciesParams struct {
-	Today       pgtype.Date `json:"today"`
-	CandidateID int64       `json:"candidate_id"`
-}
 
 type GetUserActiveCandidaciesRow struct {
 	ID              int32       `json:"id"`
 	ElectionID      int32       `json:"election_id"`
 	ElectionGroupID int32       `json:"election_group_id"`
 	PartyID         int16       `json:"party_id"`
-	PartyShortName  string      `json:"party_short_name"`
 	PartyLogo       string      `json:"party_logo"`
 	ElectionName    string      `json:"election_name"`
 	ElectionDate    pgtype.Date `json:"election_date"`
@@ -354,8 +347,8 @@ type GetUserActiveCandidaciesRow struct {
 	CandidacyType   string      `json:"candidacy_type"`
 }
 
-func (q *Queries) GetUserActiveCandidacies(ctx context.Context, arg GetUserActiveCandidaciesParams) ([]GetUserActiveCandidaciesRow, error) {
-	rows, err := q.db.Query(ctx, getUserActiveCandidacies, arg.Today, arg.CandidateID)
+func (q *Queries) GetUserActiveCandidacies(ctx context.Context, candidateID int64) ([]GetUserActiveCandidaciesRow, error) {
+	rows, err := q.db.Query(ctx, getUserActiveCandidacies, candidateID)
 	if err != nil {
 		return nil, err
 	}
@@ -368,7 +361,6 @@ func (q *Queries) GetUserActiveCandidacies(ctx context.Context, arg GetUserActiv
 			&i.ElectionID,
 			&i.ElectionGroupID,
 			&i.PartyID,
-			&i.PartyShortName,
 			&i.PartyLogo,
 			&i.ElectionName,
 			&i.ElectionDate,

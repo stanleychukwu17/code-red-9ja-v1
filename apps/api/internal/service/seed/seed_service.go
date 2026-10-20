@@ -376,6 +376,11 @@ func (s *SeedService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 							VALUES ($1, $2, $3, 'active')
 							ON CONFLICT (user_id, party_id, chapter_id) DO NOTHING
 						`, insertedUser.id, pID, natID)
+						secBatch.Queue(`
+							INSERT INTO party_follows (user_id, party_id, chapter_id)
+							VALUES ($1, $2, $3)
+							ON CONFLICT (user_id, party_id, chapter_id) DO NOTHING
+						`, insertedUser.id, pID, natID)
 					}
 
 					// 5b. State Chapter
@@ -400,6 +405,11 @@ func (s *SeedService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 							secBatch.Queue(`
 								INSERT INTO party_membership (user_id, party_id, chapter_id, status)
 								VALUES ($1, $2, $3, 'active')
+								ON CONFLICT (user_id, party_id, chapter_id) DO NOTHING
+							`, insertedUser.id, pID, stID)
+							secBatch.Queue(`
+								INSERT INTO party_follows (user_id, party_id, chapter_id)
+								VALUES ($1, $2, $3)
 								ON CONFLICT (user_id, party_id, chapter_id) DO NOTHING
 							`, insertedUser.id, pID, stID)
 						}
@@ -430,6 +440,11 @@ func (s *SeedService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 								VALUES ($1, $2, $3, 'active')
 								ON CONFLICT (user_id, party_id, chapter_id) DO NOTHING
 							`, insertedUser.id, pID, lgaCID)
+							secBatch.Queue(`
+								INSERT INTO party_follows (user_id, party_id, chapter_id)
+								VALUES ($1, $2, $3)
+								ON CONFLICT (user_id, party_id, chapter_id) DO NOTHING
+							`, insertedUser.id, pID, lgaCID)
 						}
 					}
 
@@ -456,6 +471,11 @@ func (s *SeedService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 							secBatch.Queue(`
 								INSERT INTO party_membership (user_id, party_id, chapter_id, status)
 								VALUES ($1, $2, $3, 'active')
+								ON CONFLICT (user_id, party_id, chapter_id) DO NOTHING
+							`, insertedUser.id, pID, wardCID)
+							secBatch.Queue(`
+								INSERT INTO party_follows (user_id, party_id, chapter_id)
+								VALUES ($1, $2, $3)
 								ON CONFLICT (user_id, party_id, chapter_id) DO NOTHING
 							`, insertedUser.id, pID, wardCID)
 						}

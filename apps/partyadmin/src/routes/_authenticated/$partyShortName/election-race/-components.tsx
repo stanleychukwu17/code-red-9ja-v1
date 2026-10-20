@@ -15,7 +15,6 @@ import { useUserParty } from "#/hooks/useUserParty";
 import { useElection } from "#/hooks/useElection";
 import { getElectionGroups } from "#/lib/server/election_groups";
 import { getElectionsByGroup } from "#/lib/server/elections";
-import { ElectionScopeSelector } from "../home/components/-election-scope-selector";
 import { ResultModeToggle } from "../home/components/-result-mode-toggle";
 
 /**
@@ -120,19 +119,6 @@ export function ElectionRaceHeaderRight({
 				}}
 				partyId={partyId}
 			/>
-		</div>
-	);
-}
-
-/**
- * ElectionRaceFilterBar Component
- * Renders the multi-tier cascading geopolitical scope selector bar
- * for narrowing down election race metrics.
- */
-export function ElectionRaceFilterBar() {
-	return (
-		<div className="flex items-center gap-3 flex-wrap">
-			<ElectionScopeSelector />
 		</div>
 	);
 }

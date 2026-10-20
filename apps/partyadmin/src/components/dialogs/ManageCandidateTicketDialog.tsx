@@ -59,9 +59,6 @@ export const getTicketConfig = (electionTitle: string, officeName?: string, scop
 };
 
 export function ManageCandidateTicketDialog({ open, onClose, data }: ManageCandidateTicketDialogProps) {
-  // Debug log election instance payload (id, title, office, candidate details)
-  console.log(data);
-
   // TanStack Query client used to invalidate the elections cache on update
   const queryClient = useQueryClient();
 

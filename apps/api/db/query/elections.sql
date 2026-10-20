@@ -150,7 +150,6 @@ SELECT
     uc.election_id,
     uc.election_group_id,
     uc.party_id,
-    coalesce(p.short_name, '') AS party_short_name,
     coalesce(p.logo, '') AS party_logo,
     e.name AS election_name,
     e.election_date,
@@ -161,7 +160,7 @@ FROM user_candidacies uc
 JOIN elections e ON uc.election_id = e.id
 LEFT JOIN parties p ON uc.party_id = p.id
 LEFT JOIN offices o ON e.office_id = o.id
-WHERE e.election_date >= sqlc.arg('today')::date
+WHERE e.election_date >= (CURRENT_TIMESTAMP AT TIME ZONE 'Africa/Lagos')::date
 ORDER BY e.election_date ASC;
 
 -- name: ListElectionCandidacyUsers :many

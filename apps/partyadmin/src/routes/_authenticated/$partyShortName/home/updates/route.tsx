@@ -15,7 +15,6 @@ import {
   type Election,
   type ElectionGroup,
 } from "@repo/ui/components/selects/election-group-and-election-select";
-import { ElectionScopeSelector } from "../components/-election-scope-selector";
 import {
   DashboardLayout,
   HeaderTabs,
@@ -116,11 +115,7 @@ function UpdatesLayoutComponent() {
         />
 
         {/* Filter and Toggle Row */}
-        <div className="flex items-center justify-between">
-          <div className="flex-1 py-3">
-            <ElectionScopeSelector />
-          </div>
-
+        <div className="flex items-center justify-end py-3">
           {/* Toggle buttons */}
           <HeaderTabs
             activeTab={isMediaOnly ? "media" : "all"}

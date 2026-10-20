@@ -1541,9 +1541,7 @@ func (s *ElectionsService) GetUserActiveCandidacies(ctx context.Context, candida
 	}
 
 	// 2. Query DB
-	rows, err := s.queries.GetUserActiveCandidacies(ctx, queries.GetUserActiveCandidaciesParams{
-		CandidateID: candidateID, Today: pgtype.Date{Time: utils.LagosDate(now), Valid: true},
-	})
+	rows, err := s.queries.GetUserActiveCandidacies(ctx, candidateID)
 	if err != nil {
 		return nil, err
 	}

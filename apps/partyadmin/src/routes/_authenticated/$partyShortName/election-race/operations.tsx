@@ -8,7 +8,7 @@ import { getOperationsBreakdown } from "#/lib/server/election-operations";
 import { useUserParty } from "#/hooks/useUserParty";
 import { useElection } from "#/hooks/useElection";
 import { getPageHeader } from "#/lib/shared/meta";
-import { ElectionRaceFilterBar, ElectionRaceHeaderRight } from "./-components";
+import { ElectionRaceHeaderRight } from "./-components";
 import { getElectionRaceTabs } from "./-data";
 
 /**
@@ -21,9 +21,7 @@ import { getElectionRaceTabs } from "./-data";
  *   downwards to inspect its constituent subunits.
  * - Live Polling: Auto-refreshes every 15s during active election day (`isLive`).
  */
-export const Route = createFileRoute(
-  "/_authenticated/$partyShortName/election-race/operations",
-)({
+export const Route = createFileRoute("/_authenticated/$partyShortName/election-race/operations")({
   head: () => getPageHeader({ title: "Election Race - Operations" }),
   component: OperationsPage,
 });
@@ -104,7 +102,6 @@ function OperationsPage() {
     enabled: !!(selectedElection?.id || selectedElectionGroup?.id),
     refetchInterval: isLive ? 15000 : false,
   });
-  console.log({ data });
 
   const payload = (data as any)?.data || data;
   const rawData = payload?.data || payload;
@@ -171,7 +168,6 @@ function OperationsPage() {
           <ElectionRaceHeaderRight isLive={isLive} setIsLive={setIsLive} />
         }
       />
-      <ElectionRaceFilterBar />
       {isLoading ? (
         <div className="py-16 text-center text-c-50 text-[15px]">
           Loading election operations statistics...

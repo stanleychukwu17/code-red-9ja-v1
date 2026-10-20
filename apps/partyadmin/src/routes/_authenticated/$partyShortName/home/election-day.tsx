@@ -27,7 +27,6 @@ import {
 } from "#/lib/server/elections";
 import { getPageHeader } from "#/lib/shared/meta";
 import { HomePageHeader } from "./-header";
-import { ElectionScopeSelector } from "./components/-election-scope-selector";
 import { FinalResultReel } from "./components/-final-result-reel";
 import { UpdateReel } from "./components/-update-reel";
 
@@ -158,9 +157,6 @@ function ElectionDayComponent() {
 	return (
 		<DashboardLayout>
 			<HomePageHeader activeTab="election-day" />
-
-			{/* Filter and Switcher Row */}
-			<ElectionScopeSelector />
 
 			<ResultTypeCardInfo isLive={isLive} />
 
