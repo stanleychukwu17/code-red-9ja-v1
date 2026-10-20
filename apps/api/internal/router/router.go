@@ -184,6 +184,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	partiesService.SetPageVerificationsService(pageVerificationsService)
 	partiesService.SetFollowsService(followsService)
 	bodiesService.SetPartiesService(partiesService)
+	electionsService.SetPageVerificationsService(pageVerificationsService)
 
 	notificationsHandler := notificationshandler.NewHandler(notificationsService, utilsInstance)
 	authHandler := authhandler.NewHandler(authService, usersService, filesService, utilsInstance)
@@ -486,7 +487,6 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Delete("/api/v1/elections/bulk", electionsHandler.BulkDeleteElections)
 		r.Put("/api/v1/elections/{id}", electionsHandler.UpdateElection)
 		r.Delete("/api/v1/elections/{id}", electionsHandler.DeleteElection)
-		r.Post("/api/v1/elections/{id}/candidates", electionsHandler.SyncElectionCandidates)
 
 		// referrals admin mutations
 		r.Post("/api/v1/admin/referrals", referralsHandler.CreateReferral)

@@ -397,34 +397,3 @@ export const getElectionCandidates = createServerFn({ method: "GET" })
     }
   });
 
-export const syncElectionCandidates = createServerFn({ method: "POST" })
-  .inputValidator(
-    (data: {
-      electionId: string | number;
-      candidates: {
-        candidate_id: number;
-        party_id: number;
-        party_short_name: string;
-      }[];
-    }) => data,
-  )
-  .handler(async ({ data }) => {
-    try {
-      return await apiFetchJson(
-        API_URL.electionCandidates(data.electionId),
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ candidates: data.candidates }),
-        },
-      );
-    } catch (error: any) {
-      return {
-        success: false,
-        message: error?.message || "Failed to sync candidates",
-      };
-    }
-  });
-

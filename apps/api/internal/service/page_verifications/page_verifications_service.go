@@ -341,3 +341,111 @@ func (s *PageVerificationsService) updateParentIsVerifiedFlag(ctx context.Contex
 		return nil
 	}
 }
+
+const VerificationTypePolitician = int16(4)
+
+// EnsurePoliticianVerification grants the 'politician_verified' badge (ID 4) to a user
+// if they don't already have it, and marks them verified in the users table.
+func (s *PageVerificationsService) EnsurePoliticianVerification(ctx context.Context, userID int64) error {
+	user, err := s.queries.GetUserByID(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("user not found: %w", err)
+	}
+
+	// Check if the user already has politician_verified
+	existing, err := s.GetPageVerifications(ctx, db.PageTypeUser, userID)
+	if err == nil {
+		for _, v := range existing {
+			if v.VerificationTypeID == VerificationTypePolitician {
+				return nil
+			}
+		}
+	}
+
+	// Assign verification in pages_verified table
+	_, err = s.queries.AddPageVerification(ctx, queries.AddPageVerificationParams{
+		PageType:           db.PageTypeUser,
+		PageID:             userID,
+		VerificationTypeID: VerificationTypePolitician,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to add politician verification: %w", err)
+	}
+
+	// Update is_verified on the user
+	fakeID := user.FakeID.Int64
+	if err := s.usersService.UpdateUserIsVerified(ctx, user.ID, fakeID, true); err != nil {
+		return fmt.Errorf("failed to update user verified flag: %w", err)
+	}
+
+	// Invalidate redis cache
+	redisKey := fmt.Sprintf("%s%s:%d", db.RedisPageVerifications, db.PageTypeUser, userID)
+	s.rdb.Del(ctx, redisKey)
+
+	// Log audit action
+	s.auditService.LogActionAsync(ctx, queries.InsertAuditLogParams{
+		Module:     pgtype.Text{String: db.ModuleAdmin, Valid: true},
+		Action:     db.ActionAssignPageVerification,
+		EntityType: db.PageTypeUser,
+		EntityID:   fmt.Sprintf("%d", userID),
+	})
+
+	return nil
+}
+
+// RevokePoliticianVerificationIfNoCandidacy removes the 'politician_verified' badge (ID 4)
+// if the user has no remaining contested elections across the platform.
+func (s *PageVerificationsService) RevokePoliticianVerificationIfNoCandidacy(ctx context.Context, userID int64) error {
+	hasContested, err := s.queries.CheckIfUserEverContested(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("failed to check user candidacy: %w", err)
+	}
+	if hasContested {
+		// Still has at least one candidacy elsewhere, do not revoke
+		return nil
+	}
+
+	user, err := s.queries.GetUserByID(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("user not found: %w", err)
+	}
+
+	// Remove verification badge type 4
+	err = s.queries.RemovePageVerificationByType(ctx, queries.RemovePageVerificationByTypeParams{
+		PageType:           db.PageTypeUser,
+		PageID:             userID,
+		VerificationTypeID: VerificationTypePolitician,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to remove politician verification: %w", err)
+	}
+
+	// Check if any other verifications remain (e.g. VIP, celebrity)
+	hasOtherVerifications, err := s.queries.CheckIfPageHasAnyVerification(ctx, queries.CheckIfPageHasAnyVerificationParams{
+		PageType: db.PageTypeUser,
+		PageID:   userID,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to check remaining verifications: %w", err)
+	}
+
+	// Update is_verified on the user
+	fakeID := user.FakeID.Int64
+	if err := s.usersService.UpdateUserIsVerified(ctx, user.ID, fakeID, hasOtherVerifications); err != nil {
+		return fmt.Errorf("failed to update user verified flag: %w", err)
+	}
+
+	// Invalidate redis cache
+	redisKey := fmt.Sprintf("%s%s:%d", db.RedisPageVerifications, db.PageTypeUser, userID)
+	s.rdb.Del(ctx, redisKey)
+
+	// Log audit action
+	s.auditService.LogActionAsync(ctx, queries.InsertAuditLogParams{
+		Module:     pgtype.Text{String: db.ModuleAdmin, Valid: true},
+		Action:     db.ActionRemovePageVerification,
+		EntityType: db.PageTypeUser,
+		EntityID:   fmt.Sprintf("%d", userID),
+	})
+
+	return nil
+}

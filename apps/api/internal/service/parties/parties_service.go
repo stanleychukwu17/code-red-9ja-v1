@@ -2228,7 +2228,6 @@ func (s *PartiesService) VacatePositionAssignment(ctx context.Context, id int64,
 
 	// Log audit action for the administrator
 	assignmentJSON, _ := json.Marshal(assignment)
-	actorID, _ := audit.ActorInfoFromContext(ctx)
 	s.auditService.LogActionAsync(ctx, queries.InsertAuditLogParams{
 		Module:     audit.StringToText(db.ModulePartyAdmin),
 		Action:     db.ActionVacatePartyPosition,
@@ -2244,7 +2243,6 @@ func (s *PartiesService) VacatePositionAssignment(ctx context.Context, id int64,
 		PositionID:      assignment.PositionID,
 		PositionName:    posName,
 		TargetUserID:    assignment.UserID,
-		ActorID:         &actorID,
 		AppointmentType: assignment.AppointmentType,
 		AssignmentID:    assignment.ID,
 	})

@@ -35,8 +35,8 @@ type ElectionsService interface {
 	DeleteElection(ctx context.Context, id int32) error
 	BulkDeleteElections(ctx context.Context, params elections.BulkDeleteElectionsParams) (elections.BulkDeleteElectionsResult, error)
 	GetElectionCandidates(ctx context.Context, electionID int32) ([]queries.ListElectionCandidatesDetailedByElectionIDRow, error)
-	SyncElectionCandidates(ctx context.Context, electionID int32, candidates []elections.CandidateInput) error
-	FieldPartyCandidate(ctx context.Context, electionID int32, partyID int16, candidateID int64, actorUserID *int64, slot ...string) error
+	FieldPartyCandidate(ctx context.Context, electionID int32, partyID int16, candidateID int64, slot ...string) error
+	CheckIfUserEverContested(ctx context.Context, userID int64) (bool, error)
 	GetUserActiveCandidacies(ctx context.Context, candidateID int64) ([]queries.UserActiveCandidacy, error)
 	GetNonVotingReasons(ctx context.Context) ([]queries.NonVotingReason, error)
 	CreateDidNotVoteReason(ctx context.Context, arg queries.CreateDidNotVoteReasonParams) (queries.DidNotVoteReason, error)
@@ -174,12 +174,6 @@ type BulkUpdateElectionGroupRequest struct {
 type BulkDeleteElectionsRequest struct {
 	ElectionIDs     []int32 `json:"election_ids" validate:"required,min=1"`
 	ElectionGroupID *int32  `json:"election_group_id,omitempty"`
-}
-
-type ElectionCandidateInput struct {
-	CandidateID    int64  `json:"candidate_id" validate:"required"`
-	PartyID        int64  `json:"party_id" validate:"required"`
-	PartyShortName string `json:"party_short_name" validate:"required"`
 }
 
 type CreateNationwideElectionRequest struct {
@@ -933,59 +927,6 @@ func (h *Handler) GetElectionCandidates(w http.ResponseWriter, r *http.Request) 
 	})
 }
 
-type SyncCandidatesRequest struct {
-	Candidates []ElectionCandidateInput `json:"candidates"`
-}
-
-// SyncElectionCandidates godoc
-// @Summary      Sync candidates for an election
-// @Description  Overwrites/synchronizes the list of candidate IDs associated with a specific election ID
-// @Tags         Elections
-// @Accept       json
-// @Produce      json
-// @Param        id   path  int  true  "Election ID"
-// @Param        request body SyncCandidatesRequest true "Candidate IDs payload"
-// @Success      200  {object} map[string]interface{} "Candidates synced successfully"
-// @Failure      400  {object} map[string]interface{} "Invalid payload or election ID"
-// @Failure      500  {object} map[string]interface{} "Internal server error"
-// @Router       /elections/{id}/candidates [post]
-func (h *Handler) SyncElectionCandidates(w http.ResponseWriter, r *http.Request) {
-	// Parse and validate election ID from URL parameter
-	idStr := chi.URLParam(r, "id")
-	id, err := strconv.ParseInt(idStr, 10, 32)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election ID")
-		return
-	}
-
-	// Parse JSON candidates payload
-	var req SyncCandidatesRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
-		return
-	}
-
-	// Map candidates payload into service input structs
-	candidateInputs := make([]elections.CandidateInput, len(req.Candidates))
-	for i, c := range req.Candidates {
-		candidateInputs[i] = elections.CandidateInput{
-			CandidateID:    c.CandidateID,
-			PartyID:        int16(c.PartyID),
-			PartyShortName: c.PartyShortName,
-		}
-	}
-
-	// Synchronize full candidate roster for this election in a transaction
-	err = h.service.SyncElectionCandidates(r.Context(), int32(id), candidateInputs)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to sync candidates: "+err.Error())
-		return
-	}
-
-	// Return success response
-	h.utils.RespondSuccess(w, http.StatusOK, "Candidates synced successfully", nil)
-}
-
 type FieldCandidateRequest struct {
 	CandidateID int64  `json:"candidate_id"`
 	PartyID     int16  `json:"party_id"`
@@ -1060,26 +1001,24 @@ func (h *Handler) FieldPartyCandidate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify user is associated with a party and matches the received party ID (unless super_admin/admin)
-	if !claims.HasAnyRole("super_admin", "admin") {
-		if !user.PartyID.Valid {
-			h.utils.RespondError(w, http.StatusForbidden, "User is not associated with a party")
-			return
-		}
-		if user.PartyID.Int16 != req.PartyID {
-			h.utils.RespondError(w, http.StatusForbidden, "Party ID does not match user's party")
-			return
-		}
+	if !user.PartyID.Valid {
+		h.utils.RespondError(w, http.StatusForbidden, "User is not associated with a party")
+		return
+	}
+	if user.PartyID.Int16 != req.PartyID {
+		h.utils.RespondError(w, http.StatusForbidden, "Party ID does not match user's party")
+		return
+	}
 
-		// Verify user is not suspended from the party
-		suspension, err := h.partiesService.GetActivePartyMemberSuspension(r.Context(), req.PartyID, user.ID)
-		if err != nil {
-			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to check party suspension status: "+err.Error())
-			return
-		}
-		if suspension != nil && suspension.ID > 0 {
-			h.utils.RespondError(w, http.StatusForbidden, "User is suspended from this party")
-			return
-		}
+	// Verify user is not suspended from the party
+	suspension, err := h.partiesService.GetActivePartyMemberSuspension(r.Context(), req.PartyID, user.ID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to check party suspension status: "+err.Error())
+		return
+	}
+	if suspension != nil && suspension.ID > 0 {
+		h.utils.RespondError(w, http.StatusForbidden, "User is suspended from this party")
+		return
 	}
 
 	// If fielding a candidate, also verify the candidate is not suspended from the party
@@ -1114,15 +1053,44 @@ func (h *Handler) FieldPartyCandidate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Field candidate under the party
-	var actorID *int64
-	if user.ID > 0 {
-		actorID = &user.ID
-	}
-	err = h.service.FieldPartyCandidate(r.Context(), int32(electionID), req.PartyID, req.CandidateID, actorID, req.Slot)
+	err = h.service.FieldPartyCandidate(r.Context(), int32(electionID), req.PartyID, req.CandidateID, req.Slot)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to field candidate: "+err.Error())
 		return
 	}
+
+	// Log audit action for the administrator
+	action := db.ActionFieldPartyCandidate
+	if req.CandidateID == 0 {
+		action = db.ActionUnfieldPartyCandidate
+	}
+
+	moduleName := db.ModulePartyAdmin
+	actorRole := db.ActorRolePartyAdmin
+	if claims.HasRole(db.ActorRoleSuperAdmin) {
+		moduleName = db.ModuleAdmin
+		actorRole = db.ActorRoleSuperAdmin
+	} else if claims.HasRole(db.ActorRoleAdmin) {
+		moduleName = db.ModuleAdmin
+		actorRole = db.ActorRoleAdmin
+	}
+
+	payloadJSON, _ := json.Marshal(map[string]interface{}{
+		"election_id":  electionID,
+		"party_id":     req.PartyID,
+		"candidate_id": req.CandidateID,
+		"slot":         req.Slot,
+	})
+
+	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
+		Module:     audit.StringToText(moduleName),
+		Action:     action,
+		ActorID:    user.ID,
+		ActorRole:  audit.StringToText(actorRole),
+		EntityType: db.EntityTypeElections,
+		EntityID:   strconv.FormatInt(electionID, 10),
+		NewValues:  payloadJSON,
+	})
 
 	// Return success response
 	h.utils.RespondSuccess(w, http.StatusOK, "Candidate fielded successfully", nil)

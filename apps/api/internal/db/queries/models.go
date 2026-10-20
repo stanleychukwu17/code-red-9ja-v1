@@ -434,51 +434,6 @@ type ElectionGroupPartiesLga struct {
 	UpdatedAt                                 pgtype.Timestamptz `json:"updated_at"`
 }
 
-type ElectionGroupPartiesNational struct {
-	ElectionGroupID                           int32              `json:"election_group_id"`
-	PartyID                                   int16              `json:"party_id"`
-	ApplicationsCount                         int32              `json:"applications_count"`
-	AcceptedApplicationsCount                 int32              `json:"accepted_applications_count"`
-	RejectedApplicationsCount                 int32              `json:"rejected_applications_count"`
-	WardSupervisorApplicationsCount           int32              `json:"ward_supervisor_applications_count"`
-	WardSupervisorAcceptedApplicationsCount   int32              `json:"ward_supervisor_accepted_applications_count"`
-	WardSupervisorRejectedApplicationsCount   int32              `json:"ward_supervisor_rejected_applications_count"`
-	LgaSupervisorApplicationsCount            int32              `json:"lga_supervisor_applications_count"`
-	LgaSupervisorAcceptedApplicationsCount    int32              `json:"lga_supervisor_accepted_applications_count"`
-	LgaSupervisorRejectedApplicationsCount    int32              `json:"lga_supervisor_rejected_applications_count"`
-	StateSupervisorApplicationsCount          int32              `json:"state_supervisor_applications_count"`
-	StateSupervisorAcceptedApplicationsCount  int32              `json:"state_supervisor_accepted_applications_count"`
-	StateSupervisorRejectedApplicationsCount  int32              `json:"state_supervisor_rejected_applications_count"`
-	PuAgentsCount                             int32              `json:"pu_agents_count"`
-	UniquePuAgentsCount                       int32              `json:"unique_pu_agents_count"`
-	PuAgentsInAttendanceCount                 int32              `json:"pu_agents_in_attendance_count"`
-	PuReportsCount                            int32              `json:"pu_reports_count"`
-	PuUpdatesCount                            int32              `json:"pu_updates_count"`
-	PuAverageArrivalTime                      pgtype.Timestamptz `json:"pu_average_arrival_time"`
-	PuAverageUpdateTimeIntervalInSeconds      float64            `json:"pu_average_update_time_interval_in_seconds"`
-	PuAverageElectionStartedAt                pgtype.Timestamptz `json:"pu_average_election_started_at"`
-	PuAverageElectionEndedAt                  pgtype.Timestamptz `json:"pu_average_election_ended_at"`
-	PuElectionPracticeTestReadinessPercentage pgtype.Numeric     `json:"pu_election_practice_test_readiness_percentage"`
-	PuFinalResultsUploadedCount               int32              `json:"pu_final_results_uploaded_count"`
-	UniquePuFinalResultsUploadedCount         int32              `json:"unique_pu_final_results_uploaded_count"`
-	PuLiveVotersReferredByAgentCount          int32              `json:"pu_live_voters_referred_by_agent_count"`
-	TotalPuWithReports                        int32              `json:"total_pu_with_reports"`
-	TotalPuWithUpdates                        int32              `json:"total_pu_with_updates"`
-	TotalPuWithAgentsInAttendance             int32              `json:"total_pu_with_agents_in_attendance"`
-	TotalPuWhereElectionHasStarted            int32              `json:"total_pu_where_election_has_started"`
-	TotalPuWhereElectionHasEnded              int32              `json:"total_pu_where_election_has_ended"`
-	TotalPuUniqueFinalResultsUploaded         int32              `json:"total_pu_unique_final_results_uploaded"`
-	TotalPuWhereAgentsReferredLiveVoters      int32              `json:"total_pu_where_agents_referred_live_voters"`
-	StateSupervisorsCount                     int32              `json:"state_supervisors_count"`
-	UniqueStateSupervisorsCount               int32              `json:"unique_state_supervisors_count"`
-	LgaSupervisorsCount                       int32              `json:"lga_supervisors_count"`
-	UniqueLgaSupervisorsCount                 int32              `json:"unique_lga_supervisors_count"`
-	WardSupervisorsCount                      int32              `json:"ward_supervisors_count"`
-	UniqueWardSupervisorsCount                int32              `json:"unique_ward_supervisors_count"`
-	CreatedAt                                 pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt                                 pgtype.Timestamptz `json:"updated_at"`
-}
-
 type ElectionGroupPartiesPollingUnit struct {
 	ElectionGroupID                           int32              `json:"election_group_id"`
 	PollingUnitID                             int32              `json:"polling_unit_id"`

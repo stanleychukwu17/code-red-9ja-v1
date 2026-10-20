@@ -1,9 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PartyEventsCard, PartyLeadersCard, type PartyLeader } from "#/components/party";
 
-export const Route = createFileRoute(
-  "/_authenticated/party/$partyName/$partyId/home",
-)({
+export const Route = createFileRoute("/_authenticated/party/$partyName/$partyId/home")({
   component: PartyHomeTabComponent,
 });
 

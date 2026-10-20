@@ -32,7 +32,7 @@ type ElectionStatsService interface {
 	GetElectionGroupPartyFederalConstituencyStats(ctx context.Context, arg queries.GetElectionGroupPartyFederalConstituencyStatsParams) (queries.ElectionGroupPartiesFederalConstituency, error)
 	GetElectionGroupPartyStateConstituencyStats(ctx context.Context, arg queries.GetElectionGroupPartyStateConstituencyStatsParams) (queries.ElectionGroupPartiesStateConstituency, error)
 	GetElectionGroupPartySenatorialDistrictStats(ctx context.Context, arg queries.GetElectionGroupPartySenatorialDistrictStatsParams) (queries.ElectionGroupPartiesSenatorialDistrict, error)
-	GetElectionGroupPartyNationalStats(ctx context.Context, arg queries.GetElectionGroupPartyNationalStatsParams) (queries.ElectionGroupPartiesNational, error)
+	GetElectionGroupPartyNationalStats(ctx context.Context, arg queries.GetElectionGroupPartyNationalStatsParams) (queries.GetElectionGroupPartyNationalStatsRow, error)
 }
 
 type Service struct {
@@ -149,6 +149,6 @@ func (s *Service) GetElectionGroupPartySenatorialDistrictStats(ctx context.Conte
 	return s.queries.GetElectionGroupPartySenatorialDistrictStats(ctx, arg)
 }
 
-func (s *Service) GetElectionGroupPartyNationalStats(ctx context.Context, arg queries.GetElectionGroupPartyNationalStatsParams) (queries.ElectionGroupPartiesNational, error) {
+func (s *Service) GetElectionGroupPartyNationalStats(ctx context.Context, arg queries.GetElectionGroupPartyNationalStatsParams) (queries.GetElectionGroupPartyNationalStatsRow, error) {
 	return s.queries.GetElectionGroupPartyNationalStats(ctx, arg)
 }

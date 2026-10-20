@@ -99,9 +99,6 @@ SET candidate_id = $1, updated_at = NOW()
 WHERE election_id = $2 AND party_id = $3
 RETURNING *;
 
--- name: DeleteElectionCandidatesForElection :exec
-DELETE FROM election_candidates WHERE election_id = $1;
-
 -- name: DeleteElectionCandidateForParty :exec
 DELETE FROM election_candidates
 WHERE election_id = $1
@@ -189,3 +186,10 @@ SELECT DISTINCT u.id, u.fake_id
 FROM election_candidates ec
 JOIN users u ON u.id = ec.candidate_id OR u.id = ec.running_mate_id
 WHERE ec.election_id = ANY(sqlc.arg('election_ids')::int[]);
+
+-- name: CheckIfUserEverContested :one
+SELECT EXISTS (
+    SELECT 1 FROM election_candidates WHERE candidate_id = $1
+    UNION ALL
+    SELECT 1 FROM election_candidates WHERE running_mate_id = $1
+) AS has_contested;

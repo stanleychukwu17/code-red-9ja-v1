@@ -137,13 +137,17 @@ function ReadinessComponent() {
     enabled: !!selectedElectionGroup?.id,
   });
 
+  // Normalize party stats with fallback options
   const resolvedStats =
     electionStatsData?.data?.party_stats ||
     electionStatsData?.data?.stats ||
     {};
+
+  // Target recruitment counts per operational tier
   const targets =
     electionStatsData?.data?.targets || electionStatsData?.data?.stats || {};
 
+  // Refresh wallet & party cache after buying slots
   const handleSlotsPurchased = () => {
     refetchWallet();
     if (partyId) {

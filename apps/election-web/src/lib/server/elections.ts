@@ -368,29 +368,6 @@ export const getElectionsByGroup = createServerFn({ method: "GET" })
     }
   });
 
-export const syncElectionCandidates = createServerFn({ method: "POST" })
-  .inputValidator(
-    (data: { electionId: string | number; candidateIds: number[] }) => data,
-  )
-  .handler(async ({ data }) => {
-    try {
-      const response = await apiFetch(API_URL.electionCandidates(data.electionId), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ candidate_ids: data.candidateIds }),
-      });
-      const resData = await response.json();
-      if (!response.ok) {
-        throw new Error(resData.message || "Failed to submit votes");
-      }
-      return resData;
-    } catch (error) {
-      throw error;
-    }
-  });
-
 export const getUserVoteStatus = createServerFn({ method: "GET" })
   .inputValidator((data: { electionGroupId: number }) => data)
   .handler(async ({ data: { electionGroupId } }) => {

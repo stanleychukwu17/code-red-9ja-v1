@@ -61,6 +61,7 @@ type Querier interface {
 	CheckAndUpdateWardSupervisorCompletion(ctx context.Context) error
 	CheckFileOwner(ctx context.Context, arg CheckFileOwnerParams) (bool, error)
 	CheckIfPageHasAnyVerification(ctx context.Context, arg CheckIfPageHasAnyVerificationParams) (bool, error)
+	CheckIfUserEverContested(ctx context.Context, candidateID int64) (bool, error)
 	CheckIfUserVotedInElection(ctx context.Context, arg CheckIfUserVotedInElectionParams) (bool, error)
 	CheckReferralCodeExists(ctx context.Context, referralCode pgtype.Text) (bool, error)
 	CheckUnmatchedPollingUnitResultExists(ctx context.Context, arg CheckUnmatchedPollingUnitResultExistsParams) (bool, error)
@@ -149,7 +150,6 @@ type Querier interface {
 	DeleteAssetFolder(ctx context.Context, id int32) error
 	DeleteAssignment(ctx context.Context, id int64) error
 	DeleteElectionCandidateForParty(ctx context.Context, arg DeleteElectionCandidateForPartyParams) error
-	DeleteElectionCandidatesForElection(ctx context.Context, electionID int32) error
 	DeleteElectionGroup(ctx context.Context, id int32) error
 	DeleteElectionInstance(ctx context.Context, id int32) error
 	DeleteFederalConstituency(ctx context.Context, id int32) error
@@ -206,7 +206,7 @@ type Querier interface {
 	GetElectionGroupLGAStats(ctx context.Context, arg GetElectionGroupLGAStatsParams) (ElectionGroupLga, error)
 	GetElectionGroupPartyFederalConstituencyStats(ctx context.Context, arg GetElectionGroupPartyFederalConstituencyStatsParams) (ElectionGroupPartiesFederalConstituency, error)
 	GetElectionGroupPartyLGAStats(ctx context.Context, arg GetElectionGroupPartyLGAStatsParams) (ElectionGroupPartiesLga, error)
-	GetElectionGroupPartyNationalStats(ctx context.Context, arg GetElectionGroupPartyNationalStatsParams) (ElectionGroupPartiesNational, error)
+	GetElectionGroupPartyNationalStats(ctx context.Context, arg GetElectionGroupPartyNationalStatsParams) (GetElectionGroupPartyNationalStatsRow, error)
 	// =====================================================
 	// READ QUERIES: Normalized Party Stats Tables
 	// =====================================================
@@ -407,7 +407,6 @@ type Querier interface {
 	ListElectionGroupLGAStatsByGroup(ctx context.Context, arg ListElectionGroupLGAStatsByGroupParams) ([]ElectionGroupLga, error)
 	ListElectionGroupPartiesFederalConstituenciesByGroup(ctx context.Context, arg ListElectionGroupPartiesFederalConstituenciesByGroupParams) ([]ElectionGroupPartiesFederalConstituency, error)
 	ListElectionGroupPartiesLGAsByGroup(ctx context.Context, arg ListElectionGroupPartiesLGAsByGroupParams) ([]ElectionGroupPartiesLga, error)
-	ListElectionGroupPartiesNationalByGroup(ctx context.Context, electionGroupID int32) ([]ElectionGroupPartiesNational, error)
 	ListElectionGroupPartiesPollingUnitsByGroup(ctx context.Context, arg ListElectionGroupPartiesPollingUnitsByGroupParams) ([]ElectionGroupPartiesPollingUnit, error)
 	ListElectionGroupPartiesSenatorialDistrictsByGroup(ctx context.Context, arg ListElectionGroupPartiesSenatorialDistrictsByGroupParams) ([]ElectionGroupPartiesSenatorialDistrict, error)
 	ListElectionGroupPartiesStateConstituenciesByGroup(ctx context.Context, arg ListElectionGroupPartiesStateConstituenciesByGroupParams) ([]ElectionGroupPartiesStateConstituency, error)
@@ -491,6 +490,7 @@ type Querier interface {
 	RefreshSingleElectionGroupStateStats(ctx context.Context, arg RefreshSingleElectionGroupStateStatsParams) error
 	RefreshSingleElectionGroupWardStats(ctx context.Context, arg RefreshSingleElectionGroupWardStatsParams) error
 	RemovePageVerification(ctx context.Context, arg RemovePageVerificationParams) error
+	RemovePageVerificationByType(ctx context.Context, arg RemovePageVerificationByTypeParams) error
 	RemoveUserRole(ctx context.Context, arg RemoveUserRoleParams) error
 	RequestAgentEarningsPayout(ctx context.Context, arg RequestAgentEarningsPayoutParams) (AgentEarning, error)
 	RequestAgentEarningsPayoutByID(ctx context.Context, id int64) (AgentEarning, error)

@@ -11,6 +11,7 @@ import (
 	"free9ja/api/internal/constants"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
+	apimiddleware "free9ja/api/internal/middleware"
 	"free9ja/api/internal/service/realtime"
 	"free9ja/api/internal/utils"
 
@@ -234,6 +235,9 @@ type NotifyCandidateWithdrawnParams struct {
 // ----------------------------------------------------------------------------
 
 func (s *service) CreateNotification(ctx context.Context, in CreateNotificationInput) (*NotificationItemResponse, error) {
+	// Fall back to actor in context if not explicitly provided
+	in.ActorUserID = actorFromContext(ctx, in.ActorUserID)
+
 	// Fall back to default normal priority if omitted
 	if in.Priority == "" {
 		in.Priority = "normal"
@@ -300,6 +304,9 @@ func (s *service) CreateNotification(ctx context.Context, in CreateNotificationI
 
 // CreateNotificationAsync dispatches a user notification asynchronously in a goroutine.
 func (s *service) CreateNotificationAsync(ctx context.Context, in CreateNotificationInput) {
+	// Fall back to actor in context before passing to async goroutine
+	in.ActorUserID = actorFromContext(ctx, in.ActorUserID)
+
 	// Launch background goroutine so callers are not blocked by network or DB I/O
 	go func(params CreateNotificationInput) {
 		// Use a bounded context to prevent hanging operations
@@ -449,6 +456,9 @@ func (s *service) DeleteNotification(ctx context.Context, notificationID int64, 
 // PARTY NOTIFICATIONS IMPLEMENTATION
 // ----------------------------------------------------------------------------
 func (s *service) CreatePartyNotification(ctx context.Context, in CreatePartyNotificationInput) (*PartyNotificationItemResponse, error) {
+	// Fall back to actor in context if not explicitly provided
+	in.ActorUserID = actorFromContext(ctx, in.ActorUserID)
+
 	// Fall back to default normal priority if omitted
 	if in.Priority == "" {
 		in.Priority = "normal"
@@ -523,6 +533,9 @@ func (s *service) CreatePartyNotification(ctx context.Context, in CreatePartyNot
 
 // CreatePartyNotificationAsync dispatches a party notification asynchronously in a goroutine.
 func (s *service) CreatePartyNotificationAsync(ctx context.Context, in CreatePartyNotificationInput) {
+	// Fall back to actor in context before passing to async goroutine
+	in.ActorUserID = actorFromContext(ctx, in.ActorUserID)
+
 	// Dispatch party notification in background goroutine to prevent request latency
 	go func(params CreatePartyNotificationInput) {
 		// Enforce timeout for the background task
@@ -1162,4 +1175,15 @@ func mapPartyNotificationToResponse(pn queries.PartyNotification, isRead bool) *
 	}
 
 	return resp
+}
+
+// actorFromContext extracts the actor user ID pointer from JWT claims in context if not explicitly provided.
+func actorFromContext(ctx context.Context, explicitActor *int64) *int64 {
+	if explicitActor != nil {
+		return explicitActor
+	}
+	if claims, ok := apimiddleware.GetClaimsFromContext(ctx); ok && claims != nil && claims.UserID > 0 {
+		return &claims.UserID
+	}
+	return nil
 }

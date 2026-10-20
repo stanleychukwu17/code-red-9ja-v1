@@ -11,6 +11,7 @@ import (
 	"free9ja/api/internal/service/notifications"
 	"free9ja/api/internal/utils"
 	"free9ja/api/internal/worker"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -47,15 +48,21 @@ type notificationsService interface {
 	NotifyCandidateWithdrawn(ctx context.Context, params notifications.NotifyCandidateWithdrawnParams)
 }
 
+type pageVerificationsService interface {
+	EnsurePoliticianVerification(ctx context.Context, userID int64) error
+	RevokePoliticianVerificationIfNoCandidacy(ctx context.Context, userID int64) error
+}
+
 type ElectionsService struct {
-	queries              *queries.Queries
-	pool                 *pgxpool.Pool
-	rdb                  *redis.Client
-	taskDistributor      worker.TaskDistributor
-	earningsService      earningsService
-	officeService        officesService
-	bodiesService        bodiesService
-	notificationsService notificationsService
+	queries                  *queries.Queries
+	pool                     *pgxpool.Pool
+	rdb                      *redis.Client
+	taskDistributor          worker.TaskDistributor
+	earningsService          earningsService
+	officeService            officesService
+	bodiesService            bodiesService
+	notificationsService     notificationsService
+	pageVerificationsService pageVerificationsService
 }
 
 // NewElectionsService initializes a new ElectionsService with its required database pool,
@@ -80,6 +87,11 @@ func NewElectionsService(
 		bodiesService:        bodiesService,
 		notificationsService: notificationsService,
 	}
+}
+
+// SetPageVerificationsService sets the page verifications service dependency to resolve circular dependencies.
+func (s *ElectionsService) SetPageVerificationsService(pvs pageVerificationsService) {
+	s.pageVerificationsService = pvs
 }
 
 // invalidateCache purges the Redis cache for a specific election instance by ID.
@@ -187,13 +199,6 @@ func (s *ElectionsService) batchCreateElections(ctx context.Context, tx pgx.Tx, 
 	}
 
 	return totalInserted, nil
-}
-
-// CandidateInput holds candidate and party identification for election registration.
-type CandidateInput struct {
-	CandidateID    int64
-	PartyID        int16
-	PartyShortName string
 }
 
 // CreateNationwideElection sets up a country-wide election (e.g., Presidential).
@@ -1175,79 +1180,14 @@ func (s *ElectionsService) GetElectionCandidates(ctx context.Context, electionID
 	return s.queries.ListElectionCandidatesDetailedByElectionID(ctx, electionID)
 }
 
-// SyncElectionCandidates completely synchronizes the roster of candidates for an election within a transaction.
-// It removes all prior candidates, inserts the new candidate set, updates each candidate's party in users table,
-// and updates the election's candidates_count.
-func (s *ElectionsService) SyncElectionCandidates(ctx context.Context, electionID int32, candidates []CandidateInput) error {
-	return fmt.Errorf("SyncElectionCandidates is temporarily disabled and needs to be reviewed")
-}
-
-// Keep the implementation ready for review without changing the existing
-// disabled public endpoint's behavior.
-func (s *ElectionsService) syncElectionCandidates(ctx context.Context, electionID int32, candidates []CandidateInput) error {
-	// 1. Begin database transaction
-	tx, err := s.pool.Begin(ctx)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback(ctx)
-
-	txQueries := s.queries.WithTx(tx)
-
-	// 2. Fetch the election to obtain its election_group_id
-	affected, err := txQueries.ListElectionCandidacyUsers(ctx, []int32{electionID})
-	if err != nil {
-		return err
-	}
-	election, err := txQueries.GetElectionInstanceByID(ctx, electionID)
-	if err != nil {
-		return fmt.Errorf("failed to retrieve election for candidate sync: %w", err)
-	}
-
-	// 3. Remove all existing candidates associated with this election
-	err = txQueries.DeleteElectionCandidatesForElection(ctx, electionID)
-	if err != nil {
-		return err
-	}
-
-	// 4. Link new candidates to the election and synchronize their user party affiliation
-	for _, cand := range candidates {
-		user, err := txQueries.GetUserByID(ctx, cand.CandidateID)
-		if err != nil {
-			return err
-		}
-		affected = append(affected, queries.ListElectionCandidacyUsersRow{ID: user.ID, FakeID: user.FakeID})
-		_, err = txQueries.CreateElectionCandidate(ctx, queries.CreateElectionCandidateParams{
-			ElectionID:      electionID,
-			ElectionGroupID: election.ElectionGroupID,
-			CandidateID:     cand.CandidateID,
-			PartyID:         int16(cand.PartyID),
-		})
-		if err != nil {
-			return err
-		}
-
-		err = txQueries.UpdateUserParty(ctx, queries.UpdateUserPartyParams{
-			ID:      cand.CandidateID,
-			PartyID: pgtype.Int2{Int16: int16(cand.PartyID), Valid: int16(cand.PartyID) != 0},
-		})
-		if err != nil {
-			return err
-		}
-	}
-
-	// Invalidate only after the roster and party affiliation have committed.
-	if err := tx.Commit(ctx); err != nil {
-		return err
-	}
-	s.invalidateCache(ctx, electionID)
-	s.invalidateCandidacyUsers(ctx, affected, true)
-	return nil
+// CheckIfUserEverContested checks if a user has ever contested an election as a candidate or running mate.
+func (s *ElectionsService) CheckIfUserEverContested(ctx context.Context, userID int64) (bool, error) {
+	return s.queries.CheckIfUserEverContested(ctx, userID)
 }
 
 // FieldPartyCandidate assigns, updates, or un-fields a political party's candidate or running mate for an election.
 // slot can be "candidate" (default) or "running_mate".
-func (s *ElectionsService) FieldPartyCandidate(ctx context.Context, electionID int32, partyID int16, candidateID int64, actorUserID *int64, slot ...string) error {
+func (s *ElectionsService) FieldPartyCandidate(ctx context.Context, electionID int32, partyID int16, candidateID int64, slot ...string) error {
 	targetSlot := "candidate"
 	if len(slot) > 0 && slot[0] == "running_mate" {
 		targetSlot = "running_mate"
@@ -1297,18 +1237,26 @@ func (s *ElectionsService) FieldPartyCandidate(ctx context.Context, electionID i
 					PartyID:      partyID,
 					ElectionID:   electionID,
 					TargetUserID: previousRunningMateID,
-					ActorID:      actorUserID,
 					Slot:         "running_mate",
 				})
+				if s.pageVerificationsService != nil {
+					if err := s.pageVerificationsService.RevokePoliticianVerificationIfNoCandidacy(ctx, previousRunningMateID); err != nil {
+						slog.Warn("failed to revoke politician verification for previous running mate", "userID", previousRunningMateID, "error", err)
+					}
+				}
 			}
 			if candidateID != previousRunningMateID {
 				s.notificationsService.NotifyCandidateNominated(ctx, notifications.NotifyCandidateNominatedParams{
 					PartyID:      partyID,
 					ElectionID:   electionID,
 					TargetUserID: candidateID,
-					ActorID:      actorUserID,
 					Slot:         "running_mate",
 				})
+			}
+			if s.pageVerificationsService != nil {
+				if err := s.pageVerificationsService.EnsurePoliticianVerification(ctx, candidateID); err != nil {
+					slog.Warn("failed to ensure politician verification for running mate", "userID", candidateID, "error", err)
+				}
 			}
 		} else if previousRunningMateID > 0 {
 			// remove the current running mate
@@ -1325,9 +1273,13 @@ func (s *ElectionsService) FieldPartyCandidate(ctx context.Context, electionID i
 				PartyID:      partyID,
 				ElectionID:   electionID,
 				TargetUserID: previousRunningMateID,
-				ActorID:      actorUserID,
 				Slot:         "running_mate",
 			})
+			if s.pageVerificationsService != nil {
+				if err := s.pageVerificationsService.RevokePoliticianVerificationIfNoCandidacy(ctx, previousRunningMateID); err != nil {
+					slog.Warn("failed to revoke politician verification for unfielded running mate", "userID", previousRunningMateID, "error", err)
+				}
+			}
 		}
 	} else {
 		// Retain existing ticket nominees if present
@@ -1362,9 +1314,13 @@ func (s *ElectionsService) FieldPartyCandidate(ctx context.Context, electionID i
 						PartyID:      partyID,
 						ElectionID:   electionID,
 						TargetUserID: currentCandidateID,
-						ActorID:      actorUserID,
 						Slot:         "candidate",
 					})
+					if s.pageVerificationsService != nil {
+						if err := s.pageVerificationsService.RevokePoliticianVerificationIfNoCandidacy(ctx, currentCandidateID); err != nil {
+							slog.Warn("failed to revoke politician verification for replaced candidate", "userID", currentCandidateID, "error", err)
+						}
+					}
 				}
 
 				// Notify newly nominated candidate
@@ -1373,9 +1329,13 @@ func (s *ElectionsService) FieldPartyCandidate(ctx context.Context, electionID i
 						PartyID:      partyID,
 						ElectionID:   electionID,
 						TargetUserID: candidateID,
-						ActorID:      actorUserID,
 						Slot:         "candidate",
 					})
+				}
+				if s.pageVerificationsService != nil {
+					if err := s.pageVerificationsService.EnsurePoliticianVerification(ctx, candidateID); err != nil {
+						slog.Warn("failed to ensure politician verification for candidate", "userID", candidateID, "error", err)
+					}
 				}
 			} else {
 				election, err := s.queries.GetElectionInstanceByID(ctx, electionID)
@@ -1402,9 +1362,13 @@ func (s *ElectionsService) FieldPartyCandidate(ctx context.Context, electionID i
 					PartyID:      partyID,
 					ElectionID:   electionID,
 					TargetUserID: candidateID,
-					ActorID:      actorUserID,
 					Slot:         "candidate",
 				})
+				if s.pageVerificationsService != nil {
+					if err := s.pageVerificationsService.EnsurePoliticianVerification(ctx, candidateID); err != nil {
+						slog.Warn("failed to ensure politician verification for candidate", "userID", candidateID, "error", err)
+					}
+				}
 			}
 		} else {
 			// Unfield principal candidate removes the entire party ticket
@@ -1422,9 +1386,13 @@ func (s *ElectionsService) FieldPartyCandidate(ctx context.Context, electionID i
 						PartyID:      partyID,
 						ElectionID:   electionID,
 						TargetUserID: currentCandidateID,
-						ActorID:      actorUserID,
 						Slot:         "candidate",
 					})
+					if s.pageVerificationsService != nil {
+						if err := s.pageVerificationsService.RevokePoliticianVerificationIfNoCandidacy(ctx, currentCandidateID); err != nil {
+							slog.Warn("failed to revoke politician verification for unfielded candidate", "userID", currentCandidateID, "error", err)
+						}
+					}
 				}
 
 				if currentRunningMateID > 0 {
@@ -1432,9 +1400,13 @@ func (s *ElectionsService) FieldPartyCandidate(ctx context.Context, electionID i
 						PartyID:      partyID,
 						ElectionID:   electionID,
 						TargetUserID: currentRunningMateID,
-						ActorID:      actorUserID,
 						Slot:         "running_mate",
 					})
+					if s.pageVerificationsService != nil {
+						if err := s.pageVerificationsService.RevokePoliticianVerificationIfNoCandidacy(ctx, currentRunningMateID); err != nil {
+							slog.Warn("failed to revoke politician verification for unfielded running mate", "userID", currentRunningMateID, "error", err)
+						}
+					}
 				}
 			}
 		}
@@ -1753,4 +1725,34 @@ func (s *ElectionsService) InvalidateUserActiveCandidacies(ctx context.Context, 
 
 	cacheKey := fmt.Sprintf("%s%d", db.RedisUserActiveCandidacies, candidateID)
 	_ = s.rdb.Del(ctx, cacheKey).Err()
+}
+
+// Include both the old and new roster, and running mates. Core profiles only
+// need eviction when a mutation also changes the stored user party affiliation.
+func (s *ElectionsService) invalidateCandidacyUsers(ctx context.Context, users []queries.ListElectionCandidacyUsersRow, includeProfile bool) {
+	keys := make([]string, 0, len(users)*2)
+	seen := make(map[int64]bool)
+
+	for _, user := range users {
+		// Deduplicate and skip empty user records
+		if user.ID == 0 || seen[user.ID] {
+			continue
+		}
+		seen[user.ID] = true
+
+		// Invalidate user's active candidacies cache
+		keys = append(keys, fmt.Sprintf("%s%d", db.RedisUserActiveCandidacies, user.ID))
+
+		// Invalidate user profile cache if affiliation changed
+		if includeProfile && user.FakeID.Valid {
+			keys = append(keys, fmt.Sprintf("%s%d", db.RedisUserInfo, user.FakeID.Int64))
+		}
+	}
+
+	// Purge collected keys from Redis in a single call
+	if len(keys) > 0 {
+		if err := s.rdb.Del(ctx, keys...).Err(); err != nil {
+			slog.Error("failed to invalidate candidacy caches", "error", err)
+		}
+	}
 }

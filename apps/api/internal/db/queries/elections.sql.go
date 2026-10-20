@@ -53,6 +53,20 @@ func (q *Queries) BulkUpdateElectionGroup(ctx context.Context, arg BulkUpdateEle
 	return err
 }
 
+const checkIfUserEverContested = `-- name: CheckIfUserEverContested :one
+SELECT EXISTS (
+    SELECT 1 FROM election_candidates
+    WHERE candidate_id = $1 OR running_mate_id = $1
+) AS has_contested
+`
+
+func (q *Queries) CheckIfUserEverContested(ctx context.Context, candidateID int64) (bool, error) {
+	row := q.db.QueryRow(ctx, checkIfUserEverContested, candidateID)
+	var has_contested bool
+	err := row.Scan(&has_contested)
+	return has_contested, err
+}
+
 const createElectionCandidate = `-- name: CreateElectionCandidate :one
 INSERT INTO election_candidates (election_id, election_group_id, candidate_id, party_id)
 VALUES ($1, $2, $3, $4)
@@ -165,15 +179,6 @@ func (q *Queries) DeleteElectionCandidateForParty(ctx context.Context, arg Delet
 	return err
 }
 
-const deleteElectionCandidatesForElection = `-- name: DeleteElectionCandidatesForElection :exec
-DELETE FROM election_candidates WHERE election_id = $1
-`
-
-func (q *Queries) DeleteElectionCandidatesForElection(ctx context.Context, electionID int32) error {
-	_, err := q.db.Exec(ctx, deleteElectionCandidatesForElection, electionID)
-	return err
-}
-
 const deleteElectionInstance = `-- name: DeleteElectionInstance :exec
 DELETE FROM elections WHERE id = $1
 `
@@ -213,6 +218,32 @@ func (q *Queries) GetCandidateCountsForElections(ctx context.Context, electionId
 		return nil, err
 	}
 	return items, nil
+}
+
+const getElectionCandidateForParty = `-- name: GetElectionCandidateForParty :one
+SELECT id, election_id, election_group_id, candidate_id, running_mate_id, party_id, updated_at, created_at FROM election_candidates
+WHERE election_id = $1 AND party_id = $2
+`
+
+type GetElectionCandidateForPartyParams struct {
+	ElectionID int32 `json:"election_id"`
+	PartyID    int16 `json:"party_id"`
+}
+
+func (q *Queries) GetElectionCandidateForParty(ctx context.Context, arg GetElectionCandidateForPartyParams) (ElectionCandidate, error) {
+	row := q.db.QueryRow(ctx, getElectionCandidateForParty, arg.ElectionID, arg.PartyID)
+	var i ElectionCandidate
+	err := row.Scan(
+		&i.ID,
+		&i.ElectionID,
+		&i.ElectionGroupID,
+		&i.CandidateID,
+		&i.RunningMateID,
+		&i.PartyID,
+		&i.UpdatedAt,
+		&i.CreatedAt,
+	)
+	return i, err
 }
 
 const getElectionCandidatesCount = `-- name: GetElectionCandidatesCount :one
@@ -525,90 +556,6 @@ func (q *Queries) ListElectionCandidatesDetailedByElectionID(ctx context.Context
 	return items, nil
 }
 
-const getElectionCandidateForParty = `-- name: GetElectionCandidateForParty :one
-SELECT id, election_id, election_group_id, candidate_id, running_mate_id, party_id, updated_at, created_at FROM election_candidates
-WHERE election_id = $1 AND party_id = $2
-`
-
-type GetElectionCandidateForPartyParams struct {
-	ElectionID int32 `json:"election_id"`
-	PartyID    int16 `json:"party_id"`
-}
-
-func (q *Queries) GetElectionCandidateForParty(ctx context.Context, arg GetElectionCandidateForPartyParams) (ElectionCandidate, error) {
-	row := q.db.QueryRow(ctx, getElectionCandidateForParty, arg.ElectionID, arg.PartyID)
-	var i ElectionCandidate
-	err := row.Scan(
-		&i.ID,
-		&i.ElectionID,
-		&i.ElectionGroupID,
-		&i.CandidateID,
-		&i.RunningMateID,
-		&i.PartyID,
-		&i.UpdatedAt,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
-const updateElectionCandidateRunningMate = `-- name: UpdateElectionCandidateRunningMate :one
-UPDATE election_candidates
-SET running_mate_id = $1, updated_at = NOW()
-WHERE election_id = $2 AND party_id = $3
-RETURNING id, election_id, election_group_id, candidate_id, running_mate_id, party_id, updated_at, created_at
-`
-
-type UpdateElectionCandidateRunningMateParams struct {
-	RunningMateID pgtype.Int8 `json:"running_mate_id"`
-	ElectionID    int32       `json:"election_id"`
-	PartyID       int16       `json:"party_id"`
-}
-
-func (q *Queries) UpdateElectionCandidateRunningMate(ctx context.Context, arg UpdateElectionCandidateRunningMateParams) (ElectionCandidate, error) {
-	row := q.db.QueryRow(ctx, updateElectionCandidateRunningMate, arg.RunningMateID, arg.ElectionID, arg.PartyID)
-	var i ElectionCandidate
-	err := row.Scan(
-		&i.ID,
-		&i.ElectionID,
-		&i.ElectionGroupID,
-		&i.CandidateID,
-		&i.RunningMateID,
-		&i.PartyID,
-		&i.UpdatedAt,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
-const updateElectionCandidatePrincipal = `-- name: UpdateElectionCandidatePrincipal :one
-UPDATE election_candidates
-SET candidate_id = $1, updated_at = NOW()
-WHERE election_id = $2 AND party_id = $3
-RETURNING id, election_id, election_group_id, candidate_id, running_mate_id, party_id, updated_at, created_at
-`
-
-type UpdateElectionCandidatePrincipalParams struct {
-	CandidateID int64 `json:"candidate_id"`
-	ElectionID  int32 `json:"election_id"`
-	PartyID     int16 `json:"party_id"`
-}
-
-func (q *Queries) UpdateElectionCandidatePrincipal(ctx context.Context, arg UpdateElectionCandidatePrincipalParams) (ElectionCandidate, error) {
-	row := q.db.QueryRow(ctx, updateElectionCandidatePrincipal, arg.CandidateID, arg.ElectionID, arg.PartyID)
-	var i ElectionCandidate
-	err := row.Scan(
-		&i.ID,
-		&i.ElectionID,
-		&i.ElectionGroupID,
-		&i.CandidateID,
-		&i.RunningMateID,
-		&i.PartyID,
-		&i.UpdatedAt,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
 const listElectionInstances = `-- name: ListElectionInstances :many
 SELECT
   e.id, e.election_group_id, e.state_id, e.senatorial_district_id, e.federal_constituency_id, e.state_constituency_id, e.lga_id, e.ward_id, e.office_id, e.name, e.election_date, e.scope, e.reports_count, e.updates_count, e.results_submitted_count, e.created_at, e.updated_at,
@@ -798,6 +745,64 @@ func (q *Queries) ListElectionsDetailedByGroupID(ctx context.Context, electionGr
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateElectionCandidatePrincipal = `-- name: UpdateElectionCandidatePrincipal :one
+UPDATE election_candidates
+SET candidate_id = $1, updated_at = NOW()
+WHERE election_id = $2 AND party_id = $3
+RETURNING id, election_id, election_group_id, candidate_id, running_mate_id, party_id, updated_at, created_at
+`
+
+type UpdateElectionCandidatePrincipalParams struct {
+	CandidateID int64 `json:"candidate_id"`
+	ElectionID  int32 `json:"election_id"`
+	PartyID     int16 `json:"party_id"`
+}
+
+func (q *Queries) UpdateElectionCandidatePrincipal(ctx context.Context, arg UpdateElectionCandidatePrincipalParams) (ElectionCandidate, error) {
+	row := q.db.QueryRow(ctx, updateElectionCandidatePrincipal, arg.CandidateID, arg.ElectionID, arg.PartyID)
+	var i ElectionCandidate
+	err := row.Scan(
+		&i.ID,
+		&i.ElectionID,
+		&i.ElectionGroupID,
+		&i.CandidateID,
+		&i.RunningMateID,
+		&i.PartyID,
+		&i.UpdatedAt,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const updateElectionCandidateRunningMate = `-- name: UpdateElectionCandidateRunningMate :one
+UPDATE election_candidates
+SET running_mate_id = $1, updated_at = NOW()
+WHERE election_id = $2 AND party_id = $3
+RETURNING id, election_id, election_group_id, candidate_id, running_mate_id, party_id, updated_at, created_at
+`
+
+type UpdateElectionCandidateRunningMateParams struct {
+	RunningMateID pgtype.Int8 `json:"running_mate_id"`
+	ElectionID    int32       `json:"election_id"`
+	PartyID       int16       `json:"party_id"`
+}
+
+func (q *Queries) UpdateElectionCandidateRunningMate(ctx context.Context, arg UpdateElectionCandidateRunningMateParams) (ElectionCandidate, error) {
+	row := q.db.QueryRow(ctx, updateElectionCandidateRunningMate, arg.RunningMateID, arg.ElectionID, arg.PartyID)
+	var i ElectionCandidate
+	err := row.Scan(
+		&i.ID,
+		&i.ElectionID,
+		&i.ElectionGroupID,
+		&i.CandidateID,
+		&i.RunningMateID,
+		&i.PartyID,
+		&i.UpdatedAt,
+		&i.CreatedAt,
+	)
+	return i, err
 }
 
 const updateElectionInstance = `-- name: UpdateElectionInstance :one

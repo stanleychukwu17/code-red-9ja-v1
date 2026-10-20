@@ -196,3 +196,19 @@ func (q *Queries) RemovePageVerification(ctx context.Context, arg RemovePageVeri
 	)
 	return err
 }
+
+const removePageVerificationByType = `-- name: RemovePageVerificationByType :exec
+DELETE FROM pages_verified
+WHERE page_type = $1 AND page_id = $2 AND verification_type_id = $3
+`
+
+type RemovePageVerificationByTypeParams struct {
+	PageType           string `json:"page_type"`
+	PageID             int64  `json:"page_id"`
+	VerificationTypeID int16  `json:"verification_type_id"`
+}
+
+func (q *Queries) RemovePageVerificationByType(ctx context.Context, arg RemovePageVerificationByTypeParams) error {
+	_, err := q.db.Exec(ctx, removePageVerificationByType, arg.PageType, arg.PageID, arg.VerificationTypeID)
+	return err
+}

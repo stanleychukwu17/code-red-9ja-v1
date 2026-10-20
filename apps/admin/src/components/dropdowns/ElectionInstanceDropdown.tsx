@@ -6,11 +6,10 @@ import { deleteElection } from "#/lib/server/elections";
 import { TileOptions } from "@repo/ui/components/tiles";
 import TrashcanIcon from "@repo/ui/icons/trashcan-icon";
 import type { TDropdownGroup } from "@repo/ui/lib/types";
-import { Pencil, UsersIcon } from "lucide-react";
+import { Pencil } from "lucide-react";
 import { DropdownGroupList } from "@repo/ui/components/custom/AppDropdown";
 import { DeleteAlertDialog } from "../alerts/delete-alert";
 import { ElectionInstanceFormDialog } from "../dialogs/ElectionInstanceFormDialog";
-import { ManageCandidatesDialog } from "../dialogs/ManageCandidatesDialog";
 import type { ElectionInstanceType } from "../tiles/election-instance-tile";
 
 interface ElectionInstanceDropdownProps {
@@ -24,7 +23,6 @@ export const ElectionInstanceDropdown = ({
 }: ElectionInstanceDropdownProps) => {
   const [openMenu, setOpenMenu] = useState(false);
   const [openEditDialog, setOpenEditDialog] = useState(false);
-  const [openCandidatesDialog, setOpenCandidatesDialog] = useState(false);
   const [openDeleteAlert, setOpenDeleteAlert] = useState(false);
   const queryClient = useQueryClient();
 
@@ -50,17 +48,6 @@ export const ElectionInstanceDropdown = ({
 
   const group1: TDropdownGroup = [
     {
-      title: "Manage Candidates",
-      icon: <UsersIcon className="size-4" />,
-      action: () => {
-        setOpenMenu(false);
-        setOpenCandidatesDialog(true);
-      },
-    },
-  ];
-
-  const group2: TDropdownGroup = [
-    {
       title: "Edit",
       icon: <Pencil className="size-4" />,
       action: () => {
@@ -82,7 +69,7 @@ export const ElectionInstanceDropdown = ({
         : "[&_svg]:text-red text-red",
     },
   ];
-  const dropdownData: TDropdownGroup[] = [group1, group2];
+  const dropdownData: TDropdownGroup[] = [group1];
 
   return (
     <>
@@ -98,14 +85,6 @@ export const ElectionInstanceDropdown = ({
           open={openEditDialog}
           onClose={() => setOpenEditDialog(false)}
           electionInstance={data}
-        />
-      )}
-
-      {openCandidatesDialog && (
-        <ManageCandidatesDialog
-          electionId={data.id}
-          open={openCandidatesDialog}
-          onClose={() => setOpenCandidatesDialog(false)}
         />
       )}
 

@@ -32,6 +32,8 @@ const (
 	ActionBulkUpdateElectionGroup   = "bulk_update_election_group"   // Action for bulk updating election groups
 	ActionDeleteElection            = "delete_election"              // Action for deleting an election
 	ActionBulkDeleteElections       = "bulk_delete_elections"        // Action for bulk deleting elections
+	ActionFieldPartyCandidate       = "field_party_candidate"        // Action when a party fields or updates a candidate for an election
+	ActionUnfieldPartyCandidate     = "unfield_party_candidate"      // Action when a party withdraws or un-fields a candidate from an election
 	ActionCreatePartyCustomPosition = "create_party_custom_position" // Action when a party position is created
 	ActionUpdatePartyCustomPosition = "update_party_custom_position" // Action when a party position is updated
 	ActionDeletePartyCustomPosition = "delete_party_custom_position" // Action when a party position is deleted
