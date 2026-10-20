@@ -72,7 +72,6 @@ CREATE TABLE elections (
   name VARCHAR(255) NOT NULL,
   election_date DATE NOT NULL,
   scope VARCHAR(50) NOT NULL, -- nationwide, state, senatorial-district, federal-constituency, lga, state-constituency, ward
-  status VARCHAR(30) NOT NULL DEFAULT 'upcoming' CHECK (status IN ('upcoming', 'ongoing', 'ended')),
 
   reports_count INT NOT NULL DEFAULT 0,
   updates_count INT NOT NULL DEFAULT 0,
@@ -90,27 +89,22 @@ CREATE INDEX idx_elections_election_date_id ON elections(election_date DESC, id 
 CREATE INDEX idx_elections_state_id ON elections(state_id) WHERE state_id IS NOT NULL;
 CREATE INDEX idx_elections_name_trgm ON elections USING gin (name gin_trgm_ops);
 
-
 CREATE TABLE election_candidates (
   id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   election_id INT REFERENCES elections(id) ON DELETE CASCADE NOT NULL,
   election_group_id INT REFERENCES election_groups(id) ON DELETE CASCADE NOT NULL,
   candidate_id BIGINT REFERENCES users(id) ON DELETE CASCADE NOT NULL,
   running_mate_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
-  party_id SMALLINT NOT NULL DEFAULT 7 REFERENCES parties(id) ON DELETE RESTRICT,
-  party_short_name VARCHAR(50) NOT NULL DEFAULT 'N/A',
+  party_id SMALLINT NOT NULL REFERENCES parties(id) ON DELETE RESTRICT,
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(election_group_id, candidate_id),
   UNIQUE(election_id, party_id)
 );
 
-CREATE INDEX idx_election_candidates_election_id ON election_candidates(election_id);
-CREATE INDEX idx_election_candidates_election_group_id ON election_candidates(election_group_id);
 CREATE INDEX idx_election_candidates_candidate_id ON election_candidates(candidate_id);
-CREATE INDEX idx_election_candidates_running_mate_id ON election_candidates(running_mate_id);
 CREATE INDEX idx_election_candidates_party_id ON election_candidates(party_id);
-CREATE UNIQUE INDEX uq_election_candidates_running_mate_group ON election_candidates (election_group_id, running_mate_id) WHERE running_mate_id IS NOT NULL;
+CREATE UNIQUE INDEX uq_election_candidates_running_mate_group ON election_candidates (running_mate_id, election_group_id) WHERE running_mate_id IS NOT NULL;
 
 -- +goose Down
 DROP TABLE IF EXISTS election_candidates;

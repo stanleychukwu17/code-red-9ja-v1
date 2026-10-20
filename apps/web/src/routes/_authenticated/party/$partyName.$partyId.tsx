@@ -13,13 +13,13 @@ export type PartySearch = {
 // 1. Define shared query options with staleTime: Infinity
 export const partyProfileQueryOptions = (partyId: string, partyName: string, chapterId?: number) => queryOptions({
   queryKey: ["partyProfile", partyId, partyName, chapterId],
-  queryFn: () =>
-    getPartyProfile({
-      data: { partyId: Number(partyId), shortName: partyName, chapterId },
-    }),
+  queryFn: () => getPartyProfile({
+    data: { partyId: Number(partyId), shortName: partyName, chapterId },
+  }),
   staleTime: Infinity,
   gcTime: 1000 * 60 * 60 * 24, // Keep in cache for 24h
 });
+
 
 export const Route = createFileRoute("/_authenticated/party/$partyName/$partyId")({
   validateSearch: (search: Record<string, unknown>): PartySearch => {
@@ -37,6 +37,15 @@ export const Route = createFileRoute("/_authenticated/party/$partyName/$partyId"
     });
   },
 
+  errorComponent: ({ error }) => (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 text-center">
+      <div className="rounded-lg bg-destructive/10 p-6 text-destructive">
+        <h2 className="text-lg font-semibold">Error Loading Party Profile</h2>
+        <p className="mt-2 text-sm">{error?.message || "Failed to load party profile"}</p>
+      </div>
+    </div>
+  ),
+
   component: PartyLayoutComponent,
 });
 
@@ -47,9 +56,17 @@ function PartyLayoutComponent() {
   const { chapterId } = Route.useSearch();
 
   // Query full party profile and chapter metadata (cached with infinite staleTime for snappy navigation)
-  const { data: profileRes } = useQuery(
+  const { data: profileRes, error } = useQuery(
     partyProfileQueryOptions(partyId, partyName, chapterId)
   );
+
+  if (error) {
+    throw error;
+  }
+
+  if (profileRes && !profileRes.success) {
+    throw new Error(profileRes.message || "Failed to load party profile");
+  }
 
   // Extract core party attributes and authenticated user affiliation state
   const partyDetails = profileRes?.success ? profileRes.data.data : null;

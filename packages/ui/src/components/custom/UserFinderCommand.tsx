@@ -8,14 +8,51 @@ import { AppAvatar } from "../avatar";
 import { IconInput } from "../input";
 import FancyCheckIcon from "../../icons/fancy-check-icon";
 
+export type UserChapter = {
+  id: number;
+  party_id: number;
+  chapter_type: string;
+  country_name?: string;
+  zone_name?: string;
+  state_name?: string;
+  lga_name?: string;
+  ward_name?: string;
+};
+
+export type UserCandidacy = {
+  id: number;
+  election_id: number;
+  election_group_id: number;
+  party_id: number;
+  party_short_name?: string;
+  party_logo?: string;
+  election_name: string;
+  election_date?: string;
+  scope?: string;
+  election_status: string;
+  office_name?: string;
+  candidacy_type: string;
+};
+
 export type User = {
   id: number;
   first_name: string;
   last_name: string;
+  username?: string;
   avatar?: string;
   party_id?: number;
   party_short_name?: string;
   party_logo?: string;
+  party_basic_info?: {
+    id?: number;
+    short_name?: string;
+    name?: string;
+    logo?: string;
+    color_hex?: string;
+    is_verified?: boolean;
+  };
+  chapters?: UserChapter[];
+  candidacies?: UserCandidacy[];
   role?: string;
 };
 
@@ -187,18 +224,72 @@ export function UserFinderCommand({
                           value={user.id.toString()}
                           onSelect={() => handleToggleSelect(user)}
                         >
-                          <div className="flex items-center gap-3.5 md:gap-5 w-full">
-                            <AppAvatar
-                              src={user.avatar}
-                              alt={`${user.first_name} ${user.last_name}`}
-                              fallbackText={user.first_name
-                                .charAt(0)
-                                .toUpperCase()}
-                              className="size-11 rounded-full aspect-square object-cover"
-                            />
-                            <span className="font-medium text-[16px] text-c-90">
-                              {`${user.first_name} ${user.last_name}`}
-                            </span>
+                          <div className="flex items-center gap-3.5 md:gap-4 w-full min-w-0">
+                            <div className="relative shrink-0">
+                              <AppAvatar
+                                src={user.avatar}
+                                alt={`${user.first_name} ${user.last_name}`}
+                                fallbackText={user.first_name
+                                  .charAt(0)
+                                  .toUpperCase()}
+                                className="size-11 rounded-full aspect-square object-cover"
+                              />
+                              {(user.party_logo || user.party_basic_info?.logo) && (
+                                <img
+                                  src={user.party_logo || user.party_basic_info?.logo}
+                                  alt={user.party_short_name || user.party_basic_info?.short_name || "Party"}
+                                  className="size-4.5 rounded-full absolute -bottom-0.5 -right-0.5 border border-white bg-white shadow-xs object-contain"
+                                />
+                              )}
+                            </div>
+                            <div className="flex flex-col min-w-0 flex-1 text-left">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-semibold text-[15px] text-c-90 truncate">
+                                  {`${user.first_name} ${user.last_name}`}
+                                </span>
+                                {(user.party_short_name || user.party_basic_info?.short_name) && (
+                                  <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-c-10 text-c-70 uppercase tracking-wider">
+                                    {user.party_short_name || user.party_basic_info?.short_name}
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Chapters Display */}
+                              {user.chapters && user.chapters.length > 0 && (
+                                <p className="text-xs text-c-50 truncate mt-0.5">
+                                  {user.chapters
+                                    .map((ch) =>
+                                      ch.ward_name
+                                        ? `${ch.ward_name} Ward`
+                                        : ch.lga_name
+                                          ? `${ch.lga_name} LGA`
+                                          : ch.state_name
+                                            ? `${ch.state_name} State`
+                                            : `${ch.chapter_type.toUpperCase()} Chapter`
+                                    )
+                                    .slice(0, 2)
+                                    .join(" • ")}
+                                </p>
+                              )}
+
+                              {/* Active Candidacies Display Warning */}
+                              {user.candidacies && user.candidacies.length > 0 && (
+                                <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                                  {user.candidacies.map((can) => (
+                                    <span
+                                      key={can.election_id}
+                                      className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200/80 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60"
+                                    >
+                                      <span>Running:</span>
+                                      <span className="font-semibold">{can.office_name || can.election_name}</span>
+                                      {can.candidacy_type === "running_mate" && (
+                                        <span className="opacity-80 text-[10px]">(Running Mate)</span>
+                                      )}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
                           </div>
 
                           {selectMode === "multiple" && isSelected && (

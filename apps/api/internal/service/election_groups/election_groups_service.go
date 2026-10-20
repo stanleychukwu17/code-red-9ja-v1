@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
+	"free9ja/api/internal/utils"
 	"free9ja/api/internal/worker"
 	"log/slog"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/redis/go-redis/v9"
@@ -247,7 +249,19 @@ func (s *ElectionGroupsService) UpsertPartyElectionGroupStats(ctx context.Contex
 
 // ListGroupElections returns all detailed election instances belonging to a specific election group,
 // including office information, hierarchy ranks, candidate counts, and geographic scopes.
-func (s *ElectionGroupsService) ListGroupElections(ctx context.Context, electionGroupID int32) ([]queries.ListElectionsDetailedByGroupIDRow, error) {
+func (s *ElectionGroupsService) ListGroupElections(ctx context.Context, electionGroupID int32) ([]queries.ElectionGroupListItem, error) {
 	// Fetch all election records mapped to this election group ID
-	return s.queries.ListElectionsDetailedByGroupID(ctx, electionGroupID)
+	rows, err := s.queries.ListElectionsDetailedByGroupID(ctx, electionGroupID)
+	if err != nil {
+		return nil, err
+	}
+	now := time.Now()
+	items := make([]queries.ElectionGroupListItem, 0, len(rows))
+	for _, row := range rows {
+		items = append(items, queries.ElectionGroupListItem{
+			ListElectionsDetailedByGroupIDRow: row,
+			Status:                            utils.ElectionStatusForDate(row.ElectionDate.Time, now),
+		})
+	}
+	return items, nil
 }

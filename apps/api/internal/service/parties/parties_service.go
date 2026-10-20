@@ -2699,6 +2699,16 @@ func (s *PartiesService) BlockUserFromThisParty(ctx context.Context, input Block
 	// Invalidate party related caches
 	s.blocksService.InvalidateUserBlockedPartiesCache(ctx, input.BlockedUserID)
 	if isMemberOfThisParty {
+		// Membership removal has now committed. Clear the party-wide check and
+		// chapter list even when the user had no chapter rows to iterate below.
+		s.InvalidatePartyMembership(ctx, input.BlockedUserID, input.PartyID)
+		// UpdateUserParty ran before this transaction committed; repeat cache
+		// eviction here so requests during the transaction cannot leave a stale copy.
+		keys := []string{fmt.Sprintf("%s%d", db.RedisUserActiveCandidacies, input.BlockedUserID)}
+		if user.FakeID.Valid {
+			keys = append(keys, fmt.Sprintf("%s%d", db.RedisUserInfo, user.FakeID.Int64))
+		}
+		_ = s.rdb.Del(ctx, keys...).Err()
 		s.InvalidateMemberPositionAssignmentsCache(ctx, input.PartyID, input.BlockedUserID)
 		for _, chapterID := range chapterIDs {
 			s.InvalidateChapterMemberCount(ctx, input.PartyID, chapterID)
@@ -2924,12 +2934,14 @@ func (s *PartiesService) InvalidateChapterMemberCount(ctx context.Context, party
 func (s *PartiesService) InvalidatePartyChapterMembership(ctx context.Context, userID int64, partyID int16, chapterID int32) {
 	cacheKey := fmt.Sprintf("%s%d:%d:%d", db.RedisPartyChapterMember, userID, partyID, chapterID)
 	_ = s.rdb.Del(ctx, cacheKey).Err()
+	s.InvalidateUserPartyChapters(ctx, userID, partyID)
 }
 
 // InvalidatePartyMembership removes the cached party-wide membership boolean for a user.
 func (s *PartiesService) InvalidatePartyMembership(ctx context.Context, userID int64, partyID int16) {
 	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisPartyMember, userID, partyID)
 	_ = s.rdb.Del(ctx, cacheKey).Err()
+	s.InvalidateUserPartyChapters(ctx, userID, partyID)
 }
 
 // InvalidatePartyCustomPositionsCache invalidates cached custom positions for a party.
@@ -2952,4 +2964,44 @@ func (s *PartiesService) InvalidatePartyPositionByIDCache(ctx context.Context, p
 	if err := s.rdb.Del(ctx, cacheKey).Err(); err != nil {
 		slog.Error("Failed to invalidate party position cache", "error", err, "partyID", partyID, "id", id)
 	}
+}
+
+// GetUserPartyChapters lists active chapters of a party that a user belongs to.
+// Results are cached in Redis to minimize database lookups.
+func (s *PartiesService) GetUserPartyChapters(ctx context.Context, userID int64, partyID int16) ([]queries.GetUserPartyChaptersRow, error) {
+	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisUserPartyChapters, partyID, userID)
+
+	// 1. Check Redis cache
+	if cachedVal, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
+		var cached []queries.GetUserPartyChaptersRow
+		if jsonErr := json.Unmarshal([]byte(cachedVal), &cached); jsonErr == nil {
+			return cached, nil
+		}
+	}
+
+	// 2. Query DB
+	chapters, err := s.queries.GetUserPartyChapters(ctx, queries.GetUserPartyChaptersParams{
+		UserID:  userID,
+		PartyID: partyID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if chapters == nil {
+		chapters = []queries.GetUserPartyChaptersRow{}
+	}
+
+	// 3. Cache result for 180 days
+	if jsonBytes, err := json.Marshal(chapters); err == nil {
+		_ = s.rdb.Set(ctx, cacheKey, jsonBytes, db.RedisOneEightyDaysTTL).Err()
+	}
+
+	return chapters, nil
+}
+
+// InvalidateUserPartyChapters clears the cached user party chapters.
+func (s *PartiesService) InvalidateUserPartyChapters(ctx context.Context, userID int64, partyID int16) {
+	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisUserPartyChapters, partyID, userID)
+	_ = s.rdb.Del(ctx, cacheKey).Err()
 }

@@ -19,16 +19,16 @@ import (
 )
 
 type ElectionsService interface {
-	CreateNationwideElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32) (queries.Election, error)
+	CreateNationwideElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32) (queries.ElectionDetails, error)
 	CreateStateElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, stateIDs []int16) (int, error)
 	CreateSenatorialDistrictElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, senatorialDistrictIDs []int32) (int, error)
 	CreateFederalConstituencyElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, federalConstituencyIDs []int32) (int, error)
 	CreateStateConstituencyElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, stateConstituencyIDs []int32) (int, error)
 	CreateLgaElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, lgaIDs []int32) (int, error)
 	CreateWardElection(ctx context.Context, params elections.CreateWardElectionParams) (int, error)
-	GetElectionByID(ctx context.Context, id int32) (queries.Election, error)
-	ListElections(ctx context.Context, filter elections.ListElectionsFilter) ([]queries.ListElectionInstancesRow, error)
-	UpdateElection(ctx context.Context, params elections.UpdateElectionParams) (queries.Election, error)
+	GetElectionByID(ctx context.Context, id int32) (queries.ElectionDetails, error)
+	ListElections(ctx context.Context, filter elections.ListElectionsFilter) ([]queries.ElectionListItem, error)
+	UpdateElection(ctx context.Context, params elections.UpdateElectionParams) (queries.ElectionDetails, error)
 	BulkUpdateElectionGroup(ctx context.Context, params elections.BulkUpdateElectionGroupParams) error
 	DeleteElection(ctx context.Context, id int32) error
 	BulkDeleteElections(ctx context.Context, params elections.BulkDeleteElectionsParams) (elections.BulkDeleteElectionsResult, error)

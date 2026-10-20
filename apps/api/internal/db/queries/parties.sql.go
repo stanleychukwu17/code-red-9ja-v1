@@ -701,6 +701,87 @@ func (q *Queries) GetStateChapter(ctx context.Context, arg GetStateChapterParams
 	return id, err
 }
 
+const getUserPartyChapters = `-- name: GetUserPartyChapters :many
+SELECT
+    pc.id,
+    pc.party_id,
+    pc.chapter_type,
+    pc.country_id,
+    pc.zonal_id,
+    pc.state_id,
+    pc.lga_id,
+    pc.ward_id,
+    coalesce(c.name, '') AS country_name,
+    coalesce(z.name, '') AS zone_name,
+    coalesce(s.name, '') AS state_name,
+    coalesce(l.name, '') AS lga_name,
+    coalesce(w.name, '') AS ward_name
+FROM party_membership pm
+JOIN party_chapters pc ON pm.chapter_id = pc.id
+LEFT JOIN c_countries c ON pc.country_id = c.id
+LEFT JOIN c_zones_nigeria z ON pc.zonal_id = z.id
+LEFT JOIN c_states s ON pc.state_id = s.id
+LEFT JOIN lgas l ON pc.lga_id = l.id
+LEFT JOIN wards w ON pc.ward_id = w.id
+WHERE pm.user_id = $1 AND pm.party_id = $2 AND pm.status = 'active'
+ORDER BY pc.id ASC
+`
+
+type GetUserPartyChaptersParams struct {
+	UserID  int64 `json:"user_id"`
+	PartyID int16 `json:"party_id"`
+}
+
+type GetUserPartyChaptersRow struct {
+	ID          int32       `json:"id"`
+	PartyID     int16       `json:"party_id"`
+	ChapterType string      `json:"chapter_type"`
+	CountryID   pgtype.Int2 `json:"country_id"`
+	ZonalID     pgtype.Int2 `json:"zonal_id"`
+	StateID     pgtype.Int2 `json:"state_id"`
+	LgaID       pgtype.Int4 `json:"lga_id"`
+	WardID      pgtype.Int4 `json:"ward_id"`
+	CountryName string      `json:"country_name"`
+	ZoneName    string      `json:"zone_name"`
+	StateName   string      `json:"state_name"`
+	LgaName     string      `json:"lga_name"`
+	WardName    string      `json:"ward_name"`
+}
+
+func (q *Queries) GetUserPartyChapters(ctx context.Context, arg GetUserPartyChaptersParams) ([]GetUserPartyChaptersRow, error) {
+	rows, err := q.db.Query(ctx, getUserPartyChapters, arg.UserID, arg.PartyID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetUserPartyChaptersRow
+	for rows.Next() {
+		var i GetUserPartyChaptersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.PartyID,
+			&i.ChapterType,
+			&i.CountryID,
+			&i.ZonalID,
+			&i.StateID,
+			&i.LgaID,
+			&i.WardID,
+			&i.CountryName,
+			&i.ZoneName,
+			&i.StateName,
+			&i.LgaName,
+			&i.WardName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getWardChapter = `-- name: GetWardChapter :one
 SELECT id FROM party_chapters
 WHERE party_id = $1 AND chapter_type = 'ward' AND ward_id = $2 LIMIT 1

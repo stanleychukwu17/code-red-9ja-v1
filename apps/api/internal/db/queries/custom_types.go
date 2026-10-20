@@ -2,6 +2,27 @@ package queries
 
 import "encoding/json"
 
+// Response types add date-derived labels to raw database rows. Status is never
+// stored or calculated by the database; services populate it with the shared helper.
+type ElectionDetails struct {
+	Election
+	Status string `json:"status"`
+}
+
+type ElectionListItem struct {
+	ListElectionInstancesRow
+	Status string `json:"status"`
+}
+
+type ElectionGroupListItem struct {
+	ListElectionsDetailedByGroupIDRow
+	Status string `json:"status"`
+}
+
+type UserActiveCandidacy struct {
+	GetUserActiveCandidaciesRow
+	ElectionStatus string `json:"election_status"`
+}
 
 // UserWithPlaces extends the base User struct with additional resolved fields
 // like location names, verifications, basic party info, and roles.
@@ -13,6 +34,8 @@ type UserWithPlaces struct {
 	Verifications  []GetPageVerificationsRow        `json:"verifications"`
 	PartyBasicInfo *PartyBasicInfoWithVerifications `json:"party_basic_info"`
 	Roles          CachedUserRoles                  `json:"roles"`
+	Chapters       []GetUserPartyChaptersRow        `json:"chapters"`
+	Candidacies    []UserActiveCandidacy            `json:"candidacies"`
 }
 
 // PartyWithVerifications extends the ListPartiesRow struct to include
@@ -66,10 +89,10 @@ func (p Party) MarshalJSON() ([]byte, error) {
 	}
 
 	return json.Marshal(PartyOut{
-		Alias:                   Alias(jsonParty(p)),
+		Alias:                      Alias(jsonParty(p)),
 		AgentPaymentAllocationKobo: rawAlloc,
-		AgentAcquisitionTargets: rawTargets,
-		AutoAcceptApplications:  rawAutoAccept,
+		AgentAcquisitionTargets:    rawTargets,
+		AutoAcceptApplications:     rawAutoAccept,
 	})
 }
 

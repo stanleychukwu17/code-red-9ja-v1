@@ -114,7 +114,7 @@ function AuthenticatedRoutes() {
     },
     {
       id: "elections",
-      label: "Elections",
+      label: "Elections & Candidates",
       icon: <CalendarIcon />,
       selectedIcon: <CalendarSolidIcon />,
       href: APP_URL.partyRoutes.elections(partyShortName),

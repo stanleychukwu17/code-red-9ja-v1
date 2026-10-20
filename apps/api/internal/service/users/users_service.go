@@ -35,6 +35,12 @@ type PageVerificationsService interface {
 // PartyService interface defines the methods needed from the party service
 type PartyService interface {
 	GetPartyBasicInfo(ctx context.Context, partyID int16) *queries.PartyBasicInfoWithVerifications
+	GetUserPartyChapters(ctx context.Context, userID int64, partyID int16) ([]queries.GetUserPartyChaptersRow, error)
+}
+
+// ElectionsService interface defines the methods needed from the elections service
+type ElectionsService interface {
+	GetUserActiveCandidacies(ctx context.Context, candidateID int64) ([]queries.UserActiveCandidacy, error)
 }
 
 // UsersService provides operations for managing user data, roles, and related services.
@@ -45,6 +51,7 @@ type UsersService struct {
 	bodiesService            BodiesService
 	pageVerificationsService PageVerificationsService
 	partyService             PartyService
+	electionsService         ElectionsService
 }
 
 // CachedReferralCodeInfo represents the cached referrer details stored in Redis.
@@ -54,12 +61,13 @@ type CachedReferralCodeInfo struct {
 }
 
 // NewUsersService initializes and returns a new UsersService.
-func NewUsersService(q *queries.Queries, rdb *redis.Client, monnify *monnifyclient.Client, bodiesService BodiesService) *UsersService {
+func NewUsersService(q *queries.Queries, rdb *redis.Client, monnify *monnifyclient.Client, bodiesService BodiesService, electionsService ElectionsService) *UsersService {
 	return &UsersService{
-		queries:       q,
-		rdb:           rdb,
-		monnify:       monnify,
-		bodiesService: bodiesService,
+		queries:          q,
+		rdb:              rdb,
+		monnify:          monnify,
+		bodiesService:    bodiesService,
+		electionsService: electionsService,
 	}
 }
 
@@ -111,11 +119,23 @@ func (s *UsersService) GetUserByFakeID(ctx context.Context, fakeID int64) (queri
 	if err == nil {
 		var user queries.UserWithPlaces
 		if err := json.Unmarshal([]byte(userInfoJSON), &user); err == nil {
-			return user, nil
+			users := []queries.UserWithPlaces{user}
+			if err := s.hydrateUserRelationships(ctx, users); err != nil {
+				return queries.UserWithPlaces{}, err
+			}
+			return users[0], nil
 		}
 	}
 
-	return s.fetchAndCacheUserByFakeID(ctx, fakeID, userInfoKey)
+	user, err := s.fetchAndCacheUserByFakeID(ctx, fakeID, userInfoKey)
+	if err != nil {
+		return user, err
+	}
+	users := []queries.UserWithPlaces{user}
+	if err := s.hydrateUserRelationships(ctx, users); err != nil {
+		return queries.UserWithPlaces{}, err
+	}
+	return users[0], nil
 }
 
 // fetchAndCacheUserByFakeID fetches the full user profile from the database,
@@ -146,12 +166,6 @@ func (s *UsersService) fetchAndCacheUserByFakeID(ctx context.Context, fakeID int
 	// attach the user countryName, stateName, cityName to the user info that will be cached in redis
 	countryName, stateName, cityName := s.bodiesService.GetLocationNames(ctx, user.CurrentCountry, user.CurrentState, user.CurrentCity.Int32)
 
-	// Fetch party basic info if user belongs to a party
-	var partyBasicInfo *queries.PartyBasicInfoWithVerifications
-	if user.PartyID.Valid && user.PartyID.Int16 > 0 && s.partyService != nil {
-		partyBasicInfo = s.partyService.GetPartyBasicInfo(ctx, user.PartyID.Int16)
-	}
-
 	// Create a copy of the user and obscure sensitive fields for caching
 	userForCache := user
 	userForCache.PasswordHash = "---"
@@ -166,12 +180,11 @@ func (s *UsersService) fetchAndCacheUserByFakeID(ctx context.Context, fakeID int
 		StateName:          stateName,
 		CityName:           cityName,
 		Verifications:      verifications,
-		PartyBasicInfo:     partyBasicInfo,
 		Roles:              roles,
 	}
 
 	// cache the user data in redis
-	userJSON, err := json.Marshal(userWithPlacesForCache)
+	userJSON, err := json.Marshal(coreProfile(userWithPlacesForCache))
 	if err == nil {
 		s.rdb.Set(ctx, userInfoKey, userJSON, db.RedisThirtyDaysTTL)
 	}
@@ -256,6 +269,9 @@ func (s *UsersService) GetUsersByFakeIDs(ctx context.Context, fakeIDs []int64) (
 		}
 	}
 
+	if err := s.hydrateUserRelationships(ctx, results); err != nil {
+		return nil, err
+	}
 	return results, nil
 }
 
@@ -719,11 +735,15 @@ func (s *UsersService) UpdateUserIsVerified(ctx context.Context, userID int64, f
 // UpdateUserParty updates the party_id of a user and invalidates their cache.
 // Pass nil for partyID to remove the user from any party.
 func (s *UsersService) UpdateUserParty(ctx context.Context, userID int64, partyID *int16, fakeID int64) error {
+	previous, err := s.queries.GetUserByID(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("failed to load previous party affiliation: %w", err)
+	}
 	// prepare party ID for database update (NULL if nil)
 	pID := utils.PgInt2FromPtrNullable(partyID)
 
 	// update user party in the database
-	err := s.queries.UpdateUserParty(ctx, queries.UpdateUserPartyParams{
+	err = s.queries.UpdateUserParty(ctx, queries.UpdateUserPartyParams{
 		ID:      userID,
 		PartyID: pID,
 	})
@@ -738,6 +758,14 @@ func (s *UsersService) UpdateUserParty(ctx context.Context, userID int64, partyI
 
 	// invalidate the user cache
 	_ = s.InvalidateCachedUserInfo(ctx, fakeID)
+	keys := []string{fmt.Sprintf("%s%d", db.RedisUserActiveCandidacies, userID)}
+	if previous.PartyID.Valid {
+		keys = append(keys, fmt.Sprintf("%s%d:%d", db.RedisUserPartyChapters, previous.PartyID.Int16, userID))
+	}
+	if partyID != nil {
+		keys = append(keys, fmt.Sprintf("%s%d:%d", db.RedisUserPartyChapters, *partyID, userID))
+	}
+	_ = s.rdb.Del(ctx, keys...).Err()
 
 	return nil
 }

@@ -28,7 +28,7 @@ const (
 	//--END--
 
 	//--START-- for user
-	RedisUserInfo                = "user:info:"               // STRING: user:info:<userFakeID> used to store and retrieve user info.
+	RedisUserInfo                = "user:info:"               // Core profile only; relationships are hydrated separately.
 	RedisUserMoreInfo            = "user:more_info:"          // STRING: user:more_info:<userID> used to store and retrieve user more_info.
 	RedisUserRoles               = "user:roles:"              // STRING: user:roles:<userID> used to store and retrieve user roles.
 	RedisUserPreferences         = "user:preferences:"        // STRING: user:preferences:<userID> used to store and retrieve user preferences.
@@ -72,6 +72,7 @@ const (
 	RedisPartyDefaultPositions      = "parties:default_party_positions"  // STRING: "parties:default_party_positions" stores cached JSON array of default party positions
 	RedisPartyCustomPositions       = "parties:custom_party_positions:"  // STRING: "parties:custom_party_positions:<partyID>" stores cached JSON array of custom party positions
 	RedisPartyPositionByID          = "parties:position_by_id:"          // STRING: "parties:position_by_id:<partyID>:<positionID>" stores cached single party position JSON
+	RedisUserPartyChapters          = "parties:user_chapters:"           // STRING: "parties:user_chapters:<partyID>:<userID>" stores cached JSON array of user party chapters
 	//--END--
 
 	//--START-- for page verifications & badges
@@ -110,10 +111,11 @@ const (
 	//--END--
 
 	//--START-- for elections and election groups
-	RedisElectionGroupsAll    = "election_groups:all"    // STRING: used to store and retrieve all election groups JSON.
-	RedisElectionGroupsActive = "election_groups:active" // STRING: used to store and retrieve active election groups JSON.
-	RedisElectionGroupByID    = "election_group:"        // STRING: "election_group:<id>" used to store and retrieve single election group JSON.
-	RedisElectionByID         = "election:"              // STRING: "election:<id>" used to store and retrieve single election JSON.
+	RedisElectionGroupsAll     = "election_groups:all"         // STRING: used to store and retrieve all election groups JSON.
+	RedisElectionGroupsActive  = "election_groups:active"      // STRING: used to store and retrieve active election groups JSON.
+	RedisElectionGroupByID     = "election_group:"             // STRING: "election_group:<id>" used to store and retrieve single election group JSON.
+	RedisElectionByID          = "election:"                   // Derived status; expires at Lagos midnight.
+	RedisUserActiveCandidacies = "elections:user_candidacies:" // Derived status; expires at Lagos midnight.
 	//--END--
 
 	//--START-- for background worker & cron distributed locks
@@ -170,6 +172,7 @@ var AllRedisPrefixes = []string{
 	RedisPartyDefaultPositions,
 	RedisPartyCustomPositions,
 	RedisPartyPositionByID,
+	RedisUserPartyChapters,
 	RedisPageVerificationTypesList,
 	RedisPageVerificationTypeInfo,
 	RedisPageVerifications,
@@ -177,6 +180,9 @@ var AllRedisPrefixes = []string{
 	RedisEachLGA,
 	RedisEachWard,
 	RedisEachSenatorialDistrict,
+	RedisEachFederalConstituency,
+	RedisEachStateConstituency,
+	RedisEachPollingUnit,
 	RedisSenatorialDistrictsAll,
 	RedisSenatorialDistrictsByState,
 	RedisFederalConstituenciesAll,
@@ -197,6 +203,7 @@ var AllRedisPrefixes = []string{
 	RedisElectionGroupsActive,
 	RedisElectionGroupByID,
 	RedisElectionByID,
+	RedisUserActiveCandidacies,
 	RedisCronLockINECGrabberSync,
 	RedisCronLockMarketingDeductionsPrefix,
 	RedisLockElectoralUnitsSync,

@@ -1,11 +1,7 @@
-import * as React from "react";
+import { useState, type ReactNode } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { getPageHeader } from "#/lib/shared/meta";
-import {
-  DashboardLayout,
-  HeaderTabs,
-  ReadinessStatSection,
-} from "@repo/ui/components/custom/AdminLayouts";
+import { DashboardLayout, HeaderTabs, ReadinessStatSection } from "@repo/ui/components/custom/AdminLayouts";
 import { HomePageHeader } from "./-header";
 import { ElectionScopeSelector } from "./components/-election-scope-selector";
 import { useUserParty } from "#/hooks/useUserParty";
@@ -34,19 +30,12 @@ import { TargetFormDialog } from "@repo/ui/components/dialogs/TargetFormDialog";
 import { useServerFn } from "@tanstack/react-start";
 import { getElectionGroups } from "#/lib/server/election_groups";
 import { getElectionsByGroup, getElectionStats } from "#/lib/server/elections";
-import {
-  AgentMarketingSetupDialog,
-  type AgentMarketingSetupValue,
-} from "@repo/ui/components/dialogs/AgentMarketingSetupDialog";
+import { AgentMarketingSetupDialog, type AgentMarketingSetupValue } from "@repo/ui/components/dialogs/AgentMarketingSetupDialog";
 import { DepositAgentPaymentDialog } from "@repo/ui/components/dialogs/DepositAgentStipendDialog";
 import { getApplications } from "#/lib/server/applications";
-import {
-  LeaderboardCardWrapper,
-  ObjectiveTile,
-} from "@repo/ui/components/cards/leaderboard-card";
+import { LeaderboardCardWrapper, ObjectiveTile } from "@repo/ui/components/cards/leaderboard-card";
 import { toast } from "sonner";
 import FancyAgentIcon from "@repo/ui/icons/fancy-agent-icon";
-import { SelectDateRange } from "@repo/ui/components/selects/date-range-select";
 import ArrowHandleIcon from "@repo/ui/icons/arrow-handle-icon";
 import { TransactionCard, type WalletTransaction } from "../wallet/index";
 
@@ -91,14 +80,13 @@ function ReadinessComponent() {
   const partyId = party?.id;
   const queryClient = useQueryClient();
 
-  const [isWalletDialogOpen, setIsWalletDialogOpen] = React.useState(false);
-  const [isSlotsDialogOpen, setIsSlotsDialogOpen] = React.useState(false);
-  const [isBudgetDialogOpen, setIsBudgetDialogOpen] = React.useState(false);
-  const [isTargetDialogOpen, setIsTargetDialogOpen] = React.useState(false);
-  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = React.useState(false);
-  const [isPaymentPending, setIsPaymentPending] = React.useState(false);
-  const [isMarketingDialogOpen, setIsMarketingDialogOpen] =
-    React.useState(false);
+  const [isWalletDialogOpen, setIsWalletDialogOpen] = useState(false);
+  const [isSlotsDialogOpen, setIsSlotsDialogOpen] = useState(false);
+  const [isBudgetDialogOpen, setIsBudgetDialogOpen] = useState(false);
+  const [isTargetDialogOpen, setIsTargetDialogOpen] = useState(false);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [isPaymentPending, setIsPaymentPending] = useState(false);
+  const [isMarketingDialogOpen, setIsMarketingDialogOpen] = useState(false);
 
   const fetchGroups = useServerFn(getElectionGroups);
   const fetchElectionsByGroup = useServerFn(getElectionsByGroup);
@@ -223,7 +211,6 @@ function ReadinessComponent() {
       }),
     enabled: !!selectedElectionGroup?.id,
   });
-  console.log({ electionStatsData });
 
   const resolvedStats =
     electionStatsData?.data?.party_stats ||
@@ -717,10 +704,10 @@ function SubTabsSection({
   lgaId?: number;
   wardId?: number;
 }) {
-  const [activeTab, setActiveTab] = React.useState<
+  const [activeTab, setActiveTab] = useState<
     "main" | "activities" | "transactions"
   >("main");
-  const [dateRange, setDateRange] = React.useState<string>("today");
+  const [dateRange, setDateRange] = useState<string>("today");
 
   return (
     <div className="space-y-6 pt-4">
@@ -1126,7 +1113,7 @@ function TargetCard() {
   const { party } = useUserParty();
   const partyId = party?.id;
 
-  const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const fetchTargetsFn = useServerFn(getPartyAgentTargets);
   const updateTargetsFn = useServerFn(updatePartyAgentTargets);
   const queryClient = useQueryClient();
@@ -1228,7 +1215,7 @@ function SimpleStatTile({
   label,
   value,
 }: {
-  icon?: React.ReactNode;
+  icon?: ReactNode;
   label: string;
   value: string;
 }) {

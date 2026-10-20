@@ -23,7 +23,7 @@ type ElectionGroupsService interface {
 	DeleteElectionGroup(ctx context.Context, id int32) error
 	ListElectionGroupsWithPartyStats(ctx context.Context, partyID int16, active *bool) ([]queries.ListElectionGroupsWithPartyStatsRow, error)
 	UpsertPartyElectionGroupStats(ctx context.Context, partyID int16, electionGroupID int32, pollingAgentsCoverage []byte, electionsContesting int32) (queries.PartyElectionGroup, error)
-	ListGroupElections(ctx context.Context, electionGroupID int32) ([]queries.ListElectionsDetailedByGroupIDRow, error)
+	ListGroupElections(ctx context.Context, electionGroupID int32) ([]queries.ElectionGroupListItem, error)
 }
 
 type Handler struct {

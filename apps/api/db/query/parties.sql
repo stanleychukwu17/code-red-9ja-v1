@@ -343,4 +343,27 @@ WHERE pms.party_id = sqlc.arg('party_id')::smallint
 ORDER BY pms.id DESC
 LIMIT sqlc.arg('limit_num')::int;
 
-
+-- name: GetUserPartyChapters :many
+SELECT
+    pc.id,
+    pc.party_id,
+    pc.chapter_type,
+    pc.country_id,
+    pc.zonal_id,
+    pc.state_id,
+    pc.lga_id,
+    pc.ward_id,
+    coalesce(c.name, '') AS country_name,
+    coalesce(z.name, '') AS zone_name,
+    coalesce(s.name, '') AS state_name,
+    coalesce(l.name, '') AS lga_name,
+    coalesce(w.name, '') AS ward_name
+FROM party_membership pm
+JOIN party_chapters pc ON pm.chapter_id = pc.id
+LEFT JOIN c_countries c ON pc.country_id = c.id
+LEFT JOIN c_zones_nigeria z ON pc.zonal_id = z.id
+LEFT JOIN c_states s ON pc.state_id = s.id
+LEFT JOIN lgas l ON pc.lga_id = l.id
+LEFT JOIN wards w ON pc.ward_id = w.id
+WHERE pm.user_id = $1 AND pm.party_id = $2 AND pm.status = 'active'
+ORDER BY pc.id ASC;

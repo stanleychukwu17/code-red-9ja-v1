@@ -153,7 +153,6 @@ type Election struct {
 	Name                  string             `json:"name"`
 	ElectionDate          pgtype.Date        `json:"election_date"`
 	Scope                 string             `json:"scope"`
-	Status                string             `json:"status"`
 	ReportsCount          int32              `json:"reports_count"`
 	UpdatesCount          int32              `json:"updates_count"`
 	ResultsSubmittedCount int32              `json:"results_submitted_count"`
@@ -168,7 +167,6 @@ type ElectionCandidate struct {
 	CandidateID     int64              `json:"candidate_id"`
 	RunningMateID   pgtype.Int8        `json:"running_mate_id"`
 	PartyID         int16              `json:"party_id"`
-	PartyShortName  string             `json:"party_short_name"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 }

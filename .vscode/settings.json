@@ -17,6 +17,7 @@
     "bodieshandler",
     "bodiesservice",
     "BYSCORE",
+    "cand",
     "Certbot",
     "chimiddleware",
     "chukwu",
