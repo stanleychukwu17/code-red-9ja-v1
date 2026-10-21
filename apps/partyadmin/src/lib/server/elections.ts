@@ -176,6 +176,36 @@ export const fieldPartyCandidate = createServerFn({ method: "POST" })
     }
   });
 
+export const unfieldPartyCandidate = createServerFn({ method: "POST" })
+  .inputValidator(
+    (data: { electionId: number; partyId: number; slot: "candidate" | "running_mate" }) =>
+      data,
+  )
+  .handler(async ({ data: { electionId, partyId, slot } }) => {
+    try {
+      const response = await apiFetch(
+        `${API_URL.elections}/${electionId}/unfield-candidate`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            party_id: partyId,
+            slot,
+          }),
+        },
+      );
+      const resData = await response.json();
+      return resData;
+    } catch (error) {
+      return {
+        success: false,
+        message: "Failed to unfield candidate: " + (error as Error).message,
+      };
+    }
+  });
+
 export const getElectionCandidates = createServerFn({ method: "GET" })
   .inputValidator(
     (data: { electionId: number; limit?: number; cursor?: string }) => data,

@@ -665,6 +665,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 
 		// party candidate nomination
 		r.Post("/api/v1/elections/{id}/field-candidate", electionsHandler.FieldPartyCandidate)
+		r.Post("/api/v1/elections/{id}/unfield-candidate", electionsHandler.UnfieldPartyCandidate)
 
 		// party admins can view their own party's wallet transaction ledger
 		r.Get("/api/v1/parties/{id}/wallet/transactions", partiesHandler.ListPartyWalletTransactions)

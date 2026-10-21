@@ -78,7 +78,7 @@ type PartiesService interface {
 	CreatePartyCustomPosition(ctx context.Context, arg queries.CreatePartyCustomPositionParams) (queries.PartyPosition, error)
 	UpdatePartyCustomPosition(ctx context.Context, arg queries.UpdatePartyCustomPositionParams) (queries.PartyPosition, error)
 	DeletePartyCustomPosition(ctx context.Context, id int32, partyID int16) error
-	AssignPartyPosition(ctx context.Context, arg queries.AssignPartyPositionParams) (queries.PartyPositionAssignment, error)
+	AssignPartyPosition(ctx context.Context, input partiesservice.AssignPartyPositionInput) (queries.PartyPositionAssignment, error)
 	VacatePositionAssignment(ctx context.Context, id int64, partyID int16) (queries.PartyPositionAssignment, error)
 	GetPartyChapterByID(ctx context.Context, chapterID int32) (queries.PartyChapter, error)
 	GetChapterMemberCount(ctx context.Context, partyID int16, chapterID int32) (int64, error)
@@ -2934,16 +2934,19 @@ func (h *Handler) AssignPartyOfficial(w http.ResponseWriter, r *http.Request) {
 	tenureEnd := pgtype.Date{Time: now.AddDate(4, 0, 0), Valid: true}
 
 	// Assign the position to the member in the party
-	assignment, err := h.partiesService.AssignPartyPosition(r.Context(), queries.AssignPartyPositionParams{
-		PartyID:         int16(partyID),
-		ChapterID:       int32(chapID),
-		PositionID:      req.PositionID,
-		UserID:          req.UserID,
-		AppointmentType: appointmentType,
-		Status:          "active",
-		TenureStart:     tenureStart,
-		TenureEnd:       tenureEnd,
-		AppointedBy:     appointedBy,
+	assignment, err := h.partiesService.AssignPartyPosition(r.Context(), partiesservice.AssignPartyPositionInput{
+		AssignPartyPositionParams: queries.AssignPartyPositionParams{
+			PartyID:         int16(partyID),
+			ChapterID:       int32(chapID),
+			PositionID:      req.PositionID,
+			UserID:          req.UserID,
+			AppointmentType: appointmentType,
+			Status:          "active",
+			TenureStart:     tenureStart,
+			TenureEnd:       tenureEnd,
+			AppointedBy:     appointedBy,
+		},
+		ChapterType: chapterType,
 	})
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Failed to assign position: "+err.Error())

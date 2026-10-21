@@ -218,7 +218,7 @@ func (s *PartiesService) GetPartyBasicInfo(ctx context.Context, partyID int16) *
 	}
 
 	// Only fetch verifications if the party is flagged as verified
-	if partyRow.IsVerified.Bool && s.pageVerificationsService != nil {
+	if partyRow.IsVerified.Bool {
 		verifications, _ := s.pageVerificationsService.GetPageVerifications(ctx, db.PageTypeParty, int64(partyID))
 		if verifications != nil {
 			party.Verifications = verifications
@@ -288,7 +288,7 @@ func (s *PartiesService) GetPartyInfo(ctx context.Context, partyID int16) *queri
 			},
 		}
 
-		if partyRow.IsVerified.Bool && s.pageVerificationsService != nil {
+		if partyRow.IsVerified.Bool {
 			verifications, _ := s.pageVerificationsService.GetPageVerifications(ctx, db.PageTypeParty, int64(partyID))
 			if verifications != nil {
 				party.Verifications = verifications
@@ -331,7 +331,7 @@ func (s *PartiesService) ListParties(ctx context.Context) ([]queries.PartyWithVe
 		}
 
 		// Attach verification details if party is verified
-		if p.IsVerified.Bool && s.pageVerificationsService != nil {
+		if p.IsVerified.Bool {
 			verifications, _ := s.pageVerificationsService.GetPageVerifications(ctx, db.PageTypeParty, int64(p.ID))
 			if verifications != nil {
 				party.Verifications = verifications
@@ -1186,16 +1186,14 @@ func (s *PartiesService) UpdatePartyIsVerified(ctx context.Context, partyID int1
 		})
 	} else {
 		// Remove party verifications from pages_verified using existing RemovePageVerification
-		if s.pageVerificationsService != nil {
-			verifications, _ := s.pageVerificationsService.GetPageVerifications(ctx, db.PageTypeParty, int64(partyID))
-			for _, v := range verifications {
-				_ = s.queries.RemovePageVerification(ctx, queries.RemovePageVerificationParams{
-					ID:                 v.ID,
-					PageType:           v.PageType,
-					PageID:             v.PageID,
-					VerificationTypeID: v.VerificationTypeID,
-				})
-			}
+		verifications, _ := s.pageVerificationsService.GetPageVerifications(ctx, db.PageTypeParty, int64(partyID))
+		for _, v := range verifications {
+			_ = s.queries.RemovePageVerification(ctx, queries.RemovePageVerificationParams{
+				ID:                 v.ID,
+				PageType:           v.PageType,
+				PageID:             v.PageID,
+				VerificationTypeID: v.VerificationTypeID,
+			})
 		}
 	}
 
@@ -2114,8 +2112,21 @@ func (s *PartiesService) DeletePartyCustomPosition(ctx context.Context, id int32
 	return err
 }
 
+// AssignPartyPositionInput contains parameters for assigning a party position to a member.
+type AssignPartyPositionInput struct {
+	queries.AssignPartyPositionParams
+	ChapterType string `json:"chapter_type,omitempty"`
+}
+
 // AssignPartyPosition assigns a member to a position in a chapter with occupancy checking.
-func (s *PartiesService) AssignPartyPosition(ctx context.Context, arg queries.AssignPartyPositionParams) (queries.PartyPositionAssignment, error) {
+func (s *PartiesService) AssignPartyPosition(ctx context.Context, input AssignPartyPositionInput) (queries.PartyPositionAssignment, error) {
+	arg := input.AssignPartyPositionParams
+	chapterType := strings.TrimSpace(input.ChapterType)
+
+	if chapterType == "" {
+		return queries.PartyPositionAssignment{}, fmt.Errorf("chapter type is required")
+	}
+
 	// Verify position exists and check max occupants
 	pos, err := s.GetPartyPositionByID(ctx, arg.PositionID, arg.PartyID)
 	if err != nil {
@@ -2189,13 +2200,9 @@ func (s *PartiesService) AssignPartyPosition(ctx context.Context, arg queries.As
 		})
 
 		// Grant official verification badge if chapter corresponds to an official level
-		if s.pageVerificationsService != nil {
-			if chapter, err := s.queries.GetPartyChapterByID(ctx, arg.ChapterID); err == nil {
-				if vTypeID, err := pageverificationsservice.ChapterTypeToOfficialVerificationType(chapter.ChapterType); err == nil {
-					if err := s.pageVerificationsService.EnsureOfficialVerification(ctx, arg.UserID, vTypeID); err != nil {
-						slog.Warn("failed to ensure official verification for user", "userID", arg.UserID, "vTypeID", vTypeID, "error", err)
-					}
-				}
+		if vTypeID, err := pageverificationsservice.ChapterTypeToOfficialVerificationType(chapterType); err == nil {
+			if err := s.pageVerificationsService.EnsureOfficialVerification(ctx, arg.UserID, vTypeID); err != nil {
+				slog.Warn("failed to ensure official verification for user", "userID", arg.UserID, "vTypeID", vTypeID, "error", err)
 			}
 		}
 	}
@@ -2264,12 +2271,10 @@ func (s *PartiesService) VacatePositionAssignment(ctx context.Context, id int64,
 	})
 
 	// Revoke official verification badge if user has no remaining active position at this chapter level
-	if s.pageVerificationsService != nil {
-		if chapter, err := s.queries.GetPartyChapterByID(ctx, assignment.ChapterID); err == nil {
-			if vTypeID, err := pageverificationsservice.ChapterTypeToOfficialVerificationType(chapter.ChapterType); err == nil {
-				if err := s.pageVerificationsService.RevokeOfficialVerificationIfNoActivePosition(ctx, assignment.UserID, chapter.ChapterType, vTypeID); err != nil {
-					slog.Warn("failed to revoke official verification for user", "userID", assignment.UserID, "chapterType", chapter.ChapterType, "vTypeID", vTypeID, "error", err)
-				}
+	if chapter, err := s.GetPartyChapterByID(ctx, assignment.ChapterID); err == nil {
+		if vTypeID, err := pageverificationsservice.ChapterTypeToOfficialVerificationType(chapter.ChapterType); err == nil {
+			if err := s.pageVerificationsService.RevokeOfficialVerificationIfNoActivePosition(ctx, assignment.UserID, chapter.ChapterType, vTypeID); err != nil {
+				slog.Warn("failed to revoke official verification for user", "userID", assignment.UserID, "chapterType", chapter.ChapterType, "vTypeID", vTypeID, "error", err)
 			}
 		}
 	}
@@ -2524,9 +2529,7 @@ func (s *PartiesService) SuspendPartyMember(ctx context.Context, input SuspendPa
 	})
 
 	// Revoke official badges if user has no remaining active positions
-	if s.pageVerificationsService != nil {
-		_ = s.pageVerificationsService.RevokeAllOfficialVerificationsIfNoActivePosition(ctx, input.UserID)
-	}
+	_ = s.pageVerificationsService.RevokeAllOfficialVerificationsIfNoActivePosition(ctx, input.UserID)
 
 	return &suspension, nil
 }
@@ -2747,9 +2750,7 @@ func (s *PartiesService) BlockUserFromThisParty(ctx context.Context, input Block
 		}
 
 		// Revoke official badges if user has no remaining active positions
-		if s.pageVerificationsService != nil {
-			_ = s.pageVerificationsService.RevokeAllOfficialVerificationsIfNoActivePosition(ctx, input.BlockedUserID)
-		}
+		_ = s.pageVerificationsService.RevokeAllOfficialVerificationsIfNoActivePosition(ctx, input.BlockedUserID)
 	}
 
 	// Audit Logging
@@ -2950,11 +2951,7 @@ func (s *PartiesService) InvalidatePartyCache(ctx context.Context, partyID int16
 	redisPartyBasicInfo := fmt.Sprintf("%s%d", db.RedisPartyBasicInfo, partyID)
 	s.rdb.Del(ctx, redisPartyInfo)
 	s.rdb.Del(ctx, redisPartyBasicInfo)
-	if s.pageVerificationsService != nil {
-		s.pageVerificationsService.InvalidateCache(ctx, db.PageTypeParty, int64(partyID))
-	} else {
-		s.rdb.Del(ctx, fmt.Sprintf("%s%s:%d", db.RedisPageVerifications, db.PageTypeParty, partyID))
-	}
+	s.pageVerificationsService.InvalidateCache(ctx, db.PageTypeParty, int64(partyID))
 	s.rdb.Del(ctx, db.RedisPartiesList)
 }
 

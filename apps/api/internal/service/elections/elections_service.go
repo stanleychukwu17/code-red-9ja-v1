@@ -1185,18 +1185,16 @@ func (s *ElectionsService) CheckIfUserEverContested(ctx context.Context, userID 
 	return s.queries.CheckIfUserEverContested(ctx, userID)
 }
 
-// FieldPartyCandidate assigns, updates, or un-fields a political party's candidate or running mate for an election.
-// slot can be "candidate" (default) or "running_mate".
-func (s *ElectionsService) FieldPartyCandidate(ctx context.Context, electionID int32, partyID int16, candidateID int64, slot ...string) error {
-	targetSlot := "candidate"
-	if len(slot) > 0 && slot[0] == "running_mate" {
-		targetSlot = "running_mate"
+// FieldPartyCandidate assigns or updates a political party's candidate or running mate for an election.
+// slot is "candidate" or "running_mate". Requires newCandidateID > 0.
+func (s *ElectionsService) FieldPartyCandidate(ctx context.Context, electionID int32, partyID int16, newCandidateID int64, slot string) error {
+	if newCandidateID <= 0 {
+		return fmt.Errorf("candidate ID must be greater than zero")
 	}
 
-	// Fetch current candidacy users for cache invalidation
-	affected, err := s.queries.ListElectionCandidacyUsers(ctx, []int32{electionID})
-	if err != nil {
-		return err
+	targetSlot := "candidate"
+	if slot == "running_mate" {
+		targetSlot = "running_mate"
 	}
 
 	// Retrieve any existing ballot ticket for this party in the election
@@ -1206,213 +1204,215 @@ func (s *ElectionsService) FieldPartyCandidate(ctx context.Context, electionID i
 	})
 	ticketExists := err == nil
 
+	type candidateAction struct {
+		userID int64
+		slot   string
+	}
+	var nominated []candidateAction
+	var withdrawn []candidateAction
+
 	if targetSlot == "running_mate" {
 		if !ticketExists {
 			return fmt.Errorf("cannot assign running mate: ticket has no principal candidate yet")
 		}
 
-		// Track previous running mate for replacement/withdrawal notifications
-		previousRunningMateID := utils.PgInt8OrDefault(existingTicket.RunningMateID, 0)
+		currentRunningMateID := utils.PgInt8OrDefault(existingTicket.RunningMateID, 0)
 
-		if candidateID > 0 {
-			// Ensure running mate is not the same user as the principal candidate
-			if existingTicket.CandidateID == candidateID {
-				return fmt.Errorf("running mate cannot be the same person as the principal candidate")
-			}
-
-			// Track new running mate for candidacy cache eviction
-			affected = append(affected, queries.ListElectionCandidacyUsersRow{ID: candidateID})
-			_, err = s.queries.UpdateElectionCandidateRunningMate(ctx, queries.UpdateElectionCandidateRunningMateParams{
-				RunningMateID: pgtype.Int8{Int64: candidateID, Valid: true},
-				ElectionID:    electionID,
-				PartyID:       partyID,
-			})
-			if err != nil {
-				return fmt.Errorf("failed to update running mate: %w", err)
-			}
-
-			// Notify replaced running mate and freshly nominated running mate
-			if previousRunningMateID > 0 && previousRunningMateID != candidateID {
-				s.notificationsService.NotifyCandidateWithdrawn(ctx, notifications.NotifyCandidateWithdrawnParams{
-					PartyID:      partyID,
-					ElectionID:   electionID,
-					TargetUserID: previousRunningMateID,
-					Slot:         "running_mate",
-				})
-				if s.pageVerificationsService != nil {
-					if err := s.pageVerificationsService.RevokePoliticianVerificationIfNoCandidacy(ctx, previousRunningMateID); err != nil {
-						slog.Warn("failed to revoke politician verification for previous running mate", "userID", previousRunningMateID, "error", err)
-					}
-				}
-			}
-			if candidateID != previousRunningMateID {
-				s.notificationsService.NotifyCandidateNominated(ctx, notifications.NotifyCandidateNominatedParams{
-					PartyID:      partyID,
-					ElectionID:   electionID,
-					TargetUserID: candidateID,
-					Slot:         "running_mate",
-				})
-			}
-			if s.pageVerificationsService != nil {
-				if err := s.pageVerificationsService.EnsurePoliticianVerification(ctx, candidateID); err != nil {
-					slog.Warn("failed to ensure politician verification for running mate", "userID", candidateID, "error", err)
-				}
-			}
-		} else if previousRunningMateID > 0 {
-			// remove the current running mate
-			_, err = s.queries.UpdateElectionCandidateRunningMate(ctx, queries.UpdateElectionCandidateRunningMateParams{
-				RunningMateID: pgtype.Int8{Valid: false},
-				ElectionID:    electionID,
-				PartyID:       partyID,
-			})
-			if err != nil {
-				return fmt.Errorf("failed to remove running mate: %w", err)
-			}
-
-			s.notificationsService.NotifyCandidateWithdrawn(ctx, notifications.NotifyCandidateWithdrawnParams{
-				PartyID:      partyID,
-				ElectionID:   electionID,
-				TargetUserID: previousRunningMateID,
-				Slot:         "running_mate",
-			})
-			if s.pageVerificationsService != nil {
-				if err := s.pageVerificationsService.RevokePoliticianVerificationIfNoCandidacy(ctx, previousRunningMateID); err != nil {
-					slog.Warn("failed to revoke politician verification for unfielded running mate", "userID", previousRunningMateID, "error", err)
-				}
-			}
+		// If already the active running mate, no changes needed
+		if currentRunningMateID == newCandidateID {
+			return nil
 		}
+
+		// Ensure running mate is not the same user as the principal candidate
+		if existingTicket.CandidateID == newCandidateID {
+			return fmt.Errorf("running mate cannot be the same person as the principal candidate")
+		}
+
+		// Update running mate assignment on the party's ticket
+		_, err = s.queries.UpdateElectionCandidateRunningMate(ctx, queries.UpdateElectionCandidateRunningMateParams{
+			RunningMateID: pgtype.Int8{Int64: newCandidateID, Valid: true},
+			ElectionID:    electionID,
+			PartyID:       partyID,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to update running mate: %w", err)
+		}
+
+		// Queue replaced running mate for withdrawal if one was previously assigned
+		if currentRunningMateID > 0 {
+			withdrawn = append(withdrawn, candidateAction{userID: currentRunningMateID, slot: "running_mate"})
+		}
+
+		// Queue new running mate for nomination notification and verification
+		nominated = append(nominated, candidateAction{userID: newCandidateID, slot: "running_mate"})
 	} else {
-		// Retain existing ticket nominees if present
-		var currentCandidateID int64
-		var currentRunningMateID int64
 		if ticketExists {
-			currentCandidateID = existingTicket.CandidateID
-			currentRunningMateID = utils.PgInt8OrDefault(existingTicket.RunningMateID, 0)
-		}
+			currentCandidateID := existingTicket.CandidateID
+			currentRunningMateID := utils.PgInt8OrDefault(existingTicket.RunningMateID, 0)
 
-		if candidateID > 0 {
-			affected = append(affected, queries.ListElectionCandidacyUsersRow{ID: candidateID})
-			if ticketExists {
-				// Prevent principal candidate from colliding with current running mate
-				if currentRunningMateID == candidateID {
-					return fmt.Errorf("principal candidate cannot be the same person as the running mate")
-				}
-
-				// Update principal candidate on existing ticket
-				_, err = s.queries.UpdateElectionCandidatePrincipal(ctx, queries.UpdateElectionCandidatePrincipalParams{
-					CandidateID: candidateID,
-					ElectionID:  electionID,
-					PartyID:     partyID,
-				})
-				if err != nil {
-					return fmt.Errorf("failed to update principal candidate: %w", err)
-				}
-
-				// Notify departing candidate if replaced
-				if currentCandidateID > 0 && currentCandidateID != candidateID {
-					s.notificationsService.NotifyCandidateWithdrawn(ctx, notifications.NotifyCandidateWithdrawnParams{
-						PartyID:      partyID,
-						ElectionID:   electionID,
-						TargetUserID: currentCandidateID,
-						Slot:         "candidate",
-					})
-					if s.pageVerificationsService != nil {
-						if err := s.pageVerificationsService.RevokePoliticianVerificationIfNoCandidacy(ctx, currentCandidateID); err != nil {
-							slog.Warn("failed to revoke politician verification for replaced candidate", "userID", currentCandidateID, "error", err)
-						}
-					}
-				}
-
-				// Notify newly nominated candidate
-				if candidateID != currentCandidateID {
-					s.notificationsService.NotifyCandidateNominated(ctx, notifications.NotifyCandidateNominatedParams{
-						PartyID:      partyID,
-						ElectionID:   electionID,
-						TargetUserID: candidateID,
-						Slot:         "candidate",
-					})
-				}
-				if s.pageVerificationsService != nil {
-					if err := s.pageVerificationsService.EnsurePoliticianVerification(ctx, candidateID); err != nil {
-						slog.Warn("failed to ensure politician verification for candidate", "userID", candidateID, "error", err)
-					}
-				}
-			} else {
-				election, err := s.queries.GetElectionInstanceByID(ctx, electionID)
-				if err != nil {
-					return fmt.Errorf("failed to retrieve election for fielding candidate: %w", err)
-				}
-
-				_, err = s.queries.GetPartyByID(ctx, partyID)
-				if err != nil {
-					return fmt.Errorf("party not found: %w", err)
-				}
-
-				_, err = s.queries.CreateElectionCandidate(ctx, queries.CreateElectionCandidateParams{
-					ElectionID:      electionID,
-					ElectionGroupID: election.ElectionGroupID,
-					CandidateID:     candidateID,
-					PartyID:         partyID,
-				})
-				if err != nil {
-					return err
-				}
-
-				s.notificationsService.NotifyCandidateNominated(ctx, notifications.NotifyCandidateNominatedParams{
-					PartyID:      partyID,
-					ElectionID:   electionID,
-					TargetUserID: candidateID,
-					Slot:         "candidate",
-				})
-				if s.pageVerificationsService != nil {
-					if err := s.pageVerificationsService.EnsurePoliticianVerification(ctx, candidateID); err != nil {
-						slog.Warn("failed to ensure politician verification for candidate", "userID", candidateID, "error", err)
-					}
-				}
+			// If already the active principal candidate, no changes needed
+			if currentCandidateID == newCandidateID {
+				return nil
 			}
+
+			// Prevent principal candidate from colliding with current running mate
+			if currentRunningMateID == newCandidateID {
+				return fmt.Errorf("principal candidate cannot be the same person as the running mate")
+			}
+
+			// Update principal candidate on existing ticket
+			_, err = s.queries.UpdateElectionCandidatePrincipal(ctx, queries.UpdateElectionCandidatePrincipalParams{
+				CandidateID: newCandidateID,
+				ElectionID:  electionID,
+				PartyID:     partyID,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to update principal candidate: %w", err)
+			}
+
+			// Queue previous principal candidate for withdrawal processing
+			if currentCandidateID > 0 {
+				withdrawn = append(withdrawn, candidateAction{userID: currentCandidateID, slot: "candidate"})
+			}
+
+			// Queue new principal candidate for nomination notification and verification
+			nominated = append(nominated, candidateAction{userID: newCandidateID, slot: "candidate"})
 		} else {
-			// Unfield principal candidate removes the entire party ticket
-			if ticketExists {
-				err = s.queries.DeleteElectionCandidateForParty(ctx, queries.DeleteElectionCandidateForPartyParams{
-					ElectionID: electionID,
-					PartyID:    partyID,
-				})
-				if err != nil {
-					return err
-				}
-
-				if currentCandidateID > 0 {
-					s.notificationsService.NotifyCandidateWithdrawn(ctx, notifications.NotifyCandidateWithdrawnParams{
-						PartyID:      partyID,
-						ElectionID:   electionID,
-						TargetUserID: currentCandidateID,
-						Slot:         "candidate",
-					})
-					if s.pageVerificationsService != nil {
-						if err := s.pageVerificationsService.RevokePoliticianVerificationIfNoCandidacy(ctx, currentCandidateID); err != nil {
-							slog.Warn("failed to revoke politician verification for unfielded candidate", "userID", currentCandidateID, "error", err)
-						}
-					}
-				}
-
-				if currentRunningMateID > 0 {
-					s.notificationsService.NotifyCandidateWithdrawn(ctx, notifications.NotifyCandidateWithdrawnParams{
-						PartyID:      partyID,
-						ElectionID:   electionID,
-						TargetUserID: currentRunningMateID,
-						Slot:         "running_mate",
-					})
-					if s.pageVerificationsService != nil {
-						if err := s.pageVerificationsService.RevokePoliticianVerificationIfNoCandidacy(ctx, currentRunningMateID); err != nil {
-							slog.Warn("failed to revoke politician verification for unfielded running mate", "userID", currentRunningMateID, "error", err)
-						}
-					}
-				}
+			// Create a brand new election ticket for this party
+			election, err := s.queries.GetElectionInstanceByID(ctx, electionID)
+			if err != nil {
+				return fmt.Errorf("failed to retrieve election for fielding candidate: %w", err)
 			}
+
+			// Insert new ballot ticket record with the fielded principal candidate
+			_, err = s.queries.CreateElectionCandidate(ctx, queries.CreateElectionCandidateParams{
+				ElectionID:      electionID,
+				ElectionGroupID: election.ElectionGroupID,
+				CandidateID:     newCandidateID,
+				PartyID:         partyID,
+			})
+			if err != nil {
+				return err
+			}
+
+			// Queue newly created principal candidate for nomination processing
+			nominated = append(nominated, candidateAction{userID: newCandidateID, slot: "candidate"})
 		}
 	}
 
-	s.invalidateCandidacyUsers(ctx, affected, false)
+	// Notify newly nominated candidates, grant verification badges, and refresh active candidacies cache
+	for _, c := range nominated {
+		s.notificationsService.NotifyCandidateNominated(ctx, notifications.NotifyCandidateNominatedParams{
+			PartyID:      partyID,
+			ElectionID:   electionID,
+			TargetUserID: c.userID,
+			Slot:         c.slot,
+		})
+
+		// Grant politician verification badge to candidate if not already held
+		if err := s.pageVerificationsService.EnsurePoliticianVerification(ctx, c.userID); err != nil {
+			slog.Warn("failed to ensure politician verification for candidate", "userID", c.userID, "error", err)
+		}
+
+		// Invalidate cached active candidacies for the newly nominated candidate
+		s.InvalidateUserActiveCandidacies(ctx, c.userID)
+	}
+
+	// Notify superseded/replaced candidates, revoke politician badges if no other races remain, and refresh cache
+	for _, c := range withdrawn {
+		s.notificationsService.NotifyCandidateWithdrawn(ctx, notifications.NotifyCandidateWithdrawnParams{
+			PartyID:      partyID,
+			ElectionID:   electionID,
+			TargetUserID: c.userID,
+			Slot:         c.slot,
+		})
+
+		// Revoke politician badge if the user is no longer actively contesting any elections
+		if err := s.pageVerificationsService.RevokePoliticianVerificationIfNoCandidacy(ctx, c.userID); err != nil {
+			slog.Warn("failed to revoke politician verification for candidate", "userID", c.userID, "error", err)
+		}
+
+		// Invalidate cached active candidacies for the withdrawn candidate
+		s.InvalidateUserActiveCandidacies(ctx, c.userID)
+	}
+
+	return nil
+}
+
+// UnfieldPartyCandidate removes an assigned candidate or running mate from an election.
+// If slot is "running_mate", only the running mate is removed from the ticket.
+// If slot is "candidate" (or empty), the entire party ticket is removed.
+func (s *ElectionsService) UnfieldPartyCandidate(ctx context.Context, electionID int32, partyID int16, slot string) error {
+	existingTicket, err := s.queries.GetElectionCandidateForParty(ctx, queries.GetElectionCandidateForPartyParams{
+		ElectionID: electionID,
+		PartyID:    partyID,
+	})
+	if err != nil {
+		// Nothing to unfield
+		return nil
+	}
+
+	type candidateAction struct {
+		userID int64
+		slot   string
+	}
+	var withdrawn []candidateAction
+
+	if slot == "running_mate" {
+		currentRunningMateID := utils.PgInt8OrDefault(existingTicket.RunningMateID, 0)
+		if currentRunningMateID <= 0 {
+			// No running mate currently assigned to remove
+			return nil
+		}
+
+		// Clear running mate slot on existing candidate ticket
+		_, err = s.queries.UpdateElectionCandidateRunningMate(ctx, queries.UpdateElectionCandidateRunningMateParams{
+			RunningMateID: pgtype.Int8{Valid: false},
+			ElectionID:    electionID,
+			PartyID:       partyID,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to remove running mate: %w", err)
+		}
+
+		withdrawn = append(withdrawn, candidateAction{userID: currentRunningMateID, slot: "running_mate"})
+	} else {
+		if existingTicket.CandidateID <= 0 {
+			// No candidate currently assigned to unfield
+			return nil
+		}
+
+		// Unfielding main candidate removes the entire party ticket from this election
+		err = s.queries.DeleteElectionCandidateForParty(ctx, queries.DeleteElectionCandidateForPartyParams{
+			ElectionID: electionID,
+			PartyID:    partyID,
+		})
+		if err != nil {
+			return err
+		}
+
+		// Queue candidate and running mate (if present) for withdrawal processing
+		withdrawn = append(withdrawn, candidateAction{userID: existingTicket.CandidateID, slot: "candidate"})
+		currentRunningMateID := utils.PgInt8OrDefault(existingTicket.RunningMateID, 0)
+		if currentRunningMateID > 0 {
+			withdrawn = append(withdrawn, candidateAction{userID: currentRunningMateID, slot: "running_mate"})
+		}
+	}
+
+	// Dispatch withdrawal notifications, revoke politician verification if no candidacies remain, and invalidate active candidacies cache
+	for _, c := range withdrawn {
+		s.notificationsService.NotifyCandidateWithdrawn(ctx, notifications.NotifyCandidateWithdrawnParams{
+			PartyID:      partyID,
+			ElectionID:   electionID,
+			TargetUserID: c.userID,
+			Slot:         c.slot,
+		})
+		if err := s.pageVerificationsService.RevokePoliticianVerificationIfNoCandidacy(ctx, c.userID); err != nil {
+			slog.Warn("failed to revoke politician verification for candidate", "userID", c.userID, "error", err)
+		}
+		s.InvalidateUserActiveCandidacies(ctx, c.userID)
+	}
+
 	return nil
 }
 

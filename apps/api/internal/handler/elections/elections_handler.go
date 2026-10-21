@@ -35,7 +35,8 @@ type ElectionsService interface {
 	DeleteElection(ctx context.Context, id int32) error
 	BulkDeleteElections(ctx context.Context, params elections.BulkDeleteElectionsParams) (elections.BulkDeleteElectionsResult, error)
 	GetElectionCandidates(ctx context.Context, electionID int32) ([]queries.ListElectionCandidatesDetailedByElectionIDRow, error)
-	FieldPartyCandidate(ctx context.Context, electionID int32, partyID int16, candidateID int64, slot ...string) error
+	FieldPartyCandidate(ctx context.Context, electionID int32, partyID int16, candidateID int64, slot string) error
+	UnfieldPartyCandidate(ctx context.Context, electionID int32, partyID int16, slot string) error
 	CheckIfUserEverContested(ctx context.Context, userID int64) (bool, error)
 	GetUserActiveCandidacies(ctx context.Context, candidateID int64) ([]queries.UserActiveCandidacy, error)
 	GetNonVotingReasons(ctx context.Context) ([]queries.NonVotingReason, error)
@@ -928,9 +929,9 @@ func (h *Handler) GetElectionCandidates(w http.ResponseWriter, r *http.Request) 
 }
 
 type FieldCandidateRequest struct {
-	CandidateID int64  `json:"candidate_id"`
-	PartyID     int16  `json:"party_id"`
-	Slot        string `json:"slot,omitempty"`
+	CandidateID int64  `json:"candidate_id" validate:"required,gt=0"`
+	PartyID     int16  `json:"party_id" validate:"required,gt=0"`
+	Slot        string `json:"slot" validate:"omitempty,oneof=candidate running_mate"`
 }
 
 // FieldPartyCandidate handles POST /api/v1/elections/{id}/field-candidate
@@ -956,9 +957,8 @@ func (h *Handler) FieldPartyCandidate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// partyID must be valid
-	if req.PartyID <= 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "Party ID is required")
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
 		return
 	}
 
@@ -987,31 +987,21 @@ func (h *Handler) FieldPartyCandidate(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Retrieve user account and verify political party membership
-	user, err := h.usersService.GetUserByFakeID(r.Context(), claims.FakeID)
+	// Retrieve administrator account and verify party membership
+	adminUser, err := h.usersService.GetUserByFakeID(r.Context(), claims.FakeID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusUnauthorized, "User not found")
 		return
 	}
 
-	// Verify user account status is active
-	if !user.AccountStatus.Valid || user.AccountStatus.String != "active" {
-		h.utils.RespondError(w, http.StatusForbidden, "User account is not active")
-		return
-	}
-
-	// Verify user is associated with a party and matches the received party ID (unless super_admin/admin)
-	if !user.PartyID.Valid {
-		h.utils.RespondError(w, http.StatusForbidden, "User is not associated with a party")
-		return
-	}
-	if user.PartyID.Int16 != req.PartyID {
+	// Non-platform admins can only field candidates for their own party
+	if !claims.HasAnyRole("super_admin", "admin") && (!adminUser.PartyID.Valid || adminUser.PartyID.Int16 != req.PartyID) {
 		h.utils.RespondError(w, http.StatusForbidden, "Party ID does not match user's party")
 		return
 	}
 
-	// Verify user is not suspended from the party
-	suspension, err := h.partiesService.GetActivePartyMemberSuspension(r.Context(), req.PartyID, user.ID)
+	// Verify administrator is not suspended from the party
+	suspension, err := h.partiesService.GetActivePartyMemberSuspension(r.Context(), req.PartyID, adminUser.ID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to check party suspension status: "+err.Error())
 		return
@@ -1021,34 +1011,31 @@ func (h *Handler) FieldPartyCandidate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// If fielding a candidate, also verify the candidate is not suspended from the party
-	if req.CandidateID > 0 {
-		candSuspension, err := h.partiesService.GetActivePartyMemberSuspension(r.Context(), req.PartyID, req.CandidateID)
-		if err != nil {
-			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to check candidate suspension status: "+err.Error())
-			return
-		}
-		if candSuspension != nil && candSuspension.ID > 0 {
-			h.utils.RespondError(w, http.StatusForbidden, "Candidate is suspended from this party")
-			return
-		}
+	// Verify candidate is not suspended from the party
+	candSuspension, err := h.partiesService.GetActivePartyMemberSuspension(r.Context(), req.PartyID, req.CandidateID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to check candidate suspension status: "+err.Error())
+		return
+	}
+	if candSuspension != nil && candSuspension.ID > 0 {
+		h.utils.RespondError(w, http.StatusForbidden, "Candidate is suspended from this party")
+		return
+	}
 
-		// Verify candidate is not already running in this election cycle / election group
-		candidacies, err := h.service.GetUserActiveCandidacies(r.Context(), req.CandidateID)
-		if err != nil {
-			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to verify candidate eligibility: "+err.Error())
-			return
-		}
-		// Reject if the user is already contesting another election in this cycle
-		for _, c := range candidacies {
-			if c.ElectionGroupID == election.ElectionGroupID && c.ElectionID != int32(electionID) {
-				role := "a candidate"
-				if c.CandidacyType == "running_mate" {
-					role = "a running mate"
-				}
-				h.utils.RespondError(w, http.StatusConflict, fmt.Sprintf("User is already running as %s in %s for this election cycle", role, c.ElectionName))
-				return
+	// Verify candidate is not already running in this election cycle / election group
+	candidacies, err := h.service.GetUserActiveCandidacies(r.Context(), req.CandidateID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to verify candidate eligibility: "+err.Error())
+		return
+	}
+	for _, c := range candidacies {
+		if c.ElectionGroupID == election.ElectionGroupID && c.ElectionID != int32(electionID) {
+			role := "a candidate"
+			if c.CandidacyType == "running_mate" {
+				role = "a running mate"
 			}
+			h.utils.RespondError(w, http.StatusConflict, fmt.Sprintf("User is already running as %s in %s for this election cycle", role, c.ElectionName))
+			return
 		}
 	}
 
@@ -1060,11 +1047,6 @@ func (h *Handler) FieldPartyCandidate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Log audit action for the administrator
-	action := db.ActionFieldPartyCandidate
-	if req.CandidateID == 0 {
-		action = db.ActionUnfieldPartyCandidate
-	}
-
 	moduleName := db.ModulePartyAdmin
 	actorRole := db.ActorRolePartyAdmin
 	if claims.HasRole(db.ActorRoleSuperAdmin) {
@@ -1084,8 +1066,8 @@ func (h *Handler) FieldPartyCandidate(w http.ResponseWriter, r *http.Request) {
 
 	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
 		Module:     audit.StringToText(moduleName),
-		Action:     action,
-		ActorID:    user.ID,
+		Action:     db.ActionFieldPartyCandidate,
+		ActorID:    adminUser.ID,
 		ActorRole:  audit.StringToText(actorRole),
 		EntityType: db.EntityTypeElections,
 		EntityID:   strconv.FormatInt(electionID, 10),
@@ -1094,4 +1076,113 @@ func (h *Handler) FieldPartyCandidate(w http.ResponseWriter, r *http.Request) {
 
 	// Return success response
 	h.utils.RespondSuccess(w, http.StatusOK, "Candidate fielded successfully", nil)
+}
+
+type UnfieldCandidateRequest struct {
+	PartyID int16  `json:"party_id" validate:"required,gt=0"`
+	Slot    string `json:"slot" validate:"required,oneof=candidate running_mate"`
+}
+
+// UnfieldPartyCandidate handles POST /api/v1/elections/{id}/unfield-candidate
+func (h *Handler) UnfieldPartyCandidate(w http.ResponseWriter, r *http.Request) {
+	// Parse and validate election ID from URL parameter
+	idStr := chi.URLParam(r, "id")
+	electionID, err := strconv.ParseInt(idStr, 10, 32)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election ID")
+		return
+	}
+
+	// Verify user authentication claims and enforce party admin roles
+	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey, "party_admin", "super_party_admin", "admin", "super_admin")
+	if !ok {
+		return
+	}
+
+	// Decode request payload
+	var req UnfieldCandidateRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	// Validate required party ID and ticket slot
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
+		return
+	}
+
+	// Verify election exists
+	election, err := h.service.GetElectionByID(r.Context(), int32(electionID))
+	if err != nil {
+		h.utils.RespondError(w, http.StatusNotFound, "Election not found")
+		return
+	}
+
+	// Ensure election group is active and nominations are currently open (skipped for platform admins)
+	if !claims.HasAnyRole("super_admin", "admin") {
+		electionGroup, err := h.service.GetElectionGroupByID(r.Context(), election.ElectionGroupID)
+		if err != nil {
+			h.utils.RespondError(w, http.StatusBadRequest, "Failed to verify election group: "+err.Error())
+			return
+		}
+		if !electionGroup.Active {
+			h.utils.RespondError(w, http.StatusForbidden, "Election group is not active")
+			return
+		}
+		if !election.NominationsOpen {
+			h.utils.RespondError(w, http.StatusForbidden, "Candidate nomination is closed: elections within 15 days cannot be modified")
+			return
+		}
+	}
+
+	// Retrieve administrator account and verify active standing
+	adminUser, err := h.usersService.GetUserByFakeID(r.Context(), claims.FakeID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusUnauthorized, "User not found")
+		return
+	}
+
+	// Non-platform admins can only unfield candidates for their own party
+	if !claims.HasAnyRole("super_admin", "admin") && (!adminUser.PartyID.Valid || adminUser.PartyID.Int16 != req.PartyID) {
+		h.utils.RespondError(w, http.StatusForbidden, "Party ID does not match user's party")
+		return
+	}
+
+	// Remove assigned candidate/running mate from the election ballot
+	err = h.service.UnfieldPartyCandidate(r.Context(), int32(electionID), req.PartyID, req.Slot)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to unfield candidate: "+err.Error())
+		return
+	}
+
+	// Log audit trail for party administrator or platform admin
+	moduleName := db.ModulePartyAdmin
+	actorRole := db.ActorRolePartyAdmin
+	if claims.HasRole(db.ActorRoleSuperAdmin) {
+		moduleName = db.ModuleAdmin
+		actorRole = db.ActorRoleSuperAdmin
+	} else if claims.HasRole(db.ActorRoleAdmin) {
+		moduleName = db.ModuleAdmin
+		actorRole = db.ActorRoleAdmin
+	}
+
+	payloadJSON, _ := json.Marshal(map[string]interface{}{
+		"election_id": electionID,
+		"party_id":    req.PartyID,
+		"slot":        req.Slot,
+	})
+
+	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
+		Module:     audit.StringToText(moduleName),
+		Action:     db.ActionUnfieldPartyCandidate,
+		ActorID:    adminUser.ID,
+		ActorRole:  audit.StringToText(actorRole),
+		EntityType: db.EntityTypeElections,
+		EntityID:   strconv.FormatInt(electionID, 10),
+		NewValues:  payloadJSON,
+	})
+
+	// Return success response
+	h.utils.RespondSuccess(w, http.StatusOK, "Candidate removed successfully", nil)
 }

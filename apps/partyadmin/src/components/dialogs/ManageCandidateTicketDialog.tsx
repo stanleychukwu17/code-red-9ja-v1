@@ -12,7 +12,7 @@ import { AppAvatar } from "@repo/ui/components/avatar";
 import { UserFinderCommand } from "@repo/ui/components/custom/UserFinderCommand";
 import { UsersIcon, Trash2, UserPlus, RefreshCw, UserCheck } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { fieldPartyCandidate } from "#/lib/server/elections";
+import { fieldPartyCandidate, unfieldPartyCandidate } from "#/lib/server/elections";
 import { getUsersList } from "#/lib/server/users";
 import { useUserParty } from "#/hooks/useUserParty";
 import type { ElectionInstanceType } from "../tiles/election-instance-tile";
@@ -95,6 +95,26 @@ export function ManageCandidateTicketDialog({ open, onClose, data }: ManageCandi
     },
   });
 
+  // Mutation to remove/unfield candidate from ticket
+  const removeMutation = useMutation({
+    mutationFn: async ({ slot }: { slot: "candidate" | "running_mate" }) => {
+      const res = await unfieldPartyCandidate({
+        data: {
+          electionId: data.id,
+          partyId: userPartyId || 0,
+          slot,
+        },
+      });
+      if (!res.success) {
+        throw new Error(res.message || "Failed to remove candidate");
+      }
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["elections"] });
+    },
+  });
+
   // Handles member selection from the UserFinderCommand dialog
   const handleSelectUser = (selectedUsers: any[]) => {
     if (selectedUsers.length > 0 && targetSlot) {
@@ -108,8 +128,7 @@ export function ManageCandidateTicketDialog({ open, onClose, data }: ManageCandi
 
   // Removes/un-fields the assigned candidate from the ticket
   const handleRemoveCandidate = (slot: "candidate" | "running_mate") => {
-    // Passing candidateId: 0 removes the candidate assignment for that slot
-    mutation.mutate({ candidateId: 0, slot });
+    removeMutation.mutate({ slot });
   };
 
   return (
