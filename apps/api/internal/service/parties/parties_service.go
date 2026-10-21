@@ -76,6 +76,7 @@ type PageVerificationsService interface {
 	EnsureOfficialVerification(ctx context.Context, userID int64, verificationTypeID int16) error
 	RevokeOfficialVerificationIfNoActivePosition(ctx context.Context, userID int64, chapterType string, verificationTypeID int16) error
 	RevokeAllOfficialVerificationsIfNoActivePosition(ctx context.Context, userID int64) error
+	InvalidateCache(ctx context.Context, pageType string, pageID int64)
 }
 
 // NotificationsService defines methods required for dispatching notifications
@@ -1538,7 +1539,7 @@ func (s *PartiesService) GetChapterMemberCount(ctx context.Context, partyID int1
 
 // IsPartyChapterMember checks chapter membership, including suspended members.
 func (s *PartiesService) IsPartyChapterMember(ctx context.Context, userID int64, partyID int16, chapterID int32) (bool, error) {
-	cacheKey := fmt.Sprintf("%s%d:%d:%d", db.RedisPartyChapterMember, userID, partyID, chapterID)
+	cacheKey := fmt.Sprintf("%s%d:%d:%d", db.RedisPartyChapterMember, partyID, chapterID, userID)
 	if cached, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
 		if isMember, err := strconv.ParseBool(cached); err == nil {
 			return isMember, nil
@@ -1560,7 +1561,7 @@ func (s *PartiesService) IsPartyChapterMember(ctx context.Context, userID int64,
 
 // IsPartyMember checks if a user is an active member of a party.
 func (s *PartiesService) IsPartyMember(ctx context.Context, userID int64, partyID int16) (bool, error) {
-	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisPartyMember, userID, partyID)
+	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisPartyMember, partyID, userID)
 	if s.rdb != nil {
 		if cached, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
 			if isMember, err := strconv.ParseBool(cached); err == nil {
@@ -2947,11 +2948,13 @@ func (s *PartiesService) InvalidateChapterOfficialCache(ctx context.Context, cha
 func (s *PartiesService) InvalidatePartyCache(ctx context.Context, partyID int16) {
 	redisPartyInfo := fmt.Sprintf("%s%d", db.RedisPartyInfo, partyID)
 	redisPartyBasicInfo := fmt.Sprintf("%s%d", db.RedisPartyBasicInfo, partyID)
-	redisPageVerifications := fmt.Sprintf("%s%s:%d", db.RedisPageVerifications, db.PageTypeParty, partyID)
-
 	s.rdb.Del(ctx, redisPartyInfo)
 	s.rdb.Del(ctx, redisPartyBasicInfo)
-	s.rdb.Del(ctx, redisPageVerifications)
+	if s.pageVerificationsService != nil {
+		s.pageVerificationsService.InvalidateCache(ctx, db.PageTypeParty, int64(partyID))
+	} else {
+		s.rdb.Del(ctx, fmt.Sprintf("%s%s:%d", db.RedisPageVerifications, db.PageTypeParty, partyID))
+	}
 	s.rdb.Del(ctx, db.RedisPartiesList)
 }
 
@@ -2966,14 +2969,14 @@ func (s *PartiesService) InvalidateChapterMemberCount(ctx context.Context, party
 
 // InvalidatePartyChapterMembership removes the cached membership boolean for a user in a chapter.
 func (s *PartiesService) InvalidatePartyChapterMembership(ctx context.Context, userID int64, partyID int16, chapterID int32) {
-	cacheKey := fmt.Sprintf("%s%d:%d:%d", db.RedisPartyChapterMember, userID, partyID, chapterID)
+	cacheKey := fmt.Sprintf("%s%d:%d:%d", db.RedisPartyChapterMember, partyID, chapterID, userID)
 	_ = s.rdb.Del(ctx, cacheKey).Err()
 	s.InvalidateUserPartyChapters(ctx, userID, partyID)
 }
 
 // InvalidatePartyMembership removes the cached party-wide membership boolean for a user.
 func (s *PartiesService) InvalidatePartyMembership(ctx context.Context, userID int64, partyID int16) {
-	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisPartyMember, userID, partyID)
+	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisPartyMember, partyID, userID)
 	_ = s.rdb.Del(ctx, cacheKey).Err()
 	s.InvalidateUserPartyChapters(ctx, userID, partyID)
 }

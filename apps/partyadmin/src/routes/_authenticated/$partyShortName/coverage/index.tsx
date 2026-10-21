@@ -47,9 +47,6 @@ function AgentCoveragePage() {
 
   const [drillDown, setDrillDown] = useState<{
     stateId?: number;
-    districtId?: number;
-    federalConstituencyId?: number;
-    stateConstituencyId?: number;
     lgaId?: number;
     wardId?: number;
   }>({});
@@ -60,9 +57,6 @@ function AgentCoveragePage() {
   }, [selectedElection?.id, selectedElectionGroup?.id]);
 
   const stateId = drillDown.stateId ?? (selectedElection?.state_id as number | undefined) ?? undefined;
-  const districtId = drillDown.districtId ?? (selectedElection?.senatorial_district_id as number | undefined) ?? undefined;
-  const federalConstituencyId = drillDown.federalConstituencyId ?? (selectedElection?.federal_constituency_id as number | undefined) ?? undefined;
-  const stateConstituencyId = drillDown.stateConstituencyId ?? (selectedElection?.state_constituency_id as number | undefined) ?? undefined;
   const lgaId = drillDown.lgaId ?? (selectedElection?.lga_id as number | undefined) ?? undefined;
   const wardId = drillDown.wardId ?? (selectedElection?.ward_id as number | undefined) ?? undefined;
 
@@ -71,15 +65,11 @@ function AgentCoveragePage() {
   // Fallback title based on scope
   const computedTitle = wardId
     ? "Polling Units"
-    : stateConstituencyId || lgaId
+    : lgaId
       ? "Wards"
-      : federalConstituencyId
+      : stateId
         ? "LGAs"
-        : districtId
-          ? "Federal Constituencies"
-          : stateId
-            ? "Senatorial Districts"
-            : "States";
+        : "States";
 
   const { data, isLoading } = useQuery({
     queryKey: [
@@ -89,9 +79,6 @@ function AgentCoveragePage() {
       party?.id,
       wardId,
       lgaId,
-      stateConstituencyId,
-      federalConstituencyId,
-      districtId,
       stateId,
     ],
     queryFn: async () => {
@@ -102,9 +89,6 @@ function AgentCoveragePage() {
           electionGroupId: selectedElectionGroup?.id,
           partyId: party?.id,
           stateId,
-          senatorialDistrictId: districtId,
-          federalConstituencyId,
-          stateConstituencyId,
           lgaId,
           wardId,
           limit: 150,
@@ -143,38 +127,6 @@ function AgentCoveragePage() {
 
     if (unitType === "states" || (!unitType && unitTitle === "States")) {
       setDrillDown({ stateId: unitId });
-    } else if (
-      unitType === "senatorial_districts" ||
-      unitTitle === "Senatorial Districts"
-    ) {
-      setDrillDown((prev) => ({
-        ...prev,
-        districtId: unitId,
-        federalConstituencyId: undefined,
-        stateConstituencyId: undefined,
-        lgaId: undefined,
-        wardId: undefined,
-      }));
-    } else if (
-      unitType === "federal_constituencies" ||
-      unitTitle === "Federal Constituencies"
-    ) {
-      setDrillDown((prev) => ({
-        ...prev,
-        federalConstituencyId: unitId,
-        stateConstituencyId: undefined,
-        lgaId: undefined,
-        wardId: undefined,
-      }));
-    } else if (
-      unitType === "state_constituencies" ||
-      unitTitle === "State Constituencies"
-    ) {
-      setDrillDown((prev) => ({
-        ...prev,
-        stateConstituencyId: unitId,
-        wardId: undefined,
-      }));
     } else if (unitType === "lgas" || unitTitle === "LGAs") {
       setDrillDown((prev) => ({
         ...prev,

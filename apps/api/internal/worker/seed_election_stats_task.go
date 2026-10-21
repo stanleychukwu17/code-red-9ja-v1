@@ -77,16 +77,13 @@ func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskSeedElectionGroupStats(
 		{"states", func() error { return redisTaskProcessor.queries.SeedElectionGroupStateStats(ctx, egID) }},
 
 		// Step B: Seed Senatorial Districts (up to 109 districts across Nigeria)
-		{"senatorial_districts", func() error { return redisTaskProcessor.queries.SeedElectionGroupSenatorialDistrictStats(ctx, egID) }},
 
 		// Step C: Seed Federal Constituencies (up to 360 House of Reps seats)
-		{"federal_constituencies", func() error { return redisTaskProcessor.queries.SeedElectionGroupFederalConstituencyStats(ctx, egID) }},
 
 		// Step D: Seed Local Government Areas (up to 774 LGAs)
 		{"lgas", func() error { return redisTaskProcessor.queries.SeedElectionGroupLGAStats(ctx, egID) }},
 
 		// Step E: Seed State Constituencies (up to 993 State House of Assembly seats)
-		{"state_constituencies", func() error { return redisTaskProcessor.queries.SeedElectionGroupStateConstituencyStats(ctx, egID) }},
 
 		// Step F: Seed Electoral Wards (up to ~8,809 wards / registration areas)
 		{"wards", func() error { return redisTaskProcessor.queries.SeedElectionGroupWardStats(ctx, egID) }},

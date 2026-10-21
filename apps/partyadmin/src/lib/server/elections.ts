@@ -360,28 +360,10 @@ export const getElectionStats = createServerFn({ method: "GET" })
           data.wardId,
           data.partyId,
         );
-      } else if (data.stateAssemblyConstituencyId) {
-        url = API_URL.electionStats.singleStateConstituencyStats(
-          data.electionGroupId,
-          data.stateAssemblyConstituencyId,
-          data.partyId,
-        );
       } else if (data.lgaId) {
         url = API_URL.electionStats.singleLGAStats(
           data.electionGroupId,
           data.lgaId,
-          data.partyId,
-        );
-      } else if (data.federalConstituencyId) {
-        url = API_URL.electionStats.singleFederalConstituencyStats(
-          data.electionGroupId,
-          data.federalConstituencyId,
-          data.partyId,
-        );
-      } else if (data.senatorialDistrictId) {
-        url = API_URL.electionStats.singleSenatorialDistrictStats(
-          data.electionGroupId,
-          data.senatorialDistrictId,
           data.partyId,
         );
       } else if (data.stateId) {

@@ -15,8 +15,6 @@ type Querier interface {
 	AddPartyMemberMilestone(ctx context.Context, arg AddPartyMemberMilestoneParams) error
 	AddPartyMembership(ctx context.Context, arg AddPartyMembershipParams) error
 	AddPartySlots(ctx context.Context, arg AddPartySlotsParams) (Party, error)
-	AdjustElectionGroupFederalConstituencyLGASupervisorCounts(ctx context.Context, arg AdjustElectionGroupFederalConstituencyLGASupervisorCountsParams) error
-	AdjustElectionGroupFederalConstituencyWardSupervisorCounts(ctx context.Context, arg AdjustElectionGroupFederalConstituencyWardSupervisorCountsParams) error
 	AdjustElectionGroupLGAApplicationCounts(ctx context.Context, arg AdjustElectionGroupLGAApplicationCountsParams) error
 	AdjustElectionGroupLGALGASupervisorCounts(ctx context.Context, arg AdjustElectionGroupLGALGASupervisorCountsParams) error
 	// ============================================================
@@ -31,10 +29,7 @@ type Querier interface {
 	// APPLICATION COUNT INCREMENT QUERIES
 	// ============================================================
 	AdjustElectionGroupPollingUnitApplicationCounts(ctx context.Context, arg AdjustElectionGroupPollingUnitApplicationCountsParams) error
-	AdjustElectionGroupSenatorialDistrictLGASupervisorCounts(ctx context.Context, arg AdjustElectionGroupSenatorialDistrictLGASupervisorCountsParams) error
-	AdjustElectionGroupSenatorialDistrictWardSupervisorCounts(ctx context.Context, arg AdjustElectionGroupSenatorialDistrictWardSupervisorCountsParams) error
 	AdjustElectionGroupStateApplicationCounts(ctx context.Context, arg AdjustElectionGroupStateApplicationCountsParams) error
-	AdjustElectionGroupStateConstituencyWardSupervisorCounts(ctx context.Context, arg AdjustElectionGroupStateConstituencyWardSupervisorCountsParams) error
 	AdjustElectionGroupStateLGASupervisorCounts(ctx context.Context, arg AdjustElectionGroupStateLGASupervisorCountsParams) error
 	AdjustElectionGroupStateStateSupervisorCounts(ctx context.Context, arg AdjustElectionGroupStateStateSupervisorCountsParams) error
 	AdjustElectionGroupStateWardSupervisorCounts(ctx context.Context, arg AdjustElectionGroupStateWardSupervisorCountsParams) error
@@ -203,17 +198,13 @@ type Querier interface {
 	GetElectionCandidateForParty(ctx context.Context, arg GetElectionCandidateForPartyParams) (ElectionCandidate, error)
 	GetElectionCandidatesCount(ctx context.Context, electionID int32) (int64, error)
 	GetElectionGroupByID(ctx context.Context, id int32) (ElectionGroup, error)
-	GetElectionGroupFederalConstituencyStats(ctx context.Context, arg GetElectionGroupFederalConstituencyStatsParams) (ElectionGroupFederalConstituency, error)
 	GetElectionGroupLGAStats(ctx context.Context, arg GetElectionGroupLGAStatsParams) (ElectionGroupLga, error)
-	GetElectionGroupPartyFederalConstituencyStats(ctx context.Context, arg GetElectionGroupPartyFederalConstituencyStatsParams) (ElectionGroupPartiesFederalConstituency, error)
 	GetElectionGroupPartyLGAStats(ctx context.Context, arg GetElectionGroupPartyLGAStatsParams) (ElectionGroupPartiesLga, error)
 	GetElectionGroupPartyNationalStats(ctx context.Context, arg GetElectionGroupPartyNationalStatsParams) (GetElectionGroupPartyNationalStatsRow, error)
 	// =====================================================
 	// READ QUERIES: Normalized Party Stats Tables
 	// =====================================================
 	GetElectionGroupPartyPollingUnitStats(ctx context.Context, arg GetElectionGroupPartyPollingUnitStatsParams) (ElectionGroupPartiesPollingUnit, error)
-	GetElectionGroupPartySenatorialDistrictStats(ctx context.Context, arg GetElectionGroupPartySenatorialDistrictStatsParams) (ElectionGroupPartiesSenatorialDistrict, error)
-	GetElectionGroupPartyStateConstituencyStats(ctx context.Context, arg GetElectionGroupPartyStateConstituencyStatsParams) (ElectionGroupPartiesStateConstituency, error)
 	GetElectionGroupPartyStateStats(ctx context.Context, arg GetElectionGroupPartyStateStatsParams) (ElectionGroupPartiesState, error)
 	GetElectionGroupPartyWardStats(ctx context.Context, arg GetElectionGroupPartyWardStatsParams) (ElectionGroupPartiesWard, error)
 	GetElectionGroupPollingUnitGeoIDs(ctx context.Context, arg GetElectionGroupPollingUnitGeoIDsParams) (GetElectionGroupPollingUnitGeoIDsRow, error)
@@ -221,8 +212,6 @@ type Querier interface {
 	// READ QUERIES: Base Tables
 	// =====================================================
 	GetElectionGroupPollingUnitStats(ctx context.Context, arg GetElectionGroupPollingUnitStatsParams) (ElectionGroupPollingUnit, error)
-	GetElectionGroupSenatorialDistrictStats(ctx context.Context, arg GetElectionGroupSenatorialDistrictStatsParams) (ElectionGroupSenatorialDistrict, error)
-	GetElectionGroupStateConstituencyStats(ctx context.Context, arg GetElectionGroupStateConstituencyStatsParams) (ElectionGroupStateConstituency, error)
 	GetElectionGroupStateStats(ctx context.Context, arg GetElectionGroupStateStatsParams) (ElectionGroupState, error)
 	GetElectionGroupWardStats(ctx context.Context, arg GetElectionGroupWardStatsParams) (ElectionGroupWard, error)
 	GetElectionInstanceByID(ctx context.Context, id int32) (Election, error)
@@ -319,6 +308,7 @@ type Querier interface {
 	GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (GetUserByFakeIDRow, error)
 	GetUserByID(ctx context.Context, id int64) (GetUserByIDRow, error)
 	GetUserDidNotVoteReason(ctx context.Context, arg GetUserDidNotVoteReasonParams) (GetUserDidNotVoteReasonRow, error)
+	GetUserFakeIDByID(ctx context.Context, id int64) (pgtype.Int8, error)
 	GetUserForAuthByEmail(ctx context.Context, email pgtype.Text) (GetUserForAuthByEmailRow, error)
 	GetUserForAuthByPhone(ctx context.Context, phone pgtype.Text) (GetUserForAuthByPhoneRow, error)
 	GetUserForAuthByUsername(ctx context.Context, username pgtype.Text) (GetUserForAuthByUsernameRow, error)
@@ -404,18 +394,12 @@ type Querier interface {
 	ListElectionCandidacyUsers(ctx context.Context, electionIds []int32) ([]ListElectionCandidacyUsersRow, error)
 	ListElectionCandidatesByElectionID(ctx context.Context, electionID int32) ([]ElectionCandidate, error)
 	ListElectionCandidatesDetailedByElectionID(ctx context.Context, electionID int32) ([]ListElectionCandidatesDetailedByElectionIDRow, error)
-	ListElectionGroupFederalConstituencyStatsByGroup(ctx context.Context, arg ListElectionGroupFederalConstituencyStatsByGroupParams) ([]ElectionGroupFederalConstituency, error)
 	ListElectionGroupLGAStatsByGroup(ctx context.Context, arg ListElectionGroupLGAStatsByGroupParams) ([]ElectionGroupLga, error)
-	ListElectionGroupPartiesFederalConstituenciesByGroup(ctx context.Context, arg ListElectionGroupPartiesFederalConstituenciesByGroupParams) ([]ElectionGroupPartiesFederalConstituency, error)
 	ListElectionGroupPartiesLGAsByGroup(ctx context.Context, arg ListElectionGroupPartiesLGAsByGroupParams) ([]ElectionGroupPartiesLga, error)
 	ListElectionGroupPartiesPollingUnitsByGroup(ctx context.Context, arg ListElectionGroupPartiesPollingUnitsByGroupParams) ([]ElectionGroupPartiesPollingUnit, error)
-	ListElectionGroupPartiesSenatorialDistrictsByGroup(ctx context.Context, arg ListElectionGroupPartiesSenatorialDistrictsByGroupParams) ([]ElectionGroupPartiesSenatorialDistrict, error)
-	ListElectionGroupPartiesStateConstituenciesByGroup(ctx context.Context, arg ListElectionGroupPartiesStateConstituenciesByGroupParams) ([]ElectionGroupPartiesStateConstituency, error)
 	ListElectionGroupPartiesStatesByGroup(ctx context.Context, arg ListElectionGroupPartiesStatesByGroupParams) ([]ElectionGroupPartiesState, error)
 	ListElectionGroupPartiesWardsByGroup(ctx context.Context, arg ListElectionGroupPartiesWardsByGroupParams) ([]ElectionGroupPartiesWard, error)
 	ListElectionGroupPollingUnitStatsByGroup(ctx context.Context, arg ListElectionGroupPollingUnitStatsByGroupParams) ([]ElectionGroupPollingUnit, error)
-	ListElectionGroupSenatorialDistrictStatsByGroup(ctx context.Context, arg ListElectionGroupSenatorialDistrictStatsByGroupParams) ([]ElectionGroupSenatorialDistrict, error)
-	ListElectionGroupStateConstituencyStatsByGroup(ctx context.Context, arg ListElectionGroupStateConstituencyStatsByGroupParams) ([]ElectionGroupStateConstituency, error)
 	ListElectionGroupStateStatsByGroup(ctx context.Context, electionGroupID int32) ([]ElectionGroupState, error)
 	ListElectionGroupWardStatsByGroup(ctx context.Context, arg ListElectionGroupWardStatsByGroupParams) ([]ElectionGroupWard, error)
 	ListElectionGroups(ctx context.Context, active pgtype.Bool) ([]ElectionGroup, error)
@@ -487,7 +471,6 @@ type Querier interface {
 	// CASCADE REFRESH QUERIES
 	// ============================================================
 	RefreshSingleElectionGroupPollingUnitStats(ctx context.Context, arg RefreshSingleElectionGroupPollingUnitStatsParams) error
-	RefreshSingleElectionGroupStateConstituencyStats(ctx context.Context, arg RefreshSingleElectionGroupStateConstituencyStatsParams) error
 	RefreshSingleElectionGroupStateStats(ctx context.Context, arg RefreshSingleElectionGroupStateStatsParams) error
 	RefreshSingleElectionGroupWardStats(ctx context.Context, arg RefreshSingleElectionGroupWardStatsParams) error
 	RemovePageVerification(ctx context.Context, arg RemovePageVerificationParams) error
@@ -518,10 +501,7 @@ type Querier interface {
 	SearchMediaAssets(ctx context.Context, arg SearchMediaAssetsParams) ([]MediaAsset, error)
 	// Citizen-facing user search: strictly requires active accounts and filters by text, state, party, politician, and verification.
 	SearchUsers(ctx context.Context, arg SearchUsersParams) ([]SearchUsersRow, error)
-	SeedElectionGroupFederalConstituencyStats(ctx context.Context, dollar_1 int32) error
 	SeedElectionGroupLGAStats(ctx context.Context, dollar_1 int32) error
-	SeedElectionGroupSenatorialDistrictStats(ctx context.Context, dollar_1 int32) error
-	SeedElectionGroupStateConstituencyStats(ctx context.Context, dollar_1 int32) error
 	// ============================================================
 	// SEED QUERIES
 	// ============================================================
@@ -606,7 +586,6 @@ type Querier interface {
 	UpdateWard(ctx context.Context, arg UpdateWardParams) (Ward, error)
 	UpdateWardSupervisorEarnedAmountKobo(ctx context.Context, arg UpdateWardSupervisorEarnedAmountKoboParams) (WardElectionSupervisor, error)
 	UpsertAgentEarnings(ctx context.Context, arg UpsertAgentEarningsParams) (AgentEarning, error)
-	UpsertElectionGroupFederalConstituencyPartyEntry(ctx context.Context, arg UpsertElectionGroupFederalConstituencyPartyEntryParams) error
 	UpsertElectionGroupLGAPartyEntry(ctx context.Context, arg UpsertElectionGroupLGAPartyEntryParams) error
 	UpsertElectionGroupNationalPartyEntry(ctx context.Context, arg UpsertElectionGroupNationalPartyEntryParams) error
 	// ============================================================
@@ -620,8 +599,6 @@ type Querier interface {
 	UpsertElectionGroupPollingUnitsForStateConstituencyElection(ctx context.Context, arg UpsertElectionGroupPollingUnitsForStateConstituencyElectionParams) error
 	UpsertElectionGroupPollingUnitsForStateElection(ctx context.Context, arg UpsertElectionGroupPollingUnitsForStateElectionParams) error
 	UpsertElectionGroupPollingUnitsForWardElection(ctx context.Context, arg UpsertElectionGroupPollingUnitsForWardElectionParams) error
-	UpsertElectionGroupSenatorialDistrictPartyEntry(ctx context.Context, arg UpsertElectionGroupSenatorialDistrictPartyEntryParams) error
-	UpsertElectionGroupStateConstituencyPartyEntry(ctx context.Context, arg UpsertElectionGroupStateConstituencyPartyEntryParams) error
 	UpsertElectionGroupStatePartyEntry(ctx context.Context, arg UpsertElectionGroupStatePartyEntryParams) error
 	UpsertElectionGroupWardPartyEntry(ctx context.Context, arg UpsertElectionGroupWardPartyEntryParams) error
 	UpsertFederalConstituency(ctx context.Context, arg UpsertFederalConstituencyParams) (FederalConstituency, error)

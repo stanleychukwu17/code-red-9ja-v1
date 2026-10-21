@@ -38,7 +38,6 @@ type TaskProcessor interface {
 	ProcessTaskSeedElectionGroupStats(ctx context.Context, task *asynq.Task) error
 	ProcessTaskRefreshWardStats(ctx context.Context, task *asynq.Task) error
 	ProcessTaskRefreshLGAStats(ctx context.Context, task *asynq.Task) error
-	ProcessTaskRefreshStateConstituencyStats(ctx context.Context, task *asynq.Task) error
 	ProcessTaskRefreshStateStats(ctx context.Context, task *asynq.Task) error
 	ProcessTaskRefreshGlobalStats(ctx context.Context, task *asynq.Task) error
 	// Scoped candidate rollup processors
@@ -110,7 +109,6 @@ func (redisTaskProcessor *RedisTaskProcessor) Start() error {
 	// Cascading stats refresh handlers (event-driven, per geographic unit).
 	mux.HandleFunc(TaskRefreshWardStats, redisTaskProcessor.ProcessTaskRefreshWardStats)
 	mux.HandleFunc(TaskRefreshLGAStats, redisTaskProcessor.ProcessTaskRefreshLGAStats)
-	mux.HandleFunc(TaskRefreshStateConstituencyStats, redisTaskProcessor.ProcessTaskRefreshStateConstituencyStats)
 	mux.HandleFunc(TaskRefreshStateStats, redisTaskProcessor.ProcessTaskRefreshStateStats)
 	mux.HandleFunc(TaskRefreshGlobalStats, redisTaskProcessor.ProcessTaskRefreshGlobalStats)
 

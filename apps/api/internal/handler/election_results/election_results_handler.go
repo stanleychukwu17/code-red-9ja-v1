@@ -1477,7 +1477,9 @@ func (h *Handler) GetElectoralUnitsBreakdown(w http.ResponseWriter, r *http.Requ
 	fedConstID, _ := parseAnyInt64(r, "federal_constituency_id", "federal_constituency", "federalConstituencyId", "fed_const_id")
 	senatorialID, _ := parseAnyInt64(r, "senatorial_district_id", "senatorial_district", "senatorialDistrictId", "district_id", "district")
 	stateID, _ := parseAnyInt64(r, "state_id", "state", "stateId")
-	requestedUnitType := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("unit_type")))
+	_ = stateConstID
+	_ = fedConstID
+	_ = senatorialID
 
 	var (
 		query     string
@@ -1526,26 +1528,6 @@ func (h *Handler) GetElectoralUnitsBreakdown(w http.ResponseWriter, r *http.Requ
 			WHERE pu.ward_id = $2
 			ORDER BY pu.id ASC`
 		args = []interface{}{electionID, wardID}
-	} else if stateConstID > 0 && lgaID == 0 {
-		unitTitle = "Wards"
-		unitType = "wards"
-		query = `
-			SELECT
-				w.id, w.name, '' AS code,
-				COALESCE(fr.accredited_voters, 0),
-				COALESCE(fr.votes_cast, 0),
-				COALESCE(fr.valid_votes, 0),
-				COALESCE(fr.rejected_votes, 0),
-				COALESCE(fr.polling_units_counted, 0) AS sub_units_counted,
-				COALESCE(fr.total_polling_units, 0) AS total_sub_units,
-				COALESCE(fr.candidate_results, '[]'::jsonb),
-				COALESCE(fr.candidate_results_live, '[]'::jsonb)
-			FROM wards w
-			LEFT JOIN election_ward_final_result fr
-				ON fr.ward_id = w.id AND fr.election_id = $1
-			WHERE w.state_constituency_id = $2
-			ORDER BY w.id ASC`
-		args = []interface{}{electionID, stateConstID}
 	} else if lgaID > 0 {
 		unitTitle = "Wards"
 		unitType = "wards"
@@ -1566,7 +1548,7 @@ func (h *Handler) GetElectoralUnitsBreakdown(w http.ResponseWriter, r *http.Requ
 			WHERE w.lga_id = $2
 			ORDER BY w.id ASC`
 		args = []interface{}{electionID, lgaID}
-	} else if fedConstID > 0 {
+	} else if stateID > 0 {
 		unitTitle = "LGAs"
 		unitType = "lgas"
 		query = `
@@ -1583,71 +1565,9 @@ func (h *Handler) GetElectoralUnitsBreakdown(w http.ResponseWriter, r *http.Requ
 			FROM lgas l
 			LEFT JOIN election_lga_final_result fr
 				ON fr.lga_id = l.id AND fr.election_id = $1
-			WHERE l.federal_constituency_id = $2
+			WHERE l.state_id = $2
 			ORDER BY l.id ASC`
-		args = []interface{}{electionID, fedConstID}
-	} else if senatorialID > 0 {
-		unitTitle = "Federal Constituencies"
-		unitType = "federal_constituencies"
-		query = `
-			SELECT
-				fc.id, fc.name, '' AS code,
-				COALESCE(fr.accredited_voters, 0),
-				COALESCE(fr.votes_cast, 0),
-				COALESCE(fr.valid_votes, 0),
-				COALESCE(fr.rejected_votes, 0),
-				COALESCE(fr.lgas_counted, 0) AS sub_units_counted,
-				COALESCE(fr.total_lgas, 0) AS total_sub_units,
-				COALESCE(fr.candidate_results, '[]'::jsonb),
-				COALESCE(fr.candidate_results_live, '[]'::jsonb)
-			FROM federal_constituencies fc
-			LEFT JOIN election_federal_constituency_final_result fr
-				ON fr.federal_constituency_id = fc.id AND fr.election_id = $1
-			WHERE fc.senatorial_district_id = $2
-			ORDER BY fc.id ASC`
-		args = []interface{}{electionID, senatorialID}
-	} else if stateID > 0 {
-		if requestedUnitType == "lgas" {
-			unitTitle = "LGAs"
-			unitType = "lgas"
-			query = `
-				SELECT
-					l.id, l.name, '' AS code,
-					COALESCE(fr.accredited_voters, 0),
-					COALESCE(fr.votes_cast, 0),
-					COALESCE(fr.valid_votes, 0),
-					COALESCE(fr.rejected_votes, 0),
-					COALESCE(fr.wards_counted, 0) AS sub_units_counted,
-					COALESCE(fr.total_wards, 0) AS total_sub_units,
-					COALESCE(fr.candidate_results, '[]'::jsonb),
-					COALESCE(fr.candidate_results_live, '[]'::jsonb)
-				FROM lgas l
-				LEFT JOIN election_lga_final_result fr
-					ON fr.lga_id = l.id AND fr.election_id = $1
-				WHERE l.state_id = $2
-				ORDER BY l.id ASC`
-			args = []interface{}{electionID, stateID}
-		} else {
-			unitTitle = "Senatorial Districts"
-			unitType = "senatorial_districts"
-			query = `
-				SELECT
-					sd.id, sd.name, '' AS code,
-					COALESCE(fr.accredited_voters, 0),
-					COALESCE(fr.votes_cast, 0),
-					COALESCE(fr.valid_votes, 0),
-					COALESCE(fr.rejected_votes, 0),
-					COALESCE(fr.lgas_counted, 0) AS sub_units_counted,
-					COALESCE(fr.total_lgas, 0) AS total_sub_units,
-					COALESCE(fr.candidate_results, '[]'::jsonb),
-					COALESCE(fr.candidate_results_live, '[]'::jsonb)
-				FROM senatorial_districts sd
-				LEFT JOIN election_senatorial_district_final_result fr
-					ON fr.senatorial_district_id = sd.id AND fr.election_id = $1
-				WHERE sd.state_id = $2
-				ORDER BY sd.id ASC`
-			args = []interface{}{electionID, stateID}
-		}
+		args = []interface{}{electionID, stateID}
 	} else {
 		// Nationwide: return all 36 Nigerian states + FCT
 		unitTitle = "States"

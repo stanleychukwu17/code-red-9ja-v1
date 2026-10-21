@@ -90,41 +90,7 @@ func (_m *Querier) AddPartySlots(ctx context.Context, arg queries.AddPartySlotsP
 	return r0, r1
 }
 
-// AdjustElectionGroupFederalConstituencyLGASupervisorCounts provides a mock function with given fields: ctx, arg
-func (_m *Querier) AdjustElectionGroupFederalConstituencyLGASupervisorCounts(ctx context.Context, arg queries.AdjustElectionGroupFederalConstituencyLGASupervisorCountsParams) error {
-	ret := _m.Called(ctx, arg)
 
-	if len(ret) == 0 {
-		panic("no return value specified for AdjustElectionGroupFederalConstituencyLGASupervisorCounts")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, queries.AdjustElectionGroupFederalConstituencyLGASupervisorCountsParams) error); ok {
-		r0 = rf(ctx, arg)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// AdjustElectionGroupFederalConstituencyWardSupervisorCounts provides a mock function with given fields: ctx, arg
-func (_m *Querier) AdjustElectionGroupFederalConstituencyWardSupervisorCounts(ctx context.Context, arg queries.AdjustElectionGroupFederalConstituencyWardSupervisorCountsParams) error {
-	ret := _m.Called(ctx, arg)
-
-	if len(ret) == 0 {
-		panic("no return value specified for AdjustElectionGroupFederalConstituencyWardSupervisorCounts")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, queries.AdjustElectionGroupFederalConstituencyWardSupervisorCountsParams) error); ok {
-		r0 = rf(ctx, arg)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
 
 // AdjustElectionGroupLGAWardSupervisorCounts provides a mock function with given fields: ctx, arg
 func (_m *Querier) AdjustElectionGroupLGAWardSupervisorCounts(ctx context.Context, arg queries.AdjustElectionGroupLGAWardSupervisorCountsParams) error {
@@ -198,59 +164,8 @@ func (_m *Querier) AdjustElectionGroupNationalWardSupervisorCounts(ctx context.C
 	return r0
 }
 
-// AdjustElectionGroupSenatorialDistrictLGASupervisorCounts provides a mock function with given fields: ctx, arg
-func (_m *Querier) AdjustElectionGroupSenatorialDistrictLGASupervisorCounts(ctx context.Context, arg queries.AdjustElectionGroupSenatorialDistrictLGASupervisorCountsParams) error {
-	ret := _m.Called(ctx, arg)
 
-	if len(ret) == 0 {
-		panic("no return value specified for AdjustElectionGroupSenatorialDistrictLGASupervisorCounts")
-	}
 
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, queries.AdjustElectionGroupSenatorialDistrictLGASupervisorCountsParams) error); ok {
-		r0 = rf(ctx, arg)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// AdjustElectionGroupSenatorialDistrictWardSupervisorCounts provides a mock function with given fields: ctx, arg
-func (_m *Querier) AdjustElectionGroupSenatorialDistrictWardSupervisorCounts(ctx context.Context, arg queries.AdjustElectionGroupSenatorialDistrictWardSupervisorCountsParams) error {
-	ret := _m.Called(ctx, arg)
-
-	if len(ret) == 0 {
-		panic("no return value specified for AdjustElectionGroupSenatorialDistrictWardSupervisorCounts")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, queries.AdjustElectionGroupSenatorialDistrictWardSupervisorCountsParams) error); ok {
-		r0 = rf(ctx, arg)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// AdjustElectionGroupStateConstituencyWardSupervisorCounts provides a mock function with given fields: ctx, arg
-func (_m *Querier) AdjustElectionGroupStateConstituencyWardSupervisorCounts(ctx context.Context, arg queries.AdjustElectionGroupStateConstituencyWardSupervisorCountsParams) error {
-	ret := _m.Called(ctx, arg)
-
-	if len(ret) == 0 {
-		panic("no return value specified for AdjustElectionGroupStateConstituencyWardSupervisorCounts")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, queries.AdjustElectionGroupStateConstituencyWardSupervisorCountsParams) error); ok {
-		r0 = rf(ctx, arg)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
 
 // AdjustElectionGroupStateLGASupervisorCounts provides a mock function with given fields: ctx, arg
 func (_m *Querier) AdjustElectionGroupStateLGASupervisorCounts(ctx context.Context, arg queries.AdjustElectionGroupStateLGASupervisorCountsParams) error {
@@ -2530,33 +2445,6 @@ func (_m *Querier) GetElectionGroupByID(ctx context.Context, id int64) (queries.
 	return r0, r1
 }
 
-// GetElectionGroupFederalConstituencyStats provides a mock function with given fields: ctx, arg
-func (_m *Querier) GetElectionGroupFederalConstituencyStats(ctx context.Context, arg queries.GetElectionGroupFederalConstituencyStatsParams) (queries.ElectionGroupFederalConstituency, error) {
-	ret := _m.Called(ctx, arg)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetElectionGroupFederalConstituencyStats")
-	}
-
-	var r0 queries.ElectionGroupFederalConstituency
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, queries.GetElectionGroupFederalConstituencyStatsParams) (queries.ElectionGroupFederalConstituency, error)); ok {
-		return rf(ctx, arg)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, queries.GetElectionGroupFederalConstituencyStatsParams) queries.ElectionGroupFederalConstituency); ok {
-		r0 = rf(ctx, arg)
-	} else {
-		r0 = ret.Get(0).(queries.ElectionGroupFederalConstituency)
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, queries.GetElectionGroupFederalConstituencyStatsParams) error); ok {
-		r1 = rf(ctx, arg)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
 
 // GetElectionGroupLGAStats provides a mock function with given fields: ctx, arg
 func (_m *Querier) GetElectionGroupLGAStats(ctx context.Context, arg queries.GetElectionGroupLGAStatsParams) (queries.ElectionGroupLga, error) {
@@ -2642,61 +2530,7 @@ func (_m *Querier) GetElectionGroupPollingUnitStats(ctx context.Context, arg que
 	return r0, r1
 }
 
-// GetElectionGroupSenatorialDistrictStats provides a mock function with given fields: ctx, arg
-func (_m *Querier) GetElectionGroupSenatorialDistrictStats(ctx context.Context, arg queries.GetElectionGroupSenatorialDistrictStatsParams) (queries.ElectionGroupSenatorialDistrict, error) {
-	ret := _m.Called(ctx, arg)
 
-	if len(ret) == 0 {
-		panic("no return value specified for GetElectionGroupSenatorialDistrictStats")
-	}
-
-	var r0 queries.ElectionGroupSenatorialDistrict
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, queries.GetElectionGroupSenatorialDistrictStatsParams) (queries.ElectionGroupSenatorialDistrict, error)); ok {
-		return rf(ctx, arg)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, queries.GetElectionGroupSenatorialDistrictStatsParams) queries.ElectionGroupSenatorialDistrict); ok {
-		r0 = rf(ctx, arg)
-	} else {
-		r0 = ret.Get(0).(queries.ElectionGroupSenatorialDistrict)
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, queries.GetElectionGroupSenatorialDistrictStatsParams) error); ok {
-		r1 = rf(ctx, arg)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// GetElectionGroupStateConstituencyStats provides a mock function with given fields: ctx, arg
-func (_m *Querier) GetElectionGroupStateConstituencyStats(ctx context.Context, arg queries.GetElectionGroupStateConstituencyStatsParams) (queries.ElectionGroupStateConstituency, error) {
-	ret := _m.Called(ctx, arg)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetElectionGroupStateConstituencyStats")
-	}
-
-	var r0 queries.ElectionGroupStateConstituency
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, queries.GetElectionGroupStateConstituencyStatsParams) (queries.ElectionGroupStateConstituency, error)); ok {
-		return rf(ctx, arg)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, queries.GetElectionGroupStateConstituencyStatsParams) queries.ElectionGroupStateConstituency); ok {
-		r0 = rf(ctx, arg)
-	} else {
-		r0 = ret.Get(0).(queries.ElectionGroupStateConstituency)
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, queries.GetElectionGroupStateConstituencyStatsParams) error); ok {
-		r1 = rf(ctx, arg)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
 
 // GetElectionGroupStateStats provides a mock function with given fields: ctx, arg
 func (_m *Querier) GetElectionGroupStateStats(ctx context.Context, arg queries.GetElectionGroupStateStatsParams) (queries.ElectionGroupState, error) {
@@ -5566,35 +5400,6 @@ func (_m *Querier) ListElectionCandidatesDetailedByElectionID(ctx context.Contex
 	return r0, r1
 }
 
-// ListElectionGroupFederalConstituencyStatsByGroup provides a mock function with given fields: ctx, arg
-func (_m *Querier) ListElectionGroupFederalConstituencyStatsByGroup(ctx context.Context, arg queries.ListElectionGroupFederalConstituencyStatsByGroupParams) ([]queries.ElectionGroupFederalConstituency, error) {
-	ret := _m.Called(ctx, arg)
-
-	if len(ret) == 0 {
-		panic("no return value specified for ListElectionGroupFederalConstituencyStatsByGroup")
-	}
-
-	var r0 []queries.ElectionGroupFederalConstituency
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, queries.ListElectionGroupFederalConstituencyStatsByGroupParams) ([]queries.ElectionGroupFederalConstituency, error)); ok {
-		return rf(ctx, arg)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, queries.ListElectionGroupFederalConstituencyStatsByGroupParams) []queries.ElectionGroupFederalConstituency); ok {
-		r0 = rf(ctx, arg)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]queries.ElectionGroupFederalConstituency)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, queries.ListElectionGroupFederalConstituencyStatsByGroupParams) error); ok {
-		r1 = rf(ctx, arg)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
 
 // ListElectionGroupLGAStatsByGroup provides a mock function with given fields: ctx, arg
 func (_m *Querier) ListElectionGroupLGAStatsByGroup(ctx context.Context, arg queries.ListElectionGroupLGAStatsByGroupParams) ([]queries.ElectionGroupLga, error) {
@@ -5656,65 +5461,7 @@ func (_m *Querier) ListElectionGroupPollingUnitStatsByGroup(ctx context.Context,
 	return r0, r1
 }
 
-// ListElectionGroupSenatorialDistrictStatsByGroup provides a mock function with given fields: ctx, arg
-func (_m *Querier) ListElectionGroupSenatorialDistrictStatsByGroup(ctx context.Context, arg queries.ListElectionGroupSenatorialDistrictStatsByGroupParams) ([]queries.ElectionGroupSenatorialDistrict, error) {
-	ret := _m.Called(ctx, arg)
 
-	if len(ret) == 0 {
-		panic("no return value specified for ListElectionGroupSenatorialDistrictStatsByGroup")
-	}
-
-	var r0 []queries.ElectionGroupSenatorialDistrict
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, queries.ListElectionGroupSenatorialDistrictStatsByGroupParams) ([]queries.ElectionGroupSenatorialDistrict, error)); ok {
-		return rf(ctx, arg)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, queries.ListElectionGroupSenatorialDistrictStatsByGroupParams) []queries.ElectionGroupSenatorialDistrict); ok {
-		r0 = rf(ctx, arg)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]queries.ElectionGroupSenatorialDistrict)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, queries.ListElectionGroupSenatorialDistrictStatsByGroupParams) error); ok {
-		r1 = rf(ctx, arg)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// ListElectionGroupStateConstituencyStatsByGroup provides a mock function with given fields: ctx, arg
-func (_m *Querier) ListElectionGroupStateConstituencyStatsByGroup(ctx context.Context, arg queries.ListElectionGroupStateConstituencyStatsByGroupParams) ([]queries.ElectionGroupStateConstituency, error) {
-	ret := _m.Called(ctx, arg)
-
-	if len(ret) == 0 {
-		panic("no return value specified for ListElectionGroupStateConstituencyStatsByGroup")
-	}
-
-	var r0 []queries.ElectionGroupStateConstituency
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, queries.ListElectionGroupStateConstituencyStatsByGroupParams) ([]queries.ElectionGroupStateConstituency, error)); ok {
-		return rf(ctx, arg)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, queries.ListElectionGroupStateConstituencyStatsByGroupParams) []queries.ElectionGroupStateConstituency); ok {
-		r0 = rf(ctx, arg)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]queries.ElectionGroupStateConstituency)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, queries.ListElectionGroupStateConstituencyStatsByGroupParams) error); ok {
-		r1 = rf(ctx, arg)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
 
 // ListElectionGroupStateStatsByGroup provides a mock function with given fields: ctx, electionGroupID
 func (_m *Querier) ListElectionGroupStateStatsByGroup(ctx context.Context, electionGroupID int64) ([]queries.ElectionGroupState, error) {
@@ -6604,23 +6351,6 @@ func (_m *Querier) AddPartyMemberMilestone(ctx context.Context, arg queries.AddP
 	return r0
 }
 
-// RefreshAllElectionGroupFederalConstituencyStats provides a mock function with given fields: ctx
-func (_m *Querier) RefreshAllElectionGroupFederalConstituencyStats(ctx context.Context) error {
-	ret := _m.Called(ctx)
-
-	if len(ret) == 0 {
-		panic("no return value specified for RefreshAllElectionGroupFederalConstituencyStats")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context) error); ok {
-		r0 = rf(ctx)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
 
 // RefreshAllElectionGroupGlobalStats provides a mock function with given fields: ctx
 func (_m *Querier) RefreshAllElectionGroupGlobalStats(ctx context.Context) error {
@@ -6676,41 +6406,7 @@ func (_m *Querier) RefreshAllElectionGroupPollingUnitStats(ctx context.Context) 
 	return r0
 }
 
-// RefreshAllElectionGroupSenatorialDistrictStats provides a mock function with given fields: ctx
-func (_m *Querier) RefreshAllElectionGroupSenatorialDistrictStats(ctx context.Context) error {
-	ret := _m.Called(ctx)
 
-	if len(ret) == 0 {
-		panic("no return value specified for RefreshAllElectionGroupSenatorialDistrictStats")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context) error); ok {
-		r0 = rf(ctx)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// RefreshAllElectionGroupStateConstituencyStats provides a mock function with given fields: ctx
-func (_m *Querier) RefreshAllElectionGroupStateConstituencyStats(ctx context.Context) error {
-	ret := _m.Called(ctx)
-
-	if len(ret) == 0 {
-		panic("no return value specified for RefreshAllElectionGroupStateConstituencyStats")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context) error); ok {
-		r0 = rf(ctx)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
 
 // RefreshAllElectionGroupStateStats provides a mock function with given fields: ctx
 func (_m *Querier) RefreshAllElectionGroupStateStats(ctx context.Context) error {
@@ -6820,23 +6516,6 @@ func (_m *Querier) RefreshSingleElectionGroupPollingUnitStats(ctx context.Contex
 	return r0
 }
 
-// RefreshSingleElectionGroupStateConstituencyStats provides a mock function with given fields: ctx, arg
-func (_m *Querier) RefreshSingleElectionGroupStateConstituencyStats(ctx context.Context, arg queries.RefreshSingleElectionGroupStateConstituencyStatsParams) error {
-	ret := _m.Called(ctx, arg)
-
-	if len(ret) == 0 {
-		panic("no return value specified for RefreshSingleElectionGroupStateConstituencyStats")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, queries.RefreshSingleElectionGroupStateConstituencyStatsParams) error); ok {
-		r0 = rf(ctx, arg)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
 
 // RefreshSingleElectionGroupStateStats provides a mock function with given fields: ctx, arg
 func (_m *Querier) RefreshSingleElectionGroupStateStats(ctx context.Context, arg queries.RefreshSingleElectionGroupStateStatsParams) error {
@@ -7054,23 +6733,6 @@ func (_m *Querier) RollupWardFinalResults(ctx context.Context) error {
 	return r0
 }
 
-// SeedElectionGroupFederalConstituencyStats provides a mock function with given fields: ctx, dollar_1
-func (_m *Querier) SeedElectionGroupFederalConstituencyStats(ctx context.Context, dollar_1 int64) error {
-	ret := _m.Called(ctx, dollar_1)
-
-	if len(ret) == 0 {
-		panic("no return value specified for SeedElectionGroupFederalConstituencyStats")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64) error); ok {
-		r0 = rf(ctx, dollar_1)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
 
 // SeedElectionGroupLGAStats provides a mock function with given fields: ctx, dollar_1
 func (_m *Querier) SeedElectionGroupLGAStats(ctx context.Context, dollar_1 int64) error {
@@ -7090,41 +6752,7 @@ func (_m *Querier) SeedElectionGroupLGAStats(ctx context.Context, dollar_1 int64
 	return r0
 }
 
-// SeedElectionGroupSenatorialDistrictStats provides a mock function with given fields: ctx, dollar_1
-func (_m *Querier) SeedElectionGroupSenatorialDistrictStats(ctx context.Context, dollar_1 int64) error {
-	ret := _m.Called(ctx, dollar_1)
 
-	if len(ret) == 0 {
-		panic("no return value specified for SeedElectionGroupSenatorialDistrictStats")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64) error); ok {
-		r0 = rf(ctx, dollar_1)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// SeedElectionGroupStateConstituencyStats provides a mock function with given fields: ctx, dollar_1
-func (_m *Querier) SeedElectionGroupStateConstituencyStats(ctx context.Context, dollar_1 int64) error {
-	ret := _m.Called(ctx, dollar_1)
-
-	if len(ret) == 0 {
-		panic("no return value specified for SeedElectionGroupStateConstituencyStats")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64) error); ok {
-		r0 = rf(ctx, dollar_1)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
 
 // SeedElectionGroupStateStats provides a mock function with given fields: ctx, dollar_1
 func (_m *Querier) SeedElectionGroupStateStats(ctx context.Context, dollar_1 int64) error {
@@ -8576,23 +8204,6 @@ func (_m *Querier) UpsertAgentEarnings(ctx context.Context, arg queries.UpsertAg
 	return r0, r1
 }
 
-// UpsertElectionGroupFederalConstituencyPartyEntry provides a mock function with given fields: ctx, arg
-func (_m *Querier) UpsertElectionGroupFederalConstituencyPartyEntry(ctx context.Context, arg queries.UpsertElectionGroupFederalConstituencyPartyEntryParams) error {
-	ret := _m.Called(ctx, arg)
-
-	if len(ret) == 0 {
-		panic("no return value specified for UpsertElectionGroupFederalConstituencyPartyEntry")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, queries.UpsertElectionGroupFederalConstituencyPartyEntryParams) error); ok {
-		r0 = rf(ctx, arg)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
 
 // UpsertElectionGroupLGAPartyEntry provides a mock function with given fields: ctx, arg
 func (_m *Querier) UpsertElectionGroupLGAPartyEntry(ctx context.Context, arg queries.UpsertElectionGroupLGAPartyEntryParams) error {
@@ -8648,41 +8259,7 @@ func (_m *Querier) UpsertElectionGroupPUPartyEntry(ctx context.Context, arg quer
 	return r0
 }
 
-// UpsertElectionGroupSenatorialDistrictPartyEntry provides a mock function with given fields: ctx, arg
-func (_m *Querier) UpsertElectionGroupSenatorialDistrictPartyEntry(ctx context.Context, arg queries.UpsertElectionGroupSenatorialDistrictPartyEntryParams) error {
-	ret := _m.Called(ctx, arg)
 
-	if len(ret) == 0 {
-		panic("no return value specified for UpsertElectionGroupSenatorialDistrictPartyEntry")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, queries.UpsertElectionGroupSenatorialDistrictPartyEntryParams) error); ok {
-		r0 = rf(ctx, arg)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// UpsertElectionGroupStateConstituencyPartyEntry provides a mock function with given fields: ctx, arg
-func (_m *Querier) UpsertElectionGroupStateConstituencyPartyEntry(ctx context.Context, arg queries.UpsertElectionGroupStateConstituencyPartyEntryParams) error {
-	ret := _m.Called(ctx, arg)
-
-	if len(ret) == 0 {
-		panic("no return value specified for UpsertElectionGroupStateConstituencyPartyEntry")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, queries.UpsertElectionGroupStateConstituencyPartyEntryParams) error); ok {
-		r0 = rf(ctx, arg)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
 
 // UpsertElectionGroupStatePartyEntry provides a mock function with given fields: ctx, arg
 func (_m *Querier) UpsertElectionGroupStatePartyEntry(ctx context.Context, arg queries.UpsertElectionGroupStatePartyEntryParams) error {

@@ -104,34 +104,6 @@ func (s *ElectionGroupsService) CreateElectionGroup(ctx context.Context, name st
 	return eg, nil
 }
 
-// GetElectionGroupByID retrieves an election group record by its unique identifier.
-// It leverages Redis caching with a 24-hour TTL to minimize database lookups for group metadata.
-func (s *ElectionGroupsService) GetElectionGroupByID(ctx context.Context, id int32) (queries.ElectionGroup, error) {
-	cacheKey := fmt.Sprintf("%s%d", db.RedisElectionGroupByID, id)
-
-	// 1. Attempt to fetch pre-cached election group from Redis
-	val, err := s.rdb.Get(ctx, cacheKey).Result()
-	if err == nil {
-		var eg queries.ElectionGroup
-		if err := json.Unmarshal([]byte(val), &eg); err == nil {
-			return eg, nil
-		}
-	}
-
-	// 2. Cache miss: fetch election group directly from the database
-	eg, err := s.queries.GetElectionGroupByID(ctx, id)
-	if err != nil {
-		return eg, err
-	}
-
-	// 3. Serialize and populate Redis cache
-	if egBytes, err := json.Marshal(eg); err == nil {
-		s.rdb.Set(ctx, cacheKey, egBytes, db.RedisNinetyDaysTTL)
-	}
-
-	return eg, nil
-}
-
 // ListElectionGroups returns election group records across the platform, optionally filtered by active status.
 // Results are cached in Redis with a 90-day TTL.
 func (s *ElectionGroupsService) ListElectionGroups(ctx context.Context, active *bool) ([]queries.ElectionGroup, error) {

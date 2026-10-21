@@ -891,33 +891,6 @@ func adjustAgentStats(ctx context.Context, dbtx queries.DBTX, q *queries.Queries
 			AgentsDelta:     delta,
 			UniquePuDelta:   uniquePuDelta,
 		})
-		if wardStateConstID > 0 {
-			_ = q.UpsertElectionGroupStateConstituencyPartyEntry(ctx, queries.UpsertElectionGroupStateConstituencyPartyEntryParams{
-				ElectionGroupID:     egID,
-				StateConstituencyID: wardStateConstID,
-				PartyID:             partyID,
-				AgentsDelta:         delta,
-				UniquePuDelta:       uniquePuDelta,
-			})
-		}
-		if puFedConstID > 0 {
-			_ = q.UpsertElectionGroupFederalConstituencyPartyEntry(ctx, queries.UpsertElectionGroupFederalConstituencyPartyEntryParams{
-				ElectionGroupID:       egID,
-				FederalConstituencyID: puFedConstID,
-				PartyID:               partyID,
-				AgentsDelta:           delta,
-				UniquePuDelta:         uniquePuDelta,
-			})
-		}
-		if puSenateID > 0 {
-			_ = q.UpsertElectionGroupSenatorialDistrictPartyEntry(ctx, queries.UpsertElectionGroupSenatorialDistrictPartyEntryParams{
-				ElectionGroupID:      egID,
-				SenatorialDistrictID: puSenateID,
-				PartyID:              partyID,
-				AgentsDelta:          delta,
-				UniquePuDelta:        uniquePuDelta,
-			})
-		}
 		_ = q.UpsertElectionGroupStatePartyEntry(ctx, queries.UpsertElectionGroupStatePartyEntryParams{
 			ElectionGroupID: egID,
 			StateID:         stateID_,
@@ -985,33 +958,6 @@ func adjustAgentStats(ctx context.Context, dbtx queries.DBTX, q *queries.Queries
 				UniqueDelta:     uniqueWardSup,
 			})
 		}
-		if wardStateConstID > 0 {
-			_ = q.AdjustElectionGroupStateConstituencyWardSupervisorCounts(ctx, queries.AdjustElectionGroupStateConstituencyWardSupervisorCountsParams{
-				ElectionGroupID:     egID,
-				StateConstituencyID: wardStateConstID,
-				PartyID:             partyID,
-				Delta:               delta,
-				UniqueDelta:         uniqueWardSup,
-			})
-		}
-		if lgaFedConstID > 0 {
-			_ = q.AdjustElectionGroupFederalConstituencyWardSupervisorCounts(ctx, queries.AdjustElectionGroupFederalConstituencyWardSupervisorCountsParams{
-				ElectionGroupID:       egID,
-				FederalConstituencyID: lgaFedConstID,
-				PartyID:               partyID,
-				Delta:                 delta,
-				UniqueDelta:           uniqueWardSup,
-			})
-		}
-		if lgaSenateID > 0 {
-			_ = q.AdjustElectionGroupSenatorialDistrictWardSupervisorCounts(ctx, queries.AdjustElectionGroupSenatorialDistrictWardSupervisorCountsParams{
-				ElectionGroupID:      egID,
-				SenatorialDistrictID: lgaSenateID,
-				PartyID:              partyID,
-				Delta:                delta,
-				UniqueDelta:          uniqueWardSup,
-			})
-		}
 		if stateID > 0 {
 			_ = q.AdjustElectionGroupStateWardSupervisorCounts(ctx, queries.AdjustElectionGroupStateWardSupervisorCountsParams{
 				ElectionGroupID: egID,
@@ -1063,24 +1009,6 @@ func adjustAgentStats(ctx context.Context, dbtx queries.DBTX, q *queries.Queries
 			PartyID:         partyID,
 			Delta:           delta,
 		})
-		if lgaFedConstID > 0 {
-			_ = q.AdjustElectionGroupFederalConstituencyLGASupervisorCounts(ctx, queries.AdjustElectionGroupFederalConstituencyLGASupervisorCountsParams{
-				ElectionGroupID:       egID,
-				FederalConstituencyID: lgaFedConstID,
-				PartyID:               partyID,
-				Delta:                 delta,
-				UniqueDelta:           uniqueLgaSup,
-			})
-		}
-		if lgaSenateID > 0 {
-			_ = q.AdjustElectionGroupSenatorialDistrictLGASupervisorCounts(ctx, queries.AdjustElectionGroupSenatorialDistrictLGASupervisorCountsParams{
-				ElectionGroupID:      egID,
-				SenatorialDistrictID: lgaSenateID,
-				PartyID:              partyID,
-				Delta:                delta,
-				UniqueDelta:          uniqueLgaSup,
-			})
-		}
 		if stateID > 0 {
 			_ = q.AdjustElectionGroupStateLGASupervisorCounts(ctx, queries.AdjustElectionGroupStateLGASupervisorCountsParams{
 				ElectionGroupID: egID,

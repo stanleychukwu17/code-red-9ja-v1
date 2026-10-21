@@ -554,6 +554,18 @@ func (q *Queries) GetUserByID(ctx context.Context, id int64) (GetUserByIDRow, er
 	return i, err
 }
 
+const getUserFakeIDByID = `-- name: GetUserFakeIDByID :one
+SELECT fake_id FROM users
+WHERE id = $1 LIMIT 1
+`
+
+func (q *Queries) GetUserFakeIDByID(ctx context.Context, id int64) (pgtype.Int8, error) {
+	row := q.db.QueryRow(ctx, getUserFakeIDByID, id)
+	var fake_id pgtype.Int8
+	err := row.Scan(&fake_id)
+	return fake_id, err
+}
+
 const getUserForAuthByEmail = `-- name: GetUserForAuthByEmail :one
 SELECT u.id, u.fake_id, u.username, u.email, u.phone, u.password_hash, u.account_status, u.party_id, u.has_role,
        u.first_name, u.last_name, u.middle_name, u.gender, u.avatar, u.voters_card_image,

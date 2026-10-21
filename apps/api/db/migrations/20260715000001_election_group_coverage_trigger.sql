@@ -111,46 +111,6 @@ BEGIN
     FROM lgas l WHERE l.id = v_pu.lga_id
     ON CONFLICT (election_group_id, lga_id) DO NOTHING;
 
-    -- 4. election_group_state_constituencies
-    IF v_state_const_id IS NOT NULL THEN
-      INSERT INTO election_group_state_constituencies (
-        election_group_id, state_constituency_id, state_id,
-        wards_count, polling_units_count
-      )
-      SELECT
-        v_eg_id, sc.id, v_state_id,
-        sc.wards_count, sc.polling_units_count
-      FROM state_constituencies sc WHERE sc.id = v_state_const_id
-      ON CONFLICT (election_group_id, state_constituency_id) DO NOTHING;
-    END IF;
-
-    -- 5. election_group_federal_constituencies
-    IF v_fed_const_id IS NOT NULL THEN
-      INSERT INTO election_group_federal_constituencies (
-        election_group_id, federal_constituency_id, state_id, senatorial_district_id,
-        lgas_count, state_constituencies_count, wards_count, polling_units_count
-      )
-      SELECT
-        v_eg_id, fc.id, v_state_id, fc.senatorial_district_id,
-        fc.lgas_count, fc.state_constituencies_count, fc.wards_count, fc.polling_units_count
-      FROM federal_constituencies fc WHERE fc.id = v_fed_const_id
-      ON CONFLICT (election_group_id, federal_constituency_id) DO NOTHING;
-    END IF;
-
-    -- 6. election_group_senatorial_districts
-    IF v_senat_id IS NOT NULL THEN
-      INSERT INTO election_group_senatorial_districts (
-        election_group_id, senatorial_district_id, state_id,
-        federal_constituencies_count, lgas_count,
-        state_constituencies_count, wards_count, polling_units_count
-      )
-      SELECT
-        v_eg_id, sd.id, v_state_id,
-        sd.federal_constituencies_count, sd.lgas_count,
-        sd.state_constituencies_count, sd.wards_count, sd.polling_units_count
-      FROM senatorial_districts sd WHERE sd.id = v_senat_id
-      ON CONFLICT (election_group_id, senatorial_district_id) DO NOTHING;
-    END IF;
 
     -- 7. election_group_states
     INSERT INTO election_group_states (
@@ -247,46 +207,6 @@ BEGIN
       v_lga.state_constituencies_count, v_lga.wards_count, v_lga.polling_units_count
     ON CONFLICT (election_group_id, lga_id) DO NOTHING;
 
-    -- 3. election_group_state_constituencies
-    IF v_ward.state_constituency_id IS NOT NULL THEN
-      INSERT INTO election_group_state_constituencies (
-        election_group_id, state_constituency_id, state_id,
-        wards_count, polling_units_count
-      )
-      SELECT
-        v_eg_id, sc.id, v_state_id, sc.wards_count, sc.polling_units_count
-      FROM state_constituencies sc
-      WHERE sc.id = v_ward.state_constituency_id
-      ON CONFLICT (election_group_id, state_constituency_id) DO NOTHING;
-    END IF;
-
-    -- 4. election_group_federal_constituencies
-    IF v_lga.federal_constituency_id IS NOT NULL THEN
-      INSERT INTO election_group_federal_constituencies (
-        election_group_id, federal_constituency_id, state_id, senatorial_district_id,
-        lgas_count, state_constituencies_count, wards_count, polling_units_count
-      )
-      SELECT
-        v_eg_id, fc.id, v_state_id, fc.senatorial_district_id,
-        fc.lgas_count, fc.state_constituencies_count, fc.wards_count, fc.polling_units_count
-      FROM federal_constituencies fc WHERE fc.id = v_lga.federal_constituency_id
-      ON CONFLICT (election_group_id, federal_constituency_id) DO NOTHING;
-    END IF;
-
-    -- 5. election_group_senatorial_districts
-    IF v_lga.senatorial_district_id IS NOT NULL THEN
-      INSERT INTO election_group_senatorial_districts (
-        election_group_id, senatorial_district_id, state_id,
-        federal_constituencies_count, lgas_count,
-        state_constituencies_count, wards_count, polling_units_count
-      )
-      SELECT
-        v_eg_id, sd.id, v_state_id,
-        sd.federal_constituencies_count, sd.lgas_count,
-        sd.state_constituencies_count, sd.wards_count, sd.polling_units_count
-      FROM senatorial_districts sd WHERE sd.id = v_lga.senatorial_district_id
-      ON CONFLICT (election_group_id, senatorial_district_id) DO NOTHING;
-    END IF;
 
     -- 6. election_group_states
     INSERT INTO election_group_states (
@@ -359,33 +279,6 @@ BEGIN
       v_lga.state_constituencies_count, v_lga.wards_count, v_lga.polling_units_count
     ON CONFLICT (election_group_id, lga_id) DO NOTHING;
 
-    -- 2. election_group_federal_constituencies
-    IF v_lga.federal_constituency_id IS NOT NULL THEN
-      INSERT INTO election_group_federal_constituencies (
-        election_group_id, federal_constituency_id, state_id, senatorial_district_id,
-        lgas_count, state_constituencies_count, wards_count, polling_units_count
-      )
-      SELECT
-        v_eg_id, fc.id, v_state_id, fc.senatorial_district_id,
-        fc.lgas_count, fc.state_constituencies_count, fc.wards_count, fc.polling_units_count
-      FROM federal_constituencies fc WHERE fc.id = v_lga.federal_constituency_id
-      ON CONFLICT (election_group_id, federal_constituency_id) DO NOTHING;
-    END IF;
-
-    -- 3. election_group_senatorial_districts
-    IF v_lga.senatorial_district_id IS NOT NULL THEN
-      INSERT INTO election_group_senatorial_districts (
-        election_group_id, senatorial_district_id, state_id,
-        federal_constituencies_count, lgas_count,
-        state_constituencies_count, wards_count, polling_units_count
-      )
-      SELECT
-        v_eg_id, sd.id, v_state_id,
-        sd.federal_constituencies_count, sd.lgas_count,
-        sd.state_constituencies_count, sd.wards_count, sd.polling_units_count
-      FROM senatorial_districts sd WHERE sd.id = v_lga.senatorial_district_id
-      ON CONFLICT (election_group_id, senatorial_district_id) DO NOTHING;
-    END IF;
 
     -- 4. election_group_states
     INSERT INTO election_group_states (

@@ -17,7 +17,6 @@ import (
 const (
 	TaskRefreshWardStats               = "stats:refresh_ward"
 	TaskRefreshLGAStats                = "stats:refresh_lga"
-	TaskRefreshStateConstituencyStats  = "stats:refresh_state_constituency"
 	TaskRefreshStateStats              = "stats:refresh_state"
 	TaskRefreshGlobalStats             = "stats:refresh_global"
 )
@@ -36,11 +35,6 @@ type RefreshLGAStatsPayload struct {
 	ElectionGroupID int32 `json:"election_group_id"`
 	LGAID           int32 `json:"lga_id"`
 	StateID         int16 `json:"state_id"`
-}
-
-type RefreshStateConstituencyStatsPayload struct {
-	ElectionGroupID     int32 `json:"election_group_id"`
-	StateConstituencyID int32 `json:"state_constituency_id"`
 }
 
 type RefreshStateStatsPayload struct {
@@ -103,33 +97,6 @@ func (redisTaskDistributor *RedisTaskDistributor) DistributeTaskRefreshLGAStats(
 			return nil
 		}
 		return fmt.Errorf("failed to enqueue lga stats task: %w", err)
-	}
-	slog.Info("enqueued task", "type", task.Type(), "queue", info.Queue)
-	return nil
-}
-
-func (redisTaskDistributor *RedisTaskDistributor) DistributeTaskRefreshStateConstituencyStats(ctx context.Context, payload *RefreshStateConstituencyStatsPayload, opts ...asynq.Option) error {
-	jsonPayload, err := json.Marshal(payload)
-	if err != nil {
-		return fmt.Errorf("failed to marshal state constituency stats payload: %w", err)
-	}
-	uniqueKey := fmt.Sprintf("stats_sc:%d:%d", payload.ElectionGroupID, payload.StateConstituencyID)
-	defaults := []asynq.Option{
-		asynq.ProcessIn(2 * time.Minute),
-		asynq.Unique(2 * time.Minute),
-		asynq.MaxRetry(3),
-		asynq.Timeout(60 * time.Second),
-		asynq.TaskID(uniqueKey),
-	}
-	opts = append(defaults, opts...)
-	task := asynq.NewTask(TaskRefreshStateConstituencyStats, jsonPayload, opts...)
-	info, err := redisTaskDistributor.asynqClient.EnqueueContext(ctx, task)
-	if err != nil {
-		if errors.Is(err, asynq.ErrTaskIDConflict) || errors.Is(err, asynq.ErrDuplicateTask) {
-			slog.Debug("state constituency stats refresh already queued", "election_group_id", payload.ElectionGroupID, "state_constituency_id", payload.StateConstituencyID)
-			return nil
-		}
-		return fmt.Errorf("failed to enqueue state constituency stats task: %w", err)
 	}
 	slog.Info("enqueued task", "type", task.Type(), "queue", info.Queue)
 	return nil
@@ -243,25 +210,6 @@ func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskRefreshLGAStats(ctx con
 	}
 
 	slog.Info("lga stats refreshed", "election_group_id", payload.ElectionGroupID, "lga_id", payload.LGAID)
-	return nil
-}
-
-// ProcessTaskRefreshStateConstituencyStats aggregates PU→StateConstituency (independent branch, no further cascade needed in stats chain).
-func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskRefreshStateConstituencyStats(ctx context.Context, task *asynq.Task) error {
-	var payload RefreshStateConstituencyStatsPayload
-	if err := json.Unmarshal(task.Payload(), &payload); err != nil {
-		return fmt.Errorf("failed to unmarshal state constituency stats payload: %w", err)
-	}
-	slog.Info("refreshing state constituency stats", "election_group_id", payload.ElectionGroupID, "state_constituency_id", payload.StateConstituencyID)
-
-	if err := redisTaskProcessor.queries.RefreshSingleElectionGroupStateConstituencyStats(ctx, queries.RefreshSingleElectionGroupStateConstituencyStatsParams{
-		ElectionGroupID:     payload.ElectionGroupID,
-		StateConstituencyID: payload.StateConstituencyID,
-	}); err != nil {
-		return fmt.Errorf("failed to refresh state constituency stats: %w", err)
-	}
-
-	slog.Info("state constituency stats refreshed", "election_group_id", payload.ElectionGroupID, "state_constituency_id", payload.StateConstituencyID)
 	return nil
 }
 

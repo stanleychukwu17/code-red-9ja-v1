@@ -98,13 +98,6 @@ func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskRefreshPollingUnitStats
 			})
 		}
 
-		// StateConstituency branch (independent of the Ward→LGA→State chain)
-		if geoIDs.StateConstituencyID.Valid {
-			_ = redisTaskProcessor.taskDistributor.DistributeTaskRefreshStateConstituencyStats(ctx, &RefreshStateConstituencyStatsPayload{
-				ElectionGroupID:     payload.Params.ElectionGroupID,
-				StateConstituencyID: geoIDs.StateConstituencyID.Int32,
-			})
-		}
 	}
 
 	slog.Info("successfully refreshed polling unit stats",

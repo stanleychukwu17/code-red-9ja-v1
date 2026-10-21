@@ -206,27 +206,6 @@ export const API_URL = {
     ) => {
       return `${api}/election-groups/${id}/stats/states/${stateId}/parties/${partyId}`;
     },
-    singleSenatorialDistrictStats: (
-      id: number | string,
-      sdId: number | string,
-      partyId: number | string,
-    ) => {
-      return `${api}/election-groups/${id}/stats/senatorial-districts/${sdId}/parties/${partyId}`;
-    },
-    singleFederalConstituencyStats: (
-      id: number | string,
-      fcId: number | string,
-      partyId: number | string,
-    ) => {
-      return `${api}/election-groups/${id}/stats/federal-constituencies/${fcId}/parties/${partyId}`;
-    },
-    singleStateConstituencyStats: (
-      id: number | string,
-      scId: number | string,
-      partyId: number | string,
-    ) => {
-      return `${api}/election-groups/${id}/stats/state-constituencies/${scId}/parties/${partyId}`;
-    },
     singleLGAStats: (
       id: number | string,
       lgaId: number | string,

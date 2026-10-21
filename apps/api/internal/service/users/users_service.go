@@ -716,9 +716,6 @@ func (s *UsersService) UpdateUserIsVerified(ctx context.Context, userID int64, f
 		return err
 	}
 
-	fmt.Println("isVerified: ", isVerified)
-	fmt.Println("UserID: ", userID)
-
 	err = s.queries.UpdateUserPhoneNumberIsVerified(ctx, queries.UpdateUserPhoneNumberIsVerifiedParams{
 		UserID:          userID,
 		OwnerIsVerified: pgtype.Bool{Bool: isVerified, Valid: true},

@@ -53,7 +53,7 @@ const (
 	RedisPartiesList                = "parties:list"                     // STRING: used to store and retrieve all parties and they details, the value is a JSON string of all parties.
 	RedisPartyInfo                  = "parties:info:"                    // STRING: "parties:info:<partyID>" is used to store and retrieve party info.
 	RedisPartyBasicInfo             = "parties:basic_info:"              // STRING: "parties:basic_info:<partyID>" is used to store and retrieve party basic info.
-	RedisChapterMemberCount         = "parties:chapter:members_count:"   // STRING: "parties:chapter:members_count:<chapterID>" is used to store and retrieve the number of members in each chapter of a party.
+	RedisChapterMemberCount         = "parties:chapter:members_count:"   // STRING: "parties:chapter:members_count:<partyID>:<chapterID>" is used to store and retrieve the number of members in each chapter of a party.
 	RedisNationalChapter            = "parties:national_chapter:"        // STRING: "parties:national_chapter:<partyID>:<countryID>" is used to store the national chapter ID.
 	RedisZonalChapter               = "parties:zonal_chapter:"           // STRING: "parties:zonal_chapter:<partyID>:<zonalID>" is used to store the zonal chapter ID.
 	RedisStateChapter               = "parties:state_chapter:"           // STRING: "parties:state_chapter:<partyID>:<stateID>" is used to store the state chapter ID.
@@ -65,9 +65,9 @@ const (
 	RedisPartyChapterOfficials      = "parties:chapter_officials:"       // STRING: "parties:chapter_officials:<partyID>:<chapterID>" stores cached JSON array of chapter officials
 	RedisPartyMemberSuspension      = "parties:member_suspension:"       // STRING: "parties:member_suspension:<partyID>:<userID>" stores cached active suspension JSON (id > 0 if suspended, id = 0 if not)
 	RedisPartyMemberPositions       = "parties:member_positions:"        // STRING: "parties:member_positions:<partyID>:<userID>" stores cached JSON array of member positions assignments
-	RedisPartyMember                = "parties:member:"                  // STRING: "parties:member:<userID>:<partyID>" stores cached party-wide membership booleans
-	RedisPartyChapterMember         = "parties:chapter_member:"          // STRING: "parties:chapter_member:<userID>:<partyID>:<chapterID>" stores cached membership booleans
-	RedisPartyChapterFollower       = "parties:chapter_follower:"        // STRING: "parties:chapter_follower:<userID>:<partyID>:<chapterID>" stores cached following booleans
+	RedisPartyMember                = "parties:member:"                  // STRING: "parties:member:<partyID>:<userID>" stores cached party-wide membership booleans
+	RedisPartyChapterMember         = "parties:chapter_member:"          // STRING: "parties:chapter_member:<partyID>:<chapterID>:<userID>" stores cached membership booleans
+	RedisPartyChapterFollower       = "parties:chapter_follower:"        // STRING: "parties:chapter_follower:<partyID>:<chapterID>:<userID>" stores cached following booleans
 	RedisPartyChapterFollowersCount = "parties:chapter:followers_count:" // STRING: "parties:chapter:followers_count:<partyID>:<chapterID>" stores cached count of followers for a chapter
 	RedisPartyDefaultPositions      = "parties:default_party_positions"  // STRING: "parties:default_party_positions" stores cached JSON array of default party positions
 	RedisPartyCustomPositions       = "parties:custom_party_positions:"  // STRING: "parties:custom_party_positions:<partyID>" stores cached JSON array of custom party positions

@@ -17,7 +17,6 @@ import (
 
 type ElectionGroupsService interface {
 	CreateElectionGroup(ctx context.Context, name string, year int16) (queries.ElectionGroup, error)
-	GetElectionGroupByID(ctx context.Context, id int32) (queries.ElectionGroup, error)
 	ListElectionGroups(ctx context.Context, active *bool) ([]queries.ElectionGroup, error)
 	UpdateElectionGroup(ctx context.Context, id int32, name string, year int16, active bool) (queries.ElectionGroup, error)
 	DeleteElectionGroup(ctx context.Context, id int32) error
@@ -26,17 +25,23 @@ type ElectionGroupsService interface {
 	ListGroupElections(ctx context.Context, electionGroupID int32) ([]queries.ElectionGroupListItem, error)
 }
 
-type Handler struct {
-	service      ElectionGroupsService
-	auditService audit.AuditService
-	validate     *validator.Validate
-	utils        *utils.Utils
+type ElectionsService interface {
+	GetElectionGroupByID(ctx context.Context, id int32) (queries.ElectionGroup, error)
 }
 
-func NewHandler(service ElectionGroupsService, auditService audit.AuditService, utils *utils.Utils) *Handler {
+type Handler struct {
+	service          ElectionGroupsService
+	electionsService ElectionsService
+	auditService     audit.AuditService
+	validate         *validator.Validate
+	utils            *utils.Utils
+}
+
+func NewHandler(service ElectionGroupsService, electionsService ElectionsService, auditService audit.AuditService, utils *utils.Utils) *Handler {
 	return &Handler{
 		service:      service,
-		auditService: auditService,
+		electionsService: electionsService,
+		auditService:     auditService,
 		validate:     validator.New(),
 		utils:        utils,
 	}
@@ -212,7 +217,7 @@ func (h *Handler) GetElectionGroup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 2. Fetch the election group by ID (service checks in-memory cache first, falls back to DB)
-	eg, err := h.service.GetElectionGroupByID(r.Context(), int32(id))
+	eg, err := h.electionsService.GetElectionGroupByID(r.Context(), int32(id))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Election group not found")
 		return
@@ -260,7 +265,7 @@ func (h *Handler) UpdateElectionGroup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 3. Verify the election group exists before attempting update
-	existingGroup, err := h.service.GetElectionGroupByID(r.Context(), int32(id))
+	existingGroup, err := h.electionsService.GetElectionGroupByID(r.Context(), int32(id))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Election group not found")
 		return
@@ -329,7 +334,7 @@ func (h *Handler) DeleteElectionGroup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 2. Verify election group exists before attempting deletion
-	existingGroup, err := h.service.GetElectionGroupByID(r.Context(), int32(id))
+	existingGroup, err := h.electionsService.GetElectionGroupByID(r.Context(), int32(id))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Election group not found")
 		return

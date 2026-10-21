@@ -95,7 +95,7 @@ func (s *FollowsService) FollowParty(ctx context.Context, userID int64, partyID 
 	}
 
 	// Update Redis cache with 14-day TTL
-	cacheKey := fmt.Sprintf("%s%d:%d:%d", db.RedisPartyChapterFollower, userID, partyID, chapterID)
+	cacheKey := fmt.Sprintf("%s%d:%d:%d", db.RedisPartyChapterFollower, partyID, chapterID, userID)
 	_ = s.rdb.Set(ctx, cacheKey, true, db.RedisFourteenDaysTTL).Err()
 
 	if rowsAffected > 0 {
@@ -131,7 +131,7 @@ func (s *FollowsService) UnfollowParty(ctx context.Context, userID int64, partyI
 	}
 
 	// Update Redis cache with 14-day TTL
-	cacheKey := fmt.Sprintf("%s%d:%d:%d", db.RedisPartyChapterFollower, userID, partyID, chapterID)
+	cacheKey := fmt.Sprintf("%s%d:%d:%d", db.RedisPartyChapterFollower, partyID, chapterID, userID)
 	_ = s.rdb.Set(ctx, cacheKey, false, db.RedisFourteenDaysTTL).Err()
 
 	// invalidate followers cache
@@ -146,7 +146,7 @@ func (s *FollowsService) IsFollowingParty(ctx context.Context, userID int64, par
 		return false, nil
 	}
 
-	cacheKey := fmt.Sprintf("%s%d:%d:%d", db.RedisPartyChapterFollower, userID, partyID, chapterID)
+	cacheKey := fmt.Sprintf("%s%d:%d:%d", db.RedisPartyChapterFollower, partyID, chapterID, userID)
 	if cached, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
 		if isFollowing, err := strconv.ParseBool(cached); err == nil {
 			return isFollowing, nil
@@ -202,7 +202,7 @@ func (s *FollowsService) GetPartyFollowersCount(ctx context.Context, partyID int
 
 // InvalidatePartyFollowCache removes the cached follow boolean from Redis.
 func (s *FollowsService) InvalidatePartyFollowCache(ctx context.Context, userID int64, partyID int16, chapterID int32) {
-	cacheKey := fmt.Sprintf("%s%d:%d:%d", db.RedisPartyChapterFollower, userID, partyID, chapterID)
+	cacheKey := fmt.Sprintf("%s%d:%d:%d", db.RedisPartyChapterFollower, partyID, chapterID, userID)
 	_ = s.rdb.Del(ctx, cacheKey).Err()
 }
 
