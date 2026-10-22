@@ -76,7 +76,9 @@ const (
 	//--END--
 
 	//--START-- for campaign groups and operations
-	RedisCampaignGroupMembers = "campaign_groups:members:" // STRING: "campaign_groups:members:<groupID>" stores cached JSON array of campaign group members
+	RedisCampaignGroupByID       = "campaign_groups:info:"      // STRING: "campaign_groups:info:<groupID>" stores cached JSON object of campaign group
+	RedisCampaignGroupMembers    = "campaign_groups:members:"   // STRING: "campaign_groups:members:<groupID>" stores cached JSON array of campaign group members
+	RedisCampaignGroupSyncLock   = "campaign_groups:sync_lock:" // STRING: "campaign_groups:sync_lock:<groupID>" cooldown lock preventing repeated db syncing
 	//--END--
 
 	//--START-- for page verifications & badges
@@ -213,5 +215,7 @@ var AllRedisPrefixes = []string{
 	RedisLockElectoralUnitsSync,
 	RedisElectoralUnitsSyncStatus,
 	RedisUserBlockedPartyIDs,
+	RedisCampaignGroupByID,
 	RedisCampaignGroupMembers,
+	RedisCampaignGroupSyncLock,
 }

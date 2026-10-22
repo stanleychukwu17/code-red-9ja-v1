@@ -30,6 +30,7 @@ import (
 	agentperformancehandler "free9ja/api/internal/handler/agent_performance"
 	authhandler "free9ja/api/internal/handler/auth"
 	bodieshandler "free9ja/api/internal/handler/bodies"
+	campaigngroupshandler "free9ja/api/internal/handler/campaign_groups"
 	electiongroupshandler "free9ja/api/internal/handler/election_groups"
 	electionresultshandler "free9ja/api/internal/handler/election_results"
 	electionstatshandler "free9ja/api/internal/handler/election_stats"
@@ -200,6 +201,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	wardsHandler := wardshandler.NewHandler(wardsService, bodiesService, q, utilsInstance)
 	pollingUnitsHandler := pollingunitshandler.NewHandler(pollingUnitsService, bodiesService, q, utilsInstance)
 	officesHandler := officeshandler.NewHandler(officesService, auditService, utilsInstance)
+	campaignGroupsHandler := campaigngroupshandler.NewHandler(campaignGroupsService, utilsInstance)
 	electionGroupsHandler := electiongroupshandler.NewHandler(electionGroupsService, electionsService, auditService, utilsInstance)
 	electionStatsHandler := electionstatshandler.NewHandler(electionStatsService, electionsService, statesService, bodiesService, wardsService, pool, utilsInstance)
 	electionsHandler := electionshandler.NewHandler(electionsService, usersService, auditService, utilsInstance, partiesService)
@@ -376,8 +378,8 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	mainRouter.Get("/api/v1/election-groups/{id}", electionGroupsHandler.GetElectionGroup)
 	mainRouter.Get("/api/v1/election-groups/{id}/elections", electionGroupsHandler.ListGroupElections)
 
-	// elections public routes
-	mainRouter.Get("/api/v1/elections", electionsHandler.ListElections)
+	// elections public routes (with optional auth to identify party_id for candidates)
+	mainRouter.With(apimiddleware.OptionalAuthMiddleware(jwtSecret)).Get("/api/v1/elections", electionsHandler.ListElections)
 	mainRouter.Get("/api/v1/elections/non-voting-reasons", electionsHandler.GetNonVotingReasons)
 	mainRouter.Get("/api/v1/elections/{id}", electionsHandler.GetElection)
 
@@ -618,6 +620,9 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Post("/api/v1/party-applications/{id}/reject", partyApplicationsHandler.RejectApplication)
 		r.Post("/api/v1/party-applications/{id}/cancel", partyApplicationsHandler.CancelApplication)
 
+		// campaign groups routes (authenticated users)
+		r.Get("/api/v1/campaign-groups/{id}/members", campaignGroupsHandler.GetGroupMembers)
+
 		// polling unit updates routes
 		r.Post("/api/v1/polling-unit-updates", pollingUnitUpdatesHandler.CreateUpdate)
 		r.Get("/api/v1/polling-unit-updates", pollingUnitUpdatesHandler.ListUpdates)
@@ -669,6 +674,9 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		// party candidate nomination
 		r.Post("/api/v1/elections/{id}/field-candidate", electionsHandler.FieldPartyCandidate)
 		r.Post("/api/v1/elections/{id}/unfield-candidate", electionsHandler.UnfieldPartyCandidate)
+
+		// campaign groups (admin & party_admin only)
+		r.Post("/api/v1/campaign-groups/{id}/sync-officials", campaignGroupsHandler.SyncGroupOfficials)
 
 		// party admins can view their own party's wallet transaction ledger
 		r.Get("/api/v1/parties/{id}/wallet/transactions", partiesHandler.ListPartyWalletTransactions)

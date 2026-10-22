@@ -55,6 +55,7 @@ type UsersService interface {
 
 type PartyService interface {
 	GetPartyBasicInfo(ctx context.Context, partyID int16) *queries.PartyBasicInfoWithVerifications
+	GetUserPartyChapters(ctx context.Context, userID int64, partyID int16) ([]queries.GetUserPartyChaptersRow, error)
 	JoinParty(ctx context.Context, params partiesservice.JoinPartyParams) error
 }
 
@@ -133,7 +134,6 @@ type LoginUser struct {
 	MiddleName        string                                   `json:"middle_name"`
 	Gender            string                                   `json:"gender"`
 	Avatar            string                                   `json:"avatar"`
-	Phone             string                                   `json:"phone"`
 	Roles             []string                                 `json:"roles"`
 	AccountStatus     string                                   `json:"account_status"`
 	PartyID           int16                                    `json:"party_id"`
@@ -143,10 +143,8 @@ type LoginUser struct {
 	CurrentWard       int32                                    `json:"current_ward"`
 	CurrentCity       int32                                    `json:"current_city"`
 	PollingUnitID     int32                                    `json:"polling_unit_id"`
-	BankAccountNumber string                                   `json:"bank_account_number"`
-	BankCode          string                                   `json:"bank_code"`
-	VotersCardImage   string                                   `json:"voters_card_image"`
 	Party             *queries.PartyBasicInfoWithVerifications `json:"party"`
+	Chapters          []queries.GetUserPartyChaptersRow        `json:"chapters"`
 }
 
 // authUserRow is an internal unified struct that harmonizes the different SQL query result
@@ -322,10 +320,12 @@ func (s *AuthService) Login(
 		return LoginResult{}, errors.New("Your account is not activated, you cannot login into a placeholder account. Please contact an admin to activate your account")
 	}
 
+	userID := authRow.ID
+
 	// 3. Fetch user roles if the user has roles assigned or if specific roles are required
 	var userRoleCodes []string
 	if (authRow.HasRole.Valid && authRow.HasRole.Bool) || len(allowedRoles) > 0 {
-		userRolesData, err := s.usersService.GetUserRoles(ctx, authRow.ID)
+		userRolesData, err := s.usersService.GetUserRoles(ctx, userID)
 		if err != nil {
 			return LoginResult{}, errors.New("failed to fetch user roles")
 		}
@@ -355,30 +355,39 @@ func (s *AuthService) Login(
 	// 4. Fetch party details only if partyID > 0 (for partyadmin app compatibility)
 	var partyObj *queries.PartyBasicInfoWithVerifications
 	var partyID int16
+	var userChapters []queries.GetUserPartyChaptersRow
 	if authRow.PartyID.Valid && authRow.PartyID.Int16 > 0 {
 		partyID = authRow.PartyID.Int16
-		if s.partyService != nil {
-			partyObj = s.partyService.GetPartyBasicInfo(ctx, partyID)
+		partyObj = s.partyService.GetPartyBasicInfo(ctx, partyID)
+
+		// fetch user chapters
+		if chs, err := s.partyService.GetUserPartyChapters(ctx, userID, partyID); err == nil && chs != nil {
+			userChapters = chs
 		}
+	}
+
+	// if user has no chapters, set empty slice
+	if userChapters == nil {
+		userChapters = []queries.GetUserPartyChaptersRow{}
 	}
 
 	fakeID := authRow.FakeID.Int64
 
 	// 5. Create session and generate tokens
-	tokens, err := s.createSession(ctx, authRow.ID, fakeID, authRow.Username.String, userRoleCodes, partyID)
+	tokens, err := s.createSession(ctx, userID, fakeID, authRow.Username.String, userRoleCodes, partyID)
 	if err != nil {
 		log.Error(logger.EventRedisPipelineFailed, "error", err, "operation", "login_session_storage")
 		return LoginResult{}, err
 	}
 
-	pref, _ := s.usersService.GetUserPreferences(ctx, authRow.ID)
+	pref, _ := s.usersService.GetUserPreferences(ctx, userID)
 
 	loginResult := LoginResult{
 		AccessToken:  tokens.AccessToken,
 		RefreshToken: tokens.RefreshToken,
 		Preferences:  pref,
 		User: LoginUser{
-			ID:                authRow.ID,
+			ID:                userID,
 			FakeID:            fakeID,
 			PreferenceVersion: pref.PreferenceVersion,
 			Email:             authRow.Email.String,
@@ -389,7 +398,6 @@ func (s *AuthService) Login(
 			MiddleName:        authRow.MiddleName.String,
 			Gender:            authRow.Gender.String,
 			Avatar:            authRow.Avatar.String,
-			Phone:             authRow.Phone.String,
 			Roles:             userRoleCodes,
 			AccountStatus:     authRow.AccountStatus.String,
 			PartyID:           partyID,
@@ -399,10 +407,8 @@ func (s *AuthService) Login(
 			CurrentCity:       authRow.CurrentCity.Int32,
 			CurrentLga:        authRow.CurrentLga.Int32,
 			CurrentWard:       authRow.CurrentWard.Int32,
-			BankAccountNumber: "",
-			BankCode:          "",
-			VotersCardImage:   authRow.VotersCardImage.String,
 			Party:             partyObj,
+			Chapters:          userChapters,
 		},
 	}
 
@@ -410,14 +416,7 @@ func (s *AuthService) Login(
 }
 
 // createSession creates a new login session, generates access/refresh tokens, and persists session data in Redis
-func (s *AuthService) createSession(
-	ctx context.Context,
-	userID int64,
-	fakeID int64,
-	username string,
-	roles []string,
-	partyID int16,
-) (AuthTokens, error) {
+func (s *AuthService) createSession(ctx context.Context, userID int64, fakeID int64, username string, roles []string, partyID int16) (AuthTokens, error) {
 	// 1. Generate a unique session identifier and build session payload
 	sessionID := uuid.NewString()
 	now := time.Now().UTC()
@@ -561,6 +560,7 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 		userPartyID = user.PartyID.Int16
 	}
 
+	// gets the user frontend system preferences
 	pref, _ := s.usersService.GetUserPreferences(ctx, user.ID)
 
 	// user details
@@ -568,26 +568,24 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 		ID:                user.ID,
 		FakeID:            user.FakeID.Int64,
 		PreferenceVersion: pref.PreferenceVersion,
-		Email:             user.Email.String,
 		Username:          user.Username.String,
-		ReferralCode:      user.ReferralCode.String,
-		FirstName:         user.FirstName.String,
-		LastName:          user.LastName.String,
-		MiddleName:        user.MiddleName.String,
-		Gender:            user.Gender.String,
-		Avatar:            user.Avatar.String,
-		Phone:             user.Phone.String,
-		Roles:             user.Roles.RolesCode,
-		AccountStatus:     user.AccountStatus.String,
-		PartyID:           userPartyID,
-		PollingUnitID:     user.PollingUnitID.Int32,
-		CurrentCountry:    user.CurrentCountry,
-		CurrentState:      user.CurrentState,
-		CurrentLga:        user.CurrentLga.Int32,
-		CurrentWard:       user.CurrentWard.Int32,
-		CurrentCity:       user.CurrentCity.Int32,
-		VotersCardImage:   user.VotersCardImage.String,
-		Party:             user.PartyBasicInfo,
+		ReferralCode: user.ReferralCode.String,
+		FirstName:    user.FirstName.String,
+		LastName:     user.LastName.String,
+		MiddleName:   user.MiddleName.String,
+		Gender:         user.Gender.String,
+		Avatar:         user.Avatar.String,
+		Roles:          user.Roles.RolesCode,
+		AccountStatus:  user.AccountStatus.String,
+		PartyID:        userPartyID,
+		PollingUnitID:  user.PollingUnitID.Int32,
+		CurrentCountry: user.CurrentCountry,
+		CurrentState:   user.CurrentState,
+		CurrentLga:     user.CurrentLga.Int32,
+		CurrentWard:    user.CurrentWard.Int32,
+		CurrentCity:    user.CurrentCity.Int32,
+		Party:          user.PartyBasicInfo,
+		Chapters:       user.Chapters,
 	}
 
 	// Verify account status
@@ -808,11 +806,16 @@ func (s *AuthService) CheckNIN(ctx context.Context, nin string) bool {
 	return s.usersService.CheckNIN(ctx, nin)
 }
 
+type SignupUser struct {
+	LoginUser
+	Phone string `json:"phone"`
+}
+
 type SignupResult struct {
 	ID           string                               `json:"id"`
 	AccessToken  string                               `json:"accessToken"`
 	RefreshToken string                               `json:"refreshToken"`
-	User         LoginUser                            `json:"user"`
+	User         SignupUser                           `json:"user"`
 	Preferences  usersservice.UserPreferencesResponse `json:"preferences"`
 }
 
@@ -924,29 +927,25 @@ func (s *AuthService) Signup(ctx context.Context, email, phone, password string,
 		AccessToken:  tokens.AccessToken,
 		RefreshToken: tokens.RefreshToken,
 		Preferences:  pref,
-		User: LoginUser{
-			ID:                userID,
-			FakeID:            fakeID,
-			PreferenceVersion: pref.PreferenceVersion,
-			Email:             email,
-			Phone:             e164Phone,
-			AccountStatus:     "just_registered",
-			CurrentCountry:    countryID,
-			CurrentState:      37,
+		User: SignupUser{
+			LoginUser: LoginUser{
+				ID:                userID,
+				FakeID:            fakeID,
+				PreferenceVersion: pref.PreferenceVersion,
+				Email:             email,
+				AccountStatus:     "just_registered",
+				CurrentCountry:    countryID,
+				CurrentState:      37,
+				Chapters:          []queries.GetUserPartyChaptersRow{},
+			},
+			Phone: e164Phone,
 		},
 	}, nil
 }
 
 // CompleteOnboarding finalizes a newly registered user's profile with all data collected during the onboarding flow.
 // It updates the user row, saves NIN + username to Redis/DB, stores security questions, and sets account status to 'active'.
-func (s *AuthService) CompleteOnboarding(
-	ctx context.Context,
-	userID int64,
-	fakeID int64,
-	params queries.UpdateOnboardingProfileParams,
-	referrerUserID *int64,
-	nin string,
-) error {
+func (s *AuthService) CompleteOnboarding(ctx context.Context, userID int64, fakeID int64, params queries.UpdateOnboardingProfileParams, referrerUserID *int64, nin string) error {
 	// 1. Update the users row with all onboarding fields including referral code
 	updatedUser, err := s.queries.UpdateOnboardingProfile(ctx, params)
 	if err != nil {

@@ -10,6 +10,8 @@ import { TileHeader, TileLeft, TileRight, TileRow } from "@repo/ui/components/ti
 import { formatISODate } from "@repo/ui/lib/date";
 import StarIcon from "@repo/ui/icons/star-icon";
 import { AppAvatar, Avatar, AvatarImage } from "@repo/ui/components/avatar";
+import { Link, useParams } from "@tanstack/react-router";
+import { APP_URL } from "#/lib/config";
 import { PartyElectionInstanceDropdown } from "../dropdowns/PartyElectionInstanceDropdown";
 
 export type ElectionInstanceType = {
@@ -29,6 +31,7 @@ export type ElectionInstanceType = {
   electionDate: string;
   officeName?: string;
   scope?: string;
+  electionGroupId?: number;
 };
 
 const getPartyAdminRankColor = (rank: number) => {
@@ -75,6 +78,8 @@ export function ElectionInstanceTableHeader() {
  * and contextual party election instance dropdown actions.
  */
 export function ElectionInstanceTableTile({ data }: { data: ElectionInstanceType }) {
+  const params = useParams({ strict: false }) as { partyShortName?: string };
+  const partyShortName = params.partyShortName || "";
   // Format the ISO election date string or fallback to em-dash
   const dateLabel = data.electionDate ? formatISODate(data.electionDate) : "—";
 
@@ -90,7 +95,15 @@ export function ElectionInstanceTableTile({ data }: { data: ElectionInstanceType
           />
           <span className="text-[16px] text-c-90">{data.rank}</span>
         </div>
-        <p className="truncate w-full text-[16px] text-c-80">{data.title}</p>
+        <Link
+          to={APP_URL.partyRoutes.electionInstance(partyShortName, data.id, {
+            election_group_id: data.electionGroupId,
+            scope: data.scope,
+          }) as any}
+          className="truncate w-full text-[16px] text-c-80 hover:text-c-100 hover:underline transition-colors"
+        >
+          {data.title}
+        </Link>
       </TileLeft>
       <TileRight>
         {data.candidate ? (

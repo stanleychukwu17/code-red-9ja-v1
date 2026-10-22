@@ -14,9 +14,20 @@ SELECT * FROM elections WHERE id = $1;
 -- name: ListElectionInstances :many
 SELECT
   e.*,
-  o.name AS office_name
+  o.name AS office_name,
+  ec.candidate_id,
+  u.first_name AS candidate_first_name,
+  u.last_name AS candidate_last_name,
+  u.avatar AS candidate_avatar,
+  ec.running_mate_id,
+  rm.first_name AS running_mate_first_name,
+  rm.last_name AS running_mate_last_name,
+  rm.avatar AS running_mate_avatar
 FROM elections e
 JOIN offices o ON e.office_id = o.id
+LEFT JOIN election_candidates ec ON ec.election_id = e.id AND ec.party_id = sqlc.narg('candidate_party_id')::smallint
+LEFT JOIN users u ON ec.candidate_id = u.id
+LEFT JOIN users rm ON ec.running_mate_id = rm.id
 WHERE (
   sqlc.narg('cursor_election_date')::date IS NULL
   OR (e.election_date < sqlc.narg('cursor_election_date')::date)

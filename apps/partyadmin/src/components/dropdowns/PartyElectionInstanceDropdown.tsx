@@ -7,7 +7,9 @@
 import { useState } from "react";
 import { TileOptions } from "@repo/ui/components/tiles";
 import type { TDropdownGroup } from "@repo/ui/lib/types";
-import { UsersIcon } from "lucide-react";
+import { UsersIcon, Eye } from "lucide-react";
+import { useNavigate, useParams } from "@tanstack/react-router";
+import { APP_URL } from "#/lib/config";
 import { DropdownGroupList } from "@repo/ui/components/custom/AppDropdown";
 import { ManageCandidateTicketDialog } from "../dialogs/ManageCandidateTicketDialog";
 import type { ElectionInstanceType } from "../tiles/election-instance-tile";
@@ -24,10 +26,26 @@ type PartyElectionInstanceDropdownProps = {
 export const PartyElectionInstanceDropdown = ({ data, className }: PartyElectionInstanceDropdownProps) => {
   const [openMenu, setOpenMenu] = useState(false);
   const [openTicketDialog, setOpenTicketDialog] = useState(false);
+  const navigate = useNavigate();
+  const params = useParams({ strict: false }) as { partyShortName?: string };
+  const partyShortName = params.partyShortName || "";
 
   // Dropdown menu options
   const dropdownData: TDropdownGroup[] = [
     [
+      {
+        title: "View Details & Candidates",
+        icon: <Eye className="size-4" />,
+        action: () => {
+          setOpenMenu(false);
+          navigate({
+            to: APP_URL.partyRoutes.electionInstance(partyShortName, data.id, {
+              election_group_id: data.electionGroupId,
+              scope: data.scope,
+            }) as any,
+          });
+        },
+      },
       {
         title: data.candidate ? "Manage Candidate Ticket" : "Field Candidate Ticket",
         icon: <UsersIcon className="size-4" />,

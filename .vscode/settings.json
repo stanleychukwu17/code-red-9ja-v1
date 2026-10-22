@@ -18,6 +18,7 @@
     "bodiesservice",
     "bvas",
     "BYSCORE",
+    "campaigngroupshandler",
     "campaigngroupsservice",
     "cand",
     "Certbot",

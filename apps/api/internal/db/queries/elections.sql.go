@@ -559,35 +559,47 @@ func (q *Queries) ListElectionCandidatesDetailedByElectionID(ctx context.Context
 const listElectionInstances = `-- name: ListElectionInstances :many
 SELECT
   e.id, e.election_group_id, e.state_id, e.senatorial_district_id, e.federal_constituency_id, e.state_constituency_id, e.lga_id, e.ward_id, e.office_id, e.name, e.election_date, e.scope, e.reports_count, e.updates_count, e.results_submitted_count, e.created_at, e.updated_at,
-  o.name AS office_name
+  o.name AS office_name,
+  ec.candidate_id,
+  u.first_name AS candidate_first_name,
+  u.last_name AS candidate_last_name,
+  u.avatar AS candidate_avatar,
+  ec.running_mate_id,
+  rm.first_name AS running_mate_first_name,
+  rm.last_name AS running_mate_last_name,
+  rm.avatar AS running_mate_avatar
 FROM elections e
 JOIN offices o ON e.office_id = o.id
+LEFT JOIN election_candidates ec ON ec.election_id = e.id AND ec.party_id = $1::smallint
+LEFT JOIN users u ON ec.candidate_id = u.id
+LEFT JOIN users rm ON ec.running_mate_id = rm.id
 WHERE (
-  $1::date IS NULL
-  OR (e.election_date < $1::date)
-  OR (e.election_date = $1::date AND e.id < $2::int)
+  $2::date IS NULL
+  OR (e.election_date < $2::date)
+  OR (e.election_date = $2::date AND e.id < $3::int)
 )
-AND ($3::text IS NULL OR (
-  e.name ILIKE '%' || $3::text || '%' OR
-  o.name ILIKE '%' || $3::text || '%'
+AND ($4::text IS NULL OR (
+  e.name ILIKE '%' || $4::text || '%' OR
+  o.name ILIKE '%' || $4::text || '%'
 ))
-AND ($4::int[] IS NULL OR e.election_group_id = ANY($4::int[]))
-AND ($5::text[] IS NULL OR e.scope = ANY($5::text[]))
+AND ($5::int[] IS NULL OR e.election_group_id = ANY($5::int[]))
+AND ($6::text[] IS NULL OR e.scope = ANY($6::text[]))
 AND (
-  $6::text[] IS NULL
-  OR ('upcoming' = ANY($6::text[]) AND e.election_date > $7::date + 1)
-  OR ('ongoing' = ANY($6::text[]) AND e.election_date BETWEEN $7::date AND $7::date + 1)
-  OR ('ended' = ANY($6::text[]) AND e.election_date < $7::date)
+  $7::text[] IS NULL
+  OR ('upcoming' = ANY($7::text[]) AND e.election_date > $8::date + 1)
+  OR ('ongoing' = ANY($7::text[]) AND e.election_date BETWEEN $8::date AND $8::date + 1)
+  OR ('ended' = ANY($7::text[]) AND e.election_date < $8::date)
 )
-AND ($8::smallint[] IS NULL OR e.state_id = ANY($8::smallint[]))
-AND ($9::smallint[] IS NULL OR e.office_id = ANY($9::smallint[]))
-AND ($10::date IS NULL OR e.election_date >= $10::date)
-AND ($11::date IS NULL OR e.election_date <= $11::date)
+AND ($9::smallint[] IS NULL OR e.state_id = ANY($9::smallint[]))
+AND ($10::smallint[] IS NULL OR e.office_id = ANY($10::smallint[]))
+AND ($11::date IS NULL OR e.election_date >= $11::date)
+AND ($12::date IS NULL OR e.election_date <= $12::date)
 ORDER BY e.election_date DESC, e.id DESC
-LIMIT $12::int
+LIMIT $13::int
 `
 
 type ListElectionInstancesParams struct {
+	CandidatePartyID   pgtype.Int2 `json:"candidate_party_id"`
 	CursorElectionDate pgtype.Date `json:"cursor_election_date"`
 	CursorID           int32       `json:"cursor_id"`
 	Search             pgtype.Text `json:"search"`
@@ -621,10 +633,19 @@ type ListElectionInstancesRow struct {
 	CreatedAt             pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
 	OfficeName            string             `json:"office_name"`
+	CandidateID           pgtype.Int8        `json:"candidate_id"`
+	CandidateFirstName    pgtype.Text        `json:"candidate_first_name"`
+	CandidateLastName     pgtype.Text        `json:"candidate_last_name"`
+	CandidateAvatar       pgtype.Text        `json:"candidate_avatar"`
+	RunningMateID         pgtype.Int8        `json:"running_mate_id"`
+	RunningMateFirstName  pgtype.Text        `json:"running_mate_first_name"`
+	RunningMateLastName   pgtype.Text        `json:"running_mate_last_name"`
+	RunningMateAvatar     pgtype.Text        `json:"running_mate_avatar"`
 }
 
 func (q *Queries) ListElectionInstances(ctx context.Context, arg ListElectionInstancesParams) ([]ListElectionInstancesRow, error) {
 	rows, err := q.db.Query(ctx, listElectionInstances,
+		arg.CandidatePartyID,
 		arg.CursorElectionDate,
 		arg.CursorID,
 		arg.Search,
@@ -664,6 +685,14 @@ func (q *Queries) ListElectionInstances(ctx context.Context, arg ListElectionIns
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.OfficeName,
+			&i.CandidateID,
+			&i.CandidateFirstName,
+			&i.CandidateLastName,
+			&i.CandidateAvatar,
+			&i.RunningMateID,
+			&i.RunningMateFirstName,
+			&i.RunningMateLastName,
+			&i.RunningMateAvatar,
 		); err != nil {
 			return nil, err
 		}

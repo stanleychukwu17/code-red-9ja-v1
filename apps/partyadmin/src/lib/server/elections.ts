@@ -11,6 +11,17 @@ const getVal = (val: any) => {
   return "";
 };
 
+const getId = (val: any): number | undefined => {
+  if (!val) return undefined;
+  if (typeof val === "number") return val;
+  if (typeof val === "object" && val !== null) {
+    if ("Int64" in val && val.Valid) return val.Int64;
+    if ("Int32" in val && val.Valid) return val.Int32;
+    if ("Int16" in val && val.Valid) return val.Int16;
+  }
+  return undefined;
+};
+
 export type ElectionFilters = {
   election_group_ids: number[];
   scopes: string[];
@@ -21,47 +32,46 @@ export type ElectionFilters = {
   date_to?: string;
 };
 
+export type GetElectionsProps = {
+  limit?: number;
+  cursor?: string | number;
+  partyId?: number | string;
+  partyShortName?: string;
+  search?: string;
+  election_group_ids?: number[];
+  election_group_id?: number;
+  scopes?: string[];
+  statuses?: string[];
+  state_ids?: number[];
+  office_ids?: number[];
+  date_from?: string;
+  date_to?: string;
+};
+
 export const getElections = createServerFn({ method: "GET" })
-  .inputValidator(
-    (
-      data:
-        | {
-            limit?: number;
-            cursor?: string | number;
-            partyShortName?: string;
-            search?: string;
-            election_group_ids?: number[];
-            election_group_id?: number;
-            scopes?: string[];
-            statuses?: string[];
-            state_ids?: number[];
-            office_ids?: number[];
-            date_from?: string;
-            date_to?: string;
-            orderBy?: string;
-            order?: string;
-          }
-        | undefined,
-    ) => data,
-  )
+  .inputValidator((data?: GetElectionsProps) => data)
   .handler(async ({ data }) => {
     try {
       const limit = data?.limit || 20;
       const cursor = data?.cursor || "";
-
       const userDetailsCookie = getCookie("user_details");
 
-      let resolvedPartyShortName = data?.partyShortName || "";
-      if (!resolvedPartyShortName && userDetailsCookie) {
+      let resolvedPartyId = data?.partyId;
+      if (!resolvedPartyId && userDetailsCookie) {
         try {
           const user = JSON.parse(userDetailsCookie);
-          resolvedPartyShortName = user?.party?.short_name || "";
-        } catch (e) {}
+          if (user?.party_id) {
+            resolvedPartyId = user.party_id;
+          } else if (user?.party?.id) {
+            resolvedPartyId = user.party.id;
+          }
+        } catch (e) { }
       }
 
       const params = new URLSearchParams();
       if (limit) params.append("limit", String(limit));
       if (cursor) params.append("cursor", String(cursor));
+      if (resolvedPartyId) params.append("party_id", String(resolvedPartyId));
       if (data?.search) params.append("search", data.search);
       if (data?.election_group_ids?.length) {
         params.append("election_group_ids", data.election_group_ids.join(","));
@@ -75,8 +85,6 @@ export const getElections = createServerFn({ method: "GET" })
       if (data?.office_ids?.length) params.append("office_ids", data.office_ids.join(","));
       if (data?.date_from) params.append("date_from", data.date_from);
       if (data?.date_to) params.append("date_to", data.date_to);
-      if (data?.orderBy) params.append("orderBy", data.orderBy);
-      if (data?.order) params.append("order", data.order);
 
       const qs = params.toString();
       const response = await apiFetch(
@@ -84,64 +92,57 @@ export const getElections = createServerFn({ method: "GET" })
       );
       const resData = await response.json();
 
-      if (
-        resData.success &&
-        Array.isArray(resData.data?.elections) &&
-        resolvedPartyShortName
-      ) {
-        const elections = resData.data.elections;
-        const electionsWithCandidate = await Promise.all(
-          elections.map(async (election: any) => {
-            try {
-              const candidatesUrl = `${API_URL.elections}/${election.id}/candidates`;
-              const candResp = await apiFetch(candidatesUrl);
-              if (candResp.ok) {
-                const candData = await candResp.json();
-                if (
-                  candData.success &&
-                  Array.isArray(candData.data?.candidates)
-                ) {
-                  const partyCand = candData.data.candidates.find(
-                    (c: any) =>
-                      getVal(c.party_short_name).toLowerCase() ===
-                      resolvedPartyShortName.toLowerCase(),
-                  );
-                  if (partyCand) {
-                    const runningMateId = partyCand.running_mate_id?.Int64 ?? (typeof partyCand.running_mate_id === "number" ? partyCand.running_mate_id : undefined);
-                    const runningMateFirstName = getVal(partyCand.running_mate_first_name);
-                    const runningMateLastName = getVal(partyCand.running_mate_last_name);
-                    const runningMateName = `${runningMateFirstName} ${runningMateLastName}`.trim();
-                    return {
-                      ...election,
-                      candidate: {
-                        id: partyCand.candidate_id,
-                        name: `${getVal(partyCand.first_name)} ${getVal(partyCand.last_name)}`.trim(),
-                        avatar: getVal(partyCand.avatar),
-                      },
-                      runningMate: runningMateId ? {
-                        id: runningMateId,
-                        name: runningMateName,
-                        avatar: getVal(partyCand.running_mate_avatar),
-                      } : undefined,
-                    };
-                  }
-                }
-              }
-            } catch (err) {
-              console.error(
-                `Failed to fetch candidates for election ${election.id}:`,
-                err,
-              );
-            }
-            return election;
-          }),
-        );
-        resData.data.elections = electionsWithCandidate;
+      if (resData.success && Array.isArray(resData.data?.elections)) {
+        resData.data.elections = resData.data.elections.map((election: any) => {
+          const candidateId = getId(election.candidate_id);
+          const runningMateId = getId(election.running_mate_id);
+
+          const candidateFirstName = getVal(election.candidate_first_name);
+          const candidateLastName = getVal(election.candidate_last_name);
+          const candidateName = `${candidateFirstName} ${candidateLastName}`.trim();
+          const candidateAvatar = getVal(election.candidate_avatar);
+
+          const runningMateFirstName = getVal(election.running_mate_first_name);
+          const runningMateLastName = getVal(election.running_mate_last_name);
+          const runningMateName = `${runningMateFirstName} ${runningMateLastName}`.trim();
+          const runningMateAvatar = getVal(election.running_mate_avatar);
+
+          return {
+            ...election,
+            candidate: candidateId ? { id: candidateId, name: candidateName, avatar: candidateAvatar || undefined, } : undefined,
+            runningMate: runningMateId ? { id: runningMateId, name: runningMateName, avatar: runningMateAvatar || undefined, } : undefined,
+          };
+        });
       }
 
       return resData;
     } catch (error) {
       return { success: false, message: "Failed to fetch elections from API" };
+    }
+  });
+
+export const getElectionById = createServerFn({ method: "GET" })
+  .inputValidator(
+    (data: { electionId: number; electionGroupId?: number; scope?: string }) =>
+      data,
+  )
+  .handler(async ({ data }) => {
+    try {
+      const params = new URLSearchParams();
+      if (data.electionGroupId)
+        params.append("election_group_id", String(data.electionGroupId));
+      if (data.scope) params.append("scope", data.scope);
+      const qs = params.toString();
+      const response = await apiFetch(
+        `${API_URL.elections}/${data.electionId}${qs ? `?${qs}` : ""}`,
+      );
+      const resData = await response.json();
+      return resData;
+    } catch (error) {
+      return {
+        success: false,
+        message: "Failed to fetch election details: " + (error as Error).message,
+      };
     }
   });
 
@@ -208,15 +209,29 @@ export const unfieldPartyCandidate = createServerFn({ method: "POST" })
 
 export const getElectionCandidates = createServerFn({ method: "GET" })
   .inputValidator(
-    (data: { electionId: number; limit?: number; cursor?: string }) => data,
+    (data: {
+      electionId: number;
+      limit?: number;
+      cursor?: string;
+      electionGroupId?: number;
+      scope?: string;
+    }) => data,
   )
   .handler(async ({ data }) => {
     try {
       const limit = data.limit || 20;
       const cursor = data.cursor || "";
 
+      const params = new URLSearchParams();
+      if (limit) params.append("limit", String(limit));
+      if (cursor) params.append("cursor", String(cursor));
+      if (data.electionGroupId)
+        params.append("election_group_id", String(data.electionGroupId));
+      if (data.scope) params.append("scope", data.scope);
+      const qs = params.toString();
+
       const response = await apiFetch(
-        `${API_URL.elections}/${data.electionId}/candidates?limit=${limit}&cursor=${cursor}`,
+        `${API_URL.elections}/${data.electionId}/candidates?${qs}`,
       );
       const resData = await response.json();
       return resData;

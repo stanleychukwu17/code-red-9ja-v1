@@ -555,10 +555,40 @@ func (h *Handler) ListElections(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	var candidatePartyID int16
+	if partyIDStr := query.Get("party_id"); partyIDStr != "" {
+		pid, err := strconv.ParseInt(partyIDStr, 10, 16)
+		if err != nil || pid <= 0 {
+			h.utils.RespondError(w, http.StatusBadRequest, "Invalid party_id")
+			return
+		}
+
+		// Require authentication to request candidates for a specific party
+		claims, ok := apimiddleware.GetClaims(r)
+		if !ok || claims == nil {
+			h.utils.RespondError(w, http.StatusUnauthorized, "Authentication required to filter candidates by party")
+			return
+		}
+
+		// Admins can inspect any party's candidates; party admins can only inspect their own party's candidates
+		isAdmin := claims.HasAnyRole("admin", "super_admin")
+		isPartyAdmin := claims.HasAnyRole("party_admin", "super_party_admin")
+
+		if !isAdmin {
+			if !isPartyAdmin || claims.PartyID != int16(pid) {
+				h.utils.RespondError(w, http.StatusForbidden, "You do not have permission to access candidates for this party")
+				return
+			}
+		}
+
+		candidatePartyID = int16(pid)
+	}
+
 	filter := elections.ListElectionsFilter{
 		Limit:            int32(limit),
 		Cursor:           cursor,
 		Search:           query.Get("search"),
+		CandidatePartyID: candidatePartyID,
 		ElectionGroupIDs: electionGroupIDs,
 		Scopes:           parseCommaSeparatedStrings(query.Get("scopes")),
 		Statuses:         parseCommaSeparatedStrings(query.Get("statuses")),
@@ -620,6 +650,23 @@ func (h *Handler) GetElection(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Election not found")
 		return
+	}
+
+	// Validate election_group_id & scope if provided in query params
+	query := r.URL.Query()
+	if egStr := query.Get("election_group_id"); egStr != "" {
+		if egID, err := strconv.ParseInt(egStr, 10, 32); err == nil && egID > 0 {
+			if ei.ElectionGroupID != int32(egID) {
+				h.utils.RespondError(w, http.StatusNotFound, "Election not found for the specified election group")
+				return
+			}
+		}
+	}
+	if scope := query.Get("scope"); scope != "" {
+		if !strings.EqualFold(ei.Scope, scope) {
+			h.utils.RespondError(w, http.StatusNotFound, "Election not found for the specified scope")
+			return
+		}
 	}
 
 	// Return election details
@@ -877,6 +924,29 @@ func (h *Handler) GetElectionCandidates(w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election ID")
 		return
+	}
+
+	query := r.URL.Query()
+	egStr := query.Get("election_group_id")
+	scope := query.Get("scope")
+	if egStr != "" || scope != "" {
+		ei, err := h.service.GetElectionByID(r.Context(), int32(id))
+		if err != nil {
+			h.utils.RespondError(w, http.StatusNotFound, "Election not found")
+			return
+		}
+		if egStr != "" {
+			if egID, err := strconv.ParseInt(egStr, 10, 32); err == nil && egID > 0 {
+				if ei.ElectionGroupID != int32(egID) {
+					h.utils.RespondError(w, http.StatusNotFound, "Election not found for the specified election group")
+					return
+				}
+			}
+		}
+		if scope != "" && !strings.EqualFold(ei.Scope, scope) {
+			h.utils.RespondError(w, http.StatusNotFound, "Election not found for the specified scope")
+			return
+		}
 	}
 
 	// Parse pagination parameters

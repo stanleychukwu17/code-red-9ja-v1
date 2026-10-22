@@ -270,11 +270,14 @@ function useActiveItem(items: AppSidebarItem[]): string {
       activeItem = item.id;
       // Or match against any of the nested sub-item links
     } else if (
-      item.items?.some(
-        (sub) =>
+      item.items?.some((sub) => {
+        const subBase = sub.href.split("?")[0] ?? "";
+        return (
+          location.pathname.startsWith(subBase) ||
           location.pathname.startsWith(sub.href) ||
-          location.pathname.includes(`/${sub.id}`),
-      )
+          location.pathname.includes(`/${sub.id}`)
+        );
+      })
     ) {
       activeItem = item.id;
     }
@@ -348,6 +351,31 @@ function CollapsibleNavItem({ item, isActive }: { item: AppSidebarItem; isActive
   const { state: sideBarState, isMobile, setOpenMobile } = useSidebar();
   const location = useLocation();
 
+  const isSubItemActive = (sub: AppSidebarSubItem) => {
+    const parts = sub.href.split("?");
+    const subPath = parts[0] ?? "";
+    const subQuery = parts[1];
+
+    if (subQuery) {
+      const params = new URLSearchParams(subQuery);
+      const chapterId = params.get("chapterId");
+      if (chapterId && (location.search as any)?.chapterId) {
+        return (
+          location.pathname.startsWith(subPath) &&
+          String((location.search as any)?.chapterId) === String(chapterId)
+        );
+      }
+      return (
+        (location.href && location.href.includes(sub.href)) ||
+        (location.pathname.startsWith(subPath) && (location.searchStr?.includes(subQuery) ?? false))
+      );
+    }
+    return (
+      location.pathname.startsWith(sub.href) ||
+      location.pathname.includes(`/${sub.id}`)
+    );
+  };
+
   // Mode A: Collapsed desktop sidebar -> Flyout DropdownMenu to the right
   if (sideBarState === "collapsed" && !isMobile) {
     return (
@@ -378,9 +406,7 @@ function CollapsibleNavItem({ item, isActive }: { item: AppSidebarItem; isActive
             <DropdownMenuSeparator className="my-1" />
 
             {item.items?.map((sub) => {
-              const isSubActive =
-                location.pathname.startsWith(sub.href) ||
-                location.pathname.includes(`/${sub.id}`);
+              const isSubActive = isSubItemActive(sub);
 
               return (
                 <DropdownMenuItem key={sub.id} asChild className="focus:bg-c-10 dark:focus:bg-black">
@@ -441,9 +467,7 @@ function CollapsibleNavItem({ item, isActive }: { item: AppSidebarItem; isActive
         <CollapsibleContent>
           <SidebarMenuSub className="mx-2 my-1 border-l border-c-10 dark:border-white/10 pl-3 space-y-1">
             {item.items?.map((sub) => {
-              const isSubActive =
-                location.pathname.startsWith(sub.href) ||
-                location.pathname.includes(`/${sub.id}`);
+              const isSubActive = isSubItemActive(sub);
 
               return (
                 <SidebarMenuSubItem key={sub.id} className="group/sub-item relative flex items-center">

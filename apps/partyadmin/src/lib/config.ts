@@ -30,9 +30,22 @@ export const APP_URL = {
   homePage: "/dashboard",
   parties: "/parties",
   partyHome: "/$partyShortName/home",
+
   partyRoutes: {
     home: (party: string) => `/${party}/home`,
     elections: (party: string) => `/${party}/elections`,
+    electionInstances: (party: string) => `/${party}/elections/instances`,
+    electionInstance: (
+      party: string,
+      electionId: string | number,
+      query?: { election_group_id?: string | number; scope?: string },
+    ) => {
+      const params = new URLSearchParams();
+      if (query?.election_group_id) params.set("election_group_id", String(query.election_group_id));
+      if (query?.scope) params.set("scope", query.scope);
+      const qs = params.toString();
+      return `/${party}/elections/${electionId}${qs ? `?${qs}` : ""}`;
+    },
     applications: (party: string) => `/${party}/applications`,
     members: (party: string) => `/${party}/party-members/member`,
     partyAdmins: (party: string) => `/${party}/party-members/party-admin`,

@@ -885,6 +885,7 @@ type ListElectionsFilter struct {
 	Limit            int32
 	Cursor           int64
 	Search           string
+	CandidatePartyID int16
 	ElectionGroupIDs []int32
 	Scopes           []string
 	Statuses         []string
@@ -924,6 +925,7 @@ func (s *ElectionsService) ListElections(ctx context.Context, filter ListElectio
 
 	// Fetch limit + 1 to determine if there are more records
 	params := queries.ListElectionInstancesParams{
+		CandidatePartyID:   utils.PgInt2FromPositive(filter.CandidatePartyID),
 		CursorElectionDate: cursorElectionDate,
 		CursorID:           cursorID,
 		Search:             search,

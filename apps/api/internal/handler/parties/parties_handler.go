@@ -664,7 +664,7 @@ func (h *Handler) GetParty(w http.ResponseWriter, r *http.Request) {
 // @Produce      json
 // @Param        party_id path int true "Party ID"
 // @Param        short_name path string true "Party Short Name"
-// @Param        chapter_id query int true "Chapter ID"
+// @Param        chapter_id query int false "Chapter ID (optional, defaults to national chapter)"
 // @Success      200  {object}  map[string]interface{} "Party profile retrieved successfully"
 // @Router       /parties/{party_id}/{short_name}/profile [get]
 func (h *Handler) GetPartyProfile(w http.ResponseWriter, r *http.Request) {
@@ -680,30 +680,45 @@ func (h *Handler) GetPartyProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Parse required chapter_id query parameter and verify existence
-	cidStr := r.URL.Query().Get("chapter_id")
-	cid, err := strconv.ParseInt(cidStr, 10, 32)
-	if err != nil || cid <= 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid chapter ID")
-		return
-	}
-	c := int32(cid)
+	// Parse optional chapter_id query parameter; fallback to national chapter if missing or invalid
+	var chapter queries.PartyChapter
+	chapterIDStr := r.URL.Query().Get("chapter_id")
+	parsedChapterID, err := strconv.ParseInt(chapterIDStr, 10, 32)
+	if err != nil || parsedChapterID <= 0 {
+		// Resolve the national chapter as default fallback
+		natID, natErr := h.partiesService.GetOrCreateNationalChapter(r.Context(), int16(partyID), constants.NigeriaCountryID)
+		if natErr != nil {
+			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to resolve national chapter: "+natErr.Error())
+			return
+		}
 
-	// Fetch the chapter by ID and ensure it exists
-	chapter, err := h.partiesService.GetPartyChapterByID(r.Context(), c)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusNotFound, "Party chapter not found")
-		return
-	}
+		// fetch the chapter details
+		ch, chErr := h.partiesService.GetPartyChapterByID(r.Context(), natID)
+		if chErr != nil {
+			h.utils.RespondError(w, http.StatusNotFound, "National party chapter not found")
+			return
+		}
 
-	// Ensure the fetched chapter actually belongs to the specified party
-	if chapter.PartyID != int16(partyID) {
-		h.utils.RespondError(w, http.StatusBadRequest, "Chapter does not belong to the specified party")
-		return
-	}
+		// set the chapter and chapter id
+		chapter = ch
+		chapterID = &natID
+	} else {
+		reqChapterID := int32(parsedChapterID)
+		ch, chErr := h.partiesService.GetPartyChapterByID(r.Context(), reqChapterID)
+		if chErr != nil {
+			h.utils.RespondError(w, http.StatusNotFound, "Party chapter not found")
+			return
+		}
+		// Ensure the fetched chapter actually belongs to the specified party
+		if ch.PartyID != int16(partyID) {
+			h.utils.RespondError(w, http.StatusBadRequest, "Chapter does not belong to the specified party")
+			return
+		}
 
-	// Assign validated chapter ID pointer for subsequent profile/membership checks
-	chapterID = &c
+		// set the chapter and chapter id
+		chapter = ch
+		chapterID = &reqChapterID
+	}
 
 	// Fetch full party info (including cover_image, cover_position_y, date_founded, and verifications)
 	party := h.partiesService.GetPartyInfo(r.Context(), int16(partyID))

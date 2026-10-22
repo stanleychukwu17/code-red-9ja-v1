@@ -22,6 +22,7 @@ import { ElectionInstancesFilterDialog } from "#/components/dialogs/ElectionInst
 import { useIntersectionObserver, useDebounceValue } from "usehooks-ts";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import type { ElectionInstanceType } from "#/components/tiles/election-instance-tile";
+import { useUserParty } from "#/hooks/useUserParty";
 
 export type InstancesSearch = {
   election_group_id?: number;
@@ -95,14 +96,17 @@ function RouteComponent() {
     return count;
   }, [filters]);
 
+  const { party } = useUserParty();
+
   // fetch the election instances
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteQuery({
-    queryKey: ["elections", partyShortName, debouncedSearchQuery, filters],
+    queryKey: ["elections", partyShortName, party?.id, debouncedSearchQuery, filters],
     queryFn: async ({ pageParam }) => {
       const res = await getElections({
         data: {
           limit: 35,
           cursor: pageParam as string,
+          partyId: party?.id,
           partyShortName,
           search: debouncedSearchQuery || undefined,
           election_group_ids:
@@ -157,6 +161,7 @@ function RouteComponent() {
         electionDate: el.election_date,
         officeName: el.office_name,
         scope: el.scope,
+        electionGroupId: el.election_group_id,
       })),
     )
     : [];

@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
@@ -116,11 +117,59 @@ export function AppSidebarShell({ userDetails, sitePreference }: { userDetails?:
     dispatch(updateSiteState({ sideBarState }));
   };
 
+  // Dynamically attach chapters as collapsible sub-items under "My Party" if the user has enrolled chapters
+  const sidebarItems = useMemo(() => {
+    return APP_SIDEBAR_ITEMS.map((item) => {
+      if (item.id === "party") {
+        if (user?.party && user?.chapters && user.chapters.length > 0) {
+          const partyShortName = user.party.short_name.toLowerCase();
+          const partyId = String(user.party.id);
+
+          const subItems = user.chapters.map((ch) => {
+            let label = "Chapter";
+            switch (ch.chapter_type?.toLowerCase()) {
+              case "national":
+                label = "National Chapter";
+                break;
+              case "state":
+                label = `${ch.state_name} State chapter`;
+                break;
+              case "lga":
+                label = `${ch.lga_name} LGA chapter`;
+                break;
+              case "ward":
+                label = `${ch.ward_name} Ward chapter`;
+                break;
+              case "zonal":
+                label = `${ch.zone_name} Zone chapter`;
+                break;
+              default:
+                label = "Chapter";
+            }
+
+            return {
+              id: `chapter-${ch.id}`,
+              label,
+              href: APP_URL.party(partyShortName, partyId, ch.id),
+            };
+          });
+
+          return {
+            ...item,
+            href: undefined,
+            items: subItems,
+          };
+        }
+      }
+      return item;
+    });
+  }, [user?.party, user?.chapters]);
+
   return (
     <SharedSidebar
       defaultOpen={isExpanded}
       userDetails={user}
-      items={APP_SIDEBAR_ITEMS}
+      items={sidebarItems}
       onLogout={handleLogout}
       onSidebarStateChange={handleSidebarStateChange}
       homePageUrl={APP_URL.home}

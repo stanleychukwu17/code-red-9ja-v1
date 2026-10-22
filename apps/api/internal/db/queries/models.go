@@ -141,6 +141,39 @@ type CampaignGroup struct {
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 }
 
+type CampaignGroupIssue struct {
+	ID              int64              `json:"id"`
+	GroupID         int64              `json:"group_id"`
+	ReporterID      int64              `json:"reporter_id"`
+	Title           string             `json:"title"`
+	Description     string             `json:"description"`
+	Category        string             `json:"category"`
+	Priority        string             `json:"priority"`
+	HasMedia        bool               `json:"has_media"`
+	PollingUnitID   pgtype.Int4        `json:"polling_unit_id"`
+	Status          string             `json:"status"`
+	ResolvedBy      pgtype.Int8        `json:"resolved_by"`
+	ResolvedAt      pgtype.Timestamptz `json:"resolved_at"`
+	ResolutionNotes pgtype.Text        `json:"resolution_notes"`
+	UpvotesCount    int32              `json:"upvotes_count"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+type CampaignGroupMedium struct {
+	ID            int64              `json:"id"`
+	GroupID       int64              `json:"group_id"`
+	UploaderID    int64              `json:"uploader_id"`
+	EntityType    string             `json:"entity_type"`
+	EntityID      int64              `json:"entity_id"`
+	FileID        pgtype.Int8        `json:"file_id"`
+	Url           string             `json:"url"`
+	MediaType     string             `json:"media_type"`
+	FileSizeBytes pgtype.Int8        `json:"file_size_bytes"`
+	MimeType      pgtype.Text        `json:"mime_type"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+}
+
 type CampaignGroupMember struct {
 	ID              int64              `json:"id"`
 	PartyID         int16              `json:"party_id"`
@@ -163,39 +196,6 @@ type CampaignGroupMessage struct {
 	IsDeleted        bool               `json:"is_deleted"`
 	CreatedAt        pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
-}
-
-type CampaignIssue struct {
-	ID              int64              `json:"id"`
-	GroupID         int64              `json:"group_id"`
-	ReporterID      int64              `json:"reporter_id"`
-	Title           string             `json:"title"`
-	Description     string             `json:"description"`
-	Category        string             `json:"category"`
-	Priority        string             `json:"priority"`
-	HasMedia        bool               `json:"has_media"`
-	PollingUnitID   pgtype.Int4        `json:"polling_unit_id"`
-	Status          string             `json:"status"`
-	ResolvedBy      pgtype.Int8        `json:"resolved_by"`
-	ResolvedAt      pgtype.Timestamptz `json:"resolved_at"`
-	ResolutionNotes pgtype.Text        `json:"resolution_notes"`
-	UpvotesCount    int32              `json:"upvotes_count"`
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
-}
-
-type CampaignMedium struct {
-	ID            int64              `json:"id"`
-	GroupID       int64              `json:"group_id"`
-	UploaderID    int64              `json:"uploader_id"`
-	EntityType    string             `json:"entity_type"`
-	EntityID      int64              `json:"entity_id"`
-	FileID        pgtype.Int8        `json:"file_id"`
-	Url           string             `json:"url"`
-	MediaType     string             `json:"media_type"`
-	FileSizeBytes pgtype.Int8        `json:"file_size_bytes"`
-	MimeType      pgtype.Text        `json:"mime_type"`
-	CreatedAt     pgtype.Timestamptz `json:"created_at"`
 }
 
 type CampaignTimelinePost struct {
