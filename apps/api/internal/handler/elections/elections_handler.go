@@ -35,8 +35,8 @@ type ElectionsService interface {
 	DeleteElection(ctx context.Context, id int32) error
 	BulkDeleteElections(ctx context.Context, params elections.BulkDeleteElectionsParams) (elections.BulkDeleteElectionsResult, error)
 	GetElectionCandidates(ctx context.Context, electionID int32) ([]queries.ListElectionCandidatesDetailedByElectionIDRow, error)
-	FieldPartyCandidate(ctx context.Context, electionID int32, partyID int16, candidateID int64, slot string) error
-	UnfieldPartyCandidate(ctx context.Context, electionID int32, partyID int16, slot string) error
+	FieldPartyCandidate(ctx context.Context, election queries.Election, partyID int16, candidateID int64, slot string) error
+	UnfieldPartyCandidate(ctx context.Context, election queries.Election, partyID int16, slot string) error
 	CheckIfUserEverContested(ctx context.Context, userID int64) (bool, error)
 	GetUserActiveCandidacies(ctx context.Context, candidateID int64) ([]queries.UserActiveCandidacy, error)
 	GetNonVotingReasons(ctx context.Context) ([]queries.NonVotingReason, error)
@@ -52,6 +52,7 @@ type UsersService interface {
 
 type PartiesService interface {
 	GetActivePartyMemberSuspension(ctx context.Context, partyID int16, userID int64) (*queries.PartyMemberSuspension, error)
+	IsPartyMember(ctx context.Context, userID int64, partyID int16) (bool, error)
 }
 
 type Handler struct {
@@ -1011,6 +1012,17 @@ func (h *Handler) FieldPartyCandidate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Verify candidate is an active member of the party
+	isMember, err := h.partiesService.IsPartyMember(r.Context(), req.CandidateID, req.PartyID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to check candidate party membership: "+err.Error())
+		return
+	}
+	if !isMember {
+		h.utils.RespondError(w, http.StatusBadRequest, "Candidate is not an active member of this political party")
+		return
+	}
+
 	// Verify candidate is not suspended from the party
 	candSuspension, err := h.partiesService.GetActivePartyMemberSuspension(r.Context(), req.PartyID, req.CandidateID)
 	if err != nil {
@@ -1040,7 +1052,7 @@ func (h *Handler) FieldPartyCandidate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Field candidate under the party
-	err = h.service.FieldPartyCandidate(r.Context(), int32(electionID), req.PartyID, req.CandidateID, req.Slot)
+	err = h.service.FieldPartyCandidate(r.Context(), election.Election, req.PartyID, req.CandidateID, req.Slot)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to field candidate: "+err.Error())
 		return
@@ -1150,7 +1162,7 @@ func (h *Handler) UnfieldPartyCandidate(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Remove assigned candidate/running mate from the election ballot
-	err = h.service.UnfieldPartyCandidate(r.Context(), int32(electionID), req.PartyID, req.Slot)
+	err = h.service.UnfieldPartyCandidate(r.Context(), election.Election, req.PartyID, req.Slot)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to unfield candidate: "+err.Error())
 		return

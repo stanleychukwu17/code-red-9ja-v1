@@ -62,6 +62,7 @@ import (
 	authservice "free9ja/api/internal/service/auth"
 	blocksservice "free9ja/api/internal/service/blocks"
 	bodiesservice "free9ja/api/internal/service/bodies"
+	campaigngroupsservice "free9ja/api/internal/service/campaign_groups"
 	earningsservice "free9ja/api/internal/service/earnings"
 	electiongroupsservice "free9ja/api/internal/service/election_groups"
 	electionstats "free9ja/api/internal/service/election_stats"
@@ -178,6 +179,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	seedService := seedservice.NewSeedService(q, pool, rdb, distributor, authService, bodiesService, usersService, partiesService)
 	pageVerificationsService := pageverificationsservice.NewPageVerificationsService(q, rdb, usersService, partiesService, auditService)
 	filesService := filesservice.NewFilesService(q, r2Svc, distributor)
+	campaignGroupsService := campaigngroupsservice.NewCampaignGroupsService(q, pool, rdb)
 
 	usersService.SetPageVerificationsService(pageVerificationsService)
 	usersService.SetPartyService(partiesService)
@@ -185,6 +187,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	partiesService.SetFollowsService(followsService)
 	bodiesService.SetPartiesService(partiesService)
 	electionsService.SetPageVerificationsService(pageVerificationsService)
+	electionsService.SetCampaignGroupsService(campaignGroupsService)
 
 	notificationsHandler := notificationshandler.NewHandler(notificationsService, utilsInstance)
 	authHandler := authhandler.NewHandler(authService, usersService, filesService, utilsInstance)

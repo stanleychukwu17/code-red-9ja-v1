@@ -11,6 +11,7 @@ import (
 )
 
 type Querier interface {
+	AddCampaignGroupMember(ctx context.Context, arg AddCampaignGroupMemberParams) (CampaignGroupMember, error)
 	AddPageVerification(ctx context.Context, arg AddPageVerificationParams) (PagesVerified, error)
 	AddPartyMemberMilestone(ctx context.Context, arg AddPartyMemberMilestoneParams) error
 	AddPartyMembership(ctx context.Context, arg AddPartyMembershipParams) error
@@ -169,6 +170,7 @@ type Querier interface {
 	DeleteWard(ctx context.Context, id int32) error
 	DepositPartyAllowance(ctx context.Context, arg DepositPartyAllowanceParams) (Party, error)
 	EnsureElectionGroupParentSkeletons(ctx context.Context, electionGroupID int32) error
+	FindOrCreateCampaignGroup(ctx context.Context, arg FindOrCreateCampaignGroupParams) (CampaignGroup, error)
 	FollowParty(ctx context.Context, arg FollowPartyParams) (int64, error)
 	FollowUser(ctx context.Context, arg FollowUserParams) error
 	GetAcceptedApplicationForUser(ctx context.Context, arg GetAcceptedApplicationForUserParams) (GetAcceptedApplicationForUserRow, error)
@@ -190,6 +192,7 @@ type Querier interface {
 	GetBlockedPartyIDsForUser(ctx context.Context, blockedUserID int64) ([]int16, error)
 	// Helper for filtering feeds / search results
 	GetBlockedUserIDsForUser(ctx context.Context, blockerID int64) ([]int64, error)
+	GetCampaignGroupByID(ctx context.Context, id int64) (CampaignGroup, error)
 	GetCandidateCountsForElections(ctx context.Context, electionIds []int32) ([]GetCandidateCountsForElectionsRow, error)
 	GetChapterMemberCount(ctx context.Context, arg GetChapterMemberCountParams) (int64, error)
 	GetCitiesByStateID(ctx context.Context, stateID int16) ([]GetCitiesByStateIDRow, error)
@@ -473,6 +476,8 @@ type Querier interface {
 	RefreshSingleElectionGroupPollingUnitStats(ctx context.Context, arg RefreshSingleElectionGroupPollingUnitStatsParams) error
 	RefreshSingleElectionGroupStateStats(ctx context.Context, arg RefreshSingleElectionGroupStateStatsParams) error
 	RefreshSingleElectionGroupWardStats(ctx context.Context, arg RefreshSingleElectionGroupWardStatsParams) error
+	RemoveCampaignGroupMember(ctx context.Context, arg RemoveCampaignGroupMemberParams) error
+	RemoveCampaignGroupMembersByElectionGroup(ctx context.Context, arg RemoveCampaignGroupMembersByElectionGroupParams) error
 	RemovePageVerification(ctx context.Context, arg RemovePageVerificationParams) error
 	RemovePageVerificationByType(ctx context.Context, arg RemovePageVerificationByTypeParams) error
 	RemoveUserRole(ctx context.Context, arg RemoveUserRoleParams) error

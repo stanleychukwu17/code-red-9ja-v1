@@ -35,7 +35,7 @@ func PartyChapterChannel(partyID int16, chapterID int32) string {
 // ResultsUpdatedEvent represents a lightweight signal that election rollup results have updated.
 type ResultsUpdatedEvent struct {
 	ElectionID            int32     `json:"election_id"`
-	Scope                 string    `json:"scope"` // "ward", "lga", "state_constituency", "federal_constituency", "senatorial_district", "state", "nationwide"
+	Scope                 string    `json:"scope"` // "ward", "lga", "state-constituency", "federal-constituency", "senatorial-district", "state", "nationwide"
 	StateID               *int16    `json:"state_id,omitempty"`
 	LGAID                 *int32    `json:"lga_id,omitempty"`
 	WardID                *int32    `json:"ward_id,omitempty"`

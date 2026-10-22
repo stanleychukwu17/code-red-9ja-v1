@@ -329,7 +329,7 @@ func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskRollupSingleStateConsti
 	if redisTaskProcessor.broadcaster != nil {
 		_ = redisTaskProcessor.broadcaster.BroadcastResultsUpdated(ctx, realtime.ResultsUpdatedEvent{
 			ElectionID:          payload.ElectionID,
-			Scope:               "state_constituency",
+			Scope:               "state-constituency",
 			StateConstituencyID: &payload.StateConstituencyID,
 			Timestamp:           time.Now().UTC(),
 		})
@@ -415,7 +415,7 @@ func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskRollupSingleFederalCons
 	if redisTaskProcessor.broadcaster != nil {
 		_ = redisTaskProcessor.broadcaster.BroadcastResultsUpdated(ctx, realtime.ResultsUpdatedEvent{
 			ElectionID:            payload.ElectionID,
-			Scope:                 "federal_constituency",
+			Scope:                 "federal-constituency",
 			FederalConstituencyID: &payload.FederalConstituencyID,
 			Timestamp:             time.Now().UTC(),
 		})
@@ -444,7 +444,7 @@ func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskRollupSingleSenatorialD
 	if redisTaskProcessor.broadcaster != nil {
 		_ = redisTaskProcessor.broadcaster.BroadcastResultsUpdated(ctx, realtime.ResultsUpdatedEvent{
 			ElectionID:           payload.ElectionID,
-			Scope:                "senatorial_district",
+			Scope:                "senatorial-district",
 			SenatorialDistrictID: &payload.SenatorialDistrictID,
 			Timestamp:            time.Now().UTC(),
 		})

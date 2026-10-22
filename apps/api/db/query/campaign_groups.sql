@@ -43,6 +43,7 @@ RETURNING *;
 DELETE FROM campaign_group_members
 WHERE group_id = $1 AND user_id = $2;
 
--- name: RemoveCampaignGroupMemberByRole :exec
+-- name: RemoveCampaignGroupMembersByElectionGroup :exec
 DELETE FROM campaign_group_members
-WHERE group_id = $1 AND user_id = $2 AND role = $3;
+WHERE party_id = $1 AND election_group_id = $2 AND user_id = $3;
+

@@ -53,6 +53,11 @@ type pageVerificationsService interface {
 	RevokePoliticianVerificationIfNoCandidacy(ctx context.Context, userID int64) error
 }
 
+type campaignGroupsService interface {
+	EnsureElectionCandidateGroup(ctx context.Context, partyID int16, election queries.Election, candidateID int64, role string) (*queries.CampaignGroup, error)
+	RemoveCandidateFromElectionGroup(ctx context.Context, partyID int16, electionGroupID int32, candidateID int64) error
+}
+
 type ElectionsService struct {
 	queries                  *queries.Queries
 	pool                     *pgxpool.Pool
@@ -63,6 +68,7 @@ type ElectionsService struct {
 	bodiesService            bodiesService
 	notificationsService     notificationsService
 	pageVerificationsService pageVerificationsService
+	campaignGroupsService    campaignGroupsService
 }
 
 // NewElectionsService initializes a new ElectionsService with its required database pool,
@@ -92,6 +98,11 @@ func NewElectionsService(
 // SetPageVerificationsService sets the page verifications service dependency to resolve circular dependencies.
 func (s *ElectionsService) SetPageVerificationsService(pvs pageVerificationsService) {
 	s.pageVerificationsService = pvs
+}
+
+// SetCampaignGroupsService sets the campaign groups service dependency.
+func (s *ElectionsService) SetCampaignGroupsService(cgs campaignGroupsService) {
+	s.campaignGroupsService = cgs
 }
 
 // invalidateCache purges the Redis cache for a specific election instance by ID.
@@ -1187,7 +1198,7 @@ func (s *ElectionsService) CheckIfUserEverContested(ctx context.Context, userID 
 
 // FieldPartyCandidate assigns or updates a political party's candidate or running mate for an election.
 // slot is "candidate" or "running_mate". Requires newCandidateID > 0.
-func (s *ElectionsService) FieldPartyCandidate(ctx context.Context, electionID int32, partyID int16, newCandidateID int64, slot string) error {
+func (s *ElectionsService) FieldPartyCandidate(ctx context.Context, election queries.Election, partyID int16, newCandidateID int64, slot string) error {
 	if newCandidateID <= 0 {
 		return fmt.Errorf("candidate ID must be greater than zero")
 	}
@@ -1196,6 +1207,8 @@ func (s *ElectionsService) FieldPartyCandidate(ctx context.Context, electionID i
 	if slot == "running_mate" {
 		targetSlot = "running_mate"
 	}
+
+	electionID := election.ID
 
 	// Retrieve any existing ballot ticket for this party in the election
 	existingTicket, err := s.queries.GetElectionCandidateForParty(ctx, queries.GetElectionCandidateForPartyParams{
@@ -1278,12 +1291,6 @@ func (s *ElectionsService) FieldPartyCandidate(ctx context.Context, electionID i
 			// Queue new principal candidate for nomination notification and verification
 			nominated = append(nominated, candidateAction{userID: newCandidateID, slot: "candidate"})
 		} else {
-			// Create a brand new election ticket for this party
-			election, err := s.queries.GetElectionInstanceByID(ctx, electionID)
-			if err != nil {
-				return fmt.Errorf("failed to retrieve election for fielding candidate: %w", err)
-			}
-
 			// Insert new ballot ticket record with the fielded principal candidate
 			_, err = s.queries.CreateElectionCandidate(ctx, queries.CreateElectionCandidateParams{
 				ElectionID:      electionID,
@@ -1300,7 +1307,7 @@ func (s *ElectionsService) FieldPartyCandidate(ctx context.Context, electionID i
 		}
 	}
 
-	// Notify newly nominated candidates, grant verification badges, and refresh active candidacies cache
+	// Notify newly nominated candidates, grant verification badges, enroll in campaign group, and refresh cache
 	for _, c := range nominated {
 		s.notificationsService.NotifyCandidateNominated(ctx, notifications.NotifyCandidateNominatedParams{
 			PartyID:      partyID,
@@ -1314,11 +1321,16 @@ func (s *ElectionsService) FieldPartyCandidate(ctx context.Context, electionID i
 			slog.Warn("failed to ensure politician verification for candidate", "userID", c.userID, "error", err)
 		}
 
+		// Automatically enroll candidate into their anchor campaign group
+		if _, err := s.campaignGroupsService.EnsureElectionCandidateGroup(ctx, partyID, election, c.userID, c.slot); err != nil {
+			slog.Warn("failed to enroll candidate into campaign group", "userID", c.userID, "error", err)
+		}
+
 		// Invalidate cached active candidacies for the newly nominated candidate
 		s.InvalidateUserActiveCandidacies(ctx, c.userID)
 	}
 
-	// Notify superseded/replaced candidates, revoke politician badges if no other races remain, and refresh cache
+	// Notify superseded/replaced candidates, revoke badges, remove from campaign group, and refresh cache
 	for _, c := range withdrawn {
 		s.notificationsService.NotifyCandidateWithdrawn(ctx, notifications.NotifyCandidateWithdrawnParams{
 			PartyID:      partyID,
@@ -1332,6 +1344,11 @@ func (s *ElectionsService) FieldPartyCandidate(ctx context.Context, electionID i
 			slog.Warn("failed to revoke politician verification for candidate", "userID", c.userID, "error", err)
 		}
 
+		// Remove superseded candidate from all campaign groups for this election cycle
+		if err := s.campaignGroupsService.RemoveCandidateFromElectionGroup(ctx, partyID, election.ElectionGroupID, c.userID); err != nil {
+			slog.Warn("failed to remove candidate from campaign group", "userID", c.userID, "error", err)
+		}
+
 		// Invalidate cached active candidacies for the withdrawn candidate
 		s.InvalidateUserActiveCandidacies(ctx, c.userID)
 	}
@@ -1342,7 +1359,9 @@ func (s *ElectionsService) FieldPartyCandidate(ctx context.Context, electionID i
 // UnfieldPartyCandidate removes an assigned candidate or running mate from an election.
 // If slot is "running_mate", only the running mate is removed from the ticket.
 // If slot is "candidate" (or empty), the entire party ticket is removed.
-func (s *ElectionsService) UnfieldPartyCandidate(ctx context.Context, electionID int32, partyID int16, slot string) error {
+func (s *ElectionsService) UnfieldPartyCandidate(ctx context.Context, election queries.Election, partyID int16, slot string) error {
+	electionID := election.ID
+
 	existingTicket, err := s.queries.GetElectionCandidateForParty(ctx, queries.GetElectionCandidateForPartyParams{
 		ElectionID: electionID,
 		PartyID:    partyID,
@@ -1382,7 +1401,7 @@ func (s *ElectionsService) UnfieldPartyCandidate(ctx context.Context, electionID
 			return nil
 		}
 
-		// Unfielding main candidate removes the entire party ticket from this election
+		// Un-fielding main candidate removes the entire party ticket from this election
 		err = s.queries.DeleteElectionCandidateForParty(ctx, queries.DeleteElectionCandidateForPartyParams{
 			ElectionID: electionID,
 			PartyID:    partyID,
@@ -1399,7 +1418,7 @@ func (s *ElectionsService) UnfieldPartyCandidate(ctx context.Context, electionID
 		}
 	}
 
-	// Dispatch withdrawal notifications, revoke politician verification if no candidacies remain, and invalidate active candidacies cache
+	// Dispatch withdrawal notifications, revoke politician verification, remove from campaign group, and invalidate cache
 	for _, c := range withdrawn {
 		s.notificationsService.NotifyCandidateWithdrawn(ctx, notifications.NotifyCandidateWithdrawnParams{
 			PartyID:      partyID,
@@ -1410,6 +1429,12 @@ func (s *ElectionsService) UnfieldPartyCandidate(ctx context.Context, electionID
 		if err := s.pageVerificationsService.RevokePoliticianVerificationIfNoCandidacy(ctx, c.userID); err != nil {
 			slog.Warn("failed to revoke politician verification for candidate", "userID", c.userID, "error", err)
 		}
+
+		// Remove unfielded candidate from all campaign groups for this election cycle
+		if err := s.campaignGroupsService.RemoveCandidateFromElectionGroup(ctx, partyID, election.ElectionGroupID, c.userID); err != nil {
+			slog.Warn("failed to remove candidate from campaign group", "userID", c.userID, "error", err)
+		}
+
 		s.InvalidateUserActiveCandidacies(ctx, c.userID)
 	}
 

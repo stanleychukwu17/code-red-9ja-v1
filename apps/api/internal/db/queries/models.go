@@ -126,6 +126,90 @@ type CZonesNigerium struct {
 	StateIds []int16 `json:"state_ids"`
 }
 
+type CampaignGroup struct {
+	ID              int64              `json:"id"`
+	PartyID         int16              `json:"party_id"`
+	ElectionGroupID int32              `json:"election_group_id"`
+	Scope           string             `json:"scope"`
+	StateID         pgtype.Int4        `json:"state_id"`
+	LgaID           pgtype.Int4        `json:"lga_id"`
+	WardID          pgtype.Int4        `json:"ward_id"`
+	Name            pgtype.Text        `json:"name"`
+	Status          string             `json:"status"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+type CampaignGroupMember struct {
+	ID              int64              `json:"id"`
+	PartyID         int16              `json:"party_id"`
+	ElectionGroupID int32              `json:"election_group_id"`
+	GroupID         int64              `json:"group_id"`
+	UserID          int64              `json:"user_id"`
+	Role            string             `json:"role"`
+	CanBroadcast    bool               `json:"can_broadcast"`
+	JoinedAt        pgtype.Timestamptz `json:"joined_at"`
+}
+
+type CampaignGroupMessage struct {
+	ID               int64              `json:"id"`
+	GroupID          int64              `json:"group_id"`
+	SenderID         int64              `json:"sender_id"`
+	Content          string             `json:"content"`
+	HasMedia         bool               `json:"has_media"`
+	ReplyToMessageID pgtype.Int8        `json:"reply_to_message_id"`
+	IsPinned         bool               `json:"is_pinned"`
+	IsDeleted        bool               `json:"is_deleted"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+}
+
+type CampaignIssue struct {
+	ID              int64              `json:"id"`
+	GroupID         int64              `json:"group_id"`
+	ReporterID      int64              `json:"reporter_id"`
+	Title           string             `json:"title"`
+	Description     string             `json:"description"`
+	Category        string             `json:"category"`
+	Priority        string             `json:"priority"`
+	HasMedia        bool               `json:"has_media"`
+	PollingUnitID   pgtype.Int4        `json:"polling_unit_id"`
+	Status          string             `json:"status"`
+	ResolvedBy      pgtype.Int8        `json:"resolved_by"`
+	ResolvedAt      pgtype.Timestamptz `json:"resolved_at"`
+	ResolutionNotes pgtype.Text        `json:"resolution_notes"`
+	UpvotesCount    int32              `json:"upvotes_count"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+type CampaignMedium struct {
+	ID            int64              `json:"id"`
+	GroupID       int64              `json:"group_id"`
+	UploaderID    int64              `json:"uploader_id"`
+	EntityType    string             `json:"entity_type"`
+	EntityID      int64              `json:"entity_id"`
+	FileID        pgtype.Int8        `json:"file_id"`
+	Url           string             `json:"url"`
+	MediaType     string             `json:"media_type"`
+	FileSizeBytes pgtype.Int8        `json:"file_size_bytes"`
+	MimeType      pgtype.Text        `json:"mime_type"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+}
+
+type CampaignTimelinePost struct {
+	ID            int64              `json:"id"`
+	GroupID       int64              `json:"group_id"`
+	AuthorID      int64              `json:"author_id"`
+	Content       string             `json:"content"`
+	HasMedia      bool               `json:"has_media"`
+	LikesCount    int32              `json:"likes_count"`
+	CommentsCount int32              `json:"comments_count"`
+	IsPinned      bool               `json:"is_pinned"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+}
+
 type DidNotVoteReason struct {
 	ID                int64              `json:"id"`
 	UserID            int64              `json:"user_id"`

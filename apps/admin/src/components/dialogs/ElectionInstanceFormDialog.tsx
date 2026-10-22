@@ -36,10 +36,13 @@ const formatScopeLabel = (scope?: string): string => {
       return "Nationwide";
     case "state":
       return "State";
+    case "senatorial-district":
     case "senatorial_district":
       return "Senatorial District";
+    case "federal-constituency":
     case "federal_constituency":
       return "Federal Constituency";
+    case "state-constituency":
     case "state_constituency":
       return "State Constituency";
     case "lga":
