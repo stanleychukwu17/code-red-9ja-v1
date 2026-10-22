@@ -122,10 +122,7 @@ export const getElections = createServerFn({ method: "GET" })
   });
 
 export const getElectionById = createServerFn({ method: "GET" })
-  .inputValidator(
-    (data: { electionId: number; electionGroupId?: number; scope?: string }) =>
-      data,
-  )
+  .inputValidator((data: { electionId: number; electionGroupId?: number; scope?: string }) => data)
   .handler(async ({ data }) => {
     try {
       const params = new URLSearchParams();

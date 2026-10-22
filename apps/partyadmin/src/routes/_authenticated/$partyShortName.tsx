@@ -16,14 +16,39 @@ export const Route = createFileRoute("/_authenticated/$partyShortName")({
     const roles: string[] = userDetails?.roles || (userDetails?.role ? [userDetails.role] : []);
     const isAdmin = roles.includes("admin") || roles.includes("super_admin");
 
-    // Prevent cross-party tenant access unless admin/super_admin; bounce user to their own party dashboard
-    if (!isAdmin && userParty && userParty.toLowerCase() !== pathParty.toLowerCase()) {
-      throw redirect({
-        to: APP_URL.partyHome,
-        params: { partyShortName: userParty },
-      });
+    // 1. If pathParty is missing or empty
+    if (!pathParty) {
+      if (isAdmin) {
+        throw redirect({ to: APP_URL.parties });
+      }
+
+      if (userParty) {
+        throw redirect({
+          to: APP_URL.partyHome,
+          params: { partyShortName: userParty },
+        });
+      }
+
+      throw redirect({ to: APP_URL.auth.login });
+    }
+
+    // 2. Enforce party affiliation and tenant isolation for non-platform admins
+    if (!isAdmin) {
+      // Non-admins must belong to a registered political party
+      if (!userParty) {
+        throw new Error("You are not associated with any political party.");
+      }
+
+      // Non-admins cannot access other parties' tenants
+      if (userParty.toLowerCase() !== pathParty.toLowerCase()) {
+        throw redirect({
+          to: APP_URL.partyHome,
+          params: { partyShortName: userParty },
+        });
+      }
     }
   },
+
   component: RouteComponent,
 });
 

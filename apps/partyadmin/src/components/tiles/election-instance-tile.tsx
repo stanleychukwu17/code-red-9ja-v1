@@ -96,10 +96,11 @@ export function ElectionInstanceTableTile({ data }: { data: ElectionInstanceType
           <span className="text-[16px] text-c-90">{data.rank}</span>
         </div>
         <Link
-          to={APP_URL.partyRoutes.electionInstance(partyShortName, data.id, {
-            election_group_id: data.electionGroupId,
-            scope: data.scope,
-          }) as any}
+          to={APP_URL.partyRoutes.electionInstance(
+            partyShortName,
+            data.id,
+            { election_group_id: data.electionGroupId, scope: data.scope }
+          ) as any}
           className="truncate w-full text-[16px] text-c-80 hover:text-c-100 hover:underline transition-colors"
         >
           {data.title}

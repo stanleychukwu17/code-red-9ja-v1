@@ -8,16 +8,24 @@ import { useElection } from "./useElection";
  * Hook to fetch candidates fielded for the currently active election.
  */
 export const useElectionCandidates = () => {
-	const { selectedElection } = useElection();
+	const { selectedElection, selectedElectionGroup } = useElection();
 	const fetchElectionCandidates = useServerFn(getElectionCandidates);
 
+	const electionGroupId = selectedElection?.election_group_id || selectedElectionGroup?.id;
+	const scope = selectedElection?.scope;
+
 	const { data: candidatesData } = useQuery({
-		queryKey: ["election-candidates", selectedElection?.id],
+		queryKey: ["election-candidates", selectedElection?.id, electionGroupId, scope],
 		queryFn: () =>
 			fetchElectionCandidates({
-				data: { electionId: selectedElection?.id as number },
+				data: {
+					electionId: selectedElection?.id as number,
+					electionGroupId,
+					scope,
+				},
 			}),
-		enabled: !!selectedElection?.id,
+		enabled: !!selectedElection?.id && Boolean(electionGroupId && scope),
+		staleTime: Infinity,
 	});
 
 	return candidatesData?.data?.candidates || candidatesData?.candidates || [];

@@ -39,6 +39,7 @@ import { Route as AuthenticatedProfileUsernameHistoryRouteImport } from './route
 import { Route as AuthenticatedProfileUsernameFollowingRouteImport } from './routes/_authenticated/profile/$username/following'
 import { Route as AuthenticatedProfileUsernameFollowersRouteImport } from './routes/_authenticated/profile/$username/followers'
 import { Route as AuthenticatedPartyPartyNamePartyIdRouteImport } from './routes/_authenticated/party/$partyName.$partyId'
+import { Route as AuthenticatedGroupPartyIdGroupIdRouteImport } from './routes/_authenticated/group/$partyId.$groupId'
 import { Route as AuthenticatedPartyPartyNamePartyIdIndexRouteImport } from './routes/_authenticated/party/$partyName.$partyId/index'
 import { Route as AuthenticatedPartyPartyNamePartyIdTimelineRouteImport } from './routes/_authenticated/party/$partyName.$partyId/timeline'
 import { Route as AuthenticatedPartyPartyNamePartyIdSocialLinksRouteImport } from './routes/_authenticated/party/$partyName.$partyId/social-links'
@@ -219,6 +220,12 @@ const AuthenticatedPartyPartyNamePartyIdRoute =
     path: '/party/$partyName/$partyId',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedGroupPartyIdGroupIdRoute =
+  AuthenticatedGroupPartyIdGroupIdRouteImport.update({
+    id: '/group/$partyId/$groupId',
+    path: '/group/$partyId/$groupId',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedPartyPartyNamePartyIdIndexRoute =
   AuthenticatedPartyPartyNamePartyIdIndexRouteImport.update({
     id: '/',
@@ -307,6 +314,7 @@ export interface FileRoutesByFullPath {
   '/party/': typeof AuthenticatedPartyIndexRoute
   '/profile/': typeof AuthenticatedProfileIndexRoute
   '/states/': typeof AuthenticatedStatesIndexRoute
+  '/group/$partyId/$groupId': typeof AuthenticatedGroupPartyIdGroupIdRoute
   '/party/$partyName/$partyId': typeof AuthenticatedPartyPartyNamePartyIdRouteWithChildren
   '/profile/$username/followers': typeof AuthenticatedProfileUsernameFollowersRoute
   '/profile/$username/following': typeof AuthenticatedProfileUsernameFollowingRoute
@@ -348,6 +356,7 @@ export interface FileRoutesByTo {
   '/party': typeof AuthenticatedPartyIndexRoute
   '/profile': typeof AuthenticatedProfileIndexRoute
   '/states': typeof AuthenticatedStatesIndexRoute
+  '/group/$partyId/$groupId': typeof AuthenticatedGroupPartyIdGroupIdRoute
   '/profile/$username/followers': typeof AuthenticatedProfileUsernameFollowersRoute
   '/profile/$username/following': typeof AuthenticatedProfileUsernameFollowingRoute
   '/profile/$username/history': typeof AuthenticatedProfileUsernameHistoryRoute
@@ -391,6 +400,7 @@ export interface FileRoutesById {
   '/_authenticated/party/': typeof AuthenticatedPartyIndexRoute
   '/_authenticated/profile/': typeof AuthenticatedProfileIndexRoute
   '/_authenticated/states/': typeof AuthenticatedStatesIndexRoute
+  '/_authenticated/group/$partyId/$groupId': typeof AuthenticatedGroupPartyIdGroupIdRoute
   '/_authenticated/party/$partyName/$partyId': typeof AuthenticatedPartyPartyNamePartyIdRouteWithChildren
   '/_authenticated/profile/$username/followers': typeof AuthenticatedProfileUsernameFollowersRoute
   '/_authenticated/profile/$username/following': typeof AuthenticatedProfileUsernameFollowingRoute
@@ -435,6 +445,7 @@ export interface FileRouteTypes {
     | '/party/'
     | '/profile/'
     | '/states/'
+    | '/group/$partyId/$groupId'
     | '/party/$partyName/$partyId'
     | '/profile/$username/followers'
     | '/profile/$username/following'
@@ -476,6 +487,7 @@ export interface FileRouteTypes {
     | '/party'
     | '/profile'
     | '/states'
+    | '/group/$partyId/$groupId'
     | '/profile/$username/followers'
     | '/profile/$username/following'
     | '/profile/$username/history'
@@ -518,6 +530,7 @@ export interface FileRouteTypes {
     | '/_authenticated/party/'
     | '/_authenticated/profile/'
     | '/_authenticated/states/'
+    | '/_authenticated/group/$partyId/$groupId'
     | '/_authenticated/party/$partyName/$partyId'
     | '/_authenticated/profile/$username/followers'
     | '/_authenticated/profile/$username/following'
@@ -762,6 +775,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPartyPartyNamePartyIdRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/group/$partyId/$groupId': {
+      id: '/_authenticated/group/$partyId/$groupId'
+      path: '/group/$partyId/$groupId'
+      fullPath: '/group/$partyId/$groupId'
+      preLoaderRoute: typeof AuthenticatedGroupPartyIdGroupIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/party/$partyName/$partyId/': {
       id: '/_authenticated/party/$partyName/$partyId/'
       path: '/'
@@ -929,6 +949,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedPartyIndexRoute: typeof AuthenticatedPartyIndexRoute
   AuthenticatedProfileIndexRoute: typeof AuthenticatedProfileIndexRoute
   AuthenticatedStatesIndexRoute: typeof AuthenticatedStatesIndexRoute
+  AuthenticatedGroupPartyIdGroupIdRoute: typeof AuthenticatedGroupPartyIdGroupIdRoute
   AuthenticatedPartyPartyNamePartyIdRoute: typeof AuthenticatedPartyPartyNamePartyIdRouteWithChildren
   AuthenticatedFeedPostIdIndexRoute: typeof AuthenticatedFeedPostIdIndexRoute
   AuthenticatedStatesStateIdIndexRoute: typeof AuthenticatedStatesStateIdIndexRoute
@@ -952,6 +973,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedPartyIndexRoute: AuthenticatedPartyIndexRoute,
   AuthenticatedProfileIndexRoute: AuthenticatedProfileIndexRoute,
   AuthenticatedStatesIndexRoute: AuthenticatedStatesIndexRoute,
+  AuthenticatedGroupPartyIdGroupIdRoute: AuthenticatedGroupPartyIdGroupIdRoute,
   AuthenticatedPartyPartyNamePartyIdRoute:
     AuthenticatedPartyPartyNamePartyIdRouteWithChildren,
   AuthenticatedFeedPostIdIndexRoute: AuthenticatedFeedPostIdIndexRoute,

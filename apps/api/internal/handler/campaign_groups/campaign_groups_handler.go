@@ -99,3 +99,37 @@ func (h *Handler) GetGroupMembers(w http.ResponseWriter, r *http.Request) {
 		"members": members,
 	})
 }
+
+// GetCampaignGroup godoc
+// @Summary      Get campaign group by ID
+// @Description  Fetches metadata and configuration for a campaign group
+// @Tags         CampaignGroups
+// @Produce      json
+// @Param        id   path      int  true  "Campaign Group ID"
+// @Success      200  {object}  map[string]interface{}
+// @Failure      400  {object}  map[string]interface{}
+// @Failure      404  {object}  map[string]interface{}
+// @Failure      500  {object}  map[string]interface{}
+// @Router       /campaign-groups/{id} [get]
+func (h *Handler) GetCampaignGroup(w http.ResponseWriter, r *http.Request) {
+	idParam := chi.URLParam(r, "id")
+	groupID, err := strconv.ParseInt(idParam, 10, 64)
+	if err != nil || groupID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid campaign group ID")
+		return
+	}
+
+	group, err := h.service.GetCampaignGroupByID(r.Context(), groupID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			h.utils.RespondError(w, http.StatusNotFound, "Campaign group not found")
+			return
+		}
+		h.utils.RespondError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to fetch campaign group: %v", err))
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Campaign group retrieved successfully", map[string]interface{}{
+		"group": group,
+	})
+}

@@ -2,29 +2,12 @@ import * as React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useDebounceValue } from "usehooks-ts";
 import { toast } from "sonner";
-import {
-  Loader2,
-  MoreHorizontal,
-  MapPin,
-  Calendar,
-  UserX,
-  UserPlus,
-} from "lucide-react";
+import { Loader2, MoreHorizontal, MapPin, Calendar, UserX, UserPlus } from "lucide-react";
 import { useUserParty } from "#/hooks/useUserParty";
 import { usePartyPositions } from "#/hooks/usePartyPositions";
-import {
-  getPartyOfficials,
-  vacatePartyOfficial,
-  type PartyOfficialItem,
-  type PartyPositionItem,
-} from "#/lib/server/parties";
+import { getPartyOfficials, vacatePartyOfficial, type PartyOfficialItem, type PartyPositionItem } from "#/lib/server/parties";
 import { QUERY_KEYS, WEB_URL } from "#/lib/config";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@repo/ui/components/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@repo/ui/components/dropdown-menu";
 import { VacantPositionAvatar } from "@repo/ui/components/vacant-avatar";
 import { AppointOfficialDialog } from "./party-positions-appoint-dialog";
 
@@ -63,14 +46,16 @@ const APPOINTMENT_BADGE_STYLES: Record<string, string> = {
   interim: "bg-purple-600 text-white dark:bg-purple-500/20 dark:text-purple-300 dark:border dark:border-purple-500/30",
 };
 
+export type VacantPositionCardProps = {
+  position: PartyPositionItem;
+  onAppoint?: (position: PartyPositionItem) => void;
+};
+
 /**
  * Vacant Position Card
  * Matches design with pastel lime-green gradient circle, position title, red 'Vacant' status, and 3-dots action.
  */
-function VacantPositionCard({ position, onAppoint }: {
-  position: PartyPositionItem;
-  onAppoint?: (position: PartyPositionItem) => void;
-}) {
+function VacantPositionCard({ position, onAppoint }: VacantPositionCardProps) {
   return (
     <div className="flex flex-col items-center justify-start text-center w-full max-w-60">
       {/* Vacant circular gradient avatar */}
@@ -112,16 +97,27 @@ function VacantPositionCard({ position, onAppoint }: {
   );
 }
 
+export type OccupiedPositionCardProps = {
+  official: PartyOfficialItem;
+  positionTitle: string;
+  position: PartyPositionItem;
+  onVacate: (official: PartyOfficialItem) => void;
+  onAppoint?: (position: PartyPositionItem) => void;
+};
+
 /**
  * Occupied Position Card
  * Matches design with official avatar photo, position title, bold full name + appointment badge,
  * chapter jurisdiction & tenure start date, and 3-dots action.
  */
-function OccupiedPositionCard({ official, positionTitle, onVacate }: {
-  official: PartyOfficialItem;
-  positionTitle: string;
-  onVacate: (official: PartyOfficialItem) => void;
-}) {
+function OccupiedPositionCard({
+  official,
+  positionTitle,
+  position,
+  onVacate,
+  onAppoint,
+}: OccupiedPositionCardProps) {
+  const allowsMultiple = position.max_occupants > 1;
   const fullName = [official.first_name, official.last_name].filter(Boolean).join(" ");
   const profileUrl = WEB_URL.users.profile(encodeURIComponent(official.username!));
 
@@ -202,7 +198,16 @@ function OccupiedPositionCard({ official, positionTitle, onVacate }: {
               <MoreHorizontal className="size-4" />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="center" className="w-40">
+          <DropdownMenuContent align="center" className="w-68">
+            {allowsMultiple && (
+              <DropdownMenuItem
+                className="cursor-pointer flex items-center gap-2"
+                onClick={() => onAppoint?.(position)}
+              >
+                <UserPlus className="size-4" />
+                <span>Add more officials to this position</span>
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem
               className="text-destructive focus:text-destructive cursor-pointer flex items-center gap-2"
               onClick={() => onVacate(official)}
@@ -394,7 +399,13 @@ export function PartyPositionsRosterView({
 
     // Accumulated list of card items (occupied or vacant) to render in grid
     const results: Array<
-      | { type: "occupied"; official: PartyOfficialItem; positionTitle: string; key: string }
+      | {
+          type: "occupied";
+          official: PartyOfficialItem;
+          positionTitle: string;
+          position: PartyPositionItem;
+          key: string;
+        }
       | { type: "vacant"; position: PartyPositionItem; key: string }
     > = [];
 
@@ -430,6 +441,7 @@ export function PartyPositionsRosterView({
               type: "occupied",
               official: off,
               positionTitle: off.position_name || pos.name,
+              position: pos,
               key: `occupied-${off.assignment_id}`,
             });
           }
@@ -452,6 +464,7 @@ export function PartyPositionsRosterView({
             type: "occupied",
             official: off,
             positionTitle: off.position_name || pos.name,
+            position: pos,
             key: `occupied-${off.assignment_id}`,
           });
         }
@@ -510,6 +523,14 @@ export function PartyPositionsRosterView({
     );
   }
 
+  const handleAppointPosition = (pos: PartyPositionItem) => {
+    if (onAppointPosition) {
+      onAppointPosition(pos);
+    } else {
+      setAppointingPosition(pos);
+    }
+  };
+
   return (
     <>
       <div className="w-full rounded-2xl bg-sidebar-softer/5 dark:bg-card/40 p-8 md:p-12">
@@ -520,19 +541,15 @@ export function PartyPositionsRosterView({
                 key={item.key}
                 official={item.official}
                 positionTitle={item.positionTitle}
+                position={item.position}
                 onVacate={handleVacateOfficial}
+                onAppoint={handleAppointPosition}
               />
             ) : (
               <VacantPositionCard
                 key={item.key}
                 position={item.position}
-                onAppoint={(pos) => {
-                  if (onAppointPosition) {
-                    onAppointPosition(pos);
-                  } else {
-                    setAppointingPosition(pos);
-                  }
-                }}
+                onAppoint={handleAppointPosition}
               />
             ),
           )}

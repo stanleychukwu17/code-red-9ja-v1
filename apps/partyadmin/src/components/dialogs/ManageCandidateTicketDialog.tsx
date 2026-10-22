@@ -73,7 +73,7 @@ export function ManageCandidateTicketDialog({ open, onClose, data }: ManageCandi
   const ticketConfig = getTicketConfig(data.title, data.officeName, data.scope);
 
   // Mutation to persist candidate ticket updates on the server
-  const mutation = useMutation({
+  const saveMutation = useMutation({
     mutationFn: async ({ candidateId, slot }: { candidateId: number; slot: "candidate" | "running_mate" }) => {
       // Calls server action with election ID, slot, and updated candidate ID
       const res = await fieldPartyCandidate({
@@ -90,8 +90,10 @@ export function ManageCandidateTicketDialog({ open, onClose, data }: ManageCandi
       return res.data;
     },
     onSuccess: () => {
-      // Refresh election instances list so the table updates immediately
+      // Refresh election instances list, candidates roster, and election details
       queryClient.invalidateQueries({ queryKey: ["elections"] });
+      queryClient.invalidateQueries({ queryKey: ["election-candidates", data.id] });
+      queryClient.invalidateQueries({ queryKey: ["election-details", data.id] });
     },
   });
 
@@ -112,6 +114,8 @@ export function ManageCandidateTicketDialog({ open, onClose, data }: ManageCandi
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["elections"] });
+      queryClient.invalidateQueries({ queryKey: ["election-candidates", data.id] });
+      queryClient.invalidateQueries({ queryKey: ["election-details", data.id] });
     },
   });
 
@@ -119,8 +123,10 @@ export function ManageCandidateTicketDialog({ open, onClose, data }: ManageCandi
   const handleSelectUser = (selectedUsers: any[]) => {
     if (selectedUsers.length > 0 && targetSlot) {
       const chosenId = selectedUsers[0].id;
+
       // Assign selected user to the active ticket slot
-      mutation.mutate({ candidateId: chosenId, slot: targetSlot });
+      saveMutation.mutate({ candidateId: chosenId, slot: targetSlot });
+
       // Close the member picker dialog
       setTargetSlot(null);
     }

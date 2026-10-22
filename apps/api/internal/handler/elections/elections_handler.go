@@ -557,8 +557,8 @@ func (h *Handler) ListElections(w http.ResponseWriter, r *http.Request) {
 
 	var candidatePartyID int16
 	if partyIDStr := query.Get("party_id"); partyIDStr != "" {
-		pid, err := strconv.ParseInt(partyIDStr, 10, 16)
-		if err != nil || pid <= 0 {
+		partyID, err := strconv.ParseInt(partyIDStr, 10, 16)
+		if err != nil || partyID <= 0 {
 			h.utils.RespondError(w, http.StatusBadRequest, "Invalid party_id")
 			return
 		}
@@ -575,13 +575,13 @@ func (h *Handler) ListElections(w http.ResponseWriter, r *http.Request) {
 		isPartyAdmin := claims.HasAnyRole("party_admin", "super_party_admin")
 
 		if !isAdmin {
-			if !isPartyAdmin || claims.PartyID != int16(pid) {
+			if !isPartyAdmin || claims.PartyID != int16(partyID) {
 				h.utils.RespondError(w, http.StatusForbidden, "You do not have permission to access candidates for this party")
 				return
 			}
 		}
 
-		candidatePartyID = int16(pid)
+		candidatePartyID = int16(partyID)
 	}
 
 	filter := elections.ListElectionsFilter{
@@ -926,76 +926,54 @@ func (h *Handler) GetElectionCandidates(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	// the electionID
+	electionID := int32(id)
+
+	// Required parameters: ensure election matches election_group_id & scope
 	query := r.URL.Query()
-	egStr := query.Get("election_group_id")
-	scope := query.Get("scope")
-	if egStr != "" || scope != "" {
-		ei, err := h.service.GetElectionByID(r.Context(), int32(id))
-		if err != nil {
-			h.utils.RespondError(w, http.StatusNotFound, "Election not found")
-			return
-		}
-		if egStr != "" {
-			if egID, err := strconv.ParseInt(egStr, 10, 32); err == nil && egID > 0 {
-				if ei.ElectionGroupID != int32(egID) {
-					h.utils.RespondError(w, http.StatusNotFound, "Election not found for the specified election group")
-					return
-				}
-			}
-		}
-		if scope != "" && !strings.EqualFold(ei.Scope, scope) {
-			h.utils.RespondError(w, http.StatusNotFound, "Election not found for the specified scope")
-			return
-		}
+	electionGroupIDStr := strings.TrimSpace(query.Get("election_group_id"))
+	scope := strings.TrimSpace(query.Get("scope"))
+	if electionGroupIDStr == "" || scope == "" {
+		h.utils.RespondError(w, http.StatusBadRequest, "election_group_id and scope query parameters are required")
+		return
 	}
 
-	// Parse pagination parameters
-	limit, cursor := parsePaginationParams(r)
+	electionGroupID, err := strconv.ParseInt(electionGroupIDStr, 10, 32)
+	if err != nil || electionGroupID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election_group_id")
+		return
+	}
+
+	// Fetch election metadata (served from Redis cache) to verify context integrity
+	ei, err := h.service.GetElectionByID(r.Context(), electionID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusNotFound, "Election not found")
+		return
+	}
+
+	// Verify election group ID consistency
+	if ei.ElectionGroupID != int32(electionGroupID) {
+		h.utils.RespondError(w, http.StatusNotFound, "Election not found for the specified election group")
+		return
+	}
+
+	// Verify geographic scope consistency
+	if !strings.EqualFold(ei.Scope, scope) {
+		h.utils.RespondError(w, http.StatusNotFound, "Election not found for the specified scope")
+		return
+	}
 
 	// Fetch full candidate roster for the specified election
-	candidates, err := h.service.GetElectionCandidates(r.Context(), int32(id))
+	candidates, err := h.service.GetElectionCandidates(r.Context(), electionID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to get election candidates: "+err.Error())
 		return
 	}
 
-	// Find starting index matching the cursor
-	startIndex := 0
-	if cursor > 0 {
-		for i, c := range candidates {
-			if int64(c.ID) == cursor {
-				startIndex = i + 1
-				break
-			}
-		}
-	}
-
-	var paginated []queries.ListElectionCandidatesDetailedByElectionIDRow
-	hasMore := false
-	nextCursor := ""
-
-	// Slice page items and determine next cursor
-	if startIndex < len(candidates) {
-		endIndex := startIndex + limit
-		if endIndex >= len(candidates) {
-			endIndex = len(candidates)
-			paginated = candidates[startIndex:endIndex]
-		} else {
-			paginated = candidates[startIndex:endIndex]
-			hasMore = true
-			nextCursor = strconv.FormatInt(int64(paginated[len(paginated)-1].ID), 10)
-		}
-	} else {
-		paginated = []queries.ListElectionCandidatesDetailedByElectionIDRow{}
-	}
-
-	// Return paginated candidate list with metadata
+	// Return candidate roster directly (elections have at most ~18 party candidates)
 	h.utils.RespondSuccess(w, http.StatusOK, "Candidates fetched successfully", map[string]interface{}{
-		"candidates": paginated,
-		"meta": map[string]interface{}{
-			"next_cursor": nextCursor,
-			"has_more":    hasMore,
-		},
+		"candidates": candidates,
+		"count":      len(candidates),
 	})
 }
 

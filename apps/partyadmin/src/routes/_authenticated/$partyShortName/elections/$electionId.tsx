@@ -124,19 +124,20 @@ function ElectionCandidatesPage() {
     enabled: !isNaN(electionId),
   });
 
-  // 2. Fetch full candidates roster for this election
-  const {
-    data: candidatesRes,
-    isLoading: isCandidatesLoading,
-  } = useQuery({
-    queryKey: ["election-candidates", electionId, election_group_id, scopeParam],
+  const resolvedGroupId = election_group_id || electionRes?.election_group_id;
+  const resolvedScope = scopeParam || electionRes?.scope;
+
+  // 2. Fetch full candidates roster for this election (requires group and scope)
+  const { data: candidatesRes, isLoading: isCandidatesLoading, } = useQuery({
+    queryKey: ["election-candidates", electionId, resolvedGroupId, resolvedScope],
     queryFn: async () => {
+      if (!resolvedGroupId || !resolvedScope) return [];
       const res = await getElectionCandidates({
         data: {
           electionId,
           limit: 100,
-          electionGroupId: election_group_id,
-          scope: scopeParam,
+          electionGroupId: resolvedGroupId,
+          scope: resolvedScope,
         },
       });
       if (!res || !res.success) {
@@ -144,7 +145,8 @@ function ElectionCandidatesPage() {
       }
       return (res.data?.candidates as any[]) || [];
     },
-    enabled: !isNaN(electionId),
+    enabled: !isNaN(electionId) && Boolean(resolvedGroupId && resolvedScope),
+    staleTime: Infinity,
   });
 
   const election = electionRes;
@@ -185,17 +187,17 @@ function ElectionCandidatesPage() {
       scope: scopeName,
       candidate: candidateId
         ? {
-            id: candidateId,
-            name: `${getVal(myPartyCandidate.first_name)} ${getVal(myPartyCandidate.last_name)}`.trim(),
-            avatar: getVal(myPartyCandidate.avatar),
-          }
+          id: candidateId,
+          name: `${getVal(myPartyCandidate.first_name)} ${getVal(myPartyCandidate.last_name)}`.trim(),
+          avatar: getVal(myPartyCandidate.avatar),
+        }
         : undefined,
       runningMate: runningMateId
         ? {
-            id: runningMateId,
-            name: `${getVal(myPartyCandidate.running_mate_first_name)} ${getVal(myPartyCandidate.running_mate_last_name)}`.trim(),
-            avatar: getVal(myPartyCandidate.running_mate_avatar),
-          }
+          id: runningMateId,
+          name: `${getVal(myPartyCandidate.running_mate_first_name)} ${getVal(myPartyCandidate.running_mate_last_name)}`.trim(),
+          avatar: getVal(myPartyCandidate.running_mate_avatar),
+        }
         : undefined,
     };
   }, [electionId, electionName, election?.election_date, officeName, scopeName, myPartyCandidate]);

@@ -24,6 +24,8 @@ export const APP_URL = {
 	myParty: "/party",
 	party: (partyName: string, partyId: string | number, chapterId?: string | number) =>
 		`/party/${partyName}/${partyId}/home${chapterId ? `?chapterId=${chapterId}` : ""}`,
+	group: (partyId: string | number, groupId: string | number) =>
+		`/group/${partyId}/${groupId}`,
 	parties: "/parties",
 };
 
@@ -96,6 +98,11 @@ export const API_URL = {
 	partyAdmins: (partyId: number | string) => `${api}/parties/${partyId}/admins`,
 	userPreferences: `${api}/user_preferences`,
 	searchUsers: `${api}/users/search`,
+	campaignGroups: {
+		getGroup: (groupId: number | string) => `${api}/campaign-groups/${groupId}`,
+		getMembers: (groupId: number | string) => `${api}/campaign-groups/${groupId}/members`,
+		syncOfficials: (groupId: number | string) => `${api}/campaign-groups/${groupId}/sync-officials`,
+	},
 };
 
 export const QUERY_KEYS = {
@@ -104,6 +111,8 @@ export const QUERY_KEYS = {
 	},
 	parties: ["parties"],
 	partyCards: ["partyCards"],
+	campaignGroup: (groupId: number | string) => ["campaign-group", String(groupId)],
+	campaignGroupMembers: (groupId: number | string) => ["campaign-group-members", String(groupId)],
 	countries: ["countries"],
 	states: (countryId?: number) => ["states", countryId],
 	nigeriaStates: ["nigeria-states"],

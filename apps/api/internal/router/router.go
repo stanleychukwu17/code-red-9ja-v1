@@ -621,6 +621,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Post("/api/v1/party-applications/{id}/cancel", partyApplicationsHandler.CancelApplication)
 
 		// campaign groups routes (authenticated users)
+		r.Get("/api/v1/campaign-groups/{id}", campaignGroupsHandler.GetCampaignGroup)
 		r.Get("/api/v1/campaign-groups/{id}/members", campaignGroupsHandler.GetGroupMembers)
 
 		// polling unit updates routes

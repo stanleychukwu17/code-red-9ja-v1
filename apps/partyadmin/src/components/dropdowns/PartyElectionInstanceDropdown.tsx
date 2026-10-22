@@ -30,6 +30,12 @@ export const PartyElectionInstanceDropdown = ({ data, className }: PartyElection
   const params = useParams({ strict: false }) as { partyShortName?: string };
   const partyShortName = params.partyShortName || "";
 
+  const toElectionInstanceUrl = APP_URL.partyRoutes.electionInstance(
+    partyShortName,
+    data.id,
+    { election_group_id: data.electionGroupId, scope: data.scope }
+  ) as any;
+
   // Dropdown menu options
   const dropdownData: TDropdownGroup[] = [
     [
@@ -38,12 +44,7 @@ export const PartyElectionInstanceDropdown = ({ data, className }: PartyElection
         icon: <Eye className="size-4" />,
         action: () => {
           setOpenMenu(false);
-          navigate({
-            to: APP_URL.partyRoutes.electionInstance(partyShortName, data.id, {
-              election_group_id: data.electionGroupId,
-              scope: data.scope,
-            }) as any,
-          });
+          navigate({ to: toElectionInstanceUrl });
         },
       },
       {
