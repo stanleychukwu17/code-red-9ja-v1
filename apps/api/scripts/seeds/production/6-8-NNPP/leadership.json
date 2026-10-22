@@ -1,0 +1,44 @@
+[
+  {
+    "order": 1,
+    "username": "ajuji_ahmed",
+    "position_name": "Chairman",
+    "position_id": 2
+  },
+  {
+    "order": 2,
+    "username": "olaposi_oginni",
+    "position_name": "Secretary",
+    "position_id": 5
+  },
+  {
+    "order": 3,
+    "username": "ladipo_johnson",
+    "position_name": "Publicity Secretary",
+    "position_id": 15
+  },
+  {
+    "order": 4,
+    "username": "bala_mohammed_nnpp",
+    "position_name": "Organizing Secretary",
+    "position_id": 8
+  },
+  {
+    "order": 5,
+    "username": "ahmed_balewa",
+    "position_name": "Treasurer",
+    "position_id": 22
+  },
+  {
+    "order": 6,
+    "username": "rabiu_kwankwaso_1",
+    "position_name": "Elders Council Member",
+    "position_id": 37
+  },
+  {
+    "order": 7,
+    "username": "buba_galadima_1",
+    "position_name": "Special Adviser to Chairman",
+    "position_id": 36
+  }
+]

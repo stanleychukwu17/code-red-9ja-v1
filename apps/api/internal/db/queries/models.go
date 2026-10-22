@@ -136,6 +136,7 @@ type CampaignGroup struct {
 	WardID          pgtype.Int4        `json:"ward_id"`
 	Name            pgtype.Text        `json:"name"`
 	Status          string             `json:"status"`
+	OfficialsAdded  bool               `json:"officials_added"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 }

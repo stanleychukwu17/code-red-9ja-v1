@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS campaign_groups (
   -- Custom display name (e.g., "Team Peter-Obi Epe Command Center"); if NULL, dynamic fallback is rendered
   name VARCHAR(255),
   status VARCHAR(32) NOT NULL DEFAULT 'active', -- 'active', 'archived'
+  officials_added BOOLEAN NOT NULL DEFAULT FALSE,
 
   created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
@@ -34,7 +35,7 @@ CREATE TABLE IF NOT EXISTS campaign_group_members (
   election_group_id INT REFERENCES election_groups(id) ON DELETE CASCADE NOT NULL,
   group_id BIGINT REFERENCES campaign_groups(id) ON DELETE CASCADE NOT NULL,
   user_id BIGINT REFERENCES users(id) ON DELETE CASCADE NOT NULL,
-  role VARCHAR(32) NOT NULL, -- 'candidate', 'running_mate', 'state_supervisor', 'lga_supervisor', 'ward_supervisor', 'agent', 'party_official'
+  role VARCHAR(32) NOT NULL, -- 'candidate', 'state_supervisor', 'lga_supervisor', 'ward_supervisor', 'agent', 'party_official'
   can_broadcast BOOLEAN NOT NULL DEFAULT TRUE,
   joined_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
 
@@ -87,9 +88,9 @@ CREATE TABLE IF NOT EXISTS campaign_group_messages (
 CREATE INDEX IF NOT EXISTS idx_campaign_group_messages_group_id ON campaign_group_messages(group_id, id DESC);
 
 
--- 5. CAMPAIGN ISSUES ("Challenges")
+-- 5. CAMPAIGN GROUP ISSUES ("Challenges")
 -- Dedicated problem and incident management board for polling unit agents, supervisors, and candidates.
-CREATE TABLE IF NOT EXISTS campaign_issues (
+CREATE TABLE IF NOT EXISTS campaign_group_issues (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   group_id BIGINT REFERENCES campaign_groups(id) ON DELETE CASCADE NOT NULL,
   reporter_id BIGINT REFERENCES users(id) ON DELETE RESTRICT NOT NULL,
@@ -114,9 +115,9 @@ CREATE TABLE IF NOT EXISTS campaign_issues (
 );
 
 
--- 6. CAMPAIGN MEDIA
+-- 6. CAMPAIGN GROUP MEDIA
 -- Normalized media asset storage for timeline posts, talks messages, and reported issues.
-CREATE TABLE IF NOT EXISTS campaign_media (
+CREATE TABLE IF NOT EXISTS campaign_group_media (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   group_id BIGINT REFERENCES campaign_groups(id) ON DELETE CASCADE NOT NULL,
   uploader_id BIGINT REFERENCES users(id) ON DELETE RESTRICT NOT NULL,
@@ -135,8 +136,8 @@ CREATE TABLE IF NOT EXISTS campaign_media (
 
 
 -- +goose Down
-DROP TABLE IF EXISTS campaign_media;
-DROP TABLE IF EXISTS campaign_issues;
+DROP TABLE IF EXISTS campaign_group_media;
+DROP TABLE IF EXISTS campaign_group_issues;
 DROP TABLE IF EXISTS campaign_group_messages;
 DROP TABLE IF EXISTS campaign_timeline_posts;
 DROP TABLE IF EXISTS campaign_group_members;

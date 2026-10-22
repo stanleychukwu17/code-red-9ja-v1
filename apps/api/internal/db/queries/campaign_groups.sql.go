@@ -25,8 +25,11 @@ VALUES (
 )
 ON CONFLICT (group_id, user_id)
 DO UPDATE SET
-  role = EXCLUDED.role,
-  can_broadcast = EXCLUDED.can_broadcast,
+  role = CASE 
+    WHEN campaign_group_members.role = 'candidate' THEN 'candidate'
+    ELSE EXCLUDED.role
+  END,
+  can_broadcast = EXCLUDED.can_broadcast OR campaign_group_members.can_broadcast,
   party_id = EXCLUDED.party_id,
   election_group_id = EXCLUDED.election_group_id
 RETURNING id, party_id, election_group_id, group_id, user_id, role, can_broadcast, joined_at
@@ -80,7 +83,7 @@ VALUES (
 )
 ON CONFLICT (party_id, election_group_id, scope, state_id, lga_id, ward_id)
 DO UPDATE SET updated_at = NOW()
-RETURNING id, party_id, election_group_id, scope, state_id, lga_id, ward_id, name, status, created_at, updated_at
+RETURNING id, party_id, election_group_id, scope, state_id, lga_id, ward_id, name, status, officials_added, created_at, updated_at
 `
 
 type FindOrCreateCampaignGroupParams struct {
@@ -114,6 +117,7 @@ func (q *Queries) FindOrCreateCampaignGroup(ctx context.Context, arg FindOrCreat
 		&i.WardID,
 		&i.Name,
 		&i.Status,
+		&i.OfficialsAdded,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -121,7 +125,7 @@ func (q *Queries) FindOrCreateCampaignGroup(ctx context.Context, arg FindOrCreat
 }
 
 const getCampaignGroupByID = `-- name: GetCampaignGroupByID :one
-SELECT id, party_id, election_group_id, scope, state_id, lga_id, ward_id, name, status, created_at, updated_at FROM campaign_groups WHERE id = $1
+SELECT id, party_id, election_group_id, scope, state_id, lga_id, ward_id, name, status, officials_added, created_at, updated_at FROM campaign_groups WHERE id = $1
 `
 
 func (q *Queries) GetCampaignGroupByID(ctx context.Context, id int64) (CampaignGroup, error) {
@@ -137,10 +141,103 @@ func (q *Queries) GetCampaignGroupByID(ctx context.Context, id int64) (CampaignG
 		&i.WardID,
 		&i.Name,
 		&i.Status,
+		&i.OfficialsAdded,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const listCampaignGroupMembers = `-- name: ListCampaignGroupMembers :many
+SELECT 
+    m.id,
+    m.party_id,
+    m.election_group_id,
+    m.group_id,
+    m.user_id,
+    m.role,
+    m.can_broadcast,
+    m.joined_at,
+    u.fake_id,
+    u.first_name,
+    u.last_name,
+    u.username,
+    u.avatar
+FROM campaign_group_members m
+JOIN users u ON u.id = m.user_id
+WHERE m.group_id = $1
+ORDER BY 
+    CASE m.role
+        WHEN 'candidate' THEN 1
+        WHEN 'party_official' THEN 2
+        WHEN 'state_supervisor' THEN 3
+        WHEN 'lga_supervisor' THEN 4
+        WHEN 'ward_supervisor' THEN 5
+        WHEN 'agent' THEN 6
+        ELSE 7
+    END ASC,
+    m.joined_at ASC
+`
+
+type ListCampaignGroupMembersRow struct {
+	ID              int64              `json:"id"`
+	PartyID         int16              `json:"party_id"`
+	ElectionGroupID int32              `json:"election_group_id"`
+	GroupID         int64              `json:"group_id"`
+	UserID          int64              `json:"user_id"`
+	Role            string             `json:"role"`
+	CanBroadcast    bool               `json:"can_broadcast"`
+	JoinedAt        pgtype.Timestamptz `json:"joined_at"`
+	FakeID          pgtype.Int8        `json:"fake_id"`
+	FirstName       pgtype.Text        `json:"first_name"`
+	LastName        pgtype.Text        `json:"last_name"`
+	Username        pgtype.Text        `json:"username"`
+	Avatar          pgtype.Text        `json:"avatar"`
+}
+
+func (q *Queries) ListCampaignGroupMembers(ctx context.Context, groupID int64) ([]ListCampaignGroupMembersRow, error) {
+	rows, err := q.db.Query(ctx, listCampaignGroupMembers, groupID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListCampaignGroupMembersRow
+	for rows.Next() {
+		var i ListCampaignGroupMembersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.PartyID,
+			&i.ElectionGroupID,
+			&i.GroupID,
+			&i.UserID,
+			&i.Role,
+			&i.CanBroadcast,
+			&i.JoinedAt,
+			&i.FakeID,
+			&i.FirstName,
+			&i.LastName,
+			&i.Username,
+			&i.Avatar,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const markCampaignGroupOfficialsAdded = `-- name: MarkCampaignGroupOfficialsAdded :exec
+UPDATE campaign_groups
+SET officials_added = TRUE, updated_at = NOW()
+WHERE id = $1
+`
+
+func (q *Queries) MarkCampaignGroupOfficialsAdded(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, markCampaignGroupOfficialsAdded, id)
+	return err
 }
 
 const removeCampaignGroupMember = `-- name: RemoveCampaignGroupMember :exec
@@ -158,9 +255,10 @@ func (q *Queries) RemoveCampaignGroupMember(ctx context.Context, arg RemoveCampa
 	return err
 }
 
-const removeCampaignGroupMembersByElectionGroup = `-- name: RemoveCampaignGroupMembersByElectionGroup :exec
+const removeCampaignGroupMembersByElectionGroup = `-- name: RemoveCampaignGroupMembersByElectionGroup :many
 DELETE FROM campaign_group_members
 WHERE party_id = $1 AND election_group_id = $2 AND user_id = $3
+RETURNING group_id
 `
 
 type RemoveCampaignGroupMembersByElectionGroupParams struct {
@@ -169,7 +267,22 @@ type RemoveCampaignGroupMembersByElectionGroupParams struct {
 	UserID          int64 `json:"user_id"`
 }
 
-func (q *Queries) RemoveCampaignGroupMembersByElectionGroup(ctx context.Context, arg RemoveCampaignGroupMembersByElectionGroupParams) error {
-	_, err := q.db.Exec(ctx, removeCampaignGroupMembersByElectionGroup, arg.PartyID, arg.ElectionGroupID, arg.UserID)
-	return err
+func (q *Queries) RemoveCampaignGroupMembersByElectionGroup(ctx context.Context, arg RemoveCampaignGroupMembersByElectionGroupParams) ([]int64, error) {
+	rows, err := q.db.Query(ctx, removeCampaignGroupMembersByElectionGroup, arg.PartyID, arg.ElectionGroupID, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int64
+	for rows.Next() {
+		var group_id int64
+		if err := rows.Scan(&group_id); err != nil {
+			return nil, err
+		}
+		items = append(items, group_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

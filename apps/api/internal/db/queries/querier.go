@@ -390,6 +390,7 @@ type Querier interface {
 	ListAssignments(ctx context.Context, arg ListAssignmentsParams) ([]ListAssignmentsRow, error)
 	ListBlockedUsersByParty(ctx context.Context, arg ListBlockedUsersByPartyParams) ([]ListBlockedUsersByPartyRow, error)
 	ListBlockedUsersByUser(ctx context.Context, arg ListBlockedUsersByUserParams) ([]ListBlockedUsersByUserRow, error)
+	ListCampaignGroupMembers(ctx context.Context, groupID int64) ([]ListCampaignGroupMembersRow, error)
 	ListContestedOffices(ctx context.Context) ([]Office, error)
 	ListCountries(ctx context.Context) ([]ListCountriesRow, error)
 	ListCustomPartyPositions(ctx context.Context, partyID pgtype.Int2) ([]PartyPosition, error)
@@ -452,6 +453,7 @@ type Querier interface {
 	ListZones(ctx context.Context) ([]CZonesNigerium, error)
 	MarkAgentEarningsPaid(ctx context.Context, id int64) (AgentEarning, error)
 	MarkAllNotificationsAsRead(ctx context.Context, recipientUserID int64) error
+	MarkCampaignGroupOfficialsAdded(ctx context.Context, id int64) error
 	MarkNotificationAsRead(ctx context.Context, arg MarkNotificationAsReadParams) (Notification, error)
 	MarkPartyNotificationAsRead(ctx context.Context, arg MarkPartyNotificationAsReadParams) error
 	// Sets been_paid=true on every attempt that currently has been_paid=false and increments earned_amount_kobo.
@@ -477,7 +479,7 @@ type Querier interface {
 	RefreshSingleElectionGroupStateStats(ctx context.Context, arg RefreshSingleElectionGroupStateStatsParams) error
 	RefreshSingleElectionGroupWardStats(ctx context.Context, arg RefreshSingleElectionGroupWardStatsParams) error
 	RemoveCampaignGroupMember(ctx context.Context, arg RemoveCampaignGroupMemberParams) error
-	RemoveCampaignGroupMembersByElectionGroup(ctx context.Context, arg RemoveCampaignGroupMembersByElectionGroupParams) error
+	RemoveCampaignGroupMembersByElectionGroup(ctx context.Context, arg RemoveCampaignGroupMembersByElectionGroupParams) ([]int64, error)
 	RemovePageVerification(ctx context.Context, arg RemovePageVerificationParams) error
 	RemovePageVerificationByType(ctx context.Context, arg RemovePageVerificationByTypeParams) error
 	RemoveUserRole(ctx context.Context, arg RemoveUserRoleParams) error

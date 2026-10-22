@@ -179,7 +179,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	seedService := seedservice.NewSeedService(q, pool, rdb, distributor, authService, bodiesService, usersService, partiesService)
 	pageVerificationsService := pageverificationsservice.NewPageVerificationsService(q, rdb, usersService, partiesService, auditService)
 	filesService := filesservice.NewFilesService(q, r2Svc, distributor)
-	campaignGroupsService := campaigngroupsservice.NewCampaignGroupsService(q, pool, rdb)
+	campaignGroupsService := campaigngroupsservice.NewCampaignGroupsService(q, pool, rdb, partiesService)
 
 	usersService.SetPageVerificationsService(pageVerificationsService)
 	usersService.SetPartyService(partiesService)

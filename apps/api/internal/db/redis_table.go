@@ -75,6 +75,10 @@ const (
 	RedisUserPartyChapters          = "parties:user_chapters:"           // STRING: "parties:user_chapters:<partyID>:<userID>" stores cached JSON array of user party chapters
 	//--END--
 
+	//--START-- for campaign groups and operations
+	RedisCampaignGroupMembers = "campaign_groups:members:" // STRING: "campaign_groups:members:<groupID>" stores cached JSON array of campaign group members
+	//--END--
+
 	//--START-- for page verifications & badges
 	RedisPageVerificationTypesList = "page_verification_type:list"
 	RedisPageVerificationTypeInfo  = "page_verification_type:info:"
@@ -209,4 +213,5 @@ var AllRedisPrefixes = []string{
 	RedisLockElectoralUnitsSync,
 	RedisElectoralUnitsSyncStatus,
 	RedisUserBlockedPartyIDs,
+	RedisCampaignGroupMembers,
 }

@@ -1,0 +1,56 @@
+[
+  {
+    "order": 1,
+    "username": "nenadi_usman",
+    "position_name": "Chairman",
+    "position_id": 2
+  },
+  {
+    "order": 2,
+    "username": "darlington_nwokocha",
+    "position_name": "Secretary",
+    "position_id": 5
+  },
+  {
+    "order": 3,
+    "username": "ken_asogwa",
+    "position_name": "Publicity Secretary",
+    "position_id": 15
+  },
+  {
+    "order": 4,
+    "username": "oluchi_oparah",
+    "position_name": "Organizing Secretary",
+    "position_id": 8
+  },
+  {
+    "order": 5,
+    "username": "hamisu_santurati",
+    "position_name": "Treasurer",
+    "position_id": 22
+  },
+  {
+    "order": 6,
+    "username": "anslem_eragbe",
+    "position_name": "Financial Secretary",
+    "position_id": 24
+  },
+  {
+    "order": 7,
+    "username": "yunusa_tanko",
+    "position_name": "Head of Press",
+    "position_id": 18
+  },
+  {
+    "order": 8,
+    "username": "kennedy_ahanotu",
+    "position_name": "Youth Leader",
+    "position_id": 32
+  },
+  {
+    "order": 9,
+    "username": "dudu_manuga",
+    "position_name": "Women Leader",
+    "position_id": 30
+  }
+]
