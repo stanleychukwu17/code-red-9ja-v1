@@ -29,47 +29,50 @@ export type ApplicationType = {
   party_id?: number;
   election_group_id?: number;
   status?: string;
-  rejected_reason?: any;
-  created_at?: any;
-  updated_at?: any;
-  first_name?: any;
-  last_name?: any;
-  email?: any;
-  phone?: any;
-  username?: any;
-  avatar?: any;
-  voters_card_image?: any;
+  rejected_reason?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  first_name?: string;
+  last_name?: string;
+  email?: string | null;
+  phone?: string | null;
+  username?: string;
+  avatar?: string | null;
+  voters_card_image?: string | null;
   current_country?: number;
   current_state?: number;
-  current_lga?: any;
-  current_ward?: any;
-  current_city?: any;
+  current_lga?: number;
+  current_ward?: number;
+  current_city?: number | null;
   election_group_name?: string;
-  election_date?: any;
+  election_date?: string;
   party_name?: string;
   party_short_name?: string;
-  state_name?: any;
-  lga_name?: any;
-  city_name?: any;
-  polling_unit_id?: any;
-  polling_unit_name?: any;
+  state_name?: string;
+  lga_name?: string;
+  city_name?: string | null;
+  polling_unit_id?: number | null;
+  polling_unit_name?: string | null;
+  polling_unit_code?: string | null;
   agents_count?: number;
-  party_logo?: any;
-  whatsapp_phone?: any;
-  data_phone?: any;
-  educational_status?: any;
-  highest_degree?: any;
-  graduation_year?: any;
-  school_name?: any;
-  ward_name?: any;
-  address?: any;
+  party_logo?: string;
+  whatsapp_phone?: string | null;
+  data_phone?: string | null;
+  educational_status?: string | null;
+  highest_degree?: string | null;
+  graduation_year?: string | null;
+  school_name?: string | null;
+  religion?: string | null;
+  marital_status?: string | null;
+  ward_name?: string;
+  address?: string | null;
   role?: string;
-  app_state_id?: number;
-  app_lga_id?: number;
-  app_ward_id?: number;
-  degree_certificate_url?: any;
+  app_state_id?: number | null;
+  app_lga_id?: number | null;
+  app_ward_id?: number | null;
+  degree_certificate_url?: string | null;
 
-  // Mock data fields
+  // Mock / UI fields
   name?: string;
   avatar_url?: string;
   election?: string;
@@ -80,13 +83,6 @@ export type ApplicationType = {
   voterId?: string;
   stateId?: number;
   lgaId?: number;
-};
-
-const getPgString = (val: any) => {
-  if (val && typeof val === "object" && "String" in val) {
-    return val.String || "";
-  }
-  return val || "";
 };
 
 const formatDate = (dateString?: string) => {
@@ -173,28 +169,21 @@ export function ApplicationTableTile({
     },
   });
 
-  const firstName = getPgString(data.first_name);
-  const lastName = getPgString(data.last_name);
+  const firstName = data.first_name || "";
+  const lastName = data.last_name || "";
   const name = data.name || `${firstName} ${lastName}`.trim() || "Unknown User";
 
   const avatar =
     data.avatar_url ||
-    getPgString(data.avatar) ||
+    data.avatar ||
     "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&h=200&fit=crop";
   const election =
     data.election || data.election_group_name || "Upcoming Election";
 
-  const stateName = getPgString(data.state_name);
-  const lgaName = getPgString(data.lga_name);
-  const cityName = getPgString(data.city_name);
-
-  const lgaVal =
-    data.current_lga &&
-      typeof data.current_lga === "object" &&
-      "Int32" in data.current_lga &&
-      data.current_lga.Valid
-      ? data.current_lga.Int32
-      : data.current_lga;
+  const stateName = data.state_name || "";
+  const lgaName = data.lga_name || "";
+  const cityName = data.city_name || "";
+  const lgaVal = data.current_lga;
 
   let formattedResidence = "";
   if (stateName) formattedResidence += stateName;
@@ -208,19 +197,16 @@ export function ApplicationTableTile({
   }
 
   const residence = data.residence || formattedResidence;
+  const appliedOn = data.appliedOn || formatDate(data.created_at);
 
-  const createdTime = data.created_at?.Time || data.created_at || "";
-  const appliedOn = data.appliedOn || formatDate(createdTime);
-
-  const pollingUnitName =
-    getPgString(data.polling_unit_name) || "Not Specified";
+  const pollingUnitName = data.polling_unit_name || "Not Specified";
   const agentsCount = data.agents_count ?? 0;
 
-  const partyLogo = getPgString(data.party_logo);
+  const partyLogo = data.party_logo || "";
   const partyShortName = data.party_short_name || "NDC";
 
   const voterId = data.voterId || "";
-  const phone = getPgString(data.phone);
+  const phone = data.phone || "";
 
   let decisionLabel = data.decisionLabel || "Accept";
   if (!data.decisionLabel && data.status) {
@@ -240,7 +226,7 @@ export function ApplicationTableTile({
 
   const roleType = data.role || "polling_agent";
   const isSupervisor = roleType !== "polling_agent";
-  const wardName = getPgString(data.ward_name);
+  const wardName = data.ward_name || "";
 
   let assignmentLocation = pollingUnitName;
   if (isSupervisor) {
@@ -294,25 +280,24 @@ export function ApplicationTableTile({
     voterId,
     phone: phone || undefined,
     callingPhone: phone || undefined,
-    whatsappPhone: getPgString(data.whatsapp_phone) || undefined,
-    dataPhone: getPgString(data.data_phone) || undefined,
-    schoolName: getPgString(data.school_name) || undefined,
-    degree: getPgString(data.highest_degree) || undefined,
-    graduationYear: getPgString(data.graduation_year) || undefined,
-    educationalStatus: getPgString(data.educational_status) || undefined,
-    address: getPgString(data.address) || undefined,
+    whatsappPhone: data.whatsapp_phone || undefined,
+    dataPhone: data.data_phone || undefined,
+    schoolName: data.school_name || undefined,
+    degree: data.highest_degree || undefined,
+    graduationYear: data.graduation_year || undefined,
+    educationalStatus: data.educational_status || undefined,
+    address: data.address || undefined,
     stateName: stateName || undefined,
     lgaName: lgaName || undefined,
     wardName: wardName || undefined,
     pollingUnitName: pollingUnitName || undefined,
-    degreeCertificateUrl: getPgString(data.degree_certificate_url) || undefined,
-    wardId: data.app_ward_id || data.current_ward?.Int32 || data.current_ward || undefined,
-    pollingUnitId:
-      data.polling_unit_id?.Int32 || data.polling_unit_id || undefined,
+    degreeCertificateUrl: data.degree_certificate_url || undefined,
+    wardId: data.app_ward_id || data.current_ward || undefined,
+    pollingUnitId: data.polling_unit_id || undefined,
     electionGroupId: data.election_group_id || undefined,
     partyId: data.party_id || undefined,
     stateId: data.app_state_id || data.current_state || data.stateId,
-    lgaId: data.app_lga_id || Number(lgaVal) || data.lgaId || undefined,
+    lgaId: data.app_lga_id || data.current_lga || data.lgaId || undefined,
     partyLogo: partyLogo,
     partyShortName: partyShortName,
   };
@@ -328,15 +313,7 @@ export function ApplicationTableTile({
       return;
     }
 
-    const pollingUnitID =
-      data.polling_unit_id &&
-        typeof data.polling_unit_id === "object" &&
-        "Int32" in data.polling_unit_id &&
-        data.polling_unit_id.Valid
-        ? data.polling_unit_id.Int32
-        : typeof data.polling_unit_id === "number"
-          ? data.polling_unit_id
-          : undefined;
+    const pollingUnitID = data.polling_unit_id || undefined;
 
     if (!pollingUnitID) {
       handleOpenDialog();

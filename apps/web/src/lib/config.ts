@@ -95,6 +95,32 @@ export const API_URL = {
 		const qs = chapterId ? `?chapter_id=${chapterId}` : "";
 		return `${api}/parties/${partyId}/${shortName}/profile${qs}`;
 	},
+	partyHome: (partyId: number | string, chapterId?: number) => {
+		const qs = chapterId ? `?chapter_id=${chapterId}` : "";
+		return `${api}/parties/${partyId}/home${qs}`;
+	},
+	partyPositions: (id: string | number) => `${api}/parties/${id}/positions`,
+	partyOfficials: (
+		id: string | number,
+		params?: {
+			chapter_id?: number;
+			country_id?: number;
+			zonal_id?: number;
+			state_id?: number;
+			lga_id?: number;
+			ward_id?: number;
+		}
+	) => {
+		const searchParams = new URLSearchParams();
+		if (params?.chapter_id) searchParams.append("chapter_id", String(params.chapter_id));
+		if (params?.country_id) searchParams.append("country_id", String(params.country_id));
+		if (params?.zonal_id) searchParams.append("zonal_id", String(params.zonal_id));
+		if (params?.state_id) searchParams.append("state_id", String(params.state_id));
+		if (params?.lga_id) searchParams.append("lga_id", String(params.lga_id));
+		if (params?.ward_id) searchParams.append("ward_id", String(params.ward_id));
+		const qs = searchParams.toString();
+		return `${api}/parties/${id}/officials${qs ? `?${qs}` : ""}`;
+	},
 	partyAdmins: (partyId: number | string) => `${api}/parties/${partyId}/admins`,
 	userPreferences: `${api}/user_preferences`,
 	searchUsers: `${api}/users/search`,
@@ -111,6 +137,15 @@ export const QUERY_KEYS = {
 	},
 	parties: ["parties"],
 	partyCards: ["partyCards"],
+	partyPositions: {
+		root: ["partyPositions"] as const,
+		byParty: (partyId?: number | string) => ["partyPositions", partyId] as const,
+	},
+	partyOfficials: {
+		root: ["partyOfficials"] as const,
+		byChapter: (partyId?: number | string, chapterId?: number) =>
+			["partyOfficials", partyId, chapterId] as const,
+	},
 	campaignGroup: (groupId: number | string) => ["campaign-group", String(groupId)],
 	campaignGroupMembers: (groupId: number | string) => ["campaign-group-members", String(groupId)],
 	countries: ["countries"],

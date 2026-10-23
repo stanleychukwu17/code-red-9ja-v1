@@ -5,7 +5,7 @@ INSERT INTO users (
   current_state, current_city
 )
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-RETURNING id;
+RETURNING id, fake_id;
 
 
 -- name: CreateCandidatePlaceholder :one
@@ -15,7 +15,7 @@ INSERT INTO users (
   party_id, avatar, avatar_file_id, account_status
 )
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 'placeholder')
-RETURNING id;
+RETURNING id, fake_id;
 
 
 -- name: CreateUserNIN :one

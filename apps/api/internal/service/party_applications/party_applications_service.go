@@ -426,8 +426,60 @@ func (s *Service) GetApplicationByID(ctx context.Context, id int64) (queries.Par
 	return s.queries.GetApplicationByID(ctx, id)
 }
 
-func (s *Service) ListApplications(ctx context.Context, userID int64, partyID int16, electionGroupID int32, status string, stateID int16, lgaID, wardID int32, limit int32, cursor int64) ([]queries.ListApplicationsRow, error) {
-	return s.queries.ListApplications(ctx, queries.ListApplicationsParams{
+// PartyApplicationListItem is a clean, frontend-ready representation of an agent application.
+type PartyApplicationListItem struct {
+	ID                   int64   `json:"id"`
+	UserID               int64   `json:"user_id"`
+	PartyID              int16   `json:"party_id"`
+	ElectionGroupID      int32   `json:"election_group_id"`
+	PollingUnitID        *int32  `json:"polling_unit_id,omitempty"`
+	Role                 string  `json:"role"`
+	AppStateID           *int16  `json:"app_state_id,omitempty"`
+	AppLgaID             *int32  `json:"app_lga_id,omitempty"`
+	AppWardID            *int32  `json:"app_ward_id,omitempty"`
+	Status               string  `json:"status"`
+	RejectedReason       *string `json:"rejected_reason,omitempty"`
+	CreatedAt            string  `json:"created_at"`
+	UpdatedAt            string  `json:"updated_at"`
+	FirstName            string  `json:"first_name"`
+	LastName             string  `json:"last_name"`
+	FullName             string  `json:"name"`
+	Email                *string `json:"email,omitempty"`
+	Phone                *string `json:"phone,omitempty"`
+	Username             string  `json:"username"`
+	Avatar               *string `json:"avatar,omitempty"`
+	VotersCardImage      *string `json:"voters_card_image,omitempty"`
+	CurrentCountry       int16   `json:"current_country"`
+	CurrentState         int16   `json:"current_state"`
+	CurrentLga           int32   `json:"current_lga"`
+	CurrentCity          *int32  `json:"current_city,omitempty"`
+	BankAccountNumber    *string `json:"bank_account_number,omitempty"`
+	BankCode             *string `json:"bank_code,omitempty"`
+	EducationalStatus    *string `json:"educational_status,omitempty"`
+	HighestDegree        *string `json:"highest_degree,omitempty"`
+	GraduationYear       *string `json:"graduation_year,omitempty"`
+	SchoolName           *string `json:"school_name,omitempty"`
+	Religion             *string `json:"religion,omitempty"`
+	MaritalStatus        *string `json:"marital_status,omitempty"`
+	Address              *string `json:"address,omitempty"`
+	DegreeCertificateUrl *string `json:"degree_certificate_url,omitempty"`
+	CurrentWard          int32   `json:"current_ward"`
+	ElectionGroupName    string  `json:"election_group_name"`
+	Year                 int16   `json:"year"`
+	PartyName            string  `json:"party_name"`
+	PartyShortName       string  `json:"party_short_name"`
+	PartyLogo            string  `json:"party_logo"`
+	StateName            string  `json:"state_name"`
+	LgaName              string  `json:"lga_name"`
+	CityName             *string `json:"city_name,omitempty"`
+	WardName             string  `json:"ward_name"`
+	PollingUnitName      *string `json:"polling_unit_name,omitempty"`
+	PollingUnitCode      *string `json:"polling_unit_code,omitempty"`
+	AgentsCount          int32   `json:"agents_count"`
+}
+
+func (s *Service) ListApplications(ctx context.Context, userID int64, partyID int16, electionGroupID int32, status string, stateID int16, lgaID, wardID int32, limit int32, cursor int64) ([]PartyApplicationListItem, error) {
+	rows, err := s.queries.ListApplications(ctx, queries.ListApplicationsParams{
 		UserID:          userID,
 		PartyID:         partyID,
 		ElectionGroupID: electionGroupID,
@@ -438,6 +490,94 @@ func (s *Service) ListApplications(ctx context.Context, userID int64, partyID in
 		Cursor:          cursor,
 		LimitVal:        limit,
 	})
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]PartyApplicationListItem, 0, len(rows))
+	for _, r := range rows {
+		firstName := ""
+		if r.FirstName.Valid {
+			firstName = r.FirstName.String
+		}
+		lastName := ""
+		if r.LastName.Valid {
+			lastName = r.LastName.String
+		}
+
+		fullName := strings.TrimSpace(fmt.Sprintf("%s %s", firstName, lastName))
+		if fullName == "" {
+			fullName = "Applicant"
+		}
+
+		username := fmt.Sprintf("user_%d", r.UserID)
+		if r.Username.Valid && r.Username.String != "" {
+			username = r.Username.String
+		}
+
+		createdAt := ""
+		if r.CreatedAt.Valid {
+			createdAt = r.CreatedAt.Time.Format(time.RFC3339)
+		}
+
+		updatedAt := ""
+		if r.UpdatedAt.Valid {
+			updatedAt = r.UpdatedAt.Time.Format(time.RFC3339)
+		}
+
+		result = append(result, PartyApplicationListItem{
+			ID:                   r.ID,
+			UserID:               r.UserID,
+			PartyID:              r.PartyID,
+			ElectionGroupID:      r.ElectionGroupID,
+			PollingUnitID:        utils.PtrFromPgInt4(r.PollingUnitID),
+			Role:                 r.Role,
+			AppStateID:           utils.PtrFromPgInt2(r.AppStateID),
+			AppLgaID:             utils.PtrFromPgInt4(r.AppLgaID),
+			AppWardID:            utils.PtrFromPgInt4(r.AppWardID),
+			Status:               r.Status,
+			RejectedReason:       utils.PtrFromPgText(r.RejectedReason),
+			CreatedAt:            createdAt,
+			UpdatedAt:            updatedAt,
+			FirstName:            firstName,
+			LastName:             lastName,
+			FullName:             fullName,
+			Email:                utils.PtrFromPgText(r.Email),
+			Phone:                utils.PtrFromPgText(r.Phone),
+			Username:             username,
+			Avatar:               utils.PtrFromPgText(r.Avatar),
+			VotersCardImage:      utils.PtrFromPgText(r.VotersCardImage),
+			CurrentCountry:       r.CurrentCountry,
+			CurrentState:         r.CurrentState,
+			CurrentLga:           r.CurrentLga,
+			CurrentCity:          utils.PtrFromPgInt4(r.CurrentCity),
+			BankAccountNumber:    utils.PtrFromPgText(r.BankAccountNumber),
+			BankCode:             utils.PtrFromPgText(r.BankCode),
+			EducationalStatus:    utils.PtrFromPgText(r.EducationalStatus),
+			HighestDegree:        utils.PtrFromPgText(r.HighestDegree),
+			GraduationYear:       utils.PtrFromPgText(r.GraduationYear),
+			SchoolName:           utils.PtrFromPgText(r.SchoolName),
+			Religion:             utils.PtrFromPgText(r.Religion),
+			MaritalStatus:        utils.PtrFromPgText(r.MaritalStatus),
+			Address:              utils.PtrFromPgText(r.Address),
+			DegreeCertificateUrl: utils.PtrFromPgText(r.DegreeCertificateUrl),
+			CurrentWard:          r.CurrentWard,
+			ElectionGroupName:    r.ElectionGroupName,
+			Year:                 r.Year,
+			PartyName:            r.PartyName,
+			PartyShortName:       r.PartyShortName,
+			PartyLogo:            r.PartyLogo,
+			StateName:            r.StateName,
+			LgaName:              r.LgaName,
+			CityName:             utils.PtrFromPgText(r.CityName),
+			WardName:             r.WardName,
+			PollingUnitName:      utils.PtrFromPgText(r.PollingUnitName),
+			PollingUnitCode:      utils.PtrFromPgText(r.PollingUnitCode),
+			AgentsCount:          r.AgentsCount,
+		})
+	}
+
+	return result, nil
 }
 
 func (s *Service) GetPollingUnitRecommendations(ctx context.Context, partyID int16, electionGroupID int32, lgaID, wardID, pollingUnitID int32) ([]queries.GetPollingUnitsWithAgentCountsRow, error) {

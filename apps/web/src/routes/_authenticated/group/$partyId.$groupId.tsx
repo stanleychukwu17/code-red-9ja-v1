@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { AppAvatar } from "@repo/ui/components/avatar";
 import { Button } from "@repo/ui/components/button";
+import { getVal } from "@repo/ui/lib/utils";
 import { QUERY_KEYS, APP_URL } from "@/lib/config";
 import { getParties, type Party } from "@/lib/server/parties";
 import {
@@ -165,9 +166,11 @@ function CampaignGroupPageComponent() {
       // Search query
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
-        const fullName = `${m.first_name || ""} ${m.last_name || ""}`.toLowerCase();
-        const username = (m.username || "").toLowerCase();
-        const fakeId = (m.fake_id || "").toLowerCase();
+        const firstName = getVal(m.first_name).toLowerCase();
+        const lastName = getVal(m.last_name).toLowerCase();
+        const username = getVal(m.username).toLowerCase();
+        const fakeId = getVal(m.fake_id).toLowerCase();
+        const fullName = `${firstName} ${lastName}`.trim();
         return fullName.includes(q) || username.includes(q) || fakeId.includes(q);
       }
       return true;
@@ -328,11 +331,10 @@ function CampaignGroupPageComponent() {
         <button
           type="button"
           onClick={() => setActiveTab("members")}
-          className={`px-4 py-2.5 text-sm font-semibold rounded-t-lg border-b-2 transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
-            activeTab === "members"
+          className={`px-4 py-2.5 text-sm font-semibold rounded-t-lg border-b-2 transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${activeTab === "members"
               ? "border-primary text-primary bg-primary/5"
               : "border-transparent text-muted-foreground hover:text-foreground hover:bg-accent/40"
-          }`}
+            }`}
         >
           <Users className="size-4" />
           <span>Members Roster</span>
@@ -344,11 +346,10 @@ function CampaignGroupPageComponent() {
         <button
           type="button"
           onClick={() => setActiveTab("timeline")}
-          className={`px-4 py-2.5 text-sm font-semibold rounded-t-lg border-b-2 transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
-            activeTab === "timeline"
+          className={`px-4 py-2.5 text-sm font-semibold rounded-t-lg border-b-2 transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${activeTab === "timeline"
               ? "border-primary text-primary bg-primary/5"
               : "border-transparent text-muted-foreground hover:text-foreground hover:bg-accent/40"
-          }`}
+            }`}
         >
           <Sparkles className="size-4" />
           <span>Announcements & Feed</span>
@@ -357,11 +358,10 @@ function CampaignGroupPageComponent() {
         <button
           type="button"
           onClick={() => setActiveTab("talks")}
-          className={`px-4 py-2.5 text-sm font-semibold rounded-t-lg border-b-2 transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
-            activeTab === "talks"
+          className={`px-4 py-2.5 text-sm font-semibold rounded-t-lg border-b-2 transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${activeTab === "talks"
               ? "border-primary text-primary bg-primary/5"
               : "border-transparent text-muted-foreground hover:text-foreground hover:bg-accent/40"
-          }`}
+            }`}
         >
           <MessageSquare className="size-4" />
           <span>Talks Room</span>
@@ -370,11 +370,10 @@ function CampaignGroupPageComponent() {
         <button
           type="button"
           onClick={() => setActiveTab("issues")}
-          className={`px-4 py-2.5 text-sm font-semibold rounded-t-lg border-b-2 transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
-            activeTab === "issues"
+          className={`px-4 py-2.5 text-sm font-semibold rounded-t-lg border-b-2 transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${activeTab === "issues"
               ? "border-primary text-primary bg-primary/5"
               : "border-transparent text-muted-foreground hover:text-foreground hover:bg-accent/40"
-          }`}
+            }`}
         >
           <AlertTriangle className="size-4" />
           <span>Challenges & BVAS</span>
@@ -383,11 +382,10 @@ function CampaignGroupPageComponent() {
         <button
           type="button"
           onClick={() => setActiveTab("assets")}
-          className={`px-4 py-2.5 text-sm font-semibold rounded-t-lg border-b-2 transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
-            activeTab === "assets"
+          className={`px-4 py-2.5 text-sm font-semibold rounded-t-lg border-b-2 transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${activeTab === "assets"
               ? "border-primary text-primary bg-primary/5"
               : "border-transparent text-muted-foreground hover:text-foreground hover:bg-accent/40"
-          }`}
+            }`}
         >
           <FileText className="size-4" />
           <span>Campaign Media</span>
@@ -423,11 +421,10 @@ function CampaignGroupPageComponent() {
                   key={pill.id}
                   type="button"
                   onClick={() => setRoleFilter(pill.id)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
-                    roleFilter === pill.id
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${roleFilter === pill.id
                       ? "bg-primary text-primary-foreground shadow-xs"
                       : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
-                  }`}
+                    }`}
                 >
                   <span>{pill.label}</span>
                   <span className="opacity-70 text-[10px] font-bold">({pill.count})</span>
@@ -454,7 +451,12 @@ function CampaignGroupPageComponent() {
               {filteredMembers.map((member) => {
                 const roleMeta = getRoleMeta(member.role);
                 const RoleIcon = roleMeta.icon;
-                const fullName = [member.first_name, member.last_name].filter(Boolean).join(" ") || "Campaign Member";
+                const firstName = getVal(member.first_name);
+                const lastName = getVal(member.last_name);
+                const username = getVal(member.username);
+                const avatar = getVal(member.avatar);
+                const fakeId = getVal(member.fake_id);
+                const fullName = [firstName, lastName].filter(Boolean).join(" ") || "Campaign Member";
 
                 return (
                   <div
@@ -463,7 +465,7 @@ function CampaignGroupPageComponent() {
                   >
                     <div className="flex items-start gap-3.5">
                       <AppAvatar
-                        src={member.avatar}
+                        src={avatar}
                         alt={fullName}
                         className="size-12 rounded-full border border-border/60 shrink-0"
                       />
@@ -474,8 +476,8 @@ function CampaignGroupPageComponent() {
                             <Crown className="size-3.5 text-amber-500 shrink-0" />
                           )}
                         </div>
-                        {member.username && (
-                          <p className="text-xs text-muted-foreground truncate">@{member.username}</p>
+                        {username && (
+                          <p className="text-xs text-muted-foreground truncate">@{username}</p>
                         )}
                         <div className="mt-2 flex flex-wrap items-center gap-1.5">
                           <span
@@ -496,7 +498,11 @@ function CampaignGroupPageComponent() {
 
                     <div className="pt-2 border-t border-border/40 flex items-center justify-between text-[11px] text-muted-foreground">
                       <span>Joined {new Date(member.joined_at).toLocaleDateString()}</span>
-                      {member.fake_id && <span className="font-mono text-muted-foreground/60">#{member.fake_id.slice(-6)}</span>}
+                      {fakeId && (
+                        <span className="font-mono text-muted-foreground/60">
+                          #{fakeId.slice(-6)}
+                        </span>
+                      )}
                     </div>
                   </div>
                 );

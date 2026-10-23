@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { getPartyAdmins } from "#/lib/server/parties";
+import { getPartyAdmins, type PartyAdmin } from "#/lib/server/parties";
 import { APP_URL } from "#/lib/config";
 import { VerificationBadge } from "@repo/ui/components/custom/verification-badge";
 import { HeaderAccent } from "@repo/ui/components/header-accent";
@@ -21,24 +21,6 @@ export const Route = createFileRoute(
   component: PartyAdminsTabComponent,
 });
 
-/**
- * Safely extracts a string from either a plain string or a Go/sqlc `sql.NullString` object.
- */
-function resolveText(val?: { String: string; Valid: boolean } | string): string {
-  if (!val) return "";
-  if (typeof val === "string") return val;
-  return val.Valid ? val.String : "";
-}
-
-/**
- * Safely extracts a boolean from either a boolean primitive or a Go/sqlc `sql.NullBool` object.
- */
-function resolveBool(val?: { Bool: boolean; Valid: boolean } | boolean): boolean {
-  if (val === undefined || val === null) return false;
-  if (typeof val === "boolean") return val;
-  return val.Valid ? val.Bool : false;
-}
-
 function PartyAdminsTabComponent() {
   const { partyName, partyId } = Route.useParams();
   const [searchFilter, setSearchFilter] = useState("");
@@ -49,20 +31,16 @@ function PartyAdminsTabComponent() {
     staleTime: 1000 * 60 * 5, // 5 minutes cache
   });
 
-  const admins = adminsRes?.success && adminsRes?.data?.admins ? adminsRes.data.admins : [];
+  const admins: PartyAdmin[] = adminsRes?.success && adminsRes?.data?.admins ? adminsRes.data.admins : [];
 
-  const filteredAdmins = admins.filter((admin: any) => {
+  const filteredAdmins = admins.filter((admin) => {
     if (!searchFilter.trim()) return true;
     const term = searchFilter.toLowerCase();
-    const firstName = resolveText(admin.first_name).toLowerCase();
-    const lastName = resolveText(admin.last_name).toLowerCase();
-    const username = resolveText(admin.username).toLowerCase();
-    const fullName = `${firstName} ${lastName}`;
     return (
-      firstName.includes(term) ||
-      lastName.includes(term) ||
-      fullName.includes(term) ||
-      username.includes(term)
+      admin.first_name.toLowerCase().includes(term) ||
+      admin.last_name.toLowerCase().includes(term) ||
+      admin.full_name.toLowerCase().includes(term) ||
+      admin.username.toLowerCase().includes(term)
     );
   });
 
@@ -149,20 +127,15 @@ function PartyAdminsTabComponent() {
       {/* Admins Grid */}
       {!isLoading && !error && filteredAdmins.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filteredAdmins.map((admin: any) => {
-            const firstName = resolveText(admin.first_name);
-            const lastName = resolveText(admin.last_name);
-            const fullName = `${firstName} ${lastName}`.trim() || "Administrator";
-            const username = resolveText(admin.username) || `user_${admin.id}`;
-            const avatar = resolveText(admin.avatar);
-            const isVerified = resolveBool(admin.is_verified);
+          {filteredAdmins.map((admin) => {
+            const fullName = admin.full_name;
+            const username = admin.username;
+            const avatar = admin.avatar;
+            const isVerified = admin.is_verified;
             const verifications = admin.verifications || [];
             const email = admin.email || "";
             const stateName = admin.state_name || "";
-            const isSuperAdmin = Array.isArray(admin.roles)
-              ? admin.roles.includes("super_party_admin") ||
-                admin.roles.some((r: any) => r?.code === "super_party_admin" || r === "super_party_admin")
-              : false;
+            const isSuperAdmin = admin.is_super_admin;
 
             const profileUrl = APP_URL.profile(username);
 
@@ -205,7 +178,7 @@ function PartyAdminsTabComponent() {
                         </Link>
                         {isVerified && verifications.length > 0 && (
                           <div className="inline-flex items-center gap-px">
-                            {verifications.map((v: any) => (
+                            {verifications.map((v) => (
                               <VerificationBadge
                                 key={`${v.id}-${v.verification_type_id}`}
                                 id={v.verification_type_id}

@@ -538,22 +538,22 @@ func (_m *Querier) CreateAssignment(ctx context.Context, arg queries.CreateAssig
 }
 
 // CreateCandidatePlaceholder provides a mock function with given fields: ctx, arg
-func (_m *Querier) CreateCandidatePlaceholder(ctx context.Context, arg queries.CreateCandidatePlaceholderParams) (int64, error) {
+func (_m *Querier) CreateCandidatePlaceholder(ctx context.Context, arg queries.CreateCandidatePlaceholderParams) (queries.CreateCandidatePlaceholderRow, error) {
 	ret := _m.Called(ctx, arg)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateCandidatePlaceholder")
 	}
 
-	var r0 int64
+	var r0 queries.CreateCandidatePlaceholderRow
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, queries.CreateCandidatePlaceholderParams) (int64, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, queries.CreateCandidatePlaceholderParams) (queries.CreateCandidatePlaceholderRow, error)); ok {
 		return rf(ctx, arg)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, queries.CreateCandidatePlaceholderParams) int64); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, queries.CreateCandidatePlaceholderParams) queries.CreateCandidatePlaceholderRow); ok {
 		r0 = rf(ctx, arg)
 	} else {
-		r0 = ret.Get(0).(int64)
+		r0 = ret.Get(0).(queries.CreateCandidatePlaceholderRow)
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, queries.CreateCandidatePlaceholderParams) error); ok {
@@ -1238,22 +1238,22 @@ func (_m *Querier) CreateStateSupervisor(ctx context.Context, arg queries.Create
 }
 
 // CreateUser provides a mock function with given fields: ctx, arg
-func (_m *Querier) CreateUser(ctx context.Context, arg queries.CreateUserParams) (int64, error) {
+func (_m *Querier) CreateUser(ctx context.Context, arg queries.CreateUserParams) (queries.CreateUserRow, error) {
 	ret := _m.Called(ctx, arg)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateUser")
 	}
 
-	var r0 int64
+	var r0 queries.CreateUserRow
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, queries.CreateUserParams) (int64, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, queries.CreateUserParams) (queries.CreateUserRow, error)); ok {
 		return rf(ctx, arg)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, queries.CreateUserParams) int64); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, queries.CreateUserParams) queries.CreateUserRow); ok {
 		r0 = rf(ctx, arg)
 	} else {
-		r0 = ret.Get(0).(int64)
+		r0 = ret.Get(0).(queries.CreateUserRow)
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, queries.CreateUserParams) error); ok {

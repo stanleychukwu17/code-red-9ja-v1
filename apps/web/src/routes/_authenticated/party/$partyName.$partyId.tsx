@@ -17,7 +17,7 @@ export const partyProfileQueryOptions = (partyId: string, partyName: string, cha
     data: { partyId: Number(partyId), shortName: partyName, chapterId },
   }),
   staleTime: Infinity,
-  gcTime: 1000 * 60 * 60 * 24, // Keep in cache for 24h
+  gcTime: 1000 * 60 * 60 * 3, // Keep in cache for 3h
 });
 
 
@@ -74,26 +74,19 @@ function PartyLayoutComponent() {
   const isFollowing = profileRes?.success ? Boolean(profileRes.data?.is_following) : false;
 
   // Resolve active chapter tier (e.g. 'national', 'state', 'lga', 'ward')
-  const chapterType = profileRes?.success
-    ? profileRes.data.chapter_type || profileRes.data.chapter?.chapter_type
-    : undefined;
+  const chapterType = profileRes?.success ? profileRes.data.chapter_type : undefined;
+  console.log(profileRes?.data);
 
   // Active chapter membership count: members enrolled specifically in this chapter
-  const chapterMemberCount = profileRes?.success
-    ? Number(profileRes.data?.chapter_member_count ?? 0)
-    : 0;
+  const chapterMemberCount = Number(profileRes?.data?.chapter_member_count ?? 0);
   const chapterMemberCountDisplay = chapterMemberCount.toLocaleString();
 
   // National membership count: total verified party members nationwide
-  const totalMemberCount = profileRes?.success
-    ? Number(profileRes.data?.national_member_count ?? 0)
-    : 0;
+  const totalMemberCount = Number(profileRes?.data?.national_member_count ?? 0);
   const totalMemberCountDisplay = totalMemberCount.toLocaleString();
 
   // National follower count: total followers of the party's national chapter (formatted as e.g. '850', '1.2k', '2.5M')
-  const followersCount = profileRes?.success
-    ? Number(profileRes.data?.national_followers_count ?? 0)
-    : 0;
+  const followersCount = Number(profileRes?.data?.national_followers_count ?? 0);
   const followersDisplay = formatNumber(followersCount);
 
   // Party branding, colors, preset themes, and hero banner fallback resolution
@@ -125,9 +118,9 @@ function PartyLayoutComponent() {
         fullName={displayName}
         isVerified={Boolean(partyDetails?.is_verified)}
         verifications={partyDetails?.verifications}
-        chapterName={profileRes?.success ? profileRes.data.chapter?.name : undefined}
         chapterLevel={chapterType}
         chapterType={chapterType}
+        chapterGeoName={profileRes?.success ? profileRes.data.chapter_geo_name : undefined}
         followersDisplay={followersDisplay}
         followersValue={followersCount}
         totalMembers={totalMemberCountDisplay}

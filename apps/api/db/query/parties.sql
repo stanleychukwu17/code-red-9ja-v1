@@ -278,20 +278,22 @@ SET status = 'suspended'
 WHERE party_id = $1 AND user_id = $2
 RETURNING chapter_id;
 
--- name: SuspendAllUserPositionsInParty :exec
+-- name: SuspendAllUserPositionsInParty :many
 UPDATE party_position_assignments
 SET 
     status = 'suspended',
     updated_at = NOW()
-WHERE party_id = $1 AND user_id = $2 AND status = 'active';
+WHERE party_id = $1 AND user_id = $2 AND status = 'active'
+RETURNING chapter_id, position_id;
 
--- name: VacateAllUserPositionsInParty :exec
+-- name: VacateAllUserPositionsInParty :many
 UPDATE party_position_assignments
 SET 
     status = 'vacated',
     tenure_end = CURRENT_DATE,
     updated_at = NOW()
-WHERE party_id = $1 AND user_id = $2 AND status IN ('active', 'suspended');
+WHERE party_id = $1 AND user_id = $2 AND status IN ('active', 'suspended')
+RETURNING chapter_id, position_id;
 
 -- name: LiftPartyMemberSuspension :one
 UPDATE party_member_suspensions

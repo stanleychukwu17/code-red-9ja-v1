@@ -18,7 +18,7 @@ import { Badge } from "@repo/ui/components/badge";
 import { AppAvatar } from "@repo/ui/components/avatar";
 import { TileHeader, TileLeft, TileRight, TileRow } from "@repo/ui/components/tiles";
 import { formatISODate } from "@repo/ui/lib/date";
-import { cn } from "@repo/ui/lib/utils";
+import { cn, getVal } from "@repo/ui/lib/utils";
 import { getPageHeader } from "#/lib/shared/meta";
 import { APP_URL } from "#/lib/config";
 import { getElectionById, getElectionCandidates } from "#/lib/server/elections";
@@ -62,15 +62,6 @@ export const Route = createFileRoute(
   component: ElectionCandidatesPage,
 });
 
-const getVal = (val: any): string => {
-  if (!val) return "";
-  if (typeof val === "string") return val;
-  if (typeof val === "object" && val !== null && "String" in val && val.Valid) {
-    return val.String;
-  }
-  return "";
-};
-
 const getDateStr = (val: any): string => {
   if (!val) return "";
   if (typeof val === "string") return val;
@@ -78,17 +69,6 @@ const getDateStr = (val: any): string => {
     return val.Time;
   }
   return "";
-};
-
-const getId = (val: any): number | undefined => {
-  if (!val) return undefined;
-  if (typeof val === "number") return val;
-  if (typeof val === "object" && val !== null) {
-    if ("Int64" in val && val.Valid) return val.Int64;
-    if ("Int32" in val && val.Valid) return val.Int32;
-    if ("Int16" in val && val.Valid) return val.Int16;
-  }
-  return undefined;
 };
 
 function ElectionCandidatesPage() {
@@ -176,7 +156,7 @@ function ElectionCandidatesPage() {
   // Map to ElectionInstanceType for dialog compatibility
   const electionInstanceData: ElectionInstanceType = useMemo(() => {
     const candidateId = myPartyCandidate?.candidate_id;
-    const runningMateId = myPartyCandidate?.running_mate_id?.Int64 ?? (typeof myPartyCandidate?.running_mate_id === "number" ? myPartyCandidate.running_mate_id : undefined);
+    const runningMateId = myPartyCandidate?.running_mate_id ?? undefined;
 
     return {
       id: electionId,
@@ -188,15 +168,15 @@ function ElectionCandidatesPage() {
       candidate: candidateId
         ? {
           id: candidateId,
-          name: `${getVal(myPartyCandidate.first_name)} ${getVal(myPartyCandidate.last_name)}`.trim(),
-          avatar: getVal(myPartyCandidate.avatar),
+          name: myPartyCandidate.candidate_name || `${myPartyCandidate.first_name || ""} ${myPartyCandidate.last_name || ""}`.trim(),
+          avatar: myPartyCandidate.avatar || undefined,
         }
         : undefined,
       runningMate: runningMateId
         ? {
           id: runningMateId,
-          name: `${getVal(myPartyCandidate.running_mate_first_name)} ${getVal(myPartyCandidate.running_mate_last_name)}`.trim(),
-          avatar: getVal(myPartyCandidate.running_mate_avatar),
+          name: myPartyCandidate.running_mate_name || `${myPartyCandidate.running_mate_first_name || ""} ${myPartyCandidate.running_mate_last_name || ""}`.trim(),
+          avatar: myPartyCandidate.running_mate_avatar || undefined,
         }
         : undefined,
     };

@@ -1296,12 +1296,13 @@ func (q *Queries) ResetPartyLogo(ctx context.Context, id int16) error {
 	return err
 }
 
-const suspendAllUserPositionsInParty = `-- name: SuspendAllUserPositionsInParty :exec
+const suspendAllUserPositionsInParty = `-- name: SuspendAllUserPositionsInParty :many
 UPDATE party_position_assignments
 SET 
     status = 'suspended',
     updated_at = NOW()
 WHERE party_id = $1 AND user_id = $2 AND status = 'active'
+RETURNING chapter_id, position_id
 `
 
 type SuspendAllUserPositionsInPartyParams struct {
@@ -1309,9 +1310,29 @@ type SuspendAllUserPositionsInPartyParams struct {
 	UserID  int64 `json:"user_id"`
 }
 
-func (q *Queries) SuspendAllUserPositionsInParty(ctx context.Context, arg SuspendAllUserPositionsInPartyParams) error {
-	_, err := q.db.Exec(ctx, suspendAllUserPositionsInParty, arg.PartyID, arg.UserID)
-	return err
+type SuspendAllUserPositionsInPartyRow struct {
+	ChapterID  int32 `json:"chapter_id"`
+	PositionID int32 `json:"position_id"`
+}
+
+func (q *Queries) SuspendAllUserPositionsInParty(ctx context.Context, arg SuspendAllUserPositionsInPartyParams) ([]SuspendAllUserPositionsInPartyRow, error) {
+	rows, err := q.db.Query(ctx, suspendAllUserPositionsInParty, arg.PartyID, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SuspendAllUserPositionsInPartyRow
+	for rows.Next() {
+		var i SuspendAllUserPositionsInPartyRow
+		if err := rows.Scan(&i.ChapterID, &i.PositionID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const suspendPartyMembership = `-- name: SuspendPartyMembership :many
@@ -1454,13 +1475,14 @@ func (q *Queries) UpdatePartyAgentAcquisitionTargets(ctx context.Context, arg Up
 	return i, err
 }
 
-const vacateAllUserPositionsInParty = `-- name: VacateAllUserPositionsInParty :exec
+const vacateAllUserPositionsInParty = `-- name: VacateAllUserPositionsInParty :many
 UPDATE party_position_assignments
 SET 
     status = 'vacated',
     tenure_end = CURRENT_DATE,
     updated_at = NOW()
 WHERE party_id = $1 AND user_id = $2 AND status IN ('active', 'suspended')
+RETURNING chapter_id, position_id
 `
 
 type VacateAllUserPositionsInPartyParams struct {
@@ -1468,7 +1490,27 @@ type VacateAllUserPositionsInPartyParams struct {
 	UserID  int64 `json:"user_id"`
 }
 
-func (q *Queries) VacateAllUserPositionsInParty(ctx context.Context, arg VacateAllUserPositionsInPartyParams) error {
-	_, err := q.db.Exec(ctx, vacateAllUserPositionsInParty, arg.PartyID, arg.UserID)
-	return err
+type VacateAllUserPositionsInPartyRow struct {
+	ChapterID  int32 `json:"chapter_id"`
+	PositionID int32 `json:"position_id"`
+}
+
+func (q *Queries) VacateAllUserPositionsInParty(ctx context.Context, arg VacateAllUserPositionsInPartyParams) ([]VacateAllUserPositionsInPartyRow, error) {
+	rows, err := q.db.Query(ctx, vacateAllUserPositionsInParty, arg.PartyID, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []VacateAllUserPositionsInPartyRow
+	for rows.Next() {
+		var i VacateAllUserPositionsInPartyRow
+		if err := rows.Scan(&i.ChapterID, &i.PositionID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

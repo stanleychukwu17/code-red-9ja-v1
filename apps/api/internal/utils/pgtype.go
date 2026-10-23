@@ -74,6 +74,19 @@ func PtrFromPgText(t pgtype.Text) *string {
 	return nil
 }
 
+// PtrFromString converts a plain string to an optional string pointer, returning nil if empty.
+func PtrFromString(s string) *string {
+	if s != "" {
+		return &s
+	}
+	return nil
+}
+
+// PtrFromNonEmptyString converts a plain string to an optional string pointer, returning nil if empty.
+func PtrFromNonEmptyString(s string) *string {
+	return PtrFromString(s)
+}
+
 // PtrFromPgDate formats a pgtype.Date into an optional YYYY-MM-DD string pointer.
 func PtrFromPgDate(d pgtype.Date) *string {
 	if d.Valid {
@@ -87,6 +100,14 @@ func PtrFromPgDate(d pgtype.Date) *string {
 func PtrFromPgInt2(i pgtype.Int2) *int16 {
 	if i.Valid {
 		return &i.Int16
+	}
+	return nil
+}
+
+// PtrFromPgInt4 converts a pgtype.Int4 to an optional int32 pointer.
+func PtrFromPgInt4(i pgtype.Int4) *int32 {
+	if i.Valid {
+		return &i.Int32
 	}
 	return nil
 }

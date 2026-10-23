@@ -126,16 +126,15 @@ function ElectionDayComponent() {
 		}
 		if (Array.isArray(electionCandidates) && electionCandidates.length > 0) {
 			return electionCandidates.map((c: any) => {
-				const ps = c.party_short_name?.String || c.party_short_name || "";
-				const firstName = c.first_name?.String || c.first_name || "";
-				const lastName = c.last_name?.String || c.last_name || "";
-				const avatar = c.avatar?.String || c.avatar || "";
-				const partyLogo = c.party_logo?.String || c.party_logo || "";
+				const ps = c.party_short_name || "";
+				const candidateName = c.candidate_name || `${c.first_name || ""} ${c.last_name || ""}`.trim();
+				const avatar = c.avatar || "";
+				const partyLogo = c.party_logo || "";
 				return {
 					party_short_name: ps,
 					vote_count: 0,
 					candidate: {
-						name: `${firstName} ${lastName}`.trim(),
+						name: candidateName,
 						avatar,
 					},
 					party: {

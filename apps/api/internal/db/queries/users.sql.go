@@ -94,7 +94,7 @@ INSERT INTO users (
   party_id, avatar, avatar_file_id, account_status
 )
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 'placeholder')
-RETURNING id
+RETURNING id, fake_id
 `
 
 type CreateCandidatePlaceholderParams struct {
@@ -115,7 +115,12 @@ type CreateCandidatePlaceholderParams struct {
 	AvatarFileID   pgtype.Int8 `json:"avatar_file_id"`
 }
 
-func (q *Queries) CreateCandidatePlaceholder(ctx context.Context, arg CreateCandidatePlaceholderParams) (int64, error) {
+type CreateCandidatePlaceholderRow struct {
+	ID     int64       `json:"id"`
+	FakeID pgtype.Int8 `json:"fake_id"`
+}
+
+func (q *Queries) CreateCandidatePlaceholder(ctx context.Context, arg CreateCandidatePlaceholderParams) (CreateCandidatePlaceholderRow, error) {
 	row := q.db.QueryRow(ctx, createCandidatePlaceholder,
 		arg.Email,
 		arg.PasswordHash,
@@ -133,9 +138,9 @@ func (q *Queries) CreateCandidatePlaceholder(ctx context.Context, arg CreateCand
 		arg.Avatar,
 		arg.AvatarFileID,
 	)
-	var id int64
-	err := row.Scan(&id)
-	return id, err
+	var i CreateCandidatePlaceholderRow
+	err := row.Scan(&i.ID, &i.FakeID)
+	return i, err
 }
 
 const createMoreInfoAboutThisUser = `-- name: CreateMoreInfoAboutThisUser :one
@@ -210,7 +215,7 @@ INSERT INTO users (
   current_state, current_city
 )
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-RETURNING id
+RETURNING id, fake_id
 `
 
 type CreateUserParams struct {
@@ -228,7 +233,12 @@ type CreateUserParams struct {
 	CurrentCity    pgtype.Int4 `json:"current_city"`
 }
 
-func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (int64, error) {
+type CreateUserRow struct {
+	ID     int64       `json:"id"`
+	FakeID pgtype.Int8 `json:"fake_id"`
+}
+
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateUserRow, error) {
 	row := q.db.QueryRow(ctx, createUser,
 		arg.Email,
 		arg.Phone,
@@ -243,9 +253,9 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (int64, 
 		arg.CurrentState,
 		arg.CurrentCity,
 	)
-	var id int64
-	err := row.Scan(&id)
-	return id, err
+	var i CreateUserRow
+	err := row.Scan(&i.ID, &i.FakeID)
+	return i, err
 }
 
 const createUserNIN = `-- name: CreateUserNIN :one

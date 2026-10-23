@@ -19,7 +19,7 @@ type PartyApplicationsService interface {
 	SubmitApplication(ctx context.Context, input partyapplications.SubmitApplicationInput) ([]queries.PartyApplication, error)
 	SubmitSupervisorApplication(ctx context.Context, input partyapplications.SubmitSupervisorApplicationInput) (queries.PartyApplication, error)
 	GetApplicationByID(ctx context.Context, id int64) (queries.PartyApplication, error)
-	ListApplications(ctx context.Context, userID int64, partyID int16, electionGroupID int32, status string, stateID int16, lgaID, wardID int32, limit int32, cursor int64) ([]queries.ListApplicationsRow, error)
+	ListApplications(ctx context.Context, userID int64, partyID int16, electionGroupID int32, status string, stateID int16, lgaID, wardID int32, limit int32, cursor int64) ([]partyapplications.PartyApplicationListItem, error)
 	RejectApplication(ctx context.Context, id int64, reason string) (queries.PartyApplication, error)
 	CancelApplication(ctx context.Context, id int64) (queries.PartyApplication, error)
 	ApproveApplication(ctx context.Context, input partyapplications.ApproveApplicationInput) (queries.PartyApplication, error)

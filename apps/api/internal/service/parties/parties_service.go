@@ -456,6 +456,8 @@ func (s *PartiesService) GetOnePartyChapterOfficial(ctx context.Context, chapter
 			switch positionID {
 			case constants.PartyPositionChairmanID:
 				posName = "Chairman"
+			case constants.PartyPositionDeputyChairmanID:
+				posName = "Deputy Chairman"
 			case constants.PartyPositionSecretaryID:
 				posName = "Secretary"
 			default:
@@ -469,7 +471,7 @@ func (s *PartiesService) GetOnePartyChapterOfficial(ctx context.Context, chapter
 			}
 			// Cache vacant card
 			if data, marshalErr := json.Marshal(vacantOfficial); marshalErr == nil {
-				_ = s.rdb.Set(ctx, cacheKey, data, db.RedisThirtyDaysTTL).Err()
+				_ = s.rdb.Set(ctx, cacheKey, data, db.RedisOneEightyDaysTTL).Err()
 			}
 			return &vacantOfficial, nil
 		}
@@ -611,6 +613,189 @@ func (s *PartiesService) GetPartyCards(ctx context.Context, userID int64, userPa
 	}
 
 	return cards, nil
+}
+
+// PartyHomeLeaderItem matches the frontend PartyLeader structure directly.
+type PartyHomeLeaderItem struct {
+	ID       string  `json:"id"`
+	Name     string  `json:"name"`
+	Role     string  `json:"role"`
+	Avatar   *string `json:"avatar,omitempty"`
+	Since    *string `json:"since,omitempty"`
+	Username *string `json:"username,omitempty"`
+	IsVacant bool    `json:"is_vacant"`
+}
+
+func (s *PartiesService) formatHomeLeader(card PartyOfficialCard) PartyHomeLeaderItem {
+	var id string
+	if card.UserID != nil && *card.UserID > 0 {
+		id = fmt.Sprintf("u-%d", *card.UserID)
+	} else {
+		id = fmt.Sprintf("pos-%d", card.PositionID)
+	}
+
+	name := "Unassigned"
+	if card.Name != nil && *card.Name != "" {
+		name = *card.Name
+	}
+
+	return PartyHomeLeaderItem{
+		ID:       id,
+		Name:     name,
+		Role:     card.PositionName,
+		Avatar:   card.Avatar,
+		Since:    card.Since,
+		Username: card.Username,
+		IsVacant: card.IsVacant,
+	}
+}
+
+// PartyDynamicLeadersGroup groups leadership cards for the secondary home card.
+type PartyDynamicLeadersGroup struct {
+	Title       string                `json:"title"`
+	ChapterType string                `json:"chapter_type"`
+	ChapterName *string               `json:"chapter_name,omitempty"`
+	Leaders     []PartyHomeLeaderItem `json:"leaders"`
+}
+
+// PartyHomeData encapsulates all primary data displayed on the party home tab.
+type PartyHomeData struct {
+	NationalLeaders []PartyHomeLeaderItem    `json:"national_leaders"`
+	DynamicLeaders  PartyDynamicLeadersGroup `json:"dynamic_leaders"`
+}
+
+// GetPartyHome fetches the primary data for the party home tab (leadership cards, upcoming events, etc.).
+func (s *PartiesService) GetPartyHome(ctx context.Context, partyID int16, chapterID *int32) (*PartyHomeData, error) {
+	// Resolve national chapter
+	natChapterID, err := s.GetOrCreateNationalChapter(ctx, partyID, constants.NigeriaCountryID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve national chapter: %w", err)
+	}
+
+	// Fetch national leadership card (Chairman, Deputy Chairman, Secretary)
+	topPositions := []struct {
+		id   int32
+		name string
+	}{
+		{id: constants.PartyPositionChairmanID, name: "Chairman"},
+		{id: constants.PartyPositionDeputyChairmanID, name: "Deputy Chairman"},
+		{id: constants.PartyPositionSecretaryID, name: "Secretary"},
+	}
+
+	nationalLeaders := make([]PartyHomeLeaderItem, 0, len(topPositions))
+	for _, pos := range topPositions {
+		official, err := s.GetOnePartyChapterOfficial(ctx, natChapterID, pos.id)
+		if err == nil && official != nil {
+			nationalLeaders = append(nationalLeaders, s.formatHomeLeader(*official))
+		} else {
+			nationalLeaders = append(nationalLeaders, s.formatHomeLeader(PartyOfficialCard{
+				PositionID:   pos.id,
+				PositionName: pos.name,
+				IsVacant:     true,
+			}))
+		}
+	}
+
+	// Resolve active in-view chapter
+	var activeChapter queries.PartyChapter
+	hasCustomChapter := false
+	if chapterID != nil && *chapterID > 0 && *chapterID != natChapterID {
+		if ch, err := s.GetPartyChapterByID(ctx, *chapterID); err == nil && ch.PartyID == partyID {
+			activeChapter = ch
+			hasCustomChapter = true
+		}
+	}
+
+	// Fetch dynamic leadership card (key state chairs or active chapter leaders)
+	var dynamicGroup PartyDynamicLeadersGroup
+
+	if !hasCustomChapter || activeChapter.ChapterType == "national" {
+		// Key States: Lagos (25), FCT/Abuja (15), Kano (20)
+		keyStates := []struct {
+			ID   int16
+			Name string
+		}{
+			{ID: constants.StateLagosID, Name: "Lagos"},
+			{ID: constants.StateFCTAbujaID, Name: "Abuja (FCT)"},
+			{ID: constants.StateKanoID, Name: "Kano"},
+		}
+
+		stateLeaders := make([]PartyHomeLeaderItem, 0, len(keyStates))
+		for _, st := range keyStates {
+			stateChapID, err := s.GetOrCreateStateChapter(ctx, partyID, st.ID, true)
+			if err == nil && stateChapID > 0 {
+				official, offErr := s.GetOnePartyChapterOfficial(ctx, stateChapID, constants.PartyPositionChairmanID)
+				if offErr == nil && official != nil {
+					card := *official
+					card.PositionName = fmt.Sprintf("%s Chairman", st.Name)
+					stateLeaders = append(stateLeaders, s.formatHomeLeader(card))
+					continue
+				}
+			}
+			stateLeaders = append(stateLeaders, s.formatHomeLeader(PartyOfficialCard{
+				PositionID:   constants.PartyPositionChairmanID,
+				PositionName: fmt.Sprintf("%s Chairman", st.Name),
+				IsVacant:     true,
+			}))
+		}
+
+		dynamicGroup = PartyDynamicLeadersGroup{
+			Title:       "Key state leaders",
+			ChapterType: "national",
+			Leaders:     stateLeaders,
+		}
+	} else {
+		// Active chapter in view (State, LGA, or Ward)
+		chapLeaders := make([]PartyHomeLeaderItem, 0, len(topPositions))
+		for _, pos := range topPositions {
+			official, err := s.GetOnePartyChapterOfficial(ctx, activeChapter.ID, pos.id)
+			if err == nil && official != nil {
+				chapLeaders = append(chapLeaders, s.formatHomeLeader(*official))
+			} else {
+				chapLeaders = append(chapLeaders, s.formatHomeLeader(PartyOfficialCard{
+					PositionID:   pos.id,
+					PositionName: pos.name,
+					IsVacant:     true,
+				}))
+			}
+		}
+
+		var chapName string
+		switch activeChapter.ChapterType {
+		case "state":
+			if activeChapter.StateID.Valid && activeChapter.StateID.Int16 > 0 {
+				if st, err := s.bodiesService.CheckStateByID(ctx, activeChapter.StateID.Int16); err == nil {
+					chapName = st.Name + " State"
+				}
+			}
+		case "lga":
+			if activeChapter.LgaID.Valid && activeChapter.LgaID.Int32 > 0 {
+				if lga, err := s.bodiesService.CheckLGA(ctx, activeChapter.LgaID.Int32); err == nil {
+					chapName = lga.Name + " LGA"
+				}
+			}
+		case "ward":
+			if activeChapter.WardID.Valid && activeChapter.WardID.Int32 > 0 {
+				if ward, err := s.bodiesService.CheckWard(ctx, activeChapter.WardID.Int32); err == nil {
+					chapName = ward.Name + " Ward"
+				}
+			}
+		}
+
+		title := fmt.Sprintf("%s leaders", chapName)
+
+		dynamicGroup = PartyDynamicLeadersGroup{
+			Title:       title,
+			ChapterType: activeChapter.ChapterType,
+			ChapterName: &chapName,
+			Leaders:     chapLeaders,
+		}
+	}
+
+	return &PartyHomeData{
+		NationalLeaders: nationalLeaders,
+		DynamicLeaders:  dynamicGroup,
+	}, nil
 }
 
 // UpdateParty modifies the short name, name, logo, cover, and details of an existing party.
@@ -2464,7 +2649,7 @@ func (s *PartiesService) SuspendPartyMember(ctx context.Context, input SuspendPa
 	suspensionJSON, _ := json.Marshal(suspension)
 
 	// 4. Suspend all active positions held by the user in this party
-	err = qtx.SuspendAllUserPositionsInParty(ctx, queries.SuspendAllUserPositionsInPartyParams{
+	suspendedPositions, err := qtx.SuspendAllUserPositionsInParty(ctx, queries.SuspendAllUserPositionsInPartyParams{
 		PartyID: input.PartyID,
 		UserID:  input.UserID,
 	})
@@ -2503,9 +2688,12 @@ func (s *PartiesService) SuspendPartyMember(ctx context.Context, input SuspendPa
 	// invalidate party membership from redis
 	s.InvalidatePartyMembership(ctx, input.UserID, input.PartyID)
 
-	// invalidate party officials cache and top official card caches
+	// invalidate party officials cache and chapter official card caches
 	for _, chID := range chapterIDs {
 		s.InvalidatePartyOfficialsCache(ctx, input.PartyID, chID)
+	}
+	for _, pos := range suspendedPositions {
+		s.InvalidateChapterOfficialCache(ctx, pos.ChapterID, pos.PositionID)
 	}
 
 	// Audit Logging
@@ -2671,12 +2859,13 @@ func (s *PartiesService) BlockUserFromThisParty(ctx context.Context, input Block
 
 	isMemberOfThisParty := user.PartyID.Valid && user.PartyID.Int16 == input.PartyID
 	var chapterIDs []int32
+	var vacatedPositions []queries.VacateAllUserPositionsInPartyRow
 
 	// Only vacate positions, strip roles, delete memberships, and log membership milestones
 	// if the user is currently affiliated with this party.
 	if isMemberOfThisParty {
 		// 2. Vacate all positions held by the user in this party
-		err = qtx.VacateAllUserPositionsInParty(ctx, queries.VacateAllUserPositionsInPartyParams{
+		vacatedPositions, err = qtx.VacateAllUserPositionsInParty(ctx, queries.VacateAllUserPositionsInPartyParams{
 			PartyID: input.PartyID,
 			UserID:  input.BlockedUserID,
 		})
@@ -2747,6 +2936,9 @@ func (s *PartiesService) BlockUserFromThisParty(ctx context.Context, input Block
 			s.InvalidateChapterMemberCount(ctx, input.PartyID, chapterID)
 			s.InvalidatePartyChapterMembership(ctx, input.BlockedUserID, input.PartyID, chapterID)
 			s.InvalidatePartyOfficialsCache(ctx, input.PartyID, chapterID)
+		}
+		for _, pos := range vacatedPositions {
+			s.InvalidateChapterOfficialCache(ctx, pos.ChapterID, pos.PositionID)
 		}
 
 		// Revoke official badges if user has no remaining active positions
@@ -2883,8 +3075,24 @@ func (s *PartiesService) ListSuspendedPartyMembers(ctx context.Context, partyID 
 	return s.queries.ListSuspendedPartyMembers(ctx, arg)
 }
 
+// PartyAdminItem represents a sanitized, UI-friendly party administrator.
+type PartyAdminItem struct {
+	ID            int64                             `json:"id"`
+	FirstName     string                            `json:"first_name"`
+	LastName      string                            `json:"last_name"`
+	FullName      string                            `json:"full_name"`
+	Username      string                            `json:"username"`
+	Avatar        *string                           `json:"avatar,omitempty"`
+	Email         *string                           `json:"email,omitempty"`
+	StateName     *string                           `json:"state_name,omitempty"`
+	IsVerified    bool                              `json:"is_verified"`
+	IsSuperAdmin  bool                              `json:"is_super_admin"`
+	Verifications []queries.GetPageVerificationsRow `json:"verifications"`
+}
+
 // ListPartyAdmins retrieves all administrators assigned to a given political party.
-func (s *PartiesService) ListPartyAdmins(ctx context.Context, partyID int16) ([]queries.UserWithPlaces, error) {
+func (s *PartiesService) ListPartyAdmins(ctx context.Context, partyID int16) ([]PartyAdminItem, error) {
+	// Query users assigned party administrator roles
 	arg := queries.ListUsersParams{
 		PartyID:       pgtype.Int2{Int16: partyID, Valid: true},
 		RoleCodes:     []string{"party_admin", "super_party_admin"},
@@ -2897,9 +3105,10 @@ func (s *PartiesService) ListPartyAdmins(ctx context.Context, partyID int16) ([]
 		return nil, err
 	}
 	if len(userRows) == 0 {
-		return []queries.UserWithPlaces{}, nil
+		return []PartyAdminItem{}, nil
 	}
 
+	// Collect fake IDs to hydrate enriched profile data
 	fakeIDs := make([]int64, 0, len(userRows))
 	for _, u := range userRows {
 		if u.FakeID.Valid {
@@ -2907,7 +3116,48 @@ func (s *PartiesService) ListPartyAdmins(ctx context.Context, partyID int16) ([]
 		}
 	}
 
-	return s.usersService.GetUsersByFakeIDs(ctx, fakeIDs)
+	usersWithPlaces, err := s.usersService.GetUsersByFakeIDs(ctx, fakeIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	// Map enriched users to sanitized admin items
+	result := make([]PartyAdminItem, 0, len(usersWithPlaces))
+	for _, u := range usersWithPlaces {
+		firstName := utils.PgTextOrDefault(u.FirstName, "")
+		lastName := utils.PgTextOrDefault(u.LastName, "")
+		fullName := strings.TrimSpace(fmt.Sprintf("%s %s", firstName, lastName))
+		username := utils.PgTextOrDefault(u.Username, fmt.Sprintf("user_%d", u.ID))
+		avatar := utils.PtrFromPgText(u.Avatar)
+		email := utils.PtrFromPgText(u.Email)
+		stateName := utils.PtrFromString(u.StateName)
+		isVerified := u.IsVerified.Valid && u.IsVerified.Bool
+
+		// Check for super party admin role
+		isSuperAdmin := false
+		for _, rc := range u.Roles.RolesCode {
+			if rc == "super_party_admin" {
+				isSuperAdmin = true
+				break
+			}
+		}
+
+		result = append(result, PartyAdminItem{
+			ID:            u.ID,
+			FirstName:     firstName,
+			LastName:      lastName,
+			FullName:      fullName,
+			Username:      username,
+			Avatar:        avatar,
+			Email:         email,
+			StateName:     stateName,
+			IsVerified:    isVerified,
+			IsSuperAdmin:  isSuperAdmin,
+			Verifications: u.Verifications,
+		})
+	}
+
+	return result, nil
 }
 
 // InvalidatePartyMemberSuspensionCache invalidates the Redis suspension cache for a member.
@@ -2926,15 +3176,12 @@ func (s *PartiesService) InvalidateMemberPositionAssignmentsCache(ctx context.Co
 	}
 }
 
-// InvalidatePartyOfficialsCache invalidates the Redis cache for chapter officials and top official cards.
+// InvalidatePartyOfficialsCache invalidates the Redis cache for chapter officials.
 func (s *PartiesService) InvalidatePartyOfficialsCache(ctx context.Context, partyID int16, chapterID int32) {
 	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisPartyChapterOfficials, partyID, chapterID)
 	if err := s.rdb.Del(ctx, cacheKey).Err(); err != nil {
 		slog.Error("Failed to invalidate party chapter officials cache", "error", err, "partyID", partyID, "chapterID", chapterID)
 	}
-
-	s.InvalidateChapterOfficialCache(ctx, chapterID, constants.PartyPositionChairmanID)
-	s.InvalidateChapterOfficialCache(ctx, chapterID, constants.PartyPositionSecretaryID)
 }
 
 // InvalidateChapterOfficialCache invalidates the Redis cache for a single chapter official by chapterID and positionID.

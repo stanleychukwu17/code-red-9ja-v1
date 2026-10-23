@@ -76,7 +76,7 @@ type Querier interface {
 	// ============================================================================
 	CreateAssetFolder(ctx context.Context, arg CreateAssetFolderParams) (AssetFolder, error)
 	CreateAssignment(ctx context.Context, arg CreateAssignmentParams) (PollingUnitAssignment, error)
-	CreateCandidatePlaceholder(ctx context.Context, arg CreateCandidatePlaceholderParams) (int64, error)
+	CreateCandidatePlaceholder(ctx context.Context, arg CreateCandidatePlaceholderParams) (CreateCandidatePlaceholderRow, error)
 	CreateDidNotVoteReason(ctx context.Context, arg CreateDidNotVoteReasonParams) (DidNotVoteReason, error)
 	CreateElectionCandidate(ctx context.Context, arg CreateElectionCandidateParams) (ElectionCandidate, error)
 	CreateElectionGroup(ctx context.Context, arg CreateElectionGroupParams) (ElectionGroup, error)
@@ -117,7 +117,7 @@ type Querier interface {
 	CreateStateConstituency(ctx context.Context, arg CreateStateConstituencyParams) (StateConstituency, error)
 	CreateStateSupervisor(ctx context.Context, arg CreateStateSupervisorParams) (StateElectionSupervisor, error)
 	CreateUnmatchedPollingUnitResult(ctx context.Context, arg CreateUnmatchedPollingUnitResultParams) (UnmatchedPollingUnitResult, error)
-	CreateUser(ctx context.Context, arg CreateUserParams) (int64, error)
+	CreateUser(ctx context.Context, arg CreateUserParams) (CreateUserRow, error)
 	CreateUserNIN(ctx context.Context, arg CreateUserNINParams) (int64, error)
 	CreateUserReferralRecord(ctx context.Context, arg CreateUserReferralRecordParams) error
 	CreateUserWallet(ctx context.Context, arg CreateUserWalletParams) (UserWallet, error)
@@ -518,7 +518,7 @@ type Querier interface {
 	SoftDeletePartyCustomPosition(ctx context.Context, arg SoftDeletePartyCustomPositionParams) error
 	SubmitPollingUnitResult(ctx context.Context, arg SubmitPollingUnitResultParams) (PollingUnitResult, error)
 	SubmitPracticeTest(ctx context.Context, arg SubmitPracticeTestParams) (UserPracticeTest, error)
-	SuspendAllUserPositionsInParty(ctx context.Context, arg SuspendAllUserPositionsInPartyParams) error
+	SuspendAllUserPositionsInParty(ctx context.Context, arg SuspendAllUserPositionsInPartyParams) ([]SuspendAllUserPositionsInPartyRow, error)
 	SuspendPartyMembership(ctx context.Context, arg SuspendPartyMembershipParams) ([]int32, error)
 	ToggleINECResultGrabberPause(ctx context.Context, id int64) (InecResultGrabber, error)
 	UnblockUser(ctx context.Context, arg UnblockUserParams) error
@@ -622,7 +622,7 @@ type Querier interface {
 	UpsertUserPhoneNumber(ctx context.Context, arg UpsertUserPhoneNumberParams) (int64, error)
 	UpsertUserPreferences(ctx context.Context, arg UpsertUserPreferencesParams) (UserPreference, error)
 	UpsertWard(ctx context.Context, arg UpsertWardParams) (Ward, error)
-	VacateAllUserPositionsInParty(ctx context.Context, arg VacateAllUserPositionsInPartyParams) error
+	VacateAllUserPositionsInParty(ctx context.Context, arg VacateAllUserPositionsInPartyParams) ([]VacateAllUserPositionsInPartyRow, error)
 	VacatePositionAssignment(ctx context.Context, arg VacatePositionAssignmentParams) (PartyPositionAssignment, error)
 	VoteOnResult(ctx context.Context, arg VoteOnResultParams) (PollingUnitResult, error)
 }

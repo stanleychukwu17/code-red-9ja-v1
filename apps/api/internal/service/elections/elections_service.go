@@ -1187,10 +1187,89 @@ func (s *ElectionsService) BulkDeleteElections(ctx context.Context, params BulkD
 	return result, nil
 }
 
+// ElectionCandidateItem is a clean, frontend-ready candidate representation.
+type ElectionCandidateItem struct {
+	ID                   int32   `json:"id"`
+	ElectionID           int32   `json:"election_id"`
+	ElectionGroupID      int32   `json:"election_group_id"`
+	CandidateID          int64   `json:"candidate_id"`
+	FirstName            string  `json:"first_name"`
+	LastName             string  `json:"last_name"`
+	FullName             string  `json:"candidate_name"`
+	Avatar               *string `json:"avatar,omitempty"`
+	RunningMateID        *int64  `json:"running_mate_id,omitempty"`
+	RunningMateFirstName *string `json:"running_mate_first_name,omitempty"`
+	RunningMateLastName  *string `json:"running_mate_last_name,omitempty"`
+	RunningMateFullName  *string `json:"running_mate_name,omitempty"`
+	RunningMateAvatar    *string `json:"running_mate_avatar,omitempty"`
+	PartyID              int16   `json:"party_id"`
+	PartyShortName       string  `json:"party_short_name"`
+	PartyLogo            string  `json:"party_logo"`
+	PartyColorHex        *string `json:"party_color_hex,omitempty"`
+	PartyDarkColorHex    *string `json:"party_dark_color_hex,omitempty"`
+}
+
 // GetElectionCandidates retrieves all candidate records associated with an election,
-// including candidate user details, party affiliation, and ballot data.
-func (s *ElectionsService) GetElectionCandidates(ctx context.Context, electionID int32) ([]queries.ListElectionCandidatesDetailedByElectionIDRow, error) {
-	return s.queries.ListElectionCandidatesDetailedByElectionID(ctx, electionID)
+// returning clean strings and numbers directly formatted for UI consumption.
+func (s *ElectionsService) GetElectionCandidates(ctx context.Context, electionID int32) ([]ElectionCandidateItem, error) {
+	rows, err := s.queries.ListElectionCandidatesDetailedByElectionID(ctx, electionID)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]ElectionCandidateItem, 0, len(rows))
+	for _, r := range rows {
+		firstName := ""
+		if r.FirstName.Valid {
+			firstName = r.FirstName.String
+		}
+		lastName := ""
+		if r.LastName.Valid {
+			lastName = r.LastName.String
+		}
+		fullName := strings.TrimSpace(fmt.Sprintf("%s %s", firstName, lastName))
+
+		var runningMateFullName *string
+		if r.RunningMateFirstName.Valid || r.RunningMateLastName.Valid {
+			rmName := strings.TrimSpace(fmt.Sprintf("%s %s", r.RunningMateFirstName.String, r.RunningMateLastName.String))
+			if rmName != "" {
+				runningMateFullName = &rmName
+			}
+		}
+
+		partyShortName := ""
+		if r.PartyShortName.Valid {
+			partyShortName = r.PartyShortName.String
+		}
+
+		partyLogo := ""
+		if r.PartyLogo.Valid {
+			partyLogo = r.PartyLogo.String
+		}
+
+		result = append(result, ElectionCandidateItem{
+			ID:                   r.ID,
+			ElectionID:           r.ElectionID,
+			ElectionGroupID:      r.ElectionGroupID,
+			CandidateID:          r.CandidateID,
+			FirstName:            firstName,
+			LastName:             lastName,
+			FullName:             fullName,
+			Avatar:               utils.PtrFromPgText(r.Avatar),
+			RunningMateID:        utils.PtrFromPgInt8(r.RunningMateID),
+			RunningMateFirstName: utils.PtrFromPgText(r.RunningMateFirstName),
+			RunningMateLastName:  utils.PtrFromPgText(r.RunningMateLastName),
+			RunningMateFullName:  runningMateFullName,
+			RunningMateAvatar:    utils.PtrFromPgText(r.RunningMateAvatar),
+			PartyID:              r.PartyID,
+			PartyShortName:       partyShortName,
+			PartyLogo:            partyLogo,
+			PartyColorHex:        utils.PtrFromPgText(r.PartyColorHex),
+			PartyDarkColorHex:    utils.PtrFromPgText(r.PartyDarkColorHex),
+		})
+	}
+
+	return result, nil
 }
 
 // CheckIfUserEverContested checks if a user has ever contested an election as a candidate or running mate.

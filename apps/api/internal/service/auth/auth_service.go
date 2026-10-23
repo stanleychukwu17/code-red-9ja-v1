@@ -871,7 +871,7 @@ func (s *AuthService) Signup(ctx context.Context, email, phone, password string,
 		CurrentState:   37, // temp default state to avoid error of null entry
 	}
 
-	userID, err := qtx.CreateUser(ctx, params)
+	userRow, err := qtx.CreateUser(ctx, params)
 	if err != nil {
 		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == "23505" {
 			switch pgErr.ConstraintName {
@@ -884,15 +884,8 @@ func (s *AuthService) Signup(ctx context.Context, email, phone, password string,
 		return SignupResult{}, fmt.Errorf("failed to create user: %w", err)
 	}
 
-	// fake id generator
-	fakeID := utils.GenerateFakeID(userID)
-	err = qtx.UpdateUserFakeID(ctx, queries.UpdateUserFakeIDParams{
-		ID:     userID,
-		FakeID: utils.PgInt8FromInt64(fakeID),
-	})
-	if err != nil {
-		return SignupResult{}, fmt.Errorf("failed to update user fake ID: %w", err)
-	}
+	userID := userRow.ID
+	fakeID := userRow.FakeID.Int64
 
 	// insert primary phone number directly into users_phone_numbers
 	_, err = qtx.CreatePhoneNumber(ctx, queries.CreatePhoneNumberParams{
@@ -1370,17 +1363,13 @@ func (s *AuthService) RegisterCandidatePlaceholder(
 	defer tx.Rollback(ctx)
 
 	qtx := s.queries.WithTx(tx)
-	userID, err := qtx.CreateCandidatePlaceholder(ctx, params)
+	candRow, err := qtx.CreateCandidatePlaceholder(ctx, params)
 	if err != nil {
 		return RegisterResult{}, err
 	}
 
-	// generate a fake_id using the user_id and update the user fake_id
-	fakeID := utils.GenerateFakeID(userID)
-	err = qtx.UpdateUserFakeID(ctx, queries.UpdateUserFakeIDParams{ID: userID, FakeID: utils.PgInt8FromInt64(fakeID)})
-	if err != nil {
-		return RegisterResult{}, err
-	}
+	userID := candRow.ID
+	fakeID := candRow.FakeID.Int64
 
 	if err := tx.Commit(ctx); err != nil {
 		return RegisterResult{}, err

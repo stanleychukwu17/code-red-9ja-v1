@@ -1,69 +1,58 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { PartyEventsCard, PartyLeadersCard, type PartyLeader } from "#/components/party";
+import { useQuery } from "@tanstack/react-query";
+import { PartyEventsCard, PartyLeadersCard } from "#/components/party";
+import { getPartyHome } from "@/lib/server/parties";
+
+export type PartyHomeSearch = {
+  chapterId?: number;
+};
 
 export const Route = createFileRoute("/_authenticated/party/$partyName/$partyId/home")({
+  validateSearch: (search: Record<string, unknown>): PartyHomeSearch => {
+    const rawChapterId = search?.chapterId;
+    const parsed = Number(rawChapterId);
+    const chapterId = Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+
+    return { chapterId };
+  },
+
   component: PartyHomeTabComponent,
 });
 
-const DEFAULT_NATIONAL_LEADERS_1: PartyLeader[] = [
-  {
-    id: "l1",
-    name: "Chris Martins Otse",
-    role: "National Chairman",
-    avatar:
-      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop",
-  },
-  {
-    id: "l2",
-    name: "Chris Martins Otse",
-    role: "National Chairman",
-    avatar:
-      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop",
-  },
-  {
-    id: "l3",
-    name: "Chris Martins Otse",
-    role: "National Chairman",
-    avatar:
-      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=200&auto=format&fit=crop",
-  },
-];
-
-const DEFAULT_NATIONAL_LEADERS_2: PartyLeader[] = [
-  {
-    id: "l4",
-    name: "Chris Martins Otse",
-    role: "National Chairman",
-    avatar:
-      "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=200&auto=format&fit=crop",
-  },
-  {
-    id: "l5",
-    name: "Chris Martins Otse",
-    role: "National Chairman",
-    avatar:
-      "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=200&auto=format&fit=crop",
-  },
-  {
-    id: "l6",
-    name: "Chris Martins Otse",
-    role: "National Chairman",
-    avatar:
-      "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?q=80&w=200&auto=format&fit=crop",
-  },
-];
-
 function PartyHomeTabComponent() {
+  const { partyId } = Route.useParams();
+  const { chapterId } = Route.useSearch();
+
+  // Query party home data (leadership cards, upcoming events, etc.)
+  const { data: homeRes, isLoading } = useQuery({
+    queryKey: ["partyHome", partyId, chapterId],
+    queryFn: () => getPartyHome({ data: { partyId, chapterId } }),
+    staleTime: Infinity,
+    gcTime: 1000 * 60 * 60 * 24, // 24 hours cache retention
+  });
+
+  const homeData = homeRes?.success ? homeRes.data : null;
+  const nationalLeaders = homeData?.national_leaders ?? [];
+  const dynamicLeaders = homeData?.dynamic_leaders?.leaders ?? [];
+  const dynamicTitle = homeData?.dynamic_leaders?.title || "Key state leaders";
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 3xl:grid-cols-3 gap-8 pb-16">
+      {/* Card 1: National Executive Leaders (Chairman, Deputy Chairman, Secretary) */}
       <PartyLeadersCard
         title="National leaders"
-        leaders={DEFAULT_NATIONAL_LEADERS_1}
+        leaders={nationalLeaders}
+        isLoading={isLoading}
       />
+
+      {/* Card 2: Dynamic Leaders (Key State Chairs if National, or Active Chapter Leaders) */}
       <PartyLeadersCard
-        title="National leaders"
-        leaders={DEFAULT_NATIONAL_LEADERS_2}
+        title={dynamicTitle}
+        leaders={dynamicLeaders}
+        isLoading={isLoading}
       />
+
+      {/* Card 3: Upcoming Events */}
       <PartyEventsCard />
     </div>
   );

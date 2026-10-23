@@ -83,7 +83,7 @@ export type ApplicationData = {
   lgaId?: number;
   partyLogo?: string;
   partyShortName?: string;
-  voters_card_image?: any;
+  voters_card_image?: string | null;
 };
 
 export const getRoleLabel = (r?: string) => {
@@ -100,13 +100,6 @@ export const getRoleLabel = (r?: string) => {
     default:
       return "Polling Unit Agent";
   }
-};
-
-const getPgString = (val: any) => {
-  if (val && typeof val === "object" && "String" in val) {
-    return val.String || "";
-  }
-  return val || "";
 };
 
 const fetchStatesAdapter = async (args: {
@@ -200,7 +193,7 @@ export function PartyApplicationDialog({
     }
   }, [open, application]);
 
-  const votersCardImage = getPgString(application.voters_card_image);
+  const votersCardImage = application.voters_card_image || "";
 
   // Fetch recommendations only if role is polling_agent
   const canFetchRecommendations =

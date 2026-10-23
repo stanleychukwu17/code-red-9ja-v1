@@ -165,7 +165,7 @@ func (s *BodiesService) CompletePartyHierarchySelections(ctx context.Context, pa
 		}
 	}
 	if result.National.NationalID > 0 {
-		result.National.ChapterID, err = s.partiesService.GetOrCreateNationalChapter(ctx, int16(partyID), result.National.NationalID)
+		result.National.ChapterID, err = s.partiesService.GetOrCreateNationalChapter(ctx, int16(partyID), constants.NigeriaCountryID)
 		if err != nil {
 			return PartyHierarchyResult{}, err
 		}

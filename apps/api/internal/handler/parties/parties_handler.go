@@ -97,7 +97,8 @@ type PartiesService interface {
 	UnblockPartyUser(ctx context.Context, input partiesservice.UnblockPartyUserInput) error
 	ListBlockedPartyMembers(ctx context.Context, partyID int16, limit int32, cursor int64) ([]queries.ListBlockedUsersByPartyRow, error)
 	ListSuspendedPartyMembers(ctx context.Context, partyID int16, limit int32, cursor int64) ([]queries.ListSuspendedPartyMembersRow, error)
-	ListPartyAdmins(ctx context.Context, partyID int16) ([]queries.UserWithPlaces, error)
+	ListPartyAdmins(ctx context.Context, partyID int16) ([]partiesservice.PartyAdminItem, error)
+	GetPartyHome(ctx context.Context, partyID int16, chapterID *int32) (*partiesservice.PartyHomeData, error)
 }
 
 // PermissionsService defines methods for checking user permissions
@@ -108,6 +109,11 @@ type PermissionsService interface {
 
 type BodiesService interface {
 	CompletePartyHierarchySelections(ctx context.Context, partyID int64, selections []bodiesservice.PartyHierarchySelection) (bodiesservice.PartyHierarchyResult, error)
+	CheckCountry(ctx context.Context, country_id int16) (queries.GetCountryByIDRow, error)
+	CheckZone(ctx context.Context, zoneID int16) (queries.CZonesNigerium, error)
+	CheckStateByID(ctx context.Context, stateID int16) (queries.CState, error)
+	CheckLGA(ctx context.Context, lgaID int32) (queries.Lga, error)
+	CheckWard(ctx context.Context, wardID int32) (queries.Ward, error)
 }
 
 type FollowsService interface {
@@ -727,7 +733,7 @@ func (h *Handler) GetPartyProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check authentication status, chapter membership, and following status
+	// Check if logged in user is a chapter member, and following the party
 	var isChapterMember bool
 	var isFollowing bool
 	if ok && claims != nil {
@@ -756,6 +762,7 @@ func (h *Handler) GetPartyProfile(w http.ResponseWriter, r *http.Request) {
 		if chapter.CountryID.Valid && chapter.CountryID.Int16 > 0 {
 			countryID = chapter.CountryID.Int16
 		}
+
 		if natID, err := h.partiesService.GetOrCreateNationalChapter(r.Context(), int16(partyID), countryID); err == nil {
 			nationalChapterID = natID
 		}
@@ -794,11 +801,46 @@ func (h *Handler) GetPartyProfile(w http.ResponseWriter, r *http.Request) {
 		"verifications":    verifications,
 	}
 
+	// Resolve chapter geographic name based on chapter tier
+	var chapterGeoName string
+	switch chapter.ChapterType {
+	case "national":
+		countryID := constants.NigeriaCountryID
+		if country, err := h.bodiesService.CheckCountry(r.Context(), countryID); err == nil {
+			chapterGeoName = country.Name
+		}
+	case "zonal":
+		if chapter.ZonalID.Valid && chapter.ZonalID.Int16 > 0 {
+			if zone, err := h.bodiesService.CheckZone(r.Context(), chapter.ZonalID.Int16); err == nil {
+				chapterGeoName = zone.Name
+			}
+		}
+	case "state":
+		if chapter.StateID.Valid && chapter.StateID.Int16 > 0 {
+			if state, err := h.bodiesService.CheckStateByID(r.Context(), chapter.StateID.Int16); err == nil {
+				chapterGeoName = state.Name
+			}
+		}
+	case "lga":
+		if chapter.LgaID.Valid && chapter.LgaID.Int32 > 0 {
+			if lga, err := h.bodiesService.CheckLGA(r.Context(), chapter.LgaID.Int32); err == nil {
+				chapterGeoName = lga.Name
+			}
+		}
+	case "ward":
+		if chapter.WardID.Valid && chapter.WardID.Int32 > 0 {
+			if ward, err := h.bodiesService.CheckWard(r.Context(), chapter.WardID.Int32); err == nil {
+				chapterGeoName = ward.Name
+			}
+		}
+	}
+
 	// final response data
 	responseData := map[string]interface{}{
 		"data":                     filteredParty,
 		"chapter":                  chapter,
 		"chapter_type":             chapter.ChapterType,
+		"chapter_geo_name":         chapterGeoName,
 		"national_chapter_id":      nationalChapterID,
 		"national_member_count":    nationalMemberCount,
 		"chapter_member_count":     chapterMemberCount,
@@ -808,6 +850,46 @@ func (h *Handler) GetPartyProfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Party profile retrieved successfully", responseData)
+}
+
+// GetPartyHome godoc
+// @Summary      Get party home data
+// @Description  Fetches primary data for the party home tab including leadership cards (national leaders and dynamic/chapter leaders) and upcoming components.
+// @Tags         Parties
+// @Produce      json
+// @Param        party_id    path      int  true  "Party ID"
+// @Param        chapter_id  query     int  false "Optional Chapter ID"
+// @Success      200         {object}  map[string]interface{}
+// @Router       /parties/{party_id}/home [get]
+func (h *Handler) GetPartyHome(w http.ResponseWriter, r *http.Request) {
+	// Parse party ID
+	partyIDStr := chi.URLParam(r, "party_id")
+	partyID, err := strconv.ParseInt(partyIDStr, 10, 16)
+	if err != nil || partyID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID")
+		return
+	}
+
+	// Parse optional active chapter ID
+	var chapterID *int32
+	if chapStr := r.URL.Query().Get("chapter_id"); chapStr != "" {
+		if parsed, err := strconv.ParseInt(chapStr, 10, 32); err == nil && parsed > 0 {
+			cid := int32(parsed)
+			chapterID = &cid
+		}
+	}
+
+	// Fetch party home data
+	data, err := h.partiesService.GetPartyHome(r.Context(), int16(partyID), chapterID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch party home data: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Party home data retrieved successfully", map[string]interface{}{
+		"national_leaders": data.NationalLeaders,
+		"dynamic_leaders":  data.DynamicLeaders,
+	})
 }
 
 // JoinPartyHierarchy handles requests to join a party with chapter hierarchy selections.
@@ -2715,6 +2797,11 @@ func (h *Handler) ListPartyOfficials(w http.ResponseWriter, r *http.Request) {
 	// 2. Parse query parameters
 	q := r.URL.Query()
 
+	var directChapterID int64
+	if chapStr := q.Get("chapter_id"); chapStr != "" {
+		directChapterID, _ = strconv.ParseInt(chapStr, 10, 32)
+	}
+
 	var wardID int64
 	if widStr := q.Get("ward_id"); widStr != "" {
 		wardID, _ = strconv.ParseInt(widStr, 10, 32)
@@ -2741,6 +2828,8 @@ func (h *Handler) ListPartyOfficials(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	switch {
+	case directChapterID > 0:
+		chapterID = int32(directChapterID)
 	case wardID > 0:
 		chapterID, err = h.partiesService.GetOrCreateWardChapter(ctx, int16(partyID), int32(wardID), false)
 	case lgaID > 0:

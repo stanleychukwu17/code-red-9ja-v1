@@ -151,6 +151,152 @@ func (s *SeedService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 		chapRows.Close()
 	}
 
+	// Pre-seed any party chapters required by the incoming users batch that do not yet exist
+	{
+		// Composite keys for state, LGA, and ward chapter lookups
+		type stPair struct{ pid, sid int16 }
+		type lgaPair struct {
+			pid int16
+			lid int32
+		}
+		type wardPair struct {
+			pid int16
+			wid int32
+		}
+
+		// Track missing chapters to insert
+		missingNat := make(map[int16]struct{})
+		missingState := make(map[stPair]struct{})
+		missingLga := make(map[lgaPair]struct{})
+		missingWard := make(map[wardPair]struct{})
+
+		// Identify missing chapters across users in the batch
+		for _, u := range users {
+			if u.PartyID == nil || *u.PartyID <= 0 {
+				continue
+			}
+			pID := *u.PartyID
+
+			// National chapter
+			if _, ok := nationalChapters[pID]; !ok {
+				missingNat[pID] = struct{}{}
+			}
+
+			// State chapter
+			if u.CurrentState > 0 {
+				stKey := fmt.Sprintf("%d:%d", pID, u.CurrentState)
+				if _, ok := stateChapters[stKey]; !ok {
+					missingState[stPair{pid: pID, sid: u.CurrentState}] = struct{}{}
+				}
+			}
+
+			// LGA chapter
+			if u.CurrentLga != nil && *u.CurrentLga > 0 {
+				lgaKey := fmt.Sprintf("%d:%d", pID, *u.CurrentLga)
+				if _, ok := lgaChapters[lgaKey]; !ok {
+					missingLga[lgaPair{pid: pID, lid: *u.CurrentLga}] = struct{}{}
+				}
+			}
+
+			// Ward chapter
+			if u.CurrentWard != nil && *u.CurrentWard > 0 {
+				wardKey := fmt.Sprintf("%d:%d", pID, *u.CurrentWard)
+				if _, ok := wardChapters[wardKey]; !ok {
+					missingWard[wardPair{pid: pID, wid: *u.CurrentWard}] = struct{}{}
+				}
+			}
+		}
+
+		if len(missingNat) > 0 || len(missingState) > 0 || len(missingLga) > 0 || len(missingWard) > 0 {
+			chapTx, err := s.pool.Begin(ctx)
+			if err == nil {
+				chapBatch := &pgx.Batch{}
+
+				// Queue missing national chapters
+				for pID := range missingNat {
+					chapBatch.Queue(`
+						INSERT INTO party_chapters (party_id, chapter_type, country_id)
+						VALUES ($1, 'national', $2)
+						ON CONFLICT (party_id, country_id) WHERE chapter_type = 'national'
+						DO UPDATE SET party_id = EXCLUDED.party_id
+						RETURNING id, party_id
+					`, pID, constants.NigeriaCountryID)
+				}
+
+				// Queue missing state chapters
+				for pair := range missingState {
+					chapBatch.Queue(`
+						INSERT INTO party_chapters (party_id, chapter_type, state_id)
+						VALUES ($1, 'state', $2)
+						ON CONFLICT (party_id, state_id) WHERE chapter_type = 'state'
+						DO UPDATE SET party_id = EXCLUDED.party_id
+						RETURNING id, party_id, state_id
+					`, pair.pid, pair.sid)
+				}
+
+				// Queue missing LGA chapters
+				for pair := range missingLga {
+					chapBatch.Queue(`
+						INSERT INTO party_chapters (party_id, chapter_type, state_id, lga_id)
+						SELECT $1, 'lga', l.state_id, l.id
+						FROM lgas l WHERE l.id = $2
+						ON CONFLICT (party_id, lga_id) WHERE chapter_type = 'lga'
+						DO UPDATE SET party_id = EXCLUDED.party_id
+						RETURNING id, party_id, lga_id
+					`, pair.pid, pair.lid)
+				}
+
+				// Queue missing ward chapters
+				for pair := range missingWard {
+					chapBatch.Queue(`
+						INSERT INTO party_chapters (party_id, chapter_type, state_id, lga_id, ward_id)
+						SELECT $1, 'ward', w.state_id, w.lga_id, w.id
+						FROM wards w WHERE w.id = $2
+						ON CONFLICT (party_id, ward_id) WHERE chapter_type = 'ward'
+						DO UPDATE SET party_id = EXCLUDED.party_id
+						RETURNING id, party_id, ward_id
+					`, pair.pid, pair.wid)
+				}
+
+				// Execute batch and update in-memory chapter caches
+				br := chapTx.SendBatch(ctx, chapBatch)
+				for range missingNat {
+					var id int32
+					var pid int16
+					if err := br.QueryRow().Scan(&id, &pid); err == nil {
+						nationalChapters[pid] = id
+					}
+				}
+				for range missingState {
+					var id int32
+					var pid int16
+					var sid int16
+					if err := br.QueryRow().Scan(&id, &pid, &sid); err == nil {
+						stateChapters[fmt.Sprintf("%d:%d", pid, sid)] = id
+					}
+				}
+				for range missingLga {
+					var id int32
+					var pid int16
+					var lid int32
+					if err := br.QueryRow().Scan(&id, &pid, &lid); err == nil {
+						lgaChapters[fmt.Sprintf("%d:%d", pid, lid)] = id
+					}
+				}
+				for range missingWard {
+					var id int32
+					var pid int16
+					var wid int32
+					if err := br.QueryRow().Scan(&id, &pid, &wid); err == nil {
+						wardChapters[fmt.Sprintf("%d:%d", pid, wid)] = id
+					}
+				}
+				_ = br.Close()
+				_ = chapTx.Commit(ctx)
+			}
+		}
+	}
+
 	// preparedUser holds validated and pre-parsed fields (DOB, normalized phone numbers)
 	// paired with the raw request. This avoids re-parsing/re-validating across multiple batch
 	// stages and ensures invalid data fails fast before database transactions are opened.
@@ -277,7 +423,6 @@ func (s *SeedService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 		userBatchResults := tx.SendBatch(ctx, userBatch)
 		type insertedUserMeta struct {
 			id             int64
-			fakeID         int64
 			user           SeedUserRequest
 			formattedPhone string
 			phoneCode      string
@@ -285,7 +430,7 @@ func (s *SeedService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 		}
 		var inserted []insertedUserMeta
 
-		// Read back generated IDs from the primary batch, generate fake IDs,
+		// Read back generated IDs from the primary batch
 		// and collect metadata for newly inserted users (skipping any existing email conflicts).
 		for _, prepUser := range chunk {
 			var newID int64
@@ -299,10 +444,8 @@ func (s *SeedService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 				_ = tx.Rollback(ctx)
 				return "", fmt.Errorf("failed inserting user %s: %w", prepUser.user.Email, err)
 			}
-			fakeID := utils.GenerateFakeID(newID)
 			inserted = append(inserted, insertedUserMeta{
 				id:             newID,
-				fakeID:         fakeID,
 				user:           prepUser.user,
 				formattedPhone: prepUser.formattedPhone,
 				phoneCode:      prepUser.phoneCode,
@@ -318,10 +461,7 @@ func (s *SeedService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 		if len(inserted) > 0 {
 			secBatch := &pgx.Batch{}
 			for _, insertedUser := range inserted {
-				// 1. Update fake_id
-				secBatch.Queue("UPDATE users SET fake_id = $1 WHERE id = $2", insertedUser.fakeID, insertedUser.id)
-
-				// 2. Insert phone number (if formattedPhone is present)
+				// 1. Insert phone number (if formattedPhone is present)
 				if insertedUser.formattedPhone != "" {
 					secBatch.Queue(`
 						INSERT INTO users_phone_numbers (user_id, phone, phonecode, raw_input, on_whatsapp, is_default)
@@ -350,27 +490,12 @@ func (s *SeedService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 					`, db.PageTypeUser, insertedUser.id)
 				}
 
-				// 5. Multi-tier Party Membership Enrollment down to Ward level
+				// 4. Multi-tier Party Membership Enrollment down to Ward level
 				if insertedUser.user.PartyID != nil && *insertedUser.user.PartyID > 0 {
 					pID := *insertedUser.user.PartyID
 
-					// 5a. National Chapter
-					natID, exists := nationalChapters[pID]
-					if !exists {
-						var newNatID int32
-						err := tx.QueryRow(ctx, `
-							INSERT INTO party_chapters (party_id, chapter_type, country_id)
-							VALUES ($1, 'national', $2)
-							ON CONFLICT (party_id, country_id) WHERE chapter_type = 'national'
-							DO UPDATE SET party_id = EXCLUDED.party_id
-							RETURNING id
-						`, pID, constants.NigeriaCountryID).Scan(&newNatID)
-						if err == nil {
-							nationalChapters[pID] = newNatID
-							natID = newNatID
-						}
-					}
-					if natID > 0 {
+					// 4a. National Chapter
+					if natID := nationalChapters[pID]; natID > 0 {
 						secBatch.Queue(`
 							INSERT INTO party_membership (user_id, party_id, chapter_id, status)
 							VALUES ($1, $2, $3, 'active')
@@ -383,25 +508,10 @@ func (s *SeedService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 						`, insertedUser.id, pID, natID)
 					}
 
-					// 5b. State Chapter
+					// 4b. State Chapter
 					if insertedUser.user.CurrentState > 0 {
 						stKey := fmt.Sprintf("%d:%d", pID, insertedUser.user.CurrentState)
-						stID, exists := stateChapters[stKey]
-						if !exists {
-							var newStID int32
-							err := tx.QueryRow(ctx, `
-								INSERT INTO party_chapters (party_id, chapter_type, state_id)
-								VALUES ($1, 'state', $2)
-								ON CONFLICT (party_id, state_id) WHERE chapter_type = 'state'
-								DO UPDATE SET party_id = EXCLUDED.party_id
-								RETURNING id
-							`, pID, insertedUser.user.CurrentState).Scan(&newStID)
-							if err == nil {
-								stateChapters[stKey] = newStID
-								stID = newStID
-							}
-						}
-						if stID > 0 {
+						if stID := stateChapters[stKey]; stID > 0 {
 							secBatch.Queue(`
 								INSERT INTO party_membership (user_id, party_id, chapter_id, status)
 								VALUES ($1, $2, $3, 'active')
@@ -415,26 +525,10 @@ func (s *SeedService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 						}
 					}
 
-					// 5c. LGA Chapter
+					// 4c. LGA Chapter
 					if insertedUser.user.CurrentLga != nil && *insertedUser.user.CurrentLga > 0 {
 						lgaKey := fmt.Sprintf("%d:%d", pID, *insertedUser.user.CurrentLga)
-						lgaCID, exists := lgaChapters[lgaKey]
-						if !exists {
-							var newLgaCID int32
-							err := tx.QueryRow(ctx, `
-								INSERT INTO party_chapters (party_id, chapter_type, state_id, lga_id)
-								SELECT $1, 'lga', l.state_id, l.id
-								FROM lgas l WHERE l.id = $2
-								ON CONFLICT (party_id, lga_id) WHERE chapter_type = 'lga'
-								DO UPDATE SET party_id = EXCLUDED.party_id
-								RETURNING id
-							`, pID, *insertedUser.user.CurrentLga).Scan(&newLgaCID)
-							if err == nil {
-								lgaChapters[lgaKey] = newLgaCID
-								lgaCID = newLgaCID
-							}
-						}
-						if lgaCID > 0 {
+						if lgaCID := lgaChapters[lgaKey]; lgaCID > 0 {
 							secBatch.Queue(`
 								INSERT INTO party_membership (user_id, party_id, chapter_id, status)
 								VALUES ($1, $2, $3, 'active')
@@ -448,26 +542,10 @@ func (s *SeedService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 						}
 					}
 
-					// 5d. Ward Chapter
+					// 4d. Ward Chapter
 					if insertedUser.user.CurrentWard != nil && *insertedUser.user.CurrentWard > 0 {
 						wardKey := fmt.Sprintf("%d:%d", pID, *insertedUser.user.CurrentWard)
-						wardCID, exists := wardChapters[wardKey]
-						if !exists {
-							var newWardCID int32
-							err := tx.QueryRow(ctx, `
-								INSERT INTO party_chapters (party_id, chapter_type, state_id, lga_id, ward_id)
-								SELECT $1, 'ward', w.state_id, w.lga_id, w.id
-								FROM wards w WHERE w.id = $2
-								ON CONFLICT (party_id, ward_id) WHERE chapter_type = 'ward'
-								DO UPDATE SET party_id = EXCLUDED.party_id
-								RETURNING id
-							`, pID, *insertedUser.user.CurrentWard).Scan(&newWardCID)
-							if err == nil {
-								wardChapters[wardKey] = newWardCID
-								wardCID = newWardCID
-							}
-						}
-						if wardCID > 0 {
+						if wardCID := wardChapters[wardKey]; wardCID > 0 {
 							secBatch.Queue(`
 								INSERT INTO party_membership (user_id, party_id, chapter_id, status)
 								VALUES ($1, $2, $3, 'active')

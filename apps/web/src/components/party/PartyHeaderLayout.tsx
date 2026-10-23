@@ -11,9 +11,9 @@ interface PartyHeaderLayoutProps {
   fullName: string;
   isVerified?: boolean;
   verifications?: any[];
-  chapterName?: string;
   chapterLevel?: string;
   chapterType?: string;
+  chapterGeoName?: string;
   isChapterMemberInitial?: boolean;
   isFollowingInitial?: boolean;
   followersDisplay?: string;
@@ -26,39 +26,41 @@ interface PartyHeaderLayoutProps {
   children?: React.ReactNode;
 }
 
-function getChapterTypeBadgeConfig(type?: string) {
+function getChapterTypeBadgeConfig(type?: string, geoName?: string) {
   if (!type) return null;
   const normalized = type.toLowerCase().trim().replace(/\s*chapter\s*/gi, "");
+
+  const prefix = geoName ? `${geoName} ` : "";
 
   switch (normalized) {
     case "national":
       return {
-        label: "National Chapter",
+        label: geoName ? `National (${geoName})` : "National Chapter",
         className: "bg-[#f1f2f6] text-black dark:bg-sidebar-mobile dark:text-c-80",
       };
     case "zonal":
       return {
-        label: "Zonal Chapter",
+        label: `${prefix}Zonal Chapter`,
         className: "bg-[#f4ff81] text-black dark:bg-sidebar-mobile dark:text-c-80",
       };
     case "state":
       return {
-        label: "State Chapter",
+        label: `${prefix}State Chapter`,
         className: "bg-[#ffe57f] text-black dark:bg-sidebar-mobile dark:text-c-80",
       };
     case "lga":
       return {
-        label: "LGA Chapter",
+        label: `${prefix}LGA Chapter`,
         className: "bg-[#efebe9] text-black dark:bg-sidebar-mobile dark:text-c-80",
       };
     case "ward":
       return {
-        label: "Ward Chapter",
+        label: `${prefix}Ward Chapter`,
         className: "bg-[#ffea00] text-black dark:bg-sidebar-mobile dark:text-c-80",
       };
     default:
       return {
-        label: `${normalized.charAt(0).toUpperCase() + normalized.slice(1)} Chapter`,
+        label: `${prefix}${normalized.charAt(0).toUpperCase() + normalized.slice(1)} Chapter`,
         className:
           "bg-zinc-800 text-white border-zinc-700 dark:bg-zinc-700 dark:text-white dark:border-zinc-600",
       };
@@ -73,9 +75,9 @@ export function PartyHeaderLayout({
   fullName,
   isVerified,
   verifications,
-  chapterName,
   chapterLevel,
   chapterType,
+  chapterGeoName,
   isChapterMemberInitial = false,
   isFollowingInitial = false,
   followersDisplay = "0",
@@ -90,7 +92,7 @@ export function PartyHeaderLayout({
   const [isChapterMember, setIsChapterMember] = useState(isChapterMemberInitial);
   const [isFollowing, setIsFollowing] = useState(isFollowingInitial);
   const resolvedChapterType = chapterType || chapterLevel;
-  const chapterBadge = getChapterTypeBadgeConfig(resolvedChapterType);
+  const chapterBadge = getChapterTypeBadgeConfig(resolvedChapterType, chapterGeoName);
 
   // Logarithmic progress for followers ring gauge (0% at 0 followers, 100% at 100,000+ followers)
   const followersPercentage =
@@ -186,11 +188,6 @@ export function PartyHeaderLayout({
                       <div className="flex items-center gap-1 shrink-0 relative -bottom-px">
                         <VerificationBadge id={3} title="Verified Political Party" />
                       </div>
-                    )}
-                    {chapterName && (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-lime-100 text-lime-900 dark:bg-lime-900/40 dark:text-lime-300 border border-lime-300 dark:border-lime-700">
-                        {chapterName} {chapterLevel ? `(${chapterLevel})` : "Chapter"}
-                      </span>
                     )}
                   </div>
                   <p className="text-xs sm:text-sm font-medium text-muted-foreground/90 -translate-y-0.5">{fullName}</p>

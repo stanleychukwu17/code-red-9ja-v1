@@ -55,6 +55,22 @@ CREATE TABLE users (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Automatically generate unique fake_id for users if not provided
+CREATE OR REPLACE FUNCTION set_user_fake_id()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.fake_id IS NULL THEN
+    NEW.fake_id := (floor(random() * 900 + 100)::text || NEW.id::text || floor(random() * 900 + 100)::text)::bigint;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_set_user_fake_id
+BEFORE INSERT ON users
+FOR EACH ROW
+EXECUTE FUNCTION set_user_fake_id();
+
 CREATE INDEX idx_users_party_id ON users(party_id);
 CREATE INDEX idx_users_account_status ON users(account_status);
 
@@ -118,6 +134,8 @@ CREATE TABLE user_more_infos (
 );
 
 -- +goose Down
+DROP TRIGGER IF EXISTS trg_set_user_fake_id ON users;
+DROP FUNCTION IF EXISTS set_user_fake_id();
 DROP TABLE IF EXISTS user_more_infos;
 DROP TABLE IF EXISTS users_phone_numbers;
 DROP TABLE IF EXISTS users_nin;

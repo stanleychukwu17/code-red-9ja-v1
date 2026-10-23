@@ -108,14 +108,8 @@ export function FinancialOverallCard({
 
 /** Simple key-value stat row with icon */
 export function SimpleStatTile({
-  icon,
-  label,
-  value,
-}: {
-  icon?: ReactNode;
-  label: string;
-  value: string;
-}) {
+  icon, label, value,
+}: { icon?: ReactNode; label: string; value: string }) {
   return (
     <div className="h-11 px-3 flex items-center gap-3">
       {icon ?? <FancyAgentIcon className="shrink-0 size-5" />}

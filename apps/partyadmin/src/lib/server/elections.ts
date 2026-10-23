@@ -2,25 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { getCookie } from "@tanstack/react-start/server";
 import { apiFetch } from "./fetch";
 import { API_URL } from "#/lib/config";
-
-const getVal = (val: any) => {
-  if (!val) return "";
-  if (typeof val === "string") return val;
-  if (typeof val === "object" && val !== null && "String" in val && val.Valid)
-    return val.String;
-  return "";
-};
-
-const getId = (val: any): number | undefined => {
-  if (!val) return undefined;
-  if (typeof val === "number") return val;
-  if (typeof val === "object" && val !== null) {
-    if ("Int64" in val && val.Valid) return val.Int64;
-    if ("Int32" in val && val.Valid) return val.Int32;
-    if ("Int16" in val && val.Valid) return val.Int16;
-  }
-  return undefined;
-};
+import { getVal, getId } from "@repo/ui/lib/utils";
 
 export type ElectionFilters = {
   election_group_ids: number[];

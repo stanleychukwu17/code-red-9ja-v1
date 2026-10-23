@@ -34,7 +34,7 @@ type ElectionsService interface {
 	BulkUpdateElectionGroup(ctx context.Context, params elections.BulkUpdateElectionGroupParams) error
 	DeleteElection(ctx context.Context, id int32) error
 	BulkDeleteElections(ctx context.Context, params elections.BulkDeleteElectionsParams) (elections.BulkDeleteElectionsResult, error)
-	GetElectionCandidates(ctx context.Context, electionID int32) ([]queries.ListElectionCandidatesDetailedByElectionIDRow, error)
+	GetElectionCandidates(ctx context.Context, electionID int32) ([]elections.ElectionCandidateItem, error)
 	FieldPartyCandidate(ctx context.Context, election queries.Election, partyID int16, candidateID int64, slot string) error
 	UnfieldPartyCandidate(ctx context.Context, election queries.Election, partyID int16, slot string) error
 	CheckIfUserEverContested(ctx context.Context, userID int64) (bool, error)

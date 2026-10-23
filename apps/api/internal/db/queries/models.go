@@ -227,6 +227,7 @@ type DidNotVoteReason struct {
 
 type Election struct {
 	ID                    int32              `json:"id"`
+	FakeID                pgtype.Int8        `json:"fake_id"`
 	ElectionGroupID       int32              `json:"election_group_id"`
 	StateID               pgtype.Int2        `json:"state_id"`
 	SenatorialDistrictID  pgtype.Int4        `json:"senatorial_district_id"`

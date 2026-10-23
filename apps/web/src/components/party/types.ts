@@ -12,10 +12,14 @@ import {
 } from "lucide-react";
 
 export interface PartyLeader {
-  id: string;
-  name: string;
+  id: string | number;
+  name?: string | null;
   role: string;
-  avatar: string;
+  avatar?: string | null;
+  isVacant?: boolean;
+  is_vacant?: boolean;
+  since?: string | null;
+  username?: string | null;
 }
 
 export interface PartyEvent {
