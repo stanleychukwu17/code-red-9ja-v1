@@ -112,7 +112,7 @@ type UserProfileResponse struct {
 
 // GetBanks handles GET /api/v1/banks
 // @Summary      Get list of banks
-// @Description  Returns a list of real Nigerian banks from Monnify
+// @Description  Returns a list of real Nigerian banks
 // @Tags         Banks
 // @Accept       json
 // @Produce      json
@@ -133,7 +133,7 @@ func (h *Handler) GetBanks(w http.ResponseWriter, r *http.Request) {
 
 // ValidateBankAccount handles GET /api/v1/banks/validate
 // @Summary      Validate bank account
-// @Description  Validates account number and bank code via Monnify, returning the account name
+// @Description  Validates account number and bank code, returning the account name
 // @Tags         Banks
 // @Accept       json
 // @Produce      json

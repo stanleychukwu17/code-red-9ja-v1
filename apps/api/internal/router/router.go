@@ -58,7 +58,6 @@ import (
 	systemsettingshandler "free9ja/api/internal/handler/system_settings"
 	usershandler "free9ja/api/internal/handler/users"
 	wardshandler "free9ja/api/internal/handler/wards"
-	webhookshandler "free9ja/api/internal/handler/webhooks"
 	apimiddleware "free9ja/api/internal/middleware"
 	authservice "free9ja/api/internal/service/auth"
 	blocksservice "free9ja/api/internal/service/blocks"
@@ -198,7 +197,6 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	pollingUnitUpdatesHandler := puupdateshandler.NewHandler(pollingUnitUpdatesService, utilsInstance, distributor)
 	pollingUnitResultsHandler := puresultshandler.NewHandler(pollingUnitResultsService, utilsInstance, distributor)
 	supervisorAssignmentsHandler := supervisorassignmentshandler.NewHandler(supervisorAssignmentsService, utilsInstance)
-	webhookHandler := webhookshandler.NewHandler(partiesService, usersService, utilsInstance)
 	electionResultsHandler := electionresultshandler.NewHandler(pool, utilsInstance)
 	seedHandler := seedhandler.NewHandler(seedService, utilsInstance)
 	systemSettingsHandler := systemsettingshandler.NewHandler(q, utilsInstance)
@@ -328,9 +326,6 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	// page verifications public routes
 	mainRouter.Get("/api/v1/verifications/types", pageVerificationsHandler.ListVerificationTypes)
 	mainRouter.Get("/api/v1/verifications/{pageType}/{pageID}", pageVerificationsHandler.GetPageVerifications)
-
-	// Monnify webhook — must be public (Monnify POSTs from their servers)
-	mainRouter.Post("/api/v1/webhooks/monnify", webhookHandler.HandleMonnify)
 
 	// Testing & recovery wallet provisioning (public/unauthenticated)
 	mainRouter.Post("/api/v1/parties/wallets/provision-missing", partiesHandler.ProvisionMissingPartyWallets)
@@ -583,7 +578,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Put("/api/v1/parties/{id}/agent-payment-allocations", partiesHandler.UpdateAgentPaymentAllocationKobo)
 		r.Patch("/api/v1/parties/{id}/agent-targets", partiesHandler.UpdateAgentAcquisitionTargets)
 		r.Get("/api/v1/parties/{id}/agent-targets", partiesHandler.GetAgentAcquisitionTargets)
-		r.Post("/api/v1/parties/{id}/wallet/deposit-test", partiesHandler.DepositTest)
+		r.Post("/api/v1/parties/{id}/wallet/deposit-test", partiesHandler.Deposit)
 
 		// Marketing Campaigns
 		r.Post("/api/v1/parties/{id}/agent-marketing-campaigns", partiesHandler.CreatePartyMarketingCampaign)

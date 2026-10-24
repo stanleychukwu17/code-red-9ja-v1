@@ -49,6 +49,7 @@ import { Route as AuthenticatedPartyPartyNamePartyIdMembersRouteImport } from '.
 import { Route as AuthenticatedPartyPartyNamePartyIdLeadershipRouteImport } from './routes/_authenticated/party/$partyName.$partyId/leadership'
 import { Route as AuthenticatedPartyPartyNamePartyIdHomeRouteImport } from './routes/_authenticated/party/$partyName.$partyId/home'
 import { Route as AuthenticatedPartyPartyNamePartyIdGroupsRouteImport } from './routes/_authenticated/party/$partyName.$partyId/groups'
+import { Route as AuthenticatedPartyPartyNamePartyIdEventsRouteImport } from './routes/_authenticated/party/$partyName.$partyId/events'
 import { Route as AuthenticatedPartyPartyNamePartyIdAboutRouteImport } from './routes/_authenticated/party/$partyName.$partyId/about'
 import { Route as AuthenticatedPartyOldPartyNamePartyIdHomeRouteImport } from './routes/_authenticated/party/old/$partyName.$partyId.home'
 
@@ -280,6 +281,12 @@ const AuthenticatedPartyPartyNamePartyIdGroupsRoute =
     path: '/groups',
     getParentRoute: () => AuthenticatedPartyPartyNamePartyIdRoute,
   } as any)
+const AuthenticatedPartyPartyNamePartyIdEventsRoute =
+  AuthenticatedPartyPartyNamePartyIdEventsRouteImport.update({
+    id: '/events',
+    path: '/events',
+    getParentRoute: () => AuthenticatedPartyPartyNamePartyIdRoute,
+  } as any)
 const AuthenticatedPartyPartyNamePartyIdAboutRoute =
   AuthenticatedPartyPartyNamePartyIdAboutRouteImport.update({
     id: '/about',
@@ -325,6 +332,7 @@ export interface FileRoutesByFullPath {
   '/profile/$username/': typeof AuthenticatedProfileUsernameIndexRoute
   '/states/$stateId/': typeof AuthenticatedStatesStateIdIndexRoute
   '/party/$partyName/$partyId/about': typeof AuthenticatedPartyPartyNamePartyIdAboutRoute
+  '/party/$partyName/$partyId/events': typeof AuthenticatedPartyPartyNamePartyIdEventsRoute
   '/party/$partyName/$partyId/groups': typeof AuthenticatedPartyPartyNamePartyIdGroupsRoute
   '/party/$partyName/$partyId/home': typeof AuthenticatedPartyPartyNamePartyIdHomeRoute
   '/party/$partyName/$partyId/leadership': typeof AuthenticatedPartyPartyNamePartyIdLeadershipRoute
@@ -366,6 +374,7 @@ export interface FileRoutesByTo {
   '/profile/$username': typeof AuthenticatedProfileUsernameIndexRoute
   '/states/$stateId': typeof AuthenticatedStatesStateIdIndexRoute
   '/party/$partyName/$partyId/about': typeof AuthenticatedPartyPartyNamePartyIdAboutRoute
+  '/party/$partyName/$partyId/events': typeof AuthenticatedPartyPartyNamePartyIdEventsRoute
   '/party/$partyName/$partyId/groups': typeof AuthenticatedPartyPartyNamePartyIdGroupsRoute
   '/party/$partyName/$partyId/home': typeof AuthenticatedPartyPartyNamePartyIdHomeRoute
   '/party/$partyName/$partyId/leadership': typeof AuthenticatedPartyPartyNamePartyIdLeadershipRoute
@@ -411,6 +420,7 @@ export interface FileRoutesById {
   '/_authenticated/profile/$username/': typeof AuthenticatedProfileUsernameIndexRoute
   '/_authenticated/states/$stateId/': typeof AuthenticatedStatesStateIdIndexRoute
   '/_authenticated/party/$partyName/$partyId/about': typeof AuthenticatedPartyPartyNamePartyIdAboutRoute
+  '/_authenticated/party/$partyName/$partyId/events': typeof AuthenticatedPartyPartyNamePartyIdEventsRoute
   '/_authenticated/party/$partyName/$partyId/groups': typeof AuthenticatedPartyPartyNamePartyIdGroupsRoute
   '/_authenticated/party/$partyName/$partyId/home': typeof AuthenticatedPartyPartyNamePartyIdHomeRoute
   '/_authenticated/party/$partyName/$partyId/leadership': typeof AuthenticatedPartyPartyNamePartyIdLeadershipRoute
@@ -456,6 +466,7 @@ export interface FileRouteTypes {
     | '/profile/$username/'
     | '/states/$stateId/'
     | '/party/$partyName/$partyId/about'
+    | '/party/$partyName/$partyId/events'
     | '/party/$partyName/$partyId/groups'
     | '/party/$partyName/$partyId/home'
     | '/party/$partyName/$partyId/leadership'
@@ -497,6 +508,7 @@ export interface FileRouteTypes {
     | '/profile/$username'
     | '/states/$stateId'
     | '/party/$partyName/$partyId/about'
+    | '/party/$partyName/$partyId/events'
     | '/party/$partyName/$partyId/groups'
     | '/party/$partyName/$partyId/home'
     | '/party/$partyName/$partyId/leadership'
@@ -541,6 +553,7 @@ export interface FileRouteTypes {
     | '/_authenticated/profile/$username/'
     | '/_authenticated/states/$stateId/'
     | '/_authenticated/party/$partyName/$partyId/about'
+    | '/_authenticated/party/$partyName/$partyId/events'
     | '/_authenticated/party/$partyName/$partyId/groups'
     | '/_authenticated/party/$partyName/$partyId/home'
     | '/_authenticated/party/$partyName/$partyId/leadership'
@@ -845,6 +858,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPartyPartyNamePartyIdGroupsRouteImport
       parentRoute: typeof AuthenticatedPartyPartyNamePartyIdRoute
     }
+    '/_authenticated/party/$partyName/$partyId/events': {
+      id: '/_authenticated/party/$partyName/$partyId/events'
+      path: '/events'
+      fullPath: '/party/$partyName/$partyId/events'
+      preLoaderRoute: typeof AuthenticatedPartyPartyNamePartyIdEventsRouteImport
+      parentRoute: typeof AuthenticatedPartyPartyNamePartyIdRoute
+    }
     '/_authenticated/party/$partyName/$partyId/about': {
       id: '/_authenticated/party/$partyName/$partyId/about'
       path: '/about'
@@ -894,6 +914,7 @@ const AuthenticatedProfileUsernameRouteWithChildren =
 
 interface AuthenticatedPartyPartyNamePartyIdRouteChildren {
   AuthenticatedPartyPartyNamePartyIdAboutRoute: typeof AuthenticatedPartyPartyNamePartyIdAboutRoute
+  AuthenticatedPartyPartyNamePartyIdEventsRoute: typeof AuthenticatedPartyPartyNamePartyIdEventsRoute
   AuthenticatedPartyPartyNamePartyIdGroupsRoute: typeof AuthenticatedPartyPartyNamePartyIdGroupsRoute
   AuthenticatedPartyPartyNamePartyIdHomeRoute: typeof AuthenticatedPartyPartyNamePartyIdHomeRoute
   AuthenticatedPartyPartyNamePartyIdLeadershipRoute: typeof AuthenticatedPartyPartyNamePartyIdLeadershipRoute
@@ -909,6 +930,8 @@ const AuthenticatedPartyPartyNamePartyIdRouteChildren: AuthenticatedPartyPartyNa
   {
     AuthenticatedPartyPartyNamePartyIdAboutRoute:
       AuthenticatedPartyPartyNamePartyIdAboutRoute,
+    AuthenticatedPartyPartyNamePartyIdEventsRoute:
+      AuthenticatedPartyPartyNamePartyIdEventsRoute,
     AuthenticatedPartyPartyNamePartyIdGroupsRoute:
       AuthenticatedPartyPartyNamePartyIdGroupsRoute,
     AuthenticatedPartyPartyNamePartyIdHomeRoute:

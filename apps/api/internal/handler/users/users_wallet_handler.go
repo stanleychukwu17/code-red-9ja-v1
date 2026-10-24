@@ -230,7 +230,7 @@ type UserWithdrawRequest struct {
 
 // CreateUserWalletHandler handles POST /api/v1/users/{id}/wallet
 // @Summary      Create a wallet for a user (admin / recovery)
-// @Description  Manually provisions a Monnify reserved virtual account for a user that does not yet have a wallet.
+// @Description  Manually provisions a reserved virtual account for a user that does not yet have a wallet.
 // @Tags         Users
 // @Accept       json
 // @Produce      json
@@ -321,7 +321,7 @@ func containsStringHelper(s, substr string) bool {
 
 // ProvisionMissingUserWallets godoc
 // @Summary      Provision missing wallets for users
-// @Description  Iterates over all existing users and provisions a Monnify reserved account wallet for any user that currently lacks one. Used primarily for testing and manual recovery.
+// @Description  Iterates over all existing users and provisions a wallet for any user that currently lacks one. Used primarily for testing and manual recovery.
 // @Tags         Users
 // @Accept       json
 // @Produce      json

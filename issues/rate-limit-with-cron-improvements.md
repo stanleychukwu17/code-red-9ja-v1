@@ -53,7 +53,7 @@ In an enterprise Go backend, rate limiting is handled across two distinct bounda
      }
      ```
 
-#### B. Outbound Rate Limiting (Calling 3rd-Party APIs like INEC, Gemini, Monnify, Twilio)
+#### B. Outbound Rate Limiting (Calling 3rd-Party APIs like INEC, Gemini, Twilio)
 
 When your background workers poll external services:
 

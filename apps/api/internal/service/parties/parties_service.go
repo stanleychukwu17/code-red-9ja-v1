@@ -113,8 +113,7 @@ func (s *PartiesService) SetFollowsService(fs FollowsService) {
 	s.followsService = fs
 }
 
-// CreateParty inserts a party into the database and, if a Monnify client is
-// configured, immediately provisions a reserved virtual account (wallet) for it.
+// CreateParty inserts a party into the database and provisions a wallet for it.
 func (s *PartiesService) CreateParty(ctx context.Context, shortName, name, logo string, logoFileID *int64, displayOrder int32, colorHex, darkColorHex, coverImage *string, coverImageFileID *int64, coverPositionY *int16, dateFounded *string) (queries.Party, error) {
 	party, err := s.queries.CreateParty(ctx, queries.CreatePartyParams{
 		ShortName:        shortName,
@@ -898,7 +897,7 @@ func (s *PartiesService) GetPartyWalletTransactions(ctx context.Context, partyID
 
 // ── Webhook-facing methods (called by the webhook handler) ───────────────────
 
-// GetWalletByAccountReference looks up a wallet by the Monnify account reference.
+// GetWalletByAccountReference looks up a wallet by its account reference.
 func (s *PartiesService) GetWalletByAccountReference(ctx context.Context, accountReference string) (queries.PartyWallet, error) {
 	return s.queries.GetPartyWalletByAccountReference(ctx, accountReference)
 }
@@ -1014,7 +1013,7 @@ func (s *PartiesService) WithdrawFromWallet(
 }
 
 // ProvisionMissingWallets finds all political parties that do not have a wallet
-// and provisions a Monnify reserved virtual account for each.
+// and provisions a wallet for each.
 func (s *PartiesService) ProvisionMissingWallets(ctx context.Context) (int, int, error) {
 	PartiesWithNoWallet, err := s.queries.ListPartiesWithoutWallet(ctx)
 	if err != nil {

@@ -115,7 +115,7 @@ When millions of citizens follow live election tallies, they refresh the electio
 
 ---
 
-## 5. External API Quotas (Google Gemini & Monnify)
+## 5. External API Quotas (Google Gemini)
 
 ### Context & The Hidden Trap
 When polling units close, thousands of polling unit agents upload photo scans of the official INEC EC8A result sheets.
@@ -125,9 +125,6 @@ When polling units close, thousands of polling unit agents upload photo scans of
   - **The Risk**: Free or basic Google AI tiers cap requests at **15 Requests Per Minute (RPM)**. On election afternoon, uploading 100 sheets in a minute will cause Google to return `HTTP 429 Too Many Requests`, halting the AI result extraction pipeline.
   - [ ] Ensure the Google Cloud Project has **active credit card billing (Tier 1+)** enabled.
   - [ ] Check Google Cloud Console quotas for `Generative Language API` Requests Per Minute (RPM) and ensure the quota supports at least **60 to 120 RPM**.
-
-- [ ] **Monnify Webhook & Virtual Account Quotas**:
-  - [ ] Contact Monnify support prior to election week to ensure your account limits and webhook rate limits are uncapped for high-volume transactions and agent allowance disbursements.
 
 ---
 

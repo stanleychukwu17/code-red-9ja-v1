@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogPadding } from
 import { Loader2, Coins, AlertCircle, Building2, ShieldAlert } from "lucide-react";
 import { useUserParty } from "#/hooks/useUserParty";
 import { useUser } from "#/hooks/useUser";
-import { fundPartyWalletTest } from "#/lib/server/parties";
+import { fundPartyWallet } from "#/lib/server/parties";
 import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@repo/ui/lib/utils";
@@ -60,13 +60,13 @@ export function AccountDetailsDialog({
     }
   }, [open, defaultAmount]);
 
-  // Mutation to credit test funds to party wallet
+  // Mutation to credit funds to party wallet
   const fundMutation = useMutation({
-    mutationFn: (variables: { partyID: number; amountKobo: number }) => fundPartyWalletTest({ data: variables }),
+    mutationFn: (variables: { partyID: number; amountKobo: number }) => fundPartyWallet({ data: variables }),
     onSuccess: (res) => {
       if (res && res.success) {
         toast.success(
-          `Successfully credited ₦${fundAmount.toLocaleString()} to ${party?.name || "party"} wallet!`,
+          `Successfully credited ₦${fundAmount.toLocaleString()} to ${party?.short_name} wallet!`,
         );
         // Refresh related party balances and transaction queries
         if (partyId) {
@@ -103,9 +103,7 @@ export function AccountDetailsDialog({
 
     // Direct deposit is currently restricted to platform admins
     if (!isAdmin) {
-      toast.error(
-        "Party administrators cannot directly deposit funds yet. Please contact a platform administrator.",
-      );
+      toast.error("Party administrators cannot directly deposit funds yet. Please contact a platform administrator.",);
       return;
     }
 
@@ -124,58 +122,60 @@ export function AccountDetailsDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-145 p-0 rounded-2xl border-none shadow-2xl overflow-hidden">
+      <DialogContent className="max-w-145 p-0 rounded-2xl border border-border shadow-2xl overflow-hidden bg-background">
         <DialogHeader title="Deposit Treasury Funds" />
 
         <DialogPadding className="space-y-6 mb-2 max-h-[65vh] overflow-y-auto">
           {/* Role-based notice */}
           {isAdmin ? (
-            <div className="flex items-start gap-3 rounded-xl bg-[#edf3ff] px-4 py-3">
-              <Coins className="size-5 shrink-0 text-[#3182ce] mt-0.5" />
-              <p className="leading-6 text-sm font-medium text-[#2b6cb0]">
+            <div className="flex items-start gap-3 rounded-xl bg-blue-500/10 border border-blue-500/20 px-4 py-3">
+              <Coins className="size-5 shrink-0 text-blue-600 dark:text-blue-400 mt-0.5" />
+              <p className="leading-6 text-sm font-medium text-blue-800 dark:text-blue-300">
                 Record funds transferred or deposited into Free9ja to immediately credit this party's treasury wallet.
               </p>
             </div>
           ) : (
-            <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 space-y-3">
+            <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 space-y-3">
               <div className="flex items-start gap-2.5">
-                <ShieldAlert className="size-5 text-amber-700 shrink-0 mt-0.5" />
+                <ShieldAlert className="size-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                 <div>
-                  <h4 className="text-sm font-bold text-amber-900">
+                  <h4 className="text-sm font-bold text-amber-950 dark:text-amber-200">
                     Party Admin Direct Deposit Pending
                   </h4>
-                  <p className="text-xs text-amber-800 mt-1 leading-relaxed">
+                  <p className="text-xs text-amber-900/80 dark:text-amber-300/80 mt-1 leading-relaxed">
                     Direct automated deposit confirmation for party administrators is currently being finalized.
                     To credit your party wallet, please make a bank transfer to Free9ja's official treasury and contact a platform administrator with your payment receipt.
                   </p>
                 </div>
               </div>
 
-              <div className="border-t border-amber-200/60 pt-3 space-y-1.5 text-xs text-amber-900">
+              <div className="border-t border-amber-500/20 pt-3 space-y-1.5 text-xs text-amber-950 dark:text-amber-200">
                 <div className="flex items-center gap-2">
-                  <Building2 className="size-4 text-amber-700 shrink-0" />
+                  <Building2 className="size-4 text-amber-600 dark:text-amber-400 shrink-0" />
                   <span className="font-semibold">Support Desk:</span>
-                  <span>support@free9ja.com</span>
+                  <span className="text-c-70">support@free9ja.com</span>
                 </div>
-                <div className="pl-6 text-amber-700">
-                  Reference: <span className="font-mono font-semibold">PARTY-{partyId || "0"} ({party?.short_name || "TREASURY"})</span>
+                <div className="pl-6 text-c-60">
+                  Reference: <span className="font-mono font-semibold text-c-80">PARTY-{partyId || "0"} ({party?.short_name || "TREASURY"})</span>
                 </div>
               </div>
             </div>
           )}
 
           {/* Deposit Form */}
-          <div className="border border-emerald-500/25 rounded-2xl p-5 space-y-4 bg-emerald-50/20">
+          <div className="border border-emerald-500/25 rounded-2xl p-5 space-y-4 bg-emerald-500/5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Coins className="size-5 text-[#22c55e]" />
+                <Coins className="size-5 text-emerald-500" />
                 <h4 className="text-sm font-bold text-c-80">
                   Direct Treasury Credit
                 </h4>
               </div>
               <span className={cn(
-                "text-[11px] font-semibold px-2.5 py-0.5 rounded-full",
-                isAdmin ? "text-emerald-700 bg-emerald-100" : "text-amber-800 bg-amber-100"
+                "text-[11px] font-semibold px-2.5 py-0.5 rounded-full border",
+                isAdmin
+                  ? "text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/50 border-emerald-500/20"
+                  : "text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/50 border-amber-500/20"
               )}>
                 {isAdmin ? "Admin Authorized" : "Admin Only"}
               </span>
@@ -199,7 +199,7 @@ export function AccountDetailsDialog({
                       "text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all cursor-pointer",
                       fundAmount === Math.ceil(defaultAmount)
                         ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
-                        : "bg-white text-emerald-700 border-emerald-300 hover:border-emerald-500",
+                        : "bg-c-5 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:border-emerald-500 hover:bg-emerald-500/10",
                     )}
                   >
                     Required Deficit: ₦{Math.ceil(defaultAmount).toLocaleString()}
@@ -216,7 +216,7 @@ export function AccountDetailsDialog({
                         "text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all cursor-pointer",
                         isSelected
                           ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
-                          : "bg-white text-c-70 border-gray-200 hover:border-emerald-400 hover:text-emerald-700",
+                          : "bg-c-5 text-c-70 border-border hover:border-emerald-500/50 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-hover-5",
                       )}
                     >
                       {preset.label}
@@ -228,7 +228,7 @@ export function AccountDetailsDialog({
 
             {/* Amount input & Submit button */}
             <div className="flex flex-col sm:flex-row gap-3 pt-1">
-              <div className="flex items-center bg-[#f1f1f4] rounded-xl px-3.5 py-2 flex-1 border border-transparent focus-within:border-emerald-500 focus-within:bg-white transition-all">
+              <div className="flex items-center bg-input-dialog rounded-xl px-3.5 py-2 flex-1 border border-border focus-within:border-emerald-500 focus-within:bg-input-dialog-active transition-all">
                 <span className="text-sm font-bold text-c-60 mr-1.5 select-none">₦</span>
                 <input
                   type="text"
@@ -247,8 +247,8 @@ export function AccountDetailsDialog({
                 className={cn(
                   "rounded-xl px-6 h-10 text-[13px] font-bold border-none shadow-sm transition-all duration-150 shrink-0 cursor-pointer disabled:opacity-50",
                   isAdmin
-                    ? "bg-[#22c55e] hover:bg-[#16a34a] text-white"
-                    : "bg-gray-200 text-gray-500 cursor-not-allowed hover:bg-gray-200"
+                    ? "bg-emerald-600 hover:bg-emerald-500 text-white"
+                    : "bg-c-10 text-c-50 cursor-not-allowed hover:bg-c-10"
                 )}
                 disabled={fundAmount <= 0 || fundMutation.isPending || !isAdmin}
               >
@@ -267,7 +267,7 @@ export function AccountDetailsDialog({
           </div>
         </DialogPadding>
 
-        <DialogFooter className="border-t border-gray-100 pt-3 pb-4">
+        <DialogFooter className="border-t border-border pt-3 pb-4">
           <Button variant="deepGrey" size="lg" onClick={handleClose}>
             Close
           </Button>

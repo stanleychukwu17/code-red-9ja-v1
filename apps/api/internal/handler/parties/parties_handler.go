@@ -407,7 +407,7 @@ func (h *Handler) CreateParty(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 3. Create the party in the database and provision a wallet via Monnify
+	// 3. Create the party in the database and provision a wallet
 	var colorHexPtr, darkColorHexPtr *string
 	if req.ColorHex != "" {
 		colorHexPtr = &req.ColorHex
@@ -1433,7 +1433,7 @@ type WithdrawRequest struct {
 
 // CreatePartyWalletHandler godoc
 // @Summary      Create a wallet for a party (admin)
-// @Description  Manually provisions a Monnify reserved virtual account for a party that does not yet have a wallet. Idempotent — returns an error if the party already has a wallet.
+// @Description  Manually provisions a reserved virtual account for a party that does not yet have a wallet. Idempotent — returns an error if the party already has a wallet.
 // @Tags         Parties
 // @Accept       json
 // @Produce      json
@@ -1488,7 +1488,7 @@ func containsStringHelper(s, substr string) bool {
 
 // ProvisionMissingPartyWallets godoc
 // @Summary      Provision missing wallets for political parties
-// @Description  Iterates over all existing political parties and provisions a Monnify reserved account wallet for any party that currently lacks one. Used primarily for testing and manual recovery.
+// @Description  Iterates over all existing political parties and provisions a wallet for any party that currently lacks one. Used primarily for testing and manual recovery.
 // @Tags         Parties
 // @Accept       json
 // @Produce      json
@@ -1852,9 +1852,9 @@ func (h *Handler) GetAgentPaymentAllocationKobo(w http.ResponseWriter, r *http.R
 	})
 }
 
-// DepositTest godoc
-// @Summary      Simulate deposit to party wallet
-// @Description  Directly credits a party's wallet balance (useful in sandbox/testing)
+// Deposit godoc
+// @Summary      Direct deposit to party wallet
+// @Description  Directly credits a party's wallet balance
 // @Tags         Parties
 // @Accept       json
 // @Produce      json
@@ -1863,7 +1863,8 @@ func (h *Handler) GetAgentPaymentAllocationKobo(w http.ResponseWriter, r *http.R
 // @Success      200  {object} map[string]interface{} "Wallet funded successfully"
 // @Security     BearerAuth
 // @Router       /parties/{id}/wallet/deposit-test [post]
-func (h *Handler) DepositTest(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Deposit(w http.ResponseWriter, r *http.Request) {
+	// Extract and validate target party ID from URL parameter
 	idStr := chi.URLParam(r, "id")
 	partyID, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -1871,6 +1872,7 @@ func (h *Handler) DepositTest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Verify authenticated caller claims from context
 	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
 	if !ok || claims == nil {
 		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
@@ -1888,6 +1890,7 @@ func (h *Handler) DepositTest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Parse and validate deposit request payload
 	var req DepositAllowanceRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
@@ -1899,16 +1902,19 @@ func (h *Handler) DepositTest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Retrieve party wallet
 	wallet, err := h.partiesService.GetPartyWallet(r.Context(), int16(partyID))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Wallet not found for party: "+err.Error())
 		return
 	}
 
+	// Prepare audit metadata and unique transaction reference
 	txRef := fmt.Sprintf("deposit-%d-%d", partyID, time.Now().UnixNano())
 	payerName := fmt.Sprintf("Admin %s", claims.Username)
 	narration := fmt.Sprintf("Direct deposit to party wallet confirmed by %s", claims.Username)
 
+	// Credit wallet balance with transaction record
 	_, err = h.partiesService.CreditWallet(
 		r.Context(),
 		wallet.ID,
@@ -1925,6 +1931,7 @@ func (h *Handler) DepositTest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Return success response with wallet ID
 	h.utils.RespondSuccess(w, http.StatusOK, "Wallet funded successfully", map[string]interface{}{
 		"wallet_id": wallet.ID,
 	})

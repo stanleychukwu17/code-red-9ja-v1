@@ -156,6 +156,7 @@ export const getPartyProfile = createServerFn()
 					data: PublicPartyProfile;
 					chapter?: any;
 					chapter_type?: string;
+					chapter_name?: string;
 					chapter_geo_name?: string;
 					national_chapter_id?: number;
 					national_member_count?: number;

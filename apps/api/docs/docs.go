@@ -1949,7 +1949,7 @@ const docTemplate = `{
         },
         "/banks": {
             "get": {
-                "description": "Returns a list of real Nigerian banks from Monnify",
+                "description": "Returns a list of real Nigerian banks",
                 "consumes": [
                     "application/json"
                 ],
@@ -1980,7 +1980,7 @@ const docTemplate = `{
         },
         "/banks/validate": {
             "get": {
-                "description": "Validates account number and bank code via Monnify, returning the account name",
+                "description": "Validates account number and bank code, returning the account name",
                 "consumes": [
                     "application/json"
                 ],
@@ -5098,7 +5098,7 @@ const docTemplate = `{
         },
         "/parties/wallets/provision-missing": {
             "post": {
-                "description": "Iterates over all existing political parties and provisions a Monnify reserved account wallet for any party that currently lacks one. Used primarily for testing and manual recovery.",
+                "description": "Iterates over all existing political parties and provisions a wallet for any party that currently lacks one. Used primarily for testing and manual recovery.",
                 "consumes": [
                     "application/json"
                 ],
@@ -5781,7 +5781,7 @@ const docTemplate = `{
                 }
             },
             "post": {
-                "description": "Manually provisions a Monnify reserved virtual account for a party that does not yet have a wallet. Idempotent — returns an error if the party already has a wallet.",
+                "description": "Manually provisions a reserved virtual account for a party that does not yet have a wallet. Idempotent — returns an error if the party already has a wallet.",
                 "consumes": [
                     "application/json"
                 ],
@@ -9473,7 +9473,7 @@ const docTemplate = `{
         },
         "/users/wallets/provision-missing": {
             "post": {
-                "description": "Iterates over all existing users and provisions a Monnify reserved account wallet for any user that currently lacks one. Used primarily for testing and manual recovery.",
+                "description": "Iterates over all existing users and provisions a wallet for any user that currently lacks one. Used primarily for testing and manual recovery.",
                 "consumes": [
                     "application/json"
                 ],
@@ -9504,7 +9504,7 @@ const docTemplate = `{
         },
         "/users/{id}/wallet": {
             "post": {
-                "description": "Manually provisions a Monnify reserved virtual account for a user that does not yet have a wallet.",
+                "description": "Manually provisions a reserved virtual account for a user that does not yet have a wallet.",
                 "consumes": [
                     "application/json"
                 ],

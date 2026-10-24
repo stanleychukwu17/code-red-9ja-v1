@@ -364,7 +364,7 @@ export const updatePartyAgentTargets = createServerFn({ method: "POST" })
   });
 
 // Simulate funding party wallet (test environments)
-export const fundPartyWalletTest = createServerFn({ method: "POST" })
+export const fundPartyWallet = createServerFn({ method: "POST" })
   .inputValidator(
     (data: { partyID: string | number; amountKobo: number }) => data,
   )

@@ -49,7 +49,7 @@ func (s *UsersService) GetUserWalletTransactions(ctx context.Context, userID int
 	})
 }
 
-// GetUserWalletByAccountReference looks up a user's wallet by its Monnify account reference.
+// GetUserWalletByAccountReference looks up a user's wallet by its account reference.
 func (s *UsersService) GetUserWalletByAccountReference(ctx context.Context, accountReference string) (queries.UserWallet, error) {
 	return s.queries.GetUserWalletByAccountReference(ctx, accountReference)
 }
@@ -152,7 +152,7 @@ func (s *UsersService) WithdrawFromUserWallet(
 }
 
 // ProvisionMissingWallets finds all users that do not have a wallet
-// and provisions a Monnify reserved virtual account for each.
+// and provisions a wallet for each.
 func (s *UsersService) ProvisionMissingWallets(ctx context.Context) (int, int, error) {
 	unWalletUsers, err := s.queries.ListUsersWithoutWallet(ctx)
 	if err != nil {

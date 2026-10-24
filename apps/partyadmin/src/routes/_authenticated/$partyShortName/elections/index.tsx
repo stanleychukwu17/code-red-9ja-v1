@@ -22,9 +22,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import type { ElectionGroupType } from "#/components/tiles/election-group-tile";
 import { useUserParty } from "#/hooks/useUserParty";
 
-export const Route = createFileRoute(
-  "/_authenticated/$partyShortName/elections/",
-)({
+export const Route = createFileRoute("/_authenticated/$partyShortName/elections/")({
   head: () => getPageHeader({ title: "Elections" }),
   component: RouteComponent,
 });

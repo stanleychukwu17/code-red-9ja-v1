@@ -27,16 +27,15 @@ const APPOINTMENT_BADGE_STYLES: Record<string, string> = {
   interim: "bg-purple-600 text-white dark:bg-purple-500/20 dark:text-purple-300 dark:border dark:border-purple-500/30",
 };
 
+type OccupiedPositionCardProps = {
+  official: PartyOfficialItem;
+  positionTitle: string;
+};
+
 /**
  * Occupied Position Card
  */
-function OccupiedPositionCard({
-  official,
-  positionTitle,
-}: {
-  official: PartyOfficialItem;
-  positionTitle: string;
-}) {
+function OccupiedPositionCard({ official, positionTitle }: OccupiedPositionCardProps) {
   const fullName = [official.first_name, official.last_name].filter(Boolean).join(" ");
   const profileUrl = official.username ? APP_URL.profile(official.username) : "#";
 
@@ -120,10 +119,14 @@ function OccupiedPositionCard({
   );
 }
 
+type VacantPositionCardProps = {
+  position: PartyPositionItem;
+};
+
 /**
  * Vacant Position Card
  */
-function VacantPositionCard({ position }: { position: PartyPositionItem }) {
+function VacantPositionCard({ position }: VacantPositionCardProps) {
   return (
     <div className="flex flex-col items-center justify-start text-center w-full max-w-60">
       {/* Vacant circular gradient avatar */}
