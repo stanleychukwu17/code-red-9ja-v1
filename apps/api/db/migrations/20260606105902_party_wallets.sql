@@ -45,7 +45,27 @@ CREATE TABLE party_wallet_transactions (
 CREATE INDEX idx_party_wallet_tx_wallet_id ON party_wallet_transactions(wallet_id, id DESC);
 CREATE INDEX idx_party_wallet_transactions_category ON party_wallet_transactions(transaction_category);
 
+-- +goose StatementBegin
+CREATE OR REPLACE FUNCTION trigger_auto_create_party_wallet()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO party_wallets (party_id, account_reference, account_numbers, balance_kobo)
+  VALUES (NEW.id, 'free9ja-party-' || NEW.id, '[]'::jsonb, 0)
+  ON CONFLICT (party_id) DO NOTHING;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+-- +goose StatementEnd
+
+DROP TRIGGER IF EXISTS trg_party_auto_create_wallet ON parties;
+CREATE TRIGGER trg_party_auto_create_wallet
+AFTER INSERT ON parties
+FOR EACH ROW
+EXECUTE FUNCTION trigger_auto_create_party_wallet();
+
 -- +goose Down
+DROP TRIGGER IF EXISTS trg_party_auto_create_wallet ON parties;
+DROP FUNCTION IF EXISTS trigger_auto_create_party_wallet();
 DROP INDEX IF EXISTS idx_party_wallet_transactions_category;
 DROP INDEX IF EXISTS idx_party_wallet_tx_wallet_id;
 DROP TABLE IF EXISTS party_wallet_transactions;

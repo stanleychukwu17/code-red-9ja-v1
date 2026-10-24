@@ -168,8 +168,7 @@ function ReadinessComponent() {
         {/* Right Hand Column */}
         <div className="space-y-6">
           <FinancialOverallCard
-            // walletBalance={wallet?.balance_kobo || 0}
-            walletBalance={+60}
+            walletBalance={wallet?.balance_kobo || 0}
             slots={party?.slots || 0}
             agentPaymentBalance={party?.agent_payment_balance_kobo || 0}
             activeCampaignsCount={activeCampaignsCount}

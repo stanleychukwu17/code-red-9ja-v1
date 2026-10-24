@@ -20,7 +20,7 @@ export const Route = createFileRoute("/_authenticated/party/$partyName/$partyId/
 });
 
 function PartyHomeTabComponent() {
-  const { partyId } = Route.useParams();
+  const { partyId, partyName } = Route.useParams();
   const { chapterId } = Route.useSearch();
 
   // Query party home data (leadership cards, upcoming events, etc.)
@@ -36,6 +36,9 @@ function PartyHomeTabComponent() {
   const dynamicLeaders = homeData?.dynamic_leaders?.leaders ?? [];
   const dynamicTitle = homeData?.dynamic_leaders?.title || "Key state leaders";
 
+  const nationalLeadershipHref = `/party/${partyName}/${partyId}/leadership`;
+  const dynamicLeadershipHref = `/party/${partyName}/${partyId}/leadership${chapterId ? `?chapterId=${chapterId}` : ""}`;
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 3xl:grid-cols-3 gap-8 pb-16">
       {/* Card 1: National Executive Leaders (Chairman, Deputy Chairman, Secretary) */}
@@ -43,6 +46,7 @@ function PartyHomeTabComponent() {
         title="National leaders"
         leaders={nationalLeaders}
         isLoading={isLoading}
+        href={nationalLeadershipHref}
       />
 
       {/* Card 2: Dynamic Leaders (Key State Chairs if National, or Active Chapter Leaders) */}
@@ -50,6 +54,7 @@ function PartyHomeTabComponent() {
         title={dynamicTitle}
         leaders={dynamicLeaders}
         isLoading={isLoading}
+        href={dynamicLeadershipHref}
       />
 
       {/* Card 3: Upcoming Events */}

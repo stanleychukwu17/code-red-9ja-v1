@@ -1,4 +1,4 @@
-import * as React from "react";
+import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useDebounceValue } from "usehooks-ts";
@@ -155,14 +155,14 @@ function PartyLeadershipTabComponent() {
     partyProfileQueryOptions(partyId, partyName, chapterId),
   );
 
-  const activeChapterType = profileRes?.success ? profileRes.data.chapter_type || "national" : "national";
+  const activeChapterType = profileRes?.success ? profileRes.data?.chapter_type || "national" : "national";
   const activeChapterGeoName = profileRes?.success ? profileRes.data.chapter_geo_name : undefined;
 
   // Search and filter states
-  const [searchQuery, setSearchQuery] = React.useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery] = useDebounceValue(searchQuery, 300);
-  const [showVacant, setShowVacant] = React.useState(true);
-  const [appointmentTypeFilter, setAppointmentTypeFilter] = React.useState("all");
+  const [showVacant, setShowVacant] = useState(true);
+  const [appointmentTypeFilter, setAppointmentTypeFilter] = useState("all");
 
   // 1. Fetch positions catalog
   const { data: positionsRes, isLoading: isPositionsLoading } = useQuery({
@@ -171,7 +171,7 @@ function PartyLeadershipTabComponent() {
     staleTime: Infinity,
   });
 
-  const positions: PartyPositionItem[] = React.useMemo(() => {
+  const positions: PartyPositionItem[] = useMemo(() => {
     if (!positionsRes?.success || !positionsRes.data) return [];
     return positionsRes.data.positions || [
       ...(positionsRes.data.default || []),
@@ -192,12 +192,12 @@ function PartyLeadershipTabComponent() {
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
-  const rawOfficials: PartyOfficialItem[] = React.useMemo(() => {
+  const rawOfficials: PartyOfficialItem[] = useMemo(() => {
     return officialsRes?.success && officialsRes.data?.officials ? officialsRes.data.officials : [];
   }, [officialsRes]);
 
   // Sort officials (active status first, followed by tenure recency)
-  const sortedOfficials = React.useMemo(() => {
+  const sortedOfficials = useMemo(() => {
     return [...rawOfficials].sort((a, b) => {
       const aIsActive = (a.assignment_status || "active") === "active";
       const bIsActive = (b.assignment_status || "active") === "active";
@@ -211,7 +211,7 @@ function PartyLeadershipTabComponent() {
   }, [rawOfficials]);
 
   // Group officials by position_id
-  const officialsByPosition = React.useMemo(() => {
+  const officialsByPosition = useMemo(() => {
     const map = new Map<number, PartyOfficialItem[]>();
     for (const off of sortedOfficials) {
       if ((off.assignment_status || "active") !== "active") continue;
@@ -223,7 +223,7 @@ function PartyLeadershipTabComponent() {
   }, [sortedOfficials]);
 
   // Build roster display items (merging position catalog with appointed occupants)
-  const displayItems = React.useMemo(() => {
+  const displayItems = useMemo(() => {
     const sorted = [...positions].sort((a, b) => {
       if (a.rank_order !== b.rank_order) return a.rank_order - b.rank_order;
       return a.id - b.id;
@@ -308,25 +308,17 @@ function PartyLeadershipTabComponent() {
     }
 
     return results;
-  }, [
-    positions,
-    activeChapterType,
-    officialsByPosition,
-    appointmentTypeFilter,
-    debouncedSearchQuery,
-    showVacant,
-  ]);
+  }, [positions, activeChapterType, officialsByPosition, appointmentTypeFilter, debouncedSearchQuery, showVacant]);
 
-  const chapterHeading =
-    activeChapterType === "national"
-      ? "National Executive Leadership"
-      : `${activeChapterGeoName ? `${activeChapterGeoName} ` : ""}${activeChapterType.toUpperCase()} Leadership`;
+  const chapterHeading = activeChapterType === "national"
+    ? "National Executive Leadership"
+    : `${activeChapterGeoName ? `${activeChapterGeoName} ` : ""}${activeChapterType.toUpperCase()} Leadership`;
 
-  const totalOccupied = React.useMemo(() => {
+  const totalOccupied = useMemo(() => {
     return displayItems.filter((i) => i.type === "occupied").length;
   }, [displayItems]);
 
-  const totalVacant = React.useMemo(() => {
+  const totalVacant = useMemo(() => {
     return displayItems.filter((i) => i.type === "vacant").length;
   }, [displayItems]);
 
@@ -335,12 +327,12 @@ function PartyLeadershipTabComponent() {
       {/* Header section with underline accent */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="relative inline-block">
-            <h2 className="relative text-xl sm:text-2xl font-bold tracking-tight text-foreground z-2 capitalize">
-              {chapterHeading}
-            </h2>
-            <HeaderAccent />
-          </div>
+          <HeaderAccent
+            as="h2"
+            title={chapterHeading}
+            titleClassName="text-xl sm:text-2xl font-bold tracking-tight text-foreground capitalize"
+            accentClassName="w-[200px]"
+          />
           <p className="text-sm text-muted-foreground mt-2">
             Officials holding constitutional executive leadership and governance offices for {partyName.toUpperCase()}.
           </p>
@@ -348,12 +340,12 @@ function PartyLeadershipTabComponent() {
 
         {/* Status Counts Pill */}
         <div className="flex items-center gap-2 self-start md:self-auto">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
+          <span className="inline-flex items-center gap-1.5 px-6 py-1 rounded-full text-xs font-semibold border border-primary/20">
             <Users className="size-3.5" />
             <span>{totalOccupied} Appointed</span>
           </span>
           {showVacant && totalVacant > 0 && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-destructive/10 text-destructive border border-destructive/20">
+            <span className="inline-flex items-center gap-1.5 px-6 py-1 rounded-full text-xs font-semibold text-destructive border border-destructive/20">
               <span>{totalVacant} Vacant</span>
             </span>
           )}
@@ -361,18 +353,18 @@ function PartyLeadershipTabComponent() {
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-        <div className="relative flex-1">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 w-full">
+        <div className="relative w-full sm:w-[70%]">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search officials by name or position title..."
-            className="pl-10 h-11 bg-card border-border/60 rounded-xl"
+            className="pl-10 h-11 bg-sidebar-softer border-border/60 rounded-xl"
           />
         </div>
 
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 shrink-0">
           {/* Appointment Type selector */}
           <select
             value={appointmentTypeFilter}
@@ -414,7 +406,7 @@ function PartyLeadershipTabComponent() {
           </p>
         </div>
       ) : (
-        <div className="w-full rounded-3xl bg-sidebar-mobile/40 dark:bg-card/40 p-8 sm:p-12 border border-border/40">
+        <div className="w-full rounded-3xl bg-sidebar-mobile/40 dark:bg-card/40 p-8 sm:p-12">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-12 justify-items-center">
             {displayItems.map((item) =>
               item.type === "occupied" ? (

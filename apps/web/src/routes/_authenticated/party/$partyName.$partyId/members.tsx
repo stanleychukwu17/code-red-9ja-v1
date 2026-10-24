@@ -230,12 +230,11 @@ function PartyMembersTabComponent() {
     <div className="space-y-8 pb-16">
       {/* Header Accent with Chapter Context */}
       <div>
-        <div className="relative inline-block">
-          <h2 className="relative text-xl sm:text-2xl font-bold tracking-tight text-foreground z-2 capitalize">
-            {chapterTitle} Members
-          </h2>
-          <HeaderAccent />
-        </div>
+        <HeaderAccent
+          as="h2"
+          title={`${chapterTitle} Members`}
+          titleClassName="text-xl sm:text-2xl font-bold tracking-tight text-foreground capitalize"
+        />
         <p className="text-sm text-muted-foreground mt-2">
           Directory of registered party members and officials enrolled in the {chapterTitle} of {partyName.toUpperCase()}.
         </p>

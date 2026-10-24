@@ -103,6 +103,7 @@
     "pageverificationsservice",
     "partieshandler",
     "partiesservice",
+    "partieswallethandler",
     "partyadmin",
     "partyapp",
     "partyapplications",

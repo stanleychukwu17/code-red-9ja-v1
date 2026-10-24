@@ -34,12 +34,11 @@ export function PartyEventsCard({
   return (
     <div className="space-y-4">
       {/* Header with underline accent mark matching PartyLeadersCard */}
-      <div className="relative">
-        <div className="relative text-base sm:text-xl font-bold tracking-wide text-foreground z-2">
-          {title}
-        </div>
-        <HeaderAccent />
-      </div>
+      <HeaderAccent
+        as="div"
+        title={title}
+        titleClassName="text-base sm:text-xl font-bold tracking-wide text-foreground"
+      />
 
       {/* Card container */}
       <div className="bg-sidebar-mobile/50 rounded-[50px] p-6 sm:p-8">

@@ -3,6 +3,7 @@ package usersservice
 import (
 	"context"
 	"fmt"
+	"free9ja/api/internal/constants"
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/utils"
 	"log/slog"
@@ -82,7 +83,7 @@ func (s *UsersService) CreditUserWallet(
 	txn, err := s.queries.CreateUserWalletTransaction(ctx, queries.CreateUserWalletTransactionParams{
 		WalletID:             walletID,
 		TransactionReference: transactionReference,
-		Type:                 "credit",
+		Type:                 constants.TransactionTypeCredit,
 		AmountKobo:           amountKobo,
 		BalanceAfterKobo:     updatedWallet.BalanceKobo,
 		PayerName:            utils.PgTextFromString(payerName),
@@ -135,7 +136,7 @@ func (s *UsersService) WithdrawFromUserWallet(
 	txn, err := s.queries.CreateUserWalletTransaction(ctx, queries.CreateUserWalletTransactionParams{
 		WalletID:             wallet.ID,
 		TransactionReference: transactionReference,
-		Type:                 "debit",
+		Type:                 constants.TransactionTypeDebit,
 		AmountKobo:           amountKobo,
 		BalanceAfterKobo:     updatedWallet.BalanceKobo,
 		PayerName:            utils.PgTextFromString(""),

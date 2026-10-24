@@ -68,12 +68,8 @@ export function FinancialOverallCard({
   onOpenAgentPayment,
   onOpenMarketing,
 }: FinancialOverallCardProps) {
-  const balanceNGN = (walletBalance / 100).toLocaleString("en-NG", {
-    maximumFractionDigits: 1,
-  });
-  const agentPaymentNGN = (agentPaymentBalance / 100).toLocaleString("en-NG", {
-    maximumFractionDigits: 1,
-  });
+  const balanceNGN = (walletBalance / 100).toLocaleString("en-NG", { maximumFractionDigits: 1 });
+  const agentPaymentNGN = (agentPaymentBalance / 100).toLocaleString("en-NG", { maximumFractionDigits: 1 });
 
   return (
     <ReadinessStatSection title="Financial Overall">

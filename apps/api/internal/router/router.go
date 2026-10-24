@@ -43,6 +43,7 @@ import (
 	officeshandler "free9ja/api/internal/handler/offices"
 	pageverificationshandler "free9ja/api/internal/handler/page_verifications"
 	partieshandler "free9ja/api/internal/handler/parties"
+	partieswallethandler "free9ja/api/internal/handler/parties_wallet"
 	partyapplicationshandler "free9ja/api/internal/handler/party_applications"
 	puassignmentshandler "free9ja/api/internal/handler/polling_unit_assignments"
 	puresultshandler "free9ja/api/internal/handler/polling_unit_results"
@@ -155,6 +156,8 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	supervisorAssignmentsService := supervisorassignmentsservice.NewService(q)
 	pollingUnitAssignmentsService := puassignments.NewService(q, rdb, distributor, earningsService)
 	partiesService := partiesservice.NewPartiesService(q, pool, rdb, utilsInstance, notificationsService, blocksService, auditService, bodiesService, usersService)
+	partiesWalletService := partiesservice.NewPartiesWalletService(q, pool, rdb, utilsInstance, partiesService)
+	partiesService.SetWalletService(partiesWalletService)
 	followsService := followsservice.NewFollowsService(q, rdb, partiesService, notificationsService)
 	electionGroupsService := electiongroupsservice.NewElectionGroupsService(q, rdb, distributor)
 	senatorialDistrictsService := senatorialdistrictsservice.NewSenatorialDistrictsService(q, rdb)
@@ -179,6 +182,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	authHandler := authhandler.NewHandler(authService, usersService, filesService, utilsInstance)
 	bodiesHandler := bodieshandler.NewHandler(bodiesService, q, utilsInstance, rdb)
 	partiesHandler := partieshandler.NewHandler(partiesService, bodiesService, auditService, permissionsService, filesService, utilsInstance, r2Svc, followsService)
+	partiesWalletHandler := partieswallethandler.NewHandler(partiesWalletService, partiesService, utilsInstance)
 	statesHandler := stateshandler.NewHandler(statesService, utilsInstance)
 	senatorialDistrictsHandler := senatorialdistrictshandler.NewHandler(senatorialDistrictsService, bodiesService, q, utilsInstance)
 	stateAssemblyConstituenciesHandler := stateassemblyconstituencieshandler.NewHandler(stateAssemblyConstituenciesService, bodiesService, q, utilsInstance)
@@ -314,7 +318,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	mainRouter.Get("/api/v1/parties/{id}/accepting-applications", partiesHandler.GetPartyAcceptingStatus)
 	mainRouter.With(apimiddleware.OptionalAuthMiddleware(jwtSecret)).Get("/api/v1/parties/{party_id}/{short_name}/profile", partiesHandler.GetPartyProfile)
 	mainRouter.Get("/api/v1/parties/{party_id}/home", partiesHandler.GetPartyHome)
-	mainRouter.Get("/api/v1/parties/{id}/wallet", partiesHandler.GetPartyWallet)
+	mainRouter.Get("/api/v1/parties/{id}/wallet", partiesWalletHandler.GetPartyWallet)
 	mainRouter.Get("/api/v1/parties/{id}/positions", partiesHandler.ListPartyPositions)
 	mainRouter.Get("/api/v1/parties/{id}/officials", partiesHandler.ListPartyOfficials)
 	mainRouter.Get("/api/v1/parties/{id}/members", partiesHandler.ListPartyMembers)
@@ -328,7 +332,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	mainRouter.Get("/api/v1/verifications/{pageType}/{pageID}", pageVerificationsHandler.GetPageVerifications)
 
 	// Testing & recovery wallet provisioning (public/unauthenticated)
-	mainRouter.Post("/api/v1/parties/wallets/provision-missing", partiesHandler.ProvisionMissingPartyWallets)
+	mainRouter.Post("/api/v1/parties/wallets/provision-missing", partiesWalletHandler.ProvisionMissingPartyWallets)
 	mainRouter.Post("/api/v1/users/wallets/provision-missing", usersHandler.ProvisionMissingUserWallets)
 
 	// bodies national metrics (public)
@@ -397,10 +401,10 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Put("/api/v1/admin/parties/{id}/discount", partiesHandler.UpdatePartyDiscount)
 		r.Put("/api/v1/admin/parties/{id}/verify", partiesHandler.TogglePartyVerification)
 		// manual wallet creation for a party (in case auto-create failed)
-		r.Post("/api/v1/parties/{id}/wallet", partiesHandler.CreatePartyWalletHandler)
+		r.Post("/api/v1/parties/{id}/wallet", partiesWalletHandler.CreatePartyWalletHandler)
 		// slot pricing settings
-		r.Get("/api/v1/admin/settings/slot-price", partiesHandler.GetGlobalSlotPrice)
-		r.Put("/api/v1/admin/settings/slot-price", partiesHandler.UpdateGlobalSlotPrice)
+		r.Get("/api/v1/admin/settings/slot-price", partiesWalletHandler.GetGlobalSlotPrice)
+		r.Put("/api/v1/admin/settings/slot-price", partiesWalletHandler.UpdateGlobalSlotPrice)
 
 		// generic system settings
 		r.Get("/api/v1/admin/settings/{key}", systemSettingsHandler.GetSystemSetting)
@@ -565,9 +569,9 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Get("/api/v1/election-groups/{id}/stats/lgas/{lga_id}/parties/{party_id}", electionStatsHandler.GetSingleLGAStats)
 		r.Get("/api/v1/election-groups/{id}/stats/wards/{ward_id}/parties/{party_id}", electionStatsHandler.GetSingleWardStats)
 
-		r.Post("/api/v1/parties/{id}/wallet/withdraw", partiesHandler.WithdrawFromPartyWallet)
-		r.Get("/api/v1/parties/{id}/slots/price", partiesHandler.GetPartySlotPrice)
-		r.Post("/api/v1/parties/{id}/slots/buy", partiesHandler.BuySlots)
+		r.Post("/api/v1/parties/{id}/wallet/withdraw", partiesWalletHandler.WithdrawFromPartyWallet)
+		r.Get("/api/v1/parties/{id}/slots/price", partiesWalletHandler.GetPartySlotPrice)
+		r.Post("/api/v1/parties/{id}/slots/buy", partiesWalletHandler.BuySlots)
 		r.Post("/api/v1/parties/{id}/allowances/deposit", partiesHandler.DepositAllowance)
 
 		r.Post("/api/v1/parties/{id}/join-hierarchy", partiesHandler.JoinPartyHierarchy)
@@ -578,7 +582,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Put("/api/v1/parties/{id}/agent-payment-allocations", partiesHandler.UpdateAgentPaymentAllocationKobo)
 		r.Patch("/api/v1/parties/{id}/agent-targets", partiesHandler.UpdateAgentAcquisitionTargets)
 		r.Get("/api/v1/parties/{id}/agent-targets", partiesHandler.GetAgentAcquisitionTargets)
-		r.Post("/api/v1/parties/{id}/wallet/deposit-test", partiesHandler.Deposit)
+		r.Post("/api/v1/parties/{id}/wallet/deposit-test", partiesWalletHandler.Deposit)
 
 		// Marketing Campaigns
 		r.Post("/api/v1/parties/{id}/agent-marketing-campaigns", partiesHandler.CreatePartyMarketingCampaign)
@@ -667,7 +671,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Get("/api/v1/parties/{id}/readiness", partiesHandler.GetPartyReadiness)
 
 		// party admins can view their own party's wallet transaction ledger
-		r.Get("/api/v1/parties/{id}/wallet/transactions", partiesHandler.ListPartyWalletTransactions)
+		r.Get("/api/v1/parties/{id}/wallet/transactions", partiesWalletHandler.ListPartyWalletTransactions)
 
 		// party positions and officials mutations
 		r.Post("/api/v1/parties/{id}/positions", partiesHandler.CreatePartyCustomPosition)

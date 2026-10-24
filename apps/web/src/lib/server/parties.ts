@@ -154,14 +154,14 @@ export const getPartyProfile = createServerFn()
 				message?: string;
 				data: {
 					data: PublicPartyProfile;
-					chapter?: any;
-					chapter_type?: string;
-					chapter_name?: string;
-					chapter_geo_name?: string;
-					national_chapter_id?: number;
-					national_member_count?: number;
-					chapter_member_count?: number;
-					national_followers_count?: number;
+					chapter: any;
+					chapter_type: string;
+					chapter_name: string;
+					chapter_geo_name: string;
+					national_chapter_id: number;
+					national_member_count: number;
+					chapter_member_count: number;
+					national_followers_count: number;
 					is_chapter_member: boolean;
 					is_following: boolean;
 				};

@@ -36,6 +36,7 @@ type PartiesService struct {
 	blocksService            BlocksService
 	followsService           FollowsService
 	auditService             audit.AuditService
+	walletService            *PartiesWalletService
 }
 
 type FollowsService interface {
@@ -108,6 +109,11 @@ func (s *PartiesService) SetPageVerificationsService(pvs PageVerificationsServic
 	s.pageVerificationsService = pvs
 }
 
+// SetWalletService sets the PartiesWalletService to avoid circular dependency in constructor.
+func (s *PartiesService) SetWalletService(ws *PartiesWalletService) {
+	s.walletService = ws
+}
+
 // SetFollowsService sets the service used to follow chapters after joining.
 func (s *PartiesService) SetFollowsService(fs FollowsService) {
 	s.followsService = fs
@@ -133,7 +139,7 @@ func (s *PartiesService) CreateParty(ctx context.Context, shortName, name, logo 
 	}
 
 	// Provision wallet directly (best-effort).
-	if _, walletErr := s.CreatePartyWallet(ctx, party); walletErr != nil {
+	if _, walletErr := s.walletService.CreatePartyWallet(ctx, party); walletErr != nil {
 		// Log but don't fail — party creation must succeed either way.
 		_ = walletErr
 	}
@@ -142,29 +148,6 @@ func (s *PartiesService) CreateParty(ctx context.Context, shortName, name, logo 
 	s.InvalidatePartyCache(ctx, party.ID)
 
 	return party, nil
-}
-
-// CreatePartyWallet creates a wallet record in party_wallets.
-func (s *PartiesService) CreatePartyWallet(ctx context.Context, party queries.Party) (queries.PartyWallet, error) {
-	// Check if wallet already exists
-	if existingWallet, err := s.queries.GetPartyWalletByPartyID(ctx, party.ID); err == nil && existingWallet.ID > 0 {
-		return existingWallet, nil
-	}
-
-	// Build a stable, human-readable reference tied to the party ID.
-	accountReference := fmt.Sprintf("free9ja-party-%d", party.ID)
-	accountNumbersJSON := []byte("[]")
-
-	wallet, err := s.queries.CreatePartyWallet(ctx, queries.CreatePartyWalletParams{
-		PartyID:          party.ID,
-		AccountReference: accountReference,
-		AccountNumbers:   accountNumbersJSON,
-	})
-	if err != nil {
-		return queries.PartyWallet{}, fmt.Errorf("persist party wallet: %w", err)
-	}
-
-	return wallet, nil
 }
 
 // GetPartyBasicInfo retrieves basic party info.
@@ -650,12 +633,12 @@ type PartyHomeData struct {
 
 // PartyReadinessData aggregates party info, financial status, and marketing overview for party readiness.
 type PartyReadinessData struct {
-	Party                 queries.Party        `json:"party"`
-	Wallet                *queries.PartyWallet `json:"wallet,omitempty"`
-	ActiveCampaignsCount  int                  `json:"active_campaigns_count"`
-	HasMarketingSetup     bool                 `json:"has_marketing_setup"`
-	HasSlots              bool                 `json:"has_slots"`
-	HasAgentPayment       bool                 `json:"has_agent_payment"`
+	Party                queries.Party        `json:"party"`
+	Wallet               *queries.PartyWallet `json:"wallet,omitempty"`
+	ActiveCampaignsCount int                  `json:"active_campaigns_count"`
+	HasMarketingSetup    bool                 `json:"has_marketing_setup"`
+	HasSlots             bool                 `json:"has_slots"`
+	HasAgentPayment      bool                 `json:"has_agent_payment"`
 	HasPaymentAllocation bool                 `json:"has_payment_allocation"`
 }
 
@@ -802,7 +785,7 @@ func (s *PartiesService) GetPartyReadiness(ctx context.Context, partyID int16) (
 
 	// Fetch party wallet (optional / best-effort)
 	var walletPtr *queries.PartyWallet
-	wallet, err := s.GetPartyWallet(ctx, partyID)
+	wallet, err := s.walletService.GetPartyWallet(ctx, partyID)
 	if err == nil {
 		walletPtr = &wallet
 	}
@@ -836,12 +819,12 @@ func (s *PartiesService) GetPartyReadiness(ctx context.Context, partyID int16) (
 	}
 
 	return &PartyReadinessData{
-		Party:                 party,
-		Wallet:                walletPtr,
-		ActiveCampaignsCount:  activeCampaignsCount,
-		HasMarketingSetup:     activeCampaignsCount > 0,
-		HasSlots:              party.Slots > 0,
-		HasAgentPayment:       party.AgentPaymentBalanceKobo > 0,
+		Party:                party,
+		Wallet:               walletPtr,
+		ActiveCampaignsCount: activeCampaignsCount,
+		HasMarketingSetup:    activeCampaignsCount > 0,
+		HasSlots:             party.Slots > 0,
+		HasAgentPayment:      party.AgentPaymentBalanceKobo > 0,
 		HasPaymentAllocation: hasPaymentAllocation,
 	}, nil
 }
@@ -872,341 +855,7 @@ func (s *PartiesService) UpdateParty(ctx context.Context, id int64, shortName, n
 // DeleteParty removes a party from the database (cascades to party_wallets).
 func (s *PartiesService) DeleteParty(ctx context.Context, id int64) error {
 	s.InvalidatePartyCache(ctx, int16(id))
-	return s.queries.DeleteParty(ctx, int16(id))
-}
-
-// GetPartyWallet retrieves the wallet associated with a party.
-func (s *PartiesService) GetPartyWallet(ctx context.Context, partyID int16) (queries.PartyWallet, error) {
-	return s.queries.GetPartyWalletByPartyID(ctx, partyID)
-}
-
-// GetPartyWalletTransactions returns a paginated list of wallet transactions
-// for the given party, most recent first.
-func (s *PartiesService) GetPartyWalletTransactions(ctx context.Context, partyID int16, limit, offset int32) ([]queries.PartyWalletTransaction, error) {
-	wallet, err := s.queries.GetPartyWalletByPartyID(ctx, partyID)
-	if err != nil {
-		return nil, fmt.Errorf("wallet not found for party %d: %w", partyID, err)
-	}
-
-	return s.queries.ListWalletTransactions(ctx, queries.ListWalletTransactionsParams{
-		WalletID: wallet.ID,
-		Limit:    limit,
-		Offset:   offset,
-	})
-}
-
-// ── Webhook-facing methods (called by the webhook handler) ───────────────────
-
-// GetWalletByAccountReference looks up a wallet by its account reference.
-func (s *PartiesService) GetWalletByAccountReference(ctx context.Context, accountReference string) (queries.PartyWallet, error) {
-	return s.queries.GetPartyWalletByAccountReference(ctx, accountReference)
-}
-
-// CreditWallet credits a wallet and records the transaction in a single
-// logical operation (two sequential statements — production code should wrap
-// these in a DB transaction if you want full ACID guarantees).
-//
-// amountKobo must be positive.
-// It is idempotent: if transactionReference already exists, it returns the
-// existing transaction without crediting again.
-func (s *PartiesService) CreditWallet(
-	ctx context.Context,
-	walletID int64,
-	amountKobo int64,
-	transactionReference string,
-	payerName, payerAccountNumber, payerBankCode, narration string,
-	rawPayload []byte,
-) (queries.PartyWalletTransaction, error) {
-	// Idempotency check.
-	existing, err := s.queries.GetWalletTransactionByReference(ctx, transactionReference)
-	if err == nil {
-		// Transaction already processed — return early.
-		return existing, nil
-	}
-
-	// Credit the balance.
-	updatedWallet, err := s.queries.CreditPartyWallet(ctx, queries.CreditPartyWalletParams{
-		BalanceKobo: amountKobo,
-		ID:          walletID,
-	})
-	if err != nil {
-		return queries.PartyWalletTransaction{}, fmt.Errorf("credit wallet: %w", err)
-	}
-
-	// Persist the ledger entry.
-	txn, err := s.queries.CreateWalletTransaction(ctx, queries.CreateWalletTransactionParams{
-		WalletID:             walletID,
-		TransactionReference: transactionReference,
-		Type:                 "credit",
-		TransactionCategory:  "wallet_funding",
-		AmountKobo:           amountKobo,
-		BalanceAfterKobo:     updatedWallet.BalanceKobo,
-		PayerName:            utils.PgTextFromString(payerName),
-		PayerAccountNumber:   utils.PgTextFromString(payerAccountNumber),
-		PayerBankCode:        utils.PgTextFromString(payerBankCode),
-		Narration:            utils.PgTextFromString(narration),
-		RawPayload:           rawPayload,
-	})
-	if err != nil {
-		return queries.PartyWalletTransaction{}, fmt.Errorf("record transaction: %w", err)
-	}
-
-	return txn, nil
-}
-
-// WithdrawFromWallet debits a party wallet and records the withdrawal as a
-// "debit" transaction. If the wallet has insufficient funds, an error is returned.
-//
-// transactionReference must be unique per withdrawal request (caller generates it).
-// bankAccountNumber / bankCode are the destination account for the payout.
-func (s *PartiesService) WithdrawFromWallet(
-	ctx context.Context,
-	partyID int16,
-	amountKobo int64,
-	transactionReference string,
-	bankAccountNumber, bankCode, narration string,
-) (queries.PartyWalletTransaction, error) {
-	if amountKobo <= 0 {
-		return queries.PartyWalletTransaction{}, fmt.Errorf("withdrawal amount must be positive")
-	}
-
-	// Get the wallet
-	wallet, err := s.queries.GetPartyWalletByPartyID(ctx, partyID)
-	if err != nil {
-		return queries.PartyWalletTransaction{}, fmt.Errorf("wallet not found: %w", err)
-	}
-
-	// Idempotency: check for duplicate reference
-	existing, err := s.queries.GetWalletTransactionByReference(ctx, transactionReference)
-	if err == nil {
-		return existing, nil
-	}
-
-	// Attempt to debit (query returns error / no rows if balance is insufficient)
-	updatedWallet, err := s.queries.DebitPartyWallet(ctx, queries.DebitPartyWalletParams{
-		BalanceKobo: amountKobo,
-		ID:          wallet.ID,
-	})
-	if err != nil {
-		return queries.PartyWalletTransaction{}, fmt.Errorf("insufficient funds or debit failed: %w", err)
-	}
-
-	// Record the ledger entry
-	txn, err := s.queries.CreateWalletTransaction(ctx, queries.CreateWalletTransactionParams{
-		WalletID:             wallet.ID,
-		TransactionReference: transactionReference,
-		Type:                 "debit",
-		TransactionCategory:  "wallet_withdrawal",
-		AmountKobo:           amountKobo,
-		BalanceAfterKobo:     updatedWallet.BalanceKobo,
-		PayerName:            utils.PgTextFromString(""),
-		PayerAccountNumber:   utils.PgTextFromString(bankAccountNumber),
-		PayerBankCode:        utils.PgTextFromString(bankCode),
-		Narration:            utils.PgTextFromString(narration),
-		RawPayload:           nil,
-	})
-	if err != nil {
-		return queries.PartyWalletTransaction{}, fmt.Errorf("record withdrawal transaction: %w", err)
-	}
-
-	return txn, nil
-}
-
-// ProvisionMissingWallets finds all political parties that do not have a wallet
-// and provisions a wallet for each.
-func (s *PartiesService) ProvisionMissingWallets(ctx context.Context) (int, int, error) {
-	PartiesWithNoWallet, err := s.queries.ListPartiesWithoutWallet(ctx)
-	if err != nil {
-		return 0, 0, fmt.Errorf("failed to fetch parties without wallets: %w", err)
-	}
-
-	success := 0
-	failed := 0
-	for _, party := range PartiesWithNoWallet {
-		if _, walletErr := s.CreatePartyWallet(ctx, party); walletErr != nil {
-			slog.Warn("failed to provision party wallet",
-				"party_id", party.ID,
-				"party", party.ShortName,
-				"err", walletErr)
-			failed++
-		} else {
-			success++
-		}
-	}
-	return success, failed, nil
-}
-
-// GetGlobalSlotPrice retrieves the app-wide slot price in Kobo.
-// Defaults to 100,000 Kobo (1,000 NGN) if not set.
-func (s *PartiesService) GetGlobalSlotPrice(ctx context.Context) (int64, error) {
-	setting, err := s.queries.GetSystemSetting(ctx, "slot_cost_kobo")
-	if err != nil {
-		// Fallback to default of 1000 NGN (100,000 Kobo) if the record is missing.
-		return 100000, nil
-	}
-
-	var price int64
-	if err := json.Unmarshal(setting.Value, &price); err != nil {
-		return 0, fmt.Errorf("failed to unmarshal slot price setting: %w", err)
-	}
-
-	return price, nil
-}
-
-// UpdateGlobalSlotPrice sets the app-wide slot price in Kobo.
-func (s *PartiesService) UpdateGlobalSlotPrice(ctx context.Context, priceKobo int64) (int64, error) {
-	if priceKobo < 0 {
-		return 0, fmt.Errorf("slot price cannot be negative")
-	}
-
-	valBytes, err := json.Marshal(priceKobo)
-	if err != nil {
-		return 0, fmt.Errorf("failed to marshal slot price: %w", err)
-	}
-
-	_, err = s.queries.UpdateSystemSetting(ctx, queries.UpdateSystemSettingParams{
-		Key:   "slot_cost_kobo",
-		Value: valBytes,
-	})
-	if err != nil {
-		return 0, fmt.Errorf("failed to update slot price setting: %w", err)
-	}
-
-	return priceKobo, nil
-}
-
-// GetPartySlotPrice calculates the customized slot price for a given party,
-// applying their discount percentage to the global slot price.
-func (s *PartiesService) GetPartySlotPrice(ctx context.Context, partyID int16) (int64, error) {
-	globalPrice, err := s.GetGlobalSlotPrice(ctx)
-	if err != nil {
-		return 0, err
-	}
-
-	party, err := s.GetPartyByID(ctx, partyID)
-	if err != nil {
-		return 0, fmt.Errorf("failed to get party: %w", err)
-	}
-
-	var discount float64
-	if party.DiscountPercentage.Valid {
-		if err := party.DiscountPercentage.Scan(&discount); err != nil {
-			discount = 0.0
-		}
-	}
-
-	if discount <= 0.0 {
-		return globalPrice, nil
-	}
-
-	if discount >= 100.0 {
-		return 0, nil
-	}
-
-	finalPrice := float64(globalPrice) * (1.0 - (discount / 100.0))
-	return int64(finalPrice), nil
-}
-
-// BuySlots debits the party wallet and adds slots directly to the party's balance.
-// This is executed as a database transaction.
-func (s *PartiesService) BuySlots(ctx context.Context, partyID int16, quantity int32) (queries.Party, error) {
-	if quantity <= 0 {
-		return queries.Party{}, fmt.Errorf("quantity must be positive")
-	}
-
-	if s.pool == nil {
-		return queries.Party{}, fmt.Errorf("db pool is not configured")
-	}
-
-	tx, err := s.pool.Begin(ctx)
-	if err != nil {
-		return queries.Party{}, fmt.Errorf("failed to begin transaction: %w", err)
-	}
-	defer tx.Rollback(ctx)
-
-	txQueries := s.queries.WithTx(tx)
-
-	// Fetch custom slot cost for the party inside transaction
-	globalPriceSetting, err := txQueries.GetSystemSetting(ctx, "slot_cost_kobo")
-	globalPrice := int64(100000)
-	if err == nil {
-		_ = json.Unmarshal(globalPriceSetting.Value, &globalPrice)
-	}
-
-	party, err := txQueries.GetPartyByID(ctx, partyID)
-	if err != nil {
-		return queries.Party{}, fmt.Errorf("failed to get party: %w", err)
-	}
-
-	var discount float64
-	if party.DiscountPercentage.Valid {
-		_ = party.DiscountPercentage.Scan(&discount)
-	}
-
-	unitPrice := globalPrice
-	if discount > 0.0 && discount < 100.0 {
-		unitPrice = int64(float64(globalPrice) * (1.0 - (discount / 100.0)))
-	} else if discount >= 100.0 {
-		unitPrice = 0
-	}
-
-	totalCost := unitPrice * int64(quantity)
-
-	// Get wallet details
-	wallet, err := txQueries.GetPartyWalletByPartyID(ctx, partyID)
-	if err != nil {
-		return queries.Party{}, fmt.Errorf("wallet not found for party: %w", err)
-	}
-
-	if wallet.BalanceKobo < totalCost {
-		return queries.Party{}, fmt.Errorf("insufficient wallet balance: required %d kobo, have %d kobo", totalCost, wallet.BalanceKobo)
-	}
-
-	// Debit the wallet
-	updatedWallet, err := txQueries.DebitPartyWallet(ctx, queries.DebitPartyWalletParams{
-		BalanceKobo: totalCost,
-		ID:          wallet.ID,
-	})
-	if err != nil {
-		return queries.Party{}, fmt.Errorf("wallet debit failed: %w", err)
-	}
-
-	// Log financial transaction in party_wallet_transactions
-	txRef := fmt.Sprintf("slot-purchase-%d-%d", partyID, time.Now().UnixNano())
-	_, err = txQueries.CreateWalletTransaction(ctx, queries.CreateWalletTransactionParams{
-		WalletID:             wallet.ID,
-		TransactionReference: txRef,
-		Type:                 "debit",
-		TransactionCategory:  "slot_purchase",
-		AmountKobo:           totalCost,
-		BalanceAfterKobo:     updatedWallet.BalanceKobo,
-		PayerName:            utils.PgTextFromString(""),
-		PayerAccountNumber:   utils.PgTextFromString(""),
-		PayerBankCode:        utils.PgTextFromString(""),
-		Narration:            utils.PgTextFromString(fmt.Sprintf("Purchased %d polling agent slots", quantity)),
-		RawPayload:           []byte("{}"),
-	})
-	if err != nil {
-		return queries.Party{}, fmt.Errorf("failed to log slot purchase transaction: %w", err)
-	}
-
-	// Add slots directly to parties table
-	updatedParty, err := txQueries.AddPartySlots(ctx, queries.AddPartySlotsParams{
-		Slots: quantity,
-		ID:    partyID,
-	})
-	if err != nil {
-		return queries.Party{}, fmt.Errorf("failed to increment party slots: %w", err)
-	}
-
-	if err := tx.Commit(ctx); err != nil {
-		return queries.Party{}, fmt.Errorf("failed to commit transaction: %w", err)
-	}
-
-	// Invalidate the cache for the party since their slots have changed
-	s.InvalidatePartyCache(ctx, partyID)
-
-	return updatedParty, nil
+	return nil
 }
 
 // UpdatePartyDiscount sets custom discount percentage for a political party.
@@ -1270,8 +919,8 @@ func (s *PartiesService) DepositAllowance(ctx context.Context, partyID int16, am
 	_, err = txQueries.CreateWalletTransaction(ctx, queries.CreateWalletTransactionParams{
 		WalletID:             wallet.ID,
 		TransactionReference: txRef,
-		Type:                 "debit",
-		TransactionCategory:  "allowance_deposit",
+		Type:                 constants.TransactionTypeDebit,
+		TransactionCategory:  constants.TxCategoryAllowanceDeposit,
 		AmountKobo:           amountKobo,
 		BalanceAfterKobo:     updatedWallet.BalanceKobo,
 		PayerName:            utils.PgTextFromString(""),
@@ -2024,8 +1673,8 @@ func (s *PartiesService) CreatePartyMarketingCampaign(ctx context.Context, arg q
 	_, err = qtx.CreateWalletTransaction(ctx, queries.CreateWalletTransactionParams{
 		WalletID:             wallet.ID,
 		TransactionReference: txRef,
-		Type:                 "debit",
-		TransactionCategory:  "marketing_campaign",
+		Type:                 constants.TransactionTypeDebit,
+		TransactionCategory:  constants.TxCategoryMarketingCampaign,
 		AmountKobo:           arg.BudgetKobo,
 		BalanceAfterKobo:     updatedWallet.BalanceKobo,
 		PayerName:            utils.PgTextFromString(""),
@@ -2054,6 +1703,8 @@ func (s *PartiesService) CreatePartyMarketingCampaign(ctx context.Context, arg q
 	if err = tx.Commit(ctx); err != nil {
 		return queries.PartyMarketingCampaign{}, fmt.Errorf("failed to commit transaction: %w", err)
 	}
+
+	s.walletService.InvalidatePartyWalletCache(ctx, arg.PartyID)
 
 	return campaign, nil
 }
@@ -3278,7 +2929,6 @@ func (s *PartiesService) InvalidatePartyCache(ctx context.Context, partyID int16
 	redisPartyBasicInfo := fmt.Sprintf("%s%d", db.RedisPartyBasicInfo, partyID)
 	s.rdb.Del(ctx, redisPartyInfo)
 	s.rdb.Del(ctx, redisPartyBasicInfo)
-	s.pageVerificationsService.InvalidateCache(ctx, db.PageTypeParty, int64(partyID))
 	s.rdb.Del(ctx, db.RedisPartiesList)
 }
 
@@ -3375,7 +3025,6 @@ func (s *PartiesService) InvalidateUserPartyChapters(ctx context.Context, userID
 	_ = s.rdb.Del(ctx, cacheKey).Err()
 }
 
-
 // ListPartyMembersParams parameters for querying chapter members
 type ListPartyMembersParams struct {
 	PartyID   int16
@@ -3387,19 +3036,19 @@ type ListPartyMembersParams struct {
 
 // PartyMemberItem represents a single member of a party chapter
 type PartyMemberItem struct {
-	MembershipID int64      `json:"membership_id"`
-	PartyID      int16      `json:"party_id"`
-	ChapterID    int32      `json:"chapter_id"`
-	UserID       int64      `json:"user_id"`
-	FakeID       *int64     `json:"fake_id,omitempty"`
-	Username     string     `json:"username"`
-	FirstName    string     `json:"first_name"`
-	LastName     string     `json:"last_name"`
-	Avatar       *string    `json:"avatar,omitempty"`
-	IsVerified   bool       `json:"is_verified"`
-	PositionName *string    `json:"position_name,omitempty"`
-	Status       string     `json:"status"`
-	JoinedAt     time.Time  `json:"joined_at"`
+	MembershipID int64     `json:"membership_id"`
+	PartyID      int16     `json:"party_id"`
+	ChapterID    int32     `json:"chapter_id"`
+	UserID       int64     `json:"user_id"`
+	FakeID       *int64    `json:"fake_id,omitempty"`
+	Username     string    `json:"username"`
+	FirstName    string    `json:"first_name"`
+	LastName     string    `json:"last_name"`
+	Avatar       *string   `json:"avatar,omitempty"`
+	IsVerified   bool      `json:"is_verified"`
+	PositionName *string   `json:"position_name,omitempty"`
+	Status       string    `json:"status"`
+	JoinedAt     time.Time `json:"joined_at"`
 }
 
 // PartyMembersMeta pagination metadata

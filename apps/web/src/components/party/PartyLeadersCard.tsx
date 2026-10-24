@@ -7,12 +7,14 @@ type PartyLeadersCardProps = {
   title?: string;
   leaders?: PartyLeader[];
   isLoading?: boolean;
+  href?: string;
 };
 
 export function PartyLeadersCard({
   title = "National leaders",
   leaders = [],
   isLoading = false,
+  href,
 }: PartyLeadersCardProps) {
   // Ensure we display 3 slots
   const slots: (PartyLeader | null)[] = isLoading
@@ -23,13 +25,13 @@ export function PartyLeadersCard({
 
   return (
     <div className="space-y-4">
-      {/* Header with underline accent mark */}
-      <div className="relative">
-        <div className="relative text-base sm:text-xl font-bold tracking-wide text-foreground z-2">
-          {title}
-        </div>
-        <HeaderAccent />
-      </div>
+      {/* Header with underline accent mark & optional navigation arrow */}
+      <HeaderAccent
+        as="div"
+        title={title}
+        titleClassName="text-base sm:text-xl font-bold tracking-wide text-foreground"
+        href={href}
+      />
 
       {/* Card container */}
       <div className="bg-sidebar-mobile/50 rounded-[50px] p-6 sm:p-8">
