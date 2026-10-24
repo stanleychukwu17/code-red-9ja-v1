@@ -54,19 +54,16 @@ export function ElectionStatsSidebar({
   const toggleShorten = (section: string) =>
     setShortenState((prev) => ({ ...prev, [section]: !prev[section] }));
 
-  // Helper to safely get value and format
-  const getVal = (val: any) => val || 0;
-
   // Calculate percentage
   const getPct = (val: any, total: any) => {
     if (!total || total === 0) return "(0%)";
-    const v = getVal(val);
+    const v = val || 0;
     const pct = (v / total) * 100;
     return `(${pct % 1 === 0 ? pct : pct.toFixed(1)}%)`;
   };
 
-  const totalPUs = getVal(targets?.polling_units_count);
-  const totalAgents = getVal(targets?.pu_agents_count);
+  const totalPUs = targets?.polling_units_count || 0;
+  const totalAgents = targets?.pu_agents_count || 0;
 
   if (isLoading) {
     return (
@@ -97,7 +94,7 @@ export function ElectionStatsSidebar({
           label="Total PUs with Agents"
           value={
             <SText
-              title={getVal(stats?.total_pu_with_agents_in_attendance)}
+              title={stats?.total_pu_with_agents_in_attendance || 0}
               subtitle={getPct(
                 stats?.total_pu_with_agents_in_attendance,
                 totalPUs,
@@ -111,7 +108,7 @@ export function ElectionStatsSidebar({
           label="Election started in"
           value={
             <SText
-              title={getVal(stats?.total_pu_where_election_has_started)}
+              title={stats?.total_pu_where_election_has_started || 0}
               subtitle={getPct(
                 stats?.total_pu_where_election_has_started,
                 totalPUs,
@@ -138,7 +135,7 @@ export function ElectionStatsSidebar({
           label="Election ended in"
           value={
             <SText
-              title={getVal(stats?.total_pu_where_election_has_ended)}
+              title={stats?.total_pu_where_election_has_ended || 0}
               subtitle={getPct(
                 stats?.total_pu_where_election_has_ended,
                 totalPUs,
@@ -170,7 +167,7 @@ export function ElectionStatsSidebar({
           label="Total Final Result Uploaded"
           value={
             <SText
-              title={getVal(stats?.total_pu_unique_final_results_uploaded)}
+              title={stats?.total_pu_unique_final_results_uploaded || 0}
               subtitle={getPct(
                 stats?.total_pu_unique_final_results_uploaded,
                 totalPUs,
@@ -184,7 +181,7 @@ export function ElectionStatsSidebar({
           label="PU with 1 or more Uploaded Result"
           value={
             <SText
-              title={getVal(stats?.pu_final_results_uploaded_count)}
+              title={stats?.pu_final_results_uploaded_count || 0}
               subtitle={getPct(
                 stats?.pu_final_results_uploaded_count,
                 totalPUs,
@@ -198,7 +195,7 @@ export function ElectionStatsSidebar({
           label="PU with Complete Result"
           value={
             <SText
-              title={getVal(stats?.unique_pu_final_results_uploaded_count)}
+              title={stats?.unique_pu_final_results_uploaded_count || 0}
               subtitle={getPct(
                 stats?.unique_pu_final_results_uploaded_count,
                 totalPUs,
@@ -220,7 +217,7 @@ export function ElectionStatsSidebar({
           label="Total Agents"
           value={
             <SText
-              title={getVal(stats?.pu_agents_count)}
+              title={stats?.pu_agents_count || 0}
               shorten={isShortened("agents")}
             />
           }
@@ -230,7 +227,7 @@ export function ElectionStatsSidebar({
           label="Agents in Attendance"
           value={
             <SText
-              title={getVal(stats?.pu_agents_in_attendance_count)}
+              title={stats?.pu_agents_in_attendance_count || 0}
               subtitle={getPct(
                 stats?.pu_agents_in_attendance_count,
                 stats?.pu_agents_count || 1,
@@ -257,7 +254,7 @@ export function ElectionStatsSidebar({
           label="Live voters reffered by agent"
           value={
             <SText
-              title={getVal(stats?.pu_live_voters_referred_by_agent_count)}
+              title={stats?.pu_live_voters_referred_by_agent_count || 0}
               shorten={isShortened("agents")}
             />
           }
@@ -275,7 +272,7 @@ export function ElectionStatsSidebar({
           label="Total Updates"
           value={
             <SText
-              title={getVal(stats?.updates_count)}
+              title={stats?.updates_count || 0}
               shorten={isShortened("updates")}
             />
           }
@@ -285,7 +282,7 @@ export function ElectionStatsSidebar({
           label="PU with Updates"
           value={
             <SText
-              title={getVal(stats?.total_pu_with_updates)}
+              title={stats?.total_pu_with_updates || 0}
               subtitle={getPct(stats?.total_pu_with_updates, totalPUs)}
               shorten={isShortened("updates")}
             />
@@ -296,7 +293,7 @@ export function ElectionStatsSidebar({
           label="Total Reports"
           value={
             <SText
-              title={getVal(stats?.reports_count)}
+              title={stats?.reports_count || 0}
               shorten={isShortened("updates")}
             />
           }
@@ -306,7 +303,7 @@ export function ElectionStatsSidebar({
           label="Reported PUs"
           value={
             <SText
-              title={getVal(stats?.total_pu_with_reports)}
+              title={stats?.total_pu_with_reports || 0}
               subtitle={getPct(stats?.total_pu_with_reports, totalPUs)}
               shorten={isShortened("updates")}
             />
@@ -318,9 +315,9 @@ export function ElectionStatsSidebar({
           value={
             <SText
               title={
-                getVal(stats?.pu_average_update_time_interval_in_seconds) > 0
+                (stats?.pu_average_update_time_interval_in_seconds || 0) > 0
                   ? (
-                      stats.pu_average_update_time_interval_in_seconds / 60
+                      stats!.pu_average_update_time_interval_in_seconds / 60
                     ).toFixed(0)
                   : 0
               }

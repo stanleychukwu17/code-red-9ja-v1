@@ -28,14 +28,6 @@ interface ActivitiesCardProps {
   fetchPollingUnitUpdates: (args: { data: any }) => Promise<any>;
 }
 
-const getVal = (val: any) => {
-  if (!val) return "";
-  if (typeof val === "string") return val;
-  if (typeof val === "object" && val !== null && "String" in val && val.Valid)
-    return val.String;
-  return "";
-};
-
 export function ActivitiesCard({
   electionGroupId,
   stateId,
@@ -159,9 +151,9 @@ export function ActivitiesCard({
                 minute: "2-digit",
               });
             }
-            const firstName = getVal(act.user_first_name);
-            const lastName = getVal(act.user_last_name);
-            const avatarUrl = getVal(act.user_avatar);
+            const firstName = act.user_first_name || "";
+            const lastName = act.user_last_name || "";
+            const avatarUrl = act.user_avatar || "";
 
             const name =
               `${firstName} ${lastName}`.trim() || `User #${act.user_id}`;

@@ -18,7 +18,7 @@ import { Badge } from "@repo/ui/components/badge";
 import { AppAvatar } from "@repo/ui/components/avatar";
 import { TileHeader, TileLeft, TileRight, TileRow } from "@repo/ui/components/tiles";
 import { formatISODate } from "@repo/ui/lib/date";
-import { cn, getVal } from "@repo/ui/lib/utils";
+import { cn } from "@repo/ui/lib/utils";
 import { getPageHeader } from "#/lib/shared/meta";
 import { APP_URL } from "#/lib/config";
 import { getElectionById, getElectionCandidates } from "#/lib/server/elections";
@@ -60,15 +60,6 @@ export const Route = createFileRoute(
   head: () => getPageHeader({ title: "Election Race Candidates" }),
   component: ElectionCandidatesPage,
 });
-
-const getDateStr = (val: any): string => {
-  if (!val) return "";
-  if (typeof val === "string") return val;
-  if (typeof val === "object" && val !== null && val.Valid && val.Time) {
-    return val.Time;
-  }
-  return "";
-};
 
 function ElectionCandidatesPage() {
   const { partyShortName, electionId: electionIdentifier } = Route.useParams();
@@ -138,30 +129,28 @@ function ElectionCandidatesPage() {
     if (!party?.short_name || !candidates.length) return null;
     return (
       candidates.find((c) =>
-        getVal(c.party_short_name).toLowerCase() === party.short_name?.toLowerCase(),
+        (c.party_short_name || "").toLowerCase() === party.short_name?.toLowerCase(),
       ) || null
     );
   }, [candidates, party?.short_name]);
 
   // Joint ticket roles configuration
   const electionName = election?.name || "Election Contest";
-  const officeName = getVal(election?.office_name) || "Office";
+  const officeName = election?.office_name || "Office";
   const scopeName = election?.scope || "";
   const ticketConfig = useMemo(
     () => getTicketConfig(electionName, officeName, scopeName),
     [electionName, officeName, scopeName],
   );
 
-
-
   // Filter candidates by candidate name or party name
   const filteredCandidates = useMemo(() => {
     if (!searchQuery.trim()) return candidates;
     const q = searchQuery.toLowerCase();
     return candidates.filter((c) => {
-      const candidateName = `${getVal(c.first_name)} ${getVal(c.last_name)}`.toLowerCase();
-      const runningMateName = `${getVal(c.running_mate_first_name)} ${getVal(c.running_mate_last_name)}`.toLowerCase();
-      const partyShort = getVal(c.party_short_name).toLowerCase();
+      const candidateName = (c.full_name || `${c.first_name || ""} ${c.last_name || ""}`).toLowerCase();
+      const runningMateName = (c.running_mate_full_name || `${c.running_mate_first_name || ""} ${c.running_mate_last_name || ""}`).toLowerCase();
+      const partyShort = (c.party_short_name || "").toLowerCase();
       return (
         candidateName.includes(q) ||
         runningMateName.includes(q) ||
@@ -170,8 +159,7 @@ function ElectionCandidatesPage() {
     });
   }, [candidates, searchQuery]);
 
-  const rawDate = getDateStr(election?.election_date);
-  const formattedDate = rawDate ? formatISODate(rawDate) : "—";
+  const formattedDate = election?.election_date ? formatISODate(election.election_date) : "—";
   const status = election?.status || "upcoming";
   const nominationsOpen = election?.nominations_open ?? true;
 
@@ -317,12 +305,12 @@ function ElectionCandidatesPage() {
               <div className="mt-1 flex flex-wrap items-center gap-3">
                 <div className="flex items-center gap-2">
                   <AppAvatar
-                    src={getVal(myPartyCandidate.avatar)}
-                    alt={`${getVal(myPartyCandidate.first_name)} ${getVal(myPartyCandidate.last_name)}`}
+                    src={myPartyCandidate.avatar}
+                    alt={myPartyCandidate.full_name || `${myPartyCandidate.first_name || ""} ${myPartyCandidate.last_name || ""}`}
                     className="size-6 shrink-0 ring-1 ring-border"
                   />
                   <span className="text-base font-semibold text-c-90">
-                    {getVal(myPartyCandidate.first_name)} {getVal(myPartyCandidate.last_name)}
+                    {myPartyCandidate.full_name || `${myPartyCandidate.first_name || ""} ${myPartyCandidate.last_name || ""}`}
                   </span>
                   <span className="text-xs text-c-50">({ticketConfig.principalRole})</span>
                 </div>
@@ -330,12 +318,12 @@ function ElectionCandidatesPage() {
                 {ticketConfig.hasRunningMate && myPartyCandidate.running_mate_id && (
                   <div className="flex items-center gap-2 border-l border-border pl-3">
                     <AppAvatar
-                      src={getVal(myPartyCandidate.running_mate_avatar)}
-                      alt={`${getVal(myPartyCandidate.running_mate_first_name)} ${getVal(myPartyCandidate.running_mate_last_name)}`}
+                      src={myPartyCandidate.running_mate_avatar}
+                      alt={myPartyCandidate.running_mate_full_name || `${myPartyCandidate.running_mate_first_name || ""} ${myPartyCandidate.running_mate_last_name || ""}`}
                       className="size-6 shrink-0 ring-1 ring-border"
                     />
                     <span className="text-sm font-medium text-c-80">
-                      {getVal(myPartyCandidate.running_mate_first_name)} {getVal(myPartyCandidate.running_mate_last_name)}
+                      {myPartyCandidate.running_mate_full_name || `${myPartyCandidate.running_mate_first_name || ""} ${myPartyCandidate.running_mate_last_name || ""}`}
                     </span>
                     <span className="text-xs text-c-40">(Running Mate)</span>
                   </div>
@@ -405,18 +393,16 @@ function ElectionCandidatesPage() {
           </div>
         ) : (
           filteredCandidates.map((c) => {
-            const partyShort = getVal(c.party_short_name) || "IND";
-            const partyLogo = getVal(c.party_logo);
-            const partyColor = getVal(c.party_color_hex) || "#3b82f6";
+            const partyShort = c.party_short_name || "IND";
+            const partyLogo = c.party_logo;
+            const partyColor = c.party_color_hex || "#3b82f6";
             const isMyParty = party?.short_name && partyShort.toLowerCase() === party.short_name.toLowerCase();
 
-            const candidateName = `${getVal(c.first_name)} ${getVal(c.last_name)}`.trim();
-            const candidateAvatar = getVal(c.avatar);
+            const candidateName = `${c.first_name || ""} ${c.last_name || ""}`.trim();
+            const candidateAvatar = c.avatar;
 
-            const runningMateFirstName = getVal(c.running_mate_first_name);
-            const runningMateLastName = getVal(c.running_mate_last_name);
-            const runningMateName = `${runningMateFirstName} ${runningMateLastName}`.trim();
-            const runningMateAvatar = getVal(c.running_mate_avatar);
+            const runningMateName = `${c.running_mate_first_name || ""} ${c.running_mate_last_name || ""}`.trim();
+            const runningMateAvatar = c.running_mate_avatar;
             const hasRunningMate = Boolean(c.running_mate_id && runningMateName);
 
             return (

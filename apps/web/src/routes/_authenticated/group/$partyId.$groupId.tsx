@@ -23,7 +23,6 @@ import {
 } from "lucide-react";
 import { AppAvatar } from "@repo/ui/components/avatar";
 import { Button } from "@repo/ui/components/button";
-import { getVal } from "@repo/ui/lib/utils";
 import { QUERY_KEYS, APP_URL } from "@/lib/config";
 import { getParties, type Party } from "@/lib/server/parties";
 import {
@@ -166,10 +165,10 @@ function CampaignGroupPageComponent() {
       // Search query
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
-        const firstName = getVal(m.first_name).toLowerCase();
-        const lastName = getVal(m.last_name).toLowerCase();
-        const username = getVal(m.username).toLowerCase();
-        const fakeId = getVal(m.fake_id).toLowerCase();
+        const firstName = (m.first_name || "").toLowerCase();
+        const lastName = (m.last_name || "").toLowerCase();
+        const username = (m.username || "").toLowerCase();
+        const fakeId = String(m.fake_id || "").toLowerCase();
         const fullName = `${firstName} ${lastName}`.trim();
         return fullName.includes(q) || username.includes(q) || fakeId.includes(q);
       }
@@ -451,11 +450,11 @@ function CampaignGroupPageComponent() {
               {filteredMembers.map((member) => {
                 const roleMeta = getRoleMeta(member.role);
                 const RoleIcon = roleMeta.icon;
-                const firstName = getVal(member.first_name);
-                const lastName = getVal(member.last_name);
-                const username = getVal(member.username);
-                const avatar = getVal(member.avatar);
-                const fakeId = getVal(member.fake_id);
+                const firstName = member.first_name || "";
+                const lastName = member.last_name || "";
+                const username = member.username || "";
+                const avatar = member.avatar || "";
+                const fakeId = member.fake_id || "";
                 const fullName = [firstName, lastName].filter(Boolean).join(" ") || "Campaign Member";
 
                 return (

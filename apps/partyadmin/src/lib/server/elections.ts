@@ -2,7 +2,6 @@ import { createServerFn } from "@tanstack/react-start";
 import { getCookie } from "@tanstack/react-start/server";
 import { apiFetch } from "./fetch";
 import { API_URL } from "#/lib/config";
-import { getVal, getId } from "@repo/ui/lib/utils";
 
 export type ElectionFilters = {
   election_group_ids: number[];
@@ -76,23 +75,23 @@ export const getElections = createServerFn({ method: "GET" })
 
       if (resData.success && Array.isArray(resData.data?.elections)) {
         resData.data.elections = resData.data.elections.map((election: any) => {
-          const candidateId = getId(election.candidate_id);
-          const runningMateId = getId(election.running_mate_id);
+          const candidateId = election.candidate_id ? Number(election.candidate_id) : undefined;
+          const runningMateId = election.running_mate_id ? Number(election.running_mate_id) : undefined;
 
-          const candidateFirstName = getVal(election.candidate_first_name);
-          const candidateLastName = getVal(election.candidate_last_name);
+          const candidateFirstName = election.candidate_first_name;
+          const candidateLastName = election.candidate_last_name;
           const candidateName = `${candidateFirstName} ${candidateLastName}`.trim();
-          const candidateAvatar = getVal(election.candidate_avatar);
+          const candidateAvatar = election.candidate_avatar || undefined;
 
-          const runningMateFirstName = getVal(election.running_mate_first_name);
-          const runningMateLastName = getVal(election.running_mate_last_name);
+          const runningMateFirstName = election.running_mate_first_name;
+          const runningMateLastName = election.running_mate_last_name;
           const runningMateName = `${runningMateFirstName} ${runningMateLastName}`.trim();
-          const runningMateAvatar = getVal(election.running_mate_avatar);
+          const runningMateAvatar = election.running_mate_avatar || undefined;
 
           return {
             ...election,
-            candidate: candidateId ? { id: candidateId, name: candidateName, avatar: candidateAvatar || undefined, } : undefined,
-            runningMate: runningMateId ? { id: runningMateId, name: runningMateName, avatar: runningMateAvatar || undefined, } : undefined,
+            candidate: candidateId ? { id: candidateId, name: candidateName, avatar: candidateAvatar, } : undefined,
+            running_mate: runningMateId ? { id: runningMateId, name: runningMateName, avatar: runningMateAvatar, } : undefined,
           };
         });
       }

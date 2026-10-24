@@ -3,12 +3,10 @@ package electiongroupshandler
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/service/audit"
 	"free9ja/api/internal/utils"
-	"math"
 	"net/http"
 	"strconv"
 

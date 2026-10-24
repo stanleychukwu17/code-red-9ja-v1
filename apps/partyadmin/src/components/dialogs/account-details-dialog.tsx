@@ -60,6 +60,7 @@ export function AccountDetailsDialog({
     }
   }, [open, defaultAmount]);
 
+  // Mutation to credit test funds to party wallet
   const fundMutation = useMutation({
     mutationFn: (variables: { partyID: number; amountKobo: number }) => fundPartyWalletTest({ data: variables }),
     onSuccess: (res) => {
@@ -67,6 +68,7 @@ export function AccountDetailsDialog({
         toast.success(
           `Successfully credited ₦${fundAmount.toLocaleString()} to ${party?.name || "party"} wallet!`,
         );
+        // Refresh related party balances and transaction queries
         if (partyId) {
           queryClient.invalidateQueries({ queryKey: ["partyWallet", partyId] });
           queryClient.invalidateQueries({ queryKey: ["partyWalletTransactions", partyId] });
@@ -80,6 +82,7 @@ export function AccountDetailsDialog({
       }
     },
     onError: (error: any) => {
+      // Surface network or unexpected server errors
       toast.error(error.message || "An unexpected error occurred while funding wallet");
     },
   });
@@ -93,9 +96,12 @@ export function AccountDetailsDialog({
     }
   };
 
+  // handles depositing into back  
   const handleDeposit = () => {
+    // Validate target party and positive funding amount
     if (!partyId || fundAmount <= 0) return;
 
+    // Direct deposit is currently restricted to platform admins
     if (!isAdmin) {
       toast.error(
         "Party administrators cannot directly deposit funds yet. Please contact a platform administrator.",
@@ -103,12 +109,14 @@ export function AccountDetailsDialog({
       return;
     }
 
+    // Trigger fund mutation with amount converted to kobo
     fundMutation.mutate({
       partyID: partyId,
       amountKobo: fundAmount * 100, // convert Naira input to Kobo
     });
   };
 
+  // Reset dialog state and trigger external close handler
   const handleClose = () => {
     setOpen?.(false);
     onClose();

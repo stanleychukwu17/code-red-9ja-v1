@@ -10,7 +10,6 @@ import (
 	"free9ja/api/internal/service/audit"
 	elections "free9ja/api/internal/service/elections"
 	"free9ja/api/internal/utils"
-	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -1052,7 +1051,7 @@ func (h *Handler) FieldPartyCandidate(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if !election.NominationsOpen {
+		if !electionDetails.NominationsOpen {
 			h.utils.RespondError(w, http.StatusForbidden, "Candidate nomination is closed: elections within 15 days cannot be modified")
 			return
 		}
@@ -1122,7 +1121,7 @@ func (h *Handler) FieldPartyCandidate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Field candidate under the party
-	err = h.service.FieldPartyCandidate(r.Context(), election.Election, req.PartyID, req.CandidateID, req.Slot)
+	err = h.service.FieldPartyCandidate(r.Context(), election, req.PartyID, req.CandidateID, req.Slot)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to field candidate: "+err.Error())
 		return
@@ -1212,7 +1211,7 @@ func (h *Handler) UnfieldPartyCandidate(w http.ResponseWriter, r *http.Request) 
 			h.utils.RespondError(w, http.StatusForbidden, "Election group is not active")
 			return
 		}
-		if !election.NominationsOpen {
+		if !electionDetails.NominationsOpen {
 			h.utils.RespondError(w, http.StatusForbidden, "Candidate nomination is closed: elections within 15 days cannot be modified")
 			return
 		}
@@ -1232,7 +1231,7 @@ func (h *Handler) UnfieldPartyCandidate(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Remove assigned candidate/running mate from the election ballot
-	err = h.service.UnfieldPartyCandidate(r.Context(), election.Election, req.PartyID, req.Slot)
+	err = h.service.UnfieldPartyCandidate(r.Context(), election, req.PartyID, req.Slot)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to unfield candidate: "+err.Error())
 		return
