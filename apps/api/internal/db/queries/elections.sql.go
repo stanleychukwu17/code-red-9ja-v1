@@ -258,6 +258,36 @@ func (q *Queries) GetElectionCandidatesCount(ctx context.Context, electionID int
 	return count, err
 }
 
+const getElectionInstanceByFakeID = `-- name: GetElectionInstanceByFakeID :one
+SELECT id, fake_id, election_group_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, office_id, name, election_date, scope, reports_count, updates_count, results_submitted_count, created_at, updated_at FROM elections WHERE fake_id = $1
+`
+
+func (q *Queries) GetElectionInstanceByFakeID(ctx context.Context, fakeID pgtype.Int8) (Election, error) {
+	row := q.db.QueryRow(ctx, getElectionInstanceByFakeID, fakeID)
+	var i Election
+	err := row.Scan(
+		&i.ID,
+		&i.FakeID,
+		&i.ElectionGroupID,
+		&i.StateID,
+		&i.SenatorialDistrictID,
+		&i.FederalConstituencyID,
+		&i.StateConstituencyID,
+		&i.LgaID,
+		&i.WardID,
+		&i.OfficeID,
+		&i.Name,
+		&i.ElectionDate,
+		&i.Scope,
+		&i.ReportsCount,
+		&i.UpdatesCount,
+		&i.ResultsSubmittedCount,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getElectionInstanceByID = `-- name: GetElectionInstanceByID :one
 SELECT id, fake_id, election_group_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, office_id, name, election_date, scope, reports_count, updates_count, results_submitted_count, created_at, updated_at FROM elections WHERE id = $1
 `

@@ -410,3 +410,75 @@ export const getPartyOfficials = createServerFn({ method: "GET" })
 			};
 		}
 	});
+
+export interface PartyMemberItem {
+	membership_id: number;
+	party_id: number;
+	chapter_id: number;
+	user_id: number;
+	fake_id?: number;
+	username: string;
+	first_name: string;
+	last_name: string;
+	avatar?: string;
+	is_verified: boolean;
+	position_name?: string;
+	status: string;
+	joined_at: string;
+}
+
+export interface PartyMembersResult {
+	party_id: number;
+	chapter_id: number;
+	total_count: number;
+	members: PartyMemberItem[];
+	meta: {
+		next_cursor?: number;
+		has_more: boolean;
+	};
+}
+
+/**
+ * Server function to fetch registered members for a specific party chapter.
+ */
+export const getPartyMembers = createServerFn({ method: "GET" })
+	.inputValidator(
+		(data: {
+			partyId: number | string;
+			chapterId?: number;
+			search?: string;
+			cursor?: number;
+			limit?: number;
+		}) => data,
+	)
+	.handler(async ({ data }) => {
+		try {
+			return await apiFetchJson<{
+				success: boolean;
+				message?: string;
+				data: PartyMembersResult;
+			}>(
+				API_URL.partyMembers(data.partyId, {
+					chapter_id: data.chapterId,
+					search: data.search,
+					cursor: data.cursor,
+					limit: data.limit,
+				}),
+			);
+		} catch (error: unknown) {
+			const message =
+				error instanceof Error ? error.message : "Failed to fetch party members";
+			return {
+				success: false,
+				message,
+				data: {
+					party_id: Number(data.partyId),
+					chapter_id: data.chapterId || 0,
+					total_count: 0,
+					members: [],
+					meta: { has_more: false },
+				},
+			};
+		}
+	});
+

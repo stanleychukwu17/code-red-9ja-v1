@@ -47,22 +47,6 @@ type R2Config struct {
 	APIToken  string // Cloudflare API Token for Edge Cache purging
 }
 
-// MonnifyConfig holds credentials for the Monnify payment gateway.
-// Used for creating reserved virtual accounts and verifying webhook signatures.
-type MonnifyConfig struct {
-	// BaseURL is the Monnify API root.
-	// Sandbox:    https://sandbox.monnify.com
-	// Production: https://api.monnify.com
-	BaseURL string
-
-	// APIKey and SecretKey are found on the Monnify Dashboard → Settings → API Keys.
-	APIKey    string
-	SecretKey string
-
-	// ContractCode identifies your business contract on Monnify.
-	ContractCode string
-}
-
 // Config holds the complete application configuration.
 // It includes environment settings, server port, and database configuration.
 type Config struct {
@@ -71,7 +55,6 @@ type Config struct {
 	Database             DatabaseConfig // Database connection configuration
 	Redis                RedisConfig    // Redis connection configuration
 	R2                   R2Config       // Cloudflare R2 storage configuration
-	Monnify              MonnifyConfig  // Monnify payment gateway configuration
 	GeminiAPIKey         string
 	JWTSecret            string
 	JWTAccessExpiration  time.Duration
@@ -214,14 +197,6 @@ func LoadConfig() (*Config, error) {
 			PublicURL:       GetEnv("R2_PUBLIC_URL", ""),        // CDN / Public domain URL (e.g., https://files.free9ja.com)
 			ZoneID:          GetEnv("CLOUDFLARE_ZONE_ID", ""),   // Zone ID for Cloudflare cache purging
 			APIToken:        GetEnv("CLOUDFLARE_API_TOKEN", ""), // API token with cache purge permissions
-		},
-
-		// Monnify payment gateway for wallet deposits, virtual accounts, and webhook verification
-		Monnify: MonnifyConfig{
-			BaseURL:      GetEnv("MONNIFY_BASE_URL", "https://sandbox.monnify.com"), // API root (sandbox vs production)
-			APIKey:       GetEnv("MONNIFY_API_KEY", ""),                             // Merchant API key
-			SecretKey:    GetEnv("MONNIFY_SECRET_KEY", ""),                          // Secret key for HMAC webhook verification
-			ContractCode: GetEnv("MONNIFY_CONTRACT_CODE", ""),                       // Monnify business contract code
 		},
 
 		// Google Gemini API key used by the INEC result grabber for OCR & result sheet parsing

@@ -9,7 +9,6 @@ import (
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/service/audit"
-	monnifyclient "free9ja/api/internal/service/monnify"
 	"free9ja/api/internal/service/notifications"
 	pageverificationsservice "free9ja/api/internal/service/page_verifications"
 	"free9ja/api/internal/utils"
@@ -24,12 +23,11 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-// PartiesService manages political parties and their Monnify-backed wallets.
+// PartiesService manages political parties and their wallets.
 type PartiesService struct {
 	queries                  *queries.Queries
 	pool                     *pgxpool.Pool
 	rdb                      *redis.Client
-	monnify                  *monnifyclient.Client
 	utils                    *utils.Utils
 	pageVerificationsService PageVerificationsService
 	usersService             UsersService
@@ -91,13 +89,11 @@ type NotificationsService interface {
 }
 
 // NewPartiesService creates a new PartiesService.
-// monnify may be nil in test environments — wallet creation will be skipped.
-func NewPartiesService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client, monnify *monnifyclient.Client, u *utils.Utils, ns NotificationsService, bs BlocksService, as audit.AuditService, bodiesService BodiesService, usersService UsersService) *PartiesService {
+func NewPartiesService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client, u *utils.Utils, ns NotificationsService, bs BlocksService, as audit.AuditService, bodiesService BodiesService, usersService UsersService) *PartiesService {
 	return &PartiesService{
 		queries:              q,
 		pool:                 pool,
 		rdb:                  rdb,
-		monnify:              monnify,
 		utils:                u,
 		notificationsService: ns,
 		blocksService:        bs,
@@ -137,14 +133,10 @@ func (s *PartiesService) CreateParty(ctx context.Context, shortName, name, logo 
 		return queries.Party{}, err
 	}
 
-	// Provision wallet asynchronously via Monnify (best-effort).
-	// Wallet creation failure does NOT roll back the party insert — the admin
-	// can retry wallet creation later via a dedicated endpoint.
-	if s.monnify != nil {
-		if _, walletErr := s.CreatePartyWallet(ctx, party); walletErr != nil {
-			// Log but don't fail — party creation must succeed either way.
-			_ = walletErr
-		}
+	// Provision wallet directly (best-effort).
+	if _, walletErr := s.CreatePartyWallet(ctx, party); walletErr != nil {
+		// Log but don't fail — party creation must succeed either way.
+		_ = walletErr
 	}
 
 	// Invalidate parties listings cache
@@ -153,35 +145,16 @@ func (s *PartiesService) CreateParty(ctx context.Context, shortName, name, logo 
 	return party, nil
 }
 
-// CreatePartyWallet calls Monnify to create a reserved virtual account for the
-// given party, then persists the wallet record in party_wallets.
-//
-// It is safe to call this more than once — subsequent calls will return an error
-// because account_reference is UNIQUE and Monnify rejects duplicate references.
+// CreatePartyWallet creates a wallet record in party_wallets.
 func (s *PartiesService) CreatePartyWallet(ctx context.Context, party queries.Party) (queries.PartyWallet, error) {
-	if s.monnify == nil {
-		return queries.PartyWallet{}, fmt.Errorf("monnify client is not configured")
+	// Check if wallet already exists
+	if existingWallet, err := s.queries.GetPartyWalletByPartyID(ctx, party.ID); err == nil && existingWallet.ID > 0 {
+		return existingWallet, nil
 	}
 
 	// Build a stable, human-readable reference tied to the party ID.
 	accountReference := fmt.Sprintf("free9ja-party-%d", party.ID)
-
-	resp, err := s.monnify.CreateReservedAccount(ctx, monnifyclient.ReservedAccountRequest{
-		AccountReference: accountReference,
-		AccountName:      party.Name + " - free9ja",
-		CustomerEmail:    fmt.Sprintf("party-%d@free9ja.com", party.ID),
-		CustomerName:     party.Name,
-		CustomerBvn:      "22222222222", // Default dummy BVN to ensure accounts are generated in sandbox/testing
-	})
-	if err != nil {
-		return queries.PartyWallet{}, fmt.Errorf("monnify reserved account: %w", err)
-	}
-
-	// Serialize the account numbers slice to JSONB.
-	accountNumbersJSON, err := json.Marshal(resp.AccountNumbers)
-	if err != nil {
-		return queries.PartyWallet{}, fmt.Errorf("marshal account numbers: %w", err)
-	}
+	accountNumbersJSON := []byte("[]")
 
 	wallet, err := s.queries.CreatePartyWallet(ctx, queries.CreatePartyWalletParams{
 		PartyID:          party.ID,
@@ -197,6 +170,10 @@ func (s *PartiesService) CreatePartyWallet(ctx context.Context, party queries.Pa
 
 // GetPartyBasicInfo retrieves basic party info.
 func (s *PartiesService) GetPartyBasicInfo(ctx context.Context, partyID int16) *queries.PartyBasicInfoWithVerifications {
+	if partyID <= 0 {
+		return nil
+	}
+
 	redisKey := fmt.Sprintf("%s%d", db.RedisPartyBasicInfo, partyID)
 
 	// Try to get from Redis
@@ -253,6 +230,10 @@ func (s *PartiesService) GetAcceptingPartyIDs(ctx context.Context) (map[int16]bo
 
 // GetPartyInfo returns a party if the provided optional partyID is valid.
 func (s *PartiesService) GetPartyInfo(ctx context.Context, partyID int16) *queries.PartyWithVerifications {
+	if partyID <= 0 {
+		return nil
+	}
+
 	redisKey := fmt.Sprintf("%s%d", db.RedisPartyInfo, partyID)
 
 	// Try to get from Redis
@@ -392,6 +373,10 @@ type PartyCard struct {
 
 // GetPartySampleMemberAvatars retrieves sample member avatars for a party chapter, cached in Redis.
 func (s *PartiesService) GetPartySampleMemberAvatars(ctx context.Context, partyID int16, chapterID int32) ([]PartySampleMember, error) {
+	if partyID <= 0 || chapterID <= 0 {
+		return []PartySampleMember{}, nil
+	}
+
 	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisParties5MemberAvatars, partyID, chapterID)
 
 	// Try to get from Redis
@@ -1754,6 +1739,10 @@ func (s *PartiesService) GetOrCreateWardChapter(ctx context.Context, partyID int
 // GetChapterMemberCount retrieves the number of active members in a chapter.
 // It checks Redis first and falls back to the database if not found.
 func (s *PartiesService) GetChapterMemberCount(ctx context.Context, partyID int16, chapterID int32) (int64, error) {
+	if partyID <= 0 || chapterID <= 0 {
+		return 0, nil
+	}
+
 	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisChapterMemberCount, partyID, chapterID)
 
 	// 1. Try to get count from Redis
@@ -1786,6 +1775,10 @@ func (s *PartiesService) GetChapterMemberCount(ctx context.Context, partyID int1
 
 // IsPartyChapterMember checks chapter membership, including suspended members.
 func (s *PartiesService) IsPartyChapterMember(ctx context.Context, userID int64, partyID int16, chapterID int32) (bool, error) {
+	if userID <= 0 || partyID <= 0 || chapterID <= 0 {
+		return false, nil
+	}
+
 	cacheKey := fmt.Sprintf("%s%d:%d:%d", db.RedisPartyChapterMember, partyID, chapterID, userID)
 	if cached, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
 		if isMember, err := strconv.ParseBool(cached); err == nil {
@@ -1808,6 +1801,10 @@ func (s *PartiesService) IsPartyChapterMember(ctx context.Context, userID int64,
 
 // IsPartyMember checks if a user is an active member of a party.
 func (s *PartiesService) IsPartyMember(ctx context.Context, userID int64, partyID int16) (bool, error) {
+	if userID <= 0 || partyID <= 0 {
+		return false, nil
+	}
+
 	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisPartyMember, partyID, userID)
 	if s.rdb != nil {
 		if cached, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
@@ -2535,6 +2532,10 @@ func (s *PartiesService) VacatePositionAssignment(ctx context.Context, id int64,
 // Results are cached in Redis for 7 days to eliminate database lookups across frequent roster views,
 // and invalidated whenever positions are assigned, vacated, or updated.
 func (s *PartiesService) ListPartyOfficials(ctx context.Context, partyID int16, chapterID int32) ([]queries.ListPartyOfficialsRow, error) {
+	if partyID <= 0 || chapterID <= 0 {
+		return []queries.ListPartyOfficialsRow{}, nil
+	}
+
 	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisPartyChapterOfficials, partyID, chapterID)
 
 	// 1. Check Redis cache
@@ -2571,6 +2572,10 @@ func (s *PartiesService) ListPartyOfficials(ctx context.Context, partyID int16, 
 // ListMemberPositionAssignments lists positions held by a user in the party.
 // Results are cached in Redis to minimize database lookups across frequent authorization checks.
 func (s *PartiesService) ListMemberPositionAssignments(ctx context.Context, partyID int16, userID int64) ([]queries.ListMemberPositionAssignmentsRow, error) {
+	if partyID <= 0 || userID <= 0 {
+		return []queries.ListMemberPositionAssignmentsRow{}, nil
+	}
+
 	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisPartyMemberPositions, partyID, userID)
 
 	// 1. Check Redis cache
@@ -2608,6 +2613,10 @@ func (s *PartiesService) ListMemberPositionAssignments(ctx context.Context, part
 // Results are cached in Redis to minimize database lookups across frequent checks.
 // If the user is not suspended, a struct with ID = 0 is returned/cached (check if suspension.ID > 0).
 func (s *PartiesService) GetActivePartyMemberSuspension(ctx context.Context, partyID int16, userID int64) (*queries.PartyMemberSuspension, error) {
+	if partyID <= 0 || userID <= 0 {
+		return nil, nil
+	}
+
 	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisPartyMemberSuspension, partyID, userID)
 
 	// 1. Check Redis cache
@@ -3234,6 +3243,10 @@ func (s *PartiesService) InvalidatePartyMemberSuspensionCache(ctx context.Contex
 
 // InvalidateMemberPositionAssignmentsCache invalidates the Redis position assignments cache for a member.
 func (s *PartiesService) InvalidateMemberPositionAssignmentsCache(ctx context.Context, partyID int16, userID int64) {
+	if partyID <= 0 || userID <= 0 {
+		return
+	}
+
 	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisPartyMemberPositions, partyID, userID)
 	if err := s.rdb.Del(ctx, cacheKey).Err(); err != nil {
 		slog.Error("Failed to invalidate party member positions cache", "error", err, "partyID", partyID, "userID", userID)
@@ -3242,6 +3255,10 @@ func (s *PartiesService) InvalidateMemberPositionAssignmentsCache(ctx context.Co
 
 // InvalidatePartyOfficialsCache invalidates the Redis cache for chapter officials.
 func (s *PartiesService) InvalidatePartyOfficialsCache(ctx context.Context, partyID int16, chapterID int32) {
+	if partyID <= 0 || chapterID <= 0 {
+		return
+	}
+
 	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisPartyChapterOfficials, partyID, chapterID)
 	if err := s.rdb.Del(ctx, cacheKey).Err(); err != nil {
 		slog.Error("Failed to invalidate party chapter officials cache", "error", err, "partyID", partyID, "chapterID", chapterID)
@@ -3268,6 +3285,10 @@ func (s *PartiesService) InvalidatePartyCache(ctx context.Context, partyID int16
 
 // InvalidateChapterMemberCount removes the cached member count for a chapter.
 func (s *PartiesService) InvalidateChapterMemberCount(ctx context.Context, partyID int16, chapterID int32) {
+	if partyID <= 0 || chapterID <= 0 {
+		return
+	}
+
 	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisChapterMemberCount, partyID, chapterID)
 	err := s.rdb.Del(ctx, cacheKey).Err()
 	if err != nil {
@@ -3314,6 +3335,10 @@ func (s *PartiesService) InvalidatePartyPositionByIDCache(ctx context.Context, p
 // GetUserPartyChapters lists active chapters of a party that a user belongs to.
 // Results are cached in Redis to minimize database lookups.
 func (s *PartiesService) GetUserPartyChapters(ctx context.Context, userID int64, partyID int16) ([]queries.GetUserPartyChaptersRow, error) {
+	if userID <= 0 || partyID <= 0 {
+		return []queries.GetUserPartyChaptersRow{}, nil
+	}
+
 	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisUserPartyChapters, partyID, userID)
 
 	// 1. Check Redis cache
@@ -3349,4 +3374,169 @@ func (s *PartiesService) GetUserPartyChapters(ctx context.Context, userID int64,
 func (s *PartiesService) InvalidateUserPartyChapters(ctx context.Context, userID int64, partyID int16) {
 	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisUserPartyChapters, partyID, userID)
 	_ = s.rdb.Del(ctx, cacheKey).Err()
+}
+
+
+// ListPartyMembersParams parameters for querying chapter members
+type ListPartyMembersParams struct {
+	PartyID   int16
+	ChapterID int32
+	Search    string
+	Cursor    int64
+	Limit     int32
+}
+
+// PartyMemberItem represents a single member of a party chapter
+type PartyMemberItem struct {
+	MembershipID int64      `json:"membership_id"`
+	PartyID      int16      `json:"party_id"`
+	ChapterID    int32      `json:"chapter_id"`
+	UserID       int64      `json:"user_id"`
+	FakeID       *int64     `json:"fake_id,omitempty"`
+	Username     string     `json:"username"`
+	FirstName    string     `json:"first_name"`
+	LastName     string     `json:"last_name"`
+	Avatar       *string    `json:"avatar,omitempty"`
+	IsVerified   bool       `json:"is_verified"`
+	PositionName *string    `json:"position_name,omitempty"`
+	Status       string     `json:"status"`
+	JoinedAt     time.Time  `json:"joined_at"`
+}
+
+// PartyMembersMeta pagination metadata
+type PartyMembersMeta struct {
+	NextCursor *int64 `json:"next_cursor"`
+	HasMore    bool   `json:"has_more"`
+}
+
+// PartyMembersResult response payload for chapter members listing
+type PartyMembersResult struct {
+	PartyID    int16             `json:"party_id"`
+	ChapterID  int32             `json:"chapter_id"`
+	TotalCount int64             `json:"total_count"`
+	Members    []PartyMemberItem `json:"members"`
+	Meta       PartyMembersMeta  `json:"meta"`
+}
+
+// ListPartyChapterMembers retrieves active members for a given party chapter.
+func (s *PartiesService) ListPartyChapterMembers(ctx context.Context, params ListPartyMembersParams) (*PartyMembersResult, error) {
+	if params.Limit <= 0 || params.Limit > 100 {
+		params.Limit = 30
+	}
+
+	query := `
+		SELECT 
+			pm.id,
+			pm.party_id,
+			pm.chapter_id,
+			pm.user_id,
+			u.fake_id,
+			COALESCE(u.username, ''),
+			COALESCE(u.first_name, ''),
+			COALESCE(u.last_name, ''),
+			u.avatar,
+			COALESCE(u.is_verified, false),
+			pos.name,
+			pm.status,
+			pm.created_at
+		FROM party_membership pm
+		JOIN users u ON u.id = pm.user_id
+		LEFT JOIN LATERAL (
+			SELECT p.name
+			FROM party_position_assignments pa
+			JOIN party_positions p ON p.id = pa.position_id
+			WHERE pa.party_id = pm.party_id
+			  AND pa.chapter_id = pm.chapter_id
+			  AND pa.user_id = pm.user_id
+			  AND pa.status = 'active'
+			ORDER BY pa.id ASC
+			LIMIT 1
+		) pos ON true
+		WHERE pm.party_id = $1
+		  AND pm.chapter_id = $2
+		  AND pm.status = 'active'
+		  AND ($3::bigint IS NULL OR pm.id < $3)
+		  AND ($4::text IS NULL OR (
+			u.first_name ILIKE '%' || $4 || '%' OR
+			u.last_name ILIKE '%' || $4 || '%' OR
+			u.username ILIKE '%' || $4 || '%' OR
+			(u.first_name || ' ' || u.last_name) ILIKE '%' || $4 || '%'
+		  ))
+		ORDER BY pm.id DESC
+		LIMIT $5
+	`
+
+	var cursorParam interface{}
+	if params.Cursor > 0 {
+		cursorParam = params.Cursor
+	}
+
+	var searchParam interface{}
+	if strings.TrimSpace(params.Search) != "" {
+		searchParam = strings.TrimSpace(params.Search)
+	}
+
+	rows, err := s.pool.Query(ctx, query, params.PartyID, params.ChapterID, cursorParam, searchParam, params.Limit+1)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query party chapter members: %w", err)
+	}
+	defer rows.Close()
+
+	var members []PartyMemberItem
+	for rows.Next() {
+		var m PartyMemberItem
+		var fakeID *int64
+		var avatar *string
+		var posName *string
+		if err := rows.Scan(
+			&m.MembershipID,
+			&m.PartyID,
+			&m.ChapterID,
+			&m.UserID,
+			&fakeID,
+			&m.Username,
+			&m.FirstName,
+			&m.LastName,
+			&avatar,
+			&m.IsVerified,
+			&posName,
+			&m.Status,
+			&m.JoinedAt,
+		); err != nil {
+			return nil, fmt.Errorf("failed to scan party chapter member row: %w", err)
+		}
+		m.FakeID = fakeID
+		m.Avatar = avatar
+		m.PositionName = posName
+		members = append(members, m)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error reading party chapter member rows: %w", err)
+	}
+
+	hasMore := false
+	var nextCursor *int64
+	if int32(len(members)) > params.Limit {
+		hasMore = true
+		cVal := members[params.Limit-1].MembershipID
+		nextCursor = &cVal
+		members = members[:params.Limit]
+	}
+
+	totalCount, _ := s.GetChapterMemberCount(ctx, params.PartyID, params.ChapterID)
+
+	if members == nil {
+		members = []PartyMemberItem{}
+	}
+
+	return &PartyMembersResult{
+		PartyID:    params.PartyID,
+		ChapterID:  params.ChapterID,
+		TotalCount: totalCount,
+		Members:    members,
+		Meta: PartyMembersMeta{
+			NextCursor: nextCursor,
+			HasMore:    hasMore,
+		},
+	}, nil
 }

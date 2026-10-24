@@ -74,7 +74,6 @@ import (
 	inecgrabberservice "free9ja/api/internal/service/inec_grabber"
 	mediaassetsservice "free9ja/api/internal/service/media_assets"
 	messagingservice "free9ja/api/internal/service/messaging"
-	monnifyservice "free9ja/api/internal/service/monnify"
 	notificationsservice "free9ja/api/internal/service/notifications"
 	officesservice "free9ja/api/internal/service/offices"
 	pageverificationsservice "free9ja/api/internal/service/page_verifications"
@@ -114,19 +113,6 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		accessExp = cfg.JWTAccessExpiration
 		refreshExp = cfg.JWTRefreshExpiration
 	}
-	// Initializes Monnify client (nil-safe: wallet creation is skipped if un-configured)
-	var monnifyClient *monnifyservice.Client
-	if cfg != nil && cfg.Monnify.APIKey != "" && cfg.Monnify.SecretKey != "" {
-		monnifyClient = monnifyservice.New(monnifyservice.Config{
-			BaseURL:      cfg.Monnify.BaseURL,
-			APIKey:       cfg.Monnify.APIKey,
-			SecretKey:    cfg.Monnify.SecretKey,
-			ContractCode: cfg.Monnify.ContractCode,
-		})
-	} else {
-		slog.Warn("Monnify not configured — party/user wallet creation will be unavailable", "reason", "MONNIFY_API_KEY or MONNIFY_SECRET_KEY is empty")
-	}
-
 	// Initialize the R2 service
 	var r2Svc *r2service.R2Service
 	var r2Err error
@@ -162,14 +148,14 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	electionStatsService := electionstats.NewElectionStatsService(q)
 	notificationsService := notificationsservice.NewService(q, rdb, broadcaster)
 	electionsService := electionsservice.NewElectionsService(q, pool, rdb, distributor, earningsService, officesService, bodiesService, notificationsService)
-	usersService := usersservice.NewUsersService(q, rdb, monnifyClient, bodiesService, electionsService)
+	usersService := usersservice.NewUsersService(q, rdb, bodiesService, electionsService)
 	pollingUnitUpdatesService := puupdates.NewService(q, pool, earningsService, usersService)
 	partyApplicationsService := partyapplications.NewService(q, pool, rdb, distributor)
 	pollingUnitResultsService := puresults.NewService(q, pool, distributor, earningsService, usersService)
 	pollingUnitsService := pollingunitsservice.NewPollingUnitsService(q, rdb)
 	supervisorAssignmentsService := supervisorassignmentsservice.NewService(q)
 	pollingUnitAssignmentsService := puassignments.NewService(q, rdb, distributor, earningsService)
-	partiesService := partiesservice.NewPartiesService(q, pool, rdb, monnifyClient, utilsInstance, notificationsService, blocksService, auditService, bodiesService, usersService)
+	partiesService := partiesservice.NewPartiesService(q, pool, rdb, utilsInstance, notificationsService, blocksService, auditService, bodiesService, usersService)
 	followsService := followsservice.NewFollowsService(q, rdb, partiesService, notificationsService)
 	electionGroupsService := electiongroupsservice.NewElectionGroupsService(q, rdb, distributor)
 	senatorialDistrictsService := senatorialdistrictsservice.NewSenatorialDistrictsService(q, rdb)
@@ -212,7 +198,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	pollingUnitUpdatesHandler := puupdateshandler.NewHandler(pollingUnitUpdatesService, utilsInstance, distributor)
 	pollingUnitResultsHandler := puresultshandler.NewHandler(pollingUnitResultsService, utilsInstance, distributor)
 	supervisorAssignmentsHandler := supervisorassignmentshandler.NewHandler(supervisorAssignmentsService, utilsInstance)
-	webhookHandler := webhookshandler.NewHandler(partiesService, usersService, monnifyClient, utilsInstance)
+	webhookHandler := webhookshandler.NewHandler(partiesService, usersService, utilsInstance)
 	electionResultsHandler := electionresultshandler.NewHandler(pool, utilsInstance)
 	seedHandler := seedhandler.NewHandler(seedService, utilsInstance)
 	systemSettingsHandler := systemsettingshandler.NewHandler(q, utilsInstance)
@@ -333,6 +319,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	mainRouter.Get("/api/v1/parties/{id}/wallet", partiesHandler.GetPartyWallet)
 	mainRouter.Get("/api/v1/parties/{id}/positions", partiesHandler.ListPartyPositions)
 	mainRouter.Get("/api/v1/parties/{id}/officials", partiesHandler.ListPartyOfficials)
+	mainRouter.Get("/api/v1/parties/{id}/members", partiesHandler.ListPartyMembers)
 	mainRouter.Get("/api/v1/parties/{id}/members/{user_id}/positions", partiesHandler.ListMemberPositions)
 
 	// marketing plans (public — anyone can browse available plans)
@@ -382,7 +369,8 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	// elections public routes (with optional auth to identify party_id for candidates)
 	mainRouter.With(apimiddleware.OptionalAuthMiddleware(jwtSecret)).Get("/api/v1/elections", electionsHandler.ListElections)
 	mainRouter.Get("/api/v1/elections/non-voting-reasons", electionsHandler.GetNonVotingReasons)
-	mainRouter.Get("/api/v1/elections/{id}", electionsHandler.GetElection)
+	// mainRouter.Get("/api/v1/elections/{id}", electionsHandler.GetElection)
+	mainRouter.Get("/api/v1/elections/by-fake-id/{fake_id}", electionsHandler.GetElectionByFakeID)
 
 	// file metadata — public reads (nil-safe: returns 503 when R2 is not configured)
 	mainRouter.Get("/api/v1/files", fileRoute(utilsInstance, filesHandler, func(h *fileshandler.Handler) http.HandlerFunc { return h.ListFiles }))

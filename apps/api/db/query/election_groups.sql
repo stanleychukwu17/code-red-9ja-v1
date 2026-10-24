@@ -6,6 +6,9 @@ RETURNING *;
 -- name: GetElectionGroupByID :one
 SELECT * FROM election_groups WHERE id = $1;
 
+-- name: GetElectionGroupByFakeID :one
+SELECT * FROM election_groups WHERE fake_id = $1;
+
 -- name: ListElectionGroups :many
 SELECT * FROM election_groups
 WHERE (sqlc.narg('active')::boolean IS NULL OR active = sqlc.narg('active')::boolean)

@@ -120,7 +120,9 @@ const (
 	RedisElectionGroupsAll     = "election_groups:all"         // STRING: used to store and retrieve all election groups JSON.
 	RedisElectionGroupsActive  = "election_groups:active"      // STRING: used to store and retrieve active election groups JSON.
 	RedisElectionGroupByID     = "election_group:"             // STRING: "election_group:<id>" used to store and retrieve single election group JSON.
+	RedisElectionGroupByFakeID = "election_group:fake:"        // STRING: "election_group:fake:<fake_id>" used to store and retrieve single election group JSON.
 	RedisElectionByID          = "election:"                   // Raw election record; cached for 180 days.
+	RedisElectionByFakeID      = "election:fake:"              // Raw election record by fake_id; cached for 180 days.
 	RedisUserActiveCandidacies = "elections:user_candidacies:" // Active candidacies for user; cached for 30 days.
 	//--END--
 
@@ -208,7 +210,9 @@ var AllRedisPrefixes = []string{
 	RedisElectionGroupsAll,
 	RedisElectionGroupsActive,
 	RedisElectionGroupByID,
+	RedisElectionGroupByFakeID,
 	RedisElectionByID,
+	RedisElectionByFakeID,
 	RedisUserActiveCandidacies,
 	RedisCronLockINECGrabberSync,
 	RedisCronLockMarketingDeductionsPrefix,

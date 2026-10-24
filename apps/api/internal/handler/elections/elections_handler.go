@@ -10,6 +10,7 @@ import (
 	"free9ja/api/internal/service/audit"
 	elections "free9ja/api/internal/service/elections"
 	"free9ja/api/internal/utils"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -28,6 +29,7 @@ type ElectionsService interface {
 	CreateLgaElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, lgaIDs []int32) (int, error)
 	CreateWardElection(ctx context.Context, params elections.CreateWardElectionParams) (int, error)
 	GetElectionByID(ctx context.Context, id int32) (queries.ElectionDetails, error)
+	GetElectionByFakeID(ctx context.Context, fakeID int64) (queries.ElectionDetails, error)
 	GetElectionGroupByID(ctx context.Context, id int32) (queries.ElectionGroup, error)
 	ListElections(ctx context.Context, filter elections.ListElectionsFilter) ([]queries.ElectionListItem, error)
 	UpdateElection(ctx context.Context, params elections.UpdateElectionParams) (queries.ElectionDetails, error)
@@ -630,23 +632,27 @@ func (h *Handler) ListElections(w http.ResponseWriter, r *http.Request) {
 // @Tags         Elections
 // @Accept       json
 // @Produce      json
-// @Param        id   path  int  true  "Election ID"
+// GetElection godoc
+// @Summary      Get an election by Fake ID
+// @Description  Retrieves an election instance by its unique 64-bit fake_id
+// @Tags         Elections
+// @Accept       json
+// @Produce      json
+// @Param        id   path  int  true  "Election Fake ID"
 // @Success      200  {object} map[string]interface{} "Election fetched successfully"
-// @Failure      400  {object} map[string]interface{} "Invalid ID parameter"
+// @Failure      400  {object} map[string]interface{} "Invalid fake ID parameter"
 // @Failure      404  {object} map[string]interface{} "Election not found"
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Router       /elections/{id} [get]
 func (h *Handler) GetElection(w http.ResponseWriter, r *http.Request) {
-	// Parse and validate election ID from URL parameter
 	idStr := chi.URLParam(r, "id")
-	id, err := strconv.ParseInt(idStr, 10, 32)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election ID")
+	fakeID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil || fakeID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election fake_id")
 		return
 	}
 
-	// Fetch election entity by primary key
-	ei, err := h.service.GetElectionByID(r.Context(), int32(id))
+	ei, err := h.service.GetElectionByFakeID(r.Context(), fakeID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Election not found")
 		return
@@ -670,6 +676,36 @@ func (h *Handler) GetElection(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Return election details
+	h.utils.RespondSuccess(w, http.StatusOK, "Election fetched successfully", map[string]interface{}{
+		"election": ei,
+	})
+}
+
+// GetElectionByFakeID godoc
+// @Summary      Get an election by fake ID
+// @Description  Retrieves an election instance directly by its unique public fake_id
+// @Tags         Elections
+// @Accept       json
+// @Produce      json
+// @Param        fake_id path int true "Election Fake ID"
+// @Success      200  {object} map[string]interface{} "Election fetched successfully"
+// @Failure      400  {object} map[string]interface{} "Invalid fake ID parameter"
+// @Failure      404  {object} map[string]interface{} "Election not found"
+// @Router       /elections/by-fake-id/{fake_id} [get]
+func (h *Handler) GetElectionByFakeID(w http.ResponseWriter, r *http.Request) {
+	fakeIDStr := chi.URLParam(r, "fake_id")
+	fakeID, err := strconv.ParseInt(fakeIDStr, 10, 64)
+	if err != nil || fakeID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election fake ID")
+		return
+	}
+
+	ei, err := h.service.GetElectionByFakeID(r.Context(), fakeID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusNotFound, "Election not found")
+		return
+	}
+
 	h.utils.RespondSuccess(w, http.StatusOK, "Election fetched successfully", map[string]interface{}{
 		"election": ei,
 	})
@@ -909,62 +945,48 @@ func (h *Handler) BulkDeleteElections(w http.ResponseWriter, r *http.Request) {
 
 // GetElectionCandidates godoc
 // @Summary      Get detailed candidates for an election
-// @Description  Fetches the list of candidates associated with a specific election ID
+// @Description  Fetches the list of candidates associated with a specific election ID or fake_id
 // @Tags         Elections
 // @Produce      json
-// @Param        id   path  int  true  "Election ID"
+// @Param        id   path  string  true  "Election ID or Fake ID"
 // @Success      200  {object} map[string]interface{} "Candidates fetched successfully"
 // @Failure      400  {object} map[string]interface{} "Invalid election ID"
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Router       /elections/{id}/candidates [get]
 func (h *Handler) GetElectionCandidates(w http.ResponseWriter, r *http.Request) {
-	// Parse and validate election ID from URL parameter
 	idStr := chi.URLParam(r, "id")
-	id, err := strconv.ParseInt(idStr, 10, 32)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election ID")
+	fakeID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil || fakeID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election fake_id")
 		return
 	}
 
-	// the electionID
-	electionID := int32(id)
-
-	// Required parameters: ensure election matches election_group_id & scope
-	query := r.URL.Query()
-	electionGroupIDStr := strings.TrimSpace(query.Get("election_group_id"))
-	scope := strings.TrimSpace(query.Get("scope"))
-	if electionGroupIDStr == "" || scope == "" {
-		h.utils.RespondError(w, http.StatusBadRequest, "election_group_id and scope query parameters are required")
-		return
-	}
-
-	electionGroupID, err := strconv.ParseInt(electionGroupIDStr, 10, 32)
-	if err != nil || electionGroupID <= 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election_group_id")
-		return
-	}
-
-	// Fetch election metadata (served from Redis cache) to verify context integrity
-	ei, err := h.service.GetElectionByID(r.Context(), electionID)
+	ei, err := h.service.GetElectionByFakeID(r.Context(), fakeID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Election not found")
 		return
 	}
 
-	// Verify election group ID consistency
-	if ei.ElectionGroupID != int32(electionGroupID) {
-		h.utils.RespondError(w, http.StatusNotFound, "Election not found for the specified election group")
-		return
+	// Optional parameters: if election_group_id or scope are provided, verify consistency
+	query := r.URL.Query()
+	if electionGroupIDStr := strings.TrimSpace(query.Get("election_group_id")); electionGroupIDStr != "" {
+		if egID, err := strconv.ParseInt(electionGroupIDStr, 10, 32); err == nil && egID > 0 {
+			if ei.ElectionGroupID != int32(egID) {
+				h.utils.RespondError(w, http.StatusNotFound, "Election not found for the specified election group")
+				return
+			}
+		}
 	}
 
-	// Verify geographic scope consistency
-	if !strings.EqualFold(ei.Scope, scope) {
-		h.utils.RespondError(w, http.StatusNotFound, "Election not found for the specified scope")
-		return
+	if scope := strings.TrimSpace(query.Get("scope")); scope != "" {
+		if !strings.EqualFold(ei.Scope, scope) {
+			h.utils.RespondError(w, http.StatusNotFound, "Election not found for the specified scope")
+			return
+		}
 	}
 
 	// Fetch full candidate roster for the specified election
-	candidates, err := h.service.GetElectionCandidates(r.Context(), electionID)
+	candidates, err := h.service.GetElectionCandidates(r.Context(), ei.ID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to get election candidates: "+err.Error())
 		return
@@ -985,13 +1007,20 @@ type FieldCandidateRequest struct {
 
 // FieldPartyCandidate handles POST /api/v1/elections/{id}/field-candidate
 func (h *Handler) FieldPartyCandidate(w http.ResponseWriter, r *http.Request) {
-	// Parse and validate election ID from URL parameter
+	// Parse and validate election fake_id from URL parameter
 	idStr := chi.URLParam(r, "id")
-	electionID, err := strconv.ParseInt(idStr, 10, 32)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election ID")
+	fakeID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil || fakeID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election fake_id")
 		return
 	}
+	electionDetails, err := h.service.GetElectionByFakeID(r.Context(), fakeID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusNotFound, "Election not found")
+		return
+	}
+	election := electionDetails.Election
+	electionID := int64(election.ID)
 
 	// Verify user authentication claims and enforce party admin roles
 	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey, "party_admin", "super_party_admin", "admin", "super_admin")
@@ -1008,13 +1037,6 @@ func (h *Handler) FieldPartyCandidate(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.validate.Struct(req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
-		return
-	}
-
-	// Verify election exists
-	election, err := h.service.GetElectionByID(r.Context(), int32(electionID))
-	if err != nil {
-		h.utils.RespondError(w, http.StatusNotFound, "Election not found")
 		return
 	}
 
@@ -1145,13 +1167,20 @@ type UnfieldCandidateRequest struct {
 
 // UnfieldPartyCandidate handles POST /api/v1/elections/{id}/unfield-candidate
 func (h *Handler) UnfieldPartyCandidate(w http.ResponseWriter, r *http.Request) {
-	// Parse and validate election ID from URL parameter
+	// Parse and validate election fake_id from URL parameter
 	idStr := chi.URLParam(r, "id")
-	electionID, err := strconv.ParseInt(idStr, 10, 32)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election ID")
+	fakeID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil || fakeID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election fake_id")
 		return
 	}
+	electionDetails, err := h.service.GetElectionByFakeID(r.Context(), fakeID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusNotFound, "Election not found")
+		return
+	}
+	election := electionDetails.Election
+	electionID := int64(election.ID)
 
 	// Verify user authentication claims and enforce party admin roles
 	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey, "party_admin", "super_party_admin", "admin", "super_admin")
@@ -1169,13 +1198,6 @@ func (h *Handler) UnfieldPartyCandidate(w http.ResponseWriter, r *http.Request) 
 	// Validate required party ID and ticket slot
 	if err := h.validate.Struct(req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
-		return
-	}
-
-	// Verify election exists
-	election, err := h.service.GetElectionByID(r.Context(), int32(electionID))
-	if err != nil {
-		h.utils.RespondError(w, http.StatusNotFound, "Election not found")
 		return
 	}
 

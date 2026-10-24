@@ -5,7 +5,6 @@ import { apiFetchJson } from "./fetch";
 export type CampaignGroupMemberItem = {
   id: number;
   party_id: number;
-  election_group_id: number;
   group_id: number;
   user_id: number;
   role: "candidate" | "party_official" | "state_supervisor" | "lga_supervisor" | "ward_supervisor" | "agent" | string;
@@ -21,7 +20,6 @@ export type CampaignGroupMemberItem = {
 export type CampaignGroupDetails = {
   id: number;
   party_id: number;
-  election_group_id: number;
   scope: "national" | "state" | "lga" | "ward" | string;
   state_id?: number | null;
   lga_id?: number | null;

@@ -18,11 +18,12 @@ import { formatISODate } from "@repo/ui/lib/date";
 
 export type ElectionGroupType = {
   id: number;
-  title: string;
-  pollingAgentsCoverage: number;
-  numberOfElectionsPartyIsContesting: number;
-  instancesCount: number;
-  electionDate: string;
+  fake_id?: number | bigint;
+  name: string;
+  polling_agents_coverage?: number | { percentage?: number };
+  number_of_elections_party_is_contesting?: number;
+  elections_count?: number;
+  election_date: string;
 };
 
 /**
@@ -61,7 +62,10 @@ export function ElectionGroupTableHeader() {
 export function ElectionGroupTableTile({ data }: { data: ElectionGroupType }) {
   const params = useParams({ strict: false }) as { partyShortName?: string };
   const partyShortName = params.partyShortName || "";
-  const dateLabel = data.electionDate ? formatISODate(data.electionDate) : "—";
+  const dateLabel = data.election_date ? formatISODate(data.election_date) : "—";
+  const coveragePercentage = typeof data.polling_agents_coverage === "number"
+    ? data.polling_agents_coverage
+    : (data.polling_agents_coverage?.percentage ?? 0);
 
   return (
     <TileRow>
@@ -73,18 +77,18 @@ export function ElectionGroupTableTile({ data }: { data: ElectionGroupType }) {
           search={{ election_group_id: data.id }}
           className="truncate w-full text-[16px] text-c-90 hover:text-primary hover:underline transition-colors"
         >
-          {data.title ?? "—"}
+          {data.name ?? "—"}
         </Link>
       </TileLeft>
       <TileRight>
         <span className="text-[15px] text-c-70 w-35 hidden xl:block">
-          {data.pollingAgentsCoverage}%
+          {coveragePercentage}%
         </span>
         <span className="text-[15px] text-c-70 w-25 hidden lg:block">
-          {data.instancesCount ?? 0}
+          {data.elections_count ?? 0}
         </span>
         <span className="text-[15px] text-c-70 w-28.5 hidden xl:block">
-          {data.numberOfElectionsPartyIsContesting}
+          {data.number_of_elections_party_is_contesting ?? 0}
         </span>
         <span className="text-[15px] text-c-70 w-27.5 hidden sm:block">
           {dateLabel}

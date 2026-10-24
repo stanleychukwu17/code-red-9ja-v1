@@ -151,19 +151,7 @@ function RouteComponent() {
   }, [isIntersecting, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const elections: ElectionInstanceType[] = data
-    ? data.pages.flatMap((page: any) =>
-      (page.data?.elections ?? []).map((el: any) => ({
-        id: el.id,
-        rank: el.rank,
-        title: el.name,
-        candidate: el.candidate,
-        runningMate: el.running_mate || el.runningMate,
-        electionDate: el.election_date,
-        officeName: el.office_name,
-        scope: el.scope,
-        electionGroupId: el.election_group_id,
-      })),
-    )
+    ? data.pages.flatMap((page: any) => page.data?.elections ?? [])
     : [];
 
   return (

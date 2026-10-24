@@ -3,10 +3,12 @@ package electiongroupshandler
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/service/audit"
 	"free9ja/api/internal/utils"
+	"math"
 	"net/http"
 	"strconv"
 
@@ -27,6 +29,7 @@ type ElectionGroupsService interface {
 
 type ElectionsService interface {
 	GetElectionGroupByID(ctx context.Context, id int32) (queries.ElectionGroup, error)
+	GetElectionGroupByFakeID(ctx context.Context, fakeID int64) (queries.ElectionGroup, error)
 }
 
 type Handler struct {
@@ -205,25 +208,33 @@ func (h *Handler) ListElectionGroups(w http.ResponseWriter, r *http.Request) {
 // @Success      200  {object} map[string]interface{} "Election group fetched successfully"
 // @Failure      400  {object} map[string]interface{} "Invalid ID parameter"
 // @Failure      404  {object} map[string]interface{} "Election group not found"
-// @Failure      500  {object} map[string]interface{} "Internal server error"
+// GetElectionGroup godoc
+// @Summary      Get election group by Fake ID
+// @Description  Retrieves details of a single election group using its unique 64-bit fake_id
+// @Tags         ElectionGroups
+// @Accept       json
+// @Produce      json
+// @Param        fake_id path int true "Election Group Fake ID"
+// @Success      200     {object} map[string]interface{} "Election group fetched successfully"
+// @Failure      400     {object} map[string]interface{} "Invalid fake ID parameter"
+// @Failure      404     {object} map[string]interface{} "Election group not found"
+// @Failure      500     {object} map[string]interface{} "Internal server error"
 // @Router       /election-groups/{id} [get]
 func (h *Handler) GetElectionGroup(w http.ResponseWriter, r *http.Request) {
-	// 1. Extract and parse election group ID from URL path parameter
 	idStr := chi.URLParam(r, "id")
-	id, err := strconv.ParseInt(idStr, 10, 32)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election group ID")
+	fakeID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil || fakeID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election group fake_id")
 		return
 	}
 
-	// 2. Fetch the election group by ID (service checks in-memory cache first, falls back to DB)
-	eg, err := h.electionsService.GetElectionGroupByID(r.Context(), int32(id))
+	eg, err := h.electionsService.GetElectionGroupByFakeID(r.Context(), fakeID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Election group not found")
 		return
 	}
 
-	// 3. Return 200 OK with the election group details
+	// Return 200 OK with the election group details
 	h.utils.RespondSuccess(w, http.StatusOK, "Election group fetched successfully", map[string]interface{}{
 		"election_group": eg,
 	})
@@ -418,25 +429,31 @@ func (h *Handler) UpsertPartyElectionGroupStats(w http.ResponseWriter, r *http.R
 
 // ListGroupElections godoc
 // @Summary      List elections for an election group
-// @Description  Fetches the list of elections associated with a specific election group ID
+// @Description  Fetches the list of elections associated with a specific election group ID or fake_id
 // @Tags         ElectionGroups
 // @Produce      json
-// @Param        id   path  int  true  "Election Group ID"
+// @Param        id   path  string true "Election Group ID or Fake ID"
 // @Success      200  {object} map[string]interface{} "Elections fetched successfully"
 // @Failure      400  {object} map[string]interface{} "Invalid election group ID"
+// @Failure      404  {object} map[string]interface{} "Election group not found"
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Router       /election-groups/{id}/elections [get]
 func (h *Handler) ListGroupElections(w http.ResponseWriter, r *http.Request) {
-	// 1. Extract and parse election group ID from URL path parameter
 	idStr := chi.URLParam(r, "id")
-	id, err := strconv.ParseInt(idStr, 10, 32)
+	fakeID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil || fakeID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election group fake_id")
+		return
+	}
+
+	eg, err := h.electionsService.GetElectionGroupByFakeID(r.Context(), fakeID)
 	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election group ID")
+		h.utils.RespondError(w, http.StatusNotFound, "Election group not found")
 		return
 	}
 
 	// 2. Fetch all child elections associated with this election group via service
-	elections, err := h.service.ListGroupElections(r.Context(), int32(id))
+	elections, err := h.service.ListGroupElections(r.Context(), eg.ID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch group elections: "+err.Error())
 		return

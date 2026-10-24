@@ -127,23 +127,24 @@ type CZonesNigerium struct {
 }
 
 type CampaignGroup struct {
-	ID              int64              `json:"id"`
-	PartyID         int16              `json:"party_id"`
-	ElectionGroupID int32              `json:"election_group_id"`
-	Scope           string             `json:"scope"`
-	StateID         pgtype.Int4        `json:"state_id"`
-	LgaID           pgtype.Int4        `json:"lga_id"`
-	WardID          pgtype.Int4        `json:"ward_id"`
-	Name            pgtype.Text        `json:"name"`
-	Status          string             `json:"status"`
-	OfficialsAdded  bool               `json:"officials_added"`
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	ID                    int64              `json:"id"`
+	PartyID               int16              `json:"party_id"`
+	TargetElectionGroupID pgtype.Int4        `json:"target_election_group_id"`
+	Scope                 string             `json:"scope"`
+	StateID               pgtype.Int4        `json:"state_id"`
+	LgaID                 pgtype.Int4        `json:"lga_id"`
+	WardID                pgtype.Int4        `json:"ward_id"`
+	Name                  pgtype.Text        `json:"name"`
+	Status                string             `json:"status"`
+	OfficialsAdded        bool               `json:"officials_added"`
+	CreatedAt             pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
 }
 
 type CampaignGroupIssue struct {
 	ID              int64              `json:"id"`
 	GroupID         int64              `json:"group_id"`
+	ElectionGroupID pgtype.Int4        `json:"election_group_id"`
 	ReporterID      int64              `json:"reporter_id"`
 	Title           string             `json:"title"`
 	Description     string             `json:"description"`
@@ -177,7 +178,7 @@ type CampaignGroupMedium struct {
 type CampaignGroupMember struct {
 	ID              int64              `json:"id"`
 	PartyID         int16              `json:"party_id"`
-	ElectionGroupID int32              `json:"election_group_id"`
+	ElectionGroupID pgtype.Int4        `json:"election_group_id"`
 	GroupID         int64              `json:"group_id"`
 	UserID          int64              `json:"user_id"`
 	Role            string             `json:"role"`
@@ -292,6 +293,7 @@ type ElectionFinalResult struct {
 
 type ElectionGroup struct {
 	ID                                        int32              `json:"id"`
+	FakeID                                    pgtype.Int8        `json:"fake_id"`
 	Name                                      string             `json:"name"`
 	StateSupervisorsCount                     int32              `json:"state_supervisors_count"`
 	UniqueStateSupervisorsCount               int32              `json:"unique_state_supervisors_count"`

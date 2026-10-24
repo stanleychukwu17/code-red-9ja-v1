@@ -24,7 +24,6 @@ import { APP_URL } from "#/lib/config";
 import { getElectionById, getElectionCandidates } from "#/lib/server/elections";
 import { useUserParty } from "#/hooks/useUserParty";
 import { ManageCandidateTicketDialog, getTicketConfig } from "#/components/dialogs/ManageCandidateTicketDialog";
-import type { ElectionInstanceType } from "#/components/tiles/election-instance-tile";
 import {
   Calendar,
   Layers,
@@ -72,26 +71,26 @@ const getDateStr = (val: any): string => {
 };
 
 function ElectionCandidatesPage() {
-  const { partyShortName, electionId: electionIdParam } = Route.useParams();
+  const { partyShortName, electionId: electionIdentifier } = Route.useParams();
   const { election_group_id, scope: scopeParam } = Route.useSearch();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const electionId = Number(electionIdParam);
+  const rawId = Number(electionIdentifier);
 
   const { party } = useUserParty();
   const [searchQuery, setSearchQuery] = useState("");
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
 
-  // 1. Fetch Election instance details
+  // 1. Fetch Election instance details (accepts either id or fake_id)
   const {
     data: electionRes,
     isLoading: isElectionLoading,
   } = useQuery({
-    queryKey: ["election-details", electionId, election_group_id, scopeParam],
+    queryKey: ["election-details", rawId, election_group_id, scopeParam],
     queryFn: async () => {
       const res = await getElectionById({
         data: {
-          electionId,
+          electionId: rawId,
           electionGroupId: election_group_id,
           scope: scopeParam,
         },
@@ -101,9 +100,11 @@ function ElectionCandidatesPage() {
       }
       return res.data?.election;
     },
-    enabled: !isNaN(electionId),
+    enabled: !isNaN(rawId),
   });
 
+  // Database ID for election mutations and candidate queries
+  const electionId = electionRes?.id || rawId;
   const resolvedGroupId = election_group_id || electionRes?.election_group_id;
   const resolvedScope = scopeParam || electionRes?.scope;
 
@@ -136,10 +137,8 @@ function ElectionCandidatesPage() {
   const myPartyCandidate = useMemo(() => {
     if (!party?.short_name || !candidates.length) return null;
     return (
-      candidates.find(
-        (c) =>
-          getVal(c.party_short_name).toLowerCase() ===
-          party.short_name?.toLowerCase(),
+      candidates.find((c) =>
+        getVal(c.party_short_name).toLowerCase() === party.short_name?.toLowerCase(),
       ) || null
     );
   }, [candidates, party?.short_name]);
@@ -153,34 +152,7 @@ function ElectionCandidatesPage() {
     [electionName, officeName, scopeName],
   );
 
-  // Map to ElectionInstanceType for dialog compatibility
-  const electionInstanceData: ElectionInstanceType = useMemo(() => {
-    const candidateId = myPartyCandidate?.candidate_id;
-    const runningMateId = myPartyCandidate?.running_mate_id ?? undefined;
 
-    return {
-      id: electionId,
-      rank: 1,
-      title: electionName,
-      electionDate: getDateStr(election?.election_date),
-      officeName,
-      scope: scopeName,
-      candidate: candidateId
-        ? {
-          id: candidateId,
-          name: myPartyCandidate.candidate_name || `${myPartyCandidate.first_name || ""} ${myPartyCandidate.last_name || ""}`.trim(),
-          avatar: myPartyCandidate.avatar || undefined,
-        }
-        : undefined,
-      runningMate: runningMateId
-        ? {
-          id: runningMateId,
-          name: myPartyCandidate.running_mate_name || `${myPartyCandidate.running_mate_first_name || ""} ${myPartyCandidate.running_mate_last_name || ""}`.trim(),
-          avatar: myPartyCandidate.running_mate_avatar || undefined,
-        }
-        : undefined,
-    };
-  }, [electionId, electionName, election?.election_date, officeName, scopeName, myPartyCandidate]);
 
   // Filter candidates by candidate name or party name
   const filteredCandidates = useMemo(() => {
@@ -212,8 +184,8 @@ function ElectionCandidatesPage() {
 
   const handleDialogClose = () => {
     setIsManageDialogOpen(false);
-    queryClient.invalidateQueries({ queryKey: ["election-candidates", electionId] });
-    queryClient.invalidateQueries({ queryKey: ["election-details", electionId] });
+    queryClient.invalidateQueries({ queryKey: ["election-candidates"] });
+    queryClient.invalidateQueries({ queryKey: ["election-details"] });
     queryClient.invalidateQueries({ queryKey: ["elections"] });
   };
 
@@ -550,7 +522,35 @@ function ElectionCandidatesPage() {
         <ManageCandidateTicketDialog
           open={isManageDialogOpen}
           onClose={handleDialogClose}
-          data={electionInstanceData}
+          election={{
+            id: electionId,
+            fake_id: election?.fake_id ? Number(election.fake_id) : undefined,
+            name: electionName,
+            office_name: officeName,
+            scope: scopeName,
+          }}
+          candidate={
+            myPartyCandidate?.candidate_id
+              ? {
+                id: myPartyCandidate.candidate_id,
+                name:
+                  myPartyCandidate.candidate_name ||
+                  `${myPartyCandidate.first_name || ""} ${myPartyCandidate.last_name || ""}`.trim(),
+                avatar: myPartyCandidate.avatar || undefined,
+              }
+              : undefined
+          }
+          running_mate={
+            myPartyCandidate?.running_mate_id
+              ? {
+                id: myPartyCandidate.running_mate_id,
+                name:
+                  myPartyCandidate.running_mate_name ||
+                  `${myPartyCandidate.running_mate_first_name || ""} ${myPartyCandidate.running_mate_last_name || ""}`.trim(),
+                avatar: myPartyCandidate.running_mate_avatar || undefined,
+              }
+              : undefined
+          }
         />
       )}
     </Layout>

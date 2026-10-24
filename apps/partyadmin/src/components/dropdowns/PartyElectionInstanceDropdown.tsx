@@ -32,8 +32,7 @@ export const PartyElectionInstanceDropdown = ({ data, className }: PartyElection
 
   const toElectionInstanceUrl = APP_URL.partyRoutes.electionInstance(
     partyShortName,
-    data.id,
-    { election_group_id: data.electionGroupId, scope: data.scope }
+    data.fake_id || data.id,
   ) as any;
 
   // Dropdown menu options

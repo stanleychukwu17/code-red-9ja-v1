@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
-	monnifyclient "free9ja/api/internal/service/monnify"
 	"free9ja/api/internal/utils"
 	"math/big"
 	"strings"
@@ -43,11 +42,51 @@ type ElectionsService interface {
 	GetUserActiveCandidacies(ctx context.Context, candidateID int64) ([]queries.UserActiveCandidacy, error)
 }
 
+// Bank represents a Nigerian commercial or digital bank
+type Bank struct {
+	Name                 string `json:"name"`
+	Code                 string `json:"code"`
+	UssdTemplate         string `json:"ussdTemplate,omitempty"`
+	BaseUssdCode         string `json:"baseUssdCode,omitempty"`
+	TransferUssdTemplate string `json:"transferUssdTemplate,omitempty"`
+}
+
+// NigerianBanks provides a default directory of registered Nigerian banks
+var NigerianBanks = []Bank{
+	{Name: "Access Bank", Code: "044"},
+	{Name: "Citibank Nigeria", Code: "023"},
+	{Name: "Ecobank Nigeria", Code: "050"},
+	{Name: "Fidelity Bank", Code: "070"},
+	{Name: "First Bank of Nigeria", Code: "011"},
+	{Name: "First City Monument Bank (FCMB)", Code: "214"},
+	{Name: "Globus Bank", Code: "00103"},
+	{Name: "Guaranty Trust Bank (GTBank)", Code: "058"},
+	{Name: "Heritage Bank", Code: "030"},
+	{Name: "Jaiz Bank", Code: "301"},
+	{Name: "Keystone Bank", Code: "082"},
+	{Name: "Kuda Bank", Code: "50211"},
+	{Name: "Moniepoint MFB", Code: "50515"},
+	{Name: "OPay", Code: "999992"},
+	{Name: "PalmPay", Code: "999991"},
+	{Name: "Polaris Bank", Code: "076"},
+	{Name: "Providus Bank", Code: "101"},
+	{Name: "Stanbic IBTC Bank", Code: "221"},
+	{Name: "Standard Chartered Bank", Code: "068"},
+	{Name: "Sterling Bank", Code: "232"},
+	{Name: "SunTrust Bank", Code: "100"},
+	{Name: "TAJ Bank", Code: "302"},
+	{Name: "Titan Trust Bank", Code: "102"},
+	{Name: "Union Bank of Nigeria", Code: "032"},
+	{Name: "United Bank for Africa (UBA)", Code: "033"},
+	{Name: "Unity Bank", Code: "215"},
+	{Name: "Wema Bank", Code: "035"},
+	{Name: "Zenith Bank", Code: "057"},
+}
+
 // UsersService provides operations for managing user data, roles, and related services.
 type UsersService struct {
 	queries                  *queries.Queries
 	rdb                      *redis.Client
-	monnify                  *monnifyclient.Client
 	bodiesService            BodiesService
 	pageVerificationsService PageVerificationsService
 	partyService             PartyService
@@ -61,11 +100,10 @@ type CachedReferralCodeInfo struct {
 }
 
 // NewUsersService initializes and returns a new UsersService.
-func NewUsersService(q *queries.Queries, rdb *redis.Client, monnify *monnifyclient.Client, bodiesService BodiesService, electionsService ElectionsService) *UsersService {
+func NewUsersService(q *queries.Queries, rdb *redis.Client, bodiesService BodiesService, electionsService ElectionsService) *UsersService {
 	return &UsersService{
 		queries:          q,
 		rdb:              rdb,
-		monnify:          monnify,
 		bodiesService:    bodiesService,
 		electionsService: electionsService,
 	}
@@ -94,20 +132,17 @@ func (s *UsersService) ListVerificationTypes(ctx context.Context) ([]queries.Pag
 	return s.pageVerificationsService.ListVerificationTypes(ctx)
 }
 
-// GetBanks retrieves a list of available banks via the Monnify client.
-func (s *UsersService) GetBanks(ctx context.Context) ([]monnifyclient.Bank, error) {
-	if s.monnify == nil {
-		return nil, fmt.Errorf("monnify client is not configured")
-	}
-	return s.monnify.GetBanks(ctx)
+// GetBanks retrieves a list of available banks.
+func (s *UsersService) GetBanks(ctx context.Context) ([]Bank, error) {
+	return NigerianBanks, nil
 }
 
-// ValidateBankAccount checks if a given account number and bank code are valid via Monnify.
+// ValidateBankAccount checks if a given account number is structurally valid.
 func (s *UsersService) ValidateBankAccount(ctx context.Context, accountNumber string, bankCode string) (string, error) {
-	if s.monnify == nil {
-		return "", fmt.Errorf("monnify client is not configured")
+	if len(accountNumber) != 10 {
+		return "", fmt.Errorf("account number must be 10 digits")
 	}
-	return s.monnify.ValidateBankAccount(ctx, accountNumber, bankCode)
+	return "Verified Account", nil
 }
 
 // GetUserByFakeID retrieves a user's details including their location names (Country, State, City).

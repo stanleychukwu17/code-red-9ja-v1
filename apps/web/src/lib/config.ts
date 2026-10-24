@@ -121,6 +121,23 @@ export const API_URL = {
 		const qs = searchParams.toString();
 		return `${api}/parties/${id}/officials${qs ? `?${qs}` : ""}`;
 	},
+	partyMembers: (
+		id: string | number,
+		params?: {
+			chapter_id?: number;
+			search?: string;
+			cursor?: number;
+			limit?: number;
+		}
+	) => {
+		const searchParams = new URLSearchParams();
+		if (params?.chapter_id) searchParams.append("chapter_id", String(params.chapter_id));
+		if (params?.search) searchParams.append("search", params.search);
+		if (params?.cursor) searchParams.append("cursor", String(params.cursor));
+		if (params?.limit) searchParams.append("limit", String(params.limit));
+		const qs = searchParams.toString();
+		return `${api}/parties/${id}/members${qs ? `?${qs}` : ""}`;
+	},
 	partyAdmins: (partyId: number | string) => `${api}/parties/${partyId}/admins`,
 	userPreferences: `${api}/user_preferences`,
 	searchUsers: `${api}/users/search`,
@@ -145,6 +162,11 @@ export const QUERY_KEYS = {
 		root: ["partyOfficials"] as const,
 		byChapter: (partyId?: number | string, chapterId?: number) =>
 			["partyOfficials", partyId, chapterId] as const,
+	},
+	partyMembers: {
+		root: ["partyMembers"] as const,
+		byChapter: (partyId?: number | string, chapterId?: number, search?: string) =>
+			["partyMembers", partyId, chapterId, search] as const,
 	},
 	campaignGroup: (groupId: number | string) => ["campaign-group", String(groupId)],
 	campaignGroupMembers: (groupId: number | string) => ["campaign-group-members", String(groupId)],

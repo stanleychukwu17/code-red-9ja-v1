@@ -16,22 +16,23 @@ import { PartyElectionInstanceDropdown } from "../dropdowns/PartyElectionInstanc
 
 export type ElectionInstanceType = {
   id: number;
-  rank: number;
-  title: string;
+  fake_id?: number;
+  rank?: number;
+  name: string;
   candidate?: {
     id: string | number;
     avatar?: string;
     name: string;
   };
-  runningMate?: {
+  running_mate?: {
     id: string | number;
     avatar?: string;
     name: string;
   };
-  electionDate: string;
-  officeName?: string;
+  election_date: string;
+  office_name?: string;
   scope?: string;
-  electionGroupId?: number;
+  election_group_id?: number;
 };
 
 const getPartyAdminRankColor = (rank: number) => {
@@ -81,7 +82,7 @@ export function ElectionInstanceTableTile({ data }: { data: ElectionInstanceType
   const params = useParams({ strict: false }) as { partyShortName?: string };
   const partyShortName = params.partyShortName || "";
   // Format the ISO election date string or fallback to em-dash
-  const dateLabel = data.electionDate ? formatISODate(data.electionDate) : "—";
+  const dateLabel = data.election_date ? formatISODate(data.election_date) : "—";
 
   return (
     <TileRow>
@@ -90,20 +91,19 @@ export function ElectionInstanceTableTile({ data }: { data: ElectionInstanceType
           <StarIcon
             className={cn(
               "size-4 shrink-0 fill-current",
-              getPartyAdminRankColor(data.rank),
+              getPartyAdminRankColor(data.rank || 3),
             )}
           />
-          <span className="text-[16px] text-c-90">{data.rank}</span>
+          <span className="text-[16px] text-c-90">{data.rank ?? "—"}</span>
         </div>
         <Link
           to={APP_URL.partyRoutes.electionInstance(
             partyShortName,
-            data.id,
-            { election_group_id: data.electionGroupId, scope: data.scope }
+            data.fake_id || data.id,
           ) as any}
           className="truncate w-full text-[16px] text-c-80 hover:text-c-100 hover:underline transition-colors"
         >
-          {data.title}
+          {data.name}
         </Link>
       </TileLeft>
       <TileRight>

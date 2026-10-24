@@ -2,67 +2,21 @@ package usersservice
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/utils"
-	monnifyclient "free9ja/api/internal/service/monnify"
 	"log/slog"
-	"strings"
 )
 
-
-// CreateUserWallet provisions a reserved virtual account via Monnify for the user
-// and creates the wallet entry in the database.
+// CreateUserWallet creates a wallet entry in the database for the user.
 func (s *UsersService) CreateUserWallet(ctx context.Context, user queries.User) (queries.UserWallet, error) {
 	// Check if wallet already exists
 	if existingWallet, err := s.queries.GetUserWalletByUserID(ctx, user.ID); err == nil && existingWallet.ID > 0 {
 		return existingWallet, nil
 	}
 
-	if s.monnify == nil {
-		return queries.UserWallet{}, fmt.Errorf("monnify client is not configured")
-	}
-
 	accountReference := fmt.Sprintf("free9ja-user-%d", user.ID)
-
-	email := fmt.Sprintf("user-%d@free9ja.com", user.ID)
-	if user.Email.Valid && user.Email.String != "" && strings.Contains(user.Email.String, "@") && strings.Contains(user.Email.String, ".") {
-		email = strings.TrimSpace(user.Email.String)
-	}
-
-	name := fmt.Sprintf("User %d", user.ID)
-	if fullName := strings.TrimSpace(fmt.Sprintf("%s %s", user.FirstName.String, user.LastName.String)); fullName != "" {
-		name = fullName
-	}
-
-	// Fetch user's NIN from DB to satisfy Monnify compliance requirements and generate bank account numbers
-	var userNin string
-	if dbNin, ninErr := s.queries.GetUserNINByUserID(ctx, user.ID); ninErr == nil && len(dbNin.Nin) == 11 {
-		userNin = dbNin.Nin
-	}
-
-	// In sandbox/testing mode, if no valid 11-digit NIN is found, use a default dummy NIN
-	// to ensure Monnify successfully generates virtual account numbers.
-	if len(userNin) != 11 {
-		userNin = "22222222222"
-	}
-
-	resp, err := s.monnify.CreateReservedAccount(ctx, monnifyclient.ReservedAccountRequest{
-		AccountReference: accountReference,
-		AccountName:      name + " - free9ja",
-		CustomerEmail:    email,
-		CustomerName:     name,
-		CustomerNin:      userNin,
-	})
-	if err != nil {
-		return queries.UserWallet{}, fmt.Errorf("monnify reserved account: %w", err)
-	}
-
-	accountNumbersJSON, err := json.Marshal(resp.AccountNumbers)
-	if err != nil {
-		return queries.UserWallet{}, fmt.Errorf("marshal account numbers: %w", err)
-	}
+	accountNumbersJSON := []byte("[]")
 
 	wallet, err := s.queries.CreateUserWallet(ctx, queries.CreateUserWalletParams{
 		UserID:           user.ID,

@@ -17,7 +17,6 @@ import (
 	"free9ja/api/internal/service/audit"
 	authservice "free9ja/api/internal/service/auth"
 	"free9ja/api/internal/service/files"
-	monnifyclient "free9ja/api/internal/service/monnify"
 	permissionsservice "free9ja/api/internal/service/permissions"
 	usersservice "free9ja/api/internal/service/users"
 
@@ -39,7 +38,7 @@ type UsersService interface {
 	DeleteUserAccount(ctx context.Context, id int64, fakeID int64) error
 	AdminUpdateUser(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, username, gender, avatar string, avatarFileId *int64, countryID, stateID int16, cityID int32, stateOfOrigin int16) error
 
-	GetBanks(ctx context.Context) ([]monnifyclient.Bank, error)
+	GetBanks(ctx context.Context) ([]usersservice.Bank, error)
 	ValidateBankAccount(ctx context.Context, accountNumber string, bankCode string) (string, error)
 
 	CreateUserWallet(ctx context.Context, user queries.User) (queries.UserWallet, error)

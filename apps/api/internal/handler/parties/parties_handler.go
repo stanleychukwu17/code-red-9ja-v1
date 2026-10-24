@@ -100,6 +100,7 @@ type PartiesService interface {
 	ListPartyAdmins(ctx context.Context, partyID int16) ([]partiesservice.PartyAdminItem, error)
 	GetPartyHome(ctx context.Context, partyID int16, chapterID *int32) (*partiesservice.PartyHomeData, error)
 	GetPartyReadiness(ctx context.Context, partyID int16) (*partiesservice.PartyReadinessData, error)
+	ListPartyChapterMembers(ctx context.Context, params partiesservice.ListPartyMembersParams) (*partiesservice.PartyMembersResult, error)
 }
 
 // PermissionsService defines methods for checking user permissions
@@ -1870,6 +1871,23 @@ func (h *Handler) DepositTest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
+	if !ok || claims == nil {
+		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	// Only platform admin or super_admin can directly credit/deposit funds for now.
+	// Party administrators receive an informative error until their deposit submission flow is implemented.
+	if !claims.HasAnyRole("admin", "super_admin") {
+		if claims.HasAnyRole("party_admin", "super_party_admin") {
+			h.utils.RespondError(w, http.StatusForbidden, "Party administrators cannot directly deposit funds yet. Please transfer your funds to Free9ja and contact a platform administrator with proof of payment.")
+			return
+		}
+		h.utils.RespondError(w, http.StatusForbidden, "Forbidden: insufficient permissions")
+		return
+	}
+
 	var req DepositAllowanceRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
@@ -1887,16 +1905,19 @@ func (h *Handler) DepositTest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	txRef := fmt.Sprintf("test-deposit-%d-%d", partyID, time.Now().UnixNano())
+	txRef := fmt.Sprintf("deposit-%d-%d", partyID, time.Now().UnixNano())
+	payerName := fmt.Sprintf("Admin %s", claims.Username)
+	narration := fmt.Sprintf("Direct deposit to party wallet confirmed by %s", claims.Username)
+
 	_, err = h.partiesService.CreditWallet(
 		r.Context(),
 		wallet.ID,
 		req.AmountKobo,
 		txRef,
-		"Manual Simulation Payer",
-		"1234567890",
-		"011",
-		"Simulated virtual transfer deposit to party wallet",
+		payerName,
+		"",
+		"",
+		narration,
 		[]byte("{}"),
 	)
 	if err != nil {
@@ -3035,6 +3056,114 @@ func (h *Handler) ListPartyOfficials(w http.ResponseWriter, r *http.Request) {
 // ListPartyAdmins lists the administrators for a given party.
 // Enforces authorization: only super_admin, admin, party_admin, super_party_admin,
 // or users holding an active leadership position in the party are permitted.
+// ListPartyMembers retrieves active members for a given party chapter.
+func (h *Handler) ListPartyMembers(w http.ResponseWriter, r *http.Request) {
+	// 1. Extract and validate party ID from URL parameters
+	idStr := chi.URLParam(r, "id")
+	partyID, err := strconv.ParseInt(idStr, 10, 16)
+	if err != nil || partyID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID")
+		return
+	}
+
+	// 2. Parse query parameters
+	q := r.URL.Query()
+
+	var directChapterID int64
+	if chapStr := q.Get("chapter_id"); chapStr != "" {
+		directChapterID, _ = strconv.ParseInt(chapStr, 10, 32)
+	}
+
+	var wardID int64
+	if widStr := q.Get("ward_id"); widStr != "" {
+		wardID, _ = strconv.ParseInt(widStr, 10, 32)
+	}
+	var lgaID int64
+	if lidStr := q.Get("lga_id"); lidStr != "" {
+		lgaID, _ = strconv.ParseInt(lidStr, 10, 32)
+	}
+	var stateID int64
+	if sidStr := q.Get("state_id"); sidStr != "" {
+		stateID, _ = strconv.ParseInt(sidStr, 10, 16)
+	}
+	var zonalID int64
+	if zidStr := q.Get("zonal_id"); zidStr != "" {
+		zonalID, _ = strconv.ParseInt(zidStr, 10, 16)
+	}
+	var countryID int64
+	if cidStr := q.Get("country_id"); cidStr != "" {
+		countryID, _ = strconv.ParseInt(cidStr, 10, 16)
+	}
+
+	// 3. Resolve chapter ID in order of specificity without creating missing chapters
+	var chapterID int32
+	ctx := r.Context()
+
+	switch {
+	case directChapterID > 0:
+		chapterID = int32(directChapterID)
+	case wardID > 0:
+		chapterID, err = h.partiesService.GetOrCreateWardChapter(ctx, int16(partyID), int32(wardID), false)
+	case lgaID > 0:
+		chapterID, err = h.partiesService.GetOrCreateLGAChapter(ctx, int16(partyID), int32(lgaID), false)
+	case stateID > 0:
+		chapterID, err = h.partiesService.GetOrCreateStateChapter(ctx, int16(partyID), int16(stateID), false)
+	case zonalID > 0:
+		chapterID, err = h.partiesService.GetOrCreateZonalChapter(ctx, int16(partyID), int16(zonalID), false)
+	default:
+		cID := constants.NigeriaCountryID
+		if countryID > 0 {
+			cID = int16(countryID)
+		}
+		chapterID, err = h.partiesService.GetOrCreateNationalChapter(ctx, int16(partyID), cID, false)
+	}
+
+	if err != nil || chapterID <= 0 {
+		h.utils.RespondSuccessData(w, http.StatusOK, "No members found for non-existent chapter", partiesservice.PartyMembersResult{
+			PartyID:    int16(partyID),
+			ChapterID:  chapterID,
+			TotalCount: 0,
+			Members:    []partiesservice.PartyMemberItem{},
+			Meta: partiesservice.PartyMembersMeta{
+				NextCursor: nil,
+				HasMore:    false,
+			},
+		})
+		return
+	}
+
+	search := strings.TrimSpace(q.Get("search"))
+	if search == "" {
+		search = strings.TrimSpace(q.Get("q"))
+	}
+
+	var cursor int64
+	if curStr := q.Get("cursor"); curStr != "" {
+		cursor, _ = strconv.ParseInt(curStr, 10, 64)
+	}
+
+	limit := 30
+	if limStr := q.Get("limit"); limStr != "" {
+		if l, err := strconv.Atoi(limStr); err == nil && l > 0 {
+			limit = l
+		}
+	}
+
+	result, err := h.partiesService.ListPartyChapterMembers(ctx, partiesservice.ListPartyMembersParams{
+		PartyID:   int16(partyID),
+		ChapterID: chapterID,
+		Search:    search,
+		Cursor:    cursor,
+		Limit:     int32(limit),
+	})
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to list party chapter members: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccessData(w, http.StatusOK, "Party chapter members retrieved successfully", result)
+}
+
 func (h *Handler) ListPartyAdmins(w http.ResponseWriter, r *http.Request) {
 	// Parse and validate the party ID from the URL path
 	idStr := chi.URLParam(r, "id")

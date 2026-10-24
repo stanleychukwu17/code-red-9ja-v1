@@ -72,19 +72,7 @@ function RouteComponent() {
   }, [isIntersecting, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const electionGroups: ElectionGroupType[] = data
-    ? data.pages.flatMap((page: any) =>
-      (page.data?.election_groups ?? []).map((eg: any) => ({
-        id: eg.id,
-        title: eg.name,
-        pollingAgentsCoverage: typeof eg.polling_agents_coverage === "number"
-          ? eg.polling_agents_coverage
-          : (eg.polling_agents_coverage?.percentage ?? 0),
-        numberOfElectionsPartyIsContesting:
-          eg.number_of_elections_party_is_contesting ?? 0,
-        instancesCount: eg.elections_count ?? 0,
-        electionDate: eg.election_date,
-      })),
-    )
+    ? data.pages.flatMap((page: any) => page.data?.election_groups ?? [])
     : [];
 
   return (

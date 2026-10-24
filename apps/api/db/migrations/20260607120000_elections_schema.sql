@@ -4,8 +4,9 @@
 -- Holds high-level rollups for supervisor recruitment, agent coverage, and election day PU operations
 CREATE TABLE election_groups (
   id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  fake_id BIGINT UNIQUE,                                   -- Public-facing obfuscated identifier for clean URLs
   name VARCHAR(255) UNIQUE NOT NULL,                       -- Human-readable name (e.g. "2027 Nigerian General Elections")
-  
+
   -- Supervisor hierarchy totals and unique user counts
   state_supervisors_count INT NOT NULL DEFAULT 0,
   unique_state_supervisors_count INT NOT NULL DEFAULT 0,
@@ -68,6 +69,24 @@ CREATE TABLE election_groups (
 -- Election groups indexes
 CREATE INDEX idx_election_groups_year ON election_groups(year DESC, id DESC);           -- Quick year sorting
 CREATE INDEX idx_election_groups_active_year ON election_groups(active, year DESC, id DESC); -- Active cycle lookup
+
+-- Automatically generate unique fake_id for election_groups if not provided
+-- +goose StatementBegin
+CREATE OR REPLACE FUNCTION set_election_group_fake_id()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.fake_id IS NULL THEN
+    NEW.fake_id := (floor(random() * 900 + 100)::text || NEW.id::text || floor(random() * 900 + 100)::text)::bigint;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+-- +goose StatementEnd
+
+CREATE TRIGGER trg_set_election_group_fake_id
+BEFORE INSERT ON election_groups
+FOR EACH ROW
+EXECUTE FUNCTION set_election_group_fake_id();
 
 -- ELECTIONS TABLE
 -- Individual contested election race (e.g. Presidential, Lagos Gubernatorial, Kano Central Senatorial)
@@ -153,6 +172,8 @@ CREATE UNIQUE INDEX uq_election_candidates_running_mate_group ON election_candid
 -- +goose Down
 DROP TRIGGER IF EXISTS trg_set_election_fake_id ON elections;
 DROP FUNCTION IF EXISTS set_election_fake_id();
+DROP TRIGGER IF EXISTS trg_set_election_group_fake_id ON election_groups;
+DROP FUNCTION IF EXISTS set_election_group_fake_id();
 DROP TABLE IF EXISTS election_candidates;
 DROP TABLE IF EXISTS elections;
 DROP TABLE IF EXISTS election_groups;

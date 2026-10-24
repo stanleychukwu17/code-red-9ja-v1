@@ -5,12 +5,8 @@ import { DashboardLayout } from "@repo/ui/components/custom/AdminLayouts";
 import { HomePageHeader } from "./-header";
 import { useUserParty } from "#/hooks/useUserParty";
 import { useElection } from "#/hooks/useElection";
-import { useMarketingCampaigns } from "#/hooks/useMarketingCampaigns";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  getPartyWallet,
-  getPartyMarketingCampaigns,
-} from "#/lib/server/parties";
+import { getPartyReadiness } from "#/lib/server/parties";
 import { useServerFn } from "@tanstack/react-start";
 import { getElectionStats } from "#/lib/server/elections";
 
@@ -55,14 +51,9 @@ function ReadinessComponent() {
     selectedElectionGroup,
     selectedElection,
     selectedStateId,
-    selectedDistrictId,
-    selectedFederalConstituencyId,
-    selectedStateConstituencyId,
     selectedLGAId,
     selectedWardId,
   } = useElection();
-  // Party context & marketing
-  const { activeMarketingCampaigns } = useMarketingCampaigns(party?.id);
   const partyId = party?.id;
   const queryClient = useQueryClient();
 
@@ -73,44 +64,34 @@ function ReadinessComponent() {
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [isMarketingDialogOpen, setIsMarketingDialogOpen] = useState(false);
 
+  // Server function bridges (SSR + RPC)
   const fetchElectionStatsFn = useServerFn(getElectionStats);
+  const fetchPartyReadinessFn = useServerFn(getPartyReadiness);
 
-  // on endpoint that returns all of what the home page needs
+  // Single consolidated query for party readiness:
+  // Returns treasury wallet, active marketing campaigns, slots, and setup checklists in one round-trip.
+  const { data: readinessRes, refetch: refetchReadiness } = useQuery({
+    queryKey: ["partyReadiness", partyId],
+    queryFn: () => fetchPartyReadinessFn({ data: partyId! }),
+    enabled: !!partyId,
+  });
 
-  // Party wallet query
-  // const { data: walletRes, refetch: refetchWallet } = useQuery({
-  //   queryKey: ["partyWallet", partyId],
-  //   queryFn: () => getPartyWallet({ data: partyId! }),
-  //   enabled: !!partyId,
-  // });
+  // Extract structured readiness fields
+  const readinessData = readinessRes?.data;
+  // Treasury wallet details (virtual accounts, balance in kobo)
+  const wallet = readinessData?.wallet;
+  // Number of active mobilization campaigns currently running
+  const activeCampaignsCount = readinessData?.active_campaigns_count ?? 0;
+  // Whether the party has completed marketing campaign setup
+  const hasMarketingSetup = readinessData?.has_marketing_setup ?? false;
 
-  // Marketing campaigns query
-  // const { data: campaignsRes } = useQuery({
-  //   queryKey: ["partyMarketingCampaigns", partyId],
-  //   queryFn: () => getPartyMarketingCampaigns({ data: Number(partyId) }),
-  //   enabled: !!partyId,
-  // });
+  // ReFetches readiness to refresh treasury wallet balances and statuses after actions
+  const refetchWallet = () => {
+    refetchReadiness();
+  };
 
-  // Determine active marketing campaigns setup
-  // const campaigns = campaignsRes?.data?.campaigns || [];
-  // const activeCampaignsCount = campaigns.filter((c: any) => {
-  //   if (!c.end_date) return true;
-  //   return new Date(c.end_date) > new Date();
-  // }).length;
-  // const hasMarketingSetup = activeCampaignsCount > 0;
-
-  // Safely extract the wallet, handling the case where it might be returned unwrapped from the cache
-  // const wallet =
-  //   walletRes?.data?.wallet ||
-  //   ((walletRes as any)?.id ? (walletRes as any) : undefined);
-
-  // Temporary fallbacks while backend integration is updated
-  const wallet = undefined;
-  const activeCampaignsCount = 0;
-  const hasMarketingSetup = false;
-  const refetchWallet = () => { };
-
-
+  // Geographical election & agent recruitment statistics:
+  // Dynamically scoped to the selected group, state, LGA, or ward
   const { data: electionStatsData, isLoading: isStatsLoading } = useQuery({
     queryKey: [
       "election-stats",

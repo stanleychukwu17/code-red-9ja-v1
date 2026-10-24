@@ -1,7 +1,7 @@
 -- name: FindOrCreateCampaignGroup :one
 INSERT INTO campaign_groups (
   party_id,
-  election_group_id,
+  target_election_group_id,
   scope,
   state_id,
   lga_id,
@@ -12,8 +12,10 @@ INSERT INTO campaign_groups (
 VALUES (
   $1, $2, $3, $4, $5, $6, $7, 'active'
 )
-ON CONFLICT (party_id, election_group_id, scope, state_id, lga_id, ward_id)
-DO UPDATE SET updated_at = NOW()
+ON CONFLICT (party_id, scope, state_id, lga_id, ward_id)
+DO UPDATE SET 
+  target_election_group_id = COALESCE(EXCLUDED.target_election_group_id, campaign_groups.target_election_group_id),
+  updated_at = NOW()
 RETURNING *;
 
 -- name: GetCampaignGroupByID :one
@@ -39,7 +41,7 @@ DO UPDATE SET
   END,
   can_broadcast = EXCLUDED.can_broadcast OR campaign_group_members.can_broadcast,
   party_id = EXCLUDED.party_id,
-  election_group_id = EXCLUDED.election_group_id
+  election_group_id = COALESCE(EXCLUDED.election_group_id, campaign_group_members.election_group_id)
 RETURNING *;
 
 -- name: RemoveCampaignGroupMember :exec
@@ -85,5 +87,3 @@ ORDER BY
         ELSE 7
     END ASC,
     m.joined_at ASC;
-
-

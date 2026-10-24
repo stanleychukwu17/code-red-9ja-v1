@@ -17,10 +17,25 @@ import { getUsersList } from "#/lib/server/users";
 import { useUserParty } from "#/hooks/useUserParty";
 import type { ElectionInstanceType } from "../tiles/election-instance-tile";
 
+export type TicketMember = {
+  id: string | number;
+  avatar?: string;
+  name: string;
+};
+
 export type ManageCandidateTicketDialogProps = {
   open: boolean;
   onClose: () => void;
-  data: ElectionInstanceType;
+  data?: ElectionInstanceType;
+  election?: {
+    id: number;
+    fake_id?: number | bigint;
+    name: string;
+    office_name?: string;
+    scope?: string;
+  };
+  candidate?: TicketMember;
+  running_mate?: TicketMember;
 };
 
 /**
@@ -58,7 +73,22 @@ export const getTicketConfig = (electionTitle: string, officeName?: string, scop
   };
 };
 
-export function ManageCandidateTicketDialog({ open, onClose, data }: ManageCandidateTicketDialogProps) {
+export function ManageCandidateTicketDialog({
+  open,
+  onClose,
+  data,
+  election,
+  candidate,
+  running_mate,
+}: ManageCandidateTicketDialogProps) {
+  // Resolve election details from either explicit props or data object
+  const electionId = election?.id ?? data?.id ?? 0;
+  const electionName = election?.name ?? data?.name ?? "";
+  const officeName = election?.office_name ?? data?.office_name;
+  const scope = election?.scope ?? data?.scope;
+  const activeCandidate = candidate ?? data?.candidate;
+  const activeRunningMate = running_mate ?? data?.running_mate;
+
   // TanStack Query client used to invalidate the elections cache on update
   const queryClient = useQueryClient();
 
@@ -70,7 +100,7 @@ export function ManageCandidateTicketDialog({ open, onClose, data }: ManageCandi
   const [targetSlot, setTargetSlot] = useState<"candidate" | "running_mate" | null>(null);
 
   // Detect whether this race requires a joint ticket (e.g. President, Governor, LGA Chairman)
-  const ticketConfig = getTicketConfig(data.title, data.officeName, data.scope);
+  const ticketConfig = getTicketConfig(electionName, officeName, scope);
 
   // Mutation to persist candidate ticket updates on the server
   const saveMutation = useMutation({
@@ -78,7 +108,7 @@ export function ManageCandidateTicketDialog({ open, onClose, data }: ManageCandi
       // Calls server action with election ID, slot, and updated candidate ID
       const res = await fieldPartyCandidate({
         data: {
-          electionId: data.id,
+          electionId,
           candidateId,
           partyId: userPartyId || 0,
           slot,
@@ -92,8 +122,8 @@ export function ManageCandidateTicketDialog({ open, onClose, data }: ManageCandi
     onSuccess: () => {
       // Refresh election instances list, candidates roster, and election details
       queryClient.invalidateQueries({ queryKey: ["elections"] });
-      queryClient.invalidateQueries({ queryKey: ["election-candidates", data.id] });
-      queryClient.invalidateQueries({ queryKey: ["election-details", data.id] });
+      queryClient.invalidateQueries({ queryKey: ["election-candidates", electionId] });
+      queryClient.invalidateQueries({ queryKey: ["election-details", electionId] });
     },
   });
 
@@ -102,7 +132,7 @@ export function ManageCandidateTicketDialog({ open, onClose, data }: ManageCandi
     mutationFn: async ({ slot }: { slot: "candidate" | "running_mate" }) => {
       const res = await unfieldPartyCandidate({
         data: {
-          electionId: data.id,
+          electionId,
           partyId: userPartyId || 0,
           slot,
         },
@@ -114,8 +144,8 @@ export function ManageCandidateTicketDialog({ open, onClose, data }: ManageCandi
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["elections"] });
-      queryClient.invalidateQueries({ queryKey: ["election-candidates", data.id] });
-      queryClient.invalidateQueries({ queryKey: ["election-details", data.id] });
+      queryClient.invalidateQueries({ queryKey: ["election-candidates", electionId] });
+      queryClient.invalidateQueries({ queryKey: ["election-details", electionId] });
     },
   });
 
@@ -155,7 +185,7 @@ export function ManageCandidateTicketDialog({ open, onClose, data }: ManageCandi
                 Contested Race
               </p>
               <h3 className="text-base font-bold text-c-90 mt-0.5">
-                {data.title}
+                {electionName}
               </h3>
             </div>
 
@@ -166,24 +196,24 @@ export function ManageCandidateTicketDialog({ open, onClose, data }: ManageCandi
                   <UserCheck className="size-4 text-[#00cf79]" />
                   {ticketConfig.principalRole}
                 </span>
-                {data.candidate && (
+                {activeCandidate && (
                   <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-[#00cf79]/15 text-[#009b5a]">
                     Fielded
                   </span>
                 )}
               </div>
 
-              {data.candidate ? (
+              {activeCandidate ? (
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl border border-border bg-white dark:bg-c-5 shadow-xs">
                   <div className="flex items-center gap-3 min-w-0">
                     <AppAvatar
-                      src={data.candidate.avatar}
-                      alt={data.candidate.name}
+                      src={activeCandidate.avatar}
+                      alt={activeCandidate.name}
                       className="size-14 rounded-full border border-border shrink-0"
                     />
                     <div className="min-w-0">
                       <p className="font-bold text-c-90 text-[15px] truncate">
-                        {data.candidate.name}
+                        {activeCandidate.name}
                       </p>
                       <p className="text-xs text-c-50 mt-0.5">
                         {ticketConfig.principalRole}
@@ -249,24 +279,24 @@ export function ManageCandidateTicketDialog({ open, onClose, data }: ManageCandi
                     <UsersIcon className="size-4 text-[#0099FF]" />
                     {ticketConfig.runningMateRole}
                   </span>
-                  {data.runningMate && (
+                  {activeRunningMate && (
                     <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-[#0099FF]/15 text-[#007acc]">
                       Running Mate
                     </span>
                   )}
                 </div>
 
-                {data.runningMate ? (
+                {activeRunningMate ? (
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl border border-border bg-white dark:bg-c-5 shadow-xs">
                     <div className="flex items-center gap-3 min-w-0">
                       <AppAvatar
-                        src={data.runningMate.avatar}
-                        alt={data.runningMate.name}
+                        src={activeRunningMate.avatar}
+                        alt={activeRunningMate.name}
                         className="size-14 rounded-full border border-border shrink-0"
                       />
                       <div className="min-w-0">
                         <p className="font-bold text-c-90 text-[15px] truncate">
-                          {data.runningMate.name}
+                          {activeRunningMate.name}
                         </p>
                         <p className="text-xs text-c-50 mt-0.5">
                           {ticketConfig.runningMateRole}
@@ -306,7 +336,7 @@ export function ManageCandidateTicketDialog({ open, onClose, data }: ManageCandi
                           No running mate assigned
                         </p>
                         <p className="text-xs text-c-40">
-                          {data.candidate
+                          {activeCandidate
                             ? "Select a vice candidate to complete the nomination ticket."
                             : "Field a principal candidate first before selecting a running mate."}
                         </p>
@@ -316,7 +346,7 @@ export function ManageCandidateTicketDialog({ open, onClose, data }: ManageCandi
                     <Button
                       variant="outline"
                       size="sm"
-                      disabled={!data.candidate}
+                      disabled={!activeCandidate}
                       onClick={() => setTargetSlot("running_mate")}
                       className="text-xs h-9 shrink-0 flex items-center gap-1.5"
                     >
@@ -338,10 +368,10 @@ export function ManageCandidateTicketDialog({ open, onClose, data }: ManageCandi
           onClose={() => setTargetSlot(null)}
           onAddUsers={handleSelectUser}
           alreadySelectedIds={
-            targetSlot === "candidate" && data.candidate
-              ? [Number(data.candidate.id)]
-              : targetSlot === "running_mate" && data.runningMate
-                ? [Number(data.runningMate.id)]
+            targetSlot === "candidate" && activeCandidate
+              ? [Number(activeCandidate.id)]
+              : targetSlot === "running_mate" && activeRunningMate
+                ? [Number(activeRunningMate.id)]
                 : []
           }
           fetchUsers={async ({ cursor, search }) => {

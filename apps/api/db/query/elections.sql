@@ -11,6 +11,9 @@ RETURNING *;
 -- name: GetElectionInstanceByID :one
 SELECT * FROM elections WHERE id = $1;
 
+-- name: GetElectionInstanceByFakeID :one
+SELECT * FROM elections WHERE fake_id = $1;
+
 -- name: ListElectionInstances :many
 SELECT
   e.*,

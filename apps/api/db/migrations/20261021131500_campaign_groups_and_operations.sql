@@ -1,12 +1,13 @@
 -- +goose Up
 
 -- 1. CAMPAIGN GROUPS
--- Represents tiered situation and campaign coordination groups for political parties in an election group.
+-- Represents tiered situation and campaign coordination groups for political parties.
+-- Groups are persistent per party and geographic territory; each election cycle, a group targets an election group.
 -- Hierarchy: National -> State -> LGA -> Ward
 CREATE TABLE IF NOT EXISTS campaign_groups (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   party_id SMALLINT REFERENCES parties(id) ON DELETE CASCADE NOT NULL,
-  election_group_id INT REFERENCES election_groups(id) ON DELETE CASCADE NOT NULL,
+  target_election_group_id INT REFERENCES election_groups(id) ON DELETE SET NULL,
 
   scope VARCHAR(32) NOT NULL, -- 'national', 'state', 'lga', 'ward'
 
@@ -23,16 +24,21 @@ CREATE TABLE IF NOT EXISTS campaign_groups (
   created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
 
-  CONSTRAINT uq_campaign_group_territory UNIQUE NULLS NOT DISTINCT (party_id, election_group_id, scope, state_id, lga_id, ward_id)
+  CONSTRAINT uq_campaign_group_territory UNIQUE NULLS NOT DISTINCT (party_id, scope, state_id, lga_id, ward_id)
 );
+
+CREATE INDEX IF NOT EXISTS idx_campaign_groups_target_election_group 
+ON campaign_groups(target_election_group_id);
 
 
 -- 2. CAMPAIGN GROUP MEMBERS
 -- Tracks users enrolled in a campaign group with their operational assignment role.
+-- Party officials have election_group_id = NULL (semi-permanent tenure).
+-- Seasonal roles (candidates, supervisors, agents) reference their active election cycle.
 CREATE TABLE IF NOT EXISTS campaign_group_members (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   party_id SMALLINT REFERENCES parties(id) ON DELETE CASCADE NOT NULL,
-  election_group_id INT REFERENCES election_groups(id) ON DELETE CASCADE NOT NULL,
+  election_group_id INT REFERENCES election_groups(id) ON DELETE SET NULL,
   group_id BIGINT REFERENCES campaign_groups(id) ON DELETE CASCADE NOT NULL,
   user_id BIGINT REFERENCES users(id) ON DELETE CASCADE NOT NULL,
   role VARCHAR(32) NOT NULL, -- 'candidate', 'state_supervisor', 'lga_supervisor', 'ward_supervisor', 'agent', 'party_official'
@@ -90,9 +96,11 @@ CREATE INDEX IF NOT EXISTS idx_campaign_group_messages_group_id ON campaign_grou
 
 -- 5. CAMPAIGN GROUP ISSUES ("Challenges")
 -- Dedicated problem and incident management board for polling unit agents, supervisors, and candidates.
+-- Preserves election_group_id so election incident issues can be tracked historically per cycle.
 CREATE TABLE IF NOT EXISTS campaign_group_issues (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   group_id BIGINT REFERENCES campaign_groups(id) ON DELETE CASCADE NOT NULL,
+  election_group_id INT REFERENCES election_groups(id) ON DELETE SET NULL,
   reporter_id BIGINT REFERENCES users(id) ON DELETE RESTRICT NOT NULL,
 
   title VARCHAR(255) NOT NULL,
@@ -113,6 +121,9 @@ CREATE TABLE IF NOT EXISTS campaign_group_issues (
   created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
+
+CREATE INDEX IF NOT EXISTS idx_campaign_group_issues_election_group 
+ON campaign_group_issues(group_id, election_group_id);
 
 
 -- 6. CAMPAIGN GROUP MEDIA
