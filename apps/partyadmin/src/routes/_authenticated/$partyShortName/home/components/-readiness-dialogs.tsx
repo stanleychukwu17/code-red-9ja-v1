@@ -73,6 +73,7 @@ export function ReadinessDialogs({
 }: ReadinessDialogsProps) {
   const queryClient = useQueryClient();
   const [isPaymentPending, setIsPaymentPending] = useState(false);
+  const [depositDeficitAmount, setDepositDeficitAmount] = useState<number | undefined>(undefined);
 
   const fetchGroups = useServerFn(getElectionGroups);
   const fetchElectionsByGroup = useServerFn(getElectionsByGroup);
@@ -101,8 +102,12 @@ export function ReadinessDialogs({
       <AccountDetailsDialog
         open={isWalletDialogOpen}
         setOpen={setIsWalletDialogOpen}
-        onClose={() => setIsWalletDialogOpen(false)}
+        onClose={() => {
+          setIsWalletDialogOpen(false);
+          setDepositDeficitAmount(undefined);
+        }}
         wallet={wallet}
+        defaultAmount={depositDeficitAmount}
         onSuccess={onWalletSuccess}
       />
 
@@ -112,6 +117,11 @@ export function ReadinessDialogs({
         partyId={partyId}
         walletBalanceKobo={wallet?.balance_kobo ?? 0}
         onSuccess={onSlotsPurchased}
+        onDepositFunds={(deficit) => {
+          setDepositDeficitAmount(deficit);
+          setIsSlotsDialogOpen(false);
+          setIsWalletDialogOpen(true);
+        }}
       />
 
       <AgentPaymentAllocationFormDialog

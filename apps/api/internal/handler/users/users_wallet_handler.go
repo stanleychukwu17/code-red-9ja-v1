@@ -2,6 +2,7 @@ package usershandler
 
 import (
 	"free9ja/api/internal/db/queries"
+	"github.com/jackc/pgx/v5/pgtype"
 	"encoding/json"
 	"fmt"
 	apimiddleware "free9ja/api/internal/middleware"
@@ -12,6 +13,45 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 )
+
+type UserWalletResponse struct {
+	ID               int64              `json:"id"`
+	UserID           int64              `json:"user_id"`
+	AccountReference string             `json:"account_reference"`
+	AccountNumbers   interface{}        `json:"account_numbers"`
+	BalanceKobo      int64              `json:"balance_kobo"`
+	CurrencyCode     string             `json:"currency_code"`
+	Status           string             `json:"status"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+}
+
+func formatUserWalletResponse(wallet queries.UserWallet) UserWalletResponse {
+	var parsedAccounts interface{}
+	if len(wallet.AccountNumbers) > 0 {
+		_ = json.Unmarshal(wallet.AccountNumbers, &parsedAccounts)
+		if str, ok := parsedAccounts.(string); ok {
+			var doubleParsed interface{}
+			if err := json.Unmarshal([]byte(str), &doubleParsed); err == nil {
+				parsedAccounts = doubleParsed
+			}
+		}
+	} else {
+		parsedAccounts = []interface{}{}
+	}
+
+	return UserWalletResponse{
+		ID:               wallet.ID,
+		UserID:           wallet.UserID,
+		AccountReference: wallet.AccountReference,
+		AccountNumbers:   parsedAccounts,
+		BalanceKobo:      wallet.BalanceKobo,
+		CurrencyCode:     wallet.CurrencyCode,
+		Status:           wallet.Status,
+		CreatedAt:        wallet.CreatedAt,
+		UpdatedAt:        wallet.UpdatedAt,
+	}
+}
 
 // GetMyWallet handles GET /api/v1/users/me/wallet
 // @Summary      Get current user's wallet
@@ -75,31 +115,8 @@ func (h *Handler) GetMyWallet(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	var parsedAccounts interface{}
-	if len(wallet.AccountNumbers) > 0 {
-		_ = json.Unmarshal(wallet.AccountNumbers, &parsedAccounts)
-		if str, ok := parsedAccounts.(string); ok {
-			var doubleParsed interface{}
-			if err := json.Unmarshal([]byte(str), &doubleParsed); err == nil {
-				parsedAccounts = doubleParsed
-			}
-		}
-	} else {
-		parsedAccounts = []interface{}{}
-	}
-
 	h.utils.RespondSuccess(w, http.StatusOK, "Wallet fetched successfully", map[string]interface{}{
-		"wallet": map[string]interface{}{
-			"id":                wallet.ID,
-			"user_id":           wallet.UserID,
-			"account_reference": wallet.AccountReference,
-			"account_numbers":   parsedAccounts,
-			"balance_kobo":      wallet.BalanceKobo,
-			"currency_code":     wallet.CurrencyCode,
-			"status":            wallet.Status,
-			"created_at":        wallet.CreatedAt,
-			"updated_at":        wallet.UpdatedAt,
-		},
+		"wallet": formatUserWalletResponse(wallet),
 	})
 }
 
@@ -268,31 +285,8 @@ func (h *Handler) CreateUserWalletHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	var parsedAccounts interface{}
-	if len(wallet.AccountNumbers) > 0 {
-		_ = json.Unmarshal(wallet.AccountNumbers, &parsedAccounts)
-		if str, ok := parsedAccounts.(string); ok {
-			var doubleParsed interface{}
-			if err := json.Unmarshal([]byte(str), &doubleParsed); err == nil {
-				parsedAccounts = doubleParsed
-			}
-		}
-	} else {
-		parsedAccounts = []interface{}{}
-	}
-
 	h.utils.RespondSuccess(w, http.StatusCreated, "Wallet created successfully", map[string]interface{}{
-		"wallet": map[string]interface{}{
-			"id":                wallet.ID,
-			"user_id":           wallet.UserID,
-			"account_reference": wallet.AccountReference,
-			"account_numbers":   parsedAccounts,
-			"balance_kobo":      wallet.BalanceKobo,
-			"currency_code":     wallet.CurrencyCode,
-			"status":            wallet.Status,
-			"created_at":        wallet.CreatedAt,
-			"updated_at":        wallet.UpdatedAt,
-		},
+		"wallet": formatUserWalletResponse(wallet),
 	})
 }
 

@@ -48,6 +48,15 @@ type PracticeTestResponse struct {
 	UpdatedAt        string      `json:"updated_at"`
 }
 
+type PracticeTestPayoutPreviewResponse struct {
+	PotentialWindowPayoutKobo      int64 `json:"potential_window_payout_kobo"`
+	PotentialTestPayoutKobo        int64 `json:"potential_test_payout_kobo"`
+	QuotaRemaining                 int   `json:"quota_remaining"`
+	TestsTakenInWindow             int   `json:"tests_taken_in_window"`
+	ReadinessBudgetKobo            int64 `json:"readiness_budget_kobo"`
+	ActiveWindowDaysBeforeElection int   `json:"active_window_days_before_election"`
+}
+
 type PracticeTestWithUserResponse struct {
 	PracticeTestResponse
 	FirstName *string `json:"first_name,omitempty"`
@@ -399,13 +408,13 @@ func (h *Handler) GetPayoutPreview(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if partyID == 0 {
-		h.u.RespondSuccess(w, http.StatusOK, "Payout preview", map[string]interface{}{
-			"potential_window_payout_kobo":       0,
-			"potential_test_payout_kobo":         0,
-			"quota_remaining":                    0,
-			"tests_taken_in_window":              0,
-			"readiness_budget_kobo":              0,
-			"active_window_days_before_election": 0,
+		h.u.RespondSuccessData(w, http.StatusOK, "Payout preview", PracticeTestPayoutPreviewResponse{
+			PotentialWindowPayoutKobo:      0,
+			PotentialTestPayoutKobo:        0,
+			QuotaRemaining:                 0,
+			TestsTakenInWindow:             0,
+			ReadinessBudgetKobo:            0,
+			ActiveWindowDaysBeforeElection: 0,
 		})
 		return
 	}
@@ -539,13 +548,13 @@ func (h *Handler) GetPayoutPreview(w http.ResponseWriter, r *http.Request) {
 
 	potentialWindowPayoutKobo := perTestValueKobo * int64(quotaRemaining)
 
-	h.u.RespondSuccess(w, http.StatusOK, "Payout preview", map[string]interface{}{
-		"potential_window_payout_kobo":       potentialWindowPayoutKobo,
-		"potential_test_payout_kobo":         perTestValueKobo,
-		"quota_remaining":                    quotaRemaining,
-		"tests_taken_in_window":              testsTakenInWindow,
-		"readiness_budget_kobo":              readinessBudgetKobo,
-		"active_window_days_before_election": activeWindowDays,
+	h.u.RespondSuccessData(w, http.StatusOK, "Payout preview", PracticeTestPayoutPreviewResponse{
+		PotentialWindowPayoutKobo:      potentialWindowPayoutKobo,
+		PotentialTestPayoutKobo:        perTestValueKobo,
+		QuotaRemaining:                 quotaRemaining,
+		TestsTakenInWindow:             testsTakenInWindow,
+		ReadinessBudgetKobo:            readinessBudgetKobo,
+		ActiveWindowDaysBeforeElection: activeWindowDays,
 	})
 }
 

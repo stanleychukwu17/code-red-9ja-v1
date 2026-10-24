@@ -89,6 +89,7 @@ export const API_URL = {
   getWards: `${api}/wards`,
   parties: `${api}/parties`,
   partyById: (id: string | number) => `${api}/parties/${id}`,
+  partyReadiness: (id: string | number) => `${api}/parties/${id}/readiness`,
   partyWallet: (id: string | number) => `${api}/parties/${id}/wallet`,
   partyWalletWithdraw: (id: string | number) =>
     `${api}/parties/${id}/wallet/withdraw`,

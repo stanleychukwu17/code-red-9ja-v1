@@ -45,6 +45,14 @@ type PartiesService interface {
 	InvalidatePartyCache(ctx context.Context, partyID int16)
 }
 
+type FileUploadURLResponse struct {
+	UploadURL string `json:"upload_url"`
+	FileKey   string `json:"file_key"`
+	PublicURL string `json:"public_url"`
+	FileID    int64  `json:"file_id"`
+	ExpiresAt string `json:"expires_at"`
+}
+
 // Handler holds the dependencies needed to service file-related HTTP requests.
 type Handler struct {
 	filesService   filesservice.FilesService
@@ -173,12 +181,12 @@ func (h *Handler) GenerateUploadURL(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// returns the presigned URL and file details to the client
-	h.utils.RespondSuccess(w, http.StatusOK, "Upload URL generated successfully", map[string]interface{}{
-		"upload_url": presignURL,
-		"file_key":   key,
-		"public_url": publicURL,
-		"file_id":    file.ID,
-		"expires_at": time.Now().Add(presignTTL).UTC().Format(time.RFC3339),
+	h.utils.RespondSuccessData(w, http.StatusOK, "Upload URL generated successfully", FileUploadURLResponse{
+		UploadURL: presignURL,
+		FileKey:   key,
+		PublicURL: publicURL,
+		FileID:    file.ID,
+		ExpiresAt: time.Now().Add(presignTTL).UTC().Format(time.RFC3339),
 	})
 }
 

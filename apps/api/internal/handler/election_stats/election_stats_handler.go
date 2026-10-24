@@ -44,6 +44,56 @@ type Handler struct {
 	utils            *utils.Utils
 }
 
+type OperationsBreakdownUnitResponse struct {
+	ID                    int64       `json:"id"`
+	Name                  string      `json:"name"`
+	Code                  string      `json:"code"`
+	AgentsAtPu            string      `json:"agents_at_pu"`
+	PuAgentsInAttendance  int64       `json:"pu_agents_in_attendance"`
+	PuAgentsCount         int64       `json:"pu_agents_count"`
+	AvgAgentArrivalTime   string      `json:"avg_agent_arrival_time"`
+	ElectionStartedIn     string      `json:"election_started_in"`
+	ElectionEndedIn       string      `json:"election_ended_in"`
+	AvgEleStartTime       string      `json:"avg_ele_start_time"`
+	AvgEleEndTime         string      `json:"avg_ele_end_time"`
+	UpdatesGiven          int64       `json:"updates_given"`
+	ReportsGiven          int64       `json:"reports_given"`
+	ReportedPus           int64       `json:"reported_pus"`
+	PusWithUpdates        int64       `json:"pus_with_updates"`
+	AvgUpdateTimeInterval string      `json:"avg_update_time_interval"`
+	LiveVotersReferred    int64       `json:"live_voters_referred"`
+	ResultsUploaded       int64       `json:"results_uploaded"`
+	ResultsExpected       string      `json:"results_expected"`
+	PusWithAllResults     int64       `json:"pus_with_all_results"`
+	PusWith1Agent         string      `json:"pus_with_1_agent"`
+	TotalAgents           string      `json:"total_agents"`
+	TotalPus              int64       `json:"total_pus"`
+	OverallReadiness      int64       `json:"overall_readiness"`
+	Supervisors           interface{} `json:"supervisors"`
+}
+
+type AgentCoverageUnitResponse struct {
+	ID               int64       `json:"id"`
+	Name             string      `json:"name"`
+	Code             string      `json:"code"`
+	PollingAgents    string      `json:"polling_agents"`
+	WardSupervisors  string      `json:"ward_supervisors"`
+	LgaSupervisors   string      `json:"lga_supervisors"`
+	StateSupervisors string      `json:"state_supervisors"`
+	OverallReadiness int64       `json:"overall_readiness"`
+	Supervisors      interface{} `json:"supervisors"`
+	PuAgents         interface{} `json:"pu_agents"`
+}
+
+type BreakdownListResponse[T any] struct {
+	Total           int    `json:"total"`
+	UnitTitle       string `json:"unit_title"`
+	UnitType        string `json:"unit_type"`
+	SupervisorTitle string `json:"supervisor_title"`
+	Units           []T    `json:"units"`
+}
+
+
 func NewHandler(
 	service electionstats.ElectionStatsService,
 	electionsService ElectionsService,
@@ -1034,12 +1084,12 @@ func (h *Handler) GetOperationsBreakdown(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
-	h.utils.RespondSuccess(w, http.StatusOK, "Operations breakdown fetched", map[string]interface{}{
-		"total":            len(units),
-		"unit_title":       unitTitle,
-		"unit_type":        unitType,
-		"supervisor_title": supervisorTitle,
-		"units":            units,
+	h.utils.RespondSuccessData(w, http.StatusOK, "Operations breakdown fetched", BreakdownListResponse[map[string]interface{}]{
+		Total:           len(units),
+		UnitTitle:       unitTitle,
+		UnitType:        unitType,
+		SupervisorTitle: supervisorTitle,
+		Units:           units,
 	})
 }
 
@@ -1390,11 +1440,11 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 		}
 	}
 
-	h.utils.RespondSuccess(w, http.StatusOK, "Agent coverage breakdown fetched", map[string]interface{}{
-		"total":            len(units),
-		"unit_title":       unitTitle,
-		"unit_type":        unitType,
-		"supervisor_title": supervisorTitle,
-		"units":            units,
+	h.utils.RespondSuccessData(w, http.StatusOK, "Agent coverage breakdown fetched", BreakdownListResponse[map[string]interface{}]{
+		Total:           len(units),
+		UnitTitle:       unitTitle,
+		UnitType:        unitType,
+		SupervisorTitle: supervisorTitle,
+		Units:           units,
 	})
 }

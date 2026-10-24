@@ -64,12 +64,7 @@ func (h *Handler) ListUserNotifications(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	h.utils.RespondSuccess(w, http.StatusOK, "Notifications retrieved successfully", map[string]interface{}{
-		"notifications": res.Data,
-		"unread_count":  res.UnreadCount,
-		"page":          res.Page,
-		"limit":         res.Limit,
-	})
+	h.utils.RespondSuccessData(w, http.StatusOK, "Notifications retrieved successfully", res)
 }
 
 // GetUnreadCount godoc
@@ -224,12 +219,7 @@ func (h *Handler) ListPartyNotifications(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	h.utils.RespondSuccess(w, http.StatusOK, "Party notifications retrieved successfully", map[string]interface{}{
-		"notifications": res.Data,
-		"unread_count":  res.UnreadCount,
-		"page":          res.Page,
-		"limit":         res.Limit,
-	})
+	h.utils.RespondSuccessData(w, http.StatusOK, "Party notifications retrieved successfully", res)
 }
 
 // GetPartyUnreadCount godoc

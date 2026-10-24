@@ -99,6 +99,7 @@ type PartiesService interface {
 	ListSuspendedPartyMembers(ctx context.Context, partyID int16, limit int32, cursor int64) ([]queries.ListSuspendedPartyMembersRow, error)
 	ListPartyAdmins(ctx context.Context, partyID int16) ([]partiesservice.PartyAdminItem, error)
 	GetPartyHome(ctx context.Context, partyID int16, chapterID *int32) (*partiesservice.PartyHomeData, error)
+	GetPartyReadiness(ctx context.Context, partyID int16) (*partiesservice.PartyReadinessData, error)
 }
 
 // PermissionsService defines methods for checking user permissions
@@ -143,6 +144,163 @@ func NewHandler(partiesService PartiesService, bodiesService BodiesService, audi
 		r2Svc:              r2Svc,
 		followsService:     followsService,
 	}
+}
+
+type PartyWalletResponse struct {
+	ID               int64              `json:"id"`
+	PartyID          int16              `json:"party_id"`
+	AccountReference string             `json:"account_reference"`
+	AccountNumbers   interface{}        `json:"account_numbers"`
+	BalanceKobo      int64              `json:"balance_kobo"`
+	CurrencyCode     string             `json:"currency_code"`
+	Status           string             `json:"status"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+}
+
+func formatPartyWalletResponse(wallet queries.PartyWallet) PartyWalletResponse {
+	var parsedAccounts interface{}
+	if len(wallet.AccountNumbers) > 0 {
+		_ = json.Unmarshal(wallet.AccountNumbers, &parsedAccounts)
+		if str, ok := parsedAccounts.(string); ok {
+			var doubleParsed interface{}
+			if err := json.Unmarshal([]byte(str), &doubleParsed); err == nil {
+				parsedAccounts = doubleParsed
+			}
+		}
+	} else {
+		parsedAccounts = []interface{}{}
+	}
+
+	return PartyWalletResponse{
+		ID:               wallet.ID,
+		PartyID:          wallet.PartyID,
+		AccountReference: wallet.AccountReference,
+		AccountNumbers:   parsedAccounts,
+		BalanceKobo:      wallet.BalanceKobo,
+		CurrencyCode:     wallet.CurrencyCode,
+		Status:           wallet.Status,
+		CreatedAt:        wallet.CreatedAt,
+		UpdatedAt:        wallet.UpdatedAt,
+	}
+}
+
+type FilteredPartyResponse struct {
+	ID             int16                            `json:"id"`
+	ShortName      string                           `json:"short_name"`
+	Name           string                           `json:"name"`
+	Logo           string                           `json:"logo"`
+	CoverImage     *string                          `json:"cover_image"`
+	CoverPositionY *int16                           `json:"cover_position_y"`
+	IsVerified     bool                             `json:"is_verified"`
+	ColorHex       *string                          `json:"color_hex"`
+	DarkColorHex   *string                          `json:"dark_color_hex"`
+	DateFounded    *string                          `json:"date_founded"`
+	Verifications  []queries.GetPageVerificationsRow `json:"verifications"`
+}
+
+type PartyProfileResponse struct {
+	Data                   FilteredPartyResponse `json:"data"`
+	Chapter                queries.PartyChapter  `json:"chapter"`
+	ChapterType            string                `json:"chapter_type"`
+	ChapterGeoName         string                `json:"chapter_geo_name"`
+	NationalChapterID      int32                 `json:"national_chapter_id"`
+	NationalMemberCount    int64                 `json:"national_member_count"`
+	ChapterMemberCount     int64                 `json:"chapter_member_count"`
+	NationalFollowersCount int64                 `json:"national_followers_count"`
+	IsChapterMember        bool                  `json:"is_chapter_member"`
+	IsFollowing            bool                  `json:"is_following"`
+}
+
+type PartyReadinessResponse struct {
+	Party                queries.Party        `json:"party"`
+	Wallet               *PartyWalletResponse `json:"wallet,omitempty"`
+	ActiveCampaignsCount int                  `json:"active_campaigns_count"`
+	HasMarketingSetup    bool                 `json:"has_marketing_setup"`
+	HasSlots             bool                 `json:"has_slots"`
+	HasAgentPayment      bool                 `json:"has_agent_payment"`
+	HasPaymentAllocation bool                 `json:"has_payment_allocation"`
+}
+
+type PartyMarketingCampaignResponse struct {
+	ID                 int32       `json:"id"`
+	PartyID            int16       `json:"party_id"`
+	ElectionGroupID    int32       `json:"election_group_id"`
+	ElectionID         int32       `json:"election_id"`
+	PlanID             int32       `json:"plan_id"`
+	Type               string      `json:"type"`
+	States             interface{} `json:"states"`
+	DurationInDays     int32       `json:"duration_in_days"`
+	StartDate          interface{} `json:"start_date"`
+	EndDate            interface{} `json:"end_date"`
+	Status             string      `json:"status"`
+	BudgetPerDayKobo   int64       `json:"budget_per_day_kobo"`
+	BudgetKobo         int64       `json:"budget_kobo"`
+	ReferralAmountKobo int64       `json:"referral_amount_kobo"`
+	AmountSpentKobo    int64       `json:"amount_spent_kobo"`
+	BudgetPerDay       float64     `json:"budget_per_day"`
+	Budget             float64     `json:"budget"`
+	ReferralAmount     float64     `json:"referral_amount"`
+	AmountSpent        float64     `json:"amount_spent"`
+	CreatedAt          interface{} `json:"created_at"`
+	UpdatedAt          interface{} `json:"updated_at"`
+	PlanName           string      `json:"plan_name"`
+	PlanPriceKobo      int64       `json:"plan_price_kobo"`
+	PlanPrice          float64     `json:"plan_price"`
+	PlanColor          string      `json:"plan_color"`
+	ElectionGroupName  string      `json:"election_group_name"`
+	ElectionName       string      `json:"election_name"`
+}
+
+type CampaignPartySummary struct {
+	ID        int16       `json:"id"`
+	Name      string      `json:"name"`
+	ShortName string      `json:"short_name"`
+	Logo      interface{} `json:"logo"`
+}
+
+type CampaignPlanSummary struct {
+	ID          int32   `json:"id"`
+	Name        string  `json:"name"`
+	Description string  `json:"description"`
+	PriceKobo   int64   `json:"price_kobo"`
+	Price       float64 `json:"price"`
+	ColorHex    string  `json:"color_hex"`
+}
+
+type CampaignElectionGroupSummary struct {
+	ID   int32  `json:"id"`
+	Name string `json:"name"`
+}
+
+type CampaignElectionSummary struct {
+	ID   int32  `json:"id"`
+	Name string `json:"name"`
+}
+
+type AdminMarketingCampaignResponse struct {
+	PartyMarketingCampaignResponse
+	Party         CampaignPartySummary         `json:"party"`
+	Plan          CampaignPlanSummary          `json:"plan"`
+	ElectionGroup CampaignElectionGroupSummary `json:"election_group"`
+	Election      CampaignElectionSummary      `json:"election"`
+}
+
+type PartyPositionsResponse struct {
+	Default   []queries.PartyPosition `json:"default"`
+	Custom    []queries.PartyPosition `json:"custom"`
+	Positions []queries.PartyPosition `json:"positions"`
+}
+
+type PartyChapterOfficialsResponse struct {
+	ChapterID int32                         `json:"chapter_id"`
+	Officials []queries.ListPartyOfficialsRow `json:"officials"`
+}
+
+type PartyAssignmentWithOfficialsResponse struct {
+	Assignment interface{}                   `json:"assignment"`
+	ChapterID  int32                         `json:"chapter_id"`
+	Officials  []queries.ListPartyOfficialsRow `json:"officials"`
 }
 
 func parsePaginationParams(r *http.Request) (int, int64) {
@@ -787,18 +945,18 @@ func (h *Handler) GetPartyProfile(w http.ResponseWriter, r *http.Request) {
 	if verifications == nil {
 		verifications = []queries.GetPageVerificationsRow{}
 	}
-	filteredParty := map[string]interface{}{
-		"id":               party.ID,
-		"short_name":       party.ShortName,
-		"name":             party.Name,
-		"logo":             party.Logo,
-		"cover_image":      utils.PtrFromPgText(party.CoverImage),
-		"cover_position_y": utils.PtrFromPgInt2(party.CoverPositionY),
-		"is_verified":      party.IsVerified.Bool,
-		"color_hex":        utils.PtrFromPgText(party.ColorHex),
-		"dark_color_hex":   utils.PtrFromPgText(party.DarkColorHex),
-		"date_founded":     utils.PtrFromPgDate(party.DateFounded),
-		"verifications":    verifications,
+	filteredParty := FilteredPartyResponse{
+		ID:             party.ID,
+		ShortName:      party.ShortName,
+		Name:           party.Name,
+		Logo:           party.Logo,
+		CoverImage:     utils.PtrFromPgText(party.CoverImage),
+		CoverPositionY: utils.PtrFromPgInt2(party.CoverPositionY),
+		IsVerified:     party.IsVerified.Bool,
+		ColorHex:       utils.PtrFromPgText(party.ColorHex),
+		DarkColorHex:   utils.PtrFromPgText(party.DarkColorHex),
+		DateFounded:    utils.PtrFromPgDate(party.DateFounded),
+		Verifications:  verifications,
 	}
 
 	// Resolve chapter geographic name based on chapter tier
@@ -836,20 +994,20 @@ func (h *Handler) GetPartyProfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// final response data
-	responseData := map[string]interface{}{
-		"data":                     filteredParty,
-		"chapter":                  chapter,
-		"chapter_type":             chapter.ChapterType,
-		"chapter_geo_name":         chapterGeoName,
-		"national_chapter_id":      nationalChapterID,
-		"national_member_count":    nationalMemberCount,
-		"chapter_member_count":     chapterMemberCount,
-		"national_followers_count": nationalFollowersCount,
-		"is_chapter_member":        isChapterMember,
-		"is_following":             isFollowing,
+	responseData := PartyProfileResponse{
+		Data:                   filteredParty,
+		Chapter:                chapter,
+		ChapterType:            chapter.ChapterType,
+		ChapterGeoName:         chapterGeoName,
+		NationalChapterID:      nationalChapterID,
+		NationalMemberCount:    nationalMemberCount,
+		ChapterMemberCount:     chapterMemberCount,
+		NationalFollowersCount: nationalFollowersCount,
+		IsChapterMember:        isChapterMember,
+		IsFollowing:            isFollowing,
 	}
 
-	h.utils.RespondSuccess(w, http.StatusOK, "Party profile retrieved successfully", responseData)
+	h.utils.RespondSuccessData(w, http.StatusOK, "Party profile retrieved successfully", responseData)
 }
 
 // GetPartyHome godoc
@@ -886,9 +1044,45 @@ func (h *Handler) GetPartyHome(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.utils.RespondSuccess(w, http.StatusOK, "Party home data retrieved successfully", map[string]interface{}{
-		"national_leaders": data.NationalLeaders,
-		"dynamic_leaders":  data.DynamicLeaders,
+	h.utils.RespondSuccessData(w, http.StatusOK, "Party home data retrieved successfully", data)
+}
+
+// GetPartyReadiness godoc
+// @Summary      Get party readiness data
+// @Description  Returns party operational readiness status including wallet, slots, payment allocations, and marketing summary.
+// @Tags         Parties
+// @Produce      json
+// @Param        id   path      int  true  "Party ID"
+// @Success      200  {object}  map[string]interface{}
+// @Router       /parties/{id}/readiness [get]
+func (h *Handler) GetPartyReadiness(w http.ResponseWriter, r *http.Request) {
+	partyIDStr := chi.URLParam(r, "id")
+	partyID, err := strconv.ParseInt(partyIDStr, 10, 16)
+	if err != nil || partyID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID")
+		return
+	}
+
+	data, err := h.partiesService.GetPartyReadiness(r.Context(), int16(partyID))
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch party readiness data: "+err.Error())
+		return
+	}
+
+	var walletResp *PartyWalletResponse
+	if data.Wallet != nil {
+		w := formatPartyWalletResponse(*data.Wallet)
+		walletResp = &w
+	}
+
+	h.utils.RespondSuccessData(w, http.StatusOK, "Party readiness data retrieved successfully", PartyReadinessResponse{
+		Party:                data.Party,
+		Wallet:               walletResp,
+		ActiveCampaignsCount: data.ActiveCampaignsCount,
+		HasMarketingSetup:    data.HasMarketingSetup,
+		HasSlots:             data.HasSlots,
+		HasAgentPayment:      data.HasAgentPayment,
+		HasPaymentAllocation: data.HasPaymentAllocation,
 	})
 }
 
@@ -1110,31 +1304,8 @@ func (h *Handler) GetPartyWallet(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	var parsedAccounts interface{}
-	if len(wallet.AccountNumbers) > 0 {
-		_ = json.Unmarshal(wallet.AccountNumbers, &parsedAccounts)
-		if str, ok := parsedAccounts.(string); ok {
-			var doubleParsed interface{}
-			if err := json.Unmarshal([]byte(str), &doubleParsed); err == nil {
-				parsedAccounts = doubleParsed
-			}
-		}
-	} else {
-		parsedAccounts = []interface{}{}
-	}
-
 	h.utils.RespondSuccess(w, http.StatusOK, "Wallet fetched successfully", map[string]interface{}{
-		"wallet": map[string]interface{}{
-			"id":                wallet.ID,
-			"party_id":          wallet.PartyID,
-			"account_reference": wallet.AccountReference,
-			"account_numbers":   parsedAccounts,
-			"balance_kobo":      wallet.BalanceKobo,
-			"currency_code":     wallet.CurrencyCode,
-			"status":            wallet.Status,
-			"created_at":        wallet.CreatedAt,
-			"updated_at":        wallet.UpdatedAt,
-		},
+		"wallet": formatPartyWalletResponse(wallet),
 	})
 }
 
@@ -1296,31 +1467,8 @@ func (h *Handler) CreatePartyWalletHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	var parsedAccounts interface{}
-	if len(wallet.AccountNumbers) > 0 {
-		_ = json.Unmarshal(wallet.AccountNumbers, &parsedAccounts)
-		if str, ok := parsedAccounts.(string); ok {
-			var doubleParsed interface{}
-			if err := json.Unmarshal([]byte(str), &doubleParsed); err == nil {
-				parsedAccounts = doubleParsed
-			}
-		}
-	} else {
-		parsedAccounts = []interface{}{}
-	}
-
 	h.utils.RespondSuccess(w, http.StatusCreated, "Wallet created successfully", map[string]interface{}{
-		"wallet": map[string]interface{}{
-			"id":                wallet.ID,
-			"party_id":          wallet.PartyID,
-			"account_reference": wallet.AccountReference,
-			"account_numbers":   parsedAccounts,
-			"balance_kobo":      wallet.BalanceKobo,
-			"currency_code":     wallet.CurrencyCode,
-			"status":            wallet.Status,
-			"created_at":        wallet.CreatedAt,
-			"updated_at":        wallet.UpdatedAt,
-		},
+		"wallet": formatPartyWalletResponse(wallet),
 	})
 }
 
@@ -1864,7 +2012,7 @@ func (h *Handler) GetPartyMarketingCampaigns(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	var formatted []map[string]interface{}
+	var formatted []PartyMarketingCampaignResponse
 	for _, c := range campaigns {
 		var statesJSON interface{}
 		if len(c.States) > 0 {
@@ -1878,34 +2026,34 @@ func (h *Handler) GetPartyMarketingCampaigns(w http.ResponseWriter, r *http.Requ
 			}
 		}
 
-		item := map[string]interface{}{
-			"id":                   c.ID,
-			"party_id":             c.PartyID,
-			"election_group_id":    c.ElectionGroupID,
-			"election_id":          c.ElectionID,
-			"plan_id":              c.PlanID,
-			"type":                 c.Type,
-			"states":               statesJSON,
-			"duration_in_days":     c.DurationInDays,
-			"start_date":           c.StartDate,
-			"end_date":             c.EndDate,
-			"status":               c.Status,
-			"budget_per_day_kobo":  c.BudgetPerDayKobo,
-			"budget_kobo":          c.BudgetKobo,
-			"referral_amount_kobo": c.ReferralAmountKobo,
-			"amount_spent_kobo":    c.AmountSpentKobo,
-			"budget_per_day":       float64(c.BudgetPerDayKobo) / 100.0,
-			"budget":               float64(c.BudgetKobo) / 100.0,
-			"referral_amount":      float64(c.ReferralAmountKobo) / 100.0,
-			"amount_spent":         float64(c.AmountSpentKobo) / 100.0,
-			"created_at":           c.CreatedAt,
-			"updated_at":           c.UpdatedAt,
-			"plan_name":            c.PlanName,
-			"plan_price_kobo":      c.PlanPriceKobo,
-			"plan_price":           float64(c.PlanPriceKobo) / 100.0,
-			"plan_color":           c.PlanColor.String,
-			"election_group_name":  c.ElectionGroupName,
-			"election_name":        c.ElectionName,
+		item := PartyMarketingCampaignResponse{
+			ID:                 c.ID,
+			PartyID:            c.PartyID,
+			ElectionGroupID:    c.ElectionGroupID,
+			ElectionID:         c.ElectionID,
+			PlanID:             c.PlanID,
+			Type:               c.Type,
+			States:             statesJSON,
+			DurationInDays:     c.DurationInDays,
+			StartDate:          c.StartDate,
+			EndDate:            c.EndDate,
+			Status:             c.Status,
+			BudgetPerDayKobo:   c.BudgetPerDayKobo,
+			BudgetKobo:         c.BudgetKobo,
+			ReferralAmountKobo: c.ReferralAmountKobo,
+			AmountSpentKobo:    c.AmountSpentKobo,
+			BudgetPerDay:       float64(c.BudgetPerDayKobo) / 100.0,
+			Budget:             float64(c.BudgetKobo) / 100.0,
+			ReferralAmount:     float64(c.ReferralAmountKobo) / 100.0,
+			AmountSpent:        float64(c.AmountSpentKobo) / 100.0,
+			CreatedAt:          c.CreatedAt,
+			UpdatedAt:          c.UpdatedAt,
+			PlanName:           c.PlanName,
+			PlanPriceKobo:      c.PlanPriceKobo,
+			PlanPrice:          float64(c.PlanPriceKobo) / 100.0,
+			PlanColor:          c.PlanColor.String,
+			ElectionGroupName:  c.ElectionGroupName,
+			ElectionName:       c.ElectionName,
 		}
 		formatted = append(formatted, item)
 	}
@@ -1971,7 +2119,7 @@ func (h *Handler) ListAllPartyMarketingCampaigns(w http.ResponseWriter, r *http.
 		return
 	}
 
-	var formatted []map[string]interface{}
+	var formatted []AdminMarketingCampaignResponse
 	for _, row := range rows {
 		var statesJSON interface{}
 		if len(row.States) > 0 {
@@ -1985,49 +2133,59 @@ func (h *Handler) ListAllPartyMarketingCampaigns(w http.ResponseWriter, r *http.
 			}
 		}
 
-		item := map[string]interface{}{
-			"id":                   row.ID,
-			"party_id":             row.PartyID,
-			"election_group_id":    row.ElectionGroupID,
-			"election_id":          row.ElectionID,
-			"plan_id":              row.PlanID,
-			"type":                 row.Type,
-			"states":               statesJSON,
-			"duration_in_days":     row.DurationInDays,
-			"start_date":           row.StartDate,
-			"end_date":             row.EndDate,
-			"status":               row.Status,
-			"budget_per_day_kobo":  row.BudgetPerDayKobo,
-			"budget_kobo":          row.BudgetKobo,
-			"referral_amount_kobo": row.ReferralAmountKobo,
-			"amount_spent_kobo":    row.AmountSpentKobo,
-			"budget_per_day":       float64(row.BudgetPerDayKobo) / 100.0,
-			"budget":               float64(row.BudgetKobo) / 100.0,
-			"referral_amount":      float64(row.ReferralAmountKobo) / 100.0,
-			"amount_spent":         float64(row.AmountSpentKobo) / 100.0,
-			"created_at":           row.CreatedAt,
-			"updated_at":           row.UpdatedAt,
-			"party": map[string]interface{}{
-				"id":         row.PartyID,
-				"name":       row.PartyName,
-				"short_name": row.PartyShortName,
-				"logo":       row.PartyLogo,
+		planPrice := float64(row.PlanPriceKobo) / 100.0
+
+		item := AdminMarketingCampaignResponse{
+			PartyMarketingCampaignResponse: PartyMarketingCampaignResponse{
+				ID:                 row.ID,
+				PartyID:            row.PartyID,
+				ElectionGroupID:    row.ElectionGroupID,
+				ElectionID:         row.ElectionID,
+				PlanID:             row.PlanID,
+				Type:               row.Type,
+				States:             statesJSON,
+				DurationInDays:     row.DurationInDays,
+				StartDate:          row.StartDate,
+				EndDate:            row.EndDate,
+				Status:             row.Status,
+				BudgetPerDayKobo:   row.BudgetPerDayKobo,
+				BudgetKobo:         row.BudgetKobo,
+				ReferralAmountKobo: row.ReferralAmountKobo,
+				AmountSpentKobo:    row.AmountSpentKobo,
+				BudgetPerDay:       float64(row.BudgetPerDayKobo) / 100.0,
+				Budget:             float64(row.BudgetKobo) / 100.0,
+				ReferralAmount:     float64(row.ReferralAmountKobo) / 100.0,
+				AmountSpent:        float64(row.AmountSpentKobo) / 100.0,
+				CreatedAt:          row.CreatedAt,
+				UpdatedAt:          row.UpdatedAt,
+				PlanName:           row.PlanName,
+				PlanPriceKobo:      row.PlanPriceKobo,
+				PlanPrice:          planPrice,
+				PlanColor:          row.PlanColorHex.String,
+				ElectionGroupName:  row.ElectionGroupName,
+				ElectionName:       row.ElectionName,
 			},
-			"plan": map[string]interface{}{
-				"id":          row.PlanID,
-				"name":        row.PlanName,
-				"description": row.PlanDescription,
-				"price_kobo":  row.PlanPriceKobo,
-				"price":       float64(row.PlanPriceKobo) / 100.0,
-				"color_hex":   row.PlanColorHex.String,
+			Party: CampaignPartySummary{
+				ID:         row.PartyID,
+				Name:       row.PartyName,
+				ShortName:  row.PartyShortName,
+				Logo:       row.PartyLogo,
 			},
-			"election_group": map[string]interface{}{
-				"id":   row.ElectionGroupID,
-				"name": row.ElectionGroupName,
+			Plan: CampaignPlanSummary{
+				ID:          row.PlanID,
+				Name:        row.PlanName,
+				Description: row.PlanDescription,
+				PriceKobo:   row.PlanPriceKobo,
+				Price:       planPrice,
+				ColorHex:    row.PlanColorHex.String,
 			},
-			"election": map[string]interface{}{
-				"id":   row.ElectionID,
-				"name": row.ElectionName,
+			ElectionGroup: CampaignElectionGroupSummary{
+				ID:   row.ElectionGroupID,
+				Name: row.ElectionGroupName,
+			},
+			Election: CampaignElectionSummary{
+				ID:   row.ElectionID,
+				Name: row.ElectionName,
 			},
 		}
 		formatted = append(formatted, item)
@@ -2563,10 +2721,10 @@ func (h *Handler) ListPartyPositions(w http.ResponseWriter, r *http.Request) {
 		return allPositions[i].ID < allPositions[j].ID
 	})
 
-	h.utils.RespondSuccess(w, http.StatusOK, "Positions retrieved successfully", map[string]interface{}{
-		"default":   res.Default,
-		"custom":    res.Custom,
-		"positions": allPositions,
+	h.utils.RespondSuccessData(w, http.StatusOK, "Positions retrieved successfully", PartyPositionsResponse{
+		Default:   res.Default,
+		Custom:    res.Custom,
+		Positions: allPositions,
 	})
 }
 
@@ -2853,9 +3011,9 @@ func (h *Handler) ListPartyOfficials(w http.ResponseWriter, r *http.Request) {
 
 	// If chapter does not exist yet or no jurisdiction selected, return empty list immediately
 	if chapterID <= 0 {
-		h.utils.RespondSuccess(w, http.StatusOK, "Party chapter has not been established yet", map[string]interface{}{
-			"chapter_id": 0,
-			"officials":  []queries.ListPartyOfficialsRow{},
+		h.utils.RespondSuccessData(w, http.StatusOK, "Party chapter has not been established yet", PartyChapterOfficialsResponse{
+			ChapterID: 0,
+			Officials: []queries.ListPartyOfficialsRow{},
 		})
 		return
 	}
@@ -3061,10 +3219,10 @@ func (h *Handler) AssignPartyOfficial(w http.ResponseWriter, r *http.Request) {
 	officials, _ := h.partiesService.ListPartyOfficials(r.Context(), int16(partyID), chapID)
 
 	// Respond to client with the assignment details and updated officials roster
-	h.utils.RespondSuccess(w, http.StatusCreated, "Position assigned successfully", map[string]interface{}{
-		"assignment": assignment,
-		"chapter_id": chapID,
-		"officials":  officials,
+	h.utils.RespondSuccessData(w, http.StatusCreated, "Position assigned successfully", PartyAssignmentWithOfficialsResponse{
+		Assignment: assignment,
+		ChapterID:  chapID,
+		Officials:  officials,
 	})
 }
 
@@ -3107,10 +3265,10 @@ func (h *Handler) VacatePositionAssignment(w http.ResponseWriter, r *http.Reques
 	officials, _ := h.partiesService.ListPartyOfficials(r.Context(), int16(partyID), assignment.ChapterID)
 
 	// Return updated assignment details and officials roster to the client
-	h.utils.RespondSuccess(w, http.StatusOK, "Position assignment vacated successfully", map[string]interface{}{
-		"assignment": assignment,
-		"chapter_id": assignment.ChapterID,
-		"officials":  officials,
+	h.utils.RespondSuccessData(w, http.StatusOK, "Position assignment vacated successfully", PartyAssignmentWithOfficialsResponse{
+		Assignment: assignment,
+		ChapterID:  assignment.ChapterID,
+		Officials:  officials,
 	})
 }
 

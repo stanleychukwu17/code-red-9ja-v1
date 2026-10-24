@@ -27,6 +27,22 @@ func NewHandler(pool *pgxpool.Pool, utils *utils.Utils) *Handler {
 	return &Handler{pool: pool, utils: utils}
 }
 
+type FinalResultData struct {
+	ID                   int64       `json:"id"`
+	ElectionID           int64       `json:"election_id"`
+	AccreditedVoters     int32       `json:"accredited_voters"`
+	VotesCast            int32       `json:"votes_cast"`
+	ValidVotes           int32       `json:"valid_votes"`
+	RejectedVotes        int32       `json:"rejected_votes"`
+	CandidateResults     interface{} `json:"candidate_results"`
+	CandidateResultsLive interface{} `json:"candidate_results_live"`
+}
+
+type FinalElectionResultResponse struct {
+	FinalResult FinalResultData `json:"final_result"`
+}
+
+
 func parsePaginationParams(r *http.Request) (int, int64) {
 	limit := 20
 	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
@@ -1347,16 +1363,16 @@ func (h *Handler) GetElectionFinalResult(w http.ResponseWriter, r *http.Request)
 	if err != nil {
 		// No result found in DB for this scope: populate 0-vote entries for all contesting parties
 		defaultList := buildDefaultCandidateResults(contestingPartyShortNames, partiesMap, candidatesMap)
-		h.utils.RespondSuccess(w, http.StatusOK, "Final result fetched successfully", map[string]interface{}{
-			"final_result": map[string]interface{}{
-				"id":                     0,
-				"election_id":            electionID,
-				"accredited_voters":      0,
-				"votes_cast":             0,
-				"valid_votes":            0,
-				"rejected_votes":         0,
-				"candidate_results":      defaultList,
-				"candidate_results_live": defaultList,
+		h.utils.RespondSuccessData(w, http.StatusOK, "Final result fetched successfully", FinalElectionResultResponse{
+			FinalResult: FinalResultData{
+				ID:                   0,
+				ElectionID:           electionID,
+				AccreditedVoters:     0,
+				VotesCast:            0,
+				ValidVotes:           0,
+				RejectedVotes:        0,
+				CandidateResults:     defaultList,
+				CandidateResultsLive: defaultList,
 			},
 		})
 		return
@@ -1374,16 +1390,16 @@ func (h *Handler) GetElectionFinalResult(w http.ResponseWriter, r *http.Request)
 		enrichedCRL = buildDefaultCandidateResults(contestingPartyShortNames, partiesMap, candidatesMap)
 	}
 
-	h.utils.RespondSuccess(w, http.StatusOK, "Final result fetched successfully", map[string]interface{}{
-		"final_result": map[string]interface{}{
-			"id":                     frID,
-			"election_id":            frElectionID,
-			"accredited_voters":      frAccredited,
-			"votes_cast":             frVotesCast,
-			"valid_votes":            frValidVotes,
-			"rejected_votes":         frRejectedVotes,
-			"candidate_results":      enrichedCR,
-			"candidate_results_live": enrichedCRL,
+	h.utils.RespondSuccessData(w, http.StatusOK, "Final result fetched successfully", FinalElectionResultResponse{
+		FinalResult: FinalResultData{
+			ID:                   frID,
+			ElectionID:           frElectionID,
+			AccreditedVoters:     frAccredited,
+			VotesCast:            frVotesCast,
+			ValidVotes:           frValidVotes,
+			RejectedVotes:        frRejectedVotes,
+			CandidateResults:     enrichedCR,
+			CandidateResultsLive: enrichedCRL,
 		},
 	})
 }

@@ -24,16 +24,14 @@ type FinancialOverallCardProps = {
   onOpenMarketing: () => void;
 };
 
-/** Clickable single row inside the financial overview card */
-export function FinancialRow({
-  label,
-  value,
-  onClick,
-}: {
+type FinancialRowProps = {
   label: string;
   value: string;
   onClick?: () => void;
-}) {
+};
+
+/** Clickable single row inside the financial overview card */
+export function FinancialRow({ label, value, onClick }: FinancialRowProps) {
   return (
     <div
       className={cn(
@@ -106,10 +104,14 @@ export function FinancialOverallCard({
   );
 }
 
+type SimpleStatTileProps = {
+  icon?: ReactNode;
+  label: string;
+  value: string;
+};
+
 /** Simple key-value stat row with icon */
-export function SimpleStatTile({
-  icon, label, value,
-}: { icon?: ReactNode; label: string; value: string }) {
+export function SimpleStatTile({ icon, label, value }: SimpleStatTileProps) {
   return (
     <div className="h-11 px-3 flex items-center gap-3">
       {icon ?? <FancyAgentIcon className="shrink-0 size-5" />}
@@ -234,13 +236,12 @@ export function TargetCard() {
  * - LGA Supervisor
  * - State Supervisor
  */
-export function AgentPaymentCard({
-  onEdit,
-  party,
-}: {
+type AgentPaymentCardProps = {
   onEdit: () => void;
   party: any;
-}) {
+};
+
+export function AgentPaymentCard({ onEdit, party }: AgentPaymentCardProps) {
   const allocations = party?.agent_payment_allocation_kobo || {};
   const pollingAgentPaymentKobo = allocations.polling_agent?.default || 0;
   const wardSupervisorPaymentKobo =

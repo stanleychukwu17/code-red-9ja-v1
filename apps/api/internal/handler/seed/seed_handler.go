@@ -26,6 +26,14 @@ func NewHandler(seedService *seedservice.SeedService, utils *utils.Utils) *Handl
 	}
 }
 
+type SimulateElectionResultsResponse struct {
+	ElectionID            int32  `json:"election_id"`
+	ElectionName          string `json:"election_name"`
+	Scope                 string `json:"scope"`
+	SimulatedPollingUnits int    `json:"simulated_polling_units"`
+	PartiesCount          int    `json:"parties_count"`
+}
+
 // @Summary Seed testing users
 // @Description Batch registers testing users from formatted JSON data
 // @Tags Seed
@@ -155,15 +163,14 @@ func (h *Handler) SimulateElectionResults(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	h.utils.RespondSuccess(w, http.StatusOK, res.Message, map[string]interface{}{
-		"election_id":             res.ElectionID,
-		"election_name":           res.ElectionName,
-		"scope":                   res.Scope,
-		"simulated_polling_units": res.SimulatedPollingUnits,
-		"parties_count":           res.PartiesCount,
+	h.utils.RespondSuccessData(w, http.StatusOK, res.Message, SimulateElectionResultsResponse{
+		ElectionID:            res.ElectionID,
+		ElectionName:          res.ElectionName,
+		Scope:                 res.Scope,
+		SimulatedPollingUnits: res.SimulatedPollingUnits,
+		PartiesCount:          res.PartiesCount,
 	})
 }
-
 
 // @Summary Flush Redis Cache
 // @Description Clears and flushes all application-managed keys from Redis cache using pipelines
@@ -187,4 +194,3 @@ func (h *Handler) FlushRedis(w http.ResponseWriter, r *http.Request) {
 
 	h.utils.RespondSuccess(w, http.StatusOK, msg, nil)
 }
-

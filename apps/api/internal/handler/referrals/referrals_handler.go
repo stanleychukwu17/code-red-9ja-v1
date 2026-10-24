@@ -44,6 +44,23 @@ type updateReferralRequest struct {
 	PaidAt    *string `json:"paid_at"` // ISO8601 string
 }
 
+type UserReferralStatsData struct {
+	ID                int64       `json:"id,omitempty"`
+	UserID            int64       `json:"user_id,omitempty"`
+	PartyID           interface{} `json:"party_id,omitempty"`
+	ElectionGroupID   interface{} `json:"election_group_id,omitempty"`
+	TotalReferrals    interface{} `json:"total_referrals"`
+	AgentReferrals    interface{} `json:"agent_referrals"`
+	UnpaidReferrals   interface{} `json:"unpaid_referrals"`
+	PotentialEarnings interface{} `json:"potential_earnings"`
+	EarnedAmount      interface{} `json:"earned_amount"`
+}
+
+type UserReferralStatsResponse struct {
+	UserReferral   UserReferralStatsData `json:"user_referral"`
+	ActiveCampaign interface{}           `json:"active_campaign"`
+}
+
 // @Summary Create a referral (Admin)
 // @Description manually insert a referral record
 // @Tags referrals
@@ -219,26 +236,26 @@ func (h *Handler) GetReferralStats(w http.ResponseWriter, r *http.Request) {
 
 	// Fetch user referral record
 	userReferral, err := h.referralsService.GetUserReferralByUserAndElectionGroup(r.Context(), userID, egID)
-	var userReferralData map[string]interface{}
+	var userReferralData UserReferralStatsData
 	if err != nil {
-		userReferralData = map[string]interface{}{
-			"total_referrals":    0,
-			"agent_referrals":    0,
-			"unpaid_referrals":   0,
-			"potential_earnings": "0.00",
-			"earned_amount":       "0.00",
+		userReferralData = UserReferralStatsData{
+			TotalReferrals:    0,
+			AgentReferrals:    0,
+			UnpaidReferrals:   0,
+			PotentialEarnings: "0.00",
+			EarnedAmount:      "0.00",
 		}
 	} else {
-		userReferralData = map[string]interface{}{
-			"id":                 userReferral.ID,
-			"user_id":            userReferral.UserID,
-			"party_id":           userReferral.PartyID,
-			"election_group_id":  userReferral.ElectionGroupID,
-			"total_referrals":    userReferral.TotalReferrals,
-			"agent_referrals":    userReferral.AgentReferrals,
-			"unpaid_referrals":   userReferral.UnpaidReferrals,
-			"potential_earnings": userReferral.PotentialEarnings,
-			"earned_amount":       userReferral.EarnedAmount,
+		userReferralData = UserReferralStatsData{
+			ID:                userReferral.ID,
+			UserID:            userReferral.UserID,
+			PartyID:           userReferral.PartyID,
+			ElectionGroupID:   userReferral.ElectionGroupID,
+			TotalReferrals:    userReferral.TotalReferrals,
+			AgentReferrals:    userReferral.AgentReferrals,
+			UnpaidReferrals:   userReferral.UnpaidReferrals,
+			PotentialEarnings: userReferral.PotentialEarnings,
+			EarnedAmount:      userReferral.EarnedAmount,
 		}
 	}
 
@@ -251,9 +268,9 @@ func (h *Handler) GetReferralStats(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	h.utils.RespondSuccess(w, http.StatusOK, "Referral stats fetched successfully", map[string]interface{}{
-		"user_referral":   userReferralData,
-		"active_campaign": activeCampaignData,
+	h.utils.RespondSuccessData(w, http.StatusOK, "Referral stats fetched successfully", UserReferralStatsResponse{
+		UserReferral:   userReferralData,
+		ActiveCampaign: activeCampaignData,
 	})
 }
 

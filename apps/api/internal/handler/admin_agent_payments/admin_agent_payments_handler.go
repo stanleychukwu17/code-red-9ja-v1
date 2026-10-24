@@ -27,6 +27,74 @@ func NewHandler(pool *pgxpool.Pool, utils *utils.Utils) *Handler {
 	}
 }
 
+type ElectionPaySummary struct {
+	UnpaidTotalKobo int64 `json:"unpaid_total_kobo"`
+	PaidTotalKobo   int64 `json:"paid_total_kobo"`
+	UnpaidCount     int64 `json:"unpaid_count"`
+	PaidCount       int64 `json:"paid_count"`
+	IneligibleCount int64 `json:"ineligible_count"`
+}
+
+type ReferralPaySummary struct {
+	UnpaidTotal float64 `json:"unpaid_total"`
+	PaidTotal   float64 `json:"paid_total"`
+	UnpaidCount int64   `json:"unpaid_count"`
+	PaidCount   int64   `json:"paid_count"`
+}
+
+type AgentPaymentsOverviewResponse struct {
+	ElectionGroupID int64              `json:"election_group_id"`
+	ElectionPay     ElectionPaySummary `json:"election_pay"`
+	ReferralPay     ReferralPaySummary `json:"referral_pay"`
+}
+
+type AdminElectionPayItemResponse struct {
+	ID               int64       `json:"id"`
+	UserID           int64       `json:"user_id"`
+	UserName         string      `json:"user_name"`
+	UserAvatar       interface{} `json:"user_avatar"`
+	PartyID          int16       `json:"party_id"`
+	PartyCode        string      `json:"party_code"`
+	PartyName        string      `json:"party_name"`
+	Role             string      `json:"role"`
+	RoleType         string      `json:"role_type"`
+	BasePaymentKobo  int64       `json:"base_payment_kobo"`
+	TotalEarnedKobo  int64       `json:"total_earned_kobo"`
+	EarnedAmount     string      `json:"earned_amount"`
+	EarnedPercentage int         `json:"earned_percentage"`
+	Reason           string      `json:"reason"`
+	Status           string      `json:"status"`
+	PaidAt           string      `json:"paid_at"`
+	CreatedAt        interface{} `json:"created_at"`
+}
+
+type AdminReferralPayItemResponse struct {
+	ID                       int64       `json:"id"`
+	UserID                   int64       `json:"user_id"`
+	UserName                 string      `json:"user_name"`
+	UserLabel                string      `json:"user_label"`
+	UserAvatar               interface{} `json:"user_avatar"`
+	PartyID                  int16       `json:"party_id"`
+	PartyCode                string      `json:"party_code"`
+	PartyName                string      `json:"party_name"`
+	DutiesCompleted          int64       `json:"duties_completed"`
+	DutiesCompletedFormatted string      `json:"duties_completed_formatted"`
+	AgentReferrals           int64       `json:"agent_referrals"`
+	TotalReferrals           int64       `json:"total_referrals"`
+	EarnedAmount             string      `json:"earned_amount"`
+	EarnedAmountNum          float64     `json:"earned_amount_num"`
+	Status                   string      `json:"status"`
+	PaidAt                   string      `json:"paid_at"`
+	CreatedAt                interface{} `json:"created_at"`
+}
+
+type AdminPayListResponse[T any] struct {
+	Items  []T `json:"items"`
+	Total  int `json:"total"`
+	Limit  int `json:"limit"`
+	Offset int `json:"offset"`
+}
+
 func (h *Handler) resolveElectionGroupID(r *http.Request) int64 {
 	v := r.URL.Query().Get("election_group_id")
 	if v != "" {
@@ -54,11 +122,11 @@ func (h *Handler) GetOverview(w http.ResponseWriter, r *http.Request) {
 
 	// 1. Election Pay summary from agent_earnings
 	var (
-		eleUnpaidKobo   int64
-		elePaidKobo     int64
-		eleUnpaidCount  int64
-		elePaidCount    int64
-		eleIneligCount  int64
+		eleUnpaidKobo  int64
+		elePaidKobo    int64
+		eleUnpaidCount int64
+		elePaidCount   int64
+		eleIneligCount int64
 	)
 
 	eleQuery := `
@@ -103,20 +171,20 @@ func (h *Handler) GetOverview(w http.ResponseWriter, r *http.Request) {
 		&refUnpaidCount,
 	)
 
-	h.utils.RespondSuccess(w, http.StatusOK, "Overview fetched", map[string]interface{}{
-		"election_group_id": egID,
-		"election_pay": map[string]interface{}{
-			"unpaid_total_kobo": eleUnpaidKobo,
-			"paid_total_kobo":   elePaidKobo,
-			"unpaid_count":      eleUnpaidCount,
-			"paid_count":        elePaidCount,
-			"ineligible_count":  eleIneligCount,
+	h.utils.RespondSuccessData(w, http.StatusOK, "Overview fetched", AgentPaymentsOverviewResponse{
+		ElectionGroupID: egID,
+		ElectionPay: ElectionPaySummary{
+			UnpaidTotalKobo: eleUnpaidKobo,
+			PaidTotalKobo:   elePaidKobo,
+			UnpaidCount:     eleUnpaidCount,
+			PaidCount:       elePaidCount,
+			IneligibleCount: eleIneligCount,
 		},
-		"referral_pay": map[string]interface{}{
-			"unpaid_total": refUnpaidNaira,
-			"paid_total":   refPaidNaira,
-			"unpaid_count": refUnpaidCount,
-			"paid_count":   refPaidCount,
+		ReferralPay: ReferralPaySummary{
+			UnpaidTotal: refUnpaidNaira,
+			PaidTotal:   refPaidNaira,
+			UnpaidCount: refUnpaidCount,
+			PaidCount:   refPaidCount,
 		},
 	})
 }
@@ -221,21 +289,21 @@ func (h *Handler) ListElectionPay(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rows.Close()
 
-	var items []map[string]interface{}
+	var items []AdminElectionPayItemResponse
 	for rows.Next() {
 		var (
-			id, userID                           int64
-			userName, userAvatar                 string
-			partyID                              int16
-			partyCode, partyName                 string
-			roleType                             string
-			basePaymentKobo, totalEarnedKobo     int64
-			readinessScore, attendanceScore      float64
-			startScore, endScore                 float64
-			resultsScore, updatesScore           float64
-			status                               string
-			paidAt                               pgtype.Timestamptz
-			createdAt                            time.Time
+			id, userID                       int64
+			userName, userAvatar             string
+			partyID                          int16
+			partyCode, partyName             string
+			roleType                         string
+			basePaymentKobo, totalEarnedKobo int64
+			readinessScore, attendanceScore  float64
+			startScore, endScore             float64
+			resultsScore, updatesScore       float64
+			status                           string
+			paidAt                           pgtype.Timestamptz
+			createdAt                        time.Time
 		)
 
 		if err := rows.Scan(
@@ -287,32 +355,32 @@ func (h *Handler) ListElectionPay(w http.ResponseWriter, r *http.Request) {
 			paidAtStr = paidAt.Time.Format("Jan 02, 2006")
 		}
 
-		items = append(items, map[string]interface{}{
-			"id":                id,
-			"user_id":           userID,
-			"user_name":         userName,
-			"user_avatar":       userAvatar,
-			"party_id":          partyID,
-			"party_code":        partyCode,
-			"party_name":        partyName,
-			"role":              displayRole,
-			"role_type":         roleType,
-			"base_payment_kobo": basePaymentKobo,
-			"total_earned_kobo": totalEarnedKobo,
-			"earned_amount":     earnedAmountStr,
-			"earned_percentage": int(pct),
-			"reason":            reason,
-			"status":            status,
-			"paid_at":           paidAtStr,
-			"created_at":        createdAt,
+		items = append(items, AdminElectionPayItemResponse{
+			ID:               id,
+			UserID:           userID,
+			UserName:         userName,
+			UserAvatar:       userAvatar,
+			PartyID:          partyID,
+			PartyCode:        partyCode,
+			PartyName:        partyName,
+			Role:             displayRole,
+			RoleType:         roleType,
+			BasePaymentKobo:  basePaymentKobo,
+			TotalEarnedKobo:  totalEarnedKobo,
+			EarnedAmount:     earnedAmountStr,
+			EarnedPercentage: int(pct),
+			Reason:           reason,
+			Status:           status,
+			PaidAt:           paidAtStr,
+			CreatedAt:        createdAt,
 		})
 	}
 
-	h.utils.RespondSuccess(w, http.StatusOK, "Election pay fetched", map[string]interface{}{
-		"items":  items,
-		"total":  len(items),
-		"limit":  limit,
-		"offset": offset,
+	h.utils.RespondSuccessData(w, http.StatusOK, "Election pay fetched", AdminPayListResponse[AdminElectionPayItemResponse]{
+		Items:  items,
+		Total:  len(items),
+		Limit:  limit,
+		Offset: offset,
 	})
 }
 
@@ -401,18 +469,18 @@ func (h *Handler) ListReferralPay(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rows.Close()
 
-	var items []map[string]interface{}
+	var items []AdminReferralPayItemResponse
 	for rows.Next() {
 		var (
-			id, userID                                int64
-			userName, userAvatar                      string
-			partyID                                   int16
-			partyCode, partyName                      string
-			dutiesCompleted, agentRefs, totalRefs     int64
-			earnedAmount                              float64
-			status                                    string
-			paidAt                                    pgtype.Timestamptz
-			createdAt                                 time.Time
+			id, userID                            int64
+			userName, userAvatar                  string
+			partyID                               int16
+			partyCode, partyName                  string
+			dutiesCompleted, agentRefs, totalRefs int64
+			earnedAmount                          float64
+			status                                string
+			paidAt                                pgtype.Timestamptz
+			createdAt                             time.Time
 		)
 
 		if err := rows.Scan(
@@ -447,32 +515,32 @@ func (h *Handler) ListReferralPay(w http.ResponseWriter, r *http.Request) {
 			userLabel = fmt.Sprintf("%s (%s)", userName, partyCode)
 		}
 
-		items = append(items, map[string]interface{}{
-			"id":                         id,
-			"user_id":                    userID,
-			"user_name":                  userName,
-			"user_label":                 userLabel,
-			"user_avatar":                userAvatar,
-			"party_id":                   partyID,
-			"party_code":                 partyCode,
-			"party_name":                 partyName,
-			"duties_completed":           dutiesCompleted,
-			"duties_completed_formatted": dutyPctStr,
-			"agent_referrals":            agentRefs,
-			"total_referrals":            totalRefs,
-			"earned_amount":              earnedAmountStr,
-			"earned_amount_num":          earnedAmount,
-			"status":                     status,
-			"paid_at":                    paidAtStr,
-			"created_at":                 createdAt,
+		items = append(items, AdminReferralPayItemResponse{
+			ID:                       id,
+			UserID:                   userID,
+			UserName:                 userName,
+			UserLabel:                userLabel,
+			UserAvatar:               userAvatar,
+			PartyID:                  partyID,
+			PartyCode:                partyCode,
+			PartyName:                partyName,
+			DutiesCompleted:          dutiesCompleted,
+			DutiesCompletedFormatted: dutyPctStr,
+			AgentReferrals:           agentRefs,
+			TotalReferrals:           totalRefs,
+			EarnedAmount:             earnedAmountStr,
+			EarnedAmountNum:          earnedAmount,
+			Status:                   status,
+			PaidAt:                   paidAtStr,
+			CreatedAt:                createdAt,
 		})
 	}
 
-	h.utils.RespondSuccess(w, http.StatusOK, "Referral pay fetched", map[string]interface{}{
-		"items":  items,
-		"total":  len(items),
-		"limit":  limit,
-		"offset": offset,
+	h.utils.RespondSuccessData(w, http.StatusOK, "Referral pay fetched", AdminPayListResponse[AdminReferralPayItemResponse]{
+		Items:  items,
+		Total:  len(items),
+		Limit:  limit,
+		Offset: offset,
 	})
 }
 

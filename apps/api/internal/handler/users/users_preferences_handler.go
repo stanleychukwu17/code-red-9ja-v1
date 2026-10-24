@@ -31,12 +31,7 @@ func (h *Handler) GetUserPreferences(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.utils.RespondSuccess(w, http.StatusOK, "User preferences retrieved successfully", map[string]interface{}{
-		"sidebar_state":      preferences.SidebarState,
-		"pinned_links":       preferences.PinnedLinks,
-		"theme":              preferences.Theme,
-		"preference_version": preferences.PreferenceVersion,
-	})
+	h.utils.RespondSuccessData(w, http.StatusOK, "User preferences retrieved successfully", preferences)
 }
 
 // UpdateUserPreferences handles PUT /api/v1/user_preferences
@@ -70,10 +65,5 @@ func (h *Handler) UpdateUserPreferences(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	h.utils.RespondSuccess(w, http.StatusOK, "User preferences updated successfully", map[string]interface{}{
-		"sidebar_state":      updated.SidebarState,
-		"pinned_links":       updated.PinnedLinks,
-		"theme":              updated.Theme,
-		"preference_version": updated.PreferenceVersion,
-	})
+	h.utils.RespondSuccessData(w, http.StatusOK, "User preferences updated successfully", updated)
 }

@@ -664,6 +664,17 @@ type PartyHomeData struct {
 	DynamicLeaders  PartyDynamicLeadersGroup `json:"dynamic_leaders"`
 }
 
+// PartyReadinessData aggregates party info, financial status, and marketing overview for party readiness.
+type PartyReadinessData struct {
+	Party                 queries.Party        `json:"party"`
+	Wallet                *queries.PartyWallet `json:"wallet,omitempty"`
+	ActiveCampaignsCount  int                  `json:"active_campaigns_count"`
+	HasMarketingSetup     bool                 `json:"has_marketing_setup"`
+	HasSlots              bool                 `json:"has_slots"`
+	HasAgentPayment       bool                 `json:"has_agent_payment"`
+	HasPaymentAllocation bool                 `json:"has_payment_allocation"`
+}
+
 // GetPartyHome fetches the primary data for the party home tab (leadership cards, upcoming events, etc.).
 func (s *PartiesService) GetPartyHome(ctx context.Context, partyID int16, chapterID *int32) (*PartyHomeData, error) {
 	// Resolve national chapter
@@ -795,6 +806,59 @@ func (s *PartiesService) GetPartyHome(ctx context.Context, partyID int16, chapte
 	return &PartyHomeData{
 		NationalLeaders: nationalLeaders,
 		DynamicLeaders:  dynamicGroup,
+	}, nil
+}
+
+// GetPartyReadiness aggregates party profile, wallet, slots, payment allocations, and marketing summary.
+func (s *PartiesService) GetPartyReadiness(ctx context.Context, partyID int16) (*PartyReadinessData, error) {
+	party, err := s.GetPartyByID(ctx, partyID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get party: %w", err)
+	}
+
+	// Fetch party wallet (optional / best-effort)
+	var walletPtr *queries.PartyWallet
+	wallet, err := s.GetPartyWallet(ctx, partyID)
+	if err == nil {
+		walletPtr = &wallet
+	}
+
+	// Fetch marketing campaigns
+	campaigns, err := s.GetPartyMarketingCampaigns(ctx, partyID)
+	activeCampaignsCount := 0
+	if err == nil {
+		now := time.Now()
+		for _, c := range campaigns {
+			if !c.EndDate.Valid || c.EndDate.Time.After(now) {
+				activeCampaignsCount++
+			}
+		}
+	}
+
+	// Check if payment allocation has any configured roles > 0
+	hasPaymentAllocation := false
+	if len(party.AgentPaymentAllocationKobo) > 0 {
+		var allocs map[string]map[string]interface{}
+		if err := json.Unmarshal(party.AgentPaymentAllocationKobo, &allocs); err == nil {
+			for _, role := range allocs {
+				if defVal, ok := role["default"]; ok {
+					if num, ok := defVal.(float64); ok && num > 0 {
+						hasPaymentAllocation = true
+						break
+					}
+				}
+			}
+		}
+	}
+
+	return &PartyReadinessData{
+		Party:                 party,
+		Wallet:                walletPtr,
+		ActiveCampaignsCount:  activeCampaignsCount,
+		HasMarketingSetup:     activeCampaignsCount > 0,
+		HasSlots:              party.Slots > 0,
+		HasAgentPayment:       party.AgentPaymentBalanceKobo > 0,
+		HasPaymentAllocation: hasPaymentAllocation,
 	}, nil
 }
 

@@ -355,6 +355,8 @@ function WalletSlotsAllowanceSection({
   const [isSlotsDialogOpen, setIsSlotsDialogOpen] = React.useState(false);
   const [isAllowanceDialogOpen, setIsAllowanceDialogOpen] =
     React.useState(false);
+  const [isDepositDialogOpen, setIsDepositDialogOpen] = React.useState(false);
+  const [deficitAmount, setDeficitAmount] = React.useState<number | undefined>(undefined);
 
   const allowanceVal = (
     (party?.agent_payment_balance_kobo ?? 0) / 100
@@ -387,6 +389,22 @@ function WalletSlotsAllowanceSection({
         onClose={() => setIsSlotsDialogOpen(false)}
         partyId={party?.id}
         walletBalanceKobo={wallet?.balance_kobo ?? 0}
+        onSuccess={onSuccess}
+        onDepositFunds={(deficit) => {
+          setDeficitAmount(deficit);
+          setIsSlotsDialogOpen(false);
+          setIsDepositDialogOpen(true);
+        }}
+      />
+
+      <AccountDetailsDialog
+        open={isDepositDialogOpen}
+        onClose={() => {
+          setIsDepositDialogOpen(false);
+          setDeficitAmount(undefined);
+        }}
+        wallet={wallet}
+        defaultAmount={deficitAmount}
         onSuccess={onSuccess}
       />
 

@@ -75,6 +75,8 @@ function ReadinessComponent() {
 
   const fetchElectionStatsFn = useServerFn(getElectionStats);
 
+  // on endpoint that returns all of what the home page needs
+
   // Party wallet query
   // const { data: walletRes, refetch: refetchWallet } = useQuery({
   //   queryKey: ["partyWallet", partyId],
@@ -132,14 +134,10 @@ function ReadinessComponent() {
   });
 
   // Normalize party stats with fallback options
-  const resolvedStats =
-    electionStatsData?.data?.party_stats ||
-    electionStatsData?.data?.stats ||
-    {};
+  const resolvedStats = electionStatsData?.data?.party_stats || {};
 
   // Target recruitment counts per operational tier
-  const targets =
-    electionStatsData?.data?.targets || electionStatsData?.data?.stats || {};
+  const targets = electionStatsData?.data?.targets || {};
 
   // Refresh wallet & party cache after buying slots
   const handleSlotsPurchased = () => {

@@ -37,6 +37,18 @@ export const getPublicParties = createServerFn({ method: "POST" }).handler(
   },
 );
 
+// Fetch party readiness overview
+export const getPartyReadiness = createServerFn({ method: "GET" })
+  .inputValidator((id: string | number) => id)
+  .handler(async ({ data: id }) => {
+    try {
+      const response = await apiFetch(API_URL.partyReadiness(id));
+      return await response.json();
+    } catch (error) {
+      return { success: false, message: "Failed to fetch party readiness data" };
+    }
+  });
+
 // ========================================================
 // PARTY WALLET
 // ========================================================

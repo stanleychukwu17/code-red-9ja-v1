@@ -100,6 +100,7 @@ CREATE TABLE elections (
 );
 
 -- Automatically generate unique fake_id for elections if not provided
+-- +goose StatementBegin
 CREATE OR REPLACE FUNCTION set_election_fake_id()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -109,6 +110,7 @@ BEGIN
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+-- +goose StatementEnd
 
 CREATE TRIGGER trg_set_election_fake_id
 BEFORE INSERT ON elections

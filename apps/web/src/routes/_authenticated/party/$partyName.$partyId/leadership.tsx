@@ -2,14 +2,7 @@ import * as React from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useDebounceValue } from "usehooks-ts";
-import {
-  Search,
-  MapPin,
-  Calendar,
-  Loader2,
-  Users,
-  Filter,
-} from "lucide-react";
+import { Search, MapPin, Calendar, Loader2, Users } from "lucide-react";
 import { Input } from "@repo/ui/components/input";
 import { HeaderAccent } from "@repo/ui/components/header-accent";
 import { VacantPositionAvatar } from "@repo/ui/components/vacant-avatar";
@@ -22,9 +15,7 @@ import {
 import { partyProfileQueryOptions } from "../$partyName.$partyId";
 import { APP_URL, QUERY_KEYS } from "#/lib/config";
 
-export const Route = createFileRoute(
-  "/_authenticated/party/$partyName/$partyId/leadership",
-)({
+export const Route = createFileRoute("/_authenticated/party/$partyName/$partyId/leadership")({
   component: PartyLeadershipTabComponent,
 });
 
@@ -55,9 +46,9 @@ function OccupiedPositionCard({
 
   const tenureDate = official.tenure_start
     ? new Date(official.tenure_start).toLocaleDateString("en-GB", {
-        month: "short",
-        year: "numeric",
-      })
+      month: "short",
+      year: "numeric",
+    })
     : null;
 
   const chapterDisplay =
@@ -246,12 +237,12 @@ function PartyLeadershipTabComponent() {
 
     const results: Array<
       | {
-          type: "occupied";
-          official: PartyOfficialItem;
-          positionTitle: string;
-          position: PartyPositionItem;
-          key: string;
-        }
+        type: "occupied";
+        official: PartyOfficialItem;
+        positionTitle: string;
+        position: PartyPositionItem;
+        key: string;
+      }
       | { type: "vacant"; position: PartyPositionItem; key: string }
     > = [];
 
@@ -396,11 +387,10 @@ function PartyLeadershipTabComponent() {
           <button
             type="button"
             onClick={() => setShowVacant((v) => !v)}
-            className={`h-11 px-3.5 text-xs font-semibold rounded-xl border transition-all whitespace-nowrap cursor-pointer ${
-              showVacant
-                ? "bg-muted/80 text-foreground border-border"
-                : "bg-card text-muted-foreground border-border/60 hover:text-foreground"
-            }`}
+            className={`h-11 px-3.5 text-xs font-semibold rounded-xl border transition-all whitespace-nowrap cursor-pointer ${showVacant
+              ? "bg-muted/80 text-foreground border-border"
+              : "bg-card text-muted-foreground border-border/60 hover:text-foreground"
+              }`}
           >
             {showVacant ? "Hide Vacant" : "Show Vacant"}
           </button>

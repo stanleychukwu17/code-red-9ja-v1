@@ -5,7 +5,7 @@
  * and validates against available party treasury balance.
  */
 
-import * as React from "react";
+import { useState, type ChangeEvent } from "react";
 import { Button } from "@repo/ui/components/button";
 import {
   Dialog,
@@ -14,7 +14,7 @@ import {
   DialogHeader,
   DialogPadding,
 } from "@repo/ui/components/dialog";
-import { Package, Loader2 } from "lucide-react";
+import { Package, Loader2, Coins } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { getPartySlotPrice, buyPartySlots } from "#/lib/server/parties";
 import { toast } from "sonner";
@@ -32,6 +32,15 @@ function formatNaira(amount: number) {
   })}`;
 }
 
+type BuyAgentSlotsDialogProps = {
+  open: boolean;
+  onClose: () => void;
+  partyId?: number;
+  walletBalanceKobo: number;
+  onSuccess?: () => void;
+  onDepositFunds?: (deficitNaira: number) => void;
+};
+
 /**
  * BuyAgentSlotsDialog Component
  * Prompts user for quantity of slots, multiplies by server-provided unit slot rate,
@@ -43,30 +52,28 @@ export function BuyAgentSlotsDialog({
   partyId,
   walletBalanceKobo,
   onSuccess,
-}: {
-  open: boolean;
-  onClose: () => void;
-  partyId?: number;
-  walletBalanceKobo: number;
-  onSuccess?: () => void;
-}) {
-  const [slots, setSlots] = React.useState(100);
-  const [isPending, setIsPending] = React.useState(false);
+  onDepositFunds,
+}: BuyAgentSlotsDialogProps) {
+  // Number of agent slots to purchase (default: 100)
+  const [slots, setSlots] = useState(100);
+  const [isPending, setIsPending] = useState(false);
 
+  // Fetch current unit price for a slot from the server
   const { data: priceRes, isLoading: isPriceLoading } = useQuery({
     queryKey: ["partySlotPrice", partyId],
     queryFn: () => getPartySlotPrice({ data: partyId! }),
     enabled: !!partyId && open,
   });
 
+  // Calculate unit price in Naira (convert from Kobo, fallback to ₦1,000)
   const pricePerSlot =
     priceRes?.success && priceRes?.data?.unit_price_kobo !== undefined
       ? priceRes.data.unit_price_kobo / 100
       : 1000; // fallback to 1000 NGN if loading/error
 
+  // Mutation to handle slot purchase request
   const buySlotsMutation = useMutation({
-    mutationFn: (variables: { partyID: number; quantity: number }) =>
-      buyPartySlots({ data: variables }),
+    mutationFn: (variables: { partyID: number; quantity: number }) => buyPartySlots({ data: variables }),
     onSuccess: (res) => {
       if (res && res.success) {
         toast.success(`Successfully purchased ${slots} slots!`);
@@ -81,16 +88,19 @@ export function BuyAgentSlotsDialog({
     },
   });
 
+  // Wallet and cost calculations in Naira
   const walletBalanceNaira = walletBalanceKobo / 100;
   const totalCost = slots * pricePerSlot;
   const deficit = totalCost - walletBalanceNaira;
-  const isInsufficient = deficit > 0;
+  const isInsufficient = deficit > 0; // Check if party wallet lacks funds
 
-  const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Sanitize numeric input and cap maximum slots at 5,000,000
+  const handleInput = (e: ChangeEvent<HTMLInputElement>) => {
     const val = Number(e.target.value.replace(/\D/g, ""));
     if (val <= 5_000_000) setSlots(val || 0);
   };
 
+  // Submit slot purchase when conditions are met
   const handleBuySlots = () => {
     if (!partyId || slots <= 0) return;
     buySlotsMutation.mutate({ partyID: partyId, quantity: slots });
@@ -157,13 +167,25 @@ export function BuyAgentSlotsDialog({
 
           {/* Insufficient balance warning */}
           {!isPriceLoading && isInsufficient && (
-            <PartyWalletBalance
-              icon={<FancySadEmojiIcon className="shrink-0 size-6" />}
-              label="Insufficient wallet balance"
-              value={formatNaira(deficit)}
-              className="bg-red/20"
-              valueClassName="text-red"
-            />
+            <div className="space-y-2">
+              <PartyWalletBalance
+                icon={<FancySadEmojiIcon className="shrink-0 size-6" />}
+                label="Insufficient wallet balance"
+                value={formatNaira(deficit)}
+                className="bg-red/20"
+                valueClassName="text-red"
+              />
+              {onDepositFunds && (
+                <button
+                  type="button"
+                  onClick={() => onDepositFunds(deficit)}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 px-4 text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded-xl border border-emerald-200 transition-colors cursor-pointer shadow-xs"
+                >
+                  <Coins className="size-4 text-emerald-600" />
+                  Deposit funds to cover deficit ({formatNaira(deficit)})
+                </button>
+              )}
+            </div>
           )}
           {!isPriceLoading && !isInsufficient && (
             <PartyWalletBalance

@@ -29,6 +29,44 @@ func NewHandler(s *pu_results.Service, u *utils.Utils, taskDistributor worker.Ta
 
 // ── Request/Response types ─────────────────────────────────────────────────
 
+type PollingUnitFinalResultUploaderInfo struct {
+	ID                  interface{} `json:"id"`
+	ResultSheetImageUrl interface{} `json:"result_sheet_image_url"`
+	ResultSheetVideoUrl interface{} `json:"result_sheet_video_url"`
+	UploaderFirstName   interface{} `json:"uploader_first_name"`
+	UploaderLastName    interface{} `json:"uploader_last_name"`
+	UploaderAvatar      interface{} `json:"uploader_avatar"`
+}
+
+type PollingUnitFinalResultItemResponse struct {
+	ID                    int64                              `json:"id"`
+	ElectionID            int32                              `json:"election_id"`
+	ElectionGroupID       int32                              `json:"election_group_id"`
+	PollingUnitID         int32                              `json:"polling_unit_id"`
+	PollingUnitName       string                             `json:"polling_unit_name"`
+	StateID               interface{}                        `json:"state_id"`
+	StateName             interface{}                        `json:"state_name"`
+	LgaID                 interface{}                        `json:"lga_id"`
+	LgaName               interface{}                        `json:"lga_name"`
+	WardID                interface{}                        `json:"ward_id"`
+	SenatorialDistrictID  interface{}                        `json:"senatorial_district_id"`
+	FederalConstituencyID interface{}                        `json:"federal_constituency_id"`
+	StateConstituencyID   interface{}                        `json:"state_constituency_id"`
+	AccreditedVoters      int32                              `json:"accredited_voters"`
+	VotesCast             int32                              `json:"votes_cast"`
+	ValidVotes            int32                              `json:"valid_votes"`
+	RejectedVotes         int32                              `json:"rejected_votes"`
+	CandidateResults      json.RawMessage                    `json:"candidate_results"`
+	CreatedAt             interface{}                        `json:"created_at"`
+	FinalResult           PollingUnitFinalResultUploaderInfo `json:"finalResult"`
+}
+
+type PollingUnitFinalResultsListResponse struct {
+	Results    []PollingUnitFinalResultItemResponse `json:"results"`
+	NextCursor *int64                               `json:"next_cursor"`
+}
+
+
 type SubmitResultRequest struct {
 	AssignmentID        *int64 `json:"assignment_id,omitempty"`
 	PartyID             *int16 `json:"party_id,omitempty"`
@@ -476,42 +514,42 @@ func (h *Handler) ListFinalResults(w http.ResponseWriter, r *http.Request) {
 		nextCursor = &lastID
 	}
 
-	var mappedResults []map[string]interface{}
+	mappedResults := make([]PollingUnitFinalResultItemResponse, 0, len(results))
 	for _, res := range results {
-		mappedResults = append(mappedResults, map[string]interface{}{
-			"id":                      res.ID,
-			"election_id":             res.ElectionID,
-			"election_group_id":       res.ElectionGroupID,
-			"polling_unit_id":         res.PollingUnitID,
-			"polling_unit_name":       res.PollingUnitName,
-			"state_id":                res.StateID,
-			"state_name":              res.StateName,
-			"lga_id":                  res.LgaID,
-			"lga_name":                res.LgaName,
-			"ward_id":                 res.WardID,
-			"senatorial_district_id":  res.SenatorialDistrictID,
-			"federal_constituency_id": res.FederalConstituencyID,
-			"state_constituency_id":   res.StateConstituencyID,
-			"accredited_voters":       res.AccreditedVoters,
-			"votes_cast":              res.VotesCast,
-			"valid_votes":             res.ValidVotes,
-			"rejected_votes":          res.RejectedVotes,
-			"candidate_results":       json.RawMessage(res.CandidateResults),
-			"created_at":              res.CreatedAt,
-			"finalResult": map[string]interface{}{
-				"id":                     res.PollingUnitResultID,
-				"result_sheet_image_url": res.ResultSheetImageUrl,
-				"result_sheet_video_url": res.ResultSheetVideoUrl,
-				"uploader_first_name":    res.UploaderFirstName,
-				"uploader_last_name":     res.UploaderLastName,
-				"uploader_avatar":        res.UploaderAvatar,
+		mappedResults = append(mappedResults, PollingUnitFinalResultItemResponse{
+			ID:                    res.ID,
+			ElectionID:            res.ElectionID,
+			ElectionGroupID:       res.ElectionGroupID,
+			PollingUnitID:         res.PollingUnitID,
+			PollingUnitName:       res.PollingUnitName,
+			StateID:               res.StateID,
+			StateName:             res.StateName,
+			LgaID:                 res.LgaID,
+			LgaName:               res.LgaName,
+			WardID:                res.WardID,
+			SenatorialDistrictID:  res.SenatorialDistrictID,
+			FederalConstituencyID: res.FederalConstituencyID,
+			StateConstituencyID:   res.StateConstituencyID,
+			AccreditedVoters:      res.AccreditedVoters,
+			VotesCast:             res.VotesCast,
+			ValidVotes:            res.ValidVotes,
+			RejectedVotes:         res.RejectedVotes,
+			CandidateResults:      json.RawMessage(res.CandidateResults),
+			CreatedAt:             res.CreatedAt,
+			FinalResult: PollingUnitFinalResultUploaderInfo{
+				ID:                  res.PollingUnitResultID,
+				ResultSheetImageUrl: res.ResultSheetImageUrl,
+				ResultSheetVideoUrl: res.ResultSheetVideoUrl,
+				UploaderFirstName:   res.UploaderFirstName,
+				UploaderLastName:    res.UploaderLastName,
+				UploaderAvatar:      res.UploaderAvatar,
 			},
 		})
 	}
 
-	h.utils.RespondSuccess(w, http.StatusOK, "Final results fetched successfully", map[string]interface{}{
-		"results":     mappedResults,
-		"next_cursor": nextCursor,
+	h.utils.RespondSuccessData(w, http.StatusOK, "Final results fetched successfully", PollingUnitFinalResultsListResponse{
+		Results:    mappedResults,
+		NextCursor: nextCursor,
 	})
 }
 

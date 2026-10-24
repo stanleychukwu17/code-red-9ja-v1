@@ -680,6 +680,9 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		// campaign groups (admin & party_admin only)
 		r.Post("/api/v1/campaign-groups/{id}/sync-officials", campaignGroupsHandler.SyncGroupOfficials)
 
+		// party readiness overview (party admins only)
+		r.Get("/api/v1/parties/{id}/readiness", partiesHandler.GetPartyReadiness)
+
 		// party admins can view their own party's wallet transaction ledger
 		r.Get("/api/v1/parties/{id}/wallet/transactions", partiesHandler.ListPartyWalletTransactions)
 

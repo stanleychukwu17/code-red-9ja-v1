@@ -48,6 +48,16 @@ func (u *Utils) RespondError(w http.ResponseWriter, statusCode int, message stri
 	})
 }
 
+// RespondSuccessData writes a JSON success response accepting any data payload (struct, slice, map).
+// Shape: { success: true, message: string, data: ... }
+func (u *Utils) RespondSuccessData(w http.ResponseWriter, statusCode int, message string, data any) {
+	u.RespondJSON(w, statusCode, map[string]interface{}{
+		"success": true,
+		"message": message,
+		"data":    data,
+	})
+}
+
 // RespondSuccess writes a JSON success response.
 // Shape: { success: true, message: string, data: {...}, meta?: {...} }
 func (u *Utils) RespondSuccess(w http.ResponseWriter, statusCode int, message string, data map[string]interface{}) {
