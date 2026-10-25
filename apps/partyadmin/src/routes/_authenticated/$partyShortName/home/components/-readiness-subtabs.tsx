@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getApplications } from "#/lib/server/applications";
 import { useUserParty } from "#/hooks/useUserParty";
 import { getPartyWalletTransactions } from "#/lib/server/parties";
+import { QUERY_KEYS } from "#/lib/config";
 import { TransactionCard, type WalletTransaction } from "../../wallet/index";
 
 type SubTabsSectionProps = {
@@ -284,7 +285,7 @@ export function TransactionsSubTabContent() {
   const getPartyWalletTransactionsFn = useServerFn(getPartyWalletTransactions);
 
   const { data: txRes, isLoading } = useQuery({
-    queryKey: ["partyWalletTransactions", partyId],
+    queryKey: QUERY_KEYS.partyWallet.transactions(partyId),
     queryFn: () =>
       getPartyWalletTransactionsFn({
         data: { partyID: partyId!, limit: 5, offset: 0 },

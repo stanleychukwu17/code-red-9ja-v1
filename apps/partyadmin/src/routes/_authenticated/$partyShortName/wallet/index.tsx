@@ -16,31 +16,17 @@ import type { ReactNode } from "react";
 import { cn } from "@repo/ui/lib/utils";
 import FancyBillIcon from "@repo/ui/icons/fancy-bill-icon";
 import FancyWalletIcon from "@repo/ui/icons/fancy-wallet-icon";
-import TransactionSendIcon from "@repo/ui/icons/transaction-send-icon";
 import ArrowHandleIcon from "@repo/ui/icons/arrow-handle-icon";
-import {
-  AlertTriangle,
-  ArrowDownToLine,
-  ArrowUpFromLine,
-  CheckCircle2,
-  Coins,
-  Landmark,
-  Wallet,
-  Loader2,
-} from "lucide-react";
+import { ArrowUpFromLine, Wallet, Loader2 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useUserParty } from "#/hooks/useUserParty";
-import {
-  getPartyWallet,
-  getPartyWalletTransactions,
-} from "#/lib/server/parties";
+import { getPartyWallet, getPartyWalletTransactions } from "#/lib/server/parties";
+import { QUERY_KEYS } from "#/lib/config";
 
-export const Route = createFileRoute("/_authenticated/$partyShortName/wallet/")(
-  {
-    head: () => getPageHeader({ title: "Wallet" }),
-    component: RouteComponent,
-  },
-);
+export const Route = createFileRoute("/_authenticated/$partyShortName/wallet/")({
+  head: () => getPageHeader({ title: "Wallet" }),
+  component: RouteComponent,
+});
 
 /**
  * Party Wallet Page Component
@@ -53,17 +39,16 @@ function RouteComponent() {
   const queryClient = useQueryClient();
 
   const { data: walletRes, isLoading: isWalletLoading } = useQuery({
-    queryKey: ["partyWallet", partyId],
+    queryKey: QUERY_KEYS.partyWallet.byParty(partyId),
     queryFn: () => getPartyWallet({ data: partyId! }),
     enabled: !!partyId,
   });
 
   const { data: txRes, isLoading: isTxLoading } = useQuery({
-    queryKey: ["partyWalletTransactions", partyId],
-    queryFn: () =>
-      getPartyWalletTransactions({
-        data: { partyID: partyId!, limit: 50, offset: 0 },
-      }),
+    queryKey: QUERY_KEYS.partyWallet.transactions(partyId),
+    queryFn: () => getPartyWalletTransactions({
+      data: { partyID: partyId!, limit: 50, offset: 0 },
+    }),
     enabled: !!partyId,
   });
 
@@ -75,11 +60,12 @@ function RouteComponent() {
 
   const handleRefresh = () => {
     if (partyId) {
-      queryClient.invalidateQueries({ queryKey: ["partyWallet", partyId] });
       queryClient.invalidateQueries({
-        queryKey: ["partyWalletTransactions", partyId],
+        queryKey: QUERY_KEYS.partyWallet.byParty(partyId),
       });
-      queryClient.invalidateQueries({ queryKey: ["party", partyId] });
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.partyWallet.transactions(partyId),
+      });
     }
   };
 

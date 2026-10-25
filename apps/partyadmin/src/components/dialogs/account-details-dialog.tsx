@@ -15,6 +15,7 @@ import { fundPartyWallet } from "#/lib/server/parties";
 import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@repo/ui/lib/utils";
+import { QUERY_KEYS } from "#/lib/config";
 
 export type AccountDetailsDialogProps = {
   open: boolean;
@@ -36,13 +37,7 @@ const PRESET_AMOUNTS = [
  * AccountDetailsDialog Component
  * Manages party wallet treasury deposits with strict role-based authorization.
  */
-export function AccountDetailsDialog({
-  open,
-  setOpen,
-  onClose,
-  defaultAmount,
-  onSuccess,
-}: AccountDetailsDialogProps) {
+export function AccountDetailsDialog({ open, defaultAmount, setOpen, onClose, onSuccess }: AccountDetailsDialogProps) {
   const [fundAmount, setFundAmount] = useState(defaultAmount && defaultAmount > 0 ? Math.ceil(defaultAmount) : 50000);
   const { party } = useUserParty();
   const partyId = party?.id;
@@ -51,7 +46,6 @@ export function AccountDetailsDialog({
 
   const roles = user?.roles || [];
   const isAdmin = roles.includes("admin") || roles.includes("super_admin");
-  const isPartyAdmin = roles.includes("party_admin") || roles.includes("super_party_admin");
 
   // Synchronize prefilled or deficit amounts when opened
   useEffect(() => {
@@ -70,10 +64,9 @@ export function AccountDetailsDialog({
         );
         // Refresh related party balances and transaction queries
         if (partyId) {
-          queryClient.invalidateQueries({ queryKey: ["partyWallet", partyId] });
-          queryClient.invalidateQueries({ queryKey: ["partyWalletTransactions", partyId] });
-          queryClient.invalidateQueries({ queryKey: ["party", partyId] });
-          queryClient.invalidateQueries({ queryKey: ["partyReadiness", partyId] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partyWallet.byParty(partyId) });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partyWallet.transactions(partyId) });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partyReadiness.byParty(partyId) });
         }
         onSuccess?.();
         handleClose();

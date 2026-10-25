@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { createPartyWallet, getPartyWallet } from "#/lib/server/parties";
+import { QUERY_KEYS } from "#/lib/config";
 import { useUserParty } from "./useUserParty";
 
 /**
@@ -14,7 +15,7 @@ export const usePartyWallet = (explicitPartyId?: number) => {
 	const createPartyWalletFn = useServerFn(createPartyWallet);
 
 	const { data: partyWallet, isLoading } = useQuery({
-		queryKey: ["partyWallet", partyId],
+		queryKey: QUERY_KEYS.partyWallet.byParty(partyId),
 		enabled: !!partyId,
 		queryFn: async () => {
 			const res = await fetchPartyWallet({ data: partyId as number });

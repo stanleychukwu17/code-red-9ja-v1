@@ -99,23 +99,13 @@ export function PartyTabContent({
         </div>
       );
 
-    case "about":
+    case "notifications":
       return (
         <div className="py-12 text-center text-neutral-500 dark:text-neutral-400">
           <h3 className="text-base font-semibold text-neutral-900 dark:text-white">
-            About {partyName}
+            Party Notifications
           </h3>
-          <p className="mt-1 text-sm">Ideology, manifesto, and constitution.</p>
-        </div>
-      );
-
-    case "social-links":
-      return (
-        <div className="py-12 text-center text-neutral-500 dark:text-neutral-400">
-          <h3 className="text-base font-semibold text-neutral-900 dark:text-white">
-            Official Social Media
-          </h3>
-          <p className="mt-1 text-sm">Verified handles across platforms.</p>
+          <p className="mt-1 text-sm">Official announcements and notifications for {partyName}.</p>
         </div>
       );
   }

@@ -1,30 +1,15 @@
-import React, { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useDebounceValue } from "usehooks-ts";
-import {
-  Search,
-  MapPin,
-  Building2,
-  Landmark,
-  Globe,
-  Users,
-  ChevronRight,
-  ArrowRight,
-  CheckCircle2,
-  Sparkles,
-  Layers,
-  ChevronLeft,
-} from "lucide-react";
+import { Search, MapPin, Building2, Landmark, Globe, ChevronRight, ArrowRight, CheckCircle2, Layers } from "lucide-react";
 import { Input } from "@repo/ui/components/input";
 import { HeaderAccent } from "@repo/ui/components/header-accent";
 import { partyProfileQueryOptions } from "../$partyName.$partyId";
 import { useNigeriaStates, useLGAs, useWards } from "#/hooks";
 import type { StateItem, LGAItem, WardItem } from "#/lib/server/polling_units";
 
-export const Route = createFileRoute(
-  "/_authenticated/party/$partyName/$partyId/party-chapters",
-)({
+export const Route = createFileRoute("/_authenticated/party/$partyName/$partyId/party-chapters")({
   component: PartyChaptersTabComponent,
 });
 
@@ -156,20 +141,18 @@ function PartyChaptersTabComponent() {
                 setSelectedTier(tier.id);
                 setSearchQuery("");
               }}
-              className={`px-3.5 py-2 text-xs font-semibold rounded-xl whitespace-nowrap transition-all cursor-pointer ${
-                selectedTier === tier.id
-                  ? "bg-primary text-primary-foreground shadow-xs"
-                  : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
-              }`}
+              className={`px-3.5 py-2 text-xs font-semibold rounded-xl whitespace-nowrap transition-all cursor-pointer ${selectedTier === tier.id
+                ? "bg-primary text-primary-foreground shadow-xs"
+                : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
             >
               <span>{tier.label}</span>
               {tier.count !== undefined && (
                 <span
-                  className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded-md ${
-                    selectedTier === tier.id
-                      ? "bg-primary-foreground/20 text-primary-foreground"
-                      : "bg-muted text-muted-foreground"
-                  }`}
+                  className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded-md ${selectedTier === tier.id
+                    ? "bg-primary-foreground/20 text-primary-foreground"
+                    : "bg-muted text-muted-foreground"
+                    }`}
                 >
                   {tier.count}
                 </span>
@@ -321,11 +304,10 @@ function PartyChaptersTabComponent() {
               return (
                 <div
                   key={state.id}
-                  className={`group rounded-2xl border p-5 transition-all flex flex-col justify-between ${
-                    isCurrent
-                      ? "bg-primary/5 border-primary/40 shadow-xs"
-                      : "bg-card border-border/60 hover:border-primary/40 hover:bg-muted/20"
-                  }`}
+                  className={`group rounded-2xl border p-5 transition-all flex flex-col justify-between ${isCurrent
+                    ? "bg-primary/5 border-primary/40 shadow-xs"
+                    : "bg-card border-border/60 hover:border-primary/40 hover:bg-muted/20"
+                    }`}
                 >
                   <div>
                     <div className="flex items-center justify-between mb-3">

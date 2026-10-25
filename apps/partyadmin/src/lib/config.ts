@@ -312,4 +312,17 @@ export const QUERY_KEYS = {
     byParty: (partyId?: number | string) =>
       ["partyPositions", partyId] as const,
   },
+
+  partyWallet: {
+    root: ["partyWallet"] as const,
+    byParty: (partyId?: number | string) => ["partyWallet", partyId] as const,
+    transactions: (partyId?: number | string) =>
+      ["partyWalletTransactions", partyId] as const,
+  },
+
+  partyReadiness: {
+    root: ["partyReadiness"] as const,
+    byParty: (partyId?: number | string) => ["partyReadiness", partyId] as const,
+  },
 };
+

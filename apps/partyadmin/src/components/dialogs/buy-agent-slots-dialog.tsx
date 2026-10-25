@@ -46,17 +46,9 @@ type BuyAgentSlotsDialogProps = {
  * Prompts user for quantity of slots, multiplies by server-provided unit slot rate,
  * and submits the purchase transaction.
  */
-export function BuyAgentSlotsDialog({
-  open,
-  onClose,
-  partyId,
-  walletBalanceKobo,
-  onSuccess,
-  onDepositFunds,
-}: BuyAgentSlotsDialogProps) {
+export function BuyAgentSlotsDialog({ partyId, walletBalanceKobo, open, onClose, onSuccess, onDepositFunds }: BuyAgentSlotsDialogProps) {
   // Number of agent slots to purchase (default: 100)
   const [slots, setSlots] = useState(100);
-  const [isPending, setIsPending] = useState(false);
 
   // Fetch current unit price for a slot from the server
   const { data: priceRes, isLoading: isPriceLoading } = useQuery({

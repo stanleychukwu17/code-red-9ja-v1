@@ -5,11 +5,10 @@ import {
   Crown,
   Users,
   FolderKanban,
-  Info,
-  Share2,
   ShieldCheck,
   Landmark,
   CalendarDays,
+  Bell,
 } from "lucide-react";
 
 export interface PartyLeader {
@@ -57,8 +56,7 @@ export type PartyTabPath =
   | "party-admins"
   | "members"
   | "groups"
-  | "about"
-  | "social-links";
+  | "notifications";
 
 export type PartyTabId = PartyTabPath;
 
@@ -77,6 +75,5 @@ export const PARTY_NAV_TABS: PartyTabItem[] = [
   { path: "party-admins", label: "Party Admins", icon: ShieldCheck },
   { path: "members", label: "Members", icon: Users },
   { path: "groups", label: "Groups", icon: FolderKanban },
-  { path: "about", label: "About", icon: Info },
-  { path: "social-links", label: "social links", icon: Share2 },
+  { path: "notifications", label: "Notifications", icon: Bell },
 ];

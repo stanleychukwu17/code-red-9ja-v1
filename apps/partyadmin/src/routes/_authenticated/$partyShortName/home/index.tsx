@@ -9,6 +9,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getPartyReadiness } from "#/lib/server/parties";
 import { useServerFn } from "@tanstack/react-start";
 import { getElectionStats } from "#/lib/server/elections";
+import { QUERY_KEYS } from "#/lib/config";
 
 import { ReadinessProgressCard } from "./components/-readiness-progress-card";
 import { RequiredActionsSection } from "./components/-required-actions";
@@ -71,7 +72,7 @@ function ReadinessComponent() {
   // Single consolidated query for party readiness:
   // Returns treasury wallet, active marketing campaigns, slots, and setup checklists in one round-trip.
   const { data: readinessRes, refetch: refetchReadiness } = useQuery({
-    queryKey: ["partyReadiness", partyId],
+    queryKey: QUERY_KEYS.partyReadiness.byParty(partyId),
     queryFn: () => fetchPartyReadinessFn({ data: partyId! }),
     enabled: !!partyId,
   });
