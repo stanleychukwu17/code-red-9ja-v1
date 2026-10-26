@@ -93,6 +93,8 @@ func ActorInfoFromContext(ctx context.Context) (int64, string) {
 		actorRole = db.ActorRoleSuperAdmin
 	} else if claims.HasRole(db.ActorRoleAdmin) {
 		actorRole = db.ActorRoleAdmin
+	} else if claims.HasRole(db.ActorRoleSuperPartyAdmin) {
+		actorRole = db.ActorRoleSuperPartyAdmin
 	} else if claims.HasRole(db.ActorRolePartyAdmin) {
 		actorRole = db.ActorRolePartyAdmin
 	}
@@ -110,25 +112,25 @@ func (s *auditService) prepareParams(ctx context.Context, params *queries.Insert
 		params.UserAgent = StringToText(userAgent)
 	}
 
-	var actorRole string
-	if params.ActorID == 0 || !params.ActorRole.Valid || !params.Module.Valid {
-		var actorID int64
-		actorID, actorRole = ActorInfoFromContext(ctx)
-		if params.ActorID == 0 && actorID != 0 {
-			params.ActorID = actorID
-		}
-		if !params.ActorRole.Valid && actorRole != "" {
-			params.ActorRole = StringToText(actorRole)
-		}
-	} else if params.ActorRole.Valid {
-		actorRole = params.ActorRole.String
+	actorID, actorRole := ActorInfoFromContext(ctx)
+
+	if params.ActorID == 0 && actorID != 0 {
+		params.ActorID = actorID
+	}
+	if !params.ActorRole.Valid && actorRole != "" {
+		params.ActorRole = StringToText(actorRole)
 	}
 
 	if !params.Module.Valid {
-		switch actorRole {
+		role := actorRole
+		if params.ActorRole.Valid {
+			role = params.ActorRole.String
+		}
+
+		switch role {
 		case db.ActorRoleSuperAdmin, db.ActorRoleAdmin:
 			params.Module = StringToText(db.ModuleAdmin)
-		case db.ActorRolePartyAdmin:
+		case db.ActorRoleSuperPartyAdmin, db.ActorRolePartyAdmin:
 			params.Module = StringToText(db.ModulePartyAdmin)
 		default:
 			params.Module = StringToText(db.ModuleUsers)

@@ -640,6 +640,7 @@ type PartyReadinessData struct {
 	HasSlots             bool                 `json:"has_slots"`
 	HasAgentPayment      bool                 `json:"has_agent_payment"`
 	HasPaymentAllocation bool                 `json:"has_payment_allocation"`
+	SlotPriceKobo        int64                `json:"slot_price_kobo"`
 }
 
 // GetPartyHome fetches the primary data for the party home tab (leadership cards, upcoming events, etc.).
@@ -818,6 +819,9 @@ func (s *PartiesService) GetPartyReadiness(ctx context.Context, partyID int16) (
 		}
 	}
 
+	// Fetch party slot price in kobo (with caching)
+	slotPriceKobo, _ := s.walletService.GetPartySlotPrice(ctx, partyID)
+
 	return &PartyReadinessData{
 		Party:                party,
 		Wallet:               walletPtr,
@@ -826,6 +830,7 @@ func (s *PartiesService) GetPartyReadiness(ctx context.Context, partyID int16) (
 		HasSlots:             party.Slots > 0,
 		HasAgentPayment:      party.AgentPaymentBalanceKobo > 0,
 		HasPaymentAllocation: hasPaymentAllocation,
+		SlotPriceKobo:        slotPriceKobo,
 	}, nil
 }
 
@@ -1454,11 +1459,9 @@ func (s *PartiesService) IsPartyMember(ctx context.Context, userID int64, partyI
 	}
 
 	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisPartyMember, partyID, userID)
-	if s.rdb != nil {
-		if cached, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
-			if isMember, err := strconv.ParseBool(cached); err == nil {
-				return isMember, nil
-			}
+	if cached, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
+		if isMember, err := strconv.ParseBool(cached); err == nil {
+			return isMember, nil
 		}
 	}
 
@@ -1470,9 +1473,7 @@ func (s *PartiesService) IsPartyMember(ctx context.Context, userID int64, partyI
 		return false, fmt.Errorf("failed to check party membership: %w", err)
 	}
 
-	if s.rdb != nil {
-		_ = s.rdb.Set(ctx, cacheKey, isMember, db.RedisThirtyDaysTTL).Err()
-	}
+	_ = s.rdb.Set(ctx, cacheKey, isMember, db.RedisThirtyDaysTTL).Err()
 	return isMember, nil
 }
 
@@ -1779,9 +1780,33 @@ func (s *PartiesService) GetPartyAgentAcquisitionTargets(ctx context.Context, pa
 	return json.RawMessage(party.AgentAcquisitionTargets), nil
 }
 
-// GetPartyByID returns a party by its ID.
+// GetPartyByID returns a party by its ID, cached in Redis.
 func (s *PartiesService) GetPartyByID(ctx context.Context, partyID int16) (queries.Party, error) {
-	return s.queries.GetPartyByID(ctx, partyID)
+	if partyID <= 0 {
+		return queries.Party{}, fmt.Errorf("invalid party ID")
+	}
+
+	redisKey := fmt.Sprintf("%s%d", db.RedisPartyByID, partyID)
+
+	// Try reading from Redis cache first
+	if cachedData, err := s.rdb.Get(ctx, redisKey).Result(); err == nil {
+		var party queries.Party
+		if err := json.Unmarshal([]byte(cachedData), &party); err == nil && party.ID > 0 {
+			return party, nil
+		}
+	}
+
+	party, err := s.queries.GetPartyByID(ctx, partyID)
+	if err != nil {
+		return queries.Party{}, err
+	}
+
+	// Cache the party in Redis
+	if partyData, err := json.Marshal(party); err == nil {
+		_ = s.rdb.Set(ctx, redisKey, partyData, db.RedisThirtyDaysTTL).Err()
+	}
+
+	return party, nil
 }
 
 // ResetPartyLogo resets the logo file ID of a party to NULL.
@@ -1797,12 +1822,10 @@ func (s *PartiesService) GetDefaultPartyPositions(ctx context.Context) ([]querie
 	cacheKey := db.RedisPartyDefaultPositions
 
 	// Try reading from Redis cache
-	if s.rdb != nil {
-		if cachedData, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
-			var positions []queries.PartyPosition
-			if err := json.Unmarshal([]byte(cachedData), &positions); err == nil {
-				return positions, nil
-			}
+	if cachedData, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
+		var positions []queries.PartyPosition
+		if err := json.Unmarshal([]byte(cachedData), &positions); err == nil {
+			return positions, nil
 		}
 	}
 
@@ -1816,10 +1839,8 @@ func (s *PartiesService) GetDefaultPartyPositions(ctx context.Context) ([]querie
 	}
 
 	// Cache result in Redis (default positions are static)
-	if s.rdb != nil {
-		if data, err := json.Marshal(defaultPositions); err == nil {
-			_ = s.rdb.Set(ctx, cacheKey, data, db.RedisOneYearTTL).Err()
-		}
+	if data, err := json.Marshal(defaultPositions); err == nil {
+		_ = s.rdb.Set(ctx, cacheKey, data, db.RedisOneYearTTL).Err()
 	}
 
 	return defaultPositions, nil
@@ -1830,12 +1851,10 @@ func (s *PartiesService) GetCustomPartyPositions(ctx context.Context, partyID in
 	cacheKey := fmt.Sprintf("%s%d", db.RedisPartyCustomPositions, partyID)
 
 	// Try reading from Redis cache
-	if s.rdb != nil {
-		if cachedData, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
-			var positions []queries.PartyPosition
-			if err := json.Unmarshal([]byte(cachedData), &positions); err == nil {
-				return positions, nil
-			}
+	if cachedData, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
+		var positions []queries.PartyPosition
+		if err := json.Unmarshal([]byte(cachedData), &positions); err == nil {
+			return positions, nil
 		}
 	}
 
@@ -1849,10 +1868,8 @@ func (s *PartiesService) GetCustomPartyPositions(ctx context.Context, partyID in
 	}
 
 	// Cache result in Redis
-	if s.rdb != nil {
-		if data, err := json.Marshal(customPositions); err == nil {
-			_ = s.rdb.Set(ctx, cacheKey, data, db.RedisOneEightyDaysTTL).Err()
-		}
+	if data, err := json.Marshal(customPositions); err == nil {
+		_ = s.rdb.Set(ctx, cacheKey, data, db.RedisOneEightyDaysTTL).Err()
 	}
 
 	return customPositions, nil
@@ -1887,12 +1904,10 @@ func (s *PartiesService) GetPartyPositionByID(ctx context.Context, id int32, par
 	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisPartyPositionByID, partyID, id)
 
 	// Try reading from Redis cache
-	if s.rdb != nil {
-		if cachedData, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
-			var pos queries.PartyPosition
-			if err := json.Unmarshal([]byte(cachedData), &pos); err == nil && pos.ID == id && pos.ID > 0 {
-				return pos, nil
-			}
+	if cachedData, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
+		var pos queries.PartyPosition
+		if err := json.Unmarshal([]byte(cachedData), &pos); err == nil && pos.ID == id && pos.ID > 0 {
+			return pos, nil
 		}
 	}
 
@@ -1906,10 +1921,8 @@ func (s *PartiesService) GetPartyPositionByID(ctx context.Context, id int32, par
 	}
 
 	// Cache result in Redis
-	if s.rdb != nil {
-		if data, err := json.Marshal(pos); err == nil {
-			_ = s.rdb.Set(ctx, cacheKey, data, db.RedisOneEightyDaysTTL).Err()
-		}
+	if data, err := json.Marshal(pos); err == nil {
+		_ = s.rdb.Set(ctx, cacheKey, data, db.RedisOneEightyDaysTTL).Err()
 	}
 
 	return pos, nil
@@ -2927,8 +2940,11 @@ func (s *PartiesService) InvalidateChapterOfficialCache(ctx context.Context, cha
 func (s *PartiesService) InvalidatePartyCache(ctx context.Context, partyID int16) {
 	redisPartyInfo := fmt.Sprintf("%s%d", db.RedisPartyInfo, partyID)
 	redisPartyBasicInfo := fmt.Sprintf("%s%d", db.RedisPartyBasicInfo, partyID)
+	redisPartyByID := fmt.Sprintf("%s%d", db.RedisPartyByID, partyID)
+
 	s.rdb.Del(ctx, redisPartyInfo)
 	s.rdb.Del(ctx, redisPartyBasicInfo)
+	s.rdb.Del(ctx, redisPartyByID)
 	s.rdb.Del(ctx, db.RedisPartiesList)
 }
 
@@ -2961,9 +2977,6 @@ func (s *PartiesService) InvalidatePartyMembership(ctx context.Context, userID i
 
 // InvalidatePartyCustomPositionsCache invalidates cached custom positions for a party.
 func (s *PartiesService) InvalidatePartyCustomPositionsCache(ctx context.Context, partyID int16) {
-	if s.rdb == nil {
-		return
-	}
 	cacheKey := fmt.Sprintf("%s%d", db.RedisPartyCustomPositions, partyID)
 	if err := s.rdb.Del(ctx, cacheKey).Err(); err != nil {
 		slog.Error("Failed to invalidate party custom positions cache", "error", err, "partyID", partyID)
@@ -2972,9 +2985,6 @@ func (s *PartiesService) InvalidatePartyCustomPositionsCache(ctx context.Context
 
 // InvalidatePartyPositionByIDCache invalidates the Redis cache for a single party position.
 func (s *PartiesService) InvalidatePartyPositionByIDCache(ctx context.Context, partyID int16, id int32) {
-	if s.rdb == nil {
-		return
-	}
 	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisPartyPositionByID, partyID, id)
 	if err := s.rdb.Del(ctx, cacheKey).Err(); err != nil {
 		slog.Error("Failed to invalidate party position cache", "error", err, "partyID", partyID, "id", id)

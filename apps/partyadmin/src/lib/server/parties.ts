@@ -194,22 +194,6 @@ export const withdrawFromPartyWallet = createServerFn({ method: "POST" })
 // PARTY SLOTS
 // ========================================================
 
-// Fetch current unit price for party slots
-export const getPartySlotPrice = createServerFn({ method: "POST" })
-  .inputValidator((partyID: string | number) => partyID)
-  .handler(async ({ data: partyID }) => {
-    try {
-      const response = await apiFetch(API_URL.partySlotPrice(partyID));
-      const resData = await response.json();
-      return resData;
-    } catch (error) {
-      return {
-        success: false,
-        message: "Failed to fetch slot price: " + (error as Error).message,
-      };
-    }
-  });
-
 // Purchase party slots
 export const buyPartySlots = createServerFn({ method: "POST" })
   .inputValidator(

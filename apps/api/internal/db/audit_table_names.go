@@ -46,10 +46,11 @@ const (
 	ActionDepositPartyWallet        = "deposit_party_wallet"         // Action when funds are directly credited/deposited to a party wallet
 
 	// -- Actor Roles --
-	ActorRoleSuperAdmin = "super_admin" // A super administrator of the system
-	ActorRoleAdmin      = "admin"       // A standard administrative user
-	ActorRolePartyAdmin = "party_admin" // An administrator for a specific political party
-	ActorRoleUser       = "user"        // A regular user acting on their own account
+	ActorRoleSuperAdmin      = "super_admin"       // A super administrator of the system
+	ActorRoleAdmin           = "admin"             // A standard administrative user
+	ActorRoleSuperPartyAdmin = "super_party_admin" // A super administrator for a specific political party
+	ActorRolePartyAdmin      = "party_admin"       // An administrator for a specific political party
+	ActorRoleUser            = "user"              // A regular user acting on their own account
 
 	// -- Entity Types --
 	EntityTypeUser      = "user"      // Entity type representing a regular user

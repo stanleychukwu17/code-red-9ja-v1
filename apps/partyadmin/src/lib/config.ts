@@ -106,7 +106,6 @@ export const API_URL = {
   },
   partyWalletDepositTest: (id: string | number) =>
     `${api}/parties/${id}/wallet/deposit-test`,
-  partySlotPrice: (id: string | number) => `${api}/parties/${id}/slots/price`,
   partySlotsBuy: (id: string | number) => `${api}/parties/${id}/slots/buy`,
   partyAgentPaymentDeposits: (id: string | number) =>
     `${api}/parties/${id}/agent-payment-deposits`,

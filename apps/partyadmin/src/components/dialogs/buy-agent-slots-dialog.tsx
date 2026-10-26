@@ -15,8 +15,8 @@ import {
   DialogPadding,
 } from "@repo/ui/components/dialog";
 import { Package, Loader2, Coins } from "lucide-react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { getPartySlotPrice, buyPartySlots } from "#/lib/server/parties";
+import { useMutation } from "@tanstack/react-query";
+import { buyPartySlots } from "#/lib/server/parties";
 import { toast } from "sonner";
 import { DescriptiveText } from "@repo/ui/components/custom/Texts";
 import FancyBillIcon from "@repo/ui/icons/fancy-bill-icon";
@@ -37,6 +37,7 @@ type BuyAgentSlotsDialogProps = {
   onClose: () => void;
   partyId?: number;
   walletBalanceKobo: number;
+  unitSlotPriceKobo?: number;
   onSuccess?: () => void;
   onDepositFunds?: (deficitNaira: number) => void;
 };
@@ -46,23 +47,14 @@ type BuyAgentSlotsDialogProps = {
  * Prompts user for quantity of slots, multiplies by server-provided unit slot rate,
  * and submits the purchase transaction.
  */
-export function BuyAgentSlotsDialog({ partyId, walletBalanceKobo, open, onClose, onSuccess, onDepositFunds }: BuyAgentSlotsDialogProps) {
+export function BuyAgentSlotsDialog({ partyId, walletBalanceKobo, unitSlotPriceKobo, open, onClose, onSuccess, onDepositFunds }: BuyAgentSlotsDialogProps) {
   // Number of agent slots to purchase (default: 100)
   const [slots, setSlots] = useState(100);
 
-  // Fetch current unit price for a slot from the server
-  const { data: priceRes, isLoading: isPriceLoading } = useQuery({
-    queryKey: ["partySlotPrice", partyId],
-    queryFn: () => getPartySlotPrice({ data: partyId! }),
-    enabled: !!partyId && open,
-    staleTime: Infinity,
-  });
-
-  // Calculate unit price in Naira (convert from Kobo, fallback to ₦1,000)
-  const pricePerSlot =
-    priceRes?.success && priceRes?.data?.unit_price_kobo !== undefined
-      ? priceRes.data.unit_price_kobo / 100
-      : 1000; // fallback to 1000 NGN if loading/error
+  // Unit price in Naira (converted from Kobo, fallback to 1,000 NGN)
+  const pricePerSlot = typeof unitSlotPriceKobo === 'number' && unitSlotPriceKobo >= 0
+    ? unitSlotPriceKobo / 100
+    : 1000;
 
   // Mutation to handle slot purchase request
   const buySlotsMutation = useMutation({
@@ -132,14 +124,7 @@ export function BuyAgentSlotsDialog({ partyId, walletBalanceKobo, open, onClose,
               <p className="text-base text-c-70 w-full">
                 Price per slot for a polling agent
               </p>
-              <span
-                className={cn(
-                  "text-base font-semibold text-c-80",
-                  isPriceLoading && "animate-pulse",
-                )}
-              >
-                {!isPriceLoading && <>{formatNaira(pricePerSlot)}</>}
-              </span>
+              <span className="text-base font-semibold text-c-80">{formatNaira(pricePerSlot)}</span>
             </div>
             <div className="h-12 flex items-center gap-3">
               <FancyBillIcon className="shrink-0 size-5" />
@@ -147,19 +132,12 @@ export function BuyAgentSlotsDialog({ partyId, walletBalanceKobo, open, onClose,
                 Price for {slots.toLocaleString()} slot
                 {slots !== 1 ? "s" : ""}
               </p>
-              <span
-                className={cn(
-                  "text-base font-semibold text-green",
-                  isPriceLoading && "animate-pulse",
-                )}
-              >
-                {!isPriceLoading && <>{formatNaira(totalCost)}</>}
-              </span>
+              <span className="text-base font-semibold text-green">{formatNaira(totalCost)}</span>
             </div>
           </div>
 
           {/* Insufficient balance warning */}
-          {!isPriceLoading && isInsufficient && (
+          {!isInsufficient && (
             <div className="space-y-2">
               <PartyWalletBalance
                 icon={<FancySadEmojiIcon className="shrink-0 size-6" />}
@@ -180,7 +158,7 @@ export function BuyAgentSlotsDialog({ partyId, walletBalanceKobo, open, onClose,
               )}
             </div>
           )}
-          {!isPriceLoading && !isInsufficient && (
+          {!!isInsufficient && (
             <PartyWalletBalance
               icon={<FancyHappyEmojiIcon className="shrink-0 size-6" />}
               label="Wallet balance"

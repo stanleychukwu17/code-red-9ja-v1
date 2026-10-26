@@ -570,7 +570,6 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Get("/api/v1/election-groups/{id}/stats/wards/{ward_id}/parties/{party_id}", electionStatsHandler.GetSingleWardStats)
 
 		r.Post("/api/v1/parties/{id}/wallet/withdraw", partiesWalletHandler.WithdrawFromPartyWallet)
-		r.Get("/api/v1/parties/{id}/slots/price", partiesWalletHandler.GetPartySlotPrice)
 		r.Post("/api/v1/parties/{id}/slots/buy", partiesWalletHandler.BuySlots)
 		r.Post("/api/v1/parties/{id}/allowances/deposit", partiesHandler.DepositAllowance)
 

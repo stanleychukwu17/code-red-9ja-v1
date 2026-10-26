@@ -9,6 +9,7 @@ import (
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/utils"
 	"log/slog"
+	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -295,11 +296,20 @@ func (s *PartiesWalletService) InvalidatePartyWalletCache(ctx context.Context, p
 // ── Slot pricing and purchasing methods ──────────────────────────────────────
 
 // GetGlobalSlotPrice retrieves the app-wide slot price in Kobo.
-// Defaults to 100,000 Kobo (1,000 NGN) if not set.
+// Defaults to 100,000 Kobo (1,000 NGN) if not set, with Redis caching.
 func (s *PartiesWalletService) GetGlobalSlotPrice(ctx context.Context) (int64, error) {
+	// 1. Try reading from Redis first
+	if cached, err := s.rdb.Get(ctx, db.RedisGlobalSlotCost).Result(); err == nil {
+		if price, err := strconv.ParseInt(cached, 10, 64); err == nil && price > 0 {
+			return price, nil
+		}
+	}
+
+	// 2. Fetch from database if not cached
 	setting, err := s.queries.GetSystemSetting(ctx, "slot_cost_kobo")
 	if err != nil {
 		// Fallback to default of 1000 NGN (100,000 Kobo) if the record is missing.
+		_ = s.rdb.Set(ctx, db.RedisGlobalSlotCost, strconv.FormatInt(100000, 10), db.RedisThirtyDaysTTL).Err()
 		return 100000, nil
 	}
 
@@ -308,20 +318,26 @@ func (s *PartiesWalletService) GetGlobalSlotPrice(ctx context.Context) (int64, e
 		return 0, fmt.Errorf("failed to unmarshal slot price setting: %w", err)
 	}
 
+	// 3. Populate Redis cache
+	_ = s.rdb.Set(ctx, db.RedisGlobalSlotCost, strconv.FormatInt(price, 10), db.RedisThirtyDaysTTL).Err()
+
 	return price, nil
 }
 
 // UpdateGlobalSlotPrice sets the app-wide slot price in Kobo.
 func (s *PartiesWalletService) UpdateGlobalSlotPrice(ctx context.Context, priceKobo int64) (int64, error) {
+	// Validate price cannot be negative
 	if priceKobo < 0 {
 		return 0, fmt.Errorf("slot price cannot be negative")
 	}
 
+	// Encode price as JSON payload for the system settings table
 	valBytes, err := json.Marshal(priceKobo)
 	if err != nil {
 		return 0, fmt.Errorf("failed to marshal slot price: %w", err)
 	}
 
+	// Persist the updated price in the database
 	_, err = s.queries.UpdateSystemSetting(ctx, queries.UpdateSystemSettingParams{
 		Key:   "slot_cost_kobo",
 		Value: valBytes,
@@ -330,22 +346,28 @@ func (s *PartiesWalletService) UpdateGlobalSlotPrice(ctx context.Context, priceK
 		return 0, fmt.Errorf("failed to update slot price setting: %w", err)
 	}
 
+	// Invalidate/refresh Redis cache immediately
+	_ = s.rdb.Set(ctx, db.RedisGlobalSlotCost, strconv.FormatInt(priceKobo, 10), db.RedisThirtyDaysTTL).Err()
+
 	return priceKobo, nil
 }
 
 // GetPartySlotPrice calculates the customized slot price for a given party,
 // applying their discount percentage to the global slot price.
 func (s *PartiesWalletService) GetPartySlotPrice(ctx context.Context, partyID int16) (int64, error) {
+	// Fetch the platform-wide base price per slot (in Kobo)
 	globalPrice, err := s.GetGlobalSlotPrice(ctx)
 	if err != nil {
 		return 0, err
 	}
 
-	party, err := s.queries.GetPartyByID(ctx, partyID)
+	// Fetch the party details to check for an assigned discount rate (cached via partiesService)
+	party, err := s.partiesService.GetPartyByID(ctx, partyID)
 	if err != nil {
 		return 0, fmt.Errorf("failed to get party: %w", err)
 	}
 
+	// Extract the discount percentage if configured for this party
 	var discount float64
 	if party.DiscountPercentage.Valid {
 		if err := party.DiscountPercentage.Scan(&discount); err != nil {
@@ -353,14 +375,17 @@ func (s *PartiesWalletService) GetPartySlotPrice(ctx context.Context, partyID in
 		}
 	}
 
+	// Return standard base price if there is no active discount
 	if discount <= 0.0 {
 		return globalPrice, nil
 	}
 
+	// If discount is 100% or higher, slots are completely free
 	if discount >= 100.0 {
 		return 0, nil
 	}
 
+	// Calculate discounted unit price and return in Kobo
 	finalPrice := float64(globalPrice) * (1.0 - (discount / 100.0))
 	return int64(finalPrice), nil
 }
@@ -368,14 +393,12 @@ func (s *PartiesWalletService) GetPartySlotPrice(ctx context.Context, partyID in
 // BuySlots debits the party wallet and adds slots directly to the party's balance.
 // This is executed as a database transaction.
 func (s *PartiesWalletService) BuySlots(ctx context.Context, partyID int16, quantity int32) (queries.Party, error) {
+	// Validate slot purchase quantity
 	if quantity <= 0 {
 		return queries.Party{}, fmt.Errorf("quantity must be positive")
 	}
 
-	if s.pool == nil {
-		return queries.Party{}, fmt.Errorf("db pool is not configured")
-	}
-
+	// Begin atomic database transaction for balance deduction and slot allocation
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return queries.Party{}, fmt.Errorf("failed to begin transaction: %w", err)
@@ -384,23 +407,25 @@ func (s *PartiesWalletService) BuySlots(ctx context.Context, partyID int16, quan
 
 	txQueries := s.queries.WithTx(tx)
 
-	// Fetch custom slot cost for the party inside transaction
-	globalPriceSetting, err := txQueries.GetSystemSetting(ctx, "slot_cost_kobo")
-	globalPrice := int64(100000)
-	if err == nil {
-		_ = json.Unmarshal(globalPriceSetting.Value, &globalPrice)
+	// Fetch custom slot cost for the party (using cached global slot price)
+	globalPrice, err := s.GetGlobalSlotPrice(ctx)
+	if err != nil {
+		globalPrice = 100000
 	}
 
-	party, err := txQueries.GetPartyByID(ctx, partyID)
+	// Retrieve party info (cached) to evaluate discount tier
+	party, err := s.partiesService.GetPartyByID(ctx, partyID)
 	if err != nil {
 		return queries.Party{}, fmt.Errorf("failed to get party: %w", err)
 	}
 
+	// Parse optional party discount percentage
 	var discount float64
 	if party.DiscountPercentage.Valid {
 		_ = party.DiscountPercentage.Scan(&discount)
 	}
 
+	// Calculate adjusted unit price after applying discount
 	unitPrice := globalPrice
 	if discount > 0.0 && discount < 100.0 {
 		unitPrice = int64(float64(globalPrice) * (1.0 - (discount / 100.0)))
@@ -408,10 +433,11 @@ func (s *PartiesWalletService) BuySlots(ctx context.Context, partyID int16, quan
 		unitPrice = 0
 	}
 
+	// Total cost in Kobo for the requested quantity
 	totalCost := unitPrice * int64(quantity)
 
-	// Get wallet details
-	wallet, err := txQueries.GetPartyWalletByPartyID(ctx, partyID)
+	// Get wallet details (cached via Redis)
+	wallet, err := s.GetPartyWallet(ctx, partyID)
 	if err != nil {
 		return queries.Party{}, fmt.Errorf("wallet not found for party: %w", err)
 	}

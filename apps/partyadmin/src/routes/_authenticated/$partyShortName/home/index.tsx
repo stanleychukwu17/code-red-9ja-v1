@@ -190,6 +190,7 @@ function ReadinessComponent() {
         partyId={partyId}
         wallet={wallet}
         party={party}
+        unitSlotPriceKobo={readinessData?.slot_price_kobo}
         selectedElectionGroup={selectedElectionGroup}
         selectedElection={selectedElection}
         isWalletDialogOpen={isWalletDialogOpen}

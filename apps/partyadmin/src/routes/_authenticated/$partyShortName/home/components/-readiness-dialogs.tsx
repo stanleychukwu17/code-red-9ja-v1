@@ -25,6 +25,7 @@ type ReadinessDialogsProps = {
   partyId?: number;
   wallet?: any;
   party?: any;
+  unitSlotPriceKobo?: number;
   selectedElectionGroup?: any;
   selectedElection?: any;
   isWalletDialogOpen: boolean;
@@ -56,6 +57,7 @@ export function ReadinessDialogs({
   partyId,
   wallet,
   party,
+  unitSlotPriceKobo,
   selectedElectionGroup,
   selectedElection,
   isWalletDialogOpen,
@@ -116,6 +118,7 @@ export function ReadinessDialogs({
         onClose={() => setIsSlotsDialogOpen(false)}
         partyId={partyId}
         walletBalanceKobo={wallet?.balance_kobo ?? 0}
+        unitSlotPriceKobo={unitSlotPriceKobo}
         onSuccess={onSlotsPurchased}
         onDepositFunds={(deficit) => {
           setDepositDeficitAmount(deficit);

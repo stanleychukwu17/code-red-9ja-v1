@@ -53,7 +53,9 @@ const (
 	RedisPartiesList                = "parties:list"                     // STRING: used to store and retrieve all parties and they details, the value is a JSON string of all parties.
 	RedisPartyInfo                  = "parties:info:"                    // STRING: "parties:info:<partyID>" is used to store and retrieve party info.
 	RedisPartyBasicInfo             = "parties:basic_info:"              // STRING: "parties:basic_info:<partyID>" is used to store and retrieve party basic info.
+	RedisPartyByID                  = "parties:by_id:"                   // STRING: "parties:by_id:<partyID>" stores cached full party record.
 	RedisPartyWallet                = "parties:wallet:"                  // STRING: "parties:wallet:<partyID>" is used to store and retrieve cached party wallet.
+	RedisGlobalSlotCost             = "system:setting:slot_cost_kobo"    // STRING: stores the global slot price in Kobo.
 	RedisChapterMemberCount         = "parties:chapter:members_count:"   // STRING: "parties:chapter:members_count:<partyID>:<chapterID>" is used to store and retrieve the number of members in each chapter of a party.
 	RedisNationalChapter            = "parties:national_chapter:"        // STRING: "parties:national_chapter:<partyID>:<countryID>" is used to store the national chapter ID.
 	RedisZonalChapter               = "parties:zonal_chapter:"           // STRING: "parties:zonal_chapter:<partyID>:<zonalID>" is used to store the zonal chapter ID.
@@ -162,7 +164,9 @@ var AllRedisPrefixes = []string{
 	RedisPartiesList,
 	RedisPartyInfo,
 	RedisPartyBasicInfo,
+	RedisPartyByID,
 	RedisPartyWallet,
+	RedisGlobalSlotCost,
 	RedisChapterMemberCount,
 	RedisNationalChapter,
 	RedisZonalChapter,

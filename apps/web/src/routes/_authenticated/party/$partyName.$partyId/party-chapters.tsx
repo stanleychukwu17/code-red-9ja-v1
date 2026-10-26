@@ -13,6 +13,98 @@ export const Route = createFileRoute("/_authenticated/party/$partyName/$partyId/
 
 type ChapterTierFilter = "all" | "national" | "state" | "lga" | "ward";
 
+type ChapterCardProps = {
+  title: string;
+  badge: React.ReactNode;
+  subtitle: React.ReactNode;
+  avatarText?: string;
+  exploreAction?: {
+    label: string;
+    onClick: () => void;
+  };
+  footerExtra?: React.ReactNode;
+  partyName: string;
+  partyId: string;
+};
+
+function ChapterCard({
+  title,
+  badge,
+  subtitle,
+  avatarText,
+  exploreAction,
+  footerExtra,
+  partyName,
+  partyId,
+}: ChapterCardProps) {
+  return (
+    <div className="group rounded-2xl border p-5 transition-all flex flex-col justify-between bg-card border-border/60 hover:border-primary/40 hover:bg-muted/20">
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          {avatarText ? (
+            <div className="size-10 rounded-xl bg-muted/60 flex items-center justify-center text-foreground font-bold text-xs group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+              {avatarText}
+            </div>
+          ) : (
+            <div />
+          )}
+          {badge}
+        </div>
+
+        <h4 className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">
+          {title}
+        </h4>
+        <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+          {subtitle}
+        </div>
+      </div>
+
+      <div className="mt-5 pt-3 border-t border-border/40 flex items-center justify-between">
+        {exploreAction ? (
+          <button
+            type="button"
+            onClick={exploreAction.onClick}
+            className="text-[11px] text-muted-foreground hover:text-foreground font-medium flex items-center gap-1 cursor-pointer"
+          >
+            <span>{exploreAction.label}</span>
+            <ChevronRight className="size-3" />
+          </button>
+        ) : (
+          footerExtra || <span />
+        )}
+
+        <Link
+          to="/party/$partyName/$partyId/leadership"
+          params={{ partyName, partyId }}
+          search={{}}
+          className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
+        >
+          <span>View</span>
+          <ArrowRight className="size-3" />
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+type EmptyHierarchyPromptProps = {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  description: string;
+};
+
+function EmptyHierarchyPrompt({ icon: Icon, title, description }: EmptyHierarchyPromptProps) {
+  return (
+    <div className="rounded-2xl border border-dashed border-border/80 bg-card/40 p-12 text-center">
+      <div className="mx-auto size-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mb-3">
+        <Icon className="size-6" />
+      </div>
+      <h4 className="text-sm font-semibold text-foreground">{title}</h4>
+      <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">{description}</p>
+    </div>
+  );
+}
+
 function PartyChaptersTabComponent() {
   const { partyName, partyId } = Route.useParams();
   const navigate = useNavigate();
@@ -262,57 +354,29 @@ function PartyChaptersTabComponent() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filteredStates.map((state) => {
-              return (
-                <div
-                  key={state.id}
-                  className="group rounded-2xl border p-5 transition-all flex flex-col justify-between bg-card border-border/60 hover:border-primary/40 hover:bg-muted/20"
-                >
-                  <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="size-10 rounded-xl bg-muted/60 flex items-center justify-center text-foreground font-bold text-xs group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                        {state.name.slice(0, 2).toUpperCase()}
-                      </div>
-                      <span className="text-[11px] text-muted-foreground font-medium">
-                        State Tier
-                      </span>
-                    </div>
-
-                    <h4 className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">
-                      {state.name} State Chapter
-                    </h4>
-                    <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                      <MapPin className="size-3 shrink-0" />
-                      <span>{state.name} State, Nigeria</span>
-                    </p>
-                  </div>
-
-                  <div className="mt-5 pt-3 border-t border-border/40 flex items-center justify-between">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedState(state);
-                        setSelectedTier("lga");
-                      }}
-                      className="text-[11px] text-muted-foreground hover:text-foreground font-medium flex items-center gap-1 cursor-pointer"
-                    >
-                      <span>Explore LGAs</span>
-                      <ChevronRight className="size-3" />
-                    </button>
-
-                    <Link
-                      to="/party/$partyName/$partyId/leadership"
-                      params={{ partyName, partyId }}
-                      search={{}}
-                      className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
-                    >
-                      <span>View</span>
-                      <ArrowRight className="size-3" />
-                    </Link>
-                  </div>
-                </div>
-              );
-            })}
+            {filteredStates.map((state) => (
+              <ChapterCard
+                key={state.id}
+                title={`${state.name} State Chapter`}
+                badge={<span className="text-[11px] text-muted-foreground font-medium">State Tier</span>}
+                avatarText={state.name.slice(0, 2).toUpperCase()}
+                subtitle={
+                  <>
+                    <MapPin className="size-3 shrink-0" />
+                    <span>{state.name} State, Nigeria</span>
+                  </>
+                }
+                exploreAction={{
+                  label: "Explore LGAs",
+                  onClick: () => {
+                    setSelectedState(state);
+                    setSelectedTier("lga");
+                  },
+                }}
+                partyName={partyName}
+                partyId={partyId}
+              />
+            ))}
           </div>
         </div>
       )}
@@ -339,15 +403,11 @@ function PartyChaptersTabComponent() {
           </div>
 
           {!selectedState ? (
-            <div className="rounded-2xl border border-dashed border-border/80 bg-card/40 p-12 text-center">
-              <div className="mx-auto size-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mb-3">
-                <MapPin className="size-6" />
-              </div>
-              <h4 className="text-sm font-semibold text-foreground">Select a State</h4>
-              <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
-                Choose any state from the selector above to browse all LGA party chapters in that region.
-              </p>
-            </div>
+            <EmptyHierarchyPrompt
+              icon={MapPin}
+              title="Select a State"
+              description="Choose any state from the selector above to browse all LGA party chapters in that region."
+            />
           ) : filteredLgas.length === 0 ? (
             <div className="rounded-2xl border border-border/60 bg-card/40 p-10 text-center text-muted-foreground text-xs">
               No LGAs found matching "{searchQuery}" in {selectedState.name} State.
@@ -355,47 +415,30 @@ function PartyChaptersTabComponent() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {filteredLgas.map((lga) => (
-                <div
+                <ChapterCard
                   key={lga.id}
-                  className="rounded-2xl border border-border/60 bg-card p-5 hover:border-primary/40 hover:bg-muted/20 transition-all flex flex-col justify-between group"
-                >
-                  <div>
+                  title={`${lga.name} Chapter`}
+                  badge={
                     <span className="text-[10px] font-bold text-primary uppercase tracking-wider">
                       LGA Chapter
                     </span>
-                    <h4 className="text-sm font-bold text-foreground group-hover:text-primary transition-colors mt-1">
-                      {lga.name} Chapter
-                    </h4>
-                    <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                  }
+                  subtitle={
+                    <>
                       <Building2 className="size-3 shrink-0" />
                       <span>{selectedState.name} State</span>
-                    </p>
-                  </div>
-
-                  <div className="mt-5 pt-3 border-t border-border/40 flex items-center justify-between">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedLga(lga);
-                        setSelectedTier("ward");
-                      }}
-                      className="text-[11px] text-muted-foreground hover:text-foreground font-medium flex items-center gap-1 cursor-pointer"
-                    >
-                      <span>Explore Wards</span>
-                      <ChevronRight className="size-3" />
-                    </button>
-
-                    <Link
-                      to="/party/$partyName/$partyId/leadership"
-                      params={{ partyName, partyId }}
-                      search={{}}
-                      className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
-                    >
-                      <span>View</span>
-                      <ArrowRight className="size-3" />
-                    </Link>
-                  </div>
-                </div>
+                    </>
+                  }
+                  exploreAction={{
+                    label: "Explore Wards",
+                    onClick: () => {
+                      setSelectedLga(lga);
+                      setSelectedTier("ward");
+                    },
+                  }}
+                  partyName={partyName}
+                  partyId={partyId}
+                />
               ))}
             </div>
           )}
@@ -423,19 +466,15 @@ function PartyChaptersTabComponent() {
           </div>
 
           {!selectedState || !selectedLga ? (
-            <div className="rounded-2xl border border-dashed border-border/80 bg-card/40 p-12 text-center">
-              <div className="mx-auto size-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mb-3">
-                <Globe className="size-6" />
-              </div>
-              <h4 className="text-sm font-semibold text-foreground">
-                {!selectedState ? "Select a State" : "Select an LGA"}
-              </h4>
-              <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
-                {!selectedState
+            <EmptyHierarchyPrompt
+              icon={Globe}
+              title={!selectedState ? "Select a State" : "Select an LGA"}
+              description={
+                !selectedState
                   ? "Choose a state and LGA from the selectors above to explore grassroots ward chapters."
-                  : `Choose an LGA in ${selectedState.name} State to view its ward chapters.`}
-              </p>
-            </div>
+                  : `Choose an LGA in ${selectedState.name} State to view its ward chapters.`
+              }
+            />
           ) : filteredWards.length === 0 ? (
             <div className="rounded-2xl border border-border/60 bg-card/40 p-10 text-center text-muted-foreground text-xs">
               No electoral wards found matching "{searchQuery}" in {selectedLga.name} LGA.
@@ -443,36 +482,26 @@ function PartyChaptersTabComponent() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {filteredWards.map((ward) => (
-                <div
+                <ChapterCard
                   key={ward.id}
-                  className="rounded-2xl border border-border/60 bg-card p-5 hover:border-primary/40 hover:bg-muted/20 transition-all flex flex-col justify-between group"
-                >
-                  <div>
+                  title={ward.name}
+                  badge={
                     <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
                       Ward Chapter
                     </span>
-                    <h4 className="text-sm font-bold text-foreground group-hover:text-primary transition-colors mt-1">
-                      {ward.name}
-                    </h4>
-                    <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                  }
+                  subtitle={
+                    <>
                       <MapPin className="size-3 shrink-0" />
-                      <span>{selectedLga.name}, {selectedState.name}</span>
-                    </p>
-                  </div>
-
-                  <div className="mt-5 pt-3 border-t border-border/40 flex items-center justify-between">
-                    <span className="text-[11px] text-muted-foreground">Grassroots Tier</span>
-                    <Link
-                      to="/party/$partyName/$partyId/leadership"
-                      params={{ partyName, partyId }}
-                      search={{}}
-                      className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
-                    >
-                      <span>View</span>
-                      <ArrowRight className="size-3" />
-                    </Link>
-                  </div>
-                </div>
+                      <span>
+                        {selectedLga.name}, {selectedState.name}
+                      </span>
+                    </>
+                  }
+                  footerExtra={<span className="text-[11px] text-muted-foreground">Grassroots Tier</span>}
+                  partyName={partyName}
+                  partyId={partyId}
+                />
               ))}
             </div>
           )}

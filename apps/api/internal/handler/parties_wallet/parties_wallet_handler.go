@@ -135,8 +135,11 @@ func (h *Handler) GetPartyWallet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	slotPriceKobo, _ := h.partiesWalletService.GetPartySlotPrice(r.Context(), int16(id))
+
 	h.utils.RespondSuccess(w, http.StatusOK, "Wallet fetched successfully", map[string]interface{}{
-		"wallet": FormatPartyWalletResponse(wallet),
+		"wallet":               FormatPartyWalletResponse(wallet),
+		"unit_slot_price_kobo": slotPriceKobo,
 	})
 }
 
@@ -500,35 +503,6 @@ func (h *Handler) UpdateGlobalSlotPrice(w http.ResponseWriter, r *http.Request) 
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Global slot price updated successfully", map[string]interface{}{
 		"price_kobo": price,
-	})
-}
-
-// GetPartySlotPrice godoc
-// @Summary      Get party slot price
-// @Description  Calculates the customized price of a single slot for a political party, accounting for their discount
-// @Tags         Parties
-// @Produce      json
-// @Param        id path int true "Party ID"
-// @Success      200  {object} map[string]interface{} "Party slot price retrieved"
-// @Security     BearerAuth
-// @Router       /parties/{id}/slots/price [get]
-func (h *Handler) GetPartySlotPrice(w http.ResponseWriter, r *http.Request) {
-	idStr := chi.URLParam(r, "id")
-	partyID, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID")
-		return
-	}
-
-	price, err := h.partiesWalletService.GetPartySlotPrice(r.Context(), int16(partyID))
-	if err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to retrieve slot price: "+err.Error())
-		return
-	}
-
-	h.utils.RespondSuccess(w, http.StatusOK, "Party slot price calculated", map[string]interface{}{
-		"party_id":        partyID,
-		"unit_price_kobo": price,
 	})
 }
 

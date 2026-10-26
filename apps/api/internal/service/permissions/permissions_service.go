@@ -31,8 +31,6 @@ func NewPermissionsService() *PermissionsService {
 	return &PermissionsService{}
 }
 
-
-
 // CheckUserModificationPermission verifies if the requester (identified by claims) has the necessary
 // permissions to modify the specified user's details. It enforces the following rules:
 //   - Verified accounts can only be modified by the account owner or a super admin.
@@ -108,5 +106,3 @@ func (s *PermissionsService) CheckPartyMemberSuspensionPermission(claims *utils.
 
 	return s.CheckPartyModificationPermission(claims, partyID)
 }
-
-
