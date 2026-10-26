@@ -15,12 +15,12 @@ import {
   DialogPadding,
 } from "@repo/ui/components/dialog";
 import { Package, Loader2, Coins } from "lucide-react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { buyPartySlots } from "#/lib/server/parties";
+import { QUERY_KEYS } from "#/lib/config";
 import { toast } from "sonner";
 import { DescriptiveText } from "@repo/ui/components/custom/Texts";
 import FancyBillIcon from "@repo/ui/icons/fancy-bill-icon";
-import { cn } from "@repo/ui/lib/utils";
 import FancySadEmojiIcon from "@repo/ui/icons/fancy-sad-emoji-icon";
 import FancyHappyEmojiIcon from "@repo/ui/icons/fancy-happy-emoji-icon";
 import { PartyWalletBalance } from "./party-wallet-balance";
@@ -38,7 +38,6 @@ type BuyAgentSlotsDialogProps = {
   partyId?: number;
   walletBalanceKobo: number;
   unitSlotPriceKobo?: number;
-  onSuccess?: () => void;
   onDepositFunds?: (deficitNaira: number) => void;
 };
 
@@ -47,7 +46,9 @@ type BuyAgentSlotsDialogProps = {
  * Prompts user for quantity of slots, multiplies by server-provided unit slot rate,
  * and submits the purchase transaction.
  */
-export function BuyAgentSlotsDialog({ partyId, walletBalanceKobo, unitSlotPriceKobo, open, onClose, onSuccess, onDepositFunds }: BuyAgentSlotsDialogProps) {
+export function BuyAgentSlotsDialog({ partyId, walletBalanceKobo, unitSlotPriceKobo, open, onClose, onDepositFunds }: BuyAgentSlotsDialogProps) {
+  const queryClient = useQueryClient();
+
   // Number of agent slots to purchase (default: 100)
   const [slots, setSlots] = useState(100);
 
@@ -62,7 +63,11 @@ export function BuyAgentSlotsDialog({ partyId, walletBalanceKobo, unitSlotPriceK
     onSuccess: (res) => {
       if (res && res.success) {
         toast.success(`Successfully purchased ${slots} slots!`);
-        onSuccess?.();
+        if (partyId) {
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.party.byId(partyId) });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partyReadiness.byParty(partyId) });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partyWallet.byParty(partyId) });
+        }
         onClose();
       } else {
         toast.error(res?.message || "Failed to purchase slots");
@@ -76,8 +81,8 @@ export function BuyAgentSlotsDialog({ partyId, walletBalanceKobo, unitSlotPriceK
   // Wallet and cost calculations in Naira
   const walletBalanceNaira = walletBalanceKobo / 100;
   const totalCost = slots * pricePerSlot;
-  const deficit = totalCost - walletBalanceNaira;
-  const isInsufficient = deficit > 0; // Check if party wallet lacks funds
+  const isInsufficient = totalCost > walletBalanceNaira;
+  const deficit = isInsufficient ? totalCost - walletBalanceNaira : 0;
 
   // Sanitize numeric input and cap maximum slots at 5,000,000
   const handleInput = (e: ChangeEvent<HTMLInputElement>) => {
@@ -137,7 +142,7 @@ export function BuyAgentSlotsDialog({ partyId, walletBalanceKobo, unitSlotPriceK
           </div>
 
           {/* Insufficient balance warning */}
-          {!isInsufficient && (
+          {isInsufficient && (
             <div className="space-y-2">
               <PartyWalletBalance
                 icon={<FancySadEmojiIcon className="shrink-0 size-6" />}
@@ -158,7 +163,7 @@ export function BuyAgentSlotsDialog({ partyId, walletBalanceKobo, unitSlotPriceK
               )}
             </div>
           )}
-          {!!isInsufficient && (
+          {!isInsufficient && (
             <PartyWalletBalance
               icon={<FancyHappyEmojiIcon className="shrink-0 size-6" />}
               label="Wallet balance"

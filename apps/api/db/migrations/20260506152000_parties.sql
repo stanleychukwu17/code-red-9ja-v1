@@ -15,7 +15,7 @@ CREATE TABLE parties (
   discount_percentage NUMERIC(5, 2) NOT NULL DEFAULT 0.00 CHECK (discount_percentage >= 0.00 AND discount_percentage <= 100.00),
   agent_payment_balance_kobo BIGINT NOT NULL DEFAULT 0 CHECK (agent_payment_balance_kobo >= 0),
   agent_payment_allocation_kobo JSONB NOT NULL DEFAULT '{"polling_agent":{"default":0,"states":{}},"ward_election_supervisor":{"default":0,"states":{}},"lga_election_supervisor":{"default":0,"states":{}},"state_election_supervisor":{"default":0,"states":{}}}'::jsonb,
-  agent_acquisition_targets JSONB NOT NULL DEFAULT '{"polling_agent": 1, "ward_election_supervisor": 1, "lga_election_supervisor": 1, "state_election_supervisor": 1}'::jsonb,
+  agent_acquisition_targets JSONB NOT NULL DEFAULT '{"polling_agent": 2, "ward_election_supervisor": 1, "lga_election_supervisor": 1, "state_election_supervisor": 1}'::jsonb,
   auto_accept_applications JSONB NOT NULL DEFAULT '{"polling_agent": true, "ward_election_supervisor": true, "lga_election_supervisor": true, "state_election_supervisor": true}'::jsonb,
   color_hex VARCHAR(50) DEFAULT NULL,
   dark_color_hex VARCHAR(50) DEFAULT NULL,

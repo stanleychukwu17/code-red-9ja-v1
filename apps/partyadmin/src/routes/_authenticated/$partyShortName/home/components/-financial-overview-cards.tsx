@@ -5,6 +5,7 @@ import { cn } from "@repo/ui/lib/utils";
 import ArrowHandleIcon from "@repo/ui/icons/arrow-handle-icon";
 import FancyAgentIcon from "@repo/ui/icons/fancy-agent-icon";
 import { useUserParty } from "#/hooks/useUserParty";
+import { QUERY_KEYS } from "#/lib/config";
 import { useServerFn } from "@tanstack/react-start";
 import { useQueryClient } from "@tanstack/react-query";
 import { updatePartyAgentTargets } from "#/lib/server/parties";
@@ -122,13 +123,11 @@ type TargetCardProps = {
     state_election_supervisor?: number | string;
   } | null;
   partyId?: number;
-  onTargetsUpdated?: () => void;
 };
 
 export function TargetCard({
   targets: propTargets,
   partyId: propPartyId,
-  onTargetsUpdated,
 }: TargetCardProps = {}) {
   const { party } = useUserParty();
   const partyId = propPartyId ?? party?.id;
@@ -198,19 +197,10 @@ export function TargetCard({
           updateTargets={handleUpdateTargets}
           onSuccess={() => {
             setIsDialogOpen(false);
-            if (onTargetsUpdated) {
-              onTargetsUpdated();
-            } else {
-              queryClient.invalidateQueries({
-                queryKey: ["election-stats"],
-              });
-              queryClient.invalidateQueries({
-                queryKey: ["party-agent-targets", partyId],
-              });
-              queryClient.invalidateQueries({
-                queryKey: ["party", partyId],
-              });
-            }
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.electionStats.root });
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partyAgentTargets.byParty(partyId) });
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partyReadiness.byParty(partyId) });
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.party.byId(partyId) });
           }}
         />
       )}
@@ -235,12 +225,9 @@ type AgentPaymentCardProps = {
 export function AgentPaymentCard({ onEdit, party }: AgentPaymentCardProps) {
   const allocations = party?.agent_payment_allocation_kobo || {};
   const pollingAgentPaymentKobo = allocations.polling_agent?.default || 0;
-  const wardSupervisorPaymentKobo =
-    allocations.ward_election_supervisor?.default || 0;
-  const lgaSupervisorPaymentKobo =
-    allocations.lga_election_supervisor?.default || 0;
-  const stateSupervisorPaymentKobo =
-    allocations.state_election_supervisor?.default || 0;
+  const wardSupervisorPaymentKobo = allocations.ward_election_supervisor?.default || 0;
+  const lgaSupervisorPaymentKobo = allocations.lga_election_supervisor?.default || 0;
+  const stateSupervisorPaymentKobo = allocations.state_election_supervisor?.default || 0;
 
   const payments = [
     {

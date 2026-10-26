@@ -14,8 +14,9 @@ import {
   DialogPadding,
 } from "@repo/ui/components/dialog";
 import { Loader2 } from "lucide-react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { depositPartyAllowance } from "#/lib/server/parties";
+import { QUERY_KEYS } from "#/lib/config";
 import { toast } from "sonner";
 import { DescriptiveText } from "@repo/ui/components/custom/Texts";
 import FancySadEmojiIcon from "@repo/ui/icons/fancy-sad-emoji-icon";
@@ -36,7 +37,6 @@ export type DepositAllowanceDialogProps = {
   walletBalanceKobo: number;
   agentPaymentBalanceKobo?: number;
   defaultAmountNaira?: number;
-  onSuccess?: () => void;
 };
 
 /**
@@ -51,8 +51,9 @@ export function DepositAllowanceDialog({
   defaultAmountNaira = 100000,
   open,
   onClose,
-  onSuccess,
 }: DepositAllowanceDialogProps) {
+  const queryClient = useQueryClient();
+
   // Target deposit amount in Naira
   const [depositAmountNaira, setDepositAmountNaira] = useState(defaultAmountNaira);
 
@@ -67,7 +68,12 @@ export function DepositAllowanceDialog({
     onSuccess: (res) => {
       if (res && res.success) {
         toast.success(`Successfully deposited ${formatNaira(depositAmountNaira)} to agent payment balance!`);
-        onSuccess?.();
+        if (partyId) {
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.party.byId(partyId) });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partyReadiness.byParty(partyId) });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partyWallet.byParty(partyId) });
+        }
+
         onClose();
       } else {
         toast.error(res?.message || "Failed to deposit agent payment");

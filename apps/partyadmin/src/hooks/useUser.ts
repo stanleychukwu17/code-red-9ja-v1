@@ -11,6 +11,7 @@ export interface Party {
 	slots?: number;
 	agent_payment_balance_kobo?: number;
 	agent_payment_allocation_kobo?: Record<string, number>;
+	agent_acquisition_targets?: Record<string, number>;
 	created_at?: string;
 	updated_at?: string;
 }

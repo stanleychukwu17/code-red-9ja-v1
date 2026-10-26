@@ -12,8 +12,6 @@ import { Loader2 } from "lucide-react";
 import { DescriptiveText } from "../custom/Texts";
 import { MoneyInput } from "../input";
 
-// ─── Types ──────────────────────────────────────────────────────────────────
-
 export type AgentRoles =
   | "polling_agent"
   | "ward_election_supervisor"
@@ -44,7 +42,6 @@ const DEFAULT_ALLOCATION: AgentPaymentAllocation = {
   state_election_supervisor: { default: 0, states: {} },
 };
 
-// Map legacy camelCase keys to snake_case if present
 const LEGACY_ROLE_MAP: Record<string, AgentRoles> = {
   pollingAgent: "polling_agent",
   wardElectionSupervisor: "ward_election_supervisor",
@@ -52,31 +49,47 @@ const LEGACY_ROLE_MAP: Record<string, AgentRoles> = {
   stateElectionSupervisor: "state_election_supervisor",
 };
 
-// ─── Props ───────────────────────────────────────────────────────────────────
-
 export interface AgentPaymentAllocationFormDialogProps {
   open: boolean;
   onClose: () => void;
   partyId: number | string;
-  /** Fetch the current allocation from the API. Receives the partyId. */
-  fetchAllocation: (
+  initialAllocation?: any | null;
+  fetchAllocation?: (
     partyId: number | string,
   ) => Promise<AgentPaymentAllocation | null>;
-  /** Submit the updated allocation to the API. Receives partyId + full payload. */
   updateAllocation: (
     partyId: number | string,
     values: AgentPaymentAllocation,
   ) => Promise<any>;
-  /** Optional callback after a successful save. */
   onSuccess?: () => void;
 }
 
-// ─── Dialog ───────────────────────────────────────────────────────────────────
+function parseKoboAllocationToNaira(alloc: any): AgentPaymentAllocation {
+  const converted = { ...DEFAULT_ALLOCATION };
+  if (!alloc) return converted;
+
+  Object.keys(alloc).forEach((key) => {
+    const role = (LEGACY_ROLE_MAP[key] || key) as AgentRoles;
+    if (converted[role] !== undefined && alloc[key]) {
+      converted[role] = {
+        default: (alloc[key].default || 0) / 100,
+        states: Object.fromEntries(
+          Object.entries(alloc[key].states || {}).map(([state, kobo]) => [
+            state,
+            (Number(kobo) || 0) / 100,
+          ]),
+        ),
+      };
+    }
+  });
+  return converted;
+}
 
 export function AgentPaymentAllocationFormDialog({
   open,
   onClose,
   partyId,
+  initialAllocation,
   fetchAllocation,
   updateAllocation,
   onSuccess,
@@ -85,40 +98,26 @@ export function AgentPaymentAllocationFormDialog({
     React.useState<AgentPaymentAllocation>(DEFAULT_ALLOCATION);
   const [error, setError] = React.useState<string | null>(null);
 
-  // ── Fetch existing allocation ──────────────────────────────────────────────
-  const { data: fetchedAllocation, isLoading } = useQuery({
+  const { data: queriedAllocation, isLoading: isQueryLoading } = useQuery({
     queryKey: ["agentPaymentAllocation", partyId],
-    queryFn: () => fetchAllocation(partyId),
-    enabled: open && !!partyId,
+    queryFn: () => (fetchAllocation ? fetchAllocation(partyId) : null),
+    enabled: open && !!partyId && !initialAllocation && !!fetchAllocation,
+    staleTime: Infinity,
   });
 
-  // Sync fetched values into local state whenever the dialog opens / data arrives
+  const activeAllocation = initialAllocation ?? queriedAllocation;
+  const isLoading = !initialAllocation && isQueryLoading;
+
   React.useEffect(() => {
     if (!open) return;
-    if (fetchedAllocation) {
-      const koboToNaira = (alloc: any): AgentPaymentAllocation => {
-        const converted = { ...DEFAULT_ALLOCATION };
-        Object.keys(alloc || {}).forEach((key) => {
-          const role = (LEGACY_ROLE_MAP[key] || key) as AgentRoles;
-          if (converted[role] !== undefined && alloc[key]) {
-            converted[role] = {
-              default: (alloc[key].default || 0) / 100,
-              states: Object.fromEntries(
-                Object.entries(alloc[key].states || {}).map(([state, kobo]) => [state, (Number(kobo) || 0) / 100])
-              )
-            };
-          }
-        });
-        return converted;
-      };
-      setValues(koboToNaira(fetchedAllocation));
+    if (activeAllocation) {
+      setValues(parseKoboAllocationToNaira(activeAllocation));
     } else {
       setValues(DEFAULT_ALLOCATION);
     }
     setError(null);
-  }, [open, fetchedAllocation]);
+  }, [open, activeAllocation]);
 
-  // ── Mutation ───────────────────────────────────────────────────────────────
   const mutation = useMutation({
     mutationFn: () => {
       const nairaToKobo = (alloc: AgentPaymentAllocation): AgentPaymentAllocation => {
@@ -148,7 +147,6 @@ export function AgentPaymentAllocationFormDialog({
     },
   });
 
-  // ── Helpers ────────────────────────────────────────────────────────────────
   function handleDefaultChange(role: AgentRoles, num: number) {
     setValues((prev) => ({
       ...prev,
@@ -156,14 +154,11 @@ export function AgentPaymentAllocationFormDialog({
     }));
   }
 
-  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
       <DialogContent className="max-w-[520px]">
-        {/* Header */}
         <DialogHeader title="Agent Payment Allocation" />
 
-        {/* Body */}
         <DialogPadding>
           <DescriptiveText text="Set how much you'd like to pay party election agents for the upcoming elections." />
           {isLoading ? (
@@ -194,7 +189,6 @@ export function AgentPaymentAllocationFormDialog({
           )}
         </DialogPadding>
 
-        {/* Footer */}
         <DialogFooter>
           <Button
             variant="secondary"

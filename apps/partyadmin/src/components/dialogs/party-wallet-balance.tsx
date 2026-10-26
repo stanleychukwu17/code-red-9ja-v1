@@ -14,8 +14,7 @@ export function PartyWalletBalance({ icon, label, value, className, valueClassNa
   return (
     <div
       className={cn(
-        "h-14 rounded-xl bg-c-5 px-5 flex items-center justify-between gap-3",
-        className,
+        "h-14 rounded-xl bg-c-5 px-5 flex items-center justify-between gap-3", className,
       )}
     >
       {icon}

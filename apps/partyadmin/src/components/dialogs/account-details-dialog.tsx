@@ -80,11 +80,11 @@ export function AccountDetailsDialog({ open, defaultAmount, setOpen, onClose, on
     },
   });
 
-  // Strip non-digits and cap at ₦1,000,000,000
+  // Strip non-digits and cap at ₦10,000,000,000
   const handleFundAmountChange = (e: ChangeEvent<HTMLInputElement>) => {
     const rawVal = e.target.value.replace(/\D/g, "");
     const parsed = Number(rawVal) || 0;
-    if (parsed <= 1_000_000_000) {
+    if (parsed <= 10_000_000_000) {
       setFundAmount(parsed);
     }
   };

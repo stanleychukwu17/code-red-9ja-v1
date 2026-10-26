@@ -6,6 +6,7 @@ import { useForm } from "@tanstack/react-form";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@repo/ui/components/accordion";
 import { useQuery, useMutation } from "@tanstack/react-query";
 
+// Schema representing target quotas for each supervisory/agent tier
 export type TargetData = {
   polling_agent: number;
   ward_election_supervisor: number;
@@ -13,6 +14,7 @@ export type TargetData = {
   state_election_supervisor: number;
 };
 
+// Form field configurations and display labels for each hierarchy level
 export const TARGET_FIELDS = [
   {
     name: "polling_agent",
@@ -32,15 +34,8 @@ export const TARGET_FIELDS = [
   },
 ] as const;
 
-export function TargetFormDialog({
-  open,
-  onClose,
-  partyId,
-  fetchTargets,
-  initialTargets,
-  updateTargets,
-  onSuccess,
-}: {
+// Component props for configuring target fetching, updating, and modal state
+export type TargetFormDialogProps = {
   open: boolean;
   onClose: () => void;
   partyId: string | number;
@@ -48,7 +43,10 @@ export function TargetFormDialog({
   initialTargets?: TargetData | null;
   updateTargets: (partyId: string | number, values: TargetData) => Promise<any>;
   onSuccess?: () => void;
-}) {
+};
+
+export function TargetFormDialog({ open, onClose, partyId, fetchTargets, initialTargets, updateTargets, onSuccess }: TargetFormDialogProps) {
+  // Fetch targets via query only if initialTargets was not provided as a prop
   const { data: queriedTargets, isLoading: isQueryLoading } = useQuery({
     queryKey: ["party-agent-targets", partyId],
     queryFn: () => (fetchTargets ? fetchTargets(partyId) : null),
@@ -56,9 +54,11 @@ export function TargetFormDialog({
     staleTime: Infinity,
   });
 
+  // Prioritize pre-passed targets to prevent redundant network calls and UI flickering
   const targets = initialTargets ?? queriedTargets;
   const isLoading = !initialTargets && isQueryLoading;
 
+  // Mutation to persist updated agent quotas to the backend
   const mutation = useMutation({
     mutationFn: (values: TargetData) => updateTargets(partyId, values),
     onSuccess: () => {
@@ -66,6 +66,7 @@ export function TargetFormDialog({
     },
   });
 
+  // Form controller managing editable quota counts per administrative tier
   const form = useForm({
     defaultValues: {
       polling_agent: initialTargets?.polling_agent ?? 1,
@@ -78,6 +79,7 @@ export function TargetFormDialog({
     },
   });
 
+  // Synchronize form values whenever dialog opens or targets change
   useEffect(() => {
     if (open && targets) {
       form.setFieldValue("polling_agent", targets.polling_agent ?? 1);

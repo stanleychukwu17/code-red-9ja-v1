@@ -376,7 +376,6 @@ function WalletSlotsAllowanceSection({
         partyId={party?.id}
         walletBalanceKobo={wallet?.balance_kobo ?? 0}
         unitSlotPriceKobo={walletRes?.data?.unit_slot_price_kobo}
-        onSuccess={onSuccess}
         onDepositFunds={(deficit) => {
           setDeficitAmount(deficit);
           setIsSlotsDialogOpen(false);
@@ -401,7 +400,6 @@ function WalletSlotsAllowanceSection({
         partyId={party?.id}
         walletBalanceKobo={wallet?.balance_kobo ?? 0}
         agentPaymentBalanceKobo={party?.agent_payment_balance_kobo ?? 0}
-        onSuccess={onSuccess}
       />
     </section>
   );

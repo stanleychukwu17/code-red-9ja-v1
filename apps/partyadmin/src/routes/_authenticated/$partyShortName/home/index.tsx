@@ -71,10 +71,11 @@ function ReadinessComponent() {
 
   // Single consolidated query for party readiness:
   // Returns treasury wallet, active marketing campaigns, slots, and setup checklists in one round-trip.
-  const { data: readinessRes, refetch: refetchReadiness } = useQuery({
+  const { data: readinessRes } = useQuery({
     queryKey: QUERY_KEYS.partyReadiness.byParty(partyId),
     queryFn: () => fetchPartyReadinessFn({ data: partyId! }),
     enabled: !!partyId,
+    staleTime: Infinity,
   });
 
   // Extract structured readiness fields
@@ -86,32 +87,19 @@ function ReadinessComponent() {
   // Whether the party has completed marketing campaign setup
   const hasMarketingSetup = readinessData?.has_marketing_setup ?? false;
 
-  // ReFetches readiness to refresh treasury wallet balances and statuses after actions
-  const refetchWallet = () => {
-    refetchReadiness();
-  };
-
   // Geographical election & agent recruitment statistics:
   // Dynamically scoped to the selected group, state, LGA, or ward
   const { data: electionStatsData, isLoading: isStatsLoading } = useQuery({
-    queryKey: [
-      "election-stats",
-      selectedElectionGroup?.id,
-      party?.id,
-      selectedStateId,
-      selectedLGAId,
-      selectedWardId,
-    ],
-    queryFn: () =>
-      fetchElectionStatsFn({
-        data: {
-          electionGroupId: selectedElectionGroup?.id as number,
-          partyId: party?.id!,
-          stateId: selectedStateId,
-          lgaId: selectedLGAId,
-          wardId: selectedWardId,
-        },
-      }),
+    queryKey: QUERY_KEYS.electionStats.byFilter(selectedElectionGroup?.id, party?.id, selectedStateId, selectedLGAId, selectedWardId),
+    queryFn: () => fetchElectionStatsFn({
+      data: {
+        electionGroupId: selectedElectionGroup?.id as number,
+        partyId: party?.id!,
+        stateId: selectedStateId,
+        lgaId: selectedLGAId,
+        wardId: selectedWardId,
+      },
+    }),
     enabled: !!selectedElectionGroup?.id,
   });
 
@@ -119,18 +107,11 @@ function ReadinessComponent() {
   const resolvedStats = electionStatsData?.data?.party_stats || {};
 
   // Target recruitment counts per operational tier:
-  // Derived from election stats, or fallback to readiness party targets / active party targets
+  // Derived from election stats, or readiness party targets
   const targets =
     electionStatsData?.data?.targets ||
     readinessData?.party?.agent_acquisition_targets ||
-    party?.agent_acquisition_targets ||
     {};
-
-  // Refresh wallet & party cache after buying slots
-  const handleSlotsPurchased = () => {
-    refetchWallet();
-    queryClient.invalidateQueries({ queryKey: ["party", partyId] });
-  };
 
   return (
     <DashboardLayout>
@@ -145,15 +126,9 @@ function ReadinessComponent() {
             isLoading={isStatsLoading}
           />
           <RequiredActionsSection
-            hasSlots={(party?.slots ?? 0) > 0}
-            hasAgentPaymentBalance={(party?.agent_payment_balance_kobo ?? 0) > 0}
-            hasPaymentAllocation={
-              party?.agent_payment_allocation_kobo
-                ? Object.values(party.agent_payment_allocation_kobo).some(
-                  (role: any) => (role?.default ?? 0) > 0,
-                )
-                : false
-            }
+            hasSlots={readinessData?.has_slots ?? ((readinessData?.party?.slots ?? 0) > 0)}
+            hasAgentPaymentBalance={readinessData?.has_agent_payment ?? ((readinessData?.party?.agent_payment_balance_kobo ?? 0) > 0)}
+            hasPaymentAllocation={readinessData?.has_payment_allocation ?? false}
             hasMarketingSetup={hasMarketingSetup}
             onBuySlots={() => setIsSlotsDialogOpen(true)}
             onDepositPayment={() => setIsPaymentDialogOpen(true)}
@@ -173,8 +148,8 @@ function ReadinessComponent() {
         <div className="space-y-6">
           <FinancialOverallCard
             walletBalance={wallet?.balance_kobo || 0}
-            slots={party?.slots || 0}
-            agentPaymentBalance={party?.agent_payment_balance_kobo || 0}
+            slots={readinessData?.party?.slots || 0}
+            agentPaymentBalance={readinessData?.party?.agent_payment_balance_kobo || 0}
             activeCampaignsCount={activeCampaignsCount}
             onOpenWallet={() => setIsWalletDialogOpen(true)}
             onBuySlots={() => setIsSlotsDialogOpen(true)}
@@ -184,15 +159,10 @@ function ReadinessComponent() {
           <TargetCard
             targets={targets}
             partyId={partyId}
-            onTargetsUpdated={() => {
-              queryClient.invalidateQueries({ queryKey: ["election-stats"] });
-              queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partyReadiness.byParty(partyId) });
-              queryClient.invalidateQueries({ queryKey: ["party", partyId] });
-            }}
           />
           <AgentPaymentCard
             onEdit={() => setIsBudgetDialogOpen(true)}
-            party={party}
+            party={readinessData?.party}
           />
         </div>
       </div>
@@ -206,10 +176,8 @@ function ReadinessComponent() {
         selectedElection={selectedElection}
         isWalletDialogOpen={isWalletDialogOpen}
         setIsWalletDialogOpen={setIsWalletDialogOpen}
-        onWalletSuccess={refetchWallet}
         isSlotsDialogOpen={isSlotsDialogOpen}
         setIsSlotsDialogOpen={setIsSlotsDialogOpen}
-        onSlotsPurchased={handleSlotsPurchased}
         isBudgetDialogOpen={isBudgetDialogOpen}
         setIsBudgetDialogOpen={setIsBudgetDialogOpen}
         isPaymentDialogOpen={isPaymentDialogOpen}

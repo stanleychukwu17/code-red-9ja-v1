@@ -19,6 +19,7 @@ import {
 import { getElectionGroups } from "#/lib/server/election_groups";
 import { getElectionsByGroup } from "#/lib/server/elections";
 import { getStates } from "#/lib/server/countries";
+import { QUERY_KEYS } from "#/lib/config";
 
 type ReadinessDialogsProps = {
   partyId?: number;
@@ -29,10 +30,8 @@ type ReadinessDialogsProps = {
   selectedElection?: any;
   isWalletDialogOpen: boolean;
   setIsWalletDialogOpen: (open: boolean) => void;
-  onWalletSuccess: () => void;
   isSlotsDialogOpen: boolean;
   setIsSlotsDialogOpen: (open: boolean) => void;
-  onSlotsPurchased: () => void;
   isBudgetDialogOpen: boolean;
   setIsBudgetDialogOpen: (open: boolean) => void;
   isPaymentDialogOpen: boolean;
@@ -61,10 +60,8 @@ export function ReadinessDialogs({
   selectedElection,
   isWalletDialogOpen,
   setIsWalletDialogOpen,
-  onWalletSuccess,
   isSlotsDialogOpen,
   setIsSlotsDialogOpen,
-  onSlotsPurchased,
   isBudgetDialogOpen,
   setIsBudgetDialogOpen,
   isPaymentDialogOpen,
@@ -108,7 +105,6 @@ export function ReadinessDialogs({
         }}
         wallet={wallet}
         defaultAmount={depositDeficitAmount}
-        onSuccess={onWalletSuccess}
       />
 
       <BuyAgentSlotsDialog
@@ -117,7 +113,6 @@ export function ReadinessDialogs({
         partyId={partyId}
         walletBalanceKobo={wallet?.balance_kobo ?? 0}
         unitSlotPriceKobo={unitSlotPriceKobo}
-        onSuccess={onSlotsPurchased}
         onDepositFunds={(deficit) => {
           setDepositDeficitAmount(deficit);
           setIsSlotsDialogOpen(false);
@@ -129,6 +124,7 @@ export function ReadinessDialogs({
         open={isBudgetDialogOpen}
         onClose={() => setIsBudgetDialogOpen(false)}
         partyId={partyId!}
+        initialAllocation={party?.agent_payment_allocation_kobo}
         fetchAllocation={async (id) => {
           const res = await getPartyAgentPaymentAllocation({ data: id });
           return (
@@ -142,7 +138,8 @@ export function ReadinessDialogs({
             data: { partyID: id, allowances: values as any },
           });
           if (!res.success) throw new Error(res.message || "Failed to update");
-          queryClient.invalidateQueries({ queryKey: ["party", partyId] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.party.byId(partyId) });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partyReadiness.byParty(partyId) });
           toast.success("Agent payment budget saved!");
           return res.data;
         }}
@@ -155,10 +152,6 @@ export function ReadinessDialogs({
         partyId={partyId}
         walletBalanceKobo={wallet?.balance_kobo ?? 0}
         agentPaymentBalanceKobo={party?.agent_payment_balance_kobo ?? 0}
-        onSuccess={() => {
-          onWalletSuccess();
-          queryClient.invalidateQueries({ queryKey: ["party", partyId] });
-        }}
       />
 
       <AgentMarketingSetupDialog
@@ -194,7 +187,10 @@ export function ReadinessDialogs({
           if (res?.success) {
             toast.success("Marketing campaign created successfully!");
             setIsMarketingDialogOpen(false);
-            onWalletSuccess();
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partyReadiness.byParty(partyId) });
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partyWallet.byParty(partyId) });
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.party.byId(partyId) });
+            queryClient.invalidateQueries({ queryKey: ["party-marketing-campaigns", partyId] });
           } else {
             toast.error(res?.message ?? "Failed to create marketing campaign");
           }

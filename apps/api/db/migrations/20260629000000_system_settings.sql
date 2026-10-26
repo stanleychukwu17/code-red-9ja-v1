@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS system_settings (
 
 -- Seed initial slot cost setting (1 NGN = 100 Kobo, e.g. 1,000 NGN = 100,000 Kobo)
 INSERT INTO system_settings (key, value, description)
-VALUES ('slot_cost_kobo', '5000000'::jsonb, 'The default cost of a single polling unit slot in Kobo')
+VALUES ('slot_cost_kobo', '100000'::jsonb, 'The default cost of a single polling unit slot in Kobo')
 ON CONFLICT (key) DO NOTHING;
 
 -- Seed target for live voters referred
