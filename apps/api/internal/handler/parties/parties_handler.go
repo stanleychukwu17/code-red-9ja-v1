@@ -46,7 +46,6 @@ type PartiesService interface {
 	LeaveParty(ctx context.Context, partyID int16, userID, userFid int64) error
 	// Membership methods
 	UpdateAgentPaymentAllocationKobo(ctx context.Context, partyID int16, allowancesJSON []byte) (queries.UpdatePartyAgentPaymentAllocationKoboRow, error)
-	GetAgentPaymentAllocationKobo(ctx context.Context, partyID int16) (json.RawMessage, error)
 	// Marketing methods
 	CreatePartyMarketingCampaign(ctx context.Context, arg queries.CreatePartyMarketingCampaignParams) (queries.PartyMarketingCampaign, error)
 	GetPartyMarketingCampaigns(ctx context.Context, partyID int16) ([]queries.GetPartyMarketingCampaignsRow, error)
@@ -113,6 +112,7 @@ type FollowsService interface {
 
 type NotificationsService interface {
 	NotifyPartyAgentsAllowanceDeposited(ctx context.Context, params notifications.NotifyPartyAgentsAllowanceDepositedParams)
+	NotifyPartyAgentPaymentAllocationUpdated(ctx context.Context, params notifications.NotifyPartyAgentPaymentAllocationUpdatedParams)
 }
 
 type Handler struct {
@@ -1311,8 +1311,8 @@ func (h *Handler) DepositAllowance(w http.ResponseWriter, r *http.Request) {
 // @Summary      Update agent payment allocation
 // @Description  Saves the polling agent allowance budget settings per role and state for a party.
 //
-//	Body must be a JSON object with keys: pollingAgent, wardElectionSupervisor,
-//	lgaElectionSupervisor, stateElectionSupervisor. Each key holds
+//	Body must be a JSON object with keys: polling_agent, ward_election_supervisor,
+//	lga_election_supervisor, state_election_supervisor. Each key holds
 //	{"default": <kobo amount>, "states": {"<state_name>": <kobo amount>}}.
 //
 // @Tags         Parties
@@ -1346,37 +1346,31 @@ func (h *Handler) UpdateAgentPaymentAllocationKobo(w http.ResponseWriter, r *htt
 		return
 	}
 
+	// Record audit log asynchronously
+	auditNewValues, _ := json.Marshal(map[string]interface{}{
+		"party_id":                      partyID,
+		"agent_payment_allocation_kobo": json.RawMessage(res.AgentPaymentAllocationKobo),
+	})
+	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
+		Module:     audit.StringToText(db.ModuleAdmin),
+		Action:     db.ActionUpdatePartyAgentPaymentAllocation,
+		EntityType: db.EntityTypeParty,
+		EntityID:   strconv.FormatInt(partyID, 10),
+		NewValues:  auditNewValues,
+	})
+
+	// Dispatch notification to party national chapter
+	if natChapterID, err := h.partiesService.GetOrCreateNationalChapter(r.Context(), int16(partyID), constants.NigeriaCountryID); err == nil && natChapterID > 0 {
+		h.notificationsService.NotifyPartyAgentPaymentAllocationUpdated(r.Context(), notifications.NotifyPartyAgentPaymentAllocationUpdatedParams{
+			PartyID:                    int16(partyID),
+			ChapterID:                  natChapterID,
+			AgentPaymentAllocationKobo: json.RawMessage(res.AgentPaymentAllocationKobo),
+		})
+	}
+
 	// Respond with the newly persisted canonical payment allocations
 	h.utils.RespondSuccess(w, http.StatusOK, "Allowances configuration updated successfully", map[string]interface{}{
 		"agent_payment_allocation_kobo": json.RawMessage(res.AgentPaymentAllocationKobo),
-	})
-}
-
-// GetAgentPaymentAllocationKobo godoc
-// @Summary      Get agent payment allocation
-// @Description  Returns the current agent_payment_allocation_kobo for a party as a parsed JSON object.
-// @Tags         Parties
-// @Produce      json
-// @Param        id path int true "Party ID"
-// @Success      200  {object} map[string]interface{} "Allocation fetched successfully"
-// @Security     BearerAuth
-// @Router       /parties/{id}/allowances/settings [get]
-func (h *Handler) GetAgentPaymentAllocationKobo(w http.ResponseWriter, r *http.Request) {
-	idStr := chi.URLParam(r, "id")
-	partyID, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID")
-		return
-	}
-
-	allocation, err := h.partiesService.GetAgentPaymentAllocationKobo(r.Context(), int16(partyID))
-	if err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	h.utils.RespondSuccess(w, http.StatusOK, "Allocation fetched successfully", map[string]interface{}{
-		"agent_payment_allocation_kobo": allocation,
 	})
 }
 

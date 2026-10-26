@@ -55,6 +55,7 @@ type NotificationsService interface {
 	NotifyPartyWalletDeposited(ctx context.Context, params NotifyPartyWalletDepositedParams)
 	NotifyPartySlotsPurchased(ctx context.Context, params NotifyPartySlotsPurchasedParams)
 	NotifyPartyAgentsAllowanceDeposited(ctx context.Context, params NotifyPartyAgentsAllowanceDepositedParams)
+	NotifyPartyAgentPaymentAllocationUpdated(ctx context.Context, params NotifyPartyAgentPaymentAllocationUpdatedParams)
 }
 
 type service struct {
@@ -258,6 +259,13 @@ type NotifyPartyAgentsAllowanceDepositedParams struct {
 	ActorID                    *int64
 	AmountKobo                 int64
 	NewAgentPaymentBalanceKobo int64
+}
+
+type NotifyPartyAgentPaymentAllocationUpdatedParams struct {
+	PartyID                    int16
+	ChapterID                  int32
+	ActorID                    *int64
+	AgentPaymentAllocationKobo json.RawMessage
 }
 
 // ----------------------------------------------------------------------------
@@ -902,6 +910,23 @@ func (s *service) NotifyPartyAgentsAllowanceDeposited(ctx context.Context, param
 		Category:    constants.PartyNotificationCategoryFinance,
 		Type:        constants.NotificationTypePartyAgentsAllowanceDeposited,
 		Priority:    constants.NotificationPriorityHigh,
+		Metadata:    partyMeta,
+	})
+}
+
+// NotifyPartyAgentPaymentAllocationUpdated dispatches a party notification to the national chapter when agent payment allocations are updated.
+func (s *service) NotifyPartyAgentPaymentAllocationUpdated(ctx context.Context, params NotifyPartyAgentPaymentAllocationUpdatedParams) {
+	partyMeta := utils.NewMetadata().
+		Set("party_id", params.PartyID).
+		Set("agent_payment_allocation_kobo", params.AgentPaymentAllocationKobo)
+
+	s.CreatePartyNotificationAsync(ctx, CreatePartyNotificationInput{
+		PartyID:     params.PartyID,
+		ActorUserID: params.ActorID,
+		ChapterID:   &params.ChapterID,
+		Category:    constants.PartyNotificationCategoryFinance,
+		Type:        constants.NotificationTypePartyAgentPaymentAllocationUpdated,
+		Priority:    constants.NotificationPriorityNormal,
 		Metadata:    partyMeta,
 	})
 }

@@ -1716,17 +1716,6 @@ func resolvePotentialPaymentKobo(allocationJSON []byte, roleType string, stateID
 
 	cfg, ok := allocs[roleKey]
 	if !ok {
-		legacyKeyMap := map[string]string{
-			"polling_agent":            "pollingAgent",
-			"ward_election_supervisor": "wardElectionSupervisor",
-			"lga_election_supervisor":  "lgaElectionSupervisor",
-			"state_election_supervisor": "stateElectionSupervisor",
-		}
-		if legKey, exists := legacyKeyMap[roleKey]; exists {
-			cfg, ok = allocs[legKey]
-		}
-	}
-	if !ok {
 		return 0
 	}
 

@@ -198,7 +198,6 @@ export function TargetCard({
           onSuccess={() => {
             setIsDialogOpen(false);
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.electionStats.root });
-            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partyAgentTargets.byParty(partyId) });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partyReadiness.byParty(partyId) });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.party.byId(partyId) });
           }}

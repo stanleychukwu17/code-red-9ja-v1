@@ -278,41 +278,6 @@ export const updatePartyStateAllowances = createServerFn({ method: "POST" })
     }
   });
 
-// Fetch current agent payment allocations
-export const getPartyAgentPaymentAllocation = createServerFn({ method: "GET" })
-  .inputValidator((partyId: string | number) => partyId)
-  .handler(async ({ data: partyId }) => {
-    try {
-      const response = await apiFetch(
-        API_URL.partyAgentPaymentAllocations(partyId),
-      );
-      const resData = await response.json();
-      return resData; // { success, data: { agent_payment_allocation_kobo: {...} } }
-    } catch (error) {
-      return {
-        success: false,
-        message: "Failed to fetch agent payment allocation",
-      };
-    }
-  });
-
-// Fetch party agent recruitment targets
-export const getPartyAgentTargets = createServerFn({ method: "GET" })
-  .inputValidator((partyId: string | number) => partyId)
-  .handler(async ({ data: partyId }) => {
-    try {
-      const response = await apiFetch(
-        API_URL.partyAgentTargets(partyId),
-      );
-      const resData = await response.json();
-      return resData;
-    } catch (error) {
-      return {
-        success: false,
-        message: "Failed to fetch agent targets: " + (error as Error).message,
-      };
-    }
-  });
 
 // Update party agent recruitment targets
 export const updatePartyAgentTargets = createServerFn({ method: "POST" })
@@ -347,7 +312,7 @@ export const updatePartyAgentTargets = createServerFn({ method: "POST" })
     }
   });
 
-// Simulate funding party wallet (test environments)
+// Simulate funding party wallet (test environments / admin credit)
 export const fundPartyWallet = createServerFn({ method: "POST" })
   .inputValidator(
     (data: { partyID: string | number; amountKobo: number }) => data,

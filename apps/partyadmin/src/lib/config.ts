@@ -324,11 +324,6 @@ export const QUERY_KEYS = {
     byParty: (partyId?: number | string) => ["partyReadiness", partyId] as const,
   },
 
-  partyAgentTargets: {
-    root: ["party-agent-targets"] as const,
-    byParty: (partyId?: number | string) => ["party-agent-targets", partyId] as const,
-  },
-
   party: {
     root: ["party"] as const,
     byId: (partyId?: number | string) => ["party", partyId] as const,

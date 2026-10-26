@@ -56,7 +56,8 @@ const (
 	NotificationTypeCandidateWithdrawn            = "candidate_withdrawn"
 	NotificationTypePartyWalletDeposited          = "party_wallet_deposited"
 	NotificationTypePartySlotsPurchased           = "party_slots_purchased"
-	NotificationTypePartyAgentsAllowanceDeposited = "party_agents_allowance_deposited"
+	NotificationTypePartyAgentsAllowanceDeposited      = "party_agents_allowance_deposited"
+	NotificationTypePartyAgentPaymentAllocationUpdated = "party_agent_payment_allocation_updated"
 )
 
 // DailyGroupKey formats a time-windowed daily rollup key (e.g. "prefix:2026-09-27")

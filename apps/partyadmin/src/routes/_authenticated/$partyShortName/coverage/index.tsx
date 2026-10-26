@@ -66,17 +66,197 @@ function AgentCoveragePage() {
   const { data, isLoading } = useQuery({
     queryKey: ["agent-coverage-breakdown", party?.id, wardId, lgaId, stateId],
     queryFn: async () => {
-      return fetchBreakdown({
-        data: {
-          partyId: party?.id,
-          stateId,
-          lgaId,
-          wardId,
-          limit: 150,
-        },
-      });
+      // Temporary fake data to preview UI layout and drill-downs
+      if (wardId) {
+        return {
+          unit_title: "Polling Units",
+          unit_type: "polling_units",
+          supervisor_title: "PU Agents",
+          units: [
+            {
+              id: 1001,
+              name: "PU 001 - Community Primary School I",
+              code: "LA/04/01/001",
+              polling_agents: "2",
+              overall_readiness: 100,
+              pu_agents: [
+                { id: 1, name: "Ibrahim Musa", avatar: "" },
+                { id: 2, name: "Ngozi Eze", avatar: "" },
+              ],
+            },
+            {
+              id: 1002,
+              name: "PU 002 - Town Hall Square",
+              code: "LA/04/01/002",
+              polling_agents: "1",
+              overall_readiness: 50,
+              pu_agents: [{ id: 3, name: "Babatunde Adeleke", avatar: "" }],
+            },
+            {
+              id: 1003,
+              name: "PU 003 - Health Centre Gate",
+              code: "LA/04/01/003",
+              polling_agents: "0",
+              overall_readiness: 0,
+              pu_agents: [],
+            },
+          ],
+        };
+      }
+
+      if (lgaId) {
+        return {
+          unit_title: "Wards",
+          unit_type: "wards",
+          supervisor_title: "Ward Supervisor",
+          units: [
+            {
+              id: 201,
+              name: "Ward 01 - Alausa / Secretariat",
+              polling_agents: "48 (96%)",
+              ward_supervisors: "1",
+              overall_readiness: 94,
+              supervisors: [{ id: 11, name: "Kolawole Sanwo", avatar: "" }],
+            },
+            {
+              id: 202,
+              name: "Ward 02 - Oregun / Ojota",
+              polling_agents: "30 (60%)",
+              ward_supervisors: "1",
+              overall_readiness: 62,
+              supervisors: [{ id: 12, name: "Fatima Bello", avatar: "" }],
+            },
+            {
+              id: 203,
+              name: "Ward 03 - Agidingbi",
+              polling_agents: "10 (20%)",
+              ward_supervisors: "0",
+              overall_readiness: 15,
+              supervisors: [],
+            },
+          ],
+        };
+      }
+
+      if (stateId) {
+        return {
+          unit_title: "LGAs",
+          unit_type: "lgas",
+          supervisor_title: "LGA Supervisor",
+          units: [
+            {
+              id: 101,
+              name: "Ikeja",
+              polling_agents: "380 (95%)",
+              ward_supervisors: "11 (100%)",
+              lga_supervisors: "1",
+              overall_readiness: 92,
+              supervisors: [{ id: 21, name: "Adewale Tinubu", avatar: "" }],
+            },
+            {
+              id: 102,
+              name: "Alimosho",
+              polling_agents: "820 (78%)",
+              ward_supervisors: "18 (85%)",
+              lga_supervisors: "1",
+              overall_readiness: 76,
+              supervisors: [{ id: 22, name: "Chidi Obi", avatar: "" }],
+            },
+            {
+              id: 103,
+              name: "Eti-Osa",
+              polling_agents: "210 (45%)",
+              ward_supervisors: "5 (50%)",
+              lga_supervisors: "0",
+              overall_readiness: 38,
+              supervisors: [],
+            },
+            {
+              id: 104,
+              name: "Ikorodu",
+              polling_agents: "120 (22%)",
+              ward_supervisors: "3 (25%)",
+              lga_supervisors: "0",
+              overall_readiness: 18,
+              supervisors: [],
+            },
+          ],
+        };
+      }
+
+      // Top level: States
+      return {
+        unit_title: "States",
+        unit_type: "states",
+        supervisor_title: "State Supervisor",
+        units: [
+          {
+            id: 25,
+            name: "Lagos",
+            polling_agents: "11,840 (88%)",
+            ward_supervisors: "360 (96%)",
+            lga_supervisors: "20 (100%)",
+            state_supervisors: "1",
+            overall_readiness: 91,
+            supervisors: [
+              { id: 1, name: "Olumide Akpata", avatar: "" },
+              { id: 2, name: "Amina Yusuf", avatar: "" },
+            ],
+          },
+          {
+            id: 20,
+            name: "Kano",
+            polling_agents: "9,420 (74%)",
+            ward_supervisors: "410 (84%)",
+            lga_supervisors: "44 (100%)",
+            state_supervisors: "1",
+            overall_readiness: 78,
+            supervisors: [{ id: 3, name: "Rabiu Kwankwaso", avatar: "" }],
+          },
+          {
+            id: 33,
+            name: "Rivers",
+            polling_agents: "4,200 (62%)",
+            ward_supervisors: "280 (87%)",
+            lga_supervisors: "19 (82%)",
+            state_supervisors: "1",
+            overall_readiness: 65,
+            supervisors: [{ id: 4, name: "Nyesom Nwike", avatar: "" }],
+          },
+          {
+            id: 15,
+            name: "FCT (Abuja)",
+            polling_agents: "2,600 (92%)",
+            ward_supervisors: "62 (100%)",
+            lga_supervisors: "6 (100%)",
+            state_supervisors: "1",
+            overall_readiness: 95,
+            supervisors: [{ id: 5, name: "Zainab Ahmed", avatar: "" }],
+          },
+          {
+            id: 4,
+            name: "Anambra",
+            polling_agents: "1,450 (32%)",
+            ward_supervisors: "110 (34%)",
+            lga_supervisors: "8 (38%)",
+            state_supervisors: "0",
+            overall_readiness: 28,
+            supervisors: [],
+          },
+          {
+            id: 7,
+            name: "Borno",
+            polling_agents: "0 (0%)",
+            ward_supervisors: "0 (0%)",
+            lga_supervisors: "0 (0%)",
+            state_supervisors: "0",
+            overall_readiness: 0,
+            supervisors: [],
+          },
+        ],
+      };
     },
-    enabled: !!party?.id,
+    enabled: true,
   });
 
   // Normalize API response structure

@@ -58,7 +58,7 @@ type testRequirements struct {
 }
 
 // agentPaymentAllocation:
-// {"pollingAgent": {"default": 2000000, "states": {"lagos": 2500000}}}
+// {"polling_agent": {"default": 2000000, "states": {"lagos": 2500000}}}
 type rolePaymentConfig struct {
 	Default int64             `json:"default"`
 	States  map[string]int64  `json:"states"`

@@ -950,8 +950,8 @@ type CanonicalAgentPaymentAllocation struct {
 	StateElectionSupervisor AgentPaymentRoleConfig `json:"state_election_supervisor"`
 }
 
-// HarmonizeAgentPaymentAllocation normalizes incoming allocation payloads (handling both camelCase
-// and snake_case role keys) and returns canonical JSON with guaranteed valid role configurations.
+// HarmonizeAgentPaymentAllocation validates incoming allocation payloads
+// and returns canonical JSON with guaranteed valid role configurations.
 func HarmonizeAgentPaymentAllocation(raw []byte) ([]byte, error) {
 	// Parse raw incoming JSON into an intermediate map of role configurations
 	var rawMap map[string]struct {
@@ -962,21 +962,20 @@ func HarmonizeAgentPaymentAllocation(raw []byte) ([]byte, error) {
 		return nil, fmt.Errorf("invalid allowances configuration: %w", err)
 	}
 
-	// Helper to resolve role config supporting both legacy camelCase and modern snake_case keys
-	getRoleConfig := func(camel, snake string) (AgentPaymentRoleConfig, error) {
-		cfg, exists := rawMap[camel]
-		if !exists {
-			cfg, exists = rawMap[snake]
-		}
+	// Helper to resolve and validate role config for a given snake_case role key
+	getRoleConfig := func(role string) (AgentPaymentRoleConfig, error) {
+		cfg, exists := rawMap[role]
 		// Default base payment must exist and be strictly positive
 		if !exists || cfg.Default == nil || *cfg.Default <= 0 {
-			return AgentPaymentRoleConfig{}, fmt.Errorf("missing or invalid default payment for role '%s' (must be > 0)", snake)
+			return AgentPaymentRoleConfig{}, fmt.Errorf("missing or invalid default payment for role '%s' (must be > 0)", role)
 		}
+
 		// Ensure states dictionary is always initialized (avoid nil maps in JSON)
 		states := cfg.States
 		if states == nil {
 			states = make(map[string]int64)
 		}
+
 		return AgentPaymentRoleConfig{
 			Default: *cfg.Default,
 			States:  states,
@@ -984,19 +983,19 @@ func HarmonizeAgentPaymentAllocation(raw []byte) ([]byte, error) {
 	}
 
 	// Resolve and validate each of the four mandatory agent roles
-	pa, err := getRoleConfig("pollingAgent", "polling_agent")
+	pa, err := getRoleConfig("polling_agent")
 	if err != nil {
 		return nil, err
 	}
-	ward, err := getRoleConfig("wardElectionSupervisor", "ward_election_supervisor")
+	ward, err := getRoleConfig("ward_election_supervisor")
 	if err != nil {
 		return nil, err
 	}
-	lga, err := getRoleConfig("lgaElectionSupervisor", "lga_election_supervisor")
+	lga, err := getRoleConfig("lga_election_supervisor")
 	if err != nil {
 		return nil, err
 	}
-	state, err := getRoleConfig("stateElectionSupervisor", "state_election_supervisor")
+	state, err := getRoleConfig("state_election_supervisor")
 	if err != nil {
 		return nil, err
 	}
@@ -1025,18 +1024,6 @@ func (s *PartiesService) UpdateAgentPaymentAllocationKobo(ctx context.Context, p
 		AgentPaymentAllocationKobo: canonicalJSON,
 		ID:                         partyID,
 	})
-}
-
-// GetAgentPaymentAllocationKobo returns the agent_payment_allocation JSON for a party.
-func (s *PartiesService) GetAgentPaymentAllocationKobo(ctx context.Context, partyID int16) (json.RawMessage, error) {
-	party, err := s.GetPartyByID(ctx, partyID)
-	if err != nil {
-		return nil, fmt.Errorf("party not found: %w", err)
-	}
-	if len(party.AgentPaymentAllocationKobo) == 0 {
-		return json.RawMessage("{}"), nil
-	}
-	return json.RawMessage(party.AgentPaymentAllocationKobo), nil
 }
 
 // UpdatePartyIsVerified updates the is_verified flag of a party.

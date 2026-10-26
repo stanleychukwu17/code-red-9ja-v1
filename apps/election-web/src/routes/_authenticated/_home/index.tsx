@@ -28,14 +28,11 @@ export interface HomeSearch {
 export const Route = createFileRoute("/_authenticated/_home/")({
   validateSearch: (search: Record<string, unknown>): HomeSearch => {
     return {
-      campaign:
-        typeof search.campaign === "string" ? search.campaign : undefined,
+      campaign: typeof search.campaign === "string" ? search.campaign : undefined,
       party: typeof search.party === "string" ? search.party : undefined,
       partyId: search.partyId ? Number(search.partyId) : undefined,
-      authRequired:
-        search.authRequired === true || search.authRequired === "true",
-      redirect:
-        typeof search.redirect === "string" ? search.redirect : undefined,
+      authRequired: (search.authRequired === true || search.authRequired === "true") ? true : undefined,
+      redirect: typeof search.redirect === "string" ? search.redirect : undefined,
     };
   },
   component: RouteComponent,
@@ -63,9 +60,7 @@ function RouteComponent() {
 
   const [modalDismissed, setModalDismissed] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [authRedirectUrl, setAuthRedirectUrl] = useState<string | undefined>(
-    undefined,
-  );
+  const [authRedirectUrl, setAuthRedirectUrl] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     if (search.authRequired) {
@@ -97,7 +92,7 @@ function RouteComponent() {
           search.party &&
           p.short_name &&
           p.short_name.trim().toLowerCase() ===
-            search.party.trim().toLowerCase()
+          search.party.trim().toLowerCase()
         ) {
           return true;
         }

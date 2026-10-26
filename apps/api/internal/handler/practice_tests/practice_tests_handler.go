@@ -559,7 +559,7 @@ func (h *Handler) GetPayoutPreview(w http.ResponseWriter, r *http.Request) {
 }
 
 // resolveBasePaymentKobo extracts the default kobo amount from agent_payment_allocation JSONB.
-// Format: {"pollingAgent": {"default": 2000000, "states": {...}}}
+// Format: {"polling_agent": {"default": 2000000, "states": {...}}}
 func resolveBasePaymentKobo(rawJSON []byte, roleType string) int64 {
 	var alloc map[string]struct {
 		Default int64            `json:"default"`
