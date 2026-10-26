@@ -398,7 +398,6 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Post("/api/v1/parties", partiesHandler.CreateParty)
 		r.Put("/api/v1/parties/{id}", partiesHandler.UpdateParty)
 		r.Delete("/api/v1/parties/{id}", partiesHandler.DeleteParty)
-		r.Put("/api/v1/admin/parties/{id}/discount", partiesHandler.UpdatePartyDiscount)
 		r.Put("/api/v1/admin/parties/{id}/verify", partiesHandler.TogglePartyVerification)
 		// manual wallet creation for a party (in case auto-create failed)
 		r.Post("/api/v1/parties/{id}/wallet", partiesWalletHandler.CreatePartyWalletHandler)
@@ -417,7 +416,6 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Post("/api/v1/plans", partiesHandler.CreatePlan)
 		r.Put("/api/v1/plans/{id}", partiesHandler.UpdatePlan)
 		r.Delete("/api/v1/plans/{id}", partiesHandler.DeletePlan)
-		r.Patch("/api/v1/plans/{id}/display-order", partiesHandler.UpdatePlanDisplayOrder)
 
 		// page verifications admin mutations
 		r.Post("/api/v1/admin/verifications", pageVerificationsHandler.AssignVerification)
@@ -661,9 +659,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Post("/api/v1/parties/{id}/wallet/withdraw", partiesWalletHandler.WithdrawFromPartyWallet)
 		r.Post("/api/v1/parties/{id}/wallet/deposit-test", partiesWalletHandler.Deposit)
 		r.Post("/api/v1/parties/{id}/slots/buy", partiesWalletHandler.BuySlots)
-		r.Post("/api/v1/parties/{id}/allowances/deposit", partiesHandler.DepositAllowance)
 		r.Post("/api/v1/parties/{id}/agent-payment-deposits", partiesHandler.DepositAllowance)
-		r.Put("/api/v1/parties/{id}/allowances/settings", partiesHandler.UpdateAgentPaymentAllocationKobo)
 		r.Put("/api/v1/parties/{id}/agent-payment-allocations", partiesHandler.UpdateAgentPaymentAllocationKobo)
 		r.Patch("/api/v1/parties/{id}/agent-targets", partiesHandler.UpdateAgentAcquisitionTargets)
 

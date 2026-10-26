@@ -1,16 +1,10 @@
-import * as React from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Button } from "@repo/ui/components/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogPadding,
-} from "@repo/ui/components/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogPadding } from "@repo/ui/components/dialog";
 import { Loader2 } from "lucide-react";
-import { DescriptiveText } from "../custom/Texts";
-import { MoneyInput } from "../input";
+import { DescriptiveText } from "@repo/ui/components/custom/Texts";
+import { MoneyInput } from "@repo/ui/components/input";
 
 export type AgentRoles =
   | "polling_agent"
@@ -49,20 +43,14 @@ const LEGACY_ROLE_MAP: Record<string, AgentRoles> = {
   stateElectionSupervisor: "state_election_supervisor",
 };
 
-export interface AgentPaymentAllocationFormDialogProps {
+export type AgentPaymentAllocationFormDialogProps = {
   open: boolean;
   onClose: () => void;
   partyId: number | string;
   initialAllocation?: any | null;
-  fetchAllocation?: (
-    partyId: number | string,
-  ) => Promise<AgentPaymentAllocation | null>;
-  updateAllocation: (
-    partyId: number | string,
-    values: AgentPaymentAllocation,
-  ) => Promise<any>;
-  onSuccess?: () => void;
-}
+  fetchAllocation?: (partyId: number | string) => Promise<AgentPaymentAllocation | null>;
+  updateAllocation: (partyId: number | string, values: AgentPaymentAllocation) => Promise<any>;
+};
 
 function parseKoboAllocationToNaira(alloc: any): AgentPaymentAllocation {
   const converted = { ...DEFAULT_ALLOCATION };
@@ -85,19 +73,12 @@ function parseKoboAllocationToNaira(alloc: any): AgentPaymentAllocation {
   return converted;
 }
 
-export function AgentPaymentAllocationFormDialog({
-  open,
-  onClose,
-  partyId,
-  initialAllocation,
-  fetchAllocation,
-  updateAllocation,
-  onSuccess,
-}: AgentPaymentAllocationFormDialogProps) {
-  const [values, setValues] =
-    React.useState<AgentPaymentAllocation>(DEFAULT_ALLOCATION);
-  const [error, setError] = React.useState<string | null>(null);
+export function AgentPaymentAllocationFormDialog({ open, onClose, partyId, initialAllocation, fetchAllocation, updateAllocation }: AgentPaymentAllocationFormDialogProps) {
+  // Form input state in Naira & submission error
+  const [values, setValues] = useState<AgentPaymentAllocation>(DEFAULT_ALLOCATION);
+  const [error, setError] = useState<string | null>(null);
 
+  // Fetch allocation only when not supplied via initial props
   const { data: queriedAllocation, isLoading: isQueryLoading } = useQuery({
     queryKey: ["agentPaymentAllocation", partyId],
     queryFn: () => (fetchAllocation ? fetchAllocation(partyId) : null),
@@ -105,10 +86,12 @@ export function AgentPaymentAllocationFormDialog({
     staleTime: Infinity,
   });
 
+  // Prefer preloaded allocation to avoid redundant network fetch
   const activeAllocation = initialAllocation ?? queriedAllocation;
   const isLoading = !initialAllocation && isQueryLoading;
 
-  React.useEffect(() => {
+  // Sync and convert kobo from API/props to Naira on dialog open
+  useEffect(() => {
     if (!open) return;
     if (activeAllocation) {
       setValues(parseKoboAllocationToNaira(activeAllocation));
@@ -118,6 +101,7 @@ export function AgentPaymentAllocationFormDialog({
     setError(null);
   }, [open, activeAllocation]);
 
+  // Convert Naira inputs back to kobo and persist to backend
   const mutation = useMutation({
     mutationFn: () => {
       const nairaToKobo = (alloc: AgentPaymentAllocation): AgentPaymentAllocation => {
@@ -134,19 +118,20 @@ export function AgentPaymentAllocationFormDialog({
         });
         return converted;
       };
+
       return updateAllocation(partyId, nairaToKobo(values));
     },
+
     onSuccess: () => {
-      onSuccess?.();
       onClose();
     },
+
     onError: (err: any) => {
-      setError(
-        err?.message || "Failed to save payment settings. Please try again.",
-      );
+      setError(err?.message || "Failed to save payment settings. Please try again.");
     },
   });
 
+  // Update default base rate for a specific role
   function handleDefaultChange(role: AgentRoles, num: number) {
     setValues((prev) => ({
       ...prev,

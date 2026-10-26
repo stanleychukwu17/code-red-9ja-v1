@@ -40,7 +40,6 @@ type PartiesService interface {
 	UpdateParty(ctx context.Context, id int64, shortName, name, logo string, logoFileID *int64, displayOrder int32, colorHex, darkColorHex, coverImage *string, coverImageFileID *int64, coverPositionY *int16, dateFounded *string) (queries.Party, error)
 	DeleteParty(ctx context.Context, id int64) error
 	UpdatePartyIsVerified(ctx context.Context, partyID int16, isVerified bool) error
-	UpdatePartyDiscount(ctx context.Context, partyID int16, discountPercentage float64) (queries.Party, error)
 	// Allowance methods
 	DepositAllowance(ctx context.Context, partyID int16, amountKobo int64) (queries.DepositPartyAllowanceRow, error)
 	JoinParty(ctx context.Context, params partiesservice.JoinPartyParams) error
@@ -56,7 +55,6 @@ type PartiesService interface {
 	DeletePartyMarketingCampaign(ctx context.Context, id int32) error
 	// Plan admin methods
 	GetPlans(ctx context.Context, typeFilter string, isActiveFilter string) ([]queries.Plan, error)
-	UpdatePlanDisplayOrder(ctx context.Context, arg queries.UpdatePlanDisplayOrderParams) (queries.Plan, error)
 	CreatePlan(ctx context.Context, arg queries.CreatePlanParams) (queries.Plan, error)
 	UpdatePlan(ctx context.Context, arg queries.UpdatePlanParams) (queries.Plan, error)
 	DeletePlan(ctx context.Context, id int32) error
@@ -1191,51 +1189,6 @@ func (h *Handler) DeleteParty(w http.ResponseWriter, r *http.Request) {
 	})
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Party deleted successfully", nil)
-}
-
-type SetPartyDiscountRequest struct {
-	DiscountPercentage float64 `json:"discount_percentage"`
-}
-
-// UpdatePartyDiscount godoc
-// @Summary      Set customized slot discount for a party
-// @Description  Sets the slot discount percentage for a political party (Admin only)
-// @Tags         Admin Parties
-// @Accept       json
-// @Produce      json
-// @Param        id path int true "Party ID"
-// @Param        request body SetPartyDiscountRequest true "Discount request payload"
-// @Success      200  {object} map[string]interface{} "Party discount updated"
-// @Security     BearerAuth
-// @Router       /admin/parties/{id}/discount [put]
-func (h *Handler) UpdatePartyDiscount(w http.ResponseWriter, r *http.Request) {
-	idStr := chi.URLParam(r, "id")
-	partyID, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID")
-		return
-	}
-
-	var req SetPartyDiscountRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
-		return
-	}
-
-	if req.DiscountPercentage < 0.0 || req.DiscountPercentage > 100.0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "Discount percentage must be between 0.00 and 100.00")
-		return
-	}
-
-	party, err := h.partiesService.UpdatePartyDiscount(r.Context(), int16(partyID), req.DiscountPercentage)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update discount: "+err.Error())
-		return
-	}
-
-	h.utils.RespondSuccess(w, http.StatusOK, "Party discount updated successfully", map[string]interface{}{
-		"party": party,
-	})
 }
 
 type ToggleVerificationRequest struct {

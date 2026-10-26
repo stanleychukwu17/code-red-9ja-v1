@@ -20,9 +20,7 @@ import { useElection } from "#/hooks/useElection";
 import { getPageHeader } from "#/lib/shared/meta";
 import { CoverageHeaderRight } from "./-components";
 
-export const Route = createFileRoute(
-  "/_authenticated/$partyShortName/coverage/",
-)({
+export const Route = createFileRoute("/_authenticated/$partyShortName/coverage/")({
   head: () => getPageHeader({ title: "Agent Coverage" }),
   component: AgentCoveragePage,
 });
@@ -35,34 +33,36 @@ export const Route = createFileRoute(
 function AgentCoveragePage() {
   const { partyShortName } = Route.useParams();
   const navigate = useNavigate();
-  // Filter search query for unit name / code
+
+  // Search input state for filtering units
   const [search, setSearch] = useState("");
   const [showSearch, setShowSearch] = useState(false);
 
+  // Active party and election context
   const { party } = useUserParty();
-  const {
-    selectedElection,
-    selectedElectionGroup,
-  } = useElection();
+  const { selectedElection, selectedElectionGroup } = useElection();
 
+  // Hierarchical drill-down filter state (State -> LGA -> Ward)
   const [drillDown, setDrillDown] = useState<{
     stateId?: number;
     lgaId?: number;
     wardId?: number;
   }>({});
 
-  // Reset local drill-down when active election or group changes
+  // Reset drill-down whenever the selected election or group changes
   useEffect(() => {
     setDrillDown({});
   }, [selectedElection?.id, selectedElectionGroup?.id]);
 
+  // Resolve effective scope IDs, prioritizing drill-down over election defaults
   const stateId = drillDown.stateId ?? (selectedElection?.state_id as number | undefined) ?? undefined;
   const lgaId = drillDown.lgaId ?? (selectedElection?.lga_id as number | undefined) ?? undefined;
   const wardId = drillDown.wardId ?? (selectedElection?.ward_id as number | undefined) ?? undefined;
 
+  // Server function to fetch agent coverage breakdown
   const fetchBreakdown = useServerFn(getAgentCoverageBreakdown);
 
-  // Fallback title based on scope
+  // Fallback title when server does not provide unit_title
   const computedTitle = wardId
     ? "Polling Units"
     : lgaId
@@ -71,16 +71,9 @@ function AgentCoveragePage() {
         ? "LGAs"
         : "States";
 
+  // Fetch coverage metrics for the current geographic scope
   const { data, isLoading } = useQuery({
-    queryKey: [
-      "agent-coverage-breakdown",
-      selectedElection?.id,
-      selectedElectionGroup?.id,
-      party?.id,
-      wardId,
-      lgaId,
-      stateId,
-    ],
+    queryKey: ["agent-coverage-breakdown", selectedElection?.id, selectedElectionGroup?.id, party?.id, wardId, lgaId, stateId],
     queryFn: async () => {
       if (!selectedElection?.id && !selectedElectionGroup?.id) return null;
       return fetchBreakdown({
@@ -98,29 +91,29 @@ function AgentCoveragePage() {
     enabled: !!(selectedElection?.id || selectedElectionGroup?.id),
   });
 
+  // Normalize API response structure
   const payload = (data as any)?.data || data;
   const rawData = payload?.data || payload;
   const items: AgentCoverageUnitItem[] = Array.isArray(rawData?.units)
     ? rawData.units
     : [];
 
+  // Metadata describing the current hierarchical level
   const unitTitle = rawData?.unit_title || computedTitle;
   const unitType = (rawData?.unit_type || "").toLowerCase();
   const supervisorTitle = rawData?.supervisor_title || "State Supervisor";
   const isPU = unitType === "polling_units" || unitTitle === "Polling Units";
 
+  // Filter unit list by search term (name or code)
   const filteredItems = search
     ? items.filter(
-        (u) =>
-          u.name.toLowerCase().includes(search.toLowerCase()) ||
-          u.code?.toLowerCase().includes(search.toLowerCase()),
-      )
+      (u) =>
+        u.name.toLowerCase().includes(search.toLowerCase()) ||
+        u.code?.toLowerCase().includes(search.toLowerCase()),
+    )
     : items;
 
-  /**
-   * Drill-down handler: updates the local geographic selection state to narrow the view
-   * to children electoral units (e.g. clicking a State drills down to its Senatorial Districts).
-   */
+  // Drill down into child units when clicking a row
   const handleSelectUnit = (item: AgentCoverageUnitItem) => {
     const unitId = Number(item.id);
     if (!unitId) return;
@@ -141,10 +134,7 @@ function AgentCoveragePage() {
     }
   };
 
-  /**
-   * Navigation handler to immediately assign supervisors or agents for the selected unit.
-   * Directs to the appropriate supervisor roster or polling unit agent view.
-   */
+  // Route to the corresponding agent assignment page by tier
   const handleAssign = (item: AgentCoverageUnitItem) => {
     if (unitType === "states") {
       navigate({
@@ -169,17 +159,20 @@ function AgentCoveragePage() {
     }
   };
 
+  // UI state flags for navigation and drill-down controls
   const isDrillable = !isPU;
   const hasDrillDown = Object.values(drillDown).some((v) => v !== undefined);
 
   return (
     <Layout>
+      {/* Page header with actions */}
       <PageHeader
         title="Agent Coverage"
         activeTab=""
         rightComponent={<CoverageHeaderRight />}
       />
 
+      {/* Button to clear active drill-down and return to top-level overview */}
       {hasDrillDown && (
         <div className="flex items-center gap-2 py-2">
           <button
@@ -192,8 +185,10 @@ function AgentCoveragePage() {
         </div>
       )}
 
+      {/* Toolbar for search input and filter toggles */}
       <div className="flex items-center justify-end gap-4 flex-wrap py-2">
         <div className="flex items-center gap-2">
+          {/* Collapsible search bar */}
           {showSearch && (
             <div className="relative flex items-center">
               <input
@@ -217,16 +212,17 @@ function AgentCoveragePage() {
               </button>
             </div>
           )}
+          {/* Toggle search input button */}
           <button
             type="button"
             aria-label="Search"
             onClick={() => setShowSearch(!showSearch)}
-            className={`p-2 rounded-lg border border-c-20 text-c-60 hover:text-c-90 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors ${
-              showSearch ? "bg-neutral-100 dark:bg-neutral-800 text-c-90" : ""
-            }`}
+            className={`p-2 rounded-lg border border-c-20 text-c-60 hover:text-c-90 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors ${showSearch ? "bg-neutral-100 dark:bg-neutral-800 text-c-90" : ""
+              }`}
           >
             <Search className="size-4" />
           </button>
+          {/* Filter button */}
           <button
             type="button"
             aria-label="Filter"
@@ -237,6 +233,7 @@ function AgentCoveragePage() {
         </div>
       </div>
 
+      {/* Data states: loading, unselected election, empty results, or data table */}
       {isLoading ? (
         <div className="py-16 text-center text-c-50 text-[15px]">
           Loading agent coverage statistics...

@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { AccountDetailsDialog } from "#/components/dialogs/account-details-dialog";
 import { BuyAgentSlotsDialog } from "#/components/dialogs/buy-agent-slots-dialog";
 import { DepositAllowanceDialog } from "#/components/dialogs/deposit-allowance-dialog";
-import { AgentPaymentAllocationFormDialog } from "@repo/ui/components/dialogs/AgentPaymentAllocationFormDialog";
+import { AgentPaymentAllocationFormDialog } from "#/components/dialogs/agent-payment-allocation-dialog";
 import {
   AgentMarketingSetupDialog,
   type AgentMarketingSetupValue,
@@ -125,14 +125,6 @@ export function ReadinessDialogs({
         onClose={() => setIsBudgetDialogOpen(false)}
         partyId={partyId!}
         initialAllocation={party?.agent_payment_allocation_kobo}
-        fetchAllocation={async (id) => {
-          const res = await getPartyAgentPaymentAllocation({ data: id });
-          return (
-            res?.data?.agent_payment_allocation_kobo ??
-            res?.data?.agent_payment_allocation ??
-            null
-          );
-        }}
         updateAllocation={async (id, values) => {
           const res = await updatePartyStateAllowances({
             data: { partyID: id, allowances: values as any },
@@ -143,7 +135,6 @@ export function ReadinessDialogs({
           toast.success("Agent payment budget saved!");
           return res.data;
         }}
-        onSuccess={() => setIsBudgetDialogOpen(false)}
       />
 
       <DepositAllowanceDialog

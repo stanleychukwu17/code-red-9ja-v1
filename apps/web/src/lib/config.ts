@@ -89,7 +89,6 @@ export const API_URL = {
 	},
 	parties: `${api}/parties`,
 	partyCards: `${api}/parties/cards`,
-	joinParty: (partyId: number) => `${api}/parties/${partyId}/join`,
 	joinPartyHierarchy: (partyId: number) => `${api}/parties/${partyId}/join-hierarchy`,
 	getPartyProfile: (partyId: number, shortName: string, chapterId?: number) => {
 		const qs = chapterId ? `?chapter_id=${chapterId}` : "";
