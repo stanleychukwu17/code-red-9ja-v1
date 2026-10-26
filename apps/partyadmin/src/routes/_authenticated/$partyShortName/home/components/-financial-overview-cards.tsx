@@ -6,11 +6,8 @@ import ArrowHandleIcon from "@repo/ui/icons/arrow-handle-icon";
 import FancyAgentIcon from "@repo/ui/icons/fancy-agent-icon";
 import { useUserParty } from "#/hooks/useUserParty";
 import { useServerFn } from "@tanstack/react-start";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  getPartyAgentTargets,
-  updatePartyAgentTargets,
-} from "#/lib/server/parties";
+import { useQueryClient } from "@tanstack/react-query";
+import { updatePartyAgentTargets } from "#/lib/server/parties";
 import { TargetFormDialog } from "@repo/ui/components/dialogs/TargetFormDialog";
 
 type FinancialOverallCardProps = {
@@ -59,14 +56,8 @@ export function FinancialRow({ label, value, onClick }: FinancialRowProps) {
  * - Active mobilization campaigns
  */
 export function FinancialOverallCard({
-  walletBalance,
-  slots,
-  agentPaymentBalance,
-  activeCampaignsCount,
-  onOpenWallet,
-  onBuySlots,
-  onOpenAgentPayment,
-  onOpenMarketing,
+  walletBalance, slots, agentPaymentBalance, activeCampaignsCount, onOpenWallet, onBuySlots,
+  onOpenAgentPayment, onOpenMarketing,
 }: FinancialOverallCardProps) {
   const balanceNGN = (walletBalance / 100).toLocaleString("en-NG", { maximumFractionDigits: 1 });
   const agentPaymentNGN = (agentPaymentBalance / 100).toLocaleString("en-NG", { maximumFractionDigits: 1 });
@@ -123,19 +114,28 @@ export function SimpleStatTile({ icon, label, value }: SimpleStatTileProps) {
  * Configures the party's desired agent density targets across administrative tiers:
  * (e.g., target agents per Polling Unit, Ward, LGA, and State).
  */
-export function TargetCard() {
+type TargetCardProps = {
+  targets?: {
+    polling_agent?: number | string;
+    ward_election_supervisor?: number | string;
+    lga_election_supervisor?: number | string;
+    state_election_supervisor?: number | string;
+  } | null;
+  partyId?: number;
+  onTargetsUpdated?: () => void;
+};
+
+export function TargetCard({
+  targets: propTargets,
+  partyId: propPartyId,
+  onTargetsUpdated,
+}: TargetCardProps = {}) {
   const { party } = useUserParty();
-  const partyId = party?.id;
+  const partyId = propPartyId ?? party?.id;
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const fetchTargetsFn = useServerFn(getPartyAgentTargets);
   const updateTargetsFn = useServerFn(updatePartyAgentTargets);
   const queryClient = useQueryClient();
-
-  const handleFetchTargets = async (id: string | number) => {
-    const res = await fetchTargetsFn({ data: id });
-    return res?.data?.targets || res?.data || null;
-  };
 
   const handleUpdateTargets = async (id: string | number, values: any) => {
     return await updateTargetsFn({
@@ -146,38 +146,23 @@ export function TargetCard() {
     });
   };
 
-  const { data: serverTargets } = useQuery({
-    queryKey: ["party-agent-targets", partyId],
-    queryFn: () => handleFetchTargets(partyId!),
-    enabled: !!partyId,
-  });
-
-  const st = serverTargets as any;
+  const st = (propTargets || party?.agent_acquisition_targets) as any;
   const targets = [
     {
       role: "Polling Agent per unit",
-      count: (st?.polling_agent ?? st?.pollingUnitAgent)?.toString() ?? "2",
+      count: st?.polling_agent?.toString() ?? "1",
     },
     {
       role: "Ward Supervisor per ward",
-      count:
-        (
-          st?.ward_election_supervisor ?? st?.wardElectionSupervisor
-        )?.toString() ?? "2",
+      count: st?.ward_election_supervisor?.toString() ?? "1",
     },
     {
       role: "LGA Supervisor per lga",
-      count:
-        (
-          st?.lga_election_supervisor ?? st?.lgaElectionSupervisor
-        )?.toString() ?? "2",
+      count: st?.lga_election_supervisor?.toString() ?? "1",
     },
     {
       role: "State Supervisor per state",
-      count:
-        (
-          st?.state_election_supervisor ?? st?.stateElectionSupervisor
-        )?.toString() ?? "1",
+      count: st?.state_election_supervisor?.toString() ?? "1",
     },
   ];
 
@@ -209,13 +194,23 @@ export function TargetCard() {
           open={isDialogOpen}
           onClose={() => setIsDialogOpen(false)}
           partyId={partyId}
-          fetchTargets={handleFetchTargets}
+          initialTargets={st}
           updateTargets={handleUpdateTargets}
           onSuccess={() => {
             setIsDialogOpen(false);
-            queryClient.invalidateQueries({
-              queryKey: ["party-agent-targets", partyId],
-            });
+            if (onTargetsUpdated) {
+              onTargetsUpdated();
+            } else {
+              queryClient.invalidateQueries({
+                queryKey: ["election-stats"],
+              });
+              queryClient.invalidateQueries({
+                queryKey: ["party-agent-targets", partyId],
+              });
+              queryClient.invalidateQueries({
+                queryKey: ["party", partyId],
+              });
+            }
           }}
         />
       )}

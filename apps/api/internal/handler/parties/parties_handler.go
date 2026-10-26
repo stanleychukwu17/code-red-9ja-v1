@@ -26,6 +26,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 
 	partieswallethandler "free9ja/api/internal/handler/parties_wallet"
+	notifications "free9ja/api/internal/service/notifications"
 )
 
 type PartiesService interface {
@@ -41,11 +42,11 @@ type PartiesService interface {
 	UpdatePartyIsVerified(ctx context.Context, partyID int16, isVerified bool) error
 	UpdatePartyDiscount(ctx context.Context, partyID int16, discountPercentage float64) (queries.Party, error)
 	// Allowance methods
-	DepositAllowance(ctx context.Context, partyID int16, amountKobo int64) (queries.Party, error)
+	DepositAllowance(ctx context.Context, partyID int16, amountKobo int64) (queries.DepositPartyAllowanceRow, error)
 	JoinParty(ctx context.Context, params partiesservice.JoinPartyParams) error
 	LeaveParty(ctx context.Context, partyID int16, userID, userFid int64) error
 	// Membership methods
-	UpdateAgentPaymentAllocationKobo(ctx context.Context, partyID int16, allowancesJSON []byte) (queries.Party, error)
+	UpdateAgentPaymentAllocationKobo(ctx context.Context, partyID int16, allowancesJSON []byte) (queries.UpdatePartyAgentPaymentAllocationKoboRow, error)
 	GetAgentPaymentAllocationKobo(ctx context.Context, partyID int16) (json.RawMessage, error)
 	// Marketing methods
 	CreatePartyMarketingCampaign(ctx context.Context, arg queries.CreatePartyMarketingCampaignParams) (queries.PartyMarketingCampaign, error)
@@ -60,7 +61,7 @@ type PartiesService interface {
 	UpdatePlan(ctx context.Context, arg queries.UpdatePlanParams) (queries.Plan, error)
 	DeletePlan(ctx context.Context, id int32) error
 	// Agent target methods
-	UpdatePartyAgentAcquisitionTargets(ctx context.Context, arg queries.UpdatePartyAgentAcquisitionTargetsParams) (queries.Party, error)
+	UpdatePartyAgentAcquisitionTargets(ctx context.Context, arg queries.UpdatePartyAgentAcquisitionTargetsParams) (queries.UpdatePartyAgentAcquisitionTargetsRow, error)
 	GetPartyAgentAcquisitionTargets(ctx context.Context, partyID int16) (json.RawMessage, error)
 	// Positions & Officials methods
 	ListPartyPositions(ctx context.Context, partyID int16) (*partiesservice.PartyPositionsResult, error)
@@ -112,27 +113,33 @@ type FollowsService interface {
 	GetPartyFollowersCount(ctx context.Context, partyID int16, chapterID int32) (int64, error)
 }
 
-type Handler struct {
-	bodiesService      BodiesService
-	partiesService     PartiesService
-	auditService       audit.AuditService
-	permissionsService PermissionsService
-	filesService       files.FilesService
-	utils              *utils.Utils
-	r2Svc              *r2service.R2Service
-	followsService     FollowsService
+type NotificationsService interface {
+	NotifyPartyAgentsAllowanceDeposited(ctx context.Context, params notifications.NotifyPartyAgentsAllowanceDepositedParams)
 }
 
-func NewHandler(partiesService PartiesService, bodiesService BodiesService, auditService audit.AuditService, permissionsService PermissionsService, filesService files.FilesService, utils *utils.Utils, r2Svc *r2service.R2Service, followsService FollowsService) *Handler {
+type Handler struct {
+	bodiesService        BodiesService
+	partiesService       PartiesService
+	auditService         audit.AuditService
+	permissionsService   PermissionsService
+	filesService         files.FilesService
+	utils                *utils.Utils
+	r2Svc                *r2service.R2Service
+	followsService       FollowsService
+	notificationsService NotificationsService
+}
+
+func NewHandler(partiesService PartiesService, bodiesService BodiesService, auditService audit.AuditService, permissionsService PermissionsService, filesService files.FilesService, utils *utils.Utils, r2Svc *r2service.R2Service, followsService FollowsService, notificationsService NotificationsService) *Handler {
 	return &Handler{
-		bodiesService:      bodiesService,
-		partiesService:     partiesService,
-		auditService:       auditService,
-		permissionsService: permissionsService,
-		filesService:       filesService,
-		utils:              utils,
-		r2Svc:              r2Svc,
-		followsService:     followsService,
+		bodiesService:        bodiesService,
+		partiesService:       partiesService,
+		auditService:         auditService,
+		permissionsService:   permissionsService,
+		filesService:         filesService,
+		utils:                utils,
+		r2Svc:                r2Svc,
+		followsService:       followsService,
+		notificationsService: notificationsService,
 	}
 }
 
@@ -1289,6 +1296,7 @@ type DepositAllowanceRequest struct {
 // @Security     BearerAuth
 // @Router       /parties/{id}/allowances/deposit [post]
 func (h *Handler) DepositAllowance(w http.ResponseWriter, r *http.Request) {
+	// Parse and validate party ID from URL parameter
 	idStr := chi.URLParam(r, "id")
 	partyID, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -1296,40 +1304,54 @@ func (h *Handler) DepositAllowance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Decode deposit request payload
 	var req DepositAllowanceRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
+	// Validate deposit amount
 	if req.AmountKobo <= 0 {
 		h.utils.RespondError(w, http.StatusBadRequest, "Amount must be greater than zero")
 		return
 	}
 
-	party, err := h.partiesService.DepositAllowance(r.Context(), int16(partyID), req.AmountKobo)
+	// Process allowance deposit via parties service
+	res, err := h.partiesService.DepositAllowance(r.Context(), int16(partyID), req.AmountKobo)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	h.utils.RespondSuccess(w, http.StatusOK, "Allowance deposited successfully", map[string]interface{}{
-		"party": party,
+	// Record audit log asynchronously
+	auditNewValues, _ := json.Marshal(map[string]interface{}{
+		"party_id":                       partyID,
+		"amount_kobo":                    req.AmountKobo,
+		"new_agent_payment_balance_kobo": res.AgentPaymentBalanceKobo,
 	})
-}
+	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
+		Module:     audit.StringToText(db.ModuleAdmin),
+		Action:     db.ActionDepositPartyAgentsAllowance,
+		EntityType: db.EntityTypeParty,
+		EntityID:   strconv.FormatInt(partyID, 10),
+		NewValues:  auditNewValues,
+	})
 
-// agentPaymentConfig is the shape of a single role entry in agent_payment_allocation_kobo.
-type agentPaymentConfig struct {
-	Default int64            `json:"default"`
-	States  map[string]int64 `json:"states"`
-}
+	// Dispatch notification to party national chapter
+	if natChapterID, err := h.partiesService.GetOrCreateNationalChapter(r.Context(), int16(partyID), constants.NigeriaCountryID); err == nil && natChapterID > 0 {
+		h.notificationsService.NotifyPartyAgentsAllowanceDeposited(r.Context(), notifications.NotifyPartyAgentsAllowanceDepositedParams{
+			PartyID:                    int16(partyID),
+			ChapterID:                  natChapterID,
+			AmountKobo:                 req.AmountKobo,
+			NewAgentPaymentBalanceKobo: res.AgentPaymentBalanceKobo,
+		})
+	}
 
-// agentPaymentAllocation mirrors the documented shape of the agent_payment_allocation_kobo column.
-type agentPaymentAllocation struct {
-	PollingAgent            agentPaymentConfig `json:"polling_agent"`
-	WardElectionSupervisor  agentPaymentConfig `json:"ward_election_supervisor"`
-	LgaElectionSupervisor   agentPaymentConfig `json:"lga_election_supervisor"`
-	StateElectionSupervisor agentPaymentConfig `json:"state_election_supervisor"`
+	// Return updated agent payment balance
+	h.utils.RespondSuccess(w, http.StatusOK, "Allowance deposited successfully", map[string]interface{}{
+		"agent_payment_balance_kobo": res.AgentPaymentBalanceKobo,
+	})
 }
 
 // UpdateAgentPaymentAllocationKobo godoc
@@ -1344,7 +1366,7 @@ type agentPaymentAllocation struct {
 // @Accept       json
 // @Produce      json
 // @Param        id      path int                      true "Party ID"
-// @Param        request body agentPaymentAllocation   true "Agent payment allocation payload"
+// @Param        request body map[string]interface{}   true "Agent payment allocation payload"
 // @Success      200  {object} map[string]interface{} "Allowances configuration updated successfully"
 // @Security     BearerAuth
 // @Router       /parties/{id}/allowances/settings [put]
@@ -1362,14 +1384,14 @@ func (h *Handler) UpdateAgentPaymentAllocationKobo(w http.ResponseWriter, r *htt
 		return
 	}
 
-	party, err := h.partiesService.UpdateAgentPaymentAllocationKobo(r.Context(), int16(partyID), bodyBytes)
+	res, err := h.partiesService.UpdateAgentPaymentAllocationKobo(r.Context(), int16(partyID), bodyBytes)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Allowances configuration updated successfully", map[string]interface{}{
-		"party": party,
+		"agent_payment_allocation_kobo": json.RawMessage(res.AgentPaymentAllocationKobo),
 	})
 }
 
@@ -2083,6 +2105,7 @@ type UpdateAgentTargetsRequest struct {
 // @Security     BearerAuth
 // @Router       /parties/{id}/agent-targets [patch]
 func (h *Handler) UpdateAgentAcquisitionTargets(w http.ResponseWriter, r *http.Request) {
+	// Parse and validate party ID from URL parameter
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 16)
 	if err != nil {
@@ -2090,35 +2113,36 @@ func (h *Handler) UpdateAgentAcquisitionTargets(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	var rawMap map[string]int32
-	if err := json.NewDecoder(r.Body).Decode(&rawMap); err != nil {
+	// Decode request payload
+	var req UpdateAgentTargetsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload: "+err.Error())
 		return
 	}
 
-	getVal := func(keys ...string) int32 {
-		for _, k := range keys {
-			if v, ok := rawMap[k]; ok {
-				return v
-			}
-		}
-		return 1
+	// Enforce default minimum target values of at least 1 per agent level
+	if req.PollingAgent <= 0 {
+		req.PollingAgent = 1
+	}
+	if req.WardElectionSupervisor <= 0 {
+		req.WardElectionSupervisor = 1
+	}
+	if req.LgaElectionSupervisor <= 0 {
+		req.LgaElectionSupervisor = 1
+	}
+	if req.StateElectionSupervisor <= 0 {
+		req.StateElectionSupervisor = 1
 	}
 
-	req := UpdateAgentTargetsRequest{
-		PollingAgent:            getVal("polling_agent", "pollingAgent", "pollingUnitAgent"),
-		WardElectionSupervisor:  getVal("ward_election_supervisor", "wardElectionSupervisor", "ward-election-supervisor"),
-		LgaElectionSupervisor:   getVal("lga_election_supervisor", "lgaElectionSupervisor", "lga-election-supervisor"),
-		StateElectionSupervisor: getVal("state_election_supervisor", "stateElectionSupervisor", "state-election-supervisor"),
-	}
-
+	// Serialize targets payload to JSON for storage
 	targetsJSON, err := json.Marshal(req)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to marshal targets: "+err.Error())
 		return
 	}
 
-	party, err := h.partiesService.UpdatePartyAgentAcquisitionTargets(r.Context(), queries.UpdatePartyAgentAcquisitionTargetsParams{
+	// Persist updated acquisition targets to the database
+	res, err := h.partiesService.UpdatePartyAgentAcquisitionTargets(r.Context(), queries.UpdatePartyAgentAcquisitionTargetsParams{
 		ID:                      int16(id),
 		AgentAcquisitionTargets: targetsJSON,
 	})
@@ -2127,8 +2151,9 @@ func (h *Handler) UpdateAgentAcquisitionTargets(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	// Return success response with updated agent acquisition targets
 	h.utils.RespondSuccess(w, http.StatusOK, "Agent targets updated successfully", map[string]interface{}{
-		"party": party,
+		"agent_acquisition_targets": json.RawMessage(res.AgentAcquisitionTargets),
 	})
 }
 
@@ -2142,6 +2167,7 @@ func (h *Handler) UpdateAgentAcquisitionTargets(w http.ResponseWriter, r *http.R
 // @Security     BearerAuth
 // @Router       /parties/{id}/agent-targets [get]
 func (h *Handler) GetAgentAcquisitionTargets(w http.ResponseWriter, r *http.Request) {
+	// Parse and validate party ID from URL parameter
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 16)
 	if err != nil {
@@ -2149,35 +2175,27 @@ func (h *Handler) GetAgentAcquisitionTargets(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	// Fetch targets JSON stored for this party
 	targetsJSON, err := h.partiesService.GetPartyAgentAcquisitionTargets(r.Context(), int16(id))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to get agent targets: "+err.Error())
 		return
 	}
 
-	var rawMap map[string]int32
+	// Parse targets JSON directly into UpdateAgentTargetsRequest
+	targets := UpdateAgentTargetsRequest{
+		PollingAgent:            1,
+		WardElectionSupervisor:  1,
+		LgaElectionSupervisor:   1,
+		StateElectionSupervisor: 1,
+	}
 	if len(targetsJSON) > 0 {
-		_ = json.Unmarshal(targetsJSON, &rawMap)
+		_ = json.Unmarshal(targetsJSON, &targets)
 	}
 
-	getVal := func(keys ...string) int32 {
-		for _, k := range keys {
-			if v, ok := rawMap[k]; ok {
-				return v
-			}
-		}
-		return 1
-	}
-
-	resp := map[string]int32{
-		"polling_agent":             getVal("polling_agent", "pollingAgent", "pollingUnitAgent"),
-		"ward_election_supervisor":  getVal("ward_election_supervisor", "wardElectionSupervisor", "ward-election-supervisor"),
-		"lga_election_supervisor":   getVal("lga_election_supervisor", "lgaElectionSupervisor", "lga-election-supervisor"),
-		"state_election_supervisor": getVal("state_election_supervisor", "stateElectionSupervisor", "state-election-supervisor"),
-	}
-
+	// Return normalized targets
 	h.utils.RespondSuccess(w, http.StatusOK, "Agent targets retrieved successfully", map[string]interface{}{
-		"targets": resp,
+		"targets": targets,
 	})
 }
 

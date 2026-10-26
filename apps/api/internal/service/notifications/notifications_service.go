@@ -53,6 +53,8 @@ type NotificationsService interface {
 	NotifyCandidateNominated(ctx context.Context, params NotifyCandidateNominatedParams)
 	NotifyCandidateWithdrawn(ctx context.Context, params NotifyCandidateWithdrawnParams)
 	NotifyPartyWalletDeposited(ctx context.Context, params NotifyPartyWalletDepositedParams)
+	NotifyPartySlotsPurchased(ctx context.Context, params NotifyPartySlotsPurchasedParams)
+	NotifyPartyAgentsAllowanceDeposited(ctx context.Context, params NotifyPartyAgentsAllowanceDepositedParams)
 }
 
 type service struct {
@@ -239,6 +241,23 @@ type NotifyPartyWalletDepositedParams struct {
 	BalanceAfterKobo     int64
 	TransactionReference string
 	Narration            string
+}
+
+type NotifyPartySlotsPurchasedParams struct {
+	PartyID         int16
+	ChapterID       int32
+	ActorID         *int64
+	Quantity        int32
+	TotalCostKobo   int64
+	NewSlotsBalance int32
+}
+
+type NotifyPartyAgentsAllowanceDepositedParams struct {
+	PartyID                    int16
+	ChapterID                  int32
+	ActorID                    *int64
+	AmountKobo                 int64
+	NewAgentPaymentBalanceKobo int64
 }
 
 // ----------------------------------------------------------------------------
@@ -847,6 +866,41 @@ func (s *service) NotifyPartyWalletDeposited(ctx context.Context, params NotifyP
 		ChapterID:   &params.ChapterID,
 		Category:    constants.PartyNotificationCategoryFinance,
 		Type:        constants.NotificationTypePartyWalletDeposited,
+		Priority:    constants.NotificationPriorityHigh,
+		Metadata:    partyMeta,
+	})
+}
+
+// NotifyPartySlotsPurchased dispatches a party notification to the national chapter when polling agent slots are bought.
+func (s *service) NotifyPartySlotsPurchased(ctx context.Context, params NotifyPartySlotsPurchasedParams) {
+	partyMeta := utils.NewMetadata().
+		Set("quantity", params.Quantity).
+		Set("total_cost_kobo", params.TotalCostKobo).
+		Set("new_slots_balance", params.NewSlotsBalance)
+
+	s.CreatePartyNotificationAsync(ctx, CreatePartyNotificationInput{
+		PartyID:     params.PartyID,
+		ActorUserID: params.ActorID,
+		ChapterID:   &params.ChapterID,
+		Category:    constants.PartyNotificationCategoryFinance,
+		Type:        constants.NotificationTypePartySlotsPurchased,
+		Priority:    constants.NotificationPriorityHigh,
+		Metadata:    partyMeta,
+	})
+}
+
+// NotifyPartyAgentsAllowanceDeposited dispatches a party notification to the national chapter when agent allowance budget is deposited.
+func (s *service) NotifyPartyAgentsAllowanceDeposited(ctx context.Context, params NotifyPartyAgentsAllowanceDepositedParams) {
+	partyMeta := utils.NewMetadata().
+		Set("amount_kobo", params.AmountKobo).
+		Set("new_agent_payment_balance_kobo", params.NewAgentPaymentBalanceKobo)
+
+	s.CreatePartyNotificationAsync(ctx, CreatePartyNotificationInput{
+		PartyID:     params.PartyID,
+		ActorUserID: params.ActorID,
+		ChapterID:   &params.ChapterID,
+		Category:    constants.PartyNotificationCategoryFinance,
+		Type:        constants.NotificationTypePartyAgentsAllowanceDeposited,
 		Priority:    constants.NotificationPriorityHigh,
 		Metadata:    partyMeta,
 	})

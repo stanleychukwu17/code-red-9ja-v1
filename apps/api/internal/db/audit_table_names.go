@@ -44,6 +44,8 @@ const (
 	ActionBlockPartyMember          = "block_party_member"           // Action when a user is blocked from a party
 	ActionUnblockPartyMember        = "unblock_party_member"         // Action when a user is unblocked from a party
 	ActionDepositPartyWallet        = "deposit_party_wallet"         // Action when funds are directly credited/deposited to a party wallet
+	ActionBuyPartySlots             = "buy_party_slots"              // Action when a party purchases polling agent slots
+	ActionDepositPartyAgentsAllowance = "deposit_party_agents_allowance" // Action when funds are deposited to party polling agent allowance budget
 
 	// -- Actor Roles --
 	ActorRoleSuperAdmin      = "super_admin"       // A super administrator of the system

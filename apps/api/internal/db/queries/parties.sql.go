@@ -178,7 +178,7 @@ UPDATE parties
 SET agent_payment_balance_kobo = agent_payment_balance_kobo - $1,
     updated_at = NOW()
 WHERE id = $2 AND agent_payment_balance_kobo >= $1
-RETURNING id, short_name, name, logo, logo_file_id, cover_image, cover_image_file_id, cover_position_y, display_order, status, slots, is_verified, discount_percentage, agent_payment_balance_kobo, agent_payment_allocation_kobo, agent_acquisition_targets, auto_accept_applications, color_hex, dark_color_hex, date_founded, created_at, updated_at
+RETURNING id, agent_payment_balance_kobo
 `
 
 type DeductPartyAgentPaymentBalanceParams struct {
@@ -186,33 +186,15 @@ type DeductPartyAgentPaymentBalanceParams struct {
 	ID                      int16 `json:"id"`
 }
 
-func (q *Queries) DeductPartyAgentPaymentBalance(ctx context.Context, arg DeductPartyAgentPaymentBalanceParams) (Party, error) {
+type DeductPartyAgentPaymentBalanceRow struct {
+	ID                      int16 `json:"id"`
+	AgentPaymentBalanceKobo int64 `json:"agent_payment_balance_kobo"`
+}
+
+func (q *Queries) DeductPartyAgentPaymentBalance(ctx context.Context, arg DeductPartyAgentPaymentBalanceParams) (DeductPartyAgentPaymentBalanceRow, error) {
 	row := q.db.QueryRow(ctx, deductPartyAgentPaymentBalance, arg.AgentPaymentBalanceKobo, arg.ID)
-	var i Party
-	err := row.Scan(
-		&i.ID,
-		&i.ShortName,
-		&i.Name,
-		&i.Logo,
-		&i.LogoFileID,
-		&i.CoverImage,
-		&i.CoverImageFileID,
-		&i.CoverPositionY,
-		&i.DisplayOrder,
-		&i.Status,
-		&i.Slots,
-		&i.IsVerified,
-		&i.DiscountPercentage,
-		&i.AgentPaymentBalanceKobo,
-		&i.AgentPaymentAllocationKobo,
-		&i.AgentAcquisitionTargets,
-		&i.AutoAcceptApplications,
-		&i.ColorHex,
-		&i.DarkColorHex,
-		&i.DateFounded,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
+	var i DeductPartyAgentPaymentBalanceRow
+	err := row.Scan(&i.ID, &i.AgentPaymentBalanceKobo)
 	return i, err
 }
 
@@ -1437,7 +1419,7 @@ const updatePartyAgentAcquisitionTargets = `-- name: UpdatePartyAgentAcquisition
 UPDATE parties
 SET agent_acquisition_targets = $2, updated_at = NOW()
 WHERE id = $1
-RETURNING id, short_name, name, logo, logo_file_id, cover_image, cover_image_file_id, cover_position_y, display_order, status, slots, is_verified, discount_percentage, agent_payment_balance_kobo, agent_payment_allocation_kobo, agent_acquisition_targets, auto_accept_applications, color_hex, dark_color_hex, date_founded, created_at, updated_at
+RETURNING id, agent_acquisition_targets
 `
 
 type UpdatePartyAgentAcquisitionTargetsParams struct {
@@ -1445,33 +1427,15 @@ type UpdatePartyAgentAcquisitionTargetsParams struct {
 	AgentAcquisitionTargets []byte `json:"agent_acquisition_targets"`
 }
 
-func (q *Queries) UpdatePartyAgentAcquisitionTargets(ctx context.Context, arg UpdatePartyAgentAcquisitionTargetsParams) (Party, error) {
+type UpdatePartyAgentAcquisitionTargetsRow struct {
+	ID                      int16  `json:"id"`
+	AgentAcquisitionTargets []byte `json:"agent_acquisition_targets"`
+}
+
+func (q *Queries) UpdatePartyAgentAcquisitionTargets(ctx context.Context, arg UpdatePartyAgentAcquisitionTargetsParams) (UpdatePartyAgentAcquisitionTargetsRow, error) {
 	row := q.db.QueryRow(ctx, updatePartyAgentAcquisitionTargets, arg.ID, arg.AgentAcquisitionTargets)
-	var i Party
-	err := row.Scan(
-		&i.ID,
-		&i.ShortName,
-		&i.Name,
-		&i.Logo,
-		&i.LogoFileID,
-		&i.CoverImage,
-		&i.CoverImageFileID,
-		&i.CoverPositionY,
-		&i.DisplayOrder,
-		&i.Status,
-		&i.Slots,
-		&i.IsVerified,
-		&i.DiscountPercentage,
-		&i.AgentPaymentBalanceKobo,
-		&i.AgentPaymentAllocationKobo,
-		&i.AgentAcquisitionTargets,
-		&i.AutoAcceptApplications,
-		&i.ColorHex,
-		&i.DarkColorHex,
-		&i.DateFounded,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
+	var i UpdatePartyAgentAcquisitionTargetsRow
+	err := row.Scan(&i.ID, &i.AgentAcquisitionTargets)
 	return i, err
 }
 

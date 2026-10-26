@@ -105,7 +105,7 @@ import { DepositAllowanceDialog } from "#/components/dialogs/deposit-allowance-d
 import FancyAgentIcon from "@repo/ui/icons/fancy-agent-icon";
 import { getLocalDate } from "@repo/ui/lib/date";
 
-/** Matches the Go PartyWalletTransaction struct serialised to JSON */
+/** Matches the Go PartyWalletTransaction struct serialized to JSON */
 export interface WalletTransaction {
   id: number;
   wallet_id: number;
@@ -127,7 +127,7 @@ export interface WalletTransaction {
   created_at: string;
 }
 
-/** Matches the Go PartyWallet struct serialised to JSON */
+/** Matches the Go PartyWallet struct serialized to JSON */
 interface PartyWallet {
   id: number;
   party_id: number;
@@ -148,7 +148,7 @@ interface PartyWallet {
 /**
  * WalletBillboard Component
  * Prominent balance billboard displaying total party treasury in Naira,
- * liability calculations for unstaffed units, and triggers for funding/withdrawing.
+ * liability calculations for un-staffed units, and triggers for funding/withdrawing.
  */
 function WalletBillboard({
   wallet,
@@ -308,7 +308,7 @@ function WalletQuickStatCard({
             </p>
           </div>
           <div className="flex items-center justify-between gap-5">
-            <p className="text-sm text-c-60 leading-normal max-w-[340px] pt-1">
+            <p className="text-sm text-c-60 leading-normal max-w-85 pt-1">
               {description}
             </p>
 
@@ -400,6 +400,7 @@ function WalletSlotsAllowanceSection({
         onClose={() => setIsAllowanceDialogOpen(false)}
         partyId={party?.id}
         walletBalanceKobo={wallet?.balance_kobo ?? 0}
+        agentPaymentBalanceKobo={party?.agent_payment_balance_kobo ?? 0}
         onSuccess={onSuccess}
       />
     </section>

@@ -216,14 +216,14 @@ WHERE id = $1;
 UPDATE parties
 SET agent_acquisition_targets = $2, updated_at = NOW()
 WHERE id = $1
-RETURNING *;
+RETURNING id, agent_acquisition_targets;
 
 -- name: DeductPartyAgentPaymentBalance :one
 UPDATE parties
 SET agent_payment_balance_kobo = agent_payment_balance_kobo - $1,
     updated_at = NOW()
 WHERE id = $2 AND agent_payment_balance_kobo >= $1
-RETURNING *;
+RETURNING id, agent_payment_balance_kobo;
 
 
 -- name: GetPartySampleMemberAvatars :many

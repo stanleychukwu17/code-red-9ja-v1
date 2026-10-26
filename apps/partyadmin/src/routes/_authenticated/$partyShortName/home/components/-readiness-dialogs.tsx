@@ -4,8 +4,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { AccountDetailsDialog } from "#/components/dialogs/account-details-dialog";
 import { BuyAgentSlotsDialog } from "#/components/dialogs/buy-agent-slots-dialog";
+import { DepositAllowanceDialog } from "#/components/dialogs/deposit-allowance-dialog";
 import { AgentPaymentAllocationFormDialog } from "@repo/ui/components/dialogs/AgentPaymentAllocationFormDialog";
-import { DepositAgentPaymentDialog } from "@repo/ui/components/dialogs/DepositAgentStipendDialog";
 import {
   AgentMarketingSetupDialog,
   type AgentMarketingSetupValue,
@@ -15,7 +15,6 @@ import {
   getPartyAgentPaymentAllocation,
   getPlans,
   createMarketingCampaign,
-  depositPartyAllowance,
 } from "#/lib/server/parties";
 import { getElectionGroups } from "#/lib/server/election_groups";
 import { getElectionsByGroup } from "#/lib/server/elections";
@@ -74,7 +73,6 @@ export function ReadinessDialogs({
   setIsMarketingDialogOpen,
 }: ReadinessDialogsProps) {
   const queryClient = useQueryClient();
-  const [isPaymentPending, setIsPaymentPending] = useState(false);
   const [depositDeficitAmount, setDepositDeficitAmount] = useState<number | undefined>(undefined);
 
   const fetchGroups = useServerFn(getElectionGroups);
@@ -151,33 +149,15 @@ export function ReadinessDialogs({
         onSuccess={() => setIsBudgetDialogOpen(false)}
       />
 
-      <DepositAgentPaymentDialog
+      <DepositAllowanceDialog
         open={isPaymentDialogOpen}
         onClose={() => setIsPaymentDialogOpen(false)}
-        walletBalanceNaira={(wallet?.balance_kobo ?? 0) / 100}
-        agentPaymentBalanceNaira={(party?.agent_payment_balance_kobo ?? 0) / 100}
         partyId={partyId}
-        electionGroupId={selectedElectionGroup?.id}
-        fetchElectionGroups={fetchGroups}
-        isPending={isPaymentPending}
-        onSubmit={async (amountKobo) => {
-          if (!partyId) return;
-          setIsPaymentPending(true);
-          try {
-            const res = await depositPartyAllowance({
-              data: { partyID: partyId, amountKobo },
-            });
-            if (res?.success) {
-              toast.success("Agent payment deposited!");
-              onWalletSuccess();
-              queryClient.invalidateQueries({ queryKey: ["party", partyId] });
-              setIsPaymentDialogOpen(false);
-            } else {
-              toast.error(res?.message ?? "Failed to deposit agent payment");
-            }
-          } finally {
-            setIsPaymentPending(false);
-          }
+        walletBalanceKobo={wallet?.balance_kobo ?? 0}
+        agentPaymentBalanceKobo={party?.agent_payment_balance_kobo ?? 0}
+        onSuccess={() => {
+          onWalletSuccess();
+          queryClient.invalidateQueries({ queryKey: ["party", partyId] });
         }}
       />
 

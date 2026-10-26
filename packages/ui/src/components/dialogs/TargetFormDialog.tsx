@@ -1,21 +1,9 @@
+import { useEffect } from "react";
 import { Button } from "@repo/ui/components/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogPadding,
-} from "@repo/ui/components/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogPadding } from "@repo/ui/components/dialog";
 import { Input } from "@repo/ui/components/input";
 import { useForm } from "@tanstack/react-form";
-import { ChevronDown, Loader2 } from "lucide-react";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@repo/ui/components/accordion";
-import * as React from "react";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@repo/ui/components/accordion";
 import { useQuery, useMutation } from "@tanstack/react-query";
 
 export type TargetData = {
@@ -25,26 +13,51 @@ export type TargetData = {
   state_election_supervisor: number;
 };
 
+export const TARGET_FIELDS = [
+  {
+    name: "polling_agent",
+    label: "Polling Agent per polling unit",
+  },
+  {
+    name: "ward_election_supervisor",
+    label: "Ward Supervisor per ward",
+  },
+  {
+    name: "lga_election_supervisor",
+    label: "LGA Supervisor per lga",
+  },
+  {
+    name: "state_election_supervisor",
+    label: "State Supervisor per state",
+  },
+] as const;
+
 export function TargetFormDialog({
   open,
   onClose,
   partyId,
   fetchTargets,
+  initialTargets,
   updateTargets,
   onSuccess,
 }: {
   open: boolean;
   onClose: () => void;
   partyId: string | number;
-  fetchTargets: (partyId: string | number) => Promise<TargetData | null>;
+  fetchTargets?: (partyId: string | number) => Promise<TargetData | null>;
+  initialTargets?: TargetData | null;
   updateTargets: (partyId: string | number, values: TargetData) => Promise<any>;
   onSuccess?: () => void;
 }) {
-  const { data: targets, isLoading } = useQuery({
+  const { data: queriedTargets, isLoading: isQueryLoading } = useQuery({
     queryKey: ["party-agent-targets", partyId],
-    queryFn: () => fetchTargets(partyId),
-    enabled: open,
+    queryFn: () => (fetchTargets ? fetchTargets(partyId) : null),
+    enabled: open && !!fetchTargets && !initialTargets,
+    staleTime: Infinity,
   });
+
+  const targets = initialTargets ?? queriedTargets;
+  const isLoading = !initialTargets && isQueryLoading;
 
   const mutation = useMutation({
     mutationFn: (values: TargetData) => updateTargets(partyId, values),
@@ -55,35 +68,22 @@ export function TargetFormDialog({
 
   const form = useForm({
     defaultValues: {
-      polling_agent: 1,
-      ward_election_supervisor: 1,
-      lga_election_supervisor: 1,
-      state_election_supervisor: 1,
+      polling_agent: initialTargets?.polling_agent ?? 1,
+      ward_election_supervisor: initialTargets?.ward_election_supervisor ?? 1,
+      lga_election_supervisor: initialTargets?.lga_election_supervisor ?? 1,
+      state_election_supervisor: initialTargets?.state_election_supervisor ?? 1,
     },
     onSubmit: async ({ value }) => {
       mutation.mutate(value);
     },
   });
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (open && targets) {
-      const t = targets as any;
-      form.setFieldValue(
-        "polling_agent",
-        t.polling_agent ?? t.pollingUnitAgent ?? 1,
-      );
-      form.setFieldValue(
-        "ward_election_supervisor",
-        t.ward_election_supervisor ?? t.wardElectionSupervisor ?? 1,
-      );
-      form.setFieldValue(
-        "lga_election_supervisor",
-        t.lga_election_supervisor ?? t.lgaElectionSupervisor ?? 1,
-      );
-      form.setFieldValue(
-        "state_election_supervisor",
-        t.state_election_supervisor ?? t.stateElectionSupervisor ?? 1,
-      );
+      form.setFieldValue("polling_agent", targets.polling_agent ?? 1);
+      form.setFieldValue("ward_election_supervisor", targets.ward_election_supervisor ?? 1);
+      form.setFieldValue("lga_election_supervisor", targets.lga_election_supervisor ?? 1);
+      form.setFieldValue("state_election_supervisor", targets.state_election_supervisor ?? 1);
     }
   }, [open, targets]);
 
@@ -131,24 +131,7 @@ export function TargetFormDialog({
             </Accordion>
 
             <div className="space-y-4">
-              {[
-                {
-                  name: "polling_agent",
-                  label: "Polling Agent per polling unit",
-                },
-                {
-                  name: "ward_election_supervisor",
-                  label: "Ward Supervisor per ward",
-                },
-                {
-                  name: "lga_election_supervisor",
-                  label: "LGA Supervisor per lga",
-                },
-                {
-                  name: "state_election_supervisor",
-                  label: "State Supervisor per state",
-                },
-              ].map((item) => (
+              {TARGET_FIELDS.map((item) => (
                 <form.Field
                   key={item.name}
                   name={item.name as keyof TargetData}

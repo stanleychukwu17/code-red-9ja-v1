@@ -170,9 +170,6 @@ func (s *PollingUnitsService) GetPollingUnitsWithCapacity(ctx context.Context, w
 	}
 	targetCount := targets["polling_agent"]
 	if targetCount <= 0 {
-		targetCount = targets["pollingUnitAgent"]
-	}
-	if targetCount <= 0 {
 		targetCount = 1 // Default if not found or 0
 	}
 

@@ -883,32 +883,28 @@ func (s *PartiesService) UpdatePartyDiscount(ctx context.Context, partyID int16,
 
 // DepositAllowance debits the party wallet and adds it to the party's dedicated polling agent allowance balance.
 // This is executed as a database transaction.
-func (s *PartiesService) DepositAllowance(ctx context.Context, partyID int16, amountKobo int64) (queries.Party, error) {
+func (s *PartiesService) DepositAllowance(ctx context.Context, partyID int16, amountKobo int64) (queries.DepositPartyAllowanceRow, error) {
 	if amountKobo <= 0 {
-		return queries.Party{}, fmt.Errorf("amount must be positive")
+		return queries.DepositPartyAllowanceRow{}, fmt.Errorf("amount must be positive")
 	}
 
-	if s.pool == nil {
-		return queries.Party{}, fmt.Errorf("db pool is not configured")
+	// Get wallet details (cached via Redis)
+	wallet, err := s.walletService.GetPartyWallet(ctx, partyID)
+	if err != nil {
+		return queries.DepositPartyAllowanceRow{}, fmt.Errorf("wallet not found for party: %w", err)
+	}
+
+	if wallet.BalanceKobo < amountKobo {
+		return queries.DepositPartyAllowanceRow{}, fmt.Errorf("insufficient wallet balance: required %d kobo, have %d kobo", amountKobo, wallet.BalanceKobo)
 	}
 
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return queries.Party{}, fmt.Errorf("failed to begin transaction: %w", err)
+		return queries.DepositPartyAllowanceRow{}, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
 
 	txQueries := s.queries.WithTx(tx)
-
-	// Get wallet details
-	wallet, err := txQueries.GetPartyWalletByPartyID(ctx, partyID)
-	if err != nil {
-		return queries.Party{}, fmt.Errorf("wallet not found for party: %w", err)
-	}
-
-	if wallet.BalanceKobo < amountKobo {
-		return queries.Party{}, fmt.Errorf("insufficient wallet balance: required %d kobo, have %d kobo", amountKobo, wallet.BalanceKobo)
-	}
 
 	// Debit the wallet
 	updatedWallet, err := txQueries.DebitPartyWallet(ctx, queries.DebitPartyWalletParams{
@@ -916,7 +912,7 @@ func (s *PartiesService) DepositAllowance(ctx context.Context, partyID int16, am
 		ID:          wallet.ID,
 	})
 	if err != nil {
-		return queries.Party{}, fmt.Errorf("wallet debit failed: %w", err)
+		return queries.DepositPartyAllowanceRow{}, fmt.Errorf("wallet debit failed: %w", err)
 	}
 
 	// Log financial transaction in party_wallet_transactions
@@ -935,26 +931,27 @@ func (s *PartiesService) DepositAllowance(ctx context.Context, partyID int16, am
 		RawPayload:           []byte("{}"),
 	})
 	if err != nil {
-		return queries.Party{}, fmt.Errorf("failed to log allowance deposit transaction: %w", err)
+		return queries.DepositPartyAllowanceRow{}, fmt.Errorf("failed to log allowance deposit transaction: %w", err)
 	}
 
 	// Add to allowance balance directly in parties table
-	updatedParty, err := txQueries.DepositPartyAllowance(ctx, queries.DepositPartyAllowanceParams{
+	updatedAllowance, err := txQueries.DepositPartyAllowance(ctx, queries.DepositPartyAllowanceParams{
 		AgentPaymentBalanceKobo: amountKobo,
 		ID:                      partyID,
 	})
 	if err != nil {
-		return queries.Party{}, fmt.Errorf("failed to deposit allowance: %w", err)
+		return queries.DepositPartyAllowanceRow{}, fmt.Errorf("failed to deposit allowance: %w", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return queries.Party{}, fmt.Errorf("failed to commit transaction: %w", err)
+		return queries.DepositPartyAllowanceRow{}, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	// Invalidate the cache for the party
+	// Invalidate the cache for the party and its wallet
 	s.InvalidatePartyCache(ctx, partyID)
+	s.walletService.InvalidatePartyWalletCache(ctx, partyID)
 
-	return updatedParty, nil
+	return updatedAllowance, nil
 }
 
 // AgentPaymentRoleConfig holds the default allowance and any state-level overrides for a role.
@@ -1028,10 +1025,10 @@ func HarmonizeAgentPaymentAllocation(raw []byte) ([]byte, error) {
 }
 
 // UpdateAgentPaymentAllocationKobo updates the state-by-state polling agent payment settings for a party.
-func (s *PartiesService) UpdateAgentPaymentAllocationKobo(ctx context.Context, partyID int16, allowancesJSON []byte) (queries.Party, error) {
+func (s *PartiesService) UpdateAgentPaymentAllocationKobo(ctx context.Context, partyID int16, allowancesJSON []byte) (queries.UpdatePartyAgentPaymentAllocationKoboRow, error) {
 	canonicalJSON, err := HarmonizeAgentPaymentAllocation(allowancesJSON)
 	if err != nil {
-		return queries.Party{}, err
+		return queries.UpdatePartyAgentPaymentAllocationKoboRow{}, err
 	}
 
 	defer s.InvalidatePartyCache(ctx, partyID)
@@ -1763,7 +1760,7 @@ func (s *PartiesService) UpdatePlanDisplayOrder(ctx context.Context, arg queries
 }
 
 // UpdatePartyAgentAcquisitionTargets updates the agent acquisition targets of a party.
-func (s *PartiesService) UpdatePartyAgentAcquisitionTargets(ctx context.Context, arg queries.UpdatePartyAgentAcquisitionTargetsParams) (queries.Party, error) {
+func (s *PartiesService) UpdatePartyAgentAcquisitionTargets(ctx context.Context, arg queries.UpdatePartyAgentAcquisitionTargetsParams) (queries.UpdatePartyAgentAcquisitionTargetsRow, error) {
 	defer s.InvalidatePartyCache(ctx, arg.ID)
 	return s.queries.UpdatePartyAgentAcquisitionTargets(ctx, arg)
 }
@@ -1774,9 +1771,11 @@ func (s *PartiesService) GetPartyAgentAcquisitionTargets(ctx context.Context, pa
 	if err != nil {
 		return nil, fmt.Errorf("party not found: %w", err)
 	}
+
 	if len(party.AgentAcquisitionTargets) == 0 {
 		return json.RawMessage("{}"), nil
 	}
+
 	return json.RawMessage(party.AgentAcquisitionTargets), nil
 }
 

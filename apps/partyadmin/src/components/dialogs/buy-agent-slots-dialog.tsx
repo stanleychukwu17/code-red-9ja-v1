@@ -23,7 +23,7 @@ import FancyBillIcon from "@repo/ui/icons/fancy-bill-icon";
 import { cn } from "@repo/ui/lib/utils";
 import FancySadEmojiIcon from "@repo/ui/icons/fancy-sad-emoji-icon";
 import FancyHappyEmojiIcon from "@repo/ui/icons/fancy-happy-emoji-icon";
-import { PartyWalletBalance } from "@repo/ui/components/dialogs/DepositAgentStipendDialog";
+import { PartyWalletBalance } from "./party-wallet-balance";
 
 function formatNaira(amount: number) {
   return `₦${amount.toLocaleString("en-NG", {
@@ -175,8 +175,7 @@ export function BuyAgentSlotsDialog({ partyId, walletBalanceKobo, unitSlotPriceK
             disabled={
               slots === 0 ||
               isInsufficient ||
-              buySlotsMutation.isPending ||
-              isPriceLoading
+              buySlotsMutation.isPending
             }
             onClick={handleBuySlots}
           >

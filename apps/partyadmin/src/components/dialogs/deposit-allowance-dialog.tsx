@@ -1,11 +1,10 @@
 /**
- * @file Agent Allowance Escrow Deposit Dialog
- * @description Modal enabling party treasurers to allocate funds from the primary party wallet
- * into the dedicated polling agent allowance escrow account. Ensures funds are ring-fenced
- * for post-election automated task-completion agent payouts.
+ * @file Agent Payment Deposit Dialog
+ * @description Modal allowing party administrators to allocate funds from their primary party wallet
+ * into the dedicated agent payment / allowance balance for paying polling agents and supervisors.
  */
 
-import * as React from "react";
+import { useState, type ChangeEvent } from "react";
 import { Button } from "@repo/ui/components/button";
 import {
   Dialog,
@@ -14,51 +13,64 @@ import {
   DialogHeader,
   DialogPadding,
 } from "@repo/ui/components/dialog";
-import { Package, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { depositPartyAllowance } from "#/lib/server/parties";
 import { toast } from "sonner";
+import { DescriptiveText } from "@repo/ui/components/custom/Texts";
+import FancySadEmojiIcon from "@repo/ui/icons/fancy-sad-emoji-icon";
+import FancyHappyEmojiIcon from "@repo/ui/icons/fancy-happy-emoji-icon";
+import { PartyWalletBalance } from "./party-wallet-balance";
 
-/** Formats numeric Naira value into localized currency string with decimals */
-function formatNairaWithDecimals(amount: number) {
+function formatNaira(amount: number) {
   return `₦${amount.toLocaleString("en-NG", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   })}`;
 }
 
-/**
- * DepositAllowanceDialog Component
- * Manages numerical monetary input, checks balance sufficiency against available wallet Kobo,
- * and transfers funds into the allowance escrow bucket.
- */
-export function DepositAllowanceDialog({
-  open,
-  onClose,
-  partyId,
-  walletBalanceKobo,
-  onSuccess,
-}: {
+export type DepositAllowanceDialogProps = {
   open: boolean;
   onClose: () => void;
   partyId?: number;
   walletBalanceKobo: number;
+  agentPaymentBalanceKobo?: number;
+  defaultAmountNaira?: number;
   onSuccess?: () => void;
-}) {
-  const [depositAmount, setDepositAmount] = React.useState(10000);
+};
 
+/**
+ * DepositAllowanceDialog Component
+ * Manages numerical monetary input, checks balance sufficiency against available wallet Kobo,
+ * and transfers funds into the agent allowance balance via depositPartyAllowance.
+ */
+export function DepositAllowanceDialog({
+  partyId,
+  walletBalanceKobo,
+  agentPaymentBalanceKobo = 0,
+  defaultAmountNaira = 100000,
+  open,
+  onClose,
+  onSuccess,
+}: DepositAllowanceDialogProps) {
+  // Target deposit amount in Naira
+  const [depositAmountNaira, setDepositAmountNaira] = useState(defaultAmountNaira);
+
+  // Convert balances from kobo to Naira and check treasury sufficiency
+  const walletBalanceNaira = walletBalanceKobo / 100;
+  const agentPaymentBalanceNaira = agentPaymentBalanceKobo / 100;
+  const isInsufficient = depositAmountNaira > walletBalanceNaira;
+
+  // Mutation to transfer treasury balance into agent allowance fund
   const depositMutation = useMutation({
-    mutationFn: (variables: { partyID: number; amountKobo: number }) =>
-      depositPartyAllowance({ data: variables }),
+    mutationFn: (variables: { partyID: number; amountKobo: number }) => depositPartyAllowance({ data: variables }),
     onSuccess: (res) => {
       if (res && res.success) {
-        toast.success(
-          `Successfully deposited ${formatNairaWithDecimals(depositAmount)} to polling agent allowance budget!`,
-        );
+        toast.success(`Successfully deposited ${formatNaira(depositAmountNaira)} to agent payment balance!`);
         onSuccess?.();
         onClose();
       } else {
-        toast.error(res?.message || "Failed to deposit allowance");
+        toast.error(res?.message || "Failed to deposit agent payment");
       }
     },
     onError: (error: any) => {
@@ -66,111 +78,83 @@ export function DepositAllowanceDialog({
     },
   });
 
-  const walletBalanceNaira = walletBalanceKobo / 100;
-  const isInsufficient = depositAmount > walletBalanceNaira;
-
-  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Parse numeric amount input and strip non-digits
+  const handleAmountChange = (e: ChangeEvent<HTMLInputElement>) => {
     const rawVal = e.target.value.replace(/\D/g, "");
     const parsed = Number(rawVal) || 0;
-    setDepositAmount(parsed);
+    setDepositAmountNaira(parsed);
   };
 
+  // Convert Naira to kobo and submit deposit transaction
   const handleDeposit = () => {
-    if (!partyId || depositAmount <= 0) return;
+    if (!partyId || depositAmountNaira <= 0 || isInsufficient) return;
     depositMutation.mutate({
       partyID: partyId,
-      amountKobo: depositAmount * 100, // convert Naira input to Kobo
+      amountKobo: depositAmountNaira * 100, // convert Naira to Kobo
     });
   };
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-145 p-0 rounded-2xl border-none shadow-2xl overflow-hidden">
-        <DialogHeader title="Deposit Polling Agent Allowance" />
+    <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
+      <DialogContent className="max-w-145">
+        <DialogHeader title="Top up Agent Payment" />
 
-        <DialogPadding className="space-y-4 pb-6">
-          {/* Blue info banner */}
-          <div className="flex items-start gap-3 rounded-xl bg-[#edf3ff] px-4 py-3.5">
-            <Package className="size-5 shrink-0 text-[#3182ce] mt-0.5" />
-            <p className="leading-[1.6] text-sm text-[#2b6cb0]">
-              Pay your polling agents easily through Free9ja. Enter the amount
-              you want to deposit and click{" "}
-              <strong className="font-bold">Deposit</strong>.
-            </p>
-          </div>
+        <DialogPadding>
+          <DescriptiveText text="Party agents can only perform their election-day duties once their payment has been deposited here." />
 
-          {/* Green info banner */}
-          <div className="flex items-start gap-3 rounded-xl bg-[#edfff6] px-4 py-3.5">
-            <Package className="size-5 shrink-0 text-[#22c55e] mt-0.5" />
-            <p className="leading-[1.6] text-sm text-[#166534]">
-              Free9ja pays agents directly based on task completion and
-              performance. This ensures agents meet their election-day
-              responsibilities, including uploading their polling unit's final
-              results for real-time aggregation and reporting.{" "}
-              <strong className="font-bold">No Glitch.</strong>
-            </p>
-          </div>
-
-          {/* Central monetary input */}
-          <div className="py-4 flex flex-col items-center gap-1.5">
-            <p className="text-sm font-medium text-c-50">Deposit Amount</p>
-            <div className="flex items-center justify-center w-full text-center">
-              <div className="inline-flex items-center gap-1">
-                <span className="text-[52px] font-bold text-c-80 select-none">
-                  ₦
-                </span>
+          <div className="space-y-5">
+            {/* Amount input */}
+            <div className="py-6 flex flex-col items-center gap-2">
+              <p className="text-sm text-c-50">Deposit Amount</p>
+              <div className="flex items-center">
                 <input
                   type="text"
                   inputMode="numeric"
-                  value={depositAmount.toLocaleString("en-NG")}
+                  value={depositAmountNaira ? formatNaira(depositAmountNaira) : ""}
                   onChange={handleAmountChange}
-                  className="text-[52px] font-bold text-c-80 outline-none bg-transparent p-0 border-none leading-none focus:outline-none focus:ring-0"
-                  style={{
-                    fontVariantNumeric: "tabular-nums",
-                    width: `${Math.max(1, depositAmount.toLocaleString("en-NG").length) * 0.62}em`,
-                  }}
+                  placeholder="₦0"
+                  className="text-[52px] font-bold text-c-80 text-center bg-transparent outline-none w-full leading-none pb-1 caret-c-80"
+                  style={{ fontVariantNumeric: "tabular-nums" }}
                   disabled={depositMutation.isPending}
                 />
               </div>
             </div>
-          </div>
 
-          {/* Insufficient balance warning */}
-          {isInsufficient && (
-            <div className="rounded-xl bg-[#fff1f1] px-5 py-3 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <span className="text-xl">😩</span>
-                <span className="text-[15px] font-medium text-c-70">
-                  Insufficient wallet balance
-                </span>
-              </div>
-              <span className="text-[15px] font-semibold text-[#e53e3e] whitespace-nowrap">
-                {formatNairaWithDecimals(depositAmount)}
-              </span>
-            </div>
-          )}
+            {/* Current balances */}
+            <div className="space-y-2">
+              <PartyWalletBalance
+                icon={<FancyHappyEmojiIcon className="shrink-0 size-6" />}
+                label="Wallet balance"
+                value={formatNaira(walletBalanceNaira)}
+                className="bg-secondary/20"
+              />
 
-          {/* Wallet balance info */}
-          <div className="rounded-xl bg-[#edfff6] px-5 py-3 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <span className="text-xl">💰</span>
-              <span className="text-[15px] font-medium text-[#166534]">
-                Wallet balance
-              </span>
+              {isInsufficient ? (
+                <PartyWalletBalance
+                  icon={<FancySadEmojiIcon className="shrink-0 size-6" />}
+                  label="Insufficient wallet balance"
+                  value={formatNaira(depositAmountNaira)}
+                  className="bg-red/20"
+                  valueClassName="text-red"
+                />
+              ) : (
+                <PartyWalletBalance
+                  icon={<FancySadEmojiIcon className="shrink-0 size-6" />}
+                  label="Agent Payment Balance"
+                  value={formatNaira(agentPaymentBalanceNaira)}
+                  className="bg-background border border-c-90"
+                />
+              )}
             </div>
-            <span className="text-[15px] font-semibold text-[#166534] whitespace-nowrap">
-              {formatNairaWithDecimals(walletBalanceNaira)}
-            </span>
           </div>
         </DialogPadding>
 
         <DialogFooter>
           <Button
-            className="bg-[#00e575] hover:bg-[#00c866] text-white rounded-xl px-7 h-11 text-[15px] font-bold border-none shadow-none transition-colors duration-150"
-            disabled={
-              depositAmount <= 0 || isInsufficient || depositMutation.isPending
-            }
+            variant="secondary"
+            size="3xl"
             onClick={handleDeposit}
+            disabled={depositAmountNaira <= 0 || isInsufficient || depositMutation.isPending}
           >
             {depositMutation.isPending ? (
               <span className="flex items-center gap-2">

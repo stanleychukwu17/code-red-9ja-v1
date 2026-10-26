@@ -181,7 +181,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	notificationsHandler := notificationshandler.NewHandler(notificationsService, utilsInstance)
 	authHandler := authhandler.NewHandler(authService, usersService, filesService, utilsInstance)
 	bodiesHandler := bodieshandler.NewHandler(bodiesService, q, utilsInstance, rdb)
-	partiesHandler := partieshandler.NewHandler(partiesService, bodiesService, auditService, permissionsService, filesService, utilsInstance, r2Svc, followsService)
+	partiesHandler := partieshandler.NewHandler(partiesService, bodiesService, auditService, permissionsService, filesService, utilsInstance, r2Svc, followsService, notificationsService)
 	partiesWalletHandler := partieswallethandler.NewHandler(partiesWalletService, partiesService, notificationsService, auditService, utilsInstance)
 	statesHandler := stateshandler.NewHandler(statesService, utilsInstance)
 	senatorialDistrictsHandler := senatorialdistrictshandler.NewHandler(senatorialDistrictsService, bodiesService, q, utilsInstance)
@@ -569,22 +569,10 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Get("/api/v1/election-groups/{id}/stats/lgas/{lga_id}/parties/{party_id}", electionStatsHandler.GetSingleLGAStats)
 		r.Get("/api/v1/election-groups/{id}/stats/wards/{ward_id}/parties/{party_id}", electionStatsHandler.GetSingleWardStats)
 
-		r.Post("/api/v1/parties/{id}/wallet/withdraw", partiesWalletHandler.WithdrawFromPartyWallet)
-		r.Post("/api/v1/parties/{id}/slots/buy", partiesWalletHandler.BuySlots)
-		r.Post("/api/v1/parties/{id}/allowances/deposit", partiesHandler.DepositAllowance)
-
 		r.Post("/api/v1/parties/{id}/join-hierarchy", partiesHandler.JoinPartyHierarchy)
 		r.Post("/api/v1/parties/{id}/leave", partiesHandler.LeaveParty)
-		r.Put("/api/v1/parties/{id}/allowances/settings", partiesHandler.UpdateAgentPaymentAllocationKobo)
-		r.Post("/api/v1/parties/{id}/agent-payment-deposits", partiesHandler.DepositAllowance)
 		r.Get("/api/v1/parties/{id}/agent-payment-allocations", partiesHandler.GetAgentPaymentAllocationKobo)
-		r.Put("/api/v1/parties/{id}/agent-payment-allocations", partiesHandler.UpdateAgentPaymentAllocationKobo)
-		r.Patch("/api/v1/parties/{id}/agent-targets", partiesHandler.UpdateAgentAcquisitionTargets)
 		r.Get("/api/v1/parties/{id}/agent-targets", partiesHandler.GetAgentAcquisitionTargets)
-		r.Post("/api/v1/parties/{id}/wallet/deposit-test", partiesWalletHandler.Deposit)
-
-		// Marketing Campaigns
-		r.Post("/api/v1/parties/{id}/agent-marketing-campaigns", partiesHandler.CreatePartyMarketingCampaign)
 		r.Get("/api/v1/parties/{id}/agent-marketing-campaigns", partiesHandler.GetPartyMarketingCampaigns)
 
 		// polling unit assignments routes
@@ -668,6 +656,19 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 
 		// party readiness overview (party admins only)
 		r.Get("/api/v1/parties/{id}/readiness", partiesHandler.GetPartyReadiness)
+
+		// party treasury, slots & allowance management (party admins only)
+		r.Post("/api/v1/parties/{id}/wallet/withdraw", partiesWalletHandler.WithdrawFromPartyWallet)
+		r.Post("/api/v1/parties/{id}/wallet/deposit-test", partiesWalletHandler.Deposit)
+		r.Post("/api/v1/parties/{id}/slots/buy", partiesWalletHandler.BuySlots)
+		r.Post("/api/v1/parties/{id}/allowances/deposit", partiesHandler.DepositAllowance)
+		r.Post("/api/v1/parties/{id}/agent-payment-deposits", partiesHandler.DepositAllowance)
+		r.Put("/api/v1/parties/{id}/allowances/settings", partiesHandler.UpdateAgentPaymentAllocationKobo)
+		r.Put("/api/v1/parties/{id}/agent-payment-allocations", partiesHandler.UpdateAgentPaymentAllocationKobo)
+		r.Patch("/api/v1/parties/{id}/agent-targets", partiesHandler.UpdateAgentAcquisitionTargets)
+
+		// party marketing campaigns creation (party admins only)
+		r.Post("/api/v1/parties/{id}/agent-marketing-campaigns", partiesHandler.CreatePartyMarketingCampaign)
 
 		// party admins can view their own party's wallet transaction ledger
 		r.Get("/api/v1/parties/{id}/wallet/transactions", partiesWalletHandler.ListPartyWalletTransactions)

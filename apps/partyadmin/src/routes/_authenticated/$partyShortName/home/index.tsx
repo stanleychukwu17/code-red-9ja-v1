@@ -118,15 +118,18 @@ function ReadinessComponent() {
   // Normalize party stats with fallback options
   const resolvedStats = electionStatsData?.data?.party_stats || {};
 
-  // Target recruitment counts per operational tier
-  const targets = electionStatsData?.data?.targets || {};
+  // Target recruitment counts per operational tier:
+  // Derived from election stats, or fallback to readiness party targets / active party targets
+  const targets =
+    electionStatsData?.data?.targets ||
+    readinessData?.party?.agent_acquisition_targets ||
+    party?.agent_acquisition_targets ||
+    {};
 
   // Refresh wallet & party cache after buying slots
   const handleSlotsPurchased = () => {
     refetchWallet();
-    if (partyId) {
-      queryClient.invalidateQueries({ queryKey: ["party", partyId] });
-    }
+    queryClient.invalidateQueries({ queryKey: ["party", partyId] });
   };
 
   return (
@@ -178,7 +181,15 @@ function ReadinessComponent() {
             onOpenAgentPayment={() => setIsPaymentDialogOpen(true)}
             onOpenMarketing={() => setIsMarketingDialogOpen(true)}
           />
-          <TargetCard />
+          <TargetCard
+            targets={targets}
+            partyId={partyId}
+            onTargetsUpdated={() => {
+              queryClient.invalidateQueries({ queryKey: ["election-stats"] });
+              queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partyReadiness.byParty(partyId) });
+              queryClient.invalidateQueries({ queryKey: ["party", partyId] });
+            }}
+          />
           <AgentPaymentCard
             onEdit={() => setIsBudgetDialogOpen(true)}
             party={party}

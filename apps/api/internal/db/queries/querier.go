@@ -142,7 +142,7 @@ type Querier interface {
 	DecrementElectionGroupPollingUnitsForStateConstituencyElection(ctx context.Context, arg DecrementElectionGroupPollingUnitsForStateConstituencyElectionParams) error
 	DecrementElectionGroupPollingUnitsForStateElection(ctx context.Context, arg DecrementElectionGroupPollingUnitsForStateElectionParams) error
 	DecrementElectionGroupPollingUnitsForWardElection(ctx context.Context, arg DecrementElectionGroupPollingUnitsForWardElectionParams) error
-	DeductPartyAgentPaymentBalance(ctx context.Context, arg DeductPartyAgentPaymentBalanceParams) (Party, error)
+	DeductPartyAgentPaymentBalance(ctx context.Context, arg DeductPartyAgentPaymentBalanceParams) (DeductPartyAgentPaymentBalanceRow, error)
 	DeductPartySlots(ctx context.Context, arg DeductPartySlotsParams) (Party, error)
 	DeleteAssetFolder(ctx context.Context, id int32) error
 	DeleteAssignment(ctx context.Context, id int64) error
@@ -168,7 +168,7 @@ type Querier interface {
 	DeleteUserPhoneNumber(ctx context.Context, arg DeleteUserPhoneNumberParams) error
 	DeleteUserVotesByElectionGroup(ctx context.Context, arg DeleteUserVotesByElectionGroupParams) error
 	DeleteWard(ctx context.Context, id int32) error
-	DepositPartyAllowance(ctx context.Context, arg DepositPartyAllowanceParams) (Party, error)
+	DepositPartyAllowance(ctx context.Context, arg DepositPartyAllowanceParams) (DepositPartyAllowanceRow, error)
 	EnsureElectionGroupParentSkeletons(ctx context.Context, electionGroupID int32) error
 	FindOrCreateCampaignGroup(ctx context.Context, arg FindOrCreateCampaignGroupParams) (CampaignGroup, error)
 	FollowParty(ctx context.Context, arg FollowPartyParams) (int64, error)
@@ -550,8 +550,8 @@ type Querier interface {
 	UpdateOffice(ctx context.Context, arg UpdateOfficeParams) (Office, error)
 	UpdateOnboardingProfile(ctx context.Context, arg UpdateOnboardingProfileParams) (User, error)
 	UpdateParty(ctx context.Context, arg UpdatePartyParams) (Party, error)
-	UpdatePartyAgentAcquisitionTargets(ctx context.Context, arg UpdatePartyAgentAcquisitionTargetsParams) (Party, error)
-	UpdatePartyAgentPaymentAllocationKobo(ctx context.Context, arg UpdatePartyAgentPaymentAllocationKoboParams) (Party, error)
+	UpdatePartyAgentAcquisitionTargets(ctx context.Context, arg UpdatePartyAgentAcquisitionTargetsParams) (UpdatePartyAgentAcquisitionTargetsRow, error)
+	UpdatePartyAgentPaymentAllocationKobo(ctx context.Context, arg UpdatePartyAgentPaymentAllocationKoboParams) (UpdatePartyAgentPaymentAllocationKoboRow, error)
 	UpdatePartyCustomPosition(ctx context.Context, arg UpdatePartyCustomPositionParams) (PartyPosition, error)
 	UpdatePartyDiscount(ctx context.Context, arg UpdatePartyDiscountParams) (Party, error)
 	UpdatePartyIsVerified(ctx context.Context, arg UpdatePartyIsVerifiedParams) error

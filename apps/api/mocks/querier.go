@@ -1564,22 +1564,22 @@ func (_m *Querier) DebitUserWallet(ctx context.Context, arg queries.DebitUserWal
 }
 
 // DeductPartyAgentPaymentBalance provides a mock function with given fields: ctx, arg
-func (_m *Querier) DeductPartyAgentPaymentBalance(ctx context.Context, arg queries.DeductPartyAgentPaymentBalanceParams) (queries.Party, error) {
+func (_m *Querier) DeductPartyAgentPaymentBalance(ctx context.Context, arg queries.DeductPartyAgentPaymentBalanceParams) (queries.DeductPartyAgentPaymentBalanceRow, error) {
 	ret := _m.Called(ctx, arg)
 
 	if len(ret) == 0 {
 		panic("no return value specified for DeductPartyAgentPaymentBalance")
 	}
 
-	var r0 queries.Party
+	var r0 queries.DeductPartyAgentPaymentBalanceRow
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, queries.DeductPartyAgentPaymentBalanceParams) (queries.Party, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, queries.DeductPartyAgentPaymentBalanceParams) (queries.DeductPartyAgentPaymentBalanceRow, error)); ok {
 		return rf(ctx, arg)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, queries.DeductPartyAgentPaymentBalanceParams) queries.Party); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, queries.DeductPartyAgentPaymentBalanceParams) queries.DeductPartyAgentPaymentBalanceRow); ok {
 		r0 = rf(ctx, arg)
 	} else {
-		r0 = ret.Get(0).(queries.Party)
+		r0 = ret.Get(0).(queries.DeductPartyAgentPaymentBalanceRow)
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, queries.DeductPartyAgentPaymentBalanceParams) error); ok {
@@ -7441,22 +7441,22 @@ func (_m *Querier) UpdateParty(ctx context.Context, arg queries.UpdatePartyParam
 }
 
 // UpdatePartyAgentAcquisitionTargets provides a mock function with given fields: ctx, arg
-func (_m *Querier) UpdatePartyAgentAcquisitionTargets(ctx context.Context, arg queries.UpdatePartyAgentAcquisitionTargetsParams) (queries.Party, error) {
+func (_m *Querier) UpdatePartyAgentAcquisitionTargets(ctx context.Context, arg queries.UpdatePartyAgentAcquisitionTargetsParams) (queries.UpdatePartyAgentAcquisitionTargetsRow, error) {
 	ret := _m.Called(ctx, arg)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UpdatePartyAgentAcquisitionTargets")
 	}
 
-	var r0 queries.Party
+	var r0 queries.UpdatePartyAgentAcquisitionTargetsRow
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, queries.UpdatePartyAgentAcquisitionTargetsParams) (queries.Party, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, queries.UpdatePartyAgentAcquisitionTargetsParams) (queries.UpdatePartyAgentAcquisitionTargetsRow, error)); ok {
 		return rf(ctx, arg)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, queries.UpdatePartyAgentAcquisitionTargetsParams) queries.Party); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, queries.UpdatePartyAgentAcquisitionTargetsParams) queries.UpdatePartyAgentAcquisitionTargetsRow); ok {
 		r0 = rf(ctx, arg)
 	} else {
-		r0 = ret.Get(0).(queries.Party)
+		r0 = ret.Get(0).(queries.UpdatePartyAgentAcquisitionTargetsRow)
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, queries.UpdatePartyAgentAcquisitionTargetsParams) error); ok {

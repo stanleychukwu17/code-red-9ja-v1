@@ -35,7 +35,7 @@ type PartiesWalletService interface {
 	GetGlobalSlotPrice(ctx context.Context) (int64, error)
 	UpdateGlobalSlotPrice(ctx context.Context, priceKobo int64) (int64, error)
 	GetPartySlotPrice(ctx context.Context, partyID int16) (int64, error)
-	BuySlots(ctx context.Context, partyID int16, quantity int32) (queries.Party, error)
+	BuySlots(ctx context.Context, partyID int16, quantity int32) (queries.Party, queries.PartyWalletTransaction, error)
 }
 
 // PartiesService provides access to party info and chapter resolution.
@@ -47,6 +47,7 @@ type PartiesService interface {
 // NotificationsService defines methods required for dispatching notifications.
 type NotificationsService interface {
 	NotifyPartyWalletDeposited(ctx context.Context, params notifications.NotifyPartyWalletDepositedParams)
+	NotifyPartySlotsPurchased(ctx context.Context, params notifications.NotifyPartySlotsPurchasedParams)
 }
 
 // Handler handles party wallet and slot HTTP endpoints.
@@ -540,13 +541,42 @@ func (h *Handler) BuySlots(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	party, err := h.partiesWalletService.BuySlots(r.Context(), int16(partyID), req.Quantity)
+	party, txn, err := h.partiesWalletService.BuySlots(r.Context(), int16(partyID), req.Quantity)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
+	// Record audit log asynchronously
+	auditNewValues, _ := json.Marshal(map[string]interface{}{
+		"party_id":              partyID,
+		"quantity":              req.Quantity,
+		"total_cost_kobo":       txn.AmountKobo,
+		"transaction_reference": txn.TransactionReference,
+		"balance_after_kobo":    txn.BalanceAfterKobo,
+		"new_slots_balance":     party.Slots,
+	})
+	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
+		Module:     audit.StringToText(db.ModuleAdmin),
+		Action:     db.ActionBuyPartySlots,
+		EntityType: db.EntityTypeParty,
+		EntityID:   strconv.FormatInt(partyID, 10),
+		NewValues:  auditNewValues,
+	})
+
+	// Dispatch notification to party national chapter
+	if natChapterID, err := h.partiesService.GetOrCreateNationalChapter(r.Context(), int16(partyID), constants.NigeriaCountryID); err == nil && natChapterID > 0 {
+		h.notificationsService.NotifyPartySlotsPurchased(r.Context(), notifications.NotifyPartySlotsPurchasedParams{
+			PartyID:         int16(partyID),
+			ChapterID:       natChapterID,
+			Quantity:        req.Quantity,
+			TotalCostKobo:   txn.AmountKobo,
+			NewSlotsBalance: party.Slots,
+		})
+	}
+
 	h.utils.RespondSuccess(w, http.StatusOK, fmt.Sprintf("Successfully purchased %d slots", req.Quantity), map[string]interface{}{
-		"party": party,
+		"party":       party,
+		"transaction": txn,
 	})
 }
