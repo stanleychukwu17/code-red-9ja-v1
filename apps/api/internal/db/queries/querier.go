@@ -384,6 +384,7 @@ type Querier interface {
 	LiftPartyMemberSuspension(ctx context.Context, arg LiftPartyMemberSuspensionParams) (PartyMemberSuspension, error)
 	ListAcceptingParties(ctx context.Context) ([]ListAcceptingPartiesRow, error)
 	ListActiveINECResultGrabbers(ctx context.Context, activeSyncDaysLimit int32) ([]ListActiveINECResultGrabbersRow, error)
+	ListActivePartyIDs(ctx context.Context) ([]int16, error)
 	ListAgentEarnings(ctx context.Context, arg ListAgentEarningsParams) ([]ListAgentEarningsRow, error)
 	ListAllPartyMarketingCampaigns(ctx context.Context, arg ListAllPartyMarketingCampaignsParams) ([]ListAllPartyMarketingCampaignsRow, error)
 	ListAllR2Keys(ctx context.Context) ([]string, error)

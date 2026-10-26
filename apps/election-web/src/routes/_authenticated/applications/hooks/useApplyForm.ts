@@ -4,7 +4,6 @@ import {
   getApplications,
   submitPollingAgentApplication,
 } from "#/lib/server/applications";
-import { getElectionGroups } from "#/lib/server/election_groups";
 import {
   confirmFileUpload,
   getPresignedUploadURL,
@@ -76,7 +75,6 @@ export function useApplyForm({ search, navigate }: UseApplyFormOptions) {
 
   // --- Wizard Navigation & Submission Status ---
   const [step, setStep] = useState<number>(search?.step || 1);
-  const [searchQuery, setSearchQuery] = useState<string>("");
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [success, setSuccess] = useState<boolean>(false);
 
@@ -114,32 +112,6 @@ export function useApplyForm({ search, navigate }: UseApplyFormOptions) {
   // Standardized query for political parties
   const { data: parties = [], isLoading: partiesLoading } = useParties();
 
-  // Query upcoming election groups open for agent recruitment
-  const { data: elections = [] } = useQuery({
-    queryKey: ["electionGroups", { upcoming: true }],
-    queryFn: async () => {
-      const res = await getElectionGroups({ data: { upcoming: true } });
-      if (
-        res?.success &&
-        res.data?.election_groups &&
-        res.data.election_groups.length > 0
-      ) {
-        return res.data.election_groups.map((group: any) => ({
-          id: group.id,
-          name: group.name,
-          date: group.election_date
-            ? new Date(group.election_date).toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-            })
-            : "TBD",
-        }));
-      }
-      return [];
-    },
-    initialData: [],
-  });
 
   // Query user's existing applications to avoid duplicate submissions
   const { data: applications = [] } = useQuery({
@@ -480,19 +452,12 @@ export function useApplyForm({ search, navigate }: UseApplyFormOptions) {
   const isSubmitting = submitMutation.isPending;
   const handleSubmit = () => submitMutation.mutate();
 
-  // Filter parties based on search query in Step 2
-  const filteredParties = parties.filter(
-    (p: any) =>
-      p.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.short_name?.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
-
-  // Navigate backward through the wizard, skipping Step 7 if no formal education was chosen
+  // Navigate backward through the wizard, skipping Step 5 if no formal education was chosen
   const handleBackClick = () => {
     if (step === 1) {
       navigate({ to: "/" });
-    } else if (step === 8 && educationalStatus === "none") {
-      setStep(6);
+    } else if (step === 6 && educationalStatus === "none") {
+      setStep(4);
     } else {
       setStep(step - 1);
     }
@@ -504,20 +469,16 @@ export function useApplyForm({ search, navigate }: UseApplyFormOptions) {
     step,
     setStep,
     handleBackClick,
-    searchQuery,
-    setSearchQuery,
     submitError,
     success,
     // Party
     parties,
     partiesLoading,
-    filteredParties,
     selectedPartyId,
     setSelectedPartyId,
     selectedParty,
     lockedPartyId,
     // Elections
-    elections,
     selectedElectionIds,
     setSelectedElectionIds,
     appliedElectionGroupIds,

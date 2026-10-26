@@ -145,35 +145,34 @@ func (s *PartiesService) CreateParty(ctx context.Context, shortName, name, logo 
 	}
 
 	// Invalidate parties listings cache
-	s.InvalidatePartyCache(ctx, party.ID)
+	s.InvalidatePartiesListCache(ctx)
+	s.InvalidatePartyEntityCache(ctx, party.ID)
 
 	return party, nil
 }
 
 // GetPartyBasicInfo retrieves basic party info.
+// It shares the canonical "parties:by_id:<id>" Redis cache from GetPartyByID.
 func (s *PartiesService) GetPartyBasicInfo(ctx context.Context, partyID int16) *queries.PartyBasicInfoWithVerifications {
 	if partyID <= 0 {
 		return nil
 	}
 
-	redisKey := fmt.Sprintf("%s%d", db.RedisPartyBasicInfo, partyID)
-
-	// Try to get from Redis
-	cachedData, err := s.rdb.Get(ctx, redisKey).Result()
-	if err == nil {
-		var party queries.PartyBasicInfoWithVerifications
-		if err := json.Unmarshal([]byte(cachedData), &party); err == nil {
-			return &party
-		}
-	}
-
-	partyRow, err := s.queries.GetPartyBasicInfo(ctx, partyID)
+	partyRow, err := s.GetPartyByID(ctx, partyID)
 	if err != nil {
 		return nil
 	}
 
 	party := queries.PartyBasicInfoWithVerifications{
-		GetPartyBasicInfoRow: partyRow,
+		GetPartyBasicInfoRow: queries.GetPartyBasicInfoRow{
+			ID:           partyRow.ID,
+			ShortName:    partyRow.ShortName,
+			Name:         partyRow.Name,
+			Logo:         partyRow.Logo,
+			IsVerified:   partyRow.IsVerified,
+			ColorHex:     partyRow.ColorHex,
+			DarkColorHex: partyRow.DarkColorHex,
+		},
 	}
 
 	// Only fetch verifications if the party is flagged as verified
@@ -184,25 +183,47 @@ func (s *PartiesService) GetPartyBasicInfo(ctx context.Context, partyID int16) *
 		}
 	}
 
-	// Save to Redis
-	if partyData, err := json.Marshal(party); err == nil {
-		s.rdb.Set(ctx, redisKey, partyData, db.RedisOneEightyDaysTTL)
-	}
-
 	return &party
 }
 
 // IsPartyAcceptingApplications checks if a party meets all criteria to accept agent applications.
+// It leverages the Redis-cached accepting party IDs set when available.
 func (s *PartiesService) IsPartyAcceptingApplications(ctx context.Context, partyID int16) (bool, error) {
+	acceptingMap, err := s.GetAcceptingPartyIDs(ctx)
+	if err == nil {
+		return acceptingMap[partyID], nil
+	}
+
 	return s.queries.IsPartyAcceptingApplications(ctx, partyID)
 }
 
 // GetAcceptingPartyIDs returns a set (as map[int16]bool) of party IDs currently accepting agent applications.
+// It is shielded with Redis cache to avoid running heavy JSONB queries against the database repeatedly.
 func (s *PartiesService) GetAcceptingPartyIDs(ctx context.Context) (map[int16]bool, error) {
+	cacheKey := db.RedisPartiesAcceptingIDs
+
+	// Try fetching from Redis first
+	if cachedData, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
+		var ids []int16
+		if err := json.Unmarshal([]byte(cachedData), &ids); err == nil {
+			acceptingMap := make(map[int16]bool, len(ids))
+			for _, id := range ids {
+				acceptingMap[id] = true
+			}
+			return acceptingMap, nil
+		}
+	}
+
 	ids, err := s.queries.GetAcceptingPartyIDs(ctx)
 	if err != nil {
 		return nil, err
 	}
+
+	// Cache in Redis
+	if data, err := json.Marshal(ids); err == nil {
+		_ = s.rdb.Set(ctx, cacheKey, data, db.RedisThirtyDaysTTL).Err()
+	}
+
 	acceptingMap := make(map[int16]bool, len(ids))
 	for _, id := range ids {
 		acceptingMap[id] = true
@@ -211,103 +232,197 @@ func (s *PartiesService) GetAcceptingPartyIDs(ctx context.Context) (map[int16]bo
 }
 
 // GetPartyInfo returns a party if the provided optional partyID is valid.
+// It shares the canonical "parties:by_id:<id>" Redis cache from GetPartyByID.
 func (s *PartiesService) GetPartyInfo(ctx context.Context, partyID int16) *queries.PartyWithVerifications {
 	if partyID <= 0 {
 		return nil
 	}
 
-	redisKey := fmt.Sprintf("%s%d", db.RedisPartyInfo, partyID)
+	partyRow, err := s.GetPartyByID(ctx, partyID)
+	if err != nil {
+		return nil
+	}
 
-	// Try to get from Redis
-	cachedData, err := s.rdb.Get(ctx, redisKey).Result()
-	if err == nil {
-		var party queries.PartyWithVerifications
-		if err := json.Unmarshal([]byte(cachedData), &party); err == nil {
-			return &party
+	party := queries.PartyWithVerifications{
+		ListPartiesRow: queries.ListPartiesRow{
+			ID:               partyRow.ID,
+			ShortName:        partyRow.ShortName,
+			Name:             partyRow.Name,
+			Logo:             partyRow.Logo,
+			LogoFileID:       partyRow.LogoFileID,
+			CoverImage:       partyRow.CoverImage,
+			CoverImageFileID: partyRow.CoverImageFileID,
+			CoverPositionY:   partyRow.CoverPositionY,
+			DisplayOrder:     partyRow.DisplayOrder,
+			Status:           partyRow.Status,
+			Slots:            partyRow.Slots,
+			IsVerified:       partyRow.IsVerified,
+			ColorHex:         partyRow.ColorHex,
+			DarkColorHex:     partyRow.DarkColorHex,
+			DateFounded:      partyRow.DateFounded,
+			CreatedAt:        partyRow.CreatedAt,
+			UpdatedAt:        partyRow.UpdatedAt,
+		},
+	}
+
+	if partyRow.IsVerified.Bool {
+		verifications, _ := s.pageVerificationsService.GetPageVerifications(ctx, db.PageTypeParty, int64(partyID))
+		if verifications != nil {
+			party.Verifications = verifications
 		}
 	}
 
-	partyRow, err := s.GetPartyByID(ctx, int16(partyID))
-	if err == nil {
-		party := queries.PartyWithVerifications{
-			ListPartiesRow: queries.ListPartiesRow{
-				ID:               partyRow.ID,
-				ShortName:        partyRow.ShortName,
-				Name:             partyRow.Name,
-				Logo:             partyRow.Logo,
-				LogoFileID:       partyRow.LogoFileID,
-				CoverImage:       partyRow.CoverImage,
-				CoverImageFileID: partyRow.CoverImageFileID,
-				CoverPositionY:   partyRow.CoverPositionY,
-				DisplayOrder:     partyRow.DisplayOrder,
-				Status:           partyRow.Status,
-				Slots:            partyRow.Slots,
-				IsVerified:       partyRow.IsVerified,
-				ColorHex:         partyRow.ColorHex,
-				DarkColorHex:     partyRow.DarkColorHex,
-				DateFounded:      partyRow.DateFounded,
-				CreatedAt:        partyRow.CreatedAt,
-				UpdatedAt:        partyRow.UpdatedAt,
-			},
-		}
+	return &party
+}
 
-		if partyRow.IsVerified.Bool {
-			verifications, _ := s.pageVerificationsService.GetPageVerifications(ctx, db.PageTypeParty, int64(partyID))
-			if verifications != nil {
-				party.Verifications = verifications
+// ListParties returns all active parties ordered by display_order ASC, name ASC.
+// It stores ONLY the ordered list of party IDs in Redis ("parties:list").
+// The individual party entities are fetched in a single batch using MGET against "parties:by_id:<id>",
+// falling back to PostgreSQL for any missing keys.
+func (s *PartiesService) ListParties(ctx context.Context) ([]queries.PartyWithVerifications, error) {
+	// Fetch ordered party IDs from Redis or DB
+	var partyIDs []int16
+	cachedData, err := s.rdb.Get(ctx, db.RedisPartiesList).Result()
+	if err == nil {
+		_ = json.Unmarshal([]byte(cachedData), &partyIDs)
+	}
+
+	if len(partyIDs) == 0 {
+		var dbErr error
+		partyIDs, dbErr = s.queries.ListActivePartyIDs(ctx)
+		if dbErr != nil {
+			return nil, dbErr
+		}
+		if data, mErr := json.Marshal(partyIDs); mErr == nil {
+			_ = s.rdb.Set(ctx, db.RedisPartiesList, data, db.RedisOneEightyDaysTTL).Err()
+		}
+	}
+
+	if len(partyIDs) == 0 {
+		return []queries.PartyWithVerifications{}, nil
+	}
+
+	// Fetch individual party records using MGET on canonical "parties:by_id:<id>" keys
+	keys := make([]string, len(partyIDs))
+	for i, id := range partyIDs {
+		keys[i] = fmt.Sprintf("%s%d", db.RedisPartyByID, id)
+	}
+
+	rawValues, err := s.rdb.MGet(ctx, keys...).Result()
+	if err != nil {
+		rawValues = make([]interface{}, len(keys))
+	}
+
+	partiesByID := make(map[int16]queries.Party, len(partyIDs))
+	var missingIDs []int16
+
+	for i, raw := range rawValues {
+		id := partyIDs[i]
+		if str, ok := raw.(string); ok && str != "" && str != "null" {
+			var party queries.Party
+			if json.Unmarshal([]byte(str), &party) == nil && party.ID > 0 {
+				partiesByID[id] = party
+				continue
 			}
 		}
 
-		// Save to Redis
-		if partyData, err := json.Marshal(party); err == nil {
-			s.rdb.Set(ctx, redisKey, partyData, db.RedisOneEightyDaysTTL)
-		}
-		return &party
+		missingIDs = append(missingIDs, id)
 	}
-	return nil
-}
 
-// ListParties returns all parties ordered by ID ascending.
-func (s *PartiesService) ListParties(ctx context.Context) ([]queries.PartyWithVerifications, error) {
-	redisKey := db.RedisPartiesList
-
-	// Try to get from Redis
-	cachedData, err := s.rdb.Get(ctx, redisKey).Result()
-	if err == nil {
-		var parties []queries.PartyWithVerifications
-		if err := json.Unmarshal([]byte(cachedData), &parties); err == nil {
-			return parties, nil
+	// Backfill missing parties from Postgres (GetPartyByID also writes to Redis)
+	for _, id := range missingIDs {
+		party, fetchErr := s.GetPartyByID(ctx, id)
+		if fetchErr == nil {
+			partiesByID[id] = party
 		}
 	}
 
-	// fetch from db using the status and display order
-	partyRows, err := s.queries.ListParties(ctx)
-	if err != nil {
-		return nil, err
+	// Batch fetch verifications for all verified parties using MGET
+	verificationsByPartyID := make(map[int64][]queries.GetPageVerificationsRow)
+
+	// Collect only the IDs of parties marked as verified
+	var verifiedPartyIDs []int64
+	for _, id := range partyIDs {
+		if p, ok := partiesByID[id]; ok && p.IsVerified.Bool {
+			verifiedPartyIDs = append(verifiedPartyIDs, int64(id))
+		}
 	}
 
-	// Transform rows into response models
-	var parties []queries.PartyWithVerifications
-	for _, p := range partyRows {
+	// Fetch badges in a single MGET batch instead of looping Redis requests
+	if len(verifiedPartyIDs) > 0 && s.pageVerificationsService != nil {
+		// Build the Redis key for each verified party (e.g., "page_verifications:party:<id>")
+		vKeys := make([]string, len(verifiedPartyIDs))
+		for i, id := range verifiedPartyIDs {
+			vKeys[i] = fmt.Sprintf("%s%s:%d", db.RedisPageVerifications, db.PageTypeParty, id)
+		}
+
+		// Perform single batch read from Redis
+		rawVerifiedValues, err := s.rdb.MGet(ctx, vKeys...).Result()
+		if err != nil {
+			rawVerifiedValues = make([]interface{}, len(vKeys))
+		}
+
+		// Parse cached badges and track any misses
+		var missingVerified []int64
+		for i, raw := range rawVerifiedValues {
+			id := verifiedPartyIDs[i]
+			if str, ok := raw.(string); ok && str != "" && str != "null" {
+				var vList []queries.GetPageVerificationsRow
+				if json.Unmarshal([]byte(str), &vList) == nil {
+					verificationsByPartyID[id] = vList
+					continue
+				}
+			}
+			missingVerified = append(missingVerified, id)
+		}
+
+		// Backfill any cache misses from DB (GetPageVerifications auto-saves back to Redis)
+		for _, id := range missingVerified {
+			vList, fetchErr := s.pageVerificationsService.GetPageVerifications(ctx, db.PageTypeParty, id)
+			if fetchErr == nil && vList != nil {
+				verificationsByPartyID[id] = vList
+			}
+		}
+	}
+
+	// Assemble the response preserving original display order
+	parties := make([]queries.PartyWithVerifications, 0, len(partyIDs))
+	for _, id := range partyIDs {
+		p, ok := partiesByID[id]
+		if !ok {
+			continue
+		}
+
 		party := queries.PartyWithVerifications{
-			ListPartiesRow: p,
+			ListPartiesRow: queries.ListPartiesRow{
+				ID:               p.ID,
+				ShortName:        p.ShortName,
+				Name:             p.Name,
+				Logo:             p.Logo,
+				LogoFileID:       p.LogoFileID,
+				CoverImage:       p.CoverImage,
+				CoverImageFileID: p.CoverImageFileID,
+				CoverPositionY:   p.CoverPositionY,
+				DisplayOrder:     p.DisplayOrder,
+				Status:           p.Status,
+				Slots:            p.Slots,
+				IsVerified:       p.IsVerified,
+				ColorHex:         p.ColorHex,
+				DarkColorHex:     p.DarkColorHex,
+				DateFounded:      p.DateFounded,
+				CreatedAt:        p.CreatedAt,
+				UpdatedAt:        p.UpdatedAt,
+			},
 		}
 
 		// Attach verification details if party is verified
 		if p.IsVerified.Bool {
-			verifications, _ := s.pageVerificationsService.GetPageVerifications(ctx, db.PageTypeParty, int64(p.ID))
-			if verifications != nil {
-				party.Verifications = verifications
+			if vList, exists := verificationsByPartyID[int64(p.ID)]; exists && len(vList) > 0 {
+				party.Verifications = vList
 			}
 		}
 
-		// append party to parties list
 		parties = append(parties, party)
-	}
-
-	// Save to Redis
-	if partyData, err := json.Marshal(parties); err == nil {
-		s.rdb.Set(ctx, redisKey, partyData, db.RedisOneEightyDaysTTL)
 	}
 
 	return parties, nil
@@ -836,9 +951,12 @@ func (s *PartiesService) GetPartyReadiness(ctx context.Context, partyID int16) (
 
 // UpdateParty modifies the short name, name, logo, cover, and details of an existing party.
 func (s *PartiesService) UpdateParty(ctx context.Context, id int64, shortName, name, logo string, logoFileID *int64, displayOrder int32, colorHex, darkColorHex, coverImage *string, coverImageFileID *int64, coverPositionY *int16, dateFounded *string) (queries.Party, error) {
-	defer s.InvalidatePartyCache(ctx, int16(id))
+	defer func() {
+		s.InvalidatePartyEntityCache(ctx, int16(id))
+		s.InvalidatePartiesListCache(ctx)
+	}()
 
-	party, err := s.queries.UpdateParty(ctx, queries.UpdatePartyParams{
+	return s.queries.UpdateParty(ctx, queries.UpdatePartyParams{
 		ID:               int16(id),
 		ShortName:        shortName,
 		Name:             name,
@@ -852,14 +970,13 @@ func (s *PartiesService) UpdateParty(ctx context.Context, id int64, shortName, n
 		CoverPositionY:   utils.PgInt2FromPtr(coverPositionY, 50),
 		DateFounded:      utils.PgDateFromPtr(dateFounded),
 	})
-
-	s.InvalidatePartyCache(ctx, int16(id))
-	return party, err
 }
 
 // DeleteParty removes a party from the database (cascades to party_wallets).
 func (s *PartiesService) DeleteParty(ctx context.Context, id int64) error {
-	s.InvalidatePartyCache(ctx, int16(id))
+	s.InvalidatePartyEntityCache(ctx, int16(id))
+	s.InvalidatePartiesListCache(ctx)
+	s.InvalidateAcceptingPartyIDsCache(ctx)
 	return nil
 }
 
@@ -929,9 +1046,10 @@ func (s *PartiesService) DepositAllowance(ctx context.Context, partyID int16, am
 		return queries.DepositPartyAllowanceRow{}, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	// Invalidate the cache for the party and its wallet
-	s.InvalidatePartyCache(ctx, partyID)
+	// Invalidate the cache for the party entity, its wallet, and the accepting party IDs shield
+	s.InvalidatePartyEntityCache(ctx, partyID)
 	s.walletService.InvalidatePartyWalletCache(ctx, partyID)
+	s.InvalidateAcceptingPartyIDsCache(ctx)
 
 	return updatedAllowance, nil
 }
@@ -1019,7 +1137,10 @@ func (s *PartiesService) UpdateAgentPaymentAllocationKobo(ctx context.Context, p
 		return queries.UpdatePartyAgentPaymentAllocationKoboRow{}, err
 	}
 
-	defer s.InvalidatePartyCache(ctx, partyID)
+	defer func() {
+		s.InvalidatePartyEntityCache(ctx, partyID)
+		s.InvalidateAcceptingPartyIDsCache(ctx)
+	}()
 	return s.queries.UpdatePartyAgentPaymentAllocationKobo(ctx, queries.UpdatePartyAgentPaymentAllocationKoboParams{
 		AgentPaymentAllocationKobo: canonicalJSON,
 		ID:                         partyID,
@@ -1057,8 +1178,8 @@ func (s *PartiesService) UpdatePartyIsVerified(ctx context.Context, partyID int1
 		}
 	}
 
-	// Invalidate cache
-	s.InvalidatePartyCache(ctx, partyID)
+	// Invalidate party entity cache
+	s.InvalidatePartyEntityCache(ctx, partyID)
 
 	return nil
 }
@@ -1732,7 +1853,7 @@ func (s *PartiesService) GetPlans(ctx context.Context, typeFilter string, isActi
 
 // UpdatePartyAgentAcquisitionTargets updates the agent acquisition targets of a party.
 func (s *PartiesService) UpdatePartyAgentAcquisitionTargets(ctx context.Context, arg queries.UpdatePartyAgentAcquisitionTargetsParams) (queries.UpdatePartyAgentAcquisitionTargetsRow, error) {
-	defer s.InvalidatePartyCache(ctx, arg.ID)
+	defer s.InvalidatePartyEntityCache(ctx, arg.ID)
 	return s.queries.UpdatePartyAgentAcquisitionTargets(ctx, arg)
 }
 
@@ -1781,7 +1902,7 @@ func (s *PartiesService) GetPartyByID(ctx context.Context, partyID int16) (queri
 
 // ResetPartyLogo resets the logo file ID of a party to NULL.
 func (s *PartiesService) ResetPartyLogo(ctx context.Context, partyID int16) error {
-	defer s.InvalidatePartyCache(ctx, partyID)
+	defer s.InvalidatePartyEntityCache(ctx, partyID)
 	return s.queries.ResetPartyLogo(ctx, partyID)
 }
 
@@ -2866,101 +2987,6 @@ func (s *PartiesService) ListPartyAdmins(ctx context.Context, partyID int16) ([]
 	return result, nil
 }
 
-// InvalidatePartyMemberSuspensionCache invalidates the Redis suspension cache for a member.
-func (s *PartiesService) InvalidatePartyMemberSuspensionCache(ctx context.Context, partyID int16, userID int64) {
-	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisPartyMemberSuspension, partyID, userID)
-	if err := s.rdb.Del(ctx, cacheKey).Err(); err != nil {
-		slog.Error("Failed to invalidate party member suspension cache", "error", err, "partyID", partyID, "userID", userID)
-	}
-}
-
-// InvalidateMemberPositionAssignmentsCache invalidates the Redis position assignments cache for a member.
-func (s *PartiesService) InvalidateMemberPositionAssignmentsCache(ctx context.Context, partyID int16, userID int64) {
-	if partyID <= 0 || userID <= 0 {
-		return
-	}
-
-	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisPartyMemberPositions, partyID, userID)
-	if err := s.rdb.Del(ctx, cacheKey).Err(); err != nil {
-		slog.Error("Failed to invalidate party member positions cache", "error", err, "partyID", partyID, "userID", userID)
-	}
-}
-
-// InvalidatePartyOfficialsCache invalidates the Redis cache for chapter officials.
-func (s *PartiesService) InvalidatePartyOfficialsCache(ctx context.Context, partyID int16, chapterID int32) {
-	if partyID <= 0 || chapterID <= 0 {
-		return
-	}
-
-	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisPartyChapterOfficials, partyID, chapterID)
-	if err := s.rdb.Del(ctx, cacheKey).Err(); err != nil {
-		slog.Error("Failed to invalidate party chapter officials cache", "error", err, "partyID", partyID, "chapterID", chapterID)
-	}
-}
-
-// InvalidateChapterOfficialCache invalidates the Redis cache for a single chapter official by chapterID and positionID.
-func (s *PartiesService) InvalidateChapterOfficialCache(ctx context.Context, chapterID int32, positionID int32) {
-	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisChapterOfficial, chapterID, positionID)
-	if err := s.rdb.Del(ctx, cacheKey).Err(); err != nil {
-		slog.Error("Failed to invalidate chapter official cache", "error", err, "chapterID", chapterID, "positionID", positionID)
-	}
-}
-
-// InvalidatePartyCache invalidates the Redis cache for a given party, its page verifications, and the global parties list.
-func (s *PartiesService) InvalidatePartyCache(ctx context.Context, partyID int16) {
-	redisPartyInfo := fmt.Sprintf("%s%d", db.RedisPartyInfo, partyID)
-	redisPartyBasicInfo := fmt.Sprintf("%s%d", db.RedisPartyBasicInfo, partyID)
-	redisPartyByID := fmt.Sprintf("%s%d", db.RedisPartyByID, partyID)
-
-	s.rdb.Del(ctx, redisPartyInfo)
-	s.rdb.Del(ctx, redisPartyBasicInfo)
-	s.rdb.Del(ctx, redisPartyByID)
-	s.rdb.Del(ctx, db.RedisPartiesList)
-}
-
-// InvalidateChapterMemberCount removes the cached member count for a chapter.
-func (s *PartiesService) InvalidateChapterMemberCount(ctx context.Context, partyID int16, chapterID int32) {
-	if partyID <= 0 || chapterID <= 0 {
-		return
-	}
-
-	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisChapterMemberCount, partyID, chapterID)
-	err := s.rdb.Del(ctx, cacheKey).Err()
-	if err != nil {
-		slog.Error("Failed to invalidate chapter member count in redis", "error", err, "partyID", partyID, "chapterID", chapterID)
-	}
-}
-
-// InvalidatePartyChapterMembership removes the cached membership boolean for a user in a chapter.
-func (s *PartiesService) InvalidatePartyChapterMembership(ctx context.Context, userID int64, partyID int16, chapterID int32) {
-	cacheKey := fmt.Sprintf("%s%d:%d:%d", db.RedisPartyChapterMember, partyID, chapterID, userID)
-	_ = s.rdb.Del(ctx, cacheKey).Err()
-	s.InvalidateUserPartyChapters(ctx, userID, partyID)
-}
-
-// InvalidatePartyMembership removes the cached party-wide membership boolean for a user.
-func (s *PartiesService) InvalidatePartyMembership(ctx context.Context, userID int64, partyID int16) {
-	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisPartyMember, partyID, userID)
-	_ = s.rdb.Del(ctx, cacheKey).Err()
-	s.InvalidateUserPartyChapters(ctx, userID, partyID)
-}
-
-// InvalidatePartyCustomPositionsCache invalidates cached custom positions for a party.
-func (s *PartiesService) InvalidatePartyCustomPositionsCache(ctx context.Context, partyID int16) {
-	cacheKey := fmt.Sprintf("%s%d", db.RedisPartyCustomPositions, partyID)
-	if err := s.rdb.Del(ctx, cacheKey).Err(); err != nil {
-		slog.Error("Failed to invalidate party custom positions cache", "error", err, "partyID", partyID)
-	}
-}
-
-// InvalidatePartyPositionByIDCache invalidates the Redis cache for a single party position.
-func (s *PartiesService) InvalidatePartyPositionByIDCache(ctx context.Context, partyID int16, id int32) {
-	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisPartyPositionByID, partyID, id)
-	if err := s.rdb.Del(ctx, cacheKey).Err(); err != nil {
-		slog.Error("Failed to invalidate party position cache", "error", err, "partyID", partyID, "id", id)
-	}
-}
-
 // GetUserPartyChapters lists active chapters of a party that a user belongs to.
 // Results are cached in Redis to minimize database lookups.
 func (s *PartiesService) GetUserPartyChapters(ctx context.Context, userID int64, partyID int16) ([]queries.GetUserPartyChaptersRow, error) {
@@ -2997,12 +3023,6 @@ func (s *PartiesService) GetUserPartyChapters(ctx context.Context, userID int64,
 	}
 
 	return chapters, nil
-}
-
-// InvalidateUserPartyChapters clears the cached user party chapters.
-func (s *PartiesService) InvalidateUserPartyChapters(ctx context.Context, userID int64, partyID int16) {
-	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisUserPartyChapters, partyID, userID)
-	_ = s.rdb.Del(ctx, cacheKey).Err()
 }
 
 // ListPartyMembersParams parameters for querying chapter members
@@ -3167,4 +3187,117 @@ func (s *PartiesService) ListPartyChapterMembers(ctx context.Context, params Lis
 			HasMore:    hasMore,
 		},
 	}, nil
+}
+
+// InvalidatePartyMemberSuspensionCache invalidates the Redis suspension cache for a member.
+func (s *PartiesService) InvalidatePartyMemberSuspensionCache(ctx context.Context, partyID int16, userID int64) {
+	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisPartyMemberSuspension, partyID, userID)
+	if err := s.rdb.Del(ctx, cacheKey).Err(); err != nil {
+		slog.Error("Failed to invalidate party member suspension cache", "error", err, "partyID", partyID, "userID", userID)
+	}
+}
+
+// InvalidateMemberPositionAssignmentsCache invalidates the Redis position assignments cache for a member.
+func (s *PartiesService) InvalidateMemberPositionAssignmentsCache(ctx context.Context, partyID int16, userID int64) {
+	if partyID <= 0 || userID <= 0 {
+		return
+	}
+
+	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisPartyMemberPositions, partyID, userID)
+	if err := s.rdb.Del(ctx, cacheKey).Err(); err != nil {
+		slog.Error("Failed to invalidate party member positions cache", "error", err, "partyID", partyID, "userID", userID)
+	}
+}
+
+// InvalidatePartyOfficialsCache invalidates the Redis cache for chapter officials.
+func (s *PartiesService) InvalidatePartyOfficialsCache(ctx context.Context, partyID int16, chapterID int32) {
+	if partyID <= 0 || chapterID <= 0 {
+		return
+	}
+
+	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisPartyChapterOfficials, partyID, chapterID)
+	if err := s.rdb.Del(ctx, cacheKey).Err(); err != nil {
+		slog.Error("Failed to invalidate party chapter officials cache", "error", err, "partyID", partyID, "chapterID", chapterID)
+	}
+}
+
+// InvalidateChapterOfficialCache invalidates the Redis cache for a single chapter official by chapterID and positionID.
+func (s *PartiesService) InvalidateChapterOfficialCache(ctx context.Context, chapterID int32, positionID int32) {
+	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisChapterOfficial, chapterID, positionID)
+	if err := s.rdb.Del(ctx, cacheKey).Err(); err != nil {
+		slog.Error("Failed to invalidate chapter official cache", "error", err, "chapterID", chapterID, "positionID", positionID)
+	}
+}
+
+// InvalidatePartyEntityCache invalidates only the party's own cached record ("parties:by_id:<partyID>").
+func (s *PartiesService) InvalidatePartyEntityCache(ctx context.Context, partyID int16) {
+	if partyID <= 0 {
+		return
+	}
+	s.rdb.Del(ctx, fmt.Sprintf("%s%d", db.RedisPartyByID, partyID))
+}
+
+// InvalidatePartiesListCache invalidates the global list of active party IDs ("parties:list").
+func (s *PartiesService) InvalidatePartiesListCache(ctx context.Context) {
+	s.rdb.Del(ctx, db.RedisPartiesList)
+}
+
+// InvalidatePartyCache invalidates the party's own cached record.
+// Note: "parties:list" stores only party IDs and does not need invalidation on single-party updates.
+func (s *PartiesService) InvalidatePartyCache(ctx context.Context, partyID int16) {
+	s.InvalidatePartyEntityCache(ctx, partyID)
+}
+
+// InvalidateAcceptingPartyIDsCache invalidates only the Redis cache for accepting party IDs.
+func (s *PartiesService) InvalidateAcceptingPartyIDsCache(ctx context.Context) {
+	s.rdb.Del(ctx, db.RedisPartiesAcceptingIDs)
+}
+
+// InvalidateChapterMemberCount removes the cached member count for a chapter.
+func (s *PartiesService) InvalidateChapterMemberCount(ctx context.Context, partyID int16, chapterID int32) {
+	if partyID <= 0 || chapterID <= 0 {
+		return
+	}
+
+	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisChapterMemberCount, partyID, chapterID)
+	err := s.rdb.Del(ctx, cacheKey).Err()
+	if err != nil {
+		slog.Error("Failed to invalidate chapter member count in redis", "error", err, "partyID", partyID, "chapterID", chapterID)
+	}
+}
+
+// InvalidatePartyChapterMembership removes the cached membership boolean for a user in a chapter.
+func (s *PartiesService) InvalidatePartyChapterMembership(ctx context.Context, userID int64, partyID int16, chapterID int32) {
+	cacheKey := fmt.Sprintf("%s%d:%d:%d", db.RedisPartyChapterMember, partyID, chapterID, userID)
+	_ = s.rdb.Del(ctx, cacheKey).Err()
+	s.InvalidateUserPartyChapters(ctx, userID, partyID)
+}
+
+// InvalidatePartyMembership removes the cached party-wide membership boolean for a user.
+func (s *PartiesService) InvalidatePartyMembership(ctx context.Context, userID int64, partyID int16) {
+	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisPartyMember, partyID, userID)
+	_ = s.rdb.Del(ctx, cacheKey).Err()
+	s.InvalidateUserPartyChapters(ctx, userID, partyID)
+}
+
+// InvalidatePartyCustomPositionsCache invalidates cached custom positions for a party.
+func (s *PartiesService) InvalidatePartyCustomPositionsCache(ctx context.Context, partyID int16) {
+	cacheKey := fmt.Sprintf("%s%d", db.RedisPartyCustomPositions, partyID)
+	if err := s.rdb.Del(ctx, cacheKey).Err(); err != nil {
+		slog.Error("Failed to invalidate party custom positions cache", "error", err, "partyID", partyID)
+	}
+}
+
+// InvalidatePartyPositionByIDCache invalidates the Redis cache for a single party position.
+func (s *PartiesService) InvalidatePartyPositionByIDCache(ctx context.Context, partyID int16, id int32) {
+	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisPartyPositionByID, partyID, id)
+	if err := s.rdb.Del(ctx, cacheKey).Err(); err != nil {
+		slog.Error("Failed to invalidate party position cache", "error", err, "partyID", partyID, "id", id)
+	}
+}
+
+// InvalidateUserPartyChapters clears the cached user party chapters.
+func (s *PartiesService) InvalidateUserPartyChapters(ctx context.Context, userID int64, partyID int16) {
+	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisUserPartyChapters, partyID, userID)
+	_ = s.rdb.Del(ctx, cacheKey).Err()
 }

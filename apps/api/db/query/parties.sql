@@ -32,6 +32,11 @@ FROM parties
 WHERE status = 'active'
 ORDER BY display_order ASC, name ASC;
 
+-- name: ListActivePartyIDs :many
+SELECT id FROM parties
+WHERE status = 'active'
+ORDER BY display_order ASC, name ASC;
+
 -- name: GetAcceptingPartyIDs :many
 SELECT id FROM parties
 WHERE status = 'active'

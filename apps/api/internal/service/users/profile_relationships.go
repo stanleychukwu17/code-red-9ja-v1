@@ -89,7 +89,7 @@ func (s *UsersService) hydrateUserRelationships(ctx context.Context, users []que
 
 		if u.PartyID.Valid && u.PartyID.Int16 > 0 {
 			pID := u.PartyID.Int16
-			partyKey := fmt.Sprintf("%s%d", db.RedisPartyBasicInfo, pID)
+			partyKey := fmt.Sprintf("%s%d", db.RedisPartyByID, pID)
 			trackKey(partyKey, keyMeta{kind: kindPartyBasic, partyID: pID})
 
 			chapKey := fmt.Sprintf("%s%d:%d", db.RedisUserPartyChapters, pID, u.ID)
@@ -128,9 +128,19 @@ func (s *UsersService) hydrateUserRelationships(ctx context.Context, users []que
 					parsed = true
 				}
 			case kindPartyBasic:
-				var p queries.PartyBasicInfoWithVerifications
-				if json.Unmarshal(data, &p) == nil {
-					partyBasicByID[meta.partyID] = &p
+				var party queries.Party
+				if json.Unmarshal(data, &party) == nil && party.ID > 0 {
+					partyBasicByID[meta.partyID] = &queries.PartyBasicInfoWithVerifications{
+						GetPartyBasicInfoRow: queries.GetPartyBasicInfoRow{
+							ID:           party.ID,
+							ShortName:    party.ShortName,
+							Name:         party.Name,
+							Logo:         party.Logo,
+							IsVerified:   party.IsVerified,
+							ColorHex:     party.ColorHex,
+							DarkColorHex: party.DarkColorHex,
+						},
+					}
 					parsed = true
 				}
 			case kindChapters:

@@ -665,9 +665,6 @@ func (h *Handler) ListPartiesPublic(w http.ResponseWriter, r *http.Request) {
 
 	var publicParties []PartyPublic
 	acceptingMap, _ := h.partiesService.GetAcceptingPartyIDs(r.Context())
-	if acceptingMap == nil {
-		acceptingMap = make(map[int16]bool)
-	}
 
 	for _, p := range parties {
 		publicParties = append(publicParties, PartyPublic{

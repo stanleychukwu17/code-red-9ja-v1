@@ -42,7 +42,6 @@ type UsersService interface {
 type PartiesService interface {
 	GetPartyInfo(ctx context.Context, partyID int16) *queries.PartyWithVerifications
 	ResetPartyLogo(ctx context.Context, partyID int16) error
-	InvalidatePartyCache(ctx context.Context, partyID int16)
 }
 
 type FileUploadURLResponse struct {
@@ -447,11 +446,8 @@ func (h *Handler) DeleteFile(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		// update the party logo file ID to NULL
+		// update the party logo file ID to NULL (ResetPartyLogo invalidates party cache)
 		_ = h.partiesService.ResetPartyLogo(r.Context(), party.ID)
-
-		// also invalidate party cache (optional, frontend refetch)
-		h.partiesService.InvalidatePartyCache(r.Context(), party.ID)
 	}
 
 	// if the file_id is available, we delete from the r2 bucket and DB asynchronously

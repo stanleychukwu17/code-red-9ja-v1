@@ -394,4 +394,5 @@ export const QUERY_KEYS = {
   },
   countries: ["countries"],
   parties: ["parties"],
+  electionGroups: ["electionGroups"],
 };

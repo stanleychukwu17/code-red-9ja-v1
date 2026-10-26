@@ -1,15 +1,19 @@
 import { SelectableCard } from "@repo/ui/components/cards/Rewards";
 import { toast } from "sonner";
+import { useElectionGroups } from "#/hooks/useElectionGroups";
+import { useApplyContext } from "../../context/ApplyContext";
 import { StepHeader } from "./shared/StepHeader";
 
 /** Step 3: Election ballot selection checklist */
-export const Step3 = ({
-  elections,
-  selectedElectionIds,
-  setSelectedElectionIds,
-  appliedElectionGroupIds,
-  selectedParty,
-}: any) => {
+export const Step3 = () => {
+  const {
+    selectedElectionIds,
+    setSelectedElectionIds,
+    appliedElectionGroupIds,
+  } = useApplyContext();
+
+  const { data: elections = [] } = useElectionGroups();
+
   return (
     <div className="flex flex-col gap-4 w-full px-4">
       <div className="space-y-2">
@@ -19,11 +23,13 @@ export const Step3 = ({
         />
       </div>
       <div className="space-y-3 pr-1">
+
         {elections.map((election: any) => {
           const isSelected = selectedElectionIds.includes(election.id);
           const isAlreadyApplied = appliedElectionGroupIds?.includes(
             election.id,
           );
+
           return (
             <SelectableCard
               key={election.id}
@@ -48,6 +54,7 @@ export const Step3 = ({
             />
           );
         })}
+
       </div>
     </div>
   );

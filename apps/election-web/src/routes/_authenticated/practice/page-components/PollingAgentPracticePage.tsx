@@ -3,6 +3,7 @@ import { PageHeader } from "#/components/Headers";
 import { useUser } from "#/hooks/useUser";
 import { useUserParty } from "#/hooks/useUserParty";
 import { useElection, getAutoSelectedSession } from "#/hooks/useElection";
+import { useElectionGroups } from "#/hooks/useElectionGroups";
 import { AppAvatar } from "@repo/ui/components/avatar";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -613,21 +614,7 @@ export function SelectElectionPage({
   onSelect: (group: any, election?: any) => void;
   onNextClick: () => void;
 }) {
-  const { data: electionGroups = [], isLoading } = useQuery({
-    queryKey: ["electionGroups", { upcoming: true }],
-    queryFn: async () => {
-      const res = await getElectionGroups({ data: { upcoming: true } });
-      if (
-        res?.success &&
-        res.data?.election_groups &&
-        res.data.election_groups.length > 0
-      ) {
-        return res.data.election_groups;
-      }
-      return [];
-    },
-    initialData: [],
-  });
+  const { data: electionGroups = [], isLoading } = useElectionGroups();
 
   const handleSelectGroup = async (group: any) => {
     try {

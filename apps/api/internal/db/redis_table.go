@@ -51,8 +51,7 @@ const (
 
 	//--START-- for parties
 	RedisPartiesList                = "parties:list"                     // STRING: used to store and retrieve all parties and they details, the value is a JSON string of all parties.
-	RedisPartyInfo                  = "parties:info:"                    // STRING: "parties:info:<partyID>" is used to store and retrieve party info.
-	RedisPartyBasicInfo             = "parties:basic_info:"              // STRING: "parties:basic_info:<partyID>" is used to store and retrieve party basic info.
+	RedisPartiesAcceptingIDs        = "parties:accepting_ids"            // STRING: cached JSON array of int16 party IDs currently accepting agent applications.
 	RedisPartyByID                  = "parties:by_id:"                   // STRING: "parties:by_id:<partyID>" stores cached full party record.
 	RedisPartyWallet                = "parties:wallet:"                  // STRING: "parties:wallet:<partyID>" is used to store and retrieve cached party wallet.
 	RedisGlobalSlotCost             = "system:setting:slot_cost_kobo"    // STRING: stores the global slot price in Kobo.
@@ -162,8 +161,7 @@ var AllRedisPrefixes = []string{
 	RedisStatesByCountry,
 	RedisCitiesByState,
 	RedisPartiesList,
-	RedisPartyInfo,
-	RedisPartyBasicInfo,
+	RedisPartiesAcceptingIDs,
 	RedisPartyByID,
 	RedisPartyWallet,
 	RedisGlobalSlotCost,

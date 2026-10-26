@@ -1398,6 +1398,10 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 		return queries.PartyApplication{}, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
+	// Invalidate only caches affected by slot deduction
+	s.rdb.Del(ctx, fmt.Sprintf("%s%d", db.RedisPartyByID, partyID))
+	s.rdb.Del(ctx, db.RedisPartiesAcceptingIDs)
+
 	// Initiate cascading stats rollup
 	s.initiateStatsRollup(ctx, egID, roleType, pollingUnitID, input.WardID, input.LgaID, input.StateID)
 

@@ -15,5 +15,5 @@ func TestAllRedisPrefixes_NoDuplicatesAndNonEmpty(t *testing.T) {
 		seen[prefix] = true
 	}
 
-	assert.Equal(t, 77, len(AllRedisPrefixes), "AllRedisPrefixes count should match total defined Redis key constants")
+	assert.Equal(t, 84, len(AllRedisPrefixes), "AllRedisPrefixes count should match total defined Redis key constants")
 }

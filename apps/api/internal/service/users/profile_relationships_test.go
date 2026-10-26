@@ -104,7 +104,7 @@ func TestProfilesBatchRelationshipsAndRefreshWithoutEvictingCore(t *testing.T) {
 		put(fmt.Sprintf("%s1:%d", db.RedisUserPartyChapters, id), []queries.GetUserPartyChaptersRow{{ID: int32(id) * 10}})
 		put(fmt.Sprintf("%s%d", db.RedisUserActiveCandidacies, id), []queries.UserActiveCandidacy{{GetUserActiveCandidaciesRow: queries.GetUserActiveCandidaciesRow{ElectionID: int32(id)}}})
 	}
-	put(db.RedisPartyBasicInfo+"1", queries.PartyBasicInfoWithVerifications{})
+	put(fmt.Sprintf("%s%d", db.RedisPartyByID, 1), queries.Party{ID: 1})
 	parties := &profileParties{chapters: []queries.GetUserPartyChaptersRow{{ID: 99}}}
 	s := &UsersService{rdb: rdb, partyService: parties, electionsService: profileElections{}}
 	var mgets atomic.Int32

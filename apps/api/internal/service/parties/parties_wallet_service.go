@@ -487,9 +487,10 @@ func (s *PartiesWalletService) BuySlots(ctx context.Context, partyID int16, quan
 		return queries.AddPartySlotsRow{}, queries.PartyWalletTransaction{}, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	// Invalidate both wallet cache and party cache
+	// Invalidate wallet cache, party entity, and accepting party IDs
 	s.InvalidatePartyWalletCache(ctx, partyID)
-	s.partiesService.InvalidatePartyCache(ctx, partyID)
+	s.partiesService.InvalidatePartyEntityCache(ctx, partyID)
+	s.partiesService.InvalidateAcceptingPartyIDsCache(ctx)
 
 	return updatedParty, txn, nil
 }

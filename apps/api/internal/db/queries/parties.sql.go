@@ -994,6 +994,32 @@ func (q *Queries) ListAcceptingParties(ctx context.Context) ([]ListAcceptingPart
 	return items, nil
 }
 
+const listActivePartyIDs = `-- name: ListActivePartyIDs :many
+SELECT id FROM parties
+WHERE status = 'active'
+ORDER BY display_order ASC, name ASC
+`
+
+func (q *Queries) ListActivePartyIDs(ctx context.Context) ([]int16, error) {
+	rows, err := q.db.Query(ctx, listActivePartyIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int16
+	for rows.Next() {
+		var id int16
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listParties = `-- name: ListParties :many
 SELECT 
   id,

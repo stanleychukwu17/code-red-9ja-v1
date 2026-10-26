@@ -90,8 +90,6 @@ func (_m *Querier) AddPartySlots(ctx context.Context, arg queries.AddPartySlotsP
 	return r0, r1
 }
 
-
-
 // AdjustElectionGroupLGAWardSupervisorCounts provides a mock function with given fields: ctx, arg
 func (_m *Querier) AdjustElectionGroupLGAWardSupervisorCounts(ctx context.Context, arg queries.AdjustElectionGroupLGAWardSupervisorCountsParams) error {
 	ret := _m.Called(ctx, arg)
@@ -163,9 +161,6 @@ func (_m *Querier) AdjustElectionGroupNationalWardSupervisorCounts(ctx context.C
 
 	return r0
 }
-
-
-
 
 // AdjustElectionGroupStateLGASupervisorCounts provides a mock function with given fields: ctx, arg
 func (_m *Querier) AdjustElectionGroupStateLGASupervisorCounts(ctx context.Context, arg queries.AdjustElectionGroupStateLGASupervisorCountsParams) error {
@@ -2445,7 +2440,6 @@ func (_m *Querier) GetElectionGroupByID(ctx context.Context, id int64) (queries.
 	return r0, r1
 }
 
-
 // GetElectionGroupLGAStats provides a mock function with given fields: ctx, arg
 func (_m *Querier) GetElectionGroupLGAStats(ctx context.Context, arg queries.GetElectionGroupLGAStatsParams) (queries.ElectionGroupLga, error) {
 	ret := _m.Called(ctx, arg)
@@ -2529,8 +2523,6 @@ func (_m *Querier) GetElectionGroupPollingUnitStats(ctx context.Context, arg que
 
 	return r0, r1
 }
-
-
 
 // GetElectionGroupStateStats provides a mock function with given fields: ctx, arg
 func (_m *Querier) GetElectionGroupStateStats(ctx context.Context, arg queries.GetElectionGroupStateStatsParams) (queries.ElectionGroupState, error) {
@@ -5190,36 +5182,6 @@ func (_m *Querier) IsPartyAcceptingApplications(ctx context.Context, id int16) (
 	return r0, r1
 }
 
-// ListAcceptingParties provides a mock function with given fields: ctx
-func (_m *Querier) ListAcceptingParties(ctx context.Context) ([]queries.ListAcceptingPartiesRow, error) {
-	ret := _m.Called(ctx)
-
-	if len(ret) == 0 {
-		panic("no return value specified for ListAcceptingParties")
-	}
-
-	var r0 []queries.ListAcceptingPartiesRow
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context) ([]queries.ListAcceptingPartiesRow, error)); ok {
-		return rf(ctx)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context) []queries.ListAcceptingPartiesRow); ok {
-		r0 = rf(ctx)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]queries.ListAcceptingPartiesRow)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = rf(ctx)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // ListAgentEarnings provides a mock function with given fields: ctx, arg
 func (_m *Querier) ListAgentEarnings(ctx context.Context, arg queries.ListAgentEarningsParams) ([]queries.ListAgentEarningsRow, error) {
 	ret := _m.Called(ctx, arg)
@@ -5400,7 +5362,6 @@ func (_m *Querier) ListElectionCandidatesDetailedByElectionID(ctx context.Contex
 	return r0, r1
 }
 
-
 // ListElectionGroupLGAStatsByGroup provides a mock function with given fields: ctx, arg
 func (_m *Querier) ListElectionGroupLGAStatsByGroup(ctx context.Context, arg queries.ListElectionGroupLGAStatsByGroupParams) ([]queries.ElectionGroupLga, error) {
 	ret := _m.Called(ctx, arg)
@@ -5460,8 +5421,6 @@ func (_m *Querier) ListElectionGroupPollingUnitStatsByGroup(ctx context.Context,
 
 	return r0, r1
 }
-
-
 
 // ListElectionGroupStateStatsByGroup provides a mock function with given fields: ctx, electionGroupID
 func (_m *Querier) ListElectionGroupStateStatsByGroup(ctx context.Context, electionGroupID int64) ([]queries.ElectionGroupState, error) {
@@ -6351,7 +6310,6 @@ func (_m *Querier) AddPartyMemberMilestone(ctx context.Context, arg queries.AddP
 	return r0
 }
 
-
 // RefreshAllElectionGroupGlobalStats provides a mock function with given fields: ctx
 func (_m *Querier) RefreshAllElectionGroupGlobalStats(ctx context.Context) error {
 	ret := _m.Called(ctx)
@@ -6405,8 +6363,6 @@ func (_m *Querier) RefreshAllElectionGroupPollingUnitStats(ctx context.Context) 
 
 	return r0
 }
-
-
 
 // RefreshAllElectionGroupStateStats provides a mock function with given fields: ctx
 func (_m *Querier) RefreshAllElectionGroupStateStats(ctx context.Context) error {
@@ -6515,7 +6471,6 @@ func (_m *Querier) RefreshSingleElectionGroupPollingUnitStats(ctx context.Contex
 
 	return r0
 }
-
 
 // RefreshSingleElectionGroupStateStats provides a mock function with given fields: ctx, arg
 func (_m *Querier) RefreshSingleElectionGroupStateStats(ctx context.Context, arg queries.RefreshSingleElectionGroupStateStatsParams) error {
@@ -6733,7 +6688,6 @@ func (_m *Querier) RollupWardFinalResults(ctx context.Context) error {
 	return r0
 }
 
-
 // SeedElectionGroupLGAStats provides a mock function with given fields: ctx, dollar_1
 func (_m *Querier) SeedElectionGroupLGAStats(ctx context.Context, dollar_1 int64) error {
 	ret := _m.Called(ctx, dollar_1)
@@ -6751,8 +6705,6 @@ func (_m *Querier) SeedElectionGroupLGAStats(ctx context.Context, dollar_1 int64
 
 	return r0
 }
-
-
 
 // SeedElectionGroupStateStats provides a mock function with given fields: ctx, dollar_1
 func (_m *Querier) SeedElectionGroupStateStats(ctx context.Context, dollar_1 int64) error {
@@ -7112,7 +7064,6 @@ func (_m *Querier) UpdateCandidatesFromWardElections(ctx context.Context) error 
 	return r0
 }
 
-
 // CountCandidatesInElectionGroup provides a mock function with given fields: ctx, electionGroupID
 func (_m *Querier) CountCandidatesInElectionGroup(ctx context.Context, electionGroupID int32) (int64, error) {
 	ret := _m.Called(ctx, electionGroupID)
@@ -7196,7 +7147,6 @@ func (_m *Querier) CountParticipantsInElectionGroup(ctx context.Context, electio
 
 	return r0, r1
 }
-
 
 // UpdateElectionGroup provides a mock function with given fields: ctx, arg
 func (_m *Querier) UpdateElectionGroup(ctx context.Context, arg queries.UpdateElectionGroupParams) (queries.ElectionGroup, error) {
@@ -8204,7 +8154,6 @@ func (_m *Querier) UpsertAgentEarnings(ctx context.Context, arg queries.UpsertAg
 	return r0, r1
 }
 
-
 // UpsertElectionGroupLGAPartyEntry provides a mock function with given fields: ctx, arg
 func (_m *Querier) UpsertElectionGroupLGAPartyEntry(ctx context.Context, arg queries.UpsertElectionGroupLGAPartyEntryParams) error {
 	ret := _m.Called(ctx, arg)
@@ -8258,8 +8207,6 @@ func (_m *Querier) UpsertElectionGroupPUPartyEntry(ctx context.Context, arg quer
 
 	return r0
 }
-
-
 
 // UpsertElectionGroupStatePartyEntry provides a mock function with given fields: ctx, arg
 func (_m *Querier) UpsertElectionGroupStatePartyEntry(ctx context.Context, arg queries.UpsertElectionGroupStatePartyEntryParams) error {

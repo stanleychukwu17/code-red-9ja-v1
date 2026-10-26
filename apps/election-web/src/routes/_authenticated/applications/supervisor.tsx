@@ -8,7 +8,7 @@ import {
   getWards,
   submitSupervisorApplication,
 } from "#/lib/server/applications";
-import { getElectionGroups } from "#/lib/server/election_groups";
+import { useElectionGroups } from "#/hooks/useElectionGroups";
 import { confirmFileUpload, getPresignedUploadURL } from "#/lib/server/parties";
 import { getPageHeader } from "#/lib/shared/meta";
 import { AppAvatar } from "@repo/ui/components/avatar";
@@ -94,17 +94,8 @@ function SupervisorPage() {
   const activeElectionGroupId =
     acceptedApp?.election_group_id || acceptedApp?.election_group?.id || null;
 
-  // Fetch upcoming election group metadata for display headers
-  const { data: electionGroups = [] } = useQuery({
-    queryKey: ["electionGroups", { upcoming: true }],
-    queryFn: async () => {
-      const res = await getElectionGroups({ data: { upcoming: true } });
-      if (res?.success && res.data?.election_groups) {
-        return res.data.election_groups;
-      }
-      return [];
-    },
-  });
+  // Fetch election group metadata for display headers
+  const { data: electionGroups = [] } = useElectionGroups();
 
   const currentElectionGroup = electionGroups.find(
     (eg: any) => eg.id === activeElectionGroupId,

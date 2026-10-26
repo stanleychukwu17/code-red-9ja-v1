@@ -7,12 +7,11 @@ export const getElectionGroups = createServerFn({ method: "GET" })
     (
       data:
         | {
-            limit?: number;
-            cursor?: string | number;
-            upcoming?: boolean;
-            partyId?: number;
-            active?: boolean;
-          }
+          limit?: number;
+          cursor?: string | number;
+          partyId?: number;
+          active?: boolean;
+        }
         | undefined,
     ) => data,
   )
@@ -21,9 +20,6 @@ export const getElectionGroups = createServerFn({ method: "GET" })
       const limit = data?.limit || 20;
       const cursor = data?.cursor || "";
       let url = `${API_URL.electionGroups}?limit=${limit}&cursor=${cursor}`;
-      if (data?.upcoming) {
-        url += `&upcoming=true`;
-      }
       if (data?.partyId) {
         url += `&party_id=${data.partyId}`;
       }
@@ -67,9 +63,7 @@ export const createElectionGroup = createServerFn({ method: "POST" })
     try {
       const response = await apiFetch(API_URL.electionGroups, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
       const resData = await response.json();

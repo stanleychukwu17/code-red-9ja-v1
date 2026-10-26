@@ -64,50 +64,22 @@ export function ApplyFooter() {
         </Button>
       )}
 
-      {/* Step 3: Election / Ballot Selection */}
+      {/* Step 3: WhatsApp & Phone Contact Info */}
       {step === 3 && (
         <Button
           type="button"
           variant="black"
           size="4xl"
           className="w-full rounded-full"
-          disabled={selectedElectionIds.length === 0}
+          disabled={!whatsappPhone}
           onClick={() => setStep(4)}
         >
           Continue
         </Button>
       )}
 
-      {/* Step 4: Head-shot / Passport Photo Upload */}
+      {/* Step 4: Education Status (Branches: skips details to Step 6 if 'none') */}
       {step === 4 && (
-        <Button
-          type="button"
-          variant="black"
-          size="4xl"
-          className="w-full rounded-full"
-          disabled={(!avatarUrl && !user?.avatar) || isUploading}
-          onClick={() => setStep(5)}
-        >
-          Continue
-        </Button>
-      )}
-
-      {/* Step 5: WhatsApp & Phone Contact Info */}
-      {step === 5 && (
-        <Button
-          type="button"
-          variant="black"
-          size="4xl"
-          className="w-full rounded-full"
-          disabled={!whatsappPhone}
-          onClick={() => setStep(6)}
-        >
-          Continue
-        </Button>
-      )}
-
-      {/* Step 6: Education Status (Branches: skips details to Step 8 if 'none') */}
-      {step === 6 && (
         <Button
           type="button"
           variant="black"
@@ -116,9 +88,9 @@ export function ApplyFooter() {
           disabled={!educationalStatus}
           onClick={() => {
             if (educationalStatus === "none") {
-              setStep(8);
+              setStep(6);
             } else {
-              setStep(7);
+              setStep(5);
             }
           }}
         >
@@ -126,49 +98,76 @@ export function ApplyFooter() {
         </Button>
       )}
 
-      {/* Step 7: Academic Degree & Institution Details */}
-      {step === 7 && (
+      {/* Step 5: Academic Degree & Institution Details */}
+      {step === 5 && (
         <Button
           type="button"
           variant="black"
           size="4xl"
           className="w-full rounded-full"
           disabled={!highestDegree || !graduationYear || !schoolName}
-          onClick={() => setStep(8)}
+          onClick={() => setStep(6)}
         >
           Continue
         </Button>
       )}
 
-      {/* Step 8: Residential Location (State, LGA, Address) */}
-      {step === 8 && (
+      {/* Step 6: Residential Location (State, LGA, Address) */}
+      {step === 6 && (
         <Button
           type="button"
           variant="black"
           size="4xl"
           className="w-full rounded-full"
           disabled={!selectedStateId || !selectedLgaId || !streetAddress}
-          onClick={() => setStep(9)}
+          onClick={() => setStep(7)}
         >
           Continue
         </Button>
       )}
 
-      {/* Step 9: Desired Polling Unit Assignment */}
-      {step === 9 && (
+      {/* Step 7: Desired Polling Unit Assignment */}
+      {step === 7 && (
         <Button
           type="button"
           variant="black"
           size="4xl"
           className="w-full rounded-full"
           disabled={!selectedPollingUnitId}
-          onClick={() => setStep(10)}
+          onClick={() => setStep(8)}
         >
           Continue
         </Button>
       )}
 
-      {/* Step 10: Punctuality Commitment Attestation */}
+      {/* Step 8: Election Day / Group Selection */}
+      {step === 8 && (
+        <Button
+          type="button"
+          variant="black"
+          size="4xl"
+          className="w-full rounded-full"
+          disabled={selectedElectionIds.length === 0}
+          onClick={() => setStep(9)}
+        >
+          Continue
+        </Button>
+      )}
+
+      {/* Step 9: Responsibilities & Readiness Attestation */}
+      {step === 9 && (
+        <Button
+          type="button"
+          variant="black"
+          size="4xl"
+          className="w-full rounded-full"
+          onClick={() => setStep(10)}
+        >
+          Yes, I agree
+        </Button>
+      )}
+
+      {/* Step 10: Code of Conduct & Punctuality */}
       {step === 10 && (
         <Button
           type="button"
@@ -181,7 +180,7 @@ export function ApplyFooter() {
         </Button>
       )}
 
-      {/* Step 11: Vigilance & Result Transmission Attestation */}
+      {/* Step 11: Neutrality & Integrity Attestation */}
       {step === 11 && (
         <Button
           type="button"
@@ -194,7 +193,7 @@ export function ApplyFooter() {
         </Button>
       )}
 
-      {/* Step 12: Neutrality & Integrity Attestation */}
+      {/* Step 12: Compensation & Potential Payout Details */}
       {step === 12 && (
         <Button
           type="button"
@@ -207,16 +206,17 @@ export function ApplyFooter() {
         </Button>
       )}
 
-      {/* Step 13: Non-violence & Legal Compliance Attestation */}
+      {/* Step 13: Head-shot / Passport Photo Upload */}
       {step === 13 && (
         <Button
           type="button"
           variant="black"
           size="4xl"
           className="w-full rounded-full"
+          disabled={(!avatarUrl && !user?.avatar) || isUploading}
           onClick={() => setStep(14)}
         >
-          Yes, I agree
+          Continue
         </Button>
       )}
 

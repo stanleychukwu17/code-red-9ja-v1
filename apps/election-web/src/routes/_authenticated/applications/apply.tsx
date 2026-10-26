@@ -47,17 +47,17 @@ export const Route = createFileRoute("/_authenticated/applications/apply")({
  * Progression:
  *  1. Orientation & Role Intro
  *  2. Political Party Selection (with active party locking)
- *  3. Election Group Selection (filtered to upcoming elections)
- *  4. Portrait / Selfie Upload (Cloudflare R2 presigned storage)
- *  5. Contact Information (Phone, WhatsApp, Data numbers)
- *  6. Educational Status (Primary, Secondary, Tertiary, None)
- *  7. Educational Details (Degree, School, Year - skipped if status is "none")
- *  8. Residential Address & Geographic Territory (State, LGA, Ward)
- *  9. Polling Unit Selection (Paginated search filtered to ward & party)
- * 10. Role Obligations & Readiness
- * 11. Code of Conduct
- * 12. Neutrality & Integrity Affirmation
- * 13. Payout Terms & Performance Incentives
+ *  3. Contact Information (Phone, WhatsApp, Data numbers)
+ *  4. Educational Status (Primary, Secondary, Tertiary, None)
+ *  5. Educational Details (Degree, School, Year - skipped if status is "none")
+ *  6. Residential Address & Geographic Territory (State, LGA, Ward)
+ *  7. Polling Unit Selection (Paginated search filtered to ward & party)
+ *  8. Election Day / Group Selection (Choose election day to serve)
+ *  9. Role Obligations & Readiness
+ * 10. Code of Conduct
+ * 11. Neutrality & Integrity Affirmation
+ * 12. Payout Terms & Performance Incentives
+ * 13. Portrait / Selfie Upload (Cloudflare R2 presigned storage)
  * 14. Bank Account Verification & Submission
  */
 function ApplyPage() {
@@ -79,20 +79,6 @@ function ApplyPageContent() {
     handleBackClick,
     submitError,
     success,
-    // Step 2
-    searchQuery,
-    setSearchQuery,
-    partiesLoading,
-    filteredParties,
-    selectedPartyId,
-    setSelectedPartyId,
-    lockedPartyId,
-    // Step 3
-    elections,
-    selectedElectionIds,
-    setSelectedElectionIds,
-    appliedElectionGroupIds,
-    selectedParty,
     // Step 4
     avatarUrl,
     isUploading,
@@ -165,42 +151,10 @@ function ApplyPageContent() {
         {step === 1 && <Step1 />}
 
         {/* Step 2: Political Party Selection */}
-        {step === 2 && (
-          <Step2
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            partiesLoading={partiesLoading}
-            filteredParties={filteredParties}
-            selectedPartyId={selectedPartyId}
-            setSelectedPartyId={setSelectedPartyId}
-            lockedPartyId={lockedPartyId}
-          />
-        )}
+        {step === 2 && <Step2 />}
 
-        {/* Step 3: Election Group Selection */}
+        {/* Step 3: Contact Numbers (Phone, WhatsApp, Data) */}
         {step === 3 && (
-          <Step3
-            elections={elections}
-            selectedElectionIds={selectedElectionIds}
-            setSelectedElectionIds={setSelectedElectionIds}
-            appliedElectionGroupIds={appliedElectionGroupIds}
-            selectedParty={selectedParty}
-          />
-        )}
-
-        {/* Step 4: Agent Portrait / Photo Upload */}
-        {step === 4 && (
-          <Step4
-            avatarUrl={avatarUrl || user?.avatar}
-            isUploading={isUploading}
-            handleUploadClick={handleUploadClick}
-            fileInputRef={fileInputRef}
-            handleFileChange={handleFileChange}
-          />
-        )}
-
-        {/* Step 5: Contact Numbers (Phone, WhatsApp, Data) */}
-        {step === 5 && (
           <ContactDetailsStep
             phone={phone}
             setPhone={setPhone}
@@ -212,16 +166,16 @@ function ApplyPageContent() {
           />
         )}
 
-        {/* Step 6: Educational Level Status */}
-        {step === 6 && (
+        {/* Step 4: Educational Level Status */}
+        {step === 4 && (
           <EducationalStatusStep
             educationalStatus={educationalStatus}
             setEducationalStatus={setEducationalStatus}
           />
         )}
 
-        {/* Step 7: Educational Institution & Degree Details */}
-        {step === 7 && educationalStatus !== "none" && (
+        {/* Step 5: Educational Institution & Degree Details */}
+        {step === 5 && educationalStatus !== "none" && (
           <EducationalDetailsStep
             educationalStatus={educationalStatus}
             highestDegree={highestDegree}
@@ -233,8 +187,8 @@ function ApplyPageContent() {
           />
         )}
 
-        {/* Step 8: Residential Address & Ward */}
-        {step === 8 && (
+        {/* Step 6: Residential Address & Ward */}
+        {step === 6 && (
           <Step5
             selectedStateId={selectedStateId}
             setSelectedStateId={setSelectedStateId}
@@ -247,8 +201,8 @@ function ApplyPageContent() {
           />
         )}
 
-        {/* Step 9: Polling Unit Search & Assignment */}
-        {step === 9 && (
+        {/* Step 7: Polling Unit Search & Assignment */}
+        {step === 7 && (
           <Step6
             pollingUnits={pollingUnits}
             selectedPollingUnitId={selectedPollingUnitId}
@@ -264,17 +218,31 @@ function ApplyPageContent() {
           />
         )}
 
-        {/* Step 10: Polling Agent Responsibilities */}
-        {step === 10 && <Step7 />}
+        {/* Step 8: Election Day / Group Selection */}
+        {step === 8 && <Step3 />}
 
-        {/* Step 11: Code of Conduct & Punctuality */}
-        {step === 11 && <Step8 />}
+        {/* Step 9: Polling Agent Responsibilities */}
+        {step === 9 && <Step7 />}
 
-        {/* Step 12: Neutrality & Integrity Commitment */}
-        {step === 12 && <Step9 />}
+        {/* Step 10: Code of Conduct & Punctuality */}
+        {step === 10 && <Step8 />}
 
-        {/* Step 13: Compensation & Potential Payout Details */}
-        {step === 13 && <Step10 />}
+        {/* Step 11: Neutrality & Integrity Commitment */}
+        {step === 11 && <Step9 />}
+
+        {/* Step 12: Compensation & Potential Payout Details */}
+        {step === 12 && <Step10 />}
+
+        {/* Step 13: Agent Portrait / Photo Upload */}
+        {step === 13 && (
+          <Step4
+            avatarUrl={avatarUrl || user?.avatar}
+            isUploading={isUploading}
+            handleUploadClick={handleUploadClick}
+            fileInputRef={fileInputRef}
+            handleFileChange={handleFileChange}
+          />
+        )}
 
         {/* Step 14: Bank Account & Payout Verification */}
         {step === 14 && (
