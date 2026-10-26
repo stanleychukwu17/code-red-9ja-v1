@@ -710,7 +710,7 @@ func (h *Handler) DeleteUserAccount(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Permission checks using PermissionsService
-	allowed, perms, permErr := h.permissionsService.CheckUserModificationPermission(claims, userDetails)
+	allowed, _, permErr := h.permissionsService.CheckUserModificationPermission(claims, userDetails)
 	if !allowed {
 		if permErr != nil {
 			h.utils.RespondError(w, http.StatusForbidden, permErr.Error())
@@ -736,15 +736,9 @@ func (h *Handler) DeleteUserAccount(w http.ResponseWriter, r *http.Request) {
 	updatedUserDetails.AccountStatus.Valid = true
 	newValuesJSON, _ := json.Marshal(updatedUserDetails)
 
-	// Derive the module name and actor role dynamically based on the verified permissions
-	moduleName, actorRole := perms.GetAuditActorInfo()
-
 	// --- Audit Logging ---
 	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
 		Action:     db.ActionDeleteUserAccount,
-		Module:     audit.StringToText(moduleName),
-		ActorID:    claims.UserID,
-		ActorRole:  audit.StringToText(actorRole),
 		EntityType: db.EntityTypeUser,
 		EntityID:   strconv.FormatInt(userDetails.ID, 10),
 		OldValues:  oldValuesJSON,
@@ -988,17 +982,10 @@ func (h *Handler) AdminUpdateUser(w http.ResponseWriter, r *http.Request) {
 	oldValuesJSON, _ := json.Marshal(targetUserDetails)
 	newValuesJSON, _ := json.Marshal(updatedUserDetails)
 
-	// Derive the module name and actor role dynamically based on the verified permissions
-	// This ensures the audit log accurately reflects the context of the modification
-	moduleName, actorRole := perms.GetAuditActorInfo()
-
 	// --- Audit Logging ---
 	// Asynchronously insert the audit log to prevent blocking the API response
 	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
 		Action:     db.ActionUpdateUser,
-		Module:     audit.StringToText(moduleName),
-		ActorID:    claims.UserID,
-		ActorRole:  audit.StringToText(actorRole),
 		EntityType: db.EntityTypeUser,
 		EntityID:   strconv.FormatInt(targetUserDetails.ID, 10),
 		OldValues:  oldValuesJSON,
@@ -1061,7 +1048,7 @@ func (h *Handler) AdminUpdateUserMoreInfo(w http.ResponseWriter, r *http.Request
 	}
 
 	// Permission checks using permissionsService
-	hasPermission, perms, permErr := h.permissionsService.CheckUserModificationPermission(claims, targetUserDetails)
+	hasPermission, _, permErr := h.permissionsService.CheckUserModificationPermission(claims, targetUserDetails)
 	if !hasPermission {
 		h.utils.RespondError(w, http.StatusForbidden, permErr.Error())
 		return
@@ -1090,9 +1077,6 @@ func (h *Handler) AdminUpdateUserMoreInfo(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Determine module name and actor role for audit logging
-	moduleName, actorRole := perms.GetAuditActorInfo()
-
 	// Fetch the updated more info to return back to the client
 	updatedMoreInfo, err := h.usersService.GetMoreInfoAboutThisUser(r.Context(), targetUserDetails.ID)
 	if err != nil {
@@ -1106,9 +1090,6 @@ func (h *Handler) AdminUpdateUserMoreInfo(w http.ResponseWriter, r *http.Request
 	// Asynchronously insert the audit log to prevent blocking the API response
 	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
 		Action:     db.ActionUpdateUserMoreInfo,
-		Module:     audit.StringToText(moduleName),
-		ActorID:    claims.UserID,
-		ActorRole:  audit.StringToText(actorRole),
 		EntityType: db.EntityTypeUser,
 		EntityID:   strconv.FormatInt(targetUserDetails.ID, 10),
 		OldValues:  oldValuesJSON,
@@ -1172,12 +1153,8 @@ func (h *Handler) GetUserPhoneNumbers(w http.ResponseWriter, r *http.Request) {
 
 	// audit log if viewer is not the account owner
 	if !perms.IsOwnerOfAccount {
-		moduleName, actorRole := perms.GetAuditActorInfo()
 		h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
-			Module:     audit.StringToText(moduleName),
 			Action:     db.ActionViewUserPhoneNumbers,
-			ActorID:    claims.UserID,
-			ActorRole:  audit.StringToText(actorRole),
 			EntityType: db.EntityTypeUser,
 			EntityID:   fmt.Sprintf("%d", userDetails.ID),
 		})
@@ -1235,7 +1212,7 @@ func (h *Handler) UpdateUserPhoneNumbers(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Verify requester has permission to modify this user
-	hasPermission, perms, err := h.permissionsService.CheckUserModificationPermission(claims, userDetails)
+	hasPermission, _, err := h.permissionsService.CheckUserModificationPermission(claims, userDetails)
 	if !hasPermission {
 		h.utils.RespondError(w, http.StatusForbidden, err.Error())
 		return
@@ -1308,14 +1285,9 @@ func (h *Handler) UpdateUserPhoneNumbers(w http.ResponseWriter, r *http.Request)
 	// Audit log the update
 	oldValues, _ := json.Marshal(oldPhones)
 	newValues, _ := json.Marshal(updatedPhones)
-	moduleName, actorRole := perms.GetAuditActorInfo()
-
 	// save the log
 	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
-		Module:     audit.StringToText(moduleName),
 		Action:     db.ActionUpdateUserPhoneNumbers,
-		ActorID:    claims.UserID,
-		ActorRole:  audit.StringToText(actorRole),
 		EntityType: db.EntityTypeUser,
 		EntityID:   fmt.Sprintf("%d", userDetails.ID),
 		OldValues:  oldValues,
@@ -1369,7 +1341,7 @@ func (h *Handler) DeleteUserPhoneNumber(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// check permissions
-	hasPermission, perms, err := h.permissionsService.CheckUserModificationPermission(claims, userDetails)
+	hasPermission, _, err := h.permissionsService.CheckUserModificationPermission(claims, userDetails)
 	if !hasPermission {
 		h.utils.RespondError(w, http.StatusForbidden, err.Error())
 		return
@@ -1424,14 +1396,10 @@ func (h *Handler) DeleteUserPhoneNumber(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// log the activity that the phone number was deleted
-	moduleName, actorRole := perms.GetAuditActorInfo()
 	oldValues, _ := json.Marshal(targetPhone)
 	newValues, _ := json.Marshal(updatedPhones)
 	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
-		Module:     audit.StringToText(moduleName),
 		Action:     db.ActionDeleteUserPhoneNumber,
-		ActorID:    claims.UserID,
-		ActorRole:  audit.StringToText(actorRole),
 		EntityType: db.EntityTypeUser,
 		EntityID:   fmt.Sprintf("%d", userDetails.ID),
 		OldValues:  oldValues,
@@ -1647,9 +1615,6 @@ func (h *Handler) UpdateUserRoles(w http.ResponseWriter, r *http.Request) {
 	newValuesData, _ := json.Marshal(freshUserDetails.Roles.RolesCode)
 
 	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
-		Module:     pgtype.Text{String: db.ModuleAdmin, Valid: true},
-		ActorID:    claims.UserID,
-		ActorRole:  pgtype.Text{String: db.ActorRoleAdmin, Valid: true},
 		Action:     db.ActionUpdateUserRoles,
 		EntityType: db.EntityTypeUser,
 		EntityID:   fmt.Sprintf("%d", userID),

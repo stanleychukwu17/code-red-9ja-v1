@@ -182,7 +182,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	authHandler := authhandler.NewHandler(authService, usersService, filesService, utilsInstance)
 	bodiesHandler := bodieshandler.NewHandler(bodiesService, q, utilsInstance, rdb)
 	partiesHandler := partieshandler.NewHandler(partiesService, bodiesService, auditService, permissionsService, filesService, utilsInstance, r2Svc, followsService)
-	partiesWalletHandler := partieswallethandler.NewHandler(partiesWalletService, partiesService, utilsInstance)
+	partiesWalletHandler := partieswallethandler.NewHandler(partiesWalletService, partiesService, notificationsService, auditService, utilsInstance)
 	statesHandler := stateshandler.NewHandler(statesService, utilsInstance)
 	senatorialDistrictsHandler := senatorialdistrictshandler.NewHandler(senatorialDistrictsService, bodiesService, q, utilsInstance)
 	stateAssemblyConstituenciesHandler := stateassemblyconstituencieshandler.NewHandler(stateAssemblyConstituenciesService, bodiesService, q, utilsInstance)

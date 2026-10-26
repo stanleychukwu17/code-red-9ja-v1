@@ -14,10 +14,18 @@ func (m Metadata) Set(key string, val any) Metadata {
 	return m
 }
 
-// SetIfNonEmpty sets a key-value pair only if the pointer is non-nil and the string is not empty.
-func (m Metadata) SetIfNonEmpty(key string, val *string) Metadata {
+// SetIfNotEmptyPtr sets a key-value pair only if the pointer is non-nil and the string is not empty.
+func (m Metadata) SetIfNotEmptyPtr(key string, val *string) Metadata {
 	if val != nil && *val != "" {
 		m[key] = *val
+	}
+	return m
+}
+
+// SetIfNotEmpty sets a key-value pair only if the string value is not empty.
+func (m Metadata) SetIfNotEmpty(key string, val string) Metadata {
+	if val != "" {
+		m[key] = val
 	}
 	return m
 }

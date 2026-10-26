@@ -43,6 +43,7 @@ const (
 	ActionUnsuspendPartyMember      = "unsuspend_party_member"       // Action when a party member's suspension is lifted
 	ActionBlockPartyMember          = "block_party_member"           // Action when a user is blocked from a party
 	ActionUnblockPartyMember        = "unblock_party_member"         // Action when a user is unblocked from a party
+	ActionDepositPartyWallet        = "deposit_party_wallet"         // Action when funds are directly credited/deposited to a party wallet
 
 	// -- Actor Roles --
 	ActorRoleSuperAdmin = "super_admin" // A super administrator of the system

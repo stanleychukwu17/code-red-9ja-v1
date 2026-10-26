@@ -55,6 +55,7 @@ export function BuyAgentSlotsDialog({ partyId, walletBalanceKobo, open, onClose,
     queryKey: ["partySlotPrice", partyId],
     queryFn: () => getPartySlotPrice({ data: partyId! }),
     enabled: !!partyId && open,
+    staleTime: Infinity,
   });
 
   // Calculate unit price in Naira (convert from Kobo, fallback to ₦1,000)

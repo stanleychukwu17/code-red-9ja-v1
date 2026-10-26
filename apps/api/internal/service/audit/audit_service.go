@@ -99,8 +99,8 @@ func ActorInfoFromContext(ctx context.Context) (int64, string) {
 	return claims.UserID, actorRole
 }
 
-// LogAction logs an action to the audit log.
-func (s *auditService) LogAction(ctx context.Context, params queries.InsertAuditLogParams) error {
+// prepareParams auto-populates missing audit parameters (ActorID, ActorRole, Module, IP, UserAgent) from context.
+func (s *auditService) prepareParams(ctx context.Context, params *queries.InsertAuditLogParams) {
 	ipAddress, userAgent := RequestMetadataFromContext(ctx)
 
 	if params.IpAddress == nil {
@@ -109,15 +109,36 @@ func (s *auditService) LogAction(ctx context.Context, params queries.InsertAudit
 	if !params.UserAgent.Valid {
 		params.UserAgent = StringToText(userAgent)
 	}
-	if params.ActorID == 0 || !params.ActorRole.Valid {
-		actorID, actorRole := ActorInfoFromContext(ctx)
+
+	var actorRole string
+	if params.ActorID == 0 || !params.ActorRole.Valid || !params.Module.Valid {
+		var actorID int64
+		actorID, actorRole = ActorInfoFromContext(ctx)
 		if params.ActorID == 0 && actorID != 0 {
 			params.ActorID = actorID
 		}
 		if !params.ActorRole.Valid && actorRole != "" {
 			params.ActorRole = StringToText(actorRole)
 		}
+	} else if params.ActorRole.Valid {
+		actorRole = params.ActorRole.String
 	}
+
+	if !params.Module.Valid {
+		switch actorRole {
+		case db.ActorRoleSuperAdmin, db.ActorRoleAdmin:
+			params.Module = StringToText(db.ModuleAdmin)
+		case db.ActorRolePartyAdmin:
+			params.Module = StringToText(db.ModulePartyAdmin)
+		default:
+			params.Module = StringToText(db.ModuleUsers)
+		}
+	}
+}
+
+// LogAction logs an action to the audit log.
+func (s *auditService) LogAction(ctx context.Context, params queries.InsertAuditLogParams) error {
+	s.prepareParams(ctx, &params)
 
 	// Execute the insertion synchronously for now.
 	// We might consider doing this asynchronously in the future if it becomes a bottleneck.
@@ -127,23 +148,7 @@ func (s *auditService) LogAction(ctx context.Context, params queries.InsertAudit
 
 // LogActionAsync logs an action to the audit log asynchronously in a goroutine.
 func (s *auditService) LogActionAsync(ctx context.Context, params queries.InsertAuditLogParams) {
-	ipAddress, userAgent := RequestMetadataFromContext(ctx)
-
-	if params.IpAddress == nil {
-		params.IpAddress = ParseIP(ipAddress)
-	}
-	if !params.UserAgent.Valid {
-		params.UserAgent = StringToText(userAgent)
-	}
-	if params.ActorID == 0 || !params.ActorRole.Valid {
-		actorID, actorRole := ActorInfoFromContext(ctx)
-		if params.ActorID == 0 && actorID != 0 {
-			params.ActorID = actorID
-		}
-		if !params.ActorRole.Valid && actorRole != "" {
-			params.ActorRole = StringToText(actorRole)
-		}
-	}
+	s.prepareParams(ctx, &params)
 
 	go func(p queries.InsertAuditLogParams) {
 		bgCtx := context.Background()

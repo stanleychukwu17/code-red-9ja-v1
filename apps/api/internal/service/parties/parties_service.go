@@ -2607,7 +2607,7 @@ func (s *PartiesService) BlockUserFromThisParty(ctx context.Context, input Block
 
 		// 4. Record milestone for audit trail
 		metaJSON, _ := json.Marshal(utils.NewMetadata().
-			SetIfNonEmpty("reason", input.Reason).
+			SetIfNotEmptyPtr("reason", input.Reason).
 			SetIfPresent("blocked_by", input.BlockedBy))
 
 		// If user was not enrolled in chapters, record milestone against national chapter
@@ -2733,7 +2733,7 @@ func (s *PartiesService) UnblockPartyUser(ctx context.Context, input UnblockPart
 
 	// 2. Record unblocked milestone
 	metaJSON, _ := json.Marshal(utils.NewMetadata().
-		SetIfNonEmpty("reason", input.Reason).
+		SetIfNotEmptyPtr("reason", input.Reason).
 		SetIfPresent("unblocked_by", input.UnblockedBy))
 
 	var primaryChapterID pgtype.Int4

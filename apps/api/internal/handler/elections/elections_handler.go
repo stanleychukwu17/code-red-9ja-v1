@@ -1127,17 +1127,6 @@ func (h *Handler) FieldPartyCandidate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Log audit action for the administrator
-	moduleName := db.ModulePartyAdmin
-	actorRole := db.ActorRolePartyAdmin
-	if claims.HasRole(db.ActorRoleSuperAdmin) {
-		moduleName = db.ModuleAdmin
-		actorRole = db.ActorRoleSuperAdmin
-	} else if claims.HasRole(db.ActorRoleAdmin) {
-		moduleName = db.ModuleAdmin
-		actorRole = db.ActorRoleAdmin
-	}
-
 	payloadJSON, _ := json.Marshal(map[string]interface{}{
 		"election_id":  electionID,
 		"party_id":     req.PartyID,
@@ -1146,10 +1135,7 @@ func (h *Handler) FieldPartyCandidate(w http.ResponseWriter, r *http.Request) {
 	})
 
 	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
-		Module:     audit.StringToText(moduleName),
 		Action:     db.ActionFieldPartyCandidate,
-		ActorID:    adminUser.ID,
-		ActorRole:  audit.StringToText(actorRole),
 		EntityType: db.EntityTypeElections,
 		EntityID:   strconv.FormatInt(electionID, 10),
 		NewValues:  payloadJSON,
@@ -1237,17 +1223,6 @@ func (h *Handler) UnfieldPartyCandidate(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Log audit trail for party administrator or platform admin
-	moduleName := db.ModulePartyAdmin
-	actorRole := db.ActorRolePartyAdmin
-	if claims.HasRole(db.ActorRoleSuperAdmin) {
-		moduleName = db.ModuleAdmin
-		actorRole = db.ActorRoleSuperAdmin
-	} else if claims.HasRole(db.ActorRoleAdmin) {
-		moduleName = db.ModuleAdmin
-		actorRole = db.ActorRoleAdmin
-	}
-
 	payloadJSON, _ := json.Marshal(map[string]interface{}{
 		"election_id": electionID,
 		"party_id":    req.PartyID,
@@ -1255,10 +1230,7 @@ func (h *Handler) UnfieldPartyCandidate(w http.ResponseWriter, r *http.Request) 
 	})
 
 	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
-		Module:     audit.StringToText(moduleName),
 		Action:     db.ActionUnfieldPartyCandidate,
-		ActorID:    adminUser.ID,
-		ActorRole:  audit.StringToText(actorRole),
 		EntityType: db.EntityTypeElections,
 		EntityID:   strconv.FormatInt(electionID, 10),
 		NewValues:  payloadJSON,

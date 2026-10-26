@@ -336,14 +336,6 @@ type UpdatePartyRequest struct {
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Router       /parties [post]
 func (h *Handler) CreateParty(w http.ResponseWriter, r *http.Request) {
-	var actorID int64
-	var actorRole string
-	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
-	if ok && claims != nil {
-		actorID = claims.UserID
-		actorRole = db.ActorRoleAdmin
-	}
-
 	// 1. Decode the request payload
 	var req CreatePartyRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -383,8 +375,6 @@ func (h *Handler) CreateParty(w http.ResponseWriter, r *http.Request) {
 	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
 		Module:     audit.StringToText(db.ModuleAdmin),
 		Action:     db.ActionCreateParty,
-		ActorID:    actorID,
-		ActorRole:  audit.StringToText(actorRole),
 		EntityType: db.EntityTypeParty,
 		EntityID:   strconv.FormatInt(int64(party.ID), 10),
 		NewValues:  newValuesJSON,
@@ -447,7 +437,7 @@ func (h *Handler) UpdateParty(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// check permissions to update this party
-	allowed, perms, err := h.permissionsService.CheckPartyModificationPermission(claims, int16(partyID))
+	allowed, _, err := h.permissionsService.CheckPartyModificationPermission(claims, int16(partyID))
 	if !allowed {
 		h.utils.RespondError(w, http.StatusForbidden, err.Error())
 		return
@@ -501,21 +491,8 @@ func (h *Handler) UpdateParty(w http.ResponseWriter, r *http.Request) {
 	oldValuesJSON, _ := json.Marshal(party)
 	newValuesJSON, _ := json.Marshal(updatedParty)
 
-	moduleName := db.ModulePartyAdmin
-	actorRole := db.ActorRolePartyAdmin
-	if perms.IsBothAdmin {
-		moduleName = db.ModuleAdmin
-		if perms.IsSuperAdmin {
-			actorRole = db.ActorRoleSuperAdmin
-		} else {
-			actorRole = db.ActorRoleAdmin
-		}
-	}
 	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
-		Module:     audit.StringToText(moduleName),
 		Action:     db.ActionUpdateParty,
-		ActorID:    claims.UserID,
-		ActorRole:  audit.StringToText(actorRole),
 		EntityType: db.EntityTypeParty,
 		EntityID:   idStr,
 		OldValues:  oldValuesJSON,
@@ -1150,7 +1127,7 @@ func (h *Handler) LeaveParty(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) DeleteParty(w http.ResponseWriter, r *http.Request) {
 	// get claims from the request context
 	// only super admin can delete a party
-	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey, "super_admin")
+	_, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey, "super_admin")
 	if !ok {
 		return
 	}
@@ -1200,8 +1177,6 @@ func (h *Handler) DeleteParty(w http.ResponseWriter, r *http.Request) {
 	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
 		Module:     audit.StringToText(db.ModuleAdmin),
 		Action:     db.ActionDeleteParty,
-		ActorID:    claims.UserID,
-		ActorRole:  audit.StringToText(db.ActorRoleSuperAdmin),
 		EntityType: db.EntityTypeParty,
 		EntityID:   idStr,
 		OldValues:  oldValuesJSON,

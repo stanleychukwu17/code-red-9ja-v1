@@ -373,7 +373,6 @@ func (h *Handler) DeleteFile(w http.ResponseWriter, r *http.Request) {
 
 	// permissionsservice
 	permsSvc := permissionsservice.NewPermissionsService()
-	var auditModuleName, auditActorRole string
 
 	// the file id
 	fileID, err := parseID(r, "id")
@@ -401,12 +400,11 @@ func (h *Handler) DeleteFile(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// check permissions to modify this user
-		allowed, perms, permErr := permsSvc.CheckUserModificationPermission(claims, user)
+		allowed, _, permErr := permsSvc.CheckUserModificationPermission(claims, user)
 		if !allowed {
 			h.utils.RespondError(w, http.StatusForbidden, permErr.Error())
 			return
 		}
-		auditModuleName, auditActorRole = perms.GetAuditActorInfo()
 
 		// verify that the file being deleted is actually this user's avatar
 		if !user.AvatarFileID.Valid || user.AvatarFileID.Int64 != fileID {
@@ -427,12 +425,11 @@ func (h *Handler) DeleteFile(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// check permissions to delete this party image
-		allowed, perms, err := permsSvc.CheckPartyModificationPermission(claims, int16(partyID))
+		allowed, _, err := permsSvc.CheckPartyModificationPermission(claims, int16(partyID))
 		if !allowed {
 			h.utils.RespondError(w, http.StatusForbidden, err.Error())
 			return
 		}
-		auditModuleName, auditActorRole = perms.GetAuditActorInfo()
 
 		// get the party Details
 		party := h.partiesService.GetPartyInfo(r.Context(), int16(partyID))
@@ -470,20 +467,10 @@ func (h *Handler) DeleteFile(w http.ResponseWriter, r *http.Request) {
 		h.filesService.DeleteAssetAsync(file.PublicUrl, fileID)
 
 		// --- Audit Logging ---
-		if auditModuleName == "" {
-			auditModuleName = db.ModuleFiles
-			auditActorRole = db.ActorRoleUser
-			if len(claims.Roles) > 0 {
-				auditActorRole = claims.Roles[0]
-			}
-		}
-
 		oldValuesJSON, _ := json.Marshal(file)
 		h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
-			Module:     audit.StringToText(auditModuleName),
+			Module:     audit.StringToText(db.ModuleFiles),
 			Action:     db.ActionDeleteFile,
-			ActorID:    claims.UserID,
-			ActorRole:  audit.StringToText(auditActorRole),
 			EntityType: "file",
 			EntityID:   strconv.FormatInt(fileID, 10),
 			OldValues:  oldValuesJSON,

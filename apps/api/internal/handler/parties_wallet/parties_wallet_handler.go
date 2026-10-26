@@ -13,8 +13,12 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 
+	"free9ja/api/internal/constants"
+	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	apimiddleware "free9ja/api/internal/middleware"
+	"free9ja/api/internal/service/audit"
+	"free9ja/api/internal/service/notifications"
 	partiesservice "free9ja/api/internal/service/parties"
 	"free9ja/api/internal/utils"
 )
@@ -34,23 +38,33 @@ type PartiesWalletService interface {
 	BuySlots(ctx context.Context, partyID int16, quantity int32) (queries.Party, error)
 }
 
-// PartiesService provides access to party info.
+// PartiesService provides access to party info and chapter resolution.
 type PartiesService interface {
 	GetPartyInfo(ctx context.Context, partyID int16) *queries.PartyWithVerifications
+	GetOrCreateNationalChapter(ctx context.Context, partyID, countryID int16, createIfMissing ...bool) (int32, error)
+}
+
+// NotificationsService defines methods required for dispatching notifications.
+type NotificationsService interface {
+	NotifyPartyWalletDeposited(ctx context.Context, params notifications.NotifyPartyWalletDepositedParams)
 }
 
 // Handler handles party wallet and slot HTTP endpoints.
 type Handler struct {
 	partiesWalletService PartiesWalletService
 	partiesService       PartiesService
+	notificationsService NotificationsService
+	auditService         audit.AuditService
 	utils                *utils.Utils
 }
 
 // NewHandler creates a new party wallet Handler.
-func NewHandler(partiesWalletService PartiesWalletService, partiesService PartiesService, utils *utils.Utils) *Handler {
+func NewHandler(partiesWalletService PartiesWalletService, partiesService PartiesService, notificationsService NotificationsService, auditService audit.AuditService, utils *utils.Utils) *Handler {
 	return &Handler{
 		partiesWalletService: partiesWalletService,
 		partiesService:       partiesService,
+		notificationsService: notificationsService,
+		auditService:         auditService,
 		utils:                utils,
 	}
 }
@@ -351,6 +365,7 @@ func (h *Handler) Deposit(w http.ResponseWriter, r *http.Request) {
 			h.utils.RespondError(w, http.StatusForbidden, "Party administrators cannot directly deposit funds yet. Please transfer your funds to Free9ja and contact a platform administrator with proof of payment.")
 			return
 		}
+
 		h.utils.RespondError(w, http.StatusForbidden, "Forbidden: insufficient permissions")
 		return
 	}
@@ -379,22 +394,50 @@ func (h *Handler) Deposit(w http.ResponseWriter, r *http.Request) {
 	payerName := fmt.Sprintf("Admin %s", claims.Username)
 	narration := fmt.Sprintf("Direct deposit to party wallet confirmed by %s", claims.Username)
 
-	// Credit wallet balance with transaction record
-	_, err = h.partiesWalletService.CreditWallet(r.Context(),
-		partiesservice.CreditPartyWalletParams{
-			WalletID:             wallet.ID,
-			AmountKobo:           req.AmountKobo,
-			TransactionReference: txRef,
-			PayerName:            payerName,
-			PayerAccountNumber:   "",
-			PayerBankCode:        "",
-			Narration:            narration,
-			RawPayload:           []byte("{}"),
-		},
+	txn, err := h.partiesWalletService.CreditWallet(r.Context(), partiesservice.CreditPartyWalletParams{
+		WalletID:             wallet.ID,
+		AmountKobo:           req.AmountKobo,
+		TransactionReference: txRef,
+		PayerName:            payerName,
+		PayerAccountNumber:   "",
+		PayerBankCode:        "",
+		Narration:            narration,
+		RawPayload:           []byte("{}"),
+	},
 	)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to credit wallet: "+err.Error())
 		return
+	}
+
+	// Record audit log asynchronously
+	auditNewValues, _ := json.Marshal(map[string]interface{}{
+		"wallet_id":             wallet.ID,
+		"party_id":              partyID,
+		"amount_kobo":           req.AmountKobo,
+		"transaction_reference": txRef,
+		"balance_after_kobo":    txn.BalanceAfterKobo,
+		"payer_name":            payerName,
+		"narration":             narration,
+	})
+	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
+		Module:     audit.StringToText(db.ModuleAdmin),
+		Action:     db.ActionDepositPartyWallet,
+		EntityType: db.EntityTypeParty,
+		EntityID:   strconv.FormatInt(partyID, 10),
+		NewValues:  auditNewValues,
+	})
+
+	// Dispatch notification to party national chapter
+	if natChapterID, err := h.partiesService.GetOrCreateNationalChapter(r.Context(), int16(partyID), constants.NigeriaCountryID); err == nil && natChapterID > 0 {
+		h.notificationsService.NotifyPartyWalletDeposited(r.Context(), notifications.NotifyPartyWalletDepositedParams{
+			PartyID:              int16(partyID),
+			ChapterID:            natChapterID,
+			AmountKobo:           req.AmountKobo,
+			BalanceAfterKobo:     txn.BalanceAfterKobo,
+			TransactionReference: txRef,
+			Narration:            narration,
+		})
 	}
 
 	// Return success response with wallet ID

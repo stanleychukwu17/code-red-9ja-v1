@@ -1,11 +1,9 @@
 import { useState, useMemo } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
 import { useDebounceValue } from "usehooks-ts";
 import { Search, MapPin, Building2, Landmark, Globe, ChevronRight, ArrowRight, CheckCircle2, Layers } from "lucide-react";
 import { Input } from "@repo/ui/components/input";
 import { HeaderAccent } from "@repo/ui/components/header-accent";
-import { partyProfileQueryOptions } from "../$partyName.$partyId";
 import { useNigeriaStates, useLGAs, useWards } from "#/hooks";
 import type { StateItem, LGAItem, WardItem } from "#/lib/server/polling_units";
 
@@ -17,24 +15,7 @@ type ChapterTierFilter = "all" | "national" | "state" | "lga" | "ward";
 
 function PartyChaptersTabComponent() {
   const { partyName, partyId } = Route.useParams();
-  const search = Route.useSearch() as { chapterId?: number };
-  const currentChapterId = search?.chapterId;
   const navigate = useNavigate();
-
-  // Retrieve current active chapter metadata from parent profile query cache
-  const { data: profileRes } = useQuery(
-    partyProfileQueryOptions(partyId, partyName, currentChapterId),
-  );
-
-  const activeChapterType = profileRes?.success
-    ? profileRes.data.chapter_type || "national"
-    : "national";
-  const activeChapterGeoName = profileRes?.success
-    ? profileRes.data.chapter_geo_name
-    : undefined;
-  const activeChapterId = profileRes?.success
-    ? profileRes.data.chapter?.id
-    : undefined;
 
   // Tier Filter and Search
   const [selectedTier, setSelectedTier] = useState<ChapterTierFilter>("state");
@@ -101,32 +82,17 @@ function PartyChaptersTabComponent() {
   return (
     <div className="space-y-6 pb-20">
       {/* Top Header Section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="relative inline-block">
-            <h2 className="relative text-xl sm:text-2xl font-bold tracking-tight text-foreground z-2">
-              {partyName.toUpperCase()} Chapters Directory
-            </h2>
-            <HeaderAccent />
-          </div>
-          <p className="text-sm text-muted-foreground mt-2 max-w-2xl">
-            Browse and explore registered chapters across Nigeria from national and state headquarters
-            down to local governments and electoral wards.
-          </p>
+      <div>
+        <div className="relative inline-block">
+          <h2 className="relative text-xl sm:text-2xl font-bold tracking-tight text-foreground z-2">
+            {partyName.toUpperCase()} Chapters Directory
+          </h2>
+          <HeaderAccent />
         </div>
-
-        {/* Current Active Chapter Indicator */}
-        <div className="flex items-center gap-2 self-start md:self-auto bg-card border border-border/60 rounded-2xl p-2.5 px-4 shadow-2xs">
-          <div className="size-2.5 rounded-full bg-emerald-500 animate-pulse" />
-          <div className="text-xs">
-            <span className="text-muted-foreground">Currently Viewing: </span>
-            <span className="font-semibold text-foreground capitalize">
-              {activeChapterType === "national"
-                ? "National Headquarters"
-                : `${activeChapterGeoName || ""} (${activeChapterType})`}
-            </span>
-          </div>
-        </div>
+        <p className="text-sm text-muted-foreground mt-2 max-w-2xl">
+          Browse and explore registered chapters across Nigeria from national and state headquarters
+          down to local governments and electoral wards.
+        </p>
       </div>
 
       {/* Filter and Navigation Tabs */}
@@ -297,33 +263,19 @@ function PartyChaptersTabComponent() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredStates.map((state) => {
-              const isCurrent =
-                activeChapterType === "state" &&
-                activeChapterGeoName?.toLowerCase() === state.name.toLowerCase();
-
               return (
                 <div
                   key={state.id}
-                  className={`group rounded-2xl border p-5 transition-all flex flex-col justify-between ${isCurrent
-                    ? "bg-primary/5 border-primary/40 shadow-xs"
-                    : "bg-card border-border/60 hover:border-primary/40 hover:bg-muted/20"
-                    }`}
+                  className="group rounded-2xl border p-5 transition-all flex flex-col justify-between bg-card border-border/60 hover:border-primary/40 hover:bg-muted/20"
                 >
                   <div>
                     <div className="flex items-center justify-between mb-3">
                       <div className="size-10 rounded-xl bg-muted/60 flex items-center justify-center text-foreground font-bold text-xs group-hover:bg-primary/10 group-hover:text-primary transition-colors">
                         {state.name.slice(0, 2).toUpperCase()}
                       </div>
-                      {isCurrent ? (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-                          <CheckCircle2 className="size-3.5" />
-                          <span>Active View</span>
-                        </span>
-                      ) : (
-                        <span className="text-[11px] text-muted-foreground font-medium">
-                          State Tier
-                        </span>
-                      )}
+                      <span className="text-[11px] text-muted-foreground font-medium">
+                        State Tier
+                      </span>
                     </div>
 
                     <h4 className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">

@@ -52,6 +52,7 @@ type NotificationsService interface {
 	NotifyPartyOfficialVacated(ctx context.Context, params NotifyPartyOfficialVacatedParams)
 	NotifyCandidateNominated(ctx context.Context, params NotifyCandidateNominatedParams)
 	NotifyCandidateWithdrawn(ctx context.Context, params NotifyCandidateWithdrawnParams)
+	NotifyPartyWalletDeposited(ctx context.Context, params NotifyPartyWalletDepositedParams)
 }
 
 type service struct {
@@ -228,6 +229,16 @@ type NotifyCandidateWithdrawnParams struct {
 	TargetUserID int64
 	ActorID      *int64
 	Slot         string
+}
+
+type NotifyPartyWalletDepositedParams struct {
+	PartyID              int16
+	ChapterID            int32
+	ActorID              *int64
+	AmountKobo           int64
+	BalanceAfterKobo     int64
+	TransactionReference string
+	Narration            string
 }
 
 // ----------------------------------------------------------------------------
@@ -554,7 +565,7 @@ func (s *service) NotifyPartyMemberSuspended(ctx context.Context, params NotifyP
 	// 1. Build metadata payload for the suspended member
 	userMeta := utils.NewMetadata().
 		Set("party_id", params.PartyID).
-		SetIfNonEmpty("reason", params.Reason)
+		SetIfNotEmptyPtr("reason", params.Reason)
 
 	// Send direct personal notification to the suspended user
 	s.CreateNotificationAsync(ctx, CreateNotificationInput{
@@ -570,7 +581,7 @@ func (s *service) NotifyPartyMemberSuspended(ctx context.Context, params NotifyP
 	// 2. Build metadata payload for party administrators/officials
 	partyMeta := utils.NewMetadata().
 		Set("suspended_user_id", params.TargetUserID).
-		SetIfNonEmpty("reason", params.Reason)
+		SetIfNotEmptyPtr("reason", params.Reason)
 
 	// Broadcast party notification to relevant party leadership
 	s.CreatePartyNotificationAsync(ctx, CreatePartyNotificationInput{
@@ -589,7 +600,7 @@ func (s *service) NotifyPartyMemberReinstated(ctx context.Context, params Notify
 	// 1. Build metadata payload for the reinstated member
 	userMeta := utils.NewMetadata().
 		Set("party_id", params.PartyID).
-		SetIfNonEmpty("reason", params.Reason)
+		SetIfNotEmptyPtr("reason", params.Reason)
 
 	// Send direct notification to member welcoming them back
 	s.CreateNotificationAsync(ctx, CreateNotificationInput{
@@ -605,7 +616,7 @@ func (s *service) NotifyPartyMemberReinstated(ctx context.Context, params Notify
 	// 2. Build metadata payload for party leadership
 	partyMeta := utils.NewMetadata().
 		Set("reinstated_user_id", params.TargetUserID).
-		SetIfNonEmpty("reason", params.Reason)
+		SetIfNotEmptyPtr("reason", params.Reason)
 
 	// Alert party and chapter officials of the member reinstatement
 	s.CreatePartyNotificationAsync(ctx, CreatePartyNotificationInput{
@@ -632,7 +643,7 @@ func (s *service) NotifyPartyUserBlocked(ctx context.Context, params NotifyParty
 	// Build metadata payload for the blocked user
 	userMeta := utils.NewMetadata().
 		Set("party_id", params.PartyID).
-		SetIfNonEmpty("reason", params.Reason)
+		SetIfNotEmptyPtr("reason", params.Reason)
 
 	// Send high-priority alert to the blocked user
 	s.CreateNotificationAsync(ctx, CreateNotificationInput{
@@ -648,7 +659,7 @@ func (s *service) NotifyPartyUserBlocked(ctx context.Context, params NotifyParty
 	// Build metadata payload for party leadership
 	partyMeta := utils.NewMetadata().
 		Set("blocked_user_id", params.TargetUserID).
-		SetIfNonEmpty("reason", params.Reason)
+		SetIfNotEmptyPtr("reason", params.Reason)
 
 	// Alert party and chapter leadership
 	s.CreatePartyNotificationAsync(ctx, CreatePartyNotificationInput{
@@ -673,7 +684,7 @@ type NotifyPartyUserUnblockedParams struct {
 func (s *service) NotifyPartyUserUnblocked(ctx context.Context, params NotifyPartyUserUnblockedParams) {
 	userMeta := utils.NewMetadata().
 		Set("party_id", params.PartyID).
-		SetIfNonEmpty("reason", params.Reason)
+		SetIfNotEmptyPtr("reason", params.Reason)
 
 	s.CreateNotificationAsync(ctx, CreateNotificationInput{
 		RecipientUserID: params.TargetUserID,
@@ -819,6 +830,25 @@ func (s *service) NotifyCandidateWithdrawn(ctx context.Context, params NotifyCan
 		Type:            constants.NotificationTypeCandidateWithdrawn,
 		Priority:        constants.NotificationPriorityHigh,
 		Metadata:        meta,
+	})
+}
+
+// NotifyPartyWalletDeposited dispatches a party notification to the national chapter when funds are deposited.
+func (s *service) NotifyPartyWalletDeposited(ctx context.Context, params NotifyPartyWalletDepositedParams) {
+	partyMeta := utils.NewMetadata().
+		Set("amount_kobo", params.AmountKobo).
+		Set("balance_after_kobo", params.BalanceAfterKobo).
+		Set("transaction_reference", params.TransactionReference).
+		SetIfNotEmpty("narration", params.Narration)
+
+	s.CreatePartyNotificationAsync(ctx, CreatePartyNotificationInput{
+		PartyID:     params.PartyID,
+		ActorUserID: params.ActorID,
+		ChapterID:   &params.ChapterID,
+		Category:    constants.PartyNotificationCategoryFinance,
+		Type:        constants.NotificationTypePartyWalletDeposited,
+		Priority:    constants.NotificationPriorityHigh,
+		Metadata:    partyMeta,
 	})
 }
 
