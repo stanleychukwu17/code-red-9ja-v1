@@ -13,6 +13,7 @@ export type PartyType = {
   logo: string;
   puAgents?: string;
   is_verified?: boolean;
+  is_accepting_applications?: boolean;
 };
 
 export function PartyTableHeader() {

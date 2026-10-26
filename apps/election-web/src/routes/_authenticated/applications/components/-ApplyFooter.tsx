@@ -1,6 +1,7 @@
 import { StickyFooter } from "#/components/Footers";
 import { Button } from "@repo/ui/components/button";
 import { Loader2 } from "lucide-react";
+import { useApplyContext } from "../context/ApplyContext";
 
 /**
  * ApplyFooter
@@ -9,30 +10,31 @@ import { Loader2 } from "lucide-react";
  * handles branching logic (e.g., skipping educational details), and
  * triggers final application submission on step 14.
  */
-export function ApplyFooter({
-  step,
-  setStep,
-  selectedPartyId,
-  selectedElectionIds,
-  avatarUrl,
-  isUploading,
-  selectedStateId,
-  selectedLgaId,
-  streetAddress,
-  selectedPollingUnitId,
-  bankAccountNumber,
-  whatsappPhone,
-  dataPhone,
-  educationalStatus,
-  highestDegree,
-  graduationYear,
-  schoolName,
-  isSubmitting,
-  handleSubmit,
-  user,
-  isValidatingAccount,
-  isAccountValid,
-}: any) {
+export function ApplyFooter() {
+  const {
+    step,
+    setStep,
+    selectedPartyId,
+    selectedElectionIds,
+    avatarUrl,
+    isUploading,
+    selectedStateId,
+    selectedLgaId,
+    streetAddress,
+    selectedPollingUnitId,
+    bankAccountNumber,
+    whatsappPhone,
+    educationalStatus,
+    highestDegree,
+    graduationYear,
+    schoolName,
+    isSubmitting,
+    handleSubmit,
+    user,
+    isValidatingAccount,
+    isAccountValid,
+  } = useApplyContext();
+
   return (
     <StickyFooter className="pb-20">
       {/* Step 1: Introduction / Welcome */}
@@ -76,7 +78,7 @@ export function ApplyFooter({
         </Button>
       )}
 
-      {/* Step 4: Headshot / Passport Photo Upload */}
+      {/* Step 4: Head-shot / Passport Photo Upload */}
       {step === 4 && (
         <Button
           type="button"

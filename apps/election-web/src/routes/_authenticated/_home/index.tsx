@@ -13,6 +13,7 @@ import { PollingAgentCampaignModal } from "./components/PollingAgentCampaignModa
 import { AuthModal } from "#/components/modals/AuthModal";
 import { useEffect, useMemo, useState } from "react";
 import { useUser } from "#/hooks/useUser";
+import { getPageHeader } from "#/lib/shared/meta";
 
 export interface HomeSearch {
   campaign?: string;
@@ -26,6 +27,7 @@ export interface HomeSearch {
  * Route definition for authenticated dashboard home (`/_authenticated/_home/`).
  */
 export const Route = createFileRoute("/_authenticated/_home/")({
+  head: () => getPageHeader({ title: "Home" }),
   validateSearch: (search: Record<string, unknown>): HomeSearch => {
     return {
       campaign: typeof search.campaign === "string" ? search.campaign : undefined,

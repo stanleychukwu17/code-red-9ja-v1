@@ -393,4 +393,5 @@ export const QUERY_KEYS = {
     session: ["authSession"],
   },
   countries: ["countries"],
+  parties: ["parties"],
 };
