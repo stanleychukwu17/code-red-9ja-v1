@@ -35,7 +35,7 @@ type PartiesWalletService interface {
 	GetGlobalSlotPrice(ctx context.Context) (int64, error)
 	UpdateGlobalSlotPrice(ctx context.Context, priceKobo int64) (int64, error)
 	GetPartySlotPrice(ctx context.Context, partyID int16) (int64, error)
-	BuySlots(ctx context.Context, partyID int16, quantity int32) (queries.Party, queries.PartyWalletTransaction, error)
+	BuySlots(ctx context.Context, partyID int16, quantity int32) (queries.AddPartySlotsRow, queries.PartyWalletTransaction, error)
 }
 
 // PartiesService provides access to party info and chapter resolution.

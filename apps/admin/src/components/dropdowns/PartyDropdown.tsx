@@ -2,12 +2,11 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   deleteParty,
-  updatePartyStateAllowances,
-  getPartyAgentPaymentAllocation,
   togglePartyVerification,
   getPartyAgentTargets,
   updatePartyAgentTargets,
 } from "#/lib/server/parties";
+import { QUERY_KEYS } from "#/lib/config";
 import { TileOptions } from "@repo/ui/components/tiles";
 import TrashcanIcon from "@repo/ui/icons/trashcan-icon";
 import type { TDropdownGroup } from "@repo/ui/lib/types";
@@ -17,23 +16,20 @@ import { DeleteAlertDialog } from "../alerts/delete-alert";
 import { PartyFormDialog } from "../dialogs/PartyFormDialog";
 import { UserBadgeDialog } from "../dialogs/UserBadgeDialog";
 import { TargetFormDialog } from "@repo/ui/components/dialogs/TargetFormDialog";
-import { AgentPaymentAllocationFormDialog } from "@repo/ui/components/dialogs/AgentPaymentAllocationFormDialog";
 import type { PartyType } from "../tiles/party-tile";
 import { toast } from "sonner";
-import { Wallet } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 
-interface PartyDropdownProps {
+type PartyDropdownProps = {
   data: PartyType;
   className?: string;
-}
+};
 
 export const PartyDropdown = ({ data, className }: PartyDropdownProps) => {
   const [openMenu, setOpenMenu] = useState(false);
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [openBadgeDialog, setOpenBadgeDialog] = useState(false);
   const [openTargetDialog, setOpenTargetDialog] = useState(false);
-  const [openPaymentDialog, setOpenPaymentDialog] = useState(false);
   const [openDeleteAlert, setOpenDeleteAlert] = useState(false);
   const queryClient = useQueryClient();
 
@@ -46,7 +42,7 @@ export const PartyDropdown = ({ data, className }: PartyDropdownProps) => {
       return res.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["parties"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.parties });
       setOpenDeleteAlert(false);
     },
   });
@@ -62,13 +58,7 @@ export const PartyDropdown = ({ data, className }: PartyDropdownProps) => {
       return res.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["parties"] });
-      toast.success(
-        `Party marked as ${!data.is_verified ? "verified" : "unverified"}`,
-      );
-    },
-    onError: (err: any) => {
-      toast.error(err.message || "Something went wrong");
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.parties });
     },
   });
 
@@ -82,28 +72,19 @@ export const PartyDropdown = ({ data, className }: PartyDropdownProps) => {
       },
     },
     {
-      title: data.is_verified ? "Mark as unverified" : "Mark as verified",
+      title: data.is_verified ? "Un-verify Party" : "Verify Party",
       icon: <Award className="size-4" />,
       action: () => {
         setOpenMenu(false);
         toggleVerificationMutation.mutate();
       },
-      className: "cursor-pointer!",
     },
     {
-      title: "Set Targets",
+      title: "Targets",
       icon: <Target className="size-4" />,
       action: () => {
         setOpenMenu(false);
         setOpenTargetDialog(true);
-      },
-    },
-    {
-      title: "Agent Payment",
-      icon: <Wallet className="size-4" />,
-      action: () => {
-        setOpenMenu(false);
-        setOpenPaymentDialog(true);
       },
     },
     {
@@ -154,31 +135,12 @@ export const PartyDropdown = ({ data, className }: PartyDropdownProps) => {
             data: { partyID: partyId, targets: values },
           });
           if (!res.success) throw new Error(res.message || "Failed to update targets");
-          queryClient.invalidateQueries({ queryKey: ["parties"] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.parties });
           toast.success("Agent targets saved!");
           return res.data;
         }}
         onSuccess={() => {
           setOpenTargetDialog(false);
-        }}
-      />
-
-      <AgentPaymentAllocationFormDialog
-        open={openPaymentDialog}
-        onClose={() => setOpenPaymentDialog(false)}
-        partyId={data.id}
-        fetchAllocation={async (partyId) => {
-          const res = await getPartyAgentPaymentAllocation({ data: partyId });
-          return res?.data?.agent_payment_allocation_kobo ?? res?.data?.agent_payment_allocation ?? null;
-        }}
-        updateAllocation={async (partyId, values) => {
-          const res = await updatePartyStateAllowances({
-            data: { partyID: partyId, allowances: values as any },
-          });
-          if (!res.success) throw new Error(res.message || "Failed to update");
-          queryClient.invalidateQueries({ queryKey: ["parties"] });
-          toast.success("Agent payment budget saved!");
-          return res.data;
         }}
       />
 

@@ -63,22 +63,22 @@ func (_m *Querier) AddPartyMembership(ctx context.Context, arg queries.AddPartyM
 }
 
 // AddPartySlots provides a mock function with given fields: ctx, arg
-func (_m *Querier) AddPartySlots(ctx context.Context, arg queries.AddPartySlotsParams) (queries.Party, error) {
+func (_m *Querier) AddPartySlots(ctx context.Context, arg queries.AddPartySlotsParams) (queries.AddPartySlotsRow, error) {
 	ret := _m.Called(ctx, arg)
 
 	if len(ret) == 0 {
 		panic("no return value specified for AddPartySlots")
 	}
 
-	var r0 queries.Party
+	var r0 queries.AddPartySlotsRow
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, queries.AddPartySlotsParams) (queries.Party, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, queries.AddPartySlotsParams) (queries.AddPartySlotsRow, error)); ok {
 		return rf(ctx, arg)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, queries.AddPartySlotsParams) queries.Party); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, queries.AddPartySlotsParams) queries.AddPartySlotsRow); ok {
 		r0 = rf(ctx, arg)
 	} else {
-		r0 = ret.Get(0).(queries.Party)
+		r0 = ret.Get(0).(queries.AddPartySlotsRow)
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, queries.AddPartySlotsParams) error); ok {
@@ -1592,22 +1592,22 @@ func (_m *Querier) DeductPartyAgentPaymentBalance(ctx context.Context, arg queri
 }
 
 // DeductPartySlots provides a mock function with given fields: ctx, arg
-func (_m *Querier) DeductPartySlots(ctx context.Context, arg queries.DeductPartySlotsParams) (queries.Party, error) {
+func (_m *Querier) DeductPartySlots(ctx context.Context, arg queries.DeductPartySlotsParams) (queries.DeductPartySlotsRow, error) {
 	ret := _m.Called(ctx, arg)
 
 	if len(ret) == 0 {
 		panic("no return value specified for DeductPartySlots")
 	}
 
-	var r0 queries.Party
+	var r0 queries.DeductPartySlotsRow
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, queries.DeductPartySlotsParams) (queries.Party, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, queries.DeductPartySlotsParams) (queries.DeductPartySlotsRow, error)); ok {
 		return rf(ctx, arg)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, queries.DeductPartySlotsParams) queries.Party); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, queries.DeductPartySlotsParams) queries.DeductPartySlotsRow); ok {
 		r0 = rf(ctx, arg)
 	} else {
-		r0 = ret.Get(0).(queries.Party)
+		r0 = ret.Get(0).(queries.DeductPartySlotsRow)
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, queries.DeductPartySlotsParams) error); ok {

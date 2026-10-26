@@ -863,24 +863,6 @@ func (s *PartiesService) DeleteParty(ctx context.Context, id int64) error {
 	return nil
 }
 
-// UpdatePartyDiscount sets custom discount percentage for a political party.
-func (s *PartiesService) UpdatePartyDiscount(ctx context.Context, partyID int16, discountPercentage float64) (queries.Party, error) {
-	if discountPercentage < 0.0 || discountPercentage > 100.0 {
-		return queries.Party{}, fmt.Errorf("discount percentage must be between 0 and 100")
-	}
-
-	var numericDiscount pgtype.Numeric
-	if err := numericDiscount.Scan(fmt.Sprintf("%.2f", discountPercentage)); err != nil {
-		return queries.Party{}, fmt.Errorf("failed to parse discount percentage: %w", err)
-	}
-
-	defer s.InvalidatePartyCache(ctx, partyID)
-	return s.queries.UpdatePartyDiscount(ctx, queries.UpdatePartyDiscountParams{
-		DiscountPercentage: numericDiscount,
-		ID:                 partyID,
-	})
-}
-
 // DepositAllowance debits the party wallet and adds it to the party's dedicated polling agent allowance balance.
 // This is executed as a database transaction.
 func (s *PartiesService) DepositAllowance(ctx context.Context, partyID int16, amountKobo int64) (queries.DepositPartyAllowanceRow, error) {
@@ -971,6 +953,7 @@ type CanonicalAgentPaymentAllocation struct {
 // HarmonizeAgentPaymentAllocation normalizes incoming allocation payloads (handling both camelCase
 // and snake_case role keys) and returns canonical JSON with guaranteed valid role configurations.
 func HarmonizeAgentPaymentAllocation(raw []byte) ([]byte, error) {
+	// Parse raw incoming JSON into an intermediate map of role configurations
 	var rawMap map[string]struct {
 		Default *int64           `json:"default"`
 		States  map[string]int64 `json:"states"`
@@ -979,14 +962,17 @@ func HarmonizeAgentPaymentAllocation(raw []byte) ([]byte, error) {
 		return nil, fmt.Errorf("invalid allowances configuration: %w", err)
 	}
 
+	// Helper to resolve role config supporting both legacy camelCase and modern snake_case keys
 	getRoleConfig := func(camel, snake string) (AgentPaymentRoleConfig, error) {
 		cfg, exists := rawMap[camel]
 		if !exists {
 			cfg, exists = rawMap[snake]
 		}
+		// Default base payment must exist and be strictly positive
 		if !exists || cfg.Default == nil || *cfg.Default <= 0 {
 			return AgentPaymentRoleConfig{}, fmt.Errorf("missing or invalid default payment for role '%s' (must be > 0)", snake)
 		}
+		// Ensure states dictionary is always initialized (avoid nil maps in JSON)
 		states := cfg.States
 		if states == nil {
 			states = make(map[string]int64)
@@ -997,6 +983,7 @@ func HarmonizeAgentPaymentAllocation(raw []byte) ([]byte, error) {
 		}, nil
 	}
 
+	// Resolve and validate each of the four mandatory agent roles
 	pa, err := getRoleConfig("pollingAgent", "polling_agent")
 	if err != nil {
 		return nil, err
@@ -1014,6 +1001,7 @@ func HarmonizeAgentPaymentAllocation(raw []byte) ([]byte, error) {
 		return nil, err
 	}
 
+	// Build the canonical standardized structure with snake_case fields
 	canonical := CanonicalAgentPaymentAllocation{
 		PollingAgent:            pa,
 		WardElectionSupervisor:  ward,
@@ -1021,6 +1009,7 @@ func HarmonizeAgentPaymentAllocation(raw []byte) ([]byte, error) {
 		StateElectionSupervisor: state,
 	}
 
+	// Serialize into standardized canonical JSON bytes
 	return json.Marshal(canonical)
 }
 
@@ -1752,11 +1741,6 @@ func (s *PartiesService) GetPlans(ctx context.Context, typeFilter string, isActi
 		Column2: isActiveFilter,
 	}
 	return s.queries.GetPlans(ctx, arg)
-}
-
-// UpdatePlanDisplayOrder updates a plan's display order (admin only).
-func (s *PartiesService) UpdatePlanDisplayOrder(ctx context.Context, arg queries.UpdatePlanDisplayOrderParams) (queries.Plan, error) {
-	return s.queries.UpdatePlanDisplayOrder(ctx, arg)
 }
 
 // UpdatePartyAgentAcquisitionTargets updates the agent acquisition targets of a party.

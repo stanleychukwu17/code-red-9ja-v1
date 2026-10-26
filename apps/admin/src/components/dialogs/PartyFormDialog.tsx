@@ -20,6 +20,7 @@ import { Camera, Check, Image as ImageIcon, Loader2, MoveVertical, Palette, Plus
 import { useEffect, useRef, useState } from "react";
 import { SelectDate } from "@repo/ui/components/selects/date-select";
 import type { PartyType } from "../tiles/party-tile";
+import { QUERY_KEYS } from "#/lib/config";
 
 // Common color presets for parties
 const PARTY_COLOR_PRESETS = [
@@ -373,7 +374,7 @@ export function PartyFormDialog({
 		onSuccess: (res) => {
 			const savedParty = res?.data?.party;
 			if (savedParty) {
-				queryClient.setQueryData(["parties"], (oldData: any) => {
+				queryClient.setQueryData(QUERY_KEYS.parties, (oldData: any) => {
 					if (!oldData) return oldData;
 
 					if (oldData?.data?.parties && Array.isArray(oldData.data.parties)) {
@@ -398,7 +399,7 @@ export function PartyFormDialog({
 				});
 			} else {
 				// Fallback if no party object returned
-				queryClient.invalidateQueries({ queryKey: ["parties"] });
+				queryClient.invalidateQueries({ queryKey: QUERY_KEYS.parties });
 			}
 
 			onSuccess?.();

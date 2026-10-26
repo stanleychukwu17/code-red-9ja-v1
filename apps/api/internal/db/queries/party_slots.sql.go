@@ -16,7 +16,7 @@ UPDATE parties
 SET slots = slots + $1,
     updated_at = NOW()
 WHERE id = $2
-RETURNING id, short_name, name, logo, logo_file_id, cover_image, cover_image_file_id, cover_position_y, display_order, status, slots, is_verified, discount_percentage, agent_payment_balance_kobo, agent_payment_allocation_kobo, agent_acquisition_targets, auto_accept_applications, color_hex, dark_color_hex, date_founded, created_at, updated_at
+RETURNING id, slots
 `
 
 type AddPartySlotsParams struct {
@@ -24,33 +24,15 @@ type AddPartySlotsParams struct {
 	ID    int16 `json:"id"`
 }
 
-func (q *Queries) AddPartySlots(ctx context.Context, arg AddPartySlotsParams) (Party, error) {
+type AddPartySlotsRow struct {
+	ID    int16 `json:"id"`
+	Slots int32 `json:"slots"`
+}
+
+func (q *Queries) AddPartySlots(ctx context.Context, arg AddPartySlotsParams) (AddPartySlotsRow, error) {
 	row := q.db.QueryRow(ctx, addPartySlots, arg.Slots, arg.ID)
-	var i Party
-	err := row.Scan(
-		&i.ID,
-		&i.ShortName,
-		&i.Name,
-		&i.Logo,
-		&i.LogoFileID,
-		&i.CoverImage,
-		&i.CoverImageFileID,
-		&i.CoverPositionY,
-		&i.DisplayOrder,
-		&i.Status,
-		&i.Slots,
-		&i.IsVerified,
-		&i.DiscountPercentage,
-		&i.AgentPaymentBalanceKobo,
-		&i.AgentPaymentAllocationKobo,
-		&i.AgentAcquisitionTargets,
-		&i.AutoAcceptApplications,
-		&i.ColorHex,
-		&i.DarkColorHex,
-		&i.DateFounded,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
+	var i AddPartySlotsRow
+	err := row.Scan(&i.ID, &i.Slots)
 	return i, err
 }
 
@@ -59,7 +41,7 @@ UPDATE parties
 SET slots = slots - $1,
     updated_at = NOW()
 WHERE id = $2 AND slots >= $1
-RETURNING id, short_name, name, logo, logo_file_id, cover_image, cover_image_file_id, cover_position_y, display_order, status, slots, is_verified, discount_percentage, agent_payment_balance_kobo, agent_payment_allocation_kobo, agent_acquisition_targets, auto_accept_applications, color_hex, dark_color_hex, date_founded, created_at, updated_at
+RETURNING id, slots
 `
 
 type DeductPartySlotsParams struct {
@@ -67,33 +49,15 @@ type DeductPartySlotsParams struct {
 	ID    int16 `json:"id"`
 }
 
-func (q *Queries) DeductPartySlots(ctx context.Context, arg DeductPartySlotsParams) (Party, error) {
+type DeductPartySlotsRow struct {
+	ID    int16 `json:"id"`
+	Slots int32 `json:"slots"`
+}
+
+func (q *Queries) DeductPartySlots(ctx context.Context, arg DeductPartySlotsParams) (DeductPartySlotsRow, error) {
 	row := q.db.QueryRow(ctx, deductPartySlots, arg.Slots, arg.ID)
-	var i Party
-	err := row.Scan(
-		&i.ID,
-		&i.ShortName,
-		&i.Name,
-		&i.Logo,
-		&i.LogoFileID,
-		&i.CoverImage,
-		&i.CoverImageFileID,
-		&i.CoverPositionY,
-		&i.DisplayOrder,
-		&i.Status,
-		&i.Slots,
-		&i.IsVerified,
-		&i.DiscountPercentage,
-		&i.AgentPaymentBalanceKobo,
-		&i.AgentPaymentAllocationKobo,
-		&i.AgentAcquisitionTargets,
-		&i.AutoAcceptApplications,
-		&i.ColorHex,
-		&i.DarkColorHex,
-		&i.DateFounded,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
+	var i DeductPartySlotsRow
+	err := row.Scan(&i.ID, &i.Slots)
 	return i, err
 }
 
@@ -108,49 +72,6 @@ func (q *Queries) GetSystemSetting(ctx context.Context, key string) (SystemSetti
 		&i.Key,
 		&i.Value,
 		&i.Description,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const updatePartyDiscount = `-- name: UpdatePartyDiscount :one
-UPDATE parties
-SET discount_percentage = $1,
-    updated_at = NOW()
-WHERE id = $2
-RETURNING id, short_name, name, logo, logo_file_id, cover_image, cover_image_file_id, cover_position_y, display_order, status, slots, is_verified, discount_percentage, agent_payment_balance_kobo, agent_payment_allocation_kobo, agent_acquisition_targets, auto_accept_applications, color_hex, dark_color_hex, date_founded, created_at, updated_at
-`
-
-type UpdatePartyDiscountParams struct {
-	DiscountPercentage pgtype.Numeric `json:"discount_percentage"`
-	ID                 int16          `json:"id"`
-}
-
-func (q *Queries) UpdatePartyDiscount(ctx context.Context, arg UpdatePartyDiscountParams) (Party, error) {
-	row := q.db.QueryRow(ctx, updatePartyDiscount, arg.DiscountPercentage, arg.ID)
-	var i Party
-	err := row.Scan(
-		&i.ID,
-		&i.ShortName,
-		&i.Name,
-		&i.Logo,
-		&i.LogoFileID,
-		&i.CoverImage,
-		&i.CoverImageFileID,
-		&i.CoverPositionY,
-		&i.DisplayOrder,
-		&i.Status,
-		&i.Slots,
-		&i.IsVerified,
-		&i.DiscountPercentage,
-		&i.AgentPaymentBalanceKobo,
-		&i.AgentPaymentAllocationKobo,
-		&i.AgentAcquisitionTargets,
-		&i.AutoAcceptApplications,
-		&i.ColorHex,
-		&i.DarkColorHex,
-		&i.DateFounded,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

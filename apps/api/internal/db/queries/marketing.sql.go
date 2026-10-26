@@ -661,38 +661,3 @@ func (q *Queries) UpdatePlan(ctx context.Context, arg UpdatePlanParams) (Plan, e
 	)
 	return i, err
 }
-
-const updatePlanDisplayOrder = `-- name: UpdatePlanDisplayOrder :one
-UPDATE plans
-SET display_order = $2,
-    updated_at    = NOW()
-WHERE id = $1
-RETURNING id, name, description, price_kobo, type, features, scopes_recommendation, color_hex, dark_color_hex, referral_amount_kobo, is_active, display_order, created_at, updated_at
-`
-
-type UpdatePlanDisplayOrderParams struct {
-	ID           int32 `json:"id"`
-	DisplayOrder int32 `json:"display_order"`
-}
-
-func (q *Queries) UpdatePlanDisplayOrder(ctx context.Context, arg UpdatePlanDisplayOrderParams) (Plan, error) {
-	row := q.db.QueryRow(ctx, updatePlanDisplayOrder, arg.ID, arg.DisplayOrder)
-	var i Plan
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.Description,
-		&i.PriceKobo,
-		&i.Type,
-		&i.Features,
-		&i.ScopesRecommendation,
-		&i.ColorHex,
-		&i.DarkColorHex,
-		&i.ReferralAmountKobo,
-		&i.IsActive,
-		&i.DisplayOrder,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}

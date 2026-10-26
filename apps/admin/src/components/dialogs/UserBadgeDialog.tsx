@@ -8,6 +8,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getVerificationTypes, assignVerifications, removeVerification } from "#/lib/server/page_verifications";
 import { toast } from "sonner";
 import { TinyError } from "@repo/ui/components/custom/TinyError";
+import { QUERY_KEYS } from "#/lib/config";
 
 export type VerificationType = {
   id: number;
@@ -74,7 +75,7 @@ export function UserBadgeDialog({ open, onClose, page, forWho, onSuccess }: User
       );
     } else if (forWho === "party") {
       // Update parties query cache with the new party details
-      queryClient.setQueryData(["parties"], (oldData: any) => {
+      queryClient.setQueryData(QUERY_KEYS.parties, (oldData: any) => {
         if (!oldData?.data?.parties || !Array.isArray(oldData.data.parties)) {
           return oldData;
         }

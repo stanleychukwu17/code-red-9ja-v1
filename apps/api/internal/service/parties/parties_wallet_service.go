@@ -392,16 +392,16 @@ func (s *PartiesWalletService) GetPartySlotPrice(ctx context.Context, partyID in
 
 // BuySlots debits the party wallet and adds slots directly to the party's balance.
 // This is executed as a database transaction.
-func (s *PartiesWalletService) BuySlots(ctx context.Context, partyID int16, quantity int32) (queries.Party, queries.PartyWalletTransaction, error) {
+func (s *PartiesWalletService) BuySlots(ctx context.Context, partyID int16, quantity int32) (queries.AddPartySlotsRow, queries.PartyWalletTransaction, error) {
 	// Validate slot purchase quantity
 	if quantity <= 0 {
-		return queries.Party{}, queries.PartyWalletTransaction{}, fmt.Errorf("quantity must be positive")
+		return queries.AddPartySlotsRow{}, queries.PartyWalletTransaction{}, fmt.Errorf("quantity must be positive")
 	}
 
 	// Begin atomic database transaction for balance deduction and slot allocation
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return queries.Party{}, queries.PartyWalletTransaction{}, fmt.Errorf("failed to begin transaction: %w", err)
+		return queries.AddPartySlotsRow{}, queries.PartyWalletTransaction{}, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
 
@@ -410,13 +410,13 @@ func (s *PartiesWalletService) BuySlots(ctx context.Context, partyID int16, quan
 	// Fetch custom slot cost for the party (using cached global slot price)
 	globalPrice, err := s.GetGlobalSlotPrice(ctx)
 	if err != nil {
-		return queries.Party{}, queries.PartyWalletTransaction{}, fmt.Errorf("failed to get global slot price: %w", err)
+		return queries.AddPartySlotsRow{}, queries.PartyWalletTransaction{}, fmt.Errorf("failed to get global slot price: %w", err)
 	}
 
 	// Retrieve party info (cached) to evaluate discount tier
 	party, err := s.partiesService.GetPartyByID(ctx, partyID)
 	if err != nil {
-		return queries.Party{}, queries.PartyWalletTransaction{}, fmt.Errorf("failed to get party: %w", err)
+		return queries.AddPartySlotsRow{}, queries.PartyWalletTransaction{}, fmt.Errorf("failed to get party: %w", err)
 	}
 
 	// Parse optional party discount percentage
@@ -439,11 +439,11 @@ func (s *PartiesWalletService) BuySlots(ctx context.Context, partyID int16, quan
 	// Get wallet details (cached via Redis)
 	wallet, err := s.GetPartyWallet(ctx, partyID)
 	if err != nil {
-		return queries.Party{}, queries.PartyWalletTransaction{}, fmt.Errorf("wallet not found for party: %w", err)
+		return queries.AddPartySlotsRow{}, queries.PartyWalletTransaction{}, fmt.Errorf("wallet not found for party: %w", err)
 	}
 
 	if wallet.BalanceKobo < totalCost {
-		return queries.Party{}, queries.PartyWalletTransaction{}, fmt.Errorf("insufficient wallet balance: required %d kobo, have %d kobo", totalCost, wallet.BalanceKobo)
+		return queries.AddPartySlotsRow{}, queries.PartyWalletTransaction{}, fmt.Errorf("insufficient wallet balance: required %d kobo, have %d kobo", totalCost, wallet.BalanceKobo)
 	}
 
 	// Debit the wallet
@@ -452,7 +452,7 @@ func (s *PartiesWalletService) BuySlots(ctx context.Context, partyID int16, quan
 		ID:          wallet.ID,
 	})
 	if err != nil {
-		return queries.Party{}, queries.PartyWalletTransaction{}, fmt.Errorf("wallet debit failed: %w", err)
+		return queries.AddPartySlotsRow{}, queries.PartyWalletTransaction{}, fmt.Errorf("wallet debit failed: %w", err)
 	}
 
 	// Log financial transaction in party_wallet_transactions
@@ -471,7 +471,7 @@ func (s *PartiesWalletService) BuySlots(ctx context.Context, partyID int16, quan
 		RawPayload:           []byte("{}"),
 	})
 	if err != nil {
-		return queries.Party{}, queries.PartyWalletTransaction{}, fmt.Errorf("failed to log slot purchase transaction: %w", err)
+		return queries.AddPartySlotsRow{}, queries.PartyWalletTransaction{}, fmt.Errorf("failed to log slot purchase transaction: %w", err)
 	}
 
 	// Add slots directly to parties table
@@ -480,11 +480,11 @@ func (s *PartiesWalletService) BuySlots(ctx context.Context, partyID int16, quan
 		ID:    partyID,
 	})
 	if err != nil {
-		return queries.Party{}, queries.PartyWalletTransaction{}, fmt.Errorf("failed to increment party slots: %w", err)
+		return queries.AddPartySlotsRow{}, queries.PartyWalletTransaction{}, fmt.Errorf("failed to increment party slots: %w", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return queries.Party{}, queries.PartyWalletTransaction{}, fmt.Errorf("failed to commit transaction: %w", err)
+		return queries.AddPartySlotsRow{}, queries.PartyWalletTransaction{}, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	// Invalidate both wallet cache and party cache

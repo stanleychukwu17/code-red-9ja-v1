@@ -213,8 +213,6 @@ export const API_URL = {
   lgaById: (id: string | number) => `${api}/lgas/${id}`,
   parties: `${api}/parties`,
   partyById: (id: string | number) => `${api}/parties/${id}`,
-  partyAgentPaymentAllocations: (id: string | number) =>
-    `${api}/parties/${id}/agent-payment-allocations`,
   partyAgentTargets: (id: string | number) =>
     `${api}/parties/${id}/agent-targets`,
   partyMarketingCampaigns: (id: string | number) =>

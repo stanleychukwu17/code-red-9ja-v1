@@ -15,18 +15,11 @@ UPDATE parties
 SET slots = slots + $1,
     updated_at = NOW()
 WHERE id = $2
-RETURNING *;
+RETURNING id, slots;
 
 -- name: DeductPartySlots :one
 UPDATE parties
 SET slots = slots - $1,
     updated_at = NOW()
 WHERE id = $2 AND slots >= $1
-RETURNING *;
-
--- name: UpdatePartyDiscount :one
-UPDATE parties
-SET discount_percentage = $1,
-    updated_at = NOW()
-WHERE id = $2
-RETURNING *;
+RETURNING id, slots;

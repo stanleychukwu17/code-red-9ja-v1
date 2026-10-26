@@ -6,13 +6,6 @@ WHERE ($1::text = '' OR type::text = $1::text)
   AND ($2::text = '' OR is_active = ($2::text = 'true'))
 ORDER BY display_order ASC, price_kobo ASC;
 
--- name: UpdatePlanDisplayOrder :one
-UPDATE plans
-SET display_order = $2,
-    updated_at    = NOW()
-WHERE id = $1
-RETURNING *;
-
 -- name: GetPlanByID :one
 SELECT * FROM plans 
 WHERE id = $1;

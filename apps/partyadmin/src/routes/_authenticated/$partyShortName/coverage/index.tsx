@@ -10,15 +10,13 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Layout, PageHeader } from "@repo/ui/components/custom/AdminLayouts";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Search, SlidersHorizontal, X } from "lucide-react";
 import { AgentCoverageTable } from "#/components/Tables";
 import type { AgentCoverageUnitItem } from "#/lib/server/agent-coverage";
 import { getAgentCoverageBreakdown } from "#/lib/server/agent-coverage";
 import { useUserParty } from "#/hooks/useUserParty";
-import { useElection } from "#/hooks/useElection";
 import { getPageHeader } from "#/lib/shared/meta";
-import { CoverageHeaderRight } from "./-components";
 
 export const Route = createFileRoute("/_authenticated/$partyShortName/coverage/")({
   head: () => getPageHeader({ title: "Agent Coverage" }),
@@ -27,8 +25,8 @@ export const Route = createFileRoute("/_authenticated/$partyShortName/coverage/"
 
 /**
  * Agent Coverage Page Component
- * Manages hierarchy drill-down state, electoral scope selectors, search filters,
- * and passes aggregated unit coverage metrics to the AgentCoverageTable.
+ * Manages geographic hierarchy drill-down state (State -> LGA -> Ward -> Polling Unit),
+ * search filtering, and renders aggregated unit coverage metrics.
  */
 function AgentCoveragePage() {
   const { partyShortName } = Route.useParams();
@@ -38,26 +36,19 @@ function AgentCoveragePage() {
   const [search, setSearch] = useState("");
   const [showSearch, setShowSearch] = useState(false);
 
-  // Active party and election context
+  // Active party context
   const { party } = useUserParty();
-  const { selectedElection, selectedElectionGroup } = useElection();
 
-  // Hierarchical drill-down filter state (State -> LGA -> Ward)
+  // Hierarchical geographic drill-down filter state (State -> LGA -> Ward)
   const [drillDown, setDrillDown] = useState<{
     stateId?: number;
     lgaId?: number;
     wardId?: number;
   }>({});
 
-  // Reset drill-down whenever the selected election or group changes
-  useEffect(() => {
-    setDrillDown({});
-  }, [selectedElection?.id, selectedElectionGroup?.id]);
-
-  // Resolve effective scope IDs, prioritizing drill-down over election defaults
-  const stateId = drillDown.stateId ?? (selectedElection?.state_id as number | undefined) ?? undefined;
-  const lgaId = drillDown.lgaId ?? (selectedElection?.lga_id as number | undefined) ?? undefined;
-  const wardId = drillDown.wardId ?? (selectedElection?.ward_id as number | undefined) ?? undefined;
+  const stateId = drillDown.stateId;
+  const lgaId = drillDown.lgaId;
+  const wardId = drillDown.wardId;
 
   // Server function to fetch agent coverage breakdown
   const fetchBreakdown = useServerFn(getAgentCoverageBreakdown);
@@ -71,15 +62,12 @@ function AgentCoveragePage() {
         ? "LGAs"
         : "States";
 
-  // Fetch coverage metrics for the current geographic scope
+  // Fetch coverage metrics for the current geographic scope and party
   const { data, isLoading } = useQuery({
-    queryKey: ["agent-coverage-breakdown", selectedElection?.id, selectedElectionGroup?.id, party?.id, wardId, lgaId, stateId],
+    queryKey: ["agent-coverage-breakdown", party?.id, wardId, lgaId, stateId],
     queryFn: async () => {
-      if (!selectedElection?.id && !selectedElectionGroup?.id) return null;
       return fetchBreakdown({
         data: {
-          electionId: selectedElection?.id,
-          electionGroupId: selectedElectionGroup?.id,
           partyId: party?.id,
           stateId,
           lgaId,
@@ -88,7 +76,7 @@ function AgentCoveragePage() {
         },
       });
     },
-    enabled: !!(selectedElection?.id || selectedElectionGroup?.id),
+    enabled: !!party?.id,
   });
 
   // Normalize API response structure
@@ -105,13 +93,10 @@ function AgentCoveragePage() {
   const isPU = unitType === "polling_units" || unitTitle === "Polling Units";
 
   // Filter unit list by search term (name or code)
-  const filteredItems = search
-    ? items.filter(
-      (u) =>
-        u.name.toLowerCase().includes(search.toLowerCase()) ||
-        u.code?.toLowerCase().includes(search.toLowerCase()),
-    )
-    : items;
+  const filteredItems = search ? items.filter((u) =>
+    u.name.toLowerCase().includes(search.toLowerCase()) ||
+    u.code?.toLowerCase().includes(search.toLowerCase()),
+  ) : items;
 
   // Drill down into child units when clicking a row
   const handleSelectUnit = (item: AgentCoverageUnitItem) => {
@@ -165,11 +150,10 @@ function AgentCoveragePage() {
 
   return (
     <Layout>
-      {/* Page header with actions */}
+      {/* Page header */}
       <PageHeader
         title="Agent Coverage"
         activeTab=""
-        rightComponent={<CoverageHeaderRight />}
       />
 
       {/* Button to clear active drill-down and return to top-level overview */}
@@ -233,14 +217,10 @@ function AgentCoveragePage() {
         </div>
       </div>
 
-      {/* Data states: loading, unselected election, empty results, or data table */}
+      {/* Data states: loading, empty results, or data table */}
       {isLoading ? (
         <div className="py-16 text-center text-c-50 text-[15px]">
           Loading agent coverage statistics...
-        </div>
-      ) : !selectedElection?.id && !selectedElectionGroup?.id ? (
-        <div className="py-16 text-center text-c-50 text-[15px]">
-          Select an election to view agent coverage statistics.
         </div>
       ) : filteredItems.length === 0 ? (
         <div className="py-16 text-center text-c-50 text-[15px]">

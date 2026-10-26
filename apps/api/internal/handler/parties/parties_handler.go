@@ -1324,6 +1324,7 @@ func (h *Handler) DepositAllowance(w http.ResponseWriter, r *http.Request) {
 // @Security     BearerAuth
 // @Router       /parties/{id}/allowances/settings [put]
 func (h *Handler) UpdateAgentPaymentAllocationKobo(w http.ResponseWriter, r *http.Request) {
+	// Extract and validate party ID from the URL path parameter
 	idStr := chi.URLParam(r, "id")
 	partyID, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -1331,18 +1332,21 @@ func (h *Handler) UpdateAgentPaymentAllocationKobo(w http.ResponseWriter, r *htt
 		return
 	}
 
+	// Read raw request body containing role/state payment allocation rates
 	bodyBytes, err := io.ReadAll(r.Body)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Failed to read request body")
 		return
 	}
 
+	// Delegate harmonization, persistence, and cache invalidation to service layer
 	res, err := h.partiesService.UpdateAgentPaymentAllocationKobo(r.Context(), int16(partyID), bodyBytes)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
+	// Respond with the newly persisted canonical payment allocations
 	h.utils.RespondSuccess(w, http.StatusOK, "Allowances configuration updated successfully", map[string]interface{}{
 		"agent_payment_allocation_kobo": json.RawMessage(res.AgentPaymentAllocationKobo),
 	})
@@ -1991,50 +1995,6 @@ func (h *Handler) GetPlans(w http.ResponseWriter, r *http.Request) {
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Plans retrieved successfully", map[string]interface{}{
 		"plans": resp,
-	})
-}
-
-// UpdatePlanDisplayOrderRequest is the request payload for reordering a plan
-type UpdatePlanDisplayOrderRequest struct {
-	DisplayOrder int32 `json:"display_order"`
-}
-
-// UpdatePlanDisplayOrder godoc
-// @Summary      Update a plan's display order
-// @Description  Updates the display_order of a specific plan (admin only)
-// @Tags         Plans
-// @Accept       json
-// @Produce      json
-// @Param        id      path int                          true "Plan ID"
-// @Param        request body UpdatePlanDisplayOrderRequest true "Display order payload"
-// @Success      200  {object} map[string]interface{} "Plan display order updated"
-// @Security     BearerAuth
-// @Router       /plans/{id}/display-order [patch]
-func (h *Handler) UpdatePlanDisplayOrder(w http.ResponseWriter, r *http.Request) {
-	idStr := chi.URLParam(r, "id")
-	id, err := strconv.ParseInt(idStr, 10, 32)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid plan ID: "+err.Error())
-		return
-	}
-
-	var req UpdatePlanDisplayOrderRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload: "+err.Error())
-		return
-	}
-
-	plan, err := h.partiesService.UpdatePlanDisplayOrder(r.Context(), queries.UpdatePlanDisplayOrderParams{
-		ID:           int32(id),
-		DisplayOrder: req.DisplayOrder,
-	})
-	if err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update plan display order: "+err.Error())
-		return
-	}
-
-	h.utils.RespondSuccess(w, http.StatusOK, "Plan display order updated successfully", map[string]interface{}{
-		"plan": plan,
 	})
 }
 

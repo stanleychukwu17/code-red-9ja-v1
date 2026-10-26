@@ -150,50 +150,6 @@ export const confirmFileUpload = createServerFn({ method: "POST" })
     }
   });
 
-export const updatePartyStateAllowances = createServerFn({ method: "POST" })
-  .inputValidator(
-    (data: {
-      partyID: string | number;
-      allowances: Record<string, Record<string, number>>;
-    }) => data,
-  )
-  .handler(async ({ data: { partyID, allowances } }) => {
-    try {
-      return await apiFetchJson(
-        API_URL.partyAgentPaymentAllocations(partyID),
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(allowances),
-        },
-      );
-    } catch (error) {
-      return {
-        success: false,
-        message:
-          "Failed to update agent payment allocations: " +
-          (error as Error).message,
-      };
-    }
-  });
-
-export const getPartyAgentPaymentAllocation = createServerFn({ method: "GET" })
-  .inputValidator((partyId: string | number) => partyId)
-  .handler(async ({ data: partyId }) => {
-    try {
-      return await apiFetchJson(
-        API_URL.partyAgentPaymentAllocations(partyId),
-      );
-    } catch (error) {
-      return {
-        success: false,
-        message: "Failed to fetch agent payment allocation",
-      };
-    }
-  });
-
 export const togglePartyVerification = createServerFn({ method: "POST" })
   .inputValidator((data: { id: string | number; is_verified: boolean }) => data)
   .handler(async ({ data: { id, is_verified } }) => {

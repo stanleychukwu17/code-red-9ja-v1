@@ -141,7 +141,7 @@ export function AgentPaymentAllocationFormDialog({ open, onClose, partyId, initi
 
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
-      <DialogContent className="max-w-[520px]">
+      <DialogContent className="max-w-130">
         <DialogHeader title="Agent Payment Allocation" />
 
         <DialogPadding>

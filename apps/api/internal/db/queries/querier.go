@@ -15,7 +15,7 @@ type Querier interface {
 	AddPageVerification(ctx context.Context, arg AddPageVerificationParams) (PagesVerified, error)
 	AddPartyMemberMilestone(ctx context.Context, arg AddPartyMemberMilestoneParams) error
 	AddPartyMembership(ctx context.Context, arg AddPartyMembershipParams) error
-	AddPartySlots(ctx context.Context, arg AddPartySlotsParams) (Party, error)
+	AddPartySlots(ctx context.Context, arg AddPartySlotsParams) (AddPartySlotsRow, error)
 	AdjustElectionGroupLGAApplicationCounts(ctx context.Context, arg AdjustElectionGroupLGAApplicationCountsParams) error
 	AdjustElectionGroupLGALGASupervisorCounts(ctx context.Context, arg AdjustElectionGroupLGALGASupervisorCountsParams) error
 	// ============================================================
@@ -143,7 +143,7 @@ type Querier interface {
 	DecrementElectionGroupPollingUnitsForStateElection(ctx context.Context, arg DecrementElectionGroupPollingUnitsForStateElectionParams) error
 	DecrementElectionGroupPollingUnitsForWardElection(ctx context.Context, arg DecrementElectionGroupPollingUnitsForWardElectionParams) error
 	DeductPartyAgentPaymentBalance(ctx context.Context, arg DeductPartyAgentPaymentBalanceParams) (DeductPartyAgentPaymentBalanceRow, error)
-	DeductPartySlots(ctx context.Context, arg DeductPartySlotsParams) (Party, error)
+	DeductPartySlots(ctx context.Context, arg DeductPartySlotsParams) (DeductPartySlotsRow, error)
 	DeleteAssetFolder(ctx context.Context, id int32) error
 	DeleteAssignment(ctx context.Context, id int64) error
 	DeleteElectionCandidateForParty(ctx context.Context, arg DeleteElectionCandidateForPartyParams) error
@@ -553,11 +553,9 @@ type Querier interface {
 	UpdatePartyAgentAcquisitionTargets(ctx context.Context, arg UpdatePartyAgentAcquisitionTargetsParams) (UpdatePartyAgentAcquisitionTargetsRow, error)
 	UpdatePartyAgentPaymentAllocationKobo(ctx context.Context, arg UpdatePartyAgentPaymentAllocationKoboParams) (UpdatePartyAgentPaymentAllocationKoboRow, error)
 	UpdatePartyCustomPosition(ctx context.Context, arg UpdatePartyCustomPositionParams) (PartyPosition, error)
-	UpdatePartyDiscount(ctx context.Context, arg UpdatePartyDiscountParams) (Party, error)
 	UpdatePartyIsVerified(ctx context.Context, arg UpdatePartyIsVerifiedParams) error
 	UpdatePhoneNumber(ctx context.Context, arg UpdatePhoneNumberParams) error
 	UpdatePlan(ctx context.Context, arg UpdatePlanParams) (Plan, error)
-	UpdatePlanDisplayOrder(ctx context.Context, arg UpdatePlanDisplayOrderParams) (Plan, error)
 	UpdatePollingUnit(ctx context.Context, arg UpdatePollingUnitParams) (PollingUnit, error)
 	UpdatePollingUnitAssignmentEarnedAmountKobo(ctx context.Context, arg UpdatePollingUnitAssignmentEarnedAmountKoboParams) (PollingUnitAssignment, error)
 	UpdatePollingUnitResult(ctx context.Context, arg UpdatePollingUnitResultParams) (PollingUnitResult, error)
