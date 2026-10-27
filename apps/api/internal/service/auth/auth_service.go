@@ -43,7 +43,7 @@ type UsersService interface {
 	InvalidateCachedUserInfo(ctx context.Context, fakeID int64) error
 	RevokeAllUserSessions(ctx context.Context, fakeID int64) error
 	UpdateUserPhoneNumbers(ctx context.Context, userID int64, fakeID int64, phones []usersservice.PhonePayload) error
-	CheckUsername(ctx context.Context, username string) (bool, int64)
+	CheckUsername(ctx context.Context, username string) bool
 	CheckEmail(ctx context.Context, email string) (bool, int64)
 	CheckPhone(ctx context.Context, phone string, userFakeID int64) (bool, int64)
 	CheckNIN(ctx context.Context, nin string) bool
@@ -777,8 +777,7 @@ func CleanUsername(input string) (string, error) {
 
 // function: check if the username already exist in redis and in the postgres db
 func (s *AuthService) CheckUsername(ctx context.Context, username string) bool {
-	exists, _ := s.usersService.CheckUsername(ctx, username)
-	return exists
+	return s.usersService.CheckUsername(ctx, username)
 }
 
 func (s *AuthService) CheckReferralCode(ctx context.Context, code string) (bool, string, int64) {

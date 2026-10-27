@@ -149,7 +149,6 @@ export const ContactDetailsStep = () => {
             return;
           }
 
-          toast.success("Phone number deleted successfully.");
           queryClient.invalidateQueries({
             queryKey: QUERY_KEYS.userPhoneNumbers(user?.fake_id),
           });
@@ -186,6 +185,7 @@ export const ContactDetailsStep = () => {
         queryClient.invalidateQueries({
           queryKey: QUERY_KEYS.userPhoneNumbers(user?.fake_id),
         });
+
         setPhones(saved);
         setStep(4);
       }

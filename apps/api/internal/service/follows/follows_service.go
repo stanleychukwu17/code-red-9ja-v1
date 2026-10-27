@@ -54,6 +54,15 @@ func (s *FollowsService) FollowUser(ctx context.Context, followerID, followingID
 	}); err != nil {
 		return fmt.Errorf("failed to follow user: %w", err)
 	}
+
+	// Update Redis cache with 14-day TTL
+	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisUserFollower, followerID, followingID)
+	_ = s.rdb.Set(ctx, cacheKey, true, db.RedisFourteenDaysTTL).Err()
+
+	// Invalidate user follower/following counts
+	s.InvalidateUserFollowersCountCache(ctx, followingID)
+	s.InvalidateUserFollowingCountCache(ctx, followerID)
+
 	return nil
 }
 
@@ -68,6 +77,15 @@ func (s *FollowsService) UnfollowUser(ctx context.Context, followerID, following
 	}); err != nil {
 		return fmt.Errorf("failed to unfollow user: %w", err)
 	}
+
+	// Update Redis cache with 14-day TTL
+	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisUserFollower, followerID, followingID)
+	_ = s.rdb.Set(ctx, cacheKey, false, db.RedisFourteenDaysTTL).Err()
+
+	// Invalidate user follower/following counts
+	s.InvalidateUserFollowersCountCache(ctx, followingID)
+	s.InvalidateUserFollowingCountCache(ctx, followerID)
+
 	return nil
 }
 
@@ -209,5 +227,98 @@ func (s *FollowsService) InvalidatePartyFollowCache(ctx context.Context, userID 
 // InvalidatePartyFollowersCountCache removes the cached followers count for a party chapter from Redis.
 func (s *FollowsService) InvalidatePartyFollowersCountCache(ctx context.Context, partyID int16, chapterID int32) {
 	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisPartyChapterFollowersCount, partyID, chapterID)
+	_ = s.rdb.Del(ctx, cacheKey).Err()
+}
+
+// IsFollowingUser checks if followerID is following followingID, cached in Redis for 14 days.
+func (s *FollowsService) IsFollowingUser(ctx context.Context, followerID, followingID int64) (bool, error) {
+	if followerID <= 0 || followingID <= 0 || followerID == followingID {
+		return false, nil
+	}
+
+	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisUserFollower, followerID, followingID)
+	if cached, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
+		if isFollowing, err := strconv.ParseBool(cached); err == nil {
+			return isFollowing, nil
+		}
+	}
+
+	isFollowing, err := s.queries.IsFollowingUser(ctx, queries.IsFollowingUserParams{
+		FollowerID:  followerID,
+		FollowingID: followingID,
+	})
+	if err != nil {
+		return false, fmt.Errorf("failed to check user follow: %w", err)
+	}
+
+	_ = s.rdb.Set(ctx, cacheKey, isFollowing, db.RedisFourteenDaysTTL).Err()
+	return isFollowing, nil
+}
+
+// GetUserFollowersCount retrieves the total number of followers for a user.
+// It checks Redis first and falls back to PostgreSQL on cache miss.
+func (s *FollowsService) GetUserFollowersCount(ctx context.Context, userID int64) (int64, error) {
+	if userID <= 0 {
+		return 0, nil
+	}
+
+	cacheKey := fmt.Sprintf("%s%d", db.RedisUserFollowersCount, userID)
+	if cachedStr, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
+		if count, parseErr := strconv.ParseInt(cachedStr, 10, 64); parseErr == nil {
+			return count, nil
+		}
+	} else if !errors.Is(err, redis.Nil) {
+		slog.Error("Failed to fetch user followers count from redis", "error", err, "userID", userID)
+	}
+
+	count, err := s.queries.GetUserFollowersCount(ctx, userID)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get user followers count: %w", err)
+	}
+
+	_ = s.rdb.Set(ctx, cacheKey, count, db.RedisFourteenDaysTTL).Err()
+	return count, nil
+}
+
+// GetUserFollowingCount retrieves the total number of users a user is following.
+// It checks Redis first and falls back to PostgreSQL on cache miss.
+func (s *FollowsService) GetUserFollowingCount(ctx context.Context, userID int64) (int64, error) {
+	if userID <= 0 {
+		return 0, nil
+	}
+
+	cacheKey := fmt.Sprintf("%s%d", db.RedisUserFollowingCount, userID)
+	if cachedStr, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
+		if count, parseErr := strconv.ParseInt(cachedStr, 10, 64); parseErr == nil {
+			return count, nil
+		}
+	} else if !errors.Is(err, redis.Nil) {
+		slog.Error("Failed to fetch user following count from redis", "error", err, "userID", userID)
+	}
+
+	count, err := s.queries.GetUserFollowingCount(ctx, userID)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get user following count: %w", err)
+	}
+
+	_ = s.rdb.Set(ctx, cacheKey, count, db.RedisFourteenDaysTTL).Err()
+	return count, nil
+}
+
+// InvalidateUserFollowCache removes the cached follow boolean from Redis.
+func (s *FollowsService) InvalidateUserFollowCache(ctx context.Context, followerID, followingID int64) {
+	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisUserFollower, followerID, followingID)
+	_ = s.rdb.Del(ctx, cacheKey).Err()
+}
+
+// InvalidateUserFollowersCountCache removes the cached followers count for a user from Redis.
+func (s *FollowsService) InvalidateUserFollowersCountCache(ctx context.Context, userID int64) {
+	cacheKey := fmt.Sprintf("%s%d", db.RedisUserFollowersCount, userID)
+	_ = s.rdb.Del(ctx, cacheKey).Err()
+}
+
+// InvalidateUserFollowingCountCache removes the cached following count for a user from Redis.
+func (s *FollowsService) InvalidateUserFollowingCountCache(ctx context.Context, userID int64) {
+	cacheKey := fmt.Sprintf("%s%d", db.RedisUserFollowingCount, userID)
 	_ = s.rdb.Del(ctx, cacheKey).Err()
 }

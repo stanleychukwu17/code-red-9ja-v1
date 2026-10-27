@@ -35,6 +35,9 @@ const (
 	RedisNotificationPreferences = "user:notification_prefs:" // STRING: user:notification_prefs:<userID> used to store notification preferences.
 	RedisReferralCode            = "user:referral_code:"      // STRING: user:referral_code:<code> used to store cached referrer info JSON (id, name).
 	RedisUsernameFakeID          = "user:username:"           // STRING: user:username:<cleanUsername> used to cache fakeID for fast profile resolution.
+	RedisUserFollower            = "user:follower:"           // STRING: "user:follower:<followerID>:<followingID>" stores cached boolean whether follower follows following.
+	RedisUserFollowersCount      = "user:followers_count:"    // STRING: "user:followers_count:<userID>" stores cached follower count.
+	RedisUserFollowingCount      = "user:following_count:"    // STRING: "user:following_count:<userID>" stores cached following count.
 	//--END--
 
 	//--START-- for countries and states
@@ -156,6 +159,9 @@ var AllRedisPrefixes = []string{
 	RedisNotificationPreferences,
 	RedisReferralCode,
 	RedisUsernameFakeID,
+	RedisUserFollower,
+	RedisUserFollowersCount,
+	RedisUserFollowingCount,
 	RedisEachCountry,
 	RedisEachState,
 	RedisEachCity,

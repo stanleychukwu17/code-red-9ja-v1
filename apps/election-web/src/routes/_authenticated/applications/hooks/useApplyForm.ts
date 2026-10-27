@@ -72,11 +72,24 @@ export function useApplyForm({ search, navigate }: UseApplyFormOptions) {
 
   useEffect(() => {
     if (userMeDetails) {
+      // Location & Residential Address
+      if (userMeDetails.current_state) setSelectedStateId(userMeDetails.current_state);
+      if (userMeDetails.current_lga) setSelectedLgaId(userMeDetails.current_lga);
+      if (userMeDetails.current_ward) setSelectedWardId(userMeDetails.current_ward);
+      if (userMeDetails.profile?.address || userMeDetails.address) {
+        setStreetAddress(userMeDetails.profile?.address || userMeDetails.address || "");
+      }
+      if (userMeDetails.polling_unit_id) {
+        setSelectedPollingUnitId(userMeDetails.polling_unit_id);
+      }
+
+      // Educational Background
       if (userMeDetails.profile?.educational_status) setEducationalStatus(userMeDetails.profile.educational_status);
       if (userMeDetails.profile?.highest_degree) setHighestDegree(userMeDetails.profile.highest_degree);
       if (userMeDetails.profile?.graduation_year) setGraduationYear(userMeDetails.profile.graduation_year);
       if (userMeDetails.profile?.school_name) setSchoolName(userMeDetails.profile.school_name);
 
+      // Bank Details
       if (userMeDetails.bank_account_number) {
         setBankAccountNumber(userMeDetails.bank_account_number);
         setIsAccountValid(true);

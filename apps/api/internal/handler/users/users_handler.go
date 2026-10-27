@@ -52,7 +52,7 @@ type UsersService interface {
 	UpdateUserPhoneNumbers(ctx context.Context, userID int64, fakeID int64, phones []usersservice.PhonePayload) error
 	DeleteUserPhoneNumber(ctx context.Context, id int64, userID int64) error
 	MakeUserSuperAdmin(ctx context.Context, username string) error
-	CheckUsername(ctx context.Context, username string) (bool, int64)
+	CheckUsername(ctx context.Context, username string) bool
 	GetFakeIDByUsername(ctx context.Context, username string) (int64, error)
 	InvalidateUsernameCache(ctx context.Context, username string)
 	UpdateUserRoles(ctx context.Context, userID int64, fakeID int64, roles []string, whoAssigned int64) error
@@ -916,7 +916,7 @@ func (h *Handler) AdminUpdateUser(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if exists, _ := h.usersService.CheckUsername(r.Context(), cleanUsername); exists {
+		if h.usersService.CheckUsername(r.Context(), cleanUsername) {
 			h.utils.RespondError(w, http.StatusBadRequest, "Username is already taken")
 			return
 		}

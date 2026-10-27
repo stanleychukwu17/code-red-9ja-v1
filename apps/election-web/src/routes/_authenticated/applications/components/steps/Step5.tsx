@@ -22,6 +22,8 @@ export const Step5 = () => {
     setStreetAddress,
   } = useApplyContext();
 
+  console.log({ selectedStateId, selectedLgaId, selectedWardId, streetAddress });
+
   return (
     <div className="flex flex-col gap-4 w-full px-4">
       <StepHeader
@@ -34,9 +36,12 @@ export const Step5 = () => {
           <SelectState
             selectedId={selectedStateId || undefined}
             update={(stateObj) => {
-              setSelectedStateId(stateObj?.id || null);
-              setSelectedLgaId(null);
-              setSelectedWardId(null);
+              const nextStateId = stateObj?.id || null;
+              if (nextStateId !== selectedStateId) {
+                setSelectedStateId(nextStateId);
+                setSelectedLgaId(null);
+                setSelectedWardId(null);
+              }
             }}
             fetchStates={getStates}
             className="w-full"
@@ -47,8 +52,11 @@ export const Step5 = () => {
           <SelectLga
             selectedId={selectedLgaId || undefined}
             update={(lgaObj) => {
-              setSelectedLgaId(lgaObj?.id || null);
-              setSelectedWardId(null);
+              const nextLgaId = lgaObj?.id || null;
+              if (nextLgaId !== selectedLgaId) {
+                setSelectedLgaId(nextLgaId);
+                setSelectedWardId(null);
+              }
             }}
             stateId={selectedStateId || undefined}
             disabled={!selectedStateId}

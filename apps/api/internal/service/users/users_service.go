@@ -43,6 +43,13 @@ type ElectionsService interface {
 	GetUserActiveCandidacies(ctx context.Context, candidateID int64) ([]queries.UserActiveCandidacy, error)
 }
 
+// FollowsService interface defines the methods needed from the follows service
+type FollowsService interface {
+	GetUserFollowersCount(ctx context.Context, userID int64) (int64, error)
+	GetUserFollowingCount(ctx context.Context, userID int64) (int64, error)
+	IsFollowingUser(ctx context.Context, followerID, followingID int64) (bool, error)
+}
+
 // Bank represents a Nigerian commercial or digital bank
 type Bank struct {
 	Name                 string `json:"name"`
@@ -92,6 +99,7 @@ type UsersService struct {
 	pageVerificationsService PageVerificationsService
 	partyService             PartyService
 	electionsService         ElectionsService
+	followsService           FollowsService
 }
 
 // CachedReferralCodeInfo represents the cached referrer details stored in Redis.
@@ -118,6 +126,11 @@ func (s *UsersService) SetPageVerificationsService(pvs PageVerificationsService)
 // SetPartyService sets the PartyService to avoid circular dependency in constructor.
 func (s *UsersService) SetPartyService(ps PartyService) {
 	s.partyService = ps
+}
+
+// SetFollowsService sets the FollowsService to avoid circular dependency in constructor.
+func (s *UsersService) SetFollowsService(fs FollowsService) {
+	s.followsService = fs
 }
 
 // GetUserPageVerifications retrieves the page verifications for a specific user ID.
@@ -953,12 +966,9 @@ func (s *UsersService) UpdateUserRoles(ctx context.Context, userID int64, fakeID
 }
 
 // function: check if the username already exists in the postgres db
-func (s *UsersService) CheckUsername(ctx context.Context, username string) (bool, int64) {
+func (s *UsersService) CheckUsername(ctx context.Context, username string) bool {
 	fakeID, err := s.queries.GetFakeIDByUsername(ctx, utils.PgTextFromString(username))
-	if err == nil && fakeID.Valid {
-		return true, fakeID.Int64
-	}
-	return false, 0
+	return err == nil && fakeID.Valid
 }
 
 // GetFakeIDByUsername resolves a user's fake ID by username using a Redis cache-aside pattern.
@@ -1202,6 +1212,7 @@ type UserPublicProfile struct {
 	FollowersCount int64               `json:"followers_count"`
 	FollowingCount int64               `json:"following_count"`
 	IsFollowing    bool                `json:"is_following"`
+	IsAccountOwner bool                `json:"is_account_owner"`
 	IsPolitician   bool                `json:"is_politician"`
 	IsVerified     bool                `json:"is_verified"`
 	Location       string              `json:"location,omitempty"`
@@ -1229,24 +1240,19 @@ func (s *UsersService) GetUserPublicProfile(ctx context.Context, username string
 	}
 
 	// Fetch follower and following metrics
-	followersCount, err := s.queries.GetUserFollowersCount(ctx, user.ID)
-	if err != nil {
-		followersCount = 0
-	}
-
-	followingCount, err := s.queries.GetUserFollowingCount(ctx, user.ID)
-	if err != nil {
-		followingCount = 0
-	}
+	followersCount, _ := s.followsService.GetUserFollowersCount(ctx, user.ID)
+	followingCount, _ := s.followsService.GetUserFollowingCount(ctx, user.ID)
 
 	// Check if viewing user is currently following this profile
 	isFollowing := false
 	if viewerUserID > 0 && viewerUserID != user.ID {
-		isFollowing, _ = s.queries.IsFollowingUser(ctx, queries.IsFollowingUserParams{
-			FollowerID:  viewerUserID,
-			FollowingID: user.ID,
-		})
+		isFollowing, _ = s.followsService.IsFollowingUser(ctx, viewerUserID, user.ID)
 	}
+
+	// Check if the viewer is the owner of the account
+	isAccountOwner := viewerUserID > 0 && viewerUserID == user.ID
+	// NOTE: use the isAccountOwner to show the settings button
+	// NOTE: save the edited frontend info before you continue this review
 
 	// Map political party affiliation if member
 	var party *UserPublicParty
@@ -1377,6 +1383,7 @@ func (s *UsersService) GetUserPublicProfile(ctx context.Context, username string
 		FollowersCount: followersCount,
 		FollowingCount: followingCount,
 		IsFollowing:    isFollowing,
+		IsAccountOwner: isAccountOwner,
 		IsPolitician:   user.IsPolitician.Bool,
 		IsVerified:     user.IsVerified.Bool,
 		Location:       location,

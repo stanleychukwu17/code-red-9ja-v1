@@ -143,6 +143,7 @@ export type PublicUserProfile = {
   followers_count: number;
   following_count: number;
   is_following: boolean;
+  is_account_owner: boolean;
   is_politician: boolean;
   is_verified: boolean;
   location?: string;

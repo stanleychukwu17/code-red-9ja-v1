@@ -36,7 +36,7 @@ type AuthService interface {
 // UsersService interface defines the methods from UsersService that the auth handler needs
 type UsersService interface {
 	CheckNIN(ctx context.Context, nin string) bool
-	CheckUsername(ctx context.Context, username string) (bool, int64)
+	CheckUsername(ctx context.Context, username string) bool
 	CheckEmail(ctx context.Context, email string) (bool, int64)
 	GenerateUniqueReferralCode(ctx context.Context, firstName string) (string, error)
 }
@@ -282,7 +282,7 @@ func (h *Handler) CompleteOnboarding(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check username availability
-	if exists, _ := h.usersService.CheckUsername(ctx, cleanUsername); exists {
+	if h.usersService.CheckUsername(ctx, cleanUsername) {
 		h.utils.RespondError(w, http.StatusBadRequest, "Username is already taken")
 		return
 	}
@@ -409,7 +409,7 @@ func (h *Handler) CheckUsername(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// checks if the username exist
-	exists, _ := h.usersService.CheckUsername(r.Context(), req.Username)
+	exists := h.usersService.CheckUsername(r.Context(), req.Username)
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Username checked successfully", map[string]interface{}{
 		"exists": exists,
@@ -839,7 +839,7 @@ func (h *Handler) RegisterCandidatePlaceholder(w http.ResponseWriter, r *http.Re
 			h.utils.RespondError(w, http.StatusBadRequest, err.Error())
 			return
 		}
-		if exists, _ := h.usersService.CheckUsername(r.Context(), cleanUsername); exists {
+		if h.usersService.CheckUsername(r.Context(), cleanUsername) {
 			h.utils.RespondError(w, http.StatusConflict, "Username already exists")
 			return
 		}

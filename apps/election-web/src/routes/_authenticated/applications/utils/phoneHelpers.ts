@@ -93,7 +93,6 @@ export async function saveUserPhones(
       }));
     }
 
-    toast.success("Phone numbers saved successfully.");
     return savedList;
   } catch (err: any) {
     toast.error(err?.message || "Failed to save phone numbers.");
