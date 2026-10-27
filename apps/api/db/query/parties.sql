@@ -118,6 +118,23 @@ DELETE FROM party_membership WHERE user_id = $1 AND party_id = $2 RETURNING chap
 INSERT INTO party_member_milestones (user_id, party_id, chapter_id, milestone_type, metadata)
 VALUES ($1, $2, $3, $4, $5);
 
+-- name: ListUserPartyMilestones :many
+SELECT 
+    m.id,
+    m.user_id,
+    m.party_id,
+    p.name AS party_name,
+    p.short_name AS party_short_name,
+    p.color_hex AS party_color,
+    m.chapter_id,
+    m.milestone_type,
+    m.metadata,
+    m.created_at
+FROM party_member_milestones m
+JOIN parties p ON p.id = m.party_id
+WHERE m.user_id = $1
+ORDER BY m.id DESC;
+
 -- name: GetNationalChapter :one
 SELECT id FROM party_chapters 
 WHERE party_id = $1 AND chapter_type = 'national'

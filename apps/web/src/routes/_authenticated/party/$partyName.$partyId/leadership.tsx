@@ -189,7 +189,7 @@ function PartyLeadershipTabComponent() {
           chapterId: chapterId,
         },
       }),
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: Infinity,
   });
 
   const rawOfficials: PartyOfficialItem[] = useMemo(() => {

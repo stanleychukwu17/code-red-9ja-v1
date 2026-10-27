@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import {
-  resolveProfile,
-  FollowersList,
-} from "#/components/profile/profile-page";
+import { useQuery } from "@tanstack/react-query";
+import { FollowersList } from "#/components/profile/profile-page";
+import { userProfileQueryOptions } from "../$username";
+import { formatNumber } from "@repo/ui/lib/number";
 
 export const Route = createFileRoute(
   "/_authenticated/profile/$username/followers",
@@ -12,7 +12,8 @@ export const Route = createFileRoute(
 
 function ProfileFollowersTabComponent() {
   const { username } = Route.useParams();
-  const profile = resolveProfile(username);
+  const { data: profileRes } = useQuery(userProfileQueryOptions(username));
+  const count = profileRes?.data?.followers_count ? formatNumber(profileRes.data.followers_count) : "0";
 
-  return <FollowersList count={profile.followersCount} />;
+  return <FollowersList count={count} />;
 }

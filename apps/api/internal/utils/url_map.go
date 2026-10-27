@@ -33,10 +33,11 @@ type BodiesURLMap struct {
 }
 
 type UsersURLMap struct {
-	GetMe         string
-	UpdateProfile string
-	ListUsers     string
-	SearchUsers   string
+	GetMe          string
+	UpdateProfile  string
+	ListUsers      string
+	SearchUsers    string
+	GetUserProfile string
 }
 
 type URLMap struct {
@@ -85,5 +86,6 @@ var ApiUrls = URLMap{
 		UpdateProfile: "/api/v1/users/profile",
 		ListUsers:     "/api/v1/users",
 		SearchUsers:   "/api/v1/users/search",
+		GetUserProfile: "/api/v1/users/{username}/profile",
 	},
 }

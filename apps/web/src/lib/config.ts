@@ -140,6 +140,7 @@ export const API_URL = {
 	partyAdmins: (partyId: number | string) => `${api}/parties/${partyId}/admins`,
 	userPreferences: `${api}/user_preferences`,
 	searchUsers: `${api}/users/search`,
+	getUserProfile: (username: string) => `${api}/users/${username.replace(/^@/, "")}/profile`,
 	campaignGroups: {
 		getGroup: (groupId: number | string) => `${api}/campaign-groups/${groupId}`,
 		getMembers: (groupId: number | string) => `${api}/campaign-groups/${groupId}/members`,

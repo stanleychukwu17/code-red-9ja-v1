@@ -34,155 +34,34 @@ export type UserProfileData = {
   };
   followersCount: string;
   followingCount: string;
-  socials: {
-    twitter?: string[];
-    instagram?: string[];
-  };
   timeline: TimelineEvent[];
 };
 
 export type ActiveProfileTab = "history" | "followers" | "following";
 
-/* ========================================================================== */
-/*                                 MOCK DATA                                  */
-/* ========================================================================== */
-const STANLEY_PROFILE: UserProfileData = {
-  username: "chukwu_stanley",
-  name: "Chukwu Stanley",
-  avatar:
-    "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=500&auto=format&fit=crop&q=80",
+export const DEFAULT_USER_PROFILE: UserProfileData = {
+  username: "",
+  name: "",
+  avatar: "",
   party: {
-    name: "APC",
-    since: "since 2013",
-    color: "#0066da",
+    name: "",
+    since: "",
+    color: "#6b7280",
   },
   role: {
-    title: "National treasurer",
-    chapter: "APC Lagos",
+    title: "",
+    chapter: "",
   },
-  followersCount: "+3m followers",
-  followingCount: "142 following",
-  socials: {
-    twitter: ["https://x.com", "https://x.com"],
-    instagram: ["https://instagram.com", "https://instagram.com"],
-  },
-  timeline: [
-    {
-      id: "joined-apc",
-      year: "2015",
-      title: "Joined APC",
-      branches: [
-        { id: "b1", title: "Became state treasurer" },
-        { id: "b2", title: "Became ward chairman" },
-      ],
-    },
-    {
-      id: "left-pdp",
-      year: "2015",
-      title: "Left PDP",
-    },
-  ],
+  followersCount: "0",
+  followingCount: "0",
+  timeline: [],
 };
-
-const ATIKU_PROFILE: UserProfileData = {
-  username: "atiku_abubakar",
-  name: "Atiku Abubakar",
-  avatar: "https://miro.medium.com/v2/0*AZFse8ApInmJg7xf.jpg",
-  party: {
-    name: "PDP",
-    since: "since 1998",
-    color: "#2f6f57",
-  },
-  role: {
-    title: "Presidential Candidate",
-    chapter: "PDP National",
-  },
-  followersCount: "+5.4m followers",
-  followingCount: "89 following",
-  socials: {
-    twitter: ["https://x.com", "https://x.com"],
-    instagram: ["https://instagram.com"],
-  },
-  timeline: [
-    {
-      id: "rejoined-pdp",
-      year: "2018",
-      title: "Rejoined PDP",
-      branches: [
-        { id: "atiku-1", title: "Presidential Flagbearer (2019, 2023)" },
-        { id: "atiku-2", title: "Founded Atiku Care Foundation" },
-      ],
-    },
-    {
-      id: "apc-era",
-      year: "2014",
-      title: "Joined APC Coalition",
-      branches: [{ id: "atiku-3", title: "Key merger stakeholder" }],
-    },
-    {
-      id: "vp-era",
-      year: "1999",
-      title: "Vice President of Nigeria",
-      branches: [{ id: "atiku-4", title: "Chairman, National Economic Council" }],
-    },
-  ],
-};
-
-const MOCK_FOLLOWERS = [
-  {
-    name: "Amina Bello",
-    handle: "amina_bello_lagos",
-    avatar:
-      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop",
-  },
-  {
-    name: "Emeka Okonkwo",
-    handle: "emeka_eko_pu",
-    avatar:
-      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop",
-  },
-  {
-    name: "Zainab Mohammed",
-    handle: "zainab_vote9ja",
-    avatar:
-      "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop",
-  },
-];
-
-const MOCK_FOLLOWING = [
-  {
-    name: "Babajide Sanwo-Olu",
-    handle: "jidesanwoolu",
-    avatar:
-      "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop",
-  },
-  {
-    name: "APC Lagos State Secretariat",
-    handle: "apclagos_official",
-    avatar:
-      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop",
-  },
-];
-
-export function resolveProfile(username?: string): UserProfileData {
-  if (!username) return STANLEY_PROFILE;
-  const normalized = username.toLowerCase();
-  if (
-    normalized === "atiku" ||
-    normalized === "atiku_abubakar" ||
-    normalized === "atiku-abubakar"
-  ) {
-    return ATIKU_PROFILE;
-  }
-  return STANLEY_PROFILE;
-}
 
 /* ========================================================================== */
 /*                           PARENT PAGE COMPONENT                            */
 /* ========================================================================== */
 export function ProfilePageComponent() {
-  const params = useParams({ strict: false }) as { username?: string };
-  const profile = resolveProfile(params.username);
+  const profile = DEFAULT_USER_PROFILE;
   const [activeTab, setActiveTab] = useState<ActiveProfileTab>("history");
 
   return (
@@ -572,33 +451,8 @@ function FollowersList({ count }: { count: string }) {
           <span className="text-xs text-c-40">Verified Nigerian Voters</span>
         </div>
 
-        <div className="divide-y divide-border">
-          {MOCK_FOLLOWERS.map((user) => (
-            <div
-              key={user.handle}
-              className="flex items-center justify-between py-3.5"
-            >
-              <div className="flex items-center gap-3">
-                <img
-                  src={user.avatar}
-                  alt={user.name}
-                  className="size-10 rounded-full object-cover ring-1 ring-border"
-                />
-                <div>
-                  <p className="text-sm font-semibold text-c-90 leading-tight">
-                    {user.name}
-                  </p>
-                  <p className="text-xs text-c-40">@{user.handle}</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                className="rounded-full border border-border px-3.5 py-1 text-xs font-semibold text-c-80 hover:bg-hover-5 transition cursor-pointer"
-              >
-                Follow Back
-              </button>
-            </div>
-          ))}
+        <div className="py-8 text-center text-sm text-c-50">
+          No followers to display yet.
         </div>
       </div>
     </div>
@@ -618,30 +472,8 @@ function FollowingList({ count }: { count: string }) {
           </span>
         </div>
 
-        <div className="divide-y divide-border">
-          {MOCK_FOLLOWING.map((user) => (
-            <div
-              key={user.handle}
-              className="flex items-center justify-between py-3.5"
-            >
-              <div className="flex items-center gap-3">
-                <img
-                  src={user.avatar}
-                  alt={user.name}
-                  className="size-10 rounded-full object-cover ring-1 ring-border"
-                />
-                <div>
-                  <p className="text-sm font-semibold text-c-90 leading-tight">
-                    {user.name}
-                  </p>
-                  <p className="text-xs text-c-40">@{user.handle}</p>
-                </div>
-              </div>
-              <span className="rounded-full bg-hover-7 text-c-60 px-3 py-1 text-xs font-medium">
-                Following
-              </span>
-            </div>
-          ))}
+        <div className="py-8 text-center text-sm text-c-50">
+          Not following anyone yet.
         </div>
       </div>
     </div>

@@ -107,3 +107,65 @@ export const searchCitizensList = createServerFn({ method: "GET" })
       };
     }
   });
+
+export type UserTimelineBranch = {
+  id: string;
+  title: string;
+};
+
+export type UserTimelineEvent = {
+  id: string;
+  year: string;
+  title: string;
+  branches?: UserTimelineBranch[];
+};
+
+export type PublicUserProfile = {
+  id: number;
+  fake_id: number;
+  username: string;
+  name: string;
+  first_name: string;
+  last_name: string;
+  avatar: string;
+  party?: {
+    id: number;
+    name: string;
+    short_name: string;
+    since: string;
+    color: string;
+    logo?: string;
+  } | null;
+  role?: {
+    title: string;
+    chapter: string;
+  } | null;
+  followers_count: number;
+  following_count: number;
+  is_following: boolean;
+  is_politician: boolean;
+  is_verified: boolean;
+  location?: string;
+  timeline: UserTimelineEvent[];
+};
+
+export type GetUserProfileResponse = {
+  success: boolean;
+  message?: string;
+  data: PublicUserProfile;
+};
+
+/**
+ * Server function to fetch public user profile details by username.
+ */
+export const getUserProfile = createServerFn({ method: "GET" })
+  .inputValidator((data: { username: string }) => data)
+  .handler(async ({ data: { username } }): Promise<GetUserProfileResponse> => {
+    try {
+      const url = API_URL.getUserProfile(username);
+      return await apiFetchJson<GetUserProfileResponse>(url);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to fetch user profile";
+      return { success: false, message, data: null as any };
+    }
+  });

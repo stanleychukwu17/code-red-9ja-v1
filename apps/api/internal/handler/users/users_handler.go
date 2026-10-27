@@ -27,6 +27,7 @@ import (
 
 // UsersService interface defines the methods needed from the users service
 type UsersService interface {
+	GetUserPublicProfile(ctx context.Context, username string, viewerUserID int64) (*usersservice.UserPublicProfile, error)
 	GetUserByFakeID(ctx context.Context, fakeID int64) (queries.UserWithPlaces, error)
 	GetUsersByFakeIDs(ctx context.Context, fakeIDs []int64) ([]queries.UserWithPlaces, error)
 	GetMoreInfoAboutThisUser(ctx context.Context, userID int64) (queries.UserMoreInfo, error)
@@ -197,6 +198,36 @@ func (h *Handler) GetMe(w http.ResponseWriter, r *http.Request) {
 			BankCode:          bankAccount.BankCode,
 		},
 	})
+}
+
+// GetPublicProfile godoc
+// @Summary      Get public user profile
+// @Description  Fetches public profile data, relationships, affiliation, and metrics for a user by username
+// @Tags         Users
+// @Produce      json
+// @Param        username path string true "Username (with or without @ prefix)"
+// @Success      200  {object}  map[string]interface{} "User profile retrieved successfully"
+// @Failure      404  {object}  map[string]interface{} "User not found"
+// @Router       /users/{username}/profile [get]
+func (h *Handler) GetPublicProfile(w http.ResponseWriter, r *http.Request) {
+	username := chi.URLParam(r, "username")
+	if username == "" {
+		h.utils.RespondError(w, http.StatusBadRequest, "Username is required")
+		return
+	}
+
+	var viewerUserID int64
+	if claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims); ok && claims != nil {
+		viewerUserID = claims.UserID
+	}
+
+	profile, err := h.usersService.GetUserPublicProfile(r.Context(), username, viewerUserID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusNotFound, err.Error())
+		return
+	}
+
+	h.utils.RespondSuccessData(w, http.StatusOK, "User profile retrieved successfully", profile)
 }
 
 // UpdateProfileRequest represents the request body parameters for updating the user profile

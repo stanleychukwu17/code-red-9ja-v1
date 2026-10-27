@@ -1261,6 +1261,68 @@ func (q *Queries) ListSuspendedPartyMembers(ctx context.Context, arg ListSuspend
 	return items, nil
 }
 
+const listUserPartyMilestones = `-- name: ListUserPartyMilestones :many
+SELECT 
+    m.id,
+    m.user_id,
+    m.party_id,
+    p.name AS party_name,
+    p.short_name AS party_short_name,
+    p.color_hex AS party_color,
+    m.chapter_id,
+    m.milestone_type,
+    m.metadata,
+    m.created_at
+FROM party_member_milestones m
+JOIN parties p ON p.id = m.party_id
+WHERE m.user_id = $1
+ORDER BY m.id DESC
+`
+
+type ListUserPartyMilestonesRow struct {
+	ID             int64              `json:"id"`
+	UserID         int64              `json:"user_id"`
+	PartyID        int16              `json:"party_id"`
+	PartyName      string             `json:"party_name"`
+	PartyShortName string             `json:"party_short_name"`
+	PartyColor     pgtype.Text        `json:"party_color"`
+	ChapterID      pgtype.Int4        `json:"chapter_id"`
+	MilestoneType  string             `json:"milestone_type"`
+	Metadata       []byte             `json:"metadata"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+}
+
+func (q *Queries) ListUserPartyMilestones(ctx context.Context, userID int64) ([]ListUserPartyMilestonesRow, error) {
+	rows, err := q.db.Query(ctx, listUserPartyMilestones, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListUserPartyMilestonesRow
+	for rows.Next() {
+		var i ListUserPartyMilestonesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.PartyID,
+			&i.PartyName,
+			&i.PartyShortName,
+			&i.PartyColor,
+			&i.ChapterID,
+			&i.MilestoneType,
+			&i.Metadata,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const reactivatePartyMembership = `-- name: ReactivatePartyMembership :many
 UPDATE party_membership
 SET status = 'active'

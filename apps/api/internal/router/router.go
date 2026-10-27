@@ -317,6 +317,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	mainRouter.Get("/api/v1/parties/{id}", partiesHandler.GetParty)
 	mainRouter.Get("/api/v1/parties/{id}/accepting-applications", partiesHandler.GetPartyAcceptingStatus)
 	mainRouter.With(apimiddleware.OptionalAuthMiddleware(jwtSecret)).Get("/api/v1/parties/{party_id}/{short_name}/profile", partiesHandler.GetPartyProfile)
+	mainRouter.With(apimiddleware.OptionalAuthMiddleware(jwtSecret)).Get(utils.ApiUrls.Users.GetUserProfile, usersHandler.GetPublicProfile)
 	mainRouter.Get("/api/v1/parties/{party_id}/home", partiesHandler.GetPartyHome)
 	mainRouter.Get("/api/v1/parties/{id}/wallet", partiesWalletHandler.GetPartyWallet)
 	mainRouter.Get("/api/v1/parties/{id}/positions", partiesHandler.ListPartyPositions)

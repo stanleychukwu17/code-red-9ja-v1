@@ -1,8 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import {
-  resolveProfile,
-  PartyHistoryTimeline,
-} from "#/components/profile/profile-page";
+import { useQuery } from "@tanstack/react-query";
+import { PartyHistoryTimeline } from "#/components/profile/profile-page";
+import { userProfileQueryOptions } from "../$username";
 
 export const Route = createFileRoute(
   "/_authenticated/profile/$username/history",
@@ -12,11 +11,12 @@ export const Route = createFileRoute(
 
 function ProfileHistoryTabComponent() {
   const { username } = Route.useParams();
-  const profile = resolveProfile(username);
+  const { data: profileRes } = useQuery(userProfileQueryOptions(username));
+  const events = profileRes?.data?.timeline ?? [];
 
   return (
     <div className="space-y-4">
-      <PartyHistoryTimeline events={profile.timeline} />
+      <PartyHistoryTimeline events={events} />
     </div>
   );
 }

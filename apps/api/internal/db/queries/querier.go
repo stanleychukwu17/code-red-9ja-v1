@@ -444,6 +444,7 @@ type Querier interface {
 	ListSubFolders(ctx context.Context, parentID pgtype.Int4) ([]AssetFolder, error)
 	ListSuspendedPartyMembers(ctx context.Context, arg ListSuspendedPartyMembersParams) ([]ListSuspendedPartyMembersRow, error)
 	ListUnmatchedPollingUnitResults(ctx context.Context, arg ListUnmatchedPollingUnitResultsParams) ([]UnmatchedPollingUnitResult, error)
+	ListUserPartyMilestones(ctx context.Context, userID int64) ([]ListUserPartyMilestonesRow, error)
 	ListUserPracticeTests(ctx context.Context, arg ListUserPracticeTestsParams) ([]ListUserPracticeTestsRow, error)
 	ListUserWalletTransactions(ctx context.Context, arg ListUserWalletTransactionsParams) ([]UserWalletTransaction, error)
 	// ListUsers fetches a paginated list of users with optional filtering.
