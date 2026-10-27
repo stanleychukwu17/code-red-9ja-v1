@@ -1055,11 +1055,10 @@ function MoreInfoTab({
         : "",
       educational_status: initialMoreInfo.educational_status || "",
       highest_degree: initialMoreInfo.highest_degree || "",
-      graduation_year: initialMoreInfo.graduation_year || "",
+      graduation_year: initialMoreInfo.graduation_year || 2000,
       school_name: initialMoreInfo.school_name || "",
       religion: initialMoreInfo.religion || "",
       marital_status: initialMoreInfo.marital_status || "",
-      education_level: initialMoreInfo.education_level || "",
       address: initialMoreInfo.address || "",
     },
     onSubmit: async ({ value }) => {
@@ -1083,15 +1082,11 @@ function MoreInfoTab({
       form.setFieldValue("highest_degree", serverMoreInfo.highest_degree || "");
       form.setFieldValue(
         "graduation_year",
-        serverMoreInfo.graduation_year || "",
+        serverMoreInfo.graduation_year || 2000,
       );
       form.setFieldValue("school_name", serverMoreInfo.school_name || "");
       form.setFieldValue("religion", serverMoreInfo.religion || "");
       form.setFieldValue("marital_status", serverMoreInfo.marital_status || "");
-      form.setFieldValue(
-        "education_level",
-        serverMoreInfo.education_level || "",
-      );
       form.setFieldValue("address", serverMoreInfo.address || "");
     }
   }, [serverMoreInfo, occupationsData, form]);
@@ -1171,7 +1166,7 @@ function MoreInfoTab({
           <TinyError error={error} />
 
           <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col gap-1.5 col-span-2">
+            <div className="flex flex-col gap-1.5">
               <label className="text-[14px] text-c-50">Occupation</label>
               <form.Field
                 name="occupation_id"
@@ -1195,44 +1190,30 @@ function MoreInfoTab({
                 )}
               />
             </div>
+            {renderSelect("highest_degree", "Highest Degree", [
+              { label: "None", value: "none" },
+              { label: "Primary", value: "primary" },
+              { label: "Secondary", value: "secondary" },
+              { label: "Polytechnic", value: "polytechnic" },
+              { label: "Bachelors", value: "bachelors" },
+              { label: "Masters", value: "masters" },
+              { label: "PhD", value: "phd" },
+            ])}
             {renderSelect("educational_status", "Educational Status", [
               { label: "Graduate", value: "graduate" },
               { label: "Student", value: "student" },
               { label: "None", value: "none" },
             ])}
-            {renderSelect("education_level", "Education Level", [
-              { label: "None", value: "none" },
-              { label: "Primary", value: "primary" },
-              { label: "Secondary", value: "secondary" },
-              { label: "Bachelors", value: "bachelors" },
-              { label: "Masters", value: "masters" },
-              { label: "PhD", value: "phd" },
-            ])}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[14px] text-c-50">Highest Degree</label>
-              <form.Field
-                name="highest_degree"
-                children={(field: any) => (
-                  <Input
-                    type="text"
-                    placeholder="Highest Degree"
-                    value={field.state.value}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                  />
-                )}
-              />
-            </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-[14px] text-c-50">Graduation Year</label>
               <form.Field
                 name="graduation_year"
                 children={(field: any) => (
                   <Input
-                    type="text"
+                    type="number"
                     placeholder="YYYY"
-                    maxLength={4}
-                    value={field.state.value}
-                    onChange={(e) => field.handleChange(e.target.value)}
+                    value={field.state.value ?? 2000}
+                    onChange={(e) => field.handleChange(e.target.value ? Number(e.target.value) : "")}
                   />
                 )}
               />

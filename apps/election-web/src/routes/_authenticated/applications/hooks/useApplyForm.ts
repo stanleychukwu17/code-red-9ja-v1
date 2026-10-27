@@ -87,6 +87,7 @@ export function useApplyForm({ search, navigate }: UseApplyFormOptions) {
     },
     staleTime: Infinity,
   });
+  console.log("useMe Details", userMeDetails)
 
   useEffect(() => {
     if (userMeDetails) {
@@ -452,12 +453,10 @@ export function useApplyForm({ search, navigate }: UseApplyFormOptions) {
   const isSubmitting = submitMutation.isPending;
   const handleSubmit = () => submitMutation.mutate();
 
-  // Navigate backward through the wizard, skipping Step 5 if no formal education was chosen
+  // Navigate backward through the wizard
   const handleBackClick = () => {
     if (step === 1) {
       navigate({ to: "/" });
-    } else if (step === 6 && educationalStatus === "none") {
-      setStep(4);
     } else {
       setStep(step - 1);
     }

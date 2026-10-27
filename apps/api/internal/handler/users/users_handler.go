@@ -33,7 +33,7 @@ type UsersService interface {
 	GetMoreInfoAboutThisUser(ctx context.Context, userID int64) (queries.UserMoreInfo, error)
 	GetUserPrimaryBankAccount(ctx context.Context, userID int64) (queries.UserBankAccount, error)
 	UpdateUserProfile(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, gender, avatar string, avatarFileId *int64, countryID, stateID int16, cityID int32) error
-	UpdateUserProfileDetails(ctx context.Context, userID int64, occupationID *int16, educationalStatus, highestDegree, graduationYear, schoolName, religion, maritalStatus, educationLevel, address string) error
+	UpdateUserProfileDetails(ctx context.Context, userID int64, occupationID *int16, educationalStatus, highestDegree, graduationYear, schoolName, religion, maritalStatus, address string) error
 	ListUsers(ctx context.Context, arg queries.ListUsersParams) ([]queries.ListUsersRow, error)
 	SearchUsers(ctx context.Context, arg queries.SearchUsersParams) ([]queries.SearchUsersRow, error)
 	DeleteUserAccount(ctx context.Context, id int64, fakeID int64) error
@@ -1032,13 +1032,12 @@ func (h *Handler) AdminUpdateUser(w http.ResponseWriter, r *http.Request) {
 // AdminUpdateUserMoreInfoRequest represents the request payload for updating user more info
 type AdminUpdateUserMoreInfoRequest struct {
 	OccupationID      *int16 `json:"occupation_id" validate:"omitempty"`
-	EducationalStatus string `json:"educational_status" validate:"omitempty"`
-	EducationLevel    string `json:"education_level" validate:"omitempty"`
-	HighestDegree     string `json:"highest_degree" validate:"omitempty"`
-	GraduationYear    string `json:"graduation_year" validate:"omitempty"`
+	EducationalStatus string `json:"educational_status" validate:"omitempty,oneof=graduate student none"`
+	HighestDegree     string `json:"highest_degree" validate:"omitempty,oneof=none primary secondary polytechnic bachelors masters phd"`
+	GraduationYear    *int   `json:"graduation_year" validate:"omitempty,gt=1900,lt=2030"`
 	SchoolName        string `json:"school_name" validate:"omitempty"`
-	Religion          string `json:"religion" validate:"omitempty"`
-	MaritalStatus     string `json:"marital_status" validate:"omitempty"`
+	Religion          string `json:"religion" validate:"omitempty,oneof=christianity islam traditional other"`
+	MaritalStatus     string `json:"marital_status" validate:"omitempty,oneof=single married divorced widowed"`
 	Address           string `json:"address" validate:"omitempty"`
 }
 
@@ -1089,6 +1088,11 @@ func (h *Handler) AdminUpdateUserMoreInfo(w http.ResponseWriter, r *http.Request
 	oldMoreInfo, _ := h.usersService.GetMoreInfoAboutThisUser(r.Context(), targetUserDetails.ID)
 	oldValuesJSON, _ := json.Marshal(oldMoreInfo)
 
+	graduationYear := ""
+	if req.GraduationYear != nil {
+		graduationYear = strconv.Itoa(*req.GraduationYear)
+	}
+
 	// update the user more info
 	err = h.usersService.UpdateUserProfileDetails(
 		r.Context(),
@@ -1096,11 +1100,10 @@ func (h *Handler) AdminUpdateUserMoreInfo(w http.ResponseWriter, r *http.Request
 		req.OccupationID,
 		req.EducationalStatus,
 		req.HighestDegree,
-		req.GraduationYear,
+		graduationYear,
 		req.SchoolName,
 		req.Religion,
 		req.MaritalStatus,
-		req.EducationLevel,
 		req.Address,
 	)
 	if err != nil {

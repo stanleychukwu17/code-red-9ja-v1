@@ -17,5 +17,6 @@ export { Step9 } from "./Step9";
 export { Step10 } from "./Step10";
 export { Step11 } from "./Step11";
 export { ContactDetailsStep } from "./ContactDetailsStep";
+export { EducationalStep } from "./EducationalStep";
 export { EducationalStatusStep } from "./EducationalStatusStep";
 export { EducationalDetailsStep } from "./EducationalDetailsStep";

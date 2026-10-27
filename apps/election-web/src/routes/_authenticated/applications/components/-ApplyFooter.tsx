@@ -7,8 +7,7 @@ import { useApplyContext } from "../context/ApplyContext";
  * ApplyFooter
  * Persistent sticky bottom action bar for the agent application wizard.
  * Enforces per-step validation gates before advancing to the next step,
- * handles branching logic (e.g., skipping educational details), and
- * triggers final application submission on step 14.
+ * and triggers final application submission on step 13.
  */
 export function ApplyFooter() {
   const {
@@ -78,83 +77,80 @@ export function ApplyFooter() {
         </Button>
       )}
 
-      {/* Step 4: Education Status (Branches: skips details to Step 6 if 'none') */}
+      {/* Step 4: Education Status & Details */}
       {step === 4 && (
         <Button
           type="button"
           variant="black"
           size="4xl"
           className="w-full rounded-full"
-          disabled={!educationalStatus}
-          onClick={() => {
-            if (educationalStatus === "none") {
-              setStep(6);
-            } else {
-              setStep(5);
-            }
-          }}
+          disabled={
+            !educationalStatus ||
+            (educationalStatus !== "none" &&
+              (!highestDegree || !graduationYear || !schoolName))
+          }
+          onClick={() => setStep(5)}
         >
           Continue
         </Button>
       )}
 
-      {/* Step 5: Academic Degree & Institution Details */}
+      {/* Step 5: Residential Location (State, LGA, Address) */}
       {step === 5 && (
         <Button
           type="button"
           variant="black"
           size="4xl"
           className="w-full rounded-full"
-          disabled={!highestDegree || !graduationYear || !schoolName}
+          disabled={!selectedStateId || !selectedLgaId || !streetAddress}
           onClick={() => setStep(6)}
         >
           Continue
         </Button>
       )}
 
-      {/* Step 6: Residential Location (State, LGA, Address) */}
+      {/* Step 6: Desired Polling Unit Assignment */}
       {step === 6 && (
         <Button
           type="button"
           variant="black"
           size="4xl"
           className="w-full rounded-full"
-          disabled={!selectedStateId || !selectedLgaId || !streetAddress}
+          disabled={!selectedPollingUnitId}
           onClick={() => setStep(7)}
         >
           Continue
         </Button>
       )}
 
-      {/* Step 7: Desired Polling Unit Assignment */}
+      {/* Step 7: Election Day / Group Selection */}
       {step === 7 && (
         <Button
           type="button"
           variant="black"
           size="4xl"
           className="w-full rounded-full"
-          disabled={!selectedPollingUnitId}
+          disabled={selectedElectionIds.length === 0}
           onClick={() => setStep(8)}
         >
           Continue
         </Button>
       )}
 
-      {/* Step 8: Election Day / Group Selection */}
+      {/* Step 8: Responsibilities & Readiness Attestation */}
       {step === 8 && (
         <Button
           type="button"
           variant="black"
           size="4xl"
           className="w-full rounded-full"
-          disabled={selectedElectionIds.length === 0}
           onClick={() => setStep(9)}
         >
-          Continue
+          Yes, I agree
         </Button>
       )}
 
-      {/* Step 9: Responsibilities & Readiness Attestation */}
+      {/* Step 9: Code of Conduct & Punctuality */}
       {step === 9 && (
         <Button
           type="button"
@@ -167,7 +163,7 @@ export function ApplyFooter() {
         </Button>
       )}
 
-      {/* Step 10: Code of Conduct & Punctuality */}
+      {/* Step 10: Neutrality & Integrity Attestation */}
       {step === 10 && (
         <Button
           type="button"
@@ -180,7 +176,7 @@ export function ApplyFooter() {
         </Button>
       )}
 
-      {/* Step 11: Neutrality & Integrity Attestation */}
+      {/* Step 11: Compensation & Potential Payout Details */}
       {step === 11 && (
         <Button
           type="button"
@@ -193,35 +189,22 @@ export function ApplyFooter() {
         </Button>
       )}
 
-      {/* Step 12: Compensation & Potential Payout Details */}
+      {/* Step 12: Head-shot / Passport Photo Upload */}
       {step === 12 && (
         <Button
           type="button"
           variant="black"
           size="4xl"
           className="w-full rounded-full"
-          onClick={() => setStep(13)}
-        >
-          Yes, I agree
-        </Button>
-      )}
-
-      {/* Step 13: Head-shot / Passport Photo Upload */}
-      {step === 13 && (
-        <Button
-          type="button"
-          variant="black"
-          size="4xl"
-          className="w-full rounded-full"
           disabled={(!avatarUrl && !user?.avatar) || isUploading}
-          onClick={() => setStep(14)}
+          onClick={() => setStep(13)}
         >
           Continue
         </Button>
       )}
 
-      {/* Step 14: Bank Account Details & Final Application Submission */}
-      {step === 14 && (
+      {/* Step 13: Bank Account Details & Final Application Submission */}
+      {step === 13 && (
         <Button
           type="button"
           variant="secondary"
@@ -243,4 +226,3 @@ export function ApplyFooter() {
     </StickyFooter>
   );
 }
-

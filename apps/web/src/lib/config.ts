@@ -160,6 +160,9 @@ export const API_URL = {
 	userPreferences: `${api}/user_preferences`,
 	searchUsers: `${api}/users/search`,
 	getUserProfile: (username: string) => `${api}/users/${username.replace(/^@/, "")}/profile`,
+	uploadUrl: `${api}/files/upload-url`,
+	confirmUpload: (id: string | number) => `${api}/files/${id}/confirm`,
+	updateProfile: `${api}/users/profile`,
 	campaignGroups: {
 		getGroup: (groupId: number | string) => `${api}/campaign-groups/${groupId}`,
 		getMembers: (groupId: number | string) => `${api}/campaign-groups/${groupId}/members`,
@@ -195,4 +198,8 @@ export const QUERY_KEYS = {
 	lgas: (stateId?: number) => ["lgas", stateId],
 	wards: (lgaId?: number, stateId?: number) => ["wards", lgaId, stateId],
 	cities: (stateId?: number) => ["cities", stateId],
+	userProfile: {
+		root: ["userProfile"] as const,
+		byUsername: (username: string) => ["userProfile", username.replace(/^@/, "")] as const,
+	},
 };

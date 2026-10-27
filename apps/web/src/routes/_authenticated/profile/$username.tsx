@@ -6,9 +6,10 @@ import { ProfileFloatingToolbar } from "#/components/profile/ProfileFloatingTool
 import { ProfileNavTabs } from "#/components/profile/ProfileNavTabs";
 import { getUserProfile } from "@/lib/server/citizens";
 import { formatNumber } from "@repo/ui/lib/number";
+import { QUERY_KEYS } from "#/lib/config";
 
 export const userProfileQueryOptions = (username: string) => queryOptions({
-  queryKey: ["userProfile", username.replace(/^@/, "")],
+  queryKey: QUERY_KEYS.userProfile.byUsername(username),
   queryFn: () => getUserProfile({
     data: { username: username.replace(/^@/, "") },
   }),
@@ -30,6 +31,7 @@ export const Route = createFileRoute("/_authenticated/profile/$username")({
       </div>
     </div>
   ),
+
   component: ProfileLayoutComponent,
 });
 

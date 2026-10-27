@@ -607,7 +607,7 @@ func (s *UsersService) ResetUserAvatar(ctx context.Context, userID int64, fakeID
 }
 
 // UpdateUserProfileDetails updates extended educational and demographic information for a user.
-func (s *UsersService) UpdateUserProfileDetails(ctx context.Context, userID int64, occupationID *int16, educationalStatus, highestDegree, graduationYear, schoolName, religion, maritalStatus, educationLevel, address string) error {
+func (s *UsersService) UpdateUserProfileDetails(ctx context.Context, userID int64, occupationID *int16, educationalStatus, highestDegree, graduationYear, schoolName, religion, maritalStatus, address string) error {
 	pgOccupationID := utils.PgInt2FromPtrNullable(occupationID)
 
 	err := s.queries.UpdateMoreInfoAboutThisUser(ctx, queries.UpdateMoreInfoAboutThisUserParams{

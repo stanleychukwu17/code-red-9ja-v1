@@ -143,3 +143,16 @@ export const getUserMe = createServerFn({ method: "GET" })
       return { success: false, message: "Failed to fetch user profile: " + (error as Error).message };
     }
   });
+
+export const getUserPhoneNumbers = createServerFn({ method: "GET" })
+  .inputValidator((data: { user_id: string | number }) => data)
+  .handler(async ({ data: { user_id } }) => {
+    try {
+      const response = await apiFetch(API_URL.userPhoneNumbers(user_id));
+      const resData = await response.json();
+      return resData;
+    } catch (error) {
+      return { success: false, message: "Failed to fetch user phone numbers: " + (error as Error).message };
+    }
+  });
+

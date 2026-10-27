@@ -274,6 +274,7 @@ export const API_URL = {
   adminUserById: (id: string | number) => `${api}/admin/users/${id}`,
 
   users: `${api}/users`,
+  userPhoneNumbers: (id: string | number) => `${api}/admin/users/${id}/phones`,
   generateReferralCode: `${api}/users/me/referral-code`,
   getMyWallet: `${api}/users/me/wallet`,
   getMyWalletTransactions: `${api}/users/me/wallet/transactions`,

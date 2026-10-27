@@ -8,8 +8,7 @@ import { ApplyFooter } from "./components/-ApplyFooter";
 import { ApplySuccess } from "./components/-ApplySuccess";
 import {
   ContactDetailsStep,
-  EducationalDetailsStep,
-  EducationalStatusStep,
+  EducationalStep,
   Step1,
   Step10,
   Step11,
@@ -42,23 +41,22 @@ export const Route = createFileRoute("/_authenticated/applications/apply")({
 });
 
 /**
- * 14-Step comprehensive application wizard for prospective Polling Unit Agents.
+ * 13-Step comprehensive application wizard for prospective Polling Unit Agents.
  *
  * Progression:
  *  1. Orientation & Role Intro
  *  2. Political Party Selection (with active party locking)
- *  3. Contact Information (Phone, WhatsApp, Data numbers)
- *  4. Educational Status (Primary, Secondary, Tertiary, None)
- *  5. Educational Details (Degree, School, Year - skipped if status is "none")
- *  6. Residential Address & Geographic Territory (State, LGA, Ward)
- *  7. Polling Unit Selection (Paginated search filtered to ward & party)
- *  8. Election Day / Group Selection (Choose election day to serve)
- *  9. Role Obligations & Readiness
- * 10. Code of Conduct
- * 11. Neutrality & Integrity Affirmation
- * 12. Payout Terms & Performance Incentives
- * 13. Portrait / Selfie Upload (Cloudflare R2 presigned storage)
- * 14. Bank Account Verification & Submission
+ *  3. Contact Information (Phone, WhatsApp)
+ *  4. Educational Background (Status & optional Degree, School, Year)
+ *  5. Residential Address & Geographic Territory (State, LGA, Ward)
+ *  6. Polling Unit Selection (Paginated search filtered to ward & party)
+ *  7. Election Day / Group Selection (Choose election day to serve)
+ *  8. Role Obligations & Readiness
+ *  9. Code of Conduct
+ * 10. Neutrality & Integrity Affirmation
+ * 11. Payout Terms & Performance Incentives
+ * 12. Portrait / Selfie Upload (Cloudflare R2 presigned storage)
+ * 13. Bank Account Verification & Submission
  */
 function ApplyPage() {
   const search = Route.useSearch();
@@ -85,22 +83,6 @@ function ApplyPageContent() {
     handleUploadClick,
     fileInputRef,
     handleFileChange,
-    // Step 5
-    phone,
-    setPhone,
-    whatsappPhone,
-    setWhatsappPhone,
-    dataPhone,
-    setDataPhone,
-    // Step 6 & 7
-    educationalStatus,
-    setEducationalStatus,
-    highestDegree,
-    setHighestDegree,
-    graduationYear,
-    setGraduationYear,
-    schoolName,
-    setSchoolName,
     // Step 8
     selectedStateId,
     setSelectedStateId,
@@ -154,41 +136,13 @@ function ApplyPageContent() {
         {step === 2 && <Step2 />}
 
         {/* Step 3: Contact Numbers (Phone, WhatsApp, Data) */}
-        {step === 3 && (
-          <ContactDetailsStep
-            phone={phone}
-            setPhone={setPhone}
-            userPhone={user?.phone}
-            whatsappPhone={whatsappPhone}
-            setWhatsappPhone={setWhatsappPhone}
-            dataPhone={dataPhone}
-            setDataPhone={setDataPhone}
-          />
-        )}
+        {step === 3 && <ContactDetailsStep />}
 
-        {/* Step 4: Educational Level Status */}
-        {step === 4 && (
-          <EducationalStatusStep
-            educationalStatus={educationalStatus}
-            setEducationalStatus={setEducationalStatus}
-          />
-        )}
+        {/* Step 4: Educational Background & Credentials */}
+        {step === 4 && <EducationalStep />}
 
-        {/* Step 5: Educational Institution & Degree Details */}
-        {step === 5 && educationalStatus !== "none" && (
-          <EducationalDetailsStep
-            educationalStatus={educationalStatus}
-            highestDegree={highestDegree}
-            setHighestDegree={setHighestDegree}
-            graduationYear={graduationYear}
-            setGraduationYear={setGraduationYear}
-            schoolName={schoolName}
-            setSchoolName={setSchoolName}
-          />
-        )}
-
-        {/* Step 6: Residential Address & Ward */}
-        {step === 6 && (
+        {/* Step 5: Residential Address & Ward */}
+        {step === 5 && (
           <Step5
             selectedStateId={selectedStateId}
             setSelectedStateId={setSelectedStateId}
@@ -201,8 +155,8 @@ function ApplyPageContent() {
           />
         )}
 
-        {/* Step 7: Polling Unit Search & Assignment */}
-        {step === 7 && (
+        {/* Step 6: Polling Unit Search & Assignment */}
+        {step === 6 && (
           <Step6
             pollingUnits={pollingUnits}
             selectedPollingUnitId={selectedPollingUnitId}
@@ -218,23 +172,23 @@ function ApplyPageContent() {
           />
         )}
 
-        {/* Step 8: Election Day / Group Selection */}
-        {step === 8 && <Step3 />}
+        {/* Step 7: Election Day / Group Selection */}
+        {step === 7 && <Step3 />}
 
-        {/* Step 9: Polling Agent Responsibilities */}
-        {step === 9 && <Step7 />}
+        {/* Step 8: Polling Agent Responsibilities */}
+        {step === 8 && <Step7 />}
 
-        {/* Step 10: Code of Conduct & Punctuality */}
-        {step === 10 && <Step8 />}
+        {/* Step 9: Code of Conduct & Punctuality */}
+        {step === 9 && <Step8 />}
 
-        {/* Step 11: Neutrality & Integrity Commitment */}
-        {step === 11 && <Step9 />}
+        {/* Step 10: Neutrality & Integrity Commitment */}
+        {step === 10 && <Step9 />}
 
-        {/* Step 12: Compensation & Potential Payout Details */}
-        {step === 12 && <Step10 />}
+        {/* Step 11: Compensation & Potential Payout Details */}
+        {step === 11 && <Step10 />}
 
-        {/* Step 13: Agent Portrait / Photo Upload */}
-        {step === 13 && (
+        {/* Step 12: Agent Portrait / Photo Upload */}
+        {step === 12 && (
           <Step4
             avatarUrl={avatarUrl || user?.avatar}
             isUploading={isUploading}
@@ -244,8 +198,8 @@ function ApplyPageContent() {
           />
         )}
 
-        {/* Step 14: Bank Account & Payout Verification */}
-        {step === 14 && (
+        {/* Step 13: Bank Account & Payout Verification */}
+        {step === 13 && (
           <Step11
             bankAccountNumber={bankAccountNumber}
             setBankAccountNumber={setBankAccountNumber}
