@@ -1062,27 +1062,23 @@ type PartyElectionGroup struct {
 }
 
 type PartyEvent struct {
-	ID             int64              `json:"id"`
-	PartyID        int16              `json:"party_id"`
-	ChapterID      int32              `json:"chapter_id"`
-	Tier           string             `json:"tier"`
-	Title          string             `json:"title"`
-	Description    string             `json:"description"`
-	Category       string             `json:"category"`
-	VenueName      string             `json:"venue_name"`
-	Location       string             `json:"location"`
-	IsVirtual      bool               `json:"is_virtual"`
-	VirtualUrl     pgtype.Text        `json:"virtual_url"`
-	BannerFileID   pgtype.Int8        `json:"banner_file_id"`
-	BannerUrl      string             `json:"banner_url"`
-	StartsAt       pgtype.Timestamptz `json:"starts_at"`
-	EndsAt         pgtype.Timestamptz `json:"ends_at"`
-	Status         string             `json:"status"`
-	MaxAttendees   pgtype.Int4        `json:"max_attendees"`
-	AttendeesCount int32              `json:"attendees_count"`
-	CreatedBy      pgtype.Int8        `json:"created_by"`
-	CreatedAt      pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	ID          int64              `json:"id"`
+	PartyID     int16              `json:"party_id"`
+	ChapterID   int32              `json:"chapter_id"`
+	Tier        string             `json:"tier"`
+	Title       string             `json:"title"`
+	Description string             `json:"description"`
+	Category    string             `json:"category"`
+	VenueName   string             `json:"venue_name"`
+	Location    string             `json:"location"`
+	IsVirtual   bool               `json:"is_virtual"`
+	VirtualUrl  pgtype.Text        `json:"virtual_url"`
+	StartsAt    pgtype.Timestamptz `json:"starts_at"`
+	EndsAt      pgtype.Timestamptz `json:"ends_at"`
+	Status      string             `json:"status"`
+	CreatedBy   pgtype.Int8        `json:"created_by"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 }
 
 type PartyFollow struct {

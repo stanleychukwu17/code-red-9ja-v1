@@ -371,7 +371,9 @@ export function UserFormDialog({
     queryKey: ["parties"],
     queryFn: async () => {
       const res = await getParties();
-      if (res && res.success && res.data) return res.data.parties;
+      if (Array.isArray(res)) return res;
+      if (res && res.success && res.data?.parties) return res.data.parties;
+      if (res && Array.isArray(res.data)) return res.data;
       return [];
     },
     staleTime: Infinity,
@@ -381,7 +383,10 @@ export function UserFormDialog({
   // Effect to automatically resolve the party ID if only a party short name was provided
   React.useEffect(() => {
     if (open && partyId === undefined && partyShortName && partiesData) {
-      const partyObj = partiesData.find((p: any) => {
+      const partyList = Array.isArray(partiesData)
+        ? partiesData
+        : (partiesData as any)?.data?.parties || [];
+      const partyObj = partyList.find((p: any) => {
         return p.short_name?.toLowerCase() === partyShortName.toLowerCase();
       });
 

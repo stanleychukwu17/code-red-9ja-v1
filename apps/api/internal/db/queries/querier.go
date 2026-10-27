@@ -100,6 +100,7 @@ type Querier interface {
 	CreateOffice(ctx context.Context, arg CreateOfficeParams) (Office, error)
 	CreateParty(ctx context.Context, arg CreatePartyParams) (Party, error)
 	CreatePartyCustomPosition(ctx context.Context, arg CreatePartyCustomPositionParams) (PartyPosition, error)
+	CreatePartyEvent(ctx context.Context, arg CreatePartyEventParams) (PartyEvent, error)
 	CreatePartyMarketingCampaign(ctx context.Context, arg CreatePartyMarketingCampaignParams) (PartyMarketingCampaign, error)
 	CreatePartyMemberSuspension(ctx context.Context, arg CreatePartyMemberSuspensionParams) (PartyMemberSuspension, error)
 	// ============================================================================
@@ -156,6 +157,7 @@ type Querier interface {
 	DeleteNotification(ctx context.Context, arg DeleteNotificationParams) error
 	DeleteOffice(ctx context.Context, id int16) error
 	DeleteParty(ctx context.Context, id int16) error
+	DeletePartyEvent(ctx context.Context, arg DeletePartyEventParams) error
 	DeletePartyMarketingCampaign(ctx context.Context, id int32) error
 	DeletePartyMembership(ctx context.Context, arg DeletePartyMembershipParams) ([]int32, error)
 	DeletePlan(ctx context.Context, id int32) error
@@ -267,6 +269,7 @@ type Querier interface {
 	GetPartyByID(ctx context.Context, id int16) (Party, error)
 	GetPartyChapterByID(ctx context.Context, id int32) (PartyChapter, error)
 	GetPartyElectionGroupCoverageDistribution(ctx context.Context, arg GetPartyElectionGroupCoverageDistributionParams) ([]GetPartyElectionGroupCoverageDistributionRow, error)
+	GetPartyEventByID(ctx context.Context, arg GetPartyEventByIDParams) (PartyEvent, error)
 	GetPartyFollowersCount(ctx context.Context, arg GetPartyFollowersCountParams) (int64, error)
 	GetPartyMarketingCampaigns(ctx context.Context, partyID int16) ([]GetPartyMarketingCampaignsRow, error)
 	GetPartyPositionByID(ctx context.Context, arg GetPartyPositionByIDParams) (PartyPosition, error)
@@ -309,6 +312,7 @@ type Querier interface {
 	GetUnmatchedPollingUnitResultByID(ctx context.Context, id int64) (UnmatchedPollingUnitResult, error)
 	GetUnreadNotificationsCount(ctx context.Context, recipientUserID int64) (int64, error)
 	GetUnreadPartyNotificationsCountForUser(ctx context.Context, arg GetUnreadPartyNotificationsCountForUserParams) (int64, error)
+	GetUpcomingPartyEvents(ctx context.Context, arg GetUpcomingPartyEventsParams) ([]PartyEvent, error)
 	GetUserActiveCandidacies(ctx context.Context, candidateID int64) ([]GetUserActiveCandidaciesRow, error)
 	GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (GetUserByFakeIDRow, error)
 	GetUserByID(ctx context.Context, id int64) (GetUserByIDRow, error)
@@ -429,6 +433,7 @@ type Querier interface {
 	ListParties(ctx context.Context) ([]ListPartiesRow, error)
 	ListPartiesWithoutWallet(ctx context.Context) ([]Party, error)
 	ListPartyChapters(ctx context.Context, arg ListPartyChaptersParams) ([]PartyChapter, error)
+	ListPartyEvents(ctx context.Context, arg ListPartyEventsParams) ([]PartyEvent, error)
 	// Returns party notifications relevant to the user's active chapter positions
 	ListPartyNotificationsForUser(ctx context.Context, arg ListPartyNotificationsForUserParams) ([]ListPartyNotificationsForUserRow, error)
 	ListPartyOfficials(ctx context.Context, arg ListPartyOfficialsParams) ([]ListPartyOfficialsRow, error)
@@ -558,6 +563,7 @@ type Querier interface {
 	UpdatePartyAgentAcquisitionTargets(ctx context.Context, arg UpdatePartyAgentAcquisitionTargetsParams) (UpdatePartyAgentAcquisitionTargetsRow, error)
 	UpdatePartyAgentPaymentAllocationKobo(ctx context.Context, arg UpdatePartyAgentPaymentAllocationKoboParams) (UpdatePartyAgentPaymentAllocationKoboRow, error)
 	UpdatePartyCustomPosition(ctx context.Context, arg UpdatePartyCustomPositionParams) (PartyPosition, error)
+	UpdatePartyEvent(ctx context.Context, arg UpdatePartyEventParams) (PartyEvent, error)
 	UpdatePartyIsVerified(ctx context.Context, arg UpdatePartyIsVerifiedParams) error
 	UpdatePhoneNumber(ctx context.Context, arg UpdatePhoneNumberParams) error
 	UpdatePlan(ctx context.Context, arg UpdatePlanParams) (Plan, error)

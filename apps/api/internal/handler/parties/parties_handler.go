@@ -88,6 +88,9 @@ type PartiesService interface {
 	GetPartyHome(ctx context.Context, partyID int16, chapterID *int32) (*partiesservice.PartyHomeData, error)
 	GetPartyReadiness(ctx context.Context, partyID int16) (*partiesservice.PartyReadinessData, error)
 	ListPartyChapterMembers(ctx context.Context, params partiesservice.ListPartyMembersParams) (*partiesservice.PartyMembersResult, error)
+	ListPartyEvents(ctx context.Context, params partiesservice.ListPartyEventsParams) ([]partiesservice.PartyEventItem, error)
+	GetPartyEventByID(ctx context.Context, partyID int16, eventID int64) (*partiesservice.PartyEventItem, error)
+	CreatePartyEvent(ctx context.Context, input partiesservice.CreatePartyEventInput) (*partiesservice.PartyEventItem, error)
 }
 
 // PermissionsService defines methods for checking user permissions
@@ -975,6 +978,110 @@ func (h *Handler) GetPartyHome(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.utils.RespondSuccessData(w, http.StatusOK, "Party home data retrieved successfully", data)
+}
+
+// ListPartyEvents godoc
+// @Summary      List party events
+// @Description  Fetches party events filtered by chapter, tier, category, status, and search query.
+// @Tags         Parties
+// @Produce      json
+// @Param        party_id    path      int     true  "Party ID"
+// @Param        chapter_id  query     int     false "Optional Chapter ID"
+// @Param        tier        query     string  false "Optional Tier (national, state, lga, ward)"
+// @Param        category    query     string  false "Optional Category"
+// @Param        status      query     string  false "Optional Status (upcoming, ongoing, completed, cancelled)"
+// @Param        search      query     string  false "Optional Search query"
+// @Success      200         {object}  map[string]interface{}
+// @Router       /parties/{party_id}/events [get]
+func (h *Handler) ListPartyEvents(w http.ResponseWriter, r *http.Request) {
+	partyIDStr := chi.URLParam(r, "party_id")
+	if partyIDStr == "" {
+		partyIDStr = chi.URLParam(r, "id")
+	}
+	partyID, err := strconv.ParseInt(partyIDStr, 10, 16)
+	if err != nil || partyID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID")
+		return
+	}
+
+	var chapterID *int32
+	if chapStr := r.URL.Query().Get("chapter_id"); chapStr != "" {
+		if parsed, err := strconv.ParseInt(chapStr, 10, 32); err == nil && parsed > 0 {
+			cid := int32(parsed)
+			chapterID = &cid
+		}
+	}
+
+	var tierPtr *string
+	if tier := r.URL.Query().Get("tier"); tier != "" && tier != "all" {
+		tierPtr = &tier
+	}
+
+	var catPtr *string
+	if cat := r.URL.Query().Get("category"); cat != "" && cat != "All" {
+		catPtr = &cat
+	}
+
+	var statusPtr *string
+	if status := r.URL.Query().Get("status"); status != "" && status != "all" {
+		statusPtr = &status
+	}
+
+	var searchPtr *string
+	if search := r.URL.Query().Get("search"); search != "" {
+		searchPtr = &search
+	}
+
+	events, err := h.partiesService.ListPartyEvents(r.Context(), partiesservice.ListPartyEventsParams{
+		PartyID:   int16(partyID),
+		ChapterID: chapterID,
+		Tier:      tierPtr,
+		Category:  catPtr,
+		Status:    statusPtr,
+		Search:    searchPtr,
+	})
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch party events: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccessData(w, http.StatusOK, "Party events retrieved successfully", events)
+}
+
+// GetPartyEvent godoc
+// @Summary      Get party event details
+// @Description  Fetches a single party event by ID.
+// @Tags         Parties
+// @Produce      json
+// @Param        party_id    path      int  true  "Party ID"
+// @Param        event_id    path      int  true  "Event ID"
+// @Success      200         {object}  map[string]interface{}
+// @Router       /parties/{party_id}/events/{event_id} [get]
+func (h *Handler) GetPartyEvent(w http.ResponseWriter, r *http.Request) {
+	partyIDStr := chi.URLParam(r, "party_id")
+	if partyIDStr == "" {
+		partyIDStr = chi.URLParam(r, "id")
+	}
+	partyID, err := strconv.ParseInt(partyIDStr, 10, 16)
+	if err != nil || partyID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID")
+		return
+	}
+
+	eventIDStr := chi.URLParam(r, "event_id")
+	eventID, err := strconv.ParseInt(eventIDStr, 10, 64)
+	if err != nil || eventID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid event ID")
+		return
+	}
+
+	event, err := h.partiesService.GetPartyEventByID(r.Context(), int16(partyID), eventID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusNotFound, "Event not found: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccessData(w, http.StatusOK, "Party event retrieved successfully", event)
 }
 
 // GetPartyReadiness godoc

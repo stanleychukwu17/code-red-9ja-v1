@@ -38,17 +38,21 @@ export const SelectParty = ({ update, errorMsg, selectedId, className, align = "
   const [selectedItem, setSelectedItem] = useState<Party | undefined>(undefined);
 
   // Fetch parties using react-query for caching and state management
-  const { data, isLoading } = useQuery<PartiesResponse>({
+  const { data, isLoading } = useQuery<Party[] | PartiesResponse>({
     queryKey: ["parties"],
-    queryFn: async () => {
+    queryFn: async (): Promise<Party[]> => {
       const res = await fetchParties();
-      if (res && res.success && res.data) return res;
+      if (Array.isArray(res)) return res;
+      if (res && res.success && res.data?.parties) return res.data.parties;
+      if (res && Array.isArray(res.data)) return res.data;
       throw new Error(res?.message || "Failed to fetch parties");
     },
     staleTime: Infinity,
   });
 
-  const parties = data?.data?.parties || [];
+  const parties: Party[] = Array.isArray(data)
+    ? data
+    : (data as any)?.data?.parties || [];
 
   // Sync selected item state when selectedId prop or parties data changes
   useEffect(() => {

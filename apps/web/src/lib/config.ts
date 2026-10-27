@@ -98,6 +98,25 @@ export const API_URL = {
 		const qs = chapterId ? `?chapter_id=${chapterId}` : "";
 		return `${api}/parties/${partyId}/home${qs}`;
 	},
+	partyEvents: (
+		partyId: number | string,
+		params?: {
+			chapter_id?: number;
+			tier?: string;
+			category?: string;
+			status?: string;
+			search?: string;
+		}
+	) => {
+		const searchParams = new URLSearchParams();
+		if (params?.chapter_id) searchParams.append("chapter_id", String(params.chapter_id));
+		if (params?.tier) searchParams.append("tier", params.tier);
+		if (params?.category) searchParams.append("category", params.category);
+		if (params?.status) searchParams.append("status", params.status);
+		if (params?.search) searchParams.append("search", params.search);
+		const qs = searchParams.toString();
+		return `${api}/parties/${partyId}/events${qs ? `?${qs}` : ""}`;
+	},
 	partyPositions: (id: string | number) => `${api}/parties/${id}/positions`,
 	partyOfficials: (
 		id: string | number,

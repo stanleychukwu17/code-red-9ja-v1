@@ -741,10 +741,30 @@ type PartyDynamicLeadersGroup struct {
 	Leaders     []PartyHomeLeaderItem `json:"leaders"`
 }
 
+// PartyEventItem matches the frontend and API event representation.
+type PartyEventItem struct {
+	ID          int64      `json:"id"`
+	PartyID     int16      `json:"party_id"`
+	ChapterID   int32      `json:"chapter_id"`
+	Tier        string     `json:"tier"`
+	Title       string     `json:"title"`
+	Description string     `json:"description"`
+	Category    string     `json:"category"`
+	VenueName   string     `json:"venue_name"`
+	Location    string     `json:"location"`
+	IsVirtual   bool       `json:"is_virtual"`
+	VirtualURL  *string    `json:"virtual_url,omitempty"`
+	StartsAt    time.Time  `json:"starts_at"`
+	EndsAt      *time.Time `json:"ends_at,omitempty"`
+	Status      string     `json:"status"`
+	CreatedAt   time.Time  `json:"created_at"`
+}
+
 // PartyHomeData encapsulates all primary data displayed on the party home tab.
 type PartyHomeData struct {
 	NationalLeaders []PartyHomeLeaderItem    `json:"national_leaders"`
 	DynamicLeaders  PartyDynamicLeadersGroup `json:"dynamic_leaders"`
+	UpcomingEvents  []PartyEventItem         `json:"upcoming_events"`
 }
 
 // PartyReadinessData aggregates party info, financial status, and marketing overview for party readiness.
@@ -887,10 +907,204 @@ func (s *PartiesService) GetPartyHome(ctx context.Context, partyID int16, chapte
 		}
 	}
 
+	// Fetch upcoming events for home card (limit 3)
+	var chapIDFilter pgtype.Int4
+	if hasCustomChapter {
+		chapIDFilter = pgtype.Int4{Int32: activeChapter.ID, Valid: true}
+	}
+
+	upcomingEvents := make([]PartyEventItem, 0)
+	dbEvents, err := s.queries.GetUpcomingPartyEvents(ctx, queries.GetUpcomingPartyEventsParams{
+		PartyID:   partyID,
+		ChapterID: chapIDFilter,
+		Limit:     3,
+	})
+	if err == nil {
+		for _, evt := range dbEvents {
+			upcomingEvents = append(upcomingEvents, s.formatPartyEvent(evt))
+		}
+	}
+
 	return &PartyHomeData{
 		NationalLeaders: nationalLeaders,
 		DynamicLeaders:  dynamicGroup,
+		UpcomingEvents:  upcomingEvents,
 	}, nil
+}
+
+func (s *PartiesService) formatPartyEvent(evt queries.PartyEvent) PartyEventItem {
+	var virtualURL *string
+	if evt.VirtualUrl.Valid && evt.VirtualUrl.String != "" {
+		v := evt.VirtualUrl.String
+		virtualURL = &v
+	}
+
+	var startsAt time.Time
+	if evt.StartsAt.Valid {
+		startsAt = evt.StartsAt.Time
+	}
+
+	var endsAt *time.Time
+	if evt.EndsAt.Valid {
+		t := evt.EndsAt.Time
+		endsAt = &t
+	}
+
+	var createdAt time.Time
+	if evt.CreatedAt.Valid {
+		createdAt = evt.CreatedAt.Time
+	}
+
+	return PartyEventItem{
+		ID:          evt.ID,
+		PartyID:     evt.PartyID,
+		ChapterID:   evt.ChapterID,
+		Tier:        evt.Tier,
+		Title:       evt.Title,
+		Description: evt.Description,
+		Category:    evt.Category,
+		VenueName:   evt.VenueName,
+		Location:    evt.Location,
+		IsVirtual:   evt.IsVirtual,
+		VirtualURL:  virtualURL,
+		StartsAt:    startsAt,
+		EndsAt:      endsAt,
+		Status:      evt.Status,
+		CreatedAt:   createdAt,
+	}
+}
+
+type ListPartyEventsParams struct {
+	PartyID   int16
+	ChapterID *int32
+	Tier      *string
+	Category  *string
+	Status    *string
+	Search    *string
+}
+
+func (s *PartiesService) ListPartyEvents(ctx context.Context, params ListPartyEventsParams) ([]PartyEventItem, error) {
+	var chapID pgtype.Int4
+	if params.ChapterID != nil && *params.ChapterID > 0 {
+		chapID = pgtype.Int4{Int32: *params.ChapterID, Valid: true}
+	}
+
+	var tier pgtype.Text
+	if params.Tier != nil && *params.Tier != "" && *params.Tier != "all" {
+		tier = pgtype.Text{String: *params.Tier, Valid: true}
+	}
+
+	var cat pgtype.Text
+	if params.Category != nil && *params.Category != "" && *params.Category != "All" {
+		cat = pgtype.Text{String: *params.Category, Valid: true}
+	}
+
+	var status pgtype.Text
+	if params.Status != nil && *params.Status != "" && *params.Status != "all" {
+		status = pgtype.Text{String: *params.Status, Valid: true}
+	}
+
+	var search pgtype.Text
+	if params.Search != nil && *params.Search != "" {
+		search = pgtype.Text{String: *params.Search, Valid: true}
+	}
+
+	dbEvents, err := s.queries.ListPartyEvents(ctx, queries.ListPartyEventsParams{
+		PartyID:   params.PartyID,
+		ChapterID: chapID,
+		Tier:      tier,
+		Category:  cat,
+		Status:    status,
+		Search:    search,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list party events: %w", err)
+	}
+
+	events := make([]PartyEventItem, 0, len(dbEvents))
+	for _, evt := range dbEvents {
+		events = append(events, s.formatPartyEvent(evt))
+	}
+	return events, nil
+}
+
+func (s *PartiesService) GetPartyEventByID(ctx context.Context, partyID int16, eventID int64) (*PartyEventItem, error) {
+	evt, err := s.queries.GetPartyEventByID(ctx, queries.GetPartyEventByIDParams{
+		ID:      eventID,
+		PartyID: partyID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get party event: %w", err)
+	}
+	item := s.formatPartyEvent(evt)
+	return &item, nil
+}
+
+type CreatePartyEventInput struct {
+	PartyID     int16      `json:"party_id"`
+	ChapterID   int32      `json:"chapter_id"`
+	Tier        string     `json:"tier"`
+	Title       string     `json:"title"`
+	Description string     `json:"description"`
+	Category    string     `json:"category"`
+	VenueName   string     `json:"venue_name"`
+	Location    string     `json:"location"`
+	IsVirtual   bool       `json:"is_virtual"`
+	VirtualURL  *string    `json:"virtual_url,omitempty"`
+	StartsAt    time.Time  `json:"starts_at"`
+	EndsAt      *time.Time `json:"ends_at,omitempty"`
+	Status      string     `json:"status"`
+	CreatedBy   *int64     `json:"created_by,omitempty"`
+}
+
+func (s *PartiesService) CreatePartyEvent(ctx context.Context, input CreatePartyEventInput) (*PartyEventItem, error) {
+	if input.Tier == "" {
+		input.Tier = "national"
+	}
+	if input.Category == "" {
+		input.Category = "Meeting"
+	}
+	if input.Status == "" {
+		input.Status = "upcoming"
+	}
+
+	var virtualURL pgtype.Text
+	if input.VirtualURL != nil && *input.VirtualURL != "" {
+		virtualURL = pgtype.Text{String: *input.VirtualURL, Valid: true}
+	}
+
+	var endsAt pgtype.Timestamptz
+	if input.EndsAt != nil {
+		endsAt = pgtype.Timestamptz{Time: *input.EndsAt, Valid: true}
+	}
+
+	var createdBy pgtype.Int8
+	if input.CreatedBy != nil && *input.CreatedBy > 0 {
+		createdBy = pgtype.Int8{Int64: *input.CreatedBy, Valid: true}
+	}
+
+	evt, err := s.queries.CreatePartyEvent(ctx, queries.CreatePartyEventParams{
+		PartyID:     input.PartyID,
+		ChapterID:   input.ChapterID,
+		Tier:        input.Tier,
+		Title:       input.Title,
+		Description: input.Description,
+		Category:    input.Category,
+		VenueName:   input.VenueName,
+		Location:    input.Location,
+		IsVirtual:   input.IsVirtual,
+		VirtualUrl:  virtualURL,
+		StartsAt:    pgtype.Timestamptz{Time: input.StartsAt, Valid: true},
+		EndsAt:      endsAt,
+		Status:      input.Status,
+		CreatedBy:   createdBy,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create party event: %w", err)
+	}
+
+	item := s.formatPartyEvent(evt)
+	return &item, nil
 }
 
 // GetPartyReadiness aggregates party profile, wallet, slots, payment allocations, and marketing summary.

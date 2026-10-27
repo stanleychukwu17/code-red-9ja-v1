@@ -14,7 +14,6 @@ import { Pencil, Target, Award } from "lucide-react";
 import { DropdownGroupList } from "@repo/ui/components/custom/AppDropdown";
 import { DeleteAlertDialog } from "../alerts/delete-alert";
 import { PartyFormDialog } from "../dialogs/PartyFormDialog";
-import { UserBadgeDialog } from "../dialogs/UserBadgeDialog";
 import { TargetFormDialog } from "@repo/ui/components/dialogs/TargetFormDialog";
 import type { PartyType } from "../tiles/party-tile";
 import { toast } from "sonner";
@@ -28,7 +27,6 @@ type PartyDropdownProps = {
 export const PartyDropdown = ({ data, className }: PartyDropdownProps) => {
   const [openMenu, setOpenMenu] = useState(false);
   const [openEditDialog, setOpenEditDialog] = useState(false);
-  const [openBadgeDialog, setOpenBadgeDialog] = useState(false);
   const [openTargetDialog, setOpenTargetDialog] = useState(false);
   const [openDeleteAlert, setOpenDeleteAlert] = useState(false);
   const queryClient = useQueryClient();
@@ -108,50 +106,49 @@ export const PartyDropdown = ({ data, className }: PartyDropdownProps) => {
         className={className}
       />
 
-      <PartyFormDialog
-        mode="update"
-        open={openEditDialog}
-        onClose={() => setOpenEditDialog(false)}
-        party={data}
-      />
+      {openEditDialog && (
+        <PartyFormDialog
+          mode="update"
+          open={openEditDialog}
+          onClose={() => setOpenEditDialog(false)}
+          party={data}
+        />
+      )}
 
-      <UserBadgeDialog
-        open={openBadgeDialog}
-        onClose={() => setOpenBadgeDialog(false)}
-        page={data}
-        forWho="party"
-      />
+      {openTargetDialog && (
+        <TargetFormDialog
+          open={openTargetDialog}
+          onClose={() => setOpenTargetDialog(false)}
+          partyId={data.id}
+          fetchTargets={async (partyId) => {
+            const res = await getPartyAgentTargets({ data: partyId });
+            return res?.data?.targets ?? null;
+          }}
+          updateTargets={async (partyId, values) => {
+            const res = await updatePartyAgentTargets({
+              data: { partyID: partyId, targets: values },
+            });
+            if (!res.success) throw new Error(res.message || "Failed to update targets");
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.parties });
+            toast.success("Agent targets saved!");
+            return res.data;
+          }}
+          onSuccess={() => {
+            setOpenTargetDialog(false);
+          }}
+        />
+      )}
 
-      <TargetFormDialog
-        open={openTargetDialog}
-        onClose={() => setOpenTargetDialog(false)}
-        partyId={data.id}
-        fetchTargets={async (partyId) => {
-          const res = await getPartyAgentTargets({ data: partyId });
-          return res?.data?.targets ?? null;
-        }}
-        updateTargets={async (partyId, values) => {
-          const res = await updatePartyAgentTargets({
-            data: { partyID: partyId, targets: values },
-          });
-          if (!res.success) throw new Error(res.message || "Failed to update targets");
-          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.parties });
-          toast.success("Agent targets saved!");
-          return res.data;
-        }}
-        onSuccess={() => {
-          setOpenTargetDialog(false);
-        }}
-      />
-
-      <DeleteAlertDialog
-        open={openDeleteAlert}
-        setOpen={setOpenDeleteAlert}
-        delete={() => deleteMutation.mutate()}
-        isPending={deleteMutation.isPending}
-        title="Delete Party"
-        subtitle={`Are you sure you want to permanently delete the party "${data.name}" (${data.short_name})? This action cannot be undone.`}
-      />
+      {openDeleteAlert && (
+        <DeleteAlertDialog
+          open={openDeleteAlert}
+          setOpen={setOpenDeleteAlert}
+          delete={() => deleteMutation.mutate()}
+          isPending={deleteMutation.isPending}
+          title="Delete Party"
+          subtitle={`Are you sure you want to permanently delete the party "${data.name}" (${data.short_name})? This action cannot be undone.`}
+        />
+      )}
     </>
   );
 };

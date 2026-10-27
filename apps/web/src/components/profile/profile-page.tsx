@@ -1,7 +1,8 @@
 import { useParams } from "@tanstack/react-router";
-import { Activity, Check, MoreHorizontal, Settings, PencilRuler, FolderOpen, MessageCircleMore } from "lucide-react";
+import { Activity, Check, FolderOpen, MessageCircleMore } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@repo/ui/lib/utils";
+import { ProfileFloatingToolbar } from "./ProfileFloatingToolbar";
 
 /* ========================================================================== */
 /*                             TYPES & INTERFACES                             */
@@ -27,6 +28,7 @@ export type UserProfileData = {
     name: string;
     since: string;
     color: string;
+    logo?: string;
   };
   role: {
     title: string;
@@ -47,6 +49,7 @@ export const DEFAULT_USER_PROFILE: UserProfileData = {
     name: "",
     since: "",
     color: "#6b7280",
+    logo: "",
   },
   role: {
     title: "",
@@ -139,7 +142,11 @@ function ProfilePartyRoleGrid({ party, role }: ProfilePartyRoleGridProps) {
       {/* Party Column (38%) */}
       <div className="flex items-center gap-2.5 min-w-0">
         <div className="shrink-0">
-          <PartyLogoBadge party={party.name} />
+          <img
+            src={party.logo}
+            alt={party.name}
+            className="size-8 rounded-full object-cover ring-1 ring-border shadow-2xs"
+          />
         </div>
         <div className="min-w-0">
           <p className="font-medium text-[12px] leading-tight text-c-100 truncate">
@@ -212,57 +219,6 @@ function ProfileActions({ followersCount }: { followersCount: string }) {
       >
         <MessageCircleMore className="size-full" fill="black" color="#fff" strokeWidth={2.5} />
       </button>
-    </div>
-  );
-}
-
-/* ========================================================================== */
-/*                       3. FLOATING ACTION TOOLBAR                           */
-/* ========================================================================== */
-function ProfileFloatingToolbar() {
-  const [copied, setCopied] = useState(false);
-
-  const handleShare = () => {
-    if (typeof window !== "undefined") {
-      navigator.clipboard.writeText(window.location.href);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
-
-  return (
-    <div className="mt-5 flex justify-center">
-      <div className="inline-flex items-center gap-2 rounded-full bg-sidebar-mobile/50 px-1 shadow-xs">
-        <button
-          type="button"
-          title="Civic & Endorsement Actions"
-          className="text-c-70 hover:text-c-100 transition-colors cursor-pointer bg-hover-10/50 size-10 rounded-full flex items-center justify-center"
-        >
-          <PencilRuler className="size-5" />
-        </button>
-
-        <button
-          type="button"
-          title="Profile Settings"
-          className="text-c-70 hover:text-c-100 transition-colors cursor-pointer bg-hover-10/50 size-10 rounded-full flex items-center justify-center"
-        >
-          <Settings className="size-5" />
-        </button>
-
-        <button
-          type="button"
-          onClick={handleShare}
-          title="Share profile link"
-          className="text-c-70 hover:text-c-100 transition-colors cursor-pointer relative bg-hover-10/50 size-10 rounded-full flex items-center justify-center"
-        >
-          {copied ? (
-            <span className="absolute -top-7 left-1/2 -translate-x-1/2 bg-c-100 text-background text-[10px] px-2 py-0.5 rounded shadow whitespace-nowrap">
-              Copied!
-            </span>
-          ) : null}
-          <MoreHorizontal className="size-5" />
-        </button>
-      </div>
     </div>
   );
 }
@@ -476,33 +432,6 @@ function FollowingList({ count }: { count: string }) {
           Not following anyone yet.
         </div>
       </div>
-    </div>
-  );
-}
-
-/* ========================================================================== */
-/*                             8. CUSTOM SVG ICONS                            */
-/* ========================================================================== */
-
-function PartyLogoBadge({ party }: { party: string }) {
-  if (party === "APC") {
-    return (
-      <svg
-        viewBox="0 0 36 32"
-        fill="none"
-        className="size-8 drop-shadow-2xs"
-        aria-hidden="true"
-      >
-        <path d="M12.5 3.5L2 21.5L6.5 29.5L17 11.5L12.5 3.5Z" fill="#1d63ed" />
-        <path d="M23.5 3.5L34 21.5L29.5 29.5L19 11.5L23.5 3.5Z" fill="#f59e0b" />
-        <path d="M6.5 29.5L29.5 29.5L25 21.5L11 21.5L6.5 29.5Z" fill="#16a34a" />
-      </svg>
-    );
-  }
-
-  return (
-    <div className="size-8 rounded-full bg-primary flex items-center justify-center text-white text-[10px] font-bold shadow-2xs">
-      PDP
     </div>
   );
 }

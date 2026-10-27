@@ -8,7 +8,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getVerificationTypes, assignVerifications, removeVerification } from "#/lib/server/page_verifications";
 import { toast } from "sonner";
 import { TinyError } from "@repo/ui/components/custom/TinyError";
-import { QUERY_KEYS } from "#/lib/config";
 
 export type VerificationType = {
   id: number;
@@ -26,70 +25,45 @@ export interface UserBadgeDialogProps {
   open: boolean;
   onClose: () => void;
   page: any;
-  forWho: "user" | "party";
+  forWho?: "user";
   onSuccess?: () => void;
 }
 
-export function UserBadgeDialog({ open, onClose, page, forWho, onSuccess }: UserBadgeDialogProps) {
+export function UserBadgeDialog({ open, onClose, page, forWho = "user", onSuccess }: UserBadgeDialogProps) {
   const queryClient = useQueryClient();
 
-  // Compute page's full name for display based on type
-  const name = forWho === "user"
-    ? [page?.first_name, page?.last_name].filter(Boolean).join(" ") || "User"
-    : page?.name || page?.party_name || "Party";
-
-  // list of active verifications attached to the page
+  const name = [page?.first_name, page?.last_name].filter(Boolean).join(" ") || page?.name || "User";
   const [activeVerifications, setActiveVerifications] = useState<VerificationType[]>([]);
-  // Track the currently selected verification type in the dropdown
   const [selectedCategoryId, setSelectedCategoryId] = useState<number>();
-  // tracks error
   const [error, setError] = useState<string | null>(null);
 
   // helper to update cache
   const updateCacheWithNewDetails = (updatedDetails: any) => {
     if (!updatedDetails) return;
-    if (!(updatedDetails?.first_name?.length > 0 || updatedDetails?.name?.length > 0 || updatedDetails?.party_name?.length > 0)) {
+    if (!(updatedDetails?.first_name?.length > 0 || updatedDetails?.name?.length > 0)) {
       return;
     }
 
-    if (forWho === "user") {
-      // Update users infinite query cache with the new user details
-      // ["users-list"]: is the key prefix we used to fetch all the users lists
-      queryClient.setQueriesData(
-        { queryKey: ["users-list"] },
-        (oldData: any) => {
-          if (!oldData) return oldData;
-          return {
-            ...oldData,
-            pages: oldData.pages.map((page: any) => {
-              return {
-                ...page,
-                data: {
-                  ...page.data,
-                  users: page.data?.users?.map((user: any) => user.fake_id === updatedDetails.fake_id ? updatedDetails : user) || []
-                }
-              }
-            })
-          };
-        }
-      );
-    } else if (forWho === "party") {
-      // Update parties query cache with the new party details
-      queryClient.setQueryData(QUERY_KEYS.parties, (oldData: any) => {
-        if (!oldData?.data?.parties || !Array.isArray(oldData.data.parties)) {
-          return oldData;
-        }
+    // Update users infinite query cache with the new user details
+    // ["users-list"]: is the key prefix we used to fetch all the users lists
+    queryClient.setQueriesData(
+      { queryKey: ["users-list"] },
+      (oldData: any) => {
+        if (!oldData) return oldData;
         return {
           ...oldData,
-          data: {
-            ...oldData.data,
-            parties: oldData.data.parties.map((party: any) =>
-              party.id === updatedDetails.id ? { ...party, ...updatedDetails } : party
-            ),
-          },
+          pages: oldData.pages.map((page: any) => {
+            return {
+              ...page,
+              data: {
+                ...page.data,
+                users: page.data?.users?.map((user: any) => user.fake_id === updatedDetails.fake_id ? updatedDetails : user) || []
+              }
+            };
+          })
         };
-      });
-    }
+      }
+    );
   };
 
   // Reset local state when the dialog is opened
@@ -244,7 +218,7 @@ export function UserBadgeDialog({ open, onClose, page, forWho, onSuccess }: User
           />
           <div className="flex flex-col gap-1">
             <h3 className="text-[22px] font-medium text-black">
-              {name || (forWho === "user" ? "User Name" : "Party Name")}
+              {name || "User Name"}
             </h3>
             <div className="flex gap-1 items-center">
               {activeVerifications.map((v) => (

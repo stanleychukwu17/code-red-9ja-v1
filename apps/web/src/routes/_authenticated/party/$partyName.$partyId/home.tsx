@@ -38,6 +38,8 @@ function PartyHomeTabComponent() {
 
   const nationalLeadershipHref = `/party/${partyName}/${partyId}/leadership`;
   const dynamicLeadershipHref = `/party/${partyName}/${partyId}/leadership${chapterId ? `?chapterId=${chapterId}` : ""}`;
+  const eventsHref = `/party/${partyName}/${partyId}/events${chapterId ? `?chapterId=${chapterId}` : ""}`;
+  const upcomingEvents = homeData?.upcoming_events ?? [];
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 3xl:grid-cols-3 gap-8 pb-16">
@@ -58,7 +60,12 @@ function PartyHomeTabComponent() {
       />
 
       {/* Card 3: Upcoming Events */}
-      <PartyEventsCard />
+      <PartyEventsCard
+        title="Upcoming events"
+        events={upcomingEvents}
+        isLoading={isLoading}
+        href={eventsHref}
+      />
     </div>
   );
 }

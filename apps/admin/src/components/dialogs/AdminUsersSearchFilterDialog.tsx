@@ -80,9 +80,12 @@ export function AdminUsersSearchFilterDialog({
   >(undefined);
   const [selectedStateIds, setSelectedStateIds] = React.useState<string[]>([]);
 
-  const { data: partiesArray = [], isLoading: isLoadingParties } = useParties({
+  const { data: rawParties = [], isLoading: isLoadingParties } = useParties({
     enabled: open,
   });
+  const partiesArray = Array.isArray(rawParties)
+    ? rawParties
+    : (rawParties as any)?.data?.parties || [];
 
   const toggleParty = (id: number) => {
     setSelectedParties((prev) =>

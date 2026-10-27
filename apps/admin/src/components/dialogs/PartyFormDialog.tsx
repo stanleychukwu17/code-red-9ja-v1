@@ -371,37 +371,8 @@ export function PartyFormDialog({
 			}
 			return res;
 		},
-		onSuccess: (res) => {
-			const savedParty = res?.data?.party;
-			if (savedParty) {
-				queryClient.setQueryData(QUERY_KEYS.parties, (oldData: any) => {
-					if (!oldData) return oldData;
-
-					if (oldData?.data?.parties && Array.isArray(oldData.data.parties)) {
-						const parties = oldData.data.parties;
-						const updatedParties: PartyType[] =
-							mode === "update"
-								? parties.map((p: PartyType) =>
-									p.id === savedParty.id ? { ...p, ...savedParty } : p
-								)
-								: [...parties, savedParty];
-
-						return {
-							...oldData,
-							data: {
-								...oldData.data,
-								parties: updatedParties,
-							},
-						};
-					}
-
-					return oldData;
-				});
-			} else {
-				// Fallback if no party object returned
-				queryClient.invalidateQueries({ queryKey: QUERY_KEYS.parties });
-			}
-
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: QUERY_KEYS.parties });
 			onSuccess?.();
 			onClose();
 		},

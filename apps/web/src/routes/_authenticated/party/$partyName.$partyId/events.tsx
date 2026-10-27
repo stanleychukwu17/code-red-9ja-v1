@@ -5,18 +5,15 @@ import {
   CalendarDays,
   MapPin,
   Clock,
-  Users,
   Search,
-  Filter,
-  Calendar,
-  Share2,
   ChevronRight,
-  CheckCircle2,
   Sparkles,
   Building,
   Flag,
 } from "lucide-react";
 import { Input } from "@repo/ui/components/input";
+import { Skeleton } from "@repo/ui/components/skeleton";
+import { getPartyEvents, type PartyEventData } from "@/lib/server/parties";
 import { partyProfileQueryOptions } from "../$partyName.$partyId";
 
 export type PartyEventsSearch = {
@@ -182,6 +179,63 @@ const SAMPLE_PARTY_EVENTS: PartyEventItem[] = [
   },
 ];
 
+function parseApiEvent(evt: PartyEventData): PartyEventItem {
+  const startDate = new Date(evt.starts_at);
+  const isValidDate = !isNaN(startDate.getTime());
+
+  const month = isValidDate
+    ? startDate.toLocaleDateString("en-US", { month: "short" }).toUpperCase()
+    : "TBD";
+  const day = isValidDate ? String(startDate.getDate()).padStart(2, "0") : "--";
+  const fullDate = isValidDate
+    ? startDate.toLocaleDateString("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      })
+    : "";
+
+  let timeStr = "";
+  if (isValidDate) {
+    const startTimeStr = startDate.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+    if (evt.ends_at) {
+      const endDate = new Date(evt.ends_at);
+      if (!isNaN(endDate.getTime())) {
+        const endTimeStr = endDate.toLocaleTimeString("en-US", {
+          hour: "numeric",
+          minute: "2-digit",
+          hour12: true,
+        });
+        timeStr = `${startTimeStr} - ${endTimeStr}`;
+      } else {
+        timeStr = startTimeStr;
+      }
+    } else {
+      timeStr = startTimeStr;
+    }
+  }
+
+  return {
+    id: String(evt.id),
+    title: evt.title,
+    description: evt.description,
+    tier: (evt.tier as EventTierLevel) || "national",
+    date: fullDate,
+    month,
+    day,
+    time: timeStr,
+    location: evt.location,
+    venueName: evt.venue_name || "",
+    attendeesCount: 0,
+    category: (evt.category as any) || "Meeting",
+    isVirtual: evt.is_virtual,
+  };
+}
+
 function PartyEventsTabComponent() {
   const { partyName, partyId } = Route.useParams();
   const { chapterId } = Route.useSearch();
@@ -190,6 +244,19 @@ function PartyEventsTabComponent() {
   const { data: profileRes } = useQuery(
     partyProfileQueryOptions(partyId, partyName, chapterId)
   );
+
+  // Fetch party events from backend
+  const { data: eventsRes, isLoading: isEventsLoading } = useQuery({
+    queryKey: ["partyEvents", partyId, chapterId],
+    queryFn: () => getPartyEvents({ data: { partyId, chapterId } }),
+  });
+
+  const allEvents = useMemo<PartyEventItem[]>(() => {
+    if (eventsRes?.success && eventsRes.data && eventsRes.data.length > 0) {
+      return eventsRes.data.map(parseApiEvent);
+    }
+    return SAMPLE_PARTY_EVENTS;
+  }, [eventsRes]);
 
   // Determine active chapter tier ("national", "state", "lga", "ward")
   const currentChapterType: EventTierLevel = useMemo(() => {
@@ -280,7 +347,7 @@ function PartyEventsTabComponent() {
     // If in national chapter, show national events. Otherwise show selected tier events.
     const activeTier = currentChapterType === "national" ? "national" : selectedTier;
 
-    return SAMPLE_PARTY_EVENTS.filter((evt) => {
+    return allEvents.filter((evt) => {
       // Tier match
       if (evt.tier !== activeTier) return false;
 
@@ -298,7 +365,7 @@ function PartyEventsTabComponent() {
 
       return true;
     });
-  }, [currentChapterType, selectedTier, searchQuery, categoryFilter]);
+  }, [currentChapterType, selectedTier, searchQuery, categoryFilter, allEvents]);
 
   const categories = ["All", "Meeting", "Convention", "Rally", "Workshop"];
 
@@ -395,7 +462,29 @@ function PartyEventsTabComponent() {
       </div>
 
       {/* Events Listing / Grid */}
-      {filteredEvents.length > 0 ? (
+      {isEventsLoading ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {[0, 1, 2, 3].map((idx) => (
+            <div
+              key={`events-skeleton-${idx}`}
+              className="bg-card border border-border/70 rounded-3xl p-5 sm:p-6 shadow-xs space-y-4"
+            >
+              <div className="flex items-center gap-3.5">
+                <Skeleton className="size-14 sm:size-16 rounded-2xl shrink-0" />
+                <div className="space-y-2 flex-1">
+                  <Skeleton className="h-3 w-20 rounded" />
+                  <Skeleton className="h-5 w-3/4 rounded" />
+                </div>
+              </div>
+              <Skeleton className="h-4 w-full rounded" />
+              <div className="pt-2 border-t border-border/40 space-y-2">
+                <Skeleton className="h-3 w-1/3 rounded" />
+                <Skeleton className="h-3 w-1/2 rounded" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : filteredEvents.length > 0 ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {filteredEvents.map((evt) => (
             <div
@@ -448,20 +537,18 @@ function PartyEventsTabComponent() {
                 </div>
               </div>
 
-              {/* Event Card Footer: Attendees + Action Button */}
+              {/* Event Card Footer */}
               <div className="mt-5 pt-4 border-t border-border/40 flex items-center justify-between gap-4">
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <Users className="size-3.5 text-muted-foreground/80" />
-                  <span>
-                    <strong className="text-foreground">{evt.attendeesCount}</strong> registered
-                  </span>
-                </div>
+                <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Sparkles className="size-3.5 text-primary" />
+                  <span>{evt.category}</span>
+                </span>
 
                 <button
                   type="button"
                   className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl bg-foreground text-background hover:bg-foreground/90 transition-colors cursor-pointer shadow-xs"
                 >
-                  <span>Attend</span>
+                  <span>Details</span>
                   <ChevronRight className="size-3" />
                 </button>
               </div>

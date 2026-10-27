@@ -1,7 +1,8 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { getPageHeader } from "#/lib/shared/meta";
-import { DEFAULT_USER_PROFILE, ProfileCard, ProfileFloatingToolbar, type UserProfileData } from "#/components/profile/profile-page";
+import { DEFAULT_USER_PROFILE, ProfileCard, type UserProfileData } from "#/components/profile/profile-page";
+import { ProfileFloatingToolbar } from "#/components/profile/ProfileFloatingToolbar";
 import { ProfileNavTabs } from "#/components/profile/ProfileNavTabs";
 import { getUserProfile } from "@/lib/server/citizens";
 import { formatNumber } from "@repo/ui/lib/number";
@@ -57,11 +58,13 @@ function ProfileLayoutComponent() {
           name: raw.party.short_name || raw.party.name,
           since: raw.party.since || "",
           color: raw.party.color || "#0066da",
+          logo: raw.party.logo,
         }
         : {
           name: "Independent",
           since: "Citizen",
           color: "#6b7280",
+          logo: "",
         },
       role: raw.role
         ? {

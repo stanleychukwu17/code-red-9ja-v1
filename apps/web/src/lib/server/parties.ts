@@ -256,6 +256,24 @@ export type PartyHomeLeaderOfficial = {
 	is_vacant: boolean;
 };
 
+export type PartyEventData = {
+	id: number;
+	party_id: number;
+	chapter_id: number;
+	tier: "national" | "zonal" | "state" | "lga" | "ward";
+	title: string;
+	description: string;
+	category: string;
+	venue_name: string;
+	location: string;
+	is_virtual: boolean;
+	virtual_url?: string | null;
+	starts_at: string;
+	ends_at?: string | null;
+	status: string;
+	created_at: string;
+};
+
 export type PartyHomeData = {
 	national_leaders: PartyHomeLeaderOfficial[];
 	dynamic_leaders: {
@@ -264,6 +282,7 @@ export type PartyHomeData = {
 		chapter_name?: string;
 		leaders: PartyHomeLeaderOfficial[];
 	};
+	upcoming_events?: PartyEventData[];
 };
 
 /**
@@ -292,7 +311,48 @@ export const getPartyHome = createServerFn({ method: "GET" })
 						chapter_type: "national",
 						leaders: [],
 					},
+					upcoming_events: [],
 				},
+			};
+		}
+	});
+
+/**
+ * Server function to fetch party events filtered by chapter, tier, category, etc.
+ */
+export const getPartyEvents = createServerFn({ method: "GET" })
+	.inputValidator(
+		(data: {
+			partyId: number | string;
+			chapterId?: number;
+			tier?: string;
+			category?: string;
+			status?: string;
+			search?: string;
+		}) => data,
+	)
+	.handler(async ({ data }) => {
+		try {
+			return await apiFetchJson<{
+				success: boolean;
+				message?: string;
+				data: PartyEventData[];
+			}>(
+				API_URL.partyEvents(data.partyId, {
+					chapter_id: data.chapterId,
+					tier: data.tier,
+					category: data.category,
+					status: data.status,
+					search: data.search,
+				}),
+			);
+		} catch (error: unknown) {
+			const message =
+				error instanceof Error ? error.message : "Failed to fetch party events";
+			return {
+				success: false,
+				message,
+				data: [],
 			};
 		}
 	});
