@@ -57,6 +57,7 @@ function RouteComponent() {
         return undefined;
       },
       enabled: partyId !== undefined,
+      staleTime: Infinity,
     });
 
   const { ref: sentinelRef, isIntersecting } = useIntersectionObserver({

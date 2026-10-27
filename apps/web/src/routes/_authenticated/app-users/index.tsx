@@ -29,9 +29,8 @@ function RouteComponent() {
               <p className="text-[18px] text-[#1d1b1e]">{item.label}</p>
               <div className="mt-8 flex items-end gap-3">
                 <span
-                  className={`text-[58px] font-bold leading-none tracking-[-0.05em] ${
-                    item.accent ? "text-[#2f6f57]" : "text-[#3a3a3a]"
-                  }`}
+                  className={`text-[58px] font-bold leading-none tracking-[-0.05em] ${item.accent ? "text-[#2f6f57]" : "text-[#3a3a3a]"
+                    }`}
                 >
                   {item.value}
                 </span>
@@ -44,7 +43,7 @@ function RouteComponent() {
         </section>
 
         <section className="space-y-6">
-          <div className="flex w-full max-w-[430px] rounded-[18px] bg-[#ece8ec] p-1">
+          <div className="flex w-full max-w-107.5 rounded-[18px] bg-[#ece8ec] p-1">
             <TabButton
               active={activeTab === "home"}
               label="Home"
@@ -107,9 +106,8 @@ function TabButton({
     <button
       type="button"
       onClick={onClick}
-      className={`flex flex-1 items-center justify-between rounded-[14px] px-4 py-4 text-[16px] transition ${
-        active ? "bg-[#0d7431] text-white" : "bg-transparent text-[#1f1d20]"
-      }`}
+      className={`flex flex-1 items-center justify-between rounded-[14px] px-4 py-4 text-[16px] transition ${active ? "bg-[#0d7431] text-white" : "bg-transparent text-[#1f1d20]"
+        }`}
     >
       <span>{label}</span>
       <span className="font-semibold">{value}</span>

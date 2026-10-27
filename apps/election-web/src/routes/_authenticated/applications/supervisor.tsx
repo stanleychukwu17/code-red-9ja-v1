@@ -335,7 +335,7 @@ function SupervisorEligibilityStep({
     <div className="w-full h-full flex flex-col justify-between min-h-screen">
       <PageHeader onBackClick={() => navigate({ to: "/" })} />
 
-      <div className="flex flex-col items-start px-5 pt-4 max-w-[430px] mx-auto w-full flex-1">
+      <div className="flex flex-col items-start px-5 pt-4 max-w-107.5 mx-auto w-full flex-1">
         {/* Party branding banner */}
         <div className="flex items-center gap-2 mb-4">
           <AppAvatar src={partyLogo} alt={partyName} className="size-7" />
@@ -361,7 +361,7 @@ function SupervisorEligibilityStep({
         </div>
       </div>
 
-      <StickyFooter className="pb-14 bg-background flex flex-col gap-3 max-w-[430px] mx-auto w-full px-5">
+      <StickyFooter className="pb-14 bg-background flex flex-col gap-3 max-w-107.5 mx-auto w-full px-5">
         <Button
           type="button"
           variant="black"
@@ -408,7 +408,7 @@ function SupervisorRoleSelectStep({
     <div className="w-full h-full flex flex-col justify-between min-h-screen">
       <PageHeader onBackClick={onBack} />
 
-      <div className="flex flex-col items-start px-5 pt-2 max-w-[430px] mx-auto w-full flex-1">
+      <div className="flex flex-col items-start px-5 pt-2 max-w-107.5 mx-auto w-full flex-1">
         {/* Party branding banner */}
         <div className="flex items-center gap-2 mb-3">
           <AppAvatar src={partyLogo} alt={partyName} className="size-7" />
@@ -431,7 +431,7 @@ function SupervisorRoleSelectStep({
             onClick={() => onSelectRole("state_election_supervisor")}
             className={cn(
               selectedRole === "state_election_supervisor" &&
-                "border-emerald-500 bg-emerald-50/50",
+              "border-emerald-500 bg-emerald-50/50",
             )}
           />
           <SelectableCard
@@ -441,7 +441,7 @@ function SupervisorRoleSelectStep({
             onClick={() => onSelectRole("lga_election_supervisor")}
             className={cn(
               selectedRole === "lga_election_supervisor" &&
-                "border-emerald-500 bg-emerald-50/50",
+              "border-emerald-500 bg-emerald-50/50",
             )}
           />
           <SelectableCard
@@ -451,13 +451,13 @@ function SupervisorRoleSelectStep({
             onClick={() => onSelectRole("ward_election_supervisor")}
             className={cn(
               selectedRole === "ward_election_supervisor" &&
-                "border-emerald-500 bg-emerald-50/50",
+              "border-emerald-500 bg-emerald-50/50",
             )}
           />
         </div>
       </div>
 
-      <StickyFooter className="pb-14 bg-background max-w-[430px] mx-auto w-full px-5">
+      <StickyFooter className="pb-14 bg-background max-w-107.5 mx-auto w-full px-5">
         <Button
           type="button"
           variant="black"
@@ -521,7 +521,7 @@ function SupervisorRegionSelectStep({
     <div className="w-full h-full flex flex-col justify-between min-h-screen">
       <PageHeader onBackClick={onBack} />
 
-      <div className="flex flex-col items-start px-5 pt-2 max-w-[430px] mx-auto w-full flex-1">
+      <div className="flex flex-col items-start px-5 pt-2 max-w-107.5 mx-auto w-full flex-1">
         {/* Party and role header badge */}
         <div className="flex items-center gap-2 mb-3">
           <AppAvatar src={partyLogo} alt={partyName} className="size-7" />
@@ -562,7 +562,7 @@ function SupervisorRegionSelectStep({
                 onClick={() => onSelect(item.id, item.name)}
                 className={cn(
                   isSelected &&
-                    "border-emerald-500 bg-emerald-100/70 text-emerald-950",
+                  "border-emerald-500 bg-emerald-100/70 text-emerald-950",
                 )}
               />
             );
@@ -570,7 +570,7 @@ function SupervisorRegionSelectStep({
         </div>
       </div>
 
-      <StickyFooter className="pb-14 bg-background max-w-[430px] mx-auto w-full px-5">
+      <StickyFooter className="pb-14 bg-background max-w-107.5 mx-auto w-full px-5">
         <Button
           type="button"
           variant="black"
@@ -620,7 +620,7 @@ function SupervisorCertificateUploadStep({
     <div className="w-full h-full flex flex-col justify-between min-h-screen">
       <PageHeader onBackClick={onBack} />
 
-      <div className="flex flex-col items-start px-5 pt-2 max-w-[430px] mx-auto w-full flex-1">
+      <div className="flex flex-col items-start px-5 pt-2 max-w-107.5 mx-auto w-full flex-1">
         {/* Party and role header badge */}
         <div className="flex items-center gap-2 mb-3">
           <AppAvatar src={partyLogo} alt={partyName} className="size-7" />
@@ -689,7 +689,7 @@ function SupervisorCertificateUploadStep({
         </div>
       </div>
 
-      <StickyFooter className="pb-14 bg-background max-w-[430px] mx-auto w-full px-5">
+      <StickyFooter className="pb-14 bg-background max-w-107.5 mx-auto w-full px-5">
         <Button
           type="button"
           variant="black"
@@ -735,7 +735,7 @@ function SupervisorSuccessStep({
     <div className="relative w-full h-full flex flex-col justify-between min-h-screen">
       <PageHeader onBackClick={onGoHome} />
 
-      <div className="flex-1 flex flex-col items-center gap-6 px-5 max-w-[430px] mx-auto w-full overflow-y-auto pb-32">
+      <div className="flex-1 flex flex-col items-center gap-6 px-5 max-w-107.5 mx-auto w-full overflow-y-auto pb-32">
         <div className="mt-2 flex flex-col items-center">
           <AppAvatar src={partyLogo} alt="Party Logo" className="size-14" />
           <TitleText
@@ -791,7 +791,7 @@ function SupervisorSuccessStep({
         </div>
       </div>
 
-      <StickyFooter className="pb-14 bg-background max-w-[430px] mx-auto w-full px-5">
+      <StickyFooter className="pb-14 bg-background max-w-107.5 mx-auto w-full px-5">
         <Button
           type="button"
           variant="black"

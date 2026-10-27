@@ -5,15 +5,9 @@
  * It handles form state, profile image uploads, and cascading location selection (Country -> State -> City).
  * This component is designed to be reusable across different parts of the application.
  */
-import * as React from "react";
+import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "../button";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogPadding,
-} from "../dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogPadding } from "../dialog";
 import { Input } from "../input";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -30,7 +24,7 @@ import NoProfileImageIcon from "../../icons/no-profile-image-icon";
 import { cn } from "../../lib/utils";
 import { TinyError } from "./TinyError";
 
-export interface UserResult {
+export type UserResult = {
   id: number;
   fake_id: number;
   first_name: string;
@@ -39,14 +33,14 @@ export interface UserResult {
   party_logo: string;
   party_id?: number;
   avatar_url?: string;
-}
+};
 
 /**
  * Props for the UserFormDialog component.
  * It accepts various server functions (APIs) as props to fetch dropdown data
  * and handle submissions, making the component highly reusable and backend-agnostic.
  */
-export interface UserFormDialogProps {
+export type UserFormDialogProps = {
   open: boolean;
   onClose: () => void;
   onSuccess?: (user: UserResult) => void;
@@ -90,7 +84,7 @@ export interface UserFormDialogProps {
       type?: string;
     };
   }) => Promise<any>;
-}
+};
 
 export function UserFormDialog({
   open,
@@ -116,25 +110,25 @@ export function UserFormDialog({
   getOccupations,
   deleteFile,
 }: UserFormDialogProps) {
-  const [avatarUrl, setAvatarUrl] = React.useState("");
-  const [uploadedFileId, setUploadedFileId] = React.useState<number | null>(
+  const [avatarUrl, setAvatarUrl] = useState("");
+  const [uploadedFileId, setUploadedFileId] = useState<number | null>(
     null,
   );
   const [selectedAvatarFile, setSelectedAvatarFile] =
-    React.useState<File | null>(null);
-  const [isUploading, setIsUploading] = React.useState(false);
+    useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
-  const [error, setError] = React.useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = React.useState<"basic" | "more" | "phones">(
+  const [activeTab, setActiveTab] = useState<"basic" | "more" | "phones">(
     "basic",
   );
-  const [createdUser, setCreatedUser] = React.useState<UserResult | null>(null);
+  const [createdUser, setCreatedUser] = useState<UserResult | null>(null);
 
   const activeUser = mode === "update" ? user || createdUser : createdUser;
 
   // the avatar file input ref
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Saving of the user basic info.
   // Validates all required fields and calls either updateUser or registerCandidate based on the mode.
@@ -381,7 +375,7 @@ export function UserFormDialog({
   });
 
   // Effect to automatically resolve the party ID if only a party short name was provided
-  React.useEffect(() => {
+  useEffect(() => {
     if (open && partyId === undefined && partyShortName && partiesData) {
       const partyList = Array.isArray(partiesData)
         ? partiesData
@@ -397,7 +391,7 @@ export function UserFormDialog({
 
   // Effect to initialize the form fields whenever the dialog opens.
   // It populates data for 'update' mode and resets fields for 'create' mode.
-  React.useEffect(() => {
+  useEffect(() => {
     if (open) {
       if (mode === "create") {
         setCreatedUser(null);
@@ -471,7 +465,7 @@ export function UserFormDialog({
   // 1. Converts the selected image to WebP for optimization
   // 2. Saves it in local state (deferred upload until form save)
   // 3. Generates a local preview URL for immediate UI feedback
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const rawFile = e.target.files?.[0];
     if (!rawFile) return;
 
@@ -990,7 +984,7 @@ function MoreInfoTab({
   onClose,
   onSuccess,
 }: any) {
-  const [error, setError] = React.useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   // Fetch the list of available occupations from the API using React Query.
@@ -1014,7 +1008,7 @@ function MoreInfoTab({
 
   // Group the flat list of occupations by their 'category' property
   // to render them logically in the `<optgroup>` segments of the dropdown.
-  const groupedOccupations = React.useMemo(() => {
+  const groupedOccupations = useMemo(() => {
     const groups = occupations.reduce((acc: any, o: any) => {
       const category = o.category || "Other";
 
@@ -1045,7 +1039,7 @@ function MoreInfoTab({
   });
 
   // Combine server fetched more info with user.profile
-  const initialMoreInfo = React.useMemo(() => {
+  const initialMoreInfo = useMemo(() => {
     return {
       ...(user?.profile || {}),
       ...(serverMoreInfo || {}),
@@ -1074,7 +1068,7 @@ function MoreInfoTab({
   });
 
   // Reinitialize form when data arrives
-  React.useEffect(() => {
+  useEffect(() => {
     if (serverMoreInfo) {
       form.setFieldValue(
         "occupation_id",
@@ -1327,9 +1321,9 @@ function PhoneNumbersTab({
   onClose,
   onSuccess,
 }: any) {
-  const [error, setError] = React.useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [residentCountryPhoneCode, setResidentCountryPhoneCode] =
-    React.useState<string | null>(null);
+    useState<string | null>(null);
   const userCountry = user.current_country;
   const queryClient = useQueryClient();
 
@@ -1380,7 +1374,7 @@ function PhoneNumbersTab({
 
   // Watch for loaded countries and the user's current country,
   // then look up and store the corresponding international call code for the user country.
-  React.useEffect(() => {
+  useEffect(() => {
     const countries = loadedCountries?.data?.countries || [];
 
     if (countries.length > 0) {
@@ -1393,7 +1387,7 @@ function PhoneNumbersTab({
   }, [loadedCountries, userCountry]);
 
   // Determine the default initial state for the phone numbers array
-  const initialPhones: phoneType[] = React.useMemo(() => {
+  const initialPhones: phoneType[] = useMemo(() => {
     // 1. Prioritize freshly fetched data from TanStack Query
     if (userPhoneNumbers && userPhoneNumbers.length > 0)
       return userPhoneNumbers;
@@ -1511,7 +1505,7 @@ function PhoneNumbersTab({
 
   // Effect to synchronize the form state if the API query resolves after initial mount.
   // This safely updates the form without losing reactivity.
-  React.useEffect(() => {
+  useEffect(() => {
     if (userPhoneNumbers && userPhoneNumbers.length > 0) {
       form.setFieldValue("phones", userPhoneNumbers);
     }

@@ -289,7 +289,7 @@ function UploadResultFlow() {
       <div ref={scrollRef} className="flex-1 overflow-y-auto pb-32">
         {/* SUBSTEP 1: Welcome Page & Payout Overview */}
         {subStep === 1 && (
-          <div className="relative flex flex-col items-center gap-4 h-full px-4 pt-8 max-w-[430px] mx-auto">
+          <div className="relative flex flex-col items-center gap-4 h-full px-4 pt-8 max-w-107.5 mx-auto">
             {/* Political Party Brand Avatar */}
             <AppAvatar
               src={party?.logo}
@@ -337,7 +337,7 @@ function UploadResultFlow() {
 
         {/* SUBSTEP 2: Visual Guidance & Reference Example */}
         {subStep === 2 && (
-          <div className="px-4 flex flex-col gap-6 max-w-[430px] mx-auto">
+          <div className="px-4 flex flex-col gap-6 max-w-107.5 mx-auto">
             <div className="space-y-2 mt-2">
               <TitleText
                 text="Take a clear picture of the Final Result Sheet for this election"
@@ -368,7 +368,7 @@ function UploadResultFlow() {
 
         {/* SUBSTEP 3: Captured Photo Preview & Retake Option */}
         {subStep === 3 && resultSheetImage && (
-          <div className="px-4 flex flex-col gap-6 max-w-[430px] mx-auto">
+          <div className="px-4 flex flex-col gap-6 max-w-107.5 mx-auto">
             <div className="space-y-2 mt-2">
               <TitleText
                 text="👍 Picture taken!"

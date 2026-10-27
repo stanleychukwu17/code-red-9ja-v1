@@ -342,7 +342,7 @@ function TimelineNodeItem({
         <div className="relative z-10 size-3.5 rounded-full bg-[#97a9cf] dark:bg-chart-1 ring-4 ring-background shrink-0" />
 
         {/* Horizontal connector from Primary Dot to Text */}
-        <div className="w-8 h-[2px] bg-[#97a9cf] dark:bg-chart-1 shrink-0" />
+        <div className="w-8 h-0.5 bg-[#97a9cf] dark:bg-chart-1 shrink-0" />
 
         {/* Event Label */}
         <h4 className="pl-3 font-bold text-[15px] tracking-tight text-c-100 whitespace-nowrap">
@@ -351,11 +351,11 @@ function TimelineNodeItem({
       </div>
 
       {/* Vertical trunk connecting nodes and carrying branches */}
-      <div className="relative ml-[6px]">
+      <div className="relative ml-1.5">
         {(!isLastEvent || hasBranches) && (
           <div
             className={cn(
-              "absolute left-0 top-0 w-[2px] bg-[#97a9cf] dark:bg-chart-1",
+              "absolute left-0 top-0 w-0.5 bg-[#97a9cf] dark:bg-chart-1",
               isLastEvent ? "h-full" : "h-[calc(100%+16px)]",
             )}
           />

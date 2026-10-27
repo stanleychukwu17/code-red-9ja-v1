@@ -557,7 +557,7 @@ export function WelcomePage({
     <div className="w-full h-full">
       <PageHeader onBackClick={() => navigate({ to: "/" })} />
 
-      <div className="relative flex flex-col items-center gap-3 h-full px-4 pt-16 max-w-[430px]">
+      <div className="relative flex flex-col items-center gap-3 h-full px-4 pt-16 max-w-107.5">
         <BackgroundDesign />
         <AppAvatar src={party?.logo} alt="Party Logo" className="size-7" />
         <TitleText
@@ -766,7 +766,7 @@ export function ApplicationAcceptedPage({
         />
         <div className="absolute top-5 right-5 size-10 bg-yellow rounded-full blur-[32px] opacity-50 -z-10" />
       </div>
-      <div className="flex-1 flex flex-col items-center gap-8 px-5 max-w-[430px] mx-auto overflow-y-auto pb-32">
+      <div className="flex-1 flex flex-col items-center gap-8 px-5 max-w-107.5 mx-auto overflow-y-auto pb-32">
         <div className="mt-4 flex flex-col items-center">
           <AppAvatar src={party?.logo} alt="Party Logo" className="size-16" />
           <TitleText
@@ -872,7 +872,7 @@ export function TutorialPage({
   return (
     <div className="w-full h-full">
       <PageHeader onBackClick={handleBackClick} title={`Task ${taskNumber}`} />
-      <div className="flex flex-col gap-3 h-full px-4 max-w-[430px]">
+      <div className="flex flex-col gap-3 h-full px-4 max-w-107.5">
         {/* <BackgroundDesign /> */}
         <div className="space-y-2">
           <TitleText text={title} size="xl" />
@@ -931,7 +931,7 @@ export function TaskCompletedPage({
   return (
     <div className="w-full h-full">
       <PageHeader onBackClick={handleBackClick} />
-      <div className="relative flex flex-col gap-3 h-full px-4 max-w-[430px]">
+      <div className="relative flex flex-col gap-3 h-full px-4 max-w-107.5">
         {/* <BackgroundDesign /> */}
         <div className="">
           <TaskScore
@@ -1065,7 +1065,7 @@ export function FinalScorePage({
   return (
     <div className="w-full h-full">
       <PageHeader onBackClick={handleBackClick} />
-      <div className="relative flex flex-col gap-3 h-full px-4 max-w-[430px]">
+      <div className="relative flex flex-col gap-3 h-full px-4 max-w-107.5">
         {/* <BackgroundDesign /> */}
         <div className="">
           <TaskScore
@@ -1205,7 +1205,7 @@ export function PracticalQuestionPage({
   return (
     <div className="w-full h-full">
       <PageHeader onBackClick={handleBackClick} title={`Task ${taskNumber}`} />
-      <div className="relative flex flex-col gap-3 h-full px-4 max-w-[430px]">
+      <div className="relative flex flex-col gap-3 h-full px-4 max-w-107.5">
         {/* <BackgroundDesign /> */}
         <div className="flex items-center justify-between text-xl text-c-50">
           <span>Practical</span>
@@ -1265,7 +1265,7 @@ export function QuizPage({
   return (
     <div className="w-full h-full">
       <PageHeader onBackClick={onGoBackClick} title={`Task ${taskNumber}`} />
-      <div className="flex flex-col gap-3 h-full px-4 max-w-[430px]">
+      <div className="flex flex-col gap-3 h-full px-4 max-w-107.5">
         <TitleText text={title} size="md" />
 
         <div className="w-full pt-3 space-y-2">
