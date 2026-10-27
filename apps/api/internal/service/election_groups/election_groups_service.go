@@ -79,11 +79,11 @@ func (s *ElectionGroupsService) GetSafeNationalMetrics(ctx context.Context) quer
 
 // CreateElectionGroup creates a new election group umbrella record,
 // invalidates related election group caches, and enqueues a background task to seed its geographic hierarchy stats.
-func (s *ElectionGroupsService) CreateElectionGroup(ctx context.Context, name string, year int16) (queries.ElectionGroup, error) {
+func (s *ElectionGroupsService) CreateElectionGroup(ctx context.Context, name string, electionDate time.Time) (queries.ElectionGroup, error) {
 	// Persist the new election group record
 	eg, err := s.queries.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{
-		Name: name,
-		Year: year,
+		Name:         name,
+		ElectionDate: pgtype.Date{Time: electionDate, Valid: true},
 	})
 	if err != nil {
 		return eg, err
@@ -144,13 +144,13 @@ func (s *ElectionGroupsService) ListElectionGroups(ctx context.Context, active *
 }
 
 // UpdateElectionGroup modifies an existing election group's metadata and active status, then invalidates related caches.
-func (s *ElectionGroupsService) UpdateElectionGroup(ctx context.Context, id int32, name string, year int16, active bool) (queries.ElectionGroup, error) {
+func (s *ElectionGroupsService) UpdateElectionGroup(ctx context.Context, id int32, name string, electionDate time.Time, active bool) (queries.ElectionGroup, error) {
 	// 1. Update the election group record in the database
 	group, err := s.queries.UpdateElectionGroup(ctx, queries.UpdateElectionGroupParams{
-		ID:     id,
-		Name:   name,
-		Year:   year,
-		Active: active,
+		ID:           id,
+		Name:         name,
+		ElectionDate: pgtype.Date{Time: electionDate, Valid: true},
+		Active:       active,
 	})
 	if err != nil {
 		return group, err

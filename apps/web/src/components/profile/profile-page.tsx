@@ -1,27 +1,25 @@
 import { useParams } from "@tanstack/react-router";
-import { Activity, Check, MoreHorizontal, Settings, PencilRuler, Network, MessageCircleMore } from "lucide-react";
+import { Activity, Check, MoreHorizontal, Settings, PencilRuler, FolderOpen, MessageCircleMore } from "lucide-react";
 import { useState } from "react";
-import { FaFacebook, FaXTwitter, FaYoutube } from "react-icons/fa6";
-import InstagramIcon from "@repo/ui/icons/instagram-icon";
 import { cn } from "@repo/ui/lib/utils";
 
 /* ========================================================================== */
 /*                             TYPES & INTERFACES                             */
 /* ========================================================================== */
 
-export interface TimelineBranch {
+export type TimelineBranch = {
   id: string;
   title: string;
-}
+};
 
-export interface TimelineEvent {
+export type TimelineEvent = {
   id: string;
   year: string;
   title: string;
   branches?: TimelineBranch[];
-}
+};
 
-export interface UserProfileData {
+export type UserProfileData = {
   username: string;
   name: string;
   avatar: string;
@@ -41,7 +39,7 @@ export interface UserProfileData {
     instagram?: string[];
   };
   timeline: TimelineEvent[];
-}
+};
 
 export type ActiveProfileTab = "history" | "followers" | "following";
 
@@ -215,9 +213,6 @@ function ProfileCard({ profile }: { profile: UserProfileData }) {
       {/* Overlapping Avatar */}
       <ProfileAvatar src={profile.avatar} name={profile.name} />
 
-      {/* Social Shoulder Badges */}
-      <ProfileSocialLinks />
-
       {/* Display Name & Username */}
       <div className="text-center mt-2">
         <h1 className="text-[23px] font-bold tracking-tight text-c-100">
@@ -253,65 +248,15 @@ function ProfileAvatar({ src, name }: { src: string; name: string }) {
   );
 }
 
-function ProfileSocialLinks() {
-  return (
-    <>
-      {/* Social Badges on Left Shoulder (X & YouTube) */}
-      <div className="absolute top-6 left-6 flex items-center gap-3">
-        <a
-          href="https://x.com"
-          target="_blank"
-          rel="noreferrer"
-          className="size-7 rounded-full bg-black text-white flex items-center justify-center hover:opacity-100 transition-all shadow-xs cursor-pointer grayscale-[50%] hover:grayscale-0"
-          title="X (Twitter)"
-        >
-          <FaXTwitter className="size-3.5" />
-        </a>
-        <a
-          href="https://youtube.com"
-          target="_blank"
-          rel="noreferrer"
-          className="size-7 rounded-full bg-[#FF0000] text-white flex items-center justify-center hover:opacity-100 transition-all shadow-xs cursor-pointer grayscale-[50%] hover:grayscale-0"
-          title="YouTube"
-        >
-          <FaYoutube className="size-4" />
-        </a>
-      </div>
 
-      {/* Social Badges on Right Shoulder (Instagram & Facebook) */}
-      <div className="absolute top-6 right-6 flex items-center gap-3">
-        <a
-          href="https://instagram.com"
-          target="_blank"
-          rel="noreferrer"
-          className="size-7 hover:opacity-100 transition-all shadow-xs cursor-pointer block rounded-[8px] overflow-hidden grayscale-[50%] hover:grayscale-0"
-          title="Instagram"
-        >
-          <InstagramIcon className="size-7" />
-        </a>
-        <a
-          href="https://facebook.com"
-          target="_blank"
-          rel="noreferrer"
-          className="size-7 hover:opacity-100 transition-all shadow-xs cursor-pointer flex items-center justify-center rounded-full text-[#1877F2] grayscale-[50%] hover:grayscale-0"
-          title="Facebook"
-        >
-          <FaFacebook className="size-7" />
-        </a>
-      </div>
-    </>
-  );
-}
-
-function ProfilePartyRoleGrid({
-  party,
-  role,
-}: {
+type ProfilePartyRoleGridProps = {
   party: UserProfileData["party"];
   role: UserProfileData["role"];
-}) {
+};
+
+function ProfilePartyRoleGrid({ party, role }: ProfilePartyRoleGridProps) {
   return (
-    <div className="mt-3 grid grid-cols-[38%_62%] gap-4 items-center pt-6">
+    <div className="mt-3 grid grid-cols-[43%_57%] gap-4 items-center pt-6">
       {/* Party Column (38%) */}
       <div className="flex items-center gap-2.5 min-w-0">
         <div className="shrink-0">
@@ -330,7 +275,7 @@ function ProfilePartyRoleGrid({
       {/* Role / Office Column (60%) */}
       <div className="flex items-center gap-2.5 min-w-0">
         <div className="shrink-0 text-c-80">
-          <Network className="size-6" />
+          <FolderOpen className="size-6" />
         </div>
         <div className="min-w-0">
           <p className="font-medium text-[12px] leading-tight text-c-100 truncate">

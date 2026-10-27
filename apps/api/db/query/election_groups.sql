@@ -1,5 +1,5 @@
 -- name: CreateElectionGroup :one
-INSERT INTO election_groups (name, year)
+INSERT INTO election_groups (name, election_date)
 VALUES ($1, $2)
 RETURNING *;
 
@@ -12,11 +12,11 @@ SELECT * FROM election_groups WHERE fake_id = $1;
 -- name: ListElectionGroups :many
 SELECT * FROM election_groups
 WHERE (sqlc.narg('active')::boolean IS NULL OR active = sqlc.narg('active')::boolean)
-ORDER BY year DESC, id DESC;
+ORDER BY election_date DESC;
 
 -- name: UpdateElectionGroup :one
 UPDATE election_groups
-SET name = $1, year = $2, active = $3, updated_at = NOW()
+SET name = $1, election_date = $2, active = $3, updated_at = NOW()
 WHERE id = $4
 RETURNING *;
 
@@ -44,7 +44,7 @@ DELETE FROM election_groups WHERE id = $1;
 SELECT 
     eg.id, 
     eg.name, 
-    eg.year, 
+    eg.election_date, 
     eg.active, 
     eg.created_at, 
     eg.updated_at,
@@ -54,7 +54,7 @@ FROM election_groups eg
 LEFT JOIN party_election_groups peg 
     ON eg.id = peg.election_group_id AND peg.party_id = $1
 WHERE (sqlc.narg('active')::boolean IS NULL OR eg.active = sqlc.narg('active')::boolean)
-ORDER BY eg.year DESC, eg.id DESC;
+ORDER BY eg.election_date DESC;
 
 -- name: UpsertPartyElectionGroupStats :one
 INSERT INTO party_election_groups (party_id, election_group_id, polling_agents_coverage, elections_contesting)

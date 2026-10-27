@@ -12,6 +12,7 @@ import { useContestedOffices } from "#/hooks/useContestedOffices";
 import { useNigeriaStates } from "#/hooks/useNigeriaStates";
 import { Loader2, Search } from "lucide-react";
 import { cn } from "@repo/ui/lib/utils";
+import { formatISODate } from "@repo/ui/lib/date";
 
 // Filter criteria state shape passed to the parent query
 export type ElectionFilters = {
@@ -203,9 +204,9 @@ export function ElectionInstancesFilterDialog({
                         )}
                         title={group.active ? "Active" : "Inactive"}
                       />
-                      {/* Election group name and year label */}
+                      {/* Election group name and date label */}
                       <span className="text-[14px] text-c-80 group-hover:text-black transition">
-                        {group.name} ({group.year})
+                        {group.name} {group.election_date ? `(${formatISODate(group.election_date)})` : ""}
                       </span>
                     </div>
                   </label>

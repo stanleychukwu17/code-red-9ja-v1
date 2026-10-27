@@ -118,7 +118,7 @@ func (s *Service) UpdateAssignmentTracking(ctx context.Context, id int64, arrive
 		return queries.UpdateAssignmentTrackingRow{}, errors.New("invalid election group")
 	}
 	now := time.Now().UTC()
-	if now.Year() > int(electionGroup.Year) {
+	if now.Year() > electionGroup.ElectionDate.Time.Year() {
 		return queries.UpdateAssignmentTrackingRow{}, errors.New("tracking can only be submitted during the election cycle")
 	}
 

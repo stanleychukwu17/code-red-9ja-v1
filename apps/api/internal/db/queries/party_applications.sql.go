@@ -380,7 +380,7 @@ SELECT
   up.degree_certificate_url,
   COALESCE(pa.ward_id, pu.ward_id, u.current_ward)::integer AS current_ward,
   eg.name AS election_group_name,
-  eg.year,
+  eg.election_date,
   p.name AS party_name,
   p.short_name AS party_short_name,
   p.logo AS party_logo,
@@ -473,7 +473,7 @@ type ListApplicationsRow struct {
 	DegreeCertificateUrl pgtype.Text        `json:"degree_certificate_url"`
 	CurrentWard          int32              `json:"current_ward"`
 	ElectionGroupName    string             `json:"election_group_name"`
-	Year                 int16              `json:"year"`
+	ElectionDate         pgtype.Date        `json:"election_date"`
 	PartyName            string             `json:"party_name"`
 	PartyShortName       string             `json:"party_short_name"`
 	PartyLogo            string             `json:"party_logo"`
@@ -542,7 +542,7 @@ func (q *Queries) ListApplications(ctx context.Context, arg ListApplicationsPara
 			&i.DegreeCertificateUrl,
 			&i.CurrentWard,
 			&i.ElectionGroupName,
-			&i.Year,
+			&i.ElectionDate,
 			&i.PartyName,
 			&i.PartyShortName,
 			&i.PartyLogo,

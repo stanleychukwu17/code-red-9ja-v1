@@ -24,7 +24,7 @@ VALUES (101,'test',1,1,1),(102,'test',1,1,1)`)
 	require.NoError(t, err)
 	for _, offset := range []int{-2, -1, 0, 1, 2, 7} {
 		name := strconv.Itoa(offset)
-		group, err := q.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{Name: name, Year: 2026})
+		group, err := q.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{Name: name, ElectionDate: pgtype.Date{Time: today.AddDate(0, 0, offset), Valid: true}})
 		require.NoError(t, err)
 		row, err := q.CreateElectionInstance(ctx, queries.CreateElectionInstanceParams{
 			Name: name, ElectionGroupID: group.ID, OfficeID: 1, Scope: "nationwide",

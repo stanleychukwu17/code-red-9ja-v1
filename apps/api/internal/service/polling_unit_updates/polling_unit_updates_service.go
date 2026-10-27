@@ -114,7 +114,7 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 		return queries.PollingUnitUpdate{}, fmt.Errorf("invalid election group: %w", err)
 	}
 	now := time.Now().UTC()
-	if now.Year() > int(electionGroup.Year) {
+	if now.Year() > electionGroup.ElectionDate.Time.Year() {
 		return queries.PollingUnitUpdate{}, errors.New("updates can only be submitted during the election cycle")
 	}
 

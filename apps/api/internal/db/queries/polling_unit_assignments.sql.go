@@ -115,7 +115,7 @@ SELECT
   pu.lga_name,
   pu.state_name,
   eg.name AS election_group_name,
-  eg.year
+  eg.election_date
 FROM polling_unit_assignments a
 JOIN users u ON a.user_id = u.id
 JOIN polling_units pu ON a.polling_unit_id = pu.id
@@ -151,7 +151,7 @@ type GetAssignmentByIDRow struct {
 	LgaName                 string             `json:"lga_name"`
 	StateName               string             `json:"state_name"`
 	ElectionGroupName       string             `json:"election_group_name"`
-	Year                    int16              `json:"year"`
+	ElectionDate            pgtype.Date        `json:"election_date"`
 }
 
 func (q *Queries) GetAssignmentByID(ctx context.Context, id int64) (GetAssignmentByIDRow, error) {
@@ -185,7 +185,7 @@ func (q *Queries) GetAssignmentByID(ctx context.Context, id int64) (GetAssignmen
 		&i.LgaName,
 		&i.StateName,
 		&i.ElectionGroupName,
-		&i.Year,
+		&i.ElectionDate,
 	)
 	return i, err
 }
@@ -298,7 +298,7 @@ SELECT
   pu.lga_name,
   pu.state_name,
   eg.name AS election_group_name,
-  eg.year,
+  eg.election_date,
   a.arrived_at,
   a.arrival_video_url,
   a.election_started_at,
@@ -350,7 +350,7 @@ type ListAssignmentsRow struct {
 	LgaName                 string             `json:"lga_name"`
 	StateName               string             `json:"state_name"`
 	ElectionGroupName       string             `json:"election_group_name"`
-	Year                    int16              `json:"year"`
+	ElectionDate            pgtype.Date        `json:"election_date"`
 	ArrivedAt               pgtype.Timestamptz `json:"arrived_at"`
 	ArrivalVideoUrl         pgtype.Text        `json:"arrival_video_url"`
 	ElectionStartedAt       pgtype.Timestamptz `json:"election_started_at"`
@@ -398,7 +398,7 @@ func (q *Queries) ListAssignments(ctx context.Context, arg ListAssignmentsParams
 			&i.LgaName,
 			&i.StateName,
 			&i.ElectionGroupName,
-			&i.Year,
+			&i.ElectionDate,
 			&i.ArrivedAt,
 			&i.ArrivalVideoUrl,
 			&i.ElectionStartedAt,

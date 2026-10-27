@@ -335,7 +335,7 @@ type ElectionGroup struct {
 	TotalPuWhereElectionHasEnded              int32              `json:"total_pu_where_election_has_ended"`
 	TotalPuUniqueFinalResultsUploaded         int32              `json:"total_pu_unique_final_results_uploaded"`
 	TotalPuWhereAgentsReferredLiveVoters      int32              `json:"total_pu_where_agents_referred_live_voters"`
-	Year                                      int16              `json:"year"`
+	ElectionDate                              pgtype.Date        `json:"election_date"`
 	Active                                    bool               `json:"active"`
 	CreatedAt                                 pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt                                 pgtype.Timestamptz `json:"updated_at"`

@@ -60,15 +60,15 @@ CREATE TABLE election_groups (
   total_pu_where_agents_referred_live_voters INT NOT NULL DEFAULT 0,
   
   -- Group status & metadata
-  year SMALLINT NOT NULL,                                  -- Election year (e.g. 2027)
+  election_date DATE NOT NULL,                             -- Scheduled polling date for this group
   active BOOLEAN NOT NULL DEFAULT true,                    -- Whether this group is current and active
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Election groups indexes
-CREATE INDEX idx_election_groups_year ON election_groups(year DESC, id DESC);           -- Quick year sorting
-CREATE INDEX idx_election_groups_active_year ON election_groups(active, year DESC, id DESC); -- Active cycle lookup
+CREATE INDEX idx_election_groups_date ON election_groups(election_date DESC);           -- Quick date sorting
+CREATE INDEX idx_election_groups_active_date ON election_groups(active, election_date DESC); -- Active cycle lookup
 
 -- Automatically generate unique fake_id for election_groups if not provided
 -- +goose StatementBegin

@@ -1659,7 +1659,7 @@ func (s *ElectionsService) SubmitElectionVotes(
 	}
 
 	now := time.Now()
-	if int(eg.Year) < now.Year() {
+	if eg.ElectionDate.Time.Year() < now.Year() {
 		return fmt.Errorf("voting for this election cycle has ended")
 	}
 

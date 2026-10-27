@@ -40,7 +40,7 @@ func TestElectionAPIStatusResponses(t *testing.T) {
 	rdb := testutil.Redis(t, 3)
 	q := queries.New(pool)
 	s := &ElectionsService{queries: q, pool: pool, rdb: rdb}
-	group, err := q.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{Name: "Statuses", Year: 2026})
+	group, err := q.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{Name: "Statuses", ElectionDate: pgtype.Date{Time: time.Now(), Valid: true}})
 	require.NoError(t, err)
 	today := utils.LagosDate(time.Now())
 	var ended queries.Election

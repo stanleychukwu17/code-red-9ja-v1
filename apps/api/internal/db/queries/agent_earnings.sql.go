@@ -168,7 +168,7 @@ SELECT
   a.potential_payment_kobo,
   a.interval_updates,
   cs.name AS state_name,
-  eg.year
+  eg.election_date
 FROM polling_unit_assignments a
 JOIN election_groups eg ON a.election_group_id = eg.id
 JOIN polling_units pu ON a.polling_unit_id = pu.id
@@ -197,7 +197,7 @@ type GetAssignmentForEarningsRow struct {
 	PotentialPaymentKobo                    int64              `json:"potential_payment_kobo"`
 	IntervalUpdates                         []byte             `json:"interval_updates"`
 	StateName                               string             `json:"state_name"`
-	Year                                    int16              `json:"year"`
+	ElectionDate                            pgtype.Date        `json:"election_date"`
 }
 
 func (q *Queries) GetAssignmentForEarnings(ctx context.Context, id int64) (GetAssignmentForEarningsRow, error) {
@@ -220,7 +220,7 @@ func (q *Queries) GetAssignmentForEarnings(ctx context.Context, id int64) (GetAs
 		&i.PotentialPaymentKobo,
 		&i.IntervalUpdates,
 		&i.StateName,
-		&i.Year,
+		&i.ElectionDate,
 	)
 	return i, err
 }

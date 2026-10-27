@@ -12,7 +12,7 @@ import { Link } from "@tanstack/react-router";
 export type ElectionGroupType = {
   id: number;
   name: string;
-  year: number;
+  election_date?: string;
   active?: boolean;
   created_at?: string;
   updated_at?: string;
@@ -28,8 +28,8 @@ export function ElectionGroupTableHeader() {
         <span className="text-c-50 text-[14px] w-24 hidden sm:block">
           Status
         </span>
-        <span className="text-c-50 text-[14px] w-20 hidden sm:block">
-          Year
+        <span className="text-c-50 text-[14px] w-28 hidden sm:block">
+          Date
         </span>
         <div className="ml-2 w-8 shrink-0" />
       </TileRight>
@@ -39,6 +39,9 @@ export function ElectionGroupTableHeader() {
 
 export function ElectionGroupTableTile({ data }: { data: ElectionGroupType }) {
   const isActive = data.active !== false;
+  const displayDate = data.election_date
+    ? formatISODate(data.election_date)
+    : "—";
 
   return (
     <TileRow>
@@ -64,8 +67,8 @@ export function ElectionGroupTableTile({ data }: { data: ElectionGroupType }) {
             {isActive ? "Active" : "Inactive"}
           </span>
         </div>
-        <span className="text-[15px] text-c-70 w-20 hidden sm:block">
-          {data.year ?? "—"}
+        <span className="text-[15px] text-c-70 w-28 hidden sm:block truncate">
+          {displayDate}
         </span>
         <ElectionGroupDropdown data={data} className="ml-2 hidden md:block" />
       </TileRight>

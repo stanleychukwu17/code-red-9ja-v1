@@ -1,18 +1,13 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { getPageHeader } from "#/lib/shared/meta";
-import {
-  resolveProfile,
-  ProfileCard,
-  ProfileFloatingToolbar,
-} from "#/components/profile/profile-page";
+import { resolveProfile, ProfileCard, ProfileFloatingToolbar } from "#/components/profile/profile-page";
 import { ProfileNavTabs } from "#/components/profile/ProfileNavTabs";
 
 export const Route = createFileRoute("/_authenticated/profile/$username")({
-  head: ({ params }) =>
-    getPageHeader({
-      title: `${params.username ? `${params.username} Profile` : "Profile"} `,
-      description: `View profile and political history for ${params.username || "Chukwu Stanley"} on Free9ja.`,
-    }),
+  head: ({ params }) => getPageHeader({
+    title: `${params.username ? `${params.username} Profile` : "Profile"} `,
+    description: `View profile and political history for ${params.username || "Chukwu Stanley"} on Free9ja.`,
+  }),
   component: ProfileLayoutComponent,
 });
 

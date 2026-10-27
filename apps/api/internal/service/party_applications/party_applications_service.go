@@ -563,7 +563,7 @@ func (s *Service) ListApplications(ctx context.Context, userID int64, partyID in
 			DegreeCertificateUrl: utils.PtrFromPgText(r.DegreeCertificateUrl),
 			CurrentWard:          r.CurrentWard,
 			ElectionGroupName:    r.ElectionGroupName,
-			Year:                 r.Year,
+			Year:                 int16(r.ElectionDate.Time.Year()),
 			PartyName:            r.PartyName,
 			PartyShortName:       r.PartyShortName,
 			PartyLogo:            r.PartyLogo,
@@ -892,7 +892,7 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 	}
 
 	now := time.Now()
-	if int(electionGroup.Year) < now.Year() {
+	if electionGroup.ElectionDate.Time.Year() < now.Year() {
 		reason := "Please apply for an upcoming election (not in the past)"
 		updatedApp, cancelErr := txQueries.UpdateApplicationStatus(ctx, queries.UpdateApplicationStatusParams{
 			ID:             input.ApplicationID,
@@ -1621,7 +1621,7 @@ func (s *Service) updateReferralOnApplicationSubmission(ctx context.Context, txQ
 		candidates = append(candidates, candidateUR{
 			userReferral:      ur,
 			egID:              egID,
-			year:              eg.Year,
+			year:              int16(eg.ElectionDate.Time.Year()),
 			hasActiveCampaign: hasActiveCampaign,
 		})
 	}

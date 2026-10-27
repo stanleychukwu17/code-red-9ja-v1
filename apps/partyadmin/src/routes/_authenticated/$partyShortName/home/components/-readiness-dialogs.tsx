@@ -95,97 +95,107 @@ export function ReadinessDialogs({
 
   return (
     <>
-      <AccountDetailsDialog
-        open={isWalletDialogOpen}
-        setOpen={setIsWalletDialogOpen}
-        onClose={() => {
-          setIsWalletDialogOpen(false);
-          setDepositDeficitAmount(undefined);
-        }}
-        wallet={wallet}
-        defaultAmount={depositDeficitAmount}
-      />
+      {isWalletDialogOpen && (
+        <AccountDetailsDialog
+          open={isWalletDialogOpen}
+          setOpen={setIsWalletDialogOpen}
+          onClose={() => {
+            setIsWalletDialogOpen(false);
+            setDepositDeficitAmount(undefined);
+          }}
+          wallet={wallet}
+          defaultAmount={depositDeficitAmount}
+        />
+      )}
 
-      <BuyAgentSlotsDialog
-        open={isSlotsDialogOpen}
-        onClose={() => setIsSlotsDialogOpen(false)}
-        partyId={partyId}
-        walletBalanceKobo={wallet?.balance_kobo ?? 0}
-        unitSlotPriceKobo={unitSlotPriceKobo}
-        onDepositFunds={(deficit) => {
-          setDepositDeficitAmount(deficit);
-          setIsSlotsDialogOpen(false);
-          setIsWalletDialogOpen(true);
-        }}
-      />
+      {isSlotsDialogOpen && (
+        <BuyAgentSlotsDialog
+          open={isSlotsDialogOpen}
+          onClose={() => setIsSlotsDialogOpen(false)}
+          partyId={partyId}
+          walletBalanceKobo={wallet?.balance_kobo ?? 0}
+          unitSlotPriceKobo={unitSlotPriceKobo}
+          onDepositFunds={(deficit) => {
+            setDepositDeficitAmount(deficit);
+            setIsSlotsDialogOpen(false);
+            setIsWalletDialogOpen(true);
+          }}
+        />
+      )}
 
-      <AgentPaymentAllocationFormDialog
-        open={isBudgetDialogOpen}
-        onClose={() => setIsBudgetDialogOpen(false)}
-        partyId={partyId!}
-        initialAllocation={party?.agent_payment_allocation_kobo}
-        updateAllocation={async (id, values) => {
-          const res = await updatePartyStateAllowances({
-            data: { partyID: id, allowances: values as any },
-          });
-          if (!res.success) throw new Error(res.message || "Failed to update");
-          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.party.byId(partyId) });
-          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partyReadiness.byParty(partyId) });
-          toast.success("Agent payment budget saved!");
-          return res.data;
-        }}
-      />
-
-      <DepositAllowanceDialog
-        open={isPaymentDialogOpen}
-        onClose={() => setIsPaymentDialogOpen(false)}
-        partyId={partyId}
-        walletBalanceKobo={wallet?.balance_kobo ?? 0}
-        agentPaymentBalanceKobo={party?.agent_payment_balance_kobo ?? 0}
-      />
-
-      <AgentMarketingSetupDialog
-        open={isMarketingDialogOpen}
-        onClose={() => setIsMarketingDialogOpen(false)}
-        isPending={false}
-        partyId={partyId}
-        fetchElectionGroups={fetchGroups}
-        fetchElection={fetchElectionsWrapper}
-        fetchPlans={fetchMarketingPlansWrapper}
-        fetchStates={fetchStates}
-        defaultValue={
-          {
-            electionGroupId: selectedElectionGroup?.id
-              ? String(selectedElectionGroup.id)
-              : "",
-            electionId: selectedElection?.id ? String(selectedElection.id) : "",
-            planId: "",
-            targetMode: "custom",
-            states: [],
-            durationUnit: "days",
-            durationValue: 5,
-          } satisfies Partial<AgentMarketingSetupValue>
-        }
-        onSubmit={async (payload) => {
-          if (!partyId) return;
-          const res = await submitCampaign({
-            data: {
-              ...payload,
-              partyId: partyId,
-            },
-          });
-          if (res?.success) {
-            toast.success("Marketing campaign created successfully!");
-            setIsMarketingDialogOpen(false);
-            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partyReadiness.byParty(partyId) });
-            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partyWallet.byParty(partyId) });
+      {isBudgetDialogOpen && (
+        <AgentPaymentAllocationFormDialog
+          open={isBudgetDialogOpen}
+          onClose={() => setIsBudgetDialogOpen(false)}
+          partyId={partyId!}
+          initialAllocation={party?.agent_payment_allocation_kobo}
+          updateAllocation={async (id, values) => {
+            const res = await updatePartyStateAllowances({
+              data: { partyID: id, allowances: values as any },
+            });
+            if (!res.success) throw new Error(res.message || "Failed to update");
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.party.byId(partyId) });
-            queryClient.invalidateQueries({ queryKey: ["party-marketing-campaigns", partyId] });
-          } else {
-            toast.error(res?.message ?? "Failed to create marketing campaign");
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partyReadiness.byParty(partyId) });
+            toast.success("Agent payment budget saved!");
+            return res.data;
+          }}
+        />
+      )}
+
+      {isPaymentDialogOpen && (
+        <DepositAllowanceDialog
+          open={isPaymentDialogOpen}
+          onClose={() => setIsPaymentDialogOpen(false)}
+          partyId={partyId}
+          walletBalanceKobo={wallet?.balance_kobo ?? 0}
+          agentPaymentBalanceKobo={party?.agent_payment_balance_kobo ?? 0}
+        />
+      )}
+
+      {isMarketingDialogOpen && (
+        <AgentMarketingSetupDialog
+          open={isMarketingDialogOpen}
+          onClose={() => setIsMarketingDialogOpen(false)}
+          isPending={false}
+          partyId={partyId}
+          fetchElectionGroups={fetchGroups}
+          fetchElection={fetchElectionsWrapper}
+          fetchPlans={fetchMarketingPlansWrapper}
+          fetchStates={fetchStates}
+          defaultValue={
+            {
+              electionGroupId: selectedElectionGroup?.id
+                ? String(selectedElectionGroup.id)
+                : "",
+              electionId: selectedElection?.id ? String(selectedElection.id) : "",
+              planId: "",
+              targetMode: "custom",
+              states: [],
+              durationUnit: "days",
+              durationValue: 5,
+            } satisfies Partial<AgentMarketingSetupValue>
           }
-        }}
-      />
+          onSubmit={async (payload) => {
+            if (!partyId) return;
+            const res = await submitCampaign({
+              data: {
+                ...payload,
+                partyId: partyId,
+              },
+            });
+            if (res?.success) {
+              toast.success("Marketing campaign created successfully!");
+              setIsMarketingDialogOpen(false);
+              queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partyReadiness.byParty(partyId) });
+              queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partyWallet.byParty(partyId) });
+              queryClient.invalidateQueries({ queryKey: QUERY_KEYS.party.byId(partyId) });
+              queryClient.invalidateQueries({ queryKey: ["party-marketing-campaigns", partyId] });
+            } else {
+              toast.error(res?.message ?? "Failed to create marketing campaign");
+            }
+          }}
+        />
+      )}
     </>
   );
 }

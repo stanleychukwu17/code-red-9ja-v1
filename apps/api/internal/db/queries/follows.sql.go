@@ -62,6 +62,30 @@ func (q *Queries) GetPartyFollowersCount(ctx context.Context, arg GetPartyFollow
 	return count, err
 }
 
+const getUserFollowersCount = `-- name: GetUserFollowersCount :one
+SELECT COUNT(*) FROM user_follows
+WHERE following_id = $1
+`
+
+func (q *Queries) GetUserFollowersCount(ctx context.Context, followingID int64) (int64, error) {
+	row := q.db.QueryRow(ctx, getUserFollowersCount, followingID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const getUserFollowingCount = `-- name: GetUserFollowingCount :one
+SELECT COUNT(*) FROM user_follows
+WHERE follower_id = $1
+`
+
+func (q *Queries) GetUserFollowingCount(ctx context.Context, followerID int64) (int64, error) {
+	row := q.db.QueryRow(ctx, getUserFollowingCount, followerID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const isFollowingParty = `-- name: IsFollowingParty :one
 SELECT EXISTS (
     SELECT 1 FROM party_follows
@@ -77,6 +101,25 @@ type IsFollowingPartyParams struct {
 
 func (q *Queries) IsFollowingParty(ctx context.Context, arg IsFollowingPartyParams) (bool, error) {
 	row := q.db.QueryRow(ctx, isFollowingParty, arg.UserID, arg.PartyID, arg.ChapterID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
+const isFollowingUser = `-- name: IsFollowingUser :one
+SELECT EXISTS (
+    SELECT 1 FROM user_follows
+    WHERE follower_id = $1 AND following_id = $2
+)
+`
+
+type IsFollowingUserParams struct {
+	FollowerID  int64 `json:"follower_id"`
+	FollowingID int64 `json:"following_id"`
+}
+
+func (q *Queries) IsFollowingUser(ctx context.Context, arg IsFollowingUserParams) (bool, error) {
+	row := q.db.QueryRow(ctx, isFollowingUser, arg.FollowerID, arg.FollowingID)
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err

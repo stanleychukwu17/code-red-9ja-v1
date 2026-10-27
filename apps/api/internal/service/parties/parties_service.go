@@ -373,6 +373,7 @@ func (s *PartiesService) ListParties(ctx context.Context) ([]queries.PartyWithVe
 					continue
 				}
 			}
+
 			missingVerified = append(missingVerified, id)
 		}
 
@@ -1740,7 +1741,7 @@ func (s *PartiesService) CreatePartyMarketingCampaign(ctx context.Context, arg q
 		return queries.PartyMarketingCampaign{}, fmt.Errorf("failed to get election group: %w", err)
 	}
 
-	if int(electionGroup.Year) < time.Now().Year() {
+	if electionGroup.ElectionDate.Time.Before(time.Now()) {
 		return queries.PartyMarketingCampaign{}, fmt.Errorf("one can't create an agent marketing campaign for a past election group")
 	}
 

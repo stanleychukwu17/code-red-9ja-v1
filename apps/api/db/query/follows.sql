@@ -26,3 +26,18 @@ SELECT EXISTS (
 SELECT COUNT(*) FROM party_follows
 WHERE party_id = $1 AND chapter_id = $2;
 
+
+
+-- name: IsFollowingUser :one
+SELECT EXISTS (
+    SELECT 1 FROM user_follows
+    WHERE follower_id = $1 AND following_id = $2
+);
+
+-- name: GetUserFollowersCount :one
+SELECT COUNT(*) FROM user_follows
+WHERE following_id = $1;
+
+-- name: GetUserFollowingCount :one
+SELECT COUNT(*) FROM user_follows
+WHERE follower_id = $1;

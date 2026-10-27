@@ -28,7 +28,7 @@ func (s *ElectionsService) CreateDidNotVoteReason(ctx context.Context, arg queri
 
 	// Validate date: cannot submit reasons after election cycle has ended
 	now := time.Now()
-	if int(eg.Year) < now.Year() {
+	if eg.ElectionDate.Time.Year() < now.Year() {
 		return queries.DidNotVoteReason{}, fmt.Errorf("voting for this election has ended")
 	}
 

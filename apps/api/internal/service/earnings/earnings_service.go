@@ -647,7 +647,7 @@ func (s *Service) EvaluatePracticeTestPayout(
 	if err != nil {
 		return PracticeTestPayoutResult{Eligible: false}, nil
 	}
-	if int(eg.Year) < time.Now().Year() {
+	if eg.ElectionDate.Time.Year() < time.Now().Year() {
 		slog.Info("earnings: election year is in the past, no practice test payout", "electionGroupID", electionGroupID)
 		return PracticeTestPayoutResult{Eligible: false}, nil
 	}
@@ -721,8 +721,8 @@ func (s *Service) EvaluatePracticeTestPayout(
 	now := time.Now()
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	daysToElection := 0
-	if int(eg.Year) >= today.Year() {
-		targetDate := time.Date(int(eg.Year), time.December, 31, 0, 0, 0, 0, today.Location())
+	if !eg.ElectionDate.Time.Before(today) {
+		targetDate := eg.ElectionDate.Time
 		diff := targetDate.Sub(today)
 		daysToElection = int(math.Ceil(diff.Hours() / 24.0))
 		if daysToElection < 0 {
@@ -979,7 +979,7 @@ func (s *Service) CalculatePotentialPayout(ctx context.Context, assignmentID int
 	// Election cycle check for non-readiness tasks
 	now := time.Now().UTC()
 	if taskType != "readiness" {
-		if now.Year() > int(asgn.Year) {
+		if now.Year() > asgn.ElectionDate.Time.Year() {
 			return PotentialPayoutResult{
 				AssignmentID:        assignmentID,
 				TaskType:            taskType,

@@ -52,7 +52,7 @@ export const createElectionGroup = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
       name: string;
-      year: number;
+      election_date: string;
     }) => data,
   )
   .handler(async ({ data }) => {
@@ -77,7 +77,7 @@ export const updateElectionGroup = createServerFn({ method: "POST" })
     (data: {
       id: string | number;
       name?: string;
-      year?: number;
+      election_date?: string;
       active?: boolean;
     }) => data,
   )

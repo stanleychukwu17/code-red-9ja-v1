@@ -13,6 +13,7 @@ import { getContestedOffices } from "#/lib/server/offices";
 import { getStates } from "#/lib/server/countries";
 import { Loader2, Search } from "lucide-react";
 import { cn } from "@repo/ui/lib/utils";
+import { formatISODate } from "@repo/ui/lib/date";
 import type { ElectionFilters } from "#/lib/server/elections";
 
 export type { ElectionFilters };
@@ -213,7 +214,7 @@ export function ElectionInstancesFilterDialog({
                         title={group.active ? "Active" : "Inactive"}
                       />
                       <span className="text-[14px] text-c-80 group-hover:text-black transition">
-                        {group.name} {group.year ? `(${group.year})` : ""}
+                        {group.name} {group.election_date ? `(${formatISODate(group.election_date)})` : ""}
                       </span>
                     </div>
                   </label>
