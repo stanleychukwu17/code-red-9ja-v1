@@ -71,7 +71,7 @@ export const Step6 = ({
                   <div className="flex flex-col gap-1">
                     <span>{wardName}</span>
                     {isFull && (
-                      <span className="text-[13px] text-orange-500 font-medium">
+                      <span className="text-[13px] text-orange font-medium">
                         Capacity full for this polling unit
                       </span>
                     )}

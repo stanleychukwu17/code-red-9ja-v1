@@ -19,7 +19,7 @@ export function ApplySuccess() {
         <div className="flex flex-col gap-3 w-full py-7">
           <div className="space-y-4">
             <h3 className="text-primary font-bold uppercase">FINAL STAGE</h3>
-            <h1 className="text-4xl font-bold text-gray-900 leading-tight">
+            <h1 className="text-4xl font-bold text-c-100 leading-tight">
               Take the polling agent practice test.
             </h1>
             <p className="text-c-80 leading-6">

@@ -11,9 +11,9 @@ export const SpiralNotebook = ({
 }) => {
   const textColor = {
     purple: "text-purple",
-    orange: "text-[#F6851F]",
-    red: "text-[#EC1C24]",
-    darkblue: "text-[#1B75BB]",
+    orange: "text-orange",
+    red: "text-red",
+    darkblue: "text-[#1B75BB] dark:text-[#5dade2]",
   };
   return (
     <div className="mt-2 h-full flex items-center justify-center">

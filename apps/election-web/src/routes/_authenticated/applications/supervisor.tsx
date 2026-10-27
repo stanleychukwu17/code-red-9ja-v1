@@ -431,7 +431,7 @@ function SupervisorRoleSelectStep({
             onClick={() => onSelectRole("state_election_supervisor")}
             className={cn(
               selectedRole === "state_election_supervisor" &&
-              "border-emerald-500 bg-emerald-50/50",
+              "border border-success/40 bg-success/15",
             )}
           />
           <SelectableCard
@@ -441,7 +441,7 @@ function SupervisorRoleSelectStep({
             onClick={() => onSelectRole("lga_election_supervisor")}
             className={cn(
               selectedRole === "lga_election_supervisor" &&
-              "border-emerald-500 bg-emerald-50/50",
+              "border border-success/40 bg-success/15",
             )}
           />
           <SelectableCard
@@ -451,7 +451,7 @@ function SupervisorRoleSelectStep({
             onClick={() => onSelectRole("ward_election_supervisor")}
             className={cn(
               selectedRole === "ward_election_supervisor" &&
-              "border-emerald-500 bg-emerald-50/50",
+              "border border-success/40 bg-success/15",
             )}
           />
         </div>
@@ -562,7 +562,7 @@ function SupervisorRegionSelectStep({
                 onClick={() => onSelect(item.id, item.name)}
                 className={cn(
                   isSelected &&
-                  "border-emerald-500 bg-emerald-100/70 text-emerald-950",
+                  "border border-success/40 bg-success/15 text-c-100",
                 )}
               />
             );
@@ -655,8 +655,8 @@ function SupervisorCertificateUploadStep({
             className={cn(
               "w-full h-48 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-3 transition-colors",
               certificateUrl
-                ? "border-emerald-500 bg-emerald-50/50"
-                : "border-emerald-400 bg-emerald-50/40 hover:bg-emerald-50",
+                ? "border-success bg-success/10"
+                : "border-border bg-hover-5 hover:bg-hover-7",
             )}
           >
             {certificateUrl ? (
@@ -667,8 +667,8 @@ function SupervisorCertificateUploadStep({
               />
             ) : (
               <>
-                <Upload className="size-8 text-emerald-700" />
-                <span className="font-bold text-emerald-800 text-lg">
+                <Upload className="size-8 text-c-60" />
+                <span className="font-bold text-c-90 text-lg">
                   {isUploading ? "Uploading..." : "Upload Certificate"}
                 </span>
               </>
@@ -676,13 +676,13 @@ function SupervisorCertificateUploadStep({
           </button>
 
           {submitError && (
-            <p className="text-red-500 text-sm mt-3 font-medium text-center">
+            <p className="text-red text-sm mt-3 font-medium text-center">
               {submitError}
             </p>
           )}
 
           {!submitError && (
-            <p className="text-red-500 text-xs mt-2 text-center font-medium">
+            <p className="text-c-50 text-xs mt-2 text-center font-medium">
               Please upload a clear photo of it.
             </p>
           )}
@@ -694,7 +694,7 @@ function SupervisorCertificateUploadStep({
           type="button"
           variant="black"
           size="4xl"
-          className="w-full rounded-full h-14 font-bold text-lg bg-emerald-500 hover:bg-emerald-600 text-white"
+          className="w-full rounded-full h-14 font-bold text-lg bg-success hover:bg-success/90 text-white"
           disabled={!certificateUrl || isUploading || isSubmitting}
           onClick={onSubmit}
         >
@@ -750,7 +750,7 @@ function SupervisorSuccessStep({
         </div>
 
         {/* Role Assigned Info Card */}
-        <div className="w-full bg-amber-100/70 rounded-2xl px-5 py-4 flex items-center justify-between">
+        <div className="w-full bg-hover-5 border border-border rounded-2xl px-5 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-xl">👦🏽</span>
             <span className="text-c-60 font-medium text-base">
@@ -765,8 +765,8 @@ function SupervisorSuccessStep({
           <span className="text-base font-bold text-c-80 block">
             Your LGA / Region
           </span>
-          <div className="px-4 py-4 border border-c-40 rounded-2xl bg-white shadow-sm flex items-center gap-4">
-            <PollingUnitIcon className="shrink-0 size-8 text-cyan-600" />
+          <div className="px-4 py-4 border border-border rounded-2xl bg-hover-5 shadow-sm flex items-center gap-4">
+            <PollingUnitIcon className="shrink-0 size-8 text-primary" />
             <div className="space-y-0.5">
               <p className="font-bold text-c-90 text-lg leading-tight">
                 {regionName}

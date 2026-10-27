@@ -32,7 +32,10 @@ export type PhoneEntry = {
 export const ContactDetailsStep = () => {
   const { user, phone, setPhone, whatsappPhone, setWhatsappPhone } = useApplyContext();
 
+  // Tracks whether server phone numbers have populated local state
   const [hasInitialized, setHasInitialized] = useState(false);
+
+  // Local phone rows; seeds with user's current session phone as initial fallback
   const [phones, setPhones] = useState<PhoneEntry[]>([
     {
       id: 0,
@@ -63,7 +66,6 @@ export const ContactDetailsStep = () => {
     if (!hasInitialized && userPhoneNumbers && userPhoneNumbers.length > 0) {
       const mapped: PhoneEntry[] = userPhoneNumbers.map((p, idx) => {
         const isDefault = p.is_default === true || idx === 0;
-
         const isOnWhatsapp = p.on_whatsapp === "yes" || p.on_whatsapp === true;
 
         return {
@@ -110,6 +112,7 @@ export const ContactDetailsStep = () => {
     }
   };
 
+  // Update input text and sync with form context
   const handleRawInputChange = (index: number, value: string) => {
     const updated = [...phones];
     const item = updated[index];
@@ -120,6 +123,7 @@ export const ContactDetailsStep = () => {
     syncWithContext(updated);
   };
 
+  // Toggle WhatsApp availability for this number
   const handleWhatsappChange = (index: number, value: "yes" | "no") => {
     const updated = [...phones];
     const item = updated[index];
@@ -129,6 +133,7 @@ export const ContactDetailsStep = () => {
     syncWithContext(updated);
   };
 
+  // Set selected number as primary default for calls
   const handleDefaultChange = (index: number) => {
     const updated = [...phones];
     updated.forEach((p, idx) => {
@@ -138,6 +143,7 @@ export const ContactDetailsStep = () => {
     syncWithContext(updated);
   };
 
+  // Append a new empty phone row
   const handleAddPhone = () => {
     const newEntry: PhoneEntry = {
       id: 0,
@@ -151,10 +157,11 @@ export const ContactDetailsStep = () => {
     setPhones(updated);
   };
 
+  // Remove phone row and fallback default if needed
   const handleRemovePhone = (index: number) => {
     if (phones.length <= 1) return;
     const updated = phones.filter((_, idx) => idx !== index);
-    // If we removed the default phone, designate the first remaining as default
+    // Ensure at least one number remains marked as default
     if (!updated.some((p) => p.is_default) && updated.length > 0 && updated[0]) {
       updated[0].is_default = true;
     }
@@ -172,22 +179,16 @@ export const ContactDetailsStep = () => {
       <div className="space-y-4 mt-3">
         {isLoading && !hasInitialized ? (
           <div className="flex h-24 items-center justify-center gap-2 text-c-60 text-sm">
-            <Loader2 className="size-5 animate-spin text-[#00cf79]" />
+            <Loader2 className="size-5 animate-spin text-success" />
             <span>Loading registered phone numbers...</span>
           </div>
         ) : (
           <div className="flex flex-col gap-3">
             {/* Header labels */}
             <div className="flex items-center gap-3 w-full px-1">
-              <label className="text-[13px] font-medium text-c-60 flex-1">
-                Phone Number
-              </label>
-              <label className="text-[13px] font-medium text-c-60 w-28 text-center">
-                WhatsApp?
-              </label>
-              <label className="text-[13px] font-medium text-c-60 w-16 text-center">
-                Default
-              </label>
+              <label className="text-[13px] font-medium text-c-60 flex-1">Phone Number</label>
+              <label className="text-[13px] font-medium text-c-60 w-28 text-center">WhatsApp?</label>
+              <label className="text-[13px] font-medium text-c-60 w-16 text-center">Default</label>
               {phones.length > 1 && <div className="w-9" />}
             </div>
 
@@ -201,9 +202,9 @@ export const ContactDetailsStep = () => {
                   className="flex items-center gap-3 w-full"
                 >
                   {/* Prefix + Input container */}
-                  <div className="flex items-center h-12 flex-1 rounded-xl border border-[#dfdfdf] bg-[#fdfdfd] focus-within:border-black transition overflow-hidden">
+                  <div className="flex items-center h-12 flex-1 rounded-xl border border-border bg-background hover:border-c-40 focus-within:border-c-100 transition overflow-hidden">
                     <span
-                      className="px-3 text-[14px] text-gray-500 bg-gray-50 border-r border-[#dfdfdf] h-full flex items-center shrink-0 select-none font-medium"
+                      className="px-3 text-sm text-c-60 bg-hover-5 border-r border-border h-full flex items-center shrink-0 select-none font-medium"
                       style={{ cursor: isLocked ? "not-allowed" : "default" }}
                     >
                       +{phoneObj.phonecode || "234"}
@@ -214,21 +215,19 @@ export const ContactDetailsStep = () => {
                       value={phoneObj.raw_input}
                       disabled={isLocked}
                       onChange={(e) => handleRawInputChange(index, e.target.value)}
-                      className="flex-1 h-full px-3 text-[14px] text-black outline-none bg-transparent min-w-0 disabled:opacity-60 disabled:cursor-not-allowed"
+                      className="flex-1 h-full px-3 text-sm text-c-100 placeholder:text-c-40 outline-none bg-transparent min-w-0 disabled:opacity-50 disabled:cursor-not-allowed"
                     />
                   </div>
 
                   {/* WhatsApp Select */}
-                  <div className="flex items-center h-12 w-28 rounded-xl border border-[#dfdfdf] bg-[#fdfdfd] shrink-0 overflow-hidden">
+                  <div className="flex items-center h-12 w-28 rounded-xl border border-border bg-background shrink-0 overflow-hidden hover:border-c-40 focus-within:border-c-100 transition">
                     <select
                       value={phoneObj.on_whatsapp}
-                      onChange={(e) =>
-                        handleWhatsappChange(index, e.target.value as "yes" | "no")
-                      }
-                      className="w-full h-full px-3 text-[14px] text-black outline-none bg-transparent cursor-pointer font-medium"
+                      onChange={(e) => handleWhatsappChange(index, e.target.value as "yes" | "no")}
+                      className="w-full h-full px-3 text-sm text-c-100 outline-none bg-transparent cursor-pointer font-medium"
                     >
-                      <option value="no">No</option>
-                      <option value="yes">Yes</option>
+                      <option value="no" className="bg-background text-c-100">No</option>
+                      <option value="yes" className="bg-background text-c-100">Yes</option>
                     </select>
                   </div>
 
@@ -242,7 +241,7 @@ export const ContactDetailsStep = () => {
                       name="defaultPhone"
                       checked={phoneObj.is_default || false}
                       onChange={() => handleDefaultChange(index)}
-                      className="w-5 h-5 cursor-pointer accent-[#00cf79]"
+                      className="w-5 h-5 cursor-pointer accent-success"
                     />
                   </div>
 
@@ -252,7 +251,7 @@ export const ContactDetailsStep = () => {
                       type="button"
                       disabled={isLocked}
                       onClick={() => handleRemovePhone(index)}
-                      className="h-10 w-9 text-red-500 hover:bg-red-50 rounded-lg transition flex items-center justify-center shrink-0 disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="h-10 w-9 text-red hover:bg-red/10 rounded-lg transition flex items-center justify-center shrink-0 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
                       title="Remove phone number"
                     >
                       <Trash2 className="size-4" />
@@ -266,7 +265,7 @@ export const ContactDetailsStep = () => {
             <button
               type="button"
               onClick={handleAddPhone}
-              className="inline-flex items-center gap-1.5 text-[#00cf79] font-medium text-[14px] hover:underline w-fit mt-2 cursor-pointer"
+              className="inline-flex items-center gap-1.5 text-success hover:text-success-hover font-medium text-sm hover:underline w-fit mt-2 cursor-pointer transition-colors"
             >
               <Plus className="size-4" />
               <span>Add Phone Number</span>
@@ -274,8 +273,8 @@ export const ContactDetailsStep = () => {
           </div>
         )}
 
-        <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-200/60 text-xs text-c-60 leading-relaxed mt-4">
-          <span className="font-semibold text-c-80">Note:</span> The phone number marked as <strong>Default</strong> will receive voice calls and verification alerts. Phone numbers with <strong>WhatsApp</strong> set to Yes will be added to election group monitoring channels.
+        <div className="p-3.5 bg-hover-5 rounded-xl border border-border text-xs text-c-70 leading-relaxed mt-4">
+          <span className="font-semibold text-c-100">Note:</span> The phone number marked as <strong className="text-c-90">Default</strong> will receive voice calls and verification alerts. Phone numbers with <strong className="text-c-90">WhatsApp</strong> set to Yes will be added to election group monitoring channels.
         </div>
       </div>
     </div>

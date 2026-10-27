@@ -29,32 +29,37 @@ export const Step2 = () => {
   const PartyCard = ({ party, isSelected, isDisabled, onClick }: PartyCardProps) => (
     <div
       onClick={onClick}
-      className={`flex items-center justify-between p-4.5 rounded-2xl transition ${isDisabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
-        } ${isSelected ? "bg-secondary/20" : "hover:bg-neutral-50 bg-white"}`}
+      className={`flex items-center justify-between p-4.5 rounded-2xl border transition ${
+        isDisabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+      } ${
+        isSelected
+          ? "bg-secondary/20 border-secondary/40 shadow-xs"
+          : "bg-hover-5 hover:bg-hover-7 border-border"
+      }`}
     >
       <div className="flex items-center gap-3">
         <img
           src={party.logo}
           alt={party.short_name}
-          className="w-9 h-9 rounded-full object-cover shrink-0"
+          className="w-10 h-10 rounded-full object-cover shrink-0 border border-border"
         />
         <div>
-          <p className="text-[16px] text-neutral-900 leading-tight">
+          <p className="text-[16px] font-medium text-c-100 leading-tight">
             {party.name} ({party.short_name})
           </p>
           {!party.is_verified && (
-            <span className="text-[13px] text-red-500 font-medium">
+            <span className="text-[13px] text-red font-medium">
               Not onboarded yet
             </span>
           )}
           {party.is_verified && !party.is_accepting_applications && (
-            <span className="text-[13px] text-orange-500 font-medium">
+            <span className="text-[13px] text-orange font-medium">
               Not accepting applications currently
             </span>
           )}
         </div>
       </div>
-      {isSelected && <Check className="size-6" />}
+      {isSelected && <Check className="size-6 text-c-100" />}
     </div>
   );
 
@@ -63,15 +68,15 @@ export const Step2 = () => {
       <StepHeader title="Choose a Political Party" />
       <IconInput
         placeholder="Search..."
-        className="h-14 rounded-full"
+        className="h-14 rounded-full bg-hover-5 border border-border text-c-100 placeholder:text-c-40"
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
       />
 
-      <div className="space-y-1.5">
+      <div className="space-y-2 mt-1">
         {partiesLoading ? (
           <div className="py-12 flex justify-center items-center">
-            <Loader2 className="w-8 h-8 text-neutral-400 animate-spin" />
+            <Loader2 className="w-8 h-8 text-c-50 animate-spin" />
           </div>
         ) : filteredParties.length > 0 ? (
           filteredParties.map((party: any) => {
@@ -118,7 +123,7 @@ export const Step2 = () => {
             );
           })
         ) : (
-          <p className="text-center text-neutral-400 py-8 text-sm">
+          <p className="text-center text-c-50 py-8 text-sm">
             No parties found matching "{searchQuery}"
           </p>
         )}

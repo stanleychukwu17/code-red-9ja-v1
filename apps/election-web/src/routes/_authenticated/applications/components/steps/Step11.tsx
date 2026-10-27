@@ -81,28 +81,28 @@ export const Step11 = ({
         {bankAccountNumber.length === 10 && selectedBankCode && (
           <div
             className={cn(
-              "flex items-center gap-3 p-4.5 rounded-2xl mt-2",
+              "flex items-center gap-3 p-4.5 rounded-2xl mt-2 border transition",
               isError
-                ? "bg-red-50 text-red-600"
+                ? "bg-red/10 border-red/20 text-red"
                 : isValidating
-                  ? "bg-neutral-50 text-neutral-500"
-                  : "bg-secondary/10 text-primary",
+                  ? "bg-hover-5 border-border text-c-60"
+                  : "bg-success/15 border-success/30 text-c-100",
             )}
           >
             <div
               className={cn(
                 "size-5 rounded-full flex items-center justify-center shrink-0",
                 isError
-                  ? "bg-red-100 text-red-600"
+                  ? "bg-red/20 text-red"
                   : isValidating
-                    ? "bg-transparent text-neutral-500"
-                    : "bg-secondary text-white",
+                    ? "bg-transparent text-c-60"
+                    : "bg-success text-white",
               )}
             >
               {isValidating ? (
-                <Loader2 className="size-4 animate-spin" />
+                <Loader2 className="size-4 animate-spin text-c-60" />
               ) : isError ? (
-                <XCircle className="size-4" />
+                <XCircle className="size-4 text-red" />
               ) : (
                 <Check className="size-3 stroke-[3]" />
               )}
@@ -110,7 +110,7 @@ export const Step11 = ({
             <span
               className={cn(
                 "font-medium text-lg",
-                isError ? "text-red-600" : "text-primary",
+                isError ? "text-red" : "text-c-100",
               )}
             >
               {isValidating

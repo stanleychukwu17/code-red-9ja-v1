@@ -123,7 +123,7 @@ function ApplyPageContent() {
 
         {/* Form validation or server error alert banner */}
         {submitError && (
-          <div className="p-4 mx-4 bg-red-50 border border-red-100 text-red-600 rounded-2xl text-sm flex gap-3 items-center mb-4">
+          <div className="p-4 mx-4 bg-red/10 border border-red/20 text-red rounded-2xl text-sm flex gap-3 items-center mb-4">
             <AlertCircle className="w-5 h-5 shrink-0" />
             <span>{submitError}</span>
           </div>

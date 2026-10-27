@@ -49,7 +49,7 @@ const PartyLogo = ({ shortName }: { shortName?: string }) => {
 
   return (
     <div
-      className={`w-8 h-8 rounded-full ${bgClass} flex items-center justify-center text-white text-[9px] font-extrabold select-none shrink-0 border border-neutral-100 shadow-sm`}
+      className={`w-8 h-8 rounded-full ${bgClass} flex items-center justify-center text-white text-[9px] font-extrabold select-none shrink-0 border border-border shadow-sm`}
     >
       <span className="scale-90">{shortName || ""}</span>
     </div>
@@ -186,8 +186,8 @@ function ApplicationsIndexPage() {
   if (loading) {
     return (
       <PageWrapper>
-        <div className="min-h-screen flex items-center justify-center bg-black/95">
-          <Loader2 className="w-8 h-8 text-white animate-spin" />
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <Loader2 className="w-8 h-8 text-c-80 animate-spin" />
         </div>
       </PageWrapper>
     );
@@ -202,16 +202,16 @@ function ApplicationsIndexPage() {
     const isCancelled = selectedApp.status === "cancelled";
 
     let statusLabel = "AWAITING ACCEPTANCE";
-    let statusColor = "text-neutral-500";
+    let statusColor = "text-c-60";
     if (isAccepted) {
       statusLabel = "ACCEPTED";
-      statusColor = "text-[#00DF82]";
+      statusColor = "text-success";
     } else if (isRejected) {
       statusLabel = "REJECTED";
-      statusColor = "text-[#FF4252]";
+      statusColor = "text-red";
     } else if (isCancelled) {
       statusLabel = "CANCELLED";
-      statusColor = "text-[#FF9800]";
+      statusColor = "text-orange";
     }
 
     return (
@@ -229,7 +229,7 @@ function ApplicationsIndexPage() {
               >
                 <ArrowLeft />
               </Button>
-              <h1 className="text-[18px] font-bold text-neutral-800">
+              <h1 className="text-[18px] font-bold text-c-100">
                 {selectedApp.election.name}
               </h1>
               <PartyLogo shortName={selectedApp.party?.short_name} />
@@ -242,7 +242,7 @@ function ApplicationsIndexPage() {
               >
                 {statusLabel}
               </h2>
-              <p className="text-[14px] text-neutral-400 font-bold">
+              <p className="text-[14px] text-c-50 font-bold">
                 {selectedApp.accepted_on
                   ? `Accepted on ${selectedApp.accepted_on}`
                   : `Applied on ${selectedApp.applied_on}`}
@@ -250,66 +250,66 @@ function ApplicationsIndexPage() {
             </div>
 
             {/* Details Grid */}
-            <div className="space-y-5 border-t border-neutral-100 pt-6 mt-2">
+            <div className="space-y-5 border-t border-border pt-6 mt-2">
               <div className="flex justify-between items-center text-[15px]">
-                <span className="text-neutral-400 font-bold">Role</span>
-                <span className="text-neutral-800 font-extrabold">
+                <span className="text-c-50 font-bold">Role</span>
+                <span className="text-c-90 font-extrabold">
                   {selectedApp.role}
                 </span>
               </div>
               <div className="flex justify-between items-center text-[15px]">
-                <span className="text-neutral-400 font-bold">Applied on</span>
-                <span className="text-neutral-800 font-extrabold">
+                <span className="text-c-50 font-bold">Applied on</span>
+                <span className="text-c-90 font-extrabold">
                   {selectedApp.applied_on}
                 </span>
               </div>
               {isAccepted && (
                 <div className="flex justify-between items-center text-[15px]">
-                  <span className="text-neutral-400 font-bold">
+                  <span className="text-c-50 font-bold">
                     Accepted on
                   </span>
-                  <span className="text-neutral-800 font-extrabold">
+                  <span className="text-c-90 font-extrabold">
                     {selectedApp.accepted_on}
                   </span>
                 </div>
               )}
               <div className="flex justify-between items-center text-[15px]">
-                <span className="text-neutral-400 font-bold">State</span>
-                <span className="text-neutral-800 font-extrabold">
+                <span className="text-c-50 font-bold">State</span>
+                <span className="text-c-90 font-extrabold">
                   {selectedApp.state}
                 </span>
               </div>
               <div className="flex justify-between items-center text-[15px]">
-                <span className="text-neutral-400 font-bold">Ward</span>
-                <span className="text-neutral-800 font-extrabold">
+                <span className="text-c-50 font-bold">Ward</span>
+                <span className="text-c-90 font-extrabold">
                   {selectedApp.polling_unit.ward?.name || "Unknown Ward"}
                 </span>
               </div>
               <div className="flex justify-between items-center text-[15px]">
-                <span className="text-neutral-400 font-bold">Polling Unit</span>
-                <span className="text-neutral-800 font-extrabold text-right max-w-[240px] truncate">
+                <span className="text-c-50 font-bold">Polling Unit</span>
+                <span className="text-c-90 font-extrabold text-right max-w-[240px] truncate">
                   {selectedApp.polling_unit.name}
                 </span>
               </div>
               <div className="flex justify-between items-center text-[15px]">
-                <span className="text-neutral-400 font-bold">Party</span>
-                <div className="flex items-center gap-1.5 font-extrabold text-neutral-800">
+                <span className="text-c-50 font-bold">Party</span>
+                <div className="flex items-center gap-1.5 font-extrabold text-c-90">
                   <PartyLogo shortName={selectedApp.party?.short_name} />
                   <span>{selectedApp.party?.short_name || ""}</span>
                 </div>
               </div>
               <div className="flex justify-between items-center text-[15px]">
-                <span className="text-neutral-400 font-bold">
+                <span className="text-c-50 font-bold">
                   Election date
                 </span>
-                <span className="text-neutral-800 font-extrabold">
+                <span className="text-c-90 font-extrabold">
                   {selectedApp.election.date}
                 </span>
               </div>
               {isRejected && selectedApp.rejected_reason && (
                 <div className="flex justify-between items-center text-[15px]">
-                  <span className="text-neutral-400 font-bold">Reason</span>
-                  <span className="text-neutral-800 font-extrabold text-right max-w-[240px]">
+                  <span className="text-c-50 font-bold">Reason</span>
+                  <span className="text-c-90 font-extrabold text-right max-w-[240px]">
                     {selectedApp.rejected_reason}
                   </span>
                 </div>
@@ -461,11 +461,11 @@ function ApplicationsIndexPage() {
                     <div
                       key={app.id}
                       onClick={() => setSelectedApp(app)}
-                      className="flex items-start gap-4 px-2 py-4 rounded-2xl hover:bg-neutral-50 cursor-pointer transition"
+                      className="flex items-start gap-4 px-2 py-4 rounded-2xl hover:bg-hover-5 cursor-pointer transition"
                     >
                       {bulletEl}
                       <div className="flex flex-col gap-1.5 select-none">
-                        <span className="text-[17px] text-neutral-900 leading-tight">
+                        <span className="text-[17px] text-c-100 font-medium leading-tight">
                           {app.election.name}
                         </span>
                         <div className="flex items-center gap-2 text-c-50">
@@ -479,7 +479,7 @@ function ApplicationsIndexPage() {
                           <span
                             className={cn(
                               "mt-0.5",
-                              isRejected ? "text-red" : "text-neutral-400",
+                              isRejected ? "text-red" : "text-c-50",
                             )}
                           >
                             {isRejected ? "Rejected" : "Awaiting acceptance"}
