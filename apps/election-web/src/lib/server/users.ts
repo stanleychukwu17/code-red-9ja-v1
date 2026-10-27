@@ -156,3 +156,36 @@ export const getUserPhoneNumbers = createServerFn({ method: "GET" })
     }
   });
 
+export const updateUserPhoneNumbers = createServerFn({ method: "POST" })
+  .inputValidator((data: { user_fid: string | number; phones: any[] }) => data)
+  .handler(async ({ data: { user_fid, phones } }) => {
+    try {
+      const response = await apiFetch(API_URL.userPhoneNumbers(user_fid), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phones }),
+      });
+      const resData = await response.json();
+      return resData;
+    } catch (error) {
+      return { success: false, message: "Failed to update phone numbers: " + (error as Error).message };
+    }
+  });
+
+export const deleteUserPhoneNumber = createServerFn({ method: "POST" })
+  .inputValidator((data: { id: string | number; user_fid: string | number }) => data)
+  .handler(async ({ data: { id, user_fid } }) => {
+    try {
+      const response = await apiFetch(API_URL.manageUserPhoneNumber(id), {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone_id: Number(id), user_fid: Number(user_fid) }),
+      });
+      const resData = await response.json();
+      return resData;
+    } catch (error) {
+      return { success: false, message: "Failed to delete phone number: " + (error as Error).message };
+    }
+  });
+
+

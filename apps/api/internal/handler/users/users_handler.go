@@ -210,23 +210,27 @@ func (h *Handler) GetMe(w http.ResponseWriter, r *http.Request) {
 // @Failure      404  {object}  map[string]interface{} "User not found"
 // @Router       /users/{username}/profile [get]
 func (h *Handler) GetPublicProfile(w http.ResponseWriter, r *http.Request) {
+	// Extract the target username from the URL path parameter
 	username := chi.URLParam(r, "username")
 	if username == "" {
 		h.utils.RespondError(w, http.StatusBadRequest, "Username is required")
 		return
 	}
 
+	// Extract viewer user ID if authenticated (to check is_following status)
 	var viewerUserID int64
 	if claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims); ok && claims != nil {
 		viewerUserID = claims.UserID
 	}
 
+	// Fetch hydrated public profile, political history, and affiliation data
 	profile, err := h.usersService.GetUserPublicProfile(r.Context(), username, viewerUserID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, err.Error())
 		return
 	}
 
+	// Return public profile data envelope
 	h.utils.RespondSuccessData(w, http.StatusOK, "User profile retrieved successfully", profile)
 }
 

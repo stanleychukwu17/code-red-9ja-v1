@@ -144,11 +144,6 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 
 	txQueries := s.queries.WithTx(tx)
 
-	phoneVal := input.Phone
-	if phoneVal == "---" {
-		phoneVal = ""
-	}
-
 	// Update user agent details
 	user, err := txQueries.UpdateUserAgentDetails(ctx, queries.UpdateUserAgentDetailsParams{
 		ID:              input.UserID,
@@ -160,7 +155,6 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 		CurrentLga:      pgtype.Int4{Int32: input.CurrentLga, Valid: input.CurrentLga > 0},
 		CurrentCity:     pgtype.Int4{Int32: input.CurrentCity, Valid: input.CurrentCity > 0},
 		CurrentWard:     pgtype.Int4{Int32: input.CurrentWard, Valid: input.CurrentWard > 0},
-		Phone:           phoneVal,
 		PollingUnitID:   pgtype.Int4{Int32: input.PollingUnitID, Valid: input.PollingUnitID > 0},
 	})
 	if err != nil {

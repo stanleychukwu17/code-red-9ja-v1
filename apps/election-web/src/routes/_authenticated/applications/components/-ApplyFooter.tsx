@@ -1,6 +1,5 @@
 import { StickyFooter } from "#/components/Footers";
 import { Button } from "@repo/ui/components/button";
-import { Loader2 } from "lucide-react";
 import { useApplyContext } from "../context/ApplyContext";
 
 /**
@@ -22,7 +21,6 @@ export function ApplyFooter() {
     streetAddress,
     selectedPollingUnitId,
     bankAccountNumber,
-    whatsappPhone,
     educationalStatus,
     highestDegree,
     graduationYear,
@@ -33,6 +31,9 @@ export function ApplyFooter() {
     isValidatingAccount,
     isAccountValid,
   } = useApplyContext();
+
+  // Step 3 (Contact Details) manages its own self-contained continue button
+  if (step === 3) return null;
 
   return (
     <StickyFooter className="pb-20">
@@ -58,20 +59,6 @@ export function ApplyFooter() {
           className="w-full rounded-full"
           disabled={!selectedPartyId}
           onClick={() => setStep(3)}
-        >
-          Continue
-        </Button>
-      )}
-
-      {/* Step 3: WhatsApp & Phone Contact Info */}
-      {step === 3 && (
-        <Button
-          type="button"
-          variant="black"
-          size="4xl"
-          className="w-full rounded-full"
-          disabled={!whatsappPhone}
-          onClick={() => setStep(4)}
         >
           Continue
         </Button>

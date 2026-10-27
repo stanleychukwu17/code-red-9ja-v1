@@ -77,12 +77,6 @@ function ApplyPageContent() {
     handleBackClick,
     submitError,
     success,
-    // Step 4
-    avatarUrl,
-    isUploading,
-    handleUploadClick,
-    fileInputRef,
-    handleFileChange,
     // Step 8
     selectedStateId,
     setSelectedStateId,
@@ -92,14 +86,6 @@ function ApplyPageContent() {
     setSelectedWardId,
     streetAddress,
     setStreetAddress,
-    // Step 9
-    pollingUnits,
-    selectedPollingUnitId,
-    setSelectedPollingUnitId,
-    getWardName,
-    fetchNextUnits,
-    hasNextUnits,
-    isFetchingNextUnits,
     // Step 14
     bankAccountNumber,
     setBankAccountNumber,
@@ -156,21 +142,7 @@ function ApplyPageContent() {
         )}
 
         {/* Step 6: Polling Unit Search & Assignment */}
-        {step === 6 && (
-          <Step6
-            pollingUnits={pollingUnits}
-            selectedPollingUnitId={selectedPollingUnitId}
-            setSelectedPollingUnitId={setSelectedPollingUnitId}
-            getWardName={getWardName}
-            fetchNextPage={fetchNextUnits}
-            hasNextPage={hasNextUnits}
-            isFetchingNextPage={isFetchingNextUnits}
-            selectedStateId={selectedStateId}
-            selectedLgaId={selectedLgaId}
-            selectedWardId={selectedWardId}
-            setSelectedWardId={setSelectedWardId}
-          />
-        )}
+        {step === 6 && <Step6 />}
 
         {/* Step 7: Election Day / Group Selection */}
         {step === 7 && <Step3 />}
@@ -188,15 +160,7 @@ function ApplyPageContent() {
         {step === 11 && <Step10 />}
 
         {/* Step 12: Agent Portrait / Photo Upload */}
-        {step === 12 && (
-          <Step4
-            avatarUrl={avatarUrl || user?.avatar}
-            isUploading={isUploading}
-            handleUploadClick={handleUploadClick}
-            fileInputRef={fileInputRef}
-            handleFileChange={handleFileChange}
-          />
-        )}
+        {step === 12 && <Step4 />}
 
         {/* Step 13: Bank Account & Payout Verification */}
         {step === 13 && (

@@ -3,6 +3,9 @@ import { Activity, Check, FolderOpen, MessageCircleMore } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@repo/ui/lib/utils";
 import { ProfileFloatingToolbar } from "./ProfileFloatingToolbar";
+import { PartyHistoryTimeline } from "./PartyHistoryTimeline";
+import { FollowersList } from "./FollowersList";
+import { FollowingList } from "./FollowingList";
 
 /* ========================================================================== */
 /*                             TYPES & INTERFACES                             */
@@ -24,16 +27,16 @@ export type UserProfileData = {
   username: string;
   name: string;
   avatar: string;
-  party: {
+  party?: {
     name: string;
-    since: string;
-    color: string;
+    since?: string;
+    color?: string;
     logo?: string;
-  };
-  role: {
+  } | null;
+  role?: {
     title: string;
     chapter: string;
-  };
+  } | null;
   followersCount: string;
   followingCount: string;
   timeline: TimelineEvent[];
@@ -45,16 +48,8 @@ export const DEFAULT_USER_PROFILE: UserProfileData = {
   username: "",
   name: "",
   avatar: "",
-  party: {
-    name: "",
-    since: "",
-    color: "#6b7280",
-    logo: "",
-  },
-  role: {
-    title: "",
-    chapter: "",
-  },
+  party: undefined,
+  role: undefined,
   followersCount: "0",
   followingCount: "0",
   timeline: [],
@@ -105,8 +100,10 @@ function ProfileCard({ profile }: { profile: UserProfileData }) {
         </p>
       </div>
 
-      {/* Party & Role Stats Grid */}
-      <ProfilePartyRoleGrid party={profile.party} role={profile.role} />
+      {/* Party & Role Stats Grid - hidden if user does not belong to a party */}
+      {profile.party && (
+        <ProfilePartyRoleGrid party={profile.party} role={profile.role} />
+      )}
 
       {/* Action Buttons & Follower Metrics */}
       <ProfileActions followersCount={profile.followersCount} />
@@ -132,46 +129,63 @@ function ProfileAvatar({ src, name }: { src: string; name: string }) {
 
 
 type ProfilePartyRoleGridProps = {
-  party: UserProfileData["party"];
-  role: UserProfileData["role"];
+  party?: UserProfileData["party"];
+  role?: UserProfileData["role"];
 };
 
 function ProfilePartyRoleGrid({ party, role }: ProfilePartyRoleGridProps) {
+  if (!party) return null;
+
   return (
     <div className="mt-3 grid grid-cols-[43%_57%] gap-4 items-center pt-6">
-      {/* Party Column (38%) */}
+      {/* Party Column (43%) */}
       <div className="flex items-center gap-2.5 min-w-0">
         <div className="shrink-0">
-          <img
-            src={party.logo}
-            alt={party.name}
-            className="size-8 rounded-full object-cover ring-1 ring-border shadow-2xs"
-          />
+          {party.logo ? (
+            <img
+              src={party.logo}
+              alt={party.name}
+              className="size-8 rounded-full object-cover ring-1 ring-border shadow-2xs"
+            />
+          ) : (
+            <div
+              className="size-8 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-2xs"
+              style={{ backgroundColor: party.color || "#0066da" }}
+            >
+              {party.name?.charAt(0) || "P"}
+            </div>
+          )}
         </div>
         <div className="min-w-0">
           <p className="font-medium text-[12px] leading-tight text-c-100 truncate">
             {party.name}
           </p>
-          <p className="text-[9px] font-bold text-c-40 truncate mt-1">
-            {party.since}
-          </p>
+          {party.since && (
+            <p className="text-[9px] font-bold text-c-40 truncate mt-1">
+              {party.since}
+            </p>
+          )}
         </div>
       </div>
 
-      {/* Role / Office Column (60%) */}
-      <div className="flex items-center gap-2.5 min-w-0">
-        <div className="shrink-0 text-c-80">
-          <FolderOpen className="size-6" />
+      {/* Role / Office Column (57%) */}
+      {role ? (
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="shrink-0 text-c-80">
+            <FolderOpen className="size-6" />
+          </div>
+          <div className="min-w-0">
+            <p className="font-medium text-[12px] leading-tight text-c-100 truncate">
+              {role.title}
+            </p>
+            {role.chapter && (
+              <p className="text-[9px] font-bold text-c-40 truncate mt-1">
+                {role.chapter}
+              </p>
+            )}
+          </div>
         </div>
-        <div className="min-w-0">
-          <p className="font-medium text-[12px] leading-tight text-c-100 truncate">
-            {role.title}
-          </p>
-          <p className="text-[9px] font-bold text-c-40 truncate mt-1">
-            {role.chapter}
-          </p>
-        </div>
-      </div>
+      ) : null}
     </div>
   );
 }
@@ -302,136 +316,4 @@ function ProfileTabContent({
     case "following":
       return <FollowingList count={profile.followingCount} />;
   }
-}
-
-/* ========================================================================== */
-/*                       6. PARTY HISTORY TIMELINE TREE                       */
-/* ========================================================================== */
-interface PartyHistoryTimelineProps {
-  events: TimelineEvent[];
-}
-
-function PartyHistoryTimeline({ events }: PartyHistoryTimelineProps) {
-  return (
-    <div className="relative pt-3 pl-2">
-      {events.map((event, index) => (
-        <TimelineNodeItem
-          key={event.id}
-          event={event}
-          isLastEvent={index === events.length - 1}
-        />
-      ))}
-    </div>
-  );
-}
-
-function TimelineNodeItem({
-  event,
-  isLastEvent,
-}: {
-  event: TimelineEvent;
-  isLastEvent: boolean;
-}) {
-  const hasBranches = Boolean(event.branches && event.branches.length > 0);
-
-  return (
-    <div className="relative">
-      {/* Event Header: Primary Dot + Horizontal Segment + Event Title */}
-      <div className="flex items-center">
-        {/* Primary Circular Node */}
-        <div className="relative z-10 size-3.5 rounded-full bg-[#97a9cf] dark:bg-chart-1 ring-4 ring-background shrink-0" />
-
-        {/* Horizontal connector from Primary Dot to Text */}
-        <div className="w-8 h-0.5 bg-[#97a9cf] dark:bg-chart-1 shrink-0" />
-
-        {/* Event Label */}
-        <h4 className="pl-3 font-bold text-[15px] tracking-tight text-c-100 whitespace-nowrap">
-          {event.year} - {event.title}
-        </h4>
-      </div>
-
-      {/* Vertical trunk connecting nodes and carrying branches */}
-      <div className="relative ml-1.5">
-        {(!isLastEvent || hasBranches) && (
-          <div
-            className={cn(
-              "absolute left-0 top-0 w-0.5 bg-[#97a9cf] dark:bg-chart-1",
-              isLastEvent ? "h-full" : "h-[calc(100%+16px)]",
-            )}
-          />
-        )}
-
-        {/* Sub-branch horizontal lines */}
-        {hasBranches && (
-          <div className="py-5 space-y-7 pl-0">
-            {event.branches?.map((branch) => (
-              <TimelineBranchItem key={branch.id} branch={branch} />
-            ))}
-          </div>
-        )}
-
-        {!hasBranches && !isLastEvent && <div className="h-14" />}
-      </div>
-    </div>
-  );
-}
-
-function TimelineBranchItem({ branch }: { branch: TimelineBranch }) {
-  return (
-    <div className="relative flex items-center">
-      {/* Horizontal branch line from vertical trunk */}
-      <div className="w-20 md:w-28 h-[1.5px] bg-[#97a9cf] dark:bg-chart-1 shrink-0" />
-
-      {/* Small Terminal Dot */}
-      <div className="size-2 rounded-full bg-[#97a9cf] dark:bg-chart-1 shrink-0 -ml-1 z-10" />
-
-      {/* Sub-branch Title */}
-      <span className="pl-3 text-[13px] font-medium text-c-80">
-        {branch.title}
-      </span>
-    </div>
-  );
-}
-
-/* ========================================================================== */
-/*                       7. FOLLOWERS & FOLLOWING LISTS                       */
-/* ========================================================================== */
-function FollowersList({ count }: { count: string }) {
-  return (
-    <div className="space-y-4 pt-2">
-      <div className="rounded-2xl border border-border bg-card p-6 shadow-2xs">
-        <div className="flex items-center justify-between pb-4 border-b border-border">
-          <h3 className="font-bold text-c-100">
-            Followers ({count})
-          </h3>
-          <span className="text-xs text-c-40">Verified Nigerian Voters</span>
-        </div>
-
-        <div className="py-8 text-center text-sm text-c-50">
-          No followers to display yet.
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function FollowingList({ count }: { count: string }) {
-  return (
-    <div className="space-y-4 pt-2">
-      <div className="rounded-2xl border border-border bg-card p-6 shadow-2xs">
-        <div className="flex items-center justify-between pb-4 border-b border-border">
-          <h3 className="font-bold text-c-100">
-            Following ({count})
-          </h3>
-          <span className="text-xs text-c-40">
-            Candidates & Political Org Leaders
-          </span>
-        </div>
-
-        <div className="py-8 text-center text-sm text-c-50">
-          Not following anyone yet.
-        </div>
-      </div>
-    </div>
-  );
 }

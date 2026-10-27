@@ -55,19 +55,14 @@ function ProfileLayoutComponent() {
       username: raw.username,
       name: raw.name || raw.username,
       avatar: raw.avatar || "",
-      party: raw.party
+      party: raw.party && (raw.party.name || raw.party.short_name)
         ? {
           name: raw.party.short_name || raw.party.name,
           since: raw.party.since || "",
           color: raw.party.color || "#0066da",
           logo: raw.party.logo,
         }
-        : {
-          name: "Independent",
-          since: "Citizen",
-          color: "#6b7280",
-          logo: "",
-        },
+        : undefined,
       role: raw.role
         ? {
           title: raw.role.title,

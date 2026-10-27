@@ -23,7 +23,6 @@ SET
   current_lga = $7,
   current_city = $8,
   current_ward = $9,
-  phone = COALESCE(NULLIF(sqlc.arg(phone)::varchar, ''), phone),
   polling_unit_id = sqlc.arg(polling_unit_id),
   updated_at = NOW()
 WHERE id = $1
