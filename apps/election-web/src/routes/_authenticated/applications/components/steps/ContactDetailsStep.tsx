@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { StickyFooter } from "#/components/Footers";
 import { Button } from "@repo/ui/components/button";
 import { deleteUserPhoneNumber, getUserPhoneNumbers } from "#/lib/server/users";
+import { QUERY_KEYS } from "#/lib/config";
 import { useApplyContext } from "../../context/ApplyContext";
 import { saveUserPhones, type PhoneEntry } from "../../utils/phoneHelpers";
 import { StepHeader } from "./shared/StepHeader";
@@ -25,6 +26,7 @@ export type ApiPhoneNumber = {
  * Completely self-contained: manages phone inputs, validation, and database persistence.
  */
 export const ContactDetailsStep = () => {
+  const queryClient = useQueryClient();
   const { user, setStep } = useApplyContext();
 
   const [phones, setPhones] = useState<PhoneEntry[]>([
@@ -43,16 +45,18 @@ export const ContactDetailsStep = () => {
   const [hasInitialized, setHasInitialized] = useState(false);
 
   // Fetch registered phone numbers for the active user
-  const { data: userPhoneNumbers, isLoading } = useQuery({
-    queryKey: ["user-phonenumbers", user?.fake_id || user?.id],
+  const { data: userPhoneNumbers, isLoading, refetch: refetchPhones } = useQuery({
+    queryKey: QUERY_KEYS.userPhoneNumbers(user?.fake_id),
     queryFn: async () => {
-      const id = user?.fake_id || user?.id;
+      const id = user?.fake_id;
       if (!id) return [];
       const res = await getUserPhoneNumbers({ data: { user_id: id } });
       if (!res?.success) return [];
+
       return (res.data?.phone_numbers || res.data?.phones || []) as ApiPhoneNumber[];
     },
-    enabled: !!(user?.fake_id || user?.id),
+
+    enabled: !!user?.fake_id,
     staleTime: Infinity,
   });
 
@@ -126,13 +130,15 @@ export const ContactDetailsStep = () => {
     const phoneObj = phones[index];
     if (!phoneObj) return;
 
+    // Cannot delete the default phone number
     if (phoneObj.is_default) {
       toast.error("Cannot delete the active default phone number.");
       return;
     }
 
+    // Delete the phone number from the server
     if (phoneObj.id && Number(phoneObj.id) > 0) {
-      const userFid = user?.fake_id || user?.id;
+      const userFid = user?.fake_id;
       if (userFid) {
         try {
           const res = await deleteUserPhoneNumber({
@@ -142,7 +148,11 @@ export const ContactDetailsStep = () => {
             toast.error(res?.message || "Failed to delete phone number.");
             return;
           }
+
           toast.success("Phone number deleted successfully.");
+          queryClient.invalidateQueries({
+            queryKey: QUERY_KEYS.userPhoneNumbers(user?.fake_id),
+          });
         } catch (err: any) {
           toast.error(err?.message || "Failed to delete phone number.");
           return;
@@ -150,11 +160,14 @@ export const ContactDetailsStep = () => {
       }
     }
 
+    // Remove the phone number
     const updated = phones.filter((_, idx) => idx !== index);
+
     // Ensure at least one number remains marked as default
     if (!updated.some((p) => p.is_default) && updated.length > 0 && updated[0]) {
       updated[0].is_default = true;
     }
+
     setPhones(updated);
   };
 
@@ -167,8 +180,13 @@ export const ContactDetailsStep = () => {
   const handleContinue = async () => {
     setIsSaving(true);
     try {
-      const ok = await saveUserPhones(user, phones);
-      if (ok) {
+      const saved = await saveUserPhones(user, phones);
+
+      if (saved) {
+        queryClient.invalidateQueries({
+          queryKey: QUERY_KEYS.userPhoneNumbers(user?.fake_id),
+        });
+        setPhones(saved);
         setStep(4);
       }
     } finally {
@@ -201,11 +219,7 @@ export const ContactDetailsStep = () => {
 
             {/* Phone Rows */}
             {phones.map((phoneObj, index) => {
-              const isLocked = !!(
-                phoneObj.id &&
-                Number(phoneObj.id) > 0 &&
-                phoneObj.is_default
-              );
+              const isLocked = !!(phoneObj.id && Number(phoneObj.id) > 0 && phoneObj.is_default);
 
               return (
                 <div

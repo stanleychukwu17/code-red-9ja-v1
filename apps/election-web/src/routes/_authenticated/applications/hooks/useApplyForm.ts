@@ -5,6 +5,7 @@ import {
   submitPollingAgentApplication,
 } from "#/lib/server/applications";
 import { getUserMe } from "#/lib/server/users";
+import { QUERY_KEYS } from "#/lib/config";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -26,9 +27,7 @@ export function useApplyForm({ search, navigate }: UseApplyFormOptions) {
   const [hasProcessedSearchParty, setHasProcessedSearchParty] = useState(false);
 
   // Form states
-  const [selectedPartyId, setSelectedPartyId] = useState<number | null>(
-    user?.party_id || null,
-  );
+  const [selectedPartyId, setSelectedPartyId] = useState<number | null>(user?.party_id || null);
   const [selectedElectionIds, setSelectedElectionIds] = useState<number[]>([]);
 
   // --- Identity & Photo Verification ---
@@ -36,21 +35,11 @@ export function useApplyForm({ search, navigate }: UseApplyFormOptions) {
   const [isUploading, setIsUploading] = useState<boolean>(false);
 
   // --- Residential & Territorial Location ---
-  const [selectedStateId, setSelectedStateId] = useState<number | null>(
-    user?.current_state || null,
-  );
-  const [selectedLgaId, setSelectedLgaId] = useState<number | null>(
-    user?.current_lga || null,
-  );
-  const [selectedWardId, setSelectedWardId] = useState<number | null>(
-    user?.current_ward || null,
-  );
-  const [streetAddress, setStreetAddress] = useState<string>(
-    user?.address || "",
-  );
-  const [selectedPollingUnitId, setSelectedPollingUnitId] = useState<
-    number | null
-  >(user?.polling_unit_id || null);
+  const [selectedStateId, setSelectedStateId] = useState<number | null>(user?.current_state || null);
+  const [selectedLgaId, setSelectedLgaId] = useState<number | null>(user?.current_lga || null);
+  const [selectedWardId, setSelectedWardId] = useState<number | null>(user?.current_ward || null);
+  const [streetAddress, setStreetAddress] = useState<string>(user?.address || "");
+  const [selectedPollingUnitId, setSelectedPollingUnitId] = useState<number | null>(user?.polling_unit_id || null);
 
   // --- Educational Background ---
   const [educationalStatus, setEducationalStatus] = useState<string>("");
@@ -72,24 +61,21 @@ export function useApplyForm({ search, navigate }: UseApplyFormOptions) {
 
   // Pre-fill profile, education, and banking data from existing user record
   const { data: userMeDetails } = useQuery({
-    queryKey: ["userMeDetails"],
+    queryKey: QUERY_KEYS.userMeDetails,
     queryFn: async () => {
       const res = await getUserMe();
       return res?.success && res.data?.user ? res.data.user : null;
     },
     staleTime: Infinity,
   });
+  console.log("userMeDetails", userMeDetails);
 
   useEffect(() => {
     if (userMeDetails) {
-      if (userMeDetails.profile?.educational_status)
-        setEducationalStatus(userMeDetails.profile.educational_status);
-      if (userMeDetails.profile?.highest_degree)
-        setHighestDegree(userMeDetails.profile.highest_degree);
-      if (userMeDetails.profile?.graduation_year)
-        setGraduationYear(userMeDetails.profile.graduation_year);
-      if (userMeDetails.profile?.school_name)
-        setSchoolName(userMeDetails.profile.school_name);
+      if (userMeDetails.profile?.educational_status) setEducationalStatus(userMeDetails.profile.educational_status);
+      if (userMeDetails.profile?.highest_degree) setHighestDegree(userMeDetails.profile.highest_degree);
+      if (userMeDetails.profile?.graduation_year) setGraduationYear(userMeDetails.profile.graduation_year);
+      if (userMeDetails.profile?.school_name) setSchoolName(userMeDetails.profile.school_name);
 
       if (userMeDetails.bank_account_number) {
         setBankAccountNumber(userMeDetails.bank_account_number);
@@ -106,7 +92,7 @@ export function useApplyForm({ search, navigate }: UseApplyFormOptions) {
 
   // Query user's existing applications to avoid duplicate submissions
   const { data: applications = [] } = useQuery({
-    queryKey: ["applications"],
+    queryKey: QUERY_KEYS.applications,
     queryFn: async () => {
       const res = await getApplications();
       if (res?.success && res.data?.applications) {
@@ -114,6 +100,7 @@ export function useApplyForm({ search, navigate }: UseApplyFormOptions) {
       }
       return [];
     },
+    staleTime: Infinity,
   });
 
   const appliedElectionGroupIds = useMemo(
@@ -143,11 +130,7 @@ export function useApplyForm({ search, navigate }: UseApplyFormOptions) {
       return;
     }
 
-    const result = validatePartySearch({
-      search,
-      parties,
-      lockedPartyId,
-    });
+    const result = validatePartySearch({ search, parties, lockedPartyId });
 
     if (!result) {
       setHasProcessedSearchParty(true);
@@ -164,18 +147,7 @@ export function useApplyForm({ search, navigate }: UseApplyFormOptions) {
     setSelectedPartyId(result.party.id);
     setStep(3);
     setHasProcessedSearchParty(true);
-  }, [
-    parties,
-    partiesLoading,
-    search,
-    lockedPartyId,
-    hasProcessedSearchParty,
-  ]);
-
-  // Reset LGA selection whenever state changes
-  useEffect(() => {
-    setSelectedLgaId(null);
-  }, [selectedStateId]);
+  }, [parties, partiesLoading, search, lockedPartyId, hasProcessedSearchParty]);
 
   // Mutation submitting the full polling agent application
   const submitMutation = useMutation({
@@ -221,7 +193,7 @@ export function useApplyForm({ search, navigate }: UseApplyFormOptions) {
       if (!response.success) {
         throw new Error(
           response.message ||
-            "Failed to submit application. Please check your inputs.",
+          "Failed to submit application. Please check your inputs.",
         );
       }
       return response;

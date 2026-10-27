@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { getPollingUnitsWithCapacity } from "#/lib/server/parties";
+import { getPollingUnitsWithCapacity } from "#/lib/server/polling_units";
 import { getWards } from "#/lib/server/wards";
 import { SelectableCard } from "@repo/ui/components/cards/Rewards";
 import { Label } from "@repo/ui/components/input";

@@ -961,8 +961,39 @@ func (s *UsersService) CheckUsername(ctx context.Context, username string) (bool
 	return false, 0
 }
 
-// InvalidateUsernameCache is a no-op kept for interface compatibility (usernames are queried directly from PostgreSQL)
+// GetFakeIDByUsername resolves a user's fake ID by username using a Redis cache-aside pattern.
+func (s *UsersService) GetFakeIDByUsername(ctx context.Context, username string) (int64, error) {
+	clean := strings.TrimPrefix(strings.TrimSpace(username), "@")
+	if clean == "" {
+		return 0, fmt.Errorf("username cannot be empty")
+	}
+
+	cacheKey := fmt.Sprintf("%s%s", db.RedisUsernameFakeID, strings.ToLower(clean))
+
+	// Check Redis cache first
+	if val, err := s.rdb.Get(ctx, cacheKey).Int64(); err == nil && val > 0 {
+		return val, nil
+	}
+
+	// Fetch from PostgreSQL
+	fakeID, err := s.queries.GetFakeIDByUsername(ctx, utils.PgTextFromString(clean))
+	if err != nil || !fakeID.Valid {
+		return 0, fmt.Errorf("user not found: %s", clean)
+	}
+
+	// Cache in Redis for 7 days
+	_ = s.rdb.Set(ctx, cacheKey, fakeID.Int64, db.RedisSevenDaysTTL).Err()
+
+	return fakeID.Int64, nil
+}
+
+// InvalidateUsernameCache removes the cached fake ID for a username.
 func (s *UsersService) InvalidateUsernameCache(ctx context.Context, username string) {
+	clean := strings.TrimPrefix(strings.TrimSpace(username), "@")
+	if clean != "" {
+		cacheKey := fmt.Sprintf("%s%s", db.RedisUsernameFakeID, strings.ToLower(clean))
+		_ = s.rdb.Del(ctx, cacheKey).Err()
+	}
 }
 
 // function: checks if the email already exists in the postgres db
@@ -1179,25 +1210,25 @@ type UserPublicProfile struct {
 
 // GetUserPublicProfile fetches and hydrates the public profile for a username.
 func (s *UsersService) GetUserPublicProfile(ctx context.Context, username string, viewerUserID int64) (*UserPublicProfile, error) {
-	// 1. Normalize username (strip leading @)
+	// Normalize username (strip leading @)
 	cleanUsername := strings.TrimPrefix(strings.TrimSpace(username), "@")
 	if cleanUsername == "" {
 		return nil, fmt.Errorf("username cannot be empty")
 	}
 
-	// 2. Resolve user's fake ID from username
-	fakeID, err := s.queries.GetFakeIDByUsername(ctx, utils.PgTextFromString(cleanUsername))
-	if err != nil || !fakeID.Valid {
-		return nil, fmt.Errorf("user not found: %s", cleanUsername)
+	// Resolve user's fake ID from username (cached in Redis)
+	fakeID, err := s.GetFakeIDByUsername(ctx, cleanUsername)
+	if err != nil {
+		return nil, err
 	}
 
-	// 3. Fetch full user record and relational info from cache/DB
-	user, err := s.GetUserByFakeID(ctx, fakeID.Int64)
+	// Fetch full user record and relational info from cache/DB
+	user, err := s.GetUserByFakeID(ctx, fakeID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch user details: %w", err)
 	}
 
-	// 4. Fetch follower and following metrics
+	// Fetch follower and following metrics
 	followersCount, err := s.queries.GetUserFollowersCount(ctx, user.ID)
 	if err != nil {
 		followersCount = 0
@@ -1208,7 +1239,7 @@ func (s *UsersService) GetUserPublicProfile(ctx context.Context, username string
 		followingCount = 0
 	}
 
-	// 5. Check if viewing user is currently following this profile
+	// Check if viewing user is currently following this profile
 	isFollowing := false
 	if viewerUserID > 0 && viewerUserID != user.ID {
 		isFollowing, _ = s.queries.IsFollowingUser(ctx, queries.IsFollowingUserParams{
@@ -1217,7 +1248,7 @@ func (s *UsersService) GetUserPublicProfile(ctx context.Context, username string
 		})
 	}
 
-	// 6. Map political party affiliation if member
+	// Map political party affiliation if member
 	var party *UserPublicParty
 	if user.PartyBasicInfo != nil {
 		since := ""
@@ -1234,7 +1265,7 @@ func (s *UsersService) GetUserPublicProfile(ctx context.Context, username string
 		}
 	}
 
-	// 7. Resolve user's party role title and chapter scope
+	// Resolve user's party role title and chapter scope
 	roleTitle := "Member"
 	chapterName := ""
 	if user.PartyBasicInfo != nil {
@@ -1264,7 +1295,7 @@ func (s *UsersService) GetUserPublicProfile(ctx context.Context, username string
 		Chapter: chapterName,
 	}
 
-	// 8. Build political history timeline from party milestones
+	// Build political history timeline from party milestones
 	milestones, _ := s.queries.ListUserPartyMilestones(ctx, user.ID)
 	var timeline []UserTimelineEvent
 	for _, m := range milestones {
@@ -1289,7 +1320,7 @@ func (s *UsersService) GetUserPublicProfile(ctx context.Context, username string
 		})
 	}
 
-	// 9. Fallback timeline event if no explicit party milestones exist
+	// Fallback timeline event if no explicit party milestones exist
 	if len(timeline) == 0 {
 		evYear := "2024"
 		if user.CreatedAt.Valid && user.CreatedAt.Time.Year() > 2000 {
@@ -1319,7 +1350,7 @@ func (s *UsersService) GetUserPublicProfile(ctx context.Context, username string
 		})
 	}
 
-	// 10. Format display name and geographic location string
+	// Format display name and geographic location string
 	fullName := strings.TrimSpace(user.FirstName.String + " " + user.LastName.String)
 	if fullName == "" {
 		fullName = cleanUsername
@@ -1332,7 +1363,7 @@ func (s *UsersService) GetUserPublicProfile(ctx context.Context, username string
 		location = user.StateName
 	}
 
-	// 11. Assemble and return hydrated public profile
+	// Assemble and return hydrated public profile
 	return &UserPublicProfile{
 		ID:             user.ID,
 		FakeID:         user.FakeID.Int64,

@@ -541,6 +541,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Get("/api/v1/admin/users/{id}/phones", usersHandler.GetUserPhoneNumbers)
 		r.Put("/api/v1/admin/users/{id}/phones", usersHandler.UpdateUserPhoneNumbers)
 		r.Delete("/api/v1/admin/users/phones", usersHandler.DeleteUserPhoneNumber)
+		r.Delete("/api/v1/admin/users/phones/{id}", usersHandler.DeleteUserPhoneNumber)
 		r.Get("/api/v1/users/me/wallet", usersHandler.GetMyWallet)
 		r.Get("/api/v1/users/me/wallet/transactions", usersHandler.ListMyWalletTransactions)
 		r.Post("/api/v1/users/me/wallet/withdraw", usersHandler.WithdrawFromUserWallet)

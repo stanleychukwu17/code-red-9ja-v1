@@ -53,6 +53,7 @@ type UsersService interface {
 	DeleteUserPhoneNumber(ctx context.Context, id int64, userID int64) error
 	MakeUserSuperAdmin(ctx context.Context, username string) error
 	CheckUsername(ctx context.Context, username string) (bool, int64)
+	GetFakeIDByUsername(ctx context.Context, username string) (int64, error)
 	InvalidateUsernameCache(ctx context.Context, username string)
 	UpdateUserRoles(ctx context.Context, userID int64, fakeID int64, roles []string, whoAssigned int64) error
 	UpdateUserParty(ctx context.Context, userID int64, partyID *int16, fakeID int64) error

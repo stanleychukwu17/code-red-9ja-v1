@@ -107,13 +107,13 @@ export const EducationalStep = () => {
               options={
                 isStudent
                   ? Array.from({ length: 11 }, (_, i) => {
-                      const year = String(new Date().getFullYear() + i);
-                      return { label: year, value: year };
-                    })
+                    const year = String(new Date().getFullYear() + i);
+                    return { label: year, value: year };
+                  })
                   : Array.from({ length: 71 }, (_, i) => {
-                      const year = String(new Date().getFullYear() - i);
-                      return { label: year, value: year };
-                    })
+                    const year = String(new Date().getFullYear() - i);
+                    return { label: year, value: year };
+                  })
               }
             />
           </div>

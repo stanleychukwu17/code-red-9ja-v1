@@ -13,22 +13,22 @@ export type PhoneEntry = {
 /**
  * Validates and persists user phone numbers to the backend API.
  * Ensures at least one phone number exists, at least one is enabled for WhatsApp,
- * and normalizes formatting with country codes.
+ * normalizes formatting with country codes, and returns the updated PhoneEntry array.
  */
 export async function saveUserPhones(
   user: any,
   phones: PhoneEntry[],
-): Promise<boolean> {
+): Promise<PhoneEntry[] | null> {
   const validPhones = phones.filter((p) => p.raw_input?.trim() !== "");
   if (validPhones.length === 0) {
     toast.error("Please enter at least one phone number.");
-    return false;
+    return null;
   }
 
   const hasWhatsapp = validPhones.some((p) => p.on_whatsapp === "yes");
   if (!hasWhatsapp) {
     toast.error("At least one phone number must have WhatsApp enabled (Yes).");
-    return false;
+    return null;
   }
 
   const defaultCount = validPhones.filter((p) => p.is_default).length;
@@ -36,13 +36,13 @@ export async function saveUserPhones(
     validPhones[0].is_default = true;
   } else if (defaultCount > 1) {
     toast.error("Only one phone number can be set as default.");
-    return false;
+    return null;
   }
 
-  const userFid = user?.fake_id || user?.id;
+  const userFid = user?.fake_id;
   if (!userFid) {
     toast.error("User identity not found.");
-    return false;
+    return null;
   }
 
   try {
@@ -77,13 +77,26 @@ export async function saveUserPhones(
 
     if (!res?.success) {
       toast.error(res?.message || "Failed to save phone numbers.");
-      return false;
+      return null;
+    }
+
+    const serverPhones = res.data?.phones;
+    let savedList: PhoneEntry[] = formattedPhones;
+    if (Array.isArray(serverPhones) && serverPhones.length > 0) {
+      savedList = serverPhones.map((p: any) => ({
+        id: p.id || 0,
+        phone: p.phone || p.raw_input || "",
+        phonecode: p.phonecode || "234",
+        raw_input: p.raw_input || p.phone || "",
+        on_whatsapp: p.on_whatsapp === true || p.on_whatsapp === "yes" ? "yes" : "no",
+        is_default: Boolean(p.is_default),
+      }));
     }
 
     toast.success("Phone numbers saved successfully.");
-    return true;
+    return savedList;
   } catch (err: any) {
     toast.error(err?.message || "Failed to save phone numbers.");
-    return false;
+    return null;
   }
 }

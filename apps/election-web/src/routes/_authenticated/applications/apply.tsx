@@ -77,15 +77,6 @@ function ApplyPageContent() {
     handleBackClick,
     submitError,
     success,
-    // Step 8
-    selectedStateId,
-    setSelectedStateId,
-    selectedLgaId,
-    setSelectedLgaId,
-    selectedWardId,
-    setSelectedWardId,
-    streetAddress,
-    setStreetAddress,
     // Step 14
     bankAccountNumber,
     setBankAccountNumber,
@@ -128,18 +119,7 @@ function ApplyPageContent() {
         {step === 4 && <EducationalStep />}
 
         {/* Step 5: Residential Address & Ward */}
-        {step === 5 && (
-          <Step5
-            selectedStateId={selectedStateId}
-            setSelectedStateId={setSelectedStateId}
-            selectedLgaId={selectedLgaId}
-            setSelectedLgaId={setSelectedLgaId}
-            selectedWardId={selectedWardId}
-            setSelectedWardId={setSelectedWardId}
-            streetAddress={streetAddress}
-            setStreetAddress={setStreetAddress}
-          />
-        )}
+        {step === 5 && <Step5 />}
 
         {/* Step 6: Polling Unit Search & Assignment */}
         {step === 6 && <Step6 />}

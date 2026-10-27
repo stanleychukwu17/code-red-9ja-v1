@@ -397,4 +397,8 @@ export const QUERY_KEYS = {
   countries: ["countries"],
   parties: ["parties"],
   electionGroups: ["electionGroups"],
+  applications: ["applications"],
+  userMeDetails: ["userMeDetails"],
+  userPhoneNumbers: (userId?: string | number) =>
+    userId !== undefined ? ["user-phonenumbers", userId] : ["user-phonenumbers"],
 };
