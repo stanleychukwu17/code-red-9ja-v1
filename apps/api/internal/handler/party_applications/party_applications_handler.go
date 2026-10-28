@@ -128,7 +128,7 @@ func (h *Handler) SubmitApplication(w http.ResponseWriter, r *http.Request) {
 	apps, err := h.service.SubmitApplication(r.Context(), partyapplications.SubmitApplicationInput{
 		UserID:            claims.UserID,
 		PartyID:           req.PartyID,
-		ElectionGroupIDs:  []int32{req.ElectionGroupID},
+		ElectionGroupID:   req.ElectionGroupID,
 		PollingUnitID:     req.PollingUnitID,
 		Avatar:            req.Avatar,
 		AvatarFileID:      req.AvatarFileID,

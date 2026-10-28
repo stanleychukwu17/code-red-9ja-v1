@@ -163,17 +163,19 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 		})
 	}
 
-	// Update profile details
-	err = txQueries.UpdateUserAgentMoreInfo(ctx, queries.UpdateUserAgentMoreInfoParams{
-		UserID:            input.UserID,
-		EducationalStatus: utils.PgTextFromString(input.EducationalStatus),
-		HighestDegree:     utils.PgTextFromString(input.HighestDegree),
-		GraduationYear:    utils.PgTextFromString(input.GraduationYear),
-		SchoolName:        utils.PgTextFromString(input.SchoolName),
-		Address:           utils.PgTextFromString(input.Address),
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to update user profile: %w", err)
+	// Update profile details if educational status is provided and not none
+	if input.EducationalStatus != "" && strings.ToLower(input.EducationalStatus) != "none" {
+		err = txQueries.UpdateUserAgentMoreInfo(ctx, queries.UpdateUserAgentMoreInfoParams{
+			UserID:            input.UserID,
+			EducationalStatus: utils.PgTextFromString(input.EducationalStatus),
+			HighestDegree:     utils.PgTextFromString(input.HighestDegree),
+			GraduationYear:    utils.PgTextFromString(input.GraduationYear),
+			SchoolName:        utils.PgTextFromString(input.SchoolName),
+			Address:           utils.PgTextFromString(input.Address),
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to update user profile: %w", err)
+		}
 	}
 
 	// Update bank account if provided
