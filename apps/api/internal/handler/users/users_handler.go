@@ -40,7 +40,6 @@ type UsersService interface {
 	AdminUpdateUser(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, username, gender, avatar string, avatarFileId *int64, countryID, stateID int16, cityID int32, stateOfOrigin int16) error
 
 	GetBanks(ctx context.Context) ([]usersservice.Bank, error)
-	ValidateBankAccount(ctx context.Context, accountNumber string, bankCode string) (string, error)
 
 	CreateUserWallet(ctx context.Context, user queries.User) (queries.UserWallet, error)
 	GetUserWallet(ctx context.Context, userID int64) (queries.UserWallet, error)
@@ -130,38 +129,6 @@ func (h *Handler) GetBanks(w http.ResponseWriter, r *http.Request) {
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Banks fetched successfully", map[string]interface{}{
 		"banks": banks,
-	})
-}
-
-// ValidateBankAccount handles GET /api/v1/banks/validate
-// @Summary      Validate bank account
-// @Description  Validates account number and bank code, returning the account name
-// @Tags         Banks
-// @Accept       json
-// @Produce      json
-// @Param        accountNumber query string true "Account Number"
-// @Param        bankCode      query string true "Bank Code"
-// @Success      200  {object} map[string]interface{} "Account validated successfully"
-// @Failure      400  {object} map[string]interface{} "Missing parameters"
-// @Failure      500  {object} map[string]interface{} "Validation failed"
-// @Router       /banks/validate [get]
-func (h *Handler) ValidateBankAccount(w http.ResponseWriter, r *http.Request) {
-	accountNumber := r.URL.Query().Get("accountNumber")
-	bankCode := r.URL.Query().Get("bankCode")
-
-	if accountNumber == "" || bankCode == "" {
-		h.utils.RespondError(w, http.StatusBadRequest, "accountNumber and bankCode are required")
-		return
-	}
-
-	accountName, err := h.usersService.ValidateBankAccount(r.Context(), accountNumber, bankCode)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to validate account: "+err.Error())
-		return
-	}
-
-	h.utils.RespondSuccess(w, http.StatusOK, "Account validated successfully", map[string]interface{}{
-		"accountName": accountName,
 	})
 }
 

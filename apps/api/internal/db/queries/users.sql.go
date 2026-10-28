@@ -880,11 +880,8 @@ WHERE
       SELECT 1 FROM user_roles ur WHERE ur.user_id = u.id AND ur.role_code = ANY($5::text[])
   ))
   AND ($6::text IS NULL OR (
-      u.first_name ILIKE '%' || $6::text || '%' OR
-      u.last_name ILIKE '%' || $6::text || '%' OR
       u.username ILIKE '%' || $6::text || '%' OR
-      (u.first_name || ' ' || u.last_name) ILIKE '%' || $6::text || '%' OR
-      (u.last_name || ' ' || u.first_name) ILIKE '%' || $6::text || '%'
+      (COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')) ILIKE '%' || $6::text || '%'
   ))
   AND ($7::text[] IS NULL OR u.account_status = ANY($7::text[]))
   AND ($8::smallint[] IS NULL OR u.current_country = ANY($8::smallint[]))
@@ -960,11 +957,8 @@ WHERE
   u.account_status = 'active'
   AND ($1::bigint IS NULL OR u.id < $1::bigint)
   AND ($2::text IS NULL OR (
-      u.first_name ILIKE '%' || $2::text || '%' OR
-      u.last_name ILIKE '%' || $2::text || '%' OR
       u.username ILIKE '%' || $2::text || '%' OR
-      (u.first_name || ' ' || u.last_name) ILIKE '%' || $2::text || '%' OR
-      (u.last_name || ' ' || u.first_name) ILIKE '%' || $2::text || '%'
+      (COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')) ILIKE '%' || $2::text || '%'
   ))
   AND ($3::smallint IS NULL OR u.current_country = $3::smallint)
   AND ($4::smallint IS NULL OR u.current_state = $4::smallint)

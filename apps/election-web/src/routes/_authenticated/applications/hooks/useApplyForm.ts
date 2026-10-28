@@ -1,4 +1,3 @@
-import { useUser } from "#/hooks/useUser";
 import { useParties } from "#/hooks/useParties";
 import {
   getApplications,
@@ -6,7 +5,7 @@ import {
 } from "#/lib/server/applications";
 import { getUserMe } from "#/lib/server/users";
 import { QUERY_KEYS } from "#/lib/config";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import type { ApplySearch } from "../apply";
@@ -15,6 +14,7 @@ import {
   getLockedPartyId,
   validatePartySearch,
 } from "../utils/partyValidation";
+import { validateAndFormatApplicationPayload } from "../utils/applicationValidation";
 
 interface UseApplyFormOptions {
   search: ApplySearch;
@@ -22,24 +22,25 @@ interface UseApplyFormOptions {
 }
 
 export function useApplyForm({ search, navigate }: UseApplyFormOptions) {
-  const user = useUser();
+  const queryClient = useQueryClient();
 
   const [hasProcessedSearchParty, setHasProcessedSearchParty] = useState(false);
 
   // Form states
-  const [selectedPartyId, setSelectedPartyId] = useState<number | null>(user?.party_id || null);
+  const [selectedPartyId, setSelectedPartyId] = useState<number | null>(null);
   const [selectedElectionId, setSelectedElectionId] = useState<number | null>(null);
 
   // --- Identity & Photo Verification ---
-  const [avatarUrl, setAvatarUrl] = useState<string>(user?.avatar || "");
+  const [avatarUrl, setAvatarUrl] = useState<string>("");
+  const [avatarFileId, setAvatarFileId] = useState<number | null>(null);
   const [isUploading, setIsUploading] = useState<boolean>(false);
 
   // --- Residential & Territorial Location ---
-  const [selectedStateId, setSelectedStateId] = useState<number | null>(user?.current_state || null);
-  const [selectedLgaId, setSelectedLgaId] = useState<number | null>(user?.current_lga || null);
-  const [selectedWardId, setSelectedWardId] = useState<number | null>(user?.current_ward || null);
-  const [streetAddress, setStreetAddress] = useState<string>(user?.address || "");
-  const [selectedPollingUnitId, setSelectedPollingUnitId] = useState<number | null>(user?.polling_unit_id || null);
+  const [selectedStateId, setSelectedStateId] = useState<number | null>(null);
+  const [selectedLgaId, setSelectedLgaId] = useState<number | null>(null);
+  const [selectedWardId, setSelectedWardId] = useState<number | null>(null);
+  const [streetAddress, setStreetAddress] = useState<string>("");
+  const [selectedPollingUnitId, setSelectedPollingUnitId] = useState<number | null>(null);
 
   // --- Educational Background ---
   const [educationalStatus, setEducationalStatus] = useState<string>("");
@@ -50,7 +51,6 @@ export function useApplyForm({ search, navigate }: UseApplyFormOptions) {
   // --- Bank Account & Verification ---
   const [bankAccountNumber, setBankAccountNumber] = useState<string>("");
   const [selectedBankCode, setSelectedBankCode] = useState<string | null>(null);
-  const [bankDropdownOpen, setBankDropdownOpen] = useState<boolean>(false);
   const [isValidatingAccount, setIsValidatingAccount] = useState(false);
   const [isAccountValid, setIsAccountValid] = useState(false);
 
@@ -68,10 +68,14 @@ export function useApplyForm({ search, navigate }: UseApplyFormOptions) {
     },
     staleTime: Infinity,
   });
-  console.log("userMeDetails", userMeDetails);
 
   useEffect(() => {
     if (userMeDetails) {
+      // Party Affiliation
+      if (userMeDetails.party_id && !selectedPartyId) setSelectedPartyId(userMeDetails.party_id);
+      // Photo / Avatar
+      if (userMeDetails.avatar_file_id) setAvatarFileId(Number(userMeDetails.avatar_file_id));
+      if (userMeDetails.avatar && !avatarUrl) setAvatarUrl(userMeDetails.avatar);
       // Location & Residential Address
       if (userMeDetails.current_state) setSelectedStateId(userMeDetails.current_state);
       if (userMeDetails.current_lga) setSelectedLgaId(userMeDetails.current_lga);
@@ -165,54 +169,38 @@ export function useApplyForm({ search, navigate }: UseApplyFormOptions) {
   // Mutation submitting the full polling agent application
   const submitMutation = useMutation({
     mutationFn: async () => {
-      if (
-        !selectedPartyId ||
-        !selectedElectionId ||
-        !selectedStateId ||
-        !selectedLgaId ||
-        !streetAddress ||
-        !selectedPollingUnitId ||
-        !selectedBankCode ||
-        !bankAccountNumber ||
-        bankAccountNumber.length !== 10 ||
-        !(user?.avatar || avatarUrl)
-      ) {
-        throw new Error("Please fill out all required fields.");
-      }
-
-      const response = await submitPollingAgentApplication({
-        data: {
-          party_id: selectedPartyId,
-          election_group_ids: selectedElectionId ? [selectedElectionId] : [],
-          polling_unit_id: Number(selectedPollingUnitId),
-          avatar: user?.avatar || avatarUrl,
-          current_country: 1,
-          current_state: selectedStateId!,
-          current_lga: selectedLgaId!,
-          current_ward: selectedWardId || undefined,
-          current_city: 0,
-          bank_account_number: bankAccountNumber,
-          bank_code: selectedBankCode,
-          whatsapp_phone: "",
-          educational_status: educationalStatus,
-          highest_degree: highestDegree,
-          graduation_year: graduationYear,
-          school_name: schoolName,
-          phone: user?.phone || "",
-          address: streetAddress,
-        },
+      const payload = validateAndFormatApplicationPayload({
+        selectedPartyId,
+        selectedElectionId,
+        selectedStateId,
+        selectedLgaId,
+        selectedWardId,
+        streetAddress,
+        selectedPollingUnitId,
+        avatarUrl,
+        avatarFileId,
+        userAvatar: userMeDetails?.avatar,
+        bankAccountNumber,
+        selectedBankCode,
+        educationalStatus,
+        highestDegree,
+        graduationYear,
+        schoolName,
       });
 
+      const response = await submitPollingAgentApplication({ data: payload });
+
       if (!response.success) {
-        throw new Error(
-          response.message ||
-          "Failed to submit application. Please check your inputs.",
-        );
+        throw new Error(response.message || "Failed to submit application. Please check your inputs.");
       }
+
       return response;
     },
     onSuccess: () => {
       setSuccess(true);
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.auth.session });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.userMeDetails });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.applications });
     },
     onError: (err: any) => {
       setSubmitError(
@@ -234,7 +222,7 @@ export function useApplyForm({ search, navigate }: UseApplyFormOptions) {
   };
 
   return {
-    user,
+    user: userMeDetails,
     // Step & Navigation
     step,
     setStep,
@@ -257,6 +245,8 @@ export function useApplyForm({ search, navigate }: UseApplyFormOptions) {
     // Photo / Avatar
     avatarUrl,
     setAvatarUrl,
+    avatarFileId,
+    setAvatarFileId,
     isUploading,
     setIsUploading,
     // Education
@@ -285,8 +275,6 @@ export function useApplyForm({ search, navigate }: UseApplyFormOptions) {
     setBankAccountNumber,
     selectedBankCode,
     setSelectedBankCode,
-    bankDropdownOpen,
-    setBankDropdownOpen,
     isValidatingAccount,
     setIsValidatingAccount,
     isAccountValid,

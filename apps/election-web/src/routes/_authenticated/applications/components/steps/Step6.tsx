@@ -33,13 +33,7 @@ export const Step6 = () => {
   });
 
   const { data: pollingUnitsData, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteQuery({
-    queryKey: [
-      "pollingUnits",
-      selectedWardId,
-      selectedPartyId,
-      selectedElectionId,
-      debouncedSearch,
-    ],
+    queryKey: ["pollingUnits", selectedWardId, selectedPartyId, selectedElectionId, debouncedSearch],
     queryFn: async ({ pageParam }) => {
       const res = await getPollingUnitsWithCapacity({
         data: {

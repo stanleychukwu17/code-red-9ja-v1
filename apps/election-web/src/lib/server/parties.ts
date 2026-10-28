@@ -107,3 +107,30 @@ export const confirmFileUpload = createServerFn({ method: "POST" })
       return { success: false, message: "Failed to confirm file upload" };
     }
   });
+
+export const deleteFile = createServerFn({ method: "POST" })
+  .inputValidator(
+    (data: {
+      id: string | number;
+      user_fake_id?: string | number;
+      party_id?: string | number;
+      type?: string;
+    }) => data,
+  )
+  .handler(async ({ data: { id, user_fake_id, party_id, type } }) => {
+    try {
+      const params = new URLSearchParams();
+      if (user_fake_id) params.append("user_fake_id", String(user_fake_id));
+      if (party_id) params.append("party_id", String(party_id));
+      if (type) params.append("type", type);
+      const qs = params.toString();
+
+      const response = await apiFetch(`${API_URL.deleteFile(id)}${qs ? `?${qs}` : ""}`, {
+        method: "DELETE",
+      });
+      const resData = await response.json();
+      return resData;
+    } catch (error: any) {
+      return { success: false, message: error?.message || "Failed to delete file" };
+    }
+  });

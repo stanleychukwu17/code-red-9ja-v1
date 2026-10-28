@@ -93,6 +93,7 @@ type SubmitApplicationInput struct {
 	ElectionGroupIDs []int32
 	PollingUnitID    int32
 	Avatar           string
+	AvatarFileID     *int64
 	VotersCardImage  string
 	CurrentCountry   int16
 	CurrentState     int16
@@ -159,6 +160,22 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to update user details: %w", err)
+	}
+
+	// Update user's avatar_file_id and file ownership if avatar file was uploaded
+	if input.AvatarFileID != nil && *input.AvatarFileID > 0 {
+		if err := txQueries.UpdateUserAvatar(ctx, queries.UpdateUserAvatarParams{
+			ID:           input.UserID,
+			Avatar:       utils.PgTextFromString(input.Avatar),
+			AvatarFileID: pgtype.Int8{Int64: *input.AvatarFileID, Valid: true},
+		}); err != nil {
+			return nil, fmt.Errorf("failed to update user avatar file id: %w", err)
+		}
+
+		_, _ = txQueries.UpdateFileOwner(ctx, queries.UpdateFileOwnerParams{
+			ID:      *input.AvatarFileID,
+			OwnerID: pgtype.Int8{Int64: input.UserID, Valid: true},
+		})
 	}
 
 	// Update profile details

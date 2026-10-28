@@ -45,7 +45,7 @@ WHERE
   ($2::integer = 0 OR les.election_group_id = $2) AND
   ($3::smallint = 0 OR les.state_id = $3) AND
   ($4::int = 0 OR les.lga_id = $4) AND
-  ($5::varchar = '' OR u.first_name ILIKE '%' || $5 || '%' OR u.last_name ILIKE '%' || $5 || '%') AND
+  ($5::varchar = '' OR (COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')) ILIKE '%' || $5 || '%') AND
   ($6::bigint = 0 OR les.id < $6)
 ORDER BY les.id DESC
 LIMIT $7::int
@@ -179,7 +179,7 @@ WHERE
   ($3::smallint = 0 OR pu.state_id = $3) AND
   ($4::int = 0 OR pu.lga_id = $4) AND
   ($5::int = 0 OR pu.ward_id = $5) AND
-  ($6::varchar = '' OR u.first_name ILIKE '%' || $6 || '%' OR u.last_name ILIKE '%' || $6 || '%' OR pu.pu_code ILIKE '%' || $6 || '%' OR pu.code ILIKE '%' || $6 || '%') AND
+  ($6::varchar = '' OR (COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')) ILIKE '%' || $6 || '%' OR pu.pu_code ILIKE '%' || $6 || '%' OR pu.code ILIKE '%' || $6 || '%') AND
   ($7::bigint = 0 OR pua.id < $7)
 ORDER BY pua.id DESC
 LIMIT $8::int
@@ -319,7 +319,7 @@ WHERE
   ($1::smallint = 0 OR ses.party_id = $1) AND
   ($2::integer = 0 OR ses.election_group_id = $2) AND
   ($3::smallint = 0 OR ses.state_id = $3) AND
-  ($4::varchar = '' OR u.first_name ILIKE '%' || $4 || '%' OR u.last_name ILIKE '%' || $4 || '%') AND
+  ($4::varchar = '' OR (COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')) ILIKE '%' || $4 || '%') AND
   ($5::bigint = 0 OR ses.id < $5)
 ORDER BY ses.id DESC
 LIMIT $6::int
@@ -443,7 +443,7 @@ WHERE
   ($3::smallint = 0 OR wes.state_id = $3) AND
   ($4::int = 0 OR wes.lga_id = $4) AND
   ($5::int = 0 OR wes.ward_id = $5) AND
-  ($6::varchar = '' OR u.first_name ILIKE '%' || $6 || '%' OR u.last_name ILIKE '%' || $6 || '%') AND
+  ($6::varchar = '' OR (COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')) ILIKE '%' || $6 || '%') AND
   ($7::bigint = 0 OR wes.id < $7)
 ORDER BY wes.id DESC
 LIMIT $8::int

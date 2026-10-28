@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
-import { apiFetch } from "./fetch";
 import { API_URL } from "../config";
+import { apiFetch } from "./fetch";
 
 export const getBanks = createServerFn().handler(async () => {
   try {
@@ -14,20 +14,3 @@ export const getBanks = createServerFn().handler(async () => {
     };
   }
 });
-
-export const validateBankAccount = createServerFn({ method: "POST" })
-  .inputValidator((data: { accountNumber: string; bankCode: string }) => data)
-  .handler(async ({ data }) => {
-    try {
-      const response = await apiFetch(
-        API_URL.validateBankAccount(data.accountNumber, data.bankCode)
-      );
-      const result = await response.json();
-      return result;
-    } catch (error) {
-      return {
-        success: false,
-        message: "Failed to validate bank account",
-      };
-    }
-  });

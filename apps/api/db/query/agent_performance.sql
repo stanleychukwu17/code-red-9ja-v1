@@ -40,7 +40,7 @@ WHERE
   (sqlc.arg(state_id)::smallint = 0 OR pu.state_id = sqlc.arg(state_id)) AND
   (sqlc.arg(lga_id)::int = 0 OR pu.lga_id = sqlc.arg(lga_id)) AND
   (sqlc.arg(ward_id)::int = 0 OR pu.ward_id = sqlc.arg(ward_id)) AND
-  (sqlc.arg(search_query)::varchar = '' OR u.first_name ILIKE '%' || sqlc.arg(search_query) || '%' OR u.last_name ILIKE '%' || sqlc.arg(search_query) || '%' OR pu.pu_code ILIKE '%' || sqlc.arg(search_query) || '%' OR pu.code ILIKE '%' || sqlc.arg(search_query) || '%') AND
+  (sqlc.arg(search_query)::varchar = '' OR (COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')) ILIKE '%' || sqlc.arg(search_query) || '%' OR pu.pu_code ILIKE '%' || sqlc.arg(search_query) || '%' OR pu.code ILIKE '%' || sqlc.arg(search_query) || '%') AND
   (sqlc.arg(cursor_id)::bigint = 0 OR pua.id < sqlc.arg(cursor_id))
 ORDER BY pua.id DESC
 LIMIT sqlc.arg(limit_val)::int;
@@ -81,7 +81,7 @@ WHERE
   (sqlc.arg(state_id)::smallint = 0 OR wes.state_id = sqlc.arg(state_id)) AND
   (sqlc.arg(lga_id)::int = 0 OR wes.lga_id = sqlc.arg(lga_id)) AND
   (sqlc.arg(ward_id)::int = 0 OR wes.ward_id = sqlc.arg(ward_id)) AND
-  (sqlc.arg(search_query)::varchar = '' OR u.first_name ILIKE '%' || sqlc.arg(search_query) || '%' OR u.last_name ILIKE '%' || sqlc.arg(search_query) || '%') AND
+  (sqlc.arg(search_query)::varchar = '' OR (COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')) ILIKE '%' || sqlc.arg(search_query) || '%') AND
   (sqlc.arg(cursor_id)::bigint = 0 OR wes.id < sqlc.arg(cursor_id))
 ORDER BY wes.id DESC
 LIMIT sqlc.arg(limit_val)::int;
@@ -120,7 +120,7 @@ WHERE
   (sqlc.arg(election_group_id)::integer = 0 OR les.election_group_id = sqlc.arg(election_group_id)) AND
   (sqlc.arg(state_id)::smallint = 0 OR les.state_id = sqlc.arg(state_id)) AND
   (sqlc.arg(lga_id)::int = 0 OR les.lga_id = sqlc.arg(lga_id)) AND
-  (sqlc.arg(search_query)::varchar = '' OR u.first_name ILIKE '%' || sqlc.arg(search_query) || '%' OR u.last_name ILIKE '%' || sqlc.arg(search_query) || '%') AND
+  (sqlc.arg(search_query)::varchar = '' OR (COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')) ILIKE '%' || sqlc.arg(search_query) || '%') AND
   (sqlc.arg(cursor_id)::bigint = 0 OR les.id < sqlc.arg(cursor_id))
 ORDER BY les.id DESC
 LIMIT sqlc.arg(limit_val)::int;
@@ -157,7 +157,7 @@ WHERE
   (sqlc.arg(party_id)::smallint = 0 OR ses.party_id = sqlc.arg(party_id)) AND
   (sqlc.arg(election_group_id)::integer = 0 OR ses.election_group_id = sqlc.arg(election_group_id)) AND
   (sqlc.arg(state_id)::smallint = 0 OR ses.state_id = sqlc.arg(state_id)) AND
-  (sqlc.arg(search_query)::varchar = '' OR u.first_name ILIKE '%' || sqlc.arg(search_query) || '%' OR u.last_name ILIKE '%' || sqlc.arg(search_query) || '%') AND
+  (sqlc.arg(search_query)::varchar = '' OR (COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')) ILIKE '%' || sqlc.arg(search_query) || '%') AND
   (sqlc.arg(cursor_id)::bigint = 0 OR ses.id < sqlc.arg(cursor_id))
 ORDER BY ses.id DESC
 LIMIT sqlc.arg(limit_val)::int;

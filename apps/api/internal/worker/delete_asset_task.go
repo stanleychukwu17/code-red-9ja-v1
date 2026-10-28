@@ -131,7 +131,12 @@ func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskDeleteAsset(ctx context
 	}
 
 	// 4. Delete object from Cloudflare R2 storage bucket and purge Edge CDN cache
-	if key != "" && redisTaskProcessor.r2Svc != nil {
+	if redisTaskProcessor.r2Svc == nil {
+		slog.Warn("r2Svc is nil on worker processor; skipping Cloudflare R2 deletion and DB record removal", "key", key, "file_id", payload.FileID)
+		return nil
+	}
+
+	if key != "" {
 		// S3 SDK DeleteObject permanently removes the blob from R2
 		if delErr := redisTaskProcessor.r2Svc.DeleteObject(ctx, key); delErr != nil {
 			slog.Error("failed to delete object from R2", "key", key, "err", delErr)

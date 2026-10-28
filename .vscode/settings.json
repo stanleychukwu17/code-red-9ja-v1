@@ -81,6 +81,7 @@
     "mediaassetshandler",
     "mediaassetsservice",
     "messagingservice",
+    "Metas",
     "MGET",
     "mmdb",
     "mountpoint",

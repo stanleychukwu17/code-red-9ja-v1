@@ -1878,9 +1878,9 @@ func (s *ElectionsService) GetUserActiveCandidacies(ctx context.Context, candida
 		})
 	}
 
-	// Cache candidacies with 30-day TTL
+	// Caches "[]" in Redis to avoid re-querying the DB
 	if jsonBytes, err := json.Marshal(candidacies); err == nil {
-		_ = s.rdb.Set(ctx, cacheKey, jsonBytes, db.RedisThirtyDaysTTL).Err()
+		_ = s.rdb.Set(ctx, cacheKey, jsonBytes, db.RedisSixtyDaysTTL).Err()
 	}
 
 	return candidacies, nil

@@ -15,6 +15,7 @@ import (
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/logger"
 	"free9ja/api/internal/router"
+	r2service "free9ja/api/internal/service/r2"
 	"free9ja/api/internal/service/realtime"
 	"free9ja/api/internal/worker"
 
@@ -102,7 +103,24 @@ func newApp(ctx context.Context, cfg *config.Config) *App {
 	q := queries.New(pool)
 	distributor := worker.NewRedisTaskDistributor(redisOpt)
 	broadcaster := realtime.NewBroadcasterFromEnv()
-	processor := worker.NewRedisTaskProcessor(redisOpt, q, pool, rdb, distributor, cfg, nil, broadcaster) // r2Svc will be passed after initialization
+	var r2Svc *r2service.R2Service
+	if cfg != nil {
+		var r2Err error
+		r2Svc, r2Err = r2service.New(r2service.Config{
+			AccountID:       cfg.R2.AccountID,
+			AccessKeyID:     cfg.R2.AccessKeyID,
+			SecretAccessKey: cfg.R2.SecretAccessKey,
+			BucketName:      cfg.R2.BucketName,
+			PublicURL:       cfg.R2.PublicURL,
+			ZoneID:          cfg.R2.ZoneID,
+			APIToken:        cfg.R2.APIToken,
+		})
+
+		if r2Err != nil {
+			slog.Warn("failed to initialize R2 service for worker processor", "err", r2Err)
+		}
+	}
+	processor := worker.NewRedisTaskProcessor(redisOpt, q, pool, rdb, distributor, cfg, r2Svc, broadcaster)
 
 	// Initialize router
 	r := router.New(cfg, pool, rdb, distributor)

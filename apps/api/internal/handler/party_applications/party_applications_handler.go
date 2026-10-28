@@ -51,6 +51,7 @@ type SubmitApplicationRequest struct {
 	ElectionGroupIDs []int32 `json:"election_group_ids"`
 	PollingUnitID    int32   `json:"polling_unit_id"`
 	Avatar           string  `json:"avatar"`
+	AvatarFileID     *int64  `json:"avatar_file_id"`
 	VotersCardImage  string  `json:"voters_card_image"`
 	CurrentCountry   int16   `json:"current_country"`
 	CurrentState     int16   `json:"current_state"`
@@ -83,39 +84,46 @@ type SubmitApplicationRequest struct {
 // @Security     BearerAuth
 // @Router       /party-applications [post]
 func (h *Handler) SubmitApplication(w http.ResponseWriter, r *http.Request) {
+	// 1. Verify authentication claims
 	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
 	if !ok {
 		return
 	}
 
+	// 2. Fetch authenticated requester user record
 	requester, err := h.usersService.GetUserByFakeID(r.Context(), claims.FakeID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusUnauthorized, "User not found")
 		return
 	}
 
+	// 3. Parse and validate JSON request payload
 	var req SubmitApplicationRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
+	// Support single election_group_id fallback for backward compatibility
 	electionGroupIDs := req.ElectionGroupIDs
 	if len(electionGroupIDs) == 0 && req.ElectionGroupID > 0 {
 		electionGroupIDs = []int32{req.ElectionGroupID}
 	}
 
+	// Validate required fields
 	if req.PartyID <= 0 || len(electionGroupIDs) == 0 || req.PollingUnitID <= 0 || req.CurrentCountry <= 0 || req.CurrentState <= 0 || req.CurrentLga <= 0 {
 		h.utils.RespondError(w, http.StatusBadRequest, "party_id, election_group_ids (or election_group_id), polling_unit_id, current_country, current_state, current_lga are required")
 		return
 	}
 
+	// 4. Delegate application submission and profile updates to service layer
 	apps, err := h.service.SubmitApplication(r.Context(), partyapplications.SubmitApplicationInput{
 		UserID:            requester.ID,
 		PartyID:           req.PartyID,
 		ElectionGroupIDs:  electionGroupIDs,
 		PollingUnitID:     req.PollingUnitID,
 		Avatar:            req.Avatar,
+		AvatarFileID:      req.AvatarFileID,
 		VotersCardImage:   req.VotersCardImage,
 		CurrentCountry:    req.CurrentCountry,
 		CurrentState:      req.CurrentState,
@@ -134,6 +142,7 @@ func (h *Handler) SubmitApplication(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		errStr := err.Error()
+		// Check for duplicate application uniqueness constraint violation
 		if strings.Contains(errStr, "uq_active_user_app_per_group") || strings.Contains(errStr, "uq_user_application_per_group") {
 			h.utils.RespondError(w, http.StatusConflict, "You already have an active application for this election group")
 			return
@@ -143,6 +152,7 @@ func (h *Handler) SubmitApplication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 5. Structure response payload (single application and list for backward compatibility)
 	respData := map[string]interface{}{
 		"applications": apps,
 	}

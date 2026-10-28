@@ -9,6 +9,7 @@ export interface UserDetails {
 	fake_id?: number;
 	email?: string;
 	avatar?: string;
+	avatar_file_id?: number;
 	phone?: string;
 	username?: string;
 	referral_code?: string;

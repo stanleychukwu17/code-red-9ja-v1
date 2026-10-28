@@ -77,15 +77,6 @@ function ApplyPageContent() {
     handleBackClick,
     submitError,
     success,
-    // Step 14
-    bankAccountNumber,
-    setBankAccountNumber,
-    selectedBankCode,
-    setSelectedBankCode,
-    bankDropdownOpen,
-    setBankDropdownOpen,
-    setIsValidatingAccount,
-    setIsAccountValid,
   } = form;
 
   // Render success congratulations screen upon successful submission
@@ -143,19 +134,7 @@ function ApplyPageContent() {
         {step === 12 && <Step4 />}
 
         {/* Step 13: Bank Account & Payout Verification */}
-        {step === 13 && (
-          <Step11
-            bankAccountNumber={bankAccountNumber}
-            setBankAccountNumber={setBankAccountNumber}
-            selectedBankCode={selectedBankCode}
-            setSelectedBankCode={setSelectedBankCode}
-            bankDropdownOpen={bankDropdownOpen}
-            setBankDropdownOpen={setBankDropdownOpen}
-            user={user}
-            setIsValidatingAccount={setIsValidatingAccount}
-            setIsAccountValid={setIsAccountValid}
-          />
-        )}
+        {step === 13 && <Step11 />}
       </div>
 
       {/* Sticky footer handling validation and step progression (zero props needed!) */}

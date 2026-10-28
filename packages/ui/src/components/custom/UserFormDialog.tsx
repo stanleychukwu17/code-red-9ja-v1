@@ -156,18 +156,14 @@ export function UserFormDialog({
 
       // new avatar url and file id, fallback to user's current ones
       let finalAvatarUrl = avatarUrl;
-      let finalFileId =
-        uploadedFileId || (activeUser as any)?.avatar_file_id || undefined;
+      let finalFileId = uploadedFileId || (activeUser as any)?.avatar_file_id || undefined;
 
       // if there is a new avatar file(i.e selectedAvatarFile), upload it
       if (selectedAvatarFile) {
         setIsUploading(true);
 
         // user is changing avatar, so we need to delete the existing one
-        if (
-          activeUser?.avatar_file_id &&
-          Number(activeUser.avatar_file_id) > 0
-        ) {
+        if (activeUser?.avatar_file_id && Number(activeUser.avatar_file_id) > 0) {
           await handleRemoveImage("changing_avatar");
         }
 
@@ -183,10 +179,8 @@ export function UserFormDialog({
               owner_id: activeUser?.id ? Number(activeUser.id) : undefined,
             },
           });
-          if (!uploadRes.success || !uploadRes.data)
-            throw new Error(
-              uploadRes.message || "Failed to initiate file upload",
-            );
+
+          if (!uploadRes.success || !uploadRes.data) throw new Error(uploadRes.message || "Failed to initiate file upload");
 
           const { upload_url, public_url, file_id } = uploadRes.data;
 

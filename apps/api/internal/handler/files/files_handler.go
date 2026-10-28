@@ -459,6 +459,20 @@ func (h *Handler) DeleteFile(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		// check permissions if not already verified through user avatar or party logo reset
+		isUserAvatarDeletion := userFakeIDStr != "" && fileType == "user_avatar"
+		isPartyLogoDeletion := partyIDStr != "" && fileType == "party_logo"
+		if !isUserAvatarDeletion && !isPartyLogoDeletion {
+			isAdmin := claims.HasAnyRole("admin", "super_admin")
+			isOwner := (file.UploadedBy.Valid && file.UploadedBy.Int64 == claims.UserID) ||
+				(file.OwnerID.Valid && file.OwnerID.Int64 == claims.UserID)
+
+			if !isAdmin && !isOwner {
+				h.utils.RespondError(w, http.StatusForbidden, "You do not have permission to delete this file")
+				return
+			}
+		}
+
 		// Asynchronously delete R2 object, purge Cloudflare CDN cache, and hard delete DB record
 		h.filesService.DeleteAssetAsync(file.PublicUrl, fileID)
 

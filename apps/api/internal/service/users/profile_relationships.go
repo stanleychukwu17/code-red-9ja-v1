@@ -133,6 +133,7 @@ func (s *UsersService) hydrateUserRelationships(ctx context.Context, users []que
 					candidaciesByUserID[meta.userID] = c
 					parsed = true
 				}
+
 			case kindPartyBasic:
 				var party queries.Party
 				if json.Unmarshal(data, &party) == nil && party.ID > 0 {

@@ -44,8 +44,6 @@ export const API_URL = {
 
   getBanks: `${api}/banks`,
 
-  validateBankAccount: (accountNumber: string, bankCode: string) =>
-    `${api}/banks/validate?accountNumber=${accountNumber}&bankCode=${bankCode}`,
 
   getAllCountries: `${api}/countries`,
 
@@ -204,6 +202,7 @@ export const API_URL = {
 
   uploadUrl: `${api}/files/upload-url`,
   confirmUpload: (id: string | number) => `${api}/files/${id}/confirm`,
+  deleteFile: (id: string | number) => `${api}/files/${id}`,
 
   offices: `${api}/offices`,
   officeById: (id: string | number) => `${api}/offices/${id}`,

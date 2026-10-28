@@ -3,6 +3,9 @@ package files
 import (
 	"context"
 	"log/slog"
+	"time"
+
+	"github.com/hibiken/asynq"
 
 	"free9ja/api/internal/db/queries"
 	r2service "free9ja/api/internal/service/r2"
@@ -61,7 +64,24 @@ func (s *filesService) CreateFile(ctx context.Context, arg queries.CreateFilePar
 
 // ConfirmUpload marks a file upload as complete or failed.
 func (s *filesService) ConfirmUpload(ctx context.Context, arg queries.ConfirmUploadParams) (queries.File, error) {
-	return s.queries.ConfirmUpload(ctx, arg)
+	file, err := s.queries.ConfirmUpload(ctx, arg)
+	if err != nil {
+		return file, err
+	}
+
+	// If upload succeeded, schedule a self-destruct check (2 minutes for testing).
+	// If the user abandons the form, it will automatically be cleaned up from R2 and the database.
+	if arg.Success && s.distributor != nil {
+		if scheduleErr := s.distributor.DistributeTaskCheckOrphanFile(
+			ctx,
+			&worker.CheckOrphanFilePayload{FileID: file.ID},
+			asynq.ProcessIn(2*time.Minute),
+		); scheduleErr != nil {
+			slog.Warn("failed to schedule orphan file check task", "file_id", file.ID, "err", scheduleErr)
+		}
+	}
+
+	return file, nil
 }
 
 // GetFileByID returns a file by its ID.

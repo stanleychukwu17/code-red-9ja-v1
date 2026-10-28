@@ -1,49 +1,31 @@
 import { useEffect } from "react";
-import { getBanks, validateBankAccount } from "#/lib/server/banks";
+import { getBanks } from "#/lib/server/banks";
 import { Input, Label } from "@repo/ui/components/input";
 import { SelectBank } from "@repo/ui/components/selects/bank-select";
-import { cn } from "@repo/ui/lib/utils";
-import { useQuery } from "@tanstack/react-query";
-import { Check, Loader2, XCircle } from "lucide-react";
+import { Check } from "lucide-react";
+import { useApplyContext } from "../../context/ApplyContext";
 import { StepHeader } from "./shared/StepHeader";
 
-/** Step 11: Bank account details and automated Paystack/NIBSS account name verification */
-export const Step11 = ({
-  bankAccountNumber,
-  setBankAccountNumber,
-  selectedBankCode,
-  setSelectedBankCode,
-  user,
-  setIsValidatingAccount,
-  setIsAccountValid,
-}: any) => {
-  const { data: validationResponse, isLoading: isValidating } = useQuery({
-    queryKey: ["validateAccount", bankAccountNumber, selectedBankCode],
-    queryFn: () =>
-      validateBankAccount({
-        data: {
-          accountNumber: bankAccountNumber,
-          bankCode: selectedBankCode,
-        },
-      }),
-    enabled: bankAccountNumber.length === 10 && !!selectedBankCode,
-    staleTime: 1000 * 60 * 5, // cache for 5 minutes
-  });
+/** Step 11: Bank account details for future payouts */
+export const Step11 = () => {
+  const {
+    bankAccountNumber,
+    setBankAccountNumber,
+    selectedBankCode,
+    setSelectedBankCode,
+    setIsValidatingAccount,
+    setIsAccountValid,
+  } = useApplyContext();
 
-  const accountName = validationResponse?.success
-    ? validationResponse?.data?.accountName
-    : validationResponse?.accountName;
+  // Valid once user enters 10 digits and selects a bank
+  const isValid = bankAccountNumber.length === 10 && !!selectedBankCode;
 
-  const isError =
-    validationResponse &&
-    !validationResponse.success &&
-    validationResponse.success !== undefined;
-  const isValid = !!accountName && !isError;
-
+  // Clear any validating flags
   useEffect(() => {
-    if (setIsValidatingAccount) setIsValidatingAccount(isValidating);
-  }, [isValidating, setIsValidatingAccount]);
+    if (setIsValidatingAccount) setIsValidatingAccount(false);
+  }, [setIsValidatingAccount]);
 
+  // Sync validity status to context so the footer allows proceeding when complete
   useEffect(() => {
     if (setIsAccountValid) setIsAccountValid(isValid);
   }, [isValid, setIsAccountValid]);
@@ -72,52 +54,19 @@ export const Step11 = ({
         <div className="flex flex-col gap-2">
           <Label title="Bank" />
           <SelectBank
-            initialData={selectedBankCode}
+            initialData={selectedBankCode ?? undefined}
             update={setSelectedBankCode}
             fetchBanks={getBanks}
           />
         </div>
 
-        {bankAccountNumber.length === 10 && selectedBankCode && (
-          <div
-            className={cn(
-              "flex items-center gap-3 p-4.5 rounded-2xl mt-2 border transition",
-              isError
-                ? "bg-red/10 border-red/20 text-red"
-                : isValidating
-                  ? "bg-hover-5 border-border text-c-60"
-                  : "bg-success/15 border-success/30 text-c-100",
-            )}
-          >
-            <div
-              className={cn(
-                "size-5 rounded-full flex items-center justify-center shrink-0",
-                isError
-                  ? "bg-red/20 text-red"
-                  : isValidating
-                    ? "bg-transparent text-c-60"
-                    : "bg-success text-white",
-              )}
-            >
-              {isValidating ? (
-                <Loader2 className="size-4 animate-spin text-c-60" />
-              ) : isError ? (
-                <XCircle className="size-4 text-red" />
-              ) : (
-                <Check className="size-3 stroke-[3]" />
-              )}
+        {isValid && (
+          <div className="flex items-center gap-3 p-4 rounded-2xl mt-2 border bg-success/15 border-success/30 text-c-100 transition">
+            <div className="size-5 rounded-full flex items-center justify-center shrink-0 bg-success text-white">
+              <Check className="size-3 stroke-3" />
             </div>
-            <span
-              className={cn(
-                "font-medium text-lg",
-                isError ? "text-red" : "text-c-100",
-              )}
-            >
-              {isValidating
-                ? "Verifying account..."
-                : isError
-                  ? "Invalid Account Number"
-                  : accountName || "Unknown User"}
+            <span className="font-medium text-sm text-c-100">
+              Account details provided
             </span>
           </div>
         )}

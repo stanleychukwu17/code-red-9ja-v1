@@ -121,6 +121,7 @@ func (redisTaskProcessor *RedisTaskProcessor) Start() error {
 	mux.HandleFunc(TaskRollupSingleState, redisTaskProcessor.ProcessTaskRollupSingleState)
 	mux.HandleFunc(TaskRollupSingleElection, redisTaskProcessor.ProcessTaskRollupSingleElection)
 	mux.HandleFunc(TaskDeleteAsset, redisTaskProcessor.ProcessTaskDeleteAsset)
+	mux.HandleFunc(TaskCheckOrphanFile, redisTaskProcessor.ProcessTaskCheckOrphanFile)
 
 	// Daily Marketing Campaign Deductions & Auto-Completion Worker (runs every day at 00:05 AM)
 	// Recommended schedule: "5 0 * * *" (5 minutes past midnight) to process previous day's campaign allocations cleanly.

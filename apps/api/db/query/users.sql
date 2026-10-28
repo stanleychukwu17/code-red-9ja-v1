@@ -140,11 +140,8 @@ WHERE
       SELECT 1 FROM user_roles ur WHERE ur.user_id = u.id AND ur.role_code = ANY(sqlc.narg('role_codes')::text[])
   ))
   AND (sqlc.narg('search')::text IS NULL OR (
-      u.first_name ILIKE '%' || sqlc.narg('search')::text || '%' OR
-      u.last_name ILIKE '%' || sqlc.narg('search')::text || '%' OR
       u.username ILIKE '%' || sqlc.narg('search')::text || '%' OR
-      (u.first_name || ' ' || u.last_name) ILIKE '%' || sqlc.narg('search')::text || '%' OR
-      (u.last_name || ' ' || u.first_name) ILIKE '%' || sqlc.narg('search')::text || '%'
+      (COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')) ILIKE '%' || sqlc.narg('search')::text || '%'
   ))
   AND (sqlc.narg('account_status')::text[] IS NULL OR u.account_status = ANY(sqlc.narg('account_status')::text[]))
   AND (sqlc.narg('country_ids')::smallint[] IS NULL OR u.current_country = ANY(sqlc.narg('country_ids')::smallint[]))
@@ -166,11 +163,8 @@ WHERE
   u.account_status = 'active'
   AND (sqlc.narg('cursor')::bigint IS NULL OR u.id < sqlc.narg('cursor')::bigint)
   AND (sqlc.narg('search')::text IS NULL OR (
-      u.first_name ILIKE '%' || sqlc.narg('search')::text || '%' OR
-      u.last_name ILIKE '%' || sqlc.narg('search')::text || '%' OR
       u.username ILIKE '%' || sqlc.narg('search')::text || '%' OR
-      (u.first_name || ' ' || u.last_name) ILIKE '%' || sqlc.narg('search')::text || '%' OR
-      (u.last_name || ' ' || u.first_name) ILIKE '%' || sqlc.narg('search')::text || '%'
+      (COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')) ILIKE '%' || sqlc.narg('search')::text || '%'
   ))
   AND (sqlc.narg('country_id')::smallint IS NULL OR u.current_country = sqlc.narg('country_id')::smallint)
   AND (sqlc.narg('state_id')::smallint IS NULL OR u.current_state = sqlc.narg('state_id')::smallint)

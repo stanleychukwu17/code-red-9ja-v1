@@ -191,8 +191,8 @@ func LoadConfig() (*Config, error) {
 		// Cloudflare R2 (S3-compatible) object storage for result sheet uploads, agent photos, and edge cache
 		R2: R2Config{
 			AccountID:       GetEnv("R2_ACCOUNT_ID", ""),        // Cloudflare account identifier
-			AccessKeyID:     GetEnv("R2_ACCESS_KEY_ID", ""),    // S3-compatible access key ID
-			SecretAccessKey: GetEnv("R2_SECRET_ACCESS_KEY", ""),// S3-compatible secret access key
+			AccessKeyID:     GetEnv("R2_ACCESS_KEY_ID", ""),     // S3-compatible access key ID
+			SecretAccessKey: GetEnv("R2_SECRET_ACCESS_KEY", ""), // S3-compatible secret access key
 			BucketName:      GetEnv("R2_BUCKET_NAME", ""),       // Target R2 bucket name
 			PublicURL:       GetEnv("R2_PUBLIC_URL", ""),        // CDN / Public domain URL (e.g., https://files.free9ja.com)
 			ZoneID:          GetEnv("CLOUDFLARE_ZONE_ID", ""),   // Zone ID for Cloudflare cache purging
@@ -203,9 +203,9 @@ func LoadConfig() (*Config, error) {
 		GeminiAPIKey: GetEnv("GEMINI_API_KEY", ""),
 
 		// Authentication tokens & lifetime settings
-		JWTSecret:            jwtSecret,            // Secret key used to sign and verify HMAC-SHA256 JWT tokens
-		JWTAccessExpiration:  jwtAccessExp,         // Short-lived access token duration (default: 15m)
-		JWTRefreshExpiration: jwtRefreshExp,        // Long-lived refresh token duration (default: 720h / 30 days)
+		JWTSecret:            jwtSecret,     // Secret key used to sign and verify HMAC-SHA256 JWT tokens
+		JWTAccessExpiration:  jwtAccessExp,  // Short-lived access token duration (default: 15m)
+		JWTRefreshExpiration: jwtRefreshExp, // Long-lived refresh token duration (default: 720h / 30 days)
 
 		// Concurrency limit for Asynq background workers processing queue jobs on this instance
 		WorkerConcurrency: GetIntEnv("WORKER_CONCURRENCY", 10),

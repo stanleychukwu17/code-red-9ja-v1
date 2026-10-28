@@ -280,7 +280,6 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 
 	// Banks
 	mainRouter.Get("/api/v1/banks", usersHandler.GetBanks)
-	mainRouter.Get("/api/v1/banks/validate", usersHandler.ValidateBankAccount)
 
 	// political & geographic bodies
 	mainRouter.Get("/api/v1/getOccupations", bodiesHandler.GetOccupations)
@@ -498,9 +497,6 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Get("/api/v1/admin/unmatched-polling-unit-results", inecGrabberHandler.ListUnmatchedResults)
 		r.Post("/api/v1/admin/unmatched-polling-unit-results/{id}/resolve", inecGrabberHandler.ResolveUnmatchedResult)
 
-		// only admins can permanently delete files
-		r.Delete("/api/v1/files/{id}", fileRoute(utilsInstance, filesHandler, func(h *fileshandler.Handler) http.HandlerFunc { return h.DeleteFile }))
-
 		// media assets & folders (admin only)
 		r.Get("/api/v1/admin/assets/folders", mediaAssetRoute(utilsInstance, mediaAssetsHandler, func(h *mediaassetshandler.Handler) http.HandlerFunc { return h.ListFolders }))
 		r.Post("/api/v1/admin/assets/folders", mediaAssetRoute(utilsInstance, mediaAssetsHandler, func(h *mediaassetshandler.Handler) http.HandlerFunc { return h.CreateFolder }))
@@ -526,6 +522,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		// any logged-in user can request an upload URL and confirm their upload
 		r.Post("/api/v1/files/upload-url", fileRoute(utilsInstance, filesHandler, func(h *fileshandler.Handler) http.HandlerFunc { return h.GenerateUploadURL }))
 		r.Post("/api/v1/files/{id}/confirm", fileRoute(utilsInstance, filesHandler, func(h *fileshandler.Handler) http.HandlerFunc { return h.ConfirmUpload }))
+		r.Delete("/api/v1/files/{id}", fileRoute(utilsInstance, filesHandler, func(h *fileshandler.Handler) http.HandlerFunc { return h.DeleteFile }))
 
 		// users routes
 		r.Get(utils.ApiUrls.Users.GetMe, usersHandler.GetMe)

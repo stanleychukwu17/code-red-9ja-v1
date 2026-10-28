@@ -151,14 +151,6 @@ func (s *UsersService) GetBanks(ctx context.Context) ([]Bank, error) {
 	return NigerianBanks, nil
 }
 
-// ValidateBankAccount checks if a given account number is structurally valid.
-func (s *UsersService) ValidateBankAccount(ctx context.Context, accountNumber string, bankCode string) (string, error) {
-	if len(accountNumber) != 10 {
-		return "", fmt.Errorf("account number must be 10 digits")
-	}
-	return "Verified Account", nil
-}
-
 // GetUserOptions is an alias for queries.GetUserOptions.
 type GetUserOptions = queries.GetUserOptions
 
@@ -188,14 +180,18 @@ func (s *UsersService) GetUserByFakeID(ctx context.Context, fakeID int64, opts .
 		}
 	}
 
+	// Cache miss: query database, build UserWithPlaces, and cache in Redis
 	user, err := s.fetchAndCacheUserByFakeID(ctx, fakeID, userInfoKey)
 	if err != nil {
 		return user, err
 	}
+
+	// Batch-hydrate requested relationships (party, verifications, places, etc.) based on options
 	users := []queries.UserWithPlaces{user}
 	if err := s.hydrateUserRelationships(ctx, users, opt); err != nil {
 		return queries.UserWithPlaces{}, err
 	}
+
 	return users[0], nil
 }
 
@@ -1268,8 +1264,6 @@ func (s *UsersService) GetUserPublicProfile(ctx context.Context, username string
 		}
 	}
 
-	// NOTE: save the edited frontend info before you continue this review
-
 	// Resolve user's party role title and chapter scope
 	var partyRole *UserPublicRole
 	var assignments []queries.ListMemberPositionAssignmentsRow
@@ -1298,17 +1292,12 @@ func (s *UsersService) GetUserPublicProfile(ctx context.Context, username string
 		}
 	}
 
-	fullName := strings.TrimSpace(user.FirstName.String + " " + user.LastName.String)
-	if fullName == "" {
-		fullName = cleanUsername
-	}
-
 	// Assemble and return hydrated public profile
 	return &UserPublicProfile{
 		ID:             user.ID,
 		FakeID:         user.FakeID.Int64,
 		Username:       cleanUsername,
-		Name:           fullName,
+		Name:           strings.TrimSpace(user.FirstName.String + " " + user.LastName.String),
 		FirstName:      user.FirstName.String,
 		LastName:       user.LastName.String,
 		Avatar:         user.Avatar.String,

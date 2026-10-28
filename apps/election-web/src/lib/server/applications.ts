@@ -214,6 +214,7 @@ export const submitPollingAgentApplication = createServerFn({ method: "POST" })
       election_group_ids: number[];
       polling_unit_id: number;
       avatar: string;
+      avatar_file_id?: number | null;
       voters_card_image?: string;
       current_country: number;
       current_state: number;
@@ -222,13 +223,13 @@ export const submitPollingAgentApplication = createServerFn({ method: "POST" })
       current_city: number;
       bank_account_number: string;
       bank_code: string;
-      whatsapp_phone: string;
+      whatsapp_phone?: string;
       data_phone?: string;
       educational_status: string;
       highest_degree: string;
       graduation_year: string;
       school_name: string;
-      phone: string;
+      phone?: string;
       address: string;
     }) => data,
   )
