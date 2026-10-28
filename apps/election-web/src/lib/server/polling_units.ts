@@ -125,10 +125,9 @@ export const getPollingUnitsWithCapacity = createServerFn()
       partyId: number | string;
       electionGroupId: number | string;
       wardId?: number;
-      localGovernmentId?: number;
-      stateId?: number;
       limit?: number;
       cursor?: string | number;
+      search?: string;
     }) => data,
   )
   .handler(
@@ -137,10 +136,9 @@ export const getPollingUnitsWithCapacity = createServerFn()
         partyId,
         electionGroupId,
         wardId,
-        localGovernmentId,
-        stateId,
         limit,
         cursor,
+        search,
       },
     }) => {
       try {
@@ -149,10 +147,9 @@ export const getPollingUnitsWithCapacity = createServerFn()
             partyId,
             electionGroupId,
             wardId,
-            localGovernmentId,
-            stateId,
             limit,
             cursor,
+            search,
           ),
         );
         const data = await response.json();

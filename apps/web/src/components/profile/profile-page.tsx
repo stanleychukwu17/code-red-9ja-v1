@@ -30,7 +30,6 @@ export type UserProfileData = {
   party?: {
     name: string;
     since?: string;
-    color?: string;
     logo?: string;
   } | null;
   role?: {
@@ -39,7 +38,6 @@ export type UserProfileData = {
   } | null;
   followersCount: string;
   followingCount: string;
-  timeline: TimelineEvent[];
 };
 
 export type ActiveProfileTab = "history" | "followers" | "following";
@@ -52,7 +50,6 @@ export const DEFAULT_USER_PROFILE: UserProfileData = {
   role: undefined,
   followersCount: "0",
   followingCount: "0",
-  timeline: [],
 };
 
 /* ========================================================================== */
@@ -149,8 +146,7 @@ function ProfilePartyRoleGrid({ party, role }: ProfilePartyRoleGridProps) {
             />
           ) : (
             <div
-              className="size-8 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-2xs"
-              style={{ backgroundColor: party.color || "#0066da" }}
+              className="size-8 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-2xs bg-primary"
             >
               {party.name?.charAt(0) || "P"}
             </div>
@@ -310,7 +306,7 @@ function ProfileTabContent({
 }) {
   switch (activeTab) {
     case "history":
-      return <PartyHistoryTimeline events={profile.timeline} />;
+      return <PartyHistoryTimeline events={[]} />;
     case "followers":
       return <FollowersList count={profile.followersCount} />;
     case "following":

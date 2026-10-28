@@ -697,7 +697,8 @@ SELECT
     coalesce(z.name, '') AS zone_name,
     coalesce(s.name, '') AS state_name,
     coalesce(l.name, '') AS lga_name,
-    coalesce(w.name, '') AS ward_name
+    coalesce(w.name, '') AS ward_name,
+    pm.created_at
 FROM party_membership pm
 JOIN party_chapters pc ON pm.chapter_id = pc.id
 LEFT JOIN c_countries c ON pc.country_id = c.id
@@ -715,19 +716,20 @@ type GetUserPartyChaptersParams struct {
 }
 
 type GetUserPartyChaptersRow struct {
-	ID          int32       `json:"id"`
-	PartyID     int16       `json:"party_id"`
-	ChapterType string      `json:"chapter_type"`
-	CountryID   pgtype.Int2 `json:"country_id"`
-	ZonalID     pgtype.Int2 `json:"zonal_id"`
-	StateID     pgtype.Int2 `json:"state_id"`
-	LgaID       pgtype.Int4 `json:"lga_id"`
-	WardID      pgtype.Int4 `json:"ward_id"`
-	CountryName string      `json:"country_name"`
-	ZoneName    string      `json:"zone_name"`
-	StateName   string      `json:"state_name"`
-	LgaName     string      `json:"lga_name"`
-	WardName    string      `json:"ward_name"`
+	ID          int32              `json:"id"`
+	PartyID     int16              `json:"party_id"`
+	ChapterType string             `json:"chapter_type"`
+	CountryID   pgtype.Int2        `json:"country_id"`
+	ZonalID     pgtype.Int2        `json:"zonal_id"`
+	StateID     pgtype.Int2        `json:"state_id"`
+	LgaID       pgtype.Int4        `json:"lga_id"`
+	WardID      pgtype.Int4        `json:"ward_id"`
+	CountryName string             `json:"country_name"`
+	ZoneName    string             `json:"zone_name"`
+	StateName   string             `json:"state_name"`
+	LgaName     string             `json:"lga_name"`
+	WardName    string             `json:"ward_name"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 }
 
 func (q *Queries) GetUserPartyChapters(ctx context.Context, arg GetUserPartyChaptersParams) ([]GetUserPartyChaptersRow, error) {
@@ -753,6 +755,7 @@ func (q *Queries) GetUserPartyChapters(ctx context.Context, arg GetUserPartyChap
 			&i.StateName,
 			&i.LgaName,
 			&i.WardName,
+			&i.CreatedAt,
 		); err != nil {
 			return nil, err
 		}

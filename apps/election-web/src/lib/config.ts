@@ -149,20 +149,18 @@ export const API_URL = {
     partyId: number | string,
     electionGroupId: number | string,
     wardId?: number,
-    localGovernmentId?: number,
-    stateId?: number,
     limit?: number,
     cursor?: string | number,
+    search?: string,
   ) => {
     const params = new URLSearchParams();
     if (partyId) params.append("party_id", String(partyId));
     if (electionGroupId)
       params.append("election_group_id", String(electionGroupId));
     if (wardId) params.append("ward_id", String(wardId));
-    if (localGovernmentId) params.append("lga_id", String(localGovernmentId));
-    if (stateId) params.append("state_id", String(stateId));
     if (limit) params.append("limit", String(limit));
     if (cursor) params.append("cursor", String(cursor));
+    if (search) params.append("search", search);
     const qs = params.toString();
     return `${api}/polling-units/capacity${qs ? `?${qs}` : ""}`;
   },

@@ -59,27 +59,17 @@ function ProfileLayoutComponent() {
         ? {
           name: raw.party.short_name || raw.party.name,
           since: raw.party.since || "",
-          color: raw.party.color || "#0066da",
           logo: raw.party.logo,
         }
         : undefined,
-      role: raw.role
+      role: (raw.party_role || raw.role)
         ? {
-          title: raw.role.title,
-          chapter: raw.role.chapter,
+          title: (raw.party_role || raw.role)!.title,
+          chapter: (raw.party_role || raw.role)!.chapter,
         }
-        : {
-          title: "Citizen",
-          chapter: raw.location || "Nigeria",
-        },
+        : undefined,
       followersCount: formatNumber(raw.followers_count ?? 0),
       followingCount: formatNumber(raw.following_count ?? 0),
-      timeline: (raw.timeline || []).map((t) => ({
-        id: t.id,
-        year: t.year,
-        title: t.title,
-        branches: t.branches,
-      })),
     }
     : DEFAULT_USER_PROFILE;
 

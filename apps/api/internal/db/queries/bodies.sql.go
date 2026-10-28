@@ -1066,18 +1066,23 @@ SELECT
     0
   )::integer AS agents_count
 FROM polling_units pu
-WHERE ($3::int = 0 OR pu.ward_id = $3) 
-  AND ($4::int = 0 OR pu.lga_id = $4) 
-  AND ($5::int = 0 OR pu.state_id = $5)
+WHERE pu.ward_id = $3
+
+
+  AND (
+    $4::text IS NULL OR $4::text = '' OR
+    pu.name ILIKE '%' || $4::text || '%' OR
+    pu.pu_code ILIKE '%' || $4::text || '%'
+
+  )
 ORDER BY pu.name ASC
 `
 
 type GetPollingUnitsWithPartyCountParams struct {
-	PartyID         int16 `json:"party_id"`
-	ElectionGroupID int32 `json:"election_group_id"`
-	WardID          int32 `json:"ward_id"`
-	LgaID           int32 `json:"lga_id"`
-	StateID         int32 `json:"state_id"`
+	PartyID         int16       `json:"party_id"`
+	ElectionGroupID int32       `json:"election_group_id"`
+	WardID          int32       `json:"ward_id"`
+	Search          pgtype.Text `json:"search"`
 }
 
 type GetPollingUnitsWithPartyCountRow struct {
@@ -1112,8 +1117,7 @@ func (q *Queries) GetPollingUnitsWithPartyCount(ctx context.Context, arg GetPoll
 		arg.PartyID,
 		arg.ElectionGroupID,
 		arg.WardID,
-		arg.LgaID,
-		arg.StateID,
+		arg.Search,
 	)
 	if err != nil {
 		return nil, err

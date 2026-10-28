@@ -122,9 +122,15 @@ SELECT
     0
   )::integer AS agents_count
 FROM polling_units pu
-WHERE (sqlc.arg(ward_id)::int = 0 OR pu.ward_id = sqlc.arg(ward_id)) 
-  AND (sqlc.arg(lga_id)::int = 0 OR pu.lga_id = sqlc.arg(lga_id)) 
-  AND (sqlc.arg(state_id)::int = 0 OR pu.state_id = sqlc.arg(state_id))
+WHERE pu.ward_id = sqlc.arg(ward_id)
+
+
+  AND (
+    sqlc.narg('search')::text IS NULL OR sqlc.narg('search')::text = '' OR
+    pu.name ILIKE '%' || sqlc.narg('search')::text || '%' OR
+    pu.pu_code ILIKE '%' || sqlc.narg('search')::text || '%'
+
+  )
 ORDER BY pu.name ASC;
 
 

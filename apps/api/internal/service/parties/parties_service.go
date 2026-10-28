@@ -2570,9 +2570,9 @@ func (s *PartiesService) ListMemberPositionAssignments(ctx context.Context, part
 		positions = []queries.ListMemberPositionAssignmentsRow{}
 	}
 
-	// 3. Cache result (including empty slice) for 14 days or until positions are assigned/modified/vacated
+	// 3. Cache result (including empty slice) for 180 days or until positions are assigned/modified/vacated
 	if data, err := json.Marshal(positions); err == nil {
-		_ = s.rdb.Set(ctx, cacheKey, data, db.RedisFourteenDaysTTL).Err()
+		_ = s.rdb.Set(ctx, cacheKey, data, db.RedisOneEightyDaysTTL).Err()
 	}
 
 	return positions, nil

@@ -1,13 +1,14 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { getPollingUnitsWithCapacity } from "#/lib/server/polling_units";
 import { getWards } from "#/lib/server/wards";
 import { SelectableCard } from "@repo/ui/components/cards/Rewards";
-import { Label } from "@repo/ui/components/input";
+import { IconInput, Label } from "@repo/ui/components/input";
 import { SelectWard } from "@repo/ui/components/selects/ward-select";
+import { cn } from "@repo/ui/lib/utils";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { useIntersectionObserver } from "usehooks-ts";
+import { useDebounceValue, useIntersectionObserver } from "usehooks-ts";
 import { useApplyContext } from "../../context/ApplyContext";
 import { StepHeader } from "./shared/StepHeader";
 
@@ -24,22 +25,30 @@ export const Step6 = () => {
     setSelectedPollingUnitId,
   } = useApplyContext();
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch] = useDebounceValue(searchQuery, 350);
+
   const { ref: sentinelRef, isIntersecting } = useIntersectionObserver({
     threshold: 0.1,
   });
 
   const { data: pollingUnitsData, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteQuery({
-    queryKey: ["pollingUnits", selectedStateId, selectedLgaId, selectedWardId, selectedPartyId, selectedElectionId],
+    queryKey: [
+      "pollingUnits",
+      selectedWardId,
+      selectedPartyId,
+      selectedElectionId,
+      debouncedSearch,
+    ],
     queryFn: async ({ pageParam }) => {
       const res = await getPollingUnitsWithCapacity({
         data: {
-          stateId: selectedStateId || undefined,
-          localGovernmentId: selectedLgaId || undefined,
           wardId: selectedWardId || undefined,
           limit: 20,
           cursor: pageParam || undefined,
           partyId: selectedPartyId!,
           electionGroupId: selectedElectionId!,
+          search: debouncedSearch.trim() || undefined,
         },
       });
       if (res && res.success && res.data) {
@@ -55,7 +64,7 @@ export const Step6 = () => {
       return undefined;
     },
     enabled:
-      (!!selectedStateId || !!selectedLgaId || !!selectedWardId) &&
+      !!selectedWardId &&
       !!selectedPartyId &&
       !!selectedElectionId,
   });
@@ -124,13 +133,22 @@ export const Step6 = () => {
         <div className="space-y-3 mt-7">
           <Label title={`Polling Units (${targetWardName})`} className="" />
 
+          <IconInput
+            placeholder="Search polling unit name or code..."
+            className="h-12 rounded-2xl bg-hover-5 border border-border text-c-100 placeholder:text-c-40"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
             </div>
           ) : pollingUnits.length === 0 ? (
             <div className="text-center py-12 text-sm text-muted-foreground">
-              No polling units found for this ward.
+              {debouncedSearch.trim()
+                ? `No polling units found matching "${debouncedSearch.trim()}".`
+                : "No polling units found for this ward."}
             </div>
           ) : (
             pollingUnits.map((unit: any) => {
@@ -145,6 +163,7 @@ export const Step6 = () => {
                 <SelectableCard
                   key={unit.id}
                   title={unit.name}
+                  className="py-3 bg-sidebar-softer/60"
                   subtitle={
                     <div className="flex items-center gap-2 text-xs text-c-60 mt-0.5">
                       <span>{wardName}</span>
@@ -157,9 +176,16 @@ export const Step6 = () => {
                     </div>
                   }
                   rightComponent={
-                    <div className="text-xs">
-                      <div className="">party's target: {targetCount}</div>
-                      <div className="">remaining Slots: {remainingSlots}</div>
+                    <div className="text-xs text-center w-37.5 space-y-1.5 mr-4">
+                      <div className="bg-white shadow-inner rounded-full p-1">party target: {targetCount}</div>
+                      <div
+                        className={cn(
+                          "bg-white shadow-inner rounded-full p-1",
+                          remainingSlots < 1 && "text-red"
+                        )}
+                      >
+                        open slots: {remainingSlots}
+                      </div>
                     </div>
                   }
                   isSelected={isSelected}

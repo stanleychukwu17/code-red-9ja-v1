@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
+	"free9ja/api/internal/utils"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -155,9 +156,9 @@ type PollingUnitWithCapacity struct {
 	RemainingSlots int32 `json:"remaining_slots"`
 }
 
-func (s *PollingUnitsService) GetPollingUnitsWithCapacity(ctx context.Context, wardID, localGovernmentID, stateID int32, partyID int16, electionGroupID int32) ([]PollingUnitWithCapacity, error) {
-	if wardID <= 0 && localGovernmentID <= 0 && stateID <= 0 {
-		return nil, errors.New("at least one geographic filter (ward_id, lga_id, or state_id) must be provided")
+func (s *PollingUnitsService) GetPollingUnitsWithCapacity(ctx context.Context, wardID int32, partyID int16, electionGroupID int32, search string) ([]PollingUnitWithCapacity, error) {
+	if wardID <= 0 {
+		return nil, errors.New("ward_id must be provided")
 	}
 
 	// First, fetch the party to get its agent_acquisition_targets
@@ -177,10 +178,9 @@ func (s *PollingUnitsService) GetPollingUnitsWithCapacity(ctx context.Context, w
 
 	arg := queries.GetPollingUnitsWithPartyCountParams{
 		WardID:          wardID,
-		LgaID:           localGovernmentID,
-		StateID:         stateID,
 		PartyID:         partyID,
 		ElectionGroupID: electionGroupID,
+		Search:          utils.PgTextFromString(search),
 	}
 
 	dbData, err := s.queries.GetPollingUnitsWithPartyCount(ctx, arg)

@@ -381,7 +381,8 @@ SELECT
     coalesce(z.name, '') AS zone_name,
     coalesce(s.name, '') AS state_name,
     coalesce(l.name, '') AS lga_name,
-    coalesce(w.name, '') AS ward_name
+    coalesce(w.name, '') AS ward_name,
+    pm.created_at
 FROM party_membership pm
 JOIN party_chapters pc ON pm.chapter_id = pc.id
 LEFT JOIN c_countries c ON pc.country_id = c.id

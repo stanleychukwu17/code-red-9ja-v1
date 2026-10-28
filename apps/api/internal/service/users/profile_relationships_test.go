@@ -30,6 +30,9 @@ func (p *profileParties) GetUserPartyChapters(context.Context, int64, int16) ([]
 	p.calls.Add(1)
 	return p.chapters, nil
 }
+func (p *profileParties) ListMemberPositionAssignments(context.Context, int16, int64) ([]queries.ListMemberPositionAssignmentsRow, error) {
+	return nil, nil
+}
 
 type profileElections struct{ err error }
 

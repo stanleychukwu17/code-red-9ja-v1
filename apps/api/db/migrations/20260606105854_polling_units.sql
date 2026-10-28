@@ -35,6 +35,11 @@ CREATE INDEX idx_polling_units_state_constituency_id ON polling_units (state_con
 CREATE INDEX idx_polling_units_lga_id ON polling_units (lga_id);
 CREATE INDEX idx_polling_units_ward_id ON polling_units (ward_id);
 
+-- Trigram GIN indexes for fast ILIKE substring searches on name and pu_code
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE INDEX idx_polling_units_name_trgm ON polling_units USING gin (name gin_trgm_ops);
+CREATE INDEX idx_polling_units_pu_code_trgm ON polling_units USING gin (pu_code gin_trgm_ops);
+
 -- SEED DATA START
 INSERT INTO polling_units (id, name, code, pu_code, registration_area_id, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, state_constituency_id, state_constituency_name, lga_id, lga_name, ward_id, ward_name, latitude, longitude, precise_location, formatted_address, google_place_id, status) VALUES
 (7, 'RAILWAY QUARTERS - RAILWAY QUARTERS I', '001', '01/01/01/001', NULL, 1, 'ABIA', 111, 'abia south', 2, 'aba north/aba south', 4, 'ABA NORTH', 3103, 'ABA NORTH', 17526, 'EZIAMA', NULL, NULL, NULL, NULL, NULL, 'active'),
@@ -177752,6 +177757,7 @@ ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, code = EXCLUDED.code, pu_co
 
 -- +goose Down
 DROP INDEX IF EXISTS idx_polling_units_name_trgm;
+DROP INDEX IF EXISTS idx_polling_units_pu_code_trgm;
 DROP INDEX IF EXISTS idx_polling_units_name;
 DROP INDEX IF EXISTS idx_polling_units_ward_id;
 DROP INDEX IF EXISTS idx_polling_units_lga_id;

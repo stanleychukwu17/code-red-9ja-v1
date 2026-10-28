@@ -108,18 +108,6 @@ export const searchCitizensList = createServerFn({ method: "GET" })
     }
   });
 
-export type UserTimelineBranch = {
-  id: string;
-  title: string;
-};
-
-export type UserTimelineEvent = {
-  id: string;
-  year: string;
-  title: string;
-  branches?: UserTimelineBranch[];
-};
-
 export type PublicUserProfile = {
   id: number;
   fake_id: number;
@@ -133,21 +121,40 @@ export type PublicUserProfile = {
     name: string;
     short_name: string;
     since: string;
-    color: string;
     logo?: string;
+  } | null;
+  party_role?: {
+    title: string;
+    chapter: string;
   } | null;
   role?: {
     title: string;
     chapter: string;
   } | null;
+  assignments?: Array<{
+    assignment_id: number;
+    party_id: number;
+    chapter_id: number;
+    position_id: number;
+    user_id: number;
+    appointment_type: string;
+    assignment_status: string;
+    tenure_start?: string;
+    tenure_end?: string;
+    assigned_at?: string;
+    position_name: string;
+    position_type: string;
+    rank_order: number;
+    chapter_type: string;
+    geo_name: string;
+    display_title: string;
+  }>;
   followers_count: number;
   following_count: number;
   is_following: boolean;
   is_account_owner: boolean;
   is_politician: boolean;
   is_verified: boolean;
-  location?: string;
-  timeline: UserTimelineEvent[];
 };
 
 export type GetUserProfileResponse = {

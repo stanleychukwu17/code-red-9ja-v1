@@ -147,7 +147,7 @@ export function SelectableCard({
     <div
       onClick={onClick}
       className={cn(
-        "relative flex items-center justify-between p-5 rounded-2xl bg-hover-5 cursor-pointer transition",
+        "relative flex items-center justify-between p-5 rounded-2xl bg-sidebar-softer cursor-pointer transition",
         disabled && "opacity-50 cursor-not-allowed",
         isSelected && "bg-secondary/20 cursor-pointer",
         className,

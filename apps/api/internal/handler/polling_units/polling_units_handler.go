@@ -29,7 +29,7 @@ type PollingUnitsService interface {
 	DeletePollingUnit(ctx context.Context, id int32) error
 	GetPollingUnitsPaginated(ctx context.Context, arg queries.GetPollingUnitsPaginatedParams) ([]queries.PollingUnit, error)
 	GetPollingUnits(ctx context.Context, arg queries.GetPollingUnitsParams) ([]queries.PollingUnit, error)
-	GetPollingUnitsWithCapacity(ctx context.Context, wardID, localGovernmentID, stateID int32, partyID int16, electionGroupID int32) ([]pollingunitsservice.PollingUnitWithCapacity, error)
+	GetPollingUnitsWithCapacity(ctx context.Context, wardID int32, partyID int16, electionGroupID int32, search string) ([]pollingunitsservice.PollingUnitWithCapacity, error)
 }
 
 // BodiesService defines the interface for verifying administrative boundary entities (e.g., states).
@@ -475,9 +475,7 @@ func (h *Handler) GetPollingUnits(w http.ResponseWriter, r *http.Request) {
 // @Tags         Polling Units
 // @Accept       json
 // @Produce      json
-// @Param        ward_id              query     int     false  "Ward ID to filter by"
-// @Param        lga_id               query     int     false  "LGA ID to filter by"
-// @Param        state_id             query     int     false  "State ID to filter by"
+// @Param        ward_id              query     int     true   "Ward ID to filter by"
 // @Param        search               query     string  false  "Search query for polling unit name or code"
 // @Param        limit                query     int     false  "Limit (default 20, max 100)"
 // @Param        cursor               query     string  false  "Cursor (ID of last record)"
@@ -545,6 +543,7 @@ func (h *Handler) GetPollingUnitsPaginated(w http.ResponseWriter, r *http.Reques
 // @Param        limit                query     int     false  "Limit (default 20, max 100)"
 // @Param        cursor               query     string  false  "Cursor (ID of last record)"
 // @Param        order_by             query     string  false  "Sort column (name or id)"
+// @Param        search               query     string  false  "Search query for polling unit name or code"
 // @Param        order_dir            query     string  false  "Sort direction (ASC or DESC)"
 // @Success      200                  {object}  GetPollingUnitsResponse
 // @Failure      400                  {string}  party_id and election_group_id are required
@@ -560,13 +559,17 @@ func (h *Handler) GetPollingUnitsWithCapacity(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	// Parse geographic scope ward filter and cursor pagination parameters
 	wardID := parseOptionalQueryInt(r, "ward_id")
-	localGovernmentID := parseOptionalQueryInt(r, "lga_id")
-	stateID := parseOptionalQueryInt(r, "state_id")
+	if wardID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "ward_id is required")
+		return
+	}
 	limit, cursor := parsePaginationParams(r)
+	search := strings.TrimSpace(r.URL.Query().Get("search"))
 
-	// Fetch aggregated units joining agent assignments against current election group capacity
-	units, err := h.pollingUnitsService.GetPollingUnitsWithCapacity(r.Context(), wardID, localGovernmentID, stateID, partyID, electionGroupID)
+	// Fetch aggregated units joining agent assignments against current election group capacity with optional search query
+	units, err := h.pollingUnitsService.GetPollingUnitsWithCapacity(r.Context(), wardID, partyID, electionGroupID, search)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch polling units with capacity: "+err.Error())
 		return
