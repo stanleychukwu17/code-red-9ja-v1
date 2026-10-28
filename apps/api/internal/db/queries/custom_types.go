@@ -40,6 +40,13 @@ type UserWithPlaces struct {
 	Candidacies    []UserActiveCandidacy            `json:"candidacies"`
 }
 
+// GetUserOptions configures which optional relational data to hydrate on UserWithPlaces.
+type GetUserOptions struct {
+	WithoutPartyBasic bool `json:"without_party_basic"` // If true, skips resolving PartyBasicInfo (included by default)
+	WithChapters      bool `json:"with_chapters"`       // If true, resolves user's party chapters (default false)
+	WithCandidacies   bool `json:"with_candidacies"`   // If true, resolves user's active candidacies (default false)
+}
+
 // PartyWithVerifications extends the ListPartiesRow struct to include
 // a list of active verifications attached to the party without leaking confidential fields.
 type PartyWithVerifications struct {

@@ -35,7 +35,7 @@ import (
 )
 
 type UsersService interface {
-	GetUserByFakeID(ctx context.Context, fakeID int64) (queries.UserWithPlaces, error)
+	GetUserByFakeID(ctx context.Context, fakeID int64, opts ...queries.GetUserOptions) (queries.UserWithPlaces, error)
 	ResetUserAvatar(ctx context.Context, userID int64, fakeID int64) error
 }
 

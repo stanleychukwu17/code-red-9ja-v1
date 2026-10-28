@@ -1,7 +1,15 @@
 import { useMemo, useState } from "react";
 import { useParams } from "@tanstack/react-router";
-import { MoreHorizontal, PencilRuler, Settings } from "lucide-react";
+import { Ban, MoreHorizontal, PencilRuler, Settings, Share2 } from "lucide-react";
 import { UserFormDialog } from "@repo/ui/components/custom/UserFormDialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@repo/ui/components/dropdown-menu";
+import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { QUERY_KEYS } from "#/lib/config";
 import { getUserProfile } from "#/lib/server/citizens";
@@ -20,7 +28,6 @@ export type ProfileFloatingToolbarProps = {
 
 export function ProfileFloatingToolbar({ onSuccess }: ProfileFloatingToolbarProps = {}) {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
   const queryClient = useQueryClient();
   const params = useParams({ strict: false }) as { username?: string };
   const username = params.username ? params.username.replace(/^@/, "") : "";
@@ -47,13 +54,17 @@ export function ProfileFloatingToolbar({ onSuccess }: ProfileFloatingToolbarProp
     };
   }, [profileData]);
 
-  // Copy current profile URL to clipboard with a 2-second copied state
-  const handleShare = () => {
-    if (typeof window !== "undefined") {
-      navigator.clipboard.writeText(window.location.href);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+  // Copy current profile URL to clipboard
+  const handleShare = async () => {
+    if (typeof window !== "undefined" && navigator?.clipboard) {
+      await navigator.clipboard.writeText(window.location.href);
+      toast.success("Profile link copied to clipboard");
     }
+  };
+
+  // Block user handler
+  const handleBlock = () => {
+    toast.info("Block user feature is coming soon");
   };
 
   // Close dialog, refresh profile & session cache, and notify parent
@@ -88,19 +99,43 @@ export function ProfileFloatingToolbar({ onSuccess }: ProfileFloatingToolbarProp
           </>
         )}
 
-        <button
-          type="button"
-          onClick={handleShare}
-          title="Share profile link"
-          className="text-c-70 hover:text-c-100 transition-colors cursor-pointer relative bg-hover-10/50 size-10 rounded-full flex items-center justify-center"
-        >
-          {copied ? (
-            <span className="absolute -top-7 left-1/2 -translate-x-1/2 bg-c-100 text-background text-[10px] px-2 py-0.5 rounded shadow whitespace-nowrap">
-              Copied!
-            </span>
-          ) : null}
-          <MoreHorizontal className="size-5" />
-        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              title="More options"
+              className="text-c-70 hover:text-c-100 transition-colors cursor-pointer relative bg-hover-10/50 size-10 rounded-full flex items-center justify-center data-[state=open]:bg-hover-10"
+            >
+              <MoreHorizontal className="size-5" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="center"
+            className="w-48 rounded-2xl p-1.5 shadow-xl border border-border bg-popover text-popover-foreground"
+          >
+            <DropdownMenuItem
+              onClick={handleShare}
+              className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium cursor-pointer text-c-80 hover:text-c-100 hover:bg-hover-5"
+            >
+              <Share2 className="size-4 text-c-50" />
+              <span>Share Profile</span>
+            </DropdownMenuItem>
+
+            {!isAccountOwner && (
+              <>
+                <DropdownMenuSeparator className="my-1 bg-border" />
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={handleBlock}
+                  className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium cursor-pointer text-destructive hover:bg-destructive/10"
+                >
+                  <Ban className="size-4 text-destructive" />
+                  <span>Block User</span>
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {isEditDialogOpen && isAccountOwner ? (

@@ -28,8 +28,8 @@ import (
 // UsersService interface defines the methods needed from the users service
 type UsersService interface {
 	GetUserPublicProfile(ctx context.Context, username string, viewerUserID int64) (*usersservice.UserPublicProfile, error)
-	GetUserByFakeID(ctx context.Context, fakeID int64) (queries.UserWithPlaces, error)
-	GetUsersByFakeIDs(ctx context.Context, fakeIDs []int64) ([]queries.UserWithPlaces, error)
+	GetUserByFakeID(ctx context.Context, fakeID int64, opts ...queries.GetUserOptions) (queries.UserWithPlaces, error)
+	GetUsersByFakeIDs(ctx context.Context, fakeIDs []int64, opts ...queries.GetUserOptions) ([]queries.UserWithPlaces, error)
 	GetMoreInfoAboutThisUser(ctx context.Context, userID int64) (queries.UserMoreInfo, error)
 	GetUserPrimaryBankAccount(ctx context.Context, userID int64) (queries.UserBankAccount, error)
 	UpdateUserProfile(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, gender, avatar string, avatarFileId *int64, countryID, stateID int16, cityID int32) error

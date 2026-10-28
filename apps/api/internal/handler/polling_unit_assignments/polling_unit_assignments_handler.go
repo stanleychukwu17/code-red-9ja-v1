@@ -26,7 +26,7 @@ type PollingUnitAssignmentsService interface {
 }
 
 type UsersService interface {
-	GetUserByFakeID(ctx context.Context, fakeID int64) (queries.UserWithPlaces, error)
+	GetUserByFakeID(ctx context.Context, fakeID int64, opts ...queries.GetUserOptions) (queries.UserWithPlaces, error)
 	GetUserRoles(ctx context.Context, userID int64) (queries.CachedUserRoles, error)
 }
 

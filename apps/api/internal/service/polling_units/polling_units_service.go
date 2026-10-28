@@ -150,7 +150,9 @@ func (s *PollingUnitsService) GetPollingUnits(ctx context.Context, arg queries.G
 
 type PollingUnitWithCapacity struct {
 	queries.GetPollingUnitsWithPartyCountRow
-	IsCapacityFull bool `json:"is_capacity_full"`
+	IsCapacityFull bool  `json:"is_capacity_full"`
+	TargetCount    int32 `json:"target_count"`
+	RemainingSlots int32 `json:"remaining_slots"`
 }
 
 func (s *PollingUnitsService) GetPollingUnitsWithCapacity(ctx context.Context, wardID, localGovernmentID, stateID int32, partyID int16, electionGroupID int32) ([]PollingUnitWithCapacity, error) {
@@ -189,9 +191,16 @@ func (s *PollingUnitsService) GetPollingUnitsWithCapacity(ctx context.Context, w
 	var results []PollingUnitWithCapacity
 	for _, row := range dbData {
 		isFull := row.AgentsCount >= int32(targetCount)
+		remaining := int32(targetCount) - row.AgentsCount
+		if remaining < 0 {
+			remaining = 0
+		}
+
 		results = append(results, PollingUnitWithCapacity{
 			GetPollingUnitsWithPartyCountRow: row,
 			IsCapacityFull:                   isFull,
+			TargetCount:                      int32(targetCount),
+			RemainingSlots:                   remaining,
 		})
 	}
 

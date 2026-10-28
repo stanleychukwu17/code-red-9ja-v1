@@ -137,31 +137,39 @@ export const Step6 = () => {
               const isSelected = selectedPollingUnitId === unit.id;
               const wardName = getWardName(unit);
               const isFull = unit.is_capacity_full;
+              const targetCount = unit.target_count ?? 1;
+              const remainingSlots = unit.remaining_slots ?? (isFull ? 0 : 1);
+              const puCode = typeof unit.pu_code === "string" ? unit.pu_code : unit.pu_code?.String;
 
               return (
                 <SelectableCard
                   key={unit.id}
                   title={unit.name}
                   subtitle={
-                    <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-2 text-xs text-c-60 mt-0.5">
                       <span>{wardName}</span>
-                      {isFull && (
-                        <span className="text-[13px] text-orange font-medium">
-                          Capacity full for this polling unit
-                        </span>
+                      {puCode && (
+                        <>
+                          <span>•</span>
+                          <span className="font-mono">{puCode}</span>
+                        </>
                       )}
+                    </div>
+                  }
+                  rightComponent={
+                    <div className="text-xs">
+                      <div className="">party's target: {targetCount}</div>
+                      <div className="">remaining Slots: {remainingSlots}</div>
                     </div>
                   }
                   isSelected={isSelected}
                   disabled={isFull}
                   onClick={() => {
                     if (isFull) {
-                      toast.error(
-                        "This polling unit has reached its required number of polling agents.",
-                        { position: "top-center" },
-                      );
+                      toast.error("This polling unit has reached its party target capacity.", { position: "top-center" },);
                       return;
                     }
+
                     setSelectedPollingUnitId(unit.id);
                   }}
                 />

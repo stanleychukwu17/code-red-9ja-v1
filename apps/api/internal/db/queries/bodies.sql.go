@@ -980,33 +980,24 @@ SELECT id, name, code, pu_code, registration_area_id, state_id, state_name, sena
 WHERE ($1::int = 0 OR ward_id = $1::int)
   AND ($2::int = 0 OR lga_id = $2::int)
   AND ($3::int = 0 OR state_id = $3::int)
-  AND ($4::int IS NULL OR senatorial_district_id = $4::int)
-  AND ($5::int IS NULL OR federal_constituency_id = $5::int)
-  AND ($6::int IS NULL OR state_constituency_id = $6::int)
   AND (
-    $7::text IS NULL OR $7::text = '' OR
-    name ILIKE '%' || $7::text || '%' OR
-    pu_code ILIKE '%' || $7::text || '%' OR
-    code ILIKE '%' || $7::text || '%' OR
-    ward_name ILIKE '%' || $7::text || '%' OR
-    lga_name ILIKE '%' || $7::text || '%' OR
-    state_name ILIKE '%' || $7::text || '%'
+    $4::text IS NULL OR $4::text = '' OR
+    name ILIKE '%' || $4::text || '%' OR
+    pu_code ILIKE '%' || $4::text || '%' OR
+    code ILIKE '%' || $4::text || '%'
   )
-  AND ($8::int IS NULL OR $8::int = 0 OR id > $8::int)
+  AND ($5::int IS NULL OR $5::int = 0 OR id > $5::int)
 ORDER BY id ASC
-LIMIT $9::int
+LIMIT $6::int
 `
 
 type GetPollingUnitsPaginatedParams struct {
-	WardID                int32       `json:"ward_id"`
-	LgaID                 int32       `json:"lga_id"`
-	StateID               int32       `json:"state_id"`
-	SenatorialDistrictID  pgtype.Int4 `json:"senatorial_district_id"`
-	FederalConstituencyID pgtype.Int4 `json:"federal_constituency_id"`
-	StateConstituencyID   pgtype.Int4 `json:"state_constituency_id"`
-	Search                pgtype.Text `json:"search"`
-	Cursor                pgtype.Int4 `json:"cursor"`
-	LimitNum              int32       `json:"limit_num"`
+	WardID   int32       `json:"ward_id"`
+	LgaID    int32       `json:"lga_id"`
+	StateID  int32       `json:"state_id"`
+	Search   pgtype.Text `json:"search"`
+	Cursor   pgtype.Int4 `json:"cursor"`
+	LimitNum int32       `json:"limit_num"`
 }
 
 func (q *Queries) GetPollingUnitsPaginated(ctx context.Context, arg GetPollingUnitsPaginatedParams) ([]PollingUnit, error) {
@@ -1014,9 +1005,6 @@ func (q *Queries) GetPollingUnitsPaginated(ctx context.Context, arg GetPollingUn
 		arg.WardID,
 		arg.LgaID,
 		arg.StateID,
-		arg.SenatorialDistrictID,
-		arg.FederalConstituencyID,
-		arg.StateConstituencyID,
 		arg.Search,
 		arg.Cursor,
 		arg.LimitNum,

@@ -159,9 +159,21 @@ func (s *UsersService) ValidateBankAccount(ctx context.Context, accountNumber st
 	return "Verified Account", nil
 }
 
+// GetUserOptions is an alias for queries.GetUserOptions.
+type GetUserOptions = queries.GetUserOptions
+
+func resolveGetUserOptions(opts []GetUserOptions) GetUserOptions {
+	if len(opts) > 0 {
+		return opts[0]
+	}
+	return GetUserOptions{}
+}
+
 // GetUserByFakeID retrieves a user's details including their location names (Country, State, City).
 // It implements a cache-aside pattern using Redis to improve performance.
-func (s *UsersService) GetUserByFakeID(ctx context.Context, fakeID int64) (queries.UserWithPlaces, error) {
+func (s *UsersService) GetUserByFakeID(ctx context.Context, fakeID int64, opts ...GetUserOptions) (queries.UserWithPlaces, error) {
+	opt := resolveGetUserOptions(opts)
+
 	// Check Redis cache first
 	userInfoKey := fmt.Sprintf("%s%d", db.RedisUserInfo, fakeID)
 	userInfoJSON, err := s.rdb.Get(ctx, userInfoKey).Result()
@@ -169,7 +181,7 @@ func (s *UsersService) GetUserByFakeID(ctx context.Context, fakeID int64) (queri
 		var user queries.UserWithPlaces
 		if err := json.Unmarshal([]byte(userInfoJSON), &user); err == nil {
 			users := []queries.UserWithPlaces{user}
-			if err := s.hydrateUserRelationships(ctx, users); err != nil {
+			if err := s.hydrateUserRelationships(ctx, users, opt); err != nil {
 				return queries.UserWithPlaces{}, err
 			}
 			return users[0], nil
@@ -181,7 +193,7 @@ func (s *UsersService) GetUserByFakeID(ctx context.Context, fakeID int64) (queri
 		return user, err
 	}
 	users := []queries.UserWithPlaces{user}
-	if err := s.hydrateUserRelationships(ctx, users); err != nil {
+	if err := s.hydrateUserRelationships(ctx, users, opt); err != nil {
 		return queries.UserWithPlaces{}, err
 	}
 	return users[0], nil
@@ -244,7 +256,7 @@ func (s *UsersService) fetchAndCacheUserByFakeID(ctx context.Context, fakeID int
 // GetUsersByFakeIDs retrieves multiple users optimally.
 // It uses Redis MGET to fetch cached users in a single round-trip,
 // and uses an errgroup to concurrently fetch any cache misses from the database.
-func (s *UsersService) GetUsersByFakeIDs(ctx context.Context, fakeIDs []int64) ([]queries.UserWithPlaces, error) {
+func (s *UsersService) GetUsersByFakeIDs(ctx context.Context, fakeIDs []int64, opts ...GetUserOptions) ([]queries.UserWithPlaces, error) {
 	if len(fakeIDs) == 0 {
 		return []queries.UserWithPlaces{}, nil
 	}
@@ -318,7 +330,8 @@ func (s *UsersService) GetUsersByFakeIDs(ctx context.Context, fakeIDs []int64) (
 		}
 	}
 
-	if err := s.hydrateUserRelationships(ctx, results); err != nil {
+	opt := resolveGetUserOptions(opts)
+	if err := s.hydrateUserRelationships(ctx, results, opt); err != nil {
 		return nil, err
 	}
 	return results, nil
@@ -1234,7 +1247,10 @@ func (s *UsersService) GetUserPublicProfile(ctx context.Context, username string
 	}
 
 	// Fetch full user record and relational info from cache/DB
-	user, err := s.GetUserByFakeID(ctx, fakeID)
+	user, err := s.GetUserByFakeID(ctx, fakeID, GetUserOptions{
+		WithChapters:    true,
+		WithCandidacies: true,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch user details: %w", err)
 	}

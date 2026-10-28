@@ -53,7 +53,7 @@ VALUES (101,'test',1,1,1)`)
 	require.NoError(t, err)
 	s := &UsersService{queries: q, rdb: rdb, bodiesService: profileBodies{},
 		partyService: &profileParties{chapters: []queries.GetUserPartyChaptersRow{{ID: 9}}}, electionsService: profileElections{}}
-	user, err := s.GetUserByFakeID(ctx, 101)
+	user, err := s.GetUserByFakeID(ctx, 101, GetUserOptions{WithChapters: true})
 	require.NoError(t, err)
 	require.EqualValues(t, 1, user.ID)
 	require.EqualValues(t, 9, user.Chapters[0].ID)
@@ -117,7 +117,7 @@ func TestProfilesBatchRelationshipsAndRefreshWithoutEvictingCore(t *testing.T) {
 			} // two users, one shared party
 		}
 	}})
-	users, err := s.GetUsersByFakeIDs(ctx, []int64{101, 102})
+	users, err := s.GetUsersByFakeIDs(ctx, []int64{101, 102}, GetUserOptions{WithChapters: true, WithCandidacies: true})
 	require.NoError(t, err)
 	require.EqualValues(t, 2, mgets.Load())
 	require.EqualValues(t, 5, relationshipKeys.Load())
@@ -128,7 +128,7 @@ func TestProfilesBatchRelationshipsAndRefreshWithoutEvictingCore(t *testing.T) {
 	require.NoError(t, err)
 	// A chapter mutation clears only its owning cache. The core profile stays hot.
 	require.NoError(t, rdb.Del(ctx, db.RedisUserPartyChapters+"1:1").Err())
-	user, err := s.GetUserByFakeID(ctx, 101)
+	user, err := s.GetUserByFakeID(ctx, 101, GetUserOptions{WithChapters: true})
 	require.NoError(t, err)
 	require.EqualValues(t, 99, user.Chapters[0].ID)
 	require.EqualValues(t, 1, parties.calls.Load())
@@ -137,7 +137,7 @@ func TestProfilesBatchRelationshipsAndRefreshWithoutEvictingCore(t *testing.T) {
 	// Candidacy must not disappear merely because current party affiliation is empty.
 	user.PartyID = pgtype.Int2{}
 	put(db.RedisUserInfo+"101", coreProfile(user))
-	user, err = s.GetUserByFakeID(ctx, 101)
+	user, err = s.GetUserByFakeID(ctx, 101, GetUserOptions{WithCandidacies: true})
 	require.NoError(t, err)
 	require.Len(t, user.Candidacies, 1)
 	require.Empty(t, user.Chapters)
@@ -152,7 +152,7 @@ func TestRelationshipFailureDoesNotCacheAnEmptyProfileSnapshot(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, rdb.Set(ctx, db.RedisUserInfo+"101", raw, time.Hour).Err())
 	s := &UsersService{rdb: rdb, electionsService: profileElections{err: errors.New("database unavailable")}}
-	_, err = s.GetUserByFakeID(ctx, 101)
+	_, err = s.GetUserByFakeID(ctx, 101, GetUserOptions{WithCandidacies: true})
 	require.ErrorContains(t, err, "database unavailable")
 	require.Equal(t, string(raw), rdb.Get(ctx, db.RedisUserInfo+"101").Val())
 	require.Zero(t, rdb.Exists(ctx, db.RedisUserActiveCandidacies+"1").Val())

@@ -44,7 +44,7 @@ type userPartyPair struct {
 // hydrateUserRelationships resolves candidacies, party info, and party chapters.
 // It batches Redis lookups into a single MGET, deduplicates shared party requests,
 // and fetches any cache misses concurrently directly from the respective services.
-func (s *UsersService) hydrateUserRelationships(ctx context.Context, users []queries.UserWithPlaces) error {
+func (s *UsersService) hydrateUserRelationships(ctx context.Context, users []queries.UserWithPlaces, opt GetUserOptions) error {
 	if len(users) == 0 {
 		return nil
 	}
@@ -84,16 +84,22 @@ func (s *UsersService) hydrateUserRelationships(ctx context.Context, users []que
 		u.Chapters = []queries.GetUserPartyChaptersRow{}
 		u.Candidacies = []queries.UserActiveCandidacy{}
 
-		candKey := fmt.Sprintf("%s%d", db.RedisUserActiveCandidacies, u.ID)
-		trackKey(candKey, keyMeta{kind: kindCandidacy, userID: u.ID})
+		if opt.WithCandidacies {
+			candKey := fmt.Sprintf("%s%d", db.RedisUserActiveCandidacies, u.ID)
+			trackKey(candKey, keyMeta{kind: kindCandidacy, userID: u.ID})
+		}
 
 		if u.PartyID.Valid && u.PartyID.Int16 > 0 {
 			pID := u.PartyID.Int16
-			partyKey := fmt.Sprintf("%s%d", db.RedisPartyByID, pID)
-			trackKey(partyKey, keyMeta{kind: kindPartyBasic, partyID: pID})
+			if !opt.WithoutPartyBasic {
+				partyKey := fmt.Sprintf("%s%d", db.RedisPartyByID, pID)
+				trackKey(partyKey, keyMeta{kind: kindPartyBasic, partyID: pID})
+			}
 
-			chapKey := fmt.Sprintf("%s%d:%d", db.RedisUserPartyChapters, pID, u.ID)
-			trackKey(chapKey, keyMeta{kind: kindChapters, userID: u.ID, partyID: pID})
+			if opt.WithChapters {
+				chapKey := fmt.Sprintf("%s%d:%d", db.RedisUserPartyChapters, pID, u.ID)
+				trackKey(chapKey, keyMeta{kind: kindChapters, userID: u.ID, partyID: pID})
+			}
 		}
 	}
 

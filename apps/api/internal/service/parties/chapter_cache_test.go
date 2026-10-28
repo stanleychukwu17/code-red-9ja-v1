@@ -16,7 +16,7 @@ import (
 
 type chapterUsers struct{ UsersService }
 
-func (chapterUsers) GetUserByFakeID(context.Context, int64) (queries.UserWithPlaces, error) {
+func (chapterUsers) GetUserByFakeID(context.Context, int64, ...queries.GetUserOptions) (queries.UserWithPlaces, error) {
 	return queries.UserWithPlaces{GetUserByFakeIDRow: queries.GetUserByFakeIDRow{
 		ID: 1, PartyID: pgtype.Int2{Int16: 1, Valid: true},
 	}}, nil

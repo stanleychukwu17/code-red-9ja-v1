@@ -63,8 +63,8 @@ type BlocksService interface {
 
 // UsersService interface defines the methods needed from the users service
 type UsersService interface {
-	GetUserByFakeID(ctx context.Context, fakeID int64) (queries.UserWithPlaces, error)
-	GetUsersByFakeIDs(ctx context.Context, fakeIDs []int64) ([]queries.UserWithPlaces, error)
+	GetUserByFakeID(ctx context.Context, fakeID int64, opts ...queries.GetUserOptions) (queries.UserWithPlaces, error)
+	GetUsersByFakeIDs(ctx context.Context, fakeIDs []int64, opts ...queries.GetUserOptions) ([]queries.UserWithPlaces, error)
 	UpdateUserParty(ctx context.Context, userID int64, partyID *int16, fakeID int64) error
 	StripPartyAdminRoles(ctx context.Context, userID int64, fakeID int64) error
 }

@@ -36,7 +36,7 @@ type MessagingService interface {
 
 type UsersService interface {
 	CreateUserWallet(ctx context.Context, user queries.User) (queries.UserWallet, error)
-	GetUserByFakeID(ctx context.Context, fakeID int64) (queries.UserWithPlaces, error)
+	GetUserByFakeID(ctx context.Context, fakeID int64, opts ...queries.GetUserOptions) (queries.UserWithPlaces, error)
 	GetUserRoles(ctx context.Context, userID int64) (queries.CachedUserRoles, error)
 	AssignUserRole(ctx context.Context, userID int64, fakeID int64, code string, whoAssigned int64) error
 	GetMoreInfoAboutThisUser(ctx context.Context, userID int64) (queries.UserMoreInfo, error)
@@ -1241,7 +1241,9 @@ func (s *AuthService) VerifySignupEmailOTP(ctx context.Context, email, otp strin
 
 // GetUserDetailsByFakeID fetches all user details using the user fake_id
 func (s *AuthService) GetUserDetailsByFakeID(ctx context.Context, fakeID int64) (queries.UserWithPlaces, error) {
-	return s.usersService.GetUserByFakeID(ctx, fakeID)
+	return s.usersService.GetUserByFakeID(ctx, fakeID, queries.GetUserOptions{
+		WithChapters: true,
+	})
 }
 
 // ChangePasswordByEmail resets a user's password using their email address and OTP
