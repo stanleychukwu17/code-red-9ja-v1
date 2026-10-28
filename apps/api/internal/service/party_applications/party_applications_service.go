@@ -88,28 +88,23 @@ func (s *Service) initiateStatsRollup(ctx context.Context, egID int32, roleType 
 }
 
 type SubmitApplicationInput struct {
-	UserID           int64
-	PartyID          int16
-	ElectionGroupIDs []int32
-	PollingUnitID    int32
-	Avatar           string
-	AvatarFileID     *int64
-	VotersCardImage  string
-	CurrentCountry   int16
-	CurrentState     int16
-	CurrentLga       int32
-	CurrentCity      int32
-	CurrentWard      int32
+	UserID          int64
+	PartyID         int16
+	ElectionGroupID int32
+	PollingUnitID   int32
+	Avatar          string
+	AvatarFileID    *int64
+	CurrentState    int16
+	CurrentLga      int32
+	CurrentWard     int32
 
 	EducationalStatus string
 	HighestDegree     string
 	GraduationYear    string
 	SchoolName        string
-	Phone             string
 	Address           string
 	BankAccountNumber string
 	BankCode          string
-	WhatsappPhone     string
 }
 
 func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplicationInput) ([]queries.PartyApplication, error) {
@@ -125,16 +120,10 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 		return nil, errors.New("this political party has no available slots to accept applications")
 	}
 
-	// Deduplicate election group IDs
-	uniqueGroupIDs := make([]int32, 0, len(input.ElectionGroupIDs))
-	seen := make(map[int32]bool)
-	for _, id := range input.ElectionGroupIDs {
-		if !seen[id] {
-			seen[id] = true
-			uniqueGroupIDs = append(uniqueGroupIDs, id)
-		}
+	// Ensure a valid target election group is specified for this application
+	if input.ElectionGroupID <= 0 {
+		return nil, errors.New("election_group_id is required")
 	}
-	input.ElectionGroupIDs = uniqueGroupIDs
 
 	// Begin transaction
 	tx, err := s.pool.Begin(ctx)
@@ -147,16 +136,12 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 
 	// Update user agent details
 	user, err := txQueries.UpdateUserAgentDetails(ctx, queries.UpdateUserAgentDetailsParams{
-		ID:              input.UserID,
-		PartyID:         pgtype.Int2{Int16: int16(int16(input.PartyID)), Valid: true},
-		Avatar:          utils.PgTextFromString(input.Avatar),
-		VotersCardImage: utils.PgTextFromString(input.VotersCardImage),
-		CurrentCountry:  input.CurrentCountry,
-		CurrentState:    int16(input.CurrentState),
-		CurrentLga:      pgtype.Int4{Int32: input.CurrentLga, Valid: input.CurrentLga > 0},
-		CurrentCity:     pgtype.Int4{Int32: input.CurrentCity, Valid: input.CurrentCity > 0},
-		CurrentWard:     pgtype.Int4{Int32: input.CurrentWard, Valid: input.CurrentWard > 0},
-		PollingUnitID:   pgtype.Int4{Int32: input.PollingUnitID, Valid: input.PollingUnitID > 0},
+		ID:            input.UserID,
+		Avatar:        utils.PgTextFromString(input.Avatar),
+		CurrentState:  int16(input.CurrentState),
+		CurrentLga:    pgtype.Int4{Int32: input.CurrentLga, Valid: input.CurrentLga > 0},
+		CurrentWard:   pgtype.Int4{Int32: input.CurrentWard, Valid: input.CurrentWard > 0},
+		PollingUnitID: pgtype.Int4{Int32: input.PollingUnitID, Valid: input.PollingUnitID > 0},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to update user details: %w", err)
@@ -172,7 +157,7 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 			return nil, fmt.Errorf("failed to update user avatar file id: %w", err)
 		}
 
-		_, _ = txQueries.UpdateFileOwner(ctx, queries.UpdateFileOwnerParams{
+		_ = txQueries.UpdateFileOwner(ctx, queries.UpdateFileOwnerParams{
 			ID:      *input.AvatarFileID,
 			OwnerID: pgtype.Int8{Int64: input.UserID, Valid: true},
 		})
@@ -211,87 +196,52 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 		}
 	}
 
-	if input.WhatsappPhone != "" {
-		rawPhone := input.WhatsappPhone
-		phonecode := "234"
-		formattedPhone := rawPhone
-
-		if len(rawPhone) > 0 && rawPhone[0] != '+' {
-			if rawPhone[0] == '0' {
-				formattedPhone = "+234" + rawPhone[1:]
-			} else if len(rawPhone) == 10 {
-				formattedPhone = "+234" + rawPhone
-			} else if !strings.HasPrefix(rawPhone, "234") {
-				formattedPhone = "+234" + rawPhone
-			} else {
-				formattedPhone = "+" + rawPhone
-			}
-		}
-
-		_, err = txQueries.UpsertUserPhoneNumber(ctx, queries.UpsertUserPhoneNumberParams{
-			UserID:     input.UserID,
-			Phone:      formattedPhone,
-			Phonecode:  phonecode,
-			RawInput:   rawPhone,
-			OnWhatsapp: pgtype.Bool{Bool: true, Valid: true},
-			IsDefault:  pgtype.Bool{Bool: false, Valid: true},
-		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to upsert whatsapp phone number: %w", err)
-		}
+	// Create application
+	app, err := txQueries.CreateApplication(ctx, queries.CreateApplicationParams{
+		UserID:          input.UserID,
+		PartyID:         int16(input.PartyID),
+		ElectionGroupID: input.ElectionGroupID,
+		PollingUnitID:   pgtype.Int4{Int32: input.PollingUnitID, Valid: input.PollingUnitID > 0},
+		StateID:         pgtype.Int2{Int16: int16(input.CurrentState), Valid: input.CurrentState > 0},
+		LgaID:           pgtype.Int4{Int32: input.CurrentLga, Valid: input.CurrentLga > 0},
+		WardID:          pgtype.Int4{Int32: input.CurrentWard, Valid: input.CurrentWard > 0},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create application: %w", err)
 	}
 
-	apps := make([]queries.PartyApplication, 0, len(input.ElectionGroupIDs))
-	for _, egID := range input.ElectionGroupIDs {
-		// Create application
-		app, err := txQueries.CreateApplication(ctx, queries.CreateApplicationParams{
-			UserID:          input.UserID,
-			PartyID:         int16(input.PartyID),
-			ElectionGroupID: egID,
-			PollingUnitID:   pgtype.Int4{Int32: input.PollingUnitID, Valid: input.PollingUnitID > 0},
-			StateID:         pgtype.Int2{Int16: int16(input.CurrentState), Valid: input.CurrentState > 0},
-			LgaID:           pgtype.Int4{Int32: input.CurrentLga, Valid: input.CurrentLga > 0},
-			WardID:          pgtype.Int4{Int32: input.CurrentWard, Valid: input.CurrentWard > 0},
-		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to create application: %w", err)
-		}
+	// Create user referral record for this election group
+	err = txQueries.CreateUserReferralRecord(ctx, queries.CreateUserReferralRecordParams{
+		UserID:          input.UserID,
+		PartyID:         pgtype.Int2{Int16: int16(input.PartyID), Valid: input.PartyID > 0},
+		ElectionGroupID: pgtype.Int4{Int32: input.ElectionGroupID, Valid: input.ElectionGroupID > 0},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create user referral record: %w", err)
+	}
 
-		// Create user referral record for this election group
-		err = txQueries.CreateUserReferralRecord(ctx, queries.CreateUserReferralRecordParams{
-			UserID:          input.UserID,
-			PartyID:         pgtype.Int2{Int16: int16(input.PartyID), Valid: input.PartyID > 0},
-			ElectionGroupID: pgtype.Int4{Int32: egID, Valid: egID > 0},
-		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to create user referral record: %w", err)
-		}
-
-		// Increment applications_count on election_group_polling_units for this PU & party
-		if input.PollingUnitID > 0 {
-			if adjErr := txQueries.AdjustElectionGroupPollingUnitApplicationCounts(ctx, queries.AdjustElectionGroupPollingUnitApplicationCountsParams{
-				ElectionGroupID: egID,
-				PollingUnitID:   input.PollingUnitID,
-				PartyID:         int16(input.PartyID),
-				AppDelta:        1,
-				AcceptedDelta:   0,
-				RejectedDelta:   0,
-			}); adjErr != nil {
-				return nil, fmt.Errorf("failed to adjust polling unit application counts: %w", adjErr)
-			}
-		}
-
-		_ = txQueries.AdjustElectionGroupNationalApplicationCounts(ctx, queries.AdjustElectionGroupNationalApplicationCountsParams{
-			ElectionGroupID: egID,
+	// Increment applications_count on election_group_polling_units for this PU & party
+	if input.PollingUnitID > 0 {
+		if adjErr := txQueries.AdjustElectionGroupPollingUnitApplicationCounts(ctx, queries.AdjustElectionGroupPollingUnitApplicationCountsParams{
+			ElectionGroupID: input.ElectionGroupID,
+			PollingUnitID:   input.PollingUnitID,
 			PartyID:         int16(input.PartyID),
 			AppDelta:        1,
-		})
-
-		apps = append(apps, app)
+			AcceptedDelta:   0,
+			RejectedDelta:   0,
+		}); adjErr != nil {
+			return nil, fmt.Errorf("failed to adjust polling unit application counts: %w", adjErr)
+		}
 	}
 
+	_ = txQueries.AdjustElectionGroupNationalApplicationCounts(ctx, queries.AdjustElectionGroupNationalApplicationCountsParams{
+		ElectionGroupID: input.ElectionGroupID,
+		PartyID:         int16(input.PartyID),
+		AppDelta:        1,
+	})
+
 	// Process referred user's referral record linking & increment total_referrals (best effort)
-	if refErr := s.updateReferralOnApplicationSubmission(ctx, txQueries, input.UserID, int64(input.PartyID), input.ElectionGroupIDs, int16(input.CurrentState), int16(input.CurrentCountry)); refErr != nil {
+	if refErr := s.updateReferralOnApplicationSubmission(ctx, txQueries, input.UserID, int64(input.PartyID), input.ElectionGroupID, int16(input.CurrentState)); refErr != nil {
 		slog.Warn("updateReferralOnApplicationSubmission failed (non-fatal)", "userID", input.UserID, "err", refErr)
 	}
 
@@ -305,7 +255,7 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 	}
 	s.rdb.Del(ctx, fmt.Sprintf("%s%d", db.RedisUserMoreInfo, input.UserID))
 
-	return apps, nil
+	return []queries.PartyApplication{app}, nil
 }
 
 type SubmitSupervisorApplicationInput struct {
