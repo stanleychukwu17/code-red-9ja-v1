@@ -1,5 +1,6 @@
 import { StickyFooter } from "#/components/Footers";
 import { Button } from "@repo/ui/components/button";
+import { Loader2 } from "lucide-react";
 import { useApplyContext } from "../context/ApplyContext";
 
 /**
@@ -13,7 +14,7 @@ export function ApplyFooter() {
     step,
     setStep,
     selectedPartyId,
-    selectedElectionIds,
+    selectedElectionId,
     avatarUrl,
     isUploading,
     selectedStateId,
@@ -96,28 +97,28 @@ export function ApplyFooter() {
         </Button>
       )}
 
-      {/* Step 6: Desired Polling Unit Assignment */}
+      {/* Step 6: Election Day / Group Selection */}
       {step === 6 && (
         <Button
           type="button"
           variant="black"
           size="4xl"
           className="w-full rounded-full"
-          disabled={!selectedPollingUnitId}
+          disabled={!selectedElectionId}
           onClick={() => setStep(7)}
         >
           Continue
         </Button>
       )}
 
-      {/* Step 7: Election Day / Group Selection */}
+      {/* Step 7: Desired Polling Unit Assignment */}
       {step === 7 && (
         <Button
           type="button"
           variant="black"
           size="4xl"
           className="w-full rounded-full"
-          disabled={selectedElectionIds.length === 0}
+          disabled={!selectedPollingUnitId}
           onClick={() => setStep(8)}
         >
           Continue

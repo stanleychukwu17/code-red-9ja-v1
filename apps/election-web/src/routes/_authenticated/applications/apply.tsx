@@ -49,8 +49,8 @@ export const Route = createFileRoute("/_authenticated/applications/apply")({
  *  3. Contact Information (Phone, WhatsApp)
  *  4. Educational Background (Status & optional Degree, School, Year)
  *  5. Residential Address & Geographic Territory (State, LGA, Ward)
- *  6. Polling Unit Selection (Paginated search filtered to ward & party)
- *  7. Election Day / Group Selection (Choose election day to serve)
+ *  6. Election Day / Group Selection (Choose election day to serve)
+ *  7. Polling Unit Selection (Paginated search filtered to ward & party)
  *  8. Role Obligations & Readiness
  *  9. Code of Conduct
  * 10. Neutrality & Integrity Affirmation
@@ -121,11 +121,11 @@ function ApplyPageContent() {
         {/* Step 5: Residential Address & Ward */}
         {step === 5 && <Step5 />}
 
-        {/* Step 6: Polling Unit Search & Assignment */}
-        {step === 6 && <Step6 />}
+        {/* Step 6: Election Day / Group Selection */}
+        {step === 6 && <Step3 />}
 
-        {/* Step 7: Election Day / Group Selection */}
-        {step === 7 && <Step3 />}
+        {/* Step 7: Polling Unit Search & Assignment */}
+        {step === 7 && <Step6 />}
 
         {/* Step 8: Polling Agent Responsibilities */}
         {step === 8 && <Step7 />}

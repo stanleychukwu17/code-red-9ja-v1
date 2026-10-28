@@ -50,26 +50,6 @@ func NewHandler(bodiesService BodiesService, q *queries.Queries, utils *utils.Ut
 	}
 }
 
-func parsePaginationParamsWithMax(r *http.Request, maxLimit int) (int, int64) {
-	limit := 20
-	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
-		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
-			if l > maxLimit {
-				limit = maxLimit
-			} else {
-				limit = l
-			}
-		}
-	}
-
-	var cursor int64
-	if cursorStr := r.URL.Query().Get("cursor"); cursorStr != "" {
-		if c, err := strconv.ParseInt(cursorStr, 10, 64); err == nil {
-			cursor = c
-		}
-	}
-	return limit, cursor
-}
 
 func parseOptionalQueryInt(r *http.Request, param string) int32 {
 	valStr := r.URL.Query().Get(param)
@@ -202,9 +182,7 @@ func (h *Handler) GetCities(w http.ResponseWriter, r *http.Request) {
 // @Failure      500        {string}  failed to fetch lgas
 // @Router       /lgas [get]
 func (h *Handler) GetLGAs(w http.ResponseWriter, r *http.Request) {
-	// Parse optional state filter and pagination parameters (up to 800 max)
 	stateID := parseOptionalQueryInt(r, "state_id")
-	limit, cursor := parsePaginationParamsWithMax(r, 800)
 
 	// Fetch cached or database LGAs matching state filter (or nationwide)
 	lgas, err := h.bodiesService.GetLGAs(r.Context(), stateID)
@@ -230,43 +208,9 @@ func (h *Handler) GetLGAs(w http.ResponseWriter, r *http.Request) {
 		lgas = filtered
 	}
 
-	// Locate start position based on cursor ID
-	startIndex := 0
-	if cursor > 0 {
-		for i, l := range lgas {
-			if int64(l.ID) == cursor {
-				startIndex = i + 1
-				break
-			}
-		}
-	}
-
-	// Paginate the in-memory slice and compute next cursor
-	var paginated []queries.Lga
-	hasMore := false
-	nextCursor := ""
-
-	if startIndex < len(lgas) {
-		endIndex := startIndex + limit
-		if endIndex >= len(lgas) {
-			endIndex = len(lgas)
-			paginated = lgas[startIndex:endIndex]
-		} else {
-			paginated = lgas[startIndex:endIndex]
-			hasMore = true
-			nextCursor = strconv.FormatInt(int64(paginated[len(paginated)-1].ID), 10)
-		}
-	} else {
-		paginated = []queries.Lga{}
-	}
-
-	// Return response envelope with paginated items and cursor metadata
+	// Return response envelope with all matching LGAs
 	h.utils.RespondSuccess(w, http.StatusOK, "LGAs fetched successfully", map[string]interface{}{
-		"lgas": paginated,
-		"meta": map[string]interface{}{
-			"next_cursor": nextCursor,
-			"has_more":    hasMore,
-		},
+		"lgas": lgas,
 	})
 }
 

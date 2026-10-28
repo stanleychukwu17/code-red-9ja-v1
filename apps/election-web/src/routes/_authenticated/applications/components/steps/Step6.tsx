@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { getPollingUnitsWithCapacity } from "#/lib/server/polling_units";
 import { getWards } from "#/lib/server/wards";
@@ -11,7 +11,7 @@ import { useIntersectionObserver } from "usehooks-ts";
 import { useApplyContext } from "../../context/ApplyContext";
 import { StepHeader } from "./shared/StepHeader";
 
-/** Step 6: Target polling unit selection with capacity limit checking and infinite scroll */
+/** Step 7: Target polling unit selection with capacity limit checking and infinite scroll */
 export const Step6 = () => {
   const {
     selectedStateId,
@@ -19,25 +19,17 @@ export const Step6 = () => {
     selectedWardId,
     setSelectedWardId,
     selectedPartyId,
-    selectedElectionIds,
+    selectedElectionId,
     selectedPollingUnitId,
     setSelectedPollingUnitId,
   } = useApplyContext();
 
-  const [searchQuery, setSearchQuery] = useState("");
   const { ref: sentinelRef, isIntersecting } = useIntersectionObserver({
     threshold: 0.1,
   });
 
-  const { data: pollingUnitsData, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
-    queryKey: [
-      "pollingUnits",
-      selectedStateId,
-      selectedLgaId,
-      selectedWardId,
-      selectedPartyId,
-      selectedElectionIds?.[0],
-    ],
+  const { data: pollingUnitsData, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteQuery({
+    queryKey: ["pollingUnits", selectedStateId, selectedLgaId, selectedWardId, selectedPartyId, selectedElectionId],
     queryFn: async ({ pageParam }) => {
       const res = await getPollingUnitsWithCapacity({
         data: {
@@ -47,7 +39,7 @@ export const Step6 = () => {
           limit: 20,
           cursor: pageParam || undefined,
           partyId: selectedPartyId!,
-          electionGroupId: selectedElectionIds?.[0]!,
+          electionGroupId: selectedElectionId!,
         },
       });
       if (res && res.success && res.data) {
@@ -65,24 +57,28 @@ export const Step6 = () => {
     enabled:
       (!!selectedStateId || !!selectedLgaId || !!selectedWardId) &&
       !!selectedPartyId &&
-      !!selectedElectionIds?.[0],
+      !!selectedElectionId,
   });
 
   // Flattened array of polling units across all fetched pages
   const pollingUnits = useMemo(() => {
     return pollingUnitsData
       ? pollingUnitsData.pages.flatMap(
-          (page: any) => page.data?.polling_units || [],
-        )
+        (page: any) => page.data?.polling_units || [],
+      )
       : [];
   }, [pollingUnitsData]);
 
-  // Fallback: select the first polling unit if current selection is absent from new results
+  // Fallback: select the current selection if available, or first non-full unit
   useEffect(() => {
     if (pollingUnits && pollingUnits.length > 0) {
       setSelectedPollingUnitId((current) => {
-        const exists = pollingUnits.some((u: any) => u.id === current);
-        return exists ? current : pollingUnits[0].id;
+        const matchingUnit = pollingUnits.find((u: any) => u.id === current);
+        if (matchingUnit && !matchingUnit.is_capacity_full) {
+          return current;
+        }
+        const availableUnit = pollingUnits.find((u: any) => !u.is_capacity_full);
+        return availableUnit ? availableUnit.id : null;
       });
     } else {
       setSelectedPollingUnitId(null);
@@ -128,40 +124,50 @@ export const Step6 = () => {
         <div className="space-y-3 mt-7">
           <Label title={`Polling Units (${targetWardName})`} className="" />
 
-          {pollingUnits.map((unit: any) => {
-            const isSelected = selectedPollingUnitId === unit.id;
-            const wardName = getWardName(unit);
-            const isFull = unit.is_capacity_full;
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : pollingUnits.length === 0 ? (
+            <div className="text-center py-12 text-sm text-muted-foreground">
+              No polling units found for this ward.
+            </div>
+          ) : (
+            pollingUnits.map((unit: any) => {
+              const isSelected = selectedPollingUnitId === unit.id;
+              const wardName = getWardName(unit);
+              const isFull = unit.is_capacity_full;
 
-            return (
-              <SelectableCard
-                key={unit.id}
-                title={unit.name}
-                subtitle={
-                  <div className="flex flex-col gap-1">
-                    <span>{wardName}</span>
-                    {isFull && (
-                      <span className="text-[13px] text-orange font-medium">
-                        Capacity full for this polling unit
-                      </span>
-                    )}
-                  </div>
-                }
-                isSelected={isSelected}
-                disabled={isFull}
-                onClick={() => {
-                  if (isFull) {
-                    toast.error(
-                      "This polling unit has reached its required number of polling agents.",
-                      { position: "top-center" },
-                    );
-                    return;
+              return (
+                <SelectableCard
+                  key={unit.id}
+                  title={unit.name}
+                  subtitle={
+                    <div className="flex flex-col gap-1">
+                      <span>{wardName}</span>
+                      {isFull && (
+                        <span className="text-[13px] text-orange font-medium">
+                          Capacity full for this polling unit
+                        </span>
+                      )}
+                    </div>
                   }
-                  setSelectedPollingUnitId(unit.id);
-                }}
-              />
-            );
-          })}
+                  isSelected={isSelected}
+                  disabled={isFull}
+                  onClick={() => {
+                    if (isFull) {
+                      toast.error(
+                        "This polling unit has reached its required number of polling agents.",
+                        { position: "top-center" },
+                      );
+                      return;
+                    }
+                    setSelectedPollingUnitId(unit.id);
+                  }}
+                />
+              );
+            })
+          )}
         </div>
 
         {/* Sentinel element for infinite scroll */}
@@ -182,3 +188,4 @@ export const Step6 = () => {
     </div>
   );
 };
+

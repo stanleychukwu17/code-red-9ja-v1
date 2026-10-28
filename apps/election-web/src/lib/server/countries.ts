@@ -43,12 +43,12 @@ export const getCities = createServerFn()
   });
 
 export const getLGAs = createServerFn()
-  .inputValidator((data: { stateId?: number; limit?: number; cursor?: string | number }) => data)
-  .handler(async ({ data: { stateId, limit, cursor } }) => {
+  .inputValidator((data: { stateId?: number; limit?: number; cursor?: string | number } | undefined) => data)
+  .handler(async ({ data }) => {
     try {
-      const response = await apiFetch(API_URL.getLGAs(stateId, limit, cursor));
-      const data = await response.json();
-      return data;
+      const response = await apiFetch(API_URL.getLGAs(data?.stateId));
+      const resData = await response.json();
+      return resData;
     } catch (error) {
       return { success: false, message: "Failed to fetch LGAs from API" };
     }

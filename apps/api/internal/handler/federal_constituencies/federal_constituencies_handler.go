@@ -301,27 +301,6 @@ type GetFederalConstituenciesData struct {
 	Constituencies []FederalConstituencyResponse `json:"constituencies"`
 }
 
-func parsePaginationParamsWithMax(r *http.Request, maxLimit int) (int, int64) {
-	limit := 20
-	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
-		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
-			if l > maxLimit {
-				limit = maxLimit
-			} else {
-				limit = l
-			}
-		}
-	}
-
-	var cursor int64
-	if cursorStr := r.URL.Query().Get("cursor"); cursorStr != "" {
-		if c, err := strconv.ParseInt(cursorStr, 10, 64); err == nil {
-			cursor = c
-		}
-	}
-	return limit, cursor
-}
-
 func parseOptionalQueryInt(r *http.Request, param string) int32 {
 	valStr := r.URL.Query().Get(param)
 	if valStr == "" {
@@ -336,22 +315,18 @@ func parseOptionalQueryInt(r *http.Request, param string) int32 {
 
 // GetFederalConstituencies godoc
 // @Summary      Get federal constituencies
-// @Description  Fetches federal constituencies with optional state_id and senatorial_district_id filtering and cursor pagination
+// @Description  Fetches federal constituencies with optional state_id and senatorial_district_id filtering
 // @Tags         Federal Constituencies
 // @Accept       json
 // @Produce      json
 // @Param        state_id                query     int     false  "State ID to filter by"
 // @Param        senatorial_district_id  query     int     false  "Senatorial District ID to filter by"
-// @Param        limit                   query     int     false  "Limit (default 20, max 100)"
-// @Param        cursor                  query     string  false  "Cursor (ID of last record)"
 // @Success      200                     {object}  GetFederalConstituenciesResponse
 // @Failure      500                     {string}  failed to fetch constituencies
 // @Router       /federal-constituencies [get]
 func (h *Handler) GetFederalConstituencies(w http.ResponseWriter, r *http.Request) {
-	// Parse optional filter and pagination parameters (allowing up to 500 limit)
 	stateID := parseOptionalQueryInt(r, "state_id")
 	senatorialDistrictID := parseOptionalQueryInt(r, "senatorial_district_id")
-	limit, cursor := parsePaginationParamsWithMax(r, 500)
 
 	// Fetch cached or database constituencies matching geographic filters
 	constituencies, err := h.federalConstituenciesService.GetFederalConstituencies(r.Context(), stateID, senatorialDistrictID)
@@ -380,42 +355,8 @@ func (h *Handler) GetFederalConstituencies(w http.ResponseWriter, r *http.Reques
 		constituencies = filtered
 	}
 
-	// Locate start position based on cursor ID
-	startIndex := 0
-	if cursor > 0 {
-		for i, c := range constituencies {
-			if int64(c.ID) == cursor {
-				startIndex = i + 1
-				break
-			}
-		}
-	}
-
-	// Paginate the in-memory slice and compute next cursor
-	var paginated []queries.FederalConstituency
-	hasMore := false
-	nextCursor := ""
-
-	if startIndex < len(constituencies) {
-		endIndex := startIndex + limit
-		if endIndex >= len(constituencies) {
-			endIndex = len(constituencies)
-			paginated = constituencies[startIndex:endIndex]
-		} else {
-			paginated = constituencies[startIndex:endIndex]
-			hasMore = true
-			nextCursor = strconv.FormatInt(int64(paginated[len(paginated)-1].ID), 10)
-		}
-	} else {
-		paginated = []queries.FederalConstituency{}
-	}
-
-	// Return response envelope with paginated items and cursor metadata
+	// Return response envelope with all matching constituencies
 	h.utils.RespondSuccess(w, http.StatusOK, "Federal constituencies fetched successfully", map[string]interface{}{
-		"constituencies": paginated,
-		"meta": map[string]interface{}{
-			"next_cursor": nextCursor,
-			"has_more":    hasMore,
-		},
+		"constituencies": constituencies,
 	})
 }

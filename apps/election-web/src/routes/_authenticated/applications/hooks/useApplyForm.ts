@@ -28,7 +28,7 @@ export function useApplyForm({ search, navigate }: UseApplyFormOptions) {
 
   // Form states
   const [selectedPartyId, setSelectedPartyId] = useState<number | null>(user?.party_id || null);
-  const [selectedElectionIds, setSelectedElectionIds] = useState<number[]>([]);
+  const [selectedElectionId, setSelectedElectionId] = useState<number | null>(null);
 
   // --- Identity & Photo Verification ---
   const [avatarUrl, setAvatarUrl] = useState<string>(user?.avatar || "");
@@ -167,7 +167,7 @@ export function useApplyForm({ search, navigate }: UseApplyFormOptions) {
     mutationFn: async () => {
       if (
         !selectedPartyId ||
-        selectedElectionIds.length === 0 ||
+        !selectedElectionId ||
         !selectedStateId ||
         !selectedLgaId ||
         !streetAddress ||
@@ -183,7 +183,7 @@ export function useApplyForm({ search, navigate }: UseApplyFormOptions) {
       const response = await submitPollingAgentApplication({
         data: {
           party_id: selectedPartyId,
-          election_group_ids: selectedElectionIds,
+          election_group_ids: selectedElectionId ? [selectedElectionId] : [],
           polling_unit_id: Number(selectedPollingUnitId),
           avatar: user?.avatar || avatarUrl,
           current_country: 1,
@@ -250,8 +250,9 @@ export function useApplyForm({ search, navigate }: UseApplyFormOptions) {
     selectedParty,
     lockedPartyId,
     // Elections
-    selectedElectionIds,
-    setSelectedElectionIds,
+    selectedElectionId,
+    setSelectedElectionId,
+    selectedElectionIds: selectedElectionId ? [selectedElectionId] : [],
     appliedElectionGroupIds,
     // Photo / Avatar
     avatarUrl,

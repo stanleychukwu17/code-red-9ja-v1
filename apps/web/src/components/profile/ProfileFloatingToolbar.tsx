@@ -2,9 +2,9 @@ import { useMemo, useState } from "react";
 import { useParams } from "@tanstack/react-router";
 import { MoreHorizontal, PencilRuler, Settings } from "lucide-react";
 import { UserFormDialog } from "@repo/ui/components/custom/UserFormDialog";
-import { useQueryClient } from "@tanstack/react-query";
-import { useAppSelector } from "#/redux/hooks";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { QUERY_KEYS } from "#/lib/config";
+import { getUserProfile } from "#/lib/server/citizens";
 import { getAllCountries, getStates, getCities } from "#/lib/server/countries";
 import { getParties } from "#/lib/server/parties";
 import {
@@ -22,43 +22,30 @@ export function ProfileFloatingToolbar({ onSuccess }: ProfileFloatingToolbarProp
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const queryClient = useQueryClient();
-  const authUser = useAppSelector((state) => state.auth.user);
   const params = useParams({ strict: false }) as { username?: string };
+  const username = params.username ? params.username.replace(/^@/, "") : "";
 
-  // Resolve active profile from cache, falling back to logged-in user
+  // Subscribe reactively to the public profile query cache
+  const { data: profileRes } = useQuery({
+    queryKey: QUERY_KEYS.userProfile.byUsername(username),
+    queryFn: () => getUserProfile({ data: { username } }),
+    enabled: Boolean(username),
+    staleTime: Infinity,
+    gcTime: Infinity,
+  });
+
+  const profileData = profileRes?.data;
+  const isAccountOwner = Boolean(profileData?.is_account_owner);
+
+  // Resolve active profile for editing directly from the profile data
   const activeUser = useMemo(() => {
-    let cachedProfileRes: any;
-
-    // 1. Look up profile by username from URL
-    if (params.username) {
-      cachedProfileRes = queryClient.getQueryData<any>(
-        QUERY_KEYS.userProfile.byUsername(params.username)
-      );
-    }
-
-    // 2. Fallback to any cached profile query
-    if (!cachedProfileRes) {
-      const rootQueries = queryClient.getQueriesData<any>({
-        queryKey: QUERY_KEYS.userProfile.root,
-      });
-      if (rootQueries && rootQueries.length > 0 && rootQueries[0]) {
-        cachedProfileRes = rootQueries[0][1];
-      }
-    }
-
-    // Unwrap response data or fallback to authUser
-    const profileData = cachedProfileRes?.data ?? cachedProfileRes;
-    const base = profileData || authUser;
-    if (!base) return null;
-
-    // Merge profile fields with normalized party_id and avatar
+    if (!profileData) return null;
     return {
-      ...authUser,
-      ...base,
-      party_id: base?.party?.id ?? base?.party_id ?? authUser?.party_id,
-      avatar: base?.avatar || authUser?.avatar || authUser?.avatar_url || "",
+      ...profileData,
+      party_id: profileData.party?.id,
+      avatar: profileData.avatar || "",
     };
-  }, [params.username, queryClient, authUser, isEditDialogOpen]);
+  }, [profileData]);
 
   // Copy current profile URL to clipboard with a 2-second copied state
   const handleShare = () => {
@@ -80,22 +67,26 @@ export function ProfileFloatingToolbar({ onSuccess }: ProfileFloatingToolbarProp
   return (
     <div className="mt-5 flex justify-center">
       <div className="inline-flex items-center gap-2 rounded-full bg-sidebar-mobile/50 px-1 shadow-xs">
-        <button
-          type="button"
-          onClick={() => setIsEditDialogOpen(true)}
-          title="Edit profile"
-          className="text-c-70 hover:text-c-100 transition-colors cursor-pointer bg-hover-10/50 size-10 rounded-full flex items-center justify-center"
-        >
-          <PencilRuler className="size-5" />
-        </button>
+        {isAccountOwner && (
+          <>
+            <button
+              type="button"
+              onClick={() => setIsEditDialogOpen(true)}
+              title="Edit profile"
+              className="text-c-70 hover:text-c-100 transition-colors cursor-pointer bg-hover-10/50 size-10 rounded-full flex items-center justify-center"
+            >
+              <PencilRuler className="size-5" />
+            </button>
 
-        <button
-          type="button"
-          title="Profile Settings"
-          className="text-c-70 hover:text-c-100 transition-colors cursor-pointer bg-hover-10/50 size-10 rounded-full flex items-center justify-center"
-        >
-          <Settings className="size-5" />
-        </button>
+            <button
+              type="button"
+              title="Profile Settings"
+              className="text-c-70 hover:text-c-100 transition-colors cursor-pointer bg-hover-10/50 size-10 rounded-full flex items-center justify-center"
+            >
+              <Settings className="size-5" />
+            </button>
+          </>
+        )}
 
         <button
           type="button"
@@ -112,21 +103,23 @@ export function ProfileFloatingToolbar({ onSuccess }: ProfileFloatingToolbarProp
         </button>
       </div>
 
-      <UserFormDialog
-        mode="update"
-        open={isEditDialogOpen}
-        onClose={() => setIsEditDialogOpen(false)}
-        user={activeUser}
-        onSuccess={handleSuccess}
-        getAllCountries={getAllCountries}
-        getStates={getStates}
-        getCities={getCities}
-        getParties={getParties}
-        getPresignedUploadURL={getPresignedUploadURL}
-        confirmFileUpload={confirmFileUpload}
-        registerCandidate={registerCandidate}
-        updateUser={updateUser}
-      />
+      {isEditDialogOpen && isAccountOwner ? (
+        <UserFormDialog
+          mode="update"
+          open={isEditDialogOpen}
+          onClose={() => setIsEditDialogOpen(false)}
+          user={activeUser}
+          onSuccess={handleSuccess}
+          getAllCountries={getAllCountries}
+          getStates={getStates}
+          getCities={getCities}
+          getParties={getParties}
+          getPresignedUploadURL={getPresignedUploadURL}
+          confirmFileUpload={confirmFileUpload}
+          registerCandidate={registerCandidate}
+          updateUser={updateUser}
+        />
+      ) : null}
     </div>
   );
 }

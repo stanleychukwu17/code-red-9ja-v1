@@ -104,11 +104,9 @@ export const API_URL = {
     return `${api}/state-constituencies${qs ? `?${qs}` : ""}`;
   },
 
-  getLGAs: (stateId?: number, limit?: number, cursor?: string | number) => {
+  getLGAs: (stateId?: number) => {
     const params = new URLSearchParams();
     if (stateId) params.append("state_id", String(stateId));
-    if (limit) params.append("limit", String(limit));
-    if (cursor) params.append("cursor", String(cursor));
     const qs = params.toString();
     return `${api}/lgas${qs ? `?${qs}` : ""}`;
   },

@@ -1251,7 +1251,6 @@ func (s *UsersService) GetUserPublicProfile(ctx context.Context, username string
 
 	// Check if the viewer is the owner of the account
 	isAccountOwner := viewerUserID > 0 && viewerUserID == user.ID
-	// NOTE: use the isAccountOwner to show the settings button
 	// NOTE: save the edited frontend info before you continue this review
 
 	// Map political party affiliation if member

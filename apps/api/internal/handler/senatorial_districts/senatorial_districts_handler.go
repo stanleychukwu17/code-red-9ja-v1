@@ -283,27 +283,6 @@ type GetSenatorialDistrictsData struct {
 	Districts []SenatorialDistrictResponse `json:"districts"`
 }
 
-func parsePaginationParamsWithMax(r *http.Request, maxLimit int) (int, int64) {
-	limit := 20
-	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
-		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
-			if l > maxLimit {
-				limit = maxLimit
-			} else {
-				limit = l
-			}
-		}
-	}
-
-	var cursor int64
-	if cursorStr := r.URL.Query().Get("cursor"); cursorStr != "" {
-		if c, err := strconv.ParseInt(cursorStr, 10, 64); err == nil {
-			cursor = c
-		}
-	}
-	return limit, cursor
-}
-
 func parseOptionalQueryInt(r *http.Request, param string) int32 {
 	valStr := r.URL.Query().Get(param)
 	if valStr == "" {
@@ -318,20 +297,16 @@ func parseOptionalQueryInt(r *http.Request, param string) int32 {
 
 // GetSenatorialDistricts godoc
 // @Summary      Get senatorial districts
-// @Description  Fetches senatorial districts with optional stateID filtering and cursor pagination
+// @Description  Fetches senatorial districts with optional stateID filtering
 // @Tags         Senatorial Districts
 // @Accept       json
 // @Produce      json
 // @Param        state_id   query     int     false  "State ID to filter by"
-// @Param        limit      query     int     false  "Limit (default 20, max 100)"
-// @Param        cursor     query     string  false  "Cursor (ID of last record)"
 // @Success      200        {object}  GetSenatorialDistrictsResponse
 // @Failure      500        {string}  failed to fetch districts
 // @Router       /senatorial-districts [get]
 func (h *Handler) GetSenatorialDistricts(w http.ResponseWriter, r *http.Request) {
-	// Parse optional state filter and pagination parameters (up to 200 max)
 	stateID := parseOptionalQueryInt(r, "state_id")
-	limit, cursor := parsePaginationParamsWithMax(r, 200)
 
 	// Fetch cached or database senatorial districts matching state filter (or nationwide)
 	districts, err := h.senatorialDistrictsService.GetSenatorialDistricts(r.Context(), stateID)
@@ -361,42 +336,8 @@ func (h *Handler) GetSenatorialDistricts(w http.ResponseWriter, r *http.Request)
 		districts = filtered
 	}
 
-	// Locate start position based on cursor ID
-	startIndex := 0
-	if cursor > 0 {
-		for i, d := range districts {
-			if int64(d.ID) == cursor {
-				startIndex = i + 1
-				break
-			}
-		}
-	}
-
-	// Paginate the in-memory slice and compute next cursor
-	var paginated []queries.SenatorialDistrict
-	hasMore := false
-	nextCursor := ""
-
-	if startIndex < len(districts) {
-		endIndex := startIndex + limit
-		if endIndex >= len(districts) {
-			endIndex = len(districts)
-			paginated = districts[startIndex:endIndex]
-		} else {
-			paginated = districts[startIndex:endIndex]
-			hasMore = true
-			nextCursor = strconv.FormatInt(int64(paginated[len(paginated)-1].ID), 10)
-		}
-	} else {
-		paginated = []queries.SenatorialDistrict{}
-	}
-
-	// Return response envelope with paginated items and cursor metadata
+	// Return response envelope with all matching districts
 	h.utils.RespondSuccess(w, http.StatusOK, "Senatorial districts fetched successfully", map[string]interface{}{
-		"districts": paginated,
-		"meta": map[string]interface{}{
-			"next_cursor": nextCursor,
-			"has_more":    hasMore,
-		},
+		"districts": districts,
 	})
 }
