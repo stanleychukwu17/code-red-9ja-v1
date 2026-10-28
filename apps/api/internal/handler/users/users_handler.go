@@ -287,7 +287,7 @@ func (h *Handler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if req.AvatarFileId != nil && *req.AvatarFileId > 0 {
-		_, _ = h.filesService.UpdateFileOwner(r.Context(), *req.AvatarFileId, user.ID)
+		_ = h.filesService.UpdateFileOwner(r.Context(), *req.AvatarFileId, user.ID)
 	}
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Profile updated successfully", nil)
@@ -952,7 +952,7 @@ func (h *Handler) AdminUpdateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if req.AvatarFileId != nil && *req.AvatarFileId > 0 {
-		_, _ = h.filesService.UpdateFileOwner(r.Context(), *req.AvatarFileId, targetUserDetails.ID)
+		_ = h.filesService.UpdateFileOwner(r.Context(), *req.AvatarFileId, targetUserDetails.ID)
 	}
 
 	// invalidate the old username cache if it changed

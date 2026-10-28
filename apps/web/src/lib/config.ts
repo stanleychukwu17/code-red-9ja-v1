@@ -163,6 +163,8 @@ export const API_URL = {
 	uploadUrl: `${api}/files/upload-url`,
 	confirmUpload: (id: string | number) => `${api}/files/${id}/confirm`,
 	updateProfile: `${api}/users/profile`,
+	userPhoneNumbers: (id: string | number) => `${api}/admin/users/${id}/phones`,
+	manageUserPhoneNumber: (id: string | number) => `${api}/admin/users/phones/${id}`,
 	campaignGroups: {
 		getGroup: (groupId: number | string) => `${api}/campaign-groups/${groupId}`,
 		getMembers: (groupId: number | string) => `${api}/campaign-groups/${groupId}/members`,

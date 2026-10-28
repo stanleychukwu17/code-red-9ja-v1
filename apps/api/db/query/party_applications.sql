@@ -15,14 +15,10 @@ INSERT INTO party_applications (
 -- name: UpdateUserAgentDetails :one
 UPDATE users
 SET
-  party_id = $2,
-  avatar = COALESCE($3, avatar),
-  voters_card_image = $4,
-  current_country = $5,
-  current_state = $6,
-  current_lga = $7,
-  current_city = $8,
-  current_ward = $9,
+  avatar = COALESCE($2, avatar),
+  current_state = $3,
+  current_lga = $4,
+  current_ward = $5,
   polling_unit_id = sqlc.arg(polling_unit_id),
   updated_at = NOW()
 WHERE id = $1

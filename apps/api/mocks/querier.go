@@ -7233,31 +7233,21 @@ func (_m *Querier) UpdateFederalConstituency(ctx context.Context, arg queries.Up
 }
 
 // UpdateFileOwner provides a mock function with given fields: ctx, arg
-func (_m *Querier) UpdateFileOwner(ctx context.Context, arg queries.UpdateFileOwnerParams) (queries.File, error) {
+func (_m *Querier) UpdateFileOwner(ctx context.Context, arg queries.UpdateFileOwnerParams) error {
 	ret := _m.Called(ctx, arg)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UpdateFileOwner")
 	}
 
-	var r0 queries.File
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, queries.UpdateFileOwnerParams) (queries.File, error)); ok {
-		return rf(ctx, arg)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, queries.UpdateFileOwnerParams) queries.File); ok {
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.UpdateFileOwnerParams) error); ok {
 		r0 = rf(ctx, arg)
 	} else {
-		r0 = ret.Get(0).(queries.File)
+		r0 = ret.Error(0)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, queries.UpdateFileOwnerParams) error); ok {
-		r1 = rf(ctx, arg)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
+	return r0
 }
 
 // UpdateLGA provides a mock function with given fields: ctx, arg

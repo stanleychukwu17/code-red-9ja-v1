@@ -287,11 +287,10 @@ func (q *Queries) ListFiles(ctx context.Context, arg ListFilesParams) ([]File, e
 	return items, nil
 }
 
-const updateFileOwner = `-- name: UpdateFileOwner :one
+const updateFileOwner = `-- name: UpdateFileOwner :exec
 UPDATE files
 SET owner_id = $2, updated_at = NOW()
 WHERE id = $1
-RETURNING id, original_name, mime_type, file_size, file_key, public_url, folder, is_public, status, uploaded_by, owner_id, uploaded_at, created_at, updated_at
 `
 
 type UpdateFileOwnerParams struct {
@@ -299,24 +298,7 @@ type UpdateFileOwnerParams struct {
 	OwnerID pgtype.Int8 `json:"owner_id"`
 }
 
-func (q *Queries) UpdateFileOwner(ctx context.Context, arg UpdateFileOwnerParams) (File, error) {
-	row := q.db.QueryRow(ctx, updateFileOwner, arg.ID, arg.OwnerID)
-	var i File
-	err := row.Scan(
-		&i.ID,
-		&i.OriginalName,
-		&i.MimeType,
-		&i.FileSize,
-		&i.FileKey,
-		&i.PublicUrl,
-		&i.Folder,
-		&i.IsPublic,
-		&i.Status,
-		&i.UploadedBy,
-		&i.OwnerID,
-		&i.UploadedAt,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
+func (q *Queries) UpdateFileOwner(ctx context.Context, arg UpdateFileOwnerParams) error {
+	_, err := q.db.Exec(ctx, updateFileOwner, arg.ID, arg.OwnerID)
+	return err
 }

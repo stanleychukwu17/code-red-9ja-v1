@@ -93,7 +93,7 @@ export const cancelApplication = createServerFn({ method: "POST" })
       const url = API_URL.cancelApplication(data.id);
       const response = await apiFetch(url, {
         method: "POST",
-        });
+      });
       const resData = await response.json();
       return resData;
     } catch (error) {
@@ -211,25 +211,19 @@ export const submitPollingAgentApplication = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
       party_id: number;
-      election_group_ids: number[];
+      election_group_id: number;
       polling_unit_id: number;
       avatar: string;
       avatar_file_id?: number | null;
-      voters_card_image?: string;
-      current_country: number;
       current_state: number;
       current_lga: number;
       current_ward?: number;
-      current_city: number;
       bank_account_number: string;
       bank_code: string;
-      whatsapp_phone?: string;
-      data_phone?: string;
       educational_status: string;
       highest_degree: string;
       graduation_year: string;
       school_name: string;
-      phone?: string;
       address: string;
     }) => data,
   )

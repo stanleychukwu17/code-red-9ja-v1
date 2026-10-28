@@ -655,43 +655,31 @@ func (q *Queries) UpdateApplicationStatus(ctx context.Context, arg UpdateApplica
 const updateUserAgentDetails = `-- name: UpdateUserAgentDetails :one
 UPDATE users
 SET
-  party_id = $2,
-  avatar = COALESCE($3, avatar),
-  voters_card_image = $4,
-  current_country = $5,
-  current_state = $6,
-  current_lga = $7,
-  current_city = $8,
-  current_ward = $9,
-  polling_unit_id = $10,
+  avatar = COALESCE($2, avatar),
+  current_state = $3,
+  current_lga = $4,
+  current_ward = $5,
+  polling_unit_id = $6,
   updated_at = NOW()
 WHERE id = $1
 RETURNING id, fake_id, email, phone, username, password_hash, first_name, last_name, middle_name, gender, date_of_birth, avatar, avatar_file_id, voters_card_image, current_country, current_state, current_city, current_lga, current_ward, polling_unit_id, country_of_origin, state_of_origin, has_role, is_verified, is_politician, party_id, account_status, referral_code, created_at, updated_at
 `
 
 type UpdateUserAgentDetailsParams struct {
-	ID              int64       `json:"id"`
-	PartyID         pgtype.Int2 `json:"party_id"`
-	Avatar          pgtype.Text `json:"avatar"`
-	VotersCardImage pgtype.Text `json:"voters_card_image"`
-	CurrentCountry  int16       `json:"current_country"`
-	CurrentState    int16       `json:"current_state"`
-	CurrentLga      pgtype.Int4 `json:"current_lga"`
-	CurrentCity     pgtype.Int4 `json:"current_city"`
-	CurrentWard     pgtype.Int4 `json:"current_ward"`
-	PollingUnitID   pgtype.Int4 `json:"polling_unit_id"`
+	ID            int64       `json:"id"`
+	Avatar        pgtype.Text `json:"avatar"`
+	CurrentState  int16       `json:"current_state"`
+	CurrentLga    pgtype.Int4 `json:"current_lga"`
+	CurrentWard   pgtype.Int4 `json:"current_ward"`
+	PollingUnitID pgtype.Int4 `json:"polling_unit_id"`
 }
 
 func (q *Queries) UpdateUserAgentDetails(ctx context.Context, arg UpdateUserAgentDetailsParams) (User, error) {
 	row := q.db.QueryRow(ctx, updateUserAgentDetails,
 		arg.ID,
-		arg.PartyID,
 		arg.Avatar,
-		arg.VotersCardImage,
-		arg.CurrentCountry,
 		arg.CurrentState,
 		arg.CurrentLga,
-		arg.CurrentCity,
 		arg.CurrentWard,
 		arg.PollingUnitID,
 	)

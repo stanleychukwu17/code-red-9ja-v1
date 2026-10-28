@@ -2,25 +2,14 @@ import { useMemo, useState } from "react";
 import { useParams } from "@tanstack/react-router";
 import { Ban, MoreHorizontal, PencilRuler, Settings, Share2 } from "lucide-react";
 import { UserFormDialog } from "@repo/ui/components/custom/UserFormDialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@repo/ui/components/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@repo/ui/components/dropdown-menu";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { QUERY_KEYS } from "#/lib/config";
 import { getUserProfile } from "#/lib/server/citizens";
 import { getAllCountries, getStates, getCities } from "#/lib/server/countries";
 import { getParties } from "#/lib/server/parties";
-import {
-  updateUser,
-  getPresignedUploadURL,
-  confirmFileUpload,
-  registerCandidate,
-} from "#/lib/server/users";
+import { updateUser, getPresignedUploadURL, confirmFileUpload, loadUserPhoneNumber, updateUserPhoneNumbers, deleteUserPhoneNumber } from "#/lib/server/users";
 
 export type ProfileFloatingToolbarProps = {
   onSuccess?: () => void;
@@ -138,6 +127,7 @@ export function ProfileFloatingToolbar({ onSuccess }: ProfileFloatingToolbarProp
         </DropdownMenu>
       </div>
 
+      {/* Profile edit modal dialog (active owner only) */}
       {isEditDialogOpen && isAccountOwner ? (
         <UserFormDialog
           mode="update"
@@ -151,8 +141,10 @@ export function ProfileFloatingToolbar({ onSuccess }: ProfileFloatingToolbarProp
           getParties={getParties}
           getPresignedUploadURL={getPresignedUploadURL}
           confirmFileUpload={confirmFileUpload}
-          registerCandidate={registerCandidate}
           updateUser={updateUser}
+          loadUserPhoneNumber={loadUserPhoneNumber}
+          updateUserPhoneNumbers={updateUserPhoneNumbers}
+          deleteUserPhoneNumber={deleteUserPhoneNumber}
         />
       ) : null}
     </div>

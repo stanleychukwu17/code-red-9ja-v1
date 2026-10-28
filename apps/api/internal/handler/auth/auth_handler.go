@@ -43,7 +43,7 @@ type UsersService interface {
 
 // FilesService interface defines the methods from FilesService that the auth handler needs
 type FilesService interface {
-	UpdateFileOwner(ctx context.Context, fileID int64, ownerID int64) (queries.File, error)
+	UpdateFileOwner(ctx context.Context, fileID int64, ownerID int64) error
 }
 
 // Handler struct holds the dependencies for the auth handler
@@ -871,7 +871,7 @@ func (h *Handler) RegisterCandidatePlaceholder(w http.ResponseWriter, r *http.Re
 	}
 
 	if req.AvatarFileId != nil && *req.AvatarFileId > 0 {
-		_, _ = h.filesService.UpdateFileOwner(r.Context(), *req.AvatarFileId, result.UserID)
+		_ = h.filesService.UpdateFileOwner(r.Context(), *req.AvatarFileId, result.UserID)
 	}
 
 	h.utils.RespondSuccess(w, http.StatusCreated, "Candidate placeholder registered successfully", map[string]interface{}{

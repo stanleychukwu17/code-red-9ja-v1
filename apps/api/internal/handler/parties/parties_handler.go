@@ -372,10 +372,10 @@ func (h *Handler) CreateParty(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if req.LogoFileID != nil && *req.LogoFileID > 0 {
-		_, _ = h.filesService.UpdateFileOwner(r.Context(), *req.LogoFileID, int64(party.ID))
+		_ = h.filesService.UpdateFileOwner(r.Context(), *req.LogoFileID, int64(party.ID))
 	}
 	if req.CoverImageFileID != nil && *req.CoverImageFileID > 0 {
-		_, _ = h.filesService.UpdateFileOwner(r.Context(), *req.CoverImageFileID, int64(party.ID))
+		_ = h.filesService.UpdateFileOwner(r.Context(), *req.CoverImageFileID, int64(party.ID))
 	}
 
 	// --- Audit Logging ---
@@ -488,10 +488,10 @@ func (h *Handler) UpdateParty(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if req.LogoFileID != nil && *req.LogoFileID > 0 {
-		_, _ = h.filesService.UpdateFileOwner(r.Context(), *req.LogoFileID, partyID)
+		_ = h.filesService.UpdateFileOwner(r.Context(), *req.LogoFileID, partyID)
 	}
 	if req.CoverImageFileID != nil && *req.CoverImageFileID > 0 {
-		_, _ = h.filesService.UpdateFileOwner(r.Context(), *req.CoverImageFileID, partyID)
+		_ = h.filesService.UpdateFileOwner(r.Context(), *req.CoverImageFileID, partyID)
 	}
 
 	// --- Audit Logging ---

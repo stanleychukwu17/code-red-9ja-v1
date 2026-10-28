@@ -69,7 +69,7 @@ export type UserFormDialogProps = {
   confirmFileUpload: (args: {
     data: { id: string | number; success: boolean };
   }) => Promise<any>;
-  registerCandidate: (args: { data: any }) => Promise<any>;
+  registerCandidate?: (args: { data: any }) => Promise<any>;
   updateUser: (args: { data: any }) => Promise<any>;
   updateUserMoreInfo?: (args: { data: any }) => Promise<any>;
   getUserMoreInfo?: (args: { data: any }) => Promise<any>;

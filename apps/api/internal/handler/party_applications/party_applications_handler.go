@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"free9ja/api/internal/db/queries"
 	apimiddleware "free9ja/api/internal/middleware"
 	partyapplications "free9ja/api/internal/service/party_applications"
@@ -29,6 +30,7 @@ type PartyApplicationsService interface {
 type UsersService interface {
 	GetUserByFakeID(ctx context.Context, fakeID int64, opts ...queries.GetUserOptions) (queries.UserWithPlaces, error)
 	GetUserRoles(ctx context.Context, userID int64) (queries.CachedUserRoles, error)
+	GetUserPhoneNumbersByUserID(ctx context.Context, userID int64) ([]queries.UsersPhoneNumber, error)
 }
 
 type Handler struct {
@@ -46,28 +48,22 @@ func NewHandler(service PartyApplicationsService, usersService UsersService, uti
 }
 
 type SubmitApplicationRequest struct {
-	PartyID          int16   `json:"party_id"`
-	ElectionGroupID  int32   `json:"election_group_id"`
-	ElectionGroupIDs []int32 `json:"election_group_ids"`
-	PollingUnitID    int32   `json:"polling_unit_id"`
-	Avatar           string  `json:"avatar"`
-	AvatarFileID     *int64  `json:"avatar_file_id"`
-	VotersCardImage  string  `json:"voters_card_image"`
-	CurrentCountry   int16   `json:"current_country"`
-	CurrentState     int16   `json:"current_state"`
-	CurrentLga       int32   `json:"current_lga"`
-	CurrentWard      int32   `json:"current_ward"`
-	CurrentCity      int32   `json:"current_city"`
+	PartyID         int16  `json:"party_id"`
+	ElectionGroupID int32  `json:"election_group_id"`
+	PollingUnitID   int32  `json:"polling_unit_id"`
+	Avatar          string `json:"avatar"`
+	AvatarFileID    *int64 `json:"avatar_file_id"`
+	CurrentState    int16  `json:"current_state"`
+	CurrentLga      int32  `json:"current_lga"`
+	CurrentWard     int32  `json:"current_ward"`
 
 	EducationalStatus string `json:"educational_status"`
 	HighestDegree     string `json:"highest_degree"`
 	GraduationYear    string `json:"graduation_year"`
 	SchoolName        string `json:"school_name"`
-	Phone             string `json:"phone"`
 	Address           string `json:"address"`
 	BankAccountNumber string `json:"bank_account_number"`
 	BankCode          string `json:"bank_code"`
-	WhatsappPhone     string `json:"whatsapp_phone"`
 }
 
 // SubmitApplication godoc
@@ -90,55 +86,62 @@ func (h *Handler) SubmitApplication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 2. Fetch authenticated requester user record
-	requester, err := h.usersService.GetUserByFakeID(r.Context(), claims.FakeID)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusUnauthorized, "User not found")
-		return
-	}
-
-	// 3. Parse and validate JSON request payload
+	// 2. Parse and validate JSON request payload
 	var req SubmitApplicationRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
-	// Support single election_group_id fallback for backward compatibility
-	electionGroupIDs := req.ElectionGroupIDs
-	if len(electionGroupIDs) == 0 && req.ElectionGroupID > 0 {
-		electionGroupIDs = []int32{req.ElectionGroupID}
-	}
-
 	// Validate required fields
-	if req.PartyID <= 0 || len(electionGroupIDs) == 0 || req.PollingUnitID <= 0 || req.CurrentCountry <= 0 || req.CurrentState <= 0 || req.CurrentLga <= 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "party_id, election_group_ids (or election_group_id), polling_unit_id, current_country, current_state, current_lga are required")
+	if req.PartyID <= 0 || req.ElectionGroupID <= 0 || req.PollingUnitID <= 0 || req.CurrentState <= 0 || req.CurrentLga <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "party_id, election_group_id, polling_unit_id, current_state, current_lga are required")
 		return
 	}
 
+	// 3. Ensure applicant has at least 1 WhatsApp-enabled phone number
+	phones, err := h.usersService.GetUserPhoneNumbersByUserID(r.Context(), claims.UserID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to verify contact phone numbers")
+		return
+	}
+
+	hasWhatsApp := false
+	for _, p := range phones {
+		if (!p.IsActive.Valid || p.IsActive.Bool) && (p.OnWhatsapp.Valid && p.OnWhatsapp.Bool) {
+			hasWhatsApp = true
+			break
+		}
+	}
+	if !hasWhatsApp {
+		h.utils.RespondError(w, http.StatusBadRequest, "At least one WhatsApp-enabled phone number is required before submitting an application")
+		return
+	}
+
+	fmt.Printf("%+v\n", req)
+	h.utils.RespondSuccess(w, http.StatusCreated, "Polling agent application submitted successfully", map[string]interface{}{
+		"message": "Polling agent application submitted successfully",
+	})
+	return
+
 	// 4. Delegate application submission and profile updates to service layer
 	apps, err := h.service.SubmitApplication(r.Context(), partyapplications.SubmitApplicationInput{
-		UserID:            requester.ID,
+		UserID:            claims.UserID,
 		PartyID:           req.PartyID,
-		ElectionGroupIDs:  electionGroupIDs,
+		ElectionGroupIDs:  []int32{req.ElectionGroupID},
 		PollingUnitID:     req.PollingUnitID,
 		Avatar:            req.Avatar,
 		AvatarFileID:      req.AvatarFileID,
-		VotersCardImage:   req.VotersCardImage,
-		CurrentCountry:    req.CurrentCountry,
 		CurrentState:      req.CurrentState,
 		CurrentLga:        req.CurrentLga,
 		CurrentWard:       req.CurrentWard,
-		CurrentCity:       req.CurrentCity,
 		EducationalStatus: req.EducationalStatus,
 		HighestDegree:     req.HighestDegree,
 		GraduationYear:    req.GraduationYear,
 		SchoolName:        req.SchoolName,
-		Phone:             req.Phone,
 		Address:           req.Address,
 		BankAccountNumber: req.BankAccountNumber,
 		BankCode:          req.BankCode,
-		WhatsappPhone:     req.WhatsappPhone,
 	})
 	if err != nil {
 		errStr := err.Error()

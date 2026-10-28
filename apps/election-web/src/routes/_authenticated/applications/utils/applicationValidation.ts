@@ -72,15 +72,13 @@ export function validateAndFormatApplicationPayload(params: ValidateApplicationI
 
   return {
     party_id: params.selectedPartyId,
-    election_group_ids: [params.selectedElectionId],
+    election_group_id: params.selectedElectionId,
     polling_unit_id: Number(params.selectedPollingUnitId),
     avatar: finalAvatar,
     avatar_file_id: params.avatarFileId || undefined,
-    current_country: 1,
     current_state: params.selectedStateId,
     current_lga: params.selectedLgaId,
     current_ward: params.selectedWardId || undefined,
-    current_city: 0,
     bank_account_number: params.bankAccountNumber,
     bank_code: params.selectedBankCode,
     educational_status: params.educationalStatus,

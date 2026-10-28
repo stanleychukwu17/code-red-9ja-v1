@@ -549,7 +549,7 @@ type Querier interface {
 	UpdateElectionGroup(ctx context.Context, arg UpdateElectionGroupParams) (ElectionGroup, error)
 	UpdateElectionInstance(ctx context.Context, arg UpdateElectionInstanceParams) (Election, error)
 	UpdateFederalConstituency(ctx context.Context, arg UpdateFederalConstituencyParams) (FederalConstituency, error)
-	UpdateFileOwner(ctx context.Context, arg UpdateFileOwnerParams) (File, error)
+	UpdateFileOwner(ctx context.Context, arg UpdateFileOwnerParams) error
 	UpdateINECResultGrabberMetrics(ctx context.Context, arg UpdateINECResultGrabberMetricsParams) (InecResultGrabber, error)
 	UpdateINECResultGrabberSyncStatus(ctx context.Context, arg UpdateINECResultGrabberSyncStatusParams) (InecResultGrabber, error)
 	UpdateLGA(ctx context.Context, arg UpdateLGAParams) (Lga, error)

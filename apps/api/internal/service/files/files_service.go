@@ -23,7 +23,7 @@ type FilesService interface {
 	ListFiles(ctx context.Context, arg queries.ListFilesParams) ([]queries.File, error)
 	HardDeleteFile(ctx context.Context, id int64) error
 	CheckFileOwner(ctx context.Context, fileID int64, ownerID int64) (bool, error)
-	UpdateFileOwner(ctx context.Context, fileID int64, ownerID int64) (queries.File, error)
+	UpdateFileOwner(ctx context.Context, fileID int64, ownerID int64) error
 	DeleteAssetAsync(rawURL string, fileID int64)
 }
 
@@ -69,13 +69,13 @@ func (s *filesService) ConfirmUpload(ctx context.Context, arg queries.ConfirmUpl
 		return file, err
 	}
 
-	// If upload succeeded, schedule a self-destruct check (2 minutes for testing).
+	// If upload succeeded, schedule a 24-hour self-destruct check.
 	// If the user abandons the form, it will automatically be cleaned up from R2 and the database.
 	if arg.Success && s.distributor != nil {
 		if scheduleErr := s.distributor.DistributeTaskCheckOrphanFile(
 			ctx,
 			&worker.CheckOrphanFilePayload{FileID: file.ID},
-			asynq.ProcessIn(2*time.Minute),
+			asynq.ProcessIn(24*time.Hour),
 		); scheduleErr != nil {
 			slog.Warn("failed to schedule orphan file check task", "file_id", file.ID, "err", scheduleErr)
 		}
@@ -117,7 +117,7 @@ func (s *filesService) CheckFileOwner(ctx context.Context, fileID int64, ownerID
 }
 
 // UpdateFileOwner updates the owner of a file.
-func (s *filesService) UpdateFileOwner(ctx context.Context, fileID int64, ownerID int64) (queries.File, error) {
+func (s *filesService) UpdateFileOwner(ctx context.Context, fileID int64, ownerID int64) error {
 	return s.queries.UpdateFileOwner(ctx, queries.UpdateFileOwnerParams{
 		ID:      fileID,
 		OwnerID: pgtype.Int8{Int64: ownerID, Valid: true},

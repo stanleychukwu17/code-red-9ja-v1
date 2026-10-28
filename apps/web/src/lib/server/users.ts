@@ -110,15 +110,3 @@ export const confirmFileUpload = createServerFn({ method: "POST" })
       };
     }
   });
-
-/**
- * Candidate registration placeholder (required by UserFormDialogProps)
- */
-export const registerCandidate = createServerFn({ method: "POST" })
-  .inputValidator((data: any) => data)
-  .handler(async () => {
-    return {
-      success: false,
-      message: "Registering candidates is not supported on web",
-    };
-  });
