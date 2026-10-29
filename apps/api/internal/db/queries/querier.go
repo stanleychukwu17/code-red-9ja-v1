@@ -584,7 +584,7 @@ type Querier interface {
 	UpdateStateSupervisorEarnedAmountKobo(ctx context.Context, arg UpdateStateSupervisorEarnedAmountKoboParams) (StateElectionSupervisor, error)
 	UpdateSystemSetting(ctx context.Context, arg UpdateSystemSettingParams) (SystemSetting, error)
 	UpdateUnmatchedPollingUnitResultStatus(ctx context.Context, arg UpdateUnmatchedPollingUnitResultStatusParams) (UnmatchedPollingUnitResult, error)
-	UpdateUserAgentDetails(ctx context.Context, arg UpdateUserAgentDetailsParams) (User, error)
+	UpdateUserAgentDetails(ctx context.Context, arg UpdateUserAgentDetailsParams) error
 	UpdateUserAgentMoreInfo(ctx context.Context, arg UpdateUserAgentMoreInfoParams) error
 	UpdateUserAvatar(ctx context.Context, arg UpdateUserAvatarParams) error
 	UpdateUserBankAccountsToNonPrimary(ctx context.Context, userID int64) error
@@ -628,6 +628,7 @@ type Querier interface {
 	UpsertPartyElectionGroupStats(ctx context.Context, arg UpsertPartyElectionGroupStatsParams) (PartyElectionGroup, error)
 	UpsertPollingUnit(ctx context.Context, arg UpsertPollingUnitParams) (PollingUnit, error)
 	UpsertPollingUnitFinalResult(ctx context.Context, arg UpsertPollingUnitFinalResultParams) (ElectionPollingUnitFinalResult, error)
+	UpsertPrimaryBankAccount(ctx context.Context, arg UpsertPrimaryBankAccountParams) error
 	UpsertSenatorialDistrict(ctx context.Context, arg UpsertSenatorialDistrictParams) (SenatorialDistrict, error)
 	UpsertStateConstituency(ctx context.Context, arg UpsertStateConstituencyParams) (StateConstituency, error)
 	UpsertUserPhoneNumber(ctx context.Context, arg UpsertUserPhoneNumberParams) (int64, error)

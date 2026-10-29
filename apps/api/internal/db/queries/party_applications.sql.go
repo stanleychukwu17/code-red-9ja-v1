@@ -652,7 +652,7 @@ func (q *Queries) UpdateApplicationStatus(ctx context.Context, arg UpdateApplica
 	return i, err
 }
 
-const updateUserAgentDetails = `-- name: UpdateUserAgentDetails :one
+const updateUserAgentDetails = `-- name: UpdateUserAgentDetails :exec
 UPDATE users
 SET
   avatar = COALESCE($2, avatar),
@@ -662,7 +662,6 @@ SET
   polling_unit_id = $6,
   updated_at = NOW()
 WHERE id = $1
-RETURNING id, fake_id, email, phone, username, password_hash, first_name, last_name, middle_name, gender, date_of_birth, avatar, avatar_file_id, voters_card_image, current_country, current_state, current_city, current_lga, current_ward, polling_unit_id, country_of_origin, state_of_origin, has_role, is_verified, is_politician, party_id, account_status, referral_code, created_at, updated_at
 `
 
 type UpdateUserAgentDetailsParams struct {
@@ -674,8 +673,8 @@ type UpdateUserAgentDetailsParams struct {
 	PollingUnitID pgtype.Int4 `json:"polling_unit_id"`
 }
 
-func (q *Queries) UpdateUserAgentDetails(ctx context.Context, arg UpdateUserAgentDetailsParams) (User, error) {
-	row := q.db.QueryRow(ctx, updateUserAgentDetails,
+func (q *Queries) UpdateUserAgentDetails(ctx context.Context, arg UpdateUserAgentDetailsParams) error {
+	_, err := q.db.Exec(ctx, updateUserAgentDetails,
 		arg.ID,
 		arg.Avatar,
 		arg.CurrentState,
@@ -683,40 +682,7 @@ func (q *Queries) UpdateUserAgentDetails(ctx context.Context, arg UpdateUserAgen
 		arg.CurrentWard,
 		arg.PollingUnitID,
 	)
-	var i User
-	err := row.Scan(
-		&i.ID,
-		&i.FakeID,
-		&i.Email,
-		&i.Phone,
-		&i.Username,
-		&i.PasswordHash,
-		&i.FirstName,
-		&i.LastName,
-		&i.MiddleName,
-		&i.Gender,
-		&i.DateOfBirth,
-		&i.Avatar,
-		&i.AvatarFileID,
-		&i.VotersCardImage,
-		&i.CurrentCountry,
-		&i.CurrentState,
-		&i.CurrentCity,
-		&i.CurrentLga,
-		&i.CurrentWard,
-		&i.PollingUnitID,
-		&i.CountryOfOrigin,
-		&i.StateOfOrigin,
-		&i.HasRole,
-		&i.IsVerified,
-		&i.IsPolitician,
-		&i.PartyID,
-		&i.AccountStatus,
-		&i.ReferralCode,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
+	return err
 }
 
 const updateUserRoleForPartyApp = `-- name: UpdateUserRoleForPartyApp :one

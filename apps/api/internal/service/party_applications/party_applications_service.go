@@ -89,6 +89,7 @@ func (s *Service) initiateStatsRollup(ctx context.Context, egID int32, roleType 
 
 type SubmitApplicationInput struct {
 	UserID          int64
+	UserFakeID      int64
 	PartyID         int16
 	ElectionGroupID int32
 	PollingUnitID   int32
@@ -135,13 +136,13 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 	txQueries := s.queries.WithTx(tx)
 
 	// Update user agent details
-	user, err := txQueries.UpdateUserAgentDetails(ctx, queries.UpdateUserAgentDetailsParams{
+	err = txQueries.UpdateUserAgentDetails(ctx, queries.UpdateUserAgentDetailsParams{
 		ID:            input.UserID,
 		Avatar:        utils.PgTextFromString(input.Avatar),
 		CurrentState:  int16(input.CurrentState),
-		CurrentLga:    pgtype.Int4{Int32: input.CurrentLga, Valid: input.CurrentLga > 0},
-		CurrentWard:   pgtype.Int4{Int32: input.CurrentWard, Valid: input.CurrentWard > 0},
-		PollingUnitID: pgtype.Int4{Int32: input.PollingUnitID, Valid: input.PollingUnitID > 0},
+		CurrentLga:    utils.PgInt4FromPositive(input.CurrentLga),
+		CurrentWard:   utils.PgInt4FromPositive(input.CurrentWard),
+		PollingUnitID: utils.PgInt4FromPositive(input.PollingUnitID),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to update user details: %w", err)
@@ -152,7 +153,7 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 		if err := txQueries.UpdateUserAvatar(ctx, queries.UpdateUserAvatarParams{
 			ID:           input.UserID,
 			Avatar:       utils.PgTextFromString(input.Avatar),
-			AvatarFileID: pgtype.Int8{Int64: *input.AvatarFileID, Valid: true},
+			AvatarFileID: utils.PgInt8FromPtr(input.AvatarFileID),
 		}); err != nil {
 			return nil, fmt.Errorf("failed to update user avatar file id: %w", err)
 		}
@@ -180,21 +181,13 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 
 	// Update bank account if provided
 	if input.BankAccountNumber != "" && input.BankCode != "" {
-		// First set existing primary accounts to non-primary
-		err = txQueries.UpdateUserBankAccountsToNonPrimary(ctx, input.UserID)
-		if err != nil {
-			return nil, fmt.Errorf("failed to update existing bank accounts: %w", err)
-		}
-
-		// Insert the new primary bank account
-		_, err = txQueries.InsertUserBankAccount(ctx, queries.InsertUserBankAccountParams{
+		err = txQueries.UpsertPrimaryBankAccount(ctx, queries.UpsertPrimaryBankAccountParams{
 			UserID:        input.UserID,
 			AccountNumber: input.BankAccountNumber,
 			BankCode:      input.BankCode,
-			IsPrimary:     pgtype.Bool{Bool: true, Valid: true},
 		})
 		if err != nil {
-			return nil, fmt.Errorf("failed to insert primary bank account: %w", err)
+			return nil, fmt.Errorf("failed to save primary bank account: %w", err)
 		}
 	}
 
@@ -203,10 +196,10 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 		UserID:          input.UserID,
 		PartyID:         int16(input.PartyID),
 		ElectionGroupID: input.ElectionGroupID,
-		PollingUnitID:   pgtype.Int4{Int32: input.PollingUnitID, Valid: input.PollingUnitID > 0},
-		StateID:         pgtype.Int2{Int16: int16(input.CurrentState), Valid: input.CurrentState > 0},
-		LgaID:           pgtype.Int4{Int32: input.CurrentLga, Valid: input.CurrentLga > 0},
-		WardID:          pgtype.Int4{Int32: input.CurrentWard, Valid: input.CurrentWard > 0},
+		PollingUnitID:   utils.PgInt4FromPositive(input.PollingUnitID),
+		StateID:         utils.PgInt2FromPositive(input.CurrentState),
+		LgaID:           utils.PgInt4FromPositive(input.CurrentLga),
+		WardID:          utils.PgInt4FromPositive(input.CurrentWard),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create application: %w", err)
@@ -215,8 +208,8 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 	// Create user referral record for this election group
 	err = txQueries.CreateUserReferralRecord(ctx, queries.CreateUserReferralRecordParams{
 		UserID:          input.UserID,
-		PartyID:         pgtype.Int2{Int16: int16(input.PartyID), Valid: input.PartyID > 0},
-		ElectionGroupID: pgtype.Int4{Int32: input.ElectionGroupID, Valid: input.ElectionGroupID > 0},
+		PartyID:         utils.PgInt2FromPositive(input.PartyID),
+		ElectionGroupID: utils.PgInt4FromPositive(input.ElectionGroupID),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create user referral record: %w", err)
@@ -252,8 +245,8 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 	}
 
 	// Invalidate caches
-	if user.FakeID.Valid {
-		s.rdb.Del(ctx, fmt.Sprintf("%s%d", db.RedisUserInfo, user.FakeID.Int64))
+	if input.UserFakeID > 0 {
+		s.rdb.Del(ctx, fmt.Sprintf("%s%d", db.RedisUserInfo, input.UserFakeID))
 	}
 	s.rdb.Del(ctx, fmt.Sprintf("%s%d", db.RedisUserMoreInfo, input.UserID))
 

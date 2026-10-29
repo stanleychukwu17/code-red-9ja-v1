@@ -14,7 +14,6 @@ import (
 const getUserPrimaryBankAccount = `-- name: GetUserPrimaryBankAccount :one
 SELECT id, user_id, account_number, bank_code, is_primary, created_at, updated_at FROM user_bank_accounts
 WHERE user_id = $1 AND is_primary = true
-ORDER BY id DESC
 LIMIT 1
 `
 
@@ -80,5 +79,33 @@ WHERE user_id = $1
 
 func (q *Queries) UpdateUserBankAccountsToNonPrimary(ctx context.Context, userID int64) error {
 	_, err := q.db.Exec(ctx, updateUserBankAccountsToNonPrimary, userID)
+	return err
+}
+
+const upsertPrimaryBankAccount = `-- name: UpsertPrimaryBankAccount :exec
+WITH demoted AS (
+  UPDATE user_bank_accounts
+  SET is_primary = false, updated_at = NOW()
+  WHERE user_id = $1 AND (account_number != $2 OR bank_code != $3) AND is_primary = true
+),
+updated AS (
+  UPDATE user_bank_accounts
+  SET is_primary = true, updated_at = NOW()
+  WHERE user_id = $1 AND account_number = $2 AND bank_code = $3
+  RETURNING id
+)
+INSERT INTO user_bank_accounts (user_id, account_number, bank_code, is_primary)
+SELECT $1, $2, $3, true
+WHERE NOT EXISTS (SELECT 1 FROM updated)
+`
+
+type UpsertPrimaryBankAccountParams struct {
+	UserID        int64  `json:"user_id"`
+	AccountNumber string `json:"account_number"`
+	BankCode      string `json:"bank_code"`
+}
+
+func (q *Queries) UpsertPrimaryBankAccount(ctx context.Context, arg UpsertPrimaryBankAccountParams) error {
+	_, err := q.db.Exec(ctx, upsertPrimaryBankAccount, arg.UserID, arg.AccountNumber, arg.BankCode)
 	return err
 }

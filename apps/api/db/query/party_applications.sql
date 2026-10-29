@@ -12,7 +12,7 @@ INSERT INTO party_applications (
   $1, $2, $3, $4, $5, $6, $7, 'pending'
 ) RETURNING *;
 
--- name: UpdateUserAgentDetails :one
+-- name: UpdateUserAgentDetails :exec
 UPDATE users
 SET
   avatar = COALESCE($2, avatar),
@@ -21,8 +21,7 @@ SET
   current_ward = $5,
   polling_unit_id = sqlc.arg(polling_unit_id),
   updated_at = NOW()
-WHERE id = $1
-RETURNING *;
+WHERE id = $1;
 
 -- name: GetApplicationByID :one
 SELECT * FROM party_applications

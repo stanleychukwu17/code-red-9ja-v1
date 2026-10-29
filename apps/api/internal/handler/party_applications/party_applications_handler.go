@@ -127,6 +127,7 @@ func (h *Handler) SubmitApplication(w http.ResponseWriter, r *http.Request) {
 	// 4. Delegate application submission and profile updates to service layer
 	apps, err := h.service.SubmitApplication(r.Context(), partyapplications.SubmitApplicationInput{
 		UserID:            claims.UserID,
+		UserFakeID:        claims.FakeID,
 		PartyID:           req.PartyID,
 		ElectionGroupID:   req.ElectionGroupID,
 		PollingUnitID:     req.PollingUnitID,
