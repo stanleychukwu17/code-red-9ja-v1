@@ -126,7 +126,44 @@ func (h *Handler) GetStatesWithResults(w http.ResponseWriter, r *http.Request) {
 			fr.created_at,
 			fr.updated_at
 		FROM c_states s
-		LEFT JOIN election_state_final_result fr ON fr.state_id = s.id AND fr.election_id = $1
+		LEFT JOIN (
+			SELECT
+				state_id,
+				$1::bigint AS election_id,
+				state_id::bigint AS id,
+				SUM(accredited_voters)::int AS accredited_voters,
+				SUM(votes_cast)::int AS votes_cast,
+				SUM(valid_votes)::int AS valid_votes,
+				SUM(rejected_votes)::int AS rejected_votes,
+				(
+					SELECT COALESCE(jsonb_agg(jsonb_build_object(
+						'party_short_name', p_votes.party_short_name,
+						'vote_count', p_votes.vote_count,
+						'vote_share', CASE WHEN v_sub.total_valid > 0 THEN ROUND((p_votes.vote_count::numeric / v_sub.total_valid::numeric) * 100, 2) ELSE 0 END
+					)), '[]'::jsonb)
+					FROM (
+						SELECT
+							c.value->>'party_short_name' AS party_short_name,
+							SUM((c.value->>'vote_count')::int)::int AS vote_count
+						FROM election_polling_unit_final_results sub_pu,
+						     jsonb_array_elements(sub_pu.candidate_results) AS c
+						WHERE sub_pu.election_id = epfr.election_id AND sub_pu.state_id = epfr.state_id
+						GROUP BY c.value->>'party_short_name'
+					) p_votes
+					CROSS JOIN (
+						SELECT NULLIF(SUM(valid_votes), 0) AS total_valid
+						FROM election_polling_unit_final_results sub_pu2
+						WHERE sub_pu2.election_id = epfr.election_id AND sub_pu2.state_id = epfr.state_id
+					) v_sub
+				) AS candidate_results,
+				COUNT(DISTINCT senatorial_district_id) FILTER (WHERE valid_votes > 0)::int AS senatorial_districts_counted,
+				COUNT(DISTINCT senatorial_district_id)::int AS total_senatorial_districts,
+				NOW() AS created_at,
+				NOW() AS updated_at
+			FROM election_polling_unit_final_results epfr
+			WHERE epfr.election_id = $1
+			GROUP BY election_id, state_id
+		) fr ON fr.state_id = s.id
 		WHERE s.country_id = $2 AND s.id::int < $3
 		ORDER BY s.id DESC
 		LIMIT $4
@@ -250,8 +287,45 @@ func (h *Handler) GetSenatorialDistrictsWithResults(w http.ResponseWriter, r *ht
 			fr.accredited_voters, fr.votes_cast, fr.valid_votes, fr.rejected_votes,
 			fr.candidate_results, fr.created_at, fr.updated_at
 		FROM senatorial_districts sd
-		LEFT JOIN election_senatorial_district_final_result fr
-			ON fr.senatorial_district_id = sd.id AND fr.election_id = $1
+		LEFT JOIN (
+			SELECT
+				senatorial_district_id,
+				$1::bigint AS election_id,
+				senatorial_district_id::bigint AS id,
+				state_id,
+				SUM(accredited_voters)::int AS accredited_voters,
+				SUM(votes_cast)::int AS votes_cast,
+				SUM(valid_votes)::int AS valid_votes,
+				SUM(rejected_votes)::int AS rejected_votes,
+				(
+					SELECT COALESCE(jsonb_agg(jsonb_build_object(
+						'party_short_name', p_votes.party_short_name,
+						'vote_count', p_votes.vote_count,
+						'vote_share', CASE WHEN v_sub.total_valid > 0 THEN ROUND((p_votes.vote_count::numeric / v_sub.total_valid::numeric) * 100, 2) ELSE 0 END
+					)), '[]'::jsonb)
+					FROM (
+						SELECT
+							c.value->>'party_short_name' AS party_short_name,
+							SUM((c.value->>'vote_count')::int)::int AS vote_count
+						FROM election_polling_unit_final_results sub_pu,
+						     jsonb_array_elements(sub_pu.candidate_results) AS c
+						WHERE sub_pu.election_id = epfr.election_id AND sub_pu.senatorial_district_id = epfr.senatorial_district_id
+						GROUP BY c.value->>'party_short_name'
+					) p_votes
+					CROSS JOIN (
+						SELECT NULLIF(SUM(valid_votes), 0) AS total_valid
+						FROM election_polling_unit_final_results sub_pu2
+						WHERE sub_pu2.election_id = epfr.election_id AND sub_pu2.senatorial_district_id = epfr.senatorial_district_id
+					) v_sub
+				) AS candidate_results,
+				COUNT(DISTINCT lga_id) FILTER (WHERE valid_votes > 0)::int AS lgas_counted,
+				COUNT(DISTINCT lga_id)::int AS total_lgas,
+				NOW() AS created_at,
+				NOW() AS updated_at
+			FROM election_polling_unit_final_results epfr
+			WHERE epfr.election_id = $1
+			GROUP BY election_id, senatorial_district_id, state_id
+		) fr ON fr.senatorial_district_id = sd.id
 		WHERE sd.state_id = $2 AND sd.id < $3
 		ORDER BY sd.id DESC
 		LIMIT $4
@@ -376,8 +450,46 @@ func (h *Handler) GetFederalConstituenciesWithResults(w http.ResponseWriter, r *
 			fr.accredited_voters, fr.votes_cast, fr.valid_votes, fr.rejected_votes,
 			fr.candidate_results, fr.created_at, fr.updated_at
 		FROM federal_constituencies fc
-		LEFT JOIN election_federal_constituency_final_result fr
-			ON fr.federal_constituency_id = fc.id AND fr.election_id = $1
+		LEFT JOIN (
+			SELECT
+				federal_constituency_id,
+				$1::bigint AS election_id,
+				federal_constituency_id::bigint AS id,
+				senatorial_district_id,
+				state_id,
+				SUM(accredited_voters)::int AS accredited_voters,
+				SUM(votes_cast)::int AS votes_cast,
+				SUM(valid_votes)::int AS valid_votes,
+				SUM(rejected_votes)::int AS rejected_votes,
+				(
+					SELECT COALESCE(jsonb_agg(jsonb_build_object(
+						'party_short_name', p_votes.party_short_name,
+						'vote_count', p_votes.vote_count,
+						'vote_share', CASE WHEN v_sub.total_valid > 0 THEN ROUND((p_votes.vote_count::numeric / v_sub.total_valid::numeric) * 100, 2) ELSE 0 END
+					)), '[]'::jsonb)
+					FROM (
+						SELECT
+							c.value->>'party_short_name' AS party_short_name,
+							SUM((c.value->>'vote_count')::int)::int AS vote_count
+						FROM election_polling_unit_final_results sub_pu,
+						     jsonb_array_elements(sub_pu.candidate_results) AS c
+						WHERE sub_pu.election_id = epfr.election_id AND sub_pu.federal_constituency_id = epfr.federal_constituency_id
+						GROUP BY c.value->>'party_short_name'
+					) p_votes
+					CROSS JOIN (
+						SELECT NULLIF(SUM(valid_votes), 0) AS total_valid
+						FROM election_polling_unit_final_results sub_pu2
+						WHERE sub_pu2.election_id = epfr.election_id AND sub_pu2.federal_constituency_id = epfr.federal_constituency_id
+					) v_sub
+				) AS candidate_results,
+				COUNT(DISTINCT lga_id) FILTER (WHERE valid_votes > 0)::int AS lgas_counted,
+				COUNT(DISTINCT lga_id)::int AS total_lgas,
+				NOW() AS created_at,
+				NOW() AS updated_at
+			FROM election_polling_unit_final_results epfr
+			WHERE epfr.election_id = $1
+			GROUP BY election_id, federal_constituency_id, senatorial_district_id, state_id
+		) fr ON fr.federal_constituency_id = fc.id
 		WHERE fc.senatorial_district_id = $2 AND fc.id < $3
 		ORDER BY fc.id DESC
 		LIMIT $4
@@ -541,8 +653,45 @@ func (h *Handler) GetStateConstituenciesWithResults(w http.ResponseWriter, r *ht
 			fr.accredited_voters, fr.votes_cast, fr.valid_votes, fr.rejected_votes,
 			fr.candidate_results, fr.wards_counted, fr.total_wards, fr.created_at, fr.updated_at
 		FROM state_constituencies sc
-		LEFT JOIN election_state_constituency_final_result fr
-			ON fr.state_constituency_id = sc.id AND fr.election_id = $1
+		LEFT JOIN (
+			SELECT
+				state_constituency_id,
+				$1::bigint AS election_id,
+				state_constituency_id::bigint AS id,
+				state_id,
+				SUM(accredited_voters)::int AS accredited_voters,
+				SUM(votes_cast)::int AS votes_cast,
+				SUM(valid_votes)::int AS valid_votes,
+				SUM(rejected_votes)::int AS rejected_votes,
+				(
+					SELECT COALESCE(jsonb_agg(jsonb_build_object(
+						'party_short_name', p_votes.party_short_name,
+						'vote_count', p_votes.vote_count,
+						'vote_share', CASE WHEN v_sub.total_valid > 0 THEN ROUND((p_votes.vote_count::numeric / v_sub.total_valid::numeric) * 100, 2) ELSE 0 END
+					)), '[]'::jsonb)
+					FROM (
+						SELECT
+							c.value->>'party_short_name' AS party_short_name,
+							SUM((c.value->>'vote_count')::int)::int AS vote_count
+						FROM election_polling_unit_final_results sub_pu,
+						     jsonb_array_elements(sub_pu.candidate_results) AS c
+						WHERE sub_pu.election_id = epfr.election_id AND sub_pu.state_constituency_id = epfr.state_constituency_id
+						GROUP BY c.value->>'party_short_name'
+					) p_votes
+					CROSS JOIN (
+						SELECT NULLIF(SUM(valid_votes), 0) AS total_valid
+						FROM election_polling_unit_final_results sub_pu2
+						WHERE sub_pu2.election_id = epfr.election_id AND sub_pu2.state_constituency_id = epfr.state_constituency_id
+					) v_sub
+				) AS candidate_results,
+				COUNT(DISTINCT ward_id) FILTER (WHERE valid_votes > 0)::int AS wards_counted,
+				COUNT(DISTINCT ward_id)::int AS total_wards,
+				NOW() AS created_at,
+				NOW() AS updated_at
+			FROM election_polling_unit_final_results epfr
+			WHERE epfr.election_id = $1
+			GROUP BY election_id, state_constituency_id, state_id
+		) fr ON fr.state_constituency_id = sc.id
 		WHERE %s AND sc.id < $%d
 		ORDER BY sc.id DESC
 		LIMIT $%d
@@ -713,7 +862,43 @@ func (h *Handler) GetLGAsWithResults(w http.ResponseWriter, r *http.Request) {
 			fr.accredited_voters, fr.votes_cast, fr.valid_votes, fr.rejected_votes,
 			fr.candidate_results, fr.created_at, fr.updated_at
 		FROM lgas l
-		LEFT JOIN election_lga_final_result fr ON fr.lga_id = l.id AND fr.election_id = $1
+		LEFT JOIN (
+			SELECT
+				lga_id,
+				$1::bigint AS election_id,
+				lga_id::bigint AS id,
+				state_id,
+				SUM(accredited_voters)::int AS accredited_voters,
+				SUM(votes_cast)::int AS votes_cast,
+				SUM(valid_votes)::int AS valid_votes,
+				SUM(rejected_votes)::int AS rejected_votes,
+				(
+					SELECT COALESCE(jsonb_agg(jsonb_build_object(
+						'party_short_name', p_votes.party_short_name,
+						'vote_count', p_votes.vote_count,
+						'vote_share', CASE WHEN v_sub.total_valid > 0 THEN ROUND((p_votes.vote_count::numeric / v_sub.total_valid::numeric) * 100, 2) ELSE 0 END
+					)), '[]'::jsonb)
+					FROM (
+						SELECT
+							c.value->>'party_short_name' AS party_short_name,
+							SUM((c.value->>'vote_count')::int)::int AS vote_count
+						FROM election_polling_unit_final_results sub_pu,
+						     jsonb_array_elements(sub_pu.candidate_results) AS c
+						WHERE sub_pu.election_id = epfr.election_id AND sub_pu.lga_id = epfr.lga_id
+						GROUP BY c.value->>'party_short_name'
+					) p_votes
+					CROSS JOIN (
+						SELECT NULLIF(SUM(valid_votes), 0) AS total_valid
+						FROM election_polling_unit_final_results sub_pu2
+						WHERE sub_pu2.election_id = epfr.election_id AND sub_pu2.lga_id = epfr.lga_id
+					) v_sub
+				) AS candidate_results,
+				NOW() AS created_at,
+				NOW() AS updated_at
+			FROM election_polling_unit_final_results epfr
+			WHERE epfr.election_id = $1
+			GROUP BY election_id, lga_id, state_id
+		) fr ON fr.lga_id = l.id
 		WHERE l.federal_constituency_id = $2 AND l.id < $3
 		ORDER BY l.id DESC
 		LIMIT $4
@@ -850,7 +1035,44 @@ func (h *Handler) GetWardsWithResults(w http.ResponseWriter, r *http.Request) {
 			fr.accredited_voters, fr.votes_cast, fr.valid_votes, fr.rejected_votes,
 			fr.candidate_results, fr.created_at, fr.updated_at
 		FROM wards w
-		LEFT JOIN election_ward_final_result fr ON fr.ward_id = w.id AND fr.election_id = $1
+		LEFT JOIN (
+			SELECT
+				ward_id,
+				$1::bigint AS election_id,
+				ward_id::bigint AS id,
+				lga_id,
+				state_id,
+				SUM(accredited_voters)::int AS accredited_voters,
+				SUM(votes_cast)::int AS votes_cast,
+				SUM(valid_votes)::int AS valid_votes,
+				SUM(rejected_votes)::int AS rejected_votes,
+				(
+					SELECT COALESCE(jsonb_agg(jsonb_build_object(
+						'party_short_name', p_votes.party_short_name,
+						'vote_count', p_votes.vote_count,
+						'vote_share', CASE WHEN v_sub.total_valid > 0 THEN ROUND((p_votes.vote_count::numeric / v_sub.total_valid::numeric) * 100, 2) ELSE 0 END
+					)), '[]'::jsonb)
+					FROM (
+						SELECT
+							c.value->>'party_short_name' AS party_short_name,
+							SUM((c.value->>'vote_count')::int)::int AS vote_count
+						FROM election_polling_unit_final_results sub_pu,
+						     jsonb_array_elements(sub_pu.candidate_results) AS c
+						WHERE sub_pu.election_id = epfr.election_id AND sub_pu.ward_id = epfr.ward_id
+						GROUP BY c.value->>'party_short_name'
+					) p_votes
+					CROSS JOIN (
+						SELECT NULLIF(SUM(valid_votes), 0) AS total_valid
+						FROM election_polling_unit_final_results sub_pu2
+						WHERE sub_pu2.election_id = epfr.election_id AND sub_pu2.ward_id = epfr.ward_id
+					) v_sub
+				) AS candidate_results,
+				NOW() AS created_at,
+				NOW() AS updated_at
+			FROM election_polling_unit_final_results epfr
+			WHERE epfr.election_id = $1
+			GROUP BY election_id, ward_id, lga_id, state_id
+		) fr ON fr.ward_id = w.id
 		WHERE ` + filterCol + ` = $2 AND w.id < $3
 		ORDER BY w.id DESC
 		LIMIT $4`
@@ -1323,27 +1545,63 @@ func (h *Handler) GetElectionFinalResult(w http.ResponseWriter, r *http.Request)
 	if puID > 0 {
 		query = "SELECT id, election_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, candidate_results_live FROM election_polling_unit_final_results WHERE election_id = $1 AND polling_unit_id = $2 LIMIT 1"
 		args = []interface{}{electionID, puID}
-	} else if wardID > 0 {
-		query = "SELECT id, election_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, candidate_results_live FROM election_ward_final_result WHERE election_id = $1 AND ward_id = $2 LIMIT 1"
-		args = []interface{}{electionID, wardID}
-	} else if stateConstID > 0 {
-		query = "SELECT id, election_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, candidate_results_live FROM election_state_constituency_final_result WHERE election_id = $1 AND state_constituency_id = $2 LIMIT 1"
-		args = []interface{}{electionID, stateConstID}
-	} else if lgaID > 0 {
-		query = "SELECT id, election_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, candidate_results_live FROM election_lga_final_result WHERE election_id = $1 AND lga_id = $2 LIMIT 1"
-		args = []interface{}{electionID, lgaID}
-	} else if fedConstID > 0 {
-		query = "SELECT id, election_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, candidate_results_live FROM election_federal_constituency_final_result WHERE election_id = $1 AND federal_constituency_id = $2 LIMIT 1"
-		args = []interface{}{electionID, fedConstID}
-	} else if senatorialID > 0 {
-		query = "SELECT id, election_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, candidate_results_live FROM election_senatorial_district_final_result WHERE election_id = $1 AND senatorial_district_id = $2 LIMIT 1"
-		args = []interface{}{electionID, senatorialID}
-	} else if stateID > 0 {
-		query = "SELECT id, election_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, candidate_results_live FROM election_state_final_result WHERE election_id = $1 AND state_id = $2 LIMIT 1"
-		args = []interface{}{electionID, stateID}
 	} else {
-		query = "SELECT id, election_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, candidate_results_live FROM election_final_result WHERE election_id = $1 LIMIT 1"
-		args = []interface{}{electionID}
+		var whereClause string
+		if wardID > 0 {
+			whereClause = "ward_id = $2"
+			args = []interface{}{electionID, wardID}
+		} else if stateConstID > 0 {
+			whereClause = "state_constituency_id = $2"
+			args = []interface{}{electionID, stateConstID}
+		} else if lgaID > 0 {
+			whereClause = "lga_id = $2"
+			args = []interface{}{electionID, lgaID}
+		} else if fedConstID > 0 {
+			whereClause = "federal_constituency_id = $2"
+			args = []interface{}{electionID, fedConstID}
+		} else if senatorialID > 0 {
+			whereClause = "senatorial_district_id = $2"
+			args = []interface{}{electionID, senatorialID}
+		} else if stateID > 0 {
+			whereClause = "state_id = $2"
+			args = []interface{}{electionID, stateID}
+		} else {
+			whereClause = "1=1"
+			args = []interface{}{electionID}
+		}
+
+		query = fmt.Sprintf(`
+			SELECT
+				COALESCE(MAX(id), 1)::bigint AS id,
+				$1::bigint AS election_id,
+				COALESCE(SUM(accredited_voters), 0)::int AS accredited_voters,
+				COALESCE(SUM(votes_cast), 0)::int AS votes_cast,
+				COALESCE(SUM(valid_votes), 0)::int AS valid_votes,
+				COALESCE(SUM(rejected_votes), 0)::int AS rejected_votes,
+				(
+					SELECT COALESCE(jsonb_agg(jsonb_build_object(
+						'party_short_name', p.party_short_name,
+						'vote_count', p.vote_count,
+						'vote_share', CASE WHEN v.valid_total > 0 THEN ROUND((p.vote_count::numeric / v.valid_total::numeric) * 100, 2) ELSE 0 END
+					)), '[]'::jsonb)
+					FROM (
+						SELECT c.value->>'party_short_name' AS party_short_name, SUM((c.value->>'vote_count')::int)::int AS vote_count
+						FROM election_polling_unit_final_results pu_in,
+						     jsonb_array_elements(pu_in.candidate_results) c
+						WHERE pu_in.election_id = $1 AND %s
+						GROUP BY c.value->>'party_short_name'
+					) p
+					CROSS JOIN (
+						SELECT NULLIF(SUM(valid_votes), 0) AS valid_total
+						FROM election_polling_unit_final_results pu_v
+						WHERE pu_v.election_id = $1 AND %s
+					) v
+				) AS candidate_results,
+				'[]'::jsonb AS candidate_results_live
+			FROM election_polling_unit_final_results
+			WHERE election_id = $1 AND %s
+			HAVING COUNT(*) > 0
+		`, whereClause, whereClause, whereClause)
 	}
 
 	partiesMap, _, candidatesMap, contestingPartyShortNames := h.loadPartyAndCandidateMetadata(r.Context(), electionID)
@@ -1559,8 +1817,33 @@ func (h *Handler) GetElectoralUnitsBreakdown(w http.ResponseWriter, r *http.Requ
 				COALESCE(fr.candidate_results, '[]'::jsonb),
 				COALESCE(fr.candidate_results_live, '[]'::jsonb)
 			FROM wards w
-			LEFT JOIN election_ward_final_result fr
-				ON fr.ward_id = w.id AND fr.election_id = $1
+			LEFT JOIN (
+				SELECT
+					ward_id,
+					SUM(accredited_voters)::int AS accredited_voters,
+					SUM(votes_cast)::int AS votes_cast,
+					SUM(valid_votes)::int AS valid_votes,
+					SUM(rejected_votes)::int AS rejected_votes,
+					COUNT(polling_unit_id) FILTER (WHERE valid_votes > 0)::int AS polling_units_counted,
+					COUNT(polling_unit_id)::int AS total_polling_units,
+					(
+						SELECT COALESCE(jsonb_agg(jsonb_build_object(
+							'party_short_name', p.party_short_name,
+							'vote_count', p.vote_count
+						)), '[]'::jsonb)
+						FROM (
+							SELECT c.value->>'party_short_name' AS party_short_name, SUM((c.value->>'vote_count')::int)::int AS vote_count
+							FROM election_polling_unit_final_results pu_in,
+							     jsonb_array_elements(pu_in.candidate_results) c
+							WHERE pu_in.election_id = $1 AND pu_in.ward_id = epfr.ward_id
+							GROUP BY c.value->>'party_short_name'
+						) p
+					) AS candidate_results,
+					'[]'::jsonb AS candidate_results_live
+				FROM election_polling_unit_final_results epfr
+				WHERE epfr.election_id = $1
+				GROUP BY ward_id
+			) fr ON fr.ward_id = w.id
 			WHERE w.lga_id = $2
 			ORDER BY w.id ASC`
 		args = []interface{}{electionID, lgaID}
@@ -1579,8 +1862,33 @@ func (h *Handler) GetElectoralUnitsBreakdown(w http.ResponseWriter, r *http.Requ
 				COALESCE(fr.candidate_results, '[]'::jsonb),
 				COALESCE(fr.candidate_results_live, '[]'::jsonb)
 			FROM lgas l
-			LEFT JOIN election_lga_final_result fr
-				ON fr.lga_id = l.id AND fr.election_id = $1
+			LEFT JOIN (
+				SELECT
+					lga_id,
+					SUM(accredited_voters)::int AS accredited_voters,
+					SUM(votes_cast)::int AS votes_cast,
+					SUM(valid_votes)::int AS valid_votes,
+					SUM(rejected_votes)::int AS rejected_votes,
+					COUNT(DISTINCT ward_id) FILTER (WHERE valid_votes > 0)::int AS wards_counted,
+					COUNT(DISTINCT ward_id)::int AS total_wards,
+					(
+						SELECT COALESCE(jsonb_agg(jsonb_build_object(
+							'party_short_name', p.party_short_name,
+							'vote_count', p.vote_count
+						)), '[]'::jsonb)
+						FROM (
+							SELECT c.value->>'party_short_name' AS party_short_name, SUM((c.value->>'vote_count')::int)::int AS vote_count
+							FROM election_polling_unit_final_results pu_in,
+							     jsonb_array_elements(pu_in.candidate_results) c
+							WHERE pu_in.election_id = $1 AND pu_in.lga_id = epfr.lga_id
+							GROUP BY c.value->>'party_short_name'
+						) p
+					) AS candidate_results,
+					'[]'::jsonb AS candidate_results_live
+				FROM election_polling_unit_final_results epfr
+				WHERE epfr.election_id = $1
+				GROUP BY lga_id
+			) fr ON fr.lga_id = l.id
 			WHERE l.state_id = $2
 			ORDER BY l.id ASC`
 		args = []interface{}{electionID, stateID}
@@ -1600,8 +1908,33 @@ func (h *Handler) GetElectoralUnitsBreakdown(w http.ResponseWriter, r *http.Requ
 				COALESCE(fr.candidate_results, '[]'::jsonb),
 				COALESCE(fr.candidate_results_live, '[]'::jsonb)
 			FROM c_states s
-			LEFT JOIN election_state_final_result fr
-				ON fr.state_id = s.id AND fr.election_id = $1
+			LEFT JOIN (
+				SELECT
+					state_id,
+					SUM(accredited_voters)::int AS accredited_voters,
+					SUM(votes_cast)::int AS votes_cast,
+					SUM(valid_votes)::int AS valid_votes,
+					SUM(rejected_votes)::int AS rejected_votes,
+					COUNT(DISTINCT senatorial_district_id) FILTER (WHERE valid_votes > 0)::int AS senatorial_districts_counted,
+					COUNT(DISTINCT senatorial_district_id)::int AS total_senatorial_districts,
+					(
+						SELECT COALESCE(jsonb_agg(jsonb_build_object(
+							'party_short_name', p.party_short_name,
+							'vote_count', p.vote_count
+						)), '[]'::jsonb)
+						FROM (
+							SELECT c.value->>'party_short_name' AS party_short_name, SUM((c.value->>'vote_count')::int)::int AS vote_count
+							FROM election_polling_unit_final_results pu_in,
+							     jsonb_array_elements(pu_in.candidate_results) c
+							WHERE pu_in.election_id = $1 AND pu_in.state_id = epfr.state_id
+							GROUP BY c.value->>'party_short_name'
+						) p
+					) AS candidate_results,
+					'[]'::jsonb AS candidate_results_live
+				FROM election_polling_unit_final_results epfr
+				WHERE epfr.election_id = $1
+				GROUP BY state_id
+			) fr ON fr.state_id = s.id
 			WHERE s.country_id = $2
 			ORDER BY s.name ASC`
 		args = []interface{}{electionID, constants.NigeriaCountryID}

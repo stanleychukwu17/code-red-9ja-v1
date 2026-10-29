@@ -8,11 +8,8 @@ import (
 	"log/slog"
 	"time"
 
-	"free9ja/api/internal/db/queries"
-	"free9ja/api/internal/service/realtime"
 
 	"github.com/hibiken/asynq"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // Task name constants for single-entity real-time candidate rollup cascades.
@@ -264,268 +261,37 @@ func (redisTaskDistributor *RedisTaskDistributor) DistributeTaskRollupSingleElec
 
 // ─── Processors ───────────────────────────────────────────────────────────────
 
+// ProcessTaskRollupSingleWard is a no-op: final results are aggregated dynamically from election_polling_unit_final_results.
 func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskRollupSingleWard(ctx context.Context, task *asynq.Task) error {
-	var payload RollupSingleWardPayload
-	if err := json.Unmarshal(task.Payload(), &payload); err != nil {
-		return fmt.Errorf("failed to unmarshal single ward payload: %w", err)
-	}
-
-	err := redisTaskProcessor.queries.RollupSingleWardFinalResults(ctx, queries.RollupSingleWardFinalResultsParams{
-		ElectionID: payload.ElectionID,
-		WardID:     pgtype.Int4{Int32: payload.WardID, Valid: true},
-	})
-	if err != nil {
-		return fmt.Errorf("failed to rollup single ward results: %w", err)
-	}
-
-	slog.Info("rolled up single ward final result", "election_id", payload.ElectionID, "ward_id", payload.WardID)
-
-	// Broadcast real-time results-updated event
-	if redisTaskProcessor.broadcaster != nil {
-		_ = redisTaskProcessor.broadcaster.BroadcastResultsUpdated(ctx, realtime.ResultsUpdatedEvent{
-			ElectionID:            payload.ElectionID,
-			Scope:                 "ward",
-			WardID:                &payload.WardID,
-			LGAID:                 &payload.LGAID,
-			StateID:               &payload.StateID,
-			StateConstituencyID:   &payload.StateConstituencyID,
-			FederalConstituencyID: &payload.FederalConstituencyID,
-			SenatorialDistrictID:  &payload.SenatorialDistrictID,
-			Timestamp:             time.Now().UTC(),
-		})
-	}
-
-	// Cascade up to LGA
-	if redisTaskProcessor.taskDistributor != nil && payload.LGAID > 0 {
-		_ = redisTaskProcessor.taskDistributor.DistributeTaskRollupSingleLGA(ctx, &RollupSingleLGAPayload{
-			ElectionID:            payload.ElectionID,
-			LGAID:                 payload.LGAID,
-			StateID:               payload.StateID,
-			FederalConstituencyID: payload.FederalConstituencyID,
-			SenatorialDistrictID:  payload.SenatorialDistrictID,
-		})
-	}
-
 	return nil
 }
 
+// ProcessTaskRollupSingleStateConstituency is a no-op.
 func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskRollupSingleStateConstituency(ctx context.Context, task *asynq.Task) error {
-	var payload RollupSingleStateConstituencyPayload
-	if err := json.Unmarshal(task.Payload(), &payload); err != nil {
-		return fmt.Errorf("failed to unmarshal single state constituency payload: %w", err)
-	}
-
-	err := redisTaskProcessor.queries.RollupSingleStateConstituencyFinalResults(ctx, queries.RollupSingleStateConstituencyFinalResultsParams{
-		ElectionID: payload.ElectionID,
-		ID:         payload.StateConstituencyID,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to rollup single state constituency results: %w", err)
-	}
-
-	slog.Info("rolled up single state constituency final result", "election_id", payload.ElectionID, "state_constituency_id", payload.StateConstituencyID)
-
-	// Broadcast real-time results-updated event
-	if redisTaskProcessor.broadcaster != nil {
-		_ = redisTaskProcessor.broadcaster.BroadcastResultsUpdated(ctx, realtime.ResultsUpdatedEvent{
-			ElectionID:          payload.ElectionID,
-			Scope:               "state-constituency",
-			StateConstituencyID: &payload.StateConstituencyID,
-			Timestamp:           time.Now().UTC(),
-		})
-	}
-
 	return nil
 }
 
+// ProcessTaskRollupSingleLGA is a no-op.
 func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskRollupSingleLGA(ctx context.Context, task *asynq.Task) error {
-	var payload RollupSingleLGAPayload
-	if err := json.Unmarshal(task.Payload(), &payload); err != nil {
-		return fmt.Errorf("failed to unmarshal single lga payload: %w", err)
-	}
-
-	err := redisTaskProcessor.queries.RollupSingleLGAFinalResults(ctx, queries.RollupSingleLGAFinalResultsParams{
-		ElectionID: payload.ElectionID,
-		LgaID:      pgtype.Int4{Int32: payload.LGAID, Valid: true},
-	})
-	if err != nil {
-		return fmt.Errorf("failed to rollup single lga results: %w", err)
-	}
-
-	slog.Info("rolled up single lga final result", "election_id", payload.ElectionID, "lga_id", payload.LGAID)
-
-	// Broadcast real-time results-updated event
-	if redisTaskProcessor.broadcaster != nil {
-		_ = redisTaskProcessor.broadcaster.BroadcastResultsUpdated(ctx, realtime.ResultsUpdatedEvent{
-			ElectionID:            payload.ElectionID,
-			Scope:                 "lga",
-			LGAID:                 &payload.LGAID,
-			StateID:               &payload.StateID,
-			FederalConstituencyID: &payload.FederalConstituencyID,
-			SenatorialDistrictID:  &payload.SenatorialDistrictID,
-			Timestamp:             time.Now().UTC(),
-		})
-	}
-
-	if redisTaskProcessor.taskDistributor != nil {
-		// Cascade to Federal Constituency if LGA belongs to one
-		if payload.FederalConstituencyID > 0 {
-			_ = redisTaskProcessor.taskDistributor.DistributeTaskRollupSingleFederalConstituency(ctx, &RollupSingleFederalConstituencyPayload{
-				ElectionID:            payload.ElectionID,
-				FederalConstituencyID: payload.FederalConstituencyID,
-			})
-		}
-
-		// Cascade to Senatorial District if LGA belongs to one (which will then cascade to State)
-		if payload.SenatorialDistrictID > 0 {
-			_ = redisTaskProcessor.taskDistributor.DistributeTaskRollupSingleSenatorialDistrict(ctx, &RollupSingleSenatorialDistrictPayload{
-				ElectionID:           payload.ElectionID,
-				SenatorialDistrictID: payload.SenatorialDistrictID,
-				StateID:              payload.StateID,
-			})
-		} else if payload.StateID > 0 {
-			// Fallback cascade directly to State if LGA does not belong to a senatorial district
-			_ = redisTaskProcessor.taskDistributor.DistributeTaskRollupSingleState(ctx, &RollupSingleStatePayload{
-				ElectionID: payload.ElectionID,
-				StateID:    payload.StateID,
-			})
-		}
-	}
-
 	return nil
 }
 
+// ProcessTaskRollupSingleFederalConstituency is a no-op.
 func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskRollupSingleFederalConstituency(ctx context.Context, task *asynq.Task) error {
-	var payload RollupSingleFederalConstituencyPayload
-	if err := json.Unmarshal(task.Payload(), &payload); err != nil {
-		return fmt.Errorf("failed to unmarshal single federal constituency payload: %w", err)
-	}
-
-	err := redisTaskProcessor.queries.RollupSingleFederalConstituencyFinalResults(ctx, queries.RollupSingleFederalConstituencyFinalResultsParams{
-		ElectionID:            payload.ElectionID,
-		FederalConstituencyID: pgtype.Int4{Int32: payload.FederalConstituencyID, Valid: true},
-	})
-	if err != nil {
-		return fmt.Errorf("failed to rollup single federal constituency results: %w", err)
-	}
-
-	slog.Info("rolled up single federal constituency final result", "election_id", payload.ElectionID, "federal_constituency_id", payload.FederalConstituencyID)
-
-	// Broadcast real-time results-updated event
-	if redisTaskProcessor.broadcaster != nil {
-		_ = redisTaskProcessor.broadcaster.BroadcastResultsUpdated(ctx, realtime.ResultsUpdatedEvent{
-			ElectionID:            payload.ElectionID,
-			Scope:                 "federal-constituency",
-			FederalConstituencyID: &payload.FederalConstituencyID,
-			Timestamp:             time.Now().UTC(),
-		})
-	}
-
 	return nil
 }
 
+// ProcessTaskRollupSingleSenatorialDistrict is a no-op.
 func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskRollupSingleSenatorialDistrict(ctx context.Context, task *asynq.Task) error {
-	var payload RollupSingleSenatorialDistrictPayload
-	if err := json.Unmarshal(task.Payload(), &payload); err != nil {
-		return fmt.Errorf("failed to unmarshal single senatorial district payload: %w", err)
-	}
-
-	err := redisTaskProcessor.queries.RollupSingleSenatorialDistrictFinalResults(ctx, queries.RollupSingleSenatorialDistrictFinalResultsParams{
-		ElectionID:           payload.ElectionID,
-		SenatorialDistrictID: pgtype.Int4{Int32: payload.SenatorialDistrictID, Valid: true},
-	})
-	if err != nil {
-		return fmt.Errorf("failed to rollup single senatorial district results: %w", err)
-	}
-
-	slog.Info("rolled up single senatorial district final result", "election_id", payload.ElectionID, "senatorial_district_id", payload.SenatorialDistrictID)
-
-	// Broadcast real-time results-updated event
-	if redisTaskProcessor.broadcaster != nil {
-		_ = redisTaskProcessor.broadcaster.BroadcastResultsUpdated(ctx, realtime.ResultsUpdatedEvent{
-			ElectionID:           payload.ElectionID,
-			Scope:                "senatorial-district",
-			SenatorialDistrictID: &payload.SenatorialDistrictID,
-			Timestamp:            time.Now().UTC(),
-		})
-	}
-
-	// Cascade up to State
-	stateID := payload.StateID
-	if stateID == 0 {
-		sd, err := redisTaskProcessor.queries.GetSenatorialDistrictByID(ctx, payload.SenatorialDistrictID)
-		if err == nil {
-			stateID = int16(sd.StateID)
-		}
-	}
-
-	if redisTaskProcessor.taskDistributor != nil && stateID > 0 {
-		_ = redisTaskProcessor.taskDistributor.DistributeTaskRollupSingleState(ctx, &RollupSingleStatePayload{
-			ElectionID: payload.ElectionID,
-			StateID:    stateID,
-		})
-	}
-
 	return nil
 }
 
+// ProcessTaskRollupSingleState is a no-op.
 func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskRollupSingleState(ctx context.Context, task *asynq.Task) error {
-	var payload RollupSingleStatePayload
-	if err := json.Unmarshal(task.Payload(), &payload); err != nil {
-		return fmt.Errorf("failed to unmarshal single state payload: %w", err)
-	}
-
-	err := redisTaskProcessor.queries.RollupSingleStateFinalResults(ctx, queries.RollupSingleStateFinalResultsParams{
-		ElectionID: payload.ElectionID,
-		StateID:    pgtype.Int2{Int16: payload.StateID, Valid: true},
-	})
-	if err != nil {
-		return fmt.Errorf("failed to rollup single state results: %w", err)
-	}
-
-	slog.Info("rolled up single state final result", "election_id", payload.ElectionID, "state_id", payload.StateID)
-
-	// Broadcast real-time results-updated event
-	if redisTaskProcessor.broadcaster != nil {
-		_ = redisTaskProcessor.broadcaster.BroadcastResultsUpdated(ctx, realtime.ResultsUpdatedEvent{
-			ElectionID: payload.ElectionID,
-			Scope:      "state",
-			StateID:    &payload.StateID,
-			Timestamp:  time.Now().UTC(),
-		})
-	}
-
-	// Cascade up to Nationwide Election
-	if redisTaskProcessor.taskDistributor != nil {
-		_ = redisTaskProcessor.taskDistributor.DistributeTaskRollupSingleElection(ctx, &RollupSingleElectionPayload{
-			ElectionID: payload.ElectionID,
-		})
-	}
-
 	return nil
 }
 
+// ProcessTaskRollupSingleElection is a no-op.
 func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskRollupSingleElection(ctx context.Context, task *asynq.Task) error {
-	var payload RollupSingleElectionPayload
-	if err := json.Unmarshal(task.Payload(), &payload); err != nil {
-		return fmt.Errorf("failed to unmarshal single election payload: %w", err)
-	}
-
-	err := redisTaskProcessor.queries.RollupSingleElectionFinalResults(ctx, payload.ElectionID)
-	if err != nil {
-		return fmt.Errorf("failed to rollup single election results: %w", err)
-	}
-
-	slog.Info("rolled up single nationwide election final result", "election_id", payload.ElectionID)
-
-	// Broadcast real-time results-updated event
-	if redisTaskProcessor.broadcaster != nil {
-		_ = redisTaskProcessor.broadcaster.BroadcastResultsUpdated(ctx, realtime.ResultsUpdatedEvent{
-			ElectionID: payload.ElectionID,
-			Scope:      "nationwide",
-			Timestamp:  time.Now().UTC(),
-		})
-	}
-
 	return nil
 }

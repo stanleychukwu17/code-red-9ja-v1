@@ -1057,13 +1057,7 @@ func (s *SeedService) SimulateElectionResults(ctx context.Context, electionID in
 	}
 
 	if req.RunFullRollup {
-		_ = s.queries.RollupWardFinalResults(ctx)
-		_ = s.queries.RollupStateConstituencyFinalResults(ctx)
-		_ = s.queries.RollupLGAFinalResults(ctx)
-		_ = s.queries.RollupFederalConstituencyFinalResults(ctx)
-		_ = s.queries.RollupSenatorialDistrictFinalResults(ctx)
-		_ = s.queries.RollupStateFinalResults(ctx)
-		_ = s.queries.RollupElectionFinalResults(ctx)
+		// Rollup tables dropped in favor of dynamic aggregation from election_polling_unit_final_results
 	}
 
 	return &SimulateResultsResponse{
