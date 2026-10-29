@@ -37,14 +37,6 @@ SET interval_updates = jsonb_set(
 )
 WHERE id = sqlc.arg(id)::bigint;
 
--- name: IncrementPartyElectionGroupMetrics :exec
-INSERT INTO party_election_groups (party_id, election_group_id, reports_count, updates_count)
-VALUES ($1, $2, $3, $4)
-ON CONFLICT (party_id, election_group_id)
-DO UPDATE SET 
-  reports_count = party_election_groups.reports_count + EXCLUDED.reports_count,
-  updates_count = party_election_groups.updates_count + EXCLUDED.updates_count,
-  updated_at = NOW();
 
 -- name: IncrementElectionMetricsByGroup :exec
 UPDATE elections

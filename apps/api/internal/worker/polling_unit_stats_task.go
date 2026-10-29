@@ -67,41 +67,5 @@ func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskRefreshPollingUnitStats
 		return fmt.Errorf("failed to refresh polling unit stats: %w", err)
 	}
 
-	// ── Cascade: enqueue Ward + StateConstituency refreshes ──────────────────
-	// Query the geo IDs stored on the PU row so we know what to enqueue next.
-	geoIDs, err := redisTaskProcessor.queries.GetElectionGroupPollingUnitGeoIDs(ctx, queries.GetElectionGroupPollingUnitGeoIDsParams{
-		ElectionGroupID: payload.Params.ElectionGroupID,
-		PollingUnitID:   payload.Params.PollingUnitID,
-	})
-	if err != nil {
-		// Non-fatal: log and skip the cascade. The 30-min cron safety net will catch it.
-		slog.Warn("could not fetch geo IDs for cascade enqueue; cascade skipped",
-			"election_group_id", payload.Params.ElectionGroupID,
-			"polling_unit_id", payload.Params.PollingUnitID,
-			"error", err)
-	} else {
-		// Ward → LGA → State → Global chain
-		if geoIDs.WardID.Valid {
-			lgaID := int32(0)
-			if geoIDs.LgaID.Valid {
-				lgaID = geoIDs.LgaID.Int32
-			}
-			stateID := int16(0)
-			if geoIDs.StateID.Valid {
-				stateID = geoIDs.StateID.Int16
-			}
-			_ = redisTaskProcessor.taskDistributor.DistributeTaskRefreshWardStats(ctx, &RefreshWardStatsPayload{
-				ElectionGroupID: payload.Params.ElectionGroupID,
-				WardID:          geoIDs.WardID.Int32,
-				LGAID:           lgaID,
-				StateID:         stateID,
-			})
-		}
-
-	}
-
-	slog.Info("successfully refreshed polling unit stats",
-		"election_group_id", payload.Params.ElectionGroupID, "polling_unit_id", payload.Params.PollingUnitID)
 	return nil
 }
-

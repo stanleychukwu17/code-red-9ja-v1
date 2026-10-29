@@ -22,7 +22,6 @@ type ElectionGroupsService interface {
 	UpdateElectionGroup(ctx context.Context, id int32, name string, electionDate time.Time, active bool) (queries.ElectionGroup, error)
 	DeleteElectionGroup(ctx context.Context, id int32) error
 	ListElectionGroupsWithPartyStats(ctx context.Context, partyID int16, active *bool) ([]queries.ListElectionGroupsWithPartyStatsRow, error)
-	UpsertPartyElectionGroupStats(ctx context.Context, partyID int16, electionGroupID int32, pollingAgentsCoverage []byte, electionsContesting int32) (queries.PartyElectionGroup, error)
 	ListGroupElections(ctx context.Context, electionGroupID int32) ([]queries.ElectionGroupListItem, error)
 }
 
@@ -386,59 +385,6 @@ func (h *Handler) DeleteElectionGroup(w http.ResponseWriter, r *http.Request) {
 	h.utils.RespondSuccess(w, http.StatusOK, "Election group deleted successfully", nil)
 }
 
-type UpsertPartyElectionGroupStatsRequest struct {
-	PartyID               int64       `json:"party_id" validate:"required,gt=0"`
-	PollingAgentsCoverage interface{} `json:"polling_agents_coverage"`
-	ElectionsContesting   int32       `json:"elections_contesting"`
-}
-
-// UpsertPartyElectionGroupStats godoc
-// @Summary      Upsert party election group stats
-// @Description  Upserts party-specific statistics for an election group
-// @Tags         ElectionGroups
-// @Accept       json
-// @Produce      json
-// @Param        id      path  int  true  "Election Group ID"
-// @Param        request body UpsertPartyElectionGroupStatsRequest true "Upsert Stats payload"
-// @Success      200  {object} map[string]interface{} "Stats upserted successfully"
-// @Failure      400  {object} map[string]interface{} "Invalid payload or parameters"
-// @Failure      500  {object} map[string]interface{} "Internal server error"
-// @Router       /election-groups/{id}/party-stats [put]
-func (h *Handler) UpsertPartyElectionGroupStats(w http.ResponseWriter, r *http.Request) {
-	// 1. Extract and parse election group ID from URL path parameter
-	idStr := chi.URLParam(r, "id")
-	electionGroupID, err := strconv.ParseInt(idStr, 10, 32)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election group ID")
-		return
-	}
-
-	// 2. Decode incoming JSON request payload
-	var req UpsertPartyElectionGroupStatsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
-		return
-	}
-
-	// 3. Validate required fields
-	if err := h.validate.Struct(req); err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
-		return
-	}
-
-	// 4. Marshal polling agent coverage into JSON bytes and upsert stats via service
-	coverageBytes, _ := json.Marshal(req.PollingAgentsCoverage)
-	stats, err := h.service.UpsertPartyElectionGroupStats(r.Context(), int16(req.PartyID), int32(electionGroupID), coverageBytes, req.ElectionsContesting)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to upsert party election group stats: "+err.Error())
-		return
-	}
-
-	// 5. Return 200 OK with the upserted party election group stats
-	h.utils.RespondSuccess(w, http.StatusOK, "Party election group stats upserted successfully", map[string]interface{}{
-		"party_election_group": stats,
-	})
-}
 
 // ListGroupElections godoc
 // @Summary      List elections for an election group

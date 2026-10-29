@@ -207,17 +207,6 @@ func (s *ElectionGroupsService) ListElectionGroupsWithPartyStats(ctx context.Con
 	})
 }
 
-// UpsertPartyElectionGroupStats creates or updates party-specific election group statistics,
-// including polling agent coverage JSON data and the count of elections contested by the party.
-func (s *ElectionGroupsService) UpsertPartyElectionGroupStats(ctx context.Context, partyID int16, electionGroupID int32, pollingAgentsCoverage []byte, electionsContesting int32) (queries.PartyElectionGroup, error) {
-	// Persist or update the party's coverage metrics for this election group
-	return s.queries.UpsertPartyElectionGroupStats(ctx, queries.UpsertPartyElectionGroupStatsParams{
-		PartyID:             partyID,
-		ElectionGroupID:     electionGroupID,
-		Column3:             pollingAgentsCoverage,
-		ElectionsContesting: electionsContesting,
-	})
-}
 
 // ListGroupElections returns all detailed election instances belonging to a specific election group,
 // including office information, hierarchy ranks, candidate counts, and geographic scopes.

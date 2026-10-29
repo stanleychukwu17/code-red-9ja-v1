@@ -1,3 +1,19 @@
+func emptyPartyMetrics() map[string]interface{} {
+	return map[string]interface{}{
+		"pu_agents_count":                               0,
+		"unique_pu_agents_count":                        0,
+		"pu_agents_in_attendance_count":                 0,
+		"pu_reports_count":                              0,
+		"pu_updates_count":                              0,
+		"pu_final_results_uploaded_count":               0,
+		"unique_pu_final_results_uploaded_count":        0,
+		"total_pu_with_reports":                         0,
+		"total_pu_with_updates":                         0,
+		"total_pu_with_agents_in_attendance":            0,
+		"total_pu_unique_final_results_uploaded":        0,
+	}
+}
+
 package electionstatshandler
 
 import (
@@ -50,13 +66,10 @@ type OperationsBreakdownUnitResponse struct {
 	AgentsAtPu           string      `json:"agents_at_pu"`
 	PuAgentsInAttendance int64       `json:"pu_agents_in_attendance"`
 	PuAgentsCount        int64       `json:"pu_agents_count"`
-	ElectionStartedIn    string      `json:"election_started_in"`
-	ElectionEndedIn      string      `json:"election_ended_in"`
 	UpdatesGiven         int64       `json:"updates_given"`
 	ReportsGiven         int64       `json:"reports_given"`
 	ReportedPus          int64       `json:"reported_pus"`
 	PusWithUpdates       int64       `json:"pus_with_updates"`
-	LiveVotersReferred   int64       `json:"live_voters_referred"`
 	ResultsUploaded      int64       `json:"results_uploaded"`
 	ResultsExpected      string      `json:"results_expected"`
 	PusWithAllResults    int64       `json:"pus_with_all_results"`
@@ -282,27 +295,18 @@ func partyStatsToMap(raw interface{}, partyID int32) map[string]interface{} {
 
 func defaultPartyStats(partyID int32) map[string]interface{} {
 	return map[string]interface{}{
-		"party_id":                                       partyID,
-		"pu_agents_count":                                0,
-		"unique_pu_agents_count":                         0,
-		"pu_agents_in_attendance_count":                  0,
-		"pu_reports_count":                               0,
-		"pu_updates_count":                               0,
-		"pu_average_arrival_time":                        nil,
-		"pu_average_election_started_at":                 nil,
-		"pu_average_election_ended_at":                   nil,
-		"pu_election_practice_test_readiness_percentage": 0,
-		"pu_final_results_uploaded_count":                0,
-		"unique_pu_final_results_uploaded_count":         0,
-		"pu_average_update_time_interval_in_seconds":     0,
-		"pu_live_voters_referred_by_agent_count":         0,
-		"total_pu_with_reports":                          0,
-		"total_pu_with_updates":                          0,
-		"total_pu_with_agents_in_attendance":             0,
-		"total_pu_where_election_has_started":            0,
-		"total_pu_where_election_has_ended":              0,
-		"total_pu_unique_final_results_uploaded":         0,
-		"total_pu_where_agents_referred_live_voters":     0,
+		"party_id":                               partyID,
+		"pu_agents_count":                        0,
+		"unique_pu_agents_count":                 0,
+		"pu_agents_in_attendance_count":          0,
+		"pu_reports_count":                       0,
+		"pu_updates_count":                       0,
+		"pu_final_results_uploaded_count":        0,
+		"unique_pu_final_results_uploaded_count": 0,
+		"total_pu_with_reports":                  0,
+		"total_pu_with_updates":                  0,
+		"total_pu_with_agents_in_attendance":     0,
+		"total_pu_unique_final_results_uploaded": 0,
 	}
 }
 
@@ -710,7 +714,6 @@ func (h *Handler) GetOperationsBreakdown(w http.ResponseWriter, r *http.Request)
 				COALESCE(egpu.pu_agents_count, 0) AS pu_agents_count,
 				COALESCE(egpu.pu_updates_count, 0) AS updates_count,
 				COALESCE(egpu.pu_reports_count, 0) AS reports_count,
-				COALESCE(egpu.pu_live_voters_referred_by_agent_count, 0) AS live_voters,
 				COALESCE(egpu.pu_final_results_uploaded_count, 0) AS results_uploaded,
 				COALESCE(NULLIF(egpu.unique_final_results_expected, 0), 1) AS results_expected,
 				(
@@ -748,17 +751,14 @@ func (h *Handler) GetOperationsBreakdown(w http.ResponseWriter, r *http.Request)
 				'' AS code,
 				COALESCE(egw.pu_agents_in_attendance_count, 0) AS pu_agents_in_attendance,
 				COALESCE(egw.pu_agents_count, 0) AS pu_agents_count,
-				COALESCE(egw.total_pu_where_election_has_started, 0) AS election_started_in,
-				COALESCE(egw.total_pu_where_election_has_ended, 0) AS election_ended_in,
 				COALESCE(egw.pu_updates_count, 0) AS updates_count,
 				COALESCE(egw.pu_reports_count, 0) AS reports_count,
 				COALESCE(egw.total_pu_with_reports, 0) AS reported_pus,
 				COALESCE(egw.total_pu_with_updates, 0) AS pus_with_updates,
-				COALESCE(egw.pu_live_voters_referred_by_agent_count, 0) AS live_voters,
 				COALESCE(egw.pu_final_results_uploaded_count, 0) AS results_uploaded,
 				COALESCE(egw.unique_final_results_expected, 0) AS results_expected,
 				COALESCE(egw.total_pu_unique_final_results_uploaded, 0) AS pus_with_all_results,
-				COALESCE(w.polling_units_count, egw.polling_units_count, 0) AS total_pus,
+				COALESCE(w.polling_units_count, 0) AS total_pus,
 				(
 					SELECT COALESCE(json_agg(json_build_object(
 						'id', u.id,
@@ -776,8 +776,22 @@ func (h *Handler) GetOperationsBreakdown(w http.ResponseWriter, r *http.Request)
 					) u
 				) AS supervisors
 			FROM wards w
-			LEFT JOIN election_group_wards egw
-				ON egw.ward_id = w.id AND egw.election_group_id = $1
+			LEFT JOIN (
+				SELECT
+					ward_id,
+					SUM(pu_agents_in_attendance_count)::bigint AS pu_agents_in_attendance_count,
+					SUM(pu_agents_count)::bigint AS pu_agents_count,
+					SUM(pu_updates_count)::bigint AS pu_updates_count,
+					SUM(pu_reports_count)::bigint AS pu_reports_count,
+					COUNT(DISTINCT polling_unit_id) FILTER (WHERE pu_reports_count > 0)::bigint AS total_pu_with_reports,
+					COUNT(DISTINCT polling_unit_id) FILTER (WHERE pu_updates_count > 0)::bigint AS total_pu_with_updates,
+					SUM(pu_final_results_uploaded_count)::bigint AS pu_final_results_uploaded_count,
+					SUM(unique_final_results_expected)::bigint AS unique_final_results_expected,
+					COUNT(DISTINCT polling_unit_id) FILTER (WHERE unique_pu_final_results_uploaded_count > 0)::bigint AS total_pu_unique_final_results_uploaded
+				FROM election_group_polling_units
+				WHERE ($1::bigint = 0 OR election_group_id = $1)
+				GROUP BY ward_id
+			) egw ON egw.ward_id = w.id
 			WHERE w.lga_id = $3
 			ORDER BY w.name ASC`
 		args = []interface{}{electionGroupID, partyID, lgaID}
@@ -794,17 +808,14 @@ func (h *Handler) GetOperationsBreakdown(w http.ResponseWriter, r *http.Request)
 				'' AS code,
 				COALESCE(egl.pu_agents_in_attendance_count, 0) AS pu_agents_in_attendance,
 				COALESCE(egl.pu_agents_count, 0) AS pu_agents_count,
-				COALESCE(egl.total_pu_where_election_has_started, 0) AS election_started_in,
-				COALESCE(egl.total_pu_where_election_has_ended, 0) AS election_ended_in,
 				COALESCE(egl.pu_updates_count, 0) AS updates_count,
 				COALESCE(egl.pu_reports_count, 0) AS reports_count,
 				COALESCE(egl.total_pu_with_reports, 0) AS reported_pus,
 				COALESCE(egl.total_pu_with_updates, 0) AS pus_with_updates,
-				COALESCE(egl.pu_live_voters_referred_by_agent_count, 0) AS live_voters,
 				COALESCE(egl.pu_final_results_uploaded_count, 0) AS results_uploaded,
 				COALESCE(egl.unique_final_results_expected, 0) AS results_expected,
 				COALESCE(egl.total_pu_unique_final_results_uploaded, 0) AS pus_with_all_results,
-				COALESCE(l.polling_units_count, egl.polling_units_count, 0) AS total_pus,
+				COALESCE(l.polling_units_count, 0) AS total_pus,
 				(
 					SELECT COALESCE(json_agg(json_build_object(
 						'id', u.id,
@@ -822,8 +833,22 @@ func (h *Handler) GetOperationsBreakdown(w http.ResponseWriter, r *http.Request)
 					) u
 				) AS supervisors
 			FROM lgas l
-			LEFT JOIN election_group_lgas egl
-				ON egl.lga_id = l.id AND egl.election_group_id = $1
+			LEFT JOIN (
+				SELECT
+					lga_id,
+					SUM(pu_agents_in_attendance_count)::bigint AS pu_agents_in_attendance_count,
+					SUM(pu_agents_count)::bigint AS pu_agents_count,
+					SUM(pu_updates_count)::bigint AS pu_updates_count,
+					SUM(pu_reports_count)::bigint AS pu_reports_count,
+					COUNT(DISTINCT polling_unit_id) FILTER (WHERE pu_reports_count > 0)::bigint AS total_pu_with_reports,
+					COUNT(DISTINCT polling_unit_id) FILTER (WHERE pu_updates_count > 0)::bigint AS total_pu_with_updates,
+					SUM(pu_final_results_uploaded_count)::bigint AS pu_final_results_uploaded_count,
+					SUM(unique_final_results_expected)::bigint AS unique_final_results_expected,
+					COUNT(DISTINCT polling_unit_id) FILTER (WHERE unique_pu_final_results_uploaded_count > 0)::bigint AS total_pu_unique_final_results_uploaded
+				FROM election_group_polling_units
+				WHERE ($1::bigint = 0 OR election_group_id = $1)
+				GROUP BY lga_id
+			) egl ON egl.lga_id = l.id
 			WHERE l.state_id = $3
 			ORDER BY l.name ASC`
 		args = []interface{}{electionGroupID, partyID, stateID}
@@ -841,17 +866,14 @@ func (h *Handler) GetOperationsBreakdown(w http.ResponseWriter, r *http.Request)
 				'' AS code,
 				COALESCE(egs.pu_agents_in_attendance_count, 0) AS pu_agents_in_attendance,
 				COALESCE(egs.pu_agents_count, 0) AS pu_agents_count,
-				COALESCE(egs.total_pu_where_election_has_started, 0) AS election_started_in,
-				COALESCE(egs.total_pu_where_election_has_ended, 0) AS election_ended_in,
 				COALESCE(egs.pu_updates_count, 0) AS updates_count,
 				COALESCE(egs.pu_reports_count, 0) AS reports_count,
 				COALESCE(egs.total_pu_with_reports, 0) AS reported_pus,
 				COALESCE(egs.total_pu_with_updates, 0) AS pus_with_updates,
-				COALESCE(egs.pu_live_voters_referred_by_agent_count, 0) AS live_voters,
 				COALESCE(egs.pu_final_results_uploaded_count, 0) AS results_uploaded,
 				COALESCE(egs.unique_final_results_expected, 0) AS results_expected,
 				COALESCE(egs.total_pu_unique_final_results_uploaded, 0) AS pus_with_all_results,
-				COALESCE(s.polling_units_count, egs.polling_units_count, 0) AS total_pus,
+				COALESCE(s.polling_units_count, 0) AS total_pus,
 				(
 					SELECT COALESCE(json_agg(json_build_object(
 						'id', u.id,
@@ -869,8 +891,22 @@ func (h *Handler) GetOperationsBreakdown(w http.ResponseWriter, r *http.Request)
 					) u
 				) AS supervisors
 			FROM c_states s
-			LEFT JOIN election_group_states egs
-				ON egs.state_id = s.id AND egs.election_group_id = $1
+			LEFT JOIN (
+				SELECT
+					state_id,
+					SUM(pu_agents_in_attendance_count)::bigint AS pu_agents_in_attendance_count,
+					SUM(pu_agents_count)::bigint AS pu_agents_count,
+					SUM(pu_updates_count)::bigint AS pu_updates_count,
+					SUM(pu_reports_count)::bigint AS pu_reports_count,
+					COUNT(DISTINCT polling_unit_id) FILTER (WHERE pu_reports_count > 0)::bigint AS total_pu_with_reports,
+					COUNT(DISTINCT polling_unit_id) FILTER (WHERE pu_updates_count > 0)::bigint AS total_pu_with_updates,
+					SUM(pu_final_results_uploaded_count)::bigint AS pu_final_results_uploaded_count,
+					SUM(unique_final_results_expected)::bigint AS unique_final_results_expected,
+					COUNT(DISTINCT polling_unit_id) FILTER (WHERE unique_pu_final_results_uploaded_count > 0)::bigint AS total_pu_unique_final_results_uploaded
+				FROM election_group_polling_units
+				WHERE ($1::bigint = 0 OR election_group_id = $1)
+				GROUP BY state_id
+			) egs ON egs.state_id = s.id
 			WHERE s.country_id = $3
 			ORDER BY s.name ASC`
 		args = []interface{}{electionGroupID, partyID, constants.NigeriaCountryID}
@@ -899,7 +935,6 @@ func (h *Handler) GetOperationsBreakdown(w http.ResponseWriter, r *http.Request)
 				puAgentsCount      int64
 				updatesCount       int64
 				reportsCount       int64
-				liveVoters         int64
 				resultsUploaded    int64
 				resultsExpected    int64
 				agentsBytes        []byte
@@ -909,7 +944,6 @@ func (h *Handler) GetOperationsBreakdown(w http.ResponseWriter, r *http.Request)
 				&id, &name, &code,
 				&agentsInAttendance, &puAgentsCount,
 				&updatesCount, &reportsCount,
-				&liveVoters,
 				&resultsUploaded, &resultsExpected,
 				&agentsBytes,
 			); err != nil {
@@ -939,7 +973,6 @@ func (h *Handler) GetOperationsBreakdown(w http.ResponseWriter, r *http.Request)
 				"pu_agents_count":         targetAgents,
 				"updates_given":           updatesCount,
 				"reports_given":           reportsCount,
-				"live_voters_referred":    liveVoters,
 				"results_uploaded":        resultsUploaded,
 				"results_expected":        resultsExpected,
 				"uploaded_all_results":    uploadedAll,
@@ -954,13 +987,10 @@ func (h *Handler) GetOperationsBreakdown(w http.ResponseWriter, r *http.Request)
 				name, code         string
 				agentsInAttendance int64
 				puAgentsCount      int64
-				eleStartedIn       int64
-				eleEndedIn         int64
 				updatesCount       int64
 				reportsCount       int64
 				reportedPUs        int64
 				pusWithUpdates     int64
-				liveVoters         int64
 				resultsUploaded    int64
 				resultsExpected    int64
 				pusWithAllResults  int64
@@ -971,10 +1001,8 @@ func (h *Handler) GetOperationsBreakdown(w http.ResponseWriter, r *http.Request)
 			if err := rows.Scan(
 				&id, &name, &code,
 				&agentsInAttendance, &puAgentsCount,
-				&eleStartedIn, &eleEndedIn,
 				&updatesCount, &reportsCount,
 				&reportedPUs, &pusWithUpdates,
-				&liveVoters,
 				&resultsUploaded, &resultsExpected,
 				&pusWithAllResults, &totalPUs,
 				&supervisorsBytes,
@@ -988,9 +1016,7 @@ func (h *Handler) GetOperationsBreakdown(w http.ResponseWriter, r *http.Request)
 			}
 
 			agentsAtPuStr := formatPctStr(agentsInAttendance, totalPUs)
-			eleStartedStr := formatPctStr(eleStartedIn, totalPUs)
-			eleEndedStr := formatPctStr(eleEndedIn, totalPUs)
-			resultsExpectedStr := formatPctStr(resultsExpected, totalPUs)
+							resultsExpectedStr := formatPctStr(resultsExpected, totalPUs)
 			pusWith1AgentStr := formatPctStr(agentsInAttendance, totalPUs)
 			totalAgentsStr := formatPctStr(puAgentsCount, totalPUs)
 
@@ -1001,13 +1027,10 @@ func (h *Handler) GetOperationsBreakdown(w http.ResponseWriter, r *http.Request)
 				"agents_at_pu":            agentsAtPuStr,
 				"pu_agents_in_attendance": agentsInAttendance,
 				"pu_agents_count":         puAgentsCount,
-				"election_started_in":     eleStartedStr,
-				"election_ended_in":       eleEndedStr,
 				"updates_given":           updatesCount,
 				"reports_given":           reportsCount,
 				"reported_pus":            reportedPUs,
 				"pus_with_updates":        pusWithUpdates,
-				"live_voters_referred":    liveVoters,
 				"results_uploaded":        resultsUploaded,
 				"results_expected":        resultsExpectedStr,
 				"pus_with_all_results":    pusWithAllResults,
@@ -1120,13 +1143,13 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 				w.name,
 				'' AS code,
 				COALESCE(egw.pu_agents_count, 0) AS pu_agents_count,
-				COALESCE(w.polling_units_count, egw.polling_units_count, 0) AS total_pus,
-				COALESCE(egw.ward_supervisors_count, (
-					SELECT COUNT(*) FROM ward_election_supervisors wes
+				COALESCE(w.polling_units_count, 0) AS total_pus,
+				(
+					SELECT COUNT(*)::bigint FROM ward_election_supervisors wes
 					WHERE wes.ward_id = w.id
 					  AND ($1::bigint = 0 OR wes.election_group_id = $1)
 					  AND ($2::int = 0 OR wes.party_id = $2)
-				), 0) AS ward_supervisors_count,
+				) AS ward_supervisors_count,
 				1::bigint AS total_wards,
 				0::bigint AS lga_supervisors_count,
 				0::bigint AS total_lgas,
@@ -1148,8 +1171,14 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 					) u
 				) AS supervisors
 			FROM wards w
-			LEFT JOIN election_group_wards egw
-				ON egw.ward_id = w.id AND egw.election_group_id = $1
+			LEFT JOIN (
+				SELECT
+					ward_id,
+					SUM(pu_agents_count)::bigint AS pu_agents_count
+				FROM election_group_polling_units
+				WHERE ($1::bigint = 0 OR election_group_id = $1)
+				GROUP BY ward_id
+			) egw ON egw.ward_id = w.id
 			WHERE w.lga_id = $3
 			ORDER BY w.name ASC`
 		args = []interface{}{electionGroupID, partyID, lgaID}
@@ -1165,15 +1194,21 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 				l.name,
 				'' AS code,
 				COALESCE(egl.pu_agents_count, 0) AS pu_agents_count,
-				COALESCE(l.polling_units_count, egl.polling_units_count, 0) AS total_pus,
-				COALESCE(egl.ward_supervisors_count, 0) AS ward_supervisors_count,
-				COALESCE(l.wards_count, egl.wards_count, 0) AS total_wards,
-				COALESCE(egl.lga_supervisors_count, (
-					SELECT COUNT(*) FROM lga_election_supervisors les
+				COALESCE(l.polling_units_count, 0) AS total_pus,
+				(
+					SELECT COUNT(*)::bigint FROM ward_election_supervisors wes
+					JOIN wards w ON w.id = wes.ward_id
+					WHERE w.lga_id = l.id
+					  AND ($1::bigint = 0 OR wes.election_group_id = $1)
+					  AND ($2::int = 0 OR wes.party_id = $2)
+				) AS ward_supervisors_count,
+				COALESCE(l.wards_count, 0) AS total_wards,
+				(
+					SELECT COUNT(*)::bigint FROM lga_election_supervisors les
 					WHERE les.lga_id = l.id
 					  AND ($1::bigint = 0 OR les.election_group_id = $1)
 					  AND ($2::int = 0 OR les.party_id = $2)
-				), 0) AS lga_supervisors_count,
+				) AS lga_supervisors_count,
 				1::bigint AS total_lgas,
 				0::bigint AS state_supervisors_count,
 				(
@@ -1193,8 +1228,14 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 					) u
 				) AS supervisors
 			FROM lgas l
-			LEFT JOIN election_group_lgas egl
-				ON egl.lga_id = l.id AND egl.election_group_id = $1
+			LEFT JOIN (
+				SELECT
+					lga_id,
+					SUM(pu_agents_count)::bigint AS pu_agents_count
+				FROM election_group_polling_units
+				WHERE ($1::bigint = 0 OR election_group_id = $1)
+				GROUP BY lga_id
+			) egl ON egl.lga_id = l.id
 			WHERE l.state_id = $3
 			ORDER BY l.name ASC`
 		args = []interface{}{electionGroupID, partyID, stateID}
@@ -1210,17 +1251,30 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 				s.name,
 				'' AS code,
 				COALESCE(egs.pu_agents_count, 0) AS pu_agents_count,
-				COALESCE(s.polling_units_count, egs.polling_units_count, 0) AS total_pus,
-				COALESCE(egs.ward_supervisors_count, 0) AS ward_supervisors_count,
-				COALESCE(s.wards_count, egs.wards_count, 0) AS total_wards,
-				COALESCE(egs.lga_supervisors_count, 0) AS lga_supervisors_count,
-				COALESCE(s.lgas_count, egs.lgas_count, 0) AS total_lgas,
-				COALESCE(egs.state_supervisors_count, (
-					SELECT COUNT(*) FROM state_election_supervisors ses
+				COALESCE(s.polling_units_count, 0) AS total_pus,
+				(
+					SELECT COUNT(*)::bigint FROM ward_election_supervisors wes
+					JOIN wards w ON w.id = wes.ward_id
+					JOIN lgas l ON l.id = w.lga_id
+					WHERE l.state_id = s.id
+					  AND ($1::bigint = 0 OR wes.election_group_id = $1)
+					  AND ($2::int = 0 OR wes.party_id = $2)
+				) AS ward_supervisors_count,
+				COALESCE(s.wards_count, 0) AS total_wards,
+				(
+					SELECT COUNT(*)::bigint FROM lga_election_supervisors les
+					JOIN lgas l ON l.id = les.lga_id
+					WHERE l.state_id = s.id
+					  AND ($1::bigint = 0 OR les.election_group_id = $1)
+					  AND ($2::int = 0 OR les.party_id = $2)
+				) AS lga_supervisors_count,
+				COALESCE(s.lgas_count, 0) AS total_lgas,
+				(
+					SELECT COUNT(*)::bigint FROM state_election_supervisors ses
 					WHERE ses.state_id = s.id
 					  AND ($1::bigint = 0 OR ses.election_group_id = $1)
 					  AND ($2::int = 0 OR ses.party_id = $2)
-				), 0) AS state_supervisors_count,
+				) AS state_supervisors_count,
 				(
 					SELECT COALESCE(json_agg(json_build_object(
 						'id', u.id,
@@ -1238,8 +1292,14 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 					) u
 				) AS supervisors
 			FROM c_states s
-			LEFT JOIN election_group_states egs
-				ON egs.state_id = s.id AND egs.election_group_id = $1
+			LEFT JOIN (
+				SELECT
+					state_id,
+					SUM(pu_agents_count)::bigint AS pu_agents_count
+				FROM election_group_polling_units
+				WHERE ($1::bigint = 0 OR election_group_id = $1)
+				GROUP BY state_id
+			) egs ON egs.state_id = s.id
 			WHERE s.country_id = $3
 			ORDER BY s.name ASC`
 		args = []interface{}{electionGroupID, partyID, constants.NigeriaCountryID}

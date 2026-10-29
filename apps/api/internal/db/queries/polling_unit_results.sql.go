@@ -242,25 +242,6 @@ func (q *Queries) IncrementElectionResultCount(ctx context.Context, id int32) er
 	return err
 }
 
-const incrementPartyElectionGroupResultCount = `-- name: IncrementPartyElectionGroupResultCount :exec
-INSERT INTO party_election_groups (party_id, election_group_id, results_submitted_count)
-VALUES ($1, $2, 1)
-ON CONFLICT (party_id, election_group_id)
-DO UPDATE SET
-  results_submitted_count = party_election_groups.results_submitted_count + 1,
-  updated_at              = NOW()
-`
-
-type IncrementPartyElectionGroupResultCountParams struct {
-	PartyID         int16 `json:"party_id"`
-	ElectionGroupID int32 `json:"election_group_id"`
-}
-
-func (q *Queries) IncrementPartyElectionGroupResultCount(ctx context.Context, arg IncrementPartyElectionGroupResultCountParams) error {
-	_, err := q.db.Exec(ctx, incrementPartyElectionGroupResultCount, arg.PartyID, arg.ElectionGroupID)
-	return err
-}
-
 const listPollingUnitResults = `-- name: ListPollingUnitResults :many
 SELECT id, assignment_id, election_id, election_group_id, polling_unit_id, submitted_by, party_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, result_sheet_image_url, result_sheet_video_url, status, ai_extracted_data, result_is_ai_generated, ai_confidence_score, disputed_reason, confirmed_at, confirmed_by, up_votes, down_votes, uploaded_by_inec, created_at, updated_at
 FROM polling_unit_results

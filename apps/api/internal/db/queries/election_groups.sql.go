@@ -167,11 +167,14 @@ SELECT
     eg.active, 
     eg.created_at, 
     eg.updated_at,
-    COALESCE(peg.polling_agents_coverage, '{}'::jsonb)::jsonb AS polling_agents_coverage,
-    COALESCE(peg.elections_contesting, 0)::integer AS elections_contesting
+    '{}'::jsonb AS polling_agents_coverage,
+    COALESCE(
+        (SELECT COUNT(DISTINCT ec.election_id)::integer 
+         FROM election_candidates ec 
+         WHERE ec.election_group_id = eg.id AND ec.party_id = $1),
+        0
+    )::integer AS elections_contesting
 FROM election_groups eg
-LEFT JOIN party_election_groups peg 
-    ON eg.id = peg.election_group_id AND peg.party_id = $1
 WHERE ($2::boolean IS NULL OR eg.active = $2::boolean)
 ORDER BY eg.election_date DESC
 `
@@ -249,81 +252,6 @@ func (q *Queries) UpdateElectionGroup(ctx context.Context, arg UpdateElectionGro
 		&i.Name,
 		&i.ElectionDate,
 		&i.Active,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const upsertPartyElectionGroupCoverage = `-- name: UpsertPartyElectionGroupCoverage :one
-INSERT INTO party_election_groups (party_id, election_group_id, polling_agents_coverage, elections_contesting)
-VALUES ($1, $2, $3::jsonb, 0)
-ON CONFLICT (party_id, election_group_id) 
-DO UPDATE SET 
-    polling_agents_coverage = EXCLUDED.polling_agents_coverage,
-    updated_at = NOW()
-RETURNING id, party_id, election_group_id, polling_agents_coverage, elections_contesting, reports_count, updates_count, results_submitted_count, created_at, updated_at
-`
-
-type UpsertPartyElectionGroupCoverageParams struct {
-	PartyID         int16  `json:"party_id"`
-	ElectionGroupID int32  `json:"election_group_id"`
-	Column3         []byte `json:"column_3"`
-}
-
-func (q *Queries) UpsertPartyElectionGroupCoverage(ctx context.Context, arg UpsertPartyElectionGroupCoverageParams) (PartyElectionGroup, error) {
-	row := q.db.QueryRow(ctx, upsertPartyElectionGroupCoverage, arg.PartyID, arg.ElectionGroupID, arg.Column3)
-	var i PartyElectionGroup
-	err := row.Scan(
-		&i.ID,
-		&i.PartyID,
-		&i.ElectionGroupID,
-		&i.PollingAgentsCoverage,
-		&i.ElectionsContesting,
-		&i.ReportsCount,
-		&i.UpdatesCount,
-		&i.ResultsSubmittedCount,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const upsertPartyElectionGroupStats = `-- name: UpsertPartyElectionGroupStats :one
-INSERT INTO party_election_groups (party_id, election_group_id, polling_agents_coverage, elections_contesting)
-VALUES ($1, $2, $3::jsonb, $4)
-ON CONFLICT (party_id, election_group_id) 
-DO UPDATE SET 
-    polling_agents_coverage = EXCLUDED.polling_agents_coverage,
-    elections_contesting = EXCLUDED.elections_contesting,
-    updated_at = NOW()
-RETURNING id, party_id, election_group_id, polling_agents_coverage, elections_contesting, reports_count, updates_count, results_submitted_count, created_at, updated_at
-`
-
-type UpsertPartyElectionGroupStatsParams struct {
-	PartyID             int16  `json:"party_id"`
-	ElectionGroupID     int32  `json:"election_group_id"`
-	Column3             []byte `json:"column_3"`
-	ElectionsContesting int32  `json:"elections_contesting"`
-}
-
-func (q *Queries) UpsertPartyElectionGroupStats(ctx context.Context, arg UpsertPartyElectionGroupStatsParams) (PartyElectionGroup, error) {
-	row := q.db.QueryRow(ctx, upsertPartyElectionGroupStats,
-		arg.PartyID,
-		arg.ElectionGroupID,
-		arg.Column3,
-		arg.ElectionsContesting,
-	)
-	var i PartyElectionGroup
-	err := row.Scan(
-		&i.ID,
-		&i.PartyID,
-		&i.ElectionGroupID,
-		&i.PollingAgentsCoverage,
-		&i.ElectionsContesting,
-		&i.ReportsCount,
-		&i.UpdatesCount,
-		&i.ResultsSubmittedCount,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

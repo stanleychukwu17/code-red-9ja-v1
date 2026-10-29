@@ -54,36 +54,8 @@ func (h *Handler) initiateStatsRollup(ctx context.Context, egID int32, roleType 
 				slog.Warn("failed to enqueue PU stats refresh task", "err", err, "pollingUnitID", puID)
 			}
 		}
-	case "ward_supervisor", "ward_election_supervisor":
-		if wardID > 0 {
-			if err := h.distributor.DistributeTaskRefreshWardStats(ctx, &worker.RefreshWardStatsPayload{
-				ElectionGroupID: egID,
-				WardID:          wardID,
-				LGAID:           lgaID,
-				StateID:         stateID,
-			}); err != nil {
-				slog.Warn("failed to enqueue Ward stats refresh task", "err", err, "wardID", wardID)
-			}
-		}
-	case "lga_supervisor", "lga_election_supervisor":
-		if lgaID > 0 {
-			if err := h.distributor.DistributeTaskRefreshLGAStats(ctx, &worker.RefreshLGAStatsPayload{
-				ElectionGroupID: egID,
-				LGAID:           lgaID,
-				StateID:         stateID,
-			}); err != nil {
-				slog.Warn("failed to enqueue LGA stats refresh task", "err", err, "lgaID", lgaID)
-			}
-		}
-	case "state_supervisor", "state_election_supervisor":
-		if stateID > 0 {
-			if err := h.distributor.DistributeTaskRefreshStateStats(ctx, &worker.RefreshStateStatsPayload{
-				ElectionGroupID: egID,
-				StateID:         stateID,
-			}); err != nil {
-				slog.Warn("failed to enqueue State stats refresh task", "err", err, "stateID", stateID)
-			}
-		}
+	case "ward_supervisor", "ward_election_supervisor", "lga_supervisor", "lga_election_supervisor", "state_supervisor", "state_election_supervisor":
+		// Supervisor stats are computed dynamically via real-time COUNT queries on supervisor tables
 	}
 }
 
@@ -872,170 +844,20 @@ func adjustAgentStats(ctx context.Context, dbtx queries.DBTX, q *queries.Queries
 		}
 
 		_ = q.UpsertElectionGroupPUPartyEntry(ctx, queries.UpsertElectionGroupPUPartyEntryParams{
-			ElectionGroupID: egID,
-			PollingUnitID:   puID,
-			PartyID:         partyID,
-			Delta:           delta,
-		})
-		_ = q.UpsertElectionGroupWardPartyEntry(ctx, queries.UpsertElectionGroupWardPartyEntryParams{
-			ElectionGroupID: egID,
-			WardID:          wardID_,
-			PartyID:         partyID,
-			AgentsDelta:     delta,
-			UniquePuDelta:   uniquePuDelta,
-		})
-		_ = q.UpsertElectionGroupLGAPartyEntry(ctx, queries.UpsertElectionGroupLGAPartyEntryParams{
-			ElectionGroupID: egID,
-			LgaID:           lgaID_,
-			PartyID:         partyID,
-			AgentsDelta:     delta,
-			UniquePuDelta:   uniquePuDelta,
-		})
-		_ = q.UpsertElectionGroupStatePartyEntry(ctx, queries.UpsertElectionGroupStatePartyEntryParams{
-			ElectionGroupID: egID,
-			StateID:         stateID_,
-			PartyID:         partyID,
-			AgentsDelta:     delta,
-			UniquePuDelta:   uniquePuDelta,
+			AgentsDelta:           delta,
+			ElectionGroupID:       egID,
+			PollingUnitID:         puID,
+			PartyID:               partyID,
+			StateID:               pgtype.Int2{Int16: stateID_, Valid: true},
+			LgaID:                 pgtype.Int4{Int32: lgaID_, Valid: true},
+			WardID:                pgtype.Int4{Int32: wardID_, Valid: true},
+			StateConstituencyID:   pgtype.Int4{Int32: wardStateConstID, Valid: true},
+			FederalConstituencyID: pgtype.Int4{Int32: puFedConstID, Valid: true},
+			SenatorialDistrictID:  pgtype.Int4{Int32: puSenateID, Valid: true},
 		})
 
-	case "ward_election_supervisor", "ward_supervisor":
-		if wardID <= 0 {
-			return
-		}
-		var wardStateConstID, lgaFedConstID, lgaSenateID int32
-		var sID int16
-		var lID int32
-		_ = dbtx.QueryRow(ctx, `
-			SELECT COALESCE(w.state_constituency_id, 0), COALESCE(l.federal_constituency_id, 0), COALESCE(l.senatorial_district_id, 0),
-			       w.state_id, w.lga_id
-			FROM wards w JOIN lgas l ON l.id = w.lga_id
-			WHERE w.id = $1 LIMIT 1`, wardID,
-		).Scan(&wardStateConstID, &lgaFedConstID, &lgaSenateID, &sID, &lID)
-		if stateID <= 0 {
-			stateID = sID
-		}
-		if lgaID <= 0 {
-			lgaID = lID
-		}
-
-		var wardSupCount int32
-		_ = dbtx.QueryRow(ctx, `
-			SELECT COUNT(*)::int FROM ward_election_supervisors
-			WHERE election_group_id = $1 AND ward_id = $2 AND party_id = $3`,
-			egID, wardID, partyID,
-		).Scan(&wardSupCount)
-
-		uniqueWardSup := int32(0)
-		if isIncrement {
-			if wardSupCount <= 1 {
-				uniqueWardSup = 1
-			}
-		} else {
-			if wardSupCount == 0 {
-				uniqueWardSup = -1
-			}
-		}
-
-		_ = q.AdjustElectionGroupWardWardSupervisorCounts(ctx, queries.AdjustElectionGroupWardWardSupervisorCountsParams{
-			ElectionGroupID: egID,
-			WardID:          wardID,
-			PartyID:         partyID,
-			Delta:           delta,
-		})
-		if lgaID > 0 {
-			_ = q.AdjustElectionGroupLGAWardSupervisorCounts(ctx, queries.AdjustElectionGroupLGAWardSupervisorCountsParams{
-				ElectionGroupID: egID,
-				LgaID:           lgaID,
-				PartyID:         partyID,
-				Delta:           delta,
-				UniqueDelta:     uniqueWardSup,
-			})
-		}
-		if stateID > 0 {
-			_ = q.AdjustElectionGroupStateWardSupervisorCounts(ctx, queries.AdjustElectionGroupStateWardSupervisorCountsParams{
-				ElectionGroupID: egID,
-				StateID:         stateID,
-				PartyID:         partyID,
-				Delta:           delta,
-				UniqueDelta:     uniqueWardSup,
-			})
-		}
-
-	case "lga_election_supervisor", "lga_supervisor":
-		if lgaID <= 0 {
-			return
-		}
-		var lgaFedConstID, lgaSenateID int32
-		var sID int16
-		_ = dbtx.QueryRow(ctx, `SELECT COALESCE(federal_constituency_id, 0), COALESCE(senatorial_district_id, 0), state_id FROM lgas WHERE id = $1 LIMIT 1`, lgaID).Scan(&lgaFedConstID, &lgaSenateID, &sID)
-		if stateID <= 0 {
-			stateID = sID
-		}
-
-		var lgaSupCount int32
-		_ = dbtx.QueryRow(ctx, `
-			SELECT COUNT(*)::int FROM lga_election_supervisors
-			WHERE election_group_id = $1 AND lga_id = $2 AND party_id = $3`,
-			egID, lgaID, partyID,
-		).Scan(&lgaSupCount)
-
-		uniqueLgaSup := int32(0)
-		if isIncrement {
-			if lgaSupCount <= 1 {
-				uniqueLgaSup = 1
-			}
-		} else {
-			if lgaSupCount == 0 {
-				uniqueLgaSup = -1
-			}
-		}
-
-		_ = q.AdjustElectionGroupLGALGASupervisorCounts(ctx, queries.AdjustElectionGroupLGALGASupervisorCountsParams{
-			ElectionGroupID: egID,
-			LgaID:           lgaID,
-			PartyID:         partyID,
-			Delta:           delta,
-		})
-		if stateID > 0 {
-			_ = q.AdjustElectionGroupStateLGASupervisorCounts(ctx, queries.AdjustElectionGroupStateLGASupervisorCountsParams{
-				ElectionGroupID: egID,
-				StateID:         stateID,
-				PartyID:         partyID,
-				Delta:           delta,
-				UniqueDelta:     uniqueLgaSup,
-			})
-		}
-
-	case "state_election_supervisor", "state_supervisor":
-		if stateID <= 0 {
-			return
-		}
-		var stateSupCount int32
-		_ = dbtx.QueryRow(ctx, `
-			SELECT COUNT(*)::int FROM state_election_supervisors
-			WHERE election_group_id = $1 AND state_id = $2 AND party_id = $3`,
-			egID, stateID, partyID,
-		).Scan(&stateSupCount)
-
-		uniqueStateSup := int32(0)
-		if isIncrement {
-			if stateSupCount <= 1 {
-				uniqueStateSup = 1
-			}
-		} else {
-			if stateSupCount == 0 {
-				uniqueStateSup = -1
-			}
-		}
-
-		_ = q.AdjustElectionGroupStateStateSupervisorCounts(ctx, queries.AdjustElectionGroupStateStateSupervisorCountsParams{
-			ElectionGroupID: egID,
-			StateID:         stateID,
-			PartyID:         partyID,
-			Delta:           delta,
-		})
-	}
+	case "ward_election_supervisor", "ward_supervisor", "lga_election_supervisor", "lga_supervisor", "state_election_supervisor", "state_supervisor":
+		// Supervisor stats are computed dynamically via real-time COUNT queries on supervisor tables	}
 }
 
 func stringPtr(s string) *string {

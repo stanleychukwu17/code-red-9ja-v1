@@ -62,36 +62,8 @@ func (s *Service) initiateStatsRollup(ctx context.Context, egID int32, roleType 
 				slog.Warn("failed to enqueue PU stats refresh task", "err", err, "pollingUnitID", puID)
 			}
 		}
-	case "ward_supervisor", "ward_election_supervisor":
-		if wardID > 0 {
-			if err := s.taskDistributor.DistributeTaskRefreshWardStats(ctx, &worker.RefreshWardStatsPayload{
-				ElectionGroupID: egID,
-				WardID:          wardID,
-				LGAID:           lgaID,
-				StateID:         stateID,
-			}); err != nil {
-				slog.Warn("failed to enqueue Ward stats refresh task", "err", err, "wardID", wardID)
-			}
-		}
-	case "lga_supervisor", "lga_election_supervisor":
-		if lgaID > 0 {
-			if err := s.taskDistributor.DistributeTaskRefreshLGAStats(ctx, &worker.RefreshLGAStatsPayload{
-				ElectionGroupID: egID,
-				LGAID:           lgaID,
-				StateID:         stateID,
-			}); err != nil {
-				slog.Warn("failed to enqueue LGA stats refresh task", "err", err, "lgaID", lgaID)
-			}
-		}
-	case "state_supervisor", "state_election_supervisor":
-		if stateID > 0 {
-			if err := s.taskDistributor.DistributeTaskRefreshStateStats(ctx, &worker.RefreshStateStatsPayload{
-				ElectionGroupID: egID,
-				StateID:         stateID,
-			}); err != nil {
-				slog.Warn("failed to enqueue State stats refresh task", "err", err, "stateID", stateID)
-			}
-		}
+	case "ward_supervisor", "ward_election_supervisor", "lga_supervisor", "lga_election_supervisor", "state_supervisor", "state_election_supervisor":
+		// Supervisor stats are computed dynamically via real-time COUNT queries on supervisor tables
 	}
 }
 
@@ -223,19 +195,6 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 		return 0, fmt.Errorf("failed to create user referral record: %w", err)
 	}
 
-	// Increment applications_count on election_group_polling_units for this PU & party
-	if input.PollingUnitID > 0 {
-		if adjErr := txQueries.AdjustElectionGroupPollingUnitApplicationCounts(ctx, queries.AdjustElectionGroupPollingUnitApplicationCountsParams{
-			ElectionGroupID: input.ElectionGroupID,
-			PollingUnitID:   input.PollingUnitID,
-			PartyID:         int16(input.PartyID),
-			AppDelta:        1,
-			AcceptedDelta:   0,
-			RejectedDelta:   0,
-		}); adjErr != nil {
-			return 0, fmt.Errorf("failed to adjust polling unit application counts: %w", adjErr)
-		}
-	}
 
 	// Process referred user's referral record linking & increment total_referrals (best effort)
 	if refErr := s.updateReferralOnApplicationSubmission(ctx, txQueries, input.UserID, int64(input.PartyID), []int32{input.ElectionGroupID}, int16(input.CurrentState), 1); refErr != nil {
@@ -653,62 +612,6 @@ func (s *Service) RejectApplication(ctx context.Context, id int64, reason string
 		stateID = app.StateID.Int16
 	}
 
-	// Adjust scope application counts and national application counts
-	switch role {
-	case "ward_election_supervisor", "ward_supervisor":
-		if wardID > 0 {
-			_ = s.queries.AdjustElectionGroupWardApplicationCounts(ctx, queries.AdjustElectionGroupWardApplicationCountsParams{
-				ElectionGroupID:      egID,
-				WardID:               wardID,
-				PartyID:              partyID,
-				AppDelta:             0,
-				AcceptedDelta:        0,
-				RejectedDelta:        1,
-				WardSupAppDelta:      0,
-				WardSupAcceptedDelta: 0,
-				WardSupRejectedDelta: 1,
-			})
-		}
-	case "lga_election_supervisor", "lga_supervisor":
-		if lgaID > 0 {
-			_ = s.queries.AdjustElectionGroupLGAApplicationCounts(ctx, queries.AdjustElectionGroupLGAApplicationCountsParams{
-				ElectionGroupID:     egID,
-				LgaID:               lgaID,
-				PartyID:             partyID,
-				AppDelta:            0,
-				AcceptedDelta:       0,
-				RejectedDelta:       1,
-				LgaSupAppDelta:      0,
-				LgaSupAcceptedDelta: 0,
-				LgaSupRejectedDelta: 1,
-			})
-		}
-	case "state_election_supervisor", "state_supervisor":
-		if stateID > 0 {
-			_ = s.queries.AdjustElectionGroupStateApplicationCounts(ctx, queries.AdjustElectionGroupStateApplicationCountsParams{
-				ElectionGroupID:       egID,
-				StateID:               stateID,
-				PartyID:               partyID,
-				AppDelta:              0,
-				AcceptedDelta:         0,
-				RejectedDelta:         1,
-				StateSupAppDelta:      0,
-				StateSupAcceptedDelta: 0,
-				StateSupRejectedDelta: 1,
-			})
-		}
-	default:
-		if puID > 0 {
-			_ = s.queries.AdjustElectionGroupPollingUnitApplicationCounts(ctx, queries.AdjustElectionGroupPollingUnitApplicationCountsParams{
-				ElectionGroupID: egID,
-				PollingUnitID:   puID,
-				PartyID:         partyID,
-				AppDelta:        0,
-				AcceptedDelta:   0,
-				RejectedDelta:   1,
-			})
-		}
-	}
 
 	// Initiate cascading stats rollup
 	s.initiateStatsRollup(ctx, egID, role, puID, wardID, lgaID, stateID)
@@ -971,59 +874,7 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 			return queries.PartyApplication{}, fmt.Errorf("failed to assign user to role %s: %w", roleType, err)
 		}
 
-		// Fetch lga geography for fed_const and senate IDs
-		var lgaFedConstID, lgaSenateID int32
-		_ = s.pool.QueryRow(ctx, `SELECT federal_constituency_id, senatorial_district_id FROM lgas WHERE id = $1 LIMIT 1`,
-			input.LgaID,
-		).Scan(&lgaFedConstID, &lgaSenateID)
-
-		// Uniqueness: was this the first LGA supervisor for this party in this LGA?
-		existingLgaSupCount, countErr := txQueries.GetLGASupervisorCount(ctx, queries.GetLGASupervisorCountParams{
-			ElectionGroupID: egID,
-			LgaID:           input.LgaID,
-			PartyID:         partyID,
-		})
-		if countErr != nil {
-			existingLgaSupCount = 0
-		}
-		isUniqueLgaSup := int32(0)
-		if existingLgaSupCount <= 1 {
-			isUniqueLgaSup = 1
-		}
-
-		// lga row
-		err = txQueries.AdjustElectionGroupLGALGASupervisorCounts(ctx, queries.AdjustElectionGroupLGALGASupervisorCountsParams{
-			ElectionGroupID: egID,
-			LgaID:           input.LgaID,
-			PartyID:         partyID,
-			Delta:           1,
-		})
-		if err != nil {
-			return queries.PartyApplication{}, fmt.Errorf("failed to adjust LGA supervisor counts on lga: %w", err)
-		}
-
-		// state row
-		err = txQueries.AdjustElectionGroupStateLGASupervisorCounts(ctx, queries.AdjustElectionGroupStateLGASupervisorCountsParams{
-			ElectionGroupID: egID,
-			StateID:         input.StateID,
-			PartyID:         partyID,
-			Delta:           1,
-			UniqueDelta:     isUniqueLgaSup,
-		})
-		if err != nil {
-			return queries.PartyApplication{}, fmt.Errorf("failed to adjust LGA supervisor counts on state: %w", err)
-		}
-
-		// national row
-		err = txQueries.AdjustElectionGroupNationalLGASupervisorCounts(ctx, queries.AdjustElectionGroupNationalLGASupervisorCountsParams{
-			ElectionGroupID: egID,
-			PartyID:         partyID,
-			Delta:           1,
-			UniqueDelta:     isUniqueLgaSup,
-		})
-		if err != nil {
-			return queries.PartyApplication{}, fmt.Errorf("failed to adjust LGA supervisor counts on national: %w", err)
-		}
+		// LGA supervisor created. Stats are aggregated dynamically.
 
 	} else if roleType == "ward_election_supervisor" || roleType == "ward_supervisor" {
 		_, err = txQueries.CreateWardSupervisor(ctx, queries.CreateWardSupervisorParams{
@@ -1041,73 +892,7 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 			return queries.PartyApplication{}, fmt.Errorf("failed to assign user to role %s: %w", roleType, err)
 		}
 
-		// Fetch full geography from ward + lga
-		var wardStateConstID int32
-		var lgaFedConstID, lgaSenateID int32
-		_ = s.pool.QueryRow(ctx, `
-			SELECT w.state_constituency_id, l.federal_constituency_id, l.senatorial_district_id
-			FROM wards w JOIN lgas l ON l.id = w.lga_id
-			WHERE w.id = $1 LIMIT 1`, input.WardID,
-		).Scan(&wardStateConstID, &lgaFedConstID, &lgaSenateID)
-
-		// Uniqueness: first ward supervisor for this party in this ward?
-		existingWardSupCount, countErr := txQueries.GetWardSupervisorCount(ctx, queries.GetWardSupervisorCountParams{
-			ElectionGroupID: egID,
-			WardID:          input.WardID,
-			PartyID:         partyID,
-		})
-		if countErr != nil {
-			existingWardSupCount = 0
-		}
-		isUniqueWardSup := int32(0)
-		if existingWardSupCount <= 1 {
-			isUniqueWardSup = 1
-		}
-
-		// ward row
-		err = txQueries.AdjustElectionGroupWardWardSupervisorCounts(ctx, queries.AdjustElectionGroupWardWardSupervisorCountsParams{
-			ElectionGroupID: egID,
-			WardID:          input.WardID,
-			PartyID:         partyID,
-			Delta:           1,
-		})
-		if err != nil {
-			return queries.PartyApplication{}, fmt.Errorf("failed to adjust ward supervisor counts on ward: %w", err)
-		}
-
-		// lga row
-		err = txQueries.AdjustElectionGroupLGAWardSupervisorCounts(ctx, queries.AdjustElectionGroupLGAWardSupervisorCountsParams{
-			ElectionGroupID: egID,
-			LgaID:           input.LgaID,
-			PartyID:         partyID,
-			Delta:           1,
-			UniqueDelta:     isUniqueWardSup,
-		})
-		if err != nil {
-			return queries.PartyApplication{}, fmt.Errorf("failed to adjust ward supervisor counts on lga: %w", err)
-		}
-		// state row
-		err = txQueries.AdjustElectionGroupStateWardSupervisorCounts(ctx, queries.AdjustElectionGroupStateWardSupervisorCountsParams{
-			ElectionGroupID: egID,
-			StateID:         input.StateID,
-			PartyID:         partyID,
-			Delta:           1,
-			UniqueDelta:     isUniqueWardSup,
-		})
-		if err != nil {
-			return queries.PartyApplication{}, fmt.Errorf("failed to adjust ward supervisor counts on state: %w", err)
-		}
-
-		// national row
-		err = txQueries.AdjustElectionGroupNationalWardSupervisorCounts(ctx, queries.AdjustElectionGroupNationalWardSupervisorCountsParams{
-			ElectionGroupID: egID,
-			PartyID:         partyID,
-			Delta:           1,
-			UniqueDelta:     isUniqueWardSup,
-		})
-		if err != nil {
-			return queries.PartyApplication{}, fmt.Errorf("failed to adjust ward supervisor counts on national: %w", err)
-		}
+		// Ward supervisor created. Stats are aggregated dynamically.
 
 	} else {
 		// Default: polling agent
@@ -1160,107 +945,21 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 				uniquePuDelta = 1
 			}
 
-			// 3. Upsert party entry at each level
+			// 3. Upsert party entry for polling unit
 			if err = txQueries.UpsertElectionGroupPUPartyEntry(ctx, queries.UpsertElectionGroupPUPartyEntryParams{
-				ElectionGroupID: egID,
-				PollingUnitID:   pollingUnitID,
-				PartyID:         partyID,
-				Delta:           1,
+				AgentsDelta:           1,
+				ElectionGroupID:       egID,
+				PollingUnitID:         pollingUnitID,
+				PartyID:               partyID,
+				StateID:               pgtype.Int2{Int16: geo.stateID, Valid: true},
+				LgaID:                 pgtype.Int4{Int32: geo.lgaID, Valid: true},
+				WardID:                pgtype.Int4{Int32: geo.wardID, Valid: true},
+				StateConstituencyID:   pgtype.Int4{Int32: wardStateConstID, Valid: true},
+				FederalConstituencyID: pgtype.Int4{Int32: puFedConstID, Valid: true},
+				SenatorialDistrictID:  pgtype.Int4{Int32: puSenateID, Valid: true},
 			}); err != nil {
 				return queries.PartyApplication{}, fmt.Errorf("failed UpsertElectionGroupPUPartyEntry: %v", err)
 			}
-			if err = txQueries.UpsertElectionGroupWardPartyEntry(ctx, queries.UpsertElectionGroupWardPartyEntryParams{
-				ElectionGroupID: egID,
-				WardID:          geo.wardID,
-				PartyID:         partyID,
-				AgentsDelta:     1,
-				UniquePuDelta:   uniquePuDelta,
-			}); err != nil {
-				return queries.PartyApplication{}, fmt.Errorf("failed UpsertElectionGroupWardPartyEntry: %v", err)
-			}
-			if err = txQueries.UpsertElectionGroupLGAPartyEntry(ctx, queries.UpsertElectionGroupLGAPartyEntryParams{
-				ElectionGroupID: egID,
-				LgaID:           geo.lgaID,
-				PartyID:         partyID,
-				AgentsDelta:     1,
-				UniquePuDelta:   uniquePuDelta,
-			}); err != nil {
-				return queries.PartyApplication{}, fmt.Errorf("failed UpsertElectionGroupLGAPartyEntry: %v", err)
-			}
-			if err = txQueries.UpsertElectionGroupStatePartyEntry(ctx, queries.UpsertElectionGroupStatePartyEntryParams{
-				ElectionGroupID: egID,
-				StateID:         geo.stateID,
-				PartyID:         partyID,
-				AgentsDelta:     1,
-				UniquePuDelta:   uniquePuDelta,
-			}); err != nil {
-				return queries.PartyApplication{}, fmt.Errorf("failed UpsertElectionGroupStatePartyEntry: %v", err)
-			}
-		}
-	}
-
-	// Increment accepted application metrics on scope tables
-	if roleType == "ward_election_supervisor" || roleType == "ward_supervisor" {
-		if input.WardID > 0 {
-			_ = txQueries.AdjustElectionGroupWardApplicationCounts(ctx, queries.AdjustElectionGroupWardApplicationCountsParams{
-				ElectionGroupID:      egID,
-				WardID:               input.WardID,
-				PartyID:              partyID,
-				AppDelta:             0,
-				AcceptedDelta:        1,
-				RejectedDelta:        0,
-				WardSupAppDelta:      0,
-				WardSupAcceptedDelta: 1,
-				WardSupRejectedDelta: 0,
-			})
-		}
-	} else if roleType == "lga_election_supervisor" || roleType == "lga_supervisor" {
-		if input.LgaID > 0 {
-			_ = txQueries.AdjustElectionGroupLGAApplicationCounts(ctx, queries.AdjustElectionGroupLGAApplicationCountsParams{
-				ElectionGroupID:      egID,
-				LgaID:                input.LgaID,
-				PartyID:              partyID,
-				AppDelta:             0,
-				AcceptedDelta:        1,
-				RejectedDelta:        0,
-				WardSupAppDelta:      0,
-				WardSupAcceptedDelta: 0,
-				WardSupRejectedDelta: 0,
-				LgaSupAppDelta:       0,
-				LgaSupAcceptedDelta:  1,
-				LgaSupRejectedDelta:  0,
-			})
-		}
-	} else if roleType == "state_election_supervisor" || roleType == "state_supervisor" {
-		if input.StateID > 0 {
-			_ = txQueries.AdjustElectionGroupStateApplicationCounts(ctx, queries.AdjustElectionGroupStateApplicationCountsParams{
-				ElectionGroupID:       egID,
-				StateID:               input.StateID,
-				PartyID:               partyID,
-				AppDelta:              0,
-				AcceptedDelta:         1,
-				RejectedDelta:         0,
-				WardSupAppDelta:       0,
-				WardSupAcceptedDelta:  0,
-				WardSupRejectedDelta:  0,
-				LgaSupAppDelta:        0,
-				LgaSupAcceptedDelta:   0,
-				LgaSupRejectedDelta:   0,
-				StateSupAppDelta:      0,
-				StateSupAcceptedDelta: 1,
-				StateSupRejectedDelta: 0,
-			})
-		}
-	} else {
-		if pollingUnitID > 0 {
-			_ = txQueries.AdjustElectionGroupPollingUnitApplicationCounts(ctx, queries.AdjustElectionGroupPollingUnitApplicationCountsParams{
-				ElectionGroupID: egID,
-				PollingUnitID:   pollingUnitID,
-				PartyID:         partyID,
-				AppDelta:        0,
-				AcceptedDelta:   1,
-				RejectedDelta:   0,
-			})
 		}
 	}
 

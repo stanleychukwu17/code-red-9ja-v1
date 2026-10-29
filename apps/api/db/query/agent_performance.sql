@@ -60,8 +60,8 @@ SELECT
   wes.role_type,
   100::numeric(5,2) AS readiness_pct,
   COALESCE(TO_CHAR(wes.arrived_at, 'HH12:MI AM'), '')::varchar AS arrived_at,
-  COALESCE(TO_CHAR(egw.pu_average_election_started_at, 'HH12:MI AM'), '')::varchar AS election_started_at,
-  COALESCE(TO_CHAR(egw.pu_average_election_ended_at, 'HH12:MI AM'), '')::varchar AS election_ended_at,
+  ''::varchar AS election_started_at,
+  ''::varchar AS election_ended_at,
   COALESCE(ae.total_earned_kobo, wes.earned_amount_kobo, 0)::bigint AS earnings_kobo,
   CONCAT('₦', TO_CHAR(COALESCE(ae.total_earned_kobo, wes.earned_amount_kobo, 0) / 100.0, 'FM999,999,999,990.00'))::varchar AS earnings_formatted,
   (wes.completed_at IS NOT NULL)::boolean AS completion_status,
@@ -74,7 +74,6 @@ FROM ward_election_supervisors wes
 JOIN users u ON u.id = wes.user_id
 LEFT JOIN wards w ON w.id = wes.ward_id
 LEFT JOIN agent_earnings ae ON ae.user_id = wes.user_id AND ae.election_group_id = wes.election_group_id AND ae.role_type = wes.role_type
-LEFT JOIN election_group_wards egw ON egw.election_group_id = wes.election_group_id AND egw.ward_id = wes.ward_id
 WHERE
   (sqlc.arg(party_id)::smallint = 0 OR wes.party_id = sqlc.arg(party_id)) AND
   (sqlc.arg(election_group_id)::integer = 0 OR wes.election_group_id = sqlc.arg(election_group_id)) AND
@@ -101,8 +100,8 @@ SELECT
   les.role_type,
   100::numeric(5,2) AS readiness_pct,
   COALESCE(TO_CHAR(les.arrived_at, 'HH12:MI AM'), '')::varchar AS arrived_at,
-  COALESCE(TO_CHAR(egl.pu_average_election_started_at, 'HH12:MI AM'), '')::varchar AS election_started_at,
-  COALESCE(TO_CHAR(egl.pu_average_election_ended_at, 'HH12:MI AM'), '')::varchar AS election_ended_at,
+  ''::varchar AS election_started_at,
+  ''::varchar AS election_ended_at,
   COALESCE(ae.total_earned_kobo, les.earned_amount_kobo, 0)::bigint AS earnings_kobo,
   CONCAT('₦', TO_CHAR(COALESCE(ae.total_earned_kobo, les.earned_amount_kobo, 0) / 100.0, 'FM999,999,999,990.00'))::varchar AS earnings_formatted,
   (les.completed_at IS NOT NULL)::boolean AS completion_status,
@@ -114,7 +113,6 @@ FROM lga_election_supervisors les
 JOIN users u ON u.id = les.user_id
 LEFT JOIN lgas l ON l.id = les.lga_id
 LEFT JOIN agent_earnings ae ON ae.user_id = les.user_id AND ae.election_group_id = les.election_group_id AND ae.role_type = les.role_type
-LEFT JOIN election_group_lgas egl ON egl.election_group_id = les.election_group_id AND egl.lga_id = les.lga_id
 WHERE
   (sqlc.arg(party_id)::smallint = 0 OR les.party_id = sqlc.arg(party_id)) AND
   (sqlc.arg(election_group_id)::integer = 0 OR les.election_group_id = sqlc.arg(election_group_id)) AND
@@ -140,8 +138,8 @@ SELECT
   ses.role_type,
   100::numeric(5,2) AS readiness_pct,
   COALESCE(TO_CHAR(ses.arrived_at, 'HH12:MI AM'), '')::varchar AS arrived_at,
-  COALESCE(TO_CHAR(egs.pu_average_election_started_at, 'HH12:MI AM'), '')::varchar AS election_started_at,
-  COALESCE(TO_CHAR(egs.pu_average_election_ended_at, 'HH12:MI AM'), '')::varchar AS election_ended_at,
+  ''::varchar AS election_started_at,
+  ''::varchar AS election_ended_at,
   COALESCE(ae.total_earned_kobo, ses.earned_amount_kobo, 0)::bigint AS earnings_kobo,
   CONCAT('₦', TO_CHAR(COALESCE(ae.total_earned_kobo, ses.earned_amount_kobo, 0) / 100.0, 'FM999,999,999,990.00'))::varchar AS earnings_formatted,
   (ses.completed_at IS NOT NULL)::boolean AS completion_status,
@@ -152,7 +150,6 @@ FROM state_election_supervisors ses
 JOIN users u ON u.id = ses.user_id
 LEFT JOIN c_states s ON s.id = ses.state_id
 LEFT JOIN agent_earnings ae ON ae.user_id = ses.user_id AND ae.election_group_id = ses.election_group_id AND ae.role_type = ses.role_type
-LEFT JOIN election_group_states egs ON egs.election_group_id = ses.election_group_id AND egs.state_id = ses.state_id
 WHERE
   (sqlc.arg(party_id)::smallint = 0 OR ses.party_id = sqlc.arg(party_id)) AND
   (sqlc.arg(election_group_id)::integer = 0 OR ses.election_group_id = sqlc.arg(election_group_id)) AND

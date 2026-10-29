@@ -80,29 +80,46 @@ RETURNING *;
 UPDATE ward_election_supervisors wes
 SET completed_at = COALESCE(wes.completed_at, NOW()),
     updated_at   = NOW()
-FROM election_group_wards egw
-WHERE wes.election_group_id = egw.election_group_id
-  AND wes.ward_id = egw.ward_id
-  AND wes.completed_at IS NULL
-  AND COALESCE((egw.parties->(wes.party_id::text)->>'unique_pu_final_results_uploaded_count')::int, 0) >= COALESCE((egw.parties->(wes.party_id::text)->>'unique_final_results_expected')::int, 1);
+WHERE wes.completed_at IS NULL
+  AND EXISTS (
+    SELECT 1 FROM (
+      SELECT SUM(unique_pu_final_results_uploaded_count) AS uploaded, SUM(unique_final_results_expected) AS expected
+      FROM election_group_parties_polling_units egppu
+      WHERE egppu.election_group_id = wes.election_group_id
+        AND egppu.party_id = wes.party_id
+        AND egppu.ward_id = wes.ward_id
+    ) s
+    WHERE s.uploaded >= s.expected AND s.expected > 0
+  );
 
 -- name: CheckAndUpdateLGASupervisorCompletion :exec
 UPDATE lga_election_supervisors les
 SET completed_at = COALESCE(les.completed_at, NOW()),
     updated_at   = NOW()
-FROM election_group_lgas egl
-WHERE les.election_group_id = egl.election_group_id
-  AND les.lga_id = egl.lga_id
-  AND les.completed_at IS NULL
-  AND COALESCE((egl.parties->(les.party_id::text)->>'unique_pu_final_results_uploaded_count')::int, 0) >= COALESCE((egl.parties->(les.party_id::text)->>'unique_final_results_expected')::int, 1);
+WHERE les.completed_at IS NULL
+  AND EXISTS (
+    SELECT 1 FROM (
+      SELECT SUM(unique_pu_final_results_uploaded_count) AS uploaded, SUM(unique_final_results_expected) AS expected
+      FROM election_group_parties_polling_units egppu
+      WHERE egppu.election_group_id = les.election_group_id
+        AND egppu.party_id = les.party_id
+        AND egppu.lga_id = les.lga_id
+    ) s
+    WHERE s.uploaded >= s.expected AND s.expected > 0
+  );
 
 -- name: CheckAndUpdateStateSupervisorCompletion :exec
 UPDATE state_election_supervisors ses
 SET completed_at = COALESCE(ses.completed_at, NOW()),
     updated_at   = NOW()
-FROM election_group_states egs
-WHERE ses.election_group_id = egs.election_group_id
-  AND ses.state_id = egs.state_id
-  AND ses.completed_at IS NULL
-  AND COALESCE((egs.parties->(ses.party_id::text)->>'unique_pu_final_results_uploaded_count')::int, 0) >= COALESCE((egs.parties->(ses.party_id::text)->>'unique_final_results_expected')::int, 1);
-
+WHERE ses.completed_at IS NULL
+  AND EXISTS (
+    SELECT 1 FROM (
+      SELECT SUM(unique_pu_final_results_uploaded_count) AS uploaded, SUM(unique_final_results_expected) AS expected
+      FROM election_group_parties_polling_units egppu
+      WHERE egppu.election_group_id = ses.election_group_id
+        AND egppu.party_id = ses.party_id
+        AND egppu.state_id = ses.state_id
+    ) s
+    WHERE s.uploaded >= s.expected AND s.expected > 0
+  );

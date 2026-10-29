@@ -243,12 +243,6 @@ func (s *Service) SubmitResult(ctx context.Context, input SubmitResultInput) (qu
 	if err := qtx.IncrementElectionResultCount(ctx, input.ElectionID); err != nil {
 		return queries.PollingUnitResult{}, err
 	}
-	if input.PartyID != nil {
-		_ = qtx.IncrementPartyElectionGroupResultCount(ctx, queries.IncrementPartyElectionGroupResultCountParams{
-			PartyID:         int16(*input.PartyID),
-			ElectionGroupID: input.ElectionGroupID,
-		})
-	}
 	if input.AssignmentID != nil {
 		_ = qtx.IncrementAssignmentResultCount(ctx, *input.AssignmentID)
 	}
@@ -378,12 +372,6 @@ func (s *Service) SubmitBatchResults(ctx context.Context, input SubmitBatchResul
 	}
 
 	_ = qtx.IncrementElectionGroupResultCount(ctx, input.ElectionGroupID)
-	if input.PartyID != nil {
-		_ = qtx.IncrementPartyElectionGroupResultCount(ctx, queries.IncrementPartyElectionGroupResultCountParams{
-			PartyID:         int16(*input.PartyID),
-			ElectionGroupID: input.ElectionGroupID,
-		})
-	}
 	if input.AssignmentID != nil {
 		_ = qtx.IncrementAssignmentResultCount(ctx, *input.AssignmentID)
 	}

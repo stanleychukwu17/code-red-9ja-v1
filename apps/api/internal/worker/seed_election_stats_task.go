@@ -57,48 +57,12 @@ func (redisTaskDistributor *RedisTaskDistributor) DistributeTaskSeedElectionGrou
 // Runs in top-down order (States -> Senatorial Districts -> Federal Constituencies -> LGAs -> State Constituencies -> Wards).
 // Polling units (~176k) are intentionally excluded here and seeded lazily on-demand.
 func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskSeedElectionGroupStats(ctx context.Context, task *asynq.Task) error {
-	// 1. Unmarshal payload from Redis to retrieve the target election group ID
 	var payload SeedElectionGroupStatsPayload
 	if err := json.Unmarshal(task.Payload(), &payload); err != nil {
 		return fmt.Errorf("failed to unmarshal seed payload: %w", err)
 	}
 
 	egID := payload.ElectionGroupID
-	slog.Info("seeding election group stats", "election_group_id", egID)
-
-	// 2. Define the geographic hierarchy steps to initialize with zeroed rows:
-	// Each step executes an idempotent SQL query (`ON CONFLICT DO NOTHING`)
-	// inserting only the regions in-scope for this election group and copying static count baselines.
-	steps := []struct {
-		name string
-		fn   func() error
-	}{
-		// Step A: Seed States (up to 37 states: 36 states + FCT)
-		{"states", func() error { return redisTaskProcessor.queries.SeedElectionGroupStateStats(ctx, egID) }},
-
-		// Step B: Seed Senatorial Districts (up to 109 districts across Nigeria)
-
-		// Step C: Seed Federal Constituencies (up to 360 House of Reps seats)
-
-		// Step D: Seed Local Government Areas (up to 774 LGAs)
-		{"lgas", func() error { return redisTaskProcessor.queries.SeedElectionGroupLGAStats(ctx, egID) }},
-
-		// Step E: Seed State Constituencies (up to 993 State House of Assembly seats)
-
-		// Step F: Seed Electoral Wards (up to ~8,809 wards / registration areas)
-		{"wards", func() error { return redisTaskProcessor.queries.SeedElectionGroupWardStats(ctx, egID) }},
-	}
-
-	// 3. Sequentially run each seed query and log progress; bail early if any query fails
-	for _, step := range steps {
-		if err := step.fn(); err != nil {
-			slog.Error("failed to seed election group stats", "step", step.name, "election_group_id", egID, "error", err)
-			return fmt.Errorf("seed %s failed: %w", step.name, err)
-		}
-		slog.Info("seeded election group stats step", "step", step.name, "election_group_id", egID)
-	}
-
-	// 4. Seeding successfully completed
-	slog.Info("completed seeding election group stats", "election_group_id", egID)
+	slog.Info("seed election group stats (no-op: stats are computed dynamically from polling units)", "election_group_id", egID)
 	return nil
 }

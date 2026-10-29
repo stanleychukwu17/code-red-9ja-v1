@@ -133,33 +133,6 @@ func (q *Queries) IncrementElectionMetricsByGroup(ctx context.Context, arg Incre
 	return err
 }
 
-const incrementPartyElectionGroupMetrics = `-- name: IncrementPartyElectionGroupMetrics :exec
-INSERT INTO party_election_groups (party_id, election_group_id, reports_count, updates_count)
-VALUES ($1, $2, $3, $4)
-ON CONFLICT (party_id, election_group_id)
-DO UPDATE SET 
-  reports_count = party_election_groups.reports_count + EXCLUDED.reports_count,
-  updates_count = party_election_groups.updates_count + EXCLUDED.updates_count,
-  updated_at = NOW()
-`
-
-type IncrementPartyElectionGroupMetricsParams struct {
-	PartyID         int16 `json:"party_id"`
-	ElectionGroupID int32 `json:"election_group_id"`
-	ReportsCount    int32 `json:"reports_count"`
-	UpdatesCount    int32 `json:"updates_count"`
-}
-
-func (q *Queries) IncrementPartyElectionGroupMetrics(ctx context.Context, arg IncrementPartyElectionGroupMetricsParams) error {
-	_, err := q.db.Exec(ctx, incrementPartyElectionGroupMetrics,
-		arg.PartyID,
-		arg.ElectionGroupID,
-		arg.ReportsCount,
-		arg.UpdatesCount,
-	)
-	return err
-}
-
 const incrementPollingUnitAssignmentMetrics = `-- name: IncrementPollingUnitAssignmentMetrics :exec
 UPDATE polling_unit_assignments
 SET 

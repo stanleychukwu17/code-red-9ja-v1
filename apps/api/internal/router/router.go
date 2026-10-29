@@ -554,7 +554,6 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Post("/api/v1/elections/votes", electionsHandler.SubmitElectionVotes)
 		r.Get("/api/v1/elections/{id}/candidates", electionsHandler.GetElectionCandidates)
 		r.Get("/api/v1/election-groups/{id}/vote-status", electionsHandler.GetUserElectionGroupVoteStatus)
-		r.Put("/api/v1/election-groups/{id}/party-stats", electionGroupsHandler.UpsertPartyElectionGroupStats)
 
 		// Geographic Stats pre-aggregated endpoints
 		r.Get("/api/v1/election-groups/{id}/stats/polling-units", electionStatsHandler.GetPollingUnitStats)

@@ -158,82 +158,22 @@ func (redisTaskDistributor *RedisTaskDistributor) DistributeTaskRefreshGlobalSta
 
 // ─── Processors ───────────────────────────────────────────────────────────────
 
-// ProcessTaskRefreshWardStats aggregates PU→Ward and then enqueues the LGA task.
+// ProcessTaskRefreshWardStats is a no-op; Ward stats are aggregated dynamically from polling units.
 func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskRefreshWardStats(ctx context.Context, task *asynq.Task) error {
-	var payload RefreshWardStatsPayload
-	if err := json.Unmarshal(task.Payload(), &payload); err != nil {
-		return fmt.Errorf("failed to unmarshal ward stats payload: %w", err)
-	}
-	slog.Info("refreshing ward stats", "election_group_id", payload.ElectionGroupID, "ward_id", payload.WardID)
-
-	if err := redisTaskProcessor.queries.RefreshSingleElectionGroupWardStats(ctx, queries.RefreshSingleElectionGroupWardStatsParams{
-		ElectionGroupID: payload.ElectionGroupID,
-		WardID:          payload.WardID,
-	}); err != nil {
-		return fmt.Errorf("failed to refresh ward stats: %w", err)
-	}
-
-	// Cascade → LGA (carry state_id from payload)
-	if payload.LGAID > 0 {
-		_ = redisTaskProcessor.taskDistributor.DistributeTaskRefreshLGAStats(ctx, &RefreshLGAStatsPayload{
-			ElectionGroupID: payload.ElectionGroupID,
-			LGAID:           payload.LGAID,
-			StateID:         payload.StateID,
-		})
-	}
-
-	slog.Info("ward stats refreshed", "election_group_id", payload.ElectionGroupID, "ward_id", payload.WardID)
 	return nil
 }
 
-// ProcessTaskRefreshLGAStats aggregates Wards→LGA and then enqueues the State task.
+// ProcessTaskRefreshLGAStats is a no-op; LGA stats are aggregated dynamically from polling units.
 func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskRefreshLGAStats(ctx context.Context, task *asynq.Task) error {
-	var payload RefreshLGAStatsPayload
-	if err := json.Unmarshal(task.Payload(), &payload); err != nil {
-		return fmt.Errorf("failed to unmarshal lga stats payload: %w", err)
-	}
-	slog.Info("refreshing lga stats", "election_group_id", payload.ElectionGroupID, "lga_id", payload.LGAID)
-
-	if err := redisTaskProcessor.queries.RefreshSingleElectionGroupLGAStats(ctx, queries.RefreshSingleElectionGroupLGAStatsParams{
-		ElectionGroupID: payload.ElectionGroupID,
-		LgaID:           payload.LGAID,
-	}); err != nil {
-		return fmt.Errorf("failed to refresh lga stats: %w", err)
-	}
-
-	// Cascade → State
-	if payload.StateID > 0 {
-		_ = redisTaskProcessor.taskDistributor.DistributeTaskRefreshStateStats(ctx, &RefreshStateStatsPayload{
-			ElectionGroupID: payload.ElectionGroupID,
-			StateID:         payload.StateID,
-		})
-	}
-
-	slog.Info("lga stats refreshed", "election_group_id", payload.ElectionGroupID, "lga_id", payload.LGAID)
 	return nil
 }
 
-// ProcessTaskRefreshStateStats aggregates LGAs→State and then enqueues the Global task.
+// ProcessTaskRefreshStateStats is a no-op; State stats are aggregated dynamically from polling units.
 func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskRefreshStateStats(ctx context.Context, task *asynq.Task) error {
-	var payload RefreshStateStatsPayload
-	if err := json.Unmarshal(task.Payload(), &payload); err != nil {
-		return fmt.Errorf("failed to unmarshal state stats payload: %w", err)
-	}
-	slog.Info("refreshing state stats", "election_group_id", payload.ElectionGroupID, "state_id", payload.StateID)
-
-	if err := redisTaskProcessor.queries.RefreshSingleElectionGroupStateStats(ctx, queries.RefreshSingleElectionGroupStateStatsParams{
-		ElectionGroupID: payload.ElectionGroupID,
-		StateID:         payload.StateID,
-	}); err != nil {
-		return fmt.Errorf("failed to refresh state stats: %w", err)
-	}
-
-	slog.Info("state stats refreshed", "election_group_id", payload.ElectionGroupID, "state_id", payload.StateID)
 	return nil
 }
 
 // ProcessTaskRefreshGlobalStats aggregates States→ElectionGroup. Terminal node in the cascade.
 func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskRefreshGlobalStats(ctx context.Context, task *asynq.Task) error {
-	// Global stats table on election_groups is deprecated; state is the top-level geographic rollup.
 	return nil
 }
