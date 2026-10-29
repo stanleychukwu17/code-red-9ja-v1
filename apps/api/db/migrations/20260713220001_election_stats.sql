@@ -36,20 +36,10 @@ CREATE TABLE IF NOT EXISTS election_group_polling_units (
   unique_final_results_expected                        INT         NOT NULL DEFAULT 0,
 
   -- Overall aggregate fields (across all parties at this PU)
-  applications_count                                   INT         NOT NULL DEFAULT 0,
-  accepted_applications_count                          INT         NOT NULL DEFAULT 0,
-  rejected_applications_count                          INT         NOT NULL DEFAULT 0,
   pu_agents_count                                      INT         NOT NULL DEFAULT 0,
   pu_agents_in_attendance_count                        INT         NOT NULL DEFAULT 0,
   pu_reports_count                                     INT         NOT NULL DEFAULT 0,
   pu_updates_count                                     INT         NOT NULL DEFAULT 0,
-  -- Averaged from polling_unit_assignments.election_started_at / election_ended_at
-  pu_average_arrival_time                              TIMESTAMPTZ,
-  pu_average_update_time_interval_in_seconds           FLOAT NOT NULL DEFAULT 0,
-  pu_average_election_started_at                       TIMESTAMPTZ,
-  pu_average_election_ended_at                         TIMESTAMPTZ,
-  -- Averaged from polling_unit_assignments.pu_election_practice_test_readiness_percentage
-  pu_election_practice_test_readiness_percentage       NUMERIC(5,2) NOT NULL DEFAULT 0,
   -- Total rows in polling_unit_results for this PU in this election group
   pu_final_results_uploaded_count                      INT         NOT NULL DEFAULT 0,
   -- Distinct election_ids with >=1 result submission for this PU
@@ -84,9 +74,6 @@ CREATE TABLE IF NOT EXISTS election_group_wards (
   unique_final_results_expected                    INT NOT NULL DEFAULT 1, -- total unique results (a polling unit may have)
 
   -- Application stats
-  applications_count                            INT NOT NULL DEFAULT 0, -- total applications to this ward and it's polling units
-  accepted_applications_count                   INT NOT NULL DEFAULT 0, -- total applications to this ward and it's polling units that were accepted
-  rejected_applications_count                   INT NOT NULL DEFAULT 0, -- total applications to this ward and it's polling units that were rejected
   ward_supervisor_applications_count            INT NOT NULL DEFAULT 0, -- total ward supervisor applications to this ward
   ward_supervisor_accepted_applications_count   INT NOT NULL DEFAULT 0, -- total supervisor applications to this ward that were accepted
   ward_supervisor_rejected_applications_count   INT NOT NULL DEFAULT 0, -- total supervisor applications to this ward that were rejected
@@ -97,11 +84,6 @@ CREATE TABLE IF NOT EXISTS election_group_wards (
   pu_agents_in_attendance_count              INT NOT NULL DEFAULT 0, -- total agents in attendance
   pu_reports_count                           INT NOT NULL DEFAULT 0, -- total reports
   pu_updates_count                           INT NOT NULL DEFAULT 0, -- total updates
-  pu_average_arrival_time                          TIMESTAMPTZ, -- average time polling agents in this ward arrive at their pu
-  pu_average_update_time_interval_in_seconds       FLOAT NOT NULL DEFAULT 0, -- average time between consecutive updates from polling agents in this ward
-  pu_average_election_started_at                   TIMESTAMPTZ, -- average time election starts in this ward's pu
-  pu_average_election_ended_at                   TIMESTAMPTZ, -- average time election ends in this ward's pu
-  pu_election_practice_test_readiness_percentage   NUMERIC(5,2) NOT NULL DEFAULT 0, -- average election practice test readiness percentage across all PUs
   pu_final_results_uploaded_count            INT NOT NULL DEFAULT 0, -- total pu final result uploads
   unique_pu_final_results_uploaded_count     INT NOT NULL DEFAULT 0, -- total unique final result uploads
   pu_live_voters_referred_by_agent_count           INT NOT NULL DEFAULT 0, -- total live voters referred by agents across all PUs
@@ -145,9 +127,6 @@ CREATE TABLE IF NOT EXISTS election_group_lgas (
   federal_constituency_id INT      REFERENCES federal_constituencies(id) ON DELETE SET NULL,
 
   -- Application Stats
-  applications_count                               INT NOT NULL DEFAULT 0,
-  accepted_applications_count                      INT NOT NULL DEFAULT 0,
-  rejected_applications_count                      INT NOT NULL DEFAULT 0,
 
   ward_supervisor_applications_count               INT NOT NULL DEFAULT 0,
   ward_supervisor_accepted_applications_count      INT NOT NULL DEFAULT 0,
@@ -162,11 +141,6 @@ CREATE TABLE IF NOT EXISTS election_group_lgas (
   pu_agents_in_attendance_count                    INT NOT NULL DEFAULT 0, -- total agents in attendance
   pu_reports_count                                 INT NOT NULL DEFAULT 0, -- total reports
   pu_updates_count                                 INT NOT NULL DEFAULT 0, -- total updates
-  pu_average_arrival_time                          TIMESTAMPTZ,
-  pu_average_update_time_interval_in_seconds       FLOAT NOT NULL DEFAULT 0,
-  pu_average_election_started_at                   TIMESTAMPTZ, -- average time election starts in pu
-  pu_average_election_ended_at                     TIMESTAMPTZ, -- average time election stops in pu
-  pu_election_practice_test_readiness_percentage   NUMERIC(5,2) NOT NULL DEFAULT 0, -- average election practice test readiness percentage across all PUs
   pu_final_results_uploaded_count                  INT NOT NULL DEFAULT 0, -- total pu final result uploads
   unique_pu_final_results_uploaded_count           INT NOT NULL DEFAULT 0, -- total unique final result uploads
   pu_live_voters_referred_by_agent_count           INT NOT NULL DEFAULT 0, -- total live voters referred by agents across all PUs
@@ -212,9 +186,6 @@ CREATE TABLE IF NOT EXISTS election_group_states (
   state_id            SMALLINT NOT NULL REFERENCES c_states(id) ON DELETE CASCADE,
 
   -- Application Stats
-  applications_count                               INT NOT NULL DEFAULT 0,
-  accepted_applications_count                      INT NOT NULL DEFAULT 0,
-  rejected_applications_count                      INT NOT NULL DEFAULT 0,
 
   ward_supervisor_applications_count               INT NOT NULL DEFAULT 0,
   ward_supervisor_accepted_applications_count      INT NOT NULL DEFAULT 0,
@@ -234,11 +205,6 @@ CREATE TABLE IF NOT EXISTS election_group_states (
   pu_agents_in_attendance_count                    INT NOT NULL DEFAULT 0, -- total agents in attendance
   pu_reports_count                                 INT NOT NULL DEFAULT 0, -- total reports
   pu_updates_count                                 INT NOT NULL DEFAULT 0, -- total updates
-  pu_average_arrival_time                          TIMESTAMPTZ,
-  pu_average_update_time_interval_in_seconds       FLOAT NOT NULL DEFAULT 0,
-  pu_average_election_started_at                   TIMESTAMPTZ, -- average time election starts in pu
-  pu_average_election_ended_at                     TIMESTAMPTZ, -- average time election stops in pu
-  pu_election_practice_test_readiness_percentage   NUMERIC(5,2) NOT NULL DEFAULT 0, -- average election practice test readiness percentage across all PUs
   pu_final_results_uploaded_count                  INT NOT NULL DEFAULT 0, -- total pu final result uploads
   unique_pu_final_results_uploaded_count           INT NOT NULL DEFAULT 0, -- total unique final result uploads
   pu_live_voters_referred_by_agent_count           INT NOT NULL DEFAULT 0, -- total live voters referred by agents across all PUs

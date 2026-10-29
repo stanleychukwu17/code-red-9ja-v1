@@ -14,20 +14,6 @@ CREATE TABLE election_groups (
   unique_lga_supervisors_count INT NOT NULL DEFAULT 0,
   ward_supervisors_count INT NOT NULL DEFAULT 0,
   unique_ward_supervisors_count INT NOT NULL DEFAULT 0,
-
-  -- Supervisor recruitment application pipeline counters
-  applications_count INT NOT NULL DEFAULT 0,
-  accepted_applications_count INT NOT NULL DEFAULT 0,
-  rejected_applications_count INT NOT NULL DEFAULT 0,
-  ward_supervisor_applications_count INT NOT NULL DEFAULT 0,
-  ward_supervisor_accepted_applications_count INT NOT NULL DEFAULT 0,
-  ward_supervisor_rejected_applications_count INT NOT NULL DEFAULT 0,
-  lga_supervisor_applications_count INT NOT NULL DEFAULT 0,
-  lga_supervisor_accepted_applications_count INT NOT NULL DEFAULT 0,
-  lga_supervisor_rejected_applications_count INT NOT NULL DEFAULT 0,
-  state_supervisor_applications_count INT NOT NULL DEFAULT 0,
-  state_supervisor_accepted_applications_count INT NOT NULL DEFAULT 0,
-  state_supervisor_rejected_applications_count INT NOT NULL DEFAULT 0,
   
   -- Polling unit (PU) reports and incident feeds
   pu_reports_count INT NOT NULL DEFAULT 0,                 -- Total submitted situation reports across all PUs

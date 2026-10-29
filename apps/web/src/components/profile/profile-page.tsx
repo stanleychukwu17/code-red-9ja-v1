@@ -1,6 +1,6 @@
 import { useParams } from "@tanstack/react-router";
 import { Activity, Check, FolderOpen, MessageCircleMore } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@repo/ui/lib/utils";
 import { ProfileFloatingToolbar } from "./ProfileFloatingToolbar";
 import { PartyHistoryTimeline } from "./PartyHistoryTimeline";
@@ -38,6 +38,8 @@ export type UserProfileData = {
   } | null;
   followersCount: string;
   followingCount: string;
+  isAccountOwner?: boolean;
+  isFollowing?: boolean;
 };
 
 export type ActiveProfileTab = "history" | "followers" | "following";
@@ -50,6 +52,8 @@ export const DEFAULT_USER_PROFILE: UserProfileData = {
   role: undefined,
   followersCount: "0",
   followingCount: "0",
+  isAccountOwner: false,
+  isFollowing: false,
 };
 
 /* ========================================================================== */
@@ -103,7 +107,11 @@ function ProfileCard({ profile }: { profile: UserProfileData }) {
       )}
 
       {/* Action Buttons & Follower Metrics */}
-      <ProfileActions followersCount={profile.followersCount} />
+      <ProfileActions
+        followersCount={profile.followersCount}
+        isAccountOwner={profile.isAccountOwner}
+        initialIsFollowing={profile.isFollowing}
+      />
     </div>
   );
 }
@@ -186,8 +194,31 @@ function ProfilePartyRoleGrid({ party, role }: ProfilePartyRoleGridProps) {
   );
 }
 
-function ProfileActions({ followersCount }: { followersCount: string }) {
-  const [isFollowing, setIsFollowing] = useState(false);
+function ProfileActions({
+  followersCount,
+  isAccountOwner = false,
+  initialIsFollowing = false,
+}: {
+  followersCount: string;
+  isAccountOwner?: boolean;
+  initialIsFollowing?: boolean;
+}) {
+  const [isFollowing, setIsFollowing] = useState(initialIsFollowing);
+
+  useEffect(() => {
+    setIsFollowing(Boolean(initialIsFollowing));
+  }, [initialIsFollowing]);
+
+  // If viewing own account, do not show follow or message buttons
+  if (isAccountOwner) {
+    return (
+      <div className="mt-4 flex items-center justify-center">
+        <p className="text-[11px] font-medium text-c-50 text-center">
+          {followersCount} {followersCount === "1" ? "follower" : "followers"}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="mt-8 flex items-start justify-center gap-3">

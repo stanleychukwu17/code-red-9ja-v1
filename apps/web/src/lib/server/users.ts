@@ -110,3 +110,59 @@ export const confirmFileUpload = createServerFn({ method: "POST" })
       };
     }
   });
+
+/**
+ * Gets user phone numbers
+ */
+export const getUserPhoneNumbers = createServerFn({ method: "GET" })
+  .inputValidator((data: { user_id: string | number }) => data)
+  .handler(async ({ data: { user_id } }) => {
+    try {
+      return await apiFetchJson(API_URL.userPhoneNumbers(user_id));
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error?.message || "Failed to fetch user phone numbers",
+      };
+    }
+  });
+
+/**
+ * Deletes a user phone number
+ */
+export const deleteUserPhoneNumber = createServerFn({ method: "POST" })
+  .inputValidator((data: { id: string | number; user_fid: string | number }) => data)
+  .handler(async ({ data: { id, user_fid } }) => {
+    try {
+      return await apiFetchJson(API_URL.manageUserPhoneNumber(id), {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone_id: Number(id), user_fid: Number(user_fid) }),
+      });
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error?.message || "Failed to delete phone number",
+      };
+    }
+  });
+
+/**
+ * Updates user phone numbers
+ */
+export const updateUserPhoneNumbers = createServerFn({ method: "POST" })
+  .inputValidator((data: { user_fid: string | number; phones: any[] }) => data)
+  .handler(async ({ data: { user_fid, phones } }) => {
+    try {
+      return await apiFetchJson(API_URL.userPhoneNumbers(user_fid), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phones }),
+      });
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error?.message || "Failed to update phone numbers",
+      };
+    }
+  });

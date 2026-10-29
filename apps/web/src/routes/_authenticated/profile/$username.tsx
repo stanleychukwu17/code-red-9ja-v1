@@ -70,6 +70,8 @@ function ProfileLayoutComponent() {
         : undefined,
       followersCount: formatNumber(raw.followers_count ?? 0),
       followingCount: formatNumber(raw.following_count ?? 0),
+      isAccountOwner: Boolean(raw.is_account_owner),
+      isFollowing: Boolean(raw.is_following),
     }
     : DEFAULT_USER_PROFILE;
 

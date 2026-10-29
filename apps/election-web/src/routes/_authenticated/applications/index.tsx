@@ -287,7 +287,7 @@ function ApplicationsIndexPage() {
               </div>
               <div className="flex justify-between items-center text-[15px]">
                 <span className="text-c-50 font-bold">Polling Unit</span>
-                <span className="text-c-90 font-extrabold text-right max-w-[240px] truncate">
+                <span className="text-c-90 font-extrabold text-right max-w-60 truncate">
                   {selectedApp.polling_unit.name}
                 </span>
               </div>
@@ -309,7 +309,7 @@ function ApplicationsIndexPage() {
               {isRejected && selectedApp.rejected_reason && (
                 <div className="flex justify-between items-center text-[15px]">
                   <span className="text-c-50 font-bold">Reason</span>
-                  <span className="text-c-90 font-extrabold text-right max-w-[240px]">
+                  <span className="text-c-90 font-extrabold text-right max-w-60">
                     {selectedApp.rejected_reason}
                   </span>
                 </div>

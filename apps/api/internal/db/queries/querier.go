@@ -22,7 +22,6 @@ type Querier interface {
 	// SUPERVISOR COUNT INCREMENTS / DECREMENTS
 	// ============================================================
 	AdjustElectionGroupLGAWardSupervisorCounts(ctx context.Context, arg AdjustElectionGroupLGAWardSupervisorCountsParams) error
-	AdjustElectionGroupNationalApplicationCounts(ctx context.Context, arg AdjustElectionGroupNationalApplicationCountsParams) error
 	AdjustElectionGroupNationalLGASupervisorCounts(ctx context.Context, arg AdjustElectionGroupNationalLGASupervisorCountsParams) error
 	AdjustElectionGroupNationalStateSupervisorCounts(ctx context.Context, arg AdjustElectionGroupNationalStateSupervisorCountsParams) error
 	AdjustElectionGroupNationalWardSupervisorCounts(ctx context.Context, arg AdjustElectionGroupNationalWardSupervisorCountsParams) error

@@ -234,6 +234,10 @@ export function UserFormDialog({
           },
         });
       } else {
+        if (!registerCandidate) {
+          throw new Error("Registering candidates function has not been passed");
+        }
+
         res = await registerCandidate({
           data: {
             email: values.email ? values.email.trim() : "",

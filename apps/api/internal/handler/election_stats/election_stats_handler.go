@@ -45,31 +45,26 @@ type Handler struct {
 }
 
 type OperationsBreakdownUnitResponse struct {
-	ID                    int64       `json:"id"`
-	Name                  string      `json:"name"`
-	Code                  string      `json:"code"`
-	AgentsAtPu            string      `json:"agents_at_pu"`
-	PuAgentsInAttendance  int64       `json:"pu_agents_in_attendance"`
-	PuAgentsCount         int64       `json:"pu_agents_count"`
-	AvgAgentArrivalTime   string      `json:"avg_agent_arrival_time"`
-	ElectionStartedIn     string      `json:"election_started_in"`
-	ElectionEndedIn       string      `json:"election_ended_in"`
-	AvgEleStartTime       string      `json:"avg_ele_start_time"`
-	AvgEleEndTime         string      `json:"avg_ele_end_time"`
-	UpdatesGiven          int64       `json:"updates_given"`
-	ReportsGiven          int64       `json:"reports_given"`
-	ReportedPus           int64       `json:"reported_pus"`
-	PusWithUpdates        int64       `json:"pus_with_updates"`
-	AvgUpdateTimeInterval string      `json:"avg_update_time_interval"`
-	LiveVotersReferred    int64       `json:"live_voters_referred"`
-	ResultsUploaded       int64       `json:"results_uploaded"`
-	ResultsExpected       string      `json:"results_expected"`
-	PusWithAllResults     int64       `json:"pus_with_all_results"`
-	PusWith1Agent         string      `json:"pus_with_1_agent"`
-	TotalAgents           string      `json:"total_agents"`
-	TotalPus              int64       `json:"total_pus"`
-	OverallReadiness      int64       `json:"overall_readiness"`
-	Supervisors           interface{} `json:"supervisors"`
+	ID                   int64       `json:"id"`
+	Name                 string      `json:"name"`
+	Code                 string      `json:"code"`
+	AgentsAtPu           string      `json:"agents_at_pu"`
+	PuAgentsInAttendance int64       `json:"pu_agents_in_attendance"`
+	PuAgentsCount        int64       `json:"pu_agents_count"`
+	ElectionStartedIn    string      `json:"election_started_in"`
+	ElectionEndedIn      string      `json:"election_ended_in"`
+	UpdatesGiven         int64       `json:"updates_given"`
+	ReportsGiven         int64       `json:"reports_given"`
+	ReportedPus          int64       `json:"reported_pus"`
+	PusWithUpdates       int64       `json:"pus_with_updates"`
+	LiveVotersReferred   int64       `json:"live_voters_referred"`
+	ResultsUploaded      int64       `json:"results_uploaded"`
+	ResultsExpected      string      `json:"results_expected"`
+	PusWithAllResults    int64       `json:"pus_with_all_results"`
+	PusWith1Agent        string      `json:"pus_with_1_agent"`
+	TotalAgents          string      `json:"total_agents"`
+	TotalPus             int64       `json:"total_pus"`
+	Supervisors          interface{} `json:"supervisors"`
 }
 
 type AgentCoverageUnitResponse struct {
@@ -80,7 +75,6 @@ type AgentCoverageUnitResponse struct {
 	WardSupervisors  string      `json:"ward_supervisors"`
 	LgaSupervisors   string      `json:"lga_supervisors"`
 	StateSupervisors string      `json:"state_supervisors"`
-	OverallReadiness int64       `json:"overall_readiness"`
 	Supervisors      interface{} `json:"supervisors"`
 	PuAgents         interface{} `json:"pu_agents"`
 }
@@ -639,21 +633,6 @@ func (h *Handler) GetSingleElectionGroupStats(w http.ResponseWriter, r *http.Req
 
 // ─── Operations Breakdown Handler ──────────────────────────────────────────
 
-func formatWATTime(t pgtype.Timestamptz) string {
-	if !t.Valid {
-		return "—"
-	}
-	wat := time.FixedZone("WAT", 3600)
-	return t.Time.In(wat).Format("3:04 PM")
-}
-
-func formatIntervalMin(sec float64) string {
-	if sec <= 0 {
-		return "1.4 minutes"
-	}
-	return fmt.Sprintf("%.1f minutes", sec/60.0)
-}
-
 func formatComma(n int64) string {
 	in := strconv.FormatInt(n, 10)
 	var out []byte
@@ -731,12 +710,8 @@ func (h *Handler) GetOperationsBreakdown(w http.ResponseWriter, r *http.Request)
 				COALESCE(NULLIF(pu.pu_code, ''), pu.code, '') AS code,
 				COALESCE(egpu.pu_agents_in_attendance_count, 0) AS pu_agents_in_attendance,
 				COALESCE(egpu.pu_agents_count, 0) AS pu_agents_count,
-				egpu.pu_average_arrival_time,
-				egpu.pu_average_election_started_at,
-				egpu.pu_average_election_ended_at,
 				COALESCE(egpu.pu_updates_count, 0) AS updates_count,
 				COALESCE(egpu.pu_reports_count, 0) AS reports_count,
-				COALESCE(egpu.pu_average_update_time_interval_in_seconds, 0) AS update_interval_seconds,
 				COALESCE(egpu.pu_live_voters_referred_by_agent_count, 0) AS live_voters,
 				COALESCE(egpu.pu_final_results_uploaded_count, 0) AS results_uploaded,
 				COALESCE(NULLIF(egpu.unique_final_results_expected, 0), 1) AS results_expected,
@@ -775,22 +750,17 @@ func (h *Handler) GetOperationsBreakdown(w http.ResponseWriter, r *http.Request)
 				'' AS code,
 				COALESCE(egw.pu_agents_in_attendance_count, 0) AS pu_agents_in_attendance,
 				COALESCE(egw.pu_agents_count, 0) AS pu_agents_count,
-				egw.pu_average_arrival_time,
 				COALESCE(egw.total_pu_where_election_has_started, 0) AS election_started_in,
 				COALESCE(egw.total_pu_where_election_has_ended, 0) AS election_ended_in,
-				egw.pu_average_election_started_at,
-				egw.pu_average_election_ended_at,
 				COALESCE(egw.pu_updates_count, 0) AS updates_count,
 				COALESCE(egw.pu_reports_count, 0) AS reports_count,
 				COALESCE(egw.total_pu_with_reports, 0) AS reported_pus,
 				COALESCE(egw.total_pu_with_updates, 0) AS pus_with_updates,
-				COALESCE(egw.pu_average_update_time_interval_in_seconds, 0) AS update_interval_seconds,
 				COALESCE(egw.pu_live_voters_referred_by_agent_count, 0) AS live_voters,
 				COALESCE(egw.pu_final_results_uploaded_count, 0) AS results_uploaded,
 				COALESCE(egw.unique_final_results_expected, 0) AS results_expected,
 				COALESCE(egw.total_pu_unique_final_results_uploaded, 0) AS pus_with_all_results,
 				COALESCE(w.polling_units_count, egw.polling_units_count, 0) AS total_pus,
-				COALESCE(ROUND(egw.pu_election_practice_test_readiness_percentage::numeric, 1), 0) AS overall_readiness,
 				(
 					SELECT COALESCE(json_agg(json_build_object(
 						'id', u.id,
@@ -826,22 +796,17 @@ func (h *Handler) GetOperationsBreakdown(w http.ResponseWriter, r *http.Request)
 				'' AS code,
 				COALESCE(egl.pu_agents_in_attendance_count, 0) AS pu_agents_in_attendance,
 				COALESCE(egl.pu_agents_count, 0) AS pu_agents_count,
-				egl.pu_average_arrival_time,
 				COALESCE(egl.total_pu_where_election_has_started, 0) AS election_started_in,
 				COALESCE(egl.total_pu_where_election_has_ended, 0) AS election_ended_in,
-				egl.pu_average_election_started_at,
-				egl.pu_average_election_ended_at,
 				COALESCE(egl.pu_updates_count, 0) AS updates_count,
 				COALESCE(egl.pu_reports_count, 0) AS reports_count,
 				COALESCE(egl.total_pu_with_reports, 0) AS reported_pus,
 				COALESCE(egl.total_pu_with_updates, 0) AS pus_with_updates,
-				COALESCE(egl.pu_average_update_time_interval_in_seconds, 0) AS update_interval_seconds,
 				COALESCE(egl.pu_live_voters_referred_by_agent_count, 0) AS live_voters,
 				COALESCE(egl.pu_final_results_uploaded_count, 0) AS results_uploaded,
 				COALESCE(egl.unique_final_results_expected, 0) AS results_expected,
 				COALESCE(egl.total_pu_unique_final_results_uploaded, 0) AS pus_with_all_results,
 				COALESCE(l.polling_units_count, egl.polling_units_count, 0) AS total_pus,
-				COALESCE(ROUND(egl.pu_election_practice_test_readiness_percentage::numeric, 1), 0) AS overall_readiness,
 				(
 					SELECT COALESCE(json_agg(json_build_object(
 						'id', u.id,
@@ -878,22 +843,17 @@ func (h *Handler) GetOperationsBreakdown(w http.ResponseWriter, r *http.Request)
 				'' AS code,
 				COALESCE(egs.pu_agents_in_attendance_count, 0) AS pu_agents_in_attendance,
 				COALESCE(egs.pu_agents_count, 0) AS pu_agents_count,
-				egs.pu_average_arrival_time,
 				COALESCE(egs.total_pu_where_election_has_started, 0) AS election_started_in,
 				COALESCE(egs.total_pu_where_election_has_ended, 0) AS election_ended_in,
-				egs.pu_average_election_started_at,
-				egs.pu_average_election_ended_at,
 				COALESCE(egs.pu_updates_count, 0) AS updates_count,
 				COALESCE(egs.pu_reports_count, 0) AS reports_count,
 				COALESCE(egs.total_pu_with_reports, 0) AS reported_pus,
 				COALESCE(egs.total_pu_with_updates, 0) AS pus_with_updates,
-				COALESCE(egs.pu_average_update_time_interval_in_seconds, 0) AS update_interval_seconds,
 				COALESCE(egs.pu_live_voters_referred_by_agent_count, 0) AS live_voters,
 				COALESCE(egs.pu_final_results_uploaded_count, 0) AS results_uploaded,
 				COALESCE(egs.unique_final_results_expected, 0) AS results_expected,
 				COALESCE(egs.total_pu_unique_final_results_uploaded, 0) AS pus_with_all_results,
 				COALESCE(s.polling_units_count, egs.polling_units_count, 0) AS total_pus,
-				COALESCE(ROUND(egs.pu_election_practice_test_readiness_percentage::numeric, 1), 0) AS overall_readiness,
 				(
 					SELECT COALESCE(json_agg(json_build_object(
 						'id', u.id,
@@ -935,28 +895,23 @@ func (h *Handler) GetOperationsBreakdown(w http.ResponseWriter, r *http.Request)
 	if unitType == "polling_units" {
 		for rows.Next() {
 			var (
-				id                    int64
-				name, code            string
-				agentsInAttendance    int64
-				puAgentsCount         int64
-				arrivalTime           pgtype.Timestamptz
-				startTime             pgtype.Timestamptz
-				endTime               pgtype.Timestamptz
-				updatesCount          int64
-				reportsCount          int64
-				updateIntervalSeconds float64
-				liveVoters            int64
-				resultsUploaded       int64
-				resultsExpected       int64
-				agentsBytes           []byte
+				id                 int64
+				name, code         string
+				agentsInAttendance int64
+				puAgentsCount      int64
+				updatesCount       int64
+				reportsCount       int64
+				liveVoters         int64
+				resultsUploaded    int64
+				resultsExpected    int64
+				agentsBytes        []byte
 			)
 
 			if err := rows.Scan(
 				&id, &name, &code,
 				&agentsInAttendance, &puAgentsCount,
-				&arrivalTime, &startTime, &endTime,
 				&updatesCount, &reportsCount,
-				&updateIntervalSeconds, &liveVoters,
+				&liveVoters,
 				&resultsUploaded, &resultsExpected,
 				&agentsBytes,
 			); err != nil {
@@ -978,64 +933,52 @@ func (h *Handler) GetOperationsBreakdown(w http.ResponseWriter, r *http.Request)
 			agentsAtPu := fmt.Sprintf("%d/%d", agentsInAttendance, targetAgents)
 
 			unit := map[string]interface{}{
-				"id":                       id,
-				"name":                     name,
-				"code":                     code,
-				"agents_at_pu":             agentsAtPu,
-				"pu_agents_in_attendance":  agentsInAttendance,
-				"pu_agents_count":          targetAgents,
-				"avg_agent_arrival_time":   formatWATTime(arrivalTime),
-				"avg_ele_start_time":       formatWATTime(startTime),
-				"avg_ele_end_time":         formatWATTime(endTime),
-				"updates_given":            updatesCount,
-				"reports_given":            reportsCount,
-				"avg_update_time_interval": formatIntervalMin(updateIntervalSeconds),
-				"live_voters_referred":     liveVoters,
-				"results_uploaded":         resultsUploaded,
-				"results_expected":         resultsExpected,
-				"uploaded_all_results":     uploadedAll,
-				"pu_agents":                agents,
+				"id":                      id,
+				"name":                    name,
+				"code":                    code,
+				"agents_at_pu":            agentsAtPu,
+				"pu_agents_in_attendance": agentsInAttendance,
+				"pu_agents_count":         targetAgents,
+				"updates_given":           updatesCount,
+				"reports_given":           reportsCount,
+				"live_voters_referred":    liveVoters,
+				"results_uploaded":        resultsUploaded,
+				"results_expected":        resultsExpected,
+				"uploaded_all_results":    uploadedAll,
+				"pu_agents":               agents,
 			}
 			units = append(units, unit)
 		}
 	} else {
 		for rows.Next() {
 			var (
-				id                    int64
-				name, code            string
-				agentsInAttendance    int64
-				puAgentsCount         int64
-				arrivalTime           pgtype.Timestamptz
-				eleStartedIn          int64
-				eleEndedIn            int64
-				startTime             pgtype.Timestamptz
-				endTime               pgtype.Timestamptz
-				updatesCount          int64
-				reportsCount          int64
-				reportedPUs           int64
-				pusWithUpdates        int64
-				updateIntervalSeconds float64
-				liveVoters            int64
-				resultsUploaded       int64
-				resultsExpected       int64
-				pusWithAllResults     int64
-				totalPUs              int64
-				overallReadiness      float64
-				supervisorsBytes      []byte
+				id                 int64
+				name, code         string
+				agentsInAttendance int64
+				puAgentsCount      int64
+				eleStartedIn       int64
+				eleEndedIn         int64
+				updatesCount       int64
+				reportsCount       int64
+				reportedPUs        int64
+				pusWithUpdates     int64
+				liveVoters         int64
+				resultsUploaded    int64
+				resultsExpected    int64
+				pusWithAllResults  int64
+				totalPUs           int64
+				supervisorsBytes   []byte
 			)
 
 			if err := rows.Scan(
 				&id, &name, &code,
 				&agentsInAttendance, &puAgentsCount,
-				&arrivalTime,
 				&eleStartedIn, &eleEndedIn,
-				&startTime, &endTime,
 				&updatesCount, &reportsCount,
 				&reportedPUs, &pusWithUpdates,
-				&updateIntervalSeconds, &liveVoters,
+				&liveVoters,
 				&resultsUploaded, &resultsExpected,
 				&pusWithAllResults, &totalPUs,
-				&overallReadiness,
 				&supervisorsBytes,
 			); err != nil {
 				continue
@@ -1054,31 +997,26 @@ func (h *Handler) GetOperationsBreakdown(w http.ResponseWriter, r *http.Request)
 			totalAgentsStr := formatPctStr(puAgentsCount, totalPUs)
 
 			unit := map[string]interface{}{
-				"id":                          id,
-				"name":                        name,
-				"code":                        code,
-				"agents_at_pu":                agentsAtPuStr,
-				"pu_agents_in_attendance":     agentsInAttendance,
-				"pu_agents_count":             puAgentsCount,
-				"avg_agent_arrival_time":      formatWATTime(arrivalTime),
-				"election_started_in":         eleStartedStr,
-				"election_ended_in":           eleEndedStr,
-				"avg_ele_start_time":          formatWATTime(startTime),
-				"avg_ele_end_time":            formatWATTime(endTime),
-				"updates_given":               updatesCount,
-				"reports_given":               reportsCount,
-				"reported_pus":                reportedPUs,
-				"pus_with_updates":            pusWithUpdates,
-				"avg_update_time_interval":    formatIntervalMin(updateIntervalSeconds),
-				"live_voters_referred":        liveVoters,
-				"results_uploaded":            resultsUploaded,
-				"results_expected":            resultsExpectedStr,
-				"pus_with_all_results":        pusWithAllResults,
-				"pus_with_1_agent":            pusWith1AgentStr,
-				"total_agents":                totalAgentsStr,
-				"total_pus":                   totalPUs,
-				"overall_readiness":           overallReadiness,
-				"supervisors":                 supervisors,
+				"id":                      id,
+				"name":                    name,
+				"code":                    code,
+				"agents_at_pu":            agentsAtPuStr,
+				"pu_agents_in_attendance": agentsInAttendance,
+				"pu_agents_count":         puAgentsCount,
+				"election_started_in":     eleStartedStr,
+				"election_ended_in":       eleEndedStr,
+				"updates_given":           updatesCount,
+				"reports_given":           reportsCount,
+				"reported_pus":            reportedPUs,
+				"pus_with_updates":        pusWithUpdates,
+				"live_voters_referred":    liveVoters,
+				"results_uploaded":        resultsUploaded,
+				"results_expected":        resultsExpectedStr,
+				"pus_with_all_results":    pusWithAllResults,
+				"pus_with_1_agent":        pusWith1AgentStr,
+				"total_agents":            totalAgentsStr,
+				"total_pus":               totalPUs,
+				"supervisors":             supervisors,
 			}
 			units = append(units, unit)
 		}
@@ -1150,7 +1088,6 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 					  AND ($1::bigint = 0 OR pua.election_group_id = $1)
 					  AND ($2::int = 0 OR pua.party_id = $2)
 				), 0) AS pu_agents_count,
-				COALESCE(ROUND(egpu.pu_election_practice_test_readiness_percentage::numeric, 1), 0) AS overall_readiness,
 				(
 					SELECT COALESCE(json_agg(json_build_object(
 						'id', u.id,
@@ -1196,7 +1133,6 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 				0::bigint AS lga_supervisors_count,
 				0::bigint AS total_lgas,
 				0::bigint AS state_supervisors_count,
-				COALESCE(ROUND(egw.pu_election_practice_test_readiness_percentage::numeric, 1), 0) AS overall_readiness,
 				(
 					SELECT COALESCE(json_agg(json_build_object(
 						'id', u.id,
@@ -1242,7 +1178,6 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 				), 0) AS lga_supervisors_count,
 				1::bigint AS total_lgas,
 				0::bigint AS state_supervisors_count,
-				COALESCE(ROUND(egl.pu_election_practice_test_readiness_percentage::numeric, 1), 0) AS overall_readiness,
 				(
 					SELECT COALESCE(json_agg(json_build_object(
 						'id', u.id,
@@ -1288,7 +1223,6 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 					  AND ($1::bigint = 0 OR ses.election_group_id = $1)
 					  AND ($2::int = 0 OR ses.party_id = $2)
 				), 0) AS state_supervisors_count,
-				COALESCE(ROUND(egs.pu_election_practice_test_readiness_percentage::numeric, 1), 0) AS overall_readiness,
 				(
 					SELECT COALESCE(json_agg(json_build_object(
 						'id', u.id,

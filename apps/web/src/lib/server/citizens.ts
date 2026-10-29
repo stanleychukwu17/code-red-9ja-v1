@@ -149,6 +149,12 @@ export type PublicUserProfile = {
     geo_name: string;
     display_title: string;
   }>;
+  timeline?: Array<{
+    id: string;
+    year: string;
+    title: string;
+    branches?: Array<{ id: string; title: string }>;
+  }>;
   followers_count: number;
   following_count: number;
   is_following: boolean;

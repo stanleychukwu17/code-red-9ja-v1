@@ -237,12 +237,6 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 		}
 	}
 
-	_ = txQueries.AdjustElectionGroupNationalApplicationCounts(ctx, queries.AdjustElectionGroupNationalApplicationCountsParams{
-		ElectionGroupID: input.ElectionGroupID,
-		PartyID:         int16(input.PartyID),
-		AppDelta:        1,
-	})
-
 	// Process referred user's referral record linking & increment total_referrals (best effort)
 	if refErr := s.updateReferralOnApplicationSubmission(ctx, txQueries, input.UserID, int64(input.PartyID), []int32{input.ElectionGroupID}, int16(input.CurrentState), 1); refErr != nil {
 		slog.Warn("updateReferralOnApplicationSubmission failed (non-fatal)", "userID", input.UserID, "err", refErr)
@@ -675,16 +669,6 @@ func (s *Service) RejectApplication(ctx context.Context, id int64, reason string
 				WardSupRejectedDelta: 1,
 			})
 		}
-		_ = s.queries.AdjustElectionGroupNationalApplicationCounts(ctx, queries.AdjustElectionGroupNationalApplicationCountsParams{
-			ElectionGroupID:      egID,
-			PartyID:              partyID,
-			AppDelta:             0,
-			AcceptedDelta:        0,
-			RejectedDelta:        1,
-			WardSupAppDelta:      0,
-			WardSupAcceptedDelta: 0,
-			WardSupRejectedDelta: 1,
-		})
 	case "lga_election_supervisor", "lga_supervisor":
 		if lgaID > 0 {
 			_ = s.queries.AdjustElectionGroupLGAApplicationCounts(ctx, queries.AdjustElectionGroupLGAApplicationCountsParams{
@@ -699,16 +683,6 @@ func (s *Service) RejectApplication(ctx context.Context, id int64, reason string
 				LgaSupRejectedDelta: 1,
 			})
 		}
-		_ = s.queries.AdjustElectionGroupNationalApplicationCounts(ctx, queries.AdjustElectionGroupNationalApplicationCountsParams{
-			ElectionGroupID:     egID,
-			PartyID:             partyID,
-			AppDelta:            0,
-			AcceptedDelta:       0,
-			RejectedDelta:       1,
-			LgaSupAppDelta:      0,
-			LgaSupAcceptedDelta: 0,
-			LgaSupRejectedDelta: 1,
-		})
 	case "state_election_supervisor", "state_supervisor":
 		if stateID > 0 {
 			_ = s.queries.AdjustElectionGroupStateApplicationCounts(ctx, queries.AdjustElectionGroupStateApplicationCountsParams{
@@ -723,16 +697,6 @@ func (s *Service) RejectApplication(ctx context.Context, id int64, reason string
 				StateSupRejectedDelta: 1,
 			})
 		}
-		_ = s.queries.AdjustElectionGroupNationalApplicationCounts(ctx, queries.AdjustElectionGroupNationalApplicationCountsParams{
-			ElectionGroupID:       egID,
-			PartyID:               partyID,
-			AppDelta:              0,
-			AcceptedDelta:         0,
-			RejectedDelta:         1,
-			StateSupAppDelta:      0,
-			StateSupAcceptedDelta: 0,
-			StateSupRejectedDelta: 1,
-		})
 	default:
 		if puID > 0 {
 			_ = s.queries.AdjustElectionGroupPollingUnitApplicationCounts(ctx, queries.AdjustElectionGroupPollingUnitApplicationCountsParams{
@@ -744,13 +708,6 @@ func (s *Service) RejectApplication(ctx context.Context, id int64, reason string
 				RejectedDelta:   1,
 			})
 		}
-		_ = s.queries.AdjustElectionGroupNationalApplicationCounts(ctx, queries.AdjustElectionGroupNationalApplicationCountsParams{
-			ElectionGroupID: egID,
-			PartyID:         partyID,
-			AppDelta:        0,
-			AcceptedDelta:   0,
-			RejectedDelta:   1,
-		})
 	}
 
 	// Initiate cascading stats rollup
@@ -1265,16 +1222,6 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 				WardSupRejectedDelta: 0,
 			})
 		}
-		_ = txQueries.AdjustElectionGroupNationalApplicationCounts(ctx, queries.AdjustElectionGroupNationalApplicationCountsParams{
-			ElectionGroupID:      egID,
-			PartyID:              partyID,
-			AppDelta:             0,
-			AcceptedDelta:        1,
-			RejectedDelta:        0,
-			WardSupAppDelta:      0,
-			WardSupAcceptedDelta: 1,
-			WardSupRejectedDelta: 0,
-		})
 	} else if roleType == "lga_election_supervisor" || roleType == "lga_supervisor" {
 		if input.LgaID > 0 {
 			_ = txQueries.AdjustElectionGroupLGAApplicationCounts(ctx, queries.AdjustElectionGroupLGAApplicationCountsParams{
@@ -1292,16 +1239,6 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 				LgaSupRejectedDelta:  0,
 			})
 		}
-		_ = txQueries.AdjustElectionGroupNationalApplicationCounts(ctx, queries.AdjustElectionGroupNationalApplicationCountsParams{
-			ElectionGroupID:     egID,
-			PartyID:             partyID,
-			AppDelta:            0,
-			AcceptedDelta:       1,
-			RejectedDelta:       0,
-			LgaSupAppDelta:      0,
-			LgaSupAcceptedDelta: 1,
-			LgaSupRejectedDelta: 0,
-		})
 	} else if roleType == "state_election_supervisor" || roleType == "state_supervisor" {
 		if input.StateID > 0 {
 			_ = txQueries.AdjustElectionGroupStateApplicationCounts(ctx, queries.AdjustElectionGroupStateApplicationCountsParams{
@@ -1322,16 +1259,6 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 				StateSupRejectedDelta: 0,
 			})
 		}
-		_ = txQueries.AdjustElectionGroupNationalApplicationCounts(ctx, queries.AdjustElectionGroupNationalApplicationCountsParams{
-			ElectionGroupID:       egID,
-			PartyID:               partyID,
-			AppDelta:              0,
-			AcceptedDelta:         1,
-			RejectedDelta:         0,
-			StateSupAppDelta:      0,
-			StateSupAcceptedDelta: 1,
-			StateSupRejectedDelta: 0,
-		})
 	} else {
 		if pollingUnitID > 0 {
 			_ = txQueries.AdjustElectionGroupPollingUnitApplicationCounts(ctx, queries.AdjustElectionGroupPollingUnitApplicationCountsParams{
@@ -1343,13 +1270,6 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 				RejectedDelta:   0,
 			})
 		}
-		_ = txQueries.AdjustElectionGroupNationalApplicationCounts(ctx, queries.AdjustElectionGroupNationalApplicationCountsParams{
-			ElectionGroupID: egID,
-			PartyID:         partyID,
-			AppDelta:        0,
-			AcceptedDelta:   1,
-			RejectedDelta:   0,
-		})
 	}
 
 	// --- Referral stat update on acceptance ---

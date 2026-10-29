@@ -9,7 +9,7 @@ import { QUERY_KEYS } from "#/lib/config";
 import { getUserProfile } from "#/lib/server/citizens";
 import { getAllCountries, getStates, getCities } from "#/lib/server/countries";
 import { getParties } from "#/lib/server/parties";
-import { updateUser, getPresignedUploadURL, confirmFileUpload, loadUserPhoneNumber, updateUserPhoneNumbers, deleteUserPhoneNumber } from "#/lib/server/users";
+import { updateUser, getPresignedUploadURL, confirmFileUpload, getUserPhoneNumbers, updateUserPhoneNumbers, deleteUserPhoneNumber } from "#/lib/server/users";
 
 export type ProfileFloatingToolbarProps = {
   onSuccess?: () => void;
@@ -142,7 +142,7 @@ export function ProfileFloatingToolbar({ onSuccess }: ProfileFloatingToolbarProp
           getPresignedUploadURL={getPresignedUploadURL}
           confirmFileUpload={confirmFileUpload}
           updateUser={updateUser}
-          loadUserPhoneNumber={loadUserPhoneNumber}
+          loadUserPhoneNumber={getUserPhoneNumbers}
           updateUserPhoneNumbers={updateUserPhoneNumbers}
           deleteUserPhoneNumber={deleteUserPhoneNumber}
         />
