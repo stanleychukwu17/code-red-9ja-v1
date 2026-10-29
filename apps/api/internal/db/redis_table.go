@@ -30,6 +30,7 @@ const (
 	//--START-- for user
 	RedisUserInfo                = "user:info:"               // Core profile only; relationships are hydrated separately.
 	RedisUserMoreInfo            = "user:more_info:"          // STRING: user:more_info:<userID> used to store and retrieve user more_info.
+	RedisUserPrimaryBankAccount  = "user:primary_bank_account:" // STRING: user:primary_bank_account:<userID> stores cached primary bank account.
 	RedisUserRoles               = "user:roles:"              // STRING: user:roles:<userID> used to store and retrieve user roles.
 	RedisUserPreferences         = "user:preferences:"        // STRING: user:preferences:<userID> used to store and retrieve user preferences.
 	RedisNotificationPreferences = "user:notification_prefs:" // STRING: user:notification_prefs:<userID> used to store notification preferences.
@@ -154,6 +155,7 @@ var AllRedisPrefixes = []string{
 	RedisJwtUserLoginLocked,
 	RedisUserInfo,
 	RedisUserMoreInfo,
+	RedisUserPrimaryBankAccount,
 	RedisUserRoles,
 	RedisUserPreferences,
 	RedisNotificationPreferences,

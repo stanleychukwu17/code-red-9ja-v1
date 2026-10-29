@@ -95,7 +95,7 @@ CREATE TABLE user_bank_accounts (
 );
 
 CREATE INDEX idx_user_bank_accounts_user_id ON user_bank_accounts(user_id);
-CREATE INDEX idx_user_bank_accounts_user_primary_id ON user_bank_accounts(user_id, id DESC) WHERE is_primary = true;
+CREATE UNIQUE INDEX idx_user_bank_accounts_unique_primary ON user_bank_accounts(user_id) WHERE is_primary = true;
 
 -- USERS NIN TABLE
 CREATE TABLE users_nin (

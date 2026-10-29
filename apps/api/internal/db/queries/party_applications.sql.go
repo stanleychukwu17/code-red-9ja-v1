@@ -23,7 +23,7 @@ INSERT INTO party_applications (
   status
 ) VALUES (
   $1, $2, $3, $4, $5, $6, $7, 'pending'
-) RETURNING id, user_id, party_id, election_group_id, polling_unit_id, state_id, lga_id, ward_id, role, status, rejected_reason, created_at, updated_at
+) RETURNING id
 `
 
 type CreateApplicationParams struct {
@@ -36,7 +36,7 @@ type CreateApplicationParams struct {
 	WardID          pgtype.Int4 `json:"ward_id"`
 }
 
-func (q *Queries) CreateApplication(ctx context.Context, arg CreateApplicationParams) (PartyApplication, error) {
+func (q *Queries) CreateApplication(ctx context.Context, arg CreateApplicationParams) (int64, error) {
 	row := q.db.QueryRow(ctx, createApplication,
 		arg.UserID,
 		arg.PartyID,
@@ -46,23 +46,9 @@ func (q *Queries) CreateApplication(ctx context.Context, arg CreateApplicationPa
 		arg.LgaID,
 		arg.WardID,
 	)
-	var i PartyApplication
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.PartyID,
-		&i.ElectionGroupID,
-		&i.PollingUnitID,
-		&i.StateID,
-		&i.LgaID,
-		&i.WardID,
-		&i.Role,
-		&i.Status,
-		&i.RejectedReason,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
+	var id int64
+	err := row.Scan(&id)
+	return id, err
 }
 
 const getAcceptedApplicationForUser = `-- name: GetAcceptedApplicationForUser :one

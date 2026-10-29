@@ -70,7 +70,7 @@ type Querier interface {
 	CountElectionsInElectionGroup(ctx context.Context, electionGroupID int32) (int64, error)
 	CountMediaAssetsByFolder(ctx context.Context, arg CountMediaAssetsByFolderParams) (int64, error)
 	CountParticipantsInElectionGroup(ctx context.Context, electionGroupID int32) (int64, error)
-	CreateApplication(ctx context.Context, arg CreateApplicationParams) (PartyApplication, error)
+	CreateApplication(ctx context.Context, arg CreateApplicationParams) (int64, error)
 	// ============================================================================
 	// ASSET FOLDERS QUERIES
 	// ============================================================================

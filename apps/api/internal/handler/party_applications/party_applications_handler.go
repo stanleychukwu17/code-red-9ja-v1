@@ -17,7 +17,7 @@ import (
 )
 
 type PartyApplicationsService interface {
-	SubmitApplication(ctx context.Context, input partyapplications.SubmitApplicationInput) ([]queries.PartyApplication, error)
+	SubmitApplication(ctx context.Context, input partyapplications.SubmitApplicationInput) (int64, error)
 	SubmitSupervisorApplication(ctx context.Context, input partyapplications.SubmitSupervisorApplicationInput) (queries.PartyApplication, error)
 	GetApplicationByID(ctx context.Context, id int64) (queries.PartyApplication, error)
 	ListApplications(ctx context.Context, userID int64, partyID int16, electionGroupID int32, status string, stateID int16, lgaID, wardID int32, limit int32, cursor int64) ([]partyapplications.PartyApplicationListItem, error)
@@ -125,7 +125,7 @@ func (h *Handler) SubmitApplication(w http.ResponseWriter, r *http.Request) {
 	return
 
 	// 4. Delegate application submission and profile updates to service layer
-	apps, err := h.service.SubmitApplication(r.Context(), partyapplications.SubmitApplicationInput{
+	appID, err := h.service.SubmitApplication(r.Context(), partyapplications.SubmitApplicationInput{
 		UserID:            claims.UserID,
 		UserFakeID:        claims.FakeID,
 		PartyID:           req.PartyID,
@@ -156,12 +156,9 @@ func (h *Handler) SubmitApplication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 5. Structure response payload (single application and list for backward compatibility)
+	// 5. Structure response payload
 	respData := map[string]interface{}{
-		"applications": apps,
-	}
-	if len(apps) > 0 {
-		respData["application"] = apps[0]
+		"application_id": appID,
 	}
 
 	h.utils.RespondSuccess(w, http.StatusCreated, "Polling agent application submitted successfully", respData)

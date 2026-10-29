@@ -150,7 +150,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	electionsService := electionsservice.NewElectionsService(q, pool, rdb, distributor, earningsService, officesService, bodiesService, notificationsService)
 	usersService := usersservice.NewUsersService(q, rdb, bodiesService, electionsService)
 	pollingUnitUpdatesService := puupdates.NewService(q, pool, earningsService, usersService)
-	partyApplicationsService := partyapplications.NewService(q, pool, rdb, distributor)
+	partyApplicationsService := partyapplications.NewService(q, pool, rdb, distributor, usersService)
 	pollingUnitResultsService := puresults.NewService(q, pool, distributor, earningsService, usersService)
 	pollingUnitsService := pollingunitsservice.NewPollingUnitsService(q, rdb)
 	supervisorAssignmentsService := supervisorassignmentsservice.NewService(q)

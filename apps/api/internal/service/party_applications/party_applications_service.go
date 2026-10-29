@@ -21,19 +21,27 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+type UsersService interface {
+	InvalidateCachedUserInfo(ctx context.Context, fakeID int64) error
+	InvalidateUserMoreInfo(ctx context.Context, userID int64) error
+	InvalidatePrimaryBankAccount(ctx context.Context, userID int64) error
+}
+
 type Service struct {
 	queries         *queries.Queries
 	pool            *pgxpool.Pool
 	rdb             *redis.Client
 	taskDistributor worker.TaskDistributor
+	usersService    UsersService
 }
 
-func NewService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client, taskDistributor worker.TaskDistributor) *Service {
+func NewService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client, taskDistributor worker.TaskDistributor, usersService UsersService) *Service {
 	return &Service{
 		queries:         q,
 		pool:            pool,
 		rdb:             rdb,
 		taskDistributor: taskDistributor,
+		usersService:    usersService,
 	}
 }
 
@@ -108,28 +116,28 @@ type SubmitApplicationInput struct {
 	BankCode          string
 }
 
-func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplicationInput) ([]queries.PartyApplication, error) {
+func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplicationInput) (int64, error) {
 	// Validate party is active, verified, and has available slots
 	party, err := s.queries.GetPartyByID(ctx, int16(input.PartyID))
 	if err != nil {
-		return nil, errors.New("selected political party not found")
+		return 0, errors.New("selected political party not found")
 	}
 	if party.Status != "active" || !party.IsVerified.Bool {
-		return nil, errors.New("this political party is not currently verified or accepting applications")
+		return 0, errors.New("this political party is not currently verified or accepting applications")
 	}
 	if party.Slots <= 0 {
-		return nil, errors.New("this political party has no available slots to accept applications")
+		return 0, errors.New("this political party has no available slots to accept applications")
 	}
 
 	// Ensure a valid target election group is specified for this application
 	if input.ElectionGroupID <= 0 {
-		return nil, errors.New("election_group_id is required")
+		return 0, errors.New("election_group_id is required")
 	}
 
 	// Begin transaction
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+		return 0, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
 
@@ -145,7 +153,7 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 		PollingUnitID: utils.PgInt4FromPositive(input.PollingUnitID),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to update user details: %w", err)
+		return 0, fmt.Errorf("failed to update user details: %w", err)
 	}
 
 	// Update user's avatar_file_id and file ownership if avatar file was uploaded
@@ -155,7 +163,7 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 			Avatar:       utils.PgTextFromString(input.Avatar),
 			AvatarFileID: utils.PgInt8FromPtr(input.AvatarFileID),
 		}); err != nil {
-			return nil, fmt.Errorf("failed to update user avatar file id: %w", err)
+			return 0, fmt.Errorf("failed to update user avatar file id: %w", err)
 		}
 
 		_ = txQueries.UpdateFileOwner(ctx, queries.UpdateFileOwnerParams{
@@ -175,7 +183,7 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 			Address:           utils.PgTextFromString(input.Address),
 		})
 		if err != nil {
-			return nil, fmt.Errorf("failed to update user profile: %w", err)
+			return 0, fmt.Errorf("failed to update user profile: %w", err)
 		}
 	}
 
@@ -187,12 +195,12 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 			BankCode:      input.BankCode,
 		})
 		if err != nil {
-			return nil, fmt.Errorf("failed to save primary bank account: %w", err)
+			return 0, fmt.Errorf("failed to save primary bank account: %w", err)
 		}
 	}
 
 	// Create application
-	app, err := txQueries.CreateApplication(ctx, queries.CreateApplicationParams{
+	appID, err := txQueries.CreateApplication(ctx, queries.CreateApplicationParams{
 		UserID:          input.UserID,
 		PartyID:         int16(input.PartyID),
 		ElectionGroupID: input.ElectionGroupID,
@@ -202,7 +210,7 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 		WardID:          utils.PgInt4FromPositive(input.CurrentWard),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to create application: %w", err)
+		return 0, fmt.Errorf("failed to create application: %w", err)
 	}
 
 	// Create user referral record for this election group
@@ -212,7 +220,7 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 		ElectionGroupID: utils.PgInt4FromPositive(input.ElectionGroupID),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to create user referral record: %w", err)
+		return 0, fmt.Errorf("failed to create user referral record: %w", err)
 	}
 
 	// Increment applications_count on election_group_polling_units for this PU & party
@@ -225,7 +233,7 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 			AcceptedDelta:   0,
 			RejectedDelta:   0,
 		}); adjErr != nil {
-			return nil, fmt.Errorf("failed to adjust polling unit application counts: %w", adjErr)
+			return 0, fmt.Errorf("failed to adjust polling unit application counts: %w", adjErr)
 		}
 	}
 
@@ -236,21 +244,20 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 	})
 
 	// Process referred user's referral record linking & increment total_referrals (best effort)
-	if refErr := s.updateReferralOnApplicationSubmission(ctx, txQueries, input.UserID, int64(input.PartyID), input.ElectionGroupID, int16(input.CurrentState)); refErr != nil {
+	if refErr := s.updateReferralOnApplicationSubmission(ctx, txQueries, input.UserID, int64(input.PartyID), []int32{input.ElectionGroupID}, int16(input.CurrentState), 1); refErr != nil {
 		slog.Warn("updateReferralOnApplicationSubmission failed (non-fatal)", "userID", input.UserID, "err", refErr)
 	}
 
 	if err = tx.Commit(ctx); err != nil {
-		return nil, fmt.Errorf("failed to commit application transaction: %w", err)
+		return 0, fmt.Errorf("failed to commit application transaction: %w", err)
 	}
 
 	// Invalidate caches
-	if input.UserFakeID > 0 {
-		s.rdb.Del(ctx, fmt.Sprintf("%s%d", db.RedisUserInfo, input.UserFakeID))
-	}
-	s.rdb.Del(ctx, fmt.Sprintf("%s%d", db.RedisUserMoreInfo, input.UserID))
+	_ = s.usersService.InvalidateCachedUserInfo(ctx, input.UserFakeID)
+	_ = s.usersService.InvalidateUserMoreInfo(ctx, input.UserID)
+	_ = s.usersService.InvalidatePrimaryBankAccount(ctx, input.UserID)
 
-	return []queries.PartyApplication{app}, nil
+	return appID, nil
 }
 
 type SubmitSupervisorApplicationInput struct {
@@ -339,7 +346,7 @@ func (s *Service) SubmitSupervisorApplication(ctx context.Context, input SubmitS
 	}
 
 	// Create supervisor application
-	app, err := txQueries.CreateApplication(ctx, queries.CreateApplicationParams{
+	appID, err := txQueries.CreateApplication(ctx, queries.CreateApplicationParams{
 		UserID:          input.UserID,
 		PartyID:         acceptedApp.PartyID,
 		ElectionGroupID: input.ElectionGroupID,
@@ -357,8 +364,8 @@ func (s *Service) SubmitSupervisorApplication(ctx context.Context, input SubmitS
 	}
 
 	// Set role on application record explicitly to supervisor role
-	app, err = txQueries.UpdateApplicationApproval(ctx, queries.UpdateApplicationApprovalParams{
-		ID:            app.ID,
+	app, err := txQueries.UpdateApplicationApproval(ctx, queries.UpdateApplicationApprovalParams{
+		ID:            appID,
 		Role:          roleType,
 		PollingUnitID: pgtype.Int4{Valid: false},
 		StateID:       pgtype.Int2{Int16: input.StateID, Valid: input.StateID > 0},
@@ -373,7 +380,8 @@ func (s *Service) SubmitSupervisorApplication(ctx context.Context, input SubmitS
 		return queries.PartyApplication{}, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	s.rdb.Del(ctx, fmt.Sprintf("%s%d", db.RedisUserMoreInfo, input.UserID))
+	_ = s.usersService.InvalidateUserMoreInfo(ctx, input.UserID)
+	_ = s.usersService.InvalidatePrimaryBankAccount(ctx, input.UserID)
 
 	return app, nil
 }

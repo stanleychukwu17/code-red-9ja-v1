@@ -10,7 +10,7 @@ INSERT INTO party_applications (
   status
 ) VALUES (
   $1, $2, $3, $4, $5, $6, $7, 'pending'
-) RETURNING *;
+) RETURNING id;
 
 -- name: UpdateUserAgentDetails :exec
 UPDATE users

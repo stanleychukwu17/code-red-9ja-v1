@@ -581,9 +581,53 @@ func (s *UsersService) GetMoreInfoAboutThisUser(ctx context.Context, userID int6
 	return profile, nil
 }
 
-// GetUserPrimaryBankAccount fetches the primary bank account for a given user
+// GetUserPrimaryBankAccount fetches the primary bank account for a given user, cached in Redis.
 func (s *UsersService) GetUserPrimaryBankAccount(ctx context.Context, userID int64) (queries.UserBankAccount, error) {
-	return s.queries.GetUserPrimaryBankAccount(ctx, userID)
+	cacheKey := fmt.Sprintf("%s%d", db.RedisUserPrimaryBankAccount, userID)
+
+	// Check Redis cache first
+	bankAccountJSON, err := s.rdb.Get(ctx, cacheKey).Result()
+	if err == nil {
+		var bankAccount queries.UserBankAccount
+		if err := json.Unmarshal([]byte(bankAccountJSON), &bankAccount); err == nil {
+			// Sentinel check: if ID == 0 or AccountNumber is empty, return pgx.ErrNoRows from cache
+			if bankAccount.ID == 0 || len(bankAccount.AccountNumber) == 0 {
+				return queries.UserBankAccount{}, pgx.ErrNoRows
+			}
+			return bankAccount, nil
+		}
+	}
+
+	// Fetch from Postgres if not in cache
+	bankAccount, err := s.queries.GetUserPrimaryBankAccount(ctx, userID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			// Negative cache: store empty sentinel for 24 hours to shield Postgres
+			emptySentinel, _ := json.Marshal(queries.UserBankAccount{UserID: userID})
+			_ = s.rdb.Set(ctx, cacheKey, emptySentinel, db.RedisOneDayTTL).Err()
+			return queries.UserBankAccount{}, pgx.ErrNoRows
+		}
+		return queries.UserBankAccount{}, fmt.Errorf("user primary bank account not found: %w", err)
+	}
+
+	// Cache valid primary bank account in Redis for 1 year
+	if jsonBytes, mErr := json.Marshal(bankAccount); mErr == nil {
+		_ = s.rdb.Set(ctx, cacheKey, jsonBytes, db.RedisOneYearTTL).Err()
+	}
+
+	return bankAccount, nil
+}
+
+// InvalidatePrimaryBankAccount clears the cached primary bank account for a user.
+func (s *UsersService) InvalidatePrimaryBankAccount(ctx context.Context, userID int64) error {
+	cacheKey := fmt.Sprintf("%s%d", db.RedisUserPrimaryBankAccount, userID)
+	return s.rdb.Del(ctx, cacheKey).Err()
+}
+
+// InvalidateUserMoreInfo clears the cached extended profile details for a user.
+func (s *UsersService) InvalidateUserMoreInfo(ctx context.Context, userID int64) error {
+	userProfileKey := fmt.Sprintf("%s%d", db.RedisUserMoreInfo, userID)
+	return s.rdb.Del(ctx, userProfileKey).Err()
 }
 
 // AdminUpdateUser allows admins to perform a comprehensive update of user details.
@@ -649,8 +693,7 @@ func (s *UsersService) UpdateUserProfileDetails(ctx context.Context, userID int6
 	}
 
 	// Invalidate cache
-	userProfileKey := fmt.Sprintf("%s%d", db.RedisUserMoreInfo, userID)
-	s.rdb.Del(ctx, userProfileKey)
+	_ = s.InvalidateUserMoreInfo(ctx, userID)
 	return nil
 }
 
