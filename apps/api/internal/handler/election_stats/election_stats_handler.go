@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -86,7 +85,6 @@ type BreakdownListResponse[T any] struct {
 	SupervisorTitle string `json:"supervisor_title"`
 	Units           []T    `json:"units"`
 }
-
 
 func NewHandler(
 	service electionstats.ElectionStatsService,
@@ -284,27 +282,27 @@ func partyStatsToMap(raw interface{}, partyID int32) map[string]interface{} {
 
 func defaultPartyStats(partyID int32) map[string]interface{} {
 	return map[string]interface{}{
-		"party_id":                                         partyID,
-		"pu_agents_count":                                  0,
-		"unique_pu_agents_count":                           0,
-		"pu_agents_in_attendance_count":                    0,
-		"pu_reports_count":                                 0,
-		"pu_updates_count":                                 0,
-		"pu_average_arrival_time":                          nil,
-		"pu_average_election_started_at":                   nil,
-		"pu_average_election_ended_at":                     nil,
+		"party_id":                                       partyID,
+		"pu_agents_count":                                0,
+		"unique_pu_agents_count":                         0,
+		"pu_agents_in_attendance_count":                  0,
+		"pu_reports_count":                               0,
+		"pu_updates_count":                               0,
+		"pu_average_arrival_time":                        nil,
+		"pu_average_election_started_at":                 nil,
+		"pu_average_election_ended_at":                   nil,
 		"pu_election_practice_test_readiness_percentage": 0,
-		"pu_final_results_uploaded_count":                  0,
-		"unique_pu_final_results_uploaded_count":            0,
-		"pu_average_update_time_interval_in_seconds":       0,
-		"pu_live_voters_referred_by_agent_count":           0,
-		"total_pu_with_reports":                            0,
-		"total_pu_with_updates":                            0,
-		"total_pu_with_agents_in_attendance":                0,
-		"total_pu_where_election_has_started":               0,
-		"total_pu_where_election_has_ended":                 0,
-		"total_pu_unique_final_results_uploaded":            0,
-		"total_pu_where_agents_referred_live_voters":       0,
+		"pu_final_results_uploaded_count":                0,
+		"unique_pu_final_results_uploaded_count":         0,
+		"pu_average_update_time_interval_in_seconds":     0,
+		"pu_live_voters_referred_by_agent_count":         0,
+		"total_pu_with_reports":                          0,
+		"total_pu_with_updates":                          0,
+		"total_pu_with_agents_in_attendance":             0,
+		"total_pu_where_election_has_started":            0,
+		"total_pu_where_election_has_ended":              0,
+		"total_pu_unique_final_results_uploaded":         0,
+		"total_pu_where_agents_referred_live_voters":     0,
 	}
 }
 
@@ -321,32 +319,32 @@ func sanitizeTargets(raw interface{}) map[string]interface{} {
 
 	// White-list strictly structural/geographic keys
 	allowedKeys := map[string]bool{
-		"id":                           true,
-		"election_group_id":            true,
-		"state_id":                     true,
-		"state_name":                   true,
-		"lga_id":                       true,
-		"lga_name":                     true,
-		"ward_id":                      true,
-		"ward_name":                    true,
-		"senatorial_district_id":       true,
-		"senatorial_district_name":     true,
-		"federal_constituency_id":      true,
+		"id":                            true,
+		"election_group_id":             true,
+		"state_id":                      true,
+		"state_name":                    true,
+		"lga_id":                        true,
+		"lga_name":                      true,
+		"ward_id":                       true,
+		"ward_name":                     true,
+		"senatorial_district_id":        true,
+		"senatorial_district_name":      true,
+		"federal_constituency_id":       true,
 		"federal_constituency_name":     true,
-		"state_constituency_id":        true,
-		"state_constituency_name":      true,
-		"polling_unit_id":              true,
-		"polling_unit_name":            true,
-		"states_count":                 true,
-		"senatorial_districts_count":   true,
-		"federal_constituencies_count": true,
-		"lgas_count":                   true,
-		"state_constituencies_count":   true,
-		"wards_count":                  true,
-		"polling_units_count":          true,
+		"state_constituency_id":         true,
+		"state_constituency_name":       true,
+		"polling_unit_id":               true,
+		"polling_unit_name":             true,
+		"states_count":                  true,
+		"senatorial_districts_count":    true,
+		"federal_constituencies_count":  true,
+		"lgas_count":                    true,
+		"state_constituencies_count":    true,
+		"wards_count":                   true,
+		"polling_units_count":           true,
 		"unique_final_results_expected": true,
-		"created_at":                   true,
-		"updated_at":                   true,
+		"created_at":                    true,
+		"updated_at":                    true,
 	}
 
 	cleanMap := make(map[string]interface{})
@@ -1264,17 +1262,15 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 	if unitType == "polling_units" {
 		for rows.Next() {
 			var (
-				id               int64
-				name, code       string
-				puAgentsCount    int64
-				overallReadiness float64
-				agentsBytes      []byte
+				id            int64
+				name, code    string
+				puAgentsCount int64
+				agentsBytes   []byte
 			)
 
 			if err := rows.Scan(
 				&id, &name, &code,
 				&puAgentsCount,
-				&overallReadiness,
 				&agentsBytes,
 			); err != nil {
 				continue
@@ -1286,13 +1282,12 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 			}
 
 			unit := map[string]interface{}{
-				"id":                id,
-				"name":              name,
-				"code":              code,
-				"polling_agents":    strconv.FormatInt(puAgentsCount, 10),
-				"overall_readiness": overallReadiness,
-				"pu_agents":         agents,
-				"supervisors":       agents,
+				"id":             id,
+				"name":           name,
+				"code":           code,
+				"polling_agents": strconv.FormatInt(puAgentsCount, 10),
+				"pu_agents":      agents,
+				"supervisors":    agents,
 			}
 			units = append(units, unit)
 		}
@@ -1308,7 +1303,6 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 				lgaSupervisorsCount   int64
 				totalLGAs             int64
 				stateSupervisorsCount int64
-				overallReadiness      float64
 				supervisorsBytes      []byte
 			)
 
@@ -1318,7 +1312,6 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 				&wardSupervisorsCount, &totalWards,
 				&lgaSupervisorsCount, &totalLGAs,
 				&stateSupervisorsCount,
-				&overallReadiness,
 				&supervisorsBytes,
 			); err != nil {
 				continue
@@ -1366,7 +1359,6 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 				"ward_supervisors":  wardSupervisorsStr,
 				"lga_supervisors":   lgaSupervisorsStr,
 				"state_supervisors": stateSupervisorsStr,
-				"overall_readiness": overallReadiness,
 				"supervisors":       supervisors,
 				"pu_agents":         supervisors,
 			}

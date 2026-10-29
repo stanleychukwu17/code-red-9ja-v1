@@ -44,8 +44,6 @@ CREATE TABLE IF NOT EXISTS election_group_polling_units (
   pu_final_results_uploaded_count                      INT         NOT NULL DEFAULT 0,
   -- Distinct election_ids with >=1 result submission for this PU
   unique_pu_final_results_uploaded_count               INT         NOT NULL DEFAULT 0,
-  -- Voters whose referred_by_code matches an agent assigned to this PU, who then voted
-  pu_live_voters_referred_by_agent_count               INT         NOT NULL DEFAULT 0,
 
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
@@ -73,10 +71,6 @@ CREATE TABLE IF NOT EXISTS election_group_wards (
   -- Sum of unique_final_results_expected across all PUs in this ward
   unique_final_results_expected                    INT NOT NULL DEFAULT 1, -- total unique results (a polling unit may have)
 
-  -- Application stats
-  ward_supervisor_applications_count            INT NOT NULL DEFAULT 0, -- total ward supervisor applications to this ward
-  ward_supervisor_accepted_applications_count   INT NOT NULL DEFAULT 0, -- total supervisor applications to this ward that were accepted
-  ward_supervisor_rejected_applications_count   INT NOT NULL DEFAULT 0, -- total supervisor applications to this ward that were rejected
 
   -- Rollups of per-PU scalar fields
   pu_agents_count                            INT NOT NULL DEFAULT 0, -- total pu agents
@@ -86,20 +80,15 @@ CREATE TABLE IF NOT EXISTS election_group_wards (
   pu_updates_count                           INT NOT NULL DEFAULT 0, -- total updates
   pu_final_results_uploaded_count            INT NOT NULL DEFAULT 0, -- total pu final result uploads
   unique_pu_final_results_uploaded_count     INT NOT NULL DEFAULT 0, -- total unique final result uploads
-  pu_live_voters_referred_by_agent_count           INT NOT NULL DEFAULT 0, -- total live voters referred by agents across all PUs
 
   -- Count of PUs that have crossed each threshold (overall, across all parties)
   total_pu_with_reports                            INT NOT NULL DEFAULT 0, -- total pu with 1 or more reports
   total_pu_with_updates                            INT NOT NULL DEFAULT 0, -- total pu with 1 or more updates
   total_pu_with_agents_in_attendance               INT NOT NULL DEFAULT 0, -- total pu with 1 or more agents in attendance
-  total_pu_where_election_has_started              INT NOT NULL DEFAULT 0, -- total pu where election has started
-  total_pu_where_election_has_ended                INT NOT NULL DEFAULT 0, -- total pu where election has ended
   total_pu_unique_final_results_uploaded           INT NOT NULL DEFAULT 0, -- total pu with 1 or more unique election final results uploaded (1 recorded for each election final result upload within the election group)
-  total_pu_where_agents_referred_live_voters       INT NOT NULL DEFAULT 0, -- total pu where agents have referred live voters
 
   ward_supervisors_count                           INT NOT NULL DEFAULT 0, 
 
-  polling_units_count                               INT NOT NULL DEFAULT 0,
 
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
@@ -126,14 +115,6 @@ CREATE TABLE IF NOT EXISTS election_group_lgas (
   senatorial_district_id  INT      REFERENCES senatorial_districts(id) ON DELETE SET NULL,
   federal_constituency_id INT      REFERENCES federal_constituencies(id) ON DELETE SET NULL,
 
-  -- Application Stats
-
-  ward_supervisor_applications_count               INT NOT NULL DEFAULT 0,
-  ward_supervisor_accepted_applications_count      INT NOT NULL DEFAULT 0,
-  ward_supervisor_rejected_applications_count      INT NOT NULL DEFAULT 0,
-  lga_supervisor_applications_count                INT NOT NULL DEFAULT 0,
-  lga_supervisor_accepted_applications_count       INT NOT NULL DEFAULT 0,
-  lga_supervisor_rejected_applications_count       INT NOT NULL DEFAULT 0,
 
   unique_final_results_expected                    INT NOT NULL DEFAULT 0, -- total unique results (a polling unit may have)
   pu_agents_count                                  INT NOT NULL DEFAULT 0, -- total pu agents
@@ -143,23 +124,16 @@ CREATE TABLE IF NOT EXISTS election_group_lgas (
   pu_updates_count                                 INT NOT NULL DEFAULT 0, -- total updates
   pu_final_results_uploaded_count                  INT NOT NULL DEFAULT 0, -- total pu final result uploads
   unique_pu_final_results_uploaded_count           INT NOT NULL DEFAULT 0, -- total unique final result uploads
-  pu_live_voters_referred_by_agent_count           INT NOT NULL DEFAULT 0, -- total live voters referred by agents across all PUs
 
   total_pu_with_reports                            INT NOT NULL DEFAULT 0, -- total pu with 1 or more reports
   total_pu_with_updates                            INT NOT NULL DEFAULT 0, -- total pu with 1 or more updates
   total_pu_with_agents_in_attendance               INT NOT NULL DEFAULT 0, -- total pu with 1 or more agents in attendance
-  total_pu_where_election_has_started              INT NOT NULL DEFAULT 0, -- total pu where election has started
-  total_pu_where_election_has_ended                INT NOT NULL DEFAULT 0, -- total pu where election has ended
   total_pu_unique_final_results_uploaded           INT NOT NULL DEFAULT 0, -- total pu with 1 or more unique election final results uploaded (1 recorded for each election final result upload within the election group)
-  total_pu_where_agents_referred_live_voters       INT NOT NULL DEFAULT 0, -- total pu where agents have referred live voters
 
   lga_supervisors_count                            INT NOT NULL DEFAULT 0,
   ward_supervisors_count                           INT NOT NULL DEFAULT 0,
   unique_ward_supervisors_count                    INT NOT NULL DEFAULT 0,
 
-  state_constituencies_count                       INT NOT NULL DEFAULT 0,
-  wards_count                                      INT NOT NULL DEFAULT 0,
-  polling_units_count                              INT NOT NULL DEFAULT 0,
 
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
@@ -185,19 +159,6 @@ CREATE TABLE IF NOT EXISTS election_group_states (
   election_group_id INT   NOT NULL REFERENCES election_groups(id) ON DELETE CASCADE,
   state_id            SMALLINT NOT NULL REFERENCES c_states(id) ON DELETE CASCADE,
 
-  -- Application Stats
-
-  ward_supervisor_applications_count               INT NOT NULL DEFAULT 0,
-  ward_supervisor_accepted_applications_count      INT NOT NULL DEFAULT 0,
-  ward_supervisor_rejected_applications_count      INT NOT NULL DEFAULT 0,
-
-  lga_supervisor_applications_count                INT NOT NULL DEFAULT 0,
-  lga_supervisor_accepted_applications_count       INT NOT NULL DEFAULT 0,
-  lga_supervisor_rejected_applications_count       INT NOT NULL DEFAULT 0,
-
-  state_supervisor_applications_count              INT NOT NULL DEFAULT 0,
-  state_supervisor_accepted_applications_count     INT NOT NULL DEFAULT 0,
-  state_supervisor_rejected_applications_count     INT NOT NULL DEFAULT 0,
 
   unique_final_results_expected                    INT NOT NULL DEFAULT 0, -- total unique results (a polling unit may have)
   pu_agents_count                                  INT NOT NULL DEFAULT 0, -- total pu agents
@@ -207,15 +168,11 @@ CREATE TABLE IF NOT EXISTS election_group_states (
   pu_updates_count                                 INT NOT NULL DEFAULT 0, -- total updates
   pu_final_results_uploaded_count                  INT NOT NULL DEFAULT 0, -- total pu final result uploads
   unique_pu_final_results_uploaded_count           INT NOT NULL DEFAULT 0, -- total unique final result uploads
-  pu_live_voters_referred_by_agent_count           INT NOT NULL DEFAULT 0, -- total live voters referred by agents across all PUs
 
   total_pu_with_reports                            INT NOT NULL DEFAULT 0, -- total pu with 1 or more reports
   total_pu_with_updates                            INT NOT NULL DEFAULT 0, -- total pu with 1 or more updates
   total_pu_with_agents_in_attendance               INT NOT NULL DEFAULT 0, -- total pu with 1 or more agents in attendance
-  total_pu_where_election_has_started              INT NOT NULL DEFAULT 0, -- total pu where election has started
-  total_pu_where_election_has_ended                INT NOT NULL DEFAULT 0, -- total pu where election has ended
   total_pu_unique_final_results_uploaded           INT NOT NULL DEFAULT 0, -- total pu with 1 or more unique election final results uploaded (1 recorded for each election final result upload within the election group)
-  total_pu_where_agents_referred_live_voters       INT NOT NULL DEFAULT 0, -- total pu where agents have referred live voters
 
   lga_supervisors_count                            INT NOT NULL DEFAULT 0,
   unique_lga_supervisors_count                     INT NOT NULL DEFAULT 0,
@@ -224,12 +181,6 @@ CREATE TABLE IF NOT EXISTS election_group_states (
 
   state_supervisors_count                          INT NOT NULL DEFAULT 0,
 
-  senatorial_districts_count                       INT NOT NULL DEFAULT 0,
-  federal_constituencies_count                     INT NOT NULL DEFAULT 0,
-  lgas_count                                       INT NOT NULL DEFAULT 0,
-  state_constituencies_count                       INT NOT NULL DEFAULT 0,
-  wards_count                                      INT NOT NULL DEFAULT 0,
-  polling_units_count                              INT NOT NULL DEFAULT 0,
 
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),

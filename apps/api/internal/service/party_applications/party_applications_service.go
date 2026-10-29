@@ -1196,14 +1196,6 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 			}); err != nil {
 				return queries.PartyApplication{}, fmt.Errorf("failed UpsertElectionGroupStatePartyEntry: %v", err)
 			}
-			if err = txQueries.UpsertElectionGroupNationalPartyEntry(ctx, queries.UpsertElectionGroupNationalPartyEntryParams{
-				ElectionGroupID: egID,
-				PartyID:         partyID,
-				AgentsDelta:     1,
-				UniquePuDelta:   uniquePuDelta,
-			}); err != nil {
-				return queries.PartyApplication{}, fmt.Errorf("failed UpsertElectionGroupNationalPartyEntry: %v", err)
-			}
 		}
 	}
 

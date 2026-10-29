@@ -22,9 +22,6 @@ type Querier interface {
 	// SUPERVISOR COUNT INCREMENTS / DECREMENTS
 	// ============================================================
 	AdjustElectionGroupLGAWardSupervisorCounts(ctx context.Context, arg AdjustElectionGroupLGAWardSupervisorCountsParams) error
-	AdjustElectionGroupNationalLGASupervisorCounts(ctx context.Context, arg AdjustElectionGroupNationalLGASupervisorCountsParams) error
-	AdjustElectionGroupNationalStateSupervisorCounts(ctx context.Context, arg AdjustElectionGroupNationalStateSupervisorCountsParams) error
-	AdjustElectionGroupNationalWardSupervisorCounts(ctx context.Context, arg AdjustElectionGroupNationalWardSupervisorCountsParams) error
 	// ============================================================
 	// APPLICATION COUNT INCREMENT QUERIES
 	// ============================================================
@@ -356,7 +353,6 @@ type Querier interface {
 	IncrementAssignmentIntervalUpdates(ctx context.Context, arg IncrementAssignmentIntervalUpdatesParams) error
 	IncrementAssignmentLiveVotersReferredCount(ctx context.Context, id int64) (PollingUnitAssignment, error)
 	IncrementAssignmentResultCount(ctx context.Context, id int64) error
-	IncrementElectionGroupMetrics(ctx context.Context, arg IncrementElectionGroupMetricsParams) error
 	IncrementElectionGroupPUPartyMetrics(ctx context.Context, arg IncrementElectionGroupPUPartyMetricsParams) error
 	IncrementElectionGroupResultCount(ctx context.Context, id int32) error
 	IncrementElectionMetricsByGroup(ctx context.Context, arg IncrementElectionMetricsByGroupParams) error
@@ -481,7 +477,6 @@ type Querier interface {
 	RecalculateStateMetrics(ctx context.Context) error
 	RecalculateWardMetrics(ctx context.Context) error
 	RefreshPollingUnitLiveResults(ctx context.Context, arg RefreshPollingUnitLiveResultsParams) error
-	RefreshSingleElectionGroupGlobalStats(ctx context.Context, electionGroupID int32) error
 	RefreshSingleElectionGroupLGAStats(ctx context.Context, arg RefreshSingleElectionGroupLGAStatsParams) error
 	// ============================================================
 	// CASCADE REFRESH QUERIES
@@ -604,7 +599,6 @@ type Querier interface {
 	UpdateWardSupervisorEarnedAmountKobo(ctx context.Context, arg UpdateWardSupervisorEarnedAmountKoboParams) (WardElectionSupervisor, error)
 	UpsertAgentEarnings(ctx context.Context, arg UpsertAgentEarningsParams) (AgentEarning, error)
 	UpsertElectionGroupLGAPartyEntry(ctx context.Context, arg UpsertElectionGroupLGAPartyEntryParams) error
-	UpsertElectionGroupNationalPartyEntry(ctx context.Context, arg UpsertElectionGroupNationalPartyEntryParams) error
 	// ============================================================
 	// INCREMENTAL PARTY ENTRY UPSERTS
 	// ============================================================

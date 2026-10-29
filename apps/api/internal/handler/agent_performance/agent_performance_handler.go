@@ -898,12 +898,6 @@ func adjustAgentStats(ctx context.Context, dbtx queries.DBTX, q *queries.Queries
 			AgentsDelta:     delta,
 			UniquePuDelta:   uniquePuDelta,
 		})
-		_ = q.UpsertElectionGroupNationalPartyEntry(ctx, queries.UpsertElectionGroupNationalPartyEntryParams{
-			ElectionGroupID: egID,
-			PartyID:         partyID,
-			AgentsDelta:     delta,
-			UniquePuDelta:   uniquePuDelta,
-		})
 
 	case "ward_election_supervisor", "ward_supervisor":
 		if wardID <= 0 {
@@ -967,12 +961,6 @@ func adjustAgentStats(ctx context.Context, dbtx queries.DBTX, q *queries.Queries
 				UniqueDelta:     uniqueWardSup,
 			})
 		}
-		_ = q.AdjustElectionGroupNationalWardSupervisorCounts(ctx, queries.AdjustElectionGroupNationalWardSupervisorCountsParams{
-			ElectionGroupID: egID,
-			PartyID:         partyID,
-			Delta:           delta,
-			UniqueDelta:     uniqueWardSup,
-		})
 
 	case "lga_election_supervisor", "lga_supervisor":
 		if lgaID <= 0 {
@@ -1018,12 +1006,6 @@ func adjustAgentStats(ctx context.Context, dbtx queries.DBTX, q *queries.Queries
 				UniqueDelta:     uniqueLgaSup,
 			})
 		}
-		_ = q.AdjustElectionGroupNationalLGASupervisorCounts(ctx, queries.AdjustElectionGroupNationalLGASupervisorCountsParams{
-			ElectionGroupID: egID,
-			PartyID:         partyID,
-			Delta:           delta,
-			UniqueDelta:     uniqueLgaSup,
-		})
 
 	case "state_election_supervisor", "state_supervisor":
 		if stateID <= 0 {
@@ -1052,12 +1034,6 @@ func adjustAgentStats(ctx context.Context, dbtx queries.DBTX, q *queries.Queries
 			StateID:         stateID,
 			PartyID:         partyID,
 			Delta:           delta,
-		})
-		_ = q.AdjustElectionGroupNationalStateSupervisorCounts(ctx, queries.AdjustElectionGroupNationalStateSupervisorCountsParams{
-			ElectionGroupID: egID,
-			PartyID:         partyID,
-			Delta:           delta,
-			UniqueDelta:     uniqueStateSup,
 		})
 	}
 }

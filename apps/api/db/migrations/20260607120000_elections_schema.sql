@@ -6,46 +6,6 @@ CREATE TABLE election_groups (
   id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   fake_id BIGINT UNIQUE,                                   -- Public-facing obfuscated identifier for clean URLs
   name VARCHAR(255) UNIQUE NOT NULL,                       -- Human-readable name (e.g. "2027 Nigerian General Elections")
-
-  -- Supervisor hierarchy totals and unique user counts
-  state_supervisors_count INT NOT NULL DEFAULT 0,
-  unique_state_supervisors_count INT NOT NULL DEFAULT 0,
-  lga_supervisors_count INT NOT NULL DEFAULT 0,
-  unique_lga_supervisors_count INT NOT NULL DEFAULT 0,
-  ward_supervisors_count INT NOT NULL DEFAULT 0,
-  unique_ward_supervisors_count INT NOT NULL DEFAULT 0,
-  
-  -- Polling unit (PU) reports and incident feeds
-  pu_reports_count INT NOT NULL DEFAULT 0,                 -- Total submitted situation reports across all PUs
-  pu_updates_count INT NOT NULL DEFAULT 0,                 -- Total periodic polling unit status updates
-  results_submitted_count INT NOT NULL DEFAULT 0,          -- Count of PU vote result entries logged
-  
-  -- Polling unit agent mobilization & attendance
-  unique_final_results_expected INT NOT NULL DEFAULT 0,    -- Target count of verified final results expected
-  pu_agents_count INT NOT NULL DEFAULT 0,                  -- Total agent assignments
-  unique_pu_agents_count INT NOT NULL DEFAULT 0,           -- Unique users acting as polling unit agents
-  pu_agents_in_attendance_count INT NOT NULL DEFAULT 0,    -- Count of agents actively verified on site
-  
-  -- Operational timestamps, readiness benchmarks, and performance metrics
-  pu_average_arrival_time TIMESTAMPTZ,                     -- Average time agents arrived at their PUs
-  pu_average_election_started_at TIMESTAMPTZ,              -- Average accredited voting commencement timestamp
-  pu_average_election_ended_at TIMESTAMPTZ,                -- Average voting concluded timestamp
-  pu_election_practice_test_readiness_percentage FLOAT NOT NULL DEFAULT 0, -- Agent test certification readiness %
-  pu_final_results_uploaded_count INT NOT NULL DEFAULT 0,  -- Total EC8A result sheets uploaded
-  unique_pu_final_results_uploaded_count INT NOT NULL DEFAULT 0, -- Distinct PUs with uploaded final results
-  pu_average_update_time_interval_in_seconds FLOAT NOT NULL DEFAULT 0, -- Cadence of field situation updates
-  pu_live_voters_referred_by_agent_count INT NOT NULL DEFAULT 0, -- Voters mobilized/referred on election day
-  
-  -- Polling unit coverage aggregate counters
-  total_pu_with_reports INT NOT NULL DEFAULT 0,            -- Number of unique PUs with at least 1 report
-  total_pu_with_updates INT NOT NULL DEFAULT 0,            -- Number of unique PUs with at least 1 update
-  total_pu_with_agents_in_attendance INT NOT NULL DEFAULT 0, -- Number of unique PUs with confirmed agent presence
-  total_pu_where_election_has_started INT NOT NULL DEFAULT 0,
-  total_pu_where_election_has_ended INT NOT NULL DEFAULT 0,
-  total_pu_unique_final_results_uploaded INT NOT NULL DEFAULT 0,
-  total_pu_where_agents_referred_live_voters INT NOT NULL DEFAULT 0,
-  
-  -- Group status & metadata
   election_date DATE NOT NULL,                             -- Scheduled polling date for this group
   active BOOLEAN NOT NULL DEFAULT true,                    -- Whether this group is current and active
   created_at TIMESTAMPTZ DEFAULT NOW(),

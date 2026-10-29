@@ -228,27 +228,12 @@ func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskRefreshStateStats(ctx c
 		return fmt.Errorf("failed to refresh state stats: %w", err)
 	}
 
-	// Cascade → Global
-	_ = redisTaskProcessor.taskDistributor.DistributeTaskRefreshGlobalStats(ctx, &RefreshGlobalStatsPayload{
-		ElectionGroupID: payload.ElectionGroupID,
-	})
-
 	slog.Info("state stats refreshed", "election_group_id", payload.ElectionGroupID, "state_id", payload.StateID)
 	return nil
 }
 
 // ProcessTaskRefreshGlobalStats aggregates States→ElectionGroup. Terminal node in the cascade.
 func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskRefreshGlobalStats(ctx context.Context, task *asynq.Task) error {
-	var payload RefreshGlobalStatsPayload
-	if err := json.Unmarshal(task.Payload(), &payload); err != nil {
-		return fmt.Errorf("failed to unmarshal global stats payload: %w", err)
-	}
-	slog.Info("refreshing global stats", "election_group_id", payload.ElectionGroupID)
-
-	if err := redisTaskProcessor.queries.RefreshSingleElectionGroupGlobalStats(ctx, payload.ElectionGroupID); err != nil {
-		return fmt.Errorf("failed to refresh global stats: %w", err)
-	}
-
-	slog.Info("global stats refreshed", "election_group_id", payload.ElectionGroupID)
+	// Global stats table on election_groups is deprecated; state is the top-level geographic rollup.
 	return nil
 }

@@ -114,25 +114,6 @@ func (q *Queries) IncrementAssignmentIntervalUpdates(ctx context.Context, arg In
 	return err
 }
 
-const incrementElectionGroupMetrics = `-- name: IncrementElectionGroupMetrics :exec
-UPDATE election_groups
-SET 
-  pu_reports_count = pu_reports_count + $2,
-  pu_updates_count = pu_updates_count + $3
-WHERE id = $1
-`
-
-type IncrementElectionGroupMetricsParams struct {
-	ID             int32 `json:"id"`
-	PuReportsCount int32 `json:"pu_reports_count"`
-	PuUpdatesCount int32 `json:"pu_updates_count"`
-}
-
-func (q *Queries) IncrementElectionGroupMetrics(ctx context.Context, arg IncrementElectionGroupMetricsParams) error {
-	_, err := q.db.Exec(ctx, incrementElectionGroupMetrics, arg.ID, arg.PuReportsCount, arg.PuUpdatesCount)
-	return err
-}
-
 const incrementElectionMetricsByGroup = `-- name: IncrementElectionMetricsByGroup :exec
 UPDATE elections
 SET 

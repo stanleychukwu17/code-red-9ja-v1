@@ -158,16 +158,6 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 		updatesInc = 1
 	}
 
-	// Increment Election Group Metrics
-	err = qtx.IncrementElectionGroupMetrics(ctx, queries.IncrementElectionGroupMetricsParams{
-		ID:             input.ElectionGroupID,
-		PuReportsCount: reportsInc,
-		PuUpdatesCount: updatesInc,
-	})
-	if err != nil {
-		return queries.PollingUnitUpdate{}, err
-	}
-
 	// Increment Election Metrics (all races in this group)
 	err = qtx.IncrementElectionMetricsByGroup(ctx, queries.IncrementElectionMetricsByGroupParams{
 		ElectionGroupID: input.ElectionGroupID,

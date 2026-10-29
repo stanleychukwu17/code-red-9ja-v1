@@ -55,7 +55,7 @@ func (q *Queries) CountParticipantsInElectionGroup(ctx context.Context, election
 const createElectionGroup = `-- name: CreateElectionGroup :one
 INSERT INTO election_groups (name, election_date)
 VALUES ($1, $2)
-RETURNING id, fake_id, name, state_supervisors_count, unique_state_supervisors_count, lga_supervisors_count, unique_lga_supervisors_count, ward_supervisors_count, unique_ward_supervisors_count, pu_reports_count, pu_updates_count, results_submitted_count, unique_final_results_expected, pu_agents_count, unique_pu_agents_count, pu_agents_in_attendance_count, pu_average_arrival_time, pu_average_election_started_at, pu_average_election_ended_at, pu_election_practice_test_readiness_percentage, pu_final_results_uploaded_count, unique_pu_final_results_uploaded_count, pu_average_update_time_interval_in_seconds, pu_live_voters_referred_by_agent_count, total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance, total_pu_where_election_has_started, total_pu_where_election_has_ended, total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters, election_date, active, created_at, updated_at
+RETURNING id, fake_id, name, election_date, active, created_at, updated_at
 `
 
 type CreateElectionGroupParams struct {
@@ -70,34 +70,6 @@ func (q *Queries) CreateElectionGroup(ctx context.Context, arg CreateElectionGro
 		&i.ID,
 		&i.FakeID,
 		&i.Name,
-		&i.StateSupervisorsCount,
-		&i.UniqueStateSupervisorsCount,
-		&i.LgaSupervisorsCount,
-		&i.UniqueLgaSupervisorsCount,
-		&i.WardSupervisorsCount,
-		&i.UniqueWardSupervisorsCount,
-		&i.PuReportsCount,
-		&i.PuUpdatesCount,
-		&i.ResultsSubmittedCount,
-		&i.UniqueFinalResultsExpected,
-		&i.PuAgentsCount,
-		&i.UniquePuAgentsCount,
-		&i.PuAgentsInAttendanceCount,
-		&i.PuAverageArrivalTime,
-		&i.PuAverageElectionStartedAt,
-		&i.PuAverageElectionEndedAt,
-		&i.PuElectionPracticeTestReadinessPercentage,
-		&i.PuFinalResultsUploadedCount,
-		&i.UniquePuFinalResultsUploadedCount,
-		&i.PuAverageUpdateTimeIntervalInSeconds,
-		&i.PuLiveVotersReferredByAgentCount,
-		&i.TotalPuWithReports,
-		&i.TotalPuWithUpdates,
-		&i.TotalPuWithAgentsInAttendance,
-		&i.TotalPuWhereElectionHasStarted,
-		&i.TotalPuWhereElectionHasEnded,
-		&i.TotalPuUniqueFinalResultsUploaded,
-		&i.TotalPuWhereAgentsReferredLiveVoters,
 		&i.ElectionDate,
 		&i.Active,
 		&i.CreatedAt,
@@ -116,7 +88,7 @@ func (q *Queries) DeleteElectionGroup(ctx context.Context, id int32) error {
 }
 
 const getElectionGroupByFakeID = `-- name: GetElectionGroupByFakeID :one
-SELECT id, fake_id, name, state_supervisors_count, unique_state_supervisors_count, lga_supervisors_count, unique_lga_supervisors_count, ward_supervisors_count, unique_ward_supervisors_count, pu_reports_count, pu_updates_count, results_submitted_count, unique_final_results_expected, pu_agents_count, unique_pu_agents_count, pu_agents_in_attendance_count, pu_average_arrival_time, pu_average_election_started_at, pu_average_election_ended_at, pu_election_practice_test_readiness_percentage, pu_final_results_uploaded_count, unique_pu_final_results_uploaded_count, pu_average_update_time_interval_in_seconds, pu_live_voters_referred_by_agent_count, total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance, total_pu_where_election_has_started, total_pu_where_election_has_ended, total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters, election_date, active, created_at, updated_at FROM election_groups WHERE fake_id = $1
+SELECT id, fake_id, name, election_date, active, created_at, updated_at FROM election_groups WHERE fake_id = $1
 `
 
 func (q *Queries) GetElectionGroupByFakeID(ctx context.Context, fakeID pgtype.Int8) (ElectionGroup, error) {
@@ -126,34 +98,6 @@ func (q *Queries) GetElectionGroupByFakeID(ctx context.Context, fakeID pgtype.In
 		&i.ID,
 		&i.FakeID,
 		&i.Name,
-		&i.StateSupervisorsCount,
-		&i.UniqueStateSupervisorsCount,
-		&i.LgaSupervisorsCount,
-		&i.UniqueLgaSupervisorsCount,
-		&i.WardSupervisorsCount,
-		&i.UniqueWardSupervisorsCount,
-		&i.PuReportsCount,
-		&i.PuUpdatesCount,
-		&i.ResultsSubmittedCount,
-		&i.UniqueFinalResultsExpected,
-		&i.PuAgentsCount,
-		&i.UniquePuAgentsCount,
-		&i.PuAgentsInAttendanceCount,
-		&i.PuAverageArrivalTime,
-		&i.PuAverageElectionStartedAt,
-		&i.PuAverageElectionEndedAt,
-		&i.PuElectionPracticeTestReadinessPercentage,
-		&i.PuFinalResultsUploadedCount,
-		&i.UniquePuFinalResultsUploadedCount,
-		&i.PuAverageUpdateTimeIntervalInSeconds,
-		&i.PuLiveVotersReferredByAgentCount,
-		&i.TotalPuWithReports,
-		&i.TotalPuWithUpdates,
-		&i.TotalPuWithAgentsInAttendance,
-		&i.TotalPuWhereElectionHasStarted,
-		&i.TotalPuWhereElectionHasEnded,
-		&i.TotalPuUniqueFinalResultsUploaded,
-		&i.TotalPuWhereAgentsReferredLiveVoters,
 		&i.ElectionDate,
 		&i.Active,
 		&i.CreatedAt,
@@ -163,7 +107,7 @@ func (q *Queries) GetElectionGroupByFakeID(ctx context.Context, fakeID pgtype.In
 }
 
 const getElectionGroupByID = `-- name: GetElectionGroupByID :one
-SELECT id, fake_id, name, state_supervisors_count, unique_state_supervisors_count, lga_supervisors_count, unique_lga_supervisors_count, ward_supervisors_count, unique_ward_supervisors_count, pu_reports_count, pu_updates_count, results_submitted_count, unique_final_results_expected, pu_agents_count, unique_pu_agents_count, pu_agents_in_attendance_count, pu_average_arrival_time, pu_average_election_started_at, pu_average_election_ended_at, pu_election_practice_test_readiness_percentage, pu_final_results_uploaded_count, unique_pu_final_results_uploaded_count, pu_average_update_time_interval_in_seconds, pu_live_voters_referred_by_agent_count, total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance, total_pu_where_election_has_started, total_pu_where_election_has_ended, total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters, election_date, active, created_at, updated_at FROM election_groups WHERE id = $1
+SELECT id, fake_id, name, election_date, active, created_at, updated_at FROM election_groups WHERE id = $1
 `
 
 func (q *Queries) GetElectionGroupByID(ctx context.Context, id int32) (ElectionGroup, error) {
@@ -173,34 +117,6 @@ func (q *Queries) GetElectionGroupByID(ctx context.Context, id int32) (ElectionG
 		&i.ID,
 		&i.FakeID,
 		&i.Name,
-		&i.StateSupervisorsCount,
-		&i.UniqueStateSupervisorsCount,
-		&i.LgaSupervisorsCount,
-		&i.UniqueLgaSupervisorsCount,
-		&i.WardSupervisorsCount,
-		&i.UniqueWardSupervisorsCount,
-		&i.PuReportsCount,
-		&i.PuUpdatesCount,
-		&i.ResultsSubmittedCount,
-		&i.UniqueFinalResultsExpected,
-		&i.PuAgentsCount,
-		&i.UniquePuAgentsCount,
-		&i.PuAgentsInAttendanceCount,
-		&i.PuAverageArrivalTime,
-		&i.PuAverageElectionStartedAt,
-		&i.PuAverageElectionEndedAt,
-		&i.PuElectionPracticeTestReadinessPercentage,
-		&i.PuFinalResultsUploadedCount,
-		&i.UniquePuFinalResultsUploadedCount,
-		&i.PuAverageUpdateTimeIntervalInSeconds,
-		&i.PuLiveVotersReferredByAgentCount,
-		&i.TotalPuWithReports,
-		&i.TotalPuWithUpdates,
-		&i.TotalPuWithAgentsInAttendance,
-		&i.TotalPuWhereElectionHasStarted,
-		&i.TotalPuWhereElectionHasEnded,
-		&i.TotalPuUniqueFinalResultsUploaded,
-		&i.TotalPuWhereAgentsReferredLiveVoters,
 		&i.ElectionDate,
 		&i.Active,
 		&i.CreatedAt,
@@ -210,7 +126,7 @@ func (q *Queries) GetElectionGroupByID(ctx context.Context, id int32) (ElectionG
 }
 
 const listElectionGroups = `-- name: ListElectionGroups :many
-SELECT id, fake_id, name, state_supervisors_count, unique_state_supervisors_count, lga_supervisors_count, unique_lga_supervisors_count, ward_supervisors_count, unique_ward_supervisors_count, pu_reports_count, pu_updates_count, results_submitted_count, unique_final_results_expected, pu_agents_count, unique_pu_agents_count, pu_agents_in_attendance_count, pu_average_arrival_time, pu_average_election_started_at, pu_average_election_ended_at, pu_election_practice_test_readiness_percentage, pu_final_results_uploaded_count, unique_pu_final_results_uploaded_count, pu_average_update_time_interval_in_seconds, pu_live_voters_referred_by_agent_count, total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance, total_pu_where_election_has_started, total_pu_where_election_has_ended, total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters, election_date, active, created_at, updated_at FROM election_groups
+SELECT id, fake_id, name, election_date, active, created_at, updated_at FROM election_groups
 WHERE ($1::boolean IS NULL OR active = $1::boolean)
 ORDER BY election_date DESC
 `
@@ -228,34 +144,6 @@ func (q *Queries) ListElectionGroups(ctx context.Context, active pgtype.Bool) ([
 			&i.ID,
 			&i.FakeID,
 			&i.Name,
-			&i.StateSupervisorsCount,
-			&i.UniqueStateSupervisorsCount,
-			&i.LgaSupervisorsCount,
-			&i.UniqueLgaSupervisorsCount,
-			&i.WardSupervisorsCount,
-			&i.UniqueWardSupervisorsCount,
-			&i.PuReportsCount,
-			&i.PuUpdatesCount,
-			&i.ResultsSubmittedCount,
-			&i.UniqueFinalResultsExpected,
-			&i.PuAgentsCount,
-			&i.UniquePuAgentsCount,
-			&i.PuAgentsInAttendanceCount,
-			&i.PuAverageArrivalTime,
-			&i.PuAverageElectionStartedAt,
-			&i.PuAverageElectionEndedAt,
-			&i.PuElectionPracticeTestReadinessPercentage,
-			&i.PuFinalResultsUploadedCount,
-			&i.UniquePuFinalResultsUploadedCount,
-			&i.PuAverageUpdateTimeIntervalInSeconds,
-			&i.PuLiveVotersReferredByAgentCount,
-			&i.TotalPuWithReports,
-			&i.TotalPuWithUpdates,
-			&i.TotalPuWithAgentsInAttendance,
-			&i.TotalPuWhereElectionHasStarted,
-			&i.TotalPuWhereElectionHasEnded,
-			&i.TotalPuUniqueFinalResultsUploaded,
-			&i.TotalPuWhereAgentsReferredLiveVoters,
 			&i.ElectionDate,
 			&i.Active,
 			&i.CreatedAt,
@@ -337,7 +225,7 @@ const updateElectionGroup = `-- name: UpdateElectionGroup :one
 UPDATE election_groups
 SET name = $1, election_date = $2, active = $3, updated_at = NOW()
 WHERE id = $4
-RETURNING id, fake_id, name, state_supervisors_count, unique_state_supervisors_count, lga_supervisors_count, unique_lga_supervisors_count, ward_supervisors_count, unique_ward_supervisors_count, pu_reports_count, pu_updates_count, results_submitted_count, unique_final_results_expected, pu_agents_count, unique_pu_agents_count, pu_agents_in_attendance_count, pu_average_arrival_time, pu_average_election_started_at, pu_average_election_ended_at, pu_election_practice_test_readiness_percentage, pu_final_results_uploaded_count, unique_pu_final_results_uploaded_count, pu_average_update_time_interval_in_seconds, pu_live_voters_referred_by_agent_count, total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance, total_pu_where_election_has_started, total_pu_where_election_has_ended, total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters, election_date, active, created_at, updated_at
+RETURNING id, fake_id, name, election_date, active, created_at, updated_at
 `
 
 type UpdateElectionGroupParams struct {
@@ -359,34 +247,6 @@ func (q *Queries) UpdateElectionGroup(ctx context.Context, arg UpdateElectionGro
 		&i.ID,
 		&i.FakeID,
 		&i.Name,
-		&i.StateSupervisorsCount,
-		&i.UniqueStateSupervisorsCount,
-		&i.LgaSupervisorsCount,
-		&i.UniqueLgaSupervisorsCount,
-		&i.WardSupervisorsCount,
-		&i.UniqueWardSupervisorsCount,
-		&i.PuReportsCount,
-		&i.PuUpdatesCount,
-		&i.ResultsSubmittedCount,
-		&i.UniqueFinalResultsExpected,
-		&i.PuAgentsCount,
-		&i.UniquePuAgentsCount,
-		&i.PuAgentsInAttendanceCount,
-		&i.PuAverageArrivalTime,
-		&i.PuAverageElectionStartedAt,
-		&i.PuAverageElectionEndedAt,
-		&i.PuElectionPracticeTestReadinessPercentage,
-		&i.PuFinalResultsUploadedCount,
-		&i.UniquePuFinalResultsUploadedCount,
-		&i.PuAverageUpdateTimeIntervalInSeconds,
-		&i.PuLiveVotersReferredByAgentCount,
-		&i.TotalPuWithReports,
-		&i.TotalPuWithUpdates,
-		&i.TotalPuWithAgentsInAttendance,
-		&i.TotalPuWhereElectionHasStarted,
-		&i.TotalPuWhereElectionHasEnded,
-		&i.TotalPuUniqueFinalResultsUploaded,
-		&i.TotalPuWhereAgentsReferredLiveVoters,
 		&i.ElectionDate,
 		&i.Active,
 		&i.CreatedAt,

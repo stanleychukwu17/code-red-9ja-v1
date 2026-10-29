@@ -366,15 +366,6 @@ ON CONFLICT (election_group_id, state_id, party_id) DO UPDATE SET
   unique_pu_agents_count = GREATEST(0, election_group_parties_states.unique_pu_agents_count + sqlc.arg(unique_pu_delta)::int),
   updated_at = NOW();
 
--- name: UpsertElectionGroupNationalPartyEntry :exec
-UPDATE election_groups
-SET
-  pu_agents_count        = GREATEST(0, pu_agents_count + sqlc.arg(agents_delta)::int),
-  unique_pu_agents_count = GREATEST(0, unique_pu_agents_count + sqlc.arg(unique_pu_delta)::int),
-  updated_at = NOW()
-WHERE id = sqlc.arg(election_group_id)::integer
-  AND (sqlc.arg(party_id)::smallint = sqlc.arg(party_id)::smallint);
-
 -- name: GetPUPartyAgentsCount :one
 SELECT COALESCE(pu_agents_count, 0)::int AS agents_count
 FROM election_group_parties_polling_units
@@ -520,33 +511,6 @@ VALUES (
 ON CONFLICT (election_group_id, ward_id, party_id) DO UPDATE SET
   ward_supervisors_count = GREATEST(0, election_group_parties_wards.ward_supervisors_count + sqlc.arg(delta)::int),
   updated_at = NOW();
-
--- name: AdjustElectionGroupNationalWardSupervisorCounts :exec
-UPDATE election_groups
-SET
-  ward_supervisors_count        = GREATEST(0, ward_supervisors_count + sqlc.arg(delta)::int),
-  unique_ward_supervisors_count = GREATEST(0, unique_ward_supervisors_count + sqlc.arg(unique_delta)::int),
-  updated_at = NOW()
-WHERE id = sqlc.arg(election_group_id)::integer
-  AND (sqlc.arg(party_id)::smallint = sqlc.arg(party_id)::smallint);
-
--- name: AdjustElectionGroupNationalLGASupervisorCounts :exec
-UPDATE election_groups
-SET
-  lga_supervisors_count        = GREATEST(0, lga_supervisors_count + sqlc.arg(delta)::int),
-  unique_lga_supervisors_count = GREATEST(0, unique_lga_supervisors_count + sqlc.arg(unique_delta)::int),
-  updated_at = NOW()
-WHERE id = sqlc.arg(election_group_id)::integer
-  AND (sqlc.arg(party_id)::smallint = sqlc.arg(party_id)::smallint);
-
--- name: AdjustElectionGroupNationalStateSupervisorCounts :exec
-UPDATE election_groups
-SET
-  state_supervisors_count        = GREATEST(0, state_supervisors_count + sqlc.arg(delta)::int),
-  unique_state_supervisors_count = GREATEST(0, unique_state_supervisors_count + sqlc.arg(unique_delta)::int),
-  updated_at = NOW()
-WHERE id = sqlc.arg(election_group_id)::integer
-  AND (sqlc.arg(party_id)::smallint = sqlc.arg(party_id)::smallint);
 
 -- name: AdjustElectionGroupStateStateSupervisorCounts :exec
 WITH state_update AS (
@@ -1273,64 +1237,6 @@ ON CONFLICT (election_group_id, state_id, party_id) DO UPDATE SET
   ward_supervisors_count = EXCLUDED.ward_supervisors_count,
   unique_ward_supervisors_count = EXCLUDED.unique_ward_supervisors_count,
   updated_at = NOW();
-
--- name: RefreshSingleElectionGroupGlobalStats :exec
-WITH src_agg AS (
-  SELECT
-    election_group_id,
-    SUM(unique_final_results_expected)               AS unique_final_results_expected,
-    SUM(pu_agents_count)                       AS pu_agents_count,
-    SUM(unique_pu_agents_count)                AS unique_pu_agents_count,
-    SUM(pu_agents_in_attendance_count)         AS pu_agents_in_attendance_count,
-    SUM(pu_reports_count)                   AS pu_reports_count,
-    SUM(pu_updates_count)                   AS pu_updates_count,
-    SUM(pu_final_results_uploaded_count)       AS pu_final_results_uploaded_count,
-    SUM(unique_pu_final_results_uploaded_count) AS unique_pu_final_results_uploaded_count,
-    SUM(pu_live_voters_referred_by_agent_count)      AS pu_live_voters_referred_by_agent_count,
-    SUM(total_pu_with_reports)                       AS total_pu_with_reports,
-    SUM(total_pu_with_updates)                       AS total_pu_with_updates,
-    SUM(total_pu_with_agents_in_attendance)          AS total_pu_with_agents_in_attendance,
-    SUM(total_pu_where_election_has_started)         AS total_pu_where_election_has_started,
-    SUM(total_pu_where_election_has_ended)           AS total_pu_where_election_has_ended,
-    SUM(total_pu_unique_final_results_uploaded)      AS total_pu_unique_final_results_uploaded,
-    SUM(total_pu_where_agents_referred_live_voters)  AS total_pu_where_agents_referred_live_voters,
-    COALESCE(SUM(state_supervisors_count), 0)::int   AS state_supervisors_count,
-    COUNT(*) FILTER (WHERE state_supervisors_count > 0)::int AS unique_state_supervisors_count,
-    COALESCE(SUM(lga_supervisors_count), 0)::int     AS lga_supervisors_count,
-    COALESCE(SUM(unique_lga_supervisors_count), 0)::int AS unique_lga_supervisors_count,
-    COALESCE(SUM(ward_supervisors_count), 0)::int    AS ward_supervisors_count,
-    COALESCE(SUM(unique_ward_supervisors_count), 0)::int AS unique_ward_supervisors_count
-  FROM election_group_states
-  WHERE election_group_id = sqlc.arg(election_group_id)::integer
-  GROUP BY election_group_id
-)
-UPDATE election_groups
-  SET
-    unique_final_results_expected = COALESCE(s.unique_final_results_expected, 0),
-    pu_agents_count = COALESCE(s.pu_agents_count, 0),
-    unique_pu_agents_count = COALESCE(s.unique_pu_agents_count, 0),
-    pu_agents_in_attendance_count = COALESCE(s.pu_agents_in_attendance_count, 0),
-    pu_reports_count = COALESCE(s.pu_reports_count, 0),
-    pu_updates_count = COALESCE(s.pu_updates_count, 0),
-    pu_final_results_uploaded_count = COALESCE(s.pu_final_results_uploaded_count, 0),
-    unique_pu_final_results_uploaded_count = COALESCE(s.unique_pu_final_results_uploaded_count, 0),
-    pu_live_voters_referred_by_agent_count = COALESCE(s.pu_live_voters_referred_by_agent_count, 0),
-    total_pu_with_reports = COALESCE(s.total_pu_with_reports, 0),
-    total_pu_with_updates = COALESCE(s.total_pu_with_updates, 0),
-    total_pu_with_agents_in_attendance = COALESCE(s.total_pu_with_agents_in_attendance, 0),
-    total_pu_where_election_has_started = COALESCE(s.total_pu_where_election_has_started, 0),
-    total_pu_where_election_has_ended = COALESCE(s.total_pu_where_election_has_ended, 0),
-    total_pu_unique_final_results_uploaded = COALESCE(s.total_pu_unique_final_results_uploaded, 0),
-    total_pu_where_agents_referred_live_voters = COALESCE(s.total_pu_where_agents_referred_live_voters, 0),
-    state_supervisors_count = COALESCE(s.state_supervisors_count, 0),
-    unique_state_supervisors_count = COALESCE(s.unique_state_supervisors_count, 0),
-    lga_supervisors_count = COALESCE(s.lga_supervisors_count, 0),
-    unique_lga_supervisors_count = COALESCE(s.unique_lga_supervisors_count, 0),
-    ward_supervisors_count = COALESCE(s.ward_supervisors_count, 0),
-    unique_ward_supervisors_count = COALESCE(s.unique_ward_supervisors_count, 0),
-    updated_at = NOW()
-  FROM src_agg s
-  WHERE election_groups.id = s.election_group_id;
 
 -- ============================================================
 -- APPLICATION COUNT INCREMENT QUERIES

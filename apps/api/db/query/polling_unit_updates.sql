@@ -46,13 +46,6 @@ DO UPDATE SET
   updates_count = party_election_groups.updates_count + EXCLUDED.updates_count,
   updated_at = NOW();
 
--- name: IncrementElectionGroupMetrics :exec
-UPDATE election_groups
-SET 
-  pu_reports_count = pu_reports_count + $2,
-  pu_updates_count = pu_updates_count + $3
-WHERE id = $1;
-
 -- name: IncrementElectionMetricsByGroup :exec
 UPDATE elections
 SET 

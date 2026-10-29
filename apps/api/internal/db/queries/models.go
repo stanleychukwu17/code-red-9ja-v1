@@ -292,41 +292,13 @@ type ElectionFinalResult struct {
 }
 
 type ElectionGroup struct {
-	ID                                        int32              `json:"id"`
-	FakeID                                    pgtype.Int8        `json:"fake_id"`
-	Name                                      string             `json:"name"`
-	StateSupervisorsCount                     int32              `json:"state_supervisors_count"`
-	UniqueStateSupervisorsCount               int32              `json:"unique_state_supervisors_count"`
-	LgaSupervisorsCount                       int32              `json:"lga_supervisors_count"`
-	UniqueLgaSupervisorsCount                 int32              `json:"unique_lga_supervisors_count"`
-	WardSupervisorsCount                      int32              `json:"ward_supervisors_count"`
-	UniqueWardSupervisorsCount                int32              `json:"unique_ward_supervisors_count"`
-	PuReportsCount                            int32              `json:"pu_reports_count"`
-	PuUpdatesCount                            int32              `json:"pu_updates_count"`
-	ResultsSubmittedCount                     int32              `json:"results_submitted_count"`
-	UniqueFinalResultsExpected                int32              `json:"unique_final_results_expected"`
-	PuAgentsCount                             int32              `json:"pu_agents_count"`
-	UniquePuAgentsCount                       int32              `json:"unique_pu_agents_count"`
-	PuAgentsInAttendanceCount                 int32              `json:"pu_agents_in_attendance_count"`
-	PuAverageArrivalTime                      pgtype.Timestamptz `json:"pu_average_arrival_time"`
-	PuAverageElectionStartedAt                pgtype.Timestamptz `json:"pu_average_election_started_at"`
-	PuAverageElectionEndedAt                  pgtype.Timestamptz `json:"pu_average_election_ended_at"`
-	PuElectionPracticeTestReadinessPercentage float64            `json:"pu_election_practice_test_readiness_percentage"`
-	PuFinalResultsUploadedCount               int32              `json:"pu_final_results_uploaded_count"`
-	UniquePuFinalResultsUploadedCount         int32              `json:"unique_pu_final_results_uploaded_count"`
-	PuAverageUpdateTimeIntervalInSeconds      float64            `json:"pu_average_update_time_interval_in_seconds"`
-	PuLiveVotersReferredByAgentCount          int32              `json:"pu_live_voters_referred_by_agent_count"`
-	TotalPuWithReports                        int32              `json:"total_pu_with_reports"`
-	TotalPuWithUpdates                        int32              `json:"total_pu_with_updates"`
-	TotalPuWithAgentsInAttendance             int32              `json:"total_pu_with_agents_in_attendance"`
-	TotalPuWhereElectionHasStarted            int32              `json:"total_pu_where_election_has_started"`
-	TotalPuWhereElectionHasEnded              int32              `json:"total_pu_where_election_has_ended"`
-	TotalPuUniqueFinalResultsUploaded         int32              `json:"total_pu_unique_final_results_uploaded"`
-	TotalPuWhereAgentsReferredLiveVoters      int32              `json:"total_pu_where_agents_referred_live_voters"`
-	ElectionDate                              pgtype.Date        `json:"election_date"`
-	Active                                    bool               `json:"active"`
-	CreatedAt                                 pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt                                 pgtype.Timestamptz `json:"updated_at"`
+	ID           int32              `json:"id"`
+	FakeID       pgtype.Int8        `json:"fake_id"`
+	Name         string             `json:"name"`
+	ElectionDate pgtype.Date        `json:"election_date"`
+	Active       bool               `json:"active"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 }
 
 type ElectionGroupLga struct {
