@@ -1068,21 +1068,6 @@ func (s *PartiesService) CreatePartyEvent(ctx context.Context, input CreateParty
 		input.Status = "upcoming"
 	}
 
-	var virtualURL pgtype.Text
-	if input.VirtualURL != nil && *input.VirtualURL != "" {
-		virtualURL = pgtype.Text{String: *input.VirtualURL, Valid: true}
-	}
-
-	var endsAt pgtype.Timestamptz
-	if input.EndsAt != nil {
-		endsAt = pgtype.Timestamptz{Time: *input.EndsAt, Valid: true}
-	}
-
-	var createdBy pgtype.Int8
-	if input.CreatedBy != nil && *input.CreatedBy > 0 {
-		createdBy = pgtype.Int8{Int64: *input.CreatedBy, Valid: true}
-	}
-
 	evt, err := s.queries.CreatePartyEvent(ctx, queries.CreatePartyEventParams{
 		PartyID:     input.PartyID,
 		ChapterID:   input.ChapterID,
@@ -1093,11 +1078,11 @@ func (s *PartiesService) CreatePartyEvent(ctx context.Context, input CreateParty
 		VenueName:   input.VenueName,
 		Location:    input.Location,
 		IsVirtual:   input.IsVirtual,
-		VirtualUrl:  virtualURL,
-		StartsAt:    pgtype.Timestamptz{Time: input.StartsAt, Valid: true},
-		EndsAt:      endsAt,
+		VirtualUrl:  utils.PgTextFromPtr(input.VirtualURL),
+		StartsAt:    utils.PgTimestamptzFromTime(input.StartsAt),
+		EndsAt:      utils.PgTimestamptzFromPtr(input.EndsAt),
 		Status:      input.Status,
-		CreatedBy:   createdBy,
+		CreatedBy:   utils.PgInt8FromPtr(input.CreatedBy),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create party event: %w", err)
@@ -1367,7 +1352,7 @@ func (s *PartiesService) UpdateAgentPaymentAllocationKobo(ctx context.Context, p
 func (s *PartiesService) UpdatePartyIsVerified(ctx context.Context, partyID int16, isVerified bool) error {
 	err := s.queries.UpdatePartyIsVerified(ctx, queries.UpdatePartyIsVerifiedParams{
 		ID:         partyID,
-		IsVerified: pgtype.Bool{Bool: isVerified, Valid: true},
+		IsVerified: utils.PgBool(isVerified),
 	})
 	if err != nil {
 		return err
@@ -3109,9 +3094,7 @@ func (s *PartiesService) ListSuspendedPartyMembers(ctx context.Context, partyID 
 	arg := queries.ListSuspendedPartyMembersParams{
 		PartyID:  partyID,
 		LimitNum: limit,
-	}
-	if cursor > 0 {
-		arg.Cursor = pgtype.Int8{Int64: cursor, Valid: true}
+		Cursor:   utils.PgInt8FromPositive(cursor),
 	}
 
 	return s.queries.ListSuspendedPartyMembers(ctx, arg)

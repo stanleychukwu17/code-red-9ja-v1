@@ -295,9 +295,9 @@ func (s *Service) SubmitSupervisorApplication(ctx context.Context, input SubmitS
 		PartyID:         acceptedApp.PartyID,
 		ElectionGroupID: input.ElectionGroupID,
 		PollingUnitID:   pgtype.Int4{Valid: false},
-		StateID:         pgtype.Int2{Int16: input.StateID, Valid: input.StateID > 0},
-		LgaID:           pgtype.Int4{Int32: input.LgaID, Valid: input.LgaID > 0},
-		WardID:          pgtype.Int4{Int32: input.WardID, Valid: input.WardID > 0},
+		StateID:         utils.PgInt2FromPositive(input.StateID),
+		LgaID:           utils.PgInt4FromPositive(input.LgaID),
+		WardID:          utils.PgInt4FromPositive(input.WardID),
 	})
 	if err != nil {
 		errStr := err.Error()
@@ -312,9 +312,9 @@ func (s *Service) SubmitSupervisorApplication(ctx context.Context, input SubmitS
 		ID:            appID,
 		Role:          roleType,
 		PollingUnitID: pgtype.Int4{Valid: false},
-		StateID:       pgtype.Int2{Int16: input.StateID, Valid: input.StateID > 0},
-		LgaID:         pgtype.Int4{Int32: input.LgaID, Valid: input.LgaID > 0},
-		WardID:        pgtype.Int4{Int32: input.WardID, Valid: input.WardID > 0},
+		StateID:       utils.PgInt2FromPositive(input.StateID),
+		LgaID:         utils.PgInt4FromPositive(input.LgaID),
+		WardID:        utils.PgInt4FromPositive(input.WardID),
 	})
 	if err != nil {
 		return queries.PartyAgentApplication{}, fmt.Errorf("failed to set supervisor application role: %w", err)
@@ -745,7 +745,7 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 	}
 	var assignedByVal pgtype.Int8
 	if input.AssignedBy > 0 {
-		assignedByVal = pgtype.Int8{Int64: input.AssignedBy, Valid: true}
+		assignedByVal = utils.PgInt8FromPositive(input.AssignedBy)
 	}
 
 	pollingUnitID := input.PollingUnitID
@@ -790,10 +790,10 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 	updatedApp, err := txQueries.UpdateApplicationApproval(ctx, queries.UpdateApplicationApprovalParams{
 		ID:            input.ApplicationID,
 		Role:          roleType,
-		PollingUnitID: pgtype.Int4{Int32: pollingUnitID, Valid: pollingUnitID > 0},
-		StateID:       pgtype.Int2{Int16: input.StateID, Valid: input.StateID > 0},
-		LgaID:         pgtype.Int4{Int32: input.LgaID, Valid: input.LgaID > 0},
-		WardID:        pgtype.Int4{Int32: input.WardID, Valid: input.WardID > 0},
+		PollingUnitID: utils.PgInt4FromPositive(pollingUnitID),
+		StateID:       utils.PgInt2FromPositive(input.StateID),
+		LgaID:         utils.PgInt4FromPositive(input.LgaID),
+		WardID:        utils.PgInt4FromPositive(input.WardID),
 	})
 	if err != nil {
 		return queries.PartyAgentApplication{}, fmt.Errorf("failed to update application approval status: %w", err)
@@ -935,6 +935,11 @@ func (s *Service) processReferralOnAcceptance(ctx context.Context, txQueries *qu
 		return nil
 	}
 
+	// Self-referral guard: cannot reward self
+	if referral.ReferrerUserID <= 0 || referral.ReferrerUserID == acceptedUserID {
+		return nil
+	}
+
 	userReferralID := int64(0)
 	if referral.UserReferralID.Valid {
 		userReferralID = referral.UserReferralID.Int64
@@ -990,16 +995,14 @@ func (s *Service) processReferralOnAcceptance(ctx context.Context, txQueries *qu
 	}
 
 	// 4. Update referral: set milestone = 'BECAME_AGENT' and amount_to_pay if active campaign
-	egIDPg := pgtype.Int4{Int32: electionGroupID, Valid: electionGroupID > 0}
 	if err := txQueries.UpdateReferralOnAgentAcceptance(ctx, queries.UpdateReferralOnAgentAcceptanceParams{
 		ReferredUserID:  acceptedUserID,
 		AmountToPay:     referralAmt,
-		PartyID:         pgtype.Int2{Int16: partyID, Valid: true},
-		ElectionGroupID: egIDPg,
+		PartyID:         utils.PgInt2FromPositive(partyID),
+		ElectionGroupID: utils.PgInt4FromPositive(electionGroupID),
 	}); err != nil {
 		return fmt.Errorf("UpdateReferralOnAgentAcceptance: %w", err)
 	}
-
 
 	return nil
 }
@@ -1019,20 +1022,20 @@ func (s *Service) updateReferralOnApplicationSubmission(ctx context.Context, txQ
 	}
 
 	referrerID := referral.ReferrerUserID
-	if referrerID <= 0 {
+	if referrerID <= 0 || referrerID == userID {
 		return nil
 	}
 
 	// 2. Fetch or create referrer's user_referrals record for this election group
 	ur, err := txQueries.GetUserReferralByUserAndElectionGroup(ctx, queries.GetUserReferralByUserAndElectionGroupParams{
 		UserID:          referrerID,
-		ElectionGroupID: pgtype.Int4{Int32: electionGroupID, Valid: electionGroupID > 0},
+		ElectionGroupID: utils.PgInt4FromPositive(electionGroupID),
 	})
 	if err != nil {
 		createErr := txQueries.CreateUserReferralRecord(ctx, queries.CreateUserReferralRecordParams{
 			UserID:          referrerID,
-			PartyID:         pgtype.Int2{Int16: partyID, Valid: partyID > 0},
-			ElectionGroupID: pgtype.Int4{Int32: electionGroupID, Valid: electionGroupID > 0},
+			PartyID:         utils.PgInt2FromPositive(partyID),
+			ElectionGroupID: utils.PgInt4FromPositive(electionGroupID),
 			Amount:          pgtype.Numeric{Valid: false},
 			Status:          "pending",
 		})
@@ -1041,7 +1044,7 @@ func (s *Service) updateReferralOnApplicationSubmission(ctx context.Context, txQ
 		}
 		ur, err = txQueries.GetUserReferralByUserAndElectionGroup(ctx, queries.GetUserReferralByUserAndElectionGroupParams{
 			UserID:          referrerID,
-			ElectionGroupID: pgtype.Int4{Int32: electionGroupID, Valid: electionGroupID > 0},
+			ElectionGroupID: utils.PgInt4FromPositive(electionGroupID),
 		})
 		if err != nil {
 			return fmt.Errorf("failed to fetch created referrer user_referrals record: %w", err)
@@ -1051,9 +1054,9 @@ func (s *Service) updateReferralOnApplicationSubmission(ctx context.Context, txQ
 	// 3. Update referral: link user_referral_id, party_id, election_group_id, milestone ('APPLIED')
 	if err := txQueries.UpdateReferralOnApplication(ctx, queries.UpdateReferralOnApplicationParams{
 		ID:              referral.ID,
-		UserReferralID:  pgtype.Int8{Int64: ur.ID, Valid: true},
-		PartyID:         pgtype.Int2{Int16: partyID, Valid: partyID > 0},
-		ElectionGroupID: pgtype.Int4{Int32: electionGroupID, Valid: electionGroupID > 0},
+		UserReferralID:  utils.PgInt8FromPositive(ur.ID),
+		PartyID:         utils.PgInt2FromPositive(partyID),
+		ElectionGroupID: utils.PgInt4FromPositive(electionGroupID),
 		AmountToPay:     pgtype.Numeric{Valid: false},
 		Milestone:       "APPLIED",
 	}); err != nil {

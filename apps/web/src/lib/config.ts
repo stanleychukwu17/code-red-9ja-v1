@@ -165,6 +165,8 @@ export const API_URL = {
 	updateProfile: `${api}/users/profile`,
 	userPhoneNumbers: (id: string | number) => `${api}/admin/users/${id}/phones`,
 	manageUserPhoneNumber: (id: string | number) => `${api}/admin/users/phones/${id}`,
+	manageUserMoreInfo: (id: string | number) => `${api}/admin/users/${id}/more-info`,
+	occupations: `${api}/getOccupations`,
 	campaignGroups: {
 		getGroup: (groupId: number | string) => `${api}/campaign-groups/${groupId}`,
 		getMembers: (groupId: number | string) => `${api}/campaign-groups/${groupId}/members`,

@@ -257,14 +257,16 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	mainRouter.Get("/metrics", promhttp.Handler().ServeHTTP) // Prometheus metrics
 
 	// for auths
-	mainRouter.Post("/api/v1/auth/signup", authHandler.Signup)                                        // Basic signup endpoint
-	mainRouter.Post(utils.ApiUrls.Auth.SendSignupEmailOTP, authHandler.SendSignupEmailOTP)            // Send email OTP
-	mainRouter.Post(utils.ApiUrls.Auth.VerifySignupEmailOTP, authHandler.VerifySignupEmailOTP)        // Verify email OTP
-	mainRouter.Post("/api/v1/auth/forgot-password/email-otp", authHandler.SendForgotPasswordEmailOTP) // Send forgot-password OTP
-	mainRouter.Post(utils.ApiUrls.Auth.CheckNin, authHandler.CheckNin)                                // Check NIN endpoint
-	mainRouter.Post(utils.ApiUrls.Auth.CheckUsername, authHandler.CheckUsername)                      // Check Username endpoint
-	mainRouter.Post(utils.ApiUrls.Auth.CheckReferralCode, authHandler.CheckReferralCode)              // Check Referral Code endpoint
-	mainRouter.Post(utils.ApiUrls.Auth.Login, authHandler.Login)                                      // Login endpoint
+	authChecksLimiter := apimiddleware.RateLimit(rdb, 30, time.Minute, "rate_limit:auth_checks")
+
+	mainRouter.Post("/api/v1/auth/signup", authHandler.Signup)                                                     // Basic signup endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.SendSignupEmailOTP, authHandler.SendSignupEmailOTP)                         // Send email OTP
+	mainRouter.Post(utils.ApiUrls.Auth.VerifySignupEmailOTP, authHandler.VerifySignupEmailOTP)                     // Verify email OTP
+	mainRouter.Post("/api/v1/auth/forgot-password/email-otp", authHandler.SendForgotPasswordEmailOTP)              // Send forgot-password OTP
+	mainRouter.With(authChecksLimiter).Post(utils.ApiUrls.Auth.CheckNin, authHandler.CheckNin)                     // Check NIN endpoint
+	mainRouter.With(authChecksLimiter).Post(utils.ApiUrls.Auth.CheckUsername, authHandler.CheckUsername)           // Check Username endpoint
+	mainRouter.With(authChecksLimiter).Post(utils.ApiUrls.Auth.CheckReferralCode, authHandler.CheckReferralCode)   // Check Referral Code endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.Login, authHandler.Login)                                                   // Login endpoint
 	mainRouter.Post(utils.ApiUrls.Auth.Logout, authHandler.Logout)                                    // Logout endpoint
 	mainRouter.Post(utils.ApiUrls.Auth.Refresh, authHandler.Refresh)                                  // Refresh token endpoint
 	mainRouter.Post(utils.ApiUrls.Auth.ChangePasswordByEmail, authHandler.ChangePasswordByEmail)      // Change password by email endpoint

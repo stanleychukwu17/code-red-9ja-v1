@@ -39,11 +39,12 @@ CREATE TABLE IF NOT EXISTS referrals (
   updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   paid_at TIMESTAMPTZ,
   
-  UNIQUE(referred_user_id)
+  UNIQUE(referred_user_id),
+  CONSTRAINT chk_no_self_referral CHECK (referrer_user_id <> referred_user_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_referrals_referrer_id ON referrals(referrer_user_id, id DESC);
 
 -- +goose Down
-DROP TABLE IF EXISTS user_referrals;
 DROP TABLE IF EXISTS referrals;
+DROP TABLE IF EXISTS user_referrals;

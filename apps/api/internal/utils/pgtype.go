@@ -175,6 +175,14 @@ func PgInt4FromPositive[T ~int | ~int16 | ~int32 | ~int64](id T) pgtype.Int4 {
 	return pgtype.Int4{}
 }
 
+// PgInt8FromPositive converts an integer to a valid pgtype.Int8 if > 0, otherwise null.
+func PgInt8FromPositive[T ~int | ~int16 | ~int32 | ~int64](id T) pgtype.Int8 {
+	if id > 0 {
+		return pgtype.Int8{Int64: int64(id), Valid: true}
+	}
+	return pgtype.Int8{}
+}
+
 // PgFloat8FromFloat64 wraps a non-pointer float64 as an always-valid pgtype.Float8.
 func PgFloat8FromFloat64(v float64) pgtype.Float8 {
 	return pgtype.Float8{Float64: v, Valid: true}
@@ -187,3 +195,77 @@ func PgFloat8FromPtr(f *float64) pgtype.Float8 {
 	}
 	return pgtype.Float8{}
 }
+
+// PgBool wraps a non-pointer bool as an always-valid pgtype.Bool.
+func PgBool(b bool) pgtype.Bool {
+	return pgtype.Bool{Bool: b, Valid: true}
+}
+
+// PgBoolFromPtr converts an optional bool pointer to a pgtype.Bool.
+func PgBoolFromPtr(b *bool) pgtype.Bool {
+	if b != nil {
+		return pgtype.Bool{Bool: *b, Valid: true}
+	}
+	return pgtype.Bool{}
+}
+
+// PgDateFromTime converts a time.Time to a valid pgtype.Date if non-zero, otherwise null.
+func PgDateFromTime(t time.Time) pgtype.Date {
+	if !t.IsZero() {
+		return pgtype.Date{Time: t, Valid: true}
+	}
+	return pgtype.Date{}
+}
+
+// PgDateNull returns an invalid/null pgtype.Date.
+func PgDateNull() pgtype.Date {
+	return pgtype.Date{}
+}
+
+// PgInt2Null returns an invalid/null pgtype.Int2.
+func PgInt2Null() pgtype.Int2 {
+	return pgtype.Int2{}
+}
+
+// PgInt4Null returns an invalid/null pgtype.Int4.
+func PgInt4Null() pgtype.Int4 {
+	return pgtype.Int4{}
+}
+
+// PgInt8Null returns an invalid/null pgtype.Int8.
+func PgInt8Null() pgtype.Int8 {
+	return pgtype.Int8{}
+}
+
+// PgTextNull returns an invalid/null pgtype.Text.
+func PgTextNull() pgtype.Text {
+	return pgtype.Text{}
+}
+
+// PgBoolNull returns an invalid/null pgtype.Bool.
+func PgBoolNull() pgtype.Bool {
+	return pgtype.Bool{}
+}
+
+// PgTimestamptzFromTime converts a time.Time to a valid pgtype.Timestamptz if non-zero, otherwise null.
+func PgTimestamptzFromTime(t time.Time) pgtype.Timestamptz {
+	if !t.IsZero() {
+		return pgtype.Timestamptz{Time: t, Valid: true}
+	}
+	return pgtype.Timestamptz{}
+}
+
+// PgTimestamptzFromPtr converts an optional time.Time pointer to a pgtype.Timestamptz.
+func PgTimestamptzFromPtr(t *time.Time) pgtype.Timestamptz {
+	if t != nil && !t.IsZero() {
+		return pgtype.Timestamptz{Time: *t, Valid: true}
+	}
+	return pgtype.Timestamptz{}
+}
+
+// PgTimestamptzNull returns an invalid/null pgtype.Timestamptz.
+func PgTimestamptzNull() pgtype.Timestamptz {
+	return pgtype.Timestamptz{}
+}
+
+

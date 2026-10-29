@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/go-playground/validator/v10"
-	"github.com/jackc/pgx/v5/pgtype"
+
 )
 
 type AuthService interface {
@@ -294,6 +294,12 @@ func (h *Handler) CompleteOnboarding(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Guard against self-referral
+	if req.ReferrerUserId != nil && *req.ReferrerUserId == user.ID {
+		h.utils.RespondError(w, http.StatusBadRequest, "You cannot refer yourself")
+		return
+	}
+
 	// if account_status != "just_registered", return error
 	if user.AccountStatus.String != "just_registered" {
 		h.utils.RespondError(w, http.StatusBadRequest, "User is already onboarded")
@@ -316,18 +322,18 @@ func (h *Handler) CompleteOnboarding(w http.ResponseWriter, r *http.Request) {
 
 	params := queries.UpdateOnboardingProfileParams{
 		ID:              user.ID,
-		Username:        pgtype.Text{String: cleanUsername, Valid: cleanUsername != ""},
-		FirstName:       pgtype.Text{String: req.FirstName, Valid: true},
-		LastName:        pgtype.Text{String: req.LastName, Valid: true},
-		MiddleName:      pgtype.Text{String: req.MiddleName, Valid: req.MiddleName != ""},
-		Gender:          pgtype.Text{String: req.Gender, Valid: true},
-		DateOfBirth:     pgtype.Date{Time: dob, Valid: true},
+		Username:        utils.PgTextFromString(cleanUsername),
+		FirstName:       utils.PgTextFromString(req.FirstName),
+		LastName:        utils.PgTextFromString(req.LastName),
+		MiddleName:      utils.PgTextFromString(req.MiddleName),
+		Gender:          utils.PgTextFromString(req.Gender),
+		DateOfBirth:     utils.PgDateFromTime(dob),
 		CurrentCountry:  req.CurrentCountry,
 		CurrentState:    req.CurrentState,
-		CurrentCity:     pgtype.Int4{Int32: req.CurrentCity, Valid: req.CurrentCity != 0},
-		StateOfOrigin:   pgtype.Int2{Int16: req.StateOfOrigin, Valid: req.StateOfOrigin != 0},
-		CountryOfOrigin: pgtype.Int2{Int16: req.CountryOfOrigin, Valid: req.CountryOfOrigin != 0},
-		ReferralCode:    pgtype.Text{String: myReferralCode, Valid: myReferralCode != ""},
+		CurrentCity:     utils.PgInt4FromPositive(req.CurrentCity),
+		StateOfOrigin:   utils.PgInt2FromPositive(req.StateOfOrigin),
+		CountryOfOrigin: utils.PgInt2FromPositive(req.CountryOfOrigin),
+		ReferralCode:    utils.PgTextFromString(myReferralCode),
 	}
 
 	if err = h.authService.CompleteOnboarding(r.Context(), user.ID, user.FakeID.Int64, params, req.ReferrerUserId, req.Nin); err != nil {

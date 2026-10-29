@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
+
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/sync/errgroup"
 )
@@ -444,7 +444,7 @@ func (s *UsersService) GetUserRoles(ctx context.Context, userID int64) (queries.
 func (s *UsersService) updateUserHasRole(ctx context.Context, userID int64, hasRole bool) error {
 	return s.queries.UpdateUserHasRole(ctx, queries.UpdateUserHasRoleParams{
 		ID:      userID,
-		HasRole: pgtype.Bool{Bool: hasRole, Valid: true},
+		HasRole: utils.PgBool(hasRole),
 	})
 }
 
@@ -517,7 +517,7 @@ func (s *UsersService) UpdateUserProfile(ctx context.Context, id int64, fakeID i
 		AvatarFileID:   avatarFileIdPg,
 		CurrentCountry: countryID,
 		CurrentState:   stateID,
-		CurrentCity:    pgtype.Int4{Int32: cityID, Valid: cityID != 0},
+		CurrentCity:    utils.PgInt4FromPositive(cityID),
 	})
 	if err != nil {
 		return err
@@ -645,8 +645,8 @@ func (s *UsersService) AdminUpdateUser(ctx context.Context, id int64, fakeID int
 		AvatarFileID:   avatarFileIdPg,
 		CurrentCountry: countryID,
 		CurrentState:   stateID,
-		CurrentCity:    pgtype.Int4{Int32: cityID, Valid: cityID != 0},
-		StateOfOrigin:  pgtype.Int2{Int16: stateOfOrigin, Valid: stateOfOrigin != 0},
+		CurrentCity:    utils.PgInt4FromPositive(cityID),
+		StateOfOrigin:  utils.PgInt2FromPositive(stateOfOrigin),
 	})
 	if err != nil {
 		return err
@@ -661,8 +661,8 @@ func (s *UsersService) AdminUpdateUser(ctx context.Context, id int64, fakeID int
 func (s *UsersService) ResetUserAvatar(ctx context.Context, userID int64, fakeID int64) error {
 	err := s.queries.UpdateUserAvatar(ctx, queries.UpdateUserAvatarParams{
 		ID:           userID,
-		Avatar:       pgtype.Text{Valid: false},
-		AvatarFileID: pgtype.Int8{Valid: false},
+		Avatar:       utils.PgTextNull(),
+		AvatarFileID: utils.PgInt8Null(),
 	})
 	if err != nil {
 		return err
@@ -760,8 +760,8 @@ func (s *UsersService) UpdateUserPhoneNumbers(ctx context.Context, userID int64,
 		if p.OnWhatsapp == "yes" {
 			whatsappVal = true
 		}
-		onWhatsapp := pgtype.Bool{Bool: whatsappVal, Valid: true}
-		isDefault := pgtype.Bool{Bool: p.IsDefault, Valid: true}
+		onWhatsapp := utils.PgBool(whatsappVal)
+		isDefault := utils.PgBool(p.IsDefault)
 
 		// if p.ID == 0, it means the phone number is new, so create it
 		if p.ID == 0 {
@@ -811,7 +811,7 @@ func (s *UsersService) DeleteUserPhoneNumber(ctx context.Context, id int64, user
 func (s *UsersService) UpdateUserIsVerified(ctx context.Context, userID int64, fakeID int64, isVerified bool) error {
 	err := s.queries.UpdateUserIsVerified(ctx, queries.UpdateUserIsVerifiedParams{
 		ID:         userID,
-		IsVerified: pgtype.Bool{Bool: isVerified, Valid: true},
+		IsVerified: utils.PgBool(isVerified),
 	})
 	if err != nil {
 		return err
@@ -819,7 +819,7 @@ func (s *UsersService) UpdateUserIsVerified(ctx context.Context, userID int64, f
 
 	err = s.queries.UpdateUserPhoneNumberIsVerified(ctx, queries.UpdateUserPhoneNumberIsVerifiedParams{
 		UserID:          userID,
-		OwnerIsVerified: pgtype.Bool{Bool: isVerified, Valid: true},
+		OwnerIsVerified: utils.PgBool(isVerified),
 	})
 	if err != nil {
 		return err
@@ -1113,7 +1113,7 @@ func (s *UsersService) GetReferralCodeInfo(ctx context.Context, code string) (*C
 	user, err := s.queries.GetReferrerNameByCode(ctx, utils.PgTextFromString(code))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return &CachedReferralCodeInfo{}, nil // Not taken
+			return nil, nil // Not taken
 		}
 		return nil, err
 	}
@@ -1143,7 +1143,7 @@ func (s *UsersService) IsReferralCodeTaken(ctx context.Context, code string) (bo
 	if err != nil {
 		return false, err
 	}
-	return info != nil, nil
+	return info != nil && info.ID > 0, nil
 }
 
 // GenerateUniqueReferralCode generates a unique referral code based on the user's first name.

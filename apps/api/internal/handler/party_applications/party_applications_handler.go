@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"free9ja/api/internal/db/queries"
 	apimiddleware "free9ja/api/internal/middleware"
 	partyapplications "free9ja/api/internal/service/party_applications"
@@ -117,12 +116,6 @@ func (h *Handler) SubmitApplication(w http.ResponseWriter, r *http.Request) {
 		h.utils.RespondError(w, http.StatusBadRequest, "At least one WhatsApp-enabled phone number is required before submitting an application")
 		return
 	}
-
-	fmt.Printf("%+v\n", req)
-	h.utils.RespondSuccess(w, http.StatusCreated, "Polling agent application submitted successfully", map[string]interface{}{
-		"message": "Polling agent application submitted successfully",
-	})
-	return
 
 	// 4. Delegate application submission and profile updates to service layer
 	appID, err := h.service.SubmitApplication(r.Context(), partyapplications.SubmitApplicationInput{

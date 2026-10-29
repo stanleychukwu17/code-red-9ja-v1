@@ -9,7 +9,7 @@ import { QUERY_KEYS } from "#/lib/config";
 import { getUserProfile } from "#/lib/server/citizens";
 import { getAllCountries, getStates, getCities } from "#/lib/server/countries";
 import { getParties } from "#/lib/server/parties";
-import { updateUser, getPresignedUploadURL, confirmFileUpload, getUserPhoneNumbers, updateUserPhoneNumbers, deleteUserPhoneNumber } from "#/lib/server/users";
+import { updateUser, getPresignedUploadURL, confirmFileUpload, getUserPhoneNumbers, updateUserPhoneNumbers, deleteUserPhoneNumber, getUserMoreInfo, updateUserMoreInfo, getOccupations } from "#/lib/server/users";
 
 export type ProfileFloatingToolbarProps = {
   onSuccess?: () => void;
@@ -56,11 +56,14 @@ export function ProfileFloatingToolbar({ onSuccess }: ProfileFloatingToolbarProp
     toast.info("Block user feature is coming soon");
   };
 
-  // Close dialog, refresh profile & session cache, and notify parent
-  const handleSuccess = () => {
+  // Close dialog and handle cache invalidation
+  const handleSuccess = (_updatedUser?: any, tab?: "basic" | "more" | "phones") => {
     setIsEditDialogOpen(false);
-    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.userProfile.root });
-    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.auth.session });
+    // Invalidate user profile and session strictly when basic user info changes
+    if (tab === "basic") {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.userProfile.root });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.auth.session });
+    }
     onSuccess?.();
   };
 
@@ -145,6 +148,9 @@ export function ProfileFloatingToolbar({ onSuccess }: ProfileFloatingToolbarProp
           loadUserPhoneNumber={getUserPhoneNumbers}
           updateUserPhoneNumbers={updateUserPhoneNumbers}
           deleteUserPhoneNumber={deleteUserPhoneNumber}
+          getUserMoreInfo={getUserMoreInfo}
+          updateUserMoreInfo={updateUserMoreInfo}
+          getOccupations={getOccupations}
         />
       ) : null}
     </div>

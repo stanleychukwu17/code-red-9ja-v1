@@ -6,10 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"free9ja/api/internal/db/queries"
+	"free9ja/api/internal/utils"
 	"strings"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -118,15 +118,8 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 		return queries.PollingUnitUpdate{}, errors.New("updates can only be submitted during the election cycle")
 	}
 
-	var assignmentID pgtype.Int8
-	if input.AssignmentID != nil {
-		assignmentID = pgtype.Int8{Int64: *input.AssignmentID, Valid: true}
-	}
-
-	var partyID pgtype.Int2
-	if input.PartyID != nil {
-		partyID = pgtype.Int2{Int16: int16(int16(*input.PartyID)), Valid: true}
-	}
+	assignmentID := utils.PgInt8FromPtr(input.AssignmentID)
+	partyID := utils.PgInt2FromPtrNullable(input.PartyID)
 
 	// Insert the update
 	update, err := qtx.CreatePollingUnitUpdate(ctx, queries.CreatePollingUnitUpdateParams{
@@ -135,15 +128,15 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 		PollingUnitID:               input.PollingUnitID,
 		ElectionGroupID:             input.ElectionGroupID,
 		PartyID:                     partyID,
-		StateID:                     pgtype.Int2{Int16: int16(pu.StateID), Valid: true},
-		LgaID:                       pgtype.Int4{Int32: int32(pu.LgaID), Valid: true},
-		WardID:                      pgtype.Int4{Int32: int32(pu.WardID), Valid: true},
+		StateID:                     utils.PgInt2FromPositive(pu.StateID),
+		LgaID:                       utils.PgInt4FromPositive(pu.LgaID),
+		WardID:                      utils.PgInt4FromPositive(pu.WardID),
 		SenatorialDistrictID:        lga.SenatorialDistrictID,
 		FederalConstituencyID:       lga.FederalConstituencyID,
 		StateAssemblyConstituencyID: ward.StateConstituencyID,
 		Message:                     input.Message,
 		MediaUrls:                   input.MediaUrls,
-		IsReport:                    pgtype.Bool{Bool: input.IsReport, Valid: true},
+		IsReport:                    utils.PgBool(input.IsReport),
 		ReportTypes:                 input.ReportTypes,
 	})
 	if err != nil {
@@ -190,7 +183,6 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 			}
 		}
 	}
-
 
 	if err := tx.Commit(ctx); err != nil {
 		return queries.PollingUnitUpdate{}, err
@@ -256,4 +248,3 @@ func isVideoURL(url string) bool {
 	}
 	return false
 }
-

@@ -11,7 +11,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgtype"
+
 	"github.com/redis/go-redis/v9"
 )
 
@@ -83,7 +83,7 @@ func (s *ElectionGroupsService) CreateElectionGroup(ctx context.Context, name st
 	// Persist the new election group record
 	eg, err := s.queries.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{
 		Name:         name,
-		ElectionDate: pgtype.Date{Time: electionDate, Valid: true},
+		ElectionDate: utils.PgDateFromTime(electionDate),
 	})
 	if err != nil {
 		return eg, err
@@ -126,11 +126,7 @@ func (s *ElectionGroupsService) ListElectionGroups(ctx context.Context, active *
 	}
 
 	// 2. Cache miss: retrieve election groups from the database
-	var pgActive pgtype.Bool
-	if active != nil {
-		pgActive = pgtype.Bool{Bool: *active, Valid: true}
-	}
-	groups, err := s.queries.ListElectionGroups(ctx, pgActive)
+	groups, err := s.queries.ListElectionGroups(ctx, utils.PgBoolFromPtr(active))
 	if err != nil {
 		return nil, err
 	}
@@ -149,7 +145,7 @@ func (s *ElectionGroupsService) UpdateElectionGroup(ctx context.Context, id int3
 	group, err := s.queries.UpdateElectionGroup(ctx, queries.UpdateElectionGroupParams{
 		ID:           id,
 		Name:         name,
-		ElectionDate: pgtype.Date{Time: electionDate, Valid: true},
+		ElectionDate: utils.PgDateFromTime(electionDate),
 		Active:       active,
 	})
 	if err != nil {
@@ -196,14 +192,10 @@ func (s *ElectionGroupsService) DeleteElectionGroup(ctx context.Context, id int3
 // ListElectionGroupsWithPartyStats retrieves all election groups enriched with specific political party metrics,
 // such as polling agent coverage percentages and number of contested elections, optionally filtered by active status.
 func (s *ElectionGroupsService) ListElectionGroupsWithPartyStats(ctx context.Context, partyID int16, active *bool) ([]queries.ListElectionGroupsWithPartyStatsRow, error) {
-	var pgActive pgtype.Bool
-	if active != nil {
-		pgActive = pgtype.Bool{Bool: *active, Valid: true}
-	}
 	// Query database for election groups joined with the specified party's statistics
 	return s.queries.ListElectionGroupsWithPartyStats(ctx, queries.ListElectionGroupsWithPartyStatsParams{
 		PartyID: partyID,
-		Active:  pgActive,
+		Active:  utils.PgBoolFromPtr(active),
 	})
 }
 

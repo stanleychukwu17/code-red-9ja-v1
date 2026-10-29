@@ -166,3 +166,62 @@ export const updateUserPhoneNumbers = createServerFn({ method: "POST" })
       };
     }
   });
+
+/**
+ * Gets user's more info from the API
+ */
+export const getUserMoreInfo = createServerFn({ method: "GET" })
+  .inputValidator((id: number | string) => id)
+  .handler(async ({ data }) => {
+    try {
+      return await apiFetchJson(API_URL.manageUserMoreInfo(data), {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error?.message || "Failed to get user's more info",
+      };
+    }
+  });
+
+/**
+ * Updates user's more info in the API
+ */
+export const updateUserMoreInfo = createServerFn({ method: "POST" })
+  .inputValidator((data: any) => data)
+  .handler(async ({ data: { user_id, ...body } }) => {
+    try {
+      const payload: any = { ...body };
+      if (payload.occupation_id) {
+        payload.occupation_id = Number(payload.occupation_id);
+      }
+
+      return await apiFetchJson(API_URL.manageUserMoreInfo(user_id), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error?.message || "Failed to update user more info",
+      };
+    }
+  });
+
+/**
+ * Fetches occupations from the API
+ */
+export const getOccupations = createServerFn({ method: "GET" })
+  .handler(async () => {
+    try {
+      return await apiFetchJson(API_URL.occupations);
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error?.message || "Failed to fetch occupations from API",
+      };
+    }
+  });

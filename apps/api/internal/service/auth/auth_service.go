@@ -274,14 +274,14 @@ func (s *AuthService) Login(
 
 	switch identifierType {
 	case "email":
-		row, err := s.queries.GetUserForAuthByEmail(ctx, pgtype.Text{String: identifier, Valid: true})
+		row, err := s.queries.GetUserForAuthByEmail(ctx, utils.PgTextFromString(identifier))
 		if err != nil {
 			return LoginResult{}, errors.New("Invalid email or password")
 		}
 		authRow = authRowFromEmail(row)
 
 	case "username":
-		row, err := s.queries.GetUserForAuthByUsername(ctx, pgtype.Text{String: identifier, Valid: true})
+		row, err := s.queries.GetUserForAuthByUsername(ctx, utils.PgTextFromString(identifier))
 		if err != nil {
 			return LoginResult{}, errors.New("invalid username or password")
 		}
@@ -295,7 +295,7 @@ func (s *AuthService) Login(
 		if err != nil {
 			return LoginResult{}, err
 		}
-		row, err := s.queries.GetUserForAuthByPhone(ctx, pgtype.Text{String: formattedPhone, Valid: true})
+		row, err := s.queries.GetUserForAuthByPhone(ctx, utils.PgTextFromString(formattedPhone))
 		if err != nil {
 			return LoginResult{}, errors.New("invalid phone number or password")
 		}
@@ -863,8 +863,8 @@ func (s *AuthService) Signup(ctx context.Context, email, phone, password string,
 	qtx := s.queries.WithTx(tx)
 
 	params := queries.CreateUserParams{
-		Email:          pgtype.Text{String: email, Valid: email != ""},
-		Phone:          pgtype.Text{String: e164Phone, Valid: true},
+		Email:          utils.PgTextFromString(email),
+		Phone:          utils.PgTextFromString(e164Phone),
 		PasswordHash:   string(hashedPassword),
 		CurrentCountry: countryID,
 		CurrentState:   37, // temp default state to avoid error of null entry
@@ -892,8 +892,8 @@ func (s *AuthService) Signup(ctx context.Context, email, phone, password string,
 		Phone:      e164Phone,
 		Phonecode:  country_dts.Phonecode,
 		RawInput:   phone,
-		OnWhatsapp: pgtype.Bool{Bool: false, Valid: true},
-		IsDefault:  pgtype.Bool{Bool: true, Valid: true},
+		OnWhatsapp: utils.PgBool(false),
+		IsDefault:  utils.PgBool(true),
 	})
 	if err != nil {
 		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == "23505" {
@@ -949,22 +949,22 @@ func (s *AuthService) CompleteOnboarding(ctx context.Context, userID int64, fake
 		tempAvatarURL := GenerateTempAvatarURL(params.FirstName.String, params.LastName.String)
 		if err := s.queries.UpdateUserAvatar(ctx, queries.UpdateUserAvatarParams{
 			ID:           userID,
-			Avatar:       pgtype.Text{String: tempAvatarURL, Valid: true},
-			AvatarFileID: pgtype.Int8{Valid: false},
+			Avatar:       utils.PgTextFromString(tempAvatarURL),
+			AvatarFileID: utils.PgInt8Null(),
 		}); err != nil {
 			return fmt.Errorf("update temp avatar: %w", err)
 		}
-		updatedUser.Avatar = pgtype.Text{String: tempAvatarURL, Valid: true}
+		updatedUser.Avatar = utils.PgTextFromString(tempAvatarURL)
 	}
 
 	// record referrer user
 	if referrerUserID != nil && *referrerUserID > 0 && *referrerUserID != userID {
 		if _, err := s.queries.CreateReferral(ctx, queries.CreateReferralParams{
-			PartyID:        pgtype.Int2{Valid: false}, // No party at signup
+			PartyID:        utils.PgInt2Null(), // No party at signup
 			ReferrerUserID: *referrerUserID,
 			ReferredUserID: userID,
 			Milestone:      "SIGNED_UP",
-			Status:         pgtype.Text{String: "pending", Valid: true},
+			Status:         utils.PgTextFromString("pending"),
 		}); err != nil {
 			return fmt.Errorf("create referral record: %w", err)
 		}
@@ -1347,11 +1347,11 @@ func (s *AuthService) RegisterCandidatePlaceholder(
 		MiddleName:     utils.PgTextFromString(middleName),
 		Username:       utils.PgTextFromString(username),
 		Gender:         utils.PgTextFromString(gender),
-		DateOfBirth:    pgtype.Date{Time: dob, Valid: !dob.IsZero()},
+		DateOfBirth:    utils.PgDateFromTime(dob),
 		CurrentCountry: countryID,
 		CurrentState:   stateID,
-		CurrentCity:    pgtype.Int4{Int32: currentCity, Valid: currentCity != 0},
-		StateOfOrigin:  pgtype.Int2{Int16: stateOfOrigin, Valid: stateOfOrigin != 0},
+		CurrentCity:    utils.PgInt4FromPositive(currentCity),
+		StateOfOrigin:  utils.PgInt2FromPositive(stateOfOrigin),
 		Avatar:         utils.PgTextFromString(avatar),
 		AvatarFileID:   avatarFileIdPg,
 	}

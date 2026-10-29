@@ -868,7 +868,7 @@ func (s *ElectionsService) GetElectionByFakeID(ctx context.Context, fakeID int64
 	}
 
 	// 2. Cache miss: fetch election instance directly from the database
-	el, err := s.queries.GetElectionInstanceByFakeID(ctx, pgtype.Int8{Int64: fakeID, Valid: true})
+	el, err := s.queries.GetElectionInstanceByFakeID(ctx, utils.PgInt8FromInt64(fakeID))
 	if err != nil {
 		return queries.ElectionDetails{}, err
 	}
@@ -930,7 +930,7 @@ func (s *ElectionsService) GetElectionGroupByFakeID(ctx context.Context, fakeID 
 	}
 
 	// 2. Cache miss: fetch election group directly from the database
-	eg, err := s.queries.GetElectionGroupByFakeID(ctx, pgtype.Int8{Int64: fakeID, Valid: true})
+	eg, err := s.queries.GetElectionGroupByFakeID(ctx, utils.PgInt8FromInt64(fakeID))
 	if err != nil {
 		return eg, err
 	}
@@ -1387,7 +1387,7 @@ func (s *ElectionsService) FieldPartyCandidate(ctx context.Context, election que
 
 		// Update running mate assignment on the party's ticket
 		_, err = s.queries.UpdateElectionCandidateRunningMate(ctx, queries.UpdateElectionCandidateRunningMateParams{
-			RunningMateID: pgtype.Int8{Int64: newCandidateID, Valid: true},
+			RunningMateID: utils.PgInt8FromInt64(newCandidateID),
 			ElectionID:    electionID,
 			PartyID:       partyID,
 		})
@@ -1530,7 +1530,7 @@ func (s *ElectionsService) UnfieldPartyCandidate(ctx context.Context, election q
 
 		// Clear running mate slot on existing candidate ticket
 		_, err = s.queries.UpdateElectionCandidateRunningMate(ctx, queries.UpdateElectionCandidateRunningMateParams{
-			RunningMateID: pgtype.Int8{Valid: false},
+			RunningMateID: utils.PgInt8Null(),
 			ElectionID:    electionID,
 			PartyID:       partyID,
 		})
@@ -1712,7 +1712,7 @@ func (s *ElectionsService) SubmitElectionVotes(
 	// 6. Update user's PVC details with uploaded verification image
 	err = qtx.UpdateUserVotersCard(ctx, queries.UpdateUserVotersCardParams{
 		ID:              userID,
-		VotersCardImage: pgtype.Text{String: votersCardImage, Valid: votersCardImage != ""},
+		VotersCardImage: utils.PgTextFromString(votersCardImage),
 	})
 	if err != nil {
 		return fmt.Errorf("failed to update PVC details: %w", err)

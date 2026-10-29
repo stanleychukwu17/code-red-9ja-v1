@@ -5,9 +5,10 @@ import (
 	"errors"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
+
 
 	"free9ja/api/internal/db/queries"
+	"free9ja/api/internal/utils"
 )
 
 type ReferralsService struct {
@@ -59,20 +60,16 @@ func (s *ReferralsService) UpdateReferral(ctx context.Context, params queries.Up
 }
 
 func (s *ReferralsService) GetUserReferralStats(ctx context.Context, referrerID int64, electionGroupID int32) (queries.GetUserReferralStatsRow, error) {
-	var egID pgtype.Int4
-	if electionGroupID > 0 {
-		egID = pgtype.Int4{Int32: electionGroupID, Valid: true}
-	}
 	return s.q.GetUserReferralStats(ctx, queries.GetUserReferralStatsParams{
 		ReferrerUserID:  referrerID,
-		ElectionGroupID: egID,
+		ElectionGroupID: utils.PgInt4FromPositive(electionGroupID),
 	})
 }
 
 func (s *ReferralsService) GetUserReferralByUserAndElectionGroup(ctx context.Context, userID int64, electionGroupID int32) (queries.UserReferral, error) {
 	return s.q.GetUserReferralByUserAndElectionGroup(ctx, queries.GetUserReferralByUserAndElectionGroupParams{
 		UserID:          userID,
-		ElectionGroupID: pgtype.Int4{Int32: electionGroupID, Valid: electionGroupID > 0},
+		ElectionGroupID: utils.PgInt4FromPositive(electionGroupID),
 	})
 }
 

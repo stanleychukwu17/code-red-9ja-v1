@@ -43,7 +43,7 @@ export type UserResult = {
 export type UserFormDialogProps = {
   open: boolean;
   onClose: () => void;
-  onSuccess?: (user: UserResult) => void;
+  onSuccess?: (user: UserResult, tab?: 'basic' | 'more' | 'phones') => void;
   mode?: "create" | "update";
   user?: any;
   // Optional party restriction:
@@ -295,7 +295,7 @@ export function UserFormDialog({
             },
           );
 
-          onSuccess?.(updatedDetails);
+          onSuccess?.(updatedDetails, 'basic');
         }
 
         toast.success("User updated successfully");
@@ -946,7 +946,7 @@ export function UserFormDialog({
             onClose={onClose}
             onSuccess={() => {
               if (mode === "create") setActiveTab("phones");
-              else if (onSuccess) onSuccess(activeUser);
+              else if (onSuccess) onSuccess(activeUser, 'more');
             }}
           />
         )}
@@ -959,7 +959,7 @@ export function UserFormDialog({
             getAllCountries={getAllCountries}
             onClose={onClose}
             onSuccess={() => {
-              if (onSuccess) onSuccess(activeUser);
+              if (onSuccess) onSuccess(activeUser, 'phones');
             }}
           />
         )}
@@ -1000,6 +1000,7 @@ function MoreInfoTab({
     },
 
     enabled: !!getOccupations,
+    staleTime: Infinity,
   });
 
   const occupations = occupationsData || [];
@@ -1034,6 +1035,7 @@ function MoreInfoTab({
       return null;
     },
     enabled: !!getUserMoreInfo && !!user,
+    staleTime: Infinity,
   });
 
   // Combine server fetched more info with user.profile
