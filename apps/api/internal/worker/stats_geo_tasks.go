@@ -8,8 +8,6 @@ import (
 	"log/slog"
 	"time"
 
-	"free9ja/api/internal/db/queries"
-
 	"github.com/hibiken/asynq"
 )
 

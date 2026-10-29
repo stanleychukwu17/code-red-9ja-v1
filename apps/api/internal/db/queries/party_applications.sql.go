@@ -12,7 +12,7 @@ import (
 )
 
 const createApplication = `-- name: CreateApplication :one
-INSERT INTO party_applications (
+INSERT INTO party_agent_applications (
   user_id,
   party_id,
   election_group_id,
@@ -63,7 +63,7 @@ SELECT
   pa.ward_id,
   pa.role,
   pa.status
-FROM party_applications pa
+FROM party_agent_applications pa
 WHERE pa.user_id = $1 
   AND pa.election_group_id = $2 
   AND pa.status = 'accepted'
@@ -107,18 +107,18 @@ func (q *Queries) GetAcceptedApplicationForUser(ctx context.Context, arg GetAcce
 }
 
 const getApplicationByID = `-- name: GetApplicationByID :one
-SELECT id, user_id, party_id, election_group_id, polling_unit_id, state_id, lga_id, ward_id, role, status, rejected_reason, created_at, updated_at FROM party_applications
+SELECT id, election_group_id, party_id, user_id, polling_unit_id, state_id, lga_id, ward_id, role, status, rejected_reason, created_at, updated_at FROM party_agent_applications
 WHERE id = $1 LIMIT 1
 `
 
-func (q *Queries) GetApplicationByID(ctx context.Context, id int64) (PartyApplication, error) {
+func (q *Queries) GetApplicationByID(ctx context.Context, id int64) (PartyAgentApplication, error) {
 	row := q.db.QueryRow(ctx, getApplicationByID, id)
-	var i PartyApplication
+	var i PartyAgentApplication
 	err := row.Scan(
 		&i.ID,
-		&i.UserID,
-		&i.PartyID,
 		&i.ElectionGroupID,
+		&i.PartyID,
+		&i.UserID,
 		&i.PollingUnitID,
 		&i.StateID,
 		&i.LgaID,
@@ -143,7 +143,7 @@ SELECT
   pa.lga_id,
   pa.ward_id,
   p.auto_accept_applications
-FROM party_applications pa
+FROM party_agent_applications pa
 JOIN parties p ON pa.party_id = p.id
 WHERE pa.user_id = $1 
   AND pa.election_group_id = $2 
@@ -196,7 +196,7 @@ SELECT
   pa.lga_id,
   pa.ward_id,
   p.auto_accept_applications
-FROM party_applications pa
+FROM party_agent_applications pa
 JOIN parties p ON pa.party_id = p.id
 WHERE pa.user_id = $1 
   AND pa.status = 'pending'
@@ -386,7 +386,7 @@ SELECT
     ),
     0
   )::integer AS agents_count
-FROM party_applications pa
+FROM party_agent_applications pa
 JOIN users u ON pa.user_id = u.id
 LEFT JOIN user_more_infos up ON u.id = up.user_id
 JOIN election_groups eg ON pa.election_group_id = eg.id
@@ -405,21 +405,23 @@ WHERE
   ($5::smallint = 0 OR COALESCE(pa.state_id, u.current_state, pu.state_id) = $5) AND
   ($6::integer = 0 OR COALESCE(pa.lga_id, u.current_lga, pu.lga_id) = $6) AND
   ($7::integer = 0 OR COALESCE(pa.ward_id, u.current_ward, pu.ward_id) = $7) AND
-  ($8::bigint = 0 OR pa.id < $8)
+  (NOT $8::boolean OR (eg.active = TRUE AND eg.election_date >= CURRENT_DATE)) AND
+  ($9::bigint = 0 OR pa.id < $9)
 ORDER BY pa.id DESC
-LIMIT $9
+LIMIT $10
 `
 
 type ListApplicationsParams struct {
-	UserID          int64  `json:"user_id"`
-	PartyID         int16  `json:"party_id"`
-	ElectionGroupID int32  `json:"election_group_id"`
-	Status          string `json:"status"`
-	StateID         int16  `json:"state_id"`
-	LgaID           int32  `json:"lga_id"`
-	WardID          int32  `json:"ward_id"`
-	Cursor          int64  `json:"cursor"`
-	LimitVal        int32  `json:"limit_val"`
+	UserID             int64  `json:"user_id"`
+	PartyID            int16  `json:"party_id"`
+	ElectionGroupID    int32  `json:"election_group_id"`
+	Status             string `json:"status"`
+	StateID            int16  `json:"state_id"`
+	LgaID              int32  `json:"lga_id"`
+	WardID             int32  `json:"ward_id"`
+	ActiveElectionOnly bool   `json:"active_election_only"`
+	Cursor             int64  `json:"cursor"`
+	LimitVal           int32  `json:"limit_val"`
 }
 
 type ListApplicationsRow struct {
@@ -481,6 +483,7 @@ func (q *Queries) ListApplications(ctx context.Context, arg ListApplicationsPara
 		arg.StateID,
 		arg.LgaID,
 		arg.WardID,
+		arg.ActiveElectionOnly,
 		arg.Cursor,
 		arg.LimitVal,
 	)
@@ -551,7 +554,7 @@ func (q *Queries) ListApplications(ctx context.Context, arg ListApplicationsPara
 }
 
 const updateApplicationApproval = `-- name: UpdateApplicationApproval :one
-UPDATE party_applications
+UPDATE party_agent_applications
 SET
   status = 'accepted',
   role = $1,
@@ -561,7 +564,7 @@ SET
   ward_id = $5,
   updated_at = NOW()
 WHERE id = $6
-RETURNING id, user_id, party_id, election_group_id, polling_unit_id, state_id, lga_id, ward_id, role, status, rejected_reason, created_at, updated_at
+RETURNING id, election_group_id, party_id, user_id, polling_unit_id, state_id, lga_id, ward_id, role, status, rejected_reason, created_at, updated_at
 `
 
 type UpdateApplicationApprovalParams struct {
@@ -573,7 +576,7 @@ type UpdateApplicationApprovalParams struct {
 	ID            int64       `json:"id"`
 }
 
-func (q *Queries) UpdateApplicationApproval(ctx context.Context, arg UpdateApplicationApprovalParams) (PartyApplication, error) {
+func (q *Queries) UpdateApplicationApproval(ctx context.Context, arg UpdateApplicationApprovalParams) (PartyAgentApplication, error) {
 	row := q.db.QueryRow(ctx, updateApplicationApproval,
 		arg.Role,
 		arg.PollingUnitID,
@@ -582,12 +585,12 @@ func (q *Queries) UpdateApplicationApproval(ctx context.Context, arg UpdateAppli
 		arg.WardID,
 		arg.ID,
 	)
-	var i PartyApplication
+	var i PartyAgentApplication
 	err := row.Scan(
 		&i.ID,
-		&i.UserID,
-		&i.PartyID,
 		&i.ElectionGroupID,
+		&i.PartyID,
+		&i.UserID,
 		&i.PollingUnitID,
 		&i.StateID,
 		&i.LgaID,
@@ -602,13 +605,13 @@ func (q *Queries) UpdateApplicationApproval(ctx context.Context, arg UpdateAppli
 }
 
 const updateApplicationStatus = `-- name: UpdateApplicationStatus :one
-UPDATE party_applications
+UPDATE party_agent_applications
 SET
   status = $2,
   rejected_reason = $3,
   updated_at = NOW()
 WHERE id = $1
-RETURNING id, user_id, party_id, election_group_id, polling_unit_id, state_id, lga_id, ward_id, role, status, rejected_reason, created_at, updated_at
+RETURNING id, election_group_id, party_id, user_id, polling_unit_id, state_id, lga_id, ward_id, role, status, rejected_reason, created_at, updated_at
 `
 
 type UpdateApplicationStatusParams struct {
@@ -617,14 +620,14 @@ type UpdateApplicationStatusParams struct {
 	RejectedReason pgtype.Text `json:"rejected_reason"`
 }
 
-func (q *Queries) UpdateApplicationStatus(ctx context.Context, arg UpdateApplicationStatusParams) (PartyApplication, error) {
+func (q *Queries) UpdateApplicationStatus(ctx context.Context, arg UpdateApplicationStatusParams) (PartyAgentApplication, error) {
 	row := q.db.QueryRow(ctx, updateApplicationStatus, arg.ID, arg.Status, arg.RejectedReason)
-	var i PartyApplication
+	var i PartyAgentApplication
 	err := row.Scan(
 		&i.ID,
-		&i.UserID,
-		&i.PartyID,
 		&i.ElectionGroupID,
+		&i.PartyID,
+		&i.UserID,
 		&i.PollingUnitID,
 		&i.StateID,
 		&i.LgaID,

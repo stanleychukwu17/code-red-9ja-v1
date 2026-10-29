@@ -1,19 +1,3 @@
-func emptyPartyMetrics() map[string]interface{} {
-	return map[string]interface{}{
-		"pu_agents_count":                               0,
-		"unique_pu_agents_count":                        0,
-		"pu_agents_in_attendance_count":                 0,
-		"pu_reports_count":                              0,
-		"pu_updates_count":                              0,
-		"pu_final_results_uploaded_count":               0,
-		"unique_pu_final_results_uploaded_count":        0,
-		"total_pu_with_reports":                         0,
-		"total_pu_with_updates":                         0,
-		"total_pu_with_agents_in_attendance":            0,
-		"total_pu_unique_final_results_uploaded":        0,
-	}
-}
-
 package electionstatshandler
 
 import (
@@ -1016,7 +1000,7 @@ func (h *Handler) GetOperationsBreakdown(w http.ResponseWriter, r *http.Request)
 			}
 
 			agentsAtPuStr := formatPctStr(agentsInAttendance, totalPUs)
-							resultsExpectedStr := formatPctStr(resultsExpected, totalPUs)
+			resultsExpectedStr := formatPctStr(resultsExpected, totalPUs)
 			pusWith1AgentStr := formatPctStr(agentsInAttendance, totalPUs)
 			totalAgentsStr := formatPctStr(puAgentsCount, totalPUs)
 

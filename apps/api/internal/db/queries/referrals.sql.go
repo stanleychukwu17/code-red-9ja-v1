@@ -68,53 +68,35 @@ const createUserReferralRecord = `-- name: CreateUserReferralRecord :exec
 INSERT INTO user_referrals (
   user_id,
   party_id,
-  election_group_id
+  election_group_id,
+  amount,
+  status
 ) VALUES (
-  $1, $2, $3
+  $1, $2, $3, $4, $5
 )
-ON CONFLICT (user_id, election_group_id) DO NOTHING
+ON CONFLICT (user_id, election_group_id) DO UPDATE SET
+  amount = EXCLUDED.amount,
+  status = EXCLUDED.status,
+  updated_at = NOW()
 `
 
 type CreateUserReferralRecordParams struct {
-	UserID          int64       `json:"user_id"`
-	PartyID         pgtype.Int2 `json:"party_id"`
-	ElectionGroupID pgtype.Int4 `json:"election_group_id"`
+	UserID          int64          `json:"user_id"`
+	PartyID         pgtype.Int2    `json:"party_id"`
+	ElectionGroupID pgtype.Int4    `json:"election_group_id"`
+	Amount          pgtype.Numeric `json:"amount"`
+	Status          string         `json:"status"`
 }
 
 func (q *Queries) CreateUserReferralRecord(ctx context.Context, arg CreateUserReferralRecordParams) error {
-	_, err := q.db.Exec(ctx, createUserReferralRecord, arg.UserID, arg.PartyID, arg.ElectionGroupID)
+	_, err := q.db.Exec(ctx, createUserReferralRecord,
+		arg.UserID,
+		arg.PartyID,
+		arg.ElectionGroupID,
+		arg.Amount,
+		arg.Status,
+	)
 	return err
-}
-
-const getApplicationElectionGroupsByUserAndParty = `-- name: GetApplicationElectionGroupsByUserAndParty :many
-SELECT DISTINCT election_group_id FROM party_applications
-WHERE user_id = $1 AND party_id = $2
-`
-
-type GetApplicationElectionGroupsByUserAndPartyParams struct {
-	UserID  int64 `json:"user_id"`
-	PartyID int16 `json:"party_id"`
-}
-
-// Returns all distinct election_group_ids for a user's applications under a party.
-func (q *Queries) GetApplicationElectionGroupsByUserAndParty(ctx context.Context, arg GetApplicationElectionGroupsByUserAndPartyParams) ([]int32, error) {
-	rows, err := q.db.Query(ctx, getApplicationElectionGroupsByUserAndParty, arg.UserID, arg.PartyID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []int32
-	for rows.Next() {
-		var election_group_id int32
-		if err := rows.Scan(&election_group_id); err != nil {
-			return nil, err
-		}
-		items = append(items, election_group_id)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const getReferral = `-- name: GetReferral :one
@@ -168,7 +150,7 @@ func (q *Queries) GetReferralByReferredUserID(ctx context.Context, referredUserI
 }
 
 const getReferrerUserReferralsForParty = `-- name: GetReferrerUserReferralsForParty :many
-SELECT id, user_id, party_id, election_group_id, total_referrals, agent_referrals, unpaid_referrals, duties_completed_referrals, duties_completed_and_unpaid_referrals, potential_earnings, earned_amount, status, requested_at, approved_at, paid_at, created_at, updated_at FROM user_referrals
+SELECT id, user_id, party_id, election_group_id, amount, status, requested_at, approved_at, paid_at, created_at, updated_at FROM user_referrals
 WHERE user_id = $1 AND party_id = $2
 `
 
@@ -192,13 +174,7 @@ func (q *Queries) GetReferrerUserReferralsForParty(ctx context.Context, arg GetR
 			&i.UserID,
 			&i.PartyID,
 			&i.ElectionGroupID,
-			&i.TotalReferrals,
-			&i.AgentReferrals,
-			&i.UnpaidReferrals,
-			&i.DutiesCompletedReferrals,
-			&i.DutiesCompletedAndUnpaidReferrals,
-			&i.PotentialEarnings,
-			&i.EarnedAmount,
+			&i.Amount,
 			&i.Status,
 			&i.RequestedAt,
 			&i.ApprovedAt,
@@ -217,7 +193,7 @@ func (q *Queries) GetReferrerUserReferralsForParty(ctx context.Context, arg GetR
 }
 
 const getUserReferralByID = `-- name: GetUserReferralByID :one
-SELECT id, user_id, party_id, election_group_id, total_referrals, agent_referrals, unpaid_referrals, duties_completed_referrals, duties_completed_and_unpaid_referrals, potential_earnings, earned_amount, status, requested_at, approved_at, paid_at, created_at, updated_at FROM user_referrals
+SELECT id, user_id, party_id, election_group_id, amount, status, requested_at, approved_at, paid_at, created_at, updated_at FROM user_referrals
 WHERE id = $1 LIMIT 1
 `
 
@@ -229,13 +205,7 @@ func (q *Queries) GetUserReferralByID(ctx context.Context, id int64) (UserReferr
 		&i.UserID,
 		&i.PartyID,
 		&i.ElectionGroupID,
-		&i.TotalReferrals,
-		&i.AgentReferrals,
-		&i.UnpaidReferrals,
-		&i.DutiesCompletedReferrals,
-		&i.DutiesCompletedAndUnpaidReferrals,
-		&i.PotentialEarnings,
-		&i.EarnedAmount,
+		&i.Amount,
 		&i.Status,
 		&i.RequestedAt,
 		&i.ApprovedAt,
@@ -247,7 +217,7 @@ func (q *Queries) GetUserReferralByID(ctx context.Context, id int64) (UserReferr
 }
 
 const getUserReferralByUserAndElectionGroup = `-- name: GetUserReferralByUserAndElectionGroup :one
-SELECT id, user_id, party_id, election_group_id, total_referrals, agent_referrals, unpaid_referrals, duties_completed_referrals, duties_completed_and_unpaid_referrals, potential_earnings, earned_amount, status, requested_at, approved_at, paid_at, created_at, updated_at FROM user_referrals
+SELECT id, user_id, party_id, election_group_id, amount, status, requested_at, approved_at, paid_at, created_at, updated_at FROM user_referrals
 WHERE user_id = $1 AND election_group_id = $2
 LIMIT 1
 `
@@ -265,19 +235,51 @@ func (q *Queries) GetUserReferralByUserAndElectionGroup(ctx context.Context, arg
 		&i.UserID,
 		&i.PartyID,
 		&i.ElectionGroupID,
-		&i.TotalReferrals,
-		&i.AgentReferrals,
-		&i.UnpaidReferrals,
-		&i.DutiesCompletedReferrals,
-		&i.DutiesCompletedAndUnpaidReferrals,
-		&i.PotentialEarnings,
-		&i.EarnedAmount,
+		&i.Amount,
 		&i.Status,
 		&i.RequestedAt,
 		&i.ApprovedAt,
 		&i.PaidAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getUserReferralStats = `-- name: GetUserReferralStats :one
+SELECT 
+  COALESCE(COUNT(*), 0)::integer AS total_referrals,
+  COALESCE(COUNT(*) FILTER (WHERE r.milestone = 'BECAME_AGENT'), 0)::integer AS agent_referrals,
+  COALESCE(COUNT(*) FILTER (WHERE r.status = 'pending' AND r.amount_to_pay > 0), 0)::integer AS unpaid_referrals,
+  COALESCE(SUM(r.amount_to_pay) FILTER (WHERE r.status = 'pending'), 0)::numeric AS potential_earnings,
+  COALESCE(SUM(r.amount_to_pay) FILTER (WHERE r.status = 'paid'), 0)::numeric AS earned_amount
+FROM referrals r
+WHERE r.referrer_user_id = $1
+  AND ($2::int IS NULL OR r.election_group_id = $2::int)
+`
+
+type GetUserReferralStatsParams struct {
+	ReferrerUserID  int64       `json:"referrer_user_id"`
+	ElectionGroupID pgtype.Int4 `json:"election_group_id"`
+}
+
+type GetUserReferralStatsRow struct {
+	TotalReferrals    int32          `json:"total_referrals"`
+	AgentReferrals    int32          `json:"agent_referrals"`
+	UnpaidReferrals   int32          `json:"unpaid_referrals"`
+	PotentialEarnings pgtype.Numeric `json:"potential_earnings"`
+	EarnedAmount      pgtype.Numeric `json:"earned_amount"`
+}
+
+func (q *Queries) GetUserReferralStats(ctx context.Context, arg GetUserReferralStatsParams) (GetUserReferralStatsRow, error) {
+	row := q.db.QueryRow(ctx, getUserReferralStats, arg.ReferrerUserID, arg.ElectionGroupID)
+	var i GetUserReferralStatsRow
+	err := row.Scan(
+		&i.TotalReferrals,
+		&i.AgentReferrals,
+		&i.UnpaidReferrals,
+		&i.PotentialEarnings,
+		&i.EarnedAmount,
 	)
 	return i, err
 }
@@ -292,113 +294,6 @@ func (q *Queries) GetUserReferredByID(ctx context.Context, referredUserID int64)
 	var referrer_user_id int64
 	err := row.Scan(&referrer_user_id)
 	return referrer_user_id, err
-}
-
-const incrementUserReferralAgentCount = `-- name: IncrementUserReferralAgentCount :exec
-UPDATE user_referrals
-SET agent_referrals = agent_referrals + 1,
-    updated_at = NOW()
-WHERE user_id = $1 AND election_group_id = $2
-`
-
-type IncrementUserReferralAgentCountParams struct {
-	UserID          int64       `json:"user_id"`
-	ElectionGroupID pgtype.Int4 `json:"election_group_id"`
-}
-
-// Increments agent_referrals for the referrer's user_referrals row matching the election group.
-func (q *Queries) IncrementUserReferralAgentCount(ctx context.Context, arg IncrementUserReferralAgentCountParams) error {
-	_, err := q.db.Exec(ctx, incrementUserReferralAgentCount, arg.UserID, arg.ElectionGroupID)
-	return err
-}
-
-const incrementUserReferralAgentCountByID = `-- name: IncrementUserReferralAgentCountByID :exec
-UPDATE user_referrals
-SET agent_referrals = agent_referrals + 1,
-    updated_at      = NOW()
-WHERE id = $1
-`
-
-func (q *Queries) IncrementUserReferralAgentCountByID(ctx context.Context, id int64) error {
-	_, err := q.db.Exec(ctx, incrementUserReferralAgentCountByID, id)
-	return err
-}
-
-const incrementUserReferralEarnedAmountByID = `-- name: IncrementUserReferralEarnedAmountByID :exec
-UPDATE user_referrals
-SET earned_amount = earned_amount + $2,
-    updated_at    = NOW()
-WHERE id = $1
-`
-
-type IncrementUserReferralEarnedAmountByIDParams struct {
-	ID           int64          `json:"id"`
-	EarnedAmount pgtype.Numeric `json:"earned_amount"`
-}
-
-func (q *Queries) IncrementUserReferralEarnedAmountByID(ctx context.Context, arg IncrementUserReferralEarnedAmountByIDParams) error {
-	_, err := q.db.Exec(ctx, incrementUserReferralEarnedAmountByID, arg.ID, arg.EarnedAmount)
-	return err
-}
-
-const incrementUserReferralPotentialEarningsByID = `-- name: IncrementUserReferralPotentialEarningsByID :exec
-UPDATE user_referrals
-SET potential_earnings = potential_earnings + $2,
-    updated_at         = NOW()
-WHERE id = $1
-`
-
-type IncrementUserReferralPotentialEarningsByIDParams struct {
-	ID                int64          `json:"id"`
-	PotentialEarnings pgtype.Numeric `json:"potential_earnings"`
-}
-
-func (q *Queries) IncrementUserReferralPotentialEarningsByID(ctx context.Context, arg IncrementUserReferralPotentialEarningsByIDParams) error {
-	_, err := q.db.Exec(ctx, incrementUserReferralPotentialEarningsByID, arg.ID, arg.PotentialEarnings)
-	return err
-}
-
-const incrementUserReferralTotalCount = `-- name: IncrementUserReferralTotalCount :exec
-UPDATE user_referrals
-SET total_referrals = total_referrals + 1,
-    updated_at      = NOW()
-WHERE id = $1
-`
-
-// Increments total_referrals count for the selected user_referrals record.
-func (q *Queries) IncrementUserReferralTotalCount(ctx context.Context, id int64) error {
-	_, err := q.db.Exec(ctx, incrementUserReferralTotalCount, id)
-	return err
-}
-
-const incrementUserReferralUnpaidCount = `-- name: IncrementUserReferralUnpaidCount :exec
-UPDATE user_referrals
-SET unpaid_referrals = unpaid_referrals + 1,
-    updated_at = NOW()
-WHERE user_id = $1 AND election_group_id = $2
-`
-
-type IncrementUserReferralUnpaidCountParams struct {
-	UserID          int64       `json:"user_id"`
-	ElectionGroupID pgtype.Int4 `json:"election_group_id"`
-}
-
-// Increments unpaid_referrals for the referrer's user_referrals row matching the election group.
-func (q *Queries) IncrementUserReferralUnpaidCount(ctx context.Context, arg IncrementUserReferralUnpaidCountParams) error {
-	_, err := q.db.Exec(ctx, incrementUserReferralUnpaidCount, arg.UserID, arg.ElectionGroupID)
-	return err
-}
-
-const incrementUserReferralUnpaidCountByID = `-- name: IncrementUserReferralUnpaidCountByID :exec
-UPDATE user_referrals
-SET unpaid_referrals = unpaid_referrals + 1,
-    updated_at       = NOW()
-WHERE id = $1
-`
-
-func (q *Queries) IncrementUserReferralUnpaidCountByID(ctx context.Context, id int64) error {
-	_, err := q.db.Exec(ctx, incrementUserReferralUnpaidCountByID, id)
-	return err
 }
 
 const listReferrals = `-- name: ListReferrals :many

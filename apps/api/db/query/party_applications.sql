@@ -1,5 +1,5 @@
 -- name: CreateApplication :one
-INSERT INTO party_applications (
+INSERT INTO party_agent_applications (
   user_id,
   party_id,
   election_group_id,
@@ -24,7 +24,7 @@ SET
 WHERE id = $1;
 
 -- name: GetApplicationByID :one
-SELECT * FROM party_applications
+SELECT * FROM party_agent_applications
 WHERE id = $1 LIMIT 1;
 
 -- name: ListApplications :many
@@ -85,7 +85,7 @@ SELECT
     ),
     0
   )::integer AS agents_count
-FROM party_applications pa
+FROM party_agent_applications pa
 JOIN users u ON pa.user_id = u.id
 LEFT JOIN user_more_infos up ON u.id = up.user_id
 JOIN election_groups eg ON pa.election_group_id = eg.id
@@ -104,12 +104,13 @@ WHERE
   (sqlc.arg(state_id)::smallint = 0 OR COALESCE(pa.state_id, u.current_state, pu.state_id) = sqlc.arg(state_id)) AND
   (sqlc.arg(lga_id)::integer = 0 OR COALESCE(pa.lga_id, u.current_lga, pu.lga_id) = sqlc.arg(lga_id)) AND
   (sqlc.arg(ward_id)::integer = 0 OR COALESCE(pa.ward_id, u.current_ward, pu.ward_id) = sqlc.arg(ward_id)) AND
+  (NOT sqlc.arg(active_election_only)::boolean OR (eg.active = TRUE AND eg.election_date >= CURRENT_DATE)) AND
   (sqlc.arg(cursor)::bigint = 0 OR pa.id < sqlc.arg(cursor))
 ORDER BY pa.id DESC
 LIMIT sqlc.arg(limit_val);
 
 -- name: UpdateApplicationStatus :one
-UPDATE party_applications
+UPDATE party_agent_applications
 SET
   status = $2,
   rejected_reason = $3,
@@ -118,7 +119,7 @@ WHERE id = $1
 RETURNING *;
 
 -- name: UpdateApplicationApproval :one
-UPDATE party_applications
+UPDATE party_agent_applications
 SET
   status = 'accepted',
   role = sqlc.arg(role),
@@ -177,7 +178,7 @@ SELECT
   pa.lga_id,
   pa.ward_id,
   p.auto_accept_applications
-FROM party_applications pa
+FROM party_agent_applications pa
 JOIN parties p ON pa.party_id = p.id
 WHERE pa.user_id = $1 
   AND pa.election_group_id = $2 
@@ -195,7 +196,7 @@ SELECT
   pa.lga_id,
   pa.ward_id,
   p.auto_accept_applications
-FROM party_applications pa
+FROM party_agent_applications pa
 JOIN parties p ON pa.party_id = p.id
 WHERE pa.user_id = $1 
   AND pa.status = 'pending';
@@ -213,7 +214,7 @@ SELECT
   pa.ward_id,
   pa.role,
   pa.status
-FROM party_applications pa
+FROM party_agent_applications pa
 WHERE pa.user_id = $1 
   AND pa.election_group_id = $2 
   AND pa.status = 'accepted'

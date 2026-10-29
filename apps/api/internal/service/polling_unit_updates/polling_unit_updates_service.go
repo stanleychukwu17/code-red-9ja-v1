@@ -191,19 +191,6 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 		}
 	}
 
-	if input.PartyID != nil {
-
-		err = qtx.IncrementElectionGroupPUPartyMetrics(ctx, queries.IncrementElectionGroupPUPartyMetricsParams{
-			ElectionGroupID: input.ElectionGroupID,
-			PollingUnitID:   input.PollingUnitID,
-			PartyID:         int16(*input.PartyID),
-			ReportsDelta:    reportsInc,
-			UpdatesDelta:    updatesInc,
-		})
-		if err != nil {
-			return queries.PollingUnitUpdate{}, err
-		}
-	}
 
 	if err := tx.Commit(ctx); err != nil {
 		return queries.PollingUnitUpdate{}, err

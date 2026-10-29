@@ -58,6 +58,17 @@ func (s *ReferralsService) UpdateReferral(ctx context.Context, params queries.Up
 	return s.q.UpdateReferral(ctx, params)
 }
 
+func (s *ReferralsService) GetUserReferralStats(ctx context.Context, referrerID int64, electionGroupID int32) (queries.GetUserReferralStatsRow, error) {
+	var egID pgtype.Int4
+	if electionGroupID > 0 {
+		egID = pgtype.Int4{Int32: electionGroupID, Valid: true}
+	}
+	return s.q.GetUserReferralStats(ctx, queries.GetUserReferralStatsParams{
+		ReferrerUserID:  referrerID,
+		ElectionGroupID: egID,
+	})
+}
+
 func (s *ReferralsService) GetUserReferralByUserAndElectionGroup(ctx context.Context, userID int64, electionGroupID int32) (queries.UserReferral, error) {
 	return s.q.GetUserReferralByUserAndElectionGroup(ctx, queries.GetUserReferralByUserAndElectionGroupParams{
 		UserID:          userID,

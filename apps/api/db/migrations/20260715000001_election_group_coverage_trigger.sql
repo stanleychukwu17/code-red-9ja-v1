@@ -73,11 +73,5 @@ EXECUTE FUNCTION fn_egcov_on_polling_unit_assignment();
 
 
 -- +goose Down
-DROP TRIGGER IF EXISTS trg_egcov_state_supervisor ON state_election_supervisors;
-DROP TRIGGER IF EXISTS trg_egcov_lga_supervisor ON lga_election_supervisors;
-DROP TRIGGER IF EXISTS trg_egcov_ward_supervisor ON ward_election_supervisors;
 DROP TRIGGER IF EXISTS trg_egcov_polling_unit_assignment ON polling_unit_assignments;
-DROP FUNCTION IF EXISTS fn_egcov_on_state_supervisor();
-DROP FUNCTION IF EXISTS fn_egcov_on_lga_supervisor();
-DROP FUNCTION IF EXISTS fn_egcov_on_ward_supervisor();
 DROP FUNCTION IF EXISTS fn_egcov_on_polling_unit_assignment();

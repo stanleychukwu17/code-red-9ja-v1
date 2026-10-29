@@ -157,10 +157,10 @@ func (h *Handler) GetOverview(w http.ResponseWriter, r *http.Request) {
 
 	refQuery := `
 		SELECT
-			COALESCE(SUM(CASE WHEN ur.status = 'paid' THEN ur.earned_amount ELSE 0 END), 0) AS paid_naira,
-			COALESCE(SUM(CASE WHEN ur.status != 'paid' AND ur.earned_amount > 0 THEN ur.earned_amount ELSE 0 END), 0) AS unpaid_naira,
+			COALESCE(SUM(CASE WHEN ur.status = 'paid' THEN ur.amount ELSE 0 END), 0) AS paid_naira,
+			COALESCE(SUM(CASE WHEN ur.status != 'paid' AND ur.amount > 0 THEN ur.amount ELSE 0 END), 0) AS unpaid_naira,
 			COUNT(CASE WHEN ur.status = 'paid' THEN 1 END) AS paid_count,
-			COUNT(CASE WHEN ur.status != 'paid' AND ur.earned_amount > 0 THEN 1 END) AS unpaid_count
+			COUNT(CASE WHEN ur.status != 'paid' AND ur.amount > 0 THEN 1 END) AS unpaid_count
 		FROM user_referrals ur
 		WHERE ($1::bigint = 0 OR ur.election_group_id = $1)
 	`
@@ -445,17 +445,19 @@ func (h *Handler) ListReferralPay(w http.ResponseWriter, r *http.Request) {
 			COALESCE(p.id, 0) AS party_id,
 			COALESCE(p.code, '') AS party_code,
 			COALESCE(p.name, '') AS party_name,
-			COALESCE(ur.duties_completed_referrals, 0) AS duties_completed_referrals,
-			COALESCE(ur.agent_referrals, 0) AS agent_referrals,
-			COALESCE(ur.total_referrals, 0) AS total_referrals,
-			COALESCE(ur.earned_amount, 0) AS earned_amount,
+			COUNT(r.id) FILTER (WHERE r.milestone = 'DUTIES_COMPLETED') AS duties_completed_referrals,
+			COUNT(r.id) FILTER (WHERE r.milestone = 'BECAME_AGENT') AS agent_referrals,
+			COUNT(r.id) AS total_referrals,
+			COALESCE(ur.amount, 0) AS earned_amount,
 			ur.status,
 			ur.paid_at,
 			ur.created_at
 		FROM user_referrals ur
 		JOIN users u ON u.id = ur.user_id
 		LEFT JOIN parties p ON p.id = ur.party_id
+		LEFT JOIN referrals r ON r.referrer_user_id = ur.user_id AND r.election_group_id = ur.election_group_id
 		WHERE %s
+		GROUP BY ur.id, u.first_name, u.last_name, u.username, u.avatar, p.short_name, p.name
 		ORDER BY ur.id DESC
 		LIMIT $%d OFFSET $%d
 	`, strings.Join(whereClauses, " AND "), argIdx, argIdx+1)
@@ -665,7 +667,7 @@ func (h *Handler) PayAll(w http.ResponseWriter, r *http.Request) {
 			res, err := h.pool.Exec(ctx, `
 				UPDATE user_referrals
 				SET status = 'paid', paid_at = NOW(), updated_at = NOW()
-				WHERE ($1::bigint = 0 OR election_group_id = $1) AND status != 'paid' AND earned_amount > 0
+				WHERE ($1::bigint = 0 OR election_group_id = $1) AND status != 'paid' AND amount > 0
 			`, req.ElectionGroupID)
 			if err != nil {
 				h.utils.RespondError(w, http.StatusInternalServerError, "Failed to pay referrals: "+err.Error())

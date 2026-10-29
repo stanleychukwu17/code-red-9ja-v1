@@ -18,12 +18,12 @@ import (
 
 type PartyApplicationsService interface {
 	SubmitApplication(ctx context.Context, input partyapplications.SubmitApplicationInput) (int64, error)
-	SubmitSupervisorApplication(ctx context.Context, input partyapplications.SubmitSupervisorApplicationInput) (queries.PartyApplication, error)
-	GetApplicationByID(ctx context.Context, id int64) (queries.PartyApplication, error)
-	ListApplications(ctx context.Context, userID int64, partyID int16, electionGroupID int32, status string, stateID int16, lgaID, wardID int32, limit int32, cursor int64) ([]partyapplications.PartyApplicationListItem, error)
-	RejectApplication(ctx context.Context, id int64, reason string) (queries.PartyApplication, error)
-	CancelApplication(ctx context.Context, id int64) (queries.PartyApplication, error)
-	ApproveApplication(ctx context.Context, input partyapplications.ApproveApplicationInput) (queries.PartyApplication, error)
+	SubmitSupervisorApplication(ctx context.Context, input partyapplications.SubmitSupervisorApplicationInput) (queries.PartyAgentApplication, error)
+	GetApplicationByID(ctx context.Context, id int64) (queries.PartyAgentApplication, error)
+	ListApplications(ctx context.Context, userID int64, partyID int16, electionGroupID int32, status string, stateID int16, lgaID, wardID int32, activeElectionOnly bool, limit int32, cursor int64) ([]partyapplications.PartyApplicationListItem, error)
+	RejectApplication(ctx context.Context, id int64, reason string) (queries.PartyAgentApplication, error)
+	CancelApplication(ctx context.Context, id int64) (queries.PartyAgentApplication, error)
+	ApproveApplication(ctx context.Context, input partyapplications.ApproveApplicationInput) (queries.PartyAgentApplication, error)
 	GetPollingUnitRecommendations(ctx context.Context, partyID int16, electionGroupID int32, lgaID, wardID, pollingUnitID int32) ([]queries.GetPollingUnitsWithAgentCountsRow, error)
 }
 
@@ -241,15 +241,20 @@ func (h *Handler) SubmitSupervisorApplication(w http.ResponseWriter, r *http.Req
 
 // ListApplications godoc
 // @Summary      List polling agent applications
-// @Description  Fetches a list of polling agent applications. Scoped: Party admins can only view applications for their own party.
+// @Description  Fetches a list of polling agent applications. Scoped: Party admins can only view applications for their own party; regular users can only view their own applications.
 // @Tags         PollingAgentApplications
 // @Accept       json
 // @Produce      json
-// @Param        party_id          query int    false "Filter by Party ID"
-// @Param        election_group_id query int    false "Filter by Election Group ID"
-// @Param        status            query string false "Filter by Status (pending, accepted, rejected)"
-// @Param        limit             query int    false "Pagination Limit (default 20)"
-// @Param        offset            query int    false "Pagination Offset (default 0)"
+// @Param        user_id              query int    false "Filter by User ID (Platform admin or Party admin only)"
+// @Param        party_id             query int    false "Filter by Party ID (Platform admin only or scoped to own party)"
+// @Param        election_group_id    query int    false "Filter by Election Group ID"
+// @Param        status               query string false "Filter by Status (pending, accepted, rejected)"
+// @Param        active_election_only query bool   false "Filter only active and upcoming elections"
+// @Param        state_id             query int    false "Filter by State ID"
+// @Param        lga_id               query int    false "Filter by LGA ID"
+// @Param        ward_id              query int    false "Filter by Ward ID"
+// @Param        cursor               query int    false "Pagination Cursor ID"
+// @Param        limit                query int    false "Pagination Limit (default 20)"
 // @Success      200  {object} map[string]interface{} "Applications fetched successfully"
 // @Failure      403  {object} map[string]interface{} "Permission denied"
 // @Failure      500  {object} map[string]interface{} "Internal server error"
@@ -267,18 +272,25 @@ func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var partyID int16
+	var requestedPartyID int16
 	var electionGroupID int32
 	status := r.URL.Query().Get("status")
 
 	if val := r.URL.Query().Get("party_id"); val != "" {
 		if pID, _ := strconv.ParseInt(val, 10, 16); pID > 0 {
-			partyID = int16(pID)
+			requestedPartyID = int16(pID)
 		}
 	}
 	if val := r.URL.Query().Get("election_group_id"); val != "" {
 		if egID, _ := strconv.ParseInt(val, 10, 32); egID > 0 {
 			electionGroupID = int32(egID)
+		}
+	}
+
+	var requestedUserID int64
+	if val := r.URL.Query().Get("user_id"); val != "" {
+		if uID, _ := strconv.ParseInt(val, 10, 64); uID > 0 {
+			requestedUserID = uID
 		}
 	}
 
@@ -295,7 +307,7 @@ func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Enforce visibility scoping
+	// Enforce visibility scoping & explicit RBAC checks
 	rolesData, _ := h.usersService.GetUserRoles(r.Context(), requester.ID)
 	isPlatformAdmin := false
 	isPartyAdmin := false
@@ -307,19 +319,36 @@ func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 			isPartyAdmin = true
 		}
 	}
+
+	var partyID int16
 	var filterUserID int64
-	if !isPlatformAdmin {
-		if !isPartyAdmin {
-			// A regular user can only view their own applications
-			filterUserID = requester.ID
-		} else {
-			if !requester.PartyID.Valid {
-				h.utils.RespondError(w, http.StatusForbidden, "Admin user is not associated with a party")
-				return
-			}
-			// Force the query to filter by the admin's party ID only
-			partyID = requester.PartyID.Int16
+
+	if isPlatformAdmin {
+		// Platform admin can query across all parties or filter by any party / user
+		partyID = requestedPartyID
+		filterUserID = requestedUserID
+	} else if isPartyAdmin {
+		if !requester.PartyID.Valid {
+			h.utils.RespondError(w, http.StatusForbidden, "Admin user is not associated with a party")
+			return
 		}
+		adminPartyID := requester.PartyID.Int16
+		if requestedPartyID > 0 && requestedPartyID != adminPartyID {
+			h.utils.RespondError(w, http.StatusForbidden, "You do not have permission to view applications for another party")
+			return
+		}
+		partyID = adminPartyID
+		filterUserID = requestedUserID
+	} else {
+		// Regular citizen/agent
+		if requestedPartyID > 0 {
+			partyID = requestedPartyID
+		}
+		if requestedUserID > 0 && requestedUserID != requester.ID {
+			h.utils.RespondError(w, http.StatusForbidden, "You do not have permission to view applications for other users")
+			return
+		}
+		filterUserID = requester.ID
 	}
 
 	var stateID int16
@@ -341,7 +370,9 @@ func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	apps, err := h.service.ListApplications(r.Context(), filterUserID, partyID, electionGroupID, status, stateID, lgaID, wardID, limit, cursor)
+	activeElectionOnly := r.URL.Query().Get("active_election_only") == "true"
+
+	apps, err := h.service.ListApplications(r.Context(), filterUserID, partyID, electionGroupID, status, stateID, lgaID, wardID, activeElectionOnly, limit, cursor)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to list applications: "+err.Error())
 		return

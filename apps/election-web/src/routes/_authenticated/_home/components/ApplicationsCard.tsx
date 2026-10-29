@@ -11,31 +11,6 @@ import MapPinIcon from "@repo/ui/icons/map-pin-icon";
 import { TitleText } from "@repo/ui/components/custom/Texts";
 import { Target } from "lucide-react";
 
-/**
- * Checks whether an election date is strictly in the past (before today at 00:00:00).
- * Supports ISO string dates and SQL timestamp objects (`{ Time: string }`).
- *
- * @param val - Raw date string or timestamp object
- * @returns True if the election date occurred before today, false otherwise
- */
-const isElectionInPast = (val: any) => {
-  const dateStr = val?.Time || val;
-  if (!dateStr) return false;
-  try {
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return false;
-    const electionDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-    const today = new Date();
-    const currentDay = new Date(
-      today.getFullYear(),
-      today.getMonth(),
-      today.getDate(),
-    );
-    return electionDay.getTime() < currentDay.getTime();
-  } catch (e) {
-    return false;
-  }
-};
 
 /**
  * Dashboard card displaying polling unit agent application status.
@@ -56,7 +31,9 @@ export function ApplicationsCard() {
     queryKey: ["pollingAgentApplications", user?.id],
     enabled: !!user?.id,
     queryFn: async () => {
-      const res = await getApplications({ data: { user_id: user?.id } });
+      const res = await getApplications({
+        data: { user_id: user?.id, active_election_only: true },
+      });
       if (!res || !res.success || !res.data?.applications) {
         return [];
       }
@@ -64,14 +41,15 @@ export function ApplicationsCard() {
     },
   });
 
-  // Filter applications that are currently active (not rejected/cancelled) and for future elections
+  // Filter applications that are currently active (not rejected/cancelled).
+  // Note: Past / ended elections are filtered directly at the DB level via active_election_only: true.
   const activeApps = (applicationsData || []).filter((app: any) => {
-    const isActiveStatus =
+    return (
       app.status === "pending" ||
       app.status === "approved" ||
       app.status === "success" ||
-      app.status === "accepted";
-    return isActiveStatus && !isElectionInPast(app.election_date);
+      app.status === "accepted"
+    );
   });
 
   const appCount = activeApps.length;

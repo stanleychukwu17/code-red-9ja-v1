@@ -169,6 +169,8 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 		if err != nil {
 			return 0, fmt.Errorf("failed to save primary bank account: %w", err)
 		}
+
+		_ = s.usersService.InvalidatePrimaryBankAccount(ctx, input.UserID)
 	}
 
 	// Create application
@@ -185,19 +187,9 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 		return 0, fmt.Errorf("failed to create application: %w", err)
 	}
 
-	// Create user referral record for this election group
-	err = txQueries.CreateUserReferralRecord(ctx, queries.CreateUserReferralRecordParams{
-		UserID:          input.UserID,
-		PartyID:         utils.PgInt2FromPositive(input.PartyID),
-		ElectionGroupID: utils.PgInt4FromPositive(input.ElectionGroupID),
-	})
-	if err != nil {
-		return 0, fmt.Errorf("failed to create user referral record: %w", err)
-	}
-
 
 	// Process referred user's referral record linking & increment total_referrals (best effort)
-	if refErr := s.updateReferralOnApplicationSubmission(ctx, txQueries, input.UserID, int64(input.PartyID), []int32{input.ElectionGroupID}, int16(input.CurrentState), 1); refErr != nil {
+	if refErr := s.updateReferralOnApplicationSubmission(ctx, txQueries, input.UserID, int16(input.PartyID), input.ElectionGroupID); refErr != nil {
 		slog.Warn("updateReferralOnApplicationSubmission failed (non-fatal)", "userID", input.UserID, "err", refErr)
 	}
 
@@ -208,7 +200,6 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 	// Invalidate caches
 	_ = s.usersService.InvalidateCachedUserInfo(ctx, input.UserFakeID)
 	_ = s.usersService.InvalidateUserMoreInfo(ctx, input.UserID)
-	_ = s.usersService.InvalidatePrimaryBankAccount(ctx, input.UserID)
 
 	return appID, nil
 }
@@ -223,36 +214,36 @@ type SubmitSupervisorApplicationInput struct {
 	DegreeCertificateURL string
 }
 
-func (s *Service) SubmitSupervisorApplication(ctx context.Context, input SubmitSupervisorApplicationInput) (queries.PartyApplication, error) {
+func (s *Service) SubmitSupervisorApplication(ctx context.Context, input SubmitSupervisorApplicationInput) (queries.PartyAgentApplication, error) {
 	// 1. Verify role type string
 	roleType := strings.TrimSpace(input.Role)
 	switch roleType {
 	case "state_election_supervisor", "state_supervisor", "state-election-supervisor":
 		roleType = "state_election_supervisor"
 		if input.StateID <= 0 {
-			return queries.PartyApplication{}, errors.New("state_id is required for state supervisor application")
+			return queries.PartyAgentApplication{}, errors.New("state_id is required for state supervisor application")
 		}
 	case "lga_election_supervisor", "lga_supervisor", "lga-election-supervisor":
 		roleType = "lga_election_supervisor"
 		if input.StateID <= 0 || input.LgaID <= 0 {
-			return queries.PartyApplication{}, errors.New("state_id and lga_id are required for LGA supervisor application")
+			return queries.PartyAgentApplication{}, errors.New("state_id and lga_id are required for LGA supervisor application")
 		}
 	case "ward_election_supervisor", "ward_supervisor", "ward-election-supervisor":
 		roleType = "ward_election_supervisor"
 		if input.StateID <= 0 || input.LgaID <= 0 || input.WardID <= 0 {
-			return queries.PartyApplication{}, errors.New("state_id, lga_id, and ward_id are required for Ward supervisor application")
+			return queries.PartyAgentApplication{}, errors.New("state_id, lga_id, and ward_id are required for Ward supervisor application")
 		}
 	default:
-		return queries.PartyApplication{}, errors.New("invalid supervisor role. Must be state_election_supervisor, lga_election_supervisor, or ward_election_supervisor")
+		return queries.PartyAgentApplication{}, errors.New("invalid supervisor role. Must be state_election_supervisor, lga_election_supervisor, or ward_election_supervisor")
 	}
 
 	// 2. Check user's educational degree eligibility
 	moreInfo, err := s.queries.GetMoreInfoAboutThisUser(ctx, input.UserID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return queries.PartyApplication{}, errors.New("please complete your educational details before applying for a supervisor role")
+			return queries.PartyAgentApplication{}, errors.New("please complete your educational details before applying for a supervisor role")
 		}
-		return queries.PartyApplication{}, fmt.Errorf("failed to fetch user educational details: %w", err)
+		return queries.PartyAgentApplication{}, fmt.Errorf("failed to fetch user educational details: %w", err)
 	}
 
 	highestDegree := strings.ToLower(strings.TrimSpace(moreInfo.HighestDegree.String))
@@ -263,7 +254,7 @@ func (s *Service) SubmitSupervisorApplication(ctx context.Context, input SubmitS
 		"phd":         true,
 	}
 	if !validDegrees[highestDegree] {
-		return queries.PartyApplication{}, errors.New("a higher education degree (Polytechnic/OND/HND, Bachelors, Masters, or PhD) is required to apply as an election supervisor")
+		return queries.PartyAgentApplication{}, errors.New("a higher education degree (Polytechnic/OND/HND, Bachelors, Masters, or PhD) is required to apply as an election supervisor")
 	}
 
 	// 3. Verify user has an accepted application for this election group
@@ -273,15 +264,15 @@ func (s *Service) SubmitSupervisorApplication(ctx context.Context, input SubmitS
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return queries.PartyApplication{}, errors.New("you must be an accepted polling agent for this election before applying for a supervisor role")
+			return queries.PartyAgentApplication{}, errors.New("you must be an accepted polling agent for this election before applying for a supervisor role")
 		}
-		return queries.PartyApplication{}, fmt.Errorf("failed to verify polling agent application status: %w", err)
+		return queries.PartyAgentApplication{}, fmt.Errorf("failed to verify polling agent application status: %w", err)
 	}
 
 	// 4. Begin transaction
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return queries.PartyApplication{}, fmt.Errorf("failed to begin transaction: %w", err)
+		return queries.PartyAgentApplication{}, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
 
@@ -294,7 +285,7 @@ func (s *Service) SubmitSupervisorApplication(ctx context.Context, input SubmitS
 			DegreeCertificateUrl: pgtype.Text{String: input.DegreeCertificateURL, Valid: true},
 		})
 		if err != nil {
-			return queries.PartyApplication{}, fmt.Errorf("failed to save degree certificate URL: %w", err)
+			return queries.PartyAgentApplication{}, fmt.Errorf("failed to save degree certificate URL: %w", err)
 		}
 	}
 
@@ -311,9 +302,9 @@ func (s *Service) SubmitSupervisorApplication(ctx context.Context, input SubmitS
 	if err != nil {
 		errStr := err.Error()
 		if strings.Contains(errStr, "uq_active_user_app_per_group") || strings.Contains(errStr, "uq_user_application_per_group") {
-			return queries.PartyApplication{}, errors.New("you already have an active application for this election group")
+			return queries.PartyAgentApplication{}, errors.New("you already have an active application for this election group")
 		}
-		return queries.PartyApplication{}, fmt.Errorf("failed to create supervisor application: %w", err)
+		return queries.PartyAgentApplication{}, fmt.Errorf("failed to create supervisor application: %w", err)
 	}
 
 	// Set role on application record explicitly to supervisor role
@@ -326,11 +317,11 @@ func (s *Service) SubmitSupervisorApplication(ctx context.Context, input SubmitS
 		WardID:        pgtype.Int4{Int32: input.WardID, Valid: input.WardID > 0},
 	})
 	if err != nil {
-		return queries.PartyApplication{}, fmt.Errorf("failed to set supervisor application role: %w", err)
+		return queries.PartyAgentApplication{}, fmt.Errorf("failed to set supervisor application role: %w", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return queries.PartyApplication{}, fmt.Errorf("failed to commit transaction: %w", err)
+		return queries.PartyAgentApplication{}, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	_ = s.usersService.InvalidateUserMoreInfo(ctx, input.UserID)
@@ -339,7 +330,7 @@ func (s *Service) SubmitSupervisorApplication(ctx context.Context, input SubmitS
 	return app, nil
 }
 
-func (s *Service) GetApplicationByID(ctx context.Context, id int64) (queries.PartyApplication, error) {
+func (s *Service) GetApplicationByID(ctx context.Context, id int64) (queries.PartyAgentApplication, error) {
 	return s.queries.GetApplicationByID(ctx, id)
 }
 
@@ -395,17 +386,18 @@ type PartyApplicationListItem struct {
 	AgentsCount          int32   `json:"agents_count"`
 }
 
-func (s *Service) ListApplications(ctx context.Context, userID int64, partyID int16, electionGroupID int32, status string, stateID int16, lgaID, wardID int32, limit int32, cursor int64) ([]PartyApplicationListItem, error) {
+func (s *Service) ListApplications(ctx context.Context, userID int64, partyID int16, electionGroupID int32, status string, stateID int16, lgaID, wardID int32, activeElectionOnly bool, limit int32, cursor int64) ([]PartyApplicationListItem, error) {
 	rows, err := s.queries.ListApplications(ctx, queries.ListApplicationsParams{
-		UserID:          userID,
-		PartyID:         partyID,
-		ElectionGroupID: electionGroupID,
-		Status:          status,
-		StateID:         stateID,
-		LgaID:           lgaID,
-		WardID:          wardID,
-		Cursor:          cursor,
-		LimitVal:        limit,
+		UserID:             userID,
+		PartyID:            partyID,
+		ElectionGroupID:    electionGroupID,
+		Status:             status,
+		StateID:            stateID,
+		LgaID:              lgaID,
+		WardID:             wardID,
+		ActiveElectionOnly: activeElectionOnly,
+		Cursor:             cursor,
+		LimitVal:           limit,
 	})
 	if err != nil {
 		return nil, err
@@ -572,14 +564,14 @@ func (s *Service) GetPollingUnitRecommendations(ctx context.Context, partyID int
 	return finalRows, nil
 }
 
-func (s *Service) RejectApplication(ctx context.Context, id int64, reason string) (queries.PartyApplication, error) {
+func (s *Service) RejectApplication(ctx context.Context, id int64, reason string) (queries.PartyAgentApplication, error) {
 	app, err := s.queries.GetApplicationByID(ctx, id)
 	if err != nil {
-		return queries.PartyApplication{}, err
+		return queries.PartyAgentApplication{}, err
 	}
 
 	if app.Status != "pending" {
-		return queries.PartyApplication{}, errors.New("application is already processed")
+		return queries.PartyAgentApplication{}, errors.New("application is already processed")
 	}
 
 	updatedApp, err := s.queries.UpdateApplicationStatus(ctx, queries.UpdateApplicationStatusParams{
@@ -588,11 +580,10 @@ func (s *Service) RejectApplication(ctx context.Context, id int64, reason string
 		RejectedReason: pgtype.Text{String: reason, Valid: reason != ""},
 	})
 	if err != nil {
-		return queries.PartyApplication{}, err
+		return queries.PartyAgentApplication{}, err
 	}
 
 	role := strings.ToLower(strings.TrimSpace(app.Role))
-	partyID := app.PartyID
 	egID := app.ElectionGroupID
 
 	var puID int32
@@ -612,21 +603,20 @@ func (s *Service) RejectApplication(ctx context.Context, id int64, reason string
 		stateID = app.StateID.Int16
 	}
 
-
 	// Initiate cascading stats rollup
 	s.initiateStatsRollup(ctx, egID, role, puID, wardID, lgaID, stateID)
 
 	return updatedApp, nil
 }
 
-func (s *Service) CancelApplication(ctx context.Context, id int64) (queries.PartyApplication, error) {
+func (s *Service) CancelApplication(ctx context.Context, id int64) (queries.PartyAgentApplication, error) {
 	app, err := s.queries.GetApplicationByID(ctx, id)
 	if err != nil {
-		return queries.PartyApplication{}, err
+		return queries.PartyAgentApplication{}, err
 	}
 
 	if app.Status != "pending" {
-		return queries.PartyApplication{}, errors.New("application is already processed")
+		return queries.PartyAgentApplication{}, errors.New("application is already processed")
 	}
 
 	return s.queries.UpdateApplicationStatus(ctx, queries.UpdateApplicationStatusParams{
@@ -689,11 +679,11 @@ func fetchPUGeo(ctx context.Context, pool interface {
 	return g, nil
 }
 
-func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicationInput) (queries.PartyApplication, error) {
+func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicationInput) (queries.PartyAgentApplication, error) {
 	// Begin transaction
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return queries.PartyApplication{}, fmt.Errorf("failed to begin transaction: %w", err)
+		return queries.PartyAgentApplication{}, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
 
@@ -702,17 +692,17 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 	// Fetch application
 	app, err := txQueries.GetApplicationByID(ctx, input.ApplicationID)
 	if err != nil {
-		return queries.PartyApplication{}, fmt.Errorf("failed to get application: %w", err)
+		return queries.PartyAgentApplication{}, fmt.Errorf("failed to get application: %w", err)
 	}
 
 	if app.Status != "pending" {
-		return queries.PartyApplication{}, errors.New("application is already processed")
+		return queries.PartyAgentApplication{}, errors.New("application is already processed")
 	}
 
 	// Fetch the election group to check the election date
 	electionGroup, err := txQueries.GetElectionGroupByID(ctx, app.ElectionGroupID)
 	if err != nil {
-		return queries.PartyApplication{}, fmt.Errorf("failed to get election group: %w", err)
+		return queries.PartyAgentApplication{}, fmt.Errorf("failed to get election group: %w", err)
 	}
 
 	now := time.Now()
@@ -724,10 +714,10 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 			RejectedReason: pgtype.Text{String: reason, Valid: true},
 		})
 		if cancelErr != nil {
-			return queries.PartyApplication{}, fmt.Errorf("failed to cancel application for past election: %w", cancelErr)
+			return queries.PartyAgentApplication{}, fmt.Errorf("failed to cancel application for past election: %w", cancelErr)
 		}
 		if commitErr := tx.Commit(ctx); commitErr != nil {
-			return queries.PartyApplication{}, fmt.Errorf("failed to commit cancellation: %w", commitErr)
+			return queries.PartyAgentApplication{}, fmt.Errorf("failed to commit cancellation: %w", commitErr)
 		}
 		return updatedApp, errors.New("cancelled_past_election")
 	}
@@ -739,9 +729,9 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return queries.PartyApplication{}, errors.New("insufficient slots: please purchase slots to accept applications")
+			return queries.PartyAgentApplication{}, errors.New("insufficient slots: please purchase slots to accept applications")
 		}
-		return queries.PartyApplication{}, fmt.Errorf("failed to deduct slots: %w", err)
+		return queries.PartyAgentApplication{}, fmt.Errorf("failed to deduct slots: %w", err)
 	}
 
 	// Create assignment based on role
@@ -764,7 +754,7 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 			if app.PollingUnitID.Valid {
 				pollingUnitID = app.PollingUnitID.Int32
 			} else {
-				return queries.PartyApplication{}, errors.New("polling unit ID is required for polling agents but not specified in application")
+				return queries.PartyAgentApplication{}, errors.New("polling unit ID is required for polling agents but not specified in application")
 			}
 		}
 	}
@@ -772,7 +762,7 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 	// Deduct payment based on role payment allocation
 	party, err := txQueries.GetPartyByID(ctx, int16(app.PartyID))
 	if err != nil {
-		return queries.PartyApplication{}, fmt.Errorf("failed to fetch party: %w", err)
+		return queries.PartyAgentApplication{}, fmt.Errorf("failed to fetch party: %w", err)
 	}
 
 	deductionKobo := resolvePotentialPaymentKobo(party.AgentPaymentAllocationKobo, roleType, input.StateID)
@@ -784,16 +774,16 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 		})
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
-				return queries.PartyApplication{}, errors.New("insufficient payment balance: please fund your party wallet to accept this application")
+				return queries.PartyAgentApplication{}, errors.New("insufficient payment balance: please fund your party wallet to accept this application")
 			}
-			return queries.PartyApplication{}, fmt.Errorf("failed to deduct payment balance: %w", err)
+			return queries.PartyAgentApplication{}, fmt.Errorf("failed to deduct payment balance: %w", err)
 		}
 	}
 
 	// Update user role to the dynamic role type
 	_, err = txQueries.UpdateUserRoleForPartyApp(ctx, app.UserID)
 	if err != nil {
-		return queries.PartyApplication{}, fmt.Errorf("failed to promote user role: %w", err)
+		return queries.PartyAgentApplication{}, fmt.Errorf("failed to promote user role: %w", err)
 	}
 
 	// Update application status and final role/location
@@ -806,7 +796,7 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 		WardID:        pgtype.Int4{Int32: input.WardID, Valid: input.WardID > 0},
 	})
 	if err != nil {
-		return queries.PartyApplication{}, fmt.Errorf("failed to update application approval status: %w", err)
+		return queries.PartyAgentApplication{}, fmt.Errorf("failed to update application approval status: %w", err)
 	}
 
 	egID := app.ElectionGroupID
@@ -823,41 +813,10 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 			PotentialPaymentKobo: deductionKobo,
 		})
 		if err != nil {
-			return queries.PartyApplication{}, fmt.Errorf("failed to assign user to role %s: %w", roleType, err)
+			return queries.PartyAgentApplication{}, fmt.Errorf("failed to assign user to role %s: %w", roleType, err)
 		}
 
-		existingStateSupCount, countErr := txQueries.GetStateSupervisorCount(ctx, queries.GetStateSupervisorCountParams{
-			ElectionGroupID: egID,
-			StateID:         input.StateID,
-			PartyID:         partyID,
-		})
-		if countErr != nil {
-			existingStateSupCount = 0
-		}
-		isUniqueStateSup := int32(0)
-		if existingStateSupCount <= 1 {
-			isUniqueStateSup = 1
-		}
-
-		err = txQueries.AdjustElectionGroupStateStateSupervisorCounts(ctx, queries.AdjustElectionGroupStateStateSupervisorCountsParams{
-			ElectionGroupID: egID,
-			StateID:         input.StateID,
-			PartyID:         partyID,
-			Delta:           1,
-		})
-		if err != nil {
-			return queries.PartyApplication{}, fmt.Errorf("failed to adjust state supervisor counts on state: %w", err)
-		}
-
-		err = txQueries.AdjustElectionGroupNationalStateSupervisorCounts(ctx, queries.AdjustElectionGroupNationalStateSupervisorCountsParams{
-			ElectionGroupID: egID,
-			PartyID:         partyID,
-			Delta:           1,
-			UniqueDelta:     isUniqueStateSup,
-		})
-		if err != nil {
-			return queries.PartyApplication{}, fmt.Errorf("failed to adjust state supervisor counts on national: %w", err)
-		}
+		// State supervisor created. Stats are aggregated dynamically.
 
 	} else if roleType == "lga_election_supervisor" || roleType == "lga_supervisor" {
 		_, err = txQueries.CreateLgaSupervisor(ctx, queries.CreateLgaSupervisorParams{
@@ -871,7 +830,7 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 			PotentialPaymentKobo: deductionKobo,
 		})
 		if err != nil {
-			return queries.PartyApplication{}, fmt.Errorf("failed to assign user to role %s: %w", roleType, err)
+			return queries.PartyAgentApplication{}, fmt.Errorf("failed to assign user to role %s: %w", roleType, err)
 		}
 
 		// LGA supervisor created. Stats are aggregated dynamically.
@@ -889,7 +848,7 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 			PotentialPaymentKobo: deductionKobo,
 		})
 		if err != nil {
-			return queries.PartyApplication{}, fmt.Errorf("failed to assign user to role %s: %w", roleType, err)
+			return queries.PartyAgentApplication{}, fmt.Errorf("failed to assign user to role %s: %w", roleType, err)
 		}
 
 		// Ward supervisor created. Stats are aggregated dynamically.
@@ -906,7 +865,7 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 			PotentialPaymentKobo: deductionKobo,
 		})
 		if err != nil {
-			return queries.PartyApplication{}, fmt.Errorf("failed to assign user to role %s: %w", roleType, err)
+			return queries.PartyAgentApplication{}, fmt.Errorf("failed to assign user to role %s: %w", roleType, err)
 		}
 
 		// --- Incremental stats update for polling agent ---
@@ -925,27 +884,7 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 		).Scan(&geo.wardID, &geo.lgaID, &geo.stateID, &wardStateConstID, &puFedConstID, &puSenateID)
 
 		if geoErr == nil {
-			// 2. Check current agents_count for this party in this PU BEFORE this insert.
-			//    Used to compute unique_pu_delta for all parent rows.
-			//    Because the assignment was just inserted in this tx, the DB may not have committed,
-			//    but GetPUPartyAgentsCount reads the election_group_polling_units JSONB which is
-			//    updated by THIS function call — so it's currently 0 if this is first agent.
-			//    We derive from the raw assignment count instead (using tx to see our uncommitted insert):
-			var priorAgentCount int32
-			_ = tx.QueryRow(ctx, `
-				SELECT COUNT(*)::int FROM polling_unit_assignments
-				WHERE election_group_id = $1 AND polling_unit_id = $2 AND party_id = $3`,
-				egID, pollingUnitID, partyID,
-			).Scan(&priorAgentCount)
-			// priorAgentCount now includes the one we just inserted (tx committed later),
-			// but the trigger ran after INSERT so egPu row exists.
-			// If priorAgentCount == 1, this was the first agent for this party in this PU.
-			uniquePuDelta := int32(0)
-			if priorAgentCount <= 1 {
-				uniquePuDelta = 1
-			}
-
-			// 3. Upsert party entry for polling unit
+			// 2. Upsert party entry for polling unit
 			if err = txQueries.UpsertElectionGroupPUPartyEntry(ctx, queries.UpsertElectionGroupPUPartyEntryParams{
 				AgentsDelta:           1,
 				ElectionGroupID:       egID,
@@ -958,7 +897,7 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 				FederalConstituencyID: pgtype.Int4{Int32: puFedConstID, Valid: true},
 				SenatorialDistrictID:  pgtype.Int4{Int32: puSenateID, Valid: true},
 			}); err != nil {
-				return queries.PartyApplication{}, fmt.Errorf("failed UpsertElectionGroupPUPartyEntry: %v", err)
+				return queries.PartyAgentApplication{}, fmt.Errorf("failed UpsertElectionGroupPUPartyEntry: %v", err)
 			}
 		}
 	}
@@ -970,7 +909,7 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return queries.PartyApplication{}, fmt.Errorf("failed to commit transaction: %w", err)
+		return queries.PartyAgentApplication{}, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	// Invalidate only caches affected by slot deduction
@@ -1027,10 +966,6 @@ func (s *Service) processReferralOnAcceptance(ctx context.Context, txQueries *qu
 		return nil
 	}
 
-	// 2. Increment agent_referrals on the user_referral record
-	if err := txQueries.IncrementUserReferralAgentCountByID(ctx, userReferralID); err != nil {
-		slog.Warn("IncrementUserReferralAgentCountByID failed", "userReferralID", userReferralID, "err", err)
-	}
 
 	// Get electionGroupID from user_referrals if still unknown
 	if electionGroupID <= 0 {
@@ -1041,14 +976,12 @@ func (s *Service) processReferralOnAcceptance(ctx context.Context, txQueries *qu
 
 	// 3. Check for ongoing party marketing campaign for party & election group
 	var referralAmt pgtype.Numeric
-	hasActiveCampaign := false
 	if electionGroupID > 0 {
 		campaign, campErr := txQueries.GetActiveMarketingCampaignForElectionGroup(ctx, queries.GetActiveMarketingCampaignForElectionGroupParams{
 			PartyID:         partyID,
 			ElectionGroupID: electionGroupID,
 		})
 		if campErr == nil {
-			hasActiveCampaign = true
 			_ = referralAmt.Scan(fmt.Sprintf("%d.00", campaign.ReferralAmountKobo/100))
 			if campaign.ReferralAmountKobo%100 != 0 {
 				_ = referralAmt.Scan(fmt.Sprintf("%.2f", float64(campaign.ReferralAmountKobo)/100.0))
@@ -1067,30 +1000,13 @@ func (s *Service) processReferralOnAcceptance(ctx context.Context, txQueries *qu
 		return fmt.Errorf("UpdateReferralOnAgentAcceptance: %w", err)
 	}
 
-	// 5. If active party marketing campaign exists:
-	//    - increment unpaid_referrals
-	//    - update potential_earnings
-	if hasActiveCampaign {
-		if err := txQueries.IncrementUserReferralUnpaidCountByID(ctx, userReferralID); err != nil {
-			slog.Warn("IncrementUserReferralUnpaidCountByID failed", "userReferralID", userReferralID, "err", err)
-		}
-
-		if referralAmt.Valid {
-			if err := txQueries.IncrementUserReferralPotentialEarningsByID(ctx, queries.IncrementUserReferralPotentialEarningsByIDParams{
-				ID:                userReferralID,
-				PotentialEarnings: referralAmt,
-			}); err != nil {
-				slog.Warn("IncrementUserReferralPotentialEarningsByID failed", "userReferralID", userReferralID, "err", err)
-			}
-		}
-	}
 
 	return nil
 }
 
 // updateReferralOnApplicationSubmission links a newly submitted application to the applicant's existing referral record
 // if the referral record's election_group_id / party_id / user_referral_id are still unlinked (NULL).
-func (s *Service) updateReferralOnApplicationSubmission(ctx context.Context, txQueries *queries.Queries, userID int64, partyID int64, submittedEGIDs []int32, currentStateID int16, currentCountryID int16) error {
+func (s *Service) updateReferralOnApplicationSubmission(ctx context.Context, txQueries *queries.Queries, userID int64, partyID int16, electionGroupID int32) error {
 	// 1. Fetch user's referral record
 	referral, err := txQueries.GetReferralByReferredUserID(ctx, userID)
 	if err != nil {
@@ -1107,145 +1023,37 @@ func (s *Service) updateReferralOnApplicationSubmission(ctx context.Context, txQ
 		return nil
 	}
 
-	// 2. Fetch referrer's user_referrals records for this party matching the submitted election group IDs
-	referrerUserReferrals, err := txQueries.GetReferrerUserReferralsForParty(ctx, queries.GetReferrerUserReferralsForPartyParams{
-		UserID:  referrerID,
-		PartyID: pgtype.Int2{Int16: int16(partyID), Valid: partyID > 0},
+	// 2. Fetch or create referrer's user_referrals record for this election group
+	ur, err := txQueries.GetUserReferralByUserAndElectionGroup(ctx, queries.GetUserReferralByUserAndElectionGroupParams{
+		UserID:          referrerID,
+		ElectionGroupID: pgtype.Int4{Int32: electionGroupID, Valid: electionGroupID > 0},
 	})
-	if err != nil || len(referrerUserReferrals) == 0 {
-		return nil
-	}
-
-	// Map submitted election group IDs for fast lookup
-	submittedEGMap := make(map[int32]bool)
-	for _, egID := range submittedEGIDs {
-		submittedEGMap[egID] = true
-	}
-
-	// Filter referrer's user_referral records to only those matching submitted election group IDs
-	var matchedUserReferrals []queries.UserReferral
-	for _, ur := range referrerUserReferrals {
-		if ur.ElectionGroupID.Valid && submittedEGMap[ur.ElectionGroupID.Int32] {
-			matchedUserReferrals = append(matchedUserReferrals, ur)
-		}
-	}
-
-	if len(matchedUserReferrals) == 0 {
-		return nil
-	}
-
-	// Fetch state name for state check if currentStateID > 0
-	stateName := ""
-	if currentStateID > 0 {
-		if stateObj, stateErr := txQueries.GetStateDetailsByID(ctx, currentStateID); stateErr == nil {
-			stateName = stateObj.Name
-		}
-	}
-
-	type candidateUR struct {
-		userReferral      queries.UserReferral
-		egID              int32
-		year              int16
-		hasActiveCampaign bool
-	}
-	var candidates []candidateUR
-
-	for _, ur := range matchedUserReferrals {
-		egID := ur.ElectionGroupID.Int32
-		eg, egErr := txQueries.GetElectionGroupByID(ctx, egID)
-		if egErr != nil {
-			continue
-		}
-
-		// 3. Fetch active party marketing campaign for party & election group
-		campaign, campErr := txQueries.GetActiveMarketingCampaignForElectionGroup(ctx, queries.GetActiveMarketingCampaignForElectionGroupParams{
-			PartyID:         int16(partyID),
-			ElectionGroupID: egID,
+	if err != nil {
+		createErr := txQueries.CreateUserReferralRecord(ctx, queries.CreateUserReferralRecordParams{
+			UserID:          referrerID,
+			PartyID:         pgtype.Int2{Int16: partyID, Valid: partyID > 0},
+			ElectionGroupID: pgtype.Int4{Int32: electionGroupID, Valid: electionGroupID > 0},
+			Amount:          pgtype.Numeric{Valid: false},
+			Status:          "pending",
 		})
-
-		hasActiveCampaign := false
-		if campErr == nil {
-			// Check if state.name is in party_marketing_campaign.states (JSONB array)
-			if stateName != "" && len(campaign.States) > 0 {
-				var rawStates []json.RawMessage
-				if err := json.Unmarshal(campaign.States, &rawStates); err == nil {
-					for _, raw := range rawStates {
-						var sName string
-						if err := json.Unmarshal(raw, &sName); err != nil {
-							var obj struct {
-								Name string `json:"name"`
-							}
-							if err := json.Unmarshal(raw, &obj); err == nil {
-								sName = obj.Name
-							}
-						}
-
-						if strings.EqualFold(strings.TrimSpace(sName), strings.TrimSpace(stateName)) || sName == "All" || sName == "*" {
-							hasActiveCampaign = true
-							break
-						}
-					}
-				} else {
-					hasActiveCampaign = true
-				}
-			} else {
-				hasActiveCampaign = true
-			}
+		if createErr != nil {
+			return fmt.Errorf("failed to create referrer user_referrals record: %w", createErr)
 		}
-
-		candidates = append(candidates, candidateUR{
-			userReferral:      ur,
-			egID:              egID,
-			year:              int16(eg.ElectionDate.Time.Year()),
-			hasActiveCampaign: hasActiveCampaign,
+		ur, err = txQueries.GetUserReferralByUserAndElectionGroup(ctx, queries.GetUserReferralByUserAndElectionGroupParams{
+			UserID:          referrerID,
+			ElectionGroupID: pgtype.Int4{Int32: electionGroupID, Valid: electionGroupID > 0},
 		})
-	}
-
-	if len(candidates) == 0 {
-		return nil
-	}
-
-	// 4. Select best candidate:
-	//    Filter for candidates with active marketing campaigns in user's state.
-	//    If 1 candidate -> select it.
-	//    If 2 or more -> select user_referral with nearest upcoming election cycle.
-	//    If none have active campaign -> fall back to nearest upcoming election cycle from all candidates.
-	currentYear := int16(time.Now().Year())
-
-	pickNearest := func(pool []candidateUR) candidateUR {
-		best := pool[0]
-		for _, c := range pool[1:] {
-			cUpcoming := c.year >= currentYear
-			bUpcoming := best.year >= currentYear
-			if cUpcoming && !bUpcoming {
-				best = c
-			} else if cUpcoming && bUpcoming && c.year < best.year {
-				best = c
-			}
-		}
-		return best
-	}
-
-	var activeCandidates []candidateUR
-	for _, c := range candidates {
-		if c.hasActiveCampaign {
-			activeCandidates = append(activeCandidates, c)
+		if err != nil {
+			return fmt.Errorf("failed to fetch created referrer user_referrals record: %w", err)
 		}
 	}
 
-	var selected candidateUR
-	if len(activeCandidates) > 0 {
-		selected = pickNearest(activeCandidates)
-	} else {
-		selected = pickNearest(candidates)
-	}
-
-	// 5. Update referral: set user_referral_id, party_id, election_group_id, milestone ('APPLIED') without setting amount_to_pay yet
+	// 3. Update referral: link user_referral_id, party_id, election_group_id, milestone ('APPLIED')
 	if err := txQueries.UpdateReferralOnApplication(ctx, queries.UpdateReferralOnApplicationParams{
 		ID:              referral.ID,
-		UserReferralID:  pgtype.Int8{Int64: selected.userReferral.ID, Valid: true},
-		PartyID:         pgtype.Int2{Int16: int16(partyID), Valid: partyID > 0},
-		ElectionGroupID: pgtype.Int4{Int32: selected.egID, Valid: selected.egID > 0},
+		UserReferralID:  pgtype.Int8{Int64: ur.ID, Valid: true},
+		PartyID:         pgtype.Int2{Int16: partyID, Valid: partyID > 0},
+		ElectionGroupID: pgtype.Int4{Int32: electionGroupID, Valid: electionGroupID > 0},
 		AmountToPay:     pgtype.Numeric{Valid: false},
 		Milestone:       "APPLIED",
 	}); err != nil {
@@ -1253,17 +1061,11 @@ func (s *Service) updateReferralOnApplicationSubmission(ctx context.Context, txQ
 		return err
 	}
 
-	// 6. Increment selected user_referral.total_referrals count
-	if err := txQueries.IncrementUserReferralTotalCount(ctx, selected.userReferral.ID); err != nil {
-		slog.Error("failed to increment user_referral total_referrals count", "user_referral_id", selected.userReferral.ID, "err", err)
-		return err
-	}
-
-	slog.Info("Successfully updated referral & incremented total_referrals count",
+	slog.Info("Successfully updated referral on application submission",
 		"referral_id", referral.ID,
-		"user_referral_id", selected.userReferral.ID,
+		"user_referral_id", ur.ID,
 		"party_id", partyID,
-		"election_group_id", selected.egID,
+		"election_group_id", electionGroupID,
 	)
 
 	return nil

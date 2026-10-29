@@ -12,50 +12,45 @@ import (
 )
 
 const getEligiblePollingUnitsForElection = `-- name: GetEligiblePollingUnitsForElection :many
-SELECT pu.id, pu.ward_id, pu.lga_id, pu.state_id,
-       w.state_constituency_id,
-       l.federal_constituency_id,
-       l.senatorial_district_id
+SELECT 
+    pu.id,
+    pu.state_id,
+    pu.senatorial_district_id,
+    pu.federal_constituency_id,
+    pu.state_constituency_id,
+    pu.lga_id,
+    pu.ward_id
 FROM polling_units pu
-JOIN wards w ON w.id = pu.ward_id
-JOIN lgas l ON l.id = pu.lga_id
-WHERE ($1::int = 0 OR pu.ward_id = $1)
-  AND ($2::int = 0 OR pu.lga_id = $2)
-  AND ($3::smallint = 0 OR pu.state_id = $3)
-  AND ($4::int = 0 OR w.state_constituency_id = $4)
-  AND ($5::int = 0 OR l.federal_constituency_id = $5)
-  AND ($6::int = 0 OR l.senatorial_district_id = $6)
-ORDER BY pu.id
+JOIN elections e ON e.id = $1
+WHERE 
+    (e.scope = 'nationwide') OR
+    (e.scope = 'state' AND pu.state_id = e.state_id) OR
+    (e.scope = 'senatorial-district' AND pu.senatorial_district_id = e.senatorial_district_id) OR
+    (e.scope = 'federal-constituency' AND pu.federal_constituency_id = e.federal_constituency_id) OR
+    (e.scope = 'state-constituency' AND pu.state_constituency_id = e.state_constituency_id) OR
+    (e.scope = 'lga' AND pu.lga_id = e.lga_id) OR
+    (e.scope = 'ward' AND pu.ward_id = e.ward_id)
+ORDER BY pu.id ASC
+LIMIT COALESCE(NULLIF($2::int, 0), 200000)
 `
 
 type GetEligiblePollingUnitsForElectionParams struct {
-	Column1 int32 `json:"column_1"`
+	ID      int32 `json:"id"`
 	Column2 int32 `json:"column_2"`
-	Column3 int16 `json:"column_3"`
-	Column4 int32 `json:"column_4"`
-	Column5 int32 `json:"column_5"`
-	Column6 int32 `json:"column_6"`
 }
 
 type GetEligiblePollingUnitsForElectionRow struct {
 	ID                    int32       `json:"id"`
-	WardID                int32       `json:"ward_id"`
-	LgaID                 int32       `json:"lga_id"`
-	StateID               int16       `json:"state_id"`
-	StateConstituencyID   pgtype.Int4 `json:"state_constituency_id"`
-	FederalConstituencyID pgtype.Int4 `json:"federal_constituency_id"`
+	StateID               int32       `json:"state_id"`
 	SenatorialDistrictID  pgtype.Int4 `json:"senatorial_district_id"`
+	FederalConstituencyID pgtype.Int4 `json:"federal_constituency_id"`
+	StateConstituencyID   pgtype.Int4 `json:"state_constituency_id"`
+	LgaID                 int32       `json:"lga_id"`
+	WardID                int32       `json:"ward_id"`
 }
 
 func (q *Queries) GetEligiblePollingUnitsForElection(ctx context.Context, arg GetEligiblePollingUnitsForElectionParams) ([]GetEligiblePollingUnitsForElectionRow, error) {
-	rows, err := q.db.Query(ctx, getEligiblePollingUnitsForElection,
-		arg.Column1,
-		arg.Column2,
-		arg.Column3,
-		arg.Column4,
-		arg.Column5,
-		arg.Column6,
-	)
+	rows, err := q.db.Query(ctx, getEligiblePollingUnitsForElection, arg.ID, arg.Column2)
 	if err != nil {
 		return nil, err
 	}
@@ -65,12 +60,12 @@ func (q *Queries) GetEligiblePollingUnitsForElection(ctx context.Context, arg Ge
 		var i GetEligiblePollingUnitsForElectionRow
 		if err := rows.Scan(
 			&i.ID,
-			&i.WardID,
-			&i.LgaID,
 			&i.StateID,
-			&i.StateConstituencyID,
-			&i.FederalConstituencyID,
 			&i.SenatorialDistrictID,
+			&i.FederalConstituencyID,
+			&i.StateConstituencyID,
+			&i.LgaID,
+			&i.WardID,
 		); err != nil {
 			return nil, err
 		}
@@ -123,79 +118,104 @@ func (q *Queries) GetPollingUnitFinalResult(ctx context.Context, arg GetPollingU
 
 const listPollingUnitFinalResults = `-- name: ListPollingUnitFinalResults :many
 SELECT 
-    id,
-    election_id,
-    polling_unit_id,
-    state_id,
-    senatorial_district_id,
-    federal_constituency_id,
-    state_constituency_id,
-    lga_id,
-    ward_id,
-    polling_unit_result_id,
-    accredited_voters,
-    votes_cast,
-    valid_votes,
-    rejected_votes,
-    candidate_results,
-    candidate_results_live,
-    matching_submissions_count,
-    total_submissions_count,
-    created_at,
-    updated_at
-FROM election_polling_unit_final_results
-WHERE election_id = $1
-  AND ($2::smallint IS NULL OR state_id = $2)
-  AND ($3::integer IS NULL OR senatorial_district_id = $3)
-  AND ($4::integer IS NULL OR federal_constituency_id = $4)
-  AND ($5::integer IS NULL OR state_constituency_id = $5)
-  AND ($6::integer IS NULL OR lga_id = $6)
-  AND ($7::integer IS NULL OR ward_id = $7)
-ORDER BY polling_unit_id
+  fr.id,
+  fr.election_id,
+  fr.election_group_id,
+  fr.polling_unit_id,
+  pu.name AS polling_unit_name,
+  fr.state_id,
+  s.name AS state_name,
+  fr.lga_id,
+  l.name AS lga_name,
+  fr.ward_id,
+  fr.senatorial_district_id,
+  fr.federal_constituency_id,
+  fr.state_constituency_id,
+  fr.polling_unit_result_id,
+  r.result_sheet_image_url,
+  r.result_sheet_video_url,
+  fr.accredited_voters,
+  fr.votes_cast,
+  fr.valid_votes,
+  fr.rejected_votes,
+  fr.candidate_results,
+  fr.created_at,
+  u.first_name AS uploader_first_name,
+  u.last_name AS uploader_last_name,
+  u.avatar AS uploader_avatar
+FROM election_polling_unit_final_results fr
+JOIN polling_units pu ON fr.polling_unit_id = pu.id
+LEFT JOIN c_states s ON fr.state_id = s.id
+LEFT JOIN lgas l ON fr.lga_id = l.id
+LEFT JOIN polling_unit_results r ON fr.polling_unit_result_id = r.id
+LEFT JOIN users u ON r.submitted_by = u.id
+WHERE
+  ($1::int IS NULL OR fr.election_group_id = $1)
+  AND ($2::smallint IS NULL OR fr.state_id = $2)
+  AND ($3::int IS NULL OR fr.senatorial_district_id = $3)
+  AND ($4::int IS NULL OR fr.federal_constituency_id = $4)
+  AND ($5::int IS NULL OR fr.state_constituency_id = $5)
+  AND ($6::int IS NULL OR fr.lga_id = $6)
+  AND ($7::int IS NULL OR fr.ward_id = $7)
+  AND ($8::boolean IS NULL OR ($8 = true AND r.result_sheet_image_url IS NOT NULL) OR ($8 = false))
+  AND fr.id < $9::bigint
+ORDER BY fr.id DESC
+LIMIT $10::int
 `
 
 type ListPollingUnitFinalResultsParams struct {
-	ElectionID            int32       `json:"election_id"`
+	ElectionGroupID       pgtype.Int4 `json:"election_group_id"`
 	StateID               pgtype.Int2 `json:"state_id"`
 	SenatorialDistrictID  pgtype.Int4 `json:"senatorial_district_id"`
 	FederalConstituencyID pgtype.Int4 `json:"federal_constituency_id"`
 	StateConstituencyID   pgtype.Int4 `json:"state_constituency_id"`
 	LgaID                 pgtype.Int4 `json:"lga_id"`
 	WardID                pgtype.Int4 `json:"ward_id"`
+	HasMedia              pgtype.Bool `json:"has_media"`
+	Cursor                int64       `json:"cursor"`
+	Limit                 int32       `json:"limit"`
 }
 
 type ListPollingUnitFinalResultsRow struct {
-	ID                       int64              `json:"id"`
-	ElectionID               int32              `json:"election_id"`
-	PollingUnitID            int32              `json:"polling_unit_id"`
-	StateID                  pgtype.Int2        `json:"state_id"`
-	SenatorialDistrictID     pgtype.Int4        `json:"senatorial_district_id"`
-	FederalConstituencyID    pgtype.Int4        `json:"federal_constituency_id"`
-	StateConstituencyID      pgtype.Int4        `json:"state_constituency_id"`
-	LgaID                    pgtype.Int4        `json:"lga_id"`
-	WardID                   pgtype.Int4        `json:"ward_id"`
-	PollingUnitResultID      pgtype.Int8        `json:"polling_unit_result_id"`
-	AccreditedVoters         int32              `json:"accredited_voters"`
-	VotesCast                int32              `json:"votes_cast"`
-	ValidVotes               int32              `json:"valid_votes"`
-	RejectedVotes            int32              `json:"rejected_votes"`
-	CandidateResults         []byte             `json:"candidate_results"`
-	CandidateResultsLive     []byte             `json:"candidate_results_live"`
-	MatchingSubmissionsCount int32              `json:"matching_submissions_count"`
-	TotalSubmissionsCount    int32              `json:"total_submissions_count"`
-	CreatedAt                pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt                pgtype.Timestamptz `json:"updated_at"`
+	ID                    int64              `json:"id"`
+	ElectionID            int32              `json:"election_id"`
+	ElectionGroupID       int32              `json:"election_group_id"`
+	PollingUnitID         int32              `json:"polling_unit_id"`
+	PollingUnitName       string             `json:"polling_unit_name"`
+	StateID               pgtype.Int2        `json:"state_id"`
+	StateName             pgtype.Text        `json:"state_name"`
+	LgaID                 pgtype.Int4        `json:"lga_id"`
+	LgaName               pgtype.Text        `json:"lga_name"`
+	WardID                pgtype.Int4        `json:"ward_id"`
+	SenatorialDistrictID  pgtype.Int4        `json:"senatorial_district_id"`
+	FederalConstituencyID pgtype.Int4        `json:"federal_constituency_id"`
+	StateConstituencyID   pgtype.Int4        `json:"state_constituency_id"`
+	PollingUnitResultID   pgtype.Int8        `json:"polling_unit_result_id"`
+	ResultSheetImageUrl   pgtype.Text        `json:"result_sheet_image_url"`
+	ResultSheetVideoUrl   pgtype.Text        `json:"result_sheet_video_url"`
+	AccreditedVoters      int32              `json:"accredited_voters"`
+	VotesCast             int32              `json:"votes_cast"`
+	ValidVotes            int32              `json:"valid_votes"`
+	RejectedVotes         int32              `json:"rejected_votes"`
+	CandidateResults      []byte             `json:"candidate_results"`
+	CreatedAt             pgtype.Timestamptz `json:"created_at"`
+	UploaderFirstName     pgtype.Text        `json:"uploader_first_name"`
+	UploaderLastName      pgtype.Text        `json:"uploader_last_name"`
+	UploaderAvatar        pgtype.Text        `json:"uploader_avatar"`
 }
 
 func (q *Queries) ListPollingUnitFinalResults(ctx context.Context, arg ListPollingUnitFinalResultsParams) ([]ListPollingUnitFinalResultsRow, error) {
 	rows, err := q.db.Query(ctx, listPollingUnitFinalResults,
-		arg.ElectionID,
+		arg.ElectionGroupID,
 		arg.StateID,
 		arg.SenatorialDistrictID,
 		arg.FederalConstituencyID,
 		arg.StateConstituencyID,
 		arg.LgaID,
 		arg.WardID,
+		arg.HasMedia,
+		arg.Cursor,
+		arg.Limit,
 	)
 	if err != nil {
 		return nil, err
@@ -207,24 +227,29 @@ func (q *Queries) ListPollingUnitFinalResults(ctx context.Context, arg ListPolli
 		if err := rows.Scan(
 			&i.ID,
 			&i.ElectionID,
+			&i.ElectionGroupID,
 			&i.PollingUnitID,
+			&i.PollingUnitName,
 			&i.StateID,
+			&i.StateName,
+			&i.LgaID,
+			&i.LgaName,
+			&i.WardID,
 			&i.SenatorialDistrictID,
 			&i.FederalConstituencyID,
 			&i.StateConstituencyID,
-			&i.LgaID,
-			&i.WardID,
 			&i.PollingUnitResultID,
+			&i.ResultSheetImageUrl,
+			&i.ResultSheetVideoUrl,
 			&i.AccreditedVoters,
 			&i.VotesCast,
 			&i.ValidVotes,
 			&i.RejectedVotes,
 			&i.CandidateResults,
-			&i.CandidateResultsLive,
-			&i.MatchingSubmissionsCount,
-			&i.TotalSubmissionsCount,
 			&i.CreatedAt,
-			&i.UpdatedAt,
+			&i.UploaderFirstName,
+			&i.UploaderLastName,
+			&i.UploaderAvatar,
 		); err != nil {
 			return nil, err
 		}
@@ -237,14 +262,188 @@ func (q *Queries) ListPollingUnitFinalResults(ctx context.Context, arg ListPolli
 }
 
 const refreshPollingUnitLiveResults = `-- name: RefreshPollingUnitLiveResults :exec
-UPDATE election_polling_unit_final_results
-SET candidate_results_live = candidate_results,
-    updated_at = NOW()
-WHERE election_id = $1
+WITH live_counts AS (
+  SELECT 
+    p.short_name AS party_short_name,
+    COUNT(ev.id)::int AS vote_count
+  FROM election_votes ev
+  JOIN parties p ON ev.party_id = p.id
+  WHERE ev.election_id = $1 AND ev.polling_unit_id = $2
+  GROUP BY p.short_name
+),
+live_json AS (
+  SELECT COALESCE(
+    jsonb_agg(
+      jsonb_build_object('party_short_name', party_short_name, 'vote_count', vote_count)
+    ), '[]'::jsonb
+  ) as candidate_results_live
+  FROM live_counts
+)
+INSERT INTO election_polling_unit_final_results (
+  election_id, election_group_id, polling_unit_id,
+  state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id,
+  candidate_results_live, candidate_results
+) VALUES (
+  $1, $3, $2,
+  $4, $5, $6, $7, $8, $9,
+  (SELECT candidate_results_live FROM live_json),
+  '[]'::jsonb
+)
+ON CONFLICT (election_id, polling_unit_id) DO UPDATE SET
+  candidate_results_live = EXCLUDED.candidate_results_live,
+  updated_at = NOW()
 `
 
-func (q *Queries) RefreshPollingUnitLiveResults(ctx context.Context, electionID int32) error {
-	_, err := q.db.Exec(ctx, refreshPollingUnitLiveResults, electionID)
+type RefreshPollingUnitLiveResultsParams struct {
+	ElectionID            int32       `json:"election_id"`
+	PollingUnitID         int32       `json:"polling_unit_id"`
+	ElectionGroupID       int32       `json:"election_group_id"`
+	StateID               pgtype.Int2 `json:"state_id"`
+	SenatorialDistrictID  pgtype.Int4 `json:"senatorial_district_id"`
+	FederalConstituencyID pgtype.Int4 `json:"federal_constituency_id"`
+	StateConstituencyID   pgtype.Int4 `json:"state_constituency_id"`
+	LgaID                 pgtype.Int4 `json:"lga_id"`
+	WardID                pgtype.Int4 `json:"ward_id"`
+}
+
+func (q *Queries) RefreshPollingUnitLiveResults(ctx context.Context, arg RefreshPollingUnitLiveResultsParams) error {
+	_, err := q.db.Exec(ctx, refreshPollingUnitLiveResults,
+		arg.ElectionID,
+		arg.PollingUnitID,
+		arg.ElectionGroupID,
+		arg.StateID,
+		arg.SenatorialDistrictID,
+		arg.FederalConstituencyID,
+		arg.StateConstituencyID,
+		arg.LgaID,
+		arg.WardID,
+	)
+	return err
+}
+
+const rollupElectionFinalResults = `-- name: RollupElectionFinalResults :exec
+SELECT 1
+`
+
+func (q *Queries) RollupElectionFinalResults(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, rollupElectionFinalResults)
+	return err
+}
+
+const rollupFederalConstituencyFinalResults = `-- name: RollupFederalConstituencyFinalResults :exec
+SELECT 1
+`
+
+func (q *Queries) RollupFederalConstituencyFinalResults(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, rollupFederalConstituencyFinalResults)
+	return err
+}
+
+const rollupLGAFinalResults = `-- name: RollupLGAFinalResults :exec
+SELECT 1
+`
+
+func (q *Queries) RollupLGAFinalResults(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, rollupLGAFinalResults)
+	return err
+}
+
+const rollupSenatorialDistrictFinalResults = `-- name: RollupSenatorialDistrictFinalResults :exec
+SELECT 1
+`
+
+func (q *Queries) RollupSenatorialDistrictFinalResults(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, rollupSenatorialDistrictFinalResults)
+	return err
+}
+
+const rollupSingleElectionFinalResults = `-- name: RollupSingleElectionFinalResults :exec
+SELECT 1
+`
+
+func (q *Queries) RollupSingleElectionFinalResults(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, rollupSingleElectionFinalResults)
+	return err
+}
+
+const rollupSingleFederalConstituencyFinalResults = `-- name: RollupSingleFederalConstituencyFinalResults :exec
+SELECT 1
+`
+
+func (q *Queries) RollupSingleFederalConstituencyFinalResults(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, rollupSingleFederalConstituencyFinalResults)
+	return err
+}
+
+const rollupSingleLGAFinalResults = `-- name: RollupSingleLGAFinalResults :exec
+SELECT 1
+`
+
+func (q *Queries) RollupSingleLGAFinalResults(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, rollupSingleLGAFinalResults)
+	return err
+}
+
+const rollupSingleSenatorialDistrictFinalResults = `-- name: RollupSingleSenatorialDistrictFinalResults :exec
+SELECT 1
+`
+
+func (q *Queries) RollupSingleSenatorialDistrictFinalResults(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, rollupSingleSenatorialDistrictFinalResults)
+	return err
+}
+
+const rollupSingleStateConstituencyFinalResults = `-- name: RollupSingleStateConstituencyFinalResults :exec
+SELECT 1
+`
+
+func (q *Queries) RollupSingleStateConstituencyFinalResults(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, rollupSingleStateConstituencyFinalResults)
+	return err
+}
+
+const rollupSingleStateFinalResults = `-- name: RollupSingleStateFinalResults :exec
+SELECT 1
+`
+
+func (q *Queries) RollupSingleStateFinalResults(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, rollupSingleStateFinalResults)
+	return err
+}
+
+const rollupSingleWardFinalResults = `-- name: RollupSingleWardFinalResults :exec
+SELECT 1
+`
+
+func (q *Queries) RollupSingleWardFinalResults(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, rollupSingleWardFinalResults)
+	return err
+}
+
+const rollupStateConstituencyFinalResults = `-- name: RollupStateConstituencyFinalResults :exec
+SELECT 1
+`
+
+func (q *Queries) RollupStateConstituencyFinalResults(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, rollupStateConstituencyFinalResults)
+	return err
+}
+
+const rollupStateFinalResults = `-- name: RollupStateFinalResults :exec
+SELECT 1
+`
+
+func (q *Queries) RollupStateFinalResults(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, rollupStateFinalResults)
+	return err
+}
+
+const rollupWardFinalResults = `-- name: RollupWardFinalResults :exec
+SELECT 1
+`
+
+func (q *Queries) RollupWardFinalResults(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, rollupWardFinalResults)
 	return err
 }
 
@@ -357,50 +556,3 @@ func (q *Queries) UpsertPollingUnitFinalResult(ctx context.Context, arg UpsertPo
 	)
 	return i, err
 }
-
-// ─── NO-OP ROLLUP STUBS (Dynamic aggregation replaces stored rollup tables) ───
-
-type RollupSingleFederalConstituencyFinalResultsParams struct {
-	ElectionID            int32 `json:"election_id"`
-	FederalConstituencyID int32 `json:"federal_constituency_id"`
-}
-
-type RollupSingleLGAFinalResultsParams struct {
-	ElectionID int32       `json:"election_id"`
-	LgaID      pgtype.Int4 `json:"lga_id"`
-}
-
-type RollupSingleSenatorialDistrictFinalResultsParams struct {
-	ElectionID           int32 `json:"election_id"`
-	SenatorialDistrictID int32 `json:"senatorial_district_id"`
-}
-
-type RollupSingleStateConstituencyFinalResultsParams struct {
-	ElectionID int32 `json:"election_id"`
-	ID         int32 `json:"id"`
-}
-
-type RollupSingleStateFinalResultsParams struct {
-	ElectionID int32 `json:"election_id"`
-	StateID    int16 `json:"state_id"`
-}
-
-type RollupSingleWardFinalResultsParams struct {
-	ElectionID int32       `json:"election_id"`
-	WardID     pgtype.Int4 `json:"ward_id"`
-}
-
-func (q *Queries) RollupElectionFinalResults(ctx context.Context) error { return nil }
-func (q *Queries) RollupFederalConstituencyFinalResults(ctx context.Context) error { return nil }
-func (q *Queries) RollupLGAFinalResults(ctx context.Context) error { return nil }
-func (q *Queries) RollupSenatorialDistrictFinalResults(ctx context.Context) error { return nil }
-func (q *Queries) RollupSingleElectionFinalResults(ctx context.Context, electionID int32) error { return nil }
-func (q *Queries) RollupSingleFederalConstituencyFinalResults(ctx context.Context, arg RollupSingleFederalConstituencyFinalResultsParams) error { return nil }
-func (q *Queries) RollupSingleLGAFinalResults(ctx context.Context, arg RollupSingleLGAFinalResultsParams) error { return nil }
-func (q *Queries) RollupSingleSenatorialDistrictFinalResults(ctx context.Context, arg RollupSingleSenatorialDistrictFinalResultsParams) error { return nil }
-func (q *Queries) RollupSingleStateConstituencyFinalResults(ctx context.Context, arg RollupSingleStateConstituencyFinalResultsParams) error { return nil }
-func (q *Queries) RollupSingleStateFinalResults(ctx context.Context, arg RollupSingleStateFinalResultsParams) error { return nil }
-func (q *Queries) RollupSingleWardFinalResults(ctx context.Context, arg RollupSingleWardFinalResultsParams) error { return nil }
-func (q *Queries) RollupStateConstituencyFinalResults(ctx context.Context) error { return nil }
-func (q *Queries) RollupStateFinalResults(ctx context.Context) error { return nil }
-func (q *Queries) RollupWardFinalResults(ctx context.Context) error { return nil }

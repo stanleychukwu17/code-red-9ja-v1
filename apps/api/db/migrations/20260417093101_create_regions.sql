@@ -70,6 +70,7 @@ CREATE INDEX idx_c_cities_country_id ON c_cities(country_id);
 -- +goose Down
 DROP TABLE IF EXISTS c_cities;
 DROP TABLE IF EXISTS c_states;
+DROP TABLE IF EXISTS c_zones_nigeria;
 DROP TABLE IF EXISTS c_countries;
 DROP TABLE IF EXISTS c_subregions;
 DROP TABLE IF EXISTS c_regions;

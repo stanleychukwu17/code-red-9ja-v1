@@ -234,11 +234,13 @@ func (h *Handler) GetReferralStats(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Fetch user referral record
-	userReferral, err := h.referralsService.GetUserReferralByUserAndElectionGroup(r.Context(), userID, egID)
+	// Fetch user referral stats dynamically from referrals table
+	stats, err := h.referralsService.GetUserReferralStats(r.Context(), userID, egID)
 	var userReferralData UserReferralStatsData
 	if err != nil {
 		userReferralData = UserReferralStatsData{
+			UserID:            userID,
+			ElectionGroupID:   egID,
 			TotalReferrals:    0,
 			AgentReferrals:    0,
 			UnpaidReferrals:   0,
@@ -247,15 +249,13 @@ func (h *Handler) GetReferralStats(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		userReferralData = UserReferralStatsData{
-			ID:                userReferral.ID,
-			UserID:            userReferral.UserID,
-			PartyID:           userReferral.PartyID,
-			ElectionGroupID:   userReferral.ElectionGroupID,
-			TotalReferrals:    userReferral.TotalReferrals,
-			AgentReferrals:    userReferral.AgentReferrals,
-			UnpaidReferrals:   userReferral.UnpaidReferrals,
-			PotentialEarnings: userReferral.PotentialEarnings,
-			EarnedAmount:      userReferral.EarnedAmount,
+			UserID:            userID,
+			ElectionGroupID:   egID,
+			TotalReferrals:    stats.TotalReferrals,
+			AgentReferrals:    stats.AgentReferrals,
+			UnpaidReferrals:   stats.UnpaidReferrals,
+			PotentialEarnings: stats.PotentialEarnings,
+			EarnedAmount:      stats.EarnedAmount,
 		}
 	}
 

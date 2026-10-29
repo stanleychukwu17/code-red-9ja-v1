@@ -46,43 +46,40 @@ SET
 WHERE id = $1
 RETURNING *;
 
+-- name: GetUserReferralStats :one
+SELECT 
+  COALESCE(COUNT(*), 0)::integer AS total_referrals,
+  COALESCE(COUNT(*) FILTER (WHERE r.milestone = 'BECAME_AGENT'), 0)::integer AS agent_referrals,
+  COALESCE(COUNT(*) FILTER (WHERE r.status = 'pending' AND r.amount_to_pay > 0), 0)::integer AS unpaid_referrals,
+  COALESCE(SUM(r.amount_to_pay) FILTER (WHERE r.status = 'pending'), 0)::numeric AS potential_earnings,
+  COALESCE(SUM(r.amount_to_pay) FILTER (WHERE r.status = 'paid'), 0)::numeric AS earned_amount
+FROM referrals r
+WHERE r.referrer_user_id = $1
+  AND (sqlc.narg('election_group_id')::int IS NULL OR r.election_group_id = sqlc.narg('election_group_id')::int);
+
 -- name: CreateUserReferralRecord :exec
 INSERT INTO user_referrals (
   user_id,
   party_id,
-  election_group_id
+  election_group_id,
+  amount,
+  status
 ) VALUES (
-  $1, $2, $3
+  $1, $2, $3, $4, $5
 )
-ON CONFLICT (user_id, election_group_id) DO NOTHING;
+ON CONFLICT (user_id, election_group_id) DO UPDATE SET
+  amount = EXCLUDED.amount,
+  status = EXCLUDED.status,
+  updated_at = NOW();
 
 -- name: GetUserReferredByID :one
 -- Returns the referrer_user_id for a user given their internal user ID.
 SELECT referrer_user_id FROM referrals WHERE referred_user_id = $1 LIMIT 1;
 
--- name: GetApplicationElectionGroupsByUserAndParty :many
--- Returns all distinct election_group_ids for a user's applications under a party.
-SELECT DISTINCT election_group_id FROM party_applications
-WHERE user_id = $1 AND party_id = $2;
-
 -- name: GetReferrerUserReferralsForParty :many
 -- Returns all user_referrals records for a referrer under a specific party.
 SELECT * FROM user_referrals
 WHERE user_id = $1 AND party_id = $2;
-
--- name: IncrementUserReferralAgentCount :exec
--- Increments agent_referrals for the referrer's user_referrals row matching the election group.
-UPDATE user_referrals
-SET agent_referrals = agent_referrals + 1,
-    updated_at = NOW()
-WHERE user_id = $1 AND election_group_id = $2;
-
--- name: IncrementUserReferralUnpaidCount :exec
--- Increments unpaid_referrals for the referrer's user_referrals row matching the election group.
-UPDATE user_referrals
-SET unpaid_referrals = unpaid_referrals + 1,
-    updated_at = NOW()
-WHERE user_id = $1 AND election_group_id = $2;
 
 -- name: UpdateReferralOnAgentAcceptance :exec
 -- Updates the referrals row when the referred user is accepted as an agent.
@@ -106,40 +103,9 @@ SET user_referral_id  = $2,
     updated_at        = NOW()
 WHERE id = $1;
 
--- name: IncrementUserReferralTotalCount :exec
--- Increments total_referrals count for the selected user_referrals record.
-UPDATE user_referrals
-SET total_referrals = total_referrals + 1,
-    updated_at      = NOW()
-WHERE id = $1;
-
 -- name: GetUserReferralByID :one
 SELECT * FROM user_referrals
 WHERE id = $1 LIMIT 1;
-
--- name: IncrementUserReferralAgentCountByID :exec
-UPDATE user_referrals
-SET agent_referrals = agent_referrals + 1,
-    updated_at      = NOW()
-WHERE id = $1;
-
--- name: IncrementUserReferralUnpaidCountByID :exec
-UPDATE user_referrals
-SET unpaid_referrals = unpaid_referrals + 1,
-    updated_at       = NOW()
-WHERE id = $1;
-
--- name: IncrementUserReferralPotentialEarningsByID :exec
-UPDATE user_referrals
-SET potential_earnings = potential_earnings + $2,
-    updated_at         = NOW()
-WHERE id = $1;
-
--- name: IncrementUserReferralEarnedAmountByID :exec
-UPDATE user_referrals
-SET earned_amount = earned_amount + $2,
-    updated_at    = NOW()
-WHERE id = $1;
 
 -- name: GetUserReferralByUserAndElectionGroup :one
 SELECT * FROM user_referrals

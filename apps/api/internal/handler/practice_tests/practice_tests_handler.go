@@ -20,7 +20,7 @@ import (
 )
 
 type PartyApplicationsService interface {
-	ApproveApplication(ctx context.Context, input partyapplications.ApproveApplicationInput) (queries.PartyApplication, error)
+	ApproveApplication(ctx context.Context, input partyapplications.ApproveApplicationInput) (queries.PartyAgentApplication, error)
 }
 
 type Handler struct {

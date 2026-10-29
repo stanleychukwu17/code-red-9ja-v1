@@ -5,7 +5,7 @@ import { API_URL } from "#/lib/config";
 
 export const getApplications = createServerFn({ method: "GET" })
   .inputValidator(
-    (data: { status?: string; limit?: number; cursor?: number; user_id?: string | number } | undefined) =>
+    (data: { status?: string; limit?: number; cursor?: number; user_id?: string | number; active_election_only?: boolean } | undefined) =>
       data,
   )
   .handler(async ({ data }) => {
@@ -20,6 +20,8 @@ export const getApplications = createServerFn({ method: "GET" })
       params.append("limit", String(limit));
       if (cursor) params.append("cursor", String(cursor));
       if (user_id) params.append("user_id", String(user_id));
+      if (data?.active_election_only !== undefined)
+        params.append("active_election_only", String(data.active_election_only));
       const url = `${API_URL.pollingAgentApplications}?${params.toString()}`;
       const response = await apiFetch(url);
       const resData = await response.json();

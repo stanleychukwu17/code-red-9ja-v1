@@ -7,9 +7,9 @@ import (
 
 type ElectionStatsService interface {
 	ListElectionGroupPollingUnitStatsByGroup(ctx context.Context, arg queries.ListElectionGroupPollingUnitStatsByGroupParams) ([]queries.ElectionGroupPollingUnit, error)
-	ListElectionGroupWardStatsByGroup(ctx context.Context, arg queries.ListElectionGroupWardStatsByGroupParams) ([]queries.GetElectionGroupWardStatsRow, error)
-	ListElectionGroupLGAStatsByGroup(ctx context.Context, arg queries.ListElectionGroupLGAStatsByGroupParams) ([]queries.GetElectionGroupLGAStatsRow, error)
-	ListElectionGroupStateStatsByGroup(ctx context.Context, electionGroupID int32) ([]queries.GetElectionGroupStateStatsRow, error)
+	ListElectionGroupWardStatsByGroup(ctx context.Context, arg queries.ListElectionGroupWardStatsByGroupParams) ([]queries.ListElectionGroupWardStatsByGroupRow, error)
+	ListElectionGroupLGAStatsByGroup(ctx context.Context, arg queries.ListElectionGroupLGAStatsByGroupParams) ([]queries.ListElectionGroupLGAStatsByGroupRow, error)
+	ListElectionGroupStateStatsByGroup(ctx context.Context, electionGroupID int32) ([]queries.ListElectionGroupStateStatsByGroupRow, error)
 	GetElectionGroupStateStats(ctx context.Context, arg queries.GetElectionGroupStateStatsParams) (queries.GetElectionGroupStateStatsRow, error)
 	GetElectionGroupLGAStats(ctx context.Context, arg queries.GetElectionGroupLGAStatsParams) (queries.GetElectionGroupLGAStatsRow, error)
 	GetElectionGroupWardStats(ctx context.Context, arg queries.GetElectionGroupWardStatsParams) (queries.GetElectionGroupWardStatsRow, error)
@@ -33,15 +33,15 @@ func (s *Service) ListElectionGroupPollingUnitStatsByGroup(ctx context.Context, 
 	return s.queries.ListElectionGroupPollingUnitStatsByGroup(ctx, arg)
 }
 
-func (s *Service) ListElectionGroupWardStatsByGroup(ctx context.Context, arg queries.ListElectionGroupWardStatsByGroupParams) ([]queries.GetElectionGroupWardStatsRow, error) {
+func (s *Service) ListElectionGroupWardStatsByGroup(ctx context.Context, arg queries.ListElectionGroupWardStatsByGroupParams) ([]queries.ListElectionGroupWardStatsByGroupRow, error) {
 	return s.queries.ListElectionGroupWardStatsByGroup(ctx, arg)
 }
 
-func (s *Service) ListElectionGroupLGAStatsByGroup(ctx context.Context, arg queries.ListElectionGroupLGAStatsByGroupParams) ([]queries.GetElectionGroupLGAStatsRow, error) {
+func (s *Service) ListElectionGroupLGAStatsByGroup(ctx context.Context, arg queries.ListElectionGroupLGAStatsByGroupParams) ([]queries.ListElectionGroupLGAStatsByGroupRow, error) {
 	return s.queries.ListElectionGroupLGAStatsByGroup(ctx, arg)
 }
 
-func (s *Service) ListElectionGroupStateStatsByGroup(ctx context.Context, electionGroupID int32) ([]queries.GetElectionGroupStateStatsRow, error) {
+func (s *Service) ListElectionGroupStateStatsByGroup(ctx context.Context, electionGroupID int32) ([]queries.ListElectionGroupStateStatsByGroupRow, error) {
 	return s.queries.ListElectionGroupStateStatsByGroup(ctx, electionGroupID)
 }
 

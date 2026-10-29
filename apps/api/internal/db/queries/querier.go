@@ -16,9 +16,6 @@ type Querier interface {
 	AddPartyMemberMilestone(ctx context.Context, arg AddPartyMemberMilestoneParams) error
 	AddPartyMembership(ctx context.Context, arg AddPartyMembershipParams) error
 	AddPartySlots(ctx context.Context, arg AddPartySlotsParams) (AddPartySlotsRow, error)
-	// ============================================================
-	// SUPERVISOR COUNT INCREMENTS / DECREMENTS
-	// ============================================================
 	AdminUpdateUser(ctx context.Context, arg AdminUpdateUserParams) error
 	ApproveAgentEarnings(ctx context.Context, id int64) (AgentEarning, error)
 	AssignPartyPosition(ctx context.Context, arg AssignPartyPositionParams) (PartyPositionAssignment, error)
@@ -154,7 +151,8 @@ type Querier interface {
 	DeleteUserVotesByElectionGroup(ctx context.Context, arg DeleteUserVotesByElectionGroupParams) error
 	DeleteWard(ctx context.Context, id int32) error
 	DepositPartyAllowance(ctx context.Context, arg DepositPartyAllowanceParams) (DepositPartyAllowanceRow, error)
-	EnsureElectionGroupParentSkeletons(ctx context.Context, electionGroupID int32) error
+	// No-op: parent rollup tables dropped in favor of dynamic queries on election_group_polling_units
+	EnsureElectionGroupParentSkeletons(ctx context.Context) error
 	FindOrCreateCampaignGroup(ctx context.Context, arg FindOrCreateCampaignGroupParams) (CampaignGroup, error)
 	FollowParty(ctx context.Context, arg FollowPartyParams) (int64, error)
 	FollowUser(ctx context.Context, arg FollowUserParams) error
@@ -166,9 +164,7 @@ type Querier interface {
 	GetAgentEarningsByID(ctx context.Context, id int64) (AgentEarning, error)
 	GetAgentEarningsByUserAndElectionGroupAndRole(ctx context.Context, arg GetAgentEarningsByUserAndElectionGroupAndRoleParams) (AgentEarning, error)
 	GetAllPollingUnitResultsByPU(ctx context.Context, arg GetAllPollingUnitResultsByPUParams) ([]PollingUnitResult, error)
-	GetApplicationByID(ctx context.Context, id int64) (PartyApplication, error)
-	// Returns all distinct election_group_ids for a user's applications under a party.
-	GetApplicationElectionGroupsByUserAndParty(ctx context.Context, arg GetApplicationElectionGroupsByUserAndPartyParams) ([]int32, error)
+	GetApplicationByID(ctx context.Context, id int64) (PartyAgentApplication, error)
 	GetAssetFolderByID(ctx context.Context, id int32) (AssetFolder, error)
 	GetAssetFolderByPrefix(ctx context.Context, r2Prefix string) (AssetFolder, error)
 	GetAssignmentByID(ctx context.Context, id int64) (GetAssignmentByIDRow, error)
@@ -191,17 +187,23 @@ type Querier interface {
 	GetElectionGroupPartyLGAStats(ctx context.Context, arg GetElectionGroupPartyLGAStatsParams) (GetElectionGroupPartyLGAStatsRow, error)
 	GetElectionGroupPartyNationalStats(ctx context.Context, arg GetElectionGroupPartyNationalStatsParams) (GetElectionGroupPartyNationalStatsRow, error)
 	// =====================================================
-	// READ QUERIES: Normalized Party Stats Tables
+	// READ QUERIES: Normalized Party Stats Polling Units
 	// =====================================================
 	GetElectionGroupPartyPollingUnitStats(ctx context.Context, arg GetElectionGroupPartyPollingUnitStatsParams) (ElectionGroupPartiesPollingUnit, error)
 	GetElectionGroupPartyStateStats(ctx context.Context, arg GetElectionGroupPartyStateStatsParams) (GetElectionGroupPartyStateStatsRow, error)
+	// =====================================================
+	// DYNAMIC ROLLUP QUERIES: Ward, LGA, State, National (Party)
+	// =====================================================
 	GetElectionGroupPartyWardStats(ctx context.Context, arg GetElectionGroupPartyWardStatsParams) (GetElectionGroupPartyWardStatsRow, error)
 	GetElectionGroupPollingUnitGeoIDs(ctx context.Context, arg GetElectionGroupPollingUnitGeoIDsParams) (GetElectionGroupPollingUnitGeoIDsRow, error)
 	// =====================================================
-	// READ QUERIES: Base Tables
+	// READ QUERIES: Base Polling Unit Stats
 	// =====================================================
 	GetElectionGroupPollingUnitStats(ctx context.Context, arg GetElectionGroupPollingUnitStatsParams) (ElectionGroupPollingUnit, error)
 	GetElectionGroupStateStats(ctx context.Context, arg GetElectionGroupStateStatsParams) (GetElectionGroupStateStatsRow, error)
+	// =====================================================
+	// DYNAMIC ROLLUP QUERIES: Ward, LGA, State (Base)
+	// =====================================================
 	GetElectionGroupWardStats(ctx context.Context, arg GetElectionGroupWardStatsParams) (GetElectionGroupWardStatsRow, error)
 	GetElectionInstanceByFakeID(ctx context.Context, fakeID pgtype.Int8) (Election, error)
 	GetElectionInstanceByID(ctx context.Context, id int32) (Election, error)
@@ -317,6 +319,7 @@ type Querier interface {
 	GetUserPrimaryBankAccount(ctx context.Context, userID int64) (UserBankAccount, error)
 	GetUserReferralByID(ctx context.Context, id int64) (UserReferral, error)
 	GetUserReferralByUserAndElectionGroup(ctx context.Context, arg GetUserReferralByUserAndElectionGroupParams) (UserReferral, error)
+	GetUserReferralStats(ctx context.Context, arg GetUserReferralStatsParams) (GetUserReferralStatsRow, error)
 	// Returns the referrer_user_id for a user given their internal user ID.
 	GetUserReferredByID(ctx context.Context, referredUserID int64) (int64, error)
 	GetUserRoles(ctx context.Context, userID int64) ([]GetUserRolesRow, error)
@@ -329,6 +332,9 @@ type Querier interface {
 	GetWardByID(ctx context.Context, id int32) (Ward, error)
 	GetWardChapter(ctx context.Context, arg GetWardChapterParams) (int32, error)
 	GetWardSupervisorByElectionGroup(ctx context.Context, arg GetWardSupervisorByElectionGroupParams) (WardElectionSupervisor, error)
+	// =====================================================
+	// SUPERVISOR COUNTS FROM SOURCE OF TRUTH
+	// =====================================================
 	GetWardSupervisorCount(ctx context.Context, arg GetWardSupervisorCountParams) (int32, error)
 	GetWards(ctx context.Context, arg GetWardsParams) ([]Ward, error)
 	GetWardsByIDs(ctx context.Context, wardIds []int32) ([]Ward, error)
@@ -340,21 +346,10 @@ type Querier interface {
 	IncrementAssignmentIntervalUpdates(ctx context.Context, arg IncrementAssignmentIntervalUpdatesParams) error
 	IncrementAssignmentLiveVotersReferredCount(ctx context.Context, id int64) (PollingUnitAssignment, error)
 	IncrementAssignmentResultCount(ctx context.Context, id int64) error
-	IncrementElectionGroupPUPartyMetrics(ctx context.Context, arg IncrementElectionGroupPUPartyMetricsParams) error
 	IncrementElectionGroupResultCount(ctx context.Context, id int32) error
 	IncrementElectionMetricsByGroup(ctx context.Context, arg IncrementElectionMetricsByGroupParams) error
 	IncrementElectionResultCount(ctx context.Context, id int32) error
 	IncrementPollingUnitAssignmentMetrics(ctx context.Context, arg IncrementPollingUnitAssignmentMetricsParams) error
-	// Increments agent_referrals for the referrer's user_referrals row matching the election group.
-	IncrementUserReferralAgentCount(ctx context.Context, arg IncrementUserReferralAgentCountParams) error
-	IncrementUserReferralAgentCountByID(ctx context.Context, id int64) error
-	IncrementUserReferralEarnedAmountByID(ctx context.Context, arg IncrementUserReferralEarnedAmountByIDParams) error
-	IncrementUserReferralPotentialEarningsByID(ctx context.Context, arg IncrementUserReferralPotentialEarningsByIDParams) error
-	// Increments total_referrals count for the selected user_referrals record.
-	IncrementUserReferralTotalCount(ctx context.Context, id int64) error
-	// Increments unpaid_referrals for the referrer's user_referrals row matching the election group.
-	IncrementUserReferralUnpaidCount(ctx context.Context, arg IncrementUserReferralUnpaidCountParams) error
-	IncrementUserReferralUnpaidCountByID(ctx context.Context, id int64) error
 	InsertAuditLog(ctx context.Context, arg InsertAuditLogParams) (AuditLog, error)
 	InsertUserBankAccount(ctx context.Context, arg InsertUserBankAccountParams) (UserBankAccount, error)
 	InsertUserPreferences(ctx context.Context, arg InsertUserPreferencesParams) (UserPreference, error)
@@ -388,14 +383,14 @@ type Querier interface {
 	ListElectionCandidacyUsers(ctx context.Context, electionIds []int32) ([]ListElectionCandidacyUsersRow, error)
 	ListElectionCandidatesByElectionID(ctx context.Context, electionID int32) ([]ElectionCandidate, error)
 	ListElectionCandidatesDetailedByElectionID(ctx context.Context, electionID int32) ([]ListElectionCandidatesDetailedByElectionIDRow, error)
-	ListElectionGroupLGAStatsByGroup(ctx context.Context, arg ListElectionGroupLGAStatsByGroupParams) ([]GetElectionGroupLGAStatsRow, error)
-	ListElectionGroupPartiesLGAsByGroup(ctx context.Context, arg ListElectionGroupPartiesLGAsByGroupParams) ([]GetElectionGroupPartyLGAStatsRow, error)
+	ListElectionGroupLGAStatsByGroup(ctx context.Context, arg ListElectionGroupLGAStatsByGroupParams) ([]ListElectionGroupLGAStatsByGroupRow, error)
+	ListElectionGroupPartiesLGAsByGroup(ctx context.Context, arg ListElectionGroupPartiesLGAsByGroupParams) ([]ListElectionGroupPartiesLGAsByGroupRow, error)
 	ListElectionGroupPartiesPollingUnitsByGroup(ctx context.Context, arg ListElectionGroupPartiesPollingUnitsByGroupParams) ([]ElectionGroupPartiesPollingUnit, error)
-	ListElectionGroupPartiesStatesByGroup(ctx context.Context, arg ListElectionGroupPartiesStatesByGroupParams) ([]GetElectionGroupPartyStateStatsRow, error)
-	ListElectionGroupPartiesWardsByGroup(ctx context.Context, arg ListElectionGroupPartiesWardsByGroupParams) ([]GetElectionGroupPartyWardStatsRow, error)
+	ListElectionGroupPartiesStatesByGroup(ctx context.Context, arg ListElectionGroupPartiesStatesByGroupParams) ([]ListElectionGroupPartiesStatesByGroupRow, error)
+	ListElectionGroupPartiesWardsByGroup(ctx context.Context, arg ListElectionGroupPartiesWardsByGroupParams) ([]ListElectionGroupPartiesWardsByGroupRow, error)
 	ListElectionGroupPollingUnitStatsByGroup(ctx context.Context, arg ListElectionGroupPollingUnitStatsByGroupParams) ([]ElectionGroupPollingUnit, error)
-	ListElectionGroupStateStatsByGroup(ctx context.Context, electionGroupID int32) ([]GetElectionGroupStateStatsRow, error)
-	ListElectionGroupWardStatsByGroup(ctx context.Context, arg ListElectionGroupWardStatsByGroupParams) ([]GetElectionGroupWardStatsRow, error)
+	ListElectionGroupStateStatsByGroup(ctx context.Context, electionGroupID int32) ([]ListElectionGroupStateStatsByGroupRow, error)
+	ListElectionGroupWardStatsByGroup(ctx context.Context, arg ListElectionGroupWardStatsByGroupParams) ([]ListElectionGroupWardStatsByGroupRow, error)
 	ListElectionGroups(ctx context.Context, active pgtype.Bool) ([]ElectionGroup, error)
 	ListElectionGroupsWithPartyStats(ctx context.Context, arg ListElectionGroupsWithPartyStatsParams) ([]ListElectionGroupsWithPartyStatsRow, error)
 	ListElectionInstances(ctx context.Context, arg ListElectionInstancesParams) ([]ListElectionInstancesRow, error)
@@ -462,9 +457,9 @@ type Querier interface {
 	RecalculateStateMetrics(ctx context.Context) error
 	RecalculateWardMetrics(ctx context.Context) error
 	RefreshPollingUnitLiveResults(ctx context.Context, arg RefreshPollingUnitLiveResultsParams) error
-	// ============================================================
-	// CASCADE REFRESH QUERIES
-	// ============================================================
+	// =====================================================
+	// REFRESH POLING UNIT CACHE
+	// =====================================================
 	RefreshSingleElectionGroupPollingUnitStats(ctx context.Context, arg RefreshSingleElectionGroupPollingUnitStatsParams) error
 	RemoveCampaignGroupMember(ctx context.Context, arg RemoveCampaignGroupMemberParams) error
 	RemoveCampaignGroupMembersByElectionGroup(ctx context.Context, arg RemoveCampaignGroupMembersByElectionGroupParams) ([]int64, error)
@@ -475,20 +470,18 @@ type Querier interface {
 	RequestAgentEarningsPayoutByID(ctx context.Context, id int64) (AgentEarning, error)
 	ResetPartyLogo(ctx context.Context, id int16) error
 	RollupElectionFinalResults(ctx context.Context) error
-	RollupElectionGroupExpectedResults(ctx context.Context, electionGroupID int32) error
+	// No-op: dynamic aggregation replaces pre-calculated expected results rollups
+	RollupElectionGroupExpectedResults(ctx context.Context) error
 	RollupFederalConstituencyFinalResults(ctx context.Context) error
 	RollupLGAFinalResults(ctx context.Context) error
 	RollupSenatorialDistrictFinalResults(ctx context.Context) error
-	RollupSingleElectionFinalResults(ctx context.Context, electionID int32) error
-	RollupSingleFederalConstituencyFinalResults(ctx context.Context, arg RollupSingleFederalConstituencyFinalResultsParams) error
-	RollupSingleLGAFinalResults(ctx context.Context, arg RollupSingleLGAFinalResultsParams) error
-	RollupSingleSenatorialDistrictFinalResults(ctx context.Context, arg RollupSingleSenatorialDistrictFinalResultsParams) error
-	RollupSingleStateConstituencyFinalResults(ctx context.Context, arg RollupSingleStateConstituencyFinalResultsParams) error
-	RollupSingleStateFinalResults(ctx context.Context, arg RollupSingleStateFinalResultsParams) error
-	// =========================================================================
-	// SCOPED REAL-TIME SINGLE-ENTITY ROLLUPS (EVENT-DRIVEN CASCADE)
-	// =========================================================================
-	RollupSingleWardFinalResults(ctx context.Context, arg RollupSingleWardFinalResultsParams) error
+	RollupSingleElectionFinalResults(ctx context.Context) error
+	RollupSingleFederalConstituencyFinalResults(ctx context.Context) error
+	RollupSingleLGAFinalResults(ctx context.Context) error
+	RollupSingleSenatorialDistrictFinalResults(ctx context.Context) error
+	RollupSingleStateConstituencyFinalResults(ctx context.Context) error
+	RollupSingleStateFinalResults(ctx context.Context) error
+	RollupSingleWardFinalResults(ctx context.Context) error
 	RollupStateConstituencyFinalResults(ctx context.Context) error
 	RollupStateFinalResults(ctx context.Context) error
 	RollupWardFinalResults(ctx context.Context) error
@@ -496,9 +489,6 @@ type Querier interface {
 	SearchMediaAssets(ctx context.Context, arg SearchMediaAssetsParams) ([]MediaAsset, error)
 	// Citizen-facing user search: strictly requires active accounts and filters by text, state, party, politician, and verification.
 	SearchUsers(ctx context.Context, arg SearchUsersParams) ([]SearchUsersRow, error)
-	// ============================================================
-	// SEED QUERIES
-	// ============================================================
 	SeedUser(ctx context.Context, arg SeedUserParams) (int64, error)
 	SoftDeletePartyCustomPosition(ctx context.Context, arg SoftDeletePartyCustomPositionParams) error
 	SubmitPollingUnitResult(ctx context.Context, arg SubmitPollingUnitResultParams) (PollingUnitResult, error)
@@ -512,8 +502,8 @@ type Querier interface {
 	UnblockUserByPartyBlockID(ctx context.Context, arg UnblockUserByPartyBlockIDParams) error
 	UnfollowParty(ctx context.Context, arg UnfollowPartyParams) error
 	UnfollowUser(ctx context.Context, arg UnfollowUserParams) error
-	UpdateApplicationApproval(ctx context.Context, arg UpdateApplicationApprovalParams) (PartyApplication, error)
-	UpdateApplicationStatus(ctx context.Context, arg UpdateApplicationStatusParams) (PartyApplication, error)
+	UpdateApplicationApproval(ctx context.Context, arg UpdateApplicationApprovalParams) (PartyAgentApplication, error)
+	UpdateApplicationStatus(ctx context.Context, arg UpdateApplicationStatusParams) (PartyAgentApplication, error)
 	UpdateAssetFolder(ctx context.Context, arg UpdateAssetFolderParams) (AssetFolder, error)
 	UpdateAssignmentReadinessPercentage(ctx context.Context, arg UpdateAssignmentReadinessPercentageParams) (UpdateAssignmentReadinessPercentageRow, error)
 	UpdateAssignmentTracking(ctx context.Context, arg UpdateAssignmentTrackingParams) (UpdateAssignmentTrackingRow, error)
@@ -577,9 +567,9 @@ type Querier interface {
 	UpdateWard(ctx context.Context, arg UpdateWardParams) (Ward, error)
 	UpdateWardSupervisorEarnedAmountKobo(ctx context.Context, arg UpdateWardSupervisorEarnedAmountKoboParams) (WardElectionSupervisor, error)
 	UpsertAgentEarnings(ctx context.Context, arg UpsertAgentEarningsParams) (AgentEarning, error)
-	// ============================================================
-	// INCREMENTAL PARTY ENTRY UPSERTS
-	// ============================================================
+	// =====================================================
+	// POLLING UNIT PARTY MUTATIONS
+	// =====================================================
 	UpsertElectionGroupPUPartyEntry(ctx context.Context, arg UpsertElectionGroupPUPartyEntryParams) error
 	UpsertElectionGroupPollingUnitsForFederalConstituencyElection(ctx context.Context, arg UpsertElectionGroupPollingUnitsForFederalConstituencyElectionParams) error
 	UpsertElectionGroupPollingUnitsForLgaElection(ctx context.Context, arg UpsertElectionGroupPollingUnitsForLgaElectionParams) error

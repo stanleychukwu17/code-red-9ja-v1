@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"free9ja/api/internal/db/queries"
@@ -632,7 +633,7 @@ func (h *Handler) ChangeAgentRole(w http.ResponseWriter, r *http.Request) {
 	// Increment stats for new assignment
 	adjustAgentStats(ctx, tx, txQueries, newRole, req.ElectionGroupID, req.PartyID, req.StateID, req.LgaID, req.WardID, req.PollingUnitID, true)
 
-	// Keep party_applications synchronized if an application exists
+	// Keep party_agent_applications synchronized if an application exists
 	var appPuID *int32
 	if req.PollingUnitID > 0 && newRole == "polling_agent" {
 		puVal := req.PollingUnitID
@@ -655,7 +656,7 @@ func (h *Handler) ChangeAgentRole(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_, _ = tx.Exec(ctx, `
-		UPDATE party_applications
+		UPDATE party_agent_applications
 		SET role = $1,
 		    state_id = COALESCE($2, state_id),
 		    lga_id = $3,
@@ -825,24 +826,6 @@ func adjustAgentStats(ctx context.Context, dbtx queries.DBTX, q *queries.Queries
 			return
 		}
 
-		var count int32
-		_ = dbtx.QueryRow(ctx, `
-			SELECT COUNT(*)::int FROM polling_unit_assignments
-			WHERE election_group_id = $1 AND polling_unit_id = $2 AND party_id = $3`,
-			egID, puID, partyID,
-		).Scan(&count)
-
-		uniquePuDelta := int32(0)
-		if isIncrement {
-			if count <= 1 {
-				uniquePuDelta = 1
-			}
-		} else {
-			if count == 0 {
-				uniquePuDelta = -1
-			}
-		}
-
 		_ = q.UpsertElectionGroupPUPartyEntry(ctx, queries.UpsertElectionGroupPUPartyEntryParams{
 			AgentsDelta:           delta,
 			ElectionGroupID:       egID,
@@ -857,7 +840,8 @@ func adjustAgentStats(ctx context.Context, dbtx queries.DBTX, q *queries.Queries
 		})
 
 	case "ward_election_supervisor", "ward_supervisor", "lga_election_supervisor", "lga_supervisor", "state_election_supervisor", "state_supervisor":
-		// Supervisor stats are computed dynamically via real-time COUNT queries on supervisor tables	}
+		// Supervisor stats are computed dynamically via real-time COUNT queries on supervisor tables
+	}
 }
 
 func stringPtr(s string) *string {

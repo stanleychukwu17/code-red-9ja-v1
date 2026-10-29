@@ -4,16 +4,7 @@ CREATE TABLE IF NOT EXISTS user_referrals (
   user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   party_id SMALLINT REFERENCES parties(id) ON DELETE CASCADE,
   election_group_id INT REFERENCES election_groups(id) ON DELETE CASCADE,
-  
-  -- The Stats
-  total_referrals INTEGER DEFAULT 0, -- updated after user applies to the this referrer's party and election group
-  agent_referrals INTEGER DEFAULT 0, -- updated after users referred apply and are accepted or auto-accepted as agents to as (polling/supervisor)
-  unpaid_referrals INTEGER DEFAULT 0, -- updated only if party has marketting running (for the election group) when agent was accepted
-  duties_completed_referrals INTEGER DEFAULT 0, -- updated only if referred agent complete their electoral duties on election day
-  duties_completed_and_unpaid_referrals INTEGER DEFAULT 0, -- updated only if the unpaid referral agents complete their electoral duties on election day
-  
-  potential_earnings DECIMAL(15, 2) DEFAULT 0,
-  earned_amount DECIMAL(15, 2) DEFAULT 0,
+  amount DECIMAL(15, 2) DEFAULT 0,
   
   -- Admin payout workflow (mirroring agent_earnings)
   status VARCHAR(20) NOT NULL DEFAULT 'pending'

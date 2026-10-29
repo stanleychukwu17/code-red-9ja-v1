@@ -126,19 +126,23 @@ func (q *Queries) DecrementElectionGroupPollingUnitsForWardElection(ctx context.
 }
 
 const ensureElectionGroupParentSkeletons = `-- name: EnsureElectionGroupParentSkeletons :exec
-SELECT 1;
+SELECT 1
 `
 
-func (q *Queries) EnsureElectionGroupParentSkeletons(ctx context.Context, electionGroupID int32) error {
-	return nil
+// No-op: parent rollup tables dropped in favor of dynamic queries on election_group_polling_units
+func (q *Queries) EnsureElectionGroupParentSkeletons(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, ensureElectionGroupParentSkeletons)
+	return err
 }
 
 const rollupElectionGroupExpectedResults = `-- name: RollupElectionGroupExpectedResults :exec
-SELECT 1;
+SELECT 1
 `
 
-func (q *Queries) RollupElectionGroupExpectedResults(ctx context.Context, electionGroupID int32) error {
-	return nil
+// No-op: dynamic aggregation replaces pre-calculated expected results rollups
+func (q *Queries) RollupElectionGroupExpectedResults(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, rollupElectionGroupExpectedResults)
+	return err
 }
 
 const upsertElectionGroupPollingUnitsForFederalConstituencyElection = `-- name: UpsertElectionGroupPollingUnitsForFederalConstituencyElection :exec
