@@ -7,6 +7,9 @@ import (
 	"free9ja/api/internal/db/queries"
 	apimiddleware "free9ja/api/internal/middleware"
 	partyapplications "free9ja/api/internal/service/party_applications"
+	"free9ja/api/internal/db"
+	"free9ja/api/internal/service/audit"
+	"free9ja/api/internal/service/notifications"
 	"free9ja/api/internal/utils"
 	"net/http"
 	"os"
@@ -41,16 +44,20 @@ type PartiesService interface {
 type Handler struct {
 	service        PartyApplicationsService
 	usersService   UsersService
-	partiesService PartiesService
-	utils          *utils.Utils
+	partiesService       PartiesService
+	notificationsService notifications.NotificationsService
+	auditService         audit.AuditService
+	utils                *utils.Utils
 }
 
-func NewHandler(service PartyApplicationsService, usersService UsersService, partiesService PartiesService, utils *utils.Utils) *Handler {
+func NewHandler(service PartyApplicationsService, usersService UsersService, partiesService PartiesService, notificationsService notifications.NotificationsService, auditService audit.AuditService, utils *utils.Utils) *Handler {
 	return &Handler{
 		service:        service,
 		usersService:   usersService,
-		partiesService: partiesService,
-		utils:          utils,
+		partiesService:       partiesService,
+		notificationsService: notificationsService,
+		auditService:         auditService,
+		utils:                utils,
 	}
 }
 
@@ -748,6 +755,34 @@ func (h *Handler) RejectApplication(w http.ResponseWriter, r *http.Request) {
 		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	// Asynchronously send notification to the applicant
+	h.notificationsService.NotifyAgentApplicationRejected(r.Context(), notifications.NotifyAgentApplicationRejectedParams{
+		ApplicationID:   app.ID,
+		RecipientUserID: app.UserID,
+		ActorUserID:     &requester.ID,
+		PartyID:         app.PartyID,
+		ElectionGroupID: app.ElectionGroupID,
+		Role:            app.Role,
+		Reason:          req.Reason,
+	})
+
+	// Asynchronously record the audit log for the action
+	auditOldValues, _ := json.Marshal(map[string]interface{}{
+		"status": app.Status,
+	})
+	auditNewValues, _ := json.Marshal(map[string]interface{}{
+		"status": updatedApp.Status,
+		"reason": req.Reason,
+	})
+	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
+		Module:     audit.StringToText(db.ModulePartyAdmin),
+		Action:     db.ActionRejectApplication,
+		EntityType: db.EntityTypePartyApplication,
+		EntityID:   strconv.FormatInt(id, 10),
+		OldValues:  auditOldValues,
+		NewValues:  auditNewValues,
+	})
+
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Polling agent application rejected successfully", map[string]interface{}{
 		"application": updatedApp,

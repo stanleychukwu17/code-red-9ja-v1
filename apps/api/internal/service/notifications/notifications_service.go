@@ -56,6 +56,7 @@ type NotificationsService interface {
 	NotifyPartySlotsPurchased(ctx context.Context, params NotifyPartySlotsPurchasedParams)
 	NotifyPartyAgentsAllowanceDeposited(ctx context.Context, params NotifyPartyAgentsAllowanceDepositedParams)
 	NotifyPartyAgentPaymentAllocationUpdated(ctx context.Context, params NotifyPartyAgentPaymentAllocationUpdatedParams)
+	NotifyAgentApplicationRejected(ctx context.Context, params NotifyAgentApplicationRejectedParams)
 }
 
 type service struct {
@@ -259,6 +260,16 @@ type NotifyPartyAgentsAllowanceDepositedParams struct {
 	ActorID                    *int64
 	AmountKobo                 int64
 	NewAgentPaymentBalanceKobo int64
+}
+
+type NotifyAgentApplicationRejectedParams struct {
+	ApplicationID   int64
+	RecipientUserID int64
+	ActorUserID     *int64
+	PartyID         int16
+	ElectionGroupID int32
+	Role            string
+	Reason          string
 }
 
 type NotifyPartyAgentPaymentAllocationUpdatedParams struct {
@@ -928,6 +939,25 @@ func (s *service) NotifyPartyAgentPaymentAllocationUpdated(ctx context.Context, 
 		Type:        constants.NotificationTypePartyAgentPaymentAllocationUpdated,
 		Priority:    constants.NotificationPriorityNormal,
 		Metadata:    partyMeta,
+	})
+}
+
+// NotifyAgentApplicationRejected dispatches a notification to an applicant when their agent application is rejected.
+func (s *service) NotifyAgentApplicationRejected(ctx context.Context, params NotifyAgentApplicationRejectedParams) {
+	partyID := params.PartyID
+	s.CreateNotificationAsync(ctx, CreateNotificationInput{
+		RecipientUserID: params.RecipientUserID,
+		ActorUserID:     params.ActorUserID,
+		PartyID:         &partyID,
+		Category:        constants.NotificationCategoryParty,
+		Type:            constants.NotificationTypeAgentApplicationRejected,
+		Priority:        constants.NotificationPriorityNormal,
+		Metadata: utils.NewMetadata().
+			Set("application_id", params.ApplicationID).
+			Set("role", params.Role).
+			Set("party_id", params.PartyID).
+			Set("election_group_id", params.ElectionGroupID).
+			Set("reason", params.Reason),
 	})
 }
 

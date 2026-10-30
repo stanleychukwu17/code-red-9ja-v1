@@ -47,6 +47,8 @@ const (
 	ActionBuyPartySlots                     = "buy_party_slots"                       // Action when a party purchases polling agent slots
 	ActionDepositPartyAgentsAllowance       = "deposit_party_agents_allowance"        // Action when funds are deposited to party polling agent allowance budget
 	ActionUpdatePartyAgentPaymentAllocation = "update_party_agent_payment_allocation" // Action when party agent payment allocations are updated
+	ActionRejectApplication                 = "reject_application"                  // Action when an agent application is rejected
+	ActionApproveApplication                = "approve_application"                 // Action when an agent application is approved
 
 	// -- Actor Roles --
 	ActorRoleSuperAdmin      = "super_admin"       // A super administrator of the system
@@ -56,8 +58,9 @@ const (
 	ActorRoleUser            = "user"              // A regular user acting on their own account
 
 	// -- Entity Types --
-	EntityTypeUser      = "user"      // Entity type representing a regular user
-	EntityTypeParty     = "party"     // Entity type representing a political party
-	EntityTypeOffice    = "office"    // Entity type representing a political office
-	EntityTypeElections = "elections" // Entity type representing elections
+	EntityTypeUser             = "user"              // Entity type representing a regular user
+	EntityTypeParty            = "party"             // Entity type representing a political party
+	EntityTypeOffice           = "office"            // Entity type representing a political office
+	EntityTypeElections        = "elections"         // Entity type representing elections
+	EntityTypePartyApplication = "party_application" // Entity type representing a party agent application
 )

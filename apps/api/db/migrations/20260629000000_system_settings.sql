@@ -37,9 +37,9 @@ ON CONFLICT (key) DO NOTHING;
 INSERT INTO system_settings (key, value, description)
 VALUES 
   ('earnings_allocation_polling_agent', '{"readiness": 20, "results": 30, "updates": 20, "attendance": 10, "election_start": 5, "election_end": 5, "live_voters_referred": 10}'::jsonb, 'Earnings allocation for polling agents'),
-  ('earnings_allocation_ward_supervisor', '{"readiness": 20, "results": 30, "updates": 20, "attendance": 10, "election_start": 5, "election_end": 5, "live_voters_referred": 10}'::jsonb, 'Earnings allocation for ward supervisors'),
-  ('earnings_allocation_lga_supervisor', '{"readiness": 20, "results": 30, "updates": 20, "attendance": 10, "election_start": 5, "election_end": 5, "live_voters_referred": 10}'::jsonb, 'Earnings allocation for lga supervisors'),
-  ('earnings_allocation_state_supervisor', '{"readiness": 20, "results": 30, "updates": 20, "attendance": 10, "election_start": 5, "election_end": 5, "live_voters_referred": 10}'::jsonb, 'Earnings allocation for state supervisors')
+  ('earnings_allocation_ward_election_supervisor', '{"readiness": 20, "results": 30, "updates": 20, "attendance": 10, "election_start": 5, "election_end": 5, "live_voters_referred": 10}'::jsonb, 'Earnings allocation for ward supervisors'),
+  ('earnings_allocation_lga_election_supervisor', '{"readiness": 20, "results": 30, "updates": 20, "attendance": 10, "election_start": 5, "election_end": 5, "live_voters_referred": 10}'::jsonb, 'Earnings allocation for lga supervisors'),
+  ('earnings_allocation_state_election_supervisor', '{"readiness": 20, "results": 30, "updates": 20, "attendance": 10, "election_start": 5, "election_end": 5, "live_voters_referred": 10}'::jsonb, 'Earnings allocation for state supervisors')
 ON CONFLICT (key) DO NOTHING;
 
 -- Seed test requirements per role
@@ -60,7 +60,7 @@ VALUES
     'Test requirements for polling agents: total tests expected and how many are allocated per pre-election window'
   ),
   (
-    'test_requirements_ward_supervisor',
+    'test_requirements_ward_election_supervisor',
     '{
       "total_required": 10,
       "windows": [
@@ -72,7 +72,7 @@ VALUES
     'Test requirements for ward supervisors: total tests expected and how many are allocated per pre-election window'
   ),
   (
-    'test_requirements_lga_supervisor',
+    'test_requirements_lga_election_supervisor',
     '{
       "total_required": 10,
       "windows": [
@@ -84,7 +84,7 @@ VALUES
     'Test requirements for LGA supervisors: total tests expected and how many are allocated per pre-election window'
   ),
   (
-    'test_requirements_state_supervisor',
+    'test_requirements_state_election_supervisor',
     '{
       "total_required": 10,
       "windows": [
