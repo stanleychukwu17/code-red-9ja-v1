@@ -172,9 +172,13 @@ ORDER BY
     CASE m.role
         WHEN 'candidate' THEN 1
         WHEN 'party_official' THEN 2
+        WHEN 'state_election_supervisor' THEN 3
         WHEN 'state_supervisor' THEN 3
+        WHEN 'lga_election_supervisor' THEN 4
         WHEN 'lga_supervisor' THEN 4
+        WHEN 'ward_election_supervisor' THEN 5
         WHEN 'ward_supervisor' THEN 5
+        WHEN 'polling_agent' THEN 6
         WHEN 'agent' THEN 6
         ELSE 7
     END ASC,

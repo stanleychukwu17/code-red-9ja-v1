@@ -6,7 +6,6 @@ import (
 	"errors"
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/utils"
-	"free9ja/api/internal/worker"
 	"strings"
 	"time"
 
@@ -17,7 +16,6 @@ import (
 type Service struct {
 	queries         *queries.Queries
 	rdb             *redis.Client
-	taskDistributor worker.TaskDistributor
 	earningsSvc     earningsService
 }
 
@@ -25,11 +23,10 @@ type earningsService interface {
 	ProcessTaskEarnings(ctx context.Context, assignmentID int64, taskType string, customNarration ...string) (int64, error)
 }
 
-func NewService(q *queries.Queries, rdb *redis.Client, taskDistributor worker.TaskDistributor, earningsSvc earningsService) *Service {
+func NewService(q *queries.Queries, rdb *redis.Client, earningsSvc earningsService) *Service {
 	return &Service{
 		queries:         q,
 		rdb:             rdb,
-		taskDistributor: taskDistributor,
 		earningsSvc:     earningsSvc,
 	}
 }
@@ -147,15 +144,6 @@ func (s *Service) UpdateAssignmentTracking(ctx context.Context, id int64, arrive
 			go s.earningsSvc.ProcessTaskEarnings(context.Background(), id, "election_end")
 		}
 	}
-
-	// Enqueue a background task to recalculate the PU stats (which will cascade to Ward, LGA, etc.)
-	// The worker debounces duplicate updates to the same PU automatically.
-	_ = s.taskDistributor.DistributeTaskRefreshPollingUnitStats(context.Background(), &worker.RefreshPollingUnitStatsPayload{
-		Params: queries.RefreshSingleElectionGroupPollingUnitStatsParams{
-			ElectionGroupID: assignment.ElectionGroupID,
-			PollingUnitID:   assignment.PollingUnitID,
-		},
-	})
 
 	return updated, nil
 }

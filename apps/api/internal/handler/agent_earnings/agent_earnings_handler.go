@@ -339,7 +339,7 @@ func (h *Handler) GetPotentialPayout(w http.ResponseWriter, r *http.Request) {
 // @Tags         AgentEarnings
 // @Produce      json
 // @Param        task_type         query string true  "Task Type (readiness|results|attendance|election_start|election_end|live_voters_referred|updates)"
-// @Param        role              query string false "Role (polling_agent|ward_supervisor|lga_supervisor|state_supervisor)"
+// @Param        role              query string false "Role (polling_agent|ward_election_supervisor|lga_election_supervisor|state_election_supervisor)"
 // @Param        election_group_id query int    false "Election Group ID"
 // @Param        party_id          query int    false "Party ID"
 // @Success      200 {object} utils.SuccessResponse
@@ -395,7 +395,7 @@ func (h *Handler) EstimatePotentialPayout(w http.ResponseWriter, r *http.Request
 // @Tags         AgentEarnings
 // @Produce      json
 // @Param        election_group_id query int    false "Election Group ID"
-// @Param        role_type         query string false "Role Type (polling_agent|ward_supervisor|lga_supervisor|state_supervisor)"
+// @Param        role_type         query string false "Role Type (polling_agent|ward_election_supervisor|lga_election_supervisor|state_election_supervisor)"
 // @Param        assignment_id     query int    false "Assignment ID"
 // @Success      200 {object} utils.SuccessResponse
 // @Failure      401 {object} utils.ErrorResponse
@@ -514,7 +514,7 @@ func (h *Handler) RequestPayout(w http.ResponseWriter, r *http.Request) {
 // @Summary      Get agent and supervisor performance stats with cursor pagination
 // @Tags         AgentEarnings
 // @Produce      json
-// @Param        role_type         query string false "Role type (polling_agent|ward_supervisor|lga_supervisor|state_supervisor)"
+// @Param        role_type         query string false "Role type (polling_agent|ward_election_supervisor|lga_election_supervisor|state_election_supervisor)"
 // @Param        party_id          query int    false "Filter by party ID"
 // @Param        election_group_id query int    false "Filter by election group ID"
 // @Param        state_id          query int    false "Filter by state ID"
@@ -596,7 +596,7 @@ func (h *Handler) GetAgentPerformanceStats(w http.ResponseWriter, r *http.Reques
 			CursorID:        cursor,
 			LimitVal:        limit,
 		})
-	case "ward_supervisor", "ward_election_supervisor":
+	case "ward_election_supervisor":
 		items, err = h.q.ListWardSupervisorPerformanceStats(ctx, queries.ListWardSupervisorPerformanceStatsParams{
 			PartyID:         partyID,
 			ElectionGroupID: electionGroupID,
@@ -607,7 +607,7 @@ func (h *Handler) GetAgentPerformanceStats(w http.ResponseWriter, r *http.Reques
 			CursorID:        cursor,
 			LimitVal:        limit,
 		})
-	case "lga_supervisor", "lga_election_supervisor":
+	case "lga_election_supervisor":
 		items, err = h.q.ListLGASupervisorPerformanceStats(ctx, queries.ListLGASupervisorPerformanceStatsParams{
 			PartyID:         partyID,
 			ElectionGroupID: electionGroupID,
@@ -617,7 +617,7 @@ func (h *Handler) GetAgentPerformanceStats(w http.ResponseWriter, r *http.Reques
 			CursorID:        cursor,
 			LimitVal:        limit,
 		})
-	case "state_supervisor", "state_election_supervisor":
+	case "state_election_supervisor":
 		items, err = h.q.ListStateSupervisorPerformanceStats(ctx, queries.ListStateSupervisorPerformanceStatsParams{
 			PartyID:         partyID,
 			ElectionGroupID: electionGroupID,

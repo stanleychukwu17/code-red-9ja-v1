@@ -11,7 +11,6 @@ import (
 	"free9ja/api/internal/service/polling_unit_updates"
 	"free9ja/api/internal/utils"
 
-	"free9ja/api/internal/worker"
 
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -19,11 +18,10 @@ import (
 type Handler struct {
 	service         *polling_unit_updates.Service
 	utils           *utils.Utils
-	taskDistributor worker.TaskDistributor
 }
 
-func NewHandler(s *polling_unit_updates.Service, u *utils.Utils, taskDistributor worker.TaskDistributor) *Handler {
-	return &Handler{service: s, utils: u, taskDistributor: taskDistributor}
+func NewHandler(s *polling_unit_updates.Service, u *utils.Utils) *Handler {
+	return &Handler{service: s, utils: u}
 }
 
 type CreateUpdateRequest struct {
@@ -82,19 +80,6 @@ func (h *Handler) CreateUpdate(w http.ResponseWriter, r *http.Request) {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create update: "+err.Error())
 		return
 	}
-
-	// Enqueue debounced polling unit stats refresh
-	go func() {
-		payload := &worker.RefreshPollingUnitStatsPayload{
-			Params: queries.RefreshSingleElectionGroupPollingUnitStatsParams{
-				ElectionGroupID: req.ElectionGroupID,
-				PollingUnitID:   req.PollingUnitID,
-			},
-		}
-		if err := h.taskDistributor.DistributeTaskRefreshPollingUnitStats(r.Context(), payload); err != nil {
-			// Log error but don't fail the request
-		}
-	}()
 
 	h.utils.RespondSuccess(w, http.StatusCreated, "Update submitted successfully", map[string]interface{}{
 		"update": update,

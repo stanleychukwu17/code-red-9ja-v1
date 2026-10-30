@@ -745,11 +745,7 @@ func (h *Handler) RejectApplication(w http.ResponseWriter, r *http.Request) {
 
 	updatedApp, err := h.service.RejectApplication(r.Context(), id, req.Reason)
 	if err != nil {
-		if errors.Is(err, errors.New("application is already processed")) || strings.Contains(err.Error(), "already processed") {
-			h.utils.RespondError(w, http.StatusConflict, "Application has already been processed")
-			return
-		}
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to reject application: "+err.Error())
+		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 

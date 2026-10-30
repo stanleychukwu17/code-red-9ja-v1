@@ -184,16 +184,8 @@ func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskCalculateFinalResult(ct
 		})
 	}
 
-	// Trigger the cascading stats & geo refresh chain starting from this Polling Unit
+	// Trigger the cascading candidate rollup chain starting from this Ward and State Constituency
 	if redisTaskProcessor.taskDistributor != nil {
-		_ = redisTaskProcessor.taskDistributor.DistributeTaskRefreshPollingUnitStats(ctx, &RefreshPollingUnitStatsPayload{
-			Params: queries.RefreshSingleElectionGroupPollingUnitStatsParams{
-				ElectionGroupID: r.ElectionGroupID,
-				PollingUnitID:   r.PollingUnitID,
-			},
-		})
-
-		// Trigger the cascading candidate rollup chain starting from this Ward and State Constituency
 		_ = redisTaskProcessor.taskDistributor.DistributeTaskRollupSingleWard(ctx, &RollupSingleWardPayload{
 			ElectionID:            r.ElectionID,
 			WardID:                r.WardID.Int32,

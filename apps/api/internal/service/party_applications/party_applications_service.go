@@ -13,8 +13,6 @@ import (
 	"strings"
 	"time"
 
-	"free9ja/api/internal/worker"
-
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -28,42 +26,18 @@ type UsersService interface {
 }
 
 type Service struct {
-	queries         *queries.Queries
-	pool            *pgxpool.Pool
-	rdb             *redis.Client
-	taskDistributor worker.TaskDistributor
-	usersService    UsersService
+	queries      *queries.Queries
+	pool         *pgxpool.Pool
+	rdb          *redis.Client
+	usersService UsersService
 }
 
-func NewService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client, taskDistributor worker.TaskDistributor, usersService UsersService) *Service {
+func NewService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client, usersService UsersService) *Service {
 	return &Service{
-		queries:         q,
-		pool:            pool,
-		rdb:             rdb,
-		taskDistributor: taskDistributor,
-		usersService:    usersService,
-	}
-}
-
-func (s *Service) initiateStatsRollup(ctx context.Context, egID int32, roleType string, puID int32, wardID int32, lgaID int32, stateID int16) {
-	if s.taskDistributor == nil || egID <= 0 {
-		return
-	}
-	role := strings.ToLower(strings.TrimSpace(roleType))
-	switch role {
-	case "polling_agent", "pu_agent", "polling_unit_agent":
-		if puID > 0 {
-			if err := s.taskDistributor.DistributeTaskRefreshPollingUnitStats(ctx, &worker.RefreshPollingUnitStatsPayload{
-				Params: queries.RefreshSingleElectionGroupPollingUnitStatsParams{
-					ElectionGroupID: egID,
-					PollingUnitID:   puID,
-				},
-			}); err != nil {
-				slog.Warn("failed to enqueue PU stats refresh task", "err", err, "pollingUnitID", puID)
-			}
-		}
-	case "ward_supervisor", "ward_election_supervisor", "lga_supervisor", "lga_election_supervisor", "state_supervisor", "state_election_supervisor":
-		// Supervisor stats are computed dynamically via real-time COUNT queries on supervisor tables
+		queries:      q,
+		pool:         pool,
+		rdb:          rdb,
+		usersService: usersService,
 	}
 }
 
@@ -604,26 +578,6 @@ func (s *Service) RejectApplication(ctx context.Context, id int64, reason string
 		return queries.PartyAgentApplication{}, err
 	}
 
-	role := strings.ToLower(strings.TrimSpace(app.Role))
-	egID := app.ElectionGroupID
-
-	var puID int32
-	if app.PollingUnitID.Valid {
-		puID = app.PollingUnitID.Int32
-	}
-	var wardID int32
-	if app.WardID.Valid {
-		wardID = app.WardID.Int32
-	}
-	var lgaID int32
-	if app.LgaID.Valid {
-		lgaID = app.LgaID.Int32
-	}
-	stateID := app.StateID
-
-	// Initiate cascading stats rollup
-	s.initiateStatsRollup(ctx, egID, role, puID, wardID, lgaID, stateID)
-
 	// Invalidate active agent application cache for the applicant and application entity cache
 	_ = s.InvalidateUserHasActiveAgentApp(ctx, app.UserID)
 	_ = s.InvalidateApplicationByID(ctx, id)
@@ -948,9 +902,6 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 	s.rdb.Del(ctx, db.RedisPartiesAcceptingIDs)
 	_ = s.InvalidateUserHasActiveAgentApp(ctx, app.UserID)
 	_ = s.InvalidateApplicationByID(ctx, input.ApplicationID)
-
-	// Initiate cascading stats rollup
-	s.initiateStatsRollup(ctx, egID, roleType, pollingUnitID, input.WardID, input.LgaID, input.StateID)
 
 	return updatedApp, nil
 }

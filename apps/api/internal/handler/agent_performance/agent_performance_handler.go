@@ -17,7 +17,6 @@ import (
 	apimiddleware "free9ja/api/internal/middleware"
 	usersservice "free9ja/api/internal/service/users"
 	"free9ja/api/internal/utils"
-	"free9ja/api/internal/worker"
 )
 
 type Handler struct {
@@ -25,40 +24,17 @@ type Handler struct {
 	pool         *pgxpool.Pool
 	usersService *usersservice.UsersService
 	u            *utils.Utils
-	distributor  worker.TaskDistributor
 }
 
-func NewHandler(q *queries.Queries, pool *pgxpool.Pool, usersService *usersservice.UsersService, u *utils.Utils, distributor worker.TaskDistributor) *Handler {
+func NewHandler(q *queries.Queries, pool *pgxpool.Pool, usersService *usersservice.UsersService, u *utils.Utils) *Handler {
 	return &Handler{
 		q:            q,
 		pool:         pool,
 		usersService: usersService,
 		u:            u,
-		distributor:  distributor,
 	}
 }
 
-func (h *Handler) initiateStatsRollup(ctx context.Context, egID int32, roleType string, puID int32, wardID int32, lgaID int32, stateID int16) {
-	if h.distributor == nil || egID <= 0 {
-		return
-	}
-	role := strings.ToLower(strings.TrimSpace(roleType))
-	switch role {
-	case "polling_agent", "pu_agent", "polling_unit_agent":
-		if puID > 0 {
-			if err := h.distributor.DistributeTaskRefreshPollingUnitStats(ctx, &worker.RefreshPollingUnitStatsPayload{
-				Params: queries.RefreshSingleElectionGroupPollingUnitStatsParams{
-					ElectionGroupID: egID,
-					PollingUnitID:   puID,
-				},
-			}); err != nil {
-				slog.Warn("failed to enqueue PU stats refresh task", "err", err, "pollingUnitID", puID)
-			}
-		}
-	case "ward_supervisor", "ward_election_supervisor", "lga_supervisor", "lga_election_supervisor", "state_supervisor", "state_election_supervisor":
-		// Supervisor stats are computed dynamically via real-time COUNT queries on supervisor tables
-	}
-}
 
 type AgentPerformanceItem struct {
 	ID                 int64   `json:"id"`
@@ -109,7 +85,7 @@ type ChangeAgentRoleRequest struct {
 // @Description  Returns cursor-paginated performance stats for polling agents and supervisors.
 // @Tags         AgentPerformance
 // @Produce      json
-// @Param        role_type          query string false "Role type (polling_agent, ward_supervisor, lga_supervisor, state_supervisor)"
+// @Param        role_type          query string false "Role type (polling_agent, ward_election_supervisor, lga_election_supervisor, state_election_supervisor)"
 // @Param        party_id           query int    false "Party ID filter"
 // @Param        election_group_id  query int    false "Election Group ID filter"
 // @Param        state_id           query int    false "State ID filter"
@@ -232,7 +208,7 @@ func (h *Handler) GetAgentPerformance(w http.ResponseWriter, r *http.Request) {
 			items = append(items, item)
 		}
 
-	case "ward_supervisor", "ward_election_supervisor":
+	case "ward_election_supervisor":
 		rows, err := h.q.ListWardSupervisorPerformanceStats(ctx, queries.ListWardSupervisorPerformanceStatsParams{
 			PartyID:         int16(partyID),
 			ElectionGroupID: electionGroupID,
@@ -283,7 +259,7 @@ func (h *Handler) GetAgentPerformance(w http.ResponseWriter, r *http.Request) {
 			items = append(items, item)
 		}
 
-	case "lga_supervisor", "lga_election_supervisor":
+	case "lga_election_supervisor":
 		rows, err := h.q.ListLGASupervisorPerformanceStats(ctx, queries.ListLGASupervisorPerformanceStatsParams{
 			PartyID:         int16(partyID),
 			ElectionGroupID: electionGroupID,
@@ -332,7 +308,7 @@ func (h *Handler) GetAgentPerformance(w http.ResponseWriter, r *http.Request) {
 			items = append(items, item)
 		}
 
-	case "state_supervisor", "state_election_supervisor":
+	case "state_election_supervisor":
 		rows, err := h.q.ListStateSupervisorPerformanceStats(ctx, queries.ListStateSupervisorPerformanceStatsParams{
 			PartyID:         int16(partyID),
 			ElectionGroupID: electionGroupID,
@@ -468,11 +444,11 @@ func (h *Handler) ChangeAgentRole(w http.ResponseWriter, r *http.Request) {
 	switch newRole {
 	case "polling_agent", "pu_agent", "polling_unit_agent":
 		newRole = "polling_agent"
-	case "ward_supervisor", "ward_election_supervisor":
+	case "ward_election_supervisor":
 		newRole = "ward_election_supervisor"
-	case "lga_supervisor", "lga_election_supervisor":
+	case "lga_election_supervisor":
 		newRole = "lga_election_supervisor"
-	case "state_supervisor", "state_election_supervisor":
+	case "state_election_supervisor":
 		newRole = "state_election_supervisor"
 	default:
 		h.u.RespondError(w, http.StatusBadRequest, "Invalid new_role_type: "+req.NewRoleType)
@@ -671,11 +647,6 @@ func (h *Handler) ChangeAgentRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Trigger stats rollup for both old assignment and new assignment
-	if oldRole != "" {
-		h.initiateStatsRollup(ctx, req.ElectionGroupID, oldRole, oldPuID, oldWardID, oldLgaID, oldStateID)
-	}
-	h.initiateStatsRollup(ctx, req.ElectionGroupID, newRole, req.PollingUnitID, req.WardID, req.LgaID, req.StateID)
 
 	h.u.RespondSuccess(w, http.StatusOK, "Agent role updated successfully", map[string]interface{}{
 		"user_id":  req.UserID,
@@ -703,7 +674,17 @@ func (h *Handler) RevokeAgent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	roleType := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("role_type")))
+	roleType := strings.ReplaceAll(strings.ToLower(strings.TrimSpace(r.URL.Query().Get("role_type"))), "-", "_")
+	switch roleType {
+	case "ward_supervisor":
+		roleType = "ward_election_supervisor"
+	case "lga_supervisor":
+		roleType = "lga_election_supervisor"
+	case "state_supervisor":
+		roleType = "state_election_supervisor"
+	case "pollingagent", "pu_agent", "polling_unit_agent":
+		roleType = "polling_agent"
+	}
 	partyIDParam, _ := strconv.ParseInt(r.URL.Query().Get("party_id"), 10, 16)
 
 	rolesData, _ := h.usersService.GetUserRoles(r.Context(), requester.ID)
@@ -746,7 +727,6 @@ func (h *Handler) RevokeAgent(w http.ResponseWriter, r *http.Request) {
 		_, err = h.pool.Exec(ctx, "DELETE FROM polling_unit_assignments WHERE id = $1", id)
 		if err == nil && puID > 0 {
 			adjustAgentStats(ctx, h.pool, h.q, "polling_agent", egID, partyID, 0, 0, 0, puID, false)
-			h.initiateStatsRollup(ctx, egID, "polling_agent", puID, 0, 0, 0)
 		}
 	case "ward_supervisor", "ward_election_supervisor":
 		var stateID int16
@@ -757,7 +737,6 @@ func (h *Handler) RevokeAgent(w http.ResponseWriter, r *http.Request) {
 		_, err = h.pool.Exec(ctx, "DELETE FROM ward_election_supervisors WHERE id = $1", id)
 		if err == nil && wardID > 0 {
 			adjustAgentStats(ctx, h.pool, h.q, "ward_election_supervisor", egID, partyID, stateID, lgaID, wardID, 0, false)
-			h.initiateStatsRollup(ctx, egID, "ward_election_supervisor", 0, wardID, lgaID, stateID)
 		}
 	case "lga_supervisor", "lga_election_supervisor":
 		var stateID int16
@@ -768,7 +747,6 @@ func (h *Handler) RevokeAgent(w http.ResponseWriter, r *http.Request) {
 		_, err = h.pool.Exec(ctx, "DELETE FROM lga_election_supervisors WHERE id = $1", id)
 		if err == nil && lgaID > 0 {
 			adjustAgentStats(ctx, h.pool, h.q, "lga_election_supervisor", egID, partyID, stateID, lgaID, 0, 0, false)
-			h.initiateStatsRollup(ctx, egID, "lga_election_supervisor", 0, 0, lgaID, stateID)
 		}
 	case "state_supervisor", "state_election_supervisor":
 		var stateID int16
@@ -778,7 +756,6 @@ func (h *Handler) RevokeAgent(w http.ResponseWriter, r *http.Request) {
 		_, err = h.pool.Exec(ctx, "DELETE FROM state_election_supervisors WHERE id = $1", id)
 		if err == nil && stateID > 0 {
 			adjustAgentStats(ctx, h.pool, h.q, "state_election_supervisor", egID, partyID, stateID, 0, 0, 0, false)
-			h.initiateStatsRollup(ctx, egID, "state_election_supervisor", 0, 0, 0, stateID)
 		}
 	default:
 		h.u.RespondError(w, http.StatusBadRequest, "Invalid role_type parameter")
@@ -839,7 +816,7 @@ func adjustAgentStats(ctx context.Context, dbtx queries.DBTX, q *queries.Queries
 			SenatorialDistrictID:  pgtype.Int4{Int32: puSenateID, Valid: true},
 		})
 
-	case "ward_election_supervisor", "ward_supervisor", "lga_election_supervisor", "lga_supervisor", "state_election_supervisor", "state_supervisor":
+	case "ward_election_supervisor", "lga_election_supervisor", "state_election_supervisor":
 		// Supervisor stats are computed dynamically via real-time COUNT queries on supervisor tables
 	}
 }

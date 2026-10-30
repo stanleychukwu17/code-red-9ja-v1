@@ -6,7 +6,6 @@ import (
 	"free9ja/api/internal/db/queries"
 	apimiddleware "free9ja/api/internal/middleware"
 	"free9ja/api/internal/utils"
-	"free9ja/api/internal/worker"
 	"net/http"
 	"strconv"
 	"strings"
@@ -36,17 +35,15 @@ type Handler struct {
 	pollingUnitUpdatesService *puupdates.Service
 	earningsService           *earningsservice.Service
 	utils                     *utils.Utils
-	taskDistributor           worker.TaskDistributor
 }
 
-func NewHandler(service PollingUnitAssignmentsService, usersService UsersService, puUpdatesService *puupdates.Service, utils *utils.Utils, taskDistributor worker.TaskDistributor, earningsSvc *earningsservice.Service) *Handler {
+func NewHandler(service PollingUnitAssignmentsService, usersService UsersService, puUpdatesService *puupdates.Service, utils *utils.Utils, earningsSvc *earningsservice.Service) *Handler {
 	return &Handler{
 		service:                   service,
 		usersService:              usersService,
 		pollingUnitUpdatesService: puUpdatesService,
 		earningsService:           earningsSvc,
 		utils:                     utils,
-		taskDistributor:           taskDistributor,
 	}
 }
 
@@ -527,19 +524,6 @@ func (h *Handler) UpdateAssignmentTracking(w http.ResponseWriter, r *http.Reques
 			IsReport:        false,
 		})
 	}
-
-	// Enqueue debounced polling unit stats refresh
-	go func() {
-		payload := &worker.RefreshPollingUnitStatsPayload{
-			Params: queries.RefreshSingleElectionGroupPollingUnitStatsParams{
-				ElectionGroupID: assignment.ElectionGroupID,
-				PollingUnitID:   assignment.PollingUnitID,
-			},
-		}
-		if err := h.taskDistributor.DistributeTaskRefreshPollingUnitStats(context.Background(), payload); err != nil {
-			// Log error but don't fail the request
-		}
-	}()
 
 	// Trigger earnings recalculation in the background for the tracking events
 	if h.earningsService != nil {

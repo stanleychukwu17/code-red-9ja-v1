@@ -54,23 +54,43 @@ const ROLE_CONFIG: Record<
     badgeColor: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30",
     icon: Award,
   },
-  state_supervisor: {
-    label: "State Supervisor",
+  state_election_supervisor: {
+    label: "State Election Supervisor",
     badgeColor: "bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 border-indigo-500/30",
     icon: ShieldCheck,
   },
-  lga_supervisor: {
-    label: "LGA Supervisor",
+  state_supervisor: {
+    label: "State Election Supervisor",
+    badgeColor: "bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 border-indigo-500/30",
+    icon: ShieldCheck,
+  },
+  lga_election_supervisor: {
+    label: "LGA Election Supervisor",
     badgeColor: "bg-cyan-500/15 text-cyan-700 dark:text-cyan-400 border-cyan-500/30",
     icon: ShieldCheck,
   },
-  ward_supervisor: {
-    label: "Ward Supervisor",
+  lga_supervisor: {
+    label: "LGA Election Supervisor",
+    badgeColor: "bg-cyan-500/15 text-cyan-700 dark:text-cyan-400 border-cyan-500/30",
+    icon: ShieldCheck,
+  },
+  ward_election_supervisor: {
+    label: "Ward Election Supervisor",
     badgeColor: "bg-purple-500/15 text-purple-700 dark:text-purple-400 border-purple-500/30",
     icon: ShieldCheck,
   },
+  ward_supervisor: {
+    label: "Ward Election Supervisor",
+    badgeColor: "bg-purple-500/15 text-purple-700 dark:text-purple-400 border-purple-500/30",
+    icon: ShieldCheck,
+  },
+  polling_agent: {
+    label: "Polling Agent",
+    badgeColor: "bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30",
+    icon: UserCheck,
+  },
   agent: {
-    label: "Polling Unit Agent",
+    label: "Polling Agent",
     badgeColor: "bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30",
     icon: UserCheck,
   },
@@ -159,7 +179,11 @@ function CampaignGroupPageComponent() {
   const filteredMembers = useMemo(() => {
     return members.filter((m) => {
       // Role filter
-      if (roleFilter !== "all" && m.role !== roleFilter) {
+      if (roleFilter === "supervisor") {
+        if (!m.role.includes("supervisor")) return false;
+      } else if (roleFilter === "agent") {
+        if (m.role !== "agent" && m.role !== "polling_agent") return false;
+      } else if (roleFilter !== "all" && m.role !== roleFilter) {
         return false;
       }
       // Search query
@@ -189,7 +213,7 @@ function CampaignGroupPageComponent() {
       if (m.role === "candidate") counts.candidate += 1;
       else if (m.role === "party_official") counts.party_official += 1;
       else if (m.role.includes("supervisor")) counts.supervisor += 1;
-      else if (m.role === "agent") counts.agent += 1;
+      else if (m.role === "agent" || m.role === "polling_agent") counts.agent += 1;
     }
     return counts;
   }, [members]);
@@ -413,7 +437,7 @@ function CampaignGroupPageComponent() {
                 { id: "all", label: "All Members", count: roleCounts.all },
                 { id: "candidate", label: "Candidates", count: roleCounts.candidate },
                 { id: "party_official", label: "Officials", count: roleCounts.party_official },
-                { id: "state_supervisor", label: "Supervisors", count: roleCounts.supervisor },
+                { id: "supervisor", label: "Supervisors", count: roleCounts.supervisor },
                 { id: "agent", label: "Agents", count: roleCounts.agent },
               ].map((pill) => (
                 <button

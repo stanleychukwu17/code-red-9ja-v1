@@ -333,12 +333,6 @@ func (h *Handler) processAutoAccept(ctx context.Context, uid int64) {
 
 			slog.Info("🎉 [AutoAccept] Party application approved successfully", "applicationID", app.ID)
 
-			if app.PollingUnitID.Valid && app.PollingUnitID.Int32 > 0 {
-				_ = h.q.RefreshSingleElectionGroupPollingUnitStats(ctx, queries.RefreshSingleElectionGroupPollingUnitStatsParams{
-					ElectionGroupID: app.ElectionGroupID,
-					PollingUnitID:   app.PollingUnitID.Int32,
-				})
-			}
 		}
 	}
 }

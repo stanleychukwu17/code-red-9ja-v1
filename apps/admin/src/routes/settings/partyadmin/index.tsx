@@ -137,7 +137,7 @@ function RouteComponent() {
             buttonText="Edit"
             onClick={() =>
               handleEdit(
-                "earnings_allocation_ward_supervisor",
+                "earnings_allocation_ward_election_supervisor",
                 "Ward Supervisor",
               )
             }
@@ -147,7 +147,7 @@ function RouteComponent() {
             description="Earnings percentage allocation."
             buttonText="Edit"
             onClick={() =>
-              handleEdit("earnings_allocation_lga_supervisor", "LGA Supervisor")
+              handleEdit("earnings_allocation_lga_election_supervisor", "LGA Supervisor")
             }
           />
           <SettingsTile
@@ -156,7 +156,7 @@ function RouteComponent() {
             buttonText="Edit"
             onClick={() =>
               handleEdit(
-                "earnings_allocation_state_supervisor",
+                "earnings_allocation_state_election_supervisor",
                 "State Supervisor",
               )
             }
@@ -180,7 +180,7 @@ function RouteComponent() {
             buttonText="Edit"
             onClick={() =>
               handleEditTestRequirements(
-                "test_requirements_ward_supervisor",
+                "test_requirements_ward_election_supervisor",
                 "Ward Supervisor",
               )
             }
@@ -191,7 +191,7 @@ function RouteComponent() {
             buttonText="Edit"
             onClick={() =>
               handleEditTestRequirements(
-                "test_requirements_lga_supervisor",
+                "test_requirements_lga_election_supervisor",
                 "LGA Supervisor",
               )
             }
@@ -202,7 +202,7 @@ function RouteComponent() {
             buttonText="Edit"
             onClick={() =>
               handleEditTestRequirements(
-                "test_requirements_state_supervisor",
+                "test_requirements_state_election_supervisor",
                 "State Supervisor",
               )
             }

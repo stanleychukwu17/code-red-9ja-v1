@@ -34,12 +34,7 @@ type TaskProcessor interface {
 	ProcessTaskCalculateFinalResult(ctx context.Context, task *asynq.Task) error
 	ProcessTaskExtractPUResultAI(ctx context.Context, task *asynq.Task) error
 	ProcessTaskAggregateLiveVotes(ctx context.Context, task *asynq.Task) error
-	ProcessTaskRefreshPollingUnitStats(ctx context.Context, task *asynq.Task) error
 	ProcessTaskSeedElectionGroupStats(ctx context.Context, task *asynq.Task) error
-	ProcessTaskRefreshWardStats(ctx context.Context, task *asynq.Task) error
-	ProcessTaskRefreshLGAStats(ctx context.Context, task *asynq.Task) error
-	ProcessTaskRefreshStateStats(ctx context.Context, task *asynq.Task) error
-	ProcessTaskRefreshGlobalStats(ctx context.Context, task *asynq.Task) error
 	// Scoped candidate rollup processors
 	ProcessTaskRollupSingleWard(ctx context.Context, task *asynq.Task) error
 	ProcessTaskRollupSingleStateConstituency(ctx context.Context, task *asynq.Task) error
@@ -104,13 +99,6 @@ func (redisTaskProcessor *RedisTaskProcessor) Start() error {
 	mux.HandleFunc(TaskExtractPUResultAI, redisTaskProcessor.ProcessTaskExtractPUResultAI)
 	mux.HandleFunc(TaskAggregateLiveVotes, redisTaskProcessor.ProcessTaskAggregateLiveVotes)
 	mux.HandleFunc(TaskSeedElectionGroupStats, redisTaskProcessor.ProcessTaskSeedElectionGroupStats)
-	mux.HandleFunc(TaskRefreshPollingUnitStats, redisTaskProcessor.ProcessTaskRefreshPollingUnitStats)
-
-	// Cascading stats refresh handlers (event-driven, per geographic unit).
-	mux.HandleFunc(TaskRefreshWardStats, redisTaskProcessor.ProcessTaskRefreshWardStats)
-	mux.HandleFunc(TaskRefreshLGAStats, redisTaskProcessor.ProcessTaskRefreshLGAStats)
-	mux.HandleFunc(TaskRefreshStateStats, redisTaskProcessor.ProcessTaskRefreshStateStats)
-	mux.HandleFunc(TaskRefreshGlobalStats, redisTaskProcessor.ProcessTaskRefreshGlobalStats)
 
 	// Scoped candidate rollup handlers (event-driven, bottom-up cascading).
 	mux.HandleFunc(TaskRollupSingleWard, redisTaskProcessor.ProcessTaskRollupSingleWard)

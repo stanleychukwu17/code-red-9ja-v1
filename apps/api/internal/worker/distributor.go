@@ -11,12 +11,6 @@ type TaskDistributor interface {
 	DistributeTaskCalculateFinalResult(ctx context.Context, payload *CalculateFinalResultPayload, opts ...asynq.Option) error
 	DistributeTaskSeedElectionGroupStats(ctx context.Context, payload *SeedElectionGroupStatsPayload, opts ...asynq.Option) error
 	DistributeTaskAggregateLiveVotes(ctx context.Context, payload *AggregateLiveVotesPayload, opts ...asynq.Option) error
-	DistributeTaskRefreshPollingUnitStats(ctx context.Context, payload *RefreshPollingUnitStatsPayload, opts ...asynq.Option) error
-	// Cascading stats refresh chain
-	DistributeTaskRefreshWardStats(ctx context.Context, payload *RefreshWardStatsPayload, opts ...asynq.Option) error
-	DistributeTaskRefreshLGAStats(ctx context.Context, payload *RefreshLGAStatsPayload, opts ...asynq.Option) error
-	DistributeTaskRefreshStateStats(ctx context.Context, payload *RefreshStateStatsPayload, opts ...asynq.Option) error
-	DistributeTaskRefreshGlobalStats(ctx context.Context, payload *RefreshGlobalStatsPayload, opts ...asynq.Option) error
 	// PU result AI extraction
 	DistributeTaskExtractPUResultAI(ctx context.Context, payload *ExtractPUResultAIPayload, opts ...asynq.Option) error
 	// Scoped candidate rollup chain

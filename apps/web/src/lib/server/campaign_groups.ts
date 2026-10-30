@@ -7,7 +7,7 @@ export type CampaignGroupMemberItem = {
   party_id: number;
   group_id: number;
   user_id: number;
-  role: "candidate" | "party_official" | "state_supervisor" | "lga_supervisor" | "ward_supervisor" | "agent" | string;
+  role: "candidate" | "party_official" | "state_election_supervisor" | "lga_election_supervisor" | "ward_election_supervisor" | "polling_agent" | "state_supervisor" | "lga_supervisor" | "ward_supervisor" | "agent" | string;
   can_broadcast: boolean;
   joined_at: string;
   fake_id?: string;

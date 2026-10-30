@@ -576,7 +576,7 @@ func (s *Service) getAssignmentInfo(ctx context.Context, userID int64, electionG
 			}
 		}
 
-	case "state_election_supervisor", "state_supervisor":
+	case "state_election_supervisor":
 		sup, err := s.q.GetStateSupervisorByElectionGroup(ctx, queries.GetStateSupervisorByElectionGroupParams{
 			UserID:          userID,
 			ElectionGroupID: electionGroupID,
@@ -585,7 +585,7 @@ func (s *Service) getAssignmentInfo(ctx context.Context, userID int64, electionG
 			return &AssignmentInfo{ID: sup.ID, PartyID: sup.PartyID, StateID: sup.StateID}, nil
 		}
 
-	case "lga_election_supervisor", "lga_supervisor":
+	case "lga_election_supervisor":
 		sup, err := s.q.GetLgaSupervisorByElectionGroup(ctx, queries.GetLgaSupervisorByElectionGroupParams{
 			UserID:          userID,
 			ElectionGroupID: electionGroupID,
@@ -594,7 +594,7 @@ func (s *Service) getAssignmentInfo(ctx context.Context, userID int64, electionG
 			return &AssignmentInfo{ID: sup.ID, PartyID: sup.PartyID, StateID: sup.StateID}, nil
 		}
 
-	case "ward_election_supervisor", "ward_supervisor":
+	case "ward_election_supervisor":
 		sup, err := s.q.GetWardSupervisorByElectionGroup(ctx, queries.GetWardSupervisorByElectionGroupParams{
 			UserID:          userID,
 			ElectionGroupID: electionGroupID,
@@ -663,7 +663,11 @@ func (s *Service) EvaluatePracticeTestPayout(
 	allocationKey := fmt.Sprintf("earnings_allocation_%s", roleKey)
 	allocationSetting, err := s.q.GetSystemSetting(ctx, allocationKey)
 	if err != nil {
-		allocationSetting, _ = s.q.GetSystemSetting(ctx, "earnings_allocation_polling_agent")
+		legacyKey := strings.Replace(allocationKey, "_election_supervisor", "_supervisor", 1)
+		allocationSetting, err = s.q.GetSystemSetting(ctx, legacyKey)
+		if err != nil {
+			allocationSetting, _ = s.q.GetSystemSetting(ctx, "earnings_allocation_polling_agent")
+		}
 	}
 	var alloc earningsAllocation
 	if len(allocationSetting.Value) > 0 {
@@ -678,7 +682,11 @@ func (s *Service) EvaluatePracticeTestPayout(
 	reqKey := fmt.Sprintf("test_requirements_%s", roleKey)
 	reqSetting, err := s.q.GetSystemSetting(ctx, reqKey)
 	if err != nil {
-		reqSetting, _ = s.q.GetSystemSetting(ctx, "test_requirements_polling_agent")
+		legacyReqKey := strings.Replace(reqKey, "_election_supervisor", "_supervisor", 1)
+		reqSetting, err = s.q.GetSystemSetting(ctx, legacyReqKey)
+		if err != nil {
+			reqSetting, _ = s.q.GetSystemSetting(ctx, "test_requirements_polling_agent")
+		}
 	}
 	var testReq testRequirements
 	if len(reqSetting.Value) > 0 {
@@ -822,19 +830,19 @@ func (s *Service) ProcessPracticeTestPayout(
 			ElectionGroupID: electionGroupID,
 			EarnedDeltaKobo: earnedKobo,
 		})
-	case "state_election_supervisor", "state_supervisor":
+	case "state_election_supervisor":
 		_, _ = qtx.UpdateStateSupervisorEarnedAmountKobo(ctx, queries.UpdateStateSupervisorEarnedAmountKoboParams{
 			UserID:          userID,
 			ElectionGroupID: electionGroupID,
 			EarnedDeltaKobo: earnedKobo,
 		})
-	case "lga_election_supervisor", "lga_supervisor":
+	case "lga_election_supervisor":
 		_, _ = qtx.UpdateLgaSupervisorEarnedAmountKobo(ctx, queries.UpdateLgaSupervisorEarnedAmountKoboParams{
 			UserID:          userID,
 			ElectionGroupID: electionGroupID,
 			EarnedDeltaKobo: earnedKobo,
 		})
-	case "ward_election_supervisor", "ward_supervisor":
+	case "ward_election_supervisor":
 		_, _ = qtx.UpdateWardSupervisorEarnedAmountKobo(ctx, queries.UpdateWardSupervisorEarnedAmountKoboParams{
 			UserID:          userID,
 			ElectionGroupID: electionGroupID,
@@ -1005,7 +1013,12 @@ func (s *Service) CalculatePotentialPayout(ctx context.Context, assignmentID int
 	case "readiness":
 		reqKey := fmt.Sprintf("test_requirements_%s", strings.ReplaceAll(roleType, " ", "_"))
 		totalRequired := 10
-		if reqSetting, err := s.q.GetSystemSetting(ctx, reqKey); err == nil {
+		legacyReqKey := strings.Replace(reqKey, "_election_supervisor", "_supervisor", 1)
+		reqSetting, err := s.q.GetSystemSetting(ctx, reqKey)
+		if err != nil {
+			reqSetting, err = s.q.GetSystemSetting(ctx, legacyReqKey)
+		}
+		if err == nil {
 			var testReq testRequirements
 			if jErr := json.Unmarshal(reqSetting.Value, &testReq); jErr == nil && testReq.TotalRequired > 0 {
 				totalRequired = testReq.TotalRequired
@@ -1273,7 +1286,11 @@ func (s *Service) EstimatePotentialPayout(
 	allocationKey := fmt.Sprintf("earnings_allocation_%s", strings.ReplaceAll(normRole, " ", "_"))
 	allocationSetting, err := s.q.GetSystemSetting(ctx, allocationKey)
 	if err != nil {
-		return EstimatePayoutResult{}, fmt.Errorf("get earnings allocation setting %q: %w", allocationKey, err)
+		legacyKey := strings.Replace(allocationKey, "_election_supervisor", "_supervisor", 1)
+		allocationSetting, err = s.q.GetSystemSetting(ctx, legacyKey)
+		if err != nil {
+			return EstimatePayoutResult{}, fmt.Errorf("get earnings allocation setting %q: %w", allocationKey, err)
+		}
 	}
 	var allocation earningsAllocation
 	if err := json.Unmarshal(allocationSetting.Value, &allocation); err != nil {
@@ -1411,7 +1428,7 @@ func (s *Service) GetAgentAllocations(
 			UserID:          userID,
 			ElectionGroupID: electionGroupID,
 		}); err == nil && wardSup.ID > 0 {
-			roleType = "ward_supervisor"
+			roleType = "ward_election_supervisor"
 			potentialPaymentKobo = wardSup.PotentialPaymentKobo
 			partyID = wardSup.PartyID
 		}
@@ -1423,7 +1440,7 @@ func (s *Service) GetAgentAllocations(
 			UserID:          userID,
 			ElectionGroupID: electionGroupID,
 		}); err == nil && lgaSup.ID > 0 {
-			roleType = "lga_supervisor"
+			roleType = "lga_election_supervisor"
 			potentialPaymentKobo = lgaSup.PotentialPaymentKobo
 			partyID = lgaSup.PartyID
 		}
@@ -1435,7 +1452,7 @@ func (s *Service) GetAgentAllocations(
 			UserID:          userID,
 			ElectionGroupID: electionGroupID,
 		}); err == nil && stateSup.ID > 0 {
-			roleType = "state_supervisor"
+			roleType = "state_election_supervisor"
 			potentialPaymentKobo = stateSup.PotentialPaymentKobo
 			partyID = stateSup.PartyID
 		}
@@ -1448,6 +1465,17 @@ func (s *Service) GetAgentAllocations(
 		} else {
 			roleType = "polling_agent"
 		}
+	}
+	roleType = strings.ReplaceAll(roleType, "-", "_")
+	switch roleType {
+	case "pollingagent":
+		roleType = "polling_agent"
+	case "ward_supervisor":
+		roleType = "ward_election_supervisor"
+	case "lga_supervisor":
+		roleType = "lga_election_supervisor"
+	case "state_supervisor":
+		roleType = "state_election_supervisor"
 	}
 
 	// If potentialPaymentKobo is missing, resolve base payment from party allocation
@@ -1464,7 +1492,11 @@ func (s *Service) GetAgentAllocations(
 	allocationKey := fmt.Sprintf("earnings_allocation_%s", strings.ReplaceAll(roleType, " ", "_"))
 	allocationSetting, err := s.q.GetSystemSetting(ctx, allocationKey)
 	if err != nil {
-		return AgentAllocationsResponse{}, fmt.Errorf("get earnings allocation setting %q: %w", allocationKey, err)
+		legacyKey := strings.Replace(allocationKey, "_election_supervisor", "_supervisor", 1)
+		allocationSetting, err = s.q.GetSystemSetting(ctx, legacyKey)
+		if err != nil {
+			return AgentAllocationsResponse{}, fmt.Errorf("get earnings allocation setting %q: %w", allocationKey, err)
+		}
 	}
 	var alloc earningsAllocation
 	if err := json.Unmarshal(allocationSetting.Value, &alloc); err != nil {
