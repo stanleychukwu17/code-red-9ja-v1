@@ -120,7 +120,7 @@ func (s *CampaignGroupsService) GetCampaignGroupByID(ctx context.Context, id int
 }
 
 // SyncPartyOfficialsToGroup synchronizes the party's chapter officials for the group's scope and adds them to the campaign group.
-// It is protected by a 1-hour Redis cooldown lock per group to prevent excessive database lookups.
+// It is protected by a 30-minute Redis cooldown lock per group to prevent excessive database lookups.
 func (s *CampaignGroupsService) SyncPartyOfficialsToGroup(ctx context.Context, groupID int64) (*SyncOfficialsResult, error) {
 	if groupID <= 0 {
 		return nil, fmt.Errorf("invalid campaign group id: %d", groupID)
@@ -131,10 +131,10 @@ func (s *CampaignGroupsService) SyncPartyOfficialsToGroup(ctx context.Context, g
 		return nil, fmt.Errorf("failed to fetch campaign group %d: %w", groupID, err)
 	}
 
-	// 1-hour rate limit lock per group to avoid spamming the database
+	// 30-minute rate limit lock per group to avoid spamming the database
 	lockKey := fmt.Sprintf("%s%d", db.RedisCampaignGroupSyncLock, groupID)
 	_, err = s.rdb.SetArgs(ctx, lockKey, "1", redis.SetArgs{
-		TTL:  db.RedisOneHourTTL,
+		TTL:  db.RedisThirtyMinutesTTL,
 		Mode: "NX", // only set if not exists
 	}).Result()
 
@@ -329,35 +329,35 @@ func (s *CampaignGroupsService) GetGroupMembers(ctx context.Context, groupID int
 	return members, nil
 }
 
-// EnsureElectionCandidateGroup provisions the anchor campaign group for a fielded candidate or running mate
-// and registers them as a group member with broadcasting permissions.
-func (s *CampaignGroupsService) EnsureElectionCandidateGroup(ctx context.Context, partyID int16, election queries.Election, candidateID int64) (*queries.CampaignGroup, error) {
-	campaignScope := MapElectionScopeToCampaignScope(election.Scope)
-	stateID, lgaID, wardID := resolveGroupBounds(election, campaignScope)
+// GetOrCreateCampaignGroupInput contains parameters to resolve or provision a campaign group.
+type GetOrCreateCampaignGroupInput struct {
+	PartyID         int16
+	ElectionGroupID int32
+	Scope           string
+	StateID         pgtype.Int4
+	LgaID           pgtype.Int4
+	WardID          pgtype.Int4
+}
 
-	// 1. Find or create the anchor campaign group targeting this election cycle
+// GetOrCreateCampaignGroup finds or provisions a campaign group for a given party,
+// election cycle, and territorial scope, and ensures party chapter officials are populated.
+func (s *CampaignGroupsService) GetOrCreateCampaignGroup(ctx context.Context, input GetOrCreateCampaignGroupInput) (*queries.CampaignGroup, error) {
 	group, err := s.queries.FindOrCreateCampaignGroup(ctx, queries.FindOrCreateCampaignGroupParams{
-		PartyID:               partyID,
-		TargetElectionGroupID: utils.PgInt4FromPositive(election.ElectionGroupID),
-		Scope:                 campaignScope,
-		StateID:               stateID,
-		LgaID:                 lgaID,
-		WardID:                wardID,
-		Name:                  pgtype.Text{Valid: false}, // dynamic fallback default
+		PartyID:               input.PartyID,
+		TargetElectionGroupID: utils.PgInt4FromPositive(input.ElectionGroupID),
+		Scope:                 input.Scope,
+		StateID:               input.StateID,
+		LgaID:                 input.LgaID,
+		WardID:                input.WardID,
+		Name:                  pgtype.Text{Valid: false},
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to ensure campaign group for election %d: %w", election.ID, err)
+		return nil, fmt.Errorf("failed to find or create campaign group: %w", err)
 	}
 
-	// 2. Add or update candidate as group member with election cycle scope
-	_, err = s.AddCampaignGroupMember(ctx, partyID, utils.PgInt4FromPositive(election.ElectionGroupID), group.ID, candidateID, "candidate", true)
-	if err != nil {
-		return nil, fmt.Errorf("failed to add candidate %d to campaign group %d: %w", candidateID, group.ID, err)
-	}
-
-	// 3. Populate party chapter officials if not already added to this group
+	// Populate party chapter officials if not already added to this group
 	if !group.OfficialsAdded {
-		if syncRes, err := s.syncPartyOfficialsToGroup(ctx, partyID, group); err != nil {
+		if syncRes, err := s.syncPartyOfficialsToGroup(ctx, input.PartyID, group); err != nil {
 			slog.Warn("failed to sync party officials to campaign group", "groupID", group.ID, "error", err)
 		} else if syncRes != nil && syncRes.OfficialsAdded > 0 {
 			group.OfficialsAdded = true
@@ -365,6 +365,32 @@ func (s *CampaignGroupsService) EnsureElectionCandidateGroup(ctx context.Context
 	}
 
 	return &group, nil
+}
+
+// EnsureElectionCandidateInGroup provisions the anchor campaign group for a fielded candidate or running mate
+// and registers them as a group member with broadcasting permissions.
+func (s *CampaignGroupsService) EnsureElectionCandidateInGroup(ctx context.Context, partyID int16, election queries.Election, candidateID int64) (*queries.CampaignGroup, error) {
+	campaignScope := MapElectionScopeToCampaignScope(election.Scope)
+	stateID, lgaID, wardID := resolveGroupBounds(election, campaignScope)
+
+	group, err := s.GetOrCreateCampaignGroup(ctx, GetOrCreateCampaignGroupInput{
+		PartyID:         partyID,
+		ElectionGroupID: election.ElectionGroupID,
+		Scope:           campaignScope,
+		StateID:         stateID,
+		LgaID:           lgaID,
+		WardID:          wardID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to ensure campaign group for election %d: %w", election.ID, err)
+	}
+
+	_, err = s.AddCampaignGroupMember(ctx, partyID, utils.PgInt4FromPositive(election.ElectionGroupID), group.ID, candidateID, "candidate", true)
+	if err != nil {
+		return nil, fmt.Errorf("failed to add candidate %d to campaign group %d: %w", candidateID, group.ID, err)
+	}
+
+	return group, nil
 }
 
 // RemoveCandidateFromElectionGroup revokes candidate membership across all campaign groups for the party in an election cycle.
@@ -385,4 +411,59 @@ func (s *CampaignGroupsService) RemoveCandidateFromElectionGroup(ctx context.Con
 	}
 
 	return nil
+}
+
+type EnsureAgentCampaignInGroupInput struct {
+	PartyID         int16
+	ElectionGroupID int32
+	UserID          int64
+	Role            string
+	StateID         int16
+	LgaID           int32
+	WardID          int32
+	PollingUnitID   int32
+}
+
+// EnsureAgentCampaignGroupInput is an alias for backward compatibility.
+type EnsureAgentCampaignGroupInput = EnsureAgentCampaignInGroupInput
+
+// EnsureAgentCampaignInGroup provisions or resolves the campaign group for an approved supervisor or polling agent,
+// enrolls the user as a member with their operational role, and ensures party officials at that tier are populated.
+func (s *CampaignGroupsService) EnsureAgentCampaignInGroup(ctx context.Context, input EnsureAgentCampaignInGroupInput) (*queries.CampaignGroup, error) {
+	scope := "ward"
+	switch input.Role {
+	case "state_election_supervisor":
+		scope = "state"
+	case "lga_election_supervisor":
+		scope = "lga"
+	}
+
+	sID := utils.PgInt4FromPositive(input.StateID)
+	var lID, wID pgtype.Int4
+	if scope == "lga" || scope == "ward" {
+		lID = utils.PgInt4FromPositive(input.LgaID)
+	}
+	if scope == "ward" {
+		wID = utils.PgInt4FromPositive(input.WardID)
+	}
+
+	group, err := s.GetOrCreateCampaignGroup(ctx, GetOrCreateCampaignGroupInput{
+		PartyID:         input.PartyID,
+		ElectionGroupID: input.ElectionGroupID,
+		Scope:           scope,
+		StateID:         sID,
+		LgaID:           lID,
+		WardID:          wID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// Add or update user as group member
+	_, err = s.AddCampaignGroupMember(ctx, input.PartyID, utils.PgInt4FromPositive(input.ElectionGroupID), group.ID, input.UserID, input.Role, true)
+	if err != nil {
+		return nil, fmt.Errorf("failed to add member %d to campaign group %d: %w", input.UserID, group.ID, err)
+	}
+
+	return group, nil
 }

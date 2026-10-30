@@ -44,6 +44,8 @@ type TaskProcessor interface {
 	ProcessTaskRollupSingleState(ctx context.Context, task *asynq.Task) error
 	ProcessTaskRollupSingleElection(ctx context.Context, task *asynq.Task) error
 	ProcessTaskDeleteAsset(ctx context.Context, task *asynq.Task) error
+	ProcessTaskEnrollAgentInCampaignGroup(ctx context.Context, task *asynq.Task) error
+	SetCampaignGroupsService(campaignGroupsService CampaignGroupsService)
 	ProcessDailyMarketingCampaignDeductions()
 	ProcessINECResultGrabberSync()
 }
@@ -55,9 +57,14 @@ type RedisTaskProcessor struct {
 	pool            *pgxpool.Pool
 	rdb             *redis.Client
 	taskDistributor TaskDistributor
-	cfg             *config.Config
-	r2Svc           *r2service.R2Service
-	broadcaster     realtime.Broadcaster
+	cfg                   *config.Config
+	r2Svc                 *r2service.R2Service
+	broadcaster           realtime.Broadcaster
+	campaignGroupsService CampaignGroupsService
+}
+
+func (redisTaskProcessor *RedisTaskProcessor) SetCampaignGroupsService(campaignGroupsService CampaignGroupsService) {
+	redisTaskProcessor.campaignGroupsService = campaignGroupsService
 }
 
 func NewRedisTaskProcessor(redisOpt asynq.RedisClientOpt, q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client, distributor TaskDistributor, cfg *config.Config, r2Svc *r2service.R2Service, broadcaster realtime.Broadcaster) TaskProcessor {
@@ -110,6 +117,7 @@ func (redisTaskProcessor *RedisTaskProcessor) Start() error {
 	mux.HandleFunc(TaskRollupSingleElection, redisTaskProcessor.ProcessTaskRollupSingleElection)
 	mux.HandleFunc(TaskDeleteAsset, redisTaskProcessor.ProcessTaskDeleteAsset)
 	mux.HandleFunc(TaskCheckOrphanFile, redisTaskProcessor.ProcessTaskCheckOrphanFile)
+	mux.HandleFunc(TaskEnrollAgentInCampaignGroup, redisTaskProcessor.ProcessTaskEnrollAgentInCampaignGroup)
 
 	// Daily Marketing Campaign Deductions & Auto-Completion Worker (runs every day at 00:05 AM)
 	// Recommended schedule: "5 0 * * *" (5 minutes past midnight) to process previous day's campaign allocations cleanly.

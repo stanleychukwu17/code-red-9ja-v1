@@ -97,7 +97,7 @@ import (
 )
 
 // New creates and returns a configured Chi router.
-func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor worker.TaskDistributor) http.Handler {
+func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor worker.TaskDistributor, processor worker.TaskProcessor) http.Handler {
 	mainRouter := chi.NewRouter()
 
 	// Initialize dependencies
@@ -169,6 +169,9 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	filesService := filesservice.NewFilesService(q, r2Svc, distributor)
 	campaignGroupsService := campaigngroupsservice.NewCampaignGroupsService(q, pool, rdb, partiesService)
 
+	// Wire services needed for background task processing
+	processor.SetCampaignGroupsService(campaignGroupsService)
+
 	usersService.SetPageVerificationsService(pageVerificationsService)
 	usersService.SetPartyService(partiesService)
 	usersService.SetFollowsService(followsService)
@@ -198,7 +201,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	usersHandler := usershandler.NewHandler(usersService, auditService, bodiesService, permissionsService, partiesService, filesService, utilsInstance)
 	pageVerificationsHandler := pageverificationshandler.NewHandler(pageVerificationsService, utilsInstance)
 	pollingUnitAssignmentsHandler := puassignmentshandler.NewHandler(pollingUnitAssignmentsService, usersService, pollingUnitUpdatesService, utilsInstance, earningsService)
-	partyApplicationsHandler := partyapplicationshandler.NewHandler(partyApplicationsService, usersService, partiesService, permissionsService, notificationsService, auditService, utilsInstance)
+	partyApplicationsHandler := partyapplicationshandler.NewHandler(partyApplicationsService, usersService, partiesService, permissionsService, campaignGroupsService, distributor, notificationsService, auditService, utilsInstance)
 	pollingUnitUpdatesHandler := puupdateshandler.NewHandler(pollingUnitUpdatesService, utilsInstance)
 	pollingUnitResultsHandler := puresultshandler.NewHandler(pollingUnitResultsService, utilsInstance)
 	supervisorAssignmentsHandler := supervisorassignmentshandler.NewHandler(supervisorAssignmentsService, utilsInstance)

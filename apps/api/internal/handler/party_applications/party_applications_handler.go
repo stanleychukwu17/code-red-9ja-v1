@@ -8,10 +8,13 @@ import (
 	"free9ja/api/internal/db/queries"
 	apimiddleware "free9ja/api/internal/middleware"
 	"free9ja/api/internal/service/audit"
+	campaigngroupsservice "free9ja/api/internal/service/campaign_groups"
 	"free9ja/api/internal/service/notifications"
 	partyapplications "free9ja/api/internal/service/party_applications"
 	permissionsservice "free9ja/api/internal/service/permissions"
 	"free9ja/api/internal/utils"
+	"free9ja/api/internal/worker"
+	"log/slog"
 	"net/http"
 	"os"
 	"strconv"
@@ -47,25 +50,33 @@ type PermissionsService interface {
 	CheckPartyModificationPermission(claims *utils.JWTClaims, partyID int16) (bool, permissionsservice.PartyModificationPermissions, error)
 }
 
-type Handler struct {
-	service              PartyApplicationsService
-	usersService         UsersService
-	partiesService       PartiesService
-	permissionsService   PermissionsService
-	notificationsService notifications.NotificationsService
-	auditService         audit.AuditService
-	utils                *utils.Utils
+type CampaignGroupsService interface {
+	EnsureAgentCampaignInGroup(ctx context.Context, input campaigngroupsservice.EnsureAgentCampaignInGroupInput) (*queries.CampaignGroup, error)
 }
 
-func NewHandler(service PartyApplicationsService, usersService UsersService, partiesService PartiesService, permissionsService PermissionsService, notificationsService notifications.NotificationsService, auditService audit.AuditService, utils *utils.Utils) *Handler {
+type Handler struct {
+	service               PartyApplicationsService
+	usersService          UsersService
+	partiesService        PartiesService
+	permissionsService    PermissionsService
+	campaignGroupsService CampaignGroupsService
+	distributor           worker.TaskDistributor
+	notificationsService  notifications.NotificationsService
+	auditService          audit.AuditService
+	utils                 *utils.Utils
+}
+
+func NewHandler(service PartyApplicationsService, usersService UsersService, partiesService PartiesService, permissionsService PermissionsService, campaignGroupsService CampaignGroupsService, distributor worker.TaskDistributor, notificationsService notifications.NotificationsService, auditService audit.AuditService, utils *utils.Utils) *Handler {
 	return &Handler{
-		service:              service,
-		usersService:         usersService,
-		partiesService:       partiesService,
-		permissionsService:   permissionsService,
-		notificationsService: notificationsService,
-		auditService:         auditService,
-		utils:                utils,
+		service:               service,
+		usersService:          usersService,
+		partiesService:        partiesService,
+		permissionsService:    permissionsService,
+		campaignGroupsService: campaignGroupsService,
+		distributor:           distributor,
+		notificationsService:  notificationsService,
+		auditService:          auditService,
+		utils:                 utils,
 	}
 }
 
@@ -652,12 +663,7 @@ func (h *Handler) ApproveApplication(w http.ResponseWriter, r *http.Request) {
 		natChapterID = &chapID
 	}
 
-	var puIDPtr *int32
-	if req.PollingUnitID > 0 {
-		puIDPtr = &req.PollingUnitID
-	} else if updatedApp.PollingUnitID.Valid {
-		puIDPtr = &updatedApp.PollingUnitID.Int32
-	}
+	puIDPtr := utils.PtrFromPgInt4(updatedApp.PollingUnitID)
 
 	// Asynchronously send notifications to applicant and party national chapter
 	h.notificationsService.NotifyAgentApplicationApproved(r.Context(), notifications.NotifyAgentApplicationApprovedParams{
@@ -687,6 +693,20 @@ func (h *Handler) ApproveApplication(w http.ResponseWriter, r *http.Request) {
 		OldValues:  auditOldValues,
 		NewValues:  auditNewValues,
 	})
+
+	// Enqueue campaign group enrollment and chapter officials sync task
+	if distErr := h.distributor.DistributeTaskEnrollAgentInCampaignGroup(r.Context(), &worker.EnrollAgentInCampaignGroupPayload{
+		PartyID:         app.PartyID,
+		ElectionGroupID: app.ElectionGroupID,
+		UserID:          app.UserID,
+		Role:            roleType,
+		StateID:         updatedApp.StateID,
+		LgaID:           updatedApp.LgaID.Int32,
+		WardID:          updatedApp.WardID.Int32,
+		PollingUnitID:   updatedApp.PollingUnitID.Int32,
+	}); distErr != nil {
+		slog.Error("failed to enqueue enroll agent in campaign group task", "userID", app.UserID, "role", roleType, "error", distErr)
+	}
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Polling agent application approved and assigned successfully", map[string]interface{}{
 		"application": updatedApp,

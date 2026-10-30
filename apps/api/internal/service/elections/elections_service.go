@@ -54,7 +54,7 @@ type pageVerificationsService interface {
 }
 
 type campaignGroupsService interface {
-	EnsureElectionCandidateGroup(ctx context.Context, partyID int16, election queries.Election, candidateID int64) (*queries.CampaignGroup, error)
+	EnsureElectionCandidateInGroup(ctx context.Context, partyID int16, election queries.Election, candidateID int64) (*queries.CampaignGroup, error)
 	RemoveCandidateFromElectionGroup(ctx context.Context, partyID int16, electionGroupID int32, candidateID int64) error
 }
 
@@ -1466,7 +1466,7 @@ func (s *ElectionsService) FieldPartyCandidate(ctx context.Context, election que
 		}
 
 		// Automatically enroll candidate into their anchor campaign group
-		if _, err := s.campaignGroupsService.EnsureElectionCandidateGroup(ctx, partyID, election, c.userID); err != nil {
+		if _, err := s.campaignGroupsService.EnsureElectionCandidateInGroup(ctx, partyID, election, c.userID); err != nil {
 			slog.Warn("failed to enroll candidate into campaign group", "userID", c.userID, "error", err)
 		}
 

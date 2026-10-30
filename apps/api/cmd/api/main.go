@@ -99,10 +99,7 @@ func newApp(ctx context.Context, cfg *config.Config) *App {
 		DB:       cfg.Redis.DB,
 	}
 
-	// Initialize worker
-	q := queries.New(pool)
-	distributor := worker.NewRedisTaskDistributor(redisOpt)
-	broadcaster := realtime.NewBroadcasterFromEnv()
+	// Initialize Cloudflare R2 storage service, used mainly in the processor
 	var r2Svc *r2service.R2Service
 	if cfg != nil {
 		var r2Err error
@@ -120,10 +117,15 @@ func newApp(ctx context.Context, cfg *config.Config) *App {
 			slog.Warn("failed to initialize R2 service for worker processor", "err", r2Err)
 		}
 	}
+
+	// Initialize worker, distributor, broadcaster and processor
+	q := queries.New(pool)
+	distributor := worker.NewRedisTaskDistributor(redisOpt)
+	broadcaster := realtime.NewBroadcasterFromEnv()
 	processor := worker.NewRedisTaskProcessor(redisOpt, q, pool, rdb, distributor, cfg, r2Svc, broadcaster)
 
 	// Initialize router
-	r := router.New(cfg, pool, rdb, distributor)
+	r := router.New(cfg, pool, rdb, distributor, processor)
 	addr := fmt.Sprintf(":%s", cfg.Port)
 
 	return &App{

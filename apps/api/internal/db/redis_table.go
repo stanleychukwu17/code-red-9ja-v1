@@ -5,6 +5,7 @@ import "time"
 const (
 	// Reusable duration TTLs
 	RedisFifteenMinutesTTL = 15 * time.Minute
+	RedisThirtyMinutesTTL  = 30 * time.Minute
 	RedisOneHourTTL        = 1 * time.Hour
 	RedisOneDayTTL         = 24 * time.Hour
 	RedisSevenDaysTTL      = 7 * 24 * time.Hour
