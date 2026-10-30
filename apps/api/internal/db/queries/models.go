@@ -579,7 +579,7 @@ type PartyAgentApplication struct {
 	PartyID         int16              `json:"party_id"`
 	UserID          int64              `json:"user_id"`
 	PollingUnitID   pgtype.Int4        `json:"polling_unit_id"`
-	StateID         pgtype.Int2        `json:"state_id"`
+	StateID         int16              `json:"state_id"`
 	LgaID           pgtype.Int4        `json:"lga_id"`
 	WardID          pgtype.Int4        `json:"ward_id"`
 	Role            string             `json:"role"`

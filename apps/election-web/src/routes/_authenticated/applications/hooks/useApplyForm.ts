@@ -10,8 +10,7 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import type { ApplySearch } from "../apply";
 import {
-  getAppliedElectionGroupIds,
-  getLockedPartyId,
+  getActiveApplication,
   validatePartySearch,
 } from "../utils/partyValidation";
 import { validateAndFormatApplicationPayload } from "../utils/applicationValidation";
@@ -111,7 +110,7 @@ export function useApplyForm({ search, navigate }: UseApplyFormOptions) {
   const { data: applications = [] } = useQuery({
     queryKey: QUERY_KEYS.applications,
     queryFn: async () => {
-      const res = await getApplications();
+      const res = await getApplications({ data: { active_election_only: true } });
       if (res?.success && res.data?.applications) {
         return res.data.applications;
       }
@@ -120,22 +119,11 @@ export function useApplyForm({ search, navigate }: UseApplyFormOptions) {
     staleTime: Infinity,
   });
 
-  const appliedElectionGroupIds = useMemo(
-    () => getAppliedElectionGroupIds(applications),
+
+  const activeApplication = useMemo(
+    () => getActiveApplication(applications),
     [applications],
   );
-
-  const lockedPartyId = useMemo(
-    () => getLockedPartyId(applications),
-    [applications],
-  );
-
-  // Synchronize locked party selection to form state
-  useEffect(() => {
-    if (lockedPartyId && !selectedPartyId) {
-      setSelectedPartyId(lockedPartyId);
-    }
-  }, [lockedPartyId, selectedPartyId, setSelectedPartyId]);
 
   const selectedParty = useMemo(() => {
     return parties.find((p: any) => p.id === selectedPartyId) || null;
@@ -147,7 +135,7 @@ export function useApplyForm({ search, navigate }: UseApplyFormOptions) {
       return;
     }
 
-    const result = validatePartySearch({ search, parties, lockedPartyId });
+    const result = validatePartySearch({ search, parties });
 
     if (!result) {
       setHasProcessedSearchParty(true);
@@ -164,7 +152,7 @@ export function useApplyForm({ search, navigate }: UseApplyFormOptions) {
     setSelectedPartyId(result.party.id);
     setStep(3);
     setHasProcessedSearchParty(true);
-  }, [parties, partiesLoading, search, lockedPartyId, hasProcessedSearchParty]);
+  }, [parties, partiesLoading, search, hasProcessedSearchParty]);
 
   // Mutation submitting the full polling agent application
   const submitMutation = useMutation({
@@ -236,12 +224,11 @@ export function useApplyForm({ search, navigate }: UseApplyFormOptions) {
     selectedPartyId,
     setSelectedPartyId,
     selectedParty,
-    lockedPartyId,
+    activeApplication,
     // Elections
     selectedElectionId,
     setSelectedElectionId,
     selectedElectionIds: selectedElectionId ? [selectedElectionId] : [],
-    appliedElectionGroupIds,
     // Photo / Avatar
     avatarUrl,
     setAvatarUrl,

@@ -611,7 +611,7 @@ func (s *Service) getAssignmentInfo(ctx context.Context, userID int64, electionG
 				return &AssignmentInfo{
 					ID:      0,
 					PartyID: app.PartyID,
-					StateID: app.StateID.Int16,
+					StateID: app.StateID,
 				}, nil
 			}
 		}

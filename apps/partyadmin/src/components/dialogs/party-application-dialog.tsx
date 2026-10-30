@@ -42,8 +42,6 @@ import {
   Loader2,
   Shield,
   ShieldCheck,
-  FileText,
-  ExternalLink,
   CheckCircle,
   ArrowRightLeft,
   MapPin,
@@ -64,7 +62,6 @@ export type ApplicationData = {
   lgaName?: string;
   wardName?: string;
   pollingUnitName?: string;
-  degreeCertificateUrl?: string;
   voterId?: string;
   phone?: string;
   callingPhone?: string;
@@ -83,7 +80,6 @@ export type ApplicationData = {
   lgaId?: number;
   partyLogo?: string;
   partyShortName?: string;
-  voters_card_image?: string | null;
 };
 
 export const getRoleLabel = (r?: string) => {
@@ -192,8 +188,6 @@ export function PartyApplicationDialog({
       }
     }
   }, [open, application]);
-
-  const votersCardImage = application.voters_card_image || "";
 
   // Fetch recommendations only if role is polling_agent
   const canFetchRecommendations =
@@ -672,24 +666,6 @@ export function PartyApplicationDialog({
                   {application.educationalStatus || "N/A"}
                 </p>
               </div>
-
-              {application.degreeCertificateUrl && (
-                <div className="col-span-2 pt-2 border-t border-purple-200/60 flex items-center justify-between">
-                  <span className="text-xs text-c-60 font-medium">
-                    Graduation Certificate
-                  </span>
-                  <a
-                    href={application.degreeCertificateUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-purple-700 hover:text-purple-800 hover:underline"
-                  >
-                    <FileText className="size-3.5" />
-                    View Degree Certificate
-                    <ExternalLink className="size-3" />
-                  </a>
-                </div>
-              )}
             </div>
 
             {/* Supervisor Scope Banner if role is supervisor */}

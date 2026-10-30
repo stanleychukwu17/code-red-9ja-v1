@@ -6,6 +6,7 @@ import { AlertCircle } from "lucide-react";
 import { ApplyProvider, useApplyContext } from "./context/ApplyContext";
 import { ApplyFooter } from "./components/-ApplyFooter";
 import { ApplySuccess } from "./components/-ApplySuccess";
+import { ActiveApplicationWarning } from "./components/ActiveApplicationWarning";
 import {
   ContactDetailsStep,
   EducationalStep,
@@ -72,12 +73,17 @@ function ApplyPage() {
 function ApplyPageContent() {
   const form = useApplyContext();
   const {
-    user,
     step,
     handleBackClick,
     submitError,
     success,
+    activeApplication,
   } = form;
+
+  // Block and display warning if user already has an active, unexhausted election application
+  if (activeApplication) {
+    return <ActiveApplicationWarning application={activeApplication} />;
+  }
 
   // Render success congratulations screen upon successful submission
   if (success) {

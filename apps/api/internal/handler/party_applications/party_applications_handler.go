@@ -9,6 +9,7 @@ import (
 	partyapplications "free9ja/api/internal/service/party_applications"
 	"free9ja/api/internal/utils"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 
@@ -17,6 +18,7 @@ import (
 
 type PartyApplicationsService interface {
 	SubmitApplication(ctx context.Context, input partyapplications.SubmitApplicationInput) (int64, error)
+	HasActiveAgentApplication(ctx context.Context, userID int64) (bool, error)
 	SubmitSupervisorApplication(ctx context.Context, input partyapplications.SubmitSupervisorApplicationInput) (queries.PartyAgentApplication, error)
 	GetApplicationByID(ctx context.Context, id int64) (queries.PartyAgentApplication, error)
 	ListApplications(ctx context.Context, userID int64, partyID int16, electionGroupID int32, status string, stateID int16, lgaID, wardID int32, activeElectionOnly bool, limit int32, cursor int64) ([]partyapplications.PartyApplicationListItem, error)
@@ -32,17 +34,23 @@ type UsersService interface {
 	GetUserPhoneNumbersByUserID(ctx context.Context, userID int64) ([]queries.UsersPhoneNumber, error)
 }
 
-type Handler struct {
-	service      PartyApplicationsService
-	usersService UsersService
-	utils        *utils.Utils
+type PartiesService interface {
+	GetPartyByID(ctx context.Context, partyID int16) (queries.Party, error)
 }
 
-func NewHandler(service PartyApplicationsService, usersService UsersService, utils *utils.Utils) *Handler {
+type Handler struct {
+	service        PartyApplicationsService
+	usersService   UsersService
+	partiesService PartiesService
+	utils          *utils.Utils
+}
+
+func NewHandler(service PartyApplicationsService, usersService UsersService, partiesService PartiesService, utils *utils.Utils) *Handler {
 	return &Handler{
-		service:      service,
-		usersService: usersService,
-		utils:        utils,
+		service:        service,
+		usersService:   usersService,
+		partiesService: partiesService,
+		utils:          utils,
 	}
 }
 
@@ -79,13 +87,24 @@ type SubmitApplicationRequest struct {
 // @Security     BearerAuth
 // @Router       /party-applications [post]
 func (h *Handler) SubmitApplication(w http.ResponseWriter, r *http.Request) {
-	// 1. Verify authentication claims
+	// Verify authentication claims
 	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
 	if !ok {
 		return
 	}
 
-	// 2. Parse and validate JSON request payload
+	// Fail fast: verify applicant does not already have an active application for an upcoming/active election
+	hasActive, err := h.service.HasActiveAgentApplication(r.Context(), claims.UserID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to verify application status")
+		return
+	}
+	if hasActive {
+		h.utils.RespondError(w, http.StatusConflict, "You already have an active application for an upcoming election. You cannot apply for another election group until your current assignment concludes")
+		return
+	}
+
+	// Parse and validate JSON request payload
 	var req SubmitApplicationRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
@@ -98,13 +117,35 @@ func (h *Handler) SubmitApplication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 3. Ensure applicant has at least 1 WhatsApp-enabled phone number
+	// In production, applicants must provide an uploaded avatar photo
+	if strings.EqualFold(os.Getenv("ENV"), "production") && (req.AvatarFileID == nil || *req.AvatarFileID <= 0) {
+		h.utils.RespondError(w, http.StatusBadRequest, "avatar_file_id is required in production")
+		return
+	}
+
+	// Validate party is active, verified, and has available slots
+	party, err := h.partiesService.GetPartyByID(r.Context(), req.PartyID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusNotFound, "selected political party not found")
+		return
+	}
+	if party.Status != "active" || !party.IsVerified.Bool {
+		h.utils.RespondError(w, http.StatusBadRequest, "this political party is not currently verified or accepting applications")
+		return
+	}
+	if party.Slots <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "this political party has no available slots to accept applications")
+		return
+	}
+
+	// Ensure applicant has at least 1 WhatsApp-enabled phone number
 	phones, err := h.usersService.GetUserPhoneNumbersByUserID(r.Context(), claims.UserID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to verify contact phone numbers")
 		return
 	}
 
+	// Check if any active phone number has WhatsApp enabled
 	hasWhatsApp := false
 	for _, p := range phones {
 		if (!p.IsActive.Valid || p.IsActive.Bool) && (p.OnWhatsapp.Valid && p.OnWhatsapp.Bool) {
@@ -112,12 +153,13 @@ func (h *Handler) SubmitApplication(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 	}
+	// Reject application if no reachable WhatsApp contact exists
 	if !hasWhatsApp {
 		h.utils.RespondError(w, http.StatusBadRequest, "At least one WhatsApp-enabled phone number is required before submitting an application")
 		return
 	}
 
-	// 4. Delegate application submission and profile updates to service layer
+	// Delegate application submission and profile updates to service layer
 	appID, err := h.service.SubmitApplication(r.Context(), partyapplications.SubmitApplicationInput{
 		UserID:            claims.UserID,
 		UserFakeID:        claims.FakeID,
@@ -149,7 +191,7 @@ func (h *Handler) SubmitApplication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 5. Structure response payload
+	// Structure response payload
 	respData := map[string]interface{}{
 		"application_id": appID,
 	}

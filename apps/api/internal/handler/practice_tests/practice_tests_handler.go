@@ -321,7 +321,7 @@ func (h *Handler) processAutoAccept(ctx context.Context, uid int64) {
 				ApplicationID: app.ID,
 				PollingUnitID: app.PollingUnitID.Int32,
 				RoleType:      app.Role,
-				StateID:       app.StateID.Int16,
+				StateID:       app.StateID,
 				LgaID:         app.LgaID.Int32,
 				WardID:        app.WardID.Int32,
 				AssignedBy:    uid,

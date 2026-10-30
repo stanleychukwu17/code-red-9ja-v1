@@ -12,7 +12,7 @@ INSERT INTO party_agent_applications (
   $1, $2, $3, $4, $5, $6, $7, 'pending'
 ) RETURNING id;
 
--- name: UpdateUserAgentDetails :exec
+-- name: UpdateUserAgentDetails :one
 UPDATE users
 SET
   avatar = COALESCE($2, avatar),
@@ -21,7 +21,8 @@ SET
   current_ward = $5,
   polling_unit_id = sqlc.arg(polling_unit_id),
   updated_at = NOW()
-WHERE id = $1;
+WHERE id = $1
+RETURNING avatar_file_id;
 
 -- name: GetApplicationByID :one
 SELECT * FROM party_agent_applications
@@ -44,14 +45,12 @@ SELECT
   pa.updated_at,
   u.first_name,
   u.last_name,
-  u.email,
   u.phone,
   u.username,
   u.avatar,
-  u.voters_card_image,
   u.current_country,
-  COALESCE(pa.state_id, pu.state_id, u.current_state)::smallint AS current_state,
-  COALESCE(pa.lga_id, pu.lga_id, u.current_lga)::integer AS current_lga,
+  pa.state_id AS current_state,
+  pa.lga_id AS current_lga,
   u.current_city,
   uba.account_number AS bank_account_number,
   uba.bank_code AS bank_code,
@@ -62,38 +61,37 @@ SELECT
   up.religion,
   up.marital_status,
   up.address,
-  up.degree_certificate_url,
-  COALESCE(pa.ward_id, pu.ward_id, u.current_ward)::integer AS current_ward,
+  pa.ward_id AS current_ward,
   eg.name AS election_group_name,
   eg.election_date,
   p.name AS party_name,
   p.short_name AS party_short_name,
   p.logo AS party_logo,
-  COALESCE(st.name, pu.state_name, '')::varchar AS state_name,
-  COALESCE(lg.name, pu.lga_name, '')::varchar AS lga_name,
+  st.name AS state_name,
+  lg.name AS lga_name,
   ct.name AS city_name,
-  COALESCE(w.name, pu.ward_name, '')::varchar AS ward_name,
+  w.name AS ward_name,
   pu.name AS polling_unit_name,
   pu.pu_code AS polling_unit_code,
-  COALESCE(
-    (
-      SELECT COUNT(*)::integer 
+  CASE 
+    WHEN pa.polling_unit_id IS NOT NULL THEN (
+      SELECT COUNT(*)::integer
       FROM polling_unit_assignments pua
-      WHERE pua.polling_unit_id = pa.polling_unit_id 
-        AND pua.party_id = pa.party_id 
+      WHERE pua.polling_unit_id = pa.polling_unit_id
+        AND pua.party_id = pa.party_id
         AND pua.election_group_id = pa.election_group_id
-    ),
-    0
-  )::integer AS agents_count
+    )
+    ELSE 0
+  END AS agents_count
 FROM party_agent_applications pa
 JOIN users u ON pa.user_id = u.id
 LEFT JOIN user_more_infos up ON u.id = up.user_id
 JOIN election_groups eg ON pa.election_group_id = eg.id
 JOIN parties p ON pa.party_id = p.id
 LEFT JOIN polling_units pu ON pa.polling_unit_id = pu.id
-LEFT JOIN c_states st ON COALESCE(pa.state_id, pu.state_id, u.current_state) = st.id
-LEFT JOIN lgas lg ON COALESCE(pa.lga_id, pu.lga_id, u.current_lga) = lg.id
-LEFT JOIN wards w ON COALESCE(pa.ward_id, pu.ward_id, u.current_ward) = w.id
+LEFT JOIN c_states st ON pa.state_id = st.id
+LEFT JOIN lgas lg ON pa.lga_id = lg.id
+LEFT JOIN wards w ON pa.ward_id = w.id
 LEFT JOIN c_cities ct ON u.current_city = ct.id
 LEFT JOIN user_bank_accounts uba ON uba.user_id = u.id AND uba.is_primary = true
 WHERE 
@@ -101,9 +99,9 @@ WHERE
   (sqlc.arg(party_id)::smallint = 0 OR pa.party_id = sqlc.arg(party_id)) AND
   (sqlc.arg(election_group_id)::integer = 0 OR pa.election_group_id = sqlc.arg(election_group_id)) AND
   (sqlc.arg(status)::varchar = '' OR pa.status = sqlc.arg(status)) AND
-  (sqlc.arg(state_id)::smallint = 0 OR COALESCE(pa.state_id, u.current_state, pu.state_id) = sqlc.arg(state_id)) AND
-  (sqlc.arg(lga_id)::integer = 0 OR COALESCE(pa.lga_id, u.current_lga, pu.lga_id) = sqlc.arg(lga_id)) AND
-  (sqlc.arg(ward_id)::integer = 0 OR COALESCE(pa.ward_id, u.current_ward, pu.ward_id) = sqlc.arg(ward_id)) AND
+  (sqlc.arg(state_id)::smallint = 0 OR pa.state_id = sqlc.arg(state_id)) AND
+  (sqlc.arg(lga_id)::integer = 0 OR pa.lga_id = sqlc.arg(lga_id)) AND
+  (sqlc.arg(ward_id)::integer = 0 OR pa.ward_id = sqlc.arg(ward_id)) AND
   (NOT sqlc.arg(active_election_only)::boolean OR (eg.active = TRUE AND eg.election_date >= CURRENT_DATE)) AND
   (sqlc.arg(cursor)::bigint = 0 OR pa.id < sqlc.arg(cursor))
 ORDER BY pa.id DESC
@@ -219,4 +217,16 @@ WHERE pa.user_id = $1
   AND pa.election_group_id = $2 
   AND pa.status = 'accepted'
 LIMIT 1;
+
+-- name: HasActiveAgentApplication :one
+SELECT EXISTS (
+  SELECT 1 
+  FROM party_agent_applications pa
+  JOIN election_groups eg ON pa.election_group_id = eg.id
+  WHERE pa.user_id = $1
+    AND pa.status IN ('pending', 'accepted')
+    AND eg.active = TRUE 
+    AND eg.election_date >= CURRENT_DATE
+) AS has_active;
+
 

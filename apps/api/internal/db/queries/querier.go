@@ -341,6 +341,7 @@ type Querier interface {
 	GetZonalChapter(ctx context.Context, arg GetZonalChapterParams) (int32, error)
 	HardDeleteFile(ctx context.Context, id int64) error
 	HardDeletePartyCustomPosition(ctx context.Context, arg HardDeletePartyCustomPositionParams) error
+	HasActiveAgentApplication(ctx context.Context, userID int64) (bool, error)
 	HasPositionBeenAssigned(ctx context.Context, positionID int32) (bool, error)
 	IncrementAssignmentIntervalUpdates(ctx context.Context, arg IncrementAssignmentIntervalUpdatesParams) error
 	IncrementAssignmentLiveVotersReferredCount(ctx context.Context, id int64) (PollingUnitAssignment, error)
@@ -546,7 +547,7 @@ type Querier interface {
 	UpdateStateSupervisorEarnedAmountKobo(ctx context.Context, arg UpdateStateSupervisorEarnedAmountKoboParams) (StateElectionSupervisor, error)
 	UpdateSystemSetting(ctx context.Context, arg UpdateSystemSettingParams) (SystemSetting, error)
 	UpdateUnmatchedPollingUnitResultStatus(ctx context.Context, arg UpdateUnmatchedPollingUnitResultStatusParams) (UnmatchedPollingUnitResult, error)
-	UpdateUserAgentDetails(ctx context.Context, arg UpdateUserAgentDetailsParams) error
+	UpdateUserAgentDetails(ctx context.Context, arg UpdateUserAgentDetailsParams) (pgtype.Int8, error)
 	UpdateUserAgentMoreInfo(ctx context.Context, arg UpdateUserAgentMoreInfoParams) error
 	UpdateUserAvatar(ctx context.Context, arg UpdateUserAvatarParams) error
 	UpdateUserBankAccountsToNonPrimary(ctx context.Context, userID int64) error

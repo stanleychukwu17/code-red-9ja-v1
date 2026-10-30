@@ -39,6 +39,7 @@ const (
 	RedisUserFollower            = "user:follower:"           // STRING: "user:follower:<followerID>:<followingID>" stores cached boolean whether follower follows following.
 	RedisUserFollowersCount      = "user:followers_count:"    // STRING: "user:followers_count:<userID>" stores cached follower count.
 	RedisUserFollowingCount      = "user:following_count:"    // STRING: "user:following_count:<userID>" stores cached following count.
+	RedisUserHasActiveAgentApp   = "user:has_active_agent_app:" // STRING: "user:has_active_agent_app:<userID>" stores cached boolean whether user has an active agent application.
 	//--END--
 
 	//--START-- for countries and states
@@ -164,6 +165,7 @@ var AllRedisPrefixes = []string{
 	RedisUserFollower,
 	RedisUserFollowersCount,
 	RedisUserFollowingCount,
+	RedisUserHasActiveAgentApp,
 	RedisEachCountry,
 	RedisEachState,
 	RedisEachCity,

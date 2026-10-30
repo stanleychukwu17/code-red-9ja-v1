@@ -11,10 +11,9 @@ export function getAppliedElectionGroupIds(applications: any[]): number[] {
 }
 
 /**
- * If the agent has an active application for an upcoming or present election,
- * lock their party affiliation so they represent the same party.
+ * Finds an agent's active application for an upcoming or present election.
  */
-export function getLockedPartyId(applications: any[]): number | null {
+export function getActiveApplication(applications: any[]): any | null {
   const activeApp = applications.find((app: any) => {
     const isActive = ["pending", "approved", "success", "accepted"].includes(
       app.status,
@@ -42,13 +41,12 @@ export function getLockedPartyId(applications: any[]): number | null {
     return electionDate >= today;
   });
 
-  return activeApp ? activeApp.party_id || activeApp.party?.id : null;
+  return activeApp || null;
 }
 
 export interface ValidatePartySearchParams {
   search: { party?: string; partyId?: number | string };
   parties: any[];
-  lockedPartyId: number | null;
 }
 
 export type PartyValidationResult =
@@ -57,12 +55,11 @@ export type PartyValidationResult =
 
 /**
  * Validates a party requested via URL query params (?party=... or ?partyId=...).
- * Checks existence, locked affiliation, onboarding verification, and application acceptance.
+ * Checks existence, onboarding verification, and application acceptance.
  */
 export function validatePartySearch({
   search,
   parties,
-  lockedPartyId,
 }: ValidatePartySearchParams): PartyValidationResult | null {
   if (!search.party && !search.partyId) {
     return null;
@@ -86,15 +83,6 @@ export function validatePartySearch({
     return {
       success: false,
       error: `The requested party "${search.party || search.partyId}" was not found. Please choose an eligible party.`,
-    };
-  }
-
-  // Safeguard: Check if user is locked to a different party
-  if (lockedPartyId && lockedPartyId !== matchedParty.id) {
-    return {
-      success: false,
-      party: matchedParty,
-      error: `You have an active application with another party and cannot apply for ${matchedParty.short_name}.`,
     };
   }
 

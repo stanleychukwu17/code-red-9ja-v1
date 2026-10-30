@@ -80,7 +80,7 @@ function SupervisorPage() {
   const { data: applications = [] } = useQuery({
     queryKey: ["applications"],
     queryFn: async () => {
-      const res = await getApplications();
+      const res = await getApplications({ data: { active_election_only: true } });
       if (res?.success && res.data?.applications) {
         return res.data.applications;
       }

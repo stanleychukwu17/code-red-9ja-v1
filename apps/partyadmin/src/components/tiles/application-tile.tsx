@@ -34,11 +34,9 @@ export type ApplicationType = {
   updated_at?: string;
   first_name?: string;
   last_name?: string;
-  email?: string | null;
   phone?: string | null;
   username?: string;
   avatar?: string | null;
-  voters_card_image?: string | null;
   current_country?: number;
   current_state?: number;
   current_lga?: number;
@@ -70,7 +68,6 @@ export type ApplicationType = {
   app_state_id?: number | null;
   app_lga_id?: number | null;
   app_ward_id?: number | null;
-  degree_certificate_url?: string | null;
 
   // Mock / UI fields
   name?: string;
@@ -291,7 +288,6 @@ export function ApplicationTableTile({
     lgaName: lgaName || undefined,
     wardName: wardName || undefined,
     pollingUnitName: pollingUnitName || undefined,
-    degreeCertificateUrl: data.degree_certificate_url || undefined,
     wardId: data.app_ward_id || data.current_ward || undefined,
     pollingUnitId: data.polling_unit_id || undefined,
     electionGroupId: data.election_group_id || undefined,

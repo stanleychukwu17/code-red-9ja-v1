@@ -198,7 +198,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	usersHandler := usershandler.NewHandler(usersService, auditService, bodiesService, permissionsService, partiesService, filesService, utilsInstance)
 	pageVerificationsHandler := pageverificationshandler.NewHandler(pageVerificationsService, utilsInstance)
 	pollingUnitAssignmentsHandler := puassignmentshandler.NewHandler(pollingUnitAssignmentsService, usersService, pollingUnitUpdatesService, utilsInstance, distributor, earningsService)
-	partyApplicationsHandler := partyapplicationshandler.NewHandler(partyApplicationsService, usersService, utilsInstance)
+	partyApplicationsHandler := partyapplicationshandler.NewHandler(partyApplicationsService, usersService, partiesService, utilsInstance)
 	pollingUnitUpdatesHandler := puupdateshandler.NewHandler(pollingUnitUpdatesService, utilsInstance, distributor)
 	pollingUnitResultsHandler := puresultshandler.NewHandler(pollingUnitResultsService, utilsInstance, distributor)
 	supervisorAssignmentsHandler := supervisorassignmentshandler.NewHandler(supervisorAssignmentsService, utilsInstance)
@@ -259,20 +259,20 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	// for auths
 	authChecksLimiter := apimiddleware.RateLimit(rdb, 30, time.Minute, "rate_limit:auth_checks")
 
-	mainRouter.Post("/api/v1/auth/signup", authHandler.Signup)                                                     // Basic signup endpoint
-	mainRouter.Post(utils.ApiUrls.Auth.SendSignupEmailOTP, authHandler.SendSignupEmailOTP)                         // Send email OTP
-	mainRouter.Post(utils.ApiUrls.Auth.VerifySignupEmailOTP, authHandler.VerifySignupEmailOTP)                     // Verify email OTP
-	mainRouter.Post("/api/v1/auth/forgot-password/email-otp", authHandler.SendForgotPasswordEmailOTP)              // Send forgot-password OTP
-	mainRouter.With(authChecksLimiter).Post(utils.ApiUrls.Auth.CheckNin, authHandler.CheckNin)                     // Check NIN endpoint
-	mainRouter.With(authChecksLimiter).Post(utils.ApiUrls.Auth.CheckUsername, authHandler.CheckUsername)           // Check Username endpoint
-	mainRouter.With(authChecksLimiter).Post(utils.ApiUrls.Auth.CheckReferralCode, authHandler.CheckReferralCode)   // Check Referral Code endpoint
-	mainRouter.Post(utils.ApiUrls.Auth.Login, authHandler.Login)                                                   // Login endpoint
-	mainRouter.Post(utils.ApiUrls.Auth.Logout, authHandler.Logout)                                    // Logout endpoint
-	mainRouter.Post(utils.ApiUrls.Auth.Refresh, authHandler.Refresh)                                  // Refresh token endpoint
-	mainRouter.Post(utils.ApiUrls.Auth.ChangePasswordByEmail, authHandler.ChangePasswordByEmail)      // Change password by email endpoint
-	mainRouter.Post(utils.ApiUrls.Auth.AdminLogin, authHandler.AdminLogin)                            // Admin login endpoint
-	mainRouter.Post(utils.ApiUrls.Auth.PartyLogin, authHandler.PartyLogin)                            // Party login endpoint
-	mainRouter.Post(utils.ApiUrls.Auth.SuperAdmin, usersHandler.MakeUserSuperAdmin)                   // Make superAdmin endpoint
+	mainRouter.Post("/api/v1/auth/signup", authHandler.Signup)                                                   // Basic signup endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.SendSignupEmailOTP, authHandler.SendSignupEmailOTP)                       // Send email OTP
+	mainRouter.Post(utils.ApiUrls.Auth.VerifySignupEmailOTP, authHandler.VerifySignupEmailOTP)                   // Verify email OTP
+	mainRouter.Post("/api/v1/auth/forgot-password/email-otp", authHandler.SendForgotPasswordEmailOTP)            // Send forgot-password OTP
+	mainRouter.With(authChecksLimiter).Post(utils.ApiUrls.Auth.CheckNin, authHandler.CheckNin)                   // Check NIN endpoint
+	mainRouter.With(authChecksLimiter).Post(utils.ApiUrls.Auth.CheckUsername, authHandler.CheckUsername)         // Check Username endpoint
+	mainRouter.With(authChecksLimiter).Post(utils.ApiUrls.Auth.CheckReferralCode, authHandler.CheckReferralCode) // Check Referral Code endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.Login, authHandler.Login)                                                 // Login endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.Logout, authHandler.Logout)                                               // Logout endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.Refresh, authHandler.Refresh)                                             // Refresh token endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.ChangePasswordByEmail, authHandler.ChangePasswordByEmail)                 // Change password by email endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.AdminLogin, authHandler.AdminLogin)                                       // Admin login endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.PartyLogin, authHandler.PartyLogin)                                       // Party login endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.SuperAdmin, usersHandler.MakeUserSuperAdmin)                              // Make superAdmin endpoint
 
 	// for seeds
 	mainRouter.Post("/api/v1/seed/users", seedHandler.SeedUsers)                                         // Seed users endpoint

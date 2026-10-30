@@ -89,23 +89,6 @@ type SubmitApplicationInput struct {
 }
 
 func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplicationInput) (int64, error) {
-	// Validate party is active, verified, and has available slots
-	party, err := s.queries.GetPartyByID(ctx, int16(input.PartyID))
-	if err != nil {
-		return 0, errors.New("selected political party not found")
-	}
-	if party.Status != "active" || !party.IsVerified.Bool {
-		return 0, errors.New("this political party is not currently verified or accepting applications")
-	}
-	if party.Slots <= 0 {
-		return 0, errors.New("this political party has no available slots to accept applications")
-	}
-
-	// Ensure a valid target election group is specified for this application
-	if input.ElectionGroupID <= 0 {
-		return 0, errors.New("election_group_id is required")
-	}
-
 	// Begin transaction
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -115,8 +98,17 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 
 	txQueries := s.queries.WithTx(tx)
 
-	// Update user agent details
-	err = txQueries.UpdateUserAgentDetails(ctx, queries.UpdateUserAgentDetailsParams{
+	// Ensure user does not already have an active application for an upcoming/active election
+	hasActive, err := txQueries.HasActiveAgentApplication(ctx, input.UserID)
+	if err != nil {
+		return 0, fmt.Errorf("failed to check existing applications: %w", err)
+	}
+	if hasActive {
+		return 0, errors.New("you already have an active application for an upcoming election. You cannot apply for another election group until your current assignment concludes")
+	}
+
+	// Update user agent details and retrieve existing avatar_file_id
+	currentAvatarFileID, err := txQueries.UpdateUserAgentDetails(ctx, queries.UpdateUserAgentDetailsParams{
 		ID:            input.UserID,
 		Avatar:        utils.PgTextFromString(input.Avatar),
 		CurrentState:  int16(input.CurrentState),
@@ -128,8 +120,12 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 		return 0, fmt.Errorf("failed to update user details: %w", err)
 	}
 
-	// Update user's avatar_file_id and file ownership if avatar file was uploaded
-	if input.AvatarFileID != nil && *input.AvatarFileID > 0 {
+	// Update user's avatar_file_id and file ownership only if avatar file actually changed
+	hasNewAvatar := input.AvatarFileID != nil && *input.AvatarFileID > 0 &&
+		(!currentAvatarFileID.Valid || currentAvatarFileID.Int64 != *input.AvatarFileID)
+
+	// only update avatar when there is a new avatar uploaded
+	if hasNewAvatar {
 		if err := txQueries.UpdateUserAvatar(ctx, queries.UpdateUserAvatarParams{
 			ID:           input.UserID,
 			Avatar:       utils.PgTextFromString(input.Avatar),
@@ -179,14 +175,13 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 		PartyID:         int16(input.PartyID),
 		ElectionGroupID: input.ElectionGroupID,
 		PollingUnitID:   utils.PgInt4FromPositive(input.PollingUnitID),
-		StateID:         utils.PgInt2FromPositive(input.CurrentState),
+		StateID:         int16(input.CurrentState),
 		LgaID:           utils.PgInt4FromPositive(input.CurrentLga),
 		WardID:          utils.PgInt4FromPositive(input.CurrentWard),
 	})
 	if err != nil {
 		return 0, fmt.Errorf("failed to create application: %w", err)
 	}
-
 
 	// Process referred user's referral record linking & increment total_referrals (best effort)
 	if refErr := s.updateReferralOnApplicationSubmission(ctx, txQueries, input.UserID, int16(input.PartyID), input.ElectionGroupID); refErr != nil {
@@ -200,6 +195,7 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 	// Invalidate caches
 	_ = s.usersService.InvalidateCachedUserInfo(ctx, input.UserFakeID)
 	_ = s.usersService.InvalidateUserMoreInfo(ctx, input.UserID)
+	_ = s.InvalidateUserHasActiveAgentApp(ctx, input.UserID)
 
 	return appID, nil
 }
@@ -295,7 +291,7 @@ func (s *Service) SubmitSupervisorApplication(ctx context.Context, input SubmitS
 		PartyID:         acceptedApp.PartyID,
 		ElectionGroupID: input.ElectionGroupID,
 		PollingUnitID:   pgtype.Int4{Valid: false},
-		StateID:         utils.PgInt2FromPositive(input.StateID),
+		StateID:         int16(input.StateID),
 		LgaID:           utils.PgInt4FromPositive(input.LgaID),
 		WardID:          utils.PgInt4FromPositive(input.WardID),
 	})
@@ -312,7 +308,7 @@ func (s *Service) SubmitSupervisorApplication(ctx context.Context, input SubmitS
 		ID:            appID,
 		Role:          roleType,
 		PollingUnitID: pgtype.Int4{Valid: false},
-		StateID:       utils.PgInt2FromPositive(input.StateID),
+		StateID:       int16(input.StateID),
 		LgaID:         utils.PgInt4FromPositive(input.LgaID),
 		WardID:        utils.PgInt4FromPositive(input.WardID),
 	})
@@ -326,8 +322,45 @@ func (s *Service) SubmitSupervisorApplication(ctx context.Context, input SubmitS
 
 	_ = s.usersService.InvalidateUserMoreInfo(ctx, input.UserID)
 	_ = s.usersService.InvalidatePrimaryBankAccount(ctx, input.UserID)
+	_ = s.InvalidateUserHasActiveAgentApp(ctx, input.UserID)
 
 	return app, nil
+}
+
+// HasActiveAgentApplication checks whether a user has a pending or accepted agent application for an upcoming election.
+// The result is cached in Redis with a 1-day TTL to shield subsequent calls and allow fail-fast validation at the handler layer.
+func (s *Service) HasActiveAgentApplication(ctx context.Context, userID int64) (bool, error) {
+	cacheKey := fmt.Sprintf("%s%d", db.RedisUserHasActiveAgentApp, userID)
+	if s.rdb != nil {
+		val, err := s.rdb.Get(ctx, cacheKey).Result()
+		if err == nil {
+			return val == "1", nil
+		}
+	}
+
+	hasActive, err := s.queries.HasActiveAgentApplication(ctx, userID)
+	if err != nil {
+		return false, fmt.Errorf("failed to check active agent application: %w", err)
+	}
+
+	if s.rdb != nil {
+		val := "0"
+		if hasActive {
+			val = "1"
+		}
+		_ = s.rdb.Set(ctx, cacheKey, val, db.RedisOneDayTTL).Err()
+	}
+
+	return hasActive, nil
+}
+
+// InvalidateUserHasActiveAgentApp clears the cached active agent application status for a user.
+func (s *Service) InvalidateUserHasActiveAgentApp(ctx context.Context, userID int64) error {
+	if s.rdb == nil {
+		return nil
+	}
+	cacheKey := fmt.Sprintf("%s%d", db.RedisUserHasActiveAgentApp, userID)
+	return s.rdb.Del(ctx, cacheKey).Err()
 }
 
 func (s *Service) GetApplicationByID(ctx context.Context, id int64) (queries.PartyAgentApplication, error) {
@@ -336,54 +369,51 @@ func (s *Service) GetApplicationByID(ctx context.Context, id int64) (queries.Par
 
 // PartyApplicationListItem is a clean, frontend-ready representation of an agent application.
 type PartyApplicationListItem struct {
-	ID                   int64   `json:"id"`
-	UserID               int64   `json:"user_id"`
-	PartyID              int16   `json:"party_id"`
-	ElectionGroupID      int32   `json:"election_group_id"`
-	PollingUnitID        *int32  `json:"polling_unit_id,omitempty"`
-	Role                 string  `json:"role"`
-	AppStateID           *int16  `json:"app_state_id,omitempty"`
-	AppLgaID             *int32  `json:"app_lga_id,omitempty"`
-	AppWardID            *int32  `json:"app_ward_id,omitempty"`
-	Status               string  `json:"status"`
-	RejectedReason       *string `json:"rejected_reason,omitempty"`
-	CreatedAt            string  `json:"created_at"`
-	UpdatedAt            string  `json:"updated_at"`
-	FirstName            string  `json:"first_name"`
-	LastName             string  `json:"last_name"`
-	FullName             string  `json:"name"`
-	Email                *string `json:"email,omitempty"`
-	Phone                *string `json:"phone,omitempty"`
-	Username             string  `json:"username"`
-	Avatar               *string `json:"avatar,omitempty"`
-	VotersCardImage      *string `json:"voters_card_image,omitempty"`
-	CurrentCountry       int16   `json:"current_country"`
-	CurrentState         int16   `json:"current_state"`
-	CurrentLga           int32   `json:"current_lga"`
-	CurrentCity          *int32  `json:"current_city,omitempty"`
-	BankAccountNumber    *string `json:"bank_account_number,omitempty"`
-	BankCode             *string `json:"bank_code,omitempty"`
-	EducationalStatus    *string `json:"educational_status,omitempty"`
-	HighestDegree        *string `json:"highest_degree,omitempty"`
-	GraduationYear       *string `json:"graduation_year,omitempty"`
-	SchoolName           *string `json:"school_name,omitempty"`
-	Religion             *string `json:"religion,omitempty"`
-	MaritalStatus        *string `json:"marital_status,omitempty"`
-	Address              *string `json:"address,omitempty"`
-	DegreeCertificateUrl *string `json:"degree_certificate_url,omitempty"`
-	CurrentWard          int32   `json:"current_ward"`
-	ElectionGroupName    string  `json:"election_group_name"`
-	Year                 int16   `json:"year"`
-	PartyName            string  `json:"party_name"`
-	PartyShortName       string  `json:"party_short_name"`
-	PartyLogo            string  `json:"party_logo"`
-	StateName            string  `json:"state_name"`
-	LgaName              string  `json:"lga_name"`
-	CityName             *string `json:"city_name,omitempty"`
-	WardName             string  `json:"ward_name"`
-	PollingUnitName      *string `json:"polling_unit_name,omitempty"`
-	PollingUnitCode      *string `json:"polling_unit_code,omitempty"`
-	AgentsCount          int32   `json:"agents_count"`
+	ID                int64   `json:"id"`
+	UserID            int64   `json:"user_id"`
+	PartyID           int16   `json:"party_id"`
+	ElectionGroupID   int32   `json:"election_group_id"`
+	PollingUnitID     *int32  `json:"polling_unit_id,omitempty"`
+	Role              string  `json:"role"`
+	AppStateID        *int16  `json:"app_state_id,omitempty"`
+	AppLgaID          *int32  `json:"app_lga_id,omitempty"`
+	AppWardID         *int32  `json:"app_ward_id,omitempty"`
+	Status            string  `json:"status"`
+	RejectedReason    *string `json:"rejected_reason,omitempty"`
+	CreatedAt         string  `json:"created_at"`
+	UpdatedAt         string  `json:"updated_at"`
+	FirstName         string  `json:"first_name"`
+	LastName          string  `json:"last_name"`
+	FullName          string  `json:"name"`
+	Phone             *string `json:"phone,omitempty"`
+	Username          string  `json:"username"`
+	Avatar            *string `json:"avatar,omitempty"`
+	CurrentCountry    int16   `json:"current_country"`
+	CurrentState      int16   `json:"current_state"`
+	CurrentLga        int32   `json:"current_lga"`
+	CurrentCity       *int32  `json:"current_city,omitempty"`
+	BankAccountNumber *string `json:"bank_account_number,omitempty"`
+	BankCode          *string `json:"bank_code,omitempty"`
+	EducationalStatus *string `json:"educational_status,omitempty"`
+	HighestDegree     *string `json:"highest_degree,omitempty"`
+	GraduationYear    *string `json:"graduation_year,omitempty"`
+	SchoolName        *string `json:"school_name,omitempty"`
+	Religion          *string `json:"religion,omitempty"`
+	MaritalStatus     *string `json:"marital_status,omitempty"`
+	Address           *string `json:"address,omitempty"`
+	CurrentWard       int32   `json:"current_ward"`
+	ElectionGroupName string  `json:"election_group_name"`
+	Year              int16   `json:"year"`
+	PartyName         string  `json:"party_name"`
+	PartyShortName    string  `json:"party_short_name"`
+	PartyLogo         string  `json:"party_logo"`
+	StateName         string  `json:"state_name"`
+	LgaName           string  `json:"lga_name"`
+	CityName          *string `json:"city_name,omitempty"`
+	WardName          string  `json:"ward_name"`
+	PollingUnitName   *string `json:"polling_unit_name,omitempty"`
+	PollingUnitCode   *string `json:"polling_unit_code,omitempty"`
+	AgentsCount       int32   `json:"agents_count"`
 }
 
 func (s *Service) ListApplications(ctx context.Context, userID int64, partyID int16, electionGroupID int32, status string, stateID int16, lgaID, wardID int32, activeElectionOnly bool, limit int32, cursor int64) ([]PartyApplicationListItem, error) {
@@ -405,84 +435,52 @@ func (s *Service) ListApplications(ctx context.Context, userID int64, partyID in
 
 	result := make([]PartyApplicationListItem, 0, len(rows))
 	for _, r := range rows {
-		firstName := ""
-		if r.FirstName.Valid {
-			firstName = r.FirstName.String
-		}
-		lastName := ""
-		if r.LastName.Valid {
-			lastName = r.LastName.String
-		}
-
-		fullName := strings.TrimSpace(fmt.Sprintf("%s %s", firstName, lastName))
-		if fullName == "" {
-			fullName = "Applicant"
-		}
-
-		username := fmt.Sprintf("user_%d", r.UserID)
-		if r.Username.Valid && r.Username.String != "" {
-			username = r.Username.String
-		}
-
-		createdAt := ""
-		if r.CreatedAt.Valid {
-			createdAt = r.CreatedAt.Time.Format(time.RFC3339)
-		}
-
-		updatedAt := ""
-		if r.UpdatedAt.Valid {
-			updatedAt = r.UpdatedAt.Time.Format(time.RFC3339)
-		}
-
 		result = append(result, PartyApplicationListItem{
-			ID:                   r.ID,
-			UserID:               r.UserID,
-			PartyID:              r.PartyID,
-			ElectionGroupID:      r.ElectionGroupID,
-			PollingUnitID:        utils.PtrFromPgInt4(r.PollingUnitID),
-			Role:                 r.Role,
-			AppStateID:           utils.PtrFromPgInt2(r.AppStateID),
-			AppLgaID:             utils.PtrFromPgInt4(r.AppLgaID),
-			AppWardID:            utils.PtrFromPgInt4(r.AppWardID),
-			Status:               r.Status,
-			RejectedReason:       utils.PtrFromPgText(r.RejectedReason),
-			CreatedAt:            createdAt,
-			UpdatedAt:            updatedAt,
-			FirstName:            firstName,
-			LastName:             lastName,
-			FullName:             fullName,
-			Email:                utils.PtrFromPgText(r.Email),
-			Phone:                utils.PtrFromPgText(r.Phone),
-			Username:             username,
-			Avatar:               utils.PtrFromPgText(r.Avatar),
-			VotersCardImage:      utils.PtrFromPgText(r.VotersCardImage),
-			CurrentCountry:       r.CurrentCountry,
-			CurrentState:         r.CurrentState,
-			CurrentLga:           r.CurrentLga,
-			CurrentCity:          utils.PtrFromPgInt4(r.CurrentCity),
-			BankAccountNumber:    utils.PtrFromPgText(r.BankAccountNumber),
-			BankCode:             utils.PtrFromPgText(r.BankCode),
-			EducationalStatus:    utils.PtrFromPgText(r.EducationalStatus),
-			HighestDegree:        utils.PtrFromPgText(r.HighestDegree),
-			GraduationYear:       utils.PtrFromPgText(r.GraduationYear),
-			SchoolName:           utils.PtrFromPgText(r.SchoolName),
-			Religion:             utils.PtrFromPgText(r.Religion),
-			MaritalStatus:        utils.PtrFromPgText(r.MaritalStatus),
-			Address:              utils.PtrFromPgText(r.Address),
-			DegreeCertificateUrl: utils.PtrFromPgText(r.DegreeCertificateUrl),
-			CurrentWard:          r.CurrentWard,
-			ElectionGroupName:    r.ElectionGroupName,
-			Year:                 int16(r.ElectionDate.Time.Year()),
-			PartyName:            r.PartyName,
-			PartyShortName:       r.PartyShortName,
-			PartyLogo:            r.PartyLogo,
-			StateName:            r.StateName,
-			LgaName:              r.LgaName,
-			CityName:             utils.PtrFromPgText(r.CityName),
-			WardName:             r.WardName,
-			PollingUnitName:      utils.PtrFromPgText(r.PollingUnitName),
-			PollingUnitCode:      utils.PtrFromPgText(r.PollingUnitCode),
-			AgentsCount:          r.AgentsCount,
+			ID:                r.ID,
+			UserID:            r.UserID,
+			PartyID:           r.PartyID,
+			ElectionGroupID:   r.ElectionGroupID,
+			PollingUnitID:     utils.PtrFromPgInt4(r.PollingUnitID),
+			Role:              r.Role,
+			AppStateID:        &r.AppStateID,
+			AppLgaID:          utils.PtrFromPgInt4(r.AppLgaID),
+			AppWardID:         utils.PtrFromPgInt4(r.AppWardID),
+			Status:            r.Status,
+			RejectedReason:    utils.PtrFromPgText(r.RejectedReason),
+			CreatedAt:         r.CreatedAt.Time.Format(time.RFC3339),
+			UpdatedAt:         r.UpdatedAt.Time.Format(time.RFC3339),
+			FirstName:         r.FirstName.String,
+			LastName:          r.LastName.String,
+			FullName:          strings.TrimSpace(fmt.Sprintf("%s %s", r.FirstName.String, r.LastName.String)),
+			Phone:             utils.PtrFromPgText(r.Phone),
+			Username:          r.Username.String,
+			Avatar:            utils.PtrFromPgText(r.Avatar),
+			CurrentCountry:    r.CurrentCountry,
+			CurrentState:      r.CurrentState,
+			CurrentLga:        r.CurrentLga.Int32,
+			CurrentCity:       utils.PtrFromPgInt4(r.CurrentCity),
+			BankAccountNumber: utils.PtrFromPgText(r.BankAccountNumber),
+			BankCode:          utils.PtrFromPgText(r.BankCode),
+			EducationalStatus: utils.PtrFromPgText(r.EducationalStatus),
+			HighestDegree:     utils.PtrFromPgText(r.HighestDegree),
+			GraduationYear:    utils.PtrFromPgText(r.GraduationYear),
+			SchoolName:        utils.PtrFromPgText(r.SchoolName),
+			Religion:          utils.PtrFromPgText(r.Religion),
+			MaritalStatus:     utils.PtrFromPgText(r.MaritalStatus),
+			Address:           utils.PtrFromPgText(r.Address),
+			CurrentWard:       r.CurrentWard.Int32,
+			ElectionGroupName: r.ElectionGroupName,
+			Year:              int16(r.ElectionDate.Time.Year()),
+			PartyName:         r.PartyName,
+			PartyShortName:    r.PartyShortName,
+			PartyLogo:         r.PartyLogo,
+			StateName:         r.StateName.String,
+			LgaName:           r.LgaName.String,
+			CityName:          utils.PtrFromPgText(r.CityName),
+			WardName:          r.WardName.String,
+			PollingUnitName:   utils.PtrFromPgText(r.PollingUnitName),
+			PollingUnitCode:   utils.PtrFromPgText(r.PollingUnitCode),
+			AgentsCount:       r.AgentsCount,
 		})
 	}
 
@@ -598,13 +596,13 @@ func (s *Service) RejectApplication(ctx context.Context, id int64, reason string
 	if app.LgaID.Valid {
 		lgaID = app.LgaID.Int32
 	}
-	var stateID int16
-	if app.StateID.Valid {
-		stateID = app.StateID.Int16
-	}
+	stateID := app.StateID
 
 	// Initiate cascading stats rollup
 	s.initiateStatsRollup(ctx, egID, role, puID, wardID, lgaID, stateID)
+
+	// Invalidate active agent application cache for the applicant
+	_ = s.InvalidateUserHasActiveAgentApp(ctx, app.UserID)
 
 	return updatedApp, nil
 }
@@ -619,11 +617,19 @@ func (s *Service) CancelApplication(ctx context.Context, id int64) (queries.Part
 		return queries.PartyAgentApplication{}, errors.New("application is already processed")
 	}
 
-	return s.queries.UpdateApplicationStatus(ctx, queries.UpdateApplicationStatusParams{
+	updatedApp, err := s.queries.UpdateApplicationStatus(ctx, queries.UpdateApplicationStatusParams{
 		ID:             id,
 		Status:         "cancelled",
 		RejectedReason: pgtype.Text{Valid: false},
 	})
+	if err != nil {
+		return queries.PartyAgentApplication{}, err
+	}
+
+	// Invalidate active agent application cache for the applicant
+	_ = s.InvalidateUserHasActiveAgentApp(ctx, app.UserID)
+
+	return updatedApp, nil
 }
 
 type ApproveApplicationInput struct {
@@ -791,7 +797,7 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 		ID:            input.ApplicationID,
 		Role:          roleType,
 		PollingUnitID: utils.PgInt4FromPositive(pollingUnitID),
-		StateID:       utils.PgInt2FromPositive(input.StateID),
+		StateID:       int16(input.StateID),
 		LgaID:         utils.PgInt4FromPositive(input.LgaID),
 		WardID:        utils.PgInt4FromPositive(input.WardID),
 	})
@@ -915,6 +921,7 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 	// Invalidate only caches affected by slot deduction
 	s.rdb.Del(ctx, fmt.Sprintf("%s%d", db.RedisPartyByID, partyID))
 	s.rdb.Del(ctx, db.RedisPartiesAcceptingIDs)
+	_ = s.InvalidateUserHasActiveAgentApp(ctx, app.UserID)
 
 	// Initiate cascading stats rollup
 	s.initiateStatsRollup(ctx, egID, roleType, pollingUnitID, input.WardID, input.LgaID, input.StateID)
@@ -970,7 +977,6 @@ func (s *Service) processReferralOnAcceptance(ctx context.Context, txQueries *qu
 	if userReferralID <= 0 {
 		return nil
 	}
-
 
 	// Get electionGroupID from user_referrals if still unknown
 	if electionGroupID <= 0 {

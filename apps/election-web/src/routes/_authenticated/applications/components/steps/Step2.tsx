@@ -13,9 +13,9 @@ type PartyCardProps = {
   onClick: () => void;
 };
 
-/** Step 2: Political party affiliation selection (locks to user's registered party if set) */
+/** Step 2: Political party affiliation selection */
 export const Step2 = () => {
-  const { selectedPartyId, setSelectedPartyId, lockedPartyId } = useApplyContext();
+  const { selectedPartyId, setSelectedPartyId } = useApplyContext();
   const { data: parties = [], isLoading: partiesLoading } = useParties();
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -81,10 +81,9 @@ export const Step2 = () => {
         ) : filteredParties.length > 0 ? (
           filteredParties.map((party: any) => {
             const isSelected = selectedPartyId === party.id;
-            const isLocked = lockedPartyId && lockedPartyId !== party.id;
             const isNotVerified = !party.is_verified;
             const isNotAccepting = party.is_verified && !party.is_accepting_applications;
-            const isDisabled = isLocked || isNotVerified || isNotAccepting;
+            const isDisabled = isNotVerified || isNotAccepting;
 
             return (
               <PartyCard
@@ -93,14 +92,6 @@ export const Step2 = () => {
                 isSelected={isSelected}
                 isDisabled={isDisabled}
                 onClick={() => {
-                  if (isLocked) {
-                    toast.error(
-                      "You can only change party if your existing application is either rejected or cancelled.",
-                      { position: "top-center" },
-                    );
-                    return;
-                  }
-
                   if (isNotVerified) {
                     toast.error(
                       "This party has not been onboarded yet. You cannot select it.",
