@@ -57,7 +57,7 @@ FROM referrals r
 WHERE r.referrer_user_id = $1
   AND (sqlc.narg('election_group_id')::int IS NULL OR r.election_group_id = sqlc.narg('election_group_id')::int);
 
--- name: CreateUserReferralRecord :exec
+-- name: UpsertUserReferralRecord :one
 INSERT INTO user_referrals (
   user_id,
   party_id,
@@ -68,9 +68,8 @@ INSERT INTO user_referrals (
   $1, $2, $3, $4, $5
 )
 ON CONFLICT (user_id, election_group_id) DO UPDATE SET
-  amount = EXCLUDED.amount,
-  status = EXCLUDED.status,
-  updated_at = NOW();
+  updated_at = NOW()
+RETURNING id;
 
 -- name: GetUserReferredByID :one
 -- Returns the referrer_user_id for a user given their internal user ID.

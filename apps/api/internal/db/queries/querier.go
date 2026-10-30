@@ -100,7 +100,6 @@ type Querier interface {
 	CreateUnmatchedPollingUnitResult(ctx context.Context, arg CreateUnmatchedPollingUnitResultParams) (UnmatchedPollingUnitResult, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (CreateUserRow, error)
 	CreateUserNIN(ctx context.Context, arg CreateUserNINParams) (int64, error)
-	CreateUserReferralRecord(ctx context.Context, arg CreateUserReferralRecordParams) error
 	CreateUserWallet(ctx context.Context, arg CreateUserWalletParams) (UserWallet, error)
 	CreateUserWalletTransaction(ctx context.Context, arg CreateUserWalletTransactionParams) (UserWalletTransaction, error)
 	CreateWalletTransaction(ctx context.Context, arg CreateWalletTransactionParams) (PartyWalletTransaction, error)
@@ -590,6 +589,7 @@ type Querier interface {
 	UpsertStateConstituency(ctx context.Context, arg UpsertStateConstituencyParams) (StateConstituency, error)
 	UpsertUserPhoneNumber(ctx context.Context, arg UpsertUserPhoneNumberParams) (int64, error)
 	UpsertUserPreferences(ctx context.Context, arg UpsertUserPreferencesParams) (UserPreference, error)
+	UpsertUserReferralRecord(ctx context.Context, arg UpsertUserReferralRecordParams) (int64, error)
 	UpsertWard(ctx context.Context, arg UpsertWardParams) (Ward, error)
 	VacateAllUserPositionsInParty(ctx context.Context, arg VacateAllUserPositionsInPartyParams) ([]VacateAllUserPositionsInPartyRow, error)
 	VacatePositionAssignment(ctx context.Context, arg VacatePositionAssignmentParams) (PartyPositionAssignment, error)

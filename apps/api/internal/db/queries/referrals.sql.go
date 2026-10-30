@@ -64,41 +64,6 @@ func (q *Queries) CreateReferral(ctx context.Context, arg CreateReferralParams) 
 	return i, err
 }
 
-const createUserReferralRecord = `-- name: CreateUserReferralRecord :exec
-INSERT INTO user_referrals (
-  user_id,
-  party_id,
-  election_group_id,
-  amount,
-  status
-) VALUES (
-  $1, $2, $3, $4, $5
-)
-ON CONFLICT (user_id, election_group_id) DO UPDATE SET
-  amount = EXCLUDED.amount,
-  status = EXCLUDED.status,
-  updated_at = NOW()
-`
-
-type CreateUserReferralRecordParams struct {
-	UserID          int64          `json:"user_id"`
-	PartyID         pgtype.Int2    `json:"party_id"`
-	ElectionGroupID pgtype.Int4    `json:"election_group_id"`
-	Amount          pgtype.Numeric `json:"amount"`
-	Status          string         `json:"status"`
-}
-
-func (q *Queries) CreateUserReferralRecord(ctx context.Context, arg CreateUserReferralRecordParams) error {
-	_, err := q.db.Exec(ctx, createUserReferralRecord,
-		arg.UserID,
-		arg.PartyID,
-		arg.ElectionGroupID,
-		arg.Amount,
-		arg.Status,
-	)
-	return err
-}
-
 const getReferral = `-- name: GetReferral :one
 SELECT id, user_referral_id, party_id, election_group_id, referrer_user_id, referred_user_id, milestone, status, amount_to_pay, created_at, updated_at, paid_at FROM referrals
 WHERE id = $1 LIMIT 1
@@ -581,4 +546,40 @@ func (q *Queries) UpdateReferralOnApplication(ctx context.Context, arg UpdateRef
 		arg.Milestone,
 	)
 	return err
+}
+
+const upsertUserReferralRecord = `-- name: UpsertUserReferralRecord :one
+INSERT INTO user_referrals (
+  user_id,
+  party_id,
+  election_group_id,
+  amount,
+  status
+) VALUES (
+  $1, $2, $3, $4, $5
+)
+ON CONFLICT (user_id, election_group_id) DO UPDATE SET
+  updated_at = NOW()
+RETURNING id
+`
+
+type UpsertUserReferralRecordParams struct {
+	UserID          int64          `json:"user_id"`
+	PartyID         pgtype.Int2    `json:"party_id"`
+	ElectionGroupID pgtype.Int4    `json:"election_group_id"`
+	Amount          pgtype.Numeric `json:"amount"`
+	Status          string         `json:"status"`
+}
+
+func (q *Queries) UpsertUserReferralRecord(ctx context.Context, arg UpsertUserReferralRecordParams) (int64, error) {
+	row := q.db.QueryRow(ctx, upsertUserReferralRecord,
+		arg.UserID,
+		arg.PartyID,
+		arg.ElectionGroupID,
+		arg.Amount,
+		arg.Status,
+	)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
 }

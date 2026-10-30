@@ -1027,34 +1027,21 @@ func (s *Service) updateReferralOnApplicationSubmission(ctx context.Context, txQ
 	}
 
 	// 2. Fetch or create referrer's user_referrals record for this election group
-	ur, err := txQueries.GetUserReferralByUserAndElectionGroup(ctx, queries.GetUserReferralByUserAndElectionGroupParams{
+	userReferralID, err := txQueries.UpsertUserReferralRecord(ctx, queries.UpsertUserReferralRecordParams{
 		UserID:          referrerID,
+		PartyID:         utils.PgInt2FromPositive(partyID),
 		ElectionGroupID: utils.PgInt4FromPositive(electionGroupID),
+		Amount:          pgtype.Numeric{Valid: false},
+		Status:          "pending",
 	})
 	if err != nil {
-		createErr := txQueries.CreateUserReferralRecord(ctx, queries.CreateUserReferralRecordParams{
-			UserID:          referrerID,
-			PartyID:         utils.PgInt2FromPositive(partyID),
-			ElectionGroupID: utils.PgInt4FromPositive(electionGroupID),
-			Amount:          pgtype.Numeric{Valid: false},
-			Status:          "pending",
-		})
-		if createErr != nil {
-			return fmt.Errorf("failed to create referrer user_referrals record: %w", createErr)
-		}
-		ur, err = txQueries.GetUserReferralByUserAndElectionGroup(ctx, queries.GetUserReferralByUserAndElectionGroupParams{
-			UserID:          referrerID,
-			ElectionGroupID: utils.PgInt4FromPositive(electionGroupID),
-		})
-		if err != nil {
-			return fmt.Errorf("failed to fetch created referrer user_referrals record: %w", err)
-		}
+		return fmt.Errorf("failed to upsert referrer user_referrals record: %w", err)
 	}
 
 	// 3. Update referral: link user_referral_id, party_id, election_group_id, milestone ('APPLIED')
 	if err := txQueries.UpdateReferralOnApplication(ctx, queries.UpdateReferralOnApplicationParams{
 		ID:              referral.ID,
-		UserReferralID:  utils.PgInt8FromPositive(ur.ID),
+		UserReferralID:  utils.PgInt8FromPositive(userReferralID),
 		PartyID:         utils.PgInt2FromPositive(partyID),
 		ElectionGroupID: utils.PgInt4FromPositive(electionGroupID),
 		AmountToPay:     pgtype.Numeric{Valid: false},
@@ -1063,13 +1050,6 @@ func (s *Service) updateReferralOnApplicationSubmission(ctx context.Context, txQ
 		slog.Error("failed to update referral record on application submission", "referral_id", referral.ID, "err", err)
 		return err
 	}
-
-	slog.Info("Successfully updated referral on application submission",
-		"referral_id", referral.ID,
-		"user_referral_id", ur.ID,
-		"party_id", partyID,
-		"election_group_id", electionGroupID,
-	)
 
 	return nil
 }
