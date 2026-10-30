@@ -83,6 +83,10 @@ const (
 	RedisUserPartyChapters          = "parties:user_chapters:"           // STRING: "parties:user_chapters:<partyID>:<userID>" stores cached JSON array of user party chapters
 	//--END--
 
+	//--START-- for party applications
+	RedisPartyApplicationByID = "party_applications:id:" // STRING: "party_applications:id:<appID>" stores cached single party agent application JSON
+	//--END--
+
 	//--START-- for campaign groups and operations
 	RedisCampaignGroupByID       = "campaign_groups:info:"      // STRING: "campaign_groups:info:<groupID>" stores cached JSON object of campaign group
 	RedisCampaignGroupMembers    = "campaign_groups:members:"   // STRING: "campaign_groups:members:<groupID>" stores cached JSON array of campaign group members
@@ -197,6 +201,7 @@ var AllRedisPrefixes = []string{
 	RedisPartyCustomPositions,
 	RedisPartyPositionByID,
 	RedisUserPartyChapters,
+	RedisPartyApplicationByID,
 	RedisPageVerificationTypesList,
 	RedisPageVerificationTypeInfo,
 	RedisPageVerifications,

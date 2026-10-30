@@ -128,7 +128,7 @@ func (q *Queries) GetElectionGroupByID(ctx context.Context, id int32) (ElectionG
 const listElectionGroups = `-- name: ListElectionGroups :many
 SELECT id, fake_id, name, election_date, active, created_at, updated_at FROM election_groups
 WHERE ($1::boolean IS NULL OR active = $1::boolean)
-ORDER BY election_date DESC
+ORDER BY election_date ASC
 `
 
 func (q *Queries) ListElectionGroups(ctx context.Context, active pgtype.Bool) ([]ElectionGroup, error) {
@@ -176,7 +176,7 @@ SELECT
     )::integer AS elections_contesting
 FROM election_groups eg
 WHERE ($2::boolean IS NULL OR eg.active = $2::boolean)
-ORDER BY eg.election_date DESC
+ORDER BY eg.election_date ASC
 `
 
 type ListElectionGroupsWithPartyStatsParams struct {

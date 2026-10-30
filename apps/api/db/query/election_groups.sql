@@ -12,7 +12,7 @@ SELECT * FROM election_groups WHERE fake_id = $1;
 -- name: ListElectionGroups :many
 SELECT * FROM election_groups
 WHERE (sqlc.narg('active')::boolean IS NULL OR active = sqlc.narg('active')::boolean)
-ORDER BY election_date DESC;
+ORDER BY election_date ASC;
 
 -- name: UpdateElectionGroup :one
 UPDATE election_groups
@@ -58,4 +58,4 @@ SELECT
     )::integer AS elections_contesting
 FROM election_groups eg
 WHERE (sqlc.narg('active')::boolean IS NULL OR eg.active = sqlc.narg('active')::boolean)
-ORDER BY eg.election_date DESC;
+ORDER BY eg.election_date ASC;

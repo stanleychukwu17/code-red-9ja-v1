@@ -328,43 +328,66 @@ func (s *Service) SubmitSupervisorApplication(ctx context.Context, input SubmitS
 }
 
 // HasActiveAgentApplication checks whether a user has a pending or accepted agent application for an upcoming election.
-// The result is cached in Redis with a 1-day TTL to shield subsequent calls and allow fail-fast validation at the handler layer.
+// The result is cached in Redis with a 30-day TTL to shield subsequent calls and allow fail-fast validation at the handler layer.
 func (s *Service) HasActiveAgentApplication(ctx context.Context, userID int64) (bool, error) {
 	cacheKey := fmt.Sprintf("%s%d", db.RedisUserHasActiveAgentApp, userID)
-	if s.rdb != nil {
-		val, err := s.rdb.Get(ctx, cacheKey).Result()
-		if err == nil {
-			return val == "1", nil
-		}
+	// Check Redis cache first ("1" = true, "0" = false)
+	if val, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
+		return val == "1", nil
 	}
 
+	// Fallback to database check
 	hasActive, err := s.queries.HasActiveAgentApplication(ctx, userID)
 	if err != nil {
 		return false, fmt.Errorf("failed to check active agent application: %w", err)
 	}
 
-	if s.rdb != nil {
-		val := "0"
-		if hasActive {
-			val = "1"
-		}
-		_ = s.rdb.Set(ctx, cacheKey, val, db.RedisOneDayTTL).Err()
+	// Cache result in Redis for subsequent checks
+	val := "0"
+	if hasActive {
+		val = "1"
 	}
 
+	_ = s.rdb.Set(ctx, cacheKey, val, db.RedisThirtyDaysTTL).Err()
 	return hasActive, nil
 }
 
 // InvalidateUserHasActiveAgentApp clears the cached active agent application status for a user.
 func (s *Service) InvalidateUserHasActiveAgentApp(ctx context.Context, userID int64) error {
-	if s.rdb == nil {
-		return nil
-	}
 	cacheKey := fmt.Sprintf("%s%d", db.RedisUserHasActiveAgentApp, userID)
 	return s.rdb.Del(ctx, cacheKey).Err()
 }
 
+// GetApplicationByID retrieves a single party agent application by its ID, utilizing Redis cache when available.
 func (s *Service) GetApplicationByID(ctx context.Context, id int64) (queries.PartyAgentApplication, error) {
-	return s.queries.GetApplicationByID(ctx, id)
+	if id <= 0 {
+		return queries.PartyAgentApplication{}, errors.New("invalid application ID")
+	}
+
+	cacheKey := fmt.Sprintf("%s%d", db.RedisPartyApplicationByID, id)
+	if cachedData, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
+		var app queries.PartyAgentApplication
+		if err := json.Unmarshal([]byte(cachedData), &app); err == nil && app.ID > 0 {
+			return app, nil
+		}
+	}
+
+	app, err := s.queries.GetApplicationByID(ctx, id)
+	if err != nil {
+		return queries.PartyAgentApplication{}, err
+	}
+
+	if appData, err := json.Marshal(app); err == nil {
+		_ = s.rdb.Set(ctx, cacheKey, appData, db.RedisThirtyDaysTTL).Err()
+	}
+
+	return app, nil
+}
+
+// InvalidateApplicationByID clears the cached party agent application details for an application ID.
+func (s *Service) InvalidateApplicationByID(ctx context.Context, id int64) error {
+	cacheKey := fmt.Sprintf("%s%d", db.RedisPartyApplicationByID, id)
+	return s.rdb.Del(ctx, cacheKey).Err()
 }
 
 // PartyApplicationListItem is a clean, frontend-ready representation of an agent application.
@@ -601,8 +624,9 @@ func (s *Service) RejectApplication(ctx context.Context, id int64, reason string
 	// Initiate cascading stats rollup
 	s.initiateStatsRollup(ctx, egID, role, puID, wardID, lgaID, stateID)
 
-	// Invalidate active agent application cache for the applicant
+	// Invalidate active agent application cache for the applicant and application entity cache
 	_ = s.InvalidateUserHasActiveAgentApp(ctx, app.UserID)
+	_ = s.InvalidateApplicationByID(ctx, id)
 
 	return updatedApp, nil
 }
@@ -626,8 +650,9 @@ func (s *Service) CancelApplication(ctx context.Context, id int64) (queries.Part
 		return queries.PartyAgentApplication{}, err
 	}
 
-	// Invalidate active agent application cache for the applicant
+	// Invalidate active agent application cache for the applicant and application entity cache
 	_ = s.InvalidateUserHasActiveAgentApp(ctx, app.UserID)
+	_ = s.InvalidateApplicationByID(ctx, id)
 
 	return updatedApp, nil
 }
@@ -922,6 +947,7 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 	s.rdb.Del(ctx, fmt.Sprintf("%s%d", db.RedisPartyByID, partyID))
 	s.rdb.Del(ctx, db.RedisPartiesAcceptingIDs)
 	_ = s.InvalidateUserHasActiveAgentApp(ctx, app.UserID)
+	_ = s.InvalidateApplicationByID(ctx, input.ApplicationID)
 
 	// Initiate cascading stats rollup
 	s.initiateStatsRollup(ctx, egID, roleType, pollingUnitID, input.WardID, input.LgaID, input.StateID)
