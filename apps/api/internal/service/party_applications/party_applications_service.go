@@ -25,21 +25,33 @@ type UsersService interface {
 	InvalidatePrimaryBankAccount(ctx context.Context, userID int64) error
 }
 
-type Service struct {
-	queries      *queries.Queries
-	pool         *pgxpool.Pool
-	rdb          *redis.Client
-	usersService UsersService
+type PollingUnitsService interface {
+	GetPollingUnitByID(ctx context.Context, id int32) (queries.PollingUnit, error)
 }
 
-func NewService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client, usersService UsersService) *Service {
+type Service struct {
+	queries             *queries.Queries
+	pool                *pgxpool.Pool
+	rdb                 *redis.Client
+	usersService        UsersService
+	pollingUnitsService PollingUnitsService
+}
+
+func NewService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client, usersService UsersService, pollingUnitsService PollingUnitsService) *Service {
 	return &Service{
-		queries:      q,
-		pool:         pool,
-		rdb:          rdb,
-		usersService: usersService,
+		queries:             q,
+		pool:                pool,
+		rdb:                 rdb,
+		usersService:        usersService,
+		pollingUnitsService: pollingUnitsService,
 	}
 }
+
+var (
+	ErrPollingUnitNotFound    = errors.New("selected polling unit not found")
+	ErrPollingUnitMismatch    = errors.New("selected polling unit does not match the provided state, LGA, or ward")
+	ErrPollingUnitUnavailable = errors.New("selected polling unit has no active elections in this election cycle")
+)
 
 type SubmitApplicationInput struct {
 	UserID          int64
@@ -79,6 +91,32 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 	}
 	if hasActive {
 		return 0, errors.New("you already have an active application for an upcoming election. You cannot apply for another election group until your current assignment concludes")
+	}
+
+	// Verify selected polling unit exists
+	pu, err := s.pollingUnitsService.GetPollingUnitByID(ctx, input.PollingUnitID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return 0, ErrPollingUnitNotFound
+		}
+		return 0, fmt.Errorf("failed to fetch polling unit: %w", err)
+	}
+
+	// Verify polling unit geography matches applicant's state, LGA, and ward
+	if pu.StateID != int32(input.CurrentState) || pu.LgaID != input.CurrentLga || pu.WardID != input.CurrentWard {
+		return 0, ErrPollingUnitMismatch
+	}
+
+	// Verify polling unit has active elections in the chosen election group
+	isAvailable, err := txQueries.IsPollingUnitInElectionGroup(ctx, queries.IsPollingUnitInElectionGroupParams{
+		PollingUnitID:   input.PollingUnitID,
+		ElectionGroupID: input.ElectionGroupID,
+	})
+	if err != nil {
+		return 0, fmt.Errorf("failed to verify polling unit in election group: %w", err)
+	}
+	if !isAvailable {
+		return 0, ErrPollingUnitUnavailable
 	}
 
 	// Update user agent details and retrieve existing avatar_file_id
@@ -491,7 +529,7 @@ func (s *Service) GetPollingUnitRecommendations(ctx context.Context, partyID int
 	//    This also tells us its actual ward_id.
 	var applicantWardID int32
 	if pollingUnitID > 0 {
-		pu, err := s.queries.GetPollingUnitByID(ctx, pollingUnitID)
+		pu, err := s.pollingUnitsService.GetPollingUnitByID(ctx, pollingUnitID)
 		if err == nil {
 			// Count how many agents are already assigned to this unit
 			var agentsCount int32
@@ -724,10 +762,6 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 	if roleType == "" {
 		roleType = "polling_agent" // Note: Frontend passes 'polling_agent' or supervisor string
 	}
-	// For backward compatibility / handling frontend names
-	if roleType == "polling_agent" {
-		roleType = "polling_agent"
-	}
 	var assignedByVal pgtype.Int8
 	if input.AssignedBy > 0 {
 		assignedByVal = utils.PgInt8FromPositive(input.AssignedBy)
@@ -787,7 +821,8 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 	egID := app.ElectionGroupID
 	partyID := app.PartyID
 
-	if roleType == "state_election_supervisor" || roleType == "state_supervisor" {
+	switch roleType {
+	case "state_election_supervisor":
 		_, err = txQueries.CreateStateSupervisor(ctx, queries.CreateStateSupervisorParams{
 			UserID:               app.UserID,
 			StateID:              input.StateID,
@@ -797,13 +832,7 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 			AssignedBy:           assignedByVal,
 			PotentialPaymentKobo: deductionKobo,
 		})
-		if err != nil {
-			return queries.PartyAgentApplication{}, fmt.Errorf("failed to assign user to role %s: %w", roleType, err)
-		}
-
-		// State supervisor created. Stats are aggregated dynamically.
-
-	} else if roleType == "lga_election_supervisor" || roleType == "lga_supervisor" {
+	case "lga_election_supervisor":
 		_, err = txQueries.CreateLgaSupervisor(ctx, queries.CreateLgaSupervisorParams{
 			UserID:               app.UserID,
 			StateID:              input.StateID,
@@ -814,13 +843,7 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 			AssignedBy:           assignedByVal,
 			PotentialPaymentKobo: deductionKobo,
 		})
-		if err != nil {
-			return queries.PartyAgentApplication{}, fmt.Errorf("failed to assign user to role %s: %w", roleType, err)
-		}
-
-		// LGA supervisor created. Stats are aggregated dynamically.
-
-	} else if roleType == "ward_election_supervisor" || roleType == "ward_supervisor" {
+	case "ward_election_supervisor":
 		_, err = txQueries.CreateWardSupervisor(ctx, queries.CreateWardSupervisorParams{
 			UserID:               app.UserID,
 			StateID:              input.StateID,
@@ -832,13 +855,7 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 			AssignedBy:           assignedByVal,
 			PotentialPaymentKobo: deductionKobo,
 		})
-		if err != nil {
-			return queries.PartyAgentApplication{}, fmt.Errorf("failed to assign user to role %s: %w", roleType, err)
-		}
-
-		// Ward supervisor created. Stats are aggregated dynamically.
-
-	} else {
+	default:
 		// Default: polling agent
 		_, err = txQueries.CreateAssignment(ctx, queries.CreateAssignmentParams{
 			UserID:               app.UserID,

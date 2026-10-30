@@ -3,6 +3,8 @@ package partyapplicationshandler
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"free9ja/api/internal/constants"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
@@ -21,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-playground/validator/v10"
 )
 
 type PartyApplicationsService interface {
@@ -63,6 +66,7 @@ type Handler struct {
 	distributor           worker.TaskDistributor
 	notificationsService  notifications.NotificationsService
 	auditService          audit.AuditService
+	validate              *validator.Validate
 	utils                 *utils.Utils
 }
 
@@ -76,27 +80,28 @@ func NewHandler(service PartyApplicationsService, usersService UsersService, par
 		distributor:           distributor,
 		notificationsService:  notificationsService,
 		auditService:          auditService,
+		validate:              validator.New(),
 		utils:                 utils,
 	}
 }
 
 type SubmitApplicationRequest struct {
-	PartyID         int16  `json:"party_id"`
-	ElectionGroupID int32  `json:"election_group_id"`
-	PollingUnitID   int32  `json:"polling_unit_id"`
-	Avatar          string `json:"avatar"`
-	AvatarFileID    *int64 `json:"avatar_file_id"`
-	CurrentState    int16  `json:"current_state"`
-	CurrentLga      int32  `json:"current_lga"`
-	CurrentWard     int32  `json:"current_ward"`
+	PartyID           int16   `json:"party_id" validate:"required,gt=0"`
+	ElectionGroupID   int32   `json:"election_group_id" validate:"required,gt=0"`
+	PollingUnitID     int32   `json:"polling_unit_id" validate:"required,gt=0"`
+	Avatar            string  `json:"avatar"`
+	AvatarFileID      *int64  `json:"avatar_file_id"`
+	CurrentState      int16   `json:"current_state" validate:"required,gt=0"`
+	CurrentLga        int32   `json:"current_lga" validate:"required,gt=0"`
+	CurrentWard       int32   `json:"current_ward" validate:"required,gt=0"`
 
-	EducationalStatus string `json:"educational_status"`
-	HighestDegree     string `json:"highest_degree"`
-	GraduationYear    string `json:"graduation_year"`
-	SchoolName        string `json:"school_name"`
-	Address           string `json:"address"`
-	BankAccountNumber string `json:"bank_account_number"`
-	BankCode          string `json:"bank_code"`
+	EducationalStatus string  `json:"educational_status"`
+	HighestDegree     string  `json:"highest_degree"`
+	GraduationYear    string  `json:"graduation_year"`
+	SchoolName        string  `json:"school_name"`
+	Address           string  `json:"address"`
+	BankAccountNumber string  `json:"bank_account_number"`
+	BankCode          string  `json:"bank_code"`
 }
 
 // SubmitApplication godoc
@@ -138,8 +143,8 @@ func (h *Handler) SubmitApplication(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate required fields
-	if req.PartyID <= 0 || req.ElectionGroupID <= 0 || req.PollingUnitID <= 0 || req.CurrentState <= 0 || req.CurrentLga <= 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "party_id, election_group_id, polling_unit_id, current_state, current_lga are required")
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
 		return
 	}
 
@@ -208,8 +213,14 @@ func (h *Handler) SubmitApplication(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		errStr := err.Error()
 		// Check for duplicate application uniqueness constraint violation
-		if strings.Contains(errStr, "uq_active_user_app_per_group") || strings.Contains(errStr, "uq_user_application_per_group") {
+		if strings.Contains(errStr, "uq_active_user_app_per_group") || strings.Contains(errStr, "uq_user_application_per_group") || strings.Contains(errStr, "already have an active application") {
 			h.utils.RespondError(w, http.StatusConflict, "You already have an active application for this election group")
+			return
+		}
+		if errors.Is(err, partyapplications.ErrPollingUnitNotFound) ||
+			errors.Is(err, partyapplications.ErrPollingUnitMismatch) ||
+			errors.Is(err, partyapplications.ErrPollingUnitUnavailable) {
+			h.utils.RespondError(w, http.StatusBadRequest, err.Error())
 			return
 		}
 
@@ -612,6 +623,12 @@ func (h *Handler) ApproveApplication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Exit early if application is not pending
+	if app.Status != "pending" {
+		h.utils.RespondError(w, http.StatusConflict, fmt.Sprintf("Application has already been %s", app.Status))
+		return
+	}
+
 	// Validate required role type
 	roleType := strings.TrimSpace(req.RoleType)
 	if roleType == "" {
@@ -772,6 +789,12 @@ func (h *Handler) RejectApplication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Exit early if application is not pending
+	if app.Status != "pending" {
+		h.utils.RespondError(w, http.StatusConflict, fmt.Sprintf("Application has already been %s", app.Status))
+		return
+	}
+
 	// Reject application
 	updatedApp, err := h.service.RejectApplication(r.Context(), id, req.Reason)
 	if err != nil {
@@ -852,6 +875,12 @@ func (h *Handler) CancelApplication(w http.ResponseWriter, r *http.Request) {
 			h.utils.RespondError(w, http.StatusForbidden, "Only the applicant or authorized party administrators can cancel this application")
 			return
 		}
+	}
+
+	// Exit early if application is not pending
+	if app.Status != "pending" {
+		h.utils.RespondError(w, http.StatusConflict, fmt.Sprintf("Application has already been %s", app.Status))
+		return
 	}
 
 	// Cancel application

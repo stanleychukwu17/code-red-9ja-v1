@@ -213,7 +213,7 @@ export const pollingAgentTest: PracticeTaskType[] = [
     tutorial: {
       title: "Give Party Updates",
       subtitle:
-        "Give party updates every frequently telling them how election is going at your polling unit.",
+        "Give party updates frequently to let them know how the election is going at your polling unit.",
       video:
         "https://res.cloudinary.com/dhtcwqsx4/video/upload/v1782937548/Free9ja/videos/I_like_this_but_he_shouldn_t_b_wsibes.mp4",
     },

@@ -15,7 +15,7 @@ import { getPageHeader } from "#/lib/shared/meta";
 import { createFileRoute } from "@tanstack/react-router";
 import { getApplicationTabs } from "./-data";
 import { ApplicationsActions } from "#/components/applications/ApplicationsActions";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { getApplications } from "#/lib/server/applications";
 import { Loader2 } from "lucide-react";
 
@@ -56,45 +56,18 @@ function RouteComponent() {
     },
   });
 
-  // Count queries for tab badges
-  const { data: pendingRes, refetch: refetchPending } = useQuery({
-    queryKey: ["applications", partyShortName, "pending", "count"],
-    queryFn: () => getApplications({ data: { status: "pending", limit: 1 } }),
-  });
-  const { data: acceptedRes, refetch: refetchAccepted } = useQuery({
-    queryKey: ["applications", partyShortName, "accepted", "count"],
-    queryFn: () => getApplications({ data: { status: "accepted", limit: 1 } }),
-  });
-
-  const refetchAll = () => {
-    refetchPending();
-    refetchAccepted();
-    refetchRejected();
-  };
-
   const rejectedApps =
     rejectedPages?.pages.flatMap((p) => p?.data?.applications ?? []) ?? [];
   const rejectedCount = rejectedPages?.pages[0]?.data?.meta?.has_more
     ? `${rejectedApps.length}+`
     : rejectedApps.length;
 
-  const pendingCount = pendingRes?.data?.meta?.has_more
-    ? "50+"
-    : (pendingRes?.data?.applications?.length ?? 0);
-  const acceptedCount = acceptedRes?.data?.meta?.has_more
-    ? "50+"
-    : (acceptedRes?.data?.applications?.length ?? 0);
-
   return (
     <Layout>
       <PageHeader
         title="Applications"
         activeTab="rejected"
-        tabs={getApplicationTabs(partyShortName, {
-          pending: Number(pendingCount),
-          accepted: Number(acceptedCount),
-          rejected: Number(rejectedApps.length),
-        })}
+        tabs={getApplicationTabs(partyShortName)}
         rightComponent={
           <div className="text-[18px] text-[#6f6f6f]">
             <span className="font-semibold text-[#222]">{rejectedCount}</span>{" "}
@@ -119,7 +92,7 @@ function RouteComponent() {
         </div>
       ) : (
         <>
-          <ApplicationsTable items={rejectedApps} refetch={refetchAll} />
+          <ApplicationsTable items={rejectedApps} refetch={refetchRejected} />
           {hasNextPage && (
             <div className="flex justify-center py-6">
               <button

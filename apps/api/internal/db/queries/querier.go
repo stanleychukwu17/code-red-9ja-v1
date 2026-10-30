@@ -358,6 +358,7 @@ type Querier interface {
 	IsPartyAcceptingApplications(ctx context.Context, id int16) (bool, error)
 	IsPartyChapterMember(ctx context.Context, arg IsPartyChapterMemberParams) (bool, error)
 	IsPartyMember(ctx context.Context, arg IsPartyMemberParams) (bool, error)
+	IsPollingUnitInElectionGroup(ctx context.Context, arg IsPollingUnitInElectionGroupParams) (bool, error)
 	// Checks if blocker_id has blocked blocked_user_id
 	IsUserBlocked(ctx context.Context, arg IsUserBlockedParams) (bool, error)
 	// Useful for chat/DMs/feed: true if either user has blocked the other

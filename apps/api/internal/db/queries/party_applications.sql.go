@@ -347,6 +347,36 @@ func (q *Queries) HasActiveAgentApplication(ctx context.Context, userID int64) (
 	return has_active, err
 }
 
+const isPollingUnitInElectionGroup = `-- name: IsPollingUnitInElectionGroup :one
+SELECT EXISTS (
+  SELECT 1
+  FROM elections e
+  JOIN polling_units pu ON pu.id = $1::integer
+  WHERE e.election_group_id = $2::integer
+    AND (
+      e.scope = 'nationwide'
+      OR (e.scope = 'state' AND e.state_id = pu.state_id)
+      OR (e.scope = 'senatorial-district' AND e.senatorial_district_id = pu.senatorial_district_id)
+      OR (e.scope = 'federal-constituency' AND e.federal_constituency_id = pu.federal_constituency_id)
+      OR (e.scope = 'state-constituency' AND e.state_constituency_id = pu.state_constituency_id)
+      OR (e.scope = 'lga' AND e.lga_id = pu.lga_id)
+      OR (e.scope = 'ward' AND e.ward_id = pu.ward_id)
+    )
+) AS is_available
+`
+
+type IsPollingUnitInElectionGroupParams struct {
+	PollingUnitID   int32 `json:"polling_unit_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
+}
+
+func (q *Queries) IsPollingUnitInElectionGroup(ctx context.Context, arg IsPollingUnitInElectionGroupParams) (bool, error) {
+	row := q.db.QueryRow(ctx, isPollingUnitInElectionGroup, arg.PollingUnitID, arg.ElectionGroupID)
+	var is_available bool
+	err := row.Scan(&is_available)
+	return is_available, err
+}
+
 const listApplications = `-- name: ListApplications :many
 SELECT 
   pa.id,
