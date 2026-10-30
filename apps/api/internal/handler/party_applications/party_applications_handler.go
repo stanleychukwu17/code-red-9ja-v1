@@ -3,13 +3,13 @@ package partyapplicationshandler
 import (
 	"context"
 	"encoding/json"
-	"errors"
+	"free9ja/api/internal/constants"
+	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	apimiddleware "free9ja/api/internal/middleware"
-	partyapplications "free9ja/api/internal/service/party_applications"
-	"free9ja/api/internal/db"
 	"free9ja/api/internal/service/audit"
 	"free9ja/api/internal/service/notifications"
+	partyapplications "free9ja/api/internal/service/party_applications"
 	permissionsservice "free9ja/api/internal/service/permissions"
 	"free9ja/api/internal/utils"
 	"net/http"
@@ -40,6 +40,7 @@ type UsersService interface {
 
 type PartiesService interface {
 	GetPartyByID(ctx context.Context, partyID int16) (queries.Party, error)
+	GetOrCreateNationalChapter(ctx context.Context, partyID, countryID int16, createIfMissing ...bool) (int32, error)
 }
 
 type PermissionsService interface {
@@ -237,28 +238,33 @@ type SubmitSupervisorApplicationRequest struct {
 // @Router       /party-applications/supervisor [post]
 // func (h *Handler) SubmitSupervisorApplication(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) SubmitSupervisorApplication(w http.ResponseWriter, r *http.Request) {
+	// Authenticate and extract claims
 	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
 	if !ok {
 		return
 	}
 
+	// Fetch requester user details
 	requester, err := h.usersService.GetUserByFakeID(r.Context(), claims.FakeID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusUnauthorized, "User not found")
 		return
 	}
 
+	// Decode request payload
 	var req SubmitSupervisorApplicationRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
+	// Validate required fields
 	if req.ElectionGroupID <= 0 || strings.TrimSpace(req.Role) == "" {
 		h.utils.RespondError(w, http.StatusBadRequest, "election_group_id and role are required")
 		return
 	}
 
+	// Submit supervisor application
 	app, err := h.service.SubmitSupervisorApplication(r.Context(), partyapplications.SubmitSupervisorApplicationInput{
 		UserID:               requester.ID,
 		ElectionGroupID:      req.ElectionGroupID,
@@ -283,6 +289,7 @@ func (h *Handler) SubmitSupervisorApplication(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	// Return created application
 	h.utils.RespondSuccess(w, http.StatusCreated, "Supervisor application submitted successfully", map[string]interface{}{
 		"application": app,
 	})
@@ -310,17 +317,20 @@ func (h *Handler) SubmitSupervisorApplication(w http.ResponseWriter, r *http.Req
 // @Security     BearerAuth
 // @Router       /party-applications [get]
 func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
+	// Authenticate and extract claims
 	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
 	if !ok {
 		return
 	}
 
+	// Fetch requester user details
 	requester, err := h.usersService.GetUserByFakeID(r.Context(), claims.FakeID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusUnauthorized, "User not found")
 		return
 	}
 
+	// Parse query parameters
 	var requestedPartyID int16
 	var electionGroupID int32
 	status := r.URL.Query().Get("status")
@@ -336,6 +346,7 @@ func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Parse optional user filter
 	var requestedUserID int64
 	if val := r.URL.Query().Get("user_id"); val != "" {
 		if uID, _ := strconv.ParseInt(val, 10, 64); uID > 0 {
@@ -343,6 +354,7 @@ func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Parse pagination parameters
 	limit := int32(20)
 	if val := r.URL.Query().Get("limit"); val != "" {
 		if l, err := strconv.Atoi(val); err == nil && l > 0 {
@@ -400,6 +412,7 @@ func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 		filterUserID = requester.ID
 	}
 
+	// Parse optional geographic filters
 	var stateID int16
 	var lgaID, wardID int32
 
@@ -419,14 +432,17 @@ func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Filter for active election groups only
 	activeElectionOnly := r.URL.Query().Get("active_election_only") == "true"
 
+	// Fetch filtered applications list
 	apps, err := h.service.ListApplications(r.Context(), filterUserID, partyID, electionGroupID, status, stateID, lgaID, wardID, activeElectionOnly, limit, cursor)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to list applications: "+err.Error())
 		return
 	}
 
+	// Compute keyset pagination cursor
 	var nextCursor int64
 	hasMore := false
 	if int32(len(apps)) == limit {
@@ -434,6 +450,7 @@ func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 		nextCursor = apps[len(apps)-1].ID
 	}
 
+	// Return paginated applications
 	h.utils.RespondSuccess(w, http.StatusOK, "Applications retrieved successfully", map[string]interface{}{
 		"applications": apps,
 		"meta": map[string]interface{}{
@@ -491,11 +508,13 @@ func (h *Handler) GetPollingUnitRecommendations(w http.ResponseWriter, r *http.R
 // @Security     BearerAuth
 // @Router       /party-applications/{id} [get]
 func (h *Handler) GetApplication(w http.ResponseWriter, r *http.Request) {
+	// Authenticate and extract claims
 	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
 	if !ok {
 		return
 	}
 
+	// Parse application ID
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -503,13 +522,14 @@ func (h *Handler) GetApplication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Fetch application details
 	app, err := h.service.GetApplicationByID(r.Context(), id)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Application not found")
 		return
 	}
 
-	// Authorization check: Owner or authorized party admin / platform admin
+	// Restrict access to applicant or authorized party administrators
 	if app.UserID != claims.UserID {
 		if allowed, _, err := h.permissionsService.CheckPartyModificationPermission(claims, app.PartyID); !allowed || err != nil {
 			h.utils.RespondError(w, http.StatusForbidden, "Permission denied")
@@ -517,6 +537,7 @@ func (h *Handler) GetApplication(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Return application details
 	h.utils.RespondSuccess(w, http.StatusOK, "Application retrieved successfully", map[string]interface{}{
 		"application": app,
 	})
@@ -546,11 +567,13 @@ type ApproveApplicationRequest struct {
 // @Security     BearerAuth
 // @Router       /party-applications/{id}/approve [post]
 func (h *Handler) ApproveApplication(w http.ResponseWriter, r *http.Request) {
+	// Authenticate and extract claims
 	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
 	if !ok {
 		return
 	}
 
+	// Parse application ID
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -558,28 +581,34 @@ func (h *Handler) ApproveApplication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Decode approval payload
 	var req ApproveApplicationRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
+	// Fetch application details
 	app, err := h.service.GetApplicationByID(r.Context(), id)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Application not found")
 		return
 	}
 
+	// Verify caller has party modification permissions
 	if allowed, _, err := h.permissionsService.CheckPartyModificationPermission(claims, app.PartyID); !allowed || err != nil {
 		h.utils.RespondError(w, http.StatusForbidden, "Cannot approve applications of a different party")
 		return
 	}
 
-	roleType := req.RoleType
+	// Validate required role type
+	roleType := strings.TrimSpace(req.RoleType)
 	if roleType == "" {
-		roleType = "polling_agent"
+		h.utils.RespondError(w, http.StatusBadRequest, "role_type is required")
+		return
 	}
 
+	// Approve application
 	updatedApp, err := h.service.ApproveApplication(r.Context(), partyapplications.ApproveApplicationInput{
 		ApplicationID: id,
 		PollingUnitID: req.PollingUnitID,
@@ -590,6 +619,7 @@ func (h *Handler) ApproveApplication(w http.ResponseWriter, r *http.Request) {
 		AssignedBy:    claims.UserID,
 	})
 	if err != nil {
+		// Handle specific business rule errors
 		errStr := err.Error()
 		if strings.Contains(errStr, "cancelled_past_election") {
 			h.utils.RespondSuccess(w, http.StatusOK, "Application cancelled: Please apply for an upcoming election (not in the past)", map[string]interface{}{
@@ -616,6 +646,47 @@ func (h *Handler) ApproveApplication(w http.ResponseWriter, r *http.Request) {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to approve application: "+errStr)
 		return
 	}
+	// Resolve party national chapter ID (best-effort)
+	var natChapterID *int32
+	if chapID, chErr := h.partiesService.GetOrCreateNationalChapter(r.Context(), app.PartyID, constants.NigeriaCountryID); chErr == nil && chapID > 0 {
+		natChapterID = &chapID
+	}
+
+	var puIDPtr *int32
+	if req.PollingUnitID > 0 {
+		puIDPtr = &req.PollingUnitID
+	} else if updatedApp.PollingUnitID.Valid {
+		puIDPtr = &updatedApp.PollingUnitID.Int32
+	}
+
+	// Asynchronously send notifications to applicant and party national chapter
+	h.notificationsService.NotifyAgentApplicationApproved(r.Context(), notifications.NotifyAgentApplicationApprovedParams{
+		ApplicationID:     app.ID,
+		RecipientUserID:   app.UserID,
+		PartyID:           app.PartyID,
+		NationalChapterID: natChapterID,
+		ElectionGroupID:   app.ElectionGroupID,
+		PollingUnitID:     puIDPtr,
+		Role:              roleType,
+	})
+
+	// Asynchronously record the audit log for the action
+	auditOldValues, _ := json.Marshal(map[string]interface{}{
+		"status": app.Status,
+	})
+	auditNewValues, _ := json.Marshal(map[string]interface{}{
+		"status":          updatedApp.Status,
+		"role":            roleType,
+		"polling_unit_id": puIDPtr,
+	})
+	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
+		Module:     audit.StringToText(db.ModulePartyAdmin),
+		Action:     db.ActionApproveApplication,
+		EntityType: db.EntityTypePartyApplication,
+		EntityID:   strconv.FormatInt(id, 10),
+		OldValues:  auditOldValues,
+		NewValues:  auditNewValues,
+	})
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Polling agent application approved and assigned successfully", map[string]interface{}{
 		"application": updatedApp,
@@ -642,11 +713,13 @@ type RejectApplicationRequest struct {
 // @Security     BearerAuth
 // @Router       /party-applications/{id}/reject [post]
 func (h *Handler) RejectApplication(w http.ResponseWriter, r *http.Request) {
+	// Authenticate and extract claims
 	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
 	if !ok {
 		return
 	}
 
+	// Parse application ID
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -654,6 +727,7 @@ func (h *Handler) RejectApplication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Decode rejection payload
 	var req RejectApplicationRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
@@ -665,27 +739,30 @@ func (h *Handler) RejectApplication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Fetch application details
 	app, err := h.service.GetApplicationByID(r.Context(), id)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Application not found")
 		return
 	}
 
+	// Verify caller has party modification permissions
 	if allowed, _, err := h.permissionsService.CheckPartyModificationPermission(claims, app.PartyID); !allowed || err != nil {
 		h.utils.RespondError(w, http.StatusForbidden, "Cannot reject applications of a different party")
 		return
 	}
 
+	// Reject application
 	updatedApp, err := h.service.RejectApplication(r.Context(), id, req.Reason)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+
 	// Asynchronously send notification to the applicant
 	h.notificationsService.NotifyAgentApplicationRejected(r.Context(), notifications.NotifyAgentApplicationRejectedParams{
 		ApplicationID:   app.ID,
 		RecipientUserID: app.UserID,
-		ActorUserID:     &claims.UserID,
 		PartyID:         app.PartyID,
 		ElectionGroupID: app.ElectionGroupID,
 		Role:            app.Role,
@@ -709,7 +786,6 @@ func (h *Handler) RejectApplication(w http.ResponseWriter, r *http.Request) {
 		NewValues:  auditNewValues,
 	})
 
-
 	h.utils.RespondSuccess(w, http.StatusOK, "Polling agent application rejected successfully", map[string]interface{}{
 		"application": updatedApp,
 	})
@@ -729,11 +805,13 @@ func (h *Handler) RejectApplication(w http.ResponseWriter, r *http.Request) {
 // @Security     BearerAuth
 // @Router       /party-applications/{id}/cancel [post]
 func (h *Handler) CancelApplication(w http.ResponseWriter, r *http.Request) {
+	// Authenticate and extract claims
 	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
 	if !ok {
 		return
 	}
 
+	// Parse application ID
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -741,13 +819,14 @@ func (h *Handler) CancelApplication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Fetch application details
 	app, err := h.service.GetApplicationByID(r.Context(), id)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Application not found")
 		return
 	}
 
-	// 1. Applicant can always cancel their own application
+	// Allow cancellation by application owner or authorized party administrators
 	if app.UserID != claims.UserID {
 		if allowed, _, err := h.permissionsService.CheckPartyModificationPermission(claims, app.PartyID); !allowed || err != nil {
 			h.utils.RespondError(w, http.StatusForbidden, "Only the applicant or authorized party administrators can cancel this application")
@@ -755,14 +834,37 @@ func (h *Handler) CancelApplication(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Cancel application
 	updatedApp, err := h.service.CancelApplication(r.Context(), id)
 	if err != nil {
-		if errors.Is(err, errors.New("application is already processed")) || strings.Contains(err.Error(), "already processed") {
-			h.utils.RespondError(w, http.StatusConflict, "Application has already been processed")
-			return
-		}
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to cancel application: "+err.Error())
+		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
 		return
+	}
+
+	// If cancelled by an administrator rather than the applicant, notify user and audit log
+	if app.UserID != claims.UserID {
+		h.notificationsService.NotifyAgentApplicationCancelled(r.Context(), notifications.NotifyAgentApplicationCancelledParams{
+			ApplicationID:   app.ID,
+			RecipientUserID: app.UserID,
+			PartyID:         app.PartyID,
+			ElectionGroupID: app.ElectionGroupID,
+			Role:            app.Role,
+		})
+
+		auditOldValues, _ := json.Marshal(map[string]interface{}{
+			"status": app.Status,
+		})
+		auditNewValues, _ := json.Marshal(map[string]interface{}{
+			"status": updatedApp.Status,
+		})
+		h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
+			Module:     audit.StringToText(db.ModulePartyAdmin),
+			Action:     db.ActionCancelAgentApplication,
+			EntityType: db.EntityTypePartyApplication,
+			EntityID:   strconv.FormatInt(id, 10),
+			OldValues:  auditOldValues,
+			NewValues:  auditNewValues,
+		})
 	}
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Polling agent application cancelled successfully", map[string]interface{}{

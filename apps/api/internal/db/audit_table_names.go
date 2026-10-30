@@ -49,6 +49,7 @@ const (
 	ActionUpdatePartyAgentPaymentAllocation = "update_party_agent_payment_allocation" // Action when party agent payment allocations are updated
 	ActionRejectApplication                 = "reject_application"                  // Action when an agent application is rejected
 	ActionApproveApplication                = "approve_application"                 // Action when an agent application is approved
+	ActionCancelAgentApplication            = "cancel_agent_application"            // Action when an agent application is cancelled by an administrator
 
 	// -- Actor Roles --
 	ActorRoleSuperAdmin      = "super_admin"       // A super administrator of the system

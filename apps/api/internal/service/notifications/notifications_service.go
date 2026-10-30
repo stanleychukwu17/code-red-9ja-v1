@@ -57,6 +57,8 @@ type NotificationsService interface {
 	NotifyPartyAgentsAllowanceDeposited(ctx context.Context, params NotifyPartyAgentsAllowanceDepositedParams)
 	NotifyPartyAgentPaymentAllocationUpdated(ctx context.Context, params NotifyPartyAgentPaymentAllocationUpdatedParams)
 	NotifyAgentApplicationRejected(ctx context.Context, params NotifyAgentApplicationRejectedParams)
+	NotifyAgentApplicationApproved(ctx context.Context, params NotifyAgentApplicationApprovedParams)
+	NotifyAgentApplicationCancelled(ctx context.Context, params NotifyAgentApplicationCancelledParams)
 }
 
 type service struct {
@@ -265,11 +267,28 @@ type NotifyPartyAgentsAllowanceDepositedParams struct {
 type NotifyAgentApplicationRejectedParams struct {
 	ApplicationID   int64
 	RecipientUserID int64
-	ActorUserID     *int64
 	PartyID         int16
 	ElectionGroupID int32
 	Role            string
 	Reason          string
+}
+
+type NotifyAgentApplicationCancelledParams struct {
+	ApplicationID   int64
+	RecipientUserID int64
+	PartyID         int16
+	ElectionGroupID int32
+	Role            string
+}
+
+type NotifyAgentApplicationApprovedParams struct {
+	ApplicationID   int64
+	RecipientUserID int64
+	PartyID         int16
+	NationalChapterID *int32
+	ElectionGroupID int32
+	PollingUnitID   *int32
+	Role            string
 }
 
 type NotifyPartyAgentPaymentAllocationUpdatedParams struct {
@@ -947,7 +966,6 @@ func (s *service) NotifyAgentApplicationRejected(ctx context.Context, params Not
 	partyID := params.PartyID
 	s.CreateNotificationAsync(ctx, CreateNotificationInput{
 		RecipientUserID: params.RecipientUserID,
-		ActorUserID:     params.ActorUserID,
 		PartyID:         &partyID,
 		Category:        constants.NotificationCategoryParty,
 		Type:            constants.NotificationTypeAgentApplicationRejected,
@@ -958,6 +976,59 @@ func (s *service) NotifyAgentApplicationRejected(ctx context.Context, params Not
 			Set("party_id", params.PartyID).
 			Set("election_group_id", params.ElectionGroupID).
 			Set("reason", params.Reason),
+	})
+}
+
+// NotifyAgentApplicationApproved dispatches notifications to the applicant and national chapter when an application is approved.
+func (s *service) NotifyAgentApplicationApproved(ctx context.Context, params NotifyAgentApplicationApprovedParams) {
+	partyID := params.PartyID
+	// 1. In-app notification to the approved applicant
+	s.CreateNotificationAsync(ctx, CreateNotificationInput{
+		RecipientUserID: params.RecipientUserID,
+		PartyID:         &partyID,
+		Category:        constants.NotificationCategoryParty,
+		Type:            constants.NotificationTypeAgentApplicationApproved,
+		Priority:        constants.NotificationPriorityNormal,
+		Metadata: utils.NewMetadata().
+			Set("application_id", params.ApplicationID).
+			Set("role", params.Role).
+			Set("party_id", params.PartyID).
+			Set("election_group_id", params.ElectionGroupID).
+			SetIfPresent("polling_unit_id", params.PollingUnitID),
+	})
+
+	// 2. Party notification to the national chapter
+	if params.NationalChapterID != nil && *params.NationalChapterID > 0 {
+		s.CreatePartyNotificationAsync(ctx, CreatePartyNotificationInput{
+			PartyID:   params.PartyID,
+			ChapterID: params.NationalChapterID,
+			Category:  constants.PartyNotificationCategoryAgentRecruitment,
+			Type:      constants.NotificationTypeAgentApplicationApproved,
+			Priority:  constants.NotificationPriorityNormal,
+			Metadata: utils.NewMetadata().
+				Set("applicant_user_id", params.RecipientUserID).
+				Set("application_id", params.ApplicationID).
+				Set("role", params.Role).
+				Set("election_group_id", params.ElectionGroupID).
+				SetIfPresent("polling_unit_id", params.PollingUnitID),
+		})
+	}
+}
+
+// NotifyAgentApplicationCancelled dispatches a notification to an applicant when their agent application is cancelled by an admin.
+func (s *service) NotifyAgentApplicationCancelled(ctx context.Context, params NotifyAgentApplicationCancelledParams) {
+	partyID := params.PartyID
+	s.CreateNotificationAsync(ctx, CreateNotificationInput{
+		RecipientUserID: params.RecipientUserID,
+		PartyID:         &partyID,
+		Category:        constants.NotificationCategoryParty,
+		Type:            constants.NotificationTypeAgentApplicationCancelled,
+		Priority:        constants.NotificationPriorityNormal,
+		Metadata: utils.NewMetadata().
+			Set("application_id", params.ApplicationID).
+			Set("role", params.Role).
+			Set("party_id", params.PartyID).
+			Set("election_group_id", params.ElectionGroupID),
 	})
 }
 

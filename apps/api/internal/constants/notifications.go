@@ -43,6 +43,7 @@ const (
 	NotificationTypePartyMembershipRejected       = "party_membership_rejected"
 	NotificationTypeAgentApplicationApproved      = "agent_application_approved"
 	NotificationTypeAgentApplicationRejected      = "agent_application_rejected"
+	NotificationTypeAgentApplicationCancelled     = "agent_application_cancelled"
 	NotificationTypeAgentPayoutCredited           = "agent_payout_credited"
 	NotificationTypePUResultFlagged               = "pu_result_flagged"
 	NotificationTypeNewAgentApplication           = "new_agent_application"
