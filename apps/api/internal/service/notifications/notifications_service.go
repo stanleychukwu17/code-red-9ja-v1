@@ -999,9 +999,11 @@ func (s *service) NotifyAgentApplicationApproved(ctx context.Context, params Not
 
 	// 2. Party notification to the national chapter
 	if params.NationalChapterID != nil && *params.NationalChapterID > 0 {
+		groupKey := constants.GroupKeyPartyAgentApplicationsApproved(params.PartyID, *params.NationalChapterID, params.ElectionGroupID)
 		s.CreatePartyNotificationAsync(ctx, CreatePartyNotificationInput{
 			PartyID:   params.PartyID,
 			ChapterID: params.NationalChapterID,
+			GroupKey:  &groupKey,
 			Category:  constants.PartyNotificationCategoryAgentRecruitment,
 			Type:      constants.NotificationTypeAgentApplicationApproved,
 			Priority:  constants.NotificationPriorityNormal,

@@ -77,3 +77,9 @@ func GroupKeyPartyNewMembers(partyID int16, chapterID int32) string {
 	prefix := fmt.Sprintf("party:%d:chapter:%d:new_members", partyID, chapterID)
 	return DailyGroupKey(prefix)
 }
+
+// GroupKeyPartyAgentApplicationsApproved returns a daily rollup group key for approved agent applications in a chapter.
+func GroupKeyPartyAgentApplicationsApproved(partyID int16, chapterID int32, electionGroupID int32) string {
+	prefix := fmt.Sprintf("party:%d:chapter:%d:eg:%d:agent_applications_approved", partyID, chapterID, electionGroupID)
+	return DailyGroupKey(prefix)
+}
