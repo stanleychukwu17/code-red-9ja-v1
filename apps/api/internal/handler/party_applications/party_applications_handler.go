@@ -10,6 +10,7 @@ import (
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/service/audit"
 	"free9ja/api/internal/service/notifications"
+	permissionsservice "free9ja/api/internal/service/permissions"
 	"free9ja/api/internal/utils"
 	"net/http"
 	"os"
@@ -41,20 +42,26 @@ type PartiesService interface {
 	GetPartyByID(ctx context.Context, partyID int16) (queries.Party, error)
 }
 
+type PermissionsService interface {
+	CheckPartyModificationPermission(claims *utils.JWTClaims, partyID int16) (bool, permissionsservice.PartyModificationPermissions, error)
+}
+
 type Handler struct {
-	service        PartyApplicationsService
-	usersService   UsersService
+	service              PartyApplicationsService
+	usersService         UsersService
 	partiesService       PartiesService
+	permissionsService   PermissionsService
 	notificationsService notifications.NotificationsService
 	auditService         audit.AuditService
 	utils                *utils.Utils
 }
 
-func NewHandler(service PartyApplicationsService, usersService UsersService, partiesService PartiesService, notificationsService notifications.NotificationsService, auditService audit.AuditService, utils *utils.Utils) *Handler {
+func NewHandler(service PartyApplicationsService, usersService UsersService, partiesService PartiesService, permissionsService PermissionsService, notificationsService notifications.NotificationsService, auditService audit.AuditService, utils *utils.Utils) *Handler {
 	return &Handler{
-		service:        service,
-		usersService:   usersService,
+		service:              service,
+		usersService:         usersService,
 		partiesService:       partiesService,
+		permissionsService:   permissionsService,
 		notificationsService: notificationsService,
 		auditService:         auditService,
 		utils:                utils,
@@ -489,12 +496,6 @@ func (h *Handler) GetApplication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	requester, err := h.usersService.GetUserByFakeID(r.Context(), claims.FakeID)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusUnauthorized, "User not found")
-		return
-	}
-
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -508,26 +509,9 @@ func (h *Handler) GetApplication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Authorization check
-	rolesData, _ := h.usersService.GetUserRoles(r.Context(), requester.ID)
-	isPlatformAdmin := false
-	isPartyAdmin := false
-	for _, rCode := range rolesData.RolesCode {
-		if rCode == "admin" || rCode == "super_admin" {
-			isPlatformAdmin = true
-		}
-		if rCode == "party_admin" || rCode == "super_party_admin" {
-			isPartyAdmin = true
-		}
-	}
-	if !isPlatformAdmin {
-		requesterPartyID := int16(0)
-		if requester.PartyID.Valid {
-			requesterPartyID = requester.PartyID.Int16
-		} else if claims.PartyID > 0 {
-			requesterPartyID = claims.PartyID
-		}
-		if !isPartyAdmin || requesterPartyID == 0 || app.PartyID != requesterPartyID {
+	// Authorization check: Owner or authorized party admin / platform admin
+	if app.UserID != claims.UserID {
+		if allowed, _, err := h.permissionsService.CheckPartyModificationPermission(claims, app.PartyID); !allowed || err != nil {
 			h.utils.RespondError(w, http.StatusForbidden, "Permission denied")
 			return
 		}
@@ -567,12 +551,6 @@ func (h *Handler) ApproveApplication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	requester, err := h.usersService.GetUserByFakeID(r.Context(), claims.FakeID)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusUnauthorized, "User not found")
-		return
-	}
-
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -592,32 +570,9 @@ func (h *Handler) ApproveApplication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rolesData, _ := h.usersService.GetUserRoles(r.Context(), requester.ID)
-	isPlatformAdmin := false
-	isPartyAdmin := false
-	for _, rCode := range rolesData.RolesCode {
-		if rCode == "admin" || rCode == "super_admin" {
-			isPlatformAdmin = true
-		}
-		if rCode == "party_admin" || rCode == "super_party_admin" {
-			isPartyAdmin = true
-		}
-	}
-	if !isPlatformAdmin {
-		if !isPartyAdmin {
-			h.utils.RespondError(w, http.StatusForbidden, "Only administrators can approve applications")
-			return
-		}
-		requesterPartyID := int16(0)
-		if requester.PartyID.Valid {
-			requesterPartyID = requester.PartyID.Int16
-		} else if claims.PartyID > 0 {
-			requesterPartyID = claims.PartyID
-		}
-		if requesterPartyID == 0 || app.PartyID != requesterPartyID {
-			h.utils.RespondError(w, http.StatusForbidden, "Cannot approve applications of a different party")
-			return
-		}
+	if allowed, _, err := h.permissionsService.CheckPartyModificationPermission(claims, app.PartyID); !allowed || err != nil {
+		h.utils.RespondError(w, http.StatusForbidden, "Cannot approve applications of a different party")
+		return
 	}
 
 	roleType := req.RoleType
@@ -632,7 +587,7 @@ func (h *Handler) ApproveApplication(w http.ResponseWriter, r *http.Request) {
 		StateID:       req.StateID,
 		LgaID:         req.LgaID,
 		WardID:        req.WardID,
-		AssignedBy:    requester.ID,
+		AssignedBy:    claims.UserID,
 	})
 	if err != nil {
 		errStr := err.Error()
@@ -692,12 +647,6 @@ func (h *Handler) RejectApplication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	requester, err := h.usersService.GetUserByFakeID(r.Context(), claims.FakeID)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusUnauthorized, "User not found")
-		return
-	}
-
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -722,32 +671,9 @@ func (h *Handler) RejectApplication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rolesData, _ := h.usersService.GetUserRoles(r.Context(), requester.ID)
-	isPlatformAdmin := false
-	isPartyAdmin := false
-	for _, rCode := range rolesData.RolesCode {
-		if rCode == "admin" || rCode == "super_admin" {
-			isPlatformAdmin = true
-		}
-		if rCode == "party_admin" || rCode == "super_party_admin" {
-			isPartyAdmin = true
-		}
-	}
-	if !isPlatformAdmin {
-		if !isPartyAdmin {
-			h.utils.RespondError(w, http.StatusForbidden, "Only administrators can reject applications")
-			return
-		}
-		requesterPartyID := int16(0)
-		if requester.PartyID.Valid {
-			requesterPartyID = requester.PartyID.Int16
-		} else if claims.PartyID > 0 {
-			requesterPartyID = claims.PartyID
-		}
-		if requesterPartyID == 0 || app.PartyID != requesterPartyID {
-			h.utils.RespondError(w, http.StatusForbidden, "Cannot reject applications of a different party")
-			return
-		}
+	if allowed, _, err := h.permissionsService.CheckPartyModificationPermission(claims, app.PartyID); !allowed || err != nil {
+		h.utils.RespondError(w, http.StatusForbidden, "Cannot reject applications of a different party")
+		return
 	}
 
 	updatedApp, err := h.service.RejectApplication(r.Context(), id, req.Reason)
@@ -759,7 +685,7 @@ func (h *Handler) RejectApplication(w http.ResponseWriter, r *http.Request) {
 	h.notificationsService.NotifyAgentApplicationRejected(r.Context(), notifications.NotifyAgentApplicationRejectedParams{
 		ApplicationID:   app.ID,
 		RecipientUserID: app.UserID,
-		ActorUserID:     &requester.ID,
+		ActorUserID:     &claims.UserID,
 		PartyID:         app.PartyID,
 		ElectionGroupID: app.ElectionGroupID,
 		Role:            app.Role,
@@ -808,12 +734,6 @@ func (h *Handler) CancelApplication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	requester, err := h.usersService.GetUserByFakeID(r.Context(), claims.FakeID)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusUnauthorized, "User not found")
-		return
-	}
-
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -827,31 +747,12 @@ func (h *Handler) CancelApplication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rolesData, _ := h.usersService.GetUserRoles(r.Context(), requester.ID)
-	isPlatformAdmin := false
-	isPartyAdmin := false
-	for _, rCode := range rolesData.RolesCode {
-		if rCode == "admin" || rCode == "super_admin" {
-			isPlatformAdmin = true
+	// 1. Applicant can always cancel their own application
+	if app.UserID != claims.UserID {
+		if allowed, _, err := h.permissionsService.CheckPartyModificationPermission(claims, app.PartyID); !allowed || err != nil {
+			h.utils.RespondError(w, http.StatusForbidden, "Only the applicant or authorized party administrators can cancel this application")
+			return
 		}
-		if rCode == "party_admin" || rCode == "super_party_admin" {
-			isPartyAdmin = true
-		}
-	}
-
-	requesterPartyID := int16(0)
-	if requester.PartyID.Valid {
-		requesterPartyID = requester.PartyID.Int16
-	} else if claims.PartyID > 0 {
-		requesterPartyID = claims.PartyID
-	}
-
-	isApplicant := app.UserID == requester.ID
-	isPartyAdminOfApp := isPartyAdmin && requesterPartyID > 0 && app.PartyID == requesterPartyID
-
-	if !isApplicant && !isPartyAdminOfApp && !isPlatformAdmin {
-		h.utils.RespondError(w, http.StatusForbidden, "Only the applicant or authorized party administrators can cancel this application")
-		return
 	}
 
 	updatedApp, err := h.service.CancelApplication(r.Context(), id)
