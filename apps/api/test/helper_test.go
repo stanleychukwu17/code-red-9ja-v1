@@ -70,5 +70,6 @@ func TestTestNewApp_Integration(t *testing.T) {
 
 	assert.NotNil(t, app.DB)
 	assert.NotNil(t, app.RDB)
+	assert.NotNil(t, app.Processor)
 	assert.NotNil(t, app.Server)
 }

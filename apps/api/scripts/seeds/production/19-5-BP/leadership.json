@@ -3,12 +3,16 @@
     "order": 1,
     "username": "sonny_adenuga",
     "position_name": "Chairman",
-    "position_id": 2
+    "position_id": 2,
+    "type_of_account": "existing",
+    "existing_username": "sonny_adenuga"
   },
   {
     "order": 2,
     "username": "maryann_egwuatu",
     "position_name": "Secretary",
-    "position_id": 5
+    "position_id": 5,
+    "type_of_account": "existing",
+    "existing_username": "maryann_egwuatu"
   }
 ]

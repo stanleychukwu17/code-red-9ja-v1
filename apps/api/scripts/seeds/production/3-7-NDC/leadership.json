@@ -3,30 +3,40 @@
     "order": 1,
     "username": "cleopas_zuwoghe",
     "position_name": "Chairman",
-    "position_id": 2
+    "position_id": 2,
+    "type_of_account": "existing",
+    "existing_username": "cleopas_zuwoghe"
   },
   {
     "order": 2,
     "username": "ikenna_enekweizu",
     "position_name": "Secretary",
-    "position_id": 5
+    "position_id": 5,
+    "type_of_account": "existing",
+    "existing_username": "ikenna_enekweizu"
   },
   {
     "order": 3,
     "username": "john_odey",
     "position_name": "Treasurer",
-    "position_id": 22
+    "position_id": 22,
+    "type_of_account": "existing",
+    "existing_username": "john_odey"
   },
   {
     "order": 4,
     "username": "mainasara_sani",
     "position_name": "Financial Secretary",
-    "position_id": 24
+    "position_id": 24,
+    "type_of_account": "existing",
+    "existing_username": "mainasara_sani"
   },
   {
     "order": 5,
     "username": "reuben_egwuaba",
     "position_name": "Legal Adviser",
-    "position_id": 28
+    "position_id": 28,
+    "type_of_account": "existing",
+    "existing_username": "reuben_egwuaba"
   }
 ]

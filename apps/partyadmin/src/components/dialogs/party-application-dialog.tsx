@@ -62,7 +62,6 @@ export type ApplicationData = {
   lgaName?: string;
   wardName?: string;
   pollingUnitName?: string;
-  voterId?: string;
   phone?: string;
   callingPhone?: string;
   whatsappPhone?: string;

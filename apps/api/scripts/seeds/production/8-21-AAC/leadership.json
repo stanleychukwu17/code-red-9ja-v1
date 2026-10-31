@@ -3,12 +3,16 @@
     "order": 1,
     "username": "omoyele_sowore_1",
     "position_name": "Chairman",
-    "position_id": 2
+    "position_id": 2,
+    "type_of_account": "existing",
+    "existing_username": "omoyele_sowore_1"
   },
   {
     "order": 2,
     "username": "philip_ikpeminoghena",
     "position_name": "Secretary",
-    "position_id": 5
+    "position_id": 5,
+    "type_of_account": "existing",
+    "existing_username": "philip_ikpeminoghena"
   }
 ]

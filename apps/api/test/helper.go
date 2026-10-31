@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"free9ja/api/internal/config"
 	"free9ja/api/internal/db"
+	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/router"
+	"free9ja/api/internal/service/realtime"
 	"free9ja/api/internal/utils"
 	"free9ja/api/internal/worker"
 	"io"
@@ -69,11 +71,12 @@ func AfterEach(t *testing.T) (*testing.T, error) {
 // TestNewApp: creates a connection to the testing database,
 // use chi to listen to request to the url and also start the server
 type TestApp struct {
-	Cfg    *config.Config
-	DB     *pgxpool.Pool
-	RDB    *redis.Client
-	Server *http.Server
-	addr   *net.TCPAddr
+	Cfg       *config.Config
+	DB        *pgxpool.Pool
+	RDB       *redis.Client
+	Processor worker.TaskProcessor
+	Server    *http.Server
+	addr      *net.TCPAddr
 }
 
 // this function is a mock function that sets up a new application for testing
@@ -104,10 +107,24 @@ func TestNewApp(t *testing.T, ctx context.Context, cfg *config.Config) *TestApp 
 		Password: cfg.Redis.Password,
 		DB:       cfg.Redis.DB,
 	}
+	q := queries.New(pool)
 	distributor := worker.NewRedisTaskDistributor(redisOpt)
+	broadcaster := realtime.NewBroadcasterFromEnv()
+	processor := worker.NewRedisTaskProcessor(redisOpt, q, pool, rdb, distributor, cfg, nil, broadcaster)
 
 	// Initialize router
-	r := router.New(cfg, pool, rdb, distributor)
+	r := router.New(cfg, pool, rdb, distributor, processor)
+
+	// Start processor in background
+	go func() {
+		if err := processor.Start(); err != nil {
+			t.Logf("task processor error: %v", err)
+		}
+	}()
+
+	t.Cleanup(func() {
+		processor.Shutdown()
+	})
 
 	// use random free port
 	listener, _ := net.Listen("tcp", ":0")
@@ -135,11 +152,12 @@ func TestNewApp(t *testing.T, ctx context.Context, cfg *config.Config) *TestApp 
 	waitForServer("http://" + addr.String())
 
 	return &TestApp{
-		Cfg:    cfg,
-		DB:     pool,
-		RDB:    rdb,
-		Server: server,
-		addr:   addr,
+		Cfg:       cfg,
+		DB:        pool,
+		RDB:       rdb,
+		Processor: processor,
+		Server:    server,
+		addr:      addr,
 	}
 }
 

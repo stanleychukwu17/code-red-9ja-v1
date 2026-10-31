@@ -3,18 +3,24 @@
     "order": 1,
     "username": "sylvester_ezeokenwa",
     "position_name": "Chairman",
-    "position_id": 2
+    "position_id": 2,
+    "type_of_account": "existing",
+    "existing_username": "sylvester_ezeokenwa"
   },
   {
     "order": 2,
     "username": "ibrahim_mani_1",
     "position_name": "Secretary",
-    "position_id": 5
+    "position_id": 5,
+    "type_of_account": "existing",
+    "existing_username": "ibrahim_mani_1"
   },
   {
     "order": 3,
     "username": "ejimofor_opara",
     "position_name": "Publicity Secretary",
-    "position_id": 15
+    "position_id": 15,
+    "type_of_account": "existing",
+    "existing_username": "ejimofor_opara"
   }
 ]

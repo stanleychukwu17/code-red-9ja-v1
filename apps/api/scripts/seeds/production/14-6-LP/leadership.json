@@ -3,54 +3,72 @@
     "order": 1,
     "username": "nenadi_usman",
     "position_name": "Chairman",
-    "position_id": 2
+    "position_id": 2,
+    "type_of_account": "existing",
+    "existing_username": "nenadi_usman"
   },
   {
     "order": 2,
     "username": "darlington_nwokocha",
     "position_name": "Secretary",
-    "position_id": 5
+    "position_id": 5,
+    "type_of_account": "existing",
+    "existing_username": "darlington_nwokocha"
   },
   {
     "order": 3,
     "username": "ken_asogwa",
     "position_name": "Publicity Secretary",
-    "position_id": 15
+    "position_id": 15,
+    "type_of_account": "existing",
+    "existing_username": "ken_asogwa"
   },
   {
     "order": 4,
     "username": "oluchi_oparah",
     "position_name": "Organizing Secretary",
-    "position_id": 8
+    "position_id": 8,
+    "type_of_account": "existing",
+    "existing_username": "oluchi_oparah"
   },
   {
     "order": 5,
     "username": "hamisu_santurati",
     "position_name": "Treasurer",
-    "position_id": 22
+    "position_id": 22,
+    "type_of_account": "existing",
+    "existing_username": "hamisu_santurati"
   },
   {
     "order": 6,
     "username": "anslem_eragbe",
     "position_name": "Financial Secretary",
-    "position_id": 24
+    "position_id": 24,
+    "type_of_account": "existing",
+    "existing_username": "anslem_eragbe"
   },
   {
     "order": 7,
     "username": "yunusa_tanko",
     "position_name": "Head of Press",
-    "position_id": 18
+    "position_id": 18,
+    "type_of_account": "existing",
+    "existing_username": "yunusa_tanko"
   },
   {
     "order": 8,
     "username": "kennedy_ahanotu",
     "position_name": "Youth Leader",
-    "position_id": 32
+    "position_id": 32,
+    "type_of_account": "existing",
+    "existing_username": "kennedy_ahanotu"
   },
   {
     "order": 9,
     "username": "dudu_manuga",
     "position_name": "Women Leader",
-    "position_id": 30
+    "position_id": 30,
+    "type_of_account": "existing",
+    "existing_username": "dudu_manuga"
   }
 ]

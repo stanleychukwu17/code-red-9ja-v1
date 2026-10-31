@@ -3,12 +3,16 @@
     "order": 1,
     "username": "uchenna_nnadi",
     "position_name": "Chairman",
-    "position_id": 2
+    "position_id": 2,
+    "type_of_account": "existing",
+    "existing_username": "uchenna_nnadi"
   },
   {
     "order": 2,
     "username": "abu_sossan",
     "position_name": "Secretary",
-    "position_id": 5
+    "position_id": 5,
+    "type_of_account": "existing",
+    "existing_username": "abu_sossan"
   }
 ]

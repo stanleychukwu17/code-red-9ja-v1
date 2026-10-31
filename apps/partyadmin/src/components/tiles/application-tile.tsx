@@ -26,6 +26,7 @@ export type ApplicationType = {
   updated_at?: string;
   first_name?: string;
   last_name?: string;
+  full_name?: string;
   phone?: string | null;
   username?: string;
   avatar?: string | null;
@@ -69,7 +70,6 @@ export type ApplicationType = {
   appliedOn?: string;
   decisionLabel?: string;
   decisionVariant?: "accept" | "reject" | "pending";
-  voterId?: string;
   stateId?: number;
   lgaId?: number;
 };
@@ -89,7 +89,7 @@ export function ApplicationTableHeader() {
         <p className="text-c-50 text-[14px] w-35 hidden lg:block">
           Election
         </p>
-        <p className="text-c-50 text-[14px] w-[130px] hidden md:block">
+        <p className="text-c-50 text-[14px] w-32.5 hidden md:block">
           Role
         </p>
         <p className="text-c-50 text-[14px] w-40 hidden md:block">
@@ -104,57 +104,47 @@ export function ApplicationTableHeader() {
   );
 }
 
-export type ApplicationTableTileProps = {
-  data: ApplicationType;
-  refetch?: () => void;
+/**
+ * Returns color styling and readable label for each supervisor/agent role.
+ */
+export const getRoleBadge = (role?: string) => {
+  switch (role) {
+    case "state_election_supervisor":
+      return {
+        label: "State Supervisor",
+        className: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800",
+      };
+    case "lga_election_supervisor":
+      return {
+        label: "LGA Supervisor",
+        className: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800",
+      };
+    case "ward_election_supervisor":
+      return {
+        label: "Ward Supervisor",
+        className: "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:text-purple-400 dark:border-purple-800",
+      };
+    default:
+      return {
+        label: "Polling Agent",
+        className: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-800",
+      };
+  }
 };
 
 /**
- * ApplicationTableTile Component
- * List row component representing an individual application.
- * Supports quick-action inline buttons (Accept/Reject) as well as clicking to open the detailed review modal.
+ * Normalizes and extracts display data and details payload from an application.
  */
-export function ApplicationTableTile({ data, refetch }: ApplicationTableTileProps) {
-  const queryClient = useQueryClient();
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-
-  const approveMutation = useMutation({
-    mutationFn: (variables: { id: number; pollingUnitID: number }) =>
-      approveApplication({ data: variables }),
-    onSuccess: (res) => {
-      if (res && res.success) {
-        queryClient.invalidateQueries({ queryKey: ["applications"] });
-        if (refetch) refetch();
-      } else {
-        throw new Error(res?.message || "Failed to approve application");
-      }
-    },
-  });
-
-  const rejectMutation = useMutation({
-    mutationFn: (variables: { id: number; reason: string }) =>
-      rejectApplication({ data: variables }),
-    onSuccess: (res) => {
-      if (res && res.success) {
-        queryClient.invalidateQueries({ queryKey: ["applications"] });
-        if (refetch) refetch();
-      } else {
-        throw new Error(res?.message || "Failed to reject application");
-      }
-    },
-  });
-
-  const firstName = data.first_name || "";
-  const lastName = data.last_name || "";
-  const name = data.name || `${firstName} ${lastName}`.trim() || "Unknown User";
-
+export function extractApplicationTileData(data: ApplicationType) {
+  const name = (data.name || data.full_name)!;
   const avatar = data.avatar_url || data.avatar || "";
-  const election = data.election || data.election_group_name || "Upcoming Election";
+  const election = data.election || data.election_group_name;
 
   const stateName = data.state_name || "";
   const lgaName = data.lga_name || "";
   const cityName = data.city_name || "";
   const lgaVal = data.current_lga;
+  const wardName = data.ward_name || "";
 
   let formattedResidence = "";
   if (stateName) formattedResidence += stateName;
@@ -166,14 +156,12 @@ export function ApplicationTableTile({ data, refetch }: ApplicationTableTileProp
   }
 
   const residence = data.residence || formattedResidence;
-
   const pollingUnitName = data.polling_unit_name || "Not Specified";
   const agentsCount = data.agents_count ?? 0;
 
   const partyLogo = data.party_logo || "";
-  const partyShortName = data.party_short_name || "NDC";
+  const partyShortName = data.party_short_name || "";
 
-  const voterId = data.voterId || "";
   const phone = data.phone || "";
 
   let decisionLabel = data.decisionLabel || "Accept";
@@ -184,6 +172,7 @@ export function ApplicationTableTile({ data, refetch }: ApplicationTableTileProp
       decisionLabel = "Rejected";
     }
   }
+
   const decisionVariant =
     data.decisionVariant ||
     (data.status === "pending"
@@ -194,7 +183,6 @@ export function ApplicationTableTile({ data, refetch }: ApplicationTableTileProp
 
   const roleType = data.role || "polling_agent";
   const isSupervisor = roleType !== "polling_agent";
-  const wardName = data.ward_name || "";
 
   let assignmentLocation = pollingUnitName;
   if (isSupervisor) {
@@ -207,30 +195,6 @@ export function ApplicationTableTile({ data, refetch }: ApplicationTableTileProp
     }
   }
 
-  const getRoleBadge = (r: string) => {
-    switch (r) {
-      case "state_election_supervisor":
-        return {
-          label: "State Supervisor",
-          className: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800",
-        };
-      case "lga_election_supervisor":
-        return {
-          label: "LGA Supervisor",
-          className: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800",
-        };
-      case "ward_election_supervisor":
-        return {
-          label: "Ward Supervisor",
-          className: "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:text-purple-400 dark:border-purple-800",
-        };
-      default:
-        return {
-          label: "Polling Agent",
-          className: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-800",
-        };
-    }
-  };
   const roleBadge = getRoleBadge(roleType);
 
   const applicationDetails = {
@@ -242,7 +206,6 @@ export function ApplicationTableTile({ data, refetch }: ApplicationTableTileProp
     avatar,
     location: residence,
     election,
-    voterId,
     phone: phone || undefined,
     callingPhone: phone || undefined,
     whatsappPhone: data.whatsapp_phone || undefined,
@@ -262,16 +225,83 @@ export function ApplicationTableTile({ data, refetch }: ApplicationTableTileProp
     partyId: data.party_id || undefined,
     stateId: data.app_state_id || data.current_state || data.stateId,
     lgaId: data.app_lga_id || data.current_lga || data.lgaId || undefined,
-    partyLogo: partyLogo,
-    partyShortName: partyShortName,
+    partyLogo,
+    partyShortName,
   };
 
+  return {
+    name,
+    avatar,
+    election,
+    assignmentLocation,
+    isSupervisor,
+    agentsCount,
+    decisionLabel,
+    decisionVariant,
+    roleBadge,
+    applicationDetails,
+  };
+}
+
+export type ApplicationTableTileProps = {
+  data: ApplicationType;
+  refetch?: () => void;
+};
+
+/**
+ * ApplicationTableTile Component
+ * List row component representing an individual application.
+ * Supports quick-action inline buttons (Accept/Reject) as well as clicking to open the detailed review modal.
+ */
+export function ApplicationTableTile({ data, refetch }: ApplicationTableTileProps) {
+  const queryClient = useQueryClient();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const approveMutation = useMutation({
+    mutationFn: (variables: { id: number; pollingUnitID: number }) => approveApplication({ data: variables }),
+    onSuccess: (res) => {
+      if (res && res.success) {
+        queryClient.invalidateQueries({ queryKey: ["applications"] });
+        if (refetch) refetch();
+      } else {
+        throw new Error(res?.message || "Failed to approve application");
+      }
+    },
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: (variables: { id: number; reason: string }) => rejectApplication({ data: variables }),
+    onSuccess: (res) => {
+      if (res && res.success) {
+        queryClient.invalidateQueries({ queryKey: ["applications"] });
+        if (refetch) refetch();
+      } else {
+        throw new Error(res?.message || "Failed to reject application");
+      }
+    },
+  });
+
+  const {
+    name,
+    avatar,
+    election,
+    assignmentLocation,
+    isSupervisor,
+    agentsCount,
+    decisionLabel,
+    decisionVariant,
+    roleBadge,
+    applicationDetails,
+  } = extractApplicationTileData(data);
+
+  // Open the full application details dialog modal
   const handleOpenDialog = () => {
     setIsDialogOpen(true);
   };
 
+  // Quick action: Approve application directly from the tile
   const handleTileAccept = async (e: MouseEvent) => {
-    e.stopPropagation();
+    e.stopPropagation(); // Prevent opening the details modal when clicking approve
     if (data.id === undefined) {
       alert("Application ID is missing");
       return;
@@ -279,6 +309,7 @@ export function ApplicationTableTile({ data, refetch }: ApplicationTableTileProp
 
     const pollingUnitID = data.polling_unit_id || undefined;
 
+    // Polling unit must be assigned before approving; open modal to pick one if missing
     if (!pollingUnitID) {
       handleOpenDialog();
       return;
@@ -291,14 +322,16 @@ export function ApplicationTableTile({ data, refetch }: ApplicationTableTileProp
     }
   };
 
+  // Quick action: Reject application directly from the tile
   const handleTileReject = async (e: MouseEvent) => {
-    e.stopPropagation();
+    e.stopPropagation(); // Prevent opening the details modal when clicking reject
     if (data.id === undefined) {
       alert("Application ID is missing");
       return;
     }
+    // Collect mandatory reason for rejection
     const reason = window.prompt("Enter rejection reason:");
-    if (reason === null) return;
+    if (reason === null) return; // User canceled the prompt
     if (reason.trim() === "") {
       alert("A rejection reason is required.");
       return;
@@ -357,14 +390,14 @@ export function ApplicationTableTile({ data, refetch }: ApplicationTableTileProp
                 disabled={approveMutation.isPending || rejectMutation.isPending}
                 className="rounded-full bg-[#10dd84] hover:bg-[#08cf79] text-c-80 p-0 size-8 border-none"
               >
-                <Check className="size-4 stroke-[3]" />
+                <Check className="size-4 stroke-3" />
               </Button>
               <Button
                 onClick={handleTileReject}
                 disabled={approveMutation.isPending || rejectMutation.isPending}
                 className="rounded-full bg-[#ececec] hover:bg-[#e6e6e6] text-c-80 p-0 size-8 border-none"
               >
-                <X className="size-4 stroke-[3]" />
+                <X className="size-4 stroke-3" />
               </Button>
             </>
           ) : (

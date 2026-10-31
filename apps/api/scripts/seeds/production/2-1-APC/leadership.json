@@ -3,150 +3,200 @@
     "order": 1,
     "username": "nentawe_yilwatda",
     "position_name": "Chairman",
-    "position_id": 2
+    "position_id": 2,
+    "type_of_account": "existing",
+    "existing_username": "nentawe_yilwatda"
   },
   {
     "order": 2,
     "username": "ali_dalori",
     "position_name": "Deputy Chairman",
-    "position_id": 3
+    "position_id": 3,
+    "type_of_account": "existing",
+    "existing_username": "ali_dalori"
   },
   {
     "order": 3,
     "username": "benjamin_nwoye",
     "position_name": "Deputy Chairman",
-    "position_id": 3
+    "position_id": 3,
+    "type_of_account": "existing",
+    "existing_username": "benjamin_nwoye"
   },
   {
     "order": 4,
     "username": "surajudeen_basiru",
     "position_name": "Secretary",
-    "position_id": 5
+    "position_id": 5,
+    "type_of_account": "existing",
+    "existing_username": "surajudeen_basiru"
   },
   {
     "order": 5,
     "username": "abdul_kana",
     "position_name": "Deputy Secretary",
-    "position_id": 6
+    "position_id": 6,
+    "type_of_account": "existing",
+    "existing_username": "abdul_kana"
   },
   {
     "order": 6,
     "username": "garba_muhammad",
     "position_name": "Vice Chairman",
-    "position_id": 4
+    "position_id": 4,
+    "type_of_account": "existing",
+    "existing_username": "garba_muhammad"
   },
   {
     "order": 7,
     "username": "muazu_rijau",
     "position_name": "Vice Chairman",
-    "position_id": 4
+    "position_id": 4,
+    "type_of_account": "existing",
+    "existing_username": "muazu_rijau"
   },
   {
     "order": 8,
     "username": "idriss_shuaibu",
     "position_name": "Vice Chairman",
-    "position_id": 4
+    "position_id": 4,
+    "type_of_account": "existing",
+    "existing_username": "idriss_shuaibu"
   },
   {
     "order": 9,
     "username": "ijeoma_arodiogbu",
     "position_name": "Vice Chairman",
-    "position_id": 4
+    "position_id": 4,
+    "type_of_account": "existing",
+    "existing_username": "ijeoma_arodiogbu"
   },
   {
     "order": 10,
     "username": "victor_giadom",
     "position_name": "Vice Chairman",
-    "position_id": 4
+    "position_id": 4,
+    "type_of_account": "existing",
+    "existing_username": "victor_giadom"
   },
   {
     "order": 11,
     "username": "isaac_kekemeke",
     "position_name": "Vice Chairman",
-    "position_id": 4
+    "position_id": 4,
+    "type_of_account": "existing",
+    "existing_username": "isaac_kekemeke"
   },
   {
     "order": 12,
     "username": "murtala_kankia",
     "position_name": "Legal Adviser",
-    "position_id": 28
+    "position_id": 28,
+    "type_of_account": "existing",
+    "existing_username": "murtala_kankia"
   },
   {
     "order": 13,
     "username": "uguru_ofoke",
     "position_name": "Treasurer",
-    "position_id": 22
+    "position_id": 22,
+    "type_of_account": "existing",
+    "existing_username": "uguru_ofoke"
   },
   {
     "order": 14,
     "username": "haruna_ginsau",
     "position_name": "Financial Secretary",
-    "position_id": 24
+    "position_id": 24,
+    "type_of_account": "existing",
+    "existing_username": "haruna_ginsau"
   },
   {
     "order": 15,
     "username": "sulaiman_argungu",
     "position_name": "Organizing Secretary",
-    "position_id": 8
+    "position_id": 8,
+    "type_of_account": "existing",
+    "existing_username": "sulaiman_argungu"
   },
   {
     "order": 16,
     "username": "donatus_nwankpa",
     "position_name": "Welfare Secretary",
-    "position_id": 10
+    "position_id": 10,
+    "type_of_account": "existing",
+    "existing_username": "donatus_nwankpa"
   },
   {
     "order": 17,
     "username": "felix_morka",
     "position_name": "Publicity Secretary",
-    "position_id": 15
+    "position_id": 15,
+    "type_of_account": "existing",
+    "existing_username": "felix_morka"
   },
   {
     "order": 18,
     "username": "abubakar_maikafi",
     "position_name": "Auditor",
-    "position_id": 26
+    "position_id": 26,
+    "type_of_account": "existing",
+    "existing_username": "abubakar_maikafi"
   },
   {
     "order": 19,
     "username": "mary_idele",
     "position_name": "Women Leader",
-    "position_id": 30
+    "position_id": 30,
+    "type_of_account": "existing",
+    "existing_username": "mary_idele"
   },
   {
     "order": 20,
     "username": "abdullahi_israel",
     "position_name": "Youth Leader",
-    "position_id": 32
+    "position_id": 32,
+    "type_of_account": "existing",
+    "existing_username": "abdullahi_israel"
   },
   {
     "order": 21,
     "username": "durotolu_bankole",
     "position_name": "Persons with Disabilities (PWD) Leader",
-    "position_id": 34
+    "position_id": 34,
+    "type_of_account": "existing",
+    "existing_username": "durotolu_bankole"
   },
   {
     "order": 22,
     "username": "hammaadama_kumo",
     "position_name": "Deputy Financial Secretary",
-    "position_id": 25
+    "position_id": 25,
+    "type_of_account": "existing",
+    "existing_username": "hammaadama_kumo"
   },
   {
     "order": 23,
     "username": "emeka_okafor",
     "position_name": "Assistant Organizing Secretary",
-    "position_id": 9
+    "position_id": 9,
+    "type_of_account": "existing",
+    "existing_username": "emeka_okafor"
   },
   {
     "order": 24,
     "username": "durosinmi_meseko",
     "position_name": "Assistant Publicity Secretary",
-    "position_id": 16
+    "position_id": 16,
+    "type_of_account": "existing",
+    "existing_username": "durosinmi_meseko"
   },
   {
     "order": 25,
     "username": "zainab_ibrahim",
     "position_name": "Deputy Women Leader",
-    "position_id": 31
+    "position_id": 31,
+    "type_of_account": "existing",
+    "existing_username": "zainab_ibrahim"
   }
 ]

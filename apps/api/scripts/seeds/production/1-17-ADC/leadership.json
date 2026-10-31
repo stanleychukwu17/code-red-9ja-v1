@@ -3,108 +3,144 @@
     "order": 1,
     "username": "ralph_nwosu",
     "position_name": "Founder",
-    "position_id": 1
+    "position_id": 1,
+    "type_of_account": "existing",
+    "existing_username": "ralph_nwosu"
   },
   {
     "order": 2,
     "username": "david_mark",
     "position_name": "Chairman",
-    "position_id": 2
+    "position_id": 2,
+    "type_of_account": "existing",
+    "existing_username": "david_mark"
   },
   {
     "order": 3,
     "username": "rauf_aregbesola",
     "position_name": "Secretary",
-    "position_id": 5
+    "position_id": 5,
+    "type_of_account": "existing",
+    "existing_username": "rauf_aregbesola"
   },
   {
     "order": 4,
     "username": "bolaji_abdullahi",
     "position_name": "Publicity Secretary",
-    "position_id": 15
+    "position_id": 15,
+    "type_of_account": "existing",
+    "existing_username": "bolaji_abdullahi"
   },
   {
     "order": 5,
     "username": "babachir_lawal",
     "position_name": "Deputy Chairman",
-    "position_id": 3
+    "position_id": 3,
+    "type_of_account": "existing",
+    "existing_username": "babachir_lawal"
   },
   {
     "order": 6,
     "username": "chinonso_obasi",
     "position_name": "Assistant Youth Leader",
-    "position_id": 33
+    "position_id": 33,
+    "type_of_account": "existing",
+    "existing_username": "chinonso_obasi"
   },
   {
     "order": 7,
     "username": "usani_usani",
     "position_name": "Deputy Chairman",
-    "position_id": 3
+    "position_id": 3,
+    "type_of_account": "existing",
+    "existing_username": "usani_usani"
   },
   {
     "order": 8,
     "username": "clever_ikisikpo",
     "position_name": "Deputy Treasurer",
-    "position_id": 23
+    "position_id": 23,
+    "type_of_account": "existing",
+    "existing_username": "clever_ikisikpo"
   },
   {
     "order": 9,
     "username": "jackie_wayas",
     "position_name": "Assistant Publicity Secretary",
-    "position_id": 16
+    "position_id": 16,
+    "type_of_account": "existing",
+    "existing_username": "jackie_wayas"
   },
   {
     "order": 10,
     "username": "nkem_ukandu",
     "position_name": "Welfare Secretary",
-    "position_id": 10
+    "position_id": 10,
+    "type_of_account": "existing",
+    "existing_username": "nkem_ukandu"
   },
   {
     "order": 11,
     "username": "chike_okogwu",
     "position_name": "Persons with Disabilities (PWD) Leader",
-    "position_id": 34
+    "position_id": 34,
+    "type_of_account": "existing",
+    "existing_username": "chike_okogwu"
   },
   {
     "order": 12,
     "username": "musa_elayo",
     "position_name": "Vice Chairman",
-    "position_id": 4
+    "position_id": 4,
+    "type_of_account": "existing",
+    "existing_username": "musa_elayo"
   },
   {
     "order": 13,
     "username": "chinedu_idigo",
     "position_name": "Organizing Secretary",
-    "position_id": 8
+    "position_id": 8,
+    "type_of_account": "existing",
+    "existing_username": "chinedu_idigo"
   },
   {
     "order": 14,
     "username": "oserheimen_osunbor",
     "position_name": "Legal Adviser",
-    "position_id": 28
+    "position_id": 28,
+    "type_of_account": "existing",
+    "existing_username": "oserheimen_osunbor"
   },
   {
     "order": 15,
     "username": "hauwa_yusuf",
     "position_name": "Deputy Secretary",
-    "position_id": 6
+    "position_id": 6,
+    "type_of_account": "existing",
+    "existing_username": "hauwa_yusuf"
   },
   {
     "order": 16,
     "username": "malami_galma",
     "position_name": "Vice Chairman",
-    "position_id": 4
+    "position_id": 4,
+    "type_of_account": "existing",
+    "existing_username": "malami_galma"
   },
   {
     "order": 17,
     "username": "balarabe_rufai",
     "position_name": "Youth Leader",
-    "position_id": 32
+    "position_id": 32,
+    "type_of_account": "existing",
+    "existing_username": "balarabe_rufai"
   },
   {
     "order": 18,
     "username": "queen_okiyi",
     "position_name": "New Media Director",
-    "position_id": 17
+    "position_id": 17,
+    "type_of_account": "existing",
+    "existing_username": "queen_okiyi"
   }
 ]
