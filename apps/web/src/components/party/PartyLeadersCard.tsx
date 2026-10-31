@@ -50,7 +50,7 @@ export function PartyLeadersCard({
             const isVacant = leader.isVacant ?? leader.is_vacant ?? !leader.avatar;
 
             return (
-              <div key={leader.id || `leader-${idx}`} className="flex flex-col items-center group">
+              <div key={`${leader.id || "leader"}-${idx}`} className="flex flex-col items-center group">
                 <div className="size-16 sm:size-20 md:size-35 rounded-full overflow-hidden bg-muted shadow-xs transition-transform duration-300 group-hover:scale-105 flex items-center justify-center shrink-0">
                   {isVacant ? (
                     <VacantPositionAvatar className="size-full rounded-full" />
@@ -66,9 +66,8 @@ export function PartyLeadersCard({
                   {leader.role}
                 </span>
                 <span
-                  className={`text-[10px] sm:text-[11px] mt-0.5 line-clamp-1 ${
-                    isVacant ? "text-muted-foreground/70 italic" : "text-muted-foreground font-medium"
-                  }`}
+                  className={`text-[10px] sm:text-[11px] mt-0.5 line-clamp-1 ${isVacant ? "text-muted-foreground/70 italic" : "text-muted-foreground font-medium"
+                    }`}
                 >
                   {isVacant ? "Unassigned" : leader.name}
                 </span>

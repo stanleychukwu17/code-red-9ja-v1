@@ -428,4 +428,3 @@ function PartyLeadershipTabComponent() {
     </div>
   );
 }
-export default PartyLeadershipTabComponent;

@@ -28,7 +28,6 @@ function PartyHomeTabComponent() {
     queryKey: ["partyHome", partyId, chapterId],
     queryFn: () => getPartyHome({ data: { partyId, chapterId } }),
     staleTime: Infinity,
-    gcTime: 1000 * 60 * 60 * 24, // 24 hours cache retention
   });
 
   const homeData = homeRes?.success ? homeRes.data : null;

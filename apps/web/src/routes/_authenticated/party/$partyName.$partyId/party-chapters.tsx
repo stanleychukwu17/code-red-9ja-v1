@@ -510,5 +510,3 @@ function PartyChaptersTabComponent() {
     </div>
   );
 }
-
-export default PartyChaptersTabComponent;

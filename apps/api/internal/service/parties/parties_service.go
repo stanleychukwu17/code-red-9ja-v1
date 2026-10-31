@@ -841,18 +841,27 @@ func (s *PartiesService) GetPartyHome(ctx context.Context, partyID int16, chapte
 			stateChapID, err := s.GetOrCreateStateChapter(ctx, partyID, st.ID, true)
 			if err == nil && stateChapID > 0 {
 				official, offErr := s.GetOnePartyChapterOfficial(ctx, stateChapID, constants.PartyPositionChairmanID)
+
 				if offErr == nil && official != nil {
 					card := *official
 					card.PositionName = fmt.Sprintf("%s Chairman", st.Name)
-					stateLeaders = append(stateLeaders, s.formatHomeLeader(card))
+					item := s.formatHomeLeader(card)
+
+					if item.ID == fmt.Sprintf("pos-%d", card.PositionID) {
+						item.ID = fmt.Sprintf("state-%d-pos-%d", st.ID, card.PositionID)
+					}
+
+					stateLeaders = append(stateLeaders, item)
 					continue
 				}
 			}
-			stateLeaders = append(stateLeaders, s.formatHomeLeader(PartyOfficialCard{
+			item := s.formatHomeLeader(PartyOfficialCard{
 				PositionID:   constants.PartyPositionChairmanID,
 				PositionName: fmt.Sprintf("%s Chairman", st.Name),
 				IsVacant:     true,
-			}))
+			})
+			item.ID = fmt.Sprintf("state-%d-pos-%d", st.ID, constants.PartyPositionChairmanID)
+			stateLeaders = append(stateLeaders, item)
 		}
 
 		dynamicGroup = PartyDynamicLeadersGroup{
