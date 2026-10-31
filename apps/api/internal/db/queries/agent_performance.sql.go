@@ -21,7 +21,7 @@ SELECT
   les.lga_id,
   0::int AS ward_id,
   0::int AS polling_unit_id,
-  TRIM(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, '')))::varchar AS user_name,
+  u.full_name::varchar AS user_name,
   COALESCE(u.avatar, '')::varchar AS avatar_url,
   les.role_type,
   100::numeric(5,2) AS readiness_pct,
@@ -44,7 +44,7 @@ WHERE
   ($2::integer = 0 OR les.election_group_id = $2) AND
   ($3::smallint = 0 OR les.state_id = $3) AND
   ($4::int = 0 OR les.lga_id = $4) AND
-  ($5::varchar = '' OR (COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')) ILIKE '%' || $5 || '%') AND
+  ($5::varchar = '' OR u.full_name ILIKE '%' || $5 || '%') AND
   ($6::bigint = 0 OR les.id < $6)
 ORDER BY les.id DESC
 LIMIT $7::int
@@ -146,7 +146,7 @@ SELECT
   COALESCE(pu.lga_id, 0)::int AS lga_id,
   COALESCE(pu.ward_id, 0)::int AS ward_id,
   pua.polling_unit_id,
-  TRIM(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, '')))::varchar AS user_name,
+  u.full_name::varchar AS user_name,
   COALESCE(u.avatar, '')::varchar AS avatar_url,
   pua.role_type,
   pua.election_practice_test_readiness_percentage::numeric(5,2) AS readiness_pct,
@@ -178,7 +178,7 @@ WHERE
   ($3::smallint = 0 OR pu.state_id = $3) AND
   ($4::int = 0 OR pu.lga_id = $4) AND
   ($5::int = 0 OR pu.ward_id = $5) AND
-  ($6::varchar = '' OR (COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')) ILIKE '%' || $6 || '%' OR pu.pu_code ILIKE '%' || $6 || '%' OR pu.code ILIKE '%' || $6 || '%') AND
+  ($6::varchar = '' OR u.full_name ILIKE '%' || $6 || '%' OR pu.pu_code ILIKE '%' || $6 || '%' OR pu.code ILIKE '%' || $6 || '%') AND
   ($7::bigint = 0 OR pua.id < $7)
 ORDER BY pua.id DESC
 LIMIT $8::int
@@ -296,7 +296,7 @@ SELECT
   0::int AS lga_id,
   0::int AS ward_id,
   0::int AS polling_unit_id,
-  TRIM(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, '')))::varchar AS user_name,
+  u.full_name::varchar AS user_name,
   COALESCE(u.avatar, '')::varchar AS avatar_url,
   ses.role_type,
   100::numeric(5,2) AS readiness_pct,
@@ -317,7 +317,7 @@ WHERE
   ($1::smallint = 0 OR ses.party_id = $1) AND
   ($2::integer = 0 OR ses.election_group_id = $2) AND
   ($3::smallint = 0 OR ses.state_id = $3) AND
-  ($4::varchar = '' OR (COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')) ILIKE '%' || $4 || '%') AND
+  ($4::varchar = '' OR u.full_name ILIKE '%' || $4 || '%') AND
   ($5::bigint = 0 OR ses.id < $5)
 ORDER BY ses.id DESC
 LIMIT $6::int
@@ -415,7 +415,7 @@ SELECT
   wes.lga_id,
   wes.ward_id,
   0::int AS polling_unit_id,
-  TRIM(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, '')))::varchar AS user_name,
+  u.full_name::varchar AS user_name,
   COALESCE(u.avatar, '')::varchar AS avatar_url,
   wes.role_type,
   100::numeric(5,2) AS readiness_pct,
@@ -440,7 +440,7 @@ WHERE
   ($3::smallint = 0 OR wes.state_id = $3) AND
   ($4::int = 0 OR wes.lga_id = $4) AND
   ($5::int = 0 OR wes.ward_id = $5) AND
-  ($6::varchar = '' OR (COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')) ILIKE '%' || $6 || '%') AND
+  ($6::varchar = '' OR u.full_name ILIKE '%' || $6 || '%') AND
   ($7::bigint = 0 OR wes.id < $7)
 ORDER BY wes.id DESC
 LIMIT $8::int

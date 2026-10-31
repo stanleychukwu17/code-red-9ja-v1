@@ -246,7 +246,7 @@ func (h *Handler) ListElectionPay(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if search != "" {
-		whereClauses = append(whereClauses, fmt.Sprintf("(CONCAT(u.first_name, ' ', u.last_name) ILIKE $%d OR u.phone ILIKE $%d)", argIdx, argIdx))
+		whereClauses = append(whereClauses, fmt.Sprintf("(u.full_name ILIKE $%d OR u.phone ILIKE $%d)", argIdx, argIdx))
 		args = append(args, "%"+search+"%")
 		argIdx++
 	}
@@ -255,7 +255,7 @@ func (h *Handler) ListElectionPay(w http.ResponseWriter, r *http.Request) {
 		SELECT
 			ae.id,
 			ae.user_id,
-			CONCAT(u.first_name, ' ', u.last_name) AS user_name,
+			u.full_name AS user_name,
 			COALESCE(u.avatar, '') AS user_avatar,
 			COALESCE(p.id, 0) AS party_id,
 			COALESCE(p.code, '') AS party_code,
@@ -431,7 +431,7 @@ func (h *Handler) ListReferralPay(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if search != "" {
-		whereClauses = append(whereClauses, fmt.Sprintf("(CONCAT(u.first_name, ' ', u.last_name) ILIKE $%d OR u.phone ILIKE $%d)", argIdx, argIdx))
+		whereClauses = append(whereClauses, fmt.Sprintf("(u.full_name ILIKE $%d OR u.phone ILIKE $%d)", argIdx, argIdx))
 		args = append(args, "%"+search+"%")
 		argIdx++
 	}
@@ -440,7 +440,7 @@ func (h *Handler) ListReferralPay(w http.ResponseWriter, r *http.Request) {
 		SELECT
 			ur.id,
 			ur.user_id,
-			CONCAT(u.first_name, ' ', u.last_name) AS user_name,
+			u.full_name AS user_name,
 			COALESCE(u.avatar, '') AS user_avatar,
 			COALESCE(p.id, 0) AS party_id,
 			COALESCE(p.code, '') AS party_code,

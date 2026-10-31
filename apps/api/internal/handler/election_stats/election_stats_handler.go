@@ -703,7 +703,7 @@ func (h *Handler) GetOperationsBreakdown(w http.ResponseWriter, r *http.Request)
 				(
 					SELECT COALESCE(json_agg(json_build_object(
 						'id', u.id,
-						'name', CONCAT(u.first_name, ' ', u.last_name),
+						'name', u.full_name,
 						'avatar', COALESCE(u.avatar, '')
 					)), '[]'::json)
 					FROM (
@@ -746,7 +746,7 @@ func (h *Handler) GetOperationsBreakdown(w http.ResponseWriter, r *http.Request)
 				(
 					SELECT COALESCE(json_agg(json_build_object(
 						'id', u.id,
-						'name', CONCAT(u.first_name, ' ', u.last_name),
+						'name', u.full_name,
 						'avatar', COALESCE(u.avatar, '')
 					)), '[]'::json)
 					FROM (
@@ -803,7 +803,7 @@ func (h *Handler) GetOperationsBreakdown(w http.ResponseWriter, r *http.Request)
 				(
 					SELECT COALESCE(json_agg(json_build_object(
 						'id', u.id,
-						'name', CONCAT(u.first_name, ' ', u.last_name),
+						'name', u.full_name,
 						'avatar', COALESCE(u.avatar, '')
 					)), '[]'::json)
 					FROM (
@@ -861,7 +861,7 @@ func (h *Handler) GetOperationsBreakdown(w http.ResponseWriter, r *http.Request)
 				(
 					SELECT COALESCE(json_agg(json_build_object(
 						'id', u.id,
-						'name', CONCAT(u.first_name, ' ', u.last_name),
+						'name', u.full_name,
 						'avatar', COALESCE(u.avatar, '')
 					)), '[]'::json)
 					FROM (
@@ -1096,7 +1096,7 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 				(
 					SELECT COALESCE(json_agg(json_build_object(
 						'id', u.id,
-						'name', CONCAT(u.first_name, ' ', u.last_name),
+						'name', u.full_name,
 						'avatar', COALESCE(u.avatar, '')
 					)), '[]'::json)
 					FROM (
@@ -1141,7 +1141,7 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 				(
 					SELECT COALESCE(json_agg(json_build_object(
 						'id', u.id,
-						'name', CONCAT(u.first_name, ' ', u.last_name),
+						'name', u.full_name,
 						'avatar', COALESCE(u.avatar, '')
 					)), '[]'::json)
 					FROM (
@@ -1198,7 +1198,7 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 				(
 					SELECT COALESCE(json_agg(json_build_object(
 						'id', u.id,
-						'name', CONCAT(u.first_name, ' ', u.last_name),
+						'name', u.full_name,
 						'avatar', COALESCE(u.avatar, '')
 					)), '[]'::json)
 					FROM (
@@ -1262,7 +1262,7 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 				(
 					SELECT COALESCE(json_agg(json_build_object(
 						'id', u.id,
-						'name', CONCAT(u.first_name, ' ', u.last_name),
+						'name', u.full_name,
 						'avatar', COALESCE(u.avatar, '')
 					)), '[]'::json)
 					FROM (

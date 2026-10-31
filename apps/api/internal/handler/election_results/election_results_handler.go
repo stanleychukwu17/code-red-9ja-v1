@@ -1340,7 +1340,7 @@ func (h *Handler) loadPartyAndCandidateMetadata(ctx context.Context, electionID 
 		SELECT 
 			COALESCE(NULLIF(ec.party_short_name, 'N/A'), p.short_name, '') AS party_short_name,
 			u.id,
-			TRIM(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))) AS name,
+			u.full_name AS name,
 			COALESCE(u.avatar, '') AS avatar
 		FROM election_candidates ec
 		JOIN users u ON u.id = ec.candidate_id

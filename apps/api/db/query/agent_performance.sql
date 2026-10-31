@@ -8,7 +8,7 @@ SELECT
   COALESCE(pu.lga_id, 0)::int AS lga_id,
   COALESCE(pu.ward_id, 0)::int AS ward_id,
   pua.polling_unit_id,
-  TRIM(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, '')))::varchar AS user_name,
+  u.full_name::varchar AS user_name,
   COALESCE(u.avatar, '')::varchar AS avatar_url,
   pua.role_type,
   pua.election_practice_test_readiness_percentage::numeric(5,2) AS readiness_pct,
@@ -40,7 +40,7 @@ WHERE
   (sqlc.arg(state_id)::smallint = 0 OR pu.state_id = sqlc.arg(state_id)) AND
   (sqlc.arg(lga_id)::int = 0 OR pu.lga_id = sqlc.arg(lga_id)) AND
   (sqlc.arg(ward_id)::int = 0 OR pu.ward_id = sqlc.arg(ward_id)) AND
-  (sqlc.arg(search_query)::varchar = '' OR (COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')) ILIKE '%' || sqlc.arg(search_query) || '%' OR pu.pu_code ILIKE '%' || sqlc.arg(search_query) || '%' OR pu.code ILIKE '%' || sqlc.arg(search_query) || '%') AND
+  (sqlc.arg(search_query)::varchar = '' OR u.full_name ILIKE '%' || sqlc.arg(search_query) || '%' OR pu.pu_code ILIKE '%' || sqlc.arg(search_query) || '%' OR pu.code ILIKE '%' || sqlc.arg(search_query) || '%') AND
   (sqlc.arg(cursor_id)::bigint = 0 OR pua.id < sqlc.arg(cursor_id))
 ORDER BY pua.id DESC
 LIMIT sqlc.arg(limit_val)::int;
@@ -55,7 +55,7 @@ SELECT
   wes.lga_id,
   wes.ward_id,
   0::int AS polling_unit_id,
-  TRIM(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, '')))::varchar AS user_name,
+  u.full_name::varchar AS user_name,
   COALESCE(u.avatar, '')::varchar AS avatar_url,
   wes.role_type,
   100::numeric(5,2) AS readiness_pct,
@@ -80,7 +80,7 @@ WHERE
   (sqlc.arg(state_id)::smallint = 0 OR wes.state_id = sqlc.arg(state_id)) AND
   (sqlc.arg(lga_id)::int = 0 OR wes.lga_id = sqlc.arg(lga_id)) AND
   (sqlc.arg(ward_id)::int = 0 OR wes.ward_id = sqlc.arg(ward_id)) AND
-  (sqlc.arg(search_query)::varchar = '' OR (COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')) ILIKE '%' || sqlc.arg(search_query) || '%') AND
+  (sqlc.arg(search_query)::varchar = '' OR u.full_name ILIKE '%' || sqlc.arg(search_query) || '%') AND
   (sqlc.arg(cursor_id)::bigint = 0 OR wes.id < sqlc.arg(cursor_id))
 ORDER BY wes.id DESC
 LIMIT sqlc.arg(limit_val)::int;
@@ -95,7 +95,7 @@ SELECT
   les.lga_id,
   0::int AS ward_id,
   0::int AS polling_unit_id,
-  TRIM(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, '')))::varchar AS user_name,
+  u.full_name::varchar AS user_name,
   COALESCE(u.avatar, '')::varchar AS avatar_url,
   les.role_type,
   100::numeric(5,2) AS readiness_pct,
@@ -118,7 +118,7 @@ WHERE
   (sqlc.arg(election_group_id)::integer = 0 OR les.election_group_id = sqlc.arg(election_group_id)) AND
   (sqlc.arg(state_id)::smallint = 0 OR les.state_id = sqlc.arg(state_id)) AND
   (sqlc.arg(lga_id)::int = 0 OR les.lga_id = sqlc.arg(lga_id)) AND
-  (sqlc.arg(search_query)::varchar = '' OR (COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')) ILIKE '%' || sqlc.arg(search_query) || '%') AND
+  (sqlc.arg(search_query)::varchar = '' OR u.full_name ILIKE '%' || sqlc.arg(search_query) || '%') AND
   (sqlc.arg(cursor_id)::bigint = 0 OR les.id < sqlc.arg(cursor_id))
 ORDER BY les.id DESC
 LIMIT sqlc.arg(limit_val)::int;
@@ -133,7 +133,7 @@ SELECT
   0::int AS lga_id,
   0::int AS ward_id,
   0::int AS polling_unit_id,
-  TRIM(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, '')))::varchar AS user_name,
+  u.full_name::varchar AS user_name,
   COALESCE(u.avatar, '')::varchar AS avatar_url,
   ses.role_type,
   100::numeric(5,2) AS readiness_pct,
@@ -154,7 +154,7 @@ WHERE
   (sqlc.arg(party_id)::smallint = 0 OR ses.party_id = sqlc.arg(party_id)) AND
   (sqlc.arg(election_group_id)::integer = 0 OR ses.election_group_id = sqlc.arg(election_group_id)) AND
   (sqlc.arg(state_id)::smallint = 0 OR ses.state_id = sqlc.arg(state_id)) AND
-  (sqlc.arg(search_query)::varchar = '' OR (COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')) ILIKE '%' || sqlc.arg(search_query) || '%') AND
+  (sqlc.arg(search_query)::varchar = '' OR u.full_name ILIKE '%' || sqlc.arg(search_query) || '%') AND
   (sqlc.arg(cursor_id)::bigint = 0 OR ses.id < sqlc.arg(cursor_id))
 ORDER BY ses.id DESC
 LIMIT sqlc.arg(limit_val)::int;

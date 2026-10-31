@@ -3306,7 +3306,7 @@ func (s *PartiesService) ListPartyChapterMembers(ctx context.Context, params Lis
 			u.first_name ILIKE '%' || $4 || '%' OR
 			u.last_name ILIKE '%' || $4 || '%' OR
 			u.username ILIKE '%' || $4 || '%' OR
-			(u.first_name || ' ' || u.last_name) ILIKE '%' || $4 || '%'
+			u.full_name ILIKE '%' || $4 || '%'
 		  ))
 		ORDER BY pm.id DESC
 		LIMIT $5

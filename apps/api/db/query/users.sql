@@ -150,7 +150,7 @@ ORDER BY
   CASE 
     WHEN sqlc.narg('search')::text IS NOT NULL AND (LOWER(u.username) = LOWER(sqlc.narg('search')::text) OR LOWER(u.username) = LOWER(LTRIM(sqlc.narg('search')::text, '@'))) THEN 1
     WHEN sqlc.narg('search')::text IS NOT NULL AND (u.username ILIKE sqlc.narg('search')::text || '%' OR u.username ILIKE LTRIM(sqlc.narg('search')::text, '@') || '%') THEN 2
-    WHEN sqlc.narg('search')::text IS NOT NULL AND (LOWER(u.first_name) = LOWER(sqlc.narg('search')::text) OR LOWER(u.last_name) = LOWER(sqlc.narg('search')::text) OR LOWER(u.first_name || ' ' || u.last_name) = LOWER(sqlc.narg('search')::text)) THEN 3
+    WHEN sqlc.narg('search')::text IS NOT NULL AND (LOWER(u.first_name) = LOWER(sqlc.narg('search')::text) OR LOWER(u.last_name) = LOWER(sqlc.narg('search')::text) OR LOWER(u.full_name) = LOWER(sqlc.narg('search')::text)) THEN 3
     ELSE 4
   END ASC,
   u.id DESC
@@ -175,7 +175,7 @@ ORDER BY
   CASE 
     WHEN sqlc.narg('search')::text IS NOT NULL AND (LOWER(u.username) = LOWER(sqlc.narg('search')::text) OR LOWER(u.username) = LOWER(LTRIM(sqlc.narg('search')::text, '@'))) THEN 1
     WHEN sqlc.narg('search')::text IS NOT NULL AND (u.username ILIKE sqlc.narg('search')::text || '%' OR u.username ILIKE LTRIM(sqlc.narg('search')::text, '@') || '%') THEN 2
-    WHEN sqlc.narg('search')::text IS NOT NULL AND (LOWER(u.first_name) = LOWER(sqlc.narg('search')::text) OR LOWER(u.last_name) = LOWER(sqlc.narg('search')::text) OR LOWER(u.first_name || ' ' || u.last_name) = LOWER(sqlc.narg('search')::text)) THEN 3
+    WHEN sqlc.narg('search')::text IS NOT NULL AND (LOWER(u.first_name) = LOWER(sqlc.narg('search')::text) OR LOWER(u.last_name) = LOWER(sqlc.narg('search')::text) OR LOWER(u.full_name) = LOWER(sqlc.narg('search')::text)) THEN 3
     ELSE 4
   END ASC,
   u.id DESC

@@ -890,7 +890,7 @@ ORDER BY
   CASE 
     WHEN $6::text IS NOT NULL AND (LOWER(u.username) = LOWER($6::text) OR LOWER(u.username) = LOWER(LTRIM($6::text, '@'))) THEN 1
     WHEN $6::text IS NOT NULL AND (u.username ILIKE $6::text || '%' OR u.username ILIKE LTRIM($6::text, '@') || '%') THEN 2
-    WHEN $6::text IS NOT NULL AND (LOWER(u.first_name) = LOWER($6::text) OR LOWER(u.last_name) = LOWER($6::text) OR LOWER(u.first_name || ' ' || u.last_name) = LOWER($6::text)) THEN 3
+    WHEN $6::text IS NOT NULL AND (LOWER(u.first_name) = LOWER($6::text) OR LOWER(u.last_name) = LOWER($6::text) OR LOWER(u.full_name) = LOWER($6::text)) THEN 3
     ELSE 4
   END ASC,
   u.id DESC
@@ -969,7 +969,7 @@ ORDER BY
   CASE 
     WHEN $2::text IS NOT NULL AND (LOWER(u.username) = LOWER($2::text) OR LOWER(u.username) = LOWER(LTRIM($2::text, '@'))) THEN 1
     WHEN $2::text IS NOT NULL AND (u.username ILIKE $2::text || '%' OR u.username ILIKE LTRIM($2::text, '@') || '%') THEN 2
-    WHEN $2::text IS NOT NULL AND (LOWER(u.first_name) = LOWER($2::text) OR LOWER(u.last_name) = LOWER($2::text) OR LOWER(u.first_name || ' ' || u.last_name) = LOWER($2::text)) THEN 3
+    WHEN $2::text IS NOT NULL AND (LOWER(u.first_name) = LOWER($2::text) OR LOWER(u.last_name) = LOWER($2::text) OR LOWER(u.full_name) = LOWER($2::text)) THEN 3
     ELSE 4
   END ASC,
   u.id DESC
