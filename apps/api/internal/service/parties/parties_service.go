@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"free9ja/api/internal/config"
 	"free9ja/api/internal/constants"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
@@ -1773,8 +1774,48 @@ func (s *PartiesService) IsPartyMember(ctx context.Context, userID int64, partyI
 
 //--END-- party chapters
 
-// LeaveParty allows a user to leave their current party.
-func (s *PartiesService) LeaveParty(ctx context.Context, partyID int16, userID, userFid int64) error {
+// LeaveParty allows a user to leave a party or specific chapters within it based on chapter type hierarchy.
+func (s *PartiesService) LeaveParty(ctx context.Context, partyID int16, targetChapterID int32, userID, userFid int64) error {
+	// Chapter ID 0 exits all party chapters
+	if targetChapterID == 0 {
+		return s.LeaveAllPartyChapters(ctx, partyID, userID, userFid)
+	}
+
+	// Fetch chapter details and verify party ownership
+	chapter, err := s.GetPartyChapterByID(ctx, targetChapterID)
+	if err != nil {
+		return fmt.Errorf("failed to fetch chapter details: %w", err)
+	}
+	if chapter.PartyID != partyID {
+		return fmt.Errorf("chapter does not belong to the specified party")
+	}
+
+	switch chapter.ChapterType {
+	case "national", "zonal":
+		// National or zonal departure leaves the entire party
+		return s.LeaveAllPartyChapters(ctx, partyID, userID, userFid)
+	case "state":
+		// Leaving a state also removes descendant LGA and ward memberships
+		if !chapter.StateID.Valid {
+			return fmt.Errorf("state chapter is missing valid state_id")
+		}
+		return s.LeaveStateAndInSideChapters(ctx, partyID, chapter.StateID.Int16, userID)
+	case "lga":
+		// Leaving an LGA also removes descendant ward memberships
+		if !chapter.LgaID.Valid {
+			return fmt.Errorf("lga chapter is missing valid lga_id")
+		}
+		return s.LeaveLGAChapterAndInsiders(ctx, partyID, chapter.LgaID.Int32, userID)
+	case "ward":
+		// Remove only this specific ward membership
+		return s.LeaveWardChapter(ctx, partyID, targetChapterID, userID)
+	default:
+		return fmt.Errorf("unsupported chapter type: %s", chapter.ChapterType)
+	}
+}
+
+// LeaveAllPartyChapters removes all memberships for a user in a party, strips party roles, and clears user party affiliation.
+func (s *PartiesService) LeaveAllPartyChapters(ctx context.Context, partyID int16, userID, userFid int64) error {
 	chapterIDs, err := s.queries.DeletePartyMembership(ctx, queries.DeletePartyMembershipParams{
 		UserID:  userID,
 		PartyID: partyID,
@@ -1783,20 +1824,7 @@ func (s *PartiesService) LeaveParty(ctx context.Context, partyID int16, userID, 
 		return fmt.Errorf("failed to remove user from party_membership: %w", err)
 	}
 
-	for _, chapterID := range chapterIDs {
-		_ = s.queries.AddPartyMemberMilestone(ctx, queries.AddPartyMemberMilestoneParams{
-			UserID:        userID,
-			PartyID:       partyID,
-			ChapterID:     pgtype.Int4{Int32: chapterID, Valid: true},
-			MilestoneType: constants.MilestoneTypeLeft,
-			Metadata:      []byte("{}"),
-		})
-		s.InvalidateChapterMemberCount(ctx, partyID, chapterID)
-		s.InvalidatePartyChapterMembership(ctx, userID, partyID, chapterID)
-	}
-
-	// invalidate party membership from redis
-	s.InvalidatePartyMembership(ctx, userID, partyID)
+	s.recordLeftChaptersAndInvalidate(ctx, partyID, userID, chapterIDs, "national")
 
 	// Revoke party-scoped administrative roles (party_admin, super_party_admin)
 	_ = s.usersService.StripPartyAdminRoles(ctx, userID, userFid)
@@ -1808,6 +1836,82 @@ func (s *PartiesService) LeaveParty(ctx context.Context, partyID int16, userID, 
 	}
 
 	return nil
+}
+
+// LeaveStateAndInSideChapters removes a user from a state chapter and all child LGA/Ward chapters within that state.
+func (s *PartiesService) LeaveStateAndInSideChapters(ctx context.Context, partyID int16, stateID int16, userID int64) error {
+	chapterIDs, err := s.queries.DeleteStatePartyMemberships(ctx, queries.DeleteStatePartyMembershipsParams{
+		UserID:  userID,
+		PartyID: partyID,
+		StateID: utils.PgInt2FromInt16(stateID),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to leave state and inside chapters: %w", err)
+	}
+
+	s.recordLeftChaptersAndInvalidate(ctx, partyID, userID, chapterIDs, "state")
+	return nil
+}
+
+// LeaveLGAChapterAndInsiders removes a user from an LGA chapter and all child Ward chapters within that LGA.
+func (s *PartiesService) LeaveLGAChapterAndInsiders(ctx context.Context, partyID int16, lgaID int32, userID int64) error {
+	chapterIDs, err := s.queries.DeleteLGAPartyMemberships(ctx, queries.DeleteLGAPartyMembershipsParams{
+		UserID:  userID,
+		PartyID: partyID,
+		LgaID:   utils.PgInt4FromInt32(lgaID),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to leave lga and inside chapters: %w", err)
+	}
+
+	s.recordLeftChaptersAndInvalidate(ctx, partyID, userID, chapterIDs, "lga")
+	return nil
+}
+
+// LeaveWardChapter removes a user's membership from a specific ward chapter.
+func (s *PartiesService) LeaveWardChapter(ctx context.Context, partyID int16, chapterID int32, userID int64) error {
+	chapterIDs, err := s.queries.DeleteWardPartyMembership(ctx, queries.DeleteWardPartyMembershipParams{
+		UserID:    userID,
+		PartyID:   partyID,
+		ChapterID: chapterID,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to remove ward membership: %w", err)
+	}
+
+	s.recordLeftChaptersAndInvalidate(ctx, partyID, userID, chapterIDs, "ward")
+	return nil
+}
+
+func (s *PartiesService) recordLeftChaptersAndInvalidate(ctx context.Context, partyID int16, userID int64, chapterIDs []int32, chapterType string) {
+	metadata := []byte("{}")
+	if chapterType != "" {
+		if m, err := json.Marshal(map[string]string{"chapter_type": chapterType}); err == nil {
+			metadata = m
+		}
+	}
+
+	for _, chapterID := range chapterIDs {
+		_ = s.queries.AddPartyMemberMilestone(ctx, queries.AddPartyMemberMilestoneParams{
+			UserID:        userID,
+			PartyID:       partyID,
+			ChapterID:     utils.PgInt4FromInt32(chapterID),
+			MilestoneType: constants.MilestoneTypeLeft,
+			Metadata:      metadata,
+		})
+
+		s.InvalidateChapterMemberCount(ctx, partyID, chapterID)
+		s.InvalidatePartyChapterMembership(ctx, userID, partyID, chapterID)
+	}
+
+	// Invalidate party membership from redis
+	s.InvalidatePartyMembership(ctx, userID, partyID)
+
+	// Set 48-hour cooldown in Redis to prevent spamming join/leave (production only)
+	if strings.EqualFold(config.GetEnv("ENV", "development"), "production") && chapterType != "" && len(chapterIDs) > 0 {
+		cooldownKey := fmt.Sprintf("%s%d:%s", db.RedisPartyChapterLeaveCooldown, userID, chapterType)
+		_ = s.rdb.Set(ctx, cooldownKey, time.Now().Unix(), db.RedisTwoDaysTTL).Err()
+	}
 }
 
 // JoinPartyParams identifies the user, party, and chapter being joined.
@@ -1868,6 +1972,27 @@ func (s *PartiesService) JoinParty(ctx context.Context, params JoinPartyParams) 
 
 		finalChapterID = natChapterID
 		params.ChapterType = "national"
+	} else if params.ChapterType == "" {
+		if ch, err := s.GetPartyChapterByID(ctx, finalChapterID); err == nil && ch.ID > 0 {
+			params.ChapterType = ch.ChapterType
+		}
+	}
+
+	// Enforce 48h leave cooldown before re-joining this chapter tier (production only)
+	if strings.EqualFold(config.GetEnv("ENV", "development"), "production") && params.ChapterType != "" {
+		cooldownKey := fmt.Sprintf("%s%d:%s", db.RedisPartyChapterLeaveCooldown, params.UserID, params.ChapterType)
+		ttl, err := s.rdb.TTL(ctx, cooldownKey).Result()
+		if err == nil && ttl > 0 {
+			hours := int(ttl.Hours())
+			if hours > 1 {
+				return fmt.Errorf("you recently left a %s chapter; please wait %d hours before joining again", params.ChapterType, hours)
+			}
+			minutes := int(ttl.Minutes())
+			if minutes > 0 {
+				return fmt.Errorf("you recently left a %s chapter; please wait %d minutes before joining again", params.ChapterType, minutes)
+			}
+			return fmt.Errorf("you recently left a %s chapter; please wait 48 hours before joining again", params.ChapterType)
+		}
 	}
 
 	// Skip inserting membership if the user already belongs to this chapter.

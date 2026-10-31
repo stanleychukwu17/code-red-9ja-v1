@@ -131,6 +131,7 @@ type Querier interface {
 	DeleteElectionInstance(ctx context.Context, id int32) error
 	DeleteFederalConstituency(ctx context.Context, id int32) error
 	DeleteLGA(ctx context.Context, id int32) error
+	DeleteLGAPartyMemberships(ctx context.Context, arg DeleteLGAPartyMembershipsParams) ([]int32, error)
 	DeleteMediaAsset(ctx context.Context, id int32) error
 	DeleteMediaAssetByKey(ctx context.Context, r2Key string) error
 	DeleteNotification(ctx context.Context, arg DeleteNotificationParams) error
@@ -144,11 +145,13 @@ type Querier interface {
 	DeleteSenatorialDistrict(ctx context.Context, id int32) error
 	DeleteState(ctx context.Context, id int16) error
 	DeleteStateConstituency(ctx context.Context, id int32) error
+	DeleteStatePartyMemberships(ctx context.Context, arg DeleteStatePartyMembershipsParams) ([]int32, error)
 	DeleteUser(ctx context.Context, id int64) error
 	DeleteUserDidNotVoteReasonByElectionGroup(ctx context.Context, arg DeleteUserDidNotVoteReasonByElectionGroupParams) error
 	DeleteUserPhoneNumber(ctx context.Context, arg DeleteUserPhoneNumberParams) error
 	DeleteUserVotesByElectionGroup(ctx context.Context, arg DeleteUserVotesByElectionGroupParams) error
 	DeleteWard(ctx context.Context, id int32) error
+	DeleteWardPartyMembership(ctx context.Context, arg DeleteWardPartyMembershipParams) ([]int32, error)
 	DepositPartyAllowance(ctx context.Context, arg DepositPartyAllowanceParams) (DepositPartyAllowanceRow, error)
 	// No-op: parent rollup tables dropped in favor of dynamic queries on election_group_polling_units
 	EnsureElectionGroupParentSkeletons(ctx context.Context) error

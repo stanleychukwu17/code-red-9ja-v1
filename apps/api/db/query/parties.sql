@@ -114,6 +114,33 @@ UPDATE parties SET status = 'deleted' WHERE id = $1;
 -- name: DeletePartyMembership :many
 DELETE FROM party_membership WHERE user_id = $1 AND party_id = $2 RETURNING chapter_id;
 
+-- name: DeleteStatePartyMemberships :many
+DELETE FROM party_membership
+WHERE party_membership.user_id = $1
+  AND party_membership.party_id = $2
+  AND party_membership.chapter_id IN (
+      SELECT pc.id FROM party_chapters pc
+      WHERE pc.party_id = $2 AND pc.state_id = $3
+  )
+RETURNING chapter_id;
+
+-- name: DeleteLGAPartyMemberships :many
+DELETE FROM party_membership
+WHERE party_membership.user_id = $1
+  AND party_membership.party_id = $2
+  AND party_membership.chapter_id IN (
+      SELECT pc.id FROM party_chapters pc
+      WHERE pc.party_id = $2 AND pc.lga_id = $3
+  )
+RETURNING chapter_id;
+
+-- name: DeleteWardPartyMembership :many
+DELETE FROM party_membership
+WHERE user_id = $1
+  AND party_id = $2
+  AND chapter_id = $3
+RETURNING chapter_id;
+
 -- name: AddPartyMemberMilestone :exec
 INSERT INTO party_member_milestones (user_id, party_id, chapter_id, milestone_type, metadata)
 VALUES ($1, $2, $3, $4, $5);

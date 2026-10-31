@@ -162,7 +162,7 @@ export function JoinPartyDialog({
 				}
 			);
 			queryClient.invalidateQueries({ queryKey: QUERY_KEYS.auth.session });
-			queryClient.invalidateQueries({ queryKey: ["partyProfile"] });
+			queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partyProfile.root });
 			queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partyMembers.root });
 			onJoinSuccess?.(partyId);
 

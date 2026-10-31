@@ -198,6 +198,43 @@ func (q *Queries) DeductPartyAgentPaymentBalance(ctx context.Context, arg Deduct
 	return i, err
 }
 
+const deleteLGAPartyMemberships = `-- name: DeleteLGAPartyMemberships :many
+DELETE FROM party_membership
+WHERE party_membership.user_id = $1
+  AND party_membership.party_id = $2
+  AND party_membership.chapter_id IN (
+      SELECT pc.id FROM party_chapters pc
+      WHERE pc.party_id = $2 AND pc.lga_id = $3
+  )
+RETURNING chapter_id
+`
+
+type DeleteLGAPartyMembershipsParams struct {
+	UserID  int64       `json:"user_id"`
+	PartyID int16       `json:"party_id"`
+	LgaID   pgtype.Int4 `json:"lga_id"`
+}
+
+func (q *Queries) DeleteLGAPartyMemberships(ctx context.Context, arg DeleteLGAPartyMembershipsParams) ([]int32, error) {
+	rows, err := q.db.Query(ctx, deleteLGAPartyMemberships, arg.UserID, arg.PartyID, arg.LgaID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int32
+	for rows.Next() {
+		var chapter_id int32
+		if err := rows.Scan(&chapter_id); err != nil {
+			return nil, err
+		}
+		items = append(items, chapter_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const deleteParty = `-- name: DeleteParty :exec
 UPDATE parties SET status = 'deleted' WHERE id = $1
 `
@@ -218,6 +255,77 @@ type DeletePartyMembershipParams struct {
 
 func (q *Queries) DeletePartyMembership(ctx context.Context, arg DeletePartyMembershipParams) ([]int32, error) {
 	rows, err := q.db.Query(ctx, deletePartyMembership, arg.UserID, arg.PartyID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int32
+	for rows.Next() {
+		var chapter_id int32
+		if err := rows.Scan(&chapter_id); err != nil {
+			return nil, err
+		}
+		items = append(items, chapter_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const deleteStatePartyMemberships = `-- name: DeleteStatePartyMemberships :many
+DELETE FROM party_membership
+WHERE party_membership.user_id = $1
+  AND party_membership.party_id = $2
+  AND party_membership.chapter_id IN (
+      SELECT pc.id FROM party_chapters pc
+      WHERE pc.party_id = $2 AND pc.state_id = $3
+  )
+RETURNING chapter_id
+`
+
+type DeleteStatePartyMembershipsParams struct {
+	UserID  int64       `json:"user_id"`
+	PartyID int16       `json:"party_id"`
+	StateID pgtype.Int2 `json:"state_id"`
+}
+
+func (q *Queries) DeleteStatePartyMemberships(ctx context.Context, arg DeleteStatePartyMembershipsParams) ([]int32, error) {
+	rows, err := q.db.Query(ctx, deleteStatePartyMemberships, arg.UserID, arg.PartyID, arg.StateID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int32
+	for rows.Next() {
+		var chapter_id int32
+		if err := rows.Scan(&chapter_id); err != nil {
+			return nil, err
+		}
+		items = append(items, chapter_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const deleteWardPartyMembership = `-- name: DeleteWardPartyMembership :many
+DELETE FROM party_membership
+WHERE user_id = $1
+  AND party_id = $2
+  AND chapter_id = $3
+RETURNING chapter_id
+`
+
+type DeleteWardPartyMembershipParams struct {
+	UserID    int64 `json:"user_id"`
+	PartyID   int16 `json:"party_id"`
+	ChapterID int32 `json:"chapter_id"`
+}
+
+func (q *Queries) DeleteWardPartyMembership(ctx context.Context, arg DeleteWardPartyMembershipParams) ([]int32, error) {
+	rows, err := q.db.Query(ctx, deleteWardPartyMembership, arg.UserID, arg.PartyID, arg.ChapterID)
 	if err != nil {
 		return nil, err
 	}

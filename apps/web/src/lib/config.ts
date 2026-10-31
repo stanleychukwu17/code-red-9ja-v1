@@ -90,6 +90,9 @@ export const API_URL = {
 	parties: `${api}/parties`,
 	partyCards: `${api}/parties/cards`,
 	joinPartyHierarchy: (partyId: number) => `${api}/parties/${partyId}/join-hierarchy`,
+	leaveParty: (partyId: number | string) => `${api}/parties/${partyId}/leave`,
+	followParty: (partyId: number | string) => `${api}/parties/${partyId}/follow`,
+	unfollowParty: (partyId: number | string) => `${api}/parties/${partyId}/unfollow`,
 	getPartyProfile: (partyId: number, shortName: string, chapterId?: number) => {
 		const qs = chapterId ? `?chapter_id=${chapterId}` : "";
 		return `${api}/parties/${partyId}/${shortName}/profile${qs}`;
@@ -180,6 +183,11 @@ export const QUERY_KEYS = {
 	},
 	parties: ["parties"],
 	partyCards: ["partyCards"],
+	partyProfile: {
+		root: ["partyProfile"] as const,
+		byProfile: (partyId?: number | string, partyName?: string, chapterId?: number) =>
+			["partyProfile", partyId ? String(partyId) : undefined, partyName, chapterId] as const,
+	},
 	partyPositions: {
 		root: ["partyPositions"] as const,
 		byParty: (partyId?: number | string) => ["partyPositions", partyId] as const,

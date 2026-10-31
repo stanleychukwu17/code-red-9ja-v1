@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
-import { API_URL } from "../config";
+import { queryOptions } from "@tanstack/react-query";
+import { API_URL, QUERY_KEYS } from "../config";
 import { apiFetchJson } from "./fetch";
 
 /**
@@ -173,6 +174,21 @@ export const getPartyProfile = createServerFn()
 		}
 	});
 
+export const partyProfileQueryOptions = (
+	partyId: string | number,
+	partyName: string,
+	chapterId?: number
+) =>
+	queryOptions({
+		queryKey: QUERY_KEYS.partyProfile.byProfile(partyId, partyName, chapterId),
+		queryFn: () =>
+			getPartyProfile({
+				data: { partyId: Number(partyId), shortName: partyName, chapterId },
+			}),
+		staleTime: Infinity,
+		gcTime: 1000 * 60 * 60 * 3, // Keep in cache for 3h
+	});
+
 export type PartyHierarchySelection = {
 	partyId: number;
 	chapterType: string;
@@ -197,6 +213,72 @@ export const joinPartyHierarchy = createServerFn({ method: "POST" })
 			return res;
 		} catch (error: unknown) {
 			const message = error instanceof Error ? error.message : "Failed to join party hierarchy";
+			return { success: false, message, data: null };
+		}
+	});
+
+/**
+ * Server function to leave a political party.
+ */
+export const leaveParty = createServerFn({ method: "POST" })
+	.inputValidator((data: { partyId: number | string; chapterId?: number }) => data)
+	.handler(async ({ data: { partyId, chapterId } }) => {
+		try {
+			const res = await apiFetchJson<{ success: boolean; message: string; data: any }>(
+				API_URL.leaveParty(partyId),
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ chapter_id: chapterId }),
+				}
+			);
+			return res;
+		} catch (error: unknown) {
+			const message = error instanceof Error ? error.message : "Failed to leave party";
+			return { success: false, message, data: null };
+		}
+	});
+
+/**
+ * Server function to follow a political party chapter (defaults to national if chapterId is omitted).
+ */
+export const followParty = createServerFn({ method: "POST" })
+	.inputValidator((data: { partyId: number | string; chapterId?: number }) => data)
+	.handler(async ({ data: { partyId, chapterId } }) => {
+		try {
+			const res = await apiFetchJson<{ success: boolean; message: string; data: any }>(
+				API_URL.followParty(partyId),
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ chapter_id: chapterId }),
+				}
+			);
+			return res;
+		} catch (error: unknown) {
+			const message = error instanceof Error ? error.message : "Failed to follow party";
+			return { success: false, message, data: null };
+		}
+	});
+
+/**
+ * Server function to unfollow a political party chapter (defaults to national if chapterId is omitted).
+ */
+export const unfollowParty = createServerFn({ method: "POST" })
+	.inputValidator((data: { partyId: number | string; chapterId?: number }) => data)
+	.handler(async ({ data: { partyId, chapterId } }) => {
+		try {
+			const res = await apiFetchJson<{ success: boolean; message: string; data: any }>(
+				API_URL.unfollowParty(partyId),
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ chapter_id: chapterId }),
+				}
+			);
+			return res;
+		} catch (error: unknown) {
+			const message = error instanceof Error ? error.message : "Failed to unfollow party";
 			return { success: false, message, data: null };
 		}
 	});

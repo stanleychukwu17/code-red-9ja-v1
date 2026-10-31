@@ -671,7 +671,7 @@ func (s *SeedService) SeedAdmins(ctx context.Context, req SeedAdminsRequest) (st
 					// Check user details: if user is affiliated with a different party, leave it first
 					user, err := s.usersService.GetUserByFakeID(ctx, fakeID)
 					if err == nil && user.PartyID.Valid && user.PartyID.Int16 > 0 && user.PartyID.Int16 != partyID {
-						_ = s.partiesService.LeaveParty(ctx, user.PartyID.Int16, pAdminID, fakeID)
+						_ = s.partiesService.LeaveParty(ctx, user.PartyID.Int16, 0, pAdminID, fakeID)
 					}
 
 					// join party
@@ -705,7 +705,7 @@ func (s *SeedService) SeedAdmins(ctx context.Context, req SeedAdminsRequest) (st
 					// Check user details: if user is affiliated with a different party, leave it first
 					user, err := s.usersService.GetUserByFakeID(ctx, fakeID)
 					if err == nil && user.PartyID.Valid && user.PartyID.Int16 > 0 && user.PartyID.Int16 != partyID {
-						_ = s.partiesService.LeaveParty(ctx, user.PartyID.Int16, spAdminID, fakeID)
+						_ = s.partiesService.LeaveParty(ctx, user.PartyID.Int16, 0, spAdminID, fakeID)
 					}
 
 					// join party

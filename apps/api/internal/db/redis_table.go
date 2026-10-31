@@ -8,6 +8,7 @@ const (
 	RedisThirtyMinutesTTL  = 30 * time.Minute
 	RedisOneHourTTL        = 1 * time.Hour
 	RedisOneDayTTL         = 24 * time.Hour
+	RedisTwoDaysTTL        = 48 * time.Hour
 	RedisSevenDaysTTL      = 7 * 24 * time.Hour
 	RedisFourteenDaysTTL   = 14 * 24 * time.Hour
 	RedisThirtyDaysTTL     = 30 * 24 * time.Hour
@@ -82,6 +83,7 @@ const (
 	RedisPartyCustomPositions       = "parties:custom_party_positions:"  // STRING: "parties:custom_party_positions:<partyID>" stores cached JSON array of custom party positions
 	RedisPartyPositionByID          = "parties:position_by_id:"          // STRING: "parties:position_by_id:<partyID>:<positionID>" stores cached single party position JSON
 	RedisUserPartyChapters          = "parties:user_chapters:"           // STRING: "parties:user_chapters:<partyID>:<userID>" stores cached JSON array of user party chapters
+	RedisPartyChapterLeaveCooldown  = "parties:leave_cooldown:"          // STRING: "parties:leave_cooldown:<userID>:<chapterType>" stores timestamp/TTL of 48h leave cooldown
 	//--END--
 
 	//--START-- for party applications
@@ -202,6 +204,7 @@ var AllRedisPrefixes = []string{
 	RedisPartyCustomPositions,
 	RedisPartyPositionByID,
 	RedisUserPartyChapters,
+	RedisPartyChapterLeaveCooldown,
 	RedisPartyApplicationByID,
 	RedisPageVerificationTypesList,
 	RedisPageVerificationTypeInfo,

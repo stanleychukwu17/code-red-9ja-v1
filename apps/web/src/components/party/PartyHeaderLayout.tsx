@@ -1,35 +1,43 @@
 import { useState, useEffect } from "react";
-import { Check, MessageCircleMore, Plus } from "lucide-react";
+import { Check, Loader2, MessageCircleMore, Plus } from "lucide-react";
 import { cn } from "@repo/ui/lib/utils";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@repo/ui/components/alert-dialog";
 import { VerificationBadge } from "@repo/ui/components/custom/verification-badge";
-import { useNavigate } from "@tanstack/react-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { useAuth } from "#/hooks/useAuth";
-import { APP_URL } from "#/lib/config";
+import { QUERY_KEYS } from "#/lib/config";
 import { JoinPartyDialog } from "#/components/parties";
+import { PARTY_PRESETS } from "#/components/parties/party-constants";
+import { formatNumber } from "@repo/ui/lib/number";
+import { followParty, leaveParty, partyProfileQueryOptions, unfollowParty } from "#/lib/server/parties";
 
 interface PartyHeaderLayoutProps {
   partyId?: number | string;
+  partyName?: string;
   chapterId?: number;
   coverImage?: string | null;
   coverPositionY?: number | null;
   logo?: string | null;
-  shortName: string;
-  fullName: string;
+  shortName?: string;
+  fullName?: string;
   isVerified?: boolean;
   verifications?: any[];
   chapterLevel?: string;
   chapterType?: string;
   chapterGeoName?: string;
-  isChapterMemberInitial?: boolean;
-  isFollowingInitial?: boolean;
   followersDisplay?: string;
   followersValue?: number;
   totalMembers?: string;
   chapterMembers?: string;
-  onChapterMemberToggle?: (isChapterMember: boolean) => void;
-  onFollowToggle?: (isFollowing: boolean) => void;
-  onMessageClick?: () => void;
   children?: React.ReactNode;
 }
 
@@ -74,37 +82,104 @@ function getChapterTypeBadgeConfig(type?: string, geoName?: string) {
   }
 }
 
-export function PartyHeaderLayout({
-  partyId,
-  chapterId,
-  coverImage,
-  coverPositionY = 50,
-  logo,
-  shortName,
-  fullName,
-  isVerified,
-  verifications,
-  chapterLevel,
-  chapterType,
-  chapterGeoName,
-  isChapterMemberInitial = false,
-  isFollowingInitial = false,
-  followersDisplay = "0",
-  followersValue = 0,
-  totalMembers = "000",
-  chapterMembers = "000",
-  onChapterMemberToggle,
-  onFollowToggle,
-  onMessageClick,
-  children,
-}: PartyHeaderLayoutProps) {
-  const [isChapterMember, setIsChapterMember] = useState(isChapterMemberInitial);
-  const [isFollowing, setIsFollowing] = useState(isFollowingInitial);
-  const [isJoinDialogOpen, setIsJoinDialogOpen] = useState(false);
-  const { isLoggedIn } = useAuth();
-  const navigate = useNavigate();
-  const resolvedChapterType = chapterType || chapterLevel;
+function resolvePartyHeaderData(
+  props: PartyHeaderLayoutProps,
+  profileRes?: any
+) {
+  const partyDetails = profileRes?.success ? profileRes.data.data : null;
+  const isServerChapterMember = profileRes?.success ? Boolean(profileRes.data?.is_chapter_member) : false;
+  const isServerFollowing = profileRes?.success ? Boolean(profileRes.data?.is_following) : false;
+
+  // Resolve short name, preset themes, and full party branding
+  const resolvedPartyName = props.partyName || props.shortName || "";
+  const shortName = props.shortName || partyDetails?.short_name || resolvedPartyName;
+  const partyUpper = shortName.toUpperCase();
+  const preset = PARTY_PRESETS[partyUpper];
+
+  const fullName = props.fullName || partyDetails?.name || "Nigerian Party";
+  const logo = props.logo !== undefined ? props.logo : (partyDetails?.logo || null);
+  const isVerified = props.isVerified !== undefined ? props.isVerified : Boolean(partyDetails?.is_verified);
+  const verifications = props.verifications !== undefined ? props.verifications : partyDetails?.verifications;
+
+  const coverPositionY = props.coverPositionY ?? partyDetails?.cover_position_y ?? preset?.coverPositionY ?? 50;
+  const coverImage = props.coverImage !== undefined
+    ? props.coverImage
+    : (partyDetails?.cover_image || preset?.coverImage || "https://images.unsplash.com/photo-1624383045192-cf512eb9d78c?q=80&w=1600&auto=format&fit=crop");
+
+  const resolvedChapterType = props.chapterType || props.chapterLevel || (profileRes?.success ? profileRes.data.chapter_type : undefined);
+  const chapterGeoName = props.chapterGeoName !== undefined ? props.chapterGeoName : (profileRes?.success ? profileRes.data.chapter_geo_name : undefined);
   const chapterBadge = getChapterTypeBadgeConfig(resolvedChapterType, chapterGeoName);
+
+  // Active chapter & national member statistics
+  const rawChapterMembers = profileRes?.success ? Number(profileRes.data?.chapter_member_count ?? 0) : 0;
+  const chapterMembers = props.chapterMembers || rawChapterMembers.toLocaleString();
+
+  const rawTotalMembers = profileRes?.success ? Number(profileRes.data?.national_member_count ?? 0) : 0;
+  const totalMembers = props.totalMembers || rawTotalMembers.toLocaleString();
+
+  // Follower counts and logarithmic gauge progress
+  const rawFollowersCount = profileRes?.success ? Number(profileRes.data?.national_followers_count ?? 0) : 0;
+  const followersValue = props.followersValue !== undefined ? props.followersValue : rawFollowersCount;
+  const followersDisplay = props.followersDisplay || formatNumber(followersValue);
+
+  return {
+    shortName,
+    fullName,
+    logo,
+    isVerified,
+    verifications,
+    coverPositionY,
+    coverImage,
+    chapterBadge,
+    chapterMembers,
+    totalMembers,
+    followersValue,
+    followersDisplay,
+    isServerChapterMember,
+    isServerFollowing,
+  };
+}
+
+export function PartyHeaderLayout(props: PartyHeaderLayoutProps) {
+  const {
+    partyId,
+    partyName,
+    chapterId,
+    children,
+  } = props;
+
+  // Query full party profile and chapter metadata from TanStack Query
+  const resolvedPartyName = partyName || props.shortName || "";
+  const { data: profileRes } = useQuery({
+    ...partyProfileQueryOptions(partyId || "", resolvedPartyName, chapterId),
+    enabled: Boolean(partyId && resolvedPartyName),
+  });
+
+  const {
+    shortName,
+    fullName,
+    logo,
+    isVerified,
+    verifications,
+    coverPositionY,
+    coverImage,
+    chapterBadge,
+    chapterMembers,
+    totalMembers,
+    followersValue,
+    followersDisplay,
+    isServerChapterMember,
+    isServerFollowing,
+  } = resolvePartyHeaderData(props, profileRes);
+
+  // Membership & Following state (auto-synced with TanStack query data)
+  const [isChapterMember, setIsChapterMember] = useState(isServerChapterMember);
+  const [isFollowing, setIsFollowing] = useState(isServerFollowing);
+  const [isFollowLoading, setIsFollowLoading] = useState(false);
+  const [isJoinDialogOpen, setIsJoinDialogOpen] = useState(false);
+  const [isLeaveDialogOpen, setIsLeaveDialogOpen] = useState(false);
+  const [isLeavingParty, setIsLeavingParty] = useState(false);
+  const queryClient = useQueryClient();
 
   // Logarithmic progress for followers ring gauge (0% at 0 followers, 100% at 100,000+ followers)
   const followersPercentage =
@@ -116,30 +191,94 @@ export function PartyHeaderLayout({
       ? 282.7
       : Math.max(0, 282.7 - (282.7 * followersPercentage) / 100);
 
-  // Synchronize chapter membership state when initial prop changes (e.g. async fetch completes)
+  // Synchronize chapter membership state when query updates
   useEffect(() => {
-    setIsChapterMember(isChapterMemberInitial);
-  }, [isChapterMemberInitial]);
+    setIsChapterMember(isServerChapterMember);
+  }, [isServerChapterMember]);
 
-  // Synchronize following state when initial prop changes (e.g. async fetch completes)
+  // Synchronize following state when query updates
   useEffect(() => {
-    setIsFollowing(isFollowingInitial);
-  }, [isFollowingInitial]);
+    setIsFollowing(isServerFollowing);
+  }, [isServerFollowing]);
 
-  // Open chapter enrollment modal or prompt login if not authenticated
+  // Leave the party
+  const handleLeaveParty = async () => {
+    if (!partyId || isLeavingParty) return;
+
+    setIsLeavingParty(true);
+    try {
+      const res = await leaveParty({
+        data: { partyId, chapterId },
+      });
+
+      if (!res?.success) {
+        throw new Error(res?.message || "Failed to leave party");
+      }
+
+      toast.success(`You have left ${shortName}`);
+      setIsChapterMember(false);
+      setIsLeaveDialogOpen(false);
+
+      // Invalidate relevant queries so the UI updates
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partyProfile.root });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partyCards });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partyMembers.root });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.auth.session });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to leave party. Please try again.";
+      toast.error(message);
+    } finally {
+      setIsLeavingParty(false);
+    }
+  };
+
+  // Open chapter enrollment modal or prompt confirmation to leave party
   const handleChapterMemberClick = () => {
     if (isChapterMember) {
-      return
+      setIsLeaveDialogOpen(true);
+      return;
     }
 
     setIsJoinDialogOpen(true);
   };
 
-  // Optimistically toggle follow status and notify parent callback
-  const handleFollowClick = () => {
-    const next = !isFollowing;
-    setIsFollowing(next);
-    onFollowToggle?.(next);
+  // Handle follow/unfollow party
+  const handleFollowClick = async () => {
+    if (!props.partyId || isFollowLoading) return;
+
+    const previousState = isFollowing;
+    const nextState = !previousState;
+    setIsFollowing(nextState);
+    setIsFollowLoading(true);
+
+    try {
+      const fn = nextState ? followParty : unfollowParty;
+      const res = await fn({
+        data: { partyId: Number(partyId), chapterId: Number(chapterId) },
+      });
+
+      if (!res?.success) {
+        throw new Error(res?.message || `Failed to ${nextState ? "follow" : "unfollow"} party`);
+      }
+
+      toast.success(nextState ? `You are now following ${shortName}` : `Unfollowed ${shortName}`);
+
+      // Invalidate relevant queries so follower count and profile cache stay fresh
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partyProfile.root });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partyCards });
+    } catch (err: unknown) {
+      setIsFollowing(previousState);
+      const message =
+        err instanceof Error ? err.message : `Failed to ${nextState ? "follow" : "unfollow"} party`;
+      toast.error(message);
+    } finally {
+      setIsFollowLoading(false);
+    }
+  };
+
+  // Handle direct message click
+  const handleMessageClick = () => {
+    toast.info("Direct messaging is not yet available for this party.");
   };
 
   return (
@@ -240,15 +379,16 @@ export function PartyHeaderLayout({
                   <button
                     type="button"
                     onClick={handleChapterMemberClick}
-                    disabled={isChapterMember}
                     className={cn(
-                      "flex items-center justify-center gap-1.5 px-2 sm:px-4 py-3 rounded-full text-xs xl:text-sm font-semibold transition-all duration-200 shadow-sm",
+                      "flex items-center justify-center gap-1.5 px-2 sm:px-4 py-3 rounded-full text-xs xl:text-sm font-semibold transition-all duration-200 shadow-sm cursor-pointer",
                       isChapterMember
-                        ? "bg-lime-accent text-neutral-900 dark:bg-secondary dark:text-secondary-foreground cursor-default"
-                        : "bg-lime hover:bg-lime-accent text-neutral-900 dark:bg-foreground dark:text-background dark:hover:bg-foreground/90 active:scale-95 cursor-pointer"
+                        ? "bg-lime-accent text-neutral-900 hover:bg-lime-accent-hover dark:bg-secondary dark:text-secondary-foreground dark:hover:bg-secondary/80"
+                        : "bg-lime hover:bg-lime-accent text-neutral-900 dark:bg-foreground dark:text-background dark:hover:bg-foreground/90 active:scale-95"
                     )}
                   >
-                    {isChapterMember ? (
+                    {isLeavingParty ? (
+                      <> <Loader2 className="w-4 h-4 animate-spin" /> <span>Leaving...</span> </>
+                    ) : isChapterMember ? (
                       <> <Check className="w-4 h-4 stroke-[2.5]" /> <span>Member</span> </>
                     ) : (
                       <> <Plus className="w-4 h-4 stroke-[2.5]" /> <span>Become a member</span> </>
@@ -258,13 +398,16 @@ export function PartyHeaderLayout({
                   <button
                     type="button"
                     onClick={handleFollowClick}
+                    disabled={isFollowLoading}
                     className={cn(
                       "flex items-center justify-center gap-1.5 px-3 sm:px-4 py-3 rounded-full",
                       "text-xs xl:text-sm font-semibold transition-all duration-200 active:scale-95 shadow-sm cursor-pointer",
-                      "bg-foreground text-background hover:bg-foreground/90"
+                      "bg-foreground text-background hover:bg-foreground/90 disabled:opacity-70 disabled:cursor-not-allowed"
                     )}
                   >
-                    {isFollowing ? (
+                    {isFollowLoading ? (
+                      <> <Loader2 className="w-4 h-4 animate-spin" /> <span>Updating...</span> </>
+                    ) : isFollowing ? (
                       <> <Check className="w-4 h-4" /> <span>Following</span> </>
                     ) : (
                       <> <Plus className="w-4 h-4" /> <span>Follow</span> </>
@@ -273,7 +416,7 @@ export function PartyHeaderLayout({
 
                   <button
                     type="button"
-                    onClick={onMessageClick}
+                    onClick={handleMessageClick}
                     title="Send message"
                     aria-label="Send message"
                     className="size-8 text-background hover:opacity-90 transition active:scale-95 cursor-pointer"
@@ -354,7 +497,7 @@ export function PartyHeaderLayout({
         </div>
 
         {/* Modal for Chapter Enrollment */}
-        {partyId && (
+        {partyId && isJoinDialogOpen && (
           <JoinPartyDialog
             open={isJoinDialogOpen}
             onOpenChange={setIsJoinDialogOpen}
@@ -364,9 +507,42 @@ export function PartyHeaderLayout({
             chapterId={chapterId}
             onJoinSuccess={(id) => {
               setIsChapterMember(true);
-              onChapterMemberToggle?.(true);
             }}
           />
+        )}
+
+        {/* Confirmation dialog before leaving party */}
+        {isLeaveDialogOpen && (
+          <AlertDialog open={isLeaveDialogOpen} onOpenChange={setIsLeaveDialogOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Leave {shortName.toUpperCase()}?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to leave {fullName || shortName}? You will forfeit your membership status in this chapter and will need to wait 48 hours before you can join again.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={isLeavingParty}>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  variant="destructive"
+                  disabled={isLeavingParty}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleLeaveParty();
+                  }}
+                >
+                  {isLeavingParty ? (
+                    <>
+                      <Loader2 className="mr-2 size-4 animate-spin" />
+                      <span>Leaving...</span>
+                    </>
+                  ) : (
+                    <span>Leave Party</span>
+                  )}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         )}
 
         {/* Optional Inner Navigation / Slot */}

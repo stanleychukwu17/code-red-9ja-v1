@@ -575,6 +575,8 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 
 		r.Post("/api/v1/parties/{id}/join-hierarchy", partiesHandler.JoinPartyHierarchy)
 		r.Post("/api/v1/parties/{id}/leave", partiesHandler.LeaveParty)
+		r.Post("/api/v1/parties/{id}/follow", partiesHandler.FollowParty)
+		r.Post("/api/v1/parties/{id}/unfollow", partiesHandler.UnfollowParty)
 		r.Get("/api/v1/parties/{id}/agent-targets", partiesHandler.GetAgentAcquisitionTargets)
 		r.Get("/api/v1/parties/{id}/agent-marketing-campaigns", partiesHandler.GetPartyMarketingCampaigns)
 

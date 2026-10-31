@@ -68,7 +68,7 @@ INSERT INTO party_membership (user_id,party_id,chapter_id,status) VALUES (1,1,1,
 	chapters, err = s.GetUserPartyChapters(ctx, 1, 1)
 	require.NoError(t, err)
 	require.Len(t, chapters, 2)
-	require.NoError(t, s.LeaveParty(ctx, 1, 1, 101))
+	require.NoError(t, s.LeaveParty(ctx, 1, 0, 1, 101))
 	require.Zero(t, rdb.Exists(ctx, db.RedisUserPartyChapters+"1:1").Val())
 	chapters, err = s.GetUserPartyChapters(ctx, 1, 1)
 	require.NoError(t, err)

@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-playground/validator/v10"
 	"github.com/jackc/pgx/v5/pgtype"
 
 	partieswallethandler "free9ja/api/internal/handler/parties_wallet"
@@ -43,7 +44,7 @@ type PartiesService interface {
 	// Allowance methods
 	DepositAllowance(ctx context.Context, partyID int16, amountKobo int64) (queries.DepositPartyAllowanceRow, error)
 	JoinParty(ctx context.Context, params partiesservice.JoinPartyParams) error
-	LeaveParty(ctx context.Context, partyID int16, userID, userFid int64) error
+	LeaveParty(ctx context.Context, partyID int16, chapterID int32, userID, userFid int64) error
 	// Membership methods
 	UpdateAgentPaymentAllocationKobo(ctx context.Context, partyID int16, allowancesJSON []byte) (queries.UpdatePartyAgentPaymentAllocationKoboRow, error)
 	// Marketing methods
@@ -111,6 +112,8 @@ type BodiesService interface {
 type FollowsService interface {
 	IsFollowingParty(ctx context.Context, userID int64, partyID int16, chapterID int32) (bool, error)
 	GetPartyFollowersCount(ctx context.Context, partyID int16, chapterID int32) (int64, error)
+	FollowParty(ctx context.Context, userID int64, partyID int16, chapterID int32) error
+	UnfollowParty(ctx context.Context, userID int64, partyID int16, chapterID int32) error
 }
 
 type NotificationsService interface {
@@ -128,6 +131,7 @@ type Handler struct {
 	r2Svc                *r2service.R2Service
 	followsService       FollowsService
 	notificationsService NotificationsService
+	validate             *validator.Validate
 }
 
 func NewHandler(partiesService PartiesService, bodiesService BodiesService, auditService audit.AuditService, permissionsService PermissionsService, filesService files.FilesService, utils *utils.Utils, r2Svc *r2service.R2Service, followsService FollowsService, notificationsService NotificationsService) *Handler {
@@ -141,6 +145,7 @@ func NewHandler(partiesService PartiesService, bodiesService BodiesService, audi
 		r2Svc:                r2Svc,
 		followsService:       followsService,
 		notificationsService: notificationsService,
+		validate:             validator.New(),
 	}
 }
 
@@ -1202,6 +1207,20 @@ func (h *Handler) LeaveParty(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Decode and validate request body for required chapter ID
+	var req struct {
+		ChapterID int32 `json:"chapter_id" validate:"required,gt=0"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	// Extract authenticated user credentials from context
 	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
 	if !ok {
@@ -1209,14 +1228,98 @@ func (h *Handler) LeaveParty(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Verify user is currently affiliated with this party
+	if claims.PartyID == 0 || claims.PartyID != int16(partyID) {
+		h.utils.RespondError(w, http.StatusBadRequest, "You are not a member of this party")
+		return
+	}
+
 	// Remove memberships, revoke party admin roles, and update user party_id
-	err = h.partiesService.LeaveParty(r.Context(), int16(partyID), claims.UserID, claims.FakeID)
+	err = h.partiesService.LeaveParty(r.Context(), int16(partyID), req.ChapterID, claims.UserID, claims.FakeID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Left party successfully", nil)
+}
+
+// FollowParty handles POST /api/v1/parties/{id}/follow
+func (h *Handler) FollowParty(w http.ResponseWriter, r *http.Request) {
+	// Parse and validate target party ID from URL path
+	partyID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil || partyID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID")
+		return
+	}
+
+	// Extract authenticated user claims from request context
+	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
+	if !ok || claims == nil {
+		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	// Decode and validate request payload for target chapter ID
+	var req struct {
+		ChapterID int32 `json:"chapter_id" validate:"required,gt=0"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Follow party chapter in database and update cache/notifications
+	if err := h.followsService.FollowParty(r.Context(), claims.UserID, int16(partyID), req.ChapterID); err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Followed party successfully", nil)
+}
+
+// UnfollowParty handles POST /api/v1/parties/{id}/unfollow
+func (h *Handler) UnfollowParty(w http.ResponseWriter, r *http.Request) {
+	// Parse and validate target party ID from URL path
+	partyID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil || partyID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID")
+		return
+	}
+
+	// Extract authenticated user claims from request context
+	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
+	if !ok || claims == nil {
+		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	// Decode and validate request payload for target chapter ID
+	var req struct {
+		ChapterID int32 `json:"chapter_id" validate:"required,gt=0"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Remove party chapter follow record and invalidate follower cache
+	if err := h.followsService.UnfollowParty(r.Context(), claims.UserID, int16(partyID), req.ChapterID); err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Unfollowed party successfully", nil)
 }
 
 // DeleteParty godoc

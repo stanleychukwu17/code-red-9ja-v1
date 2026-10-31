@@ -6,7 +6,7 @@
  * Agents, Supervisors, Race Results, Operations, and Agent Coverage).
  */
 
-import * as React from "react";
+import { useMemo, useState } from "react";
 import type { AgentPerformanceItem } from "#/lib/server/agents";
 import {
   ApplicationTableHeader,
