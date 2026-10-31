@@ -17,6 +17,7 @@ export function UserFormDialog(
   return (
     <SharedUserFormDialog
       {...props}
+      whoView={props.whoView ?? "admin"}
       getAllCountries={getAllCountries}
       getStates={getStates}
       getCities={getCities}

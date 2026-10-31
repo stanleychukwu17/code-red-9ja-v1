@@ -45,6 +45,7 @@ export type UserFormDialogProps = {
   onClose: () => void;
   onSuccess?: (user: UserResult, tab?: 'basic' | 'more' | 'phones') => void;
   mode?: "create" | "update";
+  whoView?: "user" | "admin";
   user?: any;
   // Optional party restriction:
   partyId?: number;
@@ -91,6 +92,7 @@ export function UserFormDialog({
   onClose,
   onSuccess,
   mode = "create",
+  whoView = "user",
   user,
   partyId,
   partyShortName,
@@ -138,21 +140,25 @@ export function UserFormDialog({
       if (!values.lastName) throw new Error("Last name is required");
       // if (!values.username) throw new Error("Username is required");
       if (!values.gender) throw new Error("Gender is required");
-      if (!values.dateOfBirth) throw new Error("Date of birth is required");
+      if (whoView !== "user" && !values.dateOfBirth)
+        throw new Error("Date of birth is required");
       if (!values.residenceCountryId)
         throw new Error("Residence country is required");
       if (!values.residenceStateId)
         throw new Error("Residence state is required");
-      if (!values.originCountryId)
+      if (whoView !== "user" && !values.originCountryId)
         throw new Error("Country of origin is required");
-      if (!values.originStateId) throw new Error("State of origin is required");
+      if (whoView !== "user" && !values.originStateId)
+        throw new Error("State of origin is required");
       if (mode === "create" && !values.email)
         throw new Error("Email is required");
       if (mode === "create" && !values.password)
         throw new Error("Password is required");
 
       // formatted date of birth
-      const formattedDob = values.dateOfBirth.split("T")[0];
+      const formattedDob = values.dateOfBirth
+        ? values.dateOfBirth.split("T")[0]
+        : (activeUser?.date_of_birth ? String(activeUser.date_of_birth).split("T")[0] : undefined);
 
       // new avatar url and file id, fallback to user's current ones
       let finalAvatarUrl = avatarUrl;
@@ -217,7 +223,7 @@ export function UserFormDialog({
           data: {
             id: activeUser?.fake_id,
             email: values.email ? values.email.trim() : "",
-            username: values.username.trim(),
+            username: values.username ? values.username.trim() : (activeUser?.username || ""),
             first_name: values.firstName.trim(),
             last_name: values.lastName.trim(),
             middle_name: values.middleName.trim(),
@@ -229,8 +235,8 @@ export function UserFormDialog({
             current_city: values.residenceCityId
               ? Number(values.residenceCityId)
               : undefined,
-            state_of_origin: Number(values.originStateId),
-            party_id: values.partyId ? Number(values.partyId) : undefined,
+            state_of_origin: values.originStateId ? Number(values.originStateId) : (activeUser?.state_of_origin ? Number(activeUser.state_of_origin) : undefined),
+            party_id: values.partyId ? Number(values.partyId) : (activeUser?.party_id ? Number(activeUser.party_id) : undefined),
           },
         });
       } else {
@@ -242,7 +248,7 @@ export function UserFormDialog({
           data: {
             email: values.email ? values.email.trim() : "",
             password: values.password,
-            username: values.username.trim(),
+            username: values.username ? values.username.trim() : (activeUser?.username || ""),
             first_name: values.firstName.trim(),
             last_name: values.lastName.trim(),
             middle_name: values.middleName.trim(),
@@ -253,8 +259,8 @@ export function UserFormDialog({
             current_city: values.residenceCityId
               ? Number(values.residenceCityId)
               : undefined,
-            state_of_origin: Number(values.originStateId),
-            party_id: values.partyId ? Number(values.partyId) : undefined,
+            state_of_origin: values.originStateId ? Number(values.originStateId) : (activeUser?.state_of_origin ? Number(activeUser.state_of_origin) : undefined),
+            party_id: values.partyId ? Number(values.partyId) : (activeUser?.party_id ? Number(activeUser.party_id) : undefined),
             avatar: finalAvatarUrl,
             avatar_file_id: finalFileId,
           },
@@ -355,6 +361,7 @@ export function UserFormDialog({
     },
     onSubmit: async ({ value }) => {
       saveMutation.mutate(value);
+      if (onSuccess) onSuccess(activeUser, "basic");
     },
   });
 
@@ -661,7 +668,12 @@ export function UserFormDialog({
                 </div>
 
                 {/* Other names and Username */}
-                <div className="grid grid-cols-2 gap-4">
+                <div
+                  className={cn(
+                    "grid gap-4",
+                    whoView === "user" ? "grid-cols-1" : "grid-cols-2"
+                  )}
+                >
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[14px] text-c-50">
                       Other names (Optional)
@@ -679,36 +691,43 @@ export function UserFormDialog({
                     />
                   </div>
 
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[14px] text-c-50">Username</label>
-                    <form.Field
-                      name="username"
-                      validators={{
-                        onChange: ({ value }) => {
-                          if (!value) return undefined;
-                          const usernameRegex =
-                            /^[a-zA-Z][a-zA-Z0-9_]{1,28}[a-zA-Z0-9]$/;
-                          if (!usernameRegex.test(value)) {
-                            return "Invalid username format";
-                          }
-                          return undefined;
-                        },
-                      }}
-                      children={(field: any) => (
-                        <Input
-                          type="text"
-                          placeholder="Username"
-                          value={field.state.value}
-                          onChange={(e) => field.handleChange(e.target.value)}
-                          errorMsg={field.state.meta.errors?.join(", ")}
-                        />
-                      )}
-                    />
-                  </div>
+                  {whoView !== "user" && (
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[14px] text-c-50">Username</label>
+                      <form.Field
+                        name="username"
+                        validators={{
+                          onChange: ({ value }) => {
+                            if (!value) return undefined;
+                            const usernameRegex =
+                              /^[a-zA-Z][a-zA-Z0-9_]{1,28}[a-zA-Z0-9]$/;
+                            if (!usernameRegex.test(value)) {
+                              return "Invalid username format";
+                            }
+                            return undefined;
+                          },
+                        }}
+                        children={(field: any) => (
+                          <Input
+                            type="text"
+                            placeholder="Username"
+                            value={field.state.value}
+                            onChange={(e) => field.handleChange(e.target.value)}
+                            errorMsg={field.state.meta.errors?.join(", ")}
+                          />
+                        )}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* Gender and DOB */}
-                <div className="grid grid-cols-2 gap-4">
+                <div
+                  className={cn(
+                    "grid gap-4",
+                    whoView === "user" ? "grid-cols-1" : "grid-cols-2"
+                  )}
+                >
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[14px] text-c-50">Gender</label>
                     <form.Field
@@ -722,47 +741,51 @@ export function UserFormDialog({
                       )}
                     />
                   </div>
+                  {whoView !== "user" && (
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[14px] text-c-50">
+                        Date of birth
+                      </label>
+                      <form.Field
+                        name="dateOfBirth"
+                        children={(field: any) => (
+                          <SelectDate
+                            initialData={field.state.value}
+                            selectedId={field.state.value}
+                            update={(val) => field.handleChange(val)}
+                            errorMsg={field.state.meta.errors?.join(", ")}
+                          />
+                        )}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* State of Origin */}
+                {whoView !== "user" && (
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[14px] text-c-50">
-                      Date of birth
+                      State of Origin
                     </label>
                     <form.Field
-                      name="dateOfBirth"
+                      name="originStateId"
                       children={(field: any) => (
-                        <SelectDate
-                          initialData={field.state.value}
-                          selectedId={field.state.value}
-                          update={(val) => field.handleChange(val)}
+                        <SelectState
+                          selectedId={
+                            field.state.value !== undefined
+                              ? String(field.state.value)
+                              : undefined
+                          }
+                          update={(item) => field.handleChange(item.id)}
+                          countryOriginalId={161}
+                          fetchStates={getStates}
+                          disabled={false}
                           errorMsg={field.state.meta.errors?.join(", ")}
                         />
                       )}
                     />
                   </div>
-                </div>
-
-                {/* State of Origin */}
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[14px] text-c-50">
-                    State of Origin
-                  </label>
-                  <form.Field
-                    name="originStateId"
-                    children={(field: any) => (
-                      <SelectState
-                        selectedId={
-                          field.state.value !== undefined
-                            ? String(field.state.value)
-                            : undefined
-                        }
-                        update={(item) => field.handleChange(item.id)}
-                        countryOriginalId={161}
-                        fetchStates={getStates}
-                        disabled={false}
-                        errorMsg={field.state.meta.errors?.join(", ")}
-                      />
-                    )}
-                  />
-                </div>
+                )}
 
                 {/* Residence Location */}
                 <div className="grid grid-cols-3 gap-4">
@@ -853,7 +876,7 @@ export function UserFormDialog({
                 </div>
 
                 {/* Party (Only show if party is not locked/passed as prop) */}
-                {!isPartyLocked && (
+                {whoView !== "user" && !isPartyLocked && (
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[14px] text-c-50">Party</label>
                     <form.Field
@@ -1310,12 +1333,7 @@ function PhoneNumbersTab({
 
   // Fetch phone numbers asynchronously when the tab mounts.
   // The query uses fake_id (or id as fallback) as the unique query key identifier.
-  const {
-    data: userPhoneNumbers,
-    isLoading,
-    refetch,
-    error: queryError,
-  } = useQuery({
+  const { data: userPhoneNumbers, isLoading, error: queryError } = useQuery({
     queryKey: ["user-phonenumbers", user?.fake_id],
 
     // query function that fetches the number

@@ -30,6 +30,7 @@ export function ProfileFloatingToolbar({ onSuccess }: ProfileFloatingToolbarProp
     gcTime: Infinity,
   });
 
+
   const profileData = profileRes?.data;
   const isAccountOwner = Boolean(profileData?.is_account_owner);
 
@@ -38,6 +39,14 @@ export function ProfileFloatingToolbar({ onSuccess }: ProfileFloatingToolbarProp
     if (!profileData) return null;
     return {
       ...profileData,
+      middle_name: profileData.middle_name || "",
+      gender: profileData.gender || "",
+      current_country: profileData.current_country,
+      current_state: profileData.current_state,
+      current_city: profileData.current_city,
+      residence_country: profileData.current_country,
+      residence_state: profileData.current_state,
+      residence_city: profileData.current_city,
       party_id: profileData.party?.id,
       avatar: profileData.avatar || "",
     };
@@ -61,6 +70,9 @@ export function ProfileFloatingToolbar({ onSuccess }: ProfileFloatingToolbarProp
     setIsEditDialogOpen(false);
     // Invalidate user profile and session strictly when basic user info changes
     if (tab === "basic") {
+      if (username) {
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.userProfile.byUsername(username) });
+      }
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.userProfile.root });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.auth.session });
     }
@@ -134,6 +146,7 @@ export function ProfileFloatingToolbar({ onSuccess }: ProfileFloatingToolbarProp
       {isEditDialogOpen && isAccountOwner ? (
         <UserFormDialog
           mode="update"
+          whoView="user"
           open={isEditDialogOpen}
           onClose={() => setIsEditDialogOpen(false)}
           user={activeUser}

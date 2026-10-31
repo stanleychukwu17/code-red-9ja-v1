@@ -115,7 +115,16 @@ export type PublicUserProfile = {
   name: string;
   first_name: string;
   last_name: string;
+  middle_name?: string;
+  gender?: string;
   avatar: string;
+  avatar_file_id?: number;
+  current_country?: number;
+  current_state?: number;
+  current_city?: number;
+  country_name?: string;
+  state_name?: string;
+  city_name?: string;
   party?: {
     id: number;
     name: string;

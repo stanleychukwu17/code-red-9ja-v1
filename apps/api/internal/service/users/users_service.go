@@ -1245,7 +1245,16 @@ type UserPublicProfile struct {
 	Name           string                                     `json:"name"`
 	FirstName      string                                     `json:"first_name"`
 	LastName       string                                     `json:"last_name"`
+	MiddleName     string                                     `json:"middle_name"`
+	Gender         string                                     `json:"gender"`
 	Avatar         string                                     `json:"avatar"`
+	AvatarFileID   *int64                                     `json:"avatar_file_id,omitempty"`
+	CurrentCountry int16                                      `json:"current_country"`
+	CurrentState   int16                                      `json:"current_state"`
+	CurrentCity    *int32                                     `json:"current_city,omitempty"`
+	CountryName    string                                     `json:"country_name,omitempty"`
+	StateName      string                                     `json:"state_name,omitempty"`
+	CityName       string                                     `json:"city_name,omitempty"`
 	Party          *UserPublicParty                           `json:"party,omitempty"`
 	PartyRole      *UserPublicRole                            `json:"party_role,omitempty"`
 	Assignments    []queries.ListMemberPositionAssignmentsRow `json:"assignments,omitempty"`
@@ -1335,6 +1344,18 @@ func (s *UsersService) GetUserPublicProfile(ctx context.Context, username string
 		}
 	}
 
+	var avatarFileID *int64
+	if user.AvatarFileID.Valid {
+		id := user.AvatarFileID.Int64
+		avatarFileID = &id
+	}
+
+	var currentCity *int32
+	if user.CurrentCity.Valid {
+		city := user.CurrentCity.Int32
+		currentCity = &city
+	}
+
 	// Assemble and return hydrated public profile
 	return &UserPublicProfile{
 		ID:             user.ID,
@@ -1343,7 +1364,16 @@ func (s *UsersService) GetUserPublicProfile(ctx context.Context, username string
 		Name:           strings.TrimSpace(user.FirstName.String + " " + user.LastName.String),
 		FirstName:      user.FirstName.String,
 		LastName:       user.LastName.String,
+		MiddleName:     user.MiddleName.String,
+		Gender:         user.Gender.String,
 		Avatar:         user.Avatar.String,
+		AvatarFileID:   avatarFileID,
+		CurrentCountry: user.CurrentCountry,
+		CurrentState:   user.CurrentState,
+		CurrentCity:    currentCity,
+		CountryName:    user.CountryName,
+		StateName:      user.StateName,
+		CityName:       user.CityName,
 		Party:          party,
 		PartyRole:      partyRole,
 		Assignments:    assignments,
