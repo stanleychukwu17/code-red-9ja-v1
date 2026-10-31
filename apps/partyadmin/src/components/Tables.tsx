@@ -8,73 +8,20 @@
 
 import { useMemo, useState } from "react";
 import type { AgentPerformanceItem } from "#/lib/server/agents";
-import {
-  ApplicationTableHeader,
-  ApplicationTableTile,
-  type ApplicationType,
-} from "./tiles/application-tile";
-import {
-  type CandidateResultItem,
-  CandidateResultTableHeader,
-  CandidateResultTableTile,
-  type ElectoralUnitItem,
-  ElectoralUnitTableHeader,
-  ElectoralUnitTableTile,
-} from "./tiles/candidate-result-tile";
-import {
-  ElectionGroupTableHeader,
-  ElectionGroupTableTile,
-  type ElectionGroupType,
-} from "./tiles/election-group-tile";
-import {
-  ElectionInstanceTableHeader,
-  ElectionInstanceTableTile,
-  type ElectionInstanceType,
-} from "./tiles/election-instance-tile";
-import {
-  LGASupervisorTableHeader,
-  LGASupervisorTableTile,
-} from "./tiles/lga-supervisor-tile";
-import {
-  type MarketingCampaignType,
-  MarketingTableHeader,
-  MarketingTableTile,
-} from "./tiles/marketing-tile";
-import {
-  PartyAdminTableHeader,
-  PartyAdminTableTile,
-  type PartyAdminType,
-} from "./tiles/party-member-tile";
-import {
-  PollingAgentTableHeader,
-  PollingAgentTableTile,
-} from "./tiles/polling-agent-tile";
-import {
-  StateSupervisorTableHeader,
-  StateSupervisorTableTile,
-} from "./tiles/state-supervisor-tile";
-import {
-  UserTableHeader,
-  UserTableTile,
-  type UserType,
-} from "./tiles/user-tile";
-import {
-  WardSupervisorTableHeader,
-  WardSupervisorTableTile,
-} from "./tiles/ward-supervisor-tile";
-import {
-  OperationsTableHeader,
-  OperationsTableTile,
-  PollingUnitOperationsTableHeader,
-  PollingUnitOperationsTableTile,
-} from "./tiles/operations-tile";
+import { ApplicationTableHeader, ApplicationTableTile, type ApplicationType } from "./tiles/application-tile";
+import { type CandidateResultItem, CandidateResultTableHeader, CandidateResultTableTile, type ElectoralUnitItem, ElectoralUnitTableHeader, ElectoralUnitTableTile } from "./tiles/candidate-result-tile";
+import { ElectionGroupTableHeader, ElectionGroupTableTile, type ElectionGroupType } from "./tiles/election-group-tile";
+import { ElectionInstanceTableHeader, ElectionInstanceTableTile, type ElectionInstanceType } from "./tiles/election-instance-tile";
+import { LGASupervisorTableHeader, LGASupervisorTableTile } from "./tiles/lga-supervisor-tile";
+import { type MarketingCampaignType, MarketingTableHeader, MarketingTableTile } from "./tiles/marketing-tile";
+import { PartyAdminTableHeader, PartyAdminTableTile, type PartyAdminType } from "./tiles/party-member-tile";
+import { PollingAgentTableHeader, PollingAgentTableTile } from "./tiles/polling-agent-tile";
+import { StateSupervisorTableHeader, StateSupervisorTableTile } from "./tiles/state-supervisor-tile";
+import { UserTableHeader, UserTableTile, type UserType } from "./tiles/user-tile";
+import { WardSupervisorTableHeader, WardSupervisorTableTile } from "./tiles/ward-supervisor-tile";
+import { OperationsTableHeader, OperationsTableTile, PollingUnitOperationsTableHeader, PollingUnitOperationsTableTile } from "./tiles/operations-tile";
 import type { OperationsUnitItem } from "#/lib/server/election-operations";
-import {
-  AgentCoverageTableHeader,
-  AgentCoverageTableTile,
-  PollingUnitAgentCoverageTableHeader,
-  PollingUnitAgentCoverageTableTile,
-} from "./tiles/agent-coverage-tile";
+import { AgentCoverageTableHeader, AgentCoverageTableTile, PollingUnitAgentCoverageTableHeader, PollingUnitAgentCoverageTableTile } from "./tiles/agent-coverage-tile";
 import type { AgentCoverageUnitItem } from "#/lib/server/agent-coverage";
 import { ElectoralUnitCursorTooltip } from "./tooltips/electoral-unit-tooltip";
 
@@ -321,7 +268,7 @@ export function CandidateResultsTable({
 }) {
   const list = Array.isArray(items) ? items : [];
   // Sort candidates by vote count descending
-  const sortedList = React.useMemo(() => {
+  const sortedList = useMemo(() => {
     return [...list].sort(
       (a, b) =>
         Number(b.vote_count ?? b.votes ?? 0) -
@@ -366,7 +313,7 @@ export function ElectoralUnitsTable({
   onSelectUnit?: (item: ElectoralUnitItem) => void;
 }) {
   const list = Array.isArray(items) ? items : [];
-  const [hovered, setHovered] = React.useState<{
+  const [hovered, setHovered] = useState<{
     unit: ElectoralUnitItem;
     x: number;
     y: number;

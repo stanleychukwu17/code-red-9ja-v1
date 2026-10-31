@@ -5,7 +5,7 @@
  * assigned station, and direct decision action buttons (inline quick accept/reject or full modal review).
  */
 
-import * as React from "react";
+import { useState, type MouseEvent } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Ellipsis, Check, X } from "lucide-react";
 import { Button } from "@repo/ui/components/button";
@@ -119,21 +119,19 @@ export function ApplicationTableHeader() {
   );
 }
 
+export type ApplicationTableTileProps = {
+  data: ApplicationType;
+  refetch?: () => void;
+};
+
 /**
  * ApplicationTableTile Component
  * List row component representing an individual application.
  * Supports quick-action inline buttons (Accept/Reject) as well as clicking to open the detailed review modal.
  */
-export function ApplicationTableTile({
-  data,
-  refetch,
-}: {
-  data: ApplicationType;
-  refetch?: () => void;
-}) {
+export function ApplicationTableTile({ data, refetch }: ApplicationTableTileProps) {
   const queryClient = useQueryClient();
-  const [isDialogOpen, setIsDialogOpen] = React.useState(false);
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const approveMutation = useMutation({
     mutationFn: (variables: { id: number; pollingUnitID: number }) =>
@@ -165,10 +163,7 @@ export function ApplicationTableTile({
   const lastName = data.last_name || "";
   const name = data.name || `${firstName} ${lastName}`.trim() || "Unknown User";
 
-  const avatar =
-    data.avatar_url ||
-    data.avatar ||
-    "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&h=200&fit=crop";
+  const avatar = data.avatar_url || data.avatar || "";
   const election = data.election || data.election_group_name || "Upcoming Election";
 
   const stateName = data.state_name || "";
@@ -291,7 +286,7 @@ export function ApplicationTableTile({
     setIsDialogOpen(true);
   };
 
-  const handleTileAccept = async (e: React.MouseEvent) => {
+  const handleTileAccept = async (e: MouseEvent) => {
     e.stopPropagation();
     if (data.id === undefined) {
       alert("Application ID is missing");
@@ -312,7 +307,7 @@ export function ApplicationTableTile({
     }
   };
 
-  const handleTileReject = async (e: React.MouseEvent) => {
+  const handleTileReject = async (e: MouseEvent) => {
     e.stopPropagation();
     if (data.id === undefined) {
       alert("Application ID is missing");
@@ -424,7 +419,7 @@ function DecisionPill({
   children: string;
   variant: "accept" | "reject" | "pending";
   className?: string;
-  onClick?: (e: React.MouseEvent) => void;
+  onClick?: (e: MouseEvent) => void;
   disabled?: boolean;
 }) {
   return (
