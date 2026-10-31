@@ -1,28 +1,23 @@
 /**
  * @file Accepted Party Applications Page
- * @description Displays the roster of approved party agent applications.
- * Allows administrators to review confirmed appointments, filter by name/location,
- * and paginate through accepted applicants.
+ * @description List of accepted polling agent applications with cascaded filters.
  */
 
-import {
-  Layout,
-  PageHeader,
-  PageSearchLayer,
-} from "@repo/ui/components/custom/AdminLayouts";
+import { useState } from "react";
+import { Layout, PageHeader } from "@repo/ui/components/custom/AdminLayouts";
 import { ApplicationsTable } from "#/components/Tables";
 import { getPageHeader } from "#/lib/shared/meta";
 import { createFileRoute } from "@tanstack/react-router";
 import { getApplicationTabs } from "./-data";
-import { ApplicationsActions } from "#/components/applications/ApplicationsActions";
+import { ApplicationsFilterBar } from "#/components/applications/ApplicationsFilterBar";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { getApplications } from "#/lib/server/applications";
+import { useUserParty } from "#/hooks/useUserParty";
+import { QUERY_KEYS } from "#/lib/config";
 import { Loader2 } from "lucide-react";
 
-export const Route = createFileRoute(
-  "/_authenticated/$partyShortName/applications/accepted",
-)({
-  head: () => getPageHeader({ title: "Applications" }),
+export const Route = createFileRoute("/_authenticated/$partyShortName/applications/accepted")({
+  head: () => getPageHeader({ title: "Accepted Applications" }),
   component: RouteComponent,
 });
 
@@ -34,33 +29,39 @@ const PAGE_LIMIT = 50;
  */
 function RouteComponent() {
   const { partyShortName } = Route.useParams();
+  const { party } = useUserParty();
+  const partyId = party?.id;
+
+  const [electionGroupId, setElectionGroupId] = useState<number | undefined>();
+  const [stateId, setStateId] = useState<number | undefined>();
+  const [lgaId, setLgaId] = useState<number | undefined>();
+  const [wardId, setWardId] = useState<number | undefined>();
 
   // Cursor-paginated accepted applications (primary list)
-  const {
-    data: acceptedPages,
-    isLoading: isAcceptedLoading,
-    isFetchingNextPage,
-    hasNextPage,
-    fetchNextPage,
-    refetch: refetchAccepted,
-  } = useInfiniteQuery({
-    queryKey: ["applications", partyShortName, "accepted"],
+  const { data: acceptedPages, isLoading: isAcceptedLoading, isFetchingNextPage, hasNextPage, fetchNextPage } = useInfiniteQuery({
+    queryKey: QUERY_KEYS.applications.list("accepted", partyId, electionGroupId, stateId, lgaId, wardId),
     initialPageParam: undefined as number | undefined,
     queryFn: ({ pageParam }) =>
       getApplications({
-        data: { status: "accepted", limit: PAGE_LIMIT, cursor: pageParam },
+        data: {
+          status: "accepted",
+          limit: PAGE_LIMIT,
+          cursor: pageParam,
+          partyId,
+          electionGroupId,
+          stateId,
+          lgaId,
+          wardId,
+        },
       }),
     getNextPageParam: (lastPage) => {
       const meta = lastPage?.data?.meta;
       return meta?.has_more ? meta.next_cursor : undefined;
     },
+    staleTime: Infinity,
   });
 
-  const acceptedApps =
-    acceptedPages?.pages.flatMap((p) => p?.data?.applications ?? []) ?? [];
-  const acceptedCount = acceptedPages?.pages[0]?.data?.meta?.has_more
-    ? `${acceptedApps.length}+`
-    : acceptedApps.length;
+  const acceptedApps = acceptedPages?.pages.flatMap((p) => p?.data?.applications ?? []) ?? [];
 
   return (
     <Layout>
@@ -68,17 +69,17 @@ function RouteComponent() {
         title="Applications"
         activeTab="accepted"
         tabs={getApplicationTabs(partyShortName)}
-        rightComponent={
-          <div className="text-[18px] text-[#6f6f6f]">
-            <span className="font-semibold text-[#222]">{acceptedCount}</span>{" "}
-            slots
-          </div>
-        }
       />
-      <PageSearchLayer
-        ariaLabel="Search applications"
-        placeholder="Search"
-        rightComponent={<ApplicationsActions />}
+      <ApplicationsFilterBar
+        electionGroupId={electionGroupId}
+        onElectionGroupChange={setElectionGroupId}
+        stateId={stateId}
+        onStateChange={setStateId}
+        lgaId={lgaId}
+        onLgaChange={setLgaId}
+        wardId={wardId}
+        onWardChange={setWardId}
+        showAcceptAll={false}
       />
 
       {isAcceptedLoading ? (
@@ -92,7 +93,7 @@ function RouteComponent() {
         </div>
       ) : (
         <>
-          <ApplicationsTable items={acceptedApps} refetch={refetchAccepted} />
+          <ApplicationsTable items={acceptedApps} />
           {hasNextPage && (
             <div className="flex justify-center py-6">
               <button

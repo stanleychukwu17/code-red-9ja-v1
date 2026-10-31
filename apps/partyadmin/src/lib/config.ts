@@ -257,6 +257,27 @@ export const QUERY_KEYS = {
   },
   countries: ["countries"],
 
+  applications: {
+    root: ["applications"] as const,
+    list: (
+      status?: string,
+      partyId?: number | string,
+      electionGroupId?: number | string,
+      stateId?: number,
+      lgaId?: number,
+      wardId?: number,
+    ) =>
+      [
+        "applications",
+        status,
+        partyId,
+        electionGroupId,
+        stateId,
+        lgaId,
+        wardId,
+      ] as const,
+  },
+
   partyMembers: {
     root: ["party-members"] as const,
 

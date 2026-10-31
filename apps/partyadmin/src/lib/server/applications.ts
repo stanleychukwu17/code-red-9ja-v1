@@ -7,15 +7,16 @@ export const getApplications = createServerFn({ method: "GET" })
     (
       data:
         | {
-            status?: string;
-            limit?: number;
-            cursor?: number;
-            electionGroupId?: number;
-            stateId?: number;
-            lgaId?: number;
-            wardId?: number;
-            active_election_only?: boolean;
-          }
+          status?: string;
+          limit?: number;
+          cursor?: number;
+          partyId?: number;
+          electionGroupId?: number;
+          stateId?: number;
+          lgaId?: number;
+          wardId?: number;
+          active_election_only?: boolean;
+        }
         | undefined,
     ) => data,
   )
@@ -29,13 +30,13 @@ export const getApplications = createServerFn({ method: "GET" })
       if (status) params.append("status", status);
       params.append("limit", String(limit));
       if (cursor) params.append("cursor", String(cursor));
-      if (data?.electionGroupId)
-        params.append("election_group_id", String(data.electionGroupId));
+      if (data?.partyId) params.append("party_id", String(data.partyId));
+      if (data?.electionGroupId) params.append("election_group_id", String(data.electionGroupId));
       if (data?.stateId) params.append("state_id", String(data.stateId));
       if (data?.lgaId) params.append("lga_id", String(data.lgaId));
       if (data?.wardId) params.append("ward_id", String(data.wardId));
-      if (data?.active_election_only !== undefined)
-        params.append("active_election_only", String(data.active_election_only));
+      if (data?.active_election_only !== undefined) params.append("active_election_only", String(data.active_election_only));
+
       const url = `${API_URL.partyApplications}?${params.toString()}`;
       const response = await apiFetch(url);
       const resData = await response.json();
@@ -117,12 +118,12 @@ export const getPollingUnits = createServerFn({ method: "GET" })
     (
       data:
         | {
-            wardID?: number;
-            lgaID?: number;
-            stateID?: number;
-            limit?: number;
-            cursor?: string | number;
-          }
+          wardID?: number;
+          lgaID?: number;
+          stateID?: number;
+          limit?: number;
+          cursor?: string | number;
+        }
         | undefined,
     ) => data,
   )
@@ -153,11 +154,11 @@ export const getLGAs = createServerFn({ method: "GET" })
     (
       data:
         | {
-            stateId?: number;
-            federalConstituencyId?: number;
-            limit?: number;
-            cursor?: string;
-          }
+          stateId?: number;
+          federalConstituencyId?: number;
+          limit?: number;
+          cursor?: string;
+        }
         | undefined,
     ) => data,
   )
@@ -192,12 +193,12 @@ export const getWards = createServerFn({ method: "GET" })
     (
       data:
         | {
-            lga_id?: number;
-            stateId?: number;
-            stateConstituencyId?: number;
-            limit?: number;
-            cursor?: string;
-          }
+          lga_id?: number;
+          stateId?: number;
+          stateConstituencyId?: number;
+          limit?: number;
+          cursor?: string;
+        }
         | undefined,
     ) => data,
   )

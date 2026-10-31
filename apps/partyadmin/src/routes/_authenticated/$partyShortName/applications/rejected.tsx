@@ -1,28 +1,23 @@
 /**
  * @file Rejected Party Applications Page
- * @description Renders disqualified or declined party agent applications.
- * Enables party admins to review rejected records, inspect past rejection history,
- * and paginate through historical submissions.
+ * @description List of rejected polling agent applications with cascaded filters.
  */
 
-import {
-  Layout,
-  PageHeader,
-  PageSearchLayer,
-} from "@repo/ui/components/custom/AdminLayouts";
+import { useState } from "react";
+import { Layout, PageHeader } from "@repo/ui/components/custom/AdminLayouts";
 import { ApplicationsTable } from "#/components/Tables";
 import { getPageHeader } from "#/lib/shared/meta";
 import { createFileRoute } from "@tanstack/react-router";
 import { getApplicationTabs } from "./-data";
-import { ApplicationsActions } from "#/components/applications/ApplicationsActions";
+import { ApplicationsFilterBar } from "#/components/applications/ApplicationsFilterBar";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { getApplications } from "#/lib/server/applications";
+import { useUserParty } from "#/hooks/useUserParty";
+import { QUERY_KEYS } from "#/lib/config";
 import { Loader2 } from "lucide-react";
 
-export const Route = createFileRoute(
-  "/_authenticated/$partyShortName/applications/rejected",
-)({
-  head: () => getPageHeader({ title: "Applications" }),
+export const Route = createFileRoute("/_authenticated/$partyShortName/applications/rejected")({
+  head: () => getPageHeader({ title: "Rejected Applications" }),
   component: RouteComponent,
 });
 
@@ -34,33 +29,40 @@ const PAGE_LIMIT = 50;
  */
 function RouteComponent() {
   const { partyShortName } = Route.useParams();
+  const { party } = useUserParty();
+  const partyId = party?.id;
+
+  const [electionGroupId, setElectionGroupId] = useState<number | undefined>();
+  const [stateId, setStateId] = useState<number | undefined>();
+  const [lgaId, setLgaId] = useState<number | undefined>();
+  const [wardId, setWardId] = useState<number | undefined>();
 
   // Cursor-paginated rejected applications (primary list)
-  const {
-    data: rejectedPages,
-    isLoading: isRejectedLoading,
-    isFetchingNextPage,
-    hasNextPage,
-    fetchNextPage,
-    refetch: refetchRejected,
-  } = useInfiniteQuery({
-    queryKey: ["applications", partyShortName, "rejected"],
+  const { data: rejectedPages, isLoading: isRejectedLoading, isFetchingNextPage, hasNextPage, fetchNextPage } = useInfiniteQuery({
+    queryKey: QUERY_KEYS.applications.list("rejected", partyId, electionGroupId, stateId, lgaId, wardId),
     initialPageParam: undefined as number | undefined,
     queryFn: ({ pageParam }) =>
       getApplications({
-        data: { status: "rejected", limit: PAGE_LIMIT, cursor: pageParam },
+        data: {
+          status: "rejected",
+          limit: PAGE_LIMIT,
+          cursor: pageParam,
+          partyId,
+          electionGroupId,
+          stateId,
+          lgaId,
+          wardId,
+        },
       }),
     getNextPageParam: (lastPage) => {
       const meta = lastPage?.data?.meta;
       return meta?.has_more ? meta.next_cursor : undefined;
     },
+    staleTime: Infinity,
   });
 
   const rejectedApps =
     rejectedPages?.pages.flatMap((p) => p?.data?.applications ?? []) ?? [];
-  const rejectedCount = rejectedPages?.pages[0]?.data?.meta?.has_more
-    ? `${rejectedApps.length}+`
-    : rejectedApps.length;
 
   return (
     <Layout>
@@ -68,17 +70,17 @@ function RouteComponent() {
         title="Applications"
         activeTab="rejected"
         tabs={getApplicationTabs(partyShortName)}
-        rightComponent={
-          <div className="text-[18px] text-[#6f6f6f]">
-            <span className="font-semibold text-[#222]">{rejectedCount}</span>{" "}
-            slots
-          </div>
-        }
       />
-      <PageSearchLayer
-        ariaLabel="Search applications"
-        placeholder="Search"
-        rightComponent={<ApplicationsActions />}
+      <ApplicationsFilterBar
+        electionGroupId={electionGroupId}
+        onElectionGroupChange={setElectionGroupId}
+        stateId={stateId}
+        onStateChange={setStateId}
+        lgaId={lgaId}
+        onLgaChange={setLgaId}
+        wardId={wardId}
+        onWardChange={setWardId}
+        showAcceptAll={false}
       />
 
       {isRejectedLoading ? (
@@ -92,7 +94,7 @@ function RouteComponent() {
         </div>
       ) : (
         <>
-          <ApplicationsTable items={rejectedApps} refetch={refetchRejected} />
+          <ApplicationsTable items={rejectedApps} />
           {hasNextPage && (
             <div className="flex justify-center py-6">
               <button

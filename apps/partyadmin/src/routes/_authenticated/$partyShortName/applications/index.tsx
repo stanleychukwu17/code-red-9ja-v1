@@ -4,14 +4,17 @@
  * Uses cursor-based infinite queries for the pending list and secondary count queries for tab badges.
  */
 
-import { Layout, PageHeader, PageSearchLayer } from "@repo/ui/components/custom/AdminLayouts";
+import { useState } from "react";
+import { Layout, PageHeader } from "@repo/ui/components/custom/AdminLayouts";
 import { ApplicationsTable } from "#/components/Tables";
 import { getPageHeader } from "#/lib/shared/meta";
 import { createFileRoute } from "@tanstack/react-router";
 import { getApplicationTabs } from "./-data";
-import { ApplicationsActions } from "#/components/applications/ApplicationsActions";
+import { ApplicationsFilterBar } from "#/components/applications/ApplicationsFilterBar";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { getApplications } from "#/lib/server/applications";
+import { useUserParty } from "#/hooks/useUserParty";
+import { QUERY_KEYS } from "#/lib/config";
 import { Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/$partyShortName/applications/")({
@@ -23,37 +26,44 @@ const PAGE_LIMIT = 50;
 
 /**
  * Pending Applications Page Component
- * Renders the pending applications queue with tab count badges for accepted/rejected records,
- * and passes the `refetchAll` callback to the table actions.
+ * Renders the pending applications queue with cascaded filters (Election Group, State, LGA, Ward).
  */
 function RouteComponent() {
   const { partyShortName } = Route.useParams();
+  const { party } = useUserParty();
+  const partyId = party?.id;
+
+  // Filter state for cascaded geographic and election group queries
+  const [electionGroupId, setElectionGroupId] = useState<number | undefined>();
+  const [stateId, setStateId] = useState<number | undefined>();
+  const [lgaId, setLgaId] = useState<number | undefined>();
+  const [wardId, setWardId] = useState<number | undefined>();
 
   // Cursor-paginated pending applications (primary list)
-  const {
-    data: pendingPages,
-    isLoading: isPendingLoading,
-    isFetchingNextPage,
-    hasNextPage,
-    fetchNextPage,
-    refetch: refetchPending,
-  } = useInfiniteQuery({
-    queryKey: ["applications", partyShortName, "pending"],
+  const { data: pendingPages, isLoading: isPendingLoading, isFetchingNextPage, hasNextPage, fetchNextPage } = useInfiniteQuery({
+    queryKey: QUERY_KEYS.applications.list("pending", partyId, electionGroupId, stateId, lgaId, wardId),
     initialPageParam: undefined as number | undefined,
     queryFn: ({ pageParam }) =>
       getApplications({
-        data: { status: "pending", limit: PAGE_LIMIT, cursor: pageParam },
+        data: {
+          status: "pending",
+          limit: PAGE_LIMIT,
+          cursor: pageParam,
+          partyId,
+          electionGroupId,
+          stateId,
+          lgaId,
+          wardId,
+        },
       }),
     getNextPageParam: (lastPage) => {
       const meta = lastPage?.data?.meta;
       return meta?.has_more ? meta.next_cursor : undefined;
     },
+    staleTime: Infinity,
   });
 
   const pendingApps = pendingPages?.pages.flatMap((p) => p?.data?.applications ?? []) ?? [];
-  const pendingCount = pendingPages?.pages[0]?.data?.meta?.has_more
-    ? `${pendingApps.length}+`
-    : pendingApps.length;
 
   return (
     <Layout>
@@ -61,18 +71,24 @@ function RouteComponent() {
         title="Applications"
         activeTab="pending"
         tabs={getApplicationTabs(partyShortName)}
-        rightComponent={
-          <div className="text-[18px] text-[#6f6f6f]">
-            <span className="font-semibold text-[#222]">{pendingCount}</span>{" "}
-            slots
-          </div>
-        }
       />
 
-      <PageSearchLayer
-        ariaLabel="Search applications"
-        placeholder="Search"
-        rightComponent={<ApplicationsActions />}
+      <ApplicationsFilterBar
+        electionGroupId={electionGroupId}
+        onElectionGroupChange={setElectionGroupId}
+        stateId={stateId}
+        onStateChange={setStateId}
+        lgaId={lgaId}
+        onLgaChange={setLgaId}
+        wardId={wardId}
+        onWardChange={setWardId}
+        onAcceptAll={() => {
+          // Handled by batch approval workflow
+        }}
+        onExport={() => {
+          // Export applications
+        }}
+        showAcceptAll={true}
       />
 
       {isPendingLoading ? (
@@ -86,7 +102,7 @@ function RouteComponent() {
         </div>
       ) : (
         <>
-          <ApplicationsTable items={pendingApps} refetch={refetchPending} />
+          <ApplicationsTable items={pendingApps} />
           {hasNextPage && (
             <div className="flex justify-center py-6">
               <button

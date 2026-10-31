@@ -113,3 +113,36 @@ export const getZones = createServerFn().handler(async () => {
     },
   };
 });
+
+export const getLGAs = createServerFn()
+  .inputValidator((data: { stateId?: number; limit?: number; cursor?: string | number } | undefined) => data)
+  .handler(async ({ data }) => {
+    try {
+      const params = new URLSearchParams();
+      if (data?.stateId) params.append("state_id", String(data.stateId));
+      if (data?.limit) params.append("limit", String(data.limit));
+      if (data?.cursor) params.append("cursor", String(data.cursor));
+      const qs = params.toString();
+      const response = await apiFetch(`${API_URL.getLGAs}${qs ? `?${qs}` : ""}`);
+      return await response.json();
+    } catch (error) {
+      return { status: "failed", error: "Failed to fetch LGAs from API" };
+    }
+  });
+
+export const getWards = createServerFn()
+  .inputValidator((data: { stateId?: number; lgaId?: number; limit?: number; cursor?: string | number } | undefined) => data)
+  .handler(async ({ data }) => {
+    try {
+      const params = new URLSearchParams();
+      if (data?.stateId) params.append("state_id", String(data.stateId));
+      if (data?.lgaId) params.append("lga_id", String(data.lgaId));
+      if (data?.limit) params.append("limit", String(data.limit));
+      if (data?.cursor) params.append("cursor", String(data.cursor));
+      const qs = params.toString();
+      const response = await apiFetch(`${API_URL.getWards}${qs ? `?${qs}` : ""}`);
+      return await response.json();
+    } catch (error) {
+      return { status: "failed", error: "Failed to fetch Wards from API" };
+    }
+  });

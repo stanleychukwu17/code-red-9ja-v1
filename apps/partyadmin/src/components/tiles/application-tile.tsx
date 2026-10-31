@@ -6,21 +6,13 @@
  */
 
 import * as React from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Ellipsis, Check, X } from "lucide-react";
 import { Button } from "@repo/ui/components/button";
-import {
-  TileHeader,
-  TileLeft,
-  TileRight,
-  TileRow,
-} from "@repo/ui/components/tiles";
+import { TileHeader, TileLeft, TileRight, TileRow } from "@repo/ui/components/tiles";
 import { cn } from "@repo/ui/lib/utils";
 import { PartyApplicationDialog } from "#/components/dialogs/party-application-dialog";
-import {
-  approveApplication,
-  rejectApplication,
-} from "#/lib/server/applications";
+import { approveApplication, rejectApplication } from "#/lib/server/applications";
 
 export type ApplicationType = {
   // Database fields
@@ -139,6 +131,7 @@ export function ApplicationTableTile({
   data: ApplicationType;
   refetch?: () => void;
 }) {
+  const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
@@ -147,6 +140,7 @@ export function ApplicationTableTile({
       approveApplication({ data: variables }),
     onSuccess: (res) => {
       if (res && res.success) {
+        queryClient.invalidateQueries({ queryKey: ["applications"] });
         if (refetch) refetch();
       } else {
         throw new Error(res?.message || "Failed to approve application");
@@ -159,6 +153,7 @@ export function ApplicationTableTile({
       rejectApplication({ data: variables }),
     onSuccess: (res) => {
       if (res && res.success) {
+        queryClient.invalidateQueries({ queryKey: ["applications"] });
         if (refetch) refetch();
       } else {
         throw new Error(res?.message || "Failed to reject application");
@@ -174,8 +169,7 @@ export function ApplicationTableTile({
     data.avatar_url ||
     data.avatar ||
     "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&h=200&fit=crop";
-  const election =
-    data.election || data.election_group_name || "Upcoming Election";
+  const election = data.election || data.election_group_name || "Upcoming Election";
 
   const stateName = data.state_name || "";
   const lgaName = data.lga_name || "";
@@ -184,10 +178,8 @@ export function ApplicationTableTile({
 
   let formattedResidence = "";
   if (stateName) formattedResidence += stateName;
-  if (lgaName)
-    formattedResidence += formattedResidence ? `, ${lgaName}` : lgaName;
-  if (cityName)
-    formattedResidence += formattedResidence ? `, ${cityName}` : cityName;
+  if (lgaName) formattedResidence += formattedResidence ? `, ${lgaName}` : lgaName;
+  if (cityName) formattedResidence += formattedResidence ? `, ${cityName}` : cityName;
 
   if (!formattedResidence) {
     formattedResidence = `State: ${data.current_state || ""}, LGA: ${lgaVal || ""}`;
@@ -227,11 +219,11 @@ export function ApplicationTableTile({
 
   let assignmentLocation = pollingUnitName;
   if (isSupervisor) {
-    if (roleType === "ward_election_supervisor" || roleType === "ward_supervisor") {
+    if (roleType === "ward_election_supervisor") {
       assignmentLocation = wardName ? `${wardName} Ward` : lgaName ? `${lgaName} LGA` : stateName || "Ward Supervisor";
-    } else if (roleType === "lga_election_supervisor" || roleType === "lga_supervisor") {
+    } else if (roleType === "lga_election_supervisor") {
       assignmentLocation = lgaName ? `${lgaName} LGA` : stateName || "LGA Supervisor";
-    } else if (roleType === "state_election_supervisor" || roleType === "state_supervisor") {
+    } else if (roleType === "state_election_supervisor") {
       assignmentLocation = stateName ? `${stateName} State` : "State Supervisor";
     }
   }
@@ -239,19 +231,16 @@ export function ApplicationTableTile({
   const getRoleBadge = (r: string) => {
     switch (r) {
       case "state_election_supervisor":
-      case "state_supervisor":
         return {
           label: "State Supervisor",
           className: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800",
         };
       case "lga_election_supervisor":
-      case "lga_supervisor":
         return {
           label: "LGA Supervisor",
           className: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800",
         };
       case "ward_election_supervisor":
-      case "ward_supervisor":
         return {
           label: "Ward Supervisor",
           className: "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:text-purple-400 dark:border-purple-800",

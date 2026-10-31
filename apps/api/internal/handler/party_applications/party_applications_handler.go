@@ -40,7 +40,6 @@ type PartyApplicationsService interface {
 
 type UsersService interface {
 	GetUserByFakeID(ctx context.Context, fakeID int64, opts ...queries.GetUserOptions) (queries.UserWithPlaces, error)
-	GetUserRoles(ctx context.Context, userID int64) (queries.CachedUserRoles, error)
 	GetUserPhoneNumbersByUserID(ctx context.Context, userID int64) ([]queries.UsersPhoneNumber, error)
 }
 
@@ -86,22 +85,22 @@ func NewHandler(service PartyApplicationsService, usersService UsersService, par
 }
 
 type SubmitApplicationRequest struct {
-	PartyID           int16   `json:"party_id" validate:"required,gt=0"`
-	ElectionGroupID   int32   `json:"election_group_id" validate:"required,gt=0"`
-	PollingUnitID     int32   `json:"polling_unit_id" validate:"required,gt=0"`
-	Avatar            string  `json:"avatar"`
-	AvatarFileID      *int64  `json:"avatar_file_id"`
-	CurrentState      int16   `json:"current_state" validate:"required,gt=0"`
-	CurrentLga        int32   `json:"current_lga" validate:"required,gt=0"`
-	CurrentWard       int32   `json:"current_ward" validate:"required,gt=0"`
+	PartyID         int16  `json:"party_id" validate:"required,gt=0"`
+	ElectionGroupID int32  `json:"election_group_id" validate:"required,gt=0"`
+	PollingUnitID   int32  `json:"polling_unit_id" validate:"required,gt=0"`
+	Avatar          string `json:"avatar"`
+	AvatarFileID    *int64 `json:"avatar_file_id"`
+	CurrentState    int16  `json:"current_state" validate:"required,gt=0"`
+	CurrentLga      int32  `json:"current_lga" validate:"required,gt=0"`
+	CurrentWard     int32  `json:"current_ward" validate:"required,gt=0"`
 
-	EducationalStatus string  `json:"educational_status"`
-	HighestDegree     string  `json:"highest_degree"`
-	GraduationYear    string  `json:"graduation_year"`
-	SchoolName        string  `json:"school_name"`
-	Address           string  `json:"address"`
-	BankAccountNumber string  `json:"bank_account_number"`
-	BankCode          string  `json:"bank_code"`
+	EducationalStatus string `json:"educational_status"`
+	HighestDegree     string `json:"highest_degree"`
+	GraduationYear    string `json:"graduation_year"`
+	SchoolName        string `json:"school_name"`
+	Address           string `json:"address"`
+	BankAccountNumber string `json:"bank_account_number"`
+	BankCode          string `json:"bank_code"`
 }
 
 // SubmitApplication godoc
@@ -326,7 +325,7 @@ func (h *Handler) SubmitSupervisorApplication(w http.ResponseWriter, r *http.Req
 // @Param        user_id              query int    false "Filter by User ID (Platform admin or Party admin only)"
 // @Param        party_id             query int    false "Filter by Party ID (Platform admin only or scoped to own party)"
 // @Param        election_group_id    query int    false "Filter by Election Group ID"
-// @Param        status               query string false "Filter by Status (pending, accepted, rejected)"
+// @Param        status               query string true  "Filter by Status (pending, accepted, rejected, cancelled)"
 // @Param        active_election_only query bool   false "Filter only active and upcoming elections"
 // @Param        state_id             query int    false "Filter by State ID"
 // @Param        lga_id               query int    false "Filter by LGA ID"
@@ -345,17 +344,26 @@ func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Fetch requester user details
-	requester, err := h.usersService.GetUserByFakeID(r.Context(), claims.FakeID)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusUnauthorized, "User not found")
-		return
-	}
-
 	// Parse query parameters
 	var requestedPartyID int16
 	var electionGroupID int32
-	status := r.URL.Query().Get("status")
+	var requestedUserID int64
+	var stateID int16
+	var lgaID, wardID int32
+	limit := int32(20)
+
+	status := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("status")))
+	if status == "" {
+		h.utils.RespondError(w, http.StatusBadRequest, "Status query parameter is required")
+		return
+	}
+	switch status {
+	case "pending", "accepted", "rejected", "cancelled":
+		// valid status
+	default:
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid status parameter: must be pending, accepted, rejected, or cancelled")
+		return
+	}
 
 	if val := r.URL.Query().Get("party_id"); val != "" {
 		if pID, _ := strconv.ParseInt(val, 10, 16); pID > 0 {
@@ -369,7 +377,6 @@ func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse optional user filter
-	var requestedUserID int64
 	if val := r.URL.Query().Get("user_id"); val != "" {
 		if uID, _ := strconv.ParseInt(val, 10, 64); uID > 0 {
 			requestedUserID = uID
@@ -377,7 +384,6 @@ func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse pagination parameters
-	limit := int32(20)
 	if val := r.URL.Query().Get("limit"); val != "" {
 		if l, err := strconv.Atoi(val); err == nil && l > 0 {
 			limit = int32(l)
@@ -390,54 +396,7 @@ func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Enforce visibility scoping & explicit RBAC checks
-	rolesData, _ := h.usersService.GetUserRoles(r.Context(), requester.ID)
-	isPlatformAdmin := false
-	isPartyAdmin := false
-	for _, rCode := range rolesData.RolesCode {
-		if rCode == "admin" || rCode == "super_admin" {
-			isPlatformAdmin = true
-		}
-		if rCode == "party_admin" || rCode == "super_party_admin" {
-			isPartyAdmin = true
-		}
-	}
-
-	var partyID int16
-	var filterUserID int64
-
-	if isPlatformAdmin {
-		// Platform admin can query across all parties or filter by any party / user
-		partyID = requestedPartyID
-		filterUserID = requestedUserID
-	} else if isPartyAdmin {
-		if !requester.PartyID.Valid {
-			h.utils.RespondError(w, http.StatusForbidden, "Admin user is not associated with a party")
-			return
-		}
-		adminPartyID := requester.PartyID.Int16
-		if requestedPartyID > 0 && requestedPartyID != adminPartyID {
-			h.utils.RespondError(w, http.StatusForbidden, "You do not have permission to view applications for another party")
-			return
-		}
-		partyID = adminPartyID
-		filterUserID = requestedUserID
-	} else {
-		// Regular citizen/agent
-		if requestedPartyID > 0 {
-			partyID = requestedPartyID
-		}
-		if requestedUserID > 0 && requestedUserID != requester.ID {
-			h.utils.RespondError(w, http.StatusForbidden, "You do not have permission to view applications for other users")
-			return
-		}
-		filterUserID = requester.ID
-	}
-
 	// Parse optional geographic filters
-	var stateID int16
-	var lgaID, wardID int32
-
 	if val := r.URL.Query().Get("state_id"); val != "" {
 		if v, _ := strconv.ParseInt(val, 10, 16); v > 0 {
 			stateID = int16(v)
@@ -456,6 +415,45 @@ func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 
 	// Filter for active election groups only
 	activeElectionOnly := r.URL.Query().Get("active_election_only") == "true"
+
+	// Enforce visibility scoping & explicit RBAC checks using claims and permissions service
+	isPlatformAdmin := claims.HasAnyRole("admin", "super_admin")
+	isPartyAdmin := claims.HasAnyRole("party_admin", "super_party_admin")
+
+	var partyID int16
+	var filterUserID int64
+
+	if isPlatformAdmin {
+		// Platform admin can query across all parties or filter by any party / user
+		partyID = requestedPartyID
+		filterUserID = requestedUserID
+	} else if isPartyAdmin {
+		if claims.PartyID <= 0 {
+			h.utils.RespondError(w, http.StatusForbidden, "Admin user is not associated with a party")
+			return
+		}
+		if requestedPartyID > 0 {
+			if allowed, _, err := h.permissionsService.CheckPartyModificationPermission(claims, requestedPartyID); !allowed || err != nil {
+				h.utils.RespondError(w, http.StatusForbidden, "You do not have permission to view applications for another party")
+				return
+			}
+		}
+
+		partyID = claims.PartyID
+		filterUserID = requestedUserID
+	} else {
+		// Regular citizen/agent
+		if requestedPartyID > 0 {
+			partyID = requestedPartyID
+		}
+
+		if requestedUserID > 0 && requestedUserID != claims.UserID {
+			h.utils.RespondError(w, http.StatusForbidden, "You do not have permission to view applications for other users")
+			return
+		}
+
+		filterUserID = claims.UserID
+	}
 
 	// Fetch filtered applications list
 	apps, err := h.service.ListApplications(r.Context(), filterUserID, partyID, electionGroupID, status, stateID, lgaID, wardID, activeElectionOnly, limit, cursor)
