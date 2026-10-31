@@ -24,15 +24,15 @@ export interface SearchUsersParams {
 export interface SearchedUserItem {
   id: number;
   fake_id: number;
-  username: { String: string; Valid: boolean } | string;
-  first_name: { String: string; Valid: boolean } | string;
-  last_name: { String: string; Valid: boolean } | string;
-  middle_name?: { String: string; Valid: boolean } | string;
-  avatar?: { String: string; Valid: boolean } | string;
-  gender?: { String: string; Valid: boolean } | string;
-  is_politician?: { Bool: boolean; Valid: boolean } | boolean;
-  is_verified?: { Bool: boolean; Valid: boolean } | boolean;
-  party_id?: { Int16: number; Valid: boolean } | number;
+  username: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  middle_name?: string | null;
+  avatar: string;
+  gender?: string | null;
+  is_politician?: boolean | null;
+  is_verified?: boolean | null;
+  party_id?: number | null;
   country_name?: string;
   state_name?: string;
   city_name?: string;

@@ -11,6 +11,7 @@ CREATE TABLE users (
   first_name VARCHAR(30),
   last_name VARCHAR(30),
   middle_name VARCHAR(30),
+  full_name VARCHAR(65) GENERATED ALWAYS AS (TRIM(COALESCE(first_name, '') || ' ' || COALESCE(last_name, ''))) STORED,
   gender VARCHAR(10) CHECK (gender IN ('male', 'female')),
   date_of_birth DATE,
 
@@ -73,14 +74,14 @@ BEFORE INSERT ON users
 FOR EACH ROW
 EXECUTE FUNCTION set_user_fake_id();
 
-CREATE INDEX idx_users_party_id ON users(party_id);
-CREATE INDEX idx_users_account_status ON users(account_status);
-
+-- create indexes for the users table
+CREATE INDEX idx_users_party_id ON users(party_id) WHERE party_id IS NOT NULL;
+CREATE INDEX idx_users_avatar_file_id ON users(avatar_file_id) WHERE avatar_file_id IS NOT NULL;
 -- pg_trgm extension and indexes for fast ILIKE searches
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
-CREATE INDEX idx_users_username_trgm ON users USING gin (username gin_trgm_ops);
-CREATE INDEX idx_users_fullname_trgm ON users USING gin ((COALESCE(first_name, '') || ' ' || COALESCE(last_name, '')) gin_trgm_ops);
-CREATE INDEX idx_users_avatar_file_id ON users(avatar_file_id) WHERE avatar_file_id IS NOT NULL;
+CREATE INDEX idx_users_search_username_trgm ON users USING gin (username gin_trgm_ops) WHERE account_status IN ('active', 'placeholder');
+CREATE INDEX idx_users_search_fullname_trgm ON users USING gin (full_name gin_trgm_ops) WHERE account_status IN ('active', 'placeholder');
+CREATE INDEX idx_users_username_trgm_gist ON users USING gist (username gist_trgm_ops);
 
 
 -- USER BANK ACCOUNTS TABLE

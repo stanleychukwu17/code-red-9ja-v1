@@ -612,35 +612,31 @@ func (h *Handler) SearchUsers(w http.ResponseWriter, r *http.Request) {
 		LimitNum: int32(limit + 1),
 	}
 
-	if cursor > 0 {
-		arg.Cursor = pgtype.Int8{Int64: cursor, Valid: true}
-	}
-	if search != "" {
-		arg.Search = pgtype.Text{String: search, Valid: true}
-	}
+	arg.Cursor = utils.PgInt8FromPositive(cursor)
+	arg.Search = utils.PgTextFromString(search)
 	if countryIDStr != "" {
-		if cid, err := strconv.ParseInt(countryIDStr, 10, 16); err == nil && cid > 0 {
-			arg.CountryID = pgtype.Int2{Int16: int16(cid), Valid: true}
+		if cid, err := strconv.ParseInt(countryIDStr, 10, 16); err == nil {
+			arg.CountryID = utils.PgInt2FromPositive(cid)
 		}
 	}
 	if stateIDStr != "" {
-		if sid, err := strconv.ParseInt(stateIDStr, 10, 16); err == nil && sid > 0 {
-			arg.StateID = pgtype.Int2{Int16: int16(sid), Valid: true}
+		if sid, err := strconv.ParseInt(stateIDStr, 10, 16); err == nil {
+			arg.StateID = utils.PgInt2FromPositive(sid)
 		}
 	}
 	if partyIDStr != "" {
-		if pid, err := strconv.ParseInt(partyIDStr, 10, 16); err == nil && pid > 0 {
-			arg.PartyID = pgtype.Int2{Int16: int16(pid), Valid: true}
+		if pid, err := strconv.ParseInt(partyIDStr, 10, 16); err == nil {
+			arg.PartyID = utils.PgInt2FromPositive(pid)
 		}
 	}
 	if isPoliticianStr != "" {
 		if b, err := strconv.ParseBool(isPoliticianStr); err == nil {
-			arg.IsPolitician = pgtype.Bool{Bool: b, Valid: true}
+			arg.IsPolitician = utils.PgBool(b)
 		}
 	}
 	if isVerifiedStr != "" {
 		if b, err := strconv.ParseBool(isVerifiedStr); err == nil {
-			arg.IsVerified = pgtype.Bool{Bool: b, Valid: true}
+			arg.IsVerified = utils.PgBool(b)
 		}
 	}
 

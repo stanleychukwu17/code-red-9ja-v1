@@ -141,7 +141,7 @@ WHERE
   ))
   AND (sqlc.narg('search')::text IS NULL OR (
       u.username ILIKE '%' || sqlc.narg('search')::text || '%' OR
-      (COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')) ILIKE '%' || sqlc.narg('search')::text || '%'
+      u.full_name ILIKE '%' || sqlc.narg('search')::text || '%'
   ))
   AND (sqlc.narg('account_status')::text[] IS NULL OR u.account_status = ANY(sqlc.narg('account_status')::text[]))
   AND (sqlc.narg('country_ids')::smallint[] IS NULL OR u.current_country = ANY(sqlc.narg('country_ids')::smallint[]))
@@ -157,14 +157,14 @@ ORDER BY
 LIMIT sqlc.arg('limit_num')::int;
 
 -- name: SearchUsers :many
--- Citizen-facing user search: strictly requires active accounts and filters by text, state, party, politician, and verification.
+-- Citizen-facing user search: requires active or placeholder accounts and filters by text, state, party, politician, and verification.
 SELECT u.id, u.fake_id FROM users u
 WHERE 
-  u.account_status = 'active'
+  u.account_status IN ('active', 'placeholder')
   AND (sqlc.narg('cursor')::bigint IS NULL OR u.id < sqlc.narg('cursor')::bigint)
   AND (sqlc.narg('search')::text IS NULL OR (
       u.username ILIKE '%' || sqlc.narg('search')::text || '%' OR
-      (COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')) ILIKE '%' || sqlc.narg('search')::text || '%'
+      u.full_name ILIKE '%' || sqlc.narg('search')::text || '%'
   ))
   AND (sqlc.narg('country_id')::smallint IS NULL OR u.current_country = sqlc.narg('country_id')::smallint)
   AND (sqlc.narg('state_id')::smallint IS NULL OR u.current_state = sqlc.narg('state_id')::smallint)

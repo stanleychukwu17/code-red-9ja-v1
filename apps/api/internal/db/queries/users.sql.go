@@ -881,7 +881,7 @@ WHERE
   ))
   AND ($6::text IS NULL OR (
       u.username ILIKE '%' || $6::text || '%' OR
-      (COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')) ILIKE '%' || $6::text || '%'
+      u.full_name ILIKE '%' || $6::text || '%'
   ))
   AND ($7::text[] IS NULL OR u.account_status = ANY($7::text[]))
   AND ($8::smallint[] IS NULL OR u.current_country = ANY($8::smallint[]))
@@ -954,11 +954,11 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUse
 const searchUsers = `-- name: SearchUsers :many
 SELECT u.id, u.fake_id FROM users u
 WHERE 
-  u.account_status = 'active'
+  u.account_status IN ('active', 'placeholder')
   AND ($1::bigint IS NULL OR u.id < $1::bigint)
   AND ($2::text IS NULL OR (
       u.username ILIKE '%' || $2::text || '%' OR
-      (COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')) ILIKE '%' || $2::text || '%'
+      u.full_name ILIKE '%' || $2::text || '%'
   ))
   AND ($3::smallint IS NULL OR u.current_country = $3::smallint)
   AND ($4::smallint IS NULL OR u.current_state = $4::smallint)
@@ -992,7 +992,7 @@ type SearchUsersRow struct {
 	FakeID pgtype.Int8 `json:"fake_id"`
 }
 
-// Citizen-facing user search: strictly requires active accounts and filters by text, state, party, politician, and verification.
+// Citizen-facing user search: requires active or placeholder accounts and filters by text, state, party, politician, and verification.
 func (q *Queries) SearchUsers(ctx context.Context, arg SearchUsersParams) ([]SearchUsersRow, error) {
 	rows, err := q.db.Query(ctx, searchUsers,
 		arg.Cursor,
@@ -1144,7 +1144,7 @@ SET username = $2,
     account_status = 'active',
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, fake_id, email, phone, username, password_hash, first_name, last_name, middle_name, gender, date_of_birth, avatar, avatar_file_id, voters_card_image, current_country, current_state, current_city, current_lga, current_ward, polling_unit_id, country_of_origin, state_of_origin, has_role, is_verified, is_politician, party_id, account_status, referral_code, created_at, updated_at
+RETURNING id, fake_id, email, phone, username, password_hash, first_name, last_name, middle_name, full_name, gender, date_of_birth, avatar, avatar_file_id, voters_card_image, current_country, current_state, current_city, current_lga, current_ward, polling_unit_id, country_of_origin, state_of_origin, has_role, is_verified, is_politician, party_id, account_status, referral_code, created_at, updated_at
 `
 
 type UpdateOnboardingProfileParams struct {
@@ -1190,6 +1190,7 @@ func (q *Queries) UpdateOnboardingProfile(ctx context.Context, arg UpdateOnboard
 		&i.FirstName,
 		&i.LastName,
 		&i.MiddleName,
+		&i.FullName,
 		&i.Gender,
 		&i.DateOfBirth,
 		&i.Avatar,

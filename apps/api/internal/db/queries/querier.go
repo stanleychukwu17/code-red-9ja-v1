@@ -488,7 +488,7 @@ type Querier interface {
 	RollupWardFinalResults(ctx context.Context) error
 	SearchAssetFolders(ctx context.Context, arg SearchAssetFoldersParams) ([]AssetFolder, error)
 	SearchMediaAssets(ctx context.Context, arg SearchMediaAssetsParams) ([]MediaAsset, error)
-	// Citizen-facing user search: strictly requires active accounts and filters by text, state, party, politician, and verification.
+	// Citizen-facing user search: requires active or placeholder accounts and filters by text, state, party, politician, and verification.
 	SearchUsers(ctx context.Context, arg SearchUsersParams) ([]SearchUsersRow, error)
 	SeedUser(ctx context.Context, arg SeedUserParams) (int64, error)
 	SoftDeletePartyCustomPosition(ctx context.Context, arg SoftDeletePartyCustomPositionParams) error

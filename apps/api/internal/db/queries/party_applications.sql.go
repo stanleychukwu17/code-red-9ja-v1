@@ -724,7 +724,7 @@ WITH inserted AS (
   ON CONFLICT (user_id, role_id) DO NOTHING
 )
 UPDATE users SET updated_at = NOW() WHERE users.id = $1
-RETURNING id, fake_id, email, phone, username, password_hash, first_name, last_name, middle_name, gender, date_of_birth, avatar, avatar_file_id, voters_card_image, current_country, current_state, current_city, current_lga, current_ward, polling_unit_id, country_of_origin, state_of_origin, has_role, is_verified, is_politician, party_id, account_status, referral_code, created_at, updated_at
+RETURNING id, fake_id, email, phone, username, password_hash, first_name, last_name, middle_name, full_name, gender, date_of_birth, avatar, avatar_file_id, voters_card_image, current_country, current_state, current_city, current_lga, current_ward, polling_unit_id, country_of_origin, state_of_origin, has_role, is_verified, is_politician, party_id, account_status, referral_code, created_at, updated_at
 `
 
 func (q *Queries) UpdateUserRoleForPartyApp(ctx context.Context, id int64) (User, error) {
@@ -740,6 +740,7 @@ func (q *Queries) UpdateUserRoleForPartyApp(ctx context.Context, id int64) (User
 		&i.FirstName,
 		&i.LastName,
 		&i.MiddleName,
+		&i.FullName,
 		&i.Gender,
 		&i.DateOfBirth,
 		&i.Avatar,

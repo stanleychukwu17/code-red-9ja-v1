@@ -1036,6 +1036,7 @@ type User struct {
 	FirstName       pgtype.Text        `json:"first_name"`
 	LastName        pgtype.Text        `json:"last_name"`
 	MiddleName      pgtype.Text        `json:"middle_name"`
+	FullName        pgtype.Text        `json:"full_name"`
 	Gender          pgtype.Text        `json:"gender"`
 	DateOfBirth     pgtype.Date        `json:"date_of_birth"`
 	Avatar          pgtype.Text        `json:"avatar"`

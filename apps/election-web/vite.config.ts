@@ -17,7 +17,7 @@ const config = defineConfig({
         preset: "node-server",
       },
       router: {
-        routeFileIgnorePattern: "(components|page-components)",
+        routeFileIgnorePattern: "(components|page-components|context|hooks|utils)",
       },
     } as any),
     viteReact(),
