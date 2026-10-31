@@ -2,8 +2,15 @@ import { useState, useEffect } from "react";
 import { Check, MessageCircleMore, Plus } from "lucide-react";
 import { cn } from "@repo/ui/lib/utils";
 import { VerificationBadge } from "@repo/ui/components/custom/verification-badge";
+import { useNavigate } from "@tanstack/react-router";
+import { toast } from "sonner";
+import { useAuth } from "#/hooks/useAuth";
+import { APP_URL } from "#/lib/config";
+import { JoinPartyDialog } from "#/components/parties";
 
 interface PartyHeaderLayoutProps {
+  partyId?: number | string;
+  chapterId?: number;
   coverImage?: string | null;
   coverPositionY?: number | null;
   logo?: string | null;
@@ -68,6 +75,8 @@ function getChapterTypeBadgeConfig(type?: string, geoName?: string) {
 }
 
 export function PartyHeaderLayout({
+  partyId,
+  chapterId,
   coverImage,
   coverPositionY = 50,
   logo,
@@ -91,6 +100,9 @@ export function PartyHeaderLayout({
 }: PartyHeaderLayoutProps) {
   const [isChapterMember, setIsChapterMember] = useState(isChapterMemberInitial);
   const [isFollowing, setIsFollowing] = useState(isFollowingInitial);
+  const [isJoinDialogOpen, setIsJoinDialogOpen] = useState(false);
+  const { isLoggedIn } = useAuth();
+  const navigate = useNavigate();
   const resolvedChapterType = chapterType || chapterLevel;
   const chapterBadge = getChapterTypeBadgeConfig(resolvedChapterType, chapterGeoName);
 
@@ -114,11 +126,13 @@ export function PartyHeaderLayout({
     setIsFollowing(isFollowingInitial);
   }, [isFollowingInitial]);
 
-  // Optimistically toggle chapter membership and notify parent callback
+  // Open chapter enrollment modal or prompt login if not authenticated
   const handleChapterMemberClick = () => {
-    const next = !isChapterMember;
-    setIsChapterMember(next);
-    onChapterMemberToggle?.(next);
+    if (isChapterMember) {
+      return
+    }
+
+    setIsJoinDialogOpen(true);
   };
 
   // Optimistically toggle follow status and notify parent callback
@@ -226,11 +240,12 @@ export function PartyHeaderLayout({
                   <button
                     type="button"
                     onClick={handleChapterMemberClick}
+                    disabled={isChapterMember}
                     className={cn(
-                      "flex items-center justify-center gap-1.5 px-2 sm:px-4 py-3 rounded-full text-xs xl:text-sm font-semibold transition-all duration-200 shadow-sm cursor-pointer",
+                      "flex items-center justify-center gap-1.5 px-2 sm:px-4 py-3 rounded-full text-xs xl:text-sm font-semibold transition-all duration-200 shadow-sm",
                       isChapterMember
-                        ? "bg-lime-accent text-neutral-900 hover:bg-lime-accent-hover dark:bg-secondary dark:text-secondary-foreground dark:hover:bg-secondary/80"
-                        : "bg-lime hover:bg-lime-accent text-neutral-900 dark:bg-foreground dark:text-background dark:hover:bg-foreground/90 active:scale-95"
+                        ? "bg-lime-accent text-neutral-900 dark:bg-secondary dark:text-secondary-foreground cursor-default"
+                        : "bg-lime hover:bg-lime-accent text-neutral-900 dark:bg-foreground dark:text-background dark:hover:bg-foreground/90 active:scale-95 cursor-pointer"
                     )}
                   >
                     {isChapterMember ? (
@@ -244,10 +259,9 @@ export function PartyHeaderLayout({
                     type="button"
                     onClick={handleFollowClick}
                     className={cn(
-                      "flex items-center justify-center gap-1.5 px-3 sm:px-4 py-3 rounded-full text-xs xl:text-sm font-semibold transition-all duration-200 active:scale-95 shadow-sm cursor-pointer",
-                      isFollowing
-                        ? "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-                        : "bg-foreground text-background hover:bg-foreground/90"
+                      "flex items-center justify-center gap-1.5 px-3 sm:px-4 py-3 rounded-full",
+                      "text-xs xl:text-sm font-semibold transition-all duration-200 active:scale-95 shadow-sm cursor-pointer",
+                      "bg-foreground text-background hover:bg-foreground/90"
                     )}
                   >
                     {isFollowing ? (
@@ -338,6 +352,22 @@ export function PartyHeaderLayout({
 
           </div>
         </div>
+
+        {/* Modal for Chapter Enrollment */}
+        {partyId && (
+          <JoinPartyDialog
+            open={isJoinDialogOpen}
+            onOpenChange={setIsJoinDialogOpen}
+            partyId={Number(partyId)}
+            partyName={shortName}
+            partyLogo={logo || undefined}
+            chapterId={chapterId}
+            onJoinSuccess={(id) => {
+              setIsChapterMember(true);
+              onChapterMemberToggle?.(true);
+            }}
+          />
+        )}
 
         {/* Optional Inner Navigation / Slot */}
         {children}

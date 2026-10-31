@@ -162,9 +162,17 @@ export function JoinPartyDialog({
 				}
 			);
 			queryClient.invalidateQueries({ queryKey: QUERY_KEYS.auth.session });
+			queryClient.invalidateQueries({ queryKey: ["partyProfile"] });
+			queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partyMembers.root });
 			onJoinSuccess?.(partyId);
 
-			await router.navigate({ to: APP_URL.party(partyName.toLowerCase(), String(partyId)) });
+			const currentPartyPath = APP_URL.party(partyName.toLowerCase(), String(partyId));
+			if (
+				typeof window !== "undefined" &&
+				!window.location.pathname.toLowerCase().startsWith(`/party/${partyName.toLowerCase()}/${partyId}`)
+			) {
+				await router.navigate({ to: currentPartyPath });
+			}
 			onOpenChange(false);
 
 		} catch (err: unknown) {
