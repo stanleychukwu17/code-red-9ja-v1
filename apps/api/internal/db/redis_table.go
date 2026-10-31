@@ -30,17 +30,17 @@ const (
 	//--END--
 
 	//--START-- for user
-	RedisUserInfo                = "user:info:"               // Core profile only; relationships are hydrated separately.
-	RedisUserMoreInfo            = "user:more_info:"          // STRING: user:more_info:<userID> used to store and retrieve user more_info.
+	RedisUserInfo                = "user:info:"                 // Core profile only; relationships are hydrated separately.
+	RedisUserMoreInfo            = "user:more_info:"            // STRING: user:more_info:<userID> used to store and retrieve user more_info.
 	RedisUserPrimaryBankAccount  = "user:primary_bank_account:" // STRING: user:primary_bank_account:<userID> stores cached primary bank account.
-	RedisUserRoles               = "user:roles:"              // STRING: user:roles:<userID> used to store and retrieve user roles.
-	RedisUserPreferences         = "user:preferences:"        // STRING: user:preferences:<userID> used to store and retrieve user preferences.
-	RedisNotificationPreferences = "user:notification_prefs:" // STRING: user:notification_prefs:<userID> used to store notification preferences.
-	RedisReferralCode            = "user:referral_code:"      // STRING: user:referral_code:<code> used to store cached referrer info JSON (id, name).
-	RedisUsernameFakeID          = "user:username:"           // STRING: user:username:<cleanUsername> used to cache fakeID for fast profile resolution.
-	RedisUserFollower            = "user:follower:"           // STRING: "user:follower:<followerID>:<followingID>" stores cached boolean whether follower follows following.
-	RedisUserFollowersCount      = "user:followers_count:"    // STRING: "user:followers_count:<userID>" stores cached follower count.
-	RedisUserFollowingCount      = "user:following_count:"    // STRING: "user:following_count:<userID>" stores cached following count.
+	RedisUserRoles               = "user:roles:"                // STRING: user:roles:<userID> used to store and retrieve user roles.
+	RedisUserPreferences         = "user:preferences:"          // STRING: user:preferences:<userID> used to store and retrieve user preferences.
+	RedisNotificationPreferences = "user:notification_prefs:"   // STRING: user:notification_prefs:<userID> used to store notification preferences.
+	RedisReferralCode            = "user:referral_code:"        // STRING: user:referral_code:<code> used to store cached referrer info JSON (id, name).
+	RedisUsernameFakeID          = "user:username:"             // STRING: user:username:<cleanUsername> used to cache fakeID for fast profile resolution.
+	RedisUserFollower            = "user:follower:"             // STRING: "user:follower:<followerID>:<followingID>" stores cached boolean whether follower follows following.
+	RedisUserFollowersCount      = "user:followers_count:"      // STRING: "user:followers_count:<userID>" stores cached follower count.
+	RedisUserFollowingCount      = "user:following_count:"      // STRING: "user:following_count:<userID>" stores cached following count.
 	RedisUserHasActiveAgentApp   = "user:has_active_agent_app:" // STRING: "user:has_active_agent_app:<userID>" stores cached boolean whether user has an active agent application.
 	//--END--
 
@@ -91,9 +91,9 @@ const (
 	//--END--
 
 	//--START-- for campaign groups and operations
-	RedisCampaignGroupByID       = "campaign_groups:info:"      // STRING: "campaign_groups:info:<groupID>" stores cached JSON object of campaign group
-	RedisCampaignGroupMembers    = "campaign_groups:members:"   // STRING: "campaign_groups:members:<groupID>" stores cached JSON array of campaign group members
-	RedisCampaignGroupSyncLock   = "campaign_groups:sync_lock:" // STRING: "campaign_groups:sync_lock:<groupID>" cooldown lock preventing repeated db syncing
+	RedisCampaignGroupByID     = "campaign_groups:info:"      // STRING: "campaign_groups:info:<groupID>" stores cached JSON object of campaign group
+	RedisCampaignGroupMembers  = "campaign_groups:members:"   // STRING: "campaign_groups:members:<groupID>" stores cached JSON array of campaign group members
+	RedisCampaignGroupSyncLock = "campaign_groups:sync_lock:" // STRING: "campaign_groups:sync_lock:<groupID>" cooldown lock preventing repeated db syncing
 	//--END--
 
 	//--START-- for page verifications & badges
@@ -157,10 +157,10 @@ const (
 var AllRedisPrefixes = []string{
 	RedisRegisterEmailOtp,
 	RedisRegisterEmailOtpVerified,
-	RedisJwtRefreshToken,
-	RedisSessionTokens,
-	RedisUserLoginSessions,
-	RedisJwtUserLoginLocked,
+	// RedisJwtRefreshToken,
+	// RedisSessionTokens,
+	// RedisUserLoginSessions,
+	// RedisJwtUserLoginLocked,
 	RedisUserInfo,
 	RedisUserMoreInfo,
 	RedisUserPrimaryBankAccount,

@@ -53,10 +53,10 @@ export function JoinPartyDialog({
 	const [selectedWard, setSelectedWard] = useState<WardItem | null>(null);
 
 	// 1. Fetch States (National / Nigeria)
-	const { data: states = [], isLoading: statesLoading } = useNigeriaStates({ enabled: open, });
+	const { data: states = [], isLoading: statesLoading } = useNigeriaStates({ enabled: open });
 
 	// 2. Fetch LGAs when state is selected
-	const { data: lgas = [], isLoading: lgasLoading } = useLGAs(selectedState?.id, { enabled: open, });
+	const { data: lgas = [], isLoading: lgasLoading } = useLGAs(selectedState?.id, { enabled: open });
 
 	// 3. Fetch Wards when LGA is selected
 	const { data: wards = [], isLoading: wardsLoading } = useWards(
@@ -119,18 +119,19 @@ export function JoinPartyDialog({
 		// Show loading state while the join request is in flight
 		setIsResolving(true);
 
-		// Build the full chapter hierarchy selection (ward → lga → state → national)
-		const AllSelected = [
-			{ partyId, chapterType: "ward", chapterId: selectedWard?.id },
-			{ partyId, chapterType: "lga", chapterId: selectedLga?.id },
-			{ partyId, chapterType: "state", chapterId: selectedState?.id },
-			{ partyId, chapterType: "national", chapterId: chapterId },
-		];
+		// Build terminal selection; backend automatically completes parent hierarchy upwards
+		const terminalSelection = selectedWard
+			? { partyId, chapterType: "ward", chapterId: selectedWard.id }
+			: selectedLga
+			? { partyId, chapterType: "lga", chapterId: selectedLga.id }
+			: selectedState
+			? { partyId, chapterType: "state", chapterId: selectedState.id }
+			: { partyId, chapterType: "national", chapterId: chapterId || 161 };
 
 		try {
-			// Submit all chapter-level memberships in a single request
+			// Submit membership request
 			const res = await joinPartyHierarchy({
-				data: { partyId, selections: AllSelected },
+				data: { partyId, selections: [terminalSelection] },
 			});
 			if (!res?.success) {
 				throw new Error(res?.message || "Failed to join party");

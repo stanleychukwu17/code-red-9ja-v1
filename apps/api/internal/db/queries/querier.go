@@ -313,6 +313,7 @@ type Querier interface {
 	GetUserIDByNIN(ctx context.Context, nin string) (int64, error)
 	GetUserIdByReferralCode(ctx context.Context, referralCode pgtype.Text) (int64, error)
 	GetUserNINByUserID(ctx context.Context, userID int64) (UsersNin, error)
+	GetUserOtherPartyMembership(ctx context.Context, arg GetUserOtherPartyMembershipParams) (int16, error)
 	GetUserPartyChapters(ctx context.Context, arg GetUserPartyChaptersParams) ([]GetUserPartyChaptersRow, error)
 	GetUserPasswordHashByFakeID(ctx context.Context, fakeID pgtype.Int8) (string, error)
 	GetUserPhoneNumbersByUserID(ctx context.Context, userID int64) ([]UsersPhoneNumber, error)

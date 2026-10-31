@@ -1947,6 +1947,14 @@ func (s *PartiesService) JoinParty(ctx context.Context, params JoinPartyParams) 
 		return fmt.Errorf("you are already a member of a different party; you must leave your current party before joining another one")
 	}
 
+	// Double-check if user has active membership in another party in the party_membership table
+	if otherPartyID, err := s.queries.GetUserOtherPartyMembership(ctx, queries.GetUserOtherPartyMembershipParams{
+		UserID:  params.UserID,
+		PartyID: params.PartyID,
+	}); err == nil && otherPartyID > 0 {
+		return fmt.Errorf("you are already a member of a different party; you must leave your current party before joining another one")
+	}
+
 	// Check blocked parties only if the user is not already a member of this party.
 	if !user.PartyID.Valid || user.PartyID.Int16 != params.PartyID {
 		blockedParties := s.blocksService.GetUserBlockedPartyIDs(ctx, params.UserID)
@@ -2010,6 +2018,18 @@ func (s *PartiesService) JoinParty(ctx context.Context, params JoinPartyParams) 
 		return s.followsService.FollowParty(ctx, params.UserID, params.PartyID, finalChapterID)
 	}
 
+	// Reject if user is already a member of another chapter of the same type in this party
+	if params.ChapterType != "" {
+		existingChapters, err := s.GetUserPartyChapters(ctx, params.UserID, params.PartyID)
+		if err == nil && len(existingChapters) > 0 {
+			for _, ex := range existingChapters {
+				if strings.EqualFold(ex.ChapterType, params.ChapterType) && ex.ID != finalChapterID {
+					return fmt.Errorf("you are already a member of a %s chapter in this party; you must leave it before joining another one", params.ChapterType)
+				}
+			}
+		}
+	}
+
 	// Insert the new membership record directly.
 	err = s.queries.AddPartyMembership(ctx, queries.AddPartyMembershipParams{
 		UserID:    params.UserID,
@@ -2024,17 +2044,22 @@ func (s *PartiesService) JoinParty(ctx context.Context, params JoinPartyParams) 
 	s.InvalidateChapterMemberCount(ctx, params.PartyID, finalChapterID)                    // chapter member count invalidation
 	s.InvalidatePartyChapterMembership(ctx, params.UserID, params.PartyID, finalChapterID) // user party chapter membership invalidation
 	s.InvalidatePartyMembership(ctx, params.UserID, params.PartyID)                        // invalidate party membership
+	s.InvalidateUserPartyChapters(ctx, params.UserID, params.PartyID)                      // invalidate user party chapters
 
-	if params.ChapterType == "national" {
-		// Log the milestone in party_member_milestones for audit trails and user activity timeline.
-		_ = s.queries.AddPartyMemberMilestone(ctx, queries.AddPartyMemberMilestoneParams{
-			UserID:        params.UserID,
-			PartyID:       params.PartyID,
-			ChapterID:     pgtype.Int4{Int32: finalChapterID, Valid: true},
-			MilestoneType: constants.MilestoneTypeJoined,
-			Metadata:      []byte("{}"),
-		})
+	// Log the milestone in party_member_milestones for audit trails and user activity timeline.
+	joinMetadata := []byte("{}")
+	if params.ChapterType != "" {
+		if m, err := json.Marshal(map[string]string{"chapter_type": params.ChapterType}); err == nil {
+			joinMetadata = m
+		}
 	}
+	_ = s.queries.AddPartyMemberMilestone(ctx, queries.AddPartyMemberMilestoneParams{
+		UserID:        params.UserID,
+		PartyID:       params.PartyID,
+		ChapterID:     utils.PgInt4FromInt32(finalChapterID),
+		MilestoneType: constants.MilestoneTypeJoined,
+		Metadata:      joinMetadata,
+	})
 
 	// Update the user's active party affiliation in the users table (if not already set)
 	if !user.PartyID.Valid || user.PartyID.Int16 != params.PartyID {

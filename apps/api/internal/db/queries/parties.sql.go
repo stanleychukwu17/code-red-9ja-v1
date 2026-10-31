@@ -791,6 +791,24 @@ func (q *Queries) GetStateChapter(ctx context.Context, arg GetStateChapterParams
 	return id, err
 }
 
+const getUserOtherPartyMembership = `-- name: GetUserOtherPartyMembership :one
+SELECT party_id FROM party_membership
+WHERE user_id = $1 AND party_id != $2 AND status = 'active'
+LIMIT 1
+`
+
+type GetUserOtherPartyMembershipParams struct {
+	UserID  int64 `json:"user_id"`
+	PartyID int16 `json:"party_id"`
+}
+
+func (q *Queries) GetUserOtherPartyMembership(ctx context.Context, arg GetUserOtherPartyMembershipParams) (int16, error) {
+	row := q.db.QueryRow(ctx, getUserOtherPartyMembership, arg.UserID, arg.PartyID)
+	var party_id int16
+	err := row.Scan(&party_id)
+	return party_id, err
+}
+
 const getUserPartyChapters = `-- name: GetUserPartyChapters :many
 SELECT
     pc.id,

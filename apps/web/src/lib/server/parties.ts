@@ -142,6 +142,17 @@ export type PublicPartyProfile = {
 	verifications?: PartyVerification[];
 };
 
+export type ChapterHierarchyInfo = {
+	country_id?: number;
+	country_name?: string;
+	state_id?: number;
+	state_name?: string;
+	lga_id?: number;
+	lga_name?: string;
+	ward_id?: number;
+	ward_name?: string;
+};
+
 /**
  * Server function to fetch full public profile data for a specific party,
  * including metrics, about info, leadership, and user membership status.
@@ -159,6 +170,7 @@ export const getPartyProfile = createServerFn()
 					chapter_type: string;
 					chapter_name: string;
 					chapter_geo_name: string;
+					chapter_hierarchy?: ChapterHierarchyInfo;
 					national_chapter_id: number;
 					national_member_count: number;
 					chapter_member_count: number;

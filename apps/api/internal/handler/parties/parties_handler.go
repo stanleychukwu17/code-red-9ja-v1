@@ -163,11 +163,23 @@ type FilteredPartyResponse struct {
 	Verifications  []queries.GetPageVerificationsRow `json:"verifications"`
 }
 
+type ChapterHierarchyInfo struct {
+	CountryID   int16  `json:"country_id,omitempty"`
+	CountryName string `json:"country_name,omitempty"`
+	StateID     int16  `json:"state_id,omitempty"`
+	StateName   string `json:"state_name,omitempty"`
+	LgaID       int32  `json:"lga_id,omitempty"`
+	LgaName     string `json:"lga_name,omitempty"`
+	WardID      int32  `json:"ward_id,omitempty"`
+	WardName    string `json:"ward_name,omitempty"`
+}
+
 type PartyProfileResponse struct {
 	Data                   FilteredPartyResponse `json:"data"`
 	Chapter                queries.PartyChapter  `json:"chapter"`
 	ChapterType            string                `json:"chapter_type"`
 	ChapterGeoName         string                `json:"chapter_geo_name"`
+	ChapterHierarchy       *ChapterHierarchyInfo `json:"chapter_hierarchy,omitempty"`
 	NationalChapterID      int32                 `json:"national_chapter_id"`
 	NationalMemberCount    int64                 `json:"national_member_count"`
 	ChapterMemberCount     int64                 `json:"chapter_member_count"`
@@ -833,11 +845,9 @@ func (h *Handler) GetPartyProfile(w http.ResponseWriter, r *http.Request) {
 	var isChapterMember bool
 	var isFollowing bool
 	if ok && claims != nil {
-		if claims.PartyID == int16(partyID) {
-			isChapMember, err := h.partiesService.IsPartyChapterMember(r.Context(), claims.UserID, int16(partyID), *chapterID)
-			if err == nil && isChapMember {
-				isChapterMember = true
-			}
+		isChapMember, err := h.partiesService.IsPartyChapterMember(r.Context(), claims.UserID, int16(partyID), *chapterID)
+		if err == nil && isChapMember {
+			isChapterMember = true
 		}
 
 		following, err := h.followsService.IsFollowingParty(r.Context(), claims.UserID, int16(partyID), *chapterID)
@@ -897,14 +907,18 @@ func (h *Handler) GetPartyProfile(w http.ResponseWriter, r *http.Request) {
 		Verifications:  verifications,
 	}
 
-	// Resolve chapter geographic name based on chapter tier
+	// Resolve chapter geographic name and ancestor hierarchy based on chapter tier
 	var chapterGeoName string
+	hierarchyInfo := &ChapterHierarchyInfo{}
+	countryID := constants.NigeriaCountryID
+	if country, err := h.bodiesService.CheckCountry(r.Context(), countryID); err == nil {
+		hierarchyInfo.CountryID = countryID
+		hierarchyInfo.CountryName = country.Name
+	}
+
 	switch chapter.ChapterType {
 	case "national":
-		countryID := constants.NigeriaCountryID
-		if country, err := h.bodiesService.CheckCountry(r.Context(), countryID); err == nil {
-			chapterGeoName = country.Name
-		}
+		chapterGeoName = hierarchyInfo.CountryName
 	case "zonal":
 		if chapter.ZonalID.Valid && chapter.ZonalID.Int16 > 0 {
 			if zone, err := h.bodiesService.CheckZone(r.Context(), chapter.ZonalID.Int16); err == nil {
@@ -915,18 +929,36 @@ func (h *Handler) GetPartyProfile(w http.ResponseWriter, r *http.Request) {
 		if chapter.StateID.Valid && chapter.StateID.Int16 > 0 {
 			if state, err := h.bodiesService.CheckStateByID(r.Context(), chapter.StateID.Int16); err == nil {
 				chapterGeoName = state.Name
+				hierarchyInfo.StateID = state.ID
+				hierarchyInfo.StateName = state.Name
 			}
 		}
 	case "lga":
 		if chapter.LgaID.Valid && chapter.LgaID.Int32 > 0 {
 			if lga, err := h.bodiesService.CheckLGA(r.Context(), chapter.LgaID.Int32); err == nil {
 				chapterGeoName = lga.Name
+				hierarchyInfo.LgaID = lga.ID
+				hierarchyInfo.LgaName = lga.Name
+				hierarchyInfo.StateID = int16(lga.StateID)
+				if state, err := h.bodiesService.CheckStateByID(r.Context(), int16(lga.StateID)); err == nil {
+					hierarchyInfo.StateName = state.Name
+				}
 			}
 		}
 	case "ward":
 		if chapter.WardID.Valid && chapter.WardID.Int32 > 0 {
 			if ward, err := h.bodiesService.CheckWard(r.Context(), chapter.WardID.Int32); err == nil {
 				chapterGeoName = ward.Name
+				hierarchyInfo.WardID = ward.ID
+				hierarchyInfo.WardName = ward.Name
+				hierarchyInfo.LgaID = ward.LgaID
+				hierarchyInfo.StateID = int16(ward.StateID)
+				if lga, err := h.bodiesService.CheckLGA(r.Context(), ward.LgaID); err == nil {
+					hierarchyInfo.LgaName = lga.Name
+				}
+				if state, err := h.bodiesService.CheckStateByID(r.Context(), int16(ward.StateID)); err == nil {
+					hierarchyInfo.StateName = state.Name
+				}
 			}
 		}
 	}
@@ -937,6 +969,7 @@ func (h *Handler) GetPartyProfile(w http.ResponseWriter, r *http.Request) {
 		Chapter:                chapter,
 		ChapterType:            chapter.ChapterType,
 		ChapterGeoName:         chapterGeoName,
+		ChapterHierarchy:       hierarchyInfo,
 		NationalChapterID:      nationalChapterID,
 		NationalMemberCount:    nationalMemberCount,
 		ChapterMemberCount:     chapterMemberCount,
@@ -1167,15 +1200,15 @@ func (h *Handler) JoinPartyHierarchy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Join each resolved party chapter.
+	// Join each resolved party chapter from national down to ward.
 	for _, chapter := range []struct {
 		chapterID   int32
 		chapterType string
 	}{
-		{hierarchy.Ward.ChapterID, "ward"},
-		{hierarchy.Lga.ChapterID, "lga"},
-		{hierarchy.State.ChapterID, "state"},
 		{hierarchy.National.ChapterID, "national"},
+		{hierarchy.State.ChapterID, "state"},
+		{hierarchy.Lga.ChapterID, "lga"},
+		{hierarchy.Ward.ChapterID, "ward"},
 	} {
 		if chapter.chapterID <= 0 {
 			continue
@@ -1228,8 +1261,8 @@ func (h *Handler) LeaveParty(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verify user is currently affiliated with this party
-	if claims.PartyID == 0 || claims.PartyID != int16(partyID) {
+	// Ensure user is not affiliated with a different party
+	if claims.PartyID > 0 && claims.PartyID != int16(partyID) {
 		h.utils.RespondError(w, http.StatusBadRequest, "You are not a member of this party")
 		return
 	}

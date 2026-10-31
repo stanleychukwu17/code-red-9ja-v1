@@ -15,7 +15,7 @@ import { VerificationBadge } from "@repo/ui/components/custom/verification-badge
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { QUERY_KEYS } from "#/lib/config";
-import { JoinPartyDialog } from "#/components/parties";
+import { JoinChapterDialog } from "./JoinChapterDialog";
 import { PARTY_PRESETS } from "#/components/parties/party-constants";
 import { formatNumber } from "@repo/ui/lib/number";
 import { followParty, leaveParty, partyProfileQueryOptions, unfollowParty } from "#/lib/server/parties";
@@ -122,6 +122,8 @@ function resolvePartyHeaderData(
   const followersValue = props.followersValue !== undefined ? props.followersValue : rawFollowersCount;
   const followersDisplay = props.followersDisplay || formatNumber(followersValue);
 
+  const chapterHierarchy = profileRes?.success ? profileRes.data?.chapter_hierarchy : undefined;
+
   return {
     shortName,
     fullName,
@@ -131,6 +133,9 @@ function resolvePartyHeaderData(
     coverPositionY,
     coverImage,
     chapterBadge,
+    chapterType: resolvedChapterType,
+    chapterGeoName,
+    chapterHierarchy,
     chapterMembers,
     totalMembers,
     followersValue,
@@ -164,6 +169,9 @@ export function PartyHeaderLayout(props: PartyHeaderLayoutProps) {
     coverPositionY,
     coverImage,
     chapterBadge,
+    chapterType,
+    chapterGeoName,
+    chapterHierarchy,
     chapterMembers,
     totalMembers,
     followersValue,
@@ -498,13 +506,16 @@ export function PartyHeaderLayout(props: PartyHeaderLayoutProps) {
 
         {/* Modal for Chapter Enrollment */}
         {partyId && isJoinDialogOpen && (
-          <JoinPartyDialog
+          <JoinChapterDialog
             open={isJoinDialogOpen}
             onOpenChange={setIsJoinDialogOpen}
             partyId={Number(partyId)}
             partyName={shortName}
             partyLogo={logo || undefined}
             chapterId={chapterId}
+            chapterType={chapterType}
+            chapterGeoName={chapterGeoName}
+            chapterHierarchy={chapterHierarchy}
             onJoinSuccess={(id) => {
               setIsChapterMember(true);
             }}

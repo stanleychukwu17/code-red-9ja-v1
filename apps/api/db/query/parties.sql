@@ -257,6 +257,11 @@ SELECT EXISTS (
     WHERE user_id = $1 AND party_id = $2 AND status = 'active'
 );
 
+-- name: GetUserOtherPartyMembership :one
+SELECT party_id FROM party_membership
+WHERE user_id = $1 AND party_id != $2 AND status = 'active'
+LIMIT 1;
+
 -- name: ResetPartyLogo :exec
 UPDATE parties
 SET logo = '', logo_file_id = NULL, updated_at = NOW()

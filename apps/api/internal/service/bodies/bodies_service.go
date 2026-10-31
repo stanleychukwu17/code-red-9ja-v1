@@ -20,6 +20,7 @@ type PartiesService interface {
 	GetOrCreateLGAChapter(ctx context.Context, partyID int16, lgaID int32, createIfMissing ...bool) (int32, error)
 	GetOrCreateStateChapter(ctx context.Context, partyID, stateID int16, createIfMissing ...bool) (int32, error)
 	GetOrCreateNationalChapter(ctx context.Context, partyID, countryID int16, createIfMissing ...bool) (int32, error)
+	GetPartyChapterByID(ctx context.Context, chapterID int32) (queries.PartyChapter, error)
 }
 
 type BodiesService struct {
@@ -79,15 +80,32 @@ func (s *BodiesService) CompletePartyHierarchySelections(ctx context.Context, pa
 		if sel.ChapterID == nil || *sel.ChapterID <= 0 {
 			continue
 		}
+		rawID := *sel.ChapterID
 		switch sel.ChapterType {
 		case "ward":
-			hasWard, wardID = true, *sel.ChapterID
+			hasWard = true
+			wardID = rawID
+			if ch, err := s.partiesService.GetPartyChapterByID(ctx, rawID); err == nil && ch.ID > 0 && ch.ChapterType == "ward" && ch.WardID.Valid {
+				wardID = ch.WardID.Int32
+			}
 		case "lga":
-			hasLGA, lgaID = true, *sel.ChapterID
+			hasLGA = true
+			lgaID = rawID
+			if ch, err := s.partiesService.GetPartyChapterByID(ctx, rawID); err == nil && ch.ID > 0 && ch.ChapterType == "lga" && ch.LgaID.Valid {
+				lgaID = ch.LgaID.Int32
+			}
 		case "state":
-			hasState, stateID = true, int16(*sel.ChapterID)
+			hasState = true
+			stateID = int16(rawID)
+			if ch, err := s.partiesService.GetPartyChapterByID(ctx, rawID); err == nil && ch.ID > 0 && ch.ChapterType == "state" && ch.StateID.Valid {
+				stateID = ch.StateID.Int16
+			}
 		case "national":
-			hasNational, nationalID = true, int16(*sel.ChapterID)
+			hasNational = true
+			nationalID = int16(rawID)
+			if ch, err := s.partiesService.GetPartyChapterByID(ctx, rawID); err == nil && ch.ID > 0 && ch.ChapterType == "national" && ch.CountryID.Valid {
+				nationalID = ch.CountryID.Int16
+			}
 		}
 	}
 

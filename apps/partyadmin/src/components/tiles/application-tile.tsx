@@ -74,21 +74,6 @@ export type ApplicationType = {
   lgaId?: number;
 };
 
-const formatDate = (dateString?: string) => {
-  if (!dateString) return "N/A";
-  try {
-    const d = new Date(dateString);
-    if (isNaN(d.getTime())) return "N/A";
-    return d.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "2-digit",
-    });
-  } catch (e) {
-    return "N/A";
-  }
-};
-
 /**
  * ApplicationTableHeader Component
  * Renders the table column labels for applications: User, Election, Role, Assignment/PU, Agents Count, Make Decision.
@@ -181,7 +166,6 @@ export function ApplicationTableTile({ data, refetch }: ApplicationTableTileProp
   }
 
   const residence = data.residence || formattedResidence;
-  const appliedOn = data.appliedOn || formatDate(data.created_at);
 
   const pollingUnitName = data.polling_unit_name || "Not Specified";
   const agentsCount = data.agents_count ?? 0;
@@ -343,7 +327,7 @@ export function ApplicationTableTile({ data, refetch }: ApplicationTableTileProp
         <p className="w-35 truncate hidden lg:block text-[#313131]">
           {election}
         </p>
-        <div className="w-[130px] hidden md:flex items-center">
+        <div className="w-32.5 hidden md:flex items-center">
           <span
             className={cn(
               "px-2.5 py-0.5 text-xs font-semibold rounded-full border",
