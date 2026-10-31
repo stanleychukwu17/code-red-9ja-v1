@@ -35,8 +35,6 @@ export const Route = createFileRoute("/_authenticated/profile/$username")({
   component: ProfileLayoutComponent,
 });
 
-
-
 function ProfileLayoutComponent() {
   const { username } = Route.useParams();
   const { data: profileRes, error } = useQuery(userProfileQueryOptions(username));

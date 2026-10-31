@@ -1,36 +1,11 @@
+import React from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import React from "react";
-import {
-  Ban,
-  Copy,
-  Ellipsis,
-  Filter,
-  Flag,
-  Loader2,
-  Search,
-  Share2,
-  User,
-  Users,
-  UserX,
-  VolumeX,
-} from "lucide-react";
+import { Ban, Copy, Ellipsis, Filter, Flag, Loader2, Search, Share2, User, Users, UserX, VolumeX } from "lucide-react";
 import { useState } from "react";
 import { useDebounceValue, useIntersectionObserver } from "usehooks-ts";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@repo/ui/components/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogPadding,
-} from "@repo/ui/components/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@repo/ui/components/dropdown-menu";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogPadding } from "@repo/ui/components/dialog";
 import { Button } from "@repo/ui/components/button";
 import { getPageHeader } from "#/lib/shared/meta";
 import { searchCitizensList, type SearchedUserItem } from "#/lib/server/citizens";
@@ -47,11 +22,10 @@ import { cn } from "@repo/ui/lib/utils";
  * Protected by the parent _authenticated layout.
  */
 export const Route = createFileRoute("/_authenticated/search")({
-  head: () =>
-    getPageHeader({
-      title: "Search Citizens",
-      description: "Search and discover registered citizens across Nigeria on Free9ja.",
-    }),
+  head: () => getPageHeader({
+    title: "Search Citizens",
+    description: "Search and discover registered citizens across Nigeria on Free9ja.",
+  }),
   component: RouteComponent,
 });
 
