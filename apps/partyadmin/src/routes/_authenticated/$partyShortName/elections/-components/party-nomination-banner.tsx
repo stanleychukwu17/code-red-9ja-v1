@@ -1,7 +1,6 @@
-import { Award, CheckCircle2, ShieldAlert } from "lucide-react";
-import { Badge } from "@repo/ui/components/badge";
-import { Button } from "@repo/ui/components/button";
+import { Plus } from "lucide-react";
 import { AppAvatar } from "@repo/ui/components/avatar";
+import { cn } from "@repo/ui/lib/utils";
 
 export type PartyNominationBannerProps = {
   party?: { logo?: string; short_name?: string } | null;
@@ -13,8 +12,74 @@ export type PartyNominationBannerProps = {
   onManageTicket: () => void;
 };
 
+type TicketCandidateProfileProps = {
+  avatar?: string;
+  name: string;
+  badgeLabel?: string;
+  ageText?: string;
+  stateText?: string;
+  onFollow?: () => void;
+  followButtonText?: string;
+};
+
+/**
+ * Reusable candidate profile card in the nomination showcase banner.
+ */
+function TicketCandidateProfile({
+  avatar,
+  name,
+  badgeLabel = "Candidate",
+  ageText,
+  stateText,
+  onFollow,
+  followButtonText = "Follow",
+}: TicketCandidateProfileProps) {
+  return (
+    <div className="flex-1 flex flex-col items-center text-center max-w-xs w-full">
+      <div className="size-24 md:size-28 lg:size-42 rounded-full overflow-hidden shadow-md ring-4 ring-background bg-sidebar-mobile flex items-center justify-center shrink-0">
+        {avatar ? (
+          <img
+            src={avatar}
+            alt={name}
+            className="size-full object-cover"
+          />
+        ) : (
+          <AppAvatar
+            src={avatar}
+            alt={name}
+            className="size-full text-2xl font-bold"
+          />
+        )}
+      </div>
+
+      <span className="mt-2.5 inline-flex items-center justify-center bg-purple text-white text-[11px] font-semibold px-4 py-0.5 rounded-full shadow-2xs tracking-wide">
+        {badgeLabel}
+      </span>
+
+      <h3 className="mt-2 text-base md:text-lg font-bold text-c-90 tracking-tight text-center max-w-full truncate px-2">
+        {name}
+      </h3>
+
+      <div className="mt-1 flex items-center justify-center gap-4 md:gap-6 text-xs md:text-[13px] text-c-50 font-medium">
+        <span>{ageText}</span>
+        <span>{stateText}</span>
+      </div>
+
+      <button
+        type="button"
+        onClick={onFollow}
+        className="mt-3.5 inline-flex items-center justify-center gap-1.5 bg-foreground hover:bg-c-90 text-background font-semibold text-xs md:text-sm px-6 py-2 rounded-full shadow-xs transition-all active:scale-95 cursor-pointer"
+      >
+        <Plus className="size-3.5 stroke-[2.5]" />
+        <span>{followButtonText}</span>
+      </button>
+    </div>
+  );
+}
+
 /**
  * Party Nomination Banner displaying current fielded ticket status and quick action.
+ * Replaced design with 3-column diagonal stripe layout matching candidate showcase.
  */
 export function PartyNominationBanner({
   party,
@@ -22,83 +87,114 @@ export function PartyNominationBanner({
   ticketConfig,
   onManageTicket,
 }: PartyNominationBannerProps) {
+  const partyShort = party?.short_name || "APC";
+
+  // Principal Candidate details
+  const candidateName =
+    myPartyCandidate?.full_name ||
+    `${myPartyCandidate?.first_name || ""} ${myPartyCandidate?.last_name || ""}`.trim();
+
+  const candidateAvatar = myPartyCandidate?.avatar;
+
+  const candidateAgeText = myPartyCandidate?.age
+    ? `${myPartyCandidate.age} years old`
+    : "59 years old";
+
+  const candidateStateText =
+    myPartyCandidate?.state
+      ? `From ${myPartyCandidate.state} state`
+      : myPartyCandidate?.state_name
+        ? `From ${myPartyCandidate.state_name} state`
+        : "From Lagos state";
+
+  // Running Mate details
+  const runningMateName =
+    myPartyCandidate?.running_mate_full_name ||
+    `${myPartyCandidate?.running_mate_first_name || ""} ${myPartyCandidate?.running_mate_last_name || ""}`.trim();
+
+  const runningMateAvatar =
+    myPartyCandidate?.running_mate_avatar || candidateAvatar;
+
+  const runningMateAgeText = myPartyCandidate?.running_mate_age
+    ? `${myPartyCandidate.running_mate_age} years old`
+    : "59 years old";
+
+  const runningMateStateText =
+    myPartyCandidate?.running_mate_state
+      ? `From ${myPartyCandidate.running_mate_state} state`
+      : myPartyCandidate?.running_mate_state_name
+        ? `From ${myPartyCandidate.running_mate_state_name} state`
+        : "From Lagos state";
+
   return (
-    <div className="rounded-2xl border border-primary/20 bg-linear-to-r from-primary/5 via-card/80 to-card/60 p-5 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-      <div className="flex items-center gap-4">
-        <div className="size-14 rounded-2xl bg-primary/10 border border-primary/25 flex items-center justify-center shrink-0">
-          {party?.logo ? (
+    <div className="relative overflow-hidden my-5 rounded-xl border border-sidebar-mobile">
+      {/* Subtle diagonal striped background (Light & Dark) */}
+      <div
+        className="absolute inset-0 pointer-events-none block dark:hidden"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(45deg, #ffffff, #ffffff 18px, #f3f4f6 18px, #f3f4f6 36px)",
+        }}
+      />
+      <div
+        className="absolute inset-0 pointer-events-none hidden dark:block"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(45deg, #141416, #141416 18px, #1e1e24 18px, #1e1e24 36px)",
+        }}
+      />
+
+      {/* 3-Column Showcase Banner Content */}
+      <div className="relative z-10 w-full px-6 py-8 md:py-10 md:px-12 flex flex-col md:flex-row items-center justify-between gap-8 md:gap-4">
+        {/* Left: Principal Candidate */}
+        <TicketCandidateProfile
+          avatar={candidateAvatar}
+          name={candidateName}
+          badgeLabel="Candidate"
+          ageText={candidateAgeText}
+          stateText={candidateStateText}
+          onFollow={onManageTicket}
+        />
+
+        {/* Center: Party Info */}
+        <div className="shrink-0 flex flex-col items-center justify-center text-center px-4 md:px-8 order-first md:order-0">
+          <h2 className="text-4xl md:text-5xl font-bold text-c-100 tracking-wider">
+            {partyShort}
+          </h2>
+
+          <div className="my-3 md:my-4 size-14 md:size-16 flex items-center justify-center">
             <img
-              src={party.logo}
-              alt={party.short_name || "Party"}
-              className="size-10 object-contain rounded-xl"
+              src={party?.logo}
+              alt={partyShort}
+              className="size-full object-contain rounded-full"
             />
-          ) : (
-            <Award className="size-7 text-primary" />
-          )}
-        </div>
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-primary">
-              {party?.short_name || "Your Party"} Ticket
-            </span>
-            {myPartyCandidate ? (
-              <Badge variant="success" className="text-[11px] py-0 px-2 flex items-center gap-1">
-                <CheckCircle2 className="size-3" />
-                Fielded
-              </Badge>
-            ) : (
-              <Badge variant="warning" className="text-[11px] py-0 px-2 flex items-center gap-1">
-                <ShieldAlert className="size-3" />
-                Vacant
-              </Badge>
-            )}
           </div>
 
-          {myPartyCandidate ? (
-            <div className="mt-1 flex flex-wrap items-center gap-3">
-              <div className="flex items-center gap-2">
-                <AppAvatar
-                  src={myPartyCandidate.avatar}
-                  alt={myPartyCandidate.full_name || `${myPartyCandidate.first_name || ""} ${myPartyCandidate.last_name || ""}`}
-                  className="size-6 shrink-0 ring-1 ring-border"
-                />
-                <span className="text-base font-semibold text-c-90">
-                  {myPartyCandidate.full_name || `${myPartyCandidate.first_name || ""} ${myPartyCandidate.last_name || ""}`}
-                </span>
-                <span className="text-xs text-c-50">({ticketConfig.principalRole})</span>
-              </div>
-
-              {ticketConfig.hasRunningMate && myPartyCandidate.running_mate_id && (
-                <div className="flex items-center gap-2 border-l border-border pl-3">
-                  <AppAvatar
-                    src={myPartyCandidate.running_mate_avatar}
-                    alt={myPartyCandidate.running_mate_full_name || `${myPartyCandidate.running_mate_first_name || ""} ${myPartyCandidate.running_mate_last_name || ""}`}
-                    className="size-6 shrink-0 ring-1 ring-border"
-                  />
-                  <span className="text-sm font-medium text-c-80">
-                    {myPartyCandidate.running_mate_full_name || `${myPartyCandidate.running_mate_first_name || ""} ${myPartyCandidate.running_mate_last_name || ""}`}
-                  </span>
-                  <span className="text-xs text-c-40">(Running Mate)</span>
-                </div>
-              )}
-            </div>
-          ) : (
-            <p className="mt-0.5 text-sm text-c-60">
-              Your party does not currently have an active candidate ticket nominated for this election contest.
-            </p>
-          )}
+          <button
+            type="button"
+            onClick={onManageTicket}
+            className={cn(
+              "inline-flex items-center justify-center",
+              "bg-card hover:bg-hover-5",
+              "border border-purple",
+              "text-c-90 font-semibold text-xs md:text-sm",
+              "mt-5 px-5 py-2 rounded-full transition cursor-pointer"
+            )}
+          >
+            {partyShort} candidates
+          </button>
         </div>
-      </div>
 
-      <Button
-        onClick={onManageTicket}
-        variant={myPartyCandidate ? "outline" : "default"}
-        size="sm"
-        className="rounded-xl shrink-0"
-      >
-        {myPartyCandidate ? "Edit Ticket" : "Nominate Ticket"}
-      </Button>
+        {/* Right: Running Mate */}
+        <TicketCandidateProfile
+          avatar={runningMateAvatar}
+          name={runningMateName}
+          badgeLabel="Candidate"
+          ageText={runningMateAgeText}
+          stateText={runningMateStateText}
+          onFollow={onManageTicket}
+        />
+      </div>
     </div>
   );
 }
-

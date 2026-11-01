@@ -9,18 +9,13 @@ import { useState, useMemo } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Layout, PageHeader, PageSearchLayer } from "@repo/ui/components/custom/AdminLayouts";
-import { Button } from "@repo/ui/components/button";
-import { Badge } from "@repo/ui/components/badge";
-import { AppAvatar } from "@repo/ui/components/avatar";
-import { TileHeader, TileLeft, TileRight, TileRow } from "@repo/ui/components/tiles";
 import { formatISODate } from "@repo/ui/lib/date";
-import { cn } from "@repo/ui/lib/utils";
 import { getPageHeader } from "#/lib/shared/meta";
 import { APP_URL } from "#/lib/config";
 import { getElectionByFakeId, getElectionCandidates } from "#/lib/server/elections";
 import { useUserParty } from "#/hooks/useUserParty";
 import { ManageCandidateTicketDialog, getTicketConfig } from "#/components/dialogs/ManageCandidateTicketDialog";
-import { ElectionMetaStatsGrid, PartyNominationBanner } from "./-components";
+import { ElectionMetaStatsGrid, PartyNominationBanner, ElectionCandidateRow } from "./-components";
 import { Users, UserCheck, Loader2, Sparkles } from "lucide-react";
 
 export type ElectionDetailsSearch = {
@@ -168,23 +163,22 @@ function ElectionCandidatesPage() {
         activeTab="instances"
         onBackClick={handleBack}
         rightComponent={
-          <Button
+          <button
             onClick={() => setIsManageDialogOpen(true)}
-            variant={myPartyCandidate ? "outline" : "default"}
-            className="flex items-center gap-2 rounded-xl h-11 px-5 font-medium shadow-sm transition hover:shadow-md"
+            className="flex items-center gap-2 bg-black text-white rounded-full h-11 px-5 font-medium shadow-sm transition"
           >
             {myPartyCandidate ? (
               <>
-                <UserCheck className="size-4.5 text-white!" />
+                <UserCheck className="size-4.5" />
                 <span>Manage Ticket</span>
               </>
             ) : (
               <>
-                <Sparkles className="size-4.5 text-white!" />
+                <Sparkles className="size-4.5" />
                 <span>Field Candidate</span>
               </>
             )}
-          </Button>
+          </button>
         }
       />
 
@@ -217,34 +211,18 @@ function ElectionCandidatesPage() {
             Showing {filteredCandidates.length} of {candidates.length} candidates
           </span>
         }
+        inputClassName={`rounded-full [&_input]:placeholder:text-c-50 [&_input]:placeholder:text-sm [&_input]:placeholder:italic `}
       />
 
-      {/* Candidates Roster Table */}
-      <div className="w-full flex flex-col rounded-2xl border border-border/80 bg-card overflow-hidden shadow-xs">
-        <TileHeader>
-          <TileLeft>
-            <span className="text-c-90 w-28 shrink-0">Party</span>
-            <span className="text-c-90 font-medium">Principal Candidate</span>
-          </TileLeft>
-          <TileRight>
-            {ticketConfig.hasRunningMate && (
-              <span className="text-c-50 text-[14px] w-60 hidden md:block">
-                Running Mate
-              </span>
-            )}
-            <span className="text-c-50 text-[14px] w-32 hidden sm:block">
-              Nomination
-            </span>
-          </TileRight>
-        </TileHeader>
-
+      {/* Candidates Roster Grid */}
+      <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-5 md:gap-6">
         {isLoading ? (
-          <div className="h-48 flex flex-col items-center justify-center gap-3 text-c-50">
+          <div className="col-span-full h-48 flex flex-col items-center justify-center gap-3 text-c-50 rounded-3xl bg-sidebar-softer/70 dark:bg-card border border-sidebar-mobile dark:border-border">
             <Loader2 className="size-6 animate-spin text-primary" />
             <p className="text-sm">Loading candidates roster...</p>
           </div>
         ) : filteredCandidates.length === 0 ? (
-          <div className="h-48 flex flex-col items-center justify-center gap-2 text-c-50">
+          <div className="col-span-full h-48 flex flex-col items-center justify-center gap-2 text-c-50 rounded-3xl bg-sidebar-softer/70 dark:bg-card border border-sidebar-mobile dark:border-border">
             <Users className="size-8 text-c-40" />
             <p className="text-base font-medium text-c-80">No candidates found</p>
             <p className="text-sm text-c-40">
@@ -252,114 +230,14 @@ function ElectionCandidatesPage() {
             </p>
           </div>
         ) : (
-          filteredCandidates.map((c) => {
-            const partyShort = c.party_short_name || "IND";
-            const partyLogo = c.party_logo;
-            const partyColor = c.party_color_hex || "#3b82f6";
-            const isMyParty = party?.short_name && partyShort.toLowerCase() === party.short_name.toLowerCase();
-
-            const candidateName = `${c.first_name || ""} ${c.last_name || ""}`.trim();
-            const candidateAvatar = c.avatar;
-
-            const runningMateName = `${c.running_mate_first_name || ""} ${c.running_mate_last_name || ""}`.trim();
-            const runningMateAvatar = c.running_mate_avatar;
-            const hasRunningMate = Boolean(c.running_mate_id && runningMateName);
-
-            return (
-              <TileRow
-                key={c.id}
-                className={cn(
-                  "transition-colors",
-                  isMyParty && "bg-primary/5 hover:bg-primary/10",
-                )}
-              >
-                <TileLeft>
-                  {/* Party Pill */}
-                  <div className="flex items-center gap-3 w-28 shrink-0">
-                    <div
-                      className="size-8 rounded-lg flex items-center justify-center overflow-hidden border border-border shrink-0 bg-background"
-                      style={{ borderLeftColor: partyColor, borderLeftWidth: 3 }}
-                    >
-                      {partyLogo ? (
-                        <img
-                          src={partyLogo}
-                          alt={partyShort}
-                          className="size-6 object-contain"
-                        />
-                      ) : (
-                        <span className="text-[11px] font-bold text-c-80">
-                          {partyShort.slice(0, 3)}
-                        </span>
-                      )}
-                    </div>
-                    <span className="font-semibold text-[15px] text-c-90">
-                      {partyShort}
-                    </span>
-                  </div>
-
-                  {/* Principal Candidate */}
-                  <div className="flex items-center gap-3 truncate">
-                    <AppAvatar
-                      src={candidateAvatar}
-                      alt={candidateName}
-                      className="size-8 shrink-0 ring-1 ring-border"
-                    />
-                    <div className="truncate">
-                      <div className="flex items-center gap-2">
-                        <p className="truncate text-[15px] font-medium text-c-90">
-                          {candidateName || "Candidate"}
-                        </p>
-                        {isMyParty && (
-                          <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-primary/40 text-primary">
-                            Your Party
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="truncate text-xs text-c-40">
-                        {ticketConfig.principalRole}
-                      </p>
-                    </div>
-                  </div>
-                </TileLeft>
-
-                <TileRight>
-                  {/* Running Mate */}
-                  {ticketConfig.hasRunningMate && (
-                    <div className="w-60 hidden md:flex items-center gap-2.5 truncate">
-                      {hasRunningMate ? (
-                        <>
-                          <AppAvatar
-                            src={runningMateAvatar}
-                            alt={runningMateName}
-                            className="size-7 shrink-0 ring-1 ring-border"
-                          />
-                          <div className="truncate">
-                            <p className="truncate text-[14px] font-medium text-c-80">
-                              {runningMateName}
-                            </p>
-                            <p className="truncate text-[11px] text-c-40">
-                              Running Mate
-                            </p>
-                          </div>
-                        </>
-                      ) : (
-                        <span className="text-xs text-c-40 italic">
-                          None registered
-                        </span>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Status */}
-                  <div className="w-32 hidden sm:flex items-center gap-2">
-                    <Badge variant="success" className="text-xs py-0.5">
-                      Fielded
-                    </Badge>
-                  </div>
-                </TileRight>
-              </TileRow>
-            );
-          })
+          filteredCandidates.map((c) => (
+            <ElectionCandidateRow
+              key={c.id}
+              candidate={c}
+              userPartyShortName={party?.short_name}
+              ticketConfig={ticketConfig}
+            />
+          ))
         )}
       </div>
 
