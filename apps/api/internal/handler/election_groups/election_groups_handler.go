@@ -19,7 +19,7 @@ import (
 type ElectionGroupsService interface {
 	CreateElectionGroup(ctx context.Context, name string, electionDate time.Time) (queries.ElectionGroup, error)
 	ListElectionGroups(ctx context.Context, active *bool) ([]queries.ElectionGroup, error)
-	UpdateElectionGroup(ctx context.Context, id int32, name string, electionDate time.Time, active bool) (queries.ElectionGroup, error)
+	UpdateElectionGroup(ctx context.Context, id int32, name string, electionDate time.Time, active bool, acceptsCandidates bool, acceptsAgents bool) (queries.ElectionGroup, error)
 	DeleteElectionGroup(ctx context.Context, id int32) error
 	ListElectionGroupsWithPartyStats(ctx context.Context, partyID int16, active *bool) ([]queries.ListElectionGroupsWithPartyStatsRow, error)
 	ListGroupElections(ctx context.Context, electionGroupID int32) ([]queries.ElectionGroupListItem, error)
@@ -54,9 +54,11 @@ type CreateElectionGroupRequest struct {
 }
 
 type UpdateElectionGroupRequest struct {
-	Name         *string `json:"name" validate:"omitempty,min=1"`
-	ElectionDate *string `json:"election_date"`
-	Active       *bool   `json:"active"`
+	Name              *string `json:"name" validate:"omitempty,min=1"`
+	ElectionDate      *string `json:"election_date"`
+	Active            *bool   `json:"active"`
+	AcceptsCandidates *bool   `json:"accepts_candidates"`
+	AcceptsAgents     *bool   `json:"accepts_agents"`
 }
 
 // CreateElectionGroup godoc
@@ -310,8 +312,18 @@ func (h *Handler) UpdateElectionGroup(w http.ResponseWriter, r *http.Request) {
 		active = *req.Active
 	}
 
+	acceptsCandidates := existingGroup.AcceptsCandidates
+	if req.AcceptsCandidates != nil {
+		acceptsCandidates = *req.AcceptsCandidates
+	}
+
+	acceptsAgents := existingGroup.AcceptsAgents
+	if req.AcceptsAgents != nil {
+		acceptsAgents = *req.AcceptsAgents
+	}
+
 	// 5. Update election group via service (updates group and invalidates cache)
-	updated, err := h.service.UpdateElectionGroup(r.Context(), int32(id), name, electionDate, active)
+	updated, err := h.service.UpdateElectionGroup(r.Context(), int32(id), name, electionDate, active, acceptsCandidates, acceptsAgents)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update election group: "+err.Error())
 		return

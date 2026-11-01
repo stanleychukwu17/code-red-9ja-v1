@@ -3,6 +3,7 @@ package seedservice
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"math/rand"
@@ -14,6 +15,7 @@ import (
 	"free9ja/api/internal/db/queries"
 	authservice "free9ja/api/internal/service/auth"
 	bodiesservice "free9ja/api/internal/service/bodies"
+	electionsservice "free9ja/api/internal/service/elections"
 	partiesservice "free9ja/api/internal/service/parties"
 	usersservice "free9ja/api/internal/service/users"
 	"free9ja/api/internal/utils"
@@ -28,14 +30,15 @@ import (
 )
 
 type SeedService struct {
-	queries         *queries.Queries
-	pool            *pgxpool.Pool
-	rdb             *redis.Client
-	taskDistributor worker.TaskDistributor
-	authService     *authservice.AuthService
-	bodiesService   *bodiesservice.BodiesService
-	usersService    *usersservice.UsersService
-	partiesService  *partiesservice.PartiesService
+	queries          *queries.Queries
+	pool             *pgxpool.Pool
+	rdb              *redis.Client
+	taskDistributor  worker.TaskDistributor
+	authService      *authservice.AuthService
+	bodiesService    *bodiesservice.BodiesService
+	usersService     *usersservice.UsersService
+	partiesService   *partiesservice.PartiesService
+	electionsService *electionsservice.ElectionsService
 }
 
 func NewSeedService(
@@ -47,16 +50,18 @@ func NewSeedService(
 	bodiesService *bodiesservice.BodiesService,
 	usersService *usersservice.UsersService,
 	partiesService *partiesservice.PartiesService,
+	electionsService *electionsservice.ElectionsService,
 ) *SeedService {
 	return &SeedService{
-		queries:         q,
-		pool:            pool,
-		rdb:             rdb,
-		taskDistributor: taskDistributor,
-		authService:     authService,
-		bodiesService:   bodiesService,
-		usersService:    usersService,
-		partiesService:  partiesService,
+		queries:          q,
+		pool:             pool,
+		rdb:              rdb,
+		taskDistributor:  taskDistributor,
+		authService:      authService,
+		bodiesService:    bodiesService,
+		usersService:     usersService,
+		partiesService:   partiesService,
+		electionsService: electionsService,
 	}
 }
 
@@ -736,6 +741,70 @@ func (s *SeedService) SeedAdmins(ctx context.Context, req SeedAdminsRequest) (st
 	return "Admins seeded successfully", nil
 }
 
+// FlushRedis removes all application cache keys matching the defined Redis prefixes in db.AllRedisPrefixes.
+// It safely scans keys in batches and deletes them using Redis pipelines for optimal performance without blocking the Redis server.
+func (s *SeedService) FlushRedis(ctx context.Context) (string, error) {
+	var totalDeleted int64
+
+	// 1. Loop through every key prefix defined in db.AllRedisPrefixes (e.g. "user:info:", "register:email_otp:", "countries:all")
+	for _, prefix := range db.AllRedisPrefixes {
+		// 2. Build the matching pattern for Redis:
+		// If the prefix ends with a colon (e.g. "user:info:"), add a wildcard "*" -> "user:info:*" to match all user keys.
+		// If it's an exact key name (e.g. "countries:all"), match that exact key.
+		pattern := prefix
+		if strings.HasSuffix(prefix, ":") {
+			pattern = prefix + "*"
+		}
+
+		var keys []string
+
+		// 3. Use SCAN instead of KEYS:
+		// Redis KEYS command blocks the entire Redis server until complete.
+		// SCAN uses a non-blocking cursor, retrieving keys in chunks of 500 without locking Redis.
+		iter := s.rdb.Scan(ctx, 0, pattern, 500).Iterator()
+
+		for iter.Next(ctx) {
+			keys = append(keys, iter.Val())
+
+			// 4. Batch Deletion with Pipeline:
+			// Once we accumulate 500 keys in memory, send a single batch (Pipeline) to Redis.
+			// Pipeline queues up all DEL commands and sends them in 1 network round-trip instead of 500 separate network requests.
+			if len(keys) >= 500 {
+				pipe := s.rdb.Pipeline()
+				for _, k := range keys {
+					pipe.Del(ctx, k)
+				}
+				cmds, err := pipe.Exec(ctx)
+				if err != nil && err != redis.Nil {
+					return "", fmt.Errorf("failed to delete keys for pattern %s: %w", pattern, err)
+				}
+				totalDeleted += int64(len(cmds))
+				keys = keys[:0] // reset slice for next batch while preserving allocated memory
+			}
+		}
+
+		// Check if there was an error during scanning
+		if err := iter.Err(); err != nil {
+			return "", fmt.Errorf("failed scanning pattern %s: %w", pattern, err)
+		}
+
+		// 5. Delete any remaining leftover keys in the current prefix batch (e.g., if there were 42 keys left)
+		if len(keys) > 0 {
+			pipe := s.rdb.Pipeline()
+			for _, k := range keys {
+				pipe.Del(ctx, k)
+			}
+			cmds, err := pipe.Exec(ctx)
+			if err != nil && err != redis.Nil {
+				return "", fmt.Errorf("failed to delete remaining keys for pattern %s: %w", pattern, err)
+			}
+			totalDeleted += int64(len(cmds))
+		}
+	}
+
+	return fmt.Sprintf("Redis cache cleared successfully (%d keys deleted)", totalDeleted), nil
+}
+
 type PartyVoteShare struct {
 	PartyShortName string  `json:"party_short_name"`
 	VoteShare      float64 `json:"vote_share"`
@@ -1070,66 +1139,291 @@ func (s *SeedService) SimulateElectionResults(ctx context.Context, electionID in
 	}, nil
 }
 
-// FlushRedis removes all application cache keys matching the defined Redis prefixes in db.AllRedisPrefixes.
-// It safely scans keys in batches and deletes them using Redis pipelines for optimal performance without blocking the Redis server.
-func (s *SeedService) FlushRedis(ctx context.Context) (string, error) {
-	var totalDeleted int64
+type SeedElectionGroupRequest struct {
+	Name         string  `json:"name"`
+	ElectionDate string  `json:"election_date"`
+	Description  *string `json:"description,omitempty"`
+}
 
-	// 1. Loop through every key prefix defined in db.AllRedisPrefixes (e.g. "user:info:", "register:email_otp:", "countries:all")
-	for _, prefix := range db.AllRedisPrefixes {
-		// 2. Build the matching pattern for Redis:
-		// If the prefix ends with a colon (e.g. "user:info:"), add a wildcard "*" -> "user:info:*" to match all user keys.
-		// If it's an exact key name (e.g. "countries:all"), match that exact key.
-		pattern := prefix
-		if strings.HasSuffix(prefix, ":") {
-			pattern = prefix + "*"
+// SeedElectionGroups inserts or updates election groups from seed requests.
+// It is idempotent (ON CONFLICT on name), invalidates Redis election group caches,
+// and enqueues background tasks to seed the geographic stats skeleton.
+func (s *SeedService) SeedElectionGroups(ctx context.Context, groups []SeedElectionGroupRequest) ([]queries.ElectionGroup, error) {
+	if len(groups) == 0 {
+		return nil, nil
+	}
+
+	var results []queries.ElectionGroup
+
+	for _, g := range groups {
+		name := strings.TrimSpace(g.Name)
+		if name == "" {
+			return nil, fmt.Errorf("election group name cannot be empty")
 		}
 
-		var keys []string
+		// Parse date (YYYY-MM-DD or RFC3339)
+		rawDate := strings.TrimSpace(g.ElectionDate)
+		electionDate, err := time.Parse("2006-01-02", rawDate)
+		if err != nil {
+			electionDate, err = time.Parse(time.RFC3339, rawDate)
+			if err != nil {
+				return nil, fmt.Errorf("invalid election_date %q for group %q: %w (expected YYYY-MM-DD)", rawDate, name, err)
+			}
+		}
 
-		// 3. Use SCAN instead of KEYS:
-		// Redis KEYS command blocks the entire Redis server until complete.
-		// SCAN uses a non-blocking cursor, retrieving keys in chunks of 500 without locking Redis.
-		iter := s.rdb.Scan(ctx, 0, pattern, 500).Iterator()
+		// Check if an active election group already exists on this election date
+		var eg queries.ElectionGroup
+		err = s.pool.QueryRow(ctx, `
+			SELECT id, fake_id, name, election_date, active, created_at, updated_at
+			FROM election_groups
+			WHERE election_date = $1 AND active = true
+			ORDER BY id ASC
+			LIMIT 1
+		`, utils.PgDateFromTime(electionDate)).Scan(
+			&eg.ID,
+			&eg.FakeID,
+			&eg.Name,
+			&eg.ElectionDate,
+			&eg.Active,
+			&eg.CreatedAt,
+			&eg.UpdatedAt,
+		)
+		if err == nil {
+			// Reuse existing active group on this date without creating a new one
+			results = append(results, eg)
+			continue
+		} else if !errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf("failed checking active election group for date %s: %w", rawDate, err)
+		}
 
-		for iter.Next(ctx) {
-			keys = append(keys, iter.Val())
+		// No active group exists on this date, create a new one
+		err = s.pool.QueryRow(ctx, `
+			INSERT INTO election_groups (name, election_date)
+			VALUES ($1, $2)
+			ON CONFLICT (name) DO UPDATE
+			SET election_date = EXCLUDED.election_date,
+			    active = true,
+			    updated_at = NOW()
+			RETURNING id, fake_id, name, election_date, active, created_at, updated_at
+		`, name, utils.PgDateFromTime(electionDate)).Scan(
+			&eg.ID,
+			&eg.FakeID,
+			&eg.Name,
+			&eg.ElectionDate,
+			&eg.Active,
+			&eg.CreatedAt,
+			&eg.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create election group %q: %w", name, err)
+		}
 
-			// 4. Batch Deletion with Pipeline:
-			// Once we accumulate 500 keys in memory, send a single batch (Pipeline) to Redis.
-			// Pipeline queues up all DEL commands and sends them in 1 network round-trip instead of 500 separate network requests.
-			if len(keys) >= 500 {
-				pipe := s.rdb.Pipeline()
-				for _, k := range keys {
-					pipe.Del(ctx, k)
+		// Invalidate Redis caches
+		if s.rdb != nil {
+			s.rdb.Del(ctx, db.RedisElectionGroupsAll, db.RedisElectionGroupsActive)
+			s.rdb.Del(ctx, fmt.Sprintf("%s%d", db.RedisElectionGroupByID, eg.ID))
+		}
+
+		results = append(results, eg)
+	}
+
+	return results, nil
+}
+
+// SeedElectionInstanceRequest represents an election instance to be seeded.
+type SeedElectionInstanceRequest struct {
+	OfficeID               int16   `json:"office_id"`
+	OfficeName             string  `json:"office_name,omitempty"`
+	Scope                  string  `json:"scope"`
+	ElectionDate           string  `json:"election_date"`
+	StateIDs               []int16 `json:"state_ids,omitempty"`
+	SenatorialDistrictIDs  []int32 `json:"senatorial_district_ids,omitempty"`
+	FederalConstituencyIDs []int32 `json:"federal_constituency_ids,omitempty"`
+	StateConstituencyIDs   []int32 `json:"state_constituency_ids,omitempty"`
+}
+
+// SeedElectionInstances creates election instances across offices and scopes idempotently.
+func (s *SeedService) SeedElectionInstances(ctx context.Context, instances []SeedElectionInstanceRequest) (string, error) {
+	if len(instances) == 0 {
+		return "No election instances provided", nil
+	}
+
+	totalCreated := 0
+
+	for _, item := range instances {
+		rawDate := strings.TrimSpace(item.ElectionDate)
+		electionDate, err := time.Parse("2006-01-02", rawDate)
+		if err != nil {
+			electionDate, err = time.Parse(time.RFC3339, rawDate)
+			if err != nil {
+				return "", fmt.Errorf("invalid election_date %q for office %d: %w (expected YYYY-MM-DD)", rawDate, item.OfficeID, err)
+			}
+		}
+
+		// Find the active election group for this election date
+		var electionGroupID int32
+		err = s.pool.QueryRow(ctx, `
+			SELECT id
+			FROM election_groups
+			WHERE election_date = $1 AND active = true
+			ORDER BY id ASC
+			LIMIT 1
+		`, utils.PgDateFromTime(electionDate)).Scan(&electionGroupID)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return "", fmt.Errorf("no active election group found for election date %s (office ID %d)", rawDate, item.OfficeID)
+			}
+			return "", fmt.Errorf("failed checking active election group for date %s: %w", rawDate, err)
+		}
+
+		scope := strings.ToLower(strings.TrimSpace(item.Scope))
+		switch scope {
+		case "nationwide":
+			var exists bool
+			err := s.pool.QueryRow(ctx, `
+				SELECT EXISTS (
+					SELECT 1 FROM elections
+					WHERE election_group_id = $1 AND office_id = $2 AND scope = 'nationwide'
+				)
+			`, electionGroupID, item.OfficeID).Scan(&exists)
+			if err != nil {
+				return "", fmt.Errorf("failed checking existing nationwide election: %w", err)
+			}
+			if !exists {
+				if _, err := s.electionsService.CreateNationwideElection(ctx, item.OfficeID, electionDate, electionGroupID); err != nil {
+					return "", fmt.Errorf("failed creating nationwide election for office %d: %w", item.OfficeID, err)
 				}
-				cmds, err := pipe.Exec(ctx)
-				if err != nil && err != redis.Nil {
-					return "", fmt.Errorf("failed to delete keys for pattern %s: %w", pattern, err)
+				totalCreated++
+			}
+
+		case "state":
+			rows, err := s.pool.Query(ctx, `
+				SELECT state_id FROM elections
+				WHERE election_group_id = $1 AND office_id = $2 AND state_id IS NOT NULL
+			`, electionGroupID, item.OfficeID)
+			if err != nil {
+				return "", fmt.Errorf("failed querying existing state elections: %w", err)
+			}
+			existing := make(map[int16]bool)
+			for rows.Next() {
+				var sid int16
+				if err := rows.Scan(&sid); err == nil {
+					existing[sid] = true
 				}
-				totalDeleted += int64(len(cmds))
-				keys = keys[:0] // reset slice for next batch while preserving allocated memory
 			}
-		}
+			rows.Close()
 
-		// Check if there was an error during scanning
-		if err := iter.Err(); err != nil {
-			return "", fmt.Errorf("failed scanning pattern %s: %w", pattern, err)
-		}
+			var missing []int16
+			for _, sid := range item.StateIDs {
+				if !existing[sid] {
+					missing = append(missing, sid)
+				}
+			}
+			if len(missing) > 0 {
+				count, err := s.electionsService.CreateStateElection(ctx, item.OfficeID, electionDate, electionGroupID, missing)
+				if err != nil {
+					return "", fmt.Errorf("failed creating state elections for office %d: %w", item.OfficeID, err)
+				}
+				totalCreated += count
+			}
 
-		// 5. Delete any remaining leftover keys in the current prefix batch (e.g., if there were 42 keys left)
-		if len(keys) > 0 {
-			pipe := s.rdb.Pipeline()
-			for _, k := range keys {
-				pipe.Del(ctx, k)
+		case "senatorial-district":
+			rows, err := s.pool.Query(ctx, `
+				SELECT senatorial_district_id FROM elections
+				WHERE election_group_id = $1 AND office_id = $2 AND senatorial_district_id IS NOT NULL
+			`, electionGroupID, item.OfficeID)
+			if err != nil {
+				return "", fmt.Errorf("failed querying existing senatorial district elections: %w", err)
 			}
-			cmds, err := pipe.Exec(ctx)
-			if err != nil && err != redis.Nil {
-				return "", fmt.Errorf("failed to delete remaining keys for pattern %s: %w", pattern, err)
+			existing := make(map[int32]bool)
+			for rows.Next() {
+				var did int32
+				if err := rows.Scan(&did); err == nil {
+					existing[did] = true
+				}
 			}
-			totalDeleted += int64(len(cmds))
+			rows.Close()
+
+			var missing []int32
+			for _, did := range item.SenatorialDistrictIDs {
+				if !existing[did] {
+					missing = append(missing, did)
+				}
+			}
+			if len(missing) > 0 {
+				count, err := s.electionsService.CreateSenatorialDistrictElection(ctx, item.OfficeID, electionDate, electionGroupID, missing)
+				if err != nil {
+					return "", fmt.Errorf("failed creating senatorial district elections for office %d: %w", item.OfficeID, err)
+				}
+				totalCreated += count
+			}
+
+		case "federal-constituency":
+			rows, err := s.pool.Query(ctx, `
+				SELECT federal_constituency_id FROM elections
+				WHERE election_group_id = $1 AND office_id = $2 AND federal_constituency_id IS NOT NULL
+			`, electionGroupID, item.OfficeID)
+			if err != nil {
+				return "", fmt.Errorf("failed querying existing federal constituency elections: %w", err)
+			}
+			existing := make(map[int32]bool)
+			for rows.Next() {
+				var fcid int32
+				if err := rows.Scan(&fcid); err == nil {
+					existing[fcid] = true
+				}
+			}
+			rows.Close()
+
+			var missing []int32
+			for _, fcid := range item.FederalConstituencyIDs {
+				if !existing[fcid] {
+					missing = append(missing, fcid)
+				}
+			}
+			if len(missing) > 0 {
+				count, err := s.electionsService.CreateFederalConstituencyElection(ctx, item.OfficeID, electionDate, electionGroupID, missing)
+				if err != nil {
+					return "", fmt.Errorf("failed creating federal constituency elections for office %d: %w", item.OfficeID, err)
+				}
+				totalCreated += count
+			}
+
+		case "state-constituency":
+			rows, err := s.pool.Query(ctx, `
+				SELECT state_constituency_id FROM elections
+				WHERE election_group_id = $1 AND office_id = $2 AND state_constituency_id IS NOT NULL
+			`, electionGroupID, item.OfficeID)
+			if err != nil {
+				return "", fmt.Errorf("failed querying existing state constituency elections: %w", err)
+			}
+			existing := make(map[int32]bool)
+			for rows.Next() {
+				var scid int32
+				if err := rows.Scan(&scid); err == nil {
+					existing[scid] = true
+				}
+			}
+			rows.Close()
+
+			var missing []int32
+			for _, scid := range item.StateConstituencyIDs {
+				if !existing[scid] {
+					missing = append(missing, scid)
+				}
+			}
+			if len(missing) > 0 {
+				count, err := s.electionsService.CreateStateConstituencyElection(ctx, item.OfficeID, electionDate, electionGroupID, missing)
+				if err != nil {
+					return "", fmt.Errorf("failed creating state constituency elections for office %d: %w", item.OfficeID, err)
+				}
+				totalCreated += count
+			}
+
+		default:
+			return "", fmt.Errorf("unsupported scope %q for office ID %d", item.Scope, item.OfficeID)
 		}
 	}
 
-	return fmt.Sprintf("Redis cache cleared successfully (%d keys deleted)", totalDeleted), nil
+	return fmt.Sprintf("Successfully seeded election instances (%d newly created)", totalCreated), nil
 }

@@ -27,6 +27,7 @@ import (
 )
 
 type PartyApplicationsService interface {
+	GetElectionGroupByID(ctx context.Context, id int32) (queries.ElectionGroup, error)
 	SubmitApplication(ctx context.Context, input partyapplications.SubmitApplicationInput) (int64, error)
 	HasActiveAgentApplication(ctx context.Context, userID int64) (bool, error)
 	SubmitSupervisorApplication(ctx context.Context, input partyapplications.SubmitSupervisorApplicationInput) (queries.PartyAgentApplication, error)
@@ -144,6 +145,21 @@ func (h *Handler) SubmitApplication(w http.ResponseWriter, r *http.Request) {
 	// Validate required fields
 	if err := h.validate.Struct(req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
+		return
+	}
+
+	// Verify election group exists, is active, and is accepting agent applications
+	electionGroup, err := h.service.GetElectionGroupByID(r.Context(), req.ElectionGroupID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Failed to verify election group: "+err.Error())
+		return
+	}
+	if !electionGroup.Active {
+		h.utils.RespondError(w, http.StatusForbidden, "Election group is not active")
+		return
+	}
+	if !electionGroup.AcceptsAgents {
+		h.utils.RespondError(w, http.StatusForbidden, "This election group is not currently accepting agent applications")
 		return
 	}
 
@@ -282,6 +298,21 @@ func (h *Handler) SubmitSupervisorApplication(w http.ResponseWriter, r *http.Req
 	// Validate required fields
 	if req.ElectionGroupID <= 0 || strings.TrimSpace(req.Role) == "" {
 		h.utils.RespondError(w, http.StatusBadRequest, "election_group_id and role are required")
+		return
+	}
+
+	// Verify election group exists, is active, and is accepting agent/supervisor applications
+	electionGroup, err := h.service.GetElectionGroupByID(r.Context(), req.ElectionGroupID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Failed to verify election group: "+err.Error())
+		return
+	}
+	if !electionGroup.Active {
+		h.utils.RespondError(w, http.StatusForbidden, "Election group is not active")
+		return
+	}
+	if !electionGroup.AcceptsAgents {
+		h.utils.RespondError(w, http.StatusForbidden, "This election group is not currently accepting agent applications")
 		return
 	}
 

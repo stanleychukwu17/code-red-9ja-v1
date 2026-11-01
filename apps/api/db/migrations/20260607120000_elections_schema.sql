@@ -8,6 +8,8 @@ CREATE TABLE election_groups (
   name VARCHAR(255) UNIQUE NOT NULL,                       -- Human-readable name (e.g. "2027 Nigerian General Elections")
   election_date DATE NOT NULL,                             -- Scheduled polling date for this group
   active BOOLEAN NOT NULL DEFAULT true,                    -- Whether this group is current and active
+  accepts_candidates BOOLEAN NOT NULL DEFAULT true,        -- Whether this cycle accepts candidate nominations
+  accepts_agents BOOLEAN NOT NULL DEFAULT true,            -- Whether this cycle accepts polling agent applications
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );

@@ -2,6 +2,7 @@ package seedhandler
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -189,6 +190,90 @@ func (h *Handler) FlushRedis(w http.ResponseWriter, r *http.Request) {
 	msg, err := h.seedService.FlushRedis(r.Context())
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to flush Redis: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, msg, nil)
+}
+
+// @Summary Seed election groups
+// @Description Creates or updates election groups from formatted JSON data
+// @Tags Seed
+// @Accept json
+// @Produce json
+// @Param request body []seedservice.SeedElectionGroupRequest true "List of election groups to seed"
+// @Success 200 {object} map[string]interface{} "Election groups seeded successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid request body"
+// @Failure 500 {object} map[string]interface{} "Failed to seed election groups"
+// @Router /seed/election-groups [post]
+func (h *Handler) SeedElectionGroups(w http.ResponseWriter, r *http.Request) {
+	if os.Getenv("ENV") == "production" {
+		h.utils.RespondError(w, http.StatusForbidden, "This endpoint is disabled in production")
+		return
+	}
+
+	bodyBytes, err := io.ReadAll(r.Body)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+		return
+	}
+
+	var req []seedservice.SeedElectionGroupRequest
+	if err := json.Unmarshal(bodyBytes, &req); err != nil {
+		var single seedservice.SeedElectionGroupRequest
+		if errSingle := json.Unmarshal(bodyBytes, &single); errSingle == nil {
+			req = []seedservice.SeedElectionGroupRequest{single}
+		} else {
+			h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+			return
+		}
+	}
+
+	groups, err := h.seedService.SeedElectionGroups(r.Context(), req)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to seed election groups: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccessData(w, http.StatusOK, fmt.Sprintf("Election groups seeded successfully (%d created/updated)", len(groups)), groups)
+}
+
+// @Summary Seed election instances
+// @Description Creates election instances across all offices and scopes from formatted JSON data
+// @Tags Seed
+// @Accept json
+// @Produce json
+// @Param request body []seedservice.SeedElectionInstanceRequest true "List of election instance definitions to seed"
+// @Success 200 {object} map[string]interface{} "Election instances seeded successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid request body"
+// @Failure 500 {object} map[string]interface{} "Failed to seed election instances"
+// @Router /seed/election-instances [post]
+func (h *Handler) SeedElectionInstances(w http.ResponseWriter, r *http.Request) {
+	if os.Getenv("ENV") == "production" {
+		h.utils.RespondError(w, http.StatusForbidden, "This endpoint is disabled in production")
+		return
+	}
+
+	bodyBytes, err := io.ReadAll(r.Body)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+		return
+	}
+
+	var req []seedservice.SeedElectionInstanceRequest
+	if err := json.Unmarshal(bodyBytes, &req); err != nil {
+		var single seedservice.SeedElectionInstanceRequest
+		if errSingle := json.Unmarshal(bodyBytes, &single); errSingle == nil {
+			req = []seedservice.SeedElectionInstanceRequest{single}
+		} else {
+			h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+			return
+		}
+	}
+
+	msg, err := h.seedService.SeedElectionInstances(r.Context(), req)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to seed election instances: "+err.Error())
 		return
 	}
 

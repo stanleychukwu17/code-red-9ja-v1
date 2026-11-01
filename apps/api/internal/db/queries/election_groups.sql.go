@@ -55,7 +55,7 @@ func (q *Queries) CountParticipantsInElectionGroup(ctx context.Context, election
 const createElectionGroup = `-- name: CreateElectionGroup :one
 INSERT INTO election_groups (name, election_date)
 VALUES ($1, $2)
-RETURNING id, fake_id, name, election_date, active, created_at, updated_at
+RETURNING id, fake_id, name, election_date, active, accepts_candidates, accepts_agents, created_at, updated_at
 `
 
 type CreateElectionGroupParams struct {
@@ -72,6 +72,8 @@ func (q *Queries) CreateElectionGroup(ctx context.Context, arg CreateElectionGro
 		&i.Name,
 		&i.ElectionDate,
 		&i.Active,
+		&i.AcceptsCandidates,
+		&i.AcceptsAgents,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -88,7 +90,7 @@ func (q *Queries) DeleteElectionGroup(ctx context.Context, id int32) error {
 }
 
 const getElectionGroupByFakeID = `-- name: GetElectionGroupByFakeID :one
-SELECT id, fake_id, name, election_date, active, created_at, updated_at FROM election_groups WHERE fake_id = $1
+SELECT id, fake_id, name, election_date, active, accepts_candidates, accepts_agents, created_at, updated_at FROM election_groups WHERE fake_id = $1
 `
 
 func (q *Queries) GetElectionGroupByFakeID(ctx context.Context, fakeID pgtype.Int8) (ElectionGroup, error) {
@@ -100,6 +102,8 @@ func (q *Queries) GetElectionGroupByFakeID(ctx context.Context, fakeID pgtype.In
 		&i.Name,
 		&i.ElectionDate,
 		&i.Active,
+		&i.AcceptsCandidates,
+		&i.AcceptsAgents,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -107,7 +111,7 @@ func (q *Queries) GetElectionGroupByFakeID(ctx context.Context, fakeID pgtype.In
 }
 
 const getElectionGroupByID = `-- name: GetElectionGroupByID :one
-SELECT id, fake_id, name, election_date, active, created_at, updated_at FROM election_groups WHERE id = $1
+SELECT id, fake_id, name, election_date, active, accepts_candidates, accepts_agents, created_at, updated_at FROM election_groups WHERE id = $1
 `
 
 func (q *Queries) GetElectionGroupByID(ctx context.Context, id int32) (ElectionGroup, error) {
@@ -119,6 +123,8 @@ func (q *Queries) GetElectionGroupByID(ctx context.Context, id int32) (ElectionG
 		&i.Name,
 		&i.ElectionDate,
 		&i.Active,
+		&i.AcceptsCandidates,
+		&i.AcceptsAgents,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -126,7 +132,7 @@ func (q *Queries) GetElectionGroupByID(ctx context.Context, id int32) (ElectionG
 }
 
 const listElectionGroups = `-- name: ListElectionGroups :many
-SELECT id, fake_id, name, election_date, active, created_at, updated_at FROM election_groups
+SELECT id, fake_id, name, election_date, active, accepts_candidates, accepts_agents, created_at, updated_at FROM election_groups
 WHERE (
   $1::boolean IS NULL 
   OR (
@@ -152,6 +158,8 @@ func (q *Queries) ListElectionGroups(ctx context.Context, active pgtype.Bool) ([
 			&i.Name,
 			&i.ElectionDate,
 			&i.Active,
+			&i.AcceptsCandidates,
+			&i.AcceptsAgents,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -171,6 +179,8 @@ SELECT
     eg.name, 
     eg.election_date, 
     eg.active, 
+    eg.accepts_candidates,
+    eg.accepts_agents,
     eg.created_at, 
     eg.updated_at,
     '{}'::jsonb AS polling_agents_coverage,
@@ -201,6 +211,8 @@ type ListElectionGroupsWithPartyStatsRow struct {
 	Name                  string             `json:"name"`
 	ElectionDate          pgtype.Date        `json:"election_date"`
 	Active                bool               `json:"active"`
+	AcceptsCandidates     bool               `json:"accepts_candidates"`
+	AcceptsAgents         bool               `json:"accepts_agents"`
 	CreatedAt             pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
 	PollingAgentsCoverage []byte             `json:"polling_agents_coverage"`
@@ -221,6 +233,8 @@ func (q *Queries) ListElectionGroupsWithPartyStats(ctx context.Context, arg List
 			&i.Name,
 			&i.ElectionDate,
 			&i.Active,
+			&i.AcceptsCandidates,
+			&i.AcceptsAgents,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.PollingAgentsCoverage,
@@ -238,16 +252,18 @@ func (q *Queries) ListElectionGroupsWithPartyStats(ctx context.Context, arg List
 
 const updateElectionGroup = `-- name: UpdateElectionGroup :one
 UPDATE election_groups
-SET name = $1, election_date = $2, active = $3, updated_at = NOW()
-WHERE id = $4
-RETURNING id, fake_id, name, election_date, active, created_at, updated_at
+SET name = $1, election_date = $2, active = $3, accepts_candidates = $4, accepts_agents = $5, updated_at = NOW()
+WHERE id = $6
+RETURNING id, fake_id, name, election_date, active, accepts_candidates, accepts_agents, created_at, updated_at
 `
 
 type UpdateElectionGroupParams struct {
-	Name         string      `json:"name"`
-	ElectionDate pgtype.Date `json:"election_date"`
-	Active       bool        `json:"active"`
-	ID           int32       `json:"id"`
+	Name              string      `json:"name"`
+	ElectionDate      pgtype.Date `json:"election_date"`
+	Active            bool        `json:"active"`
+	AcceptsCandidates bool        `json:"accepts_candidates"`
+	AcceptsAgents     bool        `json:"accepts_agents"`
+	ID                int32       `json:"id"`
 }
 
 func (q *Queries) UpdateElectionGroup(ctx context.Context, arg UpdateElectionGroupParams) (ElectionGroup, error) {
@@ -255,6 +271,8 @@ func (q *Queries) UpdateElectionGroup(ctx context.Context, arg UpdateElectionGro
 		arg.Name,
 		arg.ElectionDate,
 		arg.Active,
+		arg.AcceptsCandidates,
+		arg.AcceptsAgents,
 		arg.ID,
 	)
 	var i ElectionGroup
@@ -264,6 +282,8 @@ func (q *Queries) UpdateElectionGroup(ctx context.Context, arg UpdateElectionGro
 		&i.Name,
 		&i.ElectionDate,
 		&i.Active,
+		&i.AcceptsCandidates,
+		&i.AcceptsAgents,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

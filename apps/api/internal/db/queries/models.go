@@ -259,13 +259,15 @@ type ElectionCandidate struct {
 }
 
 type ElectionGroup struct {
-	ID           int32              `json:"id"`
-	FakeID       pgtype.Int8        `json:"fake_id"`
-	Name         string             `json:"name"`
-	ElectionDate pgtype.Date        `json:"election_date"`
-	Active       bool               `json:"active"`
-	CreatedAt    pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	ID                int32              `json:"id"`
+	FakeID            pgtype.Int8        `json:"fake_id"`
+	Name              string             `json:"name"`
+	ElectionDate      pgtype.Date        `json:"election_date"`
+	Active            bool               `json:"active"`
+	AcceptsCandidates bool               `json:"accepts_candidates"`
+	AcceptsAgents     bool               `json:"accepts_agents"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
 }
 
 type ElectionGroupPartiesPollingUnit struct {

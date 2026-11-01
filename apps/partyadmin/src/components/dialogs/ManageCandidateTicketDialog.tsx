@@ -12,6 +12,7 @@ import { AppAvatar } from "@repo/ui/components/avatar";
 import { UserFinderCommand } from "@repo/ui/components/custom/UserFinderCommand";
 import { UsersIcon, Trash2, UserPlus, RefreshCw, UserCheck } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { fieldPartyCandidate, unfieldPartyCandidate } from "#/lib/server/elections";
 import { getUsersList } from "#/lib/server/users";
 import { useUserParty } from "#/hooks/useUserParty";
@@ -74,12 +75,7 @@ export const getTicketConfig = (electionTitle: string, officeName?: string, scop
 };
 
 export function ManageCandidateTicketDialog({
-  open,
-  onClose,
-  data,
-  election,
-  candidate,
-  running_mate,
+  open, onClose, data, election, candidate, running_mate,
 }: ManageCandidateTicketDialogProps) {
   // Resolve election details from either explicit props or data object
   const electionId = election?.id ?? data?.id ?? 0;
@@ -115,11 +111,13 @@ export function ManageCandidateTicketDialog({
         },
       });
       if (!res.success) {
+        toast.error(res.message || "Failed to update candidate ticket");
         throw new Error(res.message || "Failed to update candidate ticket");
       }
       return res.data;
     },
     onSuccess: () => {
+      toast.success("Candidate ticket updated successfully");
       // Refresh election instances list, candidates roster, and election details
       queryClient.invalidateQueries({ queryKey: ["elections"] });
       queryClient.invalidateQueries({ queryKey: ["election-candidates", electionId] });
@@ -138,11 +136,13 @@ export function ManageCandidateTicketDialog({
         },
       });
       if (!res.success) {
+        toast.error(res.message || "Failed to remove candidate");
         throw new Error(res.message || "Failed to remove candidate");
       }
       return res.data;
     },
     onSuccess: () => {
+      toast.success("Candidate removed from ticket");
       queryClient.invalidateQueries({ queryKey: ["elections"] });
       queryClient.invalidateQueries({ queryKey: ["election-candidates", electionId] });
       queryClient.invalidateQueries({ queryKey: ["election-details", electionId] });

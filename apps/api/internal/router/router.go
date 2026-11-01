@@ -164,7 +164,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	stateAssemblyConstituenciesService := stateassemblyconstituenciesservice.NewStateConstituenciesService(q, rdb)
 	referralsService := referralsservice.NewReferralsService(q)
 	authService := authservice.NewAuthService(q, pool, rdb, messagingService, usersService, partiesService, bodiesService, jwtSecret, accessExp, refreshExp)
-	seedService := seedservice.NewSeedService(q, pool, rdb, distributor, authService, bodiesService, usersService, partiesService)
+	seedService := seedservice.NewSeedService(q, pool, rdb, distributor, authService, bodiesService, usersService, partiesService, electionsService)
 	pageVerificationsService := pageverificationsservice.NewPageVerificationsService(q, rdb, usersService, partiesService, auditService)
 	filesService := filesservice.NewFilesService(q, r2Svc, distributor)
 	campaignGroupsService := campaigngroupsservice.NewCampaignGroupsService(q, pool, rdb, partiesService)
@@ -280,6 +280,8 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	// for seeds
 	mainRouter.Post("/api/v1/seed/users", seedHandler.SeedUsers)                                         // Seed users endpoint
 	mainRouter.Post("/api/v1/seed/admins", seedHandler.SeedAdmins)                                       // Seed admins endpoint
+	mainRouter.Post("/api/v1/seed/election-groups", seedHandler.SeedElectionGroups)                     // Seed election groups endpoint
+	mainRouter.Post("/api/v1/seed/election-instances", seedHandler.SeedElectionInstances)               // Seed election instances endpoint
 	mainRouter.Post("/api/v1/seed/elections/{id}/simulate-results", seedHandler.SimulateElectionResults) // Simulate PU results & test rollups
 	mainRouter.Post("/api/v1/seed/flush-redis", seedHandler.FlushRedis)                                  // Flush Redis cache endpoint
 

@@ -8,7 +8,6 @@ This document catalogs all task types, payloads, debounce strategies, and execut
 
 | Task Name Constant | Task Type String | Payload Struct | File | Debounce / Options |
 |---|---|---|---|---|
-| `TaskSeedElectionGroupStats` | `election_group:seed_stats` | `SeedElectionGroupStatsPayload` | [seed_election_stats_task.go](file:///d:/Sz-projects/50-main-projects/3-free9ja/apps/api/internal/worker/seed_election_stats_task.go) | 5s delay, 10m unique, 5 retries |
 | `TaskAggregateLiveVotes` | `live_votes:aggregate` | `AggregateLiveVotesPayload` | [live_vote_task.go](file:///d:/Sz-projects/50-main-projects/3-free9ja/apps/api/internal/worker/live_vote_task.go) | 30s delay, 30s unique, 3 retries |
 | `TaskRefreshPollingUnitStats` | `polling_unit:refresh_stats` | `RefreshPollingUnitStatsPayload` | [polling_unit_stats_task.go](file:///d:/Sz-projects/50-main-projects/3-free9ja/apps/api/internal/worker/polling_unit_stats_task.go) | 1m delay, 1m unique, 3 retries |
 | `TaskRefreshWardStats` | `stats:refresh_ward` | `RefreshWardStatsPayload` | [stats_geo_tasks.go](file:///d:/Sz-projects/50-main-projects/3-free9ja/apps/api/internal/worker/stats_geo_tasks.go) | 2m delay, 2m unique, 3 retries |

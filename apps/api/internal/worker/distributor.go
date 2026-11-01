@@ -9,7 +9,6 @@ import (
 // TaskDistributor defines the interface for enqueueing tasks across all services.
 type TaskDistributor interface {
 	DistributeTaskCalculateFinalResult(ctx context.Context, payload *CalculateFinalResultPayload, opts ...asynq.Option) error
-	DistributeTaskSeedElectionGroupStats(ctx context.Context, payload *SeedElectionGroupStatsPayload, opts ...asynq.Option) error
 	DistributeTaskAggregateLiveVotes(ctx context.Context, payload *AggregateLiveVotesPayload, opts ...asynq.Option) error
 	// PU result AI extraction
 	DistributeTaskExtractPUResultAI(ctx context.Context, payload *ExtractPUResultAIPayload, opts ...asynq.Option) error

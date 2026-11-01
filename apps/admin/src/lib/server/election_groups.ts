@@ -12,6 +12,8 @@ export const getElectionGroups = createServerFn({ method: "GET" })
           orderBy?: string;
           order?: string;
           active?: boolean;
+          accepts_candidates?: boolean;
+          accepts_agents?: boolean;
         }
         | undefined,
     ) => data,
@@ -79,6 +81,8 @@ export const updateElectionGroup = createServerFn({ method: "POST" })
       name?: string;
       election_date?: string;
       active?: boolean;
+      accepts_candidates?: boolean;
+      accepts_agents?: boolean;
     }) => data,
   )
   .handler(async ({ data: { id, ...body } }) => {

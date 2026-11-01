@@ -99,7 +99,7 @@ export function ElectionInstanceTableTile({ data }: { data: ElectionInstanceType
         <Link
           to={APP_URL.partyRoutes.electionInstance(
             partyShortName,
-            data.fake_id || data.id,
+            data.fake_id as number,
           ) as any}
           className="truncate w-full text-[16px] text-c-80 hover:text-c-100 hover:underline transition-colors"
         >

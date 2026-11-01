@@ -8,7 +8,6 @@ import (
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/utils"
 	"free9ja/api/internal/worker"
-	"log/slog"
 	"time"
 
 
@@ -92,15 +91,6 @@ func (s *ElectionGroupsService) CreateElectionGroup(ctx context.Context, name st
 	// Invalidate global election group caches
 	s.invalidateCache(ctx, nil)
 
-	// Seed geographic hierarchy stats for this new election group asynchronously in the background
-	if s.distributor != nil && eg.ID > 0 {
-		if err := s.distributor.DistributeTaskSeedElectionGroupStats(ctx, &worker.SeedElectionGroupStatsPayload{
-			ElectionGroupID: eg.ID,
-		}); err != nil {
-			slog.Warn("failed to enqueue seed election group stats task", "election_group_id", eg.ID, "error", err)
-		}
-	}
-
 	return eg, nil
 }
 
@@ -140,13 +130,15 @@ func (s *ElectionGroupsService) ListElectionGroups(ctx context.Context, active *
 }
 
 // UpdateElectionGroup modifies an existing election group's metadata and active status, then invalidates related caches.
-func (s *ElectionGroupsService) UpdateElectionGroup(ctx context.Context, id int32, name string, electionDate time.Time, active bool) (queries.ElectionGroup, error) {
+func (s *ElectionGroupsService) UpdateElectionGroup(ctx context.Context, id int32, name string, electionDate time.Time, active bool, acceptsCandidates bool, acceptsAgents bool) (queries.ElectionGroup, error) {
 	// 1. Update the election group record in the database
 	group, err := s.queries.UpdateElectionGroup(ctx, queries.UpdateElectionGroupParams{
-		ID:           id,
-		Name:         name,
-		ElectionDate: utils.PgDateFromTime(electionDate),
-		Active:       active,
+		ID:                id,
+		Name:              name,
+		ElectionDate:      utils.PgDateFromTime(electionDate),
+		Active:            active,
+		AcceptsCandidates: acceptsCandidates,
+		AcceptsAgents:     acceptsAgents,
 	})
 	if err != nil {
 		return group, err

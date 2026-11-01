@@ -44,6 +44,8 @@ export function ElectionGroupFormDialog({ electionGroup, open, onClose, mode = "
       name: "",
       election_date: "",
       active: true,
+      accepts_candidates: true,
+      accepts_agents: true,
     },
     onSubmit: async ({ value }) => {
       saveMutation.mutate(value);
@@ -61,10 +63,14 @@ export function ElectionGroupFormDialog({ electionGroup, open, onClose, mode = "
         form.setFieldValue("name", electionGroup.name || "");
         form.setFieldValue("election_date", rawDate || "");
         form.setFieldValue("active", electionGroup.active !== false);
+        form.setFieldValue("accepts_candidates", electionGroup.accepts_candidates !== false);
+        form.setFieldValue("accepts_agents", electionGroup.accepts_agents !== false);
       } else {
         form.setFieldValue("name", "");
         form.setFieldValue("election_date", "");
         form.setFieldValue("active", true);
+        form.setFieldValue("accepts_candidates", true);
+        form.setFieldValue("accepts_agents", true);
       }
       setError(null);
     }
@@ -72,7 +78,13 @@ export function ElectionGroupFormDialog({ electionGroup, open, onClose, mode = "
 
   // Mutation handling group creation and updates
   const saveMutation = useMutation({
-    mutationFn: async (values: { name: string; election_date: string; active: boolean }) => {
+    mutationFn: async (values: {
+      name: string;
+      election_date: string;
+      active: boolean;
+      accepts_candidates: boolean;
+      accepts_agents: boolean;
+    }) => {
       if (!values.election_date) {
         throw new Error("Election date is required");
       }
@@ -88,6 +100,8 @@ export function ElectionGroupFormDialog({ electionGroup, open, onClose, mode = "
             name: values.name.trim(),
             election_date: values.election_date,
             active: values.active,
+            accepts_candidates: values.accepts_candidates,
+            accepts_agents: values.accepts_agents,
           },
         });
       } else {
@@ -224,6 +238,88 @@ export function ElectionGroupFormDialog({ electionGroup, open, onClose, mode = "
                 <p className="text-[12px] text-c-40">
                   Inactive election groups are excluded from creation dropdown menus.
                 </p>
+
+              </div>
+            )}
+
+            {/* Candidate Nominations Setting (when updating) */}
+            {mode === "update" && (
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[14px] font-semibold text-c-50">
+                  Accept Candidate Nominations
+                </label>
+                <form.Field
+                  name="accepts_candidates"
+                  children={(field) => (
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => field.handleChange(true)}
+                        className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-colors cursor-pointer ${field.state.value
+                            ? "border-green-500 bg-green-500/10 text-green-600 dark:text-green-400 font-semibold"
+                            : "border-c-20 text-c-50 hover:bg-c-10"
+                          }`}
+                      >
+                        Accepting
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => field.handleChange(false)}
+                        className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-colors cursor-pointer ${!field.state.value
+                            ? "border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-semibold"
+                            : "border-c-20 text-c-50 hover:bg-c-10"
+                          }`}
+                      >
+                        Closed
+                      </button>
+                    </div>
+                  )}
+                />
+                <p className="text-[12px] text-c-40">
+                  Controls whether political parties can field or replace candidates for races in this cycle.
+                </p>
+
+              </div>
+            )}
+
+            {/* Polling Agent Applications Setting (when updating) */}
+            {mode === "update" && (
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[14px] font-semibold text-c-50">
+                  Accept Polling Agent Applications
+                </label>
+                <form.Field
+                  name="accepts_agents"
+                  children={(field) => (
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => field.handleChange(true)}
+                        className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-colors cursor-pointer ${field.state.value
+                            ? "border-green-500 bg-green-500/10 text-green-600 dark:text-green-400 font-semibold"
+                            : "border-c-20 text-c-50 hover:bg-c-10"
+                          }`}
+                      >
+                        Accepting
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => field.handleChange(false)}
+                        className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-colors cursor-pointer ${!field.state.value
+                            ? "border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-semibold"
+                            : "border-c-20 text-c-50 hover:bg-c-10"
+                          }`}
+                      >
+                        Closed
+                      </button>
+                    </div>
+                  )}
+                />
+                <p className="text-[12px] text-c-40">
+                  Controls whether party members can apply as polling unit agents and supervisors.
+                </p>
+
+
               </div>
             )}
           </DialogPadding>

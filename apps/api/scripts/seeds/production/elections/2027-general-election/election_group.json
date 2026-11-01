@@ -1,5 +1,12 @@
-{
-  "name": "2027 General Elections",
-  "election_date": "2027-01-16",
-  "description": "2027 Presidential and National Assembly Elections"
-}
+[
+  {
+    "name": "2027 Presidential and Senatorial Election",
+    "election_date": "2027-01-16",
+    "description": "2027 Presidential and Senatorial Election"
+  },
+  {
+    "name": "2027 Governorship and State House of Assembly Election",
+    "election_date": "2027-02-06",
+    "description": "2027 Governorship and State House of Assembly Election"
+  }
+]

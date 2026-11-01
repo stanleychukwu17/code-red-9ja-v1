@@ -1006,20 +1006,35 @@ type FieldCandidateRequest struct {
 
 // FieldPartyCandidate handles POST /api/v1/elections/{id}/field-candidate
 func (h *Handler) FieldPartyCandidate(w http.ResponseWriter, r *http.Request) {
-	// Parse and validate election fake_id from URL parameter
+	// Parse and validate election ID from URL parameter
 	idStr := chi.URLParam(r, "id")
-	fakeID, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil || fakeID <= 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election fake_id")
+	id, err := strconv.ParseInt(idStr, 10, 32)
+	if err != nil || id <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election ID")
 		return
 	}
-	electionDetails, err := h.service.GetElectionByFakeID(r.Context(), fakeID)
+
+	// Get election details by ID
+	electionDetails, err := h.service.GetElectionByID(r.Context(), int32(id))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Election not found")
 		return
 	}
+
+	// Get election details from the result
 	election := electionDetails.Election
 	electionID := int64(election.ID)
+
+	// Fetch election group details and verify it is accepting candidates
+	electionGroup, err := h.service.GetElectionGroupByID(r.Context(), election.ElectionGroupID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Failed to verify election group: "+err.Error())
+		return
+	}
+	if !electionGroup.AcceptsCandidates {
+		h.utils.RespondError(w, http.StatusForbidden, "Not accepting candidates")
+		return
+	}
 
 	// Verify user authentication claims and enforce party admin roles
 	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey, "party_admin", "super_party_admin", "admin", "super_admin")
@@ -1041,11 +1056,6 @@ func (h *Handler) FieldPartyCandidate(w http.ResponseWriter, r *http.Request) {
 
 	// Verify election group is active and nominations are open (can be skipped for platform admins / super_admins)
 	if !claims.HasAnyRole("super_admin", "admin") {
-		electionGroup, err := h.service.GetElectionGroupByID(r.Context(), election.ElectionGroupID)
-		if err != nil {
-			h.utils.RespondError(w, http.StatusBadRequest, "Failed to verify election group: "+err.Error())
-			return
-		}
 		if !electionGroup.Active {
 			h.utils.RespondError(w, http.StatusForbidden, "Election group is not active")
 			return
@@ -1152,14 +1162,14 @@ type UnfieldCandidateRequest struct {
 
 // UnfieldPartyCandidate handles POST /api/v1/elections/{id}/unfield-candidate
 func (h *Handler) UnfieldPartyCandidate(w http.ResponseWriter, r *http.Request) {
-	// Parse and validate election fake_id from URL parameter
+	// Parse and validate election ID from URL parameter
 	idStr := chi.URLParam(r, "id")
-	fakeID, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil || fakeID <= 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election fake_id")
+	id, err := strconv.ParseInt(idStr, 10, 32)
+	if err != nil || id <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election ID")
 		return
 	}
-	electionDetails, err := h.service.GetElectionByFakeID(r.Context(), fakeID)
+	electionDetails, err := h.service.GetElectionByID(r.Context(), int32(id))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Election not found")
 		return

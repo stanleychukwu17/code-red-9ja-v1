@@ -14,6 +14,8 @@ export type ElectionGroupType = {
   name: string;
   election_date?: string;
   active?: boolean;
+  accepts_candidates?: boolean;
+  accepts_agents?: boolean;
   created_at?: string;
   updated_at?: string;
 };

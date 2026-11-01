@@ -22,8 +22,8 @@ ORDER BY election_date ASC;
 
 -- name: UpdateElectionGroup :one
 UPDATE election_groups
-SET name = $1, election_date = $2, active = $3, updated_at = NOW()
-WHERE id = $4
+SET name = $1, election_date = $2, active = $3, accepts_candidates = $4, accepts_agents = $5, updated_at = NOW()
+WHERE id = $6
 RETURNING *;
 
 -- name: CountCandidatesInElectionGroup :one
@@ -53,6 +53,8 @@ SELECT
     eg.name, 
     eg.election_date, 
     eg.active, 
+    eg.accepts_candidates,
+    eg.accepts_agents,
     eg.created_at, 
     eg.updated_at,
     '{}'::jsonb AS polling_agents_coverage,
