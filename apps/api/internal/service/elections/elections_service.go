@@ -21,6 +21,8 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+// createElectionInstanceSQL is used by batchCreateElections with pgx.Batch to perform high-throughput
+// bulk inserts of election instances (e.g. across districts, constituencies, LGAs, and wards) without row-scanning overhead.
 const createElectionInstanceSQL = `
 INSERT INTO elections (
   name, election_date, election_group_id,
@@ -887,60 +889,6 @@ func electionDetails(election queries.Election, now time.Time) queries.ElectionD
 		Status:          utils.ElectionStatusForDate(election.ElectionDate.Time, now),
 		NominationsOpen: utils.IsElectionNominationOpen(election.ElectionDate.Time, now),
 	}
-}
-
-// GetElectionGroupByID retrieves an election group record by its unique identifier, utilizing Redis caching.
-func (s *ElectionsService) GetElectionGroupByID(ctx context.Context, id int32) (queries.ElectionGroup, error) {
-	cacheKey := fmt.Sprintf("%s%d", db.RedisElectionGroupByID, id)
-
-	// 1. Attempt to fetch pre-cached election group from Redis
-	val, err := s.rdb.Get(ctx, cacheKey).Result()
-	if err == nil {
-		var eg queries.ElectionGroup
-		if err := json.Unmarshal([]byte(val), &eg); err == nil {
-			return eg, nil
-		}
-	}
-
-	// 2. Cache miss: fetch election group directly from the database
-	eg, err := s.queries.GetElectionGroupByID(ctx, id)
-	if err != nil {
-		return eg, err
-	}
-
-	// 3. Serialize and populate Redis cache
-	if egBytes, err := json.Marshal(eg); err == nil {
-		s.rdb.Set(ctx, cacheKey, egBytes, db.RedisNinetyDaysTTL)
-	}
-
-	return eg, nil
-}
-
-// GetElectionGroupByFakeID retrieves an election group record by its unique 64-bit fake_id, utilizing Redis caching.
-func (s *ElectionsService) GetElectionGroupByFakeID(ctx context.Context, fakeID int64) (queries.ElectionGroup, error) {
-	cacheKey := fmt.Sprintf("%s%d", db.RedisElectionGroupByFakeID, fakeID)
-
-	// 1. Attempt to fetch pre-cached election group from Redis
-	val, err := s.rdb.Get(ctx, cacheKey).Result()
-	if err == nil {
-		var eg queries.ElectionGroup
-		if err := json.Unmarshal([]byte(val), &eg); err == nil {
-			return eg, nil
-		}
-	}
-
-	// 2. Cache miss: fetch election group directly from the database
-	eg, err := s.queries.GetElectionGroupByFakeID(ctx, utils.PgInt8FromInt64(fakeID))
-	if err != nil {
-		return eg, err
-	}
-
-	// 3. Serialize and populate Redis cache
-	if egBytes, err := json.Marshal(eg); err == nil {
-		s.rdb.Set(ctx, cacheKey, egBytes, db.RedisNinetyDaysTTL)
-	}
-
-	return eg, nil
 }
 
 // ListElectionsFilter defines the filtering and pagination criteria for listing elections.

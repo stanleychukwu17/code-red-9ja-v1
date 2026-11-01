@@ -36,9 +36,16 @@ func (s *ElectionGroupsService) invalidateCache(ctx context.Context, id *int32) 
 	// 1. Clear global collections for election groups (all and active)
 	s.rdb.Del(ctx, db.RedisElectionGroupsAll, db.RedisElectionGroupsActive)
 
-	// 2. If a specific group ID is provided, invalidate its individual cache key
+	// 2. If a specific group ID is provided, invalidate its individual cache key and fake_id cache
 	if id != nil {
-		s.rdb.Del(ctx, fmt.Sprintf("%s%d", db.RedisElectionGroupByID, *id))
+		key := fmt.Sprintf("%s%d", db.RedisElectionGroupByID, *id)
+		if val, err := s.rdb.Get(ctx, key).Result(); err == nil {
+			var eg queries.ElectionGroup
+			if err := json.Unmarshal([]byte(val), &eg); err == nil && eg.FakeID.Valid {
+				s.rdb.Del(ctx, fmt.Sprintf("%s%d", db.RedisElectionGroupByFakeID, eg.FakeID.Int64))
+			}
+		}
+		s.rdb.Del(ctx, key)
 	}
 }
 
@@ -90,6 +97,60 @@ func (s *ElectionGroupsService) CreateElectionGroup(ctx context.Context, name st
 
 	// Invalidate global election group caches
 	s.invalidateCache(ctx, nil)
+
+	return eg, nil
+}
+
+// GetElectionGroupByID retrieves an election group record by its unique identifier, utilizing Redis caching.
+func (s *ElectionGroupsService) GetElectionGroupByID(ctx context.Context, id int32) (queries.ElectionGroup, error) {
+	cacheKey := fmt.Sprintf("%s%d", db.RedisElectionGroupByID, id)
+
+	// 1. Attempt to fetch pre-cached election group from Redis
+	val, err := s.rdb.Get(ctx, cacheKey).Result()
+	if err == nil {
+		var eg queries.ElectionGroup
+		if err := json.Unmarshal([]byte(val), &eg); err == nil {
+			return eg, nil
+		}
+	}
+
+	// 2. Cache miss: fetch election group directly from the database
+	eg, err := s.queries.GetElectionGroupByID(ctx, id)
+	if err != nil {
+		return eg, err
+	}
+
+	// 3. Serialize and populate Redis cache
+	if egBytes, err := json.Marshal(eg); err == nil {
+		s.rdb.Set(ctx, cacheKey, egBytes, db.RedisNinetyDaysTTL)
+	}
+
+	return eg, nil
+}
+
+// GetElectionGroupByFakeID retrieves an election group record by its unique 64-bit fake_id, utilizing Redis caching.
+func (s *ElectionGroupsService) GetElectionGroupByFakeID(ctx context.Context, fakeID int64) (queries.ElectionGroup, error) {
+	cacheKey := fmt.Sprintf("%s%d", db.RedisElectionGroupByFakeID, fakeID)
+
+	// 1. Attempt to fetch pre-cached election group from Redis
+	val, err := s.rdb.Get(ctx, cacheKey).Result()
+	if err == nil {
+		var eg queries.ElectionGroup
+		if err := json.Unmarshal([]byte(val), &eg); err == nil {
+			return eg, nil
+		}
+	}
+
+	// 2. Cache miss: fetch election group directly from the database
+	eg, err := s.queries.GetElectionGroupByFakeID(ctx, utils.PgInt8FromInt64(fakeID))
+	if err != nil {
+		return eg, err
+	}
+
+	// 3. Serialize and populate Redis cache
+	if egBytes, err := json.Marshal(eg); err == nil {
+		s.rdb.Set(ctx, cacheKey, egBytes, db.RedisNinetyDaysTTL)
+	}
 
 	return eg, nil
 }

@@ -207,17 +207,14 @@ func (h *Handler) FlushRedis(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} map[string]interface{} "Failed to seed election groups"
 // @Router /seed/election-groups [post]
 func (h *Handler) SeedElectionGroups(w http.ResponseWriter, r *http.Request) {
-	if os.Getenv("ENV") == "production" {
-		h.utils.RespondError(w, http.StatusForbidden, "This endpoint is disabled in production")
-		return
-	}
-
+	// Read request body
 	bodyBytes, err := io.ReadAll(r.Body)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
 		return
 	}
 
+	// Parse array or fallback to single object
 	var req []seedservice.SeedElectionGroupRequest
 	if err := json.Unmarshal(bodyBytes, &req); err != nil {
 		var single seedservice.SeedElectionGroupRequest
@@ -229,6 +226,7 @@ func (h *Handler) SeedElectionGroups(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Seed election groups
 	groups, err := h.seedService.SeedElectionGroups(r.Context(), req)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to seed election groups: "+err.Error())
@@ -249,17 +247,14 @@ func (h *Handler) SeedElectionGroups(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} map[string]interface{} "Failed to seed election instances"
 // @Router /seed/election-instances [post]
 func (h *Handler) SeedElectionInstances(w http.ResponseWriter, r *http.Request) {
-	if os.Getenv("ENV") == "production" {
-		h.utils.RespondError(w, http.StatusForbidden, "This endpoint is disabled in production")
-		return
-	}
-
+	// Read request body
 	bodyBytes, err := io.ReadAll(r.Body)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
 		return
 	}
 
+	// Parse array or fallback to single object
 	var req []seedservice.SeedElectionInstanceRequest
 	if err := json.Unmarshal(bodyBytes, &req); err != nil {
 		var single seedservice.SeedElectionInstanceRequest
@@ -271,6 +266,7 @@ func (h *Handler) SeedElectionInstances(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
+	// Seed election instances
 	msg, err := h.seedService.SeedElectionInstances(r.Context(), req)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to seed election instances: "+err.Error())

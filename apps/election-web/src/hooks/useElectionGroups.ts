@@ -10,6 +10,8 @@ export type FormattedElectionGroup = {
   name: string;
   date: string;
   election_date?: string;
+  accepts_candidates?: boolean;
+  accepts_agents?: boolean;
 };
 
 export type UseElectionGroupsOptions = {
@@ -25,15 +27,13 @@ export const electionGroupsQueryOptions = (options?: UseElectionGroupsOptions) =
     queryFn: async (): Promise<FormattedElectionGroup[]> => {
       const res = await getElectionGroups();
 
-      if (
-        res?.success &&
-        res.data?.election_groups &&
-        res.data.election_groups.length > 0
-      ) {
+      if (res?.success && res.data?.election_groups && res.data.election_groups.length > 0) {
         return res.data.election_groups.map((group: any) => ({
           id: group.id,
           name: group.name,
           election_date: group.election_date,
+          accepts_candidates: group.accepts_candidates,
+          accepts_agents: group.accepts_agents,
           date: group.election_date
             ? new Date(group.election_date).toLocaleDateString("en-US", {
               month: "short",

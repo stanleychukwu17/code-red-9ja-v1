@@ -195,13 +195,13 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	pollingUnitsHandler := pollingunitshandler.NewHandler(pollingUnitsService, bodiesService, q, utilsInstance)
 	officesHandler := officeshandler.NewHandler(officesService, auditService, utilsInstance)
 	campaignGroupsHandler := campaigngroupshandler.NewHandler(campaignGroupsService, utilsInstance)
-	electionGroupsHandler := electiongroupshandler.NewHandler(electionGroupsService, electionsService, auditService, utilsInstance)
-	electionStatsHandler := electionstatshandler.NewHandler(electionStatsService, electionsService, statesService, bodiesService, wardsService, pool, utilsInstance)
-	electionsHandler := electionshandler.NewHandler(electionsService, usersService, auditService, utilsInstance, partiesService)
+	electionGroupsHandler := electiongroupshandler.NewHandler(electionGroupsService, auditService, utilsInstance)
+	electionStatsHandler := electionstatshandler.NewHandler(electionStatsService, electionGroupsService, statesService, bodiesService, wardsService, pool, utilsInstance)
+	electionsHandler := electionshandler.NewHandler(electionsService, usersService, auditService, utilsInstance, partiesService, electionGroupsService)
 	usersHandler := usershandler.NewHandler(usersService, auditService, bodiesService, permissionsService, partiesService, filesService, utilsInstance)
 	pageVerificationsHandler := pageverificationshandler.NewHandler(pageVerificationsService, utilsInstance)
 	pollingUnitAssignmentsHandler := puassignmentshandler.NewHandler(pollingUnitAssignmentsService, usersService, pollingUnitUpdatesService, utilsInstance, earningsService)
-	partyApplicationsHandler := partyapplicationshandler.NewHandler(partyApplicationsService, usersService, partiesService, permissionsService, campaignGroupsService, distributor, notificationsService, auditService, utilsInstance)
+	partyApplicationsHandler := partyapplicationshandler.NewHandler(partyApplicationsService, usersService, partiesService, permissionsService, campaignGroupsService, distributor, notificationsService, auditService, utilsInstance, electionGroupsService)
 	pollingUnitUpdatesHandler := puupdateshandler.NewHandler(pollingUnitUpdatesService, utilsInstance)
 	pollingUnitResultsHandler := puresultshandler.NewHandler(pollingUnitResultsService, utilsInstance)
 	supervisorAssignmentsHandler := supervisorassignmentshandler.NewHandler(supervisorAssignmentsService, utilsInstance)
@@ -280,8 +280,8 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	// for seeds
 	mainRouter.Post("/api/v1/seed/users", seedHandler.SeedUsers)                                         // Seed users endpoint
 	mainRouter.Post("/api/v1/seed/admins", seedHandler.SeedAdmins)                                       // Seed admins endpoint
-	mainRouter.Post("/api/v1/seed/election-groups", seedHandler.SeedElectionGroups)                     // Seed election groups endpoint
-	mainRouter.Post("/api/v1/seed/election-instances", seedHandler.SeedElectionInstances)               // Seed election instances endpoint
+	mainRouter.Post("/api/v1/seed/election-groups", seedHandler.SeedElectionGroups)                      // Seed election groups endpoint
+	mainRouter.Post("/api/v1/seed/election-instances", seedHandler.SeedElectionInstances)                // Seed election instances endpoint
 	mainRouter.Post("/api/v1/seed/elections/{id}/simulate-results", seedHandler.SimulateElectionResults) // Simulate PU results & test rollups
 	mainRouter.Post("/api/v1/seed/flush-redis", seedHandler.FlushRedis)                                  // Flush Redis cache endpoint
 

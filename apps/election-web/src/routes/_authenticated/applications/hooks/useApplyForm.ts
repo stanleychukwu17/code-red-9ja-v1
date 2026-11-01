@@ -15,10 +15,10 @@ import {
 } from "../utils/partyValidation";
 import { validateAndFormatApplicationPayload } from "../utils/applicationValidation";
 
-interface UseApplyFormOptions {
+type UseApplyFormOptions = {
   search: ApplySearch;
   navigate: (opts: { to: string }) => void;
-}
+};
 
 export function useApplyForm({ search, navigate }: UseApplyFormOptions) {
   const queryClient = useQueryClient();

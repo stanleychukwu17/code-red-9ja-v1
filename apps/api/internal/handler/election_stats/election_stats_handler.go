@@ -17,7 +17,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type ElectionsService interface {
+type ElectionGroupsService interface {
 	GetElectionGroupByID(ctx context.Context, id int32) (queries.ElectionGroup, error)
 }
 
@@ -34,13 +34,13 @@ type WardsService interface {
 }
 
 type Handler struct {
-	service          electionstats.ElectionStatsService
-	electionsService ElectionsService
-	statesService    StatesService
-	bodiesService    BodiesService
-	wardsService     WardsService
-	pool             *pgxpool.Pool
-	utils            *utils.Utils
+	service               electionstats.ElectionStatsService
+	electionGroupsService ElectionGroupsService
+	statesService         StatesService
+	bodiesService         BodiesService
+	wardsService          WardsService
+	pool                  *pgxpool.Pool
+	utils                 *utils.Utils
 }
 
 type OperationsBreakdownUnitResponse struct {
@@ -85,7 +85,7 @@ type BreakdownListResponse[T any] struct {
 
 func NewHandler(
 	service electionstats.ElectionStatsService,
-	electionsService ElectionsService,
+	electionGroupsService ElectionGroupsService,
 	statesService StatesService,
 	bodiesService BodiesService,
 	wardsService WardsService,
@@ -93,13 +93,13 @@ func NewHandler(
 	utils *utils.Utils,
 ) *Handler {
 	return &Handler{
-		service:          service,
-		electionsService: electionsService,
-		statesService:    statesService,
-		bodiesService:    bodiesService,
-		wardsService:     wardsService,
-		pool:             pool,
-		utils:            utils,
+		service:               service,
+		electionGroupsService: electionGroupsService,
+		statesService:         statesService,
+		bodiesService:         bodiesService,
+		wardsService:          wardsService,
+		pool:                  pool,
+		utils:                 utils,
 	}
 }
 func parseOptionalInt(r *http.Request, key string) (int32, bool) {
@@ -593,7 +593,7 @@ func (h *Handler) GetSingleElectionGroupStats(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	stats, err := h.electionsService.GetElectionGroupByID(r.Context(), int32(groupID))
+	stats, err := h.electionGroupsService.GetElectionGroupByID(r.Context(), int32(groupID))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch stats: "+err.Error())
 		return

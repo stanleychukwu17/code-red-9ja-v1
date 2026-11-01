@@ -8,6 +8,7 @@ import (
 	"math"
 	"math/rand"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"free9ja/api/internal/constants"
@@ -1242,188 +1243,197 @@ type SeedElectionInstanceRequest struct {
 	StateConstituencyIDs   []int32 `json:"state_constituency_ids,omitempty"`
 }
 
-// SeedElectionInstances creates election instances across offices and scopes idempotently.
+// SeedElectionInstances creates election instances across offices and scopes idempotently and concurrently using goroutines.
 func (s *SeedService) SeedElectionInstances(ctx context.Context, instances []SeedElectionInstanceRequest) (string, error) {
 	if len(instances) == 0 {
 		return "No election instances provided", nil
 	}
 
-	totalCreated := 0
+	g, gCtx := errgroup.WithContext(ctx)
+	var totalCreated atomic.Int64
 
 	for _, item := range instances {
-		rawDate := strings.TrimSpace(item.ElectionDate)
-		electionDate, err := time.Parse("2006-01-02", rawDate)
-		if err != nil {
-			electionDate, err = time.Parse(time.RFC3339, rawDate)
+		g.Go(func() error {
+			rawDate := strings.TrimSpace(item.ElectionDate)
+			electionDate, err := time.Parse("2006-01-02", rawDate)
 			if err != nil {
-				return "", fmt.Errorf("invalid election_date %q for office %d: %w (expected YYYY-MM-DD)", rawDate, item.OfficeID, err)
-			}
-		}
-
-		// Find the active election group for this election date
-		var electionGroupID int32
-		err = s.pool.QueryRow(ctx, `
-			SELECT id
-			FROM election_groups
-			WHERE election_date = $1 AND active = true
-			ORDER BY id ASC
-			LIMIT 1
-		`, utils.PgDateFromTime(electionDate)).Scan(&electionGroupID)
-		if err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
-				return "", fmt.Errorf("no active election group found for election date %s (office ID %d)", rawDate, item.OfficeID)
-			}
-			return "", fmt.Errorf("failed checking active election group for date %s: %w", rawDate, err)
-		}
-
-		scope := strings.ToLower(strings.TrimSpace(item.Scope))
-		switch scope {
-		case "nationwide":
-			var exists bool
-			err := s.pool.QueryRow(ctx, `
-				SELECT EXISTS (
-					SELECT 1 FROM elections
-					WHERE election_group_id = $1 AND office_id = $2 AND scope = 'nationwide'
-				)
-			`, electionGroupID, item.OfficeID).Scan(&exists)
-			if err != nil {
-				return "", fmt.Errorf("failed checking existing nationwide election: %w", err)
-			}
-			if !exists {
-				if _, err := s.electionsService.CreateNationwideElection(ctx, item.OfficeID, electionDate, electionGroupID); err != nil {
-					return "", fmt.Errorf("failed creating nationwide election for office %d: %w", item.OfficeID, err)
-				}
-				totalCreated++
-			}
-
-		case "state":
-			rows, err := s.pool.Query(ctx, `
-				SELECT state_id FROM elections
-				WHERE election_group_id = $1 AND office_id = $2 AND state_id IS NOT NULL
-			`, electionGroupID, item.OfficeID)
-			if err != nil {
-				return "", fmt.Errorf("failed querying existing state elections: %w", err)
-			}
-			existing := make(map[int16]bool)
-			for rows.Next() {
-				var sid int16
-				if err := rows.Scan(&sid); err == nil {
-					existing[sid] = true
-				}
-			}
-			rows.Close()
-
-			var missing []int16
-			for _, sid := range item.StateIDs {
-				if !existing[sid] {
-					missing = append(missing, sid)
-				}
-			}
-			if len(missing) > 0 {
-				count, err := s.electionsService.CreateStateElection(ctx, item.OfficeID, electionDate, electionGroupID, missing)
+				electionDate, err = time.Parse(time.RFC3339, rawDate)
 				if err != nil {
-					return "", fmt.Errorf("failed creating state elections for office %d: %w", item.OfficeID, err)
+					return fmt.Errorf("invalid election_date %q for office %d: %w (expected YYYY-MM-DD)", rawDate, item.OfficeID, err)
 				}
-				totalCreated += count
 			}
 
-		case "senatorial-district":
-			rows, err := s.pool.Query(ctx, `
-				SELECT senatorial_district_id FROM elections
-				WHERE election_group_id = $1 AND office_id = $2 AND senatorial_district_id IS NOT NULL
-			`, electionGroupID, item.OfficeID)
+			// Find the active election group for this election date
+			var electionGroupID int32
+			err = s.pool.QueryRow(gCtx, `
+				SELECT id
+				FROM election_groups
+				WHERE election_date = $1 AND active = true
+				ORDER BY id ASC
+				LIMIT 1
+			`, utils.PgDateFromTime(electionDate)).Scan(&electionGroupID)
 			if err != nil {
-				return "", fmt.Errorf("failed querying existing senatorial district elections: %w", err)
-			}
-			existing := make(map[int32]bool)
-			for rows.Next() {
-				var did int32
-				if err := rows.Scan(&did); err == nil {
-					existing[did] = true
+				if errors.Is(err, pgx.ErrNoRows) {
+					return fmt.Errorf("no active election group found for election date %s (office ID %d)", rawDate, item.OfficeID)
 				}
+				return fmt.Errorf("failed checking active election group for date %s: %w", rawDate, err)
 			}
-			rows.Close()
 
-			var missing []int32
-			for _, did := range item.SenatorialDistrictIDs {
-				if !existing[did] {
-					missing = append(missing, did)
-				}
-			}
-			if len(missing) > 0 {
-				count, err := s.electionsService.CreateSenatorialDistrictElection(ctx, item.OfficeID, electionDate, electionGroupID, missing)
+			scope := strings.ToLower(strings.TrimSpace(item.Scope))
+			switch scope {
+			case "nationwide":
+				var exists bool
+				err := s.pool.QueryRow(gCtx, `
+					SELECT EXISTS (
+						SELECT 1 FROM elections
+						WHERE election_group_id = $1 AND office_id = $2 AND scope = 'nationwide'
+					)
+				`, electionGroupID, item.OfficeID).Scan(&exists)
 				if err != nil {
-					return "", fmt.Errorf("failed creating senatorial district elections for office %d: %w", item.OfficeID, err)
+					return fmt.Errorf("failed checking existing nationwide election: %w", err)
 				}
-				totalCreated += count
-			}
+				if !exists {
+					if _, err := s.electionsService.CreateNationwideElection(gCtx, item.OfficeID, electionDate, electionGroupID); err != nil {
+						return fmt.Errorf("failed creating nationwide election for office %d: %w", item.OfficeID, err)
+					}
+					totalCreated.Add(1)
+				}
 
-		case "federal-constituency":
-			rows, err := s.pool.Query(ctx, `
-				SELECT federal_constituency_id FROM elections
-				WHERE election_group_id = $1 AND office_id = $2 AND federal_constituency_id IS NOT NULL
-			`, electionGroupID, item.OfficeID)
-			if err != nil {
-				return "", fmt.Errorf("failed querying existing federal constituency elections: %w", err)
-			}
-			existing := make(map[int32]bool)
-			for rows.Next() {
-				var fcid int32
-				if err := rows.Scan(&fcid); err == nil {
-					existing[fcid] = true
-				}
-			}
-			rows.Close()
-
-			var missing []int32
-			for _, fcid := range item.FederalConstituencyIDs {
-				if !existing[fcid] {
-					missing = append(missing, fcid)
-				}
-			}
-			if len(missing) > 0 {
-				count, err := s.electionsService.CreateFederalConstituencyElection(ctx, item.OfficeID, electionDate, electionGroupID, missing)
+			case "state":
+				rows, err := s.pool.Query(gCtx, `
+					SELECT state_id FROM elections
+					WHERE election_group_id = $1 AND office_id = $2 AND state_id IS NOT NULL
+				`, electionGroupID, item.OfficeID)
 				if err != nil {
-					return "", fmt.Errorf("failed creating federal constituency elections for office %d: %w", item.OfficeID, err)
+					return fmt.Errorf("failed querying existing state elections: %w", err)
 				}
-				totalCreated += count
-			}
+				existing := make(map[int16]bool)
+				for rows.Next() {
+					var sid int16
+					if err := rows.Scan(&sid); err == nil {
+						existing[sid] = true
+					}
+				}
+				rows.Close()
 
-		case "state-constituency":
-			rows, err := s.pool.Query(ctx, `
-				SELECT state_constituency_id FROM elections
-				WHERE election_group_id = $1 AND office_id = $2 AND state_constituency_id IS NOT NULL
-			`, electionGroupID, item.OfficeID)
-			if err != nil {
-				return "", fmt.Errorf("failed querying existing state constituency elections: %w", err)
-			}
-			existing := make(map[int32]bool)
-			for rows.Next() {
-				var scid int32
-				if err := rows.Scan(&scid); err == nil {
-					existing[scid] = true
+				var missing []int16
+				for _, sid := range item.StateIDs {
+					if !existing[sid] {
+						missing = append(missing, sid)
+					}
 				}
-			}
-			rows.Close()
+				if len(missing) > 0 {
+					count, err := s.electionsService.CreateStateElection(gCtx, item.OfficeID, electionDate, electionGroupID, missing)
+					if err != nil {
+						return fmt.Errorf("failed creating state elections for office %d: %w", item.OfficeID, err)
+					}
+					totalCreated.Add(int64(count))
+				}
 
-			var missing []int32
-			for _, scid := range item.StateConstituencyIDs {
-				if !existing[scid] {
-					missing = append(missing, scid)
-				}
-			}
-			if len(missing) > 0 {
-				count, err := s.electionsService.CreateStateConstituencyElection(ctx, item.OfficeID, electionDate, electionGroupID, missing)
+			case "senatorial-district":
+				rows, err := s.pool.Query(gCtx, `
+					SELECT senatorial_district_id FROM elections
+					WHERE election_group_id = $1 AND office_id = $2 AND senatorial_district_id IS NOT NULL
+				`, electionGroupID, item.OfficeID)
 				if err != nil {
-					return "", fmt.Errorf("failed creating state constituency elections for office %d: %w", item.OfficeID, err)
+					return fmt.Errorf("failed querying existing senatorial district elections: %w", err)
 				}
-				totalCreated += count
+				existing := make(map[int32]bool)
+				for rows.Next() {
+					var did int32
+					if err := rows.Scan(&did); err == nil {
+						existing[did] = true
+					}
+				}
+				rows.Close()
+
+				var missing []int32
+				for _, did := range item.SenatorialDistrictIDs {
+					if !existing[did] {
+						missing = append(missing, did)
+					}
+				}
+				if len(missing) > 0 {
+					count, err := s.electionsService.CreateSenatorialDistrictElection(gCtx, item.OfficeID, electionDate, electionGroupID, missing)
+					if err != nil {
+						return fmt.Errorf("failed creating senatorial district elections for office %d: %w", item.OfficeID, err)
+					}
+					totalCreated.Add(int64(count))
+				}
+
+			case "federal-constituency":
+				rows, err := s.pool.Query(gCtx, `
+					SELECT federal_constituency_id FROM elections
+					WHERE election_group_id = $1 AND office_id = $2 AND federal_constituency_id IS NOT NULL
+				`, electionGroupID, item.OfficeID)
+				if err != nil {
+					return fmt.Errorf("failed querying existing federal constituency elections: %w", err)
+				}
+				existing := make(map[int32]bool)
+				for rows.Next() {
+					var fcid int32
+					if err := rows.Scan(&fcid); err == nil {
+						existing[fcid] = true
+					}
+				}
+				rows.Close()
+
+				var missing []int32
+				for _, fcid := range item.FederalConstituencyIDs {
+					if !existing[fcid] {
+						missing = append(missing, fcid)
+					}
+				}
+				if len(missing) > 0 {
+					count, err := s.electionsService.CreateFederalConstituencyElection(gCtx, item.OfficeID, electionDate, electionGroupID, missing)
+					if err != nil {
+						return fmt.Errorf("failed creating federal constituency elections for office %d: %w", item.OfficeID, err)
+					}
+					totalCreated.Add(int64(count))
+				}
+
+			case "state-constituency":
+				rows, err := s.pool.Query(gCtx, `
+					SELECT state_constituency_id FROM elections
+					WHERE election_group_id = $1 AND office_id = $2 AND state_constituency_id IS NOT NULL
+				`, electionGroupID, item.OfficeID)
+				if err != nil {
+					return fmt.Errorf("failed querying existing state constituency elections: %w", err)
+				}
+				existing := make(map[int32]bool)
+				for rows.Next() {
+					var scid int32
+					if err := rows.Scan(&scid); err == nil {
+						existing[scid] = true
+					}
+				}
+				rows.Close()
+
+				var missing []int32
+				for _, scid := range item.StateConstituencyIDs {
+					if !existing[scid] {
+						missing = append(missing, scid)
+					}
+				}
+				if len(missing) > 0 {
+					count, err := s.electionsService.CreateStateConstituencyElection(gCtx, item.OfficeID, electionDate, electionGroupID, missing)
+					if err != nil {
+						return fmt.Errorf("failed creating state constituency elections for office %d: %w", item.OfficeID, err)
+					}
+					totalCreated.Add(int64(count))
+				}
+
+			default:
+				return fmt.Errorf("unsupported scope %q for office ID %d", item.Scope, item.OfficeID)
 			}
 
-		default:
-			return "", fmt.Errorf("unsupported scope %q for office ID %d", item.Scope, item.OfficeID)
-		}
+			return nil
+		})
 	}
 
-	return fmt.Sprintf("Successfully seeded election instances (%d newly created)", totalCreated), nil
+	if err := g.Wait(); err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("Successfully seeded election instances (%d newly created)", totalCreated.Load()), nil
 }

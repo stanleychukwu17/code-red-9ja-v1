@@ -27,7 +27,6 @@ import (
 )
 
 type PartyApplicationsService interface {
-	GetElectionGroupByID(ctx context.Context, id int32) (queries.ElectionGroup, error)
 	SubmitApplication(ctx context.Context, input partyapplications.SubmitApplicationInput) (int64, error)
 	HasActiveAgentApplication(ctx context.Context, userID int64) (bool, error)
 	SubmitSupervisorApplication(ctx context.Context, input partyapplications.SubmitSupervisorApplicationInput) (queries.PartyAgentApplication, error)
@@ -57,12 +56,17 @@ type CampaignGroupsService interface {
 	EnsureAgentCampaignInGroup(ctx context.Context, input campaigngroupsservice.EnsureAgentCampaignInGroupInput) (*queries.CampaignGroup, error)
 }
 
+type ElectionGroupsService interface {
+	GetElectionGroupByID(ctx context.Context, id int32) (queries.ElectionGroup, error)
+}
+
 type Handler struct {
 	service               PartyApplicationsService
 	usersService          UsersService
 	partiesService        PartiesService
 	permissionsService    PermissionsService
 	campaignGroupsService CampaignGroupsService
+	electionGroupsService ElectionGroupsService
 	distributor           worker.TaskDistributor
 	notificationsService  notifications.NotificationsService
 	auditService          audit.AuditService
@@ -70,13 +74,14 @@ type Handler struct {
 	utils                 *utils.Utils
 }
 
-func NewHandler(service PartyApplicationsService, usersService UsersService, partiesService PartiesService, permissionsService PermissionsService, campaignGroupsService CampaignGroupsService, distributor worker.TaskDistributor, notificationsService notifications.NotificationsService, auditService audit.AuditService, utils *utils.Utils) *Handler {
+func NewHandler(service PartyApplicationsService, usersService UsersService, partiesService PartiesService, permissionsService PermissionsService, campaignGroupsService CampaignGroupsService, distributor worker.TaskDistributor, notificationsService notifications.NotificationsService, auditService audit.AuditService, utils *utils.Utils, electionGroupsService ElectionGroupsService) *Handler {
 	return &Handler{
 		service:               service,
 		usersService:          usersService,
 		partiesService:        partiesService,
 		permissionsService:    permissionsService,
 		campaignGroupsService: campaignGroupsService,
+		electionGroupsService: electionGroupsService,
 		distributor:           distributor,
 		notificationsService:  notificationsService,
 		auditService:          auditService,
@@ -149,7 +154,7 @@ func (h *Handler) SubmitApplication(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify election group exists, is active, and is accepting agent applications
-	electionGroup, err := h.service.GetElectionGroupByID(r.Context(), req.ElectionGroupID)
+	electionGroup, err := h.electionGroupsService.GetElectionGroupByID(r.Context(), req.ElectionGroupID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Failed to verify election group: "+err.Error())
 		return
@@ -302,7 +307,7 @@ func (h *Handler) SubmitSupervisorApplication(w http.ResponseWriter, r *http.Req
 	}
 
 	// Verify election group exists, is active, and is accepting agent/supervisor applications
-	electionGroup, err := h.service.GetElectionGroupByID(r.Context(), req.ElectionGroupID)
+	electionGroup, err := h.electionGroupsService.GetElectionGroupByID(r.Context(), req.ElectionGroupID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Failed to verify election group: "+err.Error())
 		return

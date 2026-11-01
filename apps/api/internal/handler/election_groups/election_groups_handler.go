@@ -17,6 +17,8 @@ import (
 )
 
 type ElectionGroupsService interface {
+	GetElectionGroupByID(ctx context.Context, id int32) (queries.ElectionGroup, error)
+	GetElectionGroupByFakeID(ctx context.Context, fakeID int64) (queries.ElectionGroup, error)
 	CreateElectionGroup(ctx context.Context, name string, electionDate time.Time) (queries.ElectionGroup, error)
 	ListElectionGroups(ctx context.Context, active *bool) ([]queries.ElectionGroup, error)
 	UpdateElectionGroup(ctx context.Context, id int32, name string, electionDate time.Time, active bool, acceptsCandidates bool, acceptsAgents bool) (queries.ElectionGroup, error)
@@ -25,24 +27,17 @@ type ElectionGroupsService interface {
 	ListGroupElections(ctx context.Context, electionGroupID int32) ([]queries.ElectionGroupListItem, error)
 }
 
-type ElectionsService interface {
-	GetElectionGroupByID(ctx context.Context, id int32) (queries.ElectionGroup, error)
-	GetElectionGroupByFakeID(ctx context.Context, fakeID int64) (queries.ElectionGroup, error)
-}
-
 type Handler struct {
-	service          ElectionGroupsService
-	electionsService ElectionsService
-	auditService     audit.AuditService
-	validate         *validator.Validate
-	utils            *utils.Utils
+	service      ElectionGroupsService
+	auditService audit.AuditService
+	validate     *validator.Validate
+	utils        *utils.Utils
 }
 
-func NewHandler(service ElectionGroupsService, electionsService ElectionsService, auditService audit.AuditService, utils *utils.Utils) *Handler {
+func NewHandler(service ElectionGroupsService, auditService audit.AuditService, utils *utils.Utils) *Handler {
 	return &Handler{
 		service:      service,
-		electionsService: electionsService,
-		auditService:     auditService,
+		auditService: auditService,
 		validate:     validator.New(),
 		utils:        utils,
 	}
@@ -124,6 +119,8 @@ type ElectionGroupResponse struct {
 	Name                               string             `json:"name"`
 	ElectionDate                       pgtype.Date        `json:"election_date"`
 	Active                             bool               `json:"active"`
+	AcceptsCandidates                  bool               `json:"accepts_candidates"`
+	AcceptsAgents                      bool               `json:"accepts_agents"`
 	CreatedAt                          pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt                          pgtype.Timestamptz `json:"updated_at"`
 	PollingAgentsCoverage              interface{}        `json:"polling_agents_coverage"`
@@ -173,6 +170,8 @@ func (h *Handler) ListElectionGroups(w http.ResponseWriter, r *http.Request) {
 				Name:                               row.Name,
 				ElectionDate:                       row.ElectionDate,
 				Active:                             row.Active,
+				AcceptsCandidates:                  row.AcceptsCandidates,
+				AcceptsAgents:                      row.AcceptsAgents,
 				CreatedAt:                          row.CreatedAt,
 				UpdatedAt:                          row.UpdatedAt,
 				PollingAgentsCoverage:              json.RawMessage(row.PollingAgentsCoverage),
@@ -188,12 +187,14 @@ func (h *Handler) ListElectionGroups(w http.ResponseWriter, r *http.Request) {
 
 		for _, g := range groups {
 			responseGroups = append(responseGroups, ElectionGroupResponse{
-				ID:           g.ID,
-				Name:         g.Name,
-				ElectionDate: g.ElectionDate,
-				Active:       g.Active,
-				CreatedAt:    g.CreatedAt,
-				UpdatedAt:    g.UpdatedAt,
+				ID:                g.ID,
+				Name:              g.Name,
+				ElectionDate:      g.ElectionDate,
+				Active:            g.Active,
+				AcceptsCandidates: g.AcceptsCandidates,
+				AcceptsAgents:     g.AcceptsAgents,
+				CreatedAt:         g.CreatedAt,
+				UpdatedAt:         g.UpdatedAt,
 			})
 		}
 	}
@@ -238,7 +239,7 @@ func (h *Handler) GetElectionGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	eg, err := h.electionsService.GetElectionGroupByFakeID(r.Context(), fakeID)
+	eg, err := h.service.GetElectionGroupByFakeID(r.Context(), fakeID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Election group not found")
 		return
@@ -286,7 +287,7 @@ func (h *Handler) UpdateElectionGroup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 3. Verify the election group exists before attempting update
-	existingGroup, err := h.electionsService.GetElectionGroupByID(r.Context(), int32(id))
+	existingGroup, err := h.service.GetElectionGroupByID(r.Context(), int32(id))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Election group not found")
 		return
@@ -369,7 +370,7 @@ func (h *Handler) DeleteElectionGroup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 2. Verify election group exists before attempting deletion
-	existingGroup, err := h.electionsService.GetElectionGroupByID(r.Context(), int32(id))
+	existingGroup, err := h.service.GetElectionGroupByID(r.Context(), int32(id))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Election group not found")
 		return
@@ -417,7 +418,7 @@ func (h *Handler) ListGroupElections(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	eg, err := h.electionsService.GetElectionGroupByFakeID(r.Context(), fakeID)
+	eg, err := h.service.GetElectionGroupByFakeID(r.Context(), fakeID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Election group not found")
 		return

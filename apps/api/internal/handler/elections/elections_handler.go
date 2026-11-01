@@ -29,7 +29,6 @@ type ElectionsService interface {
 	CreateWardElection(ctx context.Context, params elections.CreateWardElectionParams) (int, error)
 	GetElectionByID(ctx context.Context, id int32) (queries.ElectionDetails, error)
 	GetElectionByFakeID(ctx context.Context, fakeID int64) (queries.ElectionDetails, error)
-	GetElectionGroupByID(ctx context.Context, id int32) (queries.ElectionGroup, error)
 	ListElections(ctx context.Context, filter elections.ListElectionsFilter) ([]queries.ElectionListItem, error)
 	UpdateElection(ctx context.Context, params elections.UpdateElectionParams) (queries.ElectionDetails, error)
 	BulkUpdateElectionGroup(ctx context.Context, params elections.BulkUpdateElectionGroupParams) error
@@ -56,23 +55,29 @@ type PartiesService interface {
 	IsPartyMember(ctx context.Context, userID int64, partyID int16) (bool, error)
 }
 
-type Handler struct {
-	service        ElectionsService
-	usersService   UsersService
-	partiesService PartiesService
-	auditService   audit.AuditService
-	validate       *validator.Validate
-	utils          *utils.Utils
+type ElectionGroupsService interface {
+	GetElectionGroupByID(ctx context.Context, id int32) (queries.ElectionGroup, error)
 }
 
-func NewHandler(service ElectionsService, usersService UsersService, auditService audit.AuditService, utils *utils.Utils, partiesService PartiesService) *Handler {
+type Handler struct {
+	service               ElectionsService
+	electionGroupsService ElectionGroupsService
+	usersService          UsersService
+	partiesService        PartiesService
+	auditService          audit.AuditService
+	validate              *validator.Validate
+	utils                 *utils.Utils
+}
+
+func NewHandler(service ElectionsService, usersService UsersService, auditService audit.AuditService, utils *utils.Utils, partiesService PartiesService, electionGroupsService ElectionGroupsService) *Handler {
 	return &Handler{
-		service:        service,
-		usersService:   usersService,
-		partiesService: partiesService,
-		auditService:   auditService,
-		validate:       validator.New(),
-		utils:          utils,
+		service:               service,
+		electionGroupsService: electionGroupsService,
+		usersService:          usersService,
+		partiesService:        partiesService,
+		auditService:          auditService,
+		validate:              validator.New(),
+		utils:                 utils,
 	}
 }
 
@@ -1026,7 +1031,7 @@ func (h *Handler) FieldPartyCandidate(w http.ResponseWriter, r *http.Request) {
 	electionID := int64(election.ID)
 
 	// Fetch election group details and verify it is accepting candidates
-	electionGroup, err := h.service.GetElectionGroupByID(r.Context(), election.ElectionGroupID)
+	electionGroup, err := h.electionGroupsService.GetElectionGroupByID(r.Context(), election.ElectionGroupID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Failed to verify election group: "+err.Error())
 		return
@@ -1198,7 +1203,7 @@ func (h *Handler) UnfieldPartyCandidate(w http.ResponseWriter, r *http.Request) 
 
 	// Ensure election group is active and nominations are currently open (skipped for platform admins)
 	if !claims.HasAnyRole("super_admin", "admin") {
-		electionGroup, err := h.service.GetElectionGroupByID(r.Context(), election.ElectionGroupID)
+		electionGroup, err := h.electionGroupsService.GetElectionGroupByID(r.Context(), election.ElectionGroupID)
 		if err != nil {
 			h.utils.RespondError(w, http.StatusBadRequest, "Failed to verify election group: "+err.Error())
 			return
