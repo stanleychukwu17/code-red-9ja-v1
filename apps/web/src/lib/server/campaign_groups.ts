@@ -10,7 +10,7 @@ export type CampaignGroupMemberItem = {
   role: "candidate" | "party_official" | "state_election_supervisor" | "lga_election_supervisor" | "ward_election_supervisor" | "polling_agent" | "state_supervisor" | "lga_supervisor" | "ward_supervisor" | "agent" | string;
   can_broadcast: boolean;
   joined_at: string;
-  fake_id?: string;
+  fake_id?: string | number;
   first_name?: string;
   last_name?: string;
   username?: string;

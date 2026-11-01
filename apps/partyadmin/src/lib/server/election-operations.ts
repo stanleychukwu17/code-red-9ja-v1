@@ -85,7 +85,7 @@ export const getOperationsBreakdown = createServerFn({ method: "GET" })
       if (data.wardId) params.append("ward_id", String(data.wardId));
 
       const response = await apiFetch(
-        `${API_URL.electionOperationsBreakdown}?${params.toString()}`,
+        API_URL.electionOperationsBreakdown(params),
       );
       return response.json();
     } catch (error) {

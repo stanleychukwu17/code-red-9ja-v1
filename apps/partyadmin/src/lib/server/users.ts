@@ -93,7 +93,7 @@ export const getUsersList = createServerFn({ method: "GET" })
 
       const qs = params.toString();
 
-      const response = await apiFetch(`${API_URL.users}${qs ? `?${qs}` : ""}`);
+      const response = await apiFetch(API_URL.users(qs));
       const resData = await response.json();
       return resData;
     } catch (_error) {
@@ -127,7 +127,7 @@ export const searchUsers = createServerFn({ method: "GET" })
       if (data?.stateIds?.[0]) params.append("state_id", data.stateIds[0]);
 
       const qs = params.toString();
-      const response = await apiFetch(`${API_URL.searchUsers}${qs ? `?${qs}` : ""}`);
+      const response = await apiFetch(API_URL.searchUsers(qs));
       const resData = await response.json();
       return resData;
     } catch (_error) {

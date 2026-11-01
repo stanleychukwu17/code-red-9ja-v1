@@ -68,7 +68,7 @@ export const getAgentCoverageBreakdown = createServerFn({ method: "GET" })
       if (data.wardId) params.append("ward_id", String(data.wardId));
 
       const response = await apiFetch(
-        `${API_URL.agentCoverageBreakdown}?${params.toString()}`,
+        API_URL.agentCoverageBreakdown(params),
       );
       return response.json();
     } catch (error) {

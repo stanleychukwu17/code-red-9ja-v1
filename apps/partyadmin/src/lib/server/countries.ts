@@ -34,7 +34,7 @@ export const getCities = createServerFn()
   .inputValidator((data: { stateId: number; limit?: number; cursor?: string | number }) => data)
   .handler(async ({ data: { stateId, limit, cursor } }) => {
     try {
-      const url = `${API_URL.getCities(stateId)}?limit=${limit || 50}&cursor=${cursor || ""}`;
+      const url = API_URL.getCities(stateId, limit, cursor);
       const response = await apiFetch(url);
       const data = await response.json();
       return data;
@@ -52,7 +52,7 @@ export const getSenatorialDistricts = createServerFn()
       if (data?.limit) params.append("limit", String(data.limit));
       if (data?.cursor) params.append("cursor", String(data.cursor));
 
-      const response = await apiFetch(`${API_URL.getSenatorialDistricts}?${params.toString()}`);
+      const response = await apiFetch(API_URL.getSenatorialDistricts(params));
       const resData = await response.json();
       return resData;
     } catch (error) {
@@ -70,7 +70,7 @@ export const getFederalConstituencies = createServerFn()
       if (data?.limit) params.append("limit", String(data.limit));
       if (data?.cursor) params.append("cursor", String(data.cursor));
 
-      const response = await apiFetch(`${API_URL.getFederalConstituencies}?${params.toString()}`);
+      const response = await apiFetch(API_URL.getFederalConstituencies(params));
       const resData = await response.json();
       return resData;
     } catch (error) {
@@ -87,7 +87,7 @@ export const getStateConstituencies = createServerFn()
       if (data?.limit) params.append("limit", String(data.limit));
       if (data?.cursor) params.append("cursor", String(data.cursor));
 
-      const response = await apiFetch(`${API_URL.getStateConstituencies}?${params.toString()}`);
+      const response = await apiFetch(API_URL.getStateConstituencies(params));
       const resData = await response.json();
       return resData;
     } catch (error) {
@@ -123,7 +123,7 @@ export const getLGAs = createServerFn()
       if (data?.limit) params.append("limit", String(data.limit));
       if (data?.cursor) params.append("cursor", String(data.cursor));
       const qs = params.toString();
-      const response = await apiFetch(`${API_URL.getLGAs}${qs ? `?${qs}` : ""}`);
+      const response = await apiFetch(API_URL.getLGAs(qs));
       return await response.json();
     } catch (error) {
       return { status: "failed", error: "Failed to fetch LGAs from API" };
@@ -140,7 +140,7 @@ export const getWards = createServerFn()
       if (data?.limit) params.append("limit", String(data.limit));
       if (data?.cursor) params.append("cursor", String(data.cursor));
       const qs = params.toString();
-      const response = await apiFetch(`${API_URL.getWards}${qs ? `?${qs}` : ""}`);
+      const response = await apiFetch(API_URL.getWards(qs));
       return await response.json();
     } catch (error) {
       return { status: "failed", error: "Failed to fetch Wards from API" };

@@ -61,7 +61,7 @@ export const getPollingUnitUpdates = createServerFn({
       if (data.cursor) queryParams.append("cursor", data.cursor.toString());
       if (data.limit) queryParams.append("limit", data.limit.toString());
 
-      const url = `${API_URL.pollingUnitUpdates}?${queryParams.toString()}`;
+      const url = API_URL.pollingUnitUpdates(queryParams);
 
       const res = await apiFetch(url, {
         method: "GET",

@@ -18,12 +18,12 @@ export const getOffices = createServerFn({ method: "GET" })
   )
   .handler(async ({ data }) => {
     try {
-      const limit = data?.limit || 50;
-      const cursor = data?.cursor || "";
-      const contestedParam =
-        data?.contested !== undefined ? `&contested=${data.contested}` : "";
       const response = await apiFetch(
-        `${API_URL.offices}?limit=${limit}&cursor=${cursor}${contestedParam}`,
+        API_URL.offices({
+          limit: data?.limit || 50,
+          cursor: data?.cursor,
+          contested: data?.contested,
+        }),
       );
       return await response.json();
     } catch (error: any) {

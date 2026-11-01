@@ -18,7 +18,7 @@ export const getStatesWithResults = createServerFn({ method: "GET" })
       if (data.limit) params.append("limit", String(data.limit));
       if (data.cursor) params.append("cursor", String(data.cursor));
       const response = await apiFetch(
-        `${API_URL.electionResultsStates}?${params.toString()}`,
+        API_URL.electionResultsStates(params),
       );
       return response.json();
     } catch (error) {
@@ -38,7 +38,7 @@ export const getSenatorialDistrictsWithResults = createServerFn({ method: "GET" 
       if (data.limit) params.append("limit", String(data.limit));
       if (data.cursor) params.append("cursor", String(data.cursor));
       const response = await apiFetch(
-        `${API_URL.electionResultsSenatorialDistricts}?${params.toString()}`,
+        API_URL.electionResultsSenatorialDistricts(params),
       );
       return response.json();
     } catch (error) {
@@ -58,7 +58,7 @@ export const getFederalConstituenciesWithResults = createServerFn({ method: "GET
       if (data.limit) params.append("limit", String(data.limit));
       if (data.cursor) params.append("cursor", String(data.cursor));
       const response = await apiFetch(
-        `${API_URL.electionResultsFederalConstituencies}?${params.toString()}`,
+        API_URL.electionResultsFederalConstituencies(params),
       );
       return response.json();
     } catch (error) {
@@ -91,7 +91,7 @@ export const getStateConstituenciesWithResults = createServerFn({ method: "GET" 
       if (data.limit) params.append("limit", String(data.limit));
       if (data.cursor) params.append("cursor", String(data.cursor));
       const response = await apiFetch(
-        `${API_URL.electionResultsStateConstituencies}?${params.toString()}`,
+        API_URL.electionResultsStateConstituencies(params),
       );
       return response.json();
     } catch (error) {
@@ -116,7 +116,7 @@ export const getLGAsWithResults = createServerFn({ method: "GET" })
       if (data.limit) params.append("limit", String(data.limit));
       if (data.cursor) params.append("cursor", String(data.cursor));
       const response = await apiFetch(
-        `${API_URL.electionResultsLGAs}?${params.toString()}`,
+        API_URL.electionResultsLGAs(params),
       );
       return response.json();
     } catch (error) {
@@ -137,7 +137,7 @@ export const getWardsWithResults = createServerFn({ method: "GET" })
       if (data.limit) params.append("limit", String(data.limit));
       if (data.cursor) params.append("cursor", String(data.cursor));
       const response = await apiFetch(
-        `${API_URL.electionResultsWards}?${params.toString()}`,
+        API_URL.electionResultsWards(params),
       );
       return response.json();
     } catch (error) {
@@ -157,7 +157,7 @@ export const getPollingUnitsWithResults = createServerFn({ method: "GET" })
       if (data.limit) params.append("limit", String(data.limit));
       if (data.cursor) params.append("cursor", String(data.cursor));
       const response = await apiFetch(
-        `${API_URL.electionResultsPollingUnits}?${params.toString()}`,
+        API_URL.electionResultsPollingUnits(params),
       );
       return response.json();
     } catch (error) {
@@ -195,7 +195,7 @@ export const getScopedElectionResult = createServerFn({ method: "GET" })
       if (data.wardId) params.append("ward_id", String(data.wardId));
 
       const response = await apiFetch(
-        `${API_URL.electionResultsScoped}?${params.toString()}`,
+        API_URL.electionResultsScoped(params),
       );
       return response.json();
     } catch (error) {
@@ -243,7 +243,7 @@ export const getElectoralUnitsBreakdown = createServerFn({ method: "GET" })
       if (data.cursor) params.append("cursor", String(data.cursor));
 
       const response = await apiFetch(
-        `${API_URL.electionResultsBreakdown}?${params.toString()}`,
+        API_URL.electionResultsBreakdown(params),
       );
       return response.json();
     } catch (error) {

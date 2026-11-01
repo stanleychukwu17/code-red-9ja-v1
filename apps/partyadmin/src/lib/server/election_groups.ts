@@ -27,7 +27,7 @@ export const getElectionGroups = createServerFn({ method: "GET" })
       if (data?.order) params.append("order", data.order);
       if (data?.active !== undefined) params.append("active", String(data.active));
       const qs = params.toString();
-      const response = await apiFetch(`${API_URL.electionGroups}${qs ? `?${qs}` : ""}`);
+      const response = await apiFetch(API_URL.electionGroups(qs));
       const resData = await response.json();
       return resData;
     } catch (error) {

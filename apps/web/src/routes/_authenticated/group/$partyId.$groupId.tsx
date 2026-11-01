@@ -478,7 +478,7 @@ function CampaignGroupPageComponent() {
                 const lastName = member.last_name || "";
                 const username = member.username || "";
                 const avatar = member.avatar || "";
-                const fakeId = member.fake_id || "";
+                const fakeId = member.fake_id ? String(member.fake_id) : "";
                 const fullName = [firstName, lastName].filter(Boolean).join(" ") || "Campaign Member";
 
                 return (
@@ -523,7 +523,7 @@ function CampaignGroupPageComponent() {
                       <span>Joined {new Date(member.joined_at).toLocaleDateString()}</span>
                       {fakeId && (
                         <span className="font-mono text-muted-foreground/60">
-                          #{fakeId.slice(-6)}
+                          #{String(fakeId).slice(-6)}
                         </span>
                       )}
                     </div>

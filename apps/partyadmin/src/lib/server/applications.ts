@@ -37,7 +37,7 @@ export const getApplications = createServerFn({ method: "GET" })
       if (data?.wardId) params.append("ward_id", String(data.wardId));
       if (data?.active_election_only !== undefined) params.append("active_election_only", String(data.active_election_only));
 
-      const url = `${API_URL.partyApplications}?${params.toString()}`;
+      const url = API_URL.partyApplications(params);
       const response = await apiFetch(url);
       const resData = await response.json();
       return resData;
@@ -137,7 +137,7 @@ export const getPollingUnits = createServerFn({ method: "GET" })
       if (data?.cursor) params.append("cursor", String(data.cursor));
       const qs = params.toString();
 
-      const url = `${API_URL.pollingUnitsPaginated}${qs ? `?${qs}` : ""}`;
+      const url = API_URL.pollingUnitsPaginated(qs);
       const response = await apiFetch(url);
       const resData = await response.json();
       return resData;
@@ -176,7 +176,7 @@ export const getLGAs = createServerFn({ method: "GET" })
       if (data?.cursor) params.append("cursor", String(data.cursor));
       const qs = params.toString();
 
-      const url = `${API_URL.getLGAs}${qs ? `?${qs}` : ""}`;
+      const url = API_URL.getLGAs(qs);
       const response = await apiFetch(url);
       const resData = await response.json();
       return resData;
@@ -217,7 +217,7 @@ export const getWards = createServerFn({ method: "GET" })
       if (data?.cursor) params.append("cursor", String(data.cursor));
       const qs = params.toString();
 
-      const url = `${API_URL.getWards}${qs ? `?${qs}` : ""}`;
+      const url = API_URL.getWards(qs);
       const response = await apiFetch(url);
       const resData = await response.json();
       return resData;
@@ -249,7 +249,7 @@ export const getPollingUnitRecommendations = createServerFn({ method: "GET" })
       if (data.pollingUnitID)
         params.append("polling_unit_id", String(data.pollingUnitID));
 
-      const url = `${API_URL.partyApplicationsRecommendations}?${params.toString()}`;
+      const url = API_URL.partyApplicationsRecommendations(params);
       const response = await apiFetch(url);
       const resData = await response.json();
       return resData;

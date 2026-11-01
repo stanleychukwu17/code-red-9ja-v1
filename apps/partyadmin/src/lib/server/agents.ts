@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { API_URL } from "#/lib/config";
 import { apiFetch } from "./fetch";
 
 export type AgentPerformanceItem = {
@@ -73,9 +74,7 @@ export const getAgentPerformanceStats = createServerFn({ method: "GET" })
       if (data?.limit) params.append("limit", String(data.limit));
       if (data?.cursor) params.append("cursor", data.cursor);
 
-      const API_BASE = import.meta.env.VITE_API_URL || "";
-      const url = `${API_BASE}/api/v1/agent-performance?${params.toString()}`;
-      const response = await apiFetch(url);
+      const response = await apiFetch(API_URL.agentPerformance(params));
       const resData = await response.json();
       if (!response.ok) {
         console.error("agent-performance error:", resData);
@@ -103,9 +102,7 @@ export const changeAgentRole = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     try {
-      const API_BASE = import.meta.env.VITE_API_URL || "";
-      const url = `${API_BASE}/api/v1/agents/change-role`;
-      const response = await apiFetch(url, {
+      const response = await apiFetch(API_URL.agentChangeRole, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -137,13 +134,11 @@ export const revokeAgentAssignment = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     try {
-      const API_BASE = import.meta.env.VITE_API_URL || "";
       const params = new URLSearchParams();
       params.append("role_type", data.roleType);
       if (data.partyId) params.append("party_id", String(data.partyId));
 
-      const url = `${API_BASE}/api/v1/agents/${data.id}?${params.toString()}`;
-      const response = await apiFetch(url, {
+      const response = await apiFetch(API_URL.agentById(data.id, params), {
         method: "DELETE",
       });
       const resData = await response.json();

@@ -51,7 +51,7 @@ export const getElectionScopedFinalResult = createServerFn({ method: "GET" })
         params.append("state_id", String(data.stateId));
       }
 
-      const url = `${API_URL.electionResultsScoped}?${params.toString()}`;
+      const url = API_URL.electionResultsScoped(params);
 
       const response = await apiFetch(url);
       return await response.json();
@@ -86,7 +86,7 @@ export const getStateFinalResults = createServerFn({ method: "GET" })
       if (data.cursor) params.append("cursor", data.cursor);
 
       const response = await apiFetch(
-        `${API_URL.stateFinalResults}?${params.toString()}`,
+        API_URL.stateFinalResults(params),
       );
       return await response.json();
     } catch (error) {
@@ -123,7 +123,7 @@ export const getSenatorialDistrictFinalResults = createServerFn({
       if (data.cursor) params.append("cursor", data.cursor);
 
       const response = await apiFetch(
-        `${API_URL.senatorialDistrictFinalResults}?${params.toString()}`,
+        API_URL.senatorialDistrictFinalResults(params),
       );
       return await response.json();
     } catch (error) {
@@ -167,7 +167,7 @@ export const getFederalConstituencyFinalResults = createServerFn({
       if (data.cursor) params.append("cursor", data.cursor);
 
       const response = await apiFetch(
-        `${API_URL.federalConstituencyFinalResults}?${params.toString()}`,
+        API_URL.federalConstituencyFinalResults(params),
       );
       return await response.json();
     } catch (error) {
@@ -215,7 +215,7 @@ export const getLGAFinalResults = createServerFn({ method: "GET" })
       if (data.cursor) params.append("cursor", data.cursor);
 
       const response = await apiFetch(
-        `${API_URL.lgaFinalResults}?${params.toString()}`,
+        API_URL.lgaFinalResults(params),
       );
       return await response.json();
     } catch (error) {
@@ -264,7 +264,7 @@ export const getWardFinalResults = createServerFn({ method: "GET" })
       if (data.cursor) params.append("cursor", data.cursor);
 
       const response = await apiFetch(
-        `${API_URL.wardFinalResults}?${params.toString()}`,
+        API_URL.wardFinalResults(params),
       );
       return await response.json();
     } catch (error) {
