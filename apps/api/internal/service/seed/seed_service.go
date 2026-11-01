@@ -67,29 +67,30 @@ func NewSeedService(
 }
 
 type SeedUserRequest struct {
-	Num                int     `json:"num"`
-	Email              string  `json:"email"`
-	Avatar             string  `json:"avatar"`
-	Phone              *string `json:"phone"`
-	Username           *string `json:"username"`
-	Password           string  `json:"password"`
-	LastName           string  `json:"last_name"`
-	FirstName          string  `json:"first_name"`
-	MiddleName         *string `json:"middle_name"`
-	Gender             string  `json:"gender"`
-	DateOfBirth        string  `json:"date_of_birth"`
-	CurrentCountry     int16   `json:"current_country"`
-	CurrentState       int16   `json:"current_state"`
-	CurrentLga         *int32  `json:"current_lga"`
-	CurrentWard        *int32  `json:"current_ward"`
-	CurrentCity        *int32  `json:"current_city"`
-	PollingUnitID      *int32  `json:"polling_unit_id"`
-	StateOfOrigin      *int16  `json:"state_of_origin"`
-	PartyID            *int16  `json:"party_id"`
-	AccountStatus      string  `json:"account_status"`
-	IsVerified         bool    `json:"is_verified"`
-	VerificationTypeID *int16  `json:"verification_type_id"`
-	IsPolitician       bool    `json:"is_politician"`
+	Num                 int     `json:"num"`
+	Email               string  `json:"email"`
+	Avatar              string  `json:"avatar"`
+	Phone               *string `json:"phone"`
+	Username            *string `json:"username"`
+	Password            string  `json:"password"`
+	LastName            string  `json:"last_name"`
+	FirstName           string  `json:"first_name"`
+	MiddleName          *string `json:"middle_name"`
+	Gender              string  `json:"gender"`
+	DateOfBirth         string  `json:"date_of_birth"`
+	CurrentCountry      int16   `json:"current_country"`
+	CurrentState        int16   `json:"current_state"`
+	CurrentLga          *int32  `json:"current_lga"`
+	CurrentWard         *int32  `json:"current_ward"`
+	CurrentCity         *int32  `json:"current_city"`
+	PollingUnitID       *int32  `json:"polling_unit_id"`
+	StateOfOrigin       *int16  `json:"state_of_origin"`
+	PartyID             *int16  `json:"party_id"`
+	AccountStatus       string  `json:"account_status"`
+	IsVerified          bool    `json:"is_verified"`
+	VerificationTypeID  *int16  `json:"verification_type_id,omitempty"`
+	VerificationTypeIDs []int16 `json:"verification_type_ids,omitempty"`
+	IsPolitician        bool    `json:"is_politician"`
 }
 
 // SeedUsers registers a batch of new users from a seed request.
@@ -389,7 +390,8 @@ func (s *SeedService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 			if u.PartyID != nil && *u.PartyID > 0 {
 				partyIDVal = utils.PgInt2FromPtrNullable(u.PartyID)
 			}
-			isVerifiedVal := u.IsVerified && u.VerificationTypeID != nil
+			hasVerifications := u.VerificationTypeID != nil || len(u.VerificationTypeIDs) > 0
+			isVerifiedVal := (u.IsVerified && hasVerifications) || u.IsPolitician
 
 			userBatch.Queue(`
 				INSERT INTO users (
@@ -476,24 +478,30 @@ func (s *SeedService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 					`, insertedUser.id, insertedUser.formattedPhone, insertedUser.phoneCode, insertedUser.rawPhoneInput)
 				}
 
-				// 3. Custom verification badge (if requested)
-				if insertedUser.user.IsVerified && insertedUser.user.VerificationTypeID != nil {
+				// 3. Verification badges (supports multiple verification IDs)
+				verifTypeIDs := make(map[int16]struct{})
+				if insertedUser.user.IsVerified {
+					for _, vid := range insertedUser.user.VerificationTypeIDs {
+						if vid > 0 {
+							verifTypeIDs[vid] = struct{}{}
+						}
+					}
+					if insertedUser.user.VerificationTypeID != nil && *insertedUser.user.VerificationTypeID > 0 {
+						verifTypeIDs[*insertedUser.user.VerificationTypeID] = struct{}{}
+					}
+				}
+				if insertedUser.user.IsPolitician {
+					// Politician badge (verification_type_id = 4)
+					verifTypeIDs[4] = struct{}{}
+				}
+
+				for vid := range verifTypeIDs {
 					secBatch.Queue(`
 						INSERT INTO pages_verified (page_type, page_id, verification_type_id)
 						VALUES ($1, $2, $3)
 						ON CONFLICT (page_type, page_id, verification_type_id)
 						DO UPDATE SET verified_at = CURRENT_TIMESTAMP
-					`, db.PageTypeUser, insertedUser.id, *insertedUser.user.VerificationTypeID)
-				}
-
-				// 4. Politician badge (verification_type_id = 2)
-				if insertedUser.user.IsPolitician {
-					secBatch.Queue(`
-						INSERT INTO pages_verified (page_type, page_id, verification_type_id)
-						VALUES ($1, $2, 2)
-						ON CONFLICT (page_type, page_id, verification_type_id)
-						DO UPDATE SET verified_at = CURRENT_TIMESTAMP
-					`, db.PageTypeUser, insertedUser.id)
+					`, db.PageTypeUser, insertedUser.id, vid)
 				}
 
 				// 4. Multi-tier Party Membership Enrollment down to Ward level
@@ -1436,4 +1444,633 @@ func (s *SeedService) SeedElectionInstances(ctx context.Context, instances []See
 	}
 
 	return fmt.Sprintf("Successfully seeded election instances (%d newly created)", totalCreated.Load()), nil
+}
+
+// CandidateProfile contains personal and demographic user fields common to candidates and running mates.
+type CandidateProfile struct {
+	Num                 int     `json:"num,omitempty"`
+	Role                string  `json:"role,omitempty"`
+	Name                string  `json:"name,omitempty"`
+	FirstName           string  `json:"first_name"`
+	MiddleName          *string `json:"middle_name,omitempty"`
+	LastName            string  `json:"last_name"`
+	Username            *string `json:"username,omitempty"`
+	Email               string  `json:"email"`
+	Phone               *string `json:"phone,omitempty"`
+	Avatar              string  `json:"avatar,omitempty"`
+	IsPolitician        bool    `json:"is_politician,omitempty"`
+	IsVerified          bool    `json:"is_verified,omitempty"`
+	VerificationTypeIDs []int16 `json:"verification_type_ids,omitempty"`
+	PartyID             int16   `json:"party_id"`
+	PartyShortName      string  `json:"party_short_name,omitempty"`
+	CurrentCountry      int16   `json:"current_country"`
+	CurrentState        int16   `json:"current_state"`
+	StateOfOrigin       *int16  `json:"state_of_origin,omitempty"`
+	CurrentLga          *int32  `json:"current_lga,omitempty"`
+	CurrentWard         *int32  `json:"current_ward,omitempty"`
+	CurrentCity         *int32  `json:"current_city,omitempty"`
+	PollingUnitID       *int32  `json:"polling_unit_id,omitempty"`
+	DateOfBirth         string  `json:"date_of_birth"`
+	Gender              string  `json:"gender"`
+	Qualifications      string  `json:"qualifications,omitempty"`
+}
+
+func (p *CandidateProfile) toSeedUserRequest() SeedUserRequest {
+	verifIDs := []int16{4} // default to politician_verified (4)
+	if len(p.VerificationTypeIDs) > 0 {
+		verifIDs = p.VerificationTypeIDs
+	}
+
+	var midName *string
+	if p.MiddleName != nil && strings.TrimSpace(*p.MiddleName) != "" {
+		trimmed := strings.TrimSpace(*p.MiddleName)
+		midName = &trimmed
+	}
+
+	var phone *string
+	if p.Phone != nil && strings.TrimSpace(*p.Phone) != "" {
+		trimmed := strings.TrimSpace(*p.Phone)
+		phone = &trimmed
+	}
+
+	var username *string
+	if p.Username != nil && strings.TrimSpace(*p.Username) != "" {
+		trimmed := strings.TrimSpace(*p.Username)
+		username = &trimmed
+	}
+
+	var verifID *int16
+	if len(verifIDs) > 0 {
+		verifID = &verifIDs[0]
+	}
+
+	return SeedUserRequest{
+		Num:                 p.Num,
+		Email:               p.Email,
+		Avatar:              p.Avatar,
+		Phone:               phone,
+		Username:            username,
+		Password:            "password",
+		LastName:            p.LastName,
+		FirstName:           p.FirstName,
+		MiddleName:          midName,
+		Gender:              p.Gender,
+		DateOfBirth:         p.DateOfBirth,
+		CurrentCountry:      p.CurrentCountry,
+		CurrentState:        p.CurrentState,
+		CurrentLga:          p.CurrentLga,
+		CurrentWard:         p.CurrentWard,
+		CurrentCity:         p.CurrentCity,
+		PollingUnitID:       p.PollingUnitID,
+		StateOfOrigin:       p.StateOfOrigin,
+		PartyID:             &p.PartyID,
+		AccountStatus:       "placeholder",
+		IsVerified:          true,
+		VerificationTypeID:  verifID,
+		VerificationTypeIDs: verifIDs,
+		IsPolitician:        true,
+	}
+}
+
+type PresidentialCandidateRequest struct {
+	TicketNum      int               `json:"ticket_num,omitempty"`
+	PartyShortName string            `json:"party_short_name,omitempty"`
+	PartyID        int16             `json:"party_id"`
+	Candidate      CandidateProfile  `json:"candidate"`
+	RunningMate    *CandidateProfile `json:"running_mate,omitempty"`
+}
+
+type GovernorshipCandidateRequest struct {
+	StateName      string            `json:"state_name,omitempty"`
+	StateID        int16             `json:"state_id"`
+	TicketNum      int               `json:"ticket_num,omitempty"`
+	PartyShortName string            `json:"party_short_name,omitempty"`
+	PartyID        int16             `json:"party_id"`
+	Candidate      CandidateProfile  `json:"candidate"`
+	RunningMate    *CandidateProfile `json:"running_mate,omitempty"`
+}
+
+type SenateCandidateRequest struct {
+	CandidateProfile
+	SenatorialDistrictID int32 `json:"senatorial_district_id"`
+}
+
+type HouseOfRepsCandidateRequest struct {
+	CandidateProfile
+	FederalConstituencyID int32 `json:"federal_constituency_id"`
+}
+
+type StateAssemblyCandidateRequest struct {
+	CandidateProfile
+	StateConstituencyID int32 `json:"state_constituency_id"`
+}
+
+type candidateTicketMeta struct {
+	electionID      int32
+	electionGroupID int32
+	candidateID     int64
+	runningMateID   *int64
+	partyID         int16
+}
+
+type electionTargetMeta struct {
+	electionID      int32
+	electionGroupID int32
+}
+
+// resolveUserIDsByEmails looks up user IDs for all given emails in a single batch query.
+func (s *SeedService) resolveUserIDsByEmails(ctx context.Context, emails []string) (map[string]int64, error) {
+	if len(emails) == 0 {
+		return make(map[string]int64), nil
+	}
+
+	cleanEmails := make([]string, 0, len(emails))
+	seen := make(map[string]bool, len(emails))
+	for _, em := range emails {
+		cleaned := strings.ToLower(strings.TrimSpace(em))
+		if cleaned != "" && !seen[cleaned] {
+			seen[cleaned] = true
+			cleanEmails = append(cleanEmails, cleaned)
+		}
+	}
+
+	rows, err := s.pool.Query(ctx, `SELECT id, email FROM users WHERE email = ANY($1)`, cleanEmails)
+	if err != nil {
+		return nil, fmt.Errorf("failed fetching user IDs for candidates: %w", err)
+	}
+	defer rows.Close()
+
+	userMap := make(map[string]int64, len(cleanEmails))
+	for rows.Next() {
+		var id int64
+		var em string
+		if err := rows.Scan(&id, &em); err == nil {
+			userMap[strings.ToLower(em)] = id
+		}
+	}
+
+	return userMap, nil
+}
+
+// batchInsertCandidateTickets performs batched upserts into election_candidates, deduplicating
+// by (election_id, party_id) to avoid PostgreSQL ON CONFLICT row conflicts within the same statement.
+func (s *SeedService) batchInsertCandidateTickets(ctx context.Context, tickets []candidateTicketMeta) (int, error) {
+	if len(tickets) == 0 {
+		return 0, nil
+	}
+
+	// Deduplicate by (electionID, partyID) to prevent "ON CONFLICT DO UPDATE cannot affect row a second time"
+	ticketMap := make(map[string]candidateTicketMeta, len(tickets))
+	for _, t := range tickets {
+		key := fmt.Sprintf("%d:%d", t.electionID, t.partyID)
+		ticketMap[key] = t
+	}
+	uniqueTickets := make([]candidateTicketMeta, 0, len(ticketMap))
+	for _, t := range ticketMap {
+		uniqueTickets = append(uniqueTickets, t)
+	}
+
+	const chunkSize = 500
+	totalInserted := 0
+
+	for i := 0; i < len(uniqueTickets); i += chunkSize {
+		end := i + chunkSize
+		if end > len(uniqueTickets) {
+			end = len(uniqueTickets)
+		}
+		chunk := uniqueTickets[i:end]
+
+		tx, err := s.pool.Begin(ctx)
+		if err != nil {
+			return totalInserted, fmt.Errorf("failed to begin transaction: %w", err)
+		}
+
+		batch := &pgx.Batch{}
+		for _, t := range chunk {
+			var rmVal pgtype.Int8
+			if t.runningMateID != nil && *t.runningMateID > 0 {
+				rmVal = pgtype.Int8{Int64: *t.runningMateID, Valid: true}
+			}
+
+			batch.Queue(`
+				INSERT INTO election_candidates (
+					election_id,
+					election_group_id,
+					candidate_id,
+					running_mate_id,
+					party_id
+				)
+				VALUES ($1, $2, $3, $4, $5)
+				ON CONFLICT (election_id, party_id) DO UPDATE SET
+					candidate_id = EXCLUDED.candidate_id,
+					running_mate_id = EXCLUDED.running_mate_id,
+					updated_at = NOW()
+			`, t.electionID, t.electionGroupID, t.candidateID, rmVal, t.partyID)
+		}
+
+		br := tx.SendBatch(ctx, batch)
+		for range chunk {
+			ct, err := br.Exec()
+			if err != nil {
+				br.Close()
+				_ = tx.Rollback(ctx)
+				return totalInserted, fmt.Errorf("failed inserting candidate ticket: %w", err)
+			}
+			totalInserted += int(ct.RowsAffected())
+		}
+		if err := br.Close(); err != nil {
+			_ = tx.Rollback(ctx)
+			return totalInserted, fmt.Errorf("failed closing batch results: %w", err)
+		}
+
+		if err := tx.Commit(ctx); err != nil {
+			return totalInserted, fmt.Errorf("failed committing batch: %w", err)
+		}
+	}
+
+	return totalInserted, nil
+}
+
+// SeedPresidentialCandidates seeds presidential candidate tickets (candidate + running mate) into elections.
+func (s *SeedService) SeedPresidentialCandidates(ctx context.Context, items []PresidentialCandidateRequest) (string, error) {
+	if len(items) == 0 {
+		return "No presidential candidates provided", nil
+	}
+
+	// 1. Gather all user requests for candidates and running mates
+	userRequests := make([]SeedUserRequest, 0, len(items)*2)
+	emails := make([]string, 0, len(items)*2)
+
+	for i := range items {
+		ticket := &items[i]
+
+		userRequests = append(userRequests, ticket.Candidate.toSeedUserRequest())
+		emails = append(emails, ticket.Candidate.Email)
+
+		if ticket.RunningMate != nil {
+			userRequests = append(userRequests, ticket.RunningMate.toSeedUserRequest())
+			emails = append(emails, ticket.RunningMate.Email)
+		}
+	}
+
+	// 2. Create/upsert user accounts using existing optimized SeedUsers pipeline
+	if _, err := s.SeedUsers(ctx, userRequests); err != nil {
+		return "", fmt.Errorf("failed seeding candidate user accounts: %w", err)
+	}
+
+	// 3. Resolve user IDs from database
+	userMap, err := s.resolveUserIDsByEmails(ctx, emails)
+	if err != nil {
+		return "", err
+	}
+
+	// 4. Fetch the nationwide presidential election instance
+	var electionID, electionGroupID int32
+	err = s.pool.QueryRow(ctx, `
+		SELECT id, election_group_id
+		FROM elections
+		WHERE office_id = 1 AND scope = 'nationwide'
+		ORDER BY id DESC
+		LIMIT 1
+	`).Scan(&electionID, &electionGroupID)
+	if err != nil {
+		return "", fmt.Errorf("nationwide presidential election not found (please seed election instances first): %w", err)
+	}
+
+	// 5. Construct candidate tickets
+	tickets := make([]candidateTicketMeta, 0, len(items))
+	for _, ticket := range items {
+		candID, ok := userMap[strings.ToLower(ticket.Candidate.Email)]
+		if !ok || candID <= 0 {
+			return "", fmt.Errorf("user ID not found for candidate %s", ticket.Candidate.Email)
+		}
+
+		var rmID *int64
+		if ticket.RunningMate != nil {
+			if id, exists := userMap[strings.ToLower(ticket.RunningMate.Email)]; exists && id > 0 {
+				rmID = &id
+			}
+		}
+
+		tickets = append(tickets, candidateTicketMeta{
+			electionID:      electionID,
+			electionGroupID: electionGroupID,
+			candidateID:     candID,
+			runningMateID:   rmID,
+			partyID:         ticket.PartyID,
+		})
+	}
+
+	// 6. Batch insert tickets
+	inserted, err := s.batchInsertCandidateTickets(ctx, tickets)
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("Successfully seeded presidential candidate tickets (%d tickets created/updated)", inserted), nil
+}
+
+// SeedGovernorshipCandidates seeds governorship candidate tickets (candidate + running mate) into state elections.
+func (s *SeedService) SeedGovernorshipCandidates(ctx context.Context, items []GovernorshipCandidateRequest) (string, error) {
+	if len(items) == 0 {
+		return "No governorship candidates provided", nil
+	}
+
+	// 1. Gather all user requests for candidates and running mates
+	userRequests := make([]SeedUserRequest, 0, len(items)*2)
+	emails := make([]string, 0, len(items)*2)
+
+	for i := range items {
+		ticket := &items[i]
+
+		userRequests = append(userRequests, ticket.Candidate.toSeedUserRequest())
+		emails = append(emails, ticket.Candidate.Email)
+
+		if ticket.RunningMate != nil {
+			userRequests = append(userRequests, ticket.RunningMate.toSeedUserRequest())
+			emails = append(emails, ticket.RunningMate.Email)
+		}
+	}
+
+	// 2. Create/upsert user accounts
+	if _, err := s.SeedUsers(ctx, userRequests); err != nil {
+		return "", fmt.Errorf("failed seeding governorship candidate accounts: %w", err)
+	}
+
+	// 3. Resolve user IDs
+	userMap, err := s.resolveUserIDsByEmails(ctx, emails)
+	if err != nil {
+		return "", err
+	}
+
+	// 4. Fetch state elections (office_id = 13)
+	rows, err := s.pool.Query(ctx, `
+		SELECT id, election_group_id, state_id
+		FROM elections
+		WHERE office_id = 13 AND scope = 'state' AND state_id IS NOT NULL
+	`)
+	if err != nil {
+		return "", fmt.Errorf("failed fetching state elections: %w", err)
+	}
+	defer rows.Close()
+
+	stateElectionMap := make(map[int16]electionTargetMeta)
+	for rows.Next() {
+		var eid, egID int32
+		var sid int16
+		if err := rows.Scan(&eid, &egID, &sid); err == nil {
+			stateElectionMap[sid] = electionTargetMeta{electionID: eid, electionGroupID: egID}
+		}
+	}
+	rows.Close()
+
+	// 5. Construct candidate tickets
+	tickets := make([]candidateTicketMeta, 0, len(items))
+	for _, ticket := range items {
+		target, ok := stateElectionMap[ticket.StateID]
+		if !ok {
+			return "", fmt.Errorf("state election not found for state_id %d (please seed election instances first)", ticket.StateID)
+		}
+
+		candID, ok := userMap[strings.ToLower(ticket.Candidate.Email)]
+		if !ok || candID <= 0 {
+			return "", fmt.Errorf("user ID not found for candidate %s", ticket.Candidate.Email)
+		}
+
+		var rmID *int64
+		if ticket.RunningMate != nil {
+			if id, exists := userMap[strings.ToLower(ticket.RunningMate.Email)]; exists && id > 0 {
+				rmID = &id
+			}
+		}
+
+		tickets = append(tickets, candidateTicketMeta{
+			electionID:      target.electionID,
+			electionGroupID: target.electionGroupID,
+			candidateID:     candID,
+			runningMateID:   rmID,
+			partyID:         ticket.PartyID,
+		})
+	}
+
+	// 6. Batch insert tickets
+	inserted, err := s.batchInsertCandidateTickets(ctx, tickets)
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("Successfully seeded governorship candidate tickets (%d tickets created/updated)", inserted), nil
+}
+
+// SeedSenateCandidates seeds senatorial candidates into district elections.
+func (s *SeedService) SeedSenateCandidates(ctx context.Context, items []SenateCandidateRequest) (string, error) {
+	if len(items) == 0 {
+		return "No senatorial candidates provided", nil
+	}
+
+	userRequests := make([]SeedUserRequest, 0, len(items))
+	emails := make([]string, 0, len(items))
+
+	for i := range items {
+		userRequests = append(userRequests, items[i].toSeedUserRequest())
+		emails = append(emails, items[i].Email)
+	}
+
+	if _, err := s.SeedUsers(ctx, userRequests); err != nil {
+		return "", fmt.Errorf("failed seeding senatorial candidate accounts: %w", err)
+	}
+
+	userMap, err := s.resolveUserIDsByEmails(ctx, emails)
+	if err != nil {
+		return "", err
+	}
+
+	rows, err := s.pool.Query(ctx, `
+		SELECT id, election_group_id, senatorial_district_id
+		FROM elections
+		WHERE office_id = 21 AND scope = 'senatorial-district' AND senatorial_district_id IS NOT NULL
+	`)
+	if err != nil {
+		return "", fmt.Errorf("failed fetching senatorial district elections: %w", err)
+	}
+	defer rows.Close()
+
+	districtElectionMap := make(map[int32]electionTargetMeta)
+	for rows.Next() {
+		var eid, egid, did int32
+		if err := rows.Scan(&eid, &egid, &did); err == nil {
+			districtElectionMap[did] = electionTargetMeta{electionID: eid, electionGroupID: egid}
+		}
+	}
+	rows.Close()
+
+	tickets := make([]candidateTicketMeta, 0, len(items))
+	for _, item := range items {
+		target, ok := districtElectionMap[item.SenatorialDistrictID]
+		if !ok {
+			return "", fmt.Errorf("election not found for senatorial district %d", item.SenatorialDistrictID)
+		}
+
+		candID, ok := userMap[strings.ToLower(item.Email)]
+		if !ok || candID <= 0 {
+			return "", fmt.Errorf("user ID not found for candidate %s", item.Email)
+		}
+
+		tickets = append(tickets, candidateTicketMeta{
+			electionID:      target.electionID,
+			electionGroupID: target.electionGroupID,
+			candidateID:     candID,
+			runningMateID:   nil,
+			partyID:         item.PartyID,
+		})
+	}
+
+	inserted, err := s.batchInsertCandidateTickets(ctx, tickets)
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("Successfully seeded senatorial candidates (%d candidates created/updated)", inserted), nil
+}
+
+// SeedHouseOfRepsCandidates seeds federal constituency candidates into House of Representatives elections.
+func (s *SeedService) SeedHouseOfRepsCandidates(ctx context.Context, items []HouseOfRepsCandidateRequest) (string, error) {
+	if len(items) == 0 {
+		return "No house of representatives candidates provided", nil
+	}
+
+	userRequests := make([]SeedUserRequest, 0, len(items))
+	emails := make([]string, 0, len(items))
+
+	for i := range items {
+		userRequests = append(userRequests, items[i].toSeedUserRequest())
+		emails = append(emails, items[i].Email)
+	}
+
+	if _, err := s.SeedUsers(ctx, userRequests); err != nil {
+		return "", fmt.Errorf("failed seeding house of reps candidate accounts: %w", err)
+	}
+
+	userMap, err := s.resolveUserIDsByEmails(ctx, emails)
+	if err != nil {
+		return "", err
+	}
+
+	rows, err := s.pool.Query(ctx, `
+		SELECT id, election_group_id, federal_constituency_id
+		FROM elections
+		WHERE office_id = 22 AND scope = 'federal-constituency' AND federal_constituency_id IS NOT NULL
+	`)
+	if err != nil {
+		return "", fmt.Errorf("failed fetching federal constituency elections: %w", err)
+	}
+	defer rows.Close()
+
+	fcElectionMap := make(map[int32]electionTargetMeta)
+	for rows.Next() {
+		var eid, egid, fcid int32
+		if err := rows.Scan(&eid, &egid, &fcid); err == nil {
+			fcElectionMap[fcid] = electionTargetMeta{electionID: eid, electionGroupID: egid}
+		}
+	}
+	rows.Close()
+
+	tickets := make([]candidateTicketMeta, 0, len(items))
+	for _, item := range items {
+		target, ok := fcElectionMap[item.FederalConstituencyID]
+		if !ok {
+			return "", fmt.Errorf("election not found for federal constituency %d", item.FederalConstituencyID)
+		}
+
+		candID, ok := userMap[strings.ToLower(item.Email)]
+		if !ok || candID <= 0 {
+			return "", fmt.Errorf("user ID not found for candidate %s", item.Email)
+		}
+
+		tickets = append(tickets, candidateTicketMeta{
+			electionID:      target.electionID,
+			electionGroupID: target.electionGroupID,
+			candidateID:     candID,
+			runningMateID:   nil,
+			partyID:         item.PartyID,
+		})
+	}
+
+	inserted, err := s.batchInsertCandidateTickets(ctx, tickets)
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("Successfully seeded house of representatives candidates (%d candidates created/updated)", inserted), nil
+}
+
+// SeedStateAssemblyCandidates seeds state constituency candidates into House of Assembly elections.
+func (s *SeedService) SeedStateAssemblyCandidates(ctx context.Context, items []StateAssemblyCandidateRequest) (string, error) {
+	if len(items) == 0 {
+		return "No state assembly candidates provided", nil
+	}
+
+	userRequests := make([]SeedUserRequest, 0, len(items))
+	emails := make([]string, 0, len(items))
+
+	for i := range items {
+		userRequests = append(userRequests, items[i].toSeedUserRequest())
+		emails = append(emails, items[i].Email)
+	}
+
+	if _, err := s.SeedUsers(ctx, userRequests); err != nil {
+		return "", fmt.Errorf("failed seeding state assembly candidate accounts: %w", err)
+	}
+
+	userMap, err := s.resolveUserIDsByEmails(ctx, emails)
+	if err != nil {
+		return "", err
+	}
+
+	rows, err := s.pool.Query(ctx, `
+		SELECT id, election_group_id, state_constituency_id
+		FROM elections
+		WHERE office_id = 23 AND scope = 'state-constituency' AND state_constituency_id IS NOT NULL
+	`)
+	if err != nil {
+		return "", fmt.Errorf("failed fetching state constituency elections: %w", err)
+	}
+	defer rows.Close()
+
+	scElectionMap := make(map[int32]electionTargetMeta)
+	for rows.Next() {
+		var eid, egid, scid int32
+		if err := rows.Scan(&eid, &egid, &scid); err == nil {
+			scElectionMap[scid] = electionTargetMeta{electionID: eid, electionGroupID: egid}
+		}
+	}
+	rows.Close()
+
+	tickets := make([]candidateTicketMeta, 0, len(items))
+	for _, item := range items {
+		target, ok := scElectionMap[item.StateConstituencyID]
+		if !ok {
+			return "", fmt.Errorf("election not found for state constituency %d", item.StateConstituencyID)
+		}
+
+		candID, ok := userMap[strings.ToLower(item.Email)]
+		if !ok || candID <= 0 {
+			return "", fmt.Errorf("user ID not found for candidate %s", item.Email)
+		}
+
+		tickets = append(tickets, candidateTicketMeta{
+			electionID:      target.electionID,
+			electionGroupID: target.electionGroupID,
+			candidateID:     candID,
+			runningMateID:   nil,
+			partyID:         item.PartyID,
+		})
+	}
+
+	inserted, err := s.batchInsertCandidateTickets(ctx, tickets)
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("Successfully seeded state house of assembly candidates (%d candidates created/updated)", inserted), nil
 }

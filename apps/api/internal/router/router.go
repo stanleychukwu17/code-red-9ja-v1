@@ -282,6 +282,11 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	mainRouter.Post("/api/v1/seed/admins", seedHandler.SeedAdmins)                                       // Seed admins endpoint
 	mainRouter.Post("/api/v1/seed/election-groups", seedHandler.SeedElectionGroups)                      // Seed election groups endpoint
 	mainRouter.Post("/api/v1/seed/election-instances", seedHandler.SeedElectionInstances)                // Seed election instances endpoint
+	mainRouter.Post("/api/v1/seed/candidates/presidential", seedHandler.SeedPresidentialCandidates)       // Seed presidential candidate tickets
+	mainRouter.Post("/api/v1/seed/candidates/governorship", seedHandler.SeedGovernorshipCandidates)       // Seed governorship candidate tickets
+	mainRouter.Post("/api/v1/seed/candidates/senate", seedHandler.SeedSenateCandidates)                   // Seed senatorial candidates
+	mainRouter.Post("/api/v1/seed/candidates/house-of-reps", seedHandler.SeedHouseOfRepsCandidates)       // Seed house of reps candidates
+	mainRouter.Post("/api/v1/seed/candidates/state-assembly", seedHandler.SeedStateAssemblyCandidates)   // Seed state assembly candidates
 	mainRouter.Post("/api/v1/seed/elections/{id}/simulate-results", seedHandler.SimulateElectionResults) // Simulate PU results & test rollups
 	mainRouter.Post("/api/v1/seed/flush-redis", seedHandler.FlushRedis)                                  // Flush Redis cache endpoint
 
@@ -378,7 +383,6 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	// elections public routes (with optional auth to identify party_id for candidates)
 	mainRouter.With(apimiddleware.OptionalAuthMiddleware(jwtSecret)).Get("/api/v1/elections", electionsHandler.ListElections)
 	mainRouter.Get("/api/v1/elections/non-voting-reasons", electionsHandler.GetNonVotingReasons)
-	// mainRouter.Get("/api/v1/elections/{id}", electionsHandler.GetElection)
 	mainRouter.Get("/api/v1/elections/by-fake-id/{fake_id}", electionsHandler.GetElectionByFakeID)
 
 	// file metadata — public reads (nil-safe: returns 503 when R2 is not configured)

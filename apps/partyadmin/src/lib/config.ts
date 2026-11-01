@@ -68,6 +68,16 @@ export const APP_URL = {
 // API URLs
 // ============================================================================
 const api = `${API_BASE}/api/v1`;
+
+const withQuery = (
+  base: string,
+  query?: string | URLSearchParams,
+) => {
+  if (!query) return base;
+  const qs = typeof query === "string" ? query.replace(/^\?/, "") : query.toString();
+  return qs ? `${base}?${qs}` : base;
+};
+
 export const API_URL = {
   health: `${API_BASE}/health`,
   auth: {
@@ -84,10 +94,16 @@ export const API_URL = {
     const qs = params.toString();
     return `${api}/countries/${countryId}/states${qs ? `?${qs}` : ""}`;
   },
-  getCities: (stateId: number) => `${api}/states/${stateId}/cities`,
-  getLGAs: `${api}/lgas`,
-  getWards: `${api}/wards`,
+  getCities: (stateId: number, limit?: number, cursor?: string | number) => {
+    const params = new URLSearchParams();
+    if (limit) params.append("limit", String(limit));
+    if (cursor) params.append("cursor", String(cursor));
+    return withQuery(`${api}/states/${stateId}/cities`, params);
+  },
+  getLGAs: (query?: string | URLSearchParams) => withQuery(`${api}/lgas`, query),
+  getWards: (query?: string | URLSearchParams) => withQuery(`${api}/wards`, query),
   parties: `${api}/parties`,
+  publicParties: `${api}/parties/public`,
   partyById: (id: string | number) => `${api}/parties/${id}`,
   partyReadiness: (id: string | number) => `${api}/parties/${id}/readiness`,
   partyWallet: (id: string | number) => `${api}/parties/${id}/wallet`,
@@ -165,49 +181,81 @@ export const API_URL = {
   unblockMember: (id: string | number, userId: string | number) =>
     `${api}/parties/${id}/members/${userId}/unblock`,
   uploadUrl: `${api}/files/upload-url`,
-  confirmUpload: (id: string | number) => `${api}/files/${id}/confirm`,
-  users: `${api}/users`,
-  searchUsers: `${api}/users/search`,
+  confirmUpload: (id: string | number, success?: boolean) => {
+    const qs = success !== undefined ? `?success=${success}` : "";
+    return `${api}/files/${id}/confirm${qs}`;
+  },
+  users: (query?: string | URLSearchParams) => withQuery(`${api}/users`, query),
+  searchUsers: (query?: string | URLSearchParams) => withQuery(`${api}/users/search`, query),
   adminUserById: (id: string | number) => `${api}/admin/users/${id}`,
-  electionGroups: `${api}/election-groups`,
+  electionGroups: (query?: string | URLSearchParams) => withQuery(`${api}/election-groups`, query),
   electionGroupById: (id: string | number) => `${api}/election-groups/${id}`,
-  elections: `${api}/elections`,
+  electionGroupElections: (groupId: string | number) => `${api}/election-groups/${groupId}/elections`,
+  elections: (query?: string | URLSearchParams) => withQuery(`${api}/elections`, query),
   electionById: (id: string | number) => `${api}/elections/${id}`,
-  offices: `${api}/offices`,
+  electionByFakeId: (fakeId: string | number, query?: string | URLSearchParams) =>
+    withQuery(`${api}/elections/by-fake-id/${fakeId}`, query),
+  fieldPartyCandidate: (id: string | number) => `${api}/elections/${id}/field-candidate`,
+  unfieldPartyCandidate: (id: string | number) => `${api}/elections/${id}/unfield-candidate`,
+  offices: (params?: { limit?: number; cursor?: string | number; contested?: boolean } | string | URLSearchParams) => {
+    if (!params) return `${api}/offices`;
+    if (typeof params === "string" || params instanceof URLSearchParams) {
+      return withQuery(`${api}/offices`, params);
+    }
+    const sp = new URLSearchParams();
+    if (params.limit !== undefined) sp.append("limit", String(params.limit));
+    if (params.cursor !== undefined && params.cursor !== "") sp.append("cursor", String(params.cursor));
+    if (params.contested !== undefined) sp.append("contested", String(params.contested));
+    return withQuery(`${api}/offices`, sp);
+  },
   officeById: (id: string | number) => `${api}/offices/${id}`,
-  partyApplications: `${api}/party-applications`,
-  partyApplicationsRecommendations: `${api}/party-applications/recommendations`,
+  partyApplications: (query?: string | URLSearchParams) => withQuery(`${api}/party-applications`, query),
+  partyApplicationsRecommendations: (query?: string | URLSearchParams) =>
+    withQuery(`${api}/party-applications/recommendations`, query),
   pollingUnits: `${api}/polling-units`,
-  pollingUnitsPaginated: `${api}/polling-units/paginated`,
+  pollingUnitsPaginated: (query?: string | URLSearchParams) => withQuery(`${api}/polling-units/paginated`, query),
   approveApplication: (id: string | number) =>
     `${api}/party-applications/${id}/approve`,
   rejectApplication: (id: string | number) =>
     `${api}/party-applications/${id}/reject`,
-  getSenatorialDistricts: `${api}/senatorial-districts`,
-  getFederalConstituencies: `${api}/federal-constituencies`,
-  getStateConstituencies: `${api}/state-constituencies`,
-  electionCandidates: (id: string | number) =>
-    `${api}/elections/${id}/candidates`,
-  pollingUnitUpdates: `${api}/polling-unit-updates`,
+  getSenatorialDistricts: (query?: string | URLSearchParams) => withQuery(`${api}/senatorial-districts`, query),
+  getFederalConstituencies: (query?: string | URLSearchParams) => withQuery(`${api}/federal-constituencies`, query),
+  getStateConstituencies: (query?: string | URLSearchParams) => withQuery(`${api}/state-constituencies`, query),
+  electionCandidates: (id: string | number, query?: string | URLSearchParams) =>
+    withQuery(`${api}/elections/${id}/candidates`, query),
+  pollingUnitUpdates: (query?: string | URLSearchParams) => withQuery(`${api}/polling-unit-updates`, query),
   pollingUnitResults: `${api}/polling-unit-results`,
-  pollingUnitFinalResults: `${api}/polling-unit-final-results`,
-  stateFinalResults: `${api}/state-final-results`,
-  senatorialDistrictFinalResults: `${api}/senatorial-district-final-results`,
-  federalConstituencyFinalResults: `${api}/federal-constituency-final-results`,
-  lgaFinalResults: `${api}/lga-final-results`,
-  wardFinalResults: `${api}/ward-final-results`,
+  pollingUnitFinalResults: (query?: string | URLSearchParams) => withQuery(`${api}/polling-unit-final-results`, query),
+  stateFinalResults: (query?: string | URLSearchParams) => withQuery(`${api}/state-final-results`, query),
+  senatorialDistrictFinalResults: (query?: string | URLSearchParams) =>
+    withQuery(`${api}/senatorial-district-final-results`, query),
+  federalConstituencyFinalResults: (query?: string | URLSearchParams) =>
+    withQuery(`${api}/federal-constituency-final-results`, query),
+  lgaFinalResults: (query?: string | URLSearchParams) => withQuery(`${api}/lga-final-results`, query),
+  wardFinalResults: (query?: string | URLSearchParams) => withQuery(`${api}/ward-final-results`, query),
   // Combined geo + final result endpoints (election_id required)
-  electionResultsStates: `${api}/elections/results/states`,
-  electionResultsSenatorialDistricts: `${api}/elections/results/senatorial-districts`,
-  electionResultsFederalConstituencies: `${api}/elections/results/federal-constituencies`,
-  electionResultsStateConstituencies: `${api}/elections/results/state-constituencies`,
-  electionResultsLGAs: `${api}/elections/results/lgas`,
-  electionResultsWards: `${api}/elections/results/wards`,
-  electionResultsPollingUnits: `${api}/elections/results/polling-units`,
-  electionResultsScoped: `${api}/elections/results`,
-  electionResultsBreakdown: `${api}/elections/results/breakdown`,
-  electionOperationsBreakdown: `${api}/elections/operations/breakdown`,
-  agentCoverageBreakdown: `${api}/elections/agent-coverage/breakdown`,
+  electionResultsStates: (query?: string | URLSearchParams) => withQuery(`${api}/elections/results/states`, query),
+  electionResultsSenatorialDistricts: (query?: string | URLSearchParams) =>
+    withQuery(`${api}/elections/results/senatorial-districts`, query),
+  electionResultsFederalConstituencies: (query?: string | URLSearchParams) =>
+    withQuery(`${api}/elections/results/federal-constituencies`, query),
+  electionResultsStateConstituencies: (query?: string | URLSearchParams) =>
+    withQuery(`${api}/elections/results/state-constituencies`, query),
+  electionResultsLGAs: (query?: string | URLSearchParams) => withQuery(`${api}/elections/results/lgas`, query),
+  electionResultsWards: (query?: string | URLSearchParams) => withQuery(`${api}/elections/results/wards`, query),
+  electionResultsPollingUnits: (query?: string | URLSearchParams) =>
+    withQuery(`${api}/elections/results/polling-units`, query),
+  electionResultsScoped: (query?: string | URLSearchParams) => withQuery(`${api}/elections/results`, query),
+  electionResultsBreakdown: (query?: string | URLSearchParams) =>
+    withQuery(`${api}/elections/results/breakdown`, query),
+  electionOperationsBreakdown: (query?: string | URLSearchParams) =>
+    withQuery(`${api}/elections/operations/breakdown`, query),
+  agentCoverageBreakdown: (query?: string | URLSearchParams) =>
+    withQuery(`${api}/elections/agent-coverage/breakdown`, query),
+  agentPerformance: (query?: string | URLSearchParams) => withQuery(`${api}/agent-performance`, query),
+  agentChangeRole: `${api}/agents/change-role`,
+  agentById: (id: string | number, query?: string | URLSearchParams) =>
+    withQuery(`${api}/agents/${id}`, query),
   electionStats: {
     singleGlobalStats: (id: number | string, partyId: number | string) => {
       return `${api}/election-groups/${id}/stats/parties/${partyId}`;

@@ -68,9 +68,7 @@ export const getElections = createServerFn({ method: "GET" })
       if (data?.date_to) params.append("date_to", data.date_to);
 
       const qs = params.toString();
-      const response = await apiFetch(
-        `${API_URL.elections}${qs ? `?${qs}` : ""}`,
-      );
+      const response = await apiFetch(API_URL.elections(qs));
       const resData = await response.json();
 
       if (resData.success && Array.isArray(resData.data?.elections)) {
@@ -102,18 +100,15 @@ export const getElections = createServerFn({ method: "GET" })
     }
   });
 
-export const getElectionById = createServerFn({ method: "GET" })
+export const getElectionByFakeId = createServerFn({ method: "GET" })
   .inputValidator((data: { electionId: number; electionGroupId?: number; scope?: string }) => data)
   .handler(async ({ data }) => {
     try {
       const params = new URLSearchParams();
-      if (data.electionGroupId)
-        params.append("election_group_id", String(data.electionGroupId));
+      if (data.electionGroupId) params.append("election_group_id", String(data.electionGroupId));
       if (data.scope) params.append("scope", data.scope);
       const qs = params.toString();
-      const response = await apiFetch(
-        `${API_URL.elections}/${data.electionId}${qs ? `?${qs}` : ""}`,
-      );
+      const response = await apiFetch(API_URL.electionByFakeId(data.electionId, qs));
       const resData = await response.json();
       return resData;
     } catch (error) {
@@ -132,7 +127,7 @@ export const fieldPartyCandidate = createServerFn({ method: "POST" })
   .handler(async ({ data: { electionId, candidateId, partyId, slot = "candidate" } }) => {
     try {
       const response = await apiFetch(
-        `${API_URL.elections}/${electionId}/field-candidate`,
+        API_URL.fieldPartyCandidate(electionId),
         {
           method: "POST",
           headers: {
@@ -163,7 +158,7 @@ export const unfieldPartyCandidate = createServerFn({ method: "POST" })
   .handler(async ({ data: { electionId, partyId, slot } }) => {
     try {
       const response = await apiFetch(
-        `${API_URL.elections}/${electionId}/unfield-candidate`,
+        API_URL.unfieldPartyCandidate(electionId),
         {
           method: "POST",
           headers: {
@@ -209,7 +204,7 @@ export const getElectionCandidates = createServerFn({ method: "GET" })
       const qs = params.toString();
 
       const response = await apiFetch(
-        `${API_URL.elections}/${data.electionId}/candidates?${qs}`,
+        API_URL.electionCandidates(data.electionId, qs),
       );
       const resData = await response.json();
       return resData;
@@ -270,7 +265,7 @@ export const getPollingUnitUpdates = createServerFn({ method: "GET" })
         params.append("cursor", data.cursor.toString());
 
       const response = await apiFetch(
-        `${API_URL.pollingUnitUpdates}?${params.toString()}`,
+        API_URL.pollingUnitUpdates(params),
       );
 
       const resData = await response.json();
@@ -329,7 +324,7 @@ export const getPollingUnitFinalResults = createServerFn({ method: "GET" })
         params.append("cursor", data.cursor.toString());
 
       const response = await apiFetch(
-        `${API_URL.pollingUnitFinalResults}?${params.toString()}`,
+        API_URL.pollingUnitFinalResults(params),
       );
 
       const resData = await response.json();
@@ -349,7 +344,7 @@ export const getElectionsByGroup = createServerFn({ method: "GET" })
   .handler(async ({ data: groupId }) => {
     try {
       const response = await apiFetch(
-        `${API_URL.electionGroups}/${groupId}/elections`,
+        API_URL.electionGroupElections(groupId),
       );
       const resData = await response.json();
       return resData;

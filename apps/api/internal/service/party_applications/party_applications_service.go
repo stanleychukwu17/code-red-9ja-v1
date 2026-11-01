@@ -728,9 +728,10 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 		return queries.PartyAgentApplication{}, fmt.Errorf("failed to get election group: %w", err)
 	}
 
+	// Automatically cancel the application if the election year has already passed
 	now := time.Now()
 	if electionGroup.ElectionDate.Time.Year() < now.Year() {
-		reason := "Please apply for an upcoming election (not in the past)"
+		reason := "Election is past"
 		updatedApp, cancelErr := txQueries.UpdateApplicationStatus(ctx, queries.UpdateApplicationStatusParams{
 			ID:             input.ApplicationID,
 			Status:         "cancelled",
@@ -739,9 +740,11 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 		if cancelErr != nil {
 			return queries.PartyAgentApplication{}, fmt.Errorf("failed to cancel application for past election: %w", cancelErr)
 		}
+
 		if commitErr := tx.Commit(ctx); commitErr != nil {
 			return queries.PartyAgentApplication{}, fmt.Errorf("failed to commit cancellation: %w", commitErr)
 		}
+
 		return updatedApp, errors.New("cancelled_past_election")
 	}
 

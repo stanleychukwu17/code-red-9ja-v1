@@ -275,3 +275,191 @@ func (h *Handler) SeedElectionInstances(w http.ResponseWriter, r *http.Request) 
 
 	h.utils.RespondSuccess(w, http.StatusOK, msg, nil)
 }
+
+// @Summary Seed presidential candidates
+// @Description Creates presidential candidate tickets (candidate + running mate) into elections
+// @Tags Seed
+// @Accept json
+// @Produce json
+// @Param request body []seedservice.PresidentialCandidateRequest true "List of presidential candidate tickets"
+// @Success 200 {object} map[string]interface{} "Presidential candidates seeded successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid request body"
+// @Failure 500 {object} map[string]interface{} "Failed to seed presidential candidates"
+// @Router /seed/candidates/presidential [post]
+func (h *Handler) SeedPresidentialCandidates(w http.ResponseWriter, r *http.Request) {
+	// Read request body
+	bodyBytes, err := io.ReadAll(r.Body)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+		return
+	}
+
+	// Parse payload (supports both array and single object)
+	var req []seedservice.PresidentialCandidateRequest
+	if err := json.Unmarshal(bodyBytes, &req); err != nil {
+		var single seedservice.PresidentialCandidateRequest
+		if errSingle := json.Unmarshal(bodyBytes, &single); errSingle == nil {
+			req = []seedservice.PresidentialCandidateRequest{single}
+		} else {
+			h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+			return
+		}
+	}
+
+	// Seed candidates via service
+	msg, err := h.seedService.SeedPresidentialCandidates(r.Context(), req)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to seed presidential candidates: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, msg, nil)
+}
+
+// @Summary Seed governorship candidates
+// @Description Creates governorship candidate tickets (candidate + running mate) into state elections
+// @Tags Seed
+// @Accept json
+// @Produce json
+// @Param request body []seedservice.GovernorshipCandidateRequest true "List of governorship candidate tickets"
+// @Success 200 {object} map[string]interface{} "Governorship candidates seeded successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid request body"
+// @Failure 500 {object} map[string]interface{} "Failed to seed governorship candidates"
+// @Router /seed/candidates/governorship [post]
+func (h *Handler) SeedGovernorshipCandidates(w http.ResponseWriter, r *http.Request) {
+	bodyBytes, err := io.ReadAll(r.Body)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+		return
+	}
+
+	var req []seedservice.GovernorshipCandidateRequest
+	if err := json.Unmarshal(bodyBytes, &req); err != nil {
+		var single seedservice.GovernorshipCandidateRequest
+		if errSingle := json.Unmarshal(bodyBytes, &single); errSingle == nil {
+			req = []seedservice.GovernorshipCandidateRequest{single}
+		} else {
+			h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+			return
+		}
+	}
+
+	msg, err := h.seedService.SeedGovernorshipCandidates(r.Context(), req)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to seed governorship candidates: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, msg, nil)
+}
+
+// @Summary Seed senatorial candidates
+// @Description Creates senatorial candidates into district elections
+// @Tags Seed
+// @Accept json
+// @Produce json
+// @Param request body []seedservice.SenateCandidateRequest true "List of senatorial candidates"
+// @Success 200 {object} map[string]interface{} "Senatorial candidates seeded successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid request body"
+// @Failure 500 {object} map[string]interface{} "Failed to seed senatorial candidates"
+// @Router /seed/candidates/senate [post]
+func (h *Handler) SeedSenateCandidates(w http.ResponseWriter, r *http.Request) {
+	bodyBytes, err := io.ReadAll(r.Body)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+		return
+	}
+
+	var req []seedservice.SenateCandidateRequest
+	if err := json.Unmarshal(bodyBytes, &req); err != nil {
+		var single seedservice.SenateCandidateRequest
+		if errSingle := json.Unmarshal(bodyBytes, &single); errSingle == nil {
+			req = []seedservice.SenateCandidateRequest{single}
+		} else {
+			h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+			return
+		}
+	}
+
+	msg, err := h.seedService.SeedSenateCandidates(r.Context(), req)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to seed senatorial candidates: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, msg, nil)
+}
+
+// @Summary Seed house of representatives candidates
+// @Description Creates federal constituency candidates into House of Representatives elections
+// @Tags Seed
+// @Accept json
+// @Produce json
+// @Param request body []seedservice.HouseOfRepsCandidateRequest true "List of house of reps candidates"
+// @Success 200 {object} map[string]interface{} "House of reps candidates seeded successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid request body"
+// @Failure 500 {object} map[string]interface{} "Failed to seed house of reps candidates"
+// @Router /seed/candidates/house-of-reps [post]
+func (h *Handler) SeedHouseOfRepsCandidates(w http.ResponseWriter, r *http.Request) {
+	bodyBytes, err := io.ReadAll(r.Body)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+		return
+	}
+
+	var req []seedservice.HouseOfRepsCandidateRequest
+	if err := json.Unmarshal(bodyBytes, &req); err != nil {
+		var single seedservice.HouseOfRepsCandidateRequest
+		if errSingle := json.Unmarshal(bodyBytes, &single); errSingle == nil {
+			req = []seedservice.HouseOfRepsCandidateRequest{single}
+		} else {
+			h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+			return
+		}
+	}
+
+	msg, err := h.seedService.SeedHouseOfRepsCandidates(r.Context(), req)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to seed house of reps candidates: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, msg, nil)
+}
+
+// @Summary Seed state assembly candidates
+// @Description Creates state constituency candidates into House of Assembly elections
+// @Tags Seed
+// @Accept json
+// @Produce json
+// @Param request body []seedservice.StateAssemblyCandidateRequest true "List of state assembly candidates"
+// @Success 200 {object} map[string]interface{} "State assembly candidates seeded successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid request body"
+// @Failure 500 {object} map[string]interface{} "Failed to seed state assembly candidates"
+// @Router /seed/candidates/state-assembly [post]
+func (h *Handler) SeedStateAssemblyCandidates(w http.ResponseWriter, r *http.Request) {
+	bodyBytes, err := io.ReadAll(r.Body)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+		return
+	}
+
+	var req []seedservice.StateAssemblyCandidateRequest
+	if err := json.Unmarshal(bodyBytes, &req); err != nil {
+		var single seedservice.StateAssemblyCandidateRequest
+		if errSingle := json.Unmarshal(bodyBytes, &single); errSingle == nil {
+			req = []seedservice.StateAssemblyCandidateRequest{single}
+		} else {
+			h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+			return
+		}
+	}
+
+	msg, err := h.seedService.SeedStateAssemblyCandidates(r.Context(), req)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to seed state assembly candidates: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, msg, nil)
+}

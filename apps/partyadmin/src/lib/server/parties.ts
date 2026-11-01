@@ -23,7 +23,7 @@ export const getParties = createServerFn({ method: "GET" }).handler(
 export const getPublicParties = createServerFn({ method: "POST" }).handler(
   async () => {
     try {
-      const response = await apiFetch(`${API_URL.parties}/public`, {
+      const response = await apiFetch(API_URL.publicParties, {
         method: "GET", // The route is GET in router.go
       });
       const resData = await response.json();
@@ -119,7 +119,7 @@ export const confirmFileUpload = createServerFn({ method: "POST" })
   .handler(async ({ data: { id, success } }) => {
     try {
       const response = await apiFetch(
-        `${API_URL.confirmUpload(id)}?success=${success}`,
+        API_URL.confirmUpload(id, success),
         {
           method: "POST",
         },

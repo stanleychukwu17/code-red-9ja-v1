@@ -630,29 +630,24 @@ func (h *Handler) ListElections(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// GetElection godoc
-// @Summary      Get election by ID
-// @Description  Retrieves details of a single election using its ID
+// GetElectionByFakeID godoc
+// @Summary      Get an election by fake ID
+// @Description  Retrieves an election instance directly by its unique public fake_id, optionally validating group and scope
 // @Tags         Elections
 // @Accept       json
 // @Produce      json
-// GetElection godoc
-// @Summary      Get an election by Fake ID
-// @Description  Retrieves an election instance by its unique 64-bit fake_id
-// @Tags         Elections
-// @Accept       json
-// @Produce      json
-// @Param        id   path  int  true  "Election Fake ID"
+// @Param        fake_id           path  int    true  "Election Fake ID"
+// @Param        election_group_id query int    false "Target election group ID to validate against"
+// @Param        scope             query string false "Target election scope to validate against"
 // @Success      200  {object} map[string]interface{} "Election fetched successfully"
 // @Failure      400  {object} map[string]interface{} "Invalid fake ID parameter"
 // @Failure      404  {object} map[string]interface{} "Election not found"
-// @Failure      500  {object} map[string]interface{} "Internal server error"
-// @Router       /elections/{id} [get]
-func (h *Handler) GetElection(w http.ResponseWriter, r *http.Request) {
-	idStr := chi.URLParam(r, "id")
-	fakeID, err := strconv.ParseInt(idStr, 10, 64)
+// @Router       /elections/by-fake-id/{fake_id} [get]
+func (h *Handler) GetElectionByFakeID(w http.ResponseWriter, r *http.Request) {
+	fakeIDStr := chi.URLParam(r, "fake_id")
+	fakeID, err := strconv.ParseInt(fakeIDStr, 10, 64)
 	if err != nil || fakeID <= 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election fake_id")
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election fake ID")
 		return
 	}
 
@@ -677,37 +672,6 @@ func (h *Handler) GetElection(w http.ResponseWriter, r *http.Request) {
 			h.utils.RespondError(w, http.StatusNotFound, "Election not found for the specified scope")
 			return
 		}
-	}
-
-	// Return election details
-	h.utils.RespondSuccess(w, http.StatusOK, "Election fetched successfully", map[string]interface{}{
-		"election": ei,
-	})
-}
-
-// GetElectionByFakeID godoc
-// @Summary      Get an election by fake ID
-// @Description  Retrieves an election instance directly by its unique public fake_id
-// @Tags         Elections
-// @Accept       json
-// @Produce      json
-// @Param        fake_id path int true "Election Fake ID"
-// @Success      200  {object} map[string]interface{} "Election fetched successfully"
-// @Failure      400  {object} map[string]interface{} "Invalid fake ID parameter"
-// @Failure      404  {object} map[string]interface{} "Election not found"
-// @Router       /elections/by-fake-id/{fake_id} [get]
-func (h *Handler) GetElectionByFakeID(w http.ResponseWriter, r *http.Request) {
-	fakeIDStr := chi.URLParam(r, "fake_id")
-	fakeID, err := strconv.ParseInt(fakeIDStr, 10, 64)
-	if err != nil || fakeID <= 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election fake ID")
-		return
-	}
-
-	ei, err := h.service.GetElectionByFakeID(r.Context(), fakeID)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusNotFound, "Election not found")
-		return
 	}
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Election fetched successfully", map[string]interface{}{
