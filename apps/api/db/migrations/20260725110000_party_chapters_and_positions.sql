@@ -220,43 +220,7 @@ END;
 $$ LANGUAGE plpgsql IMMUTABLE;
 -- +goose StatementEnd
 
--- 5. Trigger to strictly enforce max_occupants for active position assignments
--- +goose StatementBegin
-CREATE OR REPLACE FUNCTION check_party_position_max_occupants()
-RETURNS TRIGGER AS $$
-DECLARE
-    v_max SMALLINT;
-    v_current BIGINT;
-BEGIN
-    IF NEW.status = 'active' THEN
-        SELECT max_occupants INTO v_max 
-        FROM party_positions 
-        WHERE id = NEW.position_id;
-
-        IF v_max > 0 THEN
-            SELECT COUNT(*) INTO v_current 
-            FROM party_position_assignments 
-            WHERE chapter_id = NEW.chapter_id 
-              AND position_id = NEW.position_id 
-              AND status = 'active' 
-              AND id != COALESCE(NEW.id, 0);
-
-            IF v_current >= v_max THEN
-                RAISE EXCEPTION 'Position has reached maximum occupancy of % for this chapter', v_max;
-            END IF;
-        END IF;
-    END IF;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
--- +goose StatementEnd
-
--- Trigger: Enforce maximum occupants for active position assignments on create or update
-CREATE TRIGGER trg_check_party_position_occupants
-BEFORE INSERT OR UPDATE ON party_position_assignments
-FOR EACH ROW EXECUTE FUNCTION check_party_position_max_occupants();
-
--- 6. Auto-provision National, Zonal, and State chapters on party creation
+-- 5. Auto-provision National, Zonal, and State chapters on party creation
 -- +goose StatementBegin
 CREATE OR REPLACE FUNCTION create_initial_party_chapters()
 RETURNS TRIGGER AS $$
@@ -307,8 +271,6 @@ ON CONFLICT (party_id, state_id) WHERE chapter_type = 'state' DO NOTHING;
 -- END backfill
 
 -- +goose Down
-DROP TRIGGER IF EXISTS trg_check_party_position_occupants ON party_position_assignments;
-DROP FUNCTION IF EXISTS check_party_position_max_occupants();
 DROP FUNCTION IF EXISTS format_position_display_title(VARCHAR, VARCHAR, VARCHAR, VARCHAR);
 DROP TRIGGER IF EXISTS trg_create_party_top_chapters ON parties;
 DROP FUNCTION IF EXISTS create_initial_party_chapters();

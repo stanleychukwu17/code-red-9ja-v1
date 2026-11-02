@@ -67,30 +67,37 @@ func NewSeedService(
 }
 
 type SeedUserRequest struct {
-	Num                 int     `json:"num"`
-	Email               string  `json:"email"`
-	Avatar              string  `json:"avatar"`
-	Phone               *string `json:"phone"`
-	Username            *string `json:"username"`
-	Password            string  `json:"password"`
-	LastName            string  `json:"last_name"`
-	FirstName           string  `json:"first_name"`
-	MiddleName          *string `json:"middle_name"`
-	Gender              string  `json:"gender"`
-	DateOfBirth         string  `json:"date_of_birth"`
-	CurrentCountry      int16   `json:"current_country"`
-	CurrentState        int16   `json:"current_state"`
-	CurrentLga          *int32  `json:"current_lga"`
-	CurrentWard         *int32  `json:"current_ward"`
-	CurrentCity         *int32  `json:"current_city"`
-	PollingUnitID       *int32  `json:"polling_unit_id"`
-	StateOfOrigin       *int16  `json:"state_of_origin"`
-	PartyID             *int16  `json:"party_id"`
-	AccountStatus       string  `json:"account_status"`
-	IsVerified          bool    `json:"is_verified"`
-	VerificationTypeID  *int16  `json:"verification_type_id,omitempty"`
-	VerificationTypeIDs []int16 `json:"verification_type_ids,omitempty"`
-	IsPolitician        bool    `json:"is_politician"`
+	Num                 int               `json:"num"`
+	Email               string            `json:"email"`
+	Avatar              string            `json:"avatar"`
+	Phone               *string           `json:"phone"`
+	Username            *string           `json:"username"`
+	Password            string            `json:"password"`
+	LastName            string            `json:"last_name"`
+	FirstName           string            `json:"first_name"`
+	MiddleName          *string           `json:"middle_name"`
+	Gender              string            `json:"gender"`
+	DateOfBirth         string            `json:"date_of_birth"`
+	CurrentCountry      int16             `json:"current_country"`
+	CurrentState        int16             `json:"current_state"`
+	CurrentLga          *int32            `json:"current_lga"`
+	CurrentWard         *int32            `json:"current_ward"`
+	CurrentCity         *int32            `json:"current_city"`
+	PollingUnitID       *int32            `json:"polling_unit_id"`
+	StateOfOrigin       *int16            `json:"state_of_origin"`
+	PartyID             *int16            `json:"party_id"`
+	AccountStatus       string            `json:"account_status"`
+	IsVerified          bool              `json:"is_verified"`
+	VerificationTypeID  *int16            `json:"verification_type_id,omitempty"`
+	VerificationTypeIDs []int16           `json:"verification_type_ids,omitempty"`
+	IsPolitician        bool              `json:"is_politician"`
+	Position            *SeedUserPosition `json:"position,omitempty"`
+}
+
+type SeedUserPosition struct {
+	Level        string `json:"level"` // "state", "lga", "national"
+	PositionID   int32  `json:"position_id"`
+	PositionName string `json:"position_name,omitempty"`
 }
 
 // SeedUsers registers a batch of new users from a seed request.
@@ -478,24 +485,24 @@ func (s *SeedService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 					`, insertedUser.id, insertedUser.formattedPhone, insertedUser.phoneCode, insertedUser.rawPhoneInput)
 				}
 
-				// 3. Verification badges (supports multiple verification IDs)
-				verifTypeIDs := make(map[int16]struct{})
+				// 2. Verification badges (supports multiple verification IDs)
+				verTypeIDs := make(map[int16]struct{})
 				if insertedUser.user.IsVerified {
 					for _, vid := range insertedUser.user.VerificationTypeIDs {
 						if vid > 0 {
-							verifTypeIDs[vid] = struct{}{}
+							verTypeIDs[vid] = struct{}{}
 						}
 					}
 					if insertedUser.user.VerificationTypeID != nil && *insertedUser.user.VerificationTypeID > 0 {
-						verifTypeIDs[*insertedUser.user.VerificationTypeID] = struct{}{}
+						verTypeIDs[*insertedUser.user.VerificationTypeID] = struct{}{}
 					}
 				}
 				if insertedUser.user.IsPolitician {
 					// Politician badge (verification_type_id = 4)
-					verifTypeIDs[4] = struct{}{}
+					verTypeIDs[4] = struct{}{}
 				}
 
-				for vid := range verifTypeIDs {
+				for vid := range verTypeIDs {
 					secBatch.Queue(`
 						INSERT INTO pages_verified (page_type, page_id, verification_type_id)
 						VALUES ($1, $2, $3)
@@ -504,11 +511,11 @@ func (s *SeedService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 					`, db.PageTypeUser, insertedUser.id, vid)
 				}
 
-				// 4. Multi-tier Party Membership Enrollment down to Ward level
+				// 3. Multi-tier Party Membership Enrollment down to Ward level
 				if insertedUser.user.PartyID != nil && *insertedUser.user.PartyID > 0 {
 					pID := *insertedUser.user.PartyID
 
-					// 4a. National Chapter
+					// 3a. National Chapter
 					if natID := nationalChapters[pID]; natID > 0 {
 						secBatch.Queue(`
 							INSERT INTO party_membership (user_id, party_id, chapter_id, status)
@@ -522,7 +529,7 @@ func (s *SeedService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 						`, insertedUser.id, pID, natID)
 					}
 
-					// 4b. State Chapter
+					// 3b. State Chapter
 					if insertedUser.user.CurrentState > 0 {
 						stKey := fmt.Sprintf("%d:%d", pID, insertedUser.user.CurrentState)
 						if stID := stateChapters[stKey]; stID > 0 {
@@ -539,7 +546,7 @@ func (s *SeedService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 						}
 					}
 
-					// 4c. LGA Chapter
+					// 3c. LGA Chapter
 					if insertedUser.user.CurrentLga != nil && *insertedUser.user.CurrentLga > 0 {
 						lgaKey := fmt.Sprintf("%d:%d", pID, *insertedUser.user.CurrentLga)
 						if lgaCID := lgaChapters[lgaKey]; lgaCID > 0 {
@@ -556,7 +563,7 @@ func (s *SeedService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 						}
 					}
 
-					// 4d. Ward Chapter
+					// 3d. Ward Chapter
 					if insertedUser.user.CurrentWard != nil && *insertedUser.user.CurrentWard > 0 {
 						wardKey := fmt.Sprintf("%d:%d", pID, *insertedUser.user.CurrentWard)
 						if wardCID := wardChapters[wardKey]; wardCID > 0 {
@@ -570,6 +577,49 @@ func (s *SeedService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 								VALUES ($1, $2, $3)
 								ON CONFLICT (user_id, party_id, chapter_id) DO NOTHING
 							`, insertedUser.id, pID, wardCID)
+						}
+					}
+
+					// 4. Party Position Assignment (if user has a leadership position)
+					if insertedUser.user.Position != nil {
+						pos := insertedUser.user.Position
+						var targetChapterID int32
+						var badgeID int16
+
+						switch strings.ToLower(strings.TrimSpace(pos.Level)) {
+						case "national":
+							targetChapterID = nationalChapters[pID]
+							badgeID = 7 // national_official_verified
+						case "state":
+							if insertedUser.user.CurrentState > 0 {
+								stKey := fmt.Sprintf("%d:%d", pID, insertedUser.user.CurrentState)
+								targetChapterID = stateChapters[stKey]
+							}
+							badgeID = 9 // state_official_verified
+						case "lga":
+							if insertedUser.user.CurrentLga != nil && *insertedUser.user.CurrentLga > 0 {
+								lgaKey := fmt.Sprintf("%d:%d", pID, *insertedUser.user.CurrentLga)
+								targetChapterID = lgaChapters[lgaKey]
+							}
+							badgeID = 10 // lga_official_verified
+						}
+
+						if targetChapterID > 0 && pos.PositionID > 0 {
+							secBatch.Queue(`
+								INSERT INTO party_position_assignments (
+									party_id, chapter_id, position_id, user_id, appointment_type, status, tenure_start
+								) VALUES ($1, $2, $3, $4, 'substantive', 'active', CURRENT_DATE)
+								ON CONFLICT (chapter_id, position_id, user_id) WHERE status = 'active' DO NOTHING
+							`, pID, targetChapterID, pos.PositionID, insertedUser.id)
+
+							if badgeID > 0 {
+								secBatch.Queue(`
+									INSERT INTO pages_verified (page_type, page_id, verification_type_id)
+									VALUES ('user', $1, $2)
+									ON CONFLICT (page_type, page_id, verification_type_id)
+									DO UPDATE SET verified_at = CURRENT_TIMESTAMP
+								`, insertedUser.id, badgeID)
+							}
 						}
 					}
 				}
@@ -2013,6 +2063,7 @@ func (s *SeedService) SeedStateAssemblyCandidates(ctx context.Context, items []S
 		return "No state assembly candidates provided", nil
 	}
 
+	// 1. Collect candidate user requests and emails
 	userRequests := make([]SeedUserRequest, 0, len(items))
 	emails := make([]string, 0, len(items))
 
@@ -2021,15 +2072,18 @@ func (s *SeedService) SeedStateAssemblyCandidates(ctx context.Context, items []S
 		emails = append(emails, items[i].Email)
 	}
 
+	// 2. Create/upsert candidate user accounts
 	if _, err := s.SeedUsers(ctx, userRequests); err != nil {
 		return "", fmt.Errorf("failed seeding state assembly candidate accounts: %w", err)
 	}
 
+	// 3. Resolve database user IDs for candidates
 	userMap, err := s.resolveUserIDsByEmails(ctx, emails)
 	if err != nil {
 		return "", err
 	}
 
+	// 4. Fetch elections mapped by state constituency ID
 	rows, err := s.pool.Query(ctx, `
 		SELECT id, election_group_id, state_constituency_id
 		FROM elections
@@ -2049,6 +2103,7 @@ func (s *SeedService) SeedStateAssemblyCandidates(ctx context.Context, items []S
 	}
 	rows.Close()
 
+	// 5. Construct candidate tickets
 	tickets := make([]candidateTicketMeta, 0, len(items))
 	for _, item := range items {
 		target, ok := scElectionMap[item.StateConstituencyID]
@@ -2070,6 +2125,7 @@ func (s *SeedService) SeedStateAssemblyCandidates(ctx context.Context, items []S
 		})
 	}
 
+	// 6. Batch insert tickets
 	inserted, err := s.batchInsertCandidateTickets(ctx, tickets)
 	if err != nil {
 		return "", err
@@ -2083,31 +2139,24 @@ type SeedPartyLeaderItem struct {
 	Order            int               `json:"order,omitempty"`
 	PositionName     string            `json:"position_name"`
 	PositionID       int32             `json:"position_id"`
-	TypeOfAccount    string            `json:"type_of_account"` // "new" or "existing"
-	ExistingUsername string            `json:"existing_username,omitempty"`
-	User             *CandidateProfile `json:"user,omitempty"`
+	TypeOfAccount    string            `json:"type_of_account"`             // "new" or "existing"
+	ExistingUsername string            `json:"existing_username,omitempty"` // used if type_of_account is "existing"
+	User             *CandidateProfile `json:"user,omitempty"`              // profile to seed if type_of_account is "new"
 }
 
 // SeedPartyLeadership seeds national party leadership into party_position_assignments,
-// creates user accounts for new leaders, assigns the national_official_verified badge (7),
-// and updates users.has_role = true.
+// creates user accounts for new leaders, and assigns the national_official_verified badge (7).
 func (s *SeedService) SeedPartyLeadership(ctx context.Context, items []SeedPartyLeaderItem) (string, error) {
 	if len(items) == 0 {
 		return "No party leadership items provided", nil
 	}
 
-	// 1. Separate new users and seed them via existing optimized SeedUsers pipeline
+	// Separate new users and seed them via existing optimized SeedUsers pipeline
 	userRequests := make([]SeedUserRequest, 0, len(items))
 	for _, item := range items {
 		if (item.TypeOfAccount == "new" || item.TypeOfAccount == "") && item.User != nil {
 			req := item.User.toSeedUserRequest()
-			if req.PartyID == nil || *req.PartyID == 0 {
-				pID := item.PartyID
-				if pID == 0 && item.User.PartyID != 0 {
-					pID = item.User.PartyID
-				}
-				req.PartyID = &pID
-			}
+			req.PartyID = &item.PartyID
 			userRequests = append(userRequests, req)
 		}
 	}
@@ -2118,7 +2167,7 @@ func (s *SeedService) SeedPartyLeadership(ctx context.Context, items []SeedParty
 		}
 	}
 
-	// 2. Fetch national chapters for parties
+	// Fetch national chapters for parties
 	chapterRows, err := s.pool.Query(ctx, `
 		SELECT party_id, id 
 		FROM party_chapters 
@@ -2139,29 +2188,23 @@ func (s *SeedService) SeedPartyLeadership(ctx context.Context, items []SeedParty
 	}
 	chapterRows.Close()
 
-	// 3. Resolve user IDs for all leaders (both new and existing)
+	// Resolve user IDs for all leaders (both new and existing)
 	usernames := make([]string, 0, len(items))
-	emails := make([]string, 0, len(items))
 	for _, item := range items {
 		if item.TypeOfAccount == "existing" && item.ExistingUsername != "" {
 			usernames = append(usernames, strings.ToLower(strings.TrimSpace(item.ExistingUsername)))
-		} else if item.User != nil {
-			if item.User.Username != nil && strings.TrimSpace(*item.User.Username) != "" {
-				usernames = append(usernames, strings.ToLower(strings.TrimSpace(*item.User.Username)))
-			}
-			if strings.TrimSpace(item.User.Email) != "" {
-				emails = append(emails, strings.ToLower(strings.TrimSpace(item.User.Email)))
-			}
+		} else if item.User != nil && item.User.Username != nil && strings.TrimSpace(*item.User.Username) != "" {
+			usernames = append(usernames, strings.ToLower(strings.TrimSpace(*item.User.Username)))
 		}
 	}
 
 	userMap := make(map[string]int64)
-	if len(usernames) > 0 || len(emails) > 0 {
+	if len(usernames) > 0 {
 		rows, err := s.pool.Query(ctx, `
-			SELECT id, LOWER(username), LOWER(email) 
+			SELECT id, LOWER(username) 
 			FROM users 
-			WHERE LOWER(username) = ANY($1) OR LOWER(email) = ANY($2)
-		`, usernames, emails)
+			WHERE LOWER(username) = ANY($1)
+		`, usernames)
 		if err != nil {
 			return "", fmt.Errorf("failed resolving user IDs for party leaders: %w", err)
 		}
@@ -2169,20 +2212,15 @@ func (s *SeedService) SeedPartyLeadership(ctx context.Context, items []SeedParty
 
 		for rows.Next() {
 			var uid int64
-			var uname, uemail string
-			if err := rows.Scan(&uid, &uname, &uemail); err == nil {
-				if uname != "" {
-					userMap[uname] = uid
-				}
-				if uemail != "" {
-					userMap[uemail] = uid
-				}
+			var uname string
+			if err := rows.Scan(&uid, &uname); err == nil && uname != "" {
+				userMap[uname] = uid
 			}
 		}
 		rows.Close()
 	}
 
-	// 4. Pre-fetch existing active assignments to ensure complete idempotency
+	// Pre-fetch existing active assignments to ensure complete idempotency
 	// and prevent trigger 'trg_check_party_position_occupants' exceptions on re-runs.
 	assignRows, err := s.pool.Query(ctx, `
 		SELECT chapter_id, position_id, user_id 
@@ -2204,7 +2242,7 @@ func (s *SeedService) SeedPartyLeadership(ctx context.Context, items []SeedParty
 	}
 	assignRows.Close()
 
-	// 5. Prepare assignments, badges, and user role updates
+	// Prepare assignments and badges
 	type newAssignment struct {
 		partyID    int16
 		chapterID  int32
@@ -2216,55 +2254,53 @@ func (s *SeedService) SeedPartyLeadership(ctx context.Context, items []SeedParty
 	allLeaderUserIDs := make([]int64, 0, len(items))
 	seenUserIDs := make(map[int64]bool)
 
+	// Build assignment records now that all user accounts exist and user IDs are resolved
 	for _, item := range items {
-		partyID := item.PartyID
-		if partyID == 0 && item.User != nil && item.User.PartyID != 0 {
-			partyID = item.User.PartyID
-		}
-
-		chapterID, ok := nationalChapters[partyID]
+		// Look up the party's national chapter
+		chapterID, ok := nationalChapters[item.PartyID]
 		if !ok {
-			return "", fmt.Errorf("national chapter not found for party ID %d", partyID)
+			return "", fmt.Errorf("national chapter not found for party ID %d", item.PartyID)
 		}
 
+		// Resolve user ID for existing or newly created account by username
 		var userID int64
 		if item.TypeOfAccount == "existing" {
 			uname := strings.ToLower(strings.TrimSpace(item.ExistingUsername))
 			userID = userMap[uname]
 			if userID <= 0 {
-				return "", fmt.Errorf("candidate account '%s' not found for party %d position %s; please ensure candidate seeds are run first", uname, partyID, item.PositionName)
+				return "", fmt.Errorf("candidate account '%s' not found for party %d position %s; please ensure candidate seeds are run first", uname, item.PartyID, item.PositionName)
 			}
 		} else if item.User != nil {
 			if item.User.Username != nil && strings.TrimSpace(*item.User.Username) != "" {
 				userID = userMap[strings.ToLower(strings.TrimSpace(*item.User.Username))]
-			}
-			if userID <= 0 && strings.TrimSpace(item.User.Email) != "" {
-				userID = userMap[strings.ToLower(strings.TrimSpace(item.User.Email))]
 			}
 			if userID <= 0 {
 				return "", fmt.Errorf("user ID not found for party leader %s (%s)", item.User.FirstName+" "+item.User.LastName, item.PositionName)
 			}
 		}
 
+		// Collect unique user IDs to grant official badges
 		if userID > 0 && !seenUserIDs[userID] {
 			seenUserIDs[userID] = true
 			allLeaderUserIDs = append(allLeaderUserIDs, userID)
 		}
 
+		// Prevent duplicate assignments (from DB or within this batch)
 		assignKey := fmt.Sprintf("%d:%d:%d", chapterID, item.PositionID, userID)
 		if !existingAssignments[assignKey] {
 			assignmentsToInsert = append(assignmentsToInsert, newAssignment{
-				partyID:    partyID,
+				partyID:    item.PartyID,
 				chapterID:  chapterID,
 				positionID: item.PositionID,
 				userID:     userID,
 			})
+
 			// Mark as tracked so duplicate items within the same request payload don't conflict
 			existingAssignments[assignKey] = true
 		}
 	}
 
-	// 6. Execute batch inserts in a database transaction
+	// Execute batch inserts in a database transaction
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return "", fmt.Errorf("failed beginning transaction: %w", err)
@@ -2283,6 +2319,7 @@ func (s *SeedService) SeedPartyLeadership(ctx context.Context, items []SeedParty
 		}
 
 		br := tx.SendBatch(ctx, batch)
+		// Read and verify execution results for each queued insert statement
 		for range assignmentsToInsert {
 			if _, err := br.Exec(); err != nil {
 				br.Close()
@@ -2306,6 +2343,7 @@ func (s *SeedService) SeedPartyLeadership(ctx context.Context, items []SeedParty
 			`, uid)
 		}
 		br := tx.SendBatch(ctx, badgeBatch)
+		// Read and verify execution results for each queued badge insert
 		for range allLeaderUserIDs {
 			if _, err := br.Exec(); err != nil {
 				br.Close()
@@ -2326,24 +2364,27 @@ func (s *SeedService) SeedPartyLeadership(ctx context.Context, items []SeedParty
 		return "", fmt.Errorf("failed committing transaction: %w", err)
 	}
 
-	// 7. Invalidate relevant party Redis caches
-	if s.rdb != nil {
-		for _, item := range items {
-			partyID := item.PartyID
-			if partyID == 0 && item.User != nil && item.User.PartyID != 0 {
-				partyID = item.User.PartyID
+	// Invalidate relevant party Redis caches in a single batch
+	keysToDelete := make([]string, 0, len(items)*2)
+	seenKeys := make(map[string]bool)
+
+	for _, item := range items {
+		if chapterID, ok := nationalChapters[item.PartyID]; ok {
+			k1 := fmt.Sprintf("%s%d:%d", db.RedisPartyChapterOfficials, item.PartyID, chapterID)
+			k2 := fmt.Sprintf("%s%d:%d", db.RedisChapterOfficial, chapterID, item.PositionID)
+			if !seenKeys[k1] {
+				seenKeys[k1] = true
+				keysToDelete = append(keysToDelete, k1)
 			}
-			if chapterID, ok := nationalChapters[partyID]; ok {
-				s.rdb.Del(ctx, fmt.Sprintf("%s%d:%d", db.RedisPartyChapterOfficials, partyID, chapterID))
-				s.rdb.Del(ctx, fmt.Sprintf("%s%d:%d", db.RedisChapterOfficial, chapterID, item.PositionID))
+			if !seenKeys[k2] {
+				seenKeys[k2] = true
+				keysToDelete = append(keysToDelete, k2)
 			}
 		}
-		for _, uid := range allLeaderUserIDs {
-			iter := s.rdb.Scan(ctx, 0, fmt.Sprintf("%s*:%d", db.RedisPartyMemberPositions, uid), 100).Iterator()
-			for iter.Next(ctx) {
-				s.rdb.Del(ctx, iter.Val())
-			}
-		}
+	}
+
+	if len(keysToDelete) > 0 {
+		s.rdb.Del(ctx, keysToDelete...)
 	}
 
 	return fmt.Sprintf("Successfully seeded party leadership (%d assignments inserted, %d officials verified)", len(assignmentsToInsert), len(allLeaderUserIDs)), nil

@@ -76,4 +76,12 @@ curl -X POST ${BASE_URL}/api/v1/seed/users \
   -d @"1.7-users-with-no-party.json"
 
 echo ""
+sleep 1 # wait for 1 second
+
+# seed sub-national party leadership (APC, ADC, PDP, NDC across all 37 states and 774 LGAs)
+echo "Seeding sub-national party leadership to ${BASE_URL}/api/v1/seed/users..."
+curl -X POST ${BASE_URL}/api/v1/seed/users \
+  -H "Content-Type: application/json" \
+  -d @"1.8-sub-national-leadership.json"
+
 echo "Done."

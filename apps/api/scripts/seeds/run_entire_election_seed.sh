@@ -30,18 +30,18 @@ curl -X POST ${BASE_URL}/api/v1/seed/candidates/presidential \
 sleep 1 # wait for 1 second
 
 # seed senatorial candidates
-# echo "Seeding senatorial candidates to ${BASE_URL}/api/v1/seed/candidates/senate..."
-# curl -X POST ${BASE_URL}/api/v1/seed/candidates/senate \
-#   -H "Content-Type: application/json" \
-#   -d @"production/elections/2027-general-election/senate.json"
+echo "Seeding senatorial candidates to ${BASE_URL}/api/v1/seed/candidates/senate..."
+curl -X POST ${BASE_URL}/api/v1/seed/candidates/senate \
+  -H "Content-Type: application/json" \
+  -d @"production/elections/2027-general-election/senate.json"
 
 sleep 1 # wait for 1 second
 
 # seed house of reps candidates
-# echo "Seeding house of representatives candidates to ${BASE_URL}/api/v1/seed/candidates/house-of-reps..."
-# curl -X POST ${BASE_URL}/api/v1/seed/candidates/house-of-reps \
-#   -H "Content-Type: application/json" \
-#   -d @"production/elections/2027-general-election/house_of_representatives.json"
+echo "Seeding house of representatives candidates to ${BASE_URL}/api/v1/seed/candidates/house-of-reps..."
+curl -X POST ${BASE_URL}/api/v1/seed/candidates/house-of-reps \
+  -H "Content-Type: application/json" \
+  -d @"production/elections/2027-general-election/house_of_representatives.json"
 
 sleep 1 # wait for 1 second
 
@@ -54,10 +54,10 @@ curl -X POST ${BASE_URL}/api/v1/seed/candidates/governorship \
 sleep 1 # wait for 1 second
 
 # seed state house of assembly candidates
-# echo "Seeding state house of assembly candidates to ${BASE_URL}/api/v1/seed/candidates/state-assembly..."
-# curl -X POST ${BASE_URL}/api/v1/seed/candidates/state-assembly \
-#   -H "Content-Type: application/json" \
-#   -d @"production/elections/2027-general-election/state_house_of_assembly.json"
+echo "Seeding state house of assembly candidates to ${BASE_URL}/api/v1/seed/candidates/state-assembly..."
+curl -X POST ${BASE_URL}/api/v1/seed/candidates/state-assembly \
+  -H "Content-Type: application/json" \
+  -d @"production/elections/2027-general-election/state_house_of_assembly.json"
 
 # seed party leadership
 echo "Seeding party leadership to ${BASE_URL}/api/v1/seed/parties/leadership..."
