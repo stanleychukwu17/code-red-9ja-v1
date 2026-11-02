@@ -215,7 +215,7 @@ function ElectionCandidatesPage() {
       />
 
       {/* Candidates Roster Grid */}
-      <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-5 md:gap-6">
+      <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-5 md:gap-6 py-5">
         {isLoading ? (
           <div className="col-span-full h-48 flex flex-col items-center justify-center gap-3 text-c-50 rounded-3xl bg-sidebar-softer/70 dark:bg-card border border-sidebar-mobile dark:border-border">
             <Loader2 className="size-6 animate-spin text-primary" />
@@ -234,7 +234,6 @@ function ElectionCandidatesPage() {
             <ElectionCandidateRow
               key={c.id}
               candidate={c}
-              userPartyShortName={party?.short_name}
               ticketConfig={ticketConfig}
             />
           ))

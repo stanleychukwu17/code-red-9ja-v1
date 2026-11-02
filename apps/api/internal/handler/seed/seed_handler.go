@@ -463,3 +463,40 @@ func (h *Handler) SeedStateAssemblyCandidates(w http.ResponseWriter, r *http.Req
 
 	h.utils.RespondSuccess(w, http.StatusOK, msg, nil)
 }
+
+// @Summary Seed party leadership
+// @Description Creates national party leadership assignments and verified badges for political parties
+// @Tags Seed
+// @Accept json
+// @Produce json
+// @Param request body []seedservice.SeedPartyLeaderItem true "List of party leadership items"
+// @Success 200 {object} map[string]interface{} "Party leadership seeded successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid request body"
+// @Failure 500 {object} map[string]interface{} "Failed to seed party leadership"
+// @Router /seed/parties/leadership [post]
+func (h *Handler) SeedPartyLeadership(w http.ResponseWriter, r *http.Request) {
+	bodyBytes, err := io.ReadAll(r.Body)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+		return
+	}
+
+	var req []seedservice.SeedPartyLeaderItem
+	if err := json.Unmarshal(bodyBytes, &req); err != nil {
+		var single seedservice.SeedPartyLeaderItem
+		if errSingle := json.Unmarshal(bodyBytes, &single); errSingle == nil {
+			req = []seedservice.SeedPartyLeaderItem{single}
+		} else {
+			h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+			return
+		}
+	}
+
+	msg, err := h.seedService.SeedPartyLeadership(r.Context(), req)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to seed party leadership: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, msg, nil)
+}

@@ -59,5 +59,11 @@ sleep 1 # wait for 1 second
 #   -H "Content-Type: application/json" \
 #   -d @"production/elections/2027-general-election/state_house_of_assembly.json"
 
+# seed party leadership
+echo "Seeding party leadership to ${BASE_URL}/api/v1/seed/parties/leadership..."
+curl -X POST ${BASE_URL}/api/v1/seed/parties/leadership \
+  -H "Content-Type: application/json" \
+  -d @"production/national_leadership/leadership.json"
+
 echo ""
 echo "Done."

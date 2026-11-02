@@ -1460,6 +1460,7 @@ type CandidateProfile struct {
 	Avatar              string  `json:"avatar,omitempty"`
 	IsPolitician        bool    `json:"is_politician,omitempty"`
 	IsVerified          bool    `json:"is_verified,omitempty"`
+	VerificationTypeID  *int16  `json:"verification_type_id,omitempty"`
 	VerificationTypeIDs []int16 `json:"verification_type_ids,omitempty"`
 	PartyID             int16   `json:"party_id"`
 	PartyShortName      string  `json:"party_short_name,omitempty"`
@@ -1479,6 +1480,8 @@ func (p *CandidateProfile) toSeedUserRequest() SeedUserRequest {
 	verifIDs := []int16{4} // default to politician_verified (4)
 	if len(p.VerificationTypeIDs) > 0 {
 		verifIDs = p.VerificationTypeIDs
+	} else if p.VerificationTypeID != nil && *p.VerificationTypeID > 0 {
+		verifIDs = []int16{*p.VerificationTypeID}
 	}
 
 	var midName *string
@@ -2073,4 +2076,275 @@ func (s *SeedService) SeedStateAssemblyCandidates(ctx context.Context, items []S
 	}
 
 	return fmt.Sprintf("Successfully seeded state house of assembly candidates (%d candidates created/updated)", inserted), nil
+}
+
+type SeedPartyLeaderItem struct {
+	PartyID          int16             `json:"party_id"`
+	Order            int               `json:"order,omitempty"`
+	PositionName     string            `json:"position_name"`
+	PositionID       int32             `json:"position_id"`
+	TypeOfAccount    string            `json:"type_of_account"` // "new" or "existing"
+	ExistingUsername string            `json:"existing_username,omitempty"`
+	User             *CandidateProfile `json:"user,omitempty"`
+}
+
+// SeedPartyLeadership seeds national party leadership into party_position_assignments,
+// creates user accounts for new leaders, assigns the national_official_verified badge (7),
+// and updates users.has_role = true.
+func (s *SeedService) SeedPartyLeadership(ctx context.Context, items []SeedPartyLeaderItem) (string, error) {
+	if len(items) == 0 {
+		return "No party leadership items provided", nil
+	}
+
+	// 1. Separate new users and seed them via existing optimized SeedUsers pipeline
+	userRequests := make([]SeedUserRequest, 0, len(items))
+	for _, item := range items {
+		if (item.TypeOfAccount == "new" || item.TypeOfAccount == "") && item.User != nil {
+			req := item.User.toSeedUserRequest()
+			if req.PartyID == nil || *req.PartyID == 0 {
+				pID := item.PartyID
+				if pID == 0 && item.User.PartyID != 0 {
+					pID = item.User.PartyID
+				}
+				req.PartyID = &pID
+			}
+			userRequests = append(userRequests, req)
+		}
+	}
+
+	if len(userRequests) > 0 {
+		if _, err := s.SeedUsers(ctx, userRequests); err != nil {
+			return "", fmt.Errorf("failed creating leadership user accounts: %w", err)
+		}
+	}
+
+	// 2. Fetch national chapters for parties
+	chapterRows, err := s.pool.Query(ctx, `
+		SELECT party_id, id 
+		FROM party_chapters 
+		WHERE chapter_type = 'national'
+	`)
+	if err != nil {
+		return "", fmt.Errorf("failed fetching national party chapters: %w", err)
+	}
+	defer chapterRows.Close()
+
+	nationalChapters := make(map[int16]int32)
+	for chapterRows.Next() {
+		var pid int16
+		var cid int32
+		if err := chapterRows.Scan(&pid, &cid); err == nil {
+			nationalChapters[pid] = cid
+		}
+	}
+	chapterRows.Close()
+
+	// 3. Resolve user IDs for all leaders (both new and existing)
+	usernames := make([]string, 0, len(items))
+	emails := make([]string, 0, len(items))
+	for _, item := range items {
+		if item.TypeOfAccount == "existing" && item.ExistingUsername != "" {
+			usernames = append(usernames, strings.ToLower(strings.TrimSpace(item.ExistingUsername)))
+		} else if item.User != nil {
+			if item.User.Username != nil && strings.TrimSpace(*item.User.Username) != "" {
+				usernames = append(usernames, strings.ToLower(strings.TrimSpace(*item.User.Username)))
+			}
+			if strings.TrimSpace(item.User.Email) != "" {
+				emails = append(emails, strings.ToLower(strings.TrimSpace(item.User.Email)))
+			}
+		}
+	}
+
+	userMap := make(map[string]int64)
+	if len(usernames) > 0 || len(emails) > 0 {
+		rows, err := s.pool.Query(ctx, `
+			SELECT id, LOWER(username), LOWER(email) 
+			FROM users 
+			WHERE LOWER(username) = ANY($1) OR LOWER(email) = ANY($2)
+		`, usernames, emails)
+		if err != nil {
+			return "", fmt.Errorf("failed resolving user IDs for party leaders: %w", err)
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var uid int64
+			var uname, uemail string
+			if err := rows.Scan(&uid, &uname, &uemail); err == nil {
+				if uname != "" {
+					userMap[uname] = uid
+				}
+				if uemail != "" {
+					userMap[uemail] = uid
+				}
+			}
+		}
+		rows.Close()
+	}
+
+	// 4. Pre-fetch existing active assignments to ensure complete idempotency
+	// and prevent trigger 'trg_check_party_position_occupants' exceptions on re-runs.
+	assignRows, err := s.pool.Query(ctx, `
+		SELECT chapter_id, position_id, user_id 
+		FROM party_position_assignments 
+		WHERE status = 'active'
+	`)
+	if err != nil {
+		return "", fmt.Errorf("failed fetching existing party position assignments: %w", err)
+	}
+	defer assignRows.Close()
+
+	existingAssignments := make(map[string]bool)
+	for assignRows.Next() {
+		var cid, posID int32
+		var uid int64
+		if err := assignRows.Scan(&cid, &posID, &uid); err == nil {
+			existingAssignments[fmt.Sprintf("%d:%d:%d", cid, posID, uid)] = true
+		}
+	}
+	assignRows.Close()
+
+	// 5. Prepare assignments, badges, and user role updates
+	type newAssignment struct {
+		partyID    int16
+		chapterID  int32
+		positionID int32
+		userID     int64
+	}
+
+	var assignmentsToInsert []newAssignment
+	allLeaderUserIDs := make([]int64, 0, len(items))
+	seenUserIDs := make(map[int64]bool)
+
+	for _, item := range items {
+		partyID := item.PartyID
+		if partyID == 0 && item.User != nil && item.User.PartyID != 0 {
+			partyID = item.User.PartyID
+		}
+
+		chapterID, ok := nationalChapters[partyID]
+		if !ok {
+			return "", fmt.Errorf("national chapter not found for party ID %d", partyID)
+		}
+
+		var userID int64
+		if item.TypeOfAccount == "existing" {
+			uname := strings.ToLower(strings.TrimSpace(item.ExistingUsername))
+			userID = userMap[uname]
+			if userID <= 0 {
+				return "", fmt.Errorf("candidate account '%s' not found for party %d position %s; please ensure candidate seeds are run first", uname, partyID, item.PositionName)
+			}
+		} else if item.User != nil {
+			if item.User.Username != nil && strings.TrimSpace(*item.User.Username) != "" {
+				userID = userMap[strings.ToLower(strings.TrimSpace(*item.User.Username))]
+			}
+			if userID <= 0 && strings.TrimSpace(item.User.Email) != "" {
+				userID = userMap[strings.ToLower(strings.TrimSpace(item.User.Email))]
+			}
+			if userID <= 0 {
+				return "", fmt.Errorf("user ID not found for party leader %s (%s)", item.User.FirstName+" "+item.User.LastName, item.PositionName)
+			}
+		}
+
+		if userID > 0 && !seenUserIDs[userID] {
+			seenUserIDs[userID] = true
+			allLeaderUserIDs = append(allLeaderUserIDs, userID)
+		}
+
+		assignKey := fmt.Sprintf("%d:%d:%d", chapterID, item.PositionID, userID)
+		if !existingAssignments[assignKey] {
+			assignmentsToInsert = append(assignmentsToInsert, newAssignment{
+				partyID:    partyID,
+				chapterID:  chapterID,
+				positionID: item.PositionID,
+				userID:     userID,
+			})
+			// Mark as tracked so duplicate items within the same request payload don't conflict
+			existingAssignments[assignKey] = true
+		}
+	}
+
+	// 6. Execute batch inserts in a database transaction
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return "", fmt.Errorf("failed beginning transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	// Insert new assignments
+	if len(assignmentsToInsert) > 0 {
+		batch := &pgx.Batch{}
+		for _, a := range assignmentsToInsert {
+			batch.Queue(`
+				INSERT INTO party_position_assignments (
+					party_id, chapter_id, position_id, user_id, appointment_type, status, tenure_start
+				) VALUES ($1, $2, $3, $4, 'substantive', 'active', CURRENT_DATE)
+			`, a.partyID, a.chapterID, a.positionID, a.userID)
+		}
+
+		br := tx.SendBatch(ctx, batch)
+		for range assignmentsToInsert {
+			if _, err := br.Exec(); err != nil {
+				br.Close()
+				return "", fmt.Errorf("failed inserting party position assignment: %w", err)
+			}
+		}
+		if err := br.Close(); err != nil {
+			return "", fmt.Errorf("failed closing batch results: %w", err)
+		}
+	}
+
+	// Grant badge 7 (national_official_verified) in pages_verified
+	if len(allLeaderUserIDs) > 0 {
+		badgeBatch := &pgx.Batch{}
+		for _, uid := range allLeaderUserIDs {
+			badgeBatch.Queue(`
+				INSERT INTO pages_verified (page_type, page_id, verification_type_id)
+				VALUES ('user', $1, 7)
+				ON CONFLICT (page_type, page_id, verification_type_id)
+				DO UPDATE SET verified_at = CURRENT_TIMESTAMP
+			`, uid)
+		}
+		br := tx.SendBatch(ctx, badgeBatch)
+		for range allLeaderUserIDs {
+			if _, err := br.Exec(); err != nil {
+				br.Close()
+				return "", fmt.Errorf("failed granting national official verified badge: %w", err)
+			}
+		}
+		if err := br.Close(); err != nil {
+			return "", fmt.Errorf("failed closing badge batch: %w", err)
+		}
+
+		// Update users.has_role = true
+		if _, err := tx.Exec(ctx, `UPDATE users SET has_role = true WHERE id = ANY($1)`, allLeaderUserIDs); err != nil {
+			return "", fmt.Errorf("failed updating users has_role: %w", err)
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return "", fmt.Errorf("failed committing transaction: %w", err)
+	}
+
+	// 7. Invalidate relevant party Redis caches
+	if s.rdb != nil {
+		for _, item := range items {
+			partyID := item.PartyID
+			if partyID == 0 && item.User != nil && item.User.PartyID != 0 {
+				partyID = item.User.PartyID
+			}
+			if chapterID, ok := nationalChapters[partyID]; ok {
+				s.rdb.Del(ctx, fmt.Sprintf("%s%d:%d", db.RedisPartyChapterOfficials, partyID, chapterID))
+				s.rdb.Del(ctx, fmt.Sprintf("%s%d:%d", db.RedisChapterOfficial, chapterID, item.PositionID))
+			}
+		}
+		for _, uid := range allLeaderUserIDs {
+			iter := s.rdb.Scan(ctx, 0, fmt.Sprintf("%s*:%d", db.RedisPartyMemberPositions, uid), 100).Iterator()
+			for iter.Next(ctx) {
+				s.rdb.Del(ctx, iter.Val())
+			}
+		}
+	}
+
+	return fmt.Sprintf("Successfully seeded party leadership (%d assignments inserted, %d officials verified)", len(assignmentsToInsert), len(allLeaderUserIDs)), nil
 }
