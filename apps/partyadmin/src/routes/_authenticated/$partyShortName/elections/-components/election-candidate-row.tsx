@@ -1,5 +1,5 @@
-import { AppAvatar } from "@repo/ui/components/avatar";
 import { cn } from "@repo/ui/lib/utils";
+import { WEB_URL } from "#/lib/config";
 
 export type ElectionCandidateRowProps = {
   candidate: any;
@@ -12,6 +12,7 @@ export type ElectionCandidateRowProps = {
 type CandidateProfileProps = {
   avatar?: string;
   name: string;
+  username: string;
   badgeLabel: string;
   badgeClassName?: string;
   ageText?: string;
@@ -24,28 +25,30 @@ type CandidateProfileProps = {
 function CandidateProfile({
   avatar,
   name,
+  username,
   badgeLabel,
   badgeClassName,
   ageText,
   stateText,
 }: CandidateProfileProps) {
+  const profileUrl = WEB_URL.users.profile(encodeURIComponent(username));
+
   return (
     <div className="flex-1 flex flex-col items-center text-center max-w-xs w-full">
-      <div className="size-24 sm:size-28 md:size-32 rounded-full overflow-hidden shadow-md ring-4 ring-background bg-sidebar-mobile flex items-center justify-center shrink-0">
-        {avatar ? (
+      <a
+        href={profileUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="shrink-0 rounded-full transition-transform hover:scale-105"
+      >
+        <div className="size-24 sm:size-28 md:size-32 rounded-full overflow-hidden shadow-md ring-4 ring-background bg-sidebar-mobile flex items-center justify-center shrink-0">
           <img
-            src={avatar}
+            src={avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=DC2626&color=ffffff`}
             alt={name}
             className="size-full object-cover"
           />
-        ) : (
-          <AppAvatar
-            src={avatar}
-            alt={name}
-            className="size-full text-2xl font-bold"
-          />
-        )}
-      </div>
+        </div>
+      </a>
 
       <span
         className={cn(
@@ -56,11 +59,16 @@ function CandidateProfile({
         {badgeLabel}
       </span>
 
-      <div className="mt-2 bg-sidebar-mobile dark:bg-neutral-900/80 border border-border/40 rounded-lg px-3 py-1 text-sm sm:text-base font-bold text-c-90 tracking-tight text-center truncate max-w-full">
+      <a
+        href={profileUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="my-3 bg-sidebar-mobile dark:bg-neutral-900/80 border border-border/40 rounded-lg px-3 py-1 text-sm sm:text-base font-bold text-c-90 tracking-tight text-center truncate max-w-full hover:text-primary transition-colors block"
+      >
         {name}
-      </div>
+      </a>
 
-      <div className="mt-1.5 flex items-center justify-center gap-3 sm:gap-4 text-[11px] sm:text-xs text-c-50 font-medium">
+      <div className="mt-.5 flex items-center justify-center gap-3 sm:gap-4 text-[11px] sm:text-xs text-c-50 font-medium">
         <span>{ageText}</span>
         <span>{stateText}</span>
       </div>
@@ -85,6 +93,7 @@ export function ElectionCandidateRow({
     `${candidate.first_name || ""} ${candidate.last_name || ""}`.trim() ||
     "Candidate";
   const candidateAvatar = candidate.avatar;
+  const candidateUsername = candidate.username || "";
   const candidateAgeText = candidate.age
     ? `${candidate.age} years old`
     : "59 years old";
@@ -99,6 +108,7 @@ export function ElectionCandidateRow({
     candidate.running_mate_full_name ||
     `${candidate.running_mate_first_name || ""} ${candidate.running_mate_last_name || ""}`.trim();
   const runningMateAvatar = candidate.running_mate_avatar;
+  const runningMateUsername = candidate.running_mate_username || "";
   const hasRunningMate = Boolean(candidate.running_mate_id || runningMateName);
   const runningMateAgeText = candidate.running_mate_age
     ? `${candidate.running_mate_age} years old`
@@ -134,15 +144,11 @@ export function ElectionCandidateRow({
             "px-5 py-3 flex items-center justify-center"
           )}
         >
-          {partyLogo ? (
-            <img
-              src={partyLogo}
-              alt={partyShort}
-              className="size-6 object-contain rounded-full"
-            />
-          ) : (
-            <span className="text-xs font-bold text-c-60">{partyShort.slice(0, 3)}</span>
-          )}
+          <img
+            src={partyLogo}
+            alt={partyShort}
+            className="size-6 object-contain rounded-full"
+          />
         </div>
       </div>
 
@@ -152,6 +158,7 @@ export function ElectionCandidateRow({
         <CandidateProfile
           avatar={candidateAvatar}
           name={candidateName}
+          username={candidateUsername}
           badgeLabel="Candidate"
           badgeClassName="bg-purple"
           ageText={candidateAgeText}
@@ -163,6 +170,7 @@ export function ElectionCandidateRow({
           <CandidateProfile
             avatar={runningMateAvatar}
             name={runningMateName || "No Running Mate"}
+            username={runningMateUsername}
             badgeLabel="Running mate"
             badgeClassName="bg-[#0052cc]"
             ageText={runningMateAgeText}

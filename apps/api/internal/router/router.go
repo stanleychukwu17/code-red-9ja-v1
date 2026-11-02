@@ -564,7 +564,6 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Post("/api/v1/elections/did-not-vote", electionsHandler.CreateDidNotVoteReason)
 		r.Get("/api/v1/elections/eligible", electionsHandler.GetEligibleElectionsForPollingUnit)
 		r.Post("/api/v1/elections/votes", electionsHandler.SubmitElectionVotes)
-		r.Get("/api/v1/elections/{id}/candidates", electionsHandler.GetElectionCandidates)
 		r.Get("/api/v1/election-groups/{id}/vote-status", electionsHandler.GetUserElectionGroupVoteStatus)
 
 		// Geographic Stats pre-aggregated endpoints

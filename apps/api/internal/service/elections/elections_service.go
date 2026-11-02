@@ -1207,11 +1207,13 @@ type ElectionCandidateItem struct {
 	FirstName            string  `json:"first_name"`
 	LastName             string  `json:"last_name"`
 	FullName             string  `json:"candidate_name"`
+	Username             *string `json:"username,omitempty"`
 	Avatar               *string `json:"avatar,omitempty"`
 	RunningMateID        *int64  `json:"running_mate_id,omitempty"`
 	RunningMateFirstName *string `json:"running_mate_first_name,omitempty"`
 	RunningMateLastName  *string `json:"running_mate_last_name,omitempty"`
 	RunningMateFullName  *string `json:"running_mate_name,omitempty"`
+	RunningMateUsername  *string `json:"running_mate_username,omitempty"`
 	RunningMateAvatar    *string `json:"running_mate_avatar,omitempty"`
 	PartyID              int16   `json:"party_id"`
 	PartyShortName       string  `json:"party_short_name"`
@@ -1266,11 +1268,13 @@ func (s *ElectionsService) GetElectionCandidates(ctx context.Context, electionID
 			FirstName:            firstName,
 			LastName:             lastName,
 			FullName:             fullName,
+			Username:             utils.PtrFromPgText(r.Username),
 			Avatar:               utils.PtrFromPgText(r.Avatar),
 			RunningMateID:        utils.PtrFromPgInt8(r.RunningMateID),
 			RunningMateFirstName: utils.PtrFromPgText(r.RunningMateFirstName),
 			RunningMateLastName:  utils.PtrFromPgText(r.RunningMateLastName),
 			RunningMateFullName:  runningMateFullName,
+			RunningMateUsername:  utils.PtrFromPgText(r.RunningMateUsername),
 			RunningMateAvatar:    utils.PtrFromPgText(r.RunningMateAvatar),
 			PartyID:              r.PartyID,
 			PartyShortName:       partyShortName,

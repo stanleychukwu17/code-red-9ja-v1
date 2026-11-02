@@ -1,6 +1,6 @@
 import { Plus } from "lucide-react";
-import { AppAvatar } from "@repo/ui/components/avatar";
 import { cn } from "@repo/ui/lib/utils";
+import { WEB_URL } from "#/lib/config";
 
 export type PartyNominationBannerProps = {
   party?: { logo?: string; short_name?: string } | null;
@@ -15,10 +15,11 @@ export type PartyNominationBannerProps = {
 type TicketCandidateProfileProps = {
   avatar?: string;
   name: string;
+  username?: string;
   badgeLabel?: string;
+  badgeClassName?: string;
   ageText?: string;
   stateText?: string;
-  onFollow?: () => void;
   followButtonText?: string;
 };
 
@@ -28,51 +29,64 @@ type TicketCandidateProfileProps = {
 function TicketCandidateProfile({
   avatar,
   name,
+  username = "",
   badgeLabel = "Candidate",
+  badgeClassName = "bg-purple",
   ageText,
   stateText,
-  onFollow,
   followButtonText = "Follow",
 }: TicketCandidateProfileProps) {
+  const profileUrl = WEB_URL.users.profile(encodeURIComponent(username));
+
   return (
     <div className="flex-1 flex flex-col items-center text-center max-w-xs w-full">
-      <div className="size-24 md:size-28 lg:size-42 rounded-full overflow-hidden shadow-md ring-4 ring-background bg-sidebar-mobile flex items-center justify-center shrink-0">
-        {avatar ? (
+      <a
+        href={profileUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="shrink-0 rounded-full transition-transform hover:scale-105"
+      >
+        <div className="size-24 md:size-28 lg:size-42 rounded-full overflow-hidden shadow-md ring-4 ring-background bg-sidebar-mobile flex items-center justify-center shrink-0">
           <img
-            src={avatar}
+            src={avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=DC2626&color=ffffff`}
             alt={name}
             className="size-full object-cover"
           />
-        ) : (
-          <AppAvatar
-            src={avatar}
-            alt={name}
-            className="size-full text-2xl font-bold"
-          />
-        )}
-      </div>
+        </div>
+      </a>
 
-      <span className="mt-2.5 inline-flex items-center justify-center bg-purple text-white text-[11px] font-semibold px-4 py-0.5 rounded-full shadow-2xs tracking-wide">
+      <span
+        className={cn(
+          "mt-2.5 inline-flex items-center justify-center text-white text-[11px] font-semibold px-4 py-0.5 rounded-full shadow-2xs tracking-wide",
+          badgeClassName
+        )}
+      >
         {badgeLabel}
       </span>
 
-      <h3 className="mt-2 text-base md:text-lg font-bold text-c-90 tracking-tight text-center max-w-full truncate px-2">
-        {name}
-      </h3>
+      <a
+        href={profileUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-2 text-base md:text-lg font-bold text-c-90 hover:text-primary tracking-tight text-center max-w-full truncate px-2 transition-colors block"
+      >
+        <h3 className="truncate">{name}</h3>
+      </a>
 
       <div className="mt-1 flex items-center justify-center gap-4 md:gap-6 text-xs md:text-[13px] text-c-50 font-medium">
         <span>{ageText}</span>
         <span>{stateText}</span>
       </div>
 
-      <button
-        type="button"
-        onClick={onFollow}
+      <a
+        href={profileUrl}
+        target="_blank"
+        rel="noopener noreferrer"
         className="mt-3.5 inline-flex items-center justify-center gap-1.5 bg-foreground hover:bg-c-90 text-background font-semibold text-xs md:text-sm px-6 py-2 rounded-full shadow-xs transition-all active:scale-95 cursor-pointer"
       >
         <Plus className="size-3.5 stroke-[2.5]" />
         <span>{followButtonText}</span>
-      </button>
+      </a>
     </div>
   );
 }
@@ -95,6 +109,7 @@ export function PartyNominationBanner({
     `${myPartyCandidate?.first_name || ""} ${myPartyCandidate?.last_name || ""}`.trim();
 
   const candidateAvatar = myPartyCandidate?.avatar;
+  const candidateUsername = myPartyCandidate?.username || "";
 
   const candidateAgeText = myPartyCandidate?.age
     ? `${myPartyCandidate.age} years old`
@@ -114,6 +129,7 @@ export function PartyNominationBanner({
 
   const runningMateAvatar =
     myPartyCandidate?.running_mate_avatar || candidateAvatar;
+  const runningMateUsername = myPartyCandidate?.running_mate_username || "";
 
   const runningMateAgeText = myPartyCandidate?.running_mate_age
     ? `${myPartyCandidate.running_mate_age} years old`
@@ -150,10 +166,11 @@ export function PartyNominationBanner({
         <TicketCandidateProfile
           avatar={candidateAvatar}
           name={candidateName}
+          username={candidateUsername}
           badgeLabel="Candidate"
+          badgeClassName="bg-purple"
           ageText={candidateAgeText}
           stateText={candidateStateText}
-          onFollow={onManageTicket}
         />
 
         {/* Center: Party Info */}
@@ -189,10 +206,11 @@ export function PartyNominationBanner({
         <TicketCandidateProfile
           avatar={runningMateAvatar}
           name={runningMateName}
-          badgeLabel="Candidate"
+          username={runningMateUsername}
+          badgeLabel="Running mate"
+          badgeClassName="bg-[#0052cc]"
           ageText={runningMateAgeText}
           stateText={runningMateStateText}
-          onFollow={onManageTicket}
         />
       </div>
     </div>

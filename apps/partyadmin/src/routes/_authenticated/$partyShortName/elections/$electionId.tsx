@@ -12,7 +12,7 @@ import { Layout, PageHeader, PageSearchLayer } from "@repo/ui/components/custom/
 import { formatISODate } from "@repo/ui/lib/date";
 import { getPageHeader } from "#/lib/shared/meta";
 import { APP_URL } from "#/lib/config";
-import { getElectionByFakeId, getElectionCandidates } from "#/lib/server/elections";
+import { getElectionByFakeId } from "#/lib/server/elections";
 import { useUserParty } from "#/hooks/useUserParty";
 import { ManageCandidateTicketDialog, getTicketConfig } from "#/components/dialogs/ManageCandidateTicketDialog";
 import { ElectionMetaStatsGrid, PartyNominationBanner, ElectionCandidateRow } from "./-components";
@@ -51,8 +51,8 @@ function ElectionCandidatesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
 
-  // 1. Fetch Election instance details (accepts either id or fake_id)
-  const { data: electionRes, isLoading: isElectionLoading } = useQuery({
+  // 1. Fetch Election instance details & candidates roster in one consolidated request
+  const { data: electionData, isLoading } = useQuery({
     queryKey: ["election-details", electionFakeID, election_group_id, scopeParam],
     queryFn: async () => {
       const res = await getElectionByFakeId({
@@ -65,41 +65,15 @@ function ElectionCandidatesPage() {
       if (!res || !res.success) {
         throw new Error(res?.message || "Failed to fetch election details");
       }
-      return res.data?.election;
+      return res.data;
     },
     enabled: !isNaN(electionFakeID),
     staleTime: Infinity,
   });
 
-  // Database ID for election mutations and candidate queries
-  const electionId = electionRes?.id;
-  const resolvedGroupId = election_group_id || electionRes?.election_group_id;
-  const resolvedScope = scopeParam || electionRes?.scope;
-
-  // 2. Fetch full candidates roster for this election (requires group and scope)
-  const { data: candidatesRes, isLoading: isCandidatesLoading } = useQuery({
-    queryKey: ["election-candidates", electionFakeID, resolvedGroupId, resolvedScope],
-    queryFn: async () => {
-      if (!resolvedGroupId || !resolvedScope) return [];
-      const res = await getElectionCandidates({
-        data: {
-          electionId: electionFakeID,
-          limit: 100,
-          electionGroupId: resolvedGroupId,
-          scope: resolvedScope,
-        },
-      });
-      if (!res || !res.success) {
-        throw new Error(res?.message || "Failed to fetch candidates");
-      }
-      return (res.data?.candidates as any[]) || [];
-    },
-    enabled: !isNaN(electionFakeID) && Boolean(resolvedGroupId && resolvedScope),
-    staleTime: Infinity,
-  });
-
-  const election = electionRes;
-  const candidates = candidatesRes || [];
+  const election = electionData?.election;
+  const candidates: any[] = electionData?.candidates || [];
+  const electionId = election?.id;
 
   // Identify current party's candidate if fielded
   const myPartyCandidate = useMemo(() => {
@@ -149,12 +123,9 @@ function ElectionCandidatesPage() {
 
   const handleDialogClose = () => {
     setIsManageDialogOpen(false);
-    queryClient.invalidateQueries({ queryKey: ["election-candidates"] });
     queryClient.invalidateQueries({ queryKey: ["election-details"] });
     queryClient.invalidateQueries({ queryKey: ["elections"] });
   };
-
-  const isLoading = isElectionLoading || isCandidatesLoading;
 
   return (
     <Layout>

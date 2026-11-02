@@ -514,10 +514,12 @@ SELECT
     ec.candidate_id,
     u.first_name,
     u.last_name,
+    u.username,
     u.avatar,
     ec.running_mate_id,
     rm.first_name AS running_mate_first_name,
     rm.last_name AS running_mate_last_name,
+    rm.username AS running_mate_username,
     rm.avatar AS running_mate_avatar,
     ec.party_id,
     p.short_name AS party_short_name,
@@ -539,10 +541,12 @@ type ListElectionCandidatesDetailedByElectionIDRow struct {
 	CandidateID          int64       `json:"candidate_id"`
 	FirstName            pgtype.Text `json:"first_name"`
 	LastName             pgtype.Text `json:"last_name"`
+	Username             pgtype.Text `json:"username"`
 	Avatar               pgtype.Text `json:"avatar"`
 	RunningMateID        pgtype.Int8 `json:"running_mate_id"`
 	RunningMateFirstName pgtype.Text `json:"running_mate_first_name"`
 	RunningMateLastName  pgtype.Text `json:"running_mate_last_name"`
+	RunningMateUsername  pgtype.Text `json:"running_mate_username"`
 	RunningMateAvatar    pgtype.Text `json:"running_mate_avatar"`
 	PartyID              int16       `json:"party_id"`
 	PartyShortName       pgtype.Text `json:"party_short_name"`
@@ -567,10 +571,12 @@ func (q *Queries) ListElectionCandidatesDetailedByElectionID(ctx context.Context
 			&i.CandidateID,
 			&i.FirstName,
 			&i.LastName,
+			&i.Username,
 			&i.Avatar,
 			&i.RunningMateID,
 			&i.RunningMateFirstName,
 			&i.RunningMateLastName,
+			&i.RunningMateUsername,
 			&i.RunningMateAvatar,
 			&i.PartyID,
 			&i.PartyShortName,

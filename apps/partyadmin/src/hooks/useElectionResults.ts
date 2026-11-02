@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { getElectionCandidates } from "#/lib/server/elections";
+import { getElectionByFakeId } from "#/lib/server/elections";
 import { getElectionScopedFinalResult } from "#/lib/server/final-results";
 import { useElection } from "./useElection";
 
@@ -9,15 +9,16 @@ import { useElection } from "./useElection";
  */
 export const useElectionCandidates = () => {
 	const { selectedElection, selectedElectionGroup } = useElection();
-	const fetchElectionCandidates = useServerFn(getElectionCandidates);
+	const fetchElectionDetails = useServerFn(getElectionByFakeId);
 
 	const electionGroupId = selectedElection?.election_group_id || selectedElectionGroup?.id;
 	const scope = selectedElection?.scope;
+	const fakeId = selectedElection?.fake_id ? Number(selectedElection.fake_id) : selectedElection?.id;
 
 	const { data: candidatesData } = useQuery({
-		queryKey: ["election-candidates", selectedElection?.id, electionGroupId, scope],
+		queryKey: ["election-details", fakeId, electionGroupId, scope],
 		queryFn: () =>
-			fetchElectionCandidates({
+			fetchElectionDetails({
 				data: {
 					electionId: selectedElection?.id as number,
 					electionGroupId,
@@ -28,7 +29,7 @@ export const useElectionCandidates = () => {
 		staleTime: Infinity,
 	});
 
-	return candidatesData?.data?.candidates || candidatesData?.candidates || [];
+	return candidatesData?.data?.candidates || (selectedElection as any)?.candidates || [];
 };
 
 /**

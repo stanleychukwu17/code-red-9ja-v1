@@ -221,8 +221,6 @@ export const API_URL = {
   getSenatorialDistricts: (query?: string | URLSearchParams) => withQuery(`${api}/senatorial-districts`, query),
   getFederalConstituencies: (query?: string | URLSearchParams) => withQuery(`${api}/federal-constituencies`, query),
   getStateConstituencies: (query?: string | URLSearchParams) => withQuery(`${api}/state-constituencies`, query),
-  electionCandidates: (id: string | number, query?: string | URLSearchParams) =>
-    withQuery(`${api}/elections/${id}/candidates`, query),
   pollingUnitUpdates: (query?: string | URLSearchParams) => withQuery(`${api}/polling-unit-updates`, query),
   pollingUnitResults: `${api}/polling-unit-results`,
   pollingUnitFinalResults: (query?: string | URLSearchParams) => withQuery(`${api}/polling-unit-final-results`, query),

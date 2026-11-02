@@ -180,43 +180,6 @@ export const unfieldPartyCandidate = createServerFn({ method: "POST" })
     }
   });
 
-export const getElectionCandidates = createServerFn({ method: "GET" })
-  .inputValidator(
-    (data: {
-      electionId: number;
-      limit?: number;
-      cursor?: string;
-      electionGroupId?: number;
-      scope?: string;
-    }) => data,
-  )
-  .handler(async ({ data }) => {
-    try {
-      const limit = data.limit || 20;
-      const cursor = data.cursor || "";
-
-      const params = new URLSearchParams();
-      if (limit) params.append("limit", String(limit));
-      if (cursor) params.append("cursor", String(cursor));
-      if (data.electionGroupId)
-        params.append("election_group_id", String(data.electionGroupId));
-      if (data.scope) params.append("scope", data.scope);
-      const qs = params.toString();
-
-      const response = await apiFetch(
-        API_URL.electionCandidates(data.electionId, qs),
-      );
-      const resData = await response.json();
-      return resData;
-    } catch (error) {
-      return {
-        success: false,
-        message:
-          "Failed to fetch election candidates: " + (error as Error).message,
-      };
-    }
-  });
-
 export const getPollingUnitUpdates = createServerFn({ method: "GET" })
   .inputValidator(
     (data: {

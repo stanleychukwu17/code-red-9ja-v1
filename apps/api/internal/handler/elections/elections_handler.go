@@ -674,8 +674,16 @@ func (h *Handler) GetElectionByFakeID(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Fetch candidates roster for the election
+	candidates, err := h.service.GetElectionCandidates(r.Context(), ei.ID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to get election candidates: "+err.Error())
+		return
+	}
+
 	h.utils.RespondSuccess(w, http.StatusOK, "Election fetched successfully", map[string]interface{}{
-		"election": ei,
+		"election":   ei,
+		"candidates": candidates,
 	})
 }
 
@@ -908,62 +916,6 @@ func (h *Handler) BulkDeleteElections(w http.ResponseWriter, r *http.Request) {
 	// Return successful deletion response with the count of removed elections
 	h.utils.RespondSuccess(w, http.StatusOK, "Elections deleted successfully", map[string]interface{}{
 		"count": len(req.ElectionIDs),
-	})
-}
-
-// GetElectionCandidates godoc
-// @Summary      Get detailed candidates for an election
-// @Description  Fetches the list of candidates associated with a specific election ID or fake_id
-// @Tags         Elections
-// @Produce      json
-// @Param        id   path  string  true  "Election ID or Fake ID"
-// @Success      200  {object} map[string]interface{} "Candidates fetched successfully"
-// @Failure      400  {object} map[string]interface{} "Invalid election ID"
-// @Failure      500  {object} map[string]interface{} "Internal server error"
-// @Router       /elections/{id}/candidates [get]
-func (h *Handler) GetElectionCandidates(w http.ResponseWriter, r *http.Request) {
-	idStr := chi.URLParam(r, "id")
-	fakeID, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil || fakeID <= 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election fake_id")
-		return
-	}
-
-	ei, err := h.service.GetElectionByFakeID(r.Context(), fakeID)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusNotFound, "Election not found")
-		return
-	}
-
-	// Optional parameters: if election_group_id or scope are provided, verify consistency
-	query := r.URL.Query()
-	if electionGroupIDStr := strings.TrimSpace(query.Get("election_group_id")); electionGroupIDStr != "" {
-		if egID, err := strconv.ParseInt(electionGroupIDStr, 10, 32); err == nil && egID > 0 {
-			if ei.ElectionGroupID != int32(egID) {
-				h.utils.RespondError(w, http.StatusNotFound, "Election not found for the specified election group")
-				return
-			}
-		}
-	}
-
-	if scope := strings.TrimSpace(query.Get("scope")); scope != "" {
-		if !strings.EqualFold(ei.Scope, scope) {
-			h.utils.RespondError(w, http.StatusNotFound, "Election not found for the specified scope")
-			return
-		}
-	}
-
-	// Fetch full candidate roster for the specified election
-	candidates, err := h.service.GetElectionCandidates(r.Context(), ei.ID)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to get election candidates: "+err.Error())
-		return
-	}
-
-	// Return candidate roster directly (elections have at most ~18 party candidates)
-	h.utils.RespondSuccess(w, http.StatusOK, "Candidates fetched successfully", map[string]interface{}{
-		"candidates": candidates,
-		"count":      len(candidates),
 	})
 }
 
