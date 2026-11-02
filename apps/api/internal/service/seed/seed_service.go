@@ -2515,6 +2515,7 @@ func (s *SeedService) SyncCampaignGroups(ctx context.Context, req SyncCampaignGr
 	defer officialRows.Close()
 
 	groupOfficials := make(map[string][]int64)
+	// Map party officials to national or state campaign group buckets
 	for officialRows.Next() {
 		var partyID int16
 		var chapterType string
@@ -2524,8 +2525,10 @@ func (s *SeedService) SyncCampaignGroups(ctx context.Context, req SyncCampaignGr
 		if err := officialRows.Scan(&partyID, &chapterType, &stateID, &userID); err == nil {
 			var groupKey string
 			if chapterType == "national" {
+				// National official -> national campaign group
 				groupKey = fmt.Sprintf("national:%d", partyID)
 			} else if chapterType == "state" && stateID.Valid && stateID.Int16 > 0 {
+				// State official -> state campaign group
 				groupKey = fmt.Sprintf("state:%d:%d", partyID, stateID.Int16)
 			}
 			if groupKey != "" && userID > 0 {
@@ -2550,6 +2553,7 @@ func (s *SeedService) SyncCampaignGroups(ctx context.Context, req SyncCampaignGr
 		stateID *int16
 	}
 
+	// Track execution order to correlate returned group IDs with their specs
 	orderedGroups := make([]groupEntry, 0, len(groupSpecs))
 	groupBatch := &pgx.Batch{}
 
@@ -2646,6 +2650,7 @@ func (s *SeedService) SyncCampaignGroups(ctx context.Context, req SyncCampaignGr
 		}
 	}
 
+	// Execute member enrollments batch and read results
 	if membersBatch.Len() > 0 {
 		brMembers := tx.SendBatch(ctx, membersBatch)
 		for j := 0; j < membersBatch.Len(); j++ {
@@ -2657,6 +2662,7 @@ func (s *SeedService) SyncCampaignGroups(ctx context.Context, req SyncCampaignGr
 		_ = brMembers.Close()
 	}
 
+	// Commit all provisioned campaign groups and memberships
 	if err := tx.Commit(ctx); err != nil {
 		return SyncCampaignGroupsResponse{}, fmt.Errorf("failed committing campaign groups transaction: %w", err)
 	}

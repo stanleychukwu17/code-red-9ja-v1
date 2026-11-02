@@ -512,17 +512,20 @@ func (h *Handler) SeedPartyLeadership(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} map[string]interface{} "Failed to sync campaign groups"
 // @Router /seed/campaign-groups/sync [post]
 func (h *Handler) SyncCampaignGroups(w http.ResponseWriter, r *http.Request) {
+	// Guard against running in production
 	if os.Getenv("ENV") == "production" {
 		h.utils.RespondError(w, http.StatusForbidden, "This endpoint is disabled in production")
 		return
 	}
 
+	// Parse request payload
 	var req seedservice.SyncCampaignGroupsRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
 		return
 	}
 
+	// Sync campaign groups via service
 	res, err := h.seedService.SyncCampaignGroups(r.Context(), req)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to sync campaign groups: "+err.Error())
