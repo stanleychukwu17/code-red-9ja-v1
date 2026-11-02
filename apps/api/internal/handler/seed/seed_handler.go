@@ -500,3 +500,34 @@ func (h *Handler) SeedPartyLeadership(w http.ResponseWriter, r *http.Request) {
 
 	h.utils.RespondSuccess(w, http.StatusOK, msg, nil)
 }
+
+// @Summary Sync campaign groups and officials
+// @Description Provisions campaign groups and enrolls fielded candidates and chapter officials for selected parties
+// @Tags Seed
+// @Accept json
+// @Produce json
+// @Param request body seedservice.SyncCampaignGroupsRequest true "Sync parameters"
+// @Success 200 {object} map[string]interface{} "Campaign groups synchronized successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid request body"
+// @Failure 500 {object} map[string]interface{} "Failed to sync campaign groups"
+// @Router /seed/campaign-groups/sync [post]
+func (h *Handler) SyncCampaignGroups(w http.ResponseWriter, r *http.Request) {
+	if os.Getenv("ENV") == "production" {
+		h.utils.RespondError(w, http.StatusForbidden, "This endpoint is disabled in production")
+		return
+	}
+
+	var req seedservice.SyncCampaignGroupsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+		return
+	}
+
+	res, err := h.seedService.SyncCampaignGroups(r.Context(), req)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to sync campaign groups: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccessData(w, http.StatusOK, "Campaign groups synchronized successfully", res)
+}

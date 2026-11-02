@@ -65,5 +65,13 @@ curl -X POST ${BASE_URL}/api/v1/seed/parties/leadership \
   -H "Content-Type: application/json" \
   -d @"production/national_leadership/leadership.json"
 
+sleep 1 # wait for 1 second
+
+# sync campaign groups and officials for participating parties (e.g. APC: 1, NDC: 7, PDP: 10, ADC: 17)
+echo "Syncing campaign groups and officials to ${BASE_URL}/api/v1/seed/campaign-groups/sync..."
+curl -X POST ${BASE_URL}/api/v1/seed/campaign-groups/sync \
+  -H "Content-Type: application/json" \
+  -d '{"election_group_id": 1, "party_ids": [1, 7, 10, 17]}'
+
 echo ""
 echo "Done."

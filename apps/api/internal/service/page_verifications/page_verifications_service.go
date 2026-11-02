@@ -18,13 +18,19 @@ const (
 	VerificationTypeCelebrity        int16 = 2
 	VerificationTypePoliticalParty   int16 = 3
 	VerificationTypePolitician       int16 = 4
-	VerificationTypeOrganization     int16 = 5
+	VerificationTypeOffice           int16 = 5
+	VerificationTypeOrganization     int16 = 5 // Alias for office verification
 	VerificationTypeBusiness         int16 = 6
-	VerificationTypeNationalOfficial int16 = 7
-	VerificationTypeZonalOfficial    int16 = 8
-	VerificationTypeStateOfficial    int16 = 9
-	VerificationTypeLgaOfficial      int16 = 10
-	VerificationTypeWardOfficial     int16 = 11
+	VerificationTypeMinistry         int16 = 7
+	VerificationTypeAgency           int16 = 8
+	VerificationTypeMedia            int16 = 9
+	VerificationTypeNGO              int16 = 10
+	VerificationTypeInstitution      int16 = 11
+	VerificationTypeNationalOfficial int16 = 12
+	VerificationTypeZonalOfficial    int16 = 13
+	VerificationTypeStateOfficial    int16 = 14
+	VerificationTypeLgaOfficial      int16 = 15
+	VerificationTypeWardOfficial     int16 = 16
 )
 
 type UsersService interface {
@@ -99,7 +105,7 @@ func (s *PageVerificationsService) VerifyPage(ctx context.Context, forWho string
 	}
 
 	// make sure verification type is for user
-	if forWho == db.PageTypeUser && (verificationTypeID == VerificationTypePoliticalParty || verificationTypeID == VerificationTypeOrganization || verificationTypeID == VerificationTypeBusiness) {
+	if forWho == db.PageTypeUser && (verificationTypeID == VerificationTypePoliticalParty || verificationTypeID == VerificationTypeOffice || verificationTypeID == VerificationTypeOrganization || verificationTypeID == VerificationTypeBusiness || verificationTypeID == VerificationTypeMinistry || verificationTypeID == VerificationTypeAgency || verificationTypeID == VerificationTypeMedia || verificationTypeID == VerificationTypeNGO || verificationTypeID == VerificationTypeInstitution) {
 		return queries.PagesVerified{}, fmt.Errorf("invalid verification type for user")
 	}
 
@@ -485,7 +491,7 @@ func ChapterTypeToOfficialVerificationType(chapterType string) (int16, error) {
 	}
 }
 
-// EnsureOfficialVerification grants an official verification badge (IDs 7 to 11) to a user
+// EnsureOfficialVerification grants an official verification badge (IDs 12 to 16) to a user
 // if they don't already have it, and marks them verified in the users table.
 func (s *PageVerificationsService) EnsureOfficialVerification(ctx context.Context, userID int64, verificationTypeID int16) error {
 	// Fast path: check Redis cache first — if already verified, exit with 0 DB hits
@@ -502,7 +508,7 @@ func (s *PageVerificationsService) EnsureOfficialVerification(ctx context.Contex
 	return s.addUserVerificationByType(ctx, userID, verificationTypeID)
 }
 
-// RevokeOfficialVerificationIfNoActivePosition removes an official verification badge (IDs 7 to 11)
+// RevokeOfficialVerificationIfNoActivePosition removes an official verification badge (IDs 12 to 16)
 // if the user has no remaining active position assignments at that chapter level across any party.
 func (s *PageVerificationsService) RevokeOfficialVerificationIfNoActivePosition(ctx context.Context, userID int64, chapterType string, verificationTypeID int16) error {
 	// Fast path: if the user doesn't even hold this official badge, exit with 0 DB hits

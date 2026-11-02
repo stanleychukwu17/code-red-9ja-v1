@@ -88,36 +88,22 @@ export function ElectionCandidateRow({
   const partyLogo = candidate.party_logo;
 
   // Principal Candidate
-  const candidateName =
-    candidate.full_name ||
-    `${candidate.first_name || ""} ${candidate.last_name || ""}`.trim() ||
-    "Candidate";
+  const candidateName = candidate.full_name;
   const candidateAvatar = candidate.avatar;
   const candidateUsername = candidate.username || "";
-  const candidateAgeText = candidate.age
-    ? `${candidate.age} years old`
-    : "59 years old";
-  const candidateStateText = candidate.state
-    ? `From ${candidate.state} state`
-    : candidate.state_name
-      ? `From ${candidate.state_name} state`
-      : "From Lagos state";
+  const candidateAgeText = `${candidate.age} years old`;
+  const candidateStateText = `From ${candidate.state_name} state`;
 
   // Running Mate
-  const runningMateName =
-    candidate.running_mate_full_name ||
-    `${candidate.running_mate_first_name || ""} ${candidate.running_mate_last_name || ""}`.trim();
+  const runningMateName = candidate.running_mate_full_name || "";
   const runningMateAvatar = candidate.running_mate_avatar;
   const runningMateUsername = candidate.running_mate_username || "";
-  const hasRunningMate = Boolean(candidate.running_mate_id || runningMateName);
   const runningMateAgeText = candidate.running_mate_age
     ? `${candidate.running_mate_age} years old`
-    : "59 years old";
-  const runningMateStateText = candidate.running_mate_state
-    ? `From ${candidate.running_mate_state} state`
-    : candidate.running_mate_state_name
-      ? `From ${candidate.running_mate_state_name} state`
-      : "From Lagos state";
+    : "";
+  const runningMateStateText = candidate.running_mate_state_name
+    ? `From ${candidate.running_mate_state_name} state`
+    : "";
 
   return (
     <div className="relative my-7 mx-2 bg-sidebar-softer/40 dark:bg-card transition-shadow hover:shadow-xs">

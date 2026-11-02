@@ -78,15 +78,19 @@ SELECT
     ec.election_id,
     ec.election_group_id,
     ec.candidate_id,
-    u.first_name,
-    u.last_name,
+    COALESCE(u.full_name, '')::varchar AS full_name,
     u.username,
     u.avatar,
+    u.date_of_birth,
+    u.state_of_origin,
+    s.name AS state_name,
     ec.running_mate_id,
-    rm.first_name AS running_mate_first_name,
-    rm.last_name AS running_mate_last_name,
+    rm.full_name AS running_mate_full_name,
     rm.username AS running_mate_username,
     rm.avatar AS running_mate_avatar,
+    rm.date_of_birth AS running_mate_date_of_birth,
+    rm.state_of_origin AS running_mate_state_of_origin,
+    rms.name AS running_mate_state_name,
     ec.party_id,
     p.short_name AS party_short_name,
     p.logo AS party_logo,
@@ -94,8 +98,10 @@ SELECT
     p.dark_color_hex AS party_dark_color_hex
 FROM election_candidates ec
 JOIN users u ON ec.candidate_id = u.id
+LEFT JOIN c_states s ON u.state_of_origin = s.id
 LEFT JOIN users rm ON ec.running_mate_id = rm.id
-LEFT JOIN parties p ON ec.party_id = p.id
+LEFT JOIN c_states rms ON rm.state_of_origin = rms.id
+JOIN parties p ON ec.party_id = p.id
 WHERE ec.election_id = $1
 ORDER BY ec.id ASC;
 

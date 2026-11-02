@@ -25,15 +25,20 @@ INSERT INTO page_verification_types (id, verification_type, verification_title, 
 (2, 'celebrity_verified', 'Verified Celebrity', 'A verified celebrity or public figure', TRUE, 'user'),
 (3, 'political_party_verified', 'Verified Political Party', 'A verified political party', TRUE, 'party'),
 (4, 'politician_verified', 'Verified Politician', 'A verified politician', FALSE, 'user'),
-(5, 'Office_verified', 'Verified Office', 'A verified office', FALSE, 'office'),
-(6, 'business_verified', 'Verified Business', 'A verified business', FALSE, 'business'),
-(7, 'national_official_verified', 'Verified Party National Official', 'A verified national official of a political party', FALSE, 'party_member'),
-(8, 'zonal_official_verified', 'Verified Party Zonal Official', 'A verified zonal official of a political party', FALSE, 'party_member'),
-(9, 'state_official_verified', 'Verified Party State Official', 'A verified state official of a political party', FALSE, 'party_member'),
-(10, 'lga_official_verified', 'Verified Party LGA Official', 'A verified LGA official of a political party', FALSE, 'party_member'),
-(11, 'ward_official_verified', 'Verified Party Ward Official', 'A verified ward official of a political party', FALSE, 'party_member');
+(5, 'office_verified', 'Verified Office', 'A verified public office', FALSE, 'office'),
+(6, 'business_verified', 'Verified Business', 'A verified corporate or business entity', TRUE, 'business'),
+(7, 'ministry_verified', 'Verified Ministry', 'A verified federal or state ministry', TRUE, 'ministry'),
+(8, 'agency_verified', 'Verified Government Agency', 'A verified government agency, parastatal, or commission', TRUE, 'agency'),
+(9, 'media_verified', 'Verified Media Organization', 'A verified news or press media outlet', TRUE, 'media'),
+(10, 'ngo_verified', 'Verified NGO / CSO', 'A verified non-governmental or civil society organization', TRUE, 'ngo'),
+(11, 'institution_verified', 'Verified Institution', 'A verified educational, traditional, or civic institution', TRUE, 'institution'),
+(12, 'national_official_verified', 'Verified Party National Official', 'A verified national official of a political party', FALSE, 'party_member'),
+(13, 'zonal_official_verified', 'Verified Party Zonal Official', 'A verified zonal official of a political party', FALSE, 'party_member'),
+(14, 'state_official_verified', 'Verified Party State Official', 'A verified state official of a political party', FALSE, 'party_member'),
+(15, 'lga_official_verified', 'Verified Party LGA Official', 'A verified LGA official of a political party', FALSE, 'party_member'),
+(16, 'ward_official_verified', 'Verified Party Ward Official', 'A verified ward official of a political party', FALSE, 'party_member');
 
--- Reset identity sequence, so the next "id" for insert will be "12"
+-- Reset identity sequence, so the next "id" for insert will be "17"
 SELECT setval(pg_get_serial_sequence('page_verification_types', 'id'), coalesce(max(id), 1)) FROM page_verification_types;
 
 -- +goose Down

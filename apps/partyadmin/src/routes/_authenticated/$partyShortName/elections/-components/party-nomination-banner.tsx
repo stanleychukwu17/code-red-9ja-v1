@@ -104,28 +104,17 @@ export function PartyNominationBanner({
   const partyShort = party?.short_name || "APC";
 
   // Principal Candidate details
-  const candidateName =
-    myPartyCandidate?.full_name ||
-    `${myPartyCandidate?.first_name || ""} ${myPartyCandidate?.last_name || ""}`.trim();
+  const candidateName = myPartyCandidate?.full_name || "";
 
   const candidateAvatar = myPartyCandidate?.avatar;
   const candidateUsername = myPartyCandidate?.username || "";
 
-  const candidateAgeText = myPartyCandidate?.age
-    ? `${myPartyCandidate.age} years old`
-    : "59 years old";
+  const candidateAgeText = `${myPartyCandidate?.age} years old`;
 
-  const candidateStateText =
-    myPartyCandidate?.state
-      ? `From ${myPartyCandidate.state} state`
-      : myPartyCandidate?.state_name
-        ? `From ${myPartyCandidate.state_name} state`
-        : "From Lagos state";
+  const candidateStateText = `From ${myPartyCandidate?.state_name} state`;
 
   // Running Mate details
-  const runningMateName =
-    myPartyCandidate?.running_mate_full_name ||
-    `${myPartyCandidate?.running_mate_first_name || ""} ${myPartyCandidate?.running_mate_last_name || ""}`.trim();
+  const runningMateName = myPartyCandidate?.running_mate_full_name || "";
 
   const runningMateAvatar =
     myPartyCandidate?.running_mate_avatar || candidateAvatar;
@@ -133,14 +122,11 @@ export function PartyNominationBanner({
 
   const runningMateAgeText = myPartyCandidate?.running_mate_age
     ? `${myPartyCandidate.running_mate_age} years old`
-    : "59 years old";
+    : "";
 
-  const runningMateStateText =
-    myPartyCandidate?.running_mate_state
-      ? `From ${myPartyCandidate.running_mate_state} state`
-      : myPartyCandidate?.running_mate_state_name
-        ? `From ${myPartyCandidate.running_mate_state_name} state`
-        : "From Lagos state";
+  const runningMateStateText = myPartyCandidate?.running_mate_state_name
+    ? `From ${myPartyCandidate.running_mate_state_name} state`
+    : "";
 
   return (
     <div className="relative overflow-hidden my-5 rounded-xl border border-sidebar-mobile">

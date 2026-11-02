@@ -512,15 +512,19 @@ SELECT
     ec.election_id,
     ec.election_group_id,
     ec.candidate_id,
-    u.first_name,
-    u.last_name,
+    COALESCE(u.full_name, '')::varchar AS full_name,
     u.username,
     u.avatar,
+    u.date_of_birth,
+    u.state_of_origin,
+    s.name AS state_name,
     ec.running_mate_id,
-    rm.first_name AS running_mate_first_name,
-    rm.last_name AS running_mate_last_name,
+    rm.full_name AS running_mate_full_name,
     rm.username AS running_mate_username,
     rm.avatar AS running_mate_avatar,
+    rm.date_of_birth AS running_mate_date_of_birth,
+    rm.state_of_origin AS running_mate_state_of_origin,
+    rms.name AS running_mate_state_name,
     ec.party_id,
     p.short_name AS party_short_name,
     p.logo AS party_logo,
@@ -528,31 +532,37 @@ SELECT
     p.dark_color_hex AS party_dark_color_hex
 FROM election_candidates ec
 JOIN users u ON ec.candidate_id = u.id
+LEFT JOIN c_states s ON u.state_of_origin = s.id
 LEFT JOIN users rm ON ec.running_mate_id = rm.id
-LEFT JOIN parties p ON ec.party_id = p.id
+LEFT JOIN c_states rms ON rm.state_of_origin = rms.id
+JOIN parties p ON ec.party_id = p.id
 WHERE ec.election_id = $1
 ORDER BY ec.id ASC
 `
 
 type ListElectionCandidatesDetailedByElectionIDRow struct {
-	ID                   int32       `json:"id"`
-	ElectionID           int32       `json:"election_id"`
-	ElectionGroupID      int32       `json:"election_group_id"`
-	CandidateID          int64       `json:"candidate_id"`
-	FirstName            pgtype.Text `json:"first_name"`
-	LastName             pgtype.Text `json:"last_name"`
-	Username             pgtype.Text `json:"username"`
-	Avatar               pgtype.Text `json:"avatar"`
-	RunningMateID        pgtype.Int8 `json:"running_mate_id"`
-	RunningMateFirstName pgtype.Text `json:"running_mate_first_name"`
-	RunningMateLastName  pgtype.Text `json:"running_mate_last_name"`
-	RunningMateUsername  pgtype.Text `json:"running_mate_username"`
-	RunningMateAvatar    pgtype.Text `json:"running_mate_avatar"`
-	PartyID              int16       `json:"party_id"`
-	PartyShortName       pgtype.Text `json:"party_short_name"`
-	PartyLogo            pgtype.Text `json:"party_logo"`
-	PartyColorHex        pgtype.Text `json:"party_color_hex"`
-	PartyDarkColorHex    pgtype.Text `json:"party_dark_color_hex"`
+	ID                       int32       `json:"id"`
+	ElectionID               int32       `json:"election_id"`
+	ElectionGroupID          int32       `json:"election_group_id"`
+	CandidateID              int64       `json:"candidate_id"`
+	FullName                 string      `json:"full_name"`
+	Username                 pgtype.Text `json:"username"`
+	Avatar                   pgtype.Text `json:"avatar"`
+	DateOfBirth              pgtype.Date `json:"date_of_birth"`
+	StateOfOrigin            pgtype.Int2 `json:"state_of_origin"`
+	StateName                pgtype.Text `json:"state_name"`
+	RunningMateID            pgtype.Int8 `json:"running_mate_id"`
+	RunningMateFullName      pgtype.Text `json:"running_mate_full_name"`
+	RunningMateUsername      pgtype.Text `json:"running_mate_username"`
+	RunningMateAvatar        pgtype.Text `json:"running_mate_avatar"`
+	RunningMateDateOfBirth   pgtype.Date `json:"running_mate_date_of_birth"`
+	RunningMateStateOfOrigin pgtype.Int2 `json:"running_mate_state_of_origin"`
+	RunningMateStateName     pgtype.Text `json:"running_mate_state_name"`
+	PartyID                  int16       `json:"party_id"`
+	PartyShortName           string      `json:"party_short_name"`
+	PartyLogo                string      `json:"party_logo"`
+	PartyColorHex            pgtype.Text `json:"party_color_hex"`
+	PartyDarkColorHex        pgtype.Text `json:"party_dark_color_hex"`
 }
 
 func (q *Queries) ListElectionCandidatesDetailedByElectionID(ctx context.Context, electionID int32) ([]ListElectionCandidatesDetailedByElectionIDRow, error) {
@@ -569,15 +579,19 @@ func (q *Queries) ListElectionCandidatesDetailedByElectionID(ctx context.Context
 			&i.ElectionID,
 			&i.ElectionGroupID,
 			&i.CandidateID,
-			&i.FirstName,
-			&i.LastName,
+			&i.FullName,
 			&i.Username,
 			&i.Avatar,
+			&i.DateOfBirth,
+			&i.StateOfOrigin,
+			&i.StateName,
 			&i.RunningMateID,
-			&i.RunningMateFirstName,
-			&i.RunningMateLastName,
+			&i.RunningMateFullName,
 			&i.RunningMateUsername,
 			&i.RunningMateAvatar,
+			&i.RunningMateDateOfBirth,
+			&i.RunningMateStateOfOrigin,
+			&i.RunningMateStateName,
 			&i.PartyID,
 			&i.PartyShortName,
 			&i.PartyLogo,

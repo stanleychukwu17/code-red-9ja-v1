@@ -632,18 +632,17 @@ func (h *Handler) ListElections(w http.ResponseWriter, r *http.Request) {
 
 // GetElectionByFakeID godoc
 // @Summary      Get an election by fake ID
-// @Description  Retrieves an election instance directly by its unique public fake_id, optionally validating group and scope
+// @Description  Retrieves an election instance directly by its unique public fake_id along with its candidates
 // @Tags         Elections
 // @Accept       json
 // @Produce      json
 // @Param        fake_id           path  int    true  "Election Fake ID"
-// @Param        election_group_id query int    false "Target election group ID to validate against"
-// @Param        scope             query string false "Target election scope to validate against"
 // @Success      200  {object} map[string]interface{} "Election fetched successfully"
 // @Failure      400  {object} map[string]interface{} "Invalid fake ID parameter"
 // @Failure      404  {object} map[string]interface{} "Election not found"
 // @Router       /elections/by-fake-id/{fake_id} [get]
 func (h *Handler) GetElectionByFakeID(w http.ResponseWriter, r *http.Request) {
+	// Parse and validate the public election fake ID from URL parameter
 	fakeIDStr := chi.URLParam(r, "fake_id")
 	fakeID, err := strconv.ParseInt(fakeIDStr, 10, 64)
 	if err != nil || fakeID <= 0 {
@@ -651,36 +650,21 @@ func (h *Handler) GetElectionByFakeID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Retrieve election instance details by fake ID
 	ei, err := h.service.GetElectionByFakeID(r.Context(), fakeID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Election not found")
 		return
 	}
 
-	// Validate election_group_id & scope if provided in query params
-	query := r.URL.Query()
-	if egStr := query.Get("election_group_id"); egStr != "" {
-		if egID, err := strconv.ParseInt(egStr, 10, 32); err == nil && egID > 0 {
-			if ei.ElectionGroupID != int32(egID) {
-				h.utils.RespondError(w, http.StatusNotFound, "Election not found for the specified election group")
-				return
-			}
-		}
-	}
-	if scope := query.Get("scope"); scope != "" {
-		if !strings.EqualFold(ei.Scope, scope) {
-			h.utils.RespondError(w, http.StatusNotFound, "Election not found for the specified scope")
-			return
-		}
-	}
-
-	// Fetch candidates roster for the election
+	// Fetch fielded candidate roster for this election (principal and running mates)
 	candidates, err := h.service.GetElectionCandidates(r.Context(), ei.ID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to get election candidates: "+err.Error())
 		return
 	}
 
+	// Return consolidated payload with both election details and candidate list
 	h.utils.RespondSuccess(w, http.StatusOK, "Election fetched successfully", map[string]interface{}{
 		"election":   ei,
 		"candidates": candidates,

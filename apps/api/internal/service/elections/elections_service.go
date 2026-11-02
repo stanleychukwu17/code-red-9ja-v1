@@ -116,7 +116,8 @@ func (s *ElectionsService) invalidateCache(ctx context.Context, electionID int32
 			s.rdb.Del(ctx, fmt.Sprintf("%s%d", db.RedisElectionByFakeID, el.FakeID.Int64))
 		}
 	}
-	s.rdb.Del(ctx, key)
+
+	s.rdb.Del(ctx, key, fmt.Sprintf("%s%d", db.RedisElectionCandidates, electionID))
 }
 
 // invalidateBulkCache purges the Redis cache for multiple election instances in a single Del call.
@@ -124,9 +125,9 @@ func (s *ElectionsService) invalidateBulkCache(ctx context.Context, electionIDs 
 	if len(electionIDs) == 0 {
 		return
 	}
-	keys := make([]string, len(electionIDs))
-	for i, id := range electionIDs {
-		keys[i] = fmt.Sprintf("%s%d", db.RedisElectionByID, id)
+	keys := make([]string, 0, len(electionIDs)*2)
+	for _, id := range electionIDs {
+		keys = append(keys, fmt.Sprintf("%s%d", db.RedisElectionByID, id), fmt.Sprintf("%s%d", db.RedisElectionCandidates, id))
 	}
 	s.rdb.Del(ctx, keys...)
 }
@@ -1200,31 +1201,48 @@ func (s *ElectionsService) BulkDeleteElections(ctx context.Context, params BulkD
 
 // ElectionCandidateItem is a clean, frontend-ready candidate representation.
 type ElectionCandidateItem struct {
-	ID                   int32   `json:"id"`
-	ElectionID           int32   `json:"election_id"`
-	ElectionGroupID      int32   `json:"election_group_id"`
-	CandidateID          int64   `json:"candidate_id"`
-	FirstName            string  `json:"first_name"`
-	LastName             string  `json:"last_name"`
-	FullName             string  `json:"candidate_name"`
-	Username             *string `json:"username,omitempty"`
-	Avatar               *string `json:"avatar,omitempty"`
-	RunningMateID        *int64  `json:"running_mate_id,omitempty"`
-	RunningMateFirstName *string `json:"running_mate_first_name,omitempty"`
-	RunningMateLastName  *string `json:"running_mate_last_name,omitempty"`
-	RunningMateFullName  *string `json:"running_mate_name,omitempty"`
-	RunningMateUsername  *string `json:"running_mate_username,omitempty"`
-	RunningMateAvatar    *string `json:"running_mate_avatar,omitempty"`
-	PartyID              int16   `json:"party_id"`
-	PartyShortName       string  `json:"party_short_name"`
-	PartyLogo            string  `json:"party_logo"`
-	PartyColorHex        *string `json:"party_color_hex,omitempty"`
-	PartyDarkColorHex    *string `json:"party_dark_color_hex,omitempty"`
+	ID                       int32   `json:"id"`
+	ElectionID               int32   `json:"election_id"`
+	ElectionGroupID          int32   `json:"election_group_id"`
+	CandidateID              int64   `json:"candidate_id"`
+	FullName                 string  `json:"candidate_name"`
+	Username                 *string `json:"username,omitempty"`
+	Avatar                   *string `json:"avatar,omitempty"`
+	DateOfBirth              *string `json:"date_of_birth,omitempty"`
+	Age                      *int    `json:"age,omitempty"`
+	StateOfOrigin            *int16  `json:"state_of_origin,omitempty"`
+	StateName                *string `json:"state_name,omitempty"`
+	RunningMateID            *int64  `json:"running_mate_id,omitempty"`
+	RunningMateFullName      *string `json:"running_mate_name,omitempty"`
+	RunningMateUsername      *string `json:"running_mate_username,omitempty"`
+	RunningMateAvatar        *string `json:"running_mate_avatar,omitempty"`
+	RunningMateDateOfBirth   *string `json:"running_mate_date_of_birth,omitempty"`
+	RunningMateAge           *int    `json:"running_mate_age,omitempty"`
+	RunningMateStateOfOrigin *int16  `json:"running_mate_state_of_origin,omitempty"`
+	RunningMateStateName     *string `json:"running_mate_state_name,omitempty"`
+	PartyID                  int16   `json:"party_id"`
+	PartyShortName           string  `json:"party_short_name"`
+	PartyLogo                string  `json:"party_logo"`
+	PartyColorHex            *string `json:"party_color_hex,omitempty"`
+	PartyDarkColorHex        *string `json:"party_dark_color_hex,omitempty"`
 }
 
 // GetElectionCandidates retrieves all candidate records associated with an election,
 // returning clean strings and numbers directly formatted for UI consumption.
+// Results are cached in Redis to minimize database lookups.
 func (s *ElectionsService) GetElectionCandidates(ctx context.Context, electionID int32) ([]ElectionCandidateItem, error) {
+	cacheKey := fmt.Sprintf("%s%d", db.RedisElectionCandidates, electionID)
+
+	// 1. Attempt to fetch pre-cached candidate roster from Redis
+	val, err := s.rdb.Get(ctx, cacheKey).Result()
+	if err == nil {
+		var cached []ElectionCandidateItem
+		if err := json.Unmarshal([]byte(val), &cached); err == nil {
+			return cached, nil
+		}
+	}
+
+	// 2. Cache miss: fetch candidate records from database
 	rows, err := s.queries.ListElectionCandidatesDetailedByElectionID(ctx, electionID)
 	if err != nil {
 		return nil, err
@@ -1232,56 +1250,37 @@ func (s *ElectionsService) GetElectionCandidates(ctx context.Context, electionID
 
 	result := make([]ElectionCandidateItem, 0, len(rows))
 	for _, r := range rows {
-		firstName := ""
-		if r.FirstName.Valid {
-			firstName = r.FirstName.String
-		}
-		lastName := ""
-		if r.LastName.Valid {
-			lastName = r.LastName.String
-		}
-		fullName := strings.TrimSpace(fmt.Sprintf("%s %s", firstName, lastName))
-
-		var runningMateFullName *string
-		if r.RunningMateFirstName.Valid || r.RunningMateLastName.Valid {
-			rmName := strings.TrimSpace(fmt.Sprintf("%s %s", r.RunningMateFirstName.String, r.RunningMateLastName.String))
-			if rmName != "" {
-				runningMateFullName = &rmName
-			}
-		}
-
-		partyShortName := ""
-		if r.PartyShortName.Valid {
-			partyShortName = r.PartyShortName.String
-		}
-
-		partyLogo := ""
-		if r.PartyLogo.Valid {
-			partyLogo = r.PartyLogo.String
-		}
-
 		result = append(result, ElectionCandidateItem{
-			ID:                   r.ID,
-			ElectionID:           r.ElectionID,
-			ElectionGroupID:      r.ElectionGroupID,
-			CandidateID:          r.CandidateID,
-			FirstName:            firstName,
-			LastName:             lastName,
-			FullName:             fullName,
-			Username:             utils.PtrFromPgText(r.Username),
-			Avatar:               utils.PtrFromPgText(r.Avatar),
-			RunningMateID:        utils.PtrFromPgInt8(r.RunningMateID),
-			RunningMateFirstName: utils.PtrFromPgText(r.RunningMateFirstName),
-			RunningMateLastName:  utils.PtrFromPgText(r.RunningMateLastName),
-			RunningMateFullName:  runningMateFullName,
-			RunningMateUsername:  utils.PtrFromPgText(r.RunningMateUsername),
-			RunningMateAvatar:    utils.PtrFromPgText(r.RunningMateAvatar),
-			PartyID:              r.PartyID,
-			PartyShortName:       partyShortName,
-			PartyLogo:            partyLogo,
-			PartyColorHex:        utils.PtrFromPgText(r.PartyColorHex),
-			PartyDarkColorHex:    utils.PtrFromPgText(r.PartyDarkColorHex),
+			ID:                       r.ID,
+			ElectionID:               r.ElectionID,
+			ElectionGroupID:          r.ElectionGroupID,
+			CandidateID:              r.CandidateID,
+			FullName:                 r.FullName,
+			Username:                 utils.PtrFromPgText(r.Username),
+			Avatar:                   utils.PtrFromPgText(r.Avatar),
+			DateOfBirth:              utils.PtrFromPgDate(r.DateOfBirth),
+			Age:                      utils.CalculateAgeFromPgDate(r.DateOfBirth),
+			StateOfOrigin:            utils.PtrFromPgInt2(r.StateOfOrigin),
+			StateName:                utils.PtrFromPgText(r.StateName),
+			RunningMateID:            utils.PtrFromPgInt8(r.RunningMateID),
+			RunningMateFullName:      utils.PtrFromPgText(r.RunningMateFullName),
+			RunningMateUsername:      utils.PtrFromPgText(r.RunningMateUsername),
+			RunningMateAvatar:        utils.PtrFromPgText(r.RunningMateAvatar),
+			RunningMateDateOfBirth:   utils.PtrFromPgDate(r.RunningMateDateOfBirth),
+			RunningMateAge:           utils.CalculateAgeFromPgDate(r.RunningMateDateOfBirth),
+			RunningMateStateOfOrigin: utils.PtrFromPgInt2(r.RunningMateStateOfOrigin),
+			RunningMateStateName:     utils.PtrFromPgText(r.RunningMateStateName),
+			PartyID:                  r.PartyID,
+			PartyShortName:           r.PartyShortName,
+			PartyLogo:                r.PartyLogo,
+			PartyColorHex:            utils.PtrFromPgText(r.PartyColorHex),
+			PartyDarkColorHex:        utils.PtrFromPgText(r.PartyDarkColorHex),
 		})
+	}
+
+	// 3. Serialize and populate Redis cache
+	if bytes, err := json.Marshal(result); err == nil {
+		_ = s.rdb.Set(ctx, cacheKey, bytes, db.RedisOneEightyDaysTTL).Err()
 	}
 
 	return result, nil
@@ -1449,6 +1448,9 @@ func (s *ElectionsService) FieldPartyCandidate(ctx context.Context, election que
 		s.InvalidateUserActiveCandidacies(ctx, c.userID)
 	}
 
+	// Invalidate cached election candidates roster
+	s.rdb.Del(ctx, fmt.Sprintf("%s%d", db.RedisElectionCandidates, electionID))
+
 	return nil
 }
 
@@ -1533,6 +1535,9 @@ func (s *ElectionsService) UnfieldPartyCandidate(ctx context.Context, election q
 
 		s.InvalidateUserActiveCandidacies(ctx, c.userID)
 	}
+
+	// Invalidate cached election candidates roster
+	s.rdb.Del(ctx, fmt.Sprintf("%s%d", db.RedisElectionCandidates, electionID))
 
 	return nil
 }

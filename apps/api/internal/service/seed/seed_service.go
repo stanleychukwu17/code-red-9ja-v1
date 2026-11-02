@@ -589,19 +589,19 @@ func (s *SeedService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 						switch strings.ToLower(strings.TrimSpace(pos.Level)) {
 						case "national":
 							targetChapterID = nationalChapters[pID]
-							badgeID = 7 // national_official_verified
+							badgeID = 12 // national_official_verified
 						case "state":
 							if insertedUser.user.CurrentState > 0 {
 								stKey := fmt.Sprintf("%d:%d", pID, insertedUser.user.CurrentState)
 								targetChapterID = stateChapters[stKey]
 							}
-							badgeID = 9 // state_official_verified
+							badgeID = 14 // state_official_verified
 						case "lga":
 							if insertedUser.user.CurrentLga != nil && *insertedUser.user.CurrentLga > 0 {
 								lgaKey := fmt.Sprintf("%d:%d", pID, *insertedUser.user.CurrentLga)
 								targetChapterID = lgaChapters[lgaKey]
 							}
-							badgeID = 10 // lga_official_verified
+							badgeID = 15 // lga_official_verified
 						}
 
 						if targetChapterID > 0 && pos.PositionID > 0 {
@@ -1527,11 +1527,11 @@ type CandidateProfile struct {
 }
 
 func (p *CandidateProfile) toSeedUserRequest() SeedUserRequest {
-	verifIDs := []int16{4} // default to politician_verified (4)
+	verFIDs := []int16{4} // default to politician_verified (4)
 	if len(p.VerificationTypeIDs) > 0 {
-		verifIDs = p.VerificationTypeIDs
+		verFIDs = p.VerificationTypeIDs
 	} else if p.VerificationTypeID != nil && *p.VerificationTypeID > 0 {
-		verifIDs = []int16{*p.VerificationTypeID}
+		verFIDs = []int16{*p.VerificationTypeID}
 	}
 
 	var midName *string
@@ -1552,9 +1552,9 @@ func (p *CandidateProfile) toSeedUserRequest() SeedUserRequest {
 		username = &trimmed
 	}
 
-	var verifID *int16
-	if len(verifIDs) > 0 {
-		verifID = &verifIDs[0]
+	var verFID *int16
+	if len(verFIDs) > 0 {
+		verFID = &verFIDs[0]
 	}
 
 	return SeedUserRequest{
@@ -1579,8 +1579,8 @@ func (p *CandidateProfile) toSeedUserRequest() SeedUserRequest {
 		PartyID:             &p.PartyID,
 		AccountStatus:       "placeholder",
 		IsVerified:          true,
-		VerificationTypeID:  verifID,
-		VerificationTypeIDs: verifIDs,
+		VerificationTypeID:  verFID,
+		VerificationTypeIDs: verFIDs,
 		IsPolitician:        true,
 	}
 }
@@ -2145,7 +2145,7 @@ type SeedPartyLeaderItem struct {
 }
 
 // SeedPartyLeadership seeds national party leadership into party_position_assignments,
-// creates user accounts for new leaders, and assigns the national_official_verified badge (7).
+// creates user accounts for new leaders, and assigns the national_official_verified badge (12).
 func (s *SeedService) SeedPartyLeadership(ctx context.Context, items []SeedPartyLeaderItem) (string, error) {
 	if len(items) == 0 {
 		return "No party leadership items provided", nil
@@ -2331,13 +2331,13 @@ func (s *SeedService) SeedPartyLeadership(ctx context.Context, items []SeedParty
 		}
 	}
 
-	// Grant badge 7 (national_official_verified) in pages_verified
+	// Grant badge 12 (national_official_verified) in pages_verified
 	if len(allLeaderUserIDs) > 0 {
 		badgeBatch := &pgx.Batch{}
 		for _, uid := range allLeaderUserIDs {
 			badgeBatch.Queue(`
 				INSERT INTO pages_verified (page_type, page_id, verification_type_id)
-				VALUES ('user', $1, 7)
+				VALUES ('user', $1, 12)
 				ON CONFLICT (page_type, page_id, verification_type_id)
 				DO UPDATE SET verified_at = CURRENT_TIMESTAMP
 			`, uid)
@@ -2388,4 +2388,292 @@ func (s *SeedService) SeedPartyLeadership(ctx context.Context, items []SeedParty
 	}
 
 	return fmt.Sprintf("Successfully seeded party leadership (%d assignments inserted, %d officials verified)", len(assignmentsToInsert), len(allLeaderUserIDs)), nil
+}
+
+type SyncCampaignGroupsRequest struct {
+	ElectionGroupID int32   `json:"election_group_id"`
+	PartyIDs        []int16 `json:"party_ids"`
+}
+
+type SyncCampaignGroupsResponse struct {
+	GroupsProvisioned  int     `json:"groups_provisioned"`
+	CandidatesEnrolled int     `json:"candidates_enrolled"`
+	OfficialsEnrolled  int     `json:"officials_enrolled"`
+	PartyIDs           []int16 `json:"party_ids"`
+}
+
+// SyncCampaignGroups provisions campaign groups and enrolls fielded candidates and chapter officials for the given parties.
+func (s *SeedService) SyncCampaignGroups(ctx context.Context, req SyncCampaignGroupsRequest) (SyncCampaignGroupsResponse, error) {
+	if req.ElectionGroupID <= 0 {
+		req.ElectionGroupID = 1
+	}
+	if len(req.PartyIDs) == 0 {
+		return SyncCampaignGroupsResponse{}, fmt.Errorf("party_ids list cannot be empty; please provide party IDs to sync")
+	}
+
+	// Fetch fielded candidates for the target parties and election group
+	type candRow struct {
+		partyID       int16
+		candidateID   int64
+		runningMateID *int64
+		scope         string
+		stateID       *int16
+	}
+	candRows, err := s.pool.Query(ctx, `
+		SELECT 
+			ec.party_id,
+			ec.candidate_id,
+			ec.running_mate_id,
+			e.scope,
+			e.state_id
+		FROM election_candidates ec
+		JOIN elections e ON e.id = ec.election_id
+		WHERE ec.election_group_id = $1 
+		  AND ec.party_id = ANY($2)
+	`, req.ElectionGroupID, req.PartyIDs)
+	if err != nil {
+		return SyncCampaignGroupsResponse{}, fmt.Errorf("failed querying candidates for sync: %w", err)
+	}
+	defer candRows.Close()
+
+	var candidates []candRow
+	// Scan candidate rows and parse nullable running mate and state IDs
+	for candRows.Next() {
+		var candidate candRow
+		var runningMateID pgtype.Int8
+		var stateID pgtype.Int2
+
+		if err := candRows.Scan(&candidate.partyID, &candidate.candidateID, &runningMateID, &candidate.scope, &stateID); err == nil {
+			if runningMateID.Valid && runningMateID.Int64 > 0 {
+				candidate.runningMateID = &runningMateID.Int64
+			}
+			if stateID.Valid && stateID.Int16 > 0 {
+				candidate.stateID = &stateID.Int16
+			}
+
+			candidates = append(candidates, candidate)
+		}
+	}
+	candRows.Close()
+
+	// Map candidates by group specification
+	type groupSpec struct {
+		partyID int16
+		scope   string
+		stateID *int16
+	}
+
+	groupCandidates := make(map[string][]int64)
+	groupSpecs := make(map[string]groupSpec)
+
+	// Group candidates into national or state campaign buckets
+	for _, c := range candidates {
+		var gKey string
+		var spec groupSpec
+
+		switch c.scope {
+		case "nationwide", "national":
+			// Presidential ticket -> national campaign group
+			gKey = fmt.Sprintf("national:%d", c.partyID)
+			spec = groupSpec{partyID: c.partyID, scope: "national"}
+		case "state", "senatorial-district", "federal-constituency", "state-constituency":
+			// State-level tickets -> state campaign group
+			if c.stateID != nil && *c.stateID > 0 {
+				gKey = fmt.Sprintf("state:%d:%d", c.partyID, *c.stateID)
+				spec = groupSpec{partyID: c.partyID, scope: "state", stateID: c.stateID}
+			}
+		}
+
+		if gKey != "" {
+			groupSpecs[gKey] = spec
+			// Collect candidate and running mate IDs
+			if c.candidateID > 0 {
+				groupCandidates[gKey] = append(groupCandidates[gKey], c.candidateID)
+			}
+			if c.runningMateID != nil && *c.runningMateID > 0 {
+				groupCandidates[gKey] = append(groupCandidates[gKey], *c.runningMateID)
+			}
+		}
+	}
+
+	// Fetch active party officials for national and state chapters
+	officialRows, err := s.pool.Query(ctx, `
+		SELECT 
+			pc.party_id,
+			pc.chapter_type,
+			pc.state_id,
+			pa.user_id
+		FROM party_position_assignments pa
+		JOIN party_chapters pc ON pc.id = pa.chapter_id
+		WHERE pa.status = 'active'
+		  AND pc.party_id = ANY($1)
+		  AND pc.chapter_type IN ('national', 'state')
+	`, req.PartyIDs)
+	if err != nil {
+		return SyncCampaignGroupsResponse{}, fmt.Errorf("failed querying party officials: %w", err)
+	}
+	defer officialRows.Close()
+
+	groupOfficials := make(map[string][]int64)
+	for officialRows.Next() {
+		var partyID int16
+		var chapterType string
+		var stateID pgtype.Int2
+		var userID int64
+
+		if err := officialRows.Scan(&partyID, &chapterType, &stateID, &userID); err == nil {
+			var groupKey string
+			if chapterType == "national" {
+				groupKey = fmt.Sprintf("national:%d", partyID)
+			} else if chapterType == "state" && stateID.Valid && stateID.Int16 > 0 {
+				groupKey = fmt.Sprintf("state:%d:%d", partyID, stateID.Int16)
+			}
+			if groupKey != "" && userID > 0 {
+				groupOfficials[groupKey] = append(groupOfficials[groupKey], userID)
+			}
+		}
+	}
+	officialRows.Close()
+
+	// Provision campaign groups in a database transaction
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return SyncCampaignGroupsResponse{}, fmt.Errorf("failed beginning transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	// Helper struct to preserve insertion order matching queued batch queries with group specs
+	type groupEntry struct {
+		key     string
+		partyID int16
+		scope   string
+		stateID *int16
+	}
+
+	orderedGroups := make([]groupEntry, 0, len(groupSpecs))
+	groupBatch := &pgx.Batch{}
+
+	// Queue bulk upsert statements for each target campaign group
+	for k, spec := range groupSpecs {
+		orderedGroups = append(orderedGroups, groupEntry{
+			key:     k,
+			partyID: spec.partyID,
+			scope:   spec.scope,
+			stateID: spec.stateID,
+		})
+
+		// Convert optional state ID to pgtype.Int4 for parameter binding
+		var sidVal pgtype.Int4
+		if spec.stateID != nil {
+			sidVal = pgtype.Int4{Int32: int32(*spec.stateID), Valid: true}
+		}
+
+		// Insert or update existing campaign group, linking it to the target election group
+		groupBatch.Queue(`
+			INSERT INTO campaign_groups (
+				party_id, target_election_group_id, scope, state_id, status, officials_added
+			)
+			VALUES ($1, $2, $3, $4, 'active', true)
+			ON CONFLICT (party_id, scope, state_id, lga_id, ward_id)
+			DO UPDATE SET 
+				target_election_group_id = COALESCE(EXCLUDED.target_election_group_id, campaign_groups.target_election_group_id),
+				officials_added = true,
+				updated_at = NOW()
+			RETURNING id
+		`, spec.partyID, req.ElectionGroupID, spec.scope, sidVal)
+	}
+
+	// Execute batch upsert in a single round-trip
+	brGroup := tx.SendBatch(ctx, groupBatch)
+	groupIDs := make(map[string]int64, len(orderedGroups))
+
+	// Collect generated or existing campaign group IDs
+	for _, g := range orderedGroups {
+		var gid int64
+		if err := brGroup.QueryRow().Scan(&gid); err != nil {
+			brGroup.Close()
+			return SyncCampaignGroupsResponse{}, fmt.Errorf("failed provisioning campaign group for %s: %w", g.key, err)
+		}
+		groupIDs[g.key] = gid
+	}
+	_ = brGroup.Close()
+
+	// Enroll candidates and officials into campaign_group_members
+	membersBatch := &pgx.Batch{}
+	totalCandidatesEnrolled := 0
+	totalOfficialsEnrolled := 0
+
+	for groupKey, groupID := range groupIDs {
+		spec := groupSpecs[groupKey]
+
+		// Enroll candidates
+		candidateIDs := groupCandidates[groupKey]
+		seenCandidates := make(map[int64]bool)
+		for _, userID := range candidateIDs {
+			if !seenCandidates[userID] {
+				seenCandidates[userID] = true
+				membersBatch.Queue(`
+					INSERT INTO campaign_group_members (
+						party_id, election_group_id, group_id, user_id, role, can_broadcast
+					)
+					VALUES ($1, $2, $3, $4, 'candidate', true)
+					ON CONFLICT (group_id, user_id)
+					DO UPDATE SET 
+						role = 'candidate', 
+						can_broadcast = true,
+						election_group_id = EXCLUDED.election_group_id
+				`, spec.partyID, req.ElectionGroupID, groupID, userID)
+				totalCandidatesEnrolled++
+			}
+		}
+
+		// Enroll party officials
+		officialIDs := groupOfficials[groupKey]
+		seenOfficials := make(map[int64]bool)
+		for _, userID := range officialIDs {
+			if !seenCandidates[userID] && !seenOfficials[userID] {
+				seenOfficials[userID] = true
+				membersBatch.Queue(`
+					INSERT INTO campaign_group_members (
+						party_id, election_group_id, group_id, user_id, role, can_broadcast
+					)
+					VALUES ($1, NULL, $2, $3, 'party_official', true)
+					ON CONFLICT (group_id, user_id)
+					DO NOTHING
+				`, spec.partyID, groupID, userID)
+				totalOfficialsEnrolled++
+			}
+		}
+	}
+
+	if membersBatch.Len() > 0 {
+		brMembers := tx.SendBatch(ctx, membersBatch)
+		for j := 0; j < membersBatch.Len(); j++ {
+			if _, err := brMembers.Exec(); err != nil {
+				brMembers.Close()
+				return SyncCampaignGroupsResponse{}, fmt.Errorf("failed enrolling campaign group members: %w", err)
+			}
+		}
+		_ = brMembers.Close()
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return SyncCampaignGroupsResponse{}, fmt.Errorf("failed committing campaign groups transaction: %w", err)
+	}
+
+	// Purge Redis cache for campaign group members in a single batch
+	if len(groupIDs) > 0 {
+		keysToDelete := make([]string, 0, len(groupIDs))
+		for _, gid := range groupIDs {
+			keysToDelete = append(keysToDelete, fmt.Sprintf("%s%d", db.RedisCampaignGroupMembers, gid))
+		}
+		_ = s.rdb.Del(ctx, keysToDelete...).Err()
+	}
+
+	return SyncCampaignGroupsResponse{
+		GroupsProvisioned:  len(groupIDs),
+		CandidatesEnrolled: totalCandidatesEnrolled,
+		OfficialsEnrolled:  totalOfficialsEnrolled,
+		PartyIDs:           req.PartyIDs,
+	}, nil
 }

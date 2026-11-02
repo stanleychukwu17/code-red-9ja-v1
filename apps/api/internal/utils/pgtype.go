@@ -96,6 +96,20 @@ func PtrFromPgDate(d pgtype.Date) *string {
 	return nil
 }
 
+// CalculateAgeFromPgDate computes the current age in years from a pgtype.Date.
+func CalculateAgeFromPgDate(d pgtype.Date) *int {
+	if !d.Valid {
+		return nil
+	}
+	now := time.Now()
+	birth := d.Time
+	age := now.Year() - birth.Year()
+	if now.Month() < birth.Month() || (now.Month() == birth.Month() && now.Day() < birth.Day()) {
+		age--
+	}
+	return &age
+}
+
 // PtrFromPgInt2 converts a pgtype.Int2 to an optional int16 pointer.
 func PtrFromPgInt2(i pgtype.Int2) *int16 {
 	if i.Valid {
