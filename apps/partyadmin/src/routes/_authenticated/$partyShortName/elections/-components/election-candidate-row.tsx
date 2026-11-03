@@ -88,21 +88,21 @@ export function ElectionCandidateRow({
   const partyLogo = candidate.party_logo;
 
   // Principal Candidate
-  const candidateName = candidate.full_name;
+  const candidateName = candidate.candidate_name;
   const candidateAvatar = candidate.avatar;
   const candidateUsername = candidate.username || "";
   const candidateAgeText = `${candidate.age} years old`;
-  const candidateStateText = `From ${candidate.state_name} state`;
+  const candidateStateText = `From ${candidate.state_name.toLowerCase()} state`;
 
   // Running Mate
-  const runningMateName = candidate.running_mate_full_name || "";
+  const runningMateName = candidate.running_mate_name || "";
   const runningMateAvatar = candidate.running_mate_avatar;
   const runningMateUsername = candidate.running_mate_username || "";
   const runningMateAgeText = candidate.running_mate_age
     ? `${candidate.running_mate_age} years old`
     : "";
   const runningMateStateText = candidate.running_mate_state_name
-    ? `From ${candidate.running_mate_state_name} state`
+    ? `From ${candidate.running_mate_state_name.toLowerCase()} state`
     : "";
 
   return (

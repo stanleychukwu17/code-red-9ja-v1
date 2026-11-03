@@ -104,7 +104,7 @@ export function PartyNominationBanner({
   const partyShort = party?.short_name || "APC";
 
   // Principal Candidate details
-  const candidateName = myPartyCandidate?.full_name || "";
+  const candidateName = myPartyCandidate?.candidate_name || "";
 
   const candidateAvatar = myPartyCandidate?.avatar;
   const candidateUsername = myPartyCandidate?.username || "";
@@ -114,7 +114,7 @@ export function PartyNominationBanner({
   const candidateStateText = `From ${myPartyCandidate?.state_name} state`;
 
   // Running Mate details
-  const runningMateName = myPartyCandidate?.running_mate_full_name || "";
+  const runningMateName = myPartyCandidate?.running_mate_name || "";
 
   const runningMateAvatar =
     myPartyCandidate?.running_mate_avatar || candidateAvatar;
