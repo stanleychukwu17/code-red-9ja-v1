@@ -533,12 +533,11 @@ func (s *Service) GetPollingUnitRecommendations(ctx context.Context, partyID int
 		pu, err := s.pollingUnitsService.GetPollingUnitByID(ctx, pollingUnitID)
 		if err == nil {
 			// Count how many agents are already assigned to this unit
-			var agentsCount int32
-			_ = s.pool.QueryRow(ctx,
-				`SELECT COALESCE(COUNT(*), 0)::integer FROM polling_unit_assignments
-				 WHERE polling_unit_id = $1 AND party_id = $2 AND election_group_id = $3`,
-				pollingUnitID, partyID, electionGroupID,
-			).Scan(&agentsCount)
+			agentsCount, _ := s.queries.CountPollingUnitAssignments(ctx, queries.CountPollingUnitAssignmentsParams{
+				PollingUnitID:   pollingUnitID,
+				PartyID:         partyID,
+				ElectionGroupID: electionGroupID,
+			})
 
 			finalRows = append(finalRows, queries.GetPollingUnitsWithAgentCountsRow{
 				ID:          pu.ID,

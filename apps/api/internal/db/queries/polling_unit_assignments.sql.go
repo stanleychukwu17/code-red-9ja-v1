@@ -11,6 +11,27 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countPollingUnitAssignments = `-- name: CountPollingUnitAssignments :one
+SELECT COUNT(*)::integer
+FROM polling_unit_assignments
+WHERE polling_unit_id = $1
+  AND party_id = $2
+  AND election_group_id = $3
+`
+
+type CountPollingUnitAssignmentsParams struct {
+	PollingUnitID   int32 `json:"polling_unit_id"`
+	PartyID         int16 `json:"party_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
+}
+
+func (q *Queries) CountPollingUnitAssignments(ctx context.Context, arg CountPollingUnitAssignmentsParams) (int32, error) {
+	row := q.db.QueryRow(ctx, countPollingUnitAssignments, arg.PollingUnitID, arg.PartyID, arg.ElectionGroupID)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const createAssignment = `-- name: CreateAssignment :one
 INSERT INTO polling_unit_assignments (
   user_id,
