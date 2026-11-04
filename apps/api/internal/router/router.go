@@ -601,7 +601,6 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Post("/api/v1/party-applications", partyApplicationsHandler.SubmitApplication)
 		r.Post("/api/v1/party-applications/supervisor", partyApplicationsHandler.SubmitSupervisorApplication)
 		r.Get("/api/v1/party-applications", partyApplicationsHandler.ListApplications)
-		r.Get("/api/v1/party-applications/recommendations", partyApplicationsHandler.GetPollingUnitRecommendations)
 		r.Get("/api/v1/party-applications/{id}", partyApplicationsHandler.GetApplication)
 		r.Post("/api/v1/party-applications/{id}/approve", partyApplicationsHandler.ApproveApplication)
 		r.Post("/api/v1/party-applications/{id}/reject", partyApplicationsHandler.RejectApplication)
@@ -699,6 +698,9 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Get("/api/v1/parties/{id}/members/blocked", partiesHandler.ListBlockedPartyMembers)
 		r.Post("/api/v1/parties/{id}/members/{user_id}/block", partiesHandler.BlockPartyUser)
 		r.Post("/api/v1/parties/{id}/members/{user_id}/unblock", partiesHandler.UnblockPartyUser)
+
+		// party applications recommendations (party admins only)
+		r.Get("/api/v1/party-applications/recommendations", partyApplicationsHandler.GetPollingUnitRecommendations)
 	})
 
 	// Agent earnings routes (authenticated users)

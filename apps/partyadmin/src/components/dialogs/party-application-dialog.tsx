@@ -8,47 +8,22 @@
  * 5. Update existing assignments for already accepted agents.
  */
 
-import {
-  approveApplication,
-  getLGAs,
-  getPollingUnitRecommendations,
-  getPollingUnits,
-  getWards,
-  rejectApplication,
-} from "#/lib/server/applications";
+import { useEffect, useMemo, useState } from "react";
+import { approveApplication, getLGAs, getPollingUnitRecommendations, getPollingUnits, getWards, rejectApplication } from "#/lib/server/applications";
 import { changeAgentRole } from "#/lib/server/agents";
 import { getStates } from "#/lib/server/countries";
 import { Button } from "@repo/ui/components/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogPadding,
-} from "@repo/ui/components/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogPadding } from "@repo/ui/components/dialog";
 import { SelectLga } from "@repo/ui/components/selects/lga-select";
 import { SelectElectionRole } from "@repo/ui/components/selects/election-role-select";
 import { SelectState } from "@repo/ui/components/selects/state-select";
 import { SelectWard } from "@repo/ui/components/selects/ward-select";
 import { cn } from "@repo/ui/lib/utils";
-import {
-  useInfiniteQuery,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
-import {
-  Check,
-  Loader2,
-  Shield,
-  ShieldCheck,
-  CheckCircle,
-  ArrowRightLeft,
-  MapPin,
-} from "lucide-react";
-import * as React from "react";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Check, Loader2, Shield, ShieldCheck, ArrowRightLeft } from "lucide-react";
 import { useIntersectionObserver } from "usehooks-ts";
 
+// Applicant details and current assignment payload
 export type ApplicationData = {
   id?: number;
   userId?: number;
@@ -81,6 +56,7 @@ export type ApplicationData = {
   partyShortName?: string;
 };
 
+// Formats election supervisor or agent role for display
 export const getRoleLabel = (r?: string) => {
   switch (r) {
     case "state_election_supervisor":
@@ -97,6 +73,7 @@ export const getRoleLabel = (r?: string) => {
   }
 };
 
+// Geographic dropdown fetch adapters (State -> LGA -> Ward)
 const fetchStatesAdapter = async (args: {
   data: { countryId: number; limit?: number; cursor?: string };
 }) => {
@@ -109,6 +86,7 @@ const fetchStatesAdapter = async (args: {
   });
 };
 
+// Adapter to fetch LGAs for the selected state
 const fetchLgasAdapter = async (args: {
   data: { stateId?: number; limit?: number; cursor?: string };
 }) => {
@@ -119,6 +97,7 @@ const fetchLgasAdapter = async (args: {
   });
 };
 
+// Adapter to fetch wards for the selected LGA and state
 const fetchWardsAdapter = async (args: {
   data: { lga_id?: number; stateId?: number; limit?: number; cursor?: string };
 }) => {
@@ -130,12 +109,14 @@ const fetchWardsAdapter = async (args: {
   });
 };
 
-interface PartyApplicationDialogProps {
+// Dialog visibility and target application props
+export type PartyApplicationDialogProps = {
   open: boolean;
   onClose: () => void;
   application: ApplicationData;
-}
+};
 
+// Polling unit selection option with location and active agent counts
 type PollingUnitOption = {
   id: string;
   name: string;
@@ -149,32 +130,18 @@ type PollingUnitOption = {
  * Primary review dialog displaying applicant information, contact channels,
  * geographic assignment selectors (State, LGA, Ward, Polling Unit), and accept/reject/reassign actions.
  */
-export function PartyApplicationDialog({
-  open,
-  onClose,
-  application,
-}: PartyApplicationDialogProps) {
+export function PartyApplicationDialog({ open, onClose, application }: PartyApplicationDialogProps) {
   const queryClient = useQueryClient();
-  const [selectedUnitId, setSelectedUnitId] = React.useState<string>("");
-  const [currentOptions, setCurrentOptions] = React.useState<
-    PollingUnitOption[]
-  >([]);
-  const [openChooseDialog, setOpenChooseDialog] = React.useState(false);
+  const [openChooseDialog, setOpenChooseDialog] = useState(false);
+  const [selectedUnitId, setSelectedUnitId] = useState<string>("");
+  const [currentOptions, setCurrentOptions] = useState<PollingUnitOption[]>([]);
+  const [role, setRole] = useState<string>(application.role || "polling_agent");
+  const [selectedState, setSelectedState] = useState<number | "">(application.stateId || "");
+  const [selectedLga, setSelectedLga] = useState<number | "">(application.lgaId || "");
+  const [selectedWard, setSelectedWard] = useState<number | "">(application.wardId || "");
 
-  const [role, setRole] = React.useState<string>(
-    application.role || "polling_agent",
-  );
-  const [selectedState, setSelectedState] = React.useState<number | "">(
-    application.stateId || "",
-  );
-  const [selectedLga, setSelectedLga] = React.useState<number | "">(
-    application.lgaId || "",
-  );
-  const [selectedWard, setSelectedWard] = React.useState<number | "">(
-    application.wardId || "",
-  );
-
-  React.useEffect(() => {
+  // Sync form state when dialog opens or application data changes
+  useEffect(() => {
     if (open) {
       setRole(application.role || "polling_agent");
       setSelectedState(application.stateId || "");
@@ -195,15 +162,9 @@ export function PartyApplicationDialog({
     !!application.partyId &&
     !!application.electionGroupId;
 
-  const { data: recData, isLoading: isUnitsLoading } = useQuery({
-    queryKey: [
-      "puRecommendations",
-      application.partyId,
-      application.electionGroupId,
-      application.lgaId,
-      application.wardId,
-      application.pollingUnitId,
-    ],
+  // Query recommended polling units based on party, election, and location
+  const { data: recommendationsData, isLoading: isRecommendationsLoading } = useQuery({
+    queryKey: ["puRecommendations", application.partyId, application.electionGroupId, application.lgaId, application.wardId, application.pollingUnitId],
     queryFn: async () => {
       const res = await getPollingUnitRecommendations({
         data: {
@@ -227,23 +188,26 @@ export function PartyApplicationDialog({
       return [];
     },
     enabled: canFetchRecommendations,
+    staleTime: Infinity,
   });
 
-  const pollingUnits: PollingUnitOption[] = React.useMemo(() => {
-    if (!recData) return [];
-    return recData.map((pu) => ({
+  // Format recommendation query results into options for selection
+  const pollingUnits: PollingUnitOption[] = useMemo(() => {
+    if (!recommendationsData) return [];
+    return recommendationsData.map((pu) => ({
       id: String(pu.id),
       name: pu.name,
       subLocation: pu.lga_name || pu.state_name || "",
       agentsCount: pu.agents_count,
       ward: pu.ward_name || "UNKNOWN WARD",
     }));
-  }, [recData]);
+  }, [recommendationsData]);
 
+  // Check if application was already approved (switches modal to reassignment mode)
   const isAccepted = application.status === "accepted";
 
   // Auto-select applicant's polling unit on load
-  React.useEffect(() => {
+  useEffect(() => {
     if (pollingUnits.length > 0) {
       let opts = [...pollingUnits];
       const applicantUnit = application.pollingUnitId
@@ -283,14 +247,17 @@ export function PartyApplicationDialog({
     }
   }, [pollingUnits, application.pollingUnitId, application.pollingUnitName]);
 
+  // Open dialog to search and pick a different polling unit
   const handleChooseAnother = () => {
     setOpenChooseDialog(true);
   };
 
+  // Update the active polling unit selection
   const handleSelectUnit = (id: string) => {
     setSelectedUnitId(id);
   };
 
+  // Mutation to reassign role/location for an existing approved agent
   const changeRoleMutation = useMutation({
     mutationFn: async (values: {
       newRole: string;
@@ -350,6 +317,7 @@ export function PartyApplicationDialog({
     },
   });
 
+  // Validate location fields and submit reassignment for approved agent
   const handleSaveChanges = async () => {
     if (role === "polling_agent" && !selectedUnitId) {
       alert("Please select a polling unit for this polling agent.");
@@ -386,6 +354,7 @@ export function PartyApplicationDialog({
     });
   };
 
+  // Mutation to approve pending application with assigned role and unit
   const approveMutation = useMutation({
     mutationFn: async (values: {
       role: string;
@@ -421,6 +390,7 @@ export function PartyApplicationDialog({
     },
   });
 
+  // Mutation to reject pending application with a mandatory reason
   const rejectMutation = useMutation({
     mutationFn: async (reason: string) => {
       if (!application.id) {
@@ -446,6 +416,7 @@ export function PartyApplicationDialog({
     },
   });
 
+  // Validate requirements and approve the pending application
   const handleAccept = async () => {
     if (
       role === "polling_agent" &&
@@ -484,6 +455,7 @@ export function PartyApplicationDialog({
     });
   };
 
+  // Prompt for mandatory rejection reason and submit rejection
   const handleReject = () => {
     const reason = window.prompt("Enter rejection reason:");
     if (reason === null) return; // user cancelled prompt
@@ -832,7 +804,7 @@ export function PartyApplicationDialog({
             {/* Polling Units list */}
             {role === "polling_agent" && (
               <div className="space-y-3">
-                {isUnitsLoading ? (
+                {isRecommendationsLoading ? (
                   <div className="py-8 flex flex-col items-center justify-center text-c-50 gap-2">
                     <Loader2 className="size-6 animate-spin text-blue-600" />
                     <p className="text-sm">Loading recommendations...</p>
@@ -852,7 +824,6 @@ export function PartyApplicationDialog({
                     const isApplicantUnit =
                       application.pollingUnitId &&
                       unit.id === String(application.pollingUnitId);
-                    const isUrgent = unit.agentsCount === 0;
                     return (
                       <div
                         key={unit.id}
@@ -952,7 +923,7 @@ export function PartyApplicationDialog({
                   disabled={
                     isSubmitting ||
                     (role === "polling_agent" &&
-                      (isUnitsLoading || currentOptions.length === 0)) ||
+                      (isRecommendationsLoading || currentOptions.length === 0)) ||
                     (role === "state_election_supervisor" && !selectedState) ||
                     (role === "lga_election_supervisor" &&
                       (!selectedState || !selectedLga)) ||
@@ -1016,25 +987,18 @@ type ChoosePollingUnitDialogProps = {
  * Secondary modal providing cascading State > LGA > Ward filters and an infinite-scrolling
  * list of polling units to assign to an agent.
  */
-export function ChoosePollingUnitDialog({
-  open,
-  onClose,
-  stateId,
-  lgaId,
-  wardId,
-  onSelect,
-}: ChoosePollingUnitDialogProps) {
-  const [selectedState, setSelectedState] = React.useState<number | "">(
+export function ChoosePollingUnitDialog({ open, onClose, stateId, lgaId, wardId, onSelect }: ChoosePollingUnitDialogProps) {
+  const [selectedState, setSelectedState] = useState<number | "">(
     stateId || "",
   );
-  const [selectedLga, setSelectedLga] = React.useState<number | "">(
+  const [selectedLga, setSelectedLga] = useState<number | "">(
     lgaId || "",
   );
-  const [selectedWard, setSelectedWard] = React.useState<number | "">(
+  const [selectedWard, setSelectedWard] = useState<number | "">(
     wardId || "",
   );
-  const [selectedUnitId, setSelectedUnitId] = React.useState<string>("");
-  const [selectedUnitObj, setSelectedUnitObj] = React.useState<{
+  const [selectedUnitId, setSelectedUnitId] = useState<string>("");
+  const [selectedUnitObj, setSelectedUnitObj] = useState<{
     id: string;
     name: string;
     subLocation: string;
@@ -1078,7 +1042,7 @@ export function ChoosePollingUnitDialog({
     threshold: 0.1,
   });
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (isIntersecting && hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
     }

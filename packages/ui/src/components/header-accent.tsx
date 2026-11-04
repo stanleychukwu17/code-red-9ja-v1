@@ -1,10 +1,10 @@
-import * as React from "react";
+import { forwardRef, type HTMLAttributes, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
 import { cn } from "../lib/utils";
 
-export type HeaderAccentProps = Omit<React.HTMLAttributes<HTMLDivElement>, "title"> & {
-  title?: React.ReactNode;
+export type HeaderAccentProps = Omit<HTMLAttributes<HTMLDivElement>, "title"> & {
+  title?: ReactNode;
   as?: "h1" | "h2" | "h3" | "h4" | "h5" | "h6" | "div" | "span";
   titleClassName?: string;
   accentColor?: string;
@@ -16,7 +16,7 @@ export type HeaderAccentProps = Omit<React.HTMLAttributes<HTMLDivElement>, "titl
   arrowClassName?: string;
 };
 
-export const HeaderAccent = React.forwardRef<HTMLDivElement, HeaderAccentProps>(
+export const HeaderAccent = forwardRef<HTMLDivElement, HeaderAccentProps>(
   (
     {
       title,

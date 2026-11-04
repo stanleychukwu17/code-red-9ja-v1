@@ -451,6 +451,7 @@ type PartyApplicationListItem struct {
 	AgentsCount       int32   `json:"agents_count"`
 }
 
+// DONE: reviewed the function and the query
 func (s *Service) ListApplications(ctx context.Context, userID int64, partyID int16, electionGroupID int32, status string, stateID int16, lgaID, wardID int32, activeElectionOnly bool, limit int32, cursor int64) ([]PartyApplicationListItem, error) {
 	rows, err := s.queries.ListApplications(ctx, queries.ListApplicationsParams{
 		UserID:             userID,

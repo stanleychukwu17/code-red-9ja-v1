@@ -50,7 +50,6 @@ import { Route as AuthenticatedPartyPartyNamePartyIdLeadershipRouteImport } from
 import { Route as AuthenticatedPartyPartyNamePartyIdHomeRouteImport } from './routes/_authenticated/party/$partyName.$partyId/home'
 import { Route as AuthenticatedPartyPartyNamePartyIdGroupsRouteImport } from './routes/_authenticated/party/$partyName.$partyId/groups'
 import { Route as AuthenticatedPartyPartyNamePartyIdEventsRouteImport } from './routes/_authenticated/party/$partyName.$partyId/events'
-import { Route as AuthenticatedPartyOldPartyNamePartyIdHomeRouteImport } from './routes/_authenticated/party/old/$partyName.$partyId.home'
 
 const PartiesRoute = PartiesRouteImport.update({
   id: '/parties',
@@ -286,12 +285,6 @@ const AuthenticatedPartyPartyNamePartyIdEventsRoute =
     path: '/events',
     getParentRoute: () => AuthenticatedPartyPartyNamePartyIdRoute,
   } as any)
-const AuthenticatedPartyOldPartyNamePartyIdHomeRoute =
-  AuthenticatedPartyOldPartyNamePartyIdHomeRouteImport.update({
-    id: '/party/old/$partyName/$partyId/home',
-    path: '/party/old/$partyName/$partyId/home',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -334,7 +327,6 @@ export interface FileRoutesByFullPath {
   '/party/$partyName/$partyId/party-chapters': typeof AuthenticatedPartyPartyNamePartyIdPartyChaptersRoute
   '/party/$partyName/$partyId/timeline': typeof AuthenticatedPartyPartyNamePartyIdTimelineRoute
   '/party/$partyName/$partyId/': typeof AuthenticatedPartyPartyNamePartyIdIndexRoute
-  '/party/old/$partyName/$partyId/home': typeof AuthenticatedPartyOldPartyNamePartyIdHomeRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -375,7 +367,6 @@ export interface FileRoutesByTo {
   '/party/$partyName/$partyId/party-chapters': typeof AuthenticatedPartyPartyNamePartyIdPartyChaptersRoute
   '/party/$partyName/$partyId/timeline': typeof AuthenticatedPartyPartyNamePartyIdTimelineRoute
   '/party/$partyName/$partyId': typeof AuthenticatedPartyPartyNamePartyIdIndexRoute
-  '/party/old/$partyName/$partyId/home': typeof AuthenticatedPartyOldPartyNamePartyIdHomeRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -420,7 +411,6 @@ export interface FileRoutesById {
   '/_authenticated/party/$partyName/$partyId/party-chapters': typeof AuthenticatedPartyPartyNamePartyIdPartyChaptersRoute
   '/_authenticated/party/$partyName/$partyId/timeline': typeof AuthenticatedPartyPartyNamePartyIdTimelineRoute
   '/_authenticated/party/$partyName/$partyId/': typeof AuthenticatedPartyPartyNamePartyIdIndexRoute
-  '/_authenticated/party/old/$partyName/$partyId/home': typeof AuthenticatedPartyOldPartyNamePartyIdHomeRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -465,7 +455,6 @@ export interface FileRouteTypes {
     | '/party/$partyName/$partyId/party-chapters'
     | '/party/$partyName/$partyId/timeline'
     | '/party/$partyName/$partyId/'
-    | '/party/old/$partyName/$partyId/home'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -506,7 +495,6 @@ export interface FileRouteTypes {
     | '/party/$partyName/$partyId/party-chapters'
     | '/party/$partyName/$partyId/timeline'
     | '/party/$partyName/$partyId'
-    | '/party/old/$partyName/$partyId/home'
   id:
     | '__root__'
     | '/'
@@ -550,7 +538,6 @@ export interface FileRouteTypes {
     | '/_authenticated/party/$partyName/$partyId/party-chapters'
     | '/_authenticated/party/$partyName/$partyId/timeline'
     | '/_authenticated/party/$partyName/$partyId/'
-    | '/_authenticated/party/old/$partyName/$partyId/home'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -852,13 +839,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPartyPartyNamePartyIdEventsRouteImport
       parentRoute: typeof AuthenticatedPartyPartyNamePartyIdRoute
     }
-    '/_authenticated/party/old/$partyName/$partyId/home': {
-      id: '/_authenticated/party/old/$partyName/$partyId/home'
-      path: '/party/old/$partyName/$partyId/home'
-      fullPath: '/party/old/$partyName/$partyId/home'
-      preLoaderRoute: typeof AuthenticatedPartyOldPartyNamePartyIdHomeRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
   }
 }
 
@@ -953,7 +933,6 @@ interface AuthenticatedRouteChildren {
   AuthenticatedPartyPartyNamePartyIdRoute: typeof AuthenticatedPartyPartyNamePartyIdRouteWithChildren
   AuthenticatedFeedPostIdIndexRoute: typeof AuthenticatedFeedPostIdIndexRoute
   AuthenticatedStatesStateIdIndexRoute: typeof AuthenticatedStatesStateIdIndexRoute
-  AuthenticatedPartyOldPartyNamePartyIdHomeRoute: typeof AuthenticatedPartyOldPartyNamePartyIdHomeRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
@@ -978,8 +957,6 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
     AuthenticatedPartyPartyNamePartyIdRouteWithChildren,
   AuthenticatedFeedPostIdIndexRoute: AuthenticatedFeedPostIdIndexRoute,
   AuthenticatedStatesStateIdIndexRoute: AuthenticatedStatesStateIdIndexRoute,
-  AuthenticatedPartyOldPartyNamePartyIdHomeRoute:
-    AuthenticatedPartyOldPartyNamePartyIdHomeRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(

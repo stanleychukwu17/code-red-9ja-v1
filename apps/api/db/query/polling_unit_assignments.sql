@@ -141,3 +141,11 @@ SET live_voters_referred_count = live_voters_referred_count + 1,
     updated_at = NOW()
 WHERE id = $1
 RETURNING *;
+
+
+-- name: CountPollingUnitAssignments :one
+SELECT COUNT(*)::integer
+FROM polling_unit_assignments
+WHERE polling_unit_id = $1
+  AND party_id = $2
+  AND election_group_id = $3;

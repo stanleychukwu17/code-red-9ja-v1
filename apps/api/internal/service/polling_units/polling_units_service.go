@@ -53,7 +53,7 @@ func (s *PollingUnitsService) GetPollingUnitByID(ctx context.Context, id int32) 
 	}
 
 	if data, err := json.Marshal(pu); err == nil {
-		s.rdb.Set(ctx, redisKey, data, db.RedisSixtyDaysTTL)
+		s.rdb.Set(ctx, redisKey, data, db.RedisOneYearTTL)
 	}
 
 	return pu, nil
@@ -134,7 +134,7 @@ func (s *PollingUnitsService) GetPollingUnits(ctx context.Context, arg queries.G
 		}
 
 		jsonData, _ := json.Marshal(payload)
-		s.rdb.Set(ctx, redisKey, jsonData, db.RedisSixtyDaysTTL)
+		s.rdb.Set(ctx, redisKey, jsonData, db.RedisOneYearTTL)
 
 		return dbData, nil
 	case nil:

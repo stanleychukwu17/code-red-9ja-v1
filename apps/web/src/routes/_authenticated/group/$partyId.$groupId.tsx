@@ -2,40 +2,20 @@ import { useMemo, useState } from "react";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import {
-  Users,
-  ShieldCheck,
-  CheckCircle2,
-  Radio,
-  Search,
-  ArrowLeft,
-  RefreshCw,
-  Share2,
-  Crown,
-  Calendar,
-  Building2,
-  Sparkles,
-  MessageSquare,
-  AlertTriangle,
-  FileText,
-  UserCheck,
-  Award,
-} from "lucide-react";
+import { Users, ShieldCheck, CheckCircle2, Radio, Search, ArrowLeft, RefreshCw, Share2, Crown, Calendar, Building2, Sparkles, MessageSquare, AlertTriangle, FileText, UserCheck, Award } from "lucide-react";
 import { AppAvatar } from "@repo/ui/components/avatar";
 import { Button } from "@repo/ui/components/button";
+import { HeaderAccent } from "@repo/ui/components/header-accent";
 import { QUERY_KEYS, APP_URL } from "@/lib/config";
-import { getParties, type Party } from "@/lib/server/parties";
-import {
-  getCampaignGroup,
-  getCampaignGroupMembers,
-  syncCampaignGroupOfficials,
-  type CampaignGroupMemberItem,
-  type CampaignGroupDetails,
-} from "@/lib/server/campaign_groups";
+import { getPageHeader } from "@/lib/shared/meta";
+import { useParties, type Party } from "#/hooks";
+import { CampaignGroupHero, CampaignGroupNavTabs, type CampaignGroupTabId } from "#/components/campaign-group";
+import { getCampaignGroup, getCampaignGroupMembers, syncCampaignGroupOfficials, type CampaignGroupMemberItem, type CampaignGroupDetails } from "@/lib/server/campaign_groups";
 
-export const Route = createFileRoute(
-  "/_authenticated/group/$partyId/$groupId",
-)({
+export const Route = createFileRoute("/_authenticated/group/$partyId/$groupId")({
+  head: () => getPageHeader({
+    title: "Campaign Group",
+  }),
   component: CampaignGroupPageComponent,
 });
 
@@ -113,20 +93,15 @@ function CampaignGroupPageComponent() {
   };
 
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<"members" | "timeline" | "talks" | "issues" | "assets">("members");
+  const [activeTab, setActiveTab] = useState<CampaignGroupTabId>("home");
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
 
   // 1. Fetch parties list to resolve party identity
-  const { data: partiesRes } = useQuery({
-    queryKey: QUERY_KEYS.parties,
-    queryFn: () => getParties(),
-    staleTime: Infinity,
-  });
-
-  const parties: Party[] = (partiesRes as any)?.data?.parties || [];
+  const { parties } = useParties();
   const activeParty = useMemo(() => {
     const pid = Number(partyId);
+    if (!Array.isArray(parties)) return null;
     return parties.find((p) => p.id === pid) || null;
   }, [parties, partyId]);
 
@@ -173,7 +148,7 @@ function CampaignGroupPageComponent() {
   const partyShortName = activeParty?.short_name || "Party";
   const groupTitle =
     group?.name ||
-    `${partyShortName.toUpperCase()} ${group?.scope ? group.scope.toUpperCase() : ""} Campaign Command`;
+    `${partyShortName.toUpperCase()} ${group?.scope ? group.scope.toUpperCase() : ""} Campaign Group`;
 
   // Filtered members list
   const filteredMembers = useMemo(() => {
@@ -200,7 +175,7 @@ function CampaignGroupPageComponent() {
     });
   }, [members, roleFilter, searchQuery]);
 
-  // Member role counts for badge filters
+  // Member role counts for badge filters and hero stat grid
   const roleCounts = useMemo(() => {
     const counts = {
       all: members.length,
@@ -208,215 +183,67 @@ function CampaignGroupPageComponent() {
       party_official: 0,
       supervisor: 0,
       agent: 0,
+      polling_agent: 0,
+      ward_supervisor: 0,
+      lga_supervisor: 0,
+      state_supervisor: 0,
     };
     for (const m of members) {
       if (m.role === "candidate") counts.candidate += 1;
       else if (m.role === "party_official") counts.party_official += 1;
-      else if (m.role.includes("supervisor")) counts.supervisor += 1;
-      else if (m.role === "agent" || m.role === "polling_agent") counts.agent += 1;
+      else if (m.role === "agent" || m.role === "polling_agent") {
+        counts.agent += 1;
+        counts.polling_agent += 1;
+      } else if (m.role === "ward_supervisor" || m.role === "ward_election_supervisor") {
+        counts.supervisor += 1;
+        counts.ward_supervisor += 1;
+      } else if (m.role === "lga_supervisor" || m.role === "lga_election_supervisor") {
+        counts.supervisor += 1;
+        counts.lga_supervisor += 1;
+      } else if (m.role === "state_supervisor" || m.role === "state_election_supervisor") {
+        counts.supervisor += 1;
+        counts.state_supervisor += 1;
+      } else if (m.role.includes("supervisor")) {
+        counts.supervisor += 1;
+      }
     }
     return counts;
   }, [members]);
 
-  // Copy share link
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(window.location.href);
-    toast.success("Campaign group URL copied to clipboard");
-  };
-
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-      {/* Back to Party Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Link
-          to={activeParty ? APP_URL.party(activeParty.short_name, activeParty.id) : (APP_URL.parties as any)}
-          className="inline-flex items-center gap-1.5 hover:text-foreground transition-colors font-medium"
-        >
-          <ArrowLeft className="size-4" />
-          <span>Back to {partyShortName.toUpperCase()} Profile</span>
-        </Link>
+    <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      {/* Header with underline accent mark */}
+      <div className="flex items-center justify-center">
+        <HeaderAccent
+          as="h1"
+          title={groupTitle}
+          titleClassName="text-base sm:text-[30px] font-bold tracking-wide text-foreground"
+          accentClassName="top-4 sm:top-7"
+        />
       </div>
+
+      {/* Campaign Group Navigation Tabs */}
+      <CampaignGroupNavTabs
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        membersCount={members.length}
+      />
+
 
       {/* Hero Command Banner */}
-      <div className="relative overflow-hidden rounded-3xl border border-border/60 bg-gradient-to-br from-card via-card/95 to-accent/10 p-6 md:p-8 shadow-xs">
-        <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
-          <div className="space-y-4 max-w-3xl">
-            {/* Pill badges */}
-            <div className="flex flex-wrap items-center gap-2">
-              {activeParty?.logo && (
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-background border border-border/60 shadow-2xs">
-                  <img
-                    src={activeParty.logo}
-                    alt={activeParty.short_name}
-                    className="size-4 rounded-full object-cover"
-                  />
-                  <span className="text-xs font-bold text-foreground uppercase">{activeParty.short_name}</span>
-                </div>
-              )}
-              <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/20">
-                {group?.scope || "National"} Scope
-              </span>
-              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
-                <CheckCircle2 className="size-3" />
-                Active Command
-              </span>
-              {group?.officials_added && (
-                <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 flex items-center gap-1">
-                  <ShieldCheck className="size-3" />
-                  Officials Synced
-                </span>
-              )}
-            </div>
+      <CampaignGroupHero
+        activeParty={activeParty}
+        group={group}
+        groupTitle={groupTitle}
+        partyShortName={partyShortName}
+        totalMembers={members.length}
+        roleCounts={roleCounts}
+        isSyncing={syncMutation.isPending}
+        onSync={() => syncMutation.mutate()}
+      />
 
-            {/* Title & Description */}
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
-                {groupTitle}
-              </h1>
-              <p className="mt-1.5 text-sm sm:text-base text-muted-foreground leading-relaxed">
-                Central mobilization command and field operations team for {activeParty?.name || partyShortName.toUpperCase()}{" "}
-                during this election cycle.
-              </p>
-            </div>
-
-            {/* Geo & Sync Meta Tags */}
-            <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-muted-foreground pt-1">
-              <span className="inline-flex items-center gap-1.5">
-                <Building2 className="size-3.5 text-primary" />
-                <span className="capitalize">{group?.scope || "National"} Jurisdiction</span>
-              </span>
-              <span className="text-border">&bull;</span>
-              <span className="inline-flex items-center gap-1.5">
-                <Calendar className="size-3.5 text-primary" />
-                <span>Formed {group?.created_at ? new Date(group.created_at).toLocaleDateString() : "Active Cycle"}</span>
-              </span>
-              <span className="text-border">&bull;</span>
-              <span className="inline-flex items-center gap-1.5">
-                <Users className="size-3.5 text-primary" />
-                <span>{members.length} Enrolled Operatives</span>
-              </span>
-            </div>
-          </div>
-
-          {/* Quick Action Buttons */}
-          <div className="flex sm:flex-row md:flex-col gap-2.5 shrink-0">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => syncMutation.mutate()}
-              disabled={syncMutation.isPending}
-              className="flex items-center gap-2 h-9 text-xs"
-            >
-              <RefreshCw className={`size-3.5 ${syncMutation.isPending ? "animate-spin" : ""}`} />
-              <span>{syncMutation.isPending ? "Syncing..." : "Sync Chapter Officials"}</span>
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={handleCopyLink}
-              className="flex items-center gap-2 h-9 text-xs"
-            >
-              <Share2 className="size-3.5" />
-              <span>Share Group</span>
-            </Button>
-          </div>
-        </div>
-
-        {/* Stats Row */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-8 pt-6 border-t border-border/50">
-          <div className="p-3.5 rounded-2xl bg-background/60 border border-border/40">
-            <p className="text-xs font-semibold text-muted-foreground">Total Personnel</p>
-            <p className="text-xl sm:text-2xl font-black text-foreground mt-0.5">{members.length}</p>
-          </div>
-          <div className="p-3.5 rounded-2xl bg-background/60 border border-border/40">
-            <p className="text-xs font-semibold text-muted-foreground">Fielded Nominees</p>
-            <p className="text-xl sm:text-2xl font-black text-amber-600 dark:text-amber-400 mt-0.5">
-              {roleCounts.candidate}
-            </p>
-          </div>
-          <div className="p-3.5 rounded-2xl bg-background/60 border border-border/40">
-            <p className="text-xs font-semibold text-muted-foreground">Chapter Officials</p>
-            <p className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
-              {roleCounts.party_official}
-            </p>
-          </div>
-          <div className="p-3.5 rounded-2xl bg-background/60 border border-border/40">
-            <p className="text-xs font-semibold text-muted-foreground">Field Supervisors</p>
-            <p className="text-xl sm:text-2xl font-black text-indigo-600 dark:text-indigo-400 mt-0.5">
-              {roleCounts.supervisor}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Tabs Bar */}
-      <div className="flex items-center gap-2 border-b border-border/60 pb-px overflow-x-auto custom-scrollbar">
-        <button
-          type="button"
-          onClick={() => setActiveTab("members")}
-          className={`px-4 py-2.5 text-sm font-semibold rounded-t-lg border-b-2 transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${activeTab === "members"
-              ? "border-primary text-primary bg-primary/5"
-              : "border-transparent text-muted-foreground hover:text-foreground hover:bg-accent/40"
-            }`}
-        >
-          <Users className="size-4" />
-          <span>Members Roster</span>
-          <span className="ml-1 px-1.5 py-0.2 rounded-full text-xs bg-muted text-muted-foreground font-bold">
-            {members.length}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab("timeline")}
-          className={`px-4 py-2.5 text-sm font-semibold rounded-t-lg border-b-2 transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${activeTab === "timeline"
-              ? "border-primary text-primary bg-primary/5"
-              : "border-transparent text-muted-foreground hover:text-foreground hover:bg-accent/40"
-            }`}
-        >
-          <Sparkles className="size-4" />
-          <span>Announcements & Feed</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab("talks")}
-          className={`px-4 py-2.5 text-sm font-semibold rounded-t-lg border-b-2 transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${activeTab === "talks"
-              ? "border-primary text-primary bg-primary/5"
-              : "border-transparent text-muted-foreground hover:text-foreground hover:bg-accent/40"
-            }`}
-        >
-          <MessageSquare className="size-4" />
-          <span>Talks Room</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab("issues")}
-          className={`px-4 py-2.5 text-sm font-semibold rounded-t-lg border-b-2 transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${activeTab === "issues"
-              ? "border-primary text-primary bg-primary/5"
-              : "border-transparent text-muted-foreground hover:text-foreground hover:bg-accent/40"
-            }`}
-        >
-          <AlertTriangle className="size-4" />
-          <span>Challenges & BVAS</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab("assets")}
-          className={`px-4 py-2.5 text-sm font-semibold rounded-t-lg border-b-2 transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${activeTab === "assets"
-              ? "border-primary text-primary bg-primary/5"
-              : "border-transparent text-muted-foreground hover:text-foreground hover:bg-accent/40"
-            }`}
-        >
-          <FileText className="size-4" />
-          <span>Campaign Media</span>
-        </button>
-      </div>
-
-      {/* Tab 1: Members Roster */}
-      {activeTab === "members" && (
+      {/* Tab 1: Home (Members Roster & Overview) */}
+      {activeTab === "home" && (
         <div className="space-y-6">
           {/* Search & Role Filters Bar */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -445,8 +272,8 @@ function CampaignGroupPageComponent() {
                   type="button"
                   onClick={() => setRoleFilter(pill.id)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${roleFilter === pill.id
-                      ? "bg-primary text-primary-foreground shadow-xs"
-                      : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
+                    ? "bg-primary text-primary-foreground shadow-xs"
+                    : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
                     }`}
                 >
                   <span>{pill.label}</span>
@@ -558,14 +385,14 @@ function CampaignGroupPageComponent() {
         </div>
       )}
 
-      {/* Placeholder Tabs: Timeline, Talks, Challenges, Assets */}
-      {activeTab !== "members" && (
+      {/* Placeholder Tabs: Timeline, Talks, Challenges, Notes */}
+      {activeTab !== "home" && (
         <div className="py-16 text-center rounded-3xl border border-dashed border-border/60 bg-card/40 p-8 space-y-3">
           <div className="size-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto">
             {activeTab === "timeline" && <Sparkles className="size-6" />}
             {activeTab === "talks" && <MessageSquare className="size-6" />}
             {activeTab === "issues" && <AlertTriangle className="size-6" />}
-            {activeTab === "assets" && <FileText className="size-6" />}
+            {activeTab === "notes" && <FileText className="size-6" />}
           </div>
           <h3 className="text-lg font-bold text-foreground capitalize">
             {activeTab === "timeline"

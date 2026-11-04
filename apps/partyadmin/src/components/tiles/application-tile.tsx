@@ -86,10 +86,10 @@ export function ApplicationTableHeader() {
       </TileLeft>
 
       <TileRight>
-        <p className="text-c-50 text-[14px] w-35 hidden lg:block">
+        <p className="text-c-50 text-[14px] w-45 hidden lg:block">
           Election
         </p>
-        <p className="text-c-50 text-[14px] w-32.5 hidden md:block">
+        <p className="text-c-50 text-[14px] w-35 hidden md:block">
           Role
         </p>
         <p className="text-c-50 text-[14px] w-40 hidden md:block">
@@ -98,7 +98,7 @@ export function ApplicationTableHeader() {
         <p className="text-c-50 text-[14px] w-25 hidden xl:block">
           Agents Count
         </p>
-        <p className="text-c-50 text-[14px] w-40">Make decision</p>
+        <p className="text-c-50 text-[14px] w-35">Make decision</p>
       </TileRight>
     </TileHeader>
   );
@@ -257,6 +257,7 @@ export function ApplicationTableTile({ data, refetch }: ApplicationTableTileProp
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
+  // Mutation to approve application and invalidate cached list
   const approveMutation = useMutation({
     mutationFn: (variables: { id: number; pollingUnitID: number }) => approveApplication({ data: variables }),
     onSuccess: (res) => {
@@ -269,6 +270,7 @@ export function ApplicationTableTile({ data, refetch }: ApplicationTableTileProp
     },
   });
 
+  // Mutation to reject application with a reason and refresh data
   const rejectMutation = useMutation({
     mutationFn: (variables: { id: number; reason: string }) => rejectApplication({ data: variables }),
     onSuccess: (res) => {
@@ -281,6 +283,7 @@ export function ApplicationTableTile({ data, refetch }: ApplicationTableTileProp
     },
   });
 
+  // Extract display values (names, badges, election info, status) from raw application data
   const {
     name,
     avatar,
@@ -356,11 +359,11 @@ export function ApplicationTableTile({ data, refetch }: ApplicationTableTileProp
         </div>
       </TileLeft>
 
-      <TileRight>
-        <p className="w-35 truncate hidden lg:block text-[#313131]">
-          {election}
-        </p>
-        <div className="w-32.5 hidden md:flex items-center">
+      <TileRight className="flex justify-between">
+        <div className="w-45 truncate hidden lg:block text-[#313131]">
+          <p className="w-35 truncate">{election}</p>
+        </div>
+        <div className="w-35 hidden md:flex items-center">
           <span
             className={cn(
               "px-2.5 py-0.5 text-xs font-semibold rounded-full border",
@@ -380,7 +383,7 @@ export function ApplicationTableTile({ data, refetch }: ApplicationTableTileProp
           {isSupervisor ? "—" : agentsCount}
         </p>
         <div
-          className="w-40 flex gap-2 justify-center"
+          className="w-35 flex gap-2"
           onClick={(e) => e.stopPropagation()}
         >
           {decisionVariant === "pending" ? (
@@ -426,19 +429,15 @@ export function ApplicationTableTile({ data, refetch }: ApplicationTableTileProp
   );
 }
 
-function DecisionPill({
-  children,
-  variant,
-  className,
-  onClick,
-  disabled,
-}: {
+type DecisionPillProps = {
   children: string;
   variant: "accept" | "reject" | "pending";
   className?: string;
   onClick?: (e: MouseEvent) => void;
   disabled?: boolean;
-}) {
+};
+
+function DecisionPill({ children, variant, className, onClick, disabled }: DecisionPillProps) {
   return (
     <button
       onClick={onClick}

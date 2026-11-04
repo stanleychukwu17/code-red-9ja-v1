@@ -10,6 +10,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Layout, PageHeader, PageSearchLayer } from "@repo/ui/components/custom/AdminLayouts";
 import { formatISODate } from "@repo/ui/lib/date";
+import { cn } from "@repo/ui/lib/utils";
 import { getPageHeader } from "#/lib/shared/meta";
 import { APP_URL } from "#/lib/config";
 import { getElectionByFakeId } from "#/lib/server/elections";
@@ -164,13 +165,15 @@ function ElectionCandidatesPage() {
         candidatesCount={candidates.length}
       />
 
-      {/* Your Party's Nomination Banner */}
-      <PartyNominationBanner
-        party={party}
-        myPartyCandidate={myPartyCandidate}
-        ticketConfig={ticketConfig}
-        onManageTicket={() => setIsManageDialogOpen(true)}
-      />
+      {/* Your Party's Nomination Banner (Joint-ticket elections only) */}
+      {ticketConfig.hasRunningMate && (
+        <PartyNominationBanner
+          party={party}
+          myPartyCandidate={myPartyCandidate}
+          ticketConfig={ticketConfig}
+          onManageTicket={() => setIsManageDialogOpen(true)}
+        />
+      )}
 
       {/* Roster Table Search */}
       <PageSearchLayer
@@ -186,7 +189,14 @@ function ElectionCandidatesPage() {
       />
 
       {/* Candidates Roster Grid */}
-      <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-5 md:gap-6 py-5">
+      <div
+        className={cn(
+          "w-full grid grid-cols-1 gap-5 md:gap-6 py-5",
+          ticketConfig.hasRunningMate
+            ? "lg:grid-cols-2"
+            : "md:grid-cols-2 lg:grid-cols-3"
+        )}
+      >
         {isLoading ? (
           <div className="col-span-full h-48 flex flex-col items-center justify-center gap-3 text-c-50 rounded-3xl bg-sidebar-softer/70 dark:bg-card border border-sidebar-mobile dark:border-border">
             <Loader2 className="size-6 animate-spin text-primary" />

@@ -3,22 +3,24 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@repo/ui/lib/utils";
 
-export interface ScrollableTabItem {
+export type ScrollableTabItem = {
   id?: string;
   path?: string;
   label: string;
-  href: string;
+  href?: string;
   icon?: React.ComponentType<{ className?: string }>;
   isActive?: boolean;
-}
+  onClick?: () => void;
+  badge?: React.ReactNode;
+};
 
-export interface ScrollableNavTabsProps {
+export type ScrollableNavTabsProps = {
   tabs: ScrollableTabItem[];
   className?: string;
   navClassName?: string;
   ariaLabel?: string;
   scrollAmount?: number;
-}
+};
 
 export function ScrollableNavTabs({ tabs, className, navClassName, ariaLabel = "Navigation tabs", scrollAmount = 240 }: ScrollableNavTabsProps) {
   const routerState = useRouterState();
@@ -110,26 +112,50 @@ export function ScrollableNavTabs({ tabs, className, navClassName, ariaLabel = "
       >
         <div className="flex items-center gap-2 min-w-max">
           {tabs.map((tab) => {
-            const key = tab.id || tab.path || tab.href;
+            const key = tab.id || tab.path || tab.href || tab.label;
             const Icon = tab.icon;
             const isTabActive =
               tab.isActive !== undefined
                 ? tab.isActive
-                : currentPath === tab.href || (tab.path && currentPath.endsWith(`/${tab.path}`));
+                : tab.href
+                  ? currentPath === tab.href || (tab.path && currentPath.endsWith(`/${tab.path}`))
+                  : false;
+
+            const tabContent = (
+              <>
+                {Icon && <Icon className="w-3.5 h-3.5 shrink-0 opacity-80" />}
+                <span>{tab.label}</span>
+                {tab.badge}
+              </>
+            );
+
+            const tabClassName = cn(
+              "flex items-center gap-1.5 px-4 py-3 rounded-full text-xs font-semibold transition-all duration-200 cursor-pointer no-underline",
+              isTabActive
+                ? "bg-hover-10 text-foreground shadow-xs"
+                : "text-muted-foreground hover:text-foreground hover:bg-hover-5"
+            );
+
+            if (tab.onClick || !tab.href) {
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={tab.onClick}
+                  className={tabClassName}
+                >
+                  {tabContent}
+                </button>
+              );
+            }
 
             return (
               <Link
                 key={key}
                 to={tab.href}
-                className={cn(
-                  "flex items-center gap-1.5 px-4 py-3 rounded-full text-xs font-semibold transition-all duration-200 cursor-pointer no-underline",
-                  isTabActive
-                    ? "bg-hover-10 text-foreground shadow-xs"
-                    : "text-muted-foreground hover:text-foreground hover:bg-hover-5"
-                )}
+                className={tabClassName}
               >
-                {Icon && <Icon className="w-3.5 h-3.5 shrink-0 opacity-80" />}
-                <span>{tab.label}</span>
+                {tabContent}
               </Link>
             );
           })}

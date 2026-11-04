@@ -529,23 +529,27 @@ func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 // @Security     BearerAuth
 // @Router       /party-applications/recommendations [get]
 func (h *Handler) GetPollingUnitRecommendations(w http.ResponseWriter, r *http.Request) {
+	// Parse query parameters
 	partyID, _ := strconv.ParseInt(r.URL.Query().Get("party_id"), 10, 16)
 	electionGroupID, _ := strconv.ParseInt(r.URL.Query().Get("election_group_id"), 10, 32)
 	lgaID, _ := strconv.ParseInt(r.URL.Query().Get("lga_id"), 10, 32)
 	wardID, _ := strconv.ParseInt(r.URL.Query().Get("ward_id"), 10, 32)
 	pollingUnitID, _ := strconv.ParseInt(r.URL.Query().Get("polling_unit_id"), 10, 32)
 
+	// Validate required parameters
 	if partyID == 0 || electionGroupID == 0 {
 		h.utils.RespondError(w, http.StatusBadRequest, "party_id and election_group_id are required")
 		return
 	}
 
+	// Fetch recommended polling units (submitted PU + lowest-agent-count units in LGA)
 	units, err := h.service.GetPollingUnitRecommendations(r.Context(), int16(partyID), int32(electionGroupID), int32(lgaID), int32(wardID), int32(pollingUnitID))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch recommendations: "+err.Error())
 		return
 	}
 
+	// Return recommendations
 	h.utils.RespondSuccess(w, http.StatusOK, "Recommendations fetched successfully", map[string]interface{}{
 		"polling_units": units,
 	})

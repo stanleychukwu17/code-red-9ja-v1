@@ -1,11 +1,11 @@
 import { ScrollableNavTabs } from "#/components/ScrollableNavTabs";
 import { PARTY_NAV_TABS } from "./types";
 
-interface PartyNavTabsProps {
+type PartyNavTabsProps = {
   partyName: string;
   partyId: string;
   chapterId?: number;
-}
+};
 
 export function PartyNavTabs({ partyName, partyId, chapterId }: PartyNavTabsProps) {
   const query = chapterId ? `?chapterId=${chapterId}` : "";

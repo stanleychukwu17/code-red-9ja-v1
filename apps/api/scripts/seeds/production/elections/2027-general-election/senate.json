@@ -15746,9 +15746,9 @@
   {
     "num": 493,
     "name": "IRETI HEEBAH KINGIBE",
-    "first_name": "Heebah",
-    "middle_name": "Kingibe",
-    "last_name": "Ireti",
+    "first_name": "Ireti",
+    "middle_name": "Heebah",
+    "last_name": "Kingibe",
     "username": "ireti_kingibe",
     "email": "ireti.kingibe@example.com",
     "phone": "08036359579",
@@ -15770,7 +15770,7 @@
     "current_ward": 20759,
     "current_city": 157027,
     "polling_unit_id": 41849,
-    "date_of_birth": "1955-01-01",
+    "date_of_birth": "1954-06-02",
     "gender": "female",
     "pwd": "None",
     "qualifications": "DIPLOMA BACHELOR CIVIL ENGINEERING"
