@@ -14,7 +14,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { getApplications } from "#/lib/server/applications";
 import { useUserParty } from "#/hooks/useUserParty";
 import { QUERY_KEYS } from "#/lib/config";
-import { Loader2 } from "lucide-react";
+import { Filter, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/$partyShortName/applications/rejected")({
   head: () => getPageHeader({ title: "Rejected Applications" }),
@@ -36,11 +36,13 @@ function RouteComponent() {
   const [stateId, setStateId] = useState<number | undefined>();
   const [lgaId, setLgaId] = useState<number | undefined>();
   const [wardId, setWardId] = useState<number | undefined>();
+  const [pollingUnitId, setPollingUnitId] = useState<number | undefined>();
 
   // Cursor-paginated rejected applications (primary list)
   const { data: rejectedPages, isLoading: isRejectedLoading, isFetchingNextPage, hasNextPage, fetchNextPage } = useInfiniteQuery({
-    queryKey: QUERY_KEYS.applications.list("rejected", partyId, electionGroupId, stateId, lgaId, wardId),
+    queryKey: QUERY_KEYS.applications.list("rejected", partyId, electionGroupId, stateId, lgaId, wardId, pollingUnitId),
     initialPageParam: undefined as number | undefined,
+    enabled: Boolean(partyId && electionGroupId && stateId),
     queryFn: ({ pageParam }) => getApplications({
       data: {
         status: "rejected",
@@ -51,6 +53,7 @@ function RouteComponent() {
         stateId,
         lgaId,
         wardId,
+        pollingUnitId,
       },
     }),
     getNextPageParam: (lastPage) => {
@@ -79,10 +82,24 @@ function RouteComponent() {
         onLgaChange={setLgaId}
         wardId={wardId}
         onWardChange={setWardId}
+        pollingUnitId={pollingUnitId}
+        onPollingUnitChange={setPollingUnitId}
         showAcceptAll={false}
       />
 
-      {isRejectedLoading ? (
+      {!electionGroupId || !stateId ? (
+        <div className="py-20 flex flex-col items-center justify-center text-center px-4">
+          <div className="size-12 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 flex items-center justify-center mb-3">
+            <Filter className="size-6" />
+          </div>
+          <h3 className="text-base font-semibold text-c-80">
+            Select an Election Group and State
+          </h3>
+          <p className="text-sm text-c-50 max-w-sm mt-1">
+            Please choose an election group and state above to view applications.
+          </p>
+        </div>
+      ) : isRejectedLoading ? (
         <div className="py-20 flex flex-col items-center justify-center text-c-50 gap-2">
           <Loader2 className="size-8 animate-spin text-blue-600" />
           <p className="text-sm">Loading applications...</p>

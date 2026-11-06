@@ -250,6 +250,9 @@ type Querier interface {
 	GetOrCreateStateChapter(ctx context.Context, arg GetOrCreateStateChapterParams) (int32, error)
 	GetOrCreateWardChapter(ctx context.Context, arg GetOrCreateWardChapterParams) (int32, error)
 	GetOrCreateZonalChapter(ctx context.Context, arg GetOrCreateZonalChapterParams) (int32, error)
+	// =====================================================
+	// POLLING UNIT PARTY MUTATIONS
+	// =====================================================
 	GetPUPartyAgentsCount(ctx context.Context, arg GetPUPartyAgentsCountParams) (int32, error)
 	GetPageVerificationType(ctx context.Context, id int16) (PageVerificationType, error)
 	GetPageVerifications(ctx context.Context, arg GetPageVerificationsParams) ([]GetPageVerificationsRow, error)

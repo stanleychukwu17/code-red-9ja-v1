@@ -492,10 +492,11 @@ WHERE
   ($5::smallint = 0 OR pa.state_id = $5) AND
   ($6::integer = 0 OR pa.lga_id = $6) AND
   ($7::integer = 0 OR pa.ward_id = $7) AND
-  (NOT $8::boolean OR (eg.active = TRUE AND eg.election_date >= CURRENT_DATE)) AND
-  ($9::bigint = 0 OR pa.id < $9)
+  ($8::integer = 0 OR pa.polling_unit_id = $8) AND
+  (NOT $9::boolean OR (eg.active = TRUE AND eg.election_date >= CURRENT_DATE)) AND
+  ($10::bigint = 0 OR pa.id < $10)
 ORDER BY pa.id DESC
-LIMIT $10
+LIMIT $11
 `
 
 type ListApplicationsParams struct {
@@ -506,6 +507,7 @@ type ListApplicationsParams struct {
 	StateID            int16  `json:"state_id"`
 	LgaID              int32  `json:"lga_id"`
 	WardID             int32  `json:"ward_id"`
+	PollingUnitID      int32  `json:"polling_unit_id"`
 	ActiveElectionOnly bool   `json:"active_election_only"`
 	Cursor             int64  `json:"cursor"`
 	LimitVal           int32  `json:"limit_val"`
@@ -567,6 +569,7 @@ func (q *Queries) ListApplications(ctx context.Context, arg ListApplicationsPara
 		arg.StateID,
 		arg.LgaID,
 		arg.WardID,
+		arg.PollingUnitID,
 		arg.ActiveElectionOnly,
 		arg.Cursor,
 		arg.LimitVal,

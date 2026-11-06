@@ -11,7 +11,7 @@ INSERT INTO polling_unit_assignments (
   assigned_by,
   potential_payment_kobo
 ) VALUES (
-  $1, $2, $3, $4, $5, $6, $7
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
 ) RETURNING *;
 
 -- name: GetAssignmentByID :one

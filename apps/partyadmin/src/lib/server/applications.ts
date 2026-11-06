@@ -15,6 +15,7 @@ export const getApplications = createServerFn({ method: "GET" })
           stateId?: number;
           lgaId?: number;
           wardId?: number;
+          pollingUnitId?: number;
           active_election_only?: boolean;
         }
         | undefined,
@@ -35,6 +36,7 @@ export const getApplications = createServerFn({ method: "GET" })
       if (data?.stateId) params.append("state_id", String(data.stateId));
       if (data?.lgaId) params.append("lga_id", String(data.lgaId));
       if (data?.wardId) params.append("ward_id", String(data.wardId));
+      if (data?.pollingUnitId) params.append("polling_unit_id", String(data.pollingUnitId));
       if (data?.active_election_only !== undefined) params.append("active_election_only", String(data.active_election_only));
 
       const url = API_URL.partyApplications(params);

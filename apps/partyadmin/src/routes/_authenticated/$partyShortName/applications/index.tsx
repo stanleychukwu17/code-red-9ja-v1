@@ -38,10 +38,11 @@ function RouteComponent() {
   const [stateId, setStateId] = useState<number | undefined>();
   const [lgaId, setLgaId] = useState<number | undefined>();
   const [wardId, setWardId] = useState<number | undefined>();
+  const [pollingUnitId, setPollingUnitId] = useState<number | undefined>();
 
   // Cursor-paginated pending applications (primary list)
   const { data: pendingPages, isLoading: isPendingLoading, isFetchingNextPage, hasNextPage, fetchNextPage } = useInfiniteQuery({
-    queryKey: QUERY_KEYS.applications.list("pending", partyId, electionGroupId, stateId, lgaId, wardId),
+    queryKey: QUERY_KEYS.applications.list("pending", partyId, electionGroupId, stateId, lgaId, wardId, pollingUnitId),
     initialPageParam: undefined as number | undefined,
     enabled: Boolean(partyId && electionGroupId && stateId),
     queryFn: ({ pageParam }) => getApplications({
@@ -54,6 +55,7 @@ function RouteComponent() {
         stateId,
         lgaId,
         wardId,
+        pollingUnitId,
       },
     }),
     getNextPageParam: (lastPage) => {
@@ -82,11 +84,10 @@ function RouteComponent() {
         onLgaChange={setLgaId}
         wardId={wardId}
         onWardChange={setWardId}
+        pollingUnitId={pollingUnitId}
+        onPollingUnitChange={setPollingUnitId}
         onAcceptAll={() => {
           // Handled by batch approval workflow
-        }}
-        onExport={() => {
-          // Export applications
         }}
         showAcceptAll={true}
       />

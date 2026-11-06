@@ -31,7 +31,7 @@ type PartyApplicationsService interface {
 	HasActiveAgentApplication(ctx context.Context, userID int64) (bool, error)
 	SubmitSupervisorApplication(ctx context.Context, input partyapplications.SubmitSupervisorApplicationInput) (queries.PartyAgentApplication, error)
 	GetApplicationByID(ctx context.Context, id int64) (queries.PartyAgentApplication, error)
-	ListApplications(ctx context.Context, userID int64, partyID int16, electionGroupID int32, status string, stateID int16, lgaID, wardID int32, activeElectionOnly bool, limit int32, cursor int64) ([]partyapplications.PartyApplicationListItem, error)
+	ListApplications(ctx context.Context, userID int64, partyID int16, electionGroupID int32, status string, stateID int16, lgaID, wardID, pollingUnitID int32, activeElectionOnly bool, limit int32, cursor int64) ([]partyapplications.PartyApplicationListItem, error)
 	RejectApplication(ctx context.Context, id int64, reason string) (queries.PartyAgentApplication, error)
 	CancelApplication(ctx context.Context, id int64) (queries.PartyAgentApplication, error)
 	ApproveApplication(ctx context.Context, input partyapplications.ApproveApplicationInput) (queries.PartyAgentApplication, error)
@@ -385,7 +385,7 @@ func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 	var electionGroupID int32
 	var requestedUserID int64
 	var stateID int16
-	var lgaID, wardID int32
+	var lgaID, wardID, pollingUnitID int32
 	limit := int32(20)
 
 	status := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("status")))
@@ -448,6 +448,11 @@ func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 			wardID = int32(v)
 		}
 	}
+	if val := r.URL.Query().Get("polling_unit_id"); val != "" {
+		if v, _ := strconv.ParseInt(val, 10, 32); v > 0 {
+			pollingUnitID = int32(v)
+		}
+	}
 
 	// Filter for active election groups only
 	activeElectionOnly := r.URL.Query().Get("active_election_only") == "true"
@@ -504,7 +509,7 @@ func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Fetch filtered applications list
-	apps, err := h.service.ListApplications(r.Context(), filterUserID, partyID, electionGroupID, status, stateID, lgaID, wardID, activeElectionOnly, limit, cursor)
+	apps, err := h.service.ListApplications(r.Context(), filterUserID, partyID, electionGroupID, status, stateID, lgaID, wardID, pollingUnitID, activeElectionOnly, limit, cursor)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to list applications: "+err.Error())
 		return

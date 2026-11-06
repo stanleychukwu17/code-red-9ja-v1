@@ -102,6 +102,7 @@ WHERE
   (sqlc.arg(state_id)::smallint = 0 OR pa.state_id = sqlc.arg(state_id)) AND
   (sqlc.arg(lga_id)::integer = 0 OR pa.lga_id = sqlc.arg(lga_id)) AND
   (sqlc.arg(ward_id)::integer = 0 OR pa.ward_id = sqlc.arg(ward_id)) AND
+  (sqlc.arg(polling_unit_id)::integer = 0 OR pa.polling_unit_id = sqlc.arg(polling_unit_id)) AND
   (NOT sqlc.arg(active_election_only)::boolean OR (eg.active = TRUE AND eg.election_date >= CURRENT_DATE)) AND
   (sqlc.arg(cursor)::bigint = 0 OR pa.id < sqlc.arg(cursor))
 ORDER BY pa.id DESC

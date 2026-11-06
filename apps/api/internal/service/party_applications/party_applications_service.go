@@ -460,7 +460,7 @@ type PartyApplicationListItem struct {
 }
 
 // show all agents applications to a party
-func (s *Service) ListApplications(ctx context.Context, userID int64, partyID int16, electionGroupID int32, status string, stateID int16, lgaID, wardID int32, activeElectionOnly bool, limit int32, cursor int64) ([]PartyApplicationListItem, error) {
+func (s *Service) ListApplications(ctx context.Context, userID int64, partyID int16, electionGroupID int32, status string, stateID int16, lgaID, wardID, pollingUnitID int32, activeElectionOnly bool, limit int32, cursor int64) ([]PartyApplicationListItem, error) {
 	if userID == 0 {
 		if electionGroupID <= 0 {
 			return nil, errors.New("election_group_id is required")
@@ -478,6 +478,7 @@ func (s *Service) ListApplications(ctx context.Context, userID int64, partyID in
 		StateID:            stateID,
 		LgaID:              lgaID,
 		WardID:             wardID,
+		PollingUnitID:      pollingUnitID,
 		ActiveElectionOnly: activeElectionOnly,
 		Cursor:             cursor,
 		LimitVal:           limit,

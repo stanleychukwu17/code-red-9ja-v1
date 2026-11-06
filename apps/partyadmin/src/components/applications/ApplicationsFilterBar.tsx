@@ -7,10 +7,10 @@
 import { SelectState } from "@repo/ui/components/selects/state-select";
 import { SelectLga } from "@repo/ui/components/selects/lga-select";
 import { SelectWard } from "@repo/ui/components/selects/ward-select";
-import ExportIcon from "@repo/ui/icons/export-icon";
 import { getStates } from "#/lib/server/countries";
-import { getLGAs, getWards } from "#/lib/server/applications";
+import { getLGAs, getPollingUnits, getWards } from "#/lib/server/applications";
 import { useElectionGroup } from "#/hooks/useElectionGroup";
+import { useQuery } from "@tanstack/react-query";
 import { X } from "lucide-react";
 
 export interface ApplicationsFilterBarProps {
@@ -22,8 +22,9 @@ export interface ApplicationsFilterBarProps {
   onLgaChange: (id?: number) => void;
   wardId?: number;
   onWardChange: (id?: number) => void;
+  pollingUnitId?: number;
+  onPollingUnitChange: (id?: number) => void;
   onAcceptAll?: () => void;
-  onExport?: () => void;
   showAcceptAll?: boolean;
 }
 
@@ -36,19 +37,39 @@ export function ApplicationsFilterBar({
   onLgaChange,
   wardId,
   onWardChange,
+  pollingUnitId,
+  onPollingUnitChange,
   onAcceptAll,
-  onExport,
   showAcceptAll = true,
 }: ApplicationsFilterBarProps) {
   const { electionGroups, isLoading: isGroupsLoading } = useElectionGroup();
 
-  const hasActiveFilters = Boolean(electionGroupId || stateId || lgaId || wardId);
+  const { data: unitsRes, isLoading: isUnitsLoading } = useQuery({
+    queryKey: ["polling-units-filter", stateId, lgaId, wardId],
+    queryFn: async () => {
+      const res = await getPollingUnits({
+        data: {
+          stateID: stateId,
+          lgaID: lgaId,
+          wardID: wardId,
+        },
+      });
+      return (res?.data?.polling_units ?? res?.data ?? []) as Array<{ id: number; name: string }>;
+    },
+    enabled: Boolean(wardId),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const pollingUnits = Array.isArray(unitsRes) ? unitsRes : [];
+
+  const hasActiveFilters = Boolean(electionGroupId || stateId || lgaId || wardId || pollingUnitId);
 
   const handleClearFilters = () => {
     onElectionGroupChange(undefined);
     onStateChange(undefined);
     onLgaChange(undefined);
     onWardChange(undefined);
+    onPollingUnitChange(undefined);
   };
 
   return (
@@ -63,7 +84,7 @@ export function ApplicationsFilterBar({
               e.target.value ? Number(e.target.value) : undefined,
             )
           }
-          className="h-11 px-3.5 rounded-12 border border-[#dddddd] bg-white text-[14px] text-[#404040] min-w-44 outline-none cursor-pointer"
+          className="h-11 px-3.5 rounded-12 border border-[#dddddd] bg-white text-[14px] text-[#404040] min-w-44 max-w-48 sm:max-w-56 truncate outline-none cursor-pointer"
         >
           <option value="">
             {isGroupsLoading ? "Loading..." : "Select Election Group *"}
@@ -76,7 +97,7 @@ export function ApplicationsFilterBar({
         </select>
 
         {/* State Selector */}
-        <div className="w-38 sm:w-44">
+        <div className="w-28 sm:w-32">
           <SelectState
             selectedId={stateId}
             countryOriginalId={161}
@@ -85,13 +106,14 @@ export function ApplicationsFilterBar({
               onStateChange(state?.id ? Number(state.id) : undefined);
               onLgaChange(undefined);
               onWardChange(undefined);
+              onPollingUnitChange(undefined);
             }}
             className="h-11 px-3.5 rounded-12 border border-[#dddddd] bg-white text-[14px] text-[#404040]"
           />
         </div>
 
         {/* LGA Selector */}
-        <div className="w-38 sm:w-44">
+        <div className="w-28 sm:w-32">
           <SelectLga
             selectedId={lgaId}
             stateId={stateId}
@@ -101,13 +123,14 @@ export function ApplicationsFilterBar({
             update={(lga) => {
               onLgaChange(lga?.id ? Number(lga.id) : undefined);
               onWardChange(undefined);
+              onPollingUnitChange(undefined);
             }}
             className="h-11 px-3.5 rounded-12 border border-[#dddddd] bg-white text-[14px] text-[#404040] disabled:opacity-50"
           />
         </div>
 
         {/* Ward Selector */}
-        <div className="w-38 sm:w-44">
+        <div className="w-28 sm:w-32">
           <SelectWard
             selectedId={wardId}
             lgaId={lgaId}
@@ -117,9 +140,33 @@ export function ApplicationsFilterBar({
             showAll="All Wards"
             update={(ward) => {
               onWardChange(ward?.id ? Number(ward.id) : undefined);
+              onPollingUnitChange(undefined);
             }}
             className="h-11 px-3.5 rounded-12 border border-[#dddddd] bg-white text-[14px] text-[#404040] disabled:opacity-50"
           />
+        </div>
+
+        {/* Polling Unit Selector */}
+        <div className="w-28 sm:w-32">
+          <select
+            value={pollingUnitId ? String(pollingUnitId) : ""}
+            disabled={!wardId || isUnitsLoading}
+            onChange={(e) =>
+              onPollingUnitChange(
+                e.target.value ? Number(e.target.value) : undefined,
+              )
+            }
+            className="w-full h-11 px-3 rounded-12 border border-[#dddddd] bg-white text-[14px] text-[#404040] truncate outline-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <option value="">
+              {isUnitsLoading ? "Loading..." : "All Units"}
+            </option>
+            {pollingUnits.map((pu) => (
+              <option key={pu.id} value={String(pu.id)}>
+                {pu.name}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Clear Filters button */}
@@ -144,16 +191,6 @@ export function ApplicationsFilterBar({
             className="flex h-11 items-center gap-2 rounded-12 bg-[#262626] px-5 text-[15px] font-medium text-white transition hover:bg-[#111]"
           >
             Accept all
-          </button>
-        )}
-        {onExport && (
-          <button
-            type="button"
-            onClick={onExport}
-            className="flex h-11 items-center gap-2.5 rounded-12 border border-[#dddddd] bg-white px-4 text-[15px] text-[#404040] transition hover:bg-[#fafafa]"
-          >
-            Export
-            <ExportIcon />
           </button>
         )}
       </div>

@@ -312,6 +312,7 @@ export const QUERY_KEYS = {
       stateId?: number,
       lgaId?: number,
       wardId?: number,
+      pollingUnitId?: number,
     ) =>
       [
         "applications",
@@ -321,6 +322,7 @@ export const QUERY_KEYS = {
         stateId,
         lgaId,
         wardId,
+        pollingUnitId,
       ] as const,
   },
 
