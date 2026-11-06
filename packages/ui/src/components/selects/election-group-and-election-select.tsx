@@ -241,8 +241,7 @@ export const SelectElectionGroupAndElection = ({
       getExtra={getGroupExtra}
       handleSelect={handleGroupClick}
       selectedId={currentSelectedId}
-      status={getGroupStatus()}
-      loadMore={handleLoadMore}
+      status={groupStatus}
       onSearch={setDesktopSearch}
     />
   );
@@ -315,7 +314,7 @@ export const SelectElectionGroupAndElection = ({
       getExtra={getGroupExtra}
       handleSelect={handleGroupClick}
       selectedId={currentSelectedId}
-      status={getGroupStatus()}
+      status={groupStatus}
       searchValue={mobileSearch}
       onSearch={setMobileSearch}
     />
