@@ -41,19 +41,18 @@ function RouteComponent() {
   const { data: rejectedPages, isLoading: isRejectedLoading, isFetchingNextPage, hasNextPage, fetchNextPage } = useInfiniteQuery({
     queryKey: QUERY_KEYS.applications.list("rejected", partyId, electionGroupId, stateId, lgaId, wardId),
     initialPageParam: undefined as number | undefined,
-    queryFn: ({ pageParam }) =>
-      getApplications({
-        data: {
-          status: "rejected",
-          limit: PAGE_LIMIT,
-          cursor: pageParam,
-          partyId,
-          electionGroupId,
-          stateId,
-          lgaId,
-          wardId,
-        },
-      }),
+    queryFn: ({ pageParam }) => getApplications({
+      data: {
+        status: "rejected",
+        limit: PAGE_LIMIT,
+        cursor: pageParam,
+        partyId,
+        electionGroupId,
+        stateId,
+        lgaId,
+        wardId,
+      },
+    }),
     getNextPageParam: (lastPage) => {
       const meta = lastPage?.data?.meta;
       return meta?.has_more ? meta.next_cursor : undefined;

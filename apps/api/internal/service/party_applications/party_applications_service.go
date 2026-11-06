@@ -461,6 +461,15 @@ type PartyApplicationListItem struct {
 
 // show all agents applications to a party
 func (s *Service) ListApplications(ctx context.Context, userID int64, partyID int16, electionGroupID int32, status string, stateID int16, lgaID, wardID int32, activeElectionOnly bool, limit int32, cursor int64) ([]PartyApplicationListItem, error) {
+	if userID == 0 {
+		if electionGroupID <= 0 {
+			return nil, errors.New("election_group_id is required")
+		}
+		if stateID <= 0 {
+			return nil, errors.New("state_id is required")
+		}
+	}
+
 	rows, err := s.queries.ListApplications(ctx, queries.ListApplicationsParams{
 		UserID:             userID,
 		PartyID:            partyID,
@@ -752,16 +761,29 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 		wardID = app.WardID.Int32
 	}
 
-	// Validate and resolve polling unit assignment for polling agents
-	pollingUnitID := input.PollingUnitID
+	// Validate and resolve polling unit assignment strictly for polling agents
+	var pollingUnitID int32
 	if roleType == "polling_agent" {
-		if pollingUnitID <= 0 {
-			if app.PollingUnitID.Valid {
-				pollingUnitID = app.PollingUnitID.Int32
-			} else {
-				return queries.PartyAgentApplication{}, errors.New("polling unit ID is required for polling agents but not specified in application")
-			}
+		pollingUnitID = input.PollingUnitID
+		if pollingUnitID <= 0 && app.PollingUnitID.Valid {
+			pollingUnitID = app.PollingUnitID.Int32
 		}
+		if pollingUnitID <= 0 {
+			return queries.PartyAgentApplication{}, errors.New("polling unit ID is required for polling agents but not specified in application")
+		}
+
+		// Derive canonical stateID, lgaID, and wardID directly from the polling unit
+		pu, err := s.pollingUnitsService.GetPollingUnitByID(ctx, pollingUnitID)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return queries.PartyAgentApplication{}, ErrPollingUnitNotFound
+			}
+			return queries.PartyAgentApplication{}, fmt.Errorf("failed to fetch polling unit: %w", err)
+		}
+
+		stateID = int16(pu.StateID)
+		lgaID = pu.LgaID
+		wardID = pu.WardID
 	}
 
 	// Deduct payment based on role payment allocation

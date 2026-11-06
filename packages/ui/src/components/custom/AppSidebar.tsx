@@ -93,6 +93,8 @@ export type AppSidebarShellProps = {
   homePageUrl?: string;
   defaultOpen?: boolean;
   showSidebarFooter?: boolean;
+  showMobileHeader?: boolean;
+  children?: ReactNode;
 };
 
 // ============================================================================
@@ -109,13 +111,15 @@ export function AppSidebarShell({
   homePageUrl,
   defaultOpen = true,
   showSidebarFooter,
+  showMobileHeader = false,
+  children,
 }: AppSidebarShellProps) {
   const location = useLocation();
   const isAuthPage = location.pathname.startsWith("/auth");
 
   // Do not render the sidebar shell on authentication pages
   if (isAuthPage) {
-    return null;
+    return <>{children}</>;
   }
 
   const user = userDetails;
@@ -146,33 +150,37 @@ export function AppSidebarShell({
       </TooltipProvider>
 
       {/* Mobile top header bar (hidden on md+ screens) */}
-      <main className="bg-sidebar md:hidden h-12 flex flex-1 flex-col">
-        <div className="flex items-center justify-between px-4 w-dvw py-2">
-          {/* Mobile brand logo */}
-          <div>
-            <Link to={(homePageUrl ?? "/") as any}>
-              <LogoIcon className="size-8 shrink-0 text-[#234f3e] dark:text-logo" />
-            </Link>
-          </div>
+      {showMobileHeader && (
+        <main className="bg-sidebar md:hidden h-12 flex flex-1 flex-col">
+          <div className="flex items-center justify-between px-4 w-dvw py-2">
+            {/* Mobile brand logo */}
+            <div>
+              <Link to={(homePageUrl ?? "/") as any}>
+                <LogoIcon className="size-8 shrink-0 text-[#234f3e] dark:text-logo" />
+              </Link>
+            </div>
 
-          {/* Mobile sidebar trigger / avatar */}
-          <div className="relative overflow-hidden w-8 h-8">
-            {user ? (
-              <SidebarTrigger
-                className="w-8 h-8! py-0 rounded-full hover:bg-white opacity-100"
-                img={
-                  user?.avatar ??
-                  "https://github.com/shadcn.png"
-                }
-              />
-            ) : (
-              <SidebarTrigger className="w-8 h-8! py-0">
-                <Menu className="size-6" />
-              </SidebarTrigger>
-            )}
+            {/* Mobile sidebar trigger / avatar */}
+            <div className="relative overflow-hidden w-8 h-8">
+              {user ? (
+                <SidebarTrigger
+                  className="w-8 h-8! py-0 rounded-full hover:bg-white opacity-100"
+                  img={
+                    user?.avatar ??
+                    "https://github.com/shadcn.png"
+                  }
+                />
+              ) : (
+                <SidebarTrigger className="w-8 h-8! py-0">
+                  <Menu className="size-6" />
+                </SidebarTrigger>
+              )}
+            </div>
           </div>
-        </div>
-      </main>
+        </main>
+      )}
+
+      {children}
     </SidebarProvider>
   );
 }

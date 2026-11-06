@@ -131,12 +131,13 @@ export const getLGAs = createServerFn()
   });
 
 export const getWards = createServerFn()
-  .inputValidator((data: { stateId?: number; lgaId?: number; limit?: number; cursor?: string | number } | undefined) => data)
+  .inputValidator((data: { stateId?: number; lgaId?: number; lga_id?: number; limit?: number; cursor?: string | number } | undefined) => data)
   .handler(async ({ data }) => {
     try {
       const params = new URLSearchParams();
+      const targetLgaId = data?.lgaId ?? data?.lga_id;
       if (data?.stateId) params.append("state_id", String(data.stateId));
-      if (data?.lgaId) params.append("lga_id", String(data.lgaId));
+      if (targetLgaId) params.append("lga_id", String(targetLgaId));
       if (data?.limit) params.append("limit", String(data.limit));
       if (data?.cursor) params.append("cursor", String(data.cursor));
       const qs = params.toString();

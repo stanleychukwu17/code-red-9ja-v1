@@ -1,5 +1,5 @@
-import NotificationSolidIcon from "@repo/ui/icons/navbar/notification-solid-icon";
 import { AppAvatar } from "@repo/ui/components/avatar";
+import { useSidebar } from "@repo/ui/components/sidebar";
 
 import { useUser } from "#/hooks/useUser";
 import { useElection } from "#/hooks/useElection";
@@ -43,6 +43,7 @@ export function HomeHeader({
   onPracticeClick,
 }: HomeHeaderProps) {
   const user = useUser();
+  const { setOpenMobile, isMobile } = useSidebar();
   const {
     selectedElectionGroup,
     setSelectedElectionGroup,
@@ -70,14 +71,32 @@ export function HomeHeader({
       )}
     >
       {/* Left section: Avatar & Election Group/Ballot Dropdown Selector */}
-      <div className="flex items-center gap-2 flex-1">
-        <AppAvatar
-          src={avatarImage ?? user?.avatar}
-          alt={user?.first_name || "User"}
-          className="size-7 shrink-0"
-        />
+      <div className="flex items-center gap-2 flex-1 min-w-0">
         <div
-          className="flex-1 min-w-0 sm:max-w-45"
+          className={cn(
+            "shrink-0",
+            isMobile && "cursor-pointer hover:opacity-80 active:scale-95 transition",
+          )}
+          onClick={(e) => {
+            if (onPracticeClick) {
+              e.preventDefault();
+              e.stopPropagation();
+              onPracticeClick();
+              return;
+            }
+            if (isMobile) {
+              setOpenMobile(true);
+            }
+          }}
+        >
+          <AppAvatar
+            src={avatarImage ?? user?.avatar}
+            alt={user?.first_name || "User"}
+            className="size-7"
+          />
+        </div>
+        <div
+          className="flex-1 min-w-0 sm:max-w-xs md:max-w-sm"
           onClickCapture={(e) => {
             if (onPracticeClick) {
               e.preventDefault();
@@ -113,20 +132,6 @@ export function HomeHeader({
               {daysLeft} {daysLeft === 1 ? "day" : "days"} left
             </span>
           ))}
-
-        {/* Notifications Icon Button with Unread Badge */}
-        <div
-          className="relative cursor-pointer p-1"
-          onClick={(e) => interceptClick(e)}
-        >
-          <NotificationSolidIcon
-            className={`size-7 transition ${textClassName || "text-neutral-950 hover:text-neutral-800"}`}
-          />
-          {/* Unread notifications count badge */}
-          <div className="absolute -top-1 -right-1 bg-red text-white text-sm font-medium rounded-lg px-1 min-w-6 h-5 flex items-center justify-center border-background">
-            3
-          </div>
-        </div>
       </div>
     </header>
   );

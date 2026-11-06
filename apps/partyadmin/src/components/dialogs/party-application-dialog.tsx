@@ -29,6 +29,7 @@ export type ApplicationData = {
   status?: string;
   role?: string;
   name: string;
+  username?: string;
   avatar: string;
   location: string;
   election: string;
@@ -518,7 +519,12 @@ export function PartyApplicationDialog({ open, onClose, application }: PartyAppl
                     <h3 className="text-xl font-semibold text-c-80 leading-tight">
                       {application.name}
                     </h3>
-                    <div className="flex items-center gap-2 mt-1">
+                    {application.username && (
+                      <p className="text-xs font-medium text-c-50 leading-tight mt-0.5 py-1">
+                        @{application.username}
+                      </p>
+                    )}
+                    <div className="flex items-center gap-2 mt-1 py-1">
                       <span
                         className={cn(
                           "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border",

@@ -110,7 +110,7 @@ function AuthenticatedRoutes() {
         initial={{ opacity: 0 }}
         animate={{ opacity: mounted ? 1 : 0 }}
         transition={{ delay: 0.3, duration: 0.5 }}
-        className="flex"
+        className="w-full"
       >
         <AppSidebarShell
           defaultOpen={isExpanded}
@@ -119,10 +119,11 @@ function AuthenticatedRoutes() {
           onLogout={handleLogout}
           onSidebarStateChange={handleSidebarStateChange}
           homePageUrl={APP_URL.home}
-        />
-        <div className="w-full min-h-svh">
-          <Outlet />
-        </div>
+        >
+          <div className="w-full min-h-svh">
+            <Outlet />
+          </div>
+        </AppSidebarShell>
       </motion.div>
     </>
   );

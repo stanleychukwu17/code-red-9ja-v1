@@ -35,12 +35,14 @@ export const SelectElectionGroupAndElection = ({
   selectedId,
   disabled,
   className,
+  popoverContentClassName,
   align = "start",
   fetchElectionGroups,
   fetchElectionsByGroup,
   onElectionSelect,
 }: SelectProps<ElectionGroup, number> & {
   partyId?: number;
+  popoverContentClassName?: string;
   fetchElectionGroups: (args: {
     data: { active?: boolean; partyId?: number; limit?: number; cursor?: string };
   }) => Promise<any>;
@@ -329,6 +331,10 @@ export const SelectElectionGroupAndElection = ({
       placeholder="Select Election Group"
       align={align}
       className={className}
+      contentClassName={cn(
+        "w-[340px] sm:w-[440px] max-w-[90vw]",
+        popoverContentClassName,
+      )}
       trigger={
         <Button
           variant="select"

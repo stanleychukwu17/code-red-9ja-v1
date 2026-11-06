@@ -140,7 +140,7 @@ export function MainSubTabContent({
           limit: 5,
         },
       }),
-    enabled: !!electionGroupId,
+    enabled: !!electionGroupId && !!stateId,
   });
 
   const applications: any[] = appsData?.data?.applications || [];

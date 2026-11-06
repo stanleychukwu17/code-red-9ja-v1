@@ -491,6 +491,18 @@ func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 		filterUserID = claims.UserID
 	}
 
+	// Enforce election group and state minimum for party applications reviews
+	if filterUserID == 0 {
+		if electionGroupID <= 0 {
+			h.utils.RespondError(w, http.StatusBadRequest, "election_group_id is required")
+			return
+		}
+		if stateID <= 0 {
+			h.utils.RespondError(w, http.StatusBadRequest, "state_id is required")
+			return
+		}
+	}
+
 	// Fetch filtered applications list
 	apps, err := h.service.ListApplications(r.Context(), filterUserID, partyID, electionGroupID, status, stateID, lgaID, wardID, activeElectionOnly, limit, cursor)
 	if err != nil {

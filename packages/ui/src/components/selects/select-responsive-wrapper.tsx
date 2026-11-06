@@ -2,6 +2,7 @@ import * as React from "react";
 import { useMediaQuery } from "usehooks-ts";
 import { Popover as RadixPopover } from "radix-ui";
 import { Drawer, DrawerContent, DrawerTitle, DrawerTrigger } from "../drawer";
+import { cn } from "../../lib/utils";
 
 interface SelectResponsiveWrapperProps {
   open: boolean;
@@ -16,6 +17,7 @@ interface SelectResponsiveWrapperProps {
   mobileContent?: React.ReactNode;
   placeholder?: string;
   className?: string;
+  contentClassName?: string;
   align?: "start" | "center" | "end";
 }
 
@@ -28,6 +30,7 @@ export function SelectResponsiveWrapper({
   mobileContent,
   placeholder = "Select option",
   className,
+  contentClassName,
   align = "start",
 }: SelectResponsiveWrapperProps) {
   const [mounted, setMounted] = React.useState(false);
@@ -51,7 +54,7 @@ export function SelectResponsiveWrapper({
             className="z-50 p-0 border-0 bg-transparent shadow-none outline-none"
             onOpenAutoFocus={(e) => e.preventDefault()}
           >
-            <div className="overflow-hidden rounded-xl bg-popover border border-border shadow-[0_18px_40px_rgba(16,24,40,0.08)] min-w-[var(--radix-popover-trigger-width)]">
+            <div className={cn("overflow-hidden rounded-xl bg-popover border border-border shadow-[0_18px_40px_rgba(16,24,40,0.08)] min-w-[var(--radix-popover-trigger-width)]", contentClassName)}>
               {desktopContent ?? children}
             </div>
           </RadixPopover.Content>

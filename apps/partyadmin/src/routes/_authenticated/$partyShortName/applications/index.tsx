@@ -15,7 +15,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { getApplications } from "#/lib/server/applications";
 import { useUserParty } from "#/hooks/useUserParty";
 import { QUERY_KEYS } from "#/lib/config";
-import { Loader2 } from "lucide-react";
+import { Filter, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/$partyShortName/applications/")({
   head: () => getPageHeader({ title: "Applications" }),
@@ -43,19 +43,19 @@ function RouteComponent() {
   const { data: pendingPages, isLoading: isPendingLoading, isFetchingNextPage, hasNextPage, fetchNextPage } = useInfiniteQuery({
     queryKey: QUERY_KEYS.applications.list("pending", partyId, electionGroupId, stateId, lgaId, wardId),
     initialPageParam: undefined as number | undefined,
-    queryFn: ({ pageParam }) =>
-      getApplications({
-        data: {
-          status: "pending",
-          limit: PAGE_LIMIT,
-          cursor: pageParam,
-          partyId,
-          electionGroupId,
-          stateId,
-          lgaId,
-          wardId,
-        },
-      }),
+    enabled: Boolean(partyId && electionGroupId && stateId),
+    queryFn: ({ pageParam }) => getApplications({
+      data: {
+        status: "pending",
+        limit: PAGE_LIMIT,
+        cursor: pageParam,
+        partyId,
+        electionGroupId,
+        stateId,
+        lgaId,
+        wardId,
+      },
+    }),
     getNextPageParam: (lastPage) => {
       const meta = lastPage?.data?.meta;
       return meta?.has_more ? meta.next_cursor : undefined;
@@ -91,7 +91,19 @@ function RouteComponent() {
         showAcceptAll={true}
       />
 
-      {isPendingLoading ? (
+      {!electionGroupId || !stateId ? (
+        <div className="py-20 flex flex-col items-center justify-center text-center px-4">
+          <div className="size-12 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 flex items-center justify-center mb-3">
+            <Filter className="size-6" />
+          </div>
+          <h3 className="text-base font-semibold text-c-80">
+            Select an Election Group and State
+          </h3>
+          <p className="text-sm text-c-50 max-w-sm mt-1">
+            Please choose an election group and state above to view applications.
+          </p>
+        </div>
+      ) : isPendingLoading ? (
         <div className="py-20 flex flex-col items-center justify-center text-c-50 gap-2">
           <Loader2 className="size-8 animate-spin text-blue-600" />
           <p className="text-sm">Loading applications...</p>

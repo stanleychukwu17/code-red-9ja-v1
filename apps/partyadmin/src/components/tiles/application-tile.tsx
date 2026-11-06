@@ -203,6 +203,7 @@ export function extractApplicationTileData(data: ApplicationType) {
     status: data.status,
     role: roleType,
     name,
+    username: data.username,
     avatar,
     location: residence,
     election,
