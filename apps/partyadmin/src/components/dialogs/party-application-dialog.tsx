@@ -19,9 +19,8 @@ import { SelectElectionRole } from "@repo/ui/components/selects/election-role-se
 import { SelectState } from "@repo/ui/components/selects/state-select";
 import { SelectWard } from "@repo/ui/components/selects/ward-select";
 import { cn } from "@repo/ui/lib/utils";
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Loader2, Shield, ShieldCheck, ArrowRightLeft } from "lucide-react";
-import { useIntersectionObserver } from "usehooks-ts";
 
 // Applicant details and current assignment payload
 export type ApplicationData = {
@@ -163,7 +162,7 @@ export function PartyApplicationDialog({ open, onClose, application }: PartyAppl
     !!application.electionGroupId;
 
   // Query recommended polling units based on party, election, and location
-  const { data: recommendationsData, isLoading: isRecommendationsLoading } = useQuery({
+  const { data: recommendedPollingUnits, isLoading: isRecommendationsLoading } = useQuery({
     queryKey: ["puRecommendations", application.partyId, application.electionGroupId, application.lgaId, application.wardId, application.pollingUnitId],
     queryFn: async () => {
       const res = await getPollingUnitRecommendations({
@@ -193,15 +192,16 @@ export function PartyApplicationDialog({ open, onClose, application }: PartyAppl
 
   // Format recommendation query results into options for selection
   const pollingUnits: PollingUnitOption[] = useMemo(() => {
-    if (!recommendationsData) return [];
-    return recommendationsData.map((pu) => ({
+    if (!recommendedPollingUnits) return [];
+
+    return recommendedPollingUnits.map((pu) => ({
       id: String(pu.id),
       name: pu.name,
       subLocation: pu.lga_name || pu.state_name || "",
       agentsCount: pu.agents_count,
       ward: pu.ward_name || "UNKNOWN WARD",
     }));
-  }, [recommendationsData]);
+  }, [recommendedPollingUnits]);
 
   // Check if application was already approved (switches modal to reassignment mode)
   const isAccepted = application.status === "accepted";
@@ -210,39 +210,37 @@ export function PartyApplicationDialog({ open, onClose, application }: PartyAppl
   useEffect(() => {
     if (pollingUnits.length > 0) {
       let opts = [...pollingUnits];
+
       const applicantUnit = application.pollingUnitId
         ? opts.find((u) => u.id === String(application.pollingUnitId))
         : undefined;
-      if (
-        !applicantUnit &&
-        application.pollingUnitId &&
-        application.pollingUnitName
-      ) {
+
+      if (!applicantUnit && application.pollingUnitId) {
         opts = [
           {
             id: String(application.pollingUnitId),
-            name: application.pollingUnitName,
-            subLocation:
-              `${application.wardName || ""} ${application.lgaName || ""}`.trim(),
+            name: application.pollingUnitName || "",
+            subLocation: `${application.wardName || ""} ${application.lgaName || ""}`.trim(),
             agentsCount: 1,
             ward: application.wardName || "",
           },
           ...opts,
         ];
       }
+
       setCurrentOptions(opts);
       setSelectedUnitId(String(application.pollingUnitId || opts[0]?.id || ""));
-    } else if (application.pollingUnitId && application.pollingUnitName) {
+    } else if (application.pollingUnitId) {
       setCurrentOptions([
         {
           id: String(application.pollingUnitId),
-          name: application.pollingUnitName,
-          subLocation:
-            `${application.wardName || ""} ${application.lgaName || ""}`.trim(),
+          name: application.pollingUnitName || "",
+          subLocation: `${application.wardName || ""} ${application.lgaName || ""}`.trim(),
           agentsCount: 1,
           ward: application.wardName || "",
         },
       ]);
+
       setSelectedUnitId(String(application.pollingUnitId));
     }
   }, [pollingUnits, application.pollingUnitId, application.pollingUnitName]);
@@ -327,17 +325,11 @@ export function PartyApplicationDialog({ open, onClose, application }: PartyAppl
       alert("Please select a state.");
       return;
     }
-    if (
-      role === "lga_election_supervisor" &&
-      (!selectedState || !selectedLga)
-    ) {
+    if (role === "lga_election_supervisor" && (!selectedState || !selectedLga)) {
       alert("Please select a state and LGA.");
       return;
     }
-    if (
-      role === "ward_election_supervisor" &&
-      (!selectedState || !selectedLga || !selectedWard)
-    ) {
+    if (role === "ward_election_supervisor" && (!selectedState || !selectedLga || !selectedWard)) {
       alert("Please select a state, LGA, and Ward.");
       return;
     }
@@ -383,6 +375,7 @@ export function PartyApplicationDialog({ open, onClose, application }: PartyAppl
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["applications"] });
+      queryClient.invalidateQueries({ queryKey: ["puRecommendations"] });
       onClose();
     },
     onError: (err: any) => {
@@ -418,11 +411,7 @@ export function PartyApplicationDialog({ open, onClose, application }: PartyAppl
 
   // Validate requirements and approve the pending application
   const handleAccept = async () => {
-    if (
-      role === "polling_agent" &&
-      !selectedUnitId &&
-      pollingUnits.length > 0
-    ) {
+    if (role === "polling_agent" && !selectedUnitId && pollingUnits.length > 0) {
       alert("Please select a polling unit to assign.");
       return;
     }
@@ -430,25 +419,18 @@ export function PartyApplicationDialog({ open, onClose, application }: PartyAppl
       alert("Please select a state.");
       return;
     }
-    if (
-      role === "lga_election_supervisor" &&
-      (!selectedState || !selectedLga)
-    ) {
+    if (role === "lga_election_supervisor" && (!selectedState || !selectedLga)) {
       alert("Please select a state and LGA.");
       return;
     }
-    if (
-      role === "ward_election_supervisor" &&
-      (!selectedState || !selectedLga || !selectedWard)
-    ) {
+    if (role === "ward_election_supervisor" && (!selectedState || !selectedLga || !selectedWard)) {
       alert("Please select a state, LGA, and Ward.");
       return;
     }
 
     approveMutation.mutate({
       role,
-      pollingUnitId:
-        role === "polling_agent" ? Number(selectedUnitId) : undefined,
+      pollingUnitId: role === "polling_agent" ? Number(selectedUnitId) : undefined,
       stateId: selectedState ? Number(selectedState) : undefined,
       lgaId: selectedLga ? Number(selectedLga) : undefined,
       wardId: selectedWard ? Number(selectedWard) : undefined,
@@ -466,10 +448,7 @@ export function PartyApplicationDialog({ open, onClose, application }: PartyAppl
     rejectMutation.mutate(reason);
   };
 
-  const isSubmitting =
-    approveMutation.isPending ||
-    rejectMutation.isPending ||
-    changeRoleMutation.isPending;
+  const isSubmitting = approveMutation.isPending || rejectMutation.isPending || changeRoleMutation.isPending;
 
   return (
     <>
@@ -641,7 +620,7 @@ export function PartyApplicationDialog({ open, onClose, application }: PartyAppl
 
             {/* Supervisor Scope Banner if role is supervisor */}
             {role !== "polling_agent" && (
-              <div className="rounded-xl p-4 bg-gradient-to-r from-purple-500/10 via-purple-500/5 to-transparent border border-purple-500/20 space-y-2">
+              <div className="rounded-xl p-4 bg-linear-to-r from-purple-500/10 via-purple-500/5 to-transparent border border-purple-500/20 space-y-2">
                 <div className="flex items-center gap-2">
                   <ShieldCheck className="size-4 text-purple-600" />
                   <h4 className="text-sm font-semibold text-c-90">
@@ -727,6 +706,7 @@ export function PartyApplicationDialog({ open, onClose, application }: PartyAppl
                       }
                       countryOriginalId={161}
                       fetchStates={fetchStatesAdapter}
+                      disabled
                       update={(state) => {
                         setSelectedState(state.id);
                         setSelectedLga("");
@@ -862,7 +842,7 @@ export function PartyApplicationDialog({ open, onClose, application }: PartyAppl
                             )}
                           >
                             {isSelected && (
-                              <Check className="size-3.5 stroke-[3]" />
+                              <Check className="size-3.5 stroke-3" />
                             )}
                           </div>
                         </div>
@@ -988,70 +968,47 @@ type ChoosePollingUnitDialogProps = {
  * list of polling units to assign to an agent.
  */
 export function ChoosePollingUnitDialog({ open, onClose, stateId, lgaId, wardId, onSelect }: ChoosePollingUnitDialogProps) {
-  const [selectedState, setSelectedState] = useState<number | "">(
-    stateId || "",
-  );
-  const [selectedLga, setSelectedLga] = useState<number | "">(
-    lgaId || "",
-  );
-  const [selectedWard, setSelectedWard] = useState<number | "">(
-    wardId || "",
-  );
+  const [selectedState, setSelectedState] = useState<number | "">(stateId || "");
+  const [selectedLga, setSelectedLga] = useState<number | "">(lgaId || "");
+  const [selectedWard, setSelectedWard] = useState<number | "">(wardId || "");
   const [selectedUnitId, setSelectedUnitId] = useState<string>("");
-  const [selectedUnitObj, setSelectedUnitObj] = useState<{
-    id: string;
-    name: string;
-    subLocation: string;
-    ward: string;
-  } | null>(null);
+  const [selectedUnitObj, setSelectedUnitObj] = useState<{ id: string; name: string; subLocation: string; ward: string } | null>(null);
 
-  const {
-    data,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoading: isUnitsLoading,
-  } = useInfiniteQuery({
+  // Enable query only when dialog is open and at least an LGA or Ward filter is set
+  const canFetchUnits = open && (!!selectedLga || !!selectedWard);
+
+  // Query polling units matching the selected cascading filters
+  const { data: unitsRes, isLoading: isUnitsLoading } = useQuery({
     queryKey: ["pu-list-choose", selectedState, selectedLga, selectedWard],
-    queryFn: async ({ pageParam }) => {
+    queryFn: async () => {
       const res = await getPollingUnits({
         data: {
           stateID: selectedState ? Number(selectedState) : undefined,
           lgaID: selectedLga ? Number(selectedLga) : undefined,
           wardID: selectedWard ? Number(selectedWard) : undefined,
-          limit: 20,
-          cursor: pageParam || undefined,
         },
       });
+
       if (res && res.success && res.data) {
         return res;
       }
+
       throw new Error(res?.message || "Failed to load polling units");
     },
-    initialPageParam: "",
-    getNextPageParam: (lastPage) => {
-      if (lastPage && lastPage.meta && lastPage.meta.has_more) {
-        return lastPage.meta.next_cursor || "";
-      }
-      return undefined;
-    },
-    enabled: open && (!!selectedState || !!selectedLga || !!selectedWard),
+    enabled: canFetchUnits,
+    staleTime: Infinity,
   });
 
-  const { ref: sentinelRef, isIntersecting } = useIntersectionObserver({
-    threshold: 0.1,
-  });
+  // Extract normalized polling units array from query response
+  const puData = (unitsRes?.data?.polling_units || []) as Array<{
+    id: number;
+    name: string;
+    lga_name?: string;
+    state_name?: string;
+    ward_name?: string;
+  }>;
 
-  useEffect(() => {
-    if (isIntersecting && hasNextPage && !isFetchingNextPage) {
-      fetchNextPage();
-    }
-  }, [isIntersecting, hasNextPage, isFetchingNextPage, fetchNextPage]);
-
-  const puData = data
-    ? data.pages.flatMap((page: any) => page.data?.polling_units || [])
-    : [];
-
+  // Set active selection and build unit payload
   const handleSelectUnit = (pu: any) => {
     setSelectedUnitId(String(pu.id));
     setSelectedUnitObj({
@@ -1062,6 +1019,7 @@ export function ChoosePollingUnitDialog({ open, onClose, stateId, lgaId, wardId,
     });
   };
 
+  // Confirm selected polling unit and return it to parent dialog
   const handleAssign = () => {
     if (selectedUnitObj) {
       onSelect(selectedUnitObj);
@@ -1085,6 +1043,7 @@ export function ChoosePollingUnitDialog({ open, onClose, stateId, lgaId, wardId,
                 selectedId={selectedState ? String(selectedState) : undefined}
                 countryOriginalId={161}
                 fetchStates={fetchStatesAdapter}
+                disabled
                 update={(state) => {
                   setSelectedState(state.id);
                   setSelectedLga("");
@@ -1137,9 +1096,9 @@ export function ChoosePollingUnitDialog({ open, onClose, stateId, lgaId, wardId,
                 <Loader2 className="size-6 animate-spin text-blue-600" />
                 <p className="text-sm">Loading polling units...</p>
               </div>
-            ) : !selectedState && !selectedLga && !selectedWard ? (
+            ) : !selectedLga && !selectedWard ? (
               <p className="text-center text-c-50 py-8 text-sm">
-                Please select a state, LGA, or ward to search for polling units.
+                Please select an LGA or Ward to view polling units.
               </p>
             ) : !puData || puData.length === 0 ? (
               <p className="text-center text-c-50 py-8 text-sm">
@@ -1177,28 +1136,13 @@ export function ChoosePollingUnitDialog({ open, onClose, stateId, lgaId, wardId,
                           )}
                         >
                           {isSelected && (
-                            <Check className="size-3.5 stroke-[3]" />
+                            <Check className="size-3.5 stroke-3" />
                           )}
                         </div>
                       </div>
                     </div>
                   );
                 })}
-
-                {/* Sentinel element for infinite scroll */}
-                {hasNextPage && (
-                  <div
-                    ref={sentinelRef}
-                    className="py-6 flex items-center justify-center text-c-50 text-[14px]"
-                  >
-                    {isFetchingNextPage ? (
-                      <Loader2 className="size-5 animate-spin mr-2" />
-                    ) : null}
-                    {isFetchingNextPage
-                      ? "Loading more..."
-                      : "Scroll down to load more"}
-                  </div>
-                )}
               </div>
             )}
           </div>

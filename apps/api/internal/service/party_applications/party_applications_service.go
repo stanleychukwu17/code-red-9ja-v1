@@ -29,21 +29,27 @@ type PollingUnitsService interface {
 	GetPollingUnitByID(ctx context.Context, id int32) (queries.PollingUnit, error)
 }
 
+type PartiesService interface {
+	GetPartyByID(ctx context.Context, partyID int16) (queries.Party, error)
+}
+
 type Service struct {
 	queries             *queries.Queries
 	pool                *pgxpool.Pool
 	rdb                 *redis.Client
 	usersService        UsersService
 	pollingUnitsService PollingUnitsService
+	partiesService      PartiesService
 }
 
-func NewService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client, usersService UsersService, pollingUnitsService PollingUnitsService) *Service {
+func NewService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client, usersService UsersService, pollingUnitsService PollingUnitsService, partiesService PartiesService) *Service {
 	return &Service{
 		queries:             q,
 		pool:                pool,
 		rdb:                 rdb,
 		usersService:        usersService,
 		pollingUnitsService: pollingUnitsService,
+		partiesService:      partiesService,
 	}
 }
 
@@ -451,7 +457,7 @@ type PartyApplicationListItem struct {
 	AgentsCount       int32   `json:"agents_count"`
 }
 
-// DONE: reviewed the function and the query
+// show all agents applications to a party
 func (s *Service) ListApplications(ctx context.Context, userID int64, partyID int16, electionGroupID int32, status string, stateID int16, lgaID, wardID int32, activeElectionOnly bool, limit int32, cursor int64) ([]PartyApplicationListItem, error) {
 	rows, err := s.queries.ListApplications(ctx, queries.ListApplicationsParams{
 		UserID:             userID,
@@ -587,9 +593,11 @@ func (s *Service) GetPollingUnitRecommendations(ctx context.Context, partyID int
 		if added >= 2 {
 			break
 		}
+
 		if r.ID == pollingUnitID {
 			continue // already included
 		}
+
 		finalRows = append(finalRows, r)
 		added++
 	}
@@ -659,49 +667,6 @@ type ApproveApplicationInput struct {
 	AssignedBy    int64
 }
 
-// puGeo holds full geography for a polling unit
-type puGeo struct {
-	wardID              int32
-	lgaID               int32
-	stateID             int16
-	stateConstituencyID int32 // nullable – 0 if not set
-	fedConstID          int32 // nullable – 0 if not set
-	senateDistrictID    int32 // nullable – 0 if not set
-}
-
-// fetchPUGeo fetches full geography for a polling unit by querying
-// polling_units JOIN wards JOIN lgas.
-func fetchPUGeo(ctx context.Context, pool interface {
-	QueryRow(ctx context.Context, sql string, args ...any) interface{ Scan(dest ...any) error }
-}, puID int32) (puGeo, error) {
-	var g puGeo
-	var scID, fcID, sdID interface{}
-	err := pool.QueryRow(ctx, `
-		SELECT pu.ward_id, pu.lga_id, pu.state_id,
-		       w.state_constituency_id,
-		       l.federal_constituency_id,
-		       l.senatorial_district_id
-		FROM polling_units pu
-		JOIN wards w ON w.id = pu.ward_id
-		JOIN lgas  l ON l.id = pu.lga_id
-		WHERE pu.id = $1 LIMIT 1`, puID).Scan(
-		&g.wardID, &g.lgaID, &g.stateID, &scID, &fcID, &sdID,
-	)
-	if err != nil {
-		return g, err
-	}
-	if v, ok := scID.(int32); ok {
-		g.stateConstituencyID = v
-	}
-	if v, ok := fcID.(int32); ok {
-		g.fedConstID = v
-	}
-	if v, ok := sdID.(int32); ok {
-		g.senateDistrictID = v
-	}
-	return g, nil
-}
-
 func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicationInput) (queries.PartyAgentApplication, error) {
 	// Begin transaction
 	tx, err := s.pool.Begin(ctx)
@@ -765,11 +730,13 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 	if roleType == "" {
 		roleType = "polling_agent" // Note: Frontend passes 'polling_agent' or supervisor string
 	}
+	// Resolve who assigned this agent (if specified)
 	var assignedByVal pgtype.Int8
 	if input.AssignedBy > 0 {
 		assignedByVal = utils.PgInt8FromPositive(input.AssignedBy)
 	}
 
+	// Validate and resolve polling unit assignment for polling agents
 	pollingUnitID := input.PollingUnitID
 	if roleType == "polling_agent" {
 		if pollingUnitID <= 0 {
@@ -782,13 +749,15 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 	}
 
 	// Deduct payment based on role payment allocation
-	party, err := txQueries.GetPartyByID(ctx, int16(app.PartyID))
+	party, err := s.partiesService.GetPartyByID(ctx, int16(app.PartyID))
 	if err != nil {
 		return queries.PartyAgentApplication{}, fmt.Errorf("failed to fetch party: %w", err)
 	}
 
+	// Calculate the required payment allocation for this role and jurisdiction
 	deductionKobo := resolvePotentialPaymentKobo(party.AgentPaymentAllocationKobo, roleType, input.StateID)
 
+	// Deduct allocated agent remuneration from party balance
 	if deductionKobo > 0 {
 		_, err = txQueries.DeductPartyAgentPaymentBalance(ctx, queries.DeductPartyAgentPaymentBalanceParams{
 			AgentPaymentBalanceKobo: deductionKobo,
@@ -800,12 +769,6 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 			}
 			return queries.PartyAgentApplication{}, fmt.Errorf("failed to deduct payment balance: %w", err)
 		}
-	}
-
-	// Update user role to the dynamic role type
-	_, err = txQueries.UpdateUserRoleForPartyApp(ctx, app.UserID)
-	if err != nil {
-		return queries.PartyAgentApplication{}, fmt.Errorf("failed to promote user role: %w", err)
 	}
 
 	// Update application status and final role/location
@@ -821,51 +784,65 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 		return queries.PartyAgentApplication{}, fmt.Errorf("failed to update application approval status: %w", err)
 	}
 
-	egID := app.ElectionGroupID
+	// Extract election group and party identifiers for assignment records
+	electionGroupID := app.ElectionGroupID
 	partyID := app.PartyID
 
+	// Create role-specific assignment record (Supervisor or Polling Agent)
 	switch roleType {
 	case "state_election_supervisor":
+		// State supervisor assignment
 		_, err = txQueries.CreateStateSupervisor(ctx, queries.CreateStateSupervisorParams{
 			UserID:               app.UserID,
 			StateID:              input.StateID,
-			ElectionGroupID:      egID,
+			ElectionGroupID:      electionGroupID,
 			PartyID:              partyID,
-			RoleType:             pgtype.Text{String: "state_election_supervisor", Valid: true},
+			RoleType:             utils.PgTextFromString(roleType),
 			AssignedBy:           assignedByVal,
 			PotentialPaymentKobo: deductionKobo,
 		})
+		if err != nil {
+			return queries.PartyAgentApplication{}, fmt.Errorf("failed to assign state supervisor: %w", err)
+		}
 	case "lga_election_supervisor":
+		// LGA supervisor assignment
 		_, err = txQueries.CreateLgaSupervisor(ctx, queries.CreateLgaSupervisorParams{
 			UserID:               app.UserID,
 			StateID:              input.StateID,
 			LgaID:                input.LgaID,
-			ElectionGroupID:      egID,
+			ElectionGroupID:      electionGroupID,
 			PartyID:              partyID,
-			RoleType:             pgtype.Text{String: "lga_election_supervisor", Valid: true},
+			RoleType:             utils.PgTextFromString(roleType),
 			AssignedBy:           assignedByVal,
 			PotentialPaymentKobo: deductionKobo,
 		})
+		if err != nil {
+			return queries.PartyAgentApplication{}, fmt.Errorf("failed to assign LGA supervisor: %w", err)
+		}
 	case "ward_election_supervisor":
+		// Ward supervisor assignment
 		_, err = txQueries.CreateWardSupervisor(ctx, queries.CreateWardSupervisorParams{
 			UserID:               app.UserID,
 			StateID:              input.StateID,
 			LgaID:                input.LgaID,
 			WardID:               input.WardID,
-			ElectionGroupID:      egID,
+			ElectionGroupID:      electionGroupID,
 			PartyID:              partyID,
-			RoleType:             pgtype.Text{String: "ward_election_supervisor", Valid: true},
+			RoleType:             utils.PgTextFromString(roleType),
 			AssignedBy:           assignedByVal,
 			PotentialPaymentKobo: deductionKobo,
 		})
-	default:
-		// Default: polling agent
+		if err != nil {
+			return queries.PartyAgentApplication{}, fmt.Errorf("failed to assign ward supervisor: %w", err)
+		}
+	case "polling_agent":
+		// Polling unit agent assignment and initial PU party stats entry
 		_, err = txQueries.CreateAssignment(ctx, queries.CreateAssignmentParams{
 			UserID:               app.UserID,
 			PollingUnitID:        pollingUnitID,
-			ElectionGroupID:      egID,
+			ElectionGroupID:      electionGroupID,
 			PartyID:              partyID,
-			RoleType:             pgtype.Text{String: "polling_agent", Valid: true},
+			RoleType:             utils.PgTextFromString(roleType),
 			AssignedBy:           assignedByVal,
 			PotentialPaymentKobo: deductionKobo,
 		})
@@ -875,7 +852,8 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 
 		// --- Incremental stats update for polling agent ---
 		// 1. Fetch full geography for the polling unit
-		var geo puGeo
+		var puWardID, puLgaID int32
+		var puStateID int16
 		var wardStateConstID, puFedConstID, puSenateID int32
 		geoErr := s.pool.QueryRow(ctx, `
 			SELECT pu.ward_id, pu.lga_id, pu.state_id,
@@ -886,25 +864,27 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 			JOIN wards w ON w.id = pu.ward_id
 			JOIN lgas  l ON l.id = pu.lga_id
 			WHERE pu.id = $1 LIMIT 1`, pollingUnitID,
-		).Scan(&geo.wardID, &geo.lgaID, &geo.stateID, &wardStateConstID, &puFedConstID, &puSenateID)
+		).Scan(&puWardID, &puLgaID, &puStateID, &wardStateConstID, &puFedConstID, &puSenateID)
 
 		if geoErr == nil {
 			// 2. Upsert party entry for polling unit
 			if err = txQueries.UpsertElectionGroupPUPartyEntry(ctx, queries.UpsertElectionGroupPUPartyEntryParams{
 				AgentsDelta:           1,
-				ElectionGroupID:       egID,
+				ElectionGroupID:       electionGroupID,
 				PollingUnitID:         pollingUnitID,
 				PartyID:               partyID,
-				StateID:               pgtype.Int2{Int16: geo.stateID, Valid: true},
-				LgaID:                 pgtype.Int4{Int32: geo.lgaID, Valid: true},
-				WardID:                pgtype.Int4{Int32: geo.wardID, Valid: true},
-				StateConstituencyID:   pgtype.Int4{Int32: wardStateConstID, Valid: true},
-				FederalConstituencyID: pgtype.Int4{Int32: puFedConstID, Valid: true},
-				SenatorialDistrictID:  pgtype.Int4{Int32: puSenateID, Valid: true},
+				StateID:               utils.PgInt2FromInt16(puStateID),
+				LgaID:                 utils.PgInt4FromInt32(puLgaID),
+				WardID:                utils.PgInt4FromInt32(puWardID),
+				StateConstituencyID:   utils.PgInt4FromPositive(wardStateConstID),
+				FederalConstituencyID: utils.PgInt4FromPositive(puFedConstID),
+				SenatorialDistrictID:  utils.PgInt4FromPositive(puSenateID),
 			}); err != nil {
 				return queries.PartyAgentApplication{}, fmt.Errorf("failed UpsertElectionGroupPUPartyEntry: %v", err)
 			}
 		}
+	default:
+		return queries.PartyAgentApplication{}, fmt.Errorf("unsupported role type: %s", roleType)
 	}
 
 	// --- Referral stat update on acceptance ---
@@ -1058,21 +1038,25 @@ func (s *Service) updateReferralOnApplicationSubmission(ctx context.Context, txQ
 }
 
 func resolvePotentialPaymentKobo(allocationJSON []byte, roleType string, stateID int16) int64 {
+	// Guard against empty allowance allocation data
 	if len(allocationJSON) == 0 {
 		return 0
 	}
+
+	// Validate against standard role keys
 	roleKey := ""
 	switch roleType {
-	case "polling_agent", "pollingagent":
+	case "polling_agent":
 		roleKey = "polling_agent"
-	case "ward_election_supervisor", "ward_supervisor":
+	case "ward_election_supervisor":
 		roleKey = "ward_election_supervisor"
-	case "lga_election_supervisor", "lga_supervisor":
+	case "lga_election_supervisor":
 		roleKey = "lga_election_supervisor"
-	case "state_election_supervisor", "state_supervisor":
+	case "state_election_supervisor":
 		roleKey = "state_election_supervisor"
 	}
 
+	// Unmarshal role-based payment configuration
 	var allocs map[string]struct {
 		Default int64            `json:"default"`
 		States  map[string]int64 `json:"states"`
@@ -1081,11 +1065,13 @@ func resolvePotentialPaymentKobo(allocationJSON []byte, roleType string, stateID
 		return 0
 	}
 
+	// Lookup payment configuration for the target role
 	cfg, ok := allocs[roleKey]
 	if !ok {
 		return 0
 	}
 
+	// Check for state-specific payment overrides
 	if stateID > 0 && cfg.States != nil {
 		stateKey := strconv.Itoa(int(stateID))
 		if customPay, found := cfg.States[stateKey]; found && customPay > 0 {
@@ -1093,5 +1079,6 @@ func resolvePotentialPaymentKobo(allocationJSON []byte, roleType string, stateID
 		}
 	}
 
+	// Fall back to default role payment
 	return cfg.Default
 }

@@ -32,8 +32,9 @@ func FormatID[T Integer](id T) string {
 }
 
 type AuditService interface {
-	LogAction(ctx context.Context, params queries.InsertAuditLogParams) error
 	LogActionAsync(ctx context.Context, params queries.InsertAuditLogParams)
+	LogPartyAdminActionAsync(ctx context.Context, params queries.InsertAuditLogParams)
+	LogAdminActionAsync(ctx context.Context, params queries.InsertAuditLogParams)
 }
 
 type auditService struct {
@@ -138,18 +139,46 @@ func (s *auditService) prepareParams(ctx context.Context, params *queries.Insert
 	}
 }
 
-// LogAction logs an action to the audit log.
-func (s *auditService) LogAction(ctx context.Context, params queries.InsertAuditLogParams) error {
-	s.prepareParams(ctx, &params)
-
-	// Execute the insertion synchronously for now.
-	// We might consider doing this asynchronously in the future if it becomes a bottleneck.
-	_, err := s.queries.InsertAuditLog(ctx, params)
-	return err
-}
-
 // LogActionAsync logs an action to the audit log asynchronously in a goroutine.
 func (s *auditService) LogActionAsync(ctx context.Context, params queries.InsertAuditLogParams) {
+	s.prepareParams(ctx, &params)
+
+	go func(p queries.InsertAuditLogParams) {
+		bgCtx := context.Background()
+		_, _ = s.queries.InsertAuditLog(bgCtx, p)
+	}(params)
+}
+
+// LogPartyAdminActionAsync logs an action within the party administration module.
+// It ensures Module is set to db.ModulePartyAdmin so party admins can view the event.
+// If the action was performed by a system administrator (super_admin or admin), it also
+// dual-logs to db.ModuleAdmin so platform administrators maintain a global security audit trail.
+func (s *auditService) LogPartyAdminActionAsync(ctx context.Context, params queries.InsertAuditLogParams) {
+	params.Module = StringToText(db.ModulePartyAdmin)
+	s.prepareParams(ctx, &params)
+
+	actorRole := ""
+	if params.ActorRole.Valid {
+		actorRole = params.ActorRole.String
+	}
+
+	go func(p queries.InsertAuditLogParams, role string) {
+		bgCtx := context.Background()
+		// 1. Log to party administration module
+		_, _ = s.queries.InsertAuditLog(bgCtx, p)
+
+		// 2. Dual-log to platform admin module if executed by a system admin
+		if role == db.ActorRoleSuperAdmin || role == db.ActorRoleAdmin {
+			adminLog := p
+			adminLog.Module = StringToText(db.ModuleAdmin)
+			_, _ = s.queries.InsertAuditLog(bgCtx, adminLog)
+		}
+	}(params, actorRole)
+}
+
+// LogAdminActionAsync logs an action within the platform administration module.
+func (s *auditService) LogAdminActionAsync(ctx context.Context, params queries.InsertAuditLogParams) {
+	params.Module = StringToText(db.ModuleAdmin)
 	s.prepareParams(ctx, &params)
 
 	go func(p queries.InsertAuditLogParams) {

@@ -129,15 +129,6 @@ SET
 WHERE id = sqlc.arg(id)
 RETURNING *;
 
--- name: UpdateUserRoleForPartyApp :one
-WITH inserted AS (
-  INSERT INTO user_roles (user_id, role_id, role_code, who_assigned_user_id, date_assigned)
-  SELECT $1, r.id, r.code, 0, CURRENT_TIMESTAMP FROM roles r WHERE r.code = 'party_admin'
-  ON CONFLICT (user_id, role_id) DO NOTHING
-)
-UPDATE users SET updated_at = NOW() WHERE users.id = $1
-RETURNING *;
-
 -- name: GetPollingUnitsWithAgentCounts :many
 SELECT
   pu.id,

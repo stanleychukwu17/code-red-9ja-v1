@@ -567,7 +567,6 @@ type Querier interface {
 	UpdateUserPreferencesByUserID(ctx context.Context, arg UpdateUserPreferencesByUserIDParams) (UserPreference, error)
 	UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) error
 	UpdateUserReferralCode(ctx context.Context, arg UpdateUserReferralCodeParams) error
-	UpdateUserRoleForPartyApp(ctx context.Context, id int64) (User, error)
 	UpdateUserStatus(ctx context.Context, arg UpdateUserStatusParams) error
 	UpdateUserVotersCard(ctx context.Context, arg UpdateUserVotersCardParams) error
 	UpdateWard(ctx context.Context, arg UpdateWardParams) (Ward, error)

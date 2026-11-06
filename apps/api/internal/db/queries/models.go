@@ -822,9 +822,9 @@ type PollingUnit struct {
 type PollingUnitAssignment struct {
 	ID                                      int64              `json:"id"`
 	UserID                                  int64              `json:"user_id"`
-	PollingUnitID                           int32              `json:"polling_unit_id"`
 	ElectionGroupID                         int32              `json:"election_group_id"`
 	PartyID                                 int16              `json:"party_id"`
+	PollingUnitID                           int32              `json:"polling_unit_id"`
 	RoleType                                pgtype.Text        `json:"role_type"`
 	AssignedBy                              pgtype.Int8        `json:"assigned_by"`
 	ArrivedAt                               pgtype.Timestamptz `json:"arrived_at"`

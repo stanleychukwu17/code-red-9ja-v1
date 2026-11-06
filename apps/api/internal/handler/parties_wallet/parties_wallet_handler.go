@@ -424,8 +424,7 @@ func (h *Handler) Deposit(w http.ResponseWriter, r *http.Request) {
 		"payer_name":            payerName,
 		"narration":             narration,
 	})
-	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
-		Module:     audit.StringToText(db.ModuleAdmin),
+	h.auditService.LogPartyAdminActionAsync(r.Context(), queries.InsertAuditLogParams{
 		Action:     db.ActionDepositPartyWallet,
 		EntityType: db.EntityTypeParty,
 		EntityID:   strconv.FormatInt(partyID, 10),
@@ -556,8 +555,7 @@ func (h *Handler) BuySlots(w http.ResponseWriter, r *http.Request) {
 		"balance_after_kobo":    txn.BalanceAfterKobo,
 		"new_slots_balance":     party.Slots,
 	})
-	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
-		Module:     audit.StringToText(db.ModuleAdmin),
+	h.auditService.LogPartyAdminActionAsync(r.Context(), queries.InsertAuditLogParams{
 		Action:     db.ActionBuyPartySlots,
 		EntityType: db.EntityTypeParty,
 		EntityID:   strconv.FormatInt(partyID, 10),

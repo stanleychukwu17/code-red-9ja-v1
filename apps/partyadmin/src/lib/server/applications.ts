@@ -121,8 +121,6 @@ export const getPollingUnits = createServerFn({ method: "GET" })
           wardID?: number;
           lgaID?: number;
           stateID?: number;
-          limit?: number;
-          cursor?: string | number;
         }
         | undefined,
     ) => data,
@@ -133,11 +131,9 @@ export const getPollingUnits = createServerFn({ method: "GET" })
       if (data?.wardID) params.append("ward_id", String(data.wardID));
       if (data?.lgaID) params.append("lga_id", String(data.lgaID));
       if (data?.stateID) params.append("state_id", String(data.stateID));
-      if (data?.limit) params.append("limit", String(data.limit));
-      if (data?.cursor) params.append("cursor", String(data.cursor));
       const qs = params.toString();
 
-      const url = API_URL.pollingUnitsPaginated(qs);
+      const url = API_URL.pollingUnits(qs);
       const response = await apiFetch(url);
       const resData = await response.json();
       return resData;

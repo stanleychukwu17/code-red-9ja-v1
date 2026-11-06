@@ -1,10 +1,10 @@
 -- +goose Up
 CREATE TABLE IF NOT EXISTS polling_unit_assignments (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  user_id BIGINT REFERENCES users(id) ON DELETE CASCADE NOT NULL,
-  polling_unit_id INTEGER REFERENCES polling_units(id) ON DELETE CASCADE NOT NULL,
   election_group_id INT REFERENCES election_groups(id) ON DELETE CASCADE NOT NULL,
   party_id SMALLINT REFERENCES parties(id) ON DELETE CASCADE NOT NULL,
+  polling_unit_id INTEGER REFERENCES polling_units(id) ON DELETE CASCADE NOT NULL,
+  user_id BIGINT REFERENCES users(id) ON DELETE CASCADE NOT NULL,
   role_type VARCHAR(50) DEFAULT 'polling_agent' CHECK (role_type IN ('polling_agent', 'observer', 'collation_agent')),
   assigned_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
   
@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS polling_unit_assignments (
 
   potential_payment_kobo BIGINT NOT NULL DEFAULT 0,
   earned_amount_kobo BIGINT NOT NULL DEFAULT 0,
-  
+
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
 
@@ -40,9 +40,7 @@ CREATE TABLE IF NOT EXISTS polling_unit_assignments (
   CONSTRAINT uq_agent_per_election_day UNIQUE(user_id, election_group_id)
 );
 
-CREATE INDEX idx_pu_assignments_party ON polling_unit_assignments(party_id);
-CREATE INDEX idx_pu_assignments_pu ON polling_unit_assignments(polling_unit_id);
-CREATE INDEX idx_pu_assignments_election_group ON polling_unit_assignments(election_group_id);
+CREATE INDEX idx_pu_assignments_composite ON polling_unit_assignments(election_group_id, party_id, polling_unit_id);
 
 -- +goose Down
 DROP TABLE IF EXISTS polling_unit_assignments;

@@ -740,8 +740,7 @@ func (h *Handler) ApproveApplication(w http.ResponseWriter, r *http.Request) {
 		"role":            roleType,
 		"polling_unit_id": puIDPtr,
 	})
-	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
-		Module:     audit.StringToText(db.ModulePartyAdmin),
+	h.auditService.LogPartyAdminActionAsync(r.Context(), queries.InsertAuditLogParams{
 		Action:     db.ActionApproveApplication,
 		EntityType: db.EntityTypePartyApplication,
 		EntityID:   strconv.FormatInt(id, 10),
@@ -858,8 +857,7 @@ func (h *Handler) RejectApplication(w http.ResponseWriter, r *http.Request) {
 		"status": updatedApp.Status,
 		"reason": req.Reason,
 	})
-	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
-		Module:     audit.StringToText(db.ModulePartyAdmin),
+	h.auditService.LogPartyAdminActionAsync(r.Context(), queries.InsertAuditLogParams{
 		Action:     db.ActionRejectApplication,
 		EntityType: db.EntityTypePartyApplication,
 		EntityID:   strconv.FormatInt(id, 10),
@@ -944,8 +942,7 @@ func (h *Handler) CancelApplication(w http.ResponseWriter, r *http.Request) {
 		auditNewValues, _ := json.Marshal(map[string]interface{}{
 			"status": updatedApp.Status,
 		})
-		h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
-			Module:     audit.StringToText(db.ModulePartyAdmin),
+		h.auditService.LogPartyAdminActionAsync(r.Context(), queries.InsertAuditLogParams{
 			Action:     db.ActionCancelAgentApplication,
 			EntityType: db.EntityTypePartyApplication,
 			EntityID:   strconv.FormatInt(id, 10),

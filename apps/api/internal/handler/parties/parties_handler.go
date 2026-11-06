@@ -1523,8 +1523,7 @@ func (h *Handler) DepositAllowance(w http.ResponseWriter, r *http.Request) {
 		"amount_kobo":                    req.AmountKobo,
 		"new_agent_payment_balance_kobo": res.AgentPaymentBalanceKobo,
 	})
-	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
-		Module:     audit.StringToText(db.ModuleAdmin),
+	h.auditService.LogPartyAdminActionAsync(r.Context(), queries.InsertAuditLogParams{
 		Action:     db.ActionDepositPartyAgentsAllowance,
 		EntityType: db.EntityTypeParty,
 		EntityID:   strconv.FormatInt(partyID, 10),
@@ -1591,8 +1590,7 @@ func (h *Handler) UpdateAgentPaymentAllocationKobo(w http.ResponseWriter, r *htt
 		"party_id":                      partyID,
 		"agent_payment_allocation_kobo": json.RawMessage(res.AgentPaymentAllocationKobo),
 	})
-	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
-		Module:     audit.StringToText(db.ModuleAdmin),
+	h.auditService.LogPartyAdminActionAsync(r.Context(), queries.InsertAuditLogParams{
 		Action:     db.ActionUpdatePartyAgentPaymentAllocation,
 		EntityType: db.EntityTypeParty,
 		EntityID:   strconv.FormatInt(partyID, 10),
