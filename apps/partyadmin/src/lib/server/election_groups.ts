@@ -22,7 +22,6 @@ export const getElectionGroups = createServerFn({ method: "GET" })
       const params = new URLSearchParams();
       if (data?.limit) params.append("limit", String(data.limit));
       if (data?.cursor) params.append("cursor", String(data.cursor));
-      if (data?.partyId) params.append("party_id", String(data.partyId));
       if (data?.orderBy) params.append("orderBy", data.orderBy);
       if (data?.order) params.append("order", data.order);
       if (data?.active !== undefined) params.append("active", String(data.active));

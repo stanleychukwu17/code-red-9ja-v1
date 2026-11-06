@@ -33,7 +33,6 @@ export const SelectElectionGroupAndElection = ({
   errorMsg,
   selectedId,
   disabled,
-  partyId,
   className,
   align = "start",
   fetchElectionGroups,
@@ -42,7 +41,7 @@ export const SelectElectionGroupAndElection = ({
 }: SelectProps<ElectionGroup, number> & {
   partyId?: number;
   fetchElectionGroups: (args: {
-    data: { partyId?: number; limit?: number; cursor?: string };
+    data: { active?: boolean; partyId?: number; limit?: number; cursor?: string };
   }) => Promise<any>;
 
   /** When provided, clicking a group opens step 2 — the elections list. */
@@ -61,9 +60,7 @@ export const SelectElectionGroupAndElection = ({
   const [desktopElectionSearch, setDesktopElectionSearch] = useState("");
   const [mobileElectionSearch, setMobileElectionSearch] = useState("");
 
-  const [selectedItem, setSelectedItem] = useState<ElectionGroup | undefined>(
-    undefined,
-  );
+  const [selectedItem, setSelectedItem] = useState<ElectionGroup | undefined>(undefined);
 
   /**
    * The group the user clicked in step 1.
@@ -73,18 +70,19 @@ export const SelectElectionGroupAndElection = ({
 
   // ─── Groups query ──────────────────────────────────────────────────────────
   const { data: groupsRaw, isLoading } = useQuery({
-    queryKey: ["election-groups-select", partyId],
+    queryKey: ["election-groups-select", { active: true }],
     queryFn: async () => {
       const res = await fetchElectionGroups({
-        data: { partyId, limit: 100 },
+        data: { active: true, limit: 100 },
       });
       if (res && res.success && res.data) return res;
       throw new Error(res?.message || "Failed to fetch election groups");
     },
+    staleTime: Infinity,
+    gcTime: Infinity,
   });
 
-  const electionGroups: ElectionGroup[] =
-    groupsRaw?.data?.election_groups || groupsRaw?.election_groups || [];
+  const electionGroups: ElectionGroup[] = groupsRaw?.data?.election_groups || [];
 
   // ─── Elections query (step 2) ──────────────────────────────────────────────
   const { data: electionsRaw, isLoading: isLoadingElections } = useQuery({
@@ -94,10 +92,11 @@ export const SelectElectionGroupAndElection = ({
       return res;
     },
     enabled: !!pendingGroup && !!fetchElectionsByGroup,
+    staleTime: Infinity,
+    gcTime: Infinity,
   });
 
-  const elections: Election[] =
-    electionsRaw?.elections || electionsRaw?.data?.elections || [];
+  const elections: Election[] = electionsRaw?.data?.elections || [];
 
   const electionStatus = isLoadingElections
     ? ("LoadingFirstPage" as const)

@@ -21,7 +21,6 @@ export type ElectionGroupType = {
   fake_id?: number | bigint;
   name: string;
   polling_agents_coverage?: number | { percentage?: number };
-  number_of_elections_party_is_contesting?: number;
   elections_count?: number;
   election_date: string;
 };
@@ -42,9 +41,6 @@ export function ElectionGroupTableHeader() {
         </span>
         <span className="text-c-50 text-[14px] w-25 hidden lg:block">
           Elections
-        </span>
-        <span className="text-c-50 text-[14px] w-28.5 hidden xl:block">
-          Contesting in
         </span>
         <span className="text-c-50 text-[14px] w-27.5 hidden sm:block">
           Date
@@ -86,9 +82,6 @@ export function ElectionGroupTableTile({ data }: { data: ElectionGroupType }) {
         </span>
         <span className="text-[15px] text-c-70 w-25 hidden lg:block">
           {data.elections_count ?? 0}
-        </span>
-        <span className="text-[15px] text-c-70 w-28.5 hidden xl:block">
-          {data.number_of_elections_party_is_contesting ?? 0}
         </span>
         <span className="text-[15px] text-c-70 w-27.5 hidden sm:block">
           {dateLabel}

@@ -398,7 +398,6 @@ type Querier interface {
 	ListElectionGroupStateStatsByGroup(ctx context.Context, electionGroupID int32) ([]ListElectionGroupStateStatsByGroupRow, error)
 	ListElectionGroupWardStatsByGroup(ctx context.Context, arg ListElectionGroupWardStatsByGroupParams) ([]ListElectionGroupWardStatsByGroupRow, error)
 	ListElectionGroups(ctx context.Context, active pgtype.Bool) ([]ElectionGroup, error)
-	ListElectionGroupsWithPartyStats(ctx context.Context, arg ListElectionGroupsWithPartyStatsParams) ([]ListElectionGroupsWithPartyStatsRow, error)
 	ListElectionInstances(ctx context.Context, arg ListElectionInstancesParams) ([]ListElectionInstancesRow, error)
 	ListElectionsDetailedByGroupID(ctx context.Context, electionGroupID int32) ([]ListElectionsDetailedByGroupIDRow, error)
 	ListFiles(ctx context.Context, arg ListFilesParams) ([]File, error)

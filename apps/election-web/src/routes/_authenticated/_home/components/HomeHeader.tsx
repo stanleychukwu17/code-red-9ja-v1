@@ -91,7 +91,6 @@ export function HomeHeader({
             fetchElectionsByGroup={fetchElectionsByGroup}
             selectedId={selectedElectionGroup?.id}
             update={(group) => setSelectedElectionGroup(group)}
-            partyId={user?.party?.id ?? user?.party_id}
             onElectionSelect={(group: ElectionGroup, election: Election) => {
               setSelectedElectionGroup(group);
               setSelectedElection(election);

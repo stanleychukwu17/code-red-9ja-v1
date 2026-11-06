@@ -23,7 +23,6 @@ type ElectionGroupsService interface {
 	ListElectionGroups(ctx context.Context, active *bool) ([]queries.ElectionGroup, error)
 	UpdateElectionGroup(ctx context.Context, id int32, name string, electionDate time.Time, active bool, acceptsCandidates bool, acceptsAgents bool) (queries.ElectionGroup, error)
 	DeleteElectionGroup(ctx context.Context, id int32) error
-	ListElectionGroupsWithPartyStats(ctx context.Context, partyID int16, active *bool) ([]queries.ListElectionGroupsWithPartyStatsRow, error)
 	ListGroupElections(ctx context.Context, electionGroupID int32) ([]queries.ElectionGroupListItem, error)
 }
 
@@ -115,16 +114,14 @@ func (h *Handler) CreateElectionGroup(w http.ResponseWriter, r *http.Request) {
 }
 
 type ElectionGroupResponse struct {
-	ID                                 int32              `json:"id"`
-	Name                               string             `json:"name"`
-	ElectionDate                       pgtype.Date        `json:"election_date"`
-	Active                             bool               `json:"active"`
-	AcceptsCandidates                  bool               `json:"accepts_candidates"`
-	AcceptsAgents                      bool               `json:"accepts_agents"`
-	CreatedAt                          pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt                          pgtype.Timestamptz `json:"updated_at"`
-	PollingAgentsCoverage              interface{}        `json:"polling_agents_coverage"`
-	NumberOfElectionsPartyIsContesting int32              `json:"number_of_elections_party_is_contesting"`
+	ID                int32              `json:"id"`
+	Name              string             `json:"name"`
+	ElectionDate      pgtype.Date        `json:"election_date"`
+	Active            bool               `json:"active"`
+	AcceptsCandidates bool               `json:"accepts_candidates"`
+	AcceptsAgents     bool               `json:"accepts_agents"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
 }
 
 // ListElectionGroups godoc
@@ -133,21 +130,12 @@ type ElectionGroupResponse struct {
 // @Tags         ElectionGroups
 // @Accept       json
 // @Produce      json
-// @Param        party_id query int false "Party ID for stats"
 // @Param        active query bool false "Filter by active status"
 // @Success      200  {object} map[string]interface{} "Election groups fetched successfully"
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Router       /election-groups [get]
 func (h *Handler) ListElectionGroups(w http.ResponseWriter, r *http.Request) {
-	// 1. Check for optional party_id to fetch party-specific stats (e.g. agent coverage)
-	var partyID int64
-	if partyIDStr := r.URL.Query().Get("party_id"); partyIDStr != "" {
-		if pid, err := strconv.ParseInt(partyIDStr, 10, 64); err == nil {
-			partyID = pid
-		}
-	}
-
-	// 2. Check for optional active filter (e.g. ?active=true)
+	// 1. Check for optional active filter (e.g. ?active=true)
 	var activeFilter *bool
 	if activeStr := r.URL.Query().Get("active"); activeStr != "" {
 		if b, err := strconv.ParseBool(activeStr); err == nil {
@@ -155,51 +143,27 @@ func (h *Handler) ListElectionGroups(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	responseGroups := make([]ElectionGroupResponse, 0)
-
-	// 3. Fetch election groups: enriched with party metrics if partyID is supplied, otherwise standard list
-	if partyID > 0 {
-		rows, err := h.service.ListElectionGroupsWithPartyStats(r.Context(), int16(partyID), activeFilter)
-		if err != nil {
-			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch election groups with party stats: "+err.Error())
-			return
-		}
-		for _, row := range rows {
-			responseGroups = append(responseGroups, ElectionGroupResponse{
-				ID:                                 row.ID,
-				Name:                               row.Name,
-				ElectionDate:                       row.ElectionDate,
-				Active:                             row.Active,
-				AcceptsCandidates:                  row.AcceptsCandidates,
-				AcceptsAgents:                      row.AcceptsAgents,
-				CreatedAt:                          row.CreatedAt,
-				UpdatedAt:                          row.UpdatedAt,
-				PollingAgentsCoverage:              json.RawMessage(row.PollingAgentsCoverage),
-				NumberOfElectionsPartyIsContesting: row.ElectionsContesting,
-			})
-		}
-	} else {
-		groups, err := h.service.ListElectionGroups(r.Context(), activeFilter)
-		if err != nil {
-			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch election groups: "+err.Error())
-			return
-		}
-
-		for _, g := range groups {
-			responseGroups = append(responseGroups, ElectionGroupResponse{
-				ID:                g.ID,
-				Name:              g.Name,
-				ElectionDate:      g.ElectionDate,
-				Active:            g.Active,
-				AcceptsCandidates: g.AcceptsCandidates,
-				AcceptsAgents:     g.AcceptsAgents,
-				CreatedAt:         g.CreatedAt,
-				UpdatedAt:         g.UpdatedAt,
-			})
-		}
+	groups, err := h.service.ListElectionGroups(r.Context(), activeFilter)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch election groups: "+err.Error())
+		return
 	}
 
-	// 4. Return the election groups with backward-compatible meta
+	responseGroups := make([]ElectionGroupResponse, 0, len(groups))
+	for _, g := range groups {
+		responseGroups = append(responseGroups, ElectionGroupResponse{
+			ID:                g.ID,
+			Name:              g.Name,
+			ElectionDate:      g.ElectionDate,
+			Active:            g.Active,
+			AcceptsCandidates: g.AcceptsCandidates,
+			AcceptsAgents:     g.AcceptsAgents,
+			CreatedAt:         g.CreatedAt,
+			UpdatedAt:         g.UpdatedAt,
+		})
+	}
+
+	// 2. Return the election groups with backward-compatible meta
 	h.utils.RespondSuccess(w, http.StatusOK, "Election groups fetched successfully", map[string]interface{}{
 		"election_groups": responseGroups,
 		"meta": map[string]interface{}{

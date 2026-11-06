@@ -534,3 +534,38 @@ func (h *Handler) SyncCampaignGroups(w http.ResponseWriter, r *http.Request) {
 
 	h.utils.RespondSuccessData(w, http.StatusOK, "Campaign groups synchronized successfully", res)
 }
+
+// @Summary Seed party agent applications
+// @Description Seeds pending agent applications for a party to test the review and acceptance interface
+// @Tags Seed
+// @Accept json
+// @Produce json
+// @Param request body seedservice.SeedPartyAgentApplicationsRequest true "Seed parameters"
+// @Success 200 {object} map[string]interface{} "Party agent applications seeded successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid request body"
+// @Failure 403 {object} map[string]interface{} "Disabled in production"
+// @Failure 500 {object} map[string]interface{} "Failed to seed party agent applications"
+// @Router /seed/party-agent-applications [post]
+func (h *Handler) SeedPartyAgentApplications(w http.ResponseWriter, r *http.Request) {
+	// Guard against running in production
+	if os.Getenv("ENV") == "production" {
+		h.utils.RespondError(w, http.StatusForbidden, "This endpoint is disabled in production")
+		return
+	}
+
+	// Parse request payload
+	var req seedservice.SeedPartyAgentApplicationsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+		return
+	}
+
+	// Seed party agent applications via service
+	res, err := h.seedService.SeedPartyAgentApplications(r.Context(), req)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to seed party agent applications: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccessData(w, http.StatusOK, "Party agent applications seeded successfully", res)
+}

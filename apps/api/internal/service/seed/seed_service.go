@@ -2683,3 +2683,222 @@ func (s *SeedService) SyncCampaignGroups(ctx context.Context, req SyncCampaignGr
 		PartyIDs:           req.PartyIDs,
 	}, nil
 }
+
+// SeedPartyAgentApplicationsRequest holds parameters for creating sample pending party agent applications.
+type SeedPartyAgentApplicationsRequest struct {
+	PartyID         int16  `json:"party_id"`
+	StateID         int16  `json:"state_id"`
+	Count           int    `json:"count"`
+	ElectionGroupID int32  `json:"election_group_id,omitempty"`
+	Role            string `json:"role,omitempty"`
+}
+
+// SeedPartyAgentApplicationsResponse represents the outcome of the agent application seeding.
+type SeedPartyAgentApplicationsResponse struct {
+	PartyID             int16  `json:"party_id"`
+	ElectionGroupID     int32  `json:"election_group_id"`
+	StateID             int16  `json:"state_id"`
+	ApplicationsCreated int    `json:"applications_created"`
+	TargetCount         int    `json:"target_count"`
+	Role                string `json:"role"`
+}
+
+type seedPollingUnit struct {
+	id      int32
+	stateID int16
+	lgaID   *int32
+	wardID  *int32
+}
+
+// SeedPartyAgentApplications seeds pending agent applications for a party using existing eligible users.
+func (s *SeedService) SeedPartyAgentApplications(ctx context.Context, req SeedPartyAgentApplicationsRequest) (SeedPartyAgentApplicationsResponse, error) {
+	// Validate target party
+	if req.PartyID <= 0 {
+		return SeedPartyAgentApplicationsResponse{}, errors.New("party_id is required")
+	}
+
+	var partyExists bool
+	if err := s.pool.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM parties WHERE id = $1)", req.PartyID).Scan(&partyExists); err != nil {
+		return SeedPartyAgentApplicationsResponse{}, fmt.Errorf("failed verifying party: %w", err)
+	}
+	if !partyExists {
+		return SeedPartyAgentApplicationsResponse{}, fmt.Errorf("party with id %d not found", req.PartyID)
+	}
+
+	// Validate target state
+	if req.StateID <= 0 {
+		return SeedPartyAgentApplicationsResponse{}, errors.New("state_id is required")
+	}
+
+	// Apply default count and role
+	if req.Count <= 0 {
+		req.Count = 300
+	}
+	if req.Role == "" {
+		req.Role = "polling_agent"
+	}
+	switch req.Role {
+	case "polling_agent", "state_election_supervisor", "lga_election_supervisor", "ward_election_supervisor":
+	default:
+		return SeedPartyAgentApplicationsResponse{}, fmt.Errorf("invalid role %q", req.Role)
+	}
+
+	// Resolve target election group if not explicitly provided
+	if req.ElectionGroupID <= 0 {
+		err := s.pool.QueryRow(ctx, `
+			SELECT id FROM election_groups 
+			WHERE active = true AND accepts_agents = true AND election_date >= CURRENT_DATE 
+			ORDER BY election_date ASC, id ASC 
+			LIMIT 1
+		`).Scan(&req.ElectionGroupID)
+		if err != nil {
+			return SeedPartyAgentApplicationsResponse{}, fmt.Errorf("no active election group accepting agents found: %w", err)
+		}
+	}
+
+	// Fetch real polling units to associate with applications
+	puRows, err := s.pool.Query(ctx, `
+		SELECT id, state_id, lga_id, ward_id 
+		FROM polling_units 
+		WHERE state_id = $1 
+		ORDER BY id ASC 
+		LIMIT $2
+	`, req.StateID, req.Count)
+	if err != nil {
+		return SeedPartyAgentApplicationsResponse{}, fmt.Errorf("failed fetching polling units: %w", err)
+	}
+	defer puRows.Close()
+
+	var pollingUnits []seedPollingUnit
+	for puRows.Next() {
+		var pu seedPollingUnit
+		var stateIDInt int32
+		if err := puRows.Scan(&pu.id, &stateIDInt, &pu.lgaID, &pu.wardID); err != nil {
+			return SeedPartyAgentApplicationsResponse{}, fmt.Errorf("failed scanning polling unit: %w", err)
+		}
+		pu.stateID = int16(stateIDInt)
+		pollingUnits = append(pollingUnits, pu)
+	}
+	if len(pollingUnits) == 0 {
+		return SeedPartyAgentApplicationsResponse{}, fmt.Errorf("no polling units found for state_id %d", req.StateID)
+	}
+
+	// Fetch eligible users without administrative roles, candidacies, or existing applications
+	userRows, err := s.pool.Query(ctx, `
+		SELECT u.id
+		FROM users u
+		WHERE (u.has_role IS FALSE OR u.has_role IS NULL)
+		  AND (u.is_politician IS FALSE OR u.is_politician IS NULL)
+		  AND (u.party_id IS NULL OR u.party_id = $1)
+		  AND NOT EXISTS (
+		      SELECT 1 FROM party_agent_applications pa
+		      WHERE pa.user_id = u.id AND pa.election_group_id = $2
+		  )
+		  AND NOT EXISTS (
+		      SELECT 1 FROM party_position_assignments ppa
+		      WHERE ppa.user_id = u.id AND ppa.status = 'active'
+		  )
+		  AND NOT EXISTS (
+		      SELECT 1 FROM election_candidates ec
+		      WHERE ec.candidate_id = u.id AND ec.election_group_id = $2
+		  )
+		  AND NOT EXISTS (
+		      SELECT 1 FROM polling_unit_assignments pua
+		      WHERE pua.user_id = u.id AND pua.election_group_id = $2
+		  )
+		ORDER BY u.id ASC
+		LIMIT $3
+	`, req.PartyID, req.ElectionGroupID, req.Count)
+	if err != nil {
+		return SeedPartyAgentApplicationsResponse{}, fmt.Errorf("failed fetching eligible users: %w", err)
+	}
+	defer userRows.Close()
+
+	var userIDs []int64
+	for userRows.Next() {
+		var uid int64
+		if err := userRows.Scan(&uid); err != nil {
+			return SeedPartyAgentApplicationsResponse{}, fmt.Errorf("failed scanning user id: %w", err)
+		}
+		userIDs = append(userIDs, uid)
+	}
+	if len(userIDs) == 0 {
+		return SeedPartyAgentApplicationsResponse{}, errors.New("no eligible users found to create agent applications")
+	}
+
+	// Start transaction for batch creation
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return SeedPartyAgentApplicationsResponse{}, fmt.Errorf("failed starting transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	// Queue application insert operations
+	batch := &pgx.Batch{}
+	insertQuery := `
+		INSERT INTO party_agent_applications (
+			election_group_id,
+			party_id,
+			user_id,
+			polling_unit_id,
+			state_id,
+			lga_id,
+			ward_id,
+			role,
+			status
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending')
+		ON CONFLICT (election_group_id, user_id) DO NOTHING
+	`
+	for i, userID := range userIDs {
+		// Distribute applicants across polling units round-robin, allowing multiple applicants per unit if needed
+		pu := pollingUnits[i%len(pollingUnits)]
+		batch.Queue(insertQuery,
+			req.ElectionGroupID,
+			req.PartyID,
+			userID,
+			pu.id,
+			pu.stateID,
+			pu.lgaID,
+			pu.wardID,
+			req.Role,
+		)
+	}
+
+	// Execute application batch
+	br := tx.SendBatch(ctx, batch)
+	var createdCount int
+	for range userIDs {
+		tag, err := br.Exec()
+		if err != nil {
+			br.Close()
+			return SeedPartyAgentApplicationsResponse{}, fmt.Errorf("failed inserting agent application: %w", err)
+		}
+		if tag.RowsAffected() > 0 {
+			createdCount++
+		}
+	}
+	_ = br.Close()
+
+	// Commit applications transaction
+	if err := tx.Commit(ctx); err != nil {
+		return SeedPartyAgentApplicationsResponse{}, fmt.Errorf("failed committing agent applications transaction: %w", err)
+	}
+
+	// Invalidate cached active application status for affected users in a single batch
+	if len(userIDs) > 0 {
+		keysToDelete := make([]string, 0, len(userIDs))
+		for _, userID := range userIDs {
+			keysToDelete = append(keysToDelete, fmt.Sprintf("%s%d", db.RedisUserHasActiveAgentApp, userID))
+		}
+		_ = s.rdb.Del(ctx, keysToDelete...).Err()
+	}
+
+	return SeedPartyAgentApplicationsResponse{
+		PartyID:             req.PartyID,
+		ElectionGroupID:     req.ElectionGroupID,
+		StateID:             req.StateID,
+		ApplicationsCreated: createdCount,
+		TargetCount:         req.Count,
+		Role:                req.Role,
+	}, nil
+}

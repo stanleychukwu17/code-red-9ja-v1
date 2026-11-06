@@ -289,6 +289,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	mainRouter.Post("/api/v1/seed/candidates/state-assembly", seedHandler.SeedStateAssemblyCandidates)   // Seed state assembly candidates
 	mainRouter.Post("/api/v1/seed/parties/leadership", seedHandler.SeedPartyLeadership)                 // Seed party leadership endpoint
 	mainRouter.Post("/api/v1/seed/campaign-groups/sync", seedHandler.SyncCampaignGroups)                 // Sync campaign groups endpoint
+	mainRouter.Post("/api/v1/seed/party-agent-applications", seedHandler.SeedPartyAgentApplications)     // Seed party agent applications endpoint
 	mainRouter.Post("/api/v1/seed/elections/{id}/simulate-results", seedHandler.SimulateElectionResults) // Simulate PU results & test rollups
 	mainRouter.Post("/api/v1/seed/flush-redis", seedHandler.FlushRedis)                                  // Flush Redis cache endpoint
 

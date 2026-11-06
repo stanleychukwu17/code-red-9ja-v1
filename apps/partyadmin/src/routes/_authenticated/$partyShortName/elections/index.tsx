@@ -39,10 +39,10 @@ function RouteComponent() {
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
     useInfiniteQuery({
-      queryKey: ["election-groups", partyId],
+      queryKey: ["election-groups"],
       queryFn: async ({ pageParam }) => {
         const res = await getElectionGroups({
-          data: { limit: 20, cursor: pageParam as string, partyId },
+          data: { limit: 20, cursor: pageParam as string },
         });
         if (res && res.success && res.data) {
           return res;
