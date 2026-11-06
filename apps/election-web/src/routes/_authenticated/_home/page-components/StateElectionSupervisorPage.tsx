@@ -30,7 +30,6 @@ import { HomeBody } from "../components/Shared";
 import { SupervisorStartDutyCard } from "../components/SupervisorReadyCard";
 import { StateSupervisorTasksTab } from "../components/SupervisorTasksTab";
 import { DidYouVoteCard } from "../components/DidYouVoteCard";
-import { MyPollingUnit } from "../components/MyPollingUnit";
 import { Layout } from "@repo/ui/components/custom/AdminLayouts";
 /**
  * State Election Supervisor Dashboard.
@@ -195,7 +194,6 @@ export function StateElectionSupervisorPage() {
   return (
     <Layout className="px-0 gap-2">
       <HomeHeader daysLeft={daysLeft} />
-      <MyPollingUnit />
 
       <HomeHeader2 title={headerTitle} rightText={headerRightText} />
 

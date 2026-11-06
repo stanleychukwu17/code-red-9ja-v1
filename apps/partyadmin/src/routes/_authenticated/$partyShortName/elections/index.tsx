@@ -17,8 +17,7 @@ import {
 import { ElectionGroupsTable } from "#/components/Tables";
 import { getElectionTabs } from "./-data";
 import { getElectionGroups } from "#/lib/server/election_groups";
-import { useIntersectionObserver } from "usehooks-ts";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import type { ElectionGroupType } from "#/components/tiles/election-group-tile";
 import { useUserParty } from "#/hooks/useUserParty";
 
@@ -37,42 +36,22 @@ function RouteComponent() {
   const { party } = useUserParty();
   const partyId = party?.id;
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
-    useInfiniteQuery({
-      queryKey: ["election-groups"],
-      queryFn: async ({ pageParam }) => {
-        const res = await getElectionGroups({
-          data: { limit: 20, cursor: pageParam as string },
-        });
-        if (res && res.success && res.data) {
-          return res;
-        }
-        throw new Error(res?.message || "Failed to fetch election groups");
-      },
-      initialPageParam: "",
-      getNextPageParam: (lastPage: any) => {
-        if (lastPage && lastPage.meta && lastPage.meta.has_more) {
-          return lastPage.meta.next_cursor || "";
-        }
-        return undefined;
-      },
-      enabled: partyId !== undefined,
-      staleTime: Infinity,
-    });
-
-  const { ref: sentinelRef, isIntersecting } = useIntersectionObserver({
-    threshold: 0.1,
+  const { data: rawData, isLoading } = useQuery({
+    queryKey: ["election-groups"],
+    queryFn: async () => {
+      const res = await getElectionGroups({
+        data: { limit: 100 },
+      });
+      if (res && res.success && res.data) {
+        return res;
+      }
+      throw new Error(res?.message || "Failed to fetch election groups");
+    },
+    enabled: partyId !== undefined,
+    staleTime: Infinity,
   });
 
-  useEffect(() => {
-    if (isIntersecting && hasNextPage && !isFetchingNextPage) {
-      fetchNextPage();
-    }
-  }, [isIntersecting, hasNextPage, isFetchingNextPage, fetchNextPage]);
-
-  const electionGroups: ElectionGroupType[] = data
-    ? data.pages.flatMap((page: any) => page.data?.election_groups ?? [])
-    : [];
+  const electionGroups: ElectionGroupType[] = rawData?.data?.election_groups ?? [];
 
   return (
     <Layout>
@@ -89,17 +68,6 @@ function RouteComponent() {
         </div>
       ) : (
         <ElectionGroupsTable items={electionGroups} />
-      )}
-
-      {hasNextPage && (
-        <div
-          ref={sentinelRef}
-          className="py-6 flex items-center justify-center text-c-50 text-[14px]"
-        >
-          {isFetchingNextPage
-            ? "Loading more election groups..."
-            : "Scroll down to load more"}
-        </div>
       )}
     </Layout>
   );

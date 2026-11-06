@@ -26,7 +26,6 @@ import { PracticeTestCard } from "../components/PracticeTestCard";
 import { ReferralCard } from "../components/ReferralCard";
 import { HomeBody } from "../components/Shared";
 import { UploadResultCard } from "../components/UploadResultCard";
-import { MyPollingUnit } from "../components/MyPollingUnit";
 import { Layout } from "@repo/ui/components/custom/AdminLayouts";
 
 /**
@@ -117,7 +116,6 @@ export function GeneralPage() {
   return (
     <Layout className="px-0 gap-2">
       <HomeHeader daysLeft={daysLeft} />
-      <MyPollingUnit />
 
       <CandidatesLeaderboard hideReportButton={daysLeft !== 0} />
 

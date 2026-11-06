@@ -12,6 +12,7 @@ import { Button } from "../button";
 
 export type ElectionGroup = {
   id: number;
+  fake_id?: number | bigint;
   name: string;
   election_date?: string;
 };
@@ -86,9 +87,12 @@ export const SelectElectionGroupAndElection = ({
 
   // ─── Elections query (step 2) ──────────────────────────────────────────────
   const { data: electionsRaw, isLoading: isLoadingElections } = useQuery({
-    queryKey: ["elections-by-group-select", pendingGroup?.id],
+    queryKey: ["elections-by-group-select", pendingGroup?.fake_id ?? pendingGroup?.id],
     queryFn: async () => {
-      const res = await fetchElectionsByGroup!({ data: pendingGroup!.id });
+      const targetId = pendingGroup?.fake_id ?? pendingGroup?.id;
+      const res = await fetchElectionsByGroup!({
+        data: typeof targetId === "bigint" ? targetId.toString() : targetId!,
+      });
       return res;
     },
     enabled: !!pendingGroup && !!fetchElectionsByGroup,
@@ -182,7 +186,6 @@ export const SelectElectionGroupAndElection = ({
   const getElectionId = (item: Election) => `${item.id}`;
   const getElectionName = (item: Election) => item.name;
   const getGroupExtra = (item: ElectionGroup) => formatDate(item.election_date);
-  const getElectionExtra = (item: Election) => formatDate(item.election_date);
 
   // ─── Loading skeleton ─────────────────────────────────────────────────────
   if (electionGroups.length === 0 && isLoading && !disabled) {

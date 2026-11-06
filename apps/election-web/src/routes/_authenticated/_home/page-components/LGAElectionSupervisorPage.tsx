@@ -30,7 +30,6 @@ import { HomeBody } from "../components/Shared";
 import { SupervisorStartDutyCard } from "../components/SupervisorReadyCard";
 import { LgaSupervisorTasksTab } from "../components/SupervisorTasksTab";
 import { DidYouVoteCard } from "../components/DidYouVoteCard";
-import { MyPollingUnit } from "../components/MyPollingUnit";
 import { Layout } from "@repo/ui/components/custom/AdminLayouts";
 
 /**
@@ -188,7 +187,6 @@ export function LGAElectionSupervisorPage() {
   return (
     <Layout className="px-0 gap-2">
       <HomeHeader daysLeft={daysLeft} />
-      <MyPollingUnit />
       <HomeHeader2 title={headerTitle} rightText={headerRightText} />
 
       {/* Primary Carousel: Readiness, Objectives, and Candidate Leaderboard */}

@@ -50,7 +50,6 @@ import { ElectionStatusCard } from "../../_home/components/ElectionStatusCard";
 import { GiveUpdateFloatingButton } from "../../_home/components/GiveUpdateFloatingButton";
 import { HomeHeader, HomeHeader2 } from "../../_home/components/HomeHeader";
 import { CandidatesLeaderboard } from "../../_home/components/Leaderboard";
-import { MyPollingUnit } from "../../_home/components/MyPollingUnit";
 import { ReferralCard } from "../../_home/components/ReferralCard";
 import { RequestPayoutCard } from "../../_home/components/RequestPayoutCard";
 import { HomeBody } from "../../_home/components/Shared";
@@ -1485,7 +1484,6 @@ export function DashboardPage({
       </div>
       <HomeHeader daysLeft={daysLeft} onPracticeClick={handlePracticeWrong} />
       <HomeHeader2 title={headerTitle} rightText={headerRightText} />
-      <MyPollingUnit onPracticeClick={handlePracticeWrong} />
       <Carousel setApi={setCarouselApi} className="w-full">
         <CarouselContent>
           {showObjectives && (

@@ -35,7 +35,6 @@ import { UploadResultCard } from "../components/UploadResultCard";
 import { UploadsTab } from "../components/UploadsTab";
 import { GiveUpdateFloatingButton } from "../components/GiveUpdateFloatingButton";
 import { HomeBody } from "../components/Shared";
-import { MyPollingUnit } from "../components/MyPollingUnit";
 import { Layout } from "@repo/ui/components/custom/AdminLayouts";
 
 // Development bypass flag: ignores 2PM/4PM constraints for local UI testing
@@ -241,7 +240,6 @@ export function PollingAgentPage() {
   return (
     <Layout className="px-0 gap-2">
       <HomeHeader daysLeft={daysLeft} />
-      <MyPollingUnit />
       <HomeHeader2 title={headerTitle} rightText={headerRightText} />
 
       {/* Primary Carousel: Objectives, Readiness Drills, and Candidate Leaderboard */}

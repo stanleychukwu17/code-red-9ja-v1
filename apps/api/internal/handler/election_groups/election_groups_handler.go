@@ -115,6 +115,7 @@ func (h *Handler) CreateElectionGroup(w http.ResponseWriter, r *http.Request) {
 
 type ElectionGroupResponse struct {
 	ID                int32              `json:"id"`
+	FakeID            *int64             `json:"fake_id,omitempty"`
 	Name              string             `json:"name"`
 	ElectionDate      pgtype.Date        `json:"election_date"`
 	Active            bool               `json:"active"`
@@ -151,8 +152,14 @@ func (h *Handler) ListElectionGroups(w http.ResponseWriter, r *http.Request) {
 
 	responseGroups := make([]ElectionGroupResponse, 0, len(groups))
 	for _, g := range groups {
+		var fakeID *int64
+		if g.FakeID.Valid {
+			fid := g.FakeID.Int64
+			fakeID = &fid
+		}
 		responseGroups = append(responseGroups, ElectionGroupResponse{
 			ID:                g.ID,
+			FakeID:            fakeID,
 			Name:              g.Name,
 			ElectionDate:      g.ElectionDate,
 			Active:            g.Active,
@@ -163,13 +170,9 @@ func (h *Handler) ListElectionGroups(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	// 2. Return the election groups with backward-compatible meta
+	// 2. Return the election groups
 	h.utils.RespondSuccess(w, http.StatusOK, "Election groups fetched successfully", map[string]interface{}{
 		"election_groups": responseGroups,
-		"meta": map[string]interface{}{
-			"next_cursor": "",
-			"has_more":    false,
-		},
 	})
 }
 
@@ -376,20 +379,25 @@ func (h *Handler) DeleteElectionGroup(w http.ResponseWriter, r *http.Request) {
 // @Router       /election-groups/{id}/elections [get]
 func (h *Handler) ListGroupElections(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
-	fakeID, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil || fakeID <= 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election group fake_id")
+	parsedID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil || parsedID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election group ID")
 		return
 	}
 
-	eg, err := h.service.GetElectionGroupByFakeID(r.Context(), fakeID)
-	if err != nil {
+	// 1. Resolve election group by fake_id or numeric primary ID
+	var groupID int32
+	if eg, err := h.service.GetElectionGroupByFakeID(r.Context(), parsedID); err == nil && eg.ID > 0 {
+		groupID = eg.ID
+	} else if eg, err := h.service.GetElectionGroupByID(r.Context(), int32(parsedID)); err == nil && eg.ID > 0 {
+		groupID = eg.ID
+	} else {
 		h.utils.RespondError(w, http.StatusNotFound, "Election group not found")
 		return
 	}
 
 	// 2. Fetch all child elections associated with this election group via service
-	elections, err := h.service.ListGroupElections(r.Context(), eg.ID)
+	elections, err := h.service.ListGroupElections(r.Context(), groupID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch group elections: "+err.Error())
 		return
