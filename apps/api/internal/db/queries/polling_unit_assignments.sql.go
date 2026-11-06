@@ -43,7 +43,7 @@ INSERT INTO polling_unit_assignments (
   potential_payment_kobo
 ) VALUES (
   $1, $2, $3, $4, $5, $6, $7
-) RETURNING id, user_id, election_group_id, party_id, polling_unit_id, role_type, assigned_by, arrived_at, arrival_video_url, election_started_at, election_started_video_url, election_ended_at, election_ended_video_url, completed_at, last_update_at, reports_count, updates_count, results_submitted_count, live_voters_referred_count, interval_updates, election_practice_test_readiness_percentage, potential_payment_kobo, earned_amount_kobo, created_at, updated_at
+) RETURNING id, election_group_id, party_id, polling_unit_id, user_id, role_type, assigned_by, arrived_at, arrival_video_url, election_started_at, election_started_video_url, election_ended_at, election_ended_video_url, completed_at, last_update_at, reports_count, updates_count, results_submitted_count, live_voters_referred_count, interval_updates, election_practice_test_readiness_percentage, potential_payment_kobo, earned_amount_kobo, created_at, updated_at
 `
 
 type CreateAssignmentParams struct {
@@ -69,10 +69,10 @@ func (q *Queries) CreateAssignment(ctx context.Context, arg CreateAssignmentPara
 	var i PollingUnitAssignment
 	err := row.Scan(
 		&i.ID,
-		&i.UserID,
 		&i.ElectionGroupID,
 		&i.PartyID,
 		&i.PollingUnitID,
+		&i.UserID,
 		&i.RoleType,
 		&i.AssignedBy,
 		&i.ArrivedAt,
@@ -260,7 +260,7 @@ UPDATE polling_unit_assignments
 SET live_voters_referred_count = live_voters_referred_count + 1,
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, user_id, election_group_id, party_id, polling_unit_id, role_type, assigned_by, arrived_at, arrival_video_url, election_started_at, election_started_video_url, election_ended_at, election_ended_video_url, completed_at, last_update_at, reports_count, updates_count, results_submitted_count, live_voters_referred_count, interval_updates, election_practice_test_readiness_percentage, potential_payment_kobo, earned_amount_kobo, created_at, updated_at
+RETURNING id, election_group_id, party_id, polling_unit_id, user_id, role_type, assigned_by, arrived_at, arrival_video_url, election_started_at, election_started_video_url, election_ended_at, election_ended_video_url, completed_at, last_update_at, reports_count, updates_count, results_submitted_count, live_voters_referred_count, interval_updates, election_practice_test_readiness_percentage, potential_payment_kobo, earned_amount_kobo, created_at, updated_at
 `
 
 func (q *Queries) IncrementAssignmentLiveVotersReferredCount(ctx context.Context, id int64) (PollingUnitAssignment, error) {
@@ -268,10 +268,10 @@ func (q *Queries) IncrementAssignmentLiveVotersReferredCount(ctx context.Context
 	var i PollingUnitAssignment
 	err := row.Scan(
 		&i.ID,
-		&i.UserID,
 		&i.ElectionGroupID,
 		&i.PartyID,
 		&i.PollingUnitID,
+		&i.UserID,
 		&i.RoleType,
 		&i.AssignedBy,
 		&i.ArrivedAt,
@@ -585,7 +585,7 @@ UPDATE polling_unit_assignments
 SET earned_amount_kobo = earned_amount_kobo + $1::bigint,
     updated_at = NOW()
 WHERE user_id = $2 AND election_group_id = $3
-RETURNING id, user_id, election_group_id, party_id, polling_unit_id, role_type, assigned_by, arrived_at, arrival_video_url, election_started_at, election_started_video_url, election_ended_at, election_ended_video_url, completed_at, last_update_at, reports_count, updates_count, results_submitted_count, live_voters_referred_count, interval_updates, election_practice_test_readiness_percentage, potential_payment_kobo, earned_amount_kobo, created_at, updated_at
+RETURNING id, election_group_id, party_id, polling_unit_id, user_id, role_type, assigned_by, arrived_at, arrival_video_url, election_started_at, election_started_video_url, election_ended_at, election_ended_video_url, completed_at, last_update_at, reports_count, updates_count, results_submitted_count, live_voters_referred_count, interval_updates, election_practice_test_readiness_percentage, potential_payment_kobo, earned_amount_kobo, created_at, updated_at
 `
 
 type UpdatePollingUnitAssignmentEarnedAmountKoboParams struct {
@@ -599,10 +599,10 @@ func (q *Queries) UpdatePollingUnitAssignmentEarnedAmountKobo(ctx context.Contex
 	var i PollingUnitAssignment
 	err := row.Scan(
 		&i.ID,
-		&i.UserID,
 		&i.ElectionGroupID,
 		&i.PartyID,
 		&i.PollingUnitID,
+		&i.UserID,
 		&i.RoleType,
 		&i.AssignedBy,
 		&i.ArrivedAt,

@@ -50,9 +50,9 @@ RETURNING *;
 SELECT 
   COALESCE(COUNT(*), 0)::integer AS total_referrals,
   COALESCE(COUNT(*) FILTER (WHERE r.milestone = 'BECAME_AGENT'), 0)::integer AS agent_referrals,
-  COALESCE(COUNT(*) FILTER (WHERE r.status = 'pending' AND r.amount_to_pay > 0), 0)::integer AS unpaid_referrals,
-  COALESCE(SUM(r.amount_to_pay) FILTER (WHERE r.status = 'pending'), 0)::numeric AS potential_earnings,
-  COALESCE(SUM(r.amount_to_pay) FILTER (WHERE r.status = 'paid'), 0)::numeric AS earned_amount
+  COALESCE(COUNT(*) FILTER (WHERE r.status = 'pending' AND r.amount_to_pay_kobo > 0), 0)::integer AS unpaid_referrals,
+  COALESCE(SUM(r.amount_to_pay_kobo) FILTER (WHERE r.status = 'pending'), 0)::bigint AS potential_earnings_kobo,
+  COALESCE(SUM(r.amount_to_pay_kobo) FILTER (WHERE r.status = 'paid'), 0)::bigint AS earned_amount_kobo
 FROM referrals r
 WHERE r.referrer_user_id = $1
   AND (sqlc.narg('election_group_id')::int IS NULL OR r.election_group_id = sqlc.narg('election_group_id')::int);
@@ -62,7 +62,7 @@ INSERT INTO user_referrals (
   user_id,
   party_id,
   election_group_id,
-  amount,
+  amount_kobo,
   status
 ) VALUES (
   $1, $2, $3, $4, $5
@@ -82,24 +82,24 @@ WHERE user_id = $1 AND party_id = $2;
 
 -- name: UpdateReferralOnAgentAcceptance :exec
 -- Updates the referrals row when the referred user is accepted as an agent.
--- Sets milestone, amount_to_pay, party_id, election_group_id.
+-- Sets milestone, amount_to_pay_kobo, party_id, election_group_id.
 UPDATE referrals
-SET milestone        = 'BECAME_AGENT',
-    amount_to_pay    = $2,
-    party_id         = $3,
-    election_group_id = $4,
-    updated_at       = NOW()
+SET milestone          = 'BECAME_AGENT',
+    amount_to_pay_kobo = $2,
+    party_id           = $3,
+    election_group_id  = $4,
+    updated_at         = NOW()
 WHERE referred_user_id = $1;
 
 -- name: UpdateReferralOnApplication :exec
 -- Updates the referrals row when the referred user submits a party application matching referrer's user_referrals.
 UPDATE referrals
-SET user_referral_id  = $2,
-    party_id          = $3,
-    election_group_id = $4,
-    amount_to_pay     = $5,
-    milestone         = COALESCE(NULLIF(sqlc.arg('milestone')::text, ''), milestone),
-    updated_at        = NOW()
+SET user_referral_id   = $2,
+    party_id           = $3,
+    election_group_id  = $4,
+    amount_to_pay_kobo = $5,
+    milestone          = COALESCE(NULLIF(sqlc.arg('milestone')::text, ''), milestone),
+    updated_at         = NOW()
 WHERE id = $1;
 
 -- name: GetUserReferralByID :one
@@ -121,7 +121,7 @@ SELECT
   r.referred_user_id,
   r.milestone,
   r.status,
-  r.amount_to_pay,
+  r.amount_to_pay_kobo,
   r.created_at,
   r.updated_at,
   u.first_name,

@@ -27,7 +27,7 @@ ON CONFLICT (referred_user_id) DO UPDATE SET
   milestone = EXCLUDED.milestone,
   status = EXCLUDED.status,
   updated_at = NOW()
-RETURNING id, user_referral_id, party_id, election_group_id, referrer_user_id, referred_user_id, milestone, status, amount_to_pay, created_at, updated_at, paid_at
+RETURNING id, user_referral_id, party_id, election_group_id, referrer_user_id, referred_user_id, milestone, status, amount_to_pay_kobo, created_at, updated_at, paid_at
 `
 
 type CreateReferralParams struct {
@@ -56,7 +56,7 @@ func (q *Queries) CreateReferral(ctx context.Context, arg CreateReferralParams) 
 		&i.ReferredUserID,
 		&i.Milestone,
 		&i.Status,
-		&i.AmountToPay,
+		&i.AmountToPayKobo,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.PaidAt,
@@ -65,7 +65,7 @@ func (q *Queries) CreateReferral(ctx context.Context, arg CreateReferralParams) 
 }
 
 const getReferral = `-- name: GetReferral :one
-SELECT id, user_referral_id, party_id, election_group_id, referrer_user_id, referred_user_id, milestone, status, amount_to_pay, created_at, updated_at, paid_at FROM referrals
+SELECT id, user_referral_id, party_id, election_group_id, referrer_user_id, referred_user_id, milestone, status, amount_to_pay_kobo, created_at, updated_at, paid_at FROM referrals
 WHERE id = $1 LIMIT 1
 `
 
@@ -81,7 +81,7 @@ func (q *Queries) GetReferral(ctx context.Context, id int64) (Referral, error) {
 		&i.ReferredUserID,
 		&i.Milestone,
 		&i.Status,
-		&i.AmountToPay,
+		&i.AmountToPayKobo,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.PaidAt,
@@ -90,7 +90,7 @@ func (q *Queries) GetReferral(ctx context.Context, id int64) (Referral, error) {
 }
 
 const getReferralByReferredUserID = `-- name: GetReferralByReferredUserID :one
-SELECT id, user_referral_id, party_id, election_group_id, referrer_user_id, referred_user_id, milestone, status, amount_to_pay, created_at, updated_at, paid_at FROM referrals
+SELECT id, user_referral_id, party_id, election_group_id, referrer_user_id, referred_user_id, milestone, status, amount_to_pay_kobo, created_at, updated_at, paid_at FROM referrals
 WHERE referred_user_id = $1 LIMIT 1
 `
 
@@ -106,7 +106,7 @@ func (q *Queries) GetReferralByReferredUserID(ctx context.Context, referredUserI
 		&i.ReferredUserID,
 		&i.Milestone,
 		&i.Status,
-		&i.AmountToPay,
+		&i.AmountToPayKobo,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.PaidAt,
@@ -115,7 +115,7 @@ func (q *Queries) GetReferralByReferredUserID(ctx context.Context, referredUserI
 }
 
 const getReferrerUserReferralsForParty = `-- name: GetReferrerUserReferralsForParty :many
-SELECT id, user_id, party_id, election_group_id, amount, status, requested_at, approved_at, paid_at, created_at, updated_at FROM user_referrals
+SELECT id, user_id, party_id, election_group_id, amount_kobo, status, requested_at, approved_at, paid_at, created_at, updated_at FROM user_referrals
 WHERE user_id = $1 AND party_id = $2
 `
 
@@ -139,7 +139,7 @@ func (q *Queries) GetReferrerUserReferralsForParty(ctx context.Context, arg GetR
 			&i.UserID,
 			&i.PartyID,
 			&i.ElectionGroupID,
-			&i.Amount,
+			&i.AmountKobo,
 			&i.Status,
 			&i.RequestedAt,
 			&i.ApprovedAt,
@@ -158,7 +158,7 @@ func (q *Queries) GetReferrerUserReferralsForParty(ctx context.Context, arg GetR
 }
 
 const getUserReferralByID = `-- name: GetUserReferralByID :one
-SELECT id, user_id, party_id, election_group_id, amount, status, requested_at, approved_at, paid_at, created_at, updated_at FROM user_referrals
+SELECT id, user_id, party_id, election_group_id, amount_kobo, status, requested_at, approved_at, paid_at, created_at, updated_at FROM user_referrals
 WHERE id = $1 LIMIT 1
 `
 
@@ -170,7 +170,7 @@ func (q *Queries) GetUserReferralByID(ctx context.Context, id int64) (UserReferr
 		&i.UserID,
 		&i.PartyID,
 		&i.ElectionGroupID,
-		&i.Amount,
+		&i.AmountKobo,
 		&i.Status,
 		&i.RequestedAt,
 		&i.ApprovedAt,
@@ -182,7 +182,7 @@ func (q *Queries) GetUserReferralByID(ctx context.Context, id int64) (UserReferr
 }
 
 const getUserReferralByUserAndElectionGroup = `-- name: GetUserReferralByUserAndElectionGroup :one
-SELECT id, user_id, party_id, election_group_id, amount, status, requested_at, approved_at, paid_at, created_at, updated_at FROM user_referrals
+SELECT id, user_id, party_id, election_group_id, amount_kobo, status, requested_at, approved_at, paid_at, created_at, updated_at FROM user_referrals
 WHERE user_id = $1 AND election_group_id = $2
 LIMIT 1
 `
@@ -200,7 +200,7 @@ func (q *Queries) GetUserReferralByUserAndElectionGroup(ctx context.Context, arg
 		&i.UserID,
 		&i.PartyID,
 		&i.ElectionGroupID,
-		&i.Amount,
+		&i.AmountKobo,
 		&i.Status,
 		&i.RequestedAt,
 		&i.ApprovedAt,
@@ -215,9 +215,9 @@ const getUserReferralStats = `-- name: GetUserReferralStats :one
 SELECT 
   COALESCE(COUNT(*), 0)::integer AS total_referrals,
   COALESCE(COUNT(*) FILTER (WHERE r.milestone = 'BECAME_AGENT'), 0)::integer AS agent_referrals,
-  COALESCE(COUNT(*) FILTER (WHERE r.status = 'pending' AND r.amount_to_pay > 0), 0)::integer AS unpaid_referrals,
-  COALESCE(SUM(r.amount_to_pay) FILTER (WHERE r.status = 'pending'), 0)::numeric AS potential_earnings,
-  COALESCE(SUM(r.amount_to_pay) FILTER (WHERE r.status = 'paid'), 0)::numeric AS earned_amount
+  COALESCE(COUNT(*) FILTER (WHERE r.status = 'pending' AND r.amount_to_pay_kobo > 0), 0)::integer AS unpaid_referrals,
+  COALESCE(SUM(r.amount_to_pay_kobo) FILTER (WHERE r.status = 'pending'), 0)::bigint AS potential_earnings_kobo,
+  COALESCE(SUM(r.amount_to_pay_kobo) FILTER (WHERE r.status = 'paid'), 0)::bigint AS earned_amount_kobo
 FROM referrals r
 WHERE r.referrer_user_id = $1
   AND ($2::int IS NULL OR r.election_group_id = $2::int)
@@ -229,11 +229,11 @@ type GetUserReferralStatsParams struct {
 }
 
 type GetUserReferralStatsRow struct {
-	TotalReferrals    int32          `json:"total_referrals"`
-	AgentReferrals    int32          `json:"agent_referrals"`
-	UnpaidReferrals   int32          `json:"unpaid_referrals"`
-	PotentialEarnings pgtype.Numeric `json:"potential_earnings"`
-	EarnedAmount      pgtype.Numeric `json:"earned_amount"`
+	TotalReferrals        int32 `json:"total_referrals"`
+	AgentReferrals        int32 `json:"agent_referrals"`
+	UnpaidReferrals       int32 `json:"unpaid_referrals"`
+	PotentialEarningsKobo int64 `json:"potential_earnings_kobo"`
+	EarnedAmountKobo      int64 `json:"earned_amount_kobo"`
 }
 
 func (q *Queries) GetUserReferralStats(ctx context.Context, arg GetUserReferralStatsParams) (GetUserReferralStatsRow, error) {
@@ -243,8 +243,8 @@ func (q *Queries) GetUserReferralStats(ctx context.Context, arg GetUserReferralS
 		&i.TotalReferrals,
 		&i.AgentReferrals,
 		&i.UnpaidReferrals,
-		&i.PotentialEarnings,
-		&i.EarnedAmount,
+		&i.PotentialEarningsKobo,
+		&i.EarnedAmountKobo,
 	)
 	return i, err
 }
@@ -262,7 +262,7 @@ func (q *Queries) GetUserReferredByID(ctx context.Context, referredUserID int64)
 }
 
 const listReferrals = `-- name: ListReferrals :many
-SELECT id, user_referral_id, party_id, election_group_id, referrer_user_id, referred_user_id, milestone, status, amount_to_pay, created_at, updated_at, paid_at FROM referrals
+SELECT id, user_referral_id, party_id, election_group_id, referrer_user_id, referred_user_id, milestone, status, amount_to_pay_kobo, created_at, updated_at, paid_at FROM referrals
 ORDER BY id DESC
 LIMIT $1 OFFSET $2
 `
@@ -290,7 +290,7 @@ func (q *Queries) ListReferrals(ctx context.Context, arg ListReferralsParams) ([
 			&i.ReferredUserID,
 			&i.Milestone,
 			&i.Status,
-			&i.AmountToPay,
+			&i.AmountToPayKobo,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.PaidAt,
@@ -306,7 +306,7 @@ func (q *Queries) ListReferrals(ctx context.Context, arg ListReferralsParams) ([
 }
 
 const listReferralsByReferrer = `-- name: ListReferralsByReferrer :many
-SELECT id, user_referral_id, party_id, election_group_id, referrer_user_id, referred_user_id, milestone, status, amount_to_pay, created_at, updated_at, paid_at FROM referrals
+SELECT id, user_referral_id, party_id, election_group_id, referrer_user_id, referred_user_id, milestone, status, amount_to_pay_kobo, created_at, updated_at, paid_at FROM referrals
 WHERE referrer_user_id = $1
 ORDER BY id DESC
 LIMIT $2 OFFSET $3
@@ -336,7 +336,7 @@ func (q *Queries) ListReferralsByReferrer(ctx context.Context, arg ListReferrals
 			&i.ReferredUserID,
 			&i.Milestone,
 			&i.Status,
-			&i.AmountToPay,
+			&i.AmountToPayKobo,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.PaidAt,
@@ -361,7 +361,7 @@ SELECT
   r.referred_user_id,
   r.milestone,
   r.status,
-  r.amount_to_pay,
+  r.amount_to_pay_kobo,
   r.created_at,
   r.updated_at,
   u.first_name,
@@ -392,7 +392,7 @@ type ListReferredUsersWithDetailsRow struct {
 	ReferredUserID  int64              `json:"referred_user_id"`
 	Milestone       string             `json:"milestone"`
 	Status          pgtype.Text        `json:"status"`
-	AmountToPay     pgtype.Numeric     `json:"amount_to_pay"`
+	AmountToPayKobo int64              `json:"amount_to_pay_kobo"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 	FirstName       pgtype.Text        `json:"first_name"`
@@ -423,7 +423,7 @@ func (q *Queries) ListReferredUsersWithDetails(ctx context.Context, arg ListRefe
 			&i.ReferredUserID,
 			&i.Milestone,
 			&i.Status,
-			&i.AmountToPay,
+			&i.AmountToPayKobo,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.FirstName,
@@ -449,7 +449,7 @@ SET
   paid_at = COALESCE($5, paid_at),
   updated_at = NOW()
 WHERE id = $1
-RETURNING id, user_referral_id, party_id, election_group_id, referrer_user_id, referred_user_id, milestone, status, amount_to_pay, created_at, updated_at, paid_at
+RETURNING id, user_referral_id, party_id, election_group_id, referrer_user_id, referred_user_id, milestone, status, amount_to_pay_kobo, created_at, updated_at, paid_at
 `
 
 type UpdateReferralParams struct {
@@ -478,7 +478,7 @@ func (q *Queries) UpdateReferral(ctx context.Context, arg UpdateReferralParams) 
 		&i.ReferredUserID,
 		&i.Milestone,
 		&i.Status,
-		&i.AmountToPay,
+		&i.AmountToPayKobo,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.PaidAt,
@@ -488,27 +488,27 @@ func (q *Queries) UpdateReferral(ctx context.Context, arg UpdateReferralParams) 
 
 const updateReferralOnAgentAcceptance = `-- name: UpdateReferralOnAgentAcceptance :exec
 UPDATE referrals
-SET milestone        = 'BECAME_AGENT',
-    amount_to_pay    = $2,
-    party_id         = $3,
-    election_group_id = $4,
-    updated_at       = NOW()
+SET milestone          = 'BECAME_AGENT',
+    amount_to_pay_kobo = $2,
+    party_id           = $3,
+    election_group_id  = $4,
+    updated_at         = NOW()
 WHERE referred_user_id = $1
 `
 
 type UpdateReferralOnAgentAcceptanceParams struct {
-	ReferredUserID  int64          `json:"referred_user_id"`
-	AmountToPay     pgtype.Numeric `json:"amount_to_pay"`
-	PartyID         pgtype.Int2    `json:"party_id"`
-	ElectionGroupID pgtype.Int4    `json:"election_group_id"`
+	ReferredUserID  int64       `json:"referred_user_id"`
+	AmountToPayKobo int64       `json:"amount_to_pay_kobo"`
+	PartyID         pgtype.Int2 `json:"party_id"`
+	ElectionGroupID pgtype.Int4 `json:"election_group_id"`
 }
 
 // Updates the referrals row when the referred user is accepted as an agent.
-// Sets milestone, amount_to_pay, party_id, election_group_id.
+// Sets milestone, amount_to_pay_kobo, party_id, election_group_id.
 func (q *Queries) UpdateReferralOnAgentAcceptance(ctx context.Context, arg UpdateReferralOnAgentAcceptanceParams) error {
 	_, err := q.db.Exec(ctx, updateReferralOnAgentAcceptance,
 		arg.ReferredUserID,
-		arg.AmountToPay,
+		arg.AmountToPayKobo,
 		arg.PartyID,
 		arg.ElectionGroupID,
 	)
@@ -517,22 +517,22 @@ func (q *Queries) UpdateReferralOnAgentAcceptance(ctx context.Context, arg Updat
 
 const updateReferralOnApplication = `-- name: UpdateReferralOnApplication :exec
 UPDATE referrals
-SET user_referral_id  = $2,
-    party_id          = $3,
-    election_group_id = $4,
-    amount_to_pay     = $5,
-    milestone         = COALESCE(NULLIF($6::text, ''), milestone),
-    updated_at        = NOW()
+SET user_referral_id   = $2,
+    party_id           = $3,
+    election_group_id  = $4,
+    amount_to_pay_kobo = $5,
+    milestone          = COALESCE(NULLIF($6::text, ''), milestone),
+    updated_at         = NOW()
 WHERE id = $1
 `
 
 type UpdateReferralOnApplicationParams struct {
-	ID              int64          `json:"id"`
-	UserReferralID  pgtype.Int8    `json:"user_referral_id"`
-	PartyID         pgtype.Int2    `json:"party_id"`
-	ElectionGroupID pgtype.Int4    `json:"election_group_id"`
-	AmountToPay     pgtype.Numeric `json:"amount_to_pay"`
-	Milestone       string         `json:"milestone"`
+	ID              int64       `json:"id"`
+	UserReferralID  pgtype.Int8 `json:"user_referral_id"`
+	PartyID         pgtype.Int2 `json:"party_id"`
+	ElectionGroupID pgtype.Int4 `json:"election_group_id"`
+	AmountToPayKobo int64       `json:"amount_to_pay_kobo"`
+	Milestone       string      `json:"milestone"`
 }
 
 // Updates the referrals row when the referred user submits a party application matching referrer's user_referrals.
@@ -542,7 +542,7 @@ func (q *Queries) UpdateReferralOnApplication(ctx context.Context, arg UpdateRef
 		arg.UserReferralID,
 		arg.PartyID,
 		arg.ElectionGroupID,
-		arg.AmountToPay,
+		arg.AmountToPayKobo,
 		arg.Milestone,
 	)
 	return err
@@ -553,7 +553,7 @@ INSERT INTO user_referrals (
   user_id,
   party_id,
   election_group_id,
-  amount,
+  amount_kobo,
   status
 ) VALUES (
   $1, $2, $3, $4, $5
@@ -564,11 +564,11 @@ RETURNING id
 `
 
 type UpsertUserReferralRecordParams struct {
-	UserID          int64          `json:"user_id"`
-	PartyID         pgtype.Int2    `json:"party_id"`
-	ElectionGroupID pgtype.Int4    `json:"election_group_id"`
-	Amount          pgtype.Numeric `json:"amount"`
-	Status          string         `json:"status"`
+	UserID          int64       `json:"user_id"`
+	PartyID         pgtype.Int2 `json:"party_id"`
+	ElectionGroupID pgtype.Int4 `json:"election_group_id"`
+	AmountKobo      int64       `json:"amount_kobo"`
+	Status          string      `json:"status"`
 }
 
 func (q *Queries) UpsertUserReferralRecord(ctx context.Context, arg UpsertUserReferralRecordParams) (int64, error) {
@@ -576,7 +576,7 @@ func (q *Queries) UpsertUserReferralRecord(ctx context.Context, arg UpsertUserRe
 		arg.UserID,
 		arg.PartyID,
 		arg.ElectionGroupID,
-		arg.Amount,
+		arg.AmountKobo,
 		arg.Status,
 	)
 	var id int64

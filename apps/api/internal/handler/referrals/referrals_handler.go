@@ -2,6 +2,7 @@ package referrals
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -45,15 +46,17 @@ type updateReferralRequest struct {
 }
 
 type UserReferralStatsData struct {
-	ID                int64       `json:"id,omitempty"`
-	UserID            int64       `json:"user_id,omitempty"`
-	PartyID           interface{} `json:"party_id,omitempty"`
-	ElectionGroupID   interface{} `json:"election_group_id,omitempty"`
-	TotalReferrals    interface{} `json:"total_referrals"`
-	AgentReferrals    interface{} `json:"agent_referrals"`
-	UnpaidReferrals   interface{} `json:"unpaid_referrals"`
-	PotentialEarnings interface{} `json:"potential_earnings"`
-	EarnedAmount      interface{} `json:"earned_amount"`
+	ID                    int64       `json:"id,omitempty"`
+	UserID                int64       `json:"user_id,omitempty"`
+	PartyID               interface{} `json:"party_id,omitempty"`
+	ElectionGroupID       interface{} `json:"election_group_id,omitempty"`
+	TotalReferrals        interface{} `json:"total_referrals"`
+	AgentReferrals        interface{} `json:"agent_referrals"`
+	UnpaidReferrals       interface{} `json:"unpaid_referrals"`
+	PotentialEarnings     interface{} `json:"potential_earnings"`
+	EarnedAmount          interface{} `json:"earned_amount"`
+	PotentialEarningsKobo int64       `json:"potential_earnings_kobo"`
+	EarnedAmountKobo      int64       `json:"earned_amount_kobo"`
 }
 
 type UserReferralStatsResponse struct {

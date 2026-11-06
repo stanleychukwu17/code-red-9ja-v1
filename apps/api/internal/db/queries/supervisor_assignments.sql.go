@@ -90,7 +90,7 @@ INSERT INTO lga_election_supervisors (
 ) VALUES (
   $1, $2, $3, $4, $5, $6, $7, $8
 )
-RETURNING id, user_id, state_id, lga_id, election_group_id, party_id, role_type, assigned_by, arrived_at, arrival_video_url, completed_at, potential_payment_kobo, earned_amount_kobo, created_at, updated_at
+RETURNING id, election_group_id, party_id, user_id, state_id, lga_id, role_type, assigned_by, arrived_at, arrival_video_url, completed_at, potential_payment_kobo, earned_amount_kobo, created_at, updated_at
 `
 
 type CreateLgaSupervisorParams struct {
@@ -118,11 +118,11 @@ func (q *Queries) CreateLgaSupervisor(ctx context.Context, arg CreateLgaSupervis
 	var i LgaElectionSupervisor
 	err := row.Scan(
 		&i.ID,
+		&i.ElectionGroupID,
+		&i.PartyID,
 		&i.UserID,
 		&i.StateID,
 		&i.LgaID,
-		&i.ElectionGroupID,
-		&i.PartyID,
 		&i.RoleType,
 		&i.AssignedBy,
 		&i.ArrivedAt,
@@ -148,7 +148,7 @@ INSERT INTO state_election_supervisors (
 ) VALUES (
   $1, $2, $3, $4, $5, $6, $7
 )
-RETURNING id, user_id, state_id, election_group_id, party_id, role_type, assigned_by, arrived_at, arrival_video_url, completed_at, potential_payment_kobo, earned_amount_kobo, created_at, updated_at
+RETURNING id, election_group_id, party_id, user_id, state_id, role_type, assigned_by, arrived_at, arrival_video_url, completed_at, potential_payment_kobo, earned_amount_kobo, created_at, updated_at
 `
 
 type CreateStateSupervisorParams struct {
@@ -174,10 +174,10 @@ func (q *Queries) CreateStateSupervisor(ctx context.Context, arg CreateStateSupe
 	var i StateElectionSupervisor
 	err := row.Scan(
 		&i.ID,
-		&i.UserID,
-		&i.StateID,
 		&i.ElectionGroupID,
 		&i.PartyID,
+		&i.UserID,
+		&i.StateID,
 		&i.RoleType,
 		&i.AssignedBy,
 		&i.ArrivedAt,
@@ -205,7 +205,7 @@ INSERT INTO ward_election_supervisors (
 ) VALUES (
   $1, $2, $3, $4, $5, $6, $7, $8, $9
 )
-RETURNING id, user_id, state_id, lga_id, ward_id, election_group_id, party_id, role_type, assigned_by, arrived_at, arrival_video_url, completed_at, potential_payment_kobo, earned_amount_kobo, created_at, updated_at
+RETURNING id, election_group_id, user_id, party_id, state_id, lga_id, ward_id, role_type, assigned_by, arrived_at, arrival_video_url, completed_at, potential_payment_kobo, earned_amount_kobo, created_at, updated_at
 `
 
 type CreateWardSupervisorParams struct {
@@ -235,12 +235,12 @@ func (q *Queries) CreateWardSupervisor(ctx context.Context, arg CreateWardSuperv
 	var i WardElectionSupervisor
 	err := row.Scan(
 		&i.ID,
+		&i.ElectionGroupID,
 		&i.UserID,
+		&i.PartyID,
 		&i.StateID,
 		&i.LgaID,
 		&i.WardID,
-		&i.ElectionGroupID,
-		&i.PartyID,
 		&i.RoleType,
 		&i.AssignedBy,
 		&i.ArrivedAt,
@@ -255,7 +255,7 @@ func (q *Queries) CreateWardSupervisor(ctx context.Context, arg CreateWardSuperv
 }
 
 const getLgaSupervisorByElectionGroup = `-- name: GetLgaSupervisorByElectionGroup :one
-SELECT id, user_id, state_id, lga_id, election_group_id, party_id, role_type, assigned_by, arrived_at, arrival_video_url, completed_at, potential_payment_kobo, earned_amount_kobo, created_at, updated_at FROM lga_election_supervisors 
+SELECT id, election_group_id, party_id, user_id, state_id, lga_id, role_type, assigned_by, arrived_at, arrival_video_url, completed_at, potential_payment_kobo, earned_amount_kobo, created_at, updated_at FROM lga_election_supervisors 
 WHERE user_id = $1 AND election_group_id = $2 LIMIT 1
 `
 
@@ -269,11 +269,11 @@ func (q *Queries) GetLgaSupervisorByElectionGroup(ctx context.Context, arg GetLg
 	var i LgaElectionSupervisor
 	err := row.Scan(
 		&i.ID,
+		&i.ElectionGroupID,
+		&i.PartyID,
 		&i.UserID,
 		&i.StateID,
 		&i.LgaID,
-		&i.ElectionGroupID,
-		&i.PartyID,
 		&i.RoleType,
 		&i.AssignedBy,
 		&i.ArrivedAt,
@@ -288,7 +288,7 @@ func (q *Queries) GetLgaSupervisorByElectionGroup(ctx context.Context, arg GetLg
 }
 
 const getStateSupervisorByElectionGroup = `-- name: GetStateSupervisorByElectionGroup :one
-SELECT id, user_id, state_id, election_group_id, party_id, role_type, assigned_by, arrived_at, arrival_video_url, completed_at, potential_payment_kobo, earned_amount_kobo, created_at, updated_at FROM state_election_supervisors 
+SELECT id, election_group_id, party_id, user_id, state_id, role_type, assigned_by, arrived_at, arrival_video_url, completed_at, potential_payment_kobo, earned_amount_kobo, created_at, updated_at FROM state_election_supervisors 
 WHERE user_id = $1 AND election_group_id = $2 LIMIT 1
 `
 
@@ -302,10 +302,10 @@ func (q *Queries) GetStateSupervisorByElectionGroup(ctx context.Context, arg Get
 	var i StateElectionSupervisor
 	err := row.Scan(
 		&i.ID,
-		&i.UserID,
-		&i.StateID,
 		&i.ElectionGroupID,
 		&i.PartyID,
+		&i.UserID,
+		&i.StateID,
 		&i.RoleType,
 		&i.AssignedBy,
 		&i.ArrivedAt,
@@ -320,7 +320,7 @@ func (q *Queries) GetStateSupervisorByElectionGroup(ctx context.Context, arg Get
 }
 
 const getWardSupervisorByElectionGroup = `-- name: GetWardSupervisorByElectionGroup :one
-SELECT id, user_id, state_id, lga_id, ward_id, election_group_id, party_id, role_type, assigned_by, arrived_at, arrival_video_url, completed_at, potential_payment_kobo, earned_amount_kobo, created_at, updated_at FROM ward_election_supervisors 
+SELECT id, election_group_id, user_id, party_id, state_id, lga_id, ward_id, role_type, assigned_by, arrived_at, arrival_video_url, completed_at, potential_payment_kobo, earned_amount_kobo, created_at, updated_at FROM ward_election_supervisors 
 WHERE user_id = $1 AND election_group_id = $2 LIMIT 1
 `
 
@@ -334,12 +334,12 @@ func (q *Queries) GetWardSupervisorByElectionGroup(ctx context.Context, arg GetW
 	var i WardElectionSupervisor
 	err := row.Scan(
 		&i.ID,
+		&i.ElectionGroupID,
 		&i.UserID,
+		&i.PartyID,
 		&i.StateID,
 		&i.LgaID,
 		&i.WardID,
-		&i.ElectionGroupID,
-		&i.PartyID,
 		&i.RoleType,
 		&i.AssignedBy,
 		&i.ArrivedAt,
@@ -358,7 +358,7 @@ UPDATE lga_election_supervisors
 SET earned_amount_kobo = earned_amount_kobo + $1::bigint,
     updated_at = NOW()
 WHERE user_id = $2 AND election_group_id = $3
-RETURNING id, user_id, state_id, lga_id, election_group_id, party_id, role_type, assigned_by, arrived_at, arrival_video_url, completed_at, potential_payment_kobo, earned_amount_kobo, created_at, updated_at
+RETURNING id, election_group_id, party_id, user_id, state_id, lga_id, role_type, assigned_by, arrived_at, arrival_video_url, completed_at, potential_payment_kobo, earned_amount_kobo, created_at, updated_at
 `
 
 type UpdateLgaSupervisorEarnedAmountKoboParams struct {
@@ -372,11 +372,11 @@ func (q *Queries) UpdateLgaSupervisorEarnedAmountKobo(ctx context.Context, arg U
 	var i LgaElectionSupervisor
 	err := row.Scan(
 		&i.ID,
+		&i.ElectionGroupID,
+		&i.PartyID,
 		&i.UserID,
 		&i.StateID,
 		&i.LgaID,
-		&i.ElectionGroupID,
-		&i.PartyID,
 		&i.RoleType,
 		&i.AssignedBy,
 		&i.ArrivedAt,
@@ -395,7 +395,7 @@ UPDATE state_election_supervisors
 SET earned_amount_kobo = earned_amount_kobo + $1::bigint,
     updated_at = NOW()
 WHERE user_id = $2 AND election_group_id = $3
-RETURNING id, user_id, state_id, election_group_id, party_id, role_type, assigned_by, arrived_at, arrival_video_url, completed_at, potential_payment_kobo, earned_amount_kobo, created_at, updated_at
+RETURNING id, election_group_id, party_id, user_id, state_id, role_type, assigned_by, arrived_at, arrival_video_url, completed_at, potential_payment_kobo, earned_amount_kobo, created_at, updated_at
 `
 
 type UpdateStateSupervisorEarnedAmountKoboParams struct {
@@ -409,10 +409,10 @@ func (q *Queries) UpdateStateSupervisorEarnedAmountKobo(ctx context.Context, arg
 	var i StateElectionSupervisor
 	err := row.Scan(
 		&i.ID,
-		&i.UserID,
-		&i.StateID,
 		&i.ElectionGroupID,
 		&i.PartyID,
+		&i.UserID,
+		&i.StateID,
 		&i.RoleType,
 		&i.AssignedBy,
 		&i.ArrivedAt,
@@ -431,7 +431,7 @@ UPDATE ward_election_supervisors
 SET earned_amount_kobo = earned_amount_kobo + $1::bigint,
     updated_at = NOW()
 WHERE user_id = $2 AND election_group_id = $3
-RETURNING id, user_id, state_id, lga_id, ward_id, election_group_id, party_id, role_type, assigned_by, arrived_at, arrival_video_url, completed_at, potential_payment_kobo, earned_amount_kobo, created_at, updated_at
+RETURNING id, election_group_id, user_id, party_id, state_id, lga_id, ward_id, role_type, assigned_by, arrived_at, arrival_video_url, completed_at, potential_payment_kobo, earned_amount_kobo, created_at, updated_at
 `
 
 type UpdateWardSupervisorEarnedAmountKoboParams struct {
@@ -445,12 +445,12 @@ func (q *Queries) UpdateWardSupervisorEarnedAmountKobo(ctx context.Context, arg 
 	var i WardElectionSupervisor
 	err := row.Scan(
 		&i.ID,
+		&i.ElectionGroupID,
 		&i.UserID,
+		&i.PartyID,
 		&i.StateID,
 		&i.LgaID,
 		&i.WardID,
-		&i.ElectionGroupID,
-		&i.PartyID,
 		&i.RoleType,
 		&i.AssignedBy,
 		&i.ArrivedAt,

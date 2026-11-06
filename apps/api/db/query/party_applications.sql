@@ -211,12 +211,53 @@ LIMIT 1;
 
 -- name: HasActiveAgentApplication :one
 SELECT EXISTS (
+  -- 1. Pending or accepted party application
   SELECT 1 
   FROM party_agent_applications pa
   JOIN election_groups eg ON pa.election_group_id = eg.id
   WHERE pa.user_id = $1
     AND pa.status IN ('pending', 'accepted')
     AND eg.active = TRUE 
+    AND eg.election_date >= CURRENT_DATE
+
+  UNION ALL
+
+  -- 2. Already assigned as a Polling Agent
+  SELECT 1
+  FROM polling_unit_assignments pua
+  JOIN election_groups eg ON pua.election_group_id = eg.id
+  WHERE pua.user_id = $1
+    AND eg.active = TRUE
+    AND eg.election_date >= CURRENT_DATE
+
+  UNION ALL
+
+  -- 3. Already assigned as a Ward Supervisor
+  SELECT 1
+  FROM ward_election_supervisors wes
+  JOIN election_groups eg ON wes.election_group_id = eg.id
+  WHERE wes.user_id = $1
+    AND eg.active = TRUE
+    AND eg.election_date >= CURRENT_DATE
+
+  UNION ALL
+
+  -- 4. Already assigned as an LGA Supervisor
+  SELECT 1
+  FROM lga_election_supervisors les
+  JOIN election_groups eg ON les.election_group_id = eg.id
+  WHERE les.user_id = $1
+    AND eg.active = TRUE
+    AND eg.election_date >= CURRENT_DATE
+
+  UNION ALL
+
+  -- 5. Already assigned as a State Supervisor
+  SELECT 1
+  FROM state_election_supervisors ses
+  JOIN election_groups eg ON ses.election_group_id = eg.id
+  WHERE ses.user_id = $1
+    AND eg.active = TRUE
     AND eg.election_date >= CURRENT_DATE
 ) AS has_active;
 

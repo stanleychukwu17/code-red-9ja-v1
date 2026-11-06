@@ -432,11 +432,11 @@ type Lga struct {
 
 type LgaElectionSupervisor struct {
 	ID                   int64              `json:"id"`
+	ElectionGroupID      int32              `json:"election_group_id"`
+	PartyID              int16              `json:"party_id"`
 	UserID               int64              `json:"user_id"`
 	StateID              int16              `json:"state_id"`
 	LgaID                int32              `json:"lga_id"`
-	ElectionGroupID      int32              `json:"election_group_id"`
-	PartyID              int16              `json:"party_id"`
 	RoleType             pgtype.Text        `json:"role_type"`
 	AssignedBy           pgtype.Int8        `json:"assigned_by"`
 	ArrivedAt            pgtype.Timestamptz `json:"arrived_at"`
@@ -821,10 +821,10 @@ type PollingUnit struct {
 
 type PollingUnitAssignment struct {
 	ID                                      int64              `json:"id"`
-	UserID                                  int64              `json:"user_id"`
 	ElectionGroupID                         int32              `json:"election_group_id"`
 	PartyID                                 int16              `json:"party_id"`
 	PollingUnitID                           int32              `json:"polling_unit_id"`
+	UserID                                  int64              `json:"user_id"`
 	RoleType                                pgtype.Text        `json:"role_type"`
 	AssignedBy                              pgtype.Int8        `json:"assigned_by"`
 	ArrivedAt                               pgtype.Timestamptz `json:"arrived_at"`
@@ -912,7 +912,7 @@ type Referral struct {
 	ReferredUserID  int64              `json:"referred_user_id"`
 	Milestone       string             `json:"milestone"`
 	Status          pgtype.Text        `json:"status"`
-	AmountToPay     pgtype.Numeric     `json:"amount_to_pay"`
+	AmountToPayKobo int64              `json:"amount_to_pay_kobo"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 	PaidAt          pgtype.Timestamptz `json:"paid_at"`
@@ -971,10 +971,10 @@ type StateConstituency struct {
 
 type StateElectionSupervisor struct {
 	ID                   int64              `json:"id"`
-	UserID               int64              `json:"user_id"`
-	StateID              int16              `json:"state_id"`
 	ElectionGroupID      int32              `json:"election_group_id"`
 	PartyID              int16              `json:"party_id"`
+	UserID               int64              `json:"user_id"`
+	StateID              int16              `json:"state_id"`
 	RoleType             pgtype.Text        `json:"role_type"`
 	AssignedBy           pgtype.Int8        `json:"assigned_by"`
 	ArrivedAt            pgtype.Timestamptz `json:"arrived_at"`
@@ -1129,7 +1129,7 @@ type UserReferral struct {
 	UserID          int64              `json:"user_id"`
 	PartyID         pgtype.Int2        `json:"party_id"`
 	ElectionGroupID pgtype.Int4        `json:"election_group_id"`
-	Amount          pgtype.Numeric     `json:"amount"`
+	AmountKobo      int64              `json:"amount_kobo"`
 	Status          string             `json:"status"`
 	RequestedAt     pgtype.Timestamptz `json:"requested_at"`
 	ApprovedAt      pgtype.Timestamptz `json:"approved_at"`
@@ -1212,12 +1212,12 @@ type Ward struct {
 
 type WardElectionSupervisor struct {
 	ID                   int64              `json:"id"`
+	ElectionGroupID      int32              `json:"election_group_id"`
 	UserID               int64              `json:"user_id"`
+	PartyID              int16              `json:"party_id"`
 	StateID              int16              `json:"state_id"`
 	LgaID                int32              `json:"lga_id"`
 	WardID               int32              `json:"ward_id"`
-	ElectionGroupID      int32              `json:"election_group_id"`
-	PartyID              int16              `json:"party_id"`
 	RoleType             pgtype.Text        `json:"role_type"`
 	AssignedBy           pgtype.Int8        `json:"assigned_by"`
 	ArrivedAt            pgtype.Timestamptz `json:"arrived_at"`

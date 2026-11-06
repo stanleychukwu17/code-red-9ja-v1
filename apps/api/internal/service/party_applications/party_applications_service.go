@@ -31,6 +31,8 @@ type PollingUnitsService interface {
 
 type PartiesService interface {
 	GetPartyByID(ctx context.Context, partyID int16) (queries.Party, error)
+	InvalidatePartyCache(ctx context.Context, partyID int16)
+	InvalidateAcceptingPartyIDsCache(ctx context.Context)
 }
 
 type Service struct {
@@ -736,6 +738,20 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 		assignedByVal = utils.PgInt8FromPositive(input.AssignedBy)
 	}
 
+	// Fallback to applicant's existing location if not explicitly provided in approval
+	stateID := input.StateID
+	if stateID <= 0 {
+		stateID = app.StateID
+	}
+	lgaID := input.LgaID
+	if lgaID <= 0 && app.LgaID.Valid {
+		lgaID = app.LgaID.Int32
+	}
+	wardID := input.WardID
+	if wardID <= 0 && app.WardID.Valid {
+		wardID = app.WardID.Int32
+	}
+
 	// Validate and resolve polling unit assignment for polling agents
 	pollingUnitID := input.PollingUnitID
 	if roleType == "polling_agent" {
@@ -755,7 +771,7 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 	}
 
 	// Calculate the required payment allocation for this role and jurisdiction
-	deductionKobo := resolvePotentialPaymentKobo(party.AgentPaymentAllocationKobo, roleType, input.StateID)
+	deductionKobo := resolvePotentialPaymentKobo(party.AgentPaymentAllocationKobo, roleType, stateID)
 
 	// Deduct allocated agent remuneration from party balance
 	if deductionKobo > 0 {
@@ -776,9 +792,9 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 		ID:            input.ApplicationID,
 		Role:          roleType,
 		PollingUnitID: utils.PgInt4FromPositive(pollingUnitID),
-		StateID:       int16(input.StateID),
-		LgaID:         utils.PgInt4FromPositive(input.LgaID),
-		WardID:        utils.PgInt4FromPositive(input.WardID),
+		StateID:       stateID,
+		LgaID:         utils.PgInt4FromPositive(lgaID),
+		WardID:        utils.PgInt4FromPositive(wardID),
 	})
 	if err != nil {
 		return queries.PartyAgentApplication{}, fmt.Errorf("failed to update application approval status: %w", err)
@@ -794,7 +810,7 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 		// State supervisor assignment
 		_, err = txQueries.CreateStateSupervisor(ctx, queries.CreateStateSupervisorParams{
 			UserID:               app.UserID,
-			StateID:              input.StateID,
+			StateID:              stateID,
 			ElectionGroupID:      electionGroupID,
 			PartyID:              partyID,
 			RoleType:             utils.PgTextFromString(roleType),
@@ -808,8 +824,8 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 		// LGA supervisor assignment
 		_, err = txQueries.CreateLgaSupervisor(ctx, queries.CreateLgaSupervisorParams{
 			UserID:               app.UserID,
-			StateID:              input.StateID,
-			LgaID:                input.LgaID,
+			StateID:              stateID,
+			LgaID:                lgaID,
 			ElectionGroupID:      electionGroupID,
 			PartyID:              partyID,
 			RoleType:             utils.PgTextFromString(roleType),
@@ -823,9 +839,9 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 		// Ward supervisor assignment
 		_, err = txQueries.CreateWardSupervisor(ctx, queries.CreateWardSupervisorParams{
 			UserID:               app.UserID,
-			StateID:              input.StateID,
-			LgaID:                input.LgaID,
-			WardID:               input.WardID,
+			StateID:              stateID,
+			LgaID:                lgaID,
+			WardID:               wardID,
 			ElectionGroupID:      electionGroupID,
 			PartyID:              partyID,
 			RoleType:             utils.PgTextFromString(roleType),
@@ -887,34 +903,38 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 		return queries.PartyAgentApplication{}, fmt.Errorf("unsupported role type: %s", roleType)
 	}
 
-	// --- Referral stat update on acceptance ---
-	// Best-effort: failures are logged but do not fail the whole transaction.
-	if refErr := s.processReferralOnAcceptance(ctx, txQueries, app.UserID, int16(app.PartyID)); refErr != nil {
-		slog.Warn("processReferralOnAcceptance failed (non-fatal)", "userID", app.UserID, "err", refErr)
-	}
-
 	if err := tx.Commit(ctx); err != nil {
 		return queries.PartyAgentApplication{}, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	// Invalidate only caches affected by slot deduction
-	s.rdb.Del(ctx, fmt.Sprintf("%s%d", db.RedisPartyByID, partyID))
-	s.rdb.Del(ctx, db.RedisPartiesAcceptingIDs)
+	s.partiesService.InvalidatePartyCache(ctx, partyID)
+	s.partiesService.InvalidateAcceptingPartyIDsCache(ctx)
 	_ = s.InvalidateUserHasActiveAgentApp(ctx, app.UserID)
 	_ = s.InvalidateApplicationByID(ctx, input.ApplicationID)
+
+	// Referral stat update on acceptance in background (best-effort)
+	go func(acceptedUserID int64, pID int16, egID int32) {
+		bgCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		if refErr := s.processReferralOnAcceptance(bgCtx, acceptedUserID, pID, egID); refErr != nil {
+			slog.Warn("processReferralOnAcceptance failed (non-fatal)", "userID", acceptedUserID, "err", refErr)
+		}
+	}(app.UserID, int16(app.PartyID), app.ElectionGroupID)
 
 	return updatedApp, nil
 }
 
 // processReferralOnAcceptance updates referral stats when a referred user's application is accepted (or auto-accepted).
-func (s *Service) processReferralOnAcceptance(ctx context.Context, txQueries *queries.Queries, acceptedUserID int64, partyID int16) error {
+func (s *Service) processReferralOnAcceptance(ctx context.Context, acceptedUserID int64, partyID int16, electionGroupID int32) error {
 	// 1. Get candidate's referral record
-	referral, err := txQueries.GetReferralByReferredUserID(ctx, acceptedUserID)
+	referral, err := s.queries.GetReferralByReferredUserID(ctx, acceptedUserID)
 	if err != nil {
 		return nil // Not referred — nothing to do
 	}
 
-	// Idempotency check: if milestone is already BECAME_AGENT, skip
+	// Idempotency check: if milestone is already BECAME_AGENT, skip (referral reward is once in a lifetime)
 	if referral.Milestone == "BECAME_AGENT" {
 		return nil
 	}
@@ -924,63 +944,27 @@ func (s *Service) processReferralOnAcceptance(ctx context.Context, txQueries *qu
 		return nil
 	}
 
-	userReferralID := int64(0)
-	if referral.UserReferralID.Valid {
-		userReferralID = referral.UserReferralID.Int64
-	}
-
-	electionGroupID := int32(0)
-	if referral.ElectionGroupID.Valid {
+	// Fall back to referral's linked election_group_id if caller did not supply one
+	if electionGroupID <= 0 && referral.ElectionGroupID.Valid {
 		electionGroupID = referral.ElectionGroupID.Int32
 	}
 
-	// If user_referral_id is not directly set on referral, try finding matching user_referrals record for referrer
-	if userReferralID <= 0 {
-		referrerID := referral.ReferrerUserID
-		if referrerID > 0 {
-			referrerRecords, err := txQueries.GetReferrerUserReferralsForParty(ctx, queries.GetReferrerUserReferralsForPartyParams{
-				UserID:  referrerID,
-				PartyID: pgtype.Int2{Int16: partyID, Valid: true},
-			})
-			if err == nil && len(referrerRecords) > 0 {
-				userReferralID = referrerRecords[0].ID
-				if referrerRecords[0].ElectionGroupID.Valid {
-					electionGroupID = referrerRecords[0].ElectionGroupID.Int32
-				}
-			}
-		}
-	}
-
-	if userReferralID <= 0 {
-		return nil
-	}
-
-	// Get electionGroupID from user_referrals if still unknown
-	if electionGroupID <= 0 {
-		if urObj, urErr := txQueries.GetUserReferralByID(ctx, userReferralID); urErr == nil && urObj.ElectionGroupID.Valid {
-			electionGroupID = urObj.ElectionGroupID.Int32
-		}
-	}
-
-	// 3. Check for ongoing party marketing campaign for party & election group
-	var referralAmt pgtype.Numeric
+	// 2. Check for ongoing party marketing campaign for party & election group
+	var referralAmtKobo int64
 	if electionGroupID > 0 {
-		campaign, campErr := txQueries.GetActiveMarketingCampaignForElectionGroup(ctx, queries.GetActiveMarketingCampaignForElectionGroupParams{
+		campaign, campErr := s.queries.GetActiveMarketingCampaignForElectionGroup(ctx, queries.GetActiveMarketingCampaignForElectionGroupParams{
 			PartyID:         partyID,
 			ElectionGroupID: electionGroupID,
 		})
 		if campErr == nil {
-			_ = referralAmt.Scan(fmt.Sprintf("%d.00", campaign.ReferralAmountKobo/100))
-			if campaign.ReferralAmountKobo%100 != 0 {
-				_ = referralAmt.Scan(fmt.Sprintf("%.2f", float64(campaign.ReferralAmountKobo)/100.0))
-			}
+			referralAmtKobo = campaign.ReferralAmountKobo
 		}
 	}
 
-	// 4. Update referral: set milestone = 'BECAME_AGENT' and amount_to_pay if active campaign
-	if err := txQueries.UpdateReferralOnAgentAcceptance(ctx, queries.UpdateReferralOnAgentAcceptanceParams{
+	// 3. Update referral: set milestone = 'BECAME_AGENT' and amount_to_pay_kobo if active campaign
+	if err := s.queries.UpdateReferralOnAgentAcceptance(ctx, queries.UpdateReferralOnAgentAcceptanceParams{
 		ReferredUserID:  acceptedUserID,
-		AmountToPay:     referralAmt,
+		AmountToPayKobo: referralAmtKobo,
 		PartyID:         utils.PgInt2FromPositive(partyID),
 		ElectionGroupID: utils.PgInt4FromPositive(electionGroupID),
 	}); err != nil {
@@ -1014,7 +998,7 @@ func (s *Service) updateReferralOnApplicationSubmission(ctx context.Context, txQ
 		UserID:          referrerID,
 		PartyID:         utils.PgInt2FromPositive(partyID),
 		ElectionGroupID: utils.PgInt4FromPositive(electionGroupID),
-		Amount:          pgtype.Numeric{Valid: false},
+		AmountKobo:      0,
 		Status:          "pending",
 	})
 	if err != nil {
@@ -1027,7 +1011,7 @@ func (s *Service) updateReferralOnApplicationSubmission(ctx context.Context, txQ
 		UserReferralID:  utils.PgInt8FromPositive(userReferralID),
 		PartyID:         utils.PgInt2FromPositive(partyID),
 		ElectionGroupID: utils.PgInt4FromPositive(electionGroupID),
-		AmountToPay:     pgtype.Numeric{Valid: false},
+		AmountToPayKobo: 0,
 		Milestone:       "APPLIED",
 	}); err != nil {
 		slog.Error("failed to update referral record on application submission", "referral_id", referral.ID, "err", err)

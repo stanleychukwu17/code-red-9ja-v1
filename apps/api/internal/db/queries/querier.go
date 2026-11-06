@@ -542,7 +542,7 @@ type Querier interface {
 	UpdatePollingUnitResultAIExtraction(ctx context.Context, arg UpdatePollingUnitResultAIExtractionParams) (PollingUnitResult, error)
 	UpdateReferral(ctx context.Context, arg UpdateReferralParams) (Referral, error)
 	// Updates the referrals row when the referred user is accepted as an agent.
-	// Sets milestone, amount_to_pay, party_id, election_group_id.
+	// Sets milestone, amount_to_pay_kobo, party_id, election_group_id.
 	UpdateReferralOnAgentAcceptance(ctx context.Context, arg UpdateReferralOnAgentAcceptanceParams) error
 	// Updates the referrals row when the referred user submits a party application matching referrer's user_referrals.
 	UpdateReferralOnApplication(ctx context.Context, arg UpdateReferralOnApplicationParams) error

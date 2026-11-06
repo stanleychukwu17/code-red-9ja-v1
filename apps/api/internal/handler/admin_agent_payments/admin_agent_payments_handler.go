@@ -157,10 +157,10 @@ func (h *Handler) GetOverview(w http.ResponseWriter, r *http.Request) {
 
 	refQuery := `
 		SELECT
-			COALESCE(SUM(CASE WHEN ur.status = 'paid' THEN ur.amount ELSE 0 END), 0) AS paid_naira,
-			COALESCE(SUM(CASE WHEN ur.status != 'paid' AND ur.amount > 0 THEN ur.amount ELSE 0 END), 0) AS unpaid_naira,
+			COALESCE(SUM(CASE WHEN ur.status = 'paid' THEN ur.amount_kobo ELSE 0 END), 0) / 100.0 AS paid_naira,
+			COALESCE(SUM(CASE WHEN ur.status != 'paid' AND ur.amount_kobo > 0 THEN ur.amount_kobo ELSE 0 END), 0) / 100.0 AS unpaid_naira,
 			COUNT(CASE WHEN ur.status = 'paid' THEN 1 END) AS paid_count,
-			COUNT(CASE WHEN ur.status != 'paid' AND ur.amount > 0 THEN 1 END) AS unpaid_count
+			COUNT(CASE WHEN ur.status != 'paid' AND ur.amount_kobo > 0 THEN 1 END) AS unpaid_count
 		FROM user_referrals ur
 		WHERE ($1::bigint = 0 OR ur.election_group_id = $1)
 	`
@@ -448,7 +448,7 @@ func (h *Handler) ListReferralPay(w http.ResponseWriter, r *http.Request) {
 			COUNT(r.id) FILTER (WHERE r.milestone = 'DUTIES_COMPLETED') AS duties_completed_referrals,
 			COUNT(r.id) FILTER (WHERE r.milestone = 'BECAME_AGENT') AS agent_referrals,
 			COUNT(r.id) AS total_referrals,
-			COALESCE(ur.amount, 0) AS earned_amount,
+			COALESCE(ur.amount_kobo, 0) AS earned_amount_kobo,
 			ur.status,
 			ur.paid_at,
 			ur.created_at
@@ -479,7 +479,7 @@ func (h *Handler) ListReferralPay(w http.ResponseWriter, r *http.Request) {
 			partyID                               int16
 			partyCode, partyName                  string
 			dutiesCompleted, agentRefs, totalRefs int64
-			earnedAmount                          float64
+			earnedAmountKobo                      int64
 			status                                string
 			paidAt                                pgtype.Timestamptz
 			createdAt                             time.Time
@@ -490,7 +490,7 @@ func (h *Handler) ListReferralPay(w http.ResponseWriter, r *http.Request) {
 			&userName, &userAvatar,
 			&partyID, &partyCode, &partyName,
 			&dutiesCompleted, &agentRefs, &totalRefs,
-			&earnedAmount,
+			&earnedAmountKobo,
 			&status, &paidAt, &createdAt,
 		); err != nil {
 			continue
@@ -505,7 +505,8 @@ func (h *Handler) ListReferralPay(w http.ResponseWriter, r *http.Request) {
 			dutyPctStr = fmt.Sprintf("%d (0%%)", dutiesCompleted)
 		}
 
-		earnedAmountStr := fmt.Sprintf("₦%s", formatMoney(earnedAmount))
+		earnedAmountNaira := float64(earnedAmountKobo) / 100.0
+		earnedAmountStr := fmt.Sprintf("₦%s", formatMoney(earnedAmountNaira))
 
 		var paidAtStr string
 		if paidAt.Valid {
@@ -531,7 +532,7 @@ func (h *Handler) ListReferralPay(w http.ResponseWriter, r *http.Request) {
 			AgentReferrals:           agentRefs,
 			TotalReferrals:           totalRefs,
 			EarnedAmount:             earnedAmountStr,
-			EarnedAmountNum:          earnedAmount,
+			EarnedAmountNum:          earnedAmountNaira,
 			Status:                   status,
 			PaidAt:                   paidAtStr,
 			CreatedAt:                createdAt,
@@ -667,7 +668,7 @@ func (h *Handler) PayAll(w http.ResponseWriter, r *http.Request) {
 			res, err := h.pool.Exec(ctx, `
 				UPDATE user_referrals
 				SET status = 'paid', paid_at = NOW(), updated_at = NOW()
-				WHERE ($1::bigint = 0 OR election_group_id = $1) AND status != 'paid' AND amount > 0
+				WHERE ($1::bigint = 0 OR election_group_id = $1) AND status != 'paid' AND amount_kobo > 0
 			`, req.ElectionGroupID)
 			if err != nil {
 				h.utils.RespondError(w, http.StatusInternalServerError, "Failed to pay referrals: "+err.Error())

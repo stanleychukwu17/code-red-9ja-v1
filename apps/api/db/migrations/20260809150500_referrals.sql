@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS user_referrals (
   user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   party_id SMALLINT REFERENCES parties(id) ON DELETE CASCADE,
   election_group_id INT REFERENCES election_groups(id) ON DELETE CASCADE,
-  amount DECIMAL(15, 2) DEFAULT 0,
+  amount_kobo BIGINT NOT NULL DEFAULT 0,
   
   -- Admin payout workflow (mirroring agent_earnings)
   status VARCHAR(20) NOT NULL DEFAULT 'pending'
@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS referrals (
   
   milestone VARCHAR(50) NOT NULL, -- e.g., 'SIGNED_UP', 'BECAME_AGENT', 'VOTED', 'UPLOADED_RESULTS'
   status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'paid', 'cancelled')),
-  amount_to_pay DECIMAL(15, 2) DEFAULT 0, -- the amount the referrer will be paid if the user became an agent during an active election group marketting campaign for this election_group_id
+  amount_to_pay_kobo BIGINT NOT NULL DEFAULT 0, -- the amount in kobo the referrer will be paid if the user became an agent during an active election group marketing campaign for this election_group_id
   
   created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
@@ -51,6 +51,7 @@ CREATE TABLE IF NOT EXISTS referrals (
 );
 
 CREATE INDEX IF NOT EXISTS idx_referrals_referrer_id ON referrals(referrer_user_id, id DESC);
+CREATE INDEX IF NOT EXISTS idx_referrals_stats_covering ON referrals(referrer_user_id, election_group_id) INCLUDE (status, milestone, amount_to_pay_kobo);
 
 -- +goose Down
 DROP TABLE IF EXISTS referrals;
