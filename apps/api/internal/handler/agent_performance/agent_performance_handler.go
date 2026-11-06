@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"free9ja/api/internal/db/queries"
@@ -34,7 +33,6 @@ func NewHandler(q *queries.Queries, pool *pgxpool.Pool, usersService *usersservi
 		u:            u,
 	}
 }
-
 
 type AgentPerformanceItem struct {
 	ID                 int64   `json:"id"`
@@ -647,7 +645,6 @@ func (h *Handler) ChangeAgentRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	h.u.RespondSuccess(w, http.StatusOK, "Agent role updated successfully", map[string]interface{}{
 		"user_id":  req.UserID,
 		"new_role": newRole,
@@ -771,54 +768,7 @@ func (h *Handler) RevokeAgent(w http.ResponseWriter, r *http.Request) {
 }
 
 func adjustAgentStats(ctx context.Context, dbtx queries.DBTX, q *queries.Queries, role string, egID int32, partyID int16, stateID int16, lgaID int32, wardID int32, puID int32, isIncrement bool) {
-	if role == "" || egID <= 0 || partyID <= 0 {
-		return
-	}
-
-	delta := int32(1)
-	if !isIncrement {
-		delta = -1
-	}
-
-	switch role {
-	case "polling_agent", "pu_agent", "polling_unit_agent":
-		if puID <= 0 {
-			return
-		}
-		var wardID_ int32
-		var lgaID_ int32
-		var stateID_ int16
-		var wardStateConstID, puFedConstID, puSenateID int32
-		err := dbtx.QueryRow(ctx, `
-			SELECT pu.ward_id, pu.lga_id, pu.state_id,
-			       COALESCE(w.state_constituency_id, 0),
-			       COALESCE(l.federal_constituency_id, 0),
-			       COALESCE(l.senatorial_district_id, 0)
-			FROM polling_units pu
-			JOIN wards w ON w.id = pu.ward_id
-			JOIN lgas  l ON l.id = pu.lga_id
-			WHERE pu.id = $1 LIMIT 1`, puID,
-		).Scan(&wardID_, &lgaID_, &stateID_, &wardStateConstID, &puFedConstID, &puSenateID)
-		if err != nil {
-			return
-		}
-
-		_ = q.UpsertElectionGroupPUPartyEntry(ctx, queries.UpsertElectionGroupPUPartyEntryParams{
-			AgentsDelta:           delta,
-			ElectionGroupID:       egID,
-			PollingUnitID:         puID,
-			PartyID:               partyID,
-			StateID:               pgtype.Int2{Int16: stateID_, Valid: true},
-			LgaID:                 pgtype.Int4{Int32: lgaID_, Valid: true},
-			WardID:                pgtype.Int4{Int32: wardID_, Valid: true},
-			StateConstituencyID:   pgtype.Int4{Int32: wardStateConstID, Valid: true},
-			FederalConstituencyID: pgtype.Int4{Int32: puFedConstID, Valid: true},
-			SenatorialDistrictID:  pgtype.Int4{Int32: puSenateID, Valid: true},
-		})
-
-	case "ward_election_supervisor", "lga_election_supervisor", "state_election_supervisor":
-		// Supervisor stats are computed dynamically via real-time COUNT queries on supervisor tables
-	}
+	// Agent and supervisor stats are computed dynamically via real-time COUNT queries on assignment tables
 }
 
 func stringPtr(s string) *string {

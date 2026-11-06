@@ -27,11 +27,10 @@ export const Route = createFileRoute("/_authenticated")({
         return;
       }
 
-      // For protected pages, redirect to home with authRequired query param and target redirect
+      // For protected pages, redirect to login with target redirect
       throw redirect({
-        to: "/",
+        to: APP_URL.auth.login,
         search: {
-          authRequired: true,
           redirect: location.href,
         },
       });

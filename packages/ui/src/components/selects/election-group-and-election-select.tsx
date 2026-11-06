@@ -3,36 +3,24 @@ import type { SelectProps } from "../../lib/types";
 import { GeneralCommand } from "../command/general-command";
 import { DrawerList } from "../command/drawer-list";
 import { SelectResponsiveWrapper } from "./select-responsive-wrapper";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import ArrowDownIcon from "../../icons/arrow-down-icon";
 import { IconInput } from "../input";
 import { ChevronLeft } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { Button } from "../button";
 
-export interface ElectionGroup {
+export type ElectionGroup = {
   id: number;
   name: string;
   election_date?: string;
-}
+};
 
-export interface Election {
+export type Election = {
   id: number;
   name: string;
   election_date?: string;
-}
-
-interface ElectionGroupsResponse {
-  success: boolean;
-  message: string;
-  data: {
-    election_groups: ElectionGroup[];
-  };
-  meta: {
-    next_cursor: string;
-    has_more: boolean;
-  };
-}
+};
 
 const formatDate = (dateStr?: string) => {
   if (!dateStr) return "";
@@ -56,8 +44,10 @@ export const SelectElectionGroupAndElection = ({
   fetchElectionGroups: (args: {
     data: { partyId?: number; limit?: number; cursor?: string };
   }) => Promise<any>;
+
   /** When provided, clicking a group opens step 2 — the elections list. */
   fetchElectionsByGroup?: (args: { data: number | string }) => Promise<any>;
+
   /** Called with the final group + election selection when two-step flow completes. */
   onElectionSelect?: (group: ElectionGroup, election: Election) => void;
 }) => {
@@ -82,27 +72,19 @@ export const SelectElectionGroupAndElection = ({
   const [pendingGroup, setPendingGroup] = useState<ElectionGroup | null>(null);
 
   // ─── Groups query ──────────────────────────────────────────────────────────
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
-    useInfiniteQuery<ElectionGroupsResponse>({
-      queryKey: ["election-groups-select", partyId],
-      queryFn: async ({ pageParam }) => {
-        const res = await fetchElectionGroups({
-          data: { partyId, limit: 50, cursor: pageParam as string },
-        });
-        if (res && res.success && res.data) return res;
-        throw new Error(res?.message || "Failed to fetch election groups");
-      },
-      initialPageParam: "",
-      getNextPageParam: (lastPage) => {
-        if (lastPage && lastPage.meta && lastPage.meta.has_more)
-          return lastPage.meta.next_cursor || "";
-        return undefined;
-      },
-    });
+  const { data: groupsRaw, isLoading } = useQuery({
+    queryKey: ["election-groups-select", partyId],
+    queryFn: async () => {
+      const res = await fetchElectionGroups({
+        data: { partyId, limit: 100 },
+      });
+      if (res && res.success && res.data) return res;
+      throw new Error(res?.message || "Failed to fetch election groups");
+    },
+  });
 
-  const electionGroups = data
-    ? data.pages.flatMap((page) => page.data?.election_groups || [])
-    : [];
+  const electionGroups: ElectionGroup[] =
+    groupsRaw?.data?.election_groups || groupsRaw?.election_groups || [];
 
   // ─── Elections query (step 2) ──────────────────────────────────────────────
   const { data: electionsRaw, isLoading: isLoadingElections } = useQuery({
@@ -122,22 +104,6 @@ export const SelectElectionGroupAndElection = ({
     : ("Exhausted" as const);
 
   // ─── Effects ──────────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (selectedId && hasNextPage && !isFetchingNextPage && !isLoading) {
-      const found = electionGroups.some(
-        (eg) => String(eg.id) === String(selectedId),
-      );
-      if (!found) fetchNextPage();
-    }
-  }, [
-    selectedId,
-    electionGroups,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoading,
-    fetchNextPage,
-  ]);
-
   useEffect(() => {
     if (selectedId) {
       const eg = electionGroups.find(
@@ -188,20 +154,7 @@ export const SelectElectionGroupAndElection = ({
     setDesktopElectionSearch("");
   };
 
-  // ─── Status / filtering helpers ───────────────────────────────────────────
-  const getGroupStatus = ():
-    | "CanLoadMore"
-    | "LoadingMore"
-    | "LoadingFirstPage"
-    | "Exhausted" => {
-    if (isLoading && electionGroups.length === 0) return "LoadingFirstPage";
-    if (isFetchingNextPage) return "LoadingMore";
-    return hasNextPage ? "CanLoadMore" : "Exhausted";
-  };
-
-  const handleLoadMore = () => {
-    if (hasNextPage && !isFetchingNextPage) fetchNextPage();
-  };
+  const groupStatus = isLoading ? ("LoadingFirstPage" as const) : ("Exhausted" as const);
 
   const desktopFilteredGroups = electionGroups.filter((eg) =>
     eg.name.toLowerCase().includes(desktopSearch.toLowerCase()),

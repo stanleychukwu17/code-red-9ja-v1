@@ -3,6 +3,9 @@ CREATE TABLE IF NOT EXISTS polling_unit_assignments (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   election_group_id INT REFERENCES election_groups(id) ON DELETE CASCADE NOT NULL,
   party_id SMALLINT REFERENCES parties(id) ON DELETE CASCADE NOT NULL,
+  state_id SMALLINT REFERENCES c_states(id) ON DELETE CASCADE NOT NULL,
+  lga_id INTEGER REFERENCES lgas(id) ON DELETE CASCADE NOT NULL,
+  ward_id INTEGER REFERENCES wards(id) ON DELETE CASCADE NOT NULL,
   polling_unit_id INTEGER REFERENCES polling_units(id) ON DELETE CASCADE NOT NULL,
   user_id BIGINT REFERENCES users(id) ON DELETE CASCADE NOT NULL,
   role_type VARCHAR(50) DEFAULT 'polling_agent' CHECK (role_type IN ('polling_agent', 'observer', 'collation_agent')),
@@ -41,6 +44,7 @@ CREATE TABLE IF NOT EXISTS polling_unit_assignments (
 );
 
 CREATE INDEX idx_pu_assignments_composite ON polling_unit_assignments(election_group_id, party_id, polling_unit_id);
+CREATE INDEX idx_pu_assignments_geo ON polling_unit_assignments(election_group_id, party_id, state_id, lga_id, ward_id);
 
 -- +goose Down
 DROP TABLE IF EXISTS polling_unit_assignments;

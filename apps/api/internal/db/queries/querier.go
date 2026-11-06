@@ -572,10 +572,6 @@ type Querier interface {
 	UpdateWard(ctx context.Context, arg UpdateWardParams) (Ward, error)
 	UpdateWardSupervisorEarnedAmountKobo(ctx context.Context, arg UpdateWardSupervisorEarnedAmountKoboParams) (WardElectionSupervisor, error)
 	UpsertAgentEarnings(ctx context.Context, arg UpsertAgentEarningsParams) (AgentEarning, error)
-	// =====================================================
-	// POLLING UNIT PARTY MUTATIONS
-	// =====================================================
-	UpsertElectionGroupPUPartyEntry(ctx context.Context, arg UpsertElectionGroupPUPartyEntryParams) error
 	UpsertElectionGroupPollingUnitsForFederalConstituencyElection(ctx context.Context, arg UpsertElectionGroupPollingUnitsForFederalConstituencyElectionParams) error
 	UpsertElectionGroupPollingUnitsForLgaElection(ctx context.Context, arg UpsertElectionGroupPollingUnitsForLgaElectionParams) error
 	UpsertElectionGroupPollingUnitsForNationwideElection(ctx context.Context, electionGroupID int32) error

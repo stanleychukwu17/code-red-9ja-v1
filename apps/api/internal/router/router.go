@@ -588,7 +588,6 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Get("/api/v1/parties/{id}/agent-marketing-campaigns", partiesHandler.GetPartyMarketingCampaigns)
 
 		// polling unit assignments routes
-		r.Post("/api/v1/polling-unit-assignments", pollingUnitAssignmentsHandler.CreateAssignment)
 		r.Get("/api/v1/polling-unit-assignments", pollingUnitAssignmentsHandler.ListAssignments)
 		r.Get("/api/v1/polling-unit-assignments/{id}", pollingUnitAssignmentsHandler.GetAssignment)
 		r.Patch("/api/v1/polling-unit-assignments/{id}/tracking", pollingUnitAssignmentsHandler.UpdateAssignmentTracking)

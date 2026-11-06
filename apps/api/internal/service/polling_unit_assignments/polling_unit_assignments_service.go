@@ -2,11 +2,9 @@ package puassignments
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/utils"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -14,9 +12,9 @@ import (
 )
 
 type Service struct {
-	queries         *queries.Queries
-	rdb             *redis.Client
-	earningsSvc     earningsService
+	queries     *queries.Queries
+	rdb         *redis.Client
+	earningsSvc earningsService
 }
 
 type earningsService interface {
@@ -25,51 +23,10 @@ type earningsService interface {
 
 func NewService(q *queries.Queries, rdb *redis.Client, earningsSvc earningsService) *Service {
 	return &Service{
-		queries:         q,
-		rdb:             rdb,
-		earningsSvc:     earningsSvc,
+		queries:     q,
+		rdb:         rdb,
+		earningsSvc: earningsSvc,
 	}
-}
-
-func (s *Service) AssignAgent(ctx context.Context, userID int64, electionGroupID int32, partyID int16, assignedBy int64, pollingUnitID int32, roleType string) (queries.PollingUnitAssignment, error) {
-	var assignedByVal pgtype.Int8
-	if assignedBy > 0 {
-		assignedByVal = pgtype.Int8{Int64: assignedBy, Valid: true}
-	}
-
-	var potentialPaymentKobo int64 = 0
-	party, err := s.queries.GetPartyByID(ctx, partyID)
-	if err == nil && len(party.AgentPaymentAllocationKobo) > 0 {
-		roleKey := strings.ReplaceAll(roleType, "-", "_")
-		switch roleKey {
-		case "ward_supervisor":
-			roleKey = "ward_election_supervisor"
-		case "lga_supervisor":
-			roleKey = "lga_election_supervisor"
-		case "state_supervisor":
-			roleKey = "state_election_supervisor"
-		}
-		var allocs map[string]struct {
-			Default int64 `json:"default"`
-		}
-		if err := json.Unmarshal(party.AgentPaymentAllocationKobo, &allocs); err == nil {
-			if alloc, ok := allocs[roleKey]; ok {
-				potentialPaymentKobo = alloc.Default
-			} else if alloc, ok := allocs["polling_agent"]; ok {
-				potentialPaymentKobo = alloc.Default
-			}
-		}
-	}
-
-	return s.queries.CreateAssignment(ctx, queries.CreateAssignmentParams{
-		UserID:               userID,
-		PollingUnitID:        pollingUnitID,
-		ElectionGroupID:      electionGroupID,
-		PartyID:              partyID,
-		RoleType:             utils.PgTextFromString(roleType),
-		AssignedBy:           assignedByVal,
-		PotentialPaymentKobo: potentialPaymentKobo,
-	})
 }
 
 func (s *Service) GetAssignmentByID(ctx context.Context, id int64) (queries.GetAssignmentByIDRow, error) {
@@ -102,7 +59,6 @@ func parseTimeParam(timeStr *string) pgtype.Timestamptz {
 	}
 	return pgtype.Timestamptz{Time: t, Valid: true}
 }
-
 
 func (s *Service) UpdateAssignmentTracking(ctx context.Context, id int64, arrivedAt, arrivalVideoUrl, electionStartedAt, electionStartedVideoUrl, electionEndedAt, electionEndedVideoUrl *string) (queries.UpdateAssignmentTrackingRow, error) {
 	assignment, err := s.queries.GetAssignmentByID(ctx, id)

@@ -381,37 +381,6 @@ GROUP BY egppu.election_group_id, egppu.party_id;
 -- POLLING UNIT PARTY MUTATIONS
 -- =====================================================
 
--- name: UpsertElectionGroupPUPartyEntry :exec
-WITH pu_update AS (
-  UPDATE election_group_polling_units
-  SET
-    pu_agents_count = GREATEST(0, pu_agents_count + sqlc.arg(agents_delta)::int),
-    updated_at = NOW()
-  WHERE election_group_id = sqlc.arg(election_group_id)::integer
-    AND polling_unit_id   = sqlc.arg(polling_unit_id)::int
-)
-INSERT INTO election_group_parties_polling_units (
-  election_group_id, party_id, polling_unit_id,
-  state_id, lga_id, ward_id,
-  state_constituency_id, federal_constituency_id, senatorial_district_id,
-  pu_agents_count
-) VALUES (
-  sqlc.arg(election_group_id)::integer,
-  sqlc.arg(party_id)::smallint,
-  sqlc.arg(polling_unit_id)::int,
-  sqlc.narg(state_id)::smallint,
-  sqlc.narg(lga_id)::int,
-  sqlc.narg(ward_id)::int,
-  sqlc.narg(state_constituency_id)::int,
-  sqlc.narg(federal_constituency_id)::int,
-  sqlc.narg(senatorial_district_id)::int,
-  GREATEST(0, sqlc.arg(agents_delta)::int)
-)
-ON CONFLICT (election_group_id, party_id, polling_unit_id)
-DO UPDATE SET
-  pu_agents_count = GREATEST(0, election_group_parties_polling_units.pu_agents_count + sqlc.arg(agents_delta)::int),
-  updated_at = NOW();
-
 -- name: GetPUPartyAgentsCount :one
 SELECT pu_agents_count
 FROM election_group_parties_polling_units

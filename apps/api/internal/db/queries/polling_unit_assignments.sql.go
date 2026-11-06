@@ -38,12 +38,15 @@ INSERT INTO polling_unit_assignments (
   polling_unit_id,
   election_group_id,
   party_id,
+  state_id,
+  lga_id,
+  ward_id,
   role_type,
   assigned_by,
   potential_payment_kobo
 ) VALUES (
-  $1, $2, $3, $4, $5, $6, $7
-) RETURNING id, election_group_id, party_id, polling_unit_id, user_id, role_type, assigned_by, arrived_at, arrival_video_url, election_started_at, election_started_video_url, election_ended_at, election_ended_video_url, completed_at, last_update_at, reports_count, updates_count, results_submitted_count, live_voters_referred_count, interval_updates, election_practice_test_readiness_percentage, potential_payment_kobo, earned_amount_kobo, created_at, updated_at
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+) RETURNING id, election_group_id, party_id, polling_unit_id, user_id, state_id, lga_id, ward_id, role_type, assigned_by, arrived_at, arrival_video_url, election_started_at, election_started_video_url, election_ended_at, election_ended_video_url, completed_at, last_update_at, reports_count, updates_count, results_submitted_count, live_voters_referred_count, interval_updates, election_practice_test_readiness_percentage, potential_payment_kobo, earned_amount_kobo, created_at, updated_at
 `
 
 type CreateAssignmentParams struct {
@@ -51,6 +54,9 @@ type CreateAssignmentParams struct {
 	PollingUnitID        int32       `json:"polling_unit_id"`
 	ElectionGroupID      int32       `json:"election_group_id"`
 	PartyID              int16       `json:"party_id"`
+	StateID              int16       `json:"state_id"`
+	LgaID                int32       `json:"lga_id"`
+	WardID               int32       `json:"ward_id"`
 	RoleType             pgtype.Text `json:"role_type"`
 	AssignedBy           pgtype.Int8 `json:"assigned_by"`
 	PotentialPaymentKobo int64       `json:"potential_payment_kobo"`
@@ -62,6 +68,9 @@ func (q *Queries) CreateAssignment(ctx context.Context, arg CreateAssignmentPara
 		arg.PollingUnitID,
 		arg.ElectionGroupID,
 		arg.PartyID,
+		arg.StateID,
+		arg.LgaID,
+		arg.WardID,
 		arg.RoleType,
 		arg.AssignedBy,
 		arg.PotentialPaymentKobo,
@@ -73,6 +82,9 @@ func (q *Queries) CreateAssignment(ctx context.Context, arg CreateAssignmentPara
 		&i.PartyID,
 		&i.PollingUnitID,
 		&i.UserID,
+		&i.StateID,
+		&i.LgaID,
+		&i.WardID,
 		&i.RoleType,
 		&i.AssignedBy,
 		&i.ArrivedAt,

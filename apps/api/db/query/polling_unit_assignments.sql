@@ -4,6 +4,9 @@ INSERT INTO polling_unit_assignments (
   polling_unit_id,
   election_group_id,
   party_id,
+  state_id,
+  lga_id,
+  ward_id,
   role_type,
   assigned_by,
   potential_payment_kobo

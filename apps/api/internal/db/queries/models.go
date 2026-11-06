@@ -825,6 +825,9 @@ type PollingUnitAssignment struct {
 	PartyID                                 int16              `json:"party_id"`
 	PollingUnitID                           int32              `json:"polling_unit_id"`
 	UserID                                  int64              `json:"user_id"`
+	StateID                                 int16              `json:"state_id"`
+	LgaID                                   int32              `json:"lga_id"`
+	WardID                                  int32              `json:"ward_id"`
 	RoleType                                pgtype.Text        `json:"role_type"`
 	AssignedBy                              pgtype.Int8        `json:"assigned_by"`
 	ArrivedAt                               pgtype.Timestamptz `json:"arrived_at"`

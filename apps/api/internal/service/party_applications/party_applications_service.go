@@ -852,52 +852,21 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 			return queries.PartyAgentApplication{}, fmt.Errorf("failed to assign ward supervisor: %w", err)
 		}
 	case "polling_agent":
-		// Polling unit agent assignment and initial PU party stats entry
+		// Create polling unit agent assignment with denormalized geography
 		_, err = txQueries.CreateAssignment(ctx, queries.CreateAssignmentParams{
 			UserID:               app.UserID,
 			PollingUnitID:        pollingUnitID,
 			ElectionGroupID:      electionGroupID,
 			PartyID:              partyID,
+			StateID:              stateID,
+			LgaID:                lgaID,
+			WardID:               wardID,
 			RoleType:             utils.PgTextFromString(roleType),
 			AssignedBy:           assignedByVal,
 			PotentialPaymentKobo: deductionKobo,
 		})
 		if err != nil {
 			return queries.PartyAgentApplication{}, fmt.Errorf("failed to assign user to role %s: %w", roleType, err)
-		}
-
-		// --- Incremental stats update for polling agent ---
-		// 1. Fetch full geography for the polling unit
-		var puWardID, puLgaID int32
-		var puStateID int16
-		var wardStateConstID, puFedConstID, puSenateID int32
-		geoErr := s.pool.QueryRow(ctx, `
-			SELECT pu.ward_id, pu.lga_id, pu.state_id,
-			       COALESCE(w.state_constituency_id, 0),
-			       COALESCE(l.federal_constituency_id, 0),
-			       COALESCE(l.senatorial_district_id, 0)
-			FROM polling_units pu
-			JOIN wards w ON w.id = pu.ward_id
-			JOIN lgas  l ON l.id = pu.lga_id
-			WHERE pu.id = $1 LIMIT 1`, pollingUnitID,
-		).Scan(&puWardID, &puLgaID, &puStateID, &wardStateConstID, &puFedConstID, &puSenateID)
-
-		if geoErr == nil {
-			// 2. Upsert party entry for polling unit
-			if err = txQueries.UpsertElectionGroupPUPartyEntry(ctx, queries.UpsertElectionGroupPUPartyEntryParams{
-				AgentsDelta:           1,
-				ElectionGroupID:       electionGroupID,
-				PollingUnitID:         pollingUnitID,
-				PartyID:               partyID,
-				StateID:               utils.PgInt2FromInt16(puStateID),
-				LgaID:                 utils.PgInt4FromInt32(puLgaID),
-				WardID:                utils.PgInt4FromInt32(puWardID),
-				StateConstituencyID:   utils.PgInt4FromPositive(wardStateConstID),
-				FederalConstituencyID: utils.PgInt4FromPositive(puFedConstID),
-				SenatorialDistrictID:  utils.PgInt4FromPositive(puSenateID),
-			}); err != nil {
-				return queries.PartyAgentApplication{}, fmt.Errorf("failed UpsertElectionGroupPUPartyEntry: %v", err)
-			}
 		}
 	default:
 		return queries.PartyAgentApplication{}, fmt.Errorf("unsupported role type: %s", roleType)

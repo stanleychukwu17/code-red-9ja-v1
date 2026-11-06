@@ -35,13 +35,14 @@ type UserReferralStats = {
   total_referrals?: number;
   agent_referrals?: number;
   unpaid_referrals?: number;
-  potential_earnings?: string | number;
-  earned_amount?: string | number;
+  potential_earnings_kobo?: number;
+  earned_amount_kobo?: number;
 };
 
 /** Active party referral campaign metadata specifying per-recruit reward amount */
 type ActiveCampaign = {
   id?: number;
+  referral_amount_kobo?: number;
   referral_amount?: string | number;
   title?: string;
 };
@@ -190,20 +191,20 @@ function ReferralsPage() {
 
   // Formatted campaign reward description (e.g. "₦1,000 per agent referred")
   const campaignBonusText = useMemo(() => {
-    if (activeCampaign?.referral_amount) {
-      const amt = Number(activeCampaign.referral_amount);
-      if (!isNaN(amt) && amt > 0) {
-        return `₦${amt.toLocaleString()} per agent referred`;
-      }
+    const rawKobo =
+      activeCampaign?.referral_amount_kobo ??
+      (activeCampaign?.referral_amount ? Number(activeCampaign.referral_amount) : 0);
+    if (rawKobo > 0) {
+      return `₦${(rawKobo / 100).toLocaleString()} per agent referred`;
     }
     return "Bonus per agent referred";
   }, [activeCampaign]);
 
   // Formatted potential referral payout
   const formattedPotentialEarnings = useMemo(() => {
-    const amt = Number(stats?.potential_earnings ?? 0);
+    const amt = (stats?.potential_earnings_kobo ?? 0) / 100;
     return `₦${amt.toLocaleString()}`;
-  }, [stats?.potential_earnings]);
+  }, [stats?.potential_earnings_kobo]);
 
   // Profile avatars of recent recruits for the double-avatar summary icon
   const avatar1 = items[0]?.avatar || "";

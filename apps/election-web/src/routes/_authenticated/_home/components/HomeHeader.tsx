@@ -45,7 +45,6 @@ export function HomeHeader({
   const user = useUser();
   const {
     selectedElectionGroup,
-    selectedElection,
     setSelectedElectionGroup,
     setSelectedElection,
   } = useElection();

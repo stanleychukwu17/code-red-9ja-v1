@@ -8,7 +8,6 @@ import (
 	"free9ja/api/internal/utils"
 	"net/http"
 	"strconv"
-	"strings"
 
 	earningsservice "free9ja/api/internal/service/earnings"
 	puupdates "free9ja/api/internal/service/polling_unit_updates"
@@ -17,7 +16,6 @@ import (
 )
 
 type PollingUnitAssignmentsService interface {
-	AssignAgent(ctx context.Context, userID int64, electionGroupID int32, partyID int16, assignedBy int64, pollingUnitID int32, roleType string) (queries.PollingUnitAssignment, error)
 	GetAssignmentByID(ctx context.Context, id int64) (queries.GetAssignmentByIDRow, error)
 	ListAssignments(ctx context.Context, electionGroupID int32, partyID int16, userID int64, pollingUnitID int32, limit, offset int32) ([]queries.ListAssignmentsRow, error)
 	DeleteAssignment(ctx context.Context, id int64) error
@@ -45,125 +43,6 @@ func NewHandler(service PollingUnitAssignmentsService, usersService UsersService
 		earningsService:           earningsSvc,
 		utils:                     utils,
 	}
-}
-
-type CreateAssignmentRequest struct {
-	FakeID          int64  `json:"fake_id"`
-	PollingUnitID   int32  `json:"polling_unit_id"`
-	ElectionGroupID int32  `json:"election_group_id"`
-	PartyID         int64  `json:"party_id"`
-	RoleType        string `json:"role_type"`
-}
-
-// CreateAssignment godoc
-// @Summary      Assign a user to a polling unit for an election group
-// @Description  Creates a polling unit assignment. Role level enforcement ensures party admins can only assign users for their own party.
-// @Tags         PollingUnitAssignments
-// @Accept       json
-// @Produce      json
-// @Param        request body CreateAssignmentRequest true "Create Assignment payload"
-// @Success      201  {object} map[string]interface{} "Assignment created successfully"
-// @Failure      400  {object} map[string]interface{} "Invalid request payload or missing fields"
-// @Failure      403  {object} map[string]interface{} "Permission denied"
-// @Failure      409  {object} map[string]interface{} "Constraint conflict (already assigned)"
-// @Failure      500  {object} map[string]interface{} "Internal server error"
-// @Security     BearerAuth
-// @Router       /polling-unit-assignments [post]
-func (h *Handler) CreateAssignment(w http.ResponseWriter, r *http.Request) {
-	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
-	if !ok {
-		return
-	}
-
-	requester, err := h.usersService.GetUserByFakeID(r.Context(), claims.FakeID)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusUnauthorized, "User not found")
-		return
-	}
-
-	var req CreateAssignmentRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
-		return
-	}
-
-	if req.FakeID <= 0 || req.PollingUnitID <= 0 || req.ElectionGroupID <= 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "fake_id, polling_unit_id, and election_group_id are required")
-		return
-	}
-
-	// Enforce role levels
-	// Platform admin can assign any party. Party admin can only assign for their own party.
-	var finalPartyID int64
-	rolesData, _ := h.usersService.GetUserRoles(r.Context(), requester.ID)
-	isPlatformAdmin := false
-	isPartyAdmin := false
-	for _, rCode := range rolesData.RolesCode {
-		if rCode == "admin" || rCode == "super_admin" {
-			isPlatformAdmin = true
-		}
-		if rCode == "party_admin" || rCode == "super_party_admin" {
-			isPartyAdmin = true
-		}
-	}
-
-	if isPlatformAdmin {
-		if req.PartyID <= 0 {
-			h.utils.RespondError(w, http.StatusBadRequest, "party_id is required for platform admins")
-			return
-		}
-		finalPartyID = req.PartyID
-	} else {
-		if !isPartyAdmin {
-			h.utils.RespondError(w, http.StatusForbidden, "Only administrators can make assignments")
-			return
-		}
-		requesterPartyID := int16(0)
-		if requester.PartyID.Valid {
-			requesterPartyID = requester.PartyID.Int16
-		} else if claims.PartyID > 0 {
-			requesterPartyID = claims.PartyID
-		}
-		if requesterPartyID == 0 {
-			h.utils.RespondError(w, http.StatusForbidden, "Admin is not associated with a party")
-			return
-		}
-		finalPartyID = int64(requesterPartyID)
-	}
-
-	// Verify target agent exists and belongs to the correct party if it is a party admin assignment
-	targetUser, err := h.usersService.GetUserByFakeID(r.Context(), req.FakeID)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Target user not found")
-		return
-	}
-
-	if !isPlatformAdmin {
-		if !targetUser.PartyID.Valid || int64(targetUser.PartyID.Int16) != finalPartyID {
-			h.utils.RespondError(w, http.StatusForbidden, "Cannot assign a user from a different party")
-			return
-		}
-	}
-
-	roleType := req.RoleType
-	if roleType == "" {
-		roleType = "polling_agent"
-	}
-
-	assignment, err := h.service.AssignAgent(r.Context(), targetUser.ID, req.ElectionGroupID, int16(finalPartyID), requester.ID, req.PollingUnitID, roleType)
-	if err != nil {
-		errStr := err.Error()
-		if strings.Contains(errStr, "uq_agent_per_election_day") {
-			h.utils.RespondError(w, http.StatusConflict, "Agent is already assigned to a polling unit for this election group")
-			return
-		}
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create assignment: "+errStr)
-		return
-	}
-
-	h.utils.RespondSuccess(w, http.StatusCreated, "Polling unit assignment created successfully", map[string]interface{}{
-		"assignment": assignment,
-	})
 }
 
 // ListAssignments godoc

@@ -2,7 +2,6 @@ package referrals
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -53,8 +52,6 @@ type UserReferralStatsData struct {
 	TotalReferrals        interface{} `json:"total_referrals"`
 	AgentReferrals        interface{} `json:"agent_referrals"`
 	UnpaidReferrals       interface{} `json:"unpaid_referrals"`
-	PotentialEarnings     interface{} `json:"potential_earnings"`
-	EarnedAmount          interface{} `json:"earned_amount"`
 	PotentialEarningsKobo int64       `json:"potential_earnings_kobo"`
 	EarnedAmountKobo      int64       `json:"earned_amount_kobo"`
 }
@@ -242,23 +239,23 @@ func (h *Handler) GetReferralStats(w http.ResponseWriter, r *http.Request) {
 	var userReferralData UserReferralStatsData
 	if err != nil {
 		userReferralData = UserReferralStatsData{
-			UserID:            userID,
-			ElectionGroupID:   egID,
-			TotalReferrals:    0,
-			AgentReferrals:    0,
-			UnpaidReferrals:   0,
-			PotentialEarnings: "0.00",
-			EarnedAmount:      "0.00",
+			UserID:                userID,
+			ElectionGroupID:       egID,
+			TotalReferrals:        0,
+			AgentReferrals:        0,
+			UnpaidReferrals:       0,
+			PotentialEarningsKobo: 0,
+			EarnedAmountKobo:      0,
 		}
 	} else {
 		userReferralData = UserReferralStatsData{
-			UserID:            userID,
-			ElectionGroupID:   egID,
-			TotalReferrals:    stats.TotalReferrals,
-			AgentReferrals:    stats.AgentReferrals,
-			UnpaidReferrals:   stats.UnpaidReferrals,
-			PotentialEarnings: stats.PotentialEarnings,
-			EarnedAmount:      stats.EarnedAmount,
+			UserID:                userID,
+			ElectionGroupID:       egID,
+			TotalReferrals:        stats.TotalReferrals,
+			AgentReferrals:        stats.AgentReferrals,
+			UnpaidReferrals:       stats.UnpaidReferrals,
+			PotentialEarningsKobo: stats.PotentialEarningsKobo,
+			EarnedAmountKobo:      stats.EarnedAmountKobo,
 		}
 	}
 
