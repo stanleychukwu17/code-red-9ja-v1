@@ -256,6 +256,38 @@ export function PartyApplicationDialog({ open, onClose, application }: PartyAppl
     setSelectedUnitId(id);
   };
 
+  // Check if role or relevant location assignment has changed from original application data
+  const hasChanges = useMemo(() => {
+    const originalRole = application.role || "polling_agent";
+    if (role !== originalRole) return true;
+
+    if (role === "polling_agent") {
+      const origUnit = application.pollingUnitId ? String(application.pollingUnitId) : "";
+      return selectedUnitId !== origUnit;
+    }
+
+    if (role === "ward_election_supervisor") {
+      return (
+        Number(selectedWard || 0) !== Number(application.wardId || 0) ||
+        Number(selectedLga || 0) !== Number(application.lgaId || 0) ||
+        Number(selectedState || 0) !== Number(application.stateId || 0)
+      );
+    }
+
+    if (role === "lga_election_supervisor") {
+      return (
+        Number(selectedLga || 0) !== Number(application.lgaId || 0) ||
+        Number(selectedState || 0) !== Number(application.stateId || 0)
+      );
+    }
+
+    if (role === "state_election_supervisor") {
+      return Number(selectedState || 0) !== Number(application.stateId || 0);
+    }
+
+    return false;
+  }, [role, selectedUnitId, selectedWard, selectedLga, selectedState, application]);
+
   // Mutation to reassign role/location for an existing approved agent
   const changeRoleMutation = useMutation({
     mutationFn: async (values: {
@@ -277,6 +309,7 @@ export function PartyApplicationDialog({ open, onClose, application }: PartyAppl
       }
       const res = await changeAgentRole({
         data: {
+          applicationId: application.id,
           userId: targetUserId,
           partyId: application.partyId,
           electionGroupId: application.electionGroupId,
@@ -318,6 +351,12 @@ export function PartyApplicationDialog({ open, onClose, application }: PartyAppl
 
   // Validate location fields and submit reassignment for approved agent
   const handleSaveChanges = async () => {
+    // If no role or geographic changes are detected, close dialog without redundant mutation
+    if (!hasChanges) {
+      onClose();
+      return;
+    }
+
     if (role === "polling_agent" && !selectedUnitId) {
       alert("Please select a polling unit for this polling agent.");
       return;
@@ -340,10 +379,7 @@ export function PartyApplicationDialog({ open, onClose, application }: PartyAppl
       stateId: selectedState ? Number(selectedState) : undefined,
       lgaId: selectedLga ? Number(selectedLga) : undefined,
       wardId: selectedWard ? Number(selectedWard) : undefined,
-      pollingUnitId:
-        role === "polling_agent" && selectedUnitId
-          ? Number(selectedUnitId)
-          : undefined,
+      pollingUnitId: role === "polling_agent" && selectedUnitId ? Number(selectedUnitId) : undefined,
     });
   };
 
@@ -878,17 +914,14 @@ export function PartyApplicationDialog({ open, onClose, application }: PartyAppl
                   size="4xl"
                   disabled={
                     changeRoleMutation.isPending ||
+                    !hasChanges ||
                     (role === "polling_agent" && !selectedUnitId) ||
                     (role === "state_election_supervisor" && !selectedState) ||
-                    (role === "lga_election_supervisor" &&
-                      (!selectedState || !selectedLga)) ||
-                    (role === "ward_election_supervisor" &&
-                      (!selectedState || !selectedLga || !selectedWard))
+                    (role === "lga_election_supervisor" && (!selectedState || !selectedLga)) ||
+                    (role === "ward_election_supervisor" && (!selectedState || !selectedLga || !selectedWard))
                   }
                 >
-                  {changeRoleMutation.isPending
-                    ? "Updating..."
-                    : "Update Assignment"}
+                  {changeRoleMutation.isPending ? "Updating..." : "Update Assignment"}
                 </Button>
               </>
             ) : (

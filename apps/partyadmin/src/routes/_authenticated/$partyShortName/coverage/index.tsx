@@ -17,6 +17,7 @@ import type { AgentCoverageUnitItem } from "#/lib/server/agent-coverage";
 import { getAgentCoverageBreakdown } from "#/lib/server/agent-coverage";
 import { useUserParty } from "#/hooks/useUserParty";
 import { getPageHeader } from "#/lib/shared/meta";
+import { ApplicationsFilterBar } from "#/components/applications/ApplicationsFilterBar";
 
 export const Route = createFileRoute("/_authenticated/$partyShortName/coverage/")({
   head: () => getPageHeader({ title: "Agent Coverage" }),
@@ -39,16 +40,21 @@ function AgentCoveragePage() {
   // Active party context
   const { party } = useUserParty();
 
-  // Hierarchical geographic drill-down filter state (State -> LGA -> Ward)
+  // Selected election group
+  const [electionGroupId, setElectionGroupId] = useState<number | undefined>();
+
+  // Hierarchical geographic drill-down filter state (State -> LGA -> Ward -> Polling Unit)
   const [drillDown, setDrillDown] = useState<{
     stateId?: number;
     lgaId?: number;
     wardId?: number;
+    pollingUnitId?: number;
   }>({});
 
   const stateId = drillDown.stateId;
   const lgaId = drillDown.lgaId;
   const wardId = drillDown.wardId;
+  const pollingUnitId = drillDown.pollingUnitId;
 
   // Server function to fetch agent coverage breakdown
   const fetchBreakdown = useServerFn(getAgentCoverageBreakdown);
@@ -64,18 +70,28 @@ function AgentCoveragePage() {
 
   // Fetch coverage metrics for the current geographic scope and party
   const { data, isLoading } = useQuery({
-    queryKey: ["agent-coverage-breakdown", party?.id, wardId, lgaId, stateId],
+    queryKey: [
+      "agent-coverage-breakdown",
+      party?.id,
+      electionGroupId,
+      wardId,
+      lgaId,
+      stateId,
+      pollingUnitId,
+    ],
     queryFn: async () => {
       return await fetchBreakdown({
         data: {
           partyId: party?.id,
+          electionGroupId,
           stateId,
           lgaId,
           wardId,
+          pollingUnitId,
         },
       });
     },
-    enabled: !!party?.id,
+    enabled: Boolean(party?.id && electionGroupId),
   });
 
   // Normalize API response structure
@@ -109,11 +125,13 @@ function AgentCoveragePage() {
         ...prev,
         lgaId: unitId,
         wardId: undefined,
+        pollingUnitId: undefined,
       }));
     } else if (unitType === "wards" || unitTitle === "Wards") {
       setDrillDown((prev) => ({
         ...prev,
         wardId: unitId,
+        pollingUnitId: undefined,
       }));
     }
   };
@@ -153,6 +171,39 @@ function AgentCoveragePage() {
       <PageHeader
         title="Agent Coverage"
         activeTab=""
+      />
+
+      {/* Cascaded Geographic & Election Group Filter Bar */}
+      <ApplicationsFilterBar
+        electionGroupId={electionGroupId}
+        onElectionGroupChange={setElectionGroupId}
+        stateId={stateId}
+        onStateChange={(id) => setDrillDown({ stateId: id })}
+        lgaId={lgaId}
+        onLgaChange={(id) =>
+          setDrillDown((prev) => ({
+            ...prev,
+            lgaId: id,
+            wardId: undefined,
+            pollingUnitId: undefined,
+          }))
+        }
+        wardId={wardId}
+        onWardChange={(id) =>
+          setDrillDown((prev) => ({
+            ...prev,
+            wardId: id,
+            pollingUnitId: undefined,
+          }))
+        }
+        pollingUnitId={pollingUnitId}
+        onPollingUnitChange={(id) =>
+          setDrillDown((prev) => ({
+            ...prev,
+            pollingUnitId: id,
+          }))
+        }
+        showAcceptAll={false}
       />
 
       {/* Button to clear active drill-down and return to top-level overview */}
@@ -216,8 +267,12 @@ function AgentCoveragePage() {
         </div>
       </div>
 
-      {/* Data states: loading, empty results, or data table */}
-      {isLoading ? (
+      {/* Data states: prompt selection, loading, empty results, or data table */}
+      {!electionGroupId ? (
+        <div className="py-16 text-center text-c-50 text-[15px]">
+          Please select an Election Group above to view agent coverage.
+        </div>
+      ) : isLoading ? (
         <div className="py-16 text-center text-c-50 text-[15px]">
           Loading agent coverage statistics...
         </div>

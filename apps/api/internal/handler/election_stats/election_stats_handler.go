@@ -1035,17 +1035,12 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 	qParams := r.URL.Query()
 
 	// Parse query parameters
-	electionID := utils.ParseQueryInt[int32](qParams, "election_id")
 	electionGroupID := utils.ParseQueryInt[int16](qParams, "election_group_id")
+	if electionGroupID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "election_group_id is required")
+		return
+	}
 	partyID := utils.ParseQueryInt[int16](qParams, "party_id")
-
-	// Resolve election group fallback if not provided
-	if electionGroupID == 0 && electionID > 0 && h.pool != nil {
-		_ = h.pool.QueryRow(ctx, "SELECT election_group_id FROM elections WHERE id = $1", electionID).Scan(&electionGroupID)
-	}
-	if electionGroupID == 0 && h.pool != nil {
-		_ = h.pool.QueryRow(ctx, "SELECT id FROM election_groups ORDER BY id DESC LIMIT 1").Scan(&electionGroupID)
-	}
 
 	// Parse geographic hierarchy scope IDs
 	puID := utils.ParseQueryInt[int32](qParams, "polling_unit_id")

@@ -36,6 +36,8 @@ type PartyApplicationsService interface {
 	CancelApplication(ctx context.Context, id int64) (queries.PartyAgentApplication, error)
 	ApproveApplication(ctx context.Context, input partyapplications.ApproveApplicationInput) (queries.PartyAgentApplication, error)
 	GetPollingUnitRecommendations(ctx context.Context, partyID int16, electionGroupID int32, lgaID, wardID, pollingUnitID int32) ([]queries.GetPollingUnitsWithAgentCountsRow, error)
+	ChangeAgentRole(ctx context.Context, input partyapplications.ChangeAgentRoleInput) (*partyapplications.ChangeAgentRoleResult, error)
+	RevokeAgent(ctx context.Context, input partyapplications.RevokeAgentInput) error
 }
 
 type UsersService interface {
@@ -933,4 +935,110 @@ func (h *Handler) CancelApplication(w http.ResponseWriter, r *http.Request) {
 	h.utils.RespondSuccess(w, http.StatusOK, "Polling agent application cancelled successfully", map[string]interface{}{
 		"application": updatedApp,
 	})
+}
+
+// ChangeAgentRoleRequest represents the HTTP payload for updating an agent's role or geographic assignment
+type ChangeAgentRoleRequest struct {
+	ApplicationID   int64  `json:"application_id"`
+	UserID          int64  `json:"user_id" validate:"required,gt=0"`
+	PartyID         int16  `json:"party_id" validate:"required,gt=0"`
+	ElectionGroupID int32  `json:"election_group_id" validate:"required,gt=0"`
+	CurrentRoleType string `json:"current_role_type"`
+	NewRoleType     string `json:"new_role_type" validate:"required"`
+	StateID         int16  `json:"state_id"`
+	LgaID           int32  `json:"lga_id"`
+	WardID          int32  `json:"ward_id"`
+	PollingUnitID   int32  `json:"polling_unit_id"`
+}
+
+// ChangeAgentRole updates an approved agent's role assignment (e.g. promoting to supervisor or reassigning location)
+func (h *Handler) ChangeAgentRole(w http.ResponseWriter, r *http.Request) {
+	// Authenticate and extract caller claims
+	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
+	if !ok {
+		return
+	}
+
+	// Decode request payload
+	var req ChangeAgentRoleRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+		return
+	}
+
+	// Validate request fields
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
+		return
+	}
+
+	// Check that requester has party modification permissions
+	if allowed, _, err := h.permissionsService.CheckPartyModificationPermission(claims, req.PartyID); !allowed || err != nil {
+		h.utils.RespondError(w, http.StatusForbidden, "Cannot change agent roles of a different party")
+		return
+	}
+
+	// Delegate role and assignment updates to service layer
+	result, err := h.service.ChangeAgentRole(r.Context(), partyapplications.ChangeAgentRoleInput{
+		ApplicationID:   req.ApplicationID,
+		UserID:          req.UserID,
+		PartyID:         req.PartyID,
+		ElectionGroupID: req.ElectionGroupID,
+		CurrentRoleType: req.CurrentRoleType,
+		NewRoleType:     req.NewRoleType,
+		StateID:         req.StateID,
+		LgaID:           req.LgaID,
+		WardID:          req.WardID,
+		PollingUnitID:   req.PollingUnitID,
+		AssignedBy:      claims.UserID,
+	})
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	h.utils.RespondSuccessData(w, http.StatusOK, "Agent role updated successfully", result)
+}
+
+// RevokeAgent removes an active polling agent or supervisor assignment
+func (h *Handler) RevokeAgent(w http.ResponseWriter, r *http.Request) {
+	// Authenticate and extract caller claims
+	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
+	if !ok {
+		return
+	}
+
+	// Parse target assignment ID
+	idStr := chi.URLParam(r, "id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid ID parameter")
+		return
+	}
+
+	// Parse query parameters
+	roleType := r.URL.Query().Get("role_type")
+	partyIDParam := utils.ParseQueryInt[int16](r.URL.Query(), "party_id")
+
+	// Verify party permissions
+	targetPartyID := claims.PartyID
+	if partyIDParam > 0 {
+		targetPartyID = partyIDParam
+	}
+	if allowed, _, err := h.permissionsService.CheckPartyModificationPermission(claims, targetPartyID); !allowed || err != nil {
+		h.utils.RespondError(w, http.StatusForbidden, "Cannot revoke agent assignments of a different party")
+		return
+	}
+
+	// Delegate revoke execution to service
+	if err := h.service.RevokeAgent(r.Context(), partyapplications.RevokeAgentInput{
+		AssignmentID: id,
+		RoleType:     roleType,
+		PartyID:      targetPartyID,
+	}); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Assignment revoked successfully", nil)
 }

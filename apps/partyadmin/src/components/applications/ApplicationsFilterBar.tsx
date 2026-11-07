@@ -13,20 +13,29 @@ import { useElectionGroup } from "#/hooks/useElectionGroup";
 import { useQuery } from "@tanstack/react-query";
 import { X } from "lucide-react";
 
-export interface ApplicationsFilterBarProps {
+export type ApplicationsFilterValues = {
   electionGroupId?: number;
-  onElectionGroupChange: (id?: number) => void;
   stateId?: number;
-  onStateChange: (id?: number) => void;
   lgaId?: number;
-  onLgaChange: (id?: number) => void;
   wardId?: number;
-  onWardChange: (id?: number) => void;
   pollingUnitId?: number;
-  onPollingUnitChange: (id?: number) => void;
+};
+
+export type ApplicationsFilterBarProps = {
+  electionGroupId?: number;
+  onElectionGroupChange?: (id?: number) => void;
+  stateId?: number;
+  onStateChange?: (id?: number) => void;
+  lgaId?: number;
+  onLgaChange?: (id?: number) => void;
+  wardId?: number;
+  onWardChange?: (id?: number) => void;
+  pollingUnitId?: number;
+  onPollingUnitChange?: (id?: number) => void;
+  onFiltersChange?: (filters: ApplicationsFilterValues) => void;
   onAcceptAll?: () => void;
   showAcceptAll?: boolean;
-}
+};
 
 export function ApplicationsFilterBar({
   electionGroupId,
@@ -39,11 +48,14 @@ export function ApplicationsFilterBar({
   onWardChange,
   pollingUnitId,
   onPollingUnitChange,
+  onFiltersChange,
   onAcceptAll,
   showAcceptAll = true,
 }: ApplicationsFilterBarProps) {
+  // Load available election groups
   const { electionGroups, isLoading: isGroupsLoading } = useElectionGroup();
 
+  // Lazy-load polling units only after a ward is selected
   const { data: unitsRes, isLoading: isUnitsLoading } = useQuery({
     queryKey: ["polling-units-filter", stateId, lgaId, wardId],
     queryFn: async () => {
@@ -57,19 +69,31 @@ export function ApplicationsFilterBar({
       return (res?.data?.polling_units ?? res?.data ?? []) as Array<{ id: number; name: string }>;
     },
     enabled: Boolean(wardId),
-    staleTime: 5 * 60 * 1000,
+    staleTime: Infinity,
   });
 
+  // Normalize polling units list
   const pollingUnits = Array.isArray(unitsRes) ? unitsRes : [];
 
+  // Check if any filter is currently active
   const hasActiveFilters = Boolean(electionGroupId || stateId || lgaId || wardId || pollingUnitId);
 
+  // Clear all cascaded and election group filters
   const handleClearFilters = () => {
-    onElectionGroupChange(undefined);
-    onStateChange(undefined);
-    onLgaChange(undefined);
-    onWardChange(undefined);
-    onPollingUnitChange(undefined);
+    if (onFiltersChange) {
+      onFiltersChange({
+        electionGroupId: undefined,
+        stateId: undefined,
+        lgaId: undefined,
+        wardId: undefined,
+        pollingUnitId: undefined,
+      });
+    }
+    onElectionGroupChange?.(undefined);
+    onStateChange?.(undefined);
+    onLgaChange?.(undefined);
+    onWardChange?.(undefined);
+    onPollingUnitChange?.(undefined);
   };
 
   return (
@@ -79,11 +103,19 @@ export function ApplicationsFilterBar({
         {/* Election Group Selector (Native HTML Select) */}
         <select
           value={electionGroupId ? String(electionGroupId) : ""}
-          onChange={(e) =>
-            onElectionGroupChange(
-              e.target.value ? Number(e.target.value) : undefined,
-            )
-          }
+          onChange={(e) => {
+            const val = e.target.value ? Number(e.target.value) : undefined;
+            if (onFiltersChange) {
+              onFiltersChange({
+                electionGroupId: val,
+                stateId,
+                lgaId,
+                wardId,
+                pollingUnitId,
+              });
+            }
+            onElectionGroupChange?.(val);
+          }}
           className="h-11 px-3.5 rounded-12 border border-[#dddddd] bg-white text-[14px] text-[#404040] min-w-44 max-w-48 sm:max-w-56 truncate outline-none cursor-pointer"
         >
           <option value="">
@@ -103,10 +135,20 @@ export function ApplicationsFilterBar({
             countryOriginalId={161}
             fetchStates={getStates}
             update={(state) => {
-              onStateChange(state?.id ? Number(state.id) : undefined);
-              onLgaChange(undefined);
-              onWardChange(undefined);
-              onPollingUnitChange(undefined);
+              const val = state?.id ? Number(state.id) : undefined;
+              if (onFiltersChange) {
+                onFiltersChange({
+                  electionGroupId,
+                  stateId: val,
+                  lgaId: undefined,
+                  wardId: undefined,
+                  pollingUnitId: undefined,
+                });
+              }
+              onStateChange?.(val);
+              onLgaChange?.(undefined);
+              onWardChange?.(undefined);
+              onPollingUnitChange?.(undefined);
             }}
             className="h-11 px-3.5 rounded-12 border border-[#dddddd] bg-white text-[14px] text-[#404040]"
           />
@@ -121,9 +163,19 @@ export function ApplicationsFilterBar({
             fetchLGAs={getLGAs}
             showAll="All LGAs"
             update={(lga) => {
-              onLgaChange(lga?.id ? Number(lga.id) : undefined);
-              onWardChange(undefined);
-              onPollingUnitChange(undefined);
+              const val = lga?.id ? Number(lga.id) : undefined;
+              if (onFiltersChange) {
+                onFiltersChange({
+                  electionGroupId,
+                  stateId,
+                  lgaId: val,
+                  wardId: undefined,
+                  pollingUnitId: undefined,
+                });
+              }
+              onLgaChange?.(val);
+              onWardChange?.(undefined);
+              onPollingUnitChange?.(undefined);
             }}
             className="h-11 px-3.5 rounded-12 border border-[#dddddd] bg-white text-[14px] text-[#404040] disabled:opacity-50"
           />
@@ -139,8 +191,18 @@ export function ApplicationsFilterBar({
             fetchWards={getWards}
             showAll="All Wards"
             update={(ward) => {
-              onWardChange(ward?.id ? Number(ward.id) : undefined);
-              onPollingUnitChange(undefined);
+              const val = ward?.id ? Number(ward.id) : undefined;
+              if (onFiltersChange) {
+                onFiltersChange({
+                  electionGroupId,
+                  stateId,
+                  lgaId,
+                  wardId: val,
+                  pollingUnitId: undefined,
+                });
+              }
+              onWardChange?.(val);
+              onPollingUnitChange?.(undefined);
             }}
             className="h-11 px-3.5 rounded-12 border border-[#dddddd] bg-white text-[14px] text-[#404040] disabled:opacity-50"
           />
@@ -151,23 +213,31 @@ export function ApplicationsFilterBar({
           <select
             value={pollingUnitId ? String(pollingUnitId) : ""}
             disabled={!wardId || isUnitsLoading}
-            onChange={(e) =>
-              onPollingUnitChange(
-                e.target.value ? Number(e.target.value) : undefined,
-              )
-            }
+            onChange={(e) => {
+              const val = e.target.value ? Number(e.target.value) : undefined;
+              if (onFiltersChange) {
+                onFiltersChange({
+                  electionGroupId,
+                  stateId,
+                  lgaId,
+                  wardId,
+                  pollingUnitId: val,
+                });
+              }
+              onPollingUnitChange?.(val);
+            }}
             className="w-full h-11 px-3 rounded-12 border border-[#dddddd] bg-white text-[14px] text-[#404040] truncate outline-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <option value="">
-              {isUnitsLoading ? "Loading..." : "All Units"}
+          <option value="">
+            {isUnitsLoading ? "Loading..." : "All Units"}
+          </option>
+          {pollingUnits.map((pu) => (
+            <option key={pu.id} value={String(pu.id)}>
+              {pu.name}
             </option>
-            {pollingUnits.map((pu) => (
-              <option key={pu.id} value={String(pu.id)}>
-                {pu.name}
-              </option>
-            ))}
-          </select>
-        </div>
+          ))}
+        </select>
+      </div>
 
         {/* Clear Filters button */}
         {hasActiveFilters && (

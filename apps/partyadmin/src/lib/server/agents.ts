@@ -89,6 +89,7 @@ export const getAgentPerformanceStats = createServerFn({ method: "GET" })
 export const changeAgentRole = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
+      applicationId?: number;
       userId: number;
       partyId: number;
       electionGroupId: number;
@@ -106,6 +107,7 @@ export const changeAgentRole = createServerFn({ method: "POST" })
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          application_id: data.applicationId,
           user_id: data.userId,
           party_id: data.partyId,
           election_group_id: data.electionGroupId,

@@ -3,20 +3,22 @@
  * @description List of rejected polling agent applications with cascaded filters.
  */
 
-import { useState } from "react";
+import { useEffect } from "react";
 import { Layout, PageHeader } from "@repo/ui/components/custom/AdminLayouts";
 import { ApplicationsTable } from "#/components/Tables";
 import { getPageHeader } from "#/lib/shared/meta";
 import { createFileRoute } from "@tanstack/react-router";
-import { getApplicationTabs } from "./-data";
-import { ApplicationsFilterBar } from "#/components/applications/ApplicationsFilterBar";
+import { getApplicationTabs, validateApplicationsSearch } from "./-data";
+import { ApplicationsFilterBar, type ApplicationsFilterValues } from "#/components/applications/ApplicationsFilterBar";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { getApplications } from "#/lib/server/applications";
 import { useUserParty } from "#/hooks/useUserParty";
 import { QUERY_KEYS } from "#/lib/config";
+import { useIntersectionObserver } from "usehooks-ts";
 import { Filter, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/$partyShortName/applications/rejected")({
+  validateSearch: validateApplicationsSearch,
   head: () => getPageHeader({ title: "Rejected Applications" }),
   component: RouteComponent,
 });
@@ -29,19 +31,43 @@ const PAGE_LIMIT = 50;
  */
 function RouteComponent() {
   const { partyShortName } = Route.useParams();
+  const { election_group_id: electionGroupId, state_id: stateId, lga_id: lgaId, ward_id: wardId, polling_unit_id: pollingUnitId } = Route.useSearch();
+  const navigate = Route.useNavigate();
   const { party } = useUserParty();
   const partyId = party?.id;
 
-  const [electionGroupId, setElectionGroupId] = useState<number | undefined>();
-  const [stateId, setStateId] = useState<number | undefined>();
-  const [lgaId, setLgaId] = useState<number | undefined>();
-  const [wardId, setWardId] = useState<number | undefined>();
-  const [pollingUnitId, setPollingUnitId] = useState<number | undefined>();
+  // Synchronize selected filter changes into URL search parameters
+  const handleFiltersChange = (filters: ApplicationsFilterValues) => {
+    navigate({
+      search: (prev: any) => {
+        const next = {
+          ...prev,
+          election_group_id: filters.electionGroupId,
+          state_id: filters.stateId,
+          lga_id: filters.lgaId,
+          ward_id: filters.wardId,
+          polling_unit_id: filters.pollingUnitId,
+        };
+
+        // Strip undefined or empty keys to keep the URL clean
+        Object.keys(next).forEach((k) => {
+          if (next[k] === undefined || next[k] === null || next[k] === "") {
+            delete next[k];
+          }
+        });
+
+        return next;
+      },
+
+      replace: true,
+    });
+  };
 
   // Cursor-paginated rejected applications (primary list)
   const { data: rejectedPages, isLoading: isRejectedLoading, isFetchingNextPage, hasNextPage, fetchNextPage } = useInfiniteQuery({
     queryKey: QUERY_KEYS.applications.list("rejected", partyId, electionGroupId, stateId, lgaId, wardId, pollingUnitId),
     initialPageParam: undefined as number | undefined,
+    // Only query once required election group and state filters are selected
     enabled: Boolean(partyId && electionGroupId && stateId),
     queryFn: ({ pageParam }) => getApplications({
       data: {
@@ -56,34 +82,49 @@ function RouteComponent() {
         pollingUnitId,
       },
     }),
+    // Resolve next cursor from either root or nested meta payload
     getNextPageParam: (lastPage) => {
-      const meta = lastPage?.data?.meta;
+      const meta = lastPage?.meta ?? lastPage?.data?.meta;
       return meta?.has_more ? meta.next_cursor : undefined;
     },
     staleTime: Infinity,
   });
 
-  const rejectedApps =
-    rejectedPages?.pages.flatMap((p) => p?.data?.applications ?? []) ?? [];
+  // Observe bottom sentinel element to detect when user reaches the end of the list
+  const { ref: sentinelRef, isIntersecting } = useIntersectionObserver({
+    threshold: 0.1,
+  });
+
+  // Automatically fetch the next batch when sentinel becomes visible
+  useEffect(() => {
+    if (isIntersecting && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [isIntersecting, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  // Flatten paginated page slices into a single continuous items array
+  const rejectedApps = rejectedPages?.pages.flatMap((p) => p?.data?.applications ?? []) ?? [];
 
   return (
     <Layout>
       <PageHeader
         title="Applications"
         activeTab="rejected"
-        tabs={getApplicationTabs(partyShortName)}
+        tabs={getApplicationTabs(partyShortName, {
+          election_group_id: electionGroupId,
+          state_id: stateId,
+          lga_id: lgaId,
+          ward_id: wardId,
+          polling_unit_id: pollingUnitId,
+        })}
       />
       <ApplicationsFilterBar
         electionGroupId={electionGroupId}
-        onElectionGroupChange={setElectionGroupId}
         stateId={stateId}
-        onStateChange={setStateId}
         lgaId={lgaId}
-        onLgaChange={setLgaId}
         wardId={wardId}
-        onWardChange={setWardId}
         pollingUnitId={pollingUnitId}
-        onPollingUnitChange={setPollingUnitId}
+        onFiltersChange={handleFiltersChange}
         showAcceptAll={false}
       />
 
@@ -112,18 +153,16 @@ function RouteComponent() {
         <>
           <ApplicationsTable items={rejectedApps} />
           {hasNextPage && (
-            <div className="flex justify-center py-6">
-              <button
-                type="button"
-                onClick={() => fetchNextPage()}
-                disabled={isFetchingNextPage}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-c-70 hover:bg-hover-2 transition disabled:opacity-50 disabled:pointer-events-none"
-              >
-                {isFetchingNextPage && (
-                  <Loader2 className="size-4 animate-spin" />
-                )}
-                Load more
-              </button>
+            <div
+              ref={sentinelRef}
+              className="flex items-center justify-center py-6 text-sm text-c-50 min-h-10"
+            >
+              {isFetchingNextPage && (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="size-5 animate-spin text-blue-600" />
+                  <span>Loading more applications...</span>
+                </div>
+              )}
             </div>
           )}
         </>

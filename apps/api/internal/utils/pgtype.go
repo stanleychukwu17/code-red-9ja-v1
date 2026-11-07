@@ -74,6 +74,11 @@ func PtrFromPgText(t pgtype.Text) *string {
 	return nil
 }
 
+// Ptr returns a pointer to the given value.
+func Ptr[T any](v T) *T {
+	return &v
+}
+
 // PtrFromString converts a plain string to an optional string pointer, returning nil if empty.
 func PtrFromString(s string) *string {
 	if s != "" {

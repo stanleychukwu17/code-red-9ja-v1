@@ -605,6 +605,8 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Post("/api/v1/party-applications/{id}/approve", partyApplicationsHandler.ApproveApplication)
 		r.Post("/api/v1/party-applications/{id}/reject", partyApplicationsHandler.RejectApplication)
 		r.Post("/api/v1/party-applications/{id}/cancel", partyApplicationsHandler.CancelApplication)
+		r.Post("/api/v1/party-applications/change-role", partyApplicationsHandler.ChangeAgentRole)
+		r.Delete("/api/v1/party-applications/agents/{id}", partyApplicationsHandler.RevokeAgent)
 
 		// campaign groups routes (authenticated users)
 		r.Get("/api/v1/campaign-groups/{id}", campaignGroupsHandler.GetCampaignGroup)
@@ -713,8 +715,8 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 
 		// Admins/party_admins: trigger calculation, list, approve, mark paid
 		r.Get("/api/v1/agent-performance", agentPerformanceHandler.GetAgentPerformance)
-		r.Post("/api/v1/agents/change-role", agentPerformanceHandler.ChangeAgentRole)
-		r.Delete("/api/v1/agents/{id}", agentPerformanceHandler.RevokeAgent)
+		r.Post("/api/v1/agents/change-role", partyApplicationsHandler.ChangeAgentRole)
+		r.Delete("/api/v1/agents/{id}", partyApplicationsHandler.RevokeAgent)
 		r.Post("/api/v1/agent-earnings/calculate/{assignment_id}", agentEarningsHandler.CalculateEarnings)
 		r.Post("/api/v1/agent-earnings/request-payout", agentEarningsHandler.RequestPayout)
 		r.Post("/api/v1/agent-earnings/assignments/{id}/request-payout", agentEarningsHandler.RequestPayout)

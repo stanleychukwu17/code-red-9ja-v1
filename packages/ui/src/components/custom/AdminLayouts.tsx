@@ -21,6 +21,7 @@ export type PageHeaderTabProps = {
   id: string;
   label: string;
   href?: string;
+  search?: any;
   onClick?: () => void;
 };
 
@@ -347,6 +348,7 @@ export function HeaderTabs({
             <Link
               key={tab.id}
               to={tab.href as never}
+              search={tab.search}
               onClick={tab.onClick}
               className={className}
             >

@@ -1,19 +1,13 @@
 package agentperformancehandler
 
 import (
-	"context"
-	"encoding/json"
 	"log/slog"
 	"math"
 	"net/http"
-	"strconv"
-	"strings"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"free9ja/api/internal/db/queries"
-	apimiddleware "free9ja/api/internal/middleware"
 	usersservice "free9ja/api/internal/service/users"
 	"free9ja/api/internal/utils"
 )
@@ -64,18 +58,6 @@ type AgentPerformanceItem struct {
 	WardName           *string `json:"ward_name,omitempty"`
 	PollingUnitName    *string `json:"polling_unit_name,omitempty"`
 	PollingUnitCode    *string `json:"polling_unit_code,omitempty"`
-}
-
-type ChangeAgentRoleRequest struct {
-	UserID          int64  `json:"user_id"`
-	PartyID         int16  `json:"party_id"`
-	ElectionGroupID int32  `json:"election_group_id"`
-	CurrentRoleType string `json:"current_role_type"`
-	NewRoleType     string `json:"new_role_type"`
-	StateID         int16  `json:"state_id"`
-	LgaID           int32  `json:"lga_id"`
-	WardID          int32  `json:"ward_id"`
-	PollingUnitID   int32  `json:"polling_unit_id"`
 }
 
 // GetAgentPerformance godoc
@@ -181,23 +163,23 @@ func (h *Handler) GetAgentPerformance(w http.ResponseWriter, r *http.Request) {
 				AvatarUrl:          row.AvatarUrl,
 				RoleType:           row.RoleType.String,
 				ReadinessPct:       math.Round(readiness*100) / 100,
-				ArrivedAt:          stringPtr(row.ArrivedAt),
-				ElectionStartedAt:  stringPtr(row.ElectionStartedAt),
-				ElectionEndedAt:    stringPtr(row.ElectionEndedAt),
-				UpdatesGiven:       int32Ptr(row.UpdatesGiven),
-				ReportsGiven:       int32Ptr(row.ReportsGiven),
-				LiveVotersReferred: int32Ptr(row.LiveVotersReferred),
-				ResultsUploaded:    stringPtr(row.ResultsUploaded),
+				ArrivedAt:          utils.PtrFromString(row.ArrivedAt),
+				ElectionStartedAt:  utils.PtrFromString(row.ElectionStartedAt),
+				ElectionEndedAt:    utils.PtrFromString(row.ElectionEndedAt),
+				UpdatesGiven:       utils.Ptr(row.UpdatesGiven),
+				ReportsGiven:       utils.Ptr(row.ReportsGiven),
+				LiveVotersReferred: utils.Ptr(row.LiveVotersReferred),
+				ResultsUploaded:    utils.PtrFromString(row.ResultsUploaded),
 				EarningsKobo:       row.EarningsKobo,
 				EarningsFormatted:  row.EarningsFormatted,
 				CompletionStatus:   row.CompletionStatus,
 				RequestedPayout:    row.RequestedPayout,
 				Paid:               row.Paid,
-				StateName:          stringPtr(row.StateName),
-				LgaName:            stringPtr(row.LgaName),
-				WardName:           stringPtr(row.WardName),
-				PollingUnitName:    stringPtr(row.PollingUnitName),
-				PollingUnitCode:    stringPtr(row.PollingUnitCode),
+				StateName:          utils.PtrFromString(row.StateName),
+				LgaName:            utils.PtrFromString(row.LgaName),
+				WardName:           utils.PtrFromString(row.WardName),
+				PollingUnitName:    utils.PtrFromString(row.PollingUnitName),
+				PollingUnitCode:    utils.PtrFromString(row.PollingUnitCode),
 			}
 			items = append(items, item)
 		}
@@ -238,17 +220,17 @@ func (h *Handler) GetAgentPerformance(w http.ResponseWriter, r *http.Request) {
 				AvatarUrl:         row.AvatarUrl,
 				RoleType:          row.RoleType.String,
 				ReadinessPct:      100.0,
-				ArrivedAt:         stringPtr(row.ArrivedAt),
-				ElectionStartedAt: stringPtr(row.ElectionStartedAt),
-				ElectionEndedAt:   stringPtr(row.ElectionEndedAt),
+				ArrivedAt:         utils.PtrFromString(row.ArrivedAt),
+				ElectionStartedAt: utils.PtrFromString(row.ElectionStartedAt),
+				ElectionEndedAt:   utils.PtrFromString(row.ElectionEndedAt),
 				EarningsKobo:      row.EarningsKobo,
 				EarningsFormatted: row.EarningsFormatted,
 				CompletionStatus:  row.CompletionStatus,
 				RequestedPayout:   row.RequestedPayout,
 				Paid:              row.Paid,
-				StateName:         stringPtr(row.StateName),
-				LgaName:           stringPtr(row.LgaName),
-				WardName:          stringPtr(row.WardName),
+				StateName:         utils.PtrFromString(row.StateName),
+				LgaName:           utils.PtrFromString(row.LgaName),
+				WardName:          utils.PtrFromString(row.WardName),
 			}
 			items = append(items, item)
 		}
@@ -288,16 +270,16 @@ func (h *Handler) GetAgentPerformance(w http.ResponseWriter, r *http.Request) {
 				AvatarUrl:         row.AvatarUrl,
 				RoleType:          row.RoleType.String,
 				ReadinessPct:      100.0,
-				ArrivedAt:         stringPtr(row.ArrivedAt),
-				ElectionStartedAt: stringPtr(row.ElectionStartedAt),
-				ElectionEndedAt:   stringPtr(row.ElectionEndedAt),
+				ArrivedAt:         utils.PtrFromString(row.ArrivedAt),
+				ElectionStartedAt: utils.PtrFromString(row.ElectionStartedAt),
+				ElectionEndedAt:   utils.PtrFromString(row.ElectionEndedAt),
 				EarningsKobo:      row.EarningsKobo,
 				EarningsFormatted: row.EarningsFormatted,
 				CompletionStatus:  row.CompletionStatus,
 				RequestedPayout:   row.RequestedPayout,
 				Paid:              row.Paid,
-				StateName:         stringPtr(row.StateName),
-				LgaName:           stringPtr(row.LgaName),
+				StateName:         utils.PtrFromString(row.StateName),
+				LgaName:           utils.PtrFromString(row.LgaName),
 			}
 			items = append(items, item)
 		}
@@ -336,15 +318,15 @@ func (h *Handler) GetAgentPerformance(w http.ResponseWriter, r *http.Request) {
 				AvatarUrl:         row.AvatarUrl,
 				RoleType:          row.RoleType.String,
 				ReadinessPct:      100.0,
-				ArrivedAt:         stringPtr(row.ArrivedAt),
-				ElectionStartedAt: stringPtr(row.ElectionStartedAt),
-				ElectionEndedAt:   stringPtr(row.ElectionEndedAt),
+				ArrivedAt:         utils.PtrFromString(row.ArrivedAt),
+				ElectionStartedAt: utils.PtrFromString(row.ElectionStartedAt),
+				ElectionEndedAt:   utils.PtrFromString(row.ElectionEndedAt),
 				EarningsKobo:      row.EarningsKobo,
 				EarningsFormatted: row.EarningsFormatted,
 				CompletionStatus:  row.CompletionStatus,
 				RequestedPayout:   row.RequestedPayout,
 				Paid:              row.Paid,
-				StateName:         stringPtr(row.StateName),
+				StateName:         utils.PtrFromString(row.StateName),
 			}
 			items = append(items, item)
 		}
@@ -377,403 +359,4 @@ func (h *Handler) GetAgentPerformance(w http.ResponseWriter, r *http.Request) {
 		"next_cursor": nextCursor,
 		"has_more":    hasMore,
 	})
-}
-
-// ChangeAgentRole updates an agent's role (promoting to supervisor or reassigning)
-func (h *Handler) ChangeAgentRole(w http.ResponseWriter, r *http.Request) {
-	claims, ok := h.u.CheckRoles(r, w, apimiddleware.ClaimsKey)
-	if !ok {
-		return
-	}
-
-	requester, err := h.usersService.GetUserByFakeID(r.Context(), claims.FakeID)
-	if err != nil {
-		h.u.RespondError(w, http.StatusUnauthorized, "Requester not found")
-		return
-	}
-
-	var req ChangeAgentRoleRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.u.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
-		return
-	}
-
-	if req.UserID <= 0 || req.PartyID <= 0 || req.ElectionGroupID <= 0 {
-		h.u.RespondError(w, http.StatusBadRequest, "user_id, party_id, and election_group_id are required")
-		return
-	}
-
-	rolesData, _ := h.usersService.GetUserRoles(r.Context(), requester.ID)
-	isPlatformAdmin := false
-	isPartyAdmin := false
-	for _, rCode := range rolesData.RolesCode {
-		if rCode == "admin" || rCode == "super_admin" {
-			isPlatformAdmin = true
-		}
-		if rCode == "party_admin" || rCode == "super_party_admin" {
-			isPartyAdmin = true
-		}
-	}
-
-	requesterPartyID := int16(0)
-	if requester.PartyID.Valid {
-		requesterPartyID = requester.PartyID.Int16
-	} else if claims.PartyID > 0 {
-		requesterPartyID = claims.PartyID
-	}
-
-	if !isPlatformAdmin {
-		if !isPartyAdmin {
-			h.u.RespondError(w, http.StatusForbidden, "Only administrators can change agent roles")
-			return
-		}
-		if requesterPartyID == 0 || req.PartyID != requesterPartyID {
-			h.u.RespondError(w, http.StatusForbidden, "Cannot change agent roles of a different party")
-			return
-		}
-	}
-
-	// Normalize role strings
-	newRole := strings.ToLower(strings.TrimSpace(req.NewRoleType))
-	switch newRole {
-	case "polling_agent", "pu_agent", "polling_unit_agent":
-		newRole = "polling_agent"
-	case "ward_election_supervisor":
-		newRole = "ward_election_supervisor"
-	case "lga_election_supervisor":
-		newRole = "lga_election_supervisor"
-	case "state_election_supervisor":
-		newRole = "state_election_supervisor"
-	default:
-		h.u.RespondError(w, http.StatusBadRequest, "Invalid new_role_type: "+req.NewRoleType)
-		return
-	}
-
-	// If new role is polling_agent, polling_unit_id is required
-	if newRole == "polling_agent" {
-		if req.PollingUnitID <= 0 {
-			h.u.RespondError(w, http.StatusBadRequest, "polling_unit_id is required for polling_agent role")
-			return
-		}
-		// If geographic IDs are missing, populate from polling_units
-		if req.StateID == 0 || req.LgaID == 0 || req.WardID == 0 {
-			_ = h.pool.QueryRow(r.Context(), "SELECT state_id, lga_id, ward_id FROM polling_units WHERE id = $1", req.PollingUnitID).Scan(&req.StateID, &req.LgaID, &req.WardID)
-		}
-	} else if newRole == "ward_election_supervisor" {
-		if req.StateID <= 0 || req.LgaID <= 0 || req.WardID <= 0 {
-			h.u.RespondError(w, http.StatusBadRequest, "state_id, lga_id, and ward_id are required for ward supervisor")
-			return
-		}
-	} else if newRole == "lga_election_supervisor" {
-		if req.StateID <= 0 || req.LgaID <= 0 {
-			h.u.RespondError(w, http.StatusBadRequest, "state_id and lga_id are required for LGA supervisor")
-			return
-		}
-	} else if newRole == "state_election_supervisor" {
-		if req.StateID <= 0 {
-			h.u.RespondError(w, http.StatusBadRequest, "state_id is required for state supervisor")
-			return
-		}
-	}
-
-	ctx := r.Context()
-	tx, err := h.pool.Begin(ctx)
-	if err != nil {
-		h.u.RespondError(w, http.StatusInternalServerError, "Failed to begin transaction: "+err.Error())
-		return
-	}
-	defer tx.Rollback(ctx)
-
-	// Step 1: Detect old assignment across tables before removal
-	var oldRole string
-	var oldStateID int16
-	var oldLgaID int32
-	var oldWardID int32
-	var oldPuID int32
-
-	var puID int32
-	if errPu := tx.QueryRow(ctx, "SELECT polling_unit_id FROM polling_unit_assignments WHERE user_id = $1 AND election_group_id = $2 AND party_id = $3 LIMIT 1", req.UserID, req.ElectionGroupID, req.PartyID).Scan(&puID); errPu == nil && puID > 0 {
-		oldRole = "polling_agent"
-		oldPuID = puID
-	} else {
-		var sID int16
-		var lID, wID int32
-		if errWard := tx.QueryRow(ctx, "SELECT state_id, lga_id, ward_id FROM ward_election_supervisors WHERE user_id = $1 AND election_group_id = $2 AND party_id = $3 LIMIT 1", req.UserID, req.ElectionGroupID, req.PartyID).Scan(&sID, &lID, &wID); errWard == nil {
-			oldRole = "ward_election_supervisor"
-			oldStateID = sID
-			oldLgaID = lID
-			oldWardID = wID
-		} else if errLga := tx.QueryRow(ctx, "SELECT state_id, lga_id FROM lga_election_supervisors WHERE user_id = $1 AND election_group_id = $2 AND party_id = $3 LIMIT 1", req.UserID, req.ElectionGroupID, req.PartyID).Scan(&sID, &lID); errLga == nil {
-			oldRole = "lga_election_supervisor"
-			oldStateID = sID
-			oldLgaID = lID
-		} else if errState := tx.QueryRow(ctx, "SELECT state_id FROM state_election_supervisors WHERE user_id = $1 AND election_group_id = $2 AND party_id = $3 LIMIT 1", req.UserID, req.ElectionGroupID, req.PartyID).Scan(&sID); errState == nil {
-			oldRole = "state_election_supervisor"
-			oldStateID = sID
-		}
-	}
-
-	if _, err := tx.Exec(ctx, "DELETE FROM polling_unit_assignments WHERE user_id = $1 AND election_group_id = $2 AND party_id = $3", req.UserID, req.ElectionGroupID, req.PartyID); err != nil {
-		h.u.RespondError(w, http.StatusInternalServerError, "Failed to clear old polling unit assignment: "+err.Error())
-		return
-	}
-	if _, err := tx.Exec(ctx, "DELETE FROM ward_election_supervisors WHERE user_id = $1 AND election_group_id = $2 AND party_id = $3", req.UserID, req.ElectionGroupID, req.PartyID); err != nil {
-		h.u.RespondError(w, http.StatusInternalServerError, "Failed to clear old ward supervisor assignment: "+err.Error())
-		return
-	}
-	if _, err := tx.Exec(ctx, "DELETE FROM lga_election_supervisors WHERE user_id = $1 AND election_group_id = $2 AND party_id = $3", req.UserID, req.ElectionGroupID, req.PartyID); err != nil {
-		h.u.RespondError(w, http.StatusInternalServerError, "Failed to clear old LGA supervisor assignment: "+err.Error())
-		return
-	}
-	if _, err := tx.Exec(ctx, "DELETE FROM state_election_supervisors WHERE user_id = $1 AND election_group_id = $2 AND party_id = $3", req.UserID, req.ElectionGroupID, req.PartyID); err != nil {
-		h.u.RespondError(w, http.StatusInternalServerError, "Failed to clear old state supervisor assignment: "+err.Error())
-		return
-	}
-
-	txQueries := h.q.WithTx(tx)
-
-	// Decrement stats for previous assignment
-	if oldRole != "" {
-		adjustAgentStats(ctx, tx, txQueries, oldRole, req.ElectionGroupID, req.PartyID, oldStateID, oldLgaID, oldWardID, oldPuID, false)
-	}
-
-	// Step 2: Insert new assignment
-	switch newRole {
-	case "polling_agent":
-		_, err = tx.Exec(ctx, `
-			INSERT INTO polling_unit_assignments (user_id, party_id, polling_unit_id, election_group_id, role_type, assigned_by)
-			VALUES ($1, $2, $3, $4, 'polling_agent', $5)
-			ON CONFLICT (user_id, election_group_id) DO UPDATE
-			SET polling_unit_id = EXCLUDED.polling_unit_id,
-			    party_id = EXCLUDED.party_id,
-			    role_type = 'polling_agent',
-			    updated_at = NOW()`,
-			req.UserID, req.PartyID, req.PollingUnitID, req.ElectionGroupID, requester.ID)
-		if err != nil {
-			h.u.RespondError(w, http.StatusInternalServerError, "Failed to assign polling agent: "+err.Error())
-			return
-		}
-
-	case "ward_election_supervisor":
-		_, err = tx.Exec(ctx, `
-			INSERT INTO ward_election_supervisors (user_id, state_id, lga_id, ward_id, election_group_id, party_id, role_type, assigned_by)
-			VALUES ($1, $2, $3, $4, $5, $6, 'ward_election_supervisor', $7)
-			ON CONFLICT (user_id, election_group_id) DO UPDATE
-			SET state_id = EXCLUDED.state_id,
-			    lga_id = EXCLUDED.lga_id,
-			    ward_id = EXCLUDED.ward_id,
-			    party_id = EXCLUDED.party_id,
-			    updated_at = NOW()`,
-			req.UserID, req.StateID, req.LgaID, req.WardID, req.ElectionGroupID, req.PartyID, requester.ID)
-		if err != nil {
-			h.u.RespondError(w, http.StatusInternalServerError, "Failed to assign ward supervisor: "+err.Error())
-			return
-		}
-
-	case "lga_election_supervisor":
-		_, err = tx.Exec(ctx, `
-			INSERT INTO lga_election_supervisors (user_id, state_id, lga_id, election_group_id, party_id, role_type, assigned_by)
-			VALUES ($1, $2, $3, $4, $5, 'lga_election_supervisor', $6)
-			ON CONFLICT (user_id, election_group_id) DO UPDATE
-			SET state_id = EXCLUDED.state_id,
-			    lga_id = EXCLUDED.lga_id,
-			    party_id = EXCLUDED.party_id,
-			    updated_at = NOW()`,
-			req.UserID, req.StateID, req.LgaID, req.ElectionGroupID, req.PartyID, requester.ID)
-		if err != nil {
-			h.u.RespondError(w, http.StatusInternalServerError, "Failed to assign LGA supervisor: "+err.Error())
-			return
-		}
-
-	case "state_election_supervisor":
-		_, err = tx.Exec(ctx, `
-			INSERT INTO state_election_supervisors (user_id, state_id, election_group_id, party_id, role_type, assigned_by)
-			VALUES ($1, $2, $3, $4, 'state_election_supervisor', $5)
-			ON CONFLICT (user_id, election_group_id) DO UPDATE
-			SET state_id = EXCLUDED.state_id,
-			    party_id = EXCLUDED.party_id,
-			    updated_at = NOW()`,
-			req.UserID, req.StateID, req.ElectionGroupID, req.PartyID, requester.ID)
-		if err != nil {
-			h.u.RespondError(w, http.StatusInternalServerError, "Failed to assign state supervisor: "+err.Error())
-			return
-		}
-	}
-
-	// Increment stats for new assignment
-	adjustAgentStats(ctx, tx, txQueries, newRole, req.ElectionGroupID, req.PartyID, req.StateID, req.LgaID, req.WardID, req.PollingUnitID, true)
-
-	// Keep party_agent_applications synchronized if an application exists
-	var appPuID *int32
-	if req.PollingUnitID > 0 && newRole == "polling_agent" {
-		puVal := req.PollingUnitID
-		appPuID = &puVal
-	}
-	var appWardID *int32
-	if req.WardID > 0 && (newRole == "ward_election_supervisor" || newRole == "polling_agent") {
-		wVal := req.WardID
-		appWardID = &wVal
-	}
-	var appLgaID *int32
-	if req.LgaID > 0 && (newRole == "lga_election_supervisor" || newRole == "ward_election_supervisor" || newRole == "polling_agent") {
-		lVal := req.LgaID
-		appLgaID = &lVal
-	}
-	var appStateID *int16
-	if req.StateID > 0 {
-		sVal := req.StateID
-		appStateID = &sVal
-	}
-
-	_, _ = tx.Exec(ctx, `
-		UPDATE party_agent_applications
-		SET role = $1,
-		    state_id = COALESCE($2, state_id),
-		    lga_id = $3,
-		    ward_id = $4,
-		    polling_unit_id = $5,
-		    updated_at = NOW()
-		WHERE user_id = $6 AND election_group_id = $7 AND party_id = $8`,
-		newRole, appStateID, appLgaID, appWardID, appPuID, req.UserID, req.ElectionGroupID, req.PartyID)
-
-	if err := tx.Commit(ctx); err != nil {
-		h.u.RespondError(w, http.StatusInternalServerError, "Failed to commit role change: "+err.Error())
-		return
-	}
-
-	h.u.RespondSuccess(w, http.StatusOK, "Agent role updated successfully", map[string]interface{}{
-		"user_id":  req.UserID,
-		"new_role": newRole,
-	})
-}
-
-// RevokeAgent removes an agent from their assigned role
-func (h *Handler) RevokeAgent(w http.ResponseWriter, r *http.Request) {
-	claims, ok := h.u.CheckRoles(r, w, apimiddleware.ClaimsKey)
-	if !ok {
-		return
-	}
-
-	requester, err := h.usersService.GetUserByFakeID(r.Context(), claims.FakeID)
-	if err != nil {
-		h.u.RespondError(w, http.StatusUnauthorized, "Requester not found")
-		return
-	}
-
-	idStr := chi.URLParam(r, "id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
-		h.u.RespondError(w, http.StatusBadRequest, "Invalid ID parameter")
-		return
-	}
-
-	roleType := strings.ReplaceAll(strings.ToLower(strings.TrimSpace(r.URL.Query().Get("role_type"))), "-", "_")
-	switch roleType {
-	case "ward_supervisor":
-		roleType = "ward_election_supervisor"
-	case "lga_supervisor":
-		roleType = "lga_election_supervisor"
-	case "state_supervisor":
-		roleType = "state_election_supervisor"
-	case "pollingagent", "pu_agent", "polling_unit_agent":
-		roleType = "polling_agent"
-	}
-	partyIDParam := utils.ParseQueryInt[int16](r.URL.Query(), "party_id")
-
-	rolesData, _ := h.usersService.GetUserRoles(r.Context(), requester.ID)
-	isPlatformAdmin := false
-	isPartyAdmin := false
-	for _, rCode := range rolesData.RolesCode {
-		if rCode == "admin" || rCode == "super_admin" {
-			isPlatformAdmin = true
-		}
-		if rCode == "party_admin" || rCode == "super_party_admin" {
-			isPartyAdmin = true
-		}
-	}
-
-	requesterPartyID := int16(0)
-	if requester.PartyID.Valid {
-		requesterPartyID = requester.PartyID.Int16
-	} else if claims.PartyID > 0 {
-		requesterPartyID = claims.PartyID
-	}
-
-	if !isPlatformAdmin {
-		if !isPartyAdmin {
-			h.u.RespondError(w, http.StatusForbidden, "Only administrators can revoke agent assignments")
-			return
-		}
-		if requesterPartyID == 0 || (partyIDParam > 0 && int16(partyIDParam) != requesterPartyID) {
-			h.u.RespondError(w, http.StatusForbidden, "Cannot revoke agent assignments of a different party")
-			return
-		}
-	}
-
-	ctx := r.Context()
-	switch roleType {
-	case "polling_agent", "pu_agent", "polling_unit_agent":
-		var puID int32
-		var egID int32
-		var partyID int16
-		_ = h.pool.QueryRow(ctx, "SELECT polling_unit_id, election_group_id, party_id FROM polling_unit_assignments WHERE id = $1", id).Scan(&puID, &egID, &partyID)
-		_, err = h.pool.Exec(ctx, "DELETE FROM polling_unit_assignments WHERE id = $1", id)
-		if err == nil && puID > 0 {
-			adjustAgentStats(ctx, h.pool, h.q, "polling_agent", egID, partyID, 0, 0, 0, puID, false)
-		}
-	case "ward_supervisor", "ward_election_supervisor":
-		var stateID int16
-		var lgaID, wardID int32
-		var egID int32
-		var partyID int16
-		_ = h.pool.QueryRow(ctx, "SELECT state_id, lga_id, ward_id, election_group_id, party_id FROM ward_election_supervisors WHERE id = $1", id).Scan(&stateID, &lgaID, &wardID, &egID, &partyID)
-		_, err = h.pool.Exec(ctx, "DELETE FROM ward_election_supervisors WHERE id = $1", id)
-		if err == nil && wardID > 0 {
-			adjustAgentStats(ctx, h.pool, h.q, "ward_election_supervisor", egID, partyID, stateID, lgaID, wardID, 0, false)
-		}
-	case "lga_supervisor", "lga_election_supervisor":
-		var stateID int16
-		var lgaID int32
-		var egID int32
-		var partyID int16
-		_ = h.pool.QueryRow(ctx, "SELECT state_id, lga_id, election_group_id, party_id FROM lga_election_supervisors WHERE id = $1", id).Scan(&stateID, &lgaID, &egID, &partyID)
-		_, err = h.pool.Exec(ctx, "DELETE FROM lga_election_supervisors WHERE id = $1", id)
-		if err == nil && lgaID > 0 {
-			adjustAgentStats(ctx, h.pool, h.q, "lga_election_supervisor", egID, partyID, stateID, lgaID, 0, 0, false)
-		}
-	case "state_supervisor", "state_election_supervisor":
-		var stateID int16
-		var egID int32
-		var partyID int16
-		_ = h.pool.QueryRow(ctx, "SELECT state_id, election_group_id, party_id FROM state_election_supervisors WHERE id = $1", id).Scan(&stateID, &egID, &partyID)
-		_, err = h.pool.Exec(ctx, "DELETE FROM state_election_supervisors WHERE id = $1", id)
-		if err == nil && stateID > 0 {
-			adjustAgentStats(ctx, h.pool, h.q, "state_election_supervisor", egID, partyID, stateID, 0, 0, 0, false)
-		}
-	default:
-		h.u.RespondError(w, http.StatusBadRequest, "Invalid role_type parameter")
-		return
-	}
-
-	if err != nil {
-		h.u.RespondError(w, http.StatusInternalServerError, "Failed to revoke assignment: "+err.Error())
-		return
-	}
-
-	h.u.RespondSuccess(w, http.StatusOK, "Assignment revoked successfully", nil)
-}
-
-func adjustAgentStats(ctx context.Context, dbtx queries.DBTX, q *queries.Queries, role string, egID int32, partyID int16, stateID int16, lgaID int32, wardID int32, puID int32, isIncrement bool) {
-	// Agent and supervisor stats are computed dynamically via real-time COUNT queries on assignment tables
-}
-
-func stringPtr(s string) *string {
-	if s == "" {
-		return nil
-	}
-	return &s
-}
-
-func int32Ptr(i int32) *int32 {
-	return &i
 }

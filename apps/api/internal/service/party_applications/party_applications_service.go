@@ -1130,3 +1130,352 @@ func resolvePotentialPaymentKobo(allocationJSON []byte, roleType string, stateID
 	// Fall back to default role payment
 	return cfg.Default
 }
+
+// ChangeAgentRoleInput defines parameters for reassigning an approved agent's role or geographic location
+type ChangeAgentRoleInput struct {
+	ApplicationID   int64
+	UserID          int64
+	PartyID         int16
+	ElectionGroupID int32
+	CurrentRoleType string
+	NewRoleType     string
+	StateID         int16
+	LgaID           int32
+	WardID          int32
+	PollingUnitID   int32
+	AssignedBy      int64
+}
+
+// ChangeAgentRoleResult returns the updated role assignment summary
+type ChangeAgentRoleResult struct {
+	UserID  int64  `json:"user_id"`
+	NewRole string `json:"new_role"`
+}
+
+// ChangeAgentRole updates an agent's active assignment (e.g. promoting polling agent to supervisor or reassigning location)
+func (s *Service) ChangeAgentRole(ctx context.Context, input ChangeAgentRoleInput) (*ChangeAgentRoleResult, error) {
+	stateID := input.StateID
+	lgaID := input.LgaID
+	wardID := input.WardID
+	pollingUnitID := input.PollingUnitID
+
+	// Validate standardized role identifier and geographic requirements
+	newRole := strings.ToLower(strings.TrimSpace(input.NewRoleType))
+	switch newRole {
+	case "polling_agent":
+		if pollingUnitID <= 0 {
+			return nil, errors.New("polling_unit_id is required for polling_agent role")
+		}
+
+		// Derive canonical parent geographic hierarchy directly from the polling unit
+		pu, err := s.pollingUnitsService.GetPollingUnitByID(ctx, pollingUnitID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch polling unit: %w", err)
+		}
+
+		stateID = int16(pu.StateID)
+		lgaID = pu.LgaID
+		wardID = pu.WardID
+	case "ward_election_supervisor":
+		if stateID <= 0 || lgaID <= 0 || wardID <= 0 {
+			return nil, errors.New("state_id, lga_id, and ward_id are required for ward supervisor")
+		}
+	case "lga_election_supervisor":
+		if stateID <= 0 || lgaID <= 0 {
+			return nil, errors.New("state_id and lga_id are required for LGA supervisor")
+		}
+	case "state_election_supervisor":
+		if stateID <= 0 {
+			return nil, errors.New("state_id is required for state supervisor")
+		}
+	default:
+		return nil, fmt.Errorf("invalid new_role_type: %s", input.NewRoleType)
+	}
+
+	// Resolve existing application details via GetApplicationByID (utilizing Redis cache)
+	var app queries.PartyAgentApplication
+	var hasApp bool
+
+	if input.ApplicationID > 0 {
+		if existingApp, err := s.GetApplicationByID(ctx, input.ApplicationID); err == nil {
+			app = existingApp
+			hasApp = true
+		}
+	}
+	if !hasApp && input.UserID > 0 && input.ElectionGroupID > 0 && input.PartyID > 0 {
+		var appID int64
+		err := s.pool.QueryRow(ctx, `
+			SELECT id FROM party_agent_applications
+			WHERE user_id = $1 AND election_group_id = $2 AND party_id = $3
+			LIMIT 1
+		`, input.UserID, input.ElectionGroupID, input.PartyID).Scan(&appID)
+		if err == nil && appID > 0 {
+			if existingApp, err := s.GetApplicationByID(ctx, appID); err == nil {
+				app = existingApp
+				hasApp = true
+			}
+		}
+	}
+
+	// Early return without DB transaction if current assignment is already identical
+	if hasApp && app.Role == newRole {
+		isSame := false
+		switch newRole {
+		case "polling_agent":
+			isSame = app.PollingUnitID.Valid && app.PollingUnitID.Int32 == pollingUnitID
+		case "ward_election_supervisor":
+			isSame = app.WardID.Valid && app.WardID.Int32 == wardID &&
+				app.LgaID.Valid && app.LgaID.Int32 == lgaID &&
+				app.StateID == stateID
+		case "lga_election_supervisor":
+			isSame = app.LgaID.Valid && app.LgaID.Int32 == lgaID &&
+				app.StateID == stateID
+		case "state_election_supervisor":
+			isSame = app.StateID == stateID
+		}
+		if isSame {
+			return &ChangeAgentRoleResult{
+				UserID:  input.UserID,
+				NewRole: newRole,
+			}, nil
+		}
+	}
+
+	// Begin atomic transaction
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	// Clear previous assignments across all assignment tables
+	if _, err := tx.Exec(ctx, "DELETE FROM polling_unit_assignments WHERE user_id = $1 AND election_group_id = $2 AND party_id = $3", input.UserID, input.ElectionGroupID, input.PartyID); err != nil {
+		return nil, fmt.Errorf("failed to clear old polling unit assignment: %w", err)
+	}
+	if _, err := tx.Exec(ctx, "DELETE FROM ward_election_supervisors WHERE user_id = $1 AND election_group_id = $2 AND party_id = $3", input.UserID, input.ElectionGroupID, input.PartyID); err != nil {
+		return nil, fmt.Errorf("failed to clear old ward supervisor assignment: %w", err)
+	}
+	if _, err := tx.Exec(ctx, "DELETE FROM lga_election_supervisors WHERE user_id = $1 AND election_group_id = $2 AND party_id = $3", input.UserID, input.ElectionGroupID, input.PartyID); err != nil {
+		return nil, fmt.Errorf("failed to clear old LGA supervisor assignment: %w", err)
+	}
+	if _, err := tx.Exec(ctx, "DELETE FROM state_election_supervisors WHERE user_id = $1 AND election_group_id = $2 AND party_id = $3", input.UserID, input.ElectionGroupID, input.PartyID); err != nil {
+		return nil, fmt.Errorf("failed to clear old state supervisor assignment: %w", err)
+	}
+
+	// Insert new assignment record into appropriate table
+	switch newRole {
+	case "polling_agent":
+		_, err = tx.Exec(ctx, `
+			INSERT INTO polling_unit_assignments (user_id, party_id, polling_unit_id, election_group_id, role_type, assigned_by)
+			VALUES ($1, $2, $3, $4, 'polling_agent', $5)
+			ON CONFLICT (user_id, election_group_id) DO UPDATE
+			SET polling_unit_id = EXCLUDED.polling_unit_id,
+			    party_id = EXCLUDED.party_id,
+			    role_type = 'polling_agent',
+			    updated_at = NOW()`,
+			input.UserID, input.PartyID, pollingUnitID, input.ElectionGroupID, input.AssignedBy)
+		if err != nil {
+			return nil, fmt.Errorf("failed to assign polling agent: %w", err)
+		}
+
+	case "ward_election_supervisor":
+		_, err = tx.Exec(ctx, `
+			INSERT INTO ward_election_supervisors (user_id, state_id, lga_id, ward_id, election_group_id, party_id, role_type, assigned_by)
+			VALUES ($1, $2, $3, $4, $5, $6, 'ward_election_supervisor', $7)
+			ON CONFLICT (user_id, election_group_id) DO UPDATE
+			SET state_id = EXCLUDED.state_id,
+			    lga_id = EXCLUDED.lga_id,
+			    ward_id = EXCLUDED.ward_id,
+			    party_id = EXCLUDED.party_id,
+			    updated_at = NOW()`,
+			input.UserID, stateID, lgaID, wardID, input.ElectionGroupID, input.PartyID, input.AssignedBy)
+		if err != nil {
+			return nil, fmt.Errorf("failed to assign ward supervisor: %w", err)
+		}
+
+	case "lga_election_supervisor":
+		_, err = tx.Exec(ctx, `
+			INSERT INTO lga_election_supervisors (user_id, state_id, lga_id, election_group_id, party_id, role_type, assigned_by)
+			VALUES ($1, $2, $3, $4, $5, 'lga_election_supervisor', $6)
+			ON CONFLICT (user_id, election_group_id) DO UPDATE
+			SET state_id = EXCLUDED.state_id,
+			    lga_id = EXCLUDED.lga_id,
+			    party_id = EXCLUDED.party_id,
+			    updated_at = NOW()`,
+			input.UserID, stateID, lgaID, input.ElectionGroupID, input.PartyID, input.AssignedBy)
+		if err != nil {
+			return nil, fmt.Errorf("failed to assign LGA supervisor: %w", err)
+		}
+
+	case "state_election_supervisor":
+		_, err = tx.Exec(ctx, `
+			INSERT INTO state_election_supervisors (user_id, state_id, election_group_id, party_id, role_type, assigned_by)
+			VALUES ($1, $2, $3, $4, 'state_election_supervisor', $5)
+			ON CONFLICT (user_id, election_group_id) DO UPDATE
+			SET state_id = EXCLUDED.state_id,
+			    party_id = EXCLUDED.party_id,
+			    updated_at = NOW()`,
+			input.UserID, stateID, input.ElectionGroupID, input.PartyID, input.AssignedBy)
+		if err != nil {
+			return nil, fmt.Errorf("failed to assign state supervisor: %w", err)
+		}
+	}
+
+	// Keep party_agent_applications synchronized with the new assignment
+	txQueries := s.queries.WithTx(tx)
+	if hasApp {
+		var puID pgtype.Int4
+		if newRole == "polling_agent" && pollingUnitID > 0 {
+			puID = utils.PgInt4FromPositive(pollingUnitID)
+		}
+		var wID pgtype.Int4
+		if (newRole == "ward_election_supervisor" || newRole == "polling_agent") && wardID > 0 {
+			wID = utils.PgInt4FromPositive(wardID)
+		}
+		var lID pgtype.Int4
+		if (newRole == "lga_election_supervisor" || newRole == "ward_election_supervisor" || newRole == "polling_agent") && lgaID > 0 {
+			lID = utils.PgInt4FromPositive(lgaID)
+		}
+
+		_, err = txQueries.UpdateApplicationApproval(ctx, queries.UpdateApplicationApprovalParams{
+			ID:            app.ID,
+			Role:          newRole,
+			PollingUnitID: puID,
+			StateID:       stateID,
+			LgaID:         lID,
+			WardID:        wID,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to update application record: %w", err)
+		}
+	} else {
+		var appPuID *int32
+		if pollingUnitID > 0 && newRole == "polling_agent" {
+			appPuID = &pollingUnitID
+		}
+		var appWardID *int32
+		if wardID > 0 && (newRole == "ward_election_supervisor" || newRole == "polling_agent") {
+			appWardID = &wardID
+		}
+		var appLgaID *int32
+		if lgaID > 0 && (newRole == "lga_election_supervisor" || newRole == "ward_election_supervisor" || newRole == "polling_agent") {
+			appLgaID = &lgaID
+		}
+		var appStateID *int16
+		if stateID > 0 {
+			appStateID = &stateID
+		}
+
+		_, err = tx.Exec(ctx, `
+			UPDATE party_agent_applications
+			SET role = $1,
+			    state_id = COALESCE($2, state_id),
+			    lga_id = $3,
+			    ward_id = $4,
+			    polling_unit_id = $5,
+			    updated_at = NOW()
+			WHERE user_id = $6 AND election_group_id = $7 AND party_id = $8`,
+			newRole, appStateID, appLgaID, appWardID, appPuID, input.UserID, input.ElectionGroupID, input.PartyID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to update application record: %w", err)
+		}
+	}
+
+	// Commit transaction
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("failed to commit role change: %w", err)
+	}
+
+	// Invalidate cached application details
+	if hasApp {
+		_ = s.InvalidateApplicationByID(ctx, app.ID)
+	}
+
+	return &ChangeAgentRoleResult{
+		UserID:  input.UserID,
+		NewRole: newRole,
+	}, nil
+}
+
+// RevokeAgentInput defines parameters for revoking an active agent or supervisor assignment
+type RevokeAgentInput struct {
+	AssignmentID int64
+	RoleType     string
+	PartyID      int16
+}
+
+// RevokeAgent removes an active polling agent or supervisor assignment
+func (s *Service) RevokeAgent(ctx context.Context, input RevokeAgentInput) error {
+	// Validate standardized role identifier
+	roleType := strings.ToLower(strings.TrimSpace(input.RoleType))
+	switch roleType {
+	case "polling_agent", "ward_election_supervisor", "lga_election_supervisor", "state_election_supervisor":
+		// Standardized role
+	default:
+		return errors.New("invalid role_type parameter")
+	}
+
+	var err error
+	switch roleType {
+	case "polling_agent":
+		var partyID int16
+		// Verify assignment exists and matches target party
+		errQuery := s.pool.QueryRow(ctx, "SELECT party_id FROM polling_unit_assignments WHERE id = $1", input.AssignmentID).Scan(&partyID)
+		if errQuery != nil {
+			return errors.New("assignment not found")
+		}
+		if input.PartyID > 0 && partyID != input.PartyID {
+			return errors.New("cannot revoke assignment belonging to another party")
+		}
+		// Delete polling unit assignment record
+		_, err = s.pool.Exec(ctx, "DELETE FROM polling_unit_assignments WHERE id = $1", input.AssignmentID)
+
+	case "ward_election_supervisor":
+		var partyID int16
+		// Verify supervisor exists and matches target party
+		errQuery := s.pool.QueryRow(ctx, "SELECT party_id FROM ward_election_supervisors WHERE id = $1", input.AssignmentID).Scan(&partyID)
+		if errQuery != nil {
+			return errors.New("assignment not found")
+		}
+		if input.PartyID > 0 && partyID != input.PartyID {
+			return errors.New("cannot revoke assignment belonging to another party")
+		}
+		// Delete ward supervisor record
+		_, err = s.pool.Exec(ctx, "DELETE FROM ward_election_supervisors WHERE id = $1", input.AssignmentID)
+
+	case "lga_election_supervisor":
+		var partyID int16
+		// Verify supervisor exists and matches target party
+		errQuery := s.pool.QueryRow(ctx, "SELECT party_id FROM lga_election_supervisors WHERE id = $1", input.AssignmentID).Scan(&partyID)
+		if errQuery != nil {
+			return errors.New("assignment not found")
+		}
+		if input.PartyID > 0 && partyID != input.PartyID {
+			return errors.New("cannot revoke assignment belonging to another party")
+		}
+		// Delete LGA supervisor record
+		_, err = s.pool.Exec(ctx, "DELETE FROM lga_election_supervisors WHERE id = $1", input.AssignmentID)
+
+	case "state_election_supervisor":
+		var partyID int16
+		// Verify supervisor exists and matches target party
+		errQuery := s.pool.QueryRow(ctx, "SELECT party_id FROM state_election_supervisors WHERE id = $1", input.AssignmentID).Scan(&partyID)
+		if errQuery != nil {
+			return errors.New("assignment not found")
+		}
+		if input.PartyID > 0 && partyID != input.PartyID {
+			return errors.New("cannot revoke assignment belonging to another party")
+		}
+		// Delete state supervisor record
+		_, err = s.pool.Exec(ctx, "DELETE FROM state_election_supervisors WHERE id = $1", input.AssignmentID)
+
+	default:
+		return errors.New("invalid role_type parameter")
+	}
+
+	if err != nil {
+		return fmt.Errorf("failed to revoke assignment: %w", err)
+	}
+
+	return nil
+}
