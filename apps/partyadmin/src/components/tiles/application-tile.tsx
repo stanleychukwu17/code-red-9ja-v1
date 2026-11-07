@@ -81,8 +81,8 @@ export type ApplicationType = {
 export function ApplicationTableHeader() {
   return (
     <TileHeader>
-      <TileLeft>
-        <p className="truncate w-full text-[16px]">User</p>
+      <TileLeft className="w-48 sm:w-60 min-w-0 shrink-0">
+        <p className="truncate text-[16px]">User</p>
       </TileLeft>
 
       <TileRight>
@@ -349,14 +349,14 @@ export function ApplicationTableTile({ data, refetch }: ApplicationTableTileProp
 
   return (
     <TileRow onClick={handleOpenDialog}>
-      <TileLeft>
+      <TileLeft className="ojemba w-48 sm:w-60 min-w-0 shrink-0">
         <div className="flex items-center gap-4 w-full min-w-0">
           <img
             src={avatar}
             alt={name}
             className="size-9 rounded-full object-cover shrink-0"
           />
-          <p className="truncate w-full text-[16px] text-[#222]">{name}</p>
+          <p className="truncate min-w-0 flex-1 text-[16px] text-[#222]">{name}</p>
         </div>
       </TileLeft>
 

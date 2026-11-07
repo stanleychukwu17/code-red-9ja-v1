@@ -22,7 +22,7 @@ export const Route = createFileRoute("/_authenticated/$partyShortName/applicatio
   component: RouteComponent,
 });
 
-const PAGE_LIMIT = 50;
+const PAGE_LIMIT = 100;
 
 /**
  * Pending Applications Page Component

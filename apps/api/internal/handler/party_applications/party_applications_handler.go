@@ -31,7 +31,7 @@ type PartyApplicationsService interface {
 	HasActiveAgentApplication(ctx context.Context, userID int64) (bool, error)
 	SubmitSupervisorApplication(ctx context.Context, input partyapplications.SubmitSupervisorApplicationInput) (queries.PartyAgentApplication, error)
 	GetApplicationByID(ctx context.Context, id int64) (queries.PartyAgentApplication, error)
-	ListApplications(ctx context.Context, userID int64, partyID int16, electionGroupID int32, status string, stateID int16, lgaID, wardID, pollingUnitID int32, activeElectionOnly bool, limit int32, cursor int64) ([]partyapplications.PartyApplicationListItem, error)
+	ListApplications(ctx context.Context, input partyapplications.ListApplicationsInput) ([]partyapplications.PartyApplicationListItem, error)
 	RejectApplication(ctx context.Context, id int64, reason string) (queries.PartyAgentApplication, error)
 	CancelApplication(ctx context.Context, id int64) (queries.PartyAgentApplication, error)
 	ApproveApplication(ctx context.Context, input partyapplications.ApproveApplicationInput) (queries.PartyAgentApplication, error)
@@ -381,14 +381,8 @@ func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse query parameters
-	var requestedPartyID int16
-	var electionGroupID int32
-	var requestedUserID int64
-	var stateID int16
-	var lgaID, wardID, pollingUnitID int32
-	limit := int32(20)
-
-	status := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("status")))
+	q := r.URL.Query()
+	status := strings.ToLower(strings.TrimSpace(q.Get("status")))
 	if status == "" {
 		h.utils.RespondError(w, http.StatusBadRequest, "Status query parameter is required")
 		return
@@ -401,61 +395,16 @@ func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if val := r.URL.Query().Get("party_id"); val != "" {
-		if pID, _ := strconv.ParseInt(val, 10, 16); pID > 0 {
-			requestedPartyID = int16(pID)
-		}
-	}
-	if val := r.URL.Query().Get("election_group_id"); val != "" {
-		if egID, _ := strconv.ParseInt(val, 10, 32); egID > 0 {
-			electionGroupID = int32(egID)
-		}
-	}
-
-	// Parse optional user filter
-	if val := r.URL.Query().Get("user_id"); val != "" {
-		if uID, _ := strconv.ParseInt(val, 10, 64); uID > 0 {
-			requestedUserID = uID
-		}
-	}
-
-	// Parse pagination parameters
-	if val := r.URL.Query().Get("limit"); val != "" {
-		if l, err := strconv.Atoi(val); err == nil && l > 0 {
-			limit = int32(l)
-		}
-	}
-	var cursor int64
-	if val := r.URL.Query().Get("cursor"); val != "" {
-		if c, err := strconv.ParseInt(val, 10, 64); err == nil && c > 0 {
-			cursor = c
-		}
-	}
-
-	// Parse optional geographic filters
-	if val := r.URL.Query().Get("state_id"); val != "" {
-		if v, _ := strconv.ParseInt(val, 10, 16); v > 0 {
-			stateID = int16(v)
-		}
-	}
-	if val := r.URL.Query().Get("lga_id"); val != "" {
-		if v, _ := strconv.ParseInt(val, 10, 32); v > 0 {
-			lgaID = int32(v)
-		}
-	}
-	if val := r.URL.Query().Get("ward_id"); val != "" {
-		if v, _ := strconv.ParseInt(val, 10, 32); v > 0 {
-			wardID = int32(v)
-		}
-	}
-	if val := r.URL.Query().Get("polling_unit_id"); val != "" {
-		if v, _ := strconv.ParseInt(val, 10, 32); v > 0 {
-			pollingUnitID = int32(v)
-		}
-	}
-
-	// Filter for active election groups only
-	activeElectionOnly := r.URL.Query().Get("active_election_only") == "true"
+	requestedPartyID := utils.ParseQueryInt[int16](q, "party_id")
+	electionGroupID := utils.ParseQueryInt[int32](q, "election_group_id")
+	requestedUserID := utils.ParseQueryInt[int64](q, "user_id")
+	limit := utils.ParseQueryInt[int32](q, "limit", 20)
+	cursor := utils.ParseQueryInt[int64](q, "cursor")
+	stateID := utils.ParseQueryInt[int16](q, "state_id")
+	lgaID := utils.ParseQueryInt[int32](q, "lga_id")
+	wardID := utils.ParseQueryInt[int32](q, "ward_id")
+	pollingUnitID := utils.ParseQueryInt[int32](q, "polling_unit_id")
+	activeElectionOnly := q.Get("active_election_only") == "true"
 
 	// Enforce visibility scoping & explicit RBAC checks using claims and permissions service
 	isPlatformAdmin := claims.HasAnyRole("admin", "super_admin")
@@ -509,7 +458,19 @@ func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Fetch filtered applications list
-	apps, err := h.service.ListApplications(r.Context(), filterUserID, partyID, electionGroupID, status, stateID, lgaID, wardID, pollingUnitID, activeElectionOnly, limit, cursor)
+	apps, err := h.service.ListApplications(r.Context(), partyapplications.ListApplicationsInput{
+		UserID:             filterUserID,
+		PartyID:            partyID,
+		ElectionGroupID:    electionGroupID,
+		Status:             status,
+		StateID:            stateID,
+		LgaID:              lgaID,
+		WardID:             wardID,
+		PollingUnitID:      pollingUnitID,
+		ActiveElectionOnly: activeElectionOnly,
+		Limit:              limit,
+		Cursor:             cursor,
+	})
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to list applications: "+err.Error())
 		return
@@ -547,11 +508,12 @@ func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 // @Router       /party-applications/recommendations [get]
 func (h *Handler) GetPollingUnitRecommendations(w http.ResponseWriter, r *http.Request) {
 	// Parse query parameters
-	partyID, _ := strconv.ParseInt(r.URL.Query().Get("party_id"), 10, 16)
-	electionGroupID, _ := strconv.ParseInt(r.URL.Query().Get("election_group_id"), 10, 32)
-	lgaID, _ := strconv.ParseInt(r.URL.Query().Get("lga_id"), 10, 32)
-	wardID, _ := strconv.ParseInt(r.URL.Query().Get("ward_id"), 10, 32)
-	pollingUnitID, _ := strconv.ParseInt(r.URL.Query().Get("polling_unit_id"), 10, 32)
+	q := r.URL.Query()
+	partyID := utils.ParseQueryInt[int16](q, "party_id")
+	electionGroupID := utils.ParseQueryInt[int32](q, "election_group_id")
+	lgaID := utils.ParseQueryInt[int32](q, "lga_id")
+	wardID := utils.ParseQueryInt[int32](q, "ward_id")
+	pollingUnitID := utils.ParseQueryInt[int32](q, "polling_unit_id")
 
 	// Validate required parameters
 	if partyID == 0 || electionGroupID == 0 {
@@ -560,7 +522,7 @@ func (h *Handler) GetPollingUnitRecommendations(w http.ResponseWriter, r *http.R
 	}
 
 	// Fetch recommended polling units (submitted PU + lowest-agent-count units in LGA)
-	units, err := h.service.GetPollingUnitRecommendations(r.Context(), int16(partyID), int32(electionGroupID), int32(lgaID), int32(wardID), int32(pollingUnitID))
+	units, err := h.service.GetPollingUnitRecommendations(r.Context(), partyID, electionGroupID, lgaID, wardID, pollingUnitID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch recommendations: "+err.Error())
 		return

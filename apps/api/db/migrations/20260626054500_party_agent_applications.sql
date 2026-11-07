@@ -15,8 +15,8 @@ CREATE TABLE IF NOT EXISTS party_agent_applications (
   updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
 
-CREATE INDEX IF NOT EXISTS idx_party_agent_applications_user ON party_agent_applications(user_id);
-CREATE INDEX IF NOT EXISTS idx_party_agent_apps_party_group_status ON party_agent_applications(party_id, election_group_id, status, id DESC);
+CREATE INDEX IF NOT EXISTS idx_party_agent_applications_user ON party_agent_applications(user_id, id DESC);
+CREATE INDEX IF NOT EXISTS idx_party_agent_apps_party_group_state_status ON party_agent_applications(party_id, election_group_id, state_id, status, id DESC);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_user_application_per_group ON party_agent_applications (election_group_id, user_id);
 
 -- +goose Down

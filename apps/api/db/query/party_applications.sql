@@ -28,7 +28,7 @@ RETURNING avatar_file_id;
 SELECT * FROM party_agent_applications
 WHERE id = $1 LIMIT 1;
 
--- name: ListApplications :many
+-- name: ListPartyApplicationsForAdmin :many
 SELECT 
   pa.id,
   pa.user_id,
@@ -95,14 +95,53 @@ LEFT JOIN wards w ON pa.ward_id = w.id
 LEFT JOIN c_cities ct ON u.current_city = ct.id
 LEFT JOIN user_bank_accounts uba ON uba.user_id = u.id AND uba.is_primary = true
 WHERE 
-  (sqlc.arg(user_id)::bigint = 0 OR pa.user_id = sqlc.arg(user_id)) AND
-  (sqlc.arg(party_id)::smallint = 0 OR pa.party_id = sqlc.arg(party_id)) AND
-  (sqlc.arg(election_group_id)::integer = 0 OR pa.election_group_id = sqlc.arg(election_group_id)) AND
-  (sqlc.arg(status)::varchar = '' OR pa.status = sqlc.arg(status)) AND
-  (sqlc.arg(state_id)::smallint = 0 OR pa.state_id = sqlc.arg(state_id)) AND
+  pa.party_id = sqlc.arg(party_id) AND
+  pa.election_group_id = sqlc.arg(election_group_id) AND
+  pa.state_id = sqlc.arg(state_id) AND
+  pa.status = sqlc.arg(status) AND
   (sqlc.arg(lga_id)::integer = 0 OR pa.lga_id = sqlc.arg(lga_id)) AND
   (sqlc.arg(ward_id)::integer = 0 OR pa.ward_id = sqlc.arg(ward_id)) AND
   (sqlc.arg(polling_unit_id)::integer = 0 OR pa.polling_unit_id = sqlc.arg(polling_unit_id)) AND
+  (sqlc.arg(cursor)::bigint = 0 OR pa.id < sqlc.arg(cursor))
+ORDER BY pa.id DESC
+LIMIT sqlc.arg(limit_val);
+
+-- name: ListUserApplications :many
+SELECT 
+  pa.id,
+  pa.user_id,
+  pa.party_id,
+  pa.election_group_id,
+  pa.polling_unit_id,
+  pa.role,
+  pa.state_id AS app_state_id,
+  pa.lga_id AS app_lga_id,
+  pa.ward_id AS app_ward_id,
+  pa.status,
+  pa.rejected_reason,
+  pa.created_at,
+  pa.updated_at,
+  eg.name AS election_group_name,
+  eg.election_date,
+  p.name AS party_name,
+  p.short_name AS party_short_name,
+  p.logo AS party_logo,
+  st.name AS state_name,
+  lg.name AS lga_name,
+  w.name AS ward_name,
+  pu.name AS polling_unit_name,
+  pu.pu_code AS polling_unit_code
+FROM party_agent_applications pa
+JOIN election_groups eg ON pa.election_group_id = eg.id
+JOIN parties p ON pa.party_id = p.id
+LEFT JOIN polling_units pu ON pa.polling_unit_id = pu.id
+LEFT JOIN c_states st ON pa.state_id = st.id
+LEFT JOIN lgas lg ON pa.lga_id = lg.id
+LEFT JOIN wards w ON pa.ward_id = w.id
+WHERE 
+  pa.user_id = sqlc.arg(user_id) AND
+  (sqlc.arg(party_id)::smallint = 0 OR pa.party_id = sqlc.arg(party_id)) AND
+  (sqlc.arg(status)::varchar = '' OR pa.status = sqlc.arg(status)) AND
   (NOT sqlc.arg(active_election_only)::boolean OR (eg.active = TRUE AND eg.election_date >= CURRENT_DATE)) AND
   (sqlc.arg(cursor)::bigint = 0 OR pa.id < sqlc.arg(cursor))
 ORDER BY pa.id DESC

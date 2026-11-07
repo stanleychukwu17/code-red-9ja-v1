@@ -418,7 +418,7 @@ func (q *Queries) IsPollingUnitInElectionGroup(ctx context.Context, arg IsPollin
 	return is_available, err
 }
 
-const listApplications = `-- name: ListApplications :many
+const listPartyApplicationsForAdmin = `-- name: ListPartyApplicationsForAdmin :many
 SELECT 
   pa.id,
   pa.user_id,
@@ -485,35 +485,31 @@ LEFT JOIN wards w ON pa.ward_id = w.id
 LEFT JOIN c_cities ct ON u.current_city = ct.id
 LEFT JOIN user_bank_accounts uba ON uba.user_id = u.id AND uba.is_primary = true
 WHERE 
-  ($1::bigint = 0 OR pa.user_id = $1) AND
-  ($2::smallint = 0 OR pa.party_id = $2) AND
-  ($3::integer = 0 OR pa.election_group_id = $3) AND
-  ($4::varchar = '' OR pa.status = $4) AND
-  ($5::smallint = 0 OR pa.state_id = $5) AND
-  ($6::integer = 0 OR pa.lga_id = $6) AND
-  ($7::integer = 0 OR pa.ward_id = $7) AND
-  ($8::integer = 0 OR pa.polling_unit_id = $8) AND
-  (NOT $9::boolean OR (eg.active = TRUE AND eg.election_date >= CURRENT_DATE)) AND
-  ($10::bigint = 0 OR pa.id < $10)
+  pa.party_id = $1 AND
+  pa.election_group_id = $2 AND
+  pa.state_id = $3 AND
+  pa.status = $4 AND
+  ($5::integer = 0 OR pa.lga_id = $5) AND
+  ($6::integer = 0 OR pa.ward_id = $6) AND
+  ($7::integer = 0 OR pa.polling_unit_id = $7) AND
+  ($8::bigint = 0 OR pa.id < $8)
 ORDER BY pa.id DESC
-LIMIT $11
+LIMIT $9
 `
 
-type ListApplicationsParams struct {
-	UserID             int64  `json:"user_id"`
-	PartyID            int16  `json:"party_id"`
-	ElectionGroupID    int32  `json:"election_group_id"`
-	Status             string `json:"status"`
-	StateID            int16  `json:"state_id"`
-	LgaID              int32  `json:"lga_id"`
-	WardID             int32  `json:"ward_id"`
-	PollingUnitID      int32  `json:"polling_unit_id"`
-	ActiveElectionOnly bool   `json:"active_election_only"`
-	Cursor             int64  `json:"cursor"`
-	LimitVal           int32  `json:"limit_val"`
+type ListPartyApplicationsForAdminParams struct {
+	PartyID         int16  `json:"party_id"`
+	ElectionGroupID int32  `json:"election_group_id"`
+	StateID         int16  `json:"state_id"`
+	Status          string `json:"status"`
+	LgaID           int32  `json:"lga_id"`
+	WardID          int32  `json:"ward_id"`
+	PollingUnitID   int32  `json:"polling_unit_id"`
+	Cursor          int64  `json:"cursor"`
+	LimitVal        int32  `json:"limit_val"`
 }
 
-type ListApplicationsRow struct {
+type ListPartyApplicationsForAdminRow struct {
 	ID                int64              `json:"id"`
 	UserID            int64              `json:"user_id"`
 	PartyID           int16              `json:"party_id"`
@@ -560,17 +556,15 @@ type ListApplicationsRow struct {
 	AgentsCount       int32              `json:"agents_count"`
 }
 
-func (q *Queries) ListApplications(ctx context.Context, arg ListApplicationsParams) ([]ListApplicationsRow, error) {
-	rows, err := q.db.Query(ctx, listApplications,
-		arg.UserID,
+func (q *Queries) ListPartyApplicationsForAdmin(ctx context.Context, arg ListPartyApplicationsForAdminParams) ([]ListPartyApplicationsForAdminRow, error) {
+	rows, err := q.db.Query(ctx, listPartyApplicationsForAdmin,
 		arg.PartyID,
 		arg.ElectionGroupID,
-		arg.Status,
 		arg.StateID,
+		arg.Status,
 		arg.LgaID,
 		arg.WardID,
 		arg.PollingUnitID,
-		arg.ActiveElectionOnly,
 		arg.Cursor,
 		arg.LimitVal,
 	)
@@ -578,9 +572,9 @@ func (q *Queries) ListApplications(ctx context.Context, arg ListApplicationsPara
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListApplicationsRow
+	var items []ListPartyApplicationsForAdminRow
 	for rows.Next() {
-		var i ListApplicationsRow
+		var i ListPartyApplicationsForAdminRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserID,
@@ -626,6 +620,134 @@ func (q *Queries) ListApplications(ctx context.Context, arg ListApplicationsPara
 			&i.PollingUnitName,
 			&i.PollingUnitCode,
 			&i.AgentsCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listUserApplications = `-- name: ListUserApplications :many
+SELECT 
+  pa.id,
+  pa.user_id,
+  pa.party_id,
+  pa.election_group_id,
+  pa.polling_unit_id,
+  pa.role,
+  pa.state_id AS app_state_id,
+  pa.lga_id AS app_lga_id,
+  pa.ward_id AS app_ward_id,
+  pa.status,
+  pa.rejected_reason,
+  pa.created_at,
+  pa.updated_at,
+  eg.name AS election_group_name,
+  eg.election_date,
+  p.name AS party_name,
+  p.short_name AS party_short_name,
+  p.logo AS party_logo,
+  st.name AS state_name,
+  lg.name AS lga_name,
+  w.name AS ward_name,
+  pu.name AS polling_unit_name,
+  pu.pu_code AS polling_unit_code
+FROM party_agent_applications pa
+JOIN election_groups eg ON pa.election_group_id = eg.id
+JOIN parties p ON pa.party_id = p.id
+LEFT JOIN polling_units pu ON pa.polling_unit_id = pu.id
+LEFT JOIN c_states st ON pa.state_id = st.id
+LEFT JOIN lgas lg ON pa.lga_id = lg.id
+LEFT JOIN wards w ON pa.ward_id = w.id
+WHERE 
+  pa.user_id = $1 AND
+  ($2::smallint = 0 OR pa.party_id = $2) AND
+  ($3::varchar = '' OR pa.status = $3) AND
+  (NOT $4::boolean OR (eg.active = TRUE AND eg.election_date >= CURRENT_DATE)) AND
+  ($5::bigint = 0 OR pa.id < $5)
+ORDER BY pa.id DESC
+LIMIT $6
+`
+
+type ListUserApplicationsParams struct {
+	UserID             int64  `json:"user_id"`
+	PartyID            int16  `json:"party_id"`
+	Status             string `json:"status"`
+	ActiveElectionOnly bool   `json:"active_election_only"`
+	Cursor             int64  `json:"cursor"`
+	LimitVal           int32  `json:"limit_val"`
+}
+
+type ListUserApplicationsRow struct {
+	ID                int64              `json:"id"`
+	UserID            int64              `json:"user_id"`
+	PartyID           int16              `json:"party_id"`
+	ElectionGroupID   int32              `json:"election_group_id"`
+	PollingUnitID     pgtype.Int4        `json:"polling_unit_id"`
+	Role              string             `json:"role"`
+	AppStateID        int16              `json:"app_state_id"`
+	AppLgaID          pgtype.Int4        `json:"app_lga_id"`
+	AppWardID         pgtype.Int4        `json:"app_ward_id"`
+	Status            string             `json:"status"`
+	RejectedReason    pgtype.Text        `json:"rejected_reason"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	ElectionGroupName string             `json:"election_group_name"`
+	ElectionDate      pgtype.Date        `json:"election_date"`
+	PartyName         string             `json:"party_name"`
+	PartyShortName    string             `json:"party_short_name"`
+	PartyLogo         string             `json:"party_logo"`
+	StateName         pgtype.Text        `json:"state_name"`
+	LgaName           pgtype.Text        `json:"lga_name"`
+	WardName          pgtype.Text        `json:"ward_name"`
+	PollingUnitName   pgtype.Text        `json:"polling_unit_name"`
+	PollingUnitCode   pgtype.Text        `json:"polling_unit_code"`
+}
+
+func (q *Queries) ListUserApplications(ctx context.Context, arg ListUserApplicationsParams) ([]ListUserApplicationsRow, error) {
+	rows, err := q.db.Query(ctx, listUserApplications,
+		arg.UserID,
+		arg.PartyID,
+		arg.Status,
+		arg.ActiveElectionOnly,
+		arg.Cursor,
+		arg.LimitVal,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListUserApplicationsRow
+	for rows.Next() {
+		var i ListUserApplicationsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.PartyID,
+			&i.ElectionGroupID,
+			&i.PollingUnitID,
+			&i.Role,
+			&i.AppStateID,
+			&i.AppLgaID,
+			&i.AppWardID,
+			&i.Status,
+			&i.RejectedReason,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.ElectionGroupName,
+			&i.ElectionDate,
+			&i.PartyName,
+			&i.PartyShortName,
+			&i.PartyLogo,
+			&i.StateName,
+			&i.LgaName,
+			&i.WardName,
+			&i.PollingUnitName,
+			&i.PollingUnitCode,
 		); err != nil {
 			return nil, err
 		}

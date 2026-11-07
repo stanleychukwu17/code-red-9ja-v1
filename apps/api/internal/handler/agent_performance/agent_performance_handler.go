@@ -104,19 +104,15 @@ func (h *Handler) GetAgentPerformance(w http.ResponseWriter, r *http.Request) {
 		roleType = "polling_agent"
 	}
 
-	partyID, _ := strconv.ParseInt(qParams.Get("party_id"), 10, 16)
-	egIDParsed, _ := strconv.ParseInt(qParams.Get("election_group_id"), 10, 32)
-	electionGroupID := int32(egIDParsed)
-	stateID, _ := strconv.ParseInt(qParams.Get("state_id"), 10, 16)
-	lgaID, _ := strconv.ParseInt(qParams.Get("lga_id"), 10, 32)
-	wardID, _ := strconv.ParseInt(qParams.Get("ward_id"), 10, 32)
+	partyID := utils.ParseQueryInt[int16](qParams, "party_id")
+	electionGroupID := utils.ParseQueryInt[int32](qParams, "election_group_id")
+	stateID := utils.ParseQueryInt[int16](qParams, "state_id")
+	lgaID := utils.ParseQueryInt[int32](qParams, "lga_id")
+	wardID := utils.ParseQueryInt[int32](qParams, "ward_id")
 	search := qParams.Get("search")
-	cursor, _ := strconv.ParseInt(qParams.Get("cursor"), 10, 64)
+	cursor := utils.ParseQueryInt[int64](qParams, "cursor")
 
-	limit, _ := strconv.ParseInt(qParams.Get("limit"), 10, 32)
-	if limit <= 0 {
-		limit = 20
-	}
+	limit := utils.ParseQueryInt[int32](qParams, "limit", 20)
 	if limit > 100 {
 		limit = 100
 	}
@@ -682,7 +678,7 @@ func (h *Handler) RevokeAgent(w http.ResponseWriter, r *http.Request) {
 	case "pollingagent", "pu_agent", "polling_unit_agent":
 		roleType = "polling_agent"
 	}
-	partyIDParam, _ := strconv.ParseInt(r.URL.Query().Get("party_id"), 10, 16)
+	partyIDParam := utils.ParseQueryInt[int16](r.URL.Query(), "party_id")
 
 	rolesData, _ := h.usersService.GetUserRoles(r.Context(), requester.ID)
 	isPlatformAdmin := false

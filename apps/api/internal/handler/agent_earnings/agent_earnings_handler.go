@@ -86,37 +86,12 @@ func (h *Handler) ListEarnings(w http.ResponseWriter, r *http.Request) {
 	}
 
 	q := r.URL.Query()
-	var userID, cursor int64
-	var partyID int16
-	var electionGroupID int32
 	status := q.Get("status")
-	limit := int32(50)
-
-	if v := q.Get("user_id"); v != "" {
-		if p, err := strconv.ParseInt(v, 10, 64); err == nil {
-			userID = p
-		}
-	}
-	if v := q.Get("election_group_id"); v != "" {
-		if p, err := strconv.ParseInt(v, 10, 32); err == nil {
-			electionGroupID = int32(p)
-		}
-	}
-	if v := q.Get("party_id"); v != "" {
-		if p, err := strconv.ParseInt(v, 10, 16); err == nil {
-			partyID = int16(p)
-		}
-	}
-	if v := q.Get("limit"); v != "" {
-		if p, err := strconv.ParseInt(v, 10, 32); err == nil && p > 0 {
-			limit = int32(p)
-		}
-	}
-	if v := q.Get("cursor"); v != "" {
-		if p, err := strconv.ParseInt(v, 10, 64); err == nil {
-			cursor = p
-		}
-	}
+	userID := utils.ParseQueryInt[int64](q, "user_id")
+	electionGroupID := utils.ParseQueryInt[int32](q, "election_group_id")
+	partyID := utils.ParseQueryInt[int16](q, "party_id")
+	limit := utils.ParseQueryInt[int32](q, "limit", 50)
+	cursor := utils.ParseQueryInt[int64](q, "cursor")
 
 	rows, err := h.q.ListAgentEarnings(r.Context(), queries.ListAgentEarningsParams{
 		Column1: userID,
@@ -363,19 +338,8 @@ func (h *Handler) EstimatePotentialPayout(w http.ResponseWriter, r *http.Request
 	}
 
 	role := q.Get("role")
-	var electionGroupID int32
-	var partyID int16
-
-	if v := q.Get("election_group_id"); v != "" {
-		if eg, err := strconv.ParseInt(v, 10, 32); err == nil {
-			electionGroupID = int32(eg)
-		}
-	}
-	if v := q.Get("party_id"); v != "" {
-		if p, err := strconv.ParseInt(v, 10, 16); err == nil {
-			partyID = int16(p)
-		}
-	}
+	electionGroupID := utils.ParseQueryInt[int32](q, "election_group_id")
+	partyID := utils.ParseQueryInt[int16](q, "party_id")
 
 	result, err := h.service.EstimatePotentialPayout(r.Context(), taskType, role, electionGroupID, partyID)
 	if err != nil {
@@ -410,16 +374,8 @@ func (h *Handler) GetAllocations(w http.ResponseWriter, r *http.Request) {
 	}
 
 	q := r.URL.Query()
-	var electionGroupID int32
-	var assignmentID int64
-	if v := q.Get("election_group_id"); v != "" {
-		if eg, err := strconv.ParseInt(v, 10, 32); err == nil {
-			electionGroupID = int32(eg)
-		}
-	}
-	if v := q.Get("assignment_id"); v != "" {
-		assignmentID, _ = strconv.ParseInt(v, 10, 64)
-	}
+	electionGroupID := utils.ParseQueryInt[int32](q, "election_group_id")
+	assignmentID := utils.ParseQueryInt[int64](q, "assignment_id")
 	roleType := q.Get("role_type")
 
 	result, err := h.service.GetAgentAllocations(r.Context(), claims.UserID, electionGroupID, roleType, assignmentID)
@@ -533,50 +489,15 @@ func (h *Handler) GetAgentPerformanceStats(w http.ResponseWriter, r *http.Reques
 		roleType = "polling_agent"
 	}
 
-	var partyID int16
-	var electionGroupID int32
-	var cursor int64
-	var stateID int16
-	var lgaID, wardID int32
-	limit := int32(20)
-
-	if v := q.Get("party_id"); v != "" {
-		if p, err := strconv.ParseInt(v, 10, 16); err == nil {
-			partyID = int16(p)
-		}
-	}
-	if v := q.Get("election_group_id"); v != "" {
-		if p, err := strconv.ParseInt(v, 10, 32); err == nil {
-			electionGroupID = int32(p)
-		}
-	}
-	if v := q.Get("state_id"); v != "" {
-		if p, err := strconv.ParseInt(v, 10, 16); err == nil {
-			stateID = int16(p)
-		}
-	}
-	if v := q.Get("lga_id"); v != "" {
-		if p, err := strconv.ParseInt(v, 10, 32); err == nil {
-			lgaID = int32(p)
-		}
-	}
-	if v := q.Get("ward_id"); v != "" {
-		if p, err := strconv.ParseInt(v, 10, 32); err == nil {
-			wardID = int32(p)
-		}
-	}
-	if v := q.Get("cursor"); v != "" {
-		if p, err := strconv.ParseInt(v, 10, 64); err == nil {
-			cursor = p
-		}
-	}
-	if v := q.Get("limit"); v != "" {
-		if p, err := strconv.ParseInt(v, 10, 32); err == nil && p > 0 {
-			limit = int32(p)
-			if limit > 100 {
-				limit = 100
-			}
-		}
+	partyID := utils.ParseQueryInt[int16](q, "party_id")
+	electionGroupID := utils.ParseQueryInt[int32](q, "election_group_id")
+	stateID := utils.ParseQueryInt[int16](q, "state_id")
+	lgaID := utils.ParseQueryInt[int32](q, "lga_id")
+	wardID := utils.ParseQueryInt[int32](q, "ward_id")
+	cursor := utils.ParseQueryInt[int64](q, "cursor")
+	limit := utils.ParseQueryInt[int32](q, "limit", 20)
+	if limit > 100 {
+		limit = 100
 	}
 	search := q.Get("search")
 
@@ -641,4 +562,3 @@ func (h *Handler) GetAgentPerformanceStats(w http.ResponseWriter, r *http.Reques
 		"limit": limit,
 	})
 }
-

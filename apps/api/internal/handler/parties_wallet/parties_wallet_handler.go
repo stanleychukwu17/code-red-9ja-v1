@@ -182,17 +182,12 @@ func (h *Handler) ListPartyWalletTransactions(w http.ResponseWriter, r *http.Req
 
 // parsePaginationForWallet parses limit + offset query params for wallet transactions.
 func parsePaginationForWallet(r *http.Request) (limit int, offset int) {
-	limit = 20
-	if l, err := strconv.Atoi(r.URL.Query().Get("limit")); err == nil && l > 0 {
-		if l > 100 {
-			limit = 100
-		} else {
-			limit = l
-		}
+	q := r.URL.Query()
+	limit = utils.ParseQueryInt[int](q, "limit", 20)
+	if limit > 100 {
+		limit = 100
 	}
-	if o, err := strconv.Atoi(r.URL.Query().Get("offset")); err == nil && o >= 0 {
-		offset = o
-	}
+	offset = utils.ParseQueryInt[int](q, "offset", 0)
 	return limit, offset
 }
 

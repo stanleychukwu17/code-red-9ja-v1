@@ -380,7 +380,6 @@ type Querier interface {
 	ListAllPartyMarketingCampaigns(ctx context.Context, arg ListAllPartyMarketingCampaignsParams) ([]ListAllPartyMarketingCampaignsRow, error)
 	ListAllR2Keys(ctx context.Context) ([]string, error)
 	ListAllStates(ctx context.Context) ([]CState, error)
-	ListApplications(ctx context.Context, arg ListApplicationsParams) ([]ListApplicationsRow, error)
 	ListAssignments(ctx context.Context, arg ListAssignmentsParams) ([]ListAssignmentsRow, error)
 	ListBlockedUsersByParty(ctx context.Context, arg ListBlockedUsersByPartyParams) ([]ListBlockedUsersByPartyRow, error)
 	ListBlockedUsersByUser(ctx context.Context, arg ListBlockedUsersByUserParams) ([]ListBlockedUsersByUserRow, error)
@@ -415,6 +414,7 @@ type Querier interface {
 	ListOfficesByCategory(ctx context.Context, category string) ([]Office, error)
 	ListParties(ctx context.Context) ([]ListPartiesRow, error)
 	ListPartiesWithoutWallet(ctx context.Context) ([]Party, error)
+	ListPartyApplicationsForAdmin(ctx context.Context, arg ListPartyApplicationsForAdminParams) ([]ListPartyApplicationsForAdminRow, error)
 	ListPartyChapters(ctx context.Context, arg ListPartyChaptersParams) ([]PartyChapter, error)
 	ListPartyEvents(ctx context.Context, arg ListPartyEventsParams) ([]PartyEvent, error)
 	// Returns party notifications relevant to the user's active chapter positions
@@ -432,6 +432,7 @@ type Querier interface {
 	ListSubFolders(ctx context.Context, parentID pgtype.Int4) ([]AssetFolder, error)
 	ListSuspendedPartyMembers(ctx context.Context, arg ListSuspendedPartyMembersParams) ([]ListSuspendedPartyMembersRow, error)
 	ListUnmatchedPollingUnitResults(ctx context.Context, arg ListUnmatchedPollingUnitResultsParams) ([]UnmatchedPollingUnitResult, error)
+	ListUserApplications(ctx context.Context, arg ListUserApplicationsParams) ([]ListUserApplicationsRow, error)
 	ListUserPartyMilestones(ctx context.Context, userID int64) ([]ListUserPartyMilestonesRow, error)
 	ListUserPracticeTests(ctx context.Context, arg ListUserPracticeTestsParams) ([]ListUserPracticeTestsRow, error)
 	ListUserWalletTransactions(ctx context.Context, arg ListUserWalletTransactionsParams) ([]UserWalletTransaction, error)

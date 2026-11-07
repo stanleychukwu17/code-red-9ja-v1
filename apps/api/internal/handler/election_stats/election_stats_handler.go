@@ -648,12 +648,9 @@ func (h *Handler) GetOperationsBreakdown(w http.ResponseWriter, r *http.Request)
 	ctx := r.Context()
 	qParams := r.URL.Query()
 
-	electionIDParsed, _ := strconv.ParseInt(qParams.Get("election_id"), 10, 32)
-	electionID := int32(electionIDParsed)
-	egIDParsed, _ := strconv.ParseInt(qParams.Get("election_group_id"), 10, 16)
-	electionGroupID := int16(egIDParsed)
-	partyIDParsed, _ := strconv.ParseInt(qParams.Get("party_id"), 10, 16)
-	partyID := int16(partyIDParsed)
+	electionID := utils.ParseQueryInt[int32](qParams, "election_id")
+	electionGroupID := utils.ParseQueryInt[int16](qParams, "election_group_id")
+	partyID := utils.ParseQueryInt[int16](qParams, "party_id")
 
 	if electionGroupID == 0 && electionID > 0 && h.pool != nil {
 		_ = h.pool.QueryRow(ctx, "SELECT election_group_id FROM elections WHERE id = $1", electionID).Scan(&electionGroupID)
@@ -662,14 +659,10 @@ func (h *Handler) GetOperationsBreakdown(w http.ResponseWriter, r *http.Request)
 		_ = h.pool.QueryRow(ctx, "SELECT id FROM election_groups ORDER BY id DESC LIMIT 1").Scan(&electionGroupID)
 	}
 
-	puIDParsed, _ := strconv.ParseInt(qParams.Get("polling_unit_id"), 10, 32)
-	puID := int32(puIDParsed)
-	wardIDParsed, _ := strconv.ParseInt(qParams.Get("ward_id"), 10, 32)
-	wardID := int32(wardIDParsed)
-	lgaIDParsed, _ := strconv.ParseInt(qParams.Get("lga_id"), 10, 32)
-	lgaID := int32(lgaIDParsed)
-	stateIDParsed, _ := strconv.ParseInt(qParams.Get("state_id"), 10, 16)
-	stateID := int16(stateIDParsed)
+	puID := utils.ParseQueryInt[int32](qParams, "polling_unit_id")
+	wardID := utils.ParseQueryInt[int32](qParams, "ward_id")
+	lgaID := utils.ParseQueryInt[int32](qParams, "lga_id")
+	stateID := utils.ParseQueryInt[int16](qParams, "state_id")
 
 	var (
 		query           string
@@ -1041,13 +1034,12 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 	ctx := r.Context()
 	qParams := r.URL.Query()
 
-	electionIDParsed, _ := strconv.ParseInt(qParams.Get("election_id"), 10, 32)
-	electionID := int32(electionIDParsed)
-	egIDParsed, _ := strconv.ParseInt(qParams.Get("election_group_id"), 10, 16)
-	electionGroupID := int16(egIDParsed)
-	partyIDParsed, _ := strconv.ParseInt(qParams.Get("party_id"), 10, 16)
-	partyID := int16(partyIDParsed)
+	// Parse query parameters
+	electionID := utils.ParseQueryInt[int32](qParams, "election_id")
+	electionGroupID := utils.ParseQueryInt[int16](qParams, "election_group_id")
+	partyID := utils.ParseQueryInt[int16](qParams, "party_id")
 
+	// Resolve election group fallback if not provided
 	if electionGroupID == 0 && electionID > 0 && h.pool != nil {
 		_ = h.pool.QueryRow(ctx, "SELECT election_group_id FROM elections WHERE id = $1", electionID).Scan(&electionGroupID)
 	}
@@ -1055,14 +1047,11 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 		_ = h.pool.QueryRow(ctx, "SELECT id FROM election_groups ORDER BY id DESC LIMIT 1").Scan(&electionGroupID)
 	}
 
-	puIDParsed, _ := strconv.ParseInt(qParams.Get("polling_unit_id"), 10, 32)
-	puID := int32(puIDParsed)
-	wardIDParsed, _ := strconv.ParseInt(qParams.Get("ward_id"), 10, 32)
-	wardID := int32(wardIDParsed)
-	lgaIDParsed, _ := strconv.ParseInt(qParams.Get("lga_id"), 10, 32)
-	lgaID := int32(lgaIDParsed)
-	stateIDParsed, _ := strconv.ParseInt(qParams.Get("state_id"), 10, 16)
-	stateID := int16(stateIDParsed)
+	// Parse geographic hierarchy scope IDs
+	puID := utils.ParseQueryInt[int32](qParams, "polling_unit_id")
+	wardID := utils.ParseQueryInt[int32](qParams, "ward_id")
+	lgaID := utils.ParseQueryInt[int32](qParams, "lga_id")
+	stateID := utils.ParseQueryInt[int16](qParams, "state_id")
 
 	var (
 		query           string
@@ -1072,6 +1061,7 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 		supervisorTitle string
 	)
 
+	// Level 1: Polling unit tier (when drilled down to a ward or PU)
 	if puID > 0 || wardID > 0 {
 		unitTitle = "Polling Units"
 		unitType = "polling_units"
@@ -1082,6 +1072,7 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 			_ = h.pool.QueryRow(ctx, "SELECT ward_id FROM polling_units WHERE id = $1", puID).Scan(&targetWardID)
 		}
 
+		// Query polling units and assigned PU agents
 		query = `
 			SELECT
 				pu.id,
@@ -1116,11 +1107,13 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 			ORDER BY pu.id ASC`
 		args = []interface{}{electionGroupID, partyID, targetWardID}
 
+		// Level 2: Ward tier (when drilled down to an LGA)
 	} else if lgaID > 0 {
 		unitTitle = "Wards"
 		unitType = "wards"
 		supervisorTitle = "Ward Supervisor"
 
+		// Query wards, aggregated PU agent counts, and ward supervisors
 		query = `
 			SELECT
 				w.id,
@@ -1167,11 +1160,13 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 			ORDER BY w.name ASC`
 		args = []interface{}{electionGroupID, partyID, lgaID}
 
+		// Level 3: LGA tier (when drilled down to a State)
 	} else if stateID > 0 {
 		unitTitle = "LGAs"
 		unitType = "lgas"
 		supervisorTitle = "LGA Supervisor"
 
+		// Query LGAs, aggregated agent/ward counts, and LGA supervisors
 		query = `
 			SELECT
 				l.id,
@@ -1224,11 +1219,13 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 			ORDER BY l.name ASC`
 		args = []interface{}{electionGroupID, partyID, stateID}
 
+		// Level 4: State tier (top-level overview across all Nigerian states)
 	} else {
 		unitTitle = "States"
 		unitType = "states"
 		supervisorTitle = "State Supervisor"
 
+		// Query states, aggregated agent counts, and state supervisors
 		query = `
 			SELECT
 				s.id,
@@ -1289,11 +1286,13 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 		args = []interface{}{electionGroupID, partyID, constants.NigeriaCountryID}
 	}
 
+	// Verify database connection pool
 	if h.pool == nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Database connection pool not initialized")
 		return
 	}
 
+	// Execute coverage query
 	rows, err := h.pool.Query(ctx, query, args...)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to query agent coverage breakdown: "+err.Error())
@@ -1303,6 +1302,7 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 
 	var units []map[string]interface{}
 
+	// Scan polling unit results
 	if unitType == "polling_units" {
 		for rows.Next() {
 			var (
@@ -1320,6 +1320,7 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 				continue
 			}
 
+			// Unmarshal PU agents list
 			var agents []map[string]interface{}
 			if len(agentsBytes) > 0 {
 				_ = json.Unmarshal(agentsBytes, &agents)
@@ -1335,6 +1336,7 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 			}
 			units = append(units, unit)
 		}
+		// Scan higher tiers (wards, LGAs, states)
 	} else {
 		for rows.Next() {
 			var (
@@ -1361,17 +1363,20 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 				continue
 			}
 
+			// Unmarshal supervisors list
 			var supervisors []map[string]interface{}
 			if len(supervisorsBytes) > 0 {
 				_ = json.Unmarshal(supervisorsBytes, &supervisors)
 			}
 
+			// Format polling agent coverage percentage (target = 2 agents per PU)
 			targetPUAgents := totalPUs * 2
 			if targetPUAgents <= 0 {
 				targetPUAgents = totalPUs
 			}
 			puAgentsStr := formatPctStr(puAgentsCount, targetPUAgents)
 
+			// Format ward supervisor count / percentage
 			var wardSupervisorsStr string
 			if unitType == "wards" {
 				wardSupervisorsStr = strconv.FormatInt(wardSupervisorsCount, 10)
@@ -1379,6 +1384,7 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 				wardSupervisorsStr = formatPctStr(wardSupervisorsCount, totalWards)
 			}
 
+			// Format LGA supervisor count / percentage
 			var lgaSupervisorsStr string
 			if unitType == "lgas" {
 				lgaSupervisorsStr = strconv.FormatInt(lgaSupervisorsCount, 10)
@@ -1388,6 +1394,7 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 				lgaSupervisorsStr = formatPctStr(lgaSupervisorsCount, totalLGAs)
 			}
 
+			// Format state supervisor count / percentage
 			var stateSupervisorsStr string
 			if unitType == "states" {
 				stateSupervisorsStr = strconv.FormatInt(stateSupervisorsCount, 10)
@@ -1410,6 +1417,7 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 		}
 	}
 
+	// Send success response with breakdown metadata and units
 	h.utils.RespondSuccessData(w, http.StatusOK, "Agent coverage breakdown fetched", BreakdownListResponse[map[string]interface{}]{
 		Total:           len(units),
 		UnitTitle:       unitTitle,

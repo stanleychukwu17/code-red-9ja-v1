@@ -202,21 +202,14 @@ func (h *Handler) ListElectionPay(w http.ResponseWriter, r *http.Request) {
 	}
 
 	roleFilter := qParams.Get("role")
-	partyID, _ := strconv.ParseInt(qParams.Get("party_id"), 10, 16)
+	partyID := utils.ParseQueryInt[int16](qParams, "party_id")
 	search := strings.TrimSpace(qParams.Get("search"))
 
-	limit := 50
-	if lStr := qParams.Get("limit"); lStr != "" {
-		if l, err := strconv.Atoi(lStr); err == nil && l > 0 && l <= 200 {
-			limit = l
-		}
+	limit := utils.ParseQueryInt[int](qParams, "limit", 50)
+	if limit > 200 {
+		limit = 200
 	}
-	offset := 0
-	if oStr := qParams.Get("offset"); oStr != "" {
-		if o, err := strconv.Atoi(oStr); err == nil && o >= 0 {
-			offset = o
-		}
-	}
+	offset := utils.ParseQueryInt[int](qParams, "offset", 0)
 
 	var whereClauses []string
 	args := []interface{}{egID}
@@ -396,21 +389,14 @@ func (h *Handler) ListReferralPay(w http.ResponseWriter, r *http.Request) {
 		statusFilter = "unpaid"
 	}
 
-	partyID, _ := strconv.ParseInt(qParams.Get("party_id"), 10, 16)
+	partyID := utils.ParseQueryInt[int16](qParams, "party_id")
 	search := strings.TrimSpace(qParams.Get("search"))
 
-	limit := 50
-	if lStr := qParams.Get("limit"); lStr != "" {
-		if l, err := strconv.Atoi(lStr); err == nil && l > 0 && l <= 200 {
-			limit = l
-		}
+	limit := utils.ParseQueryInt[int](qParams, "limit", 50)
+	if limit > 200 {
+		limit = 200
 	}
-	offset := 0
-	if oStr := qParams.Get("offset"); oStr != "" {
-		if o, err := strconv.Atoi(oStr); err == nil && o >= 0 {
-			offset = o
-		}
-	}
+	offset := utils.ParseQueryInt[int](qParams, "offset", 0)
 
 	var whereClauses []string
 	args := []interface{}{egID}

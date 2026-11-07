@@ -459,86 +459,158 @@ type PartyApplicationListItem struct {
 	AgentsCount       int32   `json:"agents_count"`
 }
 
+type ListApplicationsInput struct {
+	UserID             int64
+	PartyID            int16
+	ElectionGroupID    int32
+	Status             string
+	StateID            int16
+	LgaID              int32
+	WardID             int32
+	PollingUnitID      int32
+	ActiveElectionOnly bool
+	Limit              int32
+	Cursor             int64
+}
+
 // show all agents applications to a party
-func (s *Service) ListApplications(ctx context.Context, userID int64, partyID int16, electionGroupID int32, status string, stateID int16, lgaID, wardID, pollingUnitID int32, activeElectionOnly bool, limit int32, cursor int64) ([]PartyApplicationListItem, error) {
-	if userID == 0 {
-		if electionGroupID <= 0 {
+func (s *Service) ListApplications(ctx context.Context, input ListApplicationsInput) ([]PartyApplicationListItem, error) {
+	// Party/Platform Admin path: reviews incoming applications scoped to party, election group, and state
+	if input.UserID == 0 {
+		// Enforce mandatory election group and state filters
+		if input.ElectionGroupID <= 0 {
 			return nil, errors.New("election_group_id is required")
 		}
-		if stateID <= 0 {
+		if input.StateID <= 0 {
 			return nil, errors.New("state_id is required")
 		}
+
+		// Fetch admin applications matching the compound index (party, election_group, state, status, id DESC)
+		rows, err := s.queries.ListPartyApplicationsForAdmin(ctx, queries.ListPartyApplicationsForAdminParams{
+			PartyID:         input.PartyID,
+			ElectionGroupID: input.ElectionGroupID,
+			StateID:         input.StateID,
+			Status:          input.Status,
+			LgaID:           input.LgaID,
+			WardID:          input.WardID,
+			PollingUnitID:   input.PollingUnitID,
+			Cursor:          input.Cursor,
+			LimitVal:        input.Limit,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		// Map admin rows to list items
+		result := make([]PartyApplicationListItem, 0, len(rows))
+		for _, r := range rows {
+			result = append(result, mapAdminApplicationRow(r))
+		}
+		return result, nil
 	}
 
-	rows, err := s.queries.ListApplications(ctx, queries.ListApplicationsParams{
-		UserID:             userID,
-		PartyID:            partyID,
-		ElectionGroupID:    electionGroupID,
-		Status:             status,
-		StateID:            stateID,
-		LgaID:              lgaID,
-		WardID:             wardID,
-		PollingUnitID:      pollingUnitID,
-		ActiveElectionOnly: activeElectionOnly,
-		Cursor:             cursor,
-		LimitVal:           limit,
+	// Regular Applicant path: fetch the user's own applications via the user_id index
+	rows, err := s.queries.ListUserApplications(ctx, queries.ListUserApplicationsParams{
+		UserID:             input.UserID,
+		PartyID:            input.PartyID,
+		Status:             input.Status,
+		ActiveElectionOnly: input.ActiveElectionOnly,
+		Cursor:             input.Cursor,
+		LimitVal:           input.Limit,
 	})
 	if err != nil {
 		return nil, err
 	}
 
+	// Map user rows to list items
 	result := make([]PartyApplicationListItem, 0, len(rows))
 	for _, r := range rows {
-		result = append(result, PartyApplicationListItem{
-			ID:                r.ID,
-			UserID:            r.UserID,
-			PartyID:           r.PartyID,
-			ElectionGroupID:   r.ElectionGroupID,
-			PollingUnitID:     utils.PtrFromPgInt4(r.PollingUnitID),
-			Role:              r.Role,
-			AppStateID:        &r.AppStateID,
-			AppLgaID:          utils.PtrFromPgInt4(r.AppLgaID),
-			AppWardID:         utils.PtrFromPgInt4(r.AppWardID),
-			Status:            r.Status,
-			RejectedReason:    utils.PtrFromPgText(r.RejectedReason),
-			CreatedAt:         r.CreatedAt.Time.Format(time.RFC3339),
-			UpdatedAt:         r.UpdatedAt.Time.Format(time.RFC3339),
-			FirstName:         r.FirstName.String,
-			LastName:          r.LastName.String,
-			FullName:          strings.TrimSpace(fmt.Sprintf("%s %s", r.FirstName.String, r.LastName.String)),
-			Phone:             utils.PtrFromPgText(r.Phone),
-			Username:          r.Username.String,
-			Avatar:            utils.PtrFromPgText(r.Avatar),
-			CurrentCountry:    r.CurrentCountry,
-			CurrentState:      r.CurrentState,
-			CurrentLga:        r.CurrentLga.Int32,
-			CurrentCity:       utils.PtrFromPgInt4(r.CurrentCity),
-			BankAccountNumber: utils.PtrFromPgText(r.BankAccountNumber),
-			BankCode:          utils.PtrFromPgText(r.BankCode),
-			EducationalStatus: utils.PtrFromPgText(r.EducationalStatus),
-			HighestDegree:     utils.PtrFromPgText(r.HighestDegree),
-			GraduationYear:    utils.PtrFromPgText(r.GraduationYear),
-			SchoolName:        utils.PtrFromPgText(r.SchoolName),
-			Religion:          utils.PtrFromPgText(r.Religion),
-			MaritalStatus:     utils.PtrFromPgText(r.MaritalStatus),
-			Address:           utils.PtrFromPgText(r.Address),
-			CurrentWard:       r.CurrentWard.Int32,
-			ElectionGroupName: r.ElectionGroupName,
-			Year:              int16(r.ElectionDate.Time.Year()),
-			PartyName:         r.PartyName,
-			PartyShortName:    r.PartyShortName,
-			PartyLogo:         r.PartyLogo,
-			StateName:         r.StateName.String,
-			LgaName:           r.LgaName.String,
-			CityName:          utils.PtrFromPgText(r.CityName),
-			WardName:          r.WardName.String,
-			PollingUnitName:   utils.PtrFromPgText(r.PollingUnitName),
-			PollingUnitCode:   utils.PtrFromPgText(r.PollingUnitCode),
-			AgentsCount:       r.AgentsCount,
-		})
+		result = append(result, mapUserApplicationRow(r))
 	}
 
 	return result, nil
+}
+
+func mapAdminApplicationRow(r queries.ListPartyApplicationsForAdminRow) PartyApplicationListItem {
+	return PartyApplicationListItem{
+		ID:                r.ID,
+		UserID:            r.UserID,
+		PartyID:           r.PartyID,
+		ElectionGroupID:   r.ElectionGroupID,
+		PollingUnitID:     utils.PtrFromPgInt4(r.PollingUnitID),
+		Role:              r.Role,
+		AppStateID:        &r.AppStateID,
+		AppLgaID:          utils.PtrFromPgInt4(r.AppLgaID),
+		AppWardID:         utils.PtrFromPgInt4(r.AppWardID),
+		Status:            r.Status,
+		RejectedReason:    utils.PtrFromPgText(r.RejectedReason),
+		CreatedAt:         r.CreatedAt.Time.Format(time.RFC3339),
+		UpdatedAt:         r.UpdatedAt.Time.Format(time.RFC3339),
+		FirstName:         r.FirstName.String,
+		LastName:          r.LastName.String,
+		FullName:          strings.TrimSpace(fmt.Sprintf("%s %s", r.FirstName.String, r.LastName.String)),
+		Phone:             utils.PtrFromPgText(r.Phone),
+		Username:          r.Username.String,
+		Avatar:            utils.PtrFromPgText(r.Avatar),
+		CurrentCountry:    r.CurrentCountry,
+		CurrentState:      r.CurrentState,
+		CurrentLga:        r.CurrentLga.Int32,
+		CurrentCity:       utils.PtrFromPgInt4(r.CurrentCity),
+		BankAccountNumber: utils.PtrFromPgText(r.BankAccountNumber),
+		BankCode:          utils.PtrFromPgText(r.BankCode),
+		EducationalStatus: utils.PtrFromPgText(r.EducationalStatus),
+		HighestDegree:     utils.PtrFromPgText(r.HighestDegree),
+		GraduationYear:    utils.PtrFromPgText(r.GraduationYear),
+		SchoolName:        utils.PtrFromPgText(r.SchoolName),
+		Religion:          utils.PtrFromPgText(r.Religion),
+		MaritalStatus:     utils.PtrFromPgText(r.MaritalStatus),
+		Address:           utils.PtrFromPgText(r.Address),
+		CurrentWard:       r.CurrentWard.Int32,
+		ElectionGroupName: r.ElectionGroupName,
+		Year:              int16(r.ElectionDate.Time.Year()),
+		PartyName:         r.PartyName,
+		PartyShortName:    r.PartyShortName,
+		PartyLogo:         r.PartyLogo,
+		StateName:         r.StateName.String,
+		LgaName:           r.LgaName.String,
+		CityName:          utils.PtrFromPgText(r.CityName),
+		WardName:          r.WardName.String,
+		PollingUnitName:   utils.PtrFromPgText(r.PollingUnitName),
+		PollingUnitCode:   utils.PtrFromPgText(r.PollingUnitCode),
+		AgentsCount:       r.AgentsCount,
+	}
+}
+
+func mapUserApplicationRow(r queries.ListUserApplicationsRow) PartyApplicationListItem {
+	var appStateID *int16
+	if r.AppStateID > 0 {
+		appStateID = &r.AppStateID
+	}
+	return PartyApplicationListItem{
+		ID:                r.ID,
+		UserID:            r.UserID,
+		PartyID:           r.PartyID,
+		ElectionGroupID:   r.ElectionGroupID,
+		PollingUnitID:     utils.PtrFromPgInt4(r.PollingUnitID),
+		Role:              r.Role,
+		AppStateID:        appStateID,
+		AppLgaID:          utils.PtrFromPgInt4(r.AppLgaID),
+		AppWardID:         utils.PtrFromPgInt4(r.AppWardID),
+		Status:            r.Status,
+		RejectedReason:    utils.PtrFromPgText(r.RejectedReason),
+		CreatedAt:         r.CreatedAt.Time.Format(time.RFC3339),
+		UpdatedAt:         r.UpdatedAt.Time.Format(time.RFC3339),
+		ElectionGroupName: r.ElectionGroupName,
+		Year:              int16(r.ElectionDate.Time.Year()),
+		PartyName:         r.PartyName,
+		PartyShortName:    r.PartyShortName,
+		PartyLogo:         r.PartyLogo,
+		StateName:         r.StateName.String,
+		LgaName:           r.LgaName.String,
+		WardName:          r.WardName.String,
+		PollingUnitName:   utils.PtrFromPgText(r.PollingUnitName),
+		PollingUnitCode:   utils.PtrFromPgText(r.PollingUnitCode),
+	}
 }
 
 func (s *Service) GetPollingUnitRecommendations(ctx context.Context, partyID int16, electionGroupID int32, lgaID, wardID, pollingUnitID int32) ([]queries.GetPollingUnitsWithAgentCountsRow, error) {
