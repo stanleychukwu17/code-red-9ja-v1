@@ -25,6 +25,8 @@ CREATE TABLE IF NOT EXISTS state_election_supervisors (
   CONSTRAINT uq_state_supervisor_per_election_day UNIQUE(user_id, election_group_id)
 );
 
+CREATE INDEX idx_state_supervisors_composite ON state_election_supervisors(election_group_id, party_id, state_id);
+
 -- LGA Election Supervisors
 CREATE TABLE IF NOT EXISTS lga_election_supervisors (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -51,6 +53,8 @@ CREATE TABLE IF NOT EXISTS lga_election_supervisors (
   -- CONSTRAINTS
   CONSTRAINT uq_lga_supervisor_per_election_day UNIQUE(user_id, election_group_id)
 );
+
+CREATE INDEX idx_lga_supervisors_composite ON lga_election_supervisors(election_group_id, party_id, lga_id);
 
 -- Ward Election Supervisors
 CREATE TABLE IF NOT EXISTS ward_election_supervisors (
@@ -79,6 +83,8 @@ CREATE TABLE IF NOT EXISTS ward_election_supervisors (
   -- CONSTRAINTS
   CONSTRAINT uq_ward_supervisor_per_election_day UNIQUE(user_id, election_group_id)
 );
+
+CREATE INDEX idx_ward_supervisors_composite ON ward_election_supervisors(election_group_id, party_id, ward_id);
 
 -- +goose Down
 DROP TABLE IF EXISTS ward_election_supervisors;

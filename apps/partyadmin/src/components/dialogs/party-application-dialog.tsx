@@ -420,16 +420,16 @@ export function PartyApplicationDialog({ open, onClose, application }: PartyAppl
     },
   });
 
-  // Mutation to reject pending application with a mandatory reason
+  // Mutation to reject pending application with an optional reason
   const rejectMutation = useMutation({
-    mutationFn: async (reason: string) => {
+    mutationFn: async (reason?: string) => {
       if (!application.id) {
         throw new Error("Missing Application ID");
       }
       const res = await rejectApplication({
         data: {
           id: application.id,
-          reason,
+          reason: reason || "",
         },
       });
       if (!res.success) {
@@ -474,15 +474,11 @@ export function PartyApplicationDialog({ open, onClose, application }: PartyAppl
     });
   };
 
-  // Prompt for mandatory rejection reason and submit rejection
+  // Prompt for optional rejection reason and submit rejection
   const handleReject = () => {
-    const reason = window.prompt("Enter rejection reason:");
+    const reason = window.prompt("Enter rejection reason (optional):");
     if (reason === null) return; // user cancelled prompt
-    if (reason.trim() === "") {
-      alert("A rejection reason is required.");
-      return;
-    }
-    rejectMutation.mutate(reason);
+    rejectMutation.mutate(reason.trim());
   };
 
   const isSubmitting = approveMutation.isPending || rejectMutation.isPending || changeRoleMutation.isPending;

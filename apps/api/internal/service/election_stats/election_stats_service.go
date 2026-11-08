@@ -17,6 +17,11 @@ type ElectionStatsService interface {
 	GetElectionGroupPartyLGAStats(ctx context.Context, arg queries.GetElectionGroupPartyLGAStatsParams) (queries.GetElectionGroupPartyLGAStatsRow, error)
 	GetElectionGroupPartyWardStats(ctx context.Context, arg queries.GetElectionGroupPartyWardStatsParams) (queries.GetElectionGroupPartyWardStatsRow, error)
 	GetElectionGroupPartyNationalStats(ctx context.Context, arg queries.GetElectionGroupPartyNationalStatsParams) (queries.GetElectionGroupPartyNationalStatsRow, error)
+	GetPollingUnitWardID(ctx context.Context, id int32) (int32, error)
+	GetAgentCoveragePollingUnits(ctx context.Context, arg queries.GetAgentCoveragePollingUnitsParams) ([]queries.GetAgentCoveragePollingUnitsRow, error)
+	GetAgentCoverageWards(ctx context.Context, arg queries.GetAgentCoverageWardsParams) ([]queries.GetAgentCoverageWardsRow, error)
+	GetAgentCoverageLGAs(ctx context.Context, arg queries.GetAgentCoverageLGAsParams) ([]queries.GetAgentCoverageLGAsRow, error)
+	GetAgentCoverageStates(ctx context.Context, arg queries.GetAgentCoverageStatesParams) ([]queries.GetAgentCoverageStatesRow, error)
 }
 
 type Service struct {
@@ -71,4 +76,24 @@ func (s *Service) GetElectionGroupPartyWardStats(ctx context.Context, arg querie
 
 func (s *Service) GetElectionGroupPartyNationalStats(ctx context.Context, arg queries.GetElectionGroupPartyNationalStatsParams) (queries.GetElectionGroupPartyNationalStatsRow, error) {
 	return s.queries.GetElectionGroupPartyNationalStats(ctx, arg)
+}
+
+func (s *Service) GetPollingUnitWardID(ctx context.Context, id int32) (int32, error) {
+	return s.queries.GetPollingUnitWardID(ctx, id)
+}
+
+func (s *Service) GetAgentCoveragePollingUnits(ctx context.Context, arg queries.GetAgentCoveragePollingUnitsParams) ([]queries.GetAgentCoveragePollingUnitsRow, error) {
+	return s.queries.GetAgentCoveragePollingUnits(ctx, arg)
+}
+
+func (s *Service) GetAgentCoverageWards(ctx context.Context, arg queries.GetAgentCoverageWardsParams) ([]queries.GetAgentCoverageWardsRow, error) {
+	return s.queries.GetAgentCoverageWards(ctx, arg)
+}
+
+func (s *Service) GetAgentCoverageLGAs(ctx context.Context, arg queries.GetAgentCoverageLGAsParams) ([]queries.GetAgentCoverageLGAsRow, error) {
+	return s.queries.GetAgentCoverageLGAs(ctx, arg)
+}
+
+func (s *Service) GetAgentCoverageStates(ctx context.Context, arg queries.GetAgentCoverageStatesParams) ([]queries.GetAgentCoverageStatesRow, error) {
+	return s.queries.GetAgentCoverageStates(ctx, arg)
 }

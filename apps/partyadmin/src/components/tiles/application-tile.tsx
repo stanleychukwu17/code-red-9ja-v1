@@ -260,7 +260,14 @@ export function ApplicationTableTile({ data, refetch }: ApplicationTableTileProp
 
   // Mutation to approve application and invalidate cached list
   const approveMutation = useMutation({
-    mutationFn: (variables: { id: number; pollingUnitID: number }) => approveApplication({ data: variables }),
+    mutationFn: (variables: {
+      id: number;
+      pollingUnitID?: number;
+      roleType?: string;
+      stateId?: number;
+      lgaId?: number;
+      wardId?: number;
+    }) => approveApplication({ data: variables }),
     onSuccess: (res) => {
       if (res && res.success) {
         queryClient.invalidateQueries({ queryKey: ["applications"] });
@@ -271,9 +278,9 @@ export function ApplicationTableTile({ data, refetch }: ApplicationTableTileProp
     },
   });
 
-  // Mutation to reject application with a reason and refresh data
+  // Mutation to reject application with an optional reason and refresh data
   const rejectMutation = useMutation({
-    mutationFn: (variables: { id: number; reason: string }) => rejectApplication({ data: variables }),
+    mutationFn: (variables: { id: number; reason?: string }) => rejectApplication({ data: variables }),
     onSuccess: (res) => {
       if (res && res.success) {
         queryClient.invalidateQueries({ queryKey: ["applications"] });
@@ -319,8 +326,19 @@ export function ApplicationTableTile({ data, refetch }: ApplicationTableTileProp
       return;
     }
 
+    const stateId = data.app_state_id || data.stateId || data.current_state || undefined;
+    const lgaId = data.app_lga_id || data.lgaId || data.current_lga || undefined;
+    const wardId = data.app_ward_id || data.current_ward || undefined;
+
     try {
-      await approveMutation.mutateAsync({ id: data.id, pollingUnitID });
+      await approveMutation.mutateAsync({
+        id: data.id,
+        pollingUnitID,
+        roleType: data.role || "polling_agent",
+        stateId,
+        lgaId,
+        wardId,
+      });
     } catch (err: any) {
       alert(err.message || "Failed to approve application");
     }
@@ -333,15 +351,8 @@ export function ApplicationTableTile({ data, refetch }: ApplicationTableTileProp
       alert("Application ID is missing");
       return;
     }
-    // Collect mandatory reason for rejection
-    const reason = window.prompt("Enter rejection reason:");
-    if (reason === null) return; // User canceled the prompt
-    if (reason.trim() === "") {
-      alert("A rejection reason is required.");
-      return;
-    }
     try {
-      await rejectMutation.mutateAsync({ id: data.id, reason });
+      await rejectMutation.mutateAsync({ id: data.id });
     } catch (err: any) {
       alert(err.message || "Failed to reject application");
     }
@@ -349,7 +360,7 @@ export function ApplicationTableTile({ data, refetch }: ApplicationTableTileProp
 
   return (
     <TileRow onClick={handleOpenDialog}>
-      <TileLeft className="ojemba w-48 sm:w-60 min-w-0 shrink-0">
+      <TileLeft className="w-48 sm:w-60 min-w-0 shrink-0">
         <div className="flex items-center gap-4 w-full min-w-0">
           <img
             src={avatar}
@@ -445,12 +456,9 @@ function DecisionPill({ children, variant, className, onClick, disabled }: Decis
       disabled={disabled}
       className={cn(
         "h-8 rounded-10 px-3 text-[14px] font-semibold transition truncate text-center cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed",
-        variant === "accept" &&
-        "bg-[#10dd84] text-[#083b25] hover:bg-[#08cf79]",
-        variant === "reject" &&
-        "bg-[#ececec] text-[#5e6a64] hover:bg-[#e6e6e6]",
-        variant === "pending" &&
-        "bg-[#ececec] text-[#5e6a64] hover:bg-[#e6e6e6]",
+        variant === "accept" && "bg-[#10dd84] text-[#083b25] hover:bg-[#08cf79]",
+        variant === "reject" && "bg-[#ececec] text-[#5e6a64] hover:bg-[#e6e6e6]",
+        variant === "pending" && "bg-[#ececec] text-[#5e6a64] hover:bg-[#e6e6e6]",
         className,
       )}
     >

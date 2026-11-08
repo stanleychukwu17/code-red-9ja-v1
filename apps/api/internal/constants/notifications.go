@@ -44,6 +44,8 @@ const (
 	NotificationTypeAgentApplicationApproved      = "agent_application_approved"
 	NotificationTypeAgentApplicationRejected      = "agent_application_rejected"
 	NotificationTypeAgentApplicationCancelled     = "agent_application_cancelled"
+	NotificationTypeAgentAssignmentRevoked        = "agent_assignment_revoked"
+	NotificationTypeAgentRoleChanged              = "agent_role_changed"
 	NotificationTypeAgentPayoutCredited           = "agent_payout_credited"
 	NotificationTypePUResultFlagged               = "pu_result_flagged"
 	NotificationTypeNewAgentApplication           = "new_agent_application"

@@ -53,6 +53,21 @@ DELETE FROM campaign_group_members
 WHERE party_id = $1 AND election_group_id = $2 AND user_id = $3
 RETURNING group_id;
 
+-- name: RemoveAgentCampaignGroupMembers :many
+DELETE FROM campaign_group_members
+WHERE party_id = $1 
+  AND user_id = $2
+  AND role != 'candidate'
+RETURNING group_id;
+
+-- name: RemoveCampaignGroupMembersByElectionGroupExcept :many
+DELETE FROM campaign_group_members
+WHERE party_id = $1 
+  AND user_id = $2 
+  AND group_id != $3
+  AND role != 'candidate'
+RETURNING group_id;
+
 -- name: MarkCampaignGroupOfficialsAdded :exec
 UPDATE campaign_groups
 SET officials_added = TRUE, updated_at = NOW()

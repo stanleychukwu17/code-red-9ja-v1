@@ -32,12 +32,12 @@ type PartyApplicationsService interface {
 	SubmitSupervisorApplication(ctx context.Context, input partyapplications.SubmitSupervisorApplicationInput) (queries.PartyAgentApplication, error)
 	GetApplicationByID(ctx context.Context, id int64) (queries.PartyAgentApplication, error)
 	ListApplications(ctx context.Context, input partyapplications.ListApplicationsInput) ([]partyapplications.PartyApplicationListItem, error)
-	RejectApplication(ctx context.Context, id int64, reason string) (queries.PartyAgentApplication, error)
-	CancelApplication(ctx context.Context, id int64) (queries.PartyAgentApplication, error)
+	RejectApplication(ctx context.Context, app queries.PartyAgentApplication, reason string) (queries.PartyAgentApplication, error)
+	CancelApplication(ctx context.Context, app queries.PartyAgentApplication) (queries.PartyAgentApplication, error)
 	ApproveApplication(ctx context.Context, input partyapplications.ApproveApplicationInput) (queries.PartyAgentApplication, error)
 	GetPollingUnitRecommendations(ctx context.Context, partyID int16, electionGroupID int32, lgaID, wardID, pollingUnitID int32) ([]queries.GetPollingUnitsWithAgentCountsRow, error)
 	ChangeAgentRole(ctx context.Context, input partyapplications.ChangeAgentRoleInput) (*partyapplications.ChangeAgentRoleResult, error)
-	RevokeAgent(ctx context.Context, input partyapplications.RevokeAgentInput) error
+	RevokeAgent(ctx context.Context, input partyapplications.RevokeAgentInput) (*partyapplications.RevokedAgentResult, error)
 }
 
 type UsersService interface {
@@ -782,17 +782,9 @@ func (h *Handler) RejectApplication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Decode rejection payload
+	// Decode rejection payload (reason is optional)
 	var req RejectApplicationRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
-		return
-	}
-
-	if req.Reason == "" {
-		h.utils.RespondError(w, http.StatusBadRequest, "reason is required")
-		return
-	}
+	_ = json.NewDecoder(r.Body).Decode(&req)
 
 	// Fetch application details
 	app, err := h.service.GetApplicationByID(r.Context(), id)
@@ -814,7 +806,7 @@ func (h *Handler) RejectApplication(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Reject application
-	updatedApp, err := h.service.RejectApplication(r.Context(), id, req.Reason)
+	updatedApp, err := h.service.RejectApplication(r.Context(), app, req.Reason)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
 		return
@@ -901,7 +893,7 @@ func (h *Handler) CancelApplication(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Cancel application
-	updatedApp, err := h.service.CancelApplication(r.Context(), id)
+	updatedApp, err := h.service.CancelApplication(r.Context(), app)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
 		return
@@ -939,7 +931,7 @@ func (h *Handler) CancelApplication(w http.ResponseWriter, r *http.Request) {
 
 // ChangeAgentRoleRequest represents the HTTP payload for updating an agent's role or geographic assignment
 type ChangeAgentRoleRequest struct {
-	ApplicationID   int64  `json:"application_id"`
+	ApplicationID   int64  `json:"application_id" validate:"required,gt=0"`
 	UserID          int64  `json:"user_id" validate:"required,gt=0"`
 	PartyID         int16  `json:"party_id" validate:"required,gt=0"`
 	ElectionGroupID int32  `json:"election_group_id" validate:"required,gt=0"`
@@ -997,6 +989,55 @@ func (h *Handler) ChangeAgentRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Asynchronously record the audit log for the role change
+	auditOldValues, _ := json.Marshal(map[string]interface{}{
+		"role": req.CurrentRoleType,
+	})
+	auditNewValues, _ := json.Marshal(map[string]interface{}{
+		"application_id":    req.ApplicationID,
+		"role":              result.NewRole,
+		"party_id":          req.PartyID,
+		"election_group_id": req.ElectionGroupID,
+		"state_id":          req.StateID,
+		"lga_id":            req.LgaID,
+		"ward_id":           req.WardID,
+		"polling_unit_id":   req.PollingUnitID,
+	})
+	h.auditService.LogPartyAdminActionAsync(r.Context(), queries.InsertAuditLogParams{
+		Action:     db.ActionChangeAgentRole,
+		EntityType: db.EntityTypePartyApplication,
+		EntityID:   strconv.FormatInt(req.UserID, 10),
+		OldValues:  auditOldValues,
+		NewValues:  auditNewValues,
+	})
+
+	// Asynchronously send notification to the user about their new role
+	h.notificationsService.NotifyAgentRoleChanged(r.Context(), notifications.NotifyAgentRoleChangedParams{
+		RecipientUserID: req.UserID,
+		PartyID:         req.PartyID,
+		ElectionGroupID: req.ElectionGroupID,
+		OldRole:         req.CurrentRoleType,
+		NewRole:         result.NewRole,
+		StateID:         utils.PtrFromPositive(req.StateID),
+		LgaID:           utils.PtrFromPositive(req.LgaID),
+		WardID:          utils.PtrFromPositive(req.WardID),
+		PollingUnitID:   utils.PtrFromPositive(req.PollingUnitID),
+	})
+
+	// Sync campaign group enrollment with new role
+	if distErr := h.distributor.DistributeTaskEnrollAgentInCampaignGroup(r.Context(), &worker.EnrollAgentInCampaignGroupPayload{
+		PartyID:         req.PartyID,
+		ElectionGroupID: req.ElectionGroupID,
+		UserID:          req.UserID,
+		Role:            result.NewRole,
+		StateID:         req.StateID,
+		LgaID:           req.LgaID,
+		WardID:          req.WardID,
+		PollingUnitID:   req.PollingUnitID,
+	}); distErr != nil {
+		slog.Error("failed to enqueue enroll agent in campaign group task on role change", "userID", req.UserID, "role", result.NewRole, "error", distErr)
+	}
+
 	h.utils.RespondSuccessData(w, http.StatusOK, "Agent role updated successfully", result)
 }
 
@@ -1031,13 +1072,33 @@ func (h *Handler) RevokeAgent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Delegate revoke execution to service
-	if err := h.service.RevokeAgent(r.Context(), partyapplications.RevokeAgentInput{
+	revoked, err := h.service.RevokeAgent(r.Context(), partyapplications.RevokeAgentInput{
 		AssignmentID: id,
 		RoleType:     roleType,
 		PartyID:      targetPartyID,
-	}); err != nil {
+	})
+	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
 		return
+	}
+
+	if revoked != nil {
+		// Asynchronously notify the agent that their assignment has been revoked
+		h.notificationsService.NotifyAgentAssignmentRevoked(r.Context(), notifications.NotifyAgentAssignmentRevokedParams{
+			RecipientUserID: revoked.UserID,
+			PartyID:         revoked.PartyID,
+			ElectionGroupID: revoked.ElectionGroupID,
+			Role:            roleType,
+		})
+
+		// Asynchronously remove the revoked agent from party campaign groups for this election cycle
+		if distErr := h.distributor.DistributeTaskRemoveAgentFromCampaignGroup(r.Context(), &worker.RemoveAgentFromCampaignGroupPayload{
+			PartyID:         revoked.PartyID,
+			ElectionGroupID: revoked.ElectionGroupID,
+			UserID:          revoked.UserID,
+		}); distErr != nil {
+			slog.Error("failed to enqueue remove agent from campaign group task", "userID", revoked.UserID, "error", distErr)
+		}
 	}
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Assignment revoked successfully", nil)

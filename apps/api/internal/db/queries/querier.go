@@ -164,6 +164,10 @@ type Querier interface {
 	// Returns the active campaign (if any) for a party + election group where NOW() is within start/end dates.
 	GetActiveMarketingCampaignForElectionGroup(ctx context.Context, arg GetActiveMarketingCampaignForElectionGroupParams) (PartyMarketingCampaign, error)
 	GetActivePartyMemberSuspension(ctx context.Context, arg GetActivePartyMemberSuspensionParams) (PartyMemberSuspension, error)
+	GetAgentCoverageLGAs(ctx context.Context, arg GetAgentCoverageLGAsParams) ([]GetAgentCoverageLGAsRow, error)
+	GetAgentCoveragePollingUnits(ctx context.Context, arg GetAgentCoveragePollingUnitsParams) ([]GetAgentCoveragePollingUnitsRow, error)
+	GetAgentCoverageStates(ctx context.Context, arg GetAgentCoverageStatesParams) ([]GetAgentCoverageStatesRow, error)
+	GetAgentCoverageWards(ctx context.Context, arg GetAgentCoverageWardsParams) ([]GetAgentCoverageWardsRow, error)
 	GetAgentEarningsByID(ctx context.Context, id int64) (AgentEarning, error)
 	GetAgentEarningsByUserAndElectionGroupAndRole(ctx context.Context, arg GetAgentEarningsByUserAndElectionGroupAndRoleParams) (AgentEarning, error)
 	GetAllPollingUnitResultsByPU(ctx context.Context, arg GetAllPollingUnitResultsByPUParams) ([]PollingUnitResult, error)
@@ -279,6 +283,10 @@ type Querier interface {
 	GetPollingUnitFinalResult(ctx context.Context, arg GetPollingUnitFinalResultParams) (ElectionPollingUnitFinalResult, error)
 	GetPollingUnitResult(ctx context.Context, id int64) (PollingUnitResult, error)
 	GetPollingUnitResultByUserAndElection(ctx context.Context, arg GetPollingUnitResultByUserAndElectionParams) (PollingUnitResult, error)
+	// =====================================================
+	// AGENT COVERAGE BREAKDOWN QUERIES
+	// =====================================================
+	GetPollingUnitWardID(ctx context.Context, id int32) (int32, error)
 	GetPollingUnits(ctx context.Context, arg GetPollingUnitsParams) ([]PollingUnit, error)
 	GetPollingUnitsPaginated(ctx context.Context, arg GetPollingUnitsPaginatedParams) ([]PollingUnit, error)
 	GetPollingUnitsWithAgentCounts(ctx context.Context, arg GetPollingUnitsWithAgentCountsParams) ([]GetPollingUnitsWithAgentCountsRow, error)
@@ -470,8 +478,10 @@ type Querier interface {
 	// REFRESH POLING UNIT CACHE
 	// =====================================================
 	RefreshSingleElectionGroupPollingUnitStats(ctx context.Context, arg RefreshSingleElectionGroupPollingUnitStatsParams) error
+	RemoveAgentCampaignGroupMembers(ctx context.Context, arg RemoveAgentCampaignGroupMembersParams) ([]int64, error)
 	RemoveCampaignGroupMember(ctx context.Context, arg RemoveCampaignGroupMemberParams) error
 	RemoveCampaignGroupMembersByElectionGroup(ctx context.Context, arg RemoveCampaignGroupMembersByElectionGroupParams) ([]int64, error)
+	RemoveCampaignGroupMembersByElectionGroupExcept(ctx context.Context, arg RemoveCampaignGroupMembersByElectionGroupExceptParams) ([]int64, error)
 	RemovePageVerification(ctx context.Context, arg RemovePageVerificationParams) error
 	RemovePageVerificationByType(ctx context.Context, arg RemovePageVerificationByTypeParams) error
 	RemoveUserRole(ctx context.Context, arg RemoveUserRoleParams) error

@@ -92,7 +92,7 @@ export const approveApplication = createServerFn({ method: "POST" })
   });
 
 export const rejectApplication = createServerFn({ method: "POST" })
-  .inputValidator((data: { id: number; reason: string }) => data)
+  .inputValidator((data: { id: number; reason?: string }) => data)
   .handler(async ({ data }) => {
     try {
       const url = API_URL.rejectApplication(data.id);
@@ -102,7 +102,7 @@ export const rejectApplication = createServerFn({ method: "POST" })
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          reason: data.reason,
+          reason: data.reason || "",
         }),
       });
       const resData = await response.json();

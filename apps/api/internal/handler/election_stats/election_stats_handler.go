@@ -1049,11 +1049,10 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 	stateID := utils.ParseQueryInt[int16](qParams, "state_id")
 
 	var (
-		query           string
-		args            []interface{}
 		unitTitle       string
 		unitType        string
 		supervisorTitle string
+		units           []map[string]interface{}
 	)
 
 	// Level 1: Polling unit tier (when drilled down to a ward or PU)
@@ -1063,352 +1062,151 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 		supervisorTitle = "PU Agents"
 
 		targetWardID := wardID
-		if puID > 0 && targetWardID == 0 && h.pool != nil {
-			_ = h.pool.QueryRow(ctx, "SELECT ward_id FROM polling_units WHERE id = $1", puID).Scan(&targetWardID)
+		if puID > 0 && targetWardID == 0 {
+			targetWardID, _ = h.service.GetPollingUnitWardID(ctx, puID)
 		}
 
-		// Query polling units and assigned PU agents
-		query = `
-			SELECT
-				pu.id,
-				pu.name,
-				COALESCE(NULLIF(pu.pu_code, ''), pu.code, '') AS code,
-				COALESCE(egpu.pu_agents_count, (
-					SELECT COUNT(*) FROM polling_unit_assignments pua
-					WHERE pua.polling_unit_id = pu.id
-					  AND ($1::bigint = 0 OR pua.election_group_id = $1)
-					  AND ($2::int = 0 OR pua.party_id = $2)
-				), 0) AS pu_agents_count,
-				(
-					SELECT COALESCE(json_agg(json_build_object(
-						'id', u.id,
-						'name', u.full_name,
-						'avatar', COALESCE(u.avatar, '')
-					)), '[]'::json)
-					FROM (
-						SELECT u.id, u.first_name, u.last_name, u.avatar
-						FROM polling_unit_assignments pua
-						JOIN users u ON u.id = pua.user_id
-						WHERE pua.polling_unit_id = pu.id
-						  AND ($1::bigint = 0 OR pua.election_group_id = $1)
-						  AND ($2::int = 0 OR pua.party_id = $2)
-						LIMIT 4
-					) u
-				) AS agents
-			FROM polling_units pu
-			LEFT JOIN election_group_polling_units egpu
-				ON egpu.polling_unit_id = pu.id AND egpu.election_group_id = $1
-			WHERE ($3::bigint = 0 OR pu.ward_id = $3)
-			ORDER BY pu.id ASC`
-		args = []interface{}{electionGroupID, partyID, targetWardID}
+		// Query polling units and assigned PU agents via sqlc
+		puRows, err := h.service.GetAgentCoveragePollingUnits(ctx, queries.GetAgentCoveragePollingUnitsParams{
+			Column1: int64(electionGroupID),
+			Column2: int32(partyID),
+			Column3: int64(targetWardID),
+		})
+		if err != nil {
+			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to query agent coverage breakdown: "+err.Error())
+			return
+		}
 
-		// Level 2: Ward tier (when drilled down to an LGA)
+		for _, r := range puRows {
+			var agents []map[string]interface{}
+			if len(r.Agents) > 0 {
+				_ = json.Unmarshal(r.Agents, &agents)
+			}
+			units = append(units, map[string]interface{}{
+				"id":             r.ID,
+				"name":           r.Name,
+				"code":           r.Code,
+				"polling_agents": strconv.FormatInt(r.PuAgentsCount, 10),
+				"pu_agents":      agents,
+				"supervisors":    agents,
+			})
+		}
+
+	// Level 2: Ward tier (when drilled down to an LGA)
 	} else if lgaID > 0 {
 		unitTitle = "Wards"
 		unitType = "wards"
 		supervisorTitle = "Ward Supervisor"
 
-		// Query wards, aggregated PU agent counts, and ward supervisors
-		query = `
-			SELECT
-				w.id,
-				w.name,
-				'' AS code,
-				COALESCE(egw.pu_agents_count, 0) AS pu_agents_count,
-				COALESCE(w.polling_units_count, 0) AS total_pus,
-				(
-					SELECT COUNT(*)::bigint FROM ward_election_supervisors wes
-					WHERE wes.ward_id = w.id
-					  AND ($1::bigint = 0 OR wes.election_group_id = $1)
-					  AND ($2::int = 0 OR wes.party_id = $2)
-				) AS ward_supervisors_count,
-				1::bigint AS total_wards,
-				0::bigint AS lga_supervisors_count,
-				0::bigint AS total_lgas,
-				0::bigint AS state_supervisors_count,
-				(
-					SELECT COALESCE(json_agg(json_build_object(
-						'id', u.id,
-						'name', u.full_name,
-						'avatar', COALESCE(u.avatar, '')
-					)), '[]'::json)
-					FROM (
-						SELECT u.id, u.first_name, u.last_name, u.avatar
-						FROM ward_election_supervisors wes
-						JOIN users u ON u.id = wes.user_id
-						WHERE wes.ward_id = w.id
-						  AND ($1::bigint = 0 OR wes.election_group_id = $1)
-						  AND ($2::int = 0 OR wes.party_id = $2)
-						LIMIT 4
-					) u
-				) AS supervisors
-			FROM wards w
-			LEFT JOIN (
-				SELECT
-					ward_id,
-					SUM(pu_agents_count)::bigint AS pu_agents_count
-				FROM election_group_polling_units
-				WHERE ($1::bigint = 0 OR election_group_id = $1)
-				GROUP BY ward_id
-			) egw ON egw.ward_id = w.id
-			WHERE w.lga_id = $3
-			ORDER BY w.name ASC`
-		args = []interface{}{electionGroupID, partyID, lgaID}
+		// Query wards, aggregated PU agent counts, and ward supervisors via sqlc
+		wardRows, err := h.service.GetAgentCoverageWards(ctx, queries.GetAgentCoverageWardsParams{
+			Column1: int64(electionGroupID),
+			Column2: int32(partyID),
+			LgaID:   lgaID,
+		})
+		if err != nil {
+			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to query agent coverage breakdown: "+err.Error())
+			return
+		}
 
-		// Level 3: LGA tier (when drilled down to a State)
+		for _, r := range wardRows {
+			var supervisors []map[string]interface{}
+			if len(r.Supervisors) > 0 {
+				_ = json.Unmarshal(r.Supervisors, &supervisors)
+			}
+			targetPUAgents := r.TotalPus * 2
+			if targetPUAgents <= 0 {
+				targetPUAgents = r.TotalPus
+			}
+			units = append(units, map[string]interface{}{
+				"id":                r.ID,
+				"name":              r.Name,
+				"code":              r.Code,
+				"polling_agents":    formatPctStr(r.PuAgentsCount, targetPUAgents),
+				"ward_supervisors":  strconv.FormatInt(r.WardSupervisorsCount, 10),
+				"lga_supervisors":   "",
+				"state_supervisors": "",
+				"supervisors":       supervisors,
+				"pu_agents":         supervisors,
+			})
+		}
+
+	// Level 3: LGA tier (when drilled down to a State)
 	} else if stateID > 0 {
 		unitTitle = "LGAs"
 		unitType = "lgas"
 		supervisorTitle = "LGA Supervisor"
 
-		// Query LGAs, aggregated agent/ward counts, and LGA supervisors
-		query = `
-			SELECT
-				l.id,
-				l.name,
-				'' AS code,
-				COALESCE(egl.pu_agents_count, 0) AS pu_agents_count,
-				COALESCE(l.polling_units_count, 0) AS total_pus,
-				(
-					SELECT COUNT(*)::bigint FROM ward_election_supervisors wes
-					JOIN wards w ON w.id = wes.ward_id
-					WHERE w.lga_id = l.id
-					  AND ($1::bigint = 0 OR wes.election_group_id = $1)
-					  AND ($2::int = 0 OR wes.party_id = $2)
-				) AS ward_supervisors_count,
-				COALESCE(l.wards_count, 0) AS total_wards,
-				(
-					SELECT COUNT(*)::bigint FROM lga_election_supervisors les
-					WHERE les.lga_id = l.id
-					  AND ($1::bigint = 0 OR les.election_group_id = $1)
-					  AND ($2::int = 0 OR les.party_id = $2)
-				) AS lga_supervisors_count,
-				1::bigint AS total_lgas,
-				0::bigint AS state_supervisors_count,
-				(
-					SELECT COALESCE(json_agg(json_build_object(
-						'id', u.id,
-						'name', u.full_name,
-						'avatar', COALESCE(u.avatar, '')
-					)), '[]'::json)
-					FROM (
-						SELECT u.id, u.first_name, u.last_name, u.avatar
-						FROM lga_election_supervisors les
-						JOIN users u ON u.id = les.user_id
-						WHERE les.lga_id = l.id
-						  AND ($1::bigint = 0 OR les.election_group_id = $1)
-						  AND ($2::int = 0 OR les.party_id = $2)
-						LIMIT 4
-					) u
-				) AS supervisors
-			FROM lgas l
-			LEFT JOIN (
-				SELECT
-					lga_id,
-					SUM(pu_agents_count)::bigint AS pu_agents_count
-				FROM election_group_polling_units
-				WHERE ($1::bigint = 0 OR election_group_id = $1)
-				GROUP BY lga_id
-			) egl ON egl.lga_id = l.id
-			WHERE l.state_id = $3
-			ORDER BY l.name ASC`
-		args = []interface{}{electionGroupID, partyID, stateID}
+		// Query LGAs, aggregated agent/ward counts, and LGA supervisors via sqlc
+		lgaRows, err := h.service.GetAgentCoverageLGAs(ctx, queries.GetAgentCoverageLGAsParams{
+			Column1: int64(electionGroupID),
+			Column2: int32(partyID),
+			StateID: int32(stateID),
+		})
+		if err != nil {
+			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to query agent coverage breakdown: "+err.Error())
+			return
+		}
 
-		// Level 4: State tier (top-level overview across all Nigerian states)
+		for _, r := range lgaRows {
+			var supervisors []map[string]interface{}
+			if len(r.Supervisors) > 0 {
+				_ = json.Unmarshal(r.Supervisors, &supervisors)
+			}
+			targetPUAgents := r.TotalPus * 2
+			if targetPUAgents <= 0 {
+				targetPUAgents = r.TotalPus
+			}
+			units = append(units, map[string]interface{}{
+				"id":                r.ID,
+				"name":              r.Name,
+				"code":              r.Code,
+				"polling_agents":    formatPctStr(r.PuAgentsCount, targetPUAgents),
+				"ward_supervisors":  formatPctStr(r.WardSupervisorsCount, r.TotalWards),
+				"lga_supervisors":   strconv.FormatInt(r.LgaSupervisorsCount, 10),
+				"state_supervisors": "",
+				"supervisors":       supervisors,
+				"pu_agents":         supervisors,
+			})
+		}
+
+	// Level 4: State tier (top-level overview across all Nigerian states)
 	} else {
 		unitTitle = "States"
 		unitType = "states"
 		supervisorTitle = "State Supervisor"
 
-		// Query states, aggregated agent counts, and state supervisors
-		query = `
-			SELECT
-				s.id,
-				s.name,
-				'' AS code,
-				COALESCE(egs.pu_agents_count, 0) AS pu_agents_count,
-				COALESCE(s.polling_units_count, 0) AS total_pus,
-				(
-					SELECT COUNT(*)::bigint FROM ward_election_supervisors wes
-					JOIN wards w ON w.id = wes.ward_id
-					JOIN lgas l ON l.id = w.lga_id
-					WHERE l.state_id = s.id
-					  AND ($1::bigint = 0 OR wes.election_group_id = $1)
-					  AND ($2::int = 0 OR wes.party_id = $2)
-				) AS ward_supervisors_count,
-				COALESCE(s.wards_count, 0) AS total_wards,
-				(
-					SELECT COUNT(*)::bigint FROM lga_election_supervisors les
-					JOIN lgas l ON l.id = les.lga_id
-					WHERE l.state_id = s.id
-					  AND ($1::bigint = 0 OR les.election_group_id = $1)
-					  AND ($2::int = 0 OR les.party_id = $2)
-				) AS lga_supervisors_count,
-				COALESCE(s.lgas_count, 0) AS total_lgas,
-				(
-					SELECT COUNT(*)::bigint FROM state_election_supervisors ses
-					WHERE ses.state_id = s.id
-					  AND ($1::bigint = 0 OR ses.election_group_id = $1)
-					  AND ($2::int = 0 OR ses.party_id = $2)
-				) AS state_supervisors_count,
-				(
-					SELECT COALESCE(json_agg(json_build_object(
-						'id', u.id,
-						'name', u.full_name,
-						'avatar', COALESCE(u.avatar, '')
-					)), '[]'::json)
-					FROM (
-						SELECT u.id, u.first_name, u.last_name, u.avatar
-						FROM state_election_supervisors ses
-						JOIN users u ON u.id = ses.user_id
-						WHERE ses.state_id = s.id
-						  AND ($1::bigint = 0 OR ses.election_group_id = $1)
-						  AND ($2::int = 0 OR ses.party_id = $2)
-						LIMIT 4
-					) u
-				) AS supervisors
-			FROM c_states s
-			LEFT JOIN (
-				SELECT
-					state_id,
-					SUM(pu_agents_count)::bigint AS pu_agents_count
-				FROM election_group_polling_units
-				WHERE ($1::bigint = 0 OR election_group_id = $1)
-				GROUP BY state_id
-			) egs ON egs.state_id = s.id
-			WHERE s.country_id = $3
-			ORDER BY s.name ASC`
-		args = []interface{}{electionGroupID, partyID, constants.NigeriaCountryID}
-	}
-
-	// Verify database connection pool
-	if h.pool == nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Database connection pool not initialized")
-		return
-	}
-
-	// Execute coverage query
-	rows, err := h.pool.Query(ctx, query, args...)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to query agent coverage breakdown: "+err.Error())
-		return
-	}
-	defer rows.Close()
-
-	var units []map[string]interface{}
-
-	// Scan polling unit results
-	if unitType == "polling_units" {
-		for rows.Next() {
-			var (
-				id            int64
-				name, code    string
-				puAgentsCount int64
-				agentsBytes   []byte
-			)
-
-			if err := rows.Scan(
-				&id, &name, &code,
-				&puAgentsCount,
-				&agentsBytes,
-			); err != nil {
-				continue
-			}
-
-			// Unmarshal PU agents list
-			var agents []map[string]interface{}
-			if len(agentsBytes) > 0 {
-				_ = json.Unmarshal(agentsBytes, &agents)
-			}
-
-			unit := map[string]interface{}{
-				"id":             id,
-				"name":           name,
-				"code":           code,
-				"polling_agents": strconv.FormatInt(puAgentsCount, 10),
-				"pu_agents":      agents,
-				"supervisors":    agents,
-			}
-			units = append(units, unit)
+		// Query states, aggregated agent counts, and state supervisors via sqlc
+		stateRows, err := h.service.GetAgentCoverageStates(ctx, queries.GetAgentCoverageStatesParams{
+			Column1:   int64(electionGroupID),
+			Column2:   int32(partyID),
+			CountryID: constants.NigeriaCountryID,
+		})
+		if err != nil {
+			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to query agent coverage breakdown: "+err.Error())
+			return
 		}
-		// Scan higher tiers (wards, LGAs, states)
-	} else {
-		for rows.Next() {
-			var (
-				id                    int64
-				name, code            string
-				puAgentsCount         int64
-				totalPUs              int64
-				wardSupervisorsCount  int64
-				totalWards            int64
-				lgaSupervisorsCount   int64
-				totalLGAs             int64
-				stateSupervisorsCount int64
-				supervisorsBytes      []byte
-			)
 
-			if err := rows.Scan(
-				&id, &name, &code,
-				&puAgentsCount, &totalPUs,
-				&wardSupervisorsCount, &totalWards,
-				&lgaSupervisorsCount, &totalLGAs,
-				&stateSupervisorsCount,
-				&supervisorsBytes,
-			); err != nil {
-				continue
-			}
-
-			// Unmarshal supervisors list
+		for _, r := range stateRows {
 			var supervisors []map[string]interface{}
-			if len(supervisorsBytes) > 0 {
-				_ = json.Unmarshal(supervisorsBytes, &supervisors)
+			if len(r.Supervisors) > 0 {
+				_ = json.Unmarshal(r.Supervisors, &supervisors)
 			}
-
-			// Format polling agent coverage percentage (target = 2 agents per PU)
-			targetPUAgents := totalPUs * 2
+			targetPUAgents := r.TotalPus * 2
 			if targetPUAgents <= 0 {
-				targetPUAgents = totalPUs
+				targetPUAgents = r.TotalPus
 			}
-			puAgentsStr := formatPctStr(puAgentsCount, targetPUAgents)
-
-			// Format ward supervisor count / percentage
-			var wardSupervisorsStr string
-			if unitType == "wards" {
-				wardSupervisorsStr = strconv.FormatInt(wardSupervisorsCount, 10)
-			} else {
-				wardSupervisorsStr = formatPctStr(wardSupervisorsCount, totalWards)
-			}
-
-			// Format LGA supervisor count / percentage
-			var lgaSupervisorsStr string
-			if unitType == "lgas" {
-				lgaSupervisorsStr = strconv.FormatInt(lgaSupervisorsCount, 10)
-			} else if unitType == "wards" {
-				lgaSupervisorsStr = ""
-			} else {
-				lgaSupervisorsStr = formatPctStr(lgaSupervisorsCount, totalLGAs)
-			}
-
-			// Format state supervisor count / percentage
-			var stateSupervisorsStr string
-			if unitType == "states" {
-				stateSupervisorsStr = strconv.FormatInt(stateSupervisorsCount, 10)
-			} else {
-				stateSupervisorsStr = ""
-			}
-
-			unit := map[string]interface{}{
-				"id":                id,
-				"name":              name,
-				"code":              code,
-				"polling_agents":    puAgentsStr,
-				"ward_supervisors":  wardSupervisorsStr,
-				"lga_supervisors":   lgaSupervisorsStr,
-				"state_supervisors": stateSupervisorsStr,
+			units = append(units, map[string]interface{}{
+				"id":                r.ID,
+				"name":              r.Name,
+				"code":              r.Code,
+				"polling_agents":    formatPctStr(r.PuAgentsCount, targetPUAgents),
+				"ward_supervisors":  formatPctStr(r.WardSupervisorsCount, r.TotalWards),
+				"lga_supervisors":   formatPctStr(r.LgaSupervisorsCount, r.TotalLgas),
+				"state_supervisors": strconv.FormatInt(r.StateSupervisorsCount, 10),
 				"supervisors":       supervisors,
 				"pu_agents":         supervisors,
-			}
-			units = append(units, unit)
+			})
 		}
 	}
 

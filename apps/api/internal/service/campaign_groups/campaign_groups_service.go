@@ -234,7 +234,14 @@ func (s *CampaignGroupsService) syncPartyOfficialsToGroup(ctx context.Context, p
 		activeUserIDs = append(activeUserIDs, official.UserID)
 
 		// Party officials have null election_group_id as their tenure is chapter-bound
-		_, err := s.AddCampaignGroupMember(ctx, partyID, pgtype.Int4{Valid: false}, group.ID, official.UserID, "party_official", true)
+		_, err := s.AddCampaignGroupMember(ctx, AddCampaignGroupMemberParams{
+			PartyID:         partyID,
+			ElectionGroupID: pgtype.Int4{Valid: false},
+			GroupID:         group.ID,
+			UserID:          official.UserID,
+			Role:            "party_official",
+			CanBroadcast:    true,
+		})
 		if err != nil {
 			slog.Warn("failed to add party official to campaign group", "userID", official.UserID, "groupID", group.ID, "error", err)
 			continue
@@ -257,21 +264,34 @@ func (s *CampaignGroupsService) syncPartyOfficialsToGroup(ctx context.Context, p
 	return result, nil
 }
 
+// AddCampaignGroupMemberParams contains the parameters for adding or updating a campaign group member.
+type AddCampaignGroupMemberParams struct {
+	PartyID         int16
+	ElectionGroupID pgtype.Int4
+	GroupID         int64
+	UserID          int64
+	Role            string
+	CanBroadcast    bool
+}
+
+// AddCampaignGroupMemberInput is an alias for AddCampaignGroupMemberParams.
+type AddCampaignGroupMemberInput = AddCampaignGroupMemberParams
+
 // AddCampaignGroupMember adds or updates a member in a campaign group and invalidates the cached group member roster.
-func (s *CampaignGroupsService) AddCampaignGroupMember(ctx context.Context, partyID int16, electionGroupID pgtype.Int4, groupID int64, userID int64, role string, canBroadcast bool) (queries.CampaignGroupMember, error) {
+func (s *CampaignGroupsService) AddCampaignGroupMember(ctx context.Context, params AddCampaignGroupMemberParams) (queries.CampaignGroupMember, error) {
 	member, err := s.queries.AddCampaignGroupMember(ctx, queries.AddCampaignGroupMemberParams{
-		PartyID:         partyID,
-		ElectionGroupID: electionGroupID,
-		GroupID:         groupID,
-		UserID:          userID,
-		Role:            role,
-		CanBroadcast:    canBroadcast,
+		PartyID:         params.PartyID,
+		ElectionGroupID: params.ElectionGroupID,
+		GroupID:         params.GroupID,
+		UserID:          params.UserID,
+		Role:            params.Role,
+		CanBroadcast:    params.CanBroadcast,
 	})
 	if err != nil {
 		return queries.CampaignGroupMember{}, err
 	}
 
-	s.InvalidateGroupMembersCache(ctx, groupID)
+	s.InvalidateGroupMembersCache(ctx, params.GroupID)
 	return member, nil
 }
 
@@ -385,7 +405,14 @@ func (s *CampaignGroupsService) EnsureElectionCandidateInGroup(ctx context.Conte
 		return nil, fmt.Errorf("failed to ensure campaign group for election %d: %w", election.ID, err)
 	}
 
-	_, err = s.AddCampaignGroupMember(ctx, partyID, utils.PgInt4FromPositive(election.ElectionGroupID), group.ID, candidateID, "candidate", true)
+	_, err = s.AddCampaignGroupMember(ctx, AddCampaignGroupMemberParams{
+		PartyID:         partyID,
+		ElectionGroupID: utils.PgInt4FromPositive(election.ElectionGroupID),
+		GroupID:         group.ID,
+		UserID:          candidateID,
+		Role:            "candidate",
+		CanBroadcast:    true,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to add candidate %d to campaign group %d: %w", candidateID, group.ID, err)
 	}
@@ -413,6 +440,28 @@ func (s *CampaignGroupsService) RemoveCandidateFromElectionGroup(ctx context.Con
 	return nil
 }
 
+// RemoveAgentFromPartyCampaignGroups revokes agent/supervisor membership across all campaign groups for the party.
+func (s *CampaignGroupsService) RemoveAgentFromPartyCampaignGroups(ctx context.Context, partyID int16, userID int64) error {
+	groupIDs, err := s.queries.RemoveAgentCampaignGroupMembers(ctx, queries.RemoveAgentCampaignGroupMembersParams{
+		PartyID: partyID,
+		UserID:  userID,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to remove agent from campaign groups: %w", err)
+	}
+
+	for _, groupID := range groupIDs {
+		s.InvalidateGroupMembersCache(ctx, groupID)
+	}
+
+	return nil
+}
+
+// RemoveAgentFromElectionGroup revokes agent/supervisor membership across all campaign groups for the party.
+func (s *CampaignGroupsService) RemoveAgentFromElectionGroup(ctx context.Context, partyID int16, _ int32, userID int64) error {
+	return s.RemoveAgentFromPartyCampaignGroups(ctx, partyID, userID)
+}
+
 type EnsureAgentCampaignInGroupInput struct {
 	PartyID         int16
 	ElectionGroupID int32
@@ -430,7 +479,10 @@ type EnsureAgentCampaignGroupInput = EnsureAgentCampaignInGroupInput
 // EnsureAgentCampaignInGroup provisions or resolves the campaign group for an approved supervisor or polling agent,
 // enrolls the user as a member with their operational role, and ensures party officials at that tier are populated.
 func (s *CampaignGroupsService) EnsureAgentCampaignInGroup(ctx context.Context, input EnsureAgentCampaignInGroupInput) (*queries.CampaignGroup, error) {
+	// Default to ward scope (used for polling unit agents and ward supervisors)
 	scope := "ward"
+
+	// Resolve campaign group scope tier based on assigned role
 	switch input.Role {
 	case "state_election_supervisor":
 		scope = "state"
@@ -438,29 +490,52 @@ func (s *CampaignGroupsService) EnsureAgentCampaignInGroup(ctx context.Context, 
 		scope = "lga"
 	}
 
-	sID := utils.PgInt4FromPositive(input.StateID)
-	var lID, wID pgtype.Int4
+	// Prepare geographic identifiers based on the target hierarchy scope
+	stateID := utils.PgInt4FromPositive(input.StateID)
+	var lgaID, wardID pgtype.Int4
 	if scope == "lga" || scope == "ward" {
-		lID = utils.PgInt4FromPositive(input.LgaID)
+		lgaID = utils.PgInt4FromPositive(input.LgaID)
 	}
 	if scope == "ward" {
-		wID = utils.PgInt4FromPositive(input.WardID)
+		wardID = utils.PgInt4FromPositive(input.WardID)
 	}
 
+	// Retrieve existing campaign group or create one for this territory
 	group, err := s.GetOrCreateCampaignGroup(ctx, GetOrCreateCampaignGroupInput{
 		PartyID:         input.PartyID,
 		ElectionGroupID: input.ElectionGroupID,
 		Scope:           scope,
-		StateID:         sID,
-		LgaID:           lID,
-		WardID:          wID,
+		StateID:         stateID,
+		LgaID:           lgaID,
+		WardID:          wardID,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	// Add or update user as group member
-	_, err = s.AddCampaignGroupMember(ctx, input.PartyID, utils.PgInt4FromPositive(input.ElectionGroupID), group.ID, input.UserID, input.Role, true)
+	// Remove user from any other campaign groups in this party (excluding this target group)
+	oldGroupIDs, err := s.queries.RemoveCampaignGroupMembersByElectionGroupExcept(ctx, queries.RemoveCampaignGroupMembersByElectionGroupExceptParams{
+		PartyID: input.PartyID,
+		UserID:  input.UserID,
+		GroupID: group.ID,
+	})
+	if err != nil {
+		slog.Warn("failed to clear previous campaign group memberships", "userID", input.UserID, "error", err)
+	} else {
+		for _, oldGroupID := range oldGroupIDs {
+			s.InvalidateGroupMembersCache(ctx, oldGroupID)
+		}
+	}
+
+	// Enroll or update the agent as an active member with their assigned role
+	_, err = s.AddCampaignGroupMember(ctx, AddCampaignGroupMemberParams{
+		PartyID:         input.PartyID,
+		ElectionGroupID: utils.PgInt4FromPositive(input.ElectionGroupID),
+		GroupID:         group.ID,
+		UserID:          input.UserID,
+		Role:            input.Role,
+		CanBroadcast:    true,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to add member %d to campaign group %d: %w", input.UserID, group.ID, err)
 	}

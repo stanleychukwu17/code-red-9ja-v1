@@ -50,6 +50,7 @@ const (
 	ActionRejectApplication                 = "reject_application"                  // Action when an agent application is rejected
 	ActionApproveApplication                = "approve_application"                 // Action when an agent application is approved
 	ActionCancelAgentApplication            = "cancel_agent_application"            // Action when an agent application is cancelled by an administrator
+	ActionChangeAgentRole                   = "change_agent_role"                   // Action when an agent's role or assignment is updated by an administrator
 
 	// -- Actor Roles --
 	ActorRoleSuperAdmin      = "super_admin"       // A super administrator of the system

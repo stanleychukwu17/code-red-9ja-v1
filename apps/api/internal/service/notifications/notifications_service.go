@@ -59,6 +59,8 @@ type NotificationsService interface {
 	NotifyAgentApplicationRejected(ctx context.Context, params NotifyAgentApplicationRejectedParams)
 	NotifyAgentApplicationApproved(ctx context.Context, params NotifyAgentApplicationApprovedParams)
 	NotifyAgentApplicationCancelled(ctx context.Context, params NotifyAgentApplicationCancelledParams)
+	NotifyAgentAssignmentRevoked(ctx context.Context, params NotifyAgentAssignmentRevokedParams)
+	NotifyAgentRoleChanged(ctx context.Context, params NotifyAgentRoleChangedParams)
 }
 
 type service struct {
@@ -281,6 +283,13 @@ type NotifyAgentApplicationCancelledParams struct {
 	Role            string
 }
 
+type NotifyAgentAssignmentRevokedParams struct {
+	RecipientUserID int64
+	PartyID         int16
+	ElectionGroupID int32
+	Role            string
+}
+
 type NotifyAgentApplicationApprovedParams struct {
 	ApplicationID   int64
 	RecipientUserID int64
@@ -289,6 +298,18 @@ type NotifyAgentApplicationApprovedParams struct {
 	ElectionGroupID int32
 	PollingUnitID   *int32
 	Role            string
+}
+
+type NotifyAgentRoleChangedParams struct {
+	RecipientUserID int64
+	PartyID         int16
+	ElectionGroupID int32
+	OldRole         string
+	NewRole         string
+	StateID         *int16
+	LgaID           *int32
+	WardID          *int32
+	PollingUnitID   *int32
 }
 
 type NotifyPartyAgentPaymentAllocationUpdatedParams struct {
@@ -1031,6 +1052,43 @@ func (s *service) NotifyAgentApplicationCancelled(ctx context.Context, params No
 			Set("role", params.Role).
 			Set("party_id", params.PartyID).
 			Set("election_group_id", params.ElectionGroupID),
+	})
+}
+
+// NotifyAgentAssignmentRevoked dispatches a notification to an agent when their assignment is revoked.
+func (s *service) NotifyAgentAssignmentRevoked(ctx context.Context, params NotifyAgentAssignmentRevokedParams) {
+	partyID := params.PartyID
+	s.CreateNotificationAsync(ctx, CreateNotificationInput{
+		RecipientUserID: params.RecipientUserID,
+		PartyID:         &partyID,
+		Category:        constants.NotificationCategoryParty,
+		Type:            constants.NotificationTypeAgentAssignmentRevoked,
+		Priority:        constants.NotificationPriorityNormal,
+		Metadata: utils.NewMetadata().
+			Set("role", params.Role).
+			Set("party_id", params.PartyID).
+			Set("election_group_id", params.ElectionGroupID),
+	})
+}
+
+// NotifyAgentRoleChanged dispatches a notification to an agent when their assignment role or location changes.
+func (s *service) NotifyAgentRoleChanged(ctx context.Context, params NotifyAgentRoleChangedParams) {
+	partyID := params.PartyID
+	s.CreateNotificationAsync(ctx, CreateNotificationInput{
+		RecipientUserID: params.RecipientUserID,
+		PartyID:         &partyID,
+		Category:        constants.NotificationCategoryParty,
+		Type:            constants.NotificationTypeAgentRoleChanged,
+		Priority:        constants.NotificationPriorityNormal,
+		Metadata: utils.NewMetadata().
+			Set("old_role", params.OldRole).
+			Set("new_role", params.NewRole).
+			Set("party_id", params.PartyID).
+			Set("election_group_id", params.ElectionGroupID).
+			SetIfPresent("state_id", params.StateID).
+			SetIfPresent("lga_id", params.LgaID).
+			SetIfPresent("ward_id", params.WardID).
+			SetIfPresent("polling_unit_id", params.PollingUnitID),
 	})
 }
 

@@ -689,18 +689,9 @@ func (s *Service) GetPollingUnitRecommendations(ctx context.Context, partyID int
 	return finalRows, nil
 }
 
-func (s *Service) RejectApplication(ctx context.Context, id int64, reason string) (queries.PartyAgentApplication, error) {
-	app, err := s.queries.GetApplicationByID(ctx, id)
-	if err != nil {
-		return queries.PartyAgentApplication{}, err
-	}
-
-	if app.Status != "pending" {
-		return queries.PartyAgentApplication{}, errors.New("application is already processed")
-	}
-
+func (s *Service) RejectApplication(ctx context.Context, app queries.PartyAgentApplication, reason string) (queries.PartyAgentApplication, error) {
 	updatedApp, err := s.queries.UpdateApplicationStatus(ctx, queries.UpdateApplicationStatusParams{
-		ID:             id,
+		ID:             app.ID,
 		Status:         "rejected",
 		RejectedReason: pgtype.Text{String: reason, Valid: reason != ""},
 	})
@@ -710,23 +701,14 @@ func (s *Service) RejectApplication(ctx context.Context, id int64, reason string
 
 	// Invalidate active agent application cache for the applicant and application entity cache
 	_ = s.InvalidateUserHasActiveAgentApp(ctx, app.UserID)
-	_ = s.InvalidateApplicationByID(ctx, id)
+	_ = s.InvalidateApplicationByID(ctx, app.ID)
 
 	return updatedApp, nil
 }
 
-func (s *Service) CancelApplication(ctx context.Context, id int64) (queries.PartyAgentApplication, error) {
-	app, err := s.queries.GetApplicationByID(ctx, id)
-	if err != nil {
-		return queries.PartyAgentApplication{}, err
-	}
-
-	if app.Status != "pending" {
-		return queries.PartyAgentApplication{}, errors.New("application is already processed")
-	}
-
+func (s *Service) CancelApplication(ctx context.Context, app queries.PartyAgentApplication) (queries.PartyAgentApplication, error) {
 	updatedApp, err := s.queries.UpdateApplicationStatus(ctx, queries.UpdateApplicationStatusParams{
-		ID:             id,
+		ID:             app.ID,
 		Status:         "cancelled",
 		RejectedReason: pgtype.Text{Valid: false},
 	})
@@ -736,9 +718,89 @@ func (s *Service) CancelApplication(ctx context.Context, id int64) (queries.Part
 
 	// Invalidate active agent application cache for the applicant and application entity cache
 	_ = s.InvalidateUserHasActiveAgentApp(ctx, app.UserID)
-	_ = s.InvalidateApplicationByID(ctx, id)
+	_ = s.InvalidateApplicationByID(ctx, app.ID)
 
 	return updatedApp, nil
+}
+
+// checkRoleLocationCapacity verifies that the target location has not exceeded the party's recruitment target for the specified role
+func checkRoleLocationCapacity(ctx context.Context, txQueries *queries.Queries, party queries.Party, electionGroupID int32, roleType string, stateID int16, lgaID, wardID, pollingUnitID int32) error {
+	// Parse party's customized recruitment quotas (e.g. {"polling_agent": 2, "ward_election_supervisor": 1})
+	var targets map[string]int
+	if len(party.AgentAcquisitionTargets) > 0 {
+		_ = json.Unmarshal(party.AgentAcquisitionTargets, &targets)
+	}
+
+	// Resolve target quota for this role (defaults: 2 for polling agent, 1 for supervisors)
+	target := 1
+	if t, ok := targets[roleType]; ok && t > 0 {
+		target = t
+	} else if roleType == "polling_agent" {
+		target = 2
+	}
+
+	partyID := party.ID
+
+	// Query active deployments at the specific station level and compare against quota
+	switch roleType {
+	case "polling_agent":
+		// Count existing polling unit agents assigned for this party and election
+		count, err := txQueries.CountPollingUnitAssignments(ctx, queries.CountPollingUnitAssignmentsParams{
+			PollingUnitID:   pollingUnitID,
+			PartyID:         partyID,
+			ElectionGroupID: electionGroupID,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to check polling unit agent capacity: %w", err)
+		}
+		if count >= int32(target) {
+			return fmt.Errorf("polling unit has reached maximum capacity (%d/%d agents assigned for %s)", count, target, party.ShortName)
+		}
+
+	case "ward_election_supervisor":
+		// Count existing ward supervisors assigned for this party and election in this ward
+		count, err := txQueries.GetWardSupervisorCount(ctx, queries.GetWardSupervisorCountParams{
+			ElectionGroupID: electionGroupID,
+			WardID:          wardID,
+			PartyID:         partyID,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to check ward supervisor capacity: %w", err)
+		}
+		if count >= int32(target) {
+			return fmt.Errorf("ward has reached maximum capacity (%d/%d supervisor(s) assigned for %s)", count, target, party.ShortName)
+		}
+
+	case "lga_election_supervisor":
+		// Count existing LGA supervisors assigned for this party and election in this LGA
+		count, err := txQueries.GetLGASupervisorCount(ctx, queries.GetLGASupervisorCountParams{
+			ElectionGroupID: electionGroupID,
+			LgaID:           lgaID,
+			PartyID:         partyID,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to check LGA supervisor capacity: %w", err)
+		}
+		if count >= int32(target) {
+			return fmt.Errorf("LGA has reached maximum capacity (%d/%d supervisor(s) assigned for %s)", count, target, party.ShortName)
+		}
+
+	case "state_election_supervisor":
+		// Count existing state supervisors assigned for this party and election in this state
+		count, err := txQueries.GetStateSupervisorCount(ctx, queries.GetStateSupervisorCountParams{
+			ElectionGroupID: electionGroupID,
+			StateID:         stateID,
+			PartyID:         partyID,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to check state supervisor capacity: %w", err)
+		}
+		if count >= int32(target) {
+			return fmt.Errorf("state has reached maximum capacity (%d/%d supervisor(s) assigned for %s)", count, target, party.ShortName)
+		}
+	}
+
+	return nil
 }
 
 type ApproveApplicationInput struct {
@@ -797,18 +859,6 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 		return updatedApp, errors.New("cancelled_past_election")
 	}
 
-	// Deduct 1 slot from the party's slots balance. Once accepted, it is permanently consumed (no refund).
-	_, err = txQueries.DeductPartySlots(ctx, queries.DeductPartySlotsParams{
-		Slots: 1,
-		ID:    app.PartyID,
-	})
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return queries.PartyAgentApplication{}, errors.New("insufficient slots: please purchase slots to accept applications")
-		}
-		return queries.PartyAgentApplication{}, fmt.Errorf("failed to deduct slots: %w", err)
-	}
-
 	// Create assignment based on role
 	roleType := input.RoleType
 	if roleType == "" {
@@ -859,10 +909,27 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 		wardID = pu.WardID
 	}
 
-	// Deduct payment based on role payment allocation
+	// Fetch party configuration
 	party, err := s.partiesService.GetPartyByID(ctx, int16(app.PartyID))
 	if err != nil {
 		return queries.PartyAgentApplication{}, fmt.Errorf("failed to fetch party: %w", err)
+	}
+
+	// Verify that the target location has recruitment capacity remaining for this role
+	if err := checkRoleLocationCapacity(ctx, txQueries, party, app.ElectionGroupID, roleType, stateID, lgaID, wardID, pollingUnitID); err != nil {
+		return queries.PartyAgentApplication{}, err
+	}
+
+	// Deduct 1 slot from the party's slots balance. Once accepted, it is permanently consumed (no refund).
+	_, err = txQueries.DeductPartySlots(ctx, queries.DeductPartySlotsParams{
+		Slots: 1,
+		ID:    app.PartyID,
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return queries.PartyAgentApplication{}, errors.New("insufficient slots: please purchase slots to accept applications")
+		}
+		return queries.PartyAgentApplication{}, fmt.Errorf("failed to deduct slots: %w", err)
 	}
 
 	// Calculate the required payment allocation for this role and jurisdiction
@@ -1180,45 +1247,36 @@ func (s *Service) ChangeAgentRole(ctx context.Context, input ChangeAgentRoleInpu
 		if stateID <= 0 || lgaID <= 0 || wardID <= 0 {
 			return nil, errors.New("state_id, lga_id, and ward_id are required for ward supervisor")
 		}
+		pollingUnitID = 0
 	case "lga_election_supervisor":
 		if stateID <= 0 || lgaID <= 0 {
 			return nil, errors.New("state_id and lga_id are required for LGA supervisor")
 		}
+		wardID = 0
+		pollingUnitID = 0
 	case "state_election_supervisor":
 		if stateID <= 0 {
 			return nil, errors.New("state_id is required for state supervisor")
 		}
+		lgaID = 0
+		wardID = 0
+		pollingUnitID = 0
 	default:
 		return nil, fmt.Errorf("invalid new_role_type: %s", input.NewRoleType)
 	}
 
-	// Resolve existing application details via GetApplicationByID (utilizing Redis cache)
-	var app queries.PartyAgentApplication
-	var hasApp bool
-
-	if input.ApplicationID > 0 {
-		if existingApp, err := s.GetApplicationByID(ctx, input.ApplicationID); err == nil {
-			app = existingApp
-			hasApp = true
-		}
+	// Require valid application ID and fetch existing application details
+	if input.ApplicationID <= 0 {
+		return nil, errors.New("application_id is required")
 	}
-	if !hasApp && input.UserID > 0 && input.ElectionGroupID > 0 && input.PartyID > 0 {
-		var appID int64
-		err := s.pool.QueryRow(ctx, `
-			SELECT id FROM party_agent_applications
-			WHERE user_id = $1 AND election_group_id = $2 AND party_id = $3
-			LIMIT 1
-		`, input.UserID, input.ElectionGroupID, input.PartyID).Scan(&appID)
-		if err == nil && appID > 0 {
-			if existingApp, err := s.GetApplicationByID(ctx, appID); err == nil {
-				app = existingApp
-				hasApp = true
-			}
-		}
+
+	app, err := s.GetApplicationByID(ctx, input.ApplicationID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch application: %w", err)
 	}
 
 	// Early return without DB transaction if current assignment is already identical
-	if hasApp && app.Role == newRole {
+	if app.Role == newRole {
 		isSame := false
 		switch newRole {
 		case "polling_agent":
@@ -1233,6 +1291,8 @@ func (s *Service) ChangeAgentRole(ctx context.Context, input ChangeAgentRoleInpu
 		case "state_election_supervisor":
 			isSame = app.StateID == stateID
 		}
+
+		// if nothing changed, return early
 		if isSame {
 			return &ChangeAgentRoleResult{
 				UserID:  input.UserID,
@@ -1248,137 +1308,122 @@ func (s *Service) ChangeAgentRole(ctx context.Context, input ChangeAgentRoleInpu
 	}
 	defer tx.Rollback(ctx)
 
-	// Clear previous assignments across all assignment tables
-	if _, err := tx.Exec(ctx, "DELETE FROM polling_unit_assignments WHERE user_id = $1 AND election_group_id = $2 AND party_id = $3", input.UserID, input.ElectionGroupID, input.PartyID); err != nil {
-		return nil, fmt.Errorf("failed to clear old polling unit assignment: %w", err)
-	}
-	if _, err := tx.Exec(ctx, "DELETE FROM ward_election_supervisors WHERE user_id = $1 AND election_group_id = $2 AND party_id = $3", input.UserID, input.ElectionGroupID, input.PartyID); err != nil {
-		return nil, fmt.Errorf("failed to clear old ward supervisor assignment: %w", err)
-	}
-	if _, err := tx.Exec(ctx, "DELETE FROM lga_election_supervisors WHERE user_id = $1 AND election_group_id = $2 AND party_id = $3", input.UserID, input.ElectionGroupID, input.PartyID); err != nil {
-		return nil, fmt.Errorf("failed to clear old LGA supervisor assignment: %w", err)
-	}
-	if _, err := tx.Exec(ctx, "DELETE FROM state_election_supervisors WHERE user_id = $1 AND election_group_id = $2 AND party_id = $3", input.UserID, input.ElectionGroupID, input.PartyID); err != nil {
-		return nil, fmt.Errorf("failed to clear old state supervisor assignment: %w", err)
+	txQueries := s.queries.WithTx(tx)
+
+	// Fetch party configuration
+	party, err := s.partiesService.GetPartyByID(ctx, input.PartyID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch party: %w", err)
 	}
 
-	// Insert new assignment record into appropriate table
+	// Verify that the target location has recruitment capacity remaining for the new role
+	if err := checkRoleLocationCapacity(ctx, txQueries, party, input.ElectionGroupID, newRole, stateID, lgaID, wardID, pollingUnitID); err != nil {
+		return nil, err
+	}
+
+	// Clear previous assignment from the table corresponding to the agent's current role
+	switch app.Role {
+	case "polling_agent":
+		if _, err := tx.Exec(ctx, "DELETE FROM polling_unit_assignments WHERE user_id = $1 AND election_group_id = $2 AND party_id = $3", input.UserID, input.ElectionGroupID, input.PartyID); err != nil {
+			return nil, fmt.Errorf("failed to clear old polling unit assignment: %w", err)
+		}
+	case "ward_election_supervisor":
+		if _, err := tx.Exec(ctx, "DELETE FROM ward_election_supervisors WHERE user_id = $1 AND election_group_id = $2 AND party_id = $3", input.UserID, input.ElectionGroupID, input.PartyID); err != nil {
+			return nil, fmt.Errorf("failed to clear old ward supervisor assignment: %w", err)
+		}
+	case "lga_election_supervisor":
+		if _, err := tx.Exec(ctx, "DELETE FROM lga_election_supervisors WHERE user_id = $1 AND election_group_id = $2 AND party_id = $3", input.UserID, input.ElectionGroupID, input.PartyID); err != nil {
+			return nil, fmt.Errorf("failed to clear old LGA supervisor assignment: %w", err)
+		}
+	case "state_election_supervisor":
+		if _, err := tx.Exec(ctx, "DELETE FROM state_election_supervisors WHERE user_id = $1 AND election_group_id = $2 AND party_id = $3", input.UserID, input.ElectionGroupID, input.PartyID); err != nil {
+			return nil, fmt.Errorf("failed to clear old state supervisor assignment: %w", err)
+		}
+	}
+
+	// Resolve assigner and potential remuneration for the new assignment
+	var assignedByVal pgtype.Int8
+	if input.AssignedBy > 0 {
+		assignedByVal = utils.PgInt8FromPositive(input.AssignedBy)
+	}
+	potentialPaymentKobo := resolvePotentialPaymentKobo(party.AgentPaymentAllocationKobo, newRole, stateID)
+
+	// Insert new assignment record using type-safe sqlc queries
 	switch newRole {
 	case "polling_agent":
-		_, err = tx.Exec(ctx, `
-			INSERT INTO polling_unit_assignments (user_id, party_id, polling_unit_id, election_group_id, role_type, assigned_by)
-			VALUES ($1, $2, $3, $4, 'polling_agent', $5)
-			ON CONFLICT (user_id, election_group_id) DO UPDATE
-			SET polling_unit_id = EXCLUDED.polling_unit_id,
-			    party_id = EXCLUDED.party_id,
-			    role_type = 'polling_agent',
-			    updated_at = NOW()`,
-			input.UserID, input.PartyID, pollingUnitID, input.ElectionGroupID, input.AssignedBy)
+		_, err = txQueries.CreateAssignment(ctx, queries.CreateAssignmentParams{
+			UserID:               input.UserID,
+			PollingUnitID:        pollingUnitID,
+			ElectionGroupID:      input.ElectionGroupID,
+			PartyID:              input.PartyID,
+			StateID:              stateID,
+			LgaID:                lgaID,
+			WardID:               wardID,
+			RoleType:             utils.PgTextFromString(newRole),
+			AssignedBy:           assignedByVal,
+			PotentialPaymentKobo: potentialPaymentKobo,
+		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to assign polling agent: %w", err)
 		}
 
 	case "ward_election_supervisor":
-		_, err = tx.Exec(ctx, `
-			INSERT INTO ward_election_supervisors (user_id, state_id, lga_id, ward_id, election_group_id, party_id, role_type, assigned_by)
-			VALUES ($1, $2, $3, $4, $5, $6, 'ward_election_supervisor', $7)
-			ON CONFLICT (user_id, election_group_id) DO UPDATE
-			SET state_id = EXCLUDED.state_id,
-			    lga_id = EXCLUDED.lga_id,
-			    ward_id = EXCLUDED.ward_id,
-			    party_id = EXCLUDED.party_id,
-			    updated_at = NOW()`,
-			input.UserID, stateID, lgaID, wardID, input.ElectionGroupID, input.PartyID, input.AssignedBy)
+		_, err = txQueries.CreateWardSupervisor(ctx, queries.CreateWardSupervisorParams{
+			UserID:               input.UserID,
+			StateID:              stateID,
+			LgaID:                lgaID,
+			WardID:               wardID,
+			ElectionGroupID:      input.ElectionGroupID,
+			PartyID:              input.PartyID,
+			RoleType:             utils.PgTextFromString(newRole),
+			AssignedBy:           assignedByVal,
+			PotentialPaymentKobo: potentialPaymentKobo,
+		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to assign ward supervisor: %w", err)
 		}
 
 	case "lga_election_supervisor":
-		_, err = tx.Exec(ctx, `
-			INSERT INTO lga_election_supervisors (user_id, state_id, lga_id, election_group_id, party_id, role_type, assigned_by)
-			VALUES ($1, $2, $3, $4, $5, 'lga_election_supervisor', $6)
-			ON CONFLICT (user_id, election_group_id) DO UPDATE
-			SET state_id = EXCLUDED.state_id,
-			    lga_id = EXCLUDED.lga_id,
-			    party_id = EXCLUDED.party_id,
-			    updated_at = NOW()`,
-			input.UserID, stateID, lgaID, input.ElectionGroupID, input.PartyID, input.AssignedBy)
+		_, err = txQueries.CreateLgaSupervisor(ctx, queries.CreateLgaSupervisorParams{
+			UserID:               input.UserID,
+			StateID:              stateID,
+			LgaID:                lgaID,
+			ElectionGroupID:      input.ElectionGroupID,
+			PartyID:              input.PartyID,
+			RoleType:             utils.PgTextFromString(newRole),
+			AssignedBy:           assignedByVal,
+			PotentialPaymentKobo: potentialPaymentKobo,
+		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to assign LGA supervisor: %w", err)
 		}
 
 	case "state_election_supervisor":
-		_, err = tx.Exec(ctx, `
-			INSERT INTO state_election_supervisors (user_id, state_id, election_group_id, party_id, role_type, assigned_by)
-			VALUES ($1, $2, $3, $4, 'state_election_supervisor', $5)
-			ON CONFLICT (user_id, election_group_id) DO UPDATE
-			SET state_id = EXCLUDED.state_id,
-			    party_id = EXCLUDED.party_id,
-			    updated_at = NOW()`,
-			input.UserID, stateID, input.ElectionGroupID, input.PartyID, input.AssignedBy)
+		_, err = txQueries.CreateStateSupervisor(ctx, queries.CreateStateSupervisorParams{
+			UserID:               input.UserID,
+			StateID:              stateID,
+			ElectionGroupID:      input.ElectionGroupID,
+			PartyID:              input.PartyID,
+			RoleType:             utils.PgTextFromString(newRole),
+			AssignedBy:           assignedByVal,
+			PotentialPaymentKobo: potentialPaymentKobo,
+		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to assign state supervisor: %w", err)
 		}
 	}
 
 	// Keep party_agent_applications synchronized with the new assignment
-	txQueries := s.queries.WithTx(tx)
-	if hasApp {
-		var puID pgtype.Int4
-		if newRole == "polling_agent" && pollingUnitID > 0 {
-			puID = utils.PgInt4FromPositive(pollingUnitID)
-		}
-		var wID pgtype.Int4
-		if (newRole == "ward_election_supervisor" || newRole == "polling_agent") && wardID > 0 {
-			wID = utils.PgInt4FromPositive(wardID)
-		}
-		var lID pgtype.Int4
-		if (newRole == "lga_election_supervisor" || newRole == "ward_election_supervisor" || newRole == "polling_agent") && lgaID > 0 {
-			lID = utils.PgInt4FromPositive(lgaID)
-		}
-
-		_, err = txQueries.UpdateApplicationApproval(ctx, queries.UpdateApplicationApprovalParams{
-			ID:            app.ID,
-			Role:          newRole,
-			PollingUnitID: puID,
-			StateID:       stateID,
-			LgaID:         lID,
-			WardID:        wID,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to update application record: %w", err)
-		}
-	} else {
-		var appPuID *int32
-		if pollingUnitID > 0 && newRole == "polling_agent" {
-			appPuID = &pollingUnitID
-		}
-		var appWardID *int32
-		if wardID > 0 && (newRole == "ward_election_supervisor" || newRole == "polling_agent") {
-			appWardID = &wardID
-		}
-		var appLgaID *int32
-		if lgaID > 0 && (newRole == "lga_election_supervisor" || newRole == "ward_election_supervisor" || newRole == "polling_agent") {
-			appLgaID = &lgaID
-		}
-		var appStateID *int16
-		if stateID > 0 {
-			appStateID = &stateID
-		}
-
-		_, err = tx.Exec(ctx, `
-			UPDATE party_agent_applications
-			SET role = $1,
-			    state_id = COALESCE($2, state_id),
-			    lga_id = $3,
-			    ward_id = $4,
-			    polling_unit_id = $5,
-			    updated_at = NOW()
-			WHERE user_id = $6 AND election_group_id = $7 AND party_id = $8`,
-			newRole, appStateID, appLgaID, appWardID, appPuID, input.UserID, input.ElectionGroupID, input.PartyID)
-		if err != nil {
-			return nil, fmt.Errorf("failed to update application record: %w", err)
-		}
+	_, err = txQueries.UpdateApplicationApproval(ctx, queries.UpdateApplicationApprovalParams{
+		ID:            app.ID,
+		Role:          newRole,
+		PollingUnitID: utils.PgInt4FromPositive(pollingUnitID),
+		StateID:       stateID,
+		LgaID:         utils.PgInt4FromPositive(lgaID),
+		WardID:        utils.PgInt4FromPositive(wardID),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to update application record: %w", err)
 	}
 
 	// Commit transaction
@@ -1387,9 +1432,7 @@ func (s *Service) ChangeAgentRole(ctx context.Context, input ChangeAgentRoleInpu
 	}
 
 	// Invalidate cached application details
-	if hasApp {
-		_ = s.InvalidateApplicationByID(ctx, app.ID)
-	}
+	_ = s.InvalidateApplicationByID(ctx, app.ID)
 
 	return &ChangeAgentRoleResult{
 		UserID:  input.UserID,
@@ -1404,78 +1447,89 @@ type RevokeAgentInput struct {
 	PartyID      int16
 }
 
+// RevokedAgentResult contains the operational identifiers of the revoked agent.
+type RevokedAgentResult struct {
+	UserID          int64
+	PartyID         int16
+	ElectionGroupID int32
+}
+
 // RevokeAgent removes an active polling agent or supervisor assignment
-func (s *Service) RevokeAgent(ctx context.Context, input RevokeAgentInput) error {
+func (s *Service) RevokeAgent(ctx context.Context, input RevokeAgentInput) (*RevokedAgentResult, error) {
 	// Validate standardized role identifier
 	roleType := strings.ToLower(strings.TrimSpace(input.RoleType))
 	switch roleType {
 	case "polling_agent", "ward_election_supervisor", "lga_election_supervisor", "state_election_supervisor":
 		// Standardized role
 	default:
-		return errors.New("invalid role_type parameter")
+		return nil, errors.New("invalid role_type parameter")
 	}
 
+	var partyID int16
+	var electionGroupID int32
+	var userID int64
 	var err error
+
 	switch roleType {
 	case "polling_agent":
-		var partyID int16
 		// Verify assignment exists and matches target party
-		errQuery := s.pool.QueryRow(ctx, "SELECT party_id FROM polling_unit_assignments WHERE id = $1", input.AssignmentID).Scan(&partyID)
+		errQuery := s.pool.QueryRow(ctx, "SELECT party_id, election_group_id, user_id FROM polling_unit_assignments WHERE id = $1", input.AssignmentID).Scan(&partyID, &electionGroupID, &userID)
 		if errQuery != nil {
-			return errors.New("assignment not found")
+			return nil, errors.New("assignment not found")
 		}
 		if input.PartyID > 0 && partyID != input.PartyID {
-			return errors.New("cannot revoke assignment belonging to another party")
+			return nil, errors.New("cannot revoke assignment belonging to another party")
 		}
 		// Delete polling unit assignment record
 		_, err = s.pool.Exec(ctx, "DELETE FROM polling_unit_assignments WHERE id = $1", input.AssignmentID)
 
 	case "ward_election_supervisor":
-		var partyID int16
 		// Verify supervisor exists and matches target party
-		errQuery := s.pool.QueryRow(ctx, "SELECT party_id FROM ward_election_supervisors WHERE id = $1", input.AssignmentID).Scan(&partyID)
+		errQuery := s.pool.QueryRow(ctx, "SELECT party_id, election_group_id, user_id FROM ward_election_supervisors WHERE id = $1", input.AssignmentID).Scan(&partyID, &electionGroupID, &userID)
 		if errQuery != nil {
-			return errors.New("assignment not found")
+			return nil, errors.New("assignment not found")
 		}
 		if input.PartyID > 0 && partyID != input.PartyID {
-			return errors.New("cannot revoke assignment belonging to another party")
+			return nil, errors.New("cannot revoke assignment belonging to another party")
 		}
 		// Delete ward supervisor record
 		_, err = s.pool.Exec(ctx, "DELETE FROM ward_election_supervisors WHERE id = $1", input.AssignmentID)
 
 	case "lga_election_supervisor":
-		var partyID int16
 		// Verify supervisor exists and matches target party
-		errQuery := s.pool.QueryRow(ctx, "SELECT party_id FROM lga_election_supervisors WHERE id = $1", input.AssignmentID).Scan(&partyID)
+		errQuery := s.pool.QueryRow(ctx, "SELECT party_id, election_group_id, user_id FROM lga_election_supervisors WHERE id = $1", input.AssignmentID).Scan(&partyID, &electionGroupID, &userID)
 		if errQuery != nil {
-			return errors.New("assignment not found")
+			return nil, errors.New("assignment not found")
 		}
 		if input.PartyID > 0 && partyID != input.PartyID {
-			return errors.New("cannot revoke assignment belonging to another party")
+			return nil, errors.New("cannot revoke assignment belonging to another party")
 		}
 		// Delete LGA supervisor record
 		_, err = s.pool.Exec(ctx, "DELETE FROM lga_election_supervisors WHERE id = $1", input.AssignmentID)
 
 	case "state_election_supervisor":
-		var partyID int16
 		// Verify supervisor exists and matches target party
-		errQuery := s.pool.QueryRow(ctx, "SELECT party_id FROM state_election_supervisors WHERE id = $1", input.AssignmentID).Scan(&partyID)
+		errQuery := s.pool.QueryRow(ctx, "SELECT party_id, election_group_id, user_id FROM state_election_supervisors WHERE id = $1", input.AssignmentID).Scan(&partyID, &electionGroupID, &userID)
 		if errQuery != nil {
-			return errors.New("assignment not found")
+			return nil, errors.New("assignment not found")
 		}
 		if input.PartyID > 0 && partyID != input.PartyID {
-			return errors.New("cannot revoke assignment belonging to another party")
+			return nil, errors.New("cannot revoke assignment belonging to another party")
 		}
 		// Delete state supervisor record
 		_, err = s.pool.Exec(ctx, "DELETE FROM state_election_supervisors WHERE id = $1", input.AssignmentID)
 
 	default:
-		return errors.New("invalid role_type parameter")
+		return nil, errors.New("invalid role_type parameter")
 	}
 
 	if err != nil {
-		return fmt.Errorf("failed to revoke assignment: %w", err)
+		return nil, fmt.Errorf("failed to revoke assignment: %w", err)
 	}
 
-	return nil
+	return &RevokedAgentResult{
+		UserID:          userID,
+		PartyID:         partyID,
+		ElectionGroupID: electionGroupID,
+	}, nil
 }

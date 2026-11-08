@@ -79,6 +79,14 @@ func Ptr[T any](v T) *T {
 	return &v
 }
 
+// PtrFromPositive returns a pointer to the numeric value if > 0, otherwise nil.
+func PtrFromPositive[T ~int | ~int16 | ~int32 | ~int64](v T) *T {
+	if v > 0 {
+		return &v
+	}
+	return nil
+}
+
 // PtrFromString converts a plain string to an optional string pointer, returning nil if empty.
 func PtrFromString(s string) *string {
 	if s != "" {

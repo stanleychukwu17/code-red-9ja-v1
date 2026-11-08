@@ -23,8 +23,9 @@ type TaskDistributor interface {
 	// Asset cleanup task
 	DistributeTaskDeleteAsset(ctx context.Context, payload *DeleteAssetPayload, opts ...asynq.Option) error
 	DistributeTaskCheckOrphanFile(ctx context.Context, payload *CheckOrphanFilePayload, opts ...asynq.Option) error
-	// Campaign group auto-enrollment
+	// Campaign group auto-enrollment and removal
 	DistributeTaskEnrollAgentInCampaignGroup(ctx context.Context, payload *EnrollAgentInCampaignGroupPayload, opts ...asynq.Option) error
+	DistributeTaskRemoveAgentFromCampaignGroup(ctx context.Context, payload *RemoveAgentFromCampaignGroupPayload, opts ...asynq.Option) error
 }
 
 // RedisTaskDistributor is a task distributor that uses Redis to enqueue tasks.

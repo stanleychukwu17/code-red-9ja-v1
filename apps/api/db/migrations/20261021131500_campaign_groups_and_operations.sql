@@ -48,8 +48,8 @@ CREATE TABLE IF NOT EXISTS campaign_group_members (
   CONSTRAINT uq_campaign_group_member UNIQUE (group_id, user_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_campaign_group_members_user_cycle 
-ON campaign_group_members(user_id, election_group_id, party_id);
+CREATE INDEX IF NOT EXISTS idx_campaign_group_members_party_user 
+ON campaign_group_members(party_id, user_id);
 
 
 -- 3. CAMPAIGN TIMELINE POSTS
