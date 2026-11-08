@@ -270,48 +270,6 @@ type ElectionGroup struct {
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
 }
 
-type ElectionGroupPartiesPollingUnit struct {
-	ElectionGroupID                   int32              `json:"election_group_id"`
-	PollingUnitID                     int32              `json:"polling_unit_id"`
-	PartyID                           int16              `json:"party_id"`
-	StateID                           pgtype.Int2        `json:"state_id"`
-	LgaID                             pgtype.Int4        `json:"lga_id"`
-	WardID                            pgtype.Int4        `json:"ward_id"`
-	StateConstituencyID               pgtype.Int4        `json:"state_constituency_id"`
-	FederalConstituencyID             pgtype.Int4        `json:"federal_constituency_id"`
-	SenatorialDistrictID              pgtype.Int4        `json:"senatorial_district_id"`
-	PuAgentsCount                     int32              `json:"pu_agents_count"`
-	PuAgentsInAttendanceCount         int32              `json:"pu_agents_in_attendance_count"`
-	PuReportsCount                    int32              `json:"pu_reports_count"`
-	PuUpdatesCount                    int32              `json:"pu_updates_count"`
-	PuFinalResultsUploadedCount       int32              `json:"pu_final_results_uploaded_count"`
-	UniquePuFinalResultsUploadedCount int32              `json:"unique_pu_final_results_uploaded_count"`
-	LastUpdateGivenAt                 pgtype.Timestamptz `json:"last_update_given_at"`
-	CreatedAt                         pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt                         pgtype.Timestamptz `json:"updated_at"`
-}
-
-type ElectionGroupPollingUnit struct {
-	ID                                int64              `json:"id"`
-	ElectionGroupID                   int32              `json:"election_group_id"`
-	PollingUnitID                     int32              `json:"polling_unit_id"`
-	StateID                           pgtype.Int2        `json:"state_id"`
-	LgaID                             pgtype.Int4        `json:"lga_id"`
-	WardID                            pgtype.Int4        `json:"ward_id"`
-	StateConstituencyID               pgtype.Int4        `json:"state_constituency_id"`
-	FederalConstituencyID             pgtype.Int4        `json:"federal_constituency_id"`
-	SenatorialDistrictID              pgtype.Int4        `json:"senatorial_district_id"`
-	UniqueFinalResultsExpected        int32              `json:"unique_final_results_expected"`
-	PuAgentsCount                     int32              `json:"pu_agents_count"`
-	PuAgentsInAttendanceCount         int32              `json:"pu_agents_in_attendance_count"`
-	PuReportsCount                    int32              `json:"pu_reports_count"`
-	PuUpdatesCount                    int32              `json:"pu_updates_count"`
-	PuFinalResultsUploadedCount       int32              `json:"pu_final_results_uploaded_count"`
-	UniquePuFinalResultsUploadedCount int32              `json:"unique_pu_final_results_uploaded_count"`
-	CreatedAt                         pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt                         pgtype.Timestamptz `json:"updated_at"`
-}
-
 type ElectionPollingUnitFinalResult struct {
 	ID                       int64              `json:"id"`
 	ElectionID               int32              `json:"election_id"`

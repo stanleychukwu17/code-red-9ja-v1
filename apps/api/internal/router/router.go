@@ -196,7 +196,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	officesHandler := officeshandler.NewHandler(officesService, auditService, utilsInstance)
 	campaignGroupsHandler := campaigngroupshandler.NewHandler(campaignGroupsService, utilsInstance)
 	electionGroupsHandler := electiongroupshandler.NewHandler(electionGroupsService, auditService, utilsInstance)
-	electionStatsHandler := electionstatshandler.NewHandler(electionStatsService, electionGroupsService, statesService, bodiesService, wardsService, pool, utilsInstance)
+	electionStatsHandler := electionstatshandler.NewHandler(electionStatsService, electionGroupsService, statesService, bodiesService, wardsService, permissionsService, pool, utilsInstance)
 	electionsHandler := electionshandler.NewHandler(electionsService, usersService, auditService, utilsInstance, partiesService, electionGroupsService)
 	usersHandler := usershandler.NewHandler(usersService, auditService, bodiesService, permissionsService, partiesService, filesService, utilsInstance)
 	pageVerificationsHandler := pageverificationshandler.NewHandler(pageVerificationsService, utilsInstance)
@@ -321,8 +321,6 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	mainRouter.Get("/api/v1/elections/results/polling-units", electionResultsHandler.GetPollingUnitsWithResults)
 	mainRouter.Get("/api/v1/elections/results/breakdown", electionResultsHandler.GetElectoralUnitsBreakdown)
 	mainRouter.Get("/api/v1/elections/results/electoral-units", electionResultsHandler.GetElectoralUnitsBreakdown)
-	mainRouter.Get("/api/v1/elections/operations/breakdown", electionStatsHandler.GetOperationsBreakdown)
-	mainRouter.Get("/api/v1/elections/agent-coverage/breakdown", electionStatsHandler.GetAgentCoverageBreakdown)
 	mainRouter.Get("/api/v1/elections/results", electionResultsHandler.GetElectionFinalResult)
 
 	// political parties public routes
@@ -601,6 +599,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Post("/api/v1/party-applications", partyApplicationsHandler.SubmitApplication)
 		r.Post("/api/v1/party-applications/supervisor", partyApplicationsHandler.SubmitSupervisorApplication)
 		r.Get("/api/v1/party-applications", partyApplicationsHandler.ListApplications)
+		r.Post("/api/v1/party-applications/batch-approve", partyApplicationsHandler.BatchApproveApplications)
 		r.Get("/api/v1/party-applications/{id}", partyApplicationsHandler.GetApplication)
 		r.Post("/api/v1/party-applications/{id}/approve", partyApplicationsHandler.ApproveApplication)
 		r.Post("/api/v1/party-applications/{id}/reject", partyApplicationsHandler.RejectApplication)
@@ -669,6 +668,9 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 
 		// party readiness overview (party admins only)
 		r.Get("/api/v1/parties/{id}/readiness", partiesHandler.GetPartyReadiness)
+
+		// party agent coverage breakdown (party admins only)
+		r.Get("/api/v1/elections/agent-coverage/breakdown", electionStatsHandler.GetAgentCoverageBreakdown)
 
 		// party treasury, slots & allowance management (party admins only)
 		r.Post("/api/v1/parties/{id}/wallet/withdraw", partiesWalletHandler.WithdrawFromPartyWallet)

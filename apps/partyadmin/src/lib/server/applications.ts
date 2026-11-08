@@ -115,6 +115,45 @@ export const rejectApplication = createServerFn({ method: "POST" })
     }
   });
 
+export const batchApproveApplications = createServerFn({ method: "POST" })
+  .inputValidator(
+    (data: {
+      partyId: number;
+      electionGroupId: number;
+      stateId: number;
+      lgaId: number;
+      wardId?: number;
+    }) => data,
+  )
+  .handler(async ({ data }) => {
+    try {
+      const url = API_URL.batchApproveApplications;
+      const body: Record<string, any> = {
+        party_id: data.partyId,
+        election_group_id: data.electionGroupId,
+        state_id: data.stateId,
+        lga_id: data.lgaId,
+      };
+      if (data.wardId) {
+        body.ward_id = data.wardId;
+      }
+      const response = await apiFetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+      const resData = await response.json();
+      return resData;
+    } catch (error) {
+      return {
+        success: false,
+        message: "Failed to batch approve applications: " + (error as Error).message,
+      };
+    }
+  });
+
 export const getPollingUnits = createServerFn({ method: "GET" })
   .inputValidator(
     (

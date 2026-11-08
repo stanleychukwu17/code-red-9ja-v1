@@ -4,19 +4,22 @@
  * Uses cursor-based infinite queries for the pending list and secondary count queries for tab badges.
  */
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Layout, PageHeader } from "@repo/ui/components/custom/AdminLayouts";
 import { ApplicationsTable } from "#/components/Tables";
 import { getPageHeader } from "#/lib/shared/meta";
 import { createFileRoute } from "@tanstack/react-router";
 import { getApplicationTabs, validateApplicationsSearch } from "./-data";
 import { ApplicationsFilterBar, type ApplicationsFilterValues } from "#/components/applications/ApplicationsFilterBar";
-import { useInfiniteQuery } from "@tanstack/react-query";
-import { getApplications } from "#/lib/server/applications";
+import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { batchApproveApplications, getApplications } from "#/lib/server/applications";
 import { useUserParty } from "#/hooks/useUserParty";
 import { QUERY_KEYS } from "#/lib/config";
 import { useIntersectionObserver } from "usehooks-ts";
 import { Filter, Loader2 } from "lucide-react";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogPadding } from "@repo/ui/components/dialog";
+import { Button } from "@repo/ui/components/button";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/$partyShortName/applications/")({
   validateSearch: validateApplicationsSearch,
@@ -36,6 +39,46 @@ function RouteComponent() {
   const navigate = Route.useNavigate();
   const { party } = useUserParty();
   const partyId = party?.id;
+  const queryClient = useQueryClient();
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+
+  // Batch approve pending polling agents in selected LGA/Ward
+  const batchApproveMutation = useMutation({
+    mutationFn: async () => {
+      if (!partyId || !electionGroupId || !stateId || !lgaId) {
+        throw new Error("Party, Election Group, State, and LGA are required");
+      }
+
+      const res = await batchApproveApplications({
+        data: {
+          partyId,
+          electionGroupId,
+          stateId,
+          lgaId,
+          wardId: wardId || undefined,
+        },
+      });
+
+      if (!res.success) {
+        throw new Error(res.message || "Failed to batch approve applications");
+      }
+
+      return res;
+    },
+
+    onSuccess: (res: any) => {
+      toast.success(res?.message || "Applications batch approved successfully");
+
+      // Refresh applications cache and close modal
+      // Refresh applications cache and close modal
+      queryClient.invalidateQueries({ queryKey: ["applications"] });
+      setIsConfirmOpen(false);
+    },
+
+    onError: (err: any) => {
+      toast.error(err.message || "Failed to batch approve applications");
+    },
+  });
 
   // Synchronize selected filter changes into URL search parameters
   const handleFiltersChange = (filters: ApplicationsFilterValues) => {
@@ -49,14 +92,17 @@ function RouteComponent() {
           ward_id: filters.wardId,
           polling_unit_id: filters.pollingUnitId,
         };
+
         // Strip undefined or empty keys to keep the URL clean
         Object.keys(next).forEach((k) => {
           if (next[k] === undefined || next[k] === null || next[k] === "") {
             delete next[k];
           }
         });
+
         return next;
       },
+
       replace: true,
     });
   };
@@ -124,10 +170,9 @@ function RouteComponent() {
         wardId={wardId}
         pollingUnitId={pollingUnitId}
         onFiltersChange={handleFiltersChange}
-        onAcceptAll={() => {
-          // Handled by batch approval workflow
-        }}
+        onAcceptAll={() => setIsConfirmOpen(true)}
         showAcceptAll={true}
+        isAcceptingAll={batchApproveMutation.isPending}
       />
 
       {!electionGroupId || !stateId ? (
@@ -169,6 +214,45 @@ function RouteComponent() {
           )}
         </>
       )}
+
+      <Dialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
+        <DialogContent className="max-w-md p-0 rounded-2xl border border-border shadow-2xl overflow-hidden bg-background">
+          <DialogHeader title="Confirm Batch Approval" />
+          <DialogPadding className="space-y-3 py-4">
+            <p className="text-sm text-c-80 font-medium">
+              Are you sure you want to accept all pending polling agent applications in this {wardId ? "Ward" : "LGA"}?
+            </p>
+            <p className="text-xs text-c-50 leading-relaxed">
+              This will automatically assign approved applicants to polling units within their selected location up to recruitment quotas and deduct agent slots/remuneration according to party rules. Supervisors are not included in batch approval.
+            </p>
+          </DialogPadding>
+          <DialogFooter className="flex items-center justify-end gap-3 px-6 py-4 bg-background border-t border-border">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsConfirmOpen(false)}
+              disabled={batchApproveMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => batchApproveMutation.mutate()}
+              disabled={batchApproveMutation.isPending}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
+              {batchApproveMutation.isPending ? (
+                <>
+                  <Loader2 className="size-4 animate-spin mr-2" />
+                  Approving...
+                </>
+              ) : (
+                "Confirm & Accept All"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 }

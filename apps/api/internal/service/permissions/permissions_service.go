@@ -75,6 +75,10 @@ func (s *PermissionsService) CheckUserModificationPermission(claims *utils.JWTCl
 //
 // If permissions are insufficient, it returns false and an error with the reason.
 func (s *PermissionsService) CheckPartyModificationPermission(claims *utils.JWTClaims, partyID int16) (bool, PartyModificationPermissions, error) {
+	if claims == nil {
+		return false, PartyModificationPermissions{}, errors.New("Unauthorized")
+	}
+
 	perms := PartyModificationPermissions{
 		IsSuperAdmin:           claims.HasRole("super_admin"),
 		IsNormalAdmin:          claims.HasRole("admin"),

@@ -319,3 +319,15 @@ SELECT EXISTS (
       OR (e.scope = 'ward' AND e.ward_id = pu.ward_id)
     )
 ) AS is_available;
+
+-- name: ListPendingApplicationsForBatchApproval :many
+SELECT id, user_id, party_id, election_group_id, polling_unit_id, state_id, lga_id, ward_id, role
+FROM party_agent_applications
+WHERE party_id = sqlc.arg(party_id)::smallint
+  AND election_group_id = sqlc.arg(election_group_id)::integer
+  AND state_id = sqlc.arg(state_id)::smallint
+  AND lga_id = sqlc.arg(lga_id)::integer
+  AND (sqlc.arg(ward_id)::integer = 0 OR ward_id = sqlc.arg(ward_id)::integer)
+  AND role = 'polling_agent'
+  AND status = 'pending'
+ORDER BY id ASC;

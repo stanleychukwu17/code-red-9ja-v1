@@ -173,9 +173,6 @@ FROM polling_unit_assignments a
 JOIN election_groups eg ON a.election_group_id = eg.id
 JOIN polling_units pu ON a.polling_unit_id = pu.id
 JOIN c_states cs ON pu.state_id = cs.id
-LEFT JOIN election_group_polling_units egpu 
-  ON egpu.election_group_id = a.election_group_id 
- AND egpu.polling_unit_id = a.polling_unit_id
 WHERE a.id = $1
 LIMIT 1
 `

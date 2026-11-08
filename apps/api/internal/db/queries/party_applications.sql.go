@@ -631,6 +631,75 @@ func (q *Queries) ListPartyApplicationsForAdmin(ctx context.Context, arg ListPar
 	return items, nil
 }
 
+const listPendingApplicationsForBatchApproval = `-- name: ListPendingApplicationsForBatchApproval :many
+SELECT id, user_id, party_id, election_group_id, polling_unit_id, state_id, lga_id, ward_id, role
+FROM party_agent_applications
+WHERE party_id = $1::smallint
+  AND election_group_id = $2::integer
+  AND state_id = $3::smallint
+  AND lga_id = $4::integer
+  AND ($5::integer = 0 OR ward_id = $5::integer)
+  AND role = 'polling_agent'
+  AND status = 'pending'
+ORDER BY id ASC
+`
+
+type ListPendingApplicationsForBatchApprovalParams struct {
+	PartyID         int16 `json:"party_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
+	StateID         int16 `json:"state_id"`
+	LgaID           int32 `json:"lga_id"`
+	WardID          int32 `json:"ward_id"`
+}
+
+type ListPendingApplicationsForBatchApprovalRow struct {
+	ID              int64       `json:"id"`
+	UserID          int64       `json:"user_id"`
+	PartyID         int16       `json:"party_id"`
+	ElectionGroupID int32       `json:"election_group_id"`
+	PollingUnitID   pgtype.Int4 `json:"polling_unit_id"`
+	StateID         int16       `json:"state_id"`
+	LgaID           pgtype.Int4 `json:"lga_id"`
+	WardID          pgtype.Int4 `json:"ward_id"`
+	Role            string      `json:"role"`
+}
+
+func (q *Queries) ListPendingApplicationsForBatchApproval(ctx context.Context, arg ListPendingApplicationsForBatchApprovalParams) ([]ListPendingApplicationsForBatchApprovalRow, error) {
+	rows, err := q.db.Query(ctx, listPendingApplicationsForBatchApproval,
+		arg.PartyID,
+		arg.ElectionGroupID,
+		arg.StateID,
+		arg.LgaID,
+		arg.WardID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListPendingApplicationsForBatchApprovalRow
+	for rows.Next() {
+		var i ListPendingApplicationsForBatchApprovalRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.PartyID,
+			&i.ElectionGroupID,
+			&i.PollingUnitID,
+			&i.StateID,
+			&i.LgaID,
+			&i.WardID,
+			&i.Role,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listUserApplications = `-- name: ListUserApplications :many
 SELECT 
   pa.id,

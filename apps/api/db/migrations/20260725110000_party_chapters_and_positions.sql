@@ -136,6 +136,7 @@ INSERT INTO party_positions (id, party_id, name, position_type, allowed_levels, 
 (12, NULL, 'Campaign Coordinator', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 12, 2, false, 'campaign'),
 (13, NULL, 'Director of Mobilization', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 13, 1, false, 'campaign'),
 (14, NULL, 'Election Planning Director', 'default', ARRAY['national', 'state', 'lga'], 14, 1, false, 'campaign'),
+(38, NULL, 'Election Monitoring Team', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 14, 500, false, 'campaign'),
 
 -- Media & Communications (Publicity, press & digital reach)
 (15, NULL, 'Publicity Secretary', 'default', ARRAY['national', 'zonal', 'state', 'lga', 'ward'], 15, 1, true, 'media'),

@@ -6,14 +6,13 @@ import (
 	"fmt"
 	"free9ja/api/internal/constants"
 	"free9ja/api/internal/db/queries"
+	apimiddleware "free9ja/api/internal/middleware"
 	electionstats "free9ja/api/internal/service/election_stats"
+	permissionsservice "free9ja/api/internal/service/permissions"
 	"free9ja/api/internal/utils"
 	"net/http"
 	"strconv"
-	"strings"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -33,34 +32,19 @@ type WardsService interface {
 	GetWardByID(ctx context.Context, id int32) (queries.Ward, error)
 }
 
+type PermissionsService interface {
+	CheckPartyModificationPermission(claims *utils.JWTClaims, partyID int16) (bool, permissionsservice.PartyModificationPermissions, error)
+}
+
 type Handler struct {
 	service               electionstats.ElectionStatsService
 	electionGroupsService ElectionGroupsService
 	statesService         StatesService
 	bodiesService         BodiesService
 	wardsService          WardsService
+	permissionsService    PermissionsService
 	pool                  *pgxpool.Pool
 	utils                 *utils.Utils
-}
-
-type OperationsBreakdownUnitResponse struct {
-	ID                   int64       `json:"id"`
-	Name                 string      `json:"name"`
-	Code                 string      `json:"code"`
-	AgentsAtPu           string      `json:"agents_at_pu"`
-	PuAgentsInAttendance int64       `json:"pu_agents_in_attendance"`
-	PuAgentsCount        int64       `json:"pu_agents_count"`
-	UpdatesGiven         int64       `json:"updates_given"`
-	ReportsGiven         int64       `json:"reports_given"`
-	ReportedPus          int64       `json:"reported_pus"`
-	PusWithUpdates       int64       `json:"pus_with_updates"`
-	ResultsUploaded      int64       `json:"results_uploaded"`
-	ResultsExpected      string      `json:"results_expected"`
-	PusWithAllResults    int64       `json:"pus_with_all_results"`
-	PusWith1Agent        string      `json:"pus_with_1_agent"`
-	TotalAgents          string      `json:"total_agents"`
-	TotalPus             int64       `json:"total_pus"`
-	Supervisors          interface{} `json:"supervisors"`
 }
 
 type AgentCoverageUnitResponse struct {
@@ -89,6 +73,7 @@ func NewHandler(
 	statesService StatesService,
 	bodiesService BodiesService,
 	wardsService WardsService,
+	permissionsService PermissionsService,
 	pool *pgxpool.Pool,
 	utils *utils.Utils,
 ) *Handler {
@@ -98,949 +83,67 @@ func NewHandler(
 		statesService:         statesService,
 		bodiesService:         bodiesService,
 		wardsService:          wardsService,
+		permissionsService:    permissionsService,
 		pool:                  pool,
 		utils:                 utils,
 	}
 }
-func parseOptionalInt(r *http.Request, key string) (int32, bool) {
-	valStr := r.URL.Query().Get(key)
-	if valStr == "" {
-		return 0, false
+
+func formatPctStr(numerator, denominator int64) string {
+	if denominator <= 0 {
+		return fmt.Sprintf("%d/0 (0%%)", numerator)
 	}
-	val, err := strconv.ParseInt(valStr, 10, 32)
-	if err != nil {
-		return 0, false
-	}
-	return int32(val), true
+	pct := (float64(numerator) / float64(denominator)) * 100
+	return fmt.Sprintf("%d/%d (%.1f%%)", numerator, denominator, pct)
 }
 
-func parseOptionalInt16(r *http.Request, key string) (int16, bool) {
-	valStr := r.URL.Query().Get(key)
-	if valStr == "" {
-		return 0, false
-	}
-	val, err := strconv.ParseInt(valStr, 10, 16)
-	if err != nil {
-		return 0, false
-	}
-	return int16(val), true
-}
-
-// GetPollingUnitStats godoc
-// @Summary      List polling unit stats for an election group
-// @Description  Fetches pre-aggregated election statistics at the polling unit level
+// GetAgentCoverageBreakdown godoc
+// @Summary      Get agent coverage breakdown
+// @Description  Fetches agent and supervisor coverage across political hierarchy (States, LGAs, Wards, Polling Units)
 // @Tags         ElectionStats
 // @Produce      json
-// @Param        id        path  int  true  "Election Group ID"
-// @Param        state_id  query int  false "State ID filter"
-// @Param        lga_id    query int  false "LGA ID filter"
-// @Param        ward_id   query int  false "Ward ID filter"
+// @Param        election_group_id  query int   true  "Election Group ID"
+// @Param        party_id           query int   true  "Party ID"
+// @Param        state_id           query int   false "State ID filter"
+// @Param        lga_id             query int   false "LGA ID filter"
+// @Param        ward_id            query int   false "Ward ID filter"
+// @Param        polling_unit_id    query int   false "Polling Unit ID filter"
 // @Success      200  {object} map[string]interface{}
 // @Security     BearerAuth
-// @Router       /election-groups/{id}/stats/polling-units [get]
-func (h *Handler) GetPollingUnitStats(w http.ResponseWriter, r *http.Request) {
-	groupID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 32)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election group ID")
-		return
-	}
-
-	arg := queries.ListElectionGroupPollingUnitStatsByGroupParams{
-		ElectionGroupID: int32(groupID),
-	}
-	if stateID, ok := parseOptionalInt16(r, "state_id"); ok {
-		arg.StateID = pgtype.Int2{Int16: stateID, Valid: true}
-	}
-	if lgaID, ok := parseOptionalInt(r, "lga_id"); ok {
-		arg.LgaID = pgtype.Int4{Int32: lgaID, Valid: true}
-	}
-	if wardID, ok := parseOptionalInt(r, "ward_id"); ok {
-		arg.WardID = pgtype.Int4{Int32: wardID, Valid: true}
-	}
-
-	stats, err := h.service.ListElectionGroupPollingUnitStatsByGroup(r.Context(), arg)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch stats: "+err.Error())
-		return
-	}
-	h.utils.RespondSuccess(w, http.StatusOK, "Stats fetched", map[string]interface{}{"stats": stats})
-}
-
-// GetWardStats godoc
-// @Summary      List ward stats for an election group
-// @Description  Fetches pre-aggregated election statistics at the ward level
-// @Tags         ElectionStats
-// @Produce      json
-// @Param        id        path  int  true  "Election Group ID"
-// @Param        state_id  query int  false "State ID filter"
-// @Param        lga_id    query int  false "LGA ID filter"
-// @Success      200  {object} map[string]interface{}
-// @Security     BearerAuth
-// @Router       /election-groups/{id}/stats/wards [get]
-func (h *Handler) GetWardStats(w http.ResponseWriter, r *http.Request) {
-	groupID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 32)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election group ID")
-		return
-	}
-
-	arg := queries.ListElectionGroupWardStatsByGroupParams{
-		ElectionGroupID: int32(groupID),
-	}
-	if stateID, ok := parseOptionalInt16(r, "state_id"); ok {
-		arg.StateID = pgtype.Int2{Int16: stateID, Valid: true}
-	}
-	if lgaID, ok := parseOptionalInt(r, "lga_id"); ok {
-		arg.LgaID = pgtype.Int4{Int32: lgaID, Valid: true}
-	}
-
-	stats, err := h.service.ListElectionGroupWardStatsByGroup(r.Context(), arg)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch stats: "+err.Error())
-		return
-	}
-	h.utils.RespondSuccess(w, http.StatusOK, "Stats fetched", map[string]interface{}{"stats": stats})
-}
-
-// GetLGAStats godoc
-// @Summary      List LGA stats for an election group
-// @Description  Fetches pre-aggregated election statistics at the LGA level
-// @Tags         ElectionStats
-// @Produce      json
-// @Param        id                     path  int  true  "Election Group ID"
-// @Param        state_id               query int  false "State ID filter"
-// @Param        senatorial_district_id query int  false "Senatorial District ID filter"
-// @Success      200  {object} map[string]interface{}
-// @Security     BearerAuth
-// @Router       /election-groups/{id}/stats/lgas [get]
-func (h *Handler) GetLGAStats(w http.ResponseWriter, r *http.Request) {
-	groupID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 32)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election group ID")
-		return
-	}
-
-	arg := queries.ListElectionGroupLGAStatsByGroupParams{
-		ElectionGroupID: int32(groupID),
-	}
-	if stateID, ok := parseOptionalInt16(r, "state_id"); ok {
-		arg.StateID = pgtype.Int2{Int16: stateID, Valid: true}
-	}
-	if sdID, ok := parseOptionalInt(r, "senatorial_district_id"); ok {
-		arg.SenatorialDistrictID = pgtype.Int4{Int32: sdID, Valid: true}
-	}
-
-	stats, err := h.service.ListElectionGroupLGAStatsByGroup(r.Context(), arg)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch stats: "+err.Error())
-		return
-	}
-	h.utils.RespondSuccess(w, http.StatusOK, "Stats fetched", map[string]interface{}{"stats": stats})
-}
-
-// GetStateStats godoc
-// @Summary      List state stats for an election group
-// @Description  Fetches pre-aggregated election statistics at the state level
-// @Tags         ElectionStats
-// @Produce      json
-// @Param        id        path  int  true  "Election Group ID"
-// @Success      200  {object} map[string]interface{}
-// @Security     BearerAuth
-// @Router       /election-groups/{id}/stats/states [get]
-func (h *Handler) GetStateStats(w http.ResponseWriter, r *http.Request) {
-	groupID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 32)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election group ID")
-		return
-	}
-
-	stats, err := h.service.ListElectionGroupStateStatsByGroup(r.Context(), int32(groupID))
-	if err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch stats: "+err.Error())
-		return
-	}
-	h.utils.RespondSuccess(w, http.StatusOK, "Stats fetched", map[string]interface{}{"stats": stats})
-}
-
-func partyStatsToMap(raw interface{}, partyID int32) map[string]interface{} {
-	if raw == nil {
-		return defaultPartyStats(partyID)
-	}
-	b, err := json.Marshal(raw)
-	if err != nil {
-		return defaultPartyStats(partyID)
-	}
-	var m map[string]interface{}
-	if err := json.Unmarshal(b, &m); err != nil {
-		return defaultPartyStats(partyID)
-	}
-	return m
-}
-
-func defaultPartyStats(partyID int32) map[string]interface{} {
-	return map[string]interface{}{
-		"party_id":                               partyID,
-		"pu_agents_count":                        0,
-		"unique_pu_agents_count":                 0,
-		"pu_agents_in_attendance_count":          0,
-		"pu_reports_count":                       0,
-		"pu_updates_count":                       0,
-		"pu_final_results_uploaded_count":        0,
-		"unique_pu_final_results_uploaded_count": 0,
-		"total_pu_with_reports":                  0,
-		"total_pu_with_updates":                  0,
-		"total_pu_with_agents_in_attendance":     0,
-		"total_pu_unique_final_results_uploaded": 0,
-	}
-}
-
-// sanitizeTargets strips out all internal party/agent aggregate metrics from targets struct
-func sanitizeTargets(raw interface{}) map[string]interface{} {
-	b, err := json.Marshal(raw)
-	if err != nil {
-		return map[string]interface{}{}
-	}
-	var fullMap map[string]interface{}
-	if err := json.Unmarshal(b, &fullMap); err != nil {
-		return map[string]interface{}{}
-	}
-
-	// White-list strictly structural/geographic keys
-	allowedKeys := map[string]bool{
-		"id":                            true,
-		"election_group_id":             true,
-		"state_id":                      true,
-		"state_name":                    true,
-		"lga_id":                        true,
-		"lga_name":                      true,
-		"ward_id":                       true,
-		"ward_name":                     true,
-		"senatorial_district_id":        true,
-		"senatorial_district_name":      true,
-		"federal_constituency_id":       true,
-		"federal_constituency_name":     true,
-		"state_constituency_id":         true,
-		"state_constituency_name":       true,
-		"polling_unit_id":               true,
-		"polling_unit_name":             true,
-		"states_count":                  true,
-		"senatorial_districts_count":    true,
-		"federal_constituencies_count":  true,
-		"lgas_count":                    true,
-		"state_constituencies_count":    true,
-		"wards_count":                   true,
-		"polling_units_count":           true,
-		"unique_final_results_expected": true,
-		"created_at":                    true,
-		"updated_at":                    true,
-	}
-
-	cleanMap := make(map[string]interface{})
-	for k, v := range fullMap {
-		if allowedKeys[k] {
-			cleanMap[k] = v
-		}
-	}
-	return cleanMap
-}
-
-// GetSingleStateStats godoc
-// @Summary      Get party state stats for a single geographic unit
-// @Description  Fetches pre-aggregated election statistics for a single state unit and party, extracting party stats from the parties JSONB array.
-// @Tags         ElectionStats
-// @Produce      json
-// @Param        id        path  int  true  "Election Group ID"
-// @Param        state_id  path  int  true  "State ID"
-// @Param        party_id  path  int  true  "Party ID"
-// @Success      200  {object} map[string]interface{}
-// @Security     BearerAuth
-// @Router       /election-groups/{id}/stats/states/{state_id}/parties/{party_id} [get]
-func (h *Handler) GetSingleStateStats(w http.ResponseWriter, r *http.Request) {
-	groupID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 32)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election group ID")
-		return
-	}
-	stateID, err := strconv.ParseInt(chi.URLParam(r, "state_id"), 10, 16)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid state ID")
-		return
-	}
-	partyID, err := strconv.ParseInt(chi.URLParam(r, "party_id"), 10, 32)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID")
-		return
-	}
-
-	arg := queries.GetElectionGroupStateStatsParams{
-		ElectionGroupID: int32(groupID),
-		StateID:         int16(stateID),
-	}
-	stats, err := h.service.GetElectionGroupStateStats(r.Context(), arg)
-
-	var targets map[string]interface{}
-	if err != nil {
-		st, errState := h.statesService.GetStateByID(r.Context(), int16(stateID))
-		if errState != nil {
-			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch stats: "+err.Error())
-			return
-		}
-		targets = map[string]interface{}{
-			"election_group_id":             groupID,
-			"state_id":                      st.ID,
-			"state_name":                    st.Name,
-			"senatorial_districts_count":    st.SenatorialDistrictsCount,
-			"federal_constituencies_count":  st.FederalConstituenciesCount,
-			"lgas_count":                    st.LgasCount,
-			"state_constituencies_count":    st.StateConstituenciesCount,
-			"wards_count":                   st.WardsCount,
-			"polling_units_count":           st.PollingUnitsCount,
-			"unique_final_results_expected": st.PollingUnitsCount,
-		}
-	} else {
-		targets = sanitizeTargets(stats)
-	}
-
-	partyRow, errParty := h.service.GetElectionGroupPartyStateStats(r.Context(), queries.GetElectionGroupPartyStateStatsParams{
-		ElectionGroupID: int32(groupID),
-		StateID:         int16(stateID),
-		PartyID:         int16(partyID),
-	})
-	var partyStats map[string]interface{}
-	if errParty != nil {
-		partyStats = defaultPartyStats(int32(partyID))
-	} else {
-		partyStats = partyStatsToMap(partyRow, int32(partyID))
-	}
-
-	h.utils.RespondSuccess(w, http.StatusOK, "Stats fetched", map[string]interface{}{
-		"party_stats": partyStats,
-		"targets":     targets,
-	})
-}
-
-// GetSingleLGAStats godoc
-// @Summary      Get party LGA stats for a single geographic unit
-// @Description  Fetches pre-aggregated election statistics for a single LGA unit and party, extracting party stats from the parties JSONB array.
-// @Tags         ElectionStats
-// @Produce      json
-// @Param        id        path  int  true  "Election Group ID"
-// @Param        lga_id    path  int  true  "LGA ID"
-// @Param        party_id  path  int  true  "Party ID"
-// @Success      200  {object} map[string]interface{}
-// @Security     BearerAuth
-// @Router       /election-groups/{id}/stats/lgas/{lga_id}/parties/{party_id} [get]
-func (h *Handler) GetSingleLGAStats(w http.ResponseWriter, r *http.Request) {
-	groupID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 32)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election group ID")
-		return
-	}
-	lgaID, err := strconv.ParseInt(chi.URLParam(r, "lga_id"), 10, 32)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid LGA ID")
-		return
-	}
-	partyID, err := strconv.ParseInt(chi.URLParam(r, "party_id"), 10, 32)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID")
-		return
-	}
-
-	arg := queries.GetElectionGroupLGAStatsParams{
-		ElectionGroupID: int32(groupID),
-		LgaID:           int32(lgaID),
-	}
-	stats, err := h.service.GetElectionGroupLGAStats(r.Context(), arg)
-
-	var targets map[string]interface{}
-	if err != nil {
-		lga, errLga := h.bodiesService.GetLGAByID(r.Context(), int32(lgaID))
-		if errLga != nil {
-			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch stats: "+err.Error())
-			return
-		}
-		targets = map[string]interface{}{
-			"election_group_id":             groupID,
-			"lga_id":                        lga.ID,
-			"lga_name":                      lga.Name,
-			"state_id":                      lga.StateID,
-			"state_name":                    lga.StateName,
-			"senatorial_district_id":        lga.SenatorialDistrictID,
-			"senatorial_district_name":      lga.SenatorialDistrictName,
-			"federal_constituency_id":       lga.FederalConstituencyID,
-			"federal_constituency_name":     lga.FederalConstituencyName,
-			"state_constituencies_count":    lga.StateConstituenciesCount,
-			"wards_count":                   lga.WardsCount,
-			"polling_units_count":           lga.PollingUnitsCount,
-			"unique_final_results_expected": lga.PollingUnitsCount,
-		}
-	} else {
-		targets = sanitizeTargets(stats)
-	}
-
-	partyRow, errParty := h.service.GetElectionGroupPartyLGAStats(r.Context(), queries.GetElectionGroupPartyLGAStatsParams{
-		ElectionGroupID: int32(groupID),
-		LgaID:           int32(lgaID),
-		PartyID:         int16(partyID),
-	})
-	var partyStats map[string]interface{}
-	if errParty != nil {
-		partyStats = defaultPartyStats(int32(partyID))
-	} else {
-		partyStats = partyStatsToMap(partyRow, int32(partyID))
-	}
-
-	h.utils.RespondSuccess(w, http.StatusOK, "Stats fetched", map[string]interface{}{
-		"party_stats": partyStats,
-		"targets":     targets,
-	})
-}
-
-// GetSingleWardStats godoc
-// @Summary      Get party ward stats for a single geographic unit
-// @Description  Fetches pre-aggregated election statistics for a single ward unit and party, extracting party stats from the parties JSONB array.
-// @Tags         ElectionStats
-// @Produce      json
-// @Param        id        path  int  true  "Election Group ID"
-// @Param        ward_id   path  int  true  "Ward ID"
-// @Param        party_id  path  int  true  "Party ID"
-// @Success      200  {object} map[string]interface{}
-// @Security     BearerAuth
-// @Router       /election-groups/{id}/stats/wards/{ward_id}/parties/{party_id} [get]
-func (h *Handler) GetSingleWardStats(w http.ResponseWriter, r *http.Request) {
-	groupID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 32)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election group ID")
-		return
-	}
-	wardID, err := strconv.ParseInt(chi.URLParam(r, "ward_id"), 10, 32)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid Ward ID")
-		return
-	}
-	partyID, err := strconv.ParseInt(chi.URLParam(r, "party_id"), 10, 32)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID")
-		return
-	}
-
-	arg := queries.GetElectionGroupWardStatsParams{
-		ElectionGroupID: int32(groupID),
-		WardID:          int32(wardID),
-	}
-	stats, err := h.service.GetElectionGroupWardStats(r.Context(), arg)
-
-	var targets map[string]interface{}
-	if err != nil {
-		wrd, errWard := h.wardsService.GetWardByID(r.Context(), int32(wardID))
-		if errWard != nil {
-			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch stats: "+err.Error())
-			return
-		}
-		targets = map[string]interface{}{
-			"election_group_id":             groupID,
-			"ward_id":                       wrd.ID,
-			"ward_name":                     wrd.Name,
-			"lga_id":                        wrd.LgaID,
-			"lga_name":                      wrd.LgaName,
-			"state_id":                      wrd.StateID,
-			"state_name":                    wrd.StateName,
-			"polling_units_count":           wrd.PollingUnitsCount,
-			"unique_final_results_expected": wrd.PollingUnitsCount,
-		}
-	} else {
-		targets = sanitizeTargets(stats)
-	}
-
-	partyRow, errParty := h.service.GetElectionGroupPartyWardStats(r.Context(), queries.GetElectionGroupPartyWardStatsParams{
-		ElectionGroupID: int32(groupID),
-		WardID:          int32(wardID),
-		PartyID:         int16(partyID),
-	})
-	var partyStats map[string]interface{}
-	if errParty != nil {
-		partyStats = defaultPartyStats(int32(partyID))
-	} else {
-		partyStats = partyStatsToMap(partyRow, int32(partyID))
-	}
-
-	h.utils.RespondSuccess(w, http.StatusOK, "Stats fetched", map[string]interface{}{
-		"party_stats": partyStats,
-		"targets":     targets,
-	})
-}
-
-// GetSingleElectionGroupStats godoc
-// @Summary      Get global party stats for a single election group
-// @Description  Fetches pre-aggregated election statistics for an election group and party, extracting party stats from the parties JSONB array.
-// @Tags         ElectionStats
-// @Produce      json
-// @Param        id        path  int  true  "Election Group ID"
-// @Param        party_id  path  int  true  "Party ID"
-// @Success      200  {object} map[string]interface{}
-// @Security     BearerAuth
-// @Router       /election-groups/{id}/stats/parties/{party_id} [get]
-func (h *Handler) GetSingleElectionGroupStats(w http.ResponseWriter, r *http.Request) {
-	groupID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 32)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election group ID")
-		return
-	}
-	partyID, err := strconv.ParseInt(chi.URLParam(r, "party_id"), 10, 32)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID")
-		return
-	}
-
-	stats, err := h.electionGroupsService.GetElectionGroupByID(r.Context(), int32(groupID))
-	if err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch stats: "+err.Error())
-		return
-	}
-
-	partyRow, errParty := h.service.GetElectionGroupPartyNationalStats(r.Context(), queries.GetElectionGroupPartyNationalStatsParams{
-		ElectionGroupID: int32(groupID),
-		PartyID:         int16(partyID),
-	})
-	var partyStats map[string]interface{}
-	if errParty != nil {
-		partyStats = defaultPartyStats(int32(partyID))
-	} else {
-		partyStats = partyStatsToMap(partyRow, int32(partyID))
-	}
-
-	targets := sanitizeTargets(stats)
-	h.utils.RespondSuccess(w, http.StatusOK, "Stats fetched", map[string]interface{}{
-		"party_stats": partyStats,
-		"targets":     targets,
-	})
-}
-
-// ─── Operations Breakdown Handler ──────────────────────────────────────────
-
-func formatComma(n int64) string {
-	in := strconv.FormatInt(n, 10)
-	var out []byte
-	l := len(in)
-	for i, c := range in {
-		if i > 0 && (l-i)%3 == 0 {
-			out = append(out, ',')
-		}
-		out = append(out, byte(c))
-	}
-	return string(out)
-}
-
-func formatPctStr(count int64, total int64) string {
-	cStr := formatComma(count)
-	if total <= 0 {
-		return cStr
-	}
-	pct := float64(count) / float64(total) * 100.0
-	pStr := fmt.Sprintf("%.1f", pct)
-	pStr = strings.TrimSuffix(pStr, ".0")
-	return fmt.Sprintf("%s (%s%%)", cStr, pStr)
-}
-
-// GetOperationsBreakdown returns hierarchical unit stats and supervisors for election race operations.
-func (h *Handler) GetOperationsBreakdown(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	qParams := r.URL.Query()
-
-	electionID := utils.ParseQueryInt[int32](qParams, "election_id")
-	electionGroupID := utils.ParseQueryInt[int16](qParams, "election_group_id")
-	partyID := utils.ParseQueryInt[int16](qParams, "party_id")
-
-	if electionGroupID == 0 && electionID > 0 && h.pool != nil {
-		_ = h.pool.QueryRow(ctx, "SELECT election_group_id FROM elections WHERE id = $1", electionID).Scan(&electionGroupID)
-	}
-	if electionGroupID == 0 && h.pool != nil {
-		_ = h.pool.QueryRow(ctx, "SELECT id FROM election_groups ORDER BY id DESC LIMIT 1").Scan(&electionGroupID)
-	}
-
-	puID := utils.ParseQueryInt[int32](qParams, "polling_unit_id")
-	wardID := utils.ParseQueryInt[int32](qParams, "ward_id")
-	lgaID := utils.ParseQueryInt[int32](qParams, "lga_id")
-	stateID := utils.ParseQueryInt[int16](qParams, "state_id")
-
-	var (
-		query           string
-		args            []interface{}
-		unitTitle       string
-		unitType        string
-		supervisorTitle string
-	)
-
-	if puID > 0 || wardID > 0 {
-		unitTitle = "Polling Units"
-		unitType = "polling_units"
-		supervisorTitle = "PU Agents"
-
-		targetWardID := wardID
-		if puID > 0 && targetWardID == 0 && h.pool != nil {
-			_ = h.pool.QueryRow(ctx, "SELECT ward_id FROM polling_units WHERE id = $1", puID).Scan(&targetWardID)
-		}
-
-		query = `
-			SELECT
-				pu.id,
-				pu.name,
-				COALESCE(NULLIF(pu.pu_code, ''), pu.code, '') AS code,
-				COALESCE(egpu.pu_agents_in_attendance_count, 0) AS pu_agents_in_attendance,
-				COALESCE(egpu.pu_agents_count, 0) AS pu_agents_count,
-				COALESCE(egpu.pu_updates_count, 0) AS updates_count,
-				COALESCE(egpu.pu_reports_count, 0) AS reports_count,
-				COALESCE(egpu.pu_final_results_uploaded_count, 0) AS results_uploaded,
-				COALESCE(NULLIF(egpu.unique_final_results_expected, 0), 1) AS results_expected,
-				(
-					SELECT COALESCE(json_agg(json_build_object(
-						'id', u.id,
-						'name', u.full_name,
-						'avatar', COALESCE(u.avatar, '')
-					)), '[]'::json)
-					FROM (
-						SELECT u.id, u.first_name, u.last_name, u.avatar
-						FROM polling_unit_assignments pua
-						JOIN users u ON u.id = pua.user_id
-						WHERE pua.polling_unit_id = pu.id
-						  AND ($1::bigint = 0 OR pua.election_group_id = $1)
-						  AND ($2::int = 0 OR pua.party_id = $2)
-						LIMIT 4
-					) u
-				) AS agents
-			FROM polling_units pu
-			LEFT JOIN election_group_polling_units egpu
-				ON egpu.polling_unit_id = pu.id AND egpu.election_group_id = $1
-			WHERE ($3::bigint = 0 OR pu.ward_id = $3)
-			ORDER BY pu.id ASC`
-		args = []interface{}{electionGroupID, partyID, targetWardID}
-
-	} else if lgaID > 0 {
-		unitTitle = "Wards"
-		unitType = "wards"
-		supervisorTitle = "Ward Supervisors"
-
-		query = `
-			SELECT
-				w.id,
-				w.name,
-				'' AS code,
-				COALESCE(egw.pu_agents_in_attendance_count, 0) AS pu_agents_in_attendance,
-				COALESCE(egw.pu_agents_count, 0) AS pu_agents_count,
-				COALESCE(egw.pu_updates_count, 0) AS updates_count,
-				COALESCE(egw.pu_reports_count, 0) AS reports_count,
-				COALESCE(egw.total_pu_with_reports, 0) AS reported_pus,
-				COALESCE(egw.total_pu_with_updates, 0) AS pus_with_updates,
-				COALESCE(egw.pu_final_results_uploaded_count, 0) AS results_uploaded,
-				COALESCE(egw.unique_final_results_expected, 0) AS results_expected,
-				COALESCE(egw.total_pu_unique_final_results_uploaded, 0) AS pus_with_all_results,
-				COALESCE(w.polling_units_count, 0) AS total_pus,
-				(
-					SELECT COALESCE(json_agg(json_build_object(
-						'id', u.id,
-						'name', u.full_name,
-						'avatar', COALESCE(u.avatar, '')
-					)), '[]'::json)
-					FROM (
-						SELECT u.id, u.first_name, u.last_name, u.avatar
-						FROM ward_election_supervisors wes
-						JOIN users u ON u.id = wes.user_id
-						WHERE wes.ward_id = w.id
-						  AND ($1::bigint = 0 OR wes.election_group_id = $1)
-						  AND ($2::int = 0 OR wes.party_id = $2)
-						LIMIT 4
-					) u
-				) AS supervisors
-			FROM wards w
-			LEFT JOIN (
-				SELECT
-					ward_id,
-					SUM(pu_agents_in_attendance_count)::bigint AS pu_agents_in_attendance_count,
-					SUM(pu_agents_count)::bigint AS pu_agents_count,
-					SUM(pu_updates_count)::bigint AS pu_updates_count,
-					SUM(pu_reports_count)::bigint AS pu_reports_count,
-					COUNT(DISTINCT polling_unit_id) FILTER (WHERE pu_reports_count > 0)::bigint AS total_pu_with_reports,
-					COUNT(DISTINCT polling_unit_id) FILTER (WHERE pu_updates_count > 0)::bigint AS total_pu_with_updates,
-					SUM(pu_final_results_uploaded_count)::bigint AS pu_final_results_uploaded_count,
-					SUM(unique_final_results_expected)::bigint AS unique_final_results_expected,
-					COUNT(DISTINCT polling_unit_id) FILTER (WHERE unique_pu_final_results_uploaded_count > 0)::bigint AS total_pu_unique_final_results_uploaded
-				FROM election_group_polling_units
-				WHERE ($1::bigint = 0 OR election_group_id = $1)
-				GROUP BY ward_id
-			) egw ON egw.ward_id = w.id
-			WHERE w.lga_id = $3
-			ORDER BY w.name ASC`
-		args = []interface{}{electionGroupID, partyID, lgaID}
-
-	} else if stateID > 0 {
-		unitTitle = "LGAs"
-		unitType = "lgas"
-		supervisorTitle = "LGA Supervisors"
-
-		query = `
-			SELECT
-				l.id,
-				l.name,
-				'' AS code,
-				COALESCE(egl.pu_agents_in_attendance_count, 0) AS pu_agents_in_attendance,
-				COALESCE(egl.pu_agents_count, 0) AS pu_agents_count,
-				COALESCE(egl.pu_updates_count, 0) AS updates_count,
-				COALESCE(egl.pu_reports_count, 0) AS reports_count,
-				COALESCE(egl.total_pu_with_reports, 0) AS reported_pus,
-				COALESCE(egl.total_pu_with_updates, 0) AS pus_with_updates,
-				COALESCE(egl.pu_final_results_uploaded_count, 0) AS results_uploaded,
-				COALESCE(egl.unique_final_results_expected, 0) AS results_expected,
-				COALESCE(egl.total_pu_unique_final_results_uploaded, 0) AS pus_with_all_results,
-				COALESCE(l.polling_units_count, 0) AS total_pus,
-				(
-					SELECT COALESCE(json_agg(json_build_object(
-						'id', u.id,
-						'name', u.full_name,
-						'avatar', COALESCE(u.avatar, '')
-					)), '[]'::json)
-					FROM (
-						SELECT u.id, u.first_name, u.last_name, u.avatar
-						FROM lga_election_supervisors les
-						JOIN users u ON u.id = les.user_id
-						WHERE les.lga_id = l.id
-						  AND ($1::bigint = 0 OR les.election_group_id = $1)
-						  AND ($2::int = 0 OR les.party_id = $2)
-						LIMIT 4
-					) u
-				) AS supervisors
-			FROM lgas l
-			LEFT JOIN (
-				SELECT
-					lga_id,
-					SUM(pu_agents_in_attendance_count)::bigint AS pu_agents_in_attendance_count,
-					SUM(pu_agents_count)::bigint AS pu_agents_count,
-					SUM(pu_updates_count)::bigint AS pu_updates_count,
-					SUM(pu_reports_count)::bigint AS pu_reports_count,
-					COUNT(DISTINCT polling_unit_id) FILTER (WHERE pu_reports_count > 0)::bigint AS total_pu_with_reports,
-					COUNT(DISTINCT polling_unit_id) FILTER (WHERE pu_updates_count > 0)::bigint AS total_pu_with_updates,
-					SUM(pu_final_results_uploaded_count)::bigint AS pu_final_results_uploaded_count,
-					SUM(unique_final_results_expected)::bigint AS unique_final_results_expected,
-					COUNT(DISTINCT polling_unit_id) FILTER (WHERE unique_pu_final_results_uploaded_count > 0)::bigint AS total_pu_unique_final_results_uploaded
-				FROM election_group_polling_units
-				WHERE ($1::bigint = 0 OR election_group_id = $1)
-				GROUP BY lga_id
-			) egl ON egl.lga_id = l.id
-			WHERE l.state_id = $3
-			ORDER BY l.name ASC`
-		args = []interface{}{electionGroupID, partyID, stateID}
-
-	} else {
-		// Default nationwide states
-		unitTitle = "States"
-		unitType = "states"
-		supervisorTitle = "State Supervisors"
-
-		query = `
-			SELECT
-				s.id,
-				s.name,
-				'' AS code,
-				COALESCE(egs.pu_agents_in_attendance_count, 0) AS pu_agents_in_attendance,
-				COALESCE(egs.pu_agents_count, 0) AS pu_agents_count,
-				COALESCE(egs.pu_updates_count, 0) AS updates_count,
-				COALESCE(egs.pu_reports_count, 0) AS reports_count,
-				COALESCE(egs.total_pu_with_reports, 0) AS reported_pus,
-				COALESCE(egs.total_pu_with_updates, 0) AS pus_with_updates,
-				COALESCE(egs.pu_final_results_uploaded_count, 0) AS results_uploaded,
-				COALESCE(egs.unique_final_results_expected, 0) AS results_expected,
-				COALESCE(egs.total_pu_unique_final_results_uploaded, 0) AS pus_with_all_results,
-				COALESCE(s.polling_units_count, 0) AS total_pus,
-				(
-					SELECT COALESCE(json_agg(json_build_object(
-						'id', u.id,
-						'name', u.full_name,
-						'avatar', COALESCE(u.avatar, '')
-					)), '[]'::json)
-					FROM (
-						SELECT u.id, u.first_name, u.last_name, u.avatar
-						FROM state_election_supervisors ses
-						JOIN users u ON u.id = ses.user_id
-						WHERE ses.state_id = s.id
-						  AND ($1::bigint = 0 OR ses.election_group_id = $1)
-						  AND ($2::int = 0 OR ses.party_id = $2)
-						LIMIT 4
-					) u
-				) AS supervisors
-			FROM c_states s
-			LEFT JOIN (
-				SELECT
-					state_id,
-					SUM(pu_agents_in_attendance_count)::bigint AS pu_agents_in_attendance_count,
-					SUM(pu_agents_count)::bigint AS pu_agents_count,
-					SUM(pu_updates_count)::bigint AS pu_updates_count,
-					SUM(pu_reports_count)::bigint AS pu_reports_count,
-					COUNT(DISTINCT polling_unit_id) FILTER (WHERE pu_reports_count > 0)::bigint AS total_pu_with_reports,
-					COUNT(DISTINCT polling_unit_id) FILTER (WHERE pu_updates_count > 0)::bigint AS total_pu_with_updates,
-					SUM(pu_final_results_uploaded_count)::bigint AS pu_final_results_uploaded_count,
-					SUM(unique_final_results_expected)::bigint AS unique_final_results_expected,
-					COUNT(DISTINCT polling_unit_id) FILTER (WHERE unique_pu_final_results_uploaded_count > 0)::bigint AS total_pu_unique_final_results_uploaded
-				FROM election_group_polling_units
-				WHERE ($1::bigint = 0 OR election_group_id = $1)
-				GROUP BY state_id
-			) egs ON egs.state_id = s.id
-			WHERE s.country_id = $3
-			ORDER BY s.name ASC`
-		args = []interface{}{electionGroupID, partyID, constants.NigeriaCountryID}
-	}
-
-	if h.pool == nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Database connection pool not initialized")
-		return
-	}
-
-	rows, err := h.pool.Query(ctx, query, args...)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to query operations breakdown: "+err.Error())
-		return
-	}
-	defer rows.Close()
-
-	var units []map[string]interface{}
-
-	if unitType == "polling_units" {
-		for rows.Next() {
-			var (
-				id                 int64
-				name, code         string
-				agentsInAttendance int64
-				puAgentsCount      int64
-				updatesCount       int64
-				reportsCount       int64
-				resultsUploaded    int64
-				resultsExpected    int64
-				agentsBytes        []byte
-			)
-
-			if err := rows.Scan(
-				&id, &name, &code,
-				&agentsInAttendance, &puAgentsCount,
-				&updatesCount, &reportsCount,
-				&resultsUploaded, &resultsExpected,
-				&agentsBytes,
-			); err != nil {
-				continue
-			}
-
-			var agents []map[string]interface{}
-			if len(agentsBytes) > 0 {
-				_ = json.Unmarshal(agentsBytes, &agents)
-			}
-
-			uploadedAll := resultsUploaded > 0 && resultsUploaded >= resultsExpected
-
-			// Agents ratio e.g. "2/3"
-			targetAgents := puAgentsCount
-			if targetAgents <= 0 {
-				targetAgents = 3
-			}
-			agentsAtPu := fmt.Sprintf("%d/%d", agentsInAttendance, targetAgents)
-
-			unit := map[string]interface{}{
-				"id":                      id,
-				"name":                    name,
-				"code":                    code,
-				"agents_at_pu":            agentsAtPu,
-				"pu_agents_in_attendance": agentsInAttendance,
-				"pu_agents_count":         targetAgents,
-				"updates_given":           updatesCount,
-				"reports_given":           reportsCount,
-				"results_uploaded":        resultsUploaded,
-				"results_expected":        resultsExpected,
-				"uploaded_all_results":    uploadedAll,
-				"pu_agents":               agents,
-			}
-			units = append(units, unit)
-		}
-	} else {
-		for rows.Next() {
-			var (
-				id                 int64
-				name, code         string
-				agentsInAttendance int64
-				puAgentsCount      int64
-				updatesCount       int64
-				reportsCount       int64
-				reportedPUs        int64
-				pusWithUpdates     int64
-				resultsUploaded    int64
-				resultsExpected    int64
-				pusWithAllResults  int64
-				totalPUs           int64
-				supervisorsBytes   []byte
-			)
-
-			if err := rows.Scan(
-				&id, &name, &code,
-				&agentsInAttendance, &puAgentsCount,
-				&updatesCount, &reportsCount,
-				&reportedPUs, &pusWithUpdates,
-				&resultsUploaded, &resultsExpected,
-				&pusWithAllResults, &totalPUs,
-				&supervisorsBytes,
-			); err != nil {
-				continue
-			}
-
-			var supervisors []map[string]interface{}
-			if len(supervisorsBytes) > 0 {
-				_ = json.Unmarshal(supervisorsBytes, &supervisors)
-			}
-
-			agentsAtPuStr := formatPctStr(agentsInAttendance, totalPUs)
-			resultsExpectedStr := formatPctStr(resultsExpected, totalPUs)
-			pusWith1AgentStr := formatPctStr(agentsInAttendance, totalPUs)
-			totalAgentsStr := formatPctStr(puAgentsCount, totalPUs)
-
-			unit := map[string]interface{}{
-				"id":                      id,
-				"name":                    name,
-				"code":                    code,
-				"agents_at_pu":            agentsAtPuStr,
-				"pu_agents_in_attendance": agentsInAttendance,
-				"pu_agents_count":         puAgentsCount,
-				"updates_given":           updatesCount,
-				"reports_given":           reportsCount,
-				"reported_pus":            reportedPUs,
-				"pus_with_updates":        pusWithUpdates,
-				"results_uploaded":        resultsUploaded,
-				"results_expected":        resultsExpectedStr,
-				"pus_with_all_results":    pusWithAllResults,
-				"pus_with_1_agent":        pusWith1AgentStr,
-				"total_agents":            totalAgentsStr,
-				"total_pus":               totalPUs,
-				"supervisors":             supervisors,
-			}
-			units = append(units, unit)
-		}
-	}
-
-	h.utils.RespondSuccessData(w, http.StatusOK, "Operations breakdown fetched", BreakdownListResponse[map[string]interface{}]{
-		Total:           len(units),
-		UnitTitle:       unitTitle,
-		UnitType:        unitType,
-		SupervisorTitle: supervisorTitle,
-		Units:           units,
-	})
-}
-
-// GetAgentCoverageBreakdown returns hierarchical agent coverage statistics and supervisor avatars.
+// @Router       /elections/agent-coverage/breakdown [get]
 func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	qParams := r.URL.Query()
 
-	// Parse query parameters
+	// Parse and validate required parameters
 	electionGroupID := utils.ParseQueryInt[int16](qParams, "election_group_id")
 	if electionGroupID <= 0 {
 		h.utils.RespondError(w, http.StatusBadRequest, "election_group_id is required")
 		return
 	}
 	partyID := utils.ParseQueryInt[int16](qParams, "party_id")
+	if partyID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "party_id is required")
+		return
+	}
+
+	// Verify authenticated session
+	claims, ok := apimiddleware.GetClaims(r)
+	if !ok || claims == nil {
+		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	// Verify party access rights
+	allowed, _, err := h.permissionsService.CheckPartyModificationPermission(claims, partyID)
+	if !allowed || err != nil {
+		errMsg := "Forbidden: insufficient permissions to view or modify this party"
+		if err != nil {
+			errMsg = err.Error()
+		}
+		h.utils.RespondError(w, http.StatusForbidden, errMsg)
+		return
+	}
 
 	// Parse geographic hierarchy scope IDs
 	puID := utils.ParseQueryInt[int32](qParams, "polling_unit_id")
@@ -1066,11 +169,11 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 			targetWardID, _ = h.service.GetPollingUnitWardID(ctx, puID)
 		}
 
-		// Query polling units and assigned PU agents via sqlc
+		// Query polling units and assigned PU agents directly from source table
 		puRows, err := h.service.GetAgentCoveragePollingUnits(ctx, queries.GetAgentCoveragePollingUnitsParams{
-			Column1: int64(electionGroupID),
-			Column2: int32(partyID),
-			Column3: int64(targetWardID),
+			ElectionGroupID: int64(electionGroupID),
+			PartyID:         int32(partyID),
+			WardID:          int64(targetWardID),
 		})
 		if err != nil {
 			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to query agent coverage breakdown: "+err.Error())
@@ -1092,17 +195,17 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 			})
 		}
 
-	// Level 2: Ward tier (when drilled down to an LGA)
+		// Level 2: Ward tier (when drilled down to an LGA)
 	} else if lgaID > 0 {
 		unitTitle = "Wards"
 		unitType = "wards"
 		supervisorTitle = "Ward Supervisor"
 
-		// Query wards, aggregated PU agent counts, and ward supervisors via sqlc
+		// Query wards, aggregated PU agent counts, and ward supervisors from source tables
 		wardRows, err := h.service.GetAgentCoverageWards(ctx, queries.GetAgentCoverageWardsParams{
-			Column1: int64(electionGroupID),
-			Column2: int32(partyID),
-			LgaID:   lgaID,
+			ElectionGroupID: int64(electionGroupID),
+			PartyID:         int32(partyID),
+			LgaID:           lgaID,
 		})
 		if err != nil {
 			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to query agent coverage breakdown: "+err.Error())
@@ -1131,17 +234,17 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 			})
 		}
 
-	// Level 3: LGA tier (when drilled down to a State)
+		// Level 3: LGA tier (when drilled down to a State)
 	} else if stateID > 0 {
 		unitTitle = "LGAs"
 		unitType = "lgas"
 		supervisorTitle = "LGA Supervisor"
 
-		// Query LGAs, aggregated agent/ward counts, and LGA supervisors via sqlc
+		// Query LGAs, aggregated agent/ward counts, and LGA supervisors from source tables
 		lgaRows, err := h.service.GetAgentCoverageLGAs(ctx, queries.GetAgentCoverageLGAsParams{
-			Column1: int64(electionGroupID),
-			Column2: int32(partyID),
-			StateID: int32(stateID),
+			ElectionGroupID: int64(electionGroupID),
+			PartyID:         int32(partyID),
+			StateID:         int32(stateID),
 		})
 		if err != nil {
 			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to query agent coverage breakdown: "+err.Error())
@@ -1170,17 +273,17 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 			})
 		}
 
-	// Level 4: State tier (top-level overview across all Nigerian states)
+		// Level 4: State tier (top-level overview across all Nigerian states)
 	} else {
 		unitTitle = "States"
 		unitType = "states"
 		supervisorTitle = "State Supervisor"
 
-		// Query states, aggregated agent counts, and state supervisors via sqlc
+		// Query states, aggregated agent counts, and state supervisors from source tables
 		stateRows, err := h.service.GetAgentCoverageStates(ctx, queries.GetAgentCoverageStatesParams{
-			Column1:   int64(electionGroupID),
-			Column2:   int32(partyID),
-			CountryID: constants.NigeriaCountryID,
+			ElectionGroupID: int64(electionGroupID),
+			PartyID:         int32(partyID),
+			CountryID:       int32(constants.NigeriaCountryID),
 		})
 		if err != nil {
 			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to query agent coverage breakdown: "+err.Error())

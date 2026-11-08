@@ -11,7 +11,7 @@ import { getStates } from "#/lib/server/countries";
 import { getLGAs, getPollingUnits, getWards } from "#/lib/server/applications";
 import { useElectionGroup } from "#/hooks/useElectionGroup";
 import { useQuery } from "@tanstack/react-query";
-import { X } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 
 export type ApplicationsFilterValues = {
   electionGroupId?: number;
@@ -35,6 +35,7 @@ export type ApplicationsFilterBarProps = {
   onFiltersChange?: (filters: ApplicationsFilterValues) => void;
   onAcceptAll?: () => void;
   showAcceptAll?: boolean;
+  isAcceptingAll?: boolean;
 };
 
 export function ApplicationsFilterBar({
@@ -51,6 +52,7 @@ export function ApplicationsFilterBar({
   onFiltersChange,
   onAcceptAll,
   showAcceptAll = true,
+  isAcceptingAll = false,
 }: ApplicationsFilterBarProps) {
   // Load available election groups
   const { electionGroups, isLoading: isGroupsLoading } = useElectionGroup();
@@ -77,6 +79,9 @@ export function ApplicationsFilterBar({
 
   // Check if any filter is currently active
   const hasActiveFilters = Boolean(electionGroupId || stateId || lgaId || wardId || pollingUnitId);
+
+  const isLgaSelected = Boolean(lgaId);
+  const acceptAllLabel = wardId ? "Accept all in Ward" : lgaId ? "Accept all in LGA" : "Accept all";
 
   // Clear all cascaded and election group filters
   const handleClearFilters = () => {
@@ -228,16 +233,16 @@ export function ApplicationsFilterBar({
             }}
             className="w-full h-11 px-3 rounded-12 border border-[#dddddd] bg-white text-[14px] text-[#404040] truncate outline-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
-          <option value="">
-            {isUnitsLoading ? "Loading..." : "All Units"}
-          </option>
-          {pollingUnits.map((pu) => (
-            <option key={pu.id} value={String(pu.id)}>
-              {pu.name}
+            <option value="">
+              {isUnitsLoading ? "Loading..." : "All Units"}
             </option>
-          ))}
-        </select>
-      </div>
+            {pollingUnits.map((pu) => (
+              <option key={pu.id} value={String(pu.id)}>
+                {pu.name}
+              </option>
+            ))}
+          </select>
+        </div>
 
         {/* Clear Filters button */}
         {hasActiveFilters && (
@@ -258,9 +263,21 @@ export function ApplicationsFilterBar({
           <button
             type="button"
             onClick={onAcceptAll}
-            className="flex h-11 items-center gap-2 rounded-12 bg-[#262626] px-5 text-[15px] font-medium text-white transition hover:bg-[#111]"
+            disabled={!isLgaSelected || isAcceptingAll}
+            title={!isLgaSelected ? "Select an LGA to accept all" : undefined}
+            className={`flex h-11 items-center gap-2 rounded-12 px-5 text-[15px] font-medium transition ${!isLgaSelected || isAcceptingAll
+                ? "bg-[#262626]/50 text-white/50 cursor-not-allowed"
+                : "bg-[#262626] text-white hover:bg-[#111]"
+              }`}
           >
-            Accept all
+            {isAcceptingAll ? (
+              <>
+                <Loader2 className="size-4 animate-spin" />
+                <span>Approving...</span>
+              </>
+            ) : (
+              acceptAllLabel
+            )}
           </button>
         )}
       </div>

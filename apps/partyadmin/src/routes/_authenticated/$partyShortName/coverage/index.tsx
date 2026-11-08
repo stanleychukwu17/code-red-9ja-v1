@@ -92,6 +92,7 @@ function AgentCoveragePage() {
       });
     },
     enabled: Boolean(party?.id && electionGroupId),
+    staleTime: Infinity,
   });
 
   // Normalize API response structure
@@ -162,7 +163,7 @@ function AgentCoveragePage() {
   };
 
   // UI state flags for navigation and drill-down controls
-  const isDrillable = !isPU;
+  const isDrillAble = !isPU;
   const hasDrillDown = Object.values(drillDown).some((v) => v !== undefined);
 
   return (
@@ -288,7 +289,7 @@ function AgentCoveragePage() {
           unitTitle={unitTitle}
           unitType={unitType}
           supervisorTitle={supervisorTitle}
-          onSelectUnit={isDrillable ? handleSelectUnit : undefined}
+          onSelectUnit={isDrillAble ? handleSelectUnit : undefined}
           onAssign={handleAssign}
         />
       )}

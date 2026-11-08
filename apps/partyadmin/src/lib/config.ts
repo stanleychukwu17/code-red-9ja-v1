@@ -212,6 +212,7 @@ export const API_URL = {
   partyApplications: (query?: string | URLSearchParams) => withQuery(`${api}/party-applications`, query),
   partyApplicationsRecommendations: (query?: string | URLSearchParams) =>
     withQuery(`${api}/party-applications/recommendations`, query),
+  batchApproveApplications: `${api}/party-applications/batch-approve`,
   pollingUnits: (query?: string | URLSearchParams) => withQuery(`${api}/polling-units`, query),
   pollingUnitsPaginated: (query?: string | URLSearchParams) => withQuery(`${api}/polling-units/paginated`, query),
   approveApplication: (id: string | number) =>

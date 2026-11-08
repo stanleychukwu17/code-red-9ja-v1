@@ -18,7 +18,7 @@ SELECT
   pua.updates_count AS updates_given,
   pua.reports_count AS reports_given,
   pua.live_voters_referred_count AS live_voters_referred,
-  CONCAT(pua.results_submitted_count, '/', COALESCE(egpu.unique_final_results_expected, 1))::varchar AS results_uploaded,
+  CONCAT(pua.results_submitted_count, '/', COALESCE(NULLIF((SELECT COUNT(*)::int FROM elections e WHERE e.election_group_id = pua.election_group_id), 0), 1))::varchar AS results_uploaded,
   COALESCE(ae.total_earned_kobo, pua.earned_amount_kobo, 0)::bigint AS earnings_kobo,
   CONCAT('₦', TO_CHAR(COALESCE(ae.total_earned_kobo, pua.earned_amount_kobo, 0) / 100.0, 'FM999,999,999,990.00'))::varchar AS earnings_formatted,
   (pua.completed_at IS NOT NULL)::boolean AS completion_status,
@@ -33,7 +33,6 @@ FROM polling_unit_assignments pua
 JOIN users u ON u.id = pua.user_id
 LEFT JOIN polling_units pu ON pu.id = pua.polling_unit_id
 LEFT JOIN agent_earnings ae ON ae.user_id = pua.user_id AND ae.election_group_id = pua.election_group_id AND ae.role_type = pua.role_type
-LEFT JOIN election_group_polling_units egpu ON egpu.election_group_id = pua.election_group_id AND egpu.polling_unit_id = pua.polling_unit_id
 WHERE
   (sqlc.arg(party_id)::smallint = 0 OR pua.party_id = sqlc.arg(party_id)) AND
   (sqlc.arg(election_group_id)::integer = 0 OR pua.election_group_id = sqlc.arg(election_group_id)) AND

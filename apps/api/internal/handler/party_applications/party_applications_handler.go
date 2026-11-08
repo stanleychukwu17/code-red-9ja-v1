@@ -21,6 +21,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
@@ -35,6 +36,7 @@ type PartyApplicationsService interface {
 	RejectApplication(ctx context.Context, app queries.PartyAgentApplication, reason string) (queries.PartyAgentApplication, error)
 	CancelApplication(ctx context.Context, app queries.PartyAgentApplication) (queries.PartyAgentApplication, error)
 	ApproveApplication(ctx context.Context, input partyapplications.ApproveApplicationInput) (queries.PartyAgentApplication, error)
+	BatchApproveApplications(ctx context.Context, input partyapplications.BatchApproveApplicationsInput) (*partyapplications.BatchApproveResult, error)
 	GetPollingUnitRecommendations(ctx context.Context, partyID int16, electionGroupID int32, lgaID, wardID, pollingUnitID int32) ([]queries.GetPollingUnitsWithAgentCountsRow, error)
 	ChangeAgentRole(ctx context.Context, input partyapplications.ChangeAgentRoleInput) (*partyapplications.ChangeAgentRoleResult, error)
 	RevokeAgent(ctx context.Context, input partyapplications.RevokeAgentInput) (*partyapplications.RevokedAgentResult, error)
@@ -717,6 +719,7 @@ func (h *Handler) ApproveApplication(w http.ResponseWriter, r *http.Request) {
 		"status": app.Status,
 	})
 	auditNewValues, _ := json.Marshal(map[string]interface{}{
+		"application_id":  app.ID,
 		"status":          updatedApp.Status,
 		"role":            roleType,
 		"polling_unit_id": puIDPtr,
@@ -724,7 +727,7 @@ func (h *Handler) ApproveApplication(w http.ResponseWriter, r *http.Request) {
 	h.auditService.LogPartyAdminActionAsync(r.Context(), queries.InsertAuditLogParams{
 		Action:     db.ActionApproveApplication,
 		EntityType: db.EntityTypePartyApplication,
-		EntityID:   strconv.FormatInt(id, 10),
+		EntityID:   strconv.FormatInt(app.UserID, 10),
 		OldValues:  auditOldValues,
 		NewValues:  auditNewValues,
 	})
@@ -746,6 +749,144 @@ func (h *Handler) ApproveApplication(w http.ResponseWriter, r *http.Request) {
 	h.utils.RespondSuccess(w, http.StatusOK, "Polling agent application approved and assigned successfully", map[string]interface{}{
 		"application": updatedApp,
 	})
+}
+
+type BatchApproveApplicationsRequest struct {
+	PartyID         int16 `json:"party_id" validate:"required,gt=0"`
+	ElectionGroupID int32 `json:"election_group_id" validate:"required,gt=0"`
+	StateID         int16 `json:"state_id" validate:"required,gt=0"`
+	LgaID           int32 `json:"lga_id" validate:"required,gt=0"`
+	WardID          int32 `json:"ward_id"`
+}
+
+// BatchApproveApplications godoc
+// @Summary      Batch approve polling agent applications
+// @Description  Bulk approves pending polling agent applications within an LGA (and optional Ward) up to capacity quotas.
+// @Tags         PollingAgentApplications
+// @Accept       json
+// @Produce      json
+// @Param        request body BatchApproveApplicationsRequest true "Batch approve payload"
+// @Success      200  {object} map[string]interface{} "Applications approved successfully"
+// @Failure      400  {object} map[string]interface{} "Invalid request payload"
+// @Failure      402  {object} map[string]interface{} "Insufficient slots"
+// @Failure      403  {object} map[string]interface{} "Permission denied"
+// @Failure      500  {object} map[string]interface{} "Internal server error"
+// @Security     BearerAuth
+// @Router       /party-applications/batch-approve [post]
+func (h *Handler) BatchApproveApplications(w http.ResponseWriter, r *http.Request) {
+	// Authenticate and extract claims
+	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
+	if !ok {
+		return
+	}
+
+	var req BatchApproveApplicationsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Verify caller has party modification permissions
+	if allowed, _, err := h.permissionsService.CheckPartyModificationPermission(claims, req.PartyID); !allowed || err != nil {
+		h.utils.RespondError(w, http.StatusForbidden, "Cannot approve applications of a different party")
+		return
+	}
+
+	// Verify election group exists and is active using cached election groups service
+	electionGroup, err := h.electionGroupsService.GetElectionGroupByID(r.Context(), req.ElectionGroupID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Failed to verify election group: "+err.Error())
+		return
+	}
+	if !electionGroup.Active {
+		h.utils.RespondError(w, http.StatusForbidden, "Election group is not active")
+		return
+	}
+	if utils.ElectionStatusForDate(electionGroup.ElectionDate.Time, time.Now()) == "ended" {
+		h.utils.RespondError(w, http.StatusBadRequest, "Cannot approve applications for an election that has already ended")
+		return
+	}
+
+	res, err := h.service.BatchApproveApplications(r.Context(), partyapplications.BatchApproveApplicationsInput{
+		PartyID:         req.PartyID,
+		ElectionGroupID: req.ElectionGroupID,
+		StateID:         req.StateID,
+		LgaID:           req.LgaID,
+		WardID:          req.WardID,
+		AssignedBy:      claims.UserID,
+	})
+	if err != nil {
+		errStr := err.Error()
+		if strings.Contains(errStr, "past election") {
+			h.utils.RespondError(w, http.StatusBadRequest, errStr)
+			return
+		}
+		if strings.Contains(errStr, "insufficient slots") {
+			h.utils.RespondError(w, http.StatusPaymentRequired, errStr)
+			return
+		}
+
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to batch approve applications: "+errStr)
+		return
+	}
+
+	// Resolve party national chapter ID (best-effort)
+	var natChapterID *int32
+	if chapID, chErr := h.partiesService.GetOrCreateNationalChapter(r.Context(), req.PartyID, constants.NigeriaCountryID); chErr == nil && chapID > 0 {
+		natChapterID = &chapID
+	}
+
+	// Asynchronously notify approved applicants and enqueue campaign group enrollment
+	for _, agent := range res.Approved {
+		puID := agent.PollingUnitID
+		h.notificationsService.NotifyAgentApplicationApproved(r.Context(), notifications.NotifyAgentApplicationApprovedParams{
+			ApplicationID:     agent.ApplicationID,
+			RecipientUserID:   agent.UserID,
+			PartyID:           req.PartyID,
+			NationalChapterID: natChapterID,
+			ElectionGroupID:   req.ElectionGroupID,
+			PollingUnitID:     &puID,
+			Role:              agent.Role,
+		})
+
+		if distErr := h.distributor.DistributeTaskEnrollAgentInCampaignGroup(r.Context(), &worker.EnrollAgentInCampaignGroupPayload{
+			PartyID:         req.PartyID,
+			ElectionGroupID: req.ElectionGroupID,
+			UserID:          agent.UserID,
+			Role:            agent.Role,
+			StateID:         agent.StateID,
+			LgaID:           agent.LgaID,
+			WardID:          agent.WardID,
+			PollingUnitID:   agent.PollingUnitID,
+		}); distErr != nil {
+			slog.Error("failed to enqueue enroll agent in campaign group task", "userID", agent.UserID, "role", agent.Role, "error", distErr)
+		}
+
+		// Asynchronously record audit log per approved applicant
+		agentAuditNewValues, _ := json.Marshal(map[string]interface{}{
+			"application_id":  agent.ApplicationID,
+			"role":            agent.Role,
+			"polling_unit_id": agent.PollingUnitID,
+			"state_id":        agent.StateID,
+			"lga_id":          agent.LgaID,
+			"ward_id":         agent.WardID,
+			"status":          "accepted",
+			"batch":           true,
+		})
+		h.auditService.LogPartyAdminActionAsync(r.Context(), queries.InsertAuditLogParams{
+			Action:     db.ActionApproveApplication,
+			EntityType: db.EntityTypePartyApplication,
+			EntityID:   strconv.FormatInt(agent.UserID, 10),
+			NewValues:  agentAuditNewValues,
+		})
+	}
+
+	h.utils.RespondSuccessData(w, http.StatusOK, fmt.Sprintf("Successfully approved %d applications (%d skipped)", res.ApprovedCount, res.SkippedCount), res)
 }
 
 type RejectApplicationRequest struct {

@@ -132,10 +132,9 @@ SET
   results_submitted_count = results_submitted_count + 1,
   completed_at            = CASE
                               WHEN (results_submitted_count + 1) >= COALESCE((
-                                SELECT egpu.unique_final_results_expected
-                                FROM election_group_polling_units egpu
-                                WHERE egpu.election_group_id = polling_unit_assignments.election_group_id
-                                  AND egpu.polling_unit_id = polling_unit_assignments.polling_unit_id
+                                SELECT COUNT(*)::int
+                                FROM elections e
+                                WHERE e.election_group_id = polling_unit_assignments.election_group_id
                               ), 1) THEN COALESCE(completed_at, NOW())
                               ELSE completed_at
                             END,

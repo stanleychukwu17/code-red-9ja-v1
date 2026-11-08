@@ -839,10 +839,10 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 		return queries.PartyAgentApplication{}, fmt.Errorf("failed to get election group: %w", err)
 	}
 
-	// Automatically cancel the application if the election year has already passed
+	// Automatically cancel the application if the election has already ended
 	now := time.Now()
-	if electionGroup.ElectionDate.Time.Year() < now.Year() {
-		reason := "Election is past"
+	if utils.ElectionStatusForDate(electionGroup.ElectionDate.Time, now) == "ended" {
+		reason := "Election has already ended"
 		updatedApp, cancelErr := txQueries.UpdateApplicationStatus(ctx, queries.UpdateApplicationStatusParams{
 			ID:             input.ApplicationID,
 			Status:         "cancelled",
@@ -1055,6 +1055,234 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 	}(app.UserID, int16(app.PartyID), app.ElectionGroupID)
 
 	return updatedApp, nil
+}
+
+// BatchApproveApplicationsInput defines the geographic scope and parameters for bulk approving polling agent applications.
+type BatchApproveApplicationsInput struct {
+	PartyID         int16
+	ElectionGroupID int32
+	StateID         int16
+	LgaID           int32
+	WardID          int32
+	AssignedBy      int64
+}
+
+// ApprovedAgentInfo captures operational IDs of an approved agent for downstream notification and group sync.
+type ApprovedAgentInfo struct {
+	ApplicationID int64
+	UserID        int64
+	PollingUnitID int32
+	StateID       int16
+	LgaID         int32
+	WardID        int32
+	Role          string
+}
+
+// BatchApproveResult summarizes the outcome of a batch approval run.
+type BatchApproveResult struct {
+	ApprovedCount int                 `json:"approved_count"`
+	SkippedCount  int                 `json:"skipped_count"`
+	Approved      []ApprovedAgentInfo `json:"-"`
+}
+
+// BatchApproveApplications approves pending polling agent applications within an LGA/Ward up to party capacity limits.
+func (s *Service) BatchApproveApplications(ctx context.Context, input BatchApproveApplicationsInput) (*BatchApproveResult, error) {
+	if input.PartyID <= 0 || input.ElectionGroupID <= 0 || input.StateID <= 0 || input.LgaID <= 0 {
+		return nil, errors.New("party_id, election_group_id, state_id, and lga_id are required")
+	}
+
+	// 1. Fetch party configuration and acquisition targets
+	party, err := s.partiesService.GetPartyByID(ctx, input.PartyID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch party: %w", err)
+	}
+
+	// Parse party agent acquisition quotas per polling unit (defaults to 1)
+	var targets map[string]int
+	if len(party.AgentAcquisitionTargets) > 0 {
+		_ = json.Unmarshal(party.AgentAcquisitionTargets, &targets)
+	}
+	maxPUAgents := 1
+	if val, ok := targets["polling_agent"]; ok && val > 0 {
+		maxPUAgents = val
+	} else if val, ok := targets["pu_agent"]; ok && val > 0 {
+		maxPUAgents = val
+	}
+
+	// Calculate agent remuneration deduction per agent
+	deductionKobo := resolvePotentialPaymentKobo(party.AgentPaymentAllocationKobo, "polling_agent", input.StateID)
+
+	// 3. Query pending applications matching criteria
+	pendingApps, err := s.queries.ListPendingApplicationsForBatchApproval(ctx, queries.ListPendingApplicationsForBatchApprovalParams{
+		PartyID:         input.PartyID,
+		ElectionGroupID: input.ElectionGroupID,
+		StateID:         input.StateID,
+		LgaID:           input.LgaID,
+		WardID:          input.WardID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list pending applications: %w", err)
+	}
+	if len(pendingApps) == 0 {
+		return &BatchApproveResult{ApprovedCount: 0, SkippedCount: 0}, nil
+	}
+
+	var assignedBy pgtype.Int8
+	if input.AssignedBy > 0 {
+		assignedBy = utils.PgInt8FromPositive(input.AssignedBy)
+	}
+
+	// Track PU assignment counts in-memory to prevent over-allocation within the batch
+	puCounts := make(map[int32]int)
+	getPUCount := func(puID int32) int {
+		if c, exists := puCounts[puID]; exists {
+			return c
+		}
+
+		count, err := s.queries.CountPollingUnitAssignments(ctx, queries.CountPollingUnitAssignmentsParams{
+			PollingUnitID:   puID,
+			PartyID:         input.PartyID,
+			ElectionGroupID: input.ElectionGroupID,
+		})
+
+		if err == nil {
+			puCounts[puID] = int(count)
+		} else {
+			puCounts[puID] = 0
+		}
+
+		return puCounts[puID]
+	}
+
+	// Track successfully approved agents and count of skipped applications
+	var approvedList []ApprovedAgentInfo
+	skippedCount := 0
+
+	// Process pending polling agent applications in FIFO order
+	for _, app := range pendingApps {
+		// Skip applications without a valid polling unit designation
+		if !app.PollingUnitID.Valid || app.PollingUnitID.Int32 <= 0 {
+			skippedCount++
+			continue
+		}
+
+		puID := app.PollingUnitID.Int32
+
+		// Check capacity for this polling unit
+		currentCount := getPUCount(puID)
+		if currentCount >= maxPUAgents {
+			skippedCount++
+			continue
+		}
+
+		// Execute approval transaction for this application
+		tx, err := s.pool.Begin(ctx)
+		if err != nil {
+			slog.Warn("batch approve: failed to begin transaction", "applicationID", app.ID, "error", err)
+			skippedCount++
+			continue
+		}
+		txQueries := s.queries.WithTx(tx)
+
+		// Deduct 1 slot
+		_, err = txQueries.DeductPartySlots(ctx, queries.DeductPartySlotsParams{
+			Slots: 1,
+			ID:    input.PartyID,
+		})
+		if err != nil {
+			tx.Rollback(ctx)
+			slog.Warn("batch approve: insufficient slots or deduction error", "error", err)
+			break
+		}
+
+		// Deduct payment balance if applicable
+		if deductionKobo > 0 {
+			_, err = txQueries.DeductPartyAgentPaymentBalance(ctx, queries.DeductPartyAgentPaymentBalanceParams{
+				AgentPaymentBalanceKobo: deductionKobo,
+				ID:                      party.ID,
+			})
+			if err != nil {
+				tx.Rollback(ctx)
+				slog.Warn("batch approve: insufficient payment balance", "error", err)
+				break
+			}
+		}
+
+		// Derive canonical location from Polling Unit
+		pu, err := s.pollingUnitsService.GetPollingUnitByID(ctx, puID)
+		if err != nil {
+			tx.Rollback(ctx)
+			skippedCount++
+			continue
+		}
+		stateID := int16(pu.StateID)
+		lgaID := pu.LgaID
+		wardID := pu.WardID
+
+		// Update application status to approved
+		_, err = txQueries.UpdateApplicationApproval(ctx, queries.UpdateApplicationApprovalParams{
+			ID:            app.ID,
+			Role:          "polling_agent",
+			PollingUnitID: utils.PgInt4FromPositive(puID),
+			StateID:       stateID,
+			LgaID:         utils.PgInt4FromPositive(lgaID),
+			WardID:        utils.PgInt4FromPositive(wardID),
+		})
+		if err != nil {
+			tx.Rollback(ctx)
+			skippedCount++
+			continue
+		}
+
+		// Insert polling_unit_assignments
+		_, err = txQueries.CreateAssignment(ctx, queries.CreateAssignmentParams{
+			UserID:               app.UserID,
+			PollingUnitID:        puID,
+			ElectionGroupID:      input.ElectionGroupID,
+			PartyID:              input.PartyID,
+			StateID:              stateID,
+			LgaID:                lgaID,
+			WardID:               wardID,
+			RoleType:             utils.PgTextFromString("polling_agent"),
+			AssignedBy:           assignedBy,
+			PotentialPaymentKobo: deductionKobo,
+		})
+		if err != nil {
+			tx.Rollback(ctx)
+			skippedCount++
+			continue
+		}
+
+		if err := tx.Commit(ctx); err != nil {
+			skippedCount++
+			continue
+		}
+
+		// Increment counts on success
+		puCounts[puID]++
+		_ = s.InvalidateUserHasActiveAgentApp(ctx, app.UserID)
+		_ = s.InvalidateApplicationByID(ctx, app.ID)
+
+		approvedList = append(approvedList, ApprovedAgentInfo{
+			ApplicationID: app.ID,
+			UserID:        app.UserID,
+			PollingUnitID: puID,
+			StateID:       stateID,
+			LgaID:         lgaID,
+			WardID:        wardID,
+			Role:          "polling_agent",
+		})
+	}
+
+	// Invalidate party caches once after batch
+	s.partiesService.InvalidatePartyCache(ctx, input.PartyID)
+	s.partiesService.InvalidateAcceptingPartyIDsCache(ctx)
+
+	return &BatchApproveResult{
+		ApprovedCount: len(approvedList),
+		SkippedCount:  skippedCount,
+		Approved:      approvedList,
+	}, nil
 }
 
 // processReferralOnAcceptance updates referral stats when a referred user's application is accepted (or auto-accepted).

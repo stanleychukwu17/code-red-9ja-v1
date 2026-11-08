@@ -51,20 +51,21 @@ SELECT
 FROM lgas l
 LEFT JOIN (
     SELECT
-        lga_id,
-        SUM(pu_agents_count)::bigint AS pu_agents_count
-    FROM election_group_polling_units
-    WHERE ($1::bigint = 0 OR election_group_id = $1)
-    GROUP BY lga_id
+        pua.lga_id,
+        COUNT(*)::bigint AS pu_agents_count
+    FROM polling_unit_assignments pua
+    WHERE ($1::bigint = 0 OR pua.election_group_id = $1)
+      AND ($2::int = 0 OR pua.party_id = $2)
+    GROUP BY pua.lga_id
 ) egl ON egl.lga_id = l.id
-WHERE l.state_id = $3
+WHERE l.state_id = $3::int
 ORDER BY l.name ASC
 `
 
 type GetAgentCoverageLGAsParams struct {
-	Column1 int64 `json:"column_1"`
-	Column2 int32 `json:"column_2"`
-	StateID int32 `json:"state_id"`
+	ElectionGroupID int64 `json:"election_group_id"`
+	PartyID         int32 `json:"party_id"`
+	StateID         int32 `json:"state_id"`
 }
 
 type GetAgentCoverageLGAsRow struct {
@@ -82,7 +83,7 @@ type GetAgentCoverageLGAsRow struct {
 }
 
 func (q *Queries) GetAgentCoverageLGAs(ctx context.Context, arg GetAgentCoverageLGAsParams) ([]GetAgentCoverageLGAsRow, error) {
-	rows, err := q.db.Query(ctx, getAgentCoverageLGAs, arg.Column1, arg.Column2, arg.StateID)
+	rows, err := q.db.Query(ctx, getAgentCoverageLGAs, arg.ElectionGroupID, arg.PartyID, arg.StateID)
 	if err != nil {
 		return nil, err
 	}
@@ -118,12 +119,12 @@ SELECT
     pu.id,
     pu.name,
     COALESCE(NULLIF(pu.pu_code, ''), pu.code, '')::text AS code,
-    COALESCE(egpu.pu_agents_count, (
-        SELECT COUNT(*) FROM polling_unit_assignments pua
+    (
+        SELECT COUNT(*)::bigint FROM polling_unit_assignments pua
         WHERE pua.polling_unit_id = pu.id
           AND ($1::bigint = 0 OR pua.election_group_id = $1)
           AND ($2::int = 0 OR pua.party_id = $2)
-    ), 0)::bigint AS pu_agents_count,
+    )::bigint AS pu_agents_count,
     (
         SELECT COALESCE(json_agg(json_build_object(
             'id', u.id,
@@ -141,16 +142,14 @@ SELECT
         ) u
     )::json AS agents
 FROM polling_units pu
-LEFT JOIN election_group_polling_units egpu
-    ON egpu.polling_unit_id = pu.id AND egpu.election_group_id = $1
 WHERE ($3::bigint = 0 OR pu.ward_id = $3)
 ORDER BY pu.id ASC
 `
 
 type GetAgentCoveragePollingUnitsParams struct {
-	Column1 int64 `json:"column_1"`
-	Column2 int32 `json:"column_2"`
-	Column3 int64 `json:"column_3"`
+	ElectionGroupID int64 `json:"election_group_id"`
+	PartyID         int32 `json:"party_id"`
+	WardID          int64 `json:"ward_id"`
 }
 
 type GetAgentCoveragePollingUnitsRow struct {
@@ -162,7 +161,7 @@ type GetAgentCoveragePollingUnitsRow struct {
 }
 
 func (q *Queries) GetAgentCoveragePollingUnits(ctx context.Context, arg GetAgentCoveragePollingUnitsParams) ([]GetAgentCoveragePollingUnitsRow, error) {
-	rows, err := q.db.Query(ctx, getAgentCoveragePollingUnits, arg.Column1, arg.Column2, arg.Column3)
+	rows, err := q.db.Query(ctx, getAgentCoveragePollingUnits, arg.ElectionGroupID, arg.PartyID, arg.WardID)
 	if err != nil {
 		return nil, err
 	}
@@ -236,20 +235,21 @@ SELECT
 FROM c_states s
 LEFT JOIN (
     SELECT
-        state_id,
-        SUM(pu_agents_count)::bigint AS pu_agents_count
-    FROM election_group_polling_units
-    WHERE ($1::bigint = 0 OR election_group_id = $1)
-    GROUP BY state_id
+        pua.state_id,
+        COUNT(*)::bigint AS pu_agents_count
+    FROM polling_unit_assignments pua
+    WHERE ($1::bigint = 0 OR pua.election_group_id = $1)
+      AND ($2::int = 0 OR pua.party_id = $2)
+    GROUP BY pua.state_id
 ) egs ON egs.state_id = s.id
-WHERE s.country_id = $3
+WHERE s.country_id = $3::int
 ORDER BY s.name ASC
 `
 
 type GetAgentCoverageStatesParams struct {
-	Column1   int64 `json:"column_1"`
-	Column2   int32 `json:"column_2"`
-	CountryID int16 `json:"country_id"`
+	ElectionGroupID int64 `json:"election_group_id"`
+	PartyID         int32 `json:"party_id"`
+	CountryID       int32 `json:"country_id"`
 }
 
 type GetAgentCoverageStatesRow struct {
@@ -267,7 +267,7 @@ type GetAgentCoverageStatesRow struct {
 }
 
 func (q *Queries) GetAgentCoverageStates(ctx context.Context, arg GetAgentCoverageStatesParams) ([]GetAgentCoverageStatesRow, error) {
-	rows, err := q.db.Query(ctx, getAgentCoverageStates, arg.Column1, arg.Column2, arg.CountryID)
+	rows, err := q.db.Query(ctx, getAgentCoverageStates, arg.ElectionGroupID, arg.PartyID, arg.CountryID)
 	if err != nil {
 		return nil, err
 	}
@@ -334,20 +334,21 @@ SELECT
 FROM wards w
 LEFT JOIN (
     SELECT
-        ward_id,
-        SUM(pu_agents_count)::bigint AS pu_agents_count
-    FROM election_group_polling_units
-    WHERE ($1::bigint = 0 OR election_group_id = $1)
-    GROUP BY ward_id
+        pua.ward_id,
+        COUNT(*)::bigint AS pu_agents_count
+    FROM polling_unit_assignments pua
+    WHERE ($1::bigint = 0 OR pua.election_group_id = $1)
+      AND ($2::int = 0 OR pua.party_id = $2)
+    GROUP BY pua.ward_id
 ) egw ON egw.ward_id = w.id
-WHERE w.lga_id = $3
+WHERE w.lga_id = $3::int
 ORDER BY w.name ASC
 `
 
 type GetAgentCoverageWardsParams struct {
-	Column1 int64 `json:"column_1"`
-	Column2 int32 `json:"column_2"`
-	LgaID   int32 `json:"lga_id"`
+	ElectionGroupID int64 `json:"election_group_id"`
+	PartyID         int32 `json:"party_id"`
+	LgaID           int32 `json:"lga_id"`
 }
 
 type GetAgentCoverageWardsRow struct {
@@ -365,7 +366,7 @@ type GetAgentCoverageWardsRow struct {
 }
 
 func (q *Queries) GetAgentCoverageWards(ctx context.Context, arg GetAgentCoverageWardsParams) ([]GetAgentCoverageWardsRow, error) {
-	rows, err := q.db.Query(ctx, getAgentCoverageWards, arg.Column1, arg.Column2, arg.LgaID)
+	rows, err := q.db.Query(ctx, getAgentCoverageWards, arg.ElectionGroupID, arg.PartyID, arg.LgaID)
 	if err != nil {
 		return nil, err
 	}
