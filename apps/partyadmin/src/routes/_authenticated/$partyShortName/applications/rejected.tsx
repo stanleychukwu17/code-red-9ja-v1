@@ -9,10 +9,11 @@ import { ApplicationsTable } from "#/components/Tables";
 import { getPageHeader } from "#/lib/shared/meta";
 import { createFileRoute } from "@tanstack/react-router";
 import { getApplicationTabs, validateApplicationsSearch } from "./-data";
-import { ApplicationsFilterBar, type ApplicationsFilterValues } from "#/components/applications/ApplicationsFilterBar";
+import { ApplicationsFilterBar } from "#/components/applications/ApplicationsFilterBar";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { getApplications } from "#/lib/server/applications";
 import { useUserParty } from "#/hooks/useUserParty";
+import { useApplicationsFilters } from "#/hooks/useApplicationsFilters";
 import { QUERY_KEYS } from "#/lib/config";
 import { useIntersectionObserver } from "usehooks-ts";
 import { Filter, Loader2 } from "lucide-react";
@@ -31,37 +32,9 @@ const PAGE_LIMIT = 50;
  */
 function RouteComponent() {
   const { partyShortName } = Route.useParams();
-  const { election_group_id: electionGroupId, state_id: stateId, lga_id: lgaId, ward_id: wardId, polling_unit_id: pollingUnitId } = Route.useSearch();
-  const navigate = Route.useNavigate();
+  const { electionGroupId, stateId, lgaId, wardId, pollingUnitId, handleFiltersChange } = useApplicationsFilters();
   const { party } = useUserParty();
   const partyId = party?.id;
-
-  // Synchronize selected filter changes into URL search parameters
-  const handleFiltersChange = (filters: ApplicationsFilterValues) => {
-    navigate({
-      search: (prev: any) => {
-        const next = {
-          ...prev,
-          election_group_id: filters.electionGroupId,
-          state_id: filters.stateId,
-          lga_id: filters.lgaId,
-          ward_id: filters.wardId,
-          polling_unit_id: filters.pollingUnitId,
-        };
-
-        // Strip undefined or empty keys to keep the URL clean
-        Object.keys(next).forEach((k) => {
-          if (next[k] === undefined || next[k] === null || next[k] === "") {
-            delete next[k];
-          }
-        });
-
-        return next;
-      },
-
-      replace: true,
-    });
-  };
 
   // Cursor-paginated rejected applications (primary list)
   const { data: rejectedPages, isLoading: isRejectedLoading, isFetchingNextPage, hasNextPage, fetchNextPage } = useInfiniteQuery({

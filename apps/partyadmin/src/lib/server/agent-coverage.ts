@@ -2,12 +2,6 @@ import { createServerFn } from "@tanstack/react-start";
 import { API_URL } from "#/lib/config";
 import { apiFetch } from "./fetch";
 
-export type AgentSupervisorItem = {
-  id: number;
-  name: string;
-  avatar?: string;
-};
-
 export type AgentCoverageUnitItem = {
   id: number | string;
   name: string;
@@ -17,8 +11,6 @@ export type AgentCoverageUnitItem = {
   lga_supervisors?: string;
   state_supervisors?: string;
   overall_readiness?: number;
-  supervisors?: AgentSupervisorItem[];
-  pu_agents?: AgentSupervisorItem[];
 };
 
 export type AgentCoverageBreakdownResponse = {

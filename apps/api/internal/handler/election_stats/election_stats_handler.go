@@ -2,6 +2,7 @@ package electionstatshandler
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"free9ja/api/internal/constants"
 	"free9ja/api/internal/db/queries"
@@ -31,6 +32,10 @@ type WardsService interface {
 	GetWardByID(ctx context.Context, id int32) (queries.Ward, error)
 }
 
+type PartiesService interface {
+	GetPartyByID(ctx context.Context, partyID int16) (queries.Party, error)
+}
+
 type PermissionsService interface {
 	CheckPartyModificationPermission(claims *utils.JWTClaims, partyID int16) (bool, permissionsservice.PartyModificationPermissions, error)
 }
@@ -41,6 +46,7 @@ type Handler struct {
 	statesService         StatesService
 	bodiesService         BodiesService
 	wardsService          WardsService
+	partiesService        PartiesService
 	permissionsService    PermissionsService
 	pool                  *pgxpool.Pool
 	utils                 *utils.Utils
@@ -72,6 +78,7 @@ func NewHandler(
 	statesService StatesService,
 	bodiesService BodiesService,
 	wardsService WardsService,
+	partiesService PartiesService,
 	permissionsService PermissionsService,
 	pool *pgxpool.Pool,
 	utils *utils.Utils,
@@ -82,6 +89,7 @@ func NewHandler(
 		statesService:         statesService,
 		bodiesService:         bodiesService,
 		wardsService:          wardsService,
+		partiesService:        partiesService,
 		permissionsService:    permissionsService,
 		pool:                  pool,
 		utils:                 utils,
@@ -92,6 +100,7 @@ func formatPctStr(numerator, denominator int64) string {
 	if denominator <= 0 {
 		return fmt.Sprintf("%d/0 (0%%)", numerator)
 	}
+
 	pct := (float64(numerator) / float64(denominator)) * 100
 	return fmt.Sprintf("%d/%d (%.1f%%)", numerator, denominator, pct)
 }
@@ -144,6 +153,20 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	// Fetch party details to determine target agents per polling unit
+	targetPerPU := int64(1)
+	if party, err := h.partiesService.GetPartyByID(ctx, partyID); err == nil {
+		var targets map[string]int
+		if len(party.AgentAcquisitionTargets) > 0 {
+			_ = json.Unmarshal(party.AgentAcquisitionTargets, &targets)
+		}
+		if val, ok := targets["polling_agent"]; ok && val > 0 {
+			targetPerPU = int64(val)
+		} else if val, ok := targets["pu_agent"]; ok && val > 0 {
+			targetPerPU = int64(val)
+		}
+	}
+
 	// Parse geographic hierarchy scope IDs
 	puID := utils.ParseQueryInt[int32](qParams, "polling_unit_id")
 	wardID := utils.ParseQueryInt[int32](qParams, "ward_id")
@@ -174,6 +197,7 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 			PartyID:         partyID,
 			WardID:          int64(targetWardID),
 		})
+
 		if err != nil {
 			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to query agent coverage breakdown: "+err.Error())
 			return
@@ -185,8 +209,6 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 				"name":           r.Name,
 				"code":           r.Code,
 				"polling_agents": strconv.FormatInt(r.PuAgentsCount, 10),
-				"pu_agents":      []interface{}{},
-				"supervisors":    []interface{}{},
 			})
 		}
 
@@ -208,10 +230,11 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 		}
 
 		for _, r := range wardRows {
-			targetPUAgents := r.TotalPus * 2
+			targetPUAgents := r.TotalPus * targetPerPU
 			if targetPUAgents <= 0 {
 				targetPUAgents = r.TotalPus
 			}
+
 			units = append(units, map[string]interface{}{
 				"id":                r.ID,
 				"name":              r.Name,
@@ -220,8 +243,6 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 				"ward_supervisors":  strconv.FormatInt(r.WardSupervisorsCount, 10),
 				"lga_supervisors":   "",
 				"state_supervisors": "",
-				"supervisors":       []interface{}{},
-				"pu_agents":         []interface{}{},
 			})
 		}
 
@@ -243,10 +264,11 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 		}
 
 		for _, r := range lgaRows {
-			targetPUAgents := r.TotalPus * 2
+			targetPUAgents := r.TotalPus * targetPerPU
 			if targetPUAgents <= 0 {
 				targetPUAgents = r.TotalPus
 			}
+
 			units = append(units, map[string]interface{}{
 				"id":                r.ID,
 				"name":              r.Name,
@@ -255,8 +277,6 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 				"ward_supervisors":  formatPctStr(r.WardSupervisorsCount, r.TotalWards),
 				"lga_supervisors":   strconv.FormatInt(r.LgaSupervisorsCount, 10),
 				"state_supervisors": "",
-				"supervisors":       []interface{}{},
-				"pu_agents":         []interface{}{},
 			})
 		}
 
@@ -278,10 +298,11 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 		}
 
 		for _, r := range stateRows {
-			targetPUAgents := r.TotalPus * 2
+			targetPUAgents := r.TotalPus * targetPerPU
 			if targetPUAgents <= 0 {
 				targetPUAgents = r.TotalPus
 			}
+
 			units = append(units, map[string]interface{}{
 				"id":                r.ID,
 				"name":              r.Name,
@@ -290,8 +311,6 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 				"ward_supervisors":  formatPctStr(r.WardSupervisorsCount, r.TotalWards),
 				"lga_supervisors":   formatPctStr(r.LgaSupervisorsCount, r.TotalLgas),
 				"state_supervisors": strconv.FormatInt(r.StateSupervisorsCount, 10),
-				"supervisors":       []interface{}{},
-				"pu_agents":         []interface{}{},
 			})
 		}
 	}

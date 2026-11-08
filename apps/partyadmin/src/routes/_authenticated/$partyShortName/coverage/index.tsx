@@ -6,7 +6,7 @@
  * to assign supervisors or polling agents.
  */
 
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { Layout, PageHeader } from "@repo/ui/components/custom/AdminLayouts";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -16,11 +16,14 @@ import { AgentCoverageTable } from "#/components/Tables";
 import type { AgentCoverageUnitItem } from "#/lib/server/agent-coverage";
 import { getAgentCoverageBreakdown } from "#/lib/server/agent-coverage";
 import { useUserParty } from "#/hooks/useUserParty";
+import { useApplicationsFilters } from "#/hooks/useApplicationsFilters";
 import { getPageHeader } from "#/lib/shared/meta";
 import { ApplicationsFilterBar } from "#/components/applications/ApplicationsFilterBar";
+import { validateApplicationsSearch } from "../applications/-data";
 
 export const Route = createFileRoute("/_authenticated/$partyShortName/coverage/")({
   head: () => getPageHeader({ title: "Agent Coverage" }),
+  validateSearch: validateApplicationsSearch,
   component: AgentCoveragePage,
 });
 
@@ -31,7 +34,6 @@ export const Route = createFileRoute("/_authenticated/$partyShortName/coverage/"
  */
 function AgentCoveragePage() {
   const { partyShortName } = Route.useParams();
-  const navigate = useNavigate();
 
   // Search input state for filtering units
   const [search, setSearch] = useState("");
@@ -40,33 +42,18 @@ function AgentCoveragePage() {
   // Active party context
   const { party } = useUserParty();
 
-  // Selected election group
-  const [electionGroupId, setElectionGroupId] = useState<number | undefined>();
-
-  // Hierarchical geographic drill-down filter state (State -> LGA -> Ward -> Polling Unit)
-  const [drillDown, setDrillDown] = useState<{
-    stateId?: number;
-    lgaId?: number;
-    wardId?: number;
-    pollingUnitId?: number;
-  }>({});
-
-  const stateId = drillDown.stateId;
-  const lgaId = drillDown.lgaId;
-  const wardId = drillDown.wardId;
-  const pollingUnitId = drillDown.pollingUnitId;
+  // Geographic and election group filters synchronized to URL search params
+  const {
+    electionGroupId,
+    stateId,
+    lgaId,
+    wardId,
+    pollingUnitId,
+    handleFiltersChange,
+  } = useApplicationsFilters();
 
   // Server function to fetch agent coverage breakdown
   const fetchBreakdown = useServerFn(getAgentCoverageBreakdown);
-
-  // Fallback title when server does not provide unit_title
-  const computedTitle = wardId
-    ? "Polling Units"
-    : lgaId
-      ? "Wards"
-      : stateId
-        ? "LGAs"
-        : "States";
 
   // Fetch coverage metrics for the current geographic scope and party
   const { data, isLoading } = useQuery({
@@ -98,12 +85,10 @@ function AgentCoveragePage() {
   // Normalize API response structure
   const payload = (data as any)?.data || data;
   const rawData = payload?.data || payload;
-  const items: AgentCoverageUnitItem[] = Array.isArray(rawData?.units)
-    ? rawData.units
-    : [];
+  const items: AgentCoverageUnitItem[] = Array.isArray(rawData?.units) ? rawData.units : [];
 
   // Metadata describing the current hierarchical level
-  const unitTitle = rawData?.unit_title || computedTitle;
+  const unitTitle = rawData?.unit_title || "";
   const unitType = (rawData?.unit_type || "").toLowerCase();
   const supervisorTitle = rawData?.supervisor_title || "State Supervisor";
   const isPU = unitType === "polling_units" || unitTitle === "Polling Units";
@@ -120,20 +105,29 @@ function AgentCoveragePage() {
     if (!unitId) return;
 
     if (unitType === "states" || (!unitType && unitTitle === "States")) {
-      setDrillDown({ stateId: unitId });
+      handleFiltersChange({
+        electionGroupId,
+        stateId: unitId,
+        lgaId: undefined,
+        wardId: undefined,
+        pollingUnitId: undefined,
+      });
     } else if (unitType === "lgas" || unitTitle === "LGAs") {
-      setDrillDown((prev) => ({
-        ...prev,
+      handleFiltersChange({
+        electionGroupId,
+        stateId,
         lgaId: unitId,
         wardId: undefined,
         pollingUnitId: undefined,
-      }));
+      });
     } else if (unitType === "wards" || unitTitle === "Wards") {
-      setDrillDown((prev) => ({
-        ...prev,
+      handleFiltersChange({
+        electionGroupId,
+        stateId,
+        lgaId,
         wardId: unitId,
         pollingUnitId: undefined,
-      }));
+      });
     }
   };
 
@@ -148,42 +142,18 @@ function AgentCoveragePage() {
         activeTab=""
       />
 
-      {/* Cascaded Geographic & Election Group Filter Bar */}
-      <ApplicationsFilterBar
-        electionGroupId={electionGroupId}
-        onElectionGroupChange={setElectionGroupId}
-        stateId={stateId}
-        onStateChange={(id) => setDrillDown({ stateId: id })}
-        lgaId={lgaId}
-        onLgaChange={(id) =>
-          setDrillDown((prev) => ({
-            ...prev,
-            lgaId: id,
-            wardId: undefined,
-            pollingUnitId: undefined,
-          }))
-        }
-        wardId={wardId}
-        onWardChange={(id) =>
-          setDrillDown((prev) => ({
-            ...prev,
-            wardId: id,
-            pollingUnitId: undefined,
-          }))
-        }
-        pollingUnitId={pollingUnitId}
-        onPollingUnitChange={(id) =>
-          setDrillDown((prev) => ({
-            ...prev,
-            pollingUnitId: id,
-          }))
-        }
-        showAcceptAll={false}
-      />
+      {/* Cascaded Geographic & Election Group Filter Bar and Search Controls */}
+      <div className="flex items-center justify-between gap-4 flex-wrap py-2">
+        <ApplicationsFilterBar
+          electionGroupId={electionGroupId}
+          stateId={stateId}
+          lgaId={lgaId}
+          wardId={wardId}
+          pollingUnitId={pollingUnitId}
+          onFiltersChange={handleFiltersChange}
+          showAcceptAll={false}
+        />
 
-
-      {/* Toolbar for search input and filter toggles */}
-      <div className="flex items-center justify-end gap-4 flex-wrap py-2">
         <div className="flex items-center gap-2">
           {/* Collapsible search bar */}
           {showSearch && (
