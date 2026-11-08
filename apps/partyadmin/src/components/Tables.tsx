@@ -319,13 +319,13 @@ export function ElectoralUnitsTable({
     y: number;
   } | null>(null);
 
-  const isDrillable = !!onSelectUnit;
+  const isDrillAble = !!onSelectUnit;
 
   return (
     <div className="w-full overflow-x-auto relative">
       <ElectoralUnitTableHeader
         unitTitle={unitTitle}
-        isDrillable={isDrillable}
+        isDrillAble={isDrillAble}
       />
       <div>
         {list.map((data, index) => (
@@ -337,9 +337,9 @@ export function ElectoralUnitsTable({
             onClick={
               onSelectUnit
                 ? () => {
-                    setHovered(null);
-                    onSelectUnit(data);
-                  }
+                  setHovered(null);
+                  onSelectUnit(data);
+                }
                 : undefined
             }
             onMouseEnter={(e) =>
@@ -385,7 +385,7 @@ export function OperationsTable({
 }) {
   const list = Array.isArray(items) ? items : [];
   const isPU = unitType === "polling_units" || unitTitle === "Polling Units";
-  const isDrillable = !isPU && !!onSelectUnit;
+  const isDrillAble = !isPU && !!onSelectUnit;
 
   return (
     <div className="w-full overflow-x-auto relative">
@@ -395,7 +395,7 @@ export function OperationsTable({
         <OperationsTableHeader
           unitTitle={unitTitle}
           supervisorTitle={supervisorTitle}
-          isDrillable={isDrillable}
+          isDrillAble={isDrillAble}
         />
       )}
       <div className="divide-y divide-neutral-100 dark:divide-neutral-800/60">
@@ -409,7 +409,7 @@ export function OperationsTable({
             <OperationsTableTile
               key={`${data.name}-${data.id || index}`}
               data={data}
-              onClick={isDrillable ? () => onSelectUnit(data) : undefined}
+              onClick={isDrillAble ? () => onSelectUnit(data) : undefined}
             />
           ),
         )}
@@ -417,6 +417,14 @@ export function OperationsTable({
     </div>
   );
 }
+
+export type AgentCoverageTableProps = {
+  items: AgentCoverageUnitItem[];
+  unitTitle?: string;
+  unitType?: string;
+  supervisorTitle?: string;
+  onSelectUnit?: (item: AgentCoverageUnitItem) => void;
+};
 
 /**
  * AgentCoverageTable Component
@@ -428,18 +436,10 @@ export function AgentCoverageTable({
   unitType = "states",
   supervisorTitle = "State Supervisor",
   onSelectUnit,
-  onAssign,
-}: {
-  items: AgentCoverageUnitItem[];
-  unitTitle?: string;
-  unitType?: string;
-  supervisorTitle?: string;
-  onSelectUnit?: (item: AgentCoverageUnitItem) => void;
-  onAssign?: (item: AgentCoverageUnitItem) => void;
-}) {
+}: AgentCoverageTableProps) {
   const list = Array.isArray(items) ? items : [];
   const isPU = unitType === "polling_units" || unitTitle === "Polling Units";
-  const isDrillable = !isPU && !!onSelectUnit;
+  const isDrillAble = !isPU && !!onSelectUnit;
 
   return (
     <div className="w-full overflow-x-auto relative">
@@ -458,15 +458,13 @@ export function AgentCoverageTable({
             <PollingUnitAgentCoverageTableTile
               key={`${data.name}-${data.id || index}`}
               data={data}
-              onAssign={onAssign}
             />
           ) : (
             <AgentCoverageTableTile
               key={`${data.name}-${data.id || index}`}
               data={data}
               unitType={unitType}
-              onClick={isDrillable ? () => onSelectUnit(data) : undefined}
-              onAssign={onAssign}
+              onClick={isDrillAble ? () => onSelectUnit(data) : undefined}
             />
           ),
         )}

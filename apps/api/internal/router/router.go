@@ -566,18 +566,6 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Post("/api/v1/elections/votes", electionsHandler.SubmitElectionVotes)
 		r.Get("/api/v1/election-groups/{id}/vote-status", electionsHandler.GetUserElectionGroupVoteStatus)
 
-		// Geographic Stats pre-aggregated endpoints
-		r.Get("/api/v1/election-groups/{id}/stats/polling-units", electionStatsHandler.GetPollingUnitStats)
-		r.Get("/api/v1/election-groups/{id}/stats/wards", electionStatsHandler.GetWardStats)
-		r.Get("/api/v1/election-groups/{id}/stats/lgas", electionStatsHandler.GetLGAStats)
-		r.Get("/api/v1/election-groups/{id}/stats/states", electionStatsHandler.GetStateStats)
-		r.Get("/api/v1/election-groups/{id}/stats/breakdown", electionStatsHandler.GetOperationsBreakdown)
-
-		// Single unit dedicated party stats endpoints
-		r.Get("/api/v1/election-groups/{id}/stats/parties/{party_id}", electionStatsHandler.GetSingleElectionGroupStats)
-		r.Get("/api/v1/election-groups/{id}/stats/states/{state_id}/parties/{party_id}", electionStatsHandler.GetSingleStateStats)
-		r.Get("/api/v1/election-groups/{id}/stats/lgas/{lga_id}/parties/{party_id}", electionStatsHandler.GetSingleLGAStats)
-		r.Get("/api/v1/election-groups/{id}/stats/wards/{ward_id}/parties/{party_id}", electionStatsHandler.GetSingleWardStats)
 
 		r.Post("/api/v1/parties/{id}/join-hierarchy", partiesHandler.JoinPartyHierarchy)
 		r.Post("/api/v1/parties/{id}/leave", partiesHandler.LeaveParty)

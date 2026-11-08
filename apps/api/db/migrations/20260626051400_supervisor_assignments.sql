@@ -55,6 +55,7 @@ CREATE TABLE IF NOT EXISTS lga_election_supervisors (
 );
 
 CREATE INDEX idx_lga_supervisors_composite ON lga_election_supervisors(election_group_id, party_id, lga_id);
+CREATE INDEX idx_lga_supervisors_geo ON lga_election_supervisors(election_group_id, party_id, state_id, lga_id);
 
 -- Ward Election Supervisors
 CREATE TABLE IF NOT EXISTS ward_election_supervisors (
@@ -85,6 +86,7 @@ CREATE TABLE IF NOT EXISTS ward_election_supervisors (
 );
 
 CREATE INDEX idx_ward_supervisors_composite ON ward_election_supervisors(election_group_id, party_id, ward_id);
+CREATE INDEX idx_ward_supervisors_geo ON ward_election_supervisors(election_group_id, party_id, state_id, lga_id, ward_id);
 
 -- +goose Down
 DROP TABLE IF EXISTS ward_election_supervisors;

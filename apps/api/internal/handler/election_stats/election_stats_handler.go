@@ -2,7 +2,6 @@ package electionstatshandler
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"free9ja/api/internal/constants"
 	"free9ja/api/internal/db/queries"
@@ -171,8 +170,8 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 
 		// Query polling units and assigned PU agents directly from source table
 		puRows, err := h.service.GetAgentCoveragePollingUnits(ctx, queries.GetAgentCoveragePollingUnitsParams{
-			ElectionGroupID: int64(electionGroupID),
-			PartyID:         int32(partyID),
+			ElectionGroupID: int32(electionGroupID),
+			PartyID:         partyID,
 			WardID:          int64(targetWardID),
 		})
 		if err != nil {
@@ -181,17 +180,13 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 		}
 
 		for _, r := range puRows {
-			var agents []map[string]interface{}
-			if len(r.Agents) > 0 {
-				_ = json.Unmarshal(r.Agents, &agents)
-			}
 			units = append(units, map[string]interface{}{
 				"id":             r.ID,
 				"name":           r.Name,
 				"code":           r.Code,
 				"polling_agents": strconv.FormatInt(r.PuAgentsCount, 10),
-				"pu_agents":      agents,
-				"supervisors":    agents,
+				"pu_agents":      []interface{}{},
+				"supervisors":    []interface{}{},
 			})
 		}
 
@@ -203,8 +198,8 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 
 		// Query wards, aggregated PU agent counts, and ward supervisors from source tables
 		wardRows, err := h.service.GetAgentCoverageWards(ctx, queries.GetAgentCoverageWardsParams{
-			ElectionGroupID: int64(electionGroupID),
-			PartyID:         int32(partyID),
+			ElectionGroupID: int32(electionGroupID),
+			PartyID:         partyID,
 			LgaID:           lgaID,
 		})
 		if err != nil {
@@ -213,10 +208,6 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 		}
 
 		for _, r := range wardRows {
-			var supervisors []map[string]interface{}
-			if len(r.Supervisors) > 0 {
-				_ = json.Unmarshal(r.Supervisors, &supervisors)
-			}
 			targetPUAgents := r.TotalPus * 2
 			if targetPUAgents <= 0 {
 				targetPUAgents = r.TotalPus
@@ -224,13 +215,13 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 			units = append(units, map[string]interface{}{
 				"id":                r.ID,
 				"name":              r.Name,
-				"code":              r.Code,
+				"code":              "",
 				"polling_agents":    formatPctStr(r.PuAgentsCount, targetPUAgents),
 				"ward_supervisors":  strconv.FormatInt(r.WardSupervisorsCount, 10),
 				"lga_supervisors":   "",
 				"state_supervisors": "",
-				"supervisors":       supervisors,
-				"pu_agents":         supervisors,
+				"supervisors":       []interface{}{},
+				"pu_agents":         []interface{}{},
 			})
 		}
 
@@ -242,8 +233,8 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 
 		// Query LGAs, aggregated agent/ward counts, and LGA supervisors from source tables
 		lgaRows, err := h.service.GetAgentCoverageLGAs(ctx, queries.GetAgentCoverageLGAsParams{
-			ElectionGroupID: int64(electionGroupID),
-			PartyID:         int32(partyID),
+			ElectionGroupID: int32(electionGroupID),
+			PartyID:         partyID,
 			StateID:         int32(stateID),
 		})
 		if err != nil {
@@ -252,10 +243,6 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 		}
 
 		for _, r := range lgaRows {
-			var supervisors []map[string]interface{}
-			if len(r.Supervisors) > 0 {
-				_ = json.Unmarshal(r.Supervisors, &supervisors)
-			}
 			targetPUAgents := r.TotalPus * 2
 			if targetPUAgents <= 0 {
 				targetPUAgents = r.TotalPus
@@ -263,13 +250,13 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 			units = append(units, map[string]interface{}{
 				"id":                r.ID,
 				"name":              r.Name,
-				"code":              r.Code,
+				"code":              "",
 				"polling_agents":    formatPctStr(r.PuAgentsCount, targetPUAgents),
 				"ward_supervisors":  formatPctStr(r.WardSupervisorsCount, r.TotalWards),
 				"lga_supervisors":   strconv.FormatInt(r.LgaSupervisorsCount, 10),
 				"state_supervisors": "",
-				"supervisors":       supervisors,
-				"pu_agents":         supervisors,
+				"supervisors":       []interface{}{},
+				"pu_agents":         []interface{}{},
 			})
 		}
 
@@ -281,8 +268,8 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 
 		// Query states, aggregated agent counts, and state supervisors from source tables
 		stateRows, err := h.service.GetAgentCoverageStates(ctx, queries.GetAgentCoverageStatesParams{
-			ElectionGroupID: int64(electionGroupID),
-			PartyID:         int32(partyID),
+			ElectionGroupID: int32(electionGroupID),
+			PartyID:         partyID,
 			CountryID:       int32(constants.NigeriaCountryID),
 		})
 		if err != nil {
@@ -291,10 +278,6 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 		}
 
 		for _, r := range stateRows {
-			var supervisors []map[string]interface{}
-			if len(r.Supervisors) > 0 {
-				_ = json.Unmarshal(r.Supervisors, &supervisors)
-			}
 			targetPUAgents := r.TotalPus * 2
 			if targetPUAgents <= 0 {
 				targetPUAgents = r.TotalPus
@@ -302,13 +285,13 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 			units = append(units, map[string]interface{}{
 				"id":                r.ID,
 				"name":              r.Name,
-				"code":              r.Code,
+				"code":              "",
 				"polling_agents":    formatPctStr(r.PuAgentsCount, targetPUAgents),
 				"ward_supervisors":  formatPctStr(r.WardSupervisorsCount, r.TotalWards),
 				"lga_supervisors":   formatPctStr(r.LgaSupervisorsCount, r.TotalLgas),
 				"state_supervisors": strconv.FormatInt(r.StateSupervisorsCount, 10),
-				"supervisors":       supervisors,
-				"pu_agents":         supervisors,
+				"supervisors":       []interface{}{},
+				"pu_agents":         []interface{}{},
 			})
 		}
 	}

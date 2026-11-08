@@ -405,10 +405,10 @@ export function CandidateResultTableTile({
 // ─── Electoral Units Table (Image 2) ──────────────────────────────────────────
 export function ElectoralUnitTableHeader({
   unitTitle = "States",
-  isDrillable = true,
+  isDrillAble = true,
 }: {
   unitTitle?: string;
-  isDrillable?: boolean;
+  isDrillAble?: boolean;
 }) {
   return (
     <TileHeader className="min-w-max px-4">
@@ -425,7 +425,7 @@ export function ElectoralUnitTableHeader({
         <span className="text-c-50 text-[14px] w-[130px] text-right pr-2">
           Vote share
         </span>
-        {isDrillable && <span className="w-5" />}
+        {isDrillAble && <span className="w-5" />}
       </TileRight>
     </TileHeader>
   );

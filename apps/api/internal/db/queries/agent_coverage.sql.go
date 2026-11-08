@@ -13,65 +13,57 @@ const getAgentCoverageLGAs = `-- name: GetAgentCoverageLGAs :many
 SELECT
     l.id,
     l.name,
-    ''::text AS code,
-    COALESCE(egl.pu_agents_count, 0)::bigint AS pu_agents_count,
+    COALESCE(pua_counts.pu_agents_count, 0)::bigint AS pu_agents_count,
     COALESCE(l.polling_units_count, 0)::bigint AS total_pus,
-    (
-        SELECT COUNT(*)::bigint FROM ward_election_supervisors wes
-        JOIN wards w ON w.id = wes.ward_id
-        WHERE w.lga_id = l.id
-          AND ($1::bigint = 0 OR wes.election_group_id = $1)
-          AND ($2::int = 0 OR wes.party_id = $2)
-    )::bigint AS ward_supervisors_count,
+    COALESCE(wes_counts.ward_supervisors_count, 0)::bigint AS ward_supervisors_count,
     COALESCE(l.wards_count, 0)::bigint AS total_wards,
-    (
-        SELECT COUNT(*)::bigint FROM lga_election_supervisors les
-        WHERE les.lga_id = l.id
-          AND ($1::bigint = 0 OR les.election_group_id = $1)
-          AND ($2::int = 0 OR les.party_id = $2)
-    )::bigint AS lga_supervisors_count,
+    COALESCE(les_counts.lga_supervisors_count, 0)::bigint AS lga_supervisors_count,
     1::bigint AS total_lgas,
-    0::bigint AS state_supervisors_count,
-    (
-        SELECT COALESCE(json_agg(json_build_object(
-            'id', u.id,
-            'name', u.full_name,
-            'avatar', COALESCE(u.avatar, '')
-        )), '[]'::json)
-        FROM (
-            SELECT u.id, u.first_name, u.last_name, u.avatar
-            FROM lga_election_supervisors les
-            JOIN users u ON u.id = les.user_id
-            WHERE les.lga_id = l.id
-              AND ($1::bigint = 0 OR les.election_group_id = $1)
-              AND ($2::int = 0 OR les.party_id = $2)
-            LIMIT 4
-        ) u
-    )::json AS supervisors
+    0::bigint AS state_supervisors_count
 FROM lgas l
 LEFT JOIN (
     SELECT
         pua.lga_id,
         COUNT(*)::bigint AS pu_agents_count
     FROM polling_unit_assignments pua
-    WHERE ($1::bigint = 0 OR pua.election_group_id = $1)
-      AND ($2::int = 0 OR pua.party_id = $2)
+    WHERE pua.election_group_id = $1
+      AND pua.party_id = $2
+      AND pua.state_id = $3::int
     GROUP BY pua.lga_id
-) egl ON egl.lga_id = l.id
+) pua_counts ON pua_counts.lga_id = l.id
+LEFT JOIN (
+    SELECT
+        wes.lga_id,
+        COUNT(*)::bigint AS ward_supervisors_count
+    FROM ward_election_supervisors wes
+    WHERE wes.election_group_id = $1
+      AND wes.party_id = $2
+      AND wes.state_id = $3::smallint
+    GROUP BY wes.lga_id
+) wes_counts ON wes_counts.lga_id = l.id
+LEFT JOIN (
+    SELECT
+        les.lga_id,
+        COUNT(*)::bigint AS lga_supervisors_count
+    FROM lga_election_supervisors les
+    WHERE les.election_group_id = $1
+      AND les.party_id = $2
+      AND les.state_id = $3::smallint
+    GROUP BY les.lga_id
+) les_counts ON les_counts.lga_id = l.id
 WHERE l.state_id = $3::int
 ORDER BY l.name ASC
 `
 
 type GetAgentCoverageLGAsParams struct {
-	ElectionGroupID int64 `json:"election_group_id"`
-	PartyID         int32 `json:"party_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
+	PartyID         int16 `json:"party_id"`
 	StateID         int32 `json:"state_id"`
 }
 
 type GetAgentCoverageLGAsRow struct {
 	ID                    int32  `json:"id"`
 	Name                  string `json:"name"`
-	Code                  string `json:"code"`
 	PuAgentsCount         int64  `json:"pu_agents_count"`
 	TotalPus              int64  `json:"total_pus"`
 	WardSupervisorsCount  int64  `json:"ward_supervisors_count"`
@@ -79,7 +71,6 @@ type GetAgentCoverageLGAsRow struct {
 	LgaSupervisorsCount   int64  `json:"lga_supervisors_count"`
 	TotalLgas             int64  `json:"total_lgas"`
 	StateSupervisorsCount int64  `json:"state_supervisors_count"`
-	Supervisors           []byte `json:"supervisors"`
 }
 
 func (q *Queries) GetAgentCoverageLGAs(ctx context.Context, arg GetAgentCoverageLGAsParams) ([]GetAgentCoverageLGAsRow, error) {
@@ -94,7 +85,6 @@ func (q *Queries) GetAgentCoverageLGAs(ctx context.Context, arg GetAgentCoverage
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
-			&i.Code,
 			&i.PuAgentsCount,
 			&i.TotalPus,
 			&i.WardSupervisorsCount,
@@ -102,7 +92,6 @@ func (q *Queries) GetAgentCoverageLGAs(ctx context.Context, arg GetAgentCoverage
 			&i.LgaSupervisorsCount,
 			&i.TotalLgas,
 			&i.StateSupervisorsCount,
-			&i.Supervisors,
 		); err != nil {
 			return nil, err
 		}
@@ -119,36 +108,25 @@ SELECT
     pu.id,
     pu.name,
     COALESCE(NULLIF(pu.pu_code, ''), pu.code, '')::text AS code,
-    (
-        SELECT COUNT(*)::bigint FROM polling_unit_assignments pua
-        WHERE pua.polling_unit_id = pu.id
-          AND ($1::bigint = 0 OR pua.election_group_id = $1)
-          AND ($2::int = 0 OR pua.party_id = $2)
-    )::bigint AS pu_agents_count,
-    (
-        SELECT COALESCE(json_agg(json_build_object(
-            'id', u.id,
-            'name', u.full_name,
-            'avatar', COALESCE(u.avatar, '')
-        )), '[]'::json)
-        FROM (
-            SELECT u.id, u.first_name, u.last_name, u.avatar
-            FROM polling_unit_assignments pua
-            JOIN users u ON u.id = pua.user_id
-            WHERE pua.polling_unit_id = pu.id
-              AND ($1::bigint = 0 OR pua.election_group_id = $1)
-              AND ($2::int = 0 OR pua.party_id = $2)
-            LIMIT 4
-        ) u
-    )::json AS agents
+    COALESCE(pua_counts.pu_agents_count, 0)::bigint AS pu_agents_count
 FROM polling_units pu
+LEFT JOIN (
+    SELECT
+        pua.polling_unit_id,
+        COUNT(*)::bigint AS pu_agents_count
+    FROM polling_unit_assignments pua
+    WHERE pua.election_group_id = $1
+      AND pua.party_id = $2
+      AND ($3::bigint = 0 OR pua.ward_id = $3)
+    GROUP BY pua.polling_unit_id
+) pua_counts ON pua_counts.polling_unit_id = pu.id
 WHERE ($3::bigint = 0 OR pu.ward_id = $3)
 ORDER BY pu.id ASC
 `
 
 type GetAgentCoveragePollingUnitsParams struct {
-	ElectionGroupID int64 `json:"election_group_id"`
-	PartyID         int32 `json:"party_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
+	PartyID         int16 `json:"party_id"`
 	WardID          int64 `json:"ward_id"`
 }
 
@@ -157,7 +135,6 @@ type GetAgentCoveragePollingUnitsRow struct {
 	Name          string `json:"name"`
 	Code          string `json:"code"`
 	PuAgentsCount int64  `json:"pu_agents_count"`
-	Agents        []byte `json:"agents"`
 }
 
 func (q *Queries) GetAgentCoveragePollingUnits(ctx context.Context, arg GetAgentCoveragePollingUnitsParams) ([]GetAgentCoveragePollingUnitsRow, error) {
@@ -174,7 +151,6 @@ func (q *Queries) GetAgentCoveragePollingUnits(ctx context.Context, arg GetAgent
 			&i.Name,
 			&i.Code,
 			&i.PuAgentsCount,
-			&i.Agents,
 		); err != nil {
 			return nil, err
 		}
@@ -190,72 +166,63 @@ const getAgentCoverageStates = `-- name: GetAgentCoverageStates :many
 SELECT
     s.id,
     s.name,
-    ''::text AS code,
-    COALESCE(egs.pu_agents_count, 0)::bigint AS pu_agents_count,
+    COALESCE(pua_counts.pu_agents_count, 0)::bigint AS pu_agents_count,
     COALESCE(s.polling_units_count, 0)::bigint AS total_pus,
-    (
-        SELECT COUNT(*)::bigint FROM ward_election_supervisors wes
-        JOIN wards w ON w.id = wes.ward_id
-        JOIN lgas l ON l.id = w.lga_id
-        WHERE l.state_id = s.id
-          AND ($1::bigint = 0 OR wes.election_group_id = $1)
-          AND ($2::int = 0 OR wes.party_id = $2)
-    )::bigint AS ward_supervisors_count,
+    COALESCE(wes_counts.ward_supervisors_count, 0)::bigint AS ward_supervisors_count,
     COALESCE(s.wards_count, 0)::bigint AS total_wards,
-    (
-        SELECT COUNT(*)::bigint FROM lga_election_supervisors les
-        JOIN lgas l ON l.id = les.lga_id
-        WHERE l.state_id = s.id
-          AND ($1::bigint = 0 OR les.election_group_id = $1)
-          AND ($2::int = 0 OR les.party_id = $2)
-    )::bigint AS lga_supervisors_count,
+    COALESCE(les_counts.lga_supervisors_count, 0)::bigint AS lga_supervisors_count,
     COALESCE(s.lgas_count, 0)::bigint AS total_lgas,
-    (
-        SELECT COUNT(*)::bigint FROM state_election_supervisors ses
-        WHERE ses.state_id = s.id
-          AND ($1::bigint = 0 OR ses.election_group_id = $1)
-          AND ($2::int = 0 OR ses.party_id = $2)
-    )::bigint AS state_supervisors_count,
-    (
-        SELECT COALESCE(json_agg(json_build_object(
-            'id', u.id,
-            'name', u.full_name,
-            'avatar', COALESCE(u.avatar, '')
-        )), '[]'::json)
-        FROM (
-            SELECT u.id, u.first_name, u.last_name, u.avatar
-            FROM state_election_supervisors ses
-            JOIN users u ON u.id = ses.user_id
-            WHERE ses.state_id = s.id
-              AND ($1::bigint = 0 OR ses.election_group_id = $1)
-              AND ($2::int = 0 OR ses.party_id = $2)
-            LIMIT 4
-        ) u
-    )::json AS supervisors
+    COALESCE(ses_counts.state_supervisors_count, 0)::bigint AS state_supervisors_count
 FROM c_states s
 LEFT JOIN (
     SELECT
         pua.state_id,
         COUNT(*)::bigint AS pu_agents_count
     FROM polling_unit_assignments pua
-    WHERE ($1::bigint = 0 OR pua.election_group_id = $1)
-      AND ($2::int = 0 OR pua.party_id = $2)
+    WHERE pua.election_group_id = $1
+      AND pua.party_id = $2
     GROUP BY pua.state_id
-) egs ON egs.state_id = s.id
+) pua_counts ON pua_counts.state_id = s.id
+LEFT JOIN (
+    SELECT
+        wes.state_id,
+        COUNT(*)::bigint AS ward_supervisors_count
+    FROM ward_election_supervisors wes
+    WHERE wes.election_group_id = $1
+      AND wes.party_id = $2
+    GROUP BY wes.state_id
+) wes_counts ON wes_counts.state_id = s.id
+LEFT JOIN (
+    SELECT
+        les.state_id,
+        COUNT(*)::bigint AS lga_supervisors_count
+    FROM lga_election_supervisors les
+    WHERE les.election_group_id = $1
+      AND les.party_id = $2
+    GROUP BY les.state_id
+) les_counts ON les_counts.state_id = s.id
+LEFT JOIN (
+    SELECT
+        ses.state_id,
+        COUNT(*)::bigint AS state_supervisors_count
+    FROM state_election_supervisors ses
+    WHERE ses.election_group_id = $1
+      AND ses.party_id = $2
+    GROUP BY ses.state_id
+) ses_counts ON ses_counts.state_id = s.id
 WHERE s.country_id = $3::int
 ORDER BY s.name ASC
 `
 
 type GetAgentCoverageStatesParams struct {
-	ElectionGroupID int64 `json:"election_group_id"`
-	PartyID         int32 `json:"party_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
+	PartyID         int16 `json:"party_id"`
 	CountryID       int32 `json:"country_id"`
 }
 
 type GetAgentCoverageStatesRow struct {
 	ID                    int16  `json:"id"`
 	Name                  string `json:"name"`
-	Code                  string `json:"code"`
 	PuAgentsCount         int64  `json:"pu_agents_count"`
 	TotalPus              int64  `json:"total_pus"`
 	WardSupervisorsCount  int64  `json:"ward_supervisors_count"`
@@ -263,7 +230,6 @@ type GetAgentCoverageStatesRow struct {
 	LgaSupervisorsCount   int64  `json:"lga_supervisors_count"`
 	TotalLgas             int64  `json:"total_lgas"`
 	StateSupervisorsCount int64  `json:"state_supervisors_count"`
-	Supervisors           []byte `json:"supervisors"`
 }
 
 func (q *Queries) GetAgentCoverageStates(ctx context.Context, arg GetAgentCoverageStatesParams) ([]GetAgentCoverageStatesRow, error) {
@@ -278,7 +244,6 @@ func (q *Queries) GetAgentCoverageStates(ctx context.Context, arg GetAgentCovera
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
-			&i.Code,
 			&i.PuAgentsCount,
 			&i.TotalPus,
 			&i.WardSupervisorsCount,
@@ -286,7 +251,6 @@ func (q *Queries) GetAgentCoverageStates(ctx context.Context, arg GetAgentCovera
 			&i.LgaSupervisorsCount,
 			&i.TotalLgas,
 			&i.StateSupervisorsCount,
-			&i.Supervisors,
 		); err != nil {
 			return nil, err
 		}
@@ -302,59 +266,47 @@ const getAgentCoverageWards = `-- name: GetAgentCoverageWards :many
 SELECT
     w.id,
     w.name,
-    ''::text AS code,
-    COALESCE(egw.pu_agents_count, 0)::bigint AS pu_agents_count,
+    COALESCE(pua_counts.pu_agents_count, 0)::bigint AS pu_agents_count,
     COALESCE(w.polling_units_count, 0)::bigint AS total_pus,
-    (
-        SELECT COUNT(*)::bigint FROM ward_election_supervisors wes
-        WHERE wes.ward_id = w.id
-          AND ($1::bigint = 0 OR wes.election_group_id = $1)
-          AND ($2::int = 0 OR wes.party_id = $2)
-    )::bigint AS ward_supervisors_count,
+    COALESCE(wes_counts.ward_supervisors_count, 0)::bigint AS ward_supervisors_count,
     1::bigint AS total_wards,
     0::bigint AS lga_supervisors_count,
     0::bigint AS total_lgas,
-    0::bigint AS state_supervisors_count,
-    (
-        SELECT COALESCE(json_agg(json_build_object(
-            'id', u.id,
-            'name', u.full_name,
-            'avatar', COALESCE(u.avatar, '')
-        )), '[]'::json)
-        FROM (
-            SELECT u.id, u.first_name, u.last_name, u.avatar
-            FROM ward_election_supervisors wes
-            JOIN users u ON u.id = wes.user_id
-            WHERE wes.ward_id = w.id
-              AND ($1::bigint = 0 OR wes.election_group_id = $1)
-              AND ($2::int = 0 OR wes.party_id = $2)
-            LIMIT 4
-        ) u
-    )::json AS supervisors
+    0::bigint AS state_supervisors_count
 FROM wards w
 LEFT JOIN (
     SELECT
         pua.ward_id,
         COUNT(*)::bigint AS pu_agents_count
     FROM polling_unit_assignments pua
-    WHERE ($1::bigint = 0 OR pua.election_group_id = $1)
-      AND ($2::int = 0 OR pua.party_id = $2)
+    WHERE pua.election_group_id = $1
+      AND pua.party_id = $2
+      AND pua.lga_id = $3::int
     GROUP BY pua.ward_id
-) egw ON egw.ward_id = w.id
+) pua_counts ON pua_counts.ward_id = w.id
+LEFT JOIN (
+    SELECT
+        wes.ward_id,
+        COUNT(*)::bigint AS ward_supervisors_count
+    FROM ward_election_supervisors wes
+    WHERE wes.election_group_id = $1
+      AND wes.party_id = $2
+      AND wes.lga_id = $3::int
+    GROUP BY wes.ward_id
+) wes_counts ON wes_counts.ward_id = w.id
 WHERE w.lga_id = $3::int
 ORDER BY w.name ASC
 `
 
 type GetAgentCoverageWardsParams struct {
-	ElectionGroupID int64 `json:"election_group_id"`
-	PartyID         int32 `json:"party_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
+	PartyID         int16 `json:"party_id"`
 	LgaID           int32 `json:"lga_id"`
 }
 
 type GetAgentCoverageWardsRow struct {
 	ID                    int32  `json:"id"`
 	Name                  string `json:"name"`
-	Code                  string `json:"code"`
 	PuAgentsCount         int64  `json:"pu_agents_count"`
 	TotalPus              int64  `json:"total_pus"`
 	WardSupervisorsCount  int64  `json:"ward_supervisors_count"`
@@ -362,7 +314,6 @@ type GetAgentCoverageWardsRow struct {
 	LgaSupervisorsCount   int64  `json:"lga_supervisors_count"`
 	TotalLgas             int64  `json:"total_lgas"`
 	StateSupervisorsCount int64  `json:"state_supervisors_count"`
-	Supervisors           []byte `json:"supervisors"`
 }
 
 func (q *Queries) GetAgentCoverageWards(ctx context.Context, arg GetAgentCoverageWardsParams) ([]GetAgentCoverageWardsRow, error) {
@@ -377,7 +328,6 @@ func (q *Queries) GetAgentCoverageWards(ctx context.Context, arg GetAgentCoverag
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
-			&i.Code,
 			&i.PuAgentsCount,
 			&i.TotalPus,
 			&i.WardSupervisorsCount,
@@ -385,7 +335,6 @@ func (q *Queries) GetAgentCoverageWards(ctx context.Context, arg GetAgentCoverag
 			&i.LgaSupervisorsCount,
 			&i.TotalLgas,
 			&i.StateSupervisorsCount,
-			&i.Supervisors,
 		); err != nil {
 			return nil, err
 		}

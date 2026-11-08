@@ -118,7 +118,7 @@ function ElectoralUnitsPage() {
     }
   };
 
-  const isDrillable =
+  const isDrillAble =
     unitType !== "polling_units" && unitTitle !== "Polling Units";
   const hasDrillDown = Object.values(drillDown).some((v) => v !== undefined);
 
@@ -160,7 +160,7 @@ function ElectoralUnitsPage() {
           items={items}
           unitTitle={unitTitle}
           isLive={isLive}
-          onSelectUnit={isDrillable ? handleSelectUnit : undefined}
+          onSelectUnit={isDrillAble ? handleSelectUnit : undefined}
         />
       )}
     </Layout>

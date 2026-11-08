@@ -6,15 +6,11 @@
  */
 
 import {
-  AppAvatar,
-} from "@repo/ui/components/avatar";
-import {
   TileHeader,
   TileLeft,
   TileRight,
   TileRow,
 } from "@repo/ui/components/tiles";
-import { MoreHorizontal, Plus } from "lucide-react";
 import type * as React from "react";
 import type { AgentCoverageUnitItem } from "#/lib/server/agent-coverage";
 
@@ -76,17 +72,15 @@ export function AgentCoverageTableHeader({
         <span className="text-c-90 font-bold text-[14px]">{unitTitle}</span>
       </TileLeft>
       <TileRight className="text-sm text-c-50 font-medium">
-        <span className="w-[130px] text-left">Polling Agents</span>
-        <span className="w-[130px] text-left">Ward Supervisor</span>
+        <span className="w-32.5 text-left">Polling Agents</span>
+        <span className="w-32.5 text-left">Ward Supervisor</span>
         {hasLGASupervisor && (
-          <span className="w-[130px] text-left">LGA Supervisor</span>
+          <span className="w-32.5 text-left">LGA Supervisor</span>
         )}
         {isState && (
-          <span className="w-[130px] text-left">State Supervisor</span>
+          <span className="w-32.5 text-left">State Supervisor</span>
         )}
         <span className="w-35 text-left">Overall Readiness</span>
-        <span className="w-35 text-left">{supervisorTitle}</span>
-        <div className="w-8 shrink-0" />
       </TileRight>
     </TileHeader>
   );
@@ -97,25 +91,19 @@ export function AgentCoverageTableHeader({
  * Higher-level row tile representing an electoral unit (State, Senatorial District, Fed Constituency, LGA, Ward).
  * Displays staffing progress across tiers, overall readiness percentage, and supervisor avatar stack.
  */
-export function AgentCoverageTableTile({
-  data,
-  unitType = "states",
-  onClick,
-  onAssign,
-}: {
+export type AgentCoverageTableTileProps = {
   data: AgentCoverageUnitItem;
   unitType?: string;
   onClick?: () => void;
-  onAssign?: (item: AgentCoverageUnitItem) => void;
-}) {
+};
+
+export function AgentCoverageTableTile({ data, unitType = "states", onClick }: AgentCoverageTableTileProps) {
   const isState = unitType === "states";
   const hasLGASupervisor =
     unitType === "states" ||
     unitType === "senatorial_districts" ||
     unitType === "federal_constituencies" ||
     unitType === "lgas";
-
-  const supervisors = Array.isArray(data.supervisors) ? data.supervisors : [];
 
   return (
     <TileRow onClick={onClick}>
@@ -124,25 +112,25 @@ export function AgentCoverageTableTile({
       </TileLeft>
       <TileRight className="min-w-fit gap-4 items-center text-[13.5px]">
         {/* Polling Agents */}
-        <div className="w-[130px] text-left">
+        <div className="w-32.5 text-left">
           <FormattedNumberWithPct value={data.polling_agents} />
         </div>
 
         {/* Ward Supervisor */}
-        <div className="w-[130px] text-left">
+        <div className="w-32.5 text-left">
           <FormattedNumberWithPct value={data.ward_supervisors} />
         </div>
 
         {/* LGA Supervisor */}
         {hasLGASupervisor && (
-          <div className="w-[130px] text-left">
+          <div className="w-32.5 text-left">
             <FormattedNumberWithPct value={data.lga_supervisors} />
           </div>
         )}
 
         {/* State Supervisor */}
         {isState && (
-          <div className="w-[130px] text-left">
+          <div className="w-32.5 text-left">
             <FormattedNumberWithPct value={data.state_supervisors} />
           </div>
         )}
@@ -154,44 +142,6 @@ export function AgentCoverageTableTile({
             {data.overall_readiness ?? 0}%
           </span>
         </div>
-
-        {/* Supervisor Avatars + Add Button */}
-        <div className="w-35 flex items-center gap-1.5">
-          {supervisors.slice(0, 3).map((s, idx) => (
-            <AppAvatar
-              key={`${s.id}-${idx}`}
-              src={s.avatar}
-              alt={s.name}
-              fallbackText={s.name?.slice(0, 2).toUpperCase()}
-              className="size-8 ring-2 ring-white dark:ring-neutral-900 shrink-0"
-            />
-          ))}
-          {supervisors.length < 2 && (
-            <button
-              type="button"
-              aria-label="Assign supervisor"
-              onClick={(e) => {
-                e.stopPropagation();
-                onAssign?.(data);
-              }}
-              className="size-8 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 flex items-center justify-center transition-colors shrink-0"
-            >
-              <Plus className="size-4" />
-            </button>
-          )}
-        </div>
-
-        {/* Action Menu button */}
-        <button
-          type="button"
-          aria-label="More options"
-          onClick={(e) => {
-            e.stopPropagation();
-          }}
-          className="w-8 flex justify-center text-c-40 hover:text-c-80 transition-colors p-1 rounded"
-        >
-          <MoreHorizontal className="size-4" />
-        </button>
       </TileRight>
     </TileRow>
   );
@@ -208,10 +158,8 @@ export function PollingUnitAgentCoverageTableHeader() {
         <span className="text-c-90 font-bold text-[14px]">Polling units</span>
       </TileLeft>
       <TileRight className="text-sm text-c-50 font-medium">
-        <span className="w-[130px] text-left">Polling Agents</span>
+        <span className="w-32.5 text-left">Polling Agents</span>
         <span className="w-35 text-left">Overall Readiness</span>
-        <span className="w-35 text-left">PU Agents</span>
-        <div className="w-8 shrink-0" />
       </TileRight>
     </TileHeader>
   );
@@ -223,15 +171,9 @@ export function PollingUnitAgentCoverageTableHeader() {
  */
 export function PollingUnitAgentCoverageTableTile({
   data,
-  onAssign,
 }: {
   data: AgentCoverageUnitItem;
-  onAssign?: (item: AgentCoverageUnitItem) => void;
 }) {
-  const agents = Array.isArray(data.pu_agents || data.supervisors)
-    ? (data.pu_agents || data.supervisors)!
-    : [];
-
   return (
     <TileRow>
       <TileLeft className="min-w-45">
@@ -239,7 +181,7 @@ export function PollingUnitAgentCoverageTableTile({
       </TileLeft>
       <TileRight className="min-w-fit gap-4 items-center text-[13.5px]">
         {/* Polling Agents Count */}
-        <div className="w-[130px] text-left">
+        <div className="w-32.5 text-left">
           <span className="font-bold text-neutral-900 dark:text-neutral-100">
             {data.polling_agents ?? 0}
           </span>
@@ -252,44 +194,6 @@ export function PollingUnitAgentCoverageTableTile({
             {data.overall_readiness ?? 0}%
           </span>
         </div>
-
-        {/* PU Agents Avatars + Add Button */}
-        <div className="w-35 flex items-center gap-1.5">
-          {agents.slice(0, 3).map((a, idx) => (
-            <AppAvatar
-              key={`${a.id}-${idx}`}
-              src={a.avatar}
-              alt={a.name}
-              fallbackText={a.name?.slice(0, 2).toUpperCase()}
-              className="size-8 ring-2 ring-white dark:ring-neutral-900 shrink-0"
-            />
-          ))}
-          {agents.length < 2 && (
-            <button
-              type="button"
-              aria-label="Assign PU Agent"
-              onClick={(e) => {
-                e.stopPropagation();
-                onAssign?.(data);
-              }}
-              className="size-8 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 flex items-center justify-center transition-colors shrink-0"
-            >
-              <Plus className="size-4" />
-            </button>
-          )}
-        </div>
-
-        {/* Action Menu button */}
-        <button
-          type="button"
-          aria-label="More options"
-          onClick={(e) => {
-            e.stopPropagation();
-          }}
-          className="w-8 flex justify-center text-c-40 hover:text-c-80 transition-colors p-1 rounded"
-        >
-          <MoreHorizontal className="size-4" />
-        </button>
       </TileRight>
     </TileRow>
   );

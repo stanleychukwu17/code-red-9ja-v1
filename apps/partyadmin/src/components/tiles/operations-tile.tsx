@@ -29,11 +29,11 @@ import type { OperationsUnitItem } from "#/lib/server/election-operations";
 export function OperationsTableHeader({
   unitTitle = "States",
   supervisorTitle = "State Supervisors",
-  isDrillable = true,
+  isDrillAble = true,
 }: {
   unitTitle?: string;
   supervisorTitle?: string;
-  isDrillable?: boolean;
+  isDrillAble?: boolean;
 }) {
   return (
     <TileHeader>
@@ -81,7 +81,7 @@ export function OperationsTableTile({
   data: OperationsUnitItem;
   onClick?: () => void;
 }) {
-  const isDrillable = !!onClick;
+  const isDrillAble = !!onClick;
   // Parse supervisor avatars list (sliced to first 3 with a remaining badge count)
   const supervisors = Array.isArray(data.supervisors) ? data.supervisors : [];
   const displaySupervisors = supervisors.slice(0, 3);
