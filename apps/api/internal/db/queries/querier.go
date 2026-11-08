@@ -40,6 +40,8 @@ type Querier interface {
 	CheckReferralCodeExists(ctx context.Context, referralCode pgtype.Text) (bool, error)
 	CheckUnmatchedPollingUnitResultExists(ctx context.Context, arg CheckUnmatchedPollingUnitResultExistsParams) (bool, error)
 	CheckUserHasAnyRole(ctx context.Context, userID int64) (bool, error)
+	CheckUserInCampaignGroup(ctx context.Context, arg CheckUserInCampaignGroupParams) (bool, error)
+	CheckUserInPartyCampaignGroup(ctx context.Context, arg CheckUserInPartyCampaignGroupParams) (bool, error)
 	ConfirmUpload(ctx context.Context, arg ConfirmUploadParams) (File, error)
 	CountActivePositionOccupants(ctx context.Context, arg CountActivePositionOccupantsParams) (int64, error)
 	CountAllUserPhoneNumbers(ctx context.Context, userID int64) (int64, error)

@@ -79,7 +79,7 @@ export function CampaignGroupHero({
     homeRes?.data?.national_leaders && homeRes.data.national_leaders.length > 0
       ? homeRes.data.national_leaders.slice(0, 5).map((l) => ({
         id: l.id,
-        name: l.name ? l.name.split(" ")[0].toLowerCase() : "chike",
+        name: (l.name ? l.name.split(" ")[0] : "chike") || "chike",
         avatar: l.avatar,
       }))
       : DEFAULT_NATIONAL_LEADERS;
@@ -88,7 +88,7 @@ export function CampaignGroupHero({
     homeRes?.data?.dynamic_leaders?.leaders && homeRes.data.dynamic_leaders.leaders.length > 0
       ? homeRes.data.dynamic_leaders.leaders.slice(0, 5).map((l) => ({
         id: l.id,
-        name: (l.role || l.name || "chike").split(" ")[0],
+        name: (l.role || l.name || "chike").split(" ")[0] || "chike",
         avatar: l.avatar,
       }))
       : DEFAULT_STATE_LEADERS;

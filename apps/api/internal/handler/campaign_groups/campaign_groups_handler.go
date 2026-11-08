@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"free9ja/api/internal/db/queries"
+	apimiddleware "free9ja/api/internal/middleware"
 	campaigngroupsservice "free9ja/api/internal/service/campaign_groups"
 	"free9ja/api/internal/utils"
 	"net/http"
@@ -112,6 +113,15 @@ func (h *Handler) GetGroupMembers(w http.ResponseWriter, r *http.Request) {
 // @Failure      500  {object}  map[string]interface{}
 // @Router       /campaign-groups/{id} [get]
 func (h *Handler) GetCampaignGroup(w http.ResponseWriter, r *http.Request) {
+	// If the group was already validated and loaded by RequireCampaignGroupAccess middleware, return it directly
+	if group, ok := apimiddleware.GetCampaignGroupFromContext(r.Context()); ok {
+		h.utils.RespondSuccess(w, http.StatusOK, "Campaign group retrieved successfully", map[string]interface{}{
+			"group": group,
+		})
+		return
+	}
+
+	// Fallback if not injected by middleware: parse & validate ID from URL
 	idParam := chi.URLParam(r, "id")
 	groupID, err := strconv.ParseInt(idParam, 10, 64)
 	if err != nil || groupID <= 0 {
@@ -119,16 +129,21 @@ func (h *Handler) GetCampaignGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Fetch campaign group record from service
 	group, err := h.service.GetCampaignGroupByID(r.Context(), groupID)
 	if err != nil {
+		// Return 404 if record doesn't exist
 		if errors.Is(err, pgx.ErrNoRows) {
 			h.utils.RespondError(w, http.StatusNotFound, "Campaign group not found")
 			return
 		}
+
+		// Return 500 on database or server error
 		h.utils.RespondError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to fetch campaign group: %v", err))
 		return
 	}
 
+	// Return fetched group in standard success response
 	h.utils.RespondSuccess(w, http.StatusOK, "Campaign group retrieved successfully", map[string]interface{}{
 		"group": group,
 	})

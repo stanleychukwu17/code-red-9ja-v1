@@ -139,6 +139,7 @@ export function ApplicationsFilterBar({
             selectedId={stateId}
             countryOriginalId={161}
             fetchStates={getStates}
+            showAll="All States"
             update={(state) => {
               const val = state?.id ? Number(state.id) : undefined;
               if (onFiltersChange) {

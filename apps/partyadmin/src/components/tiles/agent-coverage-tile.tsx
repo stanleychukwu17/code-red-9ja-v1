@@ -71,16 +71,16 @@ export function AgentCoverageTableHeader({
       <TileLeft className="min-w-45">
         <span className="text-c-90 font-bold text-[14px]">{unitTitle}</span>
       </TileLeft>
-      <TileRight className="text-sm text-c-50 font-medium">
-        <span className="w-32.5 text-left">Polling Agents</span>
-        <span className="w-32.5 text-left">Ward Supervisor</span>
+      <TileRight className="min-w-fit gap-4 items-center text-sm text-c-50 font-medium">
+        <span className="w-40 shrink-0 text-center">Polling Agents</span>
+        <span className="w-40 shrink-0 text-center">Ward Supervisor</span>
         {hasLGASupervisor && (
-          <span className="w-32.5 text-left">LGA Supervisor</span>
+          <span className="w-40 shrink-0 text-center">LGA Supervisor</span>
         )}
         {isState && (
-          <span className="w-32.5 text-left">State Supervisor</span>
+          <span className="w-40 shrink-0 text-center">State Supervisor</span>
         )}
-        <span className="w-35 text-left">Overall Readiness</span>
+        <span className="w-35 shrink-0 text-center">Overall Readiness</span>
       </TileRight>
     </TileHeader>
   );
@@ -112,31 +112,31 @@ export function AgentCoverageTableTile({ data, unitType = "states", onClick }: A
       </TileLeft>
       <TileRight className="min-w-fit gap-4 items-center text-[13.5px]">
         {/* Polling Agents */}
-        <div className="w-32.5 text-left">
+        <div className="w-40 shrink-0 text-center">
           <FormattedNumberWithPct value={data.polling_agents} />
         </div>
 
         {/* Ward Supervisor */}
-        <div className="w-32.5 text-left">
+        <div className="w-40 shrink-0 text-center">
           <FormattedNumberWithPct value={data.ward_supervisors} />
         </div>
 
         {/* LGA Supervisor */}
         {hasLGASupervisor && (
-          <div className="w-32.5 text-left">
+          <div className="w-40 shrink-0 text-center">
             <FormattedNumberWithPct value={data.lga_supervisors} />
           </div>
         )}
 
         {/* State Supervisor */}
         {isState && (
-          <div className="w-32.5 text-left">
+          <div className="w-40 shrink-0 text-center">
             <FormattedNumberWithPct value={data.state_supervisors} />
           </div>
         )}
 
         {/* Overall Readiness */}
-        <div className="flex items-center gap-2 w-35">
+        <div className="flex justify-center items-center text-center gap-2 w-35 shrink-0">
           <span className="size-2.5 rounded-full bg-neutral-300 dark:bg-neutral-600 shrink-0" />
           <span className={getReadinessColor(data.overall_readiness)}>
             {data.overall_readiness ?? 0}%
@@ -157,9 +157,9 @@ export function PollingUnitAgentCoverageTableHeader() {
       <TileLeft className="min-w-45">
         <span className="text-c-90 font-bold text-[14px]">Polling units</span>
       </TileLeft>
-      <TileRight className="text-sm text-c-50 font-medium">
-        <span className="w-32.5 text-left">Polling Agents</span>
-        <span className="w-35 text-left">Overall Readiness</span>
+      <TileRight className="min-w-fit gap-4 items-center text-sm text-c-50 font-medium">
+        <span className="w-40 shrink-0 text-center">Polling Agents</span>
+        <span className="w-35 shrink-0 text-center">Overall Readiness</span>
       </TileRight>
     </TileHeader>
   );
@@ -181,14 +181,14 @@ export function PollingUnitAgentCoverageTableTile({
       </TileLeft>
       <TileRight className="min-w-fit gap-4 items-center text-[13.5px]">
         {/* Polling Agents Count */}
-        <div className="w-32.5 text-left">
+        <div className="w-40 shrink-0 text-center">
           <span className="font-bold text-neutral-900 dark:text-neutral-100">
             {data.polling_agents ?? 0}
           </span>
         </div>
 
         {/* Overall Readiness */}
-        <div className="flex items-center gap-2 w-35">
+        <div className="flex items-center gap-2 w-35 shrink-0">
           <span className="size-2.5 rounded-full bg-neutral-300 dark:bg-neutral-600 shrink-0" />
           <span className={getReadinessColor(data.overall_readiness)}>
             {data.overall_readiness ?? 0}%

@@ -15,14 +15,14 @@ import (
 
 // Task name constants
 const (
-	TaskEnrollAgentInCampaignGroup     = "task:enroll_agent_in_campaign_group"
-	TaskRemoveAgentFromCampaignGroup   = "task:remove_agent_from_campaign_group"
+	TaskEnrollAgentInCampaignGroup   = "task:enroll_agent_in_campaign_group"
+	TaskRemoveAgentFromCampaignGroup = "task:remove_agent_from_campaign_group"
 )
 
 // CampaignGroupsService defines the interface needed by the worker for campaign group operations.
 type CampaignGroupsService interface {
 	EnsureAgentCampaignInGroup(ctx context.Context, input campaigngroupsservice.EnsureAgentCampaignInGroupInput) (*queries.CampaignGroup, error)
-	RemoveAgentFromElectionGroup(ctx context.Context, partyID int16, electionGroupID int32, userID int64) error
+	RemoveAgentFromPartyCampaignGroups(ctx context.Context, partyID int16, userID int64) error
 }
 
 // EnrollAgentInCampaignGroupPayload contains the parameters to enroll an approved agent or supervisor.
@@ -89,14 +89,14 @@ func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskRemoveAgentFromCampaign
 		return fmt.Errorf("campaign groups service is not configured in task processor")
 	}
 
-	// Remove revoked agent from all campaign groups in this election group
-	if err := redisTaskProcessor.campaignGroupsService.RemoveAgentFromElectionGroup(ctx, payload.PartyID, payload.ElectionGroupID, payload.UserID); err != nil {
+	// Remove revoked agent from all campaign groups for this party
+	if err := redisTaskProcessor.campaignGroupsService.RemoveAgentFromPartyCampaignGroups(ctx, payload.PartyID, payload.UserID); err != nil {
 		slog.Error("failed to remove agent from campaign groups", "user_id", payload.UserID, "party_id", payload.PartyID, "error", err)
 		return fmt.Errorf("failed to remove agent from campaign groups: %w", err)
 	}
 
 	// Log successful agent removal
-	slog.Info("successfully removed agent from campaign groups", "user_id", payload.UserID, "party_id", payload.PartyID, "election_group_id", payload.ElectionGroupID)
+	// slog.Info("successfully removed agent from campaign groups", "user_id", payload.UserID, "party_id", payload.PartyID, "election_group_id", payload.ElectionGroupID)
 	return nil
 }
 
@@ -125,13 +125,13 @@ func (redisTaskDistributor *RedisTaskDistributor) DistributeTaskEnrollAgentInCam
 	task := asynq.NewTask(TaskEnrollAgentInCampaignGroup, jsonPayload, opts...)
 
 	// Enqueue the task into Redis via Asynq client
-	info, err := redisTaskDistributor.asynqClient.EnqueueContext(ctx, task)
+	_, err = redisTaskDistributor.asynqClient.EnqueueContext(ctx, task)
 	if err != nil {
 		return fmt.Errorf("failed to enqueue enroll agent in campaign group task: %w", err)
 	}
 
 	// Log confirmation that task was queued successfully
-	slog.Info("enqueued enroll agent in campaign group task", "type", task.Type(), "queue", info.Queue, "user_id", payload.UserID, "role", payload.Role)
+	// slog.Info("enqueued enroll agent in campaign group task", "type", task.Type(), "queue", info.Queue, "user_id", payload.UserID, "role", payload.Role)
 	return nil
 }
 
@@ -165,6 +165,6 @@ func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskEnrollAgentInCampaignGr
 	}
 
 	// Log successful processing completion
-	slog.Info("successfully enrolled agent in campaign group", "user_id", payload.UserID, "role", payload.Role, "party_id", payload.PartyID)
+	// slog.Info("successfully enrolled agent in campaign group", "user_id", payload.UserID, "role", payload.Role, "party_id", payload.PartyID)
 	return nil
 }

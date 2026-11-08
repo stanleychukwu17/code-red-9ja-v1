@@ -292,6 +292,7 @@ func (s *CampaignGroupsService) AddCampaignGroupMember(ctx context.Context, para
 	}
 
 	s.InvalidateGroupMembersCache(ctx, params.GroupID)
+	s.InvalidatePartyMemberCheckCache(ctx, params.PartyID, params.UserID)
 	return member, nil
 }
 
@@ -315,6 +316,14 @@ func (s *CampaignGroupsService) RemoveCampaignGroupMember(ctx context.Context, g
 func (s *CampaignGroupsService) InvalidateGroupMembersCache(ctx context.Context, groupID int64) {
 	if groupID > 0 {
 		cacheKey := fmt.Sprintf("%s%d", db.RedisCampaignGroupMembers, groupID)
+		_ = s.rdb.Del(ctx, cacheKey).Err()
+	}
+}
+
+// InvalidatePartyMemberCheckCache clears the cached party campaign membership check for a user.
+func (s *CampaignGroupsService) InvalidatePartyMemberCheckCache(ctx context.Context, partyID int16, userID int64) {
+	if partyID > 0 && userID > 0 {
+		cacheKey := fmt.Sprintf("%s%d:%d", db.RedisCampaignGroupMemberCheck, partyID, userID)
 		_ = s.rdb.Del(ctx, cacheKey).Err()
 	}
 }
@@ -436,6 +445,7 @@ func (s *CampaignGroupsService) RemoveCandidateFromElectionGroup(ctx context.Con
 	for _, groupID := range groupIDs {
 		s.InvalidateGroupMembersCache(ctx, groupID)
 	}
+	s.InvalidatePartyMemberCheckCache(ctx, partyID, candidateID)
 
 	return nil
 }
@@ -453,13 +463,9 @@ func (s *CampaignGroupsService) RemoveAgentFromPartyCampaignGroups(ctx context.C
 	for _, groupID := range groupIDs {
 		s.InvalidateGroupMembersCache(ctx, groupID)
 	}
+	s.InvalidatePartyMemberCheckCache(ctx, partyID, userID)
 
 	return nil
-}
-
-// RemoveAgentFromElectionGroup revokes agent/supervisor membership across all campaign groups for the party.
-func (s *CampaignGroupsService) RemoveAgentFromElectionGroup(ctx context.Context, partyID int16, _ int32, userID int64) error {
-	return s.RemoveAgentFromPartyCampaignGroups(ctx, partyID, userID)
 }
 
 type EnsureAgentCampaignInGroupInput struct {
@@ -525,6 +531,7 @@ func (s *CampaignGroupsService) EnsureAgentCampaignInGroup(ctx context.Context, 
 		for _, oldGroupID := range oldGroupIDs {
 			s.InvalidateGroupMembersCache(ctx, oldGroupID)
 		}
+		s.InvalidatePartyMemberCheckCache(ctx, input.PartyID, input.UserID)
 	}
 
 	// Enroll or update the agent as an active member with their assigned role
@@ -541,4 +548,60 @@ func (s *CampaignGroupsService) EnsureAgentCampaignInGroup(ctx context.Context, 
 	}
 
 	return group, nil
+}
+
+// IsUserGroupMember checks if a user is enrolled in a campaign group via sqlc, backed by a 7-day Redis cache.
+func (s *CampaignGroupsService) IsUserGroupMember(ctx context.Context, groupID int64, userID int64) (bool, error) {
+	if groupID <= 0 || userID <= 0 {
+		return false, nil
+	}
+
+	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisCampaignGroupMemberCheck, groupID, userID)
+
+	// 1. Fast-path: Check Redis cache
+	if cachedVal, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
+		return cachedVal == "1", nil
+	}
+
+	// 2. Query DB via generated sqlc query
+	exists, err := s.queries.CheckUserInCampaignGroup(ctx, queries.CheckUserInCampaignGroupParams{
+		GroupID: groupID,
+		UserID:  userID,
+	})
+	if err != nil {
+		return false, fmt.Errorf("failed to check group membership for group %d, user %d: %w", groupID, userID, err)
+	}
+
+	// 3. Cache result in Redis for 7 days
+	val := "0"
+	if exists {
+		val = "1"
+	}
+	_ = s.rdb.Set(ctx, cacheKey, val, db.RedisSevenDaysTTL).Err()
+
+	return exists, nil
+}
+
+// CanUserAccessGroup evaluates if the authenticated user has permission to access a campaign group.
+// Permitted users:
+// 1. Global administrators ("admin", "super_admin").
+// 2. Party administrators ("party_admin", "super_party_admin") if assigned to the group's party.
+// 3. Enrolled operatives of the group (candidates, supervisors, agents, officials in campaign_group_members).
+func (s *CampaignGroupsService) CanUserAccessGroup(ctx context.Context, group queries.CampaignGroup, claims *utils.JWTClaims) (bool, error) {
+	if claims == nil {
+		return false, nil
+	}
+
+	// 1. Global admin check
+	if claims.HasAnyRole("super_admin") {
+		return true, nil
+	}
+
+	// 2. Party admin check for matching party
+	if claims.HasAnyRole("super_party_admin") && claims.PartyID == group.PartyID {
+		return true, nil
+	}
+
+	// 3. Group membership check
+	return s.IsUserGroupMember(ctx, group.ID, claims.UserID)
 }

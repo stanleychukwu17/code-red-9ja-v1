@@ -2,15 +2,28 @@ package middleware
 
 import (
 	"context"
+	"errors"
 	"net/http"
+	"strconv"
 	"strings"
 
+	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/utils"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5"
 )
 
 type contextKey string
 
 const ClaimsKey contextKey = "claims"
+const CampaignGroupKey contextKey = "campaign_group"
+
+// CampaignGroupAccessChecker defines the service interface needed for campaign group authorization.
+type CampaignGroupAccessChecker interface {
+	GetCampaignGroupByID(ctx context.Context, id int64) (queries.CampaignGroup, error)
+	CanUserAccessGroup(ctx context.Context, group queries.CampaignGroup, claims *utils.JWTClaims) (bool, error)
+}
 
 // GetClaims extracts JWT claims from the HTTP request context.
 func GetClaims(r *http.Request) (*utils.JWTClaims, bool) {
@@ -21,6 +34,12 @@ func GetClaims(r *http.Request) (*utils.JWTClaims, bool) {
 func GetClaimsFromContext(ctx context.Context) (*utils.JWTClaims, bool) {
 	claims, ok := ctx.Value(ClaimsKey).(*utils.JWTClaims)
 	return claims, ok && claims != nil
+}
+
+// GetCampaignGroupFromContext extracts the CampaignGroup from the request context if set by middleware.
+func GetCampaignGroupFromContext(ctx context.Context) (queries.CampaignGroup, bool) {
+	group, ok := ctx.Value(CampaignGroupKey).(queries.CampaignGroup)
+	return group, ok
 }
 
 // AuthMiddleware extracts the JWT token from cookies or Authorization header,
@@ -143,3 +162,59 @@ func OptionalAuthMiddleware(jwtSecret string) func(http.Handler) http.Handler {
 	}
 }
 
+// RequireCampaignGroupAccess validates that:
+// 1. A valid campaign group ID is present in the route path ({id}).
+// 2. The campaign group exists in the database.
+// 3. The authenticated user (via JWT claims) is authorized:
+//   - Global admin (admin, super_admin)
+//   - Party admin for the group's party (party_admin, super_party_admin where claims.PartyID == group.PartyID)
+//   - Enrolled member in campaign_group_members
+//
+// Upon success, stores the retrieved queries.CampaignGroup in context under CampaignGroupKey.
+func RequireCampaignGroupAccess(service CampaignGroupAccessChecker, utilsInstance *utils.Utils) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// 1. Verify user is authenticated
+			claims, ok := GetClaims(r)
+			if !ok || claims == nil {
+				utilsInstance.RespondError(w, http.StatusUnauthorized, "Unauthorized: missing or invalid authentication token")
+				return
+			}
+
+			// 2. Extract and parse campaign group ID from route URL ({id})
+			idParam := chi.URLParam(r, "id")
+			groupID, err := strconv.ParseInt(idParam, 10, 64)
+			if err != nil || groupID <= 0 {
+				utilsInstance.RespondError(w, http.StatusBadRequest, "Invalid campaign group ID")
+				return
+			}
+
+			// 3. Fetch campaign group metadata (uses Redis cache)
+			group, err := service.GetCampaignGroupByID(r.Context(), groupID)
+			if err != nil {
+				if errors.Is(err, pgx.ErrNoRows) {
+					utilsInstance.RespondError(w, http.StatusNotFound, "Campaign group not found")
+					return
+				}
+				utilsInstance.RespondError(w, http.StatusInternalServerError, "Failed to resolve campaign group")
+				return
+			}
+
+			// 4. Check access rights: global admin, party admin, or enrolled operative
+			allowed, err := service.CanUserAccessGroup(r.Context(), group, claims)
+			if err != nil {
+				utilsInstance.RespondError(w, http.StatusInternalServerError, "Failed to verify campaign group access")
+				return
+			}
+
+			if !allowed {
+				utilsInstance.RespondError(w, http.StatusForbidden, "You do not have permission to access this campaign group")
+				return
+			}
+
+			// 5. Inject verified group into request context for downstream handlers
+			ctx := context.WithValue(r.Context(), CampaignGroupKey, group)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+}

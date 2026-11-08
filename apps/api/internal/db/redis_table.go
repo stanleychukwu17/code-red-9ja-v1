@@ -91,9 +91,10 @@ const (
 	//--END--
 
 	//--START-- for campaign groups and operations
-	RedisCampaignGroupByID     = "campaign_groups:info:"      // STRING: "campaign_groups:info:<groupID>" stores cached JSON object of campaign group
-	RedisCampaignGroupMembers  = "campaign_groups:members:"   // STRING: "campaign_groups:members:<groupID>" stores cached JSON array of campaign group members
-	RedisCampaignGroupSyncLock = "campaign_groups:sync_lock:" // STRING: "campaign_groups:sync_lock:<groupID>" cooldown lock preventing repeated db syncing
+	RedisCampaignGroupByID        = "campaign_groups:info:"         // STRING: "campaign_groups:info:<groupID>" stores cached JSON object of campaign group
+	RedisCampaignGroupMembers     = "campaign_groups:members:"      // STRING: "campaign_groups:members:<groupID>" stores cached JSON array of campaign group members
+	RedisCampaignGroupMemberCheck = "campaign_groups:party_member_check:" // STRING: "campaign_groups:party_member_check:<partyID>:<userID>" stores "1" or "0"
+	RedisCampaignGroupSyncLock    = "campaign_groups:sync_lock:"    // STRING: "campaign_groups:sync_lock:<groupID>" cooldown lock preventing repeated db syncing
 	//--END--
 
 	//--START-- for page verifications & badges
@@ -250,5 +251,6 @@ var AllRedisPrefixes = []string{
 	RedisUserBlockedPartyIDs,
 	RedisCampaignGroupByID,
 	RedisCampaignGroupMembers,
+	RedisCampaignGroupMemberCheck,
 	RedisCampaignGroupSyncLock,
 }

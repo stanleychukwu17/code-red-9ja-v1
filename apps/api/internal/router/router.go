@@ -282,12 +282,12 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	mainRouter.Post("/api/v1/seed/admins", seedHandler.SeedAdmins)                                       // Seed admins endpoint
 	mainRouter.Post("/api/v1/seed/election-groups", seedHandler.SeedElectionGroups)                      // Seed election groups endpoint
 	mainRouter.Post("/api/v1/seed/election-instances", seedHandler.SeedElectionInstances)                // Seed election instances endpoint
-	mainRouter.Post("/api/v1/seed/candidates/presidential", seedHandler.SeedPresidentialCandidates)       // Seed presidential candidate tickets
-	mainRouter.Post("/api/v1/seed/candidates/governorship", seedHandler.SeedGovernorshipCandidates)       // Seed governorship candidate tickets
-	mainRouter.Post("/api/v1/seed/candidates/senate", seedHandler.SeedSenateCandidates)                   // Seed senatorial candidates
-	mainRouter.Post("/api/v1/seed/candidates/house-of-reps", seedHandler.SeedHouseOfRepsCandidates)       // Seed house of reps candidates
+	mainRouter.Post("/api/v1/seed/candidates/presidential", seedHandler.SeedPresidentialCandidates)      // Seed presidential candidate tickets
+	mainRouter.Post("/api/v1/seed/candidates/governorship", seedHandler.SeedGovernorshipCandidates)      // Seed governorship candidate tickets
+	mainRouter.Post("/api/v1/seed/candidates/senate", seedHandler.SeedSenateCandidates)                  // Seed senatorial candidates
+	mainRouter.Post("/api/v1/seed/candidates/house-of-reps", seedHandler.SeedHouseOfRepsCandidates)      // Seed house of reps candidates
 	mainRouter.Post("/api/v1/seed/candidates/state-assembly", seedHandler.SeedStateAssemblyCandidates)   // Seed state assembly candidates
-	mainRouter.Post("/api/v1/seed/parties/leadership", seedHandler.SeedPartyLeadership)                 // Seed party leadership endpoint
+	mainRouter.Post("/api/v1/seed/parties/leadership", seedHandler.SeedPartyLeadership)                  // Seed party leadership endpoint
 	mainRouter.Post("/api/v1/seed/campaign-groups/sync", seedHandler.SyncCampaignGroups)                 // Sync campaign groups endpoint
 	mainRouter.Post("/api/v1/seed/party-agent-applications", seedHandler.SeedPartyAgentApplications)     // Seed party agent applications endpoint
 	mainRouter.Post("/api/v1/seed/elections/{id}/simulate-results", seedHandler.SimulateElectionResults) // Simulate PU results & test rollups
@@ -566,7 +566,6 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Post("/api/v1/elections/votes", electionsHandler.SubmitElectionVotes)
 		r.Get("/api/v1/election-groups/{id}/vote-status", electionsHandler.GetUserElectionGroupVoteStatus)
 
-
 		r.Post("/api/v1/parties/{id}/join-hierarchy", partiesHandler.JoinPartyHierarchy)
 		r.Post("/api/v1/parties/{id}/leave", partiesHandler.LeaveParty)
 		r.Post("/api/v1/parties/{id}/follow", partiesHandler.FollowParty)
@@ -595,9 +594,13 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Post("/api/v1/party-applications/change-role", partyApplicationsHandler.ChangeAgentRole)
 		r.Delete("/api/v1/party-applications/agents/{id}", partyApplicationsHandler.RevokeAgent)
 
-		// campaign groups routes (authenticated users)
-		r.Get("/api/v1/campaign-groups/{id}", campaignGroupsHandler.GetCampaignGroup)
-		r.Get("/api/v1/campaign-groups/{id}/members", campaignGroupsHandler.GetGroupMembers)
+		// campaign groups routes (authorized operatives & party/global admins only)
+		campaignGroupAccess := apimiddleware.RequireCampaignGroupAccess(campaignGroupsService, utilsInstance)
+		r.Group(func(campaignGroupRouter chi.Router) {
+			campaignGroupRouter.Use(campaignGroupAccess)
+			campaignGroupRouter.Get("/api/v1/campaign-groups/{id}", campaignGroupsHandler.GetCampaignGroup)
+			campaignGroupRouter.Get("/api/v1/campaign-groups/{id}/members", campaignGroupsHandler.GetGroupMembers)
+		})
 
 		// polling unit updates routes
 		r.Post("/api/v1/polling-unit-updates", pollingUnitUpdatesHandler.CreateUpdate)

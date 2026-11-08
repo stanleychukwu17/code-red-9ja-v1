@@ -67,6 +67,44 @@ func (q *Queries) AddCampaignGroupMember(ctx context.Context, arg AddCampaignGro
 	return i, err
 }
 
+const checkUserInCampaignGroup = `-- name: CheckUserInCampaignGroup :one
+SELECT EXISTS (
+  SELECT 1 FROM campaign_group_members
+  WHERE group_id = $1 AND user_id = $2
+)
+`
+
+type CheckUserInCampaignGroupParams struct {
+	GroupID int64 `json:"group_id"`
+	UserID  int64 `json:"user_id"`
+}
+
+func (q *Queries) CheckUserInCampaignGroup(ctx context.Context, arg CheckUserInCampaignGroupParams) (bool, error) {
+	row := q.db.QueryRow(ctx, checkUserInCampaignGroup, arg.GroupID, arg.UserID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
+const checkUserInPartyCampaignGroup = `-- name: CheckUserInPartyCampaignGroup :one
+SELECT EXISTS (
+  SELECT 1 FROM campaign_group_members
+  WHERE party_id = $1 AND user_id = $2
+)
+`
+
+type CheckUserInPartyCampaignGroupParams struct {
+	PartyID int16 `json:"party_id"`
+	UserID  int64 `json:"user_id"`
+}
+
+func (q *Queries) CheckUserInPartyCampaignGroup(ctx context.Context, arg CheckUserInPartyCampaignGroupParams) (bool, error) {
+	row := q.db.QueryRow(ctx, checkUserInPartyCampaignGroup, arg.PartyID, arg.UserID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const findOrCreateCampaignGroup = `-- name: FindOrCreateCampaignGroup :one
 INSERT INTO campaign_groups (
   party_id,

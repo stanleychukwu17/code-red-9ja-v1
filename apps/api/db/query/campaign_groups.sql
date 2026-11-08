@@ -21,6 +21,18 @@ RETURNING *;
 -- name: GetCampaignGroupByID :one
 SELECT * FROM campaign_groups WHERE id = $1;
 
+-- name: CheckUserInCampaignGroup :one
+SELECT EXISTS (
+  SELECT 1 FROM campaign_group_members
+  WHERE group_id = $1 AND user_id = $2
+);
+
+-- name: CheckUserInPartyCampaignGroup :one
+SELECT EXISTS (
+  SELECT 1 FROM campaign_group_members
+  WHERE party_id = $1 AND user_id = $2
+);
+
 -- name: AddCampaignGroupMember :one
 INSERT INTO campaign_group_members (
   party_id,

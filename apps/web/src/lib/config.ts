@@ -24,8 +24,8 @@ export const APP_URL = {
 	myParty: "/party",
 	party: (partyName: string, partyId: string | number, chapterId?: string | number) =>
 		`/party/${partyName}/${partyId}/home${chapterId ? `?chapterId=${chapterId}` : ""}`,
-	group: (partyId: string | number, groupId: string | number) =>
-		`/group/${partyId}/${groupId}`,
+	group: (partyId: string | number, groupId: string | number, subpath?: string) =>
+		subpath ? `/group/${partyId}/${groupId}/${subpath}` : `/group/${partyId}/${groupId}`,
 	parties: "/parties",
 };
 
