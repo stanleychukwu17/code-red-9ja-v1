@@ -24,6 +24,9 @@ export type CampaignGroupDetails = {
   state_id?: number | null;
   lga_id?: number | null;
   ward_id?: number | null;
+  state_name?: string | null;
+  lga_name?: string | null;
+  ward_name?: string | null;
   name?: string | null;
   status: string;
   officials_added: boolean;

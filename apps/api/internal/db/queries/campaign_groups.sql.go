@@ -165,12 +165,50 @@ func (q *Queries) FindOrCreateCampaignGroup(ctx context.Context, arg FindOrCreat
 }
 
 const getCampaignGroupByID = `-- name: GetCampaignGroupByID :one
-SELECT id, party_id, target_election_group_id, scope, state_id, lga_id, ward_id, name, status, officials_added, created_at, updated_at FROM campaign_groups WHERE id = $1
+SELECT 
+    cg.id,
+    cg.party_id,
+    cg.target_election_group_id,
+    cg.scope,
+    cg.state_id,
+    cg.lga_id,
+    cg.ward_id,
+    cg.name,
+    cg.status,
+    cg.officials_added,
+    cg.created_at,
+    cg.updated_at,
+    s.name AS state_name,
+    l.name AS lga_name,
+    w.name AS ward_name
+FROM campaign_groups cg
+LEFT JOIN c_states s ON s.id = cg.state_id
+LEFT JOIN lgas l ON l.id = cg.lga_id
+LEFT JOIN wards w ON w.id = cg.ward_id
+WHERE cg.id = $1
 `
 
-func (q *Queries) GetCampaignGroupByID(ctx context.Context, id int64) (CampaignGroup, error) {
+type GetCampaignGroupByIDRow struct {
+	ID                    int64              `json:"id"`
+	PartyID               int16              `json:"party_id"`
+	TargetElectionGroupID pgtype.Int4        `json:"target_election_group_id"`
+	Scope                 string             `json:"scope"`
+	StateID               pgtype.Int4        `json:"state_id"`
+	LgaID                 pgtype.Int4        `json:"lga_id"`
+	WardID                pgtype.Int4        `json:"ward_id"`
+	Name                  pgtype.Text        `json:"name"`
+	Status                string             `json:"status"`
+	OfficialsAdded        bool               `json:"officials_added"`
+	CreatedAt             pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
+	StateName             pgtype.Text        `json:"state_name"`
+	LgaName               pgtype.Text        `json:"lga_name"`
+	WardName              pgtype.Text        `json:"ward_name"`
+}
+
+func (q *Queries) GetCampaignGroupByID(ctx context.Context, id int64) (GetCampaignGroupByIDRow, error) {
 	row := q.db.QueryRow(ctx, getCampaignGroupByID, id)
-	var i CampaignGroup
+	var i GetCampaignGroupByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.PartyID,
@@ -184,6 +222,9 @@ func (q *Queries) GetCampaignGroupByID(ctx context.Context, id int64) (CampaignG
 		&i.OfficialsAdded,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.StateName,
+		&i.LgaName,
+		&i.WardName,
 	)
 	return i, err
 }

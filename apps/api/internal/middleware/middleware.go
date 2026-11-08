@@ -21,8 +21,8 @@ const CampaignGroupKey contextKey = "campaign_group"
 
 // CampaignGroupAccessChecker defines the service interface needed for campaign group authorization.
 type CampaignGroupAccessChecker interface {
-	GetCampaignGroupByID(ctx context.Context, id int64) (queries.CampaignGroup, error)
-	CanUserAccessGroup(ctx context.Context, group queries.CampaignGroup, claims *utils.JWTClaims) (bool, error)
+	GetCampaignGroupByID(ctx context.Context, id int64) (queries.GetCampaignGroupByIDRow, error)
+	CanUserAccessGroup(ctx context.Context, group queries.GetCampaignGroupByIDRow, claims *utils.JWTClaims) (bool, error)
 }
 
 // GetClaims extracts JWT claims from the HTTP request context.
@@ -37,8 +37,8 @@ func GetClaimsFromContext(ctx context.Context) (*utils.JWTClaims, bool) {
 }
 
 // GetCampaignGroupFromContext extracts the CampaignGroup from the request context if set by middleware.
-func GetCampaignGroupFromContext(ctx context.Context) (queries.CampaignGroup, bool) {
-	group, ok := ctx.Value(CampaignGroupKey).(queries.CampaignGroup)
+func GetCampaignGroupFromContext(ctx context.Context) (queries.GetCampaignGroupByIDRow, bool) {
+	group, ok := ctx.Value(CampaignGroupKey).(queries.GetCampaignGroupByIDRow)
 	return group, ok
 }
 
@@ -166,9 +166,9 @@ func OptionalAuthMiddleware(jwtSecret string) func(http.Handler) http.Handler {
 // 1. A valid campaign group ID is present in the route path ({id}).
 // 2. The campaign group exists in the database.
 // 3. The authenticated user (via JWT claims) is authorized:
-//   - Global admin (admin, super_admin)
-//   - Party admin for the group's party (party_admin, super_party_admin where claims.PartyID == group.PartyID)
-//   - Enrolled member in campaign_group_members
+//   - Global super administrator ("super_admin")
+//   - Super party administrator for the group's party ("super_party_admin" where claims.PartyID == group.PartyID)
+//   - Enrolled operative in any campaign group for this party
 //
 // Upon success, stores the retrieved queries.CampaignGroup in context under CampaignGroupKey.
 func RequireCampaignGroupAccess(service CampaignGroupAccessChecker, utilsInstance *utils.Utils) func(http.Handler) http.Handler {
@@ -200,7 +200,7 @@ func RequireCampaignGroupAccess(service CampaignGroupAccessChecker, utilsInstanc
 				return
 			}
 
-			// 4. Check access rights: global admin, party admin, or enrolled operative
+			// 4. Check access rights: super_admin, super_party_admin, or enrolled party operative
 			allowed, err := service.CanUserAccessGroup(r.Context(), group, claims)
 			if err != nil {
 				utilsInstance.RespondError(w, http.StatusInternalServerError, "Failed to verify campaign group access")

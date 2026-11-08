@@ -19,7 +19,27 @@ DO UPDATE SET
 RETURNING *;
 
 -- name: GetCampaignGroupByID :one
-SELECT * FROM campaign_groups WHERE id = $1;
+SELECT 
+    cg.id,
+    cg.party_id,
+    cg.target_election_group_id,
+    cg.scope,
+    cg.state_id,
+    cg.lga_id,
+    cg.ward_id,
+    cg.name,
+    cg.status,
+    cg.officials_added,
+    cg.created_at,
+    cg.updated_at,
+    s.name AS state_name,
+    l.name AS lga_name,
+    w.name AS ward_name
+FROM campaign_groups cg
+LEFT JOIN c_states s ON s.id = cg.state_id
+LEFT JOIN lgas l ON l.id = cg.lga_id
+LEFT JOIN wards w ON w.id = cg.ward_id
+WHERE cg.id = $1;
 
 -- name: CheckUserInCampaignGroup :one
 SELECT EXISTS (

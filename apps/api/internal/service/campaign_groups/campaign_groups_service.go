@@ -90,16 +90,16 @@ func (s *CampaignGroupsService) InvalidateCampaignGroupCache(ctx context.Context
 }
 
 // GetCampaignGroupByID fetches a campaign group by its primary key ID, backed by a 30-day Redis cache.
-func (s *CampaignGroupsService) GetCampaignGroupByID(ctx context.Context, id int64) (queries.CampaignGroup, error) {
+func (s *CampaignGroupsService) GetCampaignGroupByID(ctx context.Context, id int64) (queries.GetCampaignGroupByIDRow, error) {
 	if id <= 0 {
-		return queries.CampaignGroup{}, fmt.Errorf("invalid campaign group id: %d", id)
+		return queries.GetCampaignGroupByIDRow{}, fmt.Errorf("invalid campaign group id: %d", id)
 	}
 
 	cacheKey := fmt.Sprintf("%s%d", db.RedisCampaignGroupByID, id)
 
 	// 1. Fast-path: Check Redis cache
 	if cachedVal, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
-		var group queries.CampaignGroup
+		var group queries.GetCampaignGroupByIDRow
 		if jsonErr := json.Unmarshal([]byte(cachedVal), &group); jsonErr == nil {
 			return group, nil
 		}
@@ -108,7 +108,7 @@ func (s *CampaignGroupsService) GetCampaignGroupByID(ctx context.Context, id int
 	// 2. Query DB
 	group, err := s.queries.GetCampaignGroupByID(ctx, id)
 	if err != nil {
-		return queries.CampaignGroup{}, err
+		return queries.GetCampaignGroupByIDRow{}, err
 	}
 
 	// 3. Cache in Redis
@@ -550,26 +550,26 @@ func (s *CampaignGroupsService) EnsureAgentCampaignInGroup(ctx context.Context, 
 	return group, nil
 }
 
-// IsUserGroupMember checks if a user is enrolled in a campaign group via sqlc, backed by a 7-day Redis cache.
-func (s *CampaignGroupsService) IsUserGroupMember(ctx context.Context, groupID int64, userID int64) (bool, error) {
-	if groupID <= 0 || userID <= 0 {
+// IsUserPartyCampaignMember checks if a user is enrolled in any campaign group for this party via sqlc, backed by a 7-day Redis cache.
+func (s *CampaignGroupsService) IsUserPartyCampaignMember(ctx context.Context, partyID int16, userID int64) (bool, error) {
+	if partyID <= 0 || userID <= 0 {
 		return false, nil
 	}
 
-	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisCampaignGroupMemberCheck, groupID, userID)
+	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisCampaignGroupMemberCheck, partyID, userID)
 
 	// 1. Fast-path: Check Redis cache
 	if cachedVal, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
 		return cachedVal == "1", nil
 	}
 
-	// 2. Query DB via generated sqlc query
-	exists, err := s.queries.CheckUserInCampaignGroup(ctx, queries.CheckUserInCampaignGroupParams{
-		GroupID: groupID,
+	// 2. Query DB via generated sqlc query (hits idx_campaign_group_members_party_user)
+	exists, err := s.queries.CheckUserInPartyCampaignGroup(ctx, queries.CheckUserInPartyCampaignGroupParams{
+		PartyID: partyID,
 		UserID:  userID,
 	})
 	if err != nil {
-		return false, fmt.Errorf("failed to check group membership for group %d, user %d: %w", groupID, userID, err)
+		return false, fmt.Errorf("failed to check party campaign membership for party %d, user %d: %w", partyID, userID, err)
 	}
 
 	// 3. Cache result in Redis for 7 days
@@ -584,24 +584,24 @@ func (s *CampaignGroupsService) IsUserGroupMember(ctx context.Context, groupID i
 
 // CanUserAccessGroup evaluates if the authenticated user has permission to access a campaign group.
 // Permitted users:
-// 1. Global administrators ("admin", "super_admin").
-// 2. Party administrators ("party_admin", "super_party_admin") if assigned to the group's party.
-// 3. Enrolled operatives of the group (candidates, supervisors, agents, officials in campaign_group_members).
-func (s *CampaignGroupsService) CanUserAccessGroup(ctx context.Context, group queries.CampaignGroup, claims *utils.JWTClaims) (bool, error) {
+// 1. Global super administrator ("super_admin").
+// 2. Super party administrator ("super_party_admin") if assigned to the group's party.
+// 3. Enrolled operatives of any campaign group in this party (candidates, supervisors, agents, officials).
+func (s *CampaignGroupsService) CanUserAccessGroup(ctx context.Context, group queries.GetCampaignGroupByIDRow, claims *utils.JWTClaims) (bool, error) {
 	if claims == nil {
 		return false, nil
 	}
 
-	// 1. Global admin check
+	// 1. Global super admin check
 	if claims.HasAnyRole("super_admin") {
 		return true, nil
 	}
 
-	// 2. Party admin check for matching party
+	// 2. Super party admin check for matching party
 	if claims.HasAnyRole("super_party_admin") && claims.PartyID == group.PartyID {
 		return true, nil
 	}
 
-	// 3. Group membership check
-	return s.IsUserGroupMember(ctx, group.ID, claims.UserID)
+	// 3. Party operative check: an enrolled operative in any campaign group of this party can access all of the party's campaign groups
+	return s.IsUserPartyCampaignMember(ctx, group.PartyID, claims.UserID)
 }

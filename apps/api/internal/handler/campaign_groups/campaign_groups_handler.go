@@ -17,7 +17,7 @@ import (
 )
 
 type CampaignGroupsService interface {
-	GetCampaignGroupByID(ctx context.Context, id int64) (queries.CampaignGroup, error)
+	GetCampaignGroupByID(ctx context.Context, id int64) (queries.GetCampaignGroupByIDRow, error)
 	GetGroupMembers(ctx context.Context, groupID int64) ([]queries.ListCampaignGroupMembersRow, error)
 	SyncPartyOfficialsToGroup(ctx context.Context, groupID int64) (*campaigngroupsservice.SyncOfficialsResult, error)
 }
@@ -113,37 +113,12 @@ func (h *Handler) GetGroupMembers(w http.ResponseWriter, r *http.Request) {
 // @Failure      500  {object}  map[string]interface{}
 // @Router       /campaign-groups/{id} [get]
 func (h *Handler) GetCampaignGroup(w http.ResponseWriter, r *http.Request) {
-	// If the group was already validated and loaded by RequireCampaignGroupAccess middleware, return it directly
-	if group, ok := apimiddleware.GetCampaignGroupFromContext(r.Context()); ok {
-		h.utils.RespondSuccess(w, http.StatusOK, "Campaign group retrieved successfully", map[string]interface{}{
-			"group": group,
-		})
+	group, ok := apimiddleware.GetCampaignGroupFromContext(r.Context())
+	if !ok {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Campaign group not found in context")
 		return
 	}
 
-	// Fallback if not injected by middleware: parse & validate ID from URL
-	idParam := chi.URLParam(r, "id")
-	groupID, err := strconv.ParseInt(idParam, 10, 64)
-	if err != nil || groupID <= 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid campaign group ID")
-		return
-	}
-
-	// Fetch campaign group record from service
-	group, err := h.service.GetCampaignGroupByID(r.Context(), groupID)
-	if err != nil {
-		// Return 404 if record doesn't exist
-		if errors.Is(err, pgx.ErrNoRows) {
-			h.utils.RespondError(w, http.StatusNotFound, "Campaign group not found")
-			return
-		}
-
-		// Return 500 on database or server error
-		h.utils.RespondError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to fetch campaign group: %v", err))
-		return
-	}
-
-	// Return fetched group in standard success response
 	h.utils.RespondSuccess(w, http.StatusOK, "Campaign group retrieved successfully", map[string]interface{}{
 		"group": group,
 	})
