@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowRight } from "lucide-react";
 import { cn } from "@repo/ui/lib/utils";
 import { HeaderAccent } from "@repo/ui/components/header-accent";
+import { AppAvatar } from "@repo/ui/components/avatar";
 import type { Party } from "#/hooks";
 import { getPartyHome } from "@/lib/server/parties";
 import type { CampaignGroupDetails } from "@/lib/server/campaign_groups";
@@ -36,24 +37,8 @@ type LeaderItem = {
   avatar?: string | null;
 };
 
-const DEFAULT_NATIONAL_LEADERS: LeaderItem[] = [
-  { id: "n1", name: "chike", avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&h=120&fit=crop&crop=face" },
-  { id: "n2", name: "chike", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&h=120&fit=crop&crop=face" },
-  { id: "n3", name: "chike", avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=120&h=120&fit=crop&crop=face" },
-  { id: "n4", name: "chike", avatar: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=120&h=120&fit=crop&crop=face" },
-  { id: "n5", name: "chike", avatar: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=120&h=120&fit=crop&crop=face" },
-];
-
-const DEFAULT_STATE_LEADERS: LeaderItem[] = [
-  { id: "s1", name: "Abia", avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&h=120&fit=crop&crop=face" },
-  { id: "s2", name: "Enugu", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&h=120&fit=crop&crop=face" },
-  { id: "s3", name: "Kaduna", avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=120&h=120&fit=crop&crop=face" },
-  { id: "s4", name: "chike", avatar: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=120&h=120&fit=crop&crop=face" },
-  { id: "s5", name: "chike", avatar: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=120&h=120&fit=crop&crop=face" },
-];
-
-function formatStat(val?: number, fallback = 300000): string {
-  const num = typeof val === "number" && val > 0 ? val : fallback;
+function formatStat(val?: number): string {
+  const num = typeof val === "number" && !isNaN(val) ? val : 0;
   return num.toLocaleString();
 }
 
@@ -65,7 +50,7 @@ function RoleStatsGrid({ roleCounts }: { roleCounts?: CampaignGroupHeroProps["ro
         {/* Top Left: Polling Unit Agent */}
         <div className="pb-5 pr-5 border-r-6 border-border/40">
           <p className="text-2xl sm:text-xl font-extrabold text-foreground tracking-tight">
-            {formatStat(roleCounts?.polling_agent ?? roleCounts?.agent, 300000)}
+            {formatStat(roleCounts?.polling_agent ?? roleCounts?.agent)}
           </p>
           <p className="mt-1 text-xs text-muted-foreground font-medium">
             polling unit agent
@@ -75,7 +60,7 @@ function RoleStatsGrid({ roleCounts }: { roleCounts?: CampaignGroupHeroProps["ro
         {/* Top Right: Ward Supervisors */}
         <div className="pb-5 pl-5">
           <p className="text-2xl sm:text-xl font-extrabold text-foreground tracking-tight">
-            {formatStat(roleCounts?.ward_supervisor, 30000)}
+            {formatStat(roleCounts?.ward_supervisor)}
           </p>
           <p className="mt-1 text-xs text-muted-foreground font-medium">
             ward supervisors
@@ -87,7 +72,7 @@ function RoleStatsGrid({ roleCounts }: { roleCounts?: CampaignGroupHeroProps["ro
         {/* Bottom Left: LGA Supervisor */}
         <div className="pt-5 pr-5 border-r-6 border-border/40">
           <p className="text-2xl sm:text-xl font-extrabold text-foreground tracking-tight">
-            {formatStat(roleCounts?.lga_supervisor, 300000)}
+            {formatStat(roleCounts?.lga_supervisor)}
           </p>
           <p className="mt-1 text-xs text-muted-foreground font-medium">
             Lga supervisor
@@ -97,7 +82,7 @@ function RoleStatsGrid({ roleCounts }: { roleCounts?: CampaignGroupHeroProps["ro
         {/* Bottom Right: State Supervisors */}
         <div className="pt-5 pl-5">
           <p className="text-2xl sm:text-xl font-extrabold text-foreground tracking-tight">
-            {formatStat(roleCounts?.state_supervisor, 30000)}
+            {formatStat(roleCounts?.state_supervisor)}
           </p>
           <p className="mt-1 text-xs text-muted-foreground font-medium">
             state supervisors
@@ -107,6 +92,7 @@ function RoleStatsGrid({ roleCounts }: { roleCounts?: CampaignGroupHeroProps["ro
     </div>
   );
 }
+
 
 export function CampaignGroupHero({
   activeParty,
@@ -130,21 +116,21 @@ export function CampaignGroupHero({
     homeRes?.data?.national_leaders && homeRes.data.national_leaders.length > 0
       ? homeRes.data.national_leaders.slice(0, 5).map((l) => ({
         id: l.id,
-        name: (l.name ? l.name.split(" ")[0] : "chike") || "chike",
+        name: (l.name ? l.name.split(" ")[0] : "") || "Leader",
         avatar: l.avatar,
       }))
-      : DEFAULT_NATIONAL_LEADERS;
+      : [];
 
   const stateLeaders: LeaderItem[] =
     homeRes?.data?.dynamic_leaders?.leaders && homeRes.data.dynamic_leaders.leaders.length > 0
       ? homeRes.data.dynamic_leaders.leaders.slice(0, 5).map((l) => ({
         id: l.id,
-        name: (l.role || l.name || "chike").split(" ")[0] || "chike",
+        name: (l.role || l.name || "").split(" ")[0] || "Leader",
         avatar: l.avatar,
       }))
-      : DEFAULT_STATE_LEADERS;
+      : [];
 
-  const displayTitle = groupTitle || "2027 General election group";
+  const displayTitle = groupTitle || "Campaign Group";
   const leadershipHref = partyId ? `/party/${partyShortName.toLowerCase()}/${partyId}/leadership` : "#";
 
   return (
@@ -203,77 +189,80 @@ export function CampaignGroupHero({
           </div>
 
           {/* National Leaders Subsection */}
-          <div className="space-y-2">
-            <h4 className="text-xs sm:text-sm font-bold text-foreground">National leaders</h4>
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2.5 overflow-x-auto no-scrollbar py-1">
-                {nationalLeaders.map((leader, i) => (
-                  <div key={leader.id || i} className="flex flex-col items-center gap-1 shrink-0 w-11 text-center">
-                    <div className="size-10 sm:size-11 rounded-full overflow-hidden bg-muted ring-2 ring-background shrink-0">
-                      <img
-                        src={leader.avatar || undefined}
-                        alt={leader.name}
-                        className="size-full object-cover"
-                      />
-                    </div>
-                    <span className="text-[11px] font-medium text-foreground truncate max-w-full">
-                      {leader.name}
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              <Link
-                to={leadershipHref as any}
-                className="size-7 rounded-full border border-border/80 flex items-center justify-center text-foreground hover:bg-muted transition shrink-0 ml-auto"
-                aria-label="View all national leaders"
-              >
-                <ArrowRight className="size-3.5 stroke-[2.5]" />
-              </Link>
-            </div>
-
-            {/* Accent underline mark */}
-            <div className="relative h-0.5 w-full bg-border/40 mt-1">
-              <div className="absolute left-0 top-0 h-full w-28 bg-gradient-to-r from-lime-400 to-transparent" />
-            </div>
-          </div>
+          <LeaderSection
+            title="National leaders"
+            leaders={nationalLeaders}
+            emptyMessage="No national leaders assigned yet."
+            leadershipHref={leadershipHref}
+            ariaLabel="View all national leaders"
+          />
 
           {/* State Leaders Subsection */}
-          <div className="space-y-2">
-            <h4 className="text-xs sm:text-sm font-bold text-foreground">State leaders</h4>
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2.5 overflow-x-auto no-scrollbar py-1">
-                {stateLeaders.map((leader, i) => (
-                  <div key={leader.id || i} className="flex flex-col items-center gap-1 shrink-0 w-11 text-center">
-                    <div className="size-10 sm:size-11 rounded-full overflow-hidden bg-muted ring-2 ring-background shrink-0">
-                      <img
-                        src={leader.avatar || undefined}
-                        alt={leader.name}
-                        className="size-full object-cover"
-                      />
-                    </div>
-                    <span className="text-[11px] font-medium text-foreground truncate max-w-full">
-                      {leader.name}
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              <Link
-                to={leadershipHref as any}
-                className="size-7 rounded-full border border-border/80 flex items-center justify-center text-foreground hover:bg-muted transition shrink-0 ml-auto"
-                aria-label="View all state leaders"
-              >
-                <ArrowRight className="size-3.5 stroke-[2.5]" />
-              </Link>
-            </div>
-
-            {/* Accent underline mark */}
-            <div className="relative h-0.5 w-full bg-border/40 mt-1">
-              <div className="absolute left-0 top-0 h-full w-28 bg-gradient-to-r from-lime-400 to-transparent" />
-            </div>
-          </div>
+          <LeaderSection
+            title="State leaders"
+            leaders={stateLeaders}
+            emptyMessage="No state leaders assigned yet."
+            leadershipHref={leadershipHref}
+            ariaLabel="View all state leaders"
+          />
         </div>
+      </div>
+    </div>
+  );
+}
+
+// Mini avatar item for a party leader
+function LeaderAvatarItem({ leader }: { leader: LeaderItem }) {
+  return (
+    <div className="flex flex-col items-center gap-1 shrink-0 w-11 text-center">
+      <AppAvatar
+        src={leader.avatar || undefined}
+        alt={leader.name}
+        className="size-10 sm:size-11 ring-2 ring-background shrink-0"
+      />
+      <span className="text-[11px] font-medium text-foreground truncate max-w-full">
+        {leader.name}
+      </span>
+    </div>
+  );
+}
+
+type LeaderSectionProps = {
+  title: string;
+  leaders: LeaderItem[];
+  emptyMessage: string;
+  leadershipHref: string;
+  ariaLabel: string;
+};
+
+// Reusable subsection for displaying leadership tier (national, state)
+function LeaderSection({ title, leaders, emptyMessage, leadershipHref, ariaLabel }: LeaderSectionProps) {
+  return (
+    <div className="space-y-2">
+      <h4 className="text-xs sm:text-sm font-bold text-foreground">{title}</h4>
+      {leaders.length > 0 ? (
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5 overflow-x-auto no-scrollbar py-1">
+            {leaders.map((leader, i) => (
+              <LeaderAvatarItem key={leader.id || i} leader={leader} />
+            ))}
+          </div>
+
+          <Link
+            to={leadershipHref as any}
+            className="size-7 rounded-full border border-border/80 flex items-center justify-center text-foreground hover:bg-muted transition shrink-0 ml-auto"
+            aria-label={ariaLabel}
+          >
+            <ArrowRight className="size-3.5 stroke-[2.5]" />
+          </Link>
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground py-1">{emptyMessage}</p>
+      )}
+
+      {/* Accent underline mark */}
+      <div className="relative h-0.5 w-full bg-border/40 mt-1">
+        <div className="absolute left-0 top-0 h-full w-28 bg-linear-to-r from-lime-400 to-transparent" />
       </div>
     </div>
   );

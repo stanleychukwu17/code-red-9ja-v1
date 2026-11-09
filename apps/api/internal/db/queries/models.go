@@ -324,6 +324,66 @@ type FederalConstituency struct {
 	Status                   pgtype.Text `json:"status"`
 }
 
+type FeedPost struct {
+	ID            int64              `json:"id"`
+	AuthorID      int64              `json:"author_id"`
+	TargetType    string             `json:"target_type"`
+	TargetID      int64              `json:"target_id"`
+	PostType      string             `json:"post_type"`
+	Visibility    string             `json:"visibility"`
+	Content       string             `json:"content"`
+	HasMedia      bool               `json:"has_media"`
+	IsPinned      bool               `json:"is_pinned"`
+	IsLocked      bool               `json:"is_locked"`
+	LikesCount    int32              `json:"likes_count"`
+	CommentsCount int32              `json:"comments_count"`
+	SharesCount   int32              `json:"shares_count"`
+	Metadata      []byte             `json:"metadata"`
+	Status        string             `json:"status"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+}
+
+type FeedPostComment struct {
+	ID         int64              `json:"id"`
+	PostID     int64              `json:"post_id"`
+	UserID     int64              `json:"user_id"`
+	ParentID   pgtype.Int8        `json:"parent_id"`
+	Content    string             `json:"content"`
+	LikesCount int32              `json:"likes_count"`
+	IsPinned   bool               `json:"is_pinned"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
+}
+
+type FeedPostCommentLike struct {
+	CommentID int64              `json:"comment_id"`
+	UserID    int64              `json:"user_id"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type FeedPostLike struct {
+	PostID       int64              `json:"post_id"`
+	UserID       int64              `json:"user_id"`
+	ReactionType string             `json:"reaction_type"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+}
+
+type FeedPostMedium struct {
+	ID              int64              `json:"id"`
+	PostID          int64              `json:"post_id"`
+	FileID          pgtype.Int8        `json:"file_id"`
+	MediaType       string             `json:"media_type"`
+	Url             string             `json:"url"`
+	ThumbnailUrl    pgtype.Text        `json:"thumbnail_url"`
+	Width           pgtype.Int4        `json:"width"`
+	Height          pgtype.Int4        `json:"height"`
+	DurationSeconds pgtype.Int4        `json:"duration_seconds"`
+	FileSizeBytes   int64              `json:"file_size_bytes"`
+	SortOrder       int16              `json:"sort_order"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+}
+
 type File struct {
 	ID           int64              `json:"id"`
 	OriginalName string             `json:"original_name"`

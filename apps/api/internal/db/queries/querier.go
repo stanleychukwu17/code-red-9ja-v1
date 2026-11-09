@@ -63,6 +63,8 @@ type Querier interface {
 	CreateElectionInstance(ctx context.Context, arg CreateElectionInstanceParams) (Election, error)
 	CreateElectionVote(ctx context.Context, arg CreateElectionVoteParams) (ElectionVote, error)
 	CreateFederalConstituency(ctx context.Context, arg CreateFederalConstituencyParams) (FederalConstituency, error)
+	CreateFeedPost(ctx context.Context, arg CreateFeedPostParams) (FeedPost, error)
+	CreateFeedPostMedia(ctx context.Context, arg CreateFeedPostMediaParams) (FeedPostMedium, error)
 	CreateFile(ctx context.Context, arg CreateFileParams) (File, error)
 	CreateINECResultGrabberLog(ctx context.Context, arg CreateINECResultGrabberLogParams) (InecResultGrabberLog, error)
 	CreateLGA(ctx context.Context, arg CreateLGAParams) (Lga, error)

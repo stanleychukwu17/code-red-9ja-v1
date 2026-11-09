@@ -4,7 +4,14 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { QUERY_KEYS } from "@/lib/config";
 import { useParties } from "#/hooks";
-import { CampaignGroupHero } from "#/components/campaign-group";
+import {
+  CampaignGroupHero,
+  CampaignGroupHierarchyFilter,
+  CampaignGroupActivities,
+  CampaignGroupTalksCard,
+  CampaignGroupFeedPostCard,
+  CampaignGroupFeedComposer,
+} from "#/components/campaign-group";
 import {
   getCampaignGroup,
   getCampaignGroupMembers,
@@ -111,6 +118,7 @@ function CampaignGroupHomeTabComponent() {
 
   return (
     <div className="space-y-6">
+      {/* Hero section displaying operative statistics and party leadership */}
       <CampaignGroupHero
         activeParty={activeParty}
         group={group}
@@ -118,9 +126,46 @@ function CampaignGroupHomeTabComponent() {
         partyShortName={activeParty?.short_name}
         totalMembers={members.length}
         roleCounts={roleCounts}
+      />
+
+      {/* Territorial hierarchy flow & chapter filters with sync action */}
+      <CampaignGroupHierarchyFilter
+        activeParty={activeParty}
+        group={group}
+        partyShortName={activeParty?.short_name}
         isSyncing={syncMutation.isPending}
         onSync={() => syncMutation.mutate()}
       />
+
+      {/* Actives, Talks and Feeds */}
+      <div className="w-full flex flex-col lg:flex-row gap-8 items-start pt-2">
+        <div className="w-full lg:w-105 xl:w-110 shrink-0 space-y-8">
+          {/* Activities */}
+          <CampaignGroupActivities
+            partyId={partyId}
+            groupId={groupId}
+          />
+
+          {/* Talks Highlight */}
+          <CampaignGroupTalksCard
+            partyId={partyId}
+            groupId={groupId}
+          />
+        </div>
+
+        <div className="flex-1 w-full min-w-0">
+          <div className="w-full max-w-2xl mx-auto space-y-6">
+            {/* Feed Post Composer */}
+            <CampaignGroupFeedComposer
+              partyId={partyId}
+              groupId={groupId}
+            />
+
+            {/* feed posts */}
+            <CampaignGroupFeedPostCard />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
