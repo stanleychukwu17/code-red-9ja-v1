@@ -27,12 +27,32 @@ export type CampaignGroupDetails = {
   state_name?: string | null;
   lga_name?: string | null;
   ward_name?: string | null;
-  name?: string | null;
   status: string;
   officials_added: boolean;
   created_at: string;
   updated_at: string;
 };
+
+export function getCampaignGroupTitle(
+  group?: CampaignGroupDetails | null,
+  partyShortName?: string | null
+): string {
+  const party = (partyShortName || "Party").toUpperCase();
+  if (!group) return `${party} Campaign Group`;
+
+  switch (group.scope) {
+    case "national":
+      return `${party} National Group`;
+    case "state":
+      return `${party} ${group.state_name ? `${group.state_name} State` : "State"} Group`;
+    case "lga":
+      return `${party} ${group.lga_name ? `${group.lga_name} LGA` : "LGA"} Group`;
+    case "ward":
+      return `${party} ${group.ward_name ? `${group.ward_name} Ward` : "Ward"} Group`;
+    default:
+      return `${party} ${group.scope.toUpperCase()} Group`;
+  }
+}
 
 export type CampaignGroupResponse = {
   success: boolean;

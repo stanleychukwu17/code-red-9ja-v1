@@ -1,40 +1,34 @@
 import { useMemo } from "react";
-import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { createFileRoute, Outlet, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { AlertCircle } from "lucide-react";
 import { HeaderAccent } from "@repo/ui/components/header-accent";
 import { QUERY_KEYS } from "@/lib/config";
 import { getPageHeader } from "@/lib/shared/meta";
 import { useParties } from "#/hooks";
-import {
-  CampaignGroupHero,
-  CampaignGroupNavTabs,
-} from "#/components/campaign-group";
+import { CampaignGroupNavTabs } from "#/components/campaign-group";
 import {
   getCampaignGroup,
-  getCampaignGroupMembers,
-  syncCampaignGroupOfficials,
-  type CampaignGroupMemberItem,
+  getCampaignGroupTitle,
   type CampaignGroupDetails,
 } from "@/lib/server/campaign_groups";
 
 export const Route = createFileRoute("/_authenticated/group/$partyId/$groupId")({
-  head: () =>
-    getPageHeader({
-      title: "Campaign Group",
-    }),
+  head: () => getPageHeader({
+    title: "Campaign Group",
+  }),
   component: CampaignGroupLayoutComponent,
 });
 
 function CampaignGroupLayoutComponent() {
   const { partyId, groupId } = Route.useParams();
-  const queryClient = useQueryClient();
 
   // 1. Fetch parties list to resolve party identity
   const { parties } = useParties();
   const activeParty = useMemo(() => {
     const pid = Number(partyId);
     if (!Array.isArray(parties)) return null;
+
     return parties.find((p) => p.id === pid) || null;
   }, [parties, partyId]);
 
@@ -46,75 +40,25 @@ function CampaignGroupLayoutComponent() {
     staleTime: Infinity,
   });
 
-  // 3. Fetch group members roster
-  const { data: membersRes } = useQuery({
-    queryKey: QUERY_KEYS.campaignGroupMembers(groupId),
-    queryFn: () => getCampaignGroupMembers({ data: { groupId } }),
-    enabled: Boolean(groupId),
-    staleTime: Infinity,
-  });
-
-  // 4. Official sync mutation
-  const syncMutation = useMutation({
-    mutationFn: () => syncCampaignGroupOfficials({ data: { groupId } }),
-    onSuccess: (res) => {
-      if (res && "success" in res && res.success) {
-        toast.success("Party officials synchronized to group successfully");
-        queryClient.invalidateQueries({
-          queryKey: QUERY_KEYS.campaignGroupMembers(groupId),
-        });
-      } else {
-        toast.error((res as any)?.message || "Failed to sync officials");
-      }
-    },
-    onError: (err: any) => {
-      toast.error(err?.message || "Failed to sync party officials");
-    },
-  });
-
   const group: CampaignGroupDetails | undefined = groupRes?.data?.group;
-  const members: CampaignGroupMemberItem[] = membersRes?.data?.members || [];
+  console.log(group)
+  console.log(activeParty)
 
-  // Group display name fallback
-  const partyShortName = activeParty?.short_name || "Party";
-  const groupTitle =
-    group?.name ||
-    `${partyShortName.toUpperCase()} ${group?.scope ? group.scope.toUpperCase() : ""} Campaign Group`;
+  // Dynamic group title based on scope and territory
+  const groupTitle = useMemo(
+    () => getCampaignGroupTitle(group, activeParty?.short_name),
+    [group, activeParty?.short_name]
+  );
 
-  // Member role counts for badge filters and hero stat grid
-  const roleCounts = useMemo(() => {
-    const counts = {
-      all: members.length,
-      candidate: 0,
-      party_official: 0,
-      supervisor: 0,
-      agent: 0,
-      polling_agent: 0,
-      ward_supervisor: 0,
-      lga_supervisor: 0,
-      state_supervisor: 0,
-    };
-    for (const m of members) {
-      if (m.role === "candidate") counts.candidate += 1;
-      else if (m.role === "party_official") counts.party_official += 1;
-      else if (m.role === "agent" || m.role === "polling_agent") {
-        counts.agent += 1;
-        counts.polling_agent += 1;
-      } else if (m.role === "ward_supervisor" || m.role === "ward_election_supervisor") {
-        counts.supervisor += 1;
-        counts.ward_supervisor += 1;
-      } else if (m.role === "lga_supervisor" || m.role === "lga_election_supervisor") {
-        counts.supervisor += 1;
-        counts.lga_supervisor += 1;
-      } else if (m.role === "state_supervisor" || m.role === "state_election_supervisor") {
-        counts.supervisor += 1;
-        counts.state_supervisor += 1;
-      } else if (m.role.includes("supervisor")) {
-        counts.supervisor += 1;
-      }
-    }
-    return counts;
-  }, [members]);
+  // Exit with error view if route partyId does not match the campaign group's party_id
+  if (group && Number(partyId) !== group.party_id) {
+    return (
+      <ErrorComponent
+        partyId={partyId}
+        partyName={activeParty?.short_name}
+      />
+    );
+  }
 
   return (
     <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
@@ -132,19 +76,6 @@ function CampaignGroupLayoutComponent() {
       <CampaignGroupNavTabs
         partyId={partyId}
         groupId={groupId}
-        membersCount={members.length}
-      />
-
-      {/* Hero Command Banner */}
-      <CampaignGroupHero
-        activeParty={activeParty}
-        group={group}
-        groupTitle={groupTitle}
-        partyShortName={partyShortName}
-        totalMembers={members.length}
-        roleCounts={roleCounts}
-        isSyncing={syncMutation.isPending}
-        onSync={() => syncMutation.mutate()}
       />
 
       {/* Nested Tab Route Content */}
@@ -152,3 +83,37 @@ function CampaignGroupLayoutComponent() {
     </div>
   );
 }
+
+
+type ErrorComponentProps = {
+  partyId: string;
+  partyName?: string | null;
+};
+
+const ErrorComponent = ({ partyId, partyName }: ErrorComponentProps) => {
+  return (
+    <div className="max-w-xl mx-auto px-4 py-16 text-center">
+      <div className="flex flex-col items-center justify-center p-8 rounded-2xl border border-destructive/20 bg-destructive/5 space-y-4">
+        <AlertCircle className="size-12 text-destructive" />
+        <h2 className="text-xl font-bold text-foreground">
+          Party Mismatch Error
+        </h2>
+        <p className="text-sm text-muted-foreground max-w-md">
+          This campaign group does not belong to the selected political party.
+        </p>
+        <div className="pt-2">
+          <Link
+            to="/party/$partyName/$partyId"
+            params={{
+              partyName: (partyName || "party").toLowerCase(),
+              partyId: String(partyId),
+            }}
+            className="inline-flex items-center justify-center px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-black/90 transition-colors"
+          >
+            Return to Party Dashboard
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+};

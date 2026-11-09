@@ -57,15 +57,66 @@ function formatStat(val?: number, fallback = 300000): string {
   return num.toLocaleString();
 }
 
+// 2x2 operative role breakdown stats grid
+function RoleStatsGrid({ roleCounts }: { roleCounts?: CampaignGroupHeroProps["roleCounts"] }) {
+  return (
+    <div className="mt-4 max-w-sm">
+      <div className="grid grid-cols-2">
+        {/* Top Left: Polling Unit Agent */}
+        <div className="pb-5 pr-5 border-r-6 border-border/40">
+          <p className="text-2xl sm:text-xl font-extrabold text-foreground tracking-tight">
+            {formatStat(roleCounts?.polling_agent ?? roleCounts?.agent, 300000)}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground font-medium">
+            polling unit agent
+          </p>
+        </div>
+
+        {/* Top Right: Ward Supervisors */}
+        <div className="pb-5 pl-5">
+          <p className="text-2xl sm:text-xl font-extrabold text-foreground tracking-tight">
+            {formatStat(roleCounts?.ward_supervisor, 30000)}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground font-medium">
+            ward supervisors
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 mt-4 pt-4 border-t-6 border-border/40">
+        {/* Bottom Left: LGA Supervisor */}
+        <div className="pt-5 pr-5 border-r-6 border-border/40">
+          <p className="text-2xl sm:text-xl font-extrabold text-foreground tracking-tight">
+            {formatStat(roleCounts?.lga_supervisor, 300000)}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground font-medium">
+            Lga supervisor
+          </p>
+        </div>
+
+        {/* Bottom Right: State Supervisors */}
+        <div className="pt-5 pl-5">
+          <p className="text-2xl sm:text-xl font-extrabold text-foreground tracking-tight">
+            {formatStat(roleCounts?.state_supervisor, 30000)}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground font-medium">
+            state supervisors
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function CampaignGroupHero({
   activeParty,
   group,
   groupTitle,
-  partyShortName = "APC",
-  totalMembers,
+  partyShortName: partyShortNameProp,
   roleCounts,
 }: CampaignGroupHeroProps) {
   const partyId = activeParty?.id || group?.party_id;
+  const partyShortName = activeParty?.short_name || partyShortNameProp || "Party";
 
   // Query live party leaders (national and state) if party ID is available
   const { data: homeRes } = useQuery({
@@ -117,52 +168,7 @@ export function CampaignGroupHero({
             />
           </div>
 
-          <div className="mt-4 max-w-sm">
-            <div className="grid grid-cols-2">
-              {/* Top Left: Polling Unit Agent */}
-              <div className="pb-5 pr-5 border-r-6 border-border/40">
-                <p className="text-2xl sm:text-xl font-extrabold text-foreground tracking-tight">
-                  {formatStat(roleCounts?.polling_agent ?? roleCounts?.agent, 300000)}
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground font-medium">
-                  polling unit agent
-                </p>
-              </div>
-
-              {/* Top Right: Ward Supervisors */}
-              <div className="pb-5 pl-5">
-                <p className="text-2xl sm:text-xl font-extrabold text-foreground tracking-tight">
-                  {formatStat(roleCounts?.ward_supervisor, 30000)}
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground font-medium">
-                  ward supervisors
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 mt-4 pt-4 border-t-6 border-border/40">
-              {/* Bottom Left: LGA Supervisor */}
-              <div className="pt-5 pr-5 border-r-6 border-border/40">
-                <p className="text-2xl sm:text-xl font-extrabold text-foreground tracking-tight">
-                  {formatStat(roleCounts?.lga_supervisor, 300000)}
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground font-medium">
-                  Lga supervisor
-                </p>
-              </div>
-
-              {/* Bottom Right: State Supervisors */}
-              <div className="pt-5 pl-5">
-                <p className="text-2xl sm:text-xl font-extrabold text-foreground tracking-tight">
-                  {formatStat(roleCounts?.state_supervisor, 30000)}
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground font-medium">
-                  state supervisors
-                </p>
-              </div>
-            </div>
-          </div>
-
+          <RoleStatsGrid roleCounts={roleCounts} />
         </div>
 
         {/* CENTER COLUMN: Party Emblem & Caption (col-span-3) */}
@@ -205,7 +211,7 @@ export function CampaignGroupHero({
                   <div key={leader.id || i} className="flex flex-col items-center gap-1 shrink-0 w-11 text-center">
                     <div className="size-10 sm:size-11 rounded-full overflow-hidden bg-muted ring-2 ring-background shrink-0">
                       <img
-                        src={leader.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=face"}
+                        src={leader.avatar || undefined}
                         alt={leader.name}
                         className="size-full object-cover"
                       />
@@ -241,7 +247,7 @@ export function CampaignGroupHero({
                   <div key={leader.id || i} className="flex flex-col items-center gap-1 shrink-0 w-11 text-center">
                     <div className="size-10 sm:size-11 rounded-full overflow-hidden bg-muted ring-2 ring-background shrink-0">
                       <img
-                        src={leader.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=face"}
+                        src={leader.avatar || undefined}
                         alt={leader.name}
                         className="size-full object-cover"
                       />

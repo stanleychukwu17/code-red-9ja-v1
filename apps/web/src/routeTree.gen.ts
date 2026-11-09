@@ -54,6 +54,7 @@ import { Route as AuthenticatedPartyPartyNamePartyIdEventsRouteImport } from './
 import { Route as AuthenticatedGroupPartyIdGroupIdTimelineRouteImport } from './routes/_authenticated/group/$partyId.$groupId/timeline'
 import { Route as AuthenticatedGroupPartyIdGroupIdTalksRouteImport } from './routes/_authenticated/group/$partyId.$groupId/talks'
 import { Route as AuthenticatedGroupPartyIdGroupIdNotesRouteImport } from './routes/_authenticated/group/$partyId.$groupId/notes'
+import { Route as AuthenticatedGroupPartyIdGroupIdMembersRouteImport } from './routes/_authenticated/group/$partyId.$groupId/members'
 import { Route as AuthenticatedGroupPartyIdGroupIdIssuesRouteImport } from './routes/_authenticated/group/$partyId.$groupId/issues'
 import { Route as AuthenticatedGroupPartyIdGroupIdHomeRouteImport } from './routes/_authenticated/group/$partyId.$groupId/home'
 
@@ -315,6 +316,12 @@ const AuthenticatedGroupPartyIdGroupIdNotesRoute =
     path: '/notes',
     getParentRoute: () => AuthenticatedGroupPartyIdGroupIdRoute,
   } as any)
+const AuthenticatedGroupPartyIdGroupIdMembersRoute =
+  AuthenticatedGroupPartyIdGroupIdMembersRouteImport.update({
+    id: '/members',
+    path: '/members',
+    getParentRoute: () => AuthenticatedGroupPartyIdGroupIdRoute,
+  } as any)
 const AuthenticatedGroupPartyIdGroupIdIssuesRoute =
   AuthenticatedGroupPartyIdGroupIdIssuesRouteImport.update({
     id: '/issues',
@@ -361,6 +368,7 @@ export interface FileRoutesByFullPath {
   '/states/$stateId/': typeof AuthenticatedStatesStateIdIndexRoute
   '/group/$partyId/$groupId/home': typeof AuthenticatedGroupPartyIdGroupIdHomeRoute
   '/group/$partyId/$groupId/issues': typeof AuthenticatedGroupPartyIdGroupIdIssuesRoute
+  '/group/$partyId/$groupId/members': typeof AuthenticatedGroupPartyIdGroupIdMembersRoute
   '/group/$partyId/$groupId/notes': typeof AuthenticatedGroupPartyIdGroupIdNotesRoute
   '/group/$partyId/$groupId/talks': typeof AuthenticatedGroupPartyIdGroupIdTalksRoute
   '/group/$partyId/$groupId/timeline': typeof AuthenticatedGroupPartyIdGroupIdTimelineRoute
@@ -406,6 +414,7 @@ export interface FileRoutesByTo {
   '/states/$stateId': typeof AuthenticatedStatesStateIdIndexRoute
   '/group/$partyId/$groupId/home': typeof AuthenticatedGroupPartyIdGroupIdHomeRoute
   '/group/$partyId/$groupId/issues': typeof AuthenticatedGroupPartyIdGroupIdIssuesRoute
+  '/group/$partyId/$groupId/members': typeof AuthenticatedGroupPartyIdGroupIdMembersRoute
   '/group/$partyId/$groupId/notes': typeof AuthenticatedGroupPartyIdGroupIdNotesRoute
   '/group/$partyId/$groupId/talks': typeof AuthenticatedGroupPartyIdGroupIdTalksRoute
   '/group/$partyId/$groupId/timeline': typeof AuthenticatedGroupPartyIdGroupIdTimelineRoute
@@ -456,6 +465,7 @@ export interface FileRoutesById {
   '/_authenticated/states/$stateId/': typeof AuthenticatedStatesStateIdIndexRoute
   '/_authenticated/group/$partyId/$groupId/home': typeof AuthenticatedGroupPartyIdGroupIdHomeRoute
   '/_authenticated/group/$partyId/$groupId/issues': typeof AuthenticatedGroupPartyIdGroupIdIssuesRoute
+  '/_authenticated/group/$partyId/$groupId/members': typeof AuthenticatedGroupPartyIdGroupIdMembersRoute
   '/_authenticated/group/$partyId/$groupId/notes': typeof AuthenticatedGroupPartyIdGroupIdNotesRoute
   '/_authenticated/group/$partyId/$groupId/talks': typeof AuthenticatedGroupPartyIdGroupIdTalksRoute
   '/_authenticated/group/$partyId/$groupId/timeline': typeof AuthenticatedGroupPartyIdGroupIdTimelineRoute
@@ -506,6 +516,7 @@ export interface FileRouteTypes {
     | '/states/$stateId/'
     | '/group/$partyId/$groupId/home'
     | '/group/$partyId/$groupId/issues'
+    | '/group/$partyId/$groupId/members'
     | '/group/$partyId/$groupId/notes'
     | '/group/$partyId/$groupId/talks'
     | '/group/$partyId/$groupId/timeline'
@@ -551,6 +562,7 @@ export interface FileRouteTypes {
     | '/states/$stateId'
     | '/group/$partyId/$groupId/home'
     | '/group/$partyId/$groupId/issues'
+    | '/group/$partyId/$groupId/members'
     | '/group/$partyId/$groupId/notes'
     | '/group/$partyId/$groupId/talks'
     | '/group/$partyId/$groupId/timeline'
@@ -600,6 +612,7 @@ export interface FileRouteTypes {
     | '/_authenticated/states/$stateId/'
     | '/_authenticated/group/$partyId/$groupId/home'
     | '/_authenticated/group/$partyId/$groupId/issues'
+    | '/_authenticated/group/$partyId/$groupId/members'
     | '/_authenticated/group/$partyId/$groupId/notes'
     | '/_authenticated/group/$partyId/$groupId/talks'
     | '/_authenticated/group/$partyId/$groupId/timeline'
@@ -943,6 +956,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedGroupPartyIdGroupIdNotesRouteImport
       parentRoute: typeof AuthenticatedGroupPartyIdGroupIdRoute
     }
+    '/_authenticated/group/$partyId/$groupId/members': {
+      id: '/_authenticated/group/$partyId/$groupId/members'
+      path: '/members'
+      fullPath: '/group/$partyId/$groupId/members'
+      preLoaderRoute: typeof AuthenticatedGroupPartyIdGroupIdMembersRouteImport
+      parentRoute: typeof AuthenticatedGroupPartyIdGroupIdRoute
+    }
     '/_authenticated/group/$partyId/$groupId/issues': {
       id: '/_authenticated/group/$partyId/$groupId/issues'
       path: '/issues'
@@ -993,6 +1013,7 @@ const AuthenticatedProfileUsernameRouteWithChildren =
 interface AuthenticatedGroupPartyIdGroupIdRouteChildren {
   AuthenticatedGroupPartyIdGroupIdHomeRoute: typeof AuthenticatedGroupPartyIdGroupIdHomeRoute
   AuthenticatedGroupPartyIdGroupIdIssuesRoute: typeof AuthenticatedGroupPartyIdGroupIdIssuesRoute
+  AuthenticatedGroupPartyIdGroupIdMembersRoute: typeof AuthenticatedGroupPartyIdGroupIdMembersRoute
   AuthenticatedGroupPartyIdGroupIdNotesRoute: typeof AuthenticatedGroupPartyIdGroupIdNotesRoute
   AuthenticatedGroupPartyIdGroupIdTalksRoute: typeof AuthenticatedGroupPartyIdGroupIdTalksRoute
   AuthenticatedGroupPartyIdGroupIdTimelineRoute: typeof AuthenticatedGroupPartyIdGroupIdTimelineRoute
@@ -1005,6 +1026,8 @@ const AuthenticatedGroupPartyIdGroupIdRouteChildren: AuthenticatedGroupPartyIdGr
       AuthenticatedGroupPartyIdGroupIdHomeRoute,
     AuthenticatedGroupPartyIdGroupIdIssuesRoute:
       AuthenticatedGroupPartyIdGroupIdIssuesRoute,
+    AuthenticatedGroupPartyIdGroupIdMembersRoute:
+      AuthenticatedGroupPartyIdGroupIdMembersRoute,
     AuthenticatedGroupPartyIdGroupIdNotesRoute:
       AuthenticatedGroupPartyIdGroupIdNotesRoute,
     AuthenticatedGroupPartyIdGroupIdTalksRoute:

@@ -134,7 +134,6 @@ type CampaignGroup struct {
 	StateID               pgtype.Int4        `json:"state_id"`
 	LgaID                 pgtype.Int4        `json:"lga_id"`
 	WardID                pgtype.Int4        `json:"ward_id"`
-	Name                  pgtype.Text        `json:"name"`
 	Status                string             `json:"status"`
 	OfficialsAdded        bool               `json:"officials_added"`
 	CreatedAt             pgtype.Timestamptz `json:"created_at"`

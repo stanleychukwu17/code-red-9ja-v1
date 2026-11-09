@@ -16,8 +16,6 @@ CREATE TABLE IF NOT EXISTS campaign_groups (
   lga_id INT REFERENCES lgas(id) ON DELETE CASCADE,
   ward_id INT REFERENCES wards(id) ON DELETE CASCADE,
 
-  -- Custom display name (e.g., "Team Peter-Obi Epe Command Center"); if NULL, dynamic fallback is rendered
-  name VARCHAR(255),
   status VARCHAR(32) NOT NULL DEFAULT 'active', -- 'active', 'archived'
   officials_added BOOLEAN NOT NULL DEFAULT FALSE,
 

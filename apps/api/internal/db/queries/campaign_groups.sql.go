@@ -113,17 +113,16 @@ INSERT INTO campaign_groups (
   state_id,
   lga_id,
   ward_id,
-  name,
   status
 )
 VALUES (
-  $1, $2, $3, $4, $5, $6, $7, 'active'
+  $1, $2, $3, $4, $5, $6, 'active'
 )
 ON CONFLICT (party_id, scope, state_id, lga_id, ward_id)
 DO UPDATE SET 
   target_election_group_id = COALESCE(EXCLUDED.target_election_group_id, campaign_groups.target_election_group_id),
   updated_at = NOW()
-RETURNING id, party_id, target_election_group_id, scope, state_id, lga_id, ward_id, name, status, officials_added, created_at, updated_at
+RETURNING id, party_id, target_election_group_id, scope, state_id, lga_id, ward_id, status, officials_added, created_at, updated_at
 `
 
 type FindOrCreateCampaignGroupParams struct {
@@ -133,7 +132,6 @@ type FindOrCreateCampaignGroupParams struct {
 	StateID               pgtype.Int4 `json:"state_id"`
 	LgaID                 pgtype.Int4 `json:"lga_id"`
 	WardID                pgtype.Int4 `json:"ward_id"`
-	Name                  pgtype.Text `json:"name"`
 }
 
 func (q *Queries) FindOrCreateCampaignGroup(ctx context.Context, arg FindOrCreateCampaignGroupParams) (CampaignGroup, error) {
@@ -144,7 +142,6 @@ func (q *Queries) FindOrCreateCampaignGroup(ctx context.Context, arg FindOrCreat
 		arg.StateID,
 		arg.LgaID,
 		arg.WardID,
-		arg.Name,
 	)
 	var i CampaignGroup
 	err := row.Scan(
@@ -155,7 +152,6 @@ func (q *Queries) FindOrCreateCampaignGroup(ctx context.Context, arg FindOrCreat
 		&i.StateID,
 		&i.LgaID,
 		&i.WardID,
-		&i.Name,
 		&i.Status,
 		&i.OfficialsAdded,
 		&i.CreatedAt,
@@ -173,7 +169,6 @@ SELECT
     cg.state_id,
     cg.lga_id,
     cg.ward_id,
-    cg.name,
     cg.status,
     cg.officials_added,
     cg.created_at,
@@ -196,7 +191,6 @@ type GetCampaignGroupByIDRow struct {
 	StateID               pgtype.Int4        `json:"state_id"`
 	LgaID                 pgtype.Int4        `json:"lga_id"`
 	WardID                pgtype.Int4        `json:"ward_id"`
-	Name                  pgtype.Text        `json:"name"`
 	Status                string             `json:"status"`
 	OfficialsAdded        bool               `json:"officials_added"`
 	CreatedAt             pgtype.Timestamptz `json:"created_at"`
@@ -217,7 +211,6 @@ func (q *Queries) GetCampaignGroupByID(ctx context.Context, id int64) (GetCampai
 		&i.StateID,
 		&i.LgaID,
 		&i.WardID,
-		&i.Name,
 		&i.Status,
 		&i.OfficialsAdded,
 		&i.CreatedAt,

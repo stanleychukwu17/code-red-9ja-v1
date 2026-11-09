@@ -6,11 +6,10 @@ INSERT INTO campaign_groups (
   state_id,
   lga_id,
   ward_id,
-  name,
   status
 )
 VALUES (
-  $1, $2, $3, $4, $5, $6, $7, 'active'
+  $1, $2, $3, $4, $5, $6, 'active'
 )
 ON CONFLICT (party_id, scope, state_id, lga_id, ward_id)
 DO UPDATE SET 
@@ -27,7 +26,6 @@ SELECT
     cg.state_id,
     cg.lga_id,
     cg.ward_id,
-    cg.name,
     cg.status,
     cg.officials_added,
     cg.created_at,

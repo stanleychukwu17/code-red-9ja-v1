@@ -152,7 +152,7 @@ func (s *CampaignGroupsService) SyncPartyOfficialsToGroup(ctx context.Context, g
 	}
 
 	// Proceed with the actual sync operation
-	res, err := s.syncPartyOfficialsToGroup(ctx, group.PartyID, group)
+	res, err := s.syncPartyOfficialsToGroup(ctx, group.PartyID, toCampaignGroup(group))
 	if err != nil {
 		// Release lock on failure so caller can retry without being locked out
 		_ = s.rdb.Del(ctx, lockKey).Err()
@@ -160,6 +160,23 @@ func (s *CampaignGroupsService) SyncPartyOfficialsToGroup(ctx context.Context, g
 	}
 
 	return res, nil
+}
+
+// toCampaignGroup converts a GetCampaignGroupByIDRow into a CampaignGroup.
+func toCampaignGroup(r queries.GetCampaignGroupByIDRow) queries.CampaignGroup {
+	return queries.CampaignGroup{
+		ID:                    r.ID,
+		PartyID:               r.PartyID,
+		TargetElectionGroupID: r.TargetElectionGroupID,
+		Scope:                 r.Scope,
+		StateID:               r.StateID,
+		LgaID:                 r.LgaID,
+		WardID:                r.WardID,
+		Status:                r.Status,
+		OfficialsAdded:        r.OfficialsAdded,
+		CreatedAt:             r.CreatedAt,
+		UpdatedAt:             r.UpdatedAt,
+	}
 }
 
 // syncPartyOfficialsToGroup fetches the party's chapter officials at the group's scope and adds them to the campaign group.
@@ -378,7 +395,6 @@ func (s *CampaignGroupsService) GetOrCreateCampaignGroup(ctx context.Context, in
 		StateID:               input.StateID,
 		LgaID:                 input.LgaID,
 		WardID:                input.WardID,
-		Name:                  pgtype.Text{Valid: false},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to find or create campaign group: %w", err)
