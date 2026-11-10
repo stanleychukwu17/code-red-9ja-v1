@@ -10,7 +10,9 @@ import (
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/utils"
 	"log/slog"
+	"strconv"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
@@ -620,4 +622,76 @@ func (s *CampaignGroupsService) CanUserAccessGroup(ctx context.Context, group qu
 
 	// 3. Party operative check: an enrolled operative in any campaign group of this party can access all of the party's campaign groups
 	return s.IsUserPartyCampaignMember(ctx, group.PartyID, claims.UserID)
+}
+
+// FindCampaignGroupIDInput holds the criteria to locate a campaign group by territorial hierarchy.
+type FindCampaignGroupIDInput struct {
+	PartyID int16 `json:"party_id"`
+	StateID int32 `json:"state_id"`
+	LgaID   int32 `json:"lga_id"`
+	WardID  int32 `json:"ward_id"`
+}
+
+// FindCampaignGroupID locates a campaign group's ID for a given party by territorial scope:
+// if ward > 0 => ward scope; if lga > 0 => lga scope; if state > 0 => state scope; else national scope.
+// It wraps lookups in Redis (30-day TTL) for sub-millisecond retrieval since campaign group IDs rarely change.
+func (s *CampaignGroupsService) FindCampaignGroupID(ctx context.Context, input FindCampaignGroupIDInput) (int64, error) {
+	// Validate required party ID
+	if input.PartyID <= 0 {
+		return 0, fmt.Errorf("invalid party_id: %d", input.PartyID)
+	}
+
+	// Determine territorial scope, boundary IDs, and Redis cache key
+	var scope string
+	var cacheKey string
+	var stateID, lgaID, wardID pgtype.Int4
+
+	if input.WardID > 0 {
+		scope = "ward"
+		stateID = utils.PgInt4FromPositive(input.StateID)
+		lgaID = utils.PgInt4FromPositive(input.LgaID)
+		wardID = utils.PgInt4FromPositive(input.WardID)
+		cacheKey = fmt.Sprintf("%s%d:ward:%d", db.RedisCampaignGroupLookup, input.PartyID, input.WardID)
+	} else if input.LgaID > 0 {
+		scope = "lga"
+		stateID = utils.PgInt4FromPositive(input.StateID)
+		lgaID = utils.PgInt4FromPositive(input.LgaID)
+		cacheKey = fmt.Sprintf("%s%d:lga:%d", db.RedisCampaignGroupLookup, input.PartyID, input.LgaID)
+	} else if input.StateID > 0 {
+		scope = "state"
+		stateID = utils.PgInt4FromPositive(input.StateID)
+		cacheKey = fmt.Sprintf("%s%d:state:%d", db.RedisCampaignGroupLookup, input.PartyID, input.StateID)
+	} else {
+		scope = "national"
+		cacheKey = fmt.Sprintf("%s%d:national", db.RedisCampaignGroupLookup, input.PartyID)
+	}
+
+	// 1. Fast-path: Check Redis cache
+	if cachedVal, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
+		if gid, parseErr := strconv.ParseInt(cachedVal, 10, 64); parseErr == nil && gid > 0 {
+			return gid, nil
+		}
+	}
+
+	// 2. Query Database via unified sqlc query
+	groupID, err := s.queries.GetCampaignGroupIDByTerritory(ctx, queries.GetCampaignGroupIDByTerritoryParams{
+		PartyID: input.PartyID,
+		Scope:   scope,
+		StateID: stateID,
+		LgaID:   lgaID,
+		WardID:  wardID,
+	})
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return 0, fmt.Errorf("campaign group not found for this %s scope", scope)
+		}
+
+		return 0, fmt.Errorf("failed to query campaign group: %w", err)
+	}
+
+	// 3. Cache in Redis
+	_ = s.rdb.Set(ctx, cacheKey, strconv.FormatInt(groupID, 10), db.RedisThirtyDaysTTL).Err()
+
+	return groupID, nil
 }

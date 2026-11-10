@@ -116,6 +116,8 @@ function CampaignGroupHomeTabComponent() {
     return counts;
   }, [members]);
 
+  if (!activeParty || !group) return null;
+
   return (
     <div className="space-y-6">
       {/* Hero section displaying operative statistics and party leadership */}

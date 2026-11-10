@@ -594,6 +594,9 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Post("/api/v1/party-applications/change-role", partyApplicationsHandler.ChangeAgentRole)
 		r.Delete("/api/v1/party-applications/agents/{id}", partyApplicationsHandler.RevokeAgent)
 
+		// campaign groups routes
+		r.Post("/api/v1/campaign-groups/find", campaignGroupsHandler.FindCampaignGroup)
+
 		// campaign groups routes (authorized operatives & party/global admins only)
 		campaignGroupAccess := apimiddleware.RequireCampaignGroupAccess(campaignGroupsService, utilsInstance)
 		r.Group(func(campaignGroupRouter chi.Router) {

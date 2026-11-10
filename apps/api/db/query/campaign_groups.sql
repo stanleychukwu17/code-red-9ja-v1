@@ -136,3 +136,12 @@ ORDER BY
         ELSE 7
     END ASC,
     m.joined_at ASC;
+
+-- name: GetCampaignGroupIDByTerritory :one
+SELECT id FROM campaign_groups
+WHERE party_id = $1
+  AND scope = $2
+  AND state_id IS NOT DISTINCT FROM $3
+  AND lga_id IS NOT DISTINCT FROM $4
+  AND ward_id IS NOT DISTINCT FROM $5
+LIMIT 1;

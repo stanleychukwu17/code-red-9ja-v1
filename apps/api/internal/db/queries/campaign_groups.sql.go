@@ -222,6 +222,37 @@ func (q *Queries) GetCampaignGroupByID(ctx context.Context, id int64) (GetCampai
 	return i, err
 }
 
+const getCampaignGroupIDByTerritory = `-- name: GetCampaignGroupIDByTerritory :one
+SELECT id FROM campaign_groups
+WHERE party_id = $1
+  AND scope = $2
+  AND state_id IS NOT DISTINCT FROM $3
+  AND lga_id IS NOT DISTINCT FROM $4
+  AND ward_id IS NOT DISTINCT FROM $5
+LIMIT 1
+`
+
+type GetCampaignGroupIDByTerritoryParams struct {
+	PartyID int16       `json:"party_id"`
+	Scope   string      `json:"scope"`
+	StateID pgtype.Int4 `json:"state_id"`
+	LgaID   pgtype.Int4 `json:"lga_id"`
+	WardID  pgtype.Int4 `json:"ward_id"`
+}
+
+func (q *Queries) GetCampaignGroupIDByTerritory(ctx context.Context, arg GetCampaignGroupIDByTerritoryParams) (int64, error) {
+	row := q.db.QueryRow(ctx, getCampaignGroupIDByTerritory,
+		arg.PartyID,
+		arg.Scope,
+		arg.StateID,
+		arg.LgaID,
+		arg.WardID,
+	)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
 const listCampaignGroupMembers = `-- name: ListCampaignGroupMembers :many
 SELECT 
     m.id,

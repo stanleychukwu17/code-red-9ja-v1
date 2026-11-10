@@ -175,6 +175,7 @@ export const API_URL = {
 		getGroup: (groupId: number | string) => `${api}/campaign-groups/${groupId}`,
 		getMembers: (groupId: number | string) => `${api}/campaign-groups/${groupId}/members`,
 		syncOfficials: (groupId: number | string) => `${api}/campaign-groups/${groupId}/sync-officials`,
+		findGroup: `${api}/campaign-groups/find`,
 	},
 };
 

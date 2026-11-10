@@ -95,6 +95,7 @@ const (
 	RedisCampaignGroupMembers     = "campaign_groups:members:"            // STRING: "campaign_groups:members:<groupID>" stores cached JSON array of campaign group members
 	RedisCampaignGroupMemberCheck = "campaign_groups:group_member_check:" // STRING: "campaign_groups:group_member_check:<partyID>:<userID>" stores "1" or "0"
 	RedisCampaignGroupSyncLock    = "campaign_groups:sync_lock:"          // STRING: "campaign_groups:sync_lock:<groupID>" cooldown lock preventing repeated db syncing
+	RedisCampaignGroupLookup      = "campaign_groups:lookup:"             // STRING: "campaign_groups:lookup:<partyID>:<scope>..." stores cached groupID
 	//--END--
 
 	//--START-- for page verifications & badges

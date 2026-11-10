@@ -173,6 +173,7 @@ type Querier interface {
 	// Helper for filtering feeds / search results
 	GetBlockedUserIDsForUser(ctx context.Context, blockerID int64) ([]int64, error)
 	GetCampaignGroupByID(ctx context.Context, id int64) (GetCampaignGroupByIDRow, error)
+	GetCampaignGroupIDByTerritory(ctx context.Context, arg GetCampaignGroupIDByTerritoryParams) (int64, error)
 	GetCandidateCountsForElections(ctx context.Context, electionIds []int32) ([]GetCandidateCountsForElectionsRow, error)
 	GetChapterMemberCount(ctx context.Context, arg GetChapterMemberCountParams) (int64, error)
 	GetCitiesByStateID(ctx context.Context, stateID int16) ([]GetCitiesByStateIDRow, error)

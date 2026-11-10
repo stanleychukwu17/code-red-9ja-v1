@@ -126,3 +126,44 @@ export const syncCampaignGroupOfficials = createServerFn({ method: "POST" })
       return { success: false, message, data: undefined };
     }
   });
+
+export type SwitchCampaignGroupInput = {
+  partyId: number | string;
+  stateId?: number;
+  lgaId?: number;
+  wardId?: number;
+};
+
+export type FindCampaignGroupResponse = {
+  success: boolean;
+  message?: string;
+  data?: {
+    group_id: number;
+  };
+};
+
+/**
+ * Handle switching to a campaign group by target territorial IDs.
+ */
+export const switchCampaignGroup = createServerFn({ method: "POST" })
+  .inputValidator((data: SwitchCampaignGroupInput) => data)
+  .handler(async ({ data }) => {
+    try {
+      const res = await apiFetchJson<FindCampaignGroupResponse>(
+        API_URL.campaignGroups.findGroup,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            party_id: Number(data.partyId),
+            state_id: data.stateId ? Number(data.stateId) : 0,
+            lga_id: data.lgaId ? Number(data.lgaId) : 0,
+            ward_id: data.wardId ? Number(data.wardId) : 0,
+          }),
+        },
+      );
+      return res;
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to find campaign group";
+      return { success: false, message, data: undefined };
+    }
+  });

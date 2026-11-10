@@ -45,11 +45,8 @@ CREATE TABLE IF NOT EXISTS feed_posts (
 );
 
 -- Fast lookup composite indexes for container timelines and cursor-based pagination
-CREATE INDEX IF NOT EXISTS idx_feed_posts_container 
-  ON feed_posts(target_type, target_id, is_pinned DESC, id DESC);
-
-CREATE INDEX IF NOT EXISTS idx_feed_posts_author 
-  ON feed_posts(author_id, id DESC);
+CREATE INDEX IF NOT EXISTS idx_feed_posts_container ON feed_posts(target_type, target_id, is_pinned DESC, id DESC);
+CREATE INDEX IF NOT EXISTS idx_feed_posts_author ON feed_posts(author_id, id DESC);
 
 
 -- ============================================================================
@@ -75,8 +72,7 @@ CREATE TABLE IF NOT EXISTS feed_post_media (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_feed_post_media_post 
-  ON feed_post_media(post_id, sort_order ASC);
+CREATE INDEX IF NOT EXISTS idx_feed_post_media_post ON feed_post_media(post_id, sort_order ASC);
 
 
 -- ============================================================================
@@ -91,9 +87,6 @@ CREATE TABLE IF NOT EXISTS feed_post_likes (
 
   PRIMARY KEY (post_id, user_id)
 );
-
-CREATE INDEX IF NOT EXISTS idx_feed_post_likes_user 
-  ON feed_post_likes(user_id);
 
 
 -- ============================================================================

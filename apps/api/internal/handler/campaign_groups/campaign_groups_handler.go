@@ -2,6 +2,7 @@ package campaigngroupshandler
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"free9ja/api/internal/db/queries"
@@ -13,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-playground/validator/v10"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -20,17 +22,20 @@ type CampaignGroupsService interface {
 	GetCampaignGroupByID(ctx context.Context, id int64) (queries.GetCampaignGroupByIDRow, error)
 	GetGroupMembers(ctx context.Context, groupID int64) ([]queries.ListCampaignGroupMembersRow, error)
 	SyncPartyOfficialsToGroup(ctx context.Context, groupID int64) (*campaigngroupsservice.SyncOfficialsResult, error)
+	FindCampaignGroupID(ctx context.Context, input campaigngroupsservice.FindCampaignGroupIDInput) (int64, error)
 }
 
 type Handler struct {
-	service CampaignGroupsService
-	utils   *utils.Utils
+	service  CampaignGroupsService
+	utils    *utils.Utils
+	validate *validator.Validate
 }
 
 func NewHandler(service CampaignGroupsService, utils *utils.Utils) *Handler {
 	return &Handler{
-		service: service,
-		utils:   utils,
+		service:  service,
+		utils:    utils,
+		validate: validator.New(),
 	}
 }
 
@@ -121,5 +126,60 @@ func (h *Handler) GetCampaignGroup(w http.ResponseWriter, r *http.Request) {
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Campaign group retrieved successfully", map[string]interface{}{
 		"group": group,
+	})
+}
+
+type FindCampaignGroupRequest struct {
+	PartyID int16 `json:"party_id" validate:"required,gt=0"`
+	StateID int32 `json:"state_id" validate:"omitempty"`
+	LgaID   int32 `json:"lga_id" validate:"omitempty"`
+	WardID  int32 `json:"ward_id" validate:"omitempty"`
+}
+
+// FindCampaignGroup godoc
+// @Summary      Find campaign group ID by territory
+// @Description  Finds the campaign group ID for a party matching ward, LGA, state, or national scope
+// @Tags         CampaignGroups
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}
+// @Failure      400  {object}  map[string]interface{}
+// @Failure      404  {object}  map[string]interface{}
+// @Failure      500  {object}  map[string]interface{}
+// @Router       /campaign-groups/find [post]
+func (h *Handler) FindCampaignGroup(w http.ResponseWriter, r *http.Request) {
+	// Decode request body
+	var req FindCampaignGroupRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	// Validate required fields
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
+		return
+	}
+
+	// Resolve campaign group ID by territory
+	groupID, err := h.service.FindCampaignGroupID(r.Context(), campaigngroupsservice.FindCampaignGroupIDInput{
+		PartyID: req.PartyID,
+		StateID: req.StateID,
+		LgaID:   req.LgaID,
+		WardID:  req.WardID,
+	})
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			h.utils.RespondError(w, http.StatusNotFound, err.Error())
+			return
+		}
+
+		h.utils.RespondError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to find campaign group: %v", err))
+		return
+	}
+
+	// Return resolved group ID
+	h.utils.RespondSuccess(w, http.StatusOK, "Campaign group found successfully", map[string]interface{}{
+		"group_id": groupID,
 	})
 }
