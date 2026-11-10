@@ -183,7 +183,7 @@ export function CampaignGroupFeedComposer({
             onClick={() => fileInputRef.current?.click()}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full hover:bg-slate-200/60 dark:hover:bg-muted text-xs font-semibold text-slate-600 dark:text-slate-300 transition cursor-pointer"
           >
-            <ImageIcon className="size-4 text-emerald-500 stroke-[2]" />
+            <ImageIcon className="size-4 text-emerald-500 stroke-2" />
             <span>Photo</span>
           </button>
 
@@ -192,7 +192,7 @@ export function CampaignGroupFeedComposer({
             onClick={() => fileInputRef.current?.click()}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full hover:bg-slate-200/60 dark:hover:bg-muted text-xs font-semibold text-slate-600 dark:text-slate-300 transition cursor-pointer"
           >
-            <Video className="size-4 text-sky-500 stroke-[2]" />
+            <Video className="size-4 text-sky-500 stroke-2" />
             <span>Video</span>
           </button>
 
@@ -201,7 +201,7 @@ export function CampaignGroupFeedComposer({
             onClick={() => fileInputRef.current?.click()}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full hover:bg-slate-200/60 dark:hover:bg-muted text-xs font-semibold text-slate-600 dark:text-slate-300 transition cursor-pointer"
           >
-            <Paperclip className="size-4 text-amber-500 stroke-[2]" />
+            <Paperclip className="size-4 text-amber-500 stroke-2" />
             <span>Attach</span>
           </button>
         </div>

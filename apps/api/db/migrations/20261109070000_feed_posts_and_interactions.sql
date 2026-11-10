@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS feed_posts (
   author_id BIGINT NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
   
   -- Polymorphic Container: WHERE does this post live?
-  -- e.g. 'campaign_group', 'party', 'user_wall'
+  -- e.g. 'campaign_group', 'party_wall', 'user_wall'
   target_type VARCHAR(32) NOT NULL,
   target_id BIGINT NOT NULL,
 
@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS feed_posts (
   post_type VARCHAR(32) NOT NULL DEFAULT 'standard',
 
   -- Access control level
-  -- 'public' (everyone), 'followers' (party followers), 'members' (group operatives)
+  -- 'public' (everyone), 'members_and_followers', 'only_members'
   visibility VARCHAR(32) NOT NULL DEFAULT 'public',
 
   -- Post content
