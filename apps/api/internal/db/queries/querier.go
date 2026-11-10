@@ -359,6 +359,7 @@ type Querier interface {
 	ListBlockedUsersByParty(ctx context.Context, arg ListBlockedUsersByPartyParams) ([]ListBlockedUsersByPartyRow, error)
 	ListBlockedUsersByUser(ctx context.Context, arg ListBlockedUsersByUserParams) ([]ListBlockedUsersByUserRow, error)
 	ListCampaignGroupMembers(ctx context.Context, groupID int64) ([]ListCampaignGroupMembersRow, error)
+	ListCampaignGroupOfficials(ctx context.Context, groupID int64) ([]int64, error)
 	ListContestedOffices(ctx context.Context) ([]Office, error)
 	ListCountries(ctx context.Context) ([]ListCountriesRow, error)
 	ListCustomPartyPositions(ctx context.Context, partyID pgtype.Int2) ([]PartyPosition, error)

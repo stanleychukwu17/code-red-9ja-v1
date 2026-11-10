@@ -3,16 +3,9 @@ import { useRouterState } from "@tanstack/react-router";
 import { LayoutDashboard, Users, Sparkles, MessageSquare, AlertTriangle, FileText } from "lucide-react";
 import { ScrollableNavTabs, type ScrollableTabItem } from "#/components/ScrollableNavTabs";
 import { APP_URL } from "#/lib/config";
+import type { CampaignGroupTabId, CampaignGroupNavTabsProps } from "./types";
 
-export type CampaignGroupTabId = "home" | "members" | "timeline" | "talks" | "issues" | "notes";
-
-export type CampaignGroupNavTabsProps = {
-  partyId?: string | number;
-  groupId?: string | number;
-  activeTab?: CampaignGroupTabId;
-  onTabChange?: (tab: CampaignGroupTabId) => void;
-  className?: string;
-};
+export type { CampaignGroupTabId, CampaignGroupNavTabsProps };
 
 export const CAMPAIGN_GROUP_TABS: {
   id: CampaignGroupTabId;

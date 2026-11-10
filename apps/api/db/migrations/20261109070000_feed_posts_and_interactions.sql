@@ -109,8 +109,7 @@ CREATE TABLE IF NOT EXISTS feed_post_comments (
 );
 
 -- Fast lookup for root comments
-CREATE INDEX IF NOT EXISTS idx_feed_post_comments_post_root 
-  ON feed_post_comments(post_id, id ASC) WHERE parent_id IS NULL;
+CREATE INDEX IF NOT EXISTS idx_feed_post_comments_post_root ON feed_post_comments(post_id, id ASC) WHERE parent_id IS NULL;
 
 -- Fast lookup for nested comment replies
 CREATE INDEX IF NOT EXISTS idx_feed_post_comments_parent 
@@ -130,7 +129,23 @@ CREATE TABLE IF NOT EXISTS feed_post_comment_likes (
 
 
 -- ============================================================================
--- 6. TRIGGERS FOR ATOMIC COUNTERS
+-- 6. FEED POST BOOKMARKS / SAVED POSTS
+-- Private personal collection of posts saved by a user.
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS feed_post_bookmarks (
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  post_id BIGINT NOT NULL REFERENCES feed_posts(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+  PRIMARY KEY (user_id, post_id)
+);
+
+-- Fast foreign key cascade cleanup when a post is deleted
+CREATE INDEX IF NOT EXISTS idx_feed_post_bookmarks_post ON feed_post_bookmarks(post_id);
+
+
+-- ============================================================================
+-- 7. TRIGGERS FOR ATOMIC COUNTERS
 -- Ensures likes_count and comments_count are guaranteed in sync without race conditions.
 -- ============================================================================
 
@@ -196,6 +211,7 @@ DROP FUNCTION IF EXISTS update_feed_post_comments_count();
 DROP TRIGGER IF EXISTS trg_feed_post_likes_count ON feed_post_likes;
 DROP FUNCTION IF EXISTS update_feed_post_likes_count();
 
+DROP TABLE IF EXISTS feed_post_bookmarks;
 DROP TABLE IF EXISTS feed_post_comment_likes;
 DROP TABLE IF EXISTS feed_post_comments;
 DROP TABLE IF EXISTS feed_post_likes;

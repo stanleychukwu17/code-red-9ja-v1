@@ -2,8 +2,7 @@ import { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ArrowRight, Plus, Loader2, ArrowRightLeft } from "lucide-react";
-import { cn } from "@repo/ui/lib/utils";
+import { Plus, Loader2, ArrowRightLeft } from "lucide-react";
 import { SelectState } from "@repo/ui/components/selects/state-select";
 import { SelectLga } from "@repo/ui/components/selects/lga-select";
 import { SelectWard } from "@repo/ui/components/selects/ward-select";
@@ -11,106 +10,16 @@ import { getStates } from "#/lib/server/countries";
 import { getLGAsByState, getWardsByLGA } from "#/lib/server/polling_units";
 import { APP_URL, NIGERIA_COUNTRY_ID } from "#/lib/config";
 import type { Party } from "#/hooks";
-import { switchCampaignGroup, type CampaignGroupDetails, type SwitchCampaignGroupInput } from "@/lib/server/campaign_groups";
+import { switchCampaignGroup } from "@/lib/server/campaign_groups";
+import type {
+  CampaignGroupDetails,
+  SwitchCampaignGroupInput,
+  CampaignGroupHierarchyFilterProps,
+  HierarchyStep,
+} from "./types";
+import { HierarchyStepItem } from "./CampaignGroupHierarchyStepItem";
 
-// Component props
-export type CampaignGroupHierarchyFilterProps = {
-  activeParty: Party;
-  group: CampaignGroupDetails;
-  partyShortName?: string;
-  isSyncing?: boolean;
-  onSync?: () => void;
-};
-
-// Hierarchy breadcrumb item
-type HierarchyStep = {
-  id: string;
-  label: string;
-  level: "national" | "state" | "lga" | "ward";
-  payload: SwitchCampaignGroupInput;
-  isCurrent: boolean;
-};
-
-type HierarchyStepItemProps = {
-  step: HierarchyStep;
-  isLast: boolean;
-  activeParty: Party;
-};
-
-// Mini component representing a territorial level in the breadcrumb chain
-function HierarchyStepItem({ step, isLast, activeParty }: HierarchyStepItemProps) {
-  const navigate = useNavigate();
-
-  const stepMutation = useMutation({
-    mutationFn: async (payload: SwitchCampaignGroupInput) => {
-      return await switchCampaignGroup({ data: payload });
-    },
-    onSuccess: (res) => {
-      if (res && res.success && res.data?.group_id) {
-        navigate({
-          to: APP_URL.group(activeParty.id, res.data.group_id, "home"),
-        });
-      } else {
-        toast.error(res?.message || "Campaign group not found for this territory");
-      }
-    },
-    onError: (err: any) => {
-      toast.error(err?.message || "Failed to switch campaign group");
-    },
-  });
-
-  const handleClick = () => {
-    if (step.isCurrent || stepMutation.isPending) return;
-    stepMutation.mutate(step.payload);
-  };
-
-  return (
-    <div className="flex items-center gap-3 sm:gap-6">
-      <div className="flex flex-col items-center gap-2 text-center">
-        <button
-          type="button"
-          onClick={handleClick}
-          disabled={step.isCurrent || stepMutation.isPending}
-          title={step.isCurrent ? `Currently viewing ${step.label}` : `Switch to ${step.label} group`}
-          className={cn(
-            "relative size-16 sm:size-20 rounded-full bg-[#fcf9f2] dark:bg-neutral-800/80 border flex items-center justify-center shadow-sm transition-all overflow-hidden",
-            step.isCurrent
-              ? "ring-2 ring-primary ring-offset-2 border-primary cursor-default opacity-100"
-              : "border-amber-100/70 dark:border-neutral-700/60 cursor-pointer hover:scale-105 hover:ring-2 hover:ring-neutral-400 active:scale-95"
-          )}
-        >
-          <img
-            src="https://images.unsplash.com/photo-1579762715118-a6f1d4b934f1?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D"
-            alt={step.label}
-            className="size-full object-cover rounded-full"
-          />
-          {stepMutation.isPending && (
-            <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px] flex items-center justify-center rounded-full">
-              <Loader2 className="size-5 text-white animate-spin" />
-            </div>
-          )}
-        </button>
-        <span
-          className={cn(
-            "text-xs sm:text-sm font-semibold tracking-tight transition-colors",
-            step.isCurrent
-              ? "text-primary font-bold cursor-default"
-              : "text-foreground hover:text-primary cursor-pointer"
-          )}
-          onClick={handleClick}
-        >
-          {step.label}
-        </span>
-      </div>
-
-      {!isLast && (
-        <div className="flex items-center justify-center mb-6">
-          <ArrowRight className="size-4 sm:size-5 text-neutral-600 dark:text-neutral-400 stroke-2" />
-        </div>
-      )}
-    </div>
-  );
-}
+export type { CampaignGroupHierarchyFilterProps };
 
 // Title-case territory names (e.g. LAGOS -> Lagos)
 function toTitleCase(str?: string | null): string {
@@ -294,17 +203,17 @@ export function CampaignGroupHierarchyFilter({
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pt-4 border-t border-border/40">
         {/* Left Side: Filter Chapters */}
         <div className="flex items-center gap-4 sm:gap-6 flex-wrap">
-          <span className="text-sm sm:text-base font-bold text-foreground shrink-0 pb-1">
+          <span className="text-sm sm:text-base font-bold text-foreground shrink-0 pb-1 mt-0 md:mt-6">
             Find other groups:
           </span>
 
           <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
             {/* National Group */}
             <div className="space-y-1">
-              <span className="text-[11px] sm:text-xs font-semibold text-foreground block">
+              <span className="text-[11px] ml-1.5 sm:text-xs font-semibold text-foreground block">
                 National:
               </span>
-              <div className="h-8.5 px-3.5 py-1.5 rounded-lg bg-slate-100 dark:bg-neutral-800 text-xs sm:text-sm font-medium text-foreground">
+              <div className="flex items-center justify-center h-8.5 px-3.5 py-1.5 rounded-lg bg-slate-100 dark:bg-neutral-800 text-xs sm:text-xs font-medium text-foreground">
                 National group
               </div>
             </div>
@@ -312,7 +221,7 @@ export function CampaignGroupHierarchyFilter({
             {/* State Select element from packages/ui */}
             {showState && (
               <div className="space-y-1">
-                <span className="text-[11px] sm:text-xs font-semibold text-foreground block">
+                <span className="text-[11px] ml-1.5 sm:text-xs font-semibold text-foreground block">
                   State:
                 </span>
                 <SelectState
@@ -338,7 +247,7 @@ export function CampaignGroupHierarchyFilter({
             {/* LGA Selector */}
             {showLga && (
               <div className="space-y-1">
-                <span className="text-[11px] sm:text-xs font-semibold text-foreground block">
+                <span className="text-[11px] ml-1.5 sm:text-xs font-semibold text-foreground block">
                   lga:
                 </span>
                 <SelectLga
@@ -363,7 +272,7 @@ export function CampaignGroupHierarchyFilter({
             {/* Ward Selector */}
             {showWard && (
               <div className="space-y-1">
-                <span className="text-[11px] sm:text-xs font-semibold text-foreground block">
+                <span className="text-[11px] ml-1.5 sm:text-xs font-semibold text-foreground block">
                   Ward:
                 </span>
                 <SelectWard

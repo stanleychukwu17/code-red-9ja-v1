@@ -1,4 +1,104 @@
 import { Crown, Award, ShieldCheck, UserCheck, Users } from "lucide-react";
+import type { Party } from "#/hooks";
+
+// =========================================================================
+// 1. DOMAIN & ENTITY TYPES
+// =========================================================================
+
+export type CampaignGroupScope = "national" | "state" | "lga" | "ward" | string;
+
+export type CampaignGroupRole =
+  | "candidate"
+  | "party_official"
+  | "state_election_supervisor"
+  | "lga_election_supervisor"
+  | "ward_election_supervisor"
+  | "polling_agent"
+  | "state_supervisor"
+  | "lga_supervisor"
+  | "ward_supervisor"
+  | "agent"
+  | string;
+
+export type CampaignGroupMemberItem = {
+  id: number;
+  party_id: number;
+  group_id: number;
+  user_id: number;
+  role: CampaignGroupRole;
+  can_broadcast: boolean;
+  joined_at: string;
+  fake_id?: string | number;
+  first_name?: string;
+  last_name?: string;
+  username?: string;
+  avatar?: string;
+};
+
+export type CampaignGroupDetails = {
+  id: number;
+  party_id: number;
+  scope: CampaignGroupScope;
+  state_id?: number | null;
+  lga_id?: number | null;
+  ward_id?: number | null;
+  state_name?: string | null;
+  lga_name?: string | null;
+  ward_name?: string | null;
+  status: string;
+  officials_added: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+// =========================================================================
+// 2. SERVER FUNCTION & API DTO TYPES
+// =========================================================================
+
+export type CampaignGroupResponse = {
+  success: boolean;
+  message?: string;
+  data?: {
+    group: CampaignGroupDetails;
+  };
+};
+
+export type CampaignGroupMembersResponse = {
+  success: boolean;
+  message?: string;
+  data?: {
+    members: CampaignGroupMemberItem[];
+  };
+};
+
+export type SyncOfficialsResponse = {
+  success: boolean;
+  message?: string;
+  data?: {
+    result: any;
+  };
+};
+
+export type SwitchCampaignGroupInput = {
+  partyId: number | string;
+  stateId?: number;
+  lgaId?: number;
+  wardId?: number;
+};
+
+export type FindCampaignGroupResponse = {
+  success: boolean;
+  message?: string;
+  data?: {
+    group_id: number;
+  };
+};
+
+// =========================================================================
+// 3. UI, ROLES & NAVIGATION TYPES
+// =========================================================================
+
+export type CampaignGroupTabId = "home" | "members" | "timeline" | "talks" | "issues" | "notes";
 
 export type RoleConfigItem = {
   label: string;
@@ -68,3 +168,55 @@ export function getRoleMeta(role: string): RoleConfigItem {
     }
   );
 }
+
+export type CampaignGroupNavTabsProps = {
+  partyId?: string | number;
+  groupId?: string | number;
+  activeTab?: CampaignGroupTabId;
+  onTabChange?: (tab: CampaignGroupTabId) => void;
+  className?: string;
+};
+
+export type CampaignGroupHeroProps = {
+  activeParty?: Party | null;
+  group?: CampaignGroupDetails;
+  groupTitle?: string;
+  partyShortName?: string;
+  totalMembers?: number;
+  roleCounts?: {
+    candidate: number;
+    party_official: number;
+    supervisor: number;
+    agent?: number;
+    all?: number;
+    polling_agent?: number;
+    ward_supervisor?: number;
+    lga_supervisor?: number;
+    state_supervisor?: number;
+  };
+  isSyncing?: boolean;
+  onSync?: () => void;
+  onShare?: () => void;
+};
+
+export type CampaignGroupHierarchyFilterProps = {
+  activeParty: Party;
+  group: CampaignGroupDetails;
+  partyShortName?: string;
+  isSyncing?: boolean;
+  onSync?: () => void;
+};
+
+export type HierarchyStep = {
+  id: string;
+  label: string;
+  level: "national" | "state" | "lga" | "ward";
+  payload: SwitchCampaignGroupInput;
+  isCurrent: boolean;
+};
+
+export type HierarchyStepItemProps = {
+  step: HierarchyStep;
+  isLast: boolean;
+  activeParty: Party;
+};

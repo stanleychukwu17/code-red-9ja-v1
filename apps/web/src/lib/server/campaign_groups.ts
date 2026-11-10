@@ -1,41 +1,30 @@
 import { createServerFn } from "@tanstack/react-start";
 import { API_URL } from "../config";
 import { apiFetchJson } from "./fetch";
+import type {
+  CampaignGroupDetails,
+  CampaignGroupMemberItem,
+  CampaignGroupResponse,
+  CampaignGroupMembersResponse,
+  SyncOfficialsResponse,
+  SwitchCampaignGroupInput,
+  FindCampaignGroupResponse,
+} from "#/components/campaign-group/types";
 
-export type CampaignGroupMemberItem = {
-  id: number;
-  party_id: number;
-  group_id: number;
-  user_id: number;
-  role: "candidate" | "party_official" | "state_election_supervisor" | "lga_election_supervisor" | "ward_election_supervisor" | "polling_agent" | "state_supervisor" | "lga_supervisor" | "ward_supervisor" | "agent" | string;
-  can_broadcast: boolean;
-  joined_at: string;
-  fake_id?: string | number;
-  first_name?: string;
-  last_name?: string;
-  username?: string;
-  avatar?: string;
-};
-
-export type CampaignGroupDetails = {
-  id: number;
-  party_id: number;
-  scope: "national" | "state" | "lga" | "ward" | string;
-  state_id?: number | null;
-  lga_id?: number | null;
-  ward_id?: number | null;
-  state_name?: string | null;
-  lga_name?: string | null;
-  ward_name?: string | null;
-  status: string;
-  officials_added: boolean;
-  created_at: string;
-  updated_at: string;
+// Re-export all types for backward compatibility
+export type {
+  CampaignGroupDetails,
+  CampaignGroupMemberItem,
+  CampaignGroupResponse,
+  CampaignGroupMembersResponse,
+  SyncOfficialsResponse,
+  SwitchCampaignGroupInput,
+  FindCampaignGroupResponse,
 };
 
 export function getCampaignGroupTitle(
   group?: CampaignGroupDetails | null,
-  partyShortName?: string | null
+  partyShortName?: string | null,
 ): string {
   const party = (partyShortName || "Party").toUpperCase();
   if (!group) return `${party} Campaign Group`;
@@ -53,30 +42,6 @@ export function getCampaignGroupTitle(
       return `${party} ${group.scope.toUpperCase()} Group`;
   }
 }
-
-export type CampaignGroupResponse = {
-  success: boolean;
-  message?: string;
-  data?: {
-    group: CampaignGroupDetails;
-  };
-};
-
-export type CampaignGroupMembersResponse = {
-  success: boolean;
-  message?: string;
-  data?: {
-    members: CampaignGroupMemberItem[];
-  };
-};
-
-export type SyncOfficialsResponse = {
-  success: boolean;
-  message?: string;
-  data?: {
-    result: any;
-  };
-};
 
 /**
  * Fetch campaign group metadata by group ID.
@@ -126,21 +91,6 @@ export const syncCampaignGroupOfficials = createServerFn({ method: "POST" })
       return { success: false, message, data: undefined };
     }
   });
-
-export type SwitchCampaignGroupInput = {
-  partyId: number | string;
-  stateId?: number;
-  lgaId?: number;
-  wardId?: number;
-};
-
-export type FindCampaignGroupResponse = {
-  success: boolean;
-  message?: string;
-  data?: {
-    group_id: number;
-  };
-};
 
 /**
  * Handle switching to a campaign group by target territorial IDs.

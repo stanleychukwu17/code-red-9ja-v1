@@ -338,6 +338,31 @@ func (q *Queries) ListCampaignGroupMembers(ctx context.Context, groupID int64) (
 	return items, nil
 }
 
+const listCampaignGroupOfficials = `-- name: ListCampaignGroupOfficials :many
+SELECT user_id FROM campaign_group_members
+WHERE group_id = $1 AND role = 'party_official'
+`
+
+func (q *Queries) ListCampaignGroupOfficials(ctx context.Context, groupID int64) ([]int64, error) {
+	rows, err := q.db.Query(ctx, listCampaignGroupOfficials, groupID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int64
+	for rows.Next() {
+		var user_id int64
+		if err := rows.Scan(&user_id); err != nil {
+			return nil, err
+		}
+		items = append(items, user_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const markCampaignGroupOfficialsAdded = `-- name: MarkCampaignGroupOfficialsAdded :exec
 UPDATE campaign_groups
 SET officials_added = TRUE, updated_at = NOW()

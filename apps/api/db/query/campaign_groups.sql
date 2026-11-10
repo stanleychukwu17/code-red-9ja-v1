@@ -137,6 +137,10 @@ ORDER BY
     END ASC,
     m.joined_at ASC;
 
+-- name: ListCampaignGroupOfficials :many
+SELECT user_id FROM campaign_group_members
+WHERE group_id = $1 AND role = 'party_official';
+
 -- name: GetCampaignGroupIDByTerritory :one
 SELECT id FROM campaign_groups
 WHERE party_id = $1

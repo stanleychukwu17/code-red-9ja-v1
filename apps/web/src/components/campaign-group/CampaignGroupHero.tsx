@@ -6,29 +6,9 @@ import { HeaderAccent } from "@repo/ui/components/header-accent";
 import { AppAvatar } from "@repo/ui/components/avatar";
 import type { Party } from "#/hooks";
 import { getPartyHome } from "@/lib/server/parties";
-import type { CampaignGroupDetails } from "@/lib/server/campaign_groups";
+import type { CampaignGroupDetails, CampaignGroupHeroProps } from "./types";
 
-export type CampaignGroupHeroProps = {
-  activeParty?: Party | null;
-  group?: CampaignGroupDetails;
-  groupTitle?: string;
-  partyShortName?: string;
-  totalMembers?: number;
-  roleCounts?: {
-    candidate: number;
-    party_official: number;
-    supervisor: number;
-    agent?: number;
-    all?: number;
-    polling_agent?: number;
-    ward_supervisor?: number;
-    lga_supervisor?: number;
-    state_supervisor?: number;
-  };
-  isSyncing?: boolean;
-  onSync?: () => void;
-  onShare?: () => void;
-};
+export type { CampaignGroupHeroProps };
 
 type LeaderItem = {
   id?: string | number;
