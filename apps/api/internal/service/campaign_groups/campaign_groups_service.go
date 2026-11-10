@@ -11,6 +11,8 @@ import (
 	"free9ja/api/internal/utils"
 	"log/slog"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -360,11 +362,13 @@ func (s *CampaignGroupsService) RemoveCampaignGroupMember(ctx context.Context, g
 	return nil
 }
 
-// InvalidateGroupMembersCache invalidates the Redis cache for a campaign group's member roster.
+// InvalidateGroupMembersCache invalidates the Redis cache for a campaign group's member roster and stats.
 func (s *CampaignGroupsService) InvalidateGroupMembersCache(ctx context.Context, groupID int64) {
 	if groupID > 0 {
 		cacheKey := fmt.Sprintf("%s%d", db.RedisCampaignGroupMembers, groupID)
 		_ = s.rdb.Del(ctx, cacheKey).Err()
+		statsKey := fmt.Sprintf("%s%d", db.RedisCampaignGroupStats, groupID)
+		_ = s.rdb.Del(ctx, statsKey).Err()
 	}
 }
 
@@ -765,4 +769,121 @@ func (s *CampaignGroupsService) FindCampaignGroupID(ctx context.Context, input F
 	_ = s.rdb.Set(ctx, cacheKey, strconv.FormatInt(groupID, 10), db.RedisThirtyDaysTTL).Err()
 
 	return groupID, nil
+}
+
+// CampaignGroupStats holds aggregate operative counts rolled up for the group's territorial hierarchy.
+type CampaignGroupStats struct {
+	All             int64 `json:"all"`
+	Candidate       int64 `json:"candidate"`
+	PartyOfficial   int64 `json:"party_official"`
+	Supervisor      int64 `json:"supervisor"`
+	Agent           int64 `json:"agent"`
+	PollingAgent    int64 `json:"polling_agent"`
+	WardSupervisor  int64 `json:"ward_supervisor"`
+	LgaSupervisor   int64 `json:"lga_supervisor"`
+	StateSupervisor int64 `json:"state_supervisor"`
+}
+
+// GetCampaignGroupStats calculates the hierarchical operative counts for the group's territorial scope.
+// Lookups are cached in Redis with a 10-minute TTL.
+func (s *CampaignGroupsService) GetCampaignGroupStats(ctx context.Context, group queries.GetCampaignGroupByIDRow) (*CampaignGroupStats, error) {
+	if group.ID <= 0 {
+		return &CampaignGroupStats{}, nil
+	}
+
+	cacheKey := fmt.Sprintf("%s%d", db.RedisCampaignGroupStats, group.ID)
+
+	// 1. Fast-path: Check Redis cache
+	if cachedVal, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
+		var cachedStats CampaignGroupStats
+		if jsonErr := json.Unmarshal([]byte(cachedVal), &cachedStats); jsonErr == nil {
+			return &cachedStats, nil
+		}
+	}
+
+	// 2. Query DB based on scope
+	type statRow struct {
+		Role  string
+		Count int64
+	}
+
+	var rows []statRow
+
+	switch group.Scope {
+	case "national":
+		res, err := s.queries.GetCampaignGroupNationalStats(ctx, group.PartyID)
+		if err != nil {
+			return &CampaignGroupStats{}, err
+		}
+		for _, r := range res {
+			rows = append(rows, statRow{Role: r.Role, Count: r.Count})
+		}
+	case "state":
+		res, err := s.queries.GetCampaignGroupStateStats(ctx, queries.GetCampaignGroupStateStatsParams{
+			PartyID: group.PartyID,
+			StateID: group.StateID,
+		})
+		if err != nil {
+			return &CampaignGroupStats{}, err
+		}
+		for _, r := range res {
+			rows = append(rows, statRow{Role: r.Role, Count: r.Count})
+		}
+	case "lga":
+		res, err := s.queries.GetCampaignGroupLGAStats(ctx, queries.GetCampaignGroupLGAStatsParams{
+			PartyID: group.PartyID,
+			LgaID:   group.LgaID,
+		})
+		if err != nil {
+			return &CampaignGroupStats{}, err
+		}
+		for _, r := range res {
+			rows = append(rows, statRow{Role: r.Role, Count: r.Count})
+		}
+	case "ward":
+		res, err := s.queries.GetCampaignGroupWardStats(ctx, queries.GetCampaignGroupWardStatsParams{
+			PartyID: group.PartyID,
+			WardID:  group.WardID,
+		})
+		if err != nil {
+			return &CampaignGroupStats{}, err
+		}
+		for _, r := range res {
+			rows = append(rows, statRow{Role: r.Role, Count: r.Count})
+		}
+	}
+
+	stats := &CampaignGroupStats{}
+	for _, r := range rows {
+		stats.All += r.Count
+		switch r.Role {
+		case "candidate":
+			stats.Candidate += r.Count
+		case "party_official":
+			stats.PartyOfficial += r.Count
+		case "agent", "polling_agent":
+			stats.Agent += r.Count
+			stats.PollingAgent += r.Count
+		case "ward_supervisor", "ward_election_supervisor":
+			stats.Supervisor += r.Count
+			stats.WardSupervisor += r.Count
+		case "lga_supervisor", "lga_election_supervisor":
+			stats.Supervisor += r.Count
+			stats.LgaSupervisor += r.Count
+		case "state_supervisor", "state_election_supervisor":
+			stats.Supervisor += r.Count
+			stats.StateSupervisor += r.Count
+		default:
+			if strings.Contains(r.Role, "supervisor") {
+				stats.Supervisor += r.Count
+			}
+		}
+	}
+
+	// 3. Cache in Redis (10 minutes)
+	if data, err := json.Marshal(stats); err == nil {
+		_ = s.rdb.Set(ctx, cacheKey, data, 10*time.Minute).Err()
+	}
+
+	return stats, nil
 }

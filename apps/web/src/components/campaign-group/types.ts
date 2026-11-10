@@ -51,6 +51,18 @@ export type CampaignGroupDetails = {
   updated_at: string;
 };
 
+export type CampaignGroupStats = {
+  all: number;
+  candidate: number;
+  party_official: number;
+  supervisor: number;
+  agent: number;
+  polling_agent: number;
+  ward_supervisor: number;
+  lga_supervisor: number;
+  state_supervisor: number;
+};
+
 // =========================================================================
 // 2. SERVER FUNCTION & API DTO TYPES
 // =========================================================================
@@ -60,6 +72,7 @@ export type CampaignGroupResponse = {
   message?: string;
   data?: {
     group: CampaignGroupDetails;
+    stats?: CampaignGroupStats;
   };
 };
 
@@ -203,8 +216,6 @@ export type CampaignGroupHierarchyFilterProps = {
   activeParty: Party;
   group: CampaignGroupDetails;
   partyShortName?: string;
-  isSyncing?: boolean;
-  onSync?: () => void;
 };
 
 export type HierarchyStep = {

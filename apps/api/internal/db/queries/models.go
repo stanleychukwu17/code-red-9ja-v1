@@ -344,6 +344,12 @@ type FeedPost struct {
 	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
 }
 
+type FeedPostBookmark struct {
+	UserID    int64              `json:"user_id"`
+	PostID    int64              `json:"post_id"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
 type FeedPostComment struct {
 	ID         int64              `json:"id"`
 	PostID     int64              `json:"post_id"`

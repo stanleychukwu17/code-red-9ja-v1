@@ -9,6 +9,7 @@ import (
 	apimiddleware "free9ja/api/internal/middleware"
 	campaigngroupsservice "free9ja/api/internal/service/campaign_groups"
 	"free9ja/api/internal/utils"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -23,6 +24,7 @@ type CampaignGroupsService interface {
 	GetGroupMembers(ctx context.Context, groupID int64) ([]queries.ListCampaignGroupMembersRow, error)
 	SyncPartyOfficialsToGroup(ctx context.Context, groupID int64) (*campaigngroupsservice.SyncOfficialsResult, error)
 	FindCampaignGroupID(ctx context.Context, input campaigngroupsservice.FindCampaignGroupIDInput) (int64, error)
+	GetCampaignGroupStats(ctx context.Context, group queries.GetCampaignGroupByIDRow) (*campaigngroupsservice.CampaignGroupStats, error)
 }
 
 type Handler struct {
@@ -124,8 +126,14 @@ func (h *Handler) GetCampaignGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	stats, err := h.service.GetCampaignGroupStats(r.Context(), group)
+	if err != nil {
+		slog.Warn("failed to fetch campaign group stats", "groupID", group.ID, "error", err)
+	}
+
 	h.utils.RespondSuccess(w, http.StatusOK, "Campaign group retrieved successfully", map[string]interface{}{
 		"group": group,
+		"stats": stats,
 	})
 }
 

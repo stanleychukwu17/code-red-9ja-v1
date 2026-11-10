@@ -149,3 +149,38 @@ WHERE party_id = $1
   AND lga_id IS NOT DISTINCT FROM $4
   AND ward_id IS NOT DISTINCT FROM $5
 LIMIT 1;
+
+-- name: GetCampaignGroupNationalStats :many
+SELECT 
+    cgm.role, 
+    COUNT(*)::bigint AS count
+FROM campaign_group_members cgm
+WHERE cgm.party_id = $1
+GROUP BY cgm.role;
+
+-- name: GetCampaignGroupStateStats :many
+SELECT 
+    cgm.role, 
+    COUNT(*)::bigint AS count
+FROM campaign_group_members cgm
+JOIN campaign_groups cg ON cg.id = cgm.group_id
+WHERE cg.party_id = $1 AND cg.state_id = $2
+GROUP BY cgm.role;
+
+-- name: GetCampaignGroupLGAStats :many
+SELECT 
+    cgm.role, 
+    COUNT(*)::bigint AS count
+FROM campaign_group_members cgm
+JOIN campaign_groups cg ON cg.id = cgm.group_id
+WHERE cg.party_id = $1 AND cg.lga_id = $2
+GROUP BY cgm.role;
+
+-- name: GetCampaignGroupWardStats :many
+SELECT 
+    cgm.role, 
+    COUNT(*)::bigint AS count
+FROM campaign_group_members cgm
+JOIN campaign_groups cg ON cg.id = cgm.group_id
+WHERE cg.party_id = $1 AND cg.ward_id = $2
+GROUP BY cgm.role;

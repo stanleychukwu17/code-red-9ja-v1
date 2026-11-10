@@ -4,6 +4,7 @@ import { apiFetchJson } from "./fetch";
 import type {
   CampaignGroupDetails,
   CampaignGroupMemberItem,
+  CampaignGroupStats,
   CampaignGroupResponse,
   CampaignGroupMembersResponse,
   SyncOfficialsResponse,
@@ -15,6 +16,7 @@ import type {
 export type {
   CampaignGroupDetails,
   CampaignGroupMemberItem,
+  CampaignGroupStats,
   CampaignGroupResponse,
   CampaignGroupMembersResponse,
   SyncOfficialsResponse,

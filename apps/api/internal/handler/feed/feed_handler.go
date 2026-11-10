@@ -59,5 +59,5 @@ func (h *Handler) CreatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.utils.RespondSuccess(w, http.StatusCreated, "Feed post created successfully", res)
+	h.utils.RespondSuccessData(w, http.StatusCreated, "Feed post created successfully", res)
 }

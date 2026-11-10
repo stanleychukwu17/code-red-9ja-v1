@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Plus, Loader2, ArrowRightLeft } from "lucide-react";
 import { SelectState } from "@repo/ui/components/selects/state-select";
@@ -8,11 +8,9 @@ import { SelectLga } from "@repo/ui/components/selects/lga-select";
 import { SelectWard } from "@repo/ui/components/selects/ward-select";
 import { getStates } from "#/lib/server/countries";
 import { getLGAsByState, getWardsByLGA } from "#/lib/server/polling_units";
-import { APP_URL, NIGERIA_COUNTRY_ID } from "#/lib/config";
-import type { Party } from "#/hooks";
-import { switchCampaignGroup } from "@/lib/server/campaign_groups";
+import { APP_URL, QUERY_KEYS, NIGERIA_COUNTRY_ID } from "#/lib/config";
+import { switchCampaignGroup, syncCampaignGroupOfficials } from "@/lib/server/campaign_groups";
 import type {
-  CampaignGroupDetails,
   SwitchCampaignGroupInput,
   CampaignGroupHierarchyFilterProps,
   HierarchyStep,
@@ -35,13 +33,9 @@ function formatGroupSwitchLabel(type: "ward" | "lga" | "state", name?: string): 
   return `Switch to ${cleanName || "state"} state group`;
 }
 
-export function CampaignGroupHierarchyFilter({
-  activeParty,
-  group,
-  isSyncing,
-  onSync,
-}: CampaignGroupHierarchyFilterProps) {
+export function CampaignGroupHierarchyFilter({ activeParty, group }: CampaignGroupHierarchyFilterProps) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   // Build territorial hierarchy breadcrumbs from group scope and territory
   const hierarchySteps = useMemo<HierarchyStep[]>(() => {
@@ -182,6 +176,34 @@ export function CampaignGroupHierarchyFilter({
 
     onError: (err: any) => {
       toast.error(err?.message || "Failed to switch campaign group");
+    },
+  });
+
+
+  // Mutation to synchronize party officials into the current group
+  const syncOfficialsMutation = useMutation({
+    mutationFn: () => syncCampaignGroupOfficials({ data: { groupId: group.id } }),
+    onSuccess: (res) => {
+      if (res && res.success) {
+        const added = res.data?.result?.officials_added ?? 0;
+        const removed = res.data?.result?.officials_removed ?? 0;
+
+        if (added > 0 || removed > 0) {
+          toast.success(`Officials synced: +${added} added, -${removed} removed`);
+        } else {
+          toast.success(res.message || "Party officials are up to date");
+        }
+
+        queryClient.invalidateQueries({
+          queryKey: QUERY_KEYS.campaignGroupMembers(group.id),
+        });
+
+      } else {
+        toast.error((res as any)?.message || "Failed to sync officials");
+      }
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || "Failed to sync party officials");
     },
   });
 
@@ -333,11 +355,11 @@ export function CampaignGroupHierarchyFilter({
         <div className="shrink-0 self-end md:self-auto">
           <button
             type="button"
-            onClick={onSync}
-            disabled={isSyncing}
+            onClick={() => syncOfficialsMutation.mutate()}
+            disabled={syncOfficialsMutation.isPending}
             className="inline-flex items-center gap-1.5 px-6 py-2.5 rounded-full bg-[#c6f987] hover:bg-[#b8f573] active:scale-95 text-neutral-900 font-bold text-xs sm:text-sm transition-all shadow-sm disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
           >
-            {isSyncing ? (
+            {syncOfficialsMutation.isPending ? (
               <>
                 <Loader2 className="size-4 animate-spin text-neutral-900" />
                 <span>syncing...</span>

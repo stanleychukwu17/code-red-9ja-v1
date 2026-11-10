@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
 import { QUERY_KEYS } from "@/lib/config";
 import { useParties } from "#/hooks";
 import {
@@ -16,7 +15,6 @@ import {
   getCampaignGroup,
   getCampaignGroupMembers,
   getCampaignGroupTitle,
-  syncCampaignGroupOfficials,
   type CampaignGroupMemberItem,
   type CampaignGroupDetails,
 } from "@/lib/server/campaign_groups";
@@ -27,7 +25,6 @@ export const Route = createFileRoute("/_authenticated/group/$partyId/$groupId/ho
 
 function CampaignGroupHomeTabComponent() {
   const { partyId, groupId } = Route.useParams();
-  const queryClient = useQueryClient();
 
   // 1. Fetch parties list to resolve party identity
   const { parties } = useParties();
@@ -52,24 +49,6 @@ function CampaignGroupHomeTabComponent() {
     queryFn: () => getCampaignGroupMembers({ data: { groupId } }),
     enabled: Boolean(groupId),
     staleTime: Infinity,
-  });
-
-  // 4. Official sync mutation
-  const syncMutation = useMutation({
-    mutationFn: () => syncCampaignGroupOfficials({ data: { groupId } }),
-    onSuccess: (res) => {
-      if (res && "success" in res && res.success) {
-        toast.success("Party officials synchronized to group successfully");
-        queryClient.invalidateQueries({
-          queryKey: QUERY_KEYS.campaignGroupMembers(groupId),
-        });
-      } else {
-        toast.error((res as any)?.message || "Failed to sync officials");
-      }
-    },
-    onError: (err: any) => {
-      toast.error(err?.message || "Failed to sync party officials");
-    },
   });
 
   const group: CampaignGroupDetails | undefined = groupRes?.data?.group;
@@ -135,8 +114,6 @@ function CampaignGroupHomeTabComponent() {
         activeParty={activeParty}
         group={group}
         partyShortName={activeParty?.short_name}
-        isSyncing={syncMutation.isPending}
-        onSync={() => syncMutation.mutate()}
       />
 
       {/* Actives, Talks and Feeds */}

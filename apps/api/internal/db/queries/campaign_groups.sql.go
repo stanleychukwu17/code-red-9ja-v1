@@ -253,6 +253,160 @@ func (q *Queries) GetCampaignGroupIDByTerritory(ctx context.Context, arg GetCamp
 	return id, err
 }
 
+const getCampaignGroupLGAStats = `-- name: GetCampaignGroupLGAStats :many
+SELECT 
+    cgm.role, 
+    COUNT(*)::bigint AS count
+FROM campaign_group_members cgm
+JOIN campaign_groups cg ON cg.id = cgm.group_id
+WHERE cg.party_id = $1 AND cg.lga_id = $2
+GROUP BY cgm.role
+`
+
+type GetCampaignGroupLGAStatsParams struct {
+	PartyID int16       `json:"party_id"`
+	LgaID   pgtype.Int4 `json:"lga_id"`
+}
+
+type GetCampaignGroupLGAStatsRow struct {
+	Role  string `json:"role"`
+	Count int64  `json:"count"`
+}
+
+func (q *Queries) GetCampaignGroupLGAStats(ctx context.Context, arg GetCampaignGroupLGAStatsParams) ([]GetCampaignGroupLGAStatsRow, error) {
+	rows, err := q.db.Query(ctx, getCampaignGroupLGAStats, arg.PartyID, arg.LgaID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetCampaignGroupLGAStatsRow
+	for rows.Next() {
+		var i GetCampaignGroupLGAStatsRow
+		if err := rows.Scan(&i.Role, &i.Count); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getCampaignGroupNationalStats = `-- name: GetCampaignGroupNationalStats :many
+SELECT 
+    cgm.role, 
+    COUNT(*)::bigint AS count
+FROM campaign_group_members cgm
+WHERE cgm.party_id = $1
+GROUP BY cgm.role
+`
+
+type GetCampaignGroupNationalStatsRow struct {
+	Role  string `json:"role"`
+	Count int64  `json:"count"`
+}
+
+func (q *Queries) GetCampaignGroupNationalStats(ctx context.Context, partyID int16) ([]GetCampaignGroupNationalStatsRow, error) {
+	rows, err := q.db.Query(ctx, getCampaignGroupNationalStats, partyID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetCampaignGroupNationalStatsRow
+	for rows.Next() {
+		var i GetCampaignGroupNationalStatsRow
+		if err := rows.Scan(&i.Role, &i.Count); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getCampaignGroupStateStats = `-- name: GetCampaignGroupStateStats :many
+SELECT 
+    cgm.role, 
+    COUNT(*)::bigint AS count
+FROM campaign_group_members cgm
+JOIN campaign_groups cg ON cg.id = cgm.group_id
+WHERE cg.party_id = $1 AND cg.state_id = $2
+GROUP BY cgm.role
+`
+
+type GetCampaignGroupStateStatsParams struct {
+	PartyID int16       `json:"party_id"`
+	StateID pgtype.Int4 `json:"state_id"`
+}
+
+type GetCampaignGroupStateStatsRow struct {
+	Role  string `json:"role"`
+	Count int64  `json:"count"`
+}
+
+func (q *Queries) GetCampaignGroupStateStats(ctx context.Context, arg GetCampaignGroupStateStatsParams) ([]GetCampaignGroupStateStatsRow, error) {
+	rows, err := q.db.Query(ctx, getCampaignGroupStateStats, arg.PartyID, arg.StateID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetCampaignGroupStateStatsRow
+	for rows.Next() {
+		var i GetCampaignGroupStateStatsRow
+		if err := rows.Scan(&i.Role, &i.Count); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getCampaignGroupWardStats = `-- name: GetCampaignGroupWardStats :many
+SELECT 
+    cgm.role, 
+    COUNT(*)::bigint AS count
+FROM campaign_group_members cgm
+JOIN campaign_groups cg ON cg.id = cgm.group_id
+WHERE cg.party_id = $1 AND cg.ward_id = $2
+GROUP BY cgm.role
+`
+
+type GetCampaignGroupWardStatsParams struct {
+	PartyID int16       `json:"party_id"`
+	WardID  pgtype.Int4 `json:"ward_id"`
+}
+
+type GetCampaignGroupWardStatsRow struct {
+	Role  string `json:"role"`
+	Count int64  `json:"count"`
+}
+
+func (q *Queries) GetCampaignGroupWardStats(ctx context.Context, arg GetCampaignGroupWardStatsParams) ([]GetCampaignGroupWardStatsRow, error) {
+	rows, err := q.db.Query(ctx, getCampaignGroupWardStats, arg.PartyID, arg.WardID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetCampaignGroupWardStatsRow
+	for rows.Next() {
+		var i GetCampaignGroupWardStatsRow
+		if err := rows.Scan(&i.Role, &i.Count); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listCampaignGroupMembers = `-- name: ListCampaignGroupMembers :many
 SELECT 
     m.id,
