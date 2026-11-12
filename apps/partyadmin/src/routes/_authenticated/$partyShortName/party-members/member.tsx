@@ -171,6 +171,8 @@ function RouteComponent() {
         open={isFormOpen}
         onClose={() => setIsFormOpen(false)}
         onSuccess={() => refetch()}
+        whoView="admin"
+        partyId={partyId}
         partyShortName={partyShortName}
         getAllCountries={getAllCountries}
         getStates={getStates}

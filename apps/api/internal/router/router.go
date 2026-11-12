@@ -603,6 +603,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 			campaignGroupRouter.Use(campaignGroupAccess)
 			campaignGroupRouter.Get("/api/v1/campaign-groups/{id}", campaignGroupsHandler.GetCampaignGroup)
 			campaignGroupRouter.Get("/api/v1/campaign-groups/{id}/members", campaignGroupsHandler.GetGroupMembers)
+			campaignGroupRouter.Post("/api/v1/campaign-groups/{id}/sync-officials", campaignGroupsHandler.SyncGroupOfficials)
 		})
 
 		// polling unit updates routes
@@ -656,9 +657,6 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		// party candidate nomination
 		r.Post("/api/v1/elections/{id}/field-candidate", electionsHandler.FieldPartyCandidate)
 		r.Post("/api/v1/elections/{id}/unfield-candidate", electionsHandler.UnfieldPartyCandidate)
-
-		// campaign groups (admin & party_admin only)
-		r.Post("/api/v1/campaign-groups/{id}/sync-officials", campaignGroupsHandler.SyncGroupOfficials)
 
 		// party readiness overview (party admins only)
 		r.Get("/api/v1/parties/{id}/readiness", partiesHandler.GetPartyReadiness)

@@ -150,6 +150,7 @@ CREATE INDEX IF NOT EXISTS idx_feed_post_bookmarks_post ON feed_post_bookmarks(p
 -- ============================================================================
 
 -- Function & Trigger: Feed Post Likes Count
+-- +goose StatementBegin
 CREATE OR REPLACE FUNCTION update_feed_post_likes_count()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -161,12 +162,14 @@ BEGIN
   RETURN NULL;
 END;
 $$ LANGUAGE plpgsql;
+-- +goose StatementEnd
 
 CREATE TRIGGER trg_feed_post_likes_count
 AFTER INSERT OR DELETE ON feed_post_likes
 FOR EACH ROW EXECUTE FUNCTION update_feed_post_likes_count();
 
 -- Function & Trigger: Feed Post Comments Count
+-- +goose StatementBegin
 CREATE OR REPLACE FUNCTION update_feed_post_comments_count()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -178,12 +181,14 @@ BEGIN
   RETURN NULL;
 END;
 $$ LANGUAGE plpgsql;
+-- +goose StatementEnd
 
 CREATE TRIGGER trg_feed_post_comments_count
 AFTER INSERT OR DELETE ON feed_post_comments
 FOR EACH ROW EXECUTE FUNCTION update_feed_post_comments_count();
 
 -- Function & Trigger: Feed Post Comment Likes Count
+-- +goose StatementBegin
 CREATE OR REPLACE FUNCTION update_feed_post_comment_likes_count()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -195,6 +200,7 @@ BEGIN
   RETURN NULL;
 END;
 $$ LANGUAGE plpgsql;
+-- +goose StatementEnd
 
 CREATE TRIGGER trg_feed_post_comment_likes_count
 AFTER INSERT OR DELETE ON feed_post_comment_likes

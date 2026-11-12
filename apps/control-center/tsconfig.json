@@ -1,0 +1,20 @@
+{
+  "extends": "@repo/typescript-config/vite",
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "../../packages/ui/src/components/tiles.tsx",
+    "src/providers"
+  ],
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "#/*": ["./src/*"],
+      "@/*": ["./src/*"],
+      "@repo/ui/*": ["../../packages/ui/src/*"]
+    },
+    "verbatimModuleSyntax": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
+  }
+}

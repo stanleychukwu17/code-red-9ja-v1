@@ -1,0 +1,405 @@
+/**
+ * @file Manage Candidate Ticket Dialog
+ * @description Dialog allowing party administrators to manage the official nomination ticket
+ * for an election instance. For joint-ticket executive races (e.g. President, Governor,
+ * LGA Chairman), it allows selecting and managing both the principal candidate and running mate.
+ */
+
+import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogPadding } from "@repo/ui/components/dialog";
+import { Button } from "@repo/ui/components/button";
+import { AppAvatar } from "@repo/ui/components/avatar";
+import { UserFinderCommand } from "@repo/ui/components/custom/UserFinderCommand";
+import { UsersIcon, Trash2, UserPlus, RefreshCw, UserCheck } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { fieldPartyCandidate, unfieldPartyCandidate } from "#/lib/server/elections";
+import { getUsersList } from "#/lib/server/users";
+import { useUserParty } from "#/hooks/useUserParty";
+import type { ElectionInstanceType } from "../tiles/election-instance-tile";
+
+export type TicketMember = {
+  id: string | number;
+  avatar?: string;
+  name: string;
+};
+
+export type ManageCandidateTicketDialogProps = {
+  open: boolean;
+  onClose: () => void;
+  data?: ElectionInstanceType;
+  election?: {
+    id: number;
+    fake_id?: number | bigint;
+    name: string;
+    office_name?: string;
+    scope?: string;
+  };
+  candidate?: TicketMember;
+  running_mate?: TicketMember;
+};
+
+/**
+ * Resolves joint-ticket configuration and role labels based on election title or office.
+ */
+export const getTicketConfig = (electionTitle: string, officeName?: string, scope?: string) => {
+  const t = `${electionTitle} ${officeName || ""} ${scope || ""}`.toLowerCase();
+
+  if (t.includes("president")) {
+    return {
+      hasRunningMate: true,
+      principalRole: "Presidential Candidate",
+      runningMateRole: "Vice Presidential Candidate (Running Mate)",
+    };
+  }
+  if (t.includes("governor") || t.includes("governorship")) {
+    return {
+      hasRunningMate: true,
+      principalRole: "Gubernatorial Candidate",
+      runningMateRole: "Deputy Governor Candidate (Running Mate)",
+    };
+  }
+  if (t.includes("chairman") || t.includes("chairmanship")) {
+    return {
+      hasRunningMate: true,
+      principalRole: "Local Government Chairman Candidate",
+      runningMateRole: "Vice Chairman Candidate (Running Mate)",
+    };
+  }
+
+  return {
+    hasRunningMate: false,
+    principalRole: officeName || "Party Candidate",
+    runningMateRole: "Running Mate",
+  };
+};
+
+export function ManageCandidateTicketDialog({
+  open, onClose, data, election, candidate, running_mate,
+}: ManageCandidateTicketDialogProps) {
+  // Resolve election details from either explicit props or data object
+  const electionId = election?.id ?? data?.id ?? 0;
+  const electionName = election?.name ?? data?.name ?? "";
+  const officeName = election?.office_name ?? data?.office_name;
+  const scope = election?.scope ?? data?.scope;
+  const activeCandidate = candidate ?? data?.candidate;
+  const activeRunningMate = running_mate ?? data?.running_mate;
+
+  // TanStack Query client used to invalidate the elections cache on update
+  const queryClient = useQueryClient();
+
+  // Retrieve active tenant party to scope member searches to this party
+  const { party } = useUserParty();
+  const userPartyId = party?.id;
+
+  // Active slot being picked via UserFinderCommand: 'candidate' | 'running_mate' | null
+  const [targetSlot, setTargetSlot] = useState<"candidate" | "running_mate" | null>(null);
+
+  // Detect whether this race requires a joint ticket (e.g. President, Governor, LGA Chairman)
+  const ticketConfig = getTicketConfig(electionName, officeName, scope);
+
+  // Mutation to persist candidate ticket updates on the server
+  const saveMutation = useMutation({
+    mutationFn: async ({ candidateId, slot }: { candidateId: number; slot: "candidate" | "running_mate" }) => {
+      // Calls server action with election ID, slot, and updated candidate ID
+      const res = await fieldPartyCandidate({
+        data: {
+          electionId,
+          candidateId,
+          partyId: userPartyId || 0,
+          slot,
+        },
+      });
+      if (!res.success) {
+        toast.error(res.message || "Failed to update candidate ticket");
+        throw new Error(res.message || "Failed to update candidate ticket");
+      }
+      return res.data;
+    },
+    onSuccess: () => {
+      toast.success("Candidate ticket updated successfully");
+      // Refresh election instances list, candidates roster, and election details
+      queryClient.invalidateQueries({ queryKey: ["elections"] });
+      queryClient.invalidateQueries({ queryKey: ["election-candidates", electionId] });
+      queryClient.invalidateQueries({ queryKey: ["election-details", electionId] });
+    },
+  });
+
+  // Mutation to remove/unfield candidate from ticket
+  const removeMutation = useMutation({
+    mutationFn: async ({ slot }: { slot: "candidate" | "running_mate" }) => {
+      const res = await unfieldPartyCandidate({
+        data: {
+          electionId,
+          partyId: userPartyId || 0,
+          slot,
+        },
+      });
+      if (!res.success) {
+        toast.error(res.message || "Failed to remove candidate");
+        throw new Error(res.message || "Failed to remove candidate");
+      }
+      return res.data;
+    },
+    onSuccess: () => {
+      toast.success("Candidate removed from ticket");
+      queryClient.invalidateQueries({ queryKey: ["elections"] });
+      queryClient.invalidateQueries({ queryKey: ["election-candidates", electionId] });
+      queryClient.invalidateQueries({ queryKey: ["election-details", electionId] });
+    },
+  });
+
+  // Handles member selection from the UserFinderCommand dialog
+  const handleSelectUser = (selectedUsers: any[]) => {
+    if (selectedUsers.length > 0 && targetSlot) {
+      const chosenId = selectedUsers[0].id;
+
+      // Assign selected user to the active ticket slot
+      saveMutation.mutate({ candidateId: chosenId, slot: targetSlot });
+
+      // Close the member picker dialog
+      setTargetSlot(null);
+    }
+  };
+
+  // Removes/un-fields the assigned candidate from the ticket
+  const handleRemoveCandidate = (slot: "candidate" | "running_mate") => {
+    removeMutation.mutate({ slot });
+  };
+
+  return (
+    <>
+      <Dialog open={open} onOpenChange={onClose}>
+        <DialogContent
+          className="max-w-140 p-0 rounded-2xl border-none shadow-2xl overflow-hidden flex flex-col max-h-[88vh]"
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
+          <DialogHeader title="Manage Nomination Ticket" />
+
+          <DialogPadding className="flex-1 overflow-y-auto space-y-6 pb-6 pt-5 min-h-0 custom-scrollbar">
+            {/* Election Banner Info */}
+            <div className="bg-[#f8f9fa] dark:bg-c-10/50 p-4 rounded-xl border border-border/50">
+              <p className="text-xs font-semibold text-c-50 uppercase tracking-wider">
+                Contested Race
+              </p>
+              <h3 className="text-base font-bold text-c-90 mt-0.5">
+                {electionName}
+              </h3>
+            </div>
+
+            {/* Slot 1: Principal Nominee Card */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold text-c-90 flex items-center gap-1.5">
+                  <UserCheck className="size-4 text-[#00cf79]" />
+                  {ticketConfig.principalRole}
+                </span>
+                {activeCandidate && (
+                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-[#00cf79]/15 text-[#009b5a]">
+                    Fielded
+                  </span>
+                )}
+              </div>
+
+              {activeCandidate ? (
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl border border-border bg-white dark:bg-c-5 shadow-xs">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <AppAvatar
+                      src={activeCandidate.avatar}
+                      alt={activeCandidate.name}
+                      className="size-14 rounded-full border border-border shrink-0"
+                    />
+                    <div className="min-w-0">
+                      <p className="font-bold text-c-90 text-[15px] truncate">
+                        {activeCandidate.name}
+                      </p>
+                      <p className="text-xs text-c-50 mt-0.5">
+                        {ticketConfig.principalRole}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setTargetSlot("candidate")}
+                      className="text-xs h-9 flex items-center gap-1.5"
+                    >
+                      <RefreshCw className="size-3.5" />
+                      Change
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRemoveCandidate("candidate")}
+                      className="text-xs h-9 text-red-600 hover:bg-red-50 hover:text-red-700 flex items-center gap-1.5"
+                    >
+                      <Trash2 className="size-3.5" />
+                      Remove
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl border border-dashed border-[#dcdcdc] dark:border-c-20 bg-background/50">
+                  <div className="flex items-center gap-3">
+                    <div className="size-12 rounded-full bg-c-10 flex items-center justify-center text-c-40 shrink-0">
+                      <UsersIcon className="size-6" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-c-60">
+                        No candidate fielded
+                      </p>
+                      <p className="text-xs text-c-40">
+                        Field an accredited party member for this race.
+                      </p>
+                    </div>
+                  </div>
+
+                  <Button
+                    variant="black"
+                    size="sm"
+                    onClick={() => setTargetSlot("candidate")}
+                    className="text-xs h-9 shrink-0 flex items-center gap-1.5"
+                  >
+                    <UserPlus className="size-3.5" />
+                    Select Candidate
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Slot 2: Joint Ticket Running Mate Card (Conditional) */}
+            {ticketConfig.hasRunningMate && (
+              <div className="space-y-2 pt-2 border-t border-border/40">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-c-90 flex items-center gap-1.5">
+                    <UsersIcon className="size-4 text-[#0099FF]" />
+                    {ticketConfig.runningMateRole}
+                  </span>
+                  {activeRunningMate && (
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-[#0099FF]/15 text-[#007acc]">
+                      Running Mate
+                    </span>
+                  )}
+                </div>
+
+                {activeRunningMate ? (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl border border-border bg-white dark:bg-c-5 shadow-xs">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <AppAvatar
+                        src={activeRunningMate.avatar}
+                        alt={activeRunningMate.name}
+                        className="size-14 rounded-full border border-border shrink-0"
+                      />
+                      <div className="min-w-0">
+                        <p className="font-bold text-c-90 text-[15px] truncate">
+                          {activeRunningMate.name}
+                        </p>
+                        <p className="text-xs text-c-50 mt-0.5">
+                          {ticketConfig.runningMateRole}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setTargetSlot("running_mate")}
+                        className="text-xs h-9 flex items-center gap-1.5"
+                      >
+                        <RefreshCw className="size-3.5" />
+                        Change
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveCandidate("running_mate")}
+                        className="text-xs h-9 text-red-600 hover:bg-red-50 hover:text-red-700 flex items-center gap-1.5"
+                      >
+                        <Trash2 className="size-3.5" />
+                        Remove
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl border border-dashed border-[#dcdcdc] dark:border-c-20 bg-background/50">
+                    <div className="flex items-center gap-3">
+                      <div className="size-12 rounded-full bg-c-10 flex items-center justify-center text-c-40 shrink-0">
+                        <UsersIcon className="size-6" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-c-60">
+                          No running mate assigned
+                        </p>
+                        <p className="text-xs text-c-40">
+                          {activeCandidate
+                            ? "Select a vice candidate to complete the nomination ticket."
+                            : "Field a principal candidate first before selecting a running mate."}
+                        </p>
+                      </div>
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={!activeCandidate}
+                      onClick={() => setTargetSlot("running_mate")}
+                      className="text-xs h-9 shrink-0 flex items-center gap-1.5"
+                    >
+                      <UserPlus className="size-3.5" />
+                      Select Running Mate
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+          </DialogPadding>
+        </DialogContent>
+      </Dialog>
+
+      {/* Lazy UserFinderCommand modal scoped to the clicked slot */}
+      {targetSlot && (
+        <UserFinderCommand
+          open={!!targetSlot}
+          onClose={() => setTargetSlot(null)}
+          onAddUsers={handleSelectUser}
+          alreadySelectedIds={
+            targetSlot === "candidate" && activeCandidate
+              ? [Number(activeCandidate.id)]
+              : targetSlot === "running_mate" && activeRunningMate
+                ? [Number(activeRunningMate.id)]
+                : []
+          }
+          fetchUsers={async ({ cursor, search }) => {
+            const res = await getUsersList({
+              data: {
+                party_id: userPartyId,
+                cursor,
+                search,
+                limit: 20,
+              },
+            });
+            if (res && res.success && res.data?.users) {
+              return {
+                users: res.data.users,
+                nextCursor: res.data.meta?.next_cursor,
+              };
+            }
+            return { users: [] };
+          }}
+          filterPartyId={userPartyId}
+          title={
+            targetSlot === "candidate"
+              ? `Select ${ticketConfig.principalRole}`
+              : `Select ${ticketConfig.runningMateRole}`
+          }
+          placeholder="Search party members..."
+        />
+      )}
+    </>
+  );
+}

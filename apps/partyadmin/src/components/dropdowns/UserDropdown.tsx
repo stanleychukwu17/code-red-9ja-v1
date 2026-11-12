@@ -400,6 +400,8 @@ export const UserDropdown = ({ data, partyId, className, refetch }: UserDropdown
         open={openEditDialog}
         onClose={() => setOpenEditDialog(false)}
         user={userForDialog}
+        whoView="admin"
+        partyId={partyId}
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partyMembers.root });
           refetch?.();

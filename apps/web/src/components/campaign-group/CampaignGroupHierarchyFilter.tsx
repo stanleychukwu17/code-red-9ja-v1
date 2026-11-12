@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Loader2, ArrowRightLeft } from "lucide-react";
+import { RefreshCw, Loader2, ArrowRightLeft } from "lucide-react";
 import { SelectState } from "@repo/ui/components/selects/state-select";
 import { SelectLga } from "@repo/ui/components/selects/lga-select";
 import { SelectWard } from "@repo/ui/components/selects/ward-select";
@@ -361,12 +361,12 @@ export function CampaignGroupHierarchyFilter({ activeParty, group }: CampaignGro
           >
             {syncOfficialsMutation.isPending ? (
               <>
-                <Loader2 className="size-4 animate-spin text-neutral-900" />
+                <Loader2 className="size-3.5 animate-spin text-neutral-900" />
                 <span>syncing...</span>
               </>
             ) : (
               <>
-                <Plus className="size-4 stroke-3 text-neutral-900" />
+                <RefreshCw className="size-3.5 stroke-2.5 text-neutral-900" />
                 <span>sync officials</span>
               </>
             )}

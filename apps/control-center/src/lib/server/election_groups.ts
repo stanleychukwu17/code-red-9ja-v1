@@ -1,0 +1,35 @@
+import { createServerFn } from "@tanstack/react-start";
+import { apiFetch } from "./fetch";
+import { API_URL } from "#/lib/config";
+
+export const getElectionGroups = createServerFn({ method: "GET" })
+  .inputValidator(
+    (
+      data:
+        | {
+            limit?: number;
+            cursor?: string | number;
+            partyId?: number;
+            orderBy?: string;
+            order?: string;
+            active?: boolean;
+          }
+        | undefined,
+    ) => data,
+  )
+  .handler(async ({ data }) => {
+    try {
+      const params = new URLSearchParams();
+      if (data?.limit) params.append("limit", String(data.limit));
+      if (data?.cursor) params.append("cursor", String(data.cursor));
+      if (data?.orderBy) params.append("orderBy", data.orderBy);
+      if (data?.order) params.append("order", data.order);
+      if (data?.active !== undefined) params.append("active", String(data.active));
+      const qs = params.toString();
+      const response = await apiFetch(API_URL.electionGroups(qs));
+      const resData = await response.json();
+      return resData;
+    } catch (error) {
+      return { success: false, message: "Failed to fetch election groups from API" };
+    }
+  });

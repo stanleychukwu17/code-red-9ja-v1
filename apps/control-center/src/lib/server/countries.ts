@@ -1,0 +1,149 @@
+import { createServerFn } from "@tanstack/react-start";
+import { apiFetch } from "./fetch";
+import { API_URL } from "../config";
+
+
+/**
+ * Fetches all the countries from the backend API.
+ * @returns A Promise that resolves to an array of country objects.
+ * @throws {Error} If there was an error fetching the countries.
+*/
+export const getAllCountries = createServerFn().handler(async () => {
+  try {
+    const response = await apiFetch(API_URL.getAllCountries);
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    return { status: "failed", error: "Failed to fetch countries from API, Maybe the backend server is currently down" };
+  }
+});
+
+export const getStates = createServerFn()
+  .inputValidator((data: { countryId: number; limit?: number; cursor?: string | number }) => data)
+  .handler(async ({ data: { countryId, limit, cursor } }) => {
+    try {
+      const response = await apiFetch(API_URL.getStates(countryId, limit, cursor));
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      return { status: "failed", error: "Failed to fetch states from API, Maybe the backend server is currently down" };
+    }
+  });
+
+export const getCities = createServerFn()
+  .inputValidator((data: { stateId: number; limit?: number; cursor?: string | number }) => data)
+  .handler(async ({ data: { stateId, limit, cursor } }) => {
+    try {
+      const url = API_URL.getCities(stateId, limit, cursor);
+      const response = await apiFetch(url);
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      return { status: "failed", error: "Failed to fetch cities from API, Maybe the backend server is currently down" };
+    }
+  });
+
+export const getSenatorialDistricts = createServerFn()
+  .inputValidator((data: { stateId?: number; limit?: number; cursor?: string | number } | undefined) => data)
+  .handler(async ({ data }) => {
+    try {
+      const params = new URLSearchParams();
+      if (data?.stateId) params.append("state_id", String(data.stateId));
+      if (data?.limit) params.append("limit", String(data.limit));
+      if (data?.cursor) params.append("cursor", String(data.cursor));
+
+      const response = await apiFetch(API_URL.getSenatorialDistricts(params));
+      const resData = await response.json();
+      return resData;
+    } catch (error) {
+      return { status: "failed", error: "Failed to fetch senatorial districts from API" };
+    }
+  });
+
+export const getFederalConstituencies = createServerFn()
+  .inputValidator((data: { stateId?: number; senatorialDistrictId?: number; limit?: number; cursor?: string | number } | undefined) => data)
+  .handler(async ({ data }) => {
+    try {
+      const params = new URLSearchParams();
+      if (data?.stateId) params.append("state_id", String(data.stateId));
+      if (data?.senatorialDistrictId) params.append("senatorial_district_id", String(data.senatorialDistrictId));
+      if (data?.limit) params.append("limit", String(data.limit));
+      if (data?.cursor) params.append("cursor", String(data.cursor));
+
+      const response = await apiFetch(API_URL.getFederalConstituencies(params));
+      const resData = await response.json();
+      return resData;
+    } catch (error) {
+      return { status: "failed", error: "Failed to fetch federal constituencies from API" };
+    }
+  });
+
+export const getStateConstituencies = createServerFn()
+  .inputValidator((data: { stateId?: number; limit?: number; cursor?: string | number } | undefined) => data)
+  .handler(async ({ data }) => {
+    try {
+      const params = new URLSearchParams();
+      if (data?.stateId) params.append("state_id", String(data.stateId));
+      if (data?.limit) params.append("limit", String(data.limit));
+      if (data?.cursor) params.append("cursor", String(data.cursor));
+
+      const response = await apiFetch(API_URL.getStateConstituencies(params));
+      const resData = await response.json();
+      return resData;
+    } catch (error) {
+      return { status: "failed", error: "Failed to fetch state constituencies from API" };
+    }
+  });
+
+export const getZones = createServerFn().handler(async () => {
+  return {
+    success: true,
+    message: "Geopolitical zones fetched successfully",
+    data: {
+      zones: [
+        { id: 1, name: "North" },
+        { id: 2, name: "South" },
+        { id: 3, name: "North West" },
+        { id: 4, name: "North East" },
+        { id: 5, name: "North Central" },
+        { id: 6, name: "South West" },
+        { id: 7, name: "South East" },
+        { id: 8, name: "South South" },
+      ],
+    },
+  };
+});
+
+export const getLGAs = createServerFn()
+  .inputValidator((data: { stateId?: number; limit?: number; cursor?: string | number } | undefined) => data)
+  .handler(async ({ data }) => {
+    try {
+      const params = new URLSearchParams();
+      if (data?.stateId) params.append("state_id", String(data.stateId));
+      if (data?.limit) params.append("limit", String(data.limit));
+      if (data?.cursor) params.append("cursor", String(data.cursor));
+      const qs = params.toString();
+      const response = await apiFetch(API_URL.getLGAs(qs));
+      return await response.json();
+    } catch (error) {
+      return { status: "failed", error: "Failed to fetch LGAs from API" };
+    }
+  });
+
+export const getWards = createServerFn()
+  .inputValidator((data: { stateId?: number; lgaId?: number; lga_id?: number; limit?: number; cursor?: string | number } | undefined) => data)
+  .handler(async ({ data }) => {
+    try {
+      const params = new URLSearchParams();
+      const targetLgaId = data?.lgaId ?? data?.lga_id;
+      if (data?.stateId) params.append("state_id", String(data.stateId));
+      if (targetLgaId) params.append("lga_id", String(targetLgaId));
+      if (data?.limit) params.append("limit", String(data.limit));
+      if (data?.cursor) params.append("cursor", String(data.cursor));
+      const qs = params.toString();
+      const response = await apiFetch(API_URL.getWards(qs));
+      return await response.json();
+    } catch (error) {
+      return { status: "failed", error: "Failed to fetch Wards from API" };
+    }
+  });

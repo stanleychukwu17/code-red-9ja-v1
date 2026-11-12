@@ -1,0 +1,108 @@
+/**
+ * @file Application Root Route Shell for Control Center
+ * @description The absolute root document and shell for TanStack Router in `apps/control-center`.
+ */
+
+import {
+  ClientOnly,
+  HeadContent,
+  Outlet,
+  Scripts,
+  createRootRoute,
+} from "@tanstack/react-router";
+import { Provider } from "react-redux";
+import appCss from "../styles.css?url";
+import store from "@/redux/store";
+import { Toaster } from "@repo/ui/components/sonner";
+import { OutletWrapper } from "#/components/OutletWrapper";
+import LoadSitePreference from "#/components/LoadSitePreference";
+import LoadAuthSession from "#/components/LoadAuthSession";
+import { getUserDetailsCookie } from "@/lib/server/auth/auth";
+import { getSitePreference } from "@/lib/server/sitePreference";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import LoadVisitorDetails from "#/components/LoadVisitorDetails";
+
+const THEME_INIT_SCRIPT = `(function(){try{var stored=window.localStorage.getItem('theme');var mode=(stored==='light'||stored==='dark'||stored==='auto')?stored:'auto';var prefersDark=window.matchMedia('(prefers-color-scheme: dark)').matches;var resolved=mode==='auto'?(prefersDark?'dark':'light'):mode;var root=document.documentElement;root.classList.remove('light','dark');root.classList.add(resolved);if(mode==='auto'){root.removeAttribute('data-theme')}else{root.setAttribute('data-theme',mode)}root.style.colorScheme=resolved;}catch(e){}})();`;
+
+export const Route = createRootRoute({
+  beforeLoad: async () => {
+    const userDetails = await getUserDetailsCookie();
+    const sitePreference = await getSitePreference();
+    return { userDetails, sitePreference };
+  },
+  head: () => ({
+    meta: [
+      { charSet: "utf-8" },
+      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { title: "Free9ja Control Center | Election Situation Room" },
+    ],
+    links: [{ rel: "stylesheet", href: appCss }],
+  }),
+  component: RootLayout,
+  shellComponent: RootDocument,
+  notFoundComponent: NotFound,
+  errorComponent: ErrorComponent,
+});
+
+function RootLayout() {
+  return (
+    <OutletWrapper>
+      <Outlet />
+    </OutletWrapper>
+  );
+}
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+    },
+  },
+});
+
+function RootDocument({ children }: { children: React.ReactNode }) {
+  const { userDetails, sitePreference } = Route.useRouteContext();
+
+  return (
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        <HeadContent />
+      </head>
+      <body className="font-sans antialiased block relative overflow-x-hidden overflow-y-auto selection:bg-[rgba(79,184,178,0.24)]">
+        <Provider store={store}>
+          <QueryClientProvider client={queryClient}>
+            <Toaster position="top-center" />
+            <ClientOnly>
+              <LoadSitePreference sitePreference={sitePreference} />
+              <LoadAuthSession />
+              <LoadVisitorDetails />
+            </ClientOnly>
+            {children}
+          </QueryClientProvider>
+        </Provider>
+        <Scripts />
+      </body>
+    </html>
+  );
+}
+
+function NotFound() {
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center p-8 text-center bg-background text-foreground">
+      <h1 className="text-4xl font-extrabold tracking-tight">404</h1>
+      <p className="text-muted-foreground mt-2">Situation Room route not found.</p>
+    </div>
+  );
+}
+
+function ErrorComponent({ error }: { error: any }) {
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center p-8 text-center bg-background text-foreground">
+      <div className="rounded-2xl border border-destructive/20 bg-destructive/10 p-6 max-w-lg">
+        <p className="font-bold text-destructive">Situation Room Error</p>
+        <p className="text-sm text-destructive/80 mt-1">{error?.message || "An unexpected error occurred."}</p>
+      </div>
+    </div>
+  );
+}

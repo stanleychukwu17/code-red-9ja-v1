@@ -77,7 +77,11 @@ function RouteComponent() {
         isLoading={isWalletLoading}
         onWithdrawalClose={handleRefresh}
       />
-      <WalletSlotsAllowanceSection wallet={wallet} onSuccess={handleRefresh} />
+      <WalletSlotsAllowanceSection
+        wallet={wallet}
+        unitSlotPriceKobo={walletRes?.data?.unit_slot_price_kobo}
+        onSuccess={handleRefresh}
+      />
       <WalletTransactions transactions={transactions} isLoading={isTxLoading} />
     </DashboardLayout>
   );
@@ -332,9 +336,11 @@ function WalletQuickStatCard({
  */
 function WalletSlotsAllowanceSection({
   wallet,
+  unitSlotPriceKobo,
   onSuccess,
 }: {
   wallet: PartyWallet | undefined;
+  unitSlotPriceKobo?: number;
   onSuccess: () => void;
 }) {
   const { party } = useUserParty();
@@ -375,7 +381,7 @@ function WalletSlotsAllowanceSection({
         onClose={() => setIsSlotsDialogOpen(false)}
         partyId={party?.id}
         walletBalanceKobo={wallet?.balance_kobo ?? 0}
-        unitSlotPriceKobo={walletRes?.data?.unit_slot_price_kobo}
+        unitSlotPriceKobo={unitSlotPriceKobo}
         onDepositFunds={(deficit) => {
           setDeficitAmount(deficit);
           setIsSlotsDialogOpen(false);
