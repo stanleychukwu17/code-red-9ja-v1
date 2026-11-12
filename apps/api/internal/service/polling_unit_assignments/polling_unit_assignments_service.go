@@ -91,8 +91,8 @@ func (s *Service) GetMyAssignment(ctx context.Context, userID int64, electionGro
 	if err != nil {
 		// Return nil without error if user has not been assigned to a polling unit yet
 		if errors.Is(err, pgx.ErrNoRows) {
-			// Negative cache: store empty sentinel for 10 minutes to protect DB from repeated queries
-			_ = s.rdb.Set(ctx, cacheKey, "{}", 10*time.Minute).Err()
+			// Negative cache: store empty sentinel for 7 days to protect DB from repeated queries
+			_ = s.rdb.Set(ctx, cacheKey, "{}", db.RedisSevenDaysTTL).Err()
 			return nil, nil
 		}
 		return nil, err

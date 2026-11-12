@@ -14,14 +14,14 @@ import (
 )
 
 type Service struct {
-	q   *queries.Queries
-	rdb *redis.Client
+	queries *queries.Queries
+	rdb     *redis.Client
 }
 
 func NewService(q *queries.Queries, rdb *redis.Client) *Service {
 	return &Service{
-		q:   q,
-		rdb: rdb,
+		queries: q,
+		rdb:     rdb,
 	}
 }
 
@@ -31,6 +31,7 @@ type SupervisorAssignmentsResponse struct {
 	WardSupervisor  *queries.WardElectionSupervisor  `json:"ward_supervisor"`
 }
 
+// Cache key helpers for each supervisor level
 func (s *Service) stateCacheKey(userID int64, electionGroupID int32) string {
 	return fmt.Sprintf("%s%d:eg:%d", db.RedisStateSupervisorAssignment, userID, electionGroupID)
 }
@@ -45,6 +46,7 @@ func (s *Service) wardCacheKey(userID int64, electionGroupID int32) string {
 
 // InvalidateUserSupervisorCache removes all cached supervisor assignments for a user in an election group.
 func (s *Service) InvalidateUserSupervisorCache(ctx context.Context, userID int64, electionGroupID int32) {
+	// Purge all 3 supervisor tier keys concurrently
 	_ = s.rdb.Del(ctx,
 		s.stateCacheKey(userID, electionGroupID),
 		s.lgaCacheKey(userID, electionGroupID),
@@ -58,27 +60,33 @@ func (s *Service) GetStateSupervisorAssignment(ctx context.Context, userID int64
 
 	// Check Redis cache first
 	if cachedJSON, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
+		// Sentinel check: "{}" means user is confirmed not a state supervisor
 		if cachedJSON == "{}" || cachedJSON == "null" {
 			return nil, nil
 		}
+
 		var cached queries.StateElectionSupervisor
 		if err := json.Unmarshal([]byte(cachedJSON), &cached); err == nil && cached.ID > 0 {
 			return &cached, nil
 		}
 	}
 
-	stateSup, err := s.q.GetStateSupervisorByElectionGroup(ctx, queries.GetStateSupervisorByElectionGroupParams{
+	// Fetch from Postgres on cache miss
+	stateSup, err := s.queries.GetStateSupervisorByElectionGroup(ctx, queries.GetStateSupervisorByElectionGroupParams{
 		UserID:          userID,
 		ElectionGroupID: electionGroupID,
 	})
+
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			_ = s.rdb.Set(ctx, cacheKey, "{}", 10*time.Minute).Err()
+			// Negative cache: store "{}" for 7 days to shield Postgres from repeated queries
+			_ = s.rdb.Set(ctx, cacheKey, "{}", db.RedisSevenDaysTTL).Err()
 			return nil, nil
 		}
 		return nil, err
 	}
 
+	// Cache valid record in Redis for 7 days
 	if jsonBytes, mErr := json.Marshal(stateSup); mErr == nil {
 		_ = s.rdb.Set(ctx, cacheKey, jsonBytes, db.RedisSevenDaysTTL).Err()
 	}
@@ -92,6 +100,7 @@ func (s *Service) GetLgaSupervisorAssignment(ctx context.Context, userID int64, 
 
 	// Check Redis cache first
 	if cachedJSON, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
+		// Sentinel check: "{}" means user is confirmed not an LGA supervisor
 		if cachedJSON == "{}" || cachedJSON == "null" {
 			return nil, nil
 		}
@@ -101,18 +110,21 @@ func (s *Service) GetLgaSupervisorAssignment(ctx context.Context, userID int64, 
 		}
 	}
 
-	lgaSup, err := s.q.GetLgaSupervisorByElectionGroup(ctx, queries.GetLgaSupervisorByElectionGroupParams{
+	// Fetch from Postgres on cache miss
+	lgaSup, err := s.queries.GetLgaSupervisorByElectionGroup(ctx, queries.GetLgaSupervisorByElectionGroupParams{
 		UserID:          userID,
 		ElectionGroupID: electionGroupID,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			_ = s.rdb.Set(ctx, cacheKey, "{}", 10*time.Minute).Err()
+			// Negative cache: store "{}" for 7 days to shield Postgres from repeated queries
+			_ = s.rdb.Set(ctx, cacheKey, "{}", db.RedisSevenDaysTTL).Err()
 			return nil, nil
 		}
 		return nil, err
 	}
 
+	// Cache valid record in Redis for 7 days
 	if jsonBytes, mErr := json.Marshal(lgaSup); mErr == nil {
 		_ = s.rdb.Set(ctx, cacheKey, jsonBytes, db.RedisSevenDaysTTL).Err()
 	}
@@ -126,6 +138,7 @@ func (s *Service) GetWardSupervisorAssignment(ctx context.Context, userID int64,
 
 	// Check Redis cache first
 	if cachedJSON, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
+		// Sentinel check: "{}" means user is confirmed not a ward supervisor
 		if cachedJSON == "{}" || cachedJSON == "null" {
 			return nil, nil
 		}
@@ -135,18 +148,21 @@ func (s *Service) GetWardSupervisorAssignment(ctx context.Context, userID int64,
 		}
 	}
 
-	wardSup, err := s.q.GetWardSupervisorByElectionGroup(ctx, queries.GetWardSupervisorByElectionGroupParams{
+	// Fetch from Postgres on cache miss
+	wardSup, err := s.queries.GetWardSupervisorByElectionGroup(ctx, queries.GetWardSupervisorByElectionGroupParams{
 		UserID:          userID,
 		ElectionGroupID: electionGroupID,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			_ = s.rdb.Set(ctx, cacheKey, "{}", 10*time.Minute).Err()
+			// Negative cache: store "{}" for 7 days to shield Postgres from repeated queries
+			_ = s.rdb.Set(ctx, cacheKey, "{}", db.RedisSevenDaysTTL).Err()
 			return nil, nil
 		}
 		return nil, err
 	}
 
+	// Cache valid record in Redis for 7 days
 	if jsonBytes, mErr := json.Marshal(wardSup); mErr == nil {
 		_ = s.rdb.Set(ctx, cacheKey, jsonBytes, db.RedisSevenDaysTTL).Err()
 	}
@@ -156,21 +172,25 @@ func (s *Service) GetWardSupervisorAssignment(ctx context.Context, userID int64,
 
 // GetUserSupervisorAssignments composes all supervisor assignments for a user in an election group.
 func (s *Service) GetUserSupervisorAssignments(ctx context.Context, userID int64, electionGroupID int32) (*SupervisorAssignmentsResponse, error) {
+	// Check State-level supervisor role (cached in Redis)
 	stateSup, err := s.GetStateSupervisorAssignment(ctx, userID, electionGroupID)
 	if err != nil {
 		return nil, err
 	}
 
+	// Check LGA-level supervisor role (cached in Redis)
 	lgaSup, err := s.GetLgaSupervisorAssignment(ctx, userID, electionGroupID)
 	if err != nil {
 		return nil, err
 	}
 
+	// Check Ward-level supervisor role (cached in Redis)
 	wardSup, err := s.GetWardSupervisorAssignment(ctx, userID, electionGroupID)
 	if err != nil {
 		return nil, err
 	}
 
+	// Return aggregated supervisor response
 	return &SupervisorAssignmentsResponse{
 		StateSupervisor: stateSup,
 		LgaSupervisor:   lgaSup,

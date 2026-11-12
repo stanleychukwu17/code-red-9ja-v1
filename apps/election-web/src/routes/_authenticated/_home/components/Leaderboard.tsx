@@ -10,7 +10,6 @@ import { Loader2 } from "lucide-react";
 import { useMemo } from "react";
 import { useElection } from "#/hooks/useElection";
 import { useAssignments } from "#/hooks/useAssignments";
-import { useElectionResults } from "#/hooks/useElectionResults";
 
 interface CandidatesLeaderboardProps {
 	/** Optional interceptor for practice training mode */
@@ -39,7 +38,8 @@ export function CandidatesLeaderboard({
 
 	const { selectedElection, isLive, isLock } = useElection();
 	const { selectedSupervisorAssignment } = useAssignments();
-	const { electionCandidates, finalResultObj, isResultLoading } = useElectionResults();
+	const electionCandidates = (selectedElection as any)?.candidates || [];
+	const isResultLoading = false;
 
 	// Intercepts click during training/practice simulator
 	const interceptClick = (e: React.MouseEvent, action?: () => void) => {
@@ -52,19 +52,8 @@ export function CandidatesLeaderboard({
 		if (action) action();
 	};
 
-	// Use live incoming reports or certified final returns depending on isLive toggle
-	const rawList = isLive
-		? finalResultObj?.candidate_results_live || finalResultObj?.candidate_results
-		: finalResultObj?.candidate_results;
-
-	// Sort candidates by vote count descending
+	// Fielded candidates for the selected election
 	const sortedResults = useMemo(() => {
-		if (Array.isArray(rawList) && rawList.length > 0) {
-			return [...rawList].sort(
-				(a: any, b: any) => (Number(b.vote_count) || 0) - (Number(a.vote_count) || 0)
-			);
-		}
-		// Fallback if candidate_results not yet populated: use electionCandidates
 		if (Array.isArray(electionCandidates) && electionCandidates.length > 0) {
 			return electionCandidates.map((c: any) => {
 				const ps = c.party_short_name?.String || c.party_short_name || "";
@@ -87,7 +76,7 @@ export function CandidatesLeaderboard({
 			});
 		}
 		return [];
-	}, [rawList, electionCandidates]);
+	}, [electionCandidates]);
 
 	return (
 		<LeaderboardCardWrapper className="mx-2.5">

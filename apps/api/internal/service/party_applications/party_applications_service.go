@@ -1053,9 +1053,7 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 	s.partiesService.InvalidateAcceptingPartyIDsCache(ctx)
 	_ = s.InvalidateUserHasActiveAgentApp(ctx, app.UserID)
 	_ = s.InvalidateApplicationByID(ctx, input.ApplicationID)
-	if roleType == "polling_agent" {
-		_ = s.InvalidateUserPollingUnitAssignment(ctx, app.UserID, app.ElectionGroupID)
-	}
+	_ = s.InvalidateUserPollingUnitAssignment(ctx, app.UserID, app.ElectionGroupID)
 
 	// Referral stat update on acceptance in background (best-effort)
 	go func(acceptedUserID int64, pID int16, egID int32) {

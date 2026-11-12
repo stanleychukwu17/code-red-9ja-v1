@@ -329,26 +329,6 @@ export const createWardElection = createServerFn({ method: "POST" })
     }
   });
 
-export const getElectionByFakeId = createServerFn({ method: "GET" })
-  .inputValidator(
-    (data: {
-      fakeId: string | number;
-    }) => data,
-  )
-  .handler(async ({ data }) => {
-    try {
-      const response = await apiFetch(API_URL.electionByFakeId(data.fakeId));
-      const resData = await response.json();
-      return resData;
-    } catch (error) {
-      return {
-        success: false,
-        message:
-          "Failed to fetch election details: " + (error as Error).message,
-      };
-    }
-  });
-
 export const getElectionsByGroup = createServerFn({ method: "GET" })
   .inputValidator((groupId: string | number) => groupId)
   .handler(async ({ data: groupId }) => {
