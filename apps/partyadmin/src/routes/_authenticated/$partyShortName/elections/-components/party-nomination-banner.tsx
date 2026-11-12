@@ -5,10 +5,6 @@ import { WEB_URL } from "#/lib/config";
 export type PartyNominationBannerProps = {
   party?: { logo?: string; short_name?: string } | null;
   myPartyCandidate?: any;
-  ticketConfig: {
-    principalRole: string;
-    hasRunningMate?: boolean;
-  };
   onManageTicket: () => void;
 };
 
@@ -98,9 +94,10 @@ function TicketCandidateProfile({
 export function PartyNominationBanner({
   party,
   myPartyCandidate,
-  ticketConfig,
   onManageTicket,
 }: PartyNominationBannerProps) {
+  console.log(myPartyCandidate);
+  if (!myPartyCandidate) return null;
   const partyShort = party?.short_name || "APC";
 
   // Principal Candidate details

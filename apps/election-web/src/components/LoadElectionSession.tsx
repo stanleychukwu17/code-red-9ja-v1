@@ -7,11 +7,10 @@ import { useAppDispatch, useAppSelector } from "#/redux/hooks";
 import {
   selectSelectedElection,
   selectSelectedElectionGroup,
-  setIsLive,
   setSelectedElection,
   setSelectedElectionGroup,
 } from "#/redux/slice/electionSlice";
-import { getAutoSelectedSession, isElectionDay } from "#/hooks/useElection";
+import { getAutoSelectedSession } from "#/hooks/useElection";
 
 /**
  * Headless Election Session Coordinator.
@@ -20,8 +19,6 @@ import { getAutoSelectedSession, isElectionDay } from "#/hooks/useElection";
  * election state in Redux:
  * 1. Fetches available election groups and auto-selects the closest active group.
  * 2. Fetches elections for the selected group and auto-selects the highest-ranked ballot.
- * 3. Enforces poll closing cutoff: Automatically sets `isLive` to false after 4:00 PM
- *    on election day across active intervals and window focus events.
  */
 export default function LoadElectionSession() {
   const dispatch = useAppDispatch();
@@ -32,11 +29,11 @@ export default function LoadElectionSession() {
   const fetchGroups = useServerFn(getElectionGroups);
   const fetchElections = useServerFn(getElectionsByGroup);
 
-  // Fetch available election groups (cached for 10 minutes)
+  // Fetch available election groups (cached indefinitely)
   const { data: groupsData } = useQuery({
     queryKey: ["election-groups"],
     queryFn: () => fetchGroups({ data: { limit: 50 } }),
-    staleTime: 1000 * 60 * 10, // 10 minutes
+    staleTime: Infinity,
     refetchOnWindowFocus: false,
   });
   const groups = groupsData?.data?.election_groups || [];
@@ -62,7 +59,7 @@ export default function LoadElectionSession() {
     queryKey: ["elections", selectedElectionGroup?.id],
     queryFn: () => fetchElections({ data: selectedElectionGroup?.id }),
     enabled: !!selectedElectionGroup?.id,
-    staleTime: 1000 * 60 * 10, // 10 minutes
+    staleTime: Infinity,
     refetchOnWindowFocus: false,
   });
   const elections = electionsData?.data?.elections || [];
@@ -74,47 +71,18 @@ export default function LoadElectionSession() {
         selectedElection &&
         elections.some((e: any) => e.id === selectedElection.id);
 
-      if (
-        !isElectionValid ||
-        selectedElection.election_group_id !== selectedElectionGroup.id
-      ) {
+      if (!isElectionValid || selectedElection.election_group_id !== selectedElectionGroup.id) {
         const { selectedElection: newSelection } = getAutoSelectedSession(
           [selectedElectionGroup],
           elections,
         );
+
         if (newSelection) {
           dispatch(setSelectedElection(newSelection));
         }
       }
     }
   }, [elections, selectedElectionGroup, selectedElection, dispatch]);
-
-  // Determine if today matches the scheduled election day
-  const electionDay = isElectionDay(selectedElectionGroup?.election_date);
-
-  // Auto-switch isLive to false after 4:00 PM (16:00) on election day
-  useEffect(() => {
-    if (!electionDay) return;
-    const isBeforeEndOfDay = (): boolean => new Date().getHours() < 16;
-    const checkTime = () => {
-      // Deactivate live mode once polls close at 4pm
-      if (!isBeforeEndOfDay()) dispatch(setIsLive(false));
-    };
-
-    // Initial check on mount/activation
-    checkTime();
-
-    // Re-check whenever user returns to tab
-    window.addEventListener("focus", checkTime);
-
-    // Re-check periodically every 60 seconds
-    const interval = setInterval(checkTime, 60_000);
-
-    return () => {
-      window.removeEventListener("focus", checkTime);
-      clearInterval(interval);
-    };
-  }, [electionDay, dispatch]);
 
   // Headless component produces no DOM nodes
   return null;

@@ -170,7 +170,6 @@ function ElectionCandidatesPage() {
         <PartyNominationBanner
           party={party}
           myPartyCandidate={myPartyCandidate}
-          ticketConfig={ticketConfig}
           onManageTicket={() => setIsManageDialogOpen(true)}
         />
       )}

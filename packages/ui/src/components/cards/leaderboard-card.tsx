@@ -110,9 +110,8 @@ export function ObjectiveTile({
 }) {
   const TodoIcon = () => (
     <div
-      className={`size-5 rounded-full flex items-center justify-center transition-all shrink-0 ${
-        isCompleted ? "bg-secondary text-black" : "bg-white/20"
-      }`}
+      className={`size-5 rounded-full flex items-center justify-center transition-all shrink-0 ${isCompleted ? "bg-secondary text-black" : "bg-white/20"
+        }`}
     >
       {isCompleted && <Check className="size-3 stroke-[3]" />}
     </div>

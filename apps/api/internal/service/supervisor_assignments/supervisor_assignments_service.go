@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/redis/go-redis/v9"

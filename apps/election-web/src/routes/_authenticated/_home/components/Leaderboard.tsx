@@ -9,7 +9,6 @@ import { useNavigate } from "@tanstack/react-router";
 import { Loader2 } from "lucide-react";
 import { useMemo } from "react";
 import { useElection } from "#/hooks/useElection";
-import { useAssignments } from "#/hooks/useAssignments";
 
 interface CandidatesLeaderboardProps {
 	/** Optional interceptor for practice training mode */
@@ -24,9 +23,7 @@ interface CandidatesLeaderboardProps {
  * Candidates Election Leaderboard.
  *
  * Carousel card displaying current vote standings for the selected election ballot:
- * - Switches between real-time unverified votes (`isLive = true`) and official certified returns.
  * - Sorts candidates descending by vote tally, displaying the top 3 with candidate avatar + party badge.
- * - Contextual win count: Adapts to supervisor geographic scope (States &rarr; LGAs &rarr; Wards &rarr; PUs).
  * - "Show all" and "Report" incident action buttons.
  */
 export function CandidatesLeaderboard({
@@ -36,8 +33,7 @@ export function CandidatesLeaderboard({
 }: CandidatesLeaderboardProps) {
 	const navigate = useNavigate();
 
-	const { selectedElection, isLive, isLock } = useElection();
-	const { selectedSupervisorAssignment } = useAssignments();
+	const { selectedElection } = useElection();
 	const electionCandidates = (selectedElection as any)?.candidates || [];
 	const isResultLoading = false;
 
@@ -108,20 +104,7 @@ export function CandidatesLeaderboard({
 					const partyLogo: string | undefined = item.party?.logo || item.party_logo || item.logo;
 					const votes: number = Number(item.vote_count ?? item.votes ?? 0);
 
-					// Contextual geographic win counter based on supervisor assignment level
-					let regionsWinningCountStr = `${item.states_winning_count || 0} states`;
-					if (isLock) {
-						if (selectedSupervisorAssignment?.type === "state") {
-							regionsWinningCountStr = `${item.lgas_winning_count || 0} LGAs`;
-						} else if (selectedSupervisorAssignment?.type === "lga") {
-							regionsWinningCountStr = `${item.wards_winning_count || 0} wards`;
-						} else if (
-							selectedSupervisorAssignment?.type === "ward" ||
-							!selectedSupervisorAssignment
-						) {
-							regionsWinningCountStr = `${item.polling_units_winning_count || 0} PUs`;
-						}
-					}
+					const regionsWinningCountStr = `${item.states_winning_count || 0} states`;
 
 					return (
 						<LeaderboardCardRow

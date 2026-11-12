@@ -1,11 +1,7 @@
 import { useAppDispatch, useAppSelector } from "#/redux/hooks";
 import {
-	selectIsLive,
-	selectIsLocked,
 	selectSelectedElection,
 	selectSelectedElectionGroup,
-	setIsLive,
-	setIsLocked,
 	setSelectedElection as setSelectedElectionAction,
 	setSelectedElectionGroup as setSelectedElectionGroupAction,
 } from "#/redux/slice/electionSlice";
@@ -29,17 +25,13 @@ export const isElectionDay = (electionDate?: string | null): boolean => {
  * Exposes:
  * - `selectedElectionGroup`: The active election group (e.g. 2027 General Elections)
  * - `selectedElection`: The specific contest selected (e.g. Presidential, Gubernatorial)
- * - `isLive`: Whether real-time updates and live polling are currently enabled
- * - `isLock`: Whether scoped supervisor/agent boundaries are strictly locked
  * - `electionDay`: Boolean flag indicating if today is the election date
- * - Dispatch helpers: `setIsLive`, `setIsLocked`, `setSelectedElectionGroup`, `setSelectedElection`
+ * - Dispatch helpers: `setSelectedElectionGroup`, `setSelectedElection`
  */
 export const useElection = () => {
 	const dispatch = useAppDispatch();
 	const selectedElectionGroup = useAppSelector(selectSelectedElectionGroup);
 	const selectedElection = useAppSelector(selectSelectedElection);
-	const isLive = useAppSelector(selectIsLive);
-	const isLock = useAppSelector(selectIsLocked);
 
 	// Check if today matches the active election group's scheduled date
 	const electionDay = isElectionDay(selectedElectionGroup?.election_date);
@@ -47,11 +39,7 @@ export const useElection = () => {
 	return {
 		selectedElectionGroup,
 		selectedElection,
-		isLive,
-		isLock,
 		electionDay,
-		setIsLive: (v: boolean) => dispatch(setIsLive(v)),
-		setIsLocked: (v: boolean) => dispatch(setIsLocked(v)),
 		setSelectedElectionGroup: (group: any | null) => {
 			dispatch(setSelectedElectionGroupAction(group));
 		},
