@@ -8,12 +8,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { getPageHeader } from "#/lib/shared/meta";
 import { useEffect, useState, useMemo } from "react";
-import {
-  Layout,
-  PageHeader,
-  PageSearchLayer,
-  FilterButton,
-} from "@repo/ui/components/custom/AdminLayouts";
+import { Layout, PageHeader, PageSearchLayer, FilterButton } from "@repo/ui/components/custom/AdminLayouts";
 import { Button } from "@repo/ui/components/button";
 import { ElectionInstancesTable } from "#/components/Tables";
 import { getElectionTabs } from "./-data";

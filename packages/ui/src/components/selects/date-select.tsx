@@ -33,21 +33,36 @@ export const SelectDate = ({
   buttonText,
   startMonth,
   endMonth,
+  defaultMonth,
   align = "start",
   selectedId,
 }: SelectProps<string> & {
   startMonth?: Date;
   endMonth?: Date;
+  defaultMonth?: Date;
 }) => {
   const [open, setOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Date | undefined>(() => {
     return parseSafeDate(selectedId) || parseSafeDate(initialData);
   });
+  const [currentMonth, setCurrentMonth] = useState<Date | undefined>(() => {
+    return parseSafeDate(selectedId) || parseSafeDate(initialData) || defaultMonth || endMonth;
+  });
 
   useEffect(() => {
     const val = selectedId || initialData;
-    setSelectedItem(parseSafeDate(val));
+    const parsed = parseSafeDate(val);
+    setSelectedItem(parsed);
+    if (parsed) {
+      setCurrentMonth(parsed);
+    }
   }, [selectedId, initialData]);
+
+  useEffect(() => {
+    if (open && !selectedItem && (defaultMonth || endMonth)) {
+      setCurrentMonth(defaultMonth || endMonth);
+    }
+  }, [open, selectedItem, defaultMonth, endMonth]);
 
   const handleSelect = (date: Date | undefined) => {
     if (!date) return;
@@ -101,11 +116,13 @@ export const SelectDate = ({
           onSelect={handleSelect}
           captionLayout="dropdown"
           className="p-4 [--cell-size:44px] [--cell-radius:12px]"
-          defaultMonth={selectedItem}
+          month={currentMonth}
+          onMonthChange={setCurrentMonth}
           startMonth={
             startMonth ? startMonth : new Date(now.getFullYear() - 100, 0)
           }
           endMonth={endMonth ? endMonth : new Date(now.getFullYear() + 10, 11)}
+          disabled={endMonth ? { after: endMonth } : undefined}
         />
       </div>
     </SelectResponsiveWrapper>

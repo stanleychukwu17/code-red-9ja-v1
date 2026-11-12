@@ -504,6 +504,12 @@ function DetailsStep({
   isNinAvailable,
   ninError,
 }: DetailsStepProps) {
+  // Maximum allowed date of birth (user must be at least 13 years old)
+  const maxDateOfBirth = useMemo(() => {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() - 13);
+    return d;
+  }, []);
   return (
     <FlowScreen
       icon={<UserIcon className="size-6 text-primary" strokeWidth={1.8} />}
@@ -557,6 +563,8 @@ function DetailsStep({
         initialData={
           data.dateOfBirth ? data.dateOfBirth.toISOString() : undefined
         }
+        endMonth={maxDateOfBirth}
+        defaultMonth={maxDateOfBirth}
         update={(value) =>
           setData((c) => ({ ...c, dateOfBirth: new Date(value) }))
         }
