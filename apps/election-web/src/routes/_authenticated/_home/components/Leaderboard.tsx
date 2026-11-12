@@ -36,6 +36,7 @@ export function CandidatesLeaderboard({
 	hideReportButton,
 }: CandidatesLeaderboardProps) {
 	const navigate = useNavigate();
+
 	const { selectedElection, isLive, isLock } = useElection();
 	const { selectedSupervisorAssignment } = useAssignments();
 	const { electionCandidates, finalResultObj, isResultLoading } = useElectionResults();

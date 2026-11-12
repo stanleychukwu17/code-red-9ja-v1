@@ -50,6 +50,31 @@ JOIN polling_units pu ON a.polling_unit_id = pu.id
 JOIN election_groups eg ON a.election_group_id = eg.id
 WHERE a.id = $1 LIMIT 1;
 
+-- name: GetUserAssignment :one
+SELECT 
+  a.id,
+  a.user_id,
+  a.polling_unit_id,
+  a.election_group_id,
+  a.party_id,
+  a.role_type,
+  a.arrived_at,
+  a.election_started_at,
+  a.election_ended_at,
+  a.live_voters_referred_count,
+  pu.name AS polling_unit_name,
+  pu.pu_code AS polling_unit_pu_code,
+  pu.ward_id,
+  pu.ward_name,
+  pu.lga_id,
+  pu.lga_name,
+  pu.state_id,
+  pu.state_name
+FROM polling_unit_assignments a
+JOIN polling_units pu ON a.polling_unit_id = pu.id
+WHERE a.user_id = $1 AND a.election_group_id = $2
+LIMIT 1;
+
 -- name: ListAssignments :many
 SELECT 
   a.id,

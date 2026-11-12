@@ -178,33 +178,14 @@ export const getScopedElectionResult = createServerFn({ method: "GET" })
       pollingUnitId?: number;
     }) => data,
   )
-  .handler(async ({ data }) => {
-    try {
-      const params = new URLSearchParams();
-      params.append("election_id", String(data.electionId));
-      if (data.pollingUnitId)
-        params.append("polling_unit_id", String(data.pollingUnitId));
-      if (data.stateId) params.append("state_id", String(data.stateId));
-      if (data.senatorialDistrictId)
-        params.append("senatorial_district_id", String(data.senatorialDistrictId));
-      if (data.federalConstituencyId)
-        params.append("federal_constituency_id", String(data.federalConstituencyId));
-      if (data.lgaId) params.append("lga_id", String(data.lgaId));
-      if (data.stateConstituencyId)
-        params.append("state_constituency_id", String(data.stateConstituencyId));
-      if (data.wardId) params.append("ward_id", String(data.wardId));
-
-      const response = await apiFetch(
-        API_URL.electionResultsScoped(params),
-      );
-      return response.json();
-    } catch (error) {
-      return {
-        success: false,
-        message:
-          "Failed to fetch scoped election result: " + (error as Error).message,
-      };
-    }
+  .handler(async () => {
+    // Deprecated / under active redesign: Return clean empty result payload to avoid 404 errors
+    return {
+      success: true,
+      data: {
+        final_result: null,
+      },
+    };
   });
 
 export const getElectoralUnitsBreakdown = createServerFn({ method: "GET" })

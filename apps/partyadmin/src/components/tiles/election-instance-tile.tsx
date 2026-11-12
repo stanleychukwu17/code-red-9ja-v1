@@ -101,7 +101,8 @@ export function ElectionInstanceTableTile({ data }: { data: ElectionInstanceType
             partyShortName,
             data.fake_id as number,
           ) as any}
-          className="truncate w-full text-[16px] text-c-80 hover:text-c-100 hover:underline transition-colors"
+          title={data.name}
+          className="truncate max-w-55 sm:max-w-[320px] md:max-w-105 lg:max-w-130 text-[16px] text-c-80 hover:text-c-100 hover:underline transition-colors"
         >
           {data.name}
         </Link>

@@ -1,26 +1,9 @@
 import { useElection } from "#/hooks/useElection";
-import { getNationalMetrics } from "#/lib/server/national_metrics";
-import { Button } from "@repo/ui/components/button";
-import {
-  LeaderboardCardWrapper,
-  ObjectiveTile,
-} from "@repo/ui/components/cards/leaderboard-card";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselDot,
-  CarouselDotContent,
-  CarouselItem,
-  type CarouselApi,
-} from "@repo/ui/components/carousel";
-import ReportIcon from "@repo/ui/icons/report-icon";
-import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
 import { ApplicationsCard } from "../components/ApplicationsCard";
 import { DidYouVoteCard } from "../components/DidYouVoteCard";
 import { GiveUpdateFloatingButton } from "../components/GiveUpdateFloatingButton";
-import { HomeHeader, HomeHeader2 } from "../components/HomeHeader";
+import { HomeHeader } from "../components/HomeHeader";
 import { CandidatesLeaderboard } from "../components/Leaderboard";
 import { PracticeTestCard } from "../components/PracticeTestCard";
 import { ReferralCard } from "../components/ReferralCard";
@@ -43,30 +26,7 @@ import { Layout } from "@repo/ui/components/custom/AdminLayouts";
 export function GeneralPage() {
   const navigate = useNavigate();
 
-  const { selectedElectionGroup, selectedElection } = useElection();
-
-  const [carouselIndex, setCarouselIndex] = useState(0);
-  const [carouselApi, setCarouselApi] = useState<CarouselApi>();
-
-  // Query nationwide aggregation metrics (total voters, turnouts, registered agents)
-  const { data: metricsResponse } = useQuery({
-    queryKey: ["national-metrics"],
-    queryFn: async () => {
-      const res = await getNationalMetrics();
-      if (!res.success) throw new Error(res.message);
-      return res.data;
-    },
-  });
-  const metrics = metricsResponse || null;
-
-  // Track carousel slide changes to update header title and progress stats
-  useEffect(() => {
-    if (!carouselApi) return;
-    setCarouselIndex(carouselApi.selectedScrollSnap());
-    carouselApi.on("select", () => {
-      setCarouselIndex(carouselApi.selectedScrollSnap());
-    });
-  }, [carouselApi]);
+  const { selectedElectionGroup } = useElection();
 
   // Calculate days remaining until scheduled election
   let daysLeft: number | undefined = undefined;
@@ -82,39 +42,8 @@ export function GeneralPage() {
     }
   }
 
-  // Voter civic readiness & practice training milestones
-  const objectives = [
-    {
-      title: "Take election day practice test 1",
-      rightText: "Jul 20",
-      isCompleted: true,
-    },
-    {
-      title: "Take election day practice test 2",
-      rightText: "Jul 27",
-      isCompleted: false,
-    },
-    {
-      title: "Take election day practice test 3",
-      rightText: "Aug 2",
-      isCompleted: false,
-    },
-  ];
-
-  // Dynamic header based on active slide
-  let headerTitle = "Objectives";
-  let headerRightText = "";
-  if (carouselIndex === 0) {
-    headerTitle = "Objectives";
-    const completed = objectives.filter((o) => o.isCompleted).length;
-    headerRightText = `${Math.round((completed / Math.max(objectives.length, 1)) * 100)}%`;
-  } else if (carouselIndex === 1) {
-    headerTitle = "Elections";
-    headerRightText = "";
-  }
-
   return (
-    <Layout className="px-0 gap-2">
+    <Layout>
       <HomeHeader daysLeft={daysLeft} />
 
       <CandidatesLeaderboard hideReportButton={daysLeft !== 0} />

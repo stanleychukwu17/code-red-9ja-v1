@@ -238,8 +238,8 @@ export const API_URL = {
   nonVotingReasons: `${api}/elections/non-voting-reasons`,
   didNotVote: `${api}/elections/did-not-vote`,
   electionById: (id: string | number) => `${api}/elections/${id}`,
-  electionCandidates: (id: string | number) =>
-    `${api}/elections/${id}/candidates`,
+  electionByFakeId: (fakeId: string | number) =>
+    `${api}/elections/by-fake-id/${fakeId}`,
 
   electionsNationwide: `${api}/elections/nationwide`,
   electionsState: `${api}/elections/state`,
@@ -288,6 +288,7 @@ export const API_URL = {
     `${api}/party-applications/${id}/cancel`,
 
   pollingUnitAssignments: `${api}/polling-unit-assignments`,
+  myPollingUnitAssignment: `${api}/polling-unit-assignments/my-assignment`,
   updateAssignmentTracking: (id: string | number) =>
     `${api}/polling-unit-assignments/${id}/tracking`,
 
@@ -298,8 +299,6 @@ export const API_URL = {
     `${api}/polling-unit-results/${id}`,
   voteOnResult: (id: string | number) =>
     `${api}/polling-unit-results/${id}/vote`,
-
-  nationalMetrics: `${api}/bodies/metrics`,
 
   practiceTests: `${api}/practice-tests`,
   appendPracticeTestTask: (id: string | number) =>

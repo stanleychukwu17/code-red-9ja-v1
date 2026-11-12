@@ -267,6 +267,84 @@ func (q *Queries) GetPartyElectionGroupCoverageDistribution(ctx context.Context,
 	return items, nil
 }
 
+const getUserAssignment = `-- name: GetUserAssignment :one
+SELECT 
+  a.id,
+  a.user_id,
+  a.polling_unit_id,
+  a.election_group_id,
+  a.party_id,
+  a.role_type,
+  a.arrived_at,
+  a.election_started_at,
+  a.election_ended_at,
+  a.live_voters_referred_count,
+  pu.name AS polling_unit_name,
+  pu.pu_code AS polling_unit_pu_code,
+  pu.ward_id,
+  pu.ward_name,
+  pu.lga_id,
+  pu.lga_name,
+  pu.state_id,
+  pu.state_name
+FROM polling_unit_assignments a
+JOIN polling_units pu ON a.polling_unit_id = pu.id
+WHERE a.user_id = $1 AND a.election_group_id = $2
+LIMIT 1
+`
+
+type GetUserAssignmentParams struct {
+	UserID          int64 `json:"user_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
+}
+
+type GetUserAssignmentRow struct {
+	ID                      int64              `json:"id"`
+	UserID                  int64              `json:"user_id"`
+	PollingUnitID           int32              `json:"polling_unit_id"`
+	ElectionGroupID         int32              `json:"election_group_id"`
+	PartyID                 int16              `json:"party_id"`
+	RoleType                pgtype.Text        `json:"role_type"`
+	ArrivedAt               pgtype.Timestamptz `json:"arrived_at"`
+	ElectionStartedAt       pgtype.Timestamptz `json:"election_started_at"`
+	ElectionEndedAt         pgtype.Timestamptz `json:"election_ended_at"`
+	LiveVotersReferredCount int32              `json:"live_voters_referred_count"`
+	PollingUnitName         string             `json:"polling_unit_name"`
+	PollingUnitPuCode       pgtype.Text        `json:"polling_unit_pu_code"`
+	WardID                  int32              `json:"ward_id"`
+	WardName                string             `json:"ward_name"`
+	LgaID                   int32              `json:"lga_id"`
+	LgaName                 string             `json:"lga_name"`
+	StateID                 int32              `json:"state_id"`
+	StateName               string             `json:"state_name"`
+}
+
+func (q *Queries) GetUserAssignment(ctx context.Context, arg GetUserAssignmentParams) (GetUserAssignmentRow, error) {
+	row := q.db.QueryRow(ctx, getUserAssignment, arg.UserID, arg.ElectionGroupID)
+	var i GetUserAssignmentRow
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.PollingUnitID,
+		&i.ElectionGroupID,
+		&i.PartyID,
+		&i.RoleType,
+		&i.ArrivedAt,
+		&i.ElectionStartedAt,
+		&i.ElectionEndedAt,
+		&i.LiveVotersReferredCount,
+		&i.PollingUnitName,
+		&i.PollingUnitPuCode,
+		&i.WardID,
+		&i.WardName,
+		&i.LgaID,
+		&i.LgaName,
+		&i.StateID,
+		&i.StateName,
+	)
+	return i, err
+}
+
 const incrementAssignmentLiveVotersReferredCount = `-- name: IncrementAssignmentLiveVotersReferredCount :one
 UPDATE polling_unit_assignments
 SET live_voters_referred_count = live_voters_referred_count + 1,

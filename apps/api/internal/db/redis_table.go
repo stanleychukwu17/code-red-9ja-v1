@@ -144,7 +144,11 @@ const (
 	RedisElectionByID           = "election:"                   // Raw election record; cached for 180 days.
 	RedisElectionByFakeID       = "election:fake:"              // Raw election record by fake_id; cached for 180 days.
 	RedisElectionCandidates     = "election:candidates:"        // Cached candidate roster for election; cached for 180 days.
-	RedisUserActiveCandidacies  = "elections:user_candidacies:" // Active candidacies for user; cached for 30 days.
+	RedisUserActiveCandidacies     = "elections:user_candidacies:" // Active candidacies for user; cached for 30 days.
+	RedisUserPollingUnitAssignment = "pu_assignment:user:"         // STRING: "pu_assignment:user:<userID>:eg:<electionGroupID>" stores cached JSON of agent's assigned polling unit; cached for 7 days.
+	RedisStateSupervisorAssignment = "supervisor:state:"           // STRING: "supervisor:state:<userID>:eg:<electionGroupID>" stores cached JSON of state supervisor assignment; cached for 7 days.
+	RedisLgaSupervisorAssignment   = "supervisor:lga:"             // STRING: "supervisor:lga:<userID>:eg:<electionGroupID>" stores cached JSON of LGA supervisor assignment; cached for 7 days.
+	RedisWardSupervisorAssignment  = "supervisor:ward:"            // STRING: "supervisor:ward:<userID>:eg:<electionGroupID>" stores cached JSON of ward supervisor assignment; cached for 7 days.
 	//--END--
 
 	//--START-- for background worker & cron distributed locks
@@ -247,6 +251,10 @@ var AllRedisPrefixes = []string{
 	RedisElectionByFakeID,
 	RedisElectionCandidates,
 	RedisUserActiveCandidacies,
+	RedisUserPollingUnitAssignment,
+	RedisStateSupervisorAssignment,
+	RedisLgaSupervisorAssignment,
+	RedisWardSupervisorAssignment,
 	RedisCronLockINECGrabberSync,
 	RedisCronLockMarketingDeductionsPrefix,
 	RedisLockElectoralUnitsSync,

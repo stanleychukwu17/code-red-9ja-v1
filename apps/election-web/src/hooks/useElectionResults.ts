@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { getElectionCandidates } from "#/lib/server/elections";
+import { getElectionByFakeId } from "#/lib/server/elections";
 import { getElectionScopedFinalResult } from "#/lib/server/final-results";
 import { useElection } from "./useElection";
 import { useAssignments } from "./useAssignments";
@@ -57,17 +57,26 @@ export const useElectionResults = (options?: UseElectionResultsOptions) => {
 		options?.selectedSupervisorAssignment ?? assignmentState.selectedSupervisorAssignment;
 	const pollingUnitId = options?.pollingUnitId ?? assignmentState.pollingUnitId;
 
-	// 1. Fetch registered candidates running in this contest
-	const fetchElectionCandidates = useServerFn(getElectionCandidates);
-	const { data: candidatesData } = useQuery({
-		queryKey: ["election-candidates", electionId],
+	// 1. Fetch registered candidates running in this contest (embedded in election details)
+	const fetchElectionDetails = useServerFn(getElectionByFakeId);
+	const fakeId = electionState.selectedElection?.fake_id
+		? Number(electionState.selectedElection.fake_id)
+		: electionId;
+
+	const { data: electionDetailsData } = useQuery({
+		queryKey: ["election-details", fakeId],
 		queryFn: () =>
-			fetchElectionCandidates({
-				data: { electionId: electionId as number },
+			fetchElectionDetails({
+				data: { fakeId: fakeId as number },
 			}),
-		enabled: !!electionId,
+		enabled: !!fakeId,
+		staleTime: Infinity,
 	});
-	const electionCandidates = candidatesData?.data?.candidates || candidatesData?.candidates || [];
+
+	const electionCandidates =
+		electionDetailsData?.data?.candidates ||
+		(electionState.selectedElection as any)?.candidates ||
+		[];
 
 	// 2. Fetch scoped final results based on election, lock status, and user jurisdiction
 	const fetchScopedFinalResultFn = useServerFn(getElectionScopedFinalResult);

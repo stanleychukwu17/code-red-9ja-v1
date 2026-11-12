@@ -154,7 +154,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	partiesService := partiesservice.NewPartiesService(q, pool, rdb, utilsInstance, notificationsService, blocksService, auditService, bodiesService, usersService)
 	partyApplicationsService := partyapplications.NewService(q, pool, rdb, usersService, pollingUnitsService, partiesService)
 	pollingUnitResultsService := puresults.NewService(q, pool, distributor, earningsService, usersService)
-	supervisorAssignmentsService := supervisorassignmentsservice.NewService(q)
+	supervisorAssignmentsService := supervisorassignmentsservice.NewService(q, rdb)
 	pollingUnitAssignmentsService := puassignments.NewService(q, rdb, earningsService)
 	partiesWalletService := partiesservice.NewPartiesWalletService(q, pool, rdb, utilsInstance, partiesService)
 	followsService := followsservice.NewFollowsService(q, rdb, partiesService, notificationsService)
@@ -200,7 +200,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	electionsHandler := electionshandler.NewHandler(electionsService, usersService, auditService, utilsInstance, partiesService, electionGroupsService)
 	usersHandler := usershandler.NewHandler(usersService, auditService, bodiesService, permissionsService, partiesService, filesService, utilsInstance)
 	pageVerificationsHandler := pageverificationshandler.NewHandler(pageVerificationsService, utilsInstance)
-	pollingUnitAssignmentsHandler := puassignmentshandler.NewHandler(pollingUnitAssignmentsService, usersService, pollingUnitUpdatesService, utilsInstance, earningsService)
+	pollingUnitAssignmentsHandler := puassignmentshandler.NewHandler(pollingUnitAssignmentsService, usersService, pollingUnitUpdatesService, utilsInstance, earningsService, supervisorAssignmentsService)
 	partyApplicationsHandler := partyapplicationshandler.NewHandler(partyApplicationsService, usersService, partiesService, permissionsService, campaignGroupsService, distributor, notificationsService, auditService, utilsInstance, electionGroupsService)
 	pollingUnitUpdatesHandler := puupdateshandler.NewHandler(pollingUnitUpdatesService, utilsInstance)
 	pollingUnitResultsHandler := puresultshandler.NewHandler(pollingUnitResultsService, utilsInstance)
@@ -321,7 +321,6 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	mainRouter.Get("/api/v1/elections/results/polling-units", electionResultsHandler.GetPollingUnitsWithResults)
 	mainRouter.Get("/api/v1/elections/results/breakdown", electionResultsHandler.GetElectoralUnitsBreakdown)
 	mainRouter.Get("/api/v1/elections/results/electoral-units", electionResultsHandler.GetElectoralUnitsBreakdown)
-	mainRouter.Get("/api/v1/elections/results", electionResultsHandler.GetElectionFinalResult)
 
 	// political parties public routes
 	mainRouter.With(apimiddleware.OptionalAuthMiddleware(jwtSecret)).Get("/api/v1/parties/cards", partiesHandler.ListPartyCards)
@@ -575,6 +574,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 
 		// polling unit assignments routes
 		r.Get("/api/v1/polling-unit-assignments", pollingUnitAssignmentsHandler.ListAssignments)
+		r.Get("/api/v1/polling-unit-assignments/my-assignment", pollingUnitAssignmentsHandler.GetMyAssignment)
 		r.Get("/api/v1/polling-unit-assignments/{id}", pollingUnitAssignmentsHandler.GetAssignment)
 		r.Patch("/api/v1/polling-unit-assignments/{id}/tracking", pollingUnitAssignmentsHandler.UpdateAssignmentTracking)
 		r.Delete("/api/v1/polling-unit-assignments/{id}", pollingUnitAssignmentsHandler.DeleteAssignment)

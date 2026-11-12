@@ -284,6 +284,7 @@ type Querier interface {
 	GetUnreadPartyNotificationsCountForUser(ctx context.Context, arg GetUnreadPartyNotificationsCountForUserParams) (int64, error)
 	GetUpcomingPartyEvents(ctx context.Context, arg GetUpcomingPartyEventsParams) ([]PartyEvent, error)
 	GetUserActiveCandidacies(ctx context.Context, candidateID int64) ([]GetUserActiveCandidaciesRow, error)
+	GetUserAssignment(ctx context.Context, arg GetUserAssignmentParams) (GetUserAssignmentRow, error)
 	GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (GetUserByFakeIDRow, error)
 	GetUserByID(ctx context.Context, id int64) (GetUserByIDRow, error)
 	GetUserDidNotVoteReason(ctx context.Context, arg GetUserDidNotVoteReasonParams) (GetUserDidNotVoteReasonRow, error)

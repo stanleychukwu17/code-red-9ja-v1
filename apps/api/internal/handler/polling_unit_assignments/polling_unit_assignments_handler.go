@@ -5,12 +5,12 @@ import (
 	"encoding/json"
 	"free9ja/api/internal/db/queries"
 	apimiddleware "free9ja/api/internal/middleware"
+	earningsservice "free9ja/api/internal/service/earnings"
+	puupdates "free9ja/api/internal/service/polling_unit_updates"
+	supervisorassignmentsservice "free9ja/api/internal/service/supervisor_assignments"
 	"free9ja/api/internal/utils"
 	"net/http"
 	"strconv"
-
-	earningsservice "free9ja/api/internal/service/earnings"
-	puupdates "free9ja/api/internal/service/polling_unit_updates"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -18,8 +18,13 @@ import (
 type PollingUnitAssignmentsService interface {
 	GetAssignmentByID(ctx context.Context, id int64) (queries.GetAssignmentByIDRow, error)
 	ListAssignments(ctx context.Context, electionGroupID int32, partyID int16, userID int64, pollingUnitID int32, limit, offset int32) ([]queries.ListAssignmentsRow, error)
+	GetMyAssignment(ctx context.Context, userID int64, electionGroupID int32) (*queries.GetUserAssignmentRow, error)
 	DeleteAssignment(ctx context.Context, id int64) error
 	UpdateAssignmentTracking(ctx context.Context, id int64, arrivedAt, arrivalVideoUrl, electionStartedAt, electionStartedVideoUrl, electionEndedAt, electionEndedVideoUrl *string) (queries.UpdateAssignmentTrackingRow, error)
+}
+
+type SupervisorAssignmentsService interface {
+	GetUserSupervisorAssignments(ctx context.Context, userID int64, electionGroupID int32) (*supervisorassignmentsservice.SupervisorAssignmentsResponse, error)
 }
 
 type UsersService interface {
@@ -32,15 +37,17 @@ type Handler struct {
 	usersService              UsersService
 	pollingUnitUpdatesService *puupdates.Service
 	earningsService           *earningsservice.Service
+	supervisorService         SupervisorAssignmentsService
 	utils                     *utils.Utils
 }
 
-func NewHandler(service PollingUnitAssignmentsService, usersService UsersService, puUpdatesService *puupdates.Service, utils *utils.Utils, earningsSvc *earningsservice.Service) *Handler {
+func NewHandler(service PollingUnitAssignmentsService, usersService UsersService, puUpdatesService *puupdates.Service, utils *utils.Utils, earningsSvc *earningsservice.Service, supervisorSvc SupervisorAssignmentsService) *Handler {
 	return &Handler{
 		service:                   service,
 		usersService:              usersService,
 		pollingUnitUpdatesService: puUpdatesService,
 		earningsService:           earningsSvc,
+		supervisorService:         supervisorSvc,
 		utils:                     utils,
 	}
 }
@@ -144,6 +151,59 @@ func (h *Handler) ListAssignments(w http.ResponseWriter, r *http.Request) {
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Assignments retrieved successfully", map[string]interface{}{
 		"assignments": assignments,
+	})
+}
+
+// GetMyAssignment godoc
+// @Summary      Get current user's polling unit assignment
+// @Description  Fetches the active polling unit assignment for the authenticated user for a specific election group.
+// @Tags         PollingUnitAssignments
+// @Accept       json
+// @Produce      json
+// @Param        election_group_id query int true "Election Group ID"
+// @Success      200  {object} map[string]interface{} "Assignment fetched successfully"
+// @Failure      400  {object} map[string]interface{} "Invalid or missing election_group_id"
+// @Failure      401  {object} map[string]interface{} "Unauthorized"
+// @Failure      500  {object} map[string]interface{} "Internal server error"
+// @Security     BearerAuth
+// @Router       /polling-unit-assignments/my-assignment [get]
+func (h *Handler) GetMyAssignment(w http.ResponseWriter, r *http.Request) {
+	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
+	if !ok {
+		return
+	}
+
+	requester, err := h.usersService.GetUserByFakeID(r.Context(), claims.FakeID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusUnauthorized, "User not found")
+		return
+	}
+
+	electionGroupIDStr := r.URL.Query().Get("election_group_id")
+	electionGroupID, err := strconv.ParseInt(electionGroupIDStr, 10, 32)
+	if err != nil || electionGroupID == 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid or missing election_group_id")
+		return
+	}
+
+	assignment, err := h.service.GetMyAssignment(r.Context(), requester.ID, int32(electionGroupID))
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch assignment: "+err.Error())
+		return
+	}
+
+	var supervisorAssignments *supervisorassignmentsservice.SupervisorAssignmentsResponse
+	if h.supervisorService != nil {
+		supervisorAssignments, err = h.supervisorService.GetUserSupervisorAssignments(r.Context(), requester.ID, int32(electionGroupID))
+		if err != nil {
+			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch supervisor assignments: "+err.Error())
+			return
+		}
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Assignment fetched successfully", map[string]interface{}{
+		"assignment":             assignment,
+		"supervisor_assignments": supervisorAssignments,
 	})
 }
 

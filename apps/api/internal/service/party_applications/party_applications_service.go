@@ -410,6 +410,16 @@ func (s *Service) InvalidateApplicationByID(ctx context.Context, id int64) error
 	return s.rdb.Del(ctx, cacheKey).Err()
 }
 
+// InvalidateUserPollingUnitAssignment clears the cached polling unit and supervisor assignments for an agent in an election group.
+func (s *Service) InvalidateUserPollingUnitAssignment(ctx context.Context, userID int64, electionGroupID int32) error {
+	return s.rdb.Del(ctx,
+		fmt.Sprintf("%s%d:eg:%d", db.RedisUserPollingUnitAssignment, userID, electionGroupID),
+		fmt.Sprintf("%s%d:eg:%d", db.RedisStateSupervisorAssignment, userID, electionGroupID),
+		fmt.Sprintf("%s%d:eg:%d", db.RedisLgaSupervisorAssignment, userID, electionGroupID),
+		fmt.Sprintf("%s%d:eg:%d", db.RedisWardSupervisorAssignment, userID, electionGroupID),
+	).Err()
+}
+
 // PartyApplicationListItem is a clean, frontend-ready representation of an agent application.
 type PartyApplicationListItem struct {
 	ID                int64   `json:"id"`
@@ -1043,6 +1053,9 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 	s.partiesService.InvalidateAcceptingPartyIDsCache(ctx)
 	_ = s.InvalidateUserHasActiveAgentApp(ctx, app.UserID)
 	_ = s.InvalidateApplicationByID(ctx, input.ApplicationID)
+	if roleType == "polling_agent" {
+		_ = s.InvalidateUserPollingUnitAssignment(ctx, app.UserID, app.ElectionGroupID)
+	}
 
 	// Referral stat update on acceptance in background (best-effort)
 	go func(acceptedUserID int64, pID int16, egID int32) {
@@ -1262,6 +1275,7 @@ func (s *Service) BatchApproveApplications(ctx context.Context, input BatchAppro
 		puCounts[puID]++
 		_ = s.InvalidateUserHasActiveAgentApp(ctx, app.UserID)
 		_ = s.InvalidateApplicationByID(ctx, app.ID)
+		_ = s.InvalidateUserPollingUnitAssignment(ctx, app.UserID, input.ElectionGroupID)
 
 		approvedList = append(approvedList, ApprovedAgentInfo{
 			ApplicationID: app.ID,
@@ -1661,6 +1675,7 @@ func (s *Service) ChangeAgentRole(ctx context.Context, input ChangeAgentRoleInpu
 
 	// Invalidate cached application details
 	_ = s.InvalidateApplicationByID(ctx, app.ID)
+	_ = s.InvalidateUserPollingUnitAssignment(ctx, input.UserID, input.ElectionGroupID)
 
 	return &ChangeAgentRoleResult{
 		UserID:  input.UserID,
@@ -1754,6 +1769,9 @@ func (s *Service) RevokeAgent(ctx context.Context, input RevokeAgentInput) (*Rev
 	if err != nil {
 		return nil, fmt.Errorf("failed to revoke assignment: %w", err)
 	}
+
+	// Invalidate cached assignment in Redis for any revoked agent/supervisor
+	_ = s.InvalidateUserPollingUnitAssignment(ctx, userID, electionGroupID)
 
 	return &RevokedAgentResult{
 		UserID:          userID,

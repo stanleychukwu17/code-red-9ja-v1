@@ -329,26 +329,22 @@ export const createWardElection = createServerFn({ method: "POST" })
     }
   });
 
-export const getElectionCandidates = createServerFn({ method: "GET" })
+export const getElectionByFakeId = createServerFn({ method: "GET" })
   .inputValidator(
     (data: {
-      electionId: string | number;
-      limit?: number;
-      cursor?: string | number;
+      fakeId: string | number;
     }) => data,
   )
   .handler(async ({ data }) => {
     try {
-      const limit = data.limit || 20;
-      const cursor = data.cursor || "";
-      const response = await apiFetch(`${API_URL.electionCandidates(data.electionId)}?limit=${limit}&cursor=${cursor}`);
+      const response = await apiFetch(API_URL.electionByFakeId(data.fakeId));
       const resData = await response.json();
       return resData;
     } catch (error) {
       return {
         success: false,
         message:
-          "Failed to fetch election candidates: " + (error as Error).message,
+          "Failed to fetch election details: " + (error as Error).message,
       };
     }
   });

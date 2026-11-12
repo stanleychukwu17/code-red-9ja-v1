@@ -31,6 +31,32 @@ export const getPollingUnitAssignments = createServerFn({ method: "GET" })
     }
   });
 
+export const getMyPollingUnitAssignment = createServerFn({ method: "GET" })
+  .inputValidator(
+    (data: { election_group_id?: string | number } | undefined) => data,
+  )
+  .handler(async ({ data }) => {
+    try {
+      const election_group_id = data?.election_group_id;
+      const params = new URLSearchParams();
+      if (election_group_id) {
+        params.append("election_group_id", String(election_group_id));
+      }
+
+      const qs = params.toString();
+      const url = `${API_URL.myPollingUnitAssignment}${qs ? `?${qs}` : ""}`;
+
+      const response = await apiFetch(url);
+      const resData = await response.json();
+      return resData;
+    } catch (error) {
+      return {
+        success: false,
+        message: "Failed to fetch assignment: " + (error as Error).message,
+      };
+    }
+  });
+
 export const updateAssignmentTracking = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
