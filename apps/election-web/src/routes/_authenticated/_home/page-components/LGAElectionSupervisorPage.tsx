@@ -4,9 +4,9 @@ import { useQuery } from "@tanstack/react-query";
 import { getSingleLgaStats } from "#/lib/server/election_stats";
 import { Button } from "@repo/ui/components/button";
 import {
-  LeaderboardCardWrapper,
+  ObjectiveCardWrapper,
   ObjectiveTile,
-} from "@repo/ui/components/cards/leaderboard-card";
+} from "@repo/ui/components/cards/objective-tile";
 import {
   Carousel,
   CarouselContent,
@@ -24,7 +24,6 @@ import { ReferralCard } from "../components/ReferralCard";
 import { EarningsTab } from "../components/EarningsTab";
 import { GiveUpdateFloatingButton } from "../components/GiveUpdateFloatingButton";
 import { HomeHeader, HomeHeader2 } from "../components/HomeHeader";
-import { CandidatesLeaderboard } from "../components/Leaderboard";
 import { PracticeTestCard } from "../components/PracticeTestCard";
 import { HomeBody } from "../components/Shared";
 import { SupervisorStartDutyCard } from "../components/SupervisorReadyCard";
@@ -179,9 +178,6 @@ export function LGAElectionSupervisorPage() {
     headerTitle = "Objectives";
     const completed = objectives.filter((o) => o.isCompleted).length;
     headerRightText = `${Math.round((completed / Math.max(objectives.length, 1)) * 100)}%`;
-  } else if (carouselIndex === 2) {
-    headerTitle = "Elections";
-    headerRightText = "";
   }
 
   return (
@@ -189,11 +185,11 @@ export function LGAElectionSupervisorPage() {
       <HomeHeader daysLeft={daysLeft} />
       <HomeHeader2 title={headerTitle} rightText={headerRightText} />
 
-      {/* Primary Carousel: Readiness, Objectives, and Candidate Leaderboard */}
+      {/* Primary Carousel: Readiness and Objectives */}
       <Carousel setApi={setCarouselApi} className="w-full">
         <CarouselContent>
           <CarouselItem>
-            <LeaderboardCardWrapper className="mx-2.5">
+            <ObjectiveCardWrapper className="mx-2.5">
               {readiness.map((item) => (
                 <ObjectiveTile
                   key={item.title}
@@ -224,10 +220,10 @@ export function LGAElectionSupervisorPage() {
                   </Button>
                 </div>
               )}
-            </LeaderboardCardWrapper>
+            </ObjectiveCardWrapper>
           </CarouselItem>
           <CarouselItem>
-            <LeaderboardCardWrapper className="mx-2.5">
+            <ObjectiveCardWrapper className="mx-2.5">
               {objectives.map((item) => (
                 <ObjectiveTile
                   key={item.title}
@@ -257,10 +253,7 @@ export function LGAElectionSupervisorPage() {
                   </Button>
                 </div>
               )}
-            </LeaderboardCardWrapper>
-          </CarouselItem>
-          <CarouselItem>
-            <CandidatesLeaderboard hideReportButton={daysLeft !== 0} />
+            </ObjectiveCardWrapper>
           </CarouselItem>
         </CarouselContent>
       </Carousel>
@@ -269,7 +262,6 @@ export function LGAElectionSupervisorPage() {
       <CarouselDotContent>
         <CarouselDot active={carouselIndex === 0} />
         <CarouselDot active={carouselIndex === 1} />
-        <CarouselDot active={carouselIndex === 2} />
       </CarouselDotContent>
 
       {/* Supervisor Action Body */}

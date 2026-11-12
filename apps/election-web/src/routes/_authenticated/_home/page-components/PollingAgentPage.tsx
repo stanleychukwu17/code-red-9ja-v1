@@ -2,9 +2,9 @@ import { useElection } from "#/hooks/useElection";
 import { useAssignments } from "#/hooks/useAssignments";
 import { Button } from "@repo/ui/components/button";
 import {
-  LeaderboardCardWrapper,
+  ObjectiveCardWrapper,
   ObjectiveTile,
-} from "@repo/ui/components/cards/leaderboard-card";
+} from "@repo/ui/components/cards/objective-tile";
 import {
   Carousel,
   CarouselContent,
@@ -28,7 +28,6 @@ import { DidYouVoteCard } from "../components/DidYouVoteCard";
 import { EarningsTab } from "../components/EarningsTab";
 import { ElectionStatusCard } from "../components/ElectionStatusCard";
 import { HomeHeader, HomeHeader2 } from "../components/HomeHeader";
-import { CandidatesLeaderboard } from "../components/Leaderboard";
 import { PracticeTestCard } from "../components/PracticeTestCard";
 import { RequestPayoutCard } from "../components/RequestPayoutCard";
 import { UploadResultCard } from "../components/UploadResultCard";
@@ -227,10 +226,6 @@ export function PollingAgentPage() {
       rightText: `${Math.round((completed / Math.max(readiness.length, 1)) * 100)}%`,
     });
   }
-  carouselItems.push({
-    title: "Elections",
-    rightText: "",
-  });
 
   if (carouselItems[carouselIndex]) {
     headerTitle = carouselItems[carouselIndex].title;
@@ -238,16 +233,16 @@ export function PollingAgentPage() {
   }
 
   return (
-    <Layout className="px-0 gap-2">
+    <Layout>
       <HomeHeader daysLeft={daysLeft} />
       <HomeHeader2 title={headerTitle} rightText={headerRightText} />
 
-      {/* Primary Carousel: Objectives, Readiness Drills, and Candidate Leaderboard */}
+      {/* Primary Carousel: Objectives and Readiness Drills */}
       <Carousel setApi={setCarouselApi} className="w-full">
         <CarouselContent>
           {showObjectives && (
             <CarouselItem>
-              <LeaderboardCardWrapper className="mx-2.5">
+              <ObjectiveCardWrapper className="mx-2.5">
                 {objectives.map((item) => (
                   <ObjectiveTile
                     key={item.title}
@@ -279,12 +274,12 @@ export function PollingAgentPage() {
                     </Button>
                   </div>
                 )}
-              </LeaderboardCardWrapper>
+              </ObjectiveCardWrapper>
             </CarouselItem>
           )}
           {showReadiness && (
             <CarouselItem>
-              <LeaderboardCardWrapper className="mx-2.5">
+              <ObjectiveCardWrapper className="mx-2.5">
                 {readiness.map((item) => (
                   <ObjectiveTile
                     key={item.title}
@@ -299,19 +294,16 @@ export function PollingAgentPage() {
                     }
                   />
                 ))}
-              </LeaderboardCardWrapper>
+              </ObjectiveCardWrapper>
             </CarouselItem>
           )}
-          <CarouselItem>
-            <CandidatesLeaderboard hideReportButton={daysLeft !== 0} />
-          </CarouselItem>
         </CarouselContent>
       </Carousel>
 
       {/* Pagination indicators for carousel slides */}
       <CarouselDotContent>
         {Array.from({
-          length: (showObjectives ? 1 : 0) + (showReadiness ? 1 : 0) + 1,
+          length: (showObjectives ? 1 : 0) + (showReadiness ? 1 : 0),
         }).map((_, i) => (
           <CarouselDot key={i} active={carouselIndex === i} />
         ))}

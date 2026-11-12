@@ -1,16 +1,11 @@
 import { Button } from "@repo/ui/components/button";
 import { ActivitiesCard } from "@repo/ui/components/cards/activities-card";
 import { ElectionStatsSidebar } from "@repo/ui/components/cards/election-stats-sidebar";
-import {
-	LeaderboardCardRow,
-	LeaderboardCardWrapper,
-} from "@repo/ui/components/cards/leaderboard-card";
 import { InfoCard } from "@repo/ui/components/cards/Rewards";
 import { DashboardLayout } from "@repo/ui/components/custom/AdminLayouts";
 import { useElectionRealtime } from "@repo/ui/hooks/useElectionRealtime";
 import AlertIcon from "@repo/ui/icons/alert-icon";
 import ReportCubeIcon from "@repo/ui/icons/report-cube-icon";
-import { formatVotes } from "@repo/ui/lib/number";
 import { cn } from "@repo/ui/lib/utils";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-router";
@@ -114,39 +109,6 @@ function ElectionDayComponent() {
 		electionStatsData?.data?.party_stats || electionStatsData?.data?.stats || {};
 	const targets = electionStatsData?.data?.targets || electionStatsData?.data?.stats || {};
 
-	const rawList = isLive
-		? finalResultObj?.candidate_results_live || finalResultObj?.candidate_results
-		: finalResultObj?.candidate_results;
-
-	const sortedResults = React.useMemo(() => {
-		if (Array.isArray(rawList) && rawList.length > 0) {
-			return [...rawList].sort(
-				(a: any, b: any) => (Number(b.vote_count) || 0) - (Number(a.vote_count) || 0)
-			);
-		}
-		if (Array.isArray(electionCandidates) && electionCandidates.length > 0) {
-			return electionCandidates.map((c: any) => {
-				const ps = c.party_short_name || "";
-				const candidateName = c.candidate_name || `${c.first_name || ""} ${c.last_name || ""}`.trim();
-				const avatar = c.avatar || "";
-				const partyLogo = c.party_logo || "";
-				return {
-					party_short_name: ps,
-					vote_count: 0,
-					candidate: {
-						name: candidateName,
-						avatar,
-					},
-					party: {
-						short_name: ps,
-						logo: partyLogo,
-					},
-				};
-			});
-		}
-		return [];
-	}, [rawList, electionCandidates]);
-
 	return (
 		<DashboardLayout>
 			<HomePageHeader activeTab="election-day" />
@@ -157,69 +119,6 @@ function ElectionDayComponent() {
 			<div className="grid gap-6 lg:grid-cols-[2fr_1.2fr] items-start">
 				{/* Left Hand Column */}
 				<div className="space-y-6">
-					{/* Leaderboard Card – scoped election result */}
-					<LeaderboardCardWrapper>
-						{isResultLoading ? (
-							<div className="p-6 text-center text-gray-400 text-sm">Loading results…</div>
-						) : sortedResults.length === 0 ? (
-							<div className="p-6 text-center text-gray-500 font-medium">
-								No result data available for this scope yet.
-							</div>
-						) : (
-							sortedResults.slice(0, 3).map((item: any, index: number) => {
-								const partyShortName: string =
-									item.party_short_name || item.party?.short_name || item.short_name || "";
-								const candidateName: string | null =
-									item.candidate?.name?.trim() ||
-									item.name ||
-									item.candidate_name ||
-									(item.first_name ? `${item.first_name} ${item.last_name || ""}`.trim() : null) ||
-									partyShortName;
-								const candidateAvatar: string | undefined =
-									item.candidate?.avatar || item.candidate_avatar || item.avatar;
-								const partyLogo: string | undefined =
-									item.party?.logo || item.party_logo || item.logo;
-								const votes: number = Number(item.votes ?? item.vote_count ?? 0);
-
-								return (
-									<LeaderboardCardRow
-										key={partyShortName || index}
-										rank={index + 1}
-										image={candidateAvatar || partyLogo}
-										// image2={candidateAvatar ? partyLogo : undefined}
-										image2={partyLogo}
-										name={candidateName ? `${candidateName} (${partyShortName})` : partyShortName}
-										regionsWinningCount={
-											selectedWardId
-												? `${item.polling_units_winning_count || 0} PUs`
-												: selectedLGAId || selectedStateConstituencyId
-													? `${item.wards_winning_count || 0} wards`
-													: selectedStateId || selectedDistrictId || selectedFederalConstituencyId
-														? `${item.lgas_winning_count || 0} LGAs`
-														: `${item.states_winning_count || 0} states`
-										}
-										votesCount={formatVotes(votes, { compact: false })}
-									/>
-								);
-							})
-						)}
-						<div className="px-6 w-full my-2">
-							<Button
-								variant="black"
-								size="2xl"
-								className="w-full bg-[#2D2D2D] hover:bg-[#3D3D3D] active:bg-[#202020] text-white rounded-12"
-								onClick={() =>
-									navigate({
-										to: "/$partyShortName/election-race",
-										params: { partyShortName: party?.short_name || "" },
-									})
-								}
-							>
-								See all
-							</Button>
-						</div>
-					</LeaderboardCardWrapper>
-
 					{/* Activities Stream */}
 					<ActivitiesCard
 						electionGroupId={selectedElectionGroup?.id}

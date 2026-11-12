@@ -21,14 +21,84 @@ import { useUserParty } from "#/hooks/useUserParty";
 
 export type InstancesSearch = {
   election_group_id?: number;
+  election_group_ids?: number[];
+  scopes?: string[];
+  statuses?: string[];
+  state_ids?: number[];
+  office_ids?: number[];
+  date_from?: string;
+  date_to?: string;
+  search?: string;
+};
+
+const parseNumber = (val: unknown): number | undefined => {
+  if (val === undefined || val === null || val === "") return undefined;
+  const num = Number(val);
+  return !isNaN(num) && num > 0 ? num : undefined;
+};
+
+const parseNumberArray = (val: unknown): number[] => {
+  if (val === undefined || val === null || val === "") return [];
+  if (Array.isArray(val)) {
+    return val.map((v) => Number(v)).filter((n) => !isNaN(n) && n > 0);
+  }
+  if (typeof val === "string") {
+    return val
+      .split(",")
+      .map((s) => Number(s.trim()))
+      .filter((n) => !isNaN(n) && n > 0);
+  }
+  if (typeof val === "number" && !isNaN(val) && val > 0) {
+    return [val];
+  }
+  return [];
+};
+
+const parseStringArray = (val: unknown): string[] => {
+  if (val === undefined || val === null || val === "") return [];
+  if (Array.isArray(val)) {
+    return val.map(String).filter((s) => s.trim().length > 0);
+  }
+  if (typeof val === "string") {
+    return val
+      .split(",")
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+  }
+  return [];
+};
+
+const parseString = (val: unknown): string | undefined => {
+  if (typeof val === "string" && val.trim().length > 0) return val.trim();
+  return undefined;
 };
 
 export const Route = createFileRoute("/_authenticated/$partyShortName/elections/instances")({
   validateSearch: (search: Record<string, unknown>): InstancesSearch => {
-    const raw = search.election_group_id;
-    const num = raw !== undefined && raw !== null && raw !== "" ? Number(raw) : undefined;
+    const groupIds = parseNumberArray(search.election_group_ids);
+    const singleGroupId = parseNumber(search.election_group_id);
+    if (singleGroupId && !groupIds.includes(singleGroupId)) {
+      groupIds.unshift(singleGroupId);
+    }
+
+    const scopes = parseStringArray(search.scopes || search.scope);
+    const statuses = parseStringArray(search.statuses || search.status);
+    const state_ids = parseNumberArray(search.state_ids || search.state_id);
+    const office_ids = parseNumberArray(search.office_ids || search.office_id);
+    const date_from = parseString(search.date_from);
+    const date_to = parseString(search.date_to);
+    const searchStr = parseString(search.search || search.q);
+
     return {
-      election_group_id: num && !isNaN(num) ? num : undefined,
+      election_group_id: singleGroupId ?? (groupIds.length === 1 ? groupIds[0] : undefined),
+      election_group_ids: groupIds.length > 0 ? groupIds : undefined,
+      scopes: scopes.length > 0 ? scopes : undefined,
+      statuses: statuses.length > 0 ? statuses : undefined,
+      state_ids: state_ids.length > 0 ? state_ids : undefined,
+      office_ids: office_ids.length > 0 ? office_ids : undefined,
+      date_from,
+      date_to,
+      search: searchStr,
     };
   },
   head: () => getPageHeader({ title: "Election Instances" }),
@@ -42,41 +112,117 @@ export const Route = createFileRoute("/_authenticated/$partyShortName/elections/
  */
 function RouteComponent() {
   const { partyShortName } = Route.useParams();
-  const { election_group_id } = Route.useSearch();
+  const searchParams = Route.useSearch();
   const navigate = Route.useNavigate();
 
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(searchParams.search || "");
   const [debouncedSearchQuery] = useDebounceValue(searchQuery, 400);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
+  const initialGroupIds = useMemo(() => {
+    if (searchParams.election_group_ids && searchParams.election_group_ids.length > 0) {
+      return searchParams.election_group_ids;
+    }
+    if (searchParams.election_group_id) {
+      return [searchParams.election_group_id];
+    }
+    return [];
+  }, [searchParams.election_group_id, searchParams.election_group_ids]);
+
   const [filters, setFilters] = useState<ElectionFilters>({
-    election_group_ids: election_group_id ? [election_group_id] : [],
-    scopes: [],
-    statuses: [],
-    state_ids: [],
-    office_ids: [],
-    date_from: undefined,
-    date_to: undefined,
+    election_group_ids: initialGroupIds,
+    scopes: searchParams.scopes || [],
+    statuses: searchParams.statuses || [],
+    state_ids: searchParams.state_ids || [],
+    office_ids: searchParams.office_ids || [],
+    date_from: searchParams.date_from,
+    date_to: searchParams.date_to,
   });
 
-  // Synchronize URL search params with active election group filter if changed externally
-  useEffect(() => {
-    if (election_group_id) {
-      setFilters((prev) => {
-        if (
-          prev.election_group_ids.length === 1 &&
-          prev.election_group_ids[0] === election_group_id
-        ) {
-          return prev;
+  const updateUrlParams = (newFilters: ElectionFilters, newSearch?: string) => {
+    navigate({
+      search: () => {
+        const next: Record<string, unknown> = {};
+
+        if (newFilters.election_group_ids.length === 1) {
+          next.election_group_id = newFilters.election_group_ids[0];
+        } else if (newFilters.election_group_ids.length > 1) {
+          next.election_group_ids = newFilters.election_group_ids;
         }
 
-        return {
-          ...prev,
-          election_group_ids: [election_group_id],
-        };
-      });
+        if (newFilters.scopes.length > 0) {
+          next.scopes = newFilters.scopes;
+        }
+        if (newFilters.statuses.length > 0) {
+          next.statuses = newFilters.statuses;
+        }
+        if (newFilters.state_ids.length > 0) {
+          next.state_ids = newFilters.state_ids;
+        }
+        if (newFilters.office_ids.length > 0) {
+          next.office_ids = newFilters.office_ids;
+        }
+        if (newFilters.date_from) {
+          next.date_from = newFilters.date_from;
+        }
+        if (newFilters.date_to) {
+          next.date_to = newFilters.date_to;
+        }
+
+        const effectiveSearch = newSearch !== undefined ? newSearch : searchQuery;
+        if (effectiveSearch && effectiveSearch.trim()) {
+          next.search = effectiveSearch.trim();
+        }
+
+        return next;
+      },
+      replace: true,
+    });
+  };
+
+  // Synchronize URL search params with active filters if changed externally (e.g. back/forward navigation)
+  useEffect(() => {
+    const groupIds =
+      searchParams.election_group_ids && searchParams.election_group_ids.length > 0
+        ? searchParams.election_group_ids
+        : searchParams.election_group_id
+          ? [searchParams.election_group_id]
+          : [];
+
+    setFilters({
+      election_group_ids: groupIds,
+      scopes: searchParams.scopes || [],
+      statuses: searchParams.statuses || [],
+      state_ids: searchParams.state_ids || [],
+      office_ids: searchParams.office_ids || [],
+      date_from: searchParams.date_from,
+      date_to: searchParams.date_to,
+    });
+
+    if (searchParams.search !== undefined && searchParams.search !== searchQuery) {
+      setSearchQuery(searchParams.search);
+    } else if (!searchParams.search && searchQuery) {
+      setSearchQuery("");
     }
-  }, [election_group_id]);
+  }, [
+    searchParams.election_group_id,
+    JSON.stringify(searchParams.election_group_ids),
+    JSON.stringify(searchParams.scopes),
+    JSON.stringify(searchParams.statuses),
+    JSON.stringify(searchParams.state_ids),
+    JSON.stringify(searchParams.office_ids),
+    searchParams.date_from,
+    searchParams.date_to,
+    searchParams.search,
+  ]);
+
+  // Sync debounced search input to URL query params
+  useEffect(() => {
+    const currentUrlSearch = searchParams.search || "";
+    if (debouncedSearchQuery !== currentUrlSearch) {
+      updateUrlParams(filters, debouncedSearchQuery);
+    }
+  }, [debouncedSearchQuery]);
 
   // Calculate total number of applied filters for badge indicator
   const activeFiltersCount = useMemo(() => {
@@ -154,7 +300,7 @@ function RouteComponent() {
       <PageHeader
         title="Elections"
         activeTab="instances"
-        tabs={getElectionTabs(partyShortName)}
+        tabs={getElectionTabs(partyShortName, searchParams)}
       />
       <PageSearchLayer
         value={searchQuery}
@@ -186,8 +332,7 @@ function RouteComponent() {
               variant="outline"
               size="sm"
               onClick={() => {
-                setSearchQuery("");
-                setFilters({
+                const emptyFilters: ElectionFilters = {
                   election_group_ids: [],
                   scopes: [],
                   statuses: [],
@@ -195,16 +340,10 @@ function RouteComponent() {
                   office_ids: [],
                   date_from: undefined,
                   date_to: undefined,
-                });
-                if (election_group_id) {
-                  navigate({
-                    search: (prev) => ({
-                      ...prev,
-                      election_group_id: undefined,
-                    }),
-                    replace: true,
-                  });
-                }
+                };
+                setSearchQuery("");
+                setFilters(emptyFilters);
+                updateUrlParams(emptyFilters, "");
               }}
             >
               Clear filters and search
@@ -233,22 +372,7 @@ function RouteComponent() {
         filters={filters}
         onApply={(newFilters) => {
           setFilters(newFilters);
-
-          // Keep URL query param in sync when exactly one election group is selected
-          const newGroupId =
-            newFilters.election_group_ids.length === 1
-              ? newFilters.election_group_ids[0]
-              : undefined;
-
-          if (newGroupId !== election_group_id) {
-            navigate({
-              search: (prev) => ({
-                ...prev,
-                election_group_id: newGroupId,
-              }),
-              replace: true,
-            });
-          }
+          updateUrlParams(newFilters);
         }}
       />
     </Layout>

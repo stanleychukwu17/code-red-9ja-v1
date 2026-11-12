@@ -4,7 +4,6 @@ import { ApplicationsCard } from "../components/ApplicationsCard";
 import { DidYouVoteCard } from "../components/DidYouVoteCard";
 import { GiveUpdateFloatingButton } from "../components/GiveUpdateFloatingButton";
 import { HomeHeader } from "../components/HomeHeader";
-import { CandidatesLeaderboard } from "../components/Leaderboard";
 import { PracticeTestCard } from "../components/PracticeTestCard";
 import { ReferralCard } from "../components/ReferralCard";
 import { HomeBody } from "../components/Shared";
@@ -45,8 +44,6 @@ export function GeneralPage() {
   return (
     <Layout>
       <HomeHeader daysLeft={daysLeft} />
-
-      <CandidatesLeaderboard hideReportButton={daysLeft !== 0} />
 
       {/* Action Cards Body */}
       <HomeBody>

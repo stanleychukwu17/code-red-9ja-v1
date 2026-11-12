@@ -114,15 +114,16 @@ func (h *Handler) CreateElectionGroup(w http.ResponseWriter, r *http.Request) {
 }
 
 type ElectionGroupResponse struct {
-	ID                int32              `json:"id"`
-	FakeID            *int64             `json:"fake_id,omitempty"`
-	Name              string             `json:"name"`
-	ElectionDate      pgtype.Date        `json:"election_date"`
-	Active            bool               `json:"active"`
-	AcceptsCandidates bool               `json:"accepts_candidates"`
-	AcceptsAgents     bool               `json:"accepts_agents"`
-	CreatedAt         pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	ID                int32                           `json:"id"`
+	FakeID            int64                           `json:"fake_id"`
+	Name              string                          `json:"name"`
+	ElectionDate      pgtype.Date                     `json:"election_date"`
+	Active            bool                            `json:"active"`
+	AcceptsCandidates bool                            `json:"accepts_candidates"`
+	AcceptsAgents     bool                            `json:"accepts_agents"`
+	CreatedAt         pgtype.Timestamptz              `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz              `json:"updated_at"`
+	Elections         []queries.ElectionGroupListItem `json:"elections,omitempty"`
 }
 
 // ListElectionGroups godoc
@@ -132,11 +133,12 @@ type ElectionGroupResponse struct {
 // @Accept       json
 // @Produce      json
 // @Param        active query bool false "Filter by active status"
+// @Param        include_elections query bool false "Include child elections for each group"
 // @Success      200  {object} map[string]interface{} "Election groups fetched successfully"
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Router       /election-groups [get]
 func (h *Handler) ListElectionGroups(w http.ResponseWriter, r *http.Request) {
-	// 1. Check for optional active filter (e.g. ?active=true)
+	// Check for optional active filter (e.g. ?active=true)
 	var activeFilter *bool
 	if activeStr := r.URL.Query().Get("active"); activeStr != "" {
 		if b, err := strconv.ParseBool(activeStr); err == nil {
@@ -144,22 +146,32 @@ func (h *Handler) ListElectionGroups(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Check whether caller requested nested child elections
+	includeElections := r.URL.Query().Get("include_elections") == "true"
+
+	// Fetch election groups from service
 	groups, err := h.service.ListElectionGroups(r.Context(), activeFilter)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch election groups: "+err.Error())
 		return
 	}
 
+	// Transform groups into API response models
 	responseGroups := make([]ElectionGroupResponse, 0, len(groups))
 	for _, g := range groups {
-		var fakeID *int64
-		if g.FakeID.Valid {
-			fid := g.FakeID.Int64
-			fakeID = &fid
+		// Optionally populate child elections for this group
+		var elections []queries.ElectionGroupListItem
+		if includeElections {
+			if el, err := h.service.ListGroupElections(r.Context(), g.ID); err == nil {
+				elections = el
+			} else {
+				elections = []queries.ElectionGroupListItem{}
+			}
 		}
+
 		responseGroups = append(responseGroups, ElectionGroupResponse{
 			ID:                g.ID,
-			FakeID:            fakeID,
+			FakeID:            g.FakeID.Int64,
 			Name:              g.Name,
 			ElectionDate:      g.ElectionDate,
 			Active:            g.Active,
@@ -167,10 +179,11 @@ func (h *Handler) ListElectionGroups(w http.ResponseWriter, r *http.Request) {
 			AcceptsAgents:     g.AcceptsAgents,
 			CreatedAt:         g.CreatedAt,
 			UpdatedAt:         g.UpdatedAt,
+			Elections:         elections,
 		})
 	}
 
-	// 2. Return the election groups
+	// Return the election groups
 	h.utils.RespondSuccess(w, http.StatusOK, "Election groups fetched successfully", map[string]interface{}{
 		"election_groups": responseGroups,
 	})

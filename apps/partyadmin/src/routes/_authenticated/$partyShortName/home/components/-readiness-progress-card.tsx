@@ -1,5 +1,5 @@
 import { useElection } from "#/hooks/useElection";
-import { LeaderboardCardWrapper, ObjectiveTile } from "@repo/ui/components/cards/leaderboard-card";
+import { ObjectiveCardWrapper, ObjectiveTile } from "@repo/ui/components/cards/objective-tile";
 
 type ReadinessProgressCardProps = {
   partyStats?: any;
@@ -45,11 +45,11 @@ export function ReadinessProgressCard({
 
   if (isLoading) {
     return (
-      <LeaderboardCardWrapper>
+      <ObjectiveCardWrapper>
         <div className="flex h-40 items-center justify-center text-white/50">
           Loading readiness stats...
         </div>
-      </LeaderboardCardWrapper>
+      </ObjectiveCardWrapper>
     );
   }
 
@@ -90,7 +90,7 @@ export function ReadinessProgressCard({
   const showPU = true;
 
   return (
-    <LeaderboardCardWrapper>
+    <ObjectiveCardWrapper>
       {showPU && (
         <ObjectiveTile
           isCompleted={puPercent >= 100}
@@ -145,6 +145,6 @@ export function ReadinessProgressCard({
           }
         />
       )}
-    </LeaderboardCardWrapper>
+    </ObjectiveCardWrapper>
   );
 }

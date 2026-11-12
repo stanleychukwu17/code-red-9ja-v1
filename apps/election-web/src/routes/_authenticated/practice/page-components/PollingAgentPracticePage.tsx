@@ -7,9 +7,9 @@ import { useElectionGroups } from "#/hooks/useElectionGroups";
 import { AppAvatar } from "@repo/ui/components/avatar";
 import { Button } from "@repo/ui/components/button";
 import {
-  LeaderboardCardWrapper,
+  ObjectiveCardWrapper,
   ObjectiveTile,
-} from "@repo/ui/components/cards/leaderboard-card";
+} from "@repo/ui/components/cards/objective-tile";
 import {
   InfoCard,
   RewardSumCard,
@@ -49,7 +49,6 @@ import { EarningsTab } from "../../_home/components/EarningsTab";
 import { ElectionStatusCard } from "../../_home/components/ElectionStatusCard";
 import { GiveUpdateFloatingButton } from "../../_home/components/GiveUpdateFloatingButton";
 import { HomeHeader, HomeHeader2 } from "../../_home/components/HomeHeader";
-import { CandidatesLeaderboard } from "../../_home/components/Leaderboard";
 import { ReferralCard } from "../../_home/components/ReferralCard";
 import { RequestPayoutCard } from "../../_home/components/RequestPayoutCard";
 import { HomeBody } from "../../_home/components/Shared";
@@ -1430,11 +1429,6 @@ export function DashboardPage({
     });
   }
 
-  carouselItems.push({
-    title: "Elections",
-    rightText: "",
-  });
-
   if (carouselItems[carouselIndex]) {
     headerTitle = carouselItems[carouselIndex].title;
     headerRightText = carouselItems[carouselIndex].rightText;
@@ -1488,7 +1482,7 @@ export function DashboardPage({
         <CarouselContent>
           {showObjectives && (
             <CarouselItem>
-              <LeaderboardCardWrapper className="mx-2.5">
+              <ObjectiveCardWrapper className="mx-2.5">
                 {objectives.map((item) => (
                   <ObjectiveTile
                     key={item.title}
@@ -1508,20 +1502,14 @@ export function DashboardPage({
                     Report
                   </Button>
                 </div>
-              </LeaderboardCardWrapper>
+              </ObjectiveCardWrapper>
             </CarouselItem>
           )}
-          <CarouselItem>
-            <CandidatesLeaderboard
-              onPracticeClick={handlePracticeWrong}
-              onReportClick={handleReportClick}
-            />
-          </CarouselItem>
         </CarouselContent>
       </Carousel>
       <CarouselDotContent>
         {Array.from({
-          length: (showObjectives ? 1 : 0) + 1,
+          length: showObjectives ? 1 : 0,
         }).map((_, i) => (
           <CarouselDot key={i} active={carouselIndex === i} />
         ))}
