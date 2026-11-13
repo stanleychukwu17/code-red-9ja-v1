@@ -60,7 +60,7 @@ export function PollingAgentPage() {
   const navigate = useNavigate();
 
   const { selectedElectionGroup, selectedElection } = useElection();
-  const { selectedAssignment: currentPollingUnitAssignment } = useAssignments();
+  const { pollingUnitAssignment: currentPollingUnitAssignment } = useAssignments();
 
   // Submits duty compensation request to party administration upon task completion
   const handleRequestPayout = async () => {

@@ -7,21 +7,21 @@ export const Route = createFileRoute("/_authenticated/practice/")({
 });
 
 function RouteComponent() {
-  const { selectedSupervisorAssignment, selectedAssignment } = useAssignments();
+  const { supervisorAssignment, pollingUnitAssignment } = useAssignments();
 
-  if (selectedSupervisorAssignment) {
-    if (selectedSupervisorAssignment.type === "state") {
+  if (supervisorAssignment) {
+    if (supervisorAssignment.type === "state") {
       return <>State Supervisor</>;
     }
-    if (selectedSupervisorAssignment.type === "lga") {
+    if (supervisorAssignment.type === "lga") {
       return <>LGA Supervisor</>;
     }
-    if (selectedSupervisorAssignment.type === "ward") {
+    if (supervisorAssignment.type === "ward") {
       return <>Ward Supervisor</>;
     }
   }
 
-  if (selectedAssignment) {
+  if (pollingUnitAssignment) {
     return (
       <NuqsAdapter>
         <PollingAgentPracticePage />

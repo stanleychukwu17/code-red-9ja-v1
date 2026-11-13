@@ -108,7 +108,10 @@ export function HomeHeader({
           <SelectElectionGroupAndElection
             fetchElectionGroups={fetchGroups}
             fetchElectionsByGroup={fetchElectionsByGroup}
+            queryKey={["election-groups", { includeElections: true }]}
+            queryParams={{ limit: 50, includeElections: true }}
             selectedId={selectedElectionGroup?.id}
+            selectedItem={selectedElectionGroup}
             update={(group) => setSelectedElectionGroup(group)}
             onElectionSelect={(group: ElectionGroup, election: Election) => {
               setSelectedElectionGroup(group);

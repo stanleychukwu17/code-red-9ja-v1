@@ -22,9 +22,8 @@ export interface SupervisorAssignment {
  * - Effective `pollingUnitId` resolved from assignment or profile fallback
  *
  * @returns Object containing:
- * - `selectedAssignment`: Primary polling agent assignment (first entry or null)
- * - `assignments`: Full array of polling agent assignments
- * - `selectedSupervisorAssignment`: Active supervisor role details (`{ type, data }` or null)
+ * - `pollingUnitAssignment`: Primary polling agent assignment (first entry or null)
+ * - `supervisorAssignment`: Active supervisor role details (`{ type, data }` or null)
  * - `rawSupervisorAssignments`: Raw supervisor payload from the server
  * - `pollingUnitId`: Effective polling unit ID for tasks, arrivals, and results
  * - `isLoading`: Combined query loading state
@@ -51,27 +50,26 @@ export const useAssignments = () => {
 	});
 
 	// Primary polling agent assignment (single assignment per user per election group)
-	const selectedAssignment = assignmentsData?.assignment ?? null;
-	const assignments = selectedAssignment ? [selectedAssignment] : [];
+	const pollingUnitAssignment = assignmentsData?.assignment ?? null;
 
 	// 2. Supervisor assignments payload (State, LGA, or Ward level)
 	const supervisorAssignmentsData = assignmentsData?.supervisor_assignments ?? null;
 
 	// 3. Normalize supervisor role with hierarchy priority: State > LGA > Ward
-	let selectedSupervisorAssignment: SupervisorAssignment | null = null;
+	let supervisorAssignment: SupervisorAssignment | null = null;
 	if (supervisorAssignmentsData) {
 		if (supervisorAssignmentsData.state_supervisor) {
-			selectedSupervisorAssignment = {
+			supervisorAssignment = {
 				type: "state",
 				data: supervisorAssignmentsData.state_supervisor,
 			};
 		} else if (supervisorAssignmentsData.lga_supervisor) {
-			selectedSupervisorAssignment = {
+			supervisorAssignment = {
 				type: "lga",
 				data: supervisorAssignmentsData.lga_supervisor,
 			};
 		} else if (supervisorAssignmentsData.ward_supervisor) {
-			selectedSupervisorAssignment = {
+			supervisorAssignment = {
 				type: "ward",
 				data: supervisorAssignmentsData.ward_supervisor,
 			};
@@ -79,12 +77,11 @@ export const useAssignments = () => {
 	}
 
 	// 4. Resolve effective polling unit ID (assigned unit takes precedence over profile default)
-	const pollingUnitId = selectedAssignment?.polling_unit_id ?? user?.polling_unit_id ?? null;
+	const pollingUnitId = pollingUnitAssignment?.polling_unit_id ?? user?.polling_unit_id ?? null;
 
 	return {
-		selectedAssignment,
-		assignments,
-		selectedSupervisorAssignment,
+		pollingUnitAssignment,
+		supervisorAssignment,
 		rawSupervisorAssignments: supervisorAssignmentsData,
 		pollingUnitId,
 		isLoading,

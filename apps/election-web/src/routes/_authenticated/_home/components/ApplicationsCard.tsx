@@ -24,8 +24,8 @@ import { Target } from "lucide-react";
 export function ApplicationsCard() {
   const navigate = useNavigate();
   const user = useUser();
-  const { selectedAssignment, selectedSupervisorAssignment, isLoading: isAssignmentsLoading } = useAssignments();
-  const hasAssignedRole = Boolean(selectedAssignment || selectedSupervisorAssignment);
+  const { pollingUnitAssignment, supervisorAssignment, isLoading: isAssignmentsLoading } = useAssignments();
+  const hasAssignedRole = Boolean(pollingUnitAssignment || supervisorAssignment);
 
   // Query polling agent applications submitted by the current user
   const { data: applicationsData } = useQuery({
@@ -63,9 +63,9 @@ export function ApplicationsCard() {
 
   // Location hierarchy labels from active application or assignment fallback
   const firstApp = activeApps[0];
-  const state = firstApp?.state_name || selectedAssignment?.state_name || "State";
-  const lga = firstApp?.lga_name || selectedAssignment?.lga_name || "LGA";
-  const ward = firstApp?.ward_name || selectedAssignment?.ward_name || "Ward";
+  const state = firstApp?.state_name || pollingUnitAssignment?.state_name || "State";
+  const lga = firstApp?.lga_name || pollingUnitAssignment?.lga_name || "LGA";
+  const ward = firstApp?.ward_name || pollingUnitAssignment?.ward_name || "Ward";
 
   // STATE 1: User has existing active applications -> Show summary and preview CTA
   if (appCount > 0) {

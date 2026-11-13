@@ -44,9 +44,9 @@ export function WardElectionSupervisorPage() {
   const navigate = useNavigate();
 
   const { selectedElectionGroup, selectedElection } = useElection();
-  const { selectedSupervisorAssignment } = useAssignments();
+  const { supervisorAssignment } = useAssignments();
 
-  const currentAssignment = selectedSupervisorAssignment?.data;
+  const currentAssignment = supervisorAssignment?.data;
 
   // Active supervisor tab (Earnings vs Sub-unit agent tasks)
   const [activeTab, setActiveTab] = useState<"Earnings" | "Tasks">("Earnings");

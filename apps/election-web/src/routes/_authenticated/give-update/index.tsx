@@ -51,7 +51,7 @@ function GiveUpdate() {
   // Retrieve user, active election, and assigned polling unit
   const user = useUser();
   const { selectedElectionGroup } = useElection();
-  const { selectedAssignment: currentAssignment } = useAssignments();
+  const { pollingUnitAssignment: currentAssignment } = useAssignments();
 
   const assignmentId = currentAssignment?.id;
 

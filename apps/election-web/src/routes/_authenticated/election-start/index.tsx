@@ -51,8 +51,8 @@ function ElectionStart() {
 
   // Retrieve current active election group and agent assignment
   const { selectedElectionGroup } = useElection();
-  const { selectedAssignment } = useAssignments();
-  const effectiveAssignmentId = assignmentId || selectedAssignment?.id;
+  const { pollingUnitAssignment } = useAssignments();
+  const effectiveAssignmentId = assignmentId || pollingUnitAssignment?.id;
 
   // Query potential monetary payout reward for completing the "election_start" task
   const { data: payoutRes } = useQuery({

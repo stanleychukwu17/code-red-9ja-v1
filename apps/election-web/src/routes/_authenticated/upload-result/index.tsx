@@ -76,10 +76,10 @@ function UploadResultFlow() {
   const search = Route.useSearch() as any;
   const user = useUser();
   const { selectedElectionGroup } = useElection();
-  const { selectedAssignment, pollingUnitId } = useAssignments();
+  const { pollingUnitAssignment, pollingUnitId } = useAssignments();
   const { party } = useUserParty();
 
-  const assignmentId = selectedAssignment?.id;
+  const assignmentId = pollingUnitAssignment?.id;
 
   // Query potential compensation for result upload task
   const { data: payoutRes } = useQuery({
@@ -220,8 +220,8 @@ function UploadResultFlow() {
         result_sheet_image_url: imageUrl,
       };
 
-      if (selectedAssignment?.id) {
-        payload.assignment_id = selectedAssignment.id;
+      if (pollingUnitAssignment?.id) {
+        payload.assignment_id = pollingUnitAssignment.id;
       }
 
       const res = await submitPollingUnitResult({ data: payload });

@@ -31,21 +31,21 @@ export const Route = createFileRoute("/_authenticated/_home/")({
  * election results, incident alerts, and agent status broadcasts.
  */
 function RouteComponent() {
-  const { selectedSupervisorAssignment, selectedAssignment } = useAssignments();
+  const { supervisorAssignment, pollingUnitAssignment } = useAssignments();
   const { selectedElection } = useElection();
 
   // Connect real-time WebSocket updates for election supervisor & voter dashboard
   useElectionRealtime({
     electionId: selectedElection?.id,
     stateId:
-      selectedSupervisorAssignment?.data?.state_id ??
-      selectedAssignment?.state_id,
+      supervisorAssignment?.data?.state_id ??
+      pollingUnitAssignment?.state_id,
     lgaId:
-      selectedSupervisorAssignment?.data?.lga_id ?? selectedAssignment?.lga_id,
+      supervisorAssignment?.data?.lga_id ?? pollingUnitAssignment?.lga_id,
     wardId:
-      selectedSupervisorAssignment?.data?.ward_id ??
-      selectedAssignment?.ward_id,
-    pollingUnitId: selectedAssignment?.polling_unit_id,
+      supervisorAssignment?.data?.ward_id ??
+      pollingUnitAssignment?.ward_id,
+    pollingUnitId: pollingUnitAssignment?.polling_unit_id,
     clientConfig: {
       key: import.meta.env.VITE_PUSHER_KEY,
       cluster: import.meta.env.VITE_PUSHER_CLUSTER || "eu",
@@ -55,15 +55,15 @@ function RouteComponent() {
   let content = <GeneralPage />;
 
   // Branch 1: Regional Supervisors (State, LGA, or Ward)
-  if (selectedSupervisorAssignment) {
-    if (selectedSupervisorAssignment.type === "state") {
+  if (supervisorAssignment) {
+    if (supervisorAssignment.type === "state") {
       content = <StateElectionSupervisorPage />;
-    } else if (selectedSupervisorAssignment.type === "lga") {
+    } else if (supervisorAssignment.type === "lga") {
       content = <LGAElectionSupervisorPage />;
-    } else if (selectedSupervisorAssignment.type === "ward") {
+    } else if (supervisorAssignment.type === "ward") {
       content = <WardElectionSupervisorPage />;
     }
-  } else if (selectedAssignment) {
+  } else if (pollingUnitAssignment) {
     content = <PollingAgentPage />;
   }
 

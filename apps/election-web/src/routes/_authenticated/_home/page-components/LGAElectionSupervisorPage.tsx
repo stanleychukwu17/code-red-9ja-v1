@@ -44,9 +44,9 @@ export function LGAElectionSupervisorPage() {
   const navigate = useNavigate();
 
   const { selectedElectionGroup, selectedElection } = useElection();
-  const { selectedSupervisorAssignment } = useAssignments();
+  const { supervisorAssignment } = useAssignments();
 
-  const currentAssignment = selectedSupervisorAssignment?.data;
+  const currentAssignment = supervisorAssignment?.data;
 
   // Active supervisor tab (Earnings vs Ward supervisor task tracker)
   const [activeTab, setActiveTab] = useState<"Earnings" | "Tasks">("Earnings");

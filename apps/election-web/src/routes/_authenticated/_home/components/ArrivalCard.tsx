@@ -29,9 +29,9 @@ interface ArrivalCardProps {
 export function ArrivalCard({ onArrivedClick }: ArrivalCardProps) {
   // Retrieve current election group, assignment details, and user party from modular hooks
   const { selectedElectionGroup } = useElection();
-  const { selectedAssignment } = useAssignments();
+  const { pollingUnitAssignment } = useAssignments();
   const { party } = useUserParty();
-  const assignmentId = selectedAssignment?.id;
+  const assignmentId = pollingUnitAssignment?.id;
 
   // Query potential payout reward for completing the "attendance" arrival milestone
   const { data: potentialPayout } = useQuery({
@@ -71,10 +71,10 @@ export function ArrivalCard({ onArrivedClick }: ArrivalCardProps) {
   });
 
   // Extract assigned location hierarchy labels with safe fallbacks
-  const pollingUnit = selectedAssignment?.polling_unit_name || "Polling Unit";
-  const state = selectedAssignment?.state_name || "State";
-  const lga = selectedAssignment?.lga_name || "LGA";
-  const ward = selectedAssignment?.ward_name || "Ward";
+  const pollingUnit = pollingUnitAssignment?.polling_unit_name || "Polling Unit";
+  const state = pollingUnitAssignment?.state_name || "State";
+  const lga = pollingUnitAssignment?.lga_name || "LGA";
+  const ward = pollingUnitAssignment?.ward_name || "Ward";
 
   // Format payout as currency (defaulting to ₦1,200 placeholder if un-configured)
   const formattedPayout =

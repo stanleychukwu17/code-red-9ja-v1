@@ -71,7 +71,7 @@ func (s *filesService) ConfirmUpload(ctx context.Context, arg queries.ConfirmUpl
 
 	// If upload succeeded, schedule a 24-hour self-destruct check.
 	// If the user abandons the form, it will automatically be cleaned up from R2 and the database.
-	if arg.Success && s.distributor != nil {
+	if arg.Success {
 		if scheduleErr := s.distributor.DistributeTaskCheckOrphanFile(
 			ctx,
 			&worker.CheckOrphanFilePayload{FileID: file.ID},

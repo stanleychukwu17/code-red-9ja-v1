@@ -36,11 +36,11 @@ interface DidYouVoteCardProps {
  */
 export function DidYouVoteCard({ onYesClick, onNoClick }: DidYouVoteCardProps) {
   const { selectedElectionGroup } = useElection();
-  const { selectedAssignment } = useAssignments();
+  const { pollingUnitAssignment } = useAssignments();
   const { party } = useUserParty();
   const navigate = useNavigate();
   const [isNotVotingDrawerOpen, setIsNotVotingDrawerOpen] = useState(false);
-  const assignmentId = selectedAssignment?.id;
+  const assignmentId = pollingUnitAssignment?.id;
 
   // Query potential payout reward for voting participation or voter mobilization
   const { data: potentialPayout } = useQuery({
@@ -115,7 +115,7 @@ export function DidYouVoteCard({ onYesClick, onNoClick }: DidYouVoteCardProps) {
     <>
       <GreyCardWrapper>
         {/* Optional top row displaying task potential payout */}
-        {selectedAssignment && (
+        {pollingUnitAssignment && (
           <GreyCardTopRow
             title={"Potential payout"}
             subtitle={formattedPayout}

@@ -45,8 +45,8 @@ function ArrivalVideo() {
 
   // Retrieve current election schedule and agent's active assignment
   const { selectedElectionGroup } = useElection();
-  const { selectedAssignment } = useAssignments();
-  const effectiveAssignmentId = assignmentId || selectedAssignment?.id;
+  const { pollingUnitAssignment } = useAssignments();
+  const effectiveAssignmentId = assignmentId || pollingUnitAssignment?.id;
 
   // Fetch the potential monetary payout for completing the "attendance" milestone
   const { data: payoutRes } = useQuery({

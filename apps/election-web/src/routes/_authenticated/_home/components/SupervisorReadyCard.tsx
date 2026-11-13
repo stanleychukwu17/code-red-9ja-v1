@@ -19,10 +19,10 @@ export function SupervisorStartDutyCard({
   onReadyClick,
 }: SupervisorReadyCardProps) {
   // Retrieve active supervisor assignment details from useAssignments hook
-  const { selectedSupervisorAssignment } = useAssignments();
+  const { supervisorAssignment } = useAssignments();
 
-  const data = selectedSupervisorAssignment?.data;
-  const type = selectedSupervisorAssignment?.type;
+  const data = supervisorAssignment?.data;
+  const type = supervisorAssignment?.type;
 
   // Dynamically construct jurisdictional label based on supervisor hierarchy level
   const locationLabel = (() => {

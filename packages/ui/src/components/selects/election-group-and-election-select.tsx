@@ -40,11 +40,19 @@ export const SelectElectionGroupAndElection = ({
   fetchElectionGroups,
   fetchElectionsByGroup,
   onElectionSelect,
+  electionGroups: propElectionGroups,
+  selectedItem: propSelectedItem,
+  queryKey: customQueryKey,
+  queryParams,
 }: SelectProps<ElectionGroup, number> & {
+  electionGroups?: ElectionGroup[];
+  selectedItem?: ElectionGroup;
+  queryKey?: any[];
+  queryParams?: any;
   partyId?: number;
   popoverContentClassName?: string;
   fetchElectionGroups: (args: {
-    data: { active?: boolean; partyId?: number; limit?: number; cursor?: string };
+    data: { active?: boolean; partyId?: number; limit?: number; cursor?: string; includeElections?: boolean };
   }) => Promise<any>;
 
   /** When provided, clicking a group opens step 2 — the elections list. */
@@ -63,7 +71,7 @@ export const SelectElectionGroupAndElection = ({
   const [desktopElectionSearch, setDesktopElectionSearch] = useState("");
   const [mobileElectionSearch, setMobileElectionSearch] = useState("");
 
-  const [selectedItem, setSelectedItem] = useState<ElectionGroup | undefined>(undefined);
+  const [selectedItem, setSelectedItem] = useState<ElectionGroup | undefined>(propSelectedItem);
 
   /**
    * The group the user clicked in step 1.
@@ -72,22 +80,28 @@ export const SelectElectionGroupAndElection = ({
   const [pendingGroup, setPendingGroup] = useState<ElectionGroup | null>(null);
 
   // ─── Groups query ──────────────────────────────────────────────────────────
+  const effectiveQueryKey =
+    customQueryKey || ["election-groups-select", queryParams || { active: true }];
+
   const { data: groupsRaw, isLoading } = useQuery({
-    queryKey: ["election-groups-select", { active: true }],
+    queryKey: effectiveQueryKey,
     queryFn: async () => {
       const res = await fetchElectionGroups({
-        data: { active: true, limit: 100 },
+        data: queryParams || { active: true, limit: 100 },
       });
       if (res && res.success && res.data) return res;
       throw new Error(res?.message || "Failed to fetch election groups");
     },
+    enabled: !propElectionGroups,
     staleTime: Infinity,
     gcTime: Infinity,
   });
 
-  const electionGroups: ElectionGroup[] = groupsRaw?.data?.election_groups || [];
+  const electionGroups: ElectionGroup[] =
+    propElectionGroups || groupsRaw?.data?.election_groups || [];
 
   // ─── Elections query (step 2) ──────────────────────────────────────────────
+  const hasNestedElections = Boolean((pendingGroup as any)?.elections?.length);
   const { data: electionsRaw, isLoading: isLoadingElections } = useQuery({
     queryKey: ["elections-by-group-select", pendingGroup?.fake_id ?? pendingGroup?.id],
     queryFn: async () => {
@@ -97,12 +111,13 @@ export const SelectElectionGroupAndElection = ({
       });
       return res;
     },
-    enabled: !!pendingGroup && !!fetchElectionsByGroup,
+    enabled: !!pendingGroup && !!fetchElectionsByGroup && !hasNestedElections,
     staleTime: Infinity,
     gcTime: Infinity,
   });
 
-  const elections: Election[] = electionsRaw?.data?.elections || [];
+  const elections: Election[] =
+    (pendingGroup as any)?.elections || electionsRaw?.data?.elections || [];
 
   const electionStatus = isLoadingElections
     ? ("LoadingFirstPage" as const)
@@ -110,7 +125,9 @@ export const SelectElectionGroupAndElection = ({
 
   // ─── Effects ──────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (selectedId) {
+    if (propSelectedItem) {
+      setSelectedItem(propSelectedItem);
+    } else if (selectedId) {
       const eg = electionGroups.find(
         (eg) => String(eg.id) === String(selectedId),
       );
@@ -118,7 +135,7 @@ export const SelectElectionGroupAndElection = ({
     } else {
       setSelectedItem(undefined);
     }
-  }, [selectedId, electionGroups]);
+  }, [selectedId, electionGroups, propSelectedItem]);
 
   // Reset everything when the popover/drawer closes
   useEffect(() => {

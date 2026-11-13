@@ -35,10 +35,10 @@ export function ElectionStatusCard({
 }: ElectionStatusCardProps) {
   // Read contextual election session, user assignments, and party info from modular hooks
   const { selectedElectionGroup } = useElection();
-  const { selectedAssignment } = useAssignments();
+  const { pollingUnitAssignment } = useAssignments();
   const { party } = useUserParty();
 
-  const assignmentId = selectedAssignment?.id;
+  const assignmentId = pollingUnitAssignment?.id;
   // Switch task milestone between election kickoff and election conclusion
   const taskType = hasStarted ? "election_end" : "election_start";
 

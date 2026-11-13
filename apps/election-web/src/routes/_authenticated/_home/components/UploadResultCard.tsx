@@ -29,9 +29,9 @@ interface UploadResultCardProps {
 export function UploadResultCard({ onClick }: UploadResultCardProps) {
   // Read active election group, assignment, and political party from modular hooks
   const { selectedElectionGroup } = useElection();
-  const { selectedAssignment } = useAssignments();
+  const { pollingUnitAssignment } = useAssignments();
   const { party } = useUserParty();
-  const assignmentId = selectedAssignment?.id;
+  const assignmentId = pollingUnitAssignment?.id;
 
   // Query potential payout reward for completing the "results" upload task
   const { data: potentialPayout } = useQuery({
