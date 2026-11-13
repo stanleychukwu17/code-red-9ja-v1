@@ -2,12 +2,13 @@
  * @file Parallel Vote Audit & Discrepancy Matrix
  * @description Real-time comparison between party agent primary Form EC8A figures,
  * official INEC scraper portal data, and ward/LGA collation aggregates.
+ * Supports both Light and Dark themes.
  */
 
 import { createFileRoute, useParams } from "@tanstack/react-router";
 import { getPageHeader } from "#/lib/shared/meta";
 import { useState } from "react";
-import { AlertTriangle, CheckCircle2, Search, Filter, ShieldCheck, Eye } from "lucide-react";
+import { AlertTriangle, Search } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/$partyShortName/discrepancies")({
   head: () =>
@@ -101,14 +102,14 @@ function DiscrepancyMatrixView() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-neutral-800 pb-5">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-border pb-5">
         <div>
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 text-xs font-semibold mb-2">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 text-xs font-semibold mb-2">
             <AlertTriangle className="size-3.5" />
             <span>Parallel Dataset &bull; Forensic Audit</span>
           </div>
-          <h1 className="text-2xl font-black text-white">Parallel Audit &amp; Discrepancy Matrix</h1>
-          <p className="text-xs text-neutral-400 mt-1">
+          <h1 className="text-2xl font-black text-foreground">Parallel Audit &amp; Discrepancy Matrix</h1>
+          <p className="text-xs text-muted-foreground mt-1">
             Automated divergence detection between Party Polling Unit Agent EC8A uploads and INEC Scraper extractions.
           </p>
         </div>
@@ -118,10 +119,10 @@ function DiscrepancyMatrixView() {
             <button
               key={t}
               onClick={() => setFilterType(t)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-colors ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-colors cursor-pointer ${
                 filterType === t
-                  ? "bg-amber-500 text-neutral-950"
-                  : "bg-neutral-900 text-neutral-400 hover:text-white border border-neutral-800"
+                  ? "bg-primary text-primary-foreground font-bold shadow-xs"
+                  : "bg-muted text-muted-foreground hover:text-foreground border border-border"
               }`}
             >
               {t}
@@ -132,47 +133,47 @@ function DiscrepancyMatrixView() {
 
       {/* Discrepancy Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="p-4 rounded-2xl bg-neutral-900/70 border border-neutral-800 space-y-1">
-          <span className="text-xs text-neutral-400">Total Flagged Units</span>
-          <p className="text-2xl font-black text-white">142</p>
-          <span className="text-[10px] text-neutral-500">Across 18 States</span>
+        <div className="p-4 rounded-2xl bg-card border border-border space-y-1 shadow-xs">
+          <span className="text-xs text-muted-foreground">Total Flagged Units</span>
+          <p className="text-2xl font-black text-foreground">142</p>
+          <span className="text-[10px] text-muted-foreground">Across 18 States</span>
         </div>
-        <div className="p-4 rounded-2xl bg-neutral-900/70 border border-neutral-800 space-y-1">
-          <span className="text-xs text-neutral-400">Critical Figure Mismatches</span>
-          <p className="text-2xl font-black text-red-400">48</p>
-          <span className="text-[10px] text-red-500/80">Affecting &gt; 18,000 votes</span>
+        <div className="p-4 rounded-2xl bg-card border border-border space-y-1 shadow-xs">
+          <span className="text-xs text-muted-foreground">Critical Figure Mismatches</span>
+          <p className="text-2xl font-black text-red-600 dark:text-red-400">48</p>
+          <span className="text-[10px] text-red-600/80 dark:text-red-400/80">Affecting &gt; 18,000 votes</span>
         </div>
-        <div className="p-4 rounded-2xl bg-neutral-900/70 border border-neutral-800 space-y-1">
-          <span className="text-xs text-neutral-400">Over-voting Detected</span>
-          <p className="text-2xl font-black text-amber-400">31</p>
-          <span className="text-[10px] text-amber-500/80">Votes &gt; BVAS Accreditation</span>
+        <div className="p-4 rounded-2xl bg-card border border-border space-y-1 shadow-xs">
+          <span className="text-xs text-muted-foreground">Over-voting Detected</span>
+          <p className="text-2xl font-black text-amber-600 dark:text-amber-400">31</p>
+          <span className="text-[10px] text-amber-600/80 dark:text-amber-400/80">Votes &gt; BVAS Accreditation</span>
         </div>
-        <div className="p-4 rounded-2xl bg-neutral-900/70 border border-neutral-800 space-y-1">
-          <span className="text-xs text-neutral-400">Reconciled / Cleared</span>
-          <p className="text-2xl font-black text-emerald-400">63</p>
-          <span className="text-[10px] text-emerald-500/80">Verified by Collation Agent</span>
+        <div className="p-4 rounded-2xl bg-card border border-border space-y-1 shadow-xs">
+          <span className="text-xs text-muted-foreground">Reconciled / Cleared</span>
+          <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400">63</p>
+          <span className="text-[10px] text-emerald-600/80 dark:text-emerald-400/80">Verified by Collation Agent</span>
         </div>
       </div>
 
       {/* Discrepancy Table */}
-      <div className="rounded-2xl bg-neutral-900/70 border border-neutral-800 p-5 space-y-4">
+      <div className="rounded-2xl bg-card border border-border p-5 space-y-4 shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <h2 className="text-base font-bold text-white">Active Irregularity Docket</h2>
+          <h2 className="text-base font-bold text-foreground">Active Irregularity Docket</h2>
           <div className="relative w-full sm:w-72">
-            <Search className="size-4 text-neutral-400 absolute left-3 top-2.5" />
+            <Search className="size-4 text-muted-foreground absolute left-3 top-2.5" />
             <input
               type="text"
               placeholder="Search by PU code, State, LGA..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-neutral-950 border border-neutral-800 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder:text-neutral-500 outline-none focus:border-amber-500"
+              className="w-full bg-background border border-border rounded-xl pl-9 pr-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-primary"
             />
           </div>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="border-b border-neutral-800 text-neutral-400 uppercase tracking-wider text-[10px]">
+            <thead className="border-b border-border text-muted-foreground uppercase tracking-wider text-[10px]">
               <tr>
                 <th className="py-2.5 px-3">Docket ID</th>
                 <th className="py-2.5 px-3">Location / PU Code</th>
@@ -183,41 +184,41 @@ function DiscrepancyMatrixView() {
                 <th className="py-2.5 px-3 text-right">Action / Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-neutral-800/60 text-neutral-200">
+            <tbody className="divide-y divide-border text-foreground">
               {filtered.map((item) => (
-                <tr key={item.id} className="hover:bg-neutral-800/40 transition-colors">
-                  <td className="py-3 px-3 font-mono font-bold text-neutral-400">{item.id}</td>
+                <tr key={item.id} className="hover:bg-muted/40 transition-colors">
+                  <td className="py-3 px-3 font-mono font-bold text-muted-foreground">{item.id}</td>
                   <td className="py-3 px-3">
-                    <span className="font-bold text-white block">{item.puName}</span>
-                    <span className="text-[11px] font-mono text-neutral-400 block">
+                    <span className="font-bold text-foreground block">{item.puName}</span>
+                    <span className="text-[11px] font-mono text-muted-foreground block">
                       {item.state} &bull; {item.lga} &bull; {item.puCode}
                     </span>
                   </td>
-                  <td className="py-3 px-3 font-mono font-bold text-emerald-400">{item.agentEC8A}</td>
-                  <td className="py-3 px-3 font-mono font-bold text-sky-400">{item.inecGrabber}</td>
+                  <td className="py-3 px-3 font-mono font-bold text-emerald-600 dark:text-emerald-400">{item.agentEC8A}</td>
+                  <td className="py-3 px-3 font-mono font-bold text-sky-600 dark:text-sky-400">{item.inecGrabber}</td>
                   <td className="py-3 px-3 font-mono">
                     {item.diff === 0 ? (
-                      <span className="text-neutral-400">0</span>
+                      <span className="text-muted-foreground">0</span>
                     ) : (
-                      <span className="font-bold text-red-400">{item.diff}</span>
+                      <span className="font-bold text-red-600 dark:text-red-400">{item.diff}</span>
                     )}
                   </td>
                   <td className="py-3 px-3 max-w-xs">
                     <span
                       className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider mb-1 ${
                         item.severity === "CRITICAL"
-                          ? "bg-red-950/60 text-red-400 border border-red-800/60"
+                          ? "bg-red-500/10 text-red-700 dark:text-red-400 border border-red-500/20"
                           : item.severity === "HIGH"
-                            ? "bg-amber-950/60 text-amber-400 border border-amber-800/60"
-                            : "bg-blue-950/60 text-blue-400 border border-blue-800/60"
+                            ? "bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20"
+                            : "bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-500/20"
                       }`}
                     >
                       {item.severity}
                     </span>
-                    <p className="text-[11px] text-neutral-300 line-clamp-1">{item.reason}</p>
+                    <p className="text-[11px] text-muted-foreground line-clamp-1">{item.reason}</p>
                   </td>
                   <td className="py-3 px-3 text-right">
-                    <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold bg-neutral-800 text-neutral-300">
+                    <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold bg-muted text-foreground border border-border">
                       {item.status}
                     </span>
                   </td>

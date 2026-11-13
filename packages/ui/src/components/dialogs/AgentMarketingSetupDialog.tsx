@@ -1,13 +1,13 @@
 import * as React from "react";
 import { useMutation } from "@tanstack/react-query";
-import { Button } from "@repo/ui/components/button";
+import { Button } from "../button";
 import {
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogPadding,
-} from "@repo/ui/components/dialog";
+} from "../dialog";
 import { cn } from "../../lib/utils";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { SelectElectionGroup } from "../selects/election-group-select";

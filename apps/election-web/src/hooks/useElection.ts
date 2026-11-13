@@ -14,9 +14,15 @@ import {
  */
 export const isElectionDay = (electionDate?: string | null): boolean => {
 	if (!electionDate) return false;
-	const today = new Date().toISOString().split("T")[0];
-	const d = new Date(electionDate).toISOString().split("T")[0];
-	return today === d;
+	try {
+		const parsed = new Date(electionDate);
+		if (isNaN(parsed.getTime())) return false;
+		const today = new Date().toISOString().split("T")[0];
+		const d = parsed.toISOString().split("T")[0];
+		return today === d;
+	} catch {
+		return false;
+	}
 };
 
 /**

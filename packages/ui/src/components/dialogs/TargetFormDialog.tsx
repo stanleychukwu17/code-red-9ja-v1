@@ -1,9 +1,9 @@
 import { useEffect } from "react";
-import { Button } from "@repo/ui/components/button";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogPadding } from "@repo/ui/components/dialog";
-import { Input } from "@repo/ui/components/input";
+import { Button } from "../button";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogPadding } from "../dialog";
+import { Input } from "../input";
 import { useForm } from "@tanstack/react-form";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@repo/ui/components/accordion";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../accordion";
 import { useQuery, useMutation } from "@tanstack/react-query";
 
 // Schema representing target quotas for each supervisory/agent tier

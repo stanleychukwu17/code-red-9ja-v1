@@ -90,7 +90,7 @@ export function ManageCandidateTicketDialog({
 
   // Retrieve active tenant party to scope member searches to this party
   const { party } = useUserParty();
-  const userPartyId = party?.id;
+  const userPartyId = party?.id || (data as any)?.party_id || (election as any)?.party_id;
 
   // Active slot being picked via UserFinderCommand: 'candidate' | 'running_mate' | null
   const [targetSlot, setTargetSlot] = useState<"candidate" | "running_mate" | null>(null);
@@ -101,12 +101,17 @@ export function ManageCandidateTicketDialog({
   // Mutation to persist candidate ticket updates on the server
   const saveMutation = useMutation({
     mutationFn: async ({ candidateId, slot }: { candidateId: number; slot: "candidate" | "running_mate" }) => {
+      if (!userPartyId || userPartyId <= 0) {
+        const errorMsg = "Party ID is missing. Please ensure a valid political party is selected before fielding a candidate.";
+        toast.error(errorMsg);
+        throw new Error(errorMsg);
+      }
       // Calls server action with election ID, slot, and updated candidate ID
       const res = await fieldPartyCandidate({
         data: {
           electionId,
           candidateId,
-          partyId: userPartyId || 0,
+          partyId: userPartyId,
           slot,
         },
       });
@@ -128,10 +133,15 @@ export function ManageCandidateTicketDialog({
   // Mutation to remove/unfield candidate from ticket
   const removeMutation = useMutation({
     mutationFn: async ({ slot }: { slot: "candidate" | "running_mate" }) => {
+      if (!userPartyId || userPartyId <= 0) {
+        const errorMsg = "Party ID is missing. Please ensure a valid political party is selected before removing a candidate.";
+        toast.error(errorMsg);
+        throw new Error(errorMsg);
+      }
       const res = await unfieldPartyCandidate({
         data: {
           electionId,
-          partyId: userPartyId || 0,
+          partyId: userPartyId,
           slot,
         },
       });

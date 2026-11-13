@@ -16,17 +16,18 @@ export const Route = createFileRoute("/_authenticated/$partyShortName")({
     const roles: string[] = userDetails?.roles || (userDetails?.role ? [userDetails.role] : []);
     const isAdmin = roles.includes("admin") || roles.includes("super_admin");
 
-    // 1. If pathParty is missing or empty
-    if (!pathParty) {
-      if (isAdmin) {
-        throw redirect({ to: APP_URL.parties });
-      }
-
+    // 1. If pathParty is missing, empty, or a reserved keyword (e.g. "home", "dashboard", "parties", "party")
+    const isReserved = !pathParty || ["home", "dashboard", "parties", "party"].includes(pathParty.toLowerCase());
+    if (isReserved) {
       if (userParty) {
         throw redirect({
           to: APP_URL.partyHome,
           params: { partyShortName: userParty },
         });
+      }
+
+      if (isAdmin) {
+        throw redirect({ to: APP_URL.parties });
       }
 
       throw redirect({ to: APP_URL.auth.login });

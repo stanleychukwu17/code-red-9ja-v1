@@ -13,6 +13,7 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as AuthenticatedPartiesRouteImport } from './routes/_authenticated/parties'
+import { Route as AuthenticatedHomeRouteImport } from './routes/_authenticated/home'
 import { Route as AuthenticatedPartyShortNameRouteImport } from './routes/_authenticated/$partyShortName'
 import { Route as AuthenticatedPartyShortNameWalletRouteImport } from './routes/_authenticated/$partyShortName/wallet'
 import { Route as AuthenticatedPartyShortNameUsersRouteImport } from './routes/_authenticated/$partyShortName/users'
@@ -76,6 +77,11 @@ const AuthLoginRoute = AuthLoginRouteImport.update({
 const AuthenticatedPartiesRoute = AuthenticatedPartiesRouteImport.update({
   id: '/parties',
   path: '/parties',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedHomeRoute = AuthenticatedHomeRouteImport.update({
+  id: '/home',
+  path: '/home',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedPartyShortNameRoute =
@@ -352,6 +358,7 @@ const AuthenticatedPartyShortNameHomeResultsMediaOnlyRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$partyShortName': typeof AuthenticatedPartyShortNameRouteWithChildren
+  '/home': typeof AuthenticatedHomeRoute
   '/parties': typeof AuthenticatedPartiesRoute
   '/auth/login': typeof AuthLoginRoute
   '/$partyShortName/agents': typeof AuthenticatedPartyShortNameAgentsRouteWithChildren
@@ -402,6 +409,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$partyShortName': typeof AuthenticatedPartyShortNameRouteWithChildren
+  '/home': typeof AuthenticatedHomeRoute
   '/parties': typeof AuthenticatedPartiesRoute
   '/auth/login': typeof AuthLoginRoute
   '/$partyShortName/bodies': typeof AuthenticatedPartyShortNameBodiesRoute
@@ -445,6 +453,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/_authenticated/$partyShortName': typeof AuthenticatedPartyShortNameRouteWithChildren
+  '/_authenticated/home': typeof AuthenticatedHomeRoute
   '/_authenticated/parties': typeof AuthenticatedPartiesRoute
   '/auth/login': typeof AuthLoginRoute
   '/_authenticated/$partyShortName/agents': typeof AuthenticatedPartyShortNameAgentsRouteWithChildren
@@ -497,6 +506,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/$partyShortName'
+    | '/home'
     | '/parties'
     | '/auth/login'
     | '/$partyShortName/agents'
@@ -547,6 +557,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/$partyShortName'
+    | '/home'
     | '/parties'
     | '/auth/login'
     | '/$partyShortName/bodies'
@@ -589,6 +600,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/_authenticated/$partyShortName'
+    | '/_authenticated/home'
     | '/_authenticated/parties'
     | '/auth/login'
     | '/_authenticated/$partyShortName/agents'
@@ -671,6 +683,13 @@ declare module '@tanstack/react-router' {
       path: '/parties'
       fullPath: '/parties'
       preLoaderRoute: typeof AuthenticatedPartiesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/home': {
+      id: '/_authenticated/home'
+      path: '/home'
+      fullPath: '/home'
+      preLoaderRoute: typeof AuthenticatedHomeRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/$partyShortName': {
@@ -1257,12 +1276,14 @@ const AuthenticatedPartyShortNameRouteWithChildren =
 
 interface AuthenticatedRouteChildren {
   AuthenticatedPartyShortNameRoute: typeof AuthenticatedPartyShortNameRouteWithChildren
+  AuthenticatedHomeRoute: typeof AuthenticatedHomeRoute
   AuthenticatedPartiesRoute: typeof AuthenticatedPartiesRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedPartyShortNameRoute:
     AuthenticatedPartyShortNameRouteWithChildren,
+  AuthenticatedHomeRoute: AuthenticatedHomeRoute,
   AuthenticatedPartiesRoute: AuthenticatedPartiesRoute,
 }
 

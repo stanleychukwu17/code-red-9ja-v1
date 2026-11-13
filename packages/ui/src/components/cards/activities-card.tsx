@@ -1,5 +1,5 @@
-import { AppAvatar } from "@repo/ui/components/avatar";
-import { HeaderTabs } from "@repo/ui/components/custom/AdminLayouts";
+import { AppAvatar } from "../avatar";
+import { HeaderTabs } from "../custom/AdminLayouts";
 import { AlertTriangle } from "lucide-react";
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";

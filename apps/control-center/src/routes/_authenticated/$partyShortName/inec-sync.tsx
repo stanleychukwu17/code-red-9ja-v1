@@ -2,6 +2,7 @@
  * @file INEC Scraper Command & Sync Center
  * @description Operational interface for authorized party officials to inspect INEC scraper daemons,
  * trigger on-demand syncs for target states/races, and view real-time scrape logs.
+ * Supports both Light and Dark themes.
  */
 
 import { createFileRoute, useParams } from "@tanstack/react-router";
@@ -18,10 +19,8 @@ import {
   RefreshCw,
   Play,
   Pause,
-  Server,
   Terminal,
   CheckCircle2,
-  AlertCircle,
   Database,
   Cpu,
 } from "lucide-react";
@@ -104,14 +103,14 @@ function INECScraperSyncView() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-neutral-800 pb-5">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-border pb-5">
         <div>
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-semibold mb-2">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 text-xs font-semibold mb-2">
             <RefreshCw className="size-3.5" />
             <span>Official Portal Pipeline</span>
           </div>
-          <h1 className="text-2xl font-black text-white">INEC Scraper Command &amp; Ingestion</h1>
-          <p className="text-xs text-neutral-400 mt-1">
+          <h1 className="text-2xl font-black text-foreground">INEC Scraper Command &amp; Ingestion</h1>
+          <p className="text-xs text-muted-foreground mt-1">
             Trigger on-demand scraping, review AI document extraction, and verify sync logs from the official INEC IReV portal.
           </p>
         </div>
@@ -121,7 +120,7 @@ function INECScraperSyncView() {
             if (activeGrabberId) syncMutation.mutate(activeGrabberId);
           }}
           disabled={!activeGrabberId || syncMutation.isPending}
-          className="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-neutral-950 font-bold text-xs flex items-center gap-2 transition-all shadow-md shadow-emerald-500/10"
+          className="px-4 py-2.5 rounded-xl bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground font-bold text-xs flex items-center gap-2 transition-all shadow-xs cursor-pointer"
         >
           <RefreshCw className={`size-3.5 ${syncMutation.isPending ? "animate-spin" : ""}`} />
           <span>Sync Selected Scraper Now</span>
@@ -133,12 +132,12 @@ function INECScraperSyncView() {
         {/* Scraper List (1 col) */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider">
+            <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
               Scraper Daemons ({grabbers.length})
             </h3>
             <button
               onClick={() => refetch()}
-              className="text-[11px] text-emerald-400 hover:text-emerald-300 font-semibold"
+              className="text-[11px] text-primary hover:underline font-semibold cursor-pointer"
             >
               Refresh
             </button>
@@ -147,11 +146,11 @@ function INECScraperSyncView() {
           {isLoading ? (
             <div className="space-y-3">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="h-24 rounded-2xl bg-neutral-900/60 border border-neutral-800 animate-pulse" />
+                <div key={i} className="h-24 rounded-2xl bg-card border border-border animate-pulse shadow-xs" />
               ))}
             </div>
           ) : grabbers.length === 0 ? (
-            <div className="p-8 rounded-2xl bg-neutral-900/40 border border-neutral-800 text-center text-xs text-neutral-400">
+            <div className="p-8 rounded-2xl bg-card border border-border text-center text-xs text-muted-foreground shadow-xs">
               No active scraper instances found.
             </div>
           ) : (
@@ -163,39 +162,39 @@ function INECScraperSyncView() {
                 <div
                   key={g.id}
                   onClick={() => setSelectedGrabberId(g.id)}
-                  className={`p-4 rounded-2xl border transition-all cursor-pointer space-y-2 ${
+                  className={`p-4 rounded-2xl border transition-all cursor-pointer space-y-2 shadow-xs ${
                     isSelected
-                      ? "bg-neutral-900 border-emerald-500/60 shadow-lg shadow-emerald-500/5"
-                      : "bg-neutral-900/60 border-neutral-800 hover:border-neutral-700"
+                      ? "bg-card border-primary ring-1 ring-primary/40"
+                      : "bg-card border-border hover:border-border/80 hover:bg-muted/30"
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-white truncate max-w-[180px]">
+                    <span className="text-xs font-bold text-foreground truncate max-w-[180px]">
                       {g.name || g.title || `INEC Grabber #${g.id}`}
                     </span>
                     <span
                       className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
                         isPaused
-                          ? "bg-amber-950/40 text-amber-400 border border-amber-800/50"
-                          : "bg-emerald-950/40 text-emerald-400 border border-emerald-800/50"
+                          ? "bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20"
+                          : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20"
                       }`}
                     >
                       {isPaused ? "Paused" : "Running"}
                     </span>
                   </div>
 
-                  <div className="text-[11px] text-neutral-400 flex items-center justify-between">
+                  <div className="text-[11px] text-muted-foreground flex items-center justify-between">
                     <span>Scope: {g.scope || "Presidential / National"}</span>
-                    <span className="font-mono">{g.total_scraped || 0} sheets</span>
+                    <span className="font-mono text-foreground font-semibold">{g.total_scraped || 0} sheets</span>
                   </div>
 
-                  <div className="pt-2 flex items-center justify-between border-t border-neutral-800/60 text-xs">
+                  <div className="pt-2 flex items-center justify-between border-t border-border text-xs">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         togglePauseMutation.mutate(g.id);
                       }}
-                      className="text-neutral-400 hover:text-white flex items-center gap-1 text-[11px]"
+                      className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-[11px] cursor-pointer"
                     >
                       {isPaused ? <Play className="size-3" /> : <Pause className="size-3" />}
                       <span>{isPaused ? "Resume" : "Pause"}</span>
@@ -207,7 +206,7 @@ function INECScraperSyncView() {
                         syncMutation.mutate(g.id);
                       }}
                       disabled={syncMutation.isPending}
-                      className="text-emerald-400 hover:text-emerald-300 font-semibold flex items-center gap-1 text-[11px]"
+                      className="text-primary hover:underline font-semibold flex items-center gap-1 text-[11px] cursor-pointer"
                     >
                       <RefreshCw className="size-3" />
                       <span>Sync</span>
@@ -220,21 +219,21 @@ function INECScraperSyncView() {
         </div>
 
         {/* Live Terminal & Logs (2 cols) */}
-        <div className="lg:col-span-2 rounded-2xl bg-neutral-900/80 border border-neutral-800 p-5 flex flex-col justify-between space-y-4">
-          <div className="flex items-center justify-between border-b border-neutral-800 pb-3">
+        <div className="lg:col-span-2 rounded-2xl bg-card border border-border p-5 flex flex-col justify-between space-y-4 shadow-xs">
+          <div className="flex items-center justify-between border-b border-border pb-3">
             <div className="flex items-center gap-2">
-              <Terminal className="size-4 text-emerald-400" />
-              <h3 className="text-xs font-bold text-white uppercase tracking-wider">
+              <Terminal className="size-4 text-primary" />
+              <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">
                 Live Ingestion Stream
               </h3>
             </div>
             {isLogsFetching && (
-              <span className="text-[10px] text-neutral-400 font-mono animate-pulse">Streaming...</span>
+              <span className="text-[10px] text-muted-foreground font-mono animate-pulse">Streaming...</span>
             )}
           </div>
 
           {/* Terminal Window */}
-          <div className="h-96 rounded-xl bg-neutral-950 border border-neutral-800/80 p-4 font-mono text-[11px] overflow-y-auto space-y-2 select-text">
+          <div className="h-96 rounded-xl bg-neutral-950 dark:bg-black border border-neutral-800 p-4 font-mono text-[11px] overflow-y-auto space-y-2 select-text shadow-inner">
             {logs.length === 0 ? (
               <div className="text-neutral-500 py-12 text-center">
                 Waiting for scraper log entries...
@@ -263,17 +262,17 @@ function INECScraperSyncView() {
           </div>
 
           {/* Scraper Status Bar */}
-          <div className="grid grid-cols-3 gap-3 pt-2 text-[11px] text-neutral-400 border-t border-neutral-800">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-[11px] text-muted-foreground border-t border-border">
             <div className="flex items-center gap-2">
-              <Database className="size-3.5 text-emerald-400" />
+              <Database className="size-3.5 text-emerald-600 dark:text-emerald-400" />
               <span>R2 Cloud Backup: Active</span>
             </div>
             <div className="flex items-center gap-2">
-              <Cpu className="size-3.5 text-sky-400" />
+              <Cpu className="size-3.5 text-sky-600 dark:text-sky-400" />
               <span>AI OCR Extraction: Enabled</span>
             </div>
             <div className="flex items-center gap-2">
-              <CheckCircle2 className="size-3.5 text-emerald-400" />
+              <CheckCircle2 className="size-3.5 text-emerald-600 dark:text-emerald-400" />
               <span>INEC IReV Handshake: OK</span>
             </div>
           </div>

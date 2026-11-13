@@ -1,4 +1,4 @@
-import { IconInput } from "@repo/ui/components/input";
+import { IconInput } from "../input";
 import { cn } from "../../lib/utils";
 import { Link } from "@tanstack/react-router";
 import { Ellipsis, Search, SlidersHorizontal } from "lucide-react";

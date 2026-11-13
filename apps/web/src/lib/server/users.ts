@@ -196,6 +196,13 @@ export const updateUserMoreInfo = createServerFn({ method: "POST" })
       const payload: any = { ...body };
       if (payload.occupation_id) {
         payload.occupation_id = Number(payload.occupation_id);
+      } else {
+        delete payload.occupation_id;
+      }
+      if (payload.graduation_year) {
+        payload.graduation_year = Number(payload.graduation_year);
+      } else {
+        delete payload.graduation_year;
       }
 
       return await apiFetchJson(API_URL.manageUserMoreInfo(user_id), {

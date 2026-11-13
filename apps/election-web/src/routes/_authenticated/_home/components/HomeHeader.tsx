@@ -43,7 +43,9 @@ export function HomeHeader({
   onPracticeClick,
 }: HomeHeaderProps) {
   const user = useUser();
-  const { setOpenMobile, isMobile } = useSidebar();
+  const sidebar = useSidebar();
+  const isMobile = sidebar?.isMobile ?? false;
+  const setOpenMobile = sidebar?.setOpenMobile ?? (() => {});
   const {
     selectedElectionGroup,
     setSelectedElectionGroup,

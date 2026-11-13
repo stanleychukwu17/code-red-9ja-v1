@@ -49,36 +49,36 @@ function SelectPartySituationRoom() {
   return (
     <div className="space-y-6">
       {/* Header and Search */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-neutral-800 pb-6">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-border pb-6">
         <div>
-          <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-semibold mb-2">
+          <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 text-xs font-semibold mb-2">
             <Radio className="size-3.5 animate-pulse" />
             <span>Multi-Tenant Situation Room Dispatch</span>
           </div>
-          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white">
+          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-foreground">
             Party Command Selection
           </h1>
-          <p className="text-neutral-400 text-xs md:text-sm mt-1">
+          <p className="text-muted-foreground text-xs md:text-sm mt-1">
             Choose a registered political party to launch their dedicated real-time situation room and collation matrix.
           </p>
         </div>
 
         <div className="w-full md:w-80 relative">
-          <div className="flex h-10 items-center gap-2.5 rounded-xl bg-neutral-900 border border-neutral-800 px-3.5 transition-colors focus-within:border-emerald-500">
-            <Search className="size-4 shrink-0 text-neutral-400" />
+          <div className="flex h-10 items-center gap-2.5 rounded-xl bg-card border border-border px-3.5 transition-colors focus-within:border-primary shadow-xs">
+            <Search className="size-4 shrink-0 text-muted-foreground" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search party by code or name..."
-              className="w-full bg-transparent text-xs text-white placeholder:text-neutral-500 outline-none"
+              className="w-full bg-transparent text-xs text-foreground placeholder:text-muted-foreground outline-none"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery("")}
                 aria-label="Clear search"
-                className="shrink-0 p-1 text-neutral-400 hover:text-white rounded-md transition-colors cursor-pointer"
+                className="shrink-0 p-1 text-muted-foreground hover:text-foreground rounded-md transition-colors cursor-pointer"
               >
                 <X className="size-3.5" />
               </button>
@@ -93,16 +93,16 @@ function SelectPartySituationRoom() {
           {Array.from({ length: 6 }).map((_, i) => (
             <div
               key={i}
-              className="h-36 rounded-2xl bg-neutral-900/60 border border-neutral-800 animate-pulse"
+              className="h-36 rounded-2xl bg-card border border-border animate-pulse shadow-xs"
             />
           ))}
         </div>
       ) : error ? (
-        <div className="rounded-2xl border border-red-800/40 bg-red-950/20 p-6 text-center text-red-300 space-y-3">
+        <div className="rounded-2xl border border-destructive/20 bg-destructive/10 p-6 text-center text-destructive space-y-3">
           <p className="font-semibold text-sm">Failed to load political parties</p>
           <button
             onClick={() => refetch()}
-            className="px-4 py-2 bg-red-900/50 hover:bg-red-800 text-white rounded-xl text-xs font-semibold"
+            className="px-4 py-2 bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl text-xs font-semibold cursor-pointer"
           >
             Retry Connection
           </button>
@@ -125,13 +125,13 @@ function SelectPartySituationRoom() {
                   }
                 }}
                 className={cn(
-                  "group relative flex flex-col justify-between rounded-2xl bg-neutral-900/70 border border-neutral-800 p-5 transition-all duration-200 hover:border-emerald-500/50 hover:bg-neutral-900 cursor-pointer overflow-hidden",
-                  isUserParty && "ring-1 ring-emerald-500/60 border-emerald-500/50 bg-neutral-900"
+                  "group relative flex flex-col justify-between rounded-2xl bg-card border border-border p-5 transition-all duration-200 hover:border-primary/50 hover:shadow-sm cursor-pointer overflow-hidden",
+                  isUserParty && "ring-2 ring-primary/60 border-primary"
                 )}
               >
                 <div className="flex items-center gap-4">
                   <div
-                    className="size-12 rounded-2xl border border-neutral-700 overflow-hidden bg-neutral-800 flex items-center justify-center shrink-0 shadow-inner"
+                    className="size-12 rounded-2xl border border-border overflow-hidden bg-muted flex items-center justify-center shrink-0 shadow-inner"
                     style={{ borderLeftColor: ringColor, borderLeftWidth: "4px" }}
                   >
                     {p.logo ? (
@@ -141,7 +141,7 @@ function SelectPartySituationRoom() {
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <span className="font-black text-xs text-white">
+                      <span className="font-black text-xs text-foreground">
                         {p.short_name}
                       </span>
                     )}
@@ -149,24 +149,24 @@ function SelectPartySituationRoom() {
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <h2 className="text-base font-extrabold text-white truncate">
+                      <h2 className="text-base font-extrabold text-foreground truncate">
                         {p.short_name}
                       </h2>
                       {isUserParty && (
-                        <span className="px-2 py-0.5 text-[9px] font-bold rounded-full bg-emerald-500/20 text-emerald-400 uppercase tracking-wide">
+                        <span className="px-2 py-0.5 text-[9px] font-bold rounded-full bg-primary/10 text-primary uppercase tracking-wide">
                           Assigned Party
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-neutral-400 line-clamp-1 mt-0.5">
+                    <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
                       {p.name}
                     </p>
                   </div>
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-neutral-800/80 flex items-center justify-between text-xs text-neutral-400">
-                  <span className="text-[11px] font-mono text-neutral-500">ID #{p.id}</span>
-                  <span className="flex items-center gap-1 font-semibold text-emerald-400 group-hover:translate-x-1 transition-transform">
+                <div className="mt-4 pt-3 border-t border-border flex items-center justify-between text-xs text-muted-foreground">
+                  <span className="text-[11px] font-mono text-muted-foreground">ID #{p.id}</span>
+                  <span className="flex items-center gap-1 font-semibold text-primary group-hover:translate-x-1 transition-transform">
                     <span>Open Situation Room</span>
                     <ArrowRight className="size-3.5" />
                   </span>
@@ -176,7 +176,7 @@ function SelectPartySituationRoom() {
           })}
         </div>
       ) : (
-        <div className="p-12 text-center text-neutral-500 text-xs">
+        <div className="p-12 text-center text-muted-foreground text-xs">
           No political parties matched &quot;{searchQuery}&quot;.
         </div>
       )}

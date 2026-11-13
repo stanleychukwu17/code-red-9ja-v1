@@ -1,13 +1,14 @@
 /**
  * @file Control Center Authentication Login Page
  * @description Secure login portal for authorized party situation room operators, election directors, and administrators.
+ * Supports both Light and Dark themes.
  */
 
 import { useState, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useForm } from "@tanstack/react-form";
 import { createFileRoute, useNavigate, redirect, useRouter } from "@tanstack/react-router";
-import { Radio } from "lucide-react";
+import { Radio, Sun, Moon } from "lucide-react";
 import { Button } from "@repo/ui/components/button";
 import { FormInput, PasswordInput } from "@repo/ui/components/input";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@repo/ui/components/select";
@@ -19,6 +20,7 @@ import { getAuthRedirect } from "#/lib/shared/auth-redirect";
 import { loginPartyApp, checkIfRefreshTokenInCookie, getUserDetailsCookie } from "#/lib/server/auth/auth";
 import { getPageHeader } from "@/lib/shared/meta";
 import { getAllCountries } from "#/lib/server/countries";
+import { useTheme } from "@repo/ui/hooks/use-theme";
 
 export type countriesType = {
   success: boolean;
@@ -84,6 +86,8 @@ function LoginComponent() {
   const { redirect: returnTo } = Route.useSearch();
   const router = useRouter();
   const dispatch = useAppDispatch();
+  const { theme, setTheme } = useTheme();
+
   const { data: countriesRes } = useQuery({
     queryKey: ["countries"],
     queryFn: () => getAllCountries() as Promise<countriesType>,
@@ -185,30 +189,44 @@ function LoginComponent() {
     }
   }, [countries, visitorCountry, form]);
 
+  const toggleTheme = () => {
+    setTheme(theme === "dark" ? "light" : "dark");
+  };
+
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col justify-between items-center px-4 py-8">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="size-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-          <Radio className="size-5 animate-pulse" />
+    <div className="min-h-screen bg-background text-foreground flex flex-col justify-between items-center px-4 py-8">
+      {/* Top Header */}
+      <div className="w-full max-w-4xl flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="size-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+            <Radio className="size-5 animate-pulse" />
+          </div>
+          <div>
+            <span className="font-bold text-lg text-foreground">Free9ja</span>
+            <span className="text-[11px] text-primary font-semibold uppercase block tracking-wider">
+              Control Center &bull; Situation Room
+            </span>
+          </div>
         </div>
-        <div>
-          <span className="font-bold text-lg text-white">Free9ja</span>
-          <span className="text-[11px] text-emerald-400 font-semibold uppercase block tracking-wider">
-            Control Center &bull; Situation Room
-          </span>
-        </div>
+
+        <button
+          onClick={toggleTheme}
+          aria-label="Toggle theme"
+          className="p-2 rounded-lg bg-card border border-border text-foreground hover:bg-muted transition-colors cursor-pointer"
+        >
+          {theme === "dark" ? <Sun className="size-4 text-amber-400" /> : <Moon className="size-4" />}
+        </button>
       </div>
 
-      {/* Main card */}
-      <div className="w-full max-w-[420px] bg-neutral-900/90 border border-neutral-800 rounded-3xl p-6 md:p-8 shadow-2xl backdrop-blur-xl">
-        <h1 className="text-2xl font-bold text-white mb-1">Situation Room Access</h1>
-        <p className="text-xs text-neutral-400 mb-6">
+      {/* Main Card */}
+      <div className="w-full max-w-[420px] bg-card border border-border rounded-3xl p-6 md:p-8 shadow-xl">
+        <h1 className="text-2xl font-bold text-foreground mb-1">Situation Room Access</h1>
+        <p className="text-xs text-muted-foreground mb-6">
           Authorized party leadership, election directors &amp; collation coordinators only.
         </p>
 
         {errorMsg && (
-          <div className="mb-4 p-3.5 rounded-xl bg-red-950/40 border border-red-800/60 text-xs text-red-300 font-medium">
+          <div className="mb-4 p-3.5 rounded-xl bg-destructive/10 border border-destructive/20 text-xs text-destructive font-medium">
             {errorMsg}
           </div>
         )}
@@ -234,10 +252,10 @@ function LoginComponent() {
                   }}
                   defaultValue={field.state.value}
                 >
-                  <SelectTrigger className="w-full bg-neutral-800/80 border-neutral-700 text-white">
+                  <SelectTrigger className="w-full bg-input border-border text-foreground">
                     <SelectValue placeholder="Select Country" />
                   </SelectTrigger>
-                  <SelectContent className="bg-neutral-900 border-neutral-700 text-white">
+                  <SelectContent className="bg-popover border-border text-popover-foreground">
                     <SelectGroup>
                       <SelectLabel>Countries</SelectLabel>
                       {countries.map((country) => (
@@ -272,7 +290,7 @@ function LoginComponent() {
             children={(field) => (
               <FormInput
                 type="text"
-                className="bg-neutral-800/80 border-neutral-700 text-white placeholder:text-neutral-500 rounded-xl"
+                className="bg-input border-border text-foreground placeholder:text-muted-foreground rounded-xl"
                 placeholder="Email, Username or Phone number"
                 value={field.state.value}
                 onBlur={field.handleBlur}
@@ -299,7 +317,7 @@ function LoginComponent() {
             children={(field) => (
               <PasswordInput
                 placeholder="Password"
-                className="bg-neutral-800/80 border-neutral-700 text-white placeholder:text-neutral-500 rounded-xl"
+                className="bg-input border-border text-foreground placeholder:text-muted-foreground rounded-xl"
                 value={field.state.value}
                 onBlur={field.handleBlur}
                 onChange={(e) => field.handleChange(e.target.value)}
@@ -320,7 +338,7 @@ function LoginComponent() {
                 variant="default"
                 disabled={!canSubmit || isSubmitting}
                 loading={isSubmitting}
-                className="bg-emerald-500 hover:bg-emerald-600 text-neutral-950 font-bold rounded-xl mt-2 py-3"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-xl mt-2 py-3 cursor-pointer shadow-xs"
               >
                 Authenticate &amp; Enter Situation Room
               </Button>
@@ -329,7 +347,7 @@ function LoginComponent() {
         </form>
       </div>
 
-      <div className="text-center text-xs text-neutral-500">
+      <div className="text-center text-xs text-muted-foreground">
         Free9ja Real-Time Situation Room &bull; Encrypted Session
       </div>
     </div>

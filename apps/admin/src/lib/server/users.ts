@@ -5,11 +5,11 @@ import { apiFetchJson } from "./fetch";
 // Returns users from the API based on the provided data
 export const getUsersList = createServerFn({ method: "GET" })
   .inputValidator(
-    (data: { 
-      role?: string; 
-      limit?: number; 
-      cursor?: string | number; 
-      party_id?: number; 
+    (data: {
+      role?: string;
+      limit?: number;
+      cursor?: string | number;
+      party_id?: number;
       search?: string;
       parties?: number[];
       roles?: string[];
@@ -27,14 +27,14 @@ export const getUsersList = createServerFn({ method: "GET" })
       if (data?.cursor) params.append("cursor", String(data.cursor));
       if (data?.party_id) params.append("party_id", String(data.party_id));
       if (data?.search) params.append("search", data.search);
-      
+
       if (data?.parties?.length) params.append("parties", data.parties.join(","));
       if (data?.roles?.length) params.append("roles", data.roles.join(","));
       if (data?.statuses?.length) params.append("statuses", data.statuses.join(","));
       if (data?.verificationTypes?.length) params.append("verification_types", data.verificationTypes.join(","));
       if (data?.countryId) params.append("country_id", data.countryId);
       if (data?.stateIds?.length) params.append("state_ids", data.stateIds.join(","));
-      
+
       const qs = params.toString();
 
       return await apiFetchJson(`${API_URL.users}${qs ? `?${qs}` : ""}`);
@@ -63,10 +63,19 @@ export const updateUserMoreInfo = createServerFn({ method: "POST" })
   .inputValidator((data: any) => data)
   .handler(async ({ data: { user_id, ...body } }) => {
     try {
-      // Clean up string values (e.g. occupation_id)
+      // Clean up string values (e.g. occupation_id, graduation_year)
       const payload: any = { ...body };
+
       if (payload.occupation_id) {
         payload.occupation_id = Number(payload.occupation_id);
+      } else {
+        delete payload.occupation_id;
+      }
+
+      if (payload.graduation_year) {
+        payload.graduation_year = Number(payload.graduation_year);
+      } else {
+        delete payload.graduation_year;
       }
 
       return await apiFetchJson(API_URL.manageUserMoreInfo(user_id), {

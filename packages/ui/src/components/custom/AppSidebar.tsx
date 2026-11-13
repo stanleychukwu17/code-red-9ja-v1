@@ -29,16 +29,16 @@ import {
   SidebarProvider,
   SidebarTrigger,
   useSidebar,
-} from "@repo/ui/components/sidebar";
-import { TooltipProvider } from "@repo/ui/components/tooltip";
-import { AppAvatar, Avatar, AvatarImage } from "@repo/ui/components/avatar";
+} from "../sidebar";
+import { TooltipProvider } from "../tooltip";
+import { AppAvatar, Avatar, AvatarImage } from "../avatar";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
   PopoverHeader,
   PopoverDescription,
-} from "@repo/ui/components/popover";
+} from "../popover";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,14 +46,14 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@repo/ui/components/dropdown-menu";
+} from "../dropdown-menu";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "../collapsible";
-import LogoIcon from "@repo/ui/icons/logo-icon";
-import { Button } from "@repo/ui/components/button";
+import LogoIcon from "../../icons/logo-icon";
+import { Button } from "../button";
 import { cn } from "../../lib/utils";
 import { useIsMobile } from "../../hooks/useMobile";
 import SidebarIcon from "../../icons/navbar/sidebar-icon";

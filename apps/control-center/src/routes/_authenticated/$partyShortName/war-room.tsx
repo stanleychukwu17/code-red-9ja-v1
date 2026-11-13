@@ -2,13 +2,13 @@
  * @file Big-Screen Situation Room Wall Display
  * @description High-density full-screen projector / television wall display mode
  * for party headquarters and election night war rooms.
+ * Supports both Light and Dark presentation modes.
  */
 
 import { createFileRoute, useParams } from "@tanstack/react-router";
 import { getPageHeader } from "#/lib/shared/meta";
 import { useUserParty } from "#/hooks/useUserParty";
 import { useState, useEffect } from "react";
-import { Radio, Layers, AlertTriangle, Users, TrendingUp, ShieldCheck } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/$partyShortName/war-room")({
   head: () =>
@@ -31,64 +31,64 @@ function WarRoomWallView() {
   return (
     <div className="space-y-6">
       {/* Top War Room Ticker */}
-      <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div className="bg-card border border-border rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-xs">
         <div className="flex items-center gap-3">
-          <div className="size-3 rounded-full bg-emerald-400 animate-ping" />
-          <span className="font-mono text-xs font-bold text-emerald-400 uppercase tracking-widest">
+          <div className="size-3 rounded-full bg-emerald-500 animate-ping" />
+          <span className="font-mono text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-widest">
             HEADQUARTERS SITUATION ROOM &bull; {party?.short_name || partyShortName.toUpperCase()} COMMAND WALL
           </span>
         </div>
 
-        <div className="flex items-center gap-6 font-mono text-xs text-neutral-400">
+        <div className="flex items-center gap-6 font-mono text-xs text-muted-foreground">
           <div>
-            POLLING STATUS: <span className="text-white font-bold">CLOSE OF POLL / COLLATION ACTIVE</span>
+            POLLING STATUS: <span className="text-foreground font-bold">CLOSE OF POLL / COLLATION ACTIVE</span>
           </div>
           <div>
-            UPTIME: <span className="text-emerald-400 font-bold">{Math.floor(seconds / 60)}m {seconds % 60}s</span>
+            UPTIME: <span className="text-emerald-600 dark:text-emerald-400 font-bold">{Math.floor(seconds / 60)}m {seconds % 60}s</span>
           </div>
         </div>
       </div>
 
       {/* Giant Wall Display Metric Tiles */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="p-6 rounded-3xl bg-neutral-900/90 border border-neutral-800 text-center space-y-1">
-          <span className="text-xs uppercase tracking-wider text-neutral-400 font-bold block">
+        <div className="p-6 rounded-3xl bg-card border border-border text-center space-y-1 shadow-xs">
+          <span className="text-xs uppercase tracking-wider text-muted-foreground font-bold block">
             National PU Reporting
           </span>
-          <p className="text-5xl lg:text-6xl font-black text-emerald-400 tracking-tight font-mono">
+          <p className="text-5xl lg:text-6xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight font-mono">
             68.4%
           </p>
-          <span className="text-xs text-neutral-500 font-mono">120,962 / 176,846 Units</span>
+          <span className="text-xs text-muted-foreground font-mono">120,962 / 176,846 Units</span>
         </div>
 
-        <div className="p-6 rounded-3xl bg-neutral-900/90 border border-neutral-800 text-center space-y-1">
-          <span className="text-xs uppercase tracking-wider text-neutral-400 font-bold block">
+        <div className="p-6 rounded-3xl bg-card border border-border text-center space-y-1 shadow-xs">
+          <span className="text-xs uppercase tracking-wider text-muted-foreground font-bold block">
             Agent Coverage Active
           </span>
-          <p className="text-5xl lg:text-6xl font-black text-sky-400 tracking-tight font-mono">
+          <p className="text-5xl lg:text-6xl font-black text-sky-600 dark:text-sky-400 tracking-tight font-mono">
             94.1%
           </p>
-          <span className="text-xs text-neutral-500 font-mono">166,412 Agents on Ground</span>
+          <span className="text-xs text-muted-foreground font-mono">166,412 Agents on Ground</span>
         </div>
 
-        <div className="p-6 rounded-3xl bg-neutral-900/90 border border-neutral-800 text-center space-y-1">
-          <span className="text-xs uppercase tracking-wider text-neutral-400 font-bold block">
+        <div className="p-6 rounded-3xl bg-card border border-border text-center space-y-1 shadow-xs">
+          <span className="text-xs uppercase tracking-wider text-muted-foreground font-bold block">
             Discrepancy Audit Queue
           </span>
-          <p className="text-5xl lg:text-6xl font-black text-amber-400 tracking-tight font-mono">
+          <p className="text-5xl lg:text-6xl font-black text-amber-600 dark:text-amber-400 tracking-tight font-mono">
             142
           </p>
-          <span className="text-xs text-neutral-500 font-mono">INEC vs EC8A Divergences</span>
+          <span className="text-xs text-muted-foreground font-mono">INEC vs EC8A Divergences</span>
         </div>
 
-        <div className="p-6 rounded-3xl bg-neutral-900/90 border border-neutral-800 text-center space-y-1">
-          <span className="text-xs uppercase tracking-wider text-neutral-400 font-bold block">
+        <div className="p-6 rounded-3xl bg-card border border-border text-center space-y-1 shadow-xs">
+          <span className="text-xs uppercase tracking-wider text-muted-foreground font-bold block">
             Active Incidents
           </span>
-          <p className="text-5xl lg:text-6xl font-black text-red-400 tracking-tight font-mono">
+          <p className="text-5xl lg:text-6xl font-black text-red-600 dark:text-red-400 tracking-tight font-mono">
             23
           </p>
-          <span className="text-xs text-neutral-500 font-mono">4 Critical BVAS/Security</span>
+          <span className="text-xs text-muted-foreground font-mono">4 Critical BVAS/Security</span>
         </div>
       </div>
 
@@ -102,17 +102,17 @@ function WarRoomWallView() {
           { state: "Oyo", pus: "5,800 / 6,390", pct: 90, lead: "Leading (+65k)", color: "emerald" },
           { state: "FCT Abuja", pus: "2,822 / 2,822", pct: 100, lead: "Declared Won (+120k)", color: "emerald" },
         ].map((item) => (
-          <div key={item.state} className="p-5 rounded-2xl bg-neutral-900/70 border border-neutral-800 space-y-3">
+          <div key={item.state} className="p-5 rounded-2xl bg-card border border-border space-y-3 shadow-xs">
             <div className="flex items-center justify-between">
-              <span className="text-lg font-extrabold text-white">{item.state}</span>
-              <span className="font-mono text-xs font-bold text-emerald-400">{item.pct}%</span>
+              <span className="text-lg font-extrabold text-foreground">{item.state}</span>
+              <span className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">{item.pct}%</span>
             </div>
-            <div className="w-full bg-neutral-800 rounded-full h-2 overflow-hidden">
+            <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
               <div className="bg-emerald-500 h-2 rounded-full" style={{ width: `${item.pct}%` }} />
             </div>
-            <div className="flex justify-between items-center text-xs text-neutral-400 font-mono">
+            <div className="flex justify-between items-center text-xs text-muted-foreground font-mono">
               <span>{item.pus} PUs</span>
-              <span className="font-bold text-white">{item.lead}</span>
+              <span className="font-bold text-foreground">{item.lead}</span>
             </div>
           </div>
         ))}

@@ -75,6 +75,7 @@ type PermissionsService interface {
 // PartiesService interface defines the methods needed from the parties service
 type PartiesService interface {
 	JoinParty(ctx context.Context, params partiesservice.JoinPartyParams) error
+	LeaveAllPartyChapters(ctx context.Context, partyID int16, userID, userFid int64) error
 }
 
 // Handler holds dependencies for the users handler
@@ -896,20 +897,34 @@ func (h *Handler) AdminUpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Ensure that if the target user already has a party, the party cannot be changed unless super admin
+	// Handle party affiliation changes
 	if req.PartyID != 0 {
-		if targetUserDetails.PartyID.Valid && req.PartyID != int64(targetUserDetails.PartyID.Int16) {
-			if !perms.IsSuperAdmin {
-				h.utils.RespondError(w, http.StatusForbidden, "Forbidden: party cannot be changed")
-				return
-			}
-		}
+		isPartyChanging := !targetUserDetails.PartyID.Valid || req.PartyID != int64(targetUserDetails.PartyID.Int16)
 
-		// If the party is changing (or being set for the first time), update it
-		if !targetUserDetails.PartyID.Valid || req.PartyID != int64(targetUserDetails.PartyID.Int16) {
-			pID := int16(req.PartyID)
-			if err := h.usersService.UpdateUserParty(r.Context(), targetUserDetails.ID, &pID, targetUserDetails.FakeID.Int64); err != nil {
-				h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update user party: "+err.Error())
+		if isPartyChanging {
+			// If the target user already belongs to a party, only a super admin can reassign them
+			if targetUserDetails.PartyID.Valid && targetUserDetails.PartyID.Int16 > 0 {
+				if !perms.IsSuperAdmin {
+					h.utils.RespondError(w, http.StatusForbidden, "Forbidden: party cannot be changed")
+					return
+				}
+
+				// Leave the previous party and all its chapter memberships completely
+				if err := h.partiesService.LeaveAllPartyChapters(r.Context(), targetUserDetails.PartyID.Int16, targetUserDetails.ID, targetUserDetails.FakeID.Int64); err != nil {
+					h.utils.RespondError(w, http.StatusInternalServerError, "Failed to leave current party: "+err.Error())
+					return
+				}
+			}
+
+			// Join the new party's national chapter (which enrolls in party_membership, updates users.party_id, and invalidates cache)
+			err = h.partiesService.JoinParty(r.Context(), partiesservice.JoinPartyParams{
+				PartyID:     int16(req.PartyID),
+				ChapterType: "national",
+				UserID:      targetUserDetails.ID,
+				UserFID:     targetUserDetails.FakeID.Int64,
+			})
+			if err != nil {
+				h.utils.RespondError(w, http.StatusInternalServerError, "Failed to join party: "+err.Error())
 				return
 			}
 		}
@@ -957,17 +972,6 @@ func (h *Handler) AdminUpdateUser(w http.ResponseWriter, r *http.Request) {
 		h.usersService.CheckUsername(r.Context(), req.Username)
 	}
 
-	// if the partyID is fresh, send a request for the user to be a member of the partyID received
-	if !targetUserDetails.PartyID.Valid && req.PartyID > 0 {
-		err = h.partiesService.JoinParty(r.Context(), partiesservice.JoinPartyParams{
-			PartyID: int16(req.PartyID), ChapterType: "national", UserID: targetUserDetails.ID, UserFID: targetUserDetails.FakeID.Int64,
-		})
-		if err != nil {
-			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to join party: "+err.Error())
-			return
-		}
-	}
-
 	// Fetch the new user state for accurate logging
 	// the h.partiesService.JoinParty calls the userService to invalidate the userCache
 	// so rest assured, the h.usersService.GetUserByFakeID below will always fetch the latest user details
@@ -1002,7 +1006,7 @@ type AdminUpdateUserMoreInfoRequest struct {
 	OccupationID      *int16 `json:"occupation_id" validate:"omitempty"`
 	EducationalStatus string `json:"educational_status" validate:"omitempty,oneof=graduate student none"`
 	HighestDegree     string `json:"highest_degree" validate:"omitempty,oneof=none primary secondary polytechnic bachelors masters phd"`
-	GraduationYear    *int   `json:"graduation_year" validate:"omitempty,gt=1900,lt=2030"`
+	GraduationYear    *int   `json:"graduation_year" validate:"omitempty,min=1900,max=4100"`
 	SchoolName        string `json:"school_name" validate:"omitempty"`
 	Religion          string `json:"religion" validate:"omitempty,oneof=christianity islam traditional other"`
 	MaritalStatus     string `json:"marital_status" validate:"omitempty,oneof=single married divorced widowed"`

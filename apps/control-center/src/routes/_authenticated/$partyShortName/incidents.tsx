@@ -2,12 +2,13 @@
  * @file Incident & SOS Triage Desk
  * @description Centralized emergency triage room for field irregularities, BVAS breakdowns,
  * voter intimidation reports, and agent SOS safety alerts.
+ * Supports both Light and Dark themes.
  */
 
 import { createFileRoute, useParams } from "@tanstack/react-router";
 import { getPageHeader } from "#/lib/shared/meta";
 import { useState } from "react";
-import { Activity, Flame, ShieldAlert, Phone, CheckCircle2, Clock, MapPin, Search } from "lucide-react";
+import { Flame, Phone, MapPin } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/$partyShortName/incidents")({
@@ -90,14 +91,14 @@ function IncidentTriageView() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-neutral-800 pb-5">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-border pb-5">
         <div>
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-500/10 text-red-400 text-xs font-semibold mb-2">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-500/10 text-red-700 dark:text-red-400 border border-red-500/20 text-xs font-semibold mb-2">
             <Flame className="size-3.5" />
             <span>Crisis &amp; Emergency Escalation</span>
           </div>
-          <h1 className="text-2xl font-black text-white">Incident &amp; Field Distress Triage</h1>
-          <p className="text-xs text-neutral-400 mt-1">
+          <h1 className="text-2xl font-black text-foreground">Incident &amp; Field Distress Triage</h1>
+          <p className="text-xs text-muted-foreground mt-1">
             Real-time feed of violence, technical malfunctions, late deployments, and agent safety alerts.
           </p>
         </div>
@@ -107,10 +108,10 @@ function IncidentTriageView() {
             <button
               key={p}
               onClick={() => setPriorityFilter(p)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider transition-colors ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer ${
                 priorityFilter === p
-                  ? "bg-red-500 text-white"
-                  : "bg-neutral-900 text-neutral-400 hover:text-white border border-neutral-800"
+                  ? "bg-destructive text-destructive-foreground font-bold shadow-xs"
+                  : "bg-muted text-muted-foreground hover:text-foreground border border-border"
               }`}
             >
               {p}
@@ -124,12 +125,12 @@ function IncidentTriageView() {
         {filtered.map((inc) => (
           <div
             key={inc.id}
-            className={`p-5 rounded-2xl border transition-all space-y-3 ${
+            className={`p-5 rounded-2xl border transition-all space-y-3 shadow-xs ${
               inc.priority === "CRITICAL"
-                ? "bg-red-950/20 border-red-800/60 shadow-lg shadow-red-950/20"
+                ? "bg-red-500/5 dark:bg-red-950/20 border-red-500/30"
                 : inc.priority === "HIGH"
-                  ? "bg-amber-950/20 border-amber-800/50"
-                  : "bg-neutral-900/60 border-neutral-800"
+                  ? "bg-amber-500/5 dark:bg-amber-950/20 border-amber-500/30"
+                  : "bg-card border-border"
             }`}
           >
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -137,25 +138,25 @@ function IncidentTriageView() {
                 <span
                   className={`px-2 py-0.5 rounded text-[10px] font-black tracking-wider uppercase ${
                     inc.priority === "CRITICAL"
-                      ? "bg-red-500 text-neutral-950"
+                      ? "bg-red-600 text-white"
                       : inc.priority === "HIGH"
-                        ? "bg-amber-500 text-neutral-950"
-                        : "bg-neutral-700 text-neutral-200"
+                        ? "bg-amber-600 text-white"
+                        : "bg-muted text-muted-foreground border border-border"
                   }`}
                 >
                   {inc.priority}
                 </span>
-                <span className="font-mono text-xs text-neutral-400 font-bold">{inc.id}</span>
-                <h3 className="text-sm font-bold text-white">{inc.title}</h3>
+                <span className="font-mono text-xs text-muted-foreground font-bold">{inc.id}</span>
+                <h3 className="text-sm font-bold text-foreground">{inc.title}</h3>
               </div>
 
               <div className="flex items-center gap-2 text-xs">
-                <span className="text-neutral-400 font-mono">{inc.timestamp}</span>
+                <span className="text-muted-foreground font-mono">{inc.timestamp}</span>
                 <span
                   className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                     inc.status === "RESOLVED"
-                      ? "bg-emerald-950/60 text-emerald-400 border border-emerald-800/60"
-                      : "bg-neutral-800 text-neutral-300"
+                      ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20"
+                      : "bg-muted text-foreground border border-border"
                   }`}
                 >
                   {inc.status}
@@ -163,27 +164,27 @@ function IncidentTriageView() {
               </div>
             </div>
 
-            <p className="text-xs text-neutral-300 leading-relaxed">{inc.description}</p>
+            <p className="text-xs text-foreground/90 leading-relaxed">{inc.description}</p>
 
-            <div className="pt-2 border-t border-neutral-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-neutral-400">
+            <div className="pt-2 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-muted-foreground">
               <div className="flex items-center gap-2">
-                <MapPin className="size-3.5 text-neutral-500 shrink-0" />
+                <MapPin className="size-3.5 text-muted-foreground shrink-0" />
                 <span dangerouslySetInnerHTML={{ __html: inc.location }} />
               </div>
 
               <div className="flex items-center gap-3">
                 <a
                   href={`tel:${inc.phone}`}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-xs font-medium"
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-muted hover:bg-muted/80 text-foreground text-xs font-medium border border-border transition-colors"
                 >
-                  <Phone className="size-3 text-emerald-400" />
+                  <Phone className="size-3 text-primary" />
                   <span>Call {inc.reporter}</span>
                 </a>
 
                 {inc.status !== "RESOLVED" && (
                   <button
                     onClick={() => handleResolve(inc.id)}
-                    className="px-3 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-neutral-950 text-xs font-bold transition-colors"
+                    className="px-3 py-1 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-bold transition-colors cursor-pointer shadow-xs"
                   >
                     Mark Resolved
                   </button>

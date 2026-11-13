@@ -277,29 +277,8 @@ export function UserFormDialog({
       if (mode === "update") {
         const updatedDetails = res.data?.updatedUserDetails;
         if (updatedDetails) {
-          queryClient.setQueriesData(
-            { queryKey: ["users-list"] },
-            (oldData: any) => {
-              if (!oldData) return oldData;
-              return {
-                ...oldData,
-                pages: oldData.pages.map((page: any) => {
-                  return {
-                    ...page,
-                    data: {
-                      ...page.data,
-                      users:
-                        page.data?.users?.map((u: any) =>
-                          u.fake_id === updatedDetails.fake_id
-                            ? updatedDetails
-                            : u,
-                        ) || [],
-                    },
-                  };
-                }),
-              };
-            },
-          );
+          queryClient.invalidateQueries({ queryKey: ["party-members"] });
+          queryClient.invalidateQueries({ queryKey: ["users-list"] });
 
           onSuccess?.(updatedDetails, 'basic');
         }
@@ -309,28 +288,10 @@ export function UserFormDialog({
       } else {
         const newUser = res.data?.user;
         if (newUser) {
-          queryClient.setQueriesData(
-            { queryKey: ["users-list"] },
-            (oldData: any) => {
-              if (!oldData) return oldData;
-              return {
-                ...oldData,
-                pages: oldData.pages.map((page: any, idx: number) => {
-                  if (idx === 0) {
-                    return {
-                      ...page,
-                      data: {
-                        ...page.data,
-                        users: [newUser, ...(page.data?.users || [])],
-                      },
-                    };
-                  }
-                  return page;
-                }),
-              };
-            },
-          );
+          queryClient.invalidateQueries({ queryKey: ["party-members"] });
+          queryClient.invalidateQueries({ queryKey: ["users-list"] });
 
+          onSuccess?.(newUser, 'basic');
           onClose();
           setCreatedUser(newUser);
         }
@@ -1120,27 +1081,35 @@ function MoreInfoTab({
       if (!updateUserMoreInfo) {
         return { success: true }; // Placeholder
       }
+
+      const cleanedValues = {
+        ...values,
+        occupation_id: values.occupation_id ? Number(values.occupation_id) : undefined,
+        graduation_year: values.graduation_year ? Number(values.graduation_year) : undefined,
+      };
+
       const res = await updateUserMoreInfo({
         data: {
           user_id: user.fake_id || user.id,
-          ...values,
+          ...cleanedValues,
         },
       });
+
       if (!res?.success)
         throw new Error(res?.message || "Failed to save profile");
       return res.data;
     },
+
     onSuccess: (data: any) => {
       if (data?.more_info) {
-        queryClient.setQueryData(
-          ["userMoreInfo", user?.fake_id],
-          data.more_info,
-        );
+        queryClient.setQueryData(["userMoreInfo", user?.fake_id], data.more_info);
       }
+
       toast.success("Additional info updated successfully!");
       onSuccess?.();
       onClose();
     },
+
     onError: (err: any) => {
       setError(err.message || "An error occurred.");
     },
