@@ -11,8 +11,6 @@ import { APP_URL } from "#/lib/config";
 
 import { AppSidebarShell as SharedSidebar } from "@repo/ui/components/custom/AppSidebar";
 
-import FeedIcon from "@repo/ui/icons/navbar/feed-icon";
-import FeedSolidIcon from "@repo/ui/icons/navbar/feed-solid-icon";
 import HomeIcon from "@repo/ui/icons/navbar/home-icon";
 import HomeSolidIcon from "@repo/ui/icons/navbar/home-solid-icon";
 import NotificationIcon from "@repo/ui/icons/navbar/notification-icon";
@@ -21,7 +19,6 @@ import ProfileIcon from "@repo/ui/icons/navbar/profile-icon";
 import ProfileSolidIcon from "@repo/ui/icons/navbar/profile-solid-icon";
 import SearchIcon from "@repo/ui/icons/navbar/search-icon";
 import SearchSolidIcon from "@repo/ui/icons/navbar/search-solid-icon";
-import DashboardIcon from "@repo/ui/icons/navbar/dashboard-icon";
 import PartyIcon from "@repo/ui/icons/navbar/party-icon";
 import PartySolidIcon from "@repo/ui/icons/navbar/party-solid-icon";
 import CubeIcon from "@repo/ui/icons/navbar/cube-icon";
@@ -35,20 +32,6 @@ const APP_SIDEBAR_ITEMS = [
     icon: <HomeIcon />,
     selectedIcon: <HomeSolidIcon />,
     href: APP_URL.home,
-  },
-  {
-    id: "dashboard",
-    label: "Dashboard",
-    icon: <DashboardIcon />,
-    selectedIcon: <DashboardIcon fill={"black"} stroke="white" />,
-    href: APP_URL.dashboard,
-  },
-  {
-    id: "feed",
-    label: "Feed",
-    icon: <FeedIcon />,
-    selectedIcon: <FeedSolidIcon />,
-    href: APP_URL.feed,
   },
   {
     id: "search",
@@ -110,7 +93,7 @@ export function AppSidebarShell({ userDetails, sitePreference }: { userDetails?:
       console.error("Failed to call logoutUser on server:", error);
     }
     dispatch(updateAuthState({ user: null }));
-    navigate({ to: APP_URL.dashboard });
+    navigate({ to: APP_URL.home });
   };
 
   const handleSidebarStateChange = (sideBarState: "expanded" | "collapsed") => {

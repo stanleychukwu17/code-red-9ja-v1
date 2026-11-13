@@ -19,7 +19,6 @@ import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { HomeTabs } from "../../../../components/Tabs";
-import { ApplicationsCard } from "../components/ApplicationsCard";
 import { ReferralCard } from "../components/ReferralCard";
 import { ArrivalCard } from "../components/ArrivalCard";
 import { ArrivalDrawer } from "../components/ArrivalDrawer";
@@ -395,8 +394,7 @@ export function PollingAgentPage() {
             </>
           )}
 
-        {/* Pre-election cards: Supervisor application, referral bonuses, practice test */}
-        {daysLeft !== undefined && daysLeft !== 0 && <ApplicationsCard />}
+        {/* Pre-election cards: referral bonuses, practice test */}
         <ReferralCard onClick={() => navigate({ to: "/referrals" })} />
         {daysLeft !== undefined && daysLeft !== 0 && <PracticeTestCard />}
 

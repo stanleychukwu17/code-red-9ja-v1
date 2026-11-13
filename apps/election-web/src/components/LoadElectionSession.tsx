@@ -3,12 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getElectionGroups } from "#/lib/server/election_groups";
 import { useAppDispatch, useAppSelector } from "#/redux/hooks";
-import {
-  selectSelectedElection,
-  selectSelectedElectionGroup,
-  setSelectedElection,
-  setSelectedElectionGroup,
-} from "#/redux/slice/electionSlice";
+import { selectSelectedElection, selectSelectedElectionGroup, setSelectedElection, setSelectedElectionGroup } from "#/redux/slice/electionSlice";
 import { getAutoSelectedSession } from "#/hooks/useElection";
 
 /**

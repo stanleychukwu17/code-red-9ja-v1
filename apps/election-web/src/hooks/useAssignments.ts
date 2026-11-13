@@ -47,6 +47,7 @@ export const useAssignments = () => {
 			if (!res?.success || !res.data) return null;
 			return res.data;
 		},
+		staleTime: Infinity,
 	});
 
 	// Primary polling agent assignment (single assignment per user per election group)

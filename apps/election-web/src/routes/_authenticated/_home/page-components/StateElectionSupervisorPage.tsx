@@ -19,7 +19,6 @@ import ReportIcon from "@repo/ui/icons/report-icon";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { SupervisorTabs } from "../../../../components/Tabs";
-import { ApplicationsCard } from "../components/ApplicationsCard";
 import { ReferralCard } from "../components/ReferralCard";
 import { EarningsTab } from "../components/EarningsTab";
 import { GiveUpdateFloatingButton } from "../components/GiveUpdateFloatingButton";
@@ -274,7 +273,6 @@ export function StateElectionSupervisorPage() {
 
       {/* Supervisor Action Body */}
       <HomeBody>
-        {daysLeft !== 0 && <ApplicationsCard />}
         <ReferralCard onClick={() => navigate({ to: "/referrals" })} />
         {daysLeft !== 0 && <PracticeTestCard />}
 

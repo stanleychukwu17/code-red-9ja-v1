@@ -19,20 +19,12 @@ import { Route as AuthForgotPasswordRouteImport } from './routes/auth/forgot-pas
 import { Route as AuthenticatedSearchRouteImport } from './routes/_authenticated/search'
 import { Route as AuthenticatedPollingUnitsRouteImport } from './routes/_authenticated/polling-units'
 import { Route as AuthenticatedHomeRouteImport } from './routes/_authenticated/home'
-import { Route as AuthenticatedStatesIndexRouteImport } from './routes/_authenticated/states/index'
 import { Route as AuthenticatedProfileIndexRouteImport } from './routes/_authenticated/profile/index'
 import { Route as AuthenticatedPartyIndexRouteImport } from './routes/_authenticated/party/index'
 import { Route as AuthenticatedNotificationsIndexRouteImport } from './routes/_authenticated/notifications/index'
-import { Route as AuthenticatedFeedIndexRouteImport } from './routes/_authenticated/feed/index'
-import { Route as AuthenticatedDashboardIndexRouteImport } from './routes/_authenticated/dashboard/index'
-import { Route as AuthenticatedCandidatesIndexRouteImport } from './routes/_authenticated/candidates/index'
-import { Route as AuthenticatedAppUsersIndexRouteImport } from './routes/_authenticated/app-users/index'
 import { Route as AuthenticatedProfileUsernameRouteImport } from './routes/_authenticated/profile/$username'
 import { Route as AuthenticatedProfileOldUsernameRouteImport } from './routes/_authenticated/profile-old/$username'
-import { Route as AuthenticatedPollingUnitPollingUnitIdRouteImport } from './routes/_authenticated/polling-unit/$pollingUnitId'
-import { Route as AuthenticatedStatesStateIdIndexRouteImport } from './routes/_authenticated/states/$stateId/index'
 import { Route as AuthenticatedProfileUsernameIndexRouteImport } from './routes/_authenticated/profile/$username/index'
-import { Route as AuthenticatedFeedPostIdIndexRouteImport } from './routes/_authenticated/feed/$postId/index'
 import { Route as AuthenticatedProfileUsernameTimelineRouteImport } from './routes/_authenticated/profile/$username/timeline'
 import { Route as AuthenticatedProfileUsernameHomeRouteImport } from './routes/_authenticated/profile/$username/home'
 import { Route as AuthenticatedProfileUsernameHistoryRouteImport } from './routes/_authenticated/profile/$username/history'
@@ -108,12 +100,6 @@ const AuthenticatedHomeRoute = AuthenticatedHomeRouteImport.update({
   path: '/home',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AuthenticatedStatesIndexRoute =
-  AuthenticatedStatesIndexRouteImport.update({
-    id: '/states/',
-    path: '/states/',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
 const AuthenticatedProfileIndexRoute =
   AuthenticatedProfileIndexRouteImport.update({
     id: '/profile/',
@@ -131,29 +117,6 @@ const AuthenticatedNotificationsIndexRoute =
     path: '/notifications/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
-const AuthenticatedFeedIndexRoute = AuthenticatedFeedIndexRouteImport.update({
-  id: '/feed/',
-  path: '/feed/',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
-const AuthenticatedDashboardIndexRoute =
-  AuthenticatedDashboardIndexRouteImport.update({
-    id: '/dashboard/',
-    path: '/dashboard/',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedCandidatesIndexRoute =
-  AuthenticatedCandidatesIndexRouteImport.update({
-    id: '/candidates/',
-    path: '/candidates/',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedAppUsersIndexRoute =
-  AuthenticatedAppUsersIndexRouteImport.update({
-    id: '/app-users/',
-    path: '/app-users/',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
 const AuthenticatedProfileUsernameRoute =
   AuthenticatedProfileUsernameRouteImport.update({
     id: '/profile/$username',
@@ -166,29 +129,11 @@ const AuthenticatedProfileOldUsernameRoute =
     path: '/profile-old/$username',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
-const AuthenticatedPollingUnitPollingUnitIdRoute =
-  AuthenticatedPollingUnitPollingUnitIdRouteImport.update({
-    id: '/polling-unit/$pollingUnitId',
-    path: '/polling-unit/$pollingUnitId',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedStatesStateIdIndexRoute =
-  AuthenticatedStatesStateIdIndexRouteImport.update({
-    id: '/states/$stateId/',
-    path: '/states/$stateId/',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
 const AuthenticatedProfileUsernameIndexRoute =
   AuthenticatedProfileUsernameIndexRouteImport.update({
     id: '/',
     path: '/',
     getParentRoute: () => AuthenticatedProfileUsernameRoute,
-  } as any)
-const AuthenticatedFeedPostIdIndexRoute =
-  AuthenticatedFeedPostIdIndexRouteImport.update({
-    id: '/feed/$postId/',
-    path: '/feed/$postId/',
-    getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedProfileUsernameTimelineRoute =
   AuthenticatedProfileUsernameTimelineRouteImport.update({
@@ -345,17 +290,11 @@ export interface FileRoutesByFullPath {
   '/auth/login': typeof AuthLoginRoute
   '/auth/onboarding': typeof AuthOnboardingRoute
   '/auth/signup': typeof AuthSignupRoute
-  '/polling-unit/$pollingUnitId': typeof AuthenticatedPollingUnitPollingUnitIdRoute
   '/profile-old/$username': typeof AuthenticatedProfileOldUsernameRoute
   '/profile/$username': typeof AuthenticatedProfileUsernameRouteWithChildren
-  '/app-users/': typeof AuthenticatedAppUsersIndexRoute
-  '/candidates/': typeof AuthenticatedCandidatesIndexRoute
-  '/dashboard/': typeof AuthenticatedDashboardIndexRoute
-  '/feed/': typeof AuthenticatedFeedIndexRoute
   '/notifications/': typeof AuthenticatedNotificationsIndexRoute
   '/party/': typeof AuthenticatedPartyIndexRoute
   '/profile/': typeof AuthenticatedProfileIndexRoute
-  '/states/': typeof AuthenticatedStatesIndexRoute
   '/group/$partyId/$groupId': typeof AuthenticatedGroupPartyIdGroupIdRouteWithChildren
   '/party/$partyName/$partyId': typeof AuthenticatedPartyPartyNamePartyIdRouteWithChildren
   '/profile/$username/followers': typeof AuthenticatedProfileUsernameFollowersRoute
@@ -363,9 +302,7 @@ export interface FileRoutesByFullPath {
   '/profile/$username/history': typeof AuthenticatedProfileUsernameHistoryRoute
   '/profile/$username/home': typeof AuthenticatedProfileUsernameHomeRoute
   '/profile/$username/timeline': typeof AuthenticatedProfileUsernameTimelineRoute
-  '/feed/$postId/': typeof AuthenticatedFeedPostIdIndexRoute
   '/profile/$username/': typeof AuthenticatedProfileUsernameIndexRoute
-  '/states/$stateId/': typeof AuthenticatedStatesStateIdIndexRoute
   '/group/$partyId/$groupId/home': typeof AuthenticatedGroupPartyIdGroupIdHomeRoute
   '/group/$partyId/$groupId/issues': typeof AuthenticatedGroupPartyIdGroupIdIssuesRoute
   '/group/$partyId/$groupId/members': typeof AuthenticatedGroupPartyIdGroupIdMembersRoute
@@ -394,24 +331,16 @@ export interface FileRoutesByTo {
   '/auth/login': typeof AuthLoginRoute
   '/auth/onboarding': typeof AuthOnboardingRoute
   '/auth/signup': typeof AuthSignupRoute
-  '/polling-unit/$pollingUnitId': typeof AuthenticatedPollingUnitPollingUnitIdRoute
   '/profile-old/$username': typeof AuthenticatedProfileOldUsernameRoute
-  '/app-users': typeof AuthenticatedAppUsersIndexRoute
-  '/candidates': typeof AuthenticatedCandidatesIndexRoute
-  '/dashboard': typeof AuthenticatedDashboardIndexRoute
-  '/feed': typeof AuthenticatedFeedIndexRoute
   '/notifications': typeof AuthenticatedNotificationsIndexRoute
   '/party': typeof AuthenticatedPartyIndexRoute
   '/profile': typeof AuthenticatedProfileIndexRoute
-  '/states': typeof AuthenticatedStatesIndexRoute
   '/profile/$username/followers': typeof AuthenticatedProfileUsernameFollowersRoute
   '/profile/$username/following': typeof AuthenticatedProfileUsernameFollowingRoute
   '/profile/$username/history': typeof AuthenticatedProfileUsernameHistoryRoute
   '/profile/$username/home': typeof AuthenticatedProfileUsernameHomeRoute
   '/profile/$username/timeline': typeof AuthenticatedProfileUsernameTimelineRoute
-  '/feed/$postId': typeof AuthenticatedFeedPostIdIndexRoute
   '/profile/$username': typeof AuthenticatedProfileUsernameIndexRoute
-  '/states/$stateId': typeof AuthenticatedStatesStateIdIndexRoute
   '/group/$partyId/$groupId/home': typeof AuthenticatedGroupPartyIdGroupIdHomeRoute
   '/group/$partyId/$groupId/issues': typeof AuthenticatedGroupPartyIdGroupIdIssuesRoute
   '/group/$partyId/$groupId/members': typeof AuthenticatedGroupPartyIdGroupIdMembersRoute
@@ -442,17 +371,11 @@ export interface FileRoutesById {
   '/auth/login': typeof AuthLoginRoute
   '/auth/onboarding': typeof AuthOnboardingRoute
   '/auth/signup': typeof AuthSignupRoute
-  '/_authenticated/polling-unit/$pollingUnitId': typeof AuthenticatedPollingUnitPollingUnitIdRoute
   '/_authenticated/profile-old/$username': typeof AuthenticatedProfileOldUsernameRoute
   '/_authenticated/profile/$username': typeof AuthenticatedProfileUsernameRouteWithChildren
-  '/_authenticated/app-users/': typeof AuthenticatedAppUsersIndexRoute
-  '/_authenticated/candidates/': typeof AuthenticatedCandidatesIndexRoute
-  '/_authenticated/dashboard/': typeof AuthenticatedDashboardIndexRoute
-  '/_authenticated/feed/': typeof AuthenticatedFeedIndexRoute
   '/_authenticated/notifications/': typeof AuthenticatedNotificationsIndexRoute
   '/_authenticated/party/': typeof AuthenticatedPartyIndexRoute
   '/_authenticated/profile/': typeof AuthenticatedProfileIndexRoute
-  '/_authenticated/states/': typeof AuthenticatedStatesIndexRoute
   '/_authenticated/group/$partyId/$groupId': typeof AuthenticatedGroupPartyIdGroupIdRouteWithChildren
   '/_authenticated/party/$partyName/$partyId': typeof AuthenticatedPartyPartyNamePartyIdRouteWithChildren
   '/_authenticated/profile/$username/followers': typeof AuthenticatedProfileUsernameFollowersRoute
@@ -460,9 +383,7 @@ export interface FileRoutesById {
   '/_authenticated/profile/$username/history': typeof AuthenticatedProfileUsernameHistoryRoute
   '/_authenticated/profile/$username/home': typeof AuthenticatedProfileUsernameHomeRoute
   '/_authenticated/profile/$username/timeline': typeof AuthenticatedProfileUsernameTimelineRoute
-  '/_authenticated/feed/$postId/': typeof AuthenticatedFeedPostIdIndexRoute
   '/_authenticated/profile/$username/': typeof AuthenticatedProfileUsernameIndexRoute
-  '/_authenticated/states/$stateId/': typeof AuthenticatedStatesStateIdIndexRoute
   '/_authenticated/group/$partyId/$groupId/home': typeof AuthenticatedGroupPartyIdGroupIdHomeRoute
   '/_authenticated/group/$partyId/$groupId/issues': typeof AuthenticatedGroupPartyIdGroupIdIssuesRoute
   '/_authenticated/group/$partyId/$groupId/members': typeof AuthenticatedGroupPartyIdGroupIdMembersRoute
@@ -493,17 +414,11 @@ export interface FileRouteTypes {
     | '/auth/login'
     | '/auth/onboarding'
     | '/auth/signup'
-    | '/polling-unit/$pollingUnitId'
     | '/profile-old/$username'
     | '/profile/$username'
-    | '/app-users/'
-    | '/candidates/'
-    | '/dashboard/'
-    | '/feed/'
     | '/notifications/'
     | '/party/'
     | '/profile/'
-    | '/states/'
     | '/group/$partyId/$groupId'
     | '/party/$partyName/$partyId'
     | '/profile/$username/followers'
@@ -511,9 +426,7 @@ export interface FileRouteTypes {
     | '/profile/$username/history'
     | '/profile/$username/home'
     | '/profile/$username/timeline'
-    | '/feed/$postId/'
     | '/profile/$username/'
-    | '/states/$stateId/'
     | '/group/$partyId/$groupId/home'
     | '/group/$partyId/$groupId/issues'
     | '/group/$partyId/$groupId/members'
@@ -542,24 +455,16 @@ export interface FileRouteTypes {
     | '/auth/login'
     | '/auth/onboarding'
     | '/auth/signup'
-    | '/polling-unit/$pollingUnitId'
     | '/profile-old/$username'
-    | '/app-users'
-    | '/candidates'
-    | '/dashboard'
-    | '/feed'
     | '/notifications'
     | '/party'
     | '/profile'
-    | '/states'
     | '/profile/$username/followers'
     | '/profile/$username/following'
     | '/profile/$username/history'
     | '/profile/$username/home'
     | '/profile/$username/timeline'
-    | '/feed/$postId'
     | '/profile/$username'
-    | '/states/$stateId'
     | '/group/$partyId/$groupId/home'
     | '/group/$partyId/$groupId/issues'
     | '/group/$partyId/$groupId/members'
@@ -589,17 +494,11 @@ export interface FileRouteTypes {
     | '/auth/login'
     | '/auth/onboarding'
     | '/auth/signup'
-    | '/_authenticated/polling-unit/$pollingUnitId'
     | '/_authenticated/profile-old/$username'
     | '/_authenticated/profile/$username'
-    | '/_authenticated/app-users/'
-    | '/_authenticated/candidates/'
-    | '/_authenticated/dashboard/'
-    | '/_authenticated/feed/'
     | '/_authenticated/notifications/'
     | '/_authenticated/party/'
     | '/_authenticated/profile/'
-    | '/_authenticated/states/'
     | '/_authenticated/group/$partyId/$groupId'
     | '/_authenticated/party/$partyName/$partyId'
     | '/_authenticated/profile/$username/followers'
@@ -607,9 +506,7 @@ export interface FileRouteTypes {
     | '/_authenticated/profile/$username/history'
     | '/_authenticated/profile/$username/home'
     | '/_authenticated/profile/$username/timeline'
-    | '/_authenticated/feed/$postId/'
     | '/_authenticated/profile/$username/'
-    | '/_authenticated/states/$stateId/'
     | '/_authenticated/group/$partyId/$groupId/home'
     | '/_authenticated/group/$partyId/$groupId/issues'
     | '/_authenticated/group/$partyId/$groupId/members'
@@ -711,13 +608,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedHomeRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/states/': {
-      id: '/_authenticated/states/'
-      path: '/states'
-      fullPath: '/states/'
-      preLoaderRoute: typeof AuthenticatedStatesIndexRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
     '/_authenticated/profile/': {
       id: '/_authenticated/profile/'
       path: '/profile'
@@ -739,34 +629,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedNotificationsIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/feed/': {
-      id: '/_authenticated/feed/'
-      path: '/feed'
-      fullPath: '/feed/'
-      preLoaderRoute: typeof AuthenticatedFeedIndexRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/dashboard/': {
-      id: '/_authenticated/dashboard/'
-      path: '/dashboard'
-      fullPath: '/dashboard/'
-      preLoaderRoute: typeof AuthenticatedDashboardIndexRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/candidates/': {
-      id: '/_authenticated/candidates/'
-      path: '/candidates'
-      fullPath: '/candidates/'
-      preLoaderRoute: typeof AuthenticatedCandidatesIndexRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/app-users/': {
-      id: '/_authenticated/app-users/'
-      path: '/app-users'
-      fullPath: '/app-users/'
-      preLoaderRoute: typeof AuthenticatedAppUsersIndexRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
     '/_authenticated/profile/$username': {
       id: '/_authenticated/profile/$username'
       path: '/profile/$username'
@@ -781,33 +643,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProfileOldUsernameRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/polling-unit/$pollingUnitId': {
-      id: '/_authenticated/polling-unit/$pollingUnitId'
-      path: '/polling-unit/$pollingUnitId'
-      fullPath: '/polling-unit/$pollingUnitId'
-      preLoaderRoute: typeof AuthenticatedPollingUnitPollingUnitIdRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/states/$stateId/': {
-      id: '/_authenticated/states/$stateId/'
-      path: '/states/$stateId'
-      fullPath: '/states/$stateId/'
-      preLoaderRoute: typeof AuthenticatedStatesStateIdIndexRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
     '/_authenticated/profile/$username/': {
       id: '/_authenticated/profile/$username/'
       path: '/'
       fullPath: '/profile/$username/'
       preLoaderRoute: typeof AuthenticatedProfileUsernameIndexRouteImport
       parentRoute: typeof AuthenticatedProfileUsernameRoute
-    }
-    '/_authenticated/feed/$postId/': {
-      id: '/_authenticated/feed/$postId/'
-      path: '/feed/$postId'
-      fullPath: '/feed/$postId/'
-      preLoaderRoute: typeof AuthenticatedFeedPostIdIndexRouteImport
-      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/profile/$username/timeline': {
       id: '/_authenticated/profile/$username/timeline'
@@ -1089,46 +930,29 @@ interface AuthenticatedRouteChildren {
   AuthenticatedHomeRoute: typeof AuthenticatedHomeRoute
   AuthenticatedPollingUnitsRoute: typeof AuthenticatedPollingUnitsRoute
   AuthenticatedSearchRoute: typeof AuthenticatedSearchRoute
-  AuthenticatedPollingUnitPollingUnitIdRoute: typeof AuthenticatedPollingUnitPollingUnitIdRoute
   AuthenticatedProfileOldUsernameRoute: typeof AuthenticatedProfileOldUsernameRoute
   AuthenticatedProfileUsernameRoute: typeof AuthenticatedProfileUsernameRouteWithChildren
-  AuthenticatedAppUsersIndexRoute: typeof AuthenticatedAppUsersIndexRoute
-  AuthenticatedCandidatesIndexRoute: typeof AuthenticatedCandidatesIndexRoute
-  AuthenticatedDashboardIndexRoute: typeof AuthenticatedDashboardIndexRoute
-  AuthenticatedFeedIndexRoute: typeof AuthenticatedFeedIndexRoute
   AuthenticatedNotificationsIndexRoute: typeof AuthenticatedNotificationsIndexRoute
   AuthenticatedPartyIndexRoute: typeof AuthenticatedPartyIndexRoute
   AuthenticatedProfileIndexRoute: typeof AuthenticatedProfileIndexRoute
-  AuthenticatedStatesIndexRoute: typeof AuthenticatedStatesIndexRoute
   AuthenticatedGroupPartyIdGroupIdRoute: typeof AuthenticatedGroupPartyIdGroupIdRouteWithChildren
   AuthenticatedPartyPartyNamePartyIdRoute: typeof AuthenticatedPartyPartyNamePartyIdRouteWithChildren
-  AuthenticatedFeedPostIdIndexRoute: typeof AuthenticatedFeedPostIdIndexRoute
-  AuthenticatedStatesStateIdIndexRoute: typeof AuthenticatedStatesStateIdIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedHomeRoute: AuthenticatedHomeRoute,
   AuthenticatedPollingUnitsRoute: AuthenticatedPollingUnitsRoute,
   AuthenticatedSearchRoute: AuthenticatedSearchRoute,
-  AuthenticatedPollingUnitPollingUnitIdRoute:
-    AuthenticatedPollingUnitPollingUnitIdRoute,
   AuthenticatedProfileOldUsernameRoute: AuthenticatedProfileOldUsernameRoute,
   AuthenticatedProfileUsernameRoute:
     AuthenticatedProfileUsernameRouteWithChildren,
-  AuthenticatedAppUsersIndexRoute: AuthenticatedAppUsersIndexRoute,
-  AuthenticatedCandidatesIndexRoute: AuthenticatedCandidatesIndexRoute,
-  AuthenticatedDashboardIndexRoute: AuthenticatedDashboardIndexRoute,
-  AuthenticatedFeedIndexRoute: AuthenticatedFeedIndexRoute,
   AuthenticatedNotificationsIndexRoute: AuthenticatedNotificationsIndexRoute,
   AuthenticatedPartyIndexRoute: AuthenticatedPartyIndexRoute,
   AuthenticatedProfileIndexRoute: AuthenticatedProfileIndexRoute,
-  AuthenticatedStatesIndexRoute: AuthenticatedStatesIndexRoute,
   AuthenticatedGroupPartyIdGroupIdRoute:
     AuthenticatedGroupPartyIdGroupIdRouteWithChildren,
   AuthenticatedPartyPartyNamePartyIdRoute:
     AuthenticatedPartyPartyNamePartyIdRouteWithChildren,
-  AuthenticatedFeedPostIdIndexRoute: AuthenticatedFeedPostIdIndexRoute,
-  AuthenticatedStatesStateIdIndexRoute: AuthenticatedStatesStateIdIndexRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(

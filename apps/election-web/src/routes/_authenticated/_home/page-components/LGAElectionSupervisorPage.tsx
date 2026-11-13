@@ -19,7 +19,6 @@ import ReportIcon from "@repo/ui/icons/report-icon";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { SupervisorTabs } from "../../../../components/Tabs";
-import { ApplicationsCard } from "../components/ApplicationsCard";
 import { ReferralCard } from "../components/ReferralCard";
 import { EarningsTab } from "../components/EarningsTab";
 import { GiveUpdateFloatingButton } from "../components/GiveUpdateFloatingButton";
@@ -281,8 +280,7 @@ export function LGAElectionSupervisorPage() {
           <DidYouVoteCard onYesClick={() => navigate({ to: "/vote" })} />
         )}
 
-        {/* Applications, referrals, and practice tests */}
-        {daysLeft !== undefined && daysLeft !== 0 && <ApplicationsCard />}
+        {/* Referrals and practice tests */}
         <ReferralCard onClick={() => navigate({ to: "/referrals" })} />
         {daysLeft !== undefined && daysLeft !== 0 && <PracticeTestCard />}
 

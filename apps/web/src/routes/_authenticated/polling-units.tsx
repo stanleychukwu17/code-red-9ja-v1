@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { AppPageHeader } from "#/components/AppPageHeader";
@@ -6,7 +6,7 @@ import { getPageHeader } from "#/lib/shared/meta";
 import { useAppSelector } from "@/redux/hooks";
 import { useNigeriaStates, useLGAs, useWards } from "#/hooks";
 import { getPollingUnitsList, type PollingUnitItem } from "#/lib/server/polling_units";
-import { Search, MapPin, Vote, ChevronRight, Filter, CheckCircle2, RotateCcw, Building } from "lucide-react";
+import { Search, MapPin, Vote, Building, CheckCircle2, RotateCcw } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/polling-units")({
   head: () => getPageHeader({
@@ -17,7 +17,6 @@ export const Route = createFileRoute("/_authenticated/polling-units")({
 });
 
 function PollingUnitsPage() {
-  const navigate = useNavigate();
   const { user } = useAppSelector((state) => state.auth);
   const userPuId = (user as any)?.polling_unit_id;
 
@@ -245,18 +244,12 @@ function PollingUnitsPage() {
               return (
                 <div
                   key={pu.id}
-                  onClick={() =>
-                    navigate({
-                      to: "/polling-unit/$pollingUnitId",
-                      params: { pollingUnitId: String(pu.id) },
-                    })
-                  }
-                  className="group relative flex flex-col justify-between rounded-2xl border border-border bg-card p-5 shadow-xs transition hover:border-primary hover:shadow-md cursor-pointer"
+                  className="relative flex flex-col justify-between rounded-2xl border border-border bg-card p-5 shadow-xs"
                 >
                   <div className="space-y-2.5">
                     {/* Header: Title & Badges */}
                     <div className="flex items-start justify-between gap-3">
-                      <h3 className="text-[17px] font-bold text-card-foreground group-hover:text-primary transition-colors">
+                      <h3 className="text-[17px] font-bold text-card-foreground">
                         {pu.name}
                       </h3>
                       {isUserPU && (
@@ -299,16 +292,6 @@ function PollingUnitsPage() {
                         </span>
                       </p>
                     )}
-                  </div>
-
-                  {/* Card Footer Action */}
-                  <div className="mt-4 flex items-center justify-between border-t border-border/60 pt-3">
-                    <span className="text-xs font-medium text-muted-foreground group-hover:text-primary transition-colors flex items-center gap-1">
-                      <Vote className="size-3.5" /> View Results & Feed
-                    </span>
-                    <div className="flex size-7 items-center justify-center rounded-full bg-muted text-muted-foreground group-hover:bg-primary group-hover:text-primary-foreground transition">
-                      <ChevronRight className="size-4" />
-                    </div>
                   </div>
                 </div>
               );

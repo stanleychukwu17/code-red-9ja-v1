@@ -14,8 +14,6 @@ export const APP_URL = {
 		signup: "/auth/signup",
 		forgotPassword: "/auth/forgot-password",
 	},
-	dashboard: "/dashboard",
-	feed: "/feed",
 	home: "/home",
 	notifications: "/notifications",
 	profile: (username?: string, tab?: string) =>

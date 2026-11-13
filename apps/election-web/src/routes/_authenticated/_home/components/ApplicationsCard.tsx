@@ -24,15 +24,17 @@ import { Target } from "lucide-react";
 export function ApplicationsCard() {
   const navigate = useNavigate();
   const user = useUser();
-  const { selectedAssignment } = useAssignments();
+  const { selectedAssignment, selectedSupervisorAssignment, isLoading: isAssignmentsLoading } = useAssignments();
+  const hasAssignedRole = Boolean(selectedAssignment || selectedSupervisorAssignment);
 
   // Query polling agent applications submitted by the current user
   const { data: applicationsData } = useQuery({
     queryKey: ["pollingAgentApplications", user?.id],
-    enabled: !!user?.id,
+    enabled: !!user?.id && !hasAssignedRole && !isAssignmentsLoading,
+    staleTime: Infinity,
     queryFn: async () => {
       const res = await getApplications({
-        data: { user_id: user?.id, active_election_only: true },
+        data: { user_id: user?.id, status: "pending", active_election_only: true },
       });
       if (!res || !res.success || !res.data?.applications) {
         return [];
@@ -40,6 +42,11 @@ export function ApplicationsCard() {
       return res.data.applications;
     },
   });
+
+  // If the user already has an active duty assignment as an agent or supervisor, do not render application card
+  if (hasAssignedRole) {
+    return null;
+  }
 
   // Filter applications that are currently active (not rejected/cancelled).
   // Note: Past / ended elections are filtered directly at the DB level via active_election_only: true.
@@ -54,15 +61,11 @@ export function ApplicationsCard() {
 
   const appCount = activeApps.length;
 
-  // Location hierarchy labels from active assignment
-  const pollingUnit =
-    selectedAssignment?.polling_unit_name ||
-    selectedAssignment?.polling_unit?.name ||
-    "Pick Your Polling Unit";
-
-  const state = selectedAssignment?.state_name || "State";
-  const lga = selectedAssignment?.lga_name || "LGA";
-  const ward = selectedAssignment?.ward_name || "Ward";
+  // Location hierarchy labels from active application or assignment fallback
+  const firstApp = activeApps[0];
+  const state = firstApp?.state_name || selectedAssignment?.state_name || "State";
+  const lga = firstApp?.lga_name || selectedAssignment?.lga_name || "LGA";
+  const ward = firstApp?.ward_name || selectedAssignment?.ward_name || "Ward";
 
   // STATE 1: User has existing active applications -> Show summary and preview CTA
   if (appCount > 0) {
