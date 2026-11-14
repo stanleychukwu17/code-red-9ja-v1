@@ -81,8 +81,6 @@ function ApplyPageContent() {
     return <ActiveApplicationWarning application={activeApplication} />;
   }
 
-  console.log(activeApplication)
-
   // Block and display warning if user already has an active duty assignment
   if (hasActiveAssignment) {
     const assignmentPayload = pollingUnitAssignment || {

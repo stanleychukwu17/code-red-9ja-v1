@@ -26,6 +26,7 @@ type partiesService interface {
 	GetOrCreateLGAChapter(ctx context.Context, partyID int16, lgaID int32, createIfMissing ...bool) (int32, error)
 	GetOrCreateWardChapter(ctx context.Context, partyID int16, wardID int32, createIfMissing ...bool) (int32, error)
 	ListPartyOfficials(ctx context.Context, partyID int16, chapterID int32) ([]queries.ListPartyOfficialsRow, error)
+	GetPartyChapterByID(ctx context.Context, chapterID int32) (queries.PartyChapter, error)
 }
 
 type CampaignGroupsService struct {
@@ -555,6 +556,90 @@ func (s *CampaignGroupsService) RemoveAgentFromPartyCampaignGroups(ctx context.C
 
 	for _, groupID := range groupIDs {
 		s.InvalidateGroupMembersCache(ctx, groupID)
+	}
+	s.InvalidatePartyMemberCheckCache(ctx, partyID, userID)
+
+	return nil
+}
+
+// RemoveOfficialFromChapterCampaignGroup removes a user from the campaign group matching a party chapter if their role is 'party_official'.
+func (s *CampaignGroupsService) RemoveOfficialFromChapterCampaignGroup(ctx context.Context, partyID int16, chapterID int32, userID int64) error {
+	chapter, err := s.partiesService.GetPartyChapterByID(ctx, chapterID)
+	if err != nil {
+		return fmt.Errorf("failed to fetch chapter %d: %w", chapterID, err)
+	}
+
+	scope := chapter.ChapterType
+	if scope == "zonal" {
+		scope = "state"
+	}
+
+	var stateID pgtype.Int4
+	if chapter.StateID.Valid {
+		stateID = pgtype.Int4{Int32: int32(chapter.StateID.Int16), Valid: true}
+	}
+
+	groupID, err := s.queries.GetCampaignGroupIDByTerritory(ctx, queries.GetCampaignGroupIDByTerritoryParams{
+		PartyID: partyID,
+		Scope:   scope,
+		StateID: stateID,
+		LgaID:   chapter.LgaID,
+		WardID:  chapter.WardID,
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil
+		}
+		return fmt.Errorf("failed to lookup campaign group for chapter %d: %w", chapterID, err)
+	}
+
+	var deletedGroupID int64
+	err = s.pool.QueryRow(ctx, `
+		DELETE FROM campaign_group_members
+		WHERE group_id = $1 
+		  AND user_id = $2 
+		  AND role = 'party_official'
+		RETURNING group_id
+	`, groupID, userID).Scan(&deletedGroupID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil
+		}
+		return fmt.Errorf("failed to delete party_official membership from campaign group %d: %w", groupID, err)
+	}
+
+	s.InvalidateGroupMembersCache(ctx, groupID)
+	s.InvalidateGroupOfficialsCache(ctx, groupID)
+	s.InvalidatePartyMemberCheckCache(ctx, partyID, userID)
+
+	return nil
+}
+
+// RemovePartyOfficialFromAllCampaignGroups removes a user from all campaign groups for a party where their role is 'party_official'.
+func (s *CampaignGroupsService) RemovePartyOfficialFromAllCampaignGroups(ctx context.Context, partyID int16, userID int64) error {
+	rows, err := s.pool.Query(ctx, `
+		DELETE FROM campaign_group_members
+		WHERE party_id = $1 
+		  AND user_id = $2 
+		  AND role = 'party_official'
+		RETURNING group_id
+	`, partyID, userID)
+	if err != nil {
+		return fmt.Errorf("failed to remove official from campaign groups: %w", err)
+	}
+	defer rows.Close()
+
+	var groupIDs []int64
+	for rows.Next() {
+		var gid int64
+		if err := rows.Scan(&gid); err == nil {
+			groupIDs = append(groupIDs, gid)
+		}
+	}
+
+	for _, gid := range groupIDs {
+		s.InvalidateGroupMembersCache(ctx, gid)
+		s.InvalidateGroupOfficialsCache(ctx, gid)
 	}
 	s.InvalidatePartyMemberCheckCache(ctx, partyID, userID)
 

@@ -6,7 +6,7 @@ import { getPageHeader } from "#/lib/shared/meta";
 import { useAppSelector } from "@/redux/hooks";
 import { useNigeriaStates, useLGAs, useWards } from "#/hooks";
 import { getPollingUnitsList, type PollingUnitItem } from "#/lib/server/polling_units";
-import { Search, MapPin, Vote, Building, CheckCircle2, RotateCcw } from "lucide-react";
+import { Search, MapPin, Vote, Building, CheckCircle2, RotateCcw, Filter } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/polling-units")({
   head: () => getPageHeader({

@@ -178,6 +178,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	partiesService.SetPageVerificationsService(pageVerificationsService)
 	partiesService.SetFollowsService(followsService)
 	partiesService.SetWalletService(partiesWalletService)
+	partiesService.SetCampaignGroupsService(campaignGroupsService)
 	bodiesService.SetPartiesService(partiesService)
 	electionsService.SetPageVerificationsService(pageVerificationsService)
 	electionsService.SetCampaignGroupsService(campaignGroupsService)

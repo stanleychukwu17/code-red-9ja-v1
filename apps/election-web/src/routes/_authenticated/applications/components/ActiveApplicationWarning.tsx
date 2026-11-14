@@ -2,24 +2,14 @@ import { useNavigate } from "@tanstack/react-router";
 import { PageWrapper } from "#/components/Wrappers";
 import { StickyFooter } from "#/components/Footers";
 import { Button } from "@repo/ui/components/button";
-import {
-  AlertCircle,
-  Calendar,
-  Shield,
-  MapPin,
-  GraduationCap,
-  ArrowRight,
-} from "lucide-react";
+import { AlertCircle, Calendar, Shield, MapPin, GraduationCap, ArrowRight } from "lucide-react";
 
-interface ActiveApplicationWarningProps {
+type ActiveApplicationWarningProps = {
   application: any;
   isAssignment?: boolean;
-}
+};
 
-export function ActiveApplicationWarning({
-  application,
-  isAssignment,
-}: ActiveApplicationWarningProps) {
+export function ActiveApplicationWarning({ application, isAssignment }: ActiveApplicationWarningProps) {
   const navigate = useNavigate();
 
   const isAssigned =
@@ -28,24 +18,13 @@ export function ActiveApplicationWarning({
     application?.status === "accepted" ||
     application?.status === "approved";
 
-  const electionName =
-    application.election_group_name ||
-    application.election_group?.name ||
-    "an upcoming election";
+  const electionName = application.election_group_name || "an upcoming election";
 
-  const statusLabel =
-    isAssigned ? "Approved Agent" : "Under Review (Pending)";
+  const statusLabel = isAssigned ? "Approved Agent" : "Under Review (Pending)";
 
-  const partyName =
-    application.party_short_name ||
-    application.party_name ||
-    application.party?.short_name ||
-    "";
+  const partyName = application.party_short_name || "";
 
-  const pollingUnitName =
-    application.polling_unit_name ||
-    application.polling_unit?.name ||
-    "Assigned PU";
+  const pollingUnitName = application.polling_unit_name || "Assigned PU";
 
   return (
     <PageWrapper>
@@ -58,7 +37,7 @@ export function ActiveApplicationWarning({
           </div>
 
           <h1 className="text-2xl font-bold text-c-100 leading-tight">
-            {isAssigned ? "You Already Have an Active Assignment" : "You Already Have an Active Application"}
+            {isAssigned ? "You Have an Active Assignment" : "You Have an Active Application"}
           </h1>
 
           <p className="text-c-80 text-sm leading-relaxed">
@@ -75,11 +54,10 @@ export function ActiveApplicationWarning({
               Current Assignment
             </span>
             <span
-              className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${
-                application.status === "accepted" || application.status === "approved"
-                  ? "bg-green/15 text-green"
-                  : "bg-black/10 dark:bg-white/10 text-c-100"
-              }`}
+              className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${application.status === "accepted" || application.status === "approved"
+                ? "bg-green/15 text-green"
+                : "bg-black/10 dark:bg-white/10 text-c-100"
+                }`}
             >
               {statusLabel}
             </span>
