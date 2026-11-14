@@ -44,7 +44,6 @@ import { HomeTabs } from "../../../../components/Tabs";
 import { ArrivalCard } from "../../_home/components/ArrivalCard";
 import { ArrivalDrawer } from "../../_home/components/ArrivalDrawer";
 import { ContactPartyTab } from "../../_home/components/ContactPartyTab";
-import { DidYouVoteCard } from "../../_home/components/DidYouVoteCard";
 import { EarningsTab } from "../../_home/components/EarningsTab";
 import { ElectionStatusCard } from "../../_home/components/ElectionStatusCard";
 import { GiveUpdateFloatingButton } from "../../_home/components/GiveUpdateFloatingButton";
@@ -1443,7 +1442,6 @@ export function DashboardPage({
   const hasNotArrived = taskType === "arriveAtPollingUnit";
   const hasNotStartedElection = taskType === "startElection";
   const hasNotEndedElection = taskType === "endElection";
-  const haveNotToldUsIfTheyVoted = taskType === "mayHaveVoted";
   const hasNotUploadedResult = taskType === "uploadResult";
   const hasNotRequestedPayout = taskType === "requestPayout";
   const noVotersReffered = taskType === "referVoters";
@@ -1578,38 +1576,6 @@ export function DashboardPage({
             }}
           />
         )}
-
-        {/* Task Drill: Voter Voting Confirmation */}
-        <DidYouVoteCard
-          onYesClick={() => {
-            const isCorrect = isThisCorrect("mayHaveVoted");
-            if (!isCorrect) {
-              showFeedbackToast(false, failedAttemptCount + 1);
-              onWrong?.();
-            } else {
-              showFeedbackToast(true, failedAttemptCount);
-              const params = new URLSearchParams(window.location.search);
-              params.set("failedAttemptCount", String(failedAttemptCount));
-              navigate({
-                to: `/vote?${params.toString()}`,
-              });
-            }
-          }}
-          onNoClick={() => {
-            const isCorrect = isThisCorrect("mayHaveVoted");
-            if (!isCorrect) {
-              showFeedbackToast(false, failedAttemptCount + 1);
-              onWrong?.();
-            } else {
-              showFeedbackToast(true, failedAttemptCount);
-              const params = new URLSearchParams(window.location.search);
-              params.set("failedAttemptCount", String(failedAttemptCount));
-              navigate({
-                to: `/vote?${params.toString()}`,
-              });
-            }
-          }}
-        />
 
         {/* Task Drill: Upload EC8A Result Sheet */}
         {hasNotUploadedResult && (

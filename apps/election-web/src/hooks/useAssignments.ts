@@ -28,20 +28,23 @@ export interface SupervisorAssignment {
  * - `pollingUnitId`: Effective polling unit ID for tasks, arrivals, and results
  * - `isLoading`: Combined query loading state
  */
-export const useAssignments = () => {
+export const useAssignments = (electionGroupId?: number | string) => {
 	const user = useUser();
 	const { selectedElectionGroup } = useElection();
+
+	const targetElectionGroupId = electionGroupId !== undefined ? electionGroupId : selectedElectionGroup?.id;
 
 	// 1. Fetch authenticated user's election duty assignments (polling unit & supervisor) in a single request
 	const fetchMyAssignment = useServerFn(getMyPollingUnitAssignment);
 	const { data: assignmentsData, isLoading } = useQuery({
-		queryKey: ["myPollingUnitAssignment", selectedElectionGroup?.id],
-		enabled: !!selectedElectionGroup?.id,
+		queryKey: ["myPollingUnitAssignment", targetElectionGroupId ?? "auto"],
 		queryFn: async () => {
 			const res = await fetchMyAssignment({
-				data: {
-					election_group_id: selectedElectionGroup?.id,
-				},
+				data: targetElectionGroupId
+					? {
+							election_group_id: targetElectionGroupId,
+						}
+					: undefined,
 			});
 			if (!res?.success || !res.data) return null;
 			return res.data;
@@ -79,7 +82,10 @@ export const useAssignments = () => {
 	// 4. Resolve effective polling unit ID (assigned unit takes precedence over profile default)
 	const pollingUnitId = pollingUnitAssignment?.polling_unit_id ?? user?.polling_unit_id ?? null;
 
+	const hasActiveAssignment = !!pollingUnitAssignment || !!supervisorAssignment;
+
 	return {
+		hasActiveAssignment,
 		pollingUnitAssignment,
 		supervisorAssignment,
 		rawSupervisorAssignments: supervisorAssignmentsData,

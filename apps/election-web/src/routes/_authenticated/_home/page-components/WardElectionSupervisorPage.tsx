@@ -27,7 +27,6 @@ import { PracticeTestCard } from "../components/PracticeTestCard";
 import { HomeBody } from "../components/Shared";
 import { SupervisorStartDutyCard } from "../components/SupervisorReadyCard";
 import { WardSupervisorTasksTab } from "../components/SupervisorTasksTab";
-import { DidYouVoteCard } from "../components/DidYouVoteCard";
 import { Layout } from "@repo/ui/components/custom/AdminLayouts";
 
 /**
@@ -266,11 +265,6 @@ export function WardElectionSupervisorPage() {
               setIsArrivalDrawerOpen(true);
             }}
           />
-        )}
-
-        {/* Voting check on election day */}
-        {daysLeft === 0 && (
-          <DidYouVoteCard onYesClick={() => navigate({ to: "/vote" })} />
         )}
 
         {/* Referrals and practice tests */}

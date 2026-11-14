@@ -1,7 +1,6 @@
 import { useElection } from "#/hooks/useElection";
 import { useNavigate } from "@tanstack/react-router";
 import { ApplicationsCard } from "../components/ApplicationsCard";
-import { DidYouVoteCard } from "../components/DidYouVoteCard";
 import { GiveUpdateFloatingButton } from "../components/GiveUpdateFloatingButton";
 import { HomeHeader } from "../components/HomeHeader";
 import { PracticeTestCard } from "../components/PracticeTestCard";
@@ -18,7 +17,7 @@ import { Layout } from "@repo/ui/components/custom/AdminLayouts";
  * - Election countdown and polling unit setup.
  * - Training practice tests and educational milestones.
  * - Live candidate leaderboard and election updates.
- * - Election day participation prompt (`DidYouVoteCard`) and citizen result upload (`UploadResultCard`).
+ * - Citizen result upload (`UploadResultCard`).
  * - Application call-to-action for becoming an accredited agent or supervisor.
  * - Viral voter referral link and reward tracking.
  */
@@ -53,11 +52,6 @@ export function GeneralPage() {
 
       {/* Action Cards Body */}
       <HomeBody>
-        {/* On election day: prompt voter if they voted */}
-        {daysLeft === 0 && (
-          <DidYouVoteCard onYesClick={() => navigate({ to: "/vote" })} />
-        )}
-
         {/* On election day: permit citizens to crowdsource EC8A result sheets */}
         {daysLeft === 0 && (
           <UploadResultCard

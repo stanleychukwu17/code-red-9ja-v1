@@ -33,7 +33,6 @@ type TaskProcessor interface {
 	Shutdown()
 	ProcessTaskCalculateFinalResult(ctx context.Context, task *asynq.Task) error
 	ProcessTaskExtractPUResultAI(ctx context.Context, task *asynq.Task) error
-	ProcessTaskAggregateLiveVotes(ctx context.Context, task *asynq.Task) error
 	// Scoped candidate rollup processors
 	ProcessTaskRollupSingleWard(ctx context.Context, task *asynq.Task) error
 	ProcessTaskRollupSingleStateConstituency(ctx context.Context, task *asynq.Task) error
@@ -104,7 +103,6 @@ func (redisTaskProcessor *RedisTaskProcessor) Start() error {
 	mux := asynq.NewServeMux()
 	mux.HandleFunc(TaskCalculateFinalResult, redisTaskProcessor.ProcessTaskCalculateFinalResult)
 	mux.HandleFunc(TaskExtractPUResultAI, redisTaskProcessor.ProcessTaskExtractPUResultAI)
-	mux.HandleFunc(TaskAggregateLiveVotes, redisTaskProcessor.ProcessTaskAggregateLiveVotes)
 
 	// Scoped candidate rollup handlers (event-driven, bottom-up cascading).
 	mux.HandleFunc(TaskRollupSingleWard, redisTaskProcessor.ProcessTaskRollupSingleWard)

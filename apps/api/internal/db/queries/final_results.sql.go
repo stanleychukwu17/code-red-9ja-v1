@@ -261,66 +261,6 @@ func (q *Queries) ListPollingUnitFinalResults(ctx context.Context, arg ListPolli
 	return items, nil
 }
 
-const refreshPollingUnitLiveResults = `-- name: RefreshPollingUnitLiveResults :exec
-WITH live_counts AS (
-  SELECT 
-    p.short_name AS party_short_name,
-    COUNT(ev.id)::int AS vote_count
-  FROM election_votes ev
-  JOIN parties p ON ev.party_id = p.id
-  WHERE ev.election_id = $1 AND ev.polling_unit_id = $2
-  GROUP BY p.short_name
-),
-live_json AS (
-  SELECT COALESCE(
-    jsonb_agg(
-      jsonb_build_object('party_short_name', party_short_name, 'vote_count', vote_count)
-    ), '[]'::jsonb
-  ) as candidate_results_live
-  FROM live_counts
-)
-INSERT INTO election_polling_unit_final_results (
-  election_id, election_group_id, polling_unit_id,
-  state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id,
-  candidate_results_live, candidate_results
-) VALUES (
-  $1, $3, $2,
-  $4, $5, $6, $7, $8, $9,
-  (SELECT candidate_results_live FROM live_json),
-  '[]'::jsonb
-)
-ON CONFLICT (election_id, polling_unit_id) DO UPDATE SET
-  candidate_results_live = EXCLUDED.candidate_results_live,
-  updated_at = NOW()
-`
-
-type RefreshPollingUnitLiveResultsParams struct {
-	ElectionID            int32       `json:"election_id"`
-	PollingUnitID         int32       `json:"polling_unit_id"`
-	ElectionGroupID       int32       `json:"election_group_id"`
-	StateID               pgtype.Int2 `json:"state_id"`
-	SenatorialDistrictID  pgtype.Int4 `json:"senatorial_district_id"`
-	FederalConstituencyID pgtype.Int4 `json:"federal_constituency_id"`
-	StateConstituencyID   pgtype.Int4 `json:"state_constituency_id"`
-	LgaID                 pgtype.Int4 `json:"lga_id"`
-	WardID                pgtype.Int4 `json:"ward_id"`
-}
-
-func (q *Queries) RefreshPollingUnitLiveResults(ctx context.Context, arg RefreshPollingUnitLiveResultsParams) error {
-	_, err := q.db.Exec(ctx, refreshPollingUnitLiveResults,
-		arg.ElectionID,
-		arg.PollingUnitID,
-		arg.ElectionGroupID,
-		arg.StateID,
-		arg.SenatorialDistrictID,
-		arg.FederalConstituencyID,
-		arg.StateConstituencyID,
-		arg.LgaID,
-		arg.WardID,
-	)
-	return err
-}
-
 const rollupElectionFinalResults = `-- name: RollupElectionFinalResults :exec
 SELECT 1
 `

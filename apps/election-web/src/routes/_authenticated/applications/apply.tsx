@@ -3,6 +3,7 @@ import { PageWrapper } from "#/components/Wrappers";
 import { getPageHeader } from "#/lib/shared/meta";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { AlertCircle } from "lucide-react";
+import { useAssignments } from "#/hooks/useAssignments";
 import { ApplyProvider, useApplyContext } from "./context/ApplyContext";
 import { ApplyFooter } from "./components/-ApplyFooter";
 import { ApplySuccess } from "./components/-ApplySuccess";
@@ -80,11 +81,35 @@ function ApplyPageContent() {
     activeApplication,
   } = form;
 
-  console.log("you are now rocking with the best", activeApplication);
+  const {
+    pollingUnitAssignment,
+    supervisorAssignment,
+    hasActiveAssignment,
+  } = useAssignments();
+
 
   // Block and display warning if user already has an active, un-exhausted election application
   if (activeApplication) {
     return <ActiveApplicationWarning application={activeApplication} />;
+  }
+
+  // Block and display warning if user already has an active duty assignment
+  if (hasActiveAssignment) {
+    const assignmentPayload = pollingUnitAssignment || {
+      isAssignment: true,
+      election_group_name: supervisorAssignment?.data?.election_group_name,
+      party_short_name: supervisorAssignment?.data?.party_short_name,
+      status: "approved",
+      polling_unit_name: supervisorAssignment
+        ? `${supervisorAssignment.type.toUpperCase()} Supervisor Assignment`
+        : undefined,
+    };
+    return (
+      <ActiveApplicationWarning
+        application={assignmentPayload}
+        isAssignment={true}
+      />
+    );
   }
 
   // Render success congratulations screen upon successful submission

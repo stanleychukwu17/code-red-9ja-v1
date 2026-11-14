@@ -23,7 +23,6 @@ import { ReferralCard } from "../components/ReferralCard";
 import { ArrivalCard } from "../components/ArrivalCard";
 import { ArrivalDrawer } from "../components/ArrivalDrawer";
 import { ContactPartyTab } from "../components/ContactPartyTab";
-import { DidYouVoteCard } from "../components/DidYouVoteCard";
 import { EarningsTab } from "../components/EarningsTab";
 import { ElectionStatusCard } from "../components/ElectionStatusCard";
 import { HomeHeader, HomeHeader2 } from "../components/HomeHeader";
@@ -377,11 +376,6 @@ export function PollingAgentPage() {
                 )}
             </>
           )}
-
-        {/* Voter Participation prompt on election day */}
-        {daysLeft === 0 && (
-          <DidYouVoteCard onYesClick={() => navigate({ to: "/vote" })} />
-        )}
 
         {/* Post-Election Stage: Final result verification and duty payout request */}
         {currentPollingUnitAssignment &&

@@ -36,7 +36,6 @@ type Querier interface {
 	CheckIfPageHasAnyVerification(ctx context.Context, arg CheckIfPageHasAnyVerificationParams) (bool, error)
 	CheckIfUserEverContested(ctx context.Context, candidateID int64) (bool, error)
 	CheckIfUserHasActivePositionByChapterType(ctx context.Context, arg CheckIfUserHasActivePositionByChapterTypeParams) (bool, error)
-	CheckIfUserVotedInElection(ctx context.Context, arg CheckIfUserVotedInElectionParams) (bool, error)
 	CheckReferralCodeExists(ctx context.Context, referralCode pgtype.Text) (bool, error)
 	CheckUnmatchedPollingUnitResultExists(ctx context.Context, arg CheckUnmatchedPollingUnitResultExistsParams) (bool, error)
 	CheckUserHasAnyRole(ctx context.Context, userID int64) (bool, error)
@@ -60,7 +59,6 @@ type Querier interface {
 	CreateElectionCandidate(ctx context.Context, arg CreateElectionCandidateParams) (ElectionCandidate, error)
 	CreateElectionGroup(ctx context.Context, arg CreateElectionGroupParams) (ElectionGroup, error)
 	CreateElectionInstance(ctx context.Context, arg CreateElectionInstanceParams) (Election, error)
-	CreateElectionVote(ctx context.Context, arg CreateElectionVoteParams) (ElectionVote, error)
 	CreateFederalConstituency(ctx context.Context, arg CreateFederalConstituencyParams) (FederalConstituency, error)
 	CreateFeedPost(ctx context.Context, arg CreateFeedPostParams) (FeedPost, error)
 	CreateFeedPostMedia(ctx context.Context, arg CreateFeedPostMediaParams) (FeedPostMedium, error)
@@ -142,7 +140,6 @@ type Querier interface {
 	DeleteStatePartyMemberships(ctx context.Context, arg DeleteStatePartyMembershipsParams) ([]int32, error)
 	DeleteUser(ctx context.Context, id int64) error
 	DeleteUserPhoneNumber(ctx context.Context, arg DeleteUserPhoneNumberParams) error
-	DeleteUserVotesByElectionGroup(ctx context.Context, arg DeleteUserVotesByElectionGroupParams) error
 	DeleteWard(ctx context.Context, id int32) error
 	DeleteWardPartyMembership(ctx context.Context, arg DeleteWardPartyMembershipParams) ([]int32, error)
 	DepositPartyAllowance(ctx context.Context, arg DepositPartyAllowanceParams) (DepositPartyAllowanceRow, error)
@@ -188,7 +185,6 @@ type Querier interface {
 	GetElectionInstanceByFakeID(ctx context.Context, fakeID pgtype.Int8) (Election, error)
 	GetElectionInstanceByID(ctx context.Context, id int32) (Election, error)
 	GetElectionsByIDs(ctx context.Context, electionIds []int32) ([]GetElectionsByIDsRow, error)
-	GetEligibleElectionsForPollingUnit(ctx context.Context, arg GetEligibleElectionsForPollingUnitParams) ([]Election, error)
 	GetEligiblePollingUnitsForElection(ctx context.Context, arg GetEligiblePollingUnitsForElectionParams) ([]GetEligiblePollingUnitsForElectionRow, error)
 	GetFakeIDByAdditionalPhone(ctx context.Context, phone string) (pgtype.Int8, error)
 	GetFakeIDByEmail(ctx context.Context, email pgtype.Text) (pgtype.Int8, error)
@@ -306,7 +302,6 @@ type Querier interface {
 	// Returns the referrer_user_id for a user given their internal user ID.
 	GetUserReferredByID(ctx context.Context, referredUserID int64) (int64, error)
 	GetUserRoles(ctx context.Context, userID int64) ([]GetUserRolesRow, error)
-	GetUserVotesByElectionGroup(ctx context.Context, arg GetUserVotesByElectionGroupParams) ([]GetUserVotesByElectionGroupRow, error)
 	GetUserWalletByAccountReference(ctx context.Context, accountReference string) (UserWallet, error)
 	GetUserWalletByID(ctx context.Context, id int64) (UserWallet, error)
 	GetUserWalletByUserID(ctx context.Context, userID int64) (UserWallet, error)
@@ -435,7 +430,6 @@ type Querier interface {
 	RecalculateStateConstituencyMetrics(ctx context.Context) error
 	RecalculateStateMetrics(ctx context.Context) error
 	RecalculateWardMetrics(ctx context.Context) error
-	RefreshPollingUnitLiveResults(ctx context.Context, arg RefreshPollingUnitLiveResultsParams) error
 	RemoveAgentCampaignGroupMembers(ctx context.Context, arg RemoveAgentCampaignGroupMembersParams) ([]int64, error)
 	RemoveCampaignGroupMember(ctx context.Context, arg RemoveCampaignGroupMemberParams) error
 	RemoveCampaignGroupMembersByElectionGroup(ctx context.Context, arg RemoveCampaignGroupMembersByElectionGroupParams) ([]int64, error)

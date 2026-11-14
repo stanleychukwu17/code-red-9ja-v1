@@ -14,7 +14,6 @@ import { Route as AuthSignupRouteImport } from './routes/auth/signup'
 import { Route as AuthOnboardingRouteImport } from './routes/auth/onboarding'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as AuthForgotPasswordRouteImport } from './routes/auth/forgot-password'
-import { Route as AuthenticatedVoteIndexRouteImport } from './routes/_authenticated/vote/index'
 import { Route as AuthenticatedUploadResultIndexRouteImport } from './routes/_authenticated/upload-result/index'
 import { Route as AuthenticatedReferralsIndexRouteImport } from './routes/_authenticated/referrals/index'
 import { Route as AuthenticatedPracticeIndexRouteImport } from './routes/_authenticated/practice/index'
@@ -56,11 +55,6 @@ const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
   id: '/auth/forgot-password',
   path: '/auth/forgot-password',
   getParentRoute: () => rootRouteImport,
-} as any)
-const AuthenticatedVoteIndexRoute = AuthenticatedVoteIndexRouteImport.update({
-  id: '/vote/',
-  path: '/vote/',
-  getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedUploadResultIndexRoute =
   AuthenticatedUploadResultIndexRouteImport.update({
@@ -184,7 +178,6 @@ export interface FileRoutesByFullPath {
   '/practice/': typeof AuthenticatedPracticeIndexRoute
   '/referrals/': typeof AuthenticatedReferralsIndexRoute
   '/upload-result/': typeof AuthenticatedUploadResultIndexRoute
-  '/vote/': typeof AuthenticatedVoteIndexRoute
 }
 export interface FileRoutesByTo {
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
@@ -208,7 +201,6 @@ export interface FileRoutesByTo {
   '/practice': typeof AuthenticatedPracticeIndexRoute
   '/referrals': typeof AuthenticatedReferralsIndexRoute
   '/upload-result': typeof AuthenticatedUploadResultIndexRoute
-  '/vote': typeof AuthenticatedVoteIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -234,7 +226,6 @@ export interface FileRoutesById {
   '/_authenticated/practice/': typeof AuthenticatedPracticeIndexRoute
   '/_authenticated/referrals/': typeof AuthenticatedReferralsIndexRoute
   '/_authenticated/upload-result/': typeof AuthenticatedUploadResultIndexRoute
-  '/_authenticated/vote/': typeof AuthenticatedVoteIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -260,7 +251,6 @@ export interface FileRouteTypes {
     | '/practice/'
     | '/referrals/'
     | '/upload-result/'
-    | '/vote/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/auth/forgot-password'
@@ -284,7 +274,6 @@ export interface FileRouteTypes {
     | '/practice'
     | '/referrals'
     | '/upload-result'
-    | '/vote'
   id:
     | '__root__'
     | '/_authenticated'
@@ -309,7 +298,6 @@ export interface FileRouteTypes {
     | '/_authenticated/practice/'
     | '/_authenticated/referrals/'
     | '/_authenticated/upload-result/'
-    | '/_authenticated/vote/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -356,13 +344,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/auth/forgot-password'
       preLoaderRoute: typeof AuthForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/_authenticated/vote/': {
-      id: '/_authenticated/vote/'
-      path: '/vote'
-      fullPath: '/vote/'
-      preLoaderRoute: typeof AuthenticatedVoteIndexRouteImport
-      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/upload-result/': {
       id: '/_authenticated/upload-result/'
@@ -504,7 +485,6 @@ interface AuthenticatedRouteChildren {
   AuthenticatedPracticeIndexRoute: typeof AuthenticatedPracticeIndexRoute
   AuthenticatedReferralsIndexRoute: typeof AuthenticatedReferralsIndexRoute
   AuthenticatedUploadResultIndexRoute: typeof AuthenticatedUploadResultIndexRoute
-  AuthenticatedVoteIndexRoute: typeof AuthenticatedVoteIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
@@ -526,7 +506,6 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedPracticeIndexRoute: AuthenticatedPracticeIndexRoute,
   AuthenticatedReferralsIndexRoute: AuthenticatedReferralsIndexRoute,
   AuthenticatedUploadResultIndexRoute: AuthenticatedUploadResultIndexRoute,
-  AuthenticatedVoteIndexRoute: AuthenticatedVoteIndexRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(

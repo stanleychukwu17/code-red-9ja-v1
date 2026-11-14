@@ -27,7 +27,6 @@ import { PracticeTestCard } from "../components/PracticeTestCard";
 import { HomeBody } from "../components/Shared";
 import { SupervisorStartDutyCard } from "../components/SupervisorReadyCard";
 import { StateSupervisorTasksTab } from "../components/SupervisorTasksTab";
-import { DidYouVoteCard } from "../components/DidYouVoteCard";
 import { Layout } from "@repo/ui/components/custom/AdminLayouts";
 /**
  * State Election Supervisor Dashboard.
@@ -284,11 +283,6 @@ export function StateElectionSupervisorPage() {
               setIsArrivalDrawerOpen(true);
             }}
           />
-        )}
-
-        {/* Voting check on election day */}
-        {daysLeft === 0 && (
-          <DidYouVoteCard onYesClick={() => navigate({ to: "/vote" })} />
         )}
 
         {/* Supervisor Tabs: Earnings vs State-level LGA task progress */}

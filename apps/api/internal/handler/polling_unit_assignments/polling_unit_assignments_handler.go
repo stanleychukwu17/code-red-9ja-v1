@@ -19,6 +19,7 @@ type PollingUnitAssignmentsService interface {
 	GetAssignmentByID(ctx context.Context, id int64) (queries.GetAssignmentByIDRow, error)
 	ListAssignments(ctx context.Context, electionGroupID int32, partyID int16, userID int64, pollingUnitID int32, limit, offset int32) ([]queries.ListAssignmentsRow, error)
 	GetMyAssignment(ctx context.Context, userID int64, electionGroupID int32) (*queries.GetUserAssignmentRow, error)
+	GetActiveElectionGroupIDs(ctx context.Context) ([]int32, error)
 	DeleteAssignment(ctx context.Context, id int64) error
 	UpdateAssignmentTracking(ctx context.Context, id int64, arrivedAt, arrivalVideoUrl, electionStartedAt, electionStartedVideoUrl, electionEndedAt, electionEndedVideoUrl *string) (queries.UpdateAssignmentTrackingRow, error)
 }
@@ -156,13 +157,13 @@ func (h *Handler) ListAssignments(w http.ResponseWriter, r *http.Request) {
 
 // GetMyAssignment godoc
 // @Summary      Get current user's polling unit assignment
-// @Description  Fetches the active polling unit assignment for the authenticated user for a specific election group.
+// @Description  Fetches the active polling unit assignment for the authenticated user (optionally scoped to a specific election group, or discovering any active assignment).
 // @Tags         PollingUnitAssignments
 // @Accept       json
 // @Produce      json
-// @Param        election_group_id query int true "Election Group ID"
+// @Param        election_group_id query int false "Election Group ID (optional; if omitted, checks active upcoming elections)"
 // @Success      200  {object} map[string]interface{} "Assignment fetched successfully"
-// @Failure      400  {object} map[string]interface{} "Invalid or missing election_group_id"
+// @Failure      400  {object} map[string]interface{} "Invalid election_group_id"
 // @Failure      401  {object} map[string]interface{} "Unauthorized"
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Security     BearerAuth
@@ -180,13 +181,17 @@ func (h *Handler) GetMyAssignment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	electionGroupIDStr := r.URL.Query().Get("election_group_id")
-	electionGroupID, err := strconv.ParseInt(electionGroupIDStr, 10, 32)
-	if err != nil || electionGroupID == 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid or missing election_group_id")
-		return
+	var electionGroupID int32
+	if electionGroupIDStr != "" {
+		egID, err := strconv.ParseInt(electionGroupIDStr, 10, 32)
+		if err != nil {
+			h.utils.RespondError(w, http.StatusBadRequest, "Invalid election_group_id")
+			return
+		}
+		electionGroupID = int32(egID)
 	}
 
-	assignment, err := h.service.GetMyAssignment(r.Context(), requester.ID, int32(electionGroupID))
+	assignment, err := h.service.GetMyAssignment(r.Context(), requester.ID, electionGroupID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch assignment: "+err.Error())
 		return
@@ -194,10 +199,26 @@ func (h *Handler) GetMyAssignment(w http.ResponseWriter, r *http.Request) {
 
 	var supervisorAssignments *supervisorassignmentsservice.SupervisorAssignmentsResponse
 	if h.supervisorService != nil {
-		supervisorAssignments, err = h.supervisorService.GetUserSupervisorAssignments(r.Context(), requester.ID, int32(electionGroupID))
-		if err != nil {
-			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch supervisor assignments: "+err.Error())
-			return
+		if electionGroupID > 0 {
+			supervisorAssignments, err = h.supervisorService.GetUserSupervisorAssignments(r.Context(), requester.ID, electionGroupID)
+			if err != nil {
+				h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch supervisor assignments: "+err.Error())
+				return
+			}
+		} else if assignment != nil && assignment.ElectionGroupID > 0 {
+			supervisorAssignments, _ = h.supervisorService.GetUserSupervisorAssignments(r.Context(), requester.ID, assignment.ElectionGroupID)
+		} else {
+			// If no election_group_id was specified and no PU assignment was found,
+			// scan active upcoming election groups to see if user has a supervisor assignment
+			if groupIDs, gErr := h.service.GetActiveElectionGroupIDs(r.Context()); gErr == nil {
+				for _, gID := range groupIDs {
+					sup, sErr := h.supervisorService.GetUserSupervisorAssignments(r.Context(), requester.ID, gID)
+					if sErr == nil && sup != nil && (sup.StateSupervisor != nil || sup.LgaSupervisor != nil || sup.WardSupervisor != nil) {
+						supervisorAssignments = sup
+						break
+					}
+				}
+			}
 		}
 	}
 

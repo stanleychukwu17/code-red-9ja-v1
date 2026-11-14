@@ -40,8 +40,6 @@ func (q *Queries) CountElectionsInElectionGroup(ctx context.Context, electionGro
 const countParticipantsInElectionGroup = `-- name: CountParticipantsInElectionGroup :one
 SELECT (
   (SELECT COUNT(*) FROM election_candidates ec WHERE ec.election_group_id = $1)
-  +
-  (SELECT COUNT(*) FROM election_votes ev WHERE ev.election_group_id = $1)
 )::bigint AS participants_count
 `
 

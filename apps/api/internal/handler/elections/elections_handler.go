@@ -39,9 +39,6 @@ type ElectionsService interface {
 	UnfieldPartyCandidate(ctx context.Context, election queries.Election, partyID int16, slot string) error
 	CheckIfUserEverContested(ctx context.Context, userID int64) (bool, error)
 	GetUserActiveCandidacies(ctx context.Context, candidateID int64) ([]queries.UserActiveCandidacy, error)
-	GetEligibleElectionsForPollingUnit(ctx context.Context, electionGroupID int32, pollingUnitID int32) ([]elections.ElectionWithCandidates, error)
-	SubmitElectionVotes(ctx context.Context, userID int64, electionGroupID int32, pollingUnitID int32, votes []elections.VoteInput, votersCardImage string) error
-	GetUserElectionGroupVoteStatus(ctx context.Context, userID int64, electionGroupID int32) (elections.UserVoteStatus, error)
 }
 
 type UsersService interface {

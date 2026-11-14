@@ -13,12 +13,20 @@ import {
 
 interface ActiveApplicationWarningProps {
   application: any;
+  isAssignment?: boolean;
 }
 
 export function ActiveApplicationWarning({
   application,
+  isAssignment,
 }: ActiveApplicationWarningProps) {
   const navigate = useNavigate();
+
+  const isAssigned =
+    isAssignment ||
+    application?.isAssignment ||
+    application?.status === "accepted" ||
+    application?.status === "approved";
 
   const electionName =
     application.election_group_name ||
@@ -26,9 +34,7 @@ export function ActiveApplicationWarning({
     "an upcoming election";
 
   const statusLabel =
-    application.status === "accepted" || application.status === "approved"
-      ? "Approved Agent"
-      : "Under Review (Pending)";
+    isAssigned ? "Approved Agent" : "Under Review (Pending)";
 
   const partyName =
     application.party_short_name ||
@@ -48,17 +54,17 @@ export function ActiveApplicationWarning({
         <div className="space-y-3">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black text-white text-xs font-semibold">
             <AlertCircle className="size-3.5" />
-            <span>ACTIVE APPLICATION IN PROGRESS</span>
+            <span>{isAssigned ? "ACTIVE ELECTION ASSIGNMENT" : "ACTIVE APPLICATION IN PROGRESS"}</span>
           </div>
 
           <h1 className="text-2xl font-bold text-c-100 leading-tight">
-            You Already Have an Active Application
+            {isAssigned ? "You Already Have an Active Assignment" : "You Already Have an Active Application"}
           </h1>
 
           <p className="text-c-80 text-sm leading-relaxed">
-            In accordance with election guidelines, an agent can only be assigned to
-            one election group at a time. You cannot apply for a new election until
-            your current election concludes.
+            {isAssigned
+              ? "In accordance with election guidelines, an agent can only be assigned to one duty per election cycle. You cannot apply for another role until your current assignment concludes."
+              : "In accordance with election guidelines, an agent can only be assigned to one election group at a time. You cannot apply for a new election until your current election concludes."}
           </p>
         </div>
 

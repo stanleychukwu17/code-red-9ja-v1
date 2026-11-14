@@ -38,8 +38,6 @@ const EndElectionSmallyButton = () => (
   <SmallyButton>Yes, it has ended</SmallyButton>
 );
 
-const VotedSmallyButton = () => <SmallyButton>Yes</SmallyButton>;
-
 const UploadResultSmallyButton = () => (
   <SmallyButton className="bg-purple text-white">Upload Result</SmallyButton>
 );
@@ -72,7 +70,6 @@ export type TaskType =
   | "giveUpdate"
   | "giveReport"
   | "uploadResult"
-  | "mayHaveVoted"
   | "referVoters"
   | "requestPayout";
 
@@ -130,11 +127,6 @@ const allOptions = [
     id: 6,
     text: "I will tell my party when election ended",
     component: <EndElectionSmallyButton />,
-  },
-  {
-    id: 7,
-    text: "I will indicate who I voted for",
-    component: <VotedSmallyButton />,
   },
   {
     id: 8,
@@ -256,27 +248,6 @@ export const pollingAgentTest: PracticeTaskType[] = [
   {
     id: 5,
     tutorial: {
-      title: "Indicate who you voted for",
-      subtitle: "Only if you voted at your party assigned polling unit",
-      video:
-        "https://res.cloudinary.com/dhtcwqsx4/video/upload/v1782937548/Free9ja/videos/I_like_this_but_he_shouldn_t_b_wsibes.mp4",
-    },
-    quiz: {
-      title:
-        "You just finished voting at your polling unit of assignment, what do you do next?",
-      correctOptionId: 7,
-      options: getRandomOptions(7, 4),
-    },
-    practical: {
-      title1: "You just voted at your assigned polling unit.",
-      title2: "Show us what you will do?",
-      taskType: "mayHaveVoted",
-    },
-    note: "Ensure to indicate who you voted for (or not) after voting at your assigned polling unit.",
-  },
-  {
-    id: 6,
-    tutorial: {
       title: "Upload Election Result",
       subtitle:
         "After election is over and votes have been counted and recorded on the result sheet, get the collated result sheet and take picture and video evidences and upload.",
@@ -297,7 +268,7 @@ export const pollingAgentTest: PracticeTaskType[] = [
     note: "Ensure to get the collated result sheet and take picture and video evidences of and upload. If possible get the INEC staff to give you your own copy for further verification",
   },
   {
-    id: 7,
+    id: 6,
     tutorial: {
       title: "End Election",
       subtitle:
@@ -319,7 +290,7 @@ export const pollingAgentTest: PracticeTaskType[] = [
     note: "Ensure to update your party on when election ends at your polling unit",
   },
   {
-    id: 8,
+    id: 7,
     tutorial: {
       title: "Tell people to register on Free9ja and make more money",
       subtitle:
@@ -342,7 +313,7 @@ export const pollingAgentTest: PracticeTaskType[] = [
     note: "Make sure to tell your friends, family, and others to register on Free9ja (using your referral code) and indicate who they voted for after voting on election day. This constitutes 20% of your payment.",
   },
   {
-    id: 9,
+    id: 8,
     tutorial: {
       title: "Request Payment from Party",
       subtitle:

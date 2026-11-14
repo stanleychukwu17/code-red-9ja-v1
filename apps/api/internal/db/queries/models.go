@@ -279,22 +279,6 @@ type ElectionPollingUnitFinalResult struct {
 	UpdatedAt                pgtype.Timestamptz `json:"updated_at"`
 }
 
-type ElectionVote struct {
-	ID                    int64              `json:"id"`
-	StateID               pgtype.Int2        `json:"state_id"`
-	SenatorialDistrictID  pgtype.Int4        `json:"senatorial_district_id"`
-	FederalConstituencyID pgtype.Int4        `json:"federal_constituency_id"`
-	LgaID                 pgtype.Int4        `json:"lga_id"`
-	WardID                pgtype.Int4        `json:"ward_id"`
-	PollingUnitID         pgtype.Int4        `json:"polling_unit_id"`
-	UserID                int64              `json:"user_id"`
-	ElectionGroupID       int32              `json:"election_group_id"`
-	ElectionID            int32              `json:"election_id"`
-	PartyID               int16              `json:"party_id"`
-	CreatedAt             pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
-}
-
 type FederalConstituency struct {
 	ID                       int32       `json:"id"`
 	Name                     string      `json:"name"`

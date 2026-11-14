@@ -559,9 +559,6 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Get("/api/v1/referrals", referralsHandler.ListReferredUsers)
 		r.Post("/api/v1/users/{id}/wallet", usersHandler.CreateUserWalletHandler)
 		r.Post("/api/v1/auth/register-candidate", authHandler.RegisterCandidatePlaceholder)
-		r.Get("/api/v1/elections/eligible", electionsHandler.GetEligibleElectionsForPollingUnit)
-		r.Post("/api/v1/elections/votes", electionsHandler.SubmitElectionVotes)
-		r.Get("/api/v1/election-groups/{id}/vote-status", electionsHandler.GetUserElectionGroupVoteStatus)
 
 		r.Post("/api/v1/parties/{id}/join-hierarchy", partiesHandler.JoinPartyHierarchy)
 		r.Post("/api/v1/parties/{id}/leave", partiesHandler.LeaveParty)
