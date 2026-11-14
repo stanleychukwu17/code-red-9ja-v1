@@ -358,45 +358,6 @@ export const getUserVoteStatus = createServerFn({ method: "GET" })
     }
   });
 
-export const getNonVotingReasons = createServerFn({ method: "GET" }).handler(
-  async () => {
-    try {
-      const response = await apiFetch(API_URL.nonVotingReasons);
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      return { success: false, message: "Failed to fetch non-voting reasons" };
-    }
-  },
-);
-
-export const submitDidNotVote = createServerFn({ method: "POST" })
-  .inputValidator(
-    (data: {
-      election_group_id: number;
-      non_voting_reason_id?: number;
-      explanation: string;
-    }) => data,
-  )
-  .handler(async ({ data }) => {
-    try {
-      const response = await apiFetch(API_URL.didNotVote, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
-      const resData = await response.json();
-      if (!response.ok) {
-        throw new Error(resData.message || "Failed to submit reason");
-      }
-      return resData;
-    } catch (error) {
-      throw error;
-    }
-  });
-
 export const getEligibleElections = createServerFn({ method: "POST" })
   .inputValidator(
     (data: { electionGroupId: number; pollingUnitId: number }) => data,

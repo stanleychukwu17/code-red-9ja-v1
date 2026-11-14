@@ -57,7 +57,6 @@ type Querier interface {
 	CreateAssetFolder(ctx context.Context, arg CreateAssetFolderParams) (AssetFolder, error)
 	CreateAssignment(ctx context.Context, arg CreateAssignmentParams) (PollingUnitAssignment, error)
 	CreateCandidatePlaceholder(ctx context.Context, arg CreateCandidatePlaceholderParams) (CreateCandidatePlaceholderRow, error)
-	CreateDidNotVoteReason(ctx context.Context, arg CreateDidNotVoteReasonParams) (DidNotVoteReason, error)
 	CreateElectionCandidate(ctx context.Context, arg CreateElectionCandidateParams) (ElectionCandidate, error)
 	CreateElectionGroup(ctx context.Context, arg CreateElectionGroupParams) (ElectionGroup, error)
 	CreateElectionInstance(ctx context.Context, arg CreateElectionInstanceParams) (Election, error)
@@ -142,7 +141,6 @@ type Querier interface {
 	DeleteStateConstituency(ctx context.Context, id int32) error
 	DeleteStatePartyMemberships(ctx context.Context, arg DeleteStatePartyMembershipsParams) ([]int32, error)
 	DeleteUser(ctx context.Context, id int64) error
-	DeleteUserDidNotVoteReasonByElectionGroup(ctx context.Context, arg DeleteUserDidNotVoteReasonByElectionGroupParams) error
 	DeleteUserPhoneNumber(ctx context.Context, arg DeleteUserPhoneNumberParams) error
 	DeleteUserVotesByElectionGroup(ctx context.Context, arg DeleteUserVotesByElectionGroupParams) error
 	DeleteWard(ctx context.Context, id int32) error
@@ -214,7 +212,6 @@ type Querier interface {
 	GetMoreInfoAboutThisUser(ctx context.Context, userID int64) (UserMoreInfo, error)
 	GetNationalChapter(ctx context.Context, arg GetNationalChapterParams) (int32, error)
 	GetNationalMetrics(ctx context.Context) (NationalMetric, error)
-	GetNonVotingReasons(ctx context.Context) ([]NonVotingReason, error)
 	GetNotificationByID(ctx context.Context, id int64) (Notification, error)
 	// ============================================================================
 	// NOTIFICATION PREFERENCES
@@ -287,7 +284,6 @@ type Querier interface {
 	GetUserAssignment(ctx context.Context, arg GetUserAssignmentParams) (GetUserAssignmentRow, error)
 	GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (GetUserByFakeIDRow, error)
 	GetUserByID(ctx context.Context, id int64) (GetUserByIDRow, error)
-	GetUserDidNotVoteReason(ctx context.Context, arg GetUserDidNotVoteReasonParams) (GetUserDidNotVoteReasonRow, error)
 	GetUserFakeIDByID(ctx context.Context, id int64) (pgtype.Int8, error)
 	GetUserFollowersCount(ctx context.Context, followingID int64) (int64, error)
 	GetUserFollowingCount(ctx context.Context, followerID int64) (int64, error)

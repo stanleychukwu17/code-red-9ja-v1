@@ -382,7 +382,6 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 
 	// elections public routes (with optional auth to identify party_id for candidates)
 	mainRouter.With(apimiddleware.OptionalAuthMiddleware(jwtSecret)).Get("/api/v1/elections", electionsHandler.ListElections)
-	mainRouter.Get("/api/v1/elections/non-voting-reasons", electionsHandler.GetNonVotingReasons)
 	mainRouter.Get("/api/v1/elections/by-fake-id/{fake_id}", electionsHandler.GetElectionByFakeID)
 
 	// file metadata — public reads (nil-safe: returns 503 when R2 is not configured)
@@ -560,7 +559,6 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Get("/api/v1/referrals", referralsHandler.ListReferredUsers)
 		r.Post("/api/v1/users/{id}/wallet", usersHandler.CreateUserWalletHandler)
 		r.Post("/api/v1/auth/register-candidate", authHandler.RegisterCandidatePlaceholder)
-		r.Post("/api/v1/elections/did-not-vote", electionsHandler.CreateDidNotVoteReason)
 		r.Get("/api/v1/elections/eligible", electionsHandler.GetEligibleElectionsForPollingUnit)
 		r.Post("/api/v1/elections/votes", electionsHandler.SubmitElectionVotes)
 		r.Get("/api/v1/election-groups/{id}/vote-status", electionsHandler.GetUserElectionGroupVoteStatus)

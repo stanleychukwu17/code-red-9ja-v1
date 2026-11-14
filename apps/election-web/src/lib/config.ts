@@ -235,8 +235,6 @@ export const API_URL = {
     `${api}/election-groups/${id}/elections`,
 
   elections: `${api}/elections`,
-  nonVotingReasons: `${api}/elections/non-voting-reasons`,
-  didNotVote: `${api}/elections/did-not-vote`,
   electionById: (id: string | number) => `${api}/elections/${id}`,
   electionByFakeId: (fakeId: string | number) =>
     `${api}/elections/by-fake-id/${fakeId}`,

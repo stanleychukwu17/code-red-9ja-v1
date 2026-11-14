@@ -10,8 +10,6 @@ import {
 import FancyMoneyBagIcon from "@repo/ui/icons/fancy-money-bag-icon";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
-import { NotVotingDrawer } from "./NotVotingDrawer";
 import { GreyCardTitle, GreyCardTopRow, GreyCardWrapper } from "./Shared";
 
 import {
@@ -29,17 +27,14 @@ interface DidYouVoteCardProps {
 /**
  * Dashboard Card for checking and displaying the user's voting status.
  *
- * Renders one of three distinct UI states based on backend records:
- * 1. Default Prompt: "Did you vote?" with Yes (triggers vote flow) and No (opens reason drawer).
+ * Renders one of two distinct UI states based on backend records:
+ * 1. Default Prompt: "Did you vote?" with Yes (triggers vote flow).
  * 2. `UserVotedCard`: Displays candidates and parties the user selected with an Edit option.
- * 3. `UserDidNotVoteCard`: Displays recorded explanation/reason for abstaining with an Edit option.
  */
 export function DidYouVoteCard({ onYesClick, onNoClick }: DidYouVoteCardProps) {
   const { selectedElectionGroup } = useElection();
   const { pollingUnitAssignment } = useAssignments();
   const { party } = useUserParty();
-  const navigate = useNavigate();
-  const [isNotVotingDrawerOpen, setIsNotVotingDrawerOpen] = useState(false);
   const assignmentId = pollingUnitAssignment?.id;
 
   // Query potential payout reward for voting participation or voter mobilization
@@ -99,63 +94,49 @@ export function DidYouVoteCard({ onYesClick, onNoClick }: DidYouVoteCardProps) {
     return <UserVotedCard statusInfo={statusInfo} />;
   }
 
-  // State 2: User recorded that they did not vote
-  if (statusInfo?.status === "did_not_vote") {
-    return <UserDidNotVoteCard statusInfo={statusInfo} onNoClick={onNoClick} />;
-  }
-
   // Format payout as currency (defaulting to ₦1,200 if unconfigured)
   const formattedPayout =
     potentialPayout !== undefined
       ? `₦${potentialPayout.toLocaleString()}`
       : "₦1,200";
 
-  // State 3: Unanswered prompt — asks user if they voted
+  // State 2: Unanswered prompt — asks user if they voted
   return (
-    <>
-      <GreyCardWrapper>
-        {/* Optional top row displaying task potential payout */}
-        {pollingUnitAssignment && (
-          <GreyCardTopRow
-            title={"Potential payout"}
-            subtitle={formattedPayout}
-            icon={<FancyMoneyBagIcon className="size-5" />}
-          />
-        )}
-        <GreyCardTitle label="Did you vote?" />
+    <GreyCardWrapper>
+      {/* Optional top row displaying task potential payout */}
+      {pollingUnitAssignment && (
+        <GreyCardTopRow
+          title={"Potential payout"}
+          subtitle={formattedPayout}
+          icon={<FancyMoneyBagIcon className="size-5" />}
+        />
+      )}
+      <GreyCardTitle label="Did you vote?" />
 
-        {/* Voting response action buttons */}
-        <div className="flex items-center gap-3 mt-1">
-          <Button
-            type="button"
-            variant="secondary"
-            size="4xl"
-            className="w-full"
-            onClick={onYesClick}
-          >
-            Yes
-          </Button>
+      {/* Voting response action buttons */}
+      <div className="flex items-center gap-3 mt-1">
+        <Button
+          type="button"
+          variant="secondary"
+          size="4xl"
+          className="w-full"
+          onClick={onYesClick}
+        >
+          Yes
+        </Button>
+        {onNoClick && (
           <Button
             type="button"
             variant="outline"
             size="4xl"
             className="w-full"
-            onClick={() => {
-              if (onNoClick) onNoClick();
-              setIsNotVotingDrawerOpen(true);
-            }}
+            onClick={onNoClick}
           >
             No
           </Button>
-        </div>
-      </GreyCardWrapper>
-
-      {/* Drawer modal for selecting reason and submitting explanation */}
-      <NotVotingDrawer
-        isOpen={isNotVotingDrawerOpen}
-        onOpenChange={setIsNotVotingDrawerOpen}
-      />
-    </>
+        )}
+      </div>
+    </GreyCardWrapper>
   );
 }
 
@@ -214,62 +195,6 @@ function UserVotedCard({ statusInfo }: UserVotedCardProps) {
           Edit
         </Button>
       </div>
-    </GreyCardWrapper>
-  );
-}
-
-interface UserDidNotVoteCardProps {
-  /** Status payload containing recorded abstention reason and explanation */
-  statusInfo: any;
-  /** Optional callback to run before opening the reason drawer */
-  onNoClick?: () => void;
-}
-
-/**
- * Card displayed when user has declared they did not vote, showing their reason.
- */
-function UserDidNotVoteCard({
-  statusInfo,
-  onNoClick,
-}: UserDidNotVoteCardProps) {
-  const [isNotVotingDrawerOpen, setIsNotVotingDrawerOpen] = useState(false);
-
-  return (
-    <GreyCardWrapper>
-      <div className="flex flex-col w-full">
-        <GreyCardTitle label="You did not vote this election" />
-        <div className="mt-4 flex flex-col gap-4">
-          {/* User's custom written explanation */}
-          <span className="text-c-80 leading-6 bg-white py-2 px-3 rounded-12">
-            "{statusInfo.did_not_vote_explanation || "No comment."}"
-          </span>
-          {/* Categorized reason badge */}
-          <div className="bg-yellow/20 py-2 px-3 rounded-xl font-medium text-c-90 leading-6">
-            <span className="text-c-50">Reason: </span>
-            {statusInfo.did_not_vote_reason}
-          </div>
-        </div>
-
-        {/* Button to reopen reason drawer and modify abstention details */}
-        <Button
-          type="button"
-          variant="black"
-          size="3xl"
-          className="w-full mt-6"
-          onClick={() => {
-            if (onNoClick) onNoClick();
-            setIsNotVotingDrawerOpen(true);
-          }}
-        >
-          Edit
-        </Button>
-      </div>
-
-      {/* Drawer for updating non-voting reason */}
-      <NotVotingDrawer
-        isOpen={isNotVotingDrawerOpen}
-        onOpenChange={setIsNotVotingDrawerOpen}
-      />
     </GreyCardWrapper>
   );
 }

@@ -14,16 +14,16 @@ import (
 
 // EligibleElectionResponse is the response shape for a single eligible election including its candidates.
 type EligibleElectionResponse struct {
-	ID                     int32                                             `json:"id"`
-	Name                   string                                            `json:"name"`
-	Rank                   int32                                             `json:"rank"`
-	ElectionDate           interface{}                                       `json:"election_date"`
-	ElectionGroupID        int32                                             `json:"election_group_id"`
-	ElectionGroupName      string                                            `json:"election_group_name"`
-	OfficeID               int16                                             `json:"office_id"`
-	OfficeName             string                                            `json:"office_name"`
-	Scope                  string                                            `json:"scope"`
-	Candidates             []queries.ListElectionCandidatesDetailedByElectionIDRow `json:"candidates"`
+	ID                int32                                                   `json:"id"`
+	Name              string                                                  `json:"name"`
+	Rank              int32                                                   `json:"rank"`
+	ElectionDate      interface{}                                             `json:"election_date"`
+	ElectionGroupID   int32                                                   `json:"election_group_id"`
+	ElectionGroupName string                                                  `json:"election_group_name"`
+	OfficeID          int16                                                   `json:"office_id"`
+	OfficeName        string                                                  `json:"office_name"`
+	Scope             string                                                  `json:"scope"`
+	Candidates        []queries.ListElectionCandidatesDetailedByElectionIDRow `json:"candidates"`
 }
 
 // GetEligibleElectionsForPollingUnit godoc
@@ -116,7 +116,7 @@ func (h *Handler) SubmitElectionVotes(w http.ResponseWriter, r *http.Request) {
 
 // GetUserElectionGroupVoteStatus godoc
 // @Summary      Get user's vote status for an election group
-// @Description  Returns the vote status (voted, did_not_vote, none) and associated data (votes or reason).
+// @Description  Returns the vote status (voted, none) and associated data (votes).
 // @Tags         Elections
 // @Produce      json
 // @Param        id   path      int  true  "Election Group ID"

@@ -1586,7 +1586,7 @@ func (s *ElectionsService) GetEligibleElectionsForPollingUnit(ctx context.Contex
 // Within a database transaction, it:
 //  1. Validates that voting has not ended (not past election day).
 //  2. Resolves geographic hierarchy for the polling unit (State, LGA, Senatorial District, Federal Constituency).
-//  3. Clears prior votes and did-not-vote reasons for this user and group (allowing edits / ballot updates).
+//  3. Clears prior votes for this user and group (allowing edits / ballot updates).
 //  4. Inserts vote records for each election in the ballot.
 //  5. Updates user's PVC (Voter's Card) image if provided.
 //  6. Enqueues background debounced tasks for real-time live results aggregation.
@@ -1631,20 +1631,13 @@ func (s *ElectionsService) SubmitElectionVotes(
 		return fmt.Errorf("invalid LGA: %w", err)
 	}
 
-	// 4. Delete existing votes and non-voting reasons for this user and group to allow edits and ballot revisions
+	// 4. Delete existing votes for this user and group to allow edits and ballot revisions
 	err = qtx.DeleteUserVotesByElectionGroup(ctx, queries.DeleteUserVotesByElectionGroupParams{
 		UserID:          userID,
 		ElectionGroupID: electionGroupID,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to delete existing votes: %w", err)
-	}
-	err = qtx.DeleteUserDidNotVoteReasonByElectionGroup(ctx, queries.DeleteUserDidNotVoteReasonByElectionGroupParams{
-		UserID:          userID,
-		ElectionGroupID: electionGroupID,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to delete existing non-voting reason: %w", err)
 	}
 
 	// 5. Insert votes for each election in the ballot
@@ -1753,13 +1746,11 @@ func (s *ElectionsService) SubmitElectionVotes(
 }
 
 type UserVoteStatus struct {
-	Status                string                                   `json:"status"` // "voted", "did_not_vote", "none"
-	Votes                 []queries.GetUserVotesByElectionGroupRow `json:"votes,omitempty"`
-	DidNotVoteReason      *string                                  `json:"did_not_vote_reason,omitempty"`
-	DidNotVoteExplanation *string                                  `json:"did_not_vote_explanation,omitempty"`
+	Status string                                   `json:"status"` // "voted", "none"
+	Votes  []queries.GetUserVotesByElectionGroupRow `json:"votes,omitempty"`
 }
 
-// GetUserElectionGroupVoteStatus checks whether a user has cast votes, submitted a non-voting reason,
+// GetUserElectionGroupVoteStatus checks whether a user has cast votes
 // or taken no action for a specific election group.
 func (s *ElectionsService) GetUserElectionGroupVoteStatus(ctx context.Context, userID int64, electionGroupID int32) (UserVoteStatus, error) {
 	// 1. Check if the user has cast votes for this election group
@@ -1778,30 +1769,7 @@ func (s *ElectionsService) GetUserElectionGroupVoteStatus(ctx context.Context, u
 		}, nil
 	}
 
-	// 2. If no votes, check if the user provided an explanation/reason for not voting
-	reason, err := s.queries.GetUserDidNotVoteReason(ctx, queries.GetUserDidNotVoteReasonParams{
-		UserID:          userID,
-		ElectionGroupID: electionGroupID,
-	})
-
-	if err == nil {
-		var explanation string
-		if reason.Explanation.Valid {
-			explanation = reason.Explanation.String
-		}
-		var predefinedReason string
-		if reason.PredefinedReason.Valid {
-			predefinedReason = reason.PredefinedReason.String
-		}
-
-		return UserVoteStatus{
-			Status:                "did_not_vote",
-			DidNotVoteReason:      &predefinedReason,
-			DidNotVoteExplanation: &explanation,
-		}, nil
-	}
-
-	// 3. Neither votes nor non-voting reasons found
+	// 2. No votes found
 	return UserVoteStatus{
 		Status: "none",
 	}, nil

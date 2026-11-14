@@ -80,7 +80,9 @@ function ApplyPageContent() {
     activeApplication,
   } = form;
 
-  // Block and display warning if user already has an active, unexhausted election application
+  console.log("you are now rocking with the best", activeApplication);
+
+  // Block and display warning if user already has an active, un-exhausted election application
   if (activeApplication) {
     return <ActiveApplicationWarning application={activeApplication} />;
   }

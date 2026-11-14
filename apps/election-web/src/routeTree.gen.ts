@@ -32,7 +32,6 @@ import { Route as AuthenticatedUsersPartyMembersRouteImport } from './routes/_au
 import { Route as AuthenticatedUsersAdminRouteImport } from './routes/_authenticated/users/admin'
 import { Route as AuthenticatedApplicationsSupervisorRouteImport } from './routes/_authenticated/applications/supervisor'
 import { Route as AuthenticatedApplicationsApplyRouteImport } from './routes/_authenticated/applications/apply'
-import { Route as AuthenticatedHomeNotVotingReasonRouteImport } from './routes/_authenticated/_home/not-voting-reason'
 
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
@@ -162,12 +161,6 @@ const AuthenticatedApplicationsApplyRoute =
     path: '/applications/apply',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
-const AuthenticatedHomeNotVotingReasonRoute =
-  AuthenticatedHomeNotVotingReasonRouteImport.update({
-    id: '/_home/not-voting-reason',
-    path: '/not-voting-reason',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedHomeIndexRoute
@@ -175,7 +168,6 @@ export interface FileRoutesByFullPath {
   '/auth/login': typeof AuthLoginRoute
   '/auth/onboarding': typeof AuthOnboardingRoute
   '/auth/signup': typeof AuthSignupRoute
-  '/not-voting-reason': typeof AuthenticatedHomeNotVotingReasonRoute
   '/applications/apply': typeof AuthenticatedApplicationsApplyRoute
   '/applications/supervisor': typeof AuthenticatedApplicationsSupervisorRoute
   '/users/admin': typeof AuthenticatedUsersAdminRoute
@@ -199,7 +191,6 @@ export interface FileRoutesByTo {
   '/auth/login': typeof AuthLoginRoute
   '/auth/onboarding': typeof AuthOnboardingRoute
   '/auth/signup': typeof AuthSignupRoute
-  '/not-voting-reason': typeof AuthenticatedHomeNotVotingReasonRoute
   '/applications/apply': typeof AuthenticatedApplicationsApplyRoute
   '/applications/supervisor': typeof AuthenticatedApplicationsSupervisorRoute
   '/users/admin': typeof AuthenticatedUsersAdminRoute
@@ -226,7 +217,6 @@ export interface FileRoutesById {
   '/auth/login': typeof AuthLoginRoute
   '/auth/onboarding': typeof AuthOnboardingRoute
   '/auth/signup': typeof AuthSignupRoute
-  '/_authenticated/_home/not-voting-reason': typeof AuthenticatedHomeNotVotingReasonRoute
   '/_authenticated/applications/apply': typeof AuthenticatedApplicationsApplyRoute
   '/_authenticated/applications/supervisor': typeof AuthenticatedApplicationsSupervisorRoute
   '/_authenticated/users/admin': typeof AuthenticatedUsersAdminRoute
@@ -254,7 +244,6 @@ export interface FileRouteTypes {
     | '/auth/login'
     | '/auth/onboarding'
     | '/auth/signup'
-    | '/not-voting-reason'
     | '/applications/apply'
     | '/applications/supervisor'
     | '/users/admin'
@@ -278,7 +267,6 @@ export interface FileRouteTypes {
     | '/auth/login'
     | '/auth/onboarding'
     | '/auth/signup'
-    | '/not-voting-reason'
     | '/applications/apply'
     | '/applications/supervisor'
     | '/users/admin'
@@ -304,7 +292,6 @@ export interface FileRouteTypes {
     | '/auth/login'
     | '/auth/onboarding'
     | '/auth/signup'
-    | '/_authenticated/_home/not-voting-reason'
     | '/_authenticated/applications/apply'
     | '/_authenticated/applications/supervisor'
     | '/_authenticated/users/admin'
@@ -496,18 +483,10 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedApplicationsApplyRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/_home/not-voting-reason': {
-      id: '/_authenticated/_home/not-voting-reason'
-      path: '/not-voting-reason'
-      fullPath: '/not-voting-reason'
-      preLoaderRoute: typeof AuthenticatedHomeNotVotingReasonRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
   }
 }
 
 interface AuthenticatedRouteChildren {
-  AuthenticatedHomeNotVotingReasonRoute: typeof AuthenticatedHomeNotVotingReasonRoute
   AuthenticatedApplicationsApplyRoute: typeof AuthenticatedApplicationsApplyRoute
   AuthenticatedApplicationsSupervisorRoute: typeof AuthenticatedApplicationsSupervisorRoute
   AuthenticatedUsersAdminRoute: typeof AuthenticatedUsersAdminRoute
@@ -529,7 +508,6 @@ interface AuthenticatedRouteChildren {
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
-  AuthenticatedHomeNotVotingReasonRoute: AuthenticatedHomeNotVotingReasonRoute,
   AuthenticatedApplicationsApplyRoute: AuthenticatedApplicationsApplyRoute,
   AuthenticatedApplicationsSupervisorRoute:
     AuthenticatedApplicationsSupervisorRoute,

@@ -118,12 +118,7 @@ export function useApplyForm({ search, navigate }: UseApplyFormOptions) {
     },
     staleTime: Infinity,
   });
-
-
-  const activeApplication = useMemo(
-    () => getActiveApplication(applications),
-    [applications],
-  );
+  const activeApplication = useMemo(() => getActiveApplication(applications), [applications]);
 
   const selectedParty = useMemo(() => {
     return parties.find((p: any) => p.id === selectedPartyId) || null;

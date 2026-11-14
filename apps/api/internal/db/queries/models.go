@@ -211,20 +211,6 @@ type CampaignTimelinePost struct {
 	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
 }
 
-type DidNotVoteReason struct {
-	ID                int64              `json:"id"`
-	UserID            int64              `json:"user_id"`
-	ElectionGroupID   int32              `json:"election_group_id"`
-	NonVotingReasonID pgtype.Int2        `json:"non_voting_reason_id"`
-	Explanation       pgtype.Text        `json:"explanation"`
-	StateID           pgtype.Int2        `json:"state_id"`
-	LgaID             pgtype.Int4        `json:"lga_id"`
-	WardID            pgtype.Int4        `json:"ward_id"`
-	PollingUnitID     pgtype.Int4        `json:"polling_unit_id"`
-	CreatedAt         pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
-}
-
 type Election struct {
 	ID                    int32              `json:"id"`
 	FakeID                pgtype.Int8        `json:"fake_id"`
@@ -499,14 +485,6 @@ type NationalMetric struct {
 	WardsCount                 int32              `json:"wards_count"`
 	PollingUnitsCount          int32              `json:"polling_units_count"`
 	UpdatedAt                  pgtype.Timestamptz `json:"updated_at"`
-}
-
-type NonVotingReason struct {
-	ID         int16              `json:"id"`
-	Reason     string             `json:"reason"`
-	UsageCount int32              `json:"usage_count"`
-	CreatedAt  pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
 }
 
 type Notification struct {
