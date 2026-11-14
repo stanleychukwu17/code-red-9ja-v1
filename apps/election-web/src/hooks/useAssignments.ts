@@ -82,7 +82,9 @@ export const useAssignments = (electionGroupId?: number | string) => {
 	// 4. Resolve effective polling unit ID (assigned unit takes precedence over profile default)
 	const pollingUnitId = pollingUnitAssignment?.polling_unit_id ?? user?.polling_unit_id ?? null;
 
-	const hasActiveAssignment = !!pollingUnitAssignment || !!supervisorAssignment;
+	const hasActiveAssignment =
+		assignmentsData?.has_active_assignment ??
+		(!!pollingUnitAssignment || !!supervisorAssignment);
 
 	return {
 		hasActiveAssignment,

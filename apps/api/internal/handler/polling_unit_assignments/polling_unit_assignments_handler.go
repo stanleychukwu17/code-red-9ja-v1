@@ -19,7 +19,9 @@ type PollingUnitAssignmentsService interface {
 	GetAssignmentByID(ctx context.Context, id int64) (queries.GetAssignmentByIDRow, error)
 	ListAssignments(ctx context.Context, electionGroupID int32, partyID int16, userID int64, pollingUnitID int32, limit, offset int32) ([]queries.ListAssignmentsRow, error)
 	GetMyAssignment(ctx context.Context, userID int64, electionGroupID int32) (*queries.GetUserAssignmentRow, error)
-	GetActiveElectionGroupIDs(ctx context.Context) ([]int32, error)
+	HasActiveAssignment(ctx context.Context, userID int64) (bool, error)
+	GetActiveAssignment(ctx context.Context, userID int64) (*queries.GetUserAssignmentRow, error)
+	GetActiveSupervisorElectionGroupID(ctx context.Context, userID int64) (int32, error)
 	DeleteAssignment(ctx context.Context, id int64) error
 	UpdateAssignmentTracking(ctx context.Context, id int64, arrivedAt, arrivalVideoUrl, electionStartedAt, electionStartedVideoUrl, electionEndedAt, electionEndedVideoUrl *string) (queries.UpdateAssignmentTrackingRow, error)
 }
@@ -194,39 +196,54 @@ func (h *Handler) GetMyAssignment(w http.ResponseWriter, r *http.Request) {
 		electionGroupID = int32(egID)
 	}
 
-	// Fetch polling unit assignment
-	assignment, err := h.service.GetMyAssignment(r.Context(), requester.ID, electionGroupID)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch assignment: "+err.Error())
-		return
-	}
-
-	// Resolve supervisor assignments
+	var assignment *queries.GetUserAssignmentRow
 	var supervisorAssignments *supervisorassignmentsservice.SupervisorAssignmentsResponse
-	if h.supervisorService != nil {
-		if electionGroupID > 0 {
+	hasActiveAssignment := false
+
+	if electionGroupID > 0 {
+		// Specific election group requested
+		assignment, err = h.service.GetMyAssignment(r.Context(), requester.ID, electionGroupID)
+		if err != nil {
+			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch assignment: "+err.Error())
+			return
+		}
+
+		if h.supervisorService != nil {
 			supervisorAssignments, err = h.supervisorService.GetUserSupervisorAssignments(r.Context(), requester.ID, electionGroupID)
 			if err != nil {
 				h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch supervisor assignments: "+err.Error())
 				return
 			}
-		} else if assignment != nil && assignment.ElectionGroupID > 0 {
-			supervisorAssignments, _ = h.supervisorService.GetUserSupervisorAssignments(r.Context(), requester.ID, assignment.ElectionGroupID)
-		} else {
-			// Scan active election groups if none was specified and no PU assignment was found
-			if groupIDs, gErr := h.service.GetActiveElectionGroupIDs(r.Context()); gErr == nil {
-				for _, gID := range groupIDs {
-					sup, sErr := h.supervisorService.GetUserSupervisorAssignments(r.Context(), requester.ID, gID)
-					if sErr == nil && sup != nil && (sup.StateSupervisor != nil || sup.LgaSupervisor != nil || sup.WardSupervisor != nil) {
-						supervisorAssignments = sup
-						break
-					}
+		}
+
+		hasActiveAssignment = assignment != nil || (supervisorAssignments != nil && (supervisorAssignments.StateSupervisor != nil || supervisorAssignments.LgaSupervisor != nil || supervisorAssignments.WardSupervisor != nil))
+	} else {
+		// Step 1: Fast EXISTS check across polling unit and supervisor assignments for active/upcoming elections
+		hasActive, err := h.service.HasActiveAssignment(r.Context(), requester.ID)
+		if err != nil {
+			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to check active assignments: "+err.Error())
+			return
+		}
+
+		hasActiveAssignment = hasActive
+
+		// Step 2: If active assignment exists, fetch the assignment details
+		if hasActive {
+			assignment, _ = h.service.GetActiveAssignment(r.Context(), requester.ID)
+
+			if assignment != nil && assignment.ElectionGroupID > 0 && h.supervisorService != nil {
+				supervisorAssignments, _ = h.supervisorService.GetUserSupervisorAssignments(r.Context(), requester.ID, assignment.ElectionGroupID)
+			} else if h.supervisorService != nil {
+				// User has an active supervisor assignment
+				if supEGID, sErr := h.service.GetActiveSupervisorElectionGroupID(r.Context(), requester.ID); sErr == nil && supEGID > 0 {
+					supervisorAssignments, _ = h.supervisorService.GetUserSupervisorAssignments(r.Context(), requester.ID, supEGID)
 				}
 			}
 		}
 	}
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Assignment fetched successfully", map[string]interface{}{
+		"has_active_assignment": hasActiveAssignment,
 		"assignment":             assignment,
 		"supervisor_assignments": supervisorAssignments,
 	})
