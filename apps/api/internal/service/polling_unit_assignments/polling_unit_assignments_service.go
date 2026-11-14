@@ -115,6 +115,35 @@ func (s *Service) DeleteAssignment(ctx context.Context, id int64) error {
 	return s.queries.DeleteAssignment(ctx, id)
 }
 
+// HasActiveAssignment checks whether a user has any active polling unit or supervisor assignment for an upcoming election.
+func (s *Service) HasActiveAssignment(ctx context.Context, userID int64) (bool, error) {
+	return s.queries.HasActiveAssignment(ctx, userID)
+}
+
+// GetActiveAssignment retrieves the user's active polling unit assignment for an upcoming election.
+func (s *Service) GetActiveAssignment(ctx context.Context, userID int64) (*queries.GetUserAssignmentRow, error) {
+	assignment, err := s.queries.GetUserActiveAssignment(ctx, userID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &assignment, nil
+}
+
+// GetActiveSupervisorElectionGroupID retrieves the election group ID for a user's active supervisor role.
+func (s *Service) GetActiveSupervisorElectionGroupID(ctx context.Context, userID int64) (int32, error) {
+	egID, err := s.queries.GetActiveSupervisorElectionGroupID(ctx, userID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return 0, nil
+		}
+		return 0, err
+	}
+	return egID, nil
+}
+
 // parseTimeParam converts an optional ISO 8601/RFC3339 string into a pgtype.Timestamptz.
 func parseTimeParam(timeStr *string) pgtype.Timestamptz {
 	if timeStr == nil || *timeStr == "" {
