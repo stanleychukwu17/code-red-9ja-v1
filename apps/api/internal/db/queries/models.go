@@ -824,7 +824,6 @@ type PollingUnitAssignment struct {
 	ReportsCount                            int32              `json:"reports_count"`
 	UpdatesCount                            int32              `json:"updates_count"`
 	ResultsSubmittedCount                   int32              `json:"results_submitted_count"`
-	IntervalUpdates                         []byte             `json:"interval_updates"`
 	ElectionPracticeTestReadinessPercentage pgtype.Numeric     `json:"election_practice_test_readiness_percentage"`
 	PotentialPaymentKobo                    int64              `json:"potential_payment_kobo"`
 	EarnedAmountKobo                        int64              `json:"earned_amount_kobo"`

@@ -2,7 +2,6 @@ package polling_unit_updates
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"free9ja/api/internal/db/queries"
@@ -47,33 +46,6 @@ type CreateUpdateInput struct {
 	MediaUrls       []string `json:"media_urls"`
 	IsReport        bool     `json:"is_report"`
 	ReportTypes     []string `json:"report_types"`
-}
-
-// updateScheduleConfig mirrors the JSON structure in system_settings for the
-// 'update_schedule_config' key.
-type updateScheduleConfig struct {
-	StartTime       string `json:"start_time"`       // "HH:MM" (24-hour)
-	EndTime         string `json:"end_time"`         // "HH:MM" (24-hour)
-	IntervalMinutes int    `json:"interval_minutes"` // e.g. 30
-}
-
-// calcIntervalKey returns the floored interval bucket key ("HH:MM") for t
-// based on interval_minutes.
-//
-// Examples with interval_minutes = 30:
-//   - 06:15 AM -> "06:00"
-//   - 07:25 AM -> "07:00"
-//   - 07:32 AM -> "07:30"
-//   - 17:45 PM -> "17:30"
-func calcIntervalKey(t time.Time, cfg updateScheduleConfig) (string, error) {
-	if cfg.IntervalMinutes <= 0 {
-		cfg.IntervalMinutes = 30 // safe default
-	}
-
-	minute := t.Minute()
-	flooredMinute := (minute / cfg.IntervalMinutes) * cfg.IntervalMinutes
-
-	return fmt.Sprintf("%02d:%02d", t.Hour(), flooredMinute), nil
 }
 
 func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (queries.PollingUnitUpdate, error) {
@@ -171,17 +143,6 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 		if err != nil {
 			return queries.PollingUnitUpdate{}, err
 		}
-
-		// Update interval_updates bucket — only count non-report updates.
-		if !input.IsReport {
-			if intervalKey, err := s.calcIntervalKeyFromSettings(ctx, qtx, time.Now()); err == nil {
-				// Best-effort: if interval tracking fails, we don't fail the whole request.
-				_ = qtx.IncrementAssignmentIntervalUpdates(ctx, queries.IncrementAssignmentIntervalUpdatesParams{
-					ID:          *input.AssignmentID,
-					IntervalKey: intervalKey,
-				})
-			}
-		}
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -211,27 +172,6 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 	}
 
 	return update, nil
-}
-
-// calcIntervalKeyFromSettings fetches update_schedule_config from system_settings
-// and delegates to calcIntervalKey.
-func (s *Service) calcIntervalKeyFromSettings(ctx context.Context, q *queries.Queries, t time.Time) (string, error) {
-	setting, err := q.GetSystemSetting(ctx, "update_schedule_config")
-	if err != nil {
-		// Fall back to a simple 30-minute fixed-window if the setting is missing.
-		m := t.Minute()
-		if m < 30 {
-			return fmt.Sprintf("%02d:00", t.Hour()), nil
-		}
-		return fmt.Sprintf("%02d:30", t.Hour()), nil
-	}
-
-	var cfg updateScheduleConfig
-	if err := json.Unmarshal(setting.Value, &cfg); err != nil {
-		return "", fmt.Errorf("invalid update_schedule_config: %w", err)
-	}
-
-	return calcIntervalKey(t, cfg)
 }
 
 func (s *Service) ListUpdates(ctx context.Context, params queries.ListPollingUnitUpdatesParams) ([]queries.ListPollingUnitUpdatesRow, error) {

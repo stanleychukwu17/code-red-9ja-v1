@@ -152,8 +152,8 @@ export function PollingAgentPage() {
     {
       title: "Give updates every 30minutes (7AM - 5PM)",
       isCompleted: !!(
-        currentPollingUnitAssignment?.interval_updates &&
-        Object.keys(currentPollingUnitAssignment.interval_updates).length > 0
+        currentPollingUnitAssignment?.updates_count &&
+        currentPollingUnitAssignment.updates_count > 0
       ),
     },
     {

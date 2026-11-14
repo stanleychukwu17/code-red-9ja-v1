@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS referrals (
   referrer_user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   referred_user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   
-  milestone VARCHAR(50) NOT NULL, -- e.g., 'SIGNED_UP', 'BECAME_AGENT', 'VOTED', 'UPLOADED_RESULTS'
+  milestone VARCHAR(50) NOT NULL, -- e.g., 'SIGNED_UP', 'APPLIED', 'BECAME_AGENT'
   status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'paid', 'cancelled')),
   amount_to_pay_kobo BIGINT NOT NULL DEFAULT 0, -- the amount in kobo the referrer will be paid if the user became an agent during an active election group marketing campaign for this election_group_id
   

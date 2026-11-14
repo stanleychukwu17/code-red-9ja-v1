@@ -25,8 +25,6 @@ CREATE TABLE IF NOT EXISTS polling_unit_assignments (
   
   -- Additional Results & Tracking Fields
   results_submitted_count INT NOT NULL DEFAULT 0,
-  -- {"07:00":2, "07:30": 3, "08:00": 1, ...}
-  interval_updates JSONB DEFAULT '{}'::jsonb,
 
   -- Score from 0-100 reflecting how prepared this agent is based on practice test performance
   election_practice_test_readiness_percentage NUMERIC(5,2) NOT NULL DEFAULT 0 CHECK (election_practice_test_readiness_percentage BETWEEN 0 AND 100),

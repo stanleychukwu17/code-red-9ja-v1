@@ -159,7 +159,6 @@ SELECT
   COALESCE(egpu.unique_final_results_expected, 0)::int AS results_expected_to_submit_count,
   a.election_practice_test_readiness_percentage,
   a.potential_payment_kobo,
-  a.interval_updates,
   cs.name AS state_name,
   eg.election_date
 FROM polling_unit_assignments a
@@ -184,7 +183,6 @@ type GetAssignmentForEarningsRow struct {
 	ResultsExpectedToSubmitCount            int32              `json:"results_expected_to_submit_count"`
 	ElectionPracticeTestReadinessPercentage pgtype.Numeric     `json:"election_practice_test_readiness_percentage"`
 	PotentialPaymentKobo                    int64              `json:"potential_payment_kobo"`
-	IntervalUpdates                         []byte             `json:"interval_updates"`
 	StateName                               string             `json:"state_name"`
 	ElectionDate                            pgtype.Date        `json:"election_date"`
 }
@@ -206,7 +204,6 @@ func (q *Queries) GetAssignmentForEarnings(ctx context.Context, id int64) (GetAs
 		&i.ResultsExpectedToSubmitCount,
 		&i.ElectionPracticeTestReadinessPercentage,
 		&i.PotentialPaymentKobo,
-		&i.IntervalUpdates,
 		&i.StateName,
 		&i.ElectionDate,
 	)

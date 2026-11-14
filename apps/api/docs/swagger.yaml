@@ -360,60 +360,52 @@ definitions:
     properties:
       election_date:
         type: string
-      elections_count:
-        type: integer
       name:
         type: string
-      rank:
-        type: integer
-      states_count:
-        type: integer
+    required:
+    - election_date
+    - name
     type: object
   electiongroupshandler.UpdateElectionGroupRequest:
     properties:
+      accepts_agents:
+        type: boolean
+      accepts_candidates:
+        type: boolean
+      active:
+        type: boolean
       election_date:
         type: string
-      elections_count:
-        type: integer
       name:
+        minLength: 1
         type: string
-      rank:
-        type: integer
-      states_count:
-        type: integer
     type: object
-  electiongroupshandler.UpsertPartyElectionGroupStatsRequest:
+  electionshandler.BulkDeleteElectionsRequest:
     properties:
-      elections_contesting:
-        type: integer
-      party_id:
-        type: integer
-      polling_agents_coverage: {}
-    type: object
-  electionshandler.CreateElectionRequest:
-    properties:
-      candidates_count:
-        type: integer
-      election_date:
-        type: string
       election_group_id:
         type: integer
-      federal_constituency_id:
+      election_ids:
+        items:
+          type: integer
+        minItems: 1
+        type: array
+    required:
+    - election_ids
+    type: object
+  electionshandler.BulkUpdateElectionGroupRequest:
+    properties:
+      election_group_id:
         type: integer
-      lga_id:
+      election_ids:
+        items:
+          type: integer
+        minItems: 1
+        type: array
+      from_election_group_id:
         type: integer
-      name:
-        type: string
-      office_id:
-        type: integer
-      senatorial_district_id:
-        type: integer
-      state_constituency_id:
-        type: integer
-      state_id:
-        type: integer
-      ward_id:
-        type: integer
+    required:
+    - election_group_id
+    - election_ids
     type: object
   electionshandler.CreateFederalConstituencyElectionRequest:
     properties:
@@ -424,9 +416,15 @@ definitions:
       federal_constituency_ids:
         items:
           type: integer
+        minItems: 1
         type: array
       office_id:
         type: integer
+    required:
+    - election_date
+    - election_group_id
+    - federal_constituency_ids
+    - office_id
     type: object
   electionshandler.CreateLgaElectionRequest:
     properties:
@@ -437,22 +435,28 @@ definitions:
       lga_ids:
         items:
           type: integer
+        minItems: 1
         type: array
       office_id:
         type: integer
+    required:
+    - election_date
+    - election_group_id
+    - lga_ids
+    - office_id
     type: object
   electionshandler.CreateNationwideElectionRequest:
     properties:
-      candidates:
-        items:
-          $ref: '#/definitions/electionshandler.ElectionCandidateInput'
-        type: array
       election_date:
         type: string
       election_group_id:
         type: integer
       office_id:
         type: integer
+    required:
+    - election_date
+    - election_group_id
+    - office_id
     type: object
   electionshandler.CreateSenatorialDistrictElectionRequest:
     properties:
@@ -465,7 +469,13 @@ definitions:
       senatorial_district_ids:
         items:
           type: integer
+        minItems: 1
         type: array
+    required:
+    - election_date
+    - election_group_id
+    - office_id
+    - senatorial_district_ids
     type: object
   electionshandler.CreateStateConstituencyElectionRequest:
     properties:
@@ -478,7 +488,13 @@ definitions:
       state_constituency_ids:
         items:
           type: integer
+        minItems: 1
         type: array
+    required:
+    - election_date
+    - election_group_id
+    - office_id
+    - state_constituency_ids
     type: object
   electionshandler.CreateStateElectionRequest:
     properties:
@@ -491,10 +507,18 @@ definitions:
       state_ids:
         items:
           type: integer
+        minItems: 1
         type: array
+    required:
+    - election_date
+    - election_group_id
+    - office_id
+    - state_ids
     type: object
   electionshandler.CreateWardElectionRequest:
     properties:
+      all_wards:
+        type: boolean
       election_date:
         type: string
       election_group_id:
@@ -505,51 +529,23 @@ definitions:
         items:
           type: integer
         type: array
-    type: object
-  electionshandler.ElectionCandidateInput:
-    properties:
-      candidate_id:
-        type: integer
-      party_id:
-        type: integer
-      party_short_name:
-        type: string
     required:
-    - candidate_id
-    - party_id
-    - party_short_name
-    type: object
-  electionshandler.SyncCandidatesRequest:
-    properties:
-      candidates:
-        items:
-          $ref: '#/definitions/electionshandler.ElectionCandidateInput'
-        type: array
+    - election_date
+    - election_group_id
+    - office_id
     type: object
   electionshandler.UpdateElectionRequest:
     properties:
-      candidates_count:
-        type: integer
       election_date:
         type: string
       election_group_id:
         type: integer
-      federal_constituency_id:
-        type: integer
-      lga_id:
-        type: integer
       name:
         type: string
-      office_id:
-        type: integer
-      senatorial_district_id:
-        type: integer
-      state_constituency_id:
-        type: integer
-      state_id:
-        type: integer
-      ward_id:
-        type: integer
+    required:
+    - election_date
+    - election_group_id
+    - name
     type: object
   federalconstituencieshandler.CreateFederalConstituencyRequest:
     properties:
@@ -640,12 +636,20 @@ definitions:
     type: object
   officeshandler.CreateOfficeRequest:
     properties:
+      appointing_office_id:
+        type: integer
+      category:
+        type: string
       election:
         type: string
       inec_election_type_id:
         type: string
+      is_contested:
+        type: boolean
       name:
         type: string
+      parent_office_id:
+        type: integer
       rank:
         type: integer
       scope:
@@ -653,12 +657,20 @@ definitions:
     type: object
   officeshandler.UpdateOfficeRequest:
     properties:
+      appointing_office_id:
+        type: integer
+      category:
+        type: string
       election:
         type: string
       inec_election_type_id:
         type: string
+      is_contested:
+        type: boolean
       name:
         type: string
+      parent_office_id:
+        type: integer
       rank:
         type: integer
       scope:
@@ -679,11 +691,6 @@ definitions:
     - for_who
     - page_id
     - verification_type_ids
-    type: object
-  partieshandler.BuySlotsRequest:
-    properties:
-      quantity:
-        type: integer
     type: object
   partieshandler.CreateMarketingCampaignRequest:
     properties:
@@ -764,16 +771,6 @@ definitions:
       amount_kobo:
         type: integer
     type: object
-  partieshandler.SetPartyDiscountRequest:
-    properties:
-      discount_percentage:
-        type: number
-    type: object
-  partieshandler.SetSlotPriceRequest:
-    properties:
-      price_kobo:
-        type: integer
-    type: object
   partieshandler.ToggleVerificationRequest:
     properties:
       is_verified:
@@ -815,11 +812,6 @@ definitions:
       short_name:
         type: string
     type: object
-  partieshandler.UpdatePlanDisplayOrderRequest:
-    properties:
-      display_order:
-        type: integer
-    type: object
   partieshandler.UpdatePlanRequest:
     properties:
       color_hex:
@@ -845,39 +837,6 @@ definitions:
       type:
         type: string
     type: object
-  partieshandler.WithdrawRequest:
-    properties:
-      amount_kobo:
-        description: AmountKobo is the withdrawal amount in Kobo (1 NGN = 100 Kobo).
-        type: integer
-      bank_account_number:
-        type: string
-      bank_code:
-        type: string
-      narration:
-        type: string
-    type: object
-  partieshandler.agentPaymentAllocation:
-    properties:
-      lga_election_supervisor:
-        $ref: '#/definitions/partieshandler.agentPaymentConfig'
-      polling_agent:
-        $ref: '#/definitions/partieshandler.agentPaymentConfig'
-      state_election_supervisor:
-        $ref: '#/definitions/partieshandler.agentPaymentConfig'
-      ward_election_supervisor:
-        $ref: '#/definitions/partieshandler.agentPaymentConfig'
-    type: object
-  partieshandler.agentPaymentConfig:
-    properties:
-      default:
-        type: integer
-      states:
-        additionalProperties:
-          format: int64
-          type: integer
-        type: object
-    type: object
   partyapplicationshandler.ApproveApplicationRequest:
     properties:
       lga_id:
@@ -891,6 +850,24 @@ definitions:
       ward_id:
         type: integer
     type: object
+  partyapplicationshandler.BatchApproveApplicationsRequest:
+    properties:
+      election_group_id:
+        type: integer
+      lga_id:
+        type: integer
+      party_id:
+        type: integer
+      state_id:
+        type: integer
+      ward_id:
+        type: integer
+    required:
+    - election_group_id
+    - lga_id
+    - party_id
+    - state_id
+    type: object
   partyapplicationshandler.RejectApplicationRequest:
     properties:
       reason:
@@ -902,14 +879,12 @@ definitions:
         type: string
       avatar:
         type: string
+      avatar_file_id:
+        type: integer
       bank_account_number:
         type: string
       bank_code:
         type: string
-      current_city:
-        type: integer
-      current_country:
-        type: integer
       current_lga:
         type: integer
       current_state:
@@ -920,26 +895,23 @@ definitions:
         type: string
       election_group_id:
         type: integer
-      election_group_ids:
-        items:
-          type: integer
-        type: array
       graduation_year:
         type: string
       highest_degree:
         type: string
       party_id:
         type: integer
-      phone:
-        type: string
       polling_unit_id:
         type: integer
       school_name:
         type: string
-      voters_card_image:
-        type: string
-      whatsapp_phone:
-        type: string
+    required:
+    - current_lga
+    - current_state
+    - current_ward
+    - election_group_id
+    - party_id
+    - polling_unit_id
     type: object
   partyapplicationshandler.SubmitSupervisorApplicationRequest:
     properties:
@@ -1137,19 +1109,6 @@ definitions:
       task_id:
         type: integer
     type: object
-  puassignmentshandler.CreateAssignmentRequest:
-    properties:
-      election_group_id:
-        type: integer
-      fake_id:
-        type: integer
-      party_id:
-        type: integer
-      polling_unit_id:
-        type: integer
-      role_type:
-        type: string
-    type: object
   puassignmentshandler.UpdateAssignmentTrackingRequest:
     properties:
       arrival_video_url:
@@ -1223,6 +1182,139 @@ definitions:
         example: 35
         type: number
     type: object
+  seedservice.CandidateProfile:
+    properties:
+      avatar:
+        type: string
+      current_city:
+        type: integer
+      current_country:
+        type: integer
+      current_lga:
+        type: integer
+      current_state:
+        type: integer
+      current_ward:
+        type: integer
+      date_of_birth:
+        type: string
+      email:
+        type: string
+      first_name:
+        type: string
+      gender:
+        type: string
+      is_politician:
+        type: boolean
+      is_verified:
+        type: boolean
+      last_name:
+        type: string
+      middle_name:
+        type: string
+      name:
+        type: string
+      num:
+        type: integer
+      party_id:
+        type: integer
+      party_short_name:
+        type: string
+      phone:
+        type: string
+      polling_unit_id:
+        type: integer
+      qualifications:
+        type: string
+      role:
+        type: string
+      state_of_origin:
+        type: integer
+      username:
+        type: string
+      verification_type_id:
+        type: integer
+      verification_type_ids:
+        items:
+          type: integer
+        type: array
+    type: object
+  seedservice.GovernorshipCandidateRequest:
+    properties:
+      candidate:
+        $ref: '#/definitions/seedservice.CandidateProfile'
+      party_id:
+        type: integer
+      party_short_name:
+        type: string
+      running_mate:
+        $ref: '#/definitions/seedservice.CandidateProfile'
+      state_id:
+        type: integer
+      state_name:
+        type: string
+      ticket_num:
+        type: integer
+    type: object
+  seedservice.HouseOfRepsCandidateRequest:
+    properties:
+      avatar:
+        type: string
+      current_city:
+        type: integer
+      current_country:
+        type: integer
+      current_lga:
+        type: integer
+      current_state:
+        type: integer
+      current_ward:
+        type: integer
+      date_of_birth:
+        type: string
+      email:
+        type: string
+      federal_constituency_id:
+        type: integer
+      first_name:
+        type: string
+      gender:
+        type: string
+      is_politician:
+        type: boolean
+      is_verified:
+        type: boolean
+      last_name:
+        type: string
+      middle_name:
+        type: string
+      name:
+        type: string
+      num:
+        type: integer
+      party_id:
+        type: integer
+      party_short_name:
+        type: string
+      phone:
+        type: string
+      polling_unit_id:
+        type: integer
+      qualifications:
+        type: string
+      role:
+        type: string
+      state_of_origin:
+        type: integer
+      username:
+        type: string
+      verification_type_id:
+        type: integer
+      verification_type_ids:
+        items:
+          type: integer
+        type: array
+    type: object
   seedservice.PartyAdminsData:
     properties:
       id:
@@ -1236,6 +1328,19 @@ definitions:
         items:
           type: integer
         type: array
+    type: object
+  seedservice.PresidentialCandidateRequest:
+    properties:
+      candidate:
+        $ref: '#/definitions/seedservice.CandidateProfile'
+      party_id:
+        type: integer
+      party_short_name:
+        type: string
+      running_mate:
+        $ref: '#/definitions/seedservice.CandidateProfile'
+      ticket_num:
+        type: integer
     type: object
   seedservice.SeedAdminsRequest:
     properties:
@@ -1253,6 +1358,86 @@ definitions:
         items:
           type: integer
         type: array
+    type: object
+  seedservice.SeedElectionGroupRequest:
+    properties:
+      description:
+        type: string
+      election_date:
+        type: string
+      name:
+        type: string
+    type: object
+  seedservice.SeedElectionInstanceRequest:
+    properties:
+      election_date:
+        type: string
+      federal_constituency_ids:
+        items:
+          type: integer
+        type: array
+      office_id:
+        type: integer
+      office_name:
+        type: string
+      scope:
+        type: string
+      senatorial_district_ids:
+        items:
+          type: integer
+        type: array
+      state_constituency_ids:
+        items:
+          type: integer
+        type: array
+      state_ids:
+        items:
+          type: integer
+        type: array
+    type: object
+  seedservice.SeedPartyAgentApplicationsRequest:
+    properties:
+      count:
+        type: integer
+      election_group_id:
+        type: integer
+      party_id:
+        type: integer
+      role:
+        type: string
+      state_id:
+        type: integer
+    type: object
+  seedservice.SeedPartyLeaderItem:
+    properties:
+      existing_username:
+        description: used if type_of_account is "existing"
+        type: string
+      order:
+        type: integer
+      party_id:
+        type: integer
+      position_id:
+        type: integer
+      position_name:
+        type: string
+      type_of_account:
+        description: '"new" or "existing"'
+        type: string
+      user:
+        allOf:
+        - $ref: '#/definitions/seedservice.CandidateProfile'
+        description: profile to seed if type_of_account is "new"
+    type: object
+  seedservice.SeedUserPosition:
+    properties:
+      level:
+        description: '"state", "lga", "national"'
+        type: string
+      position_id:
+        type: integer
+      position_name:
+        type: string
     type: object
   seedservice.SeedUserRequest:
     properties:
@@ -1296,12 +1481,145 @@ definitions:
         type: string
       polling_unit_id:
         type: integer
+      position:
+        $ref: '#/definitions/seedservice.SeedUserPosition'
       state_of_origin:
         type: integer
       username:
         type: string
       verification_type_id:
         type: integer
+      verification_type_ids:
+        items:
+          type: integer
+        type: array
+    type: object
+  seedservice.SenateCandidateRequest:
+    properties:
+      avatar:
+        type: string
+      current_city:
+        type: integer
+      current_country:
+        type: integer
+      current_lga:
+        type: integer
+      current_state:
+        type: integer
+      current_ward:
+        type: integer
+      date_of_birth:
+        type: string
+      email:
+        type: string
+      first_name:
+        type: string
+      gender:
+        type: string
+      is_politician:
+        type: boolean
+      is_verified:
+        type: boolean
+      last_name:
+        type: string
+      middle_name:
+        type: string
+      name:
+        type: string
+      num:
+        type: integer
+      party_id:
+        type: integer
+      party_short_name:
+        type: string
+      phone:
+        type: string
+      polling_unit_id:
+        type: integer
+      qualifications:
+        type: string
+      role:
+        type: string
+      senatorial_district_id:
+        type: integer
+      state_of_origin:
+        type: integer
+      username:
+        type: string
+      verification_type_id:
+        type: integer
+      verification_type_ids:
+        items:
+          type: integer
+        type: array
+    type: object
+  seedservice.StateAssemblyCandidateRequest:
+    properties:
+      avatar:
+        type: string
+      current_city:
+        type: integer
+      current_country:
+        type: integer
+      current_lga:
+        type: integer
+      current_state:
+        type: integer
+      current_ward:
+        type: integer
+      date_of_birth:
+        type: string
+      email:
+        type: string
+      first_name:
+        type: string
+      gender:
+        type: string
+      is_politician:
+        type: boolean
+      is_verified:
+        type: boolean
+      last_name:
+        type: string
+      middle_name:
+        type: string
+      name:
+        type: string
+      num:
+        type: integer
+      party_id:
+        type: integer
+      party_short_name:
+        type: string
+      phone:
+        type: string
+      polling_unit_id:
+        type: integer
+      qualifications:
+        type: string
+      role:
+        type: string
+      state_constituency_id:
+        type: integer
+      state_of_origin:
+        type: integer
+      username:
+        type: string
+      verification_type_id:
+        type: integer
+      verification_type_ids:
+        items:
+          type: integer
+        type: array
+    type: object
+  seedservice.SyncCampaignGroupsRequest:
+    properties:
+      election_group_id:
+        type: integer
+      party_ids:
+        items:
+          type: integer
+        type: array
     type: object
   senatorialdistrictshandler.CreateSenatorialDistrictRequest:
     properties:
@@ -1960,37 +2278,6 @@ paths:
       summary: Toggle pause/resume status of INEC result grabber
       tags:
       - INEC Result Grabber
-  /admin/parties/{id}/discount:
-    put:
-      consumes:
-      - application/json
-      description: Sets the slot discount percentage for a political party (Admin
-        only)
-      parameters:
-      - description: Party ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: Discount request payload
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/partieshandler.SetPartyDiscountRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Party discount updated
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Set customized slot discount for a party
-      tags:
-      - Admin Parties
   /admin/parties/{id}/verify:
     put:
       consumes:
@@ -2222,44 +2509,6 @@ paths:
       summary: Update a system setting
       tags:
       - System Settings
-  /admin/settings/slot-price:
-    get:
-      description: Retrieves the global, app-wide price of a single polling unit slot
-        in Kobo
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Global slot price retrieved
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Get global slot price
-      tags:
-      - Admin Settings
-    put:
-      consumes:
-      - application/json
-      description: Updates the global, app-wide price of a single polling unit slot
-        in Kobo (Admin only)
-      parameters:
-      - description: Slot Price request payload
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/partieshandler.SetSlotPriceRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Global slot price updated
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Update global slot price
-      tags:
-      - Admin Settings
   /admin/unmatched-polling-unit-results:
     get:
       consumes:
@@ -2524,29 +2773,6 @@ paths:
       summary: Assign verifications to a page
       tags:
       - Page Verifications
-  /agent-marketing-plans:
-    get:
-      description: Returns all active marketing plans of the specified type (e.g.
-        agent-campaign)
-      parameters:
-      - default: agent-campaign
-        description: Campaign type
-        in: query
-        name: type
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Marketing plans retrieved successfully
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get plans by type
-      tags:
-      - Marketing
   /auth/admin/login:
     post:
       consumes:
@@ -2966,7 +3192,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: Returns a list of real Nigerian banks from Monnify
+      description: Returns a list of real Nigerian banks
       produces:
       - application/json
       responses:
@@ -2981,44 +3207,6 @@ paths:
             additionalProperties: true
             type: object
       summary: Get list of banks
-      tags:
-      - Banks
-  /banks/validate:
-    get:
-      consumes:
-      - application/json
-      description: Validates account number and bank code via Monnify, returning the
-        account name
-      parameters:
-      - description: Account Number
-        in: query
-        name: accountNumber
-        required: true
-        type: string
-      - description: Bank Code
-        in: query
-        name: bankCode
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Account validated successfully
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Missing parameters
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Validation failed
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Validate bank account
       tags:
       - Banks
   /bodies/metrics:
@@ -3045,19 +3233,34 @@ paths:
     post:
       consumes:
       - application/json
-      description: Fetches and synchronizes all electoral units from INEC API (unauthenticated)
+      description: Starts background synchronization of all electoral units from INEC
+        API (admin only)
       produces:
       - application/json
       responses:
-        "200":
-          description: OK
+        "202":
+          description: Accepted
           schema:
             additionalProperties: true
             type: object
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "403":
+          description: Forbidden
+          schema:
+            type: string
+        "409":
+          description: Conflict - sync in progress or rate limited
+          schema:
+            type: string
         "500":
           description: Internal Server Error
           schema:
             type: string
+      security:
+      - BearerAuth: []
       summary: Synchronize electoral units from INEC API
       tags:
       - Bodies
@@ -3065,8 +3268,44 @@ paths:
     post:
       consumes:
       - application/json
-      description: Fetches and synchronizes all electoral units from INEC API using
-        Governorship election state flow (unauthenticated)
+      description: Starts background synchronization of all electoral units from INEC
+        API using Governorship election state flow (admin only)
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "403":
+          description: Forbidden
+          schema:
+            type: string
+        "409":
+          description: Conflict - sync in progress or rate limited
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Synchronize electoral units from INEC API using State (Governorship)
+        Flow
+      tags:
+      - Bodies
+  /bodies/sync-status:
+    get:
+      consumes:
+      - application/json
+      description: Returns current live synchronization progress, report, and remaining
+        cooldown (admin only)
       produces:
       - application/json
       responses:
@@ -3075,12 +3314,21 @@ paths:
           schema:
             additionalProperties: true
             type: object
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "403":
+          description: Forbidden
+          schema:
+            type: string
         "500":
           description: Internal Server Error
           schema:
             type: string
-      summary: Synchronize electoral units from INEC API using State (Governorship)
-        Flow
+      security:
+      - BearerAuth: []
+      summary: Get synchronization status and rate limit of electoral units
       tags:
       - Bodies
   /countries:
@@ -3136,20 +3384,16 @@ paths:
     get:
       consumes:
       - application/json
-      description: Fetches a paginated list of election groups using cursor pagination
+      description: Fetches all election groups ordered by election date descending
       parameters:
-      - description: Limit (default 20, max 100)
+      - description: Filter by active status
         in: query
-        name: limit
-        type: integer
-      - description: Cursor (ID of last record)
+        name: active
+        type: boolean
+      - description: Include child elections for each group
         in: query
-        name: cursor
-        type: string
-      - description: Party ID for stats
-        in: query
-        name: party_id
-        type: integer
+        name: include_elections
+        type: boolean
       produces:
       - application/json
       responses:
@@ -3239,14 +3483,23 @@ paths:
     get:
       consumes:
       - application/json
-      description: Retrieves details of a single election group using its ID
+      - application/json
+      description: |-
+        Retrieves details of a single election group using its ID
+        Retrieves details of a single election group using its unique 64-bit fake_id
       parameters:
       - description: Election Group ID
         in: path
         name: id
         required: true
         type: integer
+      - description: Election Group Fake ID
+        in: path
+        name: fake_id
+        required: true
+        type: integer
       produces:
+      - application/json
       - application/json
       responses:
         "200":
@@ -3255,7 +3508,7 @@ paths:
             additionalProperties: true
             type: object
         "400":
-          description: Invalid ID parameter
+          description: Invalid fake ID parameter
           schema:
             additionalProperties: true
             type: object
@@ -3269,14 +3522,14 @@ paths:
           schema:
             additionalProperties: true
             type: object
-      summary: Get election group by ID
+      summary: Get election group by Fake ID
       tags:
+      - ElectionGroups
       - ElectionGroups
     put:
       consumes:
       - application/json
-      description: Modifies name, rank, counts, or election date of an existing election
-        group
+      description: Modifies name or election date of an existing election group
       parameters:
       - description: Election Group ID
         in: path
@@ -3318,13 +3571,13 @@ paths:
   /election-groups/{id}/elections:
     get:
       description: Fetches the list of elections associated with a specific election
-        group ID
+        group ID or fake_id
       parameters:
-      - description: Election Group ID
+      - description: Election Group ID or Fake ID
         in: path
         name: id
         required: true
-        type: integer
+        type: string
       produces:
       - application/json
       responses:
@@ -3338,6 +3591,11 @@ paths:
           schema:
             additionalProperties: true
             type: object
+        "404":
+          description: Election group not found
+          schema:
+            additionalProperties: true
+            type: object
         "500":
           description: Internal server error
           schema:
@@ -3346,80 +3604,6 @@ paths:
       summary: List elections for an election group
       tags:
       - ElectionGroups
-  /election-groups/{id}/party-stats:
-    put:
-      consumes:
-      - application/json
-      description: Upserts party-specific statistics for an election group
-      parameters:
-      - description: Election Group ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: Upsert Stats payload
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/electiongroupshandler.UpsertPartyElectionGroupStatsRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Stats upserted successfully
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Invalid payload or parameters
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal server error
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Upsert party election group stats
-      tags:
-      - ElectionGroups
-  /election-groups/{id}/vote-status:
-    get:
-      description: Returns the vote status (voted, did_not_vote, none) and associated
-        data (votes or reason).
-      parameters:
-      - description: Election Group ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Get user's vote status for an election group
-      tags:
-      - Elections
   /elections:
     get:
       consumes:
@@ -3448,39 +3632,6 @@ paths:
             additionalProperties: true
             type: object
       summary: List elections
-      tags:
-      - Elections
-    post:
-      consumes:
-      - application/json
-      description: Creates a new election with name, candidates count, date, group
-        ID, and type ID
-      parameters:
-      - description: Create Election payload
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/electionshandler.CreateElectionRequest'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Election created successfully
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Invalid request payload or missing fields
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal server error
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Create a new election
       tags:
       - Elections
   /elections/{id}:
@@ -3518,42 +3669,6 @@ paths:
             additionalProperties: true
             type: object
       summary: Delete an election
-      tags:
-      - Elections
-    get:
-      consumes:
-      - application/json
-      description: Retrieves details of a single election using its ID
-      parameters:
-      - description: Election ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Election fetched successfully
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Invalid ID parameter
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: Election not found
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal server error
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Get election by ID
       tags:
       - Elections
     put:
@@ -3599,64 +3714,29 @@ paths:
       summary: Update an election
       tags:
       - Elections
-  /elections/{id}/candidates:
-    get:
-      description: Fetches the list of candidates associated with a specific election
-        ID
-      parameters:
-      - description: Election ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Candidates fetched successfully
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Invalid election ID
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal server error
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Get detailed candidates for an election
-      tags:
-      - Elections
-    post:
+  /elections/bulk:
+    delete:
       consumes:
       - application/json
-      description: Overwrites/synchronizes the list of candidate IDs associated with
-        a specific election ID
+      description: Deletes multiple elections from the database in a single atomic
+        query
       parameters:
-      - description: Election ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: Candidate IDs payload
+      - description: Bulk Delete Elections payload
         in: body
         name: request
         required: true
         schema:
-          $ref: '#/definitions/electionshandler.SyncCandidatesRequest'
+          $ref: '#/definitions/electionshandler.BulkDeleteElectionsRequest'
       produces:
       - application/json
       responses:
         "200":
-          description: Candidates synced successfully
+          description: Elections deleted successfully
           schema:
             additionalProperties: true
             type: object
         "400":
-          description: Invalid payload or election ID
+          description: Invalid request payload or validation failed
           schema:
             additionalProperties: true
             type: object
@@ -3665,35 +3745,32 @@ paths:
           schema:
             additionalProperties: true
             type: object
-      summary: Sync candidates for an election
+      summary: Bulk delete elections
       tags:
       - Elections
-  /elections/eligible:
-    get:
-      description: Returns all elections eligible for a given polling unit and election
-        group, each enriched with their list of candidates (name, avatar, party info).
-        Candidates may be empty if none have been set up.
+  /elections/bulk-group:
+    put:
+      consumes:
+      - application/json
+      description: Reassigns multiple elections to a target election group in a single
+        atomic transaction
       parameters:
-      - description: Election Group ID
-        in: query
-        name: election_group_id
+      - description: Bulk Update Election Group payload
+        in: body
+        name: request
         required: true
-        type: integer
-      - description: Polling Unit ID
-        in: query
-        name: polling_unit_id
-        required: true
-        type: integer
+        schema:
+          $ref: '#/definitions/electionshandler.BulkUpdateElectionGroupRequest'
       produces:
       - application/json
       responses:
         "200":
-          description: Eligible elections fetched successfully
+          description: Election group updated successfully
           schema:
             additionalProperties: true
             type: object
         "400":
-          description: Missing or invalid query parameters
+          description: Invalid request payload or validation failed
           schema:
             additionalProperties: true
             type: object
@@ -3702,7 +3779,40 @@ paths:
           schema:
             additionalProperties: true
             type: object
-      summary: Get eligible elections with candidates for a polling unit
+      summary: Bulk update election group
+      tags:
+      - Elections
+  /elections/by-fake-id/{fake_id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves an election instance directly by its unique public fake_id
+        along with its candidates
+      parameters:
+      - description: Election Fake ID
+        in: path
+        name: fake_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Election fetched successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid fake ID parameter
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Election not found
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get an election by fake ID
       tags:
       - Elections
   /elections/federal-constituency:
@@ -3807,66 +3917,6 @@ paths:
       summary: Create a new nationwide election
       tags:
       - Elections
-  /elections/results:
-    get:
-      consumes:
-      - application/json
-      description: Returns the specific final result for the provided scope parameters.
-      parameters:
-      - description: Election ID
-        in: query
-        name: election_id
-        required: true
-        type: integer
-      - description: Polling Unit ID
-        in: query
-        name: polling_unit_id
-        type: integer
-      - description: Ward ID
-        in: query
-        name: ward_id
-        type: integer
-      - description: State Constituency ID
-        in: query
-        name: state_constituency_id
-        type: integer
-      - description: LGA ID
-        in: query
-        name: lga_id
-        type: integer
-      - description: Federal Constituency ID
-        in: query
-        name: federal_constituency_id
-        type: integer
-      - description: Senatorial District ID
-        in: query
-        name: senatorial_district_id
-        type: integer
-      - description: State ID
-        in: query
-        name: state_id
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Get scoped final result
-      tags:
-      - ElectionResults
   /elections/results/breakdown:
     get:
       consumes:
@@ -4398,7 +4448,7 @@ paths:
       consumes:
       - application/json
       description: Fetches federal constituencies with optional state_id and senatorial_district_id
-        filtering and cursor pagination
+        filtering
       parameters:
       - description: State ID to filter by
         in: query
@@ -4408,14 +4458,6 @@ paths:
         in: query
         name: senatorial_district_id
         type: integer
-      - description: Limit (default 20, max 100)
-        in: query
-        name: limit
-        type: integer
-      - description: Cursor (ID of last record)
-        in: query
-        name: cursor
-        type: string
       produces:
       - application/json
       responses:
@@ -4792,12 +4834,20 @@ paths:
     get:
       consumes:
       - application/json
-      description: Fetches LGAs with optional state_id filtering
+      description: Fetches LGAs with optional state_id filtering and cursor pagination
       parameters:
       - description: State ID to filter by
         in: query
         name: state_id
         type: integer
+      - description: Limit (default 20, max 800)
+        in: query
+        name: limit
+        type: integer
+      - description: Cursor (ID of last record)
+        in: query
+        name: cursor
+        type: string
       produces:
       - application/json
       responses:
@@ -4826,6 +4876,10 @@ paths:
         in: query
         name: cursor
         type: string
+      - description: Filter contested offices only
+        in: query
+        name: contested
+        type: boolean
       produces:
       - application/json
       responses:
@@ -5376,28 +5430,6 @@ paths:
       tags:
       - Parties
   /parties/{id}/allowances/settings:
-    get:
-      description: Returns the current agent_payment_allocation_kobo for a party as
-        a parsed JSON object.
-      parameters:
-      - description: Party ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Allocation fetched successfully
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get agent payment allocation
-      tags:
-      - Parties
     put:
       consumes:
       - application/json
@@ -5414,7 +5446,8 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/partieshandler.agentPaymentAllocation'
+          additionalProperties: true
+          type: object
       produces:
       - application/json
       responses:
@@ -5428,41 +5461,10 @@ paths:
       summary: Update agent payment allocation
       tags:
       - Parties
-  /parties/{id}/slots/buy:
-    post:
-      consumes:
-      - application/json
-      description: Deducts from a party's wallet and increases their polling unit
-        assignment slot balance
-      parameters:
-      - description: Party ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: Buy Slots request payload
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/partieshandler.BuySlotsRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Slots purchased successfully
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Buy slots for a party
-      tags:
-      - Parties
-  /parties/{id}/slots/price:
+  /parties/{id}/readiness:
     get:
-      description: Calculates the customized price of a single slot for a political
-        party, accounting for their discount
+      description: Returns party operational readiness status including wallet, slots,
+        payment allocations, and marketing summary.
       parameters:
       - description: Party ID
         in: path
@@ -5473,220 +5475,11 @@ paths:
       - application/json
       responses:
         "200":
-          description: Party slot price retrieved
+          description: OK
           schema:
             additionalProperties: true
             type: object
-      security:
-      - BearerAuth: []
-      summary: Get party slot price
-      tags:
-      - Parties
-  /parties/{id}/wallet:
-    get:
-      consumes:
-      - application/json
-      description: Returns the reserved virtual account details and current balance
-        (in Kobo) for a political party. The account_numbers field contains one or
-        more bank account numbers that donors can transfer funds to directly.
-      parameters:
-      - description: Party ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Wallet fetched successfully
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Invalid ID parameter
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: Wallet not found
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Get a party's wallet
-      tags:
-      - Parties
-    post:
-      consumes:
-      - application/json
-      description: Manually provisions a Monnify reserved virtual account for a party
-        that does not yet have a wallet. Idempotent — returns an error if the party
-        already has a wallet.
-      parameters:
-      - description: Party ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Wallet created
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Invalid ID
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: Party not found
-          schema:
-            additionalProperties: true
-            type: object
-        "409":
-          description: Wallet already exists
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal server error
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Create a wallet for a party (admin)
-      tags:
-      - Parties
-  /parties/{id}/wallet/deposit-test:
-    post:
-      consumes:
-      - application/json
-      description: Directly credits a party's wallet balance (useful in sandbox/testing)
-      parameters:
-      - description: Party ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: Deposit request payload
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/partieshandler.DepositAllowanceRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Wallet funded successfully
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Simulate deposit to party wallet
-      tags:
-      - Parties
-  /parties/{id}/wallet/transactions:
-    get:
-      consumes:
-      - application/json
-      description: Returns a paginated list of credit/debit transactions for a party's
-        wallet, ordered newest first. Accessible by admins only.
-      parameters:
-      - description: Party ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: Number of results (default 20, max 100)
-        in: query
-        name: limit
-        type: integer
-      - description: Offset for pagination (default 0)
-        in: query
-        name: offset
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Transactions fetched successfully
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Invalid ID or pagination parameters
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-        "403":
-          description: Forbidden (Admin only)
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: Wallet not found
-          schema:
-            additionalProperties: true
-            type: object
-      summary: List a party's wallet transactions
-      tags:
-      - Parties
-  /parties/{id}/wallet/withdraw:
-    post:
-      consumes:
-      - application/json
-      description: Debits the party wallet balance and records a pending withdrawal
-        transaction. The party member must be authenticated.
-      parameters:
-      - description: Party ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: Withdrawal payload
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/partieshandler.WithdrawRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Withdrawal recorded
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Invalid payload
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-        "402":
-          description: Insufficient funds
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: Party or wallet not found
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Withdraw from a party wallet
+      summary: Get party readiness data
       tags:
       - Parties
   /parties/{party_id}/{short_name}/profile:
@@ -5703,10 +5496,9 @@ paths:
         name: short_name
         required: true
         type: string
-      - description: Chapter ID
+      - description: Chapter ID (optional, defaults to national chapter)
         in: query
         name: chapter_id
-        required: true
         type: integer
       produces:
       - application/json
@@ -5717,6 +5509,97 @@ paths:
             additionalProperties: true
             type: object
       summary: Get basic party profile
+      tags:
+      - Parties
+  /parties/{party_id}/events:
+    get:
+      description: Fetches party events filtered by chapter, tier, category, status,
+        and search query.
+      parameters:
+      - description: Party ID
+        in: path
+        name: party_id
+        required: true
+        type: integer
+      - description: Optional Chapter ID
+        in: query
+        name: chapter_id
+        type: integer
+      - description: Optional Tier (national, state, lga, ward)
+        in: query
+        name: tier
+        type: string
+      - description: Optional Category
+        in: query
+        name: category
+        type: string
+      - description: Optional Status (upcoming, ongoing, completed, cancelled)
+        in: query
+        name: status
+        type: string
+      - description: Optional Search query
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: List party events
+      tags:
+      - Parties
+  /parties/{party_id}/events/{event_id}:
+    get:
+      description: Fetches a single party event by ID.
+      parameters:
+      - description: Party ID
+        in: path
+        name: party_id
+        required: true
+        type: integer
+      - description: Event ID
+        in: path
+        name: event_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get party event details
+      tags:
+      - Parties
+  /parties/{party_id}/home:
+    get:
+      description: Fetches primary data for the party home tab including leadership
+        cards (national leaders and dynamic/chapter leaders) and upcoming components.
+      parameters:
+      - description: Party ID
+        in: path
+        name: party_id
+        required: true
+        type: integer
+      - description: Optional Chapter ID
+        in: query
+        name: chapter_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get party home data
       tags:
       - Parties
   /parties/cards:
@@ -5774,37 +5657,19 @@ paths:
       summary: List public political parties
       tags:
       - Parties
-  /parties/wallets/provision-missing:
-    post:
-      consumes:
-      - application/json
-      description: Iterates over all existing political parties and provisions a Monnify
-        reserved account wallet for any party that currently lacks one. Used primarily
-        for testing and manual recovery.
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Provisioning details
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal server error
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Provision missing wallets for political parties
-      tags:
-      - Parties
   /party-applications:
     get:
       consumes:
       - application/json
       description: 'Fetches a list of polling agent applications. Scoped: Party admins
-        can only view applications for their own party.'
+        can only view applications for their own party; regular users can only view
+        their own applications.'
       parameters:
-      - description: Filter by Party ID
+      - description: Filter by User ID (Platform admin or Party admin only)
+        in: query
+        name: user_id
+        type: integer
+      - description: Filter by Party ID (Platform admin only or scoped to own party)
         in: query
         name: party_id
         type: integer
@@ -5812,17 +5677,34 @@ paths:
         in: query
         name: election_group_id
         type: integer
-      - description: Filter by Status (pending, accepted, rejected)
+      - description: Filter by Status (pending, accepted, rejected, cancelled)
         in: query
         name: status
+        required: true
         type: string
+      - description: Filter only active and upcoming elections
+        in: query
+        name: active_election_only
+        type: boolean
+      - description: Filter by State ID
+        in: query
+        name: state_id
+        type: integer
+      - description: Filter by LGA ID
+        in: query
+        name: lga_id
+        type: integer
+      - description: Filter by Ward ID
+        in: query
+        name: ward_id
+        type: integer
+      - description: Pagination Cursor ID
+        in: query
+        name: cursor
+        type: integer
       - description: Pagination Limit (default 20)
         in: query
         name: limit
-        type: integer
-      - description: Pagination Offset (default 0)
-        in: query
-        name: offset
         type: integer
       produces:
       - application/json
@@ -6069,6 +5951,52 @@ paths:
       summary: Reject a polling agent application
       tags:
       - PollingAgentApplications
+  /party-applications/batch-approve:
+    post:
+      consumes:
+      - application/json
+      description: Bulk approves pending polling agent applications within an LGA
+        (and optional Ward) up to capacity quotas.
+      parameters:
+      - description: Batch approve payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/partyapplicationshandler.BatchApproveApplicationsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Applications approved successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request payload
+          schema:
+            additionalProperties: true
+            type: object
+        "402":
+          description: Insufficient slots
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Batch approve polling agent applications
+      tags:
+      - PollingAgentApplications
   /party-applications/recommendations:
     get:
       description: Returns the applicant's submitted polling unit plus the 2 lowest-agent-count
@@ -6249,36 +6177,6 @@ paths:
       summary: Update a marketing plan
       tags:
       - Plans
-  /plans/{id}/display-order:
-    patch:
-      consumes:
-      - application/json
-      description: Updates the display_order of a specific plan (admin only)
-      parameters:
-      - description: Plan ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: Display order payload
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/partieshandler.UpdatePlanDisplayOrderRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Plan display order updated
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Update a plan's display order
-      tags:
-      - Plans
   /polling-unit-assignments:
     get:
       consumes:
@@ -6331,51 +6229,6 @@ paths:
       security:
       - BearerAuth: []
       summary: List polling unit assignments
-      tags:
-      - PollingUnitAssignments
-    post:
-      consumes:
-      - application/json
-      description: Creates a polling unit assignment. Role level enforcement ensures
-        party admins can only assign users for their own party.
-      parameters:
-      - description: Create Assignment payload
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/puassignmentshandler.CreateAssignmentRequest'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Assignment created successfully
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Invalid request payload or missing fields
-          schema:
-            additionalProperties: true
-            type: object
-        "403":
-          description: Permission denied
-          schema:
-            additionalProperties: true
-            type: object
-        "409":
-          description: Constraint conflict (already assigned)
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal server error
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Assign a user to a polling unit for an election group
       tags:
       - PollingUnitAssignments
   /polling-unit-assignments/{id}:
@@ -6494,6 +6347,47 @@ paths:
       summary: Update polling unit assignment tracking (arrival, phases)
       tags:
       - PollingUnitAssignments
+  /polling-unit-assignments/my-assignment:
+    get:
+      consumes:
+      - application/json
+      description: Fetches the active polling unit assignment for the authenticated
+        user (optionally scoped to a specific election group, or discovering any active
+        assignment).
+      parameters:
+      - description: Election Group ID (optional; if omitted, checks active upcoming
+          elections)
+        in: query
+        name: election_group_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Assignment fetched successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid election_group_id
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get current user's polling unit assignment
+      tags:
+      - PollingUnitAssignments
   /polling-unit-updates:
     get:
       consumes:
@@ -6606,8 +6500,8 @@ paths:
     get:
       consumes:
       - application/json
-      description: Fetches polling units with optional ward_id, lga_id, and state_id
-        filtering and cursor pagination
+      description: Fetches cached polling units for a specific ward or LGA. Requires
+        ward_id or lga_id.
       parameters:
       - description: Ward ID to filter by
         in: query
@@ -6617,26 +6511,6 @@ paths:
         in: query
         name: lga_id
         type: integer
-      - description: State ID to filter by
-        in: query
-        name: state_id
-        type: integer
-      - description: Party ID for capacity check
-        in: query
-        name: party_id
-        type: integer
-      - description: Election Group ID for capacity check
-        in: query
-        name: election_group_id
-        type: integer
-      - description: Limit (default 20, max 100)
-        in: query
-        name: limit
-        type: integer
-      - description: Cursor (ID of last record)
-        in: query
-        name: cursor
-        type: string
       produces:
       - application/json
       responses:
@@ -6644,11 +6518,15 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/pollingunitshandler.GetPollingUnitsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
         "500":
           description: Internal Server Error
           schema:
             type: string
-      summary: Get polling units
+      summary: Get polling units for dropdowns
       tags:
       - Polling Units
     post:
@@ -6829,6 +6707,111 @@ paths:
       summary: Update a polling unit
       tags:
       - Polling Units
+  /polling-units/capacity:
+    get:
+      consumes:
+      - application/json
+      description: Fetches polling units with agent recruitment capacity for a given
+        party and election group
+      parameters:
+      - description: Party ID for capacity check
+        in: query
+        name: party_id
+        required: true
+        type: integer
+      - description: Election Group ID for capacity check
+        in: query
+        name: election_group_id
+        required: true
+        type: integer
+      - description: Ward ID to filter by
+        in: query
+        name: ward_id
+        type: integer
+      - description: LGA ID to filter by
+        in: query
+        name: lga_id
+        type: integer
+      - description: State ID to filter by
+        in: query
+        name: state_id
+        type: integer
+      - description: Limit (default 20, max 100)
+        in: query
+        name: limit
+        type: integer
+      - description: Cursor (ID of last record)
+        in: query
+        name: cursor
+        type: string
+      - description: Sort column (name or id)
+        in: query
+        name: order_by
+        type: string
+      - description: Search query for polling unit name or code
+        in: query
+        name: search
+        type: string
+      - description: Sort direction (ASC or DESC)
+        in: query
+        name: order_dir
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/pollingunitshandler.GetPollingUnitsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Get polling units with recruitment capacity
+      tags:
+      - Polling Units
+  /polling-units/paginated:
+    get:
+      consumes:
+      - application/json
+      description: Fetches polling units with optional geographic filters, search,
+        and cursor pagination for table views
+      parameters:
+      - description: Ward ID to filter by
+        in: query
+        name: ward_id
+        required: true
+        type: integer
+      - description: Search query for polling unit name or code
+        in: query
+        name: search
+        type: string
+      - description: Limit (default 20, max 100)
+        in: query
+        name: limit
+        type: integer
+      - description: Cursor (ID of last record)
+        in: query
+        name: cursor
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/pollingunitshandler.GetPollingUnitsResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Get polling units paginated
+      tags:
+      - Polling Units
   /practice-tests:
     get:
       description: Returns the authenticated user's practice tests. Pass user_id to
@@ -7003,6 +6986,289 @@ paths:
       summary: Seed admins and party admins
       tags:
       - Seed
+  /seed/campaign-groups/sync:
+    post:
+      consumes:
+      - application/json
+      description: Provisions campaign groups and enrolls fielded candidates and chapter
+        officials for selected parties
+      parameters:
+      - description: Sync parameters
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/seedservice.SyncCampaignGroupsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Campaign groups synchronized successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to sync campaign groups
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Sync campaign groups and officials
+      tags:
+      - Seed
+  /seed/candidates/governorship:
+    post:
+      consumes:
+      - application/json
+      description: Creates governorship candidate tickets (candidate + running mate)
+        into state elections
+      parameters:
+      - description: List of governorship candidate tickets
+        in: body
+        name: request
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/seedservice.GovernorshipCandidateRequest'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Governorship candidates seeded successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to seed governorship candidates
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Seed governorship candidates
+      tags:
+      - Seed
+  /seed/candidates/house-of-reps:
+    post:
+      consumes:
+      - application/json
+      description: Creates federal constituency candidates into House of Representatives
+        elections
+      parameters:
+      - description: List of house of reps candidates
+        in: body
+        name: request
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/seedservice.HouseOfRepsCandidateRequest'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: House of reps candidates seeded successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to seed house of reps candidates
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Seed house of representatives candidates
+      tags:
+      - Seed
+  /seed/candidates/presidential:
+    post:
+      consumes:
+      - application/json
+      description: Creates presidential candidate tickets (candidate + running mate)
+        into elections
+      parameters:
+      - description: List of presidential candidate tickets
+        in: body
+        name: request
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/seedservice.PresidentialCandidateRequest'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Presidential candidates seeded successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to seed presidential candidates
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Seed presidential candidates
+      tags:
+      - Seed
+  /seed/candidates/senate:
+    post:
+      consumes:
+      - application/json
+      description: Creates senatorial candidates into district elections
+      parameters:
+      - description: List of senatorial candidates
+        in: body
+        name: request
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/seedservice.SenateCandidateRequest'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Senatorial candidates seeded successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to seed senatorial candidates
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Seed senatorial candidates
+      tags:
+      - Seed
+  /seed/candidates/state-assembly:
+    post:
+      consumes:
+      - application/json
+      description: Creates state constituency candidates into House of Assembly elections
+      parameters:
+      - description: List of state assembly candidates
+        in: body
+        name: request
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/seedservice.StateAssemblyCandidateRequest'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: State assembly candidates seeded successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to seed state assembly candidates
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Seed state assembly candidates
+      tags:
+      - Seed
+  /seed/election-groups:
+    post:
+      consumes:
+      - application/json
+      description: Creates or updates election groups from formatted JSON data
+      parameters:
+      - description: List of election groups to seed
+        in: body
+        name: request
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/seedservice.SeedElectionGroupRequest'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Election groups seeded successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to seed election groups
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Seed election groups
+      tags:
+      - Seed
+  /seed/election-instances:
+    post:
+      consumes:
+      - application/json
+      description: Creates election instances across all offices and scopes from formatted
+        JSON data
+      parameters:
+      - description: List of election instance definitions to seed
+        in: body
+        name: request
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/seedservice.SeedElectionInstanceRequest'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Election instances seeded successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to seed election instances
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Seed election instances
+      tags:
+      - Seed
   /seed/elections/{id}/simulate-results:
     post:
       consumes:
@@ -7063,6 +7329,81 @@ paths:
       summary: Flush Redis Cache
       tags:
       - Seed
+  /seed/parties/leadership:
+    post:
+      consumes:
+      - application/json
+      description: Creates national party leadership assignments and verified badges
+        for political parties
+      parameters:
+      - description: List of party leadership items
+        in: body
+        name: request
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/seedservice.SeedPartyLeaderItem'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Party leadership seeded successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to seed party leadership
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Seed party leadership
+      tags:
+      - Seed
+  /seed/party-agent-applications:
+    post:
+      consumes:
+      - application/json
+      description: Seeds pending agent applications for a party to test the review
+        and acceptance interface
+      parameters:
+      - description: Seed parameters
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/seedservice.SeedPartyAgentApplicationsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Party agent applications seeded successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Disabled in production
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to seed party agent applications
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Seed party agent applications
+      tags:
+      - Seed
   /seed/users:
     post:
       consumes:
@@ -7100,21 +7441,12 @@ paths:
     get:
       consumes:
       - application/json
-      description: Fetches senatorial districts with optional stateID filtering and
-        cursor pagination
+      description: Fetches senatorial districts with optional stateID filtering
       parameters:
       - description: State ID to filter by
         in: query
         name: state_id
         type: integer
-      - description: Limit (default 20, max 100)
-        in: query
-        name: limit
-        type: integer
-      - description: Cursor (ID of last record)
-        in: query
-        name: cursor
-        type: string
       produces:
       - application/json
       responses:
@@ -7493,7 +7825,7 @@ paths:
       consumes:
       - application/json
       description: Fetches state constituencies with optional state_id and federal_constituency_id
-        filtering and cursor pagination
+        filtering
       parameters:
       - description: State ID to filter by
         in: query
@@ -7503,14 +7835,6 @@ paths:
         in: query
         name: federal_constituency_id
         type: integer
-      - description: Limit (default 20, max 100)
-        in: query
-        name: limit
-        type: integer
-      - description: Cursor (ID of last record)
-        in: query
-        name: cursor
-        type: string
       produces:
       - application/json
       responses:
@@ -7840,8 +8164,8 @@ paths:
     post:
       consumes:
       - application/json
-      description: Manually provisions a Monnify reserved virtual account for a user
-        that does not yet have a wallet.
+      description: Manually provisions a reserved virtual account for a user that
+        does not yet have a wallet.
       parameters:
       - description: User Fake ID
         in: path
@@ -7877,6 +8201,32 @@ paths:
             additionalProperties: true
             type: object
       summary: Create a wallet for a user (admin / recovery)
+      tags:
+      - Users
+  /users/{username}/profile:
+    get:
+      description: Fetches public profile data, relationships, affiliation, and metrics
+        for a user by username
+      parameters:
+      - description: Username (with or without @ prefix)
+        in: path
+        name: username
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User profile retrieved successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: User not found
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get public user profile
       tags:
       - Users
   /users/me:
@@ -8139,9 +8489,8 @@ paths:
     post:
       consumes:
       - application/json
-      description: Iterates over all existing users and provisions a Monnify reserved
-        account wallet for any user that currently lacks one. Used primarily for testing
-        and manual recovery.
+      description: Iterates over all existing users and provisions a wallet for any
+        user that currently lacks one. Used primarily for testing and manual recovery.
       produces:
       - application/json
       responses:
@@ -8220,8 +8569,8 @@ paths:
     get:
       consumes:
       - application/json
-      description: Fetches wards with optional lga_id and state_id filtering and cursor
-        pagination
+      description: Fetches wards for a specific LGA or State (cached in Redis, required
+        for dropdown selectors)
       parameters:
       - description: LGA ID to filter by
         in: query
@@ -8231,14 +8580,6 @@ paths:
         in: query
         name: state_id
         type: integer
-      - description: Limit (default 20, max 100)
-        in: query
-        name: limit
-        type: integer
-      - description: Cursor (ID of last record)
-        in: query
-        name: cursor
-        type: string
       produces:
       - application/json
       responses:
@@ -8246,11 +8587,15 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/wardshandler.GetWardsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
         "500":
           description: Internal Server Error
           schema:
             type: string
-      summary: Get wards
+      summary: Get wards (dropdown)
       tags:
       - Wards
     post:
@@ -8428,6 +8773,47 @@ paths:
             additionalProperties: true
             type: object
       summary: Update a ward
+      tags:
+      - Wards
+  /wards/paginated:
+    get:
+      consumes:
+      - application/json
+      description: Fetches paginated wards directly from PostgreSQL with optional
+        filters, search, and cursor pagination
+      parameters:
+      - description: LGA ID to filter by
+        in: query
+        name: lga_id
+        type: integer
+      - description: State ID to filter by
+        in: query
+        name: state_id
+        type: integer
+      - description: Search query for ward name, code, LGA, or state
+        in: query
+        name: search
+        type: string
+      - description: Limit (default 20, max 100)
+        in: query
+        name: limit
+        type: integer
+      - description: Cursor (ID of last record)
+        in: query
+        name: cursor
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/wardshandler.GetWardsResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Get paginated wards (table listing)
       tags:
       - Wards
 securityDefinitions:

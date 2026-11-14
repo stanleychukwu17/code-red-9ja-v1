@@ -325,7 +325,6 @@ type Querier interface {
 	HasActiveAgentApplication(ctx context.Context, userID int64) (bool, error)
 	HasActiveAssignment(ctx context.Context, userID int64) (bool, error)
 	HasPositionBeenAssigned(ctx context.Context, positionID int32) (bool, error)
-	IncrementAssignmentIntervalUpdates(ctx context.Context, arg IncrementAssignmentIntervalUpdatesParams) error
 	IncrementAssignmentResultCount(ctx context.Context, id int64) error
 	IncrementElectionGroupResultCount(ctx context.Context, id int32) error
 	IncrementElectionMetricsByGroup(ctx context.Context, arg IncrementElectionMetricsByGroupParams) error

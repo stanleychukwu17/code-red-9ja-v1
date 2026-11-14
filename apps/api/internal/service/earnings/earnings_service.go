@@ -51,8 +51,8 @@ type testRequirements struct {
 // agentPaymentAllocation:
 // {"polling_agent": {"default": 2000000, "states": {"lagos": 2500000}}}
 type rolePaymentConfig struct {
-	Default int64             `json:"default"`
-	States  map[string]int64  `json:"states"`
+	Default int64            `json:"default"`
+	States  map[string]int64 `json:"states"`
 }
 
 // ─── Calculate (public entry point) ──────────────────────────────────────────
@@ -112,20 +112,20 @@ func (s *Service) calculateWithTx(
 	basePaymentKobo := s.resolveBasePayment(party.AgentPaymentAllocationKobo, roleType, asgn.StateName)
 
 	// 4. Compute each factor score (0–100)
-	readinessScore     := s.computeReadinessScore(asgn)
-	resultsScore       := computeRatioScore(float64(asgn.ResultsSubmittedCount), float64(asgn.ResultsExpectedToSubmitCount))
-	updatesScore       := computeRatioScore(float64(asgn.UpdatesCount), targetUpdatesCount)
-	attendanceScore    := boolScore(asgn.ArrivedAt.Valid)
+	readinessScore := s.computeReadinessScore(asgn)
+	resultsScore := computeRatioScore(float64(asgn.ResultsSubmittedCount), float64(asgn.ResultsExpectedToSubmitCount))
+	updatesScore := computeRatioScore(float64(asgn.UpdatesCount), targetUpdatesCount)
+	attendanceScore := boolScore(asgn.ArrivedAt.Valid)
 	electionStartScore := boolScore(asgn.ElectionStartedAt.Valid)
-	electionEndScore   := boolScore(asgn.ElectionEndedAt.Valid)
+	electionEndScore := boolScore(asgn.ElectionEndedAt.Valid)
 
 	// 5. Compute per-factor earnings (kobo)
-	readinessEarned    := factorEarned(basePaymentKobo, allocation.Readiness, readinessScore)
-	resultsEarned      := factorEarned(basePaymentKobo, allocation.Results, resultsScore)
-	updatesEarned      := factorEarned(basePaymentKobo, allocation.Updates, updatesScore)
-	attendanceEarned   := factorEarned(basePaymentKobo, allocation.Attendance, attendanceScore)
+	readinessEarned := factorEarned(basePaymentKobo, allocation.Readiness, readinessScore)
+	resultsEarned := factorEarned(basePaymentKobo, allocation.Results, resultsScore)
+	updatesEarned := factorEarned(basePaymentKobo, allocation.Updates, updatesScore)
+	attendanceEarned := factorEarned(basePaymentKobo, allocation.Attendance, attendanceScore)
 	electionStartEarned := factorEarned(basePaymentKobo, allocation.ElectionStart, electionStartScore)
-	electionEndEarned  := factorEarned(basePaymentKobo, allocation.ElectionEnd, electionEndScore)
+	electionEndEarned := factorEarned(basePaymentKobo, allocation.ElectionEnd, electionEndScore)
 
 	totalEarned := readinessEarned + resultsEarned + updatesEarned +
 		attendanceEarned + electionStartEarned + electionEndEarned
@@ -200,7 +200,7 @@ func (s *Service) ProcessPracticeTestEarnings(
 		return
 	}
 	if _, err := qtx.UpdateAssignmentReadinessPercentage(ctx, queries.UpdateAssignmentReadinessPercentageParams{
-		ID:                                     assignmentID,
+		ID:                                      assignmentID,
 		ElectionPracticeTestReadinessPercentage: readinessPct,
 	}); err != nil {
 		slog.Error("earnings: failed to update assignment readiness percentage", "assignmentID", assignmentID, "error", err)
@@ -1137,19 +1137,28 @@ func (s *Service) CalculatePotentialPayout(ctx context.Context, assignmentID int
 		flooredMin := (locNow.Minute() / intervalMinutes) * intervalMinutes
 		currentIntervalKey := fmt.Sprintf("%02d:%02d", locNow.Hour(), flooredMin)
 
-		// Check interval_updates JSONB map
-		var intervalMap map[string]int
-		if len(asgn.IntervalUpdates) > 0 {
-			_ = json.Unmarshal(asgn.IntervalUpdates, &intervalMap)
-		}
-		if count, exists := intervalMap[currentIntervalKey]; exists && count > 0 {
+		if float64(asgn.UpdatesCount) >= targetUpdates {
 			return PotentialPayoutResult{
 				AssignmentID:        assignmentID,
 				TaskType:            taskType,
 				PotentialPayoutKobo: 0,
 				IsEligible:          false,
-				Reason:              fmt.Sprintf("Update already submitted for interval %s", currentIntervalKey),
+				Reason:              "Target updates count reached",
 			}, nil
+		}
+
+		if asgn.LastUpdateAt.Valid {
+			lastUpdateLoc := asgn.LastUpdateAt.Time.In(wat)
+			lastUpdateInterval := fmt.Sprintf("%02d:%02d", lastUpdateLoc.Hour(), (lastUpdateLoc.Minute()/intervalMinutes)*intervalMinutes)
+			if lastUpdateInterval == currentIntervalKey && lastUpdateLoc.Day() == locNow.Day() {
+				return PotentialPayoutResult{
+					AssignmentID:        assignmentID,
+					TaskType:            taskType,
+					PotentialPayoutKobo: 0,
+					IsEligible:          false,
+					Reason:              fmt.Sprintf("Update already submitted for interval %s", currentIntervalKey),
+				}, nil
+			}
 		}
 
 		updatesBudgetKobo := float64(basePaymentKobo) * (allocation.Updates / 100.0)
@@ -1505,5 +1514,3 @@ func (s *Service) RequestPayout(ctx context.Context, userID int64, electionGroup
 	}
 	return res, nil
 }
-
-
