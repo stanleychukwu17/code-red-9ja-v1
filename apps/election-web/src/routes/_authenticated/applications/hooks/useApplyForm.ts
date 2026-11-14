@@ -110,7 +110,9 @@ export function useApplyForm({ search, navigate }: UseApplyFormOptions) {
   const { data: applications = [] } = useQuery({
     queryKey: QUERY_KEYS.applications,
     queryFn: async () => {
-      const res = await getApplications({ data: { active_election_only: true } });
+      const res = await getApplications({
+        data: { active_election_only: true, status: "pending" },
+      });
       if (res?.success && res.data?.applications) {
         return res.data.applications;
       }
@@ -184,6 +186,7 @@ export function useApplyForm({ search, navigate }: UseApplyFormOptions) {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.auth.session });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.userMeDetails });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.applications });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.pollingAgentApplications() });
     },
     onError: (err: any) => {
       setSubmitError(

@@ -158,7 +158,8 @@ func (s *Service) GetActiveAssignment(ctx context.Context, userID int64) (*queri
 		_ = s.rdb.Set(ctx, cacheKey, jsonBytes, db.RedisSevenDaysTTL).Err()
 	}
 
-	return &assignment, nil
+	res := queries.GetUserAssignmentRow(assignment)
+	return &res, nil
 }
 
 // GetActiveSupervisorElectionGroupID retrieves the election group ID for a user's active supervisor role.

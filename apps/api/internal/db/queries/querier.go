@@ -277,7 +277,7 @@ type Querier interface {
 	GetUnreadNotificationsCount(ctx context.Context, recipientUserID int64) (int64, error)
 	GetUnreadPartyNotificationsCountForUser(ctx context.Context, arg GetUnreadPartyNotificationsCountForUserParams) (int64, error)
 	GetUpcomingPartyEvents(ctx context.Context, arg GetUpcomingPartyEventsParams) ([]PartyEvent, error)
-	GetUserActiveAssignment(ctx context.Context, userID int64) (GetUserAssignmentRow, error)
+	GetUserActiveAssignment(ctx context.Context, userID int64) (GetUserActiveAssignmentRow, error)
 	GetUserActiveCandidacies(ctx context.Context, candidateID int64) ([]GetUserActiveCandidaciesRow, error)
 	GetUserAssignment(ctx context.Context, arg GetUserAssignmentParams) (GetUserAssignmentRow, error)
 	GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (GetUserByFakeIDRow, error)

@@ -735,7 +735,7 @@ LEFT JOIN wards w ON pa.ward_id = w.id
 WHERE 
   pa.user_id = $1 AND
   ($2::smallint = 0 OR pa.party_id = $2) AND
-  ($3::varchar = '' OR pa.status = $3) AND
+  pa.status = $3 AND
   (NOT $4::boolean OR (eg.active = TRUE AND eg.election_date >= CURRENT_DATE)) AND
   ($5::bigint = 0 OR pa.id < $5)
 ORDER BY pa.id DESC

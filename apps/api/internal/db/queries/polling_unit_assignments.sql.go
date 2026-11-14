@@ -331,9 +331,29 @@ ORDER BY eg.election_date ASC, a.created_at DESC
 LIMIT 1
 `
 
-func (q *Queries) GetUserActiveAssignment(ctx context.Context, userID int64) (GetUserAssignmentRow, error) {
+type GetUserActiveAssignmentRow struct {
+	ID                int64              `json:"id"`
+	UserID            int64              `json:"user_id"`
+	PollingUnitID     int32              `json:"polling_unit_id"`
+	ElectionGroupID   int32              `json:"election_group_id"`
+	PartyID           int16              `json:"party_id"`
+	RoleType          pgtype.Text        `json:"role_type"`
+	ArrivedAt         pgtype.Timestamptz `json:"arrived_at"`
+	ElectionStartedAt pgtype.Timestamptz `json:"election_started_at"`
+	ElectionEndedAt   pgtype.Timestamptz `json:"election_ended_at"`
+	PollingUnitName   string             `json:"polling_unit_name"`
+	PollingUnitPuCode pgtype.Text        `json:"polling_unit_pu_code"`
+	WardID            int32              `json:"ward_id"`
+	WardName          string             `json:"ward_name"`
+	LgaID             int32              `json:"lga_id"`
+	LgaName           string             `json:"lga_name"`
+	StateID           int32              `json:"state_id"`
+	StateName         string             `json:"state_name"`
+}
+
+func (q *Queries) GetUserActiveAssignment(ctx context.Context, userID int64) (GetUserActiveAssignmentRow, error) {
 	row := q.db.QueryRow(ctx, getUserActiveAssignment, userID)
-	var i GetUserAssignmentRow
+	var i GetUserActiveAssignmentRow
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,

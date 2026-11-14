@@ -9,6 +9,7 @@ import {
   submitSupervisorApplication,
 } from "#/lib/server/applications";
 import { useElectionGroups } from "#/hooks/useElectionGroups";
+import { QUERY_KEYS } from "#/lib/config";
 import { confirmFileUpload, getPresignedUploadURL } from "#/lib/server/parties";
 import { getPageHeader } from "#/lib/shared/meta";
 import { AppAvatar } from "@repo/ui/components/avatar";
@@ -18,7 +19,7 @@ import { DescriptiveText, TitleText } from "@repo/ui/components/custom/Texts";
 import { Label } from "@repo/ui/components/input";
 import PollingUnitIcon from "@repo/ui/icons/polling-unit-icon";
 import { cn } from "@repo/ui/lib/utils";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Upload } from "lucide-react";
 import { parseAsInteger, useQueryState } from "nuqs";
@@ -53,6 +54,7 @@ export type SupervisorRoleType =
  */
 function SupervisorPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const user = useUser();
   const { party } = useUserParty();
 
@@ -80,7 +82,9 @@ function SupervisorPage() {
   const { data: applications = [] } = useQuery({
     queryKey: ["applications"],
     queryFn: async () => {
-      const res = await getApplications({ data: { active_election_only: true } });
+      const res = await getApplications({
+        data: { active_election_only: true, status: "accepted" },
+      });
       if (res?.success && res.data?.applications) {
         return res.data.applications;
       }
@@ -130,6 +134,8 @@ function SupervisorPage() {
     },
     onSuccess: () => {
       setStep(5);
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.applications });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.pollingAgentApplications() });
     },
     onError: (err: any) => {
       setSubmitError(err.message || "Submission failed");

@@ -388,8 +388,7 @@ func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	status := strings.ToLower(strings.TrimSpace(q.Get("status")))
 	if status == "" {
-		h.utils.RespondError(w, http.StatusBadRequest, "Status query parameter is required")
-		return
+		status = "pending"
 	}
 	switch status {
 	case "pending", "accepted", "rejected", "cancelled":

@@ -5,6 +5,7 @@ import { GreyCardTitle, GreyCardTopRow, GreyCardWrapper } from "./Shared";
 
 import { useQuery } from "@tanstack/react-query";
 import { getApplications } from "#/lib/server/applications";
+import { QUERY_KEYS } from "#/lib/config";
 import { useUser } from "#/hooks/useUser";
 import { useAssignments } from "#/hooks/useAssignments";
 import MapPinIcon from "@repo/ui/icons/map-pin-icon";
@@ -29,7 +30,7 @@ export function ApplicationsCard() {
 
   // Query polling agent applications submitted by the current user
   const { data: applicationsData } = useQuery({
-    queryKey: ["pollingAgentApplications", user?.id],
+    queryKey: QUERY_KEYS.pollingAgentApplications(user?.id),
     enabled: !!user?.id && !hasAssignedRole && !isAssignmentsLoading,
     staleTime: Infinity,
     queryFn: async () => {

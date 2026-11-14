@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useAppSelector } from "#/redux/hooks";
 import { ArrowLeft, Check, Loader2 } from "lucide-react";
 import { getApplications, cancelApplication } from "#/lib/server/applications";
+import { QUERY_KEYS } from "#/lib/config";
 import { getPageHeader } from "#/lib/shared/meta";
 import {
   DarkBodyWrapper,
@@ -110,7 +111,10 @@ function ApplicationsIndexPage() {
       toast.success("Application cancelled successfully", {
         position: "top-center",
       });
-      queryClient.invalidateQueries({ queryKey: ["applications"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.applications });
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.pollingAgentApplications(),
+      });
       setSelectedApp(null);
     },
     onError: (err: any) => {
@@ -121,14 +125,15 @@ function ApplicationsIndexPage() {
   });
 
   const { data: applications = [], isLoading: loading } = useQuery({
-    queryKey: ["applications"],
+    queryKey: QUERY_KEYS.applications,
     queryFn: async () => {
-      const res = await getApplications();
+      const res = await getApplications({ data: { status: "pending" } });
       if (!res || !res.success || !res.data?.applications) {
         return [];
       }
       return res.data.applications;
     },
+    staleTime: Infinity,
     select: (data) => {
       return data.map((app: any) => {
         const statusStr = app.status || "pending";

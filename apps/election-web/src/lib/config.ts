@@ -390,6 +390,8 @@ export const QUERY_KEYS = {
   parties: ["parties"],
   electionGroups: ["electionGroups"],
   applications: ["applications"],
+  pollingAgentApplications: (userId?: string | number) =>
+    userId !== undefined ? ["pollingAgentApplications", userId] : ["pollingAgentApplications"],
   userMeDetails: ["userMeDetails"],
   userPhoneNumbers: (userId?: string | number) =>
     userId !== undefined ? ["user-phonenumbers", userId] : ["user-phonenumbers"],

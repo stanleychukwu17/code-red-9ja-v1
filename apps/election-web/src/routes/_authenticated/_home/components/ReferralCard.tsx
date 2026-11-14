@@ -37,7 +37,7 @@ export function ReferralCard({ onClick, onCopyClick }: ReferralCardProps) {
   const [_, copy] = useCopyToClipboard();
 
   // Fall back gracefully across shortName, full name, or default party name
-  const partyName = party?.shortName || party?.name || "Accord";
+  const partyName = party?.shortName || party?.name || "Parties";
 
   return (
     <GreyCardWrapper>
