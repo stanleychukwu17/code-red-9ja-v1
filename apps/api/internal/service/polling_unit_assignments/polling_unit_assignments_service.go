@@ -62,6 +62,7 @@ func (s *Service) InvalidateUserAssignmentCache(ctx context.Context, userID int6
 		fmt.Sprintf("%s%d:eg:%d", db.RedisStateSupervisorAssignment, userID, electionGroupID),
 		fmt.Sprintf("%s%d:eg:%d", db.RedisLgaSupervisorAssignment, userID, electionGroupID),
 		fmt.Sprintf("%s%d:eg:%d", db.RedisWardSupervisorAssignment, userID, electionGroupID),
+		fmt.Sprintf("%s%d", db.RedisUserHasActiveAssignment, userID),
 	).Err()
 }
 
@@ -116,8 +117,29 @@ func (s *Service) DeleteAssignment(ctx context.Context, id int64) error {
 }
 
 // HasActiveAssignment checks whether a user has any active polling unit or supervisor assignment for an upcoming election.
+// The result is cached in Redis with a 7-day TTL to shield database calls.
 func (s *Service) HasActiveAssignment(ctx context.Context, userID int64) (bool, error) {
-	return s.queries.HasActiveAssignment(ctx, userID)
+	cacheKey := fmt.Sprintf("%s%d", db.RedisUserHasActiveAssignment, userID)
+
+	// Check Redis cache first ("1" = true, "0" = false)
+	if val, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
+		return val == "1", nil
+	}
+
+	// Fallback to database check
+	hasActive, err := s.queries.HasActiveAssignment(ctx, userID)
+	if err != nil {
+		return false, fmt.Errorf("failed to check active assignment: %w", err)
+	}
+
+	// Cache result in Redis for subsequent checks
+	val := "0"
+	if hasActive {
+		val = "1"
+	}
+	_ = s.rdb.Set(ctx, cacheKey, val, db.RedisSevenDaysTTL).Err()
+
+	return hasActive, nil
 }
 
 // GetActiveAssignment retrieves the user's active polling unit assignment for an upcoming election.
@@ -129,12 +151,20 @@ func (s *Service) GetActiveAssignment(ctx context.Context, userID int64) (*queri
 		}
 		return nil, err
 	}
+
+	// Cache valid assignment under user's election group assignment key
+	cacheKey := s.userAssignmentCacheKey(userID, assignment.ElectionGroupID)
+	if jsonBytes, mErr := json.Marshal(assignment); mErr == nil {
+		_ = s.rdb.Set(ctx, cacheKey, jsonBytes, db.RedisSevenDaysTTL).Err()
+	}
+
 	return &assignment, nil
 }
 
 // GetActiveSupervisorElectionGroupID retrieves the election group ID for a user's active supervisor role.
 func (s *Service) GetActiveSupervisorElectionGroupID(ctx context.Context, userID int64) (int32, error) {
 	egID, err := s.queries.GetActiveSupervisorElectionGroupID(ctx, userID)
+
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return 0, nil

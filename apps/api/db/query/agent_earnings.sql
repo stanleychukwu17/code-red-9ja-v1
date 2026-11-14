@@ -115,6 +115,7 @@ SELECT
   a.arrived_at,
   a.election_started_at,
   a.election_ended_at,
+  a.last_update_at,
   a.updates_count,
   a.results_submitted_count,
   COALESCE(egpu.unique_final_results_expected, 0)::int AS results_expected_to_submit_count,

@@ -417,6 +417,7 @@ func (s *Service) InvalidateUserPollingUnitAssignment(ctx context.Context, userI
 		fmt.Sprintf("%s%d:eg:%d", db.RedisStateSupervisorAssignment, userID, electionGroupID),
 		fmt.Sprintf("%s%d:eg:%d", db.RedisLgaSupervisorAssignment, userID, electionGroupID),
 		fmt.Sprintf("%s%d:eg:%d", db.RedisWardSupervisorAssignment, userID, electionGroupID),
+		fmt.Sprintf("%s%d", db.RedisUserHasActiveAssignment, userID),
 	).Err()
 }
 

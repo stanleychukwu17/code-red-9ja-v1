@@ -154,6 +154,7 @@ SELECT
   a.arrived_at,
   a.election_started_at,
   a.election_ended_at,
+  a.last_update_at,
   a.updates_count,
   a.results_submitted_count,
   COALESCE(egpu.unique_final_results_expected, 0)::int AS results_expected_to_submit_count,
@@ -178,6 +179,7 @@ type GetAssignmentForEarningsRow struct {
 	ArrivedAt                               pgtype.Timestamptz `json:"arrived_at"`
 	ElectionStartedAt                       pgtype.Timestamptz `json:"election_started_at"`
 	ElectionEndedAt                         pgtype.Timestamptz `json:"election_ended_at"`
+	LastUpdateAt                            pgtype.Timestamptz `json:"last_update_at"`
 	UpdatesCount                            int32              `json:"updates_count"`
 	ResultsSubmittedCount                   int32              `json:"results_submitted_count"`
 	ResultsExpectedToSubmitCount            int32              `json:"results_expected_to_submit_count"`
@@ -199,6 +201,7 @@ func (q *Queries) GetAssignmentForEarnings(ctx context.Context, id int64) (GetAs
 		&i.ArrivedAt,
 		&i.ElectionStartedAt,
 		&i.ElectionEndedAt,
+		&i.LastUpdateAt,
 		&i.UpdatesCount,
 		&i.ResultsSubmittedCount,
 		&i.ResultsExpectedToSubmitCount,

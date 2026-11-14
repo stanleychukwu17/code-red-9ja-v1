@@ -1148,9 +1148,9 @@ func (s *Service) CalculatePotentialPayout(ctx context.Context, assignmentID int
 		}
 
 		if asgn.LastUpdateAt.Valid {
-			lastUpdateLoc := asgn.LastUpdateAt.Time.In(wat)
+			lastUpdateLoc := asgn.LastUpdateAt.Time.In(locNow.Location())
 			lastUpdateInterval := fmt.Sprintf("%02d:%02d", lastUpdateLoc.Hour(), (lastUpdateLoc.Minute()/intervalMinutes)*intervalMinutes)
-			if lastUpdateInterval == currentIntervalKey && lastUpdateLoc.Day() == locNow.Day() {
+			if lastUpdateInterval == currentIntervalKey && lastUpdateLoc.Year() == locNow.Year() && lastUpdateLoc.YearDay() == locNow.YearDay() {
 				return PotentialPayoutResult{
 					AssignmentID:        assignmentID,
 					TaskType:            taskType,
@@ -1192,20 +1192,9 @@ func (s *Service) EstimatePotentialPayout(
 	electionGroupID int32,
 	partyID int16,
 ) (EstimatePayoutResult, error) {
-	roleType := reqRole
-	if roleType == "" {
-		roleType = "polling_agent"
-	}
-	normRole := strings.ReplaceAll(roleType, "-", "_")
-	switch normRole {
-	case "pollingagent":
+	normRole := strings.ReplaceAll(reqRole, "-", "_")
+	if normRole == "" {
 		normRole = "polling_agent"
-	case "ward_supervisor":
-		normRole = "ward_election_supervisor"
-	case "lga_supervisor":
-		normRole = "lga_election_supervisor"
-	case "state_supervisor":
-		normRole = "state_election_supervisor"
 	}
 
 	var basePaymentKobo int64
@@ -1214,7 +1203,7 @@ func (s *Service) EstimatePotentialPayout(
 			if party.AgentPaymentBalanceKobo <= 0 {
 				return EstimatePayoutResult{
 					TaskType:            taskType,
-					Role:                roleType,
+					Role:                normRole,
 					PotentialPayoutKobo: 0,
 					IsEligible:          false,
 					Reason:              "Party has not funded agent payments",
@@ -1226,7 +1215,7 @@ func (s *Service) EstimatePotentialPayout(
 	if basePaymentKobo <= 0 {
 		return EstimatePayoutResult{
 			TaskType:            taskType,
-			Role:                roleType,
+			Role:                normRole,
 			PotentialPayoutKobo: 0,
 			IsEligible:          false,
 			Reason:              "Party has not configured payment allocation for this role",

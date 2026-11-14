@@ -198,10 +198,10 @@ function ResultTypeCardInfo({ isLive }: { isLive: boolean }) {
 			label={
 				<LabelDetails
 					title={
-						"These are live voting results from users who have voted at their polling units and decided to indicate who they voted for on Free9ja."
+						"These are live preliminary results and turnout updates reported in real-time by party polling agents across polling units."
 					}
 					subtitle={
-						"They may not be fully accurate because not everyone reports their vote on Free9ja."
+						"Live returns update in real-time as agents submit situation reports and preliminary counts prior to official EC8 form collation."
 					}
 				/>
 			}

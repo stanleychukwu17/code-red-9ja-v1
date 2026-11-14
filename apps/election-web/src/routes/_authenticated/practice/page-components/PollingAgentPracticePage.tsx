@@ -1409,11 +1409,6 @@ export function DashboardPage({
       title: "Enter time when election ended",
       isCompleted: tasks.endElection,
     },
-    {
-      title:
-        "Get voters at your polling unit to register on free9ja, indicate who they voted for. (1)",
-      isCompleted: tasks.referVoters,
-    },
   ];
 
   let headerTitle = "";

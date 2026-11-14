@@ -194,34 +194,34 @@ type ListPollingAgentPerformanceStatsParams struct {
 }
 
 type ListPollingAgentPerformanceStatsRow struct {
-	ID                 int64          `json:"id"`
-	UserID             int64          `json:"user_id"`
-	PartyID            int16          `json:"party_id"`
-	ElectionGroupID    int32          `json:"election_group_id"`
-	StateID            int16          `json:"state_id"`
-	LgaID              int32          `json:"lga_id"`
-	WardID             int32          `json:"ward_id"`
-	PollingUnitID      int32          `json:"polling_unit_id"`
-	UserName           string         `json:"user_name"`
-	AvatarUrl          string         `json:"avatar_url"`
-	RoleType           pgtype.Text    `json:"role_type"`
-	ReadinessPct       pgtype.Numeric `json:"readiness_pct"`
-	ArrivedAt          string         `json:"arrived_at"`
-	ElectionStartedAt  string         `json:"election_started_at"`
-	ElectionEndedAt    string         `json:"election_ended_at"`
-	UpdatesGiven       int32          `json:"updates_given"`
-	ReportsGiven       int32          `json:"reports_given"`
-	ResultsUploaded    string         `json:"results_uploaded"`
-	EarningsKobo       int64          `json:"earnings_kobo"`
-	EarningsFormatted  string         `json:"earnings_formatted"`
-	CompletionStatus   bool           `json:"completion_status"`
-	RequestedPayout    bool           `json:"requested_payout"`
-	Paid               bool           `json:"paid"`
-	StateName          string         `json:"state_name"`
-	LgaName            string         `json:"lga_name"`
-	WardName           string         `json:"ward_name"`
-	PollingUnitName    string         `json:"polling_unit_name"`
-	PollingUnitCode    string         `json:"polling_unit_code"`
+	ID                int64          `json:"id"`
+	UserID            int64          `json:"user_id"`
+	PartyID           int16          `json:"party_id"`
+	ElectionGroupID   int32          `json:"election_group_id"`
+	StateID           int16          `json:"state_id"`
+	LgaID             int32          `json:"lga_id"`
+	WardID            int32          `json:"ward_id"`
+	PollingUnitID     int32          `json:"polling_unit_id"`
+	UserName          string         `json:"user_name"`
+	AvatarUrl         string         `json:"avatar_url"`
+	RoleType          pgtype.Text    `json:"role_type"`
+	ReadinessPct      pgtype.Numeric `json:"readiness_pct"`
+	ArrivedAt         string         `json:"arrived_at"`
+	ElectionStartedAt string         `json:"election_started_at"`
+	ElectionEndedAt   string         `json:"election_ended_at"`
+	UpdatesGiven      int32          `json:"updates_given"`
+	ReportsGiven      int32          `json:"reports_given"`
+	ResultsUploaded   string         `json:"results_uploaded"`
+	EarningsKobo      int64          `json:"earnings_kobo"`
+	EarningsFormatted string         `json:"earnings_formatted"`
+	CompletionStatus  bool           `json:"completion_status"`
+	RequestedPayout   bool           `json:"requested_payout"`
+	Paid              bool           `json:"paid"`
+	StateName         string         `json:"state_name"`
+	LgaName           string         `json:"lga_name"`
+	WardName          string         `json:"ward_name"`
+	PollingUnitName   string         `json:"polling_unit_name"`
+	PollingUnitCode   string         `json:"polling_unit_code"`
 }
 
 func (q *Queries) ListPollingAgentPerformanceStats(ctx context.Context, arg ListPollingAgentPerformanceStatsParams) ([]ListPollingAgentPerformanceStatsRow, error) {

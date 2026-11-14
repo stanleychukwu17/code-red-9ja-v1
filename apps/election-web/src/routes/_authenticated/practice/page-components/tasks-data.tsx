@@ -294,13 +294,13 @@ export const pollingAgentTest: PracticeTaskType[] = [
     tutorial: {
       title: "Tell people to register on Free9ja and make more money",
       subtitle:
-        "Tell people before and on election day to register on Free9ja (using your referral code) and indicate who they voted for.",
+        "Invite friends, family, and potential agents to register on Free9ja using your referral code.",
       video:
         "https://res.cloudinary.com/dhtcwqsx4/video/upload/v1782937548/Free9ja/videos/I_like_this_but_he_shouldn_t_b_wsibes.mp4",
     },
     quiz: {
       title:
-        "To get people to register on Free9ja and make more money doing so, what do you do?",
+        "To get people to register on Free9ja using your referral code, what do you do?",
       correctOptionId: 8,
       options: getRandomOptions(8, 4),
     },
@@ -310,7 +310,7 @@ export const pollingAgentTest: PracticeTaskType[] = [
       title2: "Tap the button showing your referral code?",
       taskType: "referVoters",
     },
-    note: "Make sure to tell your friends, family, and others to register on Free9ja (using your referral code) and indicate who they voted for after voting on election day. This constitutes 20% of your payment.",
+    note: "Share your referral code to invite others to sign up on Free9ja. When users you refer become approved party agents during an active campaign, you earn referral bonuses!",
   },
   {
     id: 8,
