@@ -45,9 +45,6 @@ export function StateSupervisorTableHeader() {
         <span className="text-c-50 text-[14px] w-[110px]">Updates Given</span>
         <span className="text-c-50 text-[14px] w-[110px]">Reports Given</span>
         <span className="text-c-50 text-[14px] w-[110px]">Reported PUs</span>
-        <span className="text-c-50 text-[14px] w-[170px]">
-          Agent Live voters referred
-        </span>
         <span className="text-c-50 text-[14px] w-[120px]">
           Results uploaded
         </span>
@@ -107,7 +104,6 @@ export function StateSupervisorTableTile({
         <span className="w-[110px]">{data.updates_given ?? 0}</span>
         <span className="w-[110px]">{data.reports_given ?? 0}</span>
         <span className="w-[110px]">{data.reported_pus ?? "—"}</span>
-        <span className="w-[170px]">{data.live_voters_referred ?? 0}</span>
         <span className="w-[120px] font-bold">
           {data.results_uploaded || "—"}
         </span>

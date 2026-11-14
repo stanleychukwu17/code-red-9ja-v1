@@ -250,16 +250,6 @@ export function ElectionStatsSidebar({
           }
           icon={<FancyAgentIcon className="size-5" />}
         />
-        <StatCard
-          label="Live voters reffered by agent"
-          value={
-            <SText
-              title={stats?.pu_live_voters_referred_by_agent_count || 0}
-              shorten={isShortened("agents")}
-            />
-          }
-          icon={<FancyAgentIcon className="size-5" />}
-        />
       </StatSection>
 
       {/* Reports Stats */}

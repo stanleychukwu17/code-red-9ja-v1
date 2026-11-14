@@ -52,9 +52,6 @@ export function OperationsTableHeader({
         <span className="w-[90px] text-left">Reported PUs</span>
         <span className="w-[105px] text-left">PUs with updates</span>
         <span className="w-[135px] text-left">Avg. update time interval</span>
-        <span className="w-[155px] text-left">
-          Live voters referred by agents
-        </span>
         <span className="w-[110px] text-left">Results uploaded</span>
         <span className="w-[110px] text-left">Results expected</span>
         <span className="w-[110px] text-left">PUs w/ all results</span>
@@ -148,11 +145,6 @@ export function OperationsTableTile({
           {data.avg_update_time_interval || "—"}
         </span>
 
-        {/* Live voters referred by agents */}
-        <span className="w-[155px] text-c-80">
-          {data.live_voters_referred?.toLocaleString() ?? 0}
-        </span>
-
         {/* Results uploaded (green) */}
         <span className="w-[110px] text-[#10B981] dark:text-emerald-400 font-bold">
           {data.results_uploaded?.toLocaleString() ?? 0}
@@ -244,9 +236,6 @@ export function PollingUnitOperationsTableHeader() {
         <span className="w-[95px] text-left">Updates given</span>
         <span className="w-[90px] text-left">Reports given</span>
         <span className="w-35 text-left">Avg. update time interval</span>
-        <span className="w-40 text-left">
-          Live voters referred by agents
-        </span>
         <span className="w-[110px] text-left">Results uploaded</span>
         <span className="w-[110px] text-left">Results expected</span>
         <span className="w-[130px] text-left">Uploaded all results</span>
@@ -314,11 +303,6 @@ export function PollingUnitOperationsTableTile({
         {/* Avg update time interval */}
         <span className="w-35 text-c-80">
           {data.avg_update_time_interval || "—"}
-        </span>
-
-        {/* Live voters referred */}
-        <span className="w-40 text-c-80">
-          {data.live_voters_referred?.toLocaleString() ?? 0}
         </span>
 
         {/* Results uploaded (green) */}

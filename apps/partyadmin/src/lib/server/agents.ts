@@ -20,7 +20,6 @@ export type AgentPerformanceItem = {
   election_ended_at?: string;
   updates_given: number;
   reports_given: number;
-  live_voters_referred: number;
   results_uploaded: string;
   earnings_kobo: number;
   earnings_formatted: string;

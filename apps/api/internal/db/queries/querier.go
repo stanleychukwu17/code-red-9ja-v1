@@ -277,6 +277,8 @@ type Querier interface {
 	GetUnreadPartyNotificationsCountForUser(ctx context.Context, arg GetUnreadPartyNotificationsCountForUserParams) (int64, error)
 	GetUpcomingPartyEvents(ctx context.Context, arg GetUpcomingPartyEventsParams) ([]PartyEvent, error)
 	GetUserActiveCandidacies(ctx context.Context, candidateID int64) ([]GetUserActiveCandidaciesRow, error)
+	GetUserActiveAssignment(ctx context.Context, userID int64) (GetUserAssignmentRow, error)
+	GetActiveSupervisorElectionGroupID(ctx context.Context, userID int64) (int32, error)
 	GetUserAssignment(ctx context.Context, arg GetUserAssignmentParams) (GetUserAssignmentRow, error)
 	GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (GetUserByFakeIDRow, error)
 	GetUserByID(ctx context.Context, id int64) (GetUserByIDRow, error)
@@ -321,9 +323,9 @@ type Querier interface {
 	HardDeleteFile(ctx context.Context, id int64) error
 	HardDeletePartyCustomPosition(ctx context.Context, arg HardDeletePartyCustomPositionParams) error
 	HasActiveAgentApplication(ctx context.Context, userID int64) (bool, error)
+	HasActiveAssignment(ctx context.Context, userID int64) (bool, error)
 	HasPositionBeenAssigned(ctx context.Context, positionID int32) (bool, error)
 	IncrementAssignmentIntervalUpdates(ctx context.Context, arg IncrementAssignmentIntervalUpdatesParams) error
-	IncrementAssignmentLiveVotersReferredCount(ctx context.Context, id int64) (PollingUnitAssignment, error)
 	IncrementAssignmentResultCount(ctx context.Context, id int64) error
 	IncrementElectionGroupResultCount(ctx context.Context, id int32) error
 	IncrementElectionMetricsByGroup(ctx context.Context, arg IncrementElectionMetricsByGroupParams) error

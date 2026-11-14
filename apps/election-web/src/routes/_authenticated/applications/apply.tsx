@@ -73,20 +73,8 @@ function ApplyPage() {
 
 function ApplyPageContent() {
   const form = useApplyContext();
-  const {
-    step,
-    handleBackClick,
-    submitError,
-    success,
-    activeApplication,
-  } = form;
-
-  const {
-    pollingUnitAssignment,
-    supervisorAssignment,
-    hasActiveAssignment,
-  } = useAssignments();
-
+  const { step, handleBackClick, submitError, success, activeApplication } = form;
+  const { pollingUnitAssignment, supervisorAssignment, hasActiveAssignment } = useAssignments();
 
   // Block and display warning if user already has an active, un-exhausted election application
   if (activeApplication) {

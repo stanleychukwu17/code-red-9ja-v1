@@ -4,7 +4,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { EarningsAllocationDialog } from "#/components/dialogs/EarningsAllocationDialog";
 import { SlotCostDialog } from "#/components/dialogs/SlotCostDialog";
 import { TestRequirementsDialog } from "#/components/dialogs/TestRequirementsDialog";
-import { LiveVotersReferredDialog } from "#/components/dialogs/LiveVotersReferredDialog";
 import { UpdateScheduleConfigDialog } from "#/components/dialogs/UpdateScheduleConfigDialog";
 
 export const Route = createFileRoute("/settings/partyadmin/")({
@@ -83,7 +82,6 @@ function RouteComponent() {
   const [selectedRole, setSelectedRole] = useState<SelectedRole>(null);
   const [selectedTestRole, setSelectedTestRole] = useState<SelectedRole>(null);
   const [isSlotCostOpen, setIsSlotCostOpen] = useState(false);
-  const [isLiveVotersReferredOpen, setIsLiveVotersReferredOpen] = useState(false);
   const [isUpdateScheduleConfigOpen, setIsUpdateScheduleConfigOpen] = useState(false);
 
   const handleEdit = (key: string, name: string) => {
@@ -108,12 +106,6 @@ function RouteComponent() {
             description="Cost per slot purchase."
             buttonText="Edit"
             onClick={() => setIsSlotCostOpen(true)}
-          />
-          <SettingsTile
-            title="Live Voters Referred"
-            description="Target live voters for agents to refer."
-            buttonText="Edit"
-            onClick={() => setIsLiveVotersReferredOpen(true)}
           />
           <SettingsTile
             title="Update Schedule Settings"
@@ -231,11 +223,6 @@ function RouteComponent() {
       <SlotCostDialog
         open={isSlotCostOpen}
         onClose={() => setIsSlotCostOpen(false)}
-      />
-
-      <LiveVotersReferredDialog
-        open={isLiveVotersReferredOpen}
-        onClose={() => setIsLiveVotersReferredOpen(false)}
       />
 
       <UpdateScheduleConfigDialog

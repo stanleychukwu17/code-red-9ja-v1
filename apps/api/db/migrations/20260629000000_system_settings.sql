@@ -14,11 +14,6 @@ INSERT INTO system_settings (key, value, description)
 VALUES ('slot_cost_kobo', '100000'::jsonb, 'The default cost of a single polling unit slot in Kobo')
 ON CONFLICT (key) DO NOTHING;
 
--- Seed target for live voters referred
-INSERT INTO system_settings (key, value, description)
-VALUES ('target_live_voters_referred_count', '20'::jsonb, 'The target number of live voters an agent is expected to refer')
-ON CONFLICT (key) DO NOTHING;
-
 -- Seed update schedule config
 INSERT INTO system_settings (key, value, description)
 VALUES (
@@ -36,10 +31,10 @@ ON CONFLICT (key) DO NOTHING;
 -- Seed initial earnings allocations
 INSERT INTO system_settings (key, value, description)
 VALUES 
-  ('earnings_allocation_polling_agent', '{"readiness": 20, "results": 30, "updates": 20, "attendance": 10, "election_start": 5, "election_end": 5, "live_voters_referred": 10}'::jsonb, 'Earnings allocation for polling agents'),
-  ('earnings_allocation_ward_election_supervisor', '{"readiness": 20, "results": 30, "updates": 20, "attendance": 10, "election_start": 5, "election_end": 5, "live_voters_referred": 10}'::jsonb, 'Earnings allocation for ward supervisors'),
-  ('earnings_allocation_lga_election_supervisor', '{"readiness": 20, "results": 30, "updates": 20, "attendance": 10, "election_start": 5, "election_end": 5, "live_voters_referred": 10}'::jsonb, 'Earnings allocation for lga supervisors'),
-  ('earnings_allocation_state_election_supervisor', '{"readiness": 20, "results": 30, "updates": 20, "attendance": 10, "election_start": 5, "election_end": 5, "live_voters_referred": 10}'::jsonb, 'Earnings allocation for state supervisors')
+  ('earnings_allocation_polling_agent', '{"readiness": 20, "results": 40, "updates": 20, "attendance": 10, "election_start": 5, "election_end": 5}'::jsonb, 'Earnings allocation for polling agents'),
+  ('earnings_allocation_ward_election_supervisor', '{"readiness": 20, "results": 40, "updates": 20, "attendance": 10, "election_start": 5, "election_end": 5}'::jsonb, 'Earnings allocation for ward supervisors'),
+  ('earnings_allocation_lga_election_supervisor', '{"readiness": 20, "results": 40, "updates": 20, "attendance": 10, "election_start": 5, "election_end": 5}'::jsonb, 'Earnings allocation for lga supervisors'),
+  ('earnings_allocation_state_election_supervisor', '{"readiness": 20, "results": 40, "updates": 20, "attendance": 10, "election_start": 5, "election_end": 5}'::jsonb, 'Earnings allocation for state supervisors')
 ON CONFLICT (key) DO NOTHING;
 
 -- Seed test requirements per role

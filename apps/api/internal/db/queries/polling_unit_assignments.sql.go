@@ -722,3 +722,145 @@ func (q *Queries) UpdatePollingUnitAssignmentEarnedAmountKobo(ctx context.Contex
 	)
 	return i, err
 }
+
+const hasActiveAssignment = `-- name: HasActiveAssignment :one
+SELECT EXISTS (
+  -- 1. Already assigned as a Polling Agent
+  SELECT 1
+  FROM polling_unit_assignments pua
+  JOIN election_groups eg ON pua.election_group_id = eg.id
+  WHERE pua.user_id = $1
+    AND eg.active = TRUE
+    AND eg.election_date >= CURRENT_DATE
+
+  UNION ALL
+
+  -- 2. Already assigned as a Ward Supervisor
+  SELECT 1
+  FROM ward_election_supervisors wes
+  JOIN election_groups eg ON wes.election_group_id = eg.id
+  WHERE wes.user_id = $1
+    AND eg.active = TRUE
+    AND eg.election_date >= CURRENT_DATE
+
+  UNION ALL
+
+  -- 3. Already assigned as an LGA Supervisor
+  SELECT 1
+  FROM lga_election_supervisors les
+  JOIN election_groups eg ON les.election_group_id = eg.id
+  WHERE les.user_id = $1
+    AND eg.active = TRUE
+    AND eg.election_date >= CURRENT_DATE
+
+  UNION ALL
+
+  -- 4. Already assigned as a State Supervisor
+  SELECT 1
+  FROM state_election_supervisors ses
+  JOIN election_groups eg ON ses.election_group_id = eg.id
+  WHERE ses.user_id = $1
+    AND eg.active = TRUE
+    AND eg.election_date >= CURRENT_DATE
+) AS has_active
+`
+
+func (q *Queries) HasActiveAssignment(ctx context.Context, userID int64) (bool, error) {
+	row := q.db.QueryRow(ctx, hasActiveAssignment, userID)
+	var has_active bool
+	err := row.Scan(&has_active)
+	return has_active, err
+}
+
+const getUserActiveAssignment = `-- name: GetUserActiveAssignment :one
+SELECT 
+  a.id,
+  a.user_id,
+  a.polling_unit_id,
+  a.election_group_id,
+  a.party_id,
+  a.role_type,
+  a.arrived_at,
+  a.election_started_at,
+  a.election_ended_at,
+  a.live_voters_referred_count,
+  pu.name AS polling_unit_name,
+  pu.pu_code AS polling_unit_pu_code,
+  pu.ward_id,
+  pu.ward_name,
+  pu.lga_id,
+  pu.lga_name,
+  pu.state_id,
+  pu.state_name
+FROM polling_unit_assignments a
+JOIN polling_units pu ON a.polling_unit_id = pu.id
+JOIN election_groups eg ON a.election_group_id = eg.id
+WHERE a.user_id = $1
+  AND eg.active = TRUE
+  AND eg.election_date >= CURRENT_DATE
+ORDER BY eg.election_date ASC, a.created_at DESC
+LIMIT 1
+`
+
+func (q *Queries) GetUserActiveAssignment(ctx context.Context, userID int64) (GetUserAssignmentRow, error) {
+	row := q.db.QueryRow(ctx, getUserActiveAssignment, userID)
+	var i GetUserAssignmentRow
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.PollingUnitID,
+		&i.ElectionGroupID,
+		&i.PartyID,
+		&i.RoleType,
+		&i.ArrivedAt,
+		&i.ElectionStartedAt,
+		&i.ElectionEndedAt,
+		&i.LiveVotersReferredCount,
+		&i.PollingUnitName,
+		&i.PollingUnitPuCode,
+		&i.WardID,
+		&i.WardName,
+		&i.LgaID,
+		&i.LgaName,
+		&i.StateID,
+		&i.StateName,
+	)
+	return i, err
+}
+
+const getActiveSupervisorElectionGroupID = `-- name: GetActiveSupervisorElectionGroupID :one
+SELECT election_group_id FROM (
+  SELECT ses.election_group_id
+  FROM state_election_supervisors ses
+  JOIN election_groups eg ON ses.election_group_id = eg.id
+  WHERE ses.user_id = $1
+    AND eg.active = TRUE
+    AND eg.election_date >= CURRENT_DATE
+
+  UNION ALL
+
+  SELECT les.election_group_id
+  FROM lga_election_supervisors les
+  JOIN election_groups eg ON les.election_group_id = eg.id
+  WHERE les.user_id = $1
+    AND eg.active = TRUE
+    AND eg.election_date >= CURRENT_DATE
+
+  UNION ALL
+
+  SELECT wes.election_group_id
+  FROM ward_election_supervisors wes
+  JOIN election_groups eg ON wes.election_group_id = eg.id
+  WHERE wes.user_id = $1
+    AND eg.active = TRUE
+    AND eg.election_date >= CURRENT_DATE
+) sup
+LIMIT 1
+`
+
+func (q *Queries) GetActiveSupervisorElectionGroupID(ctx context.Context, userID int64) (int32, error) {
+	row := q.db.QueryRow(ctx, getActiveSupervisorElectionGroupID, userID)
+	var election_group_id int32
+	err := row.Scan(&election_group_id)
+	return election_group_id, err
+}

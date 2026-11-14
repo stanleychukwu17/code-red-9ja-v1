@@ -61,7 +61,6 @@ SELECT
   a.arrived_at,
   a.election_started_at,
   a.election_ended_at,
-  a.live_voters_referred_count,
   pu.name AS polling_unit_name,
   pu.pu_code AS polling_unit_pu_code,
   pu.ward_id,
@@ -104,8 +103,7 @@ SELECT
   a.election_started_at,
   a.election_started_video_url,
   a.election_ended_at,
-  a.election_ended_video_url,
-  a.live_voters_referred_count
+  a.election_ended_video_url
 FROM polling_unit_assignments a
 JOIN users u ON a.user_id = u.id
 JOIN polling_units pu ON a.polling_unit_id = pu.id
@@ -154,20 +152,13 @@ SET
   election_practice_test_readiness_percentage = $2,
   updated_at = NOW()
 WHERE id = $1
-RETURNING id, user_id, polling_unit_id, election_group_id, party_id, role_type, assigned_by, arrived_at, arrival_video_url, election_started_at, election_started_video_url, election_ended_at, election_ended_video_url, last_update_at, reports_count, updates_count, results_submitted_count, live_voters_referred_count, interval_updates, election_practice_test_readiness_percentage, created_at, updated_at;
+RETURNING id, user_id, polling_unit_id, election_group_id, party_id, role_type, assigned_by, arrived_at, arrival_video_url, election_started_at, election_started_video_url, election_ended_at, election_ended_video_url, last_update_at, reports_count, updates_count, results_submitted_count, interval_updates, election_practice_test_readiness_percentage, created_at, updated_at;
 
 -- name: UpdatePollingUnitAssignmentEarnedAmountKobo :one
 UPDATE polling_unit_assignments
 SET earned_amount_kobo = earned_amount_kobo + sqlc.arg(earned_delta_kobo)::bigint,
     updated_at = NOW()
 WHERE user_id = sqlc.arg(user_id) AND election_group_id = sqlc.arg(election_group_id)
-RETURNING *;
-
--- name: IncrementAssignmentLiveVotersReferredCount :one
-UPDATE polling_unit_assignments
-SET live_voters_referred_count = live_voters_referred_count + 1,
-    updated_at = NOW()
-WHERE id = $1
 RETURNING *;
 
 
@@ -177,3 +168,102 @@ FROM polling_unit_assignments
 WHERE polling_unit_id = $1
   AND party_id = $2
   AND election_group_id = $3;
+
+-- name: HasActiveAssignment :one
+SELECT EXISTS (
+  -- 1. Already assigned as a Polling Agent
+  SELECT 1
+  FROM polling_unit_assignments pua
+  JOIN election_groups eg ON pua.election_group_id = eg.id
+  WHERE pua.user_id = $1
+    AND eg.active = TRUE
+    AND eg.election_date >= CURRENT_DATE
+
+  UNION ALL
+
+  -- 2. Already assigned as a Ward Supervisor
+  SELECT 1
+  FROM ward_election_supervisors wes
+  JOIN election_groups eg ON wes.election_group_id = eg.id
+  WHERE wes.user_id = $1
+    AND eg.active = TRUE
+    AND eg.election_date >= CURRENT_DATE
+
+  UNION ALL
+
+  -- 3. Already assigned as an LGA Supervisor
+  SELECT 1
+  FROM lga_election_supervisors les
+  JOIN election_groups eg ON les.election_group_id = eg.id
+  WHERE les.user_id = $1
+    AND eg.active = TRUE
+    AND eg.election_date >= CURRENT_DATE
+
+  UNION ALL
+
+  -- 4. Already assigned as a State Supervisor
+  SELECT 1
+  FROM state_election_supervisors ses
+  JOIN election_groups eg ON ses.election_group_id = eg.id
+  WHERE ses.user_id = $1
+    AND eg.active = TRUE
+    AND eg.election_date >= CURRENT_DATE
+) AS has_active;
+
+-- name: GetUserActiveAssignment :one
+SELECT 
+  a.id,
+  a.user_id,
+  a.polling_unit_id,
+  a.election_group_id,
+  a.party_id,
+  a.role_type,
+  a.arrived_at,
+  a.election_started_at,
+  a.election_ended_at,
+  a.live_voters_referred_count,
+  pu.name AS polling_unit_name,
+  pu.pu_code AS polling_unit_pu_code,
+  pu.ward_id,
+  pu.ward_name,
+  pu.lga_id,
+  pu.lga_name,
+  pu.state_id,
+  pu.state_name
+FROM polling_unit_assignments a
+JOIN polling_units pu ON a.polling_unit_id = pu.id
+JOIN election_groups eg ON a.election_group_id = eg.id
+WHERE a.user_id = $1
+  AND eg.active = TRUE
+  AND eg.election_date >= CURRENT_DATE
+ORDER BY eg.election_date ASC, a.created_at DESC
+LIMIT 1;
+
+-- name: GetActiveSupervisorElectionGroupID :one
+SELECT election_group_id FROM (
+  SELECT ses.election_group_id
+  FROM state_election_supervisors ses
+  JOIN election_groups eg ON ses.election_group_id = eg.id
+  WHERE ses.user_id = $1
+    AND eg.active = TRUE
+    AND eg.election_date >= CURRENT_DATE
+
+  UNION ALL
+
+  SELECT les.election_group_id
+  FROM lga_election_supervisors les
+  JOIN election_groups eg ON les.election_group_id = eg.id
+  WHERE les.user_id = $1
+    AND eg.active = TRUE
+    AND eg.election_date >= CURRENT_DATE
+
+  UNION ALL
+
+  SELECT wes.election_group_id
+  FROM ward_election_supervisors wes
+  JOIN election_groups eg ON wes.election_group_id = eg.id
+  WHERE wes.user_id = $1
+    AND eg.active = TRUE
+    AND eg.election_date >= CURRENT_DATE
+) sup
+LIMIT 1;

@@ -169,6 +169,7 @@ func (h *Handler) ListAssignments(w http.ResponseWriter, r *http.Request) {
 // @Security     BearerAuth
 // @Router       /polling-unit-assignments/my-assignment [get]
 func (h *Handler) GetMyAssignment(w http.ResponseWriter, r *http.Request) {
+	// Authenticate requester
 	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
 	if !ok {
 		return
@@ -180,6 +181,7 @@ func (h *Handler) GetMyAssignment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Parse optional election_group_id filter
 	electionGroupIDStr := r.URL.Query().Get("election_group_id")
 	var electionGroupID int32
 	if electionGroupIDStr != "" {
@@ -188,15 +190,18 @@ func (h *Handler) GetMyAssignment(w http.ResponseWriter, r *http.Request) {
 			h.utils.RespondError(w, http.StatusBadRequest, "Invalid election_group_id")
 			return
 		}
+
 		electionGroupID = int32(egID)
 	}
 
+	// Fetch polling unit assignment
 	assignment, err := h.service.GetMyAssignment(r.Context(), requester.ID, electionGroupID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch assignment: "+err.Error())
 		return
 	}
 
+	// Resolve supervisor assignments
 	var supervisorAssignments *supervisorassignmentsservice.SupervisorAssignmentsResponse
 	if h.supervisorService != nil {
 		if electionGroupID > 0 {
@@ -208,8 +213,7 @@ func (h *Handler) GetMyAssignment(w http.ResponseWriter, r *http.Request) {
 		} else if assignment != nil && assignment.ElectionGroupID > 0 {
 			supervisorAssignments, _ = h.supervisorService.GetUserSupervisorAssignments(r.Context(), requester.ID, assignment.ElectionGroupID)
 		} else {
-			// If no election_group_id was specified and no PU assignment was found,
-			// scan active upcoming election groups to see if user has a supervisor assignment
+			// Scan active election groups if none was specified and no PU assignment was found
 			if groupIDs, gErr := h.service.GetActiveElectionGroupIDs(r.Context()); gErr == nil {
 				for _, gID := range groupIDs {
 					sup, sErr := h.supervisorService.GetUserSupervisorAssignments(r.Context(), requester.ID, gID)

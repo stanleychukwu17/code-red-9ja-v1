@@ -29,35 +29,34 @@ func NewHandler(q *queries.Queries, pool *pgxpool.Pool, usersService *usersservi
 }
 
 type AgentPerformanceItem struct {
-	ID                 int64   `json:"id"`
-	UserID             int64   `json:"user_id"`
-	PartyID            int16   `json:"party_id"`
-	ElectionGroupID    int32   `json:"election_group_id"`
-	StateID            int16   `json:"state_id"`
-	LgaID              int32   `json:"lga_id"`
-	WardID             int32   `json:"ward_id"`
-	PollingUnitID      int32   `json:"polling_unit_id"`
-	UserName           string  `json:"user_name"`
-	AvatarUrl          string  `json:"avatar_url"`
-	RoleType           string  `json:"role_type"`
-	ReadinessPct       float64 `json:"readiness_pct"`
-	ArrivedAt          *string `json:"arrived_at,omitempty"`
-	ElectionStartedAt  *string `json:"election_started_at,omitempty"`
-	ElectionEndedAt    *string `json:"election_ended_at,omitempty"`
-	UpdatesGiven       *int32  `json:"updates_given,omitempty"`
-	ReportsGiven       *int32  `json:"reports_given,omitempty"`
-	LiveVotersReferred *int32  `json:"live_voters_referred,omitempty"`
-	ResultsUploaded    *string `json:"results_uploaded,omitempty"`
-	EarningsKobo       int64   `json:"earnings_kobo"`
-	EarningsFormatted  string  `json:"earnings_formatted"`
-	CompletionStatus   bool    `json:"completion_status"`
-	RequestedPayout    bool    `json:"requested_payout"`
-	Paid               bool    `json:"paid"`
-	StateName          *string `json:"state_name,omitempty"`
-	LgaName            *string `json:"lga_name,omitempty"`
-	WardName           *string `json:"ward_name,omitempty"`
-	PollingUnitName    *string `json:"polling_unit_name,omitempty"`
-	PollingUnitCode    *string `json:"polling_unit_code,omitempty"`
+	ID                int64   `json:"id"`
+	UserID            int64   `json:"user_id"`
+	PartyID           int16   `json:"party_id"`
+	ElectionGroupID   int32   `json:"election_group_id"`
+	StateID           int16   `json:"state_id"`
+	LgaID             int32   `json:"lga_id"`
+	WardID            int32   `json:"ward_id"`
+	PollingUnitID     int32   `json:"polling_unit_id"`
+	UserName          string  `json:"user_name"`
+	AvatarUrl         string  `json:"avatar_url"`
+	RoleType          string  `json:"role_type"`
+	ReadinessPct      float64 `json:"readiness_pct"`
+	ArrivedAt         *string `json:"arrived_at,omitempty"`
+	ElectionStartedAt *string `json:"election_started_at,omitempty"`
+	ElectionEndedAt   *string `json:"election_ended_at,omitempty"`
+	UpdatesGiven      *int32  `json:"updates_given,omitempty"`
+	ReportsGiven      *int32  `json:"reports_given,omitempty"`
+	ResultsUploaded   *string `json:"results_uploaded,omitempty"`
+	EarningsKobo      int64   `json:"earnings_kobo"`
+	EarningsFormatted string  `json:"earnings_formatted"`
+	CompletionStatus  bool    `json:"completion_status"`
+	RequestedPayout   bool    `json:"requested_payout"`
+	Paid              bool    `json:"paid"`
+	StateName         *string `json:"state_name,omitempty"`
+	LgaName           *string `json:"lga_name,omitempty"`
+	WardName          *string `json:"ward_name,omitempty"`
+	PollingUnitName   *string `json:"polling_unit_name,omitempty"`
+	PollingUnitCode   *string `json:"polling_unit_code,omitempty"`
 }
 
 // GetAgentPerformance godoc
@@ -151,35 +150,34 @@ func (h *Handler) GetAgentPerformance(w http.ResponseWriter, r *http.Request) {
 			}
 
 			item := AgentPerformanceItem{
-				ID:                 row.ID,
-				UserID:             row.UserID,
-				PartyID:            row.PartyID,
-				ElectionGroupID:    row.ElectionGroupID,
-				StateID:            row.StateID,
-				LgaID:              row.LgaID,
-				WardID:             row.WardID,
-				PollingUnitID:      row.PollingUnitID,
-				UserName:           row.UserName,
-				AvatarUrl:          row.AvatarUrl,
-				RoleType:           row.RoleType.String,
-				ReadinessPct:       math.Round(readiness*100) / 100,
-				ArrivedAt:          utils.PtrFromString(row.ArrivedAt),
-				ElectionStartedAt:  utils.PtrFromString(row.ElectionStartedAt),
-				ElectionEndedAt:    utils.PtrFromString(row.ElectionEndedAt),
-				UpdatesGiven:       utils.Ptr(row.UpdatesGiven),
-				ReportsGiven:       utils.Ptr(row.ReportsGiven),
-				LiveVotersReferred: utils.Ptr(row.LiveVotersReferred),
-				ResultsUploaded:    utils.PtrFromString(row.ResultsUploaded),
-				EarningsKobo:       row.EarningsKobo,
-				EarningsFormatted:  row.EarningsFormatted,
-				CompletionStatus:   row.CompletionStatus,
-				RequestedPayout:    row.RequestedPayout,
-				Paid:               row.Paid,
-				StateName:          utils.PtrFromString(row.StateName),
-				LgaName:            utils.PtrFromString(row.LgaName),
-				WardName:           utils.PtrFromString(row.WardName),
-				PollingUnitName:    utils.PtrFromString(row.PollingUnitName),
-				PollingUnitCode:    utils.PtrFromString(row.PollingUnitCode),
+				ID:                row.ID,
+				UserID:            row.UserID,
+				PartyID:           row.PartyID,
+				ElectionGroupID:   row.ElectionGroupID,
+				StateID:           row.StateID,
+				LgaID:             row.LgaID,
+				WardID:            row.WardID,
+				PollingUnitID:     row.PollingUnitID,
+				UserName:          row.UserName,
+				AvatarUrl:         row.AvatarUrl,
+				RoleType:          row.RoleType.String,
+				ReadinessPct:      math.Round(readiness*100) / 100,
+				ArrivedAt:         utils.PtrFromString(row.ArrivedAt),
+				ElectionStartedAt: utils.PtrFromString(row.ElectionStartedAt),
+				ElectionEndedAt:   utils.PtrFromString(row.ElectionEndedAt),
+				UpdatesGiven:      utils.Ptr(row.UpdatesGiven),
+				ReportsGiven:      utils.Ptr(row.ReportsGiven),
+				ResultsUploaded:   utils.PtrFromString(row.ResultsUploaded),
+				EarningsKobo:      row.EarningsKobo,
+				EarningsFormatted: row.EarningsFormatted,
+				CompletionStatus:  row.CompletionStatus,
+				RequestedPayout:   row.RequestedPayout,
+				Paid:              row.Paid,
+				StateName:         utils.PtrFromString(row.StateName),
+				LgaName:           utils.PtrFromString(row.LgaName),
+				WardName:          utils.PtrFromString(row.WardName),
+				PollingUnitName:   utils.PtrFromString(row.PollingUnitName),
+				PollingUnitCode:   utils.PtrFromString(row.PollingUnitCode),
 			}
 			items = append(items, item)
 		}

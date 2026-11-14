@@ -24,14 +24,12 @@ type AgentEarning struct {
 	AttendanceScore         pgtype.Numeric     `json:"attendance_score"`
 	ElectionStartScore      pgtype.Numeric     `json:"election_start_score"`
 	ElectionEndScore        pgtype.Numeric     `json:"election_end_score"`
-	LiveVotersScore         pgtype.Numeric     `json:"live_voters_score"`
 	ReadinessEarnedKobo     int64              `json:"readiness_earned_kobo"`
 	ResultsEarnedKobo       int64              `json:"results_earned_kobo"`
 	UpdatesEarnedKobo       int64              `json:"updates_earned_kobo"`
 	AttendanceEarnedKobo    int64              `json:"attendance_earned_kobo"`
 	ElectionStartEarnedKobo int64              `json:"election_start_earned_kobo"`
 	ElectionEndEarnedKobo   int64              `json:"election_end_earned_kobo"`
-	LiveVotersEarnedKobo    int64              `json:"live_voters_earned_kobo"`
 	TotalEarnedKobo         int64              `json:"total_earned_kobo"`
 	Status                  string             `json:"status"`
 	CalculatedAt            pgtype.Timestamptz `json:"calculated_at"`
@@ -826,7 +824,6 @@ type PollingUnitAssignment struct {
 	ReportsCount                            int32              `json:"reports_count"`
 	UpdatesCount                            int32              `json:"updates_count"`
 	ResultsSubmittedCount                   int32              `json:"results_submitted_count"`
-	LiveVotersReferredCount                 int32              `json:"live_voters_referred_count"`
 	IntervalUpdates                         []byte             `json:"interval_updates"`
 	ElectionPracticeTestReadinessPercentage pgtype.Numeric     `json:"election_practice_test_readiness_percentage"`
 	PotentialPaymentKobo                    int64              `json:"potential_payment_kobo"`

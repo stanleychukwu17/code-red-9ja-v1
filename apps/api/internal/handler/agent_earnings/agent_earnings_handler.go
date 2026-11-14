@@ -269,7 +269,7 @@ func (h *Handler) MarkPaid(w http.ResponseWriter, r *http.Request) {
 // @Tags         AgentEarnings
 // @Produce      json
 // @Param        assignment_id query int    true  "Assignment ID"
-// @Param        task_type     query string true  "Task Type (readiness|results|attendance|election_start|election_end|live_voters_referred|updates)"
+// @Param        task_type     query string true  "Task Type (readiness|results|attendance|election_start|election_end|updates)"
 // @Success      200 {object} utils.SuccessResponse
 // @Failure      400 {object} utils.ErrorResponse
 // @Failure      401 {object} utils.ErrorResponse
@@ -313,7 +313,7 @@ func (h *Handler) GetPotentialPayout(w http.ResponseWriter, r *http.Request) {
 // @Summary      Estimate potential payout in Kobo for a given task type without requiring an assignment ID
 // @Tags         AgentEarnings
 // @Produce      json
-// @Param        task_type         query string true  "Task Type (readiness|results|attendance|election_start|election_end|live_voters_referred|updates)"
+// @Param        task_type         query string true  "Task Type (readiness|results|attendance|election_start|election_end|updates)"
 // @Param        role              query string false "Role (polling_agent|ward_election_supervisor|lga_election_supervisor|state_election_supervisor)"
 // @Param        election_group_id query int    false "Election Group ID"
 // @Param        party_id          query int    false "Party ID"

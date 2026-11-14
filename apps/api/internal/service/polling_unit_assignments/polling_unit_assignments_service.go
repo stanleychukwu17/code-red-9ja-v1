@@ -66,38 +66,7 @@ func (s *Service) InvalidateUserAssignmentCache(ctx context.Context, userID int6
 }
 
 // GetMyAssignment retrieves the unique polling unit assigned to an agent for a specific election group, cached in Redis.
-// When electionGroupID is 0, it discovers the active/upcoming assignment for the user.
 func (s *Service) GetMyAssignment(ctx context.Context, userID int64, electionGroupID int32) (*queries.GetUserAssignmentRow, error) {
-	if electionGroupID == 0 {
-		// 1. Check upcoming active election groups
-		activeGroups, err := s.queries.ListElectionGroups(ctx, pgtype.Bool{Bool: true, Valid: true})
-		if err == nil {
-			for _, g := range activeGroups {
-				asgn, err := s.GetMyAssignment(ctx, userID, g.ID)
-				if err == nil && asgn != nil {
-					return asgn, nil
-				}
-			}
-		}
-
-		// 2. Fallback to latest historical assignment if no active group match
-		rows, err := s.queries.ListAssignments(ctx, queries.ListAssignmentsParams{
-			UserID:          userID,
-			ElectionGroupID: 0,
-			PartyID:         0,
-			PollingUnitID:   0,
-			Limit:           1,
-			Offset:          0,
-		})
-		if err != nil {
-			return nil, err
-		}
-		if len(rows) > 0 {
-			return s.GetMyAssignment(ctx, userID, rows[0].ElectionGroupID)
-		}
-		return nil, nil
-	}
-
 	cacheKey := s.userAssignmentCacheKey(userID, electionGroupID)
 
 	// Check Redis cache first
@@ -144,19 +113,6 @@ func (s *Service) DeleteAssignment(ctx context.Context, id int64) error {
 		defer s.InvalidateUserAssignmentCache(ctx, assignment.UserID, assignment.ElectionGroupID)
 	}
 	return s.queries.DeleteAssignment(ctx, id)
-}
-
-// GetActiveElectionGroupIDs returns the IDs of all currently active and upcoming election groups.
-func (s *Service) GetActiveElectionGroupIDs(ctx context.Context) ([]int32, error) {
-	groups, err := s.queries.ListElectionGroups(ctx, pgtype.Bool{Bool: true, Valid: true})
-	if err != nil {
-		return nil, err
-	}
-	ids := make([]int32, len(groups))
-	for i, g := range groups {
-		ids[i] = g.ID
-	}
-	return ids, nil
 }
 
 // parseTimeParam converts an optional ISO 8601/RFC3339 string into a pgtype.Timestamptz.

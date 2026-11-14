@@ -12,20 +12,18 @@ INSERT INTO agent_earnings (
   attendance_score,
   election_start_score,
   election_end_score,
-  live_voters_score,
   readiness_earned_kobo,
   results_earned_kobo,
   updates_earned_kobo,
   attendance_earned_kobo,
   election_start_earned_kobo,
   election_end_earned_kobo,
-  live_voters_earned_kobo,
   total_earned_kobo,
   calculated_at
 ) VALUES (
   $1, $2, $3, $4, $5, $6, $7,
-  $8, $9, $10, $11, $12, $13, $14,
-  $15, $16, $17, $18, $19, $20, $21,
+  $8, $9, $10, $11, $12,
+  $13, $14, $15, $16, $17, $18, $19,
   NOW()
 )
 ON CONFLICT (user_id, election_group_id, role_type) DO UPDATE SET
@@ -37,14 +35,12 @@ ON CONFLICT (user_id, election_group_id, role_type) DO UPDATE SET
   attendance_score           = EXCLUDED.attendance_score,
   election_start_score       = EXCLUDED.election_start_score,
   election_end_score         = EXCLUDED.election_end_score,
-  live_voters_score          = EXCLUDED.live_voters_score,
   readiness_earned_kobo      = EXCLUDED.readiness_earned_kobo,
   results_earned_kobo        = EXCLUDED.results_earned_kobo,
   updates_earned_kobo        = EXCLUDED.updates_earned_kobo,
   attendance_earned_kobo     = EXCLUDED.attendance_earned_kobo,
   election_start_earned_kobo = EXCLUDED.election_start_earned_kobo,
   election_end_earned_kobo   = EXCLUDED.election_end_earned_kobo,
-  live_voters_earned_kobo    = EXCLUDED.live_voters_earned_kobo,
   total_earned_kobo          = EXCLUDED.total_earned_kobo,
   calculated_at              = NOW(),
   updated_at                 = NOW()
@@ -122,7 +118,6 @@ SELECT
   a.updates_count,
   a.results_submitted_count,
   COALESCE(egpu.unique_final_results_expected, 0)::int AS results_expected_to_submit_count,
-  a.live_voters_referred_count,
   a.election_practice_test_readiness_percentage,
   a.potential_payment_kobo,
   a.interval_updates,

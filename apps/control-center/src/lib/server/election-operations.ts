@@ -25,7 +25,6 @@ export type OperationsUnitItem = {
   reported_pus?: number;
   pus_with_updates?: number;
   avg_update_time_interval?: string;
-  live_voters_referred?: number;
   results_uploaded?: number;
   results_expected?: string | number;
   pus_with_all_results?: number;

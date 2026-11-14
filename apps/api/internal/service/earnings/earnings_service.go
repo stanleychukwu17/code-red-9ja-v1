@@ -30,21 +30,12 @@ func NewService(q *queries.Queries, pool *pgxpool.Pool) *Service {
 // ─── JSON shapes from DB ──────────────────────────────────────────────────────
 
 type earningsAllocation struct {
-	Readiness                     float64 `json:"readiness"`
-	Results                       float64 `json:"results"`
-	Updates                       float64 `json:"updates"`
-	Attendance                    float64 `json:"attendance"`
-	ElectionStart                 float64 `json:"election_start"`
-	ElectionEnd                   float64 `json:"election_end"`
-	TargetLiveVotersReferredCount float64 `json:"target_live_voters_referred_count"`
-	LiveVotersReferred            float64 `json:"live_voters_referred"`
-}
-
-func (a earningsAllocation) GetLiveVotersPct() float64 {
-	if a.LiveVotersReferred > 0 {
-		return a.LiveVotersReferred
-	}
-	return a.TargetLiveVotersReferredCount
+	Readiness     float64 `json:"readiness"`
+	Results       float64 `json:"results"`
+	Updates       float64 `json:"updates"`
+	Attendance    float64 `json:"attendance"`
+	ElectionStart float64 `json:"election_start"`
+	ElectionEnd   float64 `json:"election_end"`
 }
 
 type testWindow struct {
@@ -112,17 +103,7 @@ func (s *Service) calculateWithTx(
 		_ = json.Unmarshal(legacySetting.Value, &targetUpdatesCount)
 	}
 
-	// 3. Fetch target_live_voters_referred_count target
-	lvrTargetSetting, err := q.GetSystemSetting(ctx, "target_live_voters_referred_count")
-	if err != nil {
-		return queries.AgentEarning{}, fmt.Errorf("get target_live_voters_referred_count: %w", err)
-	}
-	var targetLiveVoters float64
-	if err := json.Unmarshal(lvrTargetSetting.Value, &targetLiveVoters); err != nil {
-		targetLiveVoters = 10
-	}
-
-	// 4. Fetch party to get base payment kobo
+	// 3. Fetch party to get base payment kobo
 	party, err := q.GetPartyByID(ctx, asgn.PartyID)
 	if err != nil {
 		return queries.AgentEarning{}, fmt.Errorf("get party: %w", err)
@@ -130,31 +111,29 @@ func (s *Service) calculateWithTx(
 
 	basePaymentKobo := s.resolveBasePayment(party.AgentPaymentAllocationKobo, roleType, asgn.StateName)
 
-	// 5. Compute each factor score (0–100)
+	// 4. Compute each factor score (0–100)
 	readinessScore     := s.computeReadinessScore(asgn)
 	resultsScore       := computeRatioScore(float64(asgn.ResultsSubmittedCount), float64(asgn.ResultsExpectedToSubmitCount))
 	updatesScore       := computeRatioScore(float64(asgn.UpdatesCount), targetUpdatesCount)
 	attendanceScore    := boolScore(asgn.ArrivedAt.Valid)
 	electionStartScore := boolScore(asgn.ElectionStartedAt.Valid)
 	electionEndScore   := boolScore(asgn.ElectionEndedAt.Valid)
-	liveVotersScore    := computeRatioScore(float64(asgn.LiveVotersReferredCount), targetLiveVoters)
 
-	// 6. Compute per-factor earnings (kobo)
+	// 5. Compute per-factor earnings (kobo)
 	readinessEarned    := factorEarned(basePaymentKobo, allocation.Readiness, readinessScore)
 	resultsEarned      := factorEarned(basePaymentKobo, allocation.Results, resultsScore)
 	updatesEarned      := factorEarned(basePaymentKobo, allocation.Updates, updatesScore)
 	attendanceEarned   := factorEarned(basePaymentKobo, allocation.Attendance, attendanceScore)
 	electionStartEarned := factorEarned(basePaymentKobo, allocation.ElectionStart, electionStartScore)
 	electionEndEarned  := factorEarned(basePaymentKobo, allocation.ElectionEnd, electionEndScore)
-	liveVotersEarned   := factorEarned(basePaymentKobo, allocation.GetLiveVotersPct(), liveVotersScore)
 
 	totalEarned := readinessEarned + resultsEarned + updatesEarned +
-		attendanceEarned + electionStartEarned + electionEndEarned + liveVotersEarned
+		attendanceEarned + electionStartEarned + electionEndEarned
 
-	// 7. Re-marshal allocation for snapshot storage
+	// 6. Re-marshal allocation for snapshot storage
 	allocationBytes, _ := json.Marshal(allocation)
 
-	// 8. Upsert earnings record
+	// 7. Upsert earnings record
 	result, err := q.UpsertAgentEarnings(ctx, queries.UpsertAgentEarningsParams{
 		UserID:                  asgn.UserID,
 		PartyID:                 asgn.PartyID,
@@ -168,14 +147,12 @@ func (s *Service) calculateWithTx(
 		AttendanceScore:         toNumeric(attendanceScore),
 		ElectionStartScore:      toNumeric(electionStartScore),
 		ElectionEndScore:        toNumeric(electionEndScore),
-		LiveVotersScore:         toNumeric(liveVotersScore),
 		ReadinessEarnedKobo:     readinessEarned,
 		ResultsEarnedKobo:       resultsEarned,
 		UpdatesEarnedKobo:       updatesEarned,
 		AttendanceEarnedKobo:    attendanceEarned,
 		ElectionStartEarnedKobo: electionStartEarned,
 		ElectionEndEarnedKobo:   electionEndEarned,
-		LiveVotersEarnedKobo:    liveVotersEarned,
 		TotalEarnedKobo:         totalEarned,
 	})
 	if err != nil {
@@ -383,8 +360,6 @@ func (s *Service) ProcessTaskEarnings(
 			oldFactorEarned = oldEarnings.UpdatesEarnedKobo
 		case "results":
 			oldFactorEarned = oldEarnings.ResultsEarnedKobo
-		case "live_voters_referred":
-			oldFactorEarned = oldEarnings.LiveVotersEarnedKobo
 		}
 	}
 
@@ -415,16 +390,9 @@ func (s *Service) ProcessTaskEarnings(
 		case "results":
 			newFactorEarned = newEarnings.ResultsEarnedKobo
 			narrationLabel = "Results: Uploaded"
-		case "live_voters_referred":
-			newFactorEarned = newEarnings.LiveVotersEarnedKobo
-			narrationLabel = "Referred User: Voted"
 		default:
 			narrationLabel = fmt.Sprintf("Task earnings (%s)", taskType)
 		}
-	}
-
-	if taskType == "live_voters_referred" {
-		newFactorEarned = newEarnings.LiveVotersEarnedKobo
 	}
 
 	delta := newFactorEarned - oldFactorEarned
@@ -1115,33 +1083,6 @@ func (s *Service) CalculatePotentialPayout(ctx context.Context, assignmentID int
 			Reason:              "Potential payout for submitting election end video",
 		}, nil
 
-	case "live_voters_referred":
-		var targetLiveVoters float64 = 20
-		if lvrSetting, err := s.q.GetSystemSetting(ctx, "target_live_voters_referred_count"); err == nil {
-			_ = json.Unmarshal(lvrSetting.Value, &targetLiveVoters)
-		}
-		if targetLiveVoters <= 0 {
-			targetLiveVoters = 20
-		}
-		if float64(asgn.LiveVotersReferredCount) >= targetLiveVoters {
-			return PotentialPayoutResult{
-				AssignmentID:        assignmentID,
-				TaskType:            taskType,
-				PotentialPayoutKobo: 0,
-				IsEligible:          false,
-				Reason:              "Live voters referral target reached",
-			}, nil
-		}
-		lvrBudgetKobo := float64(basePaymentKobo) * (allocation.GetLiveVotersPct() / 100.0)
-		payout := int64(lvrBudgetKobo / targetLiveVoters)
-		return PotentialPayoutResult{
-			AssignmentID:        assignmentID,
-			TaskType:            taskType,
-			PotentialPayoutKobo: payout,
-			IsEligible:          true,
-			Reason:              "Potential payout for referring live voter",
-		}, nil
-
 	case "updates":
 		var targetUpdates float64 = 20
 		startTimeStr := "07:00"
@@ -1324,17 +1265,6 @@ func (s *Service) EstimatePotentialPayout(
 	case "election_end":
 		payout = int64(float64(basePaymentKobo) * (allocation.ElectionEnd / 100.0))
 
-	case "live_voters_referred":
-		var targetLiveVoters float64 = 20
-		if lvrSetting, err := s.q.GetSystemSetting(ctx, "target_live_voters_referred_count"); err == nil {
-			_ = json.Unmarshal(lvrSetting.Value, &targetLiveVoters)
-		}
-		if targetLiveVoters <= 0 {
-			targetLiveVoters = 20
-		}
-		lvrBudgetKobo := float64(basePaymentKobo) * (allocation.GetLiveVotersPct() / 100.0)
-		payout = int64(lvrBudgetKobo / targetLiveVoters)
-
 	case "updates":
 		var targetUpdates float64 = 20
 		if schedSetting, err := s.q.GetSystemSetting(ctx, "update_schedule_config"); err == nil {
@@ -1503,8 +1433,6 @@ func (s *Service) GetAgentAllocations(
 		return AgentAllocationsResponse{}, fmt.Errorf("parse earnings allocation: %w", err)
 	}
 
-	liveVotersPct := alloc.GetLiveVotersPct()
-
 	items := []AllocationItem{
 		{
 			TaskType:            "readiness",
@@ -1542,15 +1470,9 @@ func (s *Service) GetAgentAllocations(
 			Percentage:          alloc.ElectionEnd,
 			PotentialPayoutKobo: int64(float64(potentialPaymentKobo) * (alloc.ElectionEnd / 100.0)),
 		},
-		{
-			TaskType:            "live_voters_referred",
-			Label:               "Live Voters Referred",
-			Percentage:          liveVotersPct,
-			PotentialPayoutKobo: int64(float64(potentialPaymentKobo) * (liveVotersPct / 100.0)),
-		},
 	}
 
-	totalPct := alloc.Readiness + alloc.Results + alloc.Updates + alloc.Attendance + alloc.ElectionStart + alloc.ElectionEnd + liveVotersPct
+	totalPct := alloc.Readiness + alloc.Results + alloc.Updates + alloc.Attendance + alloc.ElectionStart + alloc.ElectionEnd
 
 	return AgentAllocationsResponse{
 		RoleType:             roleType,

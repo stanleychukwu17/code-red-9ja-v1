@@ -176,14 +176,6 @@ export function PollingAgentPage() {
       title: "Enter time when election ended",
       isCompleted: !!currentPollingUnitAssignment?.election_ended_at,
     },
-    {
-      title:
-        "Get voters at your polling unit to register on free9ja, indicate who they voted for. (1)",
-      isCompleted: !!(
-        currentPollingUnitAssignment?.live_voters_referred_count &&
-        currentPollingUnitAssignment.live_voters_referred_count > 0
-      ),
-    },
   ];
 
   // Pre-election readiness milestone training modules

@@ -24,7 +24,6 @@ export interface EarningsAllocation {
   attendance: number;
   election_start: number;
   election_end: number;
-  target_live_voters_referred_count: number;
 }
 
 const ALLOCATION_FIELDS: { name: keyof EarningsAllocation; label: string }[] = [
@@ -34,7 +33,6 @@ const ALLOCATION_FIELDS: { name: keyof EarningsAllocation; label: string }[] = [
   { name: "attendance", label: "Attendance" },
   { name: "election_start", label: "Start Election" },
   { name: "election_end", label: "End Election" },
-  { name: "target_live_voters_referred_count", label: "Live Voters Referred" },
 ];
 
 function AllocationField({
@@ -111,7 +109,6 @@ export function EarningsAllocationDialog({
       attendance: 0,
       election_start: 0,
       election_end: 0,
-      target_live_voters_referred_count: 0,
     },
     onSubmit: async ({ value }) => {
       saveMutation.mutate(value);
@@ -121,11 +118,7 @@ export function EarningsAllocationDialog({
   React.useEffect(() => {
     if (open && settingData) {
       ALLOCATION_FIELDS.forEach(({ name }) => {
-        const val =
-          settingData[name] ??
-          (name === "target_live_voters_referred_count"
-            ? (settingData as any).live_voters_referred
-            : undefined);
+        const val = settingData[name];
         form.setFieldValue(name, parsePercent(val));
       });
       setError(null);

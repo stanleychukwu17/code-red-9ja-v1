@@ -20,7 +20,6 @@ CREATE TABLE IF NOT EXISTS agent_earnings (
   attendance_score             NUMERIC(5,2) NOT NULL DEFAULT 0 CHECK (attendance_score BETWEEN 0 AND 100),
   election_start_score         NUMERIC(5,2) NOT NULL DEFAULT 0 CHECK (election_start_score BETWEEN 0 AND 100),
   election_end_score           NUMERIC(5,2) NOT NULL DEFAULT 0 CHECK (election_end_score BETWEEN 0 AND 100),
-  live_voters_score            NUMERIC(5,2) NOT NULL DEFAULT 0 CHECK (live_voters_score BETWEEN 0 AND 100),
 
   -- Per-factor earnings (kobo)
   readiness_earned_kobo        BIGINT NOT NULL DEFAULT 0,
@@ -29,7 +28,6 @@ CREATE TABLE IF NOT EXISTS agent_earnings (
   attendance_earned_kobo       BIGINT NOT NULL DEFAULT 0,
   election_start_earned_kobo   BIGINT NOT NULL DEFAULT 0,
   election_end_earned_kobo     BIGINT NOT NULL DEFAULT 0,
-  live_voters_earned_kobo      BIGINT NOT NULL DEFAULT 0,
 
   -- Total computed earnings (kobo)
   total_earned_kobo            BIGINT NOT NULL DEFAULT 0,

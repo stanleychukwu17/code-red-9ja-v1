@@ -108,7 +108,7 @@ export const deleteElection = createServerFn({ method: "POST" })
     try {
       const response = await apiFetch(API_URL.electionById(id), {
         method: "DELETE",
-        });
+      });
       const resData = await response.json();
       return resData;
     } catch (error) {
@@ -343,5 +343,3 @@ export const getElectionsByGroup = createServerFn({ method: "GET" })
       };
     }
   });
-
-

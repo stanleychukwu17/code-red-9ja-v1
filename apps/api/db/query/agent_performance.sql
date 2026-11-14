@@ -17,7 +17,6 @@ SELECT
   COALESCE(TO_CHAR(pua.election_ended_at, 'HH12:MI AM'), '')::varchar AS election_ended_at,
   pua.updates_count AS updates_given,
   pua.reports_count AS reports_given,
-  pua.live_voters_referred_count AS live_voters_referred,
   CONCAT(pua.results_submitted_count, '/', COALESCE(NULLIF((SELECT COUNT(*)::int FROM elections e WHERE e.election_group_id = pua.election_group_id), 0), 1))::varchar AS results_uploaded,
   COALESCE(ae.total_earned_kobo, pua.earned_amount_kobo, 0)::bigint AS earnings_kobo,
   CONCAT('₦', TO_CHAR(COALESCE(ae.total_earned_kobo, pua.earned_amount_kobo, 0) / 100.0, 'FM999,999,999,990.00'))::varchar AS earnings_formatted,

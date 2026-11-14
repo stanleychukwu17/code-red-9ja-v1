@@ -62,9 +62,6 @@ export function PollingAgentTableHeader() {
         <span className="text-c-50 text-[14px] w-[120px]">Election ended</span>
         <span className="text-c-50 text-[14px] w-[110px]">Updates Given</span>
         <span className="text-c-50 text-[14px] w-[110px]">Reports Given</span>
-        <span className="text-c-50 text-[14px] w-35">
-          Live voters referred
-        </span>
         <span className="text-c-50 text-[14px] w-[120px]">
           Results uploaded
         </span>
@@ -121,7 +118,6 @@ export function PollingAgentTableTile({
         </span>
         <span className="w-[110px]">{data.updates_given ?? 0}</span>
         <span className="w-[110px]">{data.reports_given ?? 0}</span>
-        <span className="w-35">{data.live_voters_referred ?? 0}</span>
         <span className="w-[120px] font-bold">
           {data.results_uploaded || "—"}
         </span>
