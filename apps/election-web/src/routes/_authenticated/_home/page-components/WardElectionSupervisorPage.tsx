@@ -42,7 +42,7 @@ import { Layout } from "@repo/ui/components/custom/AdminLayouts";
 export function WardElectionSupervisorPage() {
   const navigate = useNavigate();
 
-  const { selectedElectionGroup, selectedElection } = useElection();
+  const { selectedElectionGroup, selectedElection, daysLeft } = useElection();
   const { supervisorAssignment } = useAssignments();
 
   const currentAssignment = supervisorAssignment?.data;
@@ -62,20 +62,6 @@ export function WardElectionSupervisorPage() {
       setCarouselIndex(carouselApi.selectedScrollSnap());
     });
   }, [carouselApi]);
-
-  // Compute countdown to election day
-  let daysLeft: number | undefined = undefined;
-  if (selectedElectionGroup?.election_date) {
-    const d = new Date(selectedElectionGroup.election_date);
-    d.setHours(0, 0, 0, 0);
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
-    const diffTime = d.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    if (diffDays >= 0) {
-      daysLeft = diffDays;
-    }
-  }
 
   // Query aggregated ward statistics (polling unit coverage, agent check-ins, result uploads)
   const { data: statsRes } = useQuery({

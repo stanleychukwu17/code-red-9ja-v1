@@ -1,19 +1,8 @@
 import { useElection } from "#/hooks/useElection";
 import { useAssignments } from "#/hooks/useAssignments";
 import { Button } from "@repo/ui/components/button";
-import {
-  ObjectiveCardWrapper,
-  ObjectiveTile,
-} from "@repo/ui/components/cards/objective-tile";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselDot,
-  CarouselDotContent,
-  CarouselItem,
-  type CarouselApi,
-} from "@repo/ui/components/carousel";
-import PlusIcon from "@repo/ui/icons/plus-icon";
+import { ObjectiveCardWrapper, ObjectiveTile } from "@repo/ui/components/cards/objective-tile";
+import { Carousel, CarouselContent, CarouselDot, CarouselDotContent, CarouselItem, type CarouselApi } from "@repo/ui/components/carousel";
 import ReportIcon from "@repo/ui/icons/report-icon";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
@@ -58,7 +47,7 @@ const BYPASS_TIME_CONSTRAINTS = process.env.NODE_ENV === "development";
 export function PollingAgentPage() {
   const navigate = useNavigate();
 
-  const { selectedElectionGroup, selectedElection } = useElection();
+  const { selectedElectionGroup, selectedElection, daysLeft, diffDays } = useElection();
   const { pollingUnitAssignment: currentPollingUnitAssignment } = useAssignments();
 
   // Submits duty compensation request to party administration upon task completion
@@ -119,21 +108,6 @@ export function PollingAgentPage() {
       setCarouselIndex(carouselApi.selectedScrollSnap());
     });
   }, [carouselApi]);
-
-  // Calculate days remaining until scheduled election date
-  let daysLeft: number | undefined = undefined;
-  let diffDays: number | undefined = undefined;
-  if (selectedElectionGroup?.election_date) {
-    const d = new Date(selectedElectionGroup.election_date);
-    d.setHours(0, 0, 0, 0);
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
-    const diffTime = d.getTime() - now.getTime();
-    diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    if (diffDays >= 0) {
-      daysLeft = diffDays;
-    }
-  }
 
   // Determine carousel view visibility (Objectives vs Readiness drills)
   const showObjectives = diffDays === undefined || diffDays <= 0;

@@ -24,27 +24,7 @@ import { Layout } from "@repo/ui/components/custom/AdminLayouts";
 export function GeneralPage() {
   const navigate = useNavigate();
 
-  const { selectedElectionGroup } = useElection();
-
-  // Calculate days remaining until scheduled election
-  let daysLeft: number | undefined = undefined;
-  if (selectedElectionGroup?.election_date) {
-    try {
-      const d = new Date(selectedElectionGroup.election_date);
-      if (!isNaN(d.getTime())) {
-        d.setHours(0, 0, 0, 0);
-        const now = new Date();
-        now.setHours(0, 0, 0, 0);
-        const diffTime = d.getTime() - now.getTime();
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        if (diffDays >= 0) {
-          daysLeft = diffDays;
-        }
-      }
-    } catch {
-      daysLeft = undefined;
-    }
-  }
+  const { selectedElectionGroup, daysLeft } = useElection();
 
   return (
     <Layout>

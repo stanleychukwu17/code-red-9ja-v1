@@ -99,27 +99,13 @@ function ReferralsPage() {
   const navigate = useNavigate();
   const user = useUser();
   const { party } = useUserParty();
-  const { selectedElectionGroup } = useElection();
+  const { selectedElectionGroup, daysLeft } = useElection();
   const [_, copy] = useCopyToClipboard();
 
   // Intersection observer hook triggering next page loads on scroll
   const { ref: loadMoreRef, isIntersecting } = useIntersectionObserver({
     threshold: 0.1,
   });
-
-  // Calculate remaining countdown days to election date
-  let daysLeft: number | undefined = undefined;
-  if (selectedElectionGroup?.election_date) {
-    const d = new Date(selectedElectionGroup.election_date);
-    d.setHours(0, 0, 0, 0);
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
-    const diffTime = d.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    if (diffDays >= 0) {
-      daysLeft = diffDays;
-    }
-  }
 
   // Fetch referral totals and current active campaign rewards
   const { data: referralStatsData, isLoading: loadingStats } = useQuery({
@@ -307,9 +293,9 @@ function ReferralsPage() {
                       : "Signed Up";
                 const formattedTime = item.created_at
                   ? new Date(item.created_at).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
                   : "";
 
                 return (

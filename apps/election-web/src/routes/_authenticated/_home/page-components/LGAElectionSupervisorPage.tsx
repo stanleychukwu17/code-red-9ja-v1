@@ -3,18 +3,8 @@ import { useAssignments } from "#/hooks/useAssignments";
 import { useQuery } from "@tanstack/react-query";
 import { getSingleLgaStats } from "#/lib/server/election_stats";
 import { Button } from "@repo/ui/components/button";
-import {
-  ObjectiveCardWrapper,
-  ObjectiveTile,
-} from "@repo/ui/components/cards/objective-tile";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselDot,
-  CarouselDotContent,
-  CarouselItem,
-  type CarouselApi,
-} from "@repo/ui/components/carousel";
+import { ObjectiveCardWrapper, ObjectiveTile } from "@repo/ui/components/cards/objective-tile";
+import { Carousel, CarouselContent, CarouselDot, CarouselDotContent, CarouselItem, type CarouselApi } from "@repo/ui/components/carousel";
 import ReportIcon from "@repo/ui/icons/report-icon";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
@@ -42,7 +32,7 @@ import { Layout } from "@repo/ui/components/custom/AdminLayouts";
 export function LGAElectionSupervisorPage() {
   const navigate = useNavigate();
 
-  const { selectedElectionGroup, selectedElection } = useElection();
+  const { selectedElectionGroup, selectedElection, daysLeft } = useElection();
   const { supervisorAssignment } = useAssignments();
 
   const currentAssignment = supervisorAssignment?.data;
@@ -62,20 +52,6 @@ export function LGAElectionSupervisorPage() {
       setCarouselIndex(carouselApi.selectedScrollSnap());
     });
   }, [carouselApi]);
-
-  // Compute countdown to election day
-  let daysLeft: number | undefined = undefined;
-  if (selectedElectionGroup?.election_date) {
-    const d = new Date(selectedElectionGroup.election_date);
-    d.setHours(0, 0, 0, 0);
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
-    const diffTime = d.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    if (diffDays >= 0) {
-      daysLeft = diffDays;
-    }
-  }
 
   // Query aggregated LGA statistics across all wards and polling units
   const { data: statsRes } = useQuery({
@@ -179,7 +155,7 @@ export function LGAElectionSupervisorPage() {
   }
 
   return (
-    <Layout className="px-0 gap-2">
+    <Layout>
       <HomeHeader daysLeft={daysLeft} />
       <HomeHeader2 title={headerTitle} rightText={headerRightText} />
 

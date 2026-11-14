@@ -1347,7 +1347,7 @@ export function DashboardPage({
   failedAttemptCount: number;
 }) {
   const navigate = useNavigate();
-  const { selectedElectionGroup } = useElection();
+  const { selectedElectionGroup, daysLeft, diffDays } = useElection();
 
   const [activeTab, setActiveTab] = useState<
     "Earnings" | "Contact" | "Uploads"
@@ -1365,21 +1365,6 @@ export function DashboardPage({
       setCarouselIndex(carouselApi.selectedScrollSnap());
     });
   }, [carouselApi]);
-
-  // Compute remaining days until election date
-  let daysLeft: number | undefined = undefined;
-  let diffDays: number | undefined = undefined;
-  if (selectedElectionGroup?.election_date) {
-    const d = new Date(selectedElectionGroup.election_date);
-    d.setHours(0, 0, 0, 0);
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
-    const diffTime = d.getTime() - now.getTime();
-    diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    if (diffDays >= 0) {
-      daysLeft = diffDays;
-    }
-  }
 
   // Display checklist objectives on or leading up to election day
   const showObjectives = diffDays === undefined || diffDays <= 0;
