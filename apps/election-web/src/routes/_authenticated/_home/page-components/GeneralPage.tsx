@@ -52,7 +52,7 @@ export function GeneralPage() {
 
       {/* Action Cards Body */}
       <HomeBody>
-        {/* On election day: permit citizens to crowdsource EC8A result sheets */}
+        {/* On election day: permit citizens to crowd-source EC8A result sheets */}
         {daysLeft === 0 && (
           <UploadResultCard
             onClick={() => navigate({ to: "/upload-result" })}
