@@ -4,30 +4,13 @@ import { getMyPollingUnitAssignment } from "#/lib/server/polling_unit_assignment
 import { useUser } from "./useUser";
 import { useElection } from "./useElection";
 
-/**
- * Represents an active supervisor assignment for an election.
- * Can be scoped to state, LGA (Local Government Area), or ward level.
- */
-export interface SupervisorAssignment {
+// Active supervisor assignment scoped to state, LGA, or ward level
+export type SupervisorAssignment = {
 	type: "state" | "lga" | "ward";
 	data: any;
-}
+};
 
-/**
- * Hook to fetch and resolve election duty assignments for the active user.
- *
- * Exposes:
- * - Polling agent assignments scoped to current user & selected election group
- * - Supervisor assignments across hierarchy levels (State -> LGA -> Ward)
- * - Effective `pollingUnitId` resolved from assignment or profile fallback
- *
- * @returns Object containing:
- * - `pollingUnitAssignment`: Primary polling agent assignment (first entry or null)
- * - `supervisorAssignment`: Active supervisor role details (`{ type, data }` or null)
- * - `rawSupervisorAssignments`: Raw supervisor payload from the server
- * - `pollingUnitId`: Effective polling unit ID for tasks, arrivals, and results
- * - `isLoading`: Combined query loading state
- */
+// Hook to fetch and resolve election duty assignments (polling unit & supervisor)
 export const useAssignments = (electionGroupId?: number | string) => {
 	const user = useUser();
 	const { selectedElectionGroup } = useElection();

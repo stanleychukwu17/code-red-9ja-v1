@@ -8,6 +8,10 @@ import NotificationIcon from "@repo/ui/icons/navbar/notification-icon";
 import NotificationSolidIcon from "@repo/ui/icons/navbar/notification-solid-icon";
 import PaperIcon from "@repo/ui/icons/navbar/paper-icon";
 import PaperSolidIcon from "@repo/ui/icons/navbar/paper-solid-icon";
+import UserIcon from "@repo/ui/icons/navbar/user-icon";
+import UserSolidIcon from "@repo/ui/icons/navbar/user-solid-icon";
+import PartyIcon from "@repo/ui/icons/navbar/party-icon";
+import PartySolidIcon from "@repo/ui/icons/navbar/party-solid-icon";
 
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { updateSiteState } from "@/redux/slice/siteSlice";
@@ -61,6 +65,20 @@ const APP_SIDEBAR_ITEMS: AppSidebarItem[] = [
     icon: <PaperIcon />,
     selectedIcon: <PaperSolidIcon className="text-c-90" />,
     href: APP_URL.applications,
+  },
+  {
+    id: "team",
+    label: "Your Team",
+    icon: <UserIcon />,
+    selectedIcon: <UserSolidIcon className="text-c-90" />,
+    href: APP_URL.team,
+  },
+  {
+    id: "campaign-groups",
+    label: "Campaign Groups",
+    icon: <PartyIcon />,
+    selectedIcon: <PartySolidIcon className="text-c-90" />,
+    href: APP_URL.campaignGroups,
   },
   {
     id: "notifications",

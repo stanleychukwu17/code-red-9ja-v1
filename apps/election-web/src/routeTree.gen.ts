@@ -15,6 +15,7 @@ import { Route as AuthOnboardingRouteImport } from './routes/auth/onboarding'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as AuthForgotPasswordRouteImport } from './routes/auth/forgot-password'
 import { Route as AuthenticatedUploadResultIndexRouteImport } from './routes/_authenticated/upload-result/index'
+import { Route as AuthenticatedTeamIndexRouteImport } from './routes/_authenticated/team/index'
 import { Route as AuthenticatedReferralsIndexRouteImport } from './routes/_authenticated/referrals/index'
 import { Route as AuthenticatedPracticeIndexRouteImport } from './routes/_authenticated/practice/index'
 import { Route as AuthenticatedPartiesIndexRouteImport } from './routes/_authenticated/parties/index'
@@ -23,6 +24,7 @@ import { Route as AuthenticatedGiveUpdateIndexRouteImport } from './routes/_auth
 import { Route as AuthenticatedElectionStartIndexRouteImport } from './routes/_authenticated/election-start/index'
 import { Route as AuthenticatedElectionEndIndexRouteImport } from './routes/_authenticated/election-end/index'
 import { Route as AuthenticatedContactsIndexRouteImport } from './routes/_authenticated/contacts/index'
+import { Route as AuthenticatedCampaignGroupsIndexRouteImport } from './routes/_authenticated/campaign-groups/index'
 import { Route as AuthenticatedArrivalIndexRouteImport } from './routes/_authenticated/arrival/index'
 import { Route as AuthenticatedApplicationsIndexRouteImport } from './routes/_authenticated/applications/index'
 import { Route as AuthenticatedHomeIndexRouteImport } from './routes/_authenticated/_home/index'
@@ -59,6 +61,11 @@ const AuthenticatedUploadResultIndexRoute =
     path: '/upload-result/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedTeamIndexRoute = AuthenticatedTeamIndexRouteImport.update({
+  id: '/team/',
+  path: '/team/',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedReferralsIndexRoute =
   AuthenticatedReferralsIndexRouteImport.update({
     id: '/referrals/',
@@ -107,6 +114,12 @@ const AuthenticatedContactsIndexRoute =
     path: '/contacts/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedCampaignGroupsIndexRoute =
+  AuthenticatedCampaignGroupsIndexRouteImport.update({
+    id: '/campaign-groups/',
+    path: '/campaign-groups/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedArrivalIndexRoute =
   AuthenticatedArrivalIndexRouteImport.update({
     id: '/arrival/',
@@ -147,6 +160,7 @@ export interface FileRoutesByFullPath {
   '/applications/supervisor': typeof AuthenticatedApplicationsSupervisorRoute
   '/applications/': typeof AuthenticatedApplicationsIndexRoute
   '/arrival/': typeof AuthenticatedArrivalIndexRoute
+  '/campaign-groups/': typeof AuthenticatedCampaignGroupsIndexRoute
   '/contacts/': typeof AuthenticatedContactsIndexRoute
   '/election-end/': typeof AuthenticatedElectionEndIndexRoute
   '/election-start/': typeof AuthenticatedElectionStartIndexRoute
@@ -155,6 +169,7 @@ export interface FileRoutesByFullPath {
   '/parties/': typeof AuthenticatedPartiesIndexRoute
   '/practice/': typeof AuthenticatedPracticeIndexRoute
   '/referrals/': typeof AuthenticatedReferralsIndexRoute
+  '/team/': typeof AuthenticatedTeamIndexRoute
   '/upload-result/': typeof AuthenticatedUploadResultIndexRoute
 }
 export interface FileRoutesByTo {
@@ -167,6 +182,7 @@ export interface FileRoutesByTo {
   '/': typeof AuthenticatedHomeIndexRoute
   '/applications': typeof AuthenticatedApplicationsIndexRoute
   '/arrival': typeof AuthenticatedArrivalIndexRoute
+  '/campaign-groups': typeof AuthenticatedCampaignGroupsIndexRoute
   '/contacts': typeof AuthenticatedContactsIndexRoute
   '/election-end': typeof AuthenticatedElectionEndIndexRoute
   '/election-start': typeof AuthenticatedElectionStartIndexRoute
@@ -175,6 +191,7 @@ export interface FileRoutesByTo {
   '/parties': typeof AuthenticatedPartiesIndexRoute
   '/practice': typeof AuthenticatedPracticeIndexRoute
   '/referrals': typeof AuthenticatedReferralsIndexRoute
+  '/team': typeof AuthenticatedTeamIndexRoute
   '/upload-result': typeof AuthenticatedUploadResultIndexRoute
 }
 export interface FileRoutesById {
@@ -189,6 +206,7 @@ export interface FileRoutesById {
   '/_authenticated/_home/': typeof AuthenticatedHomeIndexRoute
   '/_authenticated/applications/': typeof AuthenticatedApplicationsIndexRoute
   '/_authenticated/arrival/': typeof AuthenticatedArrivalIndexRoute
+  '/_authenticated/campaign-groups/': typeof AuthenticatedCampaignGroupsIndexRoute
   '/_authenticated/contacts/': typeof AuthenticatedContactsIndexRoute
   '/_authenticated/election-end/': typeof AuthenticatedElectionEndIndexRoute
   '/_authenticated/election-start/': typeof AuthenticatedElectionStartIndexRoute
@@ -197,6 +215,7 @@ export interface FileRoutesById {
   '/_authenticated/parties/': typeof AuthenticatedPartiesIndexRoute
   '/_authenticated/practice/': typeof AuthenticatedPracticeIndexRoute
   '/_authenticated/referrals/': typeof AuthenticatedReferralsIndexRoute
+  '/_authenticated/team/': typeof AuthenticatedTeamIndexRoute
   '/_authenticated/upload-result/': typeof AuthenticatedUploadResultIndexRoute
 }
 export interface FileRouteTypes {
@@ -211,6 +230,7 @@ export interface FileRouteTypes {
     | '/applications/supervisor'
     | '/applications/'
     | '/arrival/'
+    | '/campaign-groups/'
     | '/contacts/'
     | '/election-end/'
     | '/election-start/'
@@ -219,6 +239,7 @@ export interface FileRouteTypes {
     | '/parties/'
     | '/practice/'
     | '/referrals/'
+    | '/team/'
     | '/upload-result/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -231,6 +252,7 @@ export interface FileRouteTypes {
     | '/'
     | '/applications'
     | '/arrival'
+    | '/campaign-groups'
     | '/contacts'
     | '/election-end'
     | '/election-start'
@@ -239,6 +261,7 @@ export interface FileRouteTypes {
     | '/parties'
     | '/practice'
     | '/referrals'
+    | '/team'
     | '/upload-result'
   id:
     | '__root__'
@@ -252,6 +275,7 @@ export interface FileRouteTypes {
     | '/_authenticated/_home/'
     | '/_authenticated/applications/'
     | '/_authenticated/arrival/'
+    | '/_authenticated/campaign-groups/'
     | '/_authenticated/contacts/'
     | '/_authenticated/election-end/'
     | '/_authenticated/election-start/'
@@ -260,6 +284,7 @@ export interface FileRouteTypes {
     | '/_authenticated/parties/'
     | '/_authenticated/practice/'
     | '/_authenticated/referrals/'
+    | '/_authenticated/team/'
     | '/_authenticated/upload-result/'
   fileRoutesById: FileRoutesById
 }
@@ -313,6 +338,13 @@ declare module '@tanstack/react-router' {
       path: '/upload-result'
       fullPath: '/upload-result/'
       preLoaderRoute: typeof AuthenticatedUploadResultIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/team/': {
+      id: '/_authenticated/team/'
+      path: '/team'
+      fullPath: '/team/'
+      preLoaderRoute: typeof AuthenticatedTeamIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/referrals/': {
@@ -371,6 +403,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedContactsIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/campaign-groups/': {
+      id: '/_authenticated/campaign-groups/'
+      path: '/campaign-groups'
+      fullPath: '/campaign-groups/'
+      preLoaderRoute: typeof AuthenticatedCampaignGroupsIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/arrival/': {
       id: '/_authenticated/arrival/'
       path: '/arrival'
@@ -415,6 +454,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedHomeIndexRoute: typeof AuthenticatedHomeIndexRoute
   AuthenticatedApplicationsIndexRoute: typeof AuthenticatedApplicationsIndexRoute
   AuthenticatedArrivalIndexRoute: typeof AuthenticatedArrivalIndexRoute
+  AuthenticatedCampaignGroupsIndexRoute: typeof AuthenticatedCampaignGroupsIndexRoute
   AuthenticatedContactsIndexRoute: typeof AuthenticatedContactsIndexRoute
   AuthenticatedElectionEndIndexRoute: typeof AuthenticatedElectionEndIndexRoute
   AuthenticatedElectionStartIndexRoute: typeof AuthenticatedElectionStartIndexRoute
@@ -423,6 +463,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedPartiesIndexRoute: typeof AuthenticatedPartiesIndexRoute
   AuthenticatedPracticeIndexRoute: typeof AuthenticatedPracticeIndexRoute
   AuthenticatedReferralsIndexRoute: typeof AuthenticatedReferralsIndexRoute
+  AuthenticatedTeamIndexRoute: typeof AuthenticatedTeamIndexRoute
   AuthenticatedUploadResultIndexRoute: typeof AuthenticatedUploadResultIndexRoute
 }
 
@@ -433,6 +474,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedHomeIndexRoute: AuthenticatedHomeIndexRoute,
   AuthenticatedApplicationsIndexRoute: AuthenticatedApplicationsIndexRoute,
   AuthenticatedArrivalIndexRoute: AuthenticatedArrivalIndexRoute,
+  AuthenticatedCampaignGroupsIndexRoute: AuthenticatedCampaignGroupsIndexRoute,
   AuthenticatedContactsIndexRoute: AuthenticatedContactsIndexRoute,
   AuthenticatedElectionEndIndexRoute: AuthenticatedElectionEndIndexRoute,
   AuthenticatedElectionStartIndexRoute: AuthenticatedElectionStartIndexRoute,
@@ -441,6 +483,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedPartiesIndexRoute: AuthenticatedPartiesIndexRoute,
   AuthenticatedPracticeIndexRoute: AuthenticatedPracticeIndexRoute,
   AuthenticatedReferralsIndexRoute: AuthenticatedReferralsIndexRoute,
+  AuthenticatedTeamIndexRoute: AuthenticatedTeamIndexRoute,
   AuthenticatedUploadResultIndexRoute: AuthenticatedUploadResultIndexRoute,
 }
 
