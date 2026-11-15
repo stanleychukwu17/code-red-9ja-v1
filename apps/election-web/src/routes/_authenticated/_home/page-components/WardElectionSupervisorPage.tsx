@@ -83,6 +83,7 @@ export function WardElectionSupervisorPage() {
       !!selectedElectionGroup?.id &&
       !!currentAssignment?.ward_id &&
       !!currentAssignment?.party_id,
+    staleTime: Infinity,
   });
 
   const partyStats = statsRes?.data?.party_stats || {};

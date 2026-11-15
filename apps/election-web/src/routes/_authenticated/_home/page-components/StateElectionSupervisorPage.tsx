@@ -72,6 +72,7 @@ export function StateElectionSupervisorPage() {
       !!selectedElectionGroup?.id &&
       !!currentAssignment?.state_id &&
       !!currentAssignment?.party_id,
+    staleTime: Infinity
   });
 
   const partyStats = statsRes?.data?.party_stats || {};

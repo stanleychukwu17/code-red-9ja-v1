@@ -63,27 +63,6 @@ export const createUserWallet = createServerFn({ method: "POST" })
     }
   });
 
-export const getUsersList = createServerFn({ method: "GET" })
-  .inputValidator(
-    (data: { role?: string; limit?: number; cursor?: string | number; party_id?: number } | undefined) => data,
-  )
-  .handler(async ({ data }) => {
-    try {
-      const params = new URLSearchParams();
-      if (data?.role) params.append("role", data.role);
-      if (data?.limit) params.append("limit", String(data.limit));
-      if (data?.cursor) params.append("cursor", String(data.cursor));
-      if (data?.party_id) params.append("party_id", String(data.party_id));
-      const qs = params.toString();
-
-      const response = await apiFetch(`${API_URL.users}${qs ? `?${qs}` : ""}`);
-      const resData = await response.json();
-      return resData;
-    } catch (error) {
-      return { success: false, message: "Failed to fetch users from API" };
-    }
-  });
-
 export const updateUser = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {

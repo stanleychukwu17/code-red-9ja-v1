@@ -73,6 +73,7 @@ export function LGAElectionSupervisorPage() {
       !!selectedElectionGroup?.id &&
       !!currentAssignment?.lga_id &&
       !!currentAssignment?.party_id,
+    staleTime: Infinity,
   });
 
   const partyStats = statsRes?.data?.party_stats || {};

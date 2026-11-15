@@ -26,9 +26,6 @@ import { Route as AuthenticatedContactsIndexRouteImport } from './routes/_authen
 import { Route as AuthenticatedArrivalIndexRouteImport } from './routes/_authenticated/arrival/index'
 import { Route as AuthenticatedApplicationsIndexRouteImport } from './routes/_authenticated/applications/index'
 import { Route as AuthenticatedHomeIndexRouteImport } from './routes/_authenticated/_home/index'
-import { Route as AuthenticatedUsersUsersRouteImport } from './routes/_authenticated/users/users'
-import { Route as AuthenticatedUsersPartyMembersRouteImport } from './routes/_authenticated/users/party-members'
-import { Route as AuthenticatedUsersAdminRouteImport } from './routes/_authenticated/users/admin'
 import { Route as AuthenticatedApplicationsSupervisorRouteImport } from './routes/_authenticated/applications/supervisor'
 import { Route as AuthenticatedApplicationsApplyRouteImport } from './routes/_authenticated/applications/apply'
 
@@ -127,22 +124,6 @@ const AuthenticatedHomeIndexRoute = AuthenticatedHomeIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AuthenticatedUsersUsersRoute = AuthenticatedUsersUsersRouteImport.update({
-  id: '/users/users',
-  path: '/users/users',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
-const AuthenticatedUsersPartyMembersRoute =
-  AuthenticatedUsersPartyMembersRouteImport.update({
-    id: '/users/party-members',
-    path: '/users/party-members',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedUsersAdminRoute = AuthenticatedUsersAdminRouteImport.update({
-  id: '/users/admin',
-  path: '/users/admin',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
 const AuthenticatedApplicationsSupervisorRoute =
   AuthenticatedApplicationsSupervisorRouteImport.update({
     id: '/applications/supervisor',
@@ -164,9 +145,6 @@ export interface FileRoutesByFullPath {
   '/auth/signup': typeof AuthSignupRoute
   '/applications/apply': typeof AuthenticatedApplicationsApplyRoute
   '/applications/supervisor': typeof AuthenticatedApplicationsSupervisorRoute
-  '/users/admin': typeof AuthenticatedUsersAdminRoute
-  '/users/party-members': typeof AuthenticatedUsersPartyMembersRoute
-  '/users/users': typeof AuthenticatedUsersUsersRoute
   '/applications/': typeof AuthenticatedApplicationsIndexRoute
   '/arrival/': typeof AuthenticatedArrivalIndexRoute
   '/contacts/': typeof AuthenticatedContactsIndexRoute
@@ -186,9 +164,6 @@ export interface FileRoutesByTo {
   '/auth/signup': typeof AuthSignupRoute
   '/applications/apply': typeof AuthenticatedApplicationsApplyRoute
   '/applications/supervisor': typeof AuthenticatedApplicationsSupervisorRoute
-  '/users/admin': typeof AuthenticatedUsersAdminRoute
-  '/users/party-members': typeof AuthenticatedUsersPartyMembersRoute
-  '/users/users': typeof AuthenticatedUsersUsersRoute
   '/': typeof AuthenticatedHomeIndexRoute
   '/applications': typeof AuthenticatedApplicationsIndexRoute
   '/arrival': typeof AuthenticatedArrivalIndexRoute
@@ -211,9 +186,6 @@ export interface FileRoutesById {
   '/auth/signup': typeof AuthSignupRoute
   '/_authenticated/applications/apply': typeof AuthenticatedApplicationsApplyRoute
   '/_authenticated/applications/supervisor': typeof AuthenticatedApplicationsSupervisorRoute
-  '/_authenticated/users/admin': typeof AuthenticatedUsersAdminRoute
-  '/_authenticated/users/party-members': typeof AuthenticatedUsersPartyMembersRoute
-  '/_authenticated/users/users': typeof AuthenticatedUsersUsersRoute
   '/_authenticated/_home/': typeof AuthenticatedHomeIndexRoute
   '/_authenticated/applications/': typeof AuthenticatedApplicationsIndexRoute
   '/_authenticated/arrival/': typeof AuthenticatedArrivalIndexRoute
@@ -237,9 +209,6 @@ export interface FileRouteTypes {
     | '/auth/signup'
     | '/applications/apply'
     | '/applications/supervisor'
-    | '/users/admin'
-    | '/users/party-members'
-    | '/users/users'
     | '/applications/'
     | '/arrival/'
     | '/contacts/'
@@ -259,9 +228,6 @@ export interface FileRouteTypes {
     | '/auth/signup'
     | '/applications/apply'
     | '/applications/supervisor'
-    | '/users/admin'
-    | '/users/party-members'
-    | '/users/users'
     | '/'
     | '/applications'
     | '/arrival'
@@ -283,9 +249,6 @@ export interface FileRouteTypes {
     | '/auth/signup'
     | '/_authenticated/applications/apply'
     | '/_authenticated/applications/supervisor'
-    | '/_authenticated/users/admin'
-    | '/_authenticated/users/party-members'
-    | '/_authenticated/users/users'
     | '/_authenticated/_home/'
     | '/_authenticated/applications/'
     | '/_authenticated/arrival/'
@@ -429,27 +392,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedHomeIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/users/users': {
-      id: '/_authenticated/users/users'
-      path: '/users/users'
-      fullPath: '/users/users'
-      preLoaderRoute: typeof AuthenticatedUsersUsersRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/users/party-members': {
-      id: '/_authenticated/users/party-members'
-      path: '/users/party-members'
-      fullPath: '/users/party-members'
-      preLoaderRoute: typeof AuthenticatedUsersPartyMembersRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/users/admin': {
-      id: '/_authenticated/users/admin'
-      path: '/users/admin'
-      fullPath: '/users/admin'
-      preLoaderRoute: typeof AuthenticatedUsersAdminRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
     '/_authenticated/applications/supervisor': {
       id: '/_authenticated/applications/supervisor'
       path: '/applications/supervisor'
@@ -470,9 +412,6 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteChildren {
   AuthenticatedApplicationsApplyRoute: typeof AuthenticatedApplicationsApplyRoute
   AuthenticatedApplicationsSupervisorRoute: typeof AuthenticatedApplicationsSupervisorRoute
-  AuthenticatedUsersAdminRoute: typeof AuthenticatedUsersAdminRoute
-  AuthenticatedUsersPartyMembersRoute: typeof AuthenticatedUsersPartyMembersRoute
-  AuthenticatedUsersUsersRoute: typeof AuthenticatedUsersUsersRoute
   AuthenticatedHomeIndexRoute: typeof AuthenticatedHomeIndexRoute
   AuthenticatedApplicationsIndexRoute: typeof AuthenticatedApplicationsIndexRoute
   AuthenticatedArrivalIndexRoute: typeof AuthenticatedArrivalIndexRoute
@@ -491,9 +430,6 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedApplicationsApplyRoute: AuthenticatedApplicationsApplyRoute,
   AuthenticatedApplicationsSupervisorRoute:
     AuthenticatedApplicationsSupervisorRoute,
-  AuthenticatedUsersAdminRoute: AuthenticatedUsersAdminRoute,
-  AuthenticatedUsersPartyMembersRoute: AuthenticatedUsersPartyMembersRoute,
-  AuthenticatedUsersUsersRoute: AuthenticatedUsersUsersRoute,
   AuthenticatedHomeIndexRoute: AuthenticatedHomeIndexRoute,
   AuthenticatedApplicationsIndexRoute: AuthenticatedApplicationsIndexRoute,
   AuthenticatedArrivalIndexRoute: AuthenticatedArrivalIndexRoute,

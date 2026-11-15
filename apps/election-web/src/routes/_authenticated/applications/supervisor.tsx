@@ -80,7 +80,7 @@ function SupervisorPage() {
 
   // Fetch accepted polling agent application to inherit the active election group
   const { data: applications = [] } = useQuery({
-    queryKey: ["applications"],
+    queryKey: QUERY_KEYS.applications,
     queryFn: async () => {
       const res = await getApplications({
         data: { active_election_only: true, status: "accepted" },
@@ -90,6 +90,7 @@ function SupervisorPage() {
       }
       return [];
     },
+    staleTime: Infinity,
   });
 
   const acceptedApp = applications.find(

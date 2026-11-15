@@ -15,6 +15,8 @@ export const APP_URL = {
   },
   home: "/",
   applications: "/applications",
+  team: "/team",
+  campaignGroups: "/campaign-groups",
   referrals: "/referrals",
   notifications: "/notifications",
 };
