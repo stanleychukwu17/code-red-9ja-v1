@@ -1,7 +1,7 @@
 import { useRouterState } from "@tanstack/react-router";
 import { Activity, Home, Sparkles, Users, UserCheck } from "lucide-react";
 import { APP_URL } from "#/lib/config";
-import { ScrollableNavTabs } from "#/components/ScrollableNavTabs";
+import { ScrollableNavTabs } from "@repo/ui/components/custom/ScrollableNavTabs";
 
 export interface ProfileNavTabItem {
   id: string;

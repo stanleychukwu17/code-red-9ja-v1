@@ -1,4 +1,4 @@
-import { ScrollableNavTabs } from "#/components/ScrollableNavTabs";
+import { ScrollableNavTabs } from "@repo/ui/components/custom/ScrollableNavTabs";
 import { PARTY_NAV_TABS } from "./types";
 
 type PartyNavTabsProps = {

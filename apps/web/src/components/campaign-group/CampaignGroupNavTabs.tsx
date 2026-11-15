@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useRouterState } from "@tanstack/react-router";
 import { LayoutDashboard, Users, Sparkles, MessageSquare, AlertTriangle, FileText } from "lucide-react";
-import { ScrollableNavTabs, type ScrollableTabItem } from "#/components/ScrollableNavTabs";
+import { ScrollableNavTabs, type ScrollableTabItem } from "@repo/ui/components/custom/ScrollableNavTabs";
 import { APP_URL } from "#/lib/config";
 import type { CampaignGroupTabId, CampaignGroupNavTabsProps } from "./types";
 

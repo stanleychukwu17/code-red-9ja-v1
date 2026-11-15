@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect, useCallback } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { cn } from "@repo/ui/lib/utils";
+import { cn } from "../../lib/utils";
 
 export type ScrollableTabItem = {
   id?: string;
@@ -22,56 +22,43 @@ export type ScrollableNavTabsProps = {
   scrollAmount?: number;
 };
 
-export function ScrollableNavTabs({ tabs, className, navClassName, ariaLabel = "Navigation tabs", scrollAmount = 240 }: ScrollableNavTabsProps) {
+export function ScrollableNavTabs({
+  tabs,
+  className,
+  navClassName,
+  ariaLabel = "Navigation tabs",
+  scrollAmount = 240,
+}: ScrollableNavTabsProps) {
   const routerState = useRouterState();
-  const currentPath = routerState.location.pathname;
+  const currentPath = routerState?.location?.pathname ?? "";
 
-  // =========================================================================
-  // SCROLL BUTTON & OVERFLOW TRACKING: START
-  // =========================================================================
-  // Reference to the scrollable tab container
   const navRef = useRef<HTMLElement>(null);
-
-  // Track whether left/right scroll arrows should be shown
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
 
-  // Check scroll boundary positions to dynamically toggle arrow buttons
   const checkScroll = useCallback(() => {
     const el = navRef.current;
     if (!el) return;
 
-    // Get the scroll boundaries from the element
     const { scrollLeft, scrollWidth, clientWidth } = el;
-
-    setCanScrollLeft(scrollLeft > 2); // Show left button if we've scrolled forward by at least 2px
-    setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 2); // Show right button if there is still un-viewed content to the right
+    setCanScrollLeft(scrollLeft > 2);
+    setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 2);
   }, []);
 
-  // Listen for scroll & window resize events to keep button visibility in sync
   useEffect(() => {
     const el = navRef.current;
-
-    // Guard clause: exit if the nav container hasn't mounted yet
     if (!el) return;
 
-    // Run an immediate check on mount to set initial button visibility
     checkScroll();
-
-    // Re-check whenever the user scrolls horizontally (passive for better scroll performance)
     el.addEventListener("scroll", checkScroll, { passive: true });
-
-    // Re-check whenever the viewport/window resizes (which changes clientWidth)
     window.addEventListener("resize", checkScroll);
 
-    // Clean up event listeners on unmount or before re-running the effect
     return () => {
       el.removeEventListener("scroll", checkScroll);
       window.removeEventListener("resize", checkScroll);
     };
   }, [checkScroll]);
 
-  // Smoothly step the navigation left or right on arrow button click
   const scroll = (direction: "left" | "right") => {
     const el = navRef.current;
     if (!el) return;
@@ -81,9 +68,6 @@ export function ScrollableNavTabs({ tabs, className, navClassName, ariaLabel = "
       behavior: "smooth",
     });
   };
-  // =========================================================================
-  // SCROLL BUTTON & OVERFLOW TRACKING: END
-  // =========================================================================
 
   return (
     <div className={cn("relative max-w-3xl w-full md:w-fit group", className)}>
