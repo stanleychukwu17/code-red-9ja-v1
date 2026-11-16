@@ -162,6 +162,13 @@ const (
 	//--START-- for blocks
 	RedisUserBlockedPartyIDs = "blocks:user:blocked_party_ids:" // STRING: "blocks:user:blocked_party_ids:<userID>" used to store cached JSON slice of party IDs that have blocked this user.
 	//--END--
+
+	//--START-- for team rosters
+	RedisTeamAgents          = "team:agents:"    // STRING: "team:agents:<electionGroupID>:<partyID>:..." stores cached polling unit or ward agents roster
+	RedisTeamWardSupervisor  = "team:ward_sup:"  // STRING: "team:ward_sup:<electionGroupID>:<partyID>:..." stores cached ward supervisors roster
+	RedisTeamLgaSupervisor   = "team:lga_sup:"   // STRING: "team:lga_sup:<electionGroupID>:<partyID>:..." stores cached LGA supervisors roster
+	RedisTeamStateSupervisor = "team:state_sup:" // STRING: "team:state_sup:<electionGroupID>:<partyID>:..." stores cached state supervisors roster
+	//--END--
 )
 
 // AllRedisPrefixes is a list of all key prefixes and static keys used across the application.
@@ -269,4 +276,8 @@ var AllRedisPrefixes = []string{
 	RedisCampaignGroupSyncLock,
 	RedisCampaignGroupLookup,
 	RedisCampaignGroupStats,
+	RedisTeamAgents,
+	RedisTeamWardSupervisor,
+	RedisTeamLgaSupervisor,
+	RedisTeamStateSupervisor,
 }

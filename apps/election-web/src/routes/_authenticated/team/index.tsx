@@ -45,49 +45,51 @@ export type TeamMember = {
 // Individual team member card
 export function TeamUserCard({ member }: { member: TeamMember }) {
   return (
-    <div className="flex items-center gap-4 py-4">
+    <div className="flex items-center gap-4 py-6">
       <AppAvatar
         src={member.avatar}
         alt={member.name}
         className="size-20 shrink-0"
       />
-      <div className="flex flex-col gap-1 min-w-0">
+      <div className="flex flex-1 flex-col gap-1 min-w-0">
         <h3 className="text-xl font-bold text-foreground leading-tight truncate">
           {member.name}
         </h3>
-        <span className="px-3 py-0.5 rounded-full text-xs font-semibold text-white bg-[#5225a6] w-fit">
+        <span className="px-3 py-0.5 rounded-full text-[10px] font-semibold text-white bg-[#5225a6] w-fit">
           {member.role}
         </span>
         {member.pollingUnit && (
-          <div className="text-xs text-foreground mt-0.5 truncate">
+          <div className="text-[10px] text-foreground mt-0.5 truncate">
             <span className="text-muted-foreground mr-2">Polling unit:</span>
             <span className="font-medium">{member.pollingUnit}</span>
           </div>
         )}
-        {member.puCode && (
-          <div className="text-xs text-foreground truncate">
-            <span className="text-muted-foreground mr-2">PU code:</span>
-            <span className="font-medium">{member.puCode}</span>
-          </div>
-        )}
-        {member.ward && (
-          <div className="text-xs text-foreground mt-0.5 truncate">
-            <span className="text-muted-foreground mr-2">Ward:</span>
-            <span className="font-medium">{member.ward}</span>
-          </div>
-        )}
-        {member.lga && (
-          <div className="text-xs text-foreground truncate">
-            <span className="text-muted-foreground mr-2">LGA:</span>
-            <span className="font-medium">{member.lga}</span>
-          </div>
-        )}
-        {member.state && (
-          <div className="text-xs text-foreground truncate">
-            <span className="text-muted-foreground mr-2">State:</span>
-            <span className="font-medium">{member.state}</span>
-          </div>
-        )}
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-1 p-2.5 rounded-lg bg-sidebar-softer/70 text-[10px]">
+          {member.puCode && (
+            <div className="text-foreground truncate">
+              <span className="text-muted-foreground mr-1.5">PU code:</span>
+              <span className="font-medium">{member.puCode}</span>
+            </div>
+          )}
+          {member.ward && (
+            <div className="text-foreground truncate">
+              <span className="text-muted-foreground mr-1.5">Ward:</span>
+              <span className="font-medium">{member.ward}</span>
+            </div>
+          )}
+          {member.lga && (
+            <div className="text-foreground truncate">
+              <span className="text-muted-foreground mr-1.5">LGA:</span>
+              <span className="font-medium">{member.lga}</span>
+            </div>
+          )}
+          {member.state && (
+            <div className="text-foreground truncate">
+              <span className="text-muted-foreground mr-1.5">State:</span>
+              <span className="font-medium">{member.state}</span>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -178,9 +180,7 @@ export function TeamFilters({
         <label className="text-sm font-semibold text-foreground">Polling unit</label>
         <SelectPollingUnit
           selectedId={filters.pollingUnitId ?? undefined}
-          stateId={filters.stateId ? Number(filters.stateId) : undefined}
-          lgaId={filters.lgaId ? Number(filters.lgaId) : undefined}
-          wardId={filters.wardId ? Number(filters.wardId) : undefined}
+          ward_id={filters.wardId ? Number(filters.wardId) : undefined}
           disabled={isPuDisabled}
           update={(puObj) => onPollingUnitChange?.(puObj)}
           fetchPollingUnits={getPollingUnits}
@@ -398,7 +398,7 @@ function TeamPage() {
           <p className="text-xs mt-1">No assigned members matched this jurisdiction.</p>
         </div>
       ) : (
-        <div className="flex flex-col divide-y divide-border/30 mt-6">
+        <div className="flex flex-col divide-y-2 divide-sidebar-mobile mt-6">
           {members.map((member) => (
             <TeamUserCard key={member.id} member={member} />
           ))}

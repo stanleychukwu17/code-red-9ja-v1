@@ -294,7 +294,6 @@ type NotifyAgentApplicationApprovedParams struct {
 	ApplicationID   int64
 	RecipientUserID int64
 	PartyID         int16
-	NationalChapterID *int32
 	ElectionGroupID int32
 	PollingUnitID   *int32
 	Role            string
@@ -1000,10 +999,10 @@ func (s *service) NotifyAgentApplicationRejected(ctx context.Context, params Not
 	})
 }
 
-// NotifyAgentApplicationApproved dispatches notifications to the applicant and national chapter when an application is approved.
+// NotifyAgentApplicationApproved dispatches a notification to the applicant when their application is approved.
 func (s *service) NotifyAgentApplicationApproved(ctx context.Context, params NotifyAgentApplicationApprovedParams) {
 	partyID := params.PartyID
-	// 1. In-app notification to the approved applicant
+	// In-app notification to the approved applicant
 	s.CreateNotificationAsync(ctx, CreateNotificationInput{
 		RecipientUserID: params.RecipientUserID,
 		PartyID:         &partyID,
@@ -1017,25 +1016,6 @@ func (s *service) NotifyAgentApplicationApproved(ctx context.Context, params Not
 			Set("election_group_id", params.ElectionGroupID).
 			SetIfPresent("polling_unit_id", params.PollingUnitID),
 	})
-
-	// 2. Party notification to the national chapter
-	if params.NationalChapterID != nil && *params.NationalChapterID > 0 {
-		groupKey := constants.GroupKeyPartyAgentApplicationsApproved(params.PartyID, *params.NationalChapterID, params.ElectionGroupID)
-		s.CreatePartyNotificationAsync(ctx, CreatePartyNotificationInput{
-			PartyID:   params.PartyID,
-			ChapterID: params.NationalChapterID,
-			GroupKey:  &groupKey,
-			Category:  constants.PartyNotificationCategoryAgentRecruitment,
-			Type:      constants.NotificationTypeAgentApplicationApproved,
-			Priority:  constants.NotificationPriorityNormal,
-			Metadata: utils.NewMetadata().
-				Set("applicant_user_id", params.RecipientUserID).
-				Set("application_id", params.ApplicationID).
-				Set("role", params.Role).
-				Set("election_group_id", params.ElectionGroupID).
-				SetIfPresent("polling_unit_id", params.PollingUnitID),
-		})
-	}
 }
 
 // NotifyAgentApplicationCancelled dispatches a notification to an applicant when their agent application is cancelled by an admin.

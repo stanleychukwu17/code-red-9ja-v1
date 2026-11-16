@@ -33,9 +33,7 @@ export const SelectPollingUnit = ({
   errorMsg,
   selectedId,
   disabled,
-  wardId,
-  lgaId,
-  stateId,
+  ward_id,
   className,
   contentClassName,
   align = "start",
@@ -44,9 +42,7 @@ export const SelectPollingUnit = ({
   size = "select",
   placeholder = "Select Polling Unit",
 }: SelectProps<PollingUnit, number | string> & {
-  wardId?: number;
-  lgaId?: number;
-  stateId?: number;
+  ward_id?: number;
   placeholder?: string;
   contentClassName?: string;
   fetchPollingUnits: (args: {
@@ -63,19 +59,18 @@ export const SelectPollingUnit = ({
 
   // Fetch polling units scoped to territory hierarchy
   const { data, isLoading } = useQuery<PollingUnitsResponse>({
-    queryKey: ["polling-units", wardId, lgaId, stateId],
+    queryKey: ["polling-units", ward_id],
     queryFn: async () => {
       const res = await fetchPollingUnits({
         data: {
-          ward_id: wardId,
-          lga_id: lgaId,
+          ward_id,
         },
       });
       if (res && res.data) return res;
       throw new Error(res?.message || "Failed to fetch Polling Units");
     },
     staleTime: Infinity,
-    enabled: !disabled && !!wardId,
+    enabled: !disabled && !!ward_id,
     retry: false,
   });
 
@@ -157,7 +152,7 @@ export const SelectPollingUnit = ({
   // Compact size flag
   const isSmall = size === "sm" || size === "xs";
 
-  if (pollingUnits.length === 0 && isLoading && !disabled && (wardId || lgaId || stateId)) {
+  if (pollingUnits.length === 0 && isLoading && !disabled && ward_id) {
     return (
       <LoadingSelect
         open={open}
@@ -166,7 +161,7 @@ export const SelectPollingUnit = ({
         placeholder={placeholder}
         className={cn(
           isSmall &&
-            "h-9 md:h-9 text-xs md:text-[13px] px-3 rounded-lg ring-0 md:ring-0 border border-border bg-sidebar-softer text-c-90 shadow-none",
+          "h-9 md:h-9 text-xs md:text-[13px] px-3 rounded-lg ring-0 md:ring-0 border border-border bg-sidebar-softer text-c-90 shadow-none",
           className
         )}
         align={align}
@@ -189,12 +184,12 @@ export const SelectPollingUnit = ({
           className={cn(
             "justify-between w-full gap-2",
             isSmall &&
-              "h-9 md:h-9 px-3 md:px-3 text-xs md:text-[13px] font-normal rounded-lg md:rounded-lg ring-0 md:ring-0 border border-border bg-sidebar-softer text-c-90 shadow-none hover:shadow-none hover:border-c-60",
+            "h-9 md:h-9 px-3 md:px-3 text-xs md:text-[13px] font-normal rounded-lg md:rounded-lg ring-0 md:ring-0 border border-border bg-sidebar-softer text-c-90 shadow-none hover:shadow-none hover:border-c-60",
             hasError && "border-0.8 border-red",
             className
           )}
           type="button"
-          disabled={disabled || !wardId}
+          disabled={disabled || !ward_id}
         >
           <p className="whitespace-normal text-left text-xs md:text-[13px] line-clamp-1">
             {displayText}

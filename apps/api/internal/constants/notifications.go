@@ -26,39 +26,38 @@ const (
 
 // Party Notification Categories
 const (
-	PartyNotificationCategoryMembership       = "membership"
-	PartyNotificationCategoryAgentRecruitment = "agent_recruitment"
-	PartyNotificationCategoryElectionOps      = "election_ops"
-	PartyNotificationCategoryFinance          = "finance"
-	PartyNotificationCategoryCampaign         = "campaign"
-	PartyNotificationCategorySystem           = "system"
+	PartyNotificationCategoryMembership  = "membership"
+	PartyNotificationCategoryElectionOps = "election_ops"
+	PartyNotificationCategoryFinance     = "finance"
+	PartyNotificationCategoryCampaign    = "campaign"
+	PartyNotificationCategorySystem      = "system"
 )
 
 // Common Notification Types
 const (
-	NotificationTypeNewMemberJoined               = "new_member_joined"
-	NotificationTypeNewFollower                   = "new_follower"
-	NotificationTypePostComment                   = "post_comment"
-	NotificationTypePartyMembershipApproved       = "party_membership_approved"
-	NotificationTypePartyMembershipRejected       = "party_membership_rejected"
-	NotificationTypeAgentApplicationApproved      = "agent_application_approved"
-	NotificationTypeAgentApplicationRejected      = "agent_application_rejected"
-	NotificationTypeAgentApplicationCancelled     = "agent_application_cancelled"
-	NotificationTypeAgentAssignmentRevoked        = "agent_assignment_revoked"
-	NotificationTypeAgentRoleChanged              = "agent_role_changed"
-	NotificationTypeAgentPayoutCredited           = "agent_payout_credited"
-	NotificationTypePUResultFlagged               = "pu_result_flagged"
-	NotificationTypeNewAgentApplication           = "new_agent_application"
-	NotificationTypePartyMemberSuspended          = "party_member_suspended"
-	NotificationTypePartyMemberReinstated         = "party_member_reinstated"
-	NotificationTypePartyUserBlocked              = "party_user_blocked"
-	NotificationTypePartyUserUnblocked            = "party_user_unblocked"
-	NotificationTypePartyOfficialAppointed        = "party_official_appointed"
-	NotificationTypePartyOfficialVacated          = "party_official_vacated"
-	NotificationTypeCandidateNominated            = "candidate_nominated"
-	NotificationTypeCandidateWithdrawn            = "candidate_withdrawn"
-	NotificationTypePartyWalletDeposited          = "party_wallet_deposited"
-	NotificationTypePartySlotsPurchased           = "party_slots_purchased"
+	NotificationTypeNewMemberJoined                    = "new_member_joined"
+	NotificationTypeNewFollower                        = "new_follower"
+	NotificationTypePostComment                        = "post_comment"
+	NotificationTypePartyMembershipApproved            = "party_membership_approved"
+	NotificationTypePartyMembershipRejected            = "party_membership_rejected"
+	NotificationTypeAgentApplicationApproved           = "agent_application_approved"
+	NotificationTypeAgentApplicationRejected           = "agent_application_rejected"
+	NotificationTypeAgentApplicationCancelled          = "agent_application_cancelled"
+	NotificationTypeAgentAssignmentRevoked             = "agent_assignment_revoked"
+	NotificationTypeAgentRoleChanged                   = "agent_role_changed"
+	NotificationTypeAgentPayoutCredited                = "agent_payout_credited"
+	NotificationTypePUResultFlagged                    = "pu_result_flagged"
+	NotificationTypeNewAgentApplication                = "new_agent_application"
+	NotificationTypePartyMemberSuspended               = "party_member_suspended"
+	NotificationTypePartyMemberReinstated              = "party_member_reinstated"
+	NotificationTypePartyUserBlocked                   = "party_user_blocked"
+	NotificationTypePartyUserUnblocked                 = "party_user_unblocked"
+	NotificationTypePartyOfficialAppointed             = "party_official_appointed"
+	NotificationTypePartyOfficialVacated               = "party_official_vacated"
+	NotificationTypeCandidateNominated                 = "candidate_nominated"
+	NotificationTypeCandidateWithdrawn                 = "candidate_withdrawn"
+	NotificationTypePartyWalletDeposited               = "party_wallet_deposited"
+	NotificationTypePartySlotsPurchased                = "party_slots_purchased"
 	NotificationTypePartyAgentsAllowanceDeposited      = "party_agents_allowance_deposited"
 	NotificationTypePartyAgentPaymentAllocationUpdated = "party_agent_payment_allocation_updated"
 )
@@ -77,11 +76,5 @@ func HourlyGroupKey(prefix string) string {
 // GroupKeyPartyNewMembers returns a daily time-windowed rollup group key for new members joining a party/chapter.
 func GroupKeyPartyNewMembers(partyID int16, chapterID int32) string {
 	prefix := fmt.Sprintf("party:%d:chapter:%d:new_members", partyID, chapterID)
-	return DailyGroupKey(prefix)
-}
-
-// GroupKeyPartyAgentApplicationsApproved returns a daily rollup group key for approved agent applications in a chapter.
-func GroupKeyPartyAgentApplicationsApproved(partyID int16, chapterID int32, electionGroupID int32) string {
-	prefix := fmt.Sprintf("party:%d:chapter:%d:eg:%d:agent_applications_approved", partyID, chapterID, electionGroupID)
 	return DailyGroupKey(prefix)
 }

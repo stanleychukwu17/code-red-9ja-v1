@@ -16,7 +16,7 @@ export const Route = createFileRoute("/_authenticated/campaign-groups/")({
 // Fallback view displayed while assignment status is being fetched
 function CampaignGroupsLoadingState() {
   return (
-    <div className="flex flex-col flex-1 pb-24 px-4 max-w-md w-full mx-auto">
+    <div className="flex flex-col flex-1 pb-24 px-4 max-w-md w-full">
       <PageHeader title="Campaign Groups" hideBackButton />
       <div className="flex flex-1 items-center justify-center py-24 text-sm text-c-50">
         Loading assignments...
@@ -28,9 +28,9 @@ function CampaignGroupsLoadingState() {
 // Empty state view displayed when user has no active assignment
 function NoActiveAssignmentState() {
   return (
-    <div className="flex flex-col flex-1 pb-24 px-4 max-w-md w-full mx-auto">
+    <div className="flex flex-col flex-1 pb-24 px-4 max-w-md w-full">
       <PageHeader title="Campaign Groups" hideBackButton />
-      <div className="flex flex-col flex-1 items-center justify-center py-24 text-center">
+      <div className="flex flex-col flex-1 items-center justify-center py-14 text-center">
         <p className="text-base font-medium text-c-80">
           You do not have an active assignment
         </p>
@@ -101,11 +101,11 @@ function CampaignGroupsPage() {
   ];
 
   return (
-    <div className="flex flex-col flex-1 pb-24 px-4 max-w-md w-full mx-auto">
+    <div className="flex flex-col flex-1 pb-24 px-4 max-w-md">
       <PageHeader title="Campaign Groups" hideBackButton />
 
       {/* Campaign groups list */}
-      <div className="flex flex-col divide-y divide-border/60 mt-2">
+      <div className="flex flex-col divide-y divide-border/60">
         {campaignGroups.map((group) => (
           <div
             key={group.id}

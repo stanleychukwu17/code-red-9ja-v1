@@ -238,8 +238,9 @@ func (s *CampaignGroupsService) syncPartyOfficialsToGroup(ctx context.Context, p
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve chapter for campaign group %d: %w", group.ID, err)
 	}
+	// If no party chapter exists for this territory yet, exit cleanly without error
 	if chapterID <= 0 {
-		return nil, fmt.Errorf("party chapter not found for campaign group %d with scope %s", group.ID, group.Scope)
+		return result, nil
 	}
 
 	result.ChapterID = chapterID

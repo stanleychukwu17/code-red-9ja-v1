@@ -3,15 +3,15 @@ package teamservice
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/redis/go-redis/v9"
 
+	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/utils"
 )
 
-const teamCacheTTL = time.Hour
+const teamCacheTTL = db.RedisOneHourTTL
 
 // Team member representation for directory listings
 type TeamMemberItem struct {
@@ -46,7 +46,7 @@ func NewService(q *queries.Queries, rdb *redis.Client) *Service {
 func (s *Service) GetPollingAgents(ctx context.Context, partyID int16, electionGroupID int32, stateID int16, lgaID int32, wardID int32, pollingUnitID int32) ([]TeamMemberItem, error) {
 	if pollingUnitID > 0 {
 		// Check cache
-		cacheKey := fmt.Sprintf("team:agents:%d:%d:pu:%d", electionGroupID, partyID, pollingUnitID)
+		cacheKey := fmt.Sprintf("%s%d:%d:pu:%d", db.RedisTeamAgents, electionGroupID, partyID, pollingUnitID)
 		if cached, ok := utils.GetCachedJSON[[]TeamMemberItem](ctx, s.rdb, cacheKey); ok {
 			return cached, nil
 		}
@@ -89,7 +89,7 @@ func (s *Service) GetPollingAgents(ctx context.Context, partyID int16, electionG
 
 	if wardID > 0 {
 		// Check cache
-		cacheKey := fmt.Sprintf("team:agents:%d:%d:ward:%d", electionGroupID, partyID, wardID)
+		cacheKey := fmt.Sprintf("%s%d:%d:ward:%d", db.RedisTeamAgents, electionGroupID, partyID, wardID)
 		if cached, ok := utils.GetCachedJSON[[]TeamMemberItem](ctx, s.rdb, cacheKey); ok {
 			return cached, nil
 		}
@@ -139,7 +139,7 @@ func (s *Service) GetPollingAgents(ctx context.Context, partyID int16, electionG
 // Query ward election supervisors with territory boundaries
 func (s *Service) GetWardSupervisors(ctx context.Context, partyID int16, electionGroupID int32, stateID int16, lgaID int32, wardID int32) ([]TeamMemberItem, error) {
 	if wardID > 0 {
-		cacheKey := fmt.Sprintf("team:ward_sup:%d:%d:ward:%d", electionGroupID, partyID, wardID)
+		cacheKey := fmt.Sprintf("%s%d:%d:ward:%d", db.RedisTeamWardSupervisor, electionGroupID, partyID, wardID)
 		if cached, ok := utils.GetCachedJSON[[]TeamMemberItem](ctx, s.rdb, cacheKey); ok {
 			return cached, nil
 		}
@@ -178,7 +178,7 @@ func (s *Service) GetWardSupervisors(ctx context.Context, partyID int16, electio
 	}
 
 	if lgaID > 0 {
-		cacheKey := fmt.Sprintf("team:ward_sup:%d:%d:lga:%d", electionGroupID, partyID, lgaID)
+		cacheKey := fmt.Sprintf("%s%d:%d:lga:%d", db.RedisTeamWardSupervisor, electionGroupID, partyID, lgaID)
 		if cached, ok := utils.GetCachedJSON[[]TeamMemberItem](ctx, s.rdb, cacheKey); ok {
 			return cached, nil
 		}
@@ -217,7 +217,7 @@ func (s *Service) GetWardSupervisors(ctx context.Context, partyID int16, electio
 		return items, nil
 	}
 
-	cacheKey := fmt.Sprintf("team:ward_sup:%d:%d:state:%d", electionGroupID, partyID, stateID)
+	cacheKey := fmt.Sprintf("%s%d:%d:state:%d", db.RedisTeamWardSupervisor, electionGroupID, partyID, stateID)
 	if cached, ok := utils.GetCachedJSON[[]TeamMemberItem](ctx, s.rdb, cacheKey); ok {
 		return cached, nil
 	}
@@ -256,7 +256,7 @@ func (s *Service) GetWardSupervisors(ctx context.Context, partyID int16, electio
 // Query LGA election supervisors with territory boundaries
 func (s *Service) GetLgaSupervisors(ctx context.Context, partyID int16, electionGroupID int32, stateID int16, lgaID int32) ([]TeamMemberItem, error) {
 	if lgaID > 0 {
-		cacheKey := fmt.Sprintf("team:lga_sup:%d:%d:lga:%d", electionGroupID, partyID, lgaID)
+		cacheKey := fmt.Sprintf("%s%d:%d:lga:%d", db.RedisTeamLgaSupervisor, electionGroupID, partyID, lgaID)
 		if cached, ok := utils.GetCachedJSON[[]TeamMemberItem](ctx, s.rdb, cacheKey); ok {
 			return cached, nil
 		}
@@ -269,6 +269,7 @@ func (s *Service) GetLgaSupervisors(ctx context.Context, partyID int16, election
 		if err != nil {
 			return nil, err
 		}
+
 		items := make([]TeamMemberItem, 0, len(rows))
 		for _, r := range rows {
 			items = append(items, TeamMemberItem{
@@ -292,7 +293,7 @@ func (s *Service) GetLgaSupervisors(ctx context.Context, partyID int16, election
 		return items, nil
 	}
 
-	cacheKey := fmt.Sprintf("team:lga_sup:%d:%d:state:%d", electionGroupID, partyID, stateID)
+	cacheKey := fmt.Sprintf("%s%d:%d:state:%d", db.RedisTeamLgaSupervisor, electionGroupID, partyID, stateID)
 	if cached, ok := utils.GetCachedJSON[[]TeamMemberItem](ctx, s.rdb, cacheKey); ok {
 		return cached, nil
 	}
@@ -305,6 +306,7 @@ func (s *Service) GetLgaSupervisors(ctx context.Context, partyID int16, election
 	if err != nil {
 		return nil, err
 	}
+
 	items := make([]TeamMemberItem, 0, len(rows))
 	for _, r := range rows {
 		items = append(items, TeamMemberItem{
@@ -324,13 +326,14 @@ func (s *Service) GetLgaSupervisors(ctx context.Context, partyID int16, election
 			PollingUnitID:   r.PollingUnitID,
 		})
 	}
+
 	_ = utils.SetCachedJSON(ctx, s.rdb, cacheKey, items, teamCacheTTL)
 	return items, nil
 }
 
 // Query state election supervisors with territory boundaries
 func (s *Service) GetStateSupervisors(ctx context.Context, partyID int16, electionGroupID int32, stateID int16) ([]TeamMemberItem, error) {
-	cacheKey := fmt.Sprintf("team:state_sup:%d:%d:state:%d", electionGroupID, partyID, stateID)
+	cacheKey := fmt.Sprintf("%s%d:%d:state:%d", db.RedisTeamStateSupervisor, electionGroupID, partyID, stateID)
 	if cached, ok := utils.GetCachedJSON[[]TeamMemberItem](ctx, s.rdb, cacheKey); ok {
 		return cached, nil
 	}

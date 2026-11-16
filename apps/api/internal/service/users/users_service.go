@@ -1075,7 +1075,6 @@ func (s *UsersService) CheckNIN(ctx context.Context, nin string) bool {
 // GetReferralCodeInfo retrieves referral code details from Redis or DB.
 func (s *UsersService) GetReferralCodeInfo(ctx context.Context, code string) (*CachedReferralCodeInfo, error) {
 	cacheKey := db.RedisReferralCode + code
-	var info CachedReferralCodeInfo
 
 	// Check Redis cache first
 	if info, ok := utils.GetCachedJSON[CachedReferralCodeInfo](ctx, s.rdb, cacheKey); ok && info.ID > 0 {

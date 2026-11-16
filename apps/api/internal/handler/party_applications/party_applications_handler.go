@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"free9ja/api/internal/constants"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	apimiddleware "free9ja/api/internal/middleware"
@@ -694,23 +693,17 @@ func (h *Handler) ApproveApplication(w http.ResponseWriter, r *http.Request) {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to approve application: "+errStr)
 		return
 	}
-	// Resolve party national chapter ID (best-effort)
-	var natChapterID *int32
-	if chapID, chErr := h.partiesService.GetOrCreateNationalChapter(r.Context(), app.PartyID, constants.NigeriaCountryID); chErr == nil && chapID > 0 {
-		natChapterID = &chapID
-	}
 
 	puIDPtr := utils.PtrFromPgInt4(updatedApp.PollingUnitID)
 
-	// Asynchronously send notifications to applicant and party national chapter
+	// Asynchronously send notification to applicant
 	h.notificationsService.NotifyAgentApplicationApproved(r.Context(), notifications.NotifyAgentApplicationApprovedParams{
-		ApplicationID:     app.ID,
-		RecipientUserID:   app.UserID,
-		PartyID:           app.PartyID,
-		NationalChapterID: natChapterID,
-		ElectionGroupID:   app.ElectionGroupID,
-		PollingUnitID:     puIDPtr,
-		Role:              roleType,
+		ApplicationID:   app.ID,
+		RecipientUserID: app.UserID,
+		PartyID:         app.PartyID,
+		ElectionGroupID: app.ElectionGroupID,
+		PollingUnitID:   puIDPtr,
+		Role:            roleType,
 	})
 
 	// Asynchronously record the audit log for the action
@@ -834,23 +827,16 @@ func (h *Handler) BatchApproveApplications(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Resolve party national chapter ID (best-effort)
-	var natChapterID *int32
-	if chapID, chErr := h.partiesService.GetOrCreateNationalChapter(r.Context(), req.PartyID, constants.NigeriaCountryID); chErr == nil && chapID > 0 {
-		natChapterID = &chapID
-	}
-
 	// Asynchronously notify approved applicants and enqueue campaign group enrollment
 	for _, agent := range res.Approved {
 		puID := agent.PollingUnitID
 		h.notificationsService.NotifyAgentApplicationApproved(r.Context(), notifications.NotifyAgentApplicationApprovedParams{
-			ApplicationID:     agent.ApplicationID,
-			RecipientUserID:   agent.UserID,
-			PartyID:           req.PartyID,
-			NationalChapterID: natChapterID,
-			ElectionGroupID:   req.ElectionGroupID,
-			PollingUnitID:     &puID,
-			Role:              agent.Role,
+			ApplicationID:   agent.ApplicationID,
+			RecipientUserID: agent.UserID,
+			PartyID:         req.PartyID,
+			ElectionGroupID: req.ElectionGroupID,
+			PollingUnitID:   &puID,
+			Role:            agent.Role,
 		})
 
 		if distErr := h.distributor.DistributeTaskEnrollAgentInCampaignGroup(r.Context(), &worker.EnrollAgentInCampaignGroupPayload{
