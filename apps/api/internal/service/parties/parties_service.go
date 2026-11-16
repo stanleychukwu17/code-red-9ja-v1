@@ -42,8 +42,7 @@ type PartiesService struct {
 }
 
 type campaignGroupsService interface {
-	RemoveOfficialFromChapterCampaignGroup(ctx context.Context, partyID int16, chapterID int32, userID int64) error
-	RemovePartyOfficialFromAllCampaignGroups(ctx context.Context, partyID int16, userID int64) error
+	RemoveUserFromCampaignGroups(ctx context.Context, partyID int16, userID int64) error
 }
 
 type FollowsService interface {
@@ -1835,9 +1834,9 @@ func (s *PartiesService) LeaveAllPartyChapters(ctx context.Context, partyID int1
 		return fmt.Errorf("failed to clear user party_id: %w", err)
 	}
 
-	// Remove user from all party campaign groups where role was party_official
+	// Remove user from all party campaign groups
 	if s.campaignGroupsService != nil {
-		if err := s.campaignGroupsService.RemovePartyOfficialFromAllCampaignGroups(ctx, partyID, userID); err != nil {
+		if err := s.campaignGroupsService.RemoveUserFromCampaignGroups(ctx, partyID, userID); err != nil {
 			slog.Warn("failed to remove leaving official from campaign groups", "userID", userID, "partyID", partyID, "error", err)
 		}
 	}
@@ -2627,13 +2626,7 @@ func (s *PartiesService) VacatePositionAssignment(ctx context.Context, id int64,
 			)
 		`, assignment.PartyID, assignment.ChapterID, assignment.UserID).Scan(&hasOtherInChapter)
 
-		if !hasOtherInChapter {
-			if err := s.campaignGroupsService.RemoveOfficialFromChapterCampaignGroup(ctx, assignment.PartyID, assignment.ChapterID, assignment.UserID); err != nil {
-				slog.Warn("failed to remove vacated official from chapter campaign group", "userID", assignment.UserID, "chapterID", assignment.ChapterID, "error", err)
-			}
-		}
-
-		// If user has zero active positions left in the party, clear all remaining official seats
+		// If user has zero active positions left in the party, clear all campaign groups
 		var hasAnyInParty bool
 		_ = s.pool.QueryRow(ctx, `
 			SELECT EXISTS (
@@ -2643,7 +2636,7 @@ func (s *PartiesService) VacatePositionAssignment(ctx context.Context, id int64,
 		`, assignment.PartyID, assignment.UserID).Scan(&hasAnyInParty)
 
 		if !hasAnyInParty {
-			if err := s.campaignGroupsService.RemovePartyOfficialFromAllCampaignGroups(ctx, assignment.PartyID, assignment.UserID); err != nil {
+			if err := s.campaignGroupsService.RemoveUserFromCampaignGroups(ctx, assignment.PartyID, assignment.UserID); err != nil {
 				slog.Warn("failed to remove official from all campaign groups", "userID", assignment.UserID, "partyID", assignment.PartyID, "error", err)
 			}
 		}
@@ -2916,7 +2909,7 @@ func (s *PartiesService) SuspendPartyMember(ctx context.Context, input SuspendPa
 
 	// Remove suspended official from all campaign groups for this party
 	if s.campaignGroupsService != nil {
-		if err := s.campaignGroupsService.RemovePartyOfficialFromAllCampaignGroups(ctx, input.PartyID, input.UserID); err != nil {
+		if err := s.campaignGroupsService.RemoveUserFromCampaignGroups(ctx, input.PartyID, input.UserID); err != nil {
 			slog.Warn("failed to remove suspended official from campaign groups", "userID", input.UserID, "partyID", input.PartyID, "error", err)
 		}
 	}
@@ -3171,7 +3164,7 @@ func (s *PartiesService) BlockUserFromThisParty(ctx context.Context, input Block
 
 	// Remove blocked user from all campaign groups for this party
 	if s.campaignGroupsService != nil {
-		if err := s.campaignGroupsService.RemovePartyOfficialFromAllCampaignGroups(ctx, input.PartyID, input.BlockedUserID); err != nil {
+		if err := s.campaignGroupsService.RemoveUserFromCampaignGroups(ctx, input.PartyID, input.BlockedUserID); err != nil {
 			slog.Warn("failed to remove blocked user from campaign groups", "userID", input.BlockedUserID, "partyID", input.PartyID, "error", err)
 		}
 	}

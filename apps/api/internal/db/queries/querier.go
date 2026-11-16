@@ -290,7 +290,7 @@ type Querier interface {
 	GetUserAssignment(ctx context.Context, arg GetUserAssignmentParams) (GetUserAssignmentRow, error)
 	GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (GetUserByFakeIDRow, error)
 	GetUserByID(ctx context.Context, id int64) (GetUserByIDRow, error)
-	GetUserCampaignGroupMembership(ctx context.Context, userID int64) (GetUserCampaignGroupMembershipRow, error)
+	GetUserCampaignGroupMembership(ctx context.Context, arg GetUserCampaignGroupMembershipParams) (GetUserCampaignGroupMembershipRow, error)
 	GetUserFakeIDByID(ctx context.Context, id int64) (pgtype.Int8, error)
 	GetUserFollowersCount(ctx context.Context, followingID int64) (int64, error)
 	GetUserFollowingCount(ctx context.Context, followerID int64) (int64, error)
@@ -440,12 +440,9 @@ type Querier interface {
 	RecalculateStateConstituencyMetrics(ctx context.Context) error
 	RecalculateStateMetrics(ctx context.Context) error
 	RecalculateWardMetrics(ctx context.Context) error
-	RemoveAgentCampaignGroupMembers(ctx context.Context, arg RemoveAgentCampaignGroupMembersParams) ([]int64, error)
-	RemoveCampaignGroupMember(ctx context.Context, arg RemoveCampaignGroupMemberParams) error
-	RemoveCampaignGroupMembersByElectionGroup(ctx context.Context, arg RemoveCampaignGroupMembersByElectionGroupParams) ([]int64, error)
-	RemoveCampaignGroupMembersByElectionGroupExcept(ctx context.Context, arg RemoveCampaignGroupMembersByElectionGroupExceptParams) ([]int64, error)
 	RemovePageVerification(ctx context.Context, arg RemovePageVerificationParams) error
 	RemovePageVerificationByType(ctx context.Context, arg RemovePageVerificationByTypeParams) error
+	RemoveUserFromCampaignGroups(ctx context.Context, arg RemoveUserFromCampaignGroupsParams) ([]int64, error)
 	RemoveUserRole(ctx context.Context, arg RemoveUserRoleParams) error
 	RequestAgentEarningsPayout(ctx context.Context, arg RequestAgentEarningsPayoutParams) (AgentEarning, error)
 	RequestAgentEarningsPayoutByID(ctx context.Context, id int64) (AgentEarning, error)

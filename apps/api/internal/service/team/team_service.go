@@ -19,6 +19,7 @@ type TeamMemberItem struct {
 	UserID          int64  `json:"user_id"`
 	UserName        string `json:"user_name"`
 	AvatarUrl       string `json:"avatar_url"`
+	Phone           string `json:"phone"`
 	RoleType        string `json:"role_type"`
 	StateName       string `json:"state_name"`
 	LgaName         string `json:"lga_name"`
@@ -69,6 +70,7 @@ func (s *Service) GetPollingAgents(ctx context.Context, partyID int16, electionG
 				UserID:          r.UserID,
 				UserName:        r.UserName,
 				AvatarUrl:       r.AvatarUrl,
+				Phone:           r.Phone,
 				RoleType:        r.RoleType.String,
 				StateName:       r.StateName,
 				LgaName:         r.LgaName,
@@ -114,6 +116,7 @@ func (s *Service) GetPollingAgents(ctx context.Context, partyID int16, electionG
 				UserID:          r.UserID,
 				UserName:        r.UserName,
 				AvatarUrl:       r.AvatarUrl,
+				Phone:           r.Phone,
 				RoleType:        r.RoleType.String,
 				StateName:       r.StateName,
 				LgaName:         r.LgaName,
@@ -160,6 +163,7 @@ func (s *Service) GetWardSupervisors(ctx context.Context, partyID int16, electio
 				UserID:          r.UserID,
 				UserName:        r.UserName,
 				AvatarUrl:       r.AvatarUrl,
+				Phone:           r.Phone,
 				RoleType:        r.RoleType.String,
 				StateName:       r.StateName,
 				LgaName:         r.LgaName,
@@ -200,6 +204,7 @@ func (s *Service) GetWardSupervisors(ctx context.Context, partyID int16, electio
 				UserID:          r.UserID,
 				UserName:        r.UserName,
 				AvatarUrl:       r.AvatarUrl,
+				Phone:           r.Phone,
 				RoleType:        r.RoleType.String,
 				StateName:       r.StateName,
 				LgaName:         r.LgaName,
@@ -237,6 +242,7 @@ func (s *Service) GetWardSupervisors(ctx context.Context, partyID int16, electio
 			UserID:          r.UserID,
 			UserName:        r.UserName,
 			AvatarUrl:       r.AvatarUrl,
+			Phone:           r.Phone,
 			RoleType:        r.RoleType.String,
 			StateName:       r.StateName,
 			LgaName:         r.LgaName,
@@ -277,6 +283,7 @@ func (s *Service) GetLgaSupervisors(ctx context.Context, partyID int16, election
 				UserID:          r.UserID,
 				UserName:        r.UserName,
 				AvatarUrl:       r.AvatarUrl,
+				Phone:           r.Phone,
 				RoleType:        r.RoleType.String,
 				StateName:       r.StateName,
 				LgaName:         r.LgaName,
@@ -314,6 +321,7 @@ func (s *Service) GetLgaSupervisors(ctx context.Context, partyID int16, election
 			UserID:          r.UserID,
 			UserName:        r.UserName,
 			AvatarUrl:       r.AvatarUrl,
+			Phone:           r.Phone,
 			RoleType:        r.RoleType.String,
 			StateName:       r.StateName,
 			LgaName:         r.LgaName,
@@ -354,6 +362,7 @@ func (s *Service) GetStateSupervisors(ctx context.Context, partyID int16, electi
 			UserID:          r.UserID,
 			UserName:        r.UserName,
 			AvatarUrl:       r.AvatarUrl,
+			Phone:           r.Phone,
 			RoleType:        r.RoleType.String,
 			StateName:       r.StateName,
 			LgaName:         r.LgaName,

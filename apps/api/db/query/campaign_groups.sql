@@ -74,28 +74,9 @@ DO UPDATE SET
   election_group_id = COALESCE(EXCLUDED.election_group_id, campaign_group_members.election_group_id)
 RETURNING *;
 
--- name: RemoveCampaignGroupMember :exec
+-- name: RemoveUserFromCampaignGroups :many
 DELETE FROM campaign_group_members
-WHERE group_id = $1 AND user_id = $2;
-
--- name: RemoveCampaignGroupMembersByElectionGroup :many
-DELETE FROM campaign_group_members
-WHERE party_id = $1 AND election_group_id = $2 AND user_id = $3
-RETURNING group_id;
-
--- name: RemoveAgentCampaignGroupMembers :many
-DELETE FROM campaign_group_members
-WHERE party_id = $1 
-  AND user_id = $2
-  AND role != 'candidate'
-RETURNING group_id;
-
--- name: RemoveCampaignGroupMembersByElectionGroupExcept :many
-DELETE FROM campaign_group_members
-WHERE party_id = $1 
-  AND user_id = $2 
-  AND group_id != $3
-  AND role != 'candidate'
+WHERE party_id = $1 AND user_id = $2
 RETURNING group_id;
 
 -- name: MarkCampaignGroupOfficialsAdded :exec
@@ -201,6 +182,5 @@ JOIN campaign_groups cg ON cg.id = m.group_id
 LEFT JOIN c_states s ON s.id = cg.state_id
 LEFT JOIN lgas l ON l.id = cg.lga_id
 LEFT JOIN wards w ON w.id = cg.ward_id
-WHERE m.user_id = $1
-ORDER BY m.joined_at DESC
+WHERE m.party_id = $1 AND m.user_id = $2
 LIMIT 1;

@@ -25,7 +25,7 @@ type CampaignGroupsService interface {
 	SyncPartyOfficialsToGroup(ctx context.Context, groupID int64) (*campaigngroupsservice.SyncOfficialsResult, error)
 	FindCampaignGroupID(ctx context.Context, input campaigngroupsservice.FindCampaignGroupIDInput) (int64, error)
 	GetCampaignGroupStats(ctx context.Context, group queries.GetCampaignGroupByIDRow) (*campaigngroupsservice.CampaignGroupStats, error)
-	GetUserCampaignGroups(ctx context.Context, userID int64) (*campaigngroupsservice.GetUserCampaignGroupsResponse, error)
+	GetUserCampaignGroups(ctx context.Context, userID int64, partyID int16) (*campaigngroupsservice.GetUserCampaignGroupsResponse, error)
 }
 
 type Handler struct {
@@ -209,7 +209,19 @@ func (h *Handler) GetMyCampaignGroups(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err := h.service.GetUserCampaignGroups(r.Context(), claims.UserID)
+	partyIDStr := r.URL.Query().Get("party_id")
+	if partyIDStr == "" {
+		h.utils.RespondError(w, http.StatusBadRequest, "party_id query parameter is required")
+		return
+	}
+
+	pid, err := strconv.ParseInt(partyIDStr, 10, 16)
+	if err != nil || pid <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "invalid party_id query parameter")
+		return
+	}
+
+	resp, err := h.service.GetUserCampaignGroups(r.Context(), claims.UserID, int16(pid))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to fetch user campaign groups: %v", err))
 		return

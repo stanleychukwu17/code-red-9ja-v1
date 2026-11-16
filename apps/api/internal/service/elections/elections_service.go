@@ -57,7 +57,7 @@ type pageVerificationsService interface {
 
 type campaignGroupsService interface {
 	EnsureElectionCandidateInGroup(ctx context.Context, partyID int16, election queries.Election, candidateID int64) (*queries.CampaignGroup, error)
-	RemoveCandidateFromElectionGroup(ctx context.Context, partyID int16, electionGroupID int32, candidateID int64) error
+	RemoveUserFromCampaignGroups(ctx context.Context, partyID int16, userID int64) error
 }
 
 type ElectionsService struct {
@@ -1439,8 +1439,8 @@ func (s *ElectionsService) FieldPartyCandidate(ctx context.Context, election que
 			slog.Warn("failed to revoke politician verification for candidate", "userID", c.userID, "error", err)
 		}
 
-		// Remove superseded candidate from all campaign groups for this election cycle
-		if err := s.campaignGroupsService.RemoveCandidateFromElectionGroup(ctx, partyID, election.ElectionGroupID, c.userID); err != nil {
+		// Remove superseded candidate from all campaign groups for this party
+		if err := s.campaignGroupsService.RemoveUserFromCampaignGroups(ctx, partyID, c.userID); err != nil {
 			slog.Warn("failed to remove candidate from campaign group", "userID", c.userID, "error", err)
 		}
 
@@ -1529,7 +1529,7 @@ func (s *ElectionsService) UnfieldPartyCandidate(ctx context.Context, election q
 		}
 
 		// Remove unfielded candidate from all campaign groups for this election cycle
-		if err := s.campaignGroupsService.RemoveCandidateFromElectionGroup(ctx, partyID, election.ElectionGroupID, c.userID); err != nil {
+		if err := s.campaignGroupsService.RemoveUserFromCampaignGroups(ctx, partyID, c.userID); err != nil {
 			slog.Warn("failed to remove candidate from campaign group", "userID", c.userID, "error", err)
 		}
 

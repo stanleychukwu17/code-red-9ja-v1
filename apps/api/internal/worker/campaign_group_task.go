@@ -22,7 +22,7 @@ const (
 // CampaignGroupsService defines the interface needed by the worker for campaign group operations.
 type CampaignGroupsService interface {
 	EnsureAgentCampaignInGroup(ctx context.Context, input campaigngroupsservice.EnsureAgentCampaignInGroupInput) (*queries.CampaignGroup, error)
-	RemoveAgentFromPartyCampaignGroups(ctx context.Context, partyID int16, userID int64) error
+	RemoveUserFromCampaignGroups(ctx context.Context, partyID int16, userID int64) error
 }
 
 // EnrollAgentInCampaignGroupPayload contains the parameters to enroll an approved agent or supervisor.
@@ -90,7 +90,7 @@ func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskRemoveAgentFromCampaign
 	}
 
 	// Remove revoked agent from all campaign groups for this party
-	if err := redisTaskProcessor.campaignGroupsService.RemoveAgentFromPartyCampaignGroups(ctx, payload.PartyID, payload.UserID); err != nil {
+	if err := redisTaskProcessor.campaignGroupsService.RemoveUserFromCampaignGroups(ctx, payload.PartyID, payload.UserID); err != nil {
 		slog.Error("failed to remove agent from campaign groups", "user_id", payload.UserID, "party_id", payload.PartyID, "error", err)
 		return fmt.Errorf("failed to remove agent from campaign groups: %w", err)
 	}

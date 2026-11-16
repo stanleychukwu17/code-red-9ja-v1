@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Users, UserCheck, ShieldCheck, UserCog } from "lucide-react";
+import { Users, UserCheck, ShieldCheck, UserCog, Phone } from "lucide-react";
 import { ScrollableNavTabs, type ScrollableTabItem } from "@repo/ui/components/custom/ScrollableNavTabs";
+import { TeamRoleBadge, type TeamRoleType } from "@repo/ui/components/custom/team-role-badge";
 import { AppAvatar } from "@repo/ui/components/avatar";
 import { SelectState, type State } from "@repo/ui/components/selects/state-select";
 import { SelectLga, type Lga } from "@repo/ui/components/selects/lga-select";
@@ -33,8 +34,9 @@ const TEAM_TABS = [
 export type TeamMember = {
   id: string | number;
   name: string;
-  role: string;
+  role: TeamRoleType;
   avatar?: string;
+  phone?: string;
   pollingUnit?: string;
   puCode?: string;
   ward?: string;
@@ -52,14 +54,24 @@ export function TeamUserCard({ member }: { member: TeamMember }) {
         className="size-20 shrink-0"
       />
       <div className="flex flex-1 flex-col gap-1 min-w-0">
-        <h3 className="text-xl font-bold text-foreground leading-tight truncate">
-          {member.name}
-        </h3>
-        <span className="px-3 py-0.5 rounded-full text-[10px] font-semibold text-white bg-[#5225a6] w-fit">
-          {member.role}
-        </span>
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-xl font-bold text-foreground leading-tight truncate">
+            {member.name}
+          </h3>
+          {member.phone && (
+            <a
+              href={`tel:${member.phone}`}
+              className="p-2.5 rounded-full bg-sidebar-softer/50 text-muted-foreground hover:text-foreground shrink-0 transition-colors"
+              title={`Call ${member.name}`}
+              aria-label={`Call ${member.name}`}
+            >
+              <Phone className="size-4" />
+            </a>
+          )}
+        </div>
+        <TeamRoleBadge role={member.role} />
         {member.pollingUnit && (
-          <div className="text-[10px] text-foreground mt-0.5 truncate">
+          <div className="text-[10px] text-foreground mt-1 truncate">
             <span className="text-muted-foreground mr-2">Polling unit:</span>
             <span className="font-medium">{member.pollingUnit}</span>
           </div>
@@ -286,19 +298,13 @@ function TeamPage() {
     staleTime: Infinity,
   });
 
-  const ROLE_LABELS: Record<string, string> = {
-    polling_agent: "pu agent",
-    ward_election_supervisor: "ward supervisor",
-    lga_election_supervisor: "lga supervisor",
-    state_election_supervisor: "state supervisor",
-  };
-
   // Map server response to TeamMember items
   const members: TeamMember[] = (teamResponse?.items || []).map((item: any) => ({
     id: item.id,
     name: item.user_name,
-    role: ROLE_LABELS[item.role_type] ?? item.role_type,
+    role: item.role_type,
     avatar: item.avatar_url || "",
+    phone: item.phone || "",
     pollingUnit: item.polling_unit_name || "",
     puCode: item.polling_unit_code || "",
     ward: item.ward_name || "",

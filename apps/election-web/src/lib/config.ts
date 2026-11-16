@@ -1,8 +1,16 @@
 // lib/config.ts
+export const WEB_DNS = import.meta.env.VITE_WEB_URL;
 export const APP_NAME = import.meta.env.VITE_APP_NAME;
 export const FRONTEND_APP = "election-web";
 const API_BASE = import.meta.env.VITE_API_URL;
 export const IP_SERVICE_URL = import.meta.env.VITE_IP_SERVICE_URL;
+
+// Web app route helpers
+const web = `${WEB_DNS}`;
+export const WEB_URL = {
+  campaignGroup: (partyId: number | string, groupId: number | string) =>
+    `${web}/group/${partyId}/${groupId}`,
+};
 
 export const APP_URL = {
   auth: {

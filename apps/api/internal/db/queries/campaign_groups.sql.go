@@ -423,10 +423,14 @@ JOIN campaign_groups cg ON cg.id = m.group_id
 LEFT JOIN c_states s ON s.id = cg.state_id
 LEFT JOIN lgas l ON l.id = cg.lga_id
 LEFT JOIN wards w ON w.id = cg.ward_id
-WHERE m.user_id = $1
-ORDER BY m.joined_at DESC
+WHERE m.party_id = $1 AND m.user_id = $2
 LIMIT 1
 `
+
+type GetUserCampaignGroupMembershipParams struct {
+	PartyID int16 `json:"party_id"`
+	UserID  int64 `json:"user_id"`
+}
 
 type GetUserCampaignGroupMembershipRow struct {
 	Role      string      `json:"role"`
@@ -440,8 +444,8 @@ type GetUserCampaignGroupMembershipRow struct {
 	WardName  pgtype.Text `json:"ward_name"`
 }
 
-func (q *Queries) GetUserCampaignGroupMembership(ctx context.Context, userID int64) (GetUserCampaignGroupMembershipRow, error) {
-	row := q.db.QueryRow(ctx, getUserCampaignGroupMembership, userID)
+func (q *Queries) GetUserCampaignGroupMembership(ctx context.Context, arg GetUserCampaignGroupMembershipParams) (GetUserCampaignGroupMembershipRow, error) {
+	row := q.db.QueryRow(ctx, getUserCampaignGroupMembership, arg.PartyID, arg.UserID)
 	var i GetUserCampaignGroupMembershipRow
 	err := row.Scan(
 		&i.Role,
@@ -578,103 +582,19 @@ func (q *Queries) MarkCampaignGroupOfficialsAdded(ctx context.Context, id int64)
 	return err
 }
 
-const removeAgentCampaignGroupMembers = `-- name: RemoveAgentCampaignGroupMembers :many
+const removeUserFromCampaignGroups = `-- name: RemoveUserFromCampaignGroups :many
 DELETE FROM campaign_group_members
-WHERE party_id = $1 
-  AND user_id = $2
-  AND role != 'candidate'
+WHERE party_id = $1 AND user_id = $2
 RETURNING group_id
 `
 
-type RemoveAgentCampaignGroupMembersParams struct {
+type RemoveUserFromCampaignGroupsParams struct {
 	PartyID int16 `json:"party_id"`
 	UserID  int64 `json:"user_id"`
 }
 
-func (q *Queries) RemoveAgentCampaignGroupMembers(ctx context.Context, arg RemoveAgentCampaignGroupMembersParams) ([]int64, error) {
-	rows, err := q.db.Query(ctx, removeAgentCampaignGroupMembers, arg.PartyID, arg.UserID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []int64
-	for rows.Next() {
-		var group_id int64
-		if err := rows.Scan(&group_id); err != nil {
-			return nil, err
-		}
-		items = append(items, group_id)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const removeCampaignGroupMember = `-- name: RemoveCampaignGroupMember :exec
-DELETE FROM campaign_group_members
-WHERE group_id = $1 AND user_id = $2
-`
-
-type RemoveCampaignGroupMemberParams struct {
-	GroupID int64 `json:"group_id"`
-	UserID  int64 `json:"user_id"`
-}
-
-func (q *Queries) RemoveCampaignGroupMember(ctx context.Context, arg RemoveCampaignGroupMemberParams) error {
-	_, err := q.db.Exec(ctx, removeCampaignGroupMember, arg.GroupID, arg.UserID)
-	return err
-}
-
-const removeCampaignGroupMembersByElectionGroup = `-- name: RemoveCampaignGroupMembersByElectionGroup :many
-DELETE FROM campaign_group_members
-WHERE party_id = $1 AND election_group_id = $2 AND user_id = $3
-RETURNING group_id
-`
-
-type RemoveCampaignGroupMembersByElectionGroupParams struct {
-	PartyID         int16       `json:"party_id"`
-	ElectionGroupID pgtype.Int4 `json:"election_group_id"`
-	UserID          int64       `json:"user_id"`
-}
-
-func (q *Queries) RemoveCampaignGroupMembersByElectionGroup(ctx context.Context, arg RemoveCampaignGroupMembersByElectionGroupParams) ([]int64, error) {
-	rows, err := q.db.Query(ctx, removeCampaignGroupMembersByElectionGroup, arg.PartyID, arg.ElectionGroupID, arg.UserID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []int64
-	for rows.Next() {
-		var group_id int64
-		if err := rows.Scan(&group_id); err != nil {
-			return nil, err
-		}
-		items = append(items, group_id)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const removeCampaignGroupMembersByElectionGroupExcept = `-- name: RemoveCampaignGroupMembersByElectionGroupExcept :many
-DELETE FROM campaign_group_members
-WHERE party_id = $1 
-  AND user_id = $2 
-  AND group_id != $3
-  AND role != 'candidate'
-RETURNING group_id
-`
-
-type RemoveCampaignGroupMembersByElectionGroupExceptParams struct {
-	PartyID int16 `json:"party_id"`
-	UserID  int64 `json:"user_id"`
-	GroupID int64 `json:"group_id"`
-}
-
-func (q *Queries) RemoveCampaignGroupMembersByElectionGroupExcept(ctx context.Context, arg RemoveCampaignGroupMembersByElectionGroupExceptParams) ([]int64, error) {
-	rows, err := q.db.Query(ctx, removeCampaignGroupMembersByElectionGroupExcept, arg.PartyID, arg.UserID, arg.GroupID)
+func (q *Queries) RemoveUserFromCampaignGroups(ctx context.Context, arg RemoveUserFromCampaignGroupsParams) ([]int64, error) {
+	rows, err := q.db.Query(ctx, removeUserFromCampaignGroups, arg.PartyID, arg.UserID)
 	if err != nil {
 		return nil, err
 	}

@@ -25,13 +25,6 @@ type partiesService interface {
 	GetOrCreateLGAChapter(ctx context.Context, partyID int16, lgaID int32, createIfMissing ...bool) (int32, error)
 	GetOrCreateWardChapter(ctx context.Context, partyID int16, wardID int32, createIfMissing ...bool) (int32, error)
 	ListPartyOfficials(ctx context.Context, partyID int16, chapterID int32) ([]queries.ListPartyOfficialsRow, error)
-	GetPartyChapterByID(ctx context.Context, chapterID int32) (queries.PartyChapter, error)
-}
-
-type bodiesService interface {
-	CheckStateByID(ctx context.Context, stateID int16) (queries.CState, error)
-	CheckLGA(ctx context.Context, lgaID int32) (queries.Lga, error)
-	CheckWard(ctx context.Context, wardID int32) (queries.Ward, error)
 }
 
 type CampaignGroupsService struct {
@@ -39,16 +32,14 @@ type CampaignGroupsService struct {
 	pool           *pgxpool.Pool
 	rdb            *redis.Client
 	partiesService partiesService
-	bodiesService  bodiesService
 }
 
-func NewCampaignGroupsService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client, partiesService partiesService, bodiesService bodiesService) *CampaignGroupsService {
+func NewCampaignGroupsService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client, partiesService partiesService) *CampaignGroupsService {
 	return &CampaignGroupsService{
 		queries:        q,
 		pool:           pool,
 		rdb:            rdb,
 		partiesService: partiesService,
-		bodiesService:  bodiesService,
 	}
 }
 
@@ -269,7 +260,7 @@ func (s *CampaignGroupsService) syncPartyOfficialsToGroup(ctx context.Context, p
 	// 2. Prune / remove any campaign group official who is no longer an active chapter official
 	for _, currentUserID := range currentOfficialUserIDs {
 		if !activeOfficialMap[currentUserID] {
-			if err := s.RemoveCampaignGroupMember(ctx, group.ID, currentUserID); err != nil {
+			if err := s.RemoveUserFromCampaignGroups(ctx, group.PartyID, currentUserID); err != nil {
 				slog.Warn("failed to remove stale party official from campaign group", "userID", currentUserID, "groupID", group.ID, "error", err)
 				continue
 			}
@@ -339,10 +330,8 @@ func (s *CampaignGroupsService) AddCampaignGroupMember(ctx context.Context, para
 		return queries.CampaignGroupMember{}, err
 	}
 
-	// Invalidate member roster, user groups hierarchy, and party membership check caches
-	s.InvalidateGroupMembersCache(ctx, params.GroupID)
-	s.InvalidatePartyMemberCheckCache(ctx, params.PartyID, params.UserID)
-	s.InvalidateUserCampaignGroupsCache(ctx, params.UserID)
+	// Invalidate member roster, user groups hierarchy, and party campaign membership check caches
+	s.InvalidateMemberCaches(ctx, params.GroupID, params.UserID, params.PartyID)
 	if params.Role == "party_official" {
 		s.InvalidateGroupOfficialsCache(ctx, params.GroupID) // flush cached officials roster
 	}
@@ -350,21 +339,27 @@ func (s *CampaignGroupsService) AddCampaignGroupMember(ctx context.Context, para
 	return member, nil
 }
 
-// RemoveCampaignGroupMember removes a user from a specific campaign group and invalidates the cached group member roster.
-func (s *CampaignGroupsService) RemoveCampaignGroupMember(ctx context.Context, groupID int64, userID int64) error {
-	// Delete member record from the campaign group
-	err := s.queries.RemoveCampaignGroupMember(ctx, queries.RemoveCampaignGroupMemberParams{
-		GroupID: groupID,
+// RemoveUserFromCampaignGroups removes a user from all campaign groups for a given party,
+// and invalidates affected group member rosters, officials lists, and user-level caches.
+func (s *CampaignGroupsService) RemoveUserFromCampaignGroups(ctx context.Context, partyID int16, userID int64) error {
+	if partyID <= 0 || userID <= 0 {
+		return nil
+	}
+
+	groupIDs, err := s.queries.RemoveUserFromCampaignGroups(ctx, queries.RemoveUserFromCampaignGroupsParams{
+		PartyID: partyID,
 		UserID:  userID,
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to remove user %d from party %d campaign groups: %w", userID, partyID, err)
 	}
 
-	// Invalidate the group's cached member roster, user groups hierarchy, and officials list
-	s.InvalidateGroupMembersCache(ctx, groupID)
-	s.InvalidateGroupOfficialsCache(ctx, groupID)
-	s.InvalidateUserCampaignGroupsCache(ctx, userID)
+	for _, groupID := range groupIDs {
+		s.InvalidateGroupMembersCache(ctx, groupID)
+		s.InvalidateGroupOfficialsCache(ctx, groupID)
+	}
+	s.InvalidateUserCaches(ctx, userID, partyID)
+
 	return nil
 }
 
@@ -386,8 +381,8 @@ func (s *CampaignGroupsService) InvalidateGroupOfficialsCache(ctx context.Contex
 	}
 }
 
-// InvalidatePartyMemberCheckCache clears the cached party campaign membership check for a user.
-func (s *CampaignGroupsService) InvalidatePartyMemberCheckCache(ctx context.Context, partyID int16, userID int64) {
+// InvalidateUserInPartyCampaignGroupCache clears the cached party campaign membership check for a user.
+func (s *CampaignGroupsService) InvalidateUserInPartyCampaignGroupCache(ctx context.Context, partyID int16, userID int64) {
 	if partyID > 0 && userID > 0 {
 		cacheKey := fmt.Sprintf("%s%d:%d", db.RedisCampaignGroupMemberCheck, partyID, userID)
 		_ = s.rdb.Del(ctx, cacheKey).Err()
@@ -397,9 +392,27 @@ func (s *CampaignGroupsService) InvalidatePartyMemberCheckCache(ctx context.Cont
 // InvalidateUserCampaignGroupsCache clears the cached campaign groups hierarchy response for a user.
 func (s *CampaignGroupsService) InvalidateUserCampaignGroupsCache(ctx context.Context, userID int64) {
 	if userID > 0 {
-		cacheKey := fmt.Sprintf("%suser_groups:%d", db.RedisCampaignGroupLookup, userID)
+		cacheKey := fmt.Sprintf("%suser_campaign_groups:%d", db.RedisCampaignGroupLookup, userID)
 		_ = s.rdb.Del(ctx, cacheKey).Err()
 	}
+}
+
+// InvalidateUserCaches clears both the user's campaign groups hierarchy and their party campaign membership check.
+func (s *CampaignGroupsService) InvalidateUserCaches(ctx context.Context, userID int64, partyID int16) {
+	if userID > 0 {
+		s.InvalidateUserCampaignGroupsCache(ctx, userID)
+		if partyID > 0 {
+			s.InvalidateUserInPartyCampaignGroupCache(ctx, partyID, userID)
+		}
+	}
+}
+
+// InvalidateMemberCaches flushes all relevant group-level and user-level caches when a membership changes.
+func (s *CampaignGroupsService) InvalidateMemberCaches(ctx context.Context, groupID int64, userID int64, partyID int16) {
+	if groupID > 0 {
+		s.InvalidateGroupMembersCache(ctx, groupID)
+	}
+	s.InvalidateUserCaches(ctx, userID, partyID)
 }
 
 // GetCampaignGroupOfficials retrieves the official user IDs for a campaign group, backed by a 7-day Redis cache.
@@ -583,129 +596,6 @@ func (s *CampaignGroupsService) EnsureElectionCandidateInGroup(ctx context.Conte
 	return group, nil
 }
 
-// RemoveCandidateFromElectionGroup revokes candidate membership across all campaign groups for the party in an election cycle.
-func (s *CampaignGroupsService) RemoveCandidateFromElectionGroup(ctx context.Context, partyID int16, electionGroupID int32, candidateID int64) error {
-	// Remove member records from all groups tied to this party and election cycle
-	groupIDs, err := s.queries.RemoveCampaignGroupMembersByElectionGroup(ctx, queries.RemoveCampaignGroupMembersByElectionGroupParams{
-		PartyID:         partyID,
-		ElectionGroupID: utils.PgInt4FromPositive(electionGroupID),
-		UserID:          candidateID,
-	})
-	if err != nil {
-		return err
-	}
-
-	// Invalidate cached member rosters for every affected campaign group
-	for _, groupID := range groupIDs {
-		s.InvalidateGroupMembersCache(ctx, groupID)
-	}
-	s.InvalidatePartyMemberCheckCache(ctx, partyID, candidateID)
-
-	return nil
-}
-
-// RemoveAgentFromPartyCampaignGroups revokes agent/supervisor membership across all campaign groups for the party.
-func (s *CampaignGroupsService) RemoveAgentFromPartyCampaignGroups(ctx context.Context, partyID int16, userID int64) error {
-	groupIDs, err := s.queries.RemoveAgentCampaignGroupMembers(ctx, queries.RemoveAgentCampaignGroupMembersParams{
-		PartyID: partyID,
-		UserID:  userID,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to remove agent from campaign groups: %w", err)
-	}
-
-	for _, groupID := range groupIDs {
-		s.InvalidateGroupMembersCache(ctx, groupID)
-	}
-	s.InvalidatePartyMemberCheckCache(ctx, partyID, userID)
-
-	return nil
-}
-
-// RemoveOfficialFromChapterCampaignGroup removes a user from the campaign group matching a party chapter if their role is 'party_official'.
-func (s *CampaignGroupsService) RemoveOfficialFromChapterCampaignGroup(ctx context.Context, partyID int16, chapterID int32, userID int64) error {
-	chapter, err := s.partiesService.GetPartyChapterByID(ctx, chapterID)
-	if err != nil {
-		return fmt.Errorf("failed to fetch chapter %d: %w", chapterID, err)
-	}
-
-	scope := chapter.ChapterType
-	if scope == "zonal" {
-		scope = "state"
-	}
-
-	var stateID pgtype.Int4
-	if chapter.StateID.Valid {
-		stateID = pgtype.Int4{Int32: int32(chapter.StateID.Int16), Valid: true}
-	}
-
-	groupID, err := s.queries.GetCampaignGroupIDByTerritory(ctx, queries.GetCampaignGroupIDByTerritoryParams{
-		PartyID: partyID,
-		Scope:   scope,
-		StateID: stateID,
-		LgaID:   chapter.LgaID,
-		WardID:  chapter.WardID,
-	})
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil
-		}
-		return fmt.Errorf("failed to lookup campaign group for chapter %d: %w", chapterID, err)
-	}
-
-	var deletedGroupID int64
-	err = s.pool.QueryRow(ctx, `
-		DELETE FROM campaign_group_members
-		WHERE group_id = $1 
-		  AND user_id = $2 
-		  AND role = 'party_official'
-		RETURNING group_id
-	`, groupID, userID).Scan(&deletedGroupID)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil
-		}
-		return fmt.Errorf("failed to delete party_official membership from campaign group %d: %w", groupID, err)
-	}
-
-	s.InvalidateGroupMembersCache(ctx, groupID)
-	s.InvalidateGroupOfficialsCache(ctx, groupID)
-	s.InvalidatePartyMemberCheckCache(ctx, partyID, userID)
-
-	return nil
-}
-
-// RemovePartyOfficialFromAllCampaignGroups removes a user from all campaign groups for a party where their role is 'party_official'.
-func (s *CampaignGroupsService) RemovePartyOfficialFromAllCampaignGroups(ctx context.Context, partyID int16, userID int64) error {
-	rows, err := s.pool.Query(ctx, `
-		DELETE FROM campaign_group_members
-		WHERE party_id = $1 
-		  AND user_id = $2 
-		  AND role = 'party_official'
-		RETURNING group_id
-	`, partyID, userID)
-	if err != nil {
-		return fmt.Errorf("failed to remove official from campaign groups: %w", err)
-	}
-	defer rows.Close()
-
-	var groupIDs []int64
-	for rows.Next() {
-		var gid int64
-		if err := rows.Scan(&gid); err == nil {
-			groupIDs = append(groupIDs, gid)
-		}
-	}
-
-	for _, gid := range groupIDs {
-		s.InvalidateGroupMembersCache(ctx, gid)
-		s.InvalidateGroupOfficialsCache(ctx, gid)
-	}
-	s.InvalidatePartyMemberCheckCache(ctx, partyID, userID)
-
-	return nil
-}
-
 type EnsureAgentCampaignInGroupInput struct {
 	PartyID         int16
 	ElectionGroupID int32
@@ -757,19 +647,9 @@ func (s *CampaignGroupsService) EnsureAgentCampaignInGroup(ctx context.Context, 
 		return nil, err
 	}
 
-	// Remove user from any other campaign groups in this party (excluding this target group)
-	oldGroupIDs, err := s.queries.RemoveCampaignGroupMembersByElectionGroupExcept(ctx, queries.RemoveCampaignGroupMembersByElectionGroupExceptParams{
-		PartyID: input.PartyID,
-		UserID:  input.UserID,
-		GroupID: group.ID,
-	})
-	if err != nil {
+	// Remove user from any previous campaign groups in this party
+	if err := s.RemoveUserFromCampaignGroups(ctx, input.PartyID, input.UserID); err != nil {
 		slog.Warn("failed to clear previous campaign group memberships", "userID", input.UserID, "error", err)
-	} else {
-		for _, oldGroupID := range oldGroupIDs {
-			s.InvalidateGroupMembersCache(ctx, oldGroupID)
-		}
-		s.InvalidatePartyMemberCheckCache(ctx, input.PartyID, input.UserID)
 	}
 
 	// Enroll or update the agent as an active member with their assigned role
@@ -1095,20 +975,24 @@ type GetUserCampaignGroupsResponse struct {
 // - Polling Unit Agent / Ward Supervisor: Ward, LGA, State, National (4 groups)
 // - LGA Supervisor: LGA, State, National (3 groups)
 // - State Supervisor: State, National (2 groups)
-// Results are cached in Redis with a 5-minute TTL.
-func (s *CampaignGroupsService) GetUserCampaignGroups(ctx context.Context, userID int64) (*GetUserCampaignGroupsResponse, error) {
-	if userID <= 0 {
+// Results are cached in Redis with a 30-day TTL.
+func (s *CampaignGroupsService) GetUserCampaignGroups(ctx context.Context, userID int64, partyID int16) (*GetUserCampaignGroupsResponse, error) {
+	if userID <= 0 || partyID <= 0 {
 		return &GetUserCampaignGroupsResponse{Role: "none", Groups: []UserCampaignGroupItem{}}, nil
 	}
 
 	// Check Redis cache
-	cacheKey := fmt.Sprintf("%suser_groups:%d", db.RedisCampaignGroupLookup, userID)
+	cacheKey := fmt.Sprintf("%suser_campaign_groups:%d", db.RedisCampaignGroupLookup, userID)
+
 	if cachedResp, ok := utils.GetCachedJSON[GetUserCampaignGroupsResponse](ctx, s.rdb, cacheKey); ok {
 		return &cachedResp, nil
 	}
 
 	// Resolve user campaign group membership directly using sqlc
-	membership, err := s.queries.GetUserCampaignGroupMembership(ctx, userID)
+	m, err := s.queries.GetUserCampaignGroupMembership(ctx, queries.GetUserCampaignGroupMembershipParams{
+		PartyID: partyID,
+		UserID:  userID,
+	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return &GetUserCampaignGroupsResponse{
@@ -1119,34 +1003,14 @@ func (s *CampaignGroupsService) GetUserCampaignGroups(ctx context.Context, userI
 		return nil, fmt.Errorf("failed to query user campaign group membership: %w", err)
 	}
 
-	var (
-		role      = membership.Role
-		depth     = membership.Scope
-		partyID   = membership.PartyID
-		stateID   = membership.StateID
-		lgaID     = membership.LgaID
-		wardID    = membership.WardID
-		stateName = membership.StateName.String
-		lgaName   = membership.LgaName.String
-		wardName  = membership.WardName.String
-	)
-
-	// Fill in missing territory names using optimized bodiesService with 180-day Redis cache
-	if stateName == "" && stateID.Valid && stateID.Int32 > 0 {
-		if st, err := s.bodiesService.CheckStateByID(ctx, int16(stateID.Int32)); err == nil {
-			stateName = st.Name
-		}
-	}
-	if lgaName == "" && lgaID.Valid && lgaID.Int32 > 0 {
-		if lg, err := s.bodiesService.CheckLGA(ctx, lgaID.Int32); err == nil {
-			lgaName = lg.Name
-		}
-	}
-	if wardName == "" && wardID.Valid && wardID.Int32 > 0 {
-		if wd, err := s.bodiesService.CheckWard(ctx, wardID.Int32); err == nil {
-			wardName = wd.Name
-		}
-	}
+	role := m.Role
+	depth := m.Scope
+	stateID := m.StateID
+	lgaID := m.LgaID
+	wardID := m.WardID
+	stateName := m.StateName.String
+	lgaName := m.LgaName.String
+	wardName := m.WardName.String
 
 	// Determine which scopes to include (National is always top, then State, LGA, Ward)
 	type scopeSpec struct {
@@ -1243,8 +1107,8 @@ func (s *CampaignGroupsService) GetUserCampaignGroups(ctx context.Context, userI
 		Groups: groups,
 	}
 
-	// Cache in Redis with configured TTL
-	_ = utils.SetCachedJSON(ctx, s.rdb, cacheKey, response, db.RedisOneHourTTL)
+	// Cache in Redis with configured TTL (30 days, invalidated on assignment change)
+	_ = utils.SetCachedJSON(ctx, s.rdb, cacheKey, response, db.RedisThirtyDaysTTL)
 
 	return response, nil
 }

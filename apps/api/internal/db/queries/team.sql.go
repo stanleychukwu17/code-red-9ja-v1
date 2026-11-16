@@ -17,6 +17,7 @@ SELECT
     les.user_id,
     COALESCE(u.full_name, '')::varchar AS user_name,
     COALESCE(u.avatar, '')::varchar AS avatar_url,
+    COALESCE(u.phone, '')::varchar AS phone,
     les.role_type,
     COALESCE(l.state_name, '')::varchar AS state_name,
     COALESCE(l.name, '')::varchar AS lga_name,
@@ -48,6 +49,7 @@ type GetTeamLgaSupervisorsByLgaRow struct {
 	UserID          int64       `json:"user_id"`
 	UserName        string      `json:"user_name"`
 	AvatarUrl       string      `json:"avatar_url"`
+	Phone           string      `json:"phone"`
 	RoleType        pgtype.Text `json:"role_type"`
 	StateName       string      `json:"state_name"`
 	LgaName         string      `json:"lga_name"`
@@ -74,6 +76,7 @@ func (q *Queries) GetTeamLgaSupervisorsByLga(ctx context.Context, arg GetTeamLga
 			&i.UserID,
 			&i.UserName,
 			&i.AvatarUrl,
+			&i.Phone,
 			&i.RoleType,
 			&i.StateName,
 			&i.LgaName,
@@ -101,6 +104,7 @@ SELECT
     les.user_id,
     COALESCE(u.full_name, '')::varchar AS user_name,
     COALESCE(u.avatar, '')::varchar AS avatar_url,
+    COALESCE(u.phone, '')::varchar AS phone,
     les.role_type,
     COALESCE(l.state_name, '')::varchar AS state_name,
     COALESCE(l.name, '')::varchar AS lga_name,
@@ -132,6 +136,7 @@ type GetTeamLgaSupervisorsByStateRow struct {
 	UserID          int64       `json:"user_id"`
 	UserName        string      `json:"user_name"`
 	AvatarUrl       string      `json:"avatar_url"`
+	Phone           string      `json:"phone"`
 	RoleType        pgtype.Text `json:"role_type"`
 	StateName       string      `json:"state_name"`
 	LgaName         string      `json:"lga_name"`
@@ -158,6 +163,7 @@ func (q *Queries) GetTeamLgaSupervisorsByState(ctx context.Context, arg GetTeamL
 			&i.UserID,
 			&i.UserName,
 			&i.AvatarUrl,
+			&i.Phone,
 			&i.RoleType,
 			&i.StateName,
 			&i.LgaName,
@@ -185,6 +191,7 @@ SELECT
     pua.user_id,
     COALESCE(u.full_name, '')::varchar AS user_name,
     COALESCE(u.avatar, '')::varchar AS avatar_url,
+    COALESCE(u.phone, '')::varchar AS phone,
     pua.role_type,
     COALESCE(pu.state_name, '')::varchar AS state_name,
     COALESCE(pu.lga_name, '')::varchar AS lga_name,
@@ -216,6 +223,7 @@ type GetTeamPollingAgentsByPollingUnitRow struct {
 	UserID          int64       `json:"user_id"`
 	UserName        string      `json:"user_name"`
 	AvatarUrl       string      `json:"avatar_url"`
+	Phone           string      `json:"phone"`
 	RoleType        pgtype.Text `json:"role_type"`
 	StateName       string      `json:"state_name"`
 	LgaName         string      `json:"lga_name"`
@@ -242,6 +250,7 @@ func (q *Queries) GetTeamPollingAgentsByPollingUnit(ctx context.Context, arg Get
 			&i.UserID,
 			&i.UserName,
 			&i.AvatarUrl,
+			&i.Phone,
 			&i.RoleType,
 			&i.StateName,
 			&i.LgaName,
@@ -269,6 +278,7 @@ SELECT
     pua.user_id,
     COALESCE(u.full_name, '')::varchar AS user_name,
     COALESCE(u.avatar, '')::varchar AS avatar_url,
+    COALESCE(u.phone, '')::varchar AS phone,
     pua.role_type,
     COALESCE(pu.state_name, '')::varchar AS state_name,
     COALESCE(pu.lga_name, '')::varchar AS lga_name,
@@ -304,6 +314,7 @@ type GetTeamPollingAgentsByWardRow struct {
 	UserID          int64       `json:"user_id"`
 	UserName        string      `json:"user_name"`
 	AvatarUrl       string      `json:"avatar_url"`
+	Phone           string      `json:"phone"`
 	RoleType        pgtype.Text `json:"role_type"`
 	StateName       string      `json:"state_name"`
 	LgaName         string      `json:"lga_name"`
@@ -336,6 +347,7 @@ func (q *Queries) GetTeamPollingAgentsByWard(ctx context.Context, arg GetTeamPol
 			&i.UserID,
 			&i.UserName,
 			&i.AvatarUrl,
+			&i.Phone,
 			&i.RoleType,
 			&i.StateName,
 			&i.LgaName,
@@ -363,6 +375,7 @@ SELECT
     ses.user_id,
     COALESCE(u.full_name, '')::varchar AS user_name,
     COALESCE(u.avatar, '')::varchar AS avatar_url,
+    COALESCE(u.phone, '')::varchar AS phone,
     ses.role_type,
     COALESCE(s.name, '')::varchar AS state_name,
     ''::varchar AS lga_name,
@@ -394,6 +407,7 @@ type GetTeamStateSupervisorsByStateRow struct {
 	UserID          int64       `json:"user_id"`
 	UserName        string      `json:"user_name"`
 	AvatarUrl       string      `json:"avatar_url"`
+	Phone           string      `json:"phone"`
 	RoleType        pgtype.Text `json:"role_type"`
 	StateName       string      `json:"state_name"`
 	LgaName         string      `json:"lga_name"`
@@ -420,6 +434,7 @@ func (q *Queries) GetTeamStateSupervisorsByState(ctx context.Context, arg GetTea
 			&i.UserID,
 			&i.UserName,
 			&i.AvatarUrl,
+			&i.Phone,
 			&i.RoleType,
 			&i.StateName,
 			&i.LgaName,
@@ -447,6 +462,7 @@ SELECT
     wes.user_id,
     COALESCE(u.full_name, '')::varchar AS user_name,
     COALESCE(u.avatar, '')::varchar AS avatar_url,
+    COALESCE(u.phone, '')::varchar AS phone,
     wes.role_type,
     COALESCE(w.state_name, '')::varchar AS state_name,
     COALESCE(w.lga_name, '')::varchar AS lga_name,
@@ -480,6 +496,7 @@ type GetTeamWardSupervisorsByLgaRow struct {
 	UserID          int64       `json:"user_id"`
 	UserName        string      `json:"user_name"`
 	AvatarUrl       string      `json:"avatar_url"`
+	Phone           string      `json:"phone"`
 	RoleType        pgtype.Text `json:"role_type"`
 	StateName       string      `json:"state_name"`
 	LgaName         string      `json:"lga_name"`
@@ -511,6 +528,7 @@ func (q *Queries) GetTeamWardSupervisorsByLga(ctx context.Context, arg GetTeamWa
 			&i.UserID,
 			&i.UserName,
 			&i.AvatarUrl,
+			&i.Phone,
 			&i.RoleType,
 			&i.StateName,
 			&i.LgaName,
@@ -538,6 +556,7 @@ SELECT
     wes.user_id,
     COALESCE(u.full_name, '')::varchar AS user_name,
     COALESCE(u.avatar, '')::varchar AS avatar_url,
+    COALESCE(u.phone, '')::varchar AS phone,
     wes.role_type,
     COALESCE(w.state_name, '')::varchar AS state_name,
     COALESCE(w.lga_name, '')::varchar AS lga_name,
@@ -569,6 +588,7 @@ type GetTeamWardSupervisorsByStateRow struct {
 	UserID          int64       `json:"user_id"`
 	UserName        string      `json:"user_name"`
 	AvatarUrl       string      `json:"avatar_url"`
+	Phone           string      `json:"phone"`
 	RoleType        pgtype.Text `json:"role_type"`
 	StateName       string      `json:"state_name"`
 	LgaName         string      `json:"lga_name"`
@@ -595,6 +615,7 @@ func (q *Queries) GetTeamWardSupervisorsByState(ctx context.Context, arg GetTeam
 			&i.UserID,
 			&i.UserName,
 			&i.AvatarUrl,
+			&i.Phone,
 			&i.RoleType,
 			&i.StateName,
 			&i.LgaName,
@@ -622,6 +643,7 @@ SELECT
     wes.user_id,
     COALESCE(u.full_name, '')::varchar AS user_name,
     COALESCE(u.avatar, '')::varchar AS avatar_url,
+    COALESCE(u.phone, '')::varchar AS phone,
     wes.role_type,
     COALESCE(w.state_name, '')::varchar AS state_name,
     COALESCE(w.lga_name, '')::varchar AS lga_name,
@@ -653,6 +675,7 @@ type GetTeamWardSupervisorsByWardRow struct {
 	UserID          int64       `json:"user_id"`
 	UserName        string      `json:"user_name"`
 	AvatarUrl       string      `json:"avatar_url"`
+	Phone           string      `json:"phone"`
 	RoleType        pgtype.Text `json:"role_type"`
 	StateName       string      `json:"state_name"`
 	LgaName         string      `json:"lga_name"`
@@ -679,6 +702,7 @@ func (q *Queries) GetTeamWardSupervisorsByWard(ctx context.Context, arg GetTeamW
 			&i.UserID,
 			&i.UserName,
 			&i.AvatarUrl,
+			&i.Phone,
 			&i.RoleType,
 			&i.StateName,
 			&i.LgaName,

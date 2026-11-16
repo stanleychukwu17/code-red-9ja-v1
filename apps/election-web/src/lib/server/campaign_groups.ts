@@ -26,9 +26,18 @@ export interface GetMyCampaignGroupsResponse {
 }
 
 export const getMyCampaignGroups = createServerFn({ method: "GET" })
-  .handler(async () => {
+  .inputValidator(
+    (data: { party_id?: number | string } | undefined) => data,
+  )
+  .handler(async ({ data }) => {
     try {
-      const url = API_URL.campaignGroups.myGroups;
+      const party_id = data?.party_id;
+      const params = new URLSearchParams();
+      if (party_id) {
+        params.append("party_id", String(party_id));
+      }
+      const qs = params.toString();
+      const url = `${API_URL.campaignGroups.myGroups}${qs ? `?${qs}` : ""}`;
       const res = await apiFetch(url);
       const resData: GetMyCampaignGroupsResponse = await res.json();
       return resData;

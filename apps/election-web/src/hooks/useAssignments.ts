@@ -83,6 +83,12 @@ export const useAssignments = (electionGroupId?: number | string) => {
 		role_type = pollingUnitAssignment.role_type ?? "polling_agent";
 	}
 
+	// 6. Derive active assignment political party ID
+	const partyId: number | null =
+		supervisorAssignment?.data?.party_id ??
+		pollingUnitAssignment?.party_id ??
+		null;
+
 	return {
 		hasActiveAssignment,
 		pollingUnitAssignment,
@@ -90,6 +96,7 @@ export const useAssignments = (electionGroupId?: number | string) => {
 		rawSupervisorAssignments: supervisorAssignmentsData,
 		pollingUnitId,
 		role_type,
+		partyId,
 		isLoading,
 	};
 };

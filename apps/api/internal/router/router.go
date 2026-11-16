@@ -169,7 +169,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	seedService := seedservice.NewSeedService(q, pool, rdb, distributor, authService, bodiesService, usersService, partiesService, electionsService)
 	pageVerificationsService := pageverificationsservice.NewPageVerificationsService(q, rdb, usersService, partiesService, auditService)
 	filesService := filesservice.NewFilesService(q, r2Svc, distributor)
-	campaignGroupsService := campaigngroupsservice.NewCampaignGroupsService(q, pool, rdb, partiesService, bodiesService)
+	campaignGroupsService := campaigngroupsservice.NewCampaignGroupsService(q, pool, rdb, partiesService)
 	teamService := teamservice.NewService(q, rdb)
 
 	// Wire services needed for background task processing
