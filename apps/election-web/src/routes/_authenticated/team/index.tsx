@@ -45,7 +45,7 @@ export type TeamMember = {
 // Individual team member card
 export function TeamUserCard({ member }: { member: TeamMember }) {
   return (
-    <div className="flex items-center gap-4 py-6">
+    <div className="flex items-center gap-4 py-5">
       <AppAvatar
         src={member.avatar}
         alt={member.name}
