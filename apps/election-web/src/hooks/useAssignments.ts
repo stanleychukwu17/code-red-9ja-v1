@@ -69,12 +69,27 @@ export const useAssignments = (electionGroupId?: number | string) => {
 		assignmentsData?.has_active_assignment ??
 		(!!pollingUnitAssignment || !!supervisorAssignment);
 
+	// 5. Derive standardized role_type based on active assignments
+	let role_type: "state_election_supervisor" | "lga_election_supervisor" | "ward_election_supervisor" | "polling_agent" | null = null;
+	if (supervisorAssignment) {
+		if (supervisorAssignment.type === "state") {
+			role_type = supervisorAssignment.data?.role_type ?? "state_election_supervisor";
+		} else if (supervisorAssignment.type === "lga") {
+			role_type = supervisorAssignment.data?.role_type ?? "lga_election_supervisor";
+		} else if (supervisorAssignment.type === "ward") {
+			role_type = supervisorAssignment.data?.role_type ?? "ward_election_supervisor";
+		}
+	} else if (pollingUnitAssignment) {
+		role_type = pollingUnitAssignment.role_type ?? "polling_agent";
+	}
+
 	return {
 		hasActiveAssignment,
 		pollingUnitAssignment,
 		supervisorAssignment,
 		rawSupervisorAssignments: supervisorAssignmentsData,
 		pollingUnitId,
+		role_type,
 		isLoading,
 	};
 };

@@ -215,15 +215,12 @@ func (s *PartiesService) GetAcceptingPartyIDs(ctx context.Context) (map[int16]bo
 	cacheKey := db.RedisPartiesAcceptingIDs
 
 	// Try fetching from Redis first
-	if cachedData, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
-		var ids []int16
-		if err := json.Unmarshal([]byte(cachedData), &ids); err == nil {
-			acceptingMap := make(map[int16]bool, len(ids))
-			for _, id := range ids {
-				acceptingMap[id] = true
-			}
-			return acceptingMap, nil
+	if ids, ok := utils.GetCachedJSON[[]int16](ctx, s.rdb, cacheKey); ok {
+		acceptingMap := make(map[int16]bool, len(ids))
+		for _, id := range ids {
+			acceptingMap[id] = true
 		}
+		return acceptingMap, nil
 	}
 
 	ids, err := s.queries.GetAcceptingPartyIDs(ctx)
@@ -232,9 +229,7 @@ func (s *PartiesService) GetAcceptingPartyIDs(ctx context.Context) (map[int16]bo
 	}
 
 	// Cache in Redis
-	if data, err := json.Marshal(ids); err == nil {
-		_ = s.rdb.Set(ctx, cacheKey, data, db.RedisThirtyDaysTTL).Err()
-	}
+	_ = utils.SetCachedJSON(ctx, s.rdb, cacheKey, ids, db.RedisThirtyDaysTTL)
 
 	acceptingMap := make(map[int16]bool, len(ids))
 	for _, id := range ids {
@@ -287,27 +282,17 @@ func (s *PartiesService) GetPartyInfo(ctx context.Context, partyID int16) *queri
 	return &party
 }
 
-// ListParties returns all active parties ordered by display_order ASC, name ASC.
-// It stores ONLY the ordered list of party IDs in Redis ("parties:list").
-// The individual party entities are fetched in a single batch using MGET against "parties:by_id:<id>",
-// falling back to PostgreSQL for any missing keys.
+// ListParties returns all active parties ordered by display order
 func (s *PartiesService) ListParties(ctx context.Context) ([]queries.PartyWithVerifications, error) {
 	// Fetch ordered party IDs from Redis or DB
-	var partyIDs []int16
-	cachedData, err := s.rdb.Get(ctx, db.RedisPartiesList).Result()
-	if err == nil {
-		_ = json.Unmarshal([]byte(cachedData), &partyIDs)
-	}
-
-	if len(partyIDs) == 0 {
+	partyIDs, ok := utils.GetCachedJSON[[]int16](ctx, s.rdb, db.RedisPartiesList)
+	if !ok || len(partyIDs) == 0 {
 		var dbErr error
 		partyIDs, dbErr = s.queries.ListActivePartyIDs(ctx)
 		if dbErr != nil {
 			return nil, dbErr
 		}
-		if data, mErr := json.Marshal(partyIDs); mErr == nil {
-			_ = s.rdb.Set(ctx, db.RedisPartiesList, data, db.RedisOneEightyDaysTTL).Err()
-		}
+		_ = utils.SetCachedJSON(ctx, s.rdb, db.RedisPartiesList, partyIDs, db.RedisOneEightyDaysTTL)
 	}
 
 	if len(partyIDs) == 0 {
@@ -1410,11 +1395,8 @@ func (s *PartiesService) UpdatePartyIsVerified(ctx context.Context, partyID int1
 // GetPartyChapterByID retrieves a party chapter by its ID, cached in Redis.
 func (s *PartiesService) GetPartyChapterByID(ctx context.Context, chapterID int32) (queries.PartyChapter, error) {
 	cacheKey := fmt.Sprintf("%s%d", db.RedisPartyChapter, chapterID)
-	if cached, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
-		var chapter queries.PartyChapter
-		if err := json.Unmarshal([]byte(cached), &chapter); err == nil && chapter.ID == chapterID && chapter.ID > 0 {
-			return chapter, nil
-		}
+	if chapter, ok := utils.GetCachedJSON[queries.PartyChapter](ctx, s.rdb, cacheKey); ok && chapter.ID == chapterID && chapter.ID > 0 {
+		return chapter, nil
 	}
 
 	chapter, err := s.queries.GetPartyChapterByID(ctx, chapterID)
@@ -1422,9 +1404,7 @@ func (s *PartiesService) GetPartyChapterByID(ctx context.Context, chapterID int3
 		return queries.PartyChapter{}, err
 	}
 
-	if data, err := json.Marshal(chapter); err == nil {
-		_ = s.rdb.Set(ctx, cacheKey, data, db.RedisOneEightyDaysTTL).Err()
-	}
+	_ = utils.SetCachedJSON(ctx, s.rdb, cacheKey, chapter, db.RedisOneEightyDaysTTL)
 
 	return chapter, nil
 }
@@ -2263,11 +2243,8 @@ func (s *PartiesService) GetPartyByID(ctx context.Context, partyID int16) (queri
 	redisKey := fmt.Sprintf("%s%d", db.RedisPartyByID, partyID)
 
 	// Try reading from Redis cache first
-	if cachedData, err := s.rdb.Get(ctx, redisKey).Result(); err == nil {
-		var party queries.Party
-		if err := json.Unmarshal([]byte(cachedData), &party); err == nil && party.ID > 0 {
-			return party, nil
-		}
+	if party, ok := utils.GetCachedJSON[queries.Party](ctx, s.rdb, redisKey); ok && party.ID > 0 {
+		return party, nil
 	}
 
 	party, err := s.queries.GetPartyByID(ctx, partyID)
@@ -2276,9 +2253,7 @@ func (s *PartiesService) GetPartyByID(ctx context.Context, partyID int16) (queri
 	}
 
 	// Cache the party in Redis
-	if partyData, err := json.Marshal(party); err == nil {
-		_ = s.rdb.Set(ctx, redisKey, partyData, db.RedisThirtyDaysTTL).Err()
-	}
+	_ = utils.SetCachedJSON(ctx, s.rdb, redisKey, party, db.RedisThirtyDaysTTL)
 
 	return party, nil
 }
@@ -2296,11 +2271,8 @@ func (s *PartiesService) GetDefaultPartyPositions(ctx context.Context) ([]querie
 	cacheKey := db.RedisPartyDefaultPositions
 
 	// Try reading from Redis cache
-	if cachedData, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
-		var positions []queries.PartyPosition
-		if err := json.Unmarshal([]byte(cachedData), &positions); err == nil {
-			return positions, nil
-		}
+	if positions, ok := utils.GetCachedJSON[[]queries.PartyPosition](ctx, s.rdb, cacheKey); ok {
+		return positions, nil
 	}
 
 	// Fetch all default positions from database
@@ -2312,10 +2284,8 @@ func (s *PartiesService) GetDefaultPartyPositions(ctx context.Context) ([]querie
 		defaultPositions = []queries.PartyPosition{}
 	}
 
-	// Cache result in Redis (default positions are static)
-	if data, err := json.Marshal(defaultPositions); err == nil {
-		_ = s.rdb.Set(ctx, cacheKey, data, db.RedisOneYearTTL).Err()
-	}
+	// Cache result in Redis
+	_ = utils.SetCachedJSON(ctx, s.rdb, cacheKey, defaultPositions, db.RedisOneYearTTL)
 
 	return defaultPositions, nil
 }
@@ -2325,11 +2295,8 @@ func (s *PartiesService) GetCustomPartyPositions(ctx context.Context, partyID in
 	cacheKey := fmt.Sprintf("%s%d", db.RedisPartyCustomPositions, partyID)
 
 	// Try reading from Redis cache
-	if cachedData, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
-		var positions []queries.PartyPosition
-		if err := json.Unmarshal([]byte(cachedData), &positions); err == nil {
-			return positions, nil
-		}
+	if positions, ok := utils.GetCachedJSON[[]queries.PartyPosition](ctx, s.rdb, cacheKey); ok {
+		return positions, nil
 	}
 
 	// Fetch all custom positions for this party from database
@@ -2342,9 +2309,7 @@ func (s *PartiesService) GetCustomPartyPositions(ctx context.Context, partyID in
 	}
 
 	// Cache result in Redis
-	if data, err := json.Marshal(customPositions); err == nil {
-		_ = s.rdb.Set(ctx, cacheKey, data, db.RedisOneEightyDaysTTL).Err()
-	}
+	_ = utils.SetCachedJSON(ctx, s.rdb, cacheKey, customPositions, db.RedisOneEightyDaysTTL)
 
 	return customPositions, nil
 }
@@ -2378,11 +2343,8 @@ func (s *PartiesService) GetPartyPositionByID(ctx context.Context, id int32, par
 	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisPartyPositionByID, partyID, id)
 
 	// Try reading from Redis cache
-	if cachedData, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
-		var pos queries.PartyPosition
-		if err := json.Unmarshal([]byte(cachedData), &pos); err == nil && pos.ID == id && pos.ID > 0 {
-			return pos, nil
-		}
+	if pos, ok := utils.GetCachedJSON[queries.PartyPosition](ctx, s.rdb, cacheKey); ok && pos.ID == id && pos.ID > 0 {
+		return pos, nil
 	}
 
 	// Fetch position from database
@@ -2395,9 +2357,7 @@ func (s *PartiesService) GetPartyPositionByID(ctx context.Context, id int32, par
 	}
 
 	// Cache result in Redis
-	if data, err := json.Marshal(pos); err == nil {
-		_ = s.rdb.Set(ctx, cacheKey, data, db.RedisOneEightyDaysTTL).Err()
-	}
+	_ = utils.SetCachedJSON(ctx, s.rdb, cacheKey, pos, db.RedisOneEightyDaysTTL)
 
 	return pos, nil
 }

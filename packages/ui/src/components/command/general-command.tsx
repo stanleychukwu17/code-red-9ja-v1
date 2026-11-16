@@ -150,11 +150,16 @@ export function GeneralCommand<T>({
                 {virtualItems.map((virtualRow) => {
                   const item = filteredItems[virtualRow.index];
                   if (!item) return null;
+                  const itemId = getId(item);
+                  const desc = getDescription ? getDescription(item) : "";
+                  const descStr = typeof desc === "string" ? ` ${desc}` : "";
+                  const itemValue = `${getName(item)}${descStr} ${itemId}`;
+
                   return (
                     <div
                       ref={rowVirtualizer.measureElement}
                       data-index={virtualRow.index}
-                      key={getId(item)}
+                      key={itemId}
                       className="absolute top-0 left-0 w-full"
                       style={{
                         transform: `translateY(${virtualRow.start}px)`,
@@ -163,7 +168,8 @@ export function GeneralCommand<T>({
                       }}
                     >
                       <CommandItem
-                        value={getName(item)}
+                        key={itemId}
+                        value={itemValue}
                         onSelect={() => handleSelect(item)}
                         className="flex items-start gap-0 flex-col py-2 px-3 h-full cursor-pointer"
                       >

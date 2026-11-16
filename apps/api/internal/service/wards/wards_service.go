@@ -2,11 +2,11 @@ package wardsservice
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
+	"free9ja/api/internal/utils"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -70,12 +70,8 @@ func (s *WardsService) CreateWard(ctx context.Context, params CreateWardParams) 
 // GetWardByID retrieves a single ward by its ID, utilizing Redis cache when available.
 func (s *WardsService) GetWardByID(ctx context.Context, id int32) (queries.Ward, error) {
 	redisKey := fmt.Sprintf("%s%d", db.RedisEachWard, id)
-	cached, err := s.rdb.Get(ctx, redisKey).Result()
-	if err == nil {
-		var ward queries.Ward
-		if json.Unmarshal([]byte(cached), &ward) == nil && ward.ID > 0 {
-			return ward, nil
-		}
+	if ward, ok := utils.GetCachedJSON[queries.Ward](ctx, s.rdb, redisKey); ok && ward.ID > 0 {
+		return ward, nil
 	}
 
 	ward, err := s.queries.GetWardByID(ctx, id)
@@ -83,9 +79,7 @@ func (s *WardsService) GetWardByID(ctx context.Context, id int32) (queries.Ward,
 		return queries.Ward{}, err
 	}
 
-	if data, err := json.Marshal(ward); err == nil {
-		s.rdb.Set(ctx, redisKey, data, db.RedisOneEightyDaysTTL)
-	}
+	_ = utils.SetCachedJSON(ctx, s.rdb, redisKey, ward, db.RedisOneEightyDaysTTL)
 
 	return ward, nil
 }
@@ -162,37 +156,28 @@ func (s *WardsService) GetWards(ctx context.Context, lgaID, stateID int32) ([]qu
 	}
 
 	// Check Redis cache first
-	data, err := s.rdb.Get(ctx, redisKey).Result()
-	switch err {
-	case redis.Nil:
-		// Cache miss: fetch from PostgreSQL database
-		arg := queries.GetWardsParams{
-			LgaID:   lgaID,
-			StateID: stateID,
-		}
-		dbData, err := s.queries.GetWards(ctx, arg)
-		if err != nil {
-			return nil, err
-		}
-
-		payload := Response{
-			Wards: dbData,
-		}
-
-		// Cache result in Redis with 180-day TTL
-		jsonData, _ := json.Marshal(payload)
-		s.rdb.Set(ctx, redisKey, jsonData, db.RedisOneEightyDaysTTL)
-
-		return dbData, nil
-	case nil:
-		// Cache hit: unmarshal and return cached payload
-		var payload Response
-		err = json.Unmarshal([]byte(data), &payload)
+	if payload, ok := utils.GetCachedJSON[Response](ctx, s.rdb, redisKey); ok {
 		return payload.Wards, nil
-	default:
-		// Return unexpected Redis error
+	}
+
+	// Cache miss: fetch from PostgreSQL database
+	arg := queries.GetWardsParams{
+		LgaID:   lgaID,
+		StateID: stateID,
+	}
+	dbData, err := s.queries.GetWards(ctx, arg)
+	if err != nil {
 		return nil, err
 	}
+
+	payload := Response{
+		Wards: dbData,
+	}
+
+	// Cache result in Redis with configured TTL
+	_ = utils.SetCachedJSON(ctx, s.rdb, redisKey, payload, db.RedisOneEightyDaysTTL)
+
+	return dbData, nil
 }
 
 // GetWardsPaginated retrieves a paginated slice of wards directly from PostgreSQL.

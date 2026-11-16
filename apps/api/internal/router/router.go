@@ -57,6 +57,7 @@ import (
 	stateshandler "free9ja/api/internal/handler/states"
 	supervisorassignmentshandler "free9ja/api/internal/handler/supervisor_assignments"
 	systemsettingshandler "free9ja/api/internal/handler/system_settings"
+	teamhandler "free9ja/api/internal/handler/team"
 	usershandler "free9ja/api/internal/handler/users"
 	wardshandler "free9ja/api/internal/handler/wards"
 	apimiddleware "free9ja/api/internal/middleware"
@@ -92,6 +93,7 @@ import (
 	stateassemblyconstituenciesservice "free9ja/api/internal/service/state_constituencies"
 	statesservice "free9ja/api/internal/service/states"
 	supervisorassignmentsservice "free9ja/api/internal/service/supervisor_assignments"
+	teamservice "free9ja/api/internal/service/team"
 	usersservice "free9ja/api/internal/service/users"
 	wardsservice "free9ja/api/internal/service/wards"
 )
@@ -167,7 +169,8 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	seedService := seedservice.NewSeedService(q, pool, rdb, distributor, authService, bodiesService, usersService, partiesService, electionsService)
 	pageVerificationsService := pageverificationsservice.NewPageVerificationsService(q, rdb, usersService, partiesService, auditService)
 	filesService := filesservice.NewFilesService(q, r2Svc, distributor)
-	campaignGroupsService := campaigngroupsservice.NewCampaignGroupsService(q, pool, rdb, partiesService)
+	campaignGroupsService := campaigngroupsservice.NewCampaignGroupsService(q, pool, rdb, partiesService, bodiesService)
+	teamService := teamservice.NewService(q, rdb)
 
 	// Wire services needed for background task processing
 	processor.SetCampaignGroupsService(campaignGroupsService)
@@ -212,6 +215,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	practiceTestsHandler := practicetestshandler.NewHandler(q, utilsInstance, earningsService, partyApplicationsService)
 	agentEarningsHandler := agentearningshandler.NewHandler(q, earningsService, utilsInstance)
 	agentPerformanceHandler := agentperformancehandler.NewHandler(q, pool, usersService, utilsInstance)
+	teamHandler := teamhandler.NewHandler(utilsInstance, pollingUnitAssignmentsService, supervisorAssignmentsService, teamService)
 	referralsHandler := referralshandler.NewHandler(referralsService, utilsInstance)
 	adminAgentPaymentsHandler := adminagentpaymentshandler.NewHandler(pool, utilsInstance)
 
@@ -591,6 +595,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Delete("/api/v1/party-applications/agents/{id}", partyApplicationsHandler.RevokeAgent)
 
 		// campaign groups routes
+		r.Get("/api/v1/campaign-groups/my-groups", campaignGroupsHandler.GetMyCampaignGroups)
 		r.Post("/api/v1/campaign-groups/find", campaignGroupsHandler.FindCampaignGroup)
 
 		// campaign groups routes (authorized operatives & party/global admins only)
@@ -705,6 +710,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 
 		// Admins/party_admins: trigger calculation, list, approve, mark paid
 		r.Get("/api/v1/agent-performance", agentPerformanceHandler.GetAgentPerformance)
+		r.Get("/api/v1/team/members", teamHandler.GetTeamMembers)
 		r.Post("/api/v1/agents/change-role", partyApplicationsHandler.ChangeAgentRole)
 		r.Delete("/api/v1/agents/{id}", partyApplicationsHandler.RevokeAgent)
 		r.Post("/api/v1/agent-earnings/calculate/{assignment_id}", agentEarningsHandler.CalculateEarnings)

@@ -407,6 +407,56 @@ func (q *Queries) GetCampaignGroupWardStats(ctx context.Context, arg GetCampaign
 	return items, nil
 }
 
+const getUserCampaignGroupMembership = `-- name: GetUserCampaignGroupMembership :one
+SELECT 
+    m.role,
+    cg.party_id,
+    cg.scope,
+    cg.state_id,
+    cg.lga_id,
+    cg.ward_id,
+    s.name AS state_name,
+    l.name AS lga_name,
+    w.name AS ward_name
+FROM campaign_group_members m
+JOIN campaign_groups cg ON cg.id = m.group_id
+LEFT JOIN c_states s ON s.id = cg.state_id
+LEFT JOIN lgas l ON l.id = cg.lga_id
+LEFT JOIN wards w ON w.id = cg.ward_id
+WHERE m.user_id = $1
+ORDER BY m.joined_at DESC
+LIMIT 1
+`
+
+type GetUserCampaignGroupMembershipRow struct {
+	Role      string      `json:"role"`
+	PartyID   int16       `json:"party_id"`
+	Scope     string      `json:"scope"`
+	StateID   pgtype.Int4 `json:"state_id"`
+	LgaID     pgtype.Int4 `json:"lga_id"`
+	WardID    pgtype.Int4 `json:"ward_id"`
+	StateName pgtype.Text `json:"state_name"`
+	LgaName   pgtype.Text `json:"lga_name"`
+	WardName  pgtype.Text `json:"ward_name"`
+}
+
+func (q *Queries) GetUserCampaignGroupMembership(ctx context.Context, userID int64) (GetUserCampaignGroupMembershipRow, error) {
+	row := q.db.QueryRow(ctx, getUserCampaignGroupMembership, userID)
+	var i GetUserCampaignGroupMembershipRow
+	err := row.Scan(
+		&i.Role,
+		&i.PartyID,
+		&i.Scope,
+		&i.StateID,
+		&i.LgaID,
+		&i.WardID,
+		&i.StateName,
+		&i.LgaName,
+		&i.WardName,
+	)
+	return i, err
+}
+
 const listCampaignGroupMembers = `-- name: ListCampaignGroupMembers :many
 SELECT 
     m.id,

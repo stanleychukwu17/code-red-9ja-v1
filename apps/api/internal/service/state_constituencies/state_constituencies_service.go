@@ -2,7 +2,6 @@ package stateassemblyconstituenciesservice
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
@@ -84,12 +83,8 @@ func (s *StateConstituenciesService) CreateStateConstituency(ctx context.Context
 // GetStateConstituencyByID retrieves a state assembly constituency by its ID, utilizing Redis cache when available.
 func (s *StateConstituenciesService) GetStateConstituencyByID(ctx context.Context, id int32) (queries.StateConstituency, error) {
 	redisKey := fmt.Sprintf("%s%d", db.RedisEachStateConstituency, id)
-	cached, err := s.rdb.Get(ctx, redisKey).Result()
-	if err == nil {
-		var sac queries.StateConstituency
-		if json.Unmarshal([]byte(cached), &sac) == nil && sac.ID > 0 {
-			return sac, nil
-		}
+	if sac, ok := utils.GetCachedJSON[queries.StateConstituency](ctx, s.rdb, redisKey); ok && sac.ID > 0 {
+		return sac, nil
 	}
 
 	sac, err := s.queries.GetStateConstituencyByID(ctx, id)
@@ -97,9 +92,7 @@ func (s *StateConstituenciesService) GetStateConstituencyByID(ctx context.Contex
 		return queries.StateConstituency{}, err
 	}
 
-	if data, err := json.Marshal(sac); err == nil {
-		s.rdb.Set(ctx, redisKey, data, db.RedisOneEightyDaysTTL)
-	}
+	_ = utils.SetCachedJSON(ctx, s.rdb, redisKey, sac, db.RedisOneEightyDaysTTL)
 
 	return sac, nil
 }
@@ -181,36 +174,27 @@ func (s *StateConstituenciesService) GetStateConstituencies(ctx context.Context,
 		redisKey = db.RedisStateConstituenciesAll
 	}
 
-	data, err := s.rdb.Get(ctx, redisKey).Result()
-	switch err {
-	case redis.Nil:
-		// Cache miss: query PostgreSQL for constituencies matching filter parameters
-		arg := queries.GetStateConstituenciesParams{
-			StateID:               stateID,
-			FederalConstituencyID: federalConstituencyID,
-		}
-		dbData, err := s.queries.GetStateConstituencies(ctx, arg)
-		if err != nil {
-			return nil, err
-		}
-
-		payload := Response{
-			Constituencies: dbData,
-		}
-
-		jsonData, _ := json.Marshal(payload)
-		s.rdb.Set(ctx, redisKey, jsonData, db.RedisOneEightyDaysTTL)
-
-		return dbData, nil
-	case nil:
-		// Cache hit: deserialize cached JSON directly into constituency slice
-		var payload Response
-		err = json.Unmarshal([]byte(data), &payload)
+	if payload, ok := utils.GetCachedJSON[Response](ctx, s.rdb, redisKey); ok {
 		return payload.Constituencies, nil
-	default:
-		// Return unexpected Redis error
+	}
+
+	// Cache miss: query PostgreSQL for constituencies matching filter parameters
+	arg := queries.GetStateConstituenciesParams{
+		StateID:               stateID,
+		FederalConstituencyID: federalConstituencyID,
+	}
+	dbData, err := s.queries.GetStateConstituencies(ctx, arg)
+	if err != nil {
 		return nil, err
 	}
+
+	payload := Response{
+		Constituencies: dbData,
+	}
+
+	_ = utils.SetCachedJSON(ctx, s.rdb, redisKey, payload, db.RedisOneEightyDaysTTL)
+
+	return dbData, nil
 }
 
 // invalidateCache clears Redis cache entries for a constituency's state list, federal constituency list, nationwide list, national metrics, and individual constituency cache.

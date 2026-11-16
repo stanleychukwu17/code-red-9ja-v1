@@ -2,7 +2,6 @@ package campaigngroupsservice
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"free9ja/api/internal/constants"
@@ -29,19 +28,27 @@ type partiesService interface {
 	GetPartyChapterByID(ctx context.Context, chapterID int32) (queries.PartyChapter, error)
 }
 
+type bodiesService interface {
+	CheckStateByID(ctx context.Context, stateID int16) (queries.CState, error)
+	CheckLGA(ctx context.Context, lgaID int32) (queries.Lga, error)
+	CheckWard(ctx context.Context, wardID int32) (queries.Ward, error)
+}
+
 type CampaignGroupsService struct {
 	queries        *queries.Queries
 	pool           *pgxpool.Pool
 	rdb            *redis.Client
 	partiesService partiesService
+	bodiesService  bodiesService
 }
 
-func NewCampaignGroupsService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client, partiesService partiesService) *CampaignGroupsService {
+func NewCampaignGroupsService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client, partiesService partiesService, bodiesService bodiesService) *CampaignGroupsService {
 	return &CampaignGroupsService{
 		queries:        q,
 		pool:           pool,
 		rdb:            rdb,
 		partiesService: partiesService,
+		bodiesService:  bodiesService,
 	}
 }
 
@@ -104,24 +111,19 @@ func (s *CampaignGroupsService) GetCampaignGroupByID(ctx context.Context, id int
 
 	cacheKey := fmt.Sprintf("%s%d", db.RedisCampaignGroupByID, id)
 
-	// 1. Fast-path: Check Redis cache
-	if cachedVal, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
-		var group queries.GetCampaignGroupByIDRow
-		if jsonErr := json.Unmarshal([]byte(cachedVal), &group); jsonErr == nil {
-			return group, nil
-		}
+	// Check Redis cache
+	if group, ok := utils.GetCachedJSON[queries.GetCampaignGroupByIDRow](ctx, s.rdb, cacheKey); ok {
+		return group, nil
 	}
 
-	// 2. Query DB
+	// Query DB
 	group, err := s.queries.GetCampaignGroupByID(ctx, id)
 	if err != nil {
 		return queries.GetCampaignGroupByIDRow{}, err
 	}
 
-	// 3. Cache in Redis
-	if data, err := json.Marshal(group); err == nil {
-		_ = s.rdb.Set(ctx, cacheKey, data, db.RedisThirtyDaysTTL).Err()
-	}
+	// Cache in Redis
+	_ = utils.SetCachedJSON(ctx, s.rdb, cacheKey, group, db.RedisThirtyDaysTTL)
 
 	return group, nil
 }
@@ -336,9 +338,10 @@ func (s *CampaignGroupsService) AddCampaignGroupMember(ctx context.Context, para
 		return queries.CampaignGroupMember{}, err
 	}
 
-	// Invalidate member roster and party membership check caches
+	// Invalidate member roster, user groups hierarchy, and party membership check caches
 	s.InvalidateGroupMembersCache(ctx, params.GroupID)
 	s.InvalidatePartyMemberCheckCache(ctx, params.PartyID, params.UserID)
+	s.InvalidateUserCampaignGroupsCache(ctx, params.UserID)
 	if params.Role == "party_official" {
 		s.InvalidateGroupOfficialsCache(ctx, params.GroupID) // flush cached officials roster
 	}
@@ -357,9 +360,10 @@ func (s *CampaignGroupsService) RemoveCampaignGroupMember(ctx context.Context, g
 		return err
 	}
 
-	// Invalidate the group's cached member roster and officials list
+	// Invalidate the group's cached member roster, user groups hierarchy, and officials list
 	s.InvalidateGroupMembersCache(ctx, groupID)
 	s.InvalidateGroupOfficialsCache(ctx, groupID)
+	s.InvalidateUserCampaignGroupsCache(ctx, userID)
 	return nil
 }
 
@@ -389,6 +393,14 @@ func (s *CampaignGroupsService) InvalidatePartyMemberCheckCache(ctx context.Cont
 	}
 }
 
+// InvalidateUserCampaignGroupsCache clears the cached campaign groups hierarchy response for a user.
+func (s *CampaignGroupsService) InvalidateUserCampaignGroupsCache(ctx context.Context, userID int64) {
+	if userID > 0 {
+		cacheKey := fmt.Sprintf("%suser_groups:%d", db.RedisCampaignGroupLookup, userID)
+		_ = s.rdb.Del(ctx, cacheKey).Err()
+	}
+}
+
 // GetCampaignGroupOfficials retrieves the official user IDs for a campaign group, backed by a 7-day Redis cache.
 func (s *CampaignGroupsService) GetCampaignGroupOfficials(ctx context.Context, groupID int64) ([]int64, error) {
 	if groupID <= 0 {
@@ -397,15 +409,12 @@ func (s *CampaignGroupsService) GetCampaignGroupOfficials(ctx context.Context, g
 
 	cacheKey := fmt.Sprintf("%s%d", db.RedisCampaignGroupOfficials, groupID)
 
-	// 1. Fast-path: Check Redis cache
-	if cachedVal, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
-		var cached []int64
-		if jsonErr := json.Unmarshal([]byte(cachedVal), &cached); jsonErr == nil {
-			return cached, nil
-		}
+	// Check Redis cache
+	if cached, ok := utils.GetCachedJSON[[]int64](ctx, s.rdb, cacheKey); ok {
+		return cached, nil
 	}
 
-	// 2. Query DB
+	// Query DB
 	userIDs, err := s.queries.ListCampaignGroupOfficials(ctx, groupID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch campaign group officials for group %d: %w", groupID, err)
@@ -415,27 +424,22 @@ func (s *CampaignGroupsService) GetCampaignGroupOfficials(ctx context.Context, g
 		userIDs = []int64{}
 	}
 
-	// 3. Cache in Redis
-	if data, err := json.Marshal(userIDs); err == nil {
-		_ = s.rdb.Set(ctx, cacheKey, data, db.RedisSevenDaysTTL).Err()
-	}
+	// Cache in Redis
+	_ = utils.SetCachedJSON(ctx, s.rdb, cacheKey, userIDs, db.RedisSevenDaysTTL)
 
 	return userIDs, nil
 }
 
-// GetGroupMembers retrieves all members of a campaign group, backed by a 7-day Redis cache.
+// GetGroupMembers retrieves all members of a campaign group
 func (s *CampaignGroupsService) GetGroupMembers(ctx context.Context, groupID int64) ([]queries.ListCampaignGroupMembersRow, error) {
 	cacheKey := fmt.Sprintf("%s%d", db.RedisCampaignGroupMembers, groupID)
 
-	// 1. Fast-path: Check Redis cache
-	if cachedVal, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
-		var cached []queries.ListCampaignGroupMembersRow
-		if jsonErr := json.Unmarshal([]byte(cachedVal), &cached); jsonErr == nil {
-			return cached, nil
-		}
+	// Check Redis cache
+	if cached, ok := utils.GetCachedJSON[[]queries.ListCampaignGroupMembersRow](ctx, s.rdb, cacheKey); ok {
+		return cached, nil
 	}
 
-	// 2. Query DB
+	// Query DB
 	members, err := s.queries.ListCampaignGroupMembers(ctx, groupID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch campaign group members for group %d: %w", groupID, err)
@@ -445,10 +449,8 @@ func (s *CampaignGroupsService) GetGroupMembers(ctx context.Context, groupID int
 		members = []queries.ListCampaignGroupMembersRow{}
 	}
 
-	// 3. Cache in Redis
-	if data, err := json.Marshal(members); err == nil {
-		_ = s.rdb.Set(ctx, cacheKey, data, db.RedisSevenDaysTTL).Err()
-	}
+	// Cache in Redis
+	_ = utils.SetCachedJSON(ctx, s.rdb, cacheKey, members, db.RedisSevenDaysTTL)
 
 	return members, nil
 }
@@ -463,9 +465,63 @@ type GetOrCreateCampaignGroupInput struct {
 	WardID          pgtype.Int4
 }
 
+// formatTerritoryLookupKey generates a consistent Redis key for territory-scoped campaign group lookups.
+func formatTerritoryLookupKey(partyID int16, scope string, stateID, lgaID, wardID pgtype.Int4) string {
+	var sID, lID, wID int32
+	if stateID.Valid {
+		sID = stateID.Int32
+	}
+	if lgaID.Valid {
+		lID = lgaID.Int32
+	}
+	if wardID.Valid {
+		wID = wardID.Int32
+	}
+	return fmt.Sprintf("%s%d:%s:%d:%d:%d", db.RedisCampaignGroupLookup, partyID, scope, sID, lID, wID)
+}
+
 // GetOrCreateCampaignGroup finds or provisions a campaign group for a given party,
 // election cycle, and territorial scope, and ensures party chapter officials are populated.
+// It leverages a 30-day Redis territory cache to avoid database upserts and row locks on repeated lookups.
 func (s *CampaignGroupsService) GetOrCreateCampaignGroup(ctx context.Context, input GetOrCreateCampaignGroupInput) (*queries.CampaignGroup, error) {
+	lookupKey := formatTerritoryLookupKey(input.PartyID, input.Scope, input.StateID, input.LgaID, input.WardID)
+
+	// Check Redis territory lookup cache
+	if cachedIDStr, err := s.rdb.Get(ctx, lookupKey).Result(); err == nil {
+		if groupID, parseErr := strconv.ParseInt(cachedIDStr, 10, 64); parseErr == nil && groupID > 0 {
+			if groupRow, err := s.GetCampaignGroupByID(ctx, groupID); err == nil && groupRow.ID > 0 {
+				group := toCampaignGroup(groupRow)
+				if !group.OfficialsAdded {
+					if syncRes, err := s.syncPartyOfficialsToGroup(ctx, input.PartyID, group); err == nil && syncRes != nil && syncRes.OfficialsAdded > 0 {
+						group.OfficialsAdded = true
+					}
+				}
+				return &group, nil
+			}
+		}
+	}
+
+	// Read-path: Check if the campaign group already exists in the database
+	if existingID, err := s.queries.GetCampaignGroupIDByTerritory(ctx, queries.GetCampaignGroupIDByTerritoryParams{
+		PartyID: input.PartyID,
+		Scope:   input.Scope,
+		StateID: input.StateID,
+		LgaID:   input.LgaID,
+		WardID:  input.WardID,
+	}); err == nil && existingID > 0 {
+		_ = s.rdb.Set(ctx, lookupKey, strconv.FormatInt(existingID, 10), db.RedisThirtyDaysTTL).Err()
+		if groupRow, err := s.GetCampaignGroupByID(ctx, existingID); err == nil && groupRow.ID > 0 {
+			group := toCampaignGroup(groupRow)
+			if !group.OfficialsAdded {
+				if syncRes, err := s.syncPartyOfficialsToGroup(ctx, input.PartyID, group); err == nil && syncRes != nil && syncRes.OfficialsAdded > 0 {
+					group.OfficialsAdded = true
+				}
+			}
+			return &group, nil
+		}
+	}
+
+	// Write-path (fallback only): Provision new campaign group if not found
 	group, err := s.queries.FindOrCreateCampaignGroup(ctx, queries.FindOrCreateCampaignGroupParams{
 		PartyID:               input.PartyID,
 		TargetElectionGroupID: utils.PgInt4FromPositive(input.ElectionGroupID),
@@ -477,6 +533,9 @@ func (s *CampaignGroupsService) GetOrCreateCampaignGroup(ctx context.Context, in
 	if err != nil {
 		return nil, fmt.Errorf("failed to find or create campaign group: %w", err)
 	}
+
+	// Cache territory lookup mapping
+	_ = s.rdb.Set(ctx, lookupKey, strconv.FormatInt(group.ID, 10), db.RedisThirtyDaysTTL).Err()
 
 	// Populate party chapter officials if not already added to this group
 	if !group.OfficialsAdded {
@@ -878,15 +937,12 @@ func (s *CampaignGroupsService) GetCampaignGroupStats(ctx context.Context, group
 
 	cacheKey := fmt.Sprintf("%s%d", db.RedisCampaignGroupStats, group.ID)
 
-	// 1. Fast-path: Check Redis cache
-	if cachedVal, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
-		var cachedStats CampaignGroupStats
-		if jsonErr := json.Unmarshal([]byte(cachedVal), &cachedStats); jsonErr == nil {
-			return &cachedStats, nil
-		}
+	// Fast-path: Check Redis cache
+	if cachedStats, ok := utils.GetCachedJSON[CampaignGroupStats](ctx, s.rdb, cacheKey); ok {
+		return &cachedStats, nil
 	}
 
-	// 2. Query DB based on scope
+	// Query DB based on scope
 	type statRow struct {
 		Role  string
 		Count int64
@@ -965,10 +1021,229 @@ func (s *CampaignGroupsService) GetCampaignGroupStats(ctx context.Context, group
 		}
 	}
 
-	// 3. Cache in Redis (10 minutes)
-	if data, err := json.Marshal(stats); err == nil {
-		_ = s.rdb.Set(ctx, cacheKey, data, 10*time.Minute).Err()
-	}
+	// Cache in Redis with short duration
+	_ = utils.SetCachedJSON(ctx, s.rdb, cacheKey, stats, 10*time.Minute)
 
 	return stats, nil
+}
+
+// formatCampaignGroupTitle creates human-readable title matching the design mock for each scope tier.
+func formatCampaignGroupTitle(scope string, stateName, lgaName, wardName string) string {
+	switch scope {
+	case "national":
+		return "National campaign group"
+	case "state":
+		if stateName != "" {
+			return fmt.Sprintf("%s state campaign group", stateName)
+		}
+		return "State campaign group"
+	case "lga":
+		if lgaName != "" {
+			return fmt.Sprintf("%s LGA campaign group", lgaName)
+		}
+		return "LGA campaign group"
+	case "ward":
+		if wardName != "" {
+			return fmt.Sprintf("%s ward campaign group", wardName)
+		}
+		return "Ward campaign group"
+	default:
+		return "Campaign group"
+	}
+}
+
+// formatCampaignGroupDescription generates the descriptive text matching the UI design for each scope tier.
+func formatCampaignGroupDescription(scope string) string {
+	switch scope {
+	case "national":
+		return "Find National officials and candidates you are representing in the national campaign group"
+	case "state":
+		return "Find State officials and candidates you are representing in the state campaign group"
+	case "lga":
+		return "Find Local Government officials and candidates you are representing in the LGA campaign group"
+	case "ward":
+		return "Find Ward officials and candidates you are representing in the ward campaign group"
+	default:
+		return "Find officials and candidates you are representing in this campaign group"
+	}
+}
+
+// UserCampaignGroupItem represents a resolved campaign group in the hierarchy for an operative.
+type UserCampaignGroupItem struct {
+	ID          int64   `json:"id"`
+	PartyID     int16   `json:"party_id"`
+	Scope       string  `json:"scope"`
+	Title       string  `json:"title"`
+	Description string  `json:"description"`
+	StateID     *int32  `json:"state_id,omitempty"`
+	StateName   *string `json:"state_name,omitempty"`
+	LgaID       *int32  `json:"lga_id,omitempty"`
+	LgaName     *string `json:"lga_name,omitempty"`
+	WardID      *int32  `json:"ward_id,omitempty"`
+	WardName    *string `json:"ward_name,omitempty"`
+}
+
+// GetUserCampaignGroupsResponse encapsulates the resolved campaign groups hierarchy for an operative.
+type GetUserCampaignGroupsResponse struct {
+	Role   string                  `json:"role"`
+	Groups []UserCampaignGroupItem `json:"groups"`
+}
+
+// GetUserCampaignGroups resolves the hierarchical campaign groups visible to a user based on their operational assignment.
+// Hierarchy depth:
+// - Polling Unit Agent / Ward Supervisor: Ward, LGA, State, National (4 groups)
+// - LGA Supervisor: LGA, State, National (3 groups)
+// - State Supervisor: State, National (2 groups)
+// Results are cached in Redis with a 5-minute TTL.
+func (s *CampaignGroupsService) GetUserCampaignGroups(ctx context.Context, userID int64) (*GetUserCampaignGroupsResponse, error) {
+	if userID <= 0 {
+		return &GetUserCampaignGroupsResponse{Role: "none", Groups: []UserCampaignGroupItem{}}, nil
+	}
+
+	// Check Redis cache
+	cacheKey := fmt.Sprintf("%suser_groups:%d", db.RedisCampaignGroupLookup, userID)
+	if cachedResp, ok := utils.GetCachedJSON[GetUserCampaignGroupsResponse](ctx, s.rdb, cacheKey); ok {
+		return &cachedResp, nil
+	}
+
+	// Resolve user campaign group membership directly using sqlc
+	membership, err := s.queries.GetUserCampaignGroupMembership(ctx, userID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return &GetUserCampaignGroupsResponse{
+				Role:   "none",
+				Groups: []UserCampaignGroupItem{},
+			}, nil
+		}
+		return nil, fmt.Errorf("failed to query user campaign group membership: %w", err)
+	}
+
+	var (
+		role      = membership.Role
+		depth     = membership.Scope
+		partyID   = membership.PartyID
+		stateID   = membership.StateID
+		lgaID     = membership.LgaID
+		wardID    = membership.WardID
+		stateName = membership.StateName.String
+		lgaName   = membership.LgaName.String
+		wardName  = membership.WardName.String
+	)
+
+	// Fill in missing territory names using optimized bodiesService with 180-day Redis cache
+	if stateName == "" && stateID.Valid && stateID.Int32 > 0 {
+		if st, err := s.bodiesService.CheckStateByID(ctx, int16(stateID.Int32)); err == nil {
+			stateName = st.Name
+		}
+	}
+	if lgaName == "" && lgaID.Valid && lgaID.Int32 > 0 {
+		if lg, err := s.bodiesService.CheckLGA(ctx, lgaID.Int32); err == nil {
+			lgaName = lg.Name
+		}
+	}
+	if wardName == "" && wardID.Valid && wardID.Int32 > 0 {
+		if wd, err := s.bodiesService.CheckWard(ctx, wardID.Int32); err == nil {
+			wardName = wd.Name
+		}
+	}
+
+	// Determine which scopes to include (National is always top, then State, LGA, Ward)
+	type scopeSpec struct {
+		scope   string
+		stateID pgtype.Int4
+		lgaID   pgtype.Int4
+		wardID  pgtype.Int4
+	}
+
+	var targetScopes []scopeSpec
+
+	// National group is always included
+	targetScopes = append(targetScopes, scopeSpec{
+		scope: "national",
+	})
+
+	// State group
+	if depth == "state" || depth == "lga" || depth == "ward" {
+		targetScopes = append(targetScopes, scopeSpec{
+			scope:   "state",
+			stateID: stateID,
+		})
+	}
+
+	// LGA group
+	if depth == "lga" || depth == "ward" {
+		targetScopes = append(targetScopes, scopeSpec{
+			scope:   "lga",
+			stateID: stateID,
+			lgaID:   lgaID,
+		})
+	}
+
+	// Ward group
+	if depth == "ward" {
+		targetScopes = append(targetScopes, scopeSpec{
+			scope:   "ward",
+			stateID: stateID,
+			lgaID:   lgaID,
+			wardID:  wardID,
+		})
+	}
+
+	// Resolve or provision each campaign group
+	var groups []UserCampaignGroupItem
+	for _, spec := range targetScopes {
+		group, err := s.GetOrCreateCampaignGroup(ctx, GetOrCreateCampaignGroupInput{
+			PartyID: partyID,
+			Scope:   spec.scope,
+			StateID: spec.stateID,
+			LgaID:   spec.lgaID,
+			WardID:  spec.wardID,
+		})
+		if err != nil {
+			slog.Warn("failed to get or create campaign group in hierarchy", "scope", spec.scope, "error", err)
+			continue
+		}
+
+		// Build group item with formatted display details
+		item := UserCampaignGroupItem{
+			ID:          group.ID,
+			PartyID:     partyID,
+			Scope:       spec.scope,
+			Title:       formatCampaignGroupTitle(spec.scope, stateName, lgaName, wardName),
+			Description: formatCampaignGroupDescription(spec.scope),
+		}
+
+		// Attach territory metadata where applicable
+		if spec.stateID.Valid && spec.stateID.Int32 > 0 {
+			sid := spec.stateID.Int32
+			sName := stateName
+			item.StateID = &sid
+			item.StateName = &sName
+		}
+		if spec.lgaID.Valid && spec.lgaID.Int32 > 0 {
+			lid := spec.lgaID.Int32
+			lName := lgaName
+			item.LgaID = &lid
+			item.LgaName = &lName
+		}
+		if spec.wardID.Valid && spec.wardID.Int32 > 0 {
+			wid := spec.wardID.Int32
+			wName := wardName
+			item.WardID = &wid
+			item.WardName = &wName
+		}
+
+		// append the item to the group
+		groups = append(groups, item)
+	}
+
+	response := &GetUserCampaignGroupsResponse{
+		Role:   role,
+		Groups: groups,
+	}
+
+	// Cache in Redis with configured TTL
+	_ = utils.SetCachedJSON(ctx, s.rdb, cacheKey, response, db.RedisOneHourTTL)
+
+	return response, nil
 }

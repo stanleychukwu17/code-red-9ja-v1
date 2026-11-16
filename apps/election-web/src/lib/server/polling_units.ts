@@ -85,39 +85,24 @@ export const getPollingUnitById = createServerFn({ method: "GET" })
 export const getPollingUnits = createServerFn()
   .inputValidator(
     (data: {
-      wardId?: number;
-      localGovernmentId?: number;
-      stateId?: number;
-      limit?: number;
-      cursor?: string | number;
-      search?: string;
+      ward_id?: number;
+      lga_id?: number;
     }) => data,
   )
-  .handler(
-    async ({
-      data: { wardId, localGovernmentId, stateId, limit, cursor, search },
-    }) => {
-      try {
-        const response = await apiFetch(
-          API_URL.getPollingUnits(
-            wardId,
-            localGovernmentId,
-            stateId,
-            limit,
-            cursor,
-            search,
-          ),
-        );
-        const data = await response.json();
-        return data;
-      } catch (error) {
-        return {
-          status: "failed",
-          error: "Failed to fetch polling units from API",
-        };
-      }
-    },
-  );
+  .handler(async ({ data }) => {
+    try {
+      const response = await apiFetch(
+        API_URL.getPollingUnits(data?.ward_id, data?.lga_id),
+      );
+      const resData = await response.json();
+      return resData;
+    } catch (error) {
+      return {
+        status: "failed",
+        error: "Failed to fetch polling units from API",
+      };
+    }
+  });
 
 export const getPollingUnitsWithCapacity = createServerFn()
   .inputValidator(

@@ -128,19 +128,11 @@ export const API_URL = {
 
   getPollingUnits: (
     wardId?: number,
-    localGovernmentId?: number,
-    stateId?: number,
-    limit?: number,
-    cursor?: string | number,
-    search?: string,
+    lgaId?: number,
   ) => {
     const params = new URLSearchParams();
     if (wardId) params.append("ward_id", String(wardId));
-    if (localGovernmentId) params.append("lga_id", String(localGovernmentId));
-    if (stateId) params.append("state_id", String(stateId));
-    if (limit) params.append("limit", String(limit));
-    if (cursor) params.append("cursor", String(cursor));
-    if (search) params.append("search", search);
+    if (lgaId) params.append("lga_id", String(lgaId));
     const qs = params.toString();
     return `${api}/polling-units${qs ? `?${qs}` : ""}`;
   },
@@ -293,6 +285,7 @@ export const API_URL = {
     `${api}/polling-unit-assignments/${id}/tracking`,
 
   supervisorAssignments: `${api}/supervisor-assignments`,
+  teamMembers: `${api}/team/members`,
 
   pollingUnitResults: `${api}/polling-unit-results`,
   pollingUnitResultById: (id: string | number) =>
@@ -382,6 +375,14 @@ export const API_URL = {
     },
   },
   userPreferences: `${api}/user_preferences`,
+  campaignGroups: {
+    myGroups: `${api}/campaign-groups/my-groups`,
+    getGroup: (groupId: number | string) =>
+      `${api}/campaign-groups/${groupId}`,
+    getMembers: (groupId: number | string) =>
+      `${api}/campaign-groups/${groupId}/members`,
+    findGroup: `${api}/campaign-groups/find`,
+  },
 };
 
 export const QUERY_KEYS = {

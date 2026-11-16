@@ -33,19 +33,15 @@ type UpdateUserPreferencesParams struct {
 func (s *UsersService) GetUserPreferences(ctx context.Context, userID int64) (UserPreferencesResponse, error) {
 	redisKey := fmt.Sprintf("%s%d", db.RedisUserPreferences, userID)
 
-	// 1. Check Redis cache first
-	cachedJSON, err := s.rdb.Get(ctx, redisKey).Result()
-	if err == nil && cachedJSON != "" {
-		var cachedPref UserPreferencesResponse
-		if err := json.Unmarshal([]byte(cachedJSON), &cachedPref); err == nil {
-			if cachedPref.PinnedLinks == nil {
-				cachedPref.PinnedLinks = make(map[string][]string)
-			}
-			return cachedPref, nil
+	// Check Redis cache first
+	if cachedPref, ok := utils.GetCachedJSON[UserPreferencesResponse](ctx, s.rdb, redisKey); ok {
+		if cachedPref.PinnedLinks == nil {
+			cachedPref.PinnedLinks = make(map[string][]string)
 		}
+		return cachedPref, nil
 	}
 
-	// 2. Query database on cache miss
+	// Query database on cache miss
 	pref, err := s.queries.GetUserPreferencesByUserID(ctx, userID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -55,10 +51,8 @@ func (s *UsersService) GetUserPreferences(ctx context.Context, userID int64) (Us
 				Theme:             "auto",
 				PreferenceVersion: 0,
 			}
-			// Cache default preferences for 24 hours to prevent repeated DB misses
-			if jsonBytes, err := json.Marshal(defaultPref); err == nil {
-				s.rdb.Set(ctx, redisKey, jsonBytes, 24*time.Hour)
-			}
+			// Cache default preferences to prevent repeated DB misses
+			_ = utils.SetCachedJSON(ctx, s.rdb, redisKey, defaultPref, 24*time.Hour)
 			return defaultPref, nil
 		}
 		return UserPreferencesResponse{}, err
@@ -81,10 +75,7 @@ func (s *UsersService) GetUserPreferences(ctx context.Context, userID int64) (Us
 	}
 
 	// Cache the retrieved preferences in Redis
-	jsonBytes, err := json.Marshal(res)
-	if err == nil {
-		s.rdb.Set(ctx, redisKey, jsonBytes, db.RedisOneEightyDaysTTL)
-	}
+	_ = utils.SetCachedJSON(ctx, s.rdb, redisKey, res, db.RedisOneEightyDaysTTL)
 
 	return res, nil
 }
@@ -159,10 +150,7 @@ func (s *UsersService) UpdateUserPreferences(ctx context.Context, userID int64, 
 
 	// Update Redis cache immediately with fresh updated values
 	redisKey := fmt.Sprintf("%s%d", db.RedisUserPreferences, userID)
-	jsonBytes, err := json.Marshal(finalResponse)
-	if err == nil {
-		s.rdb.Set(ctx, redisKey, jsonBytes, db.RedisOneEightyDaysTTL)
-	}
+	_ = utils.SetCachedJSON(ctx, s.rdb, redisKey, finalResponse, db.RedisOneEightyDaysTTL)
 
 	return finalResponse, nil
 }

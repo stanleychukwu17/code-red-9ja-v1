@@ -184,3 +184,23 @@ FROM campaign_group_members cgm
 JOIN campaign_groups cg ON cg.id = cgm.group_id
 WHERE cg.party_id = $1 AND cg.ward_id = $2
 GROUP BY cgm.role;
+
+-- name: GetUserCampaignGroupMembership :one
+SELECT 
+    m.role,
+    cg.party_id,
+    cg.scope,
+    cg.state_id,
+    cg.lga_id,
+    cg.ward_id,
+    s.name AS state_name,
+    l.name AS lga_name,
+    w.name AS ward_name
+FROM campaign_group_members m
+JOIN campaign_groups cg ON cg.id = m.group_id
+LEFT JOIN c_states s ON s.id = cg.state_id
+LEFT JOIN lgas l ON l.id = cg.lga_id
+LEFT JOIN wards w ON w.id = cg.ward_id
+WHERE m.user_id = $1
+ORDER BY m.joined_at DESC
+LIMIT 1;

@@ -167,6 +167,8 @@
     "swaggertype",
     "swaggo",
     "systemsettingshandler",
+    "teamhandler",
+    "teamservice",
     "tfstate",
     "Timestamptz",
     "Toolbelt",

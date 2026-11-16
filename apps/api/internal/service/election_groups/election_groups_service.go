@@ -2,7 +2,6 @@ package electiongroupsservice
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
@@ -29,53 +28,39 @@ func NewElectionGroupsService(q *queries.Queries, rdb *redis.Client, distributor
 	}
 }
 
-// invalidateCache purges the cached collections for all election groups and elections,
-// as well as the individual election group cache entry if a specific group ID is provided.
+// invalidateCache purges the cached collections for all election groups and elections
 func (s *ElectionGroupsService) invalidateCache(ctx context.Context, id *int32) {
-	// 1. Clear global collections for election groups (all and active)
+	// Clear global collections for election groups
 	s.rdb.Del(ctx, db.RedisElectionGroupsAll, db.RedisElectionGroupsActive)
 
-	// 2. If a specific group ID is provided, invalidate its individual cache key, fake_id cache, and election instances list
+	// Invalidate individual group cache key if provided
 	if id != nil {
 		s.rdb.Del(ctx, fmt.Sprintf("%s%d", db.RedisElectionGroupInstances, *id))
 
 		key := fmt.Sprintf("%s%d", db.RedisElectionGroupByID, *id)
-		if val, err := s.rdb.Get(ctx, key).Result(); err == nil {
-			var eg queries.ElectionGroup
-
-			if err := json.Unmarshal([]byte(val), &eg); err == nil && eg.FakeID.Valid {
-				s.rdb.Del(ctx, fmt.Sprintf("%s%d", db.RedisElectionGroupByFakeID, eg.FakeID.Int64))
-			}
+		if eg, ok := utils.GetCachedJSON[queries.ElectionGroup](ctx, s.rdb, key); ok && eg.FakeID.Valid {
+			s.rdb.Del(ctx, fmt.Sprintf("%s%d", db.RedisElectionGroupByFakeID, eg.FakeID.Int64))
 		}
 
 		s.rdb.Del(ctx, key)
 	}
 }
 
-// GetSafeNationalMetrics retrieves the nationwide counts of electoral units using a 3-tier strategy:
-// 1. Redis Cache: Instant retrieval from memory via RedisNationalMetrics.
-// 2. Database Query: Fetches fresh totals from the national_metrics table and caches them (1-year TTL).
-// 3. Static Fallback: Default standard Nigerian administrative counts so group creation never fails.
+// GetSafeNationalMetrics retrieves the nationwide counts of electoral units
 func (s *ElectionGroupsService) GetSafeNationalMetrics(ctx context.Context) queries.NationalMetric {
-	// 1. Attempt to load cached national metrics from Redis
-	val, err := s.rdb.Get(ctx, db.RedisNationalMetrics).Result()
-	if err == nil {
-		var metrics queries.NationalMetric
-		if err := json.Unmarshal([]byte(val), &metrics); err == nil {
-			return metrics
-		}
-	}
-
-	// 2. Cache miss or parse failure: query database and refresh the cache
-	metrics, err := s.queries.GetNationalMetrics(ctx)
-	if err == nil {
-		if data, err := json.Marshal(metrics); err == nil {
-			s.rdb.Set(ctx, db.RedisNationalMetrics, data, db.RedisOneEightyDaysTTL)
-		}
+	// Attempt to load cached national metrics from Redis
+	if metrics, ok := utils.GetCachedJSON[queries.NationalMetric](ctx, s.rdb, db.RedisNationalMetrics); ok {
 		return metrics
 	}
 
-	// 3. Fallback to default official Nigerian electoral unit metrics if DB is unavailable
+	// Query database and refresh the cache on cache miss
+	metrics, err := s.queries.GetNationalMetrics(ctx)
+	if err == nil {
+		_ = utils.SetCachedJSON(ctx, s.rdb, db.RedisNationalMetrics, metrics, db.RedisOneEightyDaysTTL)
+		return metrics
+	}
+
+	// Fallback to default official Nigerian electoral unit metrics if DB is unavailable
 	return queries.NationalMetric{
 		SenatorialDistrictsCount:   109,
 		FederalConstituenciesCount: 360,
@@ -108,58 +93,39 @@ func (s *ElectionGroupsService) CreateElectionGroup(ctx context.Context, name st
 func (s *ElectionGroupsService) GetElectionGroupByID(ctx context.Context, id int32) (queries.ElectionGroup, error) {
 	cacheKey := fmt.Sprintf("%s%d", db.RedisElectionGroupByID, id)
 
-	// 1. Attempt to fetch pre-cached election group from Redis
-	val, err := s.rdb.Get(ctx, cacheKey).Result()
-	if err == nil {
-		var eg queries.ElectionGroup
-		if err := json.Unmarshal([]byte(val), &eg); err == nil {
-			return eg, nil
-		}
+	if eg, ok := utils.GetCachedJSON[queries.ElectionGroup](ctx, s.rdb, cacheKey); ok {
+		return eg, nil
 	}
 
-	// 2. Cache miss: fetch election group directly from the database
 	eg, err := s.queries.GetElectionGroupByID(ctx, id)
 	if err != nil {
 		return eg, err
 	}
 
-	// 3. Serialize and populate Redis cache
-	if egBytes, err := json.Marshal(eg); err == nil {
-		s.rdb.Set(ctx, cacheKey, egBytes, db.RedisNinetyDaysTTL)
-	}
+	_ = utils.SetCachedJSON(ctx, s.rdb, cacheKey, eg, db.RedisNinetyDaysTTL)
 
 	return eg, nil
 }
 
-// GetElectionGroupByFakeID retrieves an election group record by its unique 64-bit fake_id, utilizing Redis caching.
+// GetElectionGroupByFakeID retrieves an election group record by its unique fake ID, utilizing Redis caching.
 func (s *ElectionGroupsService) GetElectionGroupByFakeID(ctx context.Context, fakeID int64) (queries.ElectionGroup, error) {
 	cacheKey := fmt.Sprintf("%s%d", db.RedisElectionGroupByFakeID, fakeID)
 
-	// 1. Attempt to fetch pre-cached election group from Redis
-	val, err := s.rdb.Get(ctx, cacheKey).Result()
-	if err == nil {
-		var eg queries.ElectionGroup
-		if err := json.Unmarshal([]byte(val), &eg); err == nil {
-			return eg, nil
-		}
+	if eg, ok := utils.GetCachedJSON[queries.ElectionGroup](ctx, s.rdb, cacheKey); ok {
+		return eg, nil
 	}
 
-	// 2. Cache miss: fetch election group directly from the database
 	eg, err := s.queries.GetElectionGroupByFakeID(ctx, utils.PgInt8FromInt64(fakeID))
 	if err != nil {
 		return eg, err
 	}
 
-	// 3. Serialize and populate Redis cache
-	if egBytes, err := json.Marshal(eg); err == nil {
-		s.rdb.Set(ctx, cacheKey, egBytes, db.RedisNinetyDaysTTL)
-	}
+	_ = utils.SetCachedJSON(ctx, s.rdb, cacheKey, eg, db.RedisNinetyDaysTTL)
 
 	return eg, nil
 }
 
 // ListElectionGroups returns election group records across the platform, optionally filtered by active status.
-// Results are cached in Redis with a 90-day TTL.
 func (s *ElectionGroupsService) ListElectionGroups(ctx context.Context, active *bool) ([]queries.ElectionGroup, error) {
 	cacheKey := db.RedisElectionGroupsAll
 	if active != nil {
@@ -170,25 +136,16 @@ func (s *ElectionGroupsService) ListElectionGroups(ctx context.Context, active *
 		}
 	}
 
-	// 1. Attempt to fetch pre-cached election group list from Redis
-	val, err := s.rdb.Get(ctx, cacheKey).Result()
-	if err == nil {
-		var groups []queries.ElectionGroup
-		if err := json.Unmarshal([]byte(val), &groups); err == nil {
-			return groups, nil
-		}
+	if groups, ok := utils.GetCachedJSON[[]queries.ElectionGroup](ctx, s.rdb, cacheKey); ok {
+		return groups, nil
 	}
 
-	// 2. Cache miss: retrieve election groups from the database
 	groups, err := s.queries.ListElectionGroups(ctx, utils.PgBoolFromPtr(active))
 	if err != nil {
 		return nil, err
 	}
 
-	// 3. Serialize and cache election groups in Redis
-	if groupsBytes, err := json.Marshal(groups); err == nil {
-		s.rdb.Set(ctx, cacheKey, groupsBytes, db.RedisNinetyDaysTTL)
-	}
+	_ = utils.SetCachedJSON(ctx, s.rdb, cacheKey, groups, db.RedisNinetyDaysTTL)
 
 	return groups, nil
 }
@@ -240,37 +197,30 @@ func (s *ElectionGroupsService) DeleteElectionGroup(ctx context.Context, id int3
 		return err
 	}
 
-	// 4. Invalidate cache on successful deletion
+	// Invalidate cache on successful deletion
 	s.invalidateCache(ctx, &id)
 	return nil
 }
 
-// ListGroupElections returns all detailed election instances belonging to a specific election group,
-// including office information, hierarchy ranks, candidate counts, and geographic scopes.
-// Cached in Redis with a 7-day TTL.
+// ListGroupElections returns all detailed election instances belonging to a specific election group
 func (s *ElectionGroupsService) ListGroupElections(ctx context.Context, electionGroupID int32) ([]queries.ElectionGroupListItem, error) {
 	cacheKey := fmt.Sprintf("%s%d", db.RedisElectionGroupInstances, electionGroupID)
 
-	// 1. Attempt to fetch pre-cached detailed elections list from Redis
-	var rows []queries.ListElectionsDetailedByGroupIDRow
-	if val, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
-		_ = json.Unmarshal([]byte(val), &rows)
-	}
+	// Attempt to fetch pre-cached detailed elections list from Redis
+	rows, ok := utils.GetCachedJSON[[]queries.ListElectionsDetailedByGroupIDRow](ctx, s.rdb, cacheKey)
 
-	// 2. Cache miss: fetch from PostgreSQL and cache for 7 days
-	if len(rows) == 0 {
+	// Fetch from PostgreSQL and cache if missing
+	if !ok || len(rows) == 0 {
 		var err error
 		rows, err = s.queries.ListElectionsDetailedByGroupID(ctx, electionGroupID)
 		if err != nil {
 			return nil, err
 		}
 
-		if data, err := json.Marshal(rows); err == nil {
-			s.rdb.Set(ctx, cacheKey, data, db.RedisSevenDaysTTL)
-		}
+		_ = utils.SetCachedJSON(ctx, s.rdb, cacheKey, rows, db.RedisSevenDaysTTL)
 	}
 
-	// 3. Dynamically evaluate real-time election status using wall-clock time
+	// Dynamically evaluate real-time election status using wall-clock time
 	now := time.Now()
 	items := make([]queries.ElectionGroupListItem, 0, len(rows))
 	for _, row := range rows {

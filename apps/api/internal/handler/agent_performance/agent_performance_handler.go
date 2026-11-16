@@ -1,6 +1,8 @@
 package agentperformancehandler
 
 import (
+	"context"
+	"fmt"
 	"log/slog"
 	"math"
 	"net/http"
@@ -13,18 +15,18 @@ import (
 )
 
 type Handler struct {
-	q            *queries.Queries
+	queries      *queries.Queries
 	pool         *pgxpool.Pool
 	usersService *usersservice.UsersService
-	u            *utils.Utils
+	utils        *utils.Utils
 }
 
-func NewHandler(q *queries.Queries, pool *pgxpool.Pool, usersService *usersservice.UsersService, u *utils.Utils) *Handler {
+func NewHandler(queries *queries.Queries, pool *pgxpool.Pool, usersService *usersservice.UsersService, utils *utils.Utils) *Handler {
 	return &Handler{
-		q:            q,
+		queries:      queries,
 		pool:         pool,
 		usersService: usersService,
-		u:            u,
+		utils:        utils,
 	}
 }
 
@@ -110,6 +112,30 @@ func (h *Handler) GetAgentPerformance(w http.ResponseWriter, r *http.Request) {
 		"limit", limit,
 	)
 
+	items, nextCursor, hasMore, err := h.fetchPerformanceStats(r.Context(), roleType, partyID, electionGroupID, stateID, lgaID, wardID, search, cursor, limit)
+	if err != nil {
+		slog.Error("[AgentPerformance] Query error", "error", err, "role_type", roleType)
+		h.utils.RespondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	slog.Info("[AgentPerformance] Returning performance stats successfully",
+		"role_type", roleType,
+		"item_count", len(items),
+		"has_more", hasMore,
+	)
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Agent performance stats retrieved successfully", map[string]interface{}{
+		"items":       items,
+		"next_cursor": nextCursor,
+		"has_more":    hasMore,
+	})
+}
+
+
+
+// fetchPerformanceStats executes the appropriate SQL query according to role type.
+func (h *Handler) fetchPerformanceStats(ctx context.Context, roleType string, partyID int16, electionGroupID int32, stateID int16, lgaID int32, wardID int32, search string, cursor int64, limit int32) ([]AgentPerformanceItem, *int64, bool, error) {
 	// Fetch limit + 1 to check for next page
 	queryLimit := int32(limit + 1)
 
@@ -117,11 +143,9 @@ func (h *Handler) GetAgentPerformance(w http.ResponseWriter, r *http.Request) {
 	var nextCursor *int64
 	hasMore := false
 
-	ctx := r.Context()
-
 	switch roleType {
-	case "polling_agent", "polling_unit_agent", "pu_agent":
-		rows, err := h.q.ListPollingAgentPerformanceStats(ctx, queries.ListPollingAgentPerformanceStatsParams{
+	case "polling_agent":
+		rows, err := h.queries.ListPollingAgentPerformanceStats(ctx, queries.ListPollingAgentPerformanceStatsParams{
 			PartyID:         int16(partyID),
 			ElectionGroupID: electionGroupID,
 			StateID:         int16(stateID),
@@ -132,9 +156,7 @@ func (h *Handler) GetAgentPerformance(w http.ResponseWriter, r *http.Request) {
 			LimitVal:        queryLimit,
 		})
 		if err != nil {
-			slog.Error("[AgentPerformance] ListPollingAgentPerformanceStats query error", "error", err, "role_type", roleType)
-			h.u.RespondError(w, http.StatusInternalServerError, "Failed to fetch polling agent performance stats: "+err.Error())
-			return
+			return nil, nil, false, fmt.Errorf("failed to fetch polling agent performance stats: %w", err)
 		}
 
 		if len(rows) > int(limit) {
@@ -183,7 +205,7 @@ func (h *Handler) GetAgentPerformance(w http.ResponseWriter, r *http.Request) {
 		}
 
 	case "ward_election_supervisor":
-		rows, err := h.q.ListWardSupervisorPerformanceStats(ctx, queries.ListWardSupervisorPerformanceStatsParams{
+		rows, err := h.queries.ListWardSupervisorPerformanceStats(ctx, queries.ListWardSupervisorPerformanceStatsParams{
 			PartyID:         int16(partyID),
 			ElectionGroupID: electionGroupID,
 			StateID:         int16(stateID),
@@ -194,9 +216,7 @@ func (h *Handler) GetAgentPerformance(w http.ResponseWriter, r *http.Request) {
 			LimitVal:        queryLimit,
 		})
 		if err != nil {
-			slog.Error("[AgentPerformance] ListWardSupervisorPerformanceStats query error", "error", err, "role_type", roleType)
-			h.u.RespondError(w, http.StatusInternalServerError, "Failed to fetch ward supervisor performance stats: "+err.Error())
-			return
+			return nil, nil, false, fmt.Errorf("failed to fetch ward supervisor performance stats: %w", err)
 		}
 
 		if len(rows) > int(limit) {
@@ -234,7 +254,7 @@ func (h *Handler) GetAgentPerformance(w http.ResponseWriter, r *http.Request) {
 		}
 
 	case "lga_election_supervisor":
-		rows, err := h.q.ListLGASupervisorPerformanceStats(ctx, queries.ListLGASupervisorPerformanceStatsParams{
+		rows, err := h.queries.ListLGASupervisorPerformanceStats(ctx, queries.ListLGASupervisorPerformanceStatsParams{
 			PartyID:         int16(partyID),
 			ElectionGroupID: electionGroupID,
 			StateID:         int16(stateID),
@@ -244,9 +264,7 @@ func (h *Handler) GetAgentPerformance(w http.ResponseWriter, r *http.Request) {
 			LimitVal:        queryLimit,
 		})
 		if err != nil {
-			slog.Error("[AgentPerformance] ListLGASupervisorPerformanceStats query error", "error", err, "role_type", roleType)
-			h.u.RespondError(w, http.StatusInternalServerError, "Failed to fetch LGA supervisor performance stats: "+err.Error())
-			return
+			return nil, nil, false, fmt.Errorf("failed to fetch LGA supervisor performance stats: %w", err)
 		}
 
 		if len(rows) > int(limit) {
@@ -283,7 +301,7 @@ func (h *Handler) GetAgentPerformance(w http.ResponseWriter, r *http.Request) {
 		}
 
 	case "state_election_supervisor":
-		rows, err := h.q.ListStateSupervisorPerformanceStats(ctx, queries.ListStateSupervisorPerformanceStatsParams{
+		rows, err := h.queries.ListStateSupervisorPerformanceStats(ctx, queries.ListStateSupervisorPerformanceStatsParams{
 			PartyID:         int16(partyID),
 			ElectionGroupID: electionGroupID,
 			StateID:         int16(stateID),
@@ -292,9 +310,7 @@ func (h *Handler) GetAgentPerformance(w http.ResponseWriter, r *http.Request) {
 			LimitVal:        queryLimit,
 		})
 		if err != nil {
-			slog.Error("[AgentPerformance] ListStateSupervisorPerformanceStats query error", "error", err, "role_type", roleType)
-			h.u.RespondError(w, http.StatusInternalServerError, "Failed to fetch state supervisor performance stats: "+err.Error())
-			return
+			return nil, nil, false, fmt.Errorf("failed to fetch state supervisor performance stats: %w", err)
 		}
 
 		if len(rows) > int(limit) {
@@ -330,9 +346,7 @@ func (h *Handler) GetAgentPerformance(w http.ResponseWriter, r *http.Request) {
 		}
 
 	default:
-		slog.Warn("[AgentPerformance] Invalid role_type received", "role_type", roleType)
-		h.u.RespondError(w, http.StatusBadRequest, "Invalid role_type parameter: "+roleType)
-		return
+		return nil, nil, false, fmt.Errorf("invalid role_type parameter: %s", roleType)
 	}
 
 	if len(items) > 0 {
@@ -346,15 +360,5 @@ func (h *Handler) GetAgentPerformance(w http.ResponseWriter, r *http.Request) {
 		items = []AgentPerformanceItem{}
 	}
 
-	slog.Info("[AgentPerformance] Returning performance stats successfully",
-		"role_type", roleType,
-		"item_count", len(items),
-		"has_more", hasMore,
-	)
-
-	h.u.RespondSuccess(w, http.StatusOK, "Agent performance stats retrieved successfully", map[string]interface{}{
-		"items":       items,
-		"next_cursor": nextCursor,
-		"has_more":    hasMore,
-	})
+	return items, nextCursor, hasMore, nil
 }

@@ -39,12 +39,8 @@ func (s *PollingUnitsService) CreatePollingUnit(ctx context.Context, arg queries
 // GetPollingUnitByID retrieves a single polling unit by its ID, utilizing Redis cache when available.
 func (s *PollingUnitsService) GetPollingUnitByID(ctx context.Context, id int32) (queries.PollingUnit, error) {
 	redisKey := fmt.Sprintf("%s%d", db.RedisEachPollingUnit, id)
-	cached, err := s.rdb.Get(ctx, redisKey).Result()
-	if err == nil {
-		var pu queries.PollingUnit
-		if json.Unmarshal([]byte(cached), &pu) == nil && pu.ID > 0 {
-			return pu, nil
-		}
+	if pu, ok := utils.GetCachedJSON[queries.PollingUnit](ctx, s.rdb, redisKey); ok && pu.ID > 0 {
+		return pu, nil
 	}
 
 	pu, err := s.queries.GetPollingUnitByID(ctx, id)
@@ -52,9 +48,7 @@ func (s *PollingUnitsService) GetPollingUnitByID(ctx context.Context, id int32) 
 		return queries.PollingUnit{}, err
 	}
 
-	if data, err := json.Marshal(pu); err == nil {
-		s.rdb.Set(ctx, redisKey, data, db.RedisOneYearTTL)
-	}
+	_ = utils.SetCachedJSON(ctx, s.rdb, redisKey, pu, db.RedisOneYearTTL)
 
 	return pu, nil
 }
@@ -113,7 +107,7 @@ func (s *PollingUnitsService) GetPollingUnits(ctx context.Context, arg queries.G
 		PollingUnits []queries.PollingUnit `json:"polling_units"`
 	}
 
-	// Cache key selection: prioritize ward (most granular, ~10-30 PUs) then LGA (~200-500 PUs)
+	// Cache key selection: prioritize ward then LGA
 	var redisKey string
 	if arg.WardID > 0 {
 		redisKey = fmt.Sprintf("%s%d", db.RedisPollingUnitsByWard, arg.WardID)
@@ -121,32 +115,22 @@ func (s *PollingUnitsService) GetPollingUnits(ctx context.Context, arg queries.G
 		redisKey = fmt.Sprintf("%s%d", db.RedisPollingUnitsByLGA, arg.LgaID)
 	}
 
-	data, err := s.rdb.Get(ctx, redisKey).Result()
-	switch err {
-	case redis.Nil:
-		dbData, err := s.queries.GetPollingUnits(ctx, arg)
-		if err != nil {
-			return nil, err
-		}
-
-		payload := Response{
-			PollingUnits: dbData,
-		}
-
-		jsonData, _ := json.Marshal(payload)
-		s.rdb.Set(ctx, redisKey, jsonData, db.RedisOneYearTTL)
-
-		return dbData, nil
-	case nil:
-		var payload Response
-		err = json.Unmarshal([]byte(data), &payload)
-		if err != nil {
-			return nil, err
-		}
+	if payload, ok := utils.GetCachedJSON[Response](ctx, s.rdb, redisKey); ok {
 		return payload.PollingUnits, nil
-	default:
+	}
+
+	dbData, err := s.queries.GetPollingUnits(ctx, arg)
+	if err != nil {
 		return nil, err
 	}
+
+	payload := Response{
+		PollingUnits: dbData,
+	}
+
+	_ = utils.SetCachedJSON(ctx, s.rdb, redisKey, payload, db.RedisOneYearTTL)
+
+	return dbData, nil
 }
 
 type PollingUnitWithCapacity struct {

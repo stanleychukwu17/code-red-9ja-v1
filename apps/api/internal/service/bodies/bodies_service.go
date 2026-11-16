@@ -2,7 +2,6 @@ package bodiesservice
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"free9ja/api/internal/constants"
@@ -199,12 +198,8 @@ func (s *BodiesService) GetOccupations(ctx context.Context) ([]queries.Occupatio
 
 // GetNationalMetrics retrieves aggregated metrics for electoral bodies nationwide, using a cached version if available.
 func (s *BodiesService) GetNationalMetrics(ctx context.Context) (queries.NationalMetric, error) {
-	val, err := s.rdb.Get(ctx, db.RedisNationalMetrics).Result()
-	if err == nil {
-		var metrics queries.NationalMetric
-		if err := json.Unmarshal([]byte(val), &metrics); err == nil {
-			return metrics, nil
-		}
+	if metrics, ok := utils.GetCachedJSON[queries.NationalMetric](ctx, s.rdb, db.RedisNationalMetrics); ok {
+		return metrics, nil
 	}
 
 	metrics, err := s.queries.GetNationalMetrics(ctx)
@@ -212,9 +207,7 @@ func (s *BodiesService) GetNationalMetrics(ctx context.Context) (queries.Nationa
 		return queries.NationalMetric{}, err
 	}
 
-	if jsonData, err := json.Marshal(metrics); err == nil {
-		s.rdb.Set(ctx, db.RedisNationalMetrics, jsonData, db.RedisOneEightyDaysTTL)
-	}
+	_ = utils.SetCachedJSON(ctx, s.rdb, db.RedisNationalMetrics, metrics, db.RedisOneEightyDaysTTL)
 
 	return metrics, nil
 }
@@ -225,29 +218,22 @@ func (s *BodiesService) GetAllCountries(ctx context.Context) ([]queries.ListCoun
 		Countries []queries.ListCountriesRow `json:"countries"`
 	}
 
-	countries, err := s.rdb.Get(ctx, db.RedisCountriesAll).Result()
-	switch err {
-	case redis.Nil:
-		dbCountries, err := s.queries.ListCountries(ctx)
-		if err != nil {
-			return nil, err
-		}
-
-		payload := CountriesResponse{
-			Countries: dbCountries,
-		}
-
-		jsonData, _ := json.Marshal(payload)
-		s.rdb.Set(ctx, db.RedisCountriesAll, jsonData, db.RedisOneYearTTL)
-
-		return dbCountries, nil
-	case nil:
-		var payload CountriesResponse
-		err = json.Unmarshal([]byte(countries), &payload)
+	if payload, ok := utils.GetCachedJSON[CountriesResponse](ctx, s.rdb, db.RedisCountriesAll); ok {
 		return payload.Countries, nil
-	default:
+	}
+
+	dbCountries, err := s.queries.ListCountries(ctx)
+	if err != nil {
 		return nil, err
 	}
+
+	payload := CountriesResponse{
+		Countries: dbCountries,
+	}
+
+	_ = utils.SetCachedJSON(ctx, s.rdb, db.RedisCountriesAll, payload, db.RedisOneYearTTL)
+
+	return dbCountries, nil
 }
 
 // GetStatesByCountryID retrieves a list of states for a given country ID, using a cached version if available.
@@ -257,34 +243,27 @@ func (s *BodiesService) GetStatesByCountryID(ctx context.Context, countryID int1
 	}
 
 	redisKey := fmt.Sprintf("%s%d", db.RedisStatesByCountry, countryID)
-	statesData, err := s.rdb.Get(ctx, redisKey).Result()
-	switch err {
-	case redis.Nil:
-		dbStates, err := s.queries.GetStatesByCountryID(ctx, countryID)
-		if err != nil {
-			return nil, err
-		}
-
-		payload := StatesResponse{
-			States: dbStates,
-		}
-
-		jsonData, _ := json.Marshal(payload)
-		// Nigeria (161) states are extremely stable; all other countries expire sooner
-		stateTTL := db.RedisSevenDaysTTL
-		if countryID == constants.NigeriaCountryID {
-			stateTTL = db.RedisOneEightyDaysTTL
-		}
-		s.rdb.Set(ctx, redisKey, jsonData, stateTTL)
-
-		return dbStates, nil
-	case nil:
-		var payload StatesResponse
-		err = json.Unmarshal([]byte(statesData), &payload)
+	if payload, ok := utils.GetCachedJSON[StatesResponse](ctx, s.rdb, redisKey); ok {
 		return payload.States, nil
-	default:
+	}
+
+	dbStates, err := s.queries.GetStatesByCountryID(ctx, countryID)
+	if err != nil {
 		return nil, err
 	}
+
+	payload := StatesResponse{
+		States: dbStates,
+	}
+
+	// Nigeria states are extremely stable; all other countries expire sooner
+	stateTTL := db.RedisSevenDaysTTL
+	if countryID == constants.NigeriaCountryID {
+		stateTTL = db.RedisOneEightyDaysTTL
+	}
+	_ = utils.SetCachedJSON(ctx, s.rdb, redisKey, payload, stateTTL)
+
+	return dbStates, nil
 }
 
 // GetCitiesByStateID retrieves a list of cities for a given state ID, using a cached version if available.
@@ -294,29 +273,22 @@ func (s *BodiesService) GetCitiesByStateID(ctx context.Context, stateID int16) (
 	}
 
 	redisKey := fmt.Sprintf("%s%d", db.RedisCitiesByState, stateID)
-	citiesData, err := s.rdb.Get(ctx, redisKey).Result()
-	switch err {
-	case redis.Nil:
-		dbCities, err := s.queries.GetCitiesByStateID(ctx, stateID)
-		if err != nil {
-			return nil, err
-		}
-
-		payload := CitiesResponse{
-			Cities: dbCities,
-		}
-
-		jsonData, _ := json.Marshal(payload)
-		s.rdb.Set(ctx, redisKey, jsonData, db.RedisOneEightyDaysTTL)
-
-		return dbCities, nil
-	case nil:
-		var payload CitiesResponse
-		err = json.Unmarshal([]byte(citiesData), &payload)
+	if payload, ok := utils.GetCachedJSON[CitiesResponse](ctx, s.rdb, redisKey); ok {
 		return payload.Cities, nil
-	default:
+	}
+
+	dbCities, err := s.queries.GetCitiesByStateID(ctx, stateID)
+	if err != nil {
 		return nil, err
 	}
+
+	payload := CitiesResponse{
+		Cities: dbCities,
+	}
+
+	_ = utils.SetCachedJSON(ctx, s.rdb, redisKey, payload, db.RedisOneEightyDaysTTL)
+
+	return dbCities, nil
 }
 
 // GetLGAs retrieves a list of Local Government Areas (LGAs) for a given state ID or nationwide, using Redis cache when available.
@@ -332,29 +304,22 @@ func (s *BodiesService) GetLGAs(ctx context.Context, stateID int32) ([]queries.L
 		redisKey = db.RedisLGAsAll
 	}
 
-	data, err := s.rdb.Get(ctx, redisKey).Result()
-	switch err {
-	case redis.Nil:
-		dbData, err := s.queries.GetLGAs(ctx, stateID)
-		if err != nil {
-			return nil, err
-		}
-
-		payload := Response{
-			LGAs: dbData,
-		}
-
-		jsonData, _ := json.Marshal(payload)
-		s.rdb.Set(ctx, redisKey, jsonData, db.RedisOneEightyDaysTTL)
-
-		return dbData, nil
-	case nil:
-		var payload Response
-		err = json.Unmarshal([]byte(data), &payload)
+	if payload, ok := utils.GetCachedJSON[Response](ctx, s.rdb, redisKey); ok {
 		return payload.LGAs, nil
-	default:
+	}
+
+	dbData, err := s.queries.GetLGAs(ctx, stateID)
+	if err != nil {
 		return nil, err
 	}
+
+	payload := Response{
+		LGAs: dbData,
+	}
+
+	_ = utils.SetCachedJSON(ctx, s.rdb, redisKey, payload, db.RedisOneEightyDaysTTL)
+
+	return dbData, nil
 }
 
 // CreateLGAParams defines the attributes required to create a Local Government Area.
@@ -408,12 +373,8 @@ func (s *BodiesService) CreateLGA(ctx context.Context, params CreateLGAParams) (
 // GetLGAByID retrieves a single Local Government Area by its ID, utilizing Redis cache when available.
 func (s *BodiesService) GetLGAByID(ctx context.Context, id int32) (queries.Lga, error) {
 	redisKey := fmt.Sprintf("%s%d", db.RedisEachLGA, id)
-	cached, err := s.rdb.Get(ctx, redisKey).Result()
-	if err == nil {
-		var lga queries.Lga
-		if json.Unmarshal([]byte(cached), &lga) == nil && lga.ID > 0 {
-			return lga, nil
-		}
+	if lga, ok := utils.GetCachedJSON[queries.Lga](ctx, s.rdb, redisKey); ok && lga.ID > 0 {
+		return lga, nil
 	}
 
 	lga, err := s.queries.GetLGAByID(ctx, id)
@@ -421,9 +382,7 @@ func (s *BodiesService) GetLGAByID(ctx context.Context, id int32) (queries.Lga, 
 		return queries.Lga{}, err
 	}
 
-	if data, err := json.Marshal(lga); err == nil {
-		s.rdb.Set(ctx, redisKey, data, db.RedisOneEightyDaysTTL)
-	}
+	_ = utils.SetCachedJSON(ctx, s.rdb, redisKey, lga, db.RedisOneEightyDaysTTL)
 
 	return lga, nil
 }
@@ -497,20 +456,14 @@ func (s *BodiesService) CheckCountry(ctx context.Context, country_id int16) (que
 	redisCountryKey := fmt.Sprintf("%s%d", db.RedisEachCountry, country_id)
 
 	// attempt to get country details from redis
-	country_data, err := s.rdb.Get(ctx, redisCountryKey).Result()
-	if err == nil {
-		var country_dts queries.GetCountryByIDRow
-		json.Unmarshal([]byte(country_data), &country_dts)
-		if country_dts.ID > 0 {
-			return country_dts, nil
-		}
+	if country_dts, ok := utils.GetCachedJSON[queries.GetCountryByIDRow](ctx, s.rdb, redisCountryKey); ok && country_dts.ID > 0 {
+		return country_dts, nil
 	}
 
 	// get country details from db
 	country_dts, _ := s.queries.GetCountryByID(ctx, country_id)
 	if country_dts.ID > 0 {
-		jsonBytes, _ := json.Marshal(country_dts)
-		s.rdb.Set(ctx, redisCountryKey, jsonBytes, db.RedisOneYearTTL)
+		_ = utils.SetCachedJSON(ctx, s.rdb, redisCountryKey, country_dts, db.RedisOneYearTTL)
 		return country_dts, nil
 	}
 
@@ -534,29 +487,22 @@ func (s *BodiesService) CheckState(ctx context.Context, country_id, state_id int
 // CheckCity checks if the city is valid and belongs to state_id (if state_id > 0)
 func (s *BodiesService) CheckCity(ctx context.Context, state_id int16, city_id int32) (queries.GetCityByIDRow, error) {
 	redisCityKey := fmt.Sprintf("%s%d", db.RedisEachCity, city_id)
-	var city_dts queries.GetCityByIDRow
 
-	// 1. Try fetching city details from Redis cache
-	city_data, err := s.rdb.Get(ctx, redisCityKey).Result()
-	if err == nil {
-		if json.Unmarshal([]byte(city_data), &city_dts) == nil && city_dts.ID > 0 {
-
-			// Validate that the cached city belongs to the requested state
-			if state_id > 0 && city_dts.StateID != state_id {
-				return queries.GetCityByIDRow{}, fmt.Errorf("city does not belong to specified state")
-			}
-
-			return city_dts, nil
+	// Try fetching city details from Redis cache
+	if city_dts, ok := utils.GetCachedJSON[queries.GetCityByIDRow](ctx, s.rdb, redisCityKey); ok && city_dts.ID > 0 {
+		// Validate that the cached city belongs to the requested state
+		if state_id > 0 && city_dts.StateID != state_id {
+			return queries.GetCityByIDRow{}, fmt.Errorf("city does not belong to specified state")
 		}
+
+		return city_dts, nil
 	}
 
-	// 2. Fetch city details from the database on cache miss
-	city_dts, err = s.queries.GetCityByID(ctx, city_id)
+	// Fetch city details from the database on cache miss
+	city_dts, err := s.queries.GetCityByID(ctx, city_id)
 	if err == nil && city_dts.ID > 0 {
 		// Populate Redis cache for future queries
-		if data, err := json.Marshal(city_dts); err == nil {
-			s.rdb.Set(ctx, redisCityKey, data, db.RedisOneEightyDaysTTL)
-		}
+		_ = utils.SetCachedJSON(ctx, s.rdb, redisCityKey, city_dts, db.RedisOneEightyDaysTTL)
 
 		// Validate state association
 		if state_id > 0 && city_dts.StateID != state_id {
@@ -598,12 +544,8 @@ func (s *BodiesService) GetLocationNames(ctx context.Context, countryID, stateID
 func (s *BodiesService) CheckZone(ctx context.Context, zoneID int16) (queries.CZonesNigerium, error) {
 	redisZoneKey := fmt.Sprintf("%s%d", db.RedisEachZone, zoneID)
 
-	zoneData, err := s.rdb.Get(ctx, redisZoneKey).Result()
-	if err == nil {
-		var zone queries.CZonesNigerium
-		if json.Unmarshal([]byte(zoneData), &zone) == nil && zone.ID > 0 {
-			return zone, nil
-		}
+	if zone, ok := utils.GetCachedJSON[queries.CZonesNigerium](ctx, s.rdb, redisZoneKey); ok && zone.ID > 0 {
+		return zone, nil
 	}
 
 	zones, err := s.queries.ListZones(ctx)
@@ -613,9 +555,7 @@ func (s *BodiesService) CheckZone(ctx context.Context, zoneID int16) (queries.CZ
 
 	for _, z := range zones {
 		if z.ID == zoneID {
-			if data, err := json.Marshal(z); err == nil {
-				s.rdb.Set(ctx, redisZoneKey, data, db.RedisOneYearTTL)
-			}
+			_ = utils.SetCachedJSON(ctx, s.rdb, redisZoneKey, z, db.RedisOneYearTTL)
 			return z, nil
 		}
 	}
@@ -627,12 +567,8 @@ func (s *BodiesService) CheckZone(ctx context.Context, zoneID int16) (queries.CZ
 func (s *BodiesService) CheckStateByID(ctx context.Context, stateID int16) (queries.CState, error) {
 	redisStateKey := fmt.Sprintf("%s%d", db.RedisEachState, stateID)
 
-	stateData, err := s.rdb.Get(ctx, redisStateKey).Result()
-	if err == nil {
-		var state queries.CState
-		if json.Unmarshal([]byte(stateData), &state) == nil && state.ID > 0 {
-			return state, nil
-		}
+	if state, ok := utils.GetCachedJSON[queries.CState](ctx, s.rdb, redisStateKey); ok && state.ID > 0 {
+		return state, nil
 	}
 
 	state, err := s.queries.GetStateDetailsByID(ctx, stateID)
@@ -640,9 +576,7 @@ func (s *BodiesService) CheckStateByID(ctx context.Context, stateID int16) (quer
 		return queries.CState{}, fmt.Errorf("invalid state ID: %w", err)
 	}
 
-	if data, err := json.Marshal(state); err == nil {
-		s.rdb.Set(ctx, redisStateKey, data, db.RedisOneEightyDaysTTL)
-	}
+	_ = utils.SetCachedJSON(ctx, s.rdb, redisStateKey, state, db.RedisOneEightyDaysTTL)
 
 	return state, nil
 }
@@ -651,12 +585,8 @@ func (s *BodiesService) CheckStateByID(ctx context.Context, stateID int16) (quer
 func (s *BodiesService) CheckLGA(ctx context.Context, lgaID int32) (queries.Lga, error) {
 	redisLGAKey := fmt.Sprintf("%s%d", db.RedisEachLGA, lgaID)
 
-	lgaData, err := s.rdb.Get(ctx, redisLGAKey).Result()
-	if err == nil {
-		var lga queries.Lga
-		if json.Unmarshal([]byte(lgaData), &lga) == nil && lga.ID > 0 {
-			return lga, nil
-		}
+	if lga, ok := utils.GetCachedJSON[queries.Lga](ctx, s.rdb, redisLGAKey); ok && lga.ID > 0 {
+		return lga, nil
 	}
 
 	lga, err := s.queries.GetLGAByID(ctx, lgaID)
@@ -664,9 +594,7 @@ func (s *BodiesService) CheckLGA(ctx context.Context, lgaID int32) (queries.Lga,
 		return queries.Lga{}, fmt.Errorf("invalid LGA ID: %w", err)
 	}
 
-	if data, err := json.Marshal(lga); err == nil {
-		s.rdb.Set(ctx, redisLGAKey, data, db.RedisOneEightyDaysTTL)
-	}
+	_ = utils.SetCachedJSON(ctx, s.rdb, redisLGAKey, lga, db.RedisOneEightyDaysTTL)
 
 	return lga, nil
 }
@@ -675,12 +603,8 @@ func (s *BodiesService) CheckLGA(ctx context.Context, lgaID int32) (queries.Lga,
 func (s *BodiesService) CheckWard(ctx context.Context, wardID int32) (queries.Ward, error) {
 	redisWardKey := fmt.Sprintf("%s%d", db.RedisEachWard, wardID)
 
-	wardData, err := s.rdb.Get(ctx, redisWardKey).Result()
-	if err == nil {
-		var ward queries.Ward
-		if json.Unmarshal([]byte(wardData), &ward) == nil && ward.ID > 0 {
-			return ward, nil
-		}
+	if ward, ok := utils.GetCachedJSON[queries.Ward](ctx, s.rdb, redisWardKey); ok && ward.ID > 0 {
+		return ward, nil
 	}
 
 	ward, err := s.queries.GetWardByID(ctx, wardID)
@@ -688,9 +612,7 @@ func (s *BodiesService) CheckWard(ctx context.Context, wardID int32) (queries.Wa
 		return queries.Ward{}, fmt.Errorf("invalid ward ID: %w", err)
 	}
 
-	if data, err := json.Marshal(ward); err == nil {
-		s.rdb.Set(ctx, redisWardKey, data, db.RedisOneEightyDaysTTL)
-	}
+	_ = utils.SetCachedJSON(ctx, s.rdb, redisWardKey, ward, db.RedisOneEightyDaysTTL)
 
 	return ward, nil
 }

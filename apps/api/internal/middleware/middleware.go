@@ -37,6 +37,7 @@ func GetClaimsFromContext(ctx context.Context) (*utils.JWTClaims, bool) {
 }
 
 // GetCampaignGroupFromContext extracts the CampaignGroup from the request context if set by middleware.
+// the campaignGroup details is attached to the context anytime anyone visits the campaign group route
 func GetCampaignGroupFromContext(ctx context.Context) (queries.GetCampaignGroupByIDRow, bool) {
 	group, ok := ctx.Value(CampaignGroupKey).(queries.GetCampaignGroupByIDRow)
 	return group, ok

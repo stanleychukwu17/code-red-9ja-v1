@@ -36,10 +36,9 @@ export function PageHeader({
       )}
 
       {title && (
-        <h1 className="w-full text-center text-xl font-semibold">{title}</h1>
+        <div className="w-full text-center text-xl font-semibold">{title}</div>
       )}
 
-      <div className="shrink-0 w-16 h-10" />
     </div>
   );
 }

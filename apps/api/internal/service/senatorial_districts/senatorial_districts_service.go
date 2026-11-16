@@ -2,7 +2,6 @@ package senatorialdistrictsservice
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
@@ -71,12 +70,8 @@ func (s *SenatorialDistrictsService) CreateSenatorialDistrict(ctx context.Contex
 // GetSenatorialDistrictByID retrieves a senatorial district by its ID, utilizing Redis cache when available.
 func (s *SenatorialDistrictsService) GetSenatorialDistrictByID(ctx context.Context, id int32) (queries.SenatorialDistrict, error) {
 	redisKey := fmt.Sprintf("%s%d", db.RedisEachSenatorialDistrict, id)
-	cached, err := s.rdb.Get(ctx, redisKey).Result()
-	if err == nil {
-		var sd queries.SenatorialDistrict
-		if json.Unmarshal([]byte(cached), &sd) == nil && sd.ID > 0 {
-			return sd, nil
-		}
+	if sd, ok := utils.GetCachedJSON[queries.SenatorialDistrict](ctx, s.rdb, redisKey); ok && sd.ID > 0 {
+		return sd, nil
 	}
 
 	sd, err := s.queries.GetSenatorialDistrictByID(ctx, id)
@@ -84,9 +79,7 @@ func (s *SenatorialDistrictsService) GetSenatorialDistrictByID(ctx context.Conte
 		return queries.SenatorialDistrict{}, err
 	}
 
-	if data, err := json.Marshal(sd); err == nil {
-		s.rdb.Set(ctx, redisKey, data, db.RedisOneEightyDaysTTL)
-	}
+	_ = utils.SetCachedJSON(ctx, s.rdb, redisKey, sd, db.RedisOneEightyDaysTTL)
 
 	return sd, nil
 }
@@ -152,29 +145,22 @@ func (s *SenatorialDistrictsService) GetSenatorialDistricts(ctx context.Context,
 		redisKey = db.RedisSenatorialDistrictsAll
 	}
 
-	data, err := s.rdb.Get(ctx, redisKey).Result()
-	switch err {
-	case redis.Nil:
-		dbData, err := s.queries.GetSenatorialDistricts(ctx, stateID)
-		if err != nil {
-			return nil, err
-		}
-
-		payload := Response{
-			Districts: dbData,
-		}
-
-		jsonData, _ := json.Marshal(payload)
-		s.rdb.Set(ctx, redisKey, jsonData, db.RedisOneEightyDaysTTL)
-
-		return dbData, nil
-	case nil:
-		var payload Response
-		err = json.Unmarshal([]byte(data), &payload)
+	if payload, ok := utils.GetCachedJSON[Response](ctx, s.rdb, redisKey); ok {
 		return payload.Districts, nil
-	default:
+	}
+
+	dbData, err := s.queries.GetSenatorialDistricts(ctx, stateID)
+	if err != nil {
 		return nil, err
 	}
+
+	payload := Response{
+		Districts: dbData,
+	}
+
+	_ = utils.SetCachedJSON(ctx, s.rdb, redisKey, payload, db.RedisOneEightyDaysTTL)
+
+	return dbData, nil
 }
 
 // invalidateCache clears Redis cache entries for a state's senatorial districts, the national all-districts cache, national metrics, and individual district cache.

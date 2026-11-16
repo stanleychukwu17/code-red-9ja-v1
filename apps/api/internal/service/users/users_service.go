@@ -168,16 +168,12 @@ func (s *UsersService) GetUserByFakeID(ctx context.Context, fakeID int64, opts .
 
 	// Check Redis cache first
 	userInfoKey := fmt.Sprintf("%s%d", db.RedisUserInfo, fakeID)
-	userInfoJSON, err := s.rdb.Get(ctx, userInfoKey).Result()
-	if err == nil {
-		var user queries.UserWithPlaces
-		if err := json.Unmarshal([]byte(userInfoJSON), &user); err == nil {
-			users := []queries.UserWithPlaces{user}
-			if err := s.hydrateUserRelationships(ctx, users, opt); err != nil {
-				return queries.UserWithPlaces{}, err
-			}
-			return users[0], nil
+	if user, ok := utils.GetCachedJSON[queries.UserWithPlaces](ctx, s.rdb, userInfoKey); ok {
+		users := []queries.UserWithPlaces{user}
+		if err := s.hydrateUserRelationships(ctx, users, opt); err != nil {
+			return queries.UserWithPlaces{}, err
 		}
+		return users[0], nil
 	}
 
 	// Cache miss: query database, build UserWithPlaces, and cache in Redis
@@ -186,7 +182,7 @@ func (s *UsersService) GetUserByFakeID(ctx context.Context, fakeID int64, opts .
 		return user, err
 	}
 
-	// Batch-hydrate requested relationships (party, verifications, places, etc.) based on options
+	// Batch-hydrate requested relationships based on options
 	users := []queries.UserWithPlaces{user}
 	if err := s.hydrateUserRelationships(ctx, users, opt); err != nil {
 		return queries.UserWithPlaces{}, err
@@ -241,10 +237,7 @@ func (s *UsersService) fetchAndCacheUserByFakeID(ctx context.Context, fakeID int
 	}
 
 	// cache the user data in redis
-	userJSON, err := json.Marshal(coreProfile(userWithPlacesForCache))
-	if err == nil {
-		s.rdb.Set(ctx, userInfoKey, userJSON, db.RedisThirtyDaysTTL)
-	}
+	_ = utils.SetCachedJSON(ctx, s.rdb, userInfoKey, coreProfile(userWithPlacesForCache), db.RedisThirtyDaysTTL)
 
 	return userWithPlacesForCache, nil
 }
@@ -406,13 +399,8 @@ func (s *UsersService) RevokeAllUserSessions(ctx context.Context, fakeID int64) 
 func (s *UsersService) GetUserRoles(ctx context.Context, userID int64) (queries.CachedUserRoles, error) {
 	userRolesKey := fmt.Sprintf("%s%d", db.RedisUserRoles, userID)
 
-	// first redis to see if the roles have been cached
-	rolesJSON, err := s.rdb.Get(ctx, userRolesKey).Result()
-	if err == nil {
-		var cachedRoles queries.CachedUserRoles
-		if err := json.Unmarshal([]byte(rolesJSON), &cachedRoles); err == nil {
-			return cachedRoles, nil
-		}
+	if cachedRoles, ok := utils.GetCachedJSON[queries.CachedUserRoles](ctx, s.rdb, userRolesKey); ok {
+		return cachedRoles, nil
 	}
 
 	// Fetch from DB if not in Redis
@@ -432,10 +420,7 @@ func (s *UsersService) GetUserRoles(ctx context.Context, userID int64) (queries.
 	}
 
 	// Cache it in Redis
-	rolesJSONBytes, err := json.Marshal(cachedRoles)
-	if err == nil {
-		s.rdb.Set(ctx, userRolesKey, rolesJSONBytes, db.RedisOneEightyDaysTTL)
-	}
+	_ = utils.SetCachedJSON(ctx, s.rdb, userRolesKey, cachedRoles, db.RedisOneEightyDaysTTL)
 
 	return cachedRoles, nil
 }
@@ -554,12 +539,8 @@ func (s *UsersService) DeleteUserAccount(ctx context.Context, id int64, fakeID i
 func (s *UsersService) GetMoreInfoAboutThisUser(ctx context.Context, userID int64) (queries.UserMoreInfo, error) {
 	// Check Redis
 	userProfileKey := fmt.Sprintf("%s%d", db.RedisUserMoreInfo, userID)
-	profileJSON, err := s.rdb.Get(ctx, userProfileKey).Result()
-	if err == nil {
-		var profile queries.UserMoreInfo
-		if err := json.Unmarshal([]byte(profileJSON), &profile); err == nil {
-			return profile, nil
-		}
+	if profile, ok := utils.GetCachedJSON[queries.UserMoreInfo](ctx, s.rdb, userProfileKey); ok {
+		return profile, nil
 	}
 
 	// Fetch from DB if not in Redis
@@ -573,10 +554,7 @@ func (s *UsersService) GetMoreInfoAboutThisUser(ctx context.Context, userID int6
 	}
 
 	// Cache it in Redis
-	profileJSONBytes, err := json.Marshal(profile)
-	if err == nil {
-		s.rdb.Set(ctx, userProfileKey, profileJSONBytes, db.RedisNinetyDaysTTL)
-	}
+	_ = utils.SetCachedJSON(ctx, s.rdb, userProfileKey, profile, db.RedisNinetyDaysTTL)
 
 	return profile, nil
 }
@@ -1100,13 +1078,8 @@ func (s *UsersService) GetReferralCodeInfo(ctx context.Context, code string) (*C
 	var info CachedReferralCodeInfo
 
 	// Check Redis cache first
-	cachedData, err := s.rdb.Get(ctx, cacheKey).Result()
-	if err == nil && cachedData != "" {
-		if err := json.Unmarshal([]byte(cachedData), &info); err == nil && info.ID > 0 {
-			return &info, nil
-		}
-	} else if err != nil && !errors.Is(err, redis.Nil) {
-		return nil, err
+	if info, ok := utils.GetCachedJSON[CachedReferralCodeInfo](ctx, s.rdb, cacheKey); ok && info.ID > 0 {
+		return &info, nil
 	}
 
 	// Fetch from database if cache miss
@@ -1130,10 +1103,8 @@ func (s *UsersService) cacheReferralCodeInfo(ctx context.Context, code string, u
 		Name: name,
 	}
 
-	if data, err := json.Marshal(info); err == nil {
-		cacheKey := db.RedisReferralCode + code
-		s.rdb.Set(ctx, cacheKey, string(data), db.RedisOneEightyDaysTTL)
-	}
+	cacheKey := db.RedisReferralCode + code
+	_ = utils.SetCachedJSON(ctx, s.rdb, cacheKey, info, db.RedisOneEightyDaysTTL)
 	return &info
 }
 

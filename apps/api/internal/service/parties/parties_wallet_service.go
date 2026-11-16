@@ -74,12 +74,8 @@ func (s *PartiesWalletService) GetPartyWallet(ctx context.Context, partyID int16
 	redisKey := fmt.Sprintf("%s%d", db.RedisPartyWallet, partyID)
 
 	// Try reading from Redis cache first
-	cachedData, err := s.rdb.Get(ctx, redisKey).Result()
-	if err == nil {
-		var wallet queries.PartyWallet
-		if err := json.Unmarshal([]byte(cachedData), &wallet); err == nil && wallet.ID > 0 {
-			return wallet, nil
-		}
+	if wallet, ok := utils.GetCachedJSON[queries.PartyWallet](ctx, s.rdb, redisKey); ok && wallet.ID > 0 {
+		return wallet, nil
 	}
 
 	wallet, err := s.queries.GetPartyWalletByPartyID(ctx, partyID)
@@ -88,9 +84,7 @@ func (s *PartiesWalletService) GetPartyWallet(ctx context.Context, partyID int16
 	}
 
 	// Cache the wallet in Redis
-	if walletJSON, err := json.Marshal(wallet); err == nil {
-		_ = s.rdb.Set(ctx, redisKey, walletJSON, db.RedisThirtyDaysTTL).Err()
-	}
+	_ = utils.SetCachedJSON(ctx, s.rdb, redisKey, wallet, db.RedisThirtyDaysTTL)
 
 	return wallet, nil
 }

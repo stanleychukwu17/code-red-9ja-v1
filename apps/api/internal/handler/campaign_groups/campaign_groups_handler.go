@@ -25,6 +25,7 @@ type CampaignGroupsService interface {
 	SyncPartyOfficialsToGroup(ctx context.Context, groupID int64) (*campaigngroupsservice.SyncOfficialsResult, error)
 	FindCampaignGroupID(ctx context.Context, input campaigngroupsservice.FindCampaignGroupIDInput) (int64, error)
 	GetCampaignGroupStats(ctx context.Context, group queries.GetCampaignGroupByIDRow) (*campaigngroupsservice.CampaignGroupStats, error)
+	GetUserCampaignGroups(ctx context.Context, userID int64) (*campaigngroupsservice.GetUserCampaignGroupsResponse, error)
 }
 
 type Handler struct {
@@ -189,5 +190,33 @@ func (h *Handler) FindCampaignGroup(w http.ResponseWriter, r *http.Request) {
 	// Return resolved group ID
 	h.utils.RespondSuccess(w, http.StatusOK, "Campaign group found successfully", map[string]interface{}{
 		"group_id": groupID,
+	})
+}
+
+// GetMyCampaignGroups godoc
+// @Summary      Get campaign groups hierarchy for the authenticated user
+// @Description  Returns the campaign groups hierarchy (National, State, LGA, Ward) according to the user's active assignment
+// @Tags         CampaignGroups
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}
+// @Failure      401  {object}  map[string]interface{}
+// @Failure      500  {object}  map[string]interface{}
+// @Router       /campaign-groups/my-groups [get]
+func (h *Handler) GetMyCampaignGroups(w http.ResponseWriter, r *http.Request) {
+	claims, ok := apimiddleware.GetClaims(r)
+	if !ok {
+		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	resp, err := h.service.GetUserCampaignGroups(r.Context(), claims.UserID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to fetch user campaign groups: %v", err))
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Campaign groups retrieved successfully", map[string]interface{}{
+		"role":   resp.Role,
+		"groups": resp.Groups,
 	})
 }
