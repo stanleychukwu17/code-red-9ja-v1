@@ -24,6 +24,20 @@ import PartySolidIcon from "@repo/ui/icons/navbar/party-solid-icon";
 import CubeIcon from "@repo/ui/icons/navbar/cube-icon";
 import CubeSolidIcon from "@repo/ui/icons/navbar/cube-solid-icon";
 import PollingUnitIcon from "@repo/ui/icons/polling-unit-icon";
+import { useNotificationUnreadCount } from "@/hooks/useNotifications";
+
+function NotificationNavIcon({ solid = false, count }: { solid?: boolean; count?: number }) {
+  return (
+    <div className="relative flex items-center justify-center">
+      {solid ? <NotificationSolidIcon /> : <NotificationIcon />}
+      {count && count > 0 ? (
+        <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#e44b77] px-1 text-[9px] font-bold text-white shadow-xs">
+          {count > 99 ? "99+" : count}
+        </span>
+      ) : null}
+    </div>
+  );
+}
 
 const APP_SIDEBAR_ITEMS = [
   {
@@ -84,6 +98,8 @@ export function AppSidebarShell({ userDetails, sitePreference }: { userDetails?:
   const { user: authUser } = useAppSelector((state) => state.auth);
   const user = authUser || userDetails;
 
+  const { data: unreadCount = 0 } = useNotificationUnreadCount();
+
   const isExpanded = sitePreference?.sideBarState !== "collapsed";
 
   const handleLogout = async () => {
@@ -103,6 +119,13 @@ export function AppSidebarShell({ userDetails, sitePreference }: { userDetails?:
   // Dynamically attach chapters as collapsible sub-items under "My Party" if the user has enrolled chapters
   const sidebarItems = useMemo(() => {
     return APP_SIDEBAR_ITEMS.map((item) => {
+      if (item.id === "notifications") {
+        return {
+          ...item,
+          icon: <NotificationNavIcon count={unreadCount} />,
+          selectedIcon: <NotificationNavIcon solid count={unreadCount} />,
+        };
+      }
       if (item.id === "party") {
         if (user?.party && user?.chapters && user.chapters.length > 0) {
           const partyShortName = user.party.short_name.toLowerCase();

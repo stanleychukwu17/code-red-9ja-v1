@@ -6,18 +6,8 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import {
-  createFileRoute,
-  Outlet,
-  redirect,
-  useNavigate,
-  Link,
-  useParams,
-} from "@tanstack/react-router";
-import {
-  AppSidebarShell,
-  type AppSidebarItem,
-} from "@repo/ui/components/custom/AppSidebar";
+import { createFileRoute, Outlet, redirect, Link } from "@tanstack/react-router";
+import { AppSidebarShell, type AppSidebarItem } from "@repo/ui/components/custom/AppSidebar";
 import { SidebarTrigger } from "@repo/ui/components/sidebar";
 import HomeIcon from "@repo/ui/icons/navbar/home-icon";
 import HomeSolidIcon from "@repo/ui/icons/navbar/home-solid-icon";
@@ -25,34 +15,16 @@ import UserIcon from "@repo/ui/icons/navbar/user-icon";
 import UserSolidIcon from "@repo/ui/icons/navbar/user-solid-icon";
 import BalonIcon from "@repo/ui/icons/navbar/balon-icon";
 import BalonSolidIcon from "@repo/ui/icons/navbar/balon-solid-icon";
-import {
-  Layers,
-  AlertTriangle,
-  RefreshCw,
-  Activity,
-  Tv,
-  Radio,
-  Clock,
-  Maximize,
-  Minimize,
-  Sun,
-  Moon,
-  ShieldCheck,
-} from "lucide-react";
+import { Layers, AlertTriangle, RefreshCw, Activity, Tv, Clock, Maximize, Minimize, Sun, Moon } from "lucide-react";
 
 import { APP_URL } from "#/lib/config";
-import {
-  logoutUser,
-  checkIfRefreshTokenInCookie,
-  getUserDetailsCookie,
-} from "#/lib/server/auth/auth";
+import { logoutUser, checkIfRefreshTokenInCookie, getUserDetailsCookie } from "#/lib/server/auth/auth";
 import { useUserParty } from "#/hooks/useUserParty";
 import { useUser } from "#/hooks/useUser";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { updateAuthState } from "@/redux/slice/authSlice";
 import { updateSiteState } from "@/redux/slice/siteSlice";
 import { useTheme } from "@repo/ui/hooks/use-theme";
-import { cn } from "@repo/ui/lib/utils";
 
 export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async ({ location }) => {
@@ -67,9 +39,6 @@ export const Route = createFileRoute("/_authenticated")({
     }
 
     if (
-      !user?.roles?.includes("super_party_admin") &&
-      !user?.roles?.includes("party_admin") &&
-      !user?.roles?.includes("admin") &&
       !user?.roles?.includes("super_admin")
     ) {
       throw new Error(
@@ -99,8 +68,7 @@ function ControlCenterShell() {
   const [mounted, setMounted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [currentTime, setCurrentTime] = useState("");
-  const { userDetails, sitePreference: initialSitePreference } =
-    Route.useRouteContext() as any;
+  const { userDetails, sitePreference: initialSitePreference } = Route.useRouteContext() as any;
 
   const dispatch = useAppDispatch();
   const reduxSitePreference = useAppSelector((state) => state.site);
@@ -139,10 +107,10 @@ function ControlCenterShell() {
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {});
+      document.documentElement.requestFullscreen().catch(() => { });
       setIsFullscreen(true);
     } else {
-      document.exitFullscreen().catch(() => {});
+      document.exitFullscreen().catch(() => { });
       setIsFullscreen(false);
     }
   };
@@ -217,14 +185,14 @@ function ControlCenterShell() {
     },
     ...(isAdminOrSuperAdmin
       ? [
-          {
-            id: "parties",
-            label: "Switch Party",
-            icon: <BalonIcon />,
-            selectedIcon: <BalonSolidIcon />,
-            href: APP_URL.parties,
-          },
-        ]
+        {
+          id: "parties",
+          label: "Switch Party",
+          icon: <BalonIcon />,
+          selectedIcon: <BalonSolidIcon />,
+          href: APP_URL.parties,
+        },
+      ]
       : []),
   ];
 

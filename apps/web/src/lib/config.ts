@@ -175,6 +175,14 @@ export const API_URL = {
 		syncOfficials: (groupId: number | string) => `${api}/campaign-groups/${groupId}/sync-officials`,
 		findGroup: `${api}/campaign-groups/find`,
 	},
+	notifications: {
+		list: (page = 1, limit = 20) => `${api}/notifications?page=${page}&limit=${limit}`,
+		unreadCount: `${api}/notifications/unread-count`,
+		markAsRead: (id: number | string) => `${api}/notifications/${id}/read`,
+		markAllRead: `${api}/notifications/mark-all-read`,
+		delete: (id: number | string) => `${api}/notifications/${id}`,
+		preferences: `${api}/users/me/notification-preferences`,
+	},
 };
 
 export const QUERY_KEYS = {
@@ -213,5 +221,11 @@ export const QUERY_KEYS = {
 	userProfile: {
 		root: ["userProfile"] as const,
 		byUsername: (username: string) => ["userProfile", username.replace(/^@/, "")] as const,
+	},
+	notifications: {
+		root: ["notifications"] as const,
+		list: (page = 1, limit = 20) => ["notifications", "list", page, limit] as const,
+		unreadCount: ["notifications", "unread-count"] as const,
+		preferences: ["notifications", "preferences"] as const,
 	},
 };

@@ -21,6 +21,7 @@ import { Route as AuthenticatedPracticeIndexRouteImport } from './routes/_authen
 import { Route as AuthenticatedPartiesIndexRouteImport } from './routes/_authenticated/parties/index'
 import { Route as AuthenticatedNotificationsIndexRouteImport } from './routes/_authenticated/notifications/index'
 import { Route as AuthenticatedGiveUpdateIndexRouteImport } from './routes/_authenticated/give-update/index'
+import { Route as AuthenticatedGiveUpdate1IndexRouteImport } from './routes/_authenticated/give-update-1/index'
 import { Route as AuthenticatedElectionStartIndexRouteImport } from './routes/_authenticated/election-start/index'
 import { Route as AuthenticatedElectionEndIndexRouteImport } from './routes/_authenticated/election-end/index'
 import { Route as AuthenticatedContactsIndexRouteImport } from './routes/_authenticated/contacts/index'
@@ -96,6 +97,12 @@ const AuthenticatedGiveUpdateIndexRoute =
     path: '/give-update/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedGiveUpdate1IndexRoute =
+  AuthenticatedGiveUpdate1IndexRouteImport.update({
+    id: '/give-update-1/',
+    path: '/give-update-1/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedElectionStartIndexRoute =
   AuthenticatedElectionStartIndexRouteImport.update({
     id: '/election-start/',
@@ -164,6 +171,7 @@ export interface FileRoutesByFullPath {
   '/contacts/': typeof AuthenticatedContactsIndexRoute
   '/election-end/': typeof AuthenticatedElectionEndIndexRoute
   '/election-start/': typeof AuthenticatedElectionStartIndexRoute
+  '/give-update-1/': typeof AuthenticatedGiveUpdate1IndexRoute
   '/give-update/': typeof AuthenticatedGiveUpdateIndexRoute
   '/notifications/': typeof AuthenticatedNotificationsIndexRoute
   '/parties/': typeof AuthenticatedPartiesIndexRoute
@@ -186,6 +194,7 @@ export interface FileRoutesByTo {
   '/contacts': typeof AuthenticatedContactsIndexRoute
   '/election-end': typeof AuthenticatedElectionEndIndexRoute
   '/election-start': typeof AuthenticatedElectionStartIndexRoute
+  '/give-update-1': typeof AuthenticatedGiveUpdate1IndexRoute
   '/give-update': typeof AuthenticatedGiveUpdateIndexRoute
   '/notifications': typeof AuthenticatedNotificationsIndexRoute
   '/parties': typeof AuthenticatedPartiesIndexRoute
@@ -210,6 +219,7 @@ export interface FileRoutesById {
   '/_authenticated/contacts/': typeof AuthenticatedContactsIndexRoute
   '/_authenticated/election-end/': typeof AuthenticatedElectionEndIndexRoute
   '/_authenticated/election-start/': typeof AuthenticatedElectionStartIndexRoute
+  '/_authenticated/give-update-1/': typeof AuthenticatedGiveUpdate1IndexRoute
   '/_authenticated/give-update/': typeof AuthenticatedGiveUpdateIndexRoute
   '/_authenticated/notifications/': typeof AuthenticatedNotificationsIndexRoute
   '/_authenticated/parties/': typeof AuthenticatedPartiesIndexRoute
@@ -234,6 +244,7 @@ export interface FileRouteTypes {
     | '/contacts/'
     | '/election-end/'
     | '/election-start/'
+    | '/give-update-1/'
     | '/give-update/'
     | '/notifications/'
     | '/parties/'
@@ -256,6 +267,7 @@ export interface FileRouteTypes {
     | '/contacts'
     | '/election-end'
     | '/election-start'
+    | '/give-update-1'
     | '/give-update'
     | '/notifications'
     | '/parties'
@@ -279,6 +291,7 @@ export interface FileRouteTypes {
     | '/_authenticated/contacts/'
     | '/_authenticated/election-end/'
     | '/_authenticated/election-start/'
+    | '/_authenticated/give-update-1/'
     | '/_authenticated/give-update/'
     | '/_authenticated/notifications/'
     | '/_authenticated/parties/'
@@ -382,6 +395,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedGiveUpdateIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/give-update-1/': {
+      id: '/_authenticated/give-update-1/'
+      path: '/give-update-1'
+      fullPath: '/give-update-1/'
+      preLoaderRoute: typeof AuthenticatedGiveUpdate1IndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/election-start/': {
       id: '/_authenticated/election-start/'
       path: '/election-start'
@@ -458,6 +478,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedContactsIndexRoute: typeof AuthenticatedContactsIndexRoute
   AuthenticatedElectionEndIndexRoute: typeof AuthenticatedElectionEndIndexRoute
   AuthenticatedElectionStartIndexRoute: typeof AuthenticatedElectionStartIndexRoute
+  AuthenticatedGiveUpdate1IndexRoute: typeof AuthenticatedGiveUpdate1IndexRoute
   AuthenticatedGiveUpdateIndexRoute: typeof AuthenticatedGiveUpdateIndexRoute
   AuthenticatedNotificationsIndexRoute: typeof AuthenticatedNotificationsIndexRoute
   AuthenticatedPartiesIndexRoute: typeof AuthenticatedPartiesIndexRoute
@@ -478,6 +499,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedContactsIndexRoute: AuthenticatedContactsIndexRoute,
   AuthenticatedElectionEndIndexRoute: AuthenticatedElectionEndIndexRoute,
   AuthenticatedElectionStartIndexRoute: AuthenticatedElectionStartIndexRoute,
+  AuthenticatedGiveUpdate1IndexRoute: AuthenticatedGiveUpdate1IndexRoute,
   AuthenticatedGiveUpdateIndexRoute: AuthenticatedGiveUpdateIndexRoute,
   AuthenticatedNotificationsIndexRoute: AuthenticatedNotificationsIndexRoute,
   AuthenticatedPartiesIndexRoute: AuthenticatedPartiesIndexRoute,
