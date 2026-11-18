@@ -20,12 +20,6 @@ CREATE TABLE IF NOT EXISTS asset_folders (
 -- Foreign key & parent traversal index
 CREATE INDEX IF NOT EXISTS idx_asset_folders_parent ON asset_folders(parent_id);
 
--- Trigram index for fast folder name search (e.g. search "brand" matches "Branding Assets")
-CREATE INDEX IF NOT EXISTS idx_asset_folders_name_trgm ON asset_folders USING gin (name gin_trgm_ops);
-
--- Full-text search index combining folder name and description
-CREATE INDEX IF NOT EXISTS idx_asset_folders_fts ON asset_folders 
-  USING gin (to_tsvector('english', coalesce(name, '') || ' ' || coalesce(description, '')));
 
 -- 2. MEDIA ASSETS TABLE
 -- Stores uploaded dev/prod assets (.ai, .blend, videos, images, etc.) stored in Cloudflare R2
@@ -47,29 +41,19 @@ CREATE TABLE IF NOT EXISTS media_assets (
   updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Index for listing contents of a folder
-CREATE INDEX IF NOT EXISTS idx_media_assets_folder ON media_assets(folder_id);
+-- Indexes for media_assets
+-- 1. Folder browsing and pagination (composite index satisfies queries filtering on folder_id alone as well)
 CREATE INDEX IF NOT EXISTS idx_media_assets_folder_id ON media_assets(folder_id, id DESC);
 
--- Filter by type or extension (e.g. show only videos, vectors, or 3d files)
+-- 2. Filter by media file type (e.g. "image", "video", "document")
 CREATE INDEX IF NOT EXISTS idx_media_assets_type ON media_assets(file_type);
-CREATE INDEX IF NOT EXISTS idx_media_assets_extension ON media_assets(extension);
 
--- Trigram index for fast substring search on filenames (e.g. searching "banner", "hero", "icon")
+-- 3. Trigram index for fast substring search on filenames (e.g. searching "banner", "hero", "icon")
 CREATE INDEX IF NOT EXISTS idx_media_assets_name_trgm ON media_assets USING gin (name gin_trgm_ops);
 
--- GIN index for fast tag filtering: WHERE tags @> ARRAY['campaign-2026']
+-- 4. GIN index for fast tag filtering: WHERE tags @> ARRAY['demo'] or = ANY(tags)
 CREATE INDEX IF NOT EXISTS idx_media_assets_tags ON media_assets USING gin (tags);
-
--- Helper function: array_to_string is STABLE in PostgreSQL, so wrap it in an IMMUTABLE function for index expressions
-CREATE OR REPLACE FUNCTION immutable_array_to_string(text[], text)
-RETURNS text LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT array_to_string($1, $2)';
-
--- Full-text search index on name and tags
-CREATE INDEX IF NOT EXISTS idx_media_assets_fts ON media_assets 
-  USING gin (to_tsvector('english', coalesce(name, '') || ' ' || immutable_array_to_string(tags, ' ')));
 
 -- +goose Down
 DROP TABLE IF EXISTS media_assets;
 DROP TABLE IF EXISTS asset_folders;
-DROP FUNCTION IF EXISTS immutable_array_to_string(text[], text);

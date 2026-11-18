@@ -115,8 +115,10 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		accessExp = cfg.JWTAccessExpiration
 		refreshExp = cfg.JWTRefreshExpiration
 	}
-	// Initialize the R2 service
+	// Initialize the R2 service for general site uploads
 	var r2Svc *r2service.R2Service
+	// Initialize dedicated R2 service for media assets
+	var r2AssetsSvc *r2service.R2Service
 	var r2Err error
 	if cfg != nil {
 		r2Svc, r2Err = r2service.New(r2service.Config{
@@ -128,6 +130,20 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 			ZoneID:          cfg.R2.ZoneID,
 			APIToken:        cfg.R2.APIToken,
 		})
+
+		var r2AssetsErr error
+		r2AssetsSvc, r2AssetsErr = r2service.New(r2service.Config{
+			AccountID:       cfg.R2.AccountID,
+			AccessKeyID:     cfg.R2.AccessKeyID,
+			SecretAccessKey: cfg.R2.SecretAccessKey,
+			BucketName:      cfg.R2.AssetsBucketName,
+			PublicURL:       cfg.R2.AssetsPublicURL,
+			ZoneID:          cfg.R2.ZoneID,
+			APIToken:        cfg.R2.APIToken,
+		})
+		if r2AssetsErr != nil {
+			slog.Warn("R2 assets service not configured", "reason", r2AssetsErr)
+		}
 	} else {
 		r2Err = errors.New("no config provided")
 	}
@@ -219,13 +235,9 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	referralsHandler := referralshandler.NewHandler(referralsService, utilsInstance)
 	adminAgentPaymentsHandler := adminagentpaymentshandler.NewHandler(pool, utilsInstance)
 
-	var filesHandler *fileshandler.Handler
-	var mediaAssetsHandler *mediaassetshandler.Handler
-	if r2Svc != nil {
-		filesHandler = fileshandler.NewHandler(filesService, r2Svc, rdb, utilsInstance, usersService, partiesService, auditService)
-		mediaAssetsSvc := mediaassetsservice.NewMediaAssetsService(q, r2Svc)
-		mediaAssetsHandler = mediaassetshandler.NewHandler(mediaAssetsSvc, utilsInstance)
-	}
+	filesHandler := fileshandler.NewHandler(filesService, r2Svc, rdb, utilsInstance, usersService, partiesService, auditService)
+	mediaAssetsSvc := mediaassetsservice.NewMediaAssetsService(q, r2AssetsSvc)
+	mediaAssetsHandler := mediaassetshandler.NewHandler(mediaAssetsSvc, utilsInstance)
 
 	geminiKey := ""
 	if cfg != nil {
@@ -513,17 +525,17 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Post("/api/v1/admin/unmatched-polling-unit-results/{id}/resolve", inecGrabberHandler.ResolveUnmatchedResult)
 
 		// media assets & folders (admin only)
-		r.Get("/api/v1/admin/assets/folders", mediaAssetRoute(utilsInstance, mediaAssetsHandler, func(h *mediaassetshandler.Handler) http.HandlerFunc { return h.ListFolders }))
-		r.Post("/api/v1/admin/assets/folders", mediaAssetRoute(utilsInstance, mediaAssetsHandler, func(h *mediaassetshandler.Handler) http.HandlerFunc { return h.CreateFolder }))
-		r.Get("/api/v1/admin/assets/folders/{id}", mediaAssetRoute(utilsInstance, mediaAssetsHandler, func(h *mediaassetshandler.Handler) http.HandlerFunc { return h.GetFolder }))
-		r.Delete("/api/v1/admin/assets/folders/{id}", mediaAssetRoute(utilsInstance, mediaAssetsHandler, func(h *mediaassetshandler.Handler) http.HandlerFunc { return h.DeleteFolder }))
+		r.Get("/api/v1/admin/assets/folders", mediaAssetsHandler.ListFolders)
+		r.Post("/api/v1/admin/assets/folders", mediaAssetsHandler.CreateFolder)
+		r.Get("/api/v1/admin/assets/folders/{id}", mediaAssetsHandler.GetFolder)
+		r.Delete("/api/v1/admin/assets/folders/{id}", mediaAssetsHandler.DeleteFolder)
 
-		r.Get("/api/v1/admin/assets", mediaAssetRoute(utilsInstance, mediaAssetsHandler, func(h *mediaassetshandler.Handler) http.HandlerFunc { return h.ListAssets }))
-		r.Get("/api/v1/admin/assets/{id}", mediaAssetRoute(utilsInstance, mediaAssetsHandler, func(h *mediaassetshandler.Handler) http.HandlerFunc { return h.GetAsset }))
-		r.Post("/api/v1/admin/assets/upload-url", mediaAssetRoute(utilsInstance, mediaAssetsHandler, func(h *mediaassetshandler.Handler) http.HandlerFunc { return h.GetUploadPresignedURL }))
-		r.Post("/api/v1/admin/assets/confirm", mediaAssetRoute(utilsInstance, mediaAssetsHandler, func(h *mediaassetshandler.Handler) http.HandlerFunc { return h.ConfirmUpload }))
-		r.Delete("/api/v1/admin/assets/{id}", mediaAssetRoute(utilsInstance, mediaAssetsHandler, func(h *mediaassetshandler.Handler) http.HandlerFunc { return h.DeleteAsset }))
-		r.Post("/api/v1/admin/assets/sync", mediaAssetRoute(utilsInstance, mediaAssetsHandler, func(h *mediaassetshandler.Handler) http.HandlerFunc { return h.SyncR2 }))
+		r.Get("/api/v1/admin/assets", mediaAssetsHandler.ListAssets)
+		r.Get("/api/v1/admin/assets/{id}", mediaAssetsHandler.GetAsset)
+		r.Post("/api/v1/admin/assets/upload-url", mediaAssetsHandler.GetUploadPresignedURL)
+		r.Post("/api/v1/admin/assets/confirm", mediaAssetsHandler.ConfirmUpload)
+		r.Delete("/api/v1/admin/assets/{id}", mediaAssetsHandler.DeleteAsset)
+		r.Post("/api/v1/admin/assets/sync", mediaAssetsHandler.SyncR2)
 	})
 
 	// Auth-only routes (any authenticated user, regardless of role)
@@ -755,21 +767,6 @@ func fileRoute(
 	if h == nil {
 		return func(w http.ResponseWriter, r *http.Request) {
 			u.RespondError(w, http.StatusServiceUnavailable, "File storage is not configured")
-		}
-	}
-
-	return picker(h)
-}
-
-// mediaAssetRoute returns an http.HandlerFunc that is nil-safe for media assets.
-func mediaAssetRoute(
-	u *utils.Utils,
-	h *mediaassetshandler.Handler,
-	picker func(*mediaassetshandler.Handler) http.HandlerFunc,
-) http.HandlerFunc {
-	if h == nil {
-		return func(w http.ResponseWriter, r *http.Request) {
-			u.RespondError(w, http.StatusServiceUnavailable, "Cloudflare R2 media storage is not configured")
 		}
 	}
 

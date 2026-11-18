@@ -89,6 +89,7 @@ export const createAssetFolder = createServerFn({ method: "POST" })
     try {
       const res = await apiFetchJson<AssetFolder>(API_URL.assets.createFolder, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
       return { success: true, folder: res };
@@ -176,6 +177,77 @@ export const deleteMediaAsset = createServerFn({ method: "POST" })
     }
   });
 
+export type PresignUploadResponse = {
+  upload_url: string;
+  r2_key: string;
+  public_url: string;
+  file_name: string;
+  file_type: string;
+  mime_type: string;
+};
+
+export const getAssetUploadPresignedURL = createServerFn({ method: "POST" })
+  .inputValidator(
+    (data: {
+      folder_id?: number;
+      file_name: string;
+      content_type?: string;
+    }) => data,
+  )
+  .handler(async ({ data }) => {
+    try {
+      const res = await apiFetchJson<PresignUploadResponse>(
+        API_URL.assets.uploadUrl,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        },
+      );
+      return { success: true, data: res };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error?.message || "Failed to generate presigned upload URL",
+      };
+    }
+  });
+
+export type ConfirmAssetUploadInput = {
+  folder_id?: number;
+  name: string;
+  r2_key: string;
+  public_url?: string;
+  file_type?: string;
+  extension?: string;
+  mime_type?: string;
+  file_size_bytes: number;
+  dimensions?: string;
+  duration_seconds?: number;
+  tags?: string[];
+};
+
+export const confirmAssetUpload = createServerFn({ method: "POST" })
+  .inputValidator((data: ConfirmAssetUploadInput) => data)
+  .handler(async ({ data }) => {
+    try {
+      const res = await apiFetchJson<MediaAsset>(
+        API_URL.assets.confirmUpload,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        },
+      );
+      return { success: true, asset: res };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error?.message || "Failed to confirm asset upload",
+      };
+    }
+  });
+
 // ----------------------------------------------------------------------------
 // CLOUDFLARE R2 RECONCILIATION SYNC
 // ----------------------------------------------------------------------------
@@ -188,6 +260,7 @@ export const syncR2Assets = createServerFn({ method: "POST" })
         API_URL.assets.syncR2,
         {
           method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ prefix: data?.prefix ?? "" }),
         },
       );

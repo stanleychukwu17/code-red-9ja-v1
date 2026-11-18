@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"mime"
-	"path/filepath"
+	"path"
 	"strings"
 	"time"
 
@@ -87,6 +87,7 @@ func NewMediaAssetsService(q *queries.Queries, r2 *r2service.R2Service) MediaAss
 func slugify(name string) string {
 	lower := strings.ToLower(strings.TrimSpace(name))
 	var b strings.Builder
+
 	for _, r := range lower {
 		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
 			b.WriteRune(r)
@@ -96,10 +97,12 @@ func slugify(name string) string {
 			}
 		}
 	}
+
 	res := strings.Trim(b.String(), "-")
 	if res == "" {
 		res = "folder"
 	}
+
 	return res
 }
 
@@ -206,8 +209,8 @@ func (s *mediaAssetsService) DeleteFolder(ctx context.Context, id int32) error {
 }
 
 func (s *mediaAssetsService) GetUploadPresignedURL(ctx context.Context, folderID *int32, filename string, contentType string, uploadedBy *int64) (*UploadPresignResponse, error) {
-	cleanName := filepath.Base(filename)
-	ext := filepath.Ext(cleanName)
+	cleanName := path.Base(filename)
+	ext := path.Ext(cleanName)
 	if ext == "" {
 		ext = ".bin"
 	}
@@ -269,7 +272,7 @@ func (s *mediaAssetsService) ConfirmAssetUpload(ctx context.Context, req Confirm
 
 	ext := req.Extension
 	if ext == "" {
-		ext = filepath.Ext(req.Name)
+		ext = path.Ext(req.Name)
 	}
 	if req.FileType == "" {
 		req.FileType = DetectFileType(ext)
@@ -390,7 +393,9 @@ func (s *mediaAssetsService) SyncFromR2(ctx context.Context, rootPrefix string) 
 
 	var continuationToken string
 	for {
+		// Fetch a page of objects from R2 using AWS S3 ListObjectsV2
 		res, err := s.r2Svc.ListObjects(ctx, rootPrefix, "", continuationToken, 1000)
+
 		if err != nil {
 			return nil, fmt.Errorf("failed listing objects from r2: %w", err)
 		}
@@ -407,7 +412,7 @@ func (s *mediaAssetsService) SyncFromR2(ctx context.Context, rootPrefix string) 
 			// Skip empty folder markers (.keep, .gitkeep)
 			isMarker := strings.HasSuffix(obj.Key, "/.keep") || strings.HasSuffix(obj.Key, "/.gitkeep")
 
-			dir := filepath.Dir(obj.Key)
+			dir := path.Dir(obj.Key)
 			if dir == "." {
 				dir = ""
 			} else {
@@ -428,8 +433,8 @@ func (s *mediaAssetsService) SyncFromR2(ctx context.Context, rootPrefix string) 
 			}
 
 			// Upsert file
-			filename := filepath.Base(obj.Key)
-			ext := filepath.Ext(filename)
+			filename := path.Base(obj.Key)
+			ext := path.Ext(filename)
 			fileType := DetectFileType(ext)
 			mimeType := mime.TypeByExtension(ext)
 			if mimeType == "" {
@@ -469,17 +474,25 @@ func (s *mediaAssetsService) SyncFromR2(ctx context.Context, rootPrefix string) 
 
 // ensureFolderChain creates all parent and intermediate folders for an R2 key prefix.
 func (s *mediaAssetsService) ensureFolderChain(ctx context.Context, fullPrefix string, cache map[string]int32, stats *SyncStats) (*int32, error) {
+	// Normalize the prefix to ensure consistent trailing slash (e.g., "uploads/2026/")
 	fullPrefix = strings.Trim(fullPrefix, "/") + "/"
+
+	// Fast-path: return immediately if the entire folder path is already cached
 	if id, ok := cache[fullPrefix]; ok {
 		return &id, nil
 	}
 
+	// Split the path into directory segments to traverse/create from root down
 	parts := strings.Split(strings.Trim(fullPrefix, "/"), "/")
 	var currentParentID *int32
 	var currentPrefix string
 
+	// Walk through each level of the hierarchy
 	for _, part := range parts {
+		// Accumulate prefix for the current depth (e.g., "uploads/" -> "uploads/2026/")
 		currentPrefix += part + "/"
+
+		// Check if this level's folder was already resolved and cached in memory
 		if id, ok := cache[currentPrefix]; ok {
 			pID := id
 			currentParentID = &pID

@@ -38,8 +38,10 @@ type RedisConfig struct {
 type R2Config struct {
 	AccountID       string // Cloudflare Account ID (required)
 	AccessKeyID     string // R2 API token access key (required)
-	SecretAccessKey string // R2 API token secret (required)
-	BucketName      string // Target bucket name (required)
+	SecretAccessKey  string // R2 API token secret (required)
+	BucketName       string // Target bucket name (required)
+	AssetsBucketName string // Dedicated media assets bucket name (e.g. assets)
+	AssetsPublicURL  string // Dedicated public CDN domain for media assets (e.g. https://assets-cdn.free9ja.com)
 	// PublicURL is the custom domain or r2.dev URL used to build public object URLs.
 	// e.g. "https://files.free9ja.com" or "https://pub-xxx.r2.dev"
 	PublicURL string
@@ -192,9 +194,11 @@ func LoadConfig() (*Config, error) {
 		R2: R2Config{
 			AccountID:       GetEnv("R2_ACCOUNT_ID", ""),        // Cloudflare account identifier
 			AccessKeyID:     GetEnv("R2_ACCESS_KEY_ID", ""),     // S3-compatible access key ID
-			SecretAccessKey: GetEnv("R2_SECRET_ACCESS_KEY", ""), // S3-compatible secret access key
-			BucketName:      GetEnv("R2_BUCKET_NAME", ""),       // Target R2 bucket name
-			PublicURL:       GetEnv("R2_PUBLIC_URL", ""),        // CDN / Public domain URL (e.g., https://files.free9ja.com)
+			SecretAccessKey:  GetEnv("R2_SECRET_ACCESS_KEY", ""), // S3-compatible secret access key
+			BucketName:       GetEnv("R2_BUCKET_NAME", ""),       // Target R2 bucket name
+			AssetsBucketName: GetEnv("R2_BUCKET_ASSETS_NAME", ""),
+			AssetsPublicURL:  GetEnv("R2_ASSETS_PUBLIC_URL", "https://assets-cdn.free9ja.com"),
+			PublicURL:        GetEnv("R2_PUBLIC_URL", ""),        // CDN / Public domain URL (e.g., https://files.free9ja.com)
 			ZoneID:          GetEnv("CLOUDFLARE_ZONE_ID", ""),   // Zone ID for Cloudflare cache purging
 			APIToken:        GetEnv("CLOUDFLARE_API_TOKEN", ""), // API token with cache purge permissions
 		},
@@ -220,6 +224,9 @@ func LoadConfig() (*Config, error) {
 	}
 	if configInstance.GeminiAPIKey == "" {
 		return nil, fmt.Errorf("GEMINI_API_KEY is not set")
+	}
+	if configInstance.R2.AssetsBucketName == "" {
+		return nil, fmt.Errorf("R2_BUCKET_ASSETS_NAME is not set")
 	}
 
 	return configInstance, nil

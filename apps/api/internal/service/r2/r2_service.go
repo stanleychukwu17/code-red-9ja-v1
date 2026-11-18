@@ -183,6 +183,7 @@ func (s *R2Service) PublicURL(key string) string {
 	if s.publicURL != "" {
 		return fmt.Sprintf("%s/%s", s.publicURL, key)
 	}
+
 	// Fallback: this will only work if the bucket has "Allow Public Access" enabled
 	return fmt.Sprintf("https://%s.r2.cloudflarestorage.com/%s", s.bucketName, key)
 }
@@ -287,48 +288,63 @@ type ListObjectsResult struct {
 
 // ListObjects queries R2 for objects and virtual subfolders under a prefix.
 func (s *R2Service) ListObjects(ctx context.Context, prefix, delimiter string, continuationToken string, maxKeys int32) (*ListObjectsResult, error) {
+	// Clamp maxKeys to S3 API limit (1 to 1000)
 	if maxKeys <= 0 || maxKeys > 1000 {
 		maxKeys = 1000
 	}
 
+	// Prepare S3 ListObjectsV2 request
 	input := &s3.ListObjectsV2Input{
 		Bucket:  aws.String(s.bucketName),
 		Prefix:  aws.String(prefix),
 		MaxKeys: aws.Int32(maxKeys),
 	}
+
+	// Delimiter allows folder grouping (CommonPrefixes) when provided
 	if delimiter != "" {
 		input.Delimiter = aws.String(delimiter)
 	}
+
+	// Pagination continuation token for subsequent pages
 	if continuationToken != "" {
 		input.ContinuationToken = aws.String(continuationToken)
 	}
 
+	// Execute request against R2
 	out, err := s.client.ListObjectsV2(ctx, input)
 	if err != nil {
 		return nil, fmt.Errorf("r2service: failed to list objects with prefix %q: %w", prefix, err)
 	}
 
+	// Initialize result holding pagination state
 	res := &ListObjectsResult{
 		IsTruncated: aws.ToBool(out.IsTruncated),
 	}
+	// Capture continuation token if more pages exist
 	if out.NextContinuationToken != nil {
 		res.NextToken = *out.NextContinuationToken
 	}
 
+	// Collect virtual subfolder prefixes
 	for _, p := range out.CommonPrefixes {
 		if p.Prefix != nil {
 			res.CommonPrefixes = append(res.CommonPrefixes, *p.Prefix)
 		}
 	}
 
+	// Map R2 object contents to domain R2Object slice
 	for _, obj := range out.Contents {
 		if obj.Key == nil {
 			continue
 		}
+
+		// Extract last modified timestamp safely
 		var modTime time.Time
 		if obj.LastModified != nil {
 			modTime = *obj.LastModified
 		}
+
+		// Append object details (key, size in bytes, modification time, ETag)
 		res.Objects = append(res.Objects, R2Object{
 			Key:          *obj.Key,
 			Size:         aws.ToInt64(obj.Size),
@@ -385,4 +401,3 @@ func (s *R2Service) DeletePrefix(ctx context.Context, prefix string) error {
 
 	return nil
 }
-
