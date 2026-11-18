@@ -28,6 +28,7 @@ export type CreatePollingUnitUpdateInput = {
   accuracy_meters?: number;
 };
 
+// Submit a situation update or report with media and issue tracking
 export const createPollingUnitUpdate = createServerFn({ method: "POST" })
   .inputValidator((data: CreatePollingUnitUpdateInput) => data)
   .handler(async ({ data }) => {
@@ -39,22 +40,22 @@ export const createPollingUnitUpdate = createServerFn({ method: "POST" })
         },
         body: JSON.stringify(data),
       });
-      return await response.json();
+      const resData = await response.json();
+      return resData;
     } catch (error: any) {
-      return { success: false, message: error.message };
+      return { success: false, message: error.message || "Failed to create polling unit update" };
     }
   });
 
+// Fetch active unresolved issues for a specific polling unit
 export const getActivePollingUnitIssues = createServerFn({ method: "GET" })
   .inputValidator((data: { polling_unit_id: number }) => data)
   .handler(async ({ data }) => {
     try {
-      const response = await apiFetch(
-        `${API_URL.pollingUnitUpdates}/issues?polling_unit_id=${data.polling_unit_id}`,
-        { method: "GET" },
-      );
-      return await response.json();
+      const response = await apiFetch(API_URL.pollingUnitIssues(data.polling_unit_id));
+      const resData = await response.json();
+      return resData;
     } catch (error: any) {
-      return { success: false, message: error.message, data: [] };
+      return { success: false, message: error.message || "Failed to fetch active polling unit issues", data: [] };
     }
   });
