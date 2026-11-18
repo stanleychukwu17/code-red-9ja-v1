@@ -45,7 +45,6 @@ type CreateUpdateRequest struct {
 	Media             []polling_unit_updates.MediaItem `json:"media,omitempty"`
 	MediaUrls         []string                         `json:"media_urls,omitempty"`
 	IsReport          bool                             `json:"is_report,omitempty"`
-	ReportTypes       []string                         `json:"report_types,omitempty"`
 	Latitude          *float64                         `json:"latitude,omitempty"`
 	Longitude         *float64                         `json:"longitude,omitempty"`
 	AccuracyMeters    *float64                         `json:"accuracy_meters,omitempty"`
@@ -98,7 +97,6 @@ func (h *Handler) CreateUpdate(w http.ResponseWriter, r *http.Request) {
 		Media:             req.Media,
 		MediaUrls:         req.MediaUrls,
 		IsReport:          req.IsReport,
-		ReportTypes:       req.ReportTypes,
 		Latitude:          req.Latitude,
 		Longitude:         req.Longitude,
 		AccuracyMeters:    req.AccuracyMeters,

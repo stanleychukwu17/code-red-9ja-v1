@@ -19,12 +19,12 @@ import (
 type PollingUnitResultsService interface {
 	SubmitBatchResults(ctx context.Context, input pu_results.SubmitBatchResultsInput) ([]queries.PollingUnitResult, error)
 	SubmitResult(ctx context.Context, input pu_results.SubmitResultInput) (queries.PollingUnitResult, error)
-	GetResult(ctx context.Context, id int64) (queries.GetPollingUnitResultByIDRow, error)
-	ListResults(ctx context.Context, params queries.ListPollingUnitResultsParams) ([]queries.ListPollingUnitResultsRow, error)
+	GetResult(ctx context.Context, id int64) (queries.PollingUnitResult, error)
+	ListResults(ctx context.Context, params queries.ListPollingUnitResultsParams) ([]queries.PollingUnitResult, error)
 	ListPollingUnitFinalResults(ctx context.Context, params queries.ListPollingUnitFinalResultsParams) ([]queries.ListPollingUnitFinalResultsRow, error)
-	VoteOnResult(ctx context.Context, resultID int64, userFakeID int64, voteType string) (queries.VoteOnPollingUnitResultRow, error)
-	ReviewResult(ctx context.Context, reviewerFakeID int64, input pu_results.ReviewResultInput) (queries.ReviewPollingUnitResultRow, error)
-	GetFinalResult(ctx context.Context, electionID int32, pollingUnitID int32) (queries.GetPollingUnitFinalResultRow, error)
+	VoteOnResult(ctx context.Context, resultID int64, userFakeID int64, voteType string) (queries.PollingUnitResult, error)
+	ReviewResult(ctx context.Context, reviewerFakeID int64, input pu_results.ReviewResultInput) (queries.PollingUnitResult, error)
+	GetFinalResult(ctx context.Context, electionID int64, pollingUnitID int32) (interface{}, error)
 }
 
 type Handler struct {

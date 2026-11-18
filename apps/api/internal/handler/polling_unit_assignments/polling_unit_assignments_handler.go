@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"free9ja/api/internal/db/queries"
 	apimiddleware "free9ja/api/internal/middleware"
-	earningsservice "free9ja/api/internal/service/earnings"
 	puupdates "free9ja/api/internal/service/polling_unit_updates"
 	supervisorassignmentsservice "free9ja/api/internal/service/supervisor_assignments"
 	"free9ja/api/internal/utils"
@@ -251,7 +250,7 @@ func (h *Handler) GetMyAssignment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Assignment fetched successfully", map[string]interface{}{
-		"has_active_assignment": hasActiveAssignment,
+		"has_active_assignment":  hasActiveAssignment,
 		"assignment":             assignment,
 		"supervisor_assignments": supervisorAssignments,
 	})
