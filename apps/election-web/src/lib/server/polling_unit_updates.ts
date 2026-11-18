@@ -9,6 +9,7 @@ export const createPollingUnitUpdate = createServerFn({ method: "POST" })
       election_group_id: number;
       assignment_id?: number;
       party_id?: number;
+      title?: string;
       message: string;
       media_urls?: string[];
       is_report: boolean;

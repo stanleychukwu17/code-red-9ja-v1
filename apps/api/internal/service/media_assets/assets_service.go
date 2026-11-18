@@ -136,7 +136,7 @@ func (s *mediaAssetsService) CreateFolder(ctx context.Context, name string, pare
 	}
 
 	slug := slugify(name)
-	prefix := "assets/" + slug + "/"
+	prefix := slug + "/"
 
 	var parentPID pgtype.Int4
 	if parentID != nil && *parentID > 0 {
@@ -220,7 +220,7 @@ func (s *mediaAssetsService) GetUploadPresignedURL(ctx context.Context, folderID
 		}
 	}
 
-	prefix := "assets/"
+	prefix := ""
 	if folderID != nil && *folderID > 0 {
 		folder, err := s.queries.GetAssetFolderByID(ctx, *folderID)
 		if err == nil {
@@ -228,7 +228,12 @@ func (s *mediaAssetsService) GetUploadPresignedURL(ctx context.Context, folderID
 		}
 	}
 
-	key := strings.TrimSuffix(prefix, "/") + "/" + cleanName
+	var key string
+	if prefix == "" {
+		key = cleanName
+	} else {
+		key = strings.TrimSuffix(prefix, "/") + "/" + cleanName
+	}
 
 	// Generate 15-minute presigned PUT URL
 	url, err := s.r2Svc.PresignedUploadURL(ctx, key, contentType, 15*time.Minute)
@@ -372,13 +377,13 @@ func (s *mediaAssetsService) DeleteAsset(ctx context.Context, id int32) error {
 	return nil
 }
 
-// SyncFromR2 crawls Cloudflare R2 bucket under the given rootPrefix (defaults to "assets/")
+// SyncFromR2 crawls Cloudflare R2 bucket under the given rootPrefix (empty string for bucket root)
 // and automatically reconciles folders and files into PostgreSQL.
 func (s *mediaAssetsService) SyncFromR2(ctx context.Context, rootPrefix string) (*SyncStats, error) {
-	if rootPrefix == "" {
-		rootPrefix = "assets/"
+	rootPrefix = strings.TrimPrefix(rootPrefix, "/")
+	if rootPrefix != "" && !strings.HasSuffix(rootPrefix, "/") {
+		rootPrefix += "/"
 	}
-	rootPrefix = strings.TrimSuffix(rootPrefix, "/") + "/"
 
 	stats := &SyncStats{}
 	folderCache := make(map[string]int32) // prefix -> folder_id
@@ -390,8 +395,16 @@ func (s *mediaAssetsService) SyncFromR2(ctx context.Context, rootPrefix string) 
 			return nil, fmt.Errorf("failed listing objects from r2: %w", err)
 		}
 
+		// Iterate over all discovered objects in the Cloudflare R2 bucket
 		for _, obj := range res.Objects {
-			// Skip empty folder markers themselves
+			// If key ends with "/", it's a directory marker created by Cloudflare R2 / S3 UI
+			if strings.HasSuffix(obj.Key, "/") {
+				dirPath := strings.Trim(obj.Key, "/") + "/"
+				_, _ = s.ensureFolderChain(ctx, dirPath, folderCache, stats)
+				continue
+			}
+
+			// Skip empty folder markers (.keep, .gitkeep)
 			isMarker := strings.HasSuffix(obj.Key, "/.keep") || strings.HasSuffix(obj.Key, "/.gitkeep")
 
 			dir := filepath.Dir(obj.Key)
@@ -447,6 +460,7 @@ func (s *mediaAssetsService) SyncFromR2(ctx context.Context, rootPrefix string) 
 		if !res.IsTruncated || res.NextToken == "" {
 			break
 		}
+
 		continuationToken = res.NextToken
 	}
 

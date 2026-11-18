@@ -384,6 +384,38 @@ export const API_URL = {
     payReferral: (id: number | string) => `${api}/admin/agent-payments/referral-pay/${id}/pay`,
     payAll: `${api}/admin/agent-payments/pay-all`,
   },
+  assets: {
+    folders: (parentId?: number) => {
+      const params = new URLSearchParams();
+      if (parentId) params.append("parent_id", String(parentId));
+      const qs = params.toString();
+      return `${api}/admin/assets/folders${qs ? `?${qs}` : ""}`;
+    },
+    folderById: (id: number) => `${api}/admin/assets/folders/${id}`,
+    createFolder: `${api}/admin/assets/folders`,
+    deleteFolder: (id: number) => `${api}/admin/assets/folders/${id}`,
+    listAssets: (args?: {
+      folderId?: number;
+      fileType?: string;
+      search?: string;
+      page?: number;
+      limit?: number;
+    }) => {
+      const params = new URLSearchParams();
+      if (args?.folderId !== undefined) params.append("folder_id", String(args.folderId));
+      if (args?.fileType) params.append("file_type", args.fileType);
+      if (args?.search) params.append("search", args.search);
+      if (args?.page) params.append("page", String(args.page));
+      if (args?.limit) params.append("limit", String(args.limit));
+      const qs = params.toString();
+      return `${api}/admin/assets${qs ? `?${qs}` : ""}`;
+    },
+    assetById: (id: number) => `${api}/admin/assets/${id}`,
+    uploadUrl: `${api}/admin/assets/upload-url`,
+    confirmUpload: `${api}/admin/assets/confirm`,
+    deleteAsset: (id: number) => `${api}/admin/assets/${id}`,
+    syncR2: `${api}/admin/assets/sync`,
+  },
 };
 
 export const QUERY_KEYS = {
@@ -430,5 +462,17 @@ export const QUERY_KEYS = {
           : ["elections"],
     candidates: (electionId?: number) =>
       electionId !== undefined ? ["election-candidates", electionId] : ["election-candidates"],
+  },
+  assets: {
+    folders: (parentId?: number) => ["assets", "folders", parentId ?? "root"],
+    folderById: (id: number) => ["assets", "folder", id],
+    list: (folderId?: number, fileType?: string, search?: string, page?: number) => [
+      "assets",
+      "list",
+      folderId ?? "root",
+      fileType ?? "all",
+      search ?? "",
+      page ?? 1,
+    ],
   },
 };

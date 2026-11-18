@@ -68,6 +68,7 @@ CREATE TABLE IF NOT EXISTS polling_unit_updates (
   has_issues BOOLEAN DEFAULT FALSE,
   
   -- Update details
+  title VARCHAR(255),
   message TEXT NOT NULL,
   has_media BOOLEAN NOT NULL DEFAULT FALSE,
   

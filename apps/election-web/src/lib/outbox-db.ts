@@ -16,6 +16,7 @@ export type OutboxUpdateItem = {
   issueAction: "none" | "link_existing" | "create_new";
   existingIssueIds?: number[];
   newIssueOptionIds?: number[];
+  title?: string;
   message: string;
   mediaFiles: {
     name: string;

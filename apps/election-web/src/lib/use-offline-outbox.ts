@@ -23,10 +23,22 @@ async function syncSingleItem(item: OutboxUpdateItem): Promise<boolean> {
 
     // Upload each binary blob to storage
     for (const media of item.mediaFiles) {
+      const ext = media.name.split(".").pop()?.toLowerCase();
+      const fallbackMime =
+        ext === "mp4" ? "video/mp4" :
+        ext === "m4a" ? "audio/mp4" :
+        ext === "mp3" ? "audio/mpeg" :
+        ext === "wav" ? "audio/wav" :
+        ext === "webm" ? (media.type === "audio" ? "audio/webm" : "video/webm") :
+        ext === "jpg" || ext === "jpeg" ? "image/jpeg" :
+        ext === "png" ? "image/png" :
+        ext === "webp" ? "image/webp" : "application/octet-stream";
+      const resolvedMime = media.blob.type || fallbackMime;
+
       const presignedRes = await getPresignedUploadURL({
         data: {
           original_name: media.name,
-          mime_type: media.blob.type || "application/octet-stream",
+          mime_type: resolvedMime,
           file_size: media.blob.size,
           folder: "updates",
           is_public: true,
@@ -41,7 +53,7 @@ async function syncSingleItem(item: OutboxUpdateItem): Promise<boolean> {
 
       const putRes = await fetch(upload_url, {
         method: "PUT",
-        headers: { "Content-Type": media.blob.type || "application/octet-stream" },
+        headers: { "Content-Type": resolvedMime },
         body: media.blob,
       });
 
@@ -87,6 +99,7 @@ async function syncSingleItem(item: OutboxUpdateItem): Promise<boolean> {
         election_group_id: item.electionGroupId,
         assignment_id: item.assignmentId,
         party_id: item.partyId,
+        title: item.title,
         message: compiledMessage,
         media_urls: uploadedUrls,
         is_report: item.hasIssues,
