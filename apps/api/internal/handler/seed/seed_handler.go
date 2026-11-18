@@ -19,7 +19,7 @@ import (
 type SeedService interface {
 	SeedUsers(ctx context.Context, req seedservice.SeedUsersRequest) (string, error)
 	SeedAdmins(ctx context.Context, req seedservice.SeedAdminsRequest) (string, error)
-	SimulateElectionResults(ctx context.Context, electionID int32, req seedservice.SimulateElectionResultsRequest) (*seedservice.SimulateElectionResultsResult, error)
+	SimulateElectionResults(ctx context.Context, electionID int32, req seedservice.SimulateElectionResultsRequest) (*seedservice.SimulateResultsResponse, error)
 	FlushRedis(ctx context.Context) (string, error)
 	SeedElectionGroups(ctx context.Context, req seedservice.SeedElectionGroupsRequest) ([]queries.ElectionGroup, error)
 	SeedElectionInstances(ctx context.Context, req seedservice.SeedElectionInstancesRequest) (string, error)
@@ -29,8 +29,8 @@ type SeedService interface {
 	SeedHouseOfRepsCandidates(ctx context.Context, req seedservice.SeedCandidatesRequest) (string, error)
 	SeedStateAssemblyCandidates(ctx context.Context, req seedservice.SeedCandidatesRequest) (string, error)
 	SeedPartyLeadership(ctx context.Context, req seedservice.SeedCandidatesRequest) (string, error)
-	SyncCampaignGroups(ctx context.Context, req seedservice.SyncCampaignGroupsRequest) (*seedservice.SyncCampaignGroupsResult, error)
-	SeedPartyAgentApplications(ctx context.Context, req seedservice.SeedPartyAgentApplicationsRequest) (*seedservice.SeedPartyAgentApplicationsResult, error)
+	SyncCampaignGroups(ctx context.Context, req seedservice.SyncCampaignGroupsRequest) (seedservice.SyncCampaignGroupsResponse, error)
+	SeedPartyAgentApplications(ctx context.Context, req seedservice.SeedPartyAgentApplicationsRequest) (seedservice.SeedPartyAgentApplicationsResponse, error)
 }
 
 type Handler struct {

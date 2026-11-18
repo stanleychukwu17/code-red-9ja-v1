@@ -20,8 +20,8 @@ type ReferralsService interface {
 	GetReferral(ctx context.Context, id int64) (queries.Referral, error)
 	ListReferrals(ctx context.Context, limit, offset int32) ([]queries.Referral, error)
 	ListReferralsByReferrer(ctx context.Context, referrerID int64, limit, offset int32) ([]queries.Referral, error)
-	GetUserReferralStats(ctx context.Context, userID int64, electionGroupID pgtype.Int4) (queries.GetUserReferralStatsRow, error)
-	GetActiveMarketingCampaignForElectionGroup(ctx context.Context, partyID pgtype.Int2, electionGroupID pgtype.Int4) (queries.MarketingCampaign, error)
+	GetUserReferralStats(ctx context.Context, userID int64, electionGroupID int32) (queries.GetUserReferralStatsRow, error)
+	GetActiveMarketingCampaignForElectionGroup(ctx context.Context, partyID int16, electionGroupID int32) (queries.PartyMarketingCampaign, error)
 	ListReferredUsersWithDetails(ctx context.Context, params queries.ListReferredUsersWithDetailsParams) ([]queries.ListReferredUsersWithDetailsRow, error)
 	UpdateReferral(ctx context.Context, params queries.UpdateReferralParams) (queries.Referral, error)
 }
