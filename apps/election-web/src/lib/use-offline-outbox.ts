@@ -8,7 +8,6 @@ import {
 } from "./outbox-db";
 import { confirmFileUpload, getPresignedUploadURL } from "./server/parties";
 import { createPollingUnitUpdate } from "./server/polling_unit_updates";
-import { STATIC_ISSUE_CATEGORIES, STATIC_STATUS_CATEGORIES } from "./constants/update-options";
 import { toast } from "sonner";
 
 // Background sync worker flag to prevent concurrent runs
@@ -19,28 +18,37 @@ async function syncSingleItem(item: OutboxUpdateItem): Promise<boolean> {
   await updateOutboxItemStatus(item.id, "syncing");
 
   try {
-    const uploadedUrls: string[] = [];
+    const uploadedMedia: {
+      url: string;
+      media_type: "image" | "video" | "audio";
+      file_size_bytes: number;
+      duration_seconds?: number;
+    }[] = [];
 
     // Upload each binary blob to storage
     for (const media of item.mediaFiles) {
       const ext = media.name.split(".").pop()?.toLowerCase();
       const fallbackMime =
         ext === "mp4" ? "video/mp4" :
-        ext === "m4a" ? "audio/mp4" :
-        ext === "mp3" ? "audio/mpeg" :
-        ext === "wav" ? "audio/wav" :
-        ext === "webm" ? (media.type === "audio" ? "audio/webm" : "video/webm") :
-        ext === "jpg" || ext === "jpeg" ? "image/jpeg" :
-        ext === "png" ? "image/png" :
-        ext === "webp" ? "image/webp" : "application/octet-stream";
+          ext === "m4a" ? "audio/mp4" :
+            ext === "mp3" ? "audio/mpeg" :
+              ext === "wav" ? "audio/wav" :
+                ext === "webm" ? (media.type === "audio" ? "audio/webm" : "video/webm") :
+                  ext === "jpg" || ext === "jpeg" ? "image/jpeg" :
+                    ext === "png" ? "image/png" :
+                      ext === "webp" ? "image/webp" : "application/octet-stream";
+      // Resolve MIME type and target subfolder based on media kind
       const resolvedMime = media.blob.type || fallbackMime;
+      const mediaSubfolder =
+        media.type === "image" ? "photos" : media.type === "video" ? "videos" : "audio";
 
+      // 1. Request presigned upload ticket from API
       const presignedRes = await getPresignedUploadURL({
         data: {
           original_name: media.name,
           mime_type: resolvedMime,
           file_size: media.blob.size,
-          folder: "updates",
+          folder: `situation-updates/${mediaSubfolder}`,
           is_public: true,
         },
       });
@@ -51,6 +59,7 @@ async function syncSingleItem(item: OutboxUpdateItem): Promise<boolean> {
 
       const { upload_url, public_url, file_id } = presignedRes.data;
 
+      // 2. Direct binary upload to Cloudflare R2
       const putRes = await fetch(upload_url, {
         method: "PUT",
         headers: { "Content-Type": resolvedMime },
@@ -58,39 +67,20 @@ async function syncSingleItem(item: OutboxUpdateItem): Promise<boolean> {
       });
 
       if (!putRes.ok) {
+        // Mark upload as failed in backend
         await confirmFileUpload({ data: { id: file_id, success: false } });
         throw new Error("Failed to upload binary asset");
       }
 
+      // 3. Confirm successful upload and collect CDN public URL and media metadata
       await confirmFileUpload({ data: { id: file_id, success: true } });
-      uploadedUrls.push(public_url);
+      uploadedMedia.push({
+        url: public_url,
+        media_type: media.type,
+        file_size_bytes: media.blob.size,
+        duration_seconds: media.durationSeconds,
+      });
     }
-
-    // Lookup human labels for backward-compatible enriched text
-    const statusCat = STATIC_STATUS_CATEGORIES.find((c) => c.id === item.statusCategoryId);
-    const statusOpt = statusCat?.options.find((o) => o.id === item.statusOptionId);
-
-    // Find all issue names for multi-issue reports
-    const issueNames: string[] = [];
-    if (item.newIssueOptionIds && item.newIssueOptionIds.length > 0) {
-      for (const optId of item.newIssueOptionIds) {
-        for (const cat of STATIC_ISSUE_CATEGORIES) {
-          const found = cat.options.find((o) => o.id === optId);
-          if (found) issueNames.push(found.name);
-        }
-      }
-    }
-
-    const prefixParts: string[] = [];
-    if (statusCat) {
-      prefixParts.push(statusOpt ? `${statusCat.name} - ${statusOpt.name}` : statusCat.name);
-    }
-    if (item.hasIssues && issueNames.length > 0) {
-      prefixParts.push(`Issues: ${issueNames.join(", ")}`);
-    }
-
-    const prefix = prefixParts.length > 0 ? `[${prefixParts.join(" | ")}] ` : "";
-    const compiledMessage = `${prefix}${item.message.trim()}`.trim();
 
     // Create situation update record on API server
     const apiRes = await createPollingUnitUpdate({
@@ -99,11 +89,18 @@ async function syncSingleItem(item: OutboxUpdateItem): Promise<boolean> {
         election_group_id: item.electionGroupId,
         assignment_id: item.assignmentId,
         party_id: item.partyId,
+        status_category_id: item.statusCategoryId,
+        status_option_id: item.statusOptionId,
+        has_issues: item.hasIssues,
+        issue_action: item.issueAction,
+        existing_issue_ids: item.existingIssueIds,
+        new_issue_option_ids: item.newIssueOptionIds,
         title: item.title,
-        message: compiledMessage,
-        media_urls: uploadedUrls,
-        is_report: item.hasIssues,
-        report_types: issueNames,
+        message: item.message.trim(),
+        media: uploadedMedia,
+        latitude: item.latitude,
+        longitude: item.longitude,
+        accuracy_meters: item.accuracyMeters,
       },
     });
 
@@ -130,6 +127,7 @@ export async function flushOutboxQueue(): Promise<number> {
   let syncedCount = 0;
 
   try {
+    // Retrieve and process queued updates one by one
     const pending = await getPendingUpdates();
     for (const item of pending) {
       const ok = await syncSingleItem(item);
@@ -148,11 +146,15 @@ export async function flushOutboxQueue(): Promise<number> {
 
 // React hook to monitor outbox count and bind network online listeners
 export function useOfflineOutbox() {
+  // Track count of unsynced items in IndexedDB
   const [pendingCount, setPendingCount] = useState<number>(0);
+
+  // Track browser connectivity status (optimistically defaults to true for SSR)
   const [isOnline, setIsOnline] = useState<boolean>(
     typeof navigator !== "undefined" ? navigator.onLine : true,
   );
 
+  // Re-fetch pending count from IndexedDB
   const refreshCount = async () => {
     try {
       const count = await getOutboxCount();
@@ -163,8 +165,10 @@ export function useOfflineOutbox() {
   };
 
   useEffect(() => {
+    // Initial fetch on mount
     refreshCount();
 
+    // Trigger auto-sync when network connection is restored
     const handleOnline = async () => {
       setIsOnline(true);
       toast.info("Network restored. Syncing offline updates...");
@@ -175,6 +179,7 @@ export function useOfflineOutbox() {
       refreshCount();
     };
 
+    // Alert user when offline
     const handleOffline = () => {
       setIsOnline(false);
       toast.warning("You are currently offline. Updates will be queued locally.");
@@ -183,7 +188,7 @@ export function useOfflineOutbox() {
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
 
-    // Periodic sync check every thirty seconds
+    // Periodic background sync attempt every 30 seconds
     const interval = setInterval(() => {
       if (navigator.onLine) {
         flushOutboxQueue().then(() => refreshCount());
@@ -201,6 +206,7 @@ export function useOfflineOutbox() {
     pendingCount,
     isOnline,
     refreshCount,
+    // Manually trigger flush (e.g. from user click on banner)
     triggerSync: async () => {
       const synced = await flushOutboxQueue();
       await refreshCount();

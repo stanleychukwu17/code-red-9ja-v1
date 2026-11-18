@@ -71,6 +71,11 @@ CREATE TABLE IF NOT EXISTS polling_unit_updates (
   title VARCHAR(255),
   message TEXT NOT NULL,
   has_media BOOLEAN NOT NULL DEFAULT FALSE,
+
+  -- Agent coordinates at time of update
+  latitude DOUBLE PRECISION,
+  longitude DOUBLE PRECISION,
+  accuracy_meters DOUBLE PRECISION,
   
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()

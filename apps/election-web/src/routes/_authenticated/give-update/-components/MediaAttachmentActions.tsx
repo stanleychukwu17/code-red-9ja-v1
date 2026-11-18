@@ -7,6 +7,7 @@ export type AttachedMedia = {
   type: "image" | "video" | "audio";
   file: File | Blob;
   name: string;
+  durationSeconds?: number;
 };
 
 export type MediaAttachmentActionsProps = {
@@ -60,6 +61,7 @@ export function MediaAttachmentActions({
 
   // Remove attached media item and stop if playing
   const removeMedia = (index: number) => {
+
     onMediaListChange((prev) => {
       const copy = [...prev];
       const target = copy[index];
@@ -74,6 +76,7 @@ export function MediaAttachmentActions({
         URL.revokeObjectURL(target.url);
         copy.splice(index, 1);
       }
+
       return copy;
     });
   };
@@ -196,12 +199,14 @@ export function MediaAttachmentActions({
                     className="size-10 object-cover rounded-lg"
                   />
                 )}
+
                 {m.type === "video" && (
                   <video
                     src={m.url}
                     className="size-10 object-cover rounded-lg bg-black"
                   />
                 )}
+
                 {m.type === "audio" && (
                   <button
                     type="button"

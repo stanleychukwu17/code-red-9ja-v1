@@ -24,31 +24,41 @@ INSERT INTO polling_unit_updates (
   senatorial_district_id,
   federal_constituency_id,
   state_assembly_constituency_id,
+  status_category_id,
+  status_option_id,
+  has_issues,
+  title,
   message,
-  media_urls,
-  is_report,
-  report_types
+  has_media,
+  latitude,
+  longitude,
+  accuracy_meters
 ) VALUES (
-  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
-) RETURNING id, assignment_id, user_id, election_group_id, polling_unit_id, party_id, state_id, lga_id, ward_id, senatorial_district_id, federal_constituency_id, state_assembly_constituency_id, message, media_urls, is_report, report_types, created_at, updated_at
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20
+) RETURNING id, assignment_id, election_group_id, party_id, user_id, state_id, lga_id, ward_id, senatorial_district_id, federal_constituency_id, state_assembly_constituency_id, polling_unit_id, status_category_id, status_option_id, has_issues, title, message, has_media, latitude, longitude, accuracy_meters, created_at, updated_at
 `
 
 type CreatePollingUnitUpdateParams struct {
-	AssignmentID                pgtype.Int8 `json:"assignment_id"`
-	UserID                      int64       `json:"user_id"`
-	PollingUnitID               int32       `json:"polling_unit_id"`
-	ElectionGroupID             int32       `json:"election_group_id"`
-	PartyID                     pgtype.Int2 `json:"party_id"`
-	StateID                     pgtype.Int2 `json:"state_id"`
-	LgaID                       pgtype.Int4 `json:"lga_id"`
-	WardID                      pgtype.Int4 `json:"ward_id"`
-	SenatorialDistrictID        pgtype.Int4 `json:"senatorial_district_id"`
-	FederalConstituencyID       pgtype.Int4 `json:"federal_constituency_id"`
-	StateAssemblyConstituencyID pgtype.Int4 `json:"state_assembly_constituency_id"`
-	Message                     string      `json:"message"`
-	MediaUrls                   []string    `json:"media_urls"`
-	IsReport                    pgtype.Bool `json:"is_report"`
-	ReportTypes                 []string    `json:"report_types"`
+	AssignmentID                pgtype.Int8   `json:"assignment_id"`
+	UserID                      int64         `json:"user_id"`
+	PollingUnitID               int32         `json:"polling_unit_id"`
+	ElectionGroupID             int32         `json:"election_group_id"`
+	PartyID                     pgtype.Int2   `json:"party_id"`
+	StateID                     pgtype.Int2   `json:"state_id"`
+	LgaID                       pgtype.Int4   `json:"lga_id"`
+	WardID                      pgtype.Int4   `json:"ward_id"`
+	SenatorialDistrictID        pgtype.Int4   `json:"senatorial_district_id"`
+	FederalConstituencyID       pgtype.Int4   `json:"federal_constituency_id"`
+	StateAssemblyConstituencyID pgtype.Int4   `json:"state_assembly_constituency_id"`
+	StatusCategoryID            pgtype.Int2   `json:"status_category_id"`
+	StatusOptionID              pgtype.Int2   `json:"status_option_id"`
+	HasIssues                   pgtype.Bool   `json:"has_issues"`
+	Title                       pgtype.Text   `json:"title"`
+	Message                     string        `json:"message"`
+	HasMedia                    bool          `json:"has_media"`
+	Latitude                    pgtype.Float8 `json:"latitude"`
+	Longitude                   pgtype.Float8 `json:"longitude"`
+	AccuracyMeters              pgtype.Float8 `json:"accuracy_meters"`
 }
 
 func (q *Queries) CreatePollingUnitUpdate(ctx context.Context, arg CreatePollingUnitUpdateParams) (PollingUnitUpdate, error) {
@@ -64,33 +74,282 @@ func (q *Queries) CreatePollingUnitUpdate(ctx context.Context, arg CreatePolling
 		arg.SenatorialDistrictID,
 		arg.FederalConstituencyID,
 		arg.StateAssemblyConstituencyID,
+		arg.StatusCategoryID,
+		arg.StatusOptionID,
+		arg.HasIssues,
+		arg.Title,
 		arg.Message,
-		arg.MediaUrls,
-		arg.IsReport,
-		arg.ReportTypes,
+		arg.HasMedia,
+		arg.Latitude,
+		arg.Longitude,
+		arg.AccuracyMeters,
 	)
 	var i PollingUnitUpdate
 	err := row.Scan(
 		&i.ID,
 		&i.AssignmentID,
-		&i.UserID,
 		&i.ElectionGroupID,
-		&i.PollingUnitID,
 		&i.PartyID,
+		&i.UserID,
 		&i.StateID,
 		&i.LgaID,
 		&i.WardID,
 		&i.SenatorialDistrictID,
 		&i.FederalConstituencyID,
 		&i.StateAssemblyConstituencyID,
+		&i.PollingUnitID,
+		&i.StatusCategoryID,
+		&i.StatusOptionID,
+		&i.HasIssues,
+		&i.Title,
 		&i.Message,
-		&i.MediaUrls,
-		&i.IsReport,
-		&i.ReportTypes,
+		&i.HasMedia,
+		&i.Latitude,
+		&i.Longitude,
+		&i.AccuracyMeters,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const createPollingUnitUpdateMedia = `-- name: CreatePollingUnitUpdateMedia :one
+INSERT INTO polling_unit_update_media (
+  update_id,
+  media_type,
+  url,
+  thumbnail_url,
+  duration_seconds,
+  file_size_bytes
+) VALUES (
+  $1, $2, $3, $4, $5, $6
+) RETURNING id, update_id, media_type, url, thumbnail_url, duration_seconds, file_size_bytes, created_at
+`
+
+type CreatePollingUnitUpdateMediaParams struct {
+	UpdateID        int64       `json:"update_id"`
+	MediaType       string      `json:"media_type"`
+	Url             string      `json:"url"`
+	ThumbnailUrl    pgtype.Text `json:"thumbnail_url"`
+	DurationSeconds pgtype.Int4 `json:"duration_seconds"`
+	FileSizeBytes   int64       `json:"file_size_bytes"`
+}
+
+func (q *Queries) CreatePollingUnitUpdateMedia(ctx context.Context, arg CreatePollingUnitUpdateMediaParams) (PollingUnitUpdateMedia, error) {
+	row := q.db.QueryRow(ctx, createPollingUnitUpdateMedia,
+		arg.UpdateID,
+		arg.MediaType,
+		arg.Url,
+		arg.ThumbnailUrl,
+		arg.DurationSeconds,
+		arg.FileSizeBytes,
+	)
+	var i PollingUnitUpdateMedia
+	err := row.Scan(
+		&i.ID,
+		&i.UpdateID,
+		&i.MediaType,
+		&i.Url,
+		&i.ThumbnailUrl,
+		&i.DurationSeconds,
+		&i.FileSizeBytes,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const listMediaByUpdateIDs = `-- name: ListMediaByUpdateIDs :many
+SELECT id, update_id, media_type, url, thumbnail_url, duration_seconds, file_size_bytes, created_at
+FROM polling_unit_update_media
+WHERE update_id = ANY($1::bigint[])
+ORDER BY id ASC
+`
+
+func (q *Queries) ListMediaByUpdateIDs(ctx context.Context, updateIds []int64) ([]PollingUnitUpdateMedia, error) {
+	rows, err := q.db.Query(ctx, listMediaByUpdateIDs, updateIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PollingUnitUpdateMedia
+	for rows.Next() {
+		var i PollingUnitUpdateMedia
+		if err := rows.Scan(
+			&i.ID,
+			&i.UpdateID,
+			&i.MediaType,
+			&i.Url,
+			&i.ThumbnailUrl,
+			&i.DurationSeconds,
+			&i.FileSizeBytes,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getIssueOptionByID = `-- name: GetIssueOptionByID :one
+SELECT id, issue_category_id, name, severity, sort_order
+FROM polling_unit_issue_options
+WHERE id = $1
+`
+
+type GetIssueOptionByIDRow struct {
+	ID              int16       `json:"id"`
+	IssueCategoryID int16       `json:"issue_category_id"`
+	Name            string      `json:"name"`
+	Severity        pgtype.Text `json:"severity"`
+	SortOrder       pgtype.Int2 `json:"sort_order"`
+}
+
+func (q *Queries) GetIssueOptionByID(ctx context.Context, id int16) (GetIssueOptionByIDRow, error) {
+	row := q.db.QueryRow(ctx, getIssueOptionByID, id)
+	var i GetIssueOptionByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.IssueCategoryID,
+		&i.Name,
+		&i.Severity,
+		&i.SortOrder,
+	)
+	return i, err
+}
+
+const createPollingUnitIssue = `-- name: CreatePollingUnitIssue :one
+INSERT INTO polling_unit_with_issues (
+  update_id,
+  election_group_id,
+  party_id,
+  user_id,
+  assignment_id,
+  polling_unit_id,
+  issue_category_id,
+  issue_option_id,
+  is_active,
+  time_issue_started
+) VALUES (
+  $1, $2, $3, $4, $5, $6, $7, $8, true, NOW()
+) RETURNING id, update_id, election_group_id, party_id, user_id, assignment_id, polling_unit_id, issue_category_id, issue_option_id, is_active, time_issue_started, time_issue_ended, resolution_notes
+`
+
+type CreatePollingUnitIssueParams struct {
+	UpdateID        pgtype.Int8 `json:"update_id"`
+	ElectionGroupID int32       `json:"election_group_id"`
+	PartyID         pgtype.Int2 `json:"party_id"`
+	UserID          int64       `json:"user_id"`
+	AssignmentID    pgtype.Int8 `json:"assignment_id"`
+	PollingUnitID   int32       `json:"polling_unit_id"`
+	IssueCategoryID int16       `json:"issue_category_id"`
+	IssueOptionID   int16       `json:"issue_option_id"`
+}
+
+func (q *Queries) CreatePollingUnitIssue(ctx context.Context, arg CreatePollingUnitIssueParams) (PollingUnitWithIssue, error) {
+	row := q.db.QueryRow(ctx, createPollingUnitIssue,
+		arg.UpdateID,
+		arg.ElectionGroupID,
+		arg.PartyID,
+		arg.UserID,
+		arg.AssignmentID,
+		arg.PollingUnitID,
+		arg.IssueCategoryID,
+		arg.IssueOptionID,
+	)
+	var i PollingUnitWithIssue
+	err := row.Scan(
+		&i.ID,
+		&i.UpdateID,
+		&i.ElectionGroupID,
+		&i.PartyID,
+		&i.UserID,
+		&i.AssignmentID,
+		&i.PollingUnitID,
+		&i.IssueCategoryID,
+		&i.IssueOptionID,
+		&i.IsActive,
+		&i.TimeIssueStarted,
+		&i.TimeIssueEnded,
+		&i.ResolutionNotes,
+	)
+	return i, err
+}
+
+const resolvePollingUnitIssues = `-- name: ResolvePollingUnitIssues :exec
+UPDATE polling_unit_with_issues
+SET 
+  is_active = false,
+  time_issue_ended = NOW()
+WHERE id = ANY($1::bigint[])
+`
+
+func (q *Queries) ResolvePollingUnitIssues(ctx context.Context, issueIds []int64) error {
+	_, err := q.db.Exec(ctx, resolvePollingUnitIssues, issueIds)
+	return err
+}
+
+const listActivePollingUnitIssues = `-- name: ListActivePollingUnitIssues :many
+SELECT 
+  pui.id,
+  pui.update_id,
+  pui.polling_unit_id,
+  pui.issue_category_id,
+  pui.issue_option_id,
+  pui.is_active,
+  pui.time_issue_started,
+  pic.name as category_name,
+  pio.name as issue_name
+FROM polling_unit_with_issues pui
+JOIN polling_unit_issue_categories pic ON pui.issue_category_id = pic.id
+JOIN polling_unit_issue_options pio ON pui.issue_option_id = pio.id
+WHERE pui.polling_unit_id = $1 AND pui.is_active = true
+ORDER BY pui.id DESC
+`
+
+type ListActivePollingUnitIssuesRow struct {
+	ID               int64              `json:"id"`
+	UpdateID         pgtype.Int8        `json:"update_id"`
+	PollingUnitID    int32              `json:"polling_unit_id"`
+	IssueCategoryID  int16              `json:"issue_category_id"`
+	IssueOptionID    int16              `json:"issue_option_id"`
+	IsActive         bool               `json:"is_active"`
+	TimeIssueStarted pgtype.Timestamptz `json:"time_issue_started"`
+	CategoryName     string             `json:"category_name"`
+	IssueName        string             `json:"issue_name"`
+}
+
+func (q *Queries) ListActivePollingUnitIssues(ctx context.Context, pollingUnitID int32) ([]ListActivePollingUnitIssuesRow, error) {
+	rows, err := q.db.Query(ctx, listActivePollingUnitIssues, pollingUnitID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListActivePollingUnitIssuesRow
+	for rows.Next() {
+		var i ListActivePollingUnitIssuesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.UpdateID,
+			&i.PollingUnitID,
+			&i.IssueCategoryID,
+			&i.IssueOptionID,
+			&i.IsActive,
+			&i.TimeIssueStarted,
+			&i.CategoryName,
+			&i.IssueName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const incrementElectionMetricsByGroup = `-- name: IncrementElectionMetricsByGroup :exec
@@ -136,19 +395,26 @@ const listPollingUnitUpdates = `-- name: ListPollingUnitUpdates :many
 SELECT 
   pu.id, pu.assignment_id, pu.user_id, pu.polling_unit_id, pu.election_group_id, pu.party_id, 
   pu.state_id, pu.lga_id, pu.ward_id, pu.senatorial_district_id, pu.federal_constituency_id, 
-  pu.state_assembly_constituency_id, pu.message, pu.media_urls, pu.is_report, pu.report_types, 
+  pu.state_assembly_constituency_id, pu.status_category_id, pu.status_option_id,
+  pu.has_issues, pu.title, pu.message, pu.has_media,
+  pu.latitude, pu.longitude, pu.accuracy_meters,
   pu.created_at, pu.updated_at,
   u.first_name as user_first_name,
   u.last_name as user_last_name,
   u.avatar as user_avatar,
   punits.name as polling_unit_name,
   s.name as state_name,
-  l.name as lga_name
+  l.name as lga_name,
+  sc.name as status_category_name,
+  sc.color as status_category_color,
+  so.name as status_option_name
 FROM polling_unit_updates pu
 JOIN users u ON pu.user_id = u.id
 LEFT JOIN polling_units punits ON pu.polling_unit_id = punits.id
 LEFT JOIN c_states s ON pu.state_id = s.id
 LEFT JOIN lgas l ON pu.lga_id = l.id
+LEFT JOIN polling_unit_status_categories sc ON pu.status_category_id = sc.id
+LEFT JOIN polling_unit_status_options so ON pu.status_option_id = so.id
 WHERE 
   ($1::integer IS NULL OR pu.election_group_id = $1)
   AND ($2::smallint IS NULL OR pu.party_id = $2)
@@ -160,11 +426,12 @@ WHERE
   AND ($8::int IS NULL OR pu.senatorial_district_id = $8)
   AND ($9::int IS NULL OR pu.federal_constituency_id = $9)
   AND ($10::int IS NULL OR pu.state_assembly_constituency_id = $10)
-  AND ($11::boolean IS NULL OR pu.is_report = $11)
-  AND ($12::boolean IS NULL OR ($12::boolean = true AND array_length(pu.media_urls, 1) > 0) OR ($12::boolean = false AND array_length(pu.media_urls, 1) IS NULL))
-  AND pu.id < $13
+  AND ($11::smallint IS NULL OR pu.status_category_id = $11)
+  AND ($12::boolean IS NULL OR pu.has_issues = $12)
+  AND ($13::boolean IS NULL OR pu.has_media = $13)
+  AND pu.id < $14
 ORDER BY pu.id DESC
-LIMIT $14
+LIMIT $15
 `
 
 type ListPollingUnitUpdatesParams struct {
@@ -178,7 +445,8 @@ type ListPollingUnitUpdatesParams struct {
 	SenatorialDistrictID        pgtype.Int4 `json:"senatorial_district_id"`
 	FederalConstituencyID       pgtype.Int4 `json:"federal_constituency_id"`
 	StateAssemblyConstituencyID pgtype.Int4 `json:"state_assembly_constituency_id"`
-	IsReport                    pgtype.Bool `json:"is_report"`
+	StatusCategoryID            pgtype.Int2 `json:"status_category_id"`
+	HasIssues                   pgtype.Bool `json:"has_issues"`
 	HasMedia                    pgtype.Bool `json:"has_media"`
 	Cursor                      int64       `json:"cursor"`
 	Limit                       int32       `json:"limit"`
@@ -197,10 +465,15 @@ type ListPollingUnitUpdatesRow struct {
 	SenatorialDistrictID        pgtype.Int4        `json:"senatorial_district_id"`
 	FederalConstituencyID       pgtype.Int4        `json:"federal_constituency_id"`
 	StateAssemblyConstituencyID pgtype.Int4        `json:"state_assembly_constituency_id"`
+	StatusCategoryID            pgtype.Int2        `json:"status_category_id"`
+	StatusOptionID              pgtype.Int2        `json:"status_option_id"`
+	HasIssues                   pgtype.Bool        `json:"has_issues"`
+	Title                       pgtype.Text        `json:"title"`
 	Message                     string             `json:"message"`
-	MediaUrls                   []string           `json:"media_urls"`
-	IsReport                    pgtype.Bool        `json:"is_report"`
-	ReportTypes                 []string           `json:"report_types"`
+	HasMedia                    bool               `json:"has_media"`
+	Latitude                    pgtype.Float8      `json:"latitude"`
+	Longitude                   pgtype.Float8      `json:"longitude"`
+	AccuracyMeters              pgtype.Float8      `json:"accuracy_meters"`
 	CreatedAt                   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt                   pgtype.Timestamptz `json:"updated_at"`
 	UserFirstName               pgtype.Text        `json:"user_first_name"`
@@ -209,6 +482,9 @@ type ListPollingUnitUpdatesRow struct {
 	PollingUnitName             pgtype.Text        `json:"polling_unit_name"`
 	StateName                   pgtype.Text        `json:"state_name"`
 	LgaName                     pgtype.Text        `json:"lga_name"`
+	StatusCategoryName          pgtype.Text        `json:"status_category_name"`
+	StatusCategoryColor         pgtype.Text        `json:"status_category_color"`
+	StatusOptionName            pgtype.Text        `json:"status_option_name"`
 }
 
 func (q *Queries) ListPollingUnitUpdates(ctx context.Context, arg ListPollingUnitUpdatesParams) ([]ListPollingUnitUpdatesRow, error) {
@@ -223,7 +499,8 @@ func (q *Queries) ListPollingUnitUpdates(ctx context.Context, arg ListPollingUni
 		arg.SenatorialDistrictID,
 		arg.FederalConstituencyID,
 		arg.StateAssemblyConstituencyID,
-		arg.IsReport,
+		arg.StatusCategoryID,
+		arg.HasIssues,
 		arg.HasMedia,
 		arg.Cursor,
 		arg.Limit,
@@ -248,10 +525,15 @@ func (q *Queries) ListPollingUnitUpdates(ctx context.Context, arg ListPollingUni
 			&i.SenatorialDistrictID,
 			&i.FederalConstituencyID,
 			&i.StateAssemblyConstituencyID,
+			&i.StatusCategoryID,
+			&i.StatusOptionID,
+			&i.HasIssues,
+			&i.Title,
 			&i.Message,
-			&i.MediaUrls,
-			&i.IsReport,
-			&i.ReportTypes,
+			&i.HasMedia,
+			&i.Latitude,
+			&i.Longitude,
+			&i.AccuracyMeters,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.UserFirstName,
@@ -260,6 +542,9 @@ func (q *Queries) ListPollingUnitUpdates(ctx context.Context, arg ListPollingUni
 			&i.PollingUnitName,
 			&i.StateName,
 			&i.LgaName,
+			&i.StatusCategoryName,
+			&i.StatusCategoryColor,
+			&i.StatusOptionName,
 		); err != nil {
 			return nil, err
 		}

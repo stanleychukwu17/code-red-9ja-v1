@@ -18,7 +18,7 @@ import { Button } from "@repo/ui/components/button";
 import { HeaderAccent } from "@repo/ui/components/header-accent";
 import { convertToWebP } from "@repo/ui/lib/image";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { WifiOff, CloudUpload } from "lucide-react";
+import { WifiOff, CloudUpload, CalendarClock, AlertTriangle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -31,9 +31,16 @@ export const Route = createFileRoute("/_authenticated/give-update/")({
 function GiveUpdate() {
   const navigate = useNavigate();
 
-  // Active election group and polling unit assignment context
-  const { selectedElectionGroup } = useElection();
+  // Active election schedule context
+  const { selectedElectionGroup, electionDay, daysLeft } = useElection();
   const { pollingUnitAssignment } = useAssignments();
+
+  // Verify selected election group matches the assignment's election group
+  const isElectionMismatch = Boolean(
+    selectedElectionGroup?.id &&
+    pollingUnitAssignment?.election_group_id &&
+    selectedElectionGroup.id !== pollingUnitAssignment.election_group_id
+  );
 
   // Offline outbox queue manager
   const { isOnline, pendingCount, triggerSync } = useOfflineOutbox();
@@ -60,6 +67,28 @@ function GiveUpdate() {
   // Submitting state
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // User geolocation coordinates
+  const [geoCoords, setGeoCoords] = useState<{ latitude?: number; longitude?: number; accuracyMeters?: number }>({});
+
+  // Request browser geolocation on mount
+  useEffect(() => {
+    if (typeof window !== "undefined" && "geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setGeoCoords({
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+            accuracyMeters: pos.coords.accuracy,
+          });
+        }, () => {
+          // Gracefully continue without coordinates if user denies or GPS unavailable
+          alert("Location permission denied. Please enable location permissions to continue.")
+        },
+        { enableHighAccuracy: true, timeout: 30000, maximumAge: 600000 },
+      );
+    }
+  }, []);
+
   // Load any existing active issues for this polling unit on mount
   useEffect(() => {
     if (pollingUnitAssignment?.polling_unit_id) {
@@ -81,8 +110,18 @@ function GiveUpdate() {
 
   // Handler for primary post update CTA using offline-first outbox pattern
   const handlePostUpdate = async () => {
-    if (!pollingUnitAssignment || !selectedElectionGroup) {
+    if (!pollingUnitAssignment) {
       toast.error("No active polling unit assignment detected");
+      return;
+    }
+
+    if (isElectionMismatch) {
+      toast.error("Active election does not match your assigned polling unit election.");
+      return;
+    }
+
+    if (!electionDay) {
+      toast.error("Updates can only be submitted on election day.");
       return;
     }
 
@@ -90,11 +129,7 @@ function GiveUpdate() {
 
     try {
       // Process images through WebP compression before local persistent save
-      const processedMediaFiles: {
-        name: string;
-        type: "image" | "video" | "audio";
-        blob: Blob;
-      }[] = [];
+      const processedMediaFiles: OutboxUpdateItem["mediaFiles"] = [];
 
       for (const m of mediaList) {
         if (m.type === "image" && m.file instanceof File) {
@@ -117,6 +152,7 @@ function GiveUpdate() {
             name: m.name,
             type: m.type,
             blob: m.file,
+            durationSeconds: m.durationSeconds,
           });
         }
       }
@@ -125,7 +161,7 @@ function GiveUpdate() {
       const outboxItem: OutboxUpdateItem = {
         id: `update_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
         pollingUnitId: pollingUnitAssignment.polling_unit_id,
-        electionGroupId: selectedElectionGroup.id,
+        electionGroupId: pollingUnitAssignment.election_group_id,
         assignmentId: pollingUnitAssignment.id,
         partyId: pollingUnitAssignment.party_id,
         statusCategoryId: selectedStatusCategoryId,
@@ -136,6 +172,9 @@ function GiveUpdate() {
         newIssueOptionIds: isNewIssue ? selectedIssueOptionIds : undefined,
         title: title.trim() || undefined,
         message: message.trim() || title.trim() || "Polling unit status update",
+        latitude: geoCoords.latitude,
+        longitude: geoCoords.longitude,
+        accuracyMeters: geoCoords.accuracyMeters,
         mediaFiles: processedMediaFiles,
         createdAt: Date.now(),
         syncStatus: "pending",
@@ -166,33 +205,18 @@ function GiveUpdate() {
       <PageHeader onBackClick={() => navigate({ to: "/" })} />
 
       <div className="px-4 py-2 space-y-6 max-w-2xl md:min-w-200 mx-auto">
+        {/* Election Group Mismatch Banner */}
+        <ElectionMismatchBanner mismatch={isElectionMismatch} selectedGroupName={selectedElectionGroup?.name} />
+
+        {/* Election Day Restriction Banner */}
+        <ElectionDayBanner electionDay={electionDay} daysLeft={daysLeft} />
+
         {/* Offline / Pending Sync Status Banner */}
-        {(!isOnline || pendingCount > 0) && (
-          <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 text-xs text-amber-800 dark:text-amber-300">
-            <div className="flex items-center gap-2">
-              {!isOnline ? (
-                <>
-                  <WifiOff className="size-4 shrink-0 text-amber-600" />
-                  <span>Offline mode. All updates are stored safely on your phone.</span>
-                </>
-              ) : (
-                <>
-                  <CloudUpload className="size-4 shrink-0 text-amber-600 animate-bounce" />
-                  <span>{pendingCount} update{pendingCount > 1 ? "s" : ""} waiting to sync...</span>
-                </>
-              )}
-            </div>
-            {isOnline && (
-              <button
-                type="button"
-                onClick={() => triggerSync()}
-                className="font-semibold underline hover:text-amber-950 cursor-pointer"
-              >
-                Sync now
-              </button>
-            )}
-          </div>
-        )}
+        <OfflineSyncBanner
+          isOnline={isOnline}
+          pendingCount={pendingCount}
+          onSync={triggerSync}
+        />
 
         {/* Title header with lime accent underline */}
         <div>
@@ -254,5 +278,75 @@ function GiveUpdate() {
         </div>
       </div>
     </PageWrapper>
+  );
+}
+
+/**
+ * Notice banner displayed when current date does not match election day.
+ */
+function ElectionDayBanner({ electionDay, daysLeft }: { electionDay?: boolean; daysLeft?: number }) {
+  if (electionDay) return null;
+
+  return (
+    <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 text-xs text-blue-800 dark:text-blue-300">
+      <CalendarClock className="size-4 shrink-0 text-blue-600 dark:text-blue-400" />
+      <span>
+        {daysLeft !== undefined && daysLeft > 0
+          ? `Election day is in ${daysLeft} day${daysLeft > 1 ? "s" : ""}. Situation updates open on election day.`
+          : "Situation updates can only be submitted on the scheduled election day."}
+      </span>
+    </div>
+  );
+}
+
+/**
+ * Banner displayed when user is offline or has pending outbox updates to sync.
+ */
+function OfflineSyncBanner({ isOnline, pendingCount, onSync }: { isOnline: boolean; pendingCount: number; onSync: () => void }) {
+  if (isOnline && pendingCount === 0) return null;
+
+  return (
+    <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 text-xs text-amber-800 dark:text-amber-300">
+      <div className="flex items-center gap-2">
+        {!isOnline ? (
+          <>
+            <WifiOff className="size-4 shrink-0 text-amber-600" />
+            <span>Offline mode. All updates are stored safely on your phone.</span>
+          </>
+        ) : (
+          <>
+            <CloudUpload className="size-4 shrink-0 text-amber-600 animate-bounce" />
+            <span>
+              {pendingCount} update{pendingCount > 1 ? "s" : ""} waiting to sync...
+            </span>
+          </>
+        )}
+      </div>
+      {isOnline && (
+        <button
+          type="button"
+          onClick={onSync}
+          className="font-semibold underline hover:text-amber-950 cursor-pointer"
+        >
+          Sync now
+        </button>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Warning banner displayed when active selected election differs from assigned polling unit election.
+ */
+function ElectionMismatchBanner({ mismatch, selectedGroupName }: { mismatch: boolean; selectedGroupName?: string }) {
+  if (!mismatch) return null;
+
+  return (
+    <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800 text-xs text-amber-900 dark:text-amber-200">
+      <AlertTriangle className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+      <span>
+        You are currently viewing <strong>{selectedGroupName || "another election"}</strong>, which does not match your polling unit assignment&apos;s election. Please switch to your assigned election.
+      </span>
+    </div>
   );
 }

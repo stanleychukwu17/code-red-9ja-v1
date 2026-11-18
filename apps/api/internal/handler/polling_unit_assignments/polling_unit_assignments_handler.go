@@ -35,16 +35,24 @@ type UsersService interface {
 	GetUserRoles(ctx context.Context, userID int64) (queries.CachedUserRoles, error)
 }
 
+type PollingUnitUpdatesService interface {
+	CreateUpdate(ctx context.Context, input puupdates.CreateUpdateInput) (queries.PollingUnitUpdate, error)
+}
+
+type EarningsService interface {
+	Calculate(ctx context.Context, assignmentID int64) (queries.AgentEarning, error)
+}
+
 type Handler struct {
 	service                   PollingUnitAssignmentsService
 	usersService              UsersService
-	pollingUnitUpdatesService *puupdates.Service
-	earningsService           *earningsservice.Service
+	pollingUnitUpdatesService PollingUnitUpdatesService
+	earningsService           EarningsService
 	supervisorService         SupervisorAssignmentsService
 	utils                     *utils.Utils
 }
 
-func NewHandler(service PollingUnitAssignmentsService, usersService UsersService, puUpdatesService *puupdates.Service, utils *utils.Utils, earningsSvc *earningsservice.Service, supervisorSvc SupervisorAssignmentsService) *Handler {
+func NewHandler(service PollingUnitAssignmentsService, usersService UsersService, puUpdatesService PollingUnitUpdatesService, utils *utils.Utils, earningsSvc EarningsService, supervisorSvc SupervisorAssignmentsService) *Handler {
 	return &Handler{
 		service:                   service,
 		usersService:              usersService,

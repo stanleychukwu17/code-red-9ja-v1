@@ -1,38 +1,54 @@
 package polling_unit_updates
 
 import (
+	"context"
 	"encoding/json"
-	"math"
-	"net/http"
-	"strconv"
-
 	"free9ja/api/internal/db/queries"
 	apimiddleware "free9ja/api/internal/middleware"
 	"free9ja/api/internal/service/polling_unit_updates"
 	"free9ja/api/internal/utils"
-
+	"math"
+	"net/http"
+	"strconv"
 
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type Handler struct {
-	service         *polling_unit_updates.Service
-	utils           *utils.Utils
+type Service interface {
+	CreateUpdate(ctx context.Context, input polling_unit_updates.CreateUpdateInput) (queries.PollingUnitUpdate, error)
+	ListUpdates(ctx context.Context, params queries.ListPollingUnitUpdatesParams) ([]queries.ListPollingUnitUpdatesRow, error)
+	GetActiveIssues(ctx context.Context, pollingUnitID int32) ([]queries.ListActivePollingUnitIssuesRow, error)
 }
 
-func NewHandler(s *polling_unit_updates.Service, u *utils.Utils) *Handler {
+type Handler struct {
+	service Service
+	utils   *utils.Utils
+}
+
+func NewHandler(s Service, u *utils.Utils) *Handler {
 	return &Handler{service: s, utils: u}
 }
 
 type CreateUpdateRequest struct {
-	PollingUnitID   int32    `json:"polling_unit_id"`
-	ElectionGroupID int32    `json:"election_group_id"`
-	AssignmentID    *int64   `json:"assignment_id,omitempty"`
-	PartyID         *int16   `json:"party_id,omitempty"`
-	Message         string   `json:"message"`
-	MediaUrls       []string `json:"media_urls"`
-	IsReport        bool     `json:"is_report"`
-	ReportTypes     []string `json:"report_types"`
+	PollingUnitID     int32                            `json:"polling_unit_id"`
+	ElectionGroupID   int32                            `json:"election_group_id"`
+	AssignmentID      *int64                           `json:"assignment_id,omitempty"`
+	PartyID           *int16                           `json:"party_id,omitempty"`
+	StatusCategoryID  *int16                           `json:"status_category_id,omitempty"`
+	StatusOptionID    *int16                           `json:"status_option_id,omitempty"`
+	HasIssues         bool                             `json:"has_issues"`
+	IssueAction       string                           `json:"issue_action,omitempty"`
+	ExistingIssueIDs  []int64                          `json:"existing_issue_ids,omitempty"`
+	NewIssueOptionIDs []int16                          `json:"new_issue_option_ids,omitempty"`
+	Title             *string                          `json:"title,omitempty"`
+	Message           string                           `json:"message"`
+	Media             []polling_unit_updates.MediaItem `json:"media,omitempty"`
+	MediaUrls         []string                         `json:"media_urls,omitempty"`
+	IsReport          bool                             `json:"is_report,omitempty"`
+	ReportTypes       []string                         `json:"report_types,omitempty"`
+	Latitude          *float64                         `json:"latitude,omitempty"`
+	Longitude         *float64                         `json:"longitude,omitempty"`
+	AccuracyMeters    *float64                         `json:"accuracy_meters,omitempty"`
 }
 
 // CreateUpdate godoc
@@ -66,15 +82,26 @@ func (h *Handler) CreateUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	update, err := h.service.CreateUpdate(r.Context(), polling_unit_updates.CreateUpdateInput{
-		UserID:          claims.FakeID,
-		PollingUnitID:   req.PollingUnitID,
-		ElectionGroupID: req.ElectionGroupID,
-		AssignmentID:    req.AssignmentID,
-		PartyID:         req.PartyID,
-		Message:     req.Message,
-		MediaUrls:   req.MediaUrls,
-		IsReport:    req.IsReport,
-		ReportTypes: req.ReportTypes,
+		UserID:            claims.FakeID,
+		PollingUnitID:     req.PollingUnitID,
+		ElectionGroupID:   req.ElectionGroupID,
+		AssignmentID:      req.AssignmentID,
+		PartyID:           req.PartyID,
+		StatusCategoryID:  req.StatusCategoryID,
+		StatusOptionID:    req.StatusOptionID,
+		HasIssues:         req.HasIssues,
+		IssueAction:       req.IssueAction,
+		ExistingIssueIDs:  req.ExistingIssueIDs,
+		NewIssueOptionIDs: req.NewIssueOptionIDs,
+		Title:             req.Title,
+		Message:           req.Message,
+		Media:             req.Media,
+		MediaUrls:         req.MediaUrls,
+		IsReport:          req.IsReport,
+		ReportTypes:       req.ReportTypes,
+		Latitude:          req.Latitude,
+		Longitude:         req.Longitude,
+		AccuracyMeters:    req.AccuracyMeters,
 	})
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create update: "+err.Error())
@@ -99,7 +126,9 @@ func (h *Handler) CreateUpdate(w http.ResponseWriter, r *http.Request) {
 // @Param state_id query int false "Filter by State ID"
 // @Param lga_id query int false "Filter by LGA ID"
 // @Param ward_id query int false "Filter by Ward ID"
-// @Param is_report query bool false "Filter by Is Report"
+// @Param status_category_id query int false "Filter by Status Category ID"
+// @Param has_issues query bool false "Filter by Has Issues"
+// @Param has_media query bool false "Filter by Has Media"
 // @Param cursor query int false "Cursor (ID to paginate from)"
 // @Param limit query int false "Limit (default 20, max 100)"
 // @Success 200 {object} map[string]interface{}
@@ -108,7 +137,7 @@ func (h *Handler) CreateUpdate(w http.ResponseWriter, r *http.Request) {
 // @Router /polling-unit-updates [get]
 // @Security BearerAuth
 func (h *Handler) ListUpdates(w http.ResponseWriter, r *http.Request) {
-	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
+	_, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
 	if !ok {
 		return
 	}
@@ -165,9 +194,18 @@ func (h *Handler) ListUpdates(w http.ResponseWriter, r *http.Request) {
 			params.StateAssemblyConstituencyID = pgtype.Int4{Int32: int32(v), Valid: true}
 		}
 	}
-	if val := r.URL.Query().Get("is_report"); val != "" {
+	if val := r.URL.Query().Get("status_category_id"); val != "" {
+		if v, err := strconv.ParseInt(val, 10, 16); err == nil {
+			params.StatusCategoryID = pgtype.Int2{Int16: int16(v), Valid: true}
+		}
+	}
+	if val := r.URL.Query().Get("has_issues"); val != "" {
 		if v, err := strconv.ParseBool(val); err == nil {
-			params.IsReport = pgtype.Bool{Bool: v, Valid: true}
+			params.HasIssues = pgtype.Bool{Bool: v, Valid: true}
+		}
+	} else if val := r.URL.Query().Get("is_report"); val != "" {
+		if v, err := strconv.ParseBool(val); err == nil {
+			params.HasIssues = pgtype.Bool{Bool: v, Valid: true}
 		}
 	}
 	if val := r.URL.Query().Get("has_media"); val != "" {
@@ -183,6 +221,7 @@ func (h *Handler) ListUpdates(w http.ResponseWriter, r *http.Request) {
 			params.Cursor = v
 		}
 	}
+
 	params.Limit = 20
 	if val := r.URL.Query().Get("limit"); val != "" {
 		if v, err := strconv.ParseInt(val, 10, 32); err == nil && v > 0 {
@@ -193,30 +232,59 @@ func (h *Handler) ListUpdates(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Enforce role-based access
-	isPlatformAdmin := claims.HasRole("admin")
-	if !isPlatformAdmin {
-		if int64(claims.PartyID) > 0 {
-			// Force filter to user's party
-			params.PartyID = pgtype.Int2{Int16: int16(claims.PartyID), Valid: true}
-		}
-	}
-
 	updates, err := h.service.ListUpdates(r.Context(), params)
 	if err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch updates: "+err.Error())
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to list updates: "+err.Error())
 		return
 	}
 
-	// Prepare next cursor
 	var nextCursor *int64
-	if len(updates) == int(params.Limit) {
-		lastID := updates[len(updates)-1].ID
-		nextCursor = &lastID
+	if len(updates) > 0 && len(updates) == int(params.Limit) {
+		lastItem := updates[len(updates)-1]
+		nextCursor = &lastItem.ID
 	}
 
-	h.utils.RespondSuccess(w, http.StatusOK, "Updates fetched successfully", map[string]interface{}{
+	h.utils.RespondSuccess(w, http.StatusOK, "Updates retrieved successfully", map[string]interface{}{
 		"updates":     updates,
 		"next_cursor": nextCursor,
 	})
+}
+
+// ListActiveIssues godoc
+// @Summary List Active Polling Unit Issues
+// @Description Fetches active issues currently affecting a specific polling unit
+// @Tags Updates
+// @Accept json
+// @Produce json
+// @Param polling_unit_id query int true "Polling Unit ID"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /polling-unit-updates/issues [get]
+// @Security BearerAuth
+func (h *Handler) ListActiveIssues(w http.ResponseWriter, r *http.Request) {
+	_, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
+	if !ok {
+		return
+	}
+
+	val := r.URL.Query().Get("polling_unit_id")
+	if val == "" {
+		h.utils.RespondError(w, http.StatusBadRequest, "polling_unit_id is required")
+		return
+	}
+	puID, err := strconv.ParseInt(val, 10, 32)
+	if err != nil || puID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "invalid polling_unit_id")
+		return
+	}
+
+	issues, err := h.service.GetActiveIssues(r.Context(), int32(puID))
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch active issues: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccessData(w, http.StatusOK, "Active issues retrieved successfully", issues)
 }

@@ -1,6 +1,7 @@
 package polling_unit_results
 
 import (
+	"context"
 	"encoding/json"
 	"math"
 	"net/http"
@@ -15,12 +16,23 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type Handler struct {
-	service         *pu_results.Service
-	utils           *utils.Utils
+type PollingUnitResultsService interface {
+	SubmitBatchResults(ctx context.Context, input pu_results.SubmitBatchResultsInput) ([]queries.PollingUnitResult, error)
+	SubmitResult(ctx context.Context, input pu_results.SubmitResultInput) (queries.PollingUnitResult, error)
+	GetResult(ctx context.Context, id int64) (queries.GetPollingUnitResultByIDRow, error)
+	ListResults(ctx context.Context, params queries.ListPollingUnitResultsParams) ([]queries.ListPollingUnitResultsRow, error)
+	ListPollingUnitFinalResults(ctx context.Context, params queries.ListPollingUnitFinalResultsParams) ([]queries.ListPollingUnitFinalResultsRow, error)
+	VoteOnResult(ctx context.Context, resultID int64, userFakeID int64, voteType string) (queries.VoteOnPollingUnitResultRow, error)
+	ReviewResult(ctx context.Context, reviewerFakeID int64, input pu_results.ReviewResultInput) (queries.ReviewPollingUnitResultRow, error)
+	GetFinalResult(ctx context.Context, electionID int32, pollingUnitID int32) (queries.GetPollingUnitFinalResultRow, error)
 }
 
-func NewHandler(s *pu_results.Service, u *utils.Utils) *Handler {
+type Handler struct {
+	service PollingUnitResultsService
+	utils   *utils.Utils
+}
+
+func NewHandler(s PollingUnitResultsService, u *utils.Utils) *Handler {
 	return &Handler{service: s, utils: u}
 }
 
@@ -62,7 +74,6 @@ type PollingUnitFinalResultsListResponse struct {
 	Results    []PollingUnitFinalResultItemResponse `json:"results"`
 	NextCursor *int64                               `json:"next_cursor"`
 }
-
 
 type SubmitResultRequest struct {
 	AssignmentID        *int64 `json:"assignment_id,omitempty"`

@@ -10,18 +10,21 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"free9ja/api/internal/db/queries"
-	usersservice "free9ja/api/internal/service/users"
 	"free9ja/api/internal/utils"
 )
+
+type UsersService interface {
+	GetUserByFakeID(ctx context.Context, fakeID int64, opts ...queries.GetUserOptions) (queries.UserWithPlaces, error)
+}
 
 type Handler struct {
 	queries      *queries.Queries
 	pool         *pgxpool.Pool
-	usersService *usersservice.UsersService
+	usersService UsersService
 	utils        *utils.Utils
 }
 
-func NewHandler(queries *queries.Queries, pool *pgxpool.Pool, usersService *usersservice.UsersService, utils *utils.Utils) *Handler {
+func NewHandler(queries *queries.Queries, pool *pgxpool.Pool, usersService UsersService, utils *utils.Utils) *Handler {
 	return &Handler{
 		queries:      queries,
 		pool:         pool,
@@ -131,8 +134,6 @@ func (h *Handler) GetAgentPerformance(w http.ResponseWriter, r *http.Request) {
 		"has_more":    hasMore,
 	})
 }
-
-
 
 // fetchPerformanceStats executes the appropriate SQL query according to role type.
 func (h *Handler) fetchPerformanceStats(ctx context.Context, roleType string, partyID int16, electionGroupID int32, stateID int16, lgaID int32, wardID int32, search string, cursor int64, limit int32) ([]AgentPerformanceItem, *int64, bool, error) {

@@ -23,14 +23,19 @@ type PartyApplicationsService interface {
 	ApproveApplication(ctx context.Context, input partyapplications.ApproveApplicationInput) (queries.PartyAgentApplication, error)
 }
 
+type EarningsService interface {
+	EvaluatePracticeTestPayout(ctx context.Context, userID int64, electionGroupID int32, roleType string, finalScore float64) (earningsservice.PracticeTestPayoutResult, error)
+	ProcessPracticeTestPayout(ctx context.Context, userID int64, electionGroupID int32, roleType string, payoutKobo int64, testID int64) error
+}
+
 type Handler struct {
 	q         *queries.Queries
 	u         *utils.Utils
-	earnings  *earningsservice.Service
+	earnings  EarningsService
 	partyApps PartyApplicationsService
 }
 
-func NewHandler(q *queries.Queries, u *utils.Utils, earningsSvc *earningsservice.Service, partyApps PartyApplicationsService) *Handler {
+func NewHandler(q *queries.Queries, u *utils.Utils, earningsSvc EarningsService, partyApps PartyApplicationsService) *Handler {
 	return &Handler{q: q, u: u, earnings: earningsSvc, partyApps: partyApps}
 }
 

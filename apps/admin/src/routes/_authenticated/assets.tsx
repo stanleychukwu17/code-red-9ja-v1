@@ -12,6 +12,8 @@ import {
   getAssetFolders,
   getMediaAssets,
   syncR2Assets,
+  deleteMediaAsset,
+  deleteAssetFolder,
   type AssetFolder,
 } from "#/lib/server/assets";
 import { QUERY_KEYS } from "#/lib/config";
@@ -28,7 +30,23 @@ import {
   FileBox,
   File as GenericFileIcon,
   Loader2,
+  Upload,
+  FolderPlus,
+  MoreVertical,
+  Copy,
+  ExternalLink,
+  Download,
+  Trash2,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@repo/ui/components/dropdown-menu";
+import { CreateAssetFolderDialog } from "#/components/dialogs/CreateAssetFolderDialog";
+import { UploadAssetsDialog } from "#/components/dialogs/UploadAssetsDialog";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/assets")({
@@ -36,10 +54,10 @@ export const Route = createFileRoute("/_authenticated/assets")({
   component: RouteComponent,
 });
 
-interface BreadcrumbItem {
+type BreadcrumbItem = {
   id: number;
   name: string;
-}
+};
 
 export function formatBytes(bytes: number, decimals = 1) {
   if (!bytes || bytes <= 0) return "0 B";
@@ -80,8 +98,11 @@ function RouteComponent() {
     { id: 0, name: "Root" },
   ]);
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [createFolderOpen, setCreateFolderOpen] = useState(false);
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
 
   const activeParentId = currentFolderId > 0 ? currentFolderId : undefined;
+  const currentPath = breadcrumbs.map((b) => b.name).join(" / ");
 
   // 1. Fetch subfolders for current folder
   const { data: foldersData, isLoading: isLoadingFolders, isRefetching: isRefetchingFolders } = useQuery({
@@ -135,6 +156,67 @@ function RouteComponent() {
     },
   });
 
+  // Delete folder mutation
+  const deleteFolderMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await deleteAssetFolder({ data: id });
+      if (!res || !res.success) {
+        throw new Error(res?.message || "Failed to delete folder");
+      }
+      return res;
+    },
+    onSuccess: () => {
+      toast.success("Folder deleted successfully");
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.assets.folders(activeParentId),
+      });
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || "Failed to delete folder");
+    },
+  });
+
+  // Delete asset mutation
+  const deleteAssetMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await deleteMediaAsset({ data: id });
+      if (!res || !res.success) {
+        throw new Error(res?.message || "Failed to delete asset");
+      }
+      return res;
+    },
+    onSuccess: () => {
+      toast.success("Asset deleted successfully");
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.assets.list(activeParentId),
+      });
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || "Failed to delete asset");
+    },
+  });
+
+  // Copy public CDN URL to clipboard
+  const handleCopyUrl = async (url: string) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Public CDN URL copied to clipboard!");
+    } catch {
+      toast.error("Failed to copy URL to clipboard");
+    }
+  };
+
+  // Download asset directly
+  const handleDownloadAsset = (url: string, filename: string) => {
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.target = "_blank";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // Folder navigation click
   const handleOpenFolder = (folder: AssetFolder) => {
     setCurrentFolderId(folder.id);
@@ -173,7 +255,16 @@ function RouteComponent() {
               />
               <span>{syncMutation.isPending ? "Syncing R2..." : "Sync with R2"}</span>
             </button>
-            <AddButton onClick={() => { }} />
+            <button
+              type="button"
+              onClick={() => setUploadDialogOpen(true)}
+              className="flex h-10 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground transition hover:bg-primary/90 cursor-pointer shadow-xs"
+              title="Upload new media assets"
+            >
+              <Upload className="size-4" />
+              <span>Upload</span>
+            </button>
+            <AddButton onClick={() => setCreateFolderOpen(true)} />
           </div>
         }
       />
@@ -199,9 +290,9 @@ function RouteComponent() {
                 <button
                   type="button"
                   onClick={() => handleBreadcrumbClick(idx)}
-                  className={`flex items-center gap-1.5 px-2 py-1 rounded-lg transition-colors cursor-pointer ${isLast
-                    ? "font-semibold text-c-100 bg-sidebar-softer"
-                    : "text-muted-foreground hover:text-c-100 hover:bg-sidebar-softer/60"
+                  className={`flex items-center gap-1.5 px-2 py-1 rounded-lg transition-colors cursor-pointer
+                    ${isLast ? "font-semibold text-c-100 bg-sidebar-softer"
+                      : "text-muted-foreground hover:text-c-100 hover:bg-sidebar-softer/60"
                     }`}
                   aria-current={isLast ? "page" : undefined}
                 >
@@ -247,15 +338,31 @@ function RouteComponent() {
           <p className="text-sm text-muted-foreground max-w-sm mt-1">
             No subfolders or assets found here. You can sync from Cloudflare R2 or add items.
           </p>
-          <div className="mt-4 flex gap-2">
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setUploadDialogOpen(true)}
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition cursor-pointer shadow-xs"
+            >
+              <Upload className="size-4" />
+              <span>Upload Assets</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setCreateFolderOpen(true)}
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-sidebar-softer text-c-90 text-sm font-medium hover:bg-sidebar-softer/80 transition cursor-pointer border border-border/50"
+            >
+              <FolderPlus className="size-4" />
+              <span>New Folder</span>
+            </button>
             <button
               type="button"
               onClick={() => syncMutation.mutate()}
               disabled={syncMutation.isPending}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition cursor-pointer"
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-sidebar-softer text-muted-foreground text-sm font-medium hover:text-c-100 hover:bg-sidebar-softer/80 transition cursor-pointer border border-border/40"
             >
               <RefreshCw className={`size-4 ${syncMutation.isPending ? "animate-spin" : ""}`} />
-              <span>Sync with R2</span>
+              <span>Sync R2</span>
             </button>
           </div>
         </div>
@@ -271,20 +378,59 @@ function RouteComponent() {
                 {folders.map((folder) => (
                   <div
                     key={folder.id}
-                    onClick={() => handleOpenFolder(folder)}
-                    className="group flex items-center gap-3 p-3 rounded-xl bg-sidebar-softer/50 border border-border/50 hover:bg-sidebar-softer hover:border-border transition cursor-pointer select-none"
+                    className="group relative flex items-center justify-between p-3 rounded-xl bg-sidebar-softer/50 border border-border/50 hover:bg-sidebar-softer hover:border-border transition select-none"
                   >
-                    <div className="size-9 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center shrink-0 group-hover:bg-amber-500/20 transition">
-                      <FolderIcon className="size-5 fill-amber-500/20" />
+                    <div
+                      onClick={() => handleOpenFolder(folder)}
+                      className="flex items-center gap-3 min-w-0 flex-1 mr-2 cursor-pointer"
+                    >
+                      <div className="size-9 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center shrink-0 group-hover:bg-amber-500/20 transition">
+                        <FolderIcon className="size-5 fill-amber-500/20" />
+                      </div>
+                      <div className="flex flex-col min-w-0 flex-1">
+                        <span className="text-sm font-medium text-c-90 truncate group-hover:text-c-100">
+                          {folder.name}
+                        </span>
+                        <span className="text-xs text-muted-foreground truncate">
+                          {folder.r2_prefix}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex flex-col min-w-0 flex-1">
-                      <span className="text-sm font-medium text-c-90 truncate group-hover:text-c-100">
-                        {folder.name}
-                      </span>
-                      <span className="text-xs text-muted-foreground truncate">
-                        {folder.r2_prefix}
-                      </span>
-                    </div>
+
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          type="button"
+                          className="size-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-c-100 hover:bg-background/80 transition opacity-0 group-hover:opacity-100 cursor-pointer shrink-0"
+                          onClick={(e) => e.stopPropagation()}
+                          title="Folder options"
+                        >
+                          <MoreVertical className="size-4" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-40">
+                        <DropdownMenuItem
+                          onClick={() => handleOpenFolder(folder)}
+                          className="flex items-center gap-2 cursor-pointer"
+                        >
+                          <FolderIcon className="size-4" />
+                          <span>Open</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (window.confirm(`Delete folder "${folder.name}" and its subfolders?`)) {
+                              deleteFolderMutation.mutate(folder.id);
+                            }
+                          }}
+                          className="flex items-center gap-2 text-red-500 focus:text-red-500 cursor-pointer"
+                        >
+                          <Trash2 className="size-4" />
+                          <span>Delete</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 ))}
               </div>
@@ -301,7 +447,7 @@ function RouteComponent() {
                 {assets.map((asset) => (
                   <div
                     key={asset.id}
-                    className="group flex flex-col p-3 rounded-xl bg-sidebar-softer/40 border border-border/50 hover:bg-sidebar-softer hover:border-border transition"
+                    className="group relative flex flex-col p-3 rounded-xl bg-sidebar-softer/40 border border-border/50 hover:bg-sidebar-softer hover:border-border transition"
                   >
                     <div className="flex items-center gap-3">
                       <div className="size-9 rounded-lg bg-background flex items-center justify-center shrink-0 border border-border/40">
@@ -323,6 +469,60 @@ function RouteComponent() {
                           )}
                         </div>
                       </div>
+
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            type="button"
+                            className="size-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-c-100 hover:bg-background/80 transition opacity-80 group-hover:opacity-100 cursor-pointer shrink-0"
+                            onClick={(e) => e.stopPropagation()}
+                            title="Asset options"
+                          >
+                            <MoreVertical className="size-4" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem
+                            onClick={() => handleCopyUrl(asset.public_url)}
+                            className="flex items-center gap-2 cursor-pointer"
+                          >
+                            <Copy className="size-4" />
+                            <span>Copy Public URL</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            asChild
+                            className="flex items-center gap-2 cursor-pointer"
+                          >
+                            <a
+                              href={asset.public_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              <ExternalLink className="size-4" />
+                              <span>Open in New Tab</span>
+                            </a>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleDownloadAsset(asset.public_url, asset.name)}
+                            className="flex items-center gap-2 cursor-pointer"
+                          >
+                            <Download className="size-4" />
+                            <span>Download</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => {
+                              if (window.confirm(`Delete asset "${asset.name}"?`)) {
+                                deleteAssetMutation.mutate(asset.id);
+                              }
+                            }}
+                            className="flex items-center gap-2 text-red-500 focus:text-red-500 cursor-pointer"
+                          >
+                            <Trash2 className="size-4" />
+                            <span>Delete Asset</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
                 ))}
@@ -331,6 +531,22 @@ function RouteComponent() {
           )}
         </div>
       )}
+
+      {/* Create Folder Modal */}
+      <CreateAssetFolderDialog
+        open={createFolderOpen}
+        onClose={() => setCreateFolderOpen(false)}
+        parentId={activeParentId}
+        currentPath={currentPath}
+      />
+
+      {/* Upload Media Assets Modal & Dropzone */}
+      <UploadAssetsDialog
+        open={uploadDialogOpen}
+        onClose={() => setUploadDialogOpen(false)}
+        parentId={activeParentId}
+        currentPath={currentPath}
+      />
     </Layout>
   );
 }

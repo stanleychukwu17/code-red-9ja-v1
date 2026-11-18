@@ -15,13 +15,21 @@ import (
 	"free9ja/api/internal/utils"
 )
 
+type EarningsService interface {
+	Calculate(ctx context.Context, assignmentID int64) (queries.AgentEarning, error)
+	CalculatePotentialPayout(ctx context.Context, assignmentID int64, taskType string) (earningsservice.PotentialPayoutResult, error)
+	EstimatePotentialPayout(ctx context.Context, taskType, role string, electionGroupID int32, partyID int16) (earningsservice.EstimatePayoutResult, error)
+	GetAgentAllocations(ctx context.Context, userID int64, electionGroupID int32, roleType string, assignmentID int64) (earningsservice.AgentAllocationsResponse, error)
+	RequestPayout(ctx context.Context, userID int64, electionGroupID int32, roleType string) (queries.AgentEarning, error)
+}
+
 type Handler struct {
 	q       *queries.Queries
-	service *earningsservice.Service
+	service EarningsService
 	u       *utils.Utils
 }
 
-func NewHandler(q *queries.Queries, svc *earningsservice.Service, u *utils.Utils) *Handler {
+func NewHandler(q *queries.Queries, svc EarningsService, u *utils.Utils) *Handler {
 	return &Handler{q: q, service: svc, u: u}
 }
 
@@ -394,7 +402,7 @@ func (h *Handler) GetAllocations(w http.ResponseWriter, r *http.Request) {
 // TriggerCalculation is called by other handlers (practice tests, assignment tracking)
 // to recalculate earnings for a given assignment in the background.
 // It never fails the caller's HTTP response.
-func TriggerCalculation(svc *earningsservice.Service, assignmentID int64) {
+func TriggerCalculation(svc EarningsService, assignmentID int64) {
 	if assignmentID <= 0 || svc == nil {
 		return
 	}

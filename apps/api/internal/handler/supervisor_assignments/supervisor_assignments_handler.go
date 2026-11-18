@@ -1,6 +1,7 @@
 package supervisorassignments
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 
@@ -8,12 +9,16 @@ import (
 	"free9ja/api/internal/utils"
 )
 
+type SupervisorAssignmentsService interface {
+	GetUserSupervisorAssignments(ctx context.Context, userID int64, electionGroupID int32) (*supervisorassignments.SupervisorAssignmentsResponse, error)
+}
+
 type Handler struct {
-	service *supervisorassignments.Service
+	service SupervisorAssignmentsService
 	utils   *utils.Utils
 }
 
-func NewHandler(service *supervisorassignments.Service, utils *utils.Utils) *Handler {
+func NewHandler(service SupervisorAssignmentsService, utils *utils.Utils) *Handler {
 	return &Handler{
 		service: service,
 		utils:   utils,

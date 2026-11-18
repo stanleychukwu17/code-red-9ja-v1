@@ -869,22 +869,91 @@ type PollingUnitResult struct {
 type PollingUnitUpdate struct {
 	ID                          int64              `json:"id"`
 	AssignmentID                pgtype.Int8        `json:"assignment_id"`
-	UserID                      int64              `json:"user_id"`
 	ElectionGroupID             int32              `json:"election_group_id"`
-	PollingUnitID               int32              `json:"polling_unit_id"`
 	PartyID                     pgtype.Int2        `json:"party_id"`
+	UserID                      int64              `json:"user_id"`
 	StateID                     pgtype.Int2        `json:"state_id"`
 	LgaID                       pgtype.Int4        `json:"lga_id"`
 	WardID                      pgtype.Int4        `json:"ward_id"`
 	SenatorialDistrictID        pgtype.Int4        `json:"senatorial_district_id"`
 	FederalConstituencyID       pgtype.Int4        `json:"federal_constituency_id"`
 	StateAssemblyConstituencyID pgtype.Int4        `json:"state_assembly_constituency_id"`
+	PollingUnitID               int32              `json:"polling_unit_id"`
+	StatusCategoryID            pgtype.Int2        `json:"status_category_id"`
+	StatusOptionID              pgtype.Int2        `json:"status_option_id"`
+	HasIssues                   pgtype.Bool        `json:"has_issues"`
+	Title                       pgtype.Text        `json:"title"`
 	Message                     string             `json:"message"`
-	MediaUrls                   []string           `json:"media_urls"`
-	IsReport                    pgtype.Bool        `json:"is_report"`
-	ReportTypes                 []string           `json:"report_types"`
+	HasMedia                    bool               `json:"has_media"`
+	Latitude                    pgtype.Float8      `json:"latitude"`
+	Longitude                   pgtype.Float8      `json:"longitude"`
+	AccuracyMeters              pgtype.Float8      `json:"accuracy_meters"`
 	CreatedAt                   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt                   pgtype.Timestamptz `json:"updated_at"`
+}
+
+type PollingUnitUpdateMedia struct {
+	ID              int64              `json:"id"`
+	UpdateID        int64              `json:"update_id"`
+	MediaType       string             `json:"media_type"`
+	Url             string             `json:"url"`
+	ThumbnailUrl    pgtype.Text        `json:"thumbnail_url"`
+	DurationSeconds pgtype.Int4        `json:"duration_seconds"`
+	FileSizeBytes   int64              `json:"file_size_bytes"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+}
+
+type PollingUnitWithIssue struct {
+	ID               int64              `json:"id"`
+	UpdateID         pgtype.Int8        `json:"update_id"`
+	ElectionGroupID  int32              `json:"election_group_id"`
+	PartyID          pgtype.Int2        `json:"party_id"`
+	UserID           int64              `json:"user_id"`
+	AssignmentID     pgtype.Int8        `json:"assignment_id"`
+	PollingUnitID    int32              `json:"polling_unit_id"`
+	IssueCategoryID  int16              `json:"issue_category_id"`
+	IssueOptionID    int16              `json:"issue_option_id"`
+	IsActive         bool               `json:"is_active"`
+	TimeIssueStarted pgtype.Timestamptz `json:"time_issue_started"`
+	TimeIssueEnded   pgtype.Timestamptz `json:"time_issue_ended"`
+	ResolutionNotes  pgtype.Text        `json:"resolution_notes"`
+}
+
+type PollingUnitStatusCategory struct {
+	ID          int16              `json:"id"`
+	Name        string             `json:"name"`
+	Slug        string             `json:"slug"`
+	Description pgtype.Text        `json:"description"`
+	Color       pgtype.Text        `json:"color"`
+	SortOrder   pgtype.Int2        `json:"sort_order"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
+type PollingUnitStatusOption struct {
+	ID               int16              `json:"id"`
+	StatusCategoryID int16              `json:"status_category_id"`
+	Name             string             `json:"name"`
+	SortOrder        pgtype.Int2        `json:"sort_order"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+}
+
+type PollingUnitIssueCategory struct {
+	ID          int16              `json:"id"`
+	Name        string             `json:"name"`
+	Slug        string             `json:"slug"`
+	Description pgtype.Text        `json:"description"`
+	Color       pgtype.Text        `json:"color"`
+	SortOrder   pgtype.Int2        `json:"sort_order"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
+type PollingUnitIssueOption struct {
+	ID              int16              `json:"id"`
+	IssueCategoryID int16              `json:"issue_category_id"`
+	Name            string             `json:"name"`
+	Severity        pgtype.Text        `json:"severity"`
+	SortOrder       pgtype.Int2        `json:"sort_order"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 }
 
 type Referral struct {

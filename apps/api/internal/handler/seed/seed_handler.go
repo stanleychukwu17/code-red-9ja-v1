@@ -1,6 +1,7 @@
 package seedhandler
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,17 +11,35 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"free9ja/api/internal/db/queries"
 	seedservice "free9ja/api/internal/service/seed"
 	"free9ja/api/internal/utils"
 )
 
+type SeedService interface {
+	SeedUsers(ctx context.Context, req seedservice.SeedUsersRequest) (string, error)
+	SeedAdmins(ctx context.Context, req seedservice.SeedAdminsRequest) (string, error)
+	SimulateElectionResults(ctx context.Context, electionID int32, req seedservice.SimulateElectionResultsRequest) (*seedservice.SimulateElectionResultsResult, error)
+	FlushRedis(ctx context.Context) (string, error)
+	SeedElectionGroups(ctx context.Context, req seedservice.SeedElectionGroupsRequest) ([]queries.ElectionGroup, error)
+	SeedElectionInstances(ctx context.Context, req seedservice.SeedElectionInstancesRequest) (string, error)
+	SeedPresidentialCandidates(ctx context.Context, req seedservice.SeedCandidatesRequest) (string, error)
+	SeedGovernorshipCandidates(ctx context.Context, req seedservice.SeedCandidatesRequest) (string, error)
+	SeedSenateCandidates(ctx context.Context, req seedservice.SeedCandidatesRequest) (string, error)
+	SeedHouseOfRepsCandidates(ctx context.Context, req seedservice.SeedCandidatesRequest) (string, error)
+	SeedStateAssemblyCandidates(ctx context.Context, req seedservice.SeedCandidatesRequest) (string, error)
+	SeedPartyLeadership(ctx context.Context, req seedservice.SeedCandidatesRequest) (string, error)
+	SyncCampaignGroups(ctx context.Context, req seedservice.SyncCampaignGroupsRequest) (*seedservice.SyncCampaignGroupsResult, error)
+	SeedPartyAgentApplications(ctx context.Context, req seedservice.SeedPartyAgentApplicationsRequest) (*seedservice.SeedPartyAgentApplicationsResult, error)
+}
+
 type Handler struct {
-	seedService *seedservice.SeedService
+	seedService SeedService
 	utils       *utils.Utils
 }
 
 // NewHandler creates a new instance of Handler.
-func NewHandler(seedService *seedservice.SeedService, utils *utils.Utils) *Handler {
+func NewHandler(seedService SeedService, utils *utils.Utils) *Handler {
 	return &Handler{
 		seedService: seedService,
 		utils:       utils,

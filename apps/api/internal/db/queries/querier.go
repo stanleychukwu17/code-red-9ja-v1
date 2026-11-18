@@ -90,7 +90,13 @@ type Querier interface {
 	CreatePhoneNumber(ctx context.Context, arg CreatePhoneNumberParams) (int64, error)
 	CreatePlan(ctx context.Context, arg CreatePlanParams) (Plan, error)
 	CreatePollingUnit(ctx context.Context, arg CreatePollingUnitParams) (PollingUnit, error)
+	CreatePollingUnitIssue(ctx context.Context, arg CreatePollingUnitIssueParams) (PollingUnitWithIssue, error)
 	CreatePollingUnitUpdate(ctx context.Context, arg CreatePollingUnitUpdateParams) (PollingUnitUpdate, error)
+	CreatePollingUnitUpdateMedia(ctx context.Context, arg CreatePollingUnitUpdateMediaParams) (PollingUnitUpdateMedia, error)
+	GetIssueOptionByID(ctx context.Context, id int16) (GetIssueOptionByIDRow, error)
+	ListActivePollingUnitIssues(ctx context.Context, pollingUnitID int32) ([]ListActivePollingUnitIssuesRow, error)
+	ListMediaByUpdateIDs(ctx context.Context, updateIds []int64) ([]PollingUnitUpdateMedia, error)
+	ResolvePollingUnitIssues(ctx context.Context, issueIds []int64) error
 	CreateReferral(ctx context.Context, arg CreateReferralParams) (Referral, error)
 	CreateSenatorialDistrict(ctx context.Context, arg CreateSenatorialDistrictParams) (SenatorialDistrict, error)
 	CreateState(ctx context.Context, arg CreateStateParams) (CState, error)

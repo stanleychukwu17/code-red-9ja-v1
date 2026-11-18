@@ -1,6 +1,7 @@
 package referrals
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -11,16 +12,26 @@ import (
 
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/middleware"
-	"free9ja/api/internal/service/referrals"
 	"free9ja/api/internal/utils"
 )
 
+type ReferralsService interface {
+	CreateReferral(ctx context.Context, params queries.CreateReferralParams) (queries.Referral, error)
+	GetReferral(ctx context.Context, id int64) (queries.Referral, error)
+	ListReferrals(ctx context.Context, limit, offset int32) ([]queries.Referral, error)
+	ListReferralsByReferrer(ctx context.Context, referrerID int64, limit, offset int32) ([]queries.Referral, error)
+	GetUserReferralStats(ctx context.Context, userID int64, electionGroupID pgtype.Int4) (queries.GetUserReferralStatsRow, error)
+	GetActiveMarketingCampaignForElectionGroup(ctx context.Context, partyID pgtype.Int2, electionGroupID pgtype.Int4) (queries.MarketingCampaign, error)
+	ListReferredUsersWithDetails(ctx context.Context, params queries.ListReferredUsersWithDetailsParams) ([]queries.ListReferredUsersWithDetailsRow, error)
+	UpdateReferral(ctx context.Context, params queries.UpdateReferralParams) (queries.Referral, error)
+}
+
 type Handler struct {
-	referralsService *referrals.ReferralsService
+	referralsService ReferralsService
 	utils            *utils.Utils
 }
 
-func NewHandler(svc *referrals.ReferralsService, utils *utils.Utils) *Handler {
+func NewHandler(svc ReferralsService, utils *utils.Utils) *Handler {
 	return &Handler{
 		referralsService: svc,
 		utils:            utils,

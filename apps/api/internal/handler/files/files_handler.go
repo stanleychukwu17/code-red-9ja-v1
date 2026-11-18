@@ -122,9 +122,9 @@ func (h *Handler) GenerateUploadURL(w http.ResponseWriter, r *http.Request) {
 		h.utils.RespondError(w, http.StatusBadRequest, "file_size must be greater than zero")
 		return
 	}
-	const maxFileSizeBytes = 50 * 1024 * 1024 // 50 MB
+	const maxFileSizeBytes = 300 * 1024 * 1024 // 300 MB
 	if req.FileSize > maxFileSizeBytes {
-		h.utils.RespondError(w, http.StatusBadRequest, "file exceeds the 50 MB size limit")
+		h.utils.RespondError(w, http.StatusBadRequest, "file exceeds the 300 MB size limit")
 		return
 	}
 
@@ -134,12 +134,12 @@ func (h *Handler) GenerateUploadURL(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Generate a unique object key for R2 (e.g., folder/date/sanitized-name-uuid.ext)
-	key := r2service.BuildKey(folder, req.OriginalName, uuid.New().String())
+	storageKey := r2service.BuildKey(folder, req.OriginalName, uuid.New().String())
 
 	// Request a presigned URL that allows the client to upload directly to R2
 	// e.g. PUT https://<uuid>.r2.dev/uploads/2026-08-04/my-image-<uuid>.png
 	const presignTTL = 15 * time.Minute
-	presignURL, err := h.r2.PresignedUploadURL(r.Context(), key, req.MimeType, presignTTL)
+	presignURL, err := h.r2.PresignedUploadURL(r.Context(), storageKey, req.MimeType, presignTTL)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to generate upload URL: "+err.Error())
 		return
@@ -147,7 +147,7 @@ func (h *Handler) GenerateUploadURL(w http.ResponseWriter, r *http.Request) {
 
 	// Determine the public URL where the file will be accessible after a successful upload
 	// e.g. "https://cdn.free9ja.com/uploads/2026-08-04/my-image-<uuid>.png"
-	publicURL := h.r2.PublicURL(key)
+	publicURL := h.r2.PublicURL(storageKey)
 
 	// Resolve uploadedBy from authenticated JWT claims.
 	uploadedBy := pgtype.Int8{Valid: false}
@@ -167,7 +167,7 @@ func (h *Handler) GenerateUploadURL(w http.ResponseWriter, r *http.Request) {
 		OriginalName: req.OriginalName,
 		MimeType:     req.MimeType,
 		FileSize:     req.FileSize,
-		FileKey:      key,
+		FileKey:      storageKey,
 		PublicUrl:    publicURL,
 		Folder:       folder,
 		IsPublic:     req.IsPublic,
@@ -182,7 +182,7 @@ func (h *Handler) GenerateUploadURL(w http.ResponseWriter, r *http.Request) {
 	// returns the presigned URL and file details to the client
 	h.utils.RespondSuccessData(w, http.StatusOK, "Upload URL generated successfully", FileUploadURLResponse{
 		UploadURL: presignURL,
-		FileKey:   key,
+		FileKey:   storageKey,
 		PublicURL: publicURL,
 		FileID:    file.ID,
 		ExpiresAt: time.Now().Add(presignTTL).UTC().Format(time.RFC3339),
