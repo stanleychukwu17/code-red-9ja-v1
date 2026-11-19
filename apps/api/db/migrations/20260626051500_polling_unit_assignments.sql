@@ -8,16 +8,13 @@ CREATE TABLE IF NOT EXISTS polling_unit_assignments (
   ward_id INTEGER REFERENCES wards(id) ON DELETE CASCADE NOT NULL,
   polling_unit_id INTEGER REFERENCES polling_units(id) ON DELETE CASCADE NOT NULL,
   user_id BIGINT REFERENCES users(id) ON DELETE CASCADE NOT NULL,
-  role_type VARCHAR(50) DEFAULT 'polling_agent' CHECK (role_type IN ('polling_agent', 'observer', 'collation_agent')),
+  role_type VARCHAR(50) DEFAULT 'polling_agent' CHECK (role_type IN ('polling_agent')),
   assigned_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
   
   -- Agent Tracking & Verification
   arrived_at TIMESTAMPTZ,
-  arrival_video_url TEXT,
   election_started_at TIMESTAMPTZ,
-  election_started_video_url TEXT,
   election_ended_at TIMESTAMPTZ,
-  election_ended_video_url TEXT,
   completed_at TIMESTAMPTZ, -- Timestamp when agent completed election day duties (all expected PU results submitted)
   last_update_at TIMESTAMPTZ,
   reports_count INT NOT NULL DEFAULT 0,

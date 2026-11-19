@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/hibiken/asynq"
+
+	earningsservice "free9ja/api/internal/service/earnings"
 )
 
 // Task name constants
@@ -17,7 +19,7 @@ const (
 
 // EarningsService defines the interface needed by the worker to recalculate and credit agent earnings.
 type EarningsService interface {
-	ProcessTaskEarnings(ctx context.Context, assignmentID int64, taskType string, customNarration ...string) (int64, error)
+	ProcessTaskEarnings(ctx context.Context, params earningsservice.ProcessTaskEarningsParams) (int64, error)
 }
 
 // CalculateAgentEarningsPayload contains the parameters to calculate and credit task milestone earnings.
@@ -66,17 +68,11 @@ func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskCalculateAgentEarnings(
 		return fmt.Errorf("earnings service is not configured in task processor")
 	}
 
-	var customNarration []string
-	if payload.CustomNarration != "" {
-		customNarration = append(customNarration, payload.CustomNarration)
-	}
-
-	credited, err := redisTaskProcessor.earningsService.ProcessTaskEarnings(
-		ctx,
-		payload.AssignmentID,
-		payload.TaskType,
-		customNarration...,
-	)
+	credited, err := redisTaskProcessor.earningsService.ProcessTaskEarnings(ctx, earningsservice.ProcessTaskEarningsParams{
+		AssignmentID:    payload.AssignmentID,
+		TaskType:        payload.TaskType,
+		CustomNarration: payload.CustomNarration,
+	})
 	if err != nil {
 		slog.Error("failed to calculate agent earnings", "assignment_id", payload.AssignmentID, "task_type", payload.TaskType, "error", err)
 		return fmt.Errorf("failed to calculate agent earnings: %w", err)

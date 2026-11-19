@@ -46,7 +46,7 @@ INSERT INTO polling_unit_assignments (
   potential_payment_kobo
 ) VALUES (
   $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
-) RETURNING id, election_group_id, party_id, state_id, lga_id, ward_id, polling_unit_id, user_id, role_type, assigned_by, arrived_at, arrival_video_url, election_started_at, election_started_video_url, election_ended_at, election_ended_video_url, completed_at, last_update_at, reports_count, updates_count, results_submitted_count, election_practice_test_readiness_percentage, potential_payment_kobo, earned_amount_kobo, created_at, updated_at
+) RETURNING id, election_group_id, party_id, state_id, lga_id, ward_id, polling_unit_id, user_id, role_type, assigned_by, arrived_at, election_started_at, election_ended_at, completed_at, last_update_at, reports_count, updates_count, results_submitted_count, election_practice_test_readiness_percentage, potential_payment_kobo, earned_amount_kobo, created_at, updated_at
 `
 
 type CreateAssignmentParams struct {
@@ -88,11 +88,8 @@ func (q *Queries) CreateAssignment(ctx context.Context, arg CreateAssignmentPara
 		&i.RoleType,
 		&i.AssignedBy,
 		&i.ArrivedAt,
-		&i.ArrivalVideoUrl,
 		&i.ElectionStartedAt,
-		&i.ElectionStartedVideoUrl,
 		&i.ElectionEndedAt,
-		&i.ElectionEndedVideoUrl,
 		&i.CompletedAt,
 		&i.LastUpdateAt,
 		&i.ReportsCount,
@@ -164,11 +161,8 @@ SELECT
   a.role_type,
   a.assigned_by,
   a.arrived_at,
-  a.arrival_video_url,
   a.election_started_at,
-  a.election_started_video_url,
   a.election_ended_at,
-  a.election_ended_video_url,
   a.created_at,
   a.updated_at,
   u.first_name,
@@ -192,34 +186,31 @@ WHERE a.id = $1 LIMIT 1
 `
 
 type GetAssignmentByIDRow struct {
-	ID                      int64              `json:"id"`
-	UserID                  int64              `json:"user_id"`
-	PollingUnitID           int32              `json:"polling_unit_id"`
-	ElectionGroupID         int32              `json:"election_group_id"`
-	PartyID                 int16              `json:"party_id"`
-	RoleType                pgtype.Text        `json:"role_type"`
-	AssignedBy              pgtype.Int8        `json:"assigned_by"`
-	ArrivedAt               pgtype.Timestamptz `json:"arrived_at"`
-	ArrivalVideoUrl         pgtype.Text        `json:"arrival_video_url"`
-	ElectionStartedAt       pgtype.Timestamptz `json:"election_started_at"`
-	ElectionStartedVideoUrl pgtype.Text        `json:"election_started_video_url"`
-	ElectionEndedAt         pgtype.Timestamptz `json:"election_ended_at"`
-	ElectionEndedVideoUrl   pgtype.Text        `json:"election_ended_video_url"`
-	CreatedAt               pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt               pgtype.Timestamptz `json:"updated_at"`
-	FirstName               pgtype.Text        `json:"first_name"`
-	LastName                pgtype.Text        `json:"last_name"`
-	Email                   pgtype.Text        `json:"email"`
-	Phone                   pgtype.Text        `json:"phone"`
-	Username                pgtype.Text        `json:"username"`
-	Avatar                  pgtype.Text        `json:"avatar"`
-	PollingUnitName         string             `json:"polling_unit_name"`
-	PollingUnitPuCode       pgtype.Text        `json:"polling_unit_pu_code"`
-	WardName                string             `json:"ward_name"`
-	LgaName                 string             `json:"lga_name"`
-	StateName               string             `json:"state_name"`
-	ElectionGroupName       string             `json:"election_group_name"`
-	ElectionDate            pgtype.Date        `json:"election_date"`
+	ID                int64              `json:"id"`
+	UserID            int64              `json:"user_id"`
+	PollingUnitID     int32              `json:"polling_unit_id"`
+	ElectionGroupID   int32              `json:"election_group_id"`
+	PartyID           int16              `json:"party_id"`
+	RoleType          pgtype.Text        `json:"role_type"`
+	AssignedBy        pgtype.Int8        `json:"assigned_by"`
+	ArrivedAt         pgtype.Timestamptz `json:"arrived_at"`
+	ElectionStartedAt pgtype.Timestamptz `json:"election_started_at"`
+	ElectionEndedAt   pgtype.Timestamptz `json:"election_ended_at"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	FirstName         pgtype.Text        `json:"first_name"`
+	LastName          pgtype.Text        `json:"last_name"`
+	Email             pgtype.Text        `json:"email"`
+	Phone             pgtype.Text        `json:"phone"`
+	Username          pgtype.Text        `json:"username"`
+	Avatar            pgtype.Text        `json:"avatar"`
+	PollingUnitName   string             `json:"polling_unit_name"`
+	PollingUnitPuCode pgtype.Text        `json:"polling_unit_pu_code"`
+	WardName          string             `json:"ward_name"`
+	LgaName           string             `json:"lga_name"`
+	StateName         string             `json:"state_name"`
+	ElectionGroupName string             `json:"election_group_name"`
+	ElectionDate      pgtype.Date        `json:"election_date"`
 }
 
 func (q *Queries) GetAssignmentByID(ctx context.Context, id int64) (GetAssignmentByIDRow, error) {
@@ -234,11 +225,8 @@ func (q *Queries) GetAssignmentByID(ctx context.Context, id int64) (GetAssignmen
 		&i.RoleType,
 		&i.AssignedBy,
 		&i.ArrivedAt,
-		&i.ArrivalVideoUrl,
 		&i.ElectionStartedAt,
-		&i.ElectionStartedVideoUrl,
 		&i.ElectionEndedAt,
-		&i.ElectionEndedVideoUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.FirstName,
@@ -525,11 +513,8 @@ SELECT
   eg.name AS election_group_name,
   eg.election_date,
   a.arrived_at,
-  a.arrival_video_url,
   a.election_started_at,
-  a.election_started_video_url,
-  a.election_ended_at,
-  a.election_ended_video_url
+  a.election_ended_at
 FROM polling_unit_assignments a
 JOIN users u ON a.user_id = u.id
 JOIN polling_units pu ON a.polling_unit_id = pu.id
@@ -553,34 +538,31 @@ type ListAssignmentsParams struct {
 }
 
 type ListAssignmentsRow struct {
-	ID                      int64              `json:"id"`
-	UserID                  int64              `json:"user_id"`
-	PollingUnitID           int32              `json:"polling_unit_id"`
-	ElectionGroupID         int32              `json:"election_group_id"`
-	PartyID                 int16              `json:"party_id"`
-	RoleType                pgtype.Text        `json:"role_type"`
-	AssignedBy              pgtype.Int8        `json:"assigned_by"`
-	CreatedAt               pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt               pgtype.Timestamptz `json:"updated_at"`
-	FirstName               pgtype.Text        `json:"first_name"`
-	LastName                pgtype.Text        `json:"last_name"`
-	Email                   pgtype.Text        `json:"email"`
-	Phone                   pgtype.Text        `json:"phone"`
-	Username                pgtype.Text        `json:"username"`
-	Avatar                  pgtype.Text        `json:"avatar"`
-	PollingUnitName         string             `json:"polling_unit_name"`
-	PollingUnitPuCode       pgtype.Text        `json:"polling_unit_pu_code"`
-	WardName                string             `json:"ward_name"`
-	LgaName                 string             `json:"lga_name"`
-	StateName               string             `json:"state_name"`
-	ElectionGroupName       string             `json:"election_group_name"`
-	ElectionDate            pgtype.Date        `json:"election_date"`
-	ArrivedAt               pgtype.Timestamptz `json:"arrived_at"`
-	ArrivalVideoUrl         pgtype.Text        `json:"arrival_video_url"`
-	ElectionStartedAt       pgtype.Timestamptz `json:"election_started_at"`
-	ElectionStartedVideoUrl pgtype.Text        `json:"election_started_video_url"`
-	ElectionEndedAt         pgtype.Timestamptz `json:"election_ended_at"`
-	ElectionEndedVideoUrl   pgtype.Text        `json:"election_ended_video_url"`
+	ID                int64              `json:"id"`
+	UserID            int64              `json:"user_id"`
+	PollingUnitID     int32              `json:"polling_unit_id"`
+	ElectionGroupID   int32              `json:"election_group_id"`
+	PartyID           int16              `json:"party_id"`
+	RoleType          pgtype.Text        `json:"role_type"`
+	AssignedBy        pgtype.Int8        `json:"assigned_by"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	FirstName         pgtype.Text        `json:"first_name"`
+	LastName          pgtype.Text        `json:"last_name"`
+	Email             pgtype.Text        `json:"email"`
+	Phone             pgtype.Text        `json:"phone"`
+	Username          pgtype.Text        `json:"username"`
+	Avatar            pgtype.Text        `json:"avatar"`
+	PollingUnitName   string             `json:"polling_unit_name"`
+	PollingUnitPuCode pgtype.Text        `json:"polling_unit_pu_code"`
+	WardName          string             `json:"ward_name"`
+	LgaName           string             `json:"lga_name"`
+	StateName         string             `json:"state_name"`
+	ElectionGroupName string             `json:"election_group_name"`
+	ElectionDate      pgtype.Date        `json:"election_date"`
+	ArrivedAt         pgtype.Timestamptz `json:"arrived_at"`
+	ElectionStartedAt pgtype.Timestamptz `json:"election_started_at"`
+	ElectionEndedAt   pgtype.Timestamptz `json:"election_ended_at"`
 }
 
 func (q *Queries) ListAssignments(ctx context.Context, arg ListAssignmentsParams) ([]ListAssignmentsRow, error) {
@@ -623,11 +605,8 @@ func (q *Queries) ListAssignments(ctx context.Context, arg ListAssignmentsParams
 			&i.ElectionGroupName,
 			&i.ElectionDate,
 			&i.ArrivedAt,
-			&i.ArrivalVideoUrl,
 			&i.ElectionStartedAt,
-			&i.ElectionStartedVideoUrl,
 			&i.ElectionEndedAt,
-			&i.ElectionEndedVideoUrl,
 		); err != nil {
 			return nil, err
 		}
@@ -645,7 +624,7 @@ SET
   election_practice_test_readiness_percentage = $2,
   updated_at = NOW()
 WHERE id = $1
-RETURNING id, user_id, polling_unit_id, election_group_id, party_id, role_type, assigned_by, arrived_at, arrival_video_url, election_started_at, election_started_video_url, election_ended_at, election_ended_video_url, last_update_at, reports_count, updates_count, results_submitted_count, election_practice_test_readiness_percentage, created_at, updated_at
+RETURNING id, user_id, polling_unit_id, election_group_id, party_id, role_type, assigned_by, arrived_at, election_started_at, election_ended_at, last_update_at, reports_count, updates_count, results_submitted_count, election_practice_test_readiness_percentage, created_at, updated_at
 `
 
 type UpdateAssignmentReadinessPercentageParams struct {
@@ -662,11 +641,8 @@ type UpdateAssignmentReadinessPercentageRow struct {
 	RoleType                                pgtype.Text        `json:"role_type"`
 	AssignedBy                              pgtype.Int8        `json:"assigned_by"`
 	ArrivedAt                               pgtype.Timestamptz `json:"arrived_at"`
-	ArrivalVideoUrl                         pgtype.Text        `json:"arrival_video_url"`
 	ElectionStartedAt                       pgtype.Timestamptz `json:"election_started_at"`
-	ElectionStartedVideoUrl                 pgtype.Text        `json:"election_started_video_url"`
 	ElectionEndedAt                         pgtype.Timestamptz `json:"election_ended_at"`
-	ElectionEndedVideoUrl                   pgtype.Text        `json:"election_ended_video_url"`
 	LastUpdateAt                            pgtype.Timestamptz `json:"last_update_at"`
 	ReportsCount                            int32              `json:"reports_count"`
 	UpdatesCount                            int32              `json:"updates_count"`
@@ -688,11 +664,8 @@ func (q *Queries) UpdateAssignmentReadinessPercentage(ctx context.Context, arg U
 		&i.RoleType,
 		&i.AssignedBy,
 		&i.ArrivedAt,
-		&i.ArrivalVideoUrl,
 		&i.ElectionStartedAt,
-		&i.ElectionStartedVideoUrl,
 		&i.ElectionEndedAt,
-		&i.ElectionEndedVideoUrl,
 		&i.LastUpdateAt,
 		&i.ReportsCount,
 		&i.UpdatesCount,
@@ -708,53 +681,41 @@ const updateAssignmentTracking = `-- name: UpdateAssignmentTracking :one
 UPDATE polling_unit_assignments
 SET 
   arrived_at = COALESCE($2, arrived_at),
-  arrival_video_url = COALESCE($3, arrival_video_url),
-  election_started_at = COALESCE($4, election_started_at),
-  election_started_video_url = COALESCE($5, election_started_video_url),
-  election_ended_at = COALESCE($6, election_ended_at),
-  election_ended_video_url = COALESCE($7, election_ended_video_url),
+  election_started_at = COALESCE($3, election_started_at),
+  election_ended_at = COALESCE($4, election_ended_at),
   updated_at = NOW()
 WHERE id = $1
-RETURNING id, user_id, polling_unit_id, election_group_id, party_id, role_type, assigned_by, arrived_at, arrival_video_url, election_started_at, election_started_video_url, election_ended_at, election_ended_video_url, created_at, updated_at
+RETURNING id, user_id, polling_unit_id, election_group_id, party_id, role_type, assigned_by, arrived_at, election_started_at, election_ended_at, created_at, updated_at
 `
 
 type UpdateAssignmentTrackingParams struct {
-	ID                      int64              `json:"id"`
-	ArrivedAt               pgtype.Timestamptz `json:"arrived_at"`
-	ArrivalVideoUrl         pgtype.Text        `json:"arrival_video_url"`
-	ElectionStartedAt       pgtype.Timestamptz `json:"election_started_at"`
-	ElectionStartedVideoUrl pgtype.Text        `json:"election_started_video_url"`
-	ElectionEndedAt         pgtype.Timestamptz `json:"election_ended_at"`
-	ElectionEndedVideoUrl   pgtype.Text        `json:"election_ended_video_url"`
+	ID                int64              `json:"id"`
+	ArrivedAt         pgtype.Timestamptz `json:"arrived_at"`
+	ElectionStartedAt pgtype.Timestamptz `json:"election_started_at"`
+	ElectionEndedAt   pgtype.Timestamptz `json:"election_ended_at"`
 }
 
 type UpdateAssignmentTrackingRow struct {
-	ID                      int64              `json:"id"`
-	UserID                  int64              `json:"user_id"`
-	PollingUnitID           int32              `json:"polling_unit_id"`
-	ElectionGroupID         int32              `json:"election_group_id"`
-	PartyID                 int16              `json:"party_id"`
-	RoleType                pgtype.Text        `json:"role_type"`
-	AssignedBy              pgtype.Int8        `json:"assigned_by"`
-	ArrivedAt               pgtype.Timestamptz `json:"arrived_at"`
-	ArrivalVideoUrl         pgtype.Text        `json:"arrival_video_url"`
-	ElectionStartedAt       pgtype.Timestamptz `json:"election_started_at"`
-	ElectionStartedVideoUrl pgtype.Text        `json:"election_started_video_url"`
-	ElectionEndedAt         pgtype.Timestamptz `json:"election_ended_at"`
-	ElectionEndedVideoUrl   pgtype.Text        `json:"election_ended_video_url"`
-	CreatedAt               pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt               pgtype.Timestamptz `json:"updated_at"`
+	ID                int64              `json:"id"`
+	UserID            int64              `json:"user_id"`
+	PollingUnitID     int32              `json:"polling_unit_id"`
+	ElectionGroupID   int32              `json:"election_group_id"`
+	PartyID           int16              `json:"party_id"`
+	RoleType          pgtype.Text        `json:"role_type"`
+	AssignedBy        pgtype.Int8        `json:"assigned_by"`
+	ArrivedAt         pgtype.Timestamptz `json:"arrived_at"`
+	ElectionStartedAt pgtype.Timestamptz `json:"election_started_at"`
+	ElectionEndedAt   pgtype.Timestamptz `json:"election_ended_at"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
 }
 
 func (q *Queries) UpdateAssignmentTracking(ctx context.Context, arg UpdateAssignmentTrackingParams) (UpdateAssignmentTrackingRow, error) {
 	row := q.db.QueryRow(ctx, updateAssignmentTracking,
 		arg.ID,
 		arg.ArrivedAt,
-		arg.ArrivalVideoUrl,
 		arg.ElectionStartedAt,
-		arg.ElectionStartedVideoUrl,
 		arg.ElectionEndedAt,
-		arg.ElectionEndedVideoUrl,
 	)
 	var i UpdateAssignmentTrackingRow
 	err := row.Scan(
@@ -766,11 +727,8 @@ func (q *Queries) UpdateAssignmentTracking(ctx context.Context, arg UpdateAssign
 		&i.RoleType,
 		&i.AssignedBy,
 		&i.ArrivedAt,
-		&i.ArrivalVideoUrl,
 		&i.ElectionStartedAt,
-		&i.ElectionStartedVideoUrl,
 		&i.ElectionEndedAt,
-		&i.ElectionEndedVideoUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -782,7 +740,7 @@ UPDATE polling_unit_assignments
 SET earned_amount_kobo = earned_amount_kobo + $1::bigint,
     updated_at = NOW()
 WHERE user_id = $2 AND election_group_id = $3
-RETURNING id, election_group_id, party_id, state_id, lga_id, ward_id, polling_unit_id, user_id, role_type, assigned_by, arrived_at, arrival_video_url, election_started_at, election_started_video_url, election_ended_at, election_ended_video_url, completed_at, last_update_at, reports_count, updates_count, results_submitted_count, election_practice_test_readiness_percentage, potential_payment_kobo, earned_amount_kobo, created_at, updated_at
+RETURNING id, election_group_id, party_id, state_id, lga_id, ward_id, polling_unit_id, user_id, role_type, assigned_by, arrived_at, election_started_at, election_ended_at, completed_at, last_update_at, reports_count, updates_count, results_submitted_count, election_practice_test_readiness_percentage, potential_payment_kobo, earned_amount_kobo, created_at, updated_at
 `
 
 type UpdatePollingUnitAssignmentEarnedAmountKoboParams struct {
@@ -806,11 +764,8 @@ func (q *Queries) UpdatePollingUnitAssignmentEarnedAmountKobo(ctx context.Contex
 		&i.RoleType,
 		&i.AssignedBy,
 		&i.ArrivedAt,
-		&i.ArrivalVideoUrl,
 		&i.ElectionStartedAt,
-		&i.ElectionStartedVideoUrl,
 		&i.ElectionEndedAt,
-		&i.ElectionEndedVideoUrl,
 		&i.CompletedAt,
 		&i.LastUpdateAt,
 		&i.ReportsCount,

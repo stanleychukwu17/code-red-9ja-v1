@@ -811,11 +811,8 @@ type PollingUnitAssignment struct {
 	RoleType                                pgtype.Text        `json:"role_type"`
 	AssignedBy                              pgtype.Int8        `json:"assigned_by"`
 	ArrivedAt                               pgtype.Timestamptz `json:"arrived_at"`
-	ArrivalVideoUrl                         pgtype.Text        `json:"arrival_video_url"`
 	ElectionStartedAt                       pgtype.Timestamptz `json:"election_started_at"`
-	ElectionStartedVideoUrl                 pgtype.Text        `json:"election_started_video_url"`
 	ElectionEndedAt                         pgtype.Timestamptz `json:"election_ended_at"`
-	ElectionEndedVideoUrl                   pgtype.Text        `json:"election_ended_video_url"`
 	CompletedAt                             pgtype.Timestamptz `json:"completed_at"`
 	LastUpdateAt                            pgtype.Timestamptz `json:"last_update_at"`
 	ReportsCount                            int32              `json:"reports_count"`

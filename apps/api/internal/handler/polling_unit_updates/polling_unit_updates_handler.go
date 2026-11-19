@@ -89,6 +89,10 @@ func (h *Handler) CreateUpdate(w http.ResponseWriter, r *http.Request) {
 		h.utils.RespondError(w, http.StatusBadRequest, "assignment_id, polling_unit_id, election_group_id and message are required")
 		return
 	}
+	if req.StatusCategoryID == nil || *req.StatusCategoryID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "status_category_id is required")
+		return
+	}
 
 	// Verify assignment using Redis cache
 	assignment, err := h.assignmentsService.GetMyAssignment(r.Context(), claims.UserID, req.ElectionGroupID)

@@ -62,11 +62,8 @@ export const updateAssignmentTracking = createServerFn({ method: "POST" })
     (data: {
       id: number | string;
       arrived_at?: string;
-      arrival_video_url?: string;
       election_started_at?: string;
-      election_started_video_url?: string;
       election_ended_at?: string;
-      election_ended_video_url?: string;
     }) => data,
   )
   .handler(async ({ data }) => {

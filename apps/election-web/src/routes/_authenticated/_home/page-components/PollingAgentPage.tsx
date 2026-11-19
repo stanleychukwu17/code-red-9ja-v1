@@ -20,6 +20,7 @@ import { RequestPayoutCard } from "../components/RequestPayoutCard";
 import { UploadResultCard } from "../components/UploadResultCard";
 import { UploadsTab } from "../components/UploadsTab";
 import { GiveUpdateFloatingButton } from "../components/GiveUpdateFloatingButton";
+import { ElectionUpdatesProgressCard } from "../components/ElectionUpdatesProgressCard";
 import { HomeBody } from "../components/Shared";
 import { Layout } from "@repo/ui/components/custom/AdminLayouts";
 
@@ -340,6 +341,12 @@ export function PollingAgentPage() {
                     onClick={() => navigate({ to: "/upload-result" })}
                   />
                 )}
+
+              {/* Periodic Situation Updates Progress & Interval Tracker */}
+              <ElectionUpdatesProgressCard
+                assignment={currentPollingUnitAssignment}
+                onPostUpdateClick={() => navigate({ to: "/give-update" })}
+              />
             </>
           )}
 

@@ -8,7 +8,9 @@ import (
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/utils"
 	"free9ja/api/internal/worker"
+	"log/slog"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -206,29 +208,61 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 		return queries.PollingUnitUpdate{}, err
 	}
 
-	// Distribute task earnings for submitted update based on attached media
-	updateNarration := "Update: Given"
-	if len(input.Media) > 0 {
-		hasVideo := false
-		hasImage := false
-		for _, m := range input.Media {
-			if m.MediaType == "video" || isVideoURL(m.URL) {
-				hasVideo = true
-			} else if m.MediaType == "image" {
-				hasImage = true
-			}
-		}
-		if hasVideo {
-			updateNarration = "Update: Given (w/ video)"
-		} else if hasImage {
-			updateNarration = "Update: Given (w/ image)"
+	// Check if this update corresponds to a primary election milestone on the assignment
+	now := time.Now().UTC()
+	nowPg := pgtype.Timestamptz{Time: now, Valid: true}
+
+	// Prepare assignment tracking params in case this update triggers a primary election milestone
+	var trackingParams queries.UpdateAssignmentTrackingParams
+	trackingParams.ID = input.AssignmentID
+
+	var milestoneTaskType string  // Target task key for async earnings calculation ("attendance", "election_start", "election_end")
+	shouldUpdateTracking := false // Flips to true only when status matches an official milestone (arrival, start, end)
+
+	if input.StatusCategoryID != nil {
+		switch *input.StatusCategoryID {
+		case 1: // Just Arrived -> Attendance milestone
+			milestoneTaskType = "attendance"
+			trackingParams.ArrivedAt = nowPg
+			shouldUpdateTracking = true
+
+		case 3: // Active -> Election started milestone
+			milestoneTaskType = "election_start"
+			trackingParams.ElectionStartedAt = nowPg
+			shouldUpdateTracking = true
+
+		case 6: // Concluded -> Election ended milestone
+			milestoneTaskType = "election_end"
+			trackingParams.ElectionEndedAt = nowPg
+			shouldUpdateTracking = true
 		}
 	}
 
+	if shouldUpdateTracking {
+		if _, tErr := s.queries.UpdateAssignmentTracking(ctx, trackingParams); tErr != nil {
+			slog.Warn("failed to update assignment tracking for status milestone",
+				"assignmentID", input.AssignmentID,
+				"statusCategoryID", input.StatusCategoryID,
+				"err", tErr,
+			)
+		} else if s.rdb != nil {
+			_ = s.rdb.Del(ctx,
+				fmt.Sprintf("%s%d:eg:%d", db.RedisUserPollingUnitAssignment, user.ID, input.ElectionGroupID),
+				fmt.Sprintf("%s%d", db.RedisUserHasActiveAssignment, user.ID),
+			).Err()
+		}
+
+		// Trigger milestone earnings calculation asynchronously
+		_ = s.distributor.DistributeTaskCalculateAgentEarnings(context.Background(), &worker.CalculateAgentEarningsPayload{
+			AssignmentID: input.AssignmentID,
+			TaskType:     milestoneTaskType,
+		})
+	}
+
+	// Always trigger updates task earnings calculation asynchronously
 	_ = s.distributor.DistributeTaskCalculateAgentEarnings(context.Background(), &worker.CalculateAgentEarningsPayload{
-		AssignmentID:    input.AssignmentID,
-		TaskType:        "updates",
-		CustomNarration: updateNarration,
+		AssignmentID: input.AssignmentID,
+		TaskType:     "updates",
 	})
 
 	return update, nil

@@ -8,6 +8,7 @@ import (
 	"free9ja/api/internal/constants"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
+	earningsservice "free9ja/api/internal/service/earnings"
 	"free9ja/api/internal/service/notifications"
 	"free9ja/api/internal/utils"
 	"free9ja/api/internal/worker"
@@ -34,7 +35,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 `
 
 type earningsService interface {
-	ProcessTaskEarnings(ctx context.Context, assignmentID int64, taskType string, customNarration ...string) (int64, error)
+	ProcessTaskEarnings(ctx context.Context, params earningsservice.ProcessTaskEarningsParams) (int64, error)
 }
 
 type officesService interface {

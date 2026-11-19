@@ -22,7 +22,7 @@ type PollingUnitAssignmentsService interface {
 	GetActiveAssignment(ctx context.Context, userID int64) (*queries.GetUserAssignmentRow, error)
 	GetActiveSupervisorElectionGroupID(ctx context.Context, userID int64) (int32, error)
 	DeleteAssignment(ctx context.Context, id int64) error
-	UpdateAssignmentTracking(ctx context.Context, id int64, arrivedAt, arrivalVideoUrl, electionStartedAt, electionStartedVideoUrl, electionEndedAt, electionEndedVideoUrl *string) (queries.UpdateAssignmentTrackingRow, error)
+	UpdateAssignmentTracking(ctx context.Context, id int64, arrivedAt, electionStartedAt, electionEndedAt *string) (queries.UpdateAssignmentTrackingRow, error)
 }
 
 type SupervisorAssignmentsService interface {
@@ -400,12 +400,9 @@ func (h *Handler) DeleteAssignment(w http.ResponseWriter, r *http.Request) {
 }
 
 type UpdateAssignmentTrackingRequest struct {
-	ArrivedAt               *string `json:"arrived_at"`
-	ArrivalVideoUrl         *string `json:"arrival_video_url"`
-	ElectionStartedAt       *string `json:"election_started_at"`
-	ElectionStartedVideoUrl *string `json:"election_started_video_url"`
-	ElectionEndedAt         *string `json:"election_ended_at"`
-	ElectionEndedVideoUrl   *string `json:"election_ended_video_url"`
+	ArrivedAt         *string `json:"arrived_at"`
+	ElectionStartedAt *string `json:"election_started_at"`
+	ElectionEndedAt   *string `json:"election_ended_at"`
 }
 
 // UpdateAssignmentTracking godoc
@@ -460,7 +457,7 @@ func (h *Handler) UpdateAssignmentTracking(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	updated, err := h.service.UpdateAssignmentTracking(r.Context(), id, req.ArrivedAt, req.ArrivalVideoUrl, req.ElectionStartedAt, req.ElectionStartedVideoUrl, req.ElectionEndedAt, req.ElectionEndedVideoUrl)
+	updated, err := h.service.UpdateAssignmentTracking(r.Context(), id, req.ArrivedAt, req.ElectionStartedAt, req.ElectionEndedAt)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update tracking: "+err.Error())
 		return
@@ -476,13 +473,7 @@ func (h *Handler) UpdateAssignmentTracking(w http.ResponseWriter, r *http.Reques
 	}
 
 	if req.ArrivedAt != nil && !assignment.ArrivedAt.Valid {
-		var media []puupdates.MediaItem
-		if req.ArrivalVideoUrl != nil && *req.ArrivalVideoUrl != "" {
-			media = append(media, puupdates.MediaItem{
-				URL:       *req.ArrivalVideoUrl,
-				MediaType: "video",
-			})
-		}
+		statusCat := int16(1)
 		_, _ = h.pollingUnitUpdatesService.CreateUpdate(r.Context(), puupdates.CreateUpdateInput{
 			UserID:                      claims.FakeID,
 			PollingUnitID:               assignment.PollingUnitID,
@@ -495,19 +486,13 @@ func (h *Handler) UpdateAssignmentTracking(w http.ResponseWriter, r *http.Reques
 			SenatorialDistrictID:        pu.SenatorialDistrictID,
 			FederalConstituencyID:       pu.FederalConstituencyID,
 			StateAssemblyConstituencyID: pu.StateConstituencyID,
+			StatusCategoryID:            &statusCat,
 			Message:                     "I just arrived at my polling unit.",
-			Media:                       media,
 		})
 	}
 
 	if req.ElectionStartedAt != nil && !assignment.ElectionStartedAt.Valid {
-		var media []puupdates.MediaItem
-		if req.ElectionStartedVideoUrl != nil && *req.ElectionStartedVideoUrl != "" {
-			media = append(media, puupdates.MediaItem{
-				URL:       *req.ElectionStartedVideoUrl,
-				MediaType: "video",
-			})
-		}
+		statusCat := int16(3)
 		_, _ = h.pollingUnitUpdatesService.CreateUpdate(r.Context(), puupdates.CreateUpdateInput{
 			UserID:                      claims.FakeID,
 			PollingUnitID:               assignment.PollingUnitID,
@@ -520,19 +505,13 @@ func (h *Handler) UpdateAssignmentTracking(w http.ResponseWriter, r *http.Reques
 			SenatorialDistrictID:        pu.SenatorialDistrictID,
 			FederalConstituencyID:       pu.FederalConstituencyID,
 			StateAssemblyConstituencyID: pu.StateConstituencyID,
+			StatusCategoryID:            &statusCat,
 			Message:                     "The election at my polling unit has started.",
-			Media:                       media,
 		})
 	}
 
 	if req.ElectionEndedAt != nil && !assignment.ElectionEndedAt.Valid {
-		var media []puupdates.MediaItem
-		if req.ElectionEndedVideoUrl != nil && *req.ElectionEndedVideoUrl != "" {
-			media = append(media, puupdates.MediaItem{
-				URL:       *req.ElectionEndedVideoUrl,
-				MediaType: "video",
-			})
-		}
+		statusCat := int16(6)
 		_, _ = h.pollingUnitUpdatesService.CreateUpdate(r.Context(), puupdates.CreateUpdateInput{
 			UserID:                      claims.FakeID,
 			PollingUnitID:               assignment.PollingUnitID,
@@ -545,8 +524,8 @@ func (h *Handler) UpdateAssignmentTracking(w http.ResponseWriter, r *http.Reques
 			SenatorialDistrictID:        pu.SenatorialDistrictID,
 			FederalConstituencyID:       pu.FederalConstituencyID,
 			StateAssemblyConstituencyID: pu.StateConstituencyID,
+			StatusCategoryID:            &statusCat,
 			Message:                     "The election at my polling unit has ended.",
-			Media:                       media,
 		})
 	}
 

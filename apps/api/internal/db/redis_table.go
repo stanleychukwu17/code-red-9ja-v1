@@ -173,6 +173,10 @@ const (
 	//--START-- for polling unit issues
 	RedisPollingUnitIssueOption = "pu_issues:option:" // STRING: "pu_issues:option:<id>"
 	//--END--
+
+	//--START-- for earnings
+	RedisEarningsAllocation = "earnings:allocation:" // STRING: "earnings:allocation:<role>" stores cached earningsAllocation JSON
+	//--END--
 )
 
 // AllRedisPrefixes is a list of all key prefixes and static keys used across the application.
@@ -285,4 +289,5 @@ var AllRedisPrefixes = []string{
 	RedisTeamLgaSupervisor,
 	RedisTeamStateSupervisor,
 	RedisPollingUnitIssueOption,
+	RedisEarningsAllocation,
 }

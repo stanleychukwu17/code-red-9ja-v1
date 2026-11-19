@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
-	"free9ja/api/internal/utils"
 	"free9ja/api/internal/worker"
 	"time"
 
@@ -185,8 +184,8 @@ func parseTimeParam(timeStr *string) pgtype.Timestamptz {
 	return pgtype.Timestamptz{Time: t, Valid: true}
 }
 
-// UpdateAssignmentTracking records agent progress timestamps/proof videos and triggers task earnings.
-func (s *Service) UpdateAssignmentTracking(ctx context.Context, id int64, arrivedAt, arrivalVideoUrl, electionStartedAt, electionStartedVideoUrl, electionEndedAt, electionEndedVideoUrl *string) (queries.UpdateAssignmentTrackingRow, error) {
+// UpdateAssignmentTracking records agent progress timestamps and triggers task earnings.
+func (s *Service) UpdateAssignmentTracking(ctx context.Context, id int64, arrivedAt, electionStartedAt, electionEndedAt *string) (queries.UpdateAssignmentTrackingRow, error) {
 	// Verify assignment exists
 	assignment, err := s.queries.GetAssignmentByID(ctx, id)
 	if err != nil {
@@ -203,15 +202,12 @@ func (s *Service) UpdateAssignmentTracking(ctx context.Context, id int64, arrive
 		return queries.UpdateAssignmentTrackingRow{}, errors.New("tracking can only be submitted during the election cycle")
 	}
 
-	// Persist tracking timestamps and proof video URLs
+	// Persist tracking timestamps
 	updated, err := s.queries.UpdateAssignmentTracking(ctx, queries.UpdateAssignmentTrackingParams{
-		ID:                      id,
-		ArrivedAt:               parseTimeParam(arrivedAt),
-		ArrivalVideoUrl:         utils.PgTextFromPtr(arrivalVideoUrl),
-		ElectionStartedAt:       parseTimeParam(electionStartedAt),
-		ElectionStartedVideoUrl: utils.PgTextFromPtr(electionStartedVideoUrl),
-		ElectionEndedAt:         parseTimeParam(electionEndedAt),
-		ElectionEndedVideoUrl:   utils.PgTextFromPtr(electionEndedVideoUrl),
+		ID:                id,
+		ArrivedAt:         parseTimeParam(arrivedAt),
+		ElectionStartedAt: parseTimeParam(electionStartedAt),
+		ElectionEndedAt:   parseTimeParam(electionEndedAt),
 	})
 	if err != nil {
 		return updated, err

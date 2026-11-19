@@ -156,7 +156,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 
 	utilsInstance := utils.NewUtils(pool)
 	auditService := audit.NewAuditService(q)
-	earningsService := earningsservice.NewService(q, pool)
+	earningsService := earningsservice.NewService(q, pool, rdb)
 	wardsService := wardsservice.NewWardsService(q, rdb)
 	bodiesService := bodiesservice.NewBodiesService(q, pool, rdb)
 	statesService := statesservice.NewStatesService(q, rdb)

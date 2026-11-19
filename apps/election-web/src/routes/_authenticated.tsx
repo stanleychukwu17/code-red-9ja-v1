@@ -62,6 +62,13 @@ const APP_SIDEBAR_ITEMS: AppSidebarItem[] = [
     href: APP_URL.home,
   },
   {
+    id: "give-update",
+    label: "Post update",
+    icon: <PostIcon />,
+    selectedIcon: <PostSolidIcon className="text-c-90" />,
+    href: APP_URL.giveUpdate,
+  },
+  {
     id: "applications",
     label: "Applications",
     icon: <PaperIcon />,

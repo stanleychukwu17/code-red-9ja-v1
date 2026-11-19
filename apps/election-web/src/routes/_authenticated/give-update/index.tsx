@@ -9,6 +9,7 @@ import { VotingIssueSelects } from "./-components/VotingIssueSelects";
 import { UpdateMessageInputs } from "./-components/UpdateMessageInputs";
 import { MediaAttachmentActions, type AttachedMedia } from "./-components/MediaAttachmentActions";
 import { LocationStatusBanner } from "./-components/LocationStatusBanner";
+import { IntervalStatusBanner } from "./-components/IntervalStatusBanner";
 import { MissingLocationAlertDialog } from "./-components/MissingLocationAlertDialog";
 import {
   getActiveIssuesForPU,
@@ -107,6 +108,11 @@ function GiveUpdate() {
 
     if (!electionDay) {
       toast.error("Updates can only be submitted on election day.");
+      return;
+    }
+
+    if (!selectedStatusCategoryId || selectedStatusCategoryId <= 0) {
+      toast.error("Please select a voting status category.");
       return;
     }
 
@@ -220,6 +226,12 @@ function GiveUpdate() {
           isLocating={isLocating}
           geoError={geoError}
           onRequestLocation={requestLocation}
+        />
+
+        {/* 30-Minute Interval Status & Daily Updates Progress */}
+        <IntervalStatusBanner
+          updatesCount={pollingUnitAssignment?.updates_count}
+          lastUpdateAt={pollingUnitAssignment?.last_update_at}
         />
 
         {/* Title header with lime accent underline */}

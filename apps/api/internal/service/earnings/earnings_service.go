@@ -12,7 +12,9 @@ import (
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 
+	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/utils"
 )
@@ -22,15 +24,16 @@ import (
 type Service struct {
 	q    *queries.Queries
 	pool *pgxpool.Pool
+	rdb  *redis.Client
 }
 
-func NewService(q *queries.Queries, pool *pgxpool.Pool) *Service {
-	return &Service{q: q, pool: pool}
+func NewService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client) *Service {
+	return &Service{q: q, pool: pool, rdb: rdb}
 }
 
 // ─── JSON shapes from DB ──────────────────────────────────────────────────────
 
-type earningsAllocation struct {
+type EarningsAllocation struct {
 	Readiness     float64 `json:"readiness"`
 	Results       float64 `json:"results"`
 	Updates       float64 `json:"updates"`
@@ -38,6 +41,8 @@ type earningsAllocation struct {
 	ElectionStart float64 `json:"election_start"`
 	ElectionEnd   float64 `json:"election_end"`
 }
+
+type earningsAllocation = EarningsAllocation
 
 type testWindow struct {
 	DaysBeforeElection int `json:"days_before_election"`
@@ -68,37 +73,68 @@ func (s *Service) Calculate(ctx context.Context, assignmentID int64) (queries.Ag
 	return s.calculateWithTx(ctx, s.q, asgn)
 }
 
-// calculateWithTx performs the full earnings calculation using the given queries
-// handle (which may be a transaction-scoped handle).
-func (s *Service) calculateWithTx(
-	ctx context.Context,
-	q *queries.Queries,
-	asgn queries.GetAssignmentForEarningsRow,
-) (queries.AgentEarning, error) {
-	roleType := "polling_agent"
-	if asgn.RoleType.Valid && asgn.RoleType.String != "" {
-		roleType = asgn.RoleType.String
+// GetEarningsAllocation retrieves the percentage weights for each milestone task for a given role,
+// using Redis cache (1 day TTL) with fallback to system_settings in the database.
+func (s *Service) GetEarningsAllocation(ctx context.Context, roleType string) (EarningsAllocation, error) {
+	normRole := strings.ReplaceAll(strings.ToLower(roleType), " ", "_")
+	cacheKey := fmt.Sprintf("%s%s", db.RedisEarningsAllocation, normRole)
+
+	if alloc, ok := utils.GetCachedJSON[EarningsAllocation](ctx, s.rdb, cacheKey); ok && (alloc.Readiness > 0 || alloc.Results > 0 || alloc.Updates > 0 || alloc.Attendance > 0 || alloc.ElectionStart > 0 || alloc.ElectionEnd > 0) {
+		return alloc, nil
 	}
 
-	// 1. Fetch earnings allocation for this role
-	allocationKey := fmt.Sprintf("earnings_allocation_%s", strings.ReplaceAll(roleType, " ", "_"))
-	allocationSetting, err := q.GetSystemSetting(ctx, allocationKey)
+	allocationKey := fmt.Sprintf("earnings_allocation_%s", normRole)
+	allocationSetting, err := s.q.GetSystemSetting(ctx, allocationKey)
 	if err != nil {
-		return queries.AgentEarning{}, fmt.Errorf("get earnings allocation setting %q: %w", allocationKey, err)
+		legacyKey := strings.Replace(allocationKey, "_election_supervisor", "_supervisor", 1)
+		allocationSetting, err = s.q.GetSystemSetting(ctx, legacyKey)
+		if err != nil {
+			if normRole != "polling_agent" {
+				allocationSetting, err = s.q.GetSystemSetting(ctx, "earnings_allocation_polling_agent")
+			}
+			if err != nil {
+				return EarningsAllocation{}, fmt.Errorf("get earnings allocation setting %q: %w", allocationKey, err)
+			}
+		}
 	}
-	var allocation earningsAllocation
-	if err := json.Unmarshal(allocationSetting.Value, &allocation); err != nil {
-		return queries.AgentEarning{}, fmt.Errorf("parse earnings allocation: %w", err)
+
+	var alloc EarningsAllocation
+	if len(allocationSetting.Value) > 0 {
+		if err := json.Unmarshal(allocationSetting.Value, &alloc); err != nil {
+			return EarningsAllocation{}, fmt.Errorf("parse earnings allocation: %w", err)
+		}
+	}
+
+	_ = utils.SetCachedJSON(ctx, s.rdb, cacheKey, alloc, db.RedisOneDayTTL)
+	return alloc, nil
+}
+
+// calculateWithTx performs the full earnings calculation using the given queries
+// handle (which may be a transaction-scoped handle).
+func (s *Service) calculateWithTx(ctx context.Context, q *queries.Queries, asgn queries.GetAssignmentForEarningsRow) (queries.AgentEarning, error) {
+	roleType := "polling_agent"
+
+	// 1. Fetch earnings allocation for this role (Redis cached)
+	allocation, err := s.GetEarningsAllocation(ctx, roleType)
+	if err != nil {
+		return queries.AgentEarning{}, fmt.Errorf("get earnings allocation: %w", err)
 	}
 
 	// 2. Fetch update_schedule_config (or legacy target_updates_count)
 	var targetUpdatesCount float64 = 20
+	var intervalMinutes int = 30
 	if scheduleSetting, err := q.GetSystemSetting(ctx, "update_schedule_config"); err == nil {
 		var cfg struct {
 			TargetUpdatesCount float64 `json:"target_updates_count"`
+			IntervalMinutes    int     `json:"interval_minutes"`
 		}
-		if err := json.Unmarshal(scheduleSetting.Value, &cfg); err == nil && cfg.TargetUpdatesCount > 0 {
-			targetUpdatesCount = cfg.TargetUpdatesCount
+		if err := json.Unmarshal(scheduleSetting.Value, &cfg); err == nil {
+			if cfg.TargetUpdatesCount > 0 {
+				targetUpdatesCount = cfg.TargetUpdatesCount
+			}
+			if cfg.IntervalMinutes > 0 {
+				intervalMinutes = cfg.IntervalMinutes
+			}
 		}
 	} else if legacySetting, err := q.GetSystemSetting(ctx, "target_updates_count"); err == nil {
 		_ = json.Unmarshal(legacySetting.Value, &targetUpdatesCount)
@@ -115,7 +151,7 @@ func (s *Service) calculateWithTx(
 	// 4. Compute each factor score (0–100)
 	readinessScore := s.computeReadinessScore(asgn)
 	resultsScore := computeRatioScore(float64(asgn.ResultsSubmittedCount), float64(asgn.ResultsExpectedToSubmitCount))
-	updatesScore := s.computeUpdatesScore(ctx, q, asgn, targetUpdatesCount)
+	updatesScore := s.computeUpdatesScore(ctx, q, asgn, targetUpdatesCount, intervalMinutes)
 	attendanceScore := boolScore(asgn.ArrivedAt.Valid)
 	electionStartScore := boolScore(asgn.ElectionStartedAt.Valid)
 	electionEndScore := boolScore(asgn.ElectionEndedAt.Valid)
@@ -216,9 +252,6 @@ func (s *Service) ProcessPracticeTestEarnings(
 	}
 
 	roleType := "polling_agent"
-	if asgn.RoleType.Valid && asgn.RoleType.String != "" {
-		roleType = asgn.RoleType.String
-	}
 
 	// Fetch old readiness_earned_kobo before recalculating
 	oldReadinessEarned := int64(0)
@@ -309,17 +342,19 @@ func (s *Service) ProcessPracticeTestEarnings(
 	)
 }
 
+// ProcessTaskEarningsParams contains parameters to calculate and credit task milestone earnings.
+type ProcessTaskEarningsParams struct {
+	AssignmentID    int64  `json:"assignment_id"`
+	TaskType        string `json:"task_type"`
+	CustomNarration string `json:"custom_narration,omitempty"`
+}
+
 // ProcessTaskEarnings recalculates earnings for a given assignment and taskType,
 // credits any positive delta for that specific task to the user's wallet, and creates
 // a wallet transaction log. It is safe to call asynchronously or synchronously after task actions.
-func (s *Service) ProcessTaskEarnings(
-	ctx context.Context,
-	assignmentID int64,
-	taskType string,
-	customNarration ...string,
-) (int64, error) {
+func (s *Service) ProcessTaskEarnings(ctx context.Context, params ProcessTaskEarningsParams) (int64, error) {
 	if s.pool == nil {
-		slog.Warn("earnings: pool is nil, skipping task earnings processing", "taskType", taskType)
+		slog.Warn("earnings: pool is nil, skipping task earnings processing", "taskType", params.TaskType)
 		return 0, nil
 	}
 
@@ -331,15 +366,12 @@ func (s *Service) ProcessTaskEarnings(
 
 	qtx := s.q.WithTx(tx)
 
-	asgn, err := qtx.GetAssignmentForEarnings(ctx, assignmentID)
+	asgn, err := qtx.GetAssignmentForEarnings(ctx, params.AssignmentID)
 	if err != nil {
 		return 0, fmt.Errorf("earnings: failed to get assignment: %w", err)
 	}
 
 	roleType := "polling_agent"
-	if asgn.RoleType.Valid && asgn.RoleType.String != "" {
-		roleType = asgn.RoleType.String
-	}
 
 	// Fetch old earnings before recalculating
 	oldEarnings, err := qtx.GetAgentEarningsByUserAndElectionGroupAndRole(ctx, queries.GetAgentEarningsByUserAndElectionGroupAndRoleParams{
@@ -350,7 +382,7 @@ func (s *Service) ProcessTaskEarnings(
 
 	oldFactorEarned := int64(0)
 	if err == nil {
-		switch taskType {
+		switch params.TaskType {
 		case "attendance":
 			oldFactorEarned = oldEarnings.AttendanceEarnedKobo
 		case "election_start":
@@ -371,28 +403,34 @@ func (s *Service) ProcessTaskEarnings(
 	}
 
 	newFactorEarned := int64(0)
-	var narrationLabel string
-	if len(customNarration) > 0 && customNarration[0] != "" {
-		narrationLabel = customNarration[0]
-	} else {
-		switch taskType {
+	switch params.TaskType {
+	case "attendance":
+		newFactorEarned = newEarnings.AttendanceEarnedKobo
+	case "election_start":
+		newFactorEarned = newEarnings.ElectionStartEarnedKobo
+	case "election_end":
+		newFactorEarned = newEarnings.ElectionEndEarnedKobo
+	case "updates":
+		newFactorEarned = newEarnings.UpdatesEarnedKobo
+	case "results":
+		newFactorEarned = newEarnings.ResultsEarnedKobo
+	}
+
+	narrationLabel := params.CustomNarration
+	if narrationLabel == "" {
+		switch params.TaskType {
 		case "attendance":
-			newFactorEarned = newEarnings.AttendanceEarnedKobo
 			narrationLabel = "Polling Unit: Arrived"
 		case "election_start":
-			newFactorEarned = newEarnings.ElectionStartEarnedKobo
 			narrationLabel = "Election: Started"
 		case "election_end":
-			newFactorEarned = newEarnings.ElectionEndEarnedKobo
 			narrationLabel = "Election: Ended"
 		case "updates":
-			newFactorEarned = newEarnings.UpdatesEarnedKobo
 			narrationLabel = "Update: Given"
 		case "results":
-			newFactorEarned = newEarnings.ResultsEarnedKobo
 			narrationLabel = "Results: Uploaded"
 		default:
-			narrationLabel = fmt.Sprintf("Task earnings (%s)", taskType)
+			narrationLabel = fmt.Sprintf("Task earnings (%s)", params.TaskType)
 		}
 	}
 
@@ -410,7 +448,7 @@ func (s *Service) ProcessTaskEarnings(
 				return 0, fmt.Errorf("earnings: failed to credit wallet: %w", creditErr)
 			}
 
-			txRef := fmt.Sprintf("%s-%d-%d", taskType, assignmentID, time.Now().UnixNano())
+			txRef := fmt.Sprintf("%s-%d-%d", params.TaskType, params.AssignmentID, time.Now().UnixNano())
 			if _, txErr := qtx.CreateUserWalletTransaction(ctx, queries.CreateUserWalletTransactionParams{
 				WalletID:             wallet.ID,
 				TransactionReference: txRef,
@@ -441,11 +479,7 @@ func (s *Service) ProcessTaskEarnings(
 		return 0, fmt.Errorf("earnings: failed to commit transaction: %w", err)
 	}
 
-	slog.Info("earnings: task earnings processed",
-		"assignmentID", assignmentID,
-		"taskType", taskType,
-		"deltaKobo", delta,
-	)
+	slog.Info("earnings: task earnings processed", "assignmentID", params.AssignmentID, "taskType", params.TaskType, "deltaKobo", delta)
 
 	return delta, nil
 }
@@ -466,7 +500,8 @@ func (s *Service) computeReadinessScore(asgn queries.GetAssignmentForEarningsRow
 	return clamp(f.Float64, 0, 100)
 }
 
-// computeUpdatesScore derives the updates score (0–100) taking into account location verification:
+// computeUpdatesScore derives the updates score (0–100) taking into account location verification
+// and interval spacing (Option B: max 1 update credited per interval bucket, taking best weight in bucket):
 // - Updates within the polling unit geofence (or when PU coordinates are missing from DB) receive full weight (1.0).
 // - Updates lacking GPS or submitted outside the PU geofence (> 1,000m) receive reduced weight (0.5).
 func (s *Service) computeUpdatesScore(
@@ -474,10 +509,15 @@ func (s *Service) computeUpdatesScore(
 	q *queries.Queries,
 	asgn queries.GetAssignmentForEarningsRow,
 	targetUpdatesCount float64,
+	intervalMinutes int,
 ) float64 {
 	updates, err := q.ListAssignmentUpdatesCoordinates(ctx, asgn.ID)
 	if err != nil || len(updates) == 0 {
 		return 0
+	}
+
+	if intervalMinutes <= 0 {
+		intervalMinutes = 30
 	}
 
 	const maxDistanceMeters = 1000.0 // 1km tolerance radius for polling unit location
@@ -486,37 +526,44 @@ func (s *Service) computeUpdatesScore(
 	hasPuCoords := asgn.PuLatitude.Valid && asgn.PuLongitude.Valid &&
 		asgn.PuLatitude.Float64 != 0 && asgn.PuLongitude.Float64 != 0
 
-	var effectiveUpdates float64
+	// Group updates by interval bucket and track the highest weight achieved per interval
+	bucketWeights := make(map[string]float64)
+
 	for _, u := range updates {
+		weight := unverifiedWeight
 		hasUpdateCoords := u.Latitude.Valid && u.Longitude.Valid &&
 			u.Latitude.Float64 != 0 && u.Longitude.Float64 != 0
 
-		if !hasUpdateCoords {
-			// Coordinates missing from report -> reduced payout tier
-			effectiveUpdates += unverifiedWeight
-			continue
+		if hasUpdateCoords {
+			if !hasPuCoords {
+				// PU coordinates unavailable in DB -> benefit of doubt, full credit
+				weight = 1.0
+			} else {
+				dist := utils.HaversineDistanceMeters(
+					u.Latitude.Float64,
+					u.Longitude.Float64,
+					asgn.PuLatitude.Float64,
+					asgn.PuLongitude.Float64,
+				)
+				if dist <= maxDistanceMeters {
+					weight = 1.0
+				}
+			}
 		}
 
-		if !hasPuCoords {
-			// PU coordinates unavailable in DB -> benefit of doubt, full credit
-			effectiveUpdates += 1.0
-			continue
-		}
+		// Calculate interval bucket key (e.g. 2026-11-19_14:30)
+		t := u.CreatedAt.Time
+		flooredMin := (t.Minute() / intervalMinutes) * intervalMinutes
+		bucketKey := fmt.Sprintf("%s_%02d:%02d", t.Format("2006-01-02"), t.Hour(), flooredMin)
 
-		dist := utils.HaversineDistanceMeters(
-			u.Latitude.Float64,
-			u.Longitude.Float64,
-			asgn.PuLatitude.Float64,
-			asgn.PuLongitude.Float64,
-		)
-
-		if dist <= maxDistanceMeters {
-			// Verified on-site within PU geofence -> full credit
-			effectiveUpdates += 1.0
-		} else {
-			// Outside PU perimeter -> reduced payout tier
-			effectiveUpdates += unverifiedWeight
+		if prevWeight, ok := bucketWeights[bucketKey]; !ok || weight > prevWeight {
+			bucketWeights[bucketKey] = weight
 		}
+	}
+
+	var effectiveUpdates float64
+	for _, w := range bucketWeights {
+		effectiveUpdates += w
 	}
 
 	return computeRatioScore(effectiveUpdates, targetUpdatesCount)
@@ -684,20 +731,8 @@ func (s *Service) EvaluatePracticeTestPayout(
 		return PracticeTestPayoutResult{Eligible: false}, nil
 	}
 
-	// 3. Fetch earnings allocation for role (e.g. earnings_allocation_polling_agent)
-	allocationKey := fmt.Sprintf("earnings_allocation_%s", roleKey)
-	allocationSetting, err := s.q.GetSystemSetting(ctx, allocationKey)
-	if err != nil {
-		legacyKey := strings.Replace(allocationKey, "_election_supervisor", "_supervisor", 1)
-		allocationSetting, err = s.q.GetSystemSetting(ctx, legacyKey)
-		if err != nil {
-			allocationSetting, _ = s.q.GetSystemSetting(ctx, "earnings_allocation_polling_agent")
-		}
-	}
-	var alloc earningsAllocation
-	if len(allocationSetting.Value) > 0 {
-		_ = json.Unmarshal(allocationSetting.Value, &alloc)
-	}
+	// 3. Fetch earnings allocation for role (Redis cached)
+	alloc, _ := s.GetEarningsAllocation(ctx, roleKey)
 	readinessPct := alloc.Readiness
 	if readinessPct <= 0 {
 		readinessPct = 20.0
@@ -978,9 +1013,6 @@ func (s *Service) CalculatePotentialPayout(ctx context.Context, assignmentID int
 	}
 
 	roleType := "polling_agent"
-	if asgn.RoleType.Valid && asgn.RoleType.String != "" {
-		roleType = asgn.RoleType.String
-	}
 
 	// Determine base payment
 	basePaymentKobo := asgn.PotentialPaymentKobo
@@ -1023,15 +1055,10 @@ func (s *Service) CalculatePotentialPayout(ctx context.Context, assignmentID int
 		}
 	}
 
-	// Fetch earnings allocation for role
-	allocationKey := fmt.Sprintf("earnings_allocation_%s", strings.ReplaceAll(roleType, " ", "_"))
-	allocationSetting, err := s.q.GetSystemSetting(ctx, allocationKey)
+	// Fetch earnings allocation for role (Redis cached)
+	allocation, err := s.GetEarningsAllocation(ctx, roleType)
 	if err != nil {
-		return PotentialPayoutResult{}, fmt.Errorf("get earnings allocation setting %q: %w", allocationKey, err)
-	}
-	var allocation earningsAllocation
-	if err := json.Unmarshal(allocationSetting.Value, &allocation); err != nil {
-		return PotentialPayoutResult{}, fmt.Errorf("parse earnings allocation: %w", err)
+		return PotentialPayoutResult{}, fmt.Errorf("get earnings allocation: %w", err)
 	}
 
 	switch taskType {
@@ -1279,18 +1306,10 @@ func (s *Service) EstimatePotentialPayout(
 		}, nil
 	}
 
-	allocationKey := fmt.Sprintf("earnings_allocation_%s", strings.ReplaceAll(normRole, " ", "_"))
-	allocationSetting, err := s.q.GetSystemSetting(ctx, allocationKey)
+	// Fetch earnings allocation for role (Redis cached)
+	allocation, err := s.GetEarningsAllocation(ctx, normRole)
 	if err != nil {
-		legacyKey := strings.Replace(allocationKey, "_election_supervisor", "_supervisor", 1)
-		allocationSetting, err = s.q.GetSystemSetting(ctx, legacyKey)
-		if err != nil {
-			return EstimatePayoutResult{}, fmt.Errorf("get earnings allocation setting %q: %w", allocationKey, err)
-		}
-	}
-	var allocation earningsAllocation
-	if err := json.Unmarshal(allocationSetting.Value, &allocation); err != nil {
-		return EstimatePayoutResult{}, fmt.Errorf("parse earnings allocation: %w", err)
+		return EstimatePayoutResult{}, fmt.Errorf("get earnings allocation: %w", err)
 	}
 
 	var payout int64
@@ -1377,11 +1396,7 @@ func (s *Service) GetAgentAllocations(
 	// 1. If assignmentID is explicitly provided, fetch assignment for polling agent
 	if assignmentID > 0 {
 		if asgn, err := s.q.GetAssignmentForEarnings(ctx, assignmentID); err == nil {
-			if asgn.RoleType.Valid && asgn.RoleType.String != "" {
-				roleType = asgn.RoleType.String
-			} else {
-				roleType = "polling_agent"
-			}
+			roleType = "polling_agent"
 			potentialPaymentKobo = asgn.PotentialPaymentKobo
 			partyID = asgn.PartyID
 			stateName = asgn.StateName
@@ -1395,11 +1410,7 @@ func (s *Service) GetAgentAllocations(
 			ElectionGroupID: electionGroupID,
 		}); err == nil && asgnID > 0 {
 			if asgn, err := s.q.GetAssignmentForEarnings(ctx, asgnID); err == nil {
-				if asgn.RoleType.Valid && asgn.RoleType.String != "" {
-					roleType = asgn.RoleType.String
-				} else {
-					roleType = "polling_agent"
-				}
+				roleType = "polling_agent"
 				potentialPaymentKobo = asgn.PotentialPaymentKobo
 				partyID = asgn.PartyID
 				stateName = asgn.StateName
@@ -1473,19 +1484,10 @@ func (s *Service) GetAgentAllocations(
 		potentialPaymentKobo = 0
 	}
 
-	// Fetch earnings allocation for role
-	allocationKey := fmt.Sprintf("earnings_allocation_%s", strings.ReplaceAll(roleType, " ", "_"))
-	allocationSetting, err := s.q.GetSystemSetting(ctx, allocationKey)
+	// Fetch earnings allocation for role (Redis cached)
+	alloc, err := s.GetEarningsAllocation(ctx, roleType)
 	if err != nil {
-		legacyKey := strings.Replace(allocationKey, "_election_supervisor", "_supervisor", 1)
-		allocationSetting, err = s.q.GetSystemSetting(ctx, legacyKey)
-		if err != nil {
-			return AgentAllocationsResponse{}, fmt.Errorf("get earnings allocation setting %q: %w", allocationKey, err)
-		}
-	}
-	var alloc earningsAllocation
-	if err := json.Unmarshal(allocationSetting.Value, &alloc); err != nil {
-		return AgentAllocationsResponse{}, fmt.Errorf("parse earnings allocation: %w", err)
+		return AgentAllocationsResponse{}, fmt.Errorf("get earnings allocation: %w", err)
 	}
 
 	items := []AllocationItem{

@@ -8,6 +8,7 @@ import (
 	"log/slog"
 
 	"free9ja/api/internal/db/queries"
+	earningsservice "free9ja/api/internal/service/earnings"
 	"free9ja/api/internal/worker"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -27,7 +28,7 @@ type Service struct {
 }
 
 type earningsService interface {
-	ProcessTaskEarnings(ctx context.Context, assignmentID int64, taskType string, customNarration ...string) (int64, error)
+	ProcessTaskEarnings(ctx context.Context, params earningsservice.ProcessTaskEarningsParams) (int64, error)
 }
 
 func NewService(q *queries.Queries, pool *pgxpool.Pool, distributor worker.TaskDistributor, earningsSvc earningsService, usersSvc usersService) *Service {
