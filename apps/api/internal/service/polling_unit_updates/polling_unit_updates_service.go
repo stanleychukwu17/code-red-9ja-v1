@@ -4,12 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/utils"
 	"strings"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 )
 
 type usersService interface {
@@ -19,6 +21,7 @@ type usersService interface {
 type Service struct {
 	queries     *queries.Queries
 	pool        *pgxpool.Pool
+	rdb         *redis.Client
 	earningsSvc earningsService
 	usersSvc    usersService
 }
@@ -27,10 +30,11 @@ type earningsService interface {
 	ProcessTaskEarnings(ctx context.Context, assignmentID int64, taskType string, customNarration ...string) (int64, error)
 }
 
-func NewService(q *queries.Queries, pool *pgxpool.Pool, earningsSvc earningsService, usersSvc usersService) *Service {
+func NewService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client, earningsSvc earningsService, usersSvc usersService) *Service {
 	return &Service{
 		queries:     q,
 		pool:        pool,
+		rdb:         rdb,
 		earningsSvc: earningsSvc,
 		usersSvc:    usersSvc,
 	}
@@ -78,6 +82,29 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 		return queries.PollingUnitUpdate{}, errors.New("user not found")
 	}
 
+	if input.StateID == 0 {
+		return queries.PollingUnitUpdate{}, errors.New("missing resolved location details for polling unit")
+	}
+
+	// Pre-resolve and validate issue options via Redis cache (1 year TTL) before beginning transaction
+	type issueItem struct {
+		categoryID int16
+		optionID   int16
+	}
+	var validIssues []issueItem
+	// We want to validate that all the issue options are valid before we create the update
+	for _, optID := range input.NewIssueOptionIDs {
+		opt, err := s.GetIssueOptionByID(ctx, optID)
+		if err != nil {
+			continue // skip invalid option
+		}
+
+		validIssues = append(validIssues, issueItem{
+			categoryID: opt.IssueCategoryID,
+			optionID:   opt.ID,
+		})
+	}
+
 	// Start a transaction since we are updating multiple tables
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -87,17 +114,12 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 
 	qtx := s.queries.WithTx(tx)
 
-	if input.StateID == 0 {
-		return queries.PollingUnitUpdate{}, errors.New("missing resolved location details for polling unit")
-	}
-
-	hasIssues := input.HasIssues || len(input.NewIssueOptionIDs) > 0
-	assignmentID := utils.PgInt8FromInt64(input.AssignmentID)
+	hasIssues := input.HasIssues || len(validIssues) > 0
 	partyID := utils.PgInt2FromPtrNullable(input.PartyID)
 
 	// Insert the update
 	update, err := qtx.CreatePollingUnitUpdate(ctx, queries.CreatePollingUnitUpdateParams{
-		AssignmentID:                assignmentID,
+		AssignmentID:                input.AssignmentID,
 		UserID:                      user.ID,
 		PollingUnitID:               input.PollingUnitID,
 		ElectionGroupID:             input.ElectionGroupID,
@@ -160,17 +182,13 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 	}
 
 	// Create new active issues if reported
-	for _, optID := range input.NewIssueOptionIDs {
-		opt, err := qtx.GetIssueOptionByID(ctx, optID)
-		if err != nil {
-			continue // skip invalid option
-		}
+	for _, issue := range validIssues {
 		_, err = qtx.CreatePollingUnitIssue(ctx, queries.CreatePollingUnitIssueParams{
 			UpdateID:                    utils.PgInt8FromInt64(update.ID),
 			ElectionGroupID:             input.ElectionGroupID,
 			PartyID:                     partyID,
 			UserID:                      user.ID,
-			AssignmentID:                assignmentID,
+			AssignmentID:                input.AssignmentID,
 			StateID:                     utils.PgInt2FromPositive(input.StateID),
 			LgaID:                       utils.PgInt4FromPositive(input.LgaID),
 			WardID:                      utils.PgInt4FromPositive(input.WardID),
@@ -178,40 +196,12 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 			FederalConstituencyID:       input.FederalConstituencyID,
 			StateAssemblyConstituencyID: input.StateAssemblyConstituencyID,
 			PollingUnitID:               input.PollingUnitID,
-			IssueCategoryID:             opt.IssueCategoryID,
-			IssueOptionID:               opt.ID,
+			IssueCategoryID:             issue.categoryID,
+			IssueOptionID:               issue.optionID,
 		})
 		if err != nil {
 			return queries.PollingUnitUpdate{}, fmt.Errorf("failed to save issue: %w", err)
 		}
-	}
-
-	// Calculate increments
-	var reportsInc, updatesInc int32
-	if hasIssues {
-		reportsInc = 1
-	} else {
-		updatesInc = 1
-	}
-
-	// Increment Election Metrics (all races in this group)
-	err = qtx.IncrementElectionMetricsByGroup(ctx, queries.IncrementElectionMetricsByGroupParams{
-		ElectionGroupID: input.ElectionGroupID,
-		ReportsCount:    reportsInc,
-		UpdatesCount:    updatesInc,
-	})
-	if err != nil {
-		return queries.PollingUnitUpdate{}, err
-	}
-
-	// Increment Assignment & Party Metrics
-	err = qtx.IncrementPollingUnitAssignmentMetrics(ctx, queries.IncrementPollingUnitAssignmentMetricsParams{
-		ID:           input.AssignmentID,
-		ReportsCount: reportsInc,
-		UpdatesCount: updatesInc,
-	})
-	if err != nil {
-		return queries.PollingUnitUpdate{}, err
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -249,6 +239,22 @@ func (s *Service) ListUpdates(ctx context.Context, params queries.ListPollingUni
 
 func (s *Service) GetActiveIssues(ctx context.Context, pollingUnitID int32) ([]queries.ListActivePollingUnitIssuesRow, error) {
 	return s.queries.ListActivePollingUnitIssues(ctx, pollingUnitID)
+}
+
+// GetIssueOptionByID retrieves a single issue option by its ID, utilizing Redis cache (1 year TTL).
+func (s *Service) GetIssueOptionByID(ctx context.Context, id int16) (queries.GetIssueOptionByIDRow, error) {
+	cacheKey := fmt.Sprintf("%s%d", db.RedisPollingUnitIssueOption, id)
+	if opt, ok := utils.GetCachedJSON[queries.GetIssueOptionByIDRow](ctx, s.rdb, cacheKey); ok && opt.ID > 0 {
+		return opt, nil
+	}
+
+	opt, err := s.queries.GetIssueOptionByID(ctx, id)
+	if err != nil {
+		return queries.GetIssueOptionByIDRow{}, err
+	}
+
+	_ = utils.SetCachedJSON(ctx, s.rdb, cacheKey, opt, db.RedisOneYearTTL)
+	return opt, nil
 }
 
 func isVideoURL(url string) bool {

@@ -271,45 +271,6 @@ func (q *Queries) GetIssueOptionByID(ctx context.Context, id int16) (GetIssueOpt
 	return i, err
 }
 
-const incrementElectionMetricsByGroup = `-- name: IncrementElectionMetricsByGroup :exec
-UPDATE elections
-SET 
-  reports_count = reports_count + $2,
-  updates_count = updates_count + $3
-WHERE election_group_id = $1
-`
-
-type IncrementElectionMetricsByGroupParams struct {
-	ElectionGroupID int32 `json:"election_group_id"`
-	ReportsCount    int32 `json:"reports_count"`
-	UpdatesCount    int32 `json:"updates_count"`
-}
-
-func (q *Queries) IncrementElectionMetricsByGroup(ctx context.Context, arg IncrementElectionMetricsByGroupParams) error {
-	_, err := q.db.Exec(ctx, incrementElectionMetricsByGroup, arg.ElectionGroupID, arg.ReportsCount, arg.UpdatesCount)
-	return err
-}
-
-const incrementPollingUnitAssignmentMetrics = `-- name: IncrementPollingUnitAssignmentMetrics :exec
-UPDATE polling_unit_assignments
-SET 
-  reports_count = reports_count + $2,
-  updates_count = updates_count + $3,
-  last_update_at = NOW()
-WHERE id = $1
-`
-
-type IncrementPollingUnitAssignmentMetricsParams struct {
-	ID           int64 `json:"id"`
-	ReportsCount int32 `json:"reports_count"`
-	UpdatesCount int32 `json:"updates_count"`
-}
-
-func (q *Queries) IncrementPollingUnitAssignmentMetrics(ctx context.Context, arg IncrementPollingUnitAssignmentMetricsParams) error {
-	_, err := q.db.Exec(ctx, incrementPollingUnitAssignmentMetrics, arg.ID, arg.ReportsCount, arg.UpdatesCount)
-	return err
-}
-
 const listActivePollingUnitIssues = `-- name: ListActivePollingUnitIssues :many
 SELECT 
   pui.id,

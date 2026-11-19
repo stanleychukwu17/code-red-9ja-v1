@@ -141,21 +141,6 @@ SET
   updated_at              = NOW()
 WHERE polling_unit_assignments.id = $1;
 
--- name: IncrementElectionGroupResultCount :exec
-UPDATE election_groups
-SET
-  results_submitted_count = results_submitted_count + 1,
-  updated_at              = NOW()
-WHERE id = $1;
-
--- name: IncrementElectionResultCount :exec
-UPDATE elections
-SET
-  results_submitted_count = results_submitted_count + 1,
-  updated_at              = NOW()
-WHERE id = $1;
-
-
 -- name: UpdatePollingUnitResultAIExtraction :one
 UPDATE polling_unit_results
 SET

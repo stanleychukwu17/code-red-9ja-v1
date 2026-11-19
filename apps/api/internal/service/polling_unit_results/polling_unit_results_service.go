@@ -236,13 +236,6 @@ func (s *Service) SubmitResult(ctx context.Context, input SubmitResultInput) (qu
 		return queries.PollingUnitResult{}, err
 	}
 
-	// Increment relevant counters
-	if err := qtx.IncrementElectionGroupResultCount(ctx, input.ElectionGroupID); err != nil {
-		return queries.PollingUnitResult{}, err
-	}
-	if err := qtx.IncrementElectionResultCount(ctx, input.ElectionID); err != nil {
-		return queries.PollingUnitResult{}, err
-	}
 	if input.AssignmentID != nil {
 		_ = qtx.IncrementAssignmentResultCount(ctx, *input.AssignmentID)
 	}
@@ -367,11 +360,9 @@ func (s *Service) SubmitBatchResults(ctx context.Context, input SubmitBatchResul
 			return nil, fmt.Errorf("failed to insert result for election #%d: %w", sub.ElectionID, err)
 		}
 
-		_ = qtx.IncrementElectionResultCount(ctx, sub.ElectionID)
 		createdResults = append(createdResults, result)
 	}
 
-	_ = qtx.IncrementElectionGroupResultCount(ctx, input.ElectionGroupID)
 	if input.AssignmentID != nil {
 		_ = qtx.IncrementAssignmentResultCount(ctx, *input.AssignmentID)
 	}

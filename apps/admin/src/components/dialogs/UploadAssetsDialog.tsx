@@ -264,7 +264,7 @@ export function UploadAssetsDialog({
       );
       // Invalidate assets queries so newly uploaded assets show up immediately
       queryClient.invalidateQueries({
-        queryKey: QUERY_KEYS.assets.list(parentId),
+        queryKey: QUERY_KEYS.assets.list({ folderId: parentId }),
       });
       onSuccess?.();
     }

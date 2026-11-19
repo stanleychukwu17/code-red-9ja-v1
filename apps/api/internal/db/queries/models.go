@@ -223,9 +223,6 @@ type Election struct {
 	Name                  string             `json:"name"`
 	ElectionDate          pgtype.Date        `json:"election_date"`
 	Scope                 string             `json:"scope"`
-	ReportsCount          int32              `json:"reports_count"`
-	UpdatesCount          int32              `json:"updates_count"`
-	ResultsSubmittedCount int32              `json:"results_submitted_count"`
 	CreatedAt             pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
 }

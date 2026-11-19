@@ -695,10 +695,6 @@ func (s *INECGrabberService) processWardPUs(
 			"status", statusStr,
 		)
 
-		// Increment election & election group results_submitted_count counters
-		_ = s.queries.IncrementElectionResultCount(ctx, grabber.ElectionID)
-		_ = s.queries.IncrementElectionGroupResultCount(ctx, grabber.ElectionGroupID)
-
 		// Always upsert election_polling_unit_final_results directly so final result is immediately populated
 		_, _ = s.queries.UpsertPollingUnitFinalResult(ctx, queries.UpsertPollingUnitFinalResultParams{
 			ElectionID:               grabber.ElectionID,
@@ -884,10 +880,6 @@ func (s *INECGrabberService) ResolveUnmatchedResult(
 			})
 			if err == nil {
 				resolvedResult = pgtype.Int8{Int64: pur.ID, Valid: true}
-
-				// Increment election & election group results_submitted_count counters
-				_ = s.queries.IncrementElectionResultCount(ctx, unmatched.ElectionID)
-				_ = s.queries.IncrementElectionGroupResultCount(ctx, unmatched.ElectionGroupID)
 
 				// Upsert election_polling_unit_final_results directly
 				_, _ = s.queries.UpsertPollingUnitFinalResult(ctx, queries.UpsertPollingUnitFinalResultParams{

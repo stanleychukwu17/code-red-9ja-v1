@@ -338,10 +338,6 @@ type Querier interface {
 	HasActiveAssignment(ctx context.Context, userID int64) (bool, error)
 	HasPositionBeenAssigned(ctx context.Context, positionID int32) (bool, error)
 	IncrementAssignmentResultCount(ctx context.Context, id int64) error
-	IncrementElectionGroupResultCount(ctx context.Context, id int32) error
-	IncrementElectionMetricsByGroup(ctx context.Context, arg IncrementElectionMetricsByGroupParams) error
-	IncrementElectionResultCount(ctx context.Context, id int32) error
-	IncrementPollingUnitAssignmentMetrics(ctx context.Context, arg IncrementPollingUnitAssignmentMetricsParams) error
 	InsertAuditLog(ctx context.Context, arg InsertAuditLogParams) (AuditLog, error)
 	InsertUserBankAccount(ctx context.Context, arg InsertUserBankAccountParams) (UserBankAccount, error)
 	InsertUserPreferences(ctx context.Context, arg InsertUserPreferencesParams) (UserPreference, error)

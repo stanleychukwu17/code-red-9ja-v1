@@ -167,7 +167,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	notificationsService := notificationsservice.NewService(q, rdb, broadcaster)
 	electionsService := electionsservice.NewElectionsService(q, pool, rdb, distributor, earningsService, officesService, bodiesService, notificationsService)
 	usersService := usersservice.NewUsersService(q, rdb, bodiesService, electionsService)
-	pollingUnitUpdatesService := puupdates.NewService(q, pool, earningsService, usersService)
+	pollingUnitUpdatesService := puupdates.NewService(q, pool, rdb, earningsService, usersService)
 	pollingUnitsService := pollingunitsservice.NewPollingUnitsService(q, rdb)
 	partiesService := partiesservice.NewPartiesService(q, pool, rdb, utilsInstance, notificationsService, blocksService, auditService, bodiesService, usersService)
 	partyApplicationsService := partyapplications.NewService(q, pool, rdb, usersService, pollingUnitsService, partiesService)

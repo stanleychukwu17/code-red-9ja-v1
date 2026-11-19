@@ -466,13 +466,21 @@ export const QUERY_KEYS = {
   assets: {
     folders: (parentId?: number) => ["assets", "folders", parentId ?? "root"],
     folderById: (id: number) => ["assets", "folder", id],
-    list: (folderId?: number, fileType?: string, search?: string, page?: number) => [
-      "assets",
-      "list",
-      folderId ?? "root",
-      fileType ?? "all",
-      search ?? "",
-      page ?? 1,
-    ],
+    list: (args?: {
+      folderId?: number;
+      fileType?: string;
+      search?: string;
+      page?: number;
+    }) => {
+      const key: unknown[] = ["assets", "list", args?.folderId ?? "root"];
+      if (args?.fileType || args?.search || args?.page) {
+        key.push({
+          ...(args.fileType ? { fileType: args.fileType } : {}),
+          ...(args.search ? { search: args.search } : {}),
+          ...(args.page ? { page: args.page } : {}),
+        });
+      }
+      return key;
+    },
   },
 };

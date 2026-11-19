@@ -94,21 +94,6 @@ JOIN polling_unit_issue_options pio ON pui.issue_option_id = pio.id
 WHERE pui.polling_unit_id = $1 AND pui.is_active = true
 ORDER BY pui.id DESC;
 
--- name: IncrementPollingUnitAssignmentMetrics :exec
-UPDATE polling_unit_assignments
-SET 
-  reports_count = reports_count + $2,
-  updates_count = updates_count + $3,
-  last_update_at = NOW()
-WHERE id = $1;
-
--- name: IncrementElectionMetricsByGroup :exec
-UPDATE elections
-SET 
-  reports_count = reports_count + $2,
-  updates_count = updates_count + $3
-WHERE election_group_id = $1;
-
 -- name: ListPollingUnitUpdates :many
 SELECT 
   pu.id, pu.assignment_id, pu.user_id, pu.polling_unit_id, pu.election_group_id, pu.party_id, 

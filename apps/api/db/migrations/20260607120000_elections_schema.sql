@@ -57,11 +57,6 @@ CREATE TABLE elections (
   election_date DATE NOT NULL,                             -- Scheduled polling date
   scope VARCHAR(50) NOT NULL,                              -- nationwide, state, senatorial-district, federal-constituency, lga, state-constituency, ward
 
-  -- Election day report and update rollups
-  reports_count INT NOT NULL DEFAULT 0,                    -- Situation reports logged for this election
-  updates_count INT NOT NULL DEFAULT 0,                    -- Real-time progress updates logged
-  results_submitted_count INT NOT NULL DEFAULT 0,          -- Count of PU result forms processed
-
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
