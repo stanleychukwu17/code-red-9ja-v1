@@ -92,11 +92,7 @@ type Querier interface {
 	CreatePollingUnit(ctx context.Context, arg CreatePollingUnitParams) (PollingUnit, error)
 	CreatePollingUnitIssue(ctx context.Context, arg CreatePollingUnitIssueParams) (PollingUnitWithIssue, error)
 	CreatePollingUnitUpdate(ctx context.Context, arg CreatePollingUnitUpdateParams) (PollingUnitUpdate, error)
-	CreatePollingUnitUpdateMedia(ctx context.Context, arg CreatePollingUnitUpdateMediaParams) (PollingUnitUpdateMedia, error)
-	GetIssueOptionByID(ctx context.Context, id int16) (GetIssueOptionByIDRow, error)
-	ListActivePollingUnitIssues(ctx context.Context, pollingUnitID int32) ([]ListActivePollingUnitIssuesRow, error)
-	ListMediaByUpdateIDs(ctx context.Context, updateIds []int64) ([]PollingUnitUpdateMedia, error)
-	ResolvePollingUnitIssues(ctx context.Context, issueIds []int64) error
+	CreatePollingUnitUpdateMedia(ctx context.Context, arg CreatePollingUnitUpdateMediaParams) (PollingUnitUpdateMedium, error)
 	CreateReferral(ctx context.Context, arg CreateReferralParams) (Referral, error)
 	CreateSenatorialDistrict(ctx context.Context, arg CreateSenatorialDistrictParams) (SenatorialDistrict, error)
 	CreateState(ctx context.Context, arg CreateStateParams) (CState, error)
@@ -205,6 +201,7 @@ type Querier interface {
 	GetFileByPublicUrl(ctx context.Context, publicUrl string) (File, error)
 	GetINECResultGrabberByElectionID(ctx context.Context, electionID int32) (GetINECResultGrabberByElectionIDRow, error)
 	GetINECResultGrabberByID(ctx context.Context, id int64) (GetINECResultGrabberByIDRow, error)
+	GetIssueOptionByID(ctx context.Context, id int16) (GetIssueOptionByIDRow, error)
 	GetLGAByID(ctx context.Context, id int32) (Lga, error)
 	GetLGAChapter(ctx context.Context, arg GetLGAChapterParams) (int32, error)
 	GetLGASupervisorCount(ctx context.Context, arg GetLGASupervisorCountParams) (int32, error)
@@ -363,6 +360,7 @@ type Querier interface {
 	ListAcceptingParties(ctx context.Context) ([]ListAcceptingPartiesRow, error)
 	ListActiveINECResultGrabbers(ctx context.Context, activeSyncDaysLimit int32) ([]ListActiveINECResultGrabbersRow, error)
 	ListActivePartyIDs(ctx context.Context) ([]int16, error)
+	ListActivePollingUnitIssues(ctx context.Context, pollingUnitID int32) ([]ListActivePollingUnitIssuesRow, error)
 	ListAgentEarnings(ctx context.Context, arg ListAgentEarningsParams) ([]ListAgentEarningsRow, error)
 	ListAllPartyMarketingCampaigns(ctx context.Context, arg ListAllPartyMarketingCampaignsParams) ([]ListAllPartyMarketingCampaignsRow, error)
 	ListAllR2Keys(ctx context.Context) ([]string, error)
@@ -388,6 +386,7 @@ type Querier interface {
 	ListINECResultGrabbersPaginated(ctx context.Context, arg ListINECResultGrabbersPaginatedParams) ([]ListINECResultGrabbersPaginatedRow, error)
 	ListLGASupervisorPerformanceStats(ctx context.Context, arg ListLGASupervisorPerformanceStatsParams) ([]ListLGASupervisorPerformanceStatsRow, error)
 	ListMediaAssetsByFolder(ctx context.Context, arg ListMediaAssetsByFolderParams) ([]MediaAsset, error)
+	ListMediaByUpdateIDs(ctx context.Context, updateIds []int64) ([]PollingUnitUpdateMedium, error)
 	ListMemberPositionAssignments(ctx context.Context, arg ListMemberPositionAssignmentsParams) ([]ListMemberPositionAssignmentsRow, error)
 	ListNotificationsForUser(ctx context.Context, arg ListNotificationsForUserParams) ([]ListNotificationsForUserRow, error)
 	ListOffices(ctx context.Context) ([]Office, error)
@@ -453,6 +452,7 @@ type Querier interface {
 	RequestAgentEarningsPayout(ctx context.Context, arg RequestAgentEarningsPayoutParams) (AgentEarning, error)
 	RequestAgentEarningsPayoutByID(ctx context.Context, id int64) (AgentEarning, error)
 	ResetPartyLogo(ctx context.Context, id int16) error
+	ResolvePollingUnitIssues(ctx context.Context, issueIds []int64) error
 	RollupElectionFinalResults(ctx context.Context) error
 	RollupFederalConstituencyFinalResults(ctx context.Context) error
 	RollupLGAFinalResults(ctx context.Context) error

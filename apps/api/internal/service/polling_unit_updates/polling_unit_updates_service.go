@@ -7,7 +7,6 @@ import (
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/utils"
 	"strings"
-	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -92,42 +91,9 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 		return queries.PollingUnitUpdate{}, errors.New("missing resolved location details for polling unit")
 	}
 
-	stateID := input.StateID
-	lgaID := input.LgaID
-	wardID := input.WardID
-	senatorialID := input.SenatorialDistrictID
-	federalID := input.FederalConstituencyID
-	stateAssemblyID := input.StateAssemblyConstituencyID
-
-	// Fetch ElectionGroup and check date
-	electionGroup, err := qtx.GetElectionGroupByID(ctx, input.ElectionGroupID)
-	if err != nil {
-		return queries.PollingUnitUpdate{}, fmt.Errorf("invalid election group: %w", err)
-	}
-	now := time.Now().UTC()
-	if now.Year() > electionGroup.ElectionDate.Time.Year() {
-		return queries.PollingUnitUpdate{}, errors.New("updates can only be submitted during the election cycle")
-	}
-
+	hasIssues := input.HasIssues || len(input.NewIssueOptionIDs) > 0
 	assignmentID := utils.PgInt8FromInt64(input.AssignmentID)
 	partyID := utils.PgInt2FromPtrNullable(input.PartyID)
-
-	hasMedia := len(input.Media) > 0
-
-	// Handle title
-	var title pgtype.Text
-	if input.Title != nil {
-		title = utils.PgTextFromString(strings.TrimSpace(*input.Title))
-	}
-
-	// Handle coordinates
-	latitude := utils.PgFloat8FromPtr(input.Latitude)
-	longitude := utils.PgFloat8FromPtr(input.Longitude)
-	accuracyMeters := utils.PgFloat8FromPtr(input.AccuracyMeters)
-
-	hasIssues := input.HasIssues || len(input.NewIssueOptionIDs) > 0
-	statusCategoryID := utils.PgInt2FromPtrNullable(input.StatusCategoryID)
-	statusOptionID := utils.PgInt2FromPtrNullable(input.StatusOptionID)
 
 	// Insert the update
 	update, err := qtx.CreatePollingUnitUpdate(ctx, queries.CreatePollingUnitUpdateParams{
@@ -136,21 +102,21 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 		PollingUnitID:               input.PollingUnitID,
 		ElectionGroupID:             input.ElectionGroupID,
 		PartyID:                     partyID,
-		StateID:                     utils.PgInt2FromPositive(stateID),
-		LgaID:                       utils.PgInt4FromPositive(lgaID),
-		WardID:                      utils.PgInt4FromPositive(wardID),
-		SenatorialDistrictID:        senatorialID,
-		FederalConstituencyID:       federalID,
-		StateAssemblyConstituencyID: stateAssemblyID,
-		StatusCategoryID:            statusCategoryID,
-		StatusOptionID:              statusOptionID,
+		StateID:                     utils.PgInt2FromPositive(input.StateID),
+		LgaID:                       utils.PgInt4FromPositive(input.LgaID),
+		WardID:                      utils.PgInt4FromPositive(input.WardID),
+		SenatorialDistrictID:        input.SenatorialDistrictID,
+		FederalConstituencyID:       input.FederalConstituencyID,
+		StateAssemblyConstituencyID: input.StateAssemblyConstituencyID,
+		StatusCategoryID:            utils.PgInt2FromPtrNullable(input.StatusCategoryID),
+		StatusOptionID:              utils.PgInt2FromPtrNullable(input.StatusOptionID),
 		HasIssues:                   utils.PgBool(hasIssues),
-		Title:                       title,
+		Title:                       utils.PgTextFromPtr(input.Title),
 		Message:                     input.Message,
-		HasMedia:                    hasMedia,
-		Latitude:                    latitude,
-		Longitude:                   longitude,
-		AccuracyMeters:              accuracyMeters,
+		HasMedia:                    len(input.Media) > 0,
+		Latitude:                    utils.PgFloat8FromPtr(input.Latitude),
+		Longitude:                   utils.PgFloat8FromPtr(input.Longitude),
+		AccuracyMeters:              utils.PgFloat8FromPtr(input.AccuracyMeters),
 	})
 	if err != nil {
 		return queries.PollingUnitUpdate{}, err
@@ -166,10 +132,12 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 				mediaType = "image"
 			}
 		}
+
 		var sizeBytes int64
 		if m.FileSizeBytes != nil {
 			sizeBytes = *m.FileSizeBytes
 		}
+
 		_, err = qtx.CreatePollingUnitUpdateMedia(ctx, queries.CreatePollingUnitUpdateMediaParams{
 			UpdateID:        update.ID,
 			FileID:          utils.PgInt8FromPtr(m.FileID),
@@ -198,14 +166,20 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 			continue // skip invalid option
 		}
 		_, err = qtx.CreatePollingUnitIssue(ctx, queries.CreatePollingUnitIssueParams{
-			UpdateID:        utils.PgInt8FromInt64(update.ID),
-			ElectionGroupID: input.ElectionGroupID,
-			PartyID:         partyID,
-			UserID:          user.ID,
-			AssignmentID:    assignmentID,
-			PollingUnitID:   input.PollingUnitID,
-			IssueCategoryID: opt.IssueCategoryID,
-			IssueOptionID:   opt.ID,
+			UpdateID:                    utils.PgInt8FromInt64(update.ID),
+			ElectionGroupID:             input.ElectionGroupID,
+			PartyID:                     partyID,
+			UserID:                      user.ID,
+			AssignmentID:                assignmentID,
+			StateID:                     utils.PgInt2FromPositive(input.StateID),
+			LgaID:                       utils.PgInt4FromPositive(input.LgaID),
+			WardID:                      utils.PgInt4FromPositive(input.WardID),
+			SenatorialDistrictID:        input.SenatorialDistrictID,
+			FederalConstituencyID:       input.FederalConstituencyID,
+			StateAssemblyConstituencyID: input.StateAssemblyConstituencyID,
+			PollingUnitID:               input.PollingUnitID,
+			IssueCategoryID:             opt.IssueCategoryID,
+			IssueOptionID:               opt.ID,
 		})
 		if err != nil {
 			return queries.PollingUnitUpdate{}, fmt.Errorf("failed to save issue: %w", err)

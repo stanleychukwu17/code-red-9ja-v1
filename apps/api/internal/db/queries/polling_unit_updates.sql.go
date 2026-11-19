@@ -11,6 +11,88 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const createPollingUnitIssue = `-- name: CreatePollingUnitIssue :one
+INSERT INTO polling_unit_with_issues (
+  update_id,
+  election_group_id,
+  party_id,
+  user_id,
+  assignment_id,
+  state_id,
+  lga_id,
+  ward_id,
+  senatorial_district_id,
+  federal_constituency_id,
+  state_assembly_constituency_id,
+  polling_unit_id,
+  issue_category_id,
+  issue_option_id,
+  is_active,
+  time_issue_started
+) VALUES (
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, true, NOW()
+) RETURNING id, update_id, election_group_id, party_id, user_id, assignment_id, state_id, lga_id, ward_id, senatorial_district_id, federal_constituency_id, state_assembly_constituency_id, polling_unit_id, issue_category_id, issue_option_id, is_active, time_issue_started, time_issue_ended, resolution_notes
+`
+
+type CreatePollingUnitIssueParams struct {
+	UpdateID                    pgtype.Int8 `json:"update_id"`
+	ElectionGroupID             int32       `json:"election_group_id"`
+	PartyID                     pgtype.Int2 `json:"party_id"`
+	UserID                      int64       `json:"user_id"`
+	AssignmentID                int64       `json:"assignment_id"`
+	StateID                     pgtype.Int2 `json:"state_id"`
+	LgaID                       pgtype.Int4 `json:"lga_id"`
+	WardID                      pgtype.Int4 `json:"ward_id"`
+	SenatorialDistrictID        pgtype.Int4 `json:"senatorial_district_id"`
+	FederalConstituencyID       pgtype.Int4 `json:"federal_constituency_id"`
+	StateAssemblyConstituencyID pgtype.Int4 `json:"state_assembly_constituency_id"`
+	PollingUnitID               int32       `json:"polling_unit_id"`
+	IssueCategoryID             int16       `json:"issue_category_id"`
+	IssueOptionID               int16       `json:"issue_option_id"`
+}
+
+func (q *Queries) CreatePollingUnitIssue(ctx context.Context, arg CreatePollingUnitIssueParams) (PollingUnitWithIssue, error) {
+	row := q.db.QueryRow(ctx, createPollingUnitIssue,
+		arg.UpdateID,
+		arg.ElectionGroupID,
+		arg.PartyID,
+		arg.UserID,
+		arg.AssignmentID,
+		arg.StateID,
+		arg.LgaID,
+		arg.WardID,
+		arg.SenatorialDistrictID,
+		arg.FederalConstituencyID,
+		arg.StateAssemblyConstituencyID,
+		arg.PollingUnitID,
+		arg.IssueCategoryID,
+		arg.IssueOptionID,
+	)
+	var i PollingUnitWithIssue
+	err := row.Scan(
+		&i.ID,
+		&i.UpdateID,
+		&i.ElectionGroupID,
+		&i.PartyID,
+		&i.UserID,
+		&i.AssignmentID,
+		&i.StateID,
+		&i.LgaID,
+		&i.WardID,
+		&i.SenatorialDistrictID,
+		&i.FederalConstituencyID,
+		&i.StateAssemblyConstituencyID,
+		&i.PollingUnitID,
+		&i.IssueCategoryID,
+		&i.IssueOptionID,
+		&i.IsActive,
+		&i.TimeIssueStarted,
+		&i.TimeIssueEnded,
+		&i.ResolutionNotes,
+	)
+	return i, err
+}
+
 const createPollingUnitUpdate = `-- name: CreatePollingUnitUpdate :one
 INSERT INTO polling_unit_updates (
   assignment_id,
@@ -39,7 +121,7 @@ INSERT INTO polling_unit_updates (
 `
 
 type CreatePollingUnitUpdateParams struct {
-	AssignmentID                pgtype.Int8   `json:"assignment_id"`
+	AssignmentID                int64         `json:"assignment_id"`
 	UserID                      int64         `json:"user_id"`
 	PollingUnitID               int32         `json:"polling_unit_id"`
 	ElectionGroupID             int32         `json:"election_group_id"`
@@ -137,7 +219,7 @@ type CreatePollingUnitUpdateMediaParams struct {
 	FileSizeBytes   int64       `json:"file_size_bytes"`
 }
 
-func (q *Queries) CreatePollingUnitUpdateMedia(ctx context.Context, arg CreatePollingUnitUpdateMediaParams) (PollingUnitUpdateMedia, error) {
+func (q *Queries) CreatePollingUnitUpdateMedia(ctx context.Context, arg CreatePollingUnitUpdateMediaParams) (PollingUnitUpdateMedium, error) {
 	row := q.db.QueryRow(ctx, createPollingUnitUpdateMedia,
 		arg.UpdateID,
 		arg.FileID,
@@ -147,7 +229,7 @@ func (q *Queries) CreatePollingUnitUpdateMedia(ctx context.Context, arg CreatePo
 		arg.DurationSeconds,
 		arg.FileSizeBytes,
 	)
-	var i PollingUnitUpdateMedia
+	var i PollingUnitUpdateMedium
 	err := row.Scan(
 		&i.ID,
 		&i.UpdateID,
@@ -160,43 +242,6 @@ func (q *Queries) CreatePollingUnitUpdateMedia(ctx context.Context, arg CreatePo
 		&i.CreatedAt,
 	)
 	return i, err
-}
-
-const listMediaByUpdateIDs = `-- name: ListMediaByUpdateIDs :many
-SELECT id, update_id, file_id, media_type, url, thumbnail_url, duration_seconds, file_size_bytes, created_at
-FROM polling_unit_update_media
-WHERE update_id = ANY($1::bigint[])
-ORDER BY id ASC
-`
-
-func (q *Queries) ListMediaByUpdateIDs(ctx context.Context, updateIds []int64) ([]PollingUnitUpdateMedia, error) {
-	rows, err := q.db.Query(ctx, listMediaByUpdateIDs, updateIds)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []PollingUnitUpdateMedia
-	for rows.Next() {
-		var i PollingUnitUpdateMedia
-		if err := rows.Scan(
-			&i.ID,
-			&i.UpdateID,
-			&i.FileID,
-			&i.MediaType,
-			&i.Url,
-			&i.ThumbnailUrl,
-			&i.DurationSeconds,
-			&i.FileSizeBytes,
-			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const getIssueOptionByID = `-- name: GetIssueOptionByID :one
@@ -226,74 +271,42 @@ func (q *Queries) GetIssueOptionByID(ctx context.Context, id int16) (GetIssueOpt
 	return i, err
 }
 
-const createPollingUnitIssue = `-- name: CreatePollingUnitIssue :one
-INSERT INTO polling_unit_with_issues (
-  update_id,
-  election_group_id,
-  party_id,
-  user_id,
-  assignment_id,
-  polling_unit_id,
-  issue_category_id,
-  issue_option_id,
-  is_active,
-  time_issue_started
-) VALUES (
-  $1, $2, $3, $4, $5, $6, $7, $8, true, NOW()
-) RETURNING id, update_id, election_group_id, party_id, user_id, assignment_id, polling_unit_id, issue_category_id, issue_option_id, is_active, time_issue_started, time_issue_ended, resolution_notes
-`
-
-type CreatePollingUnitIssueParams struct {
-	UpdateID        pgtype.Int8 `json:"update_id"`
-	ElectionGroupID int32       `json:"election_group_id"`
-	PartyID         pgtype.Int2 `json:"party_id"`
-	UserID          int64       `json:"user_id"`
-	AssignmentID    pgtype.Int8 `json:"assignment_id"`
-	PollingUnitID   int32       `json:"polling_unit_id"`
-	IssueCategoryID int16       `json:"issue_category_id"`
-	IssueOptionID   int16       `json:"issue_option_id"`
-}
-
-func (q *Queries) CreatePollingUnitIssue(ctx context.Context, arg CreatePollingUnitIssueParams) (PollingUnitWithIssue, error) {
-	row := q.db.QueryRow(ctx, createPollingUnitIssue,
-		arg.UpdateID,
-		arg.ElectionGroupID,
-		arg.PartyID,
-		arg.UserID,
-		arg.AssignmentID,
-		arg.PollingUnitID,
-		arg.IssueCategoryID,
-		arg.IssueOptionID,
-	)
-	var i PollingUnitWithIssue
-	err := row.Scan(
-		&i.ID,
-		&i.UpdateID,
-		&i.ElectionGroupID,
-		&i.PartyID,
-		&i.UserID,
-		&i.AssignmentID,
-		&i.PollingUnitID,
-		&i.IssueCategoryID,
-		&i.IssueOptionID,
-		&i.IsActive,
-		&i.TimeIssueStarted,
-		&i.TimeIssueEnded,
-		&i.ResolutionNotes,
-	)
-	return i, err
-}
-
-const resolvePollingUnitIssues = `-- name: ResolvePollingUnitIssues :exec
-UPDATE polling_unit_with_issues
+const incrementElectionMetricsByGroup = `-- name: IncrementElectionMetricsByGroup :exec
+UPDATE elections
 SET 
-  is_active = false,
-  time_issue_ended = NOW()
-WHERE id = ANY($1::bigint[])
+  reports_count = reports_count + $2,
+  updates_count = updates_count + $3
+WHERE election_group_id = $1
 `
 
-func (q *Queries) ResolvePollingUnitIssues(ctx context.Context, issueIds []int64) error {
-	_, err := q.db.Exec(ctx, resolvePollingUnitIssues, issueIds)
+type IncrementElectionMetricsByGroupParams struct {
+	ElectionGroupID int32 `json:"election_group_id"`
+	ReportsCount    int32 `json:"reports_count"`
+	UpdatesCount    int32 `json:"updates_count"`
+}
+
+func (q *Queries) IncrementElectionMetricsByGroup(ctx context.Context, arg IncrementElectionMetricsByGroupParams) error {
+	_, err := q.db.Exec(ctx, incrementElectionMetricsByGroup, arg.ElectionGroupID, arg.ReportsCount, arg.UpdatesCount)
+	return err
+}
+
+const incrementPollingUnitAssignmentMetrics = `-- name: IncrementPollingUnitAssignmentMetrics :exec
+UPDATE polling_unit_assignments
+SET 
+  reports_count = reports_count + $2,
+  updates_count = updates_count + $3,
+  last_update_at = NOW()
+WHERE id = $1
+`
+
+type IncrementPollingUnitAssignmentMetricsParams struct {
+	ID           int64 `json:"id"`
+	ReportsCount int32 `json:"reports_count"`
+	UpdatesCount int32 `json:"updates_count"`
+}
+
+func (q *Queries) IncrementPollingUnitAssignmentMetrics(ctx context.Context, arg IncrementPollingUnitAssignmentMetricsParams) error {
+	_, err := q.db.Exec(ctx, incrementPollingUnitAssignmentMetrics, arg.ID, arg.ReportsCount, arg.UpdatesCount)
 	return err
 }
 
@@ -357,43 +370,41 @@ func (q *Queries) ListActivePollingUnitIssues(ctx context.Context, pollingUnitID
 	return items, nil
 }
 
-const incrementElectionMetricsByGroup = `-- name: IncrementElectionMetricsByGroup :exec
-UPDATE elections
-SET 
-  reports_count = reports_count + $2,
-  updates_count = updates_count + $3
-WHERE election_group_id = $1
+const listMediaByUpdateIDs = `-- name: ListMediaByUpdateIDs :many
+SELECT id, update_id, file_id, media_type, url, thumbnail_url, duration_seconds, file_size_bytes, created_at
+FROM polling_unit_update_media
+WHERE update_id = ANY($1::bigint[])
+ORDER BY id ASC
 `
 
-type IncrementElectionMetricsByGroupParams struct {
-	ElectionGroupID int32 `json:"election_group_id"`
-	ReportsCount    int32 `json:"reports_count"`
-	UpdatesCount    int32 `json:"updates_count"`
-}
-
-func (q *Queries) IncrementElectionMetricsByGroup(ctx context.Context, arg IncrementElectionMetricsByGroupParams) error {
-	_, err := q.db.Exec(ctx, incrementElectionMetricsByGroup, arg.ElectionGroupID, arg.ReportsCount, arg.UpdatesCount)
-	return err
-}
-
-const incrementPollingUnitAssignmentMetrics = `-- name: IncrementPollingUnitAssignmentMetrics :exec
-UPDATE polling_unit_assignments
-SET 
-  reports_count = reports_count + $2,
-  updates_count = updates_count + $3,
-  last_update_at = NOW()
-WHERE id = $1
-`
-
-type IncrementPollingUnitAssignmentMetricsParams struct {
-	ID           int64 `json:"id"`
-	ReportsCount int32 `json:"reports_count"`
-	UpdatesCount int32 `json:"updates_count"`
-}
-
-func (q *Queries) IncrementPollingUnitAssignmentMetrics(ctx context.Context, arg IncrementPollingUnitAssignmentMetricsParams) error {
-	_, err := q.db.Exec(ctx, incrementPollingUnitAssignmentMetrics, arg.ID, arg.ReportsCount, arg.UpdatesCount)
-	return err
+func (q *Queries) ListMediaByUpdateIDs(ctx context.Context, updateIds []int64) ([]PollingUnitUpdateMedium, error) {
+	rows, err := q.db.Query(ctx, listMediaByUpdateIDs, updateIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PollingUnitUpdateMedium
+	for rows.Next() {
+		var i PollingUnitUpdateMedium
+		if err := rows.Scan(
+			&i.ID,
+			&i.UpdateID,
+			&i.FileID,
+			&i.MediaType,
+			&i.Url,
+			&i.ThumbnailUrl,
+			&i.DurationSeconds,
+			&i.FileSizeBytes,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listPollingUnitUpdates = `-- name: ListPollingUnitUpdates :many
@@ -459,7 +470,7 @@ type ListPollingUnitUpdatesParams struct {
 
 type ListPollingUnitUpdatesRow struct {
 	ID                          int64              `json:"id"`
-	AssignmentID                pgtype.Int8        `json:"assignment_id"`
+	AssignmentID                int64              `json:"assignment_id"`
 	UserID                      int64              `json:"user_id"`
 	PollingUnitID               int32              `json:"polling_unit_id"`
 	ElectionGroupID             int32              `json:"election_group_id"`
@@ -559,4 +570,17 @@ func (q *Queries) ListPollingUnitUpdates(ctx context.Context, arg ListPollingUni
 		return nil, err
 	}
 	return items, nil
+}
+
+const resolvePollingUnitIssues = `-- name: ResolvePollingUnitIssues :exec
+UPDATE polling_unit_with_issues
+SET 
+  is_active = false,
+  time_issue_ended = NOW()
+WHERE id = ANY($1::bigint[])
+`
+
+func (q *Queries) ResolvePollingUnitIssues(ctx context.Context, issueIds []int64) error {
+	_, err := q.db.Exec(ctx, resolvePollingUnitIssues, issueIds)
+	return err
 }

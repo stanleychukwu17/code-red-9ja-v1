@@ -89,6 +89,12 @@ CREATE TABLE IF NOT EXISTS polling_unit_with_issues (
   party_id SMALLINT REFERENCES parties(id) ON DELETE SET NULL,
   user_id BIGINT REFERENCES users(id) ON DELETE CASCADE NOT NULL,
   assignment_id BIGINT REFERENCES polling_unit_assignments(id) ON DELETE CASCADE NOT NULL,
+  state_id SMALLINT REFERENCES c_states(id) ON DELETE SET NULL,
+  lga_id INT REFERENCES lgas(id) ON DELETE SET NULL,
+  ward_id INT REFERENCES wards(id) ON DELETE SET NULL,
+  senatorial_district_id INT REFERENCES senatorial_districts(id) ON DELETE SET NULL,
+  federal_constituency_id INT REFERENCES federal_constituencies(id) ON DELETE SET NULL,
+  state_assembly_constituency_id INT REFERENCES state_constituencies(id) ON DELETE SET NULL,
   polling_unit_id INTEGER REFERENCES polling_units(id) ON DELETE CASCADE NOT NULL,
   
   issue_category_id SMALLINT REFERENCES polling_unit_issue_categories(id) ON DELETE RESTRICT NOT NULL,

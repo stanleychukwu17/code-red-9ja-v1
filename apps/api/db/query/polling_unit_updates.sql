@@ -55,13 +55,19 @@ INSERT INTO polling_unit_with_issues (
   party_id,
   user_id,
   assignment_id,
+  state_id,
+  lga_id,
+  ward_id,
+  senatorial_district_id,
+  federal_constituency_id,
+  state_assembly_constituency_id,
   polling_unit_id,
   issue_category_id,
   issue_option_id,
   is_active,
   time_issue_started
 ) VALUES (
-  $1, $2, $3, $4, $5, $6, $7, $8, true, NOW()
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, true, NOW()
 ) RETURNING *;
 
 -- name: ResolvePollingUnitIssues :exec
