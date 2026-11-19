@@ -81,18 +81,15 @@ func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskCheckOrphanFile(ctx con
 		return nil
 	}
 
-	// 2. Check if file is in active use across domain tables:
-	// - users.avatar_file_id
-	// - parties.logo_file_id
-	// - parties.cover_image_file_id
+	// 2. Check if file is in active use across domain tables
 	var inUse bool
 	query := `
 		SELECT EXISTS (
 			SELECT 1 FROM users WHERE avatar_file_id = $1
 			UNION ALL
-			SELECT 1 FROM parties WHERE logo_file_id = $1
+			SELECT 1 FROM parties WHERE logo_file_id = $1 OR cover_image_file_id = $1
 			UNION ALL
-			SELECT 1 FROM parties WHERE cover_image_file_id = $1
+			SELECT 1 FROM polling_unit_update_media WHERE file_id = $1
 		)
 	`
 	if err := redisTaskProcessor.pool.QueryRow(ctx, query, payload.FileID).Scan(&inUse); err != nil {

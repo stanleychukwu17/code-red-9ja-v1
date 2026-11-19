@@ -3,6 +3,7 @@ import { apiFetch } from "./fetch";
 import { API_URL } from "../config";
 
 export type PollingUnitUpdateMediaInput = {
+  file_id?: number;
   url: string;
   media_type: "image" | "video" | "audio";
   duration_seconds?: number;
@@ -10,10 +11,9 @@ export type PollingUnitUpdateMediaInput = {
 };
 
 export type CreatePollingUnitUpdateInput = {
+  assignment_id: number;
   polling_unit_id: number;
   election_group_id: number;
-  assignment_id?: number;
-  party_id?: number;
   status_category_id?: number;
   status_option_id?: number;
   has_issues: boolean;

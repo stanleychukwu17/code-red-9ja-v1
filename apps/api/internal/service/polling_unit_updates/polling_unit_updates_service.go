@@ -38,6 +38,7 @@ func NewService(q *queries.Queries, pool *pgxpool.Pool, earningsSvc earningsServ
 }
 
 type MediaItem struct {
+	FileID          *int64 `json:"file_id,omitempty"`
 	URL             string `json:"url"`
 	MediaType       string `json:"media_type"`
 	ThumbnailURL    string `json:"thumbnail_url,omitempty"`
@@ -46,25 +47,31 @@ type MediaItem struct {
 }
 
 type CreateUpdateInput struct {
-	UserID            int64       `json:"user_id"`
-	PollingUnitID     int32       `json:"polling_unit_id"`
-	ElectionGroupID   int32       `json:"election_group_id"`
-	AssignmentID      *int64      `json:"assignment_id,omitempty"`
-	PartyID           *int16      `json:"party_id,omitempty"`
-	StatusCategoryID  *int16      `json:"status_category_id,omitempty"`
-	StatusOptionID    *int16      `json:"status_option_id,omitempty"`
-	HasIssues         bool        `json:"has_issues"`
-	IssueAction       string      `json:"issue_action,omitempty"`
-	ExistingIssueIDs  []int64     `json:"existing_issue_ids,omitempty"`
-	NewIssueOptionIDs []int16     `json:"new_issue_option_ids,omitempty"`
-	Title             *string     `json:"title,omitempty"`
-	Message           string      `json:"message"`
-	Media             []MediaItem `json:"media,omitempty"`
-	MediaUrls         []string    `json:"media_urls,omitempty"` // For backward compatibility with assignment handler
-	Latitude          *float64    `json:"latitude,omitempty"`
-	Longitude         *float64    `json:"longitude,omitempty"`
-	AccuracyMeters    *float64    `json:"accuracy_meters,omitempty"`
-	IsReport          bool        `json:"is_report,omitempty"` // For backward compatibility
+	UserID                      int64       `json:"user_id"`
+	AssignmentID                int64       `json:"assignment_id"`
+	PollingUnitID               int32       `json:"polling_unit_id"`
+	ElectionGroupID             int32       `json:"election_group_id"`
+	PartyID                     *int16      `json:"party_id,omitempty"`
+	StateID                     int32       `json:"state_id,omitempty"`
+	LgaID                       int32       `json:"lga_id,omitempty"`
+	WardID                      int32       `json:"ward_id,omitempty"`
+	SenatorialDistrictID        pgtype.Int4 `json:"senatorial_district_id,omitempty"`
+	FederalConstituencyID       pgtype.Int4 `json:"federal_constituency_id,omitempty"`
+	StateAssemblyConstituencyID pgtype.Int4 `json:"state_assembly_constituency_id,omitempty"`
+	StatusCategoryID            *int16      `json:"status_category_id,omitempty"`
+	StatusOptionID              *int16      `json:"status_option_id,omitempty"`
+	HasIssues                   bool        `json:"has_issues"`
+	IssueAction                 string      `json:"issue_action,omitempty"`
+	ExistingIssueIDs            []int64     `json:"existing_issue_ids,omitempty"`
+	NewIssueOptionIDs           []int16     `json:"new_issue_option_ids,omitempty"`
+	Title                       *string     `json:"title,omitempty"`
+	Message                     string      `json:"message"`
+	Media                       []MediaItem `json:"media,omitempty"`
+	MediaUrls                   []string    `json:"media_urls,omitempty"` // For backward compatibility with assignment handler
+	Latitude                    *float64    `json:"latitude,omitempty"`
+	Longitude                   *float64    `json:"longitude,omitempty"`
+	AccuracyMeters              *float64    `json:"accuracy_meters,omitempty"`
+	IsReport                    bool        `json:"is_report,omitempty"` // For backward compatibility
 }
 
 func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (queries.PollingUnitUpdate, error) {
@@ -83,21 +90,16 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 
 	qtx := s.queries.WithTx(tx)
 
-	// Fetch polling unit details for denormalized state/lga/ward
-	pu, err := qtx.GetPollingUnitByID(ctx, input.PollingUnitID)
-	if err != nil {
-		return queries.PollingUnitUpdate{}, errors.New("invalid polling unit id")
+	if input.StateID == 0 {
+		return queries.PollingUnitUpdate{}, errors.New("missing resolved location details for polling unit")
 	}
 
-	// Fetch LGA and Ward to get constituency IDs
-	lga, err := qtx.GetLGAByID(ctx, pu.LgaID)
-	if err != nil {
-		return queries.PollingUnitUpdate{}, errors.New("invalid lga for polling unit")
-	}
-	ward, err := qtx.GetWardByID(ctx, pu.WardID)
-	if err != nil {
-		return queries.PollingUnitUpdate{}, errors.New("invalid ward for polling unit")
-	}
+	stateID := input.StateID
+	lgaID := input.LgaID
+	wardID := input.WardID
+	senatorialID := input.SenatorialDistrictID
+	federalID := input.FederalConstituencyID
+	stateAssemblyID := input.StateAssemblyConstituencyID
 
 	// Fetch ElectionGroup and check date
 	electionGroup, err := qtx.GetElectionGroupByID(ctx, input.ElectionGroupID)
@@ -109,7 +111,7 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 		return queries.PollingUnitUpdate{}, errors.New("updates can only be submitted during the election cycle")
 	}
 
-	assignmentID := utils.PgInt8FromPtr(input.AssignmentID)
+	assignmentID := utils.PgInt8FromInt64(input.AssignmentID)
 	partyID := utils.PgInt2FromPtrNullable(input.PartyID)
 
 	// Consolidate legacy MediaUrls into Media if empty
@@ -130,21 +132,14 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 
 	// Handle title
 	var title pgtype.Text
-	if input.Title != nil && strings.TrimSpace(*input.Title) != "" {
-		title = pgtype.Text{String: strings.TrimSpace(*input.Title), Valid: true}
+	if input.Title != nil {
+		title = utils.PgTextFromString(strings.TrimSpace(*input.Title))
 	}
 
 	// Handle coordinates
-	var latitude, longitude, accuracyMeters pgtype.Float8
-	if input.Latitude != nil {
-		latitude = pgtype.Float8{Float64: *input.Latitude, Valid: true}
-	}
-	if input.Longitude != nil {
-		longitude = pgtype.Float8{Float64: *input.Longitude, Valid: true}
-	}
-	if input.AccuracyMeters != nil {
-		accuracyMeters = pgtype.Float8{Float64: *input.AccuracyMeters, Valid: true}
-	}
+	latitude := utils.PgFloat8FromPtr(input.Latitude)
+	longitude := utils.PgFloat8FromPtr(input.Longitude)
+	accuracyMeters := utils.PgFloat8FromPtr(input.AccuracyMeters)
 
 	hasIssues := input.HasIssues || input.IsReport || len(input.NewIssueOptionIDs) > 0
 	statusCategoryID := utils.PgInt2FromPtrNullable(input.StatusCategoryID)
@@ -157,15 +152,15 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 		PollingUnitID:               input.PollingUnitID,
 		ElectionGroupID:             input.ElectionGroupID,
 		PartyID:                     partyID,
-		StateID:                     utils.PgInt2FromPositive(pu.StateID),
-		LgaID:                       utils.PgInt4FromPositive(pu.LgaID),
-		WardID:                      utils.PgInt4FromPositive(pu.WardID),
-		SenatorialDistrictID:        lga.SenatorialDistrictID,
-		FederalConstituencyID:       lga.FederalConstituencyID,
-		StateAssemblyConstituencyID: ward.StateConstituencyID,
+		StateID:                     utils.PgInt2FromPositive(stateID),
+		LgaID:                       utils.PgInt4FromPositive(lgaID),
+		WardID:                      utils.PgInt4FromPositive(wardID),
+		SenatorialDistrictID:        senatorialID,
+		FederalConstituencyID:       federalID,
+		StateAssemblyConstituencyID: stateAssemblyID,
 		StatusCategoryID:            statusCategoryID,
 		StatusOptionID:              statusOptionID,
-		HasIssues:                   pgtype.Bool{Bool: hasIssues, Valid: true},
+		HasIssues:                   utils.PgBool(hasIssues),
 		Title:                       title,
 		Message:                     input.Message,
 		HasMedia:                    hasMedia,
@@ -187,24 +182,17 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 				mediaType = "image"
 			}
 		}
-		var thumb pgtype.Text
-		if m.ThumbnailURL != "" {
-			thumb = pgtype.Text{String: m.ThumbnailURL, Valid: true}
-		}
-		var dur pgtype.Int4
-		if m.DurationSeconds != nil {
-			dur = pgtype.Int4{Int32: *m.DurationSeconds, Valid: true}
-		}
 		var sizeBytes int64
 		if m.FileSizeBytes != nil {
 			sizeBytes = *m.FileSizeBytes
 		}
 		_, err = qtx.CreatePollingUnitUpdateMedia(ctx, queries.CreatePollingUnitUpdateMediaParams{
 			UpdateID:        update.ID,
+			FileID:          utils.PgInt8FromPtr(m.FileID),
 			MediaType:       mediaType,
 			Url:             m.URL,
-			ThumbnailUrl:    thumb,
-			DurationSeconds: dur,
+			ThumbnailUrl:    utils.PgTextFromString(m.ThumbnailURL),
+			DurationSeconds: utils.PgInt4FromPtr(m.DurationSeconds),
 			FileSizeBytes:   sizeBytes,
 		})
 		if err != nil {
@@ -226,7 +214,7 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 			continue // skip invalid option
 		}
 		_, err = qtx.CreatePollingUnitIssue(ctx, queries.CreatePollingUnitIssueParams{
-			UpdateID:        pgtype.Int8{Int64: update.ID, Valid: true},
+			UpdateID:        utils.PgInt8FromInt64(update.ID),
 			ElectionGroupID: input.ElectionGroupID,
 			PartyID:         partyID,
 			UserID:          user.ID,
@@ -258,23 +246,21 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 		return queries.PollingUnitUpdate{}, err
 	}
 
-	// Increment Assignment & Party Metrics if provided
-	if input.AssignmentID != nil {
-		err = qtx.IncrementPollingUnitAssignmentMetrics(ctx, queries.IncrementPollingUnitAssignmentMetricsParams{
-			ID:           *input.AssignmentID,
-			ReportsCount: reportsInc,
-			UpdatesCount: updatesInc,
-		})
-		if err != nil {
-			return queries.PollingUnitUpdate{}, err
-		}
+	// Increment Assignment & Party Metrics
+	err = qtx.IncrementPollingUnitAssignmentMetrics(ctx, queries.IncrementPollingUnitAssignmentMetricsParams{
+		ID:           input.AssignmentID,
+		ReportsCount: reportsInc,
+		UpdatesCount: updatesInc,
+	})
+	if err != nil {
+		return queries.PollingUnitUpdate{}, err
 	}
 
 	if err := tx.Commit(ctx); err != nil {
 		return queries.PollingUnitUpdate{}, err
 	}
 
-	if input.AssignmentID != nil && s.earningsSvc != nil {
+	if s.earningsSvc != nil {
 		updateNarration := "Update: Given"
 		if len(mediaItems) > 0 {
 			hasVideo := false
@@ -293,7 +279,7 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 			}
 		}
 
-		go s.earningsSvc.ProcessTaskEarnings(context.Background(), *input.AssignmentID, "updates", updateNarration)
+		go s.earningsSvc.ProcessTaskEarnings(context.Background(), input.AssignmentID, "updates", updateNarration)
 	}
 
 	return update, nil

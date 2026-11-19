@@ -20,20 +20,29 @@ type Service interface {
 	GetActiveIssues(ctx context.Context, pollingUnitID int32) ([]queries.ListActivePollingUnitIssuesRow, error)
 }
 
-type Handler struct {
-	service Service
-	utils   *utils.Utils
+type PollingUnitAssignmentsService interface {
+	GetMyAssignment(ctx context.Context, userID int64, electionGroupID int32) (*queries.GetUserAssignmentRow, error)
 }
 
-func NewHandler(s Service, u *utils.Utils) *Handler {
-	return &Handler{service: s, utils: u}
+type PollingUnitsService interface {
+	GetPollingUnitByID(ctx context.Context, id int32) (queries.PollingUnit, error)
+}
+
+type Handler struct {
+	service             Service
+	assignmentsService  PollingUnitAssignmentsService
+	pollingUnitsService PollingUnitsService
+	utils               *utils.Utils
+}
+
+func NewHandler(s Service, u *utils.Utils, asgnSvc PollingUnitAssignmentsService, puSvc PollingUnitsService) *Handler {
+	return &Handler{service: s, utils: u, assignmentsService: asgnSvc, pollingUnitsService: puSvc}
 }
 
 type CreateUpdateRequest struct {
+	AssignmentID      int64                            `json:"assignment_id"`
 	PollingUnitID     int32                            `json:"polling_unit_id"`
 	ElectionGroupID   int32                            `json:"election_group_id"`
-	AssignmentID      *int64                           `json:"assignment_id,omitempty"`
-	PartyID           *int16                           `json:"party_id,omitempty"`
 	StatusCategoryID  *int16                           `json:"status_category_id,omitempty"`
 	StatusOptionID    *int16                           `json:"status_option_id,omitempty"`
 	HasIssues         bool                             `json:"has_issues"`
@@ -43,8 +52,6 @@ type CreateUpdateRequest struct {
 	Title             *string                          `json:"title,omitempty"`
 	Message           string                           `json:"message"`
 	Media             []polling_unit_updates.MediaItem `json:"media,omitempty"`
-	MediaUrls         []string                         `json:"media_urls,omitempty"`
-	IsReport          bool                             `json:"is_report,omitempty"`
 	Latitude          *float64                         `json:"latitude,omitempty"`
 	Longitude         *float64                         `json:"longitude,omitempty"`
 	AccuracyMeters    *float64                         `json:"accuracy_meters,omitempty"`
@@ -64,29 +71,65 @@ type CreateUpdateRequest struct {
 // @Router /polling-unit-updates [post]
 // @Security BearerAuth
 func (h *Handler) CreateUpdate(w http.ResponseWriter, r *http.Request) {
-	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
+	claims, ok := apimiddleware.GetClaims(r)
 	if !ok {
+		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
+	// Decode request payload
 	var req CreateUpdateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
-	if req.PollingUnitID <= 0 || req.ElectionGroupID <= 0 || req.Message == "" {
-		h.utils.RespondError(w, http.StatusBadRequest, "polling_unit_id, election_group_id and message are required")
+	// Validate required fields
+	if req.AssignmentID <= 0 || req.PollingUnitID <= 0 || req.ElectionGroupID <= 0 || req.Message == "" {
+		h.utils.RespondError(w, http.StatusBadRequest, "assignment_id, polling_unit_id, election_group_id and message are required")
 		return
 	}
 
+	// Verify assignment using Redis cache
+	assignment, err := h.assignmentsService.GetMyAssignment(r.Context(), claims.UserID, req.ElectionGroupID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to verify assignment: "+err.Error())
+		return
+	}
+	if assignment == nil || assignment.ID <= 0 {
+		h.utils.RespondError(w, http.StatusNotFound, "No active assignment found for this election group")
+		return
+	}
+	if assignment.ID != req.AssignmentID {
+		h.utils.RespondError(w, http.StatusForbidden, "Assignment does not belong to you")
+		return
+	}
+	if assignment.PollingUnitID != req.PollingUnitID {
+		h.utils.RespondError(w, http.StatusBadRequest, "Polling unit does not match assignment")
+		return
+	}
+
+	// Fetch polling unit details from Redis cache (1 year TTL)
+	pu, err := h.pollingUnitsService.GetPollingUnitByID(r.Context(), req.PollingUnitID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid polling unit id: "+err.Error())
+		return
+	}
+
+	// Persist the polling unit update
 	update, err := h.service.CreateUpdate(r.Context(), polling_unit_updates.CreateUpdateInput{
-		UserID:            claims.FakeID,
-		PollingUnitID:     req.PollingUnitID,
-		ElectionGroupID:   req.ElectionGroupID,
-		AssignmentID:      req.AssignmentID,
-		PartyID:           req.PartyID,
-		StatusCategoryID:  req.StatusCategoryID,
+		UserID:                      claims.FakeID,
+		PollingUnitID:               req.PollingUnitID,
+		ElectionGroupID:             req.ElectionGroupID,
+		AssignmentID:                req.AssignmentID,
+		PartyID:                     &assignment.PartyID,
+		StateID:                     pu.StateID,
+		LgaID:                       pu.LgaID,
+		WardID:                      pu.WardID,
+		SenatorialDistrictID:        pu.SenatorialDistrictID,
+		FederalConstituencyID:       pu.FederalConstituencyID,
+		StateAssemblyConstituencyID: pu.StateConstituencyID,
+		StatusCategoryID:            req.StatusCategoryID,
 		StatusOptionID:    req.StatusOptionID,
 		HasIssues:         req.HasIssues,
 		IssueAction:       req.IssueAction,
@@ -95,8 +138,6 @@ func (h *Handler) CreateUpdate(w http.ResponseWriter, r *http.Request) {
 		Title:             req.Title,
 		Message:           req.Message,
 		Media:             req.Media,
-		MediaUrls:         req.MediaUrls,
-		IsReport:          req.IsReport,
 		Latitude:          req.Latitude,
 		Longitude:         req.Longitude,
 		AccuracyMeters:    req.AccuracyMeters,
@@ -106,6 +147,7 @@ func (h *Handler) CreateUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Return response
 	h.utils.RespondSuccess(w, http.StatusCreated, "Update submitted successfully", map[string]interface{}{
 		"update": update,
 	})
@@ -135,11 +177,6 @@ func (h *Handler) CreateUpdate(w http.ResponseWriter, r *http.Request) {
 // @Router /polling-unit-updates [get]
 // @Security BearerAuth
 func (h *Handler) ListUpdates(w http.ResponseWriter, r *http.Request) {
-	_, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
-	if !ok {
-		return
-	}
-
 	var params queries.ListPollingUnitUpdatesParams
 
 	if val := r.URL.Query().Get("election_group_id"); val != "" {
@@ -262,11 +299,6 @@ func (h *Handler) ListUpdates(w http.ResponseWriter, r *http.Request) {
 // @Router /polling-unit-updates/issues [get]
 // @Security BearerAuth
 func (h *Handler) ListActiveIssues(w http.ResponseWriter, r *http.Request) {
-	_, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
-	if !ok {
-		return
-	}
-
 	val := r.URL.Query().Get("polling_unit_id")
 	if val == "" {
 		h.utils.RespondError(w, http.StatusBadRequest, "polling_unit_id is required")

@@ -7,7 +7,10 @@ import {
   type OutboxUpdateItem,
 } from "./outbox-db";
 import { confirmFileUpload, getPresignedUploadURL } from "./server/parties";
-import { createPollingUnitUpdate } from "./server/polling_unit_updates";
+import {
+  createPollingUnitUpdate,
+  type PollingUnitUpdateMediaInput,
+} from "./server/polling_unit_updates";
 import { toast } from "sonner";
 
 // Background sync worker flag to prevent concurrent runs
@@ -18,12 +21,7 @@ async function syncSingleItem(item: OutboxUpdateItem): Promise<boolean> {
   await updateOutboxItemStatus(item.id, "syncing");
 
   try {
-    const uploadedMedia: {
-      url: string;
-      media_type: "image" | "video" | "audio";
-      file_size_bytes: number;
-      duration_seconds?: number;
-    }[] = [];
+    const uploadedMedia: PollingUnitUpdateMediaInput[] = [];
 
     // Upload each binary blob to storage
     for (const media of item.mediaFiles) {
@@ -75,6 +73,7 @@ async function syncSingleItem(item: OutboxUpdateItem): Promise<boolean> {
       // 3. Confirm successful upload and collect CDN public URL and media metadata
       await confirmFileUpload({ data: { id: file_id, success: true } });
       uploadedMedia.push({
+        file_id,
         url: public_url,
         media_type: media.type,
         file_size_bytes: media.blob.size,
@@ -88,7 +87,6 @@ async function syncSingleItem(item: OutboxUpdateItem): Promise<boolean> {
         polling_unit_id: item.pollingUnitId,
         election_group_id: item.electionGroupId,
         assignment_id: item.assignmentId,
-        party_id: item.partyId,
         status_category_id: item.statusCategoryId,
         status_option_id: item.statusOptionId,
         has_issues: item.hasIssues,

@@ -116,18 +116,20 @@ func (q *Queries) CreatePollingUnitUpdate(ctx context.Context, arg CreatePolling
 const createPollingUnitUpdateMedia = `-- name: CreatePollingUnitUpdateMedia :one
 INSERT INTO polling_unit_update_media (
   update_id,
+  file_id,
   media_type,
   url,
   thumbnail_url,
   duration_seconds,
   file_size_bytes
 ) VALUES (
-  $1, $2, $3, $4, $5, $6
-) RETURNING id, update_id, media_type, url, thumbnail_url, duration_seconds, file_size_bytes, created_at
+  $1, $2, $3, $4, $5, $6, $7
+) RETURNING id, update_id, file_id, media_type, url, thumbnail_url, duration_seconds, file_size_bytes, created_at
 `
 
 type CreatePollingUnitUpdateMediaParams struct {
 	UpdateID        int64       `json:"update_id"`
+	FileID          pgtype.Int8 `json:"file_id"`
 	MediaType       string      `json:"media_type"`
 	Url             string      `json:"url"`
 	ThumbnailUrl    pgtype.Text `json:"thumbnail_url"`
@@ -138,6 +140,7 @@ type CreatePollingUnitUpdateMediaParams struct {
 func (q *Queries) CreatePollingUnitUpdateMedia(ctx context.Context, arg CreatePollingUnitUpdateMediaParams) (PollingUnitUpdateMedia, error) {
 	row := q.db.QueryRow(ctx, createPollingUnitUpdateMedia,
 		arg.UpdateID,
+		arg.FileID,
 		arg.MediaType,
 		arg.Url,
 		arg.ThumbnailUrl,
@@ -148,6 +151,7 @@ func (q *Queries) CreatePollingUnitUpdateMedia(ctx context.Context, arg CreatePo
 	err := row.Scan(
 		&i.ID,
 		&i.UpdateID,
+		&i.FileID,
 		&i.MediaType,
 		&i.Url,
 		&i.ThumbnailUrl,
@@ -159,7 +163,7 @@ func (q *Queries) CreatePollingUnitUpdateMedia(ctx context.Context, arg CreatePo
 }
 
 const listMediaByUpdateIDs = `-- name: ListMediaByUpdateIDs :many
-SELECT id, update_id, media_type, url, thumbnail_url, duration_seconds, file_size_bytes, created_at
+SELECT id, update_id, file_id, media_type, url, thumbnail_url, duration_seconds, file_size_bytes, created_at
 FROM polling_unit_update_media
 WHERE update_id = ANY($1::bigint[])
 ORDER BY id ASC
@@ -177,6 +181,7 @@ func (q *Queries) ListMediaByUpdateIDs(ctx context.Context, updateIds []int64) (
 		if err := rows.Scan(
 			&i.ID,
 			&i.UpdateID,
+			&i.FileID,
 			&i.MediaType,
 			&i.Url,
 			&i.ThumbnailUrl,

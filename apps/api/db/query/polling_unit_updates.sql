@@ -27,17 +27,18 @@ INSERT INTO polling_unit_updates (
 -- name: CreatePollingUnitUpdateMedia :one
 INSERT INTO polling_unit_update_media (
   update_id,
+  file_id,
   media_type,
   url,
   thumbnail_url,
   duration_seconds,
   file_size_bytes
 ) VALUES (
-  $1, $2, $3, $4, $5, $6
+  $1, $2, $3, $4, $5, $6, $7
 ) RETURNING *;
 
 -- name: ListMediaByUpdateIDs :many
-SELECT id, update_id, media_type, url, thumbnail_url, duration_seconds, file_size_bytes, created_at
+SELECT id, update_id, file_id, media_type, url, thumbnail_url, duration_seconds, file_size_bytes, created_at
 FROM polling_unit_update_media
 WHERE update_id = ANY(sqlc.arg('update_ids')::bigint[])
 ORDER BY id ASC;

@@ -45,8 +45,8 @@ CREATE TABLE IF NOT EXISTS polling_unit_issue_options (
 CREATE TABLE IF NOT EXISTS polling_unit_updates (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   
-  -- The core relationship linking the update to the agent's assignment
-  assignment_id BIGINT REFERENCES polling_unit_assignments(id) ON DELETE SET NULL,
+  -- The core relationship linking the update to the agent's assignment (mandatory: updates require an assigned agent)
+  assignment_id BIGINT REFERENCES polling_unit_assignments(id) ON DELETE CASCADE NOT NULL,
   
   -- Denormalized references for fast dashboard filtering
   election_group_id INT REFERENCES election_groups(id) ON DELETE CASCADE NOT NULL,
@@ -88,7 +88,7 @@ CREATE TABLE IF NOT EXISTS polling_unit_with_issues (
   election_group_id INT REFERENCES election_groups(id) ON DELETE CASCADE NOT NULL,
   party_id SMALLINT REFERENCES parties(id) ON DELETE SET NULL,
   user_id BIGINT REFERENCES users(id) ON DELETE CASCADE NOT NULL,
-  assignment_id BIGINT REFERENCES polling_unit_assignments(id) ON DELETE SET NULL,
+  assignment_id BIGINT REFERENCES polling_unit_assignments(id) ON DELETE CASCADE NOT NULL,
   polling_unit_id INTEGER REFERENCES polling_units(id) ON DELETE CASCADE NOT NULL,
   
   issue_category_id SMALLINT REFERENCES polling_unit_issue_categories(id) ON DELETE RESTRICT NOT NULL,
@@ -105,6 +105,7 @@ CREATE TABLE IF NOT EXISTS polling_unit_with_issues (
 CREATE TABLE IF NOT EXISTS polling_unit_update_media (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   update_id BIGINT NOT NULL REFERENCES polling_unit_updates(id) ON DELETE CASCADE,
+  file_id BIGINT REFERENCES files(id) ON DELETE SET NULL,
   media_type VARCHAR(20) NOT NULL CHECK (media_type IN ('image', 'video', 'audio')),
   url VARCHAR(2000) NOT NULL,
   thumbnail_url VARCHAR(2000),
@@ -114,6 +115,7 @@ CREATE TABLE IF NOT EXISTS polling_unit_update_media (
 );
 
 CREATE INDEX idx_pu_update_media_update ON polling_unit_update_media(update_id);
+CREATE INDEX idx_pu_update_media_file_id ON polling_unit_update_media(file_id);
 
 -- Seed initial status categories with fixed deterministic IDs
 INSERT INTO polling_unit_status_categories (id, name, slug, description, color, sort_order) VALUES

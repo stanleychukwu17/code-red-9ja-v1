@@ -6,9 +6,9 @@ const ISSUES_STORE_NAME = "active_issues";
 
 export type OutboxUpdateItem = {
   id: string;
+  assignmentId: number;
   pollingUnitId: number;
   electionGroupId: number;
-  assignmentId?: number;
   partyId?: number;
   statusCategoryId: number;
   statusOptionId?: number;

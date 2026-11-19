@@ -1,63 +1,22 @@
-import { Fragment, useState } from "react";
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { getPageHeader } from "#/lib/shared/meta";
-import {
-  Layout,
-  PageHeader,
-  PageSearchLayer,
-  AddButton,
-} from "@repo/ui/components/custom/AdminLayouts";
+import { Layout, PageHeader, PageSearchLayer, AddButton } from "@repo/ui/components/custom/AdminLayouts";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  getAssetFolders,
-  getMediaAssets,
-  syncR2Assets,
-  deleteMediaAsset,
-  deleteAssetFolder,
-  type AssetFolder,
-} from "#/lib/server/assets";
+import { getAssetFolders, getMediaAssets, syncR2Assets, deleteMediaAsset, deleteAssetFolder, type AssetFolder } from "#/lib/server/assets";
 import { QUERY_KEYS } from "#/lib/config";
-import {
-  FolderKanban,
-  Folder as FolderIcon,
-  ChevronRight,
-  RefreshCw,
-  Home,
-  FileCode2,
-  FileImage,
-  FileVideo,
-  FileText,
-  FileBox,
-  File as GenericFileIcon,
-  Loader2,
-  Upload,
-  FolderPlus,
-  MoreVertical,
-  Copy,
-  ExternalLink,
-  Download,
-  Trash2,
-} from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@repo/ui/components/dropdown-menu";
+import { Folder as FolderIcon, RefreshCw, FileCode2, FileImage, FileVideo, FileText, FileBox, File as GenericFileIcon, Loader2, Upload, MoreVertical, Copy, ExternalLink, Download, Trash2 } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@repo/ui/components/dropdown-menu";
 import { CreateAssetFolderDialog } from "#/components/dialogs/CreateAssetFolderDialog";
 import { UploadAssetsDialog } from "#/components/dialogs/UploadAssetsDialog";
+import { AssetBreadcrumbs, type BreadcrumbItem } from "#/components/assets/AssetBreadcrumbs";
+import { EmptyAssetFolder } from "#/components/assets/EmptyAssetFolder";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/assets")({
   head: () => getPageHeader({ title: "Media Assets" }),
   component: RouteComponent,
 });
-
-type BreadcrumbItem = {
-  id: number;
-  name: string;
-};
 
 export function formatBytes(bytes: number, decimals = 1) {
   if (!bytes || bytes <= 0) return "0 B";
@@ -278,94 +237,30 @@ function RouteComponent() {
       {/* ==================================================================== */}
       {/* BREADCRUMB NAVIGATION BAR                                             */}
       {/* ==================================================================== */}
-      <div className="flex items-center justify-between rounded-xl bg-sidebar-softer/40 px-4 py-3 border border-border/40">
-        <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-1.5 text-sm">
-          {breadcrumbs.map((crumb, idx) => {
-            const isLast = idx === breadcrumbs.length - 1;
-            const isRoot = idx === 0;
-
-            return (
-              <Fragment key={crumb.id}>
-                {idx > 0 && <ChevronRight className="size-4 text-muted-foreground/60 shrink-0" />}
-                <button
-                  type="button"
-                  onClick={() => handleBreadcrumbClick(idx)}
-                  className={`flex items-center gap-1.5 px-2 py-1 rounded-lg transition-colors cursor-pointer
-                    ${isLast ? "font-semibold text-c-100 bg-sidebar-softer"
-                      : "text-muted-foreground hover:text-c-100 hover:bg-sidebar-softer/60"
-                    }`}
-                  aria-current={isLast ? "page" : undefined}
-                >
-                  {isRoot && <Home className="size-3.5" />}
-                  <span>{crumb.name}</span>
-                </button>
-              </Fragment>
-            );
-          })}
-        </nav>
-
-        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-          {isRefreshing && (
-            <span className="flex items-center gap-1 text-primary">
-              <Loader2 className="size-3 animate-spin" />
-              Updating...
-            </span>
-          )}
-          <span>
-            {folders.length} {folders.length === 1 ? "folder" : "folders"}
-          </span>
-          <span>•</span>
-          <span>
-            {assets.length} {assets.length === 1 ? "asset" : "assets"}
-          </span>
-        </div>
-      </div>
+      <AssetBreadcrumbs
+        breadcrumbs={breadcrumbs}
+        onBreadcrumbClick={handleBreadcrumbClick}
+        isRefreshing={isRefreshing}
+        folderCount={folders.length}
+        assetCount={assets.length}
+      />
 
       {/* ==================================================================== */}
       {/* CONTENT LISTING: FOLDERS & ASSETS                                    */}
       {/* ==================================================================== */}
       {isLoading ? (
-        <div className="flex flex-col items-center justify-center min-h-[300px] rounded-xl bg-sidebar-softer/30 p-8 text-center">
+        <div className="flex flex-col items-center justify-center min-h-75 rounded-xl bg-sidebar-softer/30 p-8 text-center">
           <Loader2 className="size-8 animate-spin text-primary mb-2" />
           <p className="text-sm text-muted-foreground">Loading folders and assets...</p>
         </div>
       ) : folders.length === 0 && assets.length === 0 ? (
-        <div className="flex flex-col items-center justify-center min-h-[360px] rounded-xl bg-sidebar-softer/30 p-8 text-center border border-dashed border-border/60">
-          <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-3">
-            <FolderKanban className="size-6" />
-          </div>
-          <h3 className="text-base font-semibold">This folder is empty</h3>
-          <p className="text-sm text-muted-foreground max-w-sm mt-1">
-            No subfolders or assets found here. You can sync from Cloudflare R2 or add items.
-          </p>
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setUploadDialogOpen(true)}
-              className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition cursor-pointer shadow-xs"
-            >
-              <Upload className="size-4" />
-              <span>Upload Assets</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setCreateFolderOpen(true)}
-              className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-sidebar-softer text-c-90 text-sm font-medium hover:bg-sidebar-softer/80 transition cursor-pointer border border-border/50"
-            >
-              <FolderPlus className="size-4" />
-              <span>New Folder</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => syncMutation.mutate()}
-              disabled={syncMutation.isPending}
-              className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-sidebar-softer text-muted-foreground text-sm font-medium hover:text-c-100 hover:bg-sidebar-softer/80 transition cursor-pointer border border-border/40"
-            >
-              <RefreshCw className={`size-4 ${syncMutation.isPending ? "animate-spin" : ""}`} />
-              <span>Sync R2</span>
-            </button>
-          </div>
-        </div>
+        // Empty directory state with quick actions to upload files, create folders, or sync R2
+        <EmptyAssetFolder
+          onUpload={() => setUploadDialogOpen(true)}
+          onCreateFolder={() => setCreateFolderOpen(true)}
+          onSync={() => syncMutation.mutate()}
+          isSyncing={syncMutation.isPending}
+        />
       ) : (
         <div className="flex flex-col gap-6">
           {/* Subfolders Section */}

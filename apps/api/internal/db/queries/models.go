@@ -895,6 +895,7 @@ type PollingUnitUpdate struct {
 type PollingUnitUpdateMedia struct {
 	ID              int64              `json:"id"`
 	UpdateID        int64              `json:"update_id"`
+	FileID          pgtype.Int8        `json:"file_id"`
 	MediaType       string             `json:"media_type"`
 	Url             string             `json:"url"`
 	ThumbnailUrl    pgtype.Text        `json:"thumbnail_url"`
