@@ -67,11 +67,9 @@ type CreateUpdateInput struct {
 	Title                       *string     `json:"title,omitempty"`
 	Message                     string      `json:"message"`
 	Media                       []MediaItem `json:"media,omitempty"`
-	MediaUrls                   []string    `json:"media_urls,omitempty"` // For backward compatibility with assignment handler
 	Latitude                    *float64    `json:"latitude,omitempty"`
 	Longitude                   *float64    `json:"longitude,omitempty"`
 	AccuracyMeters              *float64    `json:"accuracy_meters,omitempty"`
-	IsReport                    bool        `json:"is_report,omitempty"` // For backward compatibility
 }
 
 func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (queries.PollingUnitUpdate, error) {
@@ -114,21 +112,7 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 	assignmentID := utils.PgInt8FromInt64(input.AssignmentID)
 	partyID := utils.PgInt2FromPtrNullable(input.PartyID)
 
-	// Consolidate legacy MediaUrls into Media if empty
-	mediaItems := input.Media
-	if len(mediaItems) == 0 && len(input.MediaUrls) > 0 {
-		for _, u := range input.MediaUrls {
-			mediaType := "image"
-			if isVideoURL(u) {
-				mediaType = "video"
-			}
-			mediaItems = append(mediaItems, MediaItem{
-				URL:       u,
-				MediaType: mediaType,
-			})
-		}
-	}
-	hasMedia := len(mediaItems) > 0
+	hasMedia := len(input.Media) > 0
 
 	// Handle title
 	var title pgtype.Text
@@ -141,7 +125,7 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 	longitude := utils.PgFloat8FromPtr(input.Longitude)
 	accuracyMeters := utils.PgFloat8FromPtr(input.AccuracyMeters)
 
-	hasIssues := input.HasIssues || input.IsReport || len(input.NewIssueOptionIDs) > 0
+	hasIssues := input.HasIssues || len(input.NewIssueOptionIDs) > 0
 	statusCategoryID := utils.PgInt2FromPtrNullable(input.StatusCategoryID)
 	statusOptionID := utils.PgInt2FromPtrNullable(input.StatusOptionID)
 
@@ -173,7 +157,7 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 	}
 
 	// Insert media attachments
-	for _, m := range mediaItems {
+	for _, m := range input.Media {
 		mediaType := m.MediaType
 		if mediaType == "" {
 			if isVideoURL(m.URL) {
@@ -262,10 +246,10 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 
 	if s.earningsSvc != nil {
 		updateNarration := "Update: Given"
-		if len(mediaItems) > 0 {
+		if len(input.Media) > 0 {
 			hasVideo := false
 			hasImage := false
-			for _, m := range mediaItems {
+			for _, m := range input.Media {
 				if m.MediaType == "video" || isVideoURL(m.URL) {
 					hasVideo = true
 				} else if m.MediaType == "image" {
