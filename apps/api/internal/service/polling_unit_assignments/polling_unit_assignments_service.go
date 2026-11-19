@@ -8,6 +8,7 @@ import (
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/utils"
+	"free9ja/api/internal/worker"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -18,19 +19,15 @@ import (
 type Service struct {
 	queries     *queries.Queries
 	rdb         *redis.Client
-	earningsSvc earningsService
-}
-
-type earningsService interface {
-	ProcessTaskEarnings(ctx context.Context, assignmentID int64, taskType string, customNarration ...string) (int64, error)
+	distributor worker.TaskDistributor
 }
 
 // NewService initializes a new polling unit assignments service.
-func NewService(q *queries.Queries, rdb *redis.Client, earningsSvc earningsService) *Service {
+func NewService(q *queries.Queries, rdb *redis.Client, distributor worker.TaskDistributor) *Service {
 	return &Service{
 		queries:     q,
 		rdb:         rdb,
-		earningsSvc: earningsSvc,
+		distributor: distributor,
 	}
 }
 
@@ -224,15 +221,24 @@ func (s *Service) UpdateAssignmentTracking(ctx context.Context, id int64, arrive
 	s.InvalidateUserAssignmentCache(ctx, assignment.UserID, assignment.ElectionGroupID)
 
 	// Trigger earnings calculation & wallet credit asynchronously for each reported milestone
-	if s.earningsSvc != nil {
+	if s.distributor != nil {
 		if arrivedAt != nil && *arrivedAt != "" {
-			go s.earningsSvc.ProcessTaskEarnings(context.Background(), id, "attendance")
+			_ = s.distributor.DistributeTaskCalculateAgentEarnings(context.Background(), &worker.CalculateAgentEarningsPayload{
+				AssignmentID: id,
+				TaskType:     "attendance",
+			})
 		}
 		if electionStartedAt != nil && *electionStartedAt != "" {
-			go s.earningsSvc.ProcessTaskEarnings(context.Background(), id, "election_start")
+			_ = s.distributor.DistributeTaskCalculateAgentEarnings(context.Background(), &worker.CalculateAgentEarningsPayload{
+				AssignmentID: id,
+				TaskType:     "election_start",
+			})
 		}
 		if electionEndedAt != nil && *electionEndedAt != "" {
-			go s.earningsSvc.ProcessTaskEarnings(context.Background(), id, "election_end")
+			_ = s.distributor.DistributeTaskCalculateAgentEarnings(context.Background(), &worker.CalculateAgentEarningsPayload{
+				AssignmentID: id,
+				TaskType:     "election_end",
+			})
 		}
 	}
 

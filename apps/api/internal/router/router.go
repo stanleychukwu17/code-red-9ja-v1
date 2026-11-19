@@ -167,13 +167,13 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	notificationsService := notificationsservice.NewService(q, rdb, broadcaster)
 	electionsService := electionsservice.NewElectionsService(q, pool, rdb, distributor, earningsService, officesService, bodiesService, notificationsService)
 	usersService := usersservice.NewUsersService(q, rdb, bodiesService, electionsService)
-	pollingUnitUpdatesService := puupdates.NewService(q, pool, rdb, earningsService, usersService)
+	pollingUnitUpdatesService := puupdates.NewService(q, pool, rdb, distributor, usersService)
 	pollingUnitsService := pollingunitsservice.NewPollingUnitsService(q, rdb)
 	partiesService := partiesservice.NewPartiesService(q, pool, rdb, utilsInstance, notificationsService, blocksService, auditService, bodiesService, usersService)
 	partyApplicationsService := partyapplications.NewService(q, pool, rdb, usersService, pollingUnitsService, partiesService)
 	pollingUnitResultsService := puresults.NewService(q, pool, distributor, earningsService, usersService)
 	supervisorAssignmentsService := supervisorassignmentsservice.NewService(q, rdb)
-	pollingUnitAssignmentsService := puassignments.NewService(q, rdb, earningsService)
+	pollingUnitAssignmentsService := puassignments.NewService(q, rdb, distributor)
 	partiesWalletService := partiesservice.NewPartiesWalletService(q, pool, rdb, utilsInstance, partiesService)
 	followsService := followsservice.NewFollowsService(q, rdb, partiesService, notificationsService)
 	electionGroupsService := electiongroupsservice.NewElectionGroupsService(q, rdb, distributor)
@@ -190,6 +190,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 
 	// Wire services needed for background task processing
 	processor.SetCampaignGroupsService(campaignGroupsService)
+	processor.SetEarningsService(earningsService)
 
 	usersService.SetPageVerificationsService(pageVerificationsService)
 	usersService.SetPartyService(partiesService)

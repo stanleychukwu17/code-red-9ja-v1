@@ -361,6 +361,7 @@ type Querier interface {
 	ListAllPartyMarketingCampaigns(ctx context.Context, arg ListAllPartyMarketingCampaignsParams) ([]ListAllPartyMarketingCampaignsRow, error)
 	ListAllR2Keys(ctx context.Context) ([]string, error)
 	ListAllStates(ctx context.Context) ([]CState, error)
+	ListAssignmentUpdatesCoordinates(ctx context.Context, assignmentID int64) ([]ListAssignmentUpdatesCoordinatesRow, error)
 	ListAssignments(ctx context.Context, arg ListAssignmentsParams) ([]ListAssignmentsRow, error)
 	ListBlockedUsersByParty(ctx context.Context, arg ListBlockedUsersByPartyParams) ([]ListBlockedUsersByPartyRow, error)
 	ListBlockedUsersByUser(ctx context.Context, arg ListBlockedUsersByUserParams) ([]ListBlockedUsersByUserRow, error)

@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"free9ja/api/internal/db/queries"
+	"free9ja/api/internal/utils"
 )
 
 // ─── Service ─────────────────────────────────────────────────────────────────
@@ -114,7 +115,7 @@ func (s *Service) calculateWithTx(
 	// 4. Compute each factor score (0–100)
 	readinessScore := s.computeReadinessScore(asgn)
 	resultsScore := computeRatioScore(float64(asgn.ResultsSubmittedCount), float64(asgn.ResultsExpectedToSubmitCount))
-	updatesScore := computeRatioScore(float64(asgn.UpdatesCount), targetUpdatesCount)
+	updatesScore := s.computeUpdatesScore(ctx, q, asgn, targetUpdatesCount)
 	attendanceScore := boolScore(asgn.ArrivedAt.Valid)
 	electionStartScore := boolScore(asgn.ElectionStartedAt.Valid)
 	electionEndScore := boolScore(asgn.ElectionEndedAt.Valid)
@@ -463,6 +464,62 @@ func (s *Service) computeReadinessScore(asgn queries.GetAssignmentForEarningsRow
 		return 0
 	}
 	return clamp(f.Float64, 0, 100)
+}
+
+// computeUpdatesScore derives the updates score (0–100) taking into account location verification:
+// - Updates within the polling unit geofence (or when PU coordinates are missing from DB) receive full weight (1.0).
+// - Updates lacking GPS or submitted outside the PU geofence (> 1,000m) receive reduced weight (0.5).
+func (s *Service) computeUpdatesScore(
+	ctx context.Context,
+	q *queries.Queries,
+	asgn queries.GetAssignmentForEarningsRow,
+	targetUpdatesCount float64,
+) float64 {
+	updates, err := q.ListAssignmentUpdatesCoordinates(ctx, asgn.ID)
+	if err != nil || len(updates) == 0 {
+		return 0
+	}
+
+	const maxDistanceMeters = 1000.0 // 1km tolerance radius for polling unit location
+	const unverifiedWeight = 0.5     // 50% payout tier for updates lacking verified coordinates
+
+	hasPuCoords := asgn.PuLatitude.Valid && asgn.PuLongitude.Valid &&
+		asgn.PuLatitude.Float64 != 0 && asgn.PuLongitude.Float64 != 0
+
+	var effectiveUpdates float64
+	for _, u := range updates {
+		hasUpdateCoords := u.Latitude.Valid && u.Longitude.Valid &&
+			u.Latitude.Float64 != 0 && u.Longitude.Float64 != 0
+
+		if !hasUpdateCoords {
+			// Coordinates missing from report -> reduced payout tier
+			effectiveUpdates += unverifiedWeight
+			continue
+		}
+
+		if !hasPuCoords {
+			// PU coordinates unavailable in DB -> benefit of doubt, full credit
+			effectiveUpdates += 1.0
+			continue
+		}
+
+		dist := utils.HaversineDistanceMeters(
+			u.Latitude.Float64,
+			u.Longitude.Float64,
+			asgn.PuLatitude.Float64,
+			asgn.PuLongitude.Float64,
+		)
+
+		if dist <= maxDistanceMeters {
+			// Verified on-site within PU geofence -> full credit
+			effectiveUpdates += 1.0
+		} else {
+			// Outside PU perimeter -> reduced payout tier
+			effectiveUpdates += unverifiedWeight
+		}
+	}
+
+	return computeRatioScore(effectiveUpdates, targetUpdatesCount)
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

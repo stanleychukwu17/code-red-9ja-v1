@@ -3,10 +3,13 @@ import { PageHeader } from "#/components/Headers";
 import { PageWrapper } from "#/components/Wrappers";
 import { useAssignments } from "#/hooks/useAssignments";
 import { useElection } from "#/hooks/useElection";
+import { useGeolocation } from "#/hooks/useGeolocation";
 import { VotingStatusSelects } from "./-components/VotingStatusSelects";
 import { VotingIssueSelects } from "./-components/VotingIssueSelects";
 import { UpdateMessageInputs } from "./-components/UpdateMessageInputs";
 import { MediaAttachmentActions, type AttachedMedia } from "./-components/MediaAttachmentActions";
+import { LocationStatusBanner } from "./-components/LocationStatusBanner";
+import { MissingLocationAlertDialog } from "./-components/MissingLocationAlertDialog";
 import {
   getActiveIssuesForPU,
   saveToOutbox,
@@ -67,27 +70,9 @@ function GiveUpdate() {
   // Submitting state
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // User geolocation coordinates
-  const [geoCoords, setGeoCoords] = useState<{ latitude?: number; longitude?: number; accuracyMeters?: number }>({});
-
-  // Request browser geolocation on mount
-  useEffect(() => {
-    if (typeof window !== "undefined" && "geolocation" in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          setGeoCoords({
-            latitude: pos.coords.latitude,
-            longitude: pos.coords.longitude,
-            accuracyMeters: pos.coords.accuracy,
-          });
-        }, () => {
-          // Gracefully continue without coordinates if user denies or GPS unavailable
-          alert("Location permission denied. Please enable location permissions to continue.")
-        },
-        { enableHighAccuracy: true, timeout: 30000, maximumAge: 600000 },
-      );
-    }
-  }, []);
+  // User device geolocation hook
+  const { geoCoords, isLocating, geoError, requestLocation } = useGeolocation();
+  const [showLocationWarningDialog, setShowLocationWarningDialog] = useState(false);
 
   // Load any existing active issues for this polling unit on mount
   useEffect(() => {
@@ -108,8 +93,8 @@ function GiveUpdate() {
   const hasIssues = isExistingIssue || isNewIssue;
   const existingIssueId = isExistingIssue ? Number(issueActionValue.replace("existing_", "")) : undefined;
 
-  // Handler for primary post update CTA using offline-first outbox pattern
-  const handlePostUpdate = async () => {
+  // Inner update submission handler using offline-first outbox pattern
+  const submitUpdate = async () => {
     if (!pollingUnitAssignment) {
       toast.error("No active polling unit assignment detected");
       return;
@@ -199,6 +184,17 @@ function GiveUpdate() {
     }
   };
 
+  // Primary post update CTA: verifies GPS status before submitting
+  const handlePostUpdate = () => {
+    // If coordinates are missing, warn the agent that unverified GPS results in reduced payment
+    if (!geoCoords.latitude || !geoCoords.longitude) {
+      setShowLocationWarningDialog(true);
+      return;
+    }
+
+    submitUpdate();
+  };
+
   return (
     <PageWrapper>
       {/* Top back navigation */}
@@ -216,6 +212,14 @@ function GiveUpdate() {
           isOnline={isOnline}
           pendingCount={pendingCount}
           onSync={triggerSync}
+        />
+
+        {/* Polling Unit Geolocation Status & Warning Banner */}
+        <LocationStatusBanner
+          geoCoords={geoCoords}
+          isLocating={isLocating}
+          geoError={geoError}
+          onRequestLocation={requestLocation}
         />
 
         {/* Title header with lime accent underline */}
@@ -263,7 +267,7 @@ function GiveUpdate() {
         />
 
         {/* Primary CTA: + Post update */}
-        <div className="pt-4">
+        <div className="pt-4 pb-16">
           <Button
             type="button"
             variant="lime"
@@ -277,6 +281,14 @@ function GiveUpdate() {
           </Button>
         </div>
       </div>
+
+      {/* Missing Location Confirmation Dialog */}
+      <MissingLocationAlertDialog
+        open={showLocationWarningDialog}
+        onOpenChange={setShowLocationWarningDialog}
+        onEnableLocation={requestLocation}
+        onConfirmSubmit={submitUpdate}
+      />
     </PageWrapper>
   );
 }

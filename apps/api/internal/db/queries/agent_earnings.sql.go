@@ -161,6 +161,8 @@ SELECT
   a.election_practice_test_readiness_percentage,
   a.potential_payment_kobo,
   cs.name AS state_name,
+  pu.latitude AS pu_latitude,
+  pu.longitude AS pu_longitude,
   eg.election_date
 FROM polling_unit_assignments a
 JOIN election_groups eg ON a.election_group_id = eg.id
@@ -186,6 +188,8 @@ type GetAssignmentForEarningsRow struct {
 	ElectionPracticeTestReadinessPercentage pgtype.Numeric     `json:"election_practice_test_readiness_percentage"`
 	PotentialPaymentKobo                    int64              `json:"potential_payment_kobo"`
 	StateName                               string             `json:"state_name"`
+	PuLatitude                              pgtype.Float8      `json:"pu_latitude"`
+	PuLongitude                             pgtype.Float8      `json:"pu_longitude"`
 	ElectionDate                            pgtype.Date        `json:"election_date"`
 }
 
@@ -208,6 +212,8 @@ func (q *Queries) GetAssignmentForEarnings(ctx context.Context, id int64) (GetAs
 		&i.ElectionPracticeTestReadinessPercentage,
 		&i.PotentialPaymentKobo,
 		&i.StateName,
+		&i.PuLatitude,
+		&i.PuLongitude,
 		&i.ElectionDate,
 	)
 	return i, err

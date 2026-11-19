@@ -7,6 +7,7 @@ import (
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/utils"
+	"free9ja/api/internal/worker"
 	"strings"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -22,20 +23,16 @@ type Service struct {
 	queries     *queries.Queries
 	pool        *pgxpool.Pool
 	rdb         *redis.Client
-	earningsSvc earningsService
+	distributor worker.TaskDistributor
 	usersSvc    usersService
 }
 
-type earningsService interface {
-	ProcessTaskEarnings(ctx context.Context, assignmentID int64, taskType string, customNarration ...string) (int64, error)
-}
-
-func NewService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client, earningsSvc earningsService, usersSvc usersService) *Service {
+func NewService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client, distributor worker.TaskDistributor, usersSvc usersService) *Service {
 	return &Service{
 		queries:     q,
 		pool:        pool,
 		rdb:         rdb,
-		earningsSvc: earningsSvc,
+		distributor: distributor,
 		usersSvc:    usersSvc,
 	}
 }
@@ -204,31 +201,35 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 		}
 	}
 
+	// Commit pure append-only writes; live counters and metrics rollups are tracked via Redis
 	if err := tx.Commit(ctx); err != nil {
 		return queries.PollingUnitUpdate{}, err
 	}
 
-	if s.earningsSvc != nil {
-		updateNarration := "Update: Given"
-		if len(input.Media) > 0 {
-			hasVideo := false
-			hasImage := false
-			for _, m := range input.Media {
-				if m.MediaType == "video" || isVideoURL(m.URL) {
-					hasVideo = true
-				} else if m.MediaType == "image" {
-					hasImage = true
-				}
-			}
-			if hasVideo {
-				updateNarration = "Update: Given (w/ video)"
-			} else if hasImage {
-				updateNarration = "Update: Given (w/ image)"
+	// Distribute task earnings for submitted update based on attached media
+	updateNarration := "Update: Given"
+	if len(input.Media) > 0 {
+		hasVideo := false
+		hasImage := false
+		for _, m := range input.Media {
+			if m.MediaType == "video" || isVideoURL(m.URL) {
+				hasVideo = true
+			} else if m.MediaType == "image" {
+				hasImage = true
 			}
 		}
-
-		go s.earningsSvc.ProcessTaskEarnings(context.Background(), input.AssignmentID, "updates", updateNarration)
+		if hasVideo {
+			updateNarration = "Update: Given (w/ video)"
+		} else if hasImage {
+			updateNarration = "Update: Given (w/ image)"
+		}
 	}
+
+	_ = s.distributor.DistributeTaskCalculateAgentEarnings(context.Background(), &worker.CalculateAgentEarningsPayload{
+		AssignmentID:    input.AssignmentID,
+		TaskType:        "updates",
+		CustomNarration: updateNarration,
+	})
 
 	return update, nil
 }

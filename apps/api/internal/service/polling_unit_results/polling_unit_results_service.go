@@ -244,9 +244,12 @@ func (s *Service) SubmitResult(ctx context.Context, input SubmitResultInput) (qu
 		return queries.PollingUnitResult{}, err
 	}
 
-	// Agent earnings processing
-	if input.AssignmentID != nil && s.earningsSvc != nil {
-		go s.earningsSvc.ProcessTaskEarnings(context.Background(), *input.AssignmentID, "results")
+	// Agent earnings processing via Redis worker queue
+	if input.AssignmentID != nil && s.distributor != nil {
+		_ = s.distributor.DistributeTaskCalculateAgentEarnings(context.Background(), &worker.CalculateAgentEarningsPayload{
+			AssignmentID: *input.AssignmentID,
+			TaskType:     "results",
+		})
 	}
 
 	// Dispatch asynchronous AI extraction task
@@ -371,8 +374,11 @@ func (s *Service) SubmitBatchResults(ctx context.Context, input SubmitBatchResul
 		return nil, err
 	}
 
-	if input.AssignmentID != nil && s.earningsSvc != nil {
-		go s.earningsSvc.ProcessTaskEarnings(context.Background(), *input.AssignmentID, "results")
+	if input.AssignmentID != nil && s.distributor != nil {
+		_ = s.distributor.DistributeTaskCalculateAgentEarnings(context.Background(), &worker.CalculateAgentEarningsPayload{
+			AssignmentID: *input.AssignmentID,
+			TaskType:     "results",
+		})
 	}
 
 	// Dispatch asynchronous AI extraction tasks for all submitted results

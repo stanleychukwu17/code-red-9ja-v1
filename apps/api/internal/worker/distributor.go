@@ -25,6 +25,8 @@ type TaskDistributor interface {
 	// Campaign group auto-enrollment and removal
 	DistributeTaskEnrollAgentInCampaignGroup(ctx context.Context, payload *EnrollAgentInCampaignGroupPayload, opts ...asynq.Option) error
 	DistributeTaskRemoveAgentFromCampaignGroup(ctx context.Context, payload *RemoveAgentFromCampaignGroupPayload, opts ...asynq.Option) error
+	// Agent milestone earnings calculation & wallet credit
+	DistributeTaskCalculateAgentEarnings(ctx context.Context, payload *CalculateAgentEarningsPayload, opts ...asynq.Option) error
 }
 
 // RedisTaskDistributor is a task distributor that uses Redis to enqueue tasks.

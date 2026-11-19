@@ -331,6 +331,47 @@ func (q *Queries) ListActivePollingUnitIssues(ctx context.Context, pollingUnitID
 	return items, nil
 }
 
+const listAssignmentUpdatesCoordinates = `-- name: ListAssignmentUpdatesCoordinates :many
+SELECT id, latitude, longitude, accuracy_meters, created_at
+FROM polling_unit_updates
+WHERE assignment_id = $1
+ORDER BY id ASC
+`
+
+type ListAssignmentUpdatesCoordinatesRow struct {
+	ID             int64              `json:"id"`
+	Latitude       pgtype.Float8      `json:"latitude"`
+	Longitude      pgtype.Float8      `json:"longitude"`
+	AccuracyMeters pgtype.Float8      `json:"accuracy_meters"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+}
+
+func (q *Queries) ListAssignmentUpdatesCoordinates(ctx context.Context, assignmentID int64) ([]ListAssignmentUpdatesCoordinatesRow, error) {
+	rows, err := q.db.Query(ctx, listAssignmentUpdatesCoordinates, assignmentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListAssignmentUpdatesCoordinatesRow
+	for rows.Next() {
+		var i ListAssignmentUpdatesCoordinatesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Latitude,
+			&i.Longitude,
+			&i.AccuracyMeters,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listMediaByUpdateIDs = `-- name: ListMediaByUpdateIDs :many
 SELECT id, update_id, file_id, media_type, url, thumbnail_url, duration_seconds, file_size_bytes, created_at
 FROM polling_unit_update_media

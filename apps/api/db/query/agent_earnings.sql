@@ -122,6 +122,8 @@ SELECT
   a.election_practice_test_readiness_percentage,
   a.potential_payment_kobo,
   cs.name AS state_name,
+  pu.latitude AS pu_latitude,
+  pu.longitude AS pu_longitude,
   eg.election_date
 FROM polling_unit_assignments a
 JOIN election_groups eg ON a.election_group_id = eg.id

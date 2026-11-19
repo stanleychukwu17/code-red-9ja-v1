@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from "react";
-import { Video, FileImage, AudioWaveform, Mic, Play, Pause, X } from "lucide-react";
+import { Video, FileImage, AudioLines, Mic, Play, Pause, X } from "lucide-react";
 import { toast } from "sonner";
 
 export type AttachedMedia = {
@@ -246,47 +246,55 @@ export function MediaAttachmentActions({
       )}
 
       {/* Four Media Action Buttons */}
-      <div className="flex items-center justify-between flex-wrap gap-3 pt-1">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 pt-1">
         {/* Upload video */}
-        <button
-          type="button"
-          onClick={() => videoInputRef.current?.click()}
-          className="flex items-center gap-2 text-sm font-semibold text-foreground hover:text-primary transition cursor-pointer"
-        >
-          <Video className="size-5 text-emerald-600 fill-emerald-600" />
-          <span>upload video</span>
-        </button>
+        <div className="w-full flex items-center justify-center">
+          <button
+            type="button"
+            onClick={() => videoInputRef.current?.click()}
+            className="flex items-center justify-center gap-2 w-full py-1.5 px-3 rounded-full text-sm font-semibold bg-muted text-foreground transition cursor-pointer text-center"
+          >
+            <Video className="size-5 text-emerald-600 fill-emerald-600 shrink-0" />
+            <span>upload video</span>
+          </button>
+        </div>
 
         {/* Upload images */}
-        <button
-          type="button"
-          onClick={() => imageInputRef.current?.click()}
-          className="flex items-center gap-2 text-sm font-semibold text-foreground hover:text-primary transition cursor-pointer"
-        >
-          <FileImage className="size-5 text-foreground" />
-          <span>upload images</span>
-        </button>
+        <div className="w-full flex items-center justify-center">
+          <button
+            type="button"
+            onClick={() => imageInputRef.current?.click()}
+            className="flex items-center justify-center gap-2 w-full py-1.5 px-3 rounded-full text-sm font-semibold bg-muted text-foreground transition cursor-pointer text-center"
+          >
+            <FileImage className="size-5 text-foreground shrink-0" />
+            <span>upload images</span>
+          </button>
+        </div>
 
         {/* Upload audio */}
-        <button
-          type="button"
-          onClick={() => audioInputRef.current?.click()}
-          className="flex items-center gap-1.5 text-sm font-semibold text-foreground hover:text-primary transition cursor-pointer"
-        >
-          <AudioWaveform className="size-5 text-foreground" />
-          <span>upload audio</span>
-        </button>
+        <div className="w-full flex items-center justify-center">
+          <button
+            type="button"
+            onClick={() => audioInputRef.current?.click()}
+            className="flex items-center justify-center gap-1.5 w-full py-1.5 px-3 rounded-full text-sm font-semibold bg-muted text-foreground transition cursor-pointer text-center"
+          >
+            <AudioLines className="size-5 text-foreground shrink-0" />
+            <span>upload audio</span>
+          </button>
+        </div>
 
         {/* Record audio via native OS recorder */}
-        <button
-          type="button"
-          onClick={() => audioRecordInputRef.current?.click()}
-          title="Record audio via phone microphone"
-          className="flex items-center gap-1.5 py-1.5 px-3 rounded-full text-sm font-semibold bg-muted hover:bg-muted/80 text-foreground transition cursor-pointer"
-        >
-          <Mic className="size-4 text-rose-500" />
-          <span>record audio</span>
-        </button>
+        <div className="w-full flex items-center justify-center">
+          <button
+            type="button"
+            onClick={() => audioRecordInputRef.current?.click()}
+            title="Record audio via phone microphone"
+            className="flex items-center justify-center gap-1.5 w-full py-1.5 px-3 rounded-full text-sm font-semibold bg-muted text-foreground transition cursor-pointer text-center"
+          >
+            <Mic className="size-4 text-rose-500 shrink-0" />
+            <span>record audio</span>
+          </button>
+        </div>
       </div>
     </div>
   );

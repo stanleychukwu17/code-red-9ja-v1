@@ -135,3 +135,9 @@ WHERE
   AND pu.id < sqlc.arg('cursor')
 ORDER BY pu.id DESC
 LIMIT sqlc.arg('limit');
+
+-- name: ListAssignmentUpdatesCoordinates :many
+SELECT id, latitude, longitude, accuracy_meters, created_at
+FROM polling_unit_updates
+WHERE assignment_id = $1
+ORDER BY id ASC;
