@@ -4,6 +4,8 @@ import { motion } from "framer-motion";
 import { AppSidebarShell, type AppSidebarItem } from "@repo/ui/components/custom/AppSidebar";
 import HomeIcon from "@repo/ui/icons/navbar/home-icon";
 import HomeSolidIcon from "@repo/ui/icons/navbar/home-solid-icon";
+import PostIcon from "@repo/ui/icons/navbar/post-icon";
+import PostSolidIcon from "@repo/ui/icons/navbar/post-solid-icon";
 import NotificationIcon from "@repo/ui/icons/navbar/notification-icon";
 import NotificationSolidIcon from "@repo/ui/icons/navbar/notification-solid-icon";
 import PaperIcon from "@repo/ui/icons/navbar/paper-icon";

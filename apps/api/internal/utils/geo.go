@@ -32,3 +32,7 @@ func IsWithinDistance(lat1, lon1, lat2, lon2, maxDistanceMeters float64) bool {
 	return HaversineDistanceMeters(lat1, lon1, lat2, lon2) <= maxDistanceMeters
 }
 
+// the formulas were adapted from here https://www.movable-type.co.uk/scripts/latlong.html
+// and this for the haversine formula https://en.wikipedia.org/wiki/Haversine_formula
+// this website has other formulas for calculating distances between two points on a sphere or ellipsoid
+// so use it wisely when you need to

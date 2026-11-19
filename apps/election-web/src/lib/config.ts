@@ -22,6 +22,7 @@ export const APP_URL = {
     forgotPassword: "/auth/forgot-password",
   },
   home: "/",
+  giveUpdate: "/give-update",
   applications: "/applications",
   team: "/team",
   campaignGroups: "/campaign-groups",
