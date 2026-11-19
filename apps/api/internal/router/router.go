@@ -589,7 +589,6 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Get("/api/v1/polling-unit-assignments", pollingUnitAssignmentsHandler.ListAssignments)
 		r.Get("/api/v1/polling-unit-assignments/my-assignment", pollingUnitAssignmentsHandler.GetMyAssignment)
 		r.Get("/api/v1/polling-unit-assignments/{id}", pollingUnitAssignmentsHandler.GetAssignment)
-		r.Patch("/api/v1/polling-unit-assignments/{id}/tracking", pollingUnitAssignmentsHandler.UpdateAssignmentTracking)
 		r.Delete("/api/v1/polling-unit-assignments/{id}", pollingUnitAssignmentsHandler.DeleteAssignment)
 
 		// supervisor assignments

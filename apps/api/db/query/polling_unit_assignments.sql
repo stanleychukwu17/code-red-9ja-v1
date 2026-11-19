@@ -130,9 +130,9 @@ ORDER BY gs.threshold;
 -- name: UpdateAssignmentTracking :one
 UPDATE polling_unit_assignments
 SET 
-  arrived_at = COALESCE($2, arrived_at),
-  election_started_at = COALESCE($3, election_started_at),
-  election_ended_at = COALESCE($4, election_ended_at),
+  arrived_at = COALESCE(arrived_at, $2),
+  election_started_at = COALESCE(election_started_at, $3),
+  election_ended_at = COALESCE(election_ended_at, $4),
   updated_at = NOW()
 WHERE id = $1
 RETURNING id, user_id, polling_unit_id, election_group_id, party_id, role_type, assigned_by, arrived_at, election_started_at, election_ended_at, created_at, updated_at;

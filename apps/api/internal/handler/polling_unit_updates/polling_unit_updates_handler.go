@@ -145,6 +145,9 @@ func (h *Handler) CreateUpdate(w http.ResponseWriter, r *http.Request) {
 		Latitude:                    req.Latitude,
 		Longitude:                   req.Longitude,
 		AccuracyMeters:              req.AccuracyMeters,
+		AssignmentArrivedAt:         assignment.ArrivedAt,
+		AssignmentElectionStartedAt: assignment.ElectionStartedAt,
+		AssignmentElectionEndedAt:   assignment.ElectionEndedAt,
 	})
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create update: "+err.Error())

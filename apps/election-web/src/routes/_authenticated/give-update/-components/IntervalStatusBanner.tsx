@@ -9,12 +9,12 @@ interface IntervalStatusBannerProps {
 }
 
 /**
- * Status banner showing the agent their current 30-minute interval coverage and daily progress (X / 20).
+ * Status banner showing the agent their current 30-minute interval coverage and daily progress (X / 18).
  */
 export function IntervalStatusBanner({
   updatesCount = 0,
   lastUpdateAt,
-  targetUpdates = 20,
+  targetUpdates = 18,
   intervalMinutes = 30,
 }: IntervalStatusBannerProps) {
   const [now, setNow] = useState<Date>(new Date());

@@ -48,8 +48,8 @@ export function UpdateScheduleConfigDialog({
         if (legacyRes.success && legacyRes.data) {
           const val = legacyRes.data?.setting?.value ?? legacyRes.data?.value;
           return {
-            target_updates_count: typeof val === "number" ? val : 20,
-            start_time: "07:00",
+            target_updates_count: typeof val === "number" ? val : 18,
+            start_time: "08:00",
             end_time: "17:00",
             interval_minutes: 30,
           };
@@ -65,8 +65,8 @@ export function UpdateScheduleConfigDialog({
     const value = settingRes?.setting?.value || settingRes?.value || settingRes;
     if (value && typeof value === "object") {
       return {
-        target_updates_count: Number(value.target_updates_count) || 20,
-        start_time: value.start_time || "07:00",
+        target_updates_count: Number(value.target_updates_count) || 18,
+        start_time: value.start_time || "08:00",
         end_time: value.end_time || "17:00",
         interval_minutes: Number(value.interval_minutes) || 30,
       };
@@ -76,8 +76,8 @@ export function UpdateScheduleConfigDialog({
 
   const form = useForm({
     defaultValues: {
-      target_updates_count: 20,
-      start_time: "07:00",
+      target_updates_count: 18,
+      start_time: "08:00",
       end_time: "17:00",
       interval_minutes: 30,
     },

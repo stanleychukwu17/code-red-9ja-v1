@@ -19,8 +19,8 @@ INSERT INTO system_settings (key, value, description)
 VALUES (
   'update_schedule_config',
   '{
-    "target_updates_count": 20,
-    "start_time": "07:00",
+    "target_updates_count": 18,
+    "start_time": "08:00",
     "end_time": "17:00",
     "interval_minutes": 30
   }'::jsonb,
@@ -94,7 +94,7 @@ ON CONFLICT (key) DO NOTHING;
 
 -- Seed post-election activity window limit (in days)
 INSERT INTO system_settings (key, value, description)
-VALUES ('post_election_activity_days_limit', '7'::jsonb, 'Number of days after election date during which election activities (updates, result uploads, start/end timestamps) remain allowed')
+VALUES ('post_election_activity_days_limit', '2'::jsonb, 'Number of days after election date during which election activities (updates, result uploads, start/end timestamps) remain allowed')
 ON CONFLICT (key) DO NOTHING;
 
 -- Seed INEC API configuration

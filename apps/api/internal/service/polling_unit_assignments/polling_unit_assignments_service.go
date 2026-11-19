@@ -8,10 +8,8 @@ import (
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/worker"
-	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -169,74 +167,4 @@ func (s *Service) GetActiveSupervisorElectionGroupID(ctx context.Context, userID
 		return 0, err
 	}
 	return egID, nil
-}
-
-// parseTimeParam converts an optional ISO 8601/RFC3339 string into a pgtype.Timestamptz.
-func parseTimeParam(timeStr *string) pgtype.Timestamptz {
-	if timeStr == nil || *timeStr == "" {
-		return pgtype.Timestamptz{Valid: false}
-	}
-	// Parse assuming ISO 8601 format
-	t, err := time.Parse(time.RFC3339, *timeStr)
-	if err != nil {
-		return pgtype.Timestamptz{Valid: false}
-	}
-	return pgtype.Timestamptz{Time: t, Valid: true}
-}
-
-// UpdateAssignmentTracking records agent progress timestamps and triggers task earnings.
-func (s *Service) UpdateAssignmentTracking(ctx context.Context, id int64, arrivedAt, electionStartedAt, electionEndedAt *string) (queries.UpdateAssignmentTrackingRow, error) {
-	// Verify assignment exists
-	assignment, err := s.queries.GetAssignmentByID(ctx, id)
-	if err != nil {
-		return queries.UpdateAssignmentTrackingRow{}, errors.New("invalid assignment")
-	}
-
-	// Verify the election group and cycle validity
-	electionGroup, err := s.queries.GetElectionGroupByID(ctx, assignment.ElectionGroupID)
-	if err != nil {
-		return queries.UpdateAssignmentTrackingRow{}, errors.New("invalid election group")
-	}
-	now := time.Now().UTC()
-	if now.Year() > electionGroup.ElectionDate.Time.Year() {
-		return queries.UpdateAssignmentTrackingRow{}, errors.New("tracking can only be submitted during the election cycle")
-	}
-
-	// Persist tracking timestamps
-	updated, err := s.queries.UpdateAssignmentTracking(ctx, queries.UpdateAssignmentTrackingParams{
-		ID:                id,
-		ArrivedAt:         parseTimeParam(arrivedAt),
-		ElectionStartedAt: parseTimeParam(electionStartedAt),
-		ElectionEndedAt:   parseTimeParam(electionEndedAt),
-	})
-	if err != nil {
-		return updated, err
-	}
-
-	// Invalidate cached assignment in Redis so subsequent reads fetch fresh tracking timestamps
-	s.InvalidateUserAssignmentCache(ctx, assignment.UserID, assignment.ElectionGroupID)
-
-	// Trigger earnings calculation & wallet credit asynchronously for each reported milestone
-	if s.distributor != nil {
-		if arrivedAt != nil && *arrivedAt != "" {
-			_ = s.distributor.DistributeTaskCalculateAgentEarnings(context.Background(), &worker.CalculateAgentEarningsPayload{
-				AssignmentID: id,
-				TaskType:     "attendance",
-			})
-		}
-		if electionStartedAt != nil && *electionStartedAt != "" {
-			_ = s.distributor.DistributeTaskCalculateAgentEarnings(context.Background(), &worker.CalculateAgentEarningsPayload{
-				AssignmentID: id,
-				TaskType:     "election_start",
-			})
-		}
-		if electionEndedAt != nil && *electionEndedAt != "" {
-			_ = s.distributor.DistributeTaskCalculateAgentEarnings(context.Background(), &worker.CalculateAgentEarningsPayload{
-				AssignmentID: id,
-				TaskType:     "election_end",
-			})
-		}
-	}
-
-	return updated, nil
 }

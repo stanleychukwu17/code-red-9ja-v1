@@ -2,7 +2,6 @@ package puassignmentshandler
 
 import (
 	"context"
-	"encoding/json"
 	"free9ja/api/internal/db/queries"
 	apimiddleware "free9ja/api/internal/middleware"
 	puupdates "free9ja/api/internal/service/polling_unit_updates"
@@ -22,7 +21,6 @@ type PollingUnitAssignmentsService interface {
 	GetActiveAssignment(ctx context.Context, userID int64) (*queries.GetUserAssignmentRow, error)
 	GetActiveSupervisorElectionGroupID(ctx context.Context, userID int64) (int32, error)
 	DeleteAssignment(ctx context.Context, id int64) error
-	UpdateAssignmentTracking(ctx context.Context, id int64, arrivedAt, electionStartedAt, electionEndedAt *string) (queries.UpdateAssignmentTrackingRow, error)
 }
 
 type SupervisorAssignmentsService interface {
@@ -397,148 +395,4 @@ func (h *Handler) DeleteAssignment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Assignment deleted successfully", nil)
-}
-
-type UpdateAssignmentTrackingRequest struct {
-	ArrivedAt         *string `json:"arrived_at"`
-	ElectionStartedAt *string `json:"election_started_at"`
-	ElectionEndedAt   *string `json:"election_ended_at"`
-}
-
-// UpdateAssignmentTracking godoc
-// @Summary      Update polling unit assignment tracking (arrival, phases)
-// @Description  Allows agents to submit verification videos and times. Users can only update their own assignments.
-// @Tags         PollingUnitAssignments
-// @Accept       json
-// @Produce      json
-// @Param        id   path      int  true  "Assignment ID"
-// @Param        request body UpdateAssignmentTrackingRequest true "Update Tracking payload"
-// @Success      200  {object} map[string]interface{} "Assignment tracking updated successfully"
-// @Failure      400  {object} map[string]interface{} "Invalid request payload"
-// @Failure      403  {object} map[string]interface{} "Permission denied"
-// @Failure      404  {object} map[string]interface{} "Assignment not found"
-// @Failure      500  {object} map[string]interface{} "Internal server error"
-// @Security     BearerAuth
-// @Router       /polling-unit-assignments/{id}/tracking [patch]
-func (h *Handler) UpdateAssignmentTracking(w http.ResponseWriter, r *http.Request) {
-	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
-	if !ok {
-		return
-	}
-
-	requester, err := h.usersService.GetUserByFakeID(r.Context(), claims.FakeID)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusUnauthorized, "User not found")
-		return
-	}
-
-	idStr := chi.URLParam(r, "id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid assignment ID")
-		return
-	}
-
-	var req UpdateAssignmentTrackingRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
-		return
-	}
-
-	assignment, err := h.service.GetAssignmentByID(r.Context(), id)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusNotFound, "Assignment not found")
-		return
-	}
-
-	// Enforce that only the assigned user can update tracking
-	if assignment.UserID != requester.ID {
-		h.utils.RespondError(w, http.StatusForbidden, "You can only update your own assignments")
-		return
-	}
-
-	updated, err := h.service.UpdateAssignmentTracking(r.Context(), id, req.ArrivedAt, req.ElectionStartedAt, req.ElectionEndedAt)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update tracking: "+err.Error())
-		return
-	}
-
-	partyID := int16(assignment.PartyID)
-
-	var pu queries.PollingUnit
-	if h.puService != nil && ((req.ArrivedAt != nil && !assignment.ArrivedAt.Valid) ||
-		(req.ElectionStartedAt != nil && !assignment.ElectionStartedAt.Valid) ||
-		(req.ElectionEndedAt != nil && !assignment.ElectionEndedAt.Valid)) {
-		pu, _ = h.puService.GetPollingUnitByID(r.Context(), assignment.PollingUnitID)
-	}
-
-	if req.ArrivedAt != nil && !assignment.ArrivedAt.Valid {
-		statusCat := int16(1)
-		_, _ = h.pollingUnitUpdatesService.CreateUpdate(r.Context(), puupdates.CreateUpdateInput{
-			UserID:                      claims.FakeID,
-			PollingUnitID:               assignment.PollingUnitID,
-			ElectionGroupID:             assignment.ElectionGroupID,
-			AssignmentID:                assignment.ID,
-			PartyID:                     &partyID,
-			StateID:                     pu.StateID,
-			LgaID:                       pu.LgaID,
-			WardID:                      pu.WardID,
-			SenatorialDistrictID:        pu.SenatorialDistrictID,
-			FederalConstituencyID:       pu.FederalConstituencyID,
-			StateAssemblyConstituencyID: pu.StateConstituencyID,
-			StatusCategoryID:            &statusCat,
-			Message:                     "I just arrived at my polling unit.",
-		})
-	}
-
-	if req.ElectionStartedAt != nil && !assignment.ElectionStartedAt.Valid {
-		statusCat := int16(3)
-		_, _ = h.pollingUnitUpdatesService.CreateUpdate(r.Context(), puupdates.CreateUpdateInput{
-			UserID:                      claims.FakeID,
-			PollingUnitID:               assignment.PollingUnitID,
-			ElectionGroupID:             assignment.ElectionGroupID,
-			AssignmentID:                assignment.ID,
-			PartyID:                     &partyID,
-			StateID:                     pu.StateID,
-			LgaID:                       pu.LgaID,
-			WardID:                      pu.WardID,
-			SenatorialDistrictID:        pu.SenatorialDistrictID,
-			FederalConstituencyID:       pu.FederalConstituencyID,
-			StateAssemblyConstituencyID: pu.StateConstituencyID,
-			StatusCategoryID:            &statusCat,
-			Message:                     "The election at my polling unit has started.",
-		})
-	}
-
-	if req.ElectionEndedAt != nil && !assignment.ElectionEndedAt.Valid {
-		statusCat := int16(6)
-		_, _ = h.pollingUnitUpdatesService.CreateUpdate(r.Context(), puupdates.CreateUpdateInput{
-			UserID:                      claims.FakeID,
-			PollingUnitID:               assignment.PollingUnitID,
-			ElectionGroupID:             assignment.ElectionGroupID,
-			AssignmentID:                assignment.ID,
-			PartyID:                     &partyID,
-			StateID:                     pu.StateID,
-			LgaID:                       pu.LgaID,
-			WardID:                      pu.WardID,
-			SenatorialDistrictID:        pu.SenatorialDistrictID,
-			FederalConstituencyID:       pu.FederalConstituencyID,
-			StateAssemblyConstituencyID: pu.StateConstituencyID,
-			StatusCategoryID:            &statusCat,
-			Message:                     "The election at my polling unit has ended.",
-		})
-	}
-
-	// Trigger earnings recalculation in the background for the tracking events
-	if h.earningsService != nil {
-		earningsSvc := h.earningsService
-		assignmentID := assignment.ID
-		go func() {
-			_, _ = earningsSvc.Calculate(context.Background(), assignmentID)
-		}()
-	}
-
-	h.utils.RespondSuccess(w, http.StatusOK, "Assignment tracking updated successfully", map[string]interface{}{
-		"assignment": updated,
-	})
 }

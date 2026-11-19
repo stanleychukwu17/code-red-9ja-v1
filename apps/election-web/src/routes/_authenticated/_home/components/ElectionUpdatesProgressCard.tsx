@@ -19,14 +19,14 @@ interface ElectionUpdatesProgressCardProps {
  * Election Updates Progress Card.
  *
  * Displays:
- * 1. Progress Indicator: "Election Updates: X / 20" with a visual progress bar and percentage earned.
+ * 1. Progress Indicator: "Election Updates: X / 18" with a visual progress bar and percentage earned.
  * 2. Interval Status Badge:
  *    - Ready (Green): "Post your HH:MM–HH:MM update"
  *    - Recorded (Grey): "Interval covered. Next window opens at HH:MM (in Xm)"
  */
 export function ElectionUpdatesProgressCard({
   assignment,
-  targetUpdates = 20,
+  targetUpdates = 18,
   intervalMinutes = 30,
   onPostUpdateClick,
 }: ElectionUpdatesProgressCardProps) {

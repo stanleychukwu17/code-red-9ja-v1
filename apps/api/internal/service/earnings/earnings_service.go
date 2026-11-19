@@ -79,10 +79,12 @@ func (s *Service) GetEarningsAllocation(ctx context.Context, roleType string) (E
 	normRole := strings.ReplaceAll(strings.ToLower(roleType), " ", "_")
 	cacheKey := fmt.Sprintf("%s%s", db.RedisEarningsAllocation, normRole)
 
+	// Check Redis cache first
 	if alloc, ok := utils.GetCachedJSON[EarningsAllocation](ctx, s.rdb, cacheKey); ok && (alloc.Readiness > 0 || alloc.Results > 0 || alloc.Updates > 0 || alloc.Attendance > 0 || alloc.ElectionStart > 0 || alloc.ElectionEnd > 0) {
 		return alloc, nil
 	}
 
+	// Fetch from system_settings with fallback to legacy supervisor keys and polling_agent default
 	allocationKey := fmt.Sprintf("earnings_allocation_%s", normRole)
 	allocationSetting, err := s.q.GetSystemSetting(ctx, allocationKey)
 	if err != nil {
@@ -98,6 +100,7 @@ func (s *Service) GetEarningsAllocation(ctx context.Context, roleType string) (E
 		}
 	}
 
+	// Parse configuration JSON
 	var alloc EarningsAllocation
 	if len(allocationSetting.Value) > 0 {
 		if err := json.Unmarshal(allocationSetting.Value, &alloc); err != nil {
@@ -105,6 +108,7 @@ func (s *Service) GetEarningsAllocation(ctx context.Context, roleType string) (E
 		}
 	}
 
+	// Cache resolved allocation in Redis for 1 day
 	_ = utils.SetCachedJSON(ctx, s.rdb, cacheKey, alloc, db.RedisOneDayTTL)
 	return alloc, nil
 }
@@ -121,7 +125,7 @@ func (s *Service) calculateWithTx(ctx context.Context, q *queries.Queries, asgn 
 	}
 
 	// 2. Fetch update_schedule_config (or legacy target_updates_count)
-	var targetUpdatesCount float64 = 20
+	var targetUpdatesCount float64 = 18
 	var intervalMinutes int = 30
 	if scheduleSetting, err := q.GetSystemSetting(ctx, "update_schedule_config"); err == nil {
 		var cfg struct {
@@ -353,19 +357,17 @@ type ProcessTaskEarningsParams struct {
 // credits any positive delta for that specific task to the user's wallet, and creates
 // a wallet transaction log. It is safe to call asynchronously or synchronously after task actions.
 func (s *Service) ProcessTaskEarnings(ctx context.Context, params ProcessTaskEarningsParams) (int64, error) {
-	if s.pool == nil {
-		slog.Warn("earnings: pool is nil, skipping task earnings processing", "taskType", params.TaskType)
-		return 0, nil
-	}
-
+	// Begin atomic transaction for earnings recalculation and wallet payout
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("earnings: failed to begin transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
 
+	// starts transaction
 	qtx := s.q.WithTx(tx)
 
+	// Fetch assignment snapshot including polling unit geo-coordinates
 	asgn, err := qtx.GetAssignmentForEarnings(ctx, params.AssignmentID)
 	if err != nil {
 		return 0, fmt.Errorf("earnings: failed to get assignment: %w", err)
@@ -1168,8 +1170,8 @@ func (s *Service) CalculatePotentialPayout(ctx context.Context, assignmentID int
 		}, nil
 
 	case "updates":
-		var targetUpdates float64 = 20
-		startTimeStr := "07:00"
+		var targetUpdates float64 = 18
+		startTimeStr := "08:00"
 		endTimeStr := "17:00"
 		intervalMinutes := 30
 
@@ -1340,7 +1342,7 @@ func (s *Service) EstimatePotentialPayout(
 		payout = int64(float64(basePaymentKobo) * (allocation.ElectionEnd / 100.0))
 
 	case "updates":
-		var targetUpdates float64 = 20
+		var targetUpdates float64 = 18
 		if schedSetting, err := s.q.GetSystemSetting(ctx, "update_schedule_config"); err == nil {
 			var cfg struct {
 				TargetUpdatesCount float64 `json:"target_updates_count"`

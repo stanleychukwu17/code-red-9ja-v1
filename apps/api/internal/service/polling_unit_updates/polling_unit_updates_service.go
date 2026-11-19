@@ -49,29 +49,32 @@ type MediaItem struct {
 }
 
 type CreateUpdateInput struct {
-	UserID                      int64       `json:"user_id"`
-	AssignmentID                int64       `json:"assignment_id"`
-	PollingUnitID               int32       `json:"polling_unit_id"`
-	ElectionGroupID             int32       `json:"election_group_id"`
-	PartyID                     *int16      `json:"party_id,omitempty"`
-	StateID                     int32       `json:"state_id,omitempty"`
-	LgaID                       int32       `json:"lga_id,omitempty"`
-	WardID                      int32       `json:"ward_id,omitempty"`
-	SenatorialDistrictID        pgtype.Int4 `json:"senatorial_district_id,omitempty"`
-	FederalConstituencyID       pgtype.Int4 `json:"federal_constituency_id,omitempty"`
-	StateAssemblyConstituencyID pgtype.Int4 `json:"state_assembly_constituency_id,omitempty"`
-	StatusCategoryID            *int16      `json:"status_category_id,omitempty"`
-	StatusOptionID              *int16      `json:"status_option_id,omitempty"`
-	HasIssues                   bool        `json:"has_issues"`
-	IssueAction                 string      `json:"issue_action,omitempty"`
-	ExistingIssueIDs            []int64     `json:"existing_issue_ids,omitempty"`
-	NewIssueOptionIDs           []int16     `json:"new_issue_option_ids,omitempty"`
-	Title                       *string     `json:"title,omitempty"`
-	Message                     string      `json:"message"`
-	Media                       []MediaItem `json:"media,omitempty"`
-	Latitude                    *float64    `json:"latitude,omitempty"`
-	Longitude                   *float64    `json:"longitude,omitempty"`
-	AccuracyMeters              *float64    `json:"accuracy_meters,omitempty"`
+	UserID                      int64              `json:"user_id"`
+	AssignmentID                int64              `json:"assignment_id"`
+	PollingUnitID               int32              `json:"polling_unit_id"`
+	ElectionGroupID             int32              `json:"election_group_id"`
+	PartyID                     *int16             `json:"party_id,omitempty"`
+	StateID                     int32              `json:"state_id,omitempty"`
+	LgaID                       int32              `json:"lga_id,omitempty"`
+	WardID                      int32              `json:"ward_id,omitempty"`
+	SenatorialDistrictID        pgtype.Int4        `json:"senatorial_district_id,omitempty"`
+	FederalConstituencyID       pgtype.Int4        `json:"federal_constituency_id,omitempty"`
+	StateAssemblyConstituencyID pgtype.Int4        `json:"state_assembly_constituency_id,omitempty"`
+	StatusCategoryID            *int16             `json:"status_category_id,omitempty"`
+	StatusOptionID              *int16             `json:"status_option_id,omitempty"`
+	HasIssues                   bool               `json:"has_issues"`
+	IssueAction                 string             `json:"issue_action,omitempty"`
+	ExistingIssueIDs            []int64            `json:"existing_issue_ids,omitempty"`
+	NewIssueOptionIDs           []int16            `json:"new_issue_option_ids,omitempty"`
+	Title                       *string            `json:"title,omitempty"`
+	Message                     string             `json:"message"`
+	Media                       []MediaItem        `json:"media,omitempty"`
+	Latitude                    *float64           `json:"latitude,omitempty"`
+	Longitude                   *float64           `json:"longitude,omitempty"`
+	AccuracyMeters              *float64           `json:"accuracy_meters,omitempty"`
+	AssignmentArrivedAt         pgtype.Timestamptz `json:"assignment_arrived_at,omitempty"`
+	AssignmentElectionStartedAt pgtype.Timestamptz `json:"assignment_election_started_at,omitempty"`
+	AssignmentElectionEndedAt   pgtype.Timestamptz `json:"assignment_election_ended_at,omitempty"`
 }
 
 func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (queries.PollingUnitUpdate, error) {
@@ -83,6 +86,10 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 
 	if input.StateID == 0 {
 		return queries.PollingUnitUpdate{}, errors.New("missing resolved location details for polling unit")
+	}
+
+	if input.StatusCategoryID == nil || *input.StatusCategoryID <= 0 {
+		return queries.PollingUnitUpdate{}, errors.New("status_category_id is required")
 	}
 
 	// Pre-resolve and validate issue options via Redis cache (1 year TTL) before beginning transaction
@@ -219,19 +226,23 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 	var milestoneTaskType string  // Target task key for async earnings calculation ("attendance", "election_start", "election_end")
 	shouldUpdateTracking := false // Flips to true only when status matches an official milestone (arrival, start, end)
 
-	if input.StatusCategoryID != nil {
-		switch *input.StatusCategoryID {
-		case 1: // Just Arrived -> Attendance milestone
+	switch *input.StatusCategoryID {
+	case 1: // Just Arrived -> Attendance milestone (only if not already recorded)
+		if !input.AssignmentArrivedAt.Valid {
 			milestoneTaskType = "attendance"
 			trackingParams.ArrivedAt = nowPg
 			shouldUpdateTracking = true
+		}
 
-		case 3: // Active -> Election started milestone
+	case 3: // Active -> Election started milestone (only if not already recorded)
+		if !input.AssignmentElectionStartedAt.Valid {
 			milestoneTaskType = "election_start"
 			trackingParams.ElectionStartedAt = nowPg
 			shouldUpdateTracking = true
+		}
 
-		case 6: // Concluded -> Election ended milestone
+	case 6: // Concluded -> Election ended milestone (only if not already recorded)
+		if !input.AssignmentElectionEndedAt.Valid {
 			milestoneTaskType = "election_end"
 			trackingParams.ElectionEndedAt = nowPg
 			shouldUpdateTracking = true
@@ -240,16 +251,9 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 
 	if shouldUpdateTracking {
 		if _, tErr := s.queries.UpdateAssignmentTracking(ctx, trackingParams); tErr != nil {
-			slog.Warn("failed to update assignment tracking for status milestone",
-				"assignmentID", input.AssignmentID,
-				"statusCategoryID", input.StatusCategoryID,
-				"err", tErr,
-			)
-		} else if s.rdb != nil {
-			_ = s.rdb.Del(ctx,
-				fmt.Sprintf("%s%d:eg:%d", db.RedisUserPollingUnitAssignment, user.ID, input.ElectionGroupID),
-				fmt.Sprintf("%s%d", db.RedisUserHasActiveAssignment, user.ID),
-			).Err()
+			slog.Warn("failed to update assignment tracking for status milestone", "assignmentID", input.AssignmentID, "statusCategoryID", input.StatusCategoryID, "err", tErr)
+		} else {
+			_ = s.rdb.Del(ctx, fmt.Sprintf("%s%d:eg:%d", db.RedisUserPollingUnitAssignment, user.ID, input.ElectionGroupID)).Err()
 		}
 
 		// Trigger milestone earnings calculation asynchronously
@@ -257,13 +261,13 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 			AssignmentID: input.AssignmentID,
 			TaskType:     milestoneTaskType,
 		})
+	} else {
+		// Routine periodic update: trigger 30-minute interval update earnings asynchronously
+		_ = s.distributor.DistributeTaskCalculateAgentEarnings(context.Background(), &worker.CalculateAgentEarningsPayload{
+			AssignmentID: input.AssignmentID,
+			TaskType:     "updates",
+		})
 	}
-
-	// Always trigger updates task earnings calculation asynchronously
-	_ = s.distributor.DistributeTaskCalculateAgentEarnings(context.Background(), &worker.CalculateAgentEarningsPayload{
-		AssignmentID: input.AssignmentID,
-		TaskType:     "updates",
-	})
 
 	return update, nil
 }
@@ -295,10 +299,12 @@ func (s *Service) GetIssueOptionByID(ctx context.Context, id int16) (queries.Get
 func isVideoURL(url string) bool {
 	exts := []string{".mp4", ".mov", ".avi", ".webm", ".mkv", ".m4v"}
 	lower := strings.ToLower(url)
+
 	for _, ext := range exts {
 		if strings.HasSuffix(lower, ext) || strings.Contains(lower, "/video/upload/") {
 			return true
 		}
 	}
+
 	return false
 }
