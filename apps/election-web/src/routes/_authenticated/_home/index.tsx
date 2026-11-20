@@ -2,6 +2,7 @@ import { useElection } from "#/hooks/useElection";
 import { useAssignments } from "#/hooks/useAssignments";
 import { useElectionRealtime } from "@repo/ui/hooks/useElectionRealtime";
 import { createFileRoute } from "@tanstack/react-router";
+import { AssignmentRoleCard } from "./components/AssignmentRoleCard";
 import { HomeHeader } from "./components/HomeHeader";
 import { GeneralPage } from "./page-components/GeneralPage";
 import { LGAElectionSupervisorPage } from "./page-components/LGAElectionSupervisorPage";
