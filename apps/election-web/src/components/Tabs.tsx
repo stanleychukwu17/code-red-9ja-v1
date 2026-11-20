@@ -48,8 +48,8 @@ export function Tabs({ tabs, activeTab, onTabChange, className }: TabsProps) {
 }
 
 interface HomeTabsProps {
-  activeTab: "Earnings" | "Contact" | "Uploads";
-  onTabChange: (tab: "Earnings" | "Contact" | "Uploads") => void;
+  activeTab: "Earnings" | "Uploads";
+  onTabChange: (tab: "Earnings" | "Uploads") => void;
 }
 
 export function HomeTabs({ activeTab, onTabChange }: HomeTabsProps) {
@@ -60,30 +60,7 @@ export function HomeTabs({ activeTab, onTabChange }: HomeTabsProps) {
       onTabChange={onTabChange as any}
       tabs={[
         { label: "Earnings", value: "Earnings" },
-        { label: "Contact", value: "Contact" },
         { label: "Uploads", value: "Uploads" },
-      ]}
-    />
-  );
-}
-
-interface SupervisorTabsProps {
-  activeTab: "Earnings" | "Tasks";
-  onTabChange: (tab: "Earnings" | "Tasks") => void;
-}
-
-export function SupervisorTabs({
-  activeTab,
-  onTabChange,
-}: SupervisorTabsProps) {
-  return (
-    <Tabs
-      className="mt-4"
-      activeTab={activeTab}
-      onTabChange={onTabChange as any}
-      tabs={[
-        { label: "Earnings", value: "Earnings" },
-        { label: "Tasks", value: "Tasks" },
       ]}
     />
   );

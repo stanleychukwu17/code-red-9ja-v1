@@ -8,7 +8,6 @@ import { Carousel, CarouselContent, CarouselDot, CarouselDotContent, CarouselIte
 import ReportIcon from "@repo/ui/icons/report-icon";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { SupervisorTabs } from "../../../../components/Tabs";
 import { ReferralCard } from "../components/ReferralCard";
 import { EarningsTab } from "../components/EarningsTab";
 import { GiveUpdateFloatingButton } from "../components/GiveUpdateFloatingButton";
@@ -16,7 +15,6 @@ import { HomeHeader, HomeHeader2 } from "../components/HomeHeader";
 import { PracticeTestCard } from "../components/PracticeTestCard";
 import { HomeBody } from "../components/Shared";
 import { SupervisorStartDutyCard } from "../components/SupervisorReadyCard";
-import { LgaSupervisorTasksTab } from "../components/SupervisorTasksTab";
 import { Layout } from "@repo/ui/components/custom/AdminLayouts";
 
 /**
@@ -37,8 +35,6 @@ export function LGAElectionSupervisorPage() {
 
   const currentAssignment = supervisorAssignment?.data;
 
-  // Active supervisor tab (Earnings vs Ward supervisor task tracker)
-  const [activeTab, setActiveTab] = useState<"Earnings" | "Tasks">("Earnings");
   const [isArrivalDrawerOpen, setIsArrivalDrawerOpen] = useState(false);
   const [showNoInfo, setShowNoInfo] = useState(false);
   const [carouselIndex, setCarouselIndex] = useState(0);
@@ -255,13 +251,8 @@ export function LGAElectionSupervisorPage() {
         <ReferralCard onClick={() => navigate({ to: "/referrals" })} />
         {daysLeft !== undefined && daysLeft !== 0 && <PracticeTestCard />}
 
-        {/* Supervisor Tabs: Earnings vs LGA supervisor task tracker */}
-        <SupervisorTabs activeTab={activeTab} onTabChange={setActiveTab} />
-
-        {activeTab === "Earnings" && <EarningsTab />}
-        {activeTab === "Tasks" && (
-          <LgaSupervisorTasksTab isElectionDay={daysLeft === 0} />
-        )}
+        {/* Earnings */}
+        <EarningsTab />
 
         {/* Emergency incident report FAB */}
         {daysLeft === 0 && (

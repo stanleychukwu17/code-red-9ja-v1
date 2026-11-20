@@ -40,10 +40,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { useEffect, useState } from "react";
 import { useLocalStorage } from "usehooks-ts";
-import { HomeTabs } from "../../../../components/Tabs";
 import { ArrivalCard } from "../../_home/components/ArrivalCard";
 import { ArrivalDrawer } from "../../_home/components/ArrivalDrawer";
-import { ContactPartyTab } from "../../_home/components/ContactPartyTab";
 import { EarningsTab } from "../../_home/components/EarningsTab";
 import { ElectionStatusCard } from "../../_home/components/ElectionStatusCard";
 import { GiveUpdateFloatingButton } from "../../_home/components/GiveUpdateFloatingButton";
@@ -52,7 +50,6 @@ import { ReferralCard } from "../../_home/components/ReferralCard";
 import { RequestPayoutCard } from "../../_home/components/RequestPayoutCard";
 import { HomeBody } from "../../_home/components/Shared";
 import { UploadResultCard } from "../../_home/components/UploadResultCard";
-import { UploadsTab } from "../../_home/components/UploadsTab";
 import { TaskType, pollingAgentTest } from "./tasks-data";
 import { showFeedbackToast } from "./utils";
 import {
@@ -1349,9 +1346,6 @@ export function DashboardPage({
   const navigate = useNavigate();
   const { selectedElectionGroup, daysLeft, diffDays } = useElection();
 
-  const [activeTab, setActiveTab] = useState<
-    "Earnings" | "Contact" | "Uploads"
-  >("Earnings");
   const [isArrivalDrawerOpen, setIsArrivalDrawerOpen] = useState(false);
   const [showNoInfo, setShowNoInfo] = useState(false);
   const [carouselIndex, setCarouselIndex] = useState(0);
@@ -1608,15 +1602,8 @@ export function DashboardPage({
           />
         )}
 
-        {/* Informational home tabs (Earnings, Contact, Uploads) */}
-        <HomeTabs
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-        />
-
-        {activeTab === "Earnings" && <EarningsTab />}
-        {activeTab === "Contact" && <ContactPartyTab />}
-        {activeTab === "Uploads" && <UploadsTab />}
+        {/* Duty earnings summary */}
+        <EarningsTab />
       </HomeBody>
 
       {/* Arrival confirmation drawer */}

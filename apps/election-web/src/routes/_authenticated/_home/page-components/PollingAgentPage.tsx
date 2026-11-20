@@ -2,23 +2,20 @@ import { useElection } from "#/hooks/useElection";
 import { useAssignments } from "#/hooks/useAssignments";
 import { Button } from "@repo/ui/components/button";
 import { ObjectiveCardWrapper, ObjectiveTile } from "@repo/ui/components/cards/objective-tile";
-import { Carousel, CarouselContent, CarouselDot, CarouselDotContent, CarouselItem, type CarouselApi } from "@repo/ui/components/carousel";
+import { Carousel, CarouselContent, CarouselItem } from "@repo/ui/components/carousel";
 import ReportIcon from "@repo/ui/icons/report-icon";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { HomeTabs } from "../../../../components/Tabs";
 import { ReferralCard } from "../components/ReferralCard";
 import { ArrivalCard } from "../components/ArrivalCard";
 import { ArrivalDrawer } from "../components/ArrivalDrawer";
-import { ContactPartyTab } from "../components/ContactPartyTab";
 import { EarningsTab } from "../components/EarningsTab";
 import { ElectionStatusCard } from "../components/ElectionStatusCard";
 import { HomeHeader, HomeHeader2 } from "../components/HomeHeader";
 import { PracticeTestCard } from "../components/PracticeTestCard";
 import { RequestPayoutCard } from "../components/RequestPayoutCard";
 import { UploadResultCard } from "../components/UploadResultCard";
-import { UploadsTab } from "../components/UploadsTab";
 import { GiveUpdateFloatingButton } from "../components/GiveUpdateFloatingButton";
 import { ElectionUpdatesProgressCard } from "../components/ElectionUpdatesProgressCard";
 import { HomeBody } from "../components/Shared";
@@ -89,28 +86,8 @@ export function PollingAgentPage() {
   const isAfter2PM = currentHour >= 14 || BYPASS_TIME_CONSTRAINTS;
   const isAfter4PM = currentHour >= 16 || BYPASS_TIME_CONSTRAINTS;
 
-  // Active dashboard bottom tab
-  const [activeTab, setActiveTab] = useState<
-    "Earnings" | "Contact" | "Uploads"
-  >("Earnings");
   const [isArrivalDrawerOpen, setIsArrivalDrawerOpen] = useState(false);
   const [showNoInfo, setShowNoInfo] = useState(false);
-  const [carouselIndex, setCarouselIndex] = useState(0);
-  const [carouselApi, setCarouselApi] = useState<CarouselApi>();
-
-  // Synchronize carousel slide index with active dot and title
-  useEffect(() => {
-    if (!carouselApi) return;
-    setCarouselIndex(carouselApi.selectedScrollSnap());
-    carouselApi.on("select", () => {
-      setCarouselIndex(carouselApi.selectedScrollSnap());
-    });
-  }, [carouselApi]);
-
-  // Determine carousel view visibility (Objectives vs Readiness drills)
-  const showObjectives = diffDays === undefined || diffDays <= 0;
-  const showReadiness = diffDays === undefined || diffDays !== 0;
-
   // Checklist of core polling agent duties on election day
   const objectives = [
     {
@@ -138,126 +115,56 @@ export function PollingAgentPage() {
     },
   ];
 
-  // Pre-election readiness milestone training modules
-  const readiness = [
-    {
-      title: "Take election day practice test 1",
-      rightText: "Jul 20",
-      isCompleted: true,
-    },
-    {
-      title: "Take election day practice test 2",
-      rightText: "Jul 27",
-      isCompleted: false,
-    },
-    {
-      title: "Take election day practice test 3",
-      rightText: "Aug 2",
-      isCompleted: false,
-    },
-  ];
-
-  // Derive carousel title and completion percentage
-  let headerTitle = "";
-  let headerRightText = "";
-  const carouselItems: { title: string; rightText: string }[] = [];
-
-  if (showObjectives) {
-    const completed = objectives.filter((o) => o.isCompleted).length;
-    carouselItems.push({
-      title: "Objectives",
-      rightText: `${Math.round((completed / Math.max(objectives.length, 1)) * 100)}%`,
-    });
-  }
-  if (showReadiness) {
-    const completed = readiness.filter((r) => r.isCompleted).length;
-    carouselItems.push({
-      title: "Readiness",
-      rightText: `${Math.round((completed / Math.max(readiness.length, 1)) * 100)}%`,
-    });
-  }
-
-  if (carouselItems[carouselIndex]) {
-    headerTitle = carouselItems[carouselIndex].title;
-    headerRightText = carouselItems[carouselIndex].rightText;
-  }
+  // Derive header title and completion percentage
+  const completed = objectives.filter((o) => o.isCompleted).length;
+  const headerTitle = "Objectives";
+  const headerRightText = `${Math.round((completed / Math.max(objectives.length, 1)) * 100)}%`;
 
   return (
     <Layout>
       <HomeHeader daysLeft={daysLeft} />
       <HomeHeader2 title={headerTitle} rightText={headerRightText} />
 
-      {/* Primary Carousel: Objectives and Readiness Drills */}
-      <Carousel setApi={setCarouselApi} className="w-full">
+      {/* Primary Checklist: Objectives */}
+      <Carousel className="w-full">
         <CarouselContent>
-          {showObjectives && (
-            <CarouselItem>
-              <ObjectiveCardWrapper className="mx-2.5">
-                {objectives.map((item) => (
-                  <ObjectiveTile
-                    key={item.title}
-                    isCompleted={item.isCompleted}
-                    title={item.title}
+          <CarouselItem>
+            <ObjectiveCardWrapper className="mx-2.5">
+              {objectives.map((item) => (
+                <ObjectiveTile
+                  key={item.title}
+                  isCompleted={item.isCompleted}
+                  title={item.title}
+                  onClick={() =>
+                    navigate({
+                      to: "/give-update",
+                      search: { isReport: true },
+                    })
+                  }
+                />
+              ))}
+              {diffDays === 0 && (
+                <div className="mb-2 mt-2 px-4">
+                  <Button
+                    type="button"
+                    size="extra-large"
                     onClick={() =>
                       navigate({
                         to: "/give-update",
                         search: { isReport: true },
                       })
                     }
-                  />
-                ))}
-                {diffDays === 0 && (
-                  <div className="mb-2 mt-2 px-4">
-                    <Button
-                      type="button"
-                      size="extra-large"
-                      onClick={() =>
-                        navigate({
-                          to: "/give-update",
-                          search: { isReport: true },
-                        })
-                      }
-                      className="w-full bg-[#2D2D2D] hover:bg-[#3D3D3D] active:bg-[#202020] text-white rounded-12"
-                    >
-                      <ReportIcon className="w-5 h-5 shrink-0" />
-                      Report
-                    </Button>
-                  </div>
-                )}
-              </ObjectiveCardWrapper>
-            </CarouselItem>
-          )}
-          {showReadiness && (
-            <CarouselItem>
-              <ObjectiveCardWrapper className="mx-2.5">
-                {readiness.map((item) => (
-                  <ObjectiveTile
-                    key={item.title}
-                    isCompleted={item.isCompleted}
-                    title={item.title}
-                    rightText={item.rightText}
-                    onClick={() =>
-                      navigate({
-                        to: "/give-update",
-                        search: { isReport: true },
-                      })
-                    }
-                  />
-                ))}
-              </ObjectiveCardWrapper>
-            </CarouselItem>
-          )}
+                    className="w-full bg-[#2D2D2D] hover:bg-[#3D3D3D] active:bg-[#202020] text-white rounded-12"
+                  >
+                    <ReportIcon className="w-5 h-5 shrink-0" />
+                    Report
+                  </Button>
+                </div>
+              )}
+            </ObjectiveCardWrapper>
+          </CarouselItem>
         </CarouselContent>
       </Carousel>
-
-      {/* Pagination indicators for carousel slides */}
-      <CarouselDotContent>
-        {Array.from({
-          length: (showObjectives ? 1 : 0) + (showReadiness ? 1 : 0),
-        }).map((_, i) => (
-          <CarouselDot key={i} active={carouselIndex === i} />
-        ))}
-      </CarouselDotContent>
 
       {/* Main Action Flow Body */}
       <HomeBody>
@@ -274,8 +181,7 @@ export function PollingAgentPage() {
           )}
 
         {/* Stage 2-4: Start Election, Upload Results, and End Election Workflow */}
-        {currentPollingUnitAssignment &&
-          currentPollingUnitAssignment.arrived_at &&
+        {currentPollingUnitAssignment && currentPollingUnitAssignment.arrived_at &&
           !currentPollingUnitAssignment.election_ended_at && (
             <>
               {/* Show Start Election card if election hasn't started */}
@@ -350,13 +256,8 @@ export function PollingAgentPage() {
         <ReferralCard onClick={() => navigate({ to: "/referrals" })} />
         {daysLeft !== undefined && daysLeft !== 0 && <PracticeTestCard />}
 
-        {/* Bottom tab switcher */}
-        <HomeTabs activeTab={activeTab} onTabChange={setActiveTab} />
-
-        {/* Tab panels */}
-        {activeTab === "Earnings" && <EarningsTab />}
-        {activeTab === "Contact" && <ContactPartyTab />}
-        {activeTab === "Uploads" && <UploadsTab />}
+        {/* Duty earnings summary */}
+        <EarningsTab />
       </HomeBody>
 
       {/* Arrival check-in drawer */}

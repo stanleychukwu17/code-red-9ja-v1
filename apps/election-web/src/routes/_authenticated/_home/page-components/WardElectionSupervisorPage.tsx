@@ -10,14 +10,11 @@ import {
 import {
   Carousel,
   CarouselContent,
-  CarouselDot,
-  CarouselDotContent,
   CarouselItem,
-  type CarouselApi,
 } from "@repo/ui/components/carousel";
 import ReportIcon from "@repo/ui/icons/report-icon";
 import { useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { SupervisorTabs } from "../../../../components/Tabs";
 import { ReferralCard } from "../components/ReferralCard";
 import { EarningsTab } from "../components/EarningsTab";
@@ -51,17 +48,6 @@ export function WardElectionSupervisorPage() {
   const [activeTab, setActiveTab] = useState<"Earnings" | "Tasks">("Earnings");
   const [isArrivalDrawerOpen, setIsArrivalDrawerOpen] = useState(false);
   const [showNoInfo, setShowNoInfo] = useState(false);
-  const [carouselIndex, setCarouselIndex] = useState(0);
-  const [carouselApi, setCarouselApi] = useState<CarouselApi>();
-
-  // Synchronize carousel slide index with active dot and title
-  useEffect(() => {
-    if (!carouselApi) return;
-    setCarouselIndex(carouselApi.selectedScrollSnap());
-    carouselApi.on("select", () => {
-      setCarouselIndex(carouselApi.selectedScrollSnap());
-    });
-  }, [carouselApi]);
 
   // Query aggregated ward statistics (polling unit coverage, agent check-ins, result uploads)
   const { data: statsRes } = useQuery({
@@ -88,25 +74,6 @@ export function WardElectionSupervisorPage() {
 
   const partyStats = statsRes?.data?.party_stats || {};
   const targets = statsRes?.data?.targets || {};
-
-  // Ward pre-election readiness metrics (agent deployment & training test passage)
-  const readiness = [
-    {
-      title: "Polling agents coverage",
-      rightText: `${partyStats.unique_pu_agents_count || 0}`,
-      rightText2: `/ ${targets.polling_units_count || 0}`,
-      isCompleted:
-        (partyStats.unique_pu_agents_count || 0) >=
-        (targets.polling_units_count || 0),
-    },
-    {
-      title: "Election day practice test",
-      rightText: `${partyStats.pu_election_practice_test_readiness_percentage || 0}%`,
-      rightText2: "",
-      isCompleted:
-        (partyStats.pu_election_practice_test_readiness_percentage || 0) == 100,
-    },
-  ];
 
   // Ward election-day operations metrics (attendance, starts, updates, results)
   const objectives = [
@@ -144,30 +111,22 @@ export function WardElectionSupervisorPage() {
     },
   ];
 
-  // Derive carousel slide title and percentage
-  let headerTitle = "Readiness";
-  let headerRightText = "";
-  if (carouselIndex === 0) {
-    headerTitle = "Readiness";
-    const completed = readiness.filter((r) => r.isCompleted).length;
-    headerRightText = `${Math.round((completed / Math.max(readiness.length, 1)) * 100)}%`;
-  } else if (carouselIndex === 1) {
-    headerTitle = "Objectives";
-    const completed = objectives.filter((o) => o.isCompleted).length;
-    headerRightText = `${Math.round((completed / Math.max(objectives.length, 1)) * 100)}%`;
-  }
+  // Derive header title and percentage from objectives
+  const completed = objectives.filter((o) => o.isCompleted).length;
+  const headerTitle = "Objectives";
+  const headerRightText = `${Math.round((completed / Math.max(objectives.length, 1)) * 100)}%`;
 
   return (
     <Layout>
       <HomeHeader daysLeft={daysLeft} />
       <HomeHeader2 title={headerTitle} rightText={headerRightText} />
 
-      {/* Primary Carousel: Readiness and Objectives */}
-      <Carousel setApi={setCarouselApi} className="w-full">
+      {/* Primary Checklist: Objectives */}
+      <Carousel className="w-full">
         <CarouselContent>
           <CarouselItem>
             <ObjectiveCardWrapper className="mx-2.5">
-              {readiness.map((item) => (
+              {objectives.map((item) => (
                 <ObjectiveTile
                   key={item.title}
                   isCompleted={item.isCompleted}
@@ -199,48 +158,8 @@ export function WardElectionSupervisorPage() {
               )}
             </ObjectiveCardWrapper>
           </CarouselItem>
-          <CarouselItem>
-            <ObjectiveCardWrapper className="mx-2.5">
-              {objectives.map((item) => (
-                <ObjectiveTile
-                  key={item.title}
-                  isCompleted={item.isCompleted}
-                  title={item.title}
-                  rightText={item.rightText}
-                  rightText2={item.rightText}
-                  onClick={() =>
-                    navigate({ to: "/give-update", search: { isReport: true } })
-                  }
-                />
-              ))}
-              {daysLeft === 0 && (
-                <div className="mb-2 mt-2 px-4">
-                  <Button
-                    type="button"
-                    size="extra-large"
-                    onClick={() =>
-                      navigate({
-                        to: "/give-update",
-                        search: { isReport: true },
-                      })
-                    }
-                    className="w-full bg-[#2D2D2D] hover:bg-[#3D3D3D] active:bg-[#202020] text-white rounded-12"
-                  >
-                    <ReportIcon className="w-5 h-5 shrink-0" />
-                    Report
-                  </Button>
-                </div>
-              )}
-            </ObjectiveCardWrapper>
-          </CarouselItem>
         </CarouselContent>
       </Carousel>
-
-      {/* Pagination indicators */}
-      <CarouselDotContent>
-        <CarouselDot active={carouselIndex === 0} />
-        <CarouselDot active={carouselIndex === 1} />
-      </CarouselDotContent>
 
       {/* Supervisor Action Body */}
       <HomeBody>

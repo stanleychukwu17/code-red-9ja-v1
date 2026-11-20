@@ -8,7 +8,6 @@ import { Carousel, CarouselContent, CarouselDot, CarouselDotContent, CarouselIte
 import ReportIcon from "@repo/ui/icons/report-icon";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { SupervisorTabs } from "../../../../components/Tabs";
 import { ReferralCard } from "../components/ReferralCard";
 import { EarningsTab } from "../components/EarningsTab";
 import { GiveUpdateFloatingButton } from "../components/GiveUpdateFloatingButton";
@@ -16,7 +15,6 @@ import { HomeHeader, HomeHeader2 } from "../components/HomeHeader";
 import { PracticeTestCard } from "../components/PracticeTestCard";
 import { HomeBody } from "../components/Shared";
 import { SupervisorStartDutyCard } from "../components/SupervisorReadyCard";
-import { StateSupervisorTasksTab } from "../components/SupervisorTasksTab";
 import { Layout } from "@repo/ui/components/custom/AdminLayouts";
 /**
  * State Election Supervisor Dashboard.
@@ -36,8 +34,6 @@ export function StateElectionSupervisorPage() {
 
   const currentAssignment = supervisorAssignment?.data;
 
-  // Active supervisor tab (Earnings vs State-level LGA task progress)
-  const [activeTab, setActiveTab] = useState<"Earnings" | "Tasks">("Earnings");
   const [isArrivalDrawerOpen, setIsArrivalDrawerOpen] = useState(false);
   const [showNoInfo, setShowNoInfo] = useState(false);
   const [carouselIndex, setCarouselIndex] = useState(0);
@@ -262,13 +258,8 @@ export function StateElectionSupervisorPage() {
           />
         )}
 
-        {/* Supervisor Tabs: Earnings vs State-level LGA task progress */}
-        <SupervisorTabs activeTab={activeTab} onTabChange={setActiveTab} />
-
-        {activeTab === "Earnings" && <EarningsTab />}
-        {activeTab === "Tasks" && (
-          <StateSupervisorTasksTab isElectionDay={daysLeft === 0} />
-        )}
+        {/* Earnings */}
+        <EarningsTab />
 
         {/* Emergency incident report FAB */}
         {daysLeft === 0 && (
