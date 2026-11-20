@@ -3,6 +3,8 @@ package worker
 import (
 	"context"
 
+	notificationsservice "free9ja/api/internal/service/notifications"
+
 	"github.com/hibiken/asynq"
 )
 
@@ -27,6 +29,9 @@ type TaskDistributor interface {
 	DistributeTaskRemoveAgentFromCampaignGroup(ctx context.Context, payload *RemoveAgentFromCampaignGroupPayload, opts ...asynq.Option) error
 	// Agent milestone earnings calculation & wallet credit
 	DistributeTaskCalculateAgentEarnings(ctx context.Context, payload *CalculateAgentEarningsPayload, opts ...asynq.Option) error
+	// User & party notification dispatch
+	DistributeTaskSendNotification(ctx context.Context, payload *notificationsservice.CreateNotificationInput, opts ...asynq.Option) error
+	DistributeTaskSendPartyNotification(ctx context.Context, payload *notificationsservice.CreatePartyNotificationInput, opts ...asynq.Option) error
 }
 
 // RedisTaskDistributor is a task distributor that uses Redis to enqueue tasks.

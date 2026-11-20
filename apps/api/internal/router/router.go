@@ -165,7 +165,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	permissionsService := permissionsservice.NewPermissionsService()
 	blocksService := blocksservice.NewBlocksService(q, pool, rdb)
 	electionStatsService := electionstats.NewElectionStatsService(q)
-	notificationsService := notificationsservice.NewService(q, rdb, broadcaster)
+	notificationsService := notificationsservice.NewService(q, rdb, broadcaster, distributor)
 	electionsService := electionsservice.NewElectionsService(q, pool, rdb, distributor, earningsService, officesService, bodiesService, notificationsService)
 	usersService := usersservice.NewUsersService(q, rdb, bodiesService, electionsService)
 	pollingUnitUpdatesService := puupdates.NewService(q, pool, rdb, distributor, usersService)
@@ -191,8 +191,11 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	teamService := teamservice.NewService(q, rdb)
 
 	// Wire services needed for background task processing
-	processor.SetCampaignGroupsService(campaignGroupsService)
-	processor.SetEarningsService(earningsService)
+	if processor != nil {
+		processor.SetCampaignGroupsService(campaignGroupsService)
+		processor.SetEarningsService(earningsService)
+		processor.SetNotificationsService(notificationsService)
+	}
 
 	usersService.SetPageVerificationsService(pageVerificationsService)
 	usersService.SetPartyService(partiesService)
@@ -303,6 +306,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	mainRouter.Post("/api/v1/seed/users", seedHandler.SeedUsers)                                         // Seed users endpoint
 	mainRouter.Post("/api/v1/seed/admins", seedHandler.SeedAdmins)                                       // Seed admins endpoint
 	mainRouter.Post("/api/v1/seed/election-groups", seedHandler.SeedElectionGroups)                      // Seed election groups endpoint
+	mainRouter.Post("/api/v1/seed/election-groups/set-today", seedHandler.SetElectionGroupDateToToday)    // Set election group date to today endpoint
 	mainRouter.Post("/api/v1/seed/election-instances", seedHandler.SeedElectionInstances)                // Seed election instances endpoint
 	mainRouter.Post("/api/v1/seed/candidates/presidential", seedHandler.SeedPresidentialCandidates)      // Seed presidential candidate tickets
 	mainRouter.Post("/api/v1/seed/candidates/governorship", seedHandler.SeedGovernorshipCandidates)      // Seed governorship candidate tickets

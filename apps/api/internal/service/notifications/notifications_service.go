@@ -15,13 +15,21 @@ import (
 	"free9ja/api/internal/service/realtime"
 	"free9ja/api/internal/utils"
 
+	"github.com/hibiken/asynq"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/redis/go-redis/v9"
 )
 
+// TaskDistributor defines the queue interface for dispatching notifications asynchronously via Asynq.
+type TaskDistributor interface {
+	DistributeTaskSendNotification(ctx context.Context, payload *CreateNotificationInput, opts ...asynq.Option) error
+	DistributeTaskSendPartyNotification(ctx context.Context, payload *CreatePartyNotificationInput, opts ...asynq.Option) error
+}
+
 // NotificationsService defines business logic for user and party notifications and preferences.
 type NotificationsService interface {
+	SetTaskDistributor(distributor TaskDistributor)
 	// User Notifications
 	CreateNotification(ctx context.Context, params CreateNotificationInput) (*NotificationItemResponse, error)
 	CreateNotificationAsync(ctx context.Context, params CreateNotificationInput)
@@ -67,16 +75,22 @@ type service struct {
 	q           *queries.Queries
 	rdb         *redis.Client
 	broadcaster realtime.Broadcaster
+	distributor TaskDistributor
 }
 
 // NewService instantiates a new NotificationsService.
-func NewService(q *queries.Queries, rdb *redis.Client, broadcaster realtime.Broadcaster) NotificationsService {
+func NewService(q *queries.Queries, rdb *redis.Client, broadcaster realtime.Broadcaster, distributor TaskDistributor) NotificationsService {
 	// Initialize and return the notification service instance
 	return &service{
 		q:           q,
 		rdb:         rdb,
 		broadcaster: broadcaster,
+		distributor: distributor,
 	}
+}
+
+func (s *service) SetTaskDistributor(distributor TaskDistributor) {
+	s.distributor = distributor
 }
 
 // ----------------------------------------------------------------------------
@@ -390,22 +404,14 @@ func (s *service) CreateNotification(ctx context.Context, in CreateNotificationI
 	return resp, nil
 }
 
-// CreateNotificationAsync dispatches a user notification asynchronously in a goroutine.
+// CreateNotificationAsync dispatches a user notification asynchronously via Asynq.
 func (s *service) CreateNotificationAsync(ctx context.Context, in CreateNotificationInput) {
-	// Fall back to actor in context before passing to async goroutine
+	// Fall back to actor in context before passing to async task
 	in.ActorUserID = actorFromContext(ctx, in.ActorUserID)
 
-	// Launch background goroutine so callers are not blocked by network or DB I/O
-	go func(params CreateNotificationInput) {
-		// Use a bounded context to prevent hanging operations
-		bgCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-
-		// Attempt to persist and broadcast the notification
-		if _, err := s.CreateNotification(bgCtx, params); err != nil {
-			slog.Error("failed to create async notification", "error", err, "user_id", params.RecipientUserID)
-		}
-	}(in)
+	if err := s.distributor.DistributeTaskSendNotification(ctx, &in); err != nil {
+		slog.Error("failed to enqueue notification task to asynq", "error", err, "user_id", in.RecipientUserID)
+	}
 }
 
 func (s *service) ListUserNotifications(ctx context.Context, userID int64, page, limit int32) (*PaginatedNotificationsResponse, error) {
@@ -619,22 +625,14 @@ func (s *service) CreatePartyNotification(ctx context.Context, in CreatePartyNot
 	return resp, nil
 }
 
-// CreatePartyNotificationAsync dispatches a party notification asynchronously in a goroutine.
+// CreatePartyNotificationAsync dispatches a party notification asynchronously via Asynq.
 func (s *service) CreatePartyNotificationAsync(ctx context.Context, in CreatePartyNotificationInput) {
-	// Fall back to actor in context before passing to async goroutine
+	// Fall back to actor in context before passing to async task
 	in.ActorUserID = actorFromContext(ctx, in.ActorUserID)
 
-	// Dispatch party notification in background goroutine to prevent request latency
-	go func(params CreatePartyNotificationInput) {
-		// Enforce timeout for the background task
-		bgCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-
-		// Attempt to persist and broadcast to party channels
-		if _, err := s.CreatePartyNotification(bgCtx, params); err != nil {
-			slog.Error("failed to create async party notification", "error", err, "party_id", params.PartyID)
-		}
-	}(in)
+	if err := s.distributor.DistributeTaskSendPartyNotification(ctx, &in); err != nil {
+		slog.Error("failed to enqueue party notification task to asynq", "error", err, "party_id", in.PartyID)
+	}
 }
 
 // NotifyPartyMemberSuspended dispatches notifications for member suspension to both the user and party admins.

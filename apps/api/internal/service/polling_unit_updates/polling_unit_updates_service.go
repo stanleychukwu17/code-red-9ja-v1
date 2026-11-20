@@ -281,6 +281,29 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 		})
 	}
 
+	// TODO:(worker): Enqueue taskDistributor job for asynchronous polling unit rollups & caching:
+	//   s.distributor.DistributeTaskProcessPUUpdate(context.Background(), &worker.ProcessPUUpdatePayload{
+	//       UpdateID:        update.ID,
+	//       PollingUnitID:   input.PollingUnitID,
+	//       ElectionGroupID: input.ElectionGroupID,
+	//       WardID:          input.WardID,
+	//       LgaID:           input.LgaID,
+	//       StateID:         input.StateID,
+	//       HasIssues:       hasIssues,
+	//   })
+	//
+	// Things for taskProcessor to handle once query endpoints are established:
+	//   1. Cache Warming / PU Feed:
+	//      - ZADD pu:updates:<pu_id> <created_at_epoch> <update_id> (instant reverse-chrono pagination)
+	//      - SET pu:update:<update_id> (pre-joined payload with media & issues to avoid heavy SQL JOINs)
+	//      - SET pu:status:<pu_id> (latest status category/option snapshot for map pins)
+	//   2. Active Issue Indexing & Alerts:
+	//      - Maintain SADD/SREM pu:active_issues:<pu_id> <issue_id>
+	//      - Dispatch real-time websocket/push notifications to supervisors if high-severity issues reported
+	//   3. Geo Incident & Reporting Rollups:
+	//      - Debounced rollups for Ward/LGA reporting progress counters (arrived %, active voting %)
+	//      - Aggregated incident counts per LGA/State for party war-room heatmaps
+
 	return update, nil
 }
 

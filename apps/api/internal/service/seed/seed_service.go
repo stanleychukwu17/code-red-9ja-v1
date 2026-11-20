@@ -1289,6 +1289,122 @@ func (s *SeedService) SeedElectionGroups(ctx context.Context, groups []SeedElect
 	return results, nil
 }
 
+// SetElectionGroupTodayRequest defines the input payload for shifting an election group to today.
+type SetElectionGroupTodayRequest struct {
+	ElectionGroupID int32 `json:"election_group_id"`
+}
+
+// SetElectionGroupTodayResponse defines the result of shifting an election group to today.
+type SetElectionGroupTodayResponse struct {
+	ElectionGroupID       int32  `json:"election_group_id"`
+	ElectionGroupName     string `json:"election_group_name"`
+	PreviousElectionDate  string `json:"previous_election_date"`
+	NewElectionDate       string `json:"new_election_date"`
+	UpdatedElectionsCount int64  `json:"updated_elections_count"`
+}
+
+// SetElectionGroupDateToToday updates the election_date for an election group and all of its
+// associated child elections to today in Lagos calendar time, and flushes related Redis caches.
+func (s *SeedService) SetElectionGroupDateToToday(ctx context.Context, electionGroupID int32) (*SetElectionGroupTodayResponse, error) {
+	if electionGroupID <= 0 {
+		return nil, fmt.Errorf("invalid election_group_id: %d (must be greater than 0)", electionGroupID)
+	}
+
+	today := utils.LagosDate(time.Now())
+	todayPg := utils.PgDateFromTime(today)
+
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	// Fetch target election group
+	var eg queries.ElectionGroup
+	err = tx.QueryRow(ctx, `
+		SELECT id, fake_id, name, election_date, active, created_at, updated_at
+		FROM election_groups
+		WHERE id = $1
+	`, electionGroupID).Scan(
+		&eg.ID,
+		&eg.FakeID,
+		&eg.Name,
+		&eg.ElectionDate,
+		&eg.Active,
+		&eg.CreatedAt,
+		&eg.UpdatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf("election group with ID %d not found", electionGroupID)
+		}
+		return nil, fmt.Errorf("failed to fetch election group: %w", err)
+	}
+
+	// Update election group scheduled date
+	_, err = tx.Exec(ctx, `
+		UPDATE election_groups
+		SET election_date = $1, updated_at = NOW()
+		WHERE id = $2
+	`, todayPg, electionGroupID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update election group date: %w", err)
+	}
+
+	// Fetch child election IDs for cache invalidation
+	var electionIDs []int32
+	rows, err := tx.Query(ctx, `SELECT id FROM elections WHERE election_group_id = $1`, electionGroupID)
+	if err == nil {
+		for rows.Next() {
+			var eid int32
+			if err := rows.Scan(&eid); err == nil {
+				electionIDs = append(electionIDs, eid)
+			}
+		}
+		rows.Close()
+	}
+
+	// Cascade update to all child elections
+	tag, err := tx.Exec(ctx, `
+		UPDATE elections
+		SET election_date = $1, updated_at = NOW()
+		WHERE election_group_id = $2
+	`, todayPg, electionGroupID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update child elections: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	// Invalidate Redis caches
+	if s.rdb != nil {
+		keysToDel := []string{
+			db.RedisElectionGroupsAll,
+			db.RedisElectionGroupsActive,
+			fmt.Sprintf("%s%d", db.RedisElectionGroupByID, electionGroupID),
+			fmt.Sprintf("%s%d", db.RedisElectionGroupInstances, electionGroupID),
+			fmt.Sprintf("%s%d", db.RedisElectionGroupByFakeID, eg.FakeID.Int64),
+		}
+		for _, eid := range electionIDs {
+			keysToDel = append(keysToDel,
+				fmt.Sprintf("%s%d", db.RedisElectionByID, eid),
+				fmt.Sprintf("%s%d", db.RedisElectionCandidates, eid),
+			)
+		}
+		_ = s.rdb.Del(ctx, keysToDel...).Err()
+	}
+
+	return &SetElectionGroupTodayResponse{
+		ElectionGroupID:       eg.ID,
+		ElectionGroupName:     eg.Name,
+		PreviousElectionDate:  eg.ElectionDate.Time.Format("2006-01-02"),
+		NewElectionDate:       today.Format("2006-01-02"),
+		UpdatedElectionsCount: tag.RowsAffected(),
+	}, nil
+}
+
 // SeedElectionInstanceRequest represents an election instance to be seeded.
 type SeedElectionInstanceRequest struct {
 	OfficeID               int16   `json:"office_id"`

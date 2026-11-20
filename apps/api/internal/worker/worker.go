@@ -45,8 +45,11 @@ type TaskProcessor interface {
 	ProcessTaskEnrollAgentInCampaignGroup(ctx context.Context, task *asynq.Task) error
 	ProcessTaskRemoveAgentFromCampaignGroup(ctx context.Context, task *asynq.Task) error
 	ProcessTaskCalculateAgentEarnings(ctx context.Context, task *asynq.Task) error
+	ProcessTaskSendNotification(ctx context.Context, task *asynq.Task) error
+	ProcessTaskSendPartyNotification(ctx context.Context, task *asynq.Task) error
 	SetCampaignGroupsService(campaignGroupsService CampaignGroupsService)
 	SetEarningsService(earningsService EarningsService)
+	SetNotificationsService(notificationsService NotificationsService)
 	ProcessDailyMarketingCampaignDeductions()
 	ProcessINECResultGrabberSync()
 }
@@ -63,6 +66,7 @@ type RedisTaskProcessor struct {
 	broadcaster           realtime.Broadcaster
 	campaignGroupsService CampaignGroupsService
 	earningsService       EarningsService
+	notificationsService  NotificationsService
 }
 
 func (redisTaskProcessor *RedisTaskProcessor) SetCampaignGroupsService(campaignGroupsService CampaignGroupsService) {
@@ -71,6 +75,10 @@ func (redisTaskProcessor *RedisTaskProcessor) SetCampaignGroupsService(campaignG
 
 func (redisTaskProcessor *RedisTaskProcessor) SetEarningsService(earningsService EarningsService) {
 	redisTaskProcessor.earningsService = earningsService
+}
+
+func (redisTaskProcessor *RedisTaskProcessor) SetNotificationsService(notificationsService NotificationsService) {
+	redisTaskProcessor.notificationsService = notificationsService
 }
 
 func NewRedisTaskProcessor(redisOpt asynq.RedisClientOpt, q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client, distributor TaskDistributor, cfg *config.Config, r2Svc *r2service.R2Service, broadcaster realtime.Broadcaster) TaskProcessor {
@@ -124,6 +132,8 @@ func (redisTaskProcessor *RedisTaskProcessor) Start() error {
 	mux.HandleFunc(TaskEnrollAgentInCampaignGroup, redisTaskProcessor.ProcessTaskEnrollAgentInCampaignGroup)
 	mux.HandleFunc(TaskRemoveAgentFromCampaignGroup, redisTaskProcessor.ProcessTaskRemoveAgentFromCampaignGroup)
 	mux.HandleFunc(TaskCalculateAgentEarnings, redisTaskProcessor.ProcessTaskCalculateAgentEarnings)
+	mux.HandleFunc(TaskSendNotification, redisTaskProcessor.ProcessTaskSendNotification)
+	mux.HandleFunc(TaskSendPartyNotification, redisTaskProcessor.ProcessTaskSendPartyNotification)
 
 	// Daily Marketing Campaign Deductions & Auto-Completion Worker (runs every day at 00:05 AM)
 	// Recommended schedule: "5 0 * * *" (5 minutes past midnight) to process previous day's campaign allocations cleanly.

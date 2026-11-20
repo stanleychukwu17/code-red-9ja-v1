@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/netip"
 	"strconv"
+	"time"
 
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
@@ -38,12 +39,14 @@ type AuditService interface {
 }
 
 type auditService struct {
-	queries *queries.Queries
+	queries  *queries.Queries
+	asyncSem chan struct{}
 }
 
 func NewAuditService(q *queries.Queries) AuditService {
 	return &auditService{
-		queries: q,
+		queries:  q,
+		asyncSem: make(chan struct{}, 10),
 	}
 }
 
@@ -144,7 +147,15 @@ func (s *auditService) LogActionAsync(ctx context.Context, params queries.Insert
 	s.prepareParams(ctx, &params)
 
 	go func(p queries.InsertAuditLogParams) {
-		bgCtx := context.Background()
+		select {
+		case s.asyncSem <- struct{}{}:
+			defer func() { <-s.asyncSem }()
+		case <-time.After(30 * time.Second):
+			return
+		}
+
+		bgCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
 		_, _ = s.queries.InsertAuditLog(bgCtx, p)
 	}(params)
 }
@@ -163,7 +174,16 @@ func (s *auditService) LogPartyAdminActionAsync(ctx context.Context, params quer
 	}
 
 	go func(p queries.InsertAuditLogParams, role string) {
-		bgCtx := context.Background()
+		select {
+		case s.asyncSem <- struct{}{}:
+			defer func() { <-s.asyncSem }()
+		case <-time.After(30 * time.Second):
+			return
+		}
+
+		bgCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
 		// 1. Log to party administration module
 		_, _ = s.queries.InsertAuditLog(bgCtx, p)
 
@@ -182,7 +202,15 @@ func (s *auditService) LogAdminActionAsync(ctx context.Context, params queries.I
 	s.prepareParams(ctx, &params)
 
 	go func(p queries.InsertAuditLogParams) {
-		bgCtx := context.Background()
+		select {
+		case s.asyncSem <- struct{}{}:
+			defer func() { <-s.asyncSem }()
+		case <-time.After(30 * time.Second):
+			return
+		}
+
+		bgCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
 		_, _ = s.queries.InsertAuditLog(bgCtx, p)
 	}(params)
 }

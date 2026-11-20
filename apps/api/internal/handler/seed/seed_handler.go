@@ -31,6 +31,7 @@ type SeedService interface {
 	SeedPartyLeadership(ctx context.Context, items []seedservice.SeedPartyLeaderItem) (string, error)
 	SyncCampaignGroups(ctx context.Context, req seedservice.SyncCampaignGroupsRequest) (seedservice.SyncCampaignGroupsResponse, error)
 	SeedPartyAgentApplications(ctx context.Context, req seedservice.SeedPartyAgentApplicationsRequest) (seedservice.SeedPartyAgentApplicationsResponse, error)
+	SetElectionGroupDateToToday(ctx context.Context, electionGroupID int32) (*seedservice.SetElectionGroupTodayResponse, error)
 }
 
 type Handler struct {
@@ -253,6 +254,48 @@ func (h *Handler) SeedElectionGroups(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.utils.RespondSuccessData(w, http.StatusOK, fmt.Sprintf("Election groups seeded successfully (%d created/updated)", len(groups)), groups)
+}
+
+// @Summary Set election group date to today
+// @Description Updates an election group and its child elections scheduled date to today (Lagos calendar time) for end-to-end testing
+// @Tags Seed
+// @Accept json
+// @Produce json
+// @Param request body seedservice.SetElectionGroupTodayRequest true "Election group ID to shift to today"
+// @Success 200 {object} seedservice.SetElectionGroupTodayResponse
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /seed/election-groups/set-today [post]
+func (h *Handler) SetElectionGroupDateToToday(w http.ResponseWriter, r *http.Request) {
+	bodyBytes, err := io.ReadAll(r.Body)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+		return
+	}
+
+	var req seedservice.SetElectionGroupTodayRequest
+	if err := json.Unmarshal(bodyBytes, &req); err != nil {
+		var reqList []seedservice.SetElectionGroupTodayRequest
+		if errList := json.Unmarshal(bodyBytes, &reqList); errList == nil && len(reqList) > 0 {
+			req = reqList[0]
+		} else {
+			h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+			return
+		}
+	}
+
+	if req.ElectionGroupID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "election_group_id is required and must be greater than 0")
+		return
+	}
+
+	res, err := h.seedService.SetElectionGroupDateToToday(r.Context(), req.ElectionGroupID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update election group date: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccessData(w, http.StatusOK, "Election group date updated to today successfully", res)
 }
 
 // @Summary Seed election instances
