@@ -1387,6 +1387,7 @@ func (s *SeedService) SetElectionGroupDateToToday(ctx context.Context, electionG
 			fmt.Sprintf("%s%d", db.RedisElectionGroupInstances, electionGroupID),
 			fmt.Sprintf("%s%d", db.RedisElectionGroupByFakeID, eg.FakeID.Int64),
 		}
+
 		for _, eid := range electionIDs {
 			keysToDel = append(keysToDel,
 				fmt.Sprintf("%s%d", db.RedisElectionByID, eid),
