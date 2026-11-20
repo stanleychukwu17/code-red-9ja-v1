@@ -126,20 +126,18 @@ SET
 WHERE id = sqlc.arg('id')::bigint
 RETURNING *;
 
--- name: IncrementAssignmentResultCount :exec
+-- name: CountDistinctSubmittedResultsForAssignment :one
+SELECT COUNT(DISTINCT election_id)::int
+FROM polling_unit_results
+WHERE assignment_id = $1::bigint;
+
+-- name: MarkAssignmentCompleted :one
 UPDATE polling_unit_assignments
 SET
-  results_submitted_count = results_submitted_count + 1,
-  completed_at            = CASE
-                              WHEN (results_submitted_count + 1) >= COALESCE((
-                                SELECT COUNT(*)::int
-                                FROM elections e
-                                WHERE e.election_group_id = polling_unit_assignments.election_group_id
-                              ), 1) THEN COALESCE(completed_at, NOW())
-                              ELSE completed_at
-                            END,
-  updated_at              = NOW()
-WHERE polling_unit_assignments.id = $1;
+  completed_at = COALESCE(completed_at, $2),
+  updated_at   = NOW()
+WHERE id = $1
+RETURNING id, completed_at;
 
 -- name: UpdatePollingUnitResultAIExtraction :one
 UPDATE polling_unit_results

@@ -18,7 +18,6 @@ import { Loader2 } from "lucide-react";
 import { cn } from "@repo/ui/lib/utils";
 
 export interface EarningsAllocation {
-  readiness: number;
   results: number;
   updates: number;
   attendance: number;
@@ -27,7 +26,6 @@ export interface EarningsAllocation {
 }
 
 const ALLOCATION_FIELDS: { name: keyof EarningsAllocation; label: string }[] = [
-  { name: "readiness", label: "Readiness" },
   { name: "results", label: "Results Upload" },
   { name: "updates", label: "Updates" },
   { name: "attendance", label: "Attendance" },
@@ -103,12 +101,11 @@ export function EarningsAllocationDialog({
   // TanStack Form configuration
   const form = useForm({
     defaultValues: {
-      readiness: 0,
-      results: 0,
-      updates: 0,
-      attendance: 0,
-      election_start: 0,
-      election_end: 0,
+      results: 50,
+      updates: 30,
+      attendance: 10,
+      election_start: 5,
+      election_end: 5,
     },
     onSubmit: async ({ value }) => {
       saveMutation.mutate(value);

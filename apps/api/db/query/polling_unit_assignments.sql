@@ -137,14 +137,6 @@ SET
 WHERE id = $1
 RETURNING id, user_id, polling_unit_id, election_group_id, party_id, role_type, assigned_by, arrived_at, election_started_at, election_ended_at, created_at, updated_at;
 
--- name: UpdateAssignmentReadinessPercentage :one
-UPDATE polling_unit_assignments
-SET
-  election_practice_test_readiness_percentage = $2,
-  updated_at = NOW()
-WHERE id = $1
-RETURNING id, user_id, polling_unit_id, election_group_id, party_id, role_type, assigned_by, arrived_at, election_started_at, election_ended_at, last_update_at, reports_count, updates_count, results_submitted_count, election_practice_test_readiness_percentage, created_at, updated_at;
-
 -- name: UpdatePollingUnitAssignmentEarnedAmountKobo :one
 UPDATE polling_unit_assignments
 SET earned_amount_kobo = earned_amount_kobo + sqlc.arg(earned_delta_kobo)::bigint,

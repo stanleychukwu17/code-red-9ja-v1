@@ -11,6 +11,19 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countDistinctSubmittedResultsForAssignment = `-- name: CountDistinctSubmittedResultsForAssignment :one
+SELECT COUNT(DISTINCT election_id)::int
+FROM polling_unit_results
+WHERE assignment_id = $1::bigint
+`
+
+func (q *Queries) CountDistinctSubmittedResultsForAssignment(ctx context.Context, dollar_1 int64) (int32, error) {
+	row := q.db.QueryRow(ctx, countDistinctSubmittedResultsForAssignment, dollar_1)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const getAllPollingUnitResultsByPU = `-- name: GetAllPollingUnitResultsByPU :many
 SELECT id, assignment_id, election_id, election_group_id, polling_unit_id, submitted_by, party_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, result_sheet_image_url, result_sheet_video_url, status, ai_extracted_data, result_is_ai_generated, ai_confidence_score, disputed_reason, confirmed_at, confirmed_by, up_votes, down_votes, uploaded_by_inec, created_at, updated_at
 FROM polling_unit_results
@@ -194,27 +207,6 @@ func (q *Queries) GetUserPollingUnitResultInElectionGroup(ctx context.Context, a
 	return polling_unit_id, err
 }
 
-const incrementAssignmentResultCount = `-- name: IncrementAssignmentResultCount :exec
-UPDATE polling_unit_assignments
-SET
-  results_submitted_count = results_submitted_count + 1,
-  completed_at            = CASE
-                              WHEN (results_submitted_count + 1) >= COALESCE((
-                                SELECT COUNT(*)::int
-                                FROM elections e
-                                WHERE e.election_group_id = polling_unit_assignments.election_group_id
-                              ), 1) THEN COALESCE(completed_at, NOW())
-                              ELSE completed_at
-                            END,
-  updated_at              = NOW()
-WHERE polling_unit_assignments.id = $1
-`
-
-func (q *Queries) IncrementAssignmentResultCount(ctx context.Context, id int64) error {
-	_, err := q.db.Exec(ctx, incrementAssignmentResultCount, id)
-	return err
-}
-
 const listPollingUnitResults = `-- name: ListPollingUnitResults :many
 SELECT id, assignment_id, election_id, election_group_id, polling_unit_id, submitted_by, party_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, result_sheet_image_url, result_sheet_video_url, status, ai_extracted_data, result_is_ai_generated, ai_confidence_score, disputed_reason, confirmed_at, confirmed_by, up_votes, down_votes, uploaded_by_inec, created_at, updated_at
 FROM polling_unit_results
@@ -313,6 +305,32 @@ func (q *Queries) ListPollingUnitResults(ctx context.Context, arg ListPollingUni
 		return nil, err
 	}
 	return items, nil
+}
+
+const markAssignmentCompleted = `-- name: MarkAssignmentCompleted :one
+UPDATE polling_unit_assignments
+SET
+  completed_at = COALESCE(completed_at, $2),
+  updated_at   = NOW()
+WHERE id = $1
+RETURNING id, completed_at
+`
+
+type MarkAssignmentCompletedParams struct {
+	ID          int64              `json:"id"`
+	CompletedAt pgtype.Timestamptz `json:"completed_at"`
+}
+
+type MarkAssignmentCompletedRow struct {
+	ID          int64              `json:"id"`
+	CompletedAt pgtype.Timestamptz `json:"completed_at"`
+}
+
+func (q *Queries) MarkAssignmentCompleted(ctx context.Context, arg MarkAssignmentCompletedParams) (MarkAssignmentCompletedRow, error) {
+	row := q.db.QueryRow(ctx, markAssignmentCompleted, arg.ID, arg.CompletedAt)
+	var i MarkAssignmentCompletedRow
+	err := row.Scan(&i.ID, &i.CompletedAt)
+	return i, err
 }
 
 const submitPollingUnitResult = `-- name: SubmitPollingUnitResult :one

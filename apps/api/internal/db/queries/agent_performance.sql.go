@@ -149,13 +149,12 @@ SELECT
   u.full_name::varchar AS user_name,
   COALESCE(u.avatar, '')::varchar AS avatar_url,
   pua.role_type,
-  pua.election_practice_test_readiness_percentage::numeric(5,2) AS readiness_pct,
+  0::numeric(5,2) AS readiness_pct,
   COALESCE(TO_CHAR(pua.arrived_at, 'HH12:MI AM'), '')::varchar AS arrived_at,
   COALESCE(TO_CHAR(pua.election_started_at, 'HH12:MI AM'), '')::varchar AS election_started_at,
   COALESCE(TO_CHAR(pua.election_ended_at, 'HH12:MI AM'), '')::varchar AS election_ended_at,
-  pua.updates_count AS updates_given,
-  pua.reports_count AS reports_given,
-  CONCAT(pua.results_submitted_count, '/', COALESCE(NULLIF((SELECT COUNT(*)::int FROM elections e WHERE e.election_group_id = pua.election_group_id), 0), 1))::varchar AS results_uploaded,
+  COALESCE((SELECT COUNT(*)::int FROM polling_unit_updates puu WHERE puu.assignment_id = pua.id), 0)::int AS updates_given,
+  CONCAT(COALESCE((SELECT COUNT(DISTINCT pur.election_id)::int FROM polling_unit_results pur WHERE pur.assignment_id = pua.id), 0), '/', COALESCE(NULLIF((SELECT COUNT(*)::int FROM elections e WHERE e.election_group_id = pua.election_group_id), 0), 1))::varchar AS results_uploaded,
   COALESCE(ae.total_earned_kobo, pua.earned_amount_kobo, 0)::bigint AS earnings_kobo,
   CONCAT('₦', TO_CHAR(COALESCE(ae.total_earned_kobo, pua.earned_amount_kobo, 0) / 100.0, 'FM999,999,999,990.00'))::varchar AS earnings_formatted,
   (pua.completed_at IS NOT NULL)::boolean AS completion_status,
@@ -210,7 +209,6 @@ type ListPollingAgentPerformanceStatsRow struct {
 	ElectionStartedAt string         `json:"election_started_at"`
 	ElectionEndedAt   string         `json:"election_ended_at"`
 	UpdatesGiven      int32          `json:"updates_given"`
-	ReportsGiven      int32          `json:"reports_given"`
 	ResultsUploaded   string         `json:"results_uploaded"`
 	EarningsKobo      int64          `json:"earnings_kobo"`
 	EarningsFormatted string         `json:"earnings_formatted"`
@@ -259,7 +257,6 @@ func (q *Queries) ListPollingAgentPerformanceStats(ctx context.Context, arg List
 			&i.ElectionStartedAt,
 			&i.ElectionEndedAt,
 			&i.UpdatesGiven,
-			&i.ReportsGiven,
 			&i.ResultsUploaded,
 			&i.EarningsKobo,
 			&i.EarningsFormatted,

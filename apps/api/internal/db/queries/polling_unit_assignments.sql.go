@@ -46,7 +46,7 @@ INSERT INTO polling_unit_assignments (
   potential_payment_kobo
 ) VALUES (
   $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
-) RETURNING id, election_group_id, party_id, state_id, lga_id, ward_id, polling_unit_id, user_id, role_type, assigned_by, arrived_at, election_started_at, election_ended_at, completed_at, last_update_at, reports_count, updates_count, results_submitted_count, election_practice_test_readiness_percentage, potential_payment_kobo, earned_amount_kobo, created_at, updated_at
+) RETURNING id, election_group_id, party_id, state_id, lga_id, ward_id, polling_unit_id, user_id, role_type, assigned_by, arrived_at, election_started_at, election_ended_at, completed_at, last_update_at, potential_payment_kobo, earned_amount_kobo, created_at, updated_at
 `
 
 type CreateAssignmentParams struct {
@@ -92,10 +92,6 @@ func (q *Queries) CreateAssignment(ctx context.Context, arg CreateAssignmentPara
 		&i.ElectionEndedAt,
 		&i.CompletedAt,
 		&i.LastUpdateAt,
-		&i.ReportsCount,
-		&i.UpdatesCount,
-		&i.ResultsSubmittedCount,
-		&i.ElectionPracticeTestReadinessPercentage,
 		&i.PotentialPaymentKobo,
 		&i.EarnedAmountKobo,
 		&i.CreatedAt,
@@ -618,71 +614,12 @@ func (q *Queries) ListAssignments(ctx context.Context, arg ListAssignmentsParams
 	return items, nil
 }
 
-const updateAssignmentReadinessPercentage = `-- name: UpdateAssignmentReadinessPercentage :one
-UPDATE polling_unit_assignments
-SET
-  election_practice_test_readiness_percentage = $2,
-  updated_at = NOW()
-WHERE id = $1
-RETURNING id, user_id, polling_unit_id, election_group_id, party_id, role_type, assigned_by, arrived_at, election_started_at, election_ended_at, last_update_at, reports_count, updates_count, results_submitted_count, election_practice_test_readiness_percentage, created_at, updated_at
-`
-
-type UpdateAssignmentReadinessPercentageParams struct {
-	ID                                      int64          `json:"id"`
-	ElectionPracticeTestReadinessPercentage pgtype.Numeric `json:"election_practice_test_readiness_percentage"`
-}
-
-type UpdateAssignmentReadinessPercentageRow struct {
-	ID                                      int64              `json:"id"`
-	UserID                                  int64              `json:"user_id"`
-	PollingUnitID                           int32              `json:"polling_unit_id"`
-	ElectionGroupID                         int32              `json:"election_group_id"`
-	PartyID                                 int16              `json:"party_id"`
-	RoleType                                pgtype.Text        `json:"role_type"`
-	AssignedBy                              pgtype.Int8        `json:"assigned_by"`
-	ArrivedAt                               pgtype.Timestamptz `json:"arrived_at"`
-	ElectionStartedAt                       pgtype.Timestamptz `json:"election_started_at"`
-	ElectionEndedAt                         pgtype.Timestamptz `json:"election_ended_at"`
-	LastUpdateAt                            pgtype.Timestamptz `json:"last_update_at"`
-	ReportsCount                            int32              `json:"reports_count"`
-	UpdatesCount                            int32              `json:"updates_count"`
-	ResultsSubmittedCount                   int32              `json:"results_submitted_count"`
-	ElectionPracticeTestReadinessPercentage pgtype.Numeric     `json:"election_practice_test_readiness_percentage"`
-	CreatedAt                               pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt                               pgtype.Timestamptz `json:"updated_at"`
-}
-
-func (q *Queries) UpdateAssignmentReadinessPercentage(ctx context.Context, arg UpdateAssignmentReadinessPercentageParams) (UpdateAssignmentReadinessPercentageRow, error) {
-	row := q.db.QueryRow(ctx, updateAssignmentReadinessPercentage, arg.ID, arg.ElectionPracticeTestReadinessPercentage)
-	var i UpdateAssignmentReadinessPercentageRow
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.PollingUnitID,
-		&i.ElectionGroupID,
-		&i.PartyID,
-		&i.RoleType,
-		&i.AssignedBy,
-		&i.ArrivedAt,
-		&i.ElectionStartedAt,
-		&i.ElectionEndedAt,
-		&i.LastUpdateAt,
-		&i.ReportsCount,
-		&i.UpdatesCount,
-		&i.ResultsSubmittedCount,
-		&i.ElectionPracticeTestReadinessPercentage,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
 const updateAssignmentTracking = `-- name: UpdateAssignmentTracking :one
 UPDATE polling_unit_assignments
 SET 
-  arrived_at = COALESCE($2, arrived_at),
-  election_started_at = COALESCE($3, election_started_at),
-  election_ended_at = COALESCE($4, election_ended_at),
+  arrived_at = COALESCE(arrived_at, $2),
+  election_started_at = COALESCE(election_started_at, $3),
+  election_ended_at = COALESCE(election_ended_at, $4),
   updated_at = NOW()
 WHERE id = $1
 RETURNING id, user_id, polling_unit_id, election_group_id, party_id, role_type, assigned_by, arrived_at, election_started_at, election_ended_at, created_at, updated_at
@@ -740,7 +677,7 @@ UPDATE polling_unit_assignments
 SET earned_amount_kobo = earned_amount_kobo + $1::bigint,
     updated_at = NOW()
 WHERE user_id = $2 AND election_group_id = $3
-RETURNING id, election_group_id, party_id, state_id, lga_id, ward_id, polling_unit_id, user_id, role_type, assigned_by, arrived_at, election_started_at, election_ended_at, completed_at, last_update_at, reports_count, updates_count, results_submitted_count, election_practice_test_readiness_percentage, potential_payment_kobo, earned_amount_kobo, created_at, updated_at
+RETURNING id, election_group_id, party_id, state_id, lga_id, ward_id, polling_unit_id, user_id, role_type, assigned_by, arrived_at, election_started_at, election_ended_at, completed_at, last_update_at, potential_payment_kobo, earned_amount_kobo, created_at, updated_at
 `
 
 type UpdatePollingUnitAssignmentEarnedAmountKoboParams struct {
@@ -768,10 +705,6 @@ func (q *Queries) UpdatePollingUnitAssignmentEarnedAmountKobo(ctx context.Contex
 		&i.ElectionEndedAt,
 		&i.CompletedAt,
 		&i.LastUpdateAt,
-		&i.ReportsCount,
-		&i.UpdatesCount,
-		&i.ResultsSubmittedCount,
-		&i.ElectionPracticeTestReadinessPercentage,
 		&i.PotentialPaymentKobo,
 		&i.EarnedAmountKobo,
 		&i.CreatedAt,

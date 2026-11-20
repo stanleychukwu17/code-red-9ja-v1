@@ -30,18 +30,18 @@ const (
 	//--END--
 
 	//--START-- for user
-	RedisUserInfo                = "user:info:"                 // Core profile only; relationships are hydrated separately.
-	RedisUserMoreInfo            = "user:more_info:"            // STRING: user:more_info:<userID> used to store and retrieve user more_info.
-	RedisUserPrimaryBankAccount  = "user:primary_bank_account:" // STRING: user:primary_bank_account:<userID> stores cached primary bank account.
-	RedisUserRoles               = "user:roles:"                // STRING: user:roles:<userID> used to store and retrieve user roles.
-	RedisUserPreferences         = "user:preferences:"          // STRING: user:preferences:<userID> used to store and retrieve user preferences.
-	RedisNotificationPreferences = "user:notification_prefs:"   // STRING: user:notification_prefs:<userID> used to store notification preferences.
-	RedisReferralCode            = "user:referral_code:"        // STRING: user:referral_code:<code> used to store cached referrer info JSON (id, name).
-	RedisUsernameFakeID          = "user:username:"             // STRING: user:username:<cleanUsername> used to cache fakeID for fast profile resolution.
-	RedisUserFollower            = "user:follower:"             // STRING: "user:follower:<followerID>:<followingID>" stores cached boolean whether follower follows following.
-	RedisUserFollowersCount      = "user:followers_count:"      // STRING: "user:followers_count:<userID>" stores cached follower count.
-	RedisUserFollowingCount      = "user:following_count:"      // STRING: "user:following_count:<userID>" stores cached following count.
-	RedisUserHasActiveAgentApp   = "user:has_active_agent_app:" // STRING: "user:has_active_agent_app:<userID>" stores cached boolean whether user has an active agent application.
+	RedisUserInfo                = "user:info:"                  // Core profile only; relationships are hydrated separately.
+	RedisUserMoreInfo            = "user:more_info:"             // STRING: user:more_info:<userID> used to store and retrieve user more_info.
+	RedisUserPrimaryBankAccount  = "user:primary_bank_account:"  // STRING: user:primary_bank_account:<userID> stores cached primary bank account.
+	RedisUserRoles               = "user:roles:"                 // STRING: user:roles:<userID> used to store and retrieve user roles.
+	RedisUserPreferences         = "user:preferences:"           // STRING: user:preferences:<userID> used to store and retrieve user preferences.
+	RedisNotificationPreferences = "user:notification_prefs:"    // STRING: user:notification_prefs:<userID> used to store notification preferences.
+	RedisReferralCode            = "user:referral_code:"         // STRING: user:referral_code:<code> used to store cached referrer info JSON (id, name).
+	RedisUsernameFakeID          = "user:username:"              // STRING: user:username:<cleanUsername> used to cache fakeID for fast profile resolution.
+	RedisUserFollower            = "user:follower:"              // STRING: "user:follower:<followerID>:<followingID>" stores cached boolean whether follower follows following.
+	RedisUserFollowersCount      = "user:followers_count:"       // STRING: "user:followers_count:<userID>" stores cached follower count.
+	RedisUserFollowingCount      = "user:following_count:"       // STRING: "user:following_count:<userID>" stores cached following count.
+	RedisUserHasActiveAgentApp   = "user:has_active_agent_app:"  // STRING: "user:has_active_agent_app:<userID>" stores cached boolean whether user has an active agent application.
 	RedisUserHasActiveAssignment = "user:has_active_assignment:" // STRING: "user:has_active_assignment:<userID>" stores cached boolean whether user has an active duty assignment.
 	//--END--
 
@@ -137,14 +137,14 @@ const (
 	//--END--
 
 	//--START-- for elections and election groups
-	RedisElectionGroupsAll      = "election_groups:all"         // STRING: used to store and retrieve all election groups JSON.
-	RedisElectionGroupsActive   = "election_groups:active"      // STRING: used to store and retrieve active election groups JSON.
-	RedisElectionGroupByID      = "election_group:"             // STRING: "election_group:<id>" used to store and retrieve single election group JSON.
-	RedisElectionGroupByFakeID  = "election_group:fake:"        // STRING: "election_group:fake:<fake_id>" used to store and retrieve single election group JSON.
-	RedisElectionGroupInstances = "election_group:instances:"   // STRING: "election_group:instances:<id>" cached election instances list for an election group; cached for 7 days.
-	RedisElectionByID           = "election:"                   // Raw election record; cached for 180 days.
-	RedisElectionByFakeID       = "election:fake:"              // Raw election record by fake_id; cached for 180 days.
-	RedisElectionCandidates     = "election:candidates:"        // Cached candidate roster for election; cached for 180 days.
+	RedisElectionGroupsAll         = "election_groups:all"         // STRING: used to store and retrieve all election groups JSON.
+	RedisElectionGroupsActive      = "election_groups:active"      // STRING: used to store and retrieve active election groups JSON.
+	RedisElectionGroupByID         = "election_group:"             // STRING: "election_group:<id>" used to store and retrieve single election group JSON.
+	RedisElectionGroupByFakeID     = "election_group:fake:"        // STRING: "election_group:fake:<fake_id>" used to store and retrieve single election group JSON.
+	RedisElectionGroupInstances    = "election_group:instances:"   // STRING: "election_group:instances:<id>" cached election instances list for an election group; cached for 7 days.
+	RedisElectionByID              = "election:"                   // Raw election record; cached for 180 days.
+	RedisElectionByFakeID          = "election:fake:"              // Raw election record by fake_id; cached for 180 days.
+	RedisElectionCandidates        = "election:candidates:"        // Cached candidate roster for election; cached for 180 days.
 	RedisUserActiveCandidacies     = "elections:user_candidacies:" // Active candidacies for user; cached for 30 days.
 	RedisUserPollingUnitAssignment = "pu_assignment:user:"         // STRING: "pu_assignment:user:<userID>:eg:<electionGroupID>" stores cached JSON of agent's assigned polling unit; cached for 7 days.
 	RedisStateSupervisorAssignment = "supervisor:state:"           // STRING: "supervisor:state:<userID>:eg:<electionGroupID>" stores cached JSON of state supervisor assignment; cached for 7 days.
@@ -175,7 +175,8 @@ const (
 	//--END--
 
 	//--START-- for earnings
-	RedisEarningsAllocation = "earnings:allocation:" // STRING: "earnings:allocation:<role>" stores cached earningsAllocation JSON
+	RedisEarningsAllocation   = "earnings:allocation:"            // STRING: "earnings:allocation:<role>" stores cached earningsAllocation JSON
+	RedisUpdateScheduleConfig = "settings:update_schedule_config" // STRING: cached update_schedule_config JSON
 	//--END--
 )
 
@@ -290,4 +291,5 @@ var AllRedisPrefixes = []string{
 	RedisTeamStateSupervisor,
 	RedisPollingUnitIssueOption,
 	RedisEarningsAllocation,
+	RedisUpdateScheduleConfig,
 }

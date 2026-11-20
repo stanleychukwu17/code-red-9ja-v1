@@ -50,7 +50,6 @@ type AgentPerformanceItem struct {
 	ElectionStartedAt *string `json:"election_started_at,omitempty"`
 	ElectionEndedAt   *string `json:"election_ended_at,omitempty"`
 	UpdatesGiven      *int32  `json:"updates_given,omitempty"`
-	ReportsGiven      *int32  `json:"reports_given,omitempty"`
 	ResultsUploaded   *string `json:"results_uploaded,omitempty"`
 	EarningsKobo      int64   `json:"earnings_kobo"`
 	EarningsFormatted string  `json:"earnings_formatted"`
@@ -189,7 +188,6 @@ func (h *Handler) fetchPerformanceStats(ctx context.Context, roleType string, pa
 				ElectionStartedAt: utils.PtrFromString(row.ElectionStartedAt),
 				ElectionEndedAt:   utils.PtrFromString(row.ElectionEndedAt),
 				UpdatesGiven:      utils.Ptr(row.UpdatesGiven),
-				ReportsGiven:      utils.Ptr(row.ReportsGiven),
 				ResultsUploaded:   utils.PtrFromString(row.ResultsUploaded),
 				EarningsKobo:      row.EarningsKobo,
 				EarningsFormatted: row.EarningsFormatted,

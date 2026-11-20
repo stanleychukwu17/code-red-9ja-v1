@@ -3,26 +3,32 @@ package system_settings
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/redis/go-redis/v9"
 
+	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/logger"
 	"free9ja/api/internal/utils"
 )
 
 type Handler struct {
-	q *queries.Queries
-	u *utils.Utils
+	q   *queries.Queries
+	rdb *redis.Client
+	u   *utils.Utils
 }
 
-func NewHandler(q *queries.Queries, u *utils.Utils) *Handler {
+func NewHandler(q *queries.Queries, rdb *redis.Client, u *utils.Utils) *Handler {
 	return &Handler{
-		q: q,
-		u: u,
+		q:   q,
+		rdb: rdb,
+		u:   u,
 	}
 }
 
@@ -144,6 +150,14 @@ func (h *Handler) UpdateSystemSetting(w http.ResponseWriter, r *http.Request) {
 		log.Error("failed to update system setting", "key", key, "err", err)
 		h.u.RespondError(w, http.StatusInternalServerError, "Failed to update system setting")
 		return
+	}
+
+	// Invalidate Redis cache if updating earnings allocation setting or update schedule config
+	if strings.HasPrefix(key, "earnings_allocation_") {
+		role := strings.TrimPrefix(key, "earnings_allocation_")
+		_ = h.rdb.Del(r.Context(), fmt.Sprintf("%s%s", db.RedisEarningsAllocation, role)).Err()
+	} else if key == "update_schedule_config" {
+		_ = h.rdb.Del(r.Context(), db.RedisUpdateScheduleConfig).Err()
 	}
 
 	h.u.RespondSuccess(w, http.StatusOK, "System setting updated successfully", map[string]interface{}{

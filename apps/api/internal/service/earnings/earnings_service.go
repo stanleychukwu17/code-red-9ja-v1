@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
-	"strconv"
 	"strings"
 	"time"
 
@@ -21,20 +20,34 @@ import (
 
 // ─── Service ─────────────────────────────────────────────────────────────────
 
+type partiesService interface {
+	GetPartyByID(ctx context.Context, partyID int16) (queries.Party, error)
+}
+
 type Service struct {
-	q    *queries.Queries
-	pool *pgxpool.Pool
-	rdb  *redis.Client
+	queries    *queries.Queries
+	pool       *pgxpool.Pool
+	rdb        *redis.Client
+	partiesSvc partiesService
 }
 
 func NewService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client) *Service {
-	return &Service{q: q, pool: pool, rdb: rdb}
+	return &Service{queries: q, pool: pool, rdb: rdb}
+}
+
+// SetPartiesService sets the parties service for caching party lookups.
+func (s *Service) SetPartiesService(partiesSvc partiesService) {
+	s.partiesSvc = partiesSvc
+}
+
+// getPartyByID fetches party details via the Redis-cached partiesService.
+func (s *Service) getPartyByID(ctx context.Context, partyID int16) (queries.Party, error) {
+	return s.partiesSvc.GetPartyByID(ctx, partyID)
 }
 
 // ─── JSON shapes from DB ──────────────────────────────────────────────────────
 
 type EarningsAllocation struct {
-	Readiness     float64 `json:"readiness"`
 	Results       float64 `json:"results"`
 	Updates       float64 `json:"updates"`
 	Attendance    float64 `json:"attendance"`
@@ -44,14 +57,11 @@ type EarningsAllocation struct {
 
 type earningsAllocation = EarningsAllocation
 
-type testWindow struct {
-	DaysBeforeElection int `json:"days_before_election"`
-	Quota              int `json:"quota"`
-}
-
-type testRequirements struct {
-	TotalRequired int          `json:"total_required"`
-	Windows       []testWindow `json:"windows"`
+type UpdateScheduleConfig struct {
+	TargetUpdatesCount float64 `json:"target_updates_count"`
+	StartTime          string  `json:"start_time"`
+	EndTime            string  `json:"end_time"`
+	IntervalMinutes    int     `json:"interval_minutes"`
 }
 
 // agentPaymentAllocation:
@@ -66,51 +76,80 @@ type rolePaymentConfig struct {
 // Calculate computes and upserts the agent_earnings row for a given assignment.
 // It is safe to call repeatedly — each call refreshes the stored record.
 func (s *Service) Calculate(ctx context.Context, assignmentID int64) (queries.AgentEarning, error) {
-	asgn, err := s.q.GetAssignmentForEarnings(ctx, assignmentID)
+	asgn, err := s.queries.GetAssignmentForEarnings(ctx, assignmentID)
 	if err != nil {
 		return queries.AgentEarning{}, fmt.Errorf("get assignment: %w", err)
 	}
-	return s.calculateWithTx(ctx, s.q, asgn)
+	return s.calculateWithTx(ctx, s.queries, asgn)
 }
 
 // GetEarningsAllocation retrieves the percentage weights for each milestone task for a given role,
 // using Redis cache (1 day TTL) with fallback to system_settings in the database.
 func (s *Service) GetEarningsAllocation(ctx context.Context, roleType string) (EarningsAllocation, error) {
-	normRole := strings.ReplaceAll(strings.ToLower(roleType), " ", "_")
-	cacheKey := fmt.Sprintf("%s%s", db.RedisEarningsAllocation, normRole)
+	cacheKey := fmt.Sprintf("%s%s", db.RedisEarningsAllocation, roleType)
 
 	// Check Redis cache first
-	if alloc, ok := utils.GetCachedJSON[EarningsAllocation](ctx, s.rdb, cacheKey); ok && (alloc.Readiness > 0 || alloc.Results > 0 || alloc.Updates > 0 || alloc.Attendance > 0 || alloc.ElectionStart > 0 || alloc.ElectionEnd > 0) {
+	if alloc, ok := utils.GetCachedJSON[EarningsAllocation](ctx, s.rdb, cacheKey); ok && (alloc.Results > 0 || alloc.Updates > 0 || alloc.Attendance > 0 || alloc.ElectionStart > 0 || alloc.ElectionEnd > 0) {
 		return alloc, nil
 	}
 
-	// Fetch from system_settings with fallback to legacy supervisor keys and polling_agent default
-	allocationKey := fmt.Sprintf("earnings_allocation_%s", normRole)
-	allocationSetting, err := s.q.GetSystemSetting(ctx, allocationKey)
+	defaultAlloc := EarningsAllocation{
+		Results:       50,
+		Updates:       30,
+		Attendance:    10,
+		ElectionStart: 5,
+		ElectionEnd:   5,
+	}
+
+	// Fetch from system_settings
+	allocationKey := fmt.Sprintf("earnings_allocation_%s", roleType)
+	allocationSetting, err := s.queries.GetSystemSetting(ctx, allocationKey)
 	if err != nil {
-		legacyKey := strings.Replace(allocationKey, "_election_supervisor", "_supervisor", 1)
-		allocationSetting, err = s.q.GetSystemSetting(ctx, legacyKey)
-		if err != nil {
-			if normRole != "polling_agent" {
-				allocationSetting, err = s.q.GetSystemSetting(ctx, "earnings_allocation_polling_agent")
-			}
-			if err != nil {
-				return EarningsAllocation{}, fmt.Errorf("get earnings allocation setting %q: %w", allocationKey, err)
-			}
-		}
+		return defaultAlloc, nil
 	}
 
 	// Parse configuration JSON
-	var alloc EarningsAllocation
+	alloc := defaultAlloc
 	if len(allocationSetting.Value) > 0 {
 		if err := json.Unmarshal(allocationSetting.Value, &alloc); err != nil {
-			return EarningsAllocation{}, fmt.Errorf("parse earnings allocation: %w", err)
+			return defaultAlloc, nil
 		}
 	}
 
 	// Cache resolved allocation in Redis for 1 day
 	_ = utils.SetCachedJSON(ctx, s.rdb, cacheKey, alloc, db.RedisOneDayTTL)
 	return alloc, nil
+}
+
+// GetUpdateScheduleConfig retrieves the update schedule settings,
+// using Redis cache (1 day TTL) with fallback to system_settings in the database.
+func (s *Service) GetUpdateScheduleConfig(ctx context.Context) (UpdateScheduleConfig, error) {
+	cacheKey := db.RedisUpdateScheduleConfig
+
+	if cfg, ok := utils.GetCachedJSON[UpdateScheduleConfig](ctx, s.rdb, cacheKey); ok && cfg.TargetUpdatesCount > 0 {
+		return cfg, nil
+	}
+
+	defaultCfg := UpdateScheduleConfig{
+		TargetUpdatesCount: 18,
+		StartTime:          "08:00",
+		EndTime:            "17:00",
+		IntervalMinutes:    30,
+	}
+
+	setting, err := s.queries.GetSystemSetting(ctx, "update_schedule_config")
+	if err != nil {
+		return defaultCfg, nil
+	}
+
+	if len(setting.Value) > 0 {
+		if err := json.Unmarshal(setting.Value, &defaultCfg); err != nil {
+			return defaultCfg, nil
+		}
+	}
+
+	_ = utils.SetCachedJSON(ctx, s.rdb, cacheKey, defaultCfg, db.RedisOneDayTTL)
+	return defaultCfg, nil
 }
 
 // calculateWithTx performs the full earnings calculation using the given queries
@@ -124,51 +163,38 @@ func (s *Service) calculateWithTx(ctx context.Context, q *queries.Queries, asgn 
 		return queries.AgentEarning{}, fmt.Errorf("get earnings allocation: %w", err)
 	}
 
-	// 2. Fetch update_schedule_config (or legacy target_updates_count)
-	var targetUpdatesCount float64 = 18
-	var intervalMinutes int = 30
-	if scheduleSetting, err := q.GetSystemSetting(ctx, "update_schedule_config"); err == nil {
-		var cfg struct {
-			TargetUpdatesCount float64 `json:"target_updates_count"`
-			IntervalMinutes    int     `json:"interval_minutes"`
-		}
-		if err := json.Unmarshal(scheduleSetting.Value, &cfg); err == nil {
-			if cfg.TargetUpdatesCount > 0 {
-				targetUpdatesCount = cfg.TargetUpdatesCount
-			}
-			if cfg.IntervalMinutes > 0 {
-				intervalMinutes = cfg.IntervalMinutes
-			}
-		}
-	} else if legacySetting, err := q.GetSystemSetting(ctx, "target_updates_count"); err == nil {
-		_ = json.Unmarshal(legacySetting.Value, &targetUpdatesCount)
-	}
+	// 2. Fetch update_schedule_config (Redis cached)
+	updateScheduleConfig, _ := s.GetUpdateScheduleConfig(ctx)
+	targetUpdatesCount := updateScheduleConfig.TargetUpdatesCount
+	intervalMinutes := updateScheduleConfig.IntervalMinutes
 
-	// 3. Fetch party to get base payment kobo
-	party, err := q.GetPartyByID(ctx, asgn.PartyID)
+	// 3. Fetch party to get base payment kobo (cached via partiesService)
+	party, err := s.getPartyByID(ctx, asgn.PartyID)
 	if err != nil {
 		return queries.AgentEarning{}, fmt.Errorf("get party: %w", err)
 	}
 
+	// Resolves party-configured base payout for this role
 	basePaymentKobo := s.resolveBasePayment(party.AgentPaymentAllocationKobo, roleType, asgn.StateName)
 
 	// 4. Compute each factor score (0–100)
-	readinessScore := s.computeReadinessScore(asgn)
-	resultsScore := computeRatioScore(float64(asgn.ResultsSubmittedCount), float64(asgn.ResultsExpectedToSubmitCount))
+	resultsScore := computeRatioScore(ComputeRatioScoreParams{
+		Actual: float64(asgn.ResultsSubmittedCount),
+		Target: float64(asgn.ResultsExpectedToSubmitCount),
+	})
 	updatesScore := s.computeUpdatesScore(ctx, q, asgn, targetUpdatesCount, intervalMinutes)
 	attendanceScore := boolScore(asgn.ArrivedAt.Valid)
 	electionStartScore := boolScore(asgn.ElectionStartedAt.Valid)
 	electionEndScore := boolScore(asgn.ElectionEndedAt.Valid)
 
 	// 5. Compute per-factor earnings (kobo)
-	readinessEarned := factorEarned(basePaymentKobo, allocation.Readiness, readinessScore)
 	resultsEarned := factorEarned(basePaymentKobo, allocation.Results, resultsScore)
 	updatesEarned := factorEarned(basePaymentKobo, allocation.Updates, updatesScore)
 	attendanceEarned := factorEarned(basePaymentKobo, allocation.Attendance, attendanceScore)
 	electionStartEarned := factorEarned(basePaymentKobo, allocation.ElectionStart, electionStartScore)
 	electionEndEarned := factorEarned(basePaymentKobo, allocation.ElectionEnd, electionEndScore)
 
-	totalEarned := readinessEarned + resultsEarned + updatesEarned +
+	totalEarned := resultsEarned + updatesEarned +
 		attendanceEarned + electionStartEarned + electionEndEarned
 
 	// 6. Re-marshal allocation for snapshot storage
@@ -182,13 +208,13 @@ func (s *Service) calculateWithTx(ctx context.Context, q *queries.Queries, asgn 
 		RoleType:                roleType,
 		BasePaymentKobo:         basePaymentKobo,
 		EarningsAllocation:      allocationBytes,
-		ReadinessScore:          toNumeric(readinessScore),
+		ReadinessScore:          toNumeric(0),
 		ResultsScore:            toNumeric(resultsScore),
 		UpdatesScore:            toNumeric(updatesScore),
 		AttendanceScore:         toNumeric(attendanceScore),
 		ElectionStartScore:      toNumeric(electionStartScore),
 		ElectionEndScore:        toNumeric(electionEndScore),
-		ReadinessEarnedKobo:     readinessEarned,
+		ReadinessEarnedKobo:     0,
 		ResultsEarnedKobo:       resultsEarned,
 		UpdatesEarnedKobo:       updatesEarned,
 		AttendanceEarnedKobo:    attendanceEarned,
@@ -201,149 +227,6 @@ func (s *Service) calculateWithTx(ctx context.Context, q *queries.Queries, asgn 
 	}
 
 	return result, nil
-}
-
-// ─── ProcessPracticeTestEarnings ─────────────────────────────────────────────
-
-// ProcessPracticeTestEarnings runs the full atomic flow when an agent completes
-// a practice test:
-//  1. Update election_practice_test_readiness_percentage on the assignment
-//  2. Recalculate and upsert agent_earnings
-//  3. Credit the delta in readiness_earned_kobo to the agent's wallet
-//  4. Create a wallet transaction record
-//  5. Mark all been_paid:false attempts in test_attempts as been_paid:true
-//
-// It is intentionally called in a background goroutine; errors are logged only.
-func (s *Service) ProcessPracticeTestEarnings(
-	ctx context.Context,
-	assignmentID int64,
-	practiceTestRecordID int64,
-	newReadinessPct float64,
-) {
-	if s.pool == nil {
-		slog.Warn("earnings: pool is nil, skipping practice test earnings processing")
-		return
-	}
-
-	tx, err := s.pool.Begin(ctx)
-	if err != nil {
-		slog.Error("earnings: failed to begin transaction", "error", err)
-		return
-	}
-	defer tx.Rollback(ctx)
-
-	qtx := s.q.WithTx(tx)
-
-	// 1. Update readiness percentage on the assignment
-	var readinessPct pgtype.Numeric
-	if scanErr := readinessPct.Scan(fmt.Sprintf("%.2f", newReadinessPct)); scanErr != nil {
-		slog.Error("earnings: failed to scan readiness percentage", "error", scanErr)
-		return
-	}
-	if _, err := qtx.UpdateAssignmentReadinessPercentage(ctx, queries.UpdateAssignmentReadinessPercentageParams{
-		ID:                                      assignmentID,
-		ElectionPracticeTestReadinessPercentage: readinessPct,
-	}); err != nil {
-		slog.Error("earnings: failed to update assignment readiness percentage", "assignmentID", assignmentID, "error", err)
-		return
-	}
-
-	// 2. Fetch the current agent_earnings row to get the old readiness_earned_kobo
-	asgn, err := qtx.GetAssignmentForEarnings(ctx, assignmentID)
-	if err != nil {
-		slog.Error("earnings: failed to get assignment for earnings", "assignmentID", assignmentID, "error", err)
-		return
-	}
-
-	roleType := "polling_agent"
-
-	// Fetch old readiness_earned_kobo before recalculating
-	oldReadinessEarned := int64(0)
-	oldEarnings, err := qtx.GetAgentEarningsByUserAndElectionGroupAndRole(ctx, queries.GetAgentEarningsByUserAndElectionGroupAndRoleParams{
-		UserID:          asgn.UserID,
-		ElectionGroupID: asgn.ElectionGroupID,
-		RoleType:        roleType,
-	})
-	if err == nil {
-		oldReadinessEarned = oldEarnings.ReadinessEarnedKobo
-	}
-
-	// 3. Compute and upsert agent_earnings (using the in-tx queries)
-	newEarnings, err := s.calculateWithTx(ctx, qtx, asgn)
-	if err != nil {
-		slog.Error("earnings: failed to calculate earnings", "assignmentID", assignmentID, "error", err)
-		return
-	}
-
-	// 4. Compute the readiness delta and credit the wallet
-	delta := newEarnings.ReadinessEarnedKobo - oldReadinessEarned
-	if delta > 0 {
-		wallet, wErr := qtx.GetUserWalletByUserID(ctx, asgn.UserID)
-		if wErr != nil {
-			slog.Warn("earnings: agent has no wallet, skipping credit", "userID", asgn.UserID, "error", wErr)
-			// Non-fatal — we still want to mark the attempts paid
-		} else {
-			updatedWallet, creditErr := qtx.CreditUserWallet(ctx, queries.CreditUserWalletParams{
-				BalanceKobo: delta,
-				ID:          wallet.ID,
-			})
-			if creditErr != nil {
-				slog.Error("earnings: failed to credit wallet", "userID", asgn.UserID, "delta", delta, "error", creditErr)
-				return
-			}
-			// Build a unique reference: practiceTest-<recordID>-<timestamp>
-			txRef := fmt.Sprintf("practice-readiness-%d-%d", practiceTestRecordID, time.Now().UnixNano())
-			if _, txErr := qtx.CreateUserWalletTransaction(ctx, queries.CreateUserWalletTransactionParams{
-				WalletID:             wallet.ID,
-				TransactionReference: txRef,
-				Type:                 "credit",
-				AmountKobo:           delta,
-				BalanceAfterKobo:     updatedWallet.BalanceKobo,
-				PayerName:            pgtype.Text{},
-				PayerAccountNumber:   pgtype.Text{},
-				PayerBankCode:        pgtype.Text{},
-				Narration:            pgtype.Text{String: "Practice Test: Submitted", Valid: true},
-				RawPayload:           nil,
-			}); txErr != nil {
-				slog.Error("earnings: failed to record wallet transaction", "ref", txRef, "error", txErr)
-				return
-			}
-		}
-
-		// Update polling_unit_assignments.earned_amount_kobo
-		if _, updateAsgnErr := qtx.UpdatePollingUnitAssignmentEarnedAmountKobo(ctx, queries.UpdatePollingUnitAssignmentEarnedAmountKoboParams{
-			UserID:          asgn.UserID,
-			ElectionGroupID: asgn.ElectionGroupID,
-			EarnedDeltaKobo: delta,
-		}); updateAsgnErr != nil {
-			slog.Warn("earnings: failed to update polling_unit_assignments earned_amount_kobo", "userID", asgn.UserID, "electionGroupID", asgn.ElectionGroupID, "err", updateAsgnErr)
-		}
-	}
-
-	// 5. Mark all been_paid:false attempts as been_paid:true and credit earned_amount_kobo
-	earnedDelta := delta
-	if earnedDelta < 0 {
-		earnedDelta = 0
-	}
-	if _, err := qtx.MarkPracticeTestAttemptsPaid(ctx, queries.MarkPracticeTestAttemptsPaidParams{
-		EarnedDeltaKobo: earnedDelta,
-		ID:              practiceTestRecordID,
-	}); err != nil {
-		slog.Error("earnings: failed to mark practice test attempts as paid", "practiceTestID", practiceTestRecordID, "error", err)
-		return
-	}
-
-	if err := tx.Commit(ctx); err != nil {
-		slog.Error("earnings: failed to commit practice test earnings transaction", "error", err)
-		return
-	}
-
-	slog.Info("earnings: practice test earnings processed",
-		"assignmentID", assignmentID,
-		"practiceTestID", practiceTestRecordID,
-		"readinessDeltaKobo", delta,
-		"newReadinessPct", newReadinessPct,
-	)
 }
 
 // ProcessTaskEarningsParams contains parameters to calculate and credit task milestone earnings.
@@ -365,7 +248,7 @@ func (s *Service) ProcessTaskEarnings(ctx context.Context, params ProcessTaskEar
 	defer tx.Rollback(ctx)
 
 	// starts transaction
-	qtx := s.q.WithTx(tx)
+	qtx := s.queries.WithTx(tx)
 
 	// Fetch assignment snapshot including polling unit geo-coordinates
 	asgn, err := qtx.GetAssignmentForEarnings(ctx, params.AssignmentID)
@@ -375,7 +258,15 @@ func (s *Service) ProcessTaskEarnings(ctx context.Context, params ProcessTaskEar
 
 	roleType := "polling_agent"
 
-	// Fetch old earnings before recalculating
+	// Incremental Delta Payout Pattern:
+	// 1. Fetch current cumulative earnings record for this agent & election to check what has already been paid.
+	// agent_earnings (user_id, election_group_id, role_type)
+	// ├── readiness_earned_kobo
+	// ├── attendance_earned_kobo
+	// ├── election_start_earned_kobo
+	// ├── election_end_earned_kobo
+	// ├── updates_earned_kobo
+	// └── results_earned_kobo
 	oldEarnings, err := qtx.GetAgentEarningsByUserAndElectionGroupAndRole(ctx, queries.GetAgentEarningsByUserAndElectionGroupAndRoleParams{
 		UserID:          asgn.UserID,
 		ElectionGroupID: asgn.ElectionGroupID,
@@ -398,7 +289,7 @@ func (s *Service) ProcessTaskEarnings(ctx context.Context, params ProcessTaskEar
 		}
 	}
 
-	// Recalculate earnings
+	// 2. Recalculate total achievement scores and new earnings across all factors with the latest submission included.
 	newEarnings, err := s.calculateWithTx(ctx, qtx, asgn)
 	if err != nil {
 		return 0, fmt.Errorf("earnings: failed to calculate earnings: %w", err)
@@ -436,6 +327,8 @@ func (s *Service) ProcessTaskEarnings(ctx context.Context, params ProcessTaskEar
 		}
 	}
 
+	// 3. Compute newly unlocked delta (new - old).
+	// Only credit the positive difference to the wallet, guaranteeing idempotency and preventing duplicate payouts.
 	delta := newFactorEarned - oldFactorEarned
 	if delta > 0 {
 		wallet, wErr := qtx.GetUserWalletByUserID(ctx, asgn.UserID)
@@ -486,21 +379,7 @@ func (s *Service) ProcessTaskEarnings(ctx context.Context, params ProcessTaskEar
 	return delta, nil
 }
 
-// ─── Readiness calculation ────────────────────────────────────────────────────
-
-// computeReadinessScore derives the readiness score from the already-stored
-// election_practice_test_readiness_percentage on the assignment (0–100).
-// That field is kept up to date by the practice test completion flow.
-func (s *Service) computeReadinessScore(asgn queries.GetAssignmentForEarningsRow) float64 {
-	if !asgn.ElectionPracticeTestReadinessPercentage.Valid {
-		return 0
-	}
-	f, err := asgn.ElectionPracticeTestReadinessPercentage.Float64Value()
-	if err != nil || !f.Valid {
-		return 0
-	}
-	return clamp(f.Float64, 0, 100)
-}
+// ─── Updates calculation ──────────────────────────────────────────────────────
 
 // computeUpdatesScore derives the updates score (0–100) taking into account location verification
 // and interval spacing (Option B: max 1 update credited per interval bucket, taking best weight in bucket):
@@ -568,16 +447,25 @@ func (s *Service) computeUpdatesScore(
 		effectiveUpdates += w
 	}
 
-	return computeRatioScore(effectiveUpdates, targetUpdatesCount)
+	return computeRatioScore(ComputeRatioScoreParams{
+		Actual: effectiveUpdates,
+		Target: targetUpdatesCount,
+	})
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-func computeRatioScore(actual, target float64) float64 {
-	if target <= 0 {
+type ComputeRatioScoreParams struct {
+	Actual float64
+	Target float64
+}
+
+func computeRatioScore(params ComputeRatioScoreParams) float64 {
+	if params.Target <= 0 {
 		return 0
 	}
-	return clamp((actual/target)*100, 0, 100)
+
+	return clamp((params.Actual/params.Target)*100, 0, 100)
 }
 
 func boolScore(set bool) float64 {
@@ -607,349 +495,6 @@ func toNumeric(f float64) pgtype.Numeric {
 	var n pgtype.Numeric
 	_ = n.Scan(fmt.Sprintf("%.2f", f))
 	return n
-}
-
-// ─── Practice Test Payout Evaluation & Processing ─────────────────────────────
-
-type PracticeTestPayoutResult struct {
-	Eligible         bool
-	EarnedAmountKobo int64
-	AssignmentID     int64
-	PartyID          int16
-}
-
-type AssignmentInfo struct {
-	ID      int64
-	PartyID int16
-	StateID int16
-}
-
-func (s *Service) getAssignmentInfo(ctx context.Context, userID int64, electionGroupID int32, roleType string) (*AssignmentInfo, error) {
-	normRole := strings.ReplaceAll(roleType, "-", "_")
-	switch normRole {
-	case "pollingagent":
-		normRole = "polling_agent"
-	case "ward_supervisor":
-		normRole = "ward_election_supervisor"
-	case "lga_supervisor":
-		normRole = "lga_election_supervisor"
-	case "state_supervisor":
-		normRole = "state_election_supervisor"
-	}
-
-	switch normRole {
-	case "polling_agent":
-		asgnID, err := s.q.GetAssignmentIDByUserAndElectionGroup(ctx, queries.GetAssignmentIDByUserAndElectionGroupParams{
-			UserID:          userID,
-			ElectionGroupID: electionGroupID,
-		})
-		if err == nil && asgnID > 0 {
-			asgn, err := s.q.GetAssignmentForEarnings(ctx, asgnID)
-			if err == nil {
-				return &AssignmentInfo{ID: asgn.ID, PartyID: asgn.PartyID, StateID: 0}, nil
-			}
-		}
-
-	case "state_election_supervisor":
-		sup, err := s.q.GetStateSupervisorByElectionGroup(ctx, queries.GetStateSupervisorByElectionGroupParams{
-			UserID:          userID,
-			ElectionGroupID: electionGroupID,
-		})
-		if err == nil && sup.ID > 0 {
-			return &AssignmentInfo{ID: sup.ID, PartyID: sup.PartyID, StateID: sup.StateID}, nil
-		}
-
-	case "lga_election_supervisor":
-		sup, err := s.q.GetLgaSupervisorByElectionGroup(ctx, queries.GetLgaSupervisorByElectionGroupParams{
-			UserID:          userID,
-			ElectionGroupID: electionGroupID,
-		})
-		if err == nil && sup.ID > 0 {
-			return &AssignmentInfo{ID: sup.ID, PartyID: sup.PartyID, StateID: sup.StateID}, nil
-		}
-
-	case "ward_election_supervisor":
-		sup, err := s.q.GetWardSupervisorByElectionGroup(ctx, queries.GetWardSupervisorByElectionGroupParams{
-			UserID:          userID,
-			ElectionGroupID: electionGroupID,
-		})
-		if err == nil && sup.ID > 0 {
-			return &AssignmentInfo{ID: sup.ID, PartyID: sup.PartyID, StateID: sup.StateID}, nil
-		}
-	}
-
-	// Fallback: Check if user has a pending party application for this election group
-	if apps, err := s.q.GetPendingApplicationsForUserAutoAccept(ctx, userID); err == nil {
-		for _, app := range apps {
-			if app.ElectionGroupID == electionGroupID {
-				return &AssignmentInfo{
-					ID:      0,
-					PartyID: app.PartyID,
-					StateID: app.StateID,
-				}, nil
-			}
-		}
-	}
-
-	return nil, fmt.Errorf("user %d has no assignment or application for role %s / election group %d", userID, roleType, electionGroupID)
-}
-
-func (s *Service) EvaluatePracticeTestPayout(
-	ctx context.Context,
-	userID int64,
-	electionGroupID int32,
-	roleType string,
-	finalScore float64,
-) (PracticeTestPayoutResult, error) {
-	if roleType == "" {
-		roleType = "polling_agent"
-	}
-	roleKey := strings.ReplaceAll(roleType, "-", "_")
-	switch roleKey {
-	case "pollingagent":
-		roleKey = "polling_agent"
-	case "ward_supervisor":
-		roleKey = "ward_election_supervisor"
-	case "lga_supervisor":
-		roleKey = "lga_election_supervisor"
-	case "state_supervisor":
-		roleKey = "state_election_supervisor"
-	}
-
-	// 1. Fetch election group to verify date is not in past
-	eg, err := s.q.GetElectionGroupByID(ctx, electionGroupID)
-	if err != nil {
-		return PracticeTestPayoutResult{Eligible: false}, nil
-	}
-	if eg.ElectionDate.Time.Year() < time.Now().Year() {
-		slog.Info("earnings: election year is in the past, no practice test payout", "electionGroupID", electionGroupID)
-		return PracticeTestPayoutResult{Eligible: false}, nil
-	}
-
-	// 2. Fetch assignment info
-	asgnInfo, err := s.getAssignmentInfo(ctx, userID, electionGroupID, roleKey)
-	if err != nil {
-		slog.Info("earnings: user has no assignment or application for role/election group", "userID", userID, "electionGroupID", electionGroupID, "roleType", roleKey, "err", err)
-		return PracticeTestPayoutResult{Eligible: false}, nil
-	}
-
-	// 3. Fetch earnings allocation for role (Redis cached)
-	alloc, _ := s.GetEarningsAllocation(ctx, roleKey)
-	readinessPct := alloc.Readiness
-	if readinessPct <= 0 {
-		readinessPct = 20.0
-	}
-
-	// 4. Fetch test requirements for role (e.g. test_requirements_polling_agent)
-	reqKey := fmt.Sprintf("test_requirements_%s", roleKey)
-	reqSetting, err := s.q.GetSystemSetting(ctx, reqKey)
-	if err != nil {
-		legacyReqKey := strings.Replace(reqKey, "_election_supervisor", "_supervisor", 1)
-		reqSetting, err = s.q.GetSystemSetting(ctx, legacyReqKey)
-		if err != nil {
-			reqSetting, _ = s.q.GetSystemSetting(ctx, "test_requirements_polling_agent")
-		}
-	}
-	var testReq testRequirements
-	if len(reqSetting.Value) > 0 {
-		_ = json.Unmarshal(reqSetting.Value, &testReq)
-	}
-	if testReq.TotalRequired <= 0 {
-		testReq.TotalRequired = 10
-	}
-
-	// 5. Fetch party base payment
-	party, err := s.q.GetPartyByID(ctx, asgnInfo.PartyID)
-	if err != nil {
-		return PracticeTestPayoutResult{Eligible: false}, fmt.Errorf("get party: %w", err)
-	}
-	stateName := ""
-	if asgnInfo.StateID > 0 {
-		stateName = strconv.Itoa(int(asgnInfo.StateID))
-	}
-	basePaymentKobo := s.resolveBasePayment(party.AgentPaymentAllocationKobo, roleKey, stateName)
-	if basePaymentKobo <= 0 {
-		slog.Info("earnings: party has 0 payment allocation for role", "partyID", asgnInfo.PartyID, "roleType", roleKey)
-		return PracticeTestPayoutResult{
-			Eligible:         false,
-			EarnedAmountKobo: 0,
-			AssignmentID:     asgnInfo.ID,
-			PartyID:          asgnInfo.PartyID,
-		}, nil
-	}
-	if party.AgentPaymentBalanceKobo <= 0 {
-		slog.Info("earnings: party has 0 agent payment balance", "partyID", asgnInfo.PartyID)
-		return PracticeTestPayoutResult{
-			Eligible:         false,
-			EarnedAmountKobo: 0,
-			AssignmentID:     asgnInfo.ID,
-			PartyID:          asgnInfo.PartyID,
-		}, nil
-	}
-
-	// 6. Calculate days to election & cumulative quota from windows
-	now := time.Now()
-	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-	daysToElection := 0
-	if !eg.ElectionDate.Time.Before(today) {
-		targetDate := eg.ElectionDate.Time
-		diff := targetDate.Sub(today)
-		daysToElection = int(math.Ceil(diff.Hours() / 24.0))
-		if daysToElection < 0 {
-			daysToElection = 0
-		}
-	}
-
-	allowedCumulativeQuota := 0
-	for _, win := range testReq.Windows {
-		if daysToElection <= win.DaysBeforeElection {
-			allowedCumulativeQuota += win.Quota
-		}
-	}
-	if allowedCumulativeQuota > testReq.TotalRequired {
-		allowedCumulativeQuota = testReq.TotalRequired
-	}
-
-	// 7. Count paid tests already taken
-	paidTestsCount := 0
-	existingTest, err := s.q.GetPracticeTest(ctx, queries.GetPracticeTestParams{
-		UserID:          userID,
-		ElectionGroupID: pgtype.Int4{Int32: electionGroupID, Valid: true},
-		Role:            roleKey,
-	})
-	if err == nil && len(existingTest.TestAttempts) > 0 {
-		var attempts []map[string]interface{}
-		if err := json.Unmarshal(existingTest.TestAttempts, &attempts); err == nil {
-			for _, att := range attempts {
-				if paid, ok := att["been_paid"].(bool); ok && paid {
-					paidTestsCount++
-				} else if earned, ok := att["earned_amount_kobo"].(float64); ok && earned > 0 {
-					paidTestsCount++
-				}
-			}
-		}
-	}
-
-	remainingQuota := allowedCumulativeQuota - paidTestsCount
-	if remainingQuota <= 0 {
-		slog.Info("earnings: test submission exceeds allowed window quota",
-			"userID", userID, "daysToElection", daysToElection, "allowedQuota", allowedCumulativeQuota, "paidCount", paidTestsCount)
-		return PracticeTestPayoutResult{
-			Eligible:     false,
-			AssignmentID: asgnInfo.ID,
-			PartyID:      asgnInfo.PartyID,
-		}, nil
-	}
-
-	// 8. Compute payout amount
-	totalReadinessPayKobo := float64(basePaymentKobo) * (readinessPct / 100.0)
-	payPerTestKobo := totalReadinessPayKobo / float64(testReq.TotalRequired)
-	earnedKobo := int64(math.Round(payPerTestKobo * (finalScore / 100.0)))
-
-	slog.Info("earnings: practice test payout evaluated",
-		"userID", userID,
-		"daysToElection", daysToElection,
-		"allowedQuota", allowedCumulativeQuota,
-		"paidCount", paidTestsCount,
-		"payPerTestKobo", payPerTestKobo,
-		"finalScore", finalScore,
-		"earnedKobo", earnedKobo,
-	)
-
-	return PracticeTestPayoutResult{
-		Eligible:         true,
-		EarnedAmountKobo: earnedKobo,
-		AssignmentID:     asgnInfo.ID,
-		PartyID:          asgnInfo.PartyID,
-	}, nil
-}
-
-func (s *Service) ProcessPracticeTestPayout(
-	ctx context.Context,
-	userID int64,
-	electionGroupID int32,
-	roleType string,
-	earnedKobo int64,
-	testRecordID int64,
-) error {
-	if s.pool == nil || earnedKobo <= 0 {
-		return nil
-	}
-
-	tx, err := s.pool.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("begin tx: %w", err)
-	}
-	defer tx.Rollback(ctx)
-
-	qtx := s.q.WithTx(tx)
-
-	// 1. Update assignment earned_amount_kobo based on role
-	switch roleType {
-	case "polling_agent", "pollingagent":
-		_, _ = qtx.UpdatePollingUnitAssignmentEarnedAmountKobo(ctx, queries.UpdatePollingUnitAssignmentEarnedAmountKoboParams{
-			UserID:          userID,
-			ElectionGroupID: electionGroupID,
-			EarnedDeltaKobo: earnedKobo,
-		})
-	case "state_election_supervisor":
-		_, _ = qtx.UpdateStateSupervisorEarnedAmountKobo(ctx, queries.UpdateStateSupervisorEarnedAmountKoboParams{
-			UserID:          userID,
-			ElectionGroupID: electionGroupID,
-			EarnedDeltaKobo: earnedKobo,
-		})
-	case "lga_election_supervisor":
-		_, _ = qtx.UpdateLgaSupervisorEarnedAmountKobo(ctx, queries.UpdateLgaSupervisorEarnedAmountKoboParams{
-			UserID:          userID,
-			ElectionGroupID: electionGroupID,
-			EarnedDeltaKobo: earnedKobo,
-		})
-	case "ward_election_supervisor":
-		_, _ = qtx.UpdateWardSupervisorEarnedAmountKobo(ctx, queries.UpdateWardSupervisorEarnedAmountKoboParams{
-			UserID:          userID,
-			ElectionGroupID: electionGroupID,
-			EarnedDeltaKobo: earnedKobo,
-		})
-	}
-
-	// 2. Debit Party Agent Payment Balance
-	asgnInfo, aErr := s.getAssignmentInfo(ctx, userID, electionGroupID, roleType)
-	if aErr == nil && asgnInfo.PartyID > 0 {
-		if _, dErr := qtx.DeductPartyAgentPaymentBalance(ctx, queries.DeductPartyAgentPaymentBalanceParams{
-			AgentPaymentBalanceKobo: earnedKobo,
-			ID:                      asgnInfo.PartyID,
-		}); dErr != nil {
-			return fmt.Errorf("deduct party agent payment balance: %w", dErr)
-		}
-	}
-
-	// 3. Credit User Wallet
-	wallet, wErr := qtx.GetUserWalletByUserID(ctx, userID)
-	if wErr != nil {
-		slog.Warn("earnings: user has no wallet for practice test payout", "userID", userID, "error", wErr)
-	} else {
-		updatedWallet, creditErr := qtx.CreditUserWallet(ctx, queries.CreditUserWalletParams{
-			BalanceKobo: earnedKobo,
-			ID:          wallet.ID,
-		})
-		if creditErr != nil {
-			return fmt.Errorf("credit wallet: %w", creditErr)
-		}
-
-		txRef := fmt.Sprintf("practice-test-readiness-%d-%d", testRecordID, time.Now().UnixNano())
-		if _, txErr := qtx.CreateUserWalletTransaction(ctx, queries.CreateUserWalletTransactionParams{
-			WalletID:             wallet.ID,
-			TransactionReference: txRef,
-			Type:                 "credit",
-			AmountKobo:           earnedKobo,
-			BalanceAfterKobo:     updatedWallet.BalanceKobo,
-			Narration:            pgtype.Text{String: fmt.Sprintf("Practice test readiness payout (%s)", roleType), Valid: true},
-		}); txErr != nil {
-			return fmt.Errorf("create wallet tx: %w", txErr)
-		}
-	}
-
-	return tx.Commit(ctx)
 }
 
 // resolveBasePayment extracts the kobo amount from agent_payment_allocation JSONB.
@@ -985,16 +530,8 @@ func (s *Service) resolveBasePayment(rawJSON []byte, roleType, stateName string)
 			return v
 		}
 	}
-	return cfg.Default
-}
 
-// isWithinWindow returns true if testCompletedAt falls within the band defined by
-// [electionDate - window.daysBeforeElection, electionDate - nextWindow.daysBeforeElection).
-// Windows must be sorted from furthest to closest (descending days_before_election).
-func isWithinWindow(testTime time.Time, electionDate time.Time, window testWindow, nextDays int) bool {
-	windowStart := electionDate.AddDate(0, 0, -window.DaysBeforeElection)
-	windowEnd := electionDate.AddDate(0, 0, -nextDays)
-	return !testTime.Before(windowStart) && testTime.Before(windowEnd)
+	return cfg.Default
 }
 
 // ─── CalculatePotentialPayout ──────────────────────────────────────────────────
@@ -1009,7 +546,7 @@ type PotentialPayoutResult struct {
 
 // CalculatePotentialPayout calculates the potential payout (in Kobo) for performing a specific task type.
 func (s *Service) CalculatePotentialPayout(ctx context.Context, assignmentID int64, taskType string) (PotentialPayoutResult, error) {
-	asgn, err := s.q.GetAssignmentForEarnings(ctx, assignmentID)
+	asgn, err := s.queries.GetAssignmentForEarnings(ctx, assignmentID)
 	if err != nil {
 		return PotentialPayoutResult{}, fmt.Errorf("get assignment: %w", err)
 	}
@@ -1019,7 +556,7 @@ func (s *Service) CalculatePotentialPayout(ctx context.Context, assignmentID int
 	// Determine base payment
 	basePaymentKobo := asgn.PotentialPaymentKobo
 	if basePaymentKobo <= 0 {
-		party, err := s.q.GetPartyByID(ctx, asgn.PartyID)
+		party, err := s.getPartyByID(ctx, asgn.PartyID)
 		if err == nil {
 			if party.AgentPaymentBalanceKobo <= 0 {
 				return PotentialPayoutResult{
@@ -1043,18 +580,16 @@ func (s *Service) CalculatePotentialPayout(ctx context.Context, assignmentID int
 		}, nil
 	}
 
-	// Election cycle check for non-readiness tasks
+	// Election cycle check
 	now := time.Now().UTC()
-	if taskType != "readiness" {
-		if now.Year() > asgn.ElectionDate.Time.Year() {
-			return PotentialPayoutResult{
-				AssignmentID:        assignmentID,
-				TaskType:            taskType,
-				PotentialPayoutKobo: 0,
-				IsEligible:          false,
-				Reason:              "Task type is only eligible during the election cycle",
-			}, nil
-		}
+	if now.Year() > asgn.ElectionDate.Time.Year() {
+		return PotentialPayoutResult{
+			AssignmentID:        assignmentID,
+			TaskType:            taskType,
+			PotentialPayoutKobo: 0,
+			IsEligible:          false,
+			Reason:              "Task type is only eligible during the election cycle",
+		}, nil
 	}
 
 	// Fetch earnings allocation for role (Redis cached)
@@ -1064,29 +599,6 @@ func (s *Service) CalculatePotentialPayout(ctx context.Context, assignmentID int
 	}
 
 	switch taskType {
-	case "readiness":
-		reqKey := fmt.Sprintf("test_requirements_%s", strings.ReplaceAll(roleType, " ", "_"))
-		totalRequired := 10
-		legacyReqKey := strings.Replace(reqKey, "_election_supervisor", "_supervisor", 1)
-		reqSetting, err := s.q.GetSystemSetting(ctx, reqKey)
-		if err != nil {
-			reqSetting, err = s.q.GetSystemSetting(ctx, legacyReqKey)
-		}
-		if err == nil {
-			var testReq testRequirements
-			if jErr := json.Unmarshal(reqSetting.Value, &testReq); jErr == nil && testReq.TotalRequired > 0 {
-				totalRequired = testReq.TotalRequired
-			}
-		}
-		readinessBudgetKobo := float64(basePaymentKobo) * (allocation.Readiness / 100.0)
-		payout := int64(readinessBudgetKobo / float64(totalRequired))
-		return PotentialPayoutResult{
-			AssignmentID:        assignmentID,
-			TaskType:            taskType,
-			PotentialPayoutKobo: payout,
-			IsEligible:          true,
-			Reason:              "Potential payout for practice test completion",
-		}, nil
 
 	case "results":
 		expected := asgn.ResultsExpectedToSubmitCount
@@ -1170,33 +682,11 @@ func (s *Service) CalculatePotentialPayout(ctx context.Context, assignmentID int
 		}, nil
 
 	case "updates":
-		var targetUpdates float64 = 18
-		startTimeStr := "08:00"
-		endTimeStr := "17:00"
-		intervalMinutes := 30
-
-		if schedSetting, err := s.q.GetSystemSetting(ctx, "update_schedule_config"); err == nil {
-			var cfg struct {
-				TargetUpdatesCount float64 `json:"target_updates_count"`
-				StartTime          string  `json:"start_time"`
-				EndTime            string  `json:"end_time"`
-				IntervalMinutes    int     `json:"interval_minutes"`
-			}
-			if jErr := json.Unmarshal(schedSetting.Value, &cfg); jErr == nil {
-				if cfg.TargetUpdatesCount > 0 {
-					targetUpdates = cfg.TargetUpdatesCount
-				}
-				if cfg.StartTime != "" {
-					startTimeStr = cfg.StartTime
-				}
-				if cfg.EndTime != "" {
-					endTimeStr = cfg.EndTime
-				}
-				if cfg.IntervalMinutes > 0 {
-					intervalMinutes = cfg.IntervalMinutes
-				}
-			}
-		}
+		updateScheduleConfig, _ := s.GetUpdateScheduleConfig(ctx)
+		targetUpdates := updateScheduleConfig.TargetUpdatesCount
+		startTimeStr := updateScheduleConfig.StartTime
+		endTimeStr := updateScheduleConfig.EndTime
+		intervalMinutes := updateScheduleConfig.IntervalMinutes
 
 		// Check time window
 		locNow := time.Now()
@@ -1285,7 +775,7 @@ func (s *Service) EstimatePotentialPayout(
 
 	var basePaymentKobo int64
 	if partyID > 0 {
-		if party, err := s.q.GetPartyByID(ctx, partyID); err == nil {
+		if party, err := s.getPartyByID(ctx, partyID); err == nil {
 			if party.AgentPaymentBalanceKobo <= 0 {
 				return EstimatePayoutResult{
 					TaskType:            taskType,
@@ -1316,18 +806,6 @@ func (s *Service) EstimatePotentialPayout(
 
 	var payout int64
 	switch taskType {
-	case "readiness":
-		reqKey := fmt.Sprintf("test_requirements_%s", strings.ReplaceAll(normRole, " ", "_"))
-		totalRequired := 10
-		if reqSetting, err := s.q.GetSystemSetting(ctx, reqKey); err == nil {
-			var testReq testRequirements
-			if jErr := json.Unmarshal(reqSetting.Value, &testReq); jErr == nil && testReq.TotalRequired > 0 {
-				totalRequired = testReq.TotalRequired
-			}
-		}
-		readinessBudgetKobo := float64(basePaymentKobo) * (allocation.Readiness / 100.0)
-		payout = int64(readinessBudgetKobo / float64(totalRequired))
-
 	case "results":
 		resultsBudgetKobo := float64(basePaymentKobo) * (allocation.Results / 100.0)
 		payout = int64(resultsBudgetKobo)
@@ -1342,15 +820,8 @@ func (s *Service) EstimatePotentialPayout(
 		payout = int64(float64(basePaymentKobo) * (allocation.ElectionEnd / 100.0))
 
 	case "updates":
-		var targetUpdates float64 = 18
-		if schedSetting, err := s.q.GetSystemSetting(ctx, "update_schedule_config"); err == nil {
-			var cfg struct {
-				TargetUpdatesCount float64 `json:"target_updates_count"`
-			}
-			if jErr := json.Unmarshal(schedSetting.Value, &cfg); jErr == nil && cfg.TargetUpdatesCount > 0 {
-				targetUpdates = cfg.TargetUpdatesCount
-			}
-		}
+		updateScheduleConfig, _ := s.GetUpdateScheduleConfig(ctx)
+		targetUpdates := updateScheduleConfig.TargetUpdatesCount
 		updatesBudgetKobo := float64(basePaymentKobo) * (allocation.Updates / 100.0)
 		payout = int64(updatesBudgetKobo / targetUpdates)
 
@@ -1397,7 +868,7 @@ func (s *Service) GetAgentAllocations(
 
 	// 1. If assignmentID is explicitly provided, fetch assignment for polling agent
 	if assignmentID > 0 {
-		if asgn, err := s.q.GetAssignmentForEarnings(ctx, assignmentID); err == nil {
+		if asgn, err := s.queries.GetAssignmentForEarnings(ctx, assignmentID); err == nil {
 			roleType = "polling_agent"
 			potentialPaymentKobo = asgn.PotentialPaymentKobo
 			partyID = asgn.PartyID
@@ -1407,11 +878,11 @@ func (s *Service) GetAgentAllocations(
 
 	// 2. Check polling_unit_assignments by user & election_group
 	if roleType == "" && electionGroupID > 0 && userID > 0 {
-		if asgnID, err := s.q.GetAssignmentIDByUserAndElectionGroup(ctx, queries.GetAssignmentIDByUserAndElectionGroupParams{
+		if asgnID, err := s.queries.GetAssignmentIDByUserAndElectionGroup(ctx, queries.GetAssignmentIDByUserAndElectionGroupParams{
 			UserID:          userID,
 			ElectionGroupID: electionGroupID,
 		}); err == nil && asgnID > 0 {
-			if asgn, err := s.q.GetAssignmentForEarnings(ctx, asgnID); err == nil {
+			if asgn, err := s.queries.GetAssignmentForEarnings(ctx, asgnID); err == nil {
 				roleType = "polling_agent"
 				potentialPaymentKobo = asgn.PotentialPaymentKobo
 				partyID = asgn.PartyID
@@ -1422,7 +893,7 @@ func (s *Service) GetAgentAllocations(
 
 	// 3. Check ward_election_supervisors
 	if roleType == "" && electionGroupID > 0 && userID > 0 {
-		if wardSup, err := s.q.GetWardSupervisorByElectionGroup(ctx, queries.GetWardSupervisorByElectionGroupParams{
+		if wardSup, err := s.queries.GetWardSupervisorByElectionGroup(ctx, queries.GetWardSupervisorByElectionGroupParams{
 			UserID:          userID,
 			ElectionGroupID: electionGroupID,
 		}); err == nil && wardSup.ID > 0 {
@@ -1434,7 +905,7 @@ func (s *Service) GetAgentAllocations(
 
 	// 4. Check lga_election_supervisors
 	if roleType == "" && electionGroupID > 0 && userID > 0 {
-		if lgaSup, err := s.q.GetLgaSupervisorByElectionGroup(ctx, queries.GetLgaSupervisorByElectionGroupParams{
+		if lgaSup, err := s.queries.GetLgaSupervisorByElectionGroup(ctx, queries.GetLgaSupervisorByElectionGroupParams{
 			UserID:          userID,
 			ElectionGroupID: electionGroupID,
 		}); err == nil && lgaSup.ID > 0 {
@@ -1446,7 +917,7 @@ func (s *Service) GetAgentAllocations(
 
 	// 5. Check state_election_supervisors
 	if roleType == "" && electionGroupID > 0 && userID > 0 {
-		if stateSup, err := s.q.GetStateSupervisorByElectionGroup(ctx, queries.GetStateSupervisorByElectionGroupParams{
+		if stateSup, err := s.queries.GetStateSupervisorByElectionGroup(ctx, queries.GetStateSupervisorByElectionGroupParams{
 			UserID:          userID,
 			ElectionGroupID: electionGroupID,
 		}); err == nil && stateSup.ID > 0 {
@@ -1478,7 +949,7 @@ func (s *Service) GetAgentAllocations(
 
 	// If potentialPaymentKobo is missing, resolve base payment from party allocation
 	if potentialPaymentKobo <= 0 && partyID > 0 {
-		if party, err := s.q.GetPartyByID(ctx, partyID); err == nil {
+		if party, err := s.getPartyByID(ctx, partyID); err == nil {
 			potentialPaymentKobo = s.resolveBasePayment(party.AgentPaymentAllocationKobo, roleType, stateName)
 		}
 	}
@@ -1493,12 +964,6 @@ func (s *Service) GetAgentAllocations(
 	}
 
 	items := []AllocationItem{
-		{
-			TaskType:            "readiness",
-			Label:               "Practice Tests Readiness",
-			Percentage:          alloc.Readiness,
-			PotentialPayoutKobo: int64(float64(potentialPaymentKobo) * (alloc.Readiness / 100.0)),
-		},
 		{
 			TaskType:            "results",
 			Label:               "Election Results",
@@ -1531,7 +996,7 @@ func (s *Service) GetAgentAllocations(
 		},
 	}
 
-	totalPct := alloc.Readiness + alloc.Results + alloc.Updates + alloc.Attendance + alloc.ElectionStart + alloc.ElectionEnd
+	totalPct := alloc.Results + alloc.Updates + alloc.Attendance + alloc.ElectionStart + alloc.ElectionEnd
 
 	return AgentAllocationsResponse{
 		RoleType:             roleType,
@@ -1546,7 +1011,7 @@ func (s *Service) RequestPayout(ctx context.Context, userID int64, electionGroup
 	if roleType == "" {
 		roleType = "polling_agent"
 	}
-	asgnID, err := s.q.GetAssignmentIDByUserAndElectionGroup(ctx, queries.GetAssignmentIDByUserAndElectionGroupParams{
+	asgnID, err := s.queries.GetAssignmentIDByUserAndElectionGroup(ctx, queries.GetAssignmentIDByUserAndElectionGroupParams{
 		UserID:          userID,
 		ElectionGroupID: electionGroupID,
 	})
@@ -1554,7 +1019,7 @@ func (s *Service) RequestPayout(ctx context.Context, userID int64, electionGroup
 		_, _ = s.Calculate(ctx, asgnID)
 	}
 
-	res, err := s.q.RequestAgentEarningsPayout(ctx, queries.RequestAgentEarningsPayoutParams{
+	res, err := s.queries.RequestAgentEarningsPayout(ctx, queries.RequestAgentEarningsPayoutParams{
 		UserID:          userID,
 		ElectionGroupID: electionGroupID,
 		RoleType:        roleType,

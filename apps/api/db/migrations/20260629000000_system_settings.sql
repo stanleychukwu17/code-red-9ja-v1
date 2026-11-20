@@ -28,68 +28,13 @@ VALUES (
 )
 ON CONFLICT (key) DO NOTHING;
 
--- Seed initial earnings allocations
+-- Seed initial earnings allocations (Option A: Results 50%, Updates 30%, Attendance 10%, Election Start 5%, Election End 5%)
 INSERT INTO system_settings (key, value, description)
 VALUES 
-  ('earnings_allocation_polling_agent', '{"readiness": 20, "results": 40, "updates": 20, "attendance": 10, "election_start": 5, "election_end": 5}'::jsonb, 'Earnings allocation for polling agents'),
-  ('earnings_allocation_ward_election_supervisor', '{"readiness": 20, "results": 40, "updates": 20, "attendance": 10, "election_start": 5, "election_end": 5}'::jsonb, 'Earnings allocation for ward supervisors'),
-  ('earnings_allocation_lga_election_supervisor', '{"readiness": 20, "results": 40, "updates": 20, "attendance": 10, "election_start": 5, "election_end": 5}'::jsonb, 'Earnings allocation for lga supervisors'),
-  ('earnings_allocation_state_election_supervisor', '{"readiness": 20, "results": 40, "updates": 20, "attendance": 10, "election_start": 5, "election_end": 5}'::jsonb, 'Earnings allocation for state supervisors')
-ON CONFLICT (key) DO NOTHING;
-
--- Seed test requirements per role
--- windows are non-overlapping bands ordered furthest-from-election first
--- days_before_election marks the START of that band; quota = tests allowed in that band
-INSERT INTO system_settings (key, value, description)
-VALUES
-  (
-    'test_requirements_polling_agent',
-    '{
-      "total_required": 10,
-      "windows": [
-        { "days_before_election": 365, "quota": 4 },
-        { "days_before_election": 30,  "quota": 3 },
-        { "days_before_election": 7,   "quota": 3 }
-      ]
-    }'::jsonb,
-    'Test requirements for polling agents: total tests expected and how many are allocated per pre-election window'
-  ),
-  (
-    'test_requirements_ward_election_supervisor',
-    '{
-      "total_required": 10,
-      "windows": [
-        { "days_before_election": 365, "quota": 4 },
-        { "days_before_election": 30,  "quota": 3 },
-        { "days_before_election": 7,   "quota": 3 }
-      ]
-    }'::jsonb,
-    'Test requirements for ward supervisors: total tests expected and how many are allocated per pre-election window'
-  ),
-  (
-    'test_requirements_lga_election_supervisor',
-    '{
-      "total_required": 10,
-      "windows": [
-        { "days_before_election": 365, "quota": 4 },
-        { "days_before_election": 30,  "quota": 3 },
-        { "days_before_election": 7,   "quota": 3 }
-      ]
-    }'::jsonb,
-    'Test requirements for LGA supervisors: total tests expected and how many are allocated per pre-election window'
-  ),
-  (
-    'test_requirements_state_election_supervisor',
-    '{
-      "total_required": 10,
-      "windows": [
-        { "days_before_election": 365, "quota": 4 },
-        { "days_before_election": 30,  "quota": 3 },
-        { "days_before_election": 7,   "quota": 3 }
-      ]
-    }'::jsonb,
-    'Test requirements for state supervisors: total tests expected and how many are allocated per pre-election window'
-  )
+  ('earnings_allocation_polling_agent', '{"results": 50, "updates": 30, "attendance": 10, "election_start": 5, "election_end": 5}'::jsonb, 'Earnings allocation for polling agents'),
+  ('earnings_allocation_ward_election_supervisor', '{"results": 50, "updates": 30, "attendance": 10, "election_start": 5, "election_end": 5}'::jsonb, 'Earnings allocation for ward supervisors'),
+  ('earnings_allocation_lga_election_supervisor', '{"results": 50, "updates": 30, "attendance": 10, "election_start": 5, "election_end": 5}'::jsonb, 'Earnings allocation for lga supervisors'),
+  ('earnings_allocation_state_election_supervisor', '{"results": 50, "updates": 30, "attendance": 10, "election_start": 5, "election_end": 5}'::jsonb, 'Earnings allocation for state supervisors')
 ON CONFLICT (key) DO NOTHING;
 
 -- Seed post-election activity window limit (in days)

@@ -45,6 +45,7 @@ type Querier interface {
 	CountActivePositionOccupants(ctx context.Context, arg CountActivePositionOccupantsParams) (int64, error)
 	CountAllUserPhoneNumbers(ctx context.Context, userID int64) (int64, error)
 	CountCandidatesInElectionGroup(ctx context.Context, electionGroupID int32) (int64, error)
+	CountDistinctSubmittedResultsForAssignment(ctx context.Context, dollar_1 int64) (int32, error)
 	CountElectionsInElectionGroup(ctx context.Context, electionGroupID int32) (int64, error)
 	CountMediaAssetsByFolder(ctx context.Context, arg CountMediaAssetsByFolderParams) (int64, error)
 	CountParticipantsInElectionGroup(ctx context.Context, electionGroupID int32) (int64, error)
@@ -337,7 +338,6 @@ type Querier interface {
 	HasActiveAgentApplication(ctx context.Context, userID int64) (bool, error)
 	HasActiveAssignment(ctx context.Context, userID int64) (bool, error)
 	HasPositionBeenAssigned(ctx context.Context, positionID int32) (bool, error)
-	IncrementAssignmentResultCount(ctx context.Context, id int64) error
 	InsertAuditLog(ctx context.Context, arg InsertAuditLogParams) (AuditLog, error)
 	InsertUserBankAccount(ctx context.Context, arg InsertUserBankAccountParams) (UserBankAccount, error)
 	InsertUserPreferences(ctx context.Context, arg InsertUserPreferencesParams) (UserPreference, error)
@@ -426,6 +426,7 @@ type Querier interface {
 	ListZones(ctx context.Context) ([]CZonesNigerium, error)
 	MarkAgentEarningsPaid(ctx context.Context, id int64) (AgentEarning, error)
 	MarkAllNotificationsAsRead(ctx context.Context, recipientUserID int64) error
+	MarkAssignmentCompleted(ctx context.Context, arg MarkAssignmentCompletedParams) (MarkAssignmentCompletedRow, error)
 	MarkCampaignGroupOfficialsAdded(ctx context.Context, id int64) error
 	MarkNotificationAsRead(ctx context.Context, arg MarkNotificationAsReadParams) (Notification, error)
 	MarkPartyNotificationAsRead(ctx context.Context, arg MarkPartyNotificationAsReadParams) error
@@ -484,7 +485,6 @@ type Querier interface {
 	UpdateApplicationApproval(ctx context.Context, arg UpdateApplicationApprovalParams) (PartyAgentApplication, error)
 	UpdateApplicationStatus(ctx context.Context, arg UpdateApplicationStatusParams) (PartyAgentApplication, error)
 	UpdateAssetFolder(ctx context.Context, arg UpdateAssetFolderParams) (AssetFolder, error)
-	UpdateAssignmentReadinessPercentage(ctx context.Context, arg UpdateAssignmentReadinessPercentageParams) (UpdateAssignmentReadinessPercentageRow, error)
 	UpdateAssignmentTracking(ctx context.Context, arg UpdateAssignmentTrackingParams) (UpdateAssignmentTrackingRow, error)
 	UpdateElectionCandidatePrincipal(ctx context.Context, arg UpdateElectionCandidatePrincipalParams) (ElectionCandidate, error)
 	UpdateElectionCandidateRunningMate(ctx context.Context, arg UpdateElectionCandidateRunningMateParams) (ElectionCandidate, error)

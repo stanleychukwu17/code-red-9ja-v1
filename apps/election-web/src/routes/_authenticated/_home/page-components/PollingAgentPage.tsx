@@ -82,10 +82,7 @@ export function PollingAgentPage() {
   };
 
   // Check if agent has successfully submitted election results
-  const resultsUploaded = !!(
-    currentPollingUnitAssignment?.results_submitted_count &&
-    currentPollingUnitAssignment.results_submitted_count > 0
-  );
+  const resultsUploaded = !!currentPollingUnitAssignment?.completed_at;
 
   // Time-gated constraints: Result uploads unlock at 2PM, election end unlocks at 4PM
   const currentHour = new Date().getHours();
@@ -132,20 +129,8 @@ export function PollingAgentPage() {
       ),
     },
     {
-      title: "Report any issue",
-      isCompleted: !!(
-        currentPollingUnitAssignment?.reports_count &&
-        currentPollingUnitAssignment.reports_count > 0
-      ),
-    },
-    {
       title: "Upload final vote result",
-      isCompleted: !!(
-        currentPollingUnitAssignment?.results_submitted_count &&
-        currentPollingUnitAssignment.results_submitted_count > 0 &&
-        currentPollingUnitAssignment.results_submitted_count >=
-        (currentPollingUnitAssignment.results_expected_to_submit_count || 1)
-      ),
+      isCompleted: !!currentPollingUnitAssignment?.completed_at,
     },
     {
       title: "Enter time when election ended",

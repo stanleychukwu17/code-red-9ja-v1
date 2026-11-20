@@ -49,7 +49,6 @@ import (
 	puresultshandler "free9ja/api/internal/handler/polling_unit_results"
 	puupdateshandler "free9ja/api/internal/handler/polling_unit_updates"
 	pollingunitshandler "free9ja/api/internal/handler/polling_units"
-	practicetestshandler "free9ja/api/internal/handler/practice_tests"
 	referralshandler "free9ja/api/internal/handler/referrals"
 	seedhandler "free9ja/api/internal/handler/seed"
 	senatorialdistrictshandler "free9ja/api/internal/handler/senatorial_districts"
@@ -200,6 +199,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	partiesService.SetWalletService(partiesWalletService)
 	partiesService.SetCampaignGroupsService(campaignGroupsService)
 	bodiesService.SetPartiesService(partiesService)
+	earningsService.SetPartiesService(partiesService)
 	electionsService.SetPageVerificationsService(pageVerificationsService)
 	electionsService.SetCampaignGroupsService(campaignGroupsService)
 
@@ -228,8 +228,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	supervisorAssignmentsHandler := supervisorassignmentshandler.NewHandler(supervisorAssignmentsService, utilsInstance)
 	electionResultsHandler := electionresultshandler.NewHandler(pool, utilsInstance)
 	seedHandler := seedhandler.NewHandler(seedService, utilsInstance)
-	systemSettingsHandler := systemsettingshandler.NewHandler(q, utilsInstance)
-	practiceTestsHandler := practicetestshandler.NewHandler(q, utilsInstance, earningsService, partyApplicationsService)
+	systemSettingsHandler := systemsettingshandler.NewHandler(q, rdb, utilsInstance)
 	agentEarningsHandler := agentearningshandler.NewHandler(q, earningsService, utilsInstance)
 	agentPerformanceHandler := agentperformancehandler.NewHandler(q, pool, usersService, utilsInstance)
 	teamHandler := teamhandler.NewHandler(utilsInstance, pollingUnitAssignmentsService, supervisorAssignmentsService, teamService)
@@ -633,11 +632,6 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Get("/api/v1/polling-unit-results/{id}", pollingUnitResultsHandler.GetResult)
 		r.Patch("/api/v1/polling-unit-results/{id}/vote", pollingUnitResultsHandler.VoteOnResult)
 		r.Patch("/api/v1/polling-unit-results/{id}/review", pollingUnitResultsHandler.ReviewResult)
-
-		// practice tests routes
-		r.Post("/api/v1/practice-tests", practiceTestsHandler.SubmitPracticeTest)
-		r.Get("/api/v1/practice-tests", practiceTestsHandler.ListPracticeTests)
-		// DEPRECATED: r.Get("/api/v1/practice-tests/payout-preview", practiceTestsHandler.GetPayoutPreview)
 
 		// Notifications routes (User)
 		r.Get("/api/v1/notifications", notificationsHandler.ListUserNotifications)

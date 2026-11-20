@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"free9ja/api/internal/db/queries"
 	earningsservice "free9ja/api/internal/service/earnings"
@@ -238,7 +239,9 @@ func (s *Service) SubmitResult(ctx context.Context, input SubmitResultInput) (qu
 	}
 
 	if input.AssignmentID != nil {
-		_ = qtx.IncrementAssignmentResultCount(ctx, *input.AssignmentID)
+		if err := s.syncAssignmentResultsProgress(ctx, qtx, *input.AssignmentID, input.ElectionGroupID); err != nil {
+			return queries.PollingUnitResult{}, err
+		}
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -368,7 +371,9 @@ func (s *Service) SubmitBatchResults(ctx context.Context, input SubmitBatchResul
 	}
 
 	if input.AssignmentID != nil {
-		_ = qtx.IncrementAssignmentResultCount(ctx, *input.AssignmentID)
+		if err := s.syncAssignmentResultsProgress(ctx, qtx, *input.AssignmentID, input.ElectionGroupID); err != nil {
+			return nil, err
+		}
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -494,4 +499,39 @@ func (s *Service) ReviewResult(ctx context.Context, adminUserID int64, input Rev
 // GetFinalResult fetches the final result for a given polling unit and election.
 func (s *Service) GetFinalResult(ctx context.Context, electionID int64, pollingUnitID int32) (interface{}, error) {
 	return nil, fmt.Errorf("GetFinalResult is temporarily disabled due to schema migration")
+}
+
+// syncAssignmentResultsProgress recalculates the count of distinct results submitted for this assignment,
+// checks if the agent has fulfilled all expected results for the election group, and marks completed_at if so.
+func (s *Service) syncAssignmentResultsProgress(ctx context.Context, qtx *queries.Queries, assignmentID int64, electionGroupID int32) error {
+	// 1. Count actual distinct elections submitted for this assignment
+	submittedCount, err := qtx.CountDistinctSubmittedResultsForAssignment(ctx, assignmentID)
+	if err != nil {
+		return fmt.Errorf("count submitted results: %w", err)
+	}
+
+	// 2. Fetch expected elections for this election group
+	expectedCount, err := qtx.CountElectionsInElectionGroup(ctx, electionGroupID)
+	if err != nil || expectedCount <= 0 {
+		expectedCount = 1
+	}
+
+	// 3. Mark completed if all expected results have been submitted
+	if int64(submittedCount) >= expectedCount {
+		completedAt := pgtype.Timestamptz{Time: time.Now(), Valid: true}
+		slog.Info("agent completed all expected polling unit results",
+			"assignment_id", assignmentID,
+			"submitted_count", submittedCount,
+			"expected_count", expectedCount,
+		)
+		_, err = qtx.MarkAssignmentCompleted(ctx, queries.MarkAssignmentCompletedParams{
+			ID:          assignmentID,
+			CompletedAt: completedAt,
+		})
+		if err != nil {
+			return fmt.Errorf("mark assignment completed: %w", err)
+		}
+	}
+
+	return nil
 }

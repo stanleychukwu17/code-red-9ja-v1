@@ -155,10 +155,9 @@ SELECT
   a.election_started_at,
   a.election_ended_at,
   a.last_update_at,
-  a.updates_count,
-  a.results_submitted_count,
-  COALESCE(egpu.unique_final_results_expected, 0)::int AS results_expected_to_submit_count,
-  a.election_practice_test_readiness_percentage,
+  COALESCE((SELECT COUNT(*)::int FROM polling_unit_updates puu WHERE puu.assignment_id = a.id), 0)::int AS updates_count,
+  COALESCE((SELECT COUNT(DISTINCT pur.election_id)::int FROM polling_unit_results pur WHERE pur.assignment_id = a.id), 0)::int AS results_submitted_count,
+  COALESCE((SELECT COUNT(*)::int FROM elections e WHERE e.election_group_id = a.election_group_id), 1)::int AS results_expected_to_submit_count,
   a.potential_payment_kobo,
   cs.name AS state_name,
   pu.latitude AS pu_latitude,
@@ -173,24 +172,23 @@ LIMIT 1
 `
 
 type GetAssignmentForEarningsRow struct {
-	ID                                      int64              `json:"id"`
-	UserID                                  int64              `json:"user_id"`
-	PartyID                                 int16              `json:"party_id"`
-	ElectionGroupID                         int32              `json:"election_group_id"`
-	RoleType                                pgtype.Text        `json:"role_type"`
-	ArrivedAt                               pgtype.Timestamptz `json:"arrived_at"`
-	ElectionStartedAt                       pgtype.Timestamptz `json:"election_started_at"`
-	ElectionEndedAt                         pgtype.Timestamptz `json:"election_ended_at"`
-	LastUpdateAt                            pgtype.Timestamptz `json:"last_update_at"`
-	UpdatesCount                            int32              `json:"updates_count"`
-	ResultsSubmittedCount                   int32              `json:"results_submitted_count"`
-	ResultsExpectedToSubmitCount            int32              `json:"results_expected_to_submit_count"`
-	ElectionPracticeTestReadinessPercentage pgtype.Numeric     `json:"election_practice_test_readiness_percentage"`
-	PotentialPaymentKobo                    int64              `json:"potential_payment_kobo"`
-	StateName                               string             `json:"state_name"`
-	PuLatitude                              pgtype.Float8      `json:"pu_latitude"`
-	PuLongitude                             pgtype.Float8      `json:"pu_longitude"`
-	ElectionDate                            pgtype.Date        `json:"election_date"`
+	ID                           int64              `json:"id"`
+	UserID                       int64              `json:"user_id"`
+	PartyID                      int16              `json:"party_id"`
+	ElectionGroupID              int32              `json:"election_group_id"`
+	RoleType                     pgtype.Text        `json:"role_type"`
+	ArrivedAt                    pgtype.Timestamptz `json:"arrived_at"`
+	ElectionStartedAt            pgtype.Timestamptz `json:"election_started_at"`
+	ElectionEndedAt              pgtype.Timestamptz `json:"election_ended_at"`
+	LastUpdateAt                 pgtype.Timestamptz `json:"last_update_at"`
+	UpdatesCount                 int32              `json:"updates_count"`
+	ResultsSubmittedCount        int32              `json:"results_submitted_count"`
+	ResultsExpectedToSubmitCount int32              `json:"results_expected_to_submit_count"`
+	PotentialPaymentKobo         int64              `json:"potential_payment_kobo"`
+	StateName                    string             `json:"state_name"`
+	PuLatitude                   pgtype.Float8      `json:"pu_latitude"`
+	PuLongitude                  pgtype.Float8      `json:"pu_longitude"`
+	ElectionDate                 pgtype.Date        `json:"election_date"`
 }
 
 func (q *Queries) GetAssignmentForEarnings(ctx context.Context, id int64) (GetAssignmentForEarningsRow, error) {
@@ -209,7 +207,6 @@ func (q *Queries) GetAssignmentForEarnings(ctx context.Context, id int64) (GetAs
 		&i.UpdatesCount,
 		&i.ResultsSubmittedCount,
 		&i.ResultsExpectedToSubmitCount,
-		&i.ElectionPracticeTestReadinessPercentage,
 		&i.PotentialPaymentKobo,
 		&i.StateName,
 		&i.PuLatitude,

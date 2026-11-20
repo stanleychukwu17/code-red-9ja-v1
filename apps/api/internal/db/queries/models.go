@@ -800,29 +800,25 @@ type PollingUnit struct {
 }
 
 type PollingUnitAssignment struct {
-	ID                                      int64              `json:"id"`
-	ElectionGroupID                         int32              `json:"election_group_id"`
-	PartyID                                 int16              `json:"party_id"`
-	StateID                                 int16              `json:"state_id"`
-	LgaID                                   int32              `json:"lga_id"`
-	WardID                                  int32              `json:"ward_id"`
-	PollingUnitID                           int32              `json:"polling_unit_id"`
-	UserID                                  int64              `json:"user_id"`
-	RoleType                                pgtype.Text        `json:"role_type"`
-	AssignedBy                              pgtype.Int8        `json:"assigned_by"`
-	ArrivedAt                               pgtype.Timestamptz `json:"arrived_at"`
-	ElectionStartedAt                       pgtype.Timestamptz `json:"election_started_at"`
-	ElectionEndedAt                         pgtype.Timestamptz `json:"election_ended_at"`
-	CompletedAt                             pgtype.Timestamptz `json:"completed_at"`
-	LastUpdateAt                            pgtype.Timestamptz `json:"last_update_at"`
-	ReportsCount                            int32              `json:"reports_count"`
-	UpdatesCount                            int32              `json:"updates_count"`
-	ResultsSubmittedCount                   int32              `json:"results_submitted_count"`
-	ElectionPracticeTestReadinessPercentage pgtype.Numeric     `json:"election_practice_test_readiness_percentage"`
-	PotentialPaymentKobo                    int64              `json:"potential_payment_kobo"`
-	EarnedAmountKobo                        int64              `json:"earned_amount_kobo"`
-	CreatedAt                               pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt                               pgtype.Timestamptz `json:"updated_at"`
+	ID                   int64              `json:"id"`
+	ElectionGroupID      int32              `json:"election_group_id"`
+	PartyID              int16              `json:"party_id"`
+	StateID              int16              `json:"state_id"`
+	LgaID                int32              `json:"lga_id"`
+	WardID               int32              `json:"ward_id"`
+	PollingUnitID        int32              `json:"polling_unit_id"`
+	UserID               int64              `json:"user_id"`
+	RoleType             pgtype.Text        `json:"role_type"`
+	AssignedBy           pgtype.Int8        `json:"assigned_by"`
+	ArrivedAt            pgtype.Timestamptz `json:"arrived_at"`
+	ElectionStartedAt    pgtype.Timestamptz `json:"election_started_at"`
+	ElectionEndedAt      pgtype.Timestamptz `json:"election_ended_at"`
+	CompletedAt          pgtype.Timestamptz `json:"completed_at"`
+	LastUpdateAt         pgtype.Timestamptz `json:"last_update_at"`
+	PotentialPaymentKobo int64              `json:"potential_payment_kobo"`
+	EarnedAmountKobo     int64              `json:"earned_amount_kobo"`
+	CreatedAt            pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
 }
 
 type PollingUnitIssueCategory struct {
