@@ -15,7 +15,6 @@ import {
 import ReportIcon from "@repo/ui/icons/report-icon";
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { SupervisorTabs } from "../../../../components/Tabs";
 import { ReferralCard } from "../components/ReferralCard";
 import { EarningsTab } from "../components/EarningsTab";
 import { GiveUpdateFloatingButton } from "../components/GiveUpdateFloatingButton";
@@ -23,7 +22,6 @@ import { HomeHeader, HomeHeader2 } from "../components/HomeHeader";
 import { PracticeTestCard } from "../components/PracticeTestCard";
 import { HomeBody } from "../components/Shared";
 import { SupervisorStartDutyCard } from "../components/SupervisorReadyCard";
-import { WardSupervisorTasksTab } from "../components/SupervisorTasksTab";
 import { Layout } from "@repo/ui/components/custom/AdminLayouts";
 
 /**
@@ -44,8 +42,6 @@ export function WardElectionSupervisorPage() {
 
   const currentAssignment = supervisorAssignment?.data;
 
-  // Active supervisor tab (Earnings vs Sub-unit agent tasks)
-  const [activeTab, setActiveTab] = useState<"Earnings" | "Tasks">("Earnings");
   const [isArrivalDrawerOpen, setIsArrivalDrawerOpen] = useState(false);
   const [showNoInfo, setShowNoInfo] = useState(false);
 
