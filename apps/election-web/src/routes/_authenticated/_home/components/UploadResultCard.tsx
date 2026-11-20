@@ -2,14 +2,7 @@ import { Button } from "@repo/ui/components/button";
 import FancyMoneyBagIcon from "@repo/ui/icons/fancy-money-bag-icon";
 import { AlertTriangleIcon } from "lucide-react";
 import { GreyCardTitle, GreyCardTopRow, GreyCardWrapper } from "./Shared";
-import { useElection } from "#/hooks/useElection";
-import { useAssignments } from "#/hooks/useAssignments";
-import { useUserParty } from "#/hooks/useUserParty";
-import { useQuery } from "@tanstack/react-query";
-import {
-  getPotentialPayout,
-  getEstimatePayout,
-} from "#/lib/server/practice_tests";
+import { useAgentAllocations } from "#/hooks/useAgentAllocations";
 
 /**
  * Props for `UploadResultCard`.
@@ -27,48 +20,9 @@ interface UploadResultCardProps {
  * official result sheet is mandatory for agent payout.
  */
 export function UploadResultCard({ onClick }: UploadResultCardProps) {
-  // Read active election group, assignment, and political party from modular hooks
-  const { selectedElectionGroup } = useElection();
-  const { pollingUnitAssignment } = useAssignments();
-  const { party } = useUserParty();
-  const assignmentId = pollingUnitAssignment?.id;
-
-  // Query potential payout reward for completing the "results" upload task
-  const { data: potentialPayout } = useQuery({
-    queryKey: [
-      "taskPayout",
-      "results",
-      assignmentId ?? "no-assignment",
-      selectedElectionGroup?.id,
-      party?.id,
-    ],
-    queryFn: async () => {
-      // 1. If assigned, query the specific configured reward for this assignment and task
-      if (assignmentId) {
-        const res = await getPotentialPayout({
-          data: { assignmentId, taskType: "results" },
-        });
-        if (res?.success && res.data?.payout) {
-          // Convert amount from kobo to naira
-          return (res.data.payout.potential_payout_kobo ?? 0) / 100;
-        }
-      }
-
-      // 2. Fallback: Query role-based payout estimate for polling agents under this party and election
-      const estRes = await getEstimatePayout({
-        data: {
-          taskType: "results",
-          role: "polling_agent",
-          electionGroupId: selectedElectionGroup?.id ?? undefined,
-          partyId: party?.id ?? undefined,
-        },
-      });
-      if (estRes?.success && estRes.data?.payout) {
-        return (estRes.data.payout.potential_payout_kobo ?? 0) / 100;
-      }
-      return undefined;
-    },
-  });
+  // Query potential payout reward from the shared allocations cache
+  const { getPayoutNaira } = useAgentAllocations();
+  const potentialPayout = getPayoutNaira("results");
 
   // Format payout as currency (defaulting to ₦1,200 placeholder if un-configured)
   const formattedPayout =

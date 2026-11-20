@@ -44,7 +44,7 @@ type UsersService interface {
 	CreateUserWallet(ctx context.Context, user queries.User) (queries.UserWallet, error)
 	GetUserWallet(ctx context.Context, userID int64) (queries.UserWallet, error)
 	GetUserWalletTransactions(ctx context.Context, userID int64, limit, offset int32) ([]queries.UserWalletTransaction, error)
-	WithdrawFromUserWallet(ctx context.Context, userID int64, amountKobo int64, transactionReference string, bankAccountNumber, bankCode, narration string) (queries.UserWalletTransaction, error)
+	WithdrawFromUserWallet(ctx context.Context, params usersservice.WithdrawFromUserWalletParams) (queries.UserWalletTransaction, error)
 	ProvisionMissingWallets(ctx context.Context) (int, int, error)
 
 	GetUserPhoneNumbersByUserID(ctx context.Context, userID int64) ([]queries.UsersPhoneNumber, error)

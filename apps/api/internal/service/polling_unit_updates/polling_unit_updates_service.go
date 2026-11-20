@@ -296,6 +296,22 @@ func (s *Service) GetIssueOptionByID(ctx context.Context, id int16) (queries.Get
 	return opt, nil
 }
 
+// GetElectionGroupByID retrieves an election group by its ID, utilizing Redis cache (90 days TTL).
+func (s *Service) GetElectionGroupByID(ctx context.Context, id int32) (queries.ElectionGroup, error) {
+	cacheKey := fmt.Sprintf("%s%d", db.RedisElectionGroupByID, id)
+	if eg, ok := utils.GetCachedJSON[queries.ElectionGroup](ctx, s.rdb, cacheKey); ok && eg.ID > 0 {
+		return eg, nil
+	}
+
+	eg, err := s.queries.GetElectionGroupByID(ctx, id)
+	if err != nil {
+		return queries.ElectionGroup{}, err
+	}
+
+	_ = utils.SetCachedJSON(ctx, s.rdb, cacheKey, eg, db.RedisNinetyDaysTTL)
+	return eg, nil
+}
+
 func isVideoURL(url string) bool {
 	exts := []string{".mp4", ".mov", ".avi", ".webm", ".mkv", ".m4v"}
 	lower := strings.ToLower(url)

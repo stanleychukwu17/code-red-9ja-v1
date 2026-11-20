@@ -814,7 +814,6 @@ type PollingUnitAssignment struct {
 	CompletedAt          pgtype.Timestamptz `json:"completed_at"`
 	LastUpdateAt         pgtype.Timestamptz `json:"last_update_at"`
 	PotentialPaymentKobo int64              `json:"potential_payment_kobo"`
-	EarnedAmountKobo     int64              `json:"earned_amount_kobo"`
 	CreatedAt            pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
 }

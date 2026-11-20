@@ -1,8 +1,7 @@
 import { getPageHeader } from "#/lib/shared/meta";
 import { PageHeader } from "#/components/Headers";
 import { PageWrapper } from "#/components/Wrappers";
-import { useAssignments } from "#/hooks/useAssignments";
-import { useElection } from "#/hooks/useElection";
+import { useAgentDutyEligibility } from "#/hooks/useAgentDutyEligibility";
 import { useGeolocation } from "#/hooks/useGeolocation";
 import { VotingStatusSelects } from "./-components/VotingStatusSelects";
 import { VotingIssueSelects } from "./-components/VotingIssueSelects";
@@ -35,16 +34,16 @@ export const Route = createFileRoute("/_authenticated/give-update/")({
 function GiveUpdate() {
   const navigate = useNavigate();
 
-  // Active election schedule context
-  const { selectedElectionGroup, electionDay, daysLeft } = useElection();
-  const { pollingUnitAssignment } = useAssignments();
-
-  // Verify selected election group matches the assignment's election group
-  const isElectionMismatch = Boolean(
-    selectedElectionGroup?.id &&
-    pollingUnitAssignment?.election_group_id &&
-    selectedElectionGroup.id !== pollingUnitAssignment.election_group_id
-  );
+  // Active election schedule context and duty eligibility
+  const {
+    isEligible,
+    validateEligibility,
+    isElectionMismatch,
+    electionDay,
+    daysLeft,
+    pollingUnitAssignment,
+    selectedElectionGroup,
+  } = useAgentDutyEligibility({ dutyName: "Updates" });
 
   // Offline outbox queue manager
   const { isOnline, pendingCount, triggerSync } = useOfflineOutbox();
@@ -96,18 +95,7 @@ function GiveUpdate() {
 
   // Inner update submission handler using offline-first outbox pattern
   const submitUpdate = async () => {
-    if (!pollingUnitAssignment) {
-      toast.error("No active polling unit assignment detected");
-      return;
-    }
-
-    if (isElectionMismatch) {
-      toast.error("Active election does not match your assigned polling unit election.");
-      return;
-    }
-
-    if (!electionDay) {
-      toast.error("Updates can only be submitted on election day.");
+    if (!validateEligibility()) {
       return;
     }
 
@@ -192,6 +180,10 @@ function GiveUpdate() {
 
   // Primary post update CTA: verifies GPS status before submitting
   const handlePostUpdate = () => {
+    if (!validateEligibility()) {
+      return;
+    }
+
     // If coordinates are missing, warn the agent that unverified GPS results in reduced payment
     if (!geoCoords.latitude || !geoCoords.longitude) {
       setShowLocationWarningDialog(true);

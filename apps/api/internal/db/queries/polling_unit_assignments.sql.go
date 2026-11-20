@@ -46,7 +46,7 @@ INSERT INTO polling_unit_assignments (
   potential_payment_kobo
 ) VALUES (
   $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
-) RETURNING id, election_group_id, party_id, state_id, lga_id, ward_id, polling_unit_id, user_id, role_type, assigned_by, arrived_at, election_started_at, election_ended_at, completed_at, last_update_at, potential_payment_kobo, earned_amount_kobo, created_at, updated_at
+) RETURNING id, election_group_id, party_id, state_id, lga_id, ward_id, polling_unit_id, user_id, role_type, assigned_by, arrived_at, election_started_at, election_ended_at, completed_at, last_update_at, potential_payment_kobo, created_at, updated_at
 `
 
 type CreateAssignmentParams struct {
@@ -93,7 +93,6 @@ func (q *Queries) CreateAssignment(ctx context.Context, arg CreateAssignmentPara
 		&i.CompletedAt,
 		&i.LastUpdateAt,
 		&i.PotentialPaymentKobo,
-		&i.EarnedAmountKobo,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -666,47 +665,6 @@ func (q *Queries) UpdateAssignmentTracking(ctx context.Context, arg UpdateAssign
 		&i.ArrivedAt,
 		&i.ElectionStartedAt,
 		&i.ElectionEndedAt,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const updatePollingUnitAssignmentEarnedAmountKobo = `-- name: UpdatePollingUnitAssignmentEarnedAmountKobo :one
-UPDATE polling_unit_assignments
-SET earned_amount_kobo = earned_amount_kobo + $1::bigint,
-    updated_at = NOW()
-WHERE user_id = $2 AND election_group_id = $3
-RETURNING id, election_group_id, party_id, state_id, lga_id, ward_id, polling_unit_id, user_id, role_type, assigned_by, arrived_at, election_started_at, election_ended_at, completed_at, last_update_at, potential_payment_kobo, earned_amount_kobo, created_at, updated_at
-`
-
-type UpdatePollingUnitAssignmentEarnedAmountKoboParams struct {
-	EarnedDeltaKobo int64 `json:"earned_delta_kobo"`
-	UserID          int64 `json:"user_id"`
-	ElectionGroupID int32 `json:"election_group_id"`
-}
-
-func (q *Queries) UpdatePollingUnitAssignmentEarnedAmountKobo(ctx context.Context, arg UpdatePollingUnitAssignmentEarnedAmountKoboParams) (PollingUnitAssignment, error) {
-	row := q.db.QueryRow(ctx, updatePollingUnitAssignmentEarnedAmountKobo, arg.EarnedDeltaKobo, arg.UserID, arg.ElectionGroupID)
-	var i PollingUnitAssignment
-	err := row.Scan(
-		&i.ID,
-		&i.ElectionGroupID,
-		&i.PartyID,
-		&i.StateID,
-		&i.LgaID,
-		&i.WardID,
-		&i.PollingUnitID,
-		&i.UserID,
-		&i.RoleType,
-		&i.AssignedBy,
-		&i.ArrivedAt,
-		&i.ElectionStartedAt,
-		&i.ElectionEndedAt,
-		&i.CompletedAt,
-		&i.LastUpdateAt,
-		&i.PotentialPaymentKobo,
-		&i.EarnedAmountKobo,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

@@ -10,6 +10,7 @@ import (
 	"math"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -18,6 +19,7 @@ type Service interface {
 	CreateUpdate(ctx context.Context, input polling_unit_updates.CreateUpdateInput) (queries.PollingUnitUpdate, error)
 	ListUpdates(ctx context.Context, params queries.ListPollingUnitUpdatesParams) ([]queries.ListPollingUnitUpdatesRow, error)
 	GetActiveIssues(ctx context.Context, pollingUnitID int32) ([]queries.ListActivePollingUnitIssuesRow, error)
+	GetElectionGroupByID(ctx context.Context, id int32) (queries.ElectionGroup, error)
 }
 
 type PollingUnitAssignmentsService interface {
@@ -100,16 +102,21 @@ func (h *Handler) CreateUpdate(w http.ResponseWriter, r *http.Request) {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to verify assignment: "+err.Error())
 		return
 	}
-	if assignment == nil || assignment.ID <= 0 {
-		h.utils.RespondError(w, http.StatusNotFound, "No active assignment found for this election group")
+	if status, errMsg := validateAssignmentMatch(assignment, req.AssignmentID, req.PollingUnitID); status != 0 {
+		h.utils.RespondError(w, status, errMsg)
 		return
 	}
-	if assignment.ID != req.AssignmentID {
-		h.utils.RespondError(w, http.StatusForbidden, "Assignment does not belong to you")
+
+	// Verify election date: updates can only be submitted starting from election day.
+	// A 1-day post-election window is allowed so agents with no/poor connectivity can sync offline outbox items.
+	eg, err := h.service.GetElectionGroupByID(r.Context(), req.ElectionGroupID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election group: "+err.Error())
 		return
 	}
-	if assignment.PollingUnitID != req.PollingUnitID {
-		h.utils.RespondError(w, http.StatusBadRequest, "Polling unit does not match assignment")
+
+	if err := utils.ValidateElectionReportingWindow(eg.ElectionDate.Time, time.Now(), 1); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -150,7 +157,7 @@ func (h *Handler) CreateUpdate(w http.ResponseWriter, r *http.Request) {
 		AssignmentElectionEndedAt:   assignment.ElectionEndedAt,
 	})
 	if err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create update: "+err.Error())
+		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -324,4 +331,18 @@ func (h *Handler) ListActiveIssues(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.utils.RespondSuccessData(w, http.StatusOK, "Active issues retrieved successfully", issues)
+}
+
+// validateAssignmentMatch verifies that the cached assignment exists and matches the request payload.
+func validateAssignmentMatch(assignment *queries.GetUserAssignmentRow, expectedAssignmentID int64, expectedPUID int32) (int, string) {
+	if assignment == nil || assignment.ID <= 0 {
+		return http.StatusNotFound, "No active assignment found for this election group"
+	}
+	if assignment.ID != expectedAssignmentID {
+		return http.StatusForbidden, "Assignment does not belong to you"
+	}
+	if assignment.PollingUnitID != expectedPUID {
+		return http.StatusBadRequest, "Polling unit does not match assignment"
+	}
+	return 0, ""
 }

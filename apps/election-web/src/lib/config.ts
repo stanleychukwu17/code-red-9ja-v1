@@ -349,6 +349,18 @@ export const API_URL = {
       if (partyId) params.append("party_id", String(partyId));
       return `${api}/agent-earnings/estimate-payout?${params.toString()}`;
     },
+    allocations: (
+      electionGroupId?: number | string,
+      assignmentId?: number | string,
+      roleType?: string,
+    ) => {
+      const params = new URLSearchParams();
+      if (electionGroupId) params.append("election_group_id", String(electionGroupId));
+      if (assignmentId) params.append("assignment_id", String(assignmentId));
+      if (roleType) params.append("role_type", roleType);
+      const qs = params.toString();
+      return `${api}/agent-earnings/allocations${qs ? `?${qs}` : ""}`;
+    },
   },
 
   practiceTestPayoutPreview: (

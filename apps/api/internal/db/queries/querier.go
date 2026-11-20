@@ -511,7 +511,6 @@ type Querier interface {
 	UpdatePhoneNumber(ctx context.Context, arg UpdatePhoneNumberParams) error
 	UpdatePlan(ctx context.Context, arg UpdatePlanParams) (Plan, error)
 	UpdatePollingUnit(ctx context.Context, arg UpdatePollingUnitParams) (PollingUnit, error)
-	UpdatePollingUnitAssignmentEarnedAmountKobo(ctx context.Context, arg UpdatePollingUnitAssignmentEarnedAmountKoboParams) (PollingUnitAssignment, error)
 	UpdatePollingUnitResult(ctx context.Context, arg UpdatePollingUnitResultParams) (PollingUnitResult, error)
 	UpdatePollingUnitResultAIExtraction(ctx context.Context, arg UpdatePollingUnitResultAIExtractionParams) (PollingUnitResult, error)
 	UpdateReferral(ctx context.Context, arg UpdateReferralParams) (Referral, error)

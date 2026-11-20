@@ -70,34 +70,39 @@ func (s *UsersService) GetOrCreateUserWallet(ctx context.Context, userID int64) 
 	})
 }
 
+// CreditUserWalletParams contains the parameters for crediting a user's wallet.
+type CreditUserWalletParams struct {
+	UserID               int64
+	AmountKobo           int64
+	TransactionReference string
+	PayerName            string
+	PayerAccountNumber   string
+	PayerBankCode        string
+	Narration            string
+	RawPayload           []byte
+}
+
 // CreditUserWallet credits a user's wallet by user ID and records the credit transaction (idempotent).
-func (s *UsersService) CreditUserWallet(
-	ctx context.Context,
-	userID int64,
-	amountKobo int64,
-	transactionReference string,
-	payerName, payerAccountNumber, payerBankCode, narration string,
-	rawPayload []byte,
-) (queries.UserWalletTransaction, error) {
-	if amountKobo <= 0 {
+func (s *UsersService) CreditUserWallet(ctx context.Context, params CreditUserWalletParams) (queries.UserWalletTransaction, error) {
+	if params.AmountKobo <= 0 {
 		return queries.UserWalletTransaction{}, fmt.Errorf("credit amount must be positive")
 	}
 
 	// Idempotency check.
-	existing, err := s.queries.GetUserWalletTransactionByReference(ctx, transactionReference)
+	existing, err := s.queries.GetUserWalletTransactionByReference(ctx, params.TransactionReference)
 	if err == nil {
 		return existing, nil
 	}
 
 	// Retrieve or auto-provision wallet.
-	wallet, err := s.GetOrCreateUserWallet(ctx, userID)
+	wallet, err := s.GetOrCreateUserWallet(ctx, params.UserID)
 	if err != nil {
-		return queries.UserWalletTransaction{}, fmt.Errorf("get or create wallet for user %d: %w", userID, err)
+		return queries.UserWalletTransaction{}, fmt.Errorf("get or create wallet for user %d: %w", params.UserID, err)
 	}
 
 	// Credit the balance.
 	updatedWallet, err := s.queries.CreditUserWallet(ctx, queries.CreditUserWalletParams{
-		BalanceKobo: amountKobo,
+		BalanceKobo: params.AmountKobo,
 		ID:          wallet.ID,
 	})
 	if err != nil {
@@ -107,15 +112,15 @@ func (s *UsersService) CreditUserWallet(
 	// Persist transaction ledger entry.
 	txn, err := s.queries.CreateUserWalletTransaction(ctx, queries.CreateUserWalletTransactionParams{
 		WalletID:             wallet.ID,
-		TransactionReference: transactionReference,
+		TransactionReference: params.TransactionReference,
 		Type:                 constants.TransactionTypeCredit,
-		AmountKobo:           amountKobo,
+		AmountKobo:           params.AmountKobo,
 		BalanceAfterKobo:     updatedWallet.BalanceKobo,
-		PayerName:            utils.PgTextFromString(payerName),
-		PayerAccountNumber:   utils.PgTextFromString(payerAccountNumber),
-		PayerBankCode:        utils.PgTextFromString(payerBankCode),
-		Narration:            utils.PgTextFromString(narration),
-		RawPayload:           rawPayload,
+		PayerName:            utils.PgTextFromString(params.PayerName),
+		PayerAccountNumber:   utils.PgTextFromString(params.PayerAccountNumber),
+		PayerBankCode:        utils.PgTextFromString(params.PayerBankCode),
+		Narration:            utils.PgTextFromString(params.Narration),
+		RawPayload:           params.RawPayload,
 	})
 	if err != nil {
 		return queries.UserWalletTransaction{}, fmt.Errorf("record user credit transaction: %w", err)
@@ -124,33 +129,37 @@ func (s *UsersService) CreditUserWallet(
 	return txn, nil
 }
 
+// WithdrawFromUserWalletParams contains the parameters for debiting/withdrawing from a user's wallet.
+type WithdrawFromUserWalletParams struct {
+	UserID               int64
+	AmountKobo           int64
+	TransactionReference string
+	BankAccountNumber   string
+	BankCode             string
+	Narration            string
+}
+
 // WithdrawFromUserWallet debits a user's wallet and records the debit transaction (idempotent).
-func (s *UsersService) WithdrawFromUserWallet(
-	ctx context.Context,
-	userID int64,
-	amountKobo int64,
-	transactionReference string,
-	bankAccountNumber, bankCode, narration string,
-) (queries.UserWalletTransaction, error) {
-	if amountKobo <= 0 {
+func (s *UsersService) WithdrawFromUserWallet(ctx context.Context, params WithdrawFromUserWalletParams) (queries.UserWalletTransaction, error) {
+	if params.AmountKobo <= 0 {
 		return queries.UserWalletTransaction{}, fmt.Errorf("withdrawal amount must be positive")
 	}
 
 	// Get wallet.
-	wallet, err := s.queries.GetUserWalletByUserID(ctx, userID)
+	wallet, err := s.queries.GetUserWalletByUserID(ctx, params.UserID)
 	if err != nil {
 		return queries.UserWalletTransaction{}, fmt.Errorf("wallet not found: %w", err)
 	}
 
 	// Idempotency check.
-	existing, err := s.queries.GetUserWalletTransactionByReference(ctx, transactionReference)
+	existing, err := s.queries.GetUserWalletTransactionByReference(ctx, params.TransactionReference)
 	if err == nil {
 		return existing, nil
 	}
 
 	// Attempt debit.
 	updatedWallet, err := s.queries.DebitUserWallet(ctx, queries.DebitUserWalletParams{
-		BalanceKobo: amountKobo,
+		BalanceKobo: params.AmountKobo,
 		ID:          wallet.ID,
 	})
 	if err != nil {
@@ -160,14 +169,14 @@ func (s *UsersService) WithdrawFromUserWallet(
 	// Record transaction ledger entry.
 	txn, err := s.queries.CreateUserWalletTransaction(ctx, queries.CreateUserWalletTransactionParams{
 		WalletID:             wallet.ID,
-		TransactionReference: transactionReference,
+		TransactionReference: params.TransactionReference,
 		Type:                 constants.TransactionTypeDebit,
-		AmountKobo:           amountKobo,
+		AmountKobo:           params.AmountKobo,
 		BalanceAfterKobo:     updatedWallet.BalanceKobo,
 		PayerName:            utils.PgTextFromString(""),
-		PayerAccountNumber:   utils.PgTextFromString(bankAccountNumber),
-		PayerBankCode:        utils.PgTextFromString(bankCode),
-		Narration:            utils.PgTextFromString(narration),
+		PayerAccountNumber:   utils.PgTextFromString(params.BankAccountNumber),
+		PayerBankCode:        utils.PgTextFromString(params.BankCode),
+		Narration:            utils.PgTextFromString(params.Narration),
 		RawPayload:           nil,
 	})
 	if err != nil {

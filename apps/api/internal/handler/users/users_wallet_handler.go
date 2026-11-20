@@ -199,15 +199,14 @@ func (h *Handler) WithdrawFromUserWallet(w http.ResponseWriter, r *http.Request)
 
 	txRef := fmt.Sprintf("user-withdraw-%s", uuid.New().String())
 
-	txn, err := h.usersService.WithdrawFromUserWallet(
-		r.Context(),
-		user.ID,
-		req.AmountKobo,
-		txRef,
-		req.BankAccountNumber,
-		req.BankCode,
-		req.Narration,
-	)
+	txn, err := h.usersService.WithdrawFromUserWallet(r.Context(), usersservice.WithdrawFromUserWalletParams{
+		UserID:               user.ID,
+		AmountKobo:           req.AmountKobo,
+		TransactionReference: txRef,
+		BankAccountNumber:   req.BankAccountNumber,
+		BankCode:             req.BankCode,
+		Narration:            req.Narration,
+	})
 	if err != nil {
 		if containsString(err.Error(), "insufficient") || containsString(err.Error(), "no rows") {
 			h.utils.RespondError(w, http.StatusPaymentRequired, "Insufficient wallet balance")

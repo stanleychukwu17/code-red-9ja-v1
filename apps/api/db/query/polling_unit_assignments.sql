@@ -137,14 +137,6 @@ SET
 WHERE id = $1
 RETURNING id, user_id, polling_unit_id, election_group_id, party_id, role_type, assigned_by, arrived_at, election_started_at, election_ended_at, created_at, updated_at;
 
--- name: UpdatePollingUnitAssignmentEarnedAmountKobo :one
-UPDATE polling_unit_assignments
-SET earned_amount_kobo = earned_amount_kobo + sqlc.arg(earned_delta_kobo)::bigint,
-    updated_at = NOW()
-WHERE user_id = sqlc.arg(user_id) AND election_group_id = sqlc.arg(election_group_id)
-RETURNING *;
-
-
 -- name: CountPollingUnitAssignments :one
 SELECT COUNT(*)::integer
 FROM polling_unit_assignments

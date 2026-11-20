@@ -19,7 +19,6 @@ CREATE TABLE IF NOT EXISTS polling_unit_assignments (
   last_update_at TIMESTAMPTZ,
   
   potential_payment_kobo BIGINT NOT NULL DEFAULT 0,
-  earned_amount_kobo BIGINT NOT NULL DEFAULT 0,
 
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),

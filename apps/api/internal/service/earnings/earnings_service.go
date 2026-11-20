@@ -15,6 +15,7 @@ import (
 
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
+	usersservice "free9ja/api/internal/service/users"
 	"free9ja/api/internal/utils"
 )
 
@@ -25,14 +26,7 @@ type partiesService interface {
 }
 
 type usersWalletService interface {
-	CreditUserWallet(
-		ctx context.Context,
-		userID int64,
-		amountKobo int64,
-		transactionReference string,
-		payerName, payerAccountNumber, payerBankCode, narration string,
-		rawPayload []byte,
-	) (queries.UserWalletTransaction, error)
+	CreditUserWallet(ctx context.Context, params usersservice.CreditUserWalletParams) (queries.UserWalletTransaction, error)
 }
 
 type Service struct {
@@ -193,6 +187,9 @@ func (s *Service) GetUpdateScheduleConfig(ctx context.Context) (UpdateScheduleCo
 // handle (which may be a transaction-scoped handle).
 func (s *Service) calculateWithTx(ctx context.Context, q *queries.Queries, asgn queries.GetAssignmentForEarningsRow) (queries.AgentEarning, error) {
 	roleType := "polling_agent"
+	if asgn.RoleType.Valid && asgn.RoleType.String != "" {
+		roleType = asgn.RoleType.String
+	}
 
 	// 1. Fetch earnings allocation for this role (Redis cached)
 	allocation, err := s.GetEarningsAllocation(ctx, roleType)
@@ -205,14 +202,8 @@ func (s *Service) calculateWithTx(ctx context.Context, q *queries.Queries, asgn 
 	targetUpdatesCount := updateScheduleConfig.TargetUpdatesCount
 	intervalMinutes := updateScheduleConfig.IntervalMinutes
 
-	// 3. Fetch party to get base payment kobo (cached via partiesService)
-	party, err := s.getPartyByID(ctx, asgn.PartyID)
-	if err != nil {
-		return queries.AgentEarning{}, fmt.Errorf("get party: %w", err)
-	}
-
-	// Resolves party-configured base payout for this role
-	basePaymentKobo := s.resolveBasePayment(party.AgentPaymentAllocationKobo, roleType)
+	// 3. Base payment locked in on the assignment contract (funded and verified upon assignment)
+	basePaymentKobo := asgn.PotentialPaymentKobo
 
 	// Expected results count: total contested elections applicable to this PU (e.g., Presidential + Senate + Reps)
 	expectedResults, err := s.GetExpectedResultsCountForPU(ctx, asgn.ElectionGroupID, asgn.PollingUnitID)
@@ -308,6 +299,9 @@ func (s *Service) ProcessTaskEarnings(ctx context.Context, params ProcessTaskEar
 	}
 
 	roleType := "polling_agent"
+	if asgn.RoleType.Valid && asgn.RoleType.String != "" {
+		roleType = asgn.RoleType.String
+	}
 
 	// Incremental Delta Payout Pattern:
 	// 1. Fetch current cumulative earnings record for this agent & election to check what has already been paid.
@@ -381,16 +375,6 @@ func (s *Service) ProcessTaskEarnings(ctx context.Context, params ProcessTaskEar
 	// 3. Compute newly unlocked delta (new - old).
 	// Only credit the positive difference to the wallet, guaranteeing idempotency and preventing duplicate payouts.
 	delta := newFactorEarned - oldFactorEarned
-	if delta > 0 {
-		// Also update polling_unit_assignments.earned_amount_kobo
-		if _, updateAsgnErr := qtx.UpdatePollingUnitAssignmentEarnedAmountKobo(ctx, queries.UpdatePollingUnitAssignmentEarnedAmountKoboParams{
-			UserID:          asgn.UserID,
-			ElectionGroupID: asgn.ElectionGroupID,
-			EarnedDeltaKobo: delta,
-		}); updateAsgnErr != nil {
-			slog.Warn("earnings: failed to update polling_unit_assignments earned_amount_kobo", "userID", asgn.UserID, "electionGroupID", asgn.ElectionGroupID, "err", updateAsgnErr)
-		}
-	}
 
 	if err := tx.Commit(ctx); err != nil {
 		return 0, fmt.Errorf("earnings: failed to commit transaction: %w", err)
@@ -399,15 +383,12 @@ func (s *Service) ProcessTaskEarnings(ctx context.Context, params ProcessTaskEar
 	// 4. Delegate wallet credit to users/wallet service (atomic balance update + ledger entry).
 	if delta > 0 && s.usersSvc != nil {
 		txRef := fmt.Sprintf("%s-%d-%d", params.TaskType, params.AssignmentID, time.Now().UnixNano())
-		if _, creditErr := s.usersSvc.CreditUserWallet(
-			ctx,
-			asgn.UserID,
-			delta,
-			txRef,
-			"", "", "",
-			narrationLabel,
-			nil,
-		); creditErr != nil {
+		if _, creditErr := s.usersSvc.CreditUserWallet(ctx, usersservice.CreditUserWalletParams{
+			UserID:               asgn.UserID,
+			AmountKobo:           delta,
+			TransactionReference: txRef,
+			Narration:            narrationLabel,
+		}); creditErr != nil {
 			slog.Error("earnings: failed to credit wallet via usersService", "userID", asgn.UserID, "delta", delta, "err", creditErr)
 			return delta, fmt.Errorf("earnings: failed to credit wallet: %w", creditErr)
 		}
@@ -574,31 +555,19 @@ func (s *Service) CalculatePotentialPayout(ctx context.Context, assignmentID int
 	}
 
 	roleType := "polling_agent"
-
-	// Determine base payment
-	basePaymentKobo := asgn.PotentialPaymentKobo
-	if basePaymentKobo <= 0 {
-		party, err := s.getPartyByID(ctx, asgn.PartyID)
-		if err == nil {
-			if party.AgentPaymentBalanceKobo <= 0 {
-				return PotentialPayoutResult{
-					AssignmentID:        assignmentID,
-					TaskType:            taskType,
-					PotentialPayoutKobo: 0,
-					IsEligible:          false,
-					Reason:              "Party has not funded agent payments",
-				}, nil
-			}
-			basePaymentKobo = s.resolveBasePayment(party.AgentPaymentAllocationKobo, roleType)
-		}
+	if asgn.RoleType.Valid && asgn.RoleType.String != "" {
+		roleType = asgn.RoleType.String
 	}
+
+	// Base payment locked in on the assignment contract (already funded by party)
+	basePaymentKobo := asgn.PotentialPaymentKobo
 	if basePaymentKobo <= 0 {
 		return PotentialPayoutResult{
 			AssignmentID:        assignmentID,
 			TaskType:            taskType,
 			PotentialPayoutKobo: 0,
 			IsEligible:          false,
-			Reason:              "Party has not configured payment allocation for this role",
+			Reason:              "Assignment has no payment configured",
 		}, nil
 	}
 
@@ -798,15 +767,6 @@ func (s *Service) EstimatePotentialPayout(
 	var basePaymentKobo int64
 	if partyID > 0 {
 		if party, err := s.getPartyByID(ctx, partyID); err == nil {
-			if party.AgentPaymentBalanceKobo <= 0 {
-				return EstimatePayoutResult{
-					TaskType:            taskType,
-					Role:                normRole,
-					PotentialPayoutKobo: 0,
-					IsEligible:          false,
-					Reason:              "Party has not funded agent payments",
-				}, nil
-			}
 			basePaymentKobo = s.resolveBasePayment(party.AgentPaymentAllocationKobo, normRole)
 		}
 	}

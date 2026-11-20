@@ -1,6 +1,9 @@
 package utils
 
-import "time"
+import (
+	"errors"
+	"time"
+)
 
 // Lagos has a fixed UTC+1 offset. Keeping it here also works in minimal images
 // and Windows environments without an installed IANA timezone database.
@@ -18,12 +21,15 @@ func LagosDate(now time.Time) time.Time {
 func ElectionStatusForDate(scheduledDate, now time.Time) string {
 	date := time.Date(scheduledDate.Year(), scheduledDate.Month(), scheduledDate.Day(), 0, 0, 0, 0, time.UTC)
 	today := LagosDate(now)
+
 	if date.Before(today) {
 		return "ended"
 	}
+
 	if !date.After(today.AddDate(0, 0, 1)) {
 		return "ongoing"
 	}
+
 	return "upcoming"
 }
 
@@ -31,6 +37,23 @@ func ElectionStatusForDate(scheduledDate, now time.Time) string {
 func IsElectionNominationOpen(scheduledDate, now time.Time) bool {
 	date := time.Date(scheduledDate.Year(), scheduledDate.Month(), scheduledDate.Day(), 0, 0, 0, 0, time.UTC)
 	today := LagosDate(now)
+
+	// Nominations close 15 days before the scheduled election date
 	deadline := today.AddDate(0, 0, 15)
 	return date.After(deadline)
+}
+
+// ValidateElectionReportingWindow checks that an election task or report is being submitted
+// on or after the scheduled election day in Lagos calendar time, and within the post-election grace period (for offline sync).
+func ValidateElectionReportingWindow(scheduledDate, now time.Time, graceDays int) error {
+	date := time.Date(scheduledDate.Year(), scheduledDate.Month(), scheduledDate.Day(), 0, 0, 0, 0, time.UTC)
+	today := LagosDate(now)
+
+	if today.Before(date) {
+		return errors.New("updates cannot be submitted prior to election day")
+	}
+	if today.After(date.AddDate(0, 0, graceDays)) {
+		return errors.New("the reporting and sync window for this election has ended")
+	}
+	return nil
 }

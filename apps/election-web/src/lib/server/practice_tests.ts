@@ -140,6 +140,32 @@ export const getEstimatePayout = createServerFn({ method: "GET" })
     }
   });
 
+export const getAgentAllocations = createServerFn({ method: "GET" })
+  .inputValidator(
+    (data?: {
+      electionGroupId?: number;
+      assignmentId?: number;
+      roleType?: string;
+    }) => data,
+  )
+  .handler(async ({ data }) => {
+    try {
+      const url = API_URL.agentEarnings.allocations(
+        data?.electionGroupId,
+        data?.assignmentId,
+        data?.roleType,
+      );
+      const response = await apiFetch(url);
+      const resData = await response.json();
+      return resData;
+    } catch (error) {
+      return {
+        success: false,
+        message: "Failed to fetch agent allocations: " + (error as Error).message,
+      };
+    }
+  });
+
 /**
  * @deprecated Use getPotentialPayout from agent earnings instead.
  */

@@ -2,14 +2,8 @@ import { Button } from "@repo/ui/components/button";
 import FancyMoneyBagIcon from "@repo/ui/icons/fancy-money-bag-icon";
 import { GreyCardTitle, GreyCardTopRow, GreyCardWrapper } from "./Shared";
 import PollingUnitIcon from "@repo/ui/icons/polling-unit-icon";
-import { useElection } from "#/hooks/useElection";
 import { useAssignments } from "#/hooks/useAssignments";
-import { useUserParty } from "#/hooks/useUserParty";
-import { useQuery } from "@tanstack/react-query";
-import {
-  getPotentialPayout,
-  getEstimatePayout,
-} from "#/lib/server/practice_tests";
+import { useAgentAllocations } from "#/hooks/useAgentAllocations";
 
 /**
  * Props for `ArrivalCard`.
@@ -27,48 +21,9 @@ interface ArrivalCardProps {
  * potential payout reward for completing the attendance verification milestone.
  */
 export function ArrivalCard({ onArrivedClick }: ArrivalCardProps) {
-  // Retrieve current election group, assignment details, and user party from modular hooks
-  const { selectedElectionGroup } = useElection();
   const { pollingUnitAssignment } = useAssignments();
-  const { party } = useUserParty();
-  const assignmentId = pollingUnitAssignment?.id;
-
-  // Query potential payout reward for completing the "attendance" arrival milestone
-  const { data: potentialPayout } = useQuery({
-    queryKey: [
-      "taskPayout",
-      "attendance",
-      assignmentId ?? "no-assignment",
-      selectedElectionGroup?.id,
-      party?.id,
-    ],
-    queryFn: async () => {
-      // 1. If assigned, query the specific configured payout for this assignment and task
-      if (assignmentId) {
-        const res = await getPotentialPayout({
-          data: { assignmentId, taskType: "attendance" },
-        });
-        if (res?.success && res.data?.payout) {
-          // Convert amount from kobo to naira
-          return (res.data.payout.potential_payout_kobo ?? 0) / 100;
-        }
-      }
-
-      // 2. Fallback: Retrieve estimated role payout for polling agents in this party and election group
-      const estRes = await getEstimatePayout({
-        data: {
-          taskType: "attendance",
-          role: "polling_agent",
-          electionGroupId: selectedElectionGroup?.id ?? undefined,
-          partyId: party?.id ?? undefined,
-        },
-      });
-      if (estRes?.success && estRes.data?.payout) {
-        return (estRes.data.payout.potential_payout_kobo ?? 0) / 100;
-      }
-      return undefined;
-    },
-  });
+  const { getPayoutNaira } = useAgentAllocations();
+  const potentialPayout = getPayoutNaira("attendance");
 
   // Extract assigned location hierarchy labels with safe fallbacks
   const pollingUnit = pollingUnitAssignment?.polling_unit_name || "Polling Unit";
