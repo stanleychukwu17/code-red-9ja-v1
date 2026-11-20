@@ -50,7 +50,9 @@ export const useElection = () => {
 
 	// Check if today matches the active election group's scheduled date
 	const electionDay = isElectionDay(selectedElectionGroup?.election_date);
-	const { daysLeft, diffDays } = calculateDaysLeft(selectedElectionGroup?.election_date);
+	// const { daysLeft, diffDays } = calculateDaysLeft(selectedElectionGroup?.election_date);
+	const daysLeft = 0;
+	const diffDays = 0;
 
 	return {
 		selectedElectionGroup,

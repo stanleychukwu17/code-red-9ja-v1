@@ -2,6 +2,7 @@ import { useElection } from "#/hooks/useElection";
 import { useAssignments } from "#/hooks/useAssignments";
 import { useElectionRealtime } from "@repo/ui/hooks/useElectionRealtime";
 import { createFileRoute } from "@tanstack/react-router";
+import { HomeHeader } from "./components/HomeHeader";
 import { GeneralPage } from "./page-components/GeneralPage";
 import { LGAElectionSupervisorPage } from "./page-components/LGAElectionSupervisorPage";
 import { PollingAgentPage } from "./page-components/PollingAgentPage";
@@ -32,7 +33,7 @@ export const Route = createFileRoute("/_authenticated/_home/")({
  */
 function RouteComponent() {
   const { supervisorAssignment, pollingUnitAssignment } = useAssignments();
-  const { selectedElection } = useElection();
+  const { selectedElection, daysLeft } = useElection();
 
   // Connect real-time WebSocket updates for election supervisor & voter dashboard
   useElectionRealtime({
@@ -67,5 +68,13 @@ function RouteComponent() {
     content = <PollingAgentPage />;
   }
 
-  return content;
+  return (
+    <main className="w-full min-h-screen flex flex-col">
+      <HomeHeader daysLeft={daysLeft} />
+      <div className="">
+
+      </div>
+      {content}
+    </main>
+  );
 }

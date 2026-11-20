@@ -2,12 +2,10 @@ import { useElection } from "#/hooks/useElection";
 import { useNavigate } from "@tanstack/react-router";
 import { ApplicationsCard } from "../components/ApplicationsCard";
 import { GiveUpdateFloatingButton } from "../components/GiveUpdateFloatingButton";
-import { HomeHeader } from "../components/HomeHeader";
 import { PracticeTestComingSoonCard } from "../components/PracticeTestCard";
 import { ReferralCard } from "../components/ReferralCard";
 import { HomeBody } from "../components/Shared";
 import { UploadResultCard } from "../components/UploadResultCard";
-import { Layout } from "@repo/ui/components/custom/AdminLayouts";
 
 /**
  * General Citizen / Unassigned Voter Dashboard.
@@ -27,9 +25,7 @@ export function GeneralPage() {
   const { selectedElectionGroup, daysLeft } = useElection();
 
   return (
-    <Layout>
-      <HomeHeader daysLeft={daysLeft} />
-
+    <>
       {/* Action Cards Body */}
       <HomeBody>
         {/* On election day: permit citizens to crowd-source EC8A result sheets */}
@@ -55,6 +51,6 @@ export function GeneralPage() {
           />
         )}
       </HomeBody>
-    </Layout>
+    </>
   );
 }

@@ -11,11 +11,10 @@ import { useEffect, useState } from "react";
 import { ReferralCard } from "../components/ReferralCard";
 import { EarningsTab } from "../components/EarningsTab";
 import { GiveUpdateFloatingButton } from "../components/GiveUpdateFloatingButton";
-import { HomeHeader, HomeHeader2 } from "../components/HomeHeader";
+import { HomeHeader2 } from "../components/HomeHeader";
 import { PracticeTestComingSoonCard } from "../components/PracticeTestCard";
 import { HomeBody } from "../components/Shared";
 import { SupervisorStartDutyCard } from "../components/SupervisorReadyCard";
-import { Layout } from "@repo/ui/components/custom/AdminLayouts";
 
 /**
  * Local Government Area (LGA) Election Supervisor Dashboard.
@@ -152,8 +151,7 @@ export function LGAElectionSupervisorPage() {
   }
 
   return (
-    <Layout>
-      <HomeHeader daysLeft={daysLeft} />
+    <>
       <HomeHeader2 title={headerTitle} rightText={headerRightText} />
 
       {/* Primary Carousel: Readiness and Objectives */}
@@ -261,6 +259,6 @@ export function LGAElectionSupervisorPage() {
           />
         )}
       </HomeBody>
-    </Layout>
+    </>
   );
 }

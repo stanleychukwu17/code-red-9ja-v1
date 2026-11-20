@@ -18,11 +18,10 @@ import { useState } from "react";
 import { ReferralCard } from "../components/ReferralCard";
 import { EarningsTab } from "../components/EarningsTab";
 import { GiveUpdateFloatingButton } from "../components/GiveUpdateFloatingButton";
-import { HomeHeader, HomeHeader2 } from "../components/HomeHeader";
+import { HomeHeader2 } from "../components/HomeHeader";
 import { PracticeTestComingSoonCard } from "../components/PracticeTestCard";
 import { HomeBody } from "../components/Shared";
 import { SupervisorStartDutyCard } from "../components/SupervisorReadyCard";
-import { Layout } from "@repo/ui/components/custom/AdminLayouts";
 
 /**
  * Ward Election Supervisor Dashboard.
@@ -113,8 +112,7 @@ export function WardElectionSupervisorPage() {
   const headerRightText = `${Math.round((completed / Math.max(objectives.length, 1)) * 100)}%`;
 
   return (
-    <Layout>
-      <HomeHeader daysLeft={daysLeft} />
+    <>
       <HomeHeader2 title={headerTitle} rightText={headerRightText} />
 
       {/* Primary Checklist: Objectives */}
@@ -183,6 +181,6 @@ export function WardElectionSupervisorPage() {
           />
         )}
       </HomeBody>
-    </Layout>
+    </>
   );
 }

@@ -26,7 +26,6 @@ import { Route as AuthenticatedElectionStartIndexRouteImport } from './routes/_a
 import { Route as AuthenticatedElectionEndIndexRouteImport } from './routes/_authenticated/election-end/index'
 import { Route as AuthenticatedContactsIndexRouteImport } from './routes/_authenticated/contacts/index'
 import { Route as AuthenticatedCampaignGroupsIndexRouteImport } from './routes/_authenticated/campaign-groups/index'
-import { Route as AuthenticatedArrivalIndexRouteImport } from './routes/_authenticated/arrival/index'
 import { Route as AuthenticatedApplicationsIndexRouteImport } from './routes/_authenticated/applications/index'
 import { Route as AuthenticatedHomeIndexRouteImport } from './routes/_authenticated/_home/index'
 import { Route as AuthenticatedApplicationsSupervisorRouteImport } from './routes/_authenticated/applications/supervisor'
@@ -127,12 +126,6 @@ const AuthenticatedCampaignGroupsIndexRoute =
     path: '/campaign-groups/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
-const AuthenticatedArrivalIndexRoute =
-  AuthenticatedArrivalIndexRouteImport.update({
-    id: '/arrival/',
-    path: '/arrival/',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
 const AuthenticatedApplicationsIndexRoute =
   AuthenticatedApplicationsIndexRouteImport.update({
     id: '/applications/',
@@ -166,7 +159,6 @@ export interface FileRoutesByFullPath {
   '/applications/apply': typeof AuthenticatedApplicationsApplyRoute
   '/applications/supervisor': typeof AuthenticatedApplicationsSupervisorRoute
   '/applications/': typeof AuthenticatedApplicationsIndexRoute
-  '/arrival/': typeof AuthenticatedArrivalIndexRoute
   '/campaign-groups/': typeof AuthenticatedCampaignGroupsIndexRoute
   '/contacts/': typeof AuthenticatedContactsIndexRoute
   '/election-end/': typeof AuthenticatedElectionEndIndexRoute
@@ -189,7 +181,6 @@ export interface FileRoutesByTo {
   '/applications/supervisor': typeof AuthenticatedApplicationsSupervisorRoute
   '/': typeof AuthenticatedHomeIndexRoute
   '/applications': typeof AuthenticatedApplicationsIndexRoute
-  '/arrival': typeof AuthenticatedArrivalIndexRoute
   '/campaign-groups': typeof AuthenticatedCampaignGroupsIndexRoute
   '/contacts': typeof AuthenticatedContactsIndexRoute
   '/election-end': typeof AuthenticatedElectionEndIndexRoute
@@ -214,7 +205,6 @@ export interface FileRoutesById {
   '/_authenticated/applications/supervisor': typeof AuthenticatedApplicationsSupervisorRoute
   '/_authenticated/_home/': typeof AuthenticatedHomeIndexRoute
   '/_authenticated/applications/': typeof AuthenticatedApplicationsIndexRoute
-  '/_authenticated/arrival/': typeof AuthenticatedArrivalIndexRoute
   '/_authenticated/campaign-groups/': typeof AuthenticatedCampaignGroupsIndexRoute
   '/_authenticated/contacts/': typeof AuthenticatedContactsIndexRoute
   '/_authenticated/election-end/': typeof AuthenticatedElectionEndIndexRoute
@@ -239,7 +229,6 @@ export interface FileRouteTypes {
     | '/applications/apply'
     | '/applications/supervisor'
     | '/applications/'
-    | '/arrival/'
     | '/campaign-groups/'
     | '/contacts/'
     | '/election-end/'
@@ -262,7 +251,6 @@ export interface FileRouteTypes {
     | '/applications/supervisor'
     | '/'
     | '/applications'
-    | '/arrival'
     | '/campaign-groups'
     | '/contacts'
     | '/election-end'
@@ -286,7 +274,6 @@ export interface FileRouteTypes {
     | '/_authenticated/applications/supervisor'
     | '/_authenticated/_home/'
     | '/_authenticated/applications/'
-    | '/_authenticated/arrival/'
     | '/_authenticated/campaign-groups/'
     | '/_authenticated/contacts/'
     | '/_authenticated/election-end/'
@@ -430,13 +417,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCampaignGroupsIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/arrival/': {
-      id: '/_authenticated/arrival/'
-      path: '/arrival'
-      fullPath: '/arrival/'
-      preLoaderRoute: typeof AuthenticatedArrivalIndexRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
     '/_authenticated/applications/': {
       id: '/_authenticated/applications/'
       path: '/applications'
@@ -473,7 +453,6 @@ interface AuthenticatedRouteChildren {
   AuthenticatedApplicationsSupervisorRoute: typeof AuthenticatedApplicationsSupervisorRoute
   AuthenticatedHomeIndexRoute: typeof AuthenticatedHomeIndexRoute
   AuthenticatedApplicationsIndexRoute: typeof AuthenticatedApplicationsIndexRoute
-  AuthenticatedArrivalIndexRoute: typeof AuthenticatedArrivalIndexRoute
   AuthenticatedCampaignGroupsIndexRoute: typeof AuthenticatedCampaignGroupsIndexRoute
   AuthenticatedContactsIndexRoute: typeof AuthenticatedContactsIndexRoute
   AuthenticatedElectionEndIndexRoute: typeof AuthenticatedElectionEndIndexRoute
@@ -494,7 +473,6 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
     AuthenticatedApplicationsSupervisorRoute,
   AuthenticatedHomeIndexRoute: AuthenticatedHomeIndexRoute,
   AuthenticatedApplicationsIndexRoute: AuthenticatedApplicationsIndexRoute,
-  AuthenticatedArrivalIndexRoute: AuthenticatedArrivalIndexRoute,
   AuthenticatedCampaignGroupsIndexRoute: AuthenticatedCampaignGroupsIndexRoute,
   AuthenticatedContactsIndexRoute: AuthenticatedContactsIndexRoute,
   AuthenticatedElectionEndIndexRoute: AuthenticatedElectionEndIndexRoute,
