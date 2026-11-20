@@ -4,26 +4,42 @@ import { useElection } from "./useElection";
 
 export type UseAgentDutyEligibilityOptions = {
 	dutyName?: string;
+	roleType?: "agent" | "supervisor" | "any";
 };
 
 export function useAgentDutyEligibility(options: UseAgentDutyEligibilityOptions = {}) {
-	const { dutyName = "Updates" } = options;
+	const { dutyName = "Updates", roleType = "agent" } = options;
 	const { selectedElectionGroup, electionDay, daysLeft, diffDays } = useElection();
-	const { pollingUnitAssignment, isLoading: isAssignmentsLoading } = useAssignments();
+	const { pollingUnitAssignment, supervisorAssignment, isLoading: isAssignmentsLoading } = useAssignments();
+
+	const hasAssignment =
+		roleType === "supervisor"
+			? Boolean(supervisorAssignment)
+			: roleType === "any"
+				? Boolean(pollingUnitAssignment || supervisorAssignment)
+				: Boolean(pollingUnitAssignment);
+
+	const activeAssignmentElectionGroupId =
+		roleType === "supervisor"
+			? supervisorAssignment?.data?.election_group_id
+			: pollingUnitAssignment?.election_group_id ?? supervisorAssignment?.data?.election_group_id;
 
 	// Check for election group mismatch
 	const isElectionMismatch = Boolean(
 		selectedElectionGroup?.id &&
-		pollingUnitAssignment?.election_group_id &&
-		selectedElectionGroup.id !== pollingUnitAssignment.election_group_id
+		activeAssignmentElectionGroupId &&
+		selectedElectionGroup.id !== activeAssignmentElectionGroupId
 	);
 
 	// Determine eligibility & error message
 	let errorMessage: string | null = null;
-	if (!pollingUnitAssignment && !isAssignmentsLoading) {
-		errorMessage = "No active polling unit assignment detected.";
+	if (!hasAssignment && !isAssignmentsLoading) {
+		errorMessage =
+			roleType === "supervisor"
+				? "No active supervisor assignment detected."
+				: "No active polling unit assignment detected.";
 	} else if (isElectionMismatch) {
-		errorMessage = "Active election does not match your assigned polling unit election.";
+		errorMessage = "Active election does not match your assigned duty election.";
 	} else if (!electionDay) {
 		errorMessage = `${dutyName} can only be submitted on election day.`;
 	}
@@ -57,6 +73,7 @@ export function useAgentDutyEligibility(options: UseAgentDutyEligibilityOptions 
 		daysLeft,
 		diffDays,
 		pollingUnitAssignment,
+		supervisorAssignment,
 		selectedElectionGroup,
 		isLoading: isAssignmentsLoading,
 	};

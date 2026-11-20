@@ -230,6 +230,7 @@ export const API_URL = {
 
   pollingUnits: `${api}/polling-units`,
   pollingUnitUpdates: `${api}/polling-unit-updates`,
+  supervisorUpdates: `${api}/supervisor-updates`,
   pollingUnitIssues: (pollingUnitId: number | string) =>
     `${api}/polling-unit-updates/issues?polling_unit_id=${pollingUnitId}`,
   pollingUnitById: (id: string | number) => `${api}/polling-units/${id}`,

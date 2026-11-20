@@ -75,3 +75,30 @@ SET earned_amount_kobo = earned_amount_kobo + sqlc.arg(earned_delta_kobo)::bigin
     updated_at = NOW()
 WHERE user_id = sqlc.arg(user_id) AND election_group_id = sqlc.arg(election_group_id)
 RETURNING *;
+
+-- name: UpdateWardSupervisorTracking :one
+UPDATE ward_election_supervisors
+SET arrived_at = COALESCE(sqlc.narg(arrived_at), arrived_at),
+    arrival_video_url = COALESCE(sqlc.narg(arrival_video_url), arrival_video_url),
+    completed_at = COALESCE(sqlc.narg(completed_at), completed_at),
+    updated_at = NOW()
+WHERE user_id = sqlc.arg(user_id) AND election_group_id = sqlc.arg(election_group_id)
+RETURNING *;
+
+-- name: UpdateLgaSupervisorTracking :one
+UPDATE lga_election_supervisors
+SET arrived_at = COALESCE(sqlc.narg(arrived_at), arrived_at),
+    arrival_video_url = COALESCE(sqlc.narg(arrival_video_url), arrival_video_url),
+    completed_at = COALESCE(sqlc.narg(completed_at), completed_at),
+    updated_at = NOW()
+WHERE user_id = sqlc.arg(user_id) AND election_group_id = sqlc.arg(election_group_id)
+RETURNING *;
+
+-- name: UpdateStateSupervisorTracking :one
+UPDATE state_election_supervisors
+SET arrived_at = COALESCE(sqlc.narg(arrived_at), arrived_at),
+    arrival_video_url = COALESCE(sqlc.narg(arrival_video_url), arrival_video_url),
+    completed_at = COALESCE(sqlc.narg(completed_at), completed_at),
+    updated_at = NOW()
+WHERE user_id = sqlc.arg(user_id) AND election_group_id = sqlc.arg(election_group_id)
+RETURNING *;

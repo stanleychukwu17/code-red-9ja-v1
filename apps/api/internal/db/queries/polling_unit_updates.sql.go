@@ -36,21 +36,21 @@ INSERT INTO polling_unit_with_issues (
 `
 
 type CreatePollingUnitIssueParams struct {
-	UpdateID                    pgtype.Int8        `json:"update_id"`
-	ElectionGroupID             int32              `json:"election_group_id"`
-	PartyID                     pgtype.Int2        `json:"party_id"`
-	UserID                      int64              `json:"user_id"`
-	AssignmentID                int64              `json:"assignment_id"`
-	StateID                     pgtype.Int2        `json:"state_id"`
-	LgaID                       pgtype.Int4        `json:"lga_id"`
-	WardID                      pgtype.Int4        `json:"ward_id"`
-	SenatorialDistrictID        pgtype.Int4        `json:"senatorial_district_id"`
-	FederalConstituencyID       pgtype.Int4        `json:"federal_constituency_id"`
-	StateAssemblyConstituencyID pgtype.Int4        `json:"state_assembly_constituency_id"`
-	PollingUnitID               int32              `json:"polling_unit_id"`
-	IssueCategoryID             int16              `json:"issue_category_id"`
-	IssueOptionID               int16              `json:"issue_option_id"`
-	TimeIssueStarted            pgtype.Timestamptz `json:"time_issue_started"`
+	UpdateID                    pgtype.Int8 `json:"update_id"`
+	ElectionGroupID             int32       `json:"election_group_id"`
+	PartyID                     pgtype.Int2 `json:"party_id"`
+	UserID                      int64       `json:"user_id"`
+	AssignmentID                int64       `json:"assignment_id"`
+	StateID                     pgtype.Int2 `json:"state_id"`
+	LgaID                       pgtype.Int4 `json:"lga_id"`
+	WardID                      pgtype.Int4 `json:"ward_id"`
+	SenatorialDistrictID        pgtype.Int4 `json:"senatorial_district_id"`
+	FederalConstituencyID       pgtype.Int4 `json:"federal_constituency_id"`
+	StateAssemblyConstituencyID pgtype.Int4 `json:"state_assembly_constituency_id"`
+	PollingUnitID               int32       `json:"polling_unit_id"`
+	IssueCategoryID             int16       `json:"issue_category_id"`
+	IssueOptionID               int16       `json:"issue_option_id"`
+	TimeIssueStarted            interface{} `json:"time_issue_started"`
 }
 
 func (q *Queries) CreatePollingUnitIssue(ctx context.Context, arg CreatePollingUnitIssueParams) (PollingUnitWithIssue, error) {

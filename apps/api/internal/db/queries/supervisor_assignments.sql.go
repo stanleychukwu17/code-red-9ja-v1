@@ -324,6 +324,53 @@ func (q *Queries) UpdateLgaSupervisorEarnedAmountKobo(ctx context.Context, arg U
 	return i, err
 }
 
+const updateLgaSupervisorTracking = `-- name: UpdateLgaSupervisorTracking :one
+UPDATE lga_election_supervisors
+SET arrived_at = COALESCE($1, arrived_at),
+    arrival_video_url = COALESCE($2, arrival_video_url),
+    completed_at = COALESCE($3, completed_at),
+    updated_at = NOW()
+WHERE user_id = $4 AND election_group_id = $5
+RETURNING id, election_group_id, party_id, user_id, state_id, lga_id, role_type, assigned_by, arrived_at, arrival_video_url, completed_at, potential_payment_kobo, earned_amount_kobo, created_at, updated_at
+`
+
+type UpdateLgaSupervisorTrackingParams struct {
+	ArrivedAt       pgtype.Timestamptz `json:"arrived_at"`
+	ArrivalVideoUrl pgtype.Text        `json:"arrival_video_url"`
+	CompletedAt     pgtype.Timestamptz `json:"completed_at"`
+	UserID          int64              `json:"user_id"`
+	ElectionGroupID int32              `json:"election_group_id"`
+}
+
+func (q *Queries) UpdateLgaSupervisorTracking(ctx context.Context, arg UpdateLgaSupervisorTrackingParams) (LgaElectionSupervisor, error) {
+	row := q.db.QueryRow(ctx, updateLgaSupervisorTracking,
+		arg.ArrivedAt,
+		arg.ArrivalVideoUrl,
+		arg.CompletedAt,
+		arg.UserID,
+		arg.ElectionGroupID,
+	)
+	var i LgaElectionSupervisor
+	err := row.Scan(
+		&i.ID,
+		&i.ElectionGroupID,
+		&i.PartyID,
+		&i.UserID,
+		&i.StateID,
+		&i.LgaID,
+		&i.RoleType,
+		&i.AssignedBy,
+		&i.ArrivedAt,
+		&i.ArrivalVideoUrl,
+		&i.CompletedAt,
+		&i.PotentialPaymentKobo,
+		&i.EarnedAmountKobo,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const updateStateSupervisorEarnedAmountKobo = `-- name: UpdateStateSupervisorEarnedAmountKobo :one
 UPDATE state_election_supervisors
 SET earned_amount_kobo = earned_amount_kobo + $1::bigint,
@@ -360,6 +407,52 @@ func (q *Queries) UpdateStateSupervisorEarnedAmountKobo(ctx context.Context, arg
 	return i, err
 }
 
+const updateStateSupervisorTracking = `-- name: UpdateStateSupervisorTracking :one
+UPDATE state_election_supervisors
+SET arrived_at = COALESCE($1, arrived_at),
+    arrival_video_url = COALESCE($2, arrival_video_url),
+    completed_at = COALESCE($3, completed_at),
+    updated_at = NOW()
+WHERE user_id = $4 AND election_group_id = $5
+RETURNING id, election_group_id, party_id, user_id, state_id, role_type, assigned_by, arrived_at, arrival_video_url, completed_at, potential_payment_kobo, earned_amount_kobo, created_at, updated_at
+`
+
+type UpdateStateSupervisorTrackingParams struct {
+	ArrivedAt       pgtype.Timestamptz `json:"arrived_at"`
+	ArrivalVideoUrl pgtype.Text        `json:"arrival_video_url"`
+	CompletedAt     pgtype.Timestamptz `json:"completed_at"`
+	UserID          int64              `json:"user_id"`
+	ElectionGroupID int32              `json:"election_group_id"`
+}
+
+func (q *Queries) UpdateStateSupervisorTracking(ctx context.Context, arg UpdateStateSupervisorTrackingParams) (StateElectionSupervisor, error) {
+	row := q.db.QueryRow(ctx, updateStateSupervisorTracking,
+		arg.ArrivedAt,
+		arg.ArrivalVideoUrl,
+		arg.CompletedAt,
+		arg.UserID,
+		arg.ElectionGroupID,
+	)
+	var i StateElectionSupervisor
+	err := row.Scan(
+		&i.ID,
+		&i.ElectionGroupID,
+		&i.PartyID,
+		&i.UserID,
+		&i.StateID,
+		&i.RoleType,
+		&i.AssignedBy,
+		&i.ArrivedAt,
+		&i.ArrivalVideoUrl,
+		&i.CompletedAt,
+		&i.PotentialPaymentKobo,
+		&i.EarnedAmountKobo,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const updateWardSupervisorEarnedAmountKobo = `-- name: UpdateWardSupervisorEarnedAmountKobo :one
 UPDATE ward_election_supervisors
 SET earned_amount_kobo = earned_amount_kobo + $1::bigint,
@@ -376,6 +469,54 @@ type UpdateWardSupervisorEarnedAmountKoboParams struct {
 
 func (q *Queries) UpdateWardSupervisorEarnedAmountKobo(ctx context.Context, arg UpdateWardSupervisorEarnedAmountKoboParams) (WardElectionSupervisor, error) {
 	row := q.db.QueryRow(ctx, updateWardSupervisorEarnedAmountKobo, arg.EarnedDeltaKobo, arg.UserID, arg.ElectionGroupID)
+	var i WardElectionSupervisor
+	err := row.Scan(
+		&i.ID,
+		&i.ElectionGroupID,
+		&i.UserID,
+		&i.PartyID,
+		&i.StateID,
+		&i.LgaID,
+		&i.WardID,
+		&i.RoleType,
+		&i.AssignedBy,
+		&i.ArrivedAt,
+		&i.ArrivalVideoUrl,
+		&i.CompletedAt,
+		&i.PotentialPaymentKobo,
+		&i.EarnedAmountKobo,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateWardSupervisorTracking = `-- name: UpdateWardSupervisorTracking :one
+UPDATE ward_election_supervisors
+SET arrived_at = COALESCE($1, arrived_at),
+    arrival_video_url = COALESCE($2, arrival_video_url),
+    completed_at = COALESCE($3, completed_at),
+    updated_at = NOW()
+WHERE user_id = $4 AND election_group_id = $5
+RETURNING id, election_group_id, user_id, party_id, state_id, lga_id, ward_id, role_type, assigned_by, arrived_at, arrival_video_url, completed_at, potential_payment_kobo, earned_amount_kobo, created_at, updated_at
+`
+
+type UpdateWardSupervisorTrackingParams struct {
+	ArrivedAt       pgtype.Timestamptz `json:"arrived_at"`
+	ArrivalVideoUrl pgtype.Text        `json:"arrival_video_url"`
+	CompletedAt     pgtype.Timestamptz `json:"completed_at"`
+	UserID          int64              `json:"user_id"`
+	ElectionGroupID int32              `json:"election_group_id"`
+}
+
+func (q *Queries) UpdateWardSupervisorTracking(ctx context.Context, arg UpdateWardSupervisorTrackingParams) (WardElectionSupervisor, error) {
+	row := q.db.QueryRow(ctx, updateWardSupervisorTracking,
+		arg.ArrivedAt,
+		arg.ArrivalVideoUrl,
+		arg.CompletedAt,
+		arg.UserID,
+		arg.ElectionGroupID,
+	)
 	var i WardElectionSupervisor
 	err := row.Scan(
 		&i.ID,

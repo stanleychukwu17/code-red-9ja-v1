@@ -1031,6 +1031,40 @@ type StateElectionSupervisor struct {
 	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
 }
 
+type SupervisorUpdate struct {
+	ID              int64              `json:"id"`
+	ElectionGroupID int32              `json:"election_group_id"`
+	PartyID         pgtype.Int2        `json:"party_id"`
+	UserID          int64              `json:"user_id"`
+	RoleType        string             `json:"role_type"`
+	StateID         pgtype.Int2        `json:"state_id"`
+	LgaID           pgtype.Int4        `json:"lga_id"`
+	WardID          pgtype.Int4        `json:"ward_id"`
+	PollingUnitID   pgtype.Int4        `json:"polling_unit_id"`
+	CategoryType    string             `json:"category_type"`
+	Stage           string             `json:"stage"`
+	Title           pgtype.Text        `json:"title"`
+	Message         string             `json:"message"`
+	HasMedia        bool               `json:"has_media"`
+	Latitude        pgtype.Float8      `json:"latitude"`
+	Longitude       pgtype.Float8      `json:"longitude"`
+	AccuracyMeters  pgtype.Float8      `json:"accuracy_meters"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+type SupervisorUpdateMedium struct {
+	ID              int64              `json:"id"`
+	UpdateID        int64              `json:"update_id"`
+	FileID          pgtype.Int8        `json:"file_id"`
+	MediaType       string             `json:"media_type"`
+	Url             string             `json:"url"`
+	ThumbnailUrl    pgtype.Text        `json:"thumbnail_url"`
+	DurationSeconds pgtype.Int4        `json:"duration_seconds"`
+	FileSizeBytes   int64              `json:"file_size_bytes"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+}
+
 type SystemSetting struct {
 	Key         string             `json:"key"`
 	Value       []byte             `json:"value"`

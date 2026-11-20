@@ -266,7 +266,7 @@ export function LGAElectionSupervisorPage() {
         {/* Emergency incident report FAB */}
         {daysLeft === 0 && (
           <GiveUpdateFloatingButton
-            onClick={() => navigate({ to: "/give-update" })}
+            onClick={() => navigate({ to: "/supervisor-update" as any })}
           />
         )}
       </HomeBody>
