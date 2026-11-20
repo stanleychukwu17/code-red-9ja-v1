@@ -173,13 +173,8 @@ export function WardElectionSupervisorPage() {
         <ReferralCard onClick={() => navigate({ to: "/referrals" })} />
         {daysLeft !== 0 && <PracticeTestCard />}
 
-        {/* Supervisor Tabs: Earnings vs Sub-unit agent task list */}
-        <SupervisorTabs activeTab={activeTab} onTabChange={setActiveTab} />
-
-        {activeTab === "Earnings" && <EarningsTab />}
-        {activeTab === "Tasks" && (
-          <WardSupervisorTasksTab isElectionDay={daysLeft === 0} />
-        )}
+        {/* Earnings */}
+        <EarningsTab />
 
         {/* Emergency incident report FAB */}
         {daysLeft === 0 && (
