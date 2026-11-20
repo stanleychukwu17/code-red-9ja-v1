@@ -30,25 +30,27 @@ INSERT INTO polling_unit_with_issues (
   is_active,
   time_issue_started
 ) VALUES (
-  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, true, NOW()
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, true,
+  COALESCE($15, NOW())
 ) RETURNING id, update_id, election_group_id, party_id, user_id, assignment_id, state_id, lga_id, ward_id, senatorial_district_id, federal_constituency_id, state_assembly_constituency_id, polling_unit_id, issue_category_id, issue_option_id, is_active, time_issue_started, time_issue_ended, resolution_notes
 `
 
 type CreatePollingUnitIssueParams struct {
-	UpdateID                    pgtype.Int8 `json:"update_id"`
-	ElectionGroupID             int32       `json:"election_group_id"`
-	PartyID                     pgtype.Int2 `json:"party_id"`
-	UserID                      int64       `json:"user_id"`
-	AssignmentID                int64       `json:"assignment_id"`
-	StateID                     pgtype.Int2 `json:"state_id"`
-	LgaID                       pgtype.Int4 `json:"lga_id"`
-	WardID                      pgtype.Int4 `json:"ward_id"`
-	SenatorialDistrictID        pgtype.Int4 `json:"senatorial_district_id"`
-	FederalConstituencyID       pgtype.Int4 `json:"federal_constituency_id"`
-	StateAssemblyConstituencyID pgtype.Int4 `json:"state_assembly_constituency_id"`
-	PollingUnitID               int32       `json:"polling_unit_id"`
-	IssueCategoryID             int16       `json:"issue_category_id"`
-	IssueOptionID               int16       `json:"issue_option_id"`
+	UpdateID                    pgtype.Int8        `json:"update_id"`
+	ElectionGroupID             int32              `json:"election_group_id"`
+	PartyID                     pgtype.Int2        `json:"party_id"`
+	UserID                      int64              `json:"user_id"`
+	AssignmentID                int64              `json:"assignment_id"`
+	StateID                     pgtype.Int2        `json:"state_id"`
+	LgaID                       pgtype.Int4        `json:"lga_id"`
+	WardID                      pgtype.Int4        `json:"ward_id"`
+	SenatorialDistrictID        pgtype.Int4        `json:"senatorial_district_id"`
+	FederalConstituencyID       pgtype.Int4        `json:"federal_constituency_id"`
+	StateAssemblyConstituencyID pgtype.Int4        `json:"state_assembly_constituency_id"`
+	PollingUnitID               int32              `json:"polling_unit_id"`
+	IssueCategoryID             int16              `json:"issue_category_id"`
+	IssueOptionID               int16              `json:"issue_option_id"`
+	TimeIssueStarted            pgtype.Timestamptz `json:"time_issue_started"`
 }
 
 func (q *Queries) CreatePollingUnitIssue(ctx context.Context, arg CreatePollingUnitIssueParams) (PollingUnitWithIssue, error) {
@@ -67,6 +69,7 @@ func (q *Queries) CreatePollingUnitIssue(ctx context.Context, arg CreatePollingU
 		arg.PollingUnitID,
 		arg.IssueCategoryID,
 		arg.IssueOptionID,
+		arg.TimeIssueStarted,
 	)
 	var i PollingUnitWithIssue
 	err := row.Scan(
@@ -114,9 +117,11 @@ INSERT INTO polling_unit_updates (
   has_media,
   latitude,
   longitude,
-  accuracy_meters
+  accuracy_meters,
+  created_at
 ) VALUES (
-  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
+  COALESCE($21, NOW())
 ) RETURNING id, assignment_id, election_group_id, party_id, user_id, state_id, lga_id, ward_id, senatorial_district_id, federal_constituency_id, state_assembly_constituency_id, polling_unit_id, status_category_id, status_option_id, has_issues, title, message, has_media, latitude, longitude, accuracy_meters, created_at, updated_at
 `
 
@@ -141,6 +146,7 @@ type CreatePollingUnitUpdateParams struct {
 	Latitude                    pgtype.Float8 `json:"latitude"`
 	Longitude                   pgtype.Float8 `json:"longitude"`
 	AccuracyMeters              pgtype.Float8 `json:"accuracy_meters"`
+	CreatedAt                   interface{}   `json:"created_at"`
 }
 
 func (q *Queries) CreatePollingUnitUpdate(ctx context.Context, arg CreatePollingUnitUpdateParams) (PollingUnitUpdate, error) {
@@ -165,6 +171,7 @@ func (q *Queries) CreatePollingUnitUpdate(ctx context.Context, arg CreatePolling
 		arg.Latitude,
 		arg.Longitude,
 		arg.AccuracyMeters,
+		arg.CreatedAt,
 	)
 	var i PollingUnitUpdate
 	err := row.Scan(
@@ -578,11 +585,16 @@ const resolvePollingUnitIssues = `-- name: ResolvePollingUnitIssues :exec
 UPDATE polling_unit_with_issues
 SET 
   is_active = false,
-  time_issue_ended = NOW()
-WHERE id = ANY($1::bigint[])
+  time_issue_ended = COALESCE($1, NOW())
+WHERE id = ANY($2::bigint[])
 `
 
-func (q *Queries) ResolvePollingUnitIssues(ctx context.Context, issueIds []int64) error {
-	_, err := q.db.Exec(ctx, resolvePollingUnitIssues, issueIds)
+type ResolvePollingUnitIssuesParams struct {
+	TimeIssueEnded pgtype.Timestamptz `json:"time_issue_ended"`
+	IssueIds       []int64            `json:"issue_ids"`
+}
+
+func (q *Queries) ResolvePollingUnitIssues(ctx context.Context, arg ResolvePollingUnitIssuesParams) error {
+	_, err := q.db.Exec(ctx, resolvePollingUnitIssues, arg.TimeIssueEnded, arg.IssueIds)
 	return err
 }

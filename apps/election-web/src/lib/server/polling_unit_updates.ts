@@ -26,6 +26,7 @@ export type CreatePollingUnitUpdateInput = {
   latitude?: number;
   longitude?: number;
   accuracy_meters?: number;
+  created_at?: string;
 };
 
 // Submit a situation update or report with media and issue tracking

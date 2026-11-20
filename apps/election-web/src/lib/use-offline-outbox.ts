@@ -99,6 +99,7 @@ async function syncSingleItem(item: OutboxUpdateItem): Promise<boolean> {
         latitude: item.latitude,
         longitude: item.longitude,
         accuracy_meters: item.accuracyMeters,
+        created_at: item.createdAt ? new Date(item.createdAt).toISOString() : undefined,
       },
     });
 

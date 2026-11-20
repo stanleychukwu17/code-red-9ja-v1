@@ -19,9 +19,11 @@ INSERT INTO polling_unit_updates (
   has_media,
   latitude,
   longitude,
-  accuracy_meters
+  accuracy_meters,
+  created_at
 ) VALUES (
-  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
+  COALESCE(sqlc.narg(created_at), NOW())
 ) RETURNING *;
 
 -- name: CreatePollingUnitUpdateMedia :one
@@ -67,14 +69,15 @@ INSERT INTO polling_unit_with_issues (
   is_active,
   time_issue_started
 ) VALUES (
-  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, true, NOW()
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, true,
+  COALESCE(sqlc.narg(time_issue_started), NOW())
 ) RETURNING *;
 
 -- name: ResolvePollingUnitIssues :exec
 UPDATE polling_unit_with_issues
 SET 
   is_active = false,
-  time_issue_ended = NOW()
+  time_issue_ended = COALESCE(sqlc.narg(time_issue_ended), NOW())
 WHERE id = ANY(sqlc.arg('issue_ids')::bigint[]);
 
 -- name: ListActivePollingUnitIssues :many

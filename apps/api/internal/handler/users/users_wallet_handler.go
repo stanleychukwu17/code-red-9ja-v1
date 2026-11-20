@@ -1,19 +1,19 @@
 package usershandler
 
 import (
-	"free9ja/api/internal/db/queries"
-	"github.com/jackc/pgx/v5/pgtype"
 	"encoding/json"
 	"fmt"
-	apimiddleware "free9ja/api/internal/middleware"
-
 	"net/http"
 	"strconv"
 
+	"free9ja/api/internal/db/queries"
+	apimiddleware "free9ja/api/internal/middleware"
+	usersservice "free9ja/api/internal/service/users"
 	"free9ja/api/internal/utils"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type UserWalletResponse struct {

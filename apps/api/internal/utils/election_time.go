@@ -9,6 +9,10 @@ import (
 // and Windows environments without an installed IANA timezone database.
 var lagosLocation = time.FixedZone("Africa/Lagos", 60*60)
 
+// PostElectionCollationGraceDays defines the grace period (in days) following election day
+// to allow offline data synchronization, collation, and reporting.
+const PostElectionCollationGraceDays = 1
+
 // LagosDate returns the current Lagos calendar date as a UTC date value for
 // PostgreSQL DATE parameters. A scheduled DATE itself has no timezone.
 func LagosDate(now time.Time) time.Time {
@@ -17,20 +21,22 @@ func LagosDate(now time.Time) time.Time {
 }
 
 // ElectionStatusForDate derives the API label from the scheduled calendar date.
-// An election is ongoing on its scheduled day and on the preceding day.
+// An election is upcoming before its date, ongoing on election day and during
+// the collation/reporting grace window, and ended thereafter.
 func ElectionStatusForDate(scheduledDate, now time.Time) string {
 	date := time.Date(scheduledDate.Year(), scheduledDate.Month(), scheduledDate.Day(), 0, 0, 0, 0, time.UTC)
 	today := LagosDate(now)
 
-	if date.Before(today) {
+	if today.Before(date) {
+		return "upcoming"
+	}
+
+	// Election remains ongoing on election day and during the post-election collation window
+	if today.After(date.AddDate(0, 0, PostElectionCollationGraceDays)) {
 		return "ended"
 	}
 
-	if !date.After(today.AddDate(0, 0, 1)) {
-		return "ongoing"
-	}
-
-	return "upcoming"
+	return "ongoing"
 }
 
 // IsElectionNominationOpen returns true if the election is scheduled more than 15 days from today in Lagos calendar time.
@@ -52,8 +58,10 @@ func ValidateElectionReportingWindow(scheduledDate, now time.Time, graceDays int
 	if today.Before(date) {
 		return errors.New("updates cannot be submitted prior to election day")
 	}
+
 	if today.After(date.AddDate(0, 0, graceDays)) {
 		return errors.New("the reporting and sync window for this election has ended")
 	}
+
 	return nil
 }

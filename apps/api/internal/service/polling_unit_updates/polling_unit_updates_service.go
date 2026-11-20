@@ -72,6 +72,7 @@ type CreateUpdateInput struct {
 	Latitude                    *float64           `json:"latitude,omitempty"`
 	Longitude                   *float64           `json:"longitude,omitempty"`
 	AccuracyMeters              *float64           `json:"accuracy_meters,omitempty"`
+	CreatedAt                   *time.Time         `json:"created_at,omitempty"`
 	AssignmentArrivedAt         pgtype.Timestamptz `json:"assignment_arrived_at,omitempty"`
 	AssignmentElectionStartedAt pgtype.Timestamptz `json:"assignment_election_started_at,omitempty"`
 	AssignmentElectionEndedAt   pgtype.Timestamptz `json:"assignment_election_ended_at,omitempty"`
@@ -123,6 +124,11 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 	hasIssues := input.HasIssues || len(validIssues) > 0
 	partyID := utils.PgInt2FromPtrNullable(input.PartyID)
 
+	var createdAtPg pgtype.Timestamptz
+	if input.CreatedAt != nil && !input.CreatedAt.IsZero() {
+		createdAtPg = pgtype.Timestamptz{Time: input.CreatedAt.UTC(), Valid: true}
+	}
+
 	// Insert the update
 	update, err := qtx.CreatePollingUnitUpdate(ctx, queries.CreatePollingUnitUpdateParams{
 		AssignmentID:                input.AssignmentID,
@@ -145,9 +151,15 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 		Latitude:                    utils.PgFloat8FromPtr(input.Latitude),
 		Longitude:                   utils.PgFloat8FromPtr(input.Longitude),
 		AccuracyMeters:              utils.PgFloat8FromPtr(input.AccuracyMeters),
+		CreatedAt:                   createdAtPg,
 	})
 	if err != nil {
 		return queries.PollingUnitUpdate{}, err
+	}
+
+	effectiveTimePg := update.CreatedAt
+	if !effectiveTimePg.Valid {
+		effectiveTimePg = pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true}
 	}
 
 	// Insert media attachments
@@ -182,7 +194,10 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 
 	// Close/resolve active issues if linking existing issue as resolved
 	if input.IssueAction == "link_existing" && len(input.ExistingIssueIDs) > 0 {
-		if err := qtx.ResolvePollingUnitIssues(ctx, input.ExistingIssueIDs); err != nil {
+		if err := qtx.ResolvePollingUnitIssues(ctx, queries.ResolvePollingUnitIssuesParams{
+			TimeIssueEnded: effectiveTimePg,
+			IssueIds:       input.ExistingIssueIDs,
+		}); err != nil {
 			return queries.PollingUnitUpdate{}, fmt.Errorf("failed to resolve issues: %w", err)
 		}
 	}
@@ -204,6 +219,7 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 			PollingUnitID:               input.PollingUnitID,
 			IssueCategoryID:             issue.categoryID,
 			IssueOptionID:               issue.optionID,
+			TimeIssueStarted:            effectiveTimePg,
 		})
 		if err != nil {
 			return queries.PollingUnitUpdate{}, fmt.Errorf("failed to save issue: %w", err)
@@ -214,10 +230,6 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 	if err := tx.Commit(ctx); err != nil {
 		return queries.PollingUnitUpdate{}, err
 	}
-
-	// Check if this update corresponds to a primary election milestone on the assignment
-	now := time.Now().UTC()
-	nowPg := pgtype.Timestamptz{Time: now, Valid: true}
 
 	// Prepare assignment tracking params in case this update triggers a primary election milestone
 	var trackingParams queries.UpdateAssignmentTrackingParams
@@ -230,21 +242,21 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 	case 1: // Just Arrived -> Attendance milestone (only if not already recorded)
 		if !input.AssignmentArrivedAt.Valid {
 			milestoneTaskType = "attendance"
-			trackingParams.ArrivedAt = nowPg
+			trackingParams.ArrivedAt = effectiveTimePg
 			shouldUpdateTracking = true
 		}
 
 	case 3: // Active -> Election started milestone (only if not already recorded)
 		if !input.AssignmentElectionStartedAt.Valid {
 			milestoneTaskType = "election_start"
-			trackingParams.ElectionStartedAt = nowPg
+			trackingParams.ElectionStartedAt = effectiveTimePg
 			shouldUpdateTracking = true
 		}
 
 	case 6: // Concluded -> Election ended milestone (only if not already recorded)
 		if !input.AssignmentElectionEndedAt.Valid {
 			milestoneTaskType = "election_end"
-			trackingParams.ElectionEndedAt = nowPg
+			trackingParams.ElectionEndedAt = effectiveTimePg
 			shouldUpdateTracking = true
 		}
 	}

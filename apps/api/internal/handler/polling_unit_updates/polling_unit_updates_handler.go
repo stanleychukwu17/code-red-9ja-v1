@@ -57,6 +57,7 @@ type CreateUpdateRequest struct {
 	Latitude          *float64                         `json:"latitude,omitempty"`
 	Longitude         *float64                         `json:"longitude,omitempty"`
 	AccuracyMeters    *float64                         `json:"accuracy_meters,omitempty"`
+	CreatedAt         *time.Time                       `json:"created_at,omitempty"`
 }
 
 // CreateUpdate godoc
@@ -115,7 +116,7 @@ func (h *Handler) CreateUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := utils.ValidateElectionReportingWindow(eg.ElectionDate.Time, time.Now(), 1); err != nil {
+	if err := utils.ValidateElectionReportingWindow(eg.ElectionDate.Time, time.Now(), utils.PostElectionCollationGraceDays); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -125,6 +126,26 @@ func (h *Handler) CreateUpdate(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid polling unit id: "+err.Error())
 		return
+	}
+
+	// Validate client created_at timestamp if provided (offline sync)
+	var clientCreatedAt *time.Time
+	if req.CreatedAt != nil && !req.CreatedAt.IsZero() {
+		now := time.Now()
+		// Guard: must not be in the future (allow 5m clock skew)
+		if req.CreatedAt.After(now.Add(5 * time.Minute)) {
+			h.utils.RespondError(w, http.StatusBadRequest, "created_at cannot be in the future")
+			return
+		}
+
+		// Guard: must not be before election day
+		electionDay := time.Date(eg.ElectionDate.Time.Year(), eg.ElectionDate.Time.Month(), eg.ElectionDate.Time.Day(), 0, 0, 0, 0, time.UTC)
+		if utils.LagosDate(*req.CreatedAt).Before(electionDay) {
+			h.utils.RespondError(w, http.StatusBadRequest, "created_at cannot be prior to election day")
+			return
+		}
+
+		clientCreatedAt = req.CreatedAt
 	}
 
 	// Persist the polling unit update
@@ -152,6 +173,7 @@ func (h *Handler) CreateUpdate(w http.ResponseWriter, r *http.Request) {
 		Latitude:                    req.Latitude,
 		Longitude:                   req.Longitude,
 		AccuracyMeters:              req.AccuracyMeters,
+		CreatedAt:                   clientCreatedAt,
 		AssignmentArrivedAt:         assignment.ArrivedAt,
 		AssignmentElectionStartedAt: assignment.ElectionStartedAt,
 		AssignmentElectionEndedAt:   assignment.ElectionEndedAt,
@@ -334,14 +356,14 @@ func (h *Handler) ListActiveIssues(w http.ResponseWriter, r *http.Request) {
 }
 
 // validateAssignmentMatch verifies that the cached assignment exists and matches the request payload.
-func validateAssignmentMatch(assignment *queries.GetUserAssignmentRow, expectedAssignmentID int64, expectedPUID int32) (int, string) {
+func validateAssignmentMatch(assignment *queries.GetUserAssignmentRow, expectedAssignmentID int64, expectedPuID int32) (int, string) {
 	if assignment == nil || assignment.ID <= 0 {
 		return http.StatusNotFound, "No active assignment found for this election group"
 	}
 	if assignment.ID != expectedAssignmentID {
 		return http.StatusForbidden, "Assignment does not belong to you"
 	}
-	if assignment.PollingUnitID != expectedPUID {
+	if assignment.PollingUnitID != expectedPuID {
 		return http.StatusBadRequest, "Polling unit does not match assignment"
 	}
 	return 0, ""

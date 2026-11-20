@@ -451,7 +451,7 @@ type Querier interface {
 	RequestAgentEarningsPayout(ctx context.Context, arg RequestAgentEarningsPayoutParams) (AgentEarning, error)
 	RequestAgentEarningsPayoutByID(ctx context.Context, id int64) (AgentEarning, error)
 	ResetPartyLogo(ctx context.Context, id int16) error
-	ResolvePollingUnitIssues(ctx context.Context, issueIds []int64) error
+	ResolvePollingUnitIssues(ctx context.Context, arg ResolvePollingUnitIssuesParams) error
 	RollupElectionFinalResults(ctx context.Context) error
 	RollupFederalConstituencyFinalResults(ctx context.Context) error
 	RollupLGAFinalResults(ctx context.Context) error
