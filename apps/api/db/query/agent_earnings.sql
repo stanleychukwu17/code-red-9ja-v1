@@ -6,13 +6,11 @@ INSERT INTO agent_earnings (
   role_type,
   base_payment_kobo,
   earnings_allocation,
-  readiness_score,
   results_score,
   updates_score,
   attendance_score,
   election_start_score,
   election_end_score,
-  readiness_earned_kobo,
   results_earned_kobo,
   updates_earned_kobo,
   attendance_earned_kobo,
@@ -21,21 +19,19 @@ INSERT INTO agent_earnings (
   total_earned_kobo,
   calculated_at
 ) VALUES (
-  $1, $2, $3, $4, $5, $6, $7,
-  $8, $9, $10, $11, $12,
-  $13, $14, $15, $16, $17, $18, $19,
+  $1, $2, $3, $4, $5, $6,
+  $7, $8, $9, $10, $11,
+  $12, $13, $14, $15, $16, $17,
   NOW()
 )
 ON CONFLICT (user_id, election_group_id, role_type) DO UPDATE SET
   base_payment_kobo          = EXCLUDED.base_payment_kobo,
   earnings_allocation        = EXCLUDED.earnings_allocation,
-  readiness_score            = EXCLUDED.readiness_score,
   results_score              = EXCLUDED.results_score,
   updates_score              = EXCLUDED.updates_score,
   attendance_score           = EXCLUDED.attendance_score,
   election_start_score       = EXCLUDED.election_start_score,
   election_end_score         = EXCLUDED.election_end_score,
-  readiness_earned_kobo      = EXCLUDED.readiness_earned_kobo,
   results_earned_kobo        = EXCLUDED.results_earned_kobo,
   updates_earned_kobo        = EXCLUDED.updates_earned_kobo,
   attendance_earned_kobo     = EXCLUDED.attendance_earned_kobo,

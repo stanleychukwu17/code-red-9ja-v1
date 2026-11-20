@@ -14,7 +14,6 @@ CREATE TABLE IF NOT EXISTS agent_earnings (
   earnings_allocation          JSONB NOT NULL DEFAULT '{}',
 
   -- Per-factor achievement scores (0.00–100.00)
-  readiness_score              NUMERIC(5,2) NOT NULL DEFAULT 0 CHECK (readiness_score BETWEEN 0 AND 100),
   results_score                NUMERIC(5,2) NOT NULL DEFAULT 0 CHECK (results_score BETWEEN 0 AND 100),
   updates_score                NUMERIC(5,2) NOT NULL DEFAULT 0 CHECK (updates_score BETWEEN 0 AND 100),
   attendance_score             NUMERIC(5,2) NOT NULL DEFAULT 0 CHECK (attendance_score BETWEEN 0 AND 100),
@@ -22,7 +21,6 @@ CREATE TABLE IF NOT EXISTS agent_earnings (
   election_end_score           NUMERIC(5,2) NOT NULL DEFAULT 0 CHECK (election_end_score BETWEEN 0 AND 100),
 
   -- Per-factor earnings (kobo)
-  readiness_earned_kobo        BIGINT NOT NULL DEFAULT 0,
   results_earned_kobo          BIGINT NOT NULL DEFAULT 0,
   updates_earned_kobo          BIGINT NOT NULL DEFAULT 0,
   attendance_earned_kobo       BIGINT NOT NULL DEFAULT 0,
@@ -48,8 +46,6 @@ CREATE TABLE IF NOT EXISTS agent_earnings (
 );
 
 CREATE INDEX IF NOT EXISTS idx_agent_earnings_party_eg_id ON agent_earnings(party_id, election_group_id, id DESC);
-CREATE INDEX IF NOT EXISTS idx_agent_earnings_eg ON agent_earnings(election_group_id);
-CREATE INDEX IF NOT EXISTS idx_agent_earnings_status ON agent_earnings(status);
 
 -- +goose Down
 DROP TABLE IF EXISTS agent_earnings;

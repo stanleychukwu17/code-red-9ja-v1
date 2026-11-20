@@ -18,13 +18,11 @@ type AgentEarning struct {
 	RoleType                string             `json:"role_type"`
 	BasePaymentKobo         int64              `json:"base_payment_kobo"`
 	EarningsAllocation      []byte             `json:"earnings_allocation"`
-	ReadinessScore          pgtype.Numeric     `json:"readiness_score"`
 	ResultsScore            pgtype.Numeric     `json:"results_score"`
 	UpdatesScore            pgtype.Numeric     `json:"updates_score"`
 	AttendanceScore         pgtype.Numeric     `json:"attendance_score"`
 	ElectionStartScore      pgtype.Numeric     `json:"election_start_score"`
 	ElectionEndScore        pgtype.Numeric     `json:"election_end_score"`
-	ReadinessEarnedKobo     int64              `json:"readiness_earned_kobo"`
 	ResultsEarnedKobo       int64              `json:"results_earned_kobo"`
 	UpdatesEarnedKobo       int64              `json:"updates_earned_kobo"`
 	AttendanceEarnedKobo    int64              `json:"attendance_earned_kobo"`

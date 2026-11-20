@@ -200,6 +200,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	partiesService.SetCampaignGroupsService(campaignGroupsService)
 	bodiesService.SetPartiesService(partiesService)
 	earningsService.SetPartiesService(partiesService)
+	earningsService.SetUsersService(usersService)
 	electionsService.SetPageVerificationsService(pageVerificationsService)
 	electionsService.SetCampaignGroupsService(campaignGroupsService)
 

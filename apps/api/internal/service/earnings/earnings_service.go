@@ -24,11 +24,23 @@ type partiesService interface {
 	GetPartyByID(ctx context.Context, partyID int16) (queries.Party, error)
 }
 
+type usersWalletService interface {
+	CreditUserWallet(
+		ctx context.Context,
+		userID int64,
+		amountKobo int64,
+		transactionReference string,
+		payerName, payerAccountNumber, payerBankCode, narration string,
+		rawPayload []byte,
+	) (queries.UserWalletTransaction, error)
+}
+
 type Service struct {
 	queries    *queries.Queries
 	pool       *pgxpool.Pool
 	rdb        *redis.Client
 	partiesSvc partiesService
+	usersSvc   usersWalletService
 }
 
 func NewService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client) *Service {
@@ -38,6 +50,11 @@ func NewService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client) *Serv
 // SetPartiesService sets the parties service for caching party lookups.
 func (s *Service) SetPartiesService(partiesSvc partiesService) {
 	s.partiesSvc = partiesSvc
+}
+
+// SetUsersService sets the users/wallet service for crediting agent earnings.
+func (s *Service) SetUsersService(usersSvc usersWalletService) {
+	s.usersSvc = usersSvc
 }
 
 // getPartyByID fetches party details via the Redis-cached partiesService.
@@ -209,7 +226,8 @@ func (s *Service) calculateWithTx(ctx context.Context, q *queries.Queries, asgn 
 		Target: float64(expectedResults),
 	})
 
-	// Updates score: situational reports scored by interval bucket spacing and GPS geofence proximity (1.0 on-site, 0.5 off-site/no GPS)
+	// Updates score: situational reports scored by interval bucket spacing and GPS geo-fence proximity (1.0 on-site, 0.5 off-site/no GPS)
+	// finally returns the percentage of updates achieved
 	updatesScore := s.computeUpdatesScore(ctx, asgn, targetUpdatesCount, intervalMinutes)
 
 	// Attendance score: binary milestone (100 if arrived, 0 if not) verifying agent presence at the polling unit
@@ -222,14 +240,15 @@ func (s *Service) calculateWithTx(ctx context.Context, q *queries.Queries, asgn 
 	electionEndScore := boolScore(asgn.ElectionEndedAt.Valid)
 
 	// 5. Compute per-factor earnings (kobo)
+	// Calculate payout for each task: base pay * task % * score %
 	resultsEarned := factorEarned(basePaymentKobo, allocation.Results, resultsScore)
 	updatesEarned := factorEarned(basePaymentKobo, allocation.Updates, updatesScore)
 	attendanceEarned := factorEarned(basePaymentKobo, allocation.Attendance, attendanceScore)
 	electionStartEarned := factorEarned(basePaymentKobo, allocation.ElectionStart, electionStartScore)
 	electionEndEarned := factorEarned(basePaymentKobo, allocation.ElectionEnd, electionEndScore)
 
-	totalEarned := resultsEarned + updatesEarned +
-		attendanceEarned + electionStartEarned + electionEndEarned
+	// Total earned kobo accumulated across all milestone factors
+	totalEarned := resultsEarned + updatesEarned + attendanceEarned + electionStartEarned + electionEndEarned
 
 	// 6. Re-marshal allocation for snapshot storage
 	allocationBytes, _ := json.Marshal(allocation)
@@ -242,13 +261,11 @@ func (s *Service) calculateWithTx(ctx context.Context, q *queries.Queries, asgn 
 		RoleType:                roleType,
 		BasePaymentKobo:         basePaymentKobo,
 		EarningsAllocation:      allocationBytes,
-		ReadinessScore:          toNumeric(0),
 		ResultsScore:            toNumeric(resultsScore),
 		UpdatesScore:            toNumeric(updatesScore),
 		AttendanceScore:         toNumeric(attendanceScore),
 		ElectionStartScore:      toNumeric(electionStartScore),
 		ElectionEndScore:        toNumeric(electionEndScore),
-		ReadinessEarnedKobo:     0,
 		ResultsEarnedKobo:       resultsEarned,
 		UpdatesEarnedKobo:       updatesEarned,
 		AttendanceEarnedKobo:    attendanceEarned,
@@ -295,7 +312,6 @@ func (s *Service) ProcessTaskEarnings(ctx context.Context, params ProcessTaskEar
 	// Incremental Delta Payout Pattern:
 	// 1. Fetch current cumulative earnings record for this agent & election to check what has already been paid.
 	// agent_earnings (user_id, election_group_id, role_type)
-	// ├── readiness_earned_kobo
 	// ├── attendance_earned_kobo
 	// ├── election_start_earned_kobo
 	// ├── election_end_earned_kobo
@@ -343,6 +359,7 @@ func (s *Service) ProcessTaskEarnings(ctx context.Context, params ProcessTaskEar
 		newFactorEarned = newEarnings.ResultsEarnedKobo
 	}
 
+	// Resolve user-facing transaction narration for the wallet credit log
 	narrationLabel := params.CustomNarration
 	if narrationLabel == "" {
 		switch params.TaskType {
@@ -365,35 +382,6 @@ func (s *Service) ProcessTaskEarnings(ctx context.Context, params ProcessTaskEar
 	// Only credit the positive difference to the wallet, guaranteeing idempotency and preventing duplicate payouts.
 	delta := newFactorEarned - oldFactorEarned
 	if delta > 0 {
-		wallet, wErr := qtx.GetUserWalletByUserID(ctx, asgn.UserID)
-		if wErr != nil {
-			slog.Warn("earnings: user has no wallet to credit", "userID", asgn.UserID, "err", wErr)
-		} else {
-			updatedWallet, creditErr := qtx.CreditUserWallet(ctx, queries.CreditUserWalletParams{
-				BalanceKobo: delta,
-				ID:          wallet.ID,
-			})
-			if creditErr != nil {
-				return 0, fmt.Errorf("earnings: failed to credit wallet: %w", creditErr)
-			}
-
-			txRef := fmt.Sprintf("%s-%d-%d", params.TaskType, params.AssignmentID, time.Now().UnixNano())
-			if _, txErr := qtx.CreateUserWalletTransaction(ctx, queries.CreateUserWalletTransactionParams{
-				WalletID:             wallet.ID,
-				TransactionReference: txRef,
-				Type:                 "credit",
-				AmountKobo:           delta,
-				BalanceAfterKobo:     updatedWallet.BalanceKobo,
-				PayerName:            pgtype.Text{},
-				PayerAccountNumber:   pgtype.Text{},
-				PayerBankCode:        pgtype.Text{},
-				Narration:            pgtype.Text{String: narrationLabel, Valid: true},
-				RawPayload:           nil,
-			}); txErr != nil {
-				return 0, fmt.Errorf("earnings: failed to record transaction: %w", txErr)
-			}
-		}
-
 		// Also update polling_unit_assignments.earned_amount_kobo
 		if _, updateAsgnErr := qtx.UpdatePollingUnitAssignmentEarnedAmountKobo(ctx, queries.UpdatePollingUnitAssignmentEarnedAmountKoboParams{
 			UserID:          asgn.UserID,
@@ -408,7 +396,22 @@ func (s *Service) ProcessTaskEarnings(ctx context.Context, params ProcessTaskEar
 		return 0, fmt.Errorf("earnings: failed to commit transaction: %w", err)
 	}
 
-	slog.Info("earnings: task earnings processed", "assignmentID", params.AssignmentID, "taskType", params.TaskType, "deltaKobo", delta)
+	// 4. Delegate wallet credit to users/wallet service (atomic balance update + ledger entry).
+	if delta > 0 && s.usersSvc != nil {
+		txRef := fmt.Sprintf("%s-%d-%d", params.TaskType, params.AssignmentID, time.Now().UnixNano())
+		if _, creditErr := s.usersSvc.CreditUserWallet(
+			ctx,
+			asgn.UserID,
+			delta,
+			txRef,
+			"", "", "",
+			narrationLabel,
+			nil,
+		); creditErr != nil {
+			slog.Error("earnings: failed to credit wallet via usersService", "userID", asgn.UserID, "delta", delta, "err", creditErr)
+			return delta, fmt.Errorf("earnings: failed to credit wallet: %w", creditErr)
+		}
+	}
 
 	return delta, nil
 }
@@ -441,8 +444,9 @@ func (s *Service) computeUpdatesScore(ctx context.Context, asgn queries.GetAssig
 	// we want to make sure an update is been received at-least every 30mins
 	bucketWeights := make(map[string]float64)
 
+	// Process each update to determine its geofence credit and interval slot
 	for _, update := range updates {
-		creditWeight := unverifiedWeight
+		creditWeight := unverifiedWeight // Default 0.5 credit until location check passes
 		hasUpdateCoords := update.Latitude.Valid && update.Longitude.Valid &&
 			update.Latitude.Float64 != 0 && update.Longitude.Float64 != 0
 
@@ -469,15 +473,23 @@ func (s *Service) computeUpdatesScore(ctx context.Context, asgn queries.GetAssig
 		}
 
 		// Calculate interval bucket key (e.g. 2026-11-19_14:30)
+		// ---
+		// Timestamp when this situational update was recorded
 		t := update.CreatedAt.Time
+		// Round down minutes to interval boundary via integer division (e.g., 08:14 -> 08:00, 08:42 -> 08:30)
 		flooredMin := (t.Minute() / intervalMinutes) * intervalMinutes
+		// Unique time-slot identifier so multiple updates within the same interval map to one entry.
+		// Example bucketKey output: "2026-11-20_08:00", "2026-11-20_08:30", "2026-11-20_09:00"
 		bucketKey := fmt.Sprintf("%s_%02d:%02d", t.Format("2006-01-02"), t.Hour(), flooredMin)
 
+		// Keep the highest credit achieved in this slot (upgrade unverified 0.5 to verified 1.0, never downgrade)
 		if prevWeight, ok := bucketWeights[bucketKey]; !ok || creditWeight > prevWeight {
 			bucketWeights[bucketKey] = creditWeight
 		}
 	}
 
+	// Sum qualified credits across all intervals covered throughout the day.
+	// Each 30-min window contributes at most 1.0 (verified) or 0.5 (unverified) to prevent spam.
 	var effectiveUpdates float64
 	for _, weight := range bucketWeights {
 		effectiveUpdates += weight

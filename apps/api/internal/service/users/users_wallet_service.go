@@ -55,25 +55,50 @@ func (s *UsersService) GetUserWalletByAccountReference(ctx context.Context, acco
 	return s.queries.GetUserWalletByAccountReference(ctx, accountReference)
 }
 
-// CreditUserWallet credits a user's wallet and records the credit transaction (idempotent).
+// GetOrCreateUserWallet retrieves an existing wallet or provisions a new one for the user.
+func (s *UsersService) GetOrCreateUserWallet(ctx context.Context, userID int64) (queries.UserWallet, error) {
+	wallet, err := s.queries.GetUserWalletByUserID(ctx, userID)
+	if err == nil && wallet.ID > 0 {
+		return wallet, nil
+	}
+
+	accountReference := fmt.Sprintf("free9ja-user-%d", userID)
+	return s.queries.CreateUserWallet(ctx, queries.CreateUserWalletParams{
+		UserID:           userID,
+		AccountReference: accountReference,
+		AccountNumbers:   []byte("[]"),
+	})
+}
+
+// CreditUserWallet credits a user's wallet by user ID and records the credit transaction (idempotent).
 func (s *UsersService) CreditUserWallet(
 	ctx context.Context,
-	walletID int64,
+	userID int64,
 	amountKobo int64,
 	transactionReference string,
 	payerName, payerAccountNumber, payerBankCode, narration string,
 	rawPayload []byte,
 ) (queries.UserWalletTransaction, error) {
+	if amountKobo <= 0 {
+		return queries.UserWalletTransaction{}, fmt.Errorf("credit amount must be positive")
+	}
+
 	// Idempotency check.
 	existing, err := s.queries.GetUserWalletTransactionByReference(ctx, transactionReference)
 	if err == nil {
 		return existing, nil
 	}
 
+	// Retrieve or auto-provision wallet.
+	wallet, err := s.GetOrCreateUserWallet(ctx, userID)
+	if err != nil {
+		return queries.UserWalletTransaction{}, fmt.Errorf("get or create wallet for user %d: %w", userID, err)
+	}
+
 	// Credit the balance.
 	updatedWallet, err := s.queries.CreditUserWallet(ctx, queries.CreditUserWalletParams{
 		BalanceKobo: amountKobo,
-		ID:          walletID,
+		ID:          wallet.ID,
 	})
 	if err != nil {
 		return queries.UserWalletTransaction{}, fmt.Errorf("credit user wallet: %w", err)
@@ -81,7 +106,7 @@ func (s *UsersService) CreditUserWallet(
 
 	// Persist transaction ledger entry.
 	txn, err := s.queries.CreateUserWalletTransaction(ctx, queries.CreateUserWalletTransactionParams{
-		WalletID:             walletID,
+		WalletID:             wallet.ID,
 		TransactionReference: transactionReference,
 		Type:                 constants.TransactionTypeCredit,
 		AmountKobo:           amountKobo,

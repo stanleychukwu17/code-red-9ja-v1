@@ -256,7 +256,6 @@ func (h *Handler) ListElectionPay(w http.ResponseWriter, r *http.Request) {
 			ae.role_type,
 			ae.base_payment_kobo,
 			ae.total_earned_kobo,
-			ae.readiness_score,
 			ae.attendance_score,
 			ae.election_start_score,
 			ae.election_end_score,
@@ -291,7 +290,7 @@ func (h *Handler) ListElectionPay(w http.ResponseWriter, r *http.Request) {
 			partyCode, partyName             string
 			roleType                         string
 			basePaymentKobo, totalEarnedKobo int64
-			readinessScore, attendanceScore  float64
+			attendanceScore                  float64
 			startScore, endScore             float64
 			resultsScore, updatesScore       float64
 			status                           string
@@ -305,7 +304,7 @@ func (h *Handler) ListElectionPay(w http.ResponseWriter, r *http.Request) {
 			&partyID, &partyCode, &partyName,
 			&roleType,
 			&basePaymentKobo, &totalEarnedKobo,
-			&readinessScore, &attendanceScore,
+			&attendanceScore,
 			&startScore, &endScore,
 			&resultsScore, &updatesScore,
 			&status, &paidAt, &createdAt,
@@ -318,7 +317,7 @@ func (h *Handler) ListElectionPay(w http.ResponseWriter, r *http.Request) {
 		if basePaymentKobo > 0 {
 			pct = (float64(totalEarnedKobo) / float64(basePaymentKobo)) * 100.0
 		} else {
-			pct = (readinessScore + attendanceScore + startScore + endScore + resultsScore + updatesScore) / 6.0
+			pct = (attendanceScore + startScore + endScore + resultsScore + updatesScore) / 5.0
 		}
 		if pct > 100.0 {
 			pct = 100.0
