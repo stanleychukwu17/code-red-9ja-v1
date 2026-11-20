@@ -109,23 +109,6 @@ SET
 WHERE id = $1
 RETURNING *;
 
--- name: VoteOnResult :one
-UPDATE polling_unit_results
-SET
-  up_votes   = CASE
-                 WHEN sqlc.arg('vote_type')::text = 'up'
-                 THEN array_append(array_remove(up_votes, sqlc.arg('user_id')::bigint), sqlc.arg('user_id')::bigint)
-                 ELSE array_remove(up_votes, sqlc.arg('user_id')::bigint)
-               END,
-  down_votes = CASE
-                 WHEN sqlc.arg('vote_type')::text = 'down'
-                 THEN array_append(array_remove(down_votes, sqlc.arg('user_id')::bigint), sqlc.arg('user_id')::bigint)
-                 ELSE array_remove(down_votes, sqlc.arg('user_id')::bigint)
-               END,
-  updated_at = NOW()
-WHERE id = sqlc.arg('id')::bigint
-RETURNING *;
-
 -- name: CountDistinctSubmittedResultsForAssignment :one
 SELECT COUNT(DISTINCT election_id)::int
 FROM polling_unit_results

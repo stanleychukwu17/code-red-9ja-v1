@@ -137,19 +137,20 @@ const (
 	//--END--
 
 	//--START-- for elections and election groups
-	RedisElectionGroupsAll         = "election_groups:all"         // STRING: used to store and retrieve all election groups JSON.
-	RedisElectionGroupsActive      = "election_groups:active"      // STRING: used to store and retrieve active election groups JSON.
-	RedisElectionGroupByID         = "election_group:"             // STRING: "election_group:<id>" used to store and retrieve single election group JSON.
-	RedisElectionGroupByFakeID     = "election_group:fake:"        // STRING: "election_group:fake:<fake_id>" used to store and retrieve single election group JSON.
-	RedisElectionGroupInstances    = "election_group:instances:"   // STRING: "election_group:instances:<id>" cached election instances list for an election group; cached for 7 days.
-	RedisElectionByID              = "election:"                   // Raw election record; cached for 180 days.
-	RedisElectionByFakeID          = "election:fake:"              // Raw election record by fake_id; cached for 180 days.
-	RedisElectionCandidates        = "election:candidates:"        // Cached candidate roster for election; cached for 180 days.
-	RedisUserActiveCandidacies     = "elections:user_candidacies:" // Active candidacies for user; cached for 30 days.
-	RedisUserPollingUnitAssignment = "pu_assignment:user:"         // STRING: "pu_assignment:user:<userID>:eg:<electionGroupID>" stores cached JSON of agent's assigned polling unit; cached for 7 days.
-	RedisStateSupervisorAssignment = "supervisor:state:"           // STRING: "supervisor:state:<userID>:eg:<electionGroupID>" stores cached JSON of state supervisor assignment; cached for 7 days.
-	RedisLgaSupervisorAssignment   = "supervisor:lga:"             // STRING: "supervisor:lga:<userID>:eg:<electionGroupID>" stores cached JSON of LGA supervisor assignment; cached for 7 days.
-	RedisWardSupervisorAssignment  = "supervisor:ward:"            // STRING: "supervisor:ward:<userID>:eg:<electionGroupID>" stores cached JSON of ward supervisor assignment; cached for 7 days.
+	RedisElectionGroupsAll              = "election_groups:all"                   // STRING: used to store and retrieve all election groups JSON.
+	RedisElectionGroupsActive           = "election_groups:active"                // STRING: used to store and retrieve active election groups JSON.
+	RedisElectionGroupByID              = "election_group:"                       // STRING: "election_group:<id>" used to store and retrieve single election group JSON.
+	RedisElectionGroupByFakeID          = "election_group:fake:"                  // STRING: "election_group:fake:<fake_id>" used to store and retrieve single election group JSON.
+	RedisElectionGroupInstances         = "election_group:instances:"             // STRING: "election_group:instances:<id>" cached election instances list for an election group; cached for 7 days.
+	RedisElectionGroupExpectedElections = "election_group:pu_expected_elections:" // STRING: "election_group:pu_expected_elections:<egID>:<puID>" cached count of expected elections for a PU; cached for 7 days.
+	RedisElectionByID                   = "election:"                             // Raw election record; cached for 180 days.
+	RedisElectionByFakeID               = "election:fake:"                        // Raw election record by fake_id; cached for 180 days.
+	RedisElectionCandidates             = "election:candidates:"                  // Cached candidate roster for election; cached for 180 days.
+	RedisUserActiveCandidacies          = "elections:user_candidacies:"           // Active candidacies for user; cached for 30 days.
+	RedisUserPollingUnitAssignment      = "pu_assignment:user:"                   // STRING: "pu_assignment:user:<userID>:eg:<electionGroupID>" stores cached JSON of agent's assigned polling unit; cached for 7 days.
+	RedisStateSupervisorAssignment      = "supervisor:state:"                     // STRING: "supervisor:state:<userID>:eg:<electionGroupID>" stores cached JSON of state supervisor assignment; cached for 7 days.
+	RedisLgaSupervisorAssignment        = "supervisor:lga:"                       // STRING: "supervisor:lga:<userID>:eg:<electionGroupID>" stores cached JSON of LGA supervisor assignment; cached for 7 days.
+	RedisWardSupervisorAssignment       = "supervisor:ward:"                      // STRING: "supervisor:ward:<userID>:eg:<electionGroupID>" stores cached JSON of ward supervisor assignment; cached for 7 days.
 	//--END--
 
 	//--START-- for background worker & cron distributed locks
@@ -265,6 +266,7 @@ var AllRedisPrefixes = []string{
 	RedisElectionGroupByID,
 	RedisElectionGroupByFakeID,
 	RedisElectionGroupInstances,
+	RedisElectionGroupExpectedElections,
 	RedisElectionByID,
 	RedisElectionByFakeID,
 	RedisElectionCandidates,

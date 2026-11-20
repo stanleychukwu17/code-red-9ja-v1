@@ -30,6 +30,7 @@ type Service struct {
 
 type earningsService interface {
 	ProcessTaskEarnings(ctx context.Context, params earningsservice.ProcessTaskEarningsParams) (int64, error)
+	GetExpectedResultsCountForPU(ctx context.Context, electionGroupID int32, pollingUnitID int32) (int32, error)
 }
 
 func NewService(q *queries.Queries, pool *pgxpool.Pool, distributor worker.TaskDistributor, earningsSvc earningsService, usersSvc usersService) *Service {
@@ -239,7 +240,7 @@ func (s *Service) SubmitResult(ctx context.Context, input SubmitResultInput) (qu
 	}
 
 	if input.AssignmentID != nil {
-		if err := s.syncAssignmentResultsProgress(ctx, qtx, *input.AssignmentID, input.ElectionGroupID); err != nil {
+		if err := s.syncAssignmentResultsProgress(ctx, qtx, *input.AssignmentID, input.ElectionGroupID, input.PollingUnitID); err != nil {
 			return queries.PollingUnitResult{}, err
 		}
 	}
@@ -371,7 +372,7 @@ func (s *Service) SubmitBatchResults(ctx context.Context, input SubmitBatchResul
 	}
 
 	if input.AssignmentID != nil {
-		if err := s.syncAssignmentResultsProgress(ctx, qtx, *input.AssignmentID, input.ElectionGroupID); err != nil {
+		if err := s.syncAssignmentResultsProgress(ctx, qtx, *input.AssignmentID, input.ElectionGroupID, input.PollingUnitID); err != nil {
 			return nil, err
 		}
 	}
@@ -418,19 +419,6 @@ func (s *Service) ListResults(ctx context.Context, params queries.ListPollingUni
 // ListPollingUnitFinalResults returns a cursor-paginated slice of final polling unit results with details.
 func (s *Service) ListPollingUnitFinalResults(ctx context.Context, params queries.ListPollingUnitFinalResultsParams) ([]queries.ListPollingUnitFinalResultsRow, error) {
 	return s.queries.ListPollingUnitFinalResults(ctx, params)
-}
-
-// VoteOnResult records an up or down vote from a user, atomically swapping
-// away any previously cast vote in the opposite direction.
-func (s *Service) VoteOnResult(ctx context.Context, resultID, userID int64, voteType string) (queries.PollingUnitResult, error) {
-	if voteType != "up" && voteType != "down" {
-		return queries.PollingUnitResult{}, errors.New("vote_type must be 'up' or 'down'")
-	}
-	return s.queries.VoteOnResult(ctx, queries.VoteOnResultParams{
-		ID:       resultID,
-		UserID:   userID,
-		VoteType: voteType,
-	})
 }
 
 // ApplyAIVerification is called by the async Gemini job after scanning the result sheet image.
@@ -502,22 +490,22 @@ func (s *Service) GetFinalResult(ctx context.Context, electionID int64, pollingU
 }
 
 // syncAssignmentResultsProgress recalculates the count of distinct results submitted for this assignment,
-// checks if the agent has fulfilled all expected results for the election group, and marks completed_at if so.
-func (s *Service) syncAssignmentResultsProgress(ctx context.Context, qtx *queries.Queries, assignmentID int64, electionGroupID int32) error {
+// checks if the agent has fulfilled all expected results for the polling unit, and marks completed_at if so.
+func (s *Service) syncAssignmentResultsProgress(ctx context.Context, qtx *queries.Queries, assignmentID int64, electionGroupID int32, pollingUnitID int32) error {
 	// 1. Count actual distinct elections submitted for this assignment
 	submittedCount, err := qtx.CountDistinctSubmittedResultsForAssignment(ctx, assignmentID)
 	if err != nil {
 		return fmt.Errorf("count submitted results: %w", err)
 	}
 
-	// 2. Fetch expected elections for this election group
-	expectedCount, err := qtx.CountElectionsInElectionGroup(ctx, electionGroupID)
+	// 2. Fetch expected elections for this polling unit via Redis-cached earnings service
+	expectedCount, err := s.earningsSvc.GetExpectedResultsCountForPU(ctx, electionGroupID, pollingUnitID)
 	if err != nil || expectedCount <= 0 {
 		expectedCount = 1
 	}
 
 	// 3. Mark completed if all expected results have been submitted
-	if int64(submittedCount) >= expectedCount {
+	if submittedCount >= expectedCount {
 		completedAt := pgtype.Timestamptz{Time: time.Now(), Valid: true}
 		slog.Info("agent completed all expected polling unit results",
 			"assignment_id", assignmentID,

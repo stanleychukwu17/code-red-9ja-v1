@@ -148,6 +148,7 @@ const getAssignmentForEarnings = `-- name: GetAssignmentForEarnings :one
 SELECT
   a.id,
   a.user_id,
+  a.polling_unit_id,
   a.party_id,
   a.election_group_id,
   a.role_type,
@@ -157,38 +158,34 @@ SELECT
   a.last_update_at,
   COALESCE((SELECT COUNT(*)::int FROM polling_unit_updates puu WHERE puu.assignment_id = a.id), 0)::int AS updates_count,
   COALESCE((SELECT COUNT(DISTINCT pur.election_id)::int FROM polling_unit_results pur WHERE pur.assignment_id = a.id), 0)::int AS results_submitted_count,
-  COALESCE((SELECT COUNT(*)::int FROM elections e WHERE e.election_group_id = a.election_group_id), 1)::int AS results_expected_to_submit_count,
   a.potential_payment_kobo,
-  cs.name AS state_name,
   pu.latitude AS pu_latitude,
   pu.longitude AS pu_longitude,
   eg.election_date
 FROM polling_unit_assignments a
 JOIN election_groups eg ON a.election_group_id = eg.id
 JOIN polling_units pu ON a.polling_unit_id = pu.id
-JOIN c_states cs ON pu.state_id = cs.id
 WHERE a.id = $1
 LIMIT 1
 `
 
 type GetAssignmentForEarningsRow struct {
-	ID                           int64              `json:"id"`
-	UserID                       int64              `json:"user_id"`
-	PartyID                      int16              `json:"party_id"`
-	ElectionGroupID              int32              `json:"election_group_id"`
-	RoleType                     pgtype.Text        `json:"role_type"`
-	ArrivedAt                    pgtype.Timestamptz `json:"arrived_at"`
-	ElectionStartedAt            pgtype.Timestamptz `json:"election_started_at"`
-	ElectionEndedAt              pgtype.Timestamptz `json:"election_ended_at"`
-	LastUpdateAt                 pgtype.Timestamptz `json:"last_update_at"`
-	UpdatesCount                 int32              `json:"updates_count"`
-	ResultsSubmittedCount        int32              `json:"results_submitted_count"`
-	ResultsExpectedToSubmitCount int32              `json:"results_expected_to_submit_count"`
-	PotentialPaymentKobo         int64              `json:"potential_payment_kobo"`
-	StateName                    string             `json:"state_name"`
-	PuLatitude                   pgtype.Float8      `json:"pu_latitude"`
-	PuLongitude                  pgtype.Float8      `json:"pu_longitude"`
-	ElectionDate                 pgtype.Date        `json:"election_date"`
+	ID                    int64              `json:"id"`
+	UserID                int64              `json:"user_id"`
+	PollingUnitID         int32              `json:"polling_unit_id"`
+	PartyID               int16              `json:"party_id"`
+	ElectionGroupID       int32              `json:"election_group_id"`
+	RoleType              pgtype.Text        `json:"role_type"`
+	ArrivedAt             pgtype.Timestamptz `json:"arrived_at"`
+	ElectionStartedAt     pgtype.Timestamptz `json:"election_started_at"`
+	ElectionEndedAt       pgtype.Timestamptz `json:"election_ended_at"`
+	LastUpdateAt          pgtype.Timestamptz `json:"last_update_at"`
+	UpdatesCount          int32              `json:"updates_count"`
+	ResultsSubmittedCount int32              `json:"results_submitted_count"`
+	PotentialPaymentKobo  int64              `json:"potential_payment_kobo"`
+	PuLatitude            pgtype.Float8      `json:"pu_latitude"`
+	PuLongitude           pgtype.Float8      `json:"pu_longitude"`
+	ElectionDate          pgtype.Date        `json:"election_date"`
 }
 
 func (q *Queries) GetAssignmentForEarnings(ctx context.Context, id int64) (GetAssignmentForEarningsRow, error) {
@@ -197,6 +194,7 @@ func (q *Queries) GetAssignmentForEarnings(ctx context.Context, id int64) (GetAs
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
+		&i.PollingUnitID,
 		&i.PartyID,
 		&i.ElectionGroupID,
 		&i.RoleType,
@@ -206,9 +204,7 @@ func (q *Queries) GetAssignmentForEarnings(ctx context.Context, id int64) (GetAs
 		&i.LastUpdateAt,
 		&i.UpdatesCount,
 		&i.ResultsSubmittedCount,
-		&i.ResultsExpectedToSubmitCount,
 		&i.PotentialPaymentKobo,
-		&i.StateName,
 		&i.PuLatitude,
 		&i.PuLongitude,
 		&i.ElectionDate,

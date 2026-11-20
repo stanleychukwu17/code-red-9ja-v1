@@ -164,12 +164,27 @@ func (h *Handler) fetchPerformanceStats(ctx context.Context, roleType string, pa
 			rows = rows[:limit]
 		}
 
+		expectedCache := make(map[int32]int32)
 		for _, row := range rows {
 			var readiness float64
 			if row.ReadinessPct.Valid {
 				readinessVal, _ := row.ReadinessPct.Float64Value()
 				readiness = readinessVal.Float64
 			}
+
+			expected, ok := expectedCache[row.PollingUnitID]
+			if !ok {
+				cnt, err := h.queries.CountExpectedElectionsForPollingUnit(ctx, queries.CountExpectedElectionsForPollingUnitParams{
+					PollingUnitID:   row.PollingUnitID,
+					ElectionGroupID: row.ElectionGroupID,
+				})
+				if err != nil || cnt <= 0 {
+					cnt = 1
+				}
+				expected = cnt
+				expectedCache[row.PollingUnitID] = expected
+			}
+			resultsUploadedFormatted := fmt.Sprintf("%s/%d", row.ResultsUploaded, expected)
 
 			item := AgentPerformanceItem{
 				ID:                row.ID,
@@ -188,7 +203,7 @@ func (h *Handler) fetchPerformanceStats(ctx context.Context, roleType string, pa
 				ElectionStartedAt: utils.PtrFromString(row.ElectionStartedAt),
 				ElectionEndedAt:   utils.PtrFromString(row.ElectionEndedAt),
 				UpdatesGiven:      utils.Ptr(row.UpdatesGiven),
-				ResultsUploaded:   utils.PtrFromString(row.ResultsUploaded),
+				ResultsUploaded:   utils.PtrFromString(resultsUploadedFormatted),
 				EarningsKobo:      row.EarningsKobo,
 				EarningsFormatted: row.EarningsFormatted,
 				CompletionStatus:  row.CompletionStatus,

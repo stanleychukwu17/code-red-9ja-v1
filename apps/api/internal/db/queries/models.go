@@ -868,8 +868,6 @@ type PollingUnitResult struct {
 	DisputedReason        pgtype.Text        `json:"disputed_reason"`
 	ConfirmedAt           pgtype.Timestamptz `json:"confirmed_at"`
 	ConfirmedBy           pgtype.Int8        `json:"confirmed_by"`
-	UpVotes               []int64            `json:"up_votes"`
-	DownVotes             []int64            `json:"down_votes"`
 	UploadedByInec        bool               `json:"uploaded_by_inec"`
 	CreatedAt             pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`

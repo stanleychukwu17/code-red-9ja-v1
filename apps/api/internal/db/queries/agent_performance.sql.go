@@ -154,7 +154,7 @@ SELECT
   COALESCE(TO_CHAR(pua.election_started_at, 'HH12:MI AM'), '')::varchar AS election_started_at,
   COALESCE(TO_CHAR(pua.election_ended_at, 'HH12:MI AM'), '')::varchar AS election_ended_at,
   COALESCE((SELECT COUNT(*)::int FROM polling_unit_updates puu WHERE puu.assignment_id = pua.id), 0)::int AS updates_given,
-  CONCAT(COALESCE((SELECT COUNT(DISTINCT pur.election_id)::int FROM polling_unit_results pur WHERE pur.assignment_id = pua.id), 0), '/', COALESCE(NULLIF((SELECT COUNT(*)::int FROM elections e WHERE e.election_group_id = pua.election_group_id), 0), 1))::varchar AS results_uploaded,
+  COALESCE((SELECT COUNT(DISTINCT pur.election_id)::int FROM polling_unit_results pur WHERE pur.assignment_id = pua.id), 0)::varchar AS results_uploaded,
   COALESCE(ae.total_earned_kobo, pua.earned_amount_kobo, 0)::bigint AS earnings_kobo,
   CONCAT('₦', TO_CHAR(COALESCE(ae.total_earned_kobo, pua.earned_amount_kobo, 0) / 100.0, 'FM999,999,999,990.00'))::varchar AS earnings_formatted,
   (pua.completed_at IS NOT NULL)::boolean AS completion_status,

@@ -1259,10 +1259,9 @@ func (s *PartiesService) DepositAllowance(ctx context.Context, partyID int16, am
 	return updatedAllowance, nil
 }
 
-// AgentPaymentRoleConfig holds the default allowance and any state-level overrides for a role.
+// AgentPaymentRoleConfig holds the default allowance for a role.
 type AgentPaymentRoleConfig struct {
-	Default int64            `json:"default"`
-	States  map[string]int64 `json:"states"`
+	Default int64 `json:"default"`
 }
 
 // CanonicalAgentPaymentAllocation is the normalized structure stored in the database.
@@ -1278,8 +1277,7 @@ type CanonicalAgentPaymentAllocation struct {
 func HarmonizeAgentPaymentAllocation(raw []byte) ([]byte, error) {
 	// Parse raw incoming JSON into an intermediate map of role configurations
 	var rawMap map[string]struct {
-		Default *int64           `json:"default"`
-		States  map[string]int64 `json:"states"`
+		Default *int64 `json:"default"`
 	}
 	if err := json.Unmarshal(raw, &rawMap); err != nil {
 		return nil, fmt.Errorf("invalid allowances configuration: %w", err)
@@ -1293,15 +1291,8 @@ func HarmonizeAgentPaymentAllocation(raw []byte) ([]byte, error) {
 			return AgentPaymentRoleConfig{}, fmt.Errorf("missing or invalid default payment for role '%s' (must be > 0)", role)
 		}
 
-		// Ensure states dictionary is always initialized (avoid nil maps in JSON)
-		states := cfg.States
-		if states == nil {
-			states = make(map[string]int64)
-		}
-
 		return AgentPaymentRoleConfig{
 			Default: *cfg.Default,
-			States:  states,
 		}, nil
 	}
 

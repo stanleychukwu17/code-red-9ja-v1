@@ -214,3 +214,18 @@ SELECT EXISTS (
     SELECT 1 FROM election_candidates
     WHERE candidate_id = $1 OR running_mate_id = $1
 ) AS has_contested;
+
+-- name: CountExpectedElectionsForPollingUnit :one
+SELECT COUNT(*)::int
+FROM elections e
+JOIN polling_units pu ON pu.id = sqlc.arg('polling_unit_id')::int
+WHERE e.election_group_id = sqlc.arg('election_group_id')::int
+  AND (
+    e.scope = 'nationwide'
+    OR (e.scope = 'state' AND e.state_id = pu.state_id)
+    OR (e.scope = 'senatorial-district' AND e.senatorial_district_id = pu.senatorial_district_id)
+    OR (e.scope = 'federal-constituency' AND e.federal_constituency_id = pu.federal_constituency_id)
+    OR (e.scope = 'state-constituency' AND e.state_constituency_id = pu.state_constituency_id)
+    OR (e.scope = 'lga' AND e.lga_id = pu.lga_id)
+    OR (e.scope = 'ward' AND e.ward_id = pu.ward_id)
+  );

@@ -109,6 +109,7 @@ RETURNING *;
 SELECT
   a.id,
   a.user_id,
+  a.polling_unit_id,
   a.party_id,
   a.election_group_id,
   a.role_type,
@@ -118,16 +119,13 @@ SELECT
   a.last_update_at,
   COALESCE((SELECT COUNT(*)::int FROM polling_unit_updates puu WHERE puu.assignment_id = a.id), 0)::int AS updates_count,
   COALESCE((SELECT COUNT(DISTINCT pur.election_id)::int FROM polling_unit_results pur WHERE pur.assignment_id = a.id), 0)::int AS results_submitted_count,
-  COALESCE((SELECT COUNT(*)::int FROM elections e WHERE e.election_group_id = a.election_group_id), 1)::int AS results_expected_to_submit_count,
   a.potential_payment_kobo,
-  cs.name AS state_name,
   pu.latitude AS pu_latitude,
   pu.longitude AS pu_longitude,
   eg.election_date
 FROM polling_unit_assignments a
 JOIN election_groups eg ON a.election_group_id = eg.id
 JOIN polling_units pu ON a.polling_unit_id = pu.id
-JOIN c_states cs ON pu.state_id = cs.id
 WHERE a.id = $1
 LIMIT 1;
 

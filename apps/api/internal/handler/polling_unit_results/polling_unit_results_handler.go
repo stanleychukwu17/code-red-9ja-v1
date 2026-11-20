@@ -22,7 +22,6 @@ type PollingUnitResultsService interface {
 	GetResult(ctx context.Context, id int64) (queries.PollingUnitResult, error)
 	ListResults(ctx context.Context, params queries.ListPollingUnitResultsParams) ([]queries.PollingUnitResult, error)
 	ListPollingUnitFinalResults(ctx context.Context, params queries.ListPollingUnitFinalResultsParams) ([]queries.ListPollingUnitFinalResultsRow, error)
-	VoteOnResult(ctx context.Context, resultID int64, userFakeID int64, voteType string) (queries.PollingUnitResult, error)
 	ReviewResult(ctx context.Context, reviewerFakeID int64, input pu_results.ReviewResultInput) (queries.PollingUnitResult, error)
 	GetFinalResult(ctx context.Context, electionID int64, pollingUnitID int32) (interface{}, error)
 }
@@ -99,10 +98,6 @@ type SubmitBatchResultRequest struct {
 	PollingUnitID   int32                             `json:"polling_unit_id"`
 	UploadedByINEC  bool                              `json:"uploaded_by_inec"`
 	Submissions     []SingleElectionSubmissionRequest `json:"submissions"`
-}
-
-type VoteRequest struct {
-	VoteType string `json:"vote_type"` // "up" or "down"
 }
 
 type ReviewRequest struct {
@@ -534,52 +529,6 @@ func (h *Handler) ListFinalResults(w http.ResponseWriter, r *http.Request) {
 	h.utils.RespondSuccessData(w, http.StatusOK, "Final results fetched successfully", PollingUnitFinalResultsListResponse{
 		Results:    mappedResults,
 		NextCursor: nextCursor,
-	})
-}
-
-// VoteOnResult godoc
-// @Summary Vote on a Polling Unit Result
-// @Description Cast an up or down vote on a result. Switches vote if already cast in opposite direction.
-// @Tags Results
-// @Accept json
-// @Produce json
-// @Param id path int true "Result ID"
-// @Param request body VoteRequest true "Vote Details"
-// @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Failure 401 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
-// @Router /polling-unit-results/{id}/vote [patch]
-// @Security BearerAuth
-func (h *Handler) VoteOnResult(w http.ResponseWriter, r *http.Request) {
-	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
-	if !ok {
-		return
-	}
-
-	resultID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
-	if err != nil || resultID <= 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid result ID")
-		return
-	}
-
-	var req VoteRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
-		return
-	}
-
-	// Resolve real user ID — votes are stored by real DB user ID
-	// We reuse FakeID here; the service passes it to VoteOnResult which uses it directly.
-	// NOTE: FakeID is stored as the identifying int in JWT claims (see existing handlers).
-	result, err := h.service.VoteOnResult(r.Context(), resultID, claims.FakeID, req.VoteType)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to record vote: "+err.Error())
-		return
-	}
-
-	h.utils.RespondSuccess(w, http.StatusOK, "Vote recorded successfully", map[string]interface{}{
-		"result": result,
 	})
 }
 

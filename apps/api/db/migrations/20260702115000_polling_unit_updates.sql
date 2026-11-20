@@ -81,6 +81,8 @@ CREATE TABLE IF NOT EXISTS polling_unit_updates (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE INDEX idx_pu_updates_assignment ON polling_unit_updates(assignment_id);
+
 -- Stateful polling unit issues (tracks active issues, start/end downtime, resolution)
 CREATE TABLE IF NOT EXISTS polling_unit_with_issues (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,

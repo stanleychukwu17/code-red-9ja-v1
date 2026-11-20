@@ -47,6 +47,7 @@ type Querier interface {
 	CountCandidatesInElectionGroup(ctx context.Context, electionGroupID int32) (int64, error)
 	CountDistinctSubmittedResultsForAssignment(ctx context.Context, dollar_1 int64) (int32, error)
 	CountElectionsInElectionGroup(ctx context.Context, electionGroupID int32) (int64, error)
+	CountExpectedElectionsForPollingUnit(ctx context.Context, arg CountExpectedElectionsForPollingUnitParams) (int32, error)
 	CountMediaAssetsByFolder(ctx context.Context, arg CountMediaAssetsByFolderParams) (int64, error)
 	CountParticipantsInElectionGroup(ctx context.Context, electionGroupID int32) (int64, error)
 	CountPollingUnitAssignments(ctx context.Context, arg CountPollingUnitAssignmentsParams) (int32, error)
@@ -561,7 +562,6 @@ type Querier interface {
 	UpsertWard(ctx context.Context, arg UpsertWardParams) (Ward, error)
 	VacateAllUserPositionsInParty(ctx context.Context, arg VacateAllUserPositionsInPartyParams) ([]VacateAllUserPositionsInPartyRow, error)
 	VacatePositionAssignment(ctx context.Context, arg VacatePositionAssignmentParams) (PartyPositionAssignment, error)
-	VoteOnResult(ctx context.Context, arg VoteOnResultParams) (PollingUnitResult, error)
 }
 
 var _ Querier = (*Queries)(nil)

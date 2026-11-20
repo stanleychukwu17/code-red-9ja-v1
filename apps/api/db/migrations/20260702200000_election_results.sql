@@ -117,10 +117,6 @@ CREATE TABLE polling_unit_results (
   confirmed_at             TIMESTAMPTZ,
   confirmed_by             BIGINT REFERENCES users(id) ON DELETE SET NULL,
 
-  -- Community validation
-  up_votes                 BIGINT[] NOT NULL DEFAULT '{}',   -- array of user IDs who upvoted
-  down_votes               BIGINT[] NOT NULL DEFAULT '{}',   -- array of user IDs who downvoted
-
   -- Flags
   uploaded_by_inec         BOOLEAN  NOT NULL DEFAULT FALSE,
 
@@ -132,12 +128,9 @@ CREATE TABLE polling_unit_results (
 CREATE UNIQUE INDEX uq_result_submission ON polling_unit_results (election_id, polling_unit_id, submitted_by);
 
 -- Indexes for common query patterns
-CREATE INDEX idx_pu_results_election_group ON polling_unit_results(election_group_id);
-CREATE INDEX idx_pu_results_pu             ON polling_unit_results(polling_unit_id);
-CREATE INDEX idx_pu_results_party_group    ON polling_unit_results(party_id, election_group_id);
-CREATE INDEX idx_pu_results_submitted_by   ON polling_unit_results(submitted_by);
-CREATE INDEX idx_pu_results_location       ON polling_unit_results(state_id, lga_id, ward_id);
-CREATE INDEX idx_pu_results_status         ON polling_unit_results(status);
+CREATE INDEX idx_pu_results_pu                  ON polling_unit_results(polling_unit_id);
+CREATE INDEX idx_pu_results_assignment_election ON polling_unit_results(assignment_id, election_id);
+CREATE INDEX idx_pu_results_user_group          ON polling_unit_results(submitted_by, election_group_id);
 
 -- ============================================================
 -- election_polling_unit_final_results
@@ -181,25 +174,7 @@ CREATE TABLE election_polling_unit_final_results (
 );
 
 -- One final result per election per polling unit
-CREATE UNIQUE INDEX uq_pu_final_result
-  ON election_polling_unit_final_results (election_id, polling_unit_id);
-
-CREATE INDEX idx_pu_final_results_election_group ON election_polling_unit_final_results(election_group_id);
-CREATE INDEX idx_pu_final_results_pu ON election_polling_unit_final_results(polling_unit_id);
-CREATE INDEX idx_pu_final_results_location ON election_polling_unit_final_results(state_id, lga_id, ward_id);
-CREATE INDEX idx_pu_final_results_senatorial ON election_polling_unit_final_results(senatorial_district_id);
-CREATE INDEX idx_pu_final_results_federal ON election_polling_unit_final_results(federal_constituency_id);
-CREATE INDEX idx_pu_final_results_state_assembly ON election_polling_unit_final_results(state_constituency_id);
-CREATE INDEX idx_pu_final_results_lga ON election_polling_unit_final_results(lga_id);
-CREATE INDEX idx_pu_final_results_ward ON election_polling_unit_final_results(ward_id);
-
--- Compound indexes for fast dynamic rollups by election
-CREATE INDEX IF NOT EXISTS idx_pu_final_results_election_state       ON election_polling_unit_final_results(election_id, state_id);
-CREATE INDEX IF NOT EXISTS idx_pu_final_results_election_lga         ON election_polling_unit_final_results(election_id, lga_id);
-CREATE INDEX IF NOT EXISTS idx_pu_final_results_election_ward        ON election_polling_unit_final_results(election_id, ward_id);
-CREATE INDEX IF NOT EXISTS idx_pu_final_results_election_senatorial  ON election_polling_unit_final_results(election_id, senatorial_district_id);
-CREATE INDEX IF NOT EXISTS idx_pu_final_results_election_federal     ON election_polling_unit_final_results(election_id, federal_constituency_id);
-CREATE INDEX IF NOT EXISTS idx_pu_final_results_election_state_const ON election_polling_unit_final_results(election_id, state_constituency_id);
+CREATE UNIQUE INDEX uq_pu_final_result ON election_polling_unit_final_results (election_id, polling_unit_id);
 
 -- +goose Down
 DROP TABLE IF EXISTS election_polling_unit_final_results;

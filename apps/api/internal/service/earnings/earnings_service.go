@@ -45,6 +45,27 @@ func (s *Service) getPartyByID(ctx context.Context, partyID int16) (queries.Part
 	return s.partiesSvc.GetPartyByID(ctx, partyID)
 }
 
+// GetExpectedResultsCountForPU returns the number of contested elections that apply to a specific polling unit
+// within an election group (e.g. Presidential + Senatorial + Federal Rep = 3).
+// The result is cached in Redis for high-frequency evaluation.
+func (s *Service) GetExpectedResultsCountForPU(ctx context.Context, electionGroupID int32, pollingUnitID int32) (int32, error) {
+	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisElectionGroupExpectedElections, electionGroupID, pollingUnitID)
+	if val, ok := utils.GetCachedJSON[int32](ctx, s.rdb, cacheKey); ok && val > 0 {
+		return val, nil
+	}
+
+	count, err := s.queries.CountExpectedElectionsForPollingUnit(ctx, queries.CountExpectedElectionsForPollingUnitParams{
+		PollingUnitID:   pollingUnitID,
+		ElectionGroupID: electionGroupID,
+	})
+	if err != nil || count <= 0 {
+		return 1, nil // Fallback to 1 to prevent division by zero
+	}
+
+	_ = utils.SetCachedJSON(ctx, s.rdb, cacheKey, count, db.RedisSevenDaysTTL)
+	return count, nil
+}
+
 // ─── JSON shapes from DB ──────────────────────────────────────────────────────
 
 type EarningsAllocation struct {
@@ -65,10 +86,9 @@ type UpdateScheduleConfig struct {
 }
 
 // agentPaymentAllocation:
-// {"polling_agent": {"default": 2000000, "states": {"lagos": 2500000}}}
+// {"polling_agent": {"default": 2000000}}
 type rolePaymentConfig struct {
-	Default int64            `json:"default"`
-	States  map[string]int64 `json:"states"`
+	Default int64 `json:"default"`
 }
 
 // ─── Calculate (public entry point) ──────────────────────────────────────────
@@ -175,16 +195,30 @@ func (s *Service) calculateWithTx(ctx context.Context, q *queries.Queries, asgn 
 	}
 
 	// Resolves party-configured base payout for this role
-	basePaymentKobo := s.resolveBasePayment(party.AgentPaymentAllocationKobo, roleType, asgn.StateName)
+	basePaymentKobo := s.resolveBasePayment(party.AgentPaymentAllocationKobo, roleType)
 
-	// 4. Compute each factor score (0–100)
+	// Expected results count: total contested elections applicable to this PU (e.g., Presidential + Senate + Reps)
+	expectedResults, err := s.GetExpectedResultsCountForPU(ctx, asgn.ElectionGroupID, asgn.PollingUnitID)
+	if err != nil || expectedResults <= 0 {
+		expectedResults = 1
+	}
+
+	// Results score: percentage of expected election results submitted by the agent (0–100%)
 	resultsScore := computeRatioScore(ComputeRatioScoreParams{
 		Actual: float64(asgn.ResultsSubmittedCount),
-		Target: float64(asgn.ResultsExpectedToSubmitCount),
+		Target: float64(expectedResults),
 	})
-	updatesScore := s.computeUpdatesScore(ctx, q, asgn, targetUpdatesCount, intervalMinutes)
+
+	// Updates score: situational reports scored by interval bucket spacing and GPS geofence proximity (1.0 on-site, 0.5 off-site/no GPS)
+	updatesScore := s.computeUpdatesScore(ctx, asgn, targetUpdatesCount, intervalMinutes)
+
+	// Attendance score: binary milestone (100 if arrived, 0 if not) verifying agent presence at the polling unit
 	attendanceScore := boolScore(asgn.ArrivedAt.Valid)
+
+	// Election start score: binary milestone (100 if recorded, 0 if not) for reporting voting commencement
 	electionStartScore := boolScore(asgn.ElectionStartedAt.Valid)
+
+	// Election end score: binary milestone (100 if recorded, 0 if not) for reporting official voting conclusion
 	electionEndScore := boolScore(asgn.ElectionEndedAt.Valid)
 
 	// 5. Compute per-factor earnings (kobo)
@@ -383,16 +417,11 @@ func (s *Service) ProcessTaskEarnings(ctx context.Context, params ProcessTaskEar
 
 // computeUpdatesScore derives the updates score (0–100) taking into account location verification
 // and interval spacing (Option B: max 1 update credited per interval bucket, taking best weight in bucket):
-// - Updates within the polling unit geofence (or when PU coordinates are missing from DB) receive full weight (1.0).
-// - Updates lacking GPS or submitted outside the PU geofence (> 1,000m) receive reduced weight (0.5).
-func (s *Service) computeUpdatesScore(
-	ctx context.Context,
-	q *queries.Queries,
-	asgn queries.GetAssignmentForEarningsRow,
-	targetUpdatesCount float64,
-	intervalMinutes int,
-) float64 {
-	updates, err := q.ListAssignmentUpdatesCoordinates(ctx, asgn.ID)
+// - Updates within the polling unit geo-fence (or when PU coordinates are missing from DB) receive full weight (1.0).
+// - Updates lacking GPS or submitted outside the PU geo-fence (> 2,000m + device accuracy buffer) receive reduced weight (0.5).
+func (s *Service) computeUpdatesScore(ctx context.Context, asgn queries.GetAssignmentForEarningsRow, targetUpdatesCount float64, intervalMinutes int) float64 {
+	// Fetch all update timestamps and GPS coordinates for this assignment to evaluate interval spacing and geo-fence verification
+	updates, err := s.queries.ListAssignmentUpdatesCoordinates(ctx, asgn.ID)
 	if err != nil || len(updates) == 0 {
 		return 0
 	}
@@ -401,50 +430,57 @@ func (s *Service) computeUpdatesScore(
 		intervalMinutes = 30
 	}
 
-	const maxDistanceMeters = 1000.0 // 1km tolerance radius for polling unit location
-	const unverifiedWeight = 0.5     // 50% payout tier for updates lacking verified coordinates
+	const baseMaxDistanceMeters = 2000.0   // 2km base tolerance radius for polling unit location
+	const maxAccuracyBufferMeters = 1000.0 // Cap device inaccuracy buffer at 1km (yielding 2km–3km effective radius)
+	const unverifiedWeight = 0.5           // 50% payout tier for updates lacking verified coordinates
 
 	hasPuCoords := asgn.PuLatitude.Valid && asgn.PuLongitude.Valid &&
 		asgn.PuLatitude.Float64 != 0 && asgn.PuLongitude.Float64 != 0
 
 	// Group updates by interval bucket and track the highest weight achieved per interval
+	// we want to make sure an update is been received at-least every 30mins
 	bucketWeights := make(map[string]float64)
 
-	for _, u := range updates {
-		weight := unverifiedWeight
-		hasUpdateCoords := u.Latitude.Valid && u.Longitude.Valid &&
-			u.Latitude.Float64 != 0 && u.Longitude.Float64 != 0
+	for _, update := range updates {
+		creditWeight := unverifiedWeight
+		hasUpdateCoords := update.Latitude.Valid && update.Longitude.Valid &&
+			update.Latitude.Float64 != 0 && update.Longitude.Float64 != 0
 
 		if hasUpdateCoords {
 			if !hasPuCoords {
 				// PU coordinates unavailable in DB -> benefit of doubt, full credit
-				weight = 1.0
+				creditWeight = 1.0
 			} else {
-				dist := utils.HaversineDistanceMeters(
-					u.Latitude.Float64,
-					u.Longitude.Float64,
-					asgn.PuLatitude.Float64,
-					asgn.PuLongitude.Float64,
-				)
-				if dist <= maxDistanceMeters {
-					weight = 1.0
+				accuracyBuffer := 0.0
+				if update.AccuracyMeters.Valid && update.AccuracyMeters.Float64 > 0 {
+					accuracyBuffer = math.Min(update.AccuracyMeters.Float64, maxAccuracyBufferMeters)
+				}
+
+				if utils.IsWithinDistance(utils.IsWithinDistanceParams{
+					Lat1:              update.Latitude.Float64,
+					Lon1:              update.Longitude.Float64,
+					Lat2:              asgn.PuLatitude.Float64,
+					Lon2:              asgn.PuLongitude.Float64,
+					MaxDistanceMeters: baseMaxDistanceMeters + accuracyBuffer,
+				}) {
+					creditWeight = 1.0
 				}
 			}
 		}
 
 		// Calculate interval bucket key (e.g. 2026-11-19_14:30)
-		t := u.CreatedAt.Time
+		t := update.CreatedAt.Time
 		flooredMin := (t.Minute() / intervalMinutes) * intervalMinutes
 		bucketKey := fmt.Sprintf("%s_%02d:%02d", t.Format("2006-01-02"), t.Hour(), flooredMin)
 
-		if prevWeight, ok := bucketWeights[bucketKey]; !ok || weight > prevWeight {
-			bucketWeights[bucketKey] = weight
+		if prevWeight, ok := bucketWeights[bucketKey]; !ok || creditWeight > prevWeight {
+			bucketWeights[bucketKey] = creditWeight
 		}
 	}
 
 	var effectiveUpdates float64
-	for _, w := range bucketWeights {
-		effectiveUpdates += w
+	for _, weight := range bucketWeights {
+		effectiveUpdates += weight
 	}
 
 	return computeRatioScore(ComputeRatioScoreParams{
@@ -472,6 +508,7 @@ func boolScore(set bool) float64 {
 	if set {
 		return 100
 	}
+
 	return 0
 }
 
@@ -498,40 +535,13 @@ func toNumeric(f float64) pgtype.Numeric {
 }
 
 // resolveBasePayment extracts the kobo amount from agent_payment_allocation JSONB.
-// Format: {"polling_agent": {"default": 2000000, "states": {"lagos": 2500000}}}
-func (s *Service) resolveBasePayment(rawJSON []byte, roleType, stateName string) int64 {
+// Format: {"polling_agent": {"default": 2000000}}
+func (s *Service) resolveBasePayment(rawJSON []byte, roleType string) int64 {
 	var alloc map[string]rolePaymentConfig
 	if err := json.Unmarshal(rawJSON, &alloc); err != nil {
 		return 0
 	}
-
-	role := strings.ReplaceAll(roleType, "-", "_")
-	switch role {
-	case "ward_supervisor":
-		role = "ward_election_supervisor"
-	case "lga_supervisor":
-		role = "lga_election_supervisor"
-	case "state_supervisor":
-		role = "state_election_supervisor"
-	}
-
-	cfg, ok := alloc[role]
-	if !ok {
-		cfg, ok = alloc[roleType]
-	}
-	if !ok {
-		return 0
-	}
-
-	// Check for a state-specific override (case-insensitive key match)
-	lowerState := strings.ToLower(stateName)
-	for k, v := range cfg.States {
-		if strings.ToLower(k) == lowerState {
-			return v
-		}
-	}
-
-	return cfg.Default
+	return alloc[roleType].Default
 }
 
 // ─── CalculatePotentialPayout ──────────────────────────────────────────────────
@@ -567,7 +577,7 @@ func (s *Service) CalculatePotentialPayout(ctx context.Context, assignmentID int
 					Reason:              "Party has not funded agent payments",
 				}, nil
 			}
-			basePaymentKobo = s.resolveBasePayment(party.AgentPaymentAllocationKobo, roleType, asgn.StateName)
+			basePaymentKobo = s.resolveBasePayment(party.AgentPaymentAllocationKobo, roleType)
 		}
 	}
 	if basePaymentKobo <= 0 {
@@ -601,8 +611,8 @@ func (s *Service) CalculatePotentialPayout(ctx context.Context, assignmentID int
 	switch taskType {
 
 	case "results":
-		expected := asgn.ResultsExpectedToSubmitCount
-		if expected <= 0 {
+		expected, err := s.GetExpectedResultsCountForPU(ctx, asgn.ElectionGroupID, asgn.PollingUnitID)
+		if err != nil || expected <= 0 {
 			expected = 1
 		}
 		if asgn.ResultsSubmittedCount >= expected {
@@ -785,7 +795,7 @@ func (s *Service) EstimatePotentialPayout(
 					Reason:              "Party has not funded agent payments",
 				}, nil
 			}
-			basePaymentKobo = s.resolveBasePayment(party.AgentPaymentAllocationKobo, normRole, "")
+			basePaymentKobo = s.resolveBasePayment(party.AgentPaymentAllocationKobo, normRole)
 		}
 	}
 	if basePaymentKobo <= 0 {
@@ -864,7 +874,6 @@ func (s *Service) GetAgentAllocations(
 	var roleType string
 	var potentialPaymentKobo int64
 	var partyID int16
-	var stateName string
 
 	// 1. If assignmentID is explicitly provided, fetch assignment for polling agent
 	if assignmentID > 0 {
@@ -872,7 +881,6 @@ func (s *Service) GetAgentAllocations(
 			roleType = "polling_agent"
 			potentialPaymentKobo = asgn.PotentialPaymentKobo
 			partyID = asgn.PartyID
-			stateName = asgn.StateName
 		}
 	}
 
@@ -886,7 +894,6 @@ func (s *Service) GetAgentAllocations(
 				roleType = "polling_agent"
 				potentialPaymentKobo = asgn.PotentialPaymentKobo
 				partyID = asgn.PartyID
-				stateName = asgn.StateName
 			}
 		}
 	}
@@ -930,27 +937,16 @@ func (s *Service) GetAgentAllocations(
 	// Fallback to requested roleType or default "polling_agent"
 	if roleType == "" {
 		if reqRoleType != "" {
-			roleType = reqRoleType
+			roleType = strings.ReplaceAll(reqRoleType, "-", "_")
 		} else {
 			roleType = "polling_agent"
 		}
-	}
-	roleType = strings.ReplaceAll(roleType, "-", "_")
-	switch roleType {
-	case "pollingagent":
-		roleType = "polling_agent"
-	case "ward_supervisor":
-		roleType = "ward_election_supervisor"
-	case "lga_supervisor":
-		roleType = "lga_election_supervisor"
-	case "state_supervisor":
-		roleType = "state_election_supervisor"
 	}
 
 	// If potentialPaymentKobo is missing, resolve base payment from party allocation
 	if potentialPaymentKobo <= 0 && partyID > 0 {
 		if party, err := s.getPartyByID(ctx, partyID); err == nil {
-			potentialPaymentKobo = s.resolveBasePayment(party.AgentPaymentAllocationKobo, roleType, stateName)
+			potentialPaymentKobo = s.resolveBasePayment(party.AgentPaymentAllocationKobo, roleType)
 		}
 	}
 	if potentialPaymentKobo < 0 {

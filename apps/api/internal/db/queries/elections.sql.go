@@ -67,6 +67,34 @@ func (q *Queries) CheckIfUserEverContested(ctx context.Context, candidateID int6
 	return has_contested, err
 }
 
+const countExpectedElectionsForPollingUnit = `-- name: CountExpectedElectionsForPollingUnit :one
+SELECT COUNT(*)::int
+FROM elections e
+JOIN polling_units pu ON pu.id = $1::int
+WHERE e.election_group_id = $2::int
+  AND (
+    e.scope = 'nationwide'
+    OR (e.scope = 'state' AND e.state_id = pu.state_id)
+    OR (e.scope = 'senatorial-district' AND e.senatorial_district_id = pu.senatorial_district_id)
+    OR (e.scope = 'federal-constituency' AND e.federal_constituency_id = pu.federal_constituency_id)
+    OR (e.scope = 'state-constituency' AND e.state_constituency_id = pu.state_constituency_id)
+    OR (e.scope = 'lga' AND e.lga_id = pu.lga_id)
+    OR (e.scope = 'ward' AND e.ward_id = pu.ward_id)
+  )
+`
+
+type CountExpectedElectionsForPollingUnitParams struct {
+	PollingUnitID   int32 `json:"polling_unit_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
+}
+
+func (q *Queries) CountExpectedElectionsForPollingUnit(ctx context.Context, arg CountExpectedElectionsForPollingUnitParams) (int32, error) {
+	row := q.db.QueryRow(ctx, countExpectedElectionsForPollingUnit, arg.PollingUnitID, arg.ElectionGroupID)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const createElectionCandidate = `-- name: CreateElectionCandidate :one
 INSERT INTO election_candidates (election_id, election_group_id, candidate_id, party_id)
 VALUES ($1, $2, $3, $4)

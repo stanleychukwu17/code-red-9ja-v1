@@ -12,7 +12,7 @@ export type AgentRoles =
   | "lga_election_supervisor"
   | "state_election_supervisor";
 
-export type PaymentConfig = { default: number; states: Record<string, number> };
+export type PaymentConfig = { default: number };
 export type AgentPaymentAllocation = Record<AgentRoles, PaymentConfig>;
 
 const ROLE_ORDER: AgentRoles[] = [
@@ -30,10 +30,10 @@ const ROLE_LABELS: Record<AgentRoles, string> = {
 };
 
 const DEFAULT_ALLOCATION: AgentPaymentAllocation = {
-  polling_agent: { default: 0, states: {} },
-  ward_election_supervisor: { default: 0, states: {} },
-  lga_election_supervisor: { default: 0, states: {} },
-  state_election_supervisor: { default: 0, states: {} },
+  polling_agent: { default: 0 },
+  ward_election_supervisor: { default: 0 },
+  lga_election_supervisor: { default: 0 },
+  state_election_supervisor: { default: 0 },
 };
 
 export type AgentPaymentAllocationFormDialogProps = {
@@ -52,12 +52,6 @@ function parseKoboAllocationToNaira(alloc: any): AgentPaymentAllocation {
     if (converted[role] !== undefined && alloc[role]) {
       converted[role] = {
         default: (alloc[role].default || 0) / 100,
-        states: Object.fromEntries(
-          Object.entries(alloc[role].states || {}).map(([state, kobo]) => [
-            state,
-            (Number(kobo) || 0) / 100,
-          ]),
-        ),
       };
     }
   });
@@ -89,9 +83,6 @@ export function AgentPaymentAllocationFormDialog({ open, onClose, partyId, initi
           if (alloc[role]) {
             converted[role] = {
               default: (alloc[role].default || 0) * 100,
-              states: Object.fromEntries(
-                Object.entries(alloc[role].states || {}).map(([state, naira]) => [state, (naira || 0) * 100])
-              )
             };
           }
         });
