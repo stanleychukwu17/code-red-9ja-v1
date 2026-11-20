@@ -13,7 +13,7 @@ import { ArrivalDrawer } from "../components/ArrivalDrawer";
 import { EarningsTab } from "../components/EarningsTab";
 import { ElectionStatusCard } from "../components/ElectionStatusCard";
 import { HomeHeader, HomeHeader2 } from "../components/HomeHeader";
-import { PracticeTestCard } from "../components/PracticeTestCard";
+import { PracticeTestComingSoonCard } from "../components/PracticeTestCard";
 import { RequestPayoutCard } from "../components/RequestPayoutCard";
 import { UploadResultCard } from "../components/UploadResultCard";
 import { GiveUpdateFloatingButton } from "../components/GiveUpdateFloatingButton";
@@ -254,7 +254,7 @@ export function PollingAgentPage() {
 
         {/* Pre-election cards: referral bonuses, practice test */}
         <ReferralCard onClick={() => navigate({ to: "/referrals" })} />
-        {daysLeft !== undefined && daysLeft !== 0 && <PracticeTestCard />}
+        {daysLeft !== undefined && daysLeft !== 0 && <PracticeTestComingSoonCard />}
 
         {/* Duty earnings summary */}
         <EarningsTab />

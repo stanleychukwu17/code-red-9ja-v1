@@ -3,7 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { ApplicationsCard } from "../components/ApplicationsCard";
 import { GiveUpdateFloatingButton } from "../components/GiveUpdateFloatingButton";
 import { HomeHeader } from "../components/HomeHeader";
-import { PracticeTestCard } from "../components/PracticeTestCard";
+import { PracticeTestComingSoonCard } from "../components/PracticeTestCard";
 import { ReferralCard } from "../components/ReferralCard";
 import { HomeBody } from "../components/Shared";
 import { UploadResultCard } from "../components/UploadResultCard";
@@ -46,7 +46,7 @@ export function GeneralPage() {
         <ReferralCard onClick={() => navigate({ to: "/referrals" })} />
 
         {/* Practice voting test */}
-        <PracticeTestCard />
+        <PracticeTestComingSoonCard />
 
         {/* Quick incident report FAB on election day */}
         {daysLeft === 0 && (

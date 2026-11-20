@@ -1,6 +1,4 @@
 import { Button } from "@repo/ui/components/button";
-import { TitleText } from "@repo/ui/components/custom/Texts";
-import FancyMoneyBagIcon from "@repo/ui/icons/fancy-money-bag-icon";
 import { useNavigate } from "@tanstack/react-router";
 import { GreyCardTopRow, GreyCardWrapper } from "./Shared";
 import { Target } from "lucide-react";
@@ -46,3 +44,30 @@ export function PracticeTestCard() {
     </GreyCardWrapper>
   );
 }
+
+/**
+ * Practice Test Coming Soon Card.
+ *
+ * Displays a lightweight placeholder on home dashboards while the
+ * practice test simulator is being refined.
+ */
+export function PracticeTestComingSoonCard() {
+  return (
+    <GreyCardWrapper>
+      <GreyCardTopRow
+        title="Practice Test"
+        icon={<Target className="size-4 text-c-60" />}
+      />
+
+      <div className="flex flex-col gap-1.5 py-1">
+        <h3 className="text-[20px] leading-7 tracking-tight text-c-80 font-bold">
+          Practice test coming soon
+        </h3>
+        <p className="text-c-50 text-[14px] font-medium leading-5">
+          Interactive simulation drills will be available soon.
+        </p>
+      </div>
+    </GreyCardWrapper>
+  );
+}
+

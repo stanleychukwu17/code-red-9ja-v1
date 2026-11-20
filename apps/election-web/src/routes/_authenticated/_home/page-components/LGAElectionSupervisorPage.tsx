@@ -12,7 +12,7 @@ import { ReferralCard } from "../components/ReferralCard";
 import { EarningsTab } from "../components/EarningsTab";
 import { GiveUpdateFloatingButton } from "../components/GiveUpdateFloatingButton";
 import { HomeHeader, HomeHeader2 } from "../components/HomeHeader";
-import { PracticeTestCard } from "../components/PracticeTestCard";
+import { PracticeTestComingSoonCard } from "../components/PracticeTestCard";
 import { HomeBody } from "../components/Shared";
 import { SupervisorStartDutyCard } from "../components/SupervisorReadyCard";
 import { Layout } from "@repo/ui/components/custom/AdminLayouts";
@@ -249,7 +249,7 @@ export function LGAElectionSupervisorPage() {
 
         {/* Referrals and practice tests */}
         <ReferralCard onClick={() => navigate({ to: "/referrals" })} />
-        {daysLeft !== undefined && daysLeft !== 0 && <PracticeTestCard />}
+        {daysLeft !== undefined && daysLeft !== 0 && <PracticeTestComingSoonCard />}
 
         {/* Earnings */}
         <EarningsTab />
