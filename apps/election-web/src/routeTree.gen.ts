@@ -16,7 +16,6 @@ import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as AuthForgotPasswordRouteImport } from './routes/auth/forgot-password'
 import { Route as AuthenticatedUploadResultIndexRouteImport } from './routes/_authenticated/upload-result/index'
 import { Route as AuthenticatedTeamIndexRouteImport } from './routes/_authenticated/team/index'
-import { Route as AuthenticatedSupervisorUpdateIndexRouteImport } from './routes/_authenticated/supervisor-update/index'
 import { Route as AuthenticatedReferralsIndexRouteImport } from './routes/_authenticated/referrals/index'
 import { Route as AuthenticatedPracticeIndexRouteImport } from './routes/_authenticated/practice/index'
 import { Route as AuthenticatedPartiesIndexRouteImport } from './routes/_authenticated/parties/index'
@@ -65,12 +64,6 @@ const AuthenticatedTeamIndexRoute = AuthenticatedTeamIndexRouteImport.update({
   path: '/team/',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AuthenticatedSupervisorUpdateIndexRoute =
-  AuthenticatedSupervisorUpdateIndexRouteImport.update({
-    id: '/supervisor-update/',
-    path: '/supervisor-update/',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
 const AuthenticatedReferralsIndexRoute =
   AuthenticatedReferralsIndexRouteImport.update({
     id: '/referrals/',
@@ -160,7 +153,6 @@ export interface FileRoutesByFullPath {
   '/parties/': typeof AuthenticatedPartiesIndexRoute
   '/practice/': typeof AuthenticatedPracticeIndexRoute
   '/referrals/': typeof AuthenticatedReferralsIndexRoute
-  '/supervisor-update/': typeof AuthenticatedSupervisorUpdateIndexRoute
   '/team/': typeof AuthenticatedTeamIndexRoute
   '/upload-result/': typeof AuthenticatedUploadResultIndexRoute
 }
@@ -181,7 +173,6 @@ export interface FileRoutesByTo {
   '/parties': typeof AuthenticatedPartiesIndexRoute
   '/practice': typeof AuthenticatedPracticeIndexRoute
   '/referrals': typeof AuthenticatedReferralsIndexRoute
-  '/supervisor-update': typeof AuthenticatedSupervisorUpdateIndexRoute
   '/team': typeof AuthenticatedTeamIndexRoute
   '/upload-result': typeof AuthenticatedUploadResultIndexRoute
 }
@@ -204,7 +195,6 @@ export interface FileRoutesById {
   '/_authenticated/parties/': typeof AuthenticatedPartiesIndexRoute
   '/_authenticated/practice/': typeof AuthenticatedPracticeIndexRoute
   '/_authenticated/referrals/': typeof AuthenticatedReferralsIndexRoute
-  '/_authenticated/supervisor-update/': typeof AuthenticatedSupervisorUpdateIndexRoute
   '/_authenticated/team/': typeof AuthenticatedTeamIndexRoute
   '/_authenticated/upload-result/': typeof AuthenticatedUploadResultIndexRoute
 }
@@ -227,7 +217,6 @@ export interface FileRouteTypes {
     | '/parties/'
     | '/practice/'
     | '/referrals/'
-    | '/supervisor-update/'
     | '/team/'
     | '/upload-result/'
   fileRoutesByTo: FileRoutesByTo
@@ -248,7 +237,6 @@ export interface FileRouteTypes {
     | '/parties'
     | '/practice'
     | '/referrals'
-    | '/supervisor-update'
     | '/team'
     | '/upload-result'
   id:
@@ -270,7 +258,6 @@ export interface FileRouteTypes {
     | '/_authenticated/parties/'
     | '/_authenticated/practice/'
     | '/_authenticated/referrals/'
-    | '/_authenticated/supervisor-update/'
     | '/_authenticated/team/'
     | '/_authenticated/upload-result/'
   fileRoutesById: FileRoutesById
@@ -332,13 +319,6 @@ declare module '@tanstack/react-router' {
       path: '/team'
       fullPath: '/team/'
       preLoaderRoute: typeof AuthenticatedTeamIndexRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/supervisor-update/': {
-      id: '/_authenticated/supervisor-update/'
-      path: '/supervisor-update'
-      fullPath: '/supervisor-update/'
-      preLoaderRoute: typeof AuthenticatedSupervisorUpdateIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/referrals/': {
@@ -441,7 +421,6 @@ interface AuthenticatedRouteChildren {
   AuthenticatedPartiesIndexRoute: typeof AuthenticatedPartiesIndexRoute
   AuthenticatedPracticeIndexRoute: typeof AuthenticatedPracticeIndexRoute
   AuthenticatedReferralsIndexRoute: typeof AuthenticatedReferralsIndexRoute
-  AuthenticatedSupervisorUpdateIndexRoute: typeof AuthenticatedSupervisorUpdateIndexRoute
   AuthenticatedTeamIndexRoute: typeof AuthenticatedTeamIndexRoute
   AuthenticatedUploadResultIndexRoute: typeof AuthenticatedUploadResultIndexRoute
 }
@@ -460,8 +439,6 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedPartiesIndexRoute: AuthenticatedPartiesIndexRoute,
   AuthenticatedPracticeIndexRoute: AuthenticatedPracticeIndexRoute,
   AuthenticatedReferralsIndexRoute: AuthenticatedReferralsIndexRoute,
-  AuthenticatedSupervisorUpdateIndexRoute:
-    AuthenticatedSupervisorUpdateIndexRoute,
   AuthenticatedTeamIndexRoute: AuthenticatedTeamIndexRoute,
   AuthenticatedUploadResultIndexRoute: AuthenticatedUploadResultIndexRoute,
 }

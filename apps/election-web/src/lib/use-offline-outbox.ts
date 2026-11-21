@@ -84,7 +84,7 @@ async function syncSingleItem(item: OutboxUpdateItem): Promise<boolean> {
     // Create situation update record on API server
     const apiRes = await createPollingUnitUpdate({
       data: {
-        polling_unit_id: item.pollingUnitId,
+        polling_unit_id: item.pollingUnitId ?? 0,
         election_group_id: item.electionGroupId,
         assignment_id: item.assignmentId,
         status_category_id: item.statusCategoryId,

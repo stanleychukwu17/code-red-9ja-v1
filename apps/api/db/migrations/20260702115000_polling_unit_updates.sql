@@ -43,24 +43,30 @@ CREATE TABLE IF NOT EXISTS polling_unit_issue_options (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Primary polling unit updates table
+-- Primary updates table (polling unit agents & election supervisors)
 CREATE TABLE IF NOT EXISTS polling_unit_updates (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   
-  -- The core relationship linking the update to the agent's assignment (mandatory: updates require an assigned agent)
-  assignment_id BIGINT REFERENCES polling_unit_assignments(id) ON DELETE CASCADE NOT NULL,
+
+  -- Assignment link (required for polling_agent, NULL for supervisors)
+  assignment_id BIGINT REFERENCES polling_unit_assignments(id) ON DELETE CASCADE,
   
   -- Denormalized references for fast dashboard filtering
   election_group_id INT REFERENCES election_groups(id) ON DELETE CASCADE NOT NULL,
   party_id SMALLINT REFERENCES parties(id) ON DELETE SET NULL,
+
+  -- Role of the reporter ('polling_agent', 'ward_election_supervisor', 'lga_election_supervisor', 'state_election_supervisor')
+  role_type VARCHAR(50) NOT NULL DEFAULT 'polling_agent' CHECK (role_type IN ('polling_agent', 'ward_election_supervisor', 'lga_election_supervisor', 'state_election_supervisor')),
   user_id BIGINT REFERENCES users(id) ON DELETE CASCADE NOT NULL,
+
+  -- Geographic Hierarchy (Polling Unit's Location)
   state_id SMALLINT REFERENCES c_states(id) ON DELETE SET NULL,
   lga_id INT REFERENCES lgas(id) ON DELETE SET NULL,
   ward_id INT REFERENCES wards(id) ON DELETE SET NULL,
   senatorial_district_id INT REFERENCES senatorial_districts(id) ON DELETE SET NULL,
   federal_constituency_id INT REFERENCES federal_constituencies(id) ON DELETE SET NULL,
   state_assembly_constituency_id INT REFERENCES state_constituencies(id) ON DELETE SET NULL,
-  polling_unit_id INTEGER REFERENCES polling_units(id) ON DELETE CASCADE NOT NULL,
+  polling_unit_id INTEGER REFERENCES polling_units(id) ON DELETE CASCADE,
   
   -- Status category and option classification
   status_category_id SMALLINT REFERENCES polling_unit_status_categories(id) ON DELETE SET NULL,
@@ -85,25 +91,25 @@ CREATE TABLE IF NOT EXISTS polling_unit_updates (
 
 CREATE INDEX idx_pu_updates_assignment ON polling_unit_updates(assignment_id);
 
--- Stateful polling unit issues (tracks active issues, start/end downtime, resolution)
+-- Stateful issues (tracks active issues, start/end downtime, resolution)
 CREATE TABLE IF NOT EXISTS polling_unit_with_issues (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   update_id BIGINT REFERENCES polling_unit_updates(id) ON DELETE SET NULL,
+  role_type VARCHAR(50) NOT NULL DEFAULT 'polling_agent' CHECK (role_type IN ('polling_agent', 'ward_election_supervisor', 'lga_election_supervisor', 'state_election_supervisor')),
   election_group_id INT REFERENCES election_groups(id) ON DELETE CASCADE NOT NULL,
   party_id SMALLINT REFERENCES parties(id) ON DELETE SET NULL,
   user_id BIGINT REFERENCES users(id) ON DELETE CASCADE NOT NULL,
-  assignment_id BIGINT REFERENCES polling_unit_assignments(id) ON DELETE CASCADE NOT NULL,
   state_id SMALLINT REFERENCES c_states(id) ON DELETE SET NULL,
   lga_id INT REFERENCES lgas(id) ON DELETE SET NULL,
   ward_id INT REFERENCES wards(id) ON DELETE SET NULL,
   senatorial_district_id INT REFERENCES senatorial_districts(id) ON DELETE SET NULL,
   federal_constituency_id INT REFERENCES federal_constituencies(id) ON DELETE SET NULL,
   state_assembly_constituency_id INT REFERENCES state_constituencies(id) ON DELETE SET NULL,
-  polling_unit_id INTEGER REFERENCES polling_units(id) ON DELETE CASCADE NOT NULL,
-  
+  polling_unit_id INTEGER REFERENCES polling_units(id) ON DELETE CASCADE,
+
   issue_category_id SMALLINT REFERENCES polling_unit_issue_categories(id) ON DELETE RESTRICT NOT NULL,
   issue_option_id SMALLINT REFERENCES polling_unit_issue_options(id) ON DELETE RESTRICT NOT NULL,
-  
+
   is_active BOOLEAN DEFAULT TRUE NOT NULL,
   time_issue_started TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   time_issue_ended TIMESTAMPTZ,

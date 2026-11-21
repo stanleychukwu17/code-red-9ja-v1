@@ -1,5 +1,6 @@
 -- name: CreatePollingUnitUpdate :one
 INSERT INTO polling_unit_updates (
+  role_type,
   assignment_id,
   user_id,
   polling_unit_id,
@@ -22,7 +23,7 @@ INSERT INTO polling_unit_updates (
   accuracy_meters,
   created_at
 ) VALUES (
-  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21,
   COALESCE(sqlc.narg(created_at), NOW())
 ) RETURNING *;
 
@@ -53,10 +54,10 @@ WHERE id = $1;
 -- name: CreatePollingUnitIssue :one
 INSERT INTO polling_unit_with_issues (
   update_id,
+  role_type,
   election_group_id,
   party_id,
   user_id,
-  assignment_id,
   state_id,
   lga_id,
   ward_id,
@@ -99,7 +100,7 @@ ORDER BY pui.id DESC;
 
 -- name: ListPollingUnitUpdates :many
 SELECT 
-  pu.id, pu.assignment_id, pu.user_id, pu.polling_unit_id, pu.election_group_id, pu.party_id, 
+  pu.id, pu.role_type, pu.assignment_id, pu.user_id, pu.polling_unit_id, pu.election_group_id, pu.party_id, 
   pu.state_id, pu.lga_id, pu.ward_id, pu.senatorial_district_id, pu.federal_constituency_id, 
   pu.state_assembly_constituency_id, pu.status_category_id, pu.status_option_id,
   pu.has_issues, pu.title, pu.message, pu.has_media,
@@ -122,7 +123,8 @@ LEFT JOIN lgas l ON pu.lga_id = l.id
 LEFT JOIN polling_unit_status_categories sc ON pu.status_category_id = sc.id
 LEFT JOIN polling_unit_status_options so ON pu.status_option_id = so.id
 WHERE 
-  (sqlc.narg('election_group_id')::integer IS NULL OR pu.election_group_id = sqlc.narg('election_group_id'))
+  (sqlc.narg('role_type')::varchar IS NULL OR pu.role_type = sqlc.narg('role_type'))
+  AND (sqlc.narg('election_group_id')::integer IS NULL OR pu.election_group_id = sqlc.narg('election_group_id'))
   AND (sqlc.narg('party_id')::smallint IS NULL OR pu.party_id = sqlc.narg('party_id'))
   AND (sqlc.narg('polling_unit_id')::int IS NULL OR pu.polling_unit_id = sqlc.narg('polling_unit_id'))
   AND (sqlc.narg('user_id')::bigint IS NULL OR pu.user_id = sqlc.narg('user_id'))

@@ -34,10 +34,7 @@ export function useAgentDutyEligibility(options: UseAgentDutyEligibilityOptions 
 	// Determine eligibility & error message
 	let errorMessage: string | null = null;
 	if (!hasAssignment && !isAssignmentsLoading) {
-		errorMessage =
-			roleType === "supervisor"
-				? "No active supervisor assignment detected."
-				: "No active polling unit assignment detected.";
+		errorMessage = roleType === "supervisor" ? "No active supervisor assignment detected." : "No active polling unit assignment detected.";
 	} else if (isElectionMismatch) {
 		errorMessage = "Active election does not match your assigned duty election.";
 	} else if (!electionDay) {

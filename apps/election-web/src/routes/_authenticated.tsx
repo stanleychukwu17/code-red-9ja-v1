@@ -20,7 +20,6 @@ import { updateSiteState } from "@/redux/slice/siteSlice";
 import { updateAuthState } from "@/redux/slice/authSlice";
 import { logoutUser, checkIfRefreshTokenInCookie } from "#/lib/server/auth/auth";
 import { APP_URL } from "#/lib/config";
-import { useAssignments } from "#/hooks/useAssignments";
 import LoadElectionSession from "#/components/LoadElectionSession";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -102,7 +101,6 @@ const APP_SIDEBAR_ITEMS: AppSidebarItem[] = [
 function AuthenticatedRoutes() {
   const [mounted, setMounted] = useState(false);
   const { userDetails, sitePreference: initialSitePreference } = Route.useRouteContext();
-  const { supervisorAssignment } = useAssignments();
   const dispatch = useAppDispatch();
   const reduxSitePreference = useAppSelector((state) => state.site);
 
@@ -132,12 +130,6 @@ function AuthenticatedRoutes() {
     dispatch(updateSiteState({ sideBarState }));
   };
 
-  const sidebarItems = supervisorAssignment
-    ? APP_SIDEBAR_ITEMS.map((item) =>
-      item.id === "give-update" ? { ...item, href: APP_URL.supervisorUpdate } : item,
-    )
-    : APP_SIDEBAR_ITEMS;
-
   return (
     <>
       <LoadElectionSession />
@@ -150,7 +142,7 @@ function AuthenticatedRoutes() {
         <AppSidebarShell
           defaultOpen={isExpanded}
           userDetails={userDetails}
-          items={sidebarItems}
+          items={APP_SIDEBAR_ITEMS}
           onLogout={handleLogout}
           onSidebarStateChange={handleSidebarStateChange}
           homePageUrl={APP_URL.home}

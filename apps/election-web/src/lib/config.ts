@@ -23,7 +23,6 @@ export const APP_URL = {
   },
   home: "/",
   giveUpdate: "/give-update",
-  supervisorUpdate: "/supervisor-update",
   applications: "/applications",
   team: "/team",
   campaignGroups: "/campaign-groups",
@@ -231,7 +230,6 @@ export const API_URL = {
 
   pollingUnits: `${api}/polling-units`,
   pollingUnitUpdates: `${api}/polling-unit-updates`,
-  supervisorUpdates: `${api}/supervisor-updates`,
   pollingUnitIssues: (pollingUnitId: number | string) =>
     `${api}/polling-unit-updates/issues?polling_unit_id=${pollingUnitId}`,
   pollingUnitById: (id: string | number) => `${api}/polling-units/${id}`,

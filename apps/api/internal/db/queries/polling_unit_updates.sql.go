@@ -14,10 +14,10 @@ import (
 const createPollingUnitIssue = `-- name: CreatePollingUnitIssue :one
 INSERT INTO polling_unit_with_issues (
   update_id,
+  role_type,
   election_group_id,
   party_id,
   user_id,
-  assignment_id,
   state_id,
   lga_id,
   ward_id,
@@ -32,22 +32,22 @@ INSERT INTO polling_unit_with_issues (
 ) VALUES (
   $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, true,
   COALESCE($15, NOW())
-) RETURNING id, update_id, election_group_id, party_id, user_id, assignment_id, state_id, lga_id, ward_id, senatorial_district_id, federal_constituency_id, state_assembly_constituency_id, polling_unit_id, issue_category_id, issue_option_id, is_active, time_issue_started, time_issue_ended, resolution_notes
+) RETURNING id, update_id, role_type, election_group_id, party_id, user_id, state_id, lga_id, ward_id, senatorial_district_id, federal_constituency_id, state_assembly_constituency_id, polling_unit_id, issue_category_id, issue_option_id, is_active, time_issue_started, time_issue_ended, resolution_notes
 `
 
 type CreatePollingUnitIssueParams struct {
 	UpdateID                    pgtype.Int8 `json:"update_id"`
+	RoleType                    string      `json:"role_type"`
 	ElectionGroupID             int32       `json:"election_group_id"`
 	PartyID                     pgtype.Int2 `json:"party_id"`
 	UserID                      int64       `json:"user_id"`
-	AssignmentID                int64       `json:"assignment_id"`
 	StateID                     pgtype.Int2 `json:"state_id"`
 	LgaID                       pgtype.Int4 `json:"lga_id"`
 	WardID                      pgtype.Int4 `json:"ward_id"`
 	SenatorialDistrictID        pgtype.Int4 `json:"senatorial_district_id"`
 	FederalConstituencyID       pgtype.Int4 `json:"federal_constituency_id"`
 	StateAssemblyConstituencyID pgtype.Int4 `json:"state_assembly_constituency_id"`
-	PollingUnitID               int32       `json:"polling_unit_id"`
+	PollingUnitID               pgtype.Int4 `json:"polling_unit_id"`
 	IssueCategoryID             int16       `json:"issue_category_id"`
 	IssueOptionID               int16       `json:"issue_option_id"`
 	TimeIssueStarted            interface{} `json:"time_issue_started"`
@@ -56,10 +56,10 @@ type CreatePollingUnitIssueParams struct {
 func (q *Queries) CreatePollingUnitIssue(ctx context.Context, arg CreatePollingUnitIssueParams) (PollingUnitWithIssue, error) {
 	row := q.db.QueryRow(ctx, createPollingUnitIssue,
 		arg.UpdateID,
+		arg.RoleType,
 		arg.ElectionGroupID,
 		arg.PartyID,
 		arg.UserID,
-		arg.AssignmentID,
 		arg.StateID,
 		arg.LgaID,
 		arg.WardID,
@@ -75,10 +75,10 @@ func (q *Queries) CreatePollingUnitIssue(ctx context.Context, arg CreatePollingU
 	err := row.Scan(
 		&i.ID,
 		&i.UpdateID,
+		&i.RoleType,
 		&i.ElectionGroupID,
 		&i.PartyID,
 		&i.UserID,
-		&i.AssignmentID,
 		&i.StateID,
 		&i.LgaID,
 		&i.WardID,
@@ -98,6 +98,7 @@ func (q *Queries) CreatePollingUnitIssue(ctx context.Context, arg CreatePollingU
 
 const createPollingUnitUpdate = `-- name: CreatePollingUnitUpdate :one
 INSERT INTO polling_unit_updates (
+  role_type,
   assignment_id,
   user_id,
   polling_unit_id,
@@ -120,15 +121,16 @@ INSERT INTO polling_unit_updates (
   accuracy_meters,
   created_at
 ) VALUES (
-  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
-  COALESCE($21, NOW())
-) RETURNING id, assignment_id, election_group_id, party_id, user_id, state_id, lga_id, ward_id, senatorial_district_id, federal_constituency_id, state_assembly_constituency_id, polling_unit_id, status_category_id, status_option_id, has_issues, title, message, has_media, latitude, longitude, accuracy_meters, created_at, updated_at
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21,
+  COALESCE($22, NOW())
+) RETURNING id, assignment_id, election_group_id, party_id, role_type, user_id, state_id, lga_id, ward_id, senatorial_district_id, federal_constituency_id, state_assembly_constituency_id, polling_unit_id, status_category_id, status_option_id, has_issues, title, message, has_media, latitude, longitude, accuracy_meters, created_at, updated_at
 `
 
 type CreatePollingUnitUpdateParams struct {
-	AssignmentID                int64         `json:"assignment_id"`
+	RoleType                    string        `json:"role_type"`
+	AssignmentID                pgtype.Int8   `json:"assignment_id"`
 	UserID                      int64         `json:"user_id"`
-	PollingUnitID               int32         `json:"polling_unit_id"`
+	PollingUnitID               pgtype.Int4   `json:"polling_unit_id"`
 	ElectionGroupID             int32         `json:"election_group_id"`
 	PartyID                     pgtype.Int2   `json:"party_id"`
 	StateID                     pgtype.Int2   `json:"state_id"`
@@ -151,6 +153,7 @@ type CreatePollingUnitUpdateParams struct {
 
 func (q *Queries) CreatePollingUnitUpdate(ctx context.Context, arg CreatePollingUnitUpdateParams) (PollingUnitUpdate, error) {
 	row := q.db.QueryRow(ctx, createPollingUnitUpdate,
+		arg.RoleType,
 		arg.AssignmentID,
 		arg.UserID,
 		arg.PollingUnitID,
@@ -179,6 +182,7 @@ func (q *Queries) CreatePollingUnitUpdate(ctx context.Context, arg CreatePolling
 		&i.AssignmentID,
 		&i.ElectionGroupID,
 		&i.PartyID,
+		&i.RoleType,
 		&i.UserID,
 		&i.StateID,
 		&i.LgaID,
@@ -299,7 +303,7 @@ ORDER BY pui.id DESC
 type ListActivePollingUnitIssuesRow struct {
 	ID               int64              `json:"id"`
 	UpdateID         pgtype.Int8        `json:"update_id"`
-	PollingUnitID    int32              `json:"polling_unit_id"`
+	PollingUnitID    pgtype.Int4        `json:"polling_unit_id"`
 	IssueCategoryID  int16              `json:"issue_category_id"`
 	IssueOptionID    int16              `json:"issue_option_id"`
 	IsActive         bool               `json:"is_active"`
@@ -308,7 +312,7 @@ type ListActivePollingUnitIssuesRow struct {
 	IssueName        string             `json:"issue_name"`
 }
 
-func (q *Queries) ListActivePollingUnitIssues(ctx context.Context, pollingUnitID int32) ([]ListActivePollingUnitIssuesRow, error) {
+func (q *Queries) ListActivePollingUnitIssues(ctx context.Context, pollingUnitID pgtype.Int4) ([]ListActivePollingUnitIssuesRow, error) {
 	rows, err := q.db.Query(ctx, listActivePollingUnitIssues, pollingUnitID)
 	if err != nil {
 		return nil, err
@@ -353,7 +357,7 @@ type ListAssignmentUpdatesCoordinatesRow struct {
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 }
 
-func (q *Queries) ListAssignmentUpdatesCoordinates(ctx context.Context, assignmentID int64) ([]ListAssignmentUpdatesCoordinatesRow, error) {
+func (q *Queries) ListAssignmentUpdatesCoordinates(ctx context.Context, assignmentID pgtype.Int8) ([]ListAssignmentUpdatesCoordinatesRow, error) {
 	rows, err := q.db.Query(ctx, listAssignmentUpdatesCoordinates, assignmentID)
 	if err != nil {
 		return nil, err
@@ -418,7 +422,7 @@ func (q *Queries) ListMediaByUpdateIDs(ctx context.Context, updateIds []int64) (
 
 const listPollingUnitUpdates = `-- name: ListPollingUnitUpdates :many
 SELECT 
-  pu.id, pu.assignment_id, pu.user_id, pu.polling_unit_id, pu.election_group_id, pu.party_id, 
+  pu.id, pu.role_type, pu.assignment_id, pu.user_id, pu.polling_unit_id, pu.election_group_id, pu.party_id, 
   pu.state_id, pu.lga_id, pu.ward_id, pu.senatorial_district_id, pu.federal_constituency_id, 
   pu.state_assembly_constituency_id, pu.status_category_id, pu.status_option_id,
   pu.has_issues, pu.title, pu.message, pu.has_media,
@@ -441,25 +445,27 @@ LEFT JOIN lgas l ON pu.lga_id = l.id
 LEFT JOIN polling_unit_status_categories sc ON pu.status_category_id = sc.id
 LEFT JOIN polling_unit_status_options so ON pu.status_option_id = so.id
 WHERE 
-  ($1::integer IS NULL OR pu.election_group_id = $1)
-  AND ($2::smallint IS NULL OR pu.party_id = $2)
-  AND ($3::int IS NULL OR pu.polling_unit_id = $3)
-  AND ($4::bigint IS NULL OR pu.user_id = $4)
-  AND ($5::smallint IS NULL OR pu.state_id = $5)
-  AND ($6::int IS NULL OR pu.lga_id = $6)
-  AND ($7::int IS NULL OR pu.ward_id = $7)
-  AND ($8::int IS NULL OR pu.senatorial_district_id = $8)
-  AND ($9::int IS NULL OR pu.federal_constituency_id = $9)
-  AND ($10::int IS NULL OR pu.state_assembly_constituency_id = $10)
-  AND ($11::smallint IS NULL OR pu.status_category_id = $11)
-  AND ($12::boolean IS NULL OR pu.has_issues = $12)
-  AND ($13::boolean IS NULL OR pu.has_media = $13)
-  AND pu.id < $14
+  ($1::varchar IS NULL OR pu.role_type = $1)
+  AND ($2::integer IS NULL OR pu.election_group_id = $2)
+  AND ($3::smallint IS NULL OR pu.party_id = $3)
+  AND ($4::int IS NULL OR pu.polling_unit_id = $4)
+  AND ($5::bigint IS NULL OR pu.user_id = $5)
+  AND ($6::smallint IS NULL OR pu.state_id = $6)
+  AND ($7::int IS NULL OR pu.lga_id = $7)
+  AND ($8::int IS NULL OR pu.ward_id = $8)
+  AND ($9::int IS NULL OR pu.senatorial_district_id = $9)
+  AND ($10::int IS NULL OR pu.federal_constituency_id = $10)
+  AND ($11::int IS NULL OR pu.state_assembly_constituency_id = $11)
+  AND ($12::smallint IS NULL OR pu.status_category_id = $12)
+  AND ($13::boolean IS NULL OR pu.has_issues = $13)
+  AND ($14::boolean IS NULL OR pu.has_media = $14)
+  AND pu.id < $15
 ORDER BY pu.id DESC
-LIMIT $15
+LIMIT $16
 `
 
 type ListPollingUnitUpdatesParams struct {
+	RoleType                    pgtype.Text `json:"role_type"`
 	ElectionGroupID             pgtype.Int4 `json:"election_group_id"`
 	PartyID                     pgtype.Int2 `json:"party_id"`
 	PollingUnitID               pgtype.Int4 `json:"polling_unit_id"`
@@ -479,9 +485,10 @@ type ListPollingUnitUpdatesParams struct {
 
 type ListPollingUnitUpdatesRow struct {
 	ID                          int64              `json:"id"`
-	AssignmentID                int64              `json:"assignment_id"`
+	RoleType                    string             `json:"role_type"`
+	AssignmentID                pgtype.Int8        `json:"assignment_id"`
 	UserID                      int64              `json:"user_id"`
-	PollingUnitID               int32              `json:"polling_unit_id"`
+	PollingUnitID               pgtype.Int4        `json:"polling_unit_id"`
 	ElectionGroupID             int32              `json:"election_group_id"`
 	PartyID                     pgtype.Int2        `json:"party_id"`
 	StateID                     pgtype.Int2        `json:"state_id"`
@@ -514,6 +521,7 @@ type ListPollingUnitUpdatesRow struct {
 
 func (q *Queries) ListPollingUnitUpdates(ctx context.Context, arg ListPollingUnitUpdatesParams) ([]ListPollingUnitUpdatesRow, error) {
 	rows, err := q.db.Query(ctx, listPollingUnitUpdates,
+		arg.RoleType,
 		arg.ElectionGroupID,
 		arg.PartyID,
 		arg.PollingUnitID,
@@ -539,6 +547,7 @@ func (q *Queries) ListPollingUnitUpdates(ctx context.Context, arg ListPollingUni
 		var i ListPollingUnitUpdatesRow
 		if err := rows.Scan(
 			&i.ID,
+			&i.RoleType,
 			&i.AssignmentID,
 			&i.UserID,
 			&i.PollingUnitID,

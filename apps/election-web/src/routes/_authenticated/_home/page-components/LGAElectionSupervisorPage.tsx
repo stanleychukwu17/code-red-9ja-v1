@@ -1,5 +1,6 @@
 import { useElection } from "#/hooks/useElection";
 import { useAssignments } from "#/hooks/useAssignments";
+import { APP_URL } from "#/lib/config";
 import { useQuery } from "@tanstack/react-query";
 import { getSingleLgaStats } from "#/lib/server/election_stats";
 import { Button } from "@repo/ui/components/button";
@@ -255,7 +256,7 @@ export function LGAElectionSupervisorPage() {
         {/* Emergency incident report FAB */}
         {daysLeft === 0 && (
           <GiveUpdateFloatingButton
-            onClick={() => navigate({ to: "/supervisor-update" as any })}
+            onClick={() => navigate({ to: APP_URL.giveUpdate })}
           />
         )}
       </HomeBody>

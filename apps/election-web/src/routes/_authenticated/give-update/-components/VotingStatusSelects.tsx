@@ -72,7 +72,7 @@ export function VotingStatusSelects({
       {activeCategory?.options.length > 0 ? (
         <div className="space-y-1.5">
           <label className="text-xs sm:text-sm font-semibold text-foreground">
-            More on voting status
+            More on {label.toLowerCase()}
           </label>
           <button
             type="button"
@@ -80,8 +80,7 @@ export function VotingStatusSelects({
             className="w-full bg-[#F3F4F8] dark:bg-muted/40 border-0 rounded-xl px-4 py-3.5 text-sm font-semibold text-foreground outline-none cursor-pointer flex items-center justify-between hover:bg-[#EBEDF2] dark:hover:bg-muted/60 transition"
           >
             <span
-              className={`truncate ${activeOption ? "text-foreground" : "text-muted-foreground font-normal"
-                }`}
+              className={`truncate ${activeOption ? "text-foreground" : "text-muted-foreground font-normal"}`}
             >
               {activeOption?.name || "Select detail (optional)"}
             </span>
@@ -97,7 +96,7 @@ export function VotingStatusSelects({
         <DialogContent className="max-w-md w-[92vw] p-5 rounded-2xl bg-card border border-border space-y-4">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-foreground">
-              Select Voting Status
+              {forWho === "supervisor" ? "Select Update Category" : "Select Voting Status"}
             </DialogTitle>
           </DialogHeader>
 

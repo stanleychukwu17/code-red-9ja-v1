@@ -5,6 +5,8 @@ import { PageWrapper } from "#/components/Wrappers";
 import { useAgentDutyEligibility } from "#/hooks/useAgentDutyEligibility";
 import { useAssignments } from "#/hooks/useAssignments";
 import { useGeolocation } from "#/hooks/useGeolocation";
+import { getPollingUnits } from "#/lib/server/polling_units";
+import { useQuery } from "@tanstack/react-query";
 import { VotingStatusSelects } from "./-components/VotingStatusSelects";
 import { VotingIssueSelects } from "./-components/VotingIssueSelects";
 import { UpdateMessageInputs } from "./-components/UpdateMessageInputs";
@@ -35,13 +37,10 @@ export const Route = createFileRoute("/_authenticated/give-update/")({
 
 function GiveUpdate() {
   const navigate = useNavigate();
-  const { supervisorAssignment, isLoading: assignmentsLoading } = useAssignments();
-
-  useEffect(() => {
-    if (!assignmentsLoading && supervisorAssignment) {
-      navigate({ to: APP_URL.supervisorUpdate, replace: true });
-    }
-  }, [assignmentsLoading, supervisorAssignment, navigate]);
+  const { supervisorAssignment } = useAssignments();
+  const isSupervisor = !!supervisorAssignment;
+  const currentSupervisorAssignment = supervisorAssignment?.data;
+  const supervisorRoleType = supervisorAssignment?.type;
 
   // Active election schedule context and duty eligibility
   const {
@@ -52,14 +51,37 @@ function GiveUpdate() {
     daysLeft,
     pollingUnitAssignment,
     selectedElectionGroup,
-  } = useAgentDutyEligibility({ dutyName: "Updates" });
+  } = useAgentDutyEligibility({
+    dutyName: isSupervisor ? "Supervisor updates" : "Updates",
+    roleType: isSupervisor ? "supervisor" : "agent",
+  });
 
   // Offline outbox queue manager
   const { isOnline, pendingCount, triggerSync } = useOfflineOutbox();
 
-  // Primary status category (defaults to 'Active' - id 3, sub-option is optional)
-  const [selectedStatusCategoryId, setSelectedStatusCategoryId] = useState<number>(3);
+  // Primary status category (defaults to 'Active' [3] for agents, 'Collation Centre' [9] for supervisors)
+  const [selectedStatusCategoryId, setSelectedStatusCategoryId] = useState<number>(isSupervisor ? 9 : 3);
   const [selectedStatusOptionId, setSelectedStatusOptionId] = useState<number | undefined>(undefined);
+
+  useEffect(() => {
+    setSelectedStatusCategoryId(isSupervisor ? 9 : 3);
+    setSelectedStatusOptionId(undefined);
+  }, [isSupervisor]);
+
+  // Optional Polling Unit tag for supervisors (hidden for now; flip to true to re-enable)
+  const SHOW_SUPERVISOR_PU_TAG = false;
+  const [selectedPollingUnitId, setSelectedPollingUnitId] = useState<number | undefined>(undefined);
+  const wardId = currentSupervisorAssignment?.ward_id;
+  const lgaId = currentSupervisorAssignment?.lga_id;
+
+  const { data: puData } = useQuery({
+    queryKey: ["supervisorPUs", wardId, lgaId],
+    queryFn: () => getPollingUnits({ data: { ward_id: wardId, lga_id: lgaId } }),
+    enabled: SHOW_SUPERVISOR_PU_TAG && isSupervisor && Boolean(wardId || lgaId),
+    staleTime: Infinity,
+  });
+
+  const pollingUnitsList = puData?.data?.polling_units || [];
 
   // Active issues loaded from local cache / state
   const [activeIssuesList, setActiveIssuesList] = useState<CachedActiveIssue[]>([]);
@@ -148,10 +170,12 @@ function GiveUpdate() {
       // Build outbox item
       const outboxItem: OutboxUpdateItem = {
         id: `update_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
-        pollingUnitId: pollingUnitAssignment.polling_unit_id,
-        electionGroupId: pollingUnitAssignment.election_group_id,
-        assignmentId: pollingUnitAssignment.id,
-        partyId: pollingUnitAssignment.party_id,
+        pollingUnitId: isSupervisor ? selectedPollingUnitId : pollingUnitAssignment?.polling_unit_id,
+        electionGroupId: isSupervisor
+          ? selectedElectionGroup?.id ?? currentSupervisorAssignment?.election_group_id
+          : pollingUnitAssignment.election_group_id,
+        assignmentId: isSupervisor ? 0 : pollingUnitAssignment.id,
+        partyId: isSupervisor ? currentSupervisorAssignment?.party_id : pollingUnitAssignment.party_id,
         statusCategoryId: selectedStatusCategoryId,
         statusOptionId: selectedStatusOptionId,
         hasIssues,
@@ -159,7 +183,7 @@ function GiveUpdate() {
         existingIssueIds: isExistingIssue && existingIssueId ? [existingIssueId] : undefined,
         newIssueOptionIds: isNewIssue ? selectedIssueOptionIds : undefined,
         title: title.trim() || undefined,
-        message: message.trim() || title.trim() || "Polling unit status update",
+        message: message.trim() || title.trim() || (isSupervisor ? "Supervisor status update" : "Polling unit status update"),
         latitude: geoCoords.latitude,
         longitude: geoCoords.longitude,
         accuracyMeters: geoCoords.accuracyMeters,
@@ -229,11 +253,13 @@ function GiveUpdate() {
           onRequestLocation={requestLocation}
         />
 
-        {/* 30-Minute Interval Status & Daily Updates Progress */}
-        <IntervalStatusBanner
-          updatesCount={pollingUnitAssignment?.updates_count}
-          lastUpdateAt={pollingUnitAssignment?.last_update_at}
-        />
+        {/* 30-Minute Interval Status & Daily Updates Progress (agents only) */}
+        {!isSupervisor && (
+          <IntervalStatusBanner
+            updatesCount={pollingUnitAssignment?.updates_count}
+            lastUpdateAt={pollingUnitAssignment?.last_update_at}
+          />
+        )}
 
         {/* Title header with lime accent underline */}
         <div>
@@ -249,6 +275,8 @@ function GiveUpdate() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Voting status and contextual sub-options */}
           <VotingStatusSelects
+            forWho={isSupervisor ? "supervisor" : "agent"}
+            label={isSupervisor ? "Update category" : "Voting status"}
             selectedStatusCategoryId={selectedStatusCategoryId}
             selectedStatusOptionId={selectedStatusOptionId}
             onStatusCategoryChange={setSelectedStatusCategoryId}
@@ -257,6 +285,7 @@ function GiveUpdate() {
 
           {/* Any ongoing issues & issue detail selection */}
           <VotingIssueSelects
+            forWho={isSupervisor ? "supervisor" : "agent"}
             issueActionValue={issueActionValue}
             onIssueActionValueChange={setIssueActionValue}
             selectedIssueOptionIds={selectedIssueOptionIds}
@@ -264,6 +293,36 @@ function GiveUpdate() {
             activeIssuesList={activeIssuesList}
           />
         </div>
+
+        {/* Optional Polling Unit Tag (supervisors only) */}
+        {SHOW_SUPERVISOR_PU_TAG && isSupervisor && pollingUnitsList.length > 0 && (
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex justify-between">
+              <span>Specific Polling Unit (Optional)</span>
+              {selectedPollingUnitId && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedPollingUnitId(undefined)}
+                  className="text-xs text-purple-600 underline hover:text-purple-700 cursor-pointer "
+                >
+                  Clear Selection
+                </button>
+              )}
+            </label>
+            <select
+              value={selectedPollingUnitId || ""}
+              onChange={(e) => setSelectedPollingUnitId(e.target.value ? Number(e.target.value) : undefined)}
+              className="w-full bg-background border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-600"
+            >
+              <option value="">General (Area-wide / Entire {supervisorRoleType === "ward" ? "Ward" : "LGA"})</option>
+              {pollingUnitsList.map((pu: any) => (
+                <option key={pu.id} value={pu.id}>
+                  {pu.pu_code ? `[${pu.pu_code}] ` : ""}{pu.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {/* Update Headline & Message Inputs */}
         <UpdateMessageInputs
@@ -327,7 +386,7 @@ export function ElectionDayBanner({ electionDay, daysLeft }: { electionDay?: boo
 /**
  * Banner displayed when user is offline or has pending outbox updates to sync.
  */
-function OfflineSyncBanner({ isOnline, pendingCount, onSync }: { isOnline: boolean; pendingCount: number; onSync: () => void }) {
+export function OfflineSyncBanner({ isOnline, pendingCount, onSync }: { isOnline: boolean; pendingCount: number; onSync: () => void }) {
   if (isOnline && pendingCount === 0) return null;
 
   return (

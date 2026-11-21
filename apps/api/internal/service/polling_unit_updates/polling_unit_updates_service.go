@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"free9ja/api/internal/constants"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/utils"
@@ -49,6 +50,7 @@ type MediaItem struct {
 }
 
 type CreateUpdateInput struct {
+	RoleType                    string             `json:"role_type,omitempty"`
 	UserID                      int64              `json:"user_id"`
 	AssignmentID                int64              `json:"assignment_id"`
 	PollingUnitID               int32              `json:"polling_unit_id"`
@@ -86,7 +88,12 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 	}
 
 	if input.StateID == 0 {
-		return queries.PollingUnitUpdate{}, errors.New("missing resolved location details for polling unit")
+		return queries.PollingUnitUpdate{}, errors.New("missing resolved location details")
+	}
+
+	roleType := input.RoleType
+	if roleType == "" {
+		roleType = constants.RolePollingAgent
 	}
 
 	if input.StatusCategoryID == nil || *input.StatusCategoryID <= 0 {
@@ -129,11 +136,15 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 		createdAtPg = pgtype.Timestamptz{Time: input.CreatedAt.UTC(), Valid: true}
 	}
 
+	assignmentIDPg := pgtype.Int8{Int64: input.AssignmentID, Valid: input.AssignmentID > 0}
+	pollingUnitIDPg := pgtype.Int4{Int32: input.PollingUnitID, Valid: input.PollingUnitID > 0}
+
 	// Insert the update
 	update, err := qtx.CreatePollingUnitUpdate(ctx, queries.CreatePollingUnitUpdateParams{
-		AssignmentID:                input.AssignmentID,
+		RoleType:                    roleType,
+		AssignmentID:                assignmentIDPg,
 		UserID:                      user.ID,
-		PollingUnitID:               input.PollingUnitID,
+		PollingUnitID:               pollingUnitIDPg,
 		ElectionGroupID:             input.ElectionGroupID,
 		PartyID:                     partyID,
 		StateID:                     utils.PgInt2FromPositive(input.StateID),
@@ -206,17 +217,17 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 	for _, issue := range validIssues {
 		_, err = qtx.CreatePollingUnitIssue(ctx, queries.CreatePollingUnitIssueParams{
 			UpdateID:                    utils.PgInt8FromInt64(update.ID),
+			RoleType:                    roleType,
 			ElectionGroupID:             input.ElectionGroupID,
 			PartyID:                     partyID,
 			UserID:                      user.ID,
-			AssignmentID:                input.AssignmentID,
 			StateID:                     utils.PgInt2FromPositive(input.StateID),
 			LgaID:                       utils.PgInt4FromPositive(input.LgaID),
 			WardID:                      utils.PgInt4FromPositive(input.WardID),
 			SenatorialDistrictID:        input.SenatorialDistrictID,
 			FederalConstituencyID:       input.FederalConstituencyID,
 			StateAssemblyConstituencyID: input.StateAssemblyConstituencyID,
-			PollingUnitID:               input.PollingUnitID,
+			PollingUnitID:               pollingUnitIDPg,
 			IssueCategoryID:             issue.categoryID,
 			IssueOptionID:               issue.optionID,
 			TimeIssueStarted:            effectiveTimePg,
@@ -231,54 +242,90 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 		return queries.PollingUnitUpdate{}, err
 	}
 
-	// Prepare assignment tracking params in case this update triggers a primary election milestone
-	var trackingParams queries.UpdateAssignmentTrackingParams
-	trackingParams.ID = input.AssignmentID
+	if roleType == constants.RolePollingAgent {
+		// Prepare assignment tracking params in case this update triggers a primary election milestone
+		var trackingParams queries.UpdateAssignmentTrackingParams
+		trackingParams.ID = input.AssignmentID
 
-	var milestoneTaskType string  // Target task key for async earnings calculation ("attendance", "election_start", "election_end")
-	shouldUpdateTracking := false // Flips to true only when status matches an official milestone (arrival, start, end)
+		var milestoneTaskType string  // Target task key for async earnings calculation ("attendance", "election_start", "election_end")
+		shouldUpdateTracking := false // Flips to true only when status matches an official milestone (arrival, start, end)
 
-	switch *input.StatusCategoryID {
-	case 1: // Just Arrived -> Attendance milestone (only if not already recorded)
-		if !input.AssignmentArrivedAt.Valid {
-			milestoneTaskType = "attendance"
-			trackingParams.ArrivedAt = effectiveTimePg
-			shouldUpdateTracking = true
+		switch *input.StatusCategoryID {
+		case 1: // Just Arrived -> Attendance milestone (only if not already recorded)
+			if !input.AssignmentArrivedAt.Valid {
+				milestoneTaskType = "attendance"
+				trackingParams.ArrivedAt = effectiveTimePg
+				shouldUpdateTracking = true
+			}
+
+		case 3: // Active -> Election started milestone (only if not already recorded)
+			if !input.AssignmentElectionStartedAt.Valid {
+				milestoneTaskType = "election_start"
+				trackingParams.ElectionStartedAt = effectiveTimePg
+				shouldUpdateTracking = true
+			}
+
+		case 6: // Concluded -> Election ended milestone (only if not already recorded)
+			if !input.AssignmentElectionEndedAt.Valid {
+				milestoneTaskType = "election_end"
+				trackingParams.ElectionEndedAt = effectiveTimePg
+				shouldUpdateTracking = true
+			}
 		}
 
-	case 3: // Active -> Election started milestone (only if not already recorded)
-		if !input.AssignmentElectionStartedAt.Valid {
-			milestoneTaskType = "election_start"
-			trackingParams.ElectionStartedAt = effectiveTimePg
-			shouldUpdateTracking = true
-		}
+		if shouldUpdateTracking {
+			if _, tErr := s.queries.UpdateAssignmentTracking(ctx, trackingParams); tErr != nil {
+				slog.Warn("failed to update assignment tracking for status milestone", "assignmentID", input.AssignmentID, "statusCategoryID", input.StatusCategoryID, "err", tErr)
+			} else {
+				_ = s.rdb.Del(ctx, fmt.Sprintf("%s%d:eg:%d", db.RedisUserPollingUnitAssignment, user.ID, input.ElectionGroupID)).Err()
+			}
 
-	case 6: // Concluded -> Election ended milestone (only if not already recorded)
-		if !input.AssignmentElectionEndedAt.Valid {
-			milestoneTaskType = "election_end"
-			trackingParams.ElectionEndedAt = effectiveTimePg
-			shouldUpdateTracking = true
-		}
-	}
-
-	if shouldUpdateTracking {
-		if _, tErr := s.queries.UpdateAssignmentTracking(ctx, trackingParams); tErr != nil {
-			slog.Warn("failed to update assignment tracking for status milestone", "assignmentID", input.AssignmentID, "statusCategoryID", input.StatusCategoryID, "err", tErr)
+			// Trigger milestone earnings calculation asynchronously
+			_ = s.distributor.DistributeTaskCalculateAgentEarnings(context.Background(), &worker.CalculateAgentEarningsPayload{
+				AssignmentID: input.AssignmentID,
+				TaskType:     milestoneTaskType,
+			})
 		} else {
-			_ = s.rdb.Del(ctx, fmt.Sprintf("%s%d:eg:%d", db.RedisUserPollingUnitAssignment, user.ID, input.ElectionGroupID)).Err()
+			// Routine periodic update: trigger 30-minute interval update earnings asynchronously
+			_ = s.distributor.DistributeTaskCalculateAgentEarnings(context.Background(), &worker.CalculateAgentEarningsPayload{
+				AssignmentID: input.AssignmentID,
+				TaskType:     "updates",
+			})
 		}
-
-		// Trigger milestone earnings calculation asynchronously
-		_ = s.distributor.DistributeTaskCalculateAgentEarnings(context.Background(), &worker.CalculateAgentEarningsPayload{
-			AssignmentID: input.AssignmentID,
-			TaskType:     milestoneTaskType,
-		})
-	} else {
-		// Routine periodic update: trigger 30-minute interval update earnings asynchronously
-		_ = s.distributor.DistributeTaskCalculateAgentEarnings(context.Background(), &worker.CalculateAgentEarningsPayload{
-			AssignmentID: input.AssignmentID,
-			TaskType:     "updates",
-		})
+	} else if *input.StatusCategoryID == 9 && input.StatusOptionID != nil {
+		// Supervisor collation centre milestone tracking (37 = Arrived at Collation Centre, 41 = Collation Concluded)
+		var arrivedAt, completedAt pgtype.Timestamptz
+		switch *input.StatusOptionID {
+		case 37:
+			arrivedAt = effectiveTimePg
+		case 41:
+			completedAt = effectiveTimePg
+		}
+		if arrivedAt.Valid || completedAt.Valid {
+			switch roleType {
+			case constants.RoleWardElectionSupervisor:
+				_, _ = s.queries.UpdateWardSupervisorTracking(ctx, queries.UpdateWardSupervisorTrackingParams{
+					UserID:          user.ID,
+					ElectionGroupID: input.ElectionGroupID,
+					ArrivedAt:       arrivedAt,
+					CompletedAt:     completedAt,
+				})
+			case constants.RoleLgaElectionSupervisor:
+				_, _ = s.queries.UpdateLgaSupervisorTracking(ctx, queries.UpdateLgaSupervisorTrackingParams{
+					UserID:          user.ID,
+					ElectionGroupID: input.ElectionGroupID,
+					ArrivedAt:       arrivedAt,
+					CompletedAt:     completedAt,
+				})
+			case constants.RoleStateElectionSupervisor:
+				_, _ = s.queries.UpdateStateSupervisorTracking(ctx, queries.UpdateStateSupervisorTrackingParams{
+					UserID:          user.ID,
+					ElectionGroupID: input.ElectionGroupID,
+					ArrivedAt:       arrivedAt,
+					CompletedAt:     completedAt,
+				})
+			}
+		}
 	}
 
 	// TODO:(worker): Enqueue taskDistributor job for asynchronous polling unit rollups & caching:
@@ -312,7 +359,7 @@ func (s *Service) ListUpdates(ctx context.Context, params queries.ListPollingUni
 }
 
 func (s *Service) GetActiveIssues(ctx context.Context, pollingUnitID int32) ([]queries.ListActivePollingUnitIssuesRow, error) {
-	return s.queries.ListActivePollingUnitIssues(ctx, pollingUnitID)
+	return s.queries.ListActivePollingUnitIssues(ctx, utils.PgInt4FromInt32(pollingUnitID))
 }
 
 // GetIssueOptionByID retrieves a single issue option by its ID, utilizing Redis cache (1 year TTL).

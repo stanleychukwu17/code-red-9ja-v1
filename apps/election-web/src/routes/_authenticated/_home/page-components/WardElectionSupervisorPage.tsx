@@ -177,7 +177,7 @@ export function WardElectionSupervisorPage() {
         {/* Emergency incident report FAB */}
         {daysLeft === 0 && (
           <GiveUpdateFloatingButton
-            onClick={() => navigate({ to: "/supervisor-update" as any })}
+            onClick={() => navigate({ to: "/give-update" })}
           />
         )}
       </HomeBody>

@@ -406,7 +406,7 @@ func (s *Service) ProcessTaskEarnings(ctx context.Context, params ProcessTaskEar
 // - Updates lacking GPS or submitted outside the PU geo-fence (> 2,000m + device accuracy buffer) receive reduced weight (0.5).
 func (s *Service) computeUpdatesScore(ctx context.Context, asgn queries.GetAssignmentForEarningsRow, targetUpdatesCount float64, intervalMinutes int) float64 {
 	// Fetch all update timestamps and GPS coordinates for this assignment to evaluate interval spacing and geo-fence verification
-	updates, err := s.queries.ListAssignmentUpdatesCoordinates(ctx, asgn.ID)
+	updates, err := s.queries.ListAssignmentUpdatesCoordinates(ctx, utils.PgInt8FromInt64(asgn.ID))
 	if err != nil || len(updates) == 0 {
 		return 0
 	}

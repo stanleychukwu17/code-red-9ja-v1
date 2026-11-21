@@ -3,9 +3,11 @@ package polling_unit_updates
 import (
 	"context"
 	"encoding/json"
+	"free9ja/api/internal/constants"
 	"free9ja/api/internal/db/queries"
 	apimiddleware "free9ja/api/internal/middleware"
 	"free9ja/api/internal/service/polling_unit_updates"
+	supervisorassignmentsservice "free9ja/api/internal/service/supervisor_assignments"
 	"free9ja/api/internal/utils"
 	"math"
 	"net/http"
@@ -30,15 +32,20 @@ type PollingUnitsService interface {
 	GetPollingUnitByID(ctx context.Context, id int32) (queries.PollingUnit, error)
 }
 
+type SupervisorAssignmentsService interface {
+	GetUserSupervisorAssignments(ctx context.Context, userID int64, electionGroupID int32) (*supervisorassignmentsservice.SupervisorAssignmentsResponse, error)
+}
+
 type Handler struct {
 	service             Service
 	assignmentsService  PollingUnitAssignmentsService
+	supervisorService   SupervisorAssignmentsService
 	pollingUnitsService PollingUnitsService
 	utils               *utils.Utils
 }
 
-func NewHandler(s Service, u *utils.Utils, asgnSvc PollingUnitAssignmentsService, puSvc PollingUnitsService) *Handler {
-	return &Handler{service: s, utils: u, assignmentsService: asgnSvc, pollingUnitsService: puSvc}
+func NewHandler(s Service, u *utils.Utils, asgnSvc PollingUnitAssignmentsService, supSvc SupervisorAssignmentsService, puSvc PollingUnitsService) *Handler {
+	return &Handler{service: s, utils: u, assignmentsService: asgnSvc, supervisorService: supSvc, pollingUnitsService: puSvc}
 }
 
 type CreateUpdateRequest struct {
@@ -97,15 +104,84 @@ func (h *Handler) CreateUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verify assignment using Redis cache
-	assignment, err := h.assignmentsService.GetMyAssignment(r.Context(), claims.UserID, req.ElectionGroupID)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to verify assignment: "+err.Error())
-		return
-	}
-	if status, errMsg := validateAssignmentMatch(assignment, req.AssignmentID, req.PollingUnitID); status != 0 {
-		h.utils.RespondError(w, status, errMsg)
-		return
+	var roleType string
+	var partyID *int16
+	var stateID, lgaID, wardID int32
+	var senatorialDistrictID, federalConstituencyID, stateAssemblyConstituencyID pgtype.Int4
+	var assignmentArrivedAt, assignmentStartedAt, assignmentEndedAt pgtype.Timestamptz
+
+	if req.AssignmentID > 0 {
+		// Polling unit agent flow
+		assignment, err := h.assignmentsService.GetMyAssignment(r.Context(), claims.UserID, req.ElectionGroupID)
+		if err != nil {
+			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to verify assignment: "+err.Error())
+			return
+		}
+		if status, errMsg := validateAssignmentMatch(assignment, req.AssignmentID, req.PollingUnitID); status != 0 {
+			h.utils.RespondError(w, status, errMsg)
+			return
+		}
+
+		pu, err := h.pollingUnitsService.GetPollingUnitByID(r.Context(), req.PollingUnitID)
+		if err != nil {
+			h.utils.RespondError(w, http.StatusBadRequest, "Invalid polling unit id: "+err.Error())
+			return
+		}
+
+		roleType = constants.RolePollingAgent
+		partyID = &assignment.PartyID
+		stateID = pu.StateID
+		lgaID = pu.LgaID
+		wardID = pu.WardID
+		senatorialDistrictID = pu.SenatorialDistrictID
+		federalConstituencyID = pu.FederalConstituencyID
+		stateAssemblyConstituencyID = pu.StateConstituencyID
+		assignmentArrivedAt = assignment.ArrivedAt
+		assignmentStartedAt = assignment.ElectionStartedAt
+		assignmentEndedAt = assignment.ElectionEndedAt
+	} else {
+		// Supervisor flow
+		supRes, err := h.supervisorService.GetUserSupervisorAssignments(r.Context(), claims.UserID, req.ElectionGroupID)
+		if err != nil {
+			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to verify supervisor assignment: "+err.Error())
+			return
+		}
+		if supRes != nil {
+			if supRes.WardSupervisor != nil && supRes.WardSupervisor.ID > 0 {
+				roleType = constants.RoleWardElectionSupervisor
+				stateID = int32(supRes.WardSupervisor.StateID)
+				lgaID = supRes.WardSupervisor.LgaID
+				wardID = supRes.WardSupervisor.WardID
+				p := supRes.WardSupervisor.PartyID
+				partyID = &p
+			} else if supRes.LgaSupervisor != nil && supRes.LgaSupervisor.ID > 0 {
+				roleType = constants.RoleLgaElectionSupervisor
+				stateID = int32(supRes.LgaSupervisor.StateID)
+				lgaID = supRes.LgaSupervisor.LgaID
+				p := supRes.LgaSupervisor.PartyID
+				partyID = &p
+			} else if supRes.StateSupervisor != nil && supRes.StateSupervisor.ID > 0 {
+				roleType = constants.RoleStateElectionSupervisor
+				stateID = int32(supRes.StateSupervisor.StateID)
+				p := supRes.StateSupervisor.PartyID
+				partyID = &p
+			}
+		}
+		if roleType == "" {
+			h.utils.RespondError(w, http.StatusForbidden, "You do not have an active assignment for this election")
+			return
+		}
+
+		if req.PollingUnitID > 0 {
+			if pu, puErr := h.pollingUnitsService.GetPollingUnitByID(r.Context(), req.PollingUnitID); puErr == nil {
+				stateID = pu.StateID
+				lgaID = pu.LgaID
+				wardID = pu.WardID
+				senatorialDistrictID = pu.SenatorialDistrictID
+				federalConstituencyID = pu.FederalConstituencyID
+				stateAssemblyConstituencyID = pu.StateConstituencyID
+			}
+		}
 	}
 
 	// Verify election date: updates can only be submitted starting from election day.
@@ -118,13 +194,6 @@ func (h *Handler) CreateUpdate(w http.ResponseWriter, r *http.Request) {
 
 	if err := utils.ValidateElectionReportingWindow(eg.ElectionDate.Time, time.Now(), utils.PostElectionCollationGraceDays); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	// Fetch polling unit details from Redis cache (1 year TTL)
-	pu, err := h.pollingUnitsService.GetPollingUnitByID(r.Context(), req.PollingUnitID)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid polling unit id: "+err.Error())
 		return
 	}
 
@@ -148,19 +217,20 @@ func (h *Handler) CreateUpdate(w http.ResponseWriter, r *http.Request) {
 		clientCreatedAt = req.CreatedAt
 	}
 
-	// Persist the polling unit update
+	// Persist the update
 	update, err := h.service.CreateUpdate(r.Context(), polling_unit_updates.CreateUpdateInput{
+		RoleType:                    roleType,
 		UserID:                      claims.FakeID,
 		PollingUnitID:               req.PollingUnitID,
 		ElectionGroupID:             req.ElectionGroupID,
 		AssignmentID:                req.AssignmentID,
-		PartyID:                     &assignment.PartyID,
-		StateID:                     pu.StateID,
-		LgaID:                       pu.LgaID,
-		WardID:                      pu.WardID,
-		SenatorialDistrictID:        pu.SenatorialDistrictID,
-		FederalConstituencyID:       pu.FederalConstituencyID,
-		StateAssemblyConstituencyID: pu.StateConstituencyID,
+		PartyID:                     partyID,
+		StateID:                     stateID,
+		LgaID:                       lgaID,
+		WardID:                      wardID,
+		SenatorialDistrictID:        senatorialDistrictID,
+		FederalConstituencyID:       federalConstituencyID,
+		StateAssemblyConstituencyID: stateAssemblyConstituencyID,
 		StatusCategoryID:            req.StatusCategoryID,
 		StatusOptionID:              req.StatusOptionID,
 		HasIssues:                   req.HasIssues,
@@ -174,9 +244,9 @@ func (h *Handler) CreateUpdate(w http.ResponseWriter, r *http.Request) {
 		Longitude:                   req.Longitude,
 		AccuracyMeters:              req.AccuracyMeters,
 		CreatedAt:                   clientCreatedAt,
-		AssignmentArrivedAt:         assignment.ArrivedAt,
-		AssignmentElectionStartedAt: assignment.ElectionStartedAt,
-		AssignmentElectionEndedAt:   assignment.ElectionEndedAt,
+		AssignmentArrivedAt:         assignmentArrivedAt,
+		AssignmentElectionStartedAt: assignmentStartedAt,
+		AssignmentElectionEndedAt:   assignmentEndedAt,
 	})
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
