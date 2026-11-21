@@ -878,6 +878,7 @@ type PollingUnitStatusCategory struct {
 	Color       pgtype.Text        `json:"color"`
 	SortOrder   pgtype.Int2        `json:"sort_order"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	ForWho      string             `json:"for_who"`
 }
 
 type PollingUnitStatusOption struct {

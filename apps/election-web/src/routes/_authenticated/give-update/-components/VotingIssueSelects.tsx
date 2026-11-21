@@ -14,6 +14,7 @@ export type VotingIssueSelectsProps = {
   selectedIssueOptionIds: number[];
   onIssueOptionIdsChange: (optionIds: number[]) => void;
   activeIssuesList: ActiveIssueItem[];
+  forWho?: "agent" | "supervisor";
 };
 
 export function VotingIssueSelects({
@@ -22,6 +23,7 @@ export function VotingIssueSelects({
   selectedIssueOptionIds,
   onIssueOptionIdsChange,
   activeIssuesList,
+  forWho = "agent",
 }: VotingIssueSelectsProps) {
   // Modal open states for action dialog and multi-select detail dialog
   const [isActionDialogOpen, setIsActionDialogOpen] = useState(false);
@@ -262,8 +264,11 @@ export function VotingIssueSelects({
           {/* Grouped list of issue categories and options */}
           <div className="overflow-y-auto pr-1 flex-1 my-2 divide-y divide-border">
             {STATIC_ISSUE_CATEGORIES.map((cat) => {
+              const roleOptions = cat.options.filter((o) => (o.forWho ?? "agent") === forWho);
+              if (roleOptions.length === 0) return null;
+
               const isExpanded = expandedCategoryIds.includes(cat.id);
-              const selectedCount = cat.options.filter((o) =>
+              const selectedCount = roleOptions.filter((o) =>
                 selectedIssueOptionIds.includes(o.id),
               ).length;
 
@@ -294,7 +299,7 @@ export function VotingIssueSelects({
                   {/* Expandable options list */}
                   {isExpanded && (
                     <div className="space-y-1.5 pt-2 pb-1">
-                      {cat.options.map((opt) => {
+                      {roleOptions.map((opt) => {
                         const isSelected = selectedIssueOptionIds.includes(opt.id);
 
                         return (

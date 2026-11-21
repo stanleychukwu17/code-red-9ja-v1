@@ -23,6 +23,7 @@ export const APP_URL = {
   },
   home: "/",
   giveUpdate: "/give-update",
+  supervisorUpdate: "/supervisor-update",
   applications: "/applications",
   team: "/team",
   campaignGroups: "/campaign-groups",

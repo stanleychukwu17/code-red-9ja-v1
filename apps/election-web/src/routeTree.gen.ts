@@ -24,7 +24,6 @@ import { Route as AuthenticatedNotificationsIndexRouteImport } from './routes/_a
 import { Route as AuthenticatedGiveUpdateIndexRouteImport } from './routes/_authenticated/give-update/index'
 import { Route as AuthenticatedElectionStartIndexRouteImport } from './routes/_authenticated/election-start/index'
 import { Route as AuthenticatedElectionEndIndexRouteImport } from './routes/_authenticated/election-end/index'
-import { Route as AuthenticatedContactsIndexRouteImport } from './routes/_authenticated/contacts/index'
 import { Route as AuthenticatedCampaignGroupsIndexRouteImport } from './routes/_authenticated/campaign-groups/index'
 import { Route as AuthenticatedApplicationsIndexRouteImport } from './routes/_authenticated/applications/index'
 import { Route as AuthenticatedHomeIndexRouteImport } from './routes/_authenticated/_home/index'
@@ -114,12 +113,6 @@ const AuthenticatedElectionEndIndexRoute =
     path: '/election-end/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
-const AuthenticatedContactsIndexRoute =
-  AuthenticatedContactsIndexRouteImport.update({
-    id: '/contacts/',
-    path: '/contacts/',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
 const AuthenticatedCampaignGroupsIndexRoute =
   AuthenticatedCampaignGroupsIndexRouteImport.update({
     id: '/campaign-groups/',
@@ -160,7 +153,6 @@ export interface FileRoutesByFullPath {
   '/applications/supervisor': typeof AuthenticatedApplicationsSupervisorRoute
   '/applications/': typeof AuthenticatedApplicationsIndexRoute
   '/campaign-groups/': typeof AuthenticatedCampaignGroupsIndexRoute
-  '/contacts/': typeof AuthenticatedContactsIndexRoute
   '/election-end/': typeof AuthenticatedElectionEndIndexRoute
   '/election-start/': typeof AuthenticatedElectionStartIndexRoute
   '/give-update/': typeof AuthenticatedGiveUpdateIndexRoute
@@ -182,7 +174,6 @@ export interface FileRoutesByTo {
   '/': typeof AuthenticatedHomeIndexRoute
   '/applications': typeof AuthenticatedApplicationsIndexRoute
   '/campaign-groups': typeof AuthenticatedCampaignGroupsIndexRoute
-  '/contacts': typeof AuthenticatedContactsIndexRoute
   '/election-end': typeof AuthenticatedElectionEndIndexRoute
   '/election-start': typeof AuthenticatedElectionStartIndexRoute
   '/give-update': typeof AuthenticatedGiveUpdateIndexRoute
@@ -206,7 +197,6 @@ export interface FileRoutesById {
   '/_authenticated/_home/': typeof AuthenticatedHomeIndexRoute
   '/_authenticated/applications/': typeof AuthenticatedApplicationsIndexRoute
   '/_authenticated/campaign-groups/': typeof AuthenticatedCampaignGroupsIndexRoute
-  '/_authenticated/contacts/': typeof AuthenticatedContactsIndexRoute
   '/_authenticated/election-end/': typeof AuthenticatedElectionEndIndexRoute
   '/_authenticated/election-start/': typeof AuthenticatedElectionStartIndexRoute
   '/_authenticated/give-update/': typeof AuthenticatedGiveUpdateIndexRoute
@@ -230,7 +220,6 @@ export interface FileRouteTypes {
     | '/applications/supervisor'
     | '/applications/'
     | '/campaign-groups/'
-    | '/contacts/'
     | '/election-end/'
     | '/election-start/'
     | '/give-update/'
@@ -252,7 +241,6 @@ export interface FileRouteTypes {
     | '/'
     | '/applications'
     | '/campaign-groups'
-    | '/contacts'
     | '/election-end'
     | '/election-start'
     | '/give-update'
@@ -275,7 +263,6 @@ export interface FileRouteTypes {
     | '/_authenticated/_home/'
     | '/_authenticated/applications/'
     | '/_authenticated/campaign-groups/'
-    | '/_authenticated/contacts/'
     | '/_authenticated/election-end/'
     | '/_authenticated/election-start/'
     | '/_authenticated/give-update/'
@@ -403,13 +390,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedElectionEndIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/contacts/': {
-      id: '/_authenticated/contacts/'
-      path: '/contacts'
-      fullPath: '/contacts/'
-      preLoaderRoute: typeof AuthenticatedContactsIndexRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
     '/_authenticated/campaign-groups/': {
       id: '/_authenticated/campaign-groups/'
       path: '/campaign-groups'
@@ -454,7 +434,6 @@ interface AuthenticatedRouteChildren {
   AuthenticatedHomeIndexRoute: typeof AuthenticatedHomeIndexRoute
   AuthenticatedApplicationsIndexRoute: typeof AuthenticatedApplicationsIndexRoute
   AuthenticatedCampaignGroupsIndexRoute: typeof AuthenticatedCampaignGroupsIndexRoute
-  AuthenticatedContactsIndexRoute: typeof AuthenticatedContactsIndexRoute
   AuthenticatedElectionEndIndexRoute: typeof AuthenticatedElectionEndIndexRoute
   AuthenticatedElectionStartIndexRoute: typeof AuthenticatedElectionStartIndexRoute
   AuthenticatedGiveUpdateIndexRoute: typeof AuthenticatedGiveUpdateIndexRoute
@@ -474,7 +453,6 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedHomeIndexRoute: AuthenticatedHomeIndexRoute,
   AuthenticatedApplicationsIndexRoute: AuthenticatedApplicationsIndexRoute,
   AuthenticatedCampaignGroupsIndexRoute: AuthenticatedCampaignGroupsIndexRoute,
-  AuthenticatedContactsIndexRoute: AuthenticatedContactsIndexRoute,
   AuthenticatedElectionEndIndexRoute: AuthenticatedElectionEndIndexRoute,
   AuthenticatedElectionStartIndexRoute: AuthenticatedElectionStartIndexRoute,
   AuthenticatedGiveUpdateIndexRoute: AuthenticatedGiveUpdateIndexRoute,

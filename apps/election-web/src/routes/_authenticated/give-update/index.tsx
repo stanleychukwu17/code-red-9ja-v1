@@ -1,7 +1,9 @@
 import { getPageHeader } from "#/lib/shared/meta";
+import { APP_URL } from "#/lib/config";
 import { PageHeader } from "#/components/Headers";
 import { PageWrapper } from "#/components/Wrappers";
 import { useAgentDutyEligibility } from "#/hooks/useAgentDutyEligibility";
+import { useAssignments } from "#/hooks/useAssignments";
 import { useGeolocation } from "#/hooks/useGeolocation";
 import { VotingStatusSelects } from "./-components/VotingStatusSelects";
 import { VotingIssueSelects } from "./-components/VotingIssueSelects";
@@ -33,6 +35,13 @@ export const Route = createFileRoute("/_authenticated/give-update/")({
 
 function GiveUpdate() {
   const navigate = useNavigate();
+  const { supervisorAssignment, isLoading: assignmentsLoading } = useAssignments();
+
+  useEffect(() => {
+    if (!assignmentsLoading && supervisorAssignment) {
+      navigate({ to: APP_URL.supervisorUpdate, replace: true });
+    }
+  }, [assignmentsLoading, supervisorAssignment, navigate]);
 
   // Active election schedule context and duty eligibility
   const {
@@ -300,7 +309,7 @@ function GiveUpdate() {
 /**
  * Notice banner displayed when current date does not match election day.
  */
-function ElectionDayBanner({ electionDay, daysLeft }: { electionDay?: boolean; daysLeft?: number }) {
+export function ElectionDayBanner({ electionDay, daysLeft }: { electionDay?: boolean; daysLeft?: number }) {
   if (electionDay) return null;
 
   return (
@@ -354,7 +363,7 @@ function OfflineSyncBanner({ isOnline, pendingCount, onSync }: { isOnline: boole
 /**
  * Warning banner displayed when active selected election differs from assigned polling unit election.
  */
-function ElectionMismatchBanner({ mismatch, selectedGroupName }: { mismatch: boolean; selectedGroupName?: string }) {
+export function ElectionMismatchBanner({ mismatch, selectedGroupName }: { mismatch: boolean; selectedGroupName?: string }) {
   if (!mismatch) return null;
 
   return (

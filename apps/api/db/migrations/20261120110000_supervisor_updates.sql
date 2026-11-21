@@ -25,6 +25,8 @@ CREATE TABLE IF NOT EXISTS supervisor_updates (
   title VARCHAR(255),
   message TEXT NOT NULL,
   has_media BOOLEAN NOT NULL DEFAULT FALSE,
+  has_issue BOOLEAN NOT NULL DEFAULT FALSE,
+  issue_option_ids SMALLINT[],
 
   -- Supervisor coordinates at time of update
   latitude DOUBLE PRECISION,

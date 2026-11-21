@@ -8,6 +8,8 @@ export type VotingStatusSelectsProps = {
   selectedStatusOptionId?: number;
   onStatusCategoryChange: (categoryId: number) => void;
   onStatusOptionChange: (optionId?: number) => void;
+  forWho?: "agent" | "supervisor";
+  label?: string;
 };
 
 export function VotingStatusSelects({
@@ -15,13 +17,20 @@ export function VotingStatusSelects({
   selectedStatusOptionId,
   onStatusCategoryChange,
   onStatusOptionChange,
+  forWho = "agent",
+  label = "Voting status",
 }: VotingStatusSelectsProps) {
   // Modal open states for category and sub-option dialogs
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
   const [isOptionDialogOpen, setIsOptionDialogOpen] = useState(false);
 
+  // Filter status categories by role
+  const agentStatusCategories = STATIC_STATUS_CATEGORIES.filter(
+    (c) => (c.forWho ?? "agent") === forWho,
+  );
+
   // Find currently active status category from bundled static options
-  const activeCategory = STATIC_STATUS_CATEGORIES.find(
+  const activeCategory = agentStatusCategories.find(
     (c) => c.id === selectedStatusCategoryId,
   ) as StatusCategory;
 
@@ -47,7 +56,7 @@ export function VotingStatusSelects({
       {/* Primary voting status trigger button */}
       <div className="space-y-1.5">
         <label className="text-xs sm:text-sm font-semibold text-foreground">
-          Voting status
+          {label}
         </label>
         <button
           type="button"
@@ -94,7 +103,7 @@ export function VotingStatusSelects({
 
           {/* List of status categories */}
           <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
-            {STATIC_STATUS_CATEGORIES.map((cat) => {
+            {agentStatusCategories.map((cat) => {
               const isSelected = cat.id === selectedStatusCategoryId;
               return (
                 <button

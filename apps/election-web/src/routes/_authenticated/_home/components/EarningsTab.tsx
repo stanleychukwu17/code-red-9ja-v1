@@ -102,12 +102,14 @@ export function EarningsTab() {
   const { data: walletRes } = useQuery({
     queryKey: ["myWallet"],
     queryFn: () => getMyWallet(),
+    staleTime: Infinity,
   });
 
   // Query recent wallet ledger transactions
   const { data: txRes, isLoading: isTxLoading } = useQuery({
     queryKey: ["myWalletTransactions"],
     queryFn: () => getMyWalletTransactions({ data: { limit: 50, offset: 0 } }),
+    staleTime: Infinity,
   });
 
   // Derive balance from kobo
