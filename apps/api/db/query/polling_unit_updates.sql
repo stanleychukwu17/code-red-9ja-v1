@@ -78,7 +78,8 @@ INSERT INTO polling_unit_with_issues (
 UPDATE polling_unit_with_issues
 SET 
   is_active = false,
-  time_issue_ended = COALESCE(sqlc.narg(time_issue_ended), NOW())
+  time_issue_ended = COALESCE(sqlc.narg(time_issue_ended), NOW()),
+  resolution_notes = COALESCE(sqlc.narg(resolution_notes), resolution_notes)
 WHERE id = ANY(sqlc.arg('issue_ids')::bigint[]);
 
 -- name: ListActivePollingUnitIssues :many

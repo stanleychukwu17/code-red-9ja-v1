@@ -594,16 +594,18 @@ const resolvePollingUnitIssues = `-- name: ResolvePollingUnitIssues :exec
 UPDATE polling_unit_with_issues
 SET 
   is_active = false,
-  time_issue_ended = COALESCE($1, NOW())
-WHERE id = ANY($2::bigint[])
+  time_issue_ended = COALESCE($1, NOW()),
+  resolution_notes = COALESCE($2, resolution_notes)
+WHERE id = ANY($3::bigint[])
 `
 
 type ResolvePollingUnitIssuesParams struct {
-	TimeIssueEnded pgtype.Timestamptz `json:"time_issue_ended"`
-	IssueIds       []int64            `json:"issue_ids"`
+	TimeIssueEnded  pgtype.Timestamptz `json:"time_issue_ended"`
+	ResolutionNotes pgtype.Text        `json:"resolution_notes"`
+	IssueIds        []int64            `json:"issue_ids"`
 }
 
 func (q *Queries) ResolvePollingUnitIssues(ctx context.Context, arg ResolvePollingUnitIssuesParams) error {
-	_, err := q.db.Exec(ctx, resolvePollingUnitIssues, arg.TimeIssueEnded, arg.IssueIds)
+	_, err := q.db.Exec(ctx, resolvePollingUnitIssues, arg.TimeIssueEnded, arg.ResolutionNotes, arg.IssueIds)
 	return err
 }

@@ -46,10 +46,8 @@ export const useElection = () => {
     // Inherent geographic jurisdiction derived from the active election contest
     selectedStateId: (selectedElection?.state_id as number | undefined) ?? undefined,
     selectedDistrictId: (selectedElection?.senatorial_district_id as number | undefined) ?? undefined,
-    selectedFederalConstituencyId:
-      (selectedElection?.federal_constituency_id as number | undefined) ?? undefined,
-    selectedStateConstituencyId:
-      (selectedElection?.state_constituency_id as number | undefined) ?? undefined,
+    selectedFederalConstituencyId: (selectedElection?.federal_constituency_id as number | undefined) ?? undefined,
+    selectedStateConstituencyId: (selectedElection?.state_constituency_id as number | undefined) ?? undefined,
     selectedLGAId: (selectedElection?.lga_id as number | undefined) ?? undefined,
     selectedWardId: (selectedElection?.ward_id as number | undefined) ?? undefined,
     isLive,

@@ -80,25 +80,29 @@ type CreateUpdateInput struct {
 	AssignmentElectionEndedAt   pgtype.Timestamptz `json:"assignment_election_ended_at,omitempty"`
 }
 
-func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (queries.PollingUnitUpdate, error) {
-	// Fetch real User ID by FakeID using cached/optimized user service outside transaction
-	user, err := s.usersSvc.GetUserByFakeID(ctx, input.UserID)
-	if err != nil {
-		return queries.PollingUnitUpdate{}, errors.New("user not found")
+// validateCreateUpdateInput ensures required identity, location, role, and status fields are present before creating an update.
+func validateCreateUpdateInput(input CreateUpdateInput) error {
+	if input.UserID <= 0 {
+		return errors.New("user not found")
 	}
-
 	if input.StateID == 0 {
-		return queries.PollingUnitUpdate{}, errors.New("missing resolved location details")
+		return errors.New("missing resolved location details")
+	}
+	if input.RoleType == "" {
+		return errors.New("role_type is required")
+	}
+	if input.StatusCategoryID == nil || *input.StatusCategoryID <= 0 {
+		return errors.New("status_category_id is required")
+	}
+	return nil
+}
+
+func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (queries.PollingUnitUpdate, error) {
+	if err := validateCreateUpdateInput(input); err != nil {
+		return queries.PollingUnitUpdate{}, err
 	}
 
 	roleType := input.RoleType
-	if roleType == "" {
-		roleType = constants.RolePollingAgent
-	}
-
-	if input.StatusCategoryID == nil || *input.StatusCategoryID <= 0 {
-		return queries.PollingUnitUpdate{}, errors.New("status_category_id is required")
-	}
 
 	// Pre-resolve and validate issue options via Redis cache (1 year TTL) before beginning transaction
 	type issueItem struct {
@@ -143,7 +147,7 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 	update, err := qtx.CreatePollingUnitUpdate(ctx, queries.CreatePollingUnitUpdateParams{
 		RoleType:                    roleType,
 		AssignmentID:                assignmentIDPg,
-		UserID:                      user.ID,
+		UserID:                      input.UserID,
 		PollingUnitID:               pollingUnitIDPg,
 		ElectionGroupID:             input.ElectionGroupID,
 		PartyID:                     partyID,
@@ -168,6 +172,7 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 		return queries.PollingUnitUpdate{}, err
 	}
 
+	// Use the persisted update timestamp (or current UTC time as fallback) for milestone tracking
 	effectiveTimePg := update.CreatedAt
 	if !effectiveTimePg.Valid {
 		effectiveTimePg = pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true}
@@ -203,16 +208,6 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 		}
 	}
 
-	// Close/resolve active issues if linking existing issue as resolved
-	if input.IssueAction == "link_existing" && len(input.ExistingIssueIDs) > 0 {
-		if err := qtx.ResolvePollingUnitIssues(ctx, queries.ResolvePollingUnitIssuesParams{
-			TimeIssueEnded: effectiveTimePg,
-			IssueIds:       input.ExistingIssueIDs,
-		}); err != nil {
-			return queries.PollingUnitUpdate{}, fmt.Errorf("failed to resolve issues: %w", err)
-		}
-	}
-
 	// Create new active issues if reported
 	for _, issue := range validIssues {
 		_, err = qtx.CreatePollingUnitIssue(ctx, queries.CreatePollingUnitIssueParams{
@@ -220,7 +215,7 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 			RoleType:                    roleType,
 			ElectionGroupID:             input.ElectionGroupID,
 			PartyID:                     partyID,
-			UserID:                      user.ID,
+			UserID:                      input.UserID,
 			StateID:                     utils.PgInt2FromPositive(input.StateID),
 			LgaID:                       utils.PgInt4FromPositive(input.LgaID),
 			WardID:                      utils.PgInt4FromPositive(input.WardID),
@@ -277,7 +272,7 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 			if _, tErr := s.queries.UpdateAssignmentTracking(ctx, trackingParams); tErr != nil {
 				slog.Warn("failed to update assignment tracking for status milestone", "assignmentID", input.AssignmentID, "statusCategoryID", input.StatusCategoryID, "err", tErr)
 			} else {
-				_ = s.rdb.Del(ctx, fmt.Sprintf("%s%d:eg:%d", db.RedisUserPollingUnitAssignment, user.ID, input.ElectionGroupID)).Err()
+				_ = s.rdb.Del(ctx, fmt.Sprintf("%s%d:eg:%d", db.RedisUserPollingUnitAssignment, input.UserID, input.ElectionGroupID)).Err()
 			}
 
 			// Trigger milestone earnings calculation asynchronously
@@ -301,25 +296,26 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 		case 41:
 			completedAt = effectiveTimePg
 		}
+
 		if arrivedAt.Valid || completedAt.Valid {
 			switch roleType {
 			case constants.RoleWardElectionSupervisor:
 				_, _ = s.queries.UpdateWardSupervisorTracking(ctx, queries.UpdateWardSupervisorTrackingParams{
-					UserID:          user.ID,
+					UserID:          input.UserID,
 					ElectionGroupID: input.ElectionGroupID,
 					ArrivedAt:       arrivedAt,
 					CompletedAt:     completedAt,
 				})
 			case constants.RoleLgaElectionSupervisor:
 				_, _ = s.queries.UpdateLgaSupervisorTracking(ctx, queries.UpdateLgaSupervisorTrackingParams{
-					UserID:          user.ID,
+					UserID:          input.UserID,
 					ElectionGroupID: input.ElectionGroupID,
 					ArrivedAt:       arrivedAt,
 					CompletedAt:     completedAt,
 				})
 			case constants.RoleStateElectionSupervisor:
 				_, _ = s.queries.UpdateStateSupervisorTracking(ctx, queries.UpdateStateSupervisorTrackingParams{
-					UserID:          user.ID,
+					UserID:          input.UserID,
 					ElectionGroupID: input.ElectionGroupID,
 					ArrivedAt:       arrivedAt,
 					CompletedAt:     completedAt,

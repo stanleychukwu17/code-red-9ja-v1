@@ -96,6 +96,7 @@ export async function saveToOutbox(item: OutboxUpdateItem): Promise<void> {
 // Retrieve all pending or failed outbox updates
 export async function getPendingUpdates(): Promise<OutboxUpdateItem[]> {
   const db = await openDB();
+
   return new Promise((resolve, reject) => {
     const tx = db.transaction(UPDATES_STORE_NAME, "readonly");
     const store = tx.objectStore(UPDATES_STORE_NAME);
@@ -105,6 +106,7 @@ export async function getPendingUpdates(): Promise<OutboxUpdateItem[]> {
       const items = (request.result as OutboxUpdateItem[]) || [];
       resolve(items.filter((i) => i.syncStatus !== "syncing"));
     };
+
     request.onerror = () => reject(request.error);
   });
 }

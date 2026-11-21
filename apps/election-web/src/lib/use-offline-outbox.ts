@@ -18,6 +18,7 @@ let isSyncInProgress = false;
 
 // Process a single outbox item through Cloudflare R2 / S3 upload and API creation
 async function syncSingleItem(item: OutboxUpdateItem): Promise<boolean> {
+  // Mark item as syncing in IndexedDB so retries/UI know it's in flight
   await updateOutboxItemStatus(item.id, "syncing");
 
   try {
@@ -35,6 +36,7 @@ async function syncSingleItem(item: OutboxUpdateItem): Promise<boolean> {
                   ext === "jpg" || ext === "jpeg" ? "image/jpeg" :
                     ext === "png" ? "image/png" :
                       ext === "webp" ? "image/webp" : "application/octet-stream";
+
       // Resolve MIME type and target subfolder based on media kind
       const resolvedMime = media.blob.type || fallbackMime;
       const mediaSubfolder =
@@ -118,6 +120,7 @@ async function syncSingleItem(item: OutboxUpdateItem): Promise<boolean> {
 
 // Flush all pending outbox updates sequentially
 export async function flushOutboxQueue(): Promise<number> {
+  // Prevent concurrent flushes and skip syncing while offline
   if (isSyncInProgress || (typeof navigator !== "undefined" && !navigator.onLine)) {
     return 0;
   }

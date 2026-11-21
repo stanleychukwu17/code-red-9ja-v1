@@ -195,10 +195,10 @@ INSERT INTO polling_unit_status_options (id, status_category_id, name, sort_orde
   (36, 8, 'Other declaration detail', 5),
 
   (37, 9, 'Arrived at Collation Centre', 1),
-  (38, 9, 'Receiving PU Results (EC8A)', 2),
+  (38, 9, 'Receiving Results (EC8A/B/C/D)', 2),
   (39, 9, 'Collation In Progress', 3),
   (40, 9, 'Result Disputed / Objections', 4),
-  (41, 9, 'Collation Concluded (EC8B/C Signed)', 5),
+  (41, 9, 'Collation Concluded (EC8B/C/E Signed)', 5),
   (42, 9, 'Other collation update', 6),
 
   (43, 10, 'Routine PU Inspection', 1),

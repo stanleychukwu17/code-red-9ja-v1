@@ -68,28 +68,33 @@ export function VotingStatusSelects({
         </button>
       </div>
 
-      {/* Contextual sub-option trigger button (auto-hidden when category has no options e.g. Just Arrived) */}
-      {activeCategory?.options.length > 0 ? (
-        <div className="space-y-1.5">
-          <label className="text-xs sm:text-sm font-semibold text-foreground">
-            More on {label.toLowerCase()}
-          </label>
-          <button
-            type="button"
-            onClick={() => setIsOptionDialogOpen(true)}
-            className="w-full bg-[#F3F4F8] dark:bg-muted/40 border-0 rounded-xl px-4 py-3.5 text-sm font-semibold text-foreground outline-none cursor-pointer flex items-center justify-between hover:bg-[#EBEDF2] dark:hover:bg-muted/60 transition"
+      {/* Contextual sub-option trigger button (disabled when no category selected or category has no options e.g. Just Arrived) */}
+      <div className="space-y-1.5">
+        <label className="text-xs sm:text-sm font-semibold text-foreground">
+          More on {label.toLowerCase()}
+        </label>
+        <button
+          type="button"
+          disabled={!activeCategory || activeCategory.options.length === 0}
+          onClick={() => setIsOptionDialogOpen(true)}
+          className={`w-full bg-[#F3F4F8] dark:bg-muted/40 border-0 rounded-xl px-4 py-3.5 text-sm font-semibold text-foreground outline-none flex items-center justify-between transition ${
+            !activeCategory || activeCategory.options.length === 0
+              ? "opacity-50 cursor-not-allowed"
+              : "cursor-pointer hover:bg-[#EBEDF2] dark:hover:bg-muted/60"
+          }`}
+        >
+          <span
+            className={`truncate ${activeOption ? "text-foreground" : "text-muted-foreground font-normal"}`}
           >
-            <span
-              className={`truncate ${activeOption ? "text-foreground" : "text-muted-foreground font-normal"}`}
-            >
-              {activeOption?.name || "Select detail (optional)"}
-            </span>
-            <ChevronDown className="size-4 shrink-0 text-muted-foreground ml-2" />
-          </button>
-        </div>
-      ) : (
-        <div className="hidden sm:block" />
-      )}
+            {!activeCategory
+              ? `Select ${label.toLowerCase()} first`
+              : activeCategory.options.length === 0
+                ? "No extra details"
+                : activeOption?.name || "Select detail (optional)"}
+          </span>
+          <ChevronDown className="size-4 shrink-0 text-muted-foreground ml-2" />
+        </button>
+      </div>
 
       {/* Modal Dialog to pick from all status categories */}
       <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>

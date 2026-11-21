@@ -161,10 +161,10 @@ export const STATIC_STATUS_CATEGORIES: StatusCategory[] = [
     sortOrder: 10,
     options: [
       { id: 37, name: "Arrived at Collation Centre", sortOrder: 1 },
-      { id: 38, name: "Receiving PU Results (EC8A)", sortOrder: 2 },
+      { id: 38, name: "Receiving Results (EC8A/B/C/D)", sortOrder: 2 },
       { id: 39, name: "Collation In Progress", sortOrder: 3 },
       { id: 40, name: "Result Disputed / Objections", sortOrder: 4 },
-      { id: 41, name: "Collation Concluded (EC8B/C Signed)", sortOrder: 5 },
+      { id: 41, name: "Collation Concluded (EC8B/C/E Signed)", sortOrder: 5 },
       { id: 42, name: "Other collation update", sortOrder: 6 },
     ],
   },

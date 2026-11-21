@@ -11,7 +11,7 @@ var lagosLocation = time.FixedZone("Africa/Lagos", 60*60)
 
 // PostElectionCollationGraceDays defines the grace period (in days) following election day
 // to allow offline data synchronization, collation, and reporting.
-const PostElectionCollationGraceDays = 1
+const PostElectionCollationGraceDays = 5
 
 // LagosDate returns the current Lagos calendar date as a UTC date value for
 // PostgreSQL DATE parameters. A scheduled DATE itself has no timezone.

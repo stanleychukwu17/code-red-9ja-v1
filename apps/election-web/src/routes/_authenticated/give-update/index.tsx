@@ -37,21 +37,13 @@ export const Route = createFileRoute("/_authenticated/give-update/")({
 
 function GiveUpdate() {
   const navigate = useNavigate();
-  const { supervisorAssignment } = useAssignments();
+  const { supervisorAssignment, electionGroupId, partyId } = useAssignments();
   const isSupervisor = !!supervisorAssignment;
   const currentSupervisorAssignment = supervisorAssignment?.data;
   const supervisorRoleType = supervisorAssignment?.type;
 
   // Active election schedule context and duty eligibility
-  const {
-    isEligible,
-    validateEligibility,
-    isElectionMismatch,
-    electionDay,
-    daysLeft,
-    pollingUnitAssignment,
-    selectedElectionGroup,
-  } = useAgentDutyEligibility({
+  const { validateEligibility, isElectionMismatch, electionDay, daysLeft, pollingUnitAssignment, selectedElectionGroup } = useAgentDutyEligibility({
     dutyName: isSupervisor ? "Supervisor updates" : "Updates",
     roleType: isSupervisor ? "supervisor" : "agent",
   });
@@ -59,21 +51,15 @@ function GiveUpdate() {
   // Offline outbox queue manager
   const { isOnline, pendingCount, triggerSync } = useOfflineOutbox();
 
-  // Primary status category (defaults to 'Active' [3] for agents, 'Collation Centre' [9] for supervisors)
-  const [selectedStatusCategoryId, setSelectedStatusCategoryId] = useState<number>(isSupervisor ? 9 : 3);
+  // Primary status category (starts unselected so the user explicitly chooses)
+  const [selectedStatusCategoryId, setSelectedStatusCategoryId] = useState<number>(0);
   const [selectedStatusOptionId, setSelectedStatusOptionId] = useState<number | undefined>(undefined);
 
-  useEffect(() => {
-    setSelectedStatusCategoryId(isSupervisor ? 9 : 3);
-    setSelectedStatusOptionId(undefined);
-  }, [isSupervisor]);
-
   // Optional Polling Unit tag for supervisors (hidden for now; flip to true to re-enable)
-  const SHOW_SUPERVISOR_PU_TAG = false;
+  const SHOW_SUPERVISOR_PU_TAG = false; // the feature is hidden for now, after the 2027 elections, if we see that it is needed, we can bring it back
   const [selectedPollingUnitId, setSelectedPollingUnitId] = useState<number | undefined>(undefined);
   const wardId = currentSupervisorAssignment?.ward_id;
   const lgaId = currentSupervisorAssignment?.lga_id;
-
   const { data: puData } = useQuery({
     queryKey: ["supervisorPUs", wardId, lgaId],
     queryFn: () => getPollingUnits({ data: { ward_id: wardId, lga_id: lgaId } }),
@@ -124,14 +110,24 @@ function GiveUpdate() {
   const hasIssues = isExistingIssue || isNewIssue;
   const existingIssueId = isExistingIssue ? Number(issueActionValue.replace("existing_", "")) : undefined;
 
-  // Inner update submission handler using offline-first outbox pattern
-  const submitUpdate = async () => {
-    if (!validateEligibility()) {
-      return;
+  // Validate required category and headline before queuing an update
+  const validateFormInputs = () => {
+    if (!selectedStatusCategoryId || selectedStatusCategoryId <= 0) {
+      toast.error(isSupervisor ? "Please select an update category." : "Please select a voting status category.");
+      return false;
     }
 
-    if (!selectedStatusCategoryId || selectedStatusCategoryId <= 0) {
-      toast.error("Please select a voting status category.");
+    if (!title.trim()) {
+      toast.error("Please enter an update headline.");
+      return false;
+    }
+
+    return true;
+  };
+
+  // Inner update submission handler using offline-first outbox pattern
+  const submitUpdate = async () => {
+    if (!validateEligibility() || !validateFormInputs()) {
       return;
     }
 
@@ -171,19 +167,17 @@ function GiveUpdate() {
       const outboxItem: OutboxUpdateItem = {
         id: `update_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
         pollingUnitId: isSupervisor ? selectedPollingUnitId : pollingUnitAssignment?.polling_unit_id,
-        electionGroupId: isSupervisor
-          ? selectedElectionGroup?.id ?? currentSupervisorAssignment?.election_group_id
-          : pollingUnitAssignment.election_group_id,
-        assignmentId: isSupervisor ? 0 : pollingUnitAssignment.id,
-        partyId: isSupervisor ? currentSupervisorAssignment?.party_id : pollingUnitAssignment.party_id,
+        electionGroupId: electionGroupId ?? 0,
+        assignmentId: isSupervisor ? 0 : pollingUnitAssignment?.id ?? 0,
+        partyId: partyId ?? undefined,
         statusCategoryId: selectedStatusCategoryId,
         statusOptionId: selectedStatusOptionId,
         hasIssues,
         issueAction: isExistingIssue ? "link_existing" : isNewIssue ? "create_new" : "none",
         existingIssueIds: isExistingIssue && existingIssueId ? [existingIssueId] : undefined,
         newIssueOptionIds: isNewIssue ? selectedIssueOptionIds : undefined,
-        title: title.trim() || undefined,
-        message: message.trim() || title.trim() || (isSupervisor ? "Supervisor status update" : "Polling unit status update"),
+        title: title.trim(),
+        message: message.trim(),
         latitude: geoCoords.latitude,
         longitude: geoCoords.longitude,
         accuracyMeters: geoCoords.accuracyMeters,

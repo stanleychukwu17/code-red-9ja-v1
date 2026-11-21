@@ -70,8 +70,13 @@ export const useAssignments = (electionGroupId?: number | string) => {
 
 	const hasActiveAssignment = assignmentsData?.has_active_assignment ?? false;
 
-	// 5. Active assignment political party ID & scoped elections
+	// 5. Active assignment political party ID, election group ID & scoped elections
 	const partyId: number | null = assignmentsData?.party_id ?? null;
+	const resolvedElectionGroupId: number | null =
+		pollingUnitAssignment?.election_group_id ??
+		supervisorAssignment?.data?.election_group_id ??
+		selectedElectionGroup?.id ??
+		null;
 	const elections: any[] = assignmentsData?.elections ?? [];
 
 	return {
@@ -82,6 +87,7 @@ export const useAssignments = (electionGroupId?: number | string) => {
 		pollingUnitId,
 		role_type,
 		partyId,
+		electionGroupId: resolvedElectionGroupId,
 		elections,
 		isLoading,
 	};

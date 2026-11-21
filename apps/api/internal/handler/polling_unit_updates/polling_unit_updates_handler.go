@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -42,23 +43,31 @@ type Handler struct {
 	supervisorService   SupervisorAssignmentsService
 	pollingUnitsService PollingUnitsService
 	utils               *utils.Utils
+	validate            *validator.Validate
 }
 
 func NewHandler(s Service, u *utils.Utils, asgnSvc PollingUnitAssignmentsService, supSvc SupervisorAssignmentsService, puSvc PollingUnitsService) *Handler {
-	return &Handler{service: s, utils: u, assignmentsService: asgnSvc, supervisorService: supSvc, pollingUnitsService: puSvc}
+	return &Handler{
+		service:             s,
+		utils:               u,
+		assignmentsService:  asgnSvc,
+		supervisorService:   supSvc,
+		pollingUnitsService: puSvc,
+		validate:            validator.New(),
+	}
 }
 
 type CreateUpdateRequest struct {
 	AssignmentID      int64                            `json:"assignment_id"`
 	PollingUnitID     int32                            `json:"polling_unit_id"`
-	ElectionGroupID   int32                            `json:"election_group_id"`
-	StatusCategoryID  *int16                           `json:"status_category_id,omitempty"`
+	ElectionGroupID   int32                            `json:"election_group_id" validate:"required,gt=0"`
+	StatusCategoryID  *int16                           `json:"status_category_id,omitempty" validate:"required,gt=0"`
 	StatusOptionID    *int16                           `json:"status_option_id,omitempty"`
 	HasIssues         bool                             `json:"has_issues"`
 	IssueAction       string                           `json:"issue_action,omitempty"`
 	ExistingIssueIDs  []int64                          `json:"existing_issue_ids,omitempty"`
 	NewIssueOptionIDs []int16                          `json:"new_issue_option_ids,omitempty"`
-	Title             *string                          `json:"title,omitempty"`
+	Title             *string                          `json:"title,omitempty" validate:"required,min=1"`
 	Message           string                           `json:"message"`
 	Media             []polling_unit_updates.MediaItem `json:"media,omitempty"`
 	Latitude          *float64                         `json:"latitude,omitempty"`
@@ -95,12 +104,8 @@ func (h *Handler) CreateUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate required fields
-	if req.AssignmentID <= 0 || req.PollingUnitID <= 0 || req.ElectionGroupID <= 0 || req.Message == "" {
-		h.utils.RespondError(w, http.StatusBadRequest, "assignment_id, polling_unit_id, election_group_id and message are required")
-		return
-	}
-	if req.StatusCategoryID == nil || *req.StatusCategoryID <= 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "status_category_id is required")
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
 		return
 	}
 
@@ -146,6 +151,7 @@ func (h *Handler) CreateUpdate(w http.ResponseWriter, r *http.Request) {
 			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to verify supervisor assignment: "+err.Error())
 			return
 		}
+
 		if supRes != nil {
 			if supRes.WardSupervisor != nil && supRes.WardSupervisor.ID > 0 {
 				roleType = constants.RoleWardElectionSupervisor
@@ -220,7 +226,7 @@ func (h *Handler) CreateUpdate(w http.ResponseWriter, r *http.Request) {
 	// Persist the update
 	update, err := h.service.CreateUpdate(r.Context(), polling_unit_updates.CreateUpdateInput{
 		RoleType:                    roleType,
-		UserID:                      claims.FakeID,
+		UserID:                      claims.UserID,
 		PollingUnitID:               req.PollingUnitID,
 		ElectionGroupID:             req.ElectionGroupID,
 		AssignmentID:                req.AssignmentID,
