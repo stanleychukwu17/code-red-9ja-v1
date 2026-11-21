@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"free9ja/api/internal/constants"
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/utils"
 )
@@ -86,7 +87,7 @@ func (h *Handler) GetAgentPerformance(w http.ResponseWriter, r *http.Request) {
 
 	roleType := qParams.Get("role_type")
 	if roleType == "" {
-		roleType = "polling_agent"
+		roleType = constants.RolePollingAgent
 	}
 
 	partyID := utils.ParseQueryInt[int16](qParams, "party_id")
@@ -144,7 +145,7 @@ func (h *Handler) fetchPerformanceStats(ctx context.Context, roleType string, pa
 	hasMore := false
 
 	switch roleType {
-	case "polling_agent":
+	case constants.RolePollingAgent:
 		rows, err := h.queries.ListPollingAgentPerformanceStats(ctx, queries.ListPollingAgentPerformanceStatsParams{
 			PartyID:         int16(partyID),
 			ElectionGroupID: electionGroupID,
@@ -218,7 +219,7 @@ func (h *Handler) fetchPerformanceStats(ctx context.Context, roleType string, pa
 			items = append(items, item)
 		}
 
-	case "ward_election_supervisor":
+	case constants.RoleWardElectionSupervisor:
 		rows, err := h.queries.ListWardSupervisorPerformanceStats(ctx, queries.ListWardSupervisorPerformanceStatsParams{
 			PartyID:         int16(partyID),
 			ElectionGroupID: electionGroupID,
@@ -267,7 +268,7 @@ func (h *Handler) fetchPerformanceStats(ctx context.Context, roleType string, pa
 			items = append(items, item)
 		}
 
-	case "lga_election_supervisor":
+	case constants.RoleLgaElectionSupervisor:
 		rows, err := h.queries.ListLGASupervisorPerformanceStats(ctx, queries.ListLGASupervisorPerformanceStatsParams{
 			PartyID:         int16(partyID),
 			ElectionGroupID: electionGroupID,
@@ -314,7 +315,7 @@ func (h *Handler) fetchPerformanceStats(ctx context.Context, roleType string, pa
 			items = append(items, item)
 		}
 
-	case "state_election_supervisor":
+	case constants.RoleStateElectionSupervisor:
 		rows, err := h.queries.ListStateSupervisorPerformanceStats(ctx, queries.ListStateSupervisorPerformanceStatsParams{
 			PartyID:         int16(partyID),
 			ElectionGroupID: electionGroupID,

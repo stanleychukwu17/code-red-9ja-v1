@@ -164,16 +164,16 @@ func (h *Handler) GetAgentCoverageBreakdown(w http.ResponseWriter, r *http.Reque
 		if len(party.AgentAcquisitionTargets) > 0 {
 			_ = json.Unmarshal(party.AgentAcquisitionTargets, &targets)
 		}
-		if val, ok := targets["polling_agent"]; ok && val > 0 {
+		if val, ok := targets[constants.RolePollingAgent]; ok && val > 0 {
 			targetPerPU = int64(val)
 		}
-		if val, ok := targets["ward_election_supervisor"]; ok && val > 0 {
+		if val, ok := targets[constants.RoleWardElectionSupervisor]; ok && val > 0 {
 			targetPerWard = int64(val)
 		}
-		if val, ok := targets["lga_election_supervisor"]; ok && val > 0 {
+		if val, ok := targets[constants.RoleLgaElectionSupervisor]; ok && val > 0 {
 			targetPerLGA = int64(val)
 		}
-		if val, ok := targets["state_election_supervisor"]; ok && val > 0 {
+		if val, ok := targets[constants.RoleStateElectionSupervisor]; ok && val > 0 {
 			targetPerState = int64(val)
 		}
 	}

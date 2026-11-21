@@ -618,9 +618,9 @@ func (s *CampaignGroupsService) EnsureAgentCampaignInGroup(ctx context.Context, 
 
 	// Resolve campaign group scope tier based on assigned role
 	switch input.Role {
-	case "state_election_supervisor":
+	case constants.RoleStateElectionSupervisor:
 		scope = "state"
-	case "lga_election_supervisor":
+	case constants.RoleLgaElectionSupervisor:
 		scope = "lga"
 	}
 
@@ -883,16 +883,16 @@ func (s *CampaignGroupsService) GetCampaignGroupStats(ctx context.Context, group
 			stats.Candidate += r.Count
 		case "party_official":
 			stats.PartyOfficial += r.Count
-		case "agent", "polling_agent":
+		case "agent", constants.RolePollingAgent:
 			stats.Agent += r.Count
 			stats.PollingAgent += r.Count
-		case "ward_supervisor", "ward_election_supervisor":
+		case "ward_supervisor", constants.RoleWardElectionSupervisor:
 			stats.Supervisor += r.Count
 			stats.WardSupervisor += r.Count
-		case "lga_supervisor", "lga_election_supervisor":
+		case "lga_supervisor", constants.RoleLgaElectionSupervisor:
 			stats.Supervisor += r.Count
 			stats.LgaSupervisor += r.Count
-		case "state_supervisor", "state_election_supervisor":
+		case "state_supervisor", constants.RoleStateElectionSupervisor:
 			stats.Supervisor += r.Count
 			stats.StateSupervisor += r.Count
 		default:

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"free9ja/api/internal/constants"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/utils"
@@ -155,7 +156,7 @@ func (s *PollingUnitsService) GetPollingUnitsWithCapacity(ctx context.Context, w
 	if len(party.AgentAcquisitionTargets) > 0 {
 		_ = json.Unmarshal(party.AgentAcquisitionTargets, &targets)
 	}
-	targetCount := targets["polling_agent"]
+	targetCount := targets[constants.RolePollingAgent]
 	if targetCount <= 0 {
 		targetCount = 1 // Default if not found or 0
 	}

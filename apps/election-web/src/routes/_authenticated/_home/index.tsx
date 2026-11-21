@@ -4,12 +4,14 @@ import { useElectionRealtime } from "@repo/ui/hooks/useElectionRealtime";
 import { createFileRoute } from "@tanstack/react-router";
 import { AssignmentRoleCard } from "./components/AssignmentRoleCard";
 import { HomeHeader } from "./components/HomeHeader";
+import { UnderYourWatchCard } from "./components/UnderYourWatchCard";
 import { GeneralPage } from "./page-components/GeneralPage";
 import { LGAElectionSupervisorPage } from "./page-components/LGAElectionSupervisorPage";
 import { PollingAgentPage } from "./page-components/PollingAgentPage";
 import { StateElectionSupervisorPage } from "./page-components/StateElectionSupervisorPage";
 import { WardElectionSupervisorPage } from "./page-components/WardElectionSupervisorPage";
 import { getPageHeader } from "#/lib/shared/meta";
+import { Separator } from "#/components/Separator";
 
 /**
  * Route definition for authenticated dashboard home (`/_authenticated/_home/`).
@@ -55,26 +57,31 @@ function RouteComponent() {
   });
 
   let content = <GeneralPage />;
+  let roleLabel: string | null = null;
 
   // Branch 1: Regional Supervisors (State, LGA, or Ward)
   if (supervisorAssignment) {
     if (supervisorAssignment.type === "state") {
       content = <StateElectionSupervisorPage />;
+      roleLabel = "State Supervisor";
     } else if (supervisorAssignment.type === "lga") {
       content = <LGAElectionSupervisorPage />;
+      roleLabel = "LGA Supervisor";
     } else if (supervisorAssignment.type === "ward") {
       content = <WardElectionSupervisorPage />;
+      roleLabel = "Ward Supervisor";
     }
   } else if (pollingUnitAssignment) {
     content = <PollingAgentPage />;
+    roleLabel = "Polling-unit Agent";
   }
 
   return (
     <main className="w-full min-h-screen flex flex-col">
       <HomeHeader daysLeft={daysLeft} />
-      <div className="">
-
-      </div>
+      {roleLabel && <AssignmentRoleCard roleLabel={roleLabel} />}
+      <Separator />
+      <UnderYourWatchCard />
       {content}
     </main>
   );

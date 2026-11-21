@@ -1297,19 +1297,19 @@ func HarmonizeAgentPaymentAllocation(raw []byte) ([]byte, error) {
 	}
 
 	// Resolve and validate each of the four mandatory agent roles
-	pa, err := getRoleConfig("polling_agent")
+	pa, err := getRoleConfig(constants.RolePollingAgent)
 	if err != nil {
 		return nil, err
 	}
-	ward, err := getRoleConfig("ward_election_supervisor")
+	ward, err := getRoleConfig(constants.RoleWardElectionSupervisor)
 	if err != nil {
 		return nil, err
 	}
-	lga, err := getRoleConfig("lga_election_supervisor")
+	lga, err := getRoleConfig(constants.RoleLgaElectionSupervisor)
 	if err != nil {
 		return nil, err
 	}
-	state, err := getRoleConfig("state_election_supervisor")
+	state, err := getRoleConfig(constants.RoleStateElectionSupervisor)
 	if err != nil {
 		return nil, err
 	}

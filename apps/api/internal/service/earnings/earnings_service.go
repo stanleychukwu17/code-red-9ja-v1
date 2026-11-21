@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
+	"free9ja/api/internal/constants"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	usersservice "free9ja/api/internal/service/users"
@@ -186,7 +187,7 @@ func (s *Service) GetUpdateScheduleConfig(ctx context.Context) (UpdateScheduleCo
 // calculateWithTx performs the full earnings calculation using the given queries
 // handle (which may be a transaction-scoped handle).
 func (s *Service) calculateWithTx(ctx context.Context, q *queries.Queries, asgn queries.GetAssignmentForEarningsRow) (queries.AgentEarning, error) {
-	roleType := "polling_agent"
+	roleType := constants.RolePollingAgent
 	if asgn.RoleType.Valid && asgn.RoleType.String != "" {
 		roleType = asgn.RoleType.String
 	}
@@ -298,7 +299,7 @@ func (s *Service) ProcessTaskEarnings(ctx context.Context, params ProcessTaskEar
 		return 0, fmt.Errorf("earnings: failed to get assignment: %w", err)
 	}
 
-	roleType := "polling_agent"
+	roleType := constants.RolePollingAgent
 	if asgn.RoleType.Valid && asgn.RoleType.String != "" {
 		roleType = asgn.RoleType.String
 	}
@@ -554,7 +555,7 @@ func (s *Service) CalculatePotentialPayout(ctx context.Context, assignmentID int
 		return PotentialPayoutResult{}, fmt.Errorf("get assignment: %w", err)
 	}
 
-	roleType := "polling_agent"
+	roleType := constants.RolePollingAgent
 	if asgn.RoleType.Valid && asgn.RoleType.String != "" {
 		roleType = asgn.RoleType.String
 	}
@@ -761,7 +762,7 @@ func (s *Service) EstimatePotentialPayout(
 ) (EstimatePayoutResult, error) {
 	normRole := strings.ReplaceAll(reqRole, "-", "_")
 	if normRole == "" {
-		normRole = "polling_agent"
+		normRole = constants.RolePollingAgent
 	}
 
 	var basePaymentKobo int64
@@ -850,7 +851,7 @@ func (s *Service) GetAgentAllocations(
 	// 1. If assignmentID is explicitly provided, fetch assignment for polling agent
 	if assignmentID > 0 {
 		if asgn, err := s.queries.GetAssignmentForEarnings(ctx, assignmentID); err == nil {
-			roleType = "polling_agent"
+			roleType = constants.RolePollingAgent
 			potentialPaymentKobo = asgn.PotentialPaymentKobo
 			partyID = asgn.PartyID
 		}
@@ -863,7 +864,7 @@ func (s *Service) GetAgentAllocations(
 			ElectionGroupID: electionGroupID,
 		}); err == nil && asgnID > 0 {
 			if asgn, err := s.queries.GetAssignmentForEarnings(ctx, asgnID); err == nil {
-				roleType = "polling_agent"
+				roleType = constants.RolePollingAgent
 				potentialPaymentKobo = asgn.PotentialPaymentKobo
 				partyID = asgn.PartyID
 			}
@@ -876,7 +877,7 @@ func (s *Service) GetAgentAllocations(
 			UserID:          userID,
 			ElectionGroupID: electionGroupID,
 		}); err == nil && wardSup.ID > 0 {
-			roleType = "ward_election_supervisor"
+			roleType = constants.RoleWardElectionSupervisor
 			potentialPaymentKobo = wardSup.PotentialPaymentKobo
 			partyID = wardSup.PartyID
 		}
@@ -888,7 +889,7 @@ func (s *Service) GetAgentAllocations(
 			UserID:          userID,
 			ElectionGroupID: electionGroupID,
 		}); err == nil && lgaSup.ID > 0 {
-			roleType = "lga_election_supervisor"
+			roleType = constants.RoleLgaElectionSupervisor
 			potentialPaymentKobo = lgaSup.PotentialPaymentKobo
 			partyID = lgaSup.PartyID
 		}
@@ -900,7 +901,7 @@ func (s *Service) GetAgentAllocations(
 			UserID:          userID,
 			ElectionGroupID: electionGroupID,
 		}); err == nil && stateSup.ID > 0 {
-			roleType = "state_election_supervisor"
+			roleType = constants.RoleStateElectionSupervisor
 			potentialPaymentKobo = stateSup.PotentialPaymentKobo
 			partyID = stateSup.PartyID
 		}
@@ -911,7 +912,7 @@ func (s *Service) GetAgentAllocations(
 		if reqRoleType != "" {
 			roleType = strings.ReplaceAll(reqRoleType, "-", "_")
 		} else {
-			roleType = "polling_agent"
+			roleType = constants.RolePollingAgent
 		}
 	}
 
@@ -977,7 +978,7 @@ func (s *Service) GetAgentAllocations(
 // RequestPayout calculates/refreshes earnings and marks agent_earnings.status as 'requested'.
 func (s *Service) RequestPayout(ctx context.Context, userID int64, electionGroupID int32, roleType string) (queries.AgentEarning, error) {
 	if roleType == "" {
-		roleType = "polling_agent"
+		roleType = constants.RolePollingAgent
 	}
 	asgnID, err := s.queries.GetAssignmentIDByUserAndElectionGroup(ctx, queries.GetAssignmentIDByUserAndElectionGroupParams{
 		UserID:          userID,

@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"free9ja/api/internal/constants"
 	"free9ja/api/internal/db/queries"
 	apimiddleware "free9ja/api/internal/middleware"
 	earningsservice "free9ja/api/internal/service/earnings"
@@ -182,7 +183,7 @@ func (h *Handler) GetEarningsByAssignment(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	roleType := "polling_agent"
+	roleType := constants.RolePollingAgent
 	if asgn.RoleType.Valid && asgn.RoleType.String != "" {
 		roleType = asgn.RoleType.String
 	}
@@ -494,7 +495,7 @@ func (h *Handler) GetAgentPerformanceStats(w http.ResponseWriter, r *http.Reques
 	q := r.URL.Query()
 	roleType := q.Get("role_type")
 	if roleType == "" {
-		roleType = "polling_agent"
+		roleType = constants.RolePollingAgent
 	}
 
 	partyID := utils.ParseQueryInt[int16](q, "party_id")
@@ -514,7 +515,7 @@ func (h *Handler) GetAgentPerformanceStats(w http.ResponseWriter, r *http.Reques
 	var err error
 
 	switch roleType {
-	case "polling_agent":
+	case constants.RolePollingAgent:
 		items, err = h.q.ListPollingAgentPerformanceStats(ctx, queries.ListPollingAgentPerformanceStatsParams{
 			PartyID:         partyID,
 			ElectionGroupID: electionGroupID,
@@ -525,7 +526,7 @@ func (h *Handler) GetAgentPerformanceStats(w http.ResponseWriter, r *http.Reques
 			CursorID:        cursor,
 			LimitVal:        limit,
 		})
-	case "ward_election_supervisor":
+	case constants.RoleWardElectionSupervisor:
 		items, err = h.q.ListWardSupervisorPerformanceStats(ctx, queries.ListWardSupervisorPerformanceStatsParams{
 			PartyID:         partyID,
 			ElectionGroupID: electionGroupID,
@@ -536,7 +537,7 @@ func (h *Handler) GetAgentPerformanceStats(w http.ResponseWriter, r *http.Reques
 			CursorID:        cursor,
 			LimitVal:        limit,
 		})
-	case "lga_election_supervisor":
+	case constants.RoleLgaElectionSupervisor:
 		items, err = h.q.ListLGASupervisorPerformanceStats(ctx, queries.ListLGASupervisorPerformanceStatsParams{
 			PartyID:         partyID,
 			ElectionGroupID: electionGroupID,
@@ -546,7 +547,7 @@ func (h *Handler) GetAgentPerformanceStats(w http.ResponseWriter, r *http.Reques
 			CursorID:        cursor,
 			LimitVal:        limit,
 		})
-	case "state_election_supervisor":
+	case constants.RoleStateElectionSupervisor:
 		items, err = h.q.ListStateSupervisorPerformanceStats(ctx, queries.ListStateSupervisorPerformanceStatsParams{
 			PartyID:         partyID,
 			ElectionGroupID: electionGroupID,

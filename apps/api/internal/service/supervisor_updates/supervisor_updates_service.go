@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"free9ja/api/internal/constants"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/utils"
@@ -173,19 +174,19 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateSupervisorUpdate
 		switch input.Stage {
 		case "arrival_at_collation":
 			switch input.RoleType {
-			case "ward_election_supervisor":
+			case constants.RoleWardElectionSupervisor:
 				_, _ = s.queries.UpdateWardSupervisorTracking(ctx, queries.UpdateWardSupervisorTrackingParams{
 					UserID:          user.ID,
 					ElectionGroupID: input.ElectionGroupID,
 					ArrivedAt:       nowPg,
 				})
-			case "lga_election_supervisor":
+			case constants.RoleLgaElectionSupervisor:
 				_, _ = s.queries.UpdateLgaSupervisorTracking(ctx, queries.UpdateLgaSupervisorTrackingParams{
 					UserID:          user.ID,
 					ElectionGroupID: input.ElectionGroupID,
 					ArrivedAt:       nowPg,
 				})
-			case "state_election_supervisor":
+			case constants.RoleStateElectionSupervisor:
 				_, _ = s.queries.UpdateStateSupervisorTracking(ctx, queries.UpdateStateSupervisorTrackingParams{
 					UserID:          user.ID,
 					ElectionGroupID: input.ElectionGroupID,
@@ -194,19 +195,19 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateSupervisorUpdate
 			}
 		case "collation_concluded":
 			switch input.RoleType {
-			case "ward_election_supervisor":
+			case constants.RoleWardElectionSupervisor:
 				_, _ = s.queries.UpdateWardSupervisorTracking(ctx, queries.UpdateWardSupervisorTrackingParams{
 					UserID:          user.ID,
 					ElectionGroupID: input.ElectionGroupID,
 					CompletedAt:     nowPg,
 				})
-			case "lga_election_supervisor":
+			case constants.RoleLgaElectionSupervisor:
 				_, _ = s.queries.UpdateLgaSupervisorTracking(ctx, queries.UpdateLgaSupervisorTrackingParams{
 					UserID:          user.ID,
 					ElectionGroupID: input.ElectionGroupID,
 					CompletedAt:     nowPg,
 				})
-			case "state_election_supervisor":
+			case constants.RoleStateElectionSupervisor:
 				_, _ = s.queries.UpdateStateSupervisorTracking(ctx, queries.UpdateStateSupervisorTrackingParams{
 					UserID:          user.ID,
 					ElectionGroupID: input.ElectionGroupID,

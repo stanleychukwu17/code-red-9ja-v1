@@ -14,7 +14,6 @@ export type SupervisorAssignment = {
 export const useAssignments = (electionGroupId?: number | string) => {
 	const user = useUser();
 	const { selectedElectionGroup } = useElection();
-
 	const targetElectionGroupId = electionGroupId !== undefined ? electionGroupId : selectedElectionGroup?.id;
 
 	// 1. Fetch authenticated user's election duty assignments (polling unit & supervisor) in a single request
@@ -25,8 +24,8 @@ export const useAssignments = (electionGroupId?: number | string) => {
 			const res = await fetchMyAssignment({
 				data: targetElectionGroupId
 					? {
-							election_group_id: targetElectionGroupId,
-						}
+						election_group_id: targetElectionGroupId,
+					}
 					: undefined,
 			});
 			if (!res?.success || !res.data) return null;
@@ -36,58 +35,43 @@ export const useAssignments = (electionGroupId?: number | string) => {
 	});
 
 	// Primary polling agent assignment (single assignment per user per election group)
-	const pollingUnitAssignment = assignmentsData?.assignment ?? null;
+	const pollingUnitAssignment = assignmentsData?.polling_unit_assignment ?? null;
+	const role_type:
+		| "state_election_supervisor"
+		| "lga_election_supervisor"
+		| "ward_election_supervisor"
+		| "polling_agent"
+		| null = assignmentsData?.role_type ?? null;
 
 	// 2. Supervisor assignments payload (State, LGA, or Ward level)
 	const supervisorAssignmentsData = assignmentsData?.supervisor_assignments ?? null;
 
-	// 3. Normalize supervisor role with hierarchy priority: State > LGA > Ward
+	// 3. Normalize supervisor role using role_type
 	let supervisorAssignment: SupervisorAssignment | null = null;
-	if (supervisorAssignmentsData) {
-		if (supervisorAssignmentsData.state_supervisor) {
-			supervisorAssignment = {
-				type: "state",
-				data: supervisorAssignmentsData.state_supervisor,
-			};
-		} else if (supervisorAssignmentsData.lga_supervisor) {
-			supervisorAssignment = {
-				type: "lga",
-				data: supervisorAssignmentsData.lga_supervisor,
-			};
-		} else if (supervisorAssignmentsData.ward_supervisor) {
-			supervisorAssignment = {
-				type: "ward",
-				data: supervisorAssignmentsData.ward_supervisor,
-			};
-		}
+	if (role_type === "state_election_supervisor") {
+		supervisorAssignment = {
+			type: "state",
+			data: supervisorAssignmentsData?.state_supervisor,
+		};
+	} else if (role_type === "lga_election_supervisor") {
+		supervisorAssignment = {
+			type: "lga",
+			data: supervisorAssignmentsData?.lga_supervisor,
+		};
+	} else if (role_type === "ward_election_supervisor") {
+		supervisorAssignment = {
+			type: "ward",
+			data: supervisorAssignmentsData?.ward_supervisor,
+		};
 	}
 
 	// 4. Resolve effective polling unit ID (assigned unit takes precedence over profile default)
 	const pollingUnitId = pollingUnitAssignment?.polling_unit_id ?? user?.polling_unit_id ?? null;
 
-	const hasActiveAssignment =
-		assignmentsData?.has_active_assignment ??
-		(!!pollingUnitAssignment || !!supervisorAssignment);
+	const hasActiveAssignment = assignmentsData?.has_active_assignment ?? false;
 
-	// 5. Derive standardized role_type based on active assignments
-	let role_type: "state_election_supervisor" | "lga_election_supervisor" | "ward_election_supervisor" | "polling_agent" | null = null;
-	if (supervisorAssignment) {
-		if (supervisorAssignment.type === "state") {
-			role_type = supervisorAssignment.data?.role_type ?? "state_election_supervisor";
-		} else if (supervisorAssignment.type === "lga") {
-			role_type = supervisorAssignment.data?.role_type ?? "lga_election_supervisor";
-		} else if (supervisorAssignment.type === "ward") {
-			role_type = supervisorAssignment.data?.role_type ?? "ward_election_supervisor";
-		}
-	} else if (pollingUnitAssignment) {
-		role_type = pollingUnitAssignment.role_type ?? "polling_agent";
-	}
-
-	// 6. Derive active assignment political party ID
-	const partyId: number | null =
-		supervisorAssignment?.data?.party_id ??
-		pollingUnitAssignment?.party_id ??
-		null;
+	// 5. Active assignment political party ID
+	const partyId: number | null = assignmentsData?.party_id ?? null;
 
 	return {
 		hasActiveAssignment,

@@ -176,11 +176,17 @@ func (s *Service) GetUserSupervisorAssignments(ctx context.Context, userID int64
 	if err != nil {
 		return nil, err
 	}
+	if stateSup != nil {
+		return &SupervisorAssignmentsResponse{StateSupervisor: stateSup}, nil
+	}
 
 	// Check LGA-level supervisor role (cached in Redis)
 	lgaSup, err := s.GetLgaSupervisorAssignment(ctx, userID, electionGroupID)
 	if err != nil {
 		return nil, err
+	}
+	if lgaSup != nil {
+		return &SupervisorAssignmentsResponse{LgaSupervisor: lgaSup}, nil
 	}
 
 	// Check Ward-level supervisor role (cached in Redis)
@@ -189,10 +195,5 @@ func (s *Service) GetUserSupervisorAssignments(ctx context.Context, userID int64
 		return nil, err
 	}
 
-	// Return aggregated supervisor response
-	return &SupervisorAssignmentsResponse{
-		StateSupervisor: stateSup,
-		LgaSupervisor:   lgaSup,
-		WardSupervisor:  wardSup,
-	}, nil
+	return &SupervisorAssignmentsResponse{WardSupervisor: wardSup}, nil
 }

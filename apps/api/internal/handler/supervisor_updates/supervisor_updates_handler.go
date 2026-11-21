@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"free9ja/api/internal/constants"
 	"free9ja/api/internal/db/queries"
 	apimiddleware "free9ja/api/internal/middleware"
 	supervisorassignmentsservice "free9ja/api/internal/service/supervisor_assignments"
@@ -105,7 +106,7 @@ func (h *Handler) CreateUpdate(w http.ResponseWriter, r *http.Request) {
 
 	if supRes != nil {
 		if supRes.WardSupervisor != nil && supRes.WardSupervisor.ID > 0 {
-			roleType = "ward_election_supervisor"
+			roleType = constants.RoleWardElectionSupervisor
 			stateID = supRes.WardSupervisor.StateID
 			lgaVal := supRes.WardSupervisor.LgaID
 			lgaID = &lgaVal
@@ -114,14 +115,14 @@ func (h *Handler) CreateUpdate(w http.ResponseWriter, r *http.Request) {
 			pVal := supRes.WardSupervisor.PartyID
 			partyID = &pVal
 		} else if supRes.LgaSupervisor != nil && supRes.LgaSupervisor.ID > 0 {
-			roleType = "lga_election_supervisor"
+			roleType = constants.RoleLgaElectionSupervisor
 			stateID = supRes.LgaSupervisor.StateID
 			lgaVal := supRes.LgaSupervisor.LgaID
 			lgaID = &lgaVal
 			pVal := supRes.LgaSupervisor.PartyID
 			partyID = &pVal
 		} else if supRes.StateSupervisor != nil && supRes.StateSupervisor.ID > 0 {
-			roleType = "state_election_supervisor"
+			roleType = constants.RoleStateElectionSupervisor
 			stateID = supRes.StateSupervisor.StateID
 			pVal := supRes.StateSupervisor.PartyID
 			partyID = &pVal

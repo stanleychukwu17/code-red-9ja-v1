@@ -2852,10 +2852,10 @@ func (s *SeedService) SeedPartyAgentApplications(ctx context.Context, req SeedPa
 		req.Count = 300
 	}
 	if req.Role == "" {
-		req.Role = "polling_agent"
+		req.Role = constants.RolePollingAgent
 	}
 	switch req.Role {
-	case "polling_agent", "state_election_supervisor", "lga_election_supervisor", "ward_election_supervisor":
+	case constants.RolePollingAgent, constants.RoleStateElectionSupervisor, constants.RoleLgaElectionSupervisor, constants.RoleWardElectionSupervisor:
 	default:
 		return SeedPartyAgentApplicationsResponse{}, fmt.Errorf("invalid role %q", req.Role)
 	}

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"free9ja/api/internal/constants"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/utils"
@@ -234,18 +235,18 @@ func (s *Service) SubmitSupervisorApplication(ctx context.Context, input SubmitS
 	// 1. Verify role type string
 	roleType := strings.TrimSpace(input.Role)
 	switch roleType {
-	case "state_election_supervisor", "state_supervisor", "state-election-supervisor":
-		roleType = "state_election_supervisor"
+	case constants.RoleStateElectionSupervisor, "state_supervisor", "state-election-supervisor":
+		roleType = constants.RoleStateElectionSupervisor
 		if input.StateID <= 0 {
 			return queries.PartyAgentApplication{}, errors.New("state_id is required for state supervisor application")
 		}
-	case "lga_election_supervisor", "lga_supervisor", "lga-election-supervisor":
-		roleType = "lga_election_supervisor"
+	case constants.RoleLgaElectionSupervisor, "lga_supervisor", "lga-election-supervisor":
+		roleType = constants.RoleLgaElectionSupervisor
 		if input.StateID <= 0 || input.LgaID <= 0 {
 			return queries.PartyAgentApplication{}, errors.New("state_id and lga_id are required for LGA supervisor application")
 		}
-	case "ward_election_supervisor", "ward_supervisor", "ward-election-supervisor":
-		roleType = "ward_election_supervisor"
+	case constants.RoleWardElectionSupervisor, "ward_supervisor", "ward-election-supervisor":
+		roleType = constants.RoleWardElectionSupervisor
 		if input.StateID <= 0 || input.LgaID <= 0 || input.WardID <= 0 {
 			return queries.PartyAgentApplication{}, errors.New("state_id, lga_id, and ward_id are required for Ward supervisor application")
 		}
@@ -746,7 +747,7 @@ func checkRoleLocationCapacity(ctx context.Context, txQueries *queries.Queries, 
 	target := 1
 	if t, ok := targets[roleType]; ok && t > 0 {
 		target = t
-	} else if roleType == "polling_agent" {
+	} else if roleType == constants.RolePollingAgent {
 		target = 2
 	}
 
@@ -754,7 +755,7 @@ func checkRoleLocationCapacity(ctx context.Context, txQueries *queries.Queries, 
 
 	// Query active deployments at the specific station level and compare against quota
 	switch roleType {
-	case "polling_agent":
+	case constants.RolePollingAgent:
 		// Count existing polling unit agents assigned for this party and election
 		count, err := txQueries.CountPollingUnitAssignments(ctx, queries.CountPollingUnitAssignmentsParams{
 			PollingUnitID:   pollingUnitID,
@@ -768,7 +769,7 @@ func checkRoleLocationCapacity(ctx context.Context, txQueries *queries.Queries, 
 			return fmt.Errorf("polling unit has reached maximum capacity (%d/%d agents assigned for %s)", count, target, party.ShortName)
 		}
 
-	case "ward_election_supervisor":
+	case constants.RoleWardElectionSupervisor:
 		// Count existing ward supervisors assigned for this party and election in this ward
 		count, err := txQueries.GetWardSupervisorCount(ctx, queries.GetWardSupervisorCountParams{
 			ElectionGroupID: electionGroupID,
@@ -782,7 +783,7 @@ func checkRoleLocationCapacity(ctx context.Context, txQueries *queries.Queries, 
 			return fmt.Errorf("ward has reached maximum capacity (%d/%d supervisor(s) assigned for %s)", count, target, party.ShortName)
 		}
 
-	case "lga_election_supervisor":
+	case constants.RoleLgaElectionSupervisor:
 		// Count existing LGA supervisors assigned for this party and election in this LGA
 		count, err := txQueries.GetLGASupervisorCount(ctx, queries.GetLGASupervisorCountParams{
 			ElectionGroupID: electionGroupID,
@@ -796,7 +797,7 @@ func checkRoleLocationCapacity(ctx context.Context, txQueries *queries.Queries, 
 			return fmt.Errorf("LGA has reached maximum capacity (%d/%d supervisor(s) assigned for %s)", count, target, party.ShortName)
 		}
 
-	case "state_election_supervisor":
+	case constants.RoleStateElectionSupervisor:
 		// Count existing state supervisors assigned for this party and election in this state
 		count, err := txQueries.GetStateSupervisorCount(ctx, queries.GetStateSupervisorCountParams{
 			ElectionGroupID: electionGroupID,
@@ -873,7 +874,7 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 	// Create assignment based on role
 	roleType := input.RoleType
 	if roleType == "" {
-		roleType = "polling_agent" // Note: Frontend passes 'polling_agent' or supervisor string
+		roleType = constants.RolePollingAgent // Note: Frontend passes 'polling_agent' or supervisor string
 	}
 	// Resolve who assigned this agent (if specified)
 	var assignedByVal pgtype.Int8
@@ -897,7 +898,7 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 
 	// Validate and resolve polling unit assignment strictly for polling agents
 	var pollingUnitID int32
-	if roleType == "polling_agent" {
+	if roleType == constants.RolePollingAgent {
 		pollingUnitID = input.PollingUnitID
 		if pollingUnitID <= 0 && app.PollingUnitID.Valid {
 			pollingUnitID = app.PollingUnitID.Int32
@@ -979,7 +980,7 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 
 	// Create role-specific assignment record (Supervisor or Polling Agent)
 	switch roleType {
-	case "state_election_supervisor":
+	case constants.RoleStateElectionSupervisor:
 		// State supervisor assignment
 		_, err = txQueries.CreateStateSupervisor(ctx, queries.CreateStateSupervisorParams{
 			UserID:               app.UserID,
@@ -993,7 +994,7 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 		if err != nil {
 			return queries.PartyAgentApplication{}, fmt.Errorf("failed to assign state supervisor: %w", err)
 		}
-	case "lga_election_supervisor":
+	case constants.RoleLgaElectionSupervisor:
 		// LGA supervisor assignment
 		_, err = txQueries.CreateLgaSupervisor(ctx, queries.CreateLgaSupervisorParams{
 			UserID:               app.UserID,
@@ -1008,7 +1009,7 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 		if err != nil {
 			return queries.PartyAgentApplication{}, fmt.Errorf("failed to assign LGA supervisor: %w", err)
 		}
-	case "ward_election_supervisor":
+	case constants.RoleWardElectionSupervisor:
 		// Ward supervisor assignment
 		_, err = txQueries.CreateWardSupervisor(ctx, queries.CreateWardSupervisorParams{
 			UserID:               app.UserID,
@@ -1024,7 +1025,7 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 		if err != nil {
 			return queries.PartyAgentApplication{}, fmt.Errorf("failed to assign ward supervisor: %w", err)
 		}
-	case "polling_agent":
+	case constants.RolePollingAgent:
 		// Create polling unit agent assignment with denormalized geography
 		_, err = txQueries.CreateAssignment(ctx, queries.CreateAssignmentParams{
 			UserID:               app.UserID,
@@ -1115,14 +1116,14 @@ func (s *Service) BatchApproveApplications(ctx context.Context, input BatchAppro
 		_ = json.Unmarshal(party.AgentAcquisitionTargets, &targets)
 	}
 	maxPUAgents := 1
-	if val, ok := targets["polling_agent"]; ok && val > 0 {
+	if val, ok := targets[constants.RolePollingAgent]; ok && val > 0 {
 		maxPUAgents = val
 	} else if val, ok := targets["pu_agent"]; ok && val > 0 {
 		maxPUAgents = val
 	}
 
 	// Calculate agent remuneration deduction per agent
-	deductionKobo := resolvePotentialPaymentKobo(party.AgentPaymentAllocationKobo, "polling_agent", input.StateID)
+	deductionKobo := resolvePotentialPaymentKobo(party.AgentPaymentAllocationKobo, constants.RolePollingAgent, input.StateID)
 
 	// 3. Query pending applications matching criteria
 	pendingApps, err := s.queries.ListPendingApplicationsForBatchApproval(ctx, queries.ListPendingApplicationsForBatchApprovalParams{
@@ -1234,7 +1235,7 @@ func (s *Service) BatchApproveApplications(ctx context.Context, input BatchAppro
 		// Update application status to approved
 		_, err = txQueries.UpdateApplicationApproval(ctx, queries.UpdateApplicationApprovalParams{
 			ID:            app.ID,
-			Role:          "polling_agent",
+			Role:          constants.RolePollingAgent,
 			PollingUnitID: utils.PgInt4FromPositive(puID),
 			StateID:       stateID,
 			LgaID:         utils.PgInt4FromPositive(lgaID),
@@ -1255,7 +1256,7 @@ func (s *Service) BatchApproveApplications(ctx context.Context, input BatchAppro
 			StateID:              stateID,
 			LgaID:                lgaID,
 			WardID:               wardID,
-			RoleType:             utils.PgTextFromString("polling_agent"),
+			RoleType:             utils.PgTextFromString(constants.RolePollingAgent),
 			AssignedBy:           assignedBy,
 			PotentialPaymentKobo: deductionKobo,
 		})
@@ -1283,7 +1284,7 @@ func (s *Service) BatchApproveApplications(ctx context.Context, input BatchAppro
 			StateID:       stateID,
 			LgaID:         lgaID,
 			WardID:        wardID,
-			Role:          "polling_agent",
+			Role:          constants.RolePollingAgent,
 		})
 	}
 
@@ -1402,14 +1403,14 @@ func resolvePotentialPaymentKobo(allocationJSON []byte, roleType string, stateID
 	// Validate against standard role keys
 	roleKey := ""
 	switch roleType {
-	case "polling_agent":
-		roleKey = "polling_agent"
-	case "ward_election_supervisor":
-		roleKey = "ward_election_supervisor"
-	case "lga_election_supervisor":
-		roleKey = "lga_election_supervisor"
-	case "state_election_supervisor":
-		roleKey = "state_election_supervisor"
+	case constants.RolePollingAgent:
+		roleKey = constants.RolePollingAgent
+	case constants.RoleWardElectionSupervisor:
+		roleKey = constants.RoleWardElectionSupervisor
+	case constants.RoleLgaElectionSupervisor:
+		roleKey = constants.RoleLgaElectionSupervisor
+	case constants.RoleStateElectionSupervisor:
+		roleKey = constants.RoleStateElectionSupervisor
 	}
 
 	// Unmarshal role-based payment configuration
@@ -1470,7 +1471,7 @@ func (s *Service) ChangeAgentRole(ctx context.Context, input ChangeAgentRoleInpu
 	// Validate standardized role identifier and geographic requirements
 	newRole := strings.ToLower(strings.TrimSpace(input.NewRoleType))
 	switch newRole {
-	case "polling_agent":
+	case constants.RolePollingAgent:
 		if pollingUnitID <= 0 {
 			return nil, errors.New("polling_unit_id is required for polling_agent role")
 		}
@@ -1484,18 +1485,18 @@ func (s *Service) ChangeAgentRole(ctx context.Context, input ChangeAgentRoleInpu
 		stateID = int16(pu.StateID)
 		lgaID = pu.LgaID
 		wardID = pu.WardID
-	case "ward_election_supervisor":
+	case constants.RoleWardElectionSupervisor:
 		if stateID <= 0 || lgaID <= 0 || wardID <= 0 {
 			return nil, errors.New("state_id, lga_id, and ward_id are required for ward supervisor")
 		}
 		pollingUnitID = 0
-	case "lga_election_supervisor":
+	case constants.RoleLgaElectionSupervisor:
 		if stateID <= 0 || lgaID <= 0 {
 			return nil, errors.New("state_id and lga_id are required for LGA supervisor")
 		}
 		wardID = 0
 		pollingUnitID = 0
-	case "state_election_supervisor":
+	case constants.RoleStateElectionSupervisor:
 		if stateID <= 0 {
 			return nil, errors.New("state_id is required for state supervisor")
 		}
@@ -1520,16 +1521,16 @@ func (s *Service) ChangeAgentRole(ctx context.Context, input ChangeAgentRoleInpu
 	if app.Role == newRole {
 		isSame := false
 		switch newRole {
-		case "polling_agent":
+		case constants.RolePollingAgent:
 			isSame = app.PollingUnitID.Valid && app.PollingUnitID.Int32 == pollingUnitID
-		case "ward_election_supervisor":
+		case constants.RoleWardElectionSupervisor:
 			isSame = app.WardID.Valid && app.WardID.Int32 == wardID &&
 				app.LgaID.Valid && app.LgaID.Int32 == lgaID &&
 				app.StateID == stateID
-		case "lga_election_supervisor":
+		case constants.RoleLgaElectionSupervisor:
 			isSame = app.LgaID.Valid && app.LgaID.Int32 == lgaID &&
 				app.StateID == stateID
-		case "state_election_supervisor":
+		case constants.RoleStateElectionSupervisor:
 			isSame = app.StateID == stateID
 		}
 
@@ -1564,19 +1565,19 @@ func (s *Service) ChangeAgentRole(ctx context.Context, input ChangeAgentRoleInpu
 
 	// Clear previous assignment from the table corresponding to the agent's current role
 	switch app.Role {
-	case "polling_agent":
+	case constants.RolePollingAgent:
 		if _, err := tx.Exec(ctx, "DELETE FROM polling_unit_assignments WHERE user_id = $1 AND election_group_id = $2 AND party_id = $3", input.UserID, input.ElectionGroupID, input.PartyID); err != nil {
 			return nil, fmt.Errorf("failed to clear old polling unit assignment: %w", err)
 		}
-	case "ward_election_supervisor":
+	case constants.RoleWardElectionSupervisor:
 		if _, err := tx.Exec(ctx, "DELETE FROM ward_election_supervisors WHERE user_id = $1 AND election_group_id = $2 AND party_id = $3", input.UserID, input.ElectionGroupID, input.PartyID); err != nil {
 			return nil, fmt.Errorf("failed to clear old ward supervisor assignment: %w", err)
 		}
-	case "lga_election_supervisor":
+	case constants.RoleLgaElectionSupervisor:
 		if _, err := tx.Exec(ctx, "DELETE FROM lga_election_supervisors WHERE user_id = $1 AND election_group_id = $2 AND party_id = $3", input.UserID, input.ElectionGroupID, input.PartyID); err != nil {
 			return nil, fmt.Errorf("failed to clear old LGA supervisor assignment: %w", err)
 		}
-	case "state_election_supervisor":
+	case constants.RoleStateElectionSupervisor:
 		if _, err := tx.Exec(ctx, "DELETE FROM state_election_supervisors WHERE user_id = $1 AND election_group_id = $2 AND party_id = $3", input.UserID, input.ElectionGroupID, input.PartyID); err != nil {
 			return nil, fmt.Errorf("failed to clear old state supervisor assignment: %w", err)
 		}
@@ -1591,7 +1592,7 @@ func (s *Service) ChangeAgentRole(ctx context.Context, input ChangeAgentRoleInpu
 
 	// Insert new assignment record using type-safe sqlc queries
 	switch newRole {
-	case "polling_agent":
+	case constants.RolePollingAgent:
 		_, err = txQueries.CreateAssignment(ctx, queries.CreateAssignmentParams{
 			UserID:               input.UserID,
 			PollingUnitID:        pollingUnitID,
@@ -1608,7 +1609,7 @@ func (s *Service) ChangeAgentRole(ctx context.Context, input ChangeAgentRoleInpu
 			return nil, fmt.Errorf("failed to assign polling agent: %w", err)
 		}
 
-	case "ward_election_supervisor":
+	case constants.RoleWardElectionSupervisor:
 		_, err = txQueries.CreateWardSupervisor(ctx, queries.CreateWardSupervisorParams{
 			UserID:               input.UserID,
 			StateID:              stateID,
@@ -1624,7 +1625,7 @@ func (s *Service) ChangeAgentRole(ctx context.Context, input ChangeAgentRoleInpu
 			return nil, fmt.Errorf("failed to assign ward supervisor: %w", err)
 		}
 
-	case "lga_election_supervisor":
+	case constants.RoleLgaElectionSupervisor:
 		_, err = txQueries.CreateLgaSupervisor(ctx, queries.CreateLgaSupervisorParams{
 			UserID:               input.UserID,
 			StateID:              stateID,
@@ -1639,7 +1640,7 @@ func (s *Service) ChangeAgentRole(ctx context.Context, input ChangeAgentRoleInpu
 			return nil, fmt.Errorf("failed to assign LGA supervisor: %w", err)
 		}
 
-	case "state_election_supervisor":
+	case constants.RoleStateElectionSupervisor:
 		_, err = txQueries.CreateStateSupervisor(ctx, queries.CreateStateSupervisorParams{
 			UserID:               input.UserID,
 			StateID:              stateID,
@@ -1701,7 +1702,7 @@ func (s *Service) RevokeAgent(ctx context.Context, input RevokeAgentInput) (*Rev
 	// Validate standardized role identifier
 	roleType := strings.ToLower(strings.TrimSpace(input.RoleType))
 	switch roleType {
-	case "polling_agent", "ward_election_supervisor", "lga_election_supervisor", "state_election_supervisor":
+	case constants.RolePollingAgent, constants.RoleWardElectionSupervisor, constants.RoleLgaElectionSupervisor, constants.RoleStateElectionSupervisor:
 		// Standardized role
 	default:
 		return nil, errors.New("invalid role_type parameter")
@@ -1713,7 +1714,7 @@ func (s *Service) RevokeAgent(ctx context.Context, input RevokeAgentInput) (*Rev
 	var err error
 
 	switch roleType {
-	case "polling_agent":
+	case constants.RolePollingAgent:
 		// Verify assignment exists and matches target party
 		errQuery := s.pool.QueryRow(ctx, "SELECT party_id, election_group_id, user_id FROM polling_unit_assignments WHERE id = $1", input.AssignmentID).Scan(&partyID, &electionGroupID, &userID)
 		if errQuery != nil {
@@ -1725,7 +1726,7 @@ func (s *Service) RevokeAgent(ctx context.Context, input RevokeAgentInput) (*Rev
 		// Delete polling unit assignment record
 		_, err = s.pool.Exec(ctx, "DELETE FROM polling_unit_assignments WHERE id = $1", input.AssignmentID)
 
-	case "ward_election_supervisor":
+	case constants.RoleWardElectionSupervisor:
 		// Verify supervisor exists and matches target party
 		errQuery := s.pool.QueryRow(ctx, "SELECT party_id, election_group_id, user_id FROM ward_election_supervisors WHERE id = $1", input.AssignmentID).Scan(&partyID, &electionGroupID, &userID)
 		if errQuery != nil {
@@ -1737,7 +1738,7 @@ func (s *Service) RevokeAgent(ctx context.Context, input RevokeAgentInput) (*Rev
 		// Delete ward supervisor record
 		_, err = s.pool.Exec(ctx, "DELETE FROM ward_election_supervisors WHERE id = $1", input.AssignmentID)
 
-	case "lga_election_supervisor":
+	case constants.RoleLgaElectionSupervisor:
 		// Verify supervisor exists and matches target party
 		errQuery := s.pool.QueryRow(ctx, "SELECT party_id, election_group_id, user_id FROM lga_election_supervisors WHERE id = $1", input.AssignmentID).Scan(&partyID, &electionGroupID, &userID)
 		if errQuery != nil {
@@ -1749,7 +1750,7 @@ func (s *Service) RevokeAgent(ctx context.Context, input RevokeAgentInput) (*Rev
 		// Delete LGA supervisor record
 		_, err = s.pool.Exec(ctx, "DELETE FROM lga_election_supervisors WHERE id = $1", input.AssignmentID)
 
-	case "state_election_supervisor":
+	case constants.RoleStateElectionSupervisor:
 		// Verify supervisor exists and matches target party
 		errQuery := s.pool.QueryRow(ctx, "SELECT party_id, election_group_id, user_id FROM state_election_supervisors WHERE id = $1", input.AssignmentID).Scan(&partyID, &electionGroupID, &userID)
 		if errQuery != nil {

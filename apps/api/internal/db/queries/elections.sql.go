@@ -938,3 +938,64 @@ func (q *Queries) UpdateElectionInstance(ctx context.Context, arg UpdateElection
 	)
 	return i, err
 }
+
+
+const getElectionsForWard = `-- name: GetElectionsForWard :many
+SELECT e.id, e.fake_id, e.election_group_id, e.office_id, e.name, e.election_date, e.scope
+FROM elections e
+JOIN wards w ON w.id = $1::int
+WHERE e.election_group_id = $2::int
+  AND (
+    e.scope = 'nationwide'
+    OR (e.scope = 'state' AND e.state_id = w.state_id)
+    OR (e.scope = 'senatorial-district' AND e.senatorial_district_id = w.senatorial_district_id)
+    OR (e.scope = 'federal-constituency' AND e.federal_constituency_id = w.federal_constituency_id)
+    OR (e.scope = 'state-constituency' AND e.state_constituency_id = w.state_constituency_id)
+    OR (e.scope = 'lga' AND e.lga_id = w.lga_id)
+    OR (e.scope = 'ward' AND e.ward_id = w.id)
+  )
+ORDER BY e.office_id ASC, e.id ASC
+`
+
+type GetElectionsForWardParams struct {
+	WardID          int32 `json:"ward_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
+}
+
+type GetElectionsForWardRow struct {
+	ID              int32       `json:"id"`
+	FakeID          pgtype.Int8 `json:"fake_id"`
+	ElectionGroupID int32       `json:"election_group_id"`
+	OfficeID        int16       `json:"office_id"`
+	Name            string      `json:"name"`
+	ElectionDate    pgtype.Date `json:"election_date"`
+	Scope           string      `json:"scope"`
+}
+
+func (q *Queries) GetElectionsForWard(ctx context.Context, arg GetElectionsForWardParams) ([]GetElectionsForWardRow, error) {
+	rows, err := q.db.Query(ctx, getElectionsForWard, arg.WardID, arg.ElectionGroupID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetElectionsForWardRow
+	for rows.Next() {
+		var i GetElectionsForWardRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.FakeID,
+			&i.ElectionGroupID,
+			&i.OfficeID,
+			&i.Name,
+			&i.ElectionDate,
+			&i.Scope,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

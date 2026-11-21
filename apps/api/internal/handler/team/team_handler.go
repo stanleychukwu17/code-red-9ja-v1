@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 
+	"free9ja/api/internal/constants"
 	"free9ja/api/internal/db/queries"
 	apimiddleware "free9ja/api/internal/middleware"
 	supervisorassignmentsservice "free9ja/api/internal/service/supervisor_assignments"
@@ -103,7 +104,7 @@ func (h *Handler) GetTeamMembers(w http.ResponseWriter, r *http.Request) {
 		baseLgaID = pollingUnitAssignment.LgaID
 		baseWardID = pollingUnitAssignment.WardID
 		basePollingUnitID = pollingUnitAssignment.PollingUnitID
-		userRole = "polling_agent"
+		userRole = constants.RolePollingAgent
 	} else {
 		// Resolve supervisor role for election group using cached service
 		supAssignments, sErr := h.supervisorService.GetUserSupervisorAssignments(ctx, userID, electionGroupID)
@@ -116,18 +117,18 @@ func (h *Handler) GetTeamMembers(w http.ResponseWriter, r *http.Request) {
 			if stateSupervisor := supAssignments.StateSupervisor; stateSupervisor != nil && stateSupervisor.ID > 0 {
 				partyID = stateSupervisor.PartyID
 				baseStateID = stateSupervisor.StateID
-				userRole = "state_supervisor"
+				userRole = constants.RoleStateElectionSupervisor
 			} else if lgaSupervisor := supAssignments.LgaSupervisor; lgaSupervisor != nil && lgaSupervisor.ID > 0 {
 				partyID = lgaSupervisor.PartyID
 				baseStateID = lgaSupervisor.StateID
 				baseLgaID = lgaSupervisor.LgaID
-				userRole = "lga_supervisor"
+				userRole = constants.RoleLgaElectionSupervisor
 			} else if wardSupervisor := supAssignments.WardSupervisor; wardSupervisor != nil && wardSupervisor.ID > 0 {
 				partyID = wardSupervisor.PartyID
 				baseStateID = wardSupervisor.StateID
 				baseLgaID = wardSupervisor.LgaID
 				baseWardID = wardSupervisor.WardID
-				userRole = "ward_supervisor"
+				userRole = constants.RoleWardElectionSupervisor
 			}
 		}
 	}
@@ -151,22 +152,22 @@ func (h *Handler) GetTeamMembers(w http.ResponseWriter, r *http.Request) {
 	var effectivePollingUnitID int32
 
 	switch userRole {
-	case "polling_agent":
+	case constants.RolePollingAgent:
 		effectiveStateID = baseStateID
 		effectiveLgaID = baseLgaID
 		effectiveWardID = baseWardID
 		effectivePollingUnitID = basePollingUnitID
-	case "ward_supervisor":
+	case constants.RoleWardElectionSupervisor:
 		effectiveLgaID = baseLgaID
 		effectiveWardID = baseWardID
 		effectivePollingUnitID = paramPollingUnitID
-	case "lga_supervisor":
+	case constants.RoleLgaElectionSupervisor:
 		effectiveLgaID = baseLgaID
 		if paramWardID > 0 {
 			effectiveWardID = paramWardID
 		}
 		effectivePollingUnitID = paramPollingUnitID
-	case "state_supervisor":
+	case constants.RoleStateElectionSupervisor:
 		if paramLgaID > 0 {
 			effectiveLgaID = paramLgaID
 		}
@@ -179,7 +180,7 @@ func (h *Handler) GetTeamMembers(w http.ResponseWriter, r *http.Request) {
 	// Resolve target tab parameter
 	tab := qParams.Get("tab")
 	if tab == "" {
-		tab = "polling_agent"
+		tab = constants.RolePollingAgent
 	}
 
 	var items []teamservice.TeamMemberItem
@@ -187,13 +188,13 @@ func (h *Handler) GetTeamMembers(w http.ResponseWriter, r *http.Request) {
 
 	// Fetch team members according to requested role type
 	switch tab {
-	case "polling_agent":
+	case constants.RolePollingAgent:
 		items, queryErr = h.teamService.GetPollingAgents(ctx, partyID, electionGroupID, effectiveStateID, effectiveLgaID, effectiveWardID, effectivePollingUnitID)
-	case "ward_election_supervisor":
+	case constants.RoleWardElectionSupervisor:
 		items, queryErr = h.teamService.GetWardSupervisors(ctx, partyID, electionGroupID, effectiveStateID, effectiveLgaID, effectiveWardID)
-	case "lga_election_supervisor":
+	case constants.RoleLgaElectionSupervisor:
 		items, queryErr = h.teamService.GetLgaSupervisors(ctx, partyID, electionGroupID, effectiveStateID, effectiveLgaID)
-	case "state_election_supervisor":
+	case constants.RoleStateElectionSupervisor:
 		items, queryErr = h.teamService.GetStateSupervisors(ctx, partyID, electionGroupID, effectiveStateID)
 	default:
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid tab parameter: "+tab)

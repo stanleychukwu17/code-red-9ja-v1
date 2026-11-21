@@ -229,3 +229,19 @@ WHERE e.election_group_id = sqlc.arg('election_group_id')::int
     OR (e.scope = 'lga' AND e.lga_id = pu.lga_id)
     OR (e.scope = 'ward' AND e.ward_id = pu.ward_id)
   );
+
+-- name: GetElectionsForWard :many
+SELECT e.id, e.fake_id, e.election_group_id, e.office_id, e.name, e.election_date, e.scope
+FROM elections e
+JOIN wards w ON w.id = sqlc.arg('ward_id')::int
+WHERE e.election_group_id = sqlc.arg('election_group_id')::int
+  AND (
+    e.scope = 'nationwide'
+    OR (e.scope = 'state' AND e.state_id = w.state_id)
+    OR (e.scope = 'senatorial-district' AND e.senatorial_district_id = w.senatorial_district_id)
+    OR (e.scope = 'federal-constituency' AND e.federal_constituency_id = w.federal_constituency_id)
+    OR (e.scope = 'state-constituency' AND e.state_constituency_id = w.state_constituency_id)
+    OR (e.scope = 'lga' AND e.lga_id = w.lga_id)
+    OR (e.scope = 'ward' AND e.ward_id = w.id)
+  )
+ORDER BY e.office_id ASC, e.id ASC;

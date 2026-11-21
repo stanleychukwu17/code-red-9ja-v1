@@ -2,6 +2,7 @@ package puassignmentshandler
 
 import (
 	"context"
+	"free9ja/api/internal/constants"
 	"free9ja/api/internal/db/queries"
 	apimiddleware "free9ja/api/internal/middleware"
 	puupdates "free9ja/api/internal/service/polling_unit_updates"
@@ -207,19 +208,19 @@ func (h *Handler) GetMyAssignment(w http.ResponseWriter, r *http.Request) {
 		electionGroupID = int32(egID)
 	}
 
-	var assignment *queries.GetUserAssignmentRow
+	var pollingUnitAssignment *queries.GetUserAssignmentRow
 	var supervisorAssignments *supervisorassignmentsservice.SupervisorAssignmentsResponse
 	hasActiveAssignment := false
 
 	if electionGroupID > 0 {
 		// Specific election group requested
-		assignment, err = h.service.GetMyAssignment(r.Context(), requester.ID, electionGroupID)
+		pollingUnitAssignment, err = h.service.GetMyAssignment(r.Context(), requester.ID, electionGroupID)
 		if err != nil {
 			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch assignment: "+err.Error())
 			return
 		}
 
-		if h.supervisorService != nil {
+		if pollingUnitAssignment == nil {
 			supervisorAssignments, err = h.supervisorService.GetUserSupervisorAssignments(r.Context(), requester.ID, electionGroupID)
 			if err != nil {
 				h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch supervisor assignments: "+err.Error())
@@ -227,36 +228,67 @@ func (h *Handler) GetMyAssignment(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		hasActiveAssignment = assignment != nil || (supervisorAssignments != nil && (supervisorAssignments.StateSupervisor != nil || supervisorAssignments.LgaSupervisor != nil || supervisorAssignments.WardSupervisor != nil))
+		hasActiveAssignment = pollingUnitAssignment != nil || (supervisorAssignments != nil && (supervisorAssignments.StateSupervisor != nil || supervisorAssignments.LgaSupervisor != nil || supervisorAssignments.WardSupervisor != nil))
 	} else {
 		// Step 1: Fast EXISTS check across polling unit and supervisor assignments for active/upcoming elections
-		hasActive, err := h.service.HasActiveAssignment(r.Context(), requester.ID)
+		hasActiveAssignment, err = h.service.HasActiveAssignment(r.Context(), requester.ID)
 		if err != nil {
 			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to check active assignments: "+err.Error())
 			return
 		}
 
-		hasActiveAssignment = hasActive
-
 		// Step 2: If active assignment exists, fetch the assignment details
-		if hasActive {
-			assignment, _ = h.service.GetActiveAssignment(r.Context(), requester.ID)
+		if hasActiveAssignment {
+			pollingUnitAssignment, _ = h.service.GetActiveAssignment(r.Context(), requester.ID)
 
-			if assignment != nil && assignment.ElectionGroupID > 0 && h.supervisorService != nil {
-				supervisorAssignments, _ = h.supervisorService.GetUserSupervisorAssignments(r.Context(), requester.ID, assignment.ElectionGroupID)
-			} else if h.supervisorService != nil {
+			if pollingUnitAssignment == nil {
 				// User has an active supervisor assignment
-				if supEGID, sErr := h.service.GetActiveSupervisorElectionGroupID(r.Context(), requester.ID); sErr == nil && supEGID > 0 {
-					supervisorAssignments, _ = h.supervisorService.GetUserSupervisorAssignments(r.Context(), requester.ID, supEGID)
+				if supervisorElectionGroupID, err := h.service.GetActiveSupervisorElectionGroupID(r.Context(), requester.ID); err == nil && supervisorElectionGroupID > 0 {
+					supervisorAssignments, _ = h.supervisorService.GetUserSupervisorAssignments(r.Context(), requester.ID, supervisorElectionGroupID)
 				}
 			}
 		}
 	}
 
+	// Derive top-level role_type and party_id from whichever assignment is active
+	var roleType *string
+	var partyID *int16
+	if pollingUnitAssignment != nil {
+		t := constants.RolePollingAgent
+
+		roleType = &t
+		partyID = &pollingUnitAssignment.PartyID
+	} else if supervisorAssignments != nil {
+		var t string
+		if supervisorAssignments.StateSupervisor != nil {
+			t = constants.RoleStateElectionSupervisor
+			partyID = &supervisorAssignments.StateSupervisor.PartyID
+		} else if supervisorAssignments.LgaSupervisor != nil {
+			t = constants.RoleLgaElectionSupervisor
+			partyID = &supervisorAssignments.LgaSupervisor.PartyID
+		} else if supervisorAssignments.WardSupervisor != nil {
+			t = constants.RoleWardElectionSupervisor
+			partyID = &supervisorAssignments.WardSupervisor.PartyID
+		}
+
+		if t != "" {
+			roleType = &t
+		}
+	}
+
+	// from role type, get elections covered by the agent or supervisor
+	if roleType != nil && (*roleType == constants.RolePollingAgent || *roleType == constants.RoleWardElectionSupervisor) {
+
+	} else if *roleType == constants.RoleLgaElectionSupervisor {
+	} else if *roleType == constants.RoleStateElectionSupervisor {
+	}
+
 	h.utils.RespondSuccess(w, http.StatusOK, "Assignment fetched successfully", map[string]interface{}{
-		"has_active_assignment":  hasActiveAssignment,
-		"assignment":             assignment,
-		"supervisor_assignments": supervisorAssignments,
+		"has_active_assignment":   hasActiveAssignment,
+		"role_type":               roleType,
+		"party_id":                partyID,
+		"polling_unit_assignment": pollingUnitAssignment,
+		"supervisor_assignments":  supervisorAssignments,
 	})
 }
 
