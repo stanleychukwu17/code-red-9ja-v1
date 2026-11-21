@@ -117,6 +117,10 @@ CREATE TABLE IF NOT EXISTS polling_unit_with_issues (
   resolution_notes TEXT
 );
 
+CREATE UNIQUE INDEX idx_active_user_issue
+ON polling_unit_with_issues (user_id, election_group_id, issue_option_id)
+WHERE is_active = true;
+
 -- Child table for media attachments (photos, videos, audio/voice notes)
 CREATE TABLE IF NOT EXISTS polling_unit_update_media (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,

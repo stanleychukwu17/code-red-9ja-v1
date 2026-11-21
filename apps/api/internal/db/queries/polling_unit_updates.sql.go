@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const createPollingUnitIssue = `-- name: CreatePollingUnitIssue :one
+const createPollingUnitIssue = `-- name: CreatePollingUnitIssue :exec
 INSERT INTO polling_unit_with_issues (
   update_id,
   role_type,
@@ -32,7 +32,8 @@ INSERT INTO polling_unit_with_issues (
 ) VALUES (
   $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, true,
   COALESCE($15, NOW())
-) RETURNING id, update_id, role_type, election_group_id, party_id, user_id, state_id, lga_id, ward_id, senatorial_district_id, federal_constituency_id, state_assembly_constituency_id, polling_unit_id, issue_category_id, issue_option_id, is_active, time_issue_started, time_issue_ended, resolution_notes
+)
+ON CONFLICT (user_id, election_group_id, issue_option_id) WHERE is_active = true DO NOTHING
 `
 
 type CreatePollingUnitIssueParams struct {
@@ -53,8 +54,8 @@ type CreatePollingUnitIssueParams struct {
 	TimeIssueStarted            interface{} `json:"time_issue_started"`
 }
 
-func (q *Queries) CreatePollingUnitIssue(ctx context.Context, arg CreatePollingUnitIssueParams) (PollingUnitWithIssue, error) {
-	row := q.db.QueryRow(ctx, createPollingUnitIssue,
+func (q *Queries) CreatePollingUnitIssue(ctx context.Context, arg CreatePollingUnitIssueParams) error {
+	_, err := q.db.Exec(ctx, createPollingUnitIssue,
 		arg.UpdateID,
 		arg.RoleType,
 		arg.ElectionGroupID,
@@ -71,29 +72,7 @@ func (q *Queries) CreatePollingUnitIssue(ctx context.Context, arg CreatePollingU
 		arg.IssueOptionID,
 		arg.TimeIssueStarted,
 	)
-	var i PollingUnitWithIssue
-	err := row.Scan(
-		&i.ID,
-		&i.UpdateID,
-		&i.RoleType,
-		&i.ElectionGroupID,
-		&i.PartyID,
-		&i.UserID,
-		&i.StateID,
-		&i.LgaID,
-		&i.WardID,
-		&i.SenatorialDistrictID,
-		&i.FederalConstituencyID,
-		&i.StateAssemblyConstituencyID,
-		&i.PollingUnitID,
-		&i.IssueCategoryID,
-		&i.IssueOptionID,
-		&i.IsActive,
-		&i.TimeIssueStarted,
-		&i.TimeIssueEnded,
-		&i.ResolutionNotes,
-	)
-	return i, err
+	return err
 }
 
 const createPollingUnitUpdate = `-- name: CreatePollingUnitUpdate :one

@@ -15,9 +15,7 @@ import { LocationStatusBanner } from "./-components/LocationStatusBanner";
 import { IntervalStatusBanner } from "./-components/IntervalStatusBanner";
 import { MissingLocationAlertDialog } from "./-components/MissingLocationAlertDialog";
 import {
-  getActiveIssuesForPU,
   saveToOutbox,
-  type CachedActiveIssue,
   type OutboxUpdateItem,
 } from "#/lib/outbox-db";
 import { useOfflineOutbox } from "#/lib/use-offline-outbox";
@@ -69,13 +67,10 @@ function GiveUpdate() {
 
   const pollingUnitsList = puData?.data?.polling_units || [];
 
-  // Active issues loaded from local cache / state
-  const [activeIssuesList, setActiveIssuesList] = useState<CachedActiveIssue[]>([]);
-
-  // Issue Action: 'none' | 'existing_{id}' | 'new'
+  // Issue Action: 'none' | 'new'
   const [issueActionValue, setIssueActionValue] = useState<string>("none");
 
-  // Selected new issue options (multi-select)
+  // Selected issue options (multi-select)
   const [selectedIssueOptionIds, setSelectedIssueOptionIds] = useState<number[]>([]);
 
   const [title, setTitle] = useState("");
@@ -91,24 +86,9 @@ function GiveUpdate() {
   const { geoCoords, isLocating, geoError, requestLocation } = useGeolocation();
   const [showLocationWarningDialog, setShowLocationWarningDialog] = useState(false);
 
-  // Load any existing active issues for this polling unit on mount
-  useEffect(() => {
-    if (pollingUnitAssignment?.polling_unit_id) {
-      getActiveIssuesForPU(pollingUnitAssignment.polling_unit_id).then((issues) => {
-        setActiveIssuesList(issues);
-        // Pre-select existing issue if one is active
-        if (issues.length > 0) {
-          setIssueActionValue(`existing_${issues[0]!.id}`);
-        }
-      });
-    }
-  }, [pollingUnitAssignment?.polling_unit_id]);
-
   // Parse current issue selection
-  const isExistingIssue = issueActionValue.startsWith("existing_");
   const isNewIssue = issueActionValue === "new";
-  const hasIssues = isExistingIssue || isNewIssue;
-  const existingIssueId = isExistingIssue ? Number(issueActionValue.replace("existing_", "")) : undefined;
+  const hasIssues = isNewIssue && selectedIssueOptionIds.length > 0;
 
   // Validate required category and headline before queuing an update
   const validateFormInputs = () => {
@@ -117,8 +97,9 @@ function GiveUpdate() {
       return false;
     }
 
-    if (!title.trim()) {
-      toast.error("Please enter an update headline.");
+    const titleWords = title.trim().split(/\s+/).filter(Boolean);
+    if (titleWords.length < 2) {
+      toast.error("Please enter a headline of at least 2 words.");
       return false;
     }
 
@@ -173,8 +154,7 @@ function GiveUpdate() {
         statusCategoryId: selectedStatusCategoryId,
         statusOptionId: selectedStatusOptionId,
         hasIssues,
-        issueAction: isExistingIssue ? "link_existing" : isNewIssue ? "create_new" : "none",
-        existingIssueIds: isExistingIssue && existingIssueId ? [existingIssueId] : undefined,
+        issueAction: isNewIssue ? "create_new" : "none",
         newIssueOptionIds: isNewIssue ? selectedIssueOptionIds : undefined,
         title: title.trim(),
         message: message.trim(),
@@ -284,7 +264,6 @@ function GiveUpdate() {
             onIssueActionValueChange={setIssueActionValue}
             selectedIssueOptionIds={selectedIssueOptionIds}
             onIssueOptionIdsChange={setSelectedIssueOptionIds}
-            activeIssuesList={activeIssuesList}
           />
         </div>
 

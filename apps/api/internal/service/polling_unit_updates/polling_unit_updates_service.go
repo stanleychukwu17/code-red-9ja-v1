@@ -210,7 +210,7 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 
 	// Create new active issues if reported
 	for _, issue := range validIssues {
-		_, err = qtx.CreatePollingUnitIssue(ctx, queries.CreatePollingUnitIssueParams{
+		err = qtx.CreatePollingUnitIssue(ctx, queries.CreatePollingUnitIssueParams{
 			UpdateID:                    utils.PgInt8FromInt64(update.ID),
 			RoleType:                    roleType,
 			ElectionGroupID:             input.ElectionGroupID,

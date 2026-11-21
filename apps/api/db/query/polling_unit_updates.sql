@@ -51,7 +51,7 @@ SELECT id, issue_category_id, name, severity, sort_order
 FROM polling_unit_issue_options
 WHERE id = $1;
 
--- name: CreatePollingUnitIssue :one
+-- name: CreatePollingUnitIssue :exec
 INSERT INTO polling_unit_with_issues (
   update_id,
   role_type,
@@ -72,7 +72,8 @@ INSERT INTO polling_unit_with_issues (
 ) VALUES (
   $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, true,
   COALESCE(sqlc.narg(time_issue_started), NOW())
-) RETURNING *;
+)
+ON CONFLICT (user_id, election_group_id, issue_option_id) WHERE is_active = true DO NOTHING;
 
 -- name: ResolvePollingUnitIssues :exec
 UPDATE polling_unit_with_issues

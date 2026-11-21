@@ -1,19 +1,13 @@
 import { useState } from "react";
 import { STATIC_ISSUE_CATEGORIES } from "#/lib/constants/update-options";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@repo/ui/components/dialog";
-import { Check, ChevronDown, AlertTriangle, ShieldAlert, CheckCircle2 } from "lucide-react";
-
-export type ActiveIssueItem = {
-  id: number;
-  issueName: string;
-};
+import { Check, ChevronDown, ShieldAlert, CheckCircle2 } from "lucide-react";
 
 export type VotingIssueSelectsProps = {
   issueActionValue: string;
   onIssueActionValueChange: (val: string) => void;
   selectedIssueOptionIds: number[];
   onIssueOptionIdsChange: (optionIds: number[]) => void;
-  activeIssuesList: ActiveIssueItem[];
   forWho?: "agent" | "supervisor";
 };
 
@@ -22,7 +16,6 @@ export function VotingIssueSelects({
   onIssueActionValueChange,
   selectedIssueOptionIds,
   onIssueOptionIdsChange,
-  activeIssuesList,
   forWho = "agent",
 }: VotingIssueSelectsProps) {
   // Modal open states for action dialog and multi-select detail dialog
@@ -39,10 +32,7 @@ export function VotingIssueSelects({
   };
 
   // Derived state
-  const isExistingIssue = issueActionValue.startsWith("existing_");
   const isNewIssue = issueActionValue === "new";
-  const existingIssueId = isExistingIssue ? Number(issueActionValue.replace("existing_", "")) : undefined;
-  const linkedActiveIssue = activeIssuesList.find((i) => i.id === existingIssueId);
 
   // Handle action selection
   const handleActionSelect = (action: string) => {
@@ -68,11 +58,8 @@ export function VotingIssueSelects({
 
   // Label for the action trigger
   const getActionTriggerLabel = () => {
-    if (isExistingIssue && linkedActiveIssue) {
-      return `Ongoing: ${linkedActiveIssue.issueName}`;
-    }
     if (isNewIssue) {
-      return "+ Report a new issue";
+      return "+ Report an issue";
     }
     return "None (All smooth)";
   };
@@ -100,11 +87,9 @@ export function VotingIssueSelects({
         <button
           type="button"
           onClick={() => setIsActionDialogOpen(true)}
-          className={`w-full border-0 rounded-xl px-4 py-3.5 text-sm font-semibold outline-none cursor-pointer flex items-center justify-between transition ${isExistingIssue
-            ? "bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20"
-            : isNewIssue
-              ? "bg-red-500/10 text-red-700 dark:text-red-400 hover:bg-red-500/20"
-              : "bg-[#F3F4F8] dark:bg-muted/40 text-foreground hover:bg-[#EBEDF2] dark:hover:bg-muted/60"
+          className={`w-full border-0 rounded-xl px-4 py-3.5 text-sm font-semibold outline-none cursor-pointer flex items-center justify-between transition ${isNewIssue
+            ? "bg-red-500/10 text-red-700 dark:text-red-400 hover:bg-red-500/20"
+            : "bg-[#F3F4F8] dark:bg-muted/40 text-foreground hover:bg-[#EBEDF2] dark:hover:bg-muted/60"
             }`}
         >
           <span className="truncate">{getActionTriggerLabel()}</span>
@@ -133,16 +118,6 @@ export function VotingIssueSelects({
             </span>
             <ChevronDown className="size-4 shrink-0 text-muted-foreground ml-2" />
           </button>
-        </div>
-      ) : isExistingIssue ? (
-        <div className="space-y-1.5">
-          <label className="text-xs sm:text-sm font-semibold text-foreground">
-            Issue context
-          </label>
-          <div className="w-full bg-amber-500/10 dark:bg-amber-500/20 rounded-xl px-4 py-3.5 text-sm font-medium text-amber-700 dark:text-amber-400 truncate flex items-center gap-2">
-            <AlertTriangle className="size-4 shrink-0" />
-            <span>Linking update to ongoing issue</span>
-          </div>
         </div>
       ) : (
         <div className="hidden sm:block" />
@@ -185,41 +160,7 @@ export function VotingIssueSelects({
               )}
             </button>
 
-            {/* Option 2: Active ongoing issues list */}
-            {activeIssuesList.map((issue) => {
-              const val = `existing_${issue.id}`;
-              const isSelected = issueActionValue === val;
-              return (
-                <button
-                  key={issue.id}
-                  type="button"
-                  onClick={() => handleActionSelect(val)}
-                  className={`w-full text-left p-3.5 rounded-xl border transition flex items-start justify-between gap-3 cursor-pointer ${isSelected
-                    ? "border-amber-500 bg-amber-500/10"
-                    : "border-border/60 hover:bg-muted/50 bg-background"
-                    }`}
-                >
-                  <div className="flex items-start gap-3">
-                    <AlertTriangle className="size-5 text-amber-600 mt-0.5 shrink-0" />
-                    <div className="space-y-0.5">
-                      <p className="text-sm font-bold text-foreground">
-                        Ongoing: {issue.issueName}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Provide a progress or status update on this open issue
-                      </p>
-                    </div>
-                  </div>
-                  {isSelected && (
-                    <span className="size-5 rounded-full bg-amber-600 flex items-center justify-center shrink-0 mt-0.5">
-                      <Check className="size-3 text-white stroke-3" />
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-
-            {/* Option 3: Report a new issue */}
+            {/* Option 2: Report an issue */}
             <button
               type="button"
               onClick={() => handleActionSelect("new")}

@@ -92,7 +92,7 @@ type Querier interface {
 	CreatePhoneNumber(ctx context.Context, arg CreatePhoneNumberParams) (int64, error)
 	CreatePlan(ctx context.Context, arg CreatePlanParams) (Plan, error)
 	CreatePollingUnit(ctx context.Context, arg CreatePollingUnitParams) (PollingUnit, error)
-	CreatePollingUnitIssue(ctx context.Context, arg CreatePollingUnitIssueParams) (PollingUnitWithIssue, error)
+	CreatePollingUnitIssue(ctx context.Context, arg CreatePollingUnitIssueParams) error
 	CreatePollingUnitUpdate(ctx context.Context, arg CreatePollingUnitUpdateParams) (PollingUnitUpdate, error)
 	CreatePollingUnitUpdateMedia(ctx context.Context, arg CreatePollingUnitUpdateMediaParams) (PollingUnitUpdateMedium, error)
 	CreateReferral(ctx context.Context, arg CreateReferralParams) (Referral, error)

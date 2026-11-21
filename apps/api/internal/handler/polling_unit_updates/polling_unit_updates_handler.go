@@ -12,6 +12,7 @@ import (
 	"math"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-playground/validator/v10"
@@ -106,6 +107,10 @@ func (h *Handler) CreateUpdate(w http.ResponseWriter, r *http.Request) {
 	// Validate required fields
 	if err := h.validate.Struct(req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
+		return
+	}
+	if req.Title == nil || len(strings.Fields(*req.Title)) < 2 {
+		h.utils.RespondError(w, http.StatusBadRequest, "title must be at least 2 words")
 		return
 	}
 
