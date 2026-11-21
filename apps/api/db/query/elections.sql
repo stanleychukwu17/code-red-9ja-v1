@@ -36,10 +36,7 @@ WHERE (
   OR (e.election_date < sqlc.narg('cursor_election_date')::date)
   OR (e.election_date = sqlc.narg('cursor_election_date')::date AND e.id < sqlc.arg('cursor_id')::int)
 )
-AND (sqlc.narg('search')::text IS NULL OR (
-  e.name ILIKE '%' || sqlc.narg('search')::text || '%' OR
-  o.name ILIKE '%' || sqlc.narg('search')::text || '%'
-))
+AND (sqlc.narg('search')::text IS NULL OR e.name ILIKE '%' || sqlc.narg('search')::text || '%')
 AND (sqlc.narg('election_group_ids')::int[] IS NULL OR e.election_group_id = ANY(sqlc.narg('election_group_ids')::int[]))
 AND (sqlc.narg('scopes')::text[] IS NULL OR e.scope = ANY(sqlc.narg('scopes')::text[]))
 AND (
@@ -243,5 +240,35 @@ WHERE e.election_group_id = sqlc.arg('election_group_id')::int
     OR (e.scope = 'state-constituency' AND e.state_constituency_id = w.state_constituency_id)
     OR (e.scope = 'lga' AND e.lga_id = w.lga_id)
     OR (e.scope = 'ward' AND e.ward_id = w.id)
+  )
+ORDER BY e.office_id ASC, e.id ASC;
+
+-- name: GetElectionsForLGA :many
+SELECT e.id, e.fake_id, e.election_group_id, e.office_id, e.name, e.election_date, e.scope
+FROM elections e
+JOIN lgas l ON l.id = sqlc.arg('lga_id')::int
+WHERE e.election_group_id = sqlc.arg('election_group_id')::int
+  AND (
+    e.scope = 'nationwide'
+    OR (e.scope = 'state' AND e.state_id = l.state_id)
+    OR (e.scope = 'senatorial-district' AND e.senatorial_district_id = l.senatorial_district_id)
+    OR (e.scope = 'federal-constituency' AND e.federal_constituency_id = l.federal_constituency_id)
+    OR (e.scope = 'lga' AND e.lga_id = l.id)
+    OR (e.scope = 'state-constituency' AND EXISTS (
+      SELECT 1 FROM state_constituencies sc WHERE sc.id = e.state_constituency_id AND sc.lga_id = l.id
+    ))
+    OR (e.scope = 'ward' AND EXISTS (
+      SELECT 1 FROM wards w WHERE w.id = e.ward_id AND w.lga_id = l.id
+    ))
+  )
+ORDER BY e.office_id ASC, e.id ASC;
+
+-- name: GetElectionsForState :many
+SELECT e.id, e.fake_id, e.election_group_id, e.office_id, e.name, e.election_date, e.scope
+FROM elections e
+WHERE e.election_group_id = sqlc.arg('election_group_id')::int
+  AND (
+    e.scope = 'nationwide'
+    OR e.state_id = sqlc.arg('state_id')::smallint
   )
 ORDER BY e.office_id ASC, e.id ASC;

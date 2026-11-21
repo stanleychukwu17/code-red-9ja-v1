@@ -45,6 +45,12 @@ type PollingUnitsService interface {
 	GetPollingUnitByID(ctx context.Context, id int32) (queries.PollingUnit, error)
 }
 
+type ElectionsService interface {
+	GetElectionsForWard(ctx context.Context, electionGroupID, wardID int32) ([]queries.GetElectionsForWardRow, error)
+	GetElectionsForLGA(ctx context.Context, electionGroupID, lgaID int32) ([]queries.GetElectionsForLGARow, error)
+	GetElectionsForState(ctx context.Context, electionGroupID int32, stateID int16) ([]queries.GetElectionsForStateRow, error)
+}
+
 type Handler struct {
 	service                   PollingUnitAssignmentsService
 	usersService              UsersService
@@ -52,10 +58,11 @@ type Handler struct {
 	earningsService           EarningsService
 	supervisorService         SupervisorAssignmentsService
 	puService                 PollingUnitsService
+	electionsService          ElectionsService
 	utils                     *utils.Utils
 }
 
-func NewHandler(service PollingUnitAssignmentsService, usersService UsersService, puUpdatesService PollingUnitUpdatesService, utils *utils.Utils, earningsSvc EarningsService, supervisorSvc SupervisorAssignmentsService, puSvc PollingUnitsService) *Handler {
+func NewHandler(service PollingUnitAssignmentsService, usersService UsersService, puUpdatesService PollingUnitUpdatesService, utils *utils.Utils, earningsSvc EarningsService, supervisorSvc SupervisorAssignmentsService, puSvc PollingUnitsService, electionsSvc ElectionsService) *Handler {
 	return &Handler{
 		service:                   service,
 		usersService:              usersService,
@@ -63,6 +70,7 @@ func NewHandler(service PollingUnitAssignmentsService, usersService UsersService
 		earningsService:           earningsSvc,
 		supervisorService:         supervisorSvc,
 		puService:                 puSvc,
+		electionsService:          electionsSvc,
 		utils:                     utils,
 	}
 }
@@ -276,17 +284,39 @@ func (h *Handler) GetMyAssignment(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// from role type, get elections covered by the agent or supervisor
+	// From role_type, get elections covered by the agent or supervisor
+	var elections interface{}
 	if roleType != nil && (*roleType == constants.RolePollingAgent || *roleType == constants.RoleWardElectionSupervisor) {
-
-	} else if *roleType == constants.RoleLgaElectionSupervisor {
-	} else if *roleType == constants.RoleStateElectionSupervisor {
+		var wardID, targetElectionGroupID int32
+		if *roleType == constants.RolePollingAgent && pollingUnitAssignment != nil {
+			wardID = pollingUnitAssignment.WardID
+			targetElectionGroupID = pollingUnitAssignment.ElectionGroupID
+		} else if supervisorAssignments != nil && supervisorAssignments.WardSupervisor != nil {
+			wardID = supervisorAssignments.WardSupervisor.WardID
+			targetElectionGroupID = supervisorAssignments.WardSupervisor.ElectionGroupID
+		}
+		if wardID > 0 && targetElectionGroupID > 0 {
+			elections, _ = h.electionsService.GetElectionsForWard(r.Context(), targetElectionGroupID, wardID)
+		}
+	} else if roleType != nil && *roleType == constants.RoleLgaElectionSupervisor && supervisorAssignments != nil && supervisorAssignments.LgaSupervisor != nil {
+		lgaID := supervisorAssignments.LgaSupervisor.LgaID
+		targetElectionGroupID := supervisorAssignments.LgaSupervisor.ElectionGroupID
+		if lgaID > 0 && targetElectionGroupID > 0 {
+			elections, _ = h.electionsService.GetElectionsForLGA(r.Context(), targetElectionGroupID, lgaID)
+		}
+	} else if roleType != nil && *roleType == constants.RoleStateElectionSupervisor && supervisorAssignments != nil && supervisorAssignments.StateSupervisor != nil {
+		stateID := supervisorAssignments.StateSupervisor.StateID
+		targetElectionGroupID := supervisorAssignments.StateSupervisor.ElectionGroupID
+		if stateID > 0 && targetElectionGroupID > 0 {
+			elections, _ = h.electionsService.GetElectionsForState(r.Context(), targetElectionGroupID, stateID)
+		}
 	}
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Assignment fetched successfully", map[string]interface{}{
 		"has_active_assignment":   hasActiveAssignment,
 		"role_type":               roleType,
 		"party_id":                partyID,
+		"elections":               elections,
 		"polling_unit_assignment": pollingUnitAssignment,
 		"supervisor_assignments":  supervisorAssignments,
 	})

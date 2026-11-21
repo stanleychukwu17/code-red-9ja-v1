@@ -375,6 +375,184 @@ func (q *Queries) GetElectionsByIDs(ctx context.Context, electionIds []int32) ([
 	return items, nil
 }
 
+const getElectionsForLGA = `-- name: GetElectionsForLGA :many
+SELECT e.id, e.fake_id, e.election_group_id, e.office_id, e.name, e.election_date, e.scope
+FROM elections e
+JOIN lgas l ON l.id = $1::int
+WHERE e.election_group_id = $2::int
+  AND (
+    e.scope = 'nationwide'
+    OR (e.scope = 'state' AND e.state_id = l.state_id)
+    OR (e.scope = 'senatorial-district' AND e.senatorial_district_id = l.senatorial_district_id)
+    OR (e.scope = 'federal-constituency' AND e.federal_constituency_id = l.federal_constituency_id)
+    OR (e.scope = 'lga' AND e.lga_id = l.id)
+    OR (e.scope = 'state-constituency' AND EXISTS (
+      SELECT 1 FROM state_constituencies sc WHERE sc.id = e.state_constituency_id AND sc.lga_id = l.id
+    ))
+    OR (e.scope = 'ward' AND EXISTS (
+      SELECT 1 FROM wards w WHERE w.id = e.ward_id AND w.lga_id = l.id
+    ))
+  )
+ORDER BY e.office_id ASC, e.id ASC
+`
+
+type GetElectionsForLGAParams struct {
+	LgaID           int32 `json:"lga_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
+}
+
+type GetElectionsForLGARow struct {
+	ID              int32       `json:"id"`
+	FakeID          pgtype.Int8 `json:"fake_id"`
+	ElectionGroupID int32       `json:"election_group_id"`
+	OfficeID        int16       `json:"office_id"`
+	Name            string      `json:"name"`
+	ElectionDate    pgtype.Date `json:"election_date"`
+	Scope           string      `json:"scope"`
+}
+
+func (q *Queries) GetElectionsForLGA(ctx context.Context, arg GetElectionsForLGAParams) ([]GetElectionsForLGARow, error) {
+	rows, err := q.db.Query(ctx, getElectionsForLGA, arg.LgaID, arg.ElectionGroupID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetElectionsForLGARow
+	for rows.Next() {
+		var i GetElectionsForLGARow
+		if err := rows.Scan(
+			&i.ID,
+			&i.FakeID,
+			&i.ElectionGroupID,
+			&i.OfficeID,
+			&i.Name,
+			&i.ElectionDate,
+			&i.Scope,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getElectionsForState = `-- name: GetElectionsForState :many
+SELECT e.id, e.fake_id, e.election_group_id, e.office_id, e.name, e.election_date, e.scope
+FROM elections e
+WHERE e.election_group_id = $1::int
+  AND (
+    e.scope = 'nationwide'
+    OR e.state_id = $2::smallint
+  )
+ORDER BY e.office_id ASC, e.id ASC
+`
+
+type GetElectionsForStateParams struct {
+	ElectionGroupID int32 `json:"election_group_id"`
+	StateID         int16 `json:"state_id"`
+}
+
+type GetElectionsForStateRow struct {
+	ID              int32       `json:"id"`
+	FakeID          pgtype.Int8 `json:"fake_id"`
+	ElectionGroupID int32       `json:"election_group_id"`
+	OfficeID        int16       `json:"office_id"`
+	Name            string      `json:"name"`
+	ElectionDate    pgtype.Date `json:"election_date"`
+	Scope           string      `json:"scope"`
+}
+
+func (q *Queries) GetElectionsForState(ctx context.Context, arg GetElectionsForStateParams) ([]GetElectionsForStateRow, error) {
+	rows, err := q.db.Query(ctx, getElectionsForState, arg.ElectionGroupID, arg.StateID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetElectionsForStateRow
+	for rows.Next() {
+		var i GetElectionsForStateRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.FakeID,
+			&i.ElectionGroupID,
+			&i.OfficeID,
+			&i.Name,
+			&i.ElectionDate,
+			&i.Scope,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getElectionsForWard = `-- name: GetElectionsForWard :many
+SELECT e.id, e.fake_id, e.election_group_id, e.office_id, e.name, e.election_date, e.scope
+FROM elections e
+JOIN wards w ON w.id = $1::int
+WHERE e.election_group_id = $2::int
+  AND (
+    e.scope = 'nationwide'
+    OR (e.scope = 'state' AND e.state_id = w.state_id)
+    OR (e.scope = 'senatorial-district' AND e.senatorial_district_id = w.senatorial_district_id)
+    OR (e.scope = 'federal-constituency' AND e.federal_constituency_id = w.federal_constituency_id)
+    OR (e.scope = 'state-constituency' AND e.state_constituency_id = w.state_constituency_id)
+    OR (e.scope = 'lga' AND e.lga_id = w.lga_id)
+    OR (e.scope = 'ward' AND e.ward_id = w.id)
+  )
+ORDER BY e.office_id ASC, e.id ASC
+`
+
+type GetElectionsForWardParams struct {
+	WardID          int32 `json:"ward_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
+}
+
+type GetElectionsForWardRow struct {
+	ID              int32       `json:"id"`
+	FakeID          pgtype.Int8 `json:"fake_id"`
+	ElectionGroupID int32       `json:"election_group_id"`
+	OfficeID        int16       `json:"office_id"`
+	Name            string      `json:"name"`
+	ElectionDate    pgtype.Date `json:"election_date"`
+	Scope           string      `json:"scope"`
+}
+
+func (q *Queries) GetElectionsForWard(ctx context.Context, arg GetElectionsForWardParams) ([]GetElectionsForWardRow, error) {
+	rows, err := q.db.Query(ctx, getElectionsForWard, arg.WardID, arg.ElectionGroupID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetElectionsForWardRow
+	for rows.Next() {
+		var i GetElectionsForWardRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.FakeID,
+			&i.ElectionGroupID,
+			&i.OfficeID,
+			&i.Name,
+			&i.ElectionDate,
+			&i.Scope,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getUserActiveCandidacies = `-- name: GetUserActiveCandidacies :many
 WITH user_candidacies AS (
     SELECT
@@ -649,10 +827,7 @@ WHERE (
   OR (e.election_date < $2::date)
   OR (e.election_date = $2::date AND e.id < $3::int)
 )
-AND ($4::text IS NULL OR (
-  e.name ILIKE '%' || $4::text || '%' OR
-  o.name ILIKE '%' || $4::text || '%'
-))
+AND ($4::text IS NULL OR e.name ILIKE '%' || $4::text || '%')
 AND ($5::int[] IS NULL OR e.election_group_id = ANY($5::int[]))
 AND ($6::text[] IS NULL OR e.scope = ANY($6::text[]))
 AND (
@@ -937,65 +1112,4 @@ func (q *Queries) UpdateElectionInstance(ctx context.Context, arg UpdateElection
 		&i.UpdatedAt,
 	)
 	return i, err
-}
-
-
-const getElectionsForWard = `-- name: GetElectionsForWard :many
-SELECT e.id, e.fake_id, e.election_group_id, e.office_id, e.name, e.election_date, e.scope
-FROM elections e
-JOIN wards w ON w.id = $1::int
-WHERE e.election_group_id = $2::int
-  AND (
-    e.scope = 'nationwide'
-    OR (e.scope = 'state' AND e.state_id = w.state_id)
-    OR (e.scope = 'senatorial-district' AND e.senatorial_district_id = w.senatorial_district_id)
-    OR (e.scope = 'federal-constituency' AND e.federal_constituency_id = w.federal_constituency_id)
-    OR (e.scope = 'state-constituency' AND e.state_constituency_id = w.state_constituency_id)
-    OR (e.scope = 'lga' AND e.lga_id = w.lga_id)
-    OR (e.scope = 'ward' AND e.ward_id = w.id)
-  )
-ORDER BY e.office_id ASC, e.id ASC
-`
-
-type GetElectionsForWardParams struct {
-	WardID          int32 `json:"ward_id"`
-	ElectionGroupID int32 `json:"election_group_id"`
-}
-
-type GetElectionsForWardRow struct {
-	ID              int32       `json:"id"`
-	FakeID          pgtype.Int8 `json:"fake_id"`
-	ElectionGroupID int32       `json:"election_group_id"`
-	OfficeID        int16       `json:"office_id"`
-	Name            string      `json:"name"`
-	ElectionDate    pgtype.Date `json:"election_date"`
-	Scope           string      `json:"scope"`
-}
-
-func (q *Queries) GetElectionsForWard(ctx context.Context, arg GetElectionsForWardParams) ([]GetElectionsForWardRow, error) {
-	rows, err := q.db.Query(ctx, getElectionsForWard, arg.WardID, arg.ElectionGroupID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetElectionsForWardRow
-	for rows.Next() {
-		var i GetElectionsForWardRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.FakeID,
-			&i.ElectionGroupID,
-			&i.OfficeID,
-			&i.Name,
-			&i.ElectionDate,
-			&i.Scope,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }

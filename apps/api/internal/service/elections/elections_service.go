@@ -133,18 +133,80 @@ func (s *ElectionsService) invalidateBulkCache(ctx context.Context, electionIDs 
 	s.rdb.Del(ctx, keys...)
 }
 
+func (s *ElectionsService) getScopeElectionsVersion(ctx context.Context, electionGroupID int32) int64 {
+	v, err := s.rdb.Get(ctx, fmt.Sprintf("%s%d", db.RedisElectionGroupScopeElectionsVersion, electionGroupID)).Int64()
+	if err != nil {
+		return 0
+	}
+	return v
+}
+
+// invalidateScopeElectionsCache bumps the per-election-group version key in O(1),
+// instantly invalidating all ward, LGA, and state scoped election caches for those groups.
+func (s *ElectionsService) invalidateScopeElectionsCache(ctx context.Context, electionGroupIDs ...int32) {
+	seen := make(map[int32]bool)
+	for _, egID := range electionGroupIDs {
+		if egID <= 0 || seen[egID] {
+			continue
+		}
+
+		seen[egID] = true
+		key := fmt.Sprintf("%s%d", db.RedisElectionGroupScopeElectionsVersion, egID)
+
+		// Bump version so existing ward/LGA/state cache keys become stale without scanning Redis
+		_ = s.rdb.Incr(ctx, key).Err()
+		_ = s.rdb.Expire(ctx, key, db.RedisThirtyDaysTTL).Err()
+	}
+}
+
+type scopedElectionsCacheParams[T any] struct {
+	Prefix          string
+	ElectionGroupID int32
+	ScopeID         int32
+	Fetch           func() ([]T, error)
+}
+
+// getOrSetScopedElectionsCache reads versioned scoped elections from Redis, falling back to params.Fetch on a miss.
+func getOrSetScopedElectionsCache[T any](ctx context.Context, s *ElectionsService, params scopedElectionsCacheParams[T]) ([]T, error) {
+	// Include election-group version so group mutations invalidate all scoped keys in O(1)
+	ver := s.getScopeElectionsVersion(ctx, params.ElectionGroupID)
+	cacheKey := fmt.Sprintf("%s%d:v%d:%d", params.Prefix, params.ElectionGroupID, ver, params.ScopeID)
+
+	// Return cached scoped elections on Redis hit
+	if cached, ok := utils.GetCachedJSON[[]T](ctx, s.rdb, cacheKey); ok {
+		return cached, nil
+	}
+
+	// Cache miss: query DB via caller-provided fetcher
+	rows, err := params.Fetch()
+	if err != nil {
+		return nil, err
+	}
+
+	// Normalize nil slice to empty slice so JSON marshals as [] instead of null
+	if rows == nil {
+		rows = []T{}
+	}
+
+	_ = utils.SetCachedJSON(ctx, s.rdb, cacheKey, rows, db.RedisSevenDaysTTL)
+	return rows, nil
+}
+
 // validateElectionGroup ensures that the target election group exists and is active.
 func (s *ElectionsService) validateElectionGroup(ctx context.Context, q *queries.Queries, groupID int32) (queries.ElectionGroup, error) {
 	eg, err := q.GetElectionGroupByID(ctx, groupID)
+
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return queries.ElectionGroup{}, fmt.Errorf("election group with ID %d does not exist", groupID)
 		}
 		return queries.ElectionGroup{}, fmt.Errorf("failed to verify election group: %w", err)
 	}
+
 	if !eg.Active {
 		return queries.ElectionGroup{}, fmt.Errorf("election group '%s' is not active", eg.Name)
 	}
+
 	return eg, nil
 }
 
@@ -271,6 +333,7 @@ func (s *ElectionsService) CreateNationwideElection(ctx context.Context, officeI
 		return queries.ElectionDetails{}, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
+	s.invalidateScopeElectionsCache(ctx, electionGroupID)
 	return electionDetails(election, time.Now()), nil
 }
 
@@ -350,6 +413,10 @@ func (s *ElectionsService) CreateStateElection(ctx context.Context, officeID int
 	// Commit transaction
 	if err := tx.Commit(ctx); err != nil {
 		return 0, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	if count > 0 && len(paramsList) > 0 {
+		s.invalidateScopeElectionsCache(ctx, paramsList[0].ElectionGroupID)
 	}
 
 	return count, nil
@@ -434,6 +501,10 @@ func (s *ElectionsService) CreateSenatorialDistrictElection(ctx context.Context,
 	// Commit transaction
 	if err := tx.Commit(ctx); err != nil {
 		return 0, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	if count > 0 && len(paramsList) > 0 {
+		s.invalidateScopeElectionsCache(ctx, paramsList[0].ElectionGroupID)
 	}
 
 	return count, nil
@@ -526,6 +597,10 @@ func (s *ElectionsService) CreateFederalConstituencyElection(ctx context.Context
 	// Commit transaction
 	if err := tx.Commit(ctx); err != nil {
 		return 0, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	if count > 0 && len(paramsList) > 0 {
+		s.invalidateScopeElectionsCache(ctx, paramsList[0].ElectionGroupID)
 	}
 
 	return count, nil
@@ -628,6 +703,10 @@ func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, 
 		return 0, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
+	if count > 0 && len(paramsList) > 0 {
+		s.invalidateScopeElectionsCache(ctx, paramsList[0].ElectionGroupID)
+	}
+
 	return count, nil
 }
 
@@ -720,6 +799,10 @@ func (s *ElectionsService) CreateLgaElection(ctx context.Context, officeID int16
 	// Commit transaction
 	if err := tx.Commit(ctx); err != nil {
 		return 0, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	if count > 0 && len(paramsList) > 0 {
+		s.invalidateScopeElectionsCache(ctx, paramsList[0].ElectionGroupID)
 	}
 
 	return count, nil
@@ -822,6 +905,10 @@ func (s *ElectionsService) CreateWardElection(ctx context.Context, params Create
 	// Commit transaction
 	if err := tx.Commit(ctx); err != nil {
 		return 0, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	if count > 0 && len(paramsList) > 0 {
+		s.invalidateScopeElectionsCache(ctx, paramsList[0].ElectionGroupID)
 	}
 
 	return count, nil
@@ -1018,6 +1105,7 @@ func (s *ElectionsService) UpdateElection(ctx context.Context, params UpdateElec
 	// 3. Invalidate Redis caches on successful update
 	s.invalidateCache(ctx, params.ID)
 	s.invalidateCandidacyUsers(ctx, affected, false)
+	s.invalidateScopeElectionsCache(ctx, params.ElectionGroupID)
 	return electionDetails(el, time.Now()), nil
 }
 
@@ -1033,10 +1121,18 @@ func (s *ElectionsService) DeleteElection(ctx context.Context, id int32) error {
 		return fmt.Errorf("cannot delete election: %d candidate(s) are already registered for this election", candidateCount)
 	}
 
-	// Ensure Redis cache invalidation occurs when the operation completes
-	defer s.invalidateCache(ctx, id)
+	// Look up election group before deletion so we can invalidate scoped election caches
+	existing, _ := s.queries.GetElectionsByIDs(ctx, []int32{id})
 
-	return s.queries.DeleteElectionInstance(ctx, id)
+	if err := s.queries.DeleteElectionInstance(ctx, id); err != nil {
+		return err
+	}
+
+	s.invalidateCache(ctx, id)
+	if len(existing) > 0 {
+		s.invalidateScopeElectionsCache(ctx, existing[0].ElectionGroupID)
+	}
+	return nil
 }
 
 // BulkUpdateElectionGroupParams encapsulates parameters for bulk reassigning elections to a new election group.
@@ -1126,6 +1222,12 @@ func (s *ElectionsService) BulkUpdateElectionGroup(ctx context.Context, params B
 
 	s.invalidateBulkCache(ctx, electionIDs)
 	s.invalidateCandidacyUsers(ctx, affected, false)
+	affectedGroupIDs := make([]int32, 0, len(existing)+1)
+	affectedGroupIDs = append(affectedGroupIDs, params.ElectionGroupID)
+	for _, el := range existing {
+		affectedGroupIDs = append(affectedGroupIDs, el.ElectionGroupID)
+	}
+	s.invalidateScopeElectionsCache(ctx, affectedGroupIDs...)
 	return nil
 }
 
@@ -1197,6 +1299,7 @@ func (s *ElectionsService) BulkDeleteElections(ctx context.Context, params BulkD
 	}
 
 	s.invalidateBulkCache(ctx, electionIDs)
+	s.invalidateScopeElectionsCache(ctx, result.ElectionGroupIDs...)
 	return result, nil
 }
 
@@ -1623,4 +1726,49 @@ func (s *ElectionsService) invalidateCandidacyUsers(ctx context.Context, users [
 			slog.Error("failed to invalidate candidacy caches", "error", err)
 		}
 	}
+}
+
+// GetElectionsForWard returns all elections in an election group that apply to the given ward.
+func (s *ElectionsService) GetElectionsForWard(ctx context.Context, electionGroupID, wardID int32) ([]queries.GetElectionsForWardRow, error) {
+	return getOrSetScopedElectionsCache(ctx, s, scopedElectionsCacheParams[queries.GetElectionsForWardRow]{
+		Prefix:          db.RedisElectionGroupWardElections,
+		ElectionGroupID: electionGroupID,
+		ScopeID:         wardID,
+		Fetch: func() ([]queries.GetElectionsForWardRow, error) {
+			return s.queries.GetElectionsForWard(ctx, queries.GetElectionsForWardParams{
+				WardID:          wardID,
+				ElectionGroupID: electionGroupID,
+			})
+		},
+	})
+}
+
+// GetElectionsForLGA returns all elections in an election group that apply to the given LGA.
+func (s *ElectionsService) GetElectionsForLGA(ctx context.Context, electionGroupID, lgaID int32) ([]queries.GetElectionsForLGARow, error) {
+	return getOrSetScopedElectionsCache(ctx, s, scopedElectionsCacheParams[queries.GetElectionsForLGARow]{
+		Prefix:          db.RedisElectionGroupLGAElections,
+		ElectionGroupID: electionGroupID,
+		ScopeID:         lgaID,
+		Fetch: func() ([]queries.GetElectionsForLGARow, error) {
+			return s.queries.GetElectionsForLGA(ctx, queries.GetElectionsForLGAParams{
+				LgaID:           lgaID,
+				ElectionGroupID: electionGroupID,
+			})
+		},
+	})
+}
+
+// GetElectionsForState returns all elections in an election group that apply to the given state.
+func (s *ElectionsService) GetElectionsForState(ctx context.Context, electionGroupID int32, stateID int16) ([]queries.GetElectionsForStateRow, error) {
+	return getOrSetScopedElectionsCache(ctx, s, scopedElectionsCacheParams[queries.GetElectionsForStateRow]{
+		Prefix:          db.RedisElectionGroupStateElections,
+		ElectionGroupID: electionGroupID,
+		ScopeID:         int32(stateID),
+		Fetch: func() ([]queries.GetElectionsForStateRow, error) {
+			return s.queries.GetElectionsForState(ctx, queries.GetElectionsForStateParams{
+				ElectionGroupID: electionGroupID,
+				StateID:         stateID,
+			})
+		},
+	})
 }

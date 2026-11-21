@@ -11,7 +11,7 @@ import { PollingAgentPage } from "./page-components/PollingAgentPage";
 import { StateElectionSupervisorPage } from "./page-components/StateElectionSupervisorPage";
 import { WardElectionSupervisorPage } from "./page-components/WardElectionSupervisorPage";
 import { getPageHeader } from "#/lib/shared/meta";
-import { Separator } from "#/components/Separator";
+import { Separator } from "#/components/separator/Separator";
 
 /**
  * Route definition for authenticated dashboard home (`/_authenticated/_home/`).

@@ -192,6 +192,8 @@ type Querier interface {
 	GetElectionInstanceByFakeID(ctx context.Context, fakeID pgtype.Int8) (Election, error)
 	GetElectionInstanceByID(ctx context.Context, id int32) (Election, error)
 	GetElectionsByIDs(ctx context.Context, electionIds []int32) ([]GetElectionsByIDsRow, error)
+	GetElectionsForLGA(ctx context.Context, arg GetElectionsForLGAParams) ([]GetElectionsForLGARow, error)
+	GetElectionsForState(ctx context.Context, arg GetElectionsForStateParams) ([]GetElectionsForStateRow, error)
 	GetElectionsForWard(ctx context.Context, arg GetElectionsForWardParams) ([]GetElectionsForWardRow, error)
 	GetEligiblePollingUnitsForElection(ctx context.Context, arg GetEligiblePollingUnitsForElectionParams) ([]GetEligiblePollingUnitsForElectionRow, error)
 	GetFakeIDByAdditionalPhone(ctx context.Context, phone string) (pgtype.Int8, error)

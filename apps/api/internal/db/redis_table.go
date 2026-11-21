@@ -143,6 +143,10 @@ const (
 	RedisElectionGroupByFakeID          = "election_group:fake:"                  // STRING: "election_group:fake:<fake_id>" used to store and retrieve single election group JSON.
 	RedisElectionGroupInstances         = "election_group:instances:"             // STRING: "election_group:instances:<id>" cached election instances list for an election group; cached for 7 days.
 	RedisElectionGroupExpectedElections = "election_group:pu_expected_elections:" // STRING: "election_group:pu_expected_elections:<egID>:<puID>" cached count of expected elections for a PU; cached for 7 days.
+	RedisElectionGroupWardElections         = "election_group:ward_elections:"        // STRING: "election_group:ward_elections:<egID>:v<ver>:<wardID>" cached elections for a ward in an election group; cached for 7 days.
+	RedisElectionGroupLGAElections          = "election_group:lga_elections:"         // STRING: "election_group:lga_elections:<egID>:v<ver>:<lgaID>" cached elections for an LGA in an election group; cached for 7 days.
+	RedisElectionGroupStateElections        = "election_group:state_elections:"       // STRING: "election_group:state_elections:<egID>:v<ver>:<stateID>" cached elections for a state in an election group; cached for 7 days.
+	RedisElectionGroupScopeElectionsVersion = "election_group:scope_elections:v:"     // STRING: "election_group:scope_elections:v:<egID>" version counter for ward/LGA/state scoped election caches.
 	RedisElectionByID                   = "election:"                             // Raw election record; cached for 180 days.
 	RedisElectionByFakeID               = "election:fake:"                        // Raw election record by fake_id; cached for 180 days.
 	RedisElectionCandidates             = "election:candidates:"                  // Cached candidate roster for election; cached for 180 days.
@@ -267,6 +271,10 @@ var AllRedisPrefixes = []string{
 	RedisElectionGroupByFakeID,
 	RedisElectionGroupInstances,
 	RedisElectionGroupExpectedElections,
+	RedisElectionGroupWardElections,
+	RedisElectionGroupLGAElections,
+	RedisElectionGroupStateElections,
+	RedisElectionGroupScopeElectionsVersion,
 	RedisElectionByID,
 	RedisElectionByFakeID,
 	RedisElectionCandidates,
