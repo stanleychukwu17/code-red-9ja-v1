@@ -46,7 +46,6 @@ CREATE TABLE IF NOT EXISTS polling_unit_issue_options (
 -- Primary updates table (polling unit agents & election supervisors)
 CREATE TABLE IF NOT EXISTS polling_unit_updates (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  
 
   -- Assignment link (required for polling_agent, NULL for supervisors)
   assignment_id BIGINT REFERENCES polling_unit_assignments(id) ON DELETE CASCADE,
@@ -90,6 +89,8 @@ CREATE TABLE IF NOT EXISTS polling_unit_updates (
 );
 
 CREATE INDEX idx_pu_updates_assignment ON polling_unit_updates(assignment_id);
+CREATE INDEX idx_pu_updates_eg_user_id ON polling_unit_updates(election_group_id, user_id, id DESC);
+
 
 -- Stateful issues (tracks active issues, start/end downtime, resolution)
 CREATE TABLE IF NOT EXISTS polling_unit_with_issues (

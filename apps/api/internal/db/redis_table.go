@@ -177,6 +177,7 @@ const (
 
 	//--START-- for polling unit issues
 	RedisPollingUnitIssueOption = "pu_issues:option:" // STRING: "pu_issues:option:<id>"
+	RedisUserLatestUpdate       = "pu_updates:latest:" // STRING: "pu_updates:latest:<userID>:eg:<electionGroupID>"
 	//--END--
 
 	//--START-- for earnings
@@ -300,6 +301,7 @@ var AllRedisPrefixes = []string{
 	RedisTeamLgaSupervisor,
 	RedisTeamStateSupervisor,
 	RedisPollingUnitIssueOption,
+	RedisUserLatestUpdate,
 	RedisEarningsAllocation,
 	RedisUpdateScheduleConfig,
 }

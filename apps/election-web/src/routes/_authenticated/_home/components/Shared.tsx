@@ -8,20 +8,12 @@ export const GreyCardWrapper = ({ children }: { children: React.ReactNode }) => 
   );
 };
 
-export const GreyCardTopRow = ({
-  title,
-  subtitle,
-  icon,
-}: {
-  title?: string;
-  subtitle?: string;
-  icon?: React.ReactNode;
-}) => {
+export const GreyCardTopRow = ({ title, subtitle, icon }: { title?: string; subtitle?: string; icon?: React.ReactNode }) => {
   return (
     <div className="flex items-center justify-between text-c-50">
       <div className="flex items-center gap-2">
         <div className="min-w-5">{icon}</div>
-        <span className="truncate max-w-[200px]">{title}</span>
+        <span className="truncate max-w-50">{title}</span>
       </div>
       <span className="text-c-90 font-bold">{subtitle}</span>
     </div>

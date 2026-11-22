@@ -60,3 +60,19 @@ export const getActivePollingUnitIssues = createServerFn({ method: "GET" })
       return { success: false, message: error.message || "Failed to fetch active polling unit issues", data: [] };
     }
   });
+
+// Fetch the authenticated user's most recent situation update for an election group
+export const getMyLatestUpdate = createServerFn({ method: "GET" })
+  .inputValidator((data: { election_group_id: number }) => data)
+  .handler(async ({ data }) => {
+    try {
+      const params = new URLSearchParams({
+        election_group_id: String(data.election_group_id),
+      });
+      const response = await apiFetch(`${API_URL.myLatestUpdate}?${params.toString()}`);
+      const resData = await response.json();
+      return { success: Boolean(resData?.success), data: resData?.data ?? null };
+    } catch (error: any) {
+      return { success: false, message: error.message || "Failed to fetch latest update", data: null };
+    }
+  });

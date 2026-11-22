@@ -22,6 +22,7 @@ import (
 type Service interface {
 	CreateUpdate(ctx context.Context, input polling_unit_updates.CreateUpdateInput) (queries.PollingUnitUpdate, error)
 	ListUpdates(ctx context.Context, params queries.ListPollingUnitUpdatesParams) ([]queries.ListPollingUnitUpdatesRow, error)
+	GetMyLatestUpdate(ctx context.Context, electionGroupID int32, userID int64) (*queries.GetMyLatestPollingUnitUpdateRow, error)
 	GetActiveIssues(ctx context.Context, pollingUnitID int32) ([]queries.ListActivePollingUnitIssuesRow, error)
 	GetElectionGroupByID(ctx context.Context, id int32) (queries.ElectionGroup, error)
 }
@@ -268,6 +269,30 @@ func (h *Handler) CreateUpdate(w http.ResponseWriter, r *http.Request) {
 	h.utils.RespondSuccess(w, http.StatusCreated, "Update submitted successfully", map[string]interface{}{
 		"update": update,
 	})
+}
+
+// GetMyLatestUpdate returns the authenticated user's most recent update timestamp.
+func (h *Handler) GetMyLatestUpdate(w http.ResponseWriter, r *http.Request) {
+	claims, ok := apimiddleware.GetClaims(r)
+	if !ok {
+		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	val := r.URL.Query().Get("election_group_id")
+	v, err := strconv.ParseInt(val, 10, 32)
+	if err != nil || v <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "election_group_id is required")
+		return
+	}
+
+	latest, err := h.service.GetMyLatestUpdate(r.Context(), int32(v), claims.UserID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch latest update: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccessData(w, http.StatusOK, "Latest update fetched", latest)
 }
 
 // ListUpdates godoc

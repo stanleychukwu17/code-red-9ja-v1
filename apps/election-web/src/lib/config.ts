@@ -204,6 +204,7 @@ export const API_URL = {
 
   pollingUnits: `${api}/polling-units`,
   pollingUnitUpdates: `${api}/polling-unit-updates`,
+  myLatestUpdate: `${api}/polling-unit-updates/latest`,
   pollingUnitIssues: (pollingUnitId: number | string) =>
     `${api}/polling-unit-updates/issues?polling_unit_id=${pollingUnitId}`,
   pollingUnitById: (id: string | number) => `${api}/polling-units/${id}`,
@@ -395,4 +396,5 @@ export const QUERY_KEYS = {
   userMeDetails: ["userMeDetails"],
   userPhoneNumbers: (userId?: string | number) =>
     userId !== undefined ? ["user-phonenumbers", userId] : ["user-phonenumbers"],
+  myLatestUpdateTime: (electionGroupId: number) => ["MyLatestUpdateTime", electionGroupId],
 };

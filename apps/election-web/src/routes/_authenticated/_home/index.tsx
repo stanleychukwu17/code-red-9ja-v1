@@ -4,6 +4,7 @@ import { useElectionRealtime } from "@repo/ui/hooks/useElectionRealtime";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { APP_URL } from "#/lib/config";
 import { AssignmentRoleCard } from "./components/AssignmentRoleCard";
+import { DesignationCard } from "./components/DesignationCard";
 import { EarningsTab } from "./components/EarningsTab";
 import { GiveUpdateFloatingButton } from "./components/GiveUpdateFloatingButton";
 import { HomeHeader } from "./components/HomeHeader";
@@ -87,23 +88,38 @@ function RouteComponent() {
     <>
       {/* Top welcome header and election day countdown */}
       < HomeHeader daysLeft={daysLeft} />
-      <main className="w-full max-w-125 min-h-screen flex flex-col px-4">
+      <main className="w-full max-w-125 min-h-screen flex flex-col px-4 mb-30">
 
         {/* Active duty role badge (only shown when user has an assignment) */}
         {roleLabel && <AssignmentRoleCard roleLabel={roleLabel} />}
         <Separator />
 
-        {roleLabel && <UpdateReminderCard />}
+        {/* Update posting reminder and quick-action button (election day only) */}
+        {roleLabel && electionDay && (
+          <>
+            <UpdateReminderCard />
+            <Separator />
+          </>
+        )}
+
+        {/* Assigned geographic designation (State, LGA, Ward, PU) */}
+        {roleLabel && <DesignationCard />}
         <Separator />
 
         {/* Summary of PUs / wards / LGAs under the user's watch */}
         <UnderYourWatchCard />
+        <Separator />
 
         {/* Role-specific dashboard body */}
         {content}
-        {/* Shared dashboard cards (referrals, practice test, and duty earnings for assigned roles) */}
-        <ReferralCard onClick={() => navigate({ to: APP_URL.referrals })} />
-        {daysLeft !== 0 && <PracticeTestComingSoonCard />}
+        {/* Pre-election cards (referrals & practice test) */}
+        {!electionDay && (
+          <>
+            <ReferralCard onClick={() => navigate({ to: APP_URL.referrals })} />
+            <Separator />
+            <PracticeTestComingSoonCard />
+          </>
+        )}
 
         {roleLabel && <EarningsTab />}
 

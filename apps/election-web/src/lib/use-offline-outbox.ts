@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   getOutboxCount,
   getPendingUpdates,
@@ -148,6 +149,7 @@ export async function flushOutboxQueue(): Promise<number> {
 
 // React hook to monitor outbox count and bind network online listeners
 export function useOfflineOutbox() {
+  const queryClient = useQueryClient();
   // Track count of unsynced items in IndexedDB
   const [pendingCount, setPendingCount] = useState<number>(0);
 
@@ -177,6 +179,7 @@ export function useOfflineOutbox() {
       const synced = await flushOutboxQueue();
       if (synced > 0) {
         toast.success(`Synced ${synced} update${synced > 1 ? "s" : ""}!`);
+        queryClient.invalidateQueries({ queryKey: ["MyLatestUpdateTime"] });
       }
       refreshCount();
     };
@@ -193,7 +196,12 @@ export function useOfflineOutbox() {
     // Periodic background sync attempt every 30 seconds
     const interval = setInterval(() => {
       if (navigator.onLine) {
-        flushOutboxQueue().then(() => refreshCount());
+        flushOutboxQueue().then((synced) => {
+          if (synced > 0) {
+            queryClient.invalidateQueries({ queryKey: ["MyLatestUpdateTime"] });
+          }
+          refreshCount();
+        });
       }
     }, 30000);
 
@@ -202,7 +210,7 @@ export function useOfflineOutbox() {
       window.removeEventListener("offline", handleOffline);
       clearInterval(interval);
     };
-  }, []);
+  }, [queryClient]);
 
   return {
     pendingCount,
@@ -211,6 +219,9 @@ export function useOfflineOutbox() {
     // Manually trigger flush (e.g. from user click on banner)
     triggerSync: async () => {
       const synced = await flushOutboxQueue();
+      if (synced > 0) {
+        queryClient.invalidateQueries({ queryKey: ["MyLatestUpdateTime"] });
+      }
       await refreshCount();
       return synced;
     },

@@ -626,6 +626,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		// polling unit updates routes
 		r.Post("/api/v1/polling-unit-updates", pollingUnitUpdatesHandler.CreateUpdate)
 		r.Get("/api/v1/polling-unit-updates", pollingUnitUpdatesHandler.ListUpdates)
+		r.Get("/api/v1/polling-unit-updates/latest", pollingUnitUpdatesHandler.GetMyLatestUpdate)
 		r.Get("/api/v1/polling-unit-updates/issues", pollingUnitUpdatesHandler.ListActiveIssues)
 
 		// polling unit results routes

@@ -215,6 +215,7 @@ type Querier interface {
 	GetMediaAssetByID(ctx context.Context, id int32) (MediaAsset, error)
 	GetMediaAssetByKey(ctx context.Context, r2Key string) (MediaAsset, error)
 	GetMoreInfoAboutThisUser(ctx context.Context, userID int64) (UserMoreInfo, error)
+	GetMyLatestPollingUnitUpdate(ctx context.Context, arg GetMyLatestPollingUnitUpdateParams) (GetMyLatestPollingUnitUpdateRow, error)
 	GetNationalChapter(ctx context.Context, arg GetNationalChapterParams) (int32, error)
 	GetNationalMetrics(ctx context.Context) (NationalMetric, error)
 	GetNotificationByID(ctx context.Context, id int64) (Notification, error)

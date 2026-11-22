@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
@@ -237,6 +238,13 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 		return queries.PollingUnitUpdate{}, err
 	}
 
+	// Update cached latest update timestamp for this user and election group
+	latestCacheKey := fmt.Sprintf("%s%d:eg:%d", db.RedisUserLatestUpdate, input.UserID, input.ElectionGroupID)
+	_ = utils.SetCachedJSON(ctx, s.rdb, latestCacheKey, queries.GetMyLatestPollingUnitUpdateRow{
+		ID:        update.ID,
+		CreatedAt: update.CreatedAt,
+	}, db.RedisSevenDaysTTL)
+
 	if roleType == constants.RolePollingAgent {
 		// Prepare assignment tracking params in case this update triggers a primary election milestone
 		var trackingParams queries.UpdateAssignmentTrackingParams
@@ -352,6 +360,27 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 
 func (s *Service) ListUpdates(ctx context.Context, params queries.ListPollingUnitUpdatesParams) ([]queries.ListPollingUnitUpdatesRow, error) {
 	return s.queries.ListPollingUnitUpdates(ctx, params)
+}
+
+func (s *Service) GetMyLatestUpdate(ctx context.Context, electionGroupID int32, userID int64) (*queries.GetMyLatestPollingUnitUpdateRow, error) {
+	cacheKey := fmt.Sprintf("%s%d:eg:%d", db.RedisUserLatestUpdate, userID, electionGroupID)
+	if cached, ok := utils.GetCachedJSON[queries.GetMyLatestPollingUnitUpdateRow](ctx, s.rdb, cacheKey); ok && cached.ID > 0 {
+		return &cached, nil
+	}
+
+	row, err := s.queries.GetMyLatestPollingUnitUpdate(ctx, queries.GetMyLatestPollingUnitUpdateParams{
+		ElectionGroupID: electionGroupID,
+		UserID:          userID,
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	_ = utils.SetCachedJSON(ctx, s.rdb, cacheKey, row, db.RedisSevenDaysTTL)
+	return &row, nil
 }
 
 func (s *Service) GetActiveIssues(ctx context.Context, pollingUnitID int32) ([]queries.ListActivePollingUnitIssuesRow, error) {

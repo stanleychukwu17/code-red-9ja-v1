@@ -148,3 +148,11 @@ SELECT id, latitude, longitude, accuracy_meters, created_at
 FROM polling_unit_updates
 WHERE assignment_id = $1
 ORDER BY id ASC;
+
+-- name: GetMyLatestPollingUnitUpdate :one
+SELECT id, created_at
+FROM polling_unit_updates
+WHERE election_group_id = $1
+  AND user_id = $2
+ORDER BY id DESC
+LIMIT 1;

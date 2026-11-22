@@ -261,6 +261,32 @@ func (q *Queries) GetIssueOptionByID(ctx context.Context, id int16) (GetIssueOpt
 	return i, err
 }
 
+const getMyLatestPollingUnitUpdate = `-- name: GetMyLatestPollingUnitUpdate :one
+SELECT id, created_at
+FROM polling_unit_updates
+WHERE election_group_id = $1
+  AND user_id = $2
+ORDER BY id DESC
+LIMIT 1
+`
+
+type GetMyLatestPollingUnitUpdateParams struct {
+	ElectionGroupID int32 `json:"election_group_id"`
+	UserID          int64 `json:"user_id"`
+}
+
+type GetMyLatestPollingUnitUpdateRow struct {
+	ID        int64              `json:"id"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+func (q *Queries) GetMyLatestPollingUnitUpdate(ctx context.Context, arg GetMyLatestPollingUnitUpdateParams) (GetMyLatestPollingUnitUpdateRow, error) {
+	row := q.db.QueryRow(ctx, getMyLatestPollingUnitUpdate, arg.ElectionGroupID, arg.UserID)
+	var i GetMyLatestPollingUnitUpdateRow
+	err := row.Scan(&i.ID, &i.CreatedAt)
+	return i, err
+}
+
 const listActivePollingUnitIssues = `-- name: ListActivePollingUnitIssues :many
 SELECT 
   pui.id,
