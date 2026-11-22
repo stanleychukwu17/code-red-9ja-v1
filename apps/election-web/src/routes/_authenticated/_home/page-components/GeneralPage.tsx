@@ -1,10 +1,6 @@
 import { useElection } from "#/hooks/useElection";
 import { useNavigate } from "@tanstack/react-router";
 import { ApplicationsCard } from "../components/ApplicationsCard";
-import { GiveUpdateFloatingButton } from "../components/GiveUpdateFloatingButton";
-import { PracticeTestComingSoonCard } from "../components/PracticeTestCard";
-import { ReferralCard } from "../components/ReferralCard";
-import { HomeBody } from "../components/Shared";
 import { UploadResultCard } from "../components/UploadResultCard";
 
 /**
@@ -27,7 +23,7 @@ export function GeneralPage() {
   return (
     <>
       {/* Action Cards Body */}
-      <HomeBody>
+      <div className="flex flex-col gap-6 px-4 mt-5">
         {/* On election day: permit citizens to crowd-source EC8A result sheets */}
         {daysLeft === 0 && (
           <UploadResultCard
@@ -37,20 +33,7 @@ export function GeneralPage() {
 
         {/* Opportunity to apply as an accredited party supervisor or agent */}
         <ApplicationsCard />
-
-        {/* Citizen referral recruitment card */}
-        <ReferralCard onClick={() => navigate({ to: "/referrals" })} />
-
-        {/* Practice voting test */}
-        <PracticeTestComingSoonCard />
-
-        {/* Quick incident report FAB on election day */}
-        {daysLeft === 0 && (
-          <GiveUpdateFloatingButton
-            onClick={() => navigate({ to: "/give-update" })}
-          />
-        )}
-      </HomeBody>
+      </div>
     </>
   );
 }

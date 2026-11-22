@@ -1,16 +1,12 @@
 import { useElection } from "#/hooks/useElection";
 import { useAssignments } from "#/hooks/useAssignments";
+import { APP_URL } from "#/lib/config";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { ReferralCard } from "../components/ReferralCard";
-import { EarningsTab } from "../components/EarningsTab";
 import { ElectionStatusCard } from "../components/ElectionStatusCard";
-import { PracticeTestComingSoonCard } from "../components/PracticeTestCard";
 import { RequestPayoutCard } from "../components/RequestPayoutCard";
 import { UploadResultCard } from "../components/UploadResultCard";
-import { GiveUpdateFloatingButton } from "../components/GiveUpdateFloatingButton";
 import { ElectionUpdatesProgressCard } from "../components/ElectionUpdatesProgressCard";
-import { HomeBody } from "../components/Shared";
 
 // Development bypass flag: ignores 2PM/4PM constraints for local UI testing
 const BYPASS_TIME_CONSTRAINTS = process.env.NODE_ENV === "development";
@@ -68,7 +64,7 @@ export function PollingAgentPage() {
   return (
     <>
       {/* Main Action Flow Body */}
-      <HomeBody>
+      <div className="flex flex-col gap-6 px-4 mt-5">
         {/* Stage 2-4: Start Election, Upload Results, and End Election Workflow */}
         {currentPollingUnitAssignment && currentPollingUnitAssignment.arrived_at &&
           !currentPollingUnitAssignment.election_ended_at && (
@@ -78,16 +74,7 @@ export function PollingAgentPage() {
                 <ElectionStatusCard
                   hasStarted={false}
                   onStartClick={() => {
-                    if (currentPollingUnitAssignment.id) {
-                      navigate({
-                        to: "/election-start",
-                        search: {
-                          assignmentId: currentPollingUnitAssignment.id,
-                        } as any,
-                      });
-                    } else {
-                      navigate({ to: "/election-start" });
-                    }
+                    navigate({ to: APP_URL.giveUpdate });
                   }}
                 />
               )}
@@ -99,16 +86,7 @@ export function PollingAgentPage() {
                   <ElectionStatusCard
                     hasStarted={true}
                     onEndClick={() => {
-                      if (currentPollingUnitAssignment.id) {
-                        navigate({
-                          to: "/election-end",
-                          search: {
-                            assignmentId: currentPollingUnitAssignment.id,
-                          } as any,
-                        });
-                      } else {
-                        navigate({ to: "/election-end" });
-                      }
+                      navigate({ to: APP_URL.giveUpdate });
                     }}
                   />
                 )}
@@ -139,21 +117,7 @@ export function PollingAgentPage() {
             <RequestPayoutCard onClick={handleRequestPayout} />
           </>
         )}
-
-        {/* Pre-election cards: referral bonuses, practice test */}
-        {daysLeft !== 0 && <ReferralCard onClick={() => navigate({ to: "/referrals" })} />}
-        {daysLeft !== 0 && <PracticeTestComingSoonCard />}
-
-        {/* Duty earnings summary */}
-        <EarningsTab />
-      </HomeBody>
-
-      {/* Quick situation reporting FAB on election day */}
-      {diffDays === 0 && (
-        <GiveUpdateFloatingButton
-          onClick={() => navigate({ to: "/give-update" })}
-        />
-      )}
+      </div>
     </>
   );
 }

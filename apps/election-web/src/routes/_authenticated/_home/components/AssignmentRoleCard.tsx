@@ -1,5 +1,6 @@
 import { useAssignments } from "#/hooks/useAssignments";
 import { useParties } from "#/hooks/useParties";
+import { GreyCardWrapper } from "./Shared";
 
 type AssignmentRoleCardProps = {
   roleLabel: string;
@@ -14,8 +15,7 @@ export function AssignmentRoleCard({ roleLabel }: AssignmentRoleCardProps) {
   const party = parties?.find((p) => p.id === partyId);
 
   return (
-    <div className="w-full max-w-110 px-4 my-3">
-      <section className="bg-sidebar-softer/60 rounded-[20px] px-5 py-6 flex flex-col gap-3">
+    <GreyCardWrapper>
         <h2 className="text-[26px] leading-tight font-bold text-c-90 text-center tracking-tight">
           {roleLabel}
         </h2>
@@ -36,7 +36,6 @@ export function AssignmentRoleCard({ roleLabel }: AssignmentRoleCardProps) {
             </div>
           </>
         )}
-      </section>
-    </div>
+    </GreyCardWrapper>
   );
 }

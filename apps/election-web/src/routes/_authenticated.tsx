@@ -6,6 +6,7 @@ import HomeIcon from "@repo/ui/icons/navbar/home-icon";
 import HomeSolidIcon from "@repo/ui/icons/navbar/home-solid-icon";
 import PostIcon from "@repo/ui/icons/navbar/post-icon";
 import PostSolidIcon from "@repo/ui/icons/navbar/post-solid-icon";
+import { FileUp, Radio, AlertTriangle, BarChart3 } from "lucide-react";
 import NotificationIcon from "@repo/ui/icons/navbar/notification-icon";
 import NotificationSolidIcon from "@repo/ui/icons/navbar/notification-solid-icon";
 import PaperIcon from "@repo/ui/icons/navbar/paper-icon";
@@ -67,6 +68,34 @@ const APP_SIDEBAR_ITEMS: AppSidebarItem[] = [
     icon: <PostIcon />,
     selectedIcon: <PostSolidIcon className="text-c-90" />,
     href: APP_URL.giveUpdate,
+  },
+  {
+    id: "upload-result",
+    label: "Upload Result",
+    icon: <FileUp className="size-5" />,
+    selectedIcon: <FileUp className="size-5 text-c-90" />,
+    href: APP_URL.uploadResult,
+  },
+  {
+    id: "field-updates",
+    label: "See Field Updates",
+    icon: <Radio className="size-5" />,
+    selectedIcon: <Radio className="size-5 text-c-90" />,
+    href: APP_URL.fieldUpdates,
+  },
+  {
+    id: "field-issues",
+    label: "See Field Issues",
+    icon: <AlertTriangle className="size-5" />,
+    selectedIcon: <AlertTriangle className="size-5 text-c-90" />,
+    href: APP_URL.fieldIssues,
+  },
+  {
+    id: "field-stats",
+    label: "See Field Stats",
+    icon: <BarChart3 className="size-5" />,
+    selectedIcon: <BarChart3 className="size-5 text-c-90" />,
+    href: APP_URL.fieldStats,
   },
   {
     id: "applications",

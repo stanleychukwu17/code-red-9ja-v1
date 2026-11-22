@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Loader2, X, ArrowRight } from "lucide-react";
+import { Loader2, X, ArrowRight, CalendarClock } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { showFeedbackToast } from "../practice/page-components/utils";
@@ -75,7 +75,7 @@ function UploadResultFlow() {
   const navigate = useNavigate();
   const search = Route.useSearch() as any;
   const user = useUser();
-  const { selectedElectionGroup } = useElection();
+  const { selectedElectionGroup, electionDay } = useElection();
   const { pollingUnitAssignment, pollingUnitId } = useAssignments();
   const { party } = useUserParty();
 
@@ -255,6 +255,31 @@ function UploadResultFlow() {
       </div>
     );
   }
+  // Guard: Results can only be uploaded on election day
+  if (!electionDay) {
+    return (
+      <PageWrapper>
+        <PageHeader onBackClick={() => navigate({ to: "/" })} />
+        <div className="flex flex-col items-center justify-center px-6 py-16 text-center max-w-md mx-auto space-y-4">
+          <div className="size-12 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+            <CalendarClock className="size-6" />
+          </div>
+          <div className="space-y-1.5">
+            <h2 className="text-lg font-bold text-foreground">
+              Result Upload Unavailable
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              You can only upload election results on election day.
+            </p>
+          </div>
+          <Button variant="outline" onClick={() => navigate({ to: "/" })}>
+            Back to Home
+          </Button>
+        </div>
+      </PageWrapper>
+    );
+  }
+
   // Guard: Loading election group elections
   if (electionsLoading) {
     return (

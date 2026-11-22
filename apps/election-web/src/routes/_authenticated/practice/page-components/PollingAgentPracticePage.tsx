@@ -4,6 +4,7 @@ import { useUser } from "#/hooks/useUser";
 import { useUserParty } from "#/hooks/useUserParty";
 import { useElection, getAutoSelectedSession } from "#/hooks/useElection";
 import { useElectionGroups } from "#/hooks/useElectionGroups";
+import { APP_URL } from "#/lib/config";
 import { AppAvatar } from "@repo/ui/components/avatar";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -1523,7 +1524,7 @@ export function DashboardPage({
                 const params = new URLSearchParams(window.location.search);
                 params.set("failedAttemptCount", String(failedAttemptCount));
                 navigate({
-                  to: `/election-start?${params.toString()}`,
+                  to: `${APP_URL.giveUpdate}?${params.toString()}`,
                 });
               }
             }}
@@ -1544,7 +1545,7 @@ export function DashboardPage({
                 const params = new URLSearchParams(window.location.search);
                 params.set("failedAttemptCount", String(failedAttemptCount));
                 navigate({
-                  to: `/election-end?${params.toString()}`,
+                  to: `${APP_URL.giveUpdate}?${params.toString()}`,
                 });
               }
             }}

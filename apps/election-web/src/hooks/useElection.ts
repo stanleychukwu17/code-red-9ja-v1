@@ -6,15 +6,29 @@ import {
 	setSelectedElectionGroup as setSelectedElectionGroupAction,
 } from "#/redux/slice/electionSlice";
 
-// Checks if election date matches today (UTC)
-export const isElectionDay = (electionDate?: string | null): boolean => {
+// Matches backend PostElectionCollationGraceDays in apps/api/internal/utils/election_time.go
+export const POST_ELECTION_COLLATION_GRACE_DAYS = 5;
+
+// Checks if today (Africa/Lagos) is within the election reporting window (election day + grace days)
+export const isElectionDay = (
+	electionDate?: string | null,
+	graceDays = POST_ELECTION_COLLATION_GRACE_DAYS,
+): boolean => {
 	if (!electionDate) return false;
 	try {
 		const parsed = new Date(electionDate);
 		if (isNaN(parsed.getTime())) return false;
-		const today = new Date().toISOString().split("T")[0];
-		const d = parsed.toISOString().split("T")[0];
-		return today === d;
+
+		const todayLagos = new Date().toLocaleDateString("en-CA", {
+			timeZone: "Africa/Lagos",
+		});
+		const electionDayStr = parsed.toISOString().split("T")[0]!;
+
+		const todayMs = Date.parse(`${todayLagos}T00:00:00Z`);
+		const startMs = Date.parse(`${electionDayStr}T00:00:00Z`);
+		const endMs = startMs + graceDays * 24 * 60 * 60 * 1000;
+
+		return todayMs >= startMs && todayMs <= endMs;
 	} catch {
 		return false;
 	}
@@ -50,9 +64,7 @@ export const useElection = () => {
 
 	// Check if today matches the active election group's scheduled date
 	const electionDay = isElectionDay(selectedElectionGroup?.election_date);
-	// const { daysLeft, diffDays } = calculateDaysLeft(selectedElectionGroup?.election_date);
-	const daysLeft = 0;
-	const diffDays = 0;
+	const { daysLeft, diffDays } = calculateDaysLeft(selectedElectionGroup?.election_date);
 
 	return {
 		selectedElectionGroup,
@@ -93,6 +105,7 @@ export const getAutoSelectedSession = (groups: any[], elections: any[]) => {
 			if (a.election_date && b.election_date) {
 				const dA = new Date(a.election_date);
 				dA.setHours(0, 0, 0, 0);
+
 				const dB = new Date(b.election_date);
 				dB.setHours(0, 0, 0, 0);
 

@@ -1,14 +1,8 @@
 import { TitleText } from "@repo/ui/components/custom/Texts";
-import PollingUnitIcon from "@repo/ui/icons/polling-unit-icon";
-import FancyMoneyBagIcon from "@repo/ui/icons/fancy-money-bag-icon";
 
-export const GreyCardWrapper = ({
-  children,
-}: {
-  children: React.ReactNode;
-}) => {
+export const GreyCardWrapper = ({ children }: { children: React.ReactNode }) => {
   return (
-    <section className="bg-c-5 rounded-[20px] px-4 py-4 flex flex-col gap-2">
+    <section className="bg-sidebar-softer/60 rounded-[20px] my-5 px-6 py-6 flex flex-col gap-2">
       {children}
     </section>
   );
@@ -37,11 +31,3 @@ export const GreyCardTopRow = ({
 export const GreyCardTitle = ({ label }: { label: string }) => {
   return <TitleText text={label} size="lg" />;
 };
-
-export function HomeBody({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="w-full max-w-[440px] flex flex-col gap-6 px-4 mt-5 mb-40">
-      {children}
-    </div>
-  );
-}

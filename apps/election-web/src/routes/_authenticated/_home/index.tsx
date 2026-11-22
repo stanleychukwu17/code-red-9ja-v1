@@ -1,10 +1,16 @@
 import { useElection } from "#/hooks/useElection";
 import { useAssignments } from "#/hooks/useAssignments";
 import { useElectionRealtime } from "@repo/ui/hooks/useElectionRealtime";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { APP_URL } from "#/lib/config";
 import { AssignmentRoleCard } from "./components/AssignmentRoleCard";
+import { EarningsTab } from "./components/EarningsTab";
+import { GiveUpdateFloatingButton } from "./components/GiveUpdateFloatingButton";
 import { HomeHeader } from "./components/HomeHeader";
+import { PracticeTestComingSoonCard } from "./components/PracticeTestCard";
+import { ReferralCard } from "./components/ReferralCard";
 import { UnderYourWatchCard } from "./components/UnderYourWatchCard";
+import { UpdateReminderCard } from "./components/UpdateReminderCard";
 import { GeneralPage } from "./page-components/GeneralPage";
 import { LGAElectionSupervisorPage } from "./page-components/LGAElectionSupervisorPage";
 import { PollingAgentPage } from "./page-components/PollingAgentPage";
@@ -35,8 +41,9 @@ export const Route = createFileRoute("/_authenticated/_home/")({
  * election results, incident alerts, and agent status broadcasts.
  */
 function RouteComponent() {
+  const navigate = useNavigate();
   const { supervisorAssignment, pollingUnitAssignment } = useAssignments();
-  const { selectedElection, daysLeft } = useElection();
+  const { selectedElection, daysLeft, electionDay } = useElection();
 
   // Connect real-time WebSocket updates for election supervisor & voter dashboard
   useElectionRealtime({
@@ -77,12 +84,36 @@ function RouteComponent() {
   }
 
   return (
-    <main className="w-full min-h-screen flex flex-col">
-      <HomeHeader daysLeft={daysLeft} />
-      {roleLabel && <AssignmentRoleCard roleLabel={roleLabel} />}
-      <Separator />
-      <UnderYourWatchCard />
-      {content}
-    </main>
+    <>
+      {/* Top welcome header and election day countdown */}
+      < HomeHeader daysLeft={daysLeft} />
+      <main className="w-full max-w-125 min-h-screen flex flex-col px-4">
+
+        {/* Active duty role badge (only shown when user has an assignment) */}
+        {roleLabel && <AssignmentRoleCard roleLabel={roleLabel} />}
+        <Separator />
+
+        {roleLabel && <UpdateReminderCard />}
+        <Separator />
+
+        {/* Summary of PUs / wards / LGAs under the user's watch */}
+        <UnderYourWatchCard />
+
+        {/* Role-specific dashboard body */}
+        {content}
+        {/* Shared dashboard cards (referrals, practice test, and duty earnings for assigned roles) */}
+        <ReferralCard onClick={() => navigate({ to: APP_URL.referrals })} />
+        {daysLeft !== 0 && <PracticeTestComingSoonCard />}
+
+        {roleLabel && <EarningsTab />}
+
+        {/* Quick situation update FAB on election day / grace window */}
+        {electionDay && (
+          <GiveUpdateFloatingButton
+            onClick={() => navigate({ to: APP_URL.giveUpdate })}
+          />
+        )}
+      </main>
+    </>
   );
 }

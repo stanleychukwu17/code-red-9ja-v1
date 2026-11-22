@@ -23,6 +23,10 @@ export const APP_URL = {
   },
   home: "/",
   giveUpdate: "/give-update",
+  uploadResult: "/upload-result",
+  fieldUpdates: "/field-updates",
+  fieldIssues: "/field-issues",
+  fieldStats: "/field-stats",
   applications: "/applications",
   team: "/team",
   campaignGroups: "/campaign-groups",
@@ -164,36 +168,6 @@ export const API_URL = {
     if (search) params.append("search", search);
     const qs = params.toString();
     return `${api}/polling-units/capacity${qs ? `?${qs}` : ""}`;
-  },
-
-  electionStats: {
-    singleStateStats: (
-      id: number | string,
-      stateId: number | string,
-      partyId?: number | string,
-    ) => {
-      return partyId
-        ? `${api}/election-groups/${id}/stats/states/${stateId}/parties/${partyId}`
-        : `${api}/election-groups/${id}/stats/states/${stateId}`;
-    },
-    singleLGAStats: (
-      id: number | string,
-      lgaId: number | string,
-      partyId?: number | string,
-    ) => {
-      return partyId
-        ? `${api}/election-groups/${id}/stats/lgas/${lgaId}/parties/${partyId}`
-        : `${api}/election-groups/${id}/stats/lgas/${lgaId}`;
-    },
-    singleWardStats: (
-      id: number | string,
-      wardId: number | string,
-      partyId?: number | string,
-    ) => {
-      return partyId
-        ? `${api}/election-groups/${id}/stats/wards/${wardId}/parties/${partyId}`
-        : `${api}/election-groups/${id}/stats/wards/${wardId}`;
-    },
   },
 
   uploadToR2: `${api}/upload`,

@@ -21,8 +21,9 @@ import { Route as AuthenticatedPracticeIndexRouteImport } from './routes/_authen
 import { Route as AuthenticatedPartiesIndexRouteImport } from './routes/_authenticated/parties/index'
 import { Route as AuthenticatedNotificationsIndexRouteImport } from './routes/_authenticated/notifications/index'
 import { Route as AuthenticatedGiveUpdateIndexRouteImport } from './routes/_authenticated/give-update/index'
-import { Route as AuthenticatedElectionStartIndexRouteImport } from './routes/_authenticated/election-start/index'
-import { Route as AuthenticatedElectionEndIndexRouteImport } from './routes/_authenticated/election-end/index'
+import { Route as AuthenticatedFieldUpdatesIndexRouteImport } from './routes/_authenticated/field-updates/index'
+import { Route as AuthenticatedFieldStatsIndexRouteImport } from './routes/_authenticated/field-stats/index'
+import { Route as AuthenticatedFieldIssuesIndexRouteImport } from './routes/_authenticated/field-issues/index'
 import { Route as AuthenticatedCampaignGroupsIndexRouteImport } from './routes/_authenticated/campaign-groups/index'
 import { Route as AuthenticatedApplicationsIndexRouteImport } from './routes/_authenticated/applications/index'
 import { Route as AuthenticatedHomeIndexRouteImport } from './routes/_authenticated/_home/index'
@@ -94,16 +95,22 @@ const AuthenticatedGiveUpdateIndexRoute =
     path: '/give-update/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
-const AuthenticatedElectionStartIndexRoute =
-  AuthenticatedElectionStartIndexRouteImport.update({
-    id: '/election-start/',
-    path: '/election-start/',
+const AuthenticatedFieldUpdatesIndexRoute =
+  AuthenticatedFieldUpdatesIndexRouteImport.update({
+    id: '/field-updates/',
+    path: '/field-updates/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
-const AuthenticatedElectionEndIndexRoute =
-  AuthenticatedElectionEndIndexRouteImport.update({
-    id: '/election-end/',
-    path: '/election-end/',
+const AuthenticatedFieldStatsIndexRoute =
+  AuthenticatedFieldStatsIndexRouteImport.update({
+    id: '/field-stats/',
+    path: '/field-stats/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedFieldIssuesIndexRoute =
+  AuthenticatedFieldIssuesIndexRouteImport.update({
+    id: '/field-issues/',
+    path: '/field-issues/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedCampaignGroupsIndexRoute =
@@ -146,8 +153,9 @@ export interface FileRoutesByFullPath {
   '/applications/supervisor': typeof AuthenticatedApplicationsSupervisorRoute
   '/applications/': typeof AuthenticatedApplicationsIndexRoute
   '/campaign-groups/': typeof AuthenticatedCampaignGroupsIndexRoute
-  '/election-end/': typeof AuthenticatedElectionEndIndexRoute
-  '/election-start/': typeof AuthenticatedElectionStartIndexRoute
+  '/field-issues/': typeof AuthenticatedFieldIssuesIndexRoute
+  '/field-stats/': typeof AuthenticatedFieldStatsIndexRoute
+  '/field-updates/': typeof AuthenticatedFieldUpdatesIndexRoute
   '/give-update/': typeof AuthenticatedGiveUpdateIndexRoute
   '/notifications/': typeof AuthenticatedNotificationsIndexRoute
   '/parties/': typeof AuthenticatedPartiesIndexRoute
@@ -166,8 +174,9 @@ export interface FileRoutesByTo {
   '/': typeof AuthenticatedHomeIndexRoute
   '/applications': typeof AuthenticatedApplicationsIndexRoute
   '/campaign-groups': typeof AuthenticatedCampaignGroupsIndexRoute
-  '/election-end': typeof AuthenticatedElectionEndIndexRoute
-  '/election-start': typeof AuthenticatedElectionStartIndexRoute
+  '/field-issues': typeof AuthenticatedFieldIssuesIndexRoute
+  '/field-stats': typeof AuthenticatedFieldStatsIndexRoute
+  '/field-updates': typeof AuthenticatedFieldUpdatesIndexRoute
   '/give-update': typeof AuthenticatedGiveUpdateIndexRoute
   '/notifications': typeof AuthenticatedNotificationsIndexRoute
   '/parties': typeof AuthenticatedPartiesIndexRoute
@@ -188,8 +197,9 @@ export interface FileRoutesById {
   '/_authenticated/_home/': typeof AuthenticatedHomeIndexRoute
   '/_authenticated/applications/': typeof AuthenticatedApplicationsIndexRoute
   '/_authenticated/campaign-groups/': typeof AuthenticatedCampaignGroupsIndexRoute
-  '/_authenticated/election-end/': typeof AuthenticatedElectionEndIndexRoute
-  '/_authenticated/election-start/': typeof AuthenticatedElectionStartIndexRoute
+  '/_authenticated/field-issues/': typeof AuthenticatedFieldIssuesIndexRoute
+  '/_authenticated/field-stats/': typeof AuthenticatedFieldStatsIndexRoute
+  '/_authenticated/field-updates/': typeof AuthenticatedFieldUpdatesIndexRoute
   '/_authenticated/give-update/': typeof AuthenticatedGiveUpdateIndexRoute
   '/_authenticated/notifications/': typeof AuthenticatedNotificationsIndexRoute
   '/_authenticated/parties/': typeof AuthenticatedPartiesIndexRoute
@@ -210,8 +220,9 @@ export interface FileRouteTypes {
     | '/applications/supervisor'
     | '/applications/'
     | '/campaign-groups/'
-    | '/election-end/'
-    | '/election-start/'
+    | '/field-issues/'
+    | '/field-stats/'
+    | '/field-updates/'
     | '/give-update/'
     | '/notifications/'
     | '/parties/'
@@ -230,8 +241,9 @@ export interface FileRouteTypes {
     | '/'
     | '/applications'
     | '/campaign-groups'
-    | '/election-end'
-    | '/election-start'
+    | '/field-issues'
+    | '/field-stats'
+    | '/field-updates'
     | '/give-update'
     | '/notifications'
     | '/parties'
@@ -251,8 +263,9 @@ export interface FileRouteTypes {
     | '/_authenticated/_home/'
     | '/_authenticated/applications/'
     | '/_authenticated/campaign-groups/'
-    | '/_authenticated/election-end/'
-    | '/_authenticated/election-start/'
+    | '/_authenticated/field-issues/'
+    | '/_authenticated/field-stats/'
+    | '/_authenticated/field-updates/'
     | '/_authenticated/give-update/'
     | '/_authenticated/notifications/'
     | '/_authenticated/parties/'
@@ -356,18 +369,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedGiveUpdateIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/election-start/': {
-      id: '/_authenticated/election-start/'
-      path: '/election-start'
-      fullPath: '/election-start/'
-      preLoaderRoute: typeof AuthenticatedElectionStartIndexRouteImport
+    '/_authenticated/field-updates/': {
+      id: '/_authenticated/field-updates/'
+      path: '/field-updates'
+      fullPath: '/field-updates/'
+      preLoaderRoute: typeof AuthenticatedFieldUpdatesIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/election-end/': {
-      id: '/_authenticated/election-end/'
-      path: '/election-end'
-      fullPath: '/election-end/'
-      preLoaderRoute: typeof AuthenticatedElectionEndIndexRouteImport
+    '/_authenticated/field-stats/': {
+      id: '/_authenticated/field-stats/'
+      path: '/field-stats'
+      fullPath: '/field-stats/'
+      preLoaderRoute: typeof AuthenticatedFieldStatsIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/field-issues/': {
+      id: '/_authenticated/field-issues/'
+      path: '/field-issues'
+      fullPath: '/field-issues/'
+      preLoaderRoute: typeof AuthenticatedFieldIssuesIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/campaign-groups/': {
@@ -414,8 +434,9 @@ interface AuthenticatedRouteChildren {
   AuthenticatedHomeIndexRoute: typeof AuthenticatedHomeIndexRoute
   AuthenticatedApplicationsIndexRoute: typeof AuthenticatedApplicationsIndexRoute
   AuthenticatedCampaignGroupsIndexRoute: typeof AuthenticatedCampaignGroupsIndexRoute
-  AuthenticatedElectionEndIndexRoute: typeof AuthenticatedElectionEndIndexRoute
-  AuthenticatedElectionStartIndexRoute: typeof AuthenticatedElectionStartIndexRoute
+  AuthenticatedFieldIssuesIndexRoute: typeof AuthenticatedFieldIssuesIndexRoute
+  AuthenticatedFieldStatsIndexRoute: typeof AuthenticatedFieldStatsIndexRoute
+  AuthenticatedFieldUpdatesIndexRoute: typeof AuthenticatedFieldUpdatesIndexRoute
   AuthenticatedGiveUpdateIndexRoute: typeof AuthenticatedGiveUpdateIndexRoute
   AuthenticatedNotificationsIndexRoute: typeof AuthenticatedNotificationsIndexRoute
   AuthenticatedPartiesIndexRoute: typeof AuthenticatedPartiesIndexRoute
@@ -432,8 +453,9 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedHomeIndexRoute: AuthenticatedHomeIndexRoute,
   AuthenticatedApplicationsIndexRoute: AuthenticatedApplicationsIndexRoute,
   AuthenticatedCampaignGroupsIndexRoute: AuthenticatedCampaignGroupsIndexRoute,
-  AuthenticatedElectionEndIndexRoute: AuthenticatedElectionEndIndexRoute,
-  AuthenticatedElectionStartIndexRoute: AuthenticatedElectionStartIndexRoute,
+  AuthenticatedFieldIssuesIndexRoute: AuthenticatedFieldIssuesIndexRoute,
+  AuthenticatedFieldStatsIndexRoute: AuthenticatedFieldStatsIndexRoute,
+  AuthenticatedFieldUpdatesIndexRoute: AuthenticatedFieldUpdatesIndexRoute,
   AuthenticatedGiveUpdateIndexRoute: AuthenticatedGiveUpdateIndexRoute,
   AuthenticatedNotificationsIndexRoute: AuthenticatedNotificationsIndexRoute,
   AuthenticatedPartiesIndexRoute: AuthenticatedPartiesIndexRoute,
