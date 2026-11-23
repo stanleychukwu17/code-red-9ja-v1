@@ -396,7 +396,7 @@ func (s *service) CreateNotification(ctx context.Context, in CreateNotificationI
 	// Convert database entity into response DTO
 	resp := mapNotificationToResponse(n)
 
-	// Broadcast in real-time via Pusher to the recipient user's private channel
+	// Broadcast in real-time to the recipient user's private channel
 	if s.broadcaster != nil {
 		_ = s.broadcaster.BroadcastNotification(ctx, in.RecipientUserID, resp)
 	}
@@ -617,7 +617,7 @@ func (s *service) CreatePartyNotification(ctx context.Context, in CreatePartyNot
 	// Convert DB record to response DTO (defaults isRead to false on creation)
 	resp := mapPartyNotificationToResponse(pn, false)
 
-	// Broadcast to party & chapter realtime channels via Pusher
+	// Broadcast to party & chapter realtime channels
 	if s.broadcaster != nil {
 		_ = s.broadcaster.BroadcastPartyNotification(ctx, in.PartyID, in.ChapterID, resp)
 	}

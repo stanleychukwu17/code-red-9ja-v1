@@ -1,6 +1,5 @@
 import { useElection } from "#/hooks/useElection";
 import { useAssignments } from "#/hooks/useAssignments";
-import { useElectionRealtime } from "@repo/ui/hooks/useElectionRealtime";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { APP_URL } from "#/lib/config";
 import { AssignmentRoleCard } from "./components/AssignmentRoleCard";
@@ -37,32 +36,11 @@ export const Route = createFileRoute("/_authenticated/_home/")({
  * 3. Ward Supervisor (`WardElectionSupervisorPage`)
  * 4. Polling Unit Agent (`PollingAgentPage`)
  * 5. General Citizen / Voter (`GeneralPage`)
- *
- * Also initiates real-time WebSocket subscriptions via Pusher for live
- * election results, incident alerts, and agent status broadcasts.
  */
 function RouteComponent() {
   const navigate = useNavigate();
   const { supervisorAssignment, pollingUnitAssignment, elections } = useAssignments();
-  const { selectedElection, daysLeft, electionDay } = useElection();
-
-  // Connect real-time WebSocket updates for election supervisor & voter dashboard
-  useElectionRealtime({
-    electionId: selectedElection?.id,
-    stateId:
-      supervisorAssignment?.data?.state_id ??
-      pollingUnitAssignment?.state_id,
-    lgaId:
-      supervisorAssignment?.data?.lga_id ?? pollingUnitAssignment?.lga_id,
-    wardId:
-      supervisorAssignment?.data?.ward_id ??
-      pollingUnitAssignment?.ward_id,
-    pollingUnitId: pollingUnitAssignment?.polling_unit_id,
-    clientConfig: {
-      key: import.meta.env.VITE_PUSHER_KEY,
-      cluster: import.meta.env.VITE_PUSHER_CLUSTER || "eu",
-    },
-  });
+  const { daysLeft, electionDay } = useElection();
 
   let content = <GeneralPage />;
   let roleLabel: string | null = null;

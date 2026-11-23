@@ -80,8 +80,7 @@ export const SelectElectionGroupAndElection = ({
   const [pendingGroup, setPendingGroup] = useState<ElectionGroup | null>(null);
 
   // ─── Groups query ──────────────────────────────────────────────────────────
-  const effectiveQueryKey =
-    customQueryKey || ["election-groups-select", queryParams || { active: true }];
+  const effectiveQueryKey = customQueryKey || ["election-groups-select", queryParams || { active: true }];
 
   const { data: groupsRaw, isLoading } = useQuery({
     queryKey: effectiveQueryKey,
@@ -97,8 +96,7 @@ export const SelectElectionGroupAndElection = ({
     gcTime: Infinity,
   });
 
-  const electionGroups: ElectionGroup[] =
-    propElectionGroups || groupsRaw?.data?.election_groups || [];
+  const electionGroups: ElectionGroup[] = propElectionGroups || groupsRaw?.data?.election_groups || [];
 
   // ─── Elections query (step 2) ──────────────────────────────────────────────
   const hasNestedElections = Boolean((pendingGroup as any)?.elections?.length);
@@ -116,12 +114,9 @@ export const SelectElectionGroupAndElection = ({
     gcTime: Infinity,
   });
 
-  const elections: Election[] =
-    (pendingGroup as any)?.elections || electionsRaw?.data?.elections || [];
+  const elections: Election[] = (pendingGroup as any)?.elections || electionsRaw?.data?.elections || [];
 
-  const electionStatus = isLoadingElections
-    ? ("LoadingFirstPage" as const)
-    : ("Exhausted" as const);
+  const electionStatus = isLoadingElections ? ("LoadingFirstPage" as const) : ("Exhausted" as const);
 
   // ─── Effects ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -191,9 +186,7 @@ export const SelectElectionGroupAndElection = ({
     e.name.toLowerCase().includes(mobileElectionSearch.toLowerCase()),
   );
 
-  const displayText =
-    selectedItem?.name ||
-    (isLoading && !selectedItem ? "Loading..." : "Select Election Group");
+  const displayText = selectedItem?.name || (isLoading && !selectedItem ? "Loading..." : "Select Election Group");
   const currentSelectedId = selectedItem?.id
     ? `${selectedItem.id}`
     : selectedId

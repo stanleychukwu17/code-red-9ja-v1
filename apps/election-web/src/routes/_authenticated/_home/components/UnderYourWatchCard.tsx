@@ -18,7 +18,7 @@ export function UnderYourWatchCard() {
         Under your watch {electionDay ? "today" : "on Election Day"}
       </SectionTitle>
 
-      <ul className="flex flex-col gap-4">
+      <ul className="flex flex-col gap-4 mt-1">
         {elections.map((election: any) => (
           <li key={election.id} className="flex items-center gap-3.5">
             <CircleCheck

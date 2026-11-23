@@ -3,7 +3,6 @@ import { ActivitiesCard } from "@repo/ui/components/cards/activities-card";
 import { ElectionStatsSidebar } from "@repo/ui/components/cards/election-stats-sidebar";
 import { InfoCard } from "@repo/ui/components/cards/Rewards";
 import { DashboardLayout } from "@repo/ui/components/custom/AdminLayouts";
-import { useElectionRealtime } from "@repo/ui/hooks/useElectionRealtime";
 import AlertIcon from "@repo/ui/icons/alert-icon";
 import ReportCubeIcon from "@repo/ui/icons/report-cube-icon";
 import { cn } from "@repo/ui/lib/utils";
@@ -29,10 +28,9 @@ import { UpdateReel } from "./components/-update-reel";
  * Election Day War Room Dashboard
  *
  * Real-time command center for party administrators on election day:
- * 1. Live Pusher WebSocket Feeds: Subscribes to geographic broadcast channels for instant vote count and incident updates.
- * 2. Scoped Candidate Leaderboard: Displays leading candidates, vote counts, and winning region counts (States, LGAs, or Wards).
- * 3. Accreditation & Quota Metrics: Right sidebar displaying party accreditation quotas and supervisor coverage goals.
- * 4. Ground Intel Galleries:
+ * 1. Scoped Candidate Leaderboard: Displays leading candidates, vote counts, and winning region counts (States, LGAs, or Wards).
+ * 2. Accreditation & Quota Metrics: Right sidebar displaying party accreditation quotas and supervisor coverage goals.
+ * 3. Ground Intel Galleries:
  *    - Final Results: Scanned Form EC8A sheets submitted by polling agents.
  *    - Agent Updates: Routine field reports and turn-out observations.
  *    - Incident Reports: Emergency escalations (BVAS glitches, delayed voting materials, security issues).
@@ -45,7 +43,7 @@ export const Route = createFileRoute("/_authenticated/$partyShortName/home/elect
 /**
  * ElectionDayComponent
  *
- * Situation room orchestrator coordinating WebSocket connections, leaderboard rankings,
+ * Situation room orchestrator coordinating leaderboard rankings,
  * activities stream, and modal media reels.
  */
 function ElectionDayComponent() {
@@ -64,21 +62,6 @@ function ElectionDayComponent() {
 	const { electionCandidates, finalResultObj, isResultLoading } = useElectionResults();
 	const { activeParties } = useActiveParties();
 	const navigate = useNavigate();
-
-	// Connect real-time WebSocket updates for election day
-	useElectionRealtime({
-		electionId: selectedElection?.id,
-		stateId: selectedStateId,
-		lgaId: selectedLGAId,
-		wardId: selectedWardId,
-		senatorialDistrictId: selectedDistrictId,
-		federalConstituencyId: selectedFederalConstituencyId,
-		stateConstituencyId: selectedStateConstituencyId,
-		clientConfig: {
-			key: import.meta.env.VITE_PUSHER_KEY,
-			cluster: import.meta.env.VITE_PUSHER_CLUSTER || "eu",
-		},
-	});
 
 	const fetchPollingUnitUpdatesFn = useServerFn(getPollingUnitUpdates);
 	const fetchElectionStatsFn = useServerFn(getElectionStats);

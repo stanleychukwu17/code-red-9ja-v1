@@ -3,13 +3,8 @@ import { useSidebar } from "@repo/ui/components/sidebar";
 
 import { useUser } from "#/hooks/useUser";
 import { useElection } from "#/hooks/useElection";
-import {
-  SelectElectionGroupAndElection,
-  type Election,
-  type ElectionGroup,
-} from "@repo/ui/components/selects/election-group-and-election-select";
+import { SelectElectionGroupAndElection } from "@repo/ui/components/selects/election-group-and-election-select";
 import { getElectionGroups } from "#/lib/server/election_groups";
-import { getElectionsByGroup } from "#/lib/server/elections";
 import { useServerFn } from "@tanstack/react-start";
 import { TitleText } from "@repo/ui/components/custom/Texts";
 import { cn } from "@repo/ui/lib/utils";
@@ -40,20 +35,8 @@ export function HomeHeader({ daysLeft, textClassName, avatarImage, containerClas
   const sidebar = useSidebar();
   const isMobile = sidebar?.isMobile ?? false;
   const setOpenMobile = sidebar?.setOpenMobile ?? (() => { });
-  const { selectedElectionGroup, setSelectedElectionGroup, setSelectedElection } = useElection();
+  const { selectedElectionGroup, setSelectedElectionGroup } = useElection();
   const fetchGroups = useServerFn(getElectionGroups);
-  const fetchElectionsByGroup = useServerFn(getElectionsByGroup);
-
-  // Prevents opening dropdown or navigating when inside practice test mode
-  const interceptClick = (e: React.MouseEvent, action?: () => void) => {
-    if (onPracticeClick) {
-      e.preventDefault();
-      e.stopPropagation();
-      onPracticeClick();
-      return;
-    }
-    if (action) action();
-  };
 
   return (
     <header
@@ -101,16 +84,11 @@ export function HomeHeader({ daysLeft, textClassName, avatarImage, containerClas
         >
           <SelectElectionGroupAndElection
             fetchElectionGroups={fetchGroups}
-            fetchElectionsByGroup={fetchElectionsByGroup}
-            queryKey={["election-groups", { includeElections: true }]}
-            queryParams={{ limit: 50, includeElections: true }}
+            queryKey={["election-groups"]}
+            queryParams={{ limit: 50 }}
             selectedId={selectedElectionGroup?.id}
             selectedItem={selectedElectionGroup}
             update={(group) => setSelectedElectionGroup(group)}
-            onElectionSelect={(group: ElectionGroup, election: Election) => {
-              setSelectedElectionGroup(group);
-              setSelectedElection(election);
-            }}
             className={`border-none ring-0 text-sm shadow-none bg-transparent hover:bg-transparent px-0 font-semibold p-0 h-auto ${textClassName || "text-c-900"}`}
           />
         </div>

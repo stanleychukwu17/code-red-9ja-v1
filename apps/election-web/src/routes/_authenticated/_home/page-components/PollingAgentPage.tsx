@@ -20,7 +20,7 @@ const BYPASS_TIME_CONSTRAINTS = process.env.NODE_ENV === "development";
 export function PollingAgentPage() {
   const navigate = useNavigate();
 
-  const { selectedElectionGroup, selectedElection, daysLeft, diffDays } = useElection();
+  const { selectedElectionGroup, daysLeft, diffDays } = useElection();
   const { pollingUnitAssignment: currentPollingUnitAssignment } = useAssignments();
 
   // Submits duty compensation request to party administration upon task completion

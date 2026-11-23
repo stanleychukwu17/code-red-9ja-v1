@@ -1,6 +1,7 @@
 import { MapPin } from "lucide-react";
 import { SectionTitle } from "#/components/separator/SectionTitle";
 import { useAssignments } from "#/hooks/useAssignments";
+import { useElection } from "#/hooks/useElection";
 
 /**
  * Displays the user's assigned geographic designation (State, LGA, Ward, PU)
@@ -8,6 +9,7 @@ import { useAssignments } from "#/hooks/useAssignments";
  */
 export function DesignationCard() {
   const { pollingUnitAssignment, supervisorAssignment } = useAssignments();
+  const { electionDay } = useElection();
   const assignment = supervisorAssignment?.data ?? pollingUnitAssignment;
 
   const items = [
@@ -21,9 +23,11 @@ export function DesignationCard() {
 
   return (
     <section className="w-full py-2 flex flex-col gap-4">
-      <SectionTitle>Your Designation for today</SectionTitle>
+      <SectionTitle>
+        Your Designation {electionDay ? "for today" : "on Election Day"}
+      </SectionTitle>
 
-      <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+      <div className="grid grid-cols-2 gap-x-6 gap-y-4 mt-1">
         {items.map((item) => (
           <div key={item.label} className="flex items-center gap-2.5 min-w-0">
             <MapPin

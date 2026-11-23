@@ -308,7 +308,6 @@ function UploadResultFlow() {
       {/* Top Header with step-aware back navigation */}
       <PageHeader
         onBackClick={handleBack}
-      // title={subStep > 1 ? currentElection.name : ""}
       />
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto pb-32">

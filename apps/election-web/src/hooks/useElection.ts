@@ -1,8 +1,6 @@
 import { useAppDispatch, useAppSelector } from "#/redux/hooks";
 import {
-	selectSelectedElection,
 	selectSelectedElectionGroup,
-	setSelectedElection as setSelectedElectionAction,
 	setSelectedElectionGroup as setSelectedElectionGroupAction,
 } from "#/redux/slice/electionSlice";
 
@@ -35,9 +33,7 @@ export const isElectionDay = (
 };
 
 // Calculates countdown days remaining until election date
-export const calculateDaysLeft = (
-	electionDate?: string | null,
-): { daysLeft?: number; diffDays?: number } => {
+export const calculateDaysLeft = (electionDate?: string | null,): { daysLeft?: number; diffDays?: number } => {
 	if (!electionDate) return {};
 	try {
 		const d = new Date(electionDate);
@@ -60,7 +56,6 @@ export const calculateDaysLeft = (
 export const useElection = () => {
 	const dispatch = useAppDispatch();
 	const selectedElectionGroup = useAppSelector(selectSelectedElectionGroup);
-	const selectedElection = useAppSelector(selectSelectedElection);
 
 	// Check if today matches the active election group's scheduled date
 	const electionDay = isElectionDay(selectedElectionGroup?.election_date);
@@ -68,15 +63,11 @@ export const useElection = () => {
 
 	return {
 		selectedElectionGroup,
-		selectedElection,
 		electionDay,
 		daysLeft,
 		diffDays,
 		setSelectedElectionGroup: (group: any | null) => {
 			dispatch(setSelectedElectionGroupAction(group));
-		},
-		setSelectedElection: (election: any | null) => {
-			dispatch(setSelectedElectionAction(election));
 		},
 	};
 };
@@ -89,13 +80,15 @@ export const getAutoSelectedSession = (groups: any[], elections: any[]) => {
 	if (groups.length > 0) {
 		const now = new Date();
 		now.setHours(0, 0, 0, 0);
+		const graceCutoff = new Date(now);
+		graceCutoff.setDate(graceCutoff.getDate() - POST_ELECTION_COLLATION_GRACE_DAYS);
 
-		// Prioritize upcoming or today's elections over past elections
+		// Prioritize upcoming elections or recent elections still within the collation grace window
 		let validGroups = groups.filter((g: any) => {
 			if (!g.election_date) return false;
 			const d = new Date(g.election_date);
 			d.setHours(0, 0, 0, 0);
-			return d.getTime() >= now.getTime();
+			return d.getTime() >= graceCutoff.getTime();
 		});
 
 		if (validGroups.length === 0) validGroups = [...groups];
