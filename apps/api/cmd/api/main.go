@@ -16,7 +16,6 @@ import (
 	"free9ja/api/internal/logger"
 	"free9ja/api/internal/router"
 	r2service "free9ja/api/internal/service/r2"
-	"free9ja/api/internal/service/realtime"
 	"free9ja/api/internal/worker"
 
 	"github.com/hibiken/asynq"
@@ -118,11 +117,10 @@ func newApp(ctx context.Context, cfg *config.Config) *App {
 		}
 	}
 
-	// Initialize worker, distributor, broadcaster and processor
+	// Initialize worker, distributor and processor
 	q := queries.New(pool)
 	distributor := worker.NewRedisTaskDistributor(redisOpt)
-	broadcaster := realtime.NewBroadcasterFromEnv()
-	processor := worker.NewRedisTaskProcessor(redisOpt, q, pool, rdb, distributor, cfg, r2Svc, broadcaster)
+	processor := worker.NewRedisTaskProcessor(redisOpt, q, pool, rdb, distributor, cfg, r2Svc)
 
 	// Initialize router
 	r := router.New(cfg, pool, rdb, distributor, processor)

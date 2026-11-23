@@ -16,7 +16,6 @@ import (
 	"free9ja/api/internal/db/queries"
 	inecgrabber "free9ja/api/internal/service/inec_grabber"
 	r2service "free9ja/api/internal/service/r2"
-	"free9ja/api/internal/service/realtime"
 )
 
 // Task names
@@ -63,7 +62,6 @@ type RedisTaskProcessor struct {
 	taskDistributor       TaskDistributor
 	cfg                   *config.Config
 	r2Svc                 *r2service.R2Service
-	broadcaster           realtime.Broadcaster
 	campaignGroupsService CampaignGroupsService
 	earningsService       EarningsService
 	notificationsService  NotificationsService
@@ -81,11 +79,7 @@ func (redisTaskProcessor *RedisTaskProcessor) SetNotificationsService(notificati
 	redisTaskProcessor.notificationsService = notificationsService
 }
 
-func NewRedisTaskProcessor(redisOpt asynq.RedisClientOpt, q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client, distributor TaskDistributor, cfg *config.Config, r2Svc *r2service.R2Service, broadcaster realtime.Broadcaster) TaskProcessor {
-	if broadcaster == nil {
-		broadcaster = realtime.NewNoOpBroadcaster()
-	}
-
+func NewRedisTaskProcessor(redisOpt asynq.RedisClientOpt, q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client, distributor TaskDistributor, cfg *config.Config, r2Svc *r2service.R2Service) TaskProcessor {
 	concurrency := 10
 	if cfg != nil && cfg.WorkerConcurrency > 0 {
 		concurrency = cfg.WorkerConcurrency
@@ -110,7 +104,6 @@ func NewRedisTaskProcessor(redisOpt asynq.RedisClientOpt, q *queries.Queries, po
 		taskDistributor: distributor,
 		cfg:             cfg,
 		r2Svc:           r2Svc,
-		broadcaster:     broadcaster,
 	}
 }
 

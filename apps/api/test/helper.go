@@ -10,7 +10,6 @@ import (
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/router"
-	"free9ja/api/internal/service/realtime"
 	"free9ja/api/internal/utils"
 	"free9ja/api/internal/worker"
 	"io"
@@ -109,8 +108,7 @@ func TestNewApp(t *testing.T, ctx context.Context, cfg *config.Config) *TestApp 
 	}
 	q := queries.New(pool)
 	distributor := worker.NewRedisTaskDistributor(redisOpt)
-	broadcaster := realtime.NewBroadcasterFromEnv()
-	processor := worker.NewRedisTaskProcessor(redisOpt, q, pool, rdb, distributor, cfg, nil, broadcaster)
+	processor := worker.NewRedisTaskProcessor(redisOpt, q, pool, rdb, distributor, cfg, nil)
 
 	// Initialize router
 	r := router.New(cfg, pool, rdb, distributor, processor)

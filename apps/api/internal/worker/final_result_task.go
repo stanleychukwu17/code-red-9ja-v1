@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"free9ja/api/internal/db/queries"
-	"free9ja/api/internal/service/realtime"
 
 	"github.com/hibiken/asynq"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -170,19 +169,6 @@ func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskCalculateFinalResult(ct
 		"polling_unit_id", payload.PollingUnitID,
 		"matching", winningGroup.Count,
 		"total", len(results))
-
-	// Broadcast real-time PU result event
-	if redisTaskProcessor.broadcaster != nil {
-		_ = redisTaskProcessor.broadcaster.BroadcastPUResultUploaded(ctx, realtime.PUResultUploadedEvent{
-			ElectionID:    r.ElectionID,
-			PollingUnitID: r.PollingUnitID,
-			WardID:        r.WardID.Int32,
-			LGAID:         r.LgaID.Int32,
-			StateID:       r.StateID.Int16,
-			ValidVotes:    r.ValidVotes,
-			Timestamp:     time.Now().UTC(),
-		})
-	}
 
 	// Trigger the cascading candidate rollup chain starting from this Ward and State Constituency
 	if redisTaskProcessor.taskDistributor != nil {

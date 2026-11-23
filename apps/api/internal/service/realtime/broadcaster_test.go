@@ -3,44 +3,24 @@ package realtime
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestChannelHelpers(t *testing.T) {
-	assert.Equal(t, "election-1", ElectionChannel(1))
-	assert.Equal(t, "election-1-state-2", ElectionStateChannel(1, 2))
-	assert.Equal(t, "election-1-lga-15", ElectionLGAChannel(1, 15))
-	assert.Equal(t, "election-1-ward-80", ElectionWardChannel(1, 80))
-	assert.Equal(t, "election-1-pu-500", ElectionPUChannel(1, 500))
-	assert.Equal(t, "election-1-sc-20", ElectionStateConstituencyChannel(1, 20))
-	assert.Equal(t, "election-1-fc-12", ElectionFederalConstituencyChannel(1, 12))
-	assert.Equal(t, "election-1-sd-4", ElectionSenatorialDistrictChannel(1, 4))
+func TestNotificationChannelHelpers(t *testing.T) {
+	assert.Equal(t, "user-42", UserChannel(42))
+	assert.Equal(t, "party-7", PartyChannel(7))
+	assert.Equal(t, "party-7-chapter-12", PartyChapterChannel(7, 12))
 }
 
 func TestNoOpBroadcaster(t *testing.T) {
 	b := NewNoOpBroadcaster()
 	ctx := context.Background()
 
-	stateID := int16(1)
-	err := b.BroadcastResultsUpdated(ctx, ResultsUpdatedEvent{
-		ElectionID: 1,
-		Scope:      "state",
-		StateID:    &stateID,
-		Timestamp:  time.Now(),
-	})
+	err := b.BroadcastNotification(ctx, 1, map[string]string{"msg": "ok"})
 	assert.NoError(t, err)
 
-	err = b.BroadcastPUResultUploaded(ctx, PUResultUploadedEvent{
-		ElectionID:    1,
-		PollingUnitID: 10,
-		WardID:        2,
-		LGAID:         3,
-		StateID:       1,
-		ValidVotes:    150,
-		Timestamp:     time.Now(),
-	})
+	err = b.BroadcastPartyNotification(ctx, 1, nil, map[string]string{"msg": "ok"})
 	assert.NoError(t, err)
 }
 
