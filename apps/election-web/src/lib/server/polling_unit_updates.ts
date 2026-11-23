@@ -17,6 +17,7 @@ export type CreatePollingUnitUpdateInput = {
   status_category_id?: number;
   status_option_id?: number;
   has_issues: boolean;
+  is_emergency?: boolean;
   issue_action?: "none" | "link_existing" | "create_new";
   existing_issue_ids?: number[];
   new_issue_option_ids?: number[];

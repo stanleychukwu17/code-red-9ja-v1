@@ -226,7 +226,7 @@ export const STATIC_ISSUE_CATEGORIES: IssueCategory[] = [
     color: "red",
     sortOrder: 1,
     options: [
-      { id: 1, name: "Inec officials are running", severity: "critical", sortOrder: 1, forWho: "agent" },
+      { id: 1, name: "Violence and fighting at the polling unit", severity: "critical", sortOrder: 1, forWho: "agent" },
       { id: 2, name: "Ballot box snatching or destruction", severity: "critical", sortOrder: 2, forWho: "agent" },
       { id: 3, name: "Thugs disrupting voting", severity: "critical", sortOrder: 3, forWho: "agent" },
       { id: 4, name: "Voter intimidation or harassment", severity: "high", sortOrder: 4, forWho: "agent" },

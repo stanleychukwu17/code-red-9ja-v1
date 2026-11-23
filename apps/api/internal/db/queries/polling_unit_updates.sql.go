@@ -92,6 +92,7 @@ INSERT INTO polling_unit_updates (
   status_category_id,
   status_option_id,
   has_issues,
+  is_emergency,
   title,
   message,
   has_media,
@@ -100,9 +101,9 @@ INSERT INTO polling_unit_updates (
   accuracy_meters,
   created_at
 ) VALUES (
-  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21,
-  COALESCE($22, NOW())
-) RETURNING id, assignment_id, election_group_id, party_id, role_type, user_id, state_id, lga_id, ward_id, senatorial_district_id, federal_constituency_id, state_assembly_constituency_id, polling_unit_id, status_category_id, status_option_id, has_issues, title, message, has_media, latitude, longitude, accuracy_meters, created_at, updated_at
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22,
+  COALESCE($23, NOW())
+) RETURNING id, assignment_id, election_group_id, party_id, role_type, user_id, state_id, lga_id, ward_id, senatorial_district_id, federal_constituency_id, state_assembly_constituency_id, polling_unit_id, status_category_id, status_option_id, has_issues, is_emergency, title, message, has_media, latitude, longitude, accuracy_meters, created_at, updated_at
 `
 
 type CreatePollingUnitUpdateParams struct {
@@ -121,6 +122,7 @@ type CreatePollingUnitUpdateParams struct {
 	StatusCategoryID            pgtype.Int2   `json:"status_category_id"`
 	StatusOptionID              pgtype.Int2   `json:"status_option_id"`
 	HasIssues                   pgtype.Bool   `json:"has_issues"`
+	IsEmergency                 bool          `json:"is_emergency"`
 	Title                       pgtype.Text   `json:"title"`
 	Message                     string        `json:"message"`
 	HasMedia                    bool          `json:"has_media"`
@@ -147,6 +149,7 @@ func (q *Queries) CreatePollingUnitUpdate(ctx context.Context, arg CreatePolling
 		arg.StatusCategoryID,
 		arg.StatusOptionID,
 		arg.HasIssues,
+		arg.IsEmergency,
 		arg.Title,
 		arg.Message,
 		arg.HasMedia,
@@ -173,6 +176,7 @@ func (q *Queries) CreatePollingUnitUpdate(ctx context.Context, arg CreatePolling
 		&i.StatusCategoryID,
 		&i.StatusOptionID,
 		&i.HasIssues,
+		&i.IsEmergency,
 		&i.Title,
 		&i.Message,
 		&i.HasMedia,
@@ -430,7 +434,7 @@ SELECT
   pu.id, pu.role_type, pu.assignment_id, pu.user_id, pu.polling_unit_id, pu.election_group_id, pu.party_id, 
   pu.state_id, pu.lga_id, pu.ward_id, pu.senatorial_district_id, pu.federal_constituency_id, 
   pu.state_assembly_constituency_id, pu.status_category_id, pu.status_option_id,
-  pu.has_issues, pu.title, pu.message, pu.has_media,
+  pu.has_issues, pu.is_emergency, pu.title, pu.message, pu.has_media,
   pu.latitude, pu.longitude, pu.accuracy_meters,
   pu.created_at, pu.updated_at,
   u.first_name as user_first_name,
@@ -463,10 +467,11 @@ WHERE
   AND ($11::int IS NULL OR pu.state_assembly_constituency_id = $11)
   AND ($12::smallint IS NULL OR pu.status_category_id = $12)
   AND ($13::boolean IS NULL OR pu.has_issues = $13)
-  AND ($14::boolean IS NULL OR pu.has_media = $14)
-  AND pu.id < $15
+  AND ($14::boolean IS NULL OR pu.is_emergency = $14)
+  AND ($15::boolean IS NULL OR pu.has_media = $15)
+  AND pu.id < $16
 ORDER BY pu.id DESC
-LIMIT $16
+LIMIT $17
 `
 
 type ListPollingUnitUpdatesParams struct {
@@ -483,6 +488,7 @@ type ListPollingUnitUpdatesParams struct {
 	StateAssemblyConstituencyID pgtype.Int4 `json:"state_assembly_constituency_id"`
 	StatusCategoryID            pgtype.Int2 `json:"status_category_id"`
 	HasIssues                   pgtype.Bool `json:"has_issues"`
+	IsEmergency                 pgtype.Bool `json:"is_emergency"`
 	HasMedia                    pgtype.Bool `json:"has_media"`
 	Cursor                      int64       `json:"cursor"`
 	Limit                       int32       `json:"limit"`
@@ -505,6 +511,7 @@ type ListPollingUnitUpdatesRow struct {
 	StatusCategoryID            pgtype.Int2        `json:"status_category_id"`
 	StatusOptionID              pgtype.Int2        `json:"status_option_id"`
 	HasIssues                   pgtype.Bool        `json:"has_issues"`
+	IsEmergency                 bool               `json:"is_emergency"`
 	Title                       pgtype.Text        `json:"title"`
 	Message                     string             `json:"message"`
 	HasMedia                    bool               `json:"has_media"`
@@ -539,6 +546,7 @@ func (q *Queries) ListPollingUnitUpdates(ctx context.Context, arg ListPollingUni
 		arg.StateAssemblyConstituencyID,
 		arg.StatusCategoryID,
 		arg.HasIssues,
+		arg.IsEmergency,
 		arg.HasMedia,
 		arg.Cursor,
 		arg.Limit,
@@ -567,6 +575,7 @@ func (q *Queries) ListPollingUnitUpdates(ctx context.Context, arg ListPollingUni
 			&i.StatusCategoryID,
 			&i.StatusOptionID,
 			&i.HasIssues,
+			&i.IsEmergency,
 			&i.Title,
 			&i.Message,
 			&i.HasMedia,

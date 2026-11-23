@@ -13,6 +13,7 @@ export type OutboxUpdateItem = {
   statusCategoryId: number;
   statusOptionId?: number;
   hasIssues: boolean;
+  isEmergency?: boolean;
   issueAction: "none" | "link_existing" | "create_new";
   existingIssueIds?: number[];
   newIssueOptionIds?: number[];

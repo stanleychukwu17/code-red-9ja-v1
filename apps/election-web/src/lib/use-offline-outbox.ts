@@ -93,6 +93,7 @@ async function syncSingleItem(item: OutboxUpdateItem): Promise<boolean> {
         status_category_id: item.statusCategoryId,
         status_option_id: item.statusOptionId,
         has_issues: item.hasIssues,
+        is_emergency: item.isEmergency ?? false,
         issue_action: item.issueAction,
         existing_issue_ids: item.existingIssueIds,
         new_issue_option_ids: item.newIssueOptionIds,

@@ -66,6 +66,7 @@ type CreateUpdateRequest struct {
 	StatusCategoryID  *int16                           `json:"status_category_id,omitempty" validate:"required,gt=0"`
 	StatusOptionID    *int16                           `json:"status_option_id,omitempty"`
 	HasIssues         bool                             `json:"has_issues"`
+	IsEmergency       bool                             `json:"is_emergency"`
 	IssueAction       string                           `json:"issue_action,omitempty"`
 	ExistingIssueIDs  []int64                          `json:"existing_issue_ids,omitempty"`
 	NewIssueOptionIDs []int16                          `json:"new_issue_option_ids,omitempty"`
@@ -246,6 +247,7 @@ func (h *Handler) CreateUpdate(w http.ResponseWriter, r *http.Request) {
 		StatusCategoryID:            req.StatusCategoryID,
 		StatusOptionID:              req.StatusOptionID,
 		HasIssues:                   req.HasIssues,
+		IsEmergency:                 req.IsEmergency,
 		IssueAction:                 req.IssueAction,
 		ExistingIssueIDs:            req.ExistingIssueIDs,
 		NewIssueOptionIDs:           req.NewIssueOptionIDs,

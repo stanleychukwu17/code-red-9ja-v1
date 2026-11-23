@@ -907,6 +907,7 @@ type PollingUnitUpdate struct {
 	StatusCategoryID            pgtype.Int2        `json:"status_category_id"`
 	StatusOptionID              pgtype.Int2        `json:"status_option_id"`
 	HasIssues                   pgtype.Bool        `json:"has_issues"`
+	IsEmergency                 bool               `json:"is_emergency"`
 	Title                       pgtype.Text        `json:"title"`
 	Message                     string             `json:"message"`
 	HasMedia                    bool               `json:"has_media"`

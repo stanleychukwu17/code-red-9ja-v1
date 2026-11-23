@@ -66,6 +66,7 @@ type CreateUpdateInput struct {
 	StatusCategoryID            *int16             `json:"status_category_id,omitempty"`
 	StatusOptionID              *int16             `json:"status_option_id,omitempty"`
 	HasIssues                   bool               `json:"has_issues"`
+	IsEmergency                 bool               `json:"is_emergency"`
 	IssueAction                 string             `json:"issue_action,omitempty"`
 	ExistingIssueIDs            []int64            `json:"existing_issue_ids,omitempty"`
 	NewIssueOptionIDs           []int16            `json:"new_issue_option_ids,omitempty"`
@@ -161,6 +162,7 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 		StatusCategoryID:            utils.PgInt2FromPtrNullable(input.StatusCategoryID),
 		StatusOptionID:              utils.PgInt2FromPtrNullable(input.StatusOptionID),
 		HasIssues:                   utils.PgBool(hasIssues),
+		IsEmergency:                 input.IsEmergency,
 		Title:                       utils.PgTextFromPtr(input.Title),
 		Message:                     input.Message,
 		HasMedia:                    len(input.Media) > 0,

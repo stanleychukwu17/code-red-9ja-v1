@@ -15,6 +15,7 @@ INSERT INTO polling_unit_updates (
   status_category_id,
   status_option_id,
   has_issues,
+  is_emergency,
   title,
   message,
   has_media,
@@ -23,7 +24,7 @@ INSERT INTO polling_unit_updates (
   accuracy_meters,
   created_at
 ) VALUES (
-  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21,
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22,
   COALESCE(sqlc.narg(created_at), NOW())
 ) RETURNING *;
 
@@ -105,7 +106,7 @@ SELECT
   pu.id, pu.role_type, pu.assignment_id, pu.user_id, pu.polling_unit_id, pu.election_group_id, pu.party_id, 
   pu.state_id, pu.lga_id, pu.ward_id, pu.senatorial_district_id, pu.federal_constituency_id, 
   pu.state_assembly_constituency_id, pu.status_category_id, pu.status_option_id,
-  pu.has_issues, pu.title, pu.message, pu.has_media,
+  pu.has_issues, pu.is_emergency, pu.title, pu.message, pu.has_media,
   pu.latitude, pu.longitude, pu.accuracy_meters,
   pu.created_at, pu.updated_at,
   u.first_name as user_first_name,
@@ -138,6 +139,7 @@ WHERE
   AND (sqlc.narg('state_assembly_constituency_id')::int IS NULL OR pu.state_assembly_constituency_id = sqlc.narg('state_assembly_constituency_id'))
   AND (sqlc.narg('status_category_id')::smallint IS NULL OR pu.status_category_id = sqlc.narg('status_category_id'))
   AND (sqlc.narg('has_issues')::boolean IS NULL OR pu.has_issues = sqlc.narg('has_issues'))
+  AND (sqlc.narg('is_emergency')::boolean IS NULL OR pu.is_emergency = sqlc.narg('is_emergency'))
   AND (sqlc.narg('has_media')::boolean IS NULL OR pu.has_media = sqlc.narg('has_media'))
   AND pu.id < sqlc.arg('cursor')
 ORDER BY pu.id DESC

@@ -71,8 +71,9 @@ CREATE TABLE IF NOT EXISTS polling_unit_updates (
   status_category_id SMALLINT REFERENCES polling_unit_status_categories(id) ON DELETE SET NULL,
   status_option_id SMALLINT REFERENCES polling_unit_status_options(id) ON DELETE SET NULL,
   
-  -- Ongoing issues flag
+  -- Ongoing issues & emergency flag
   has_issues BOOLEAN DEFAULT FALSE,
+  is_emergency BOOLEAN NOT NULL DEFAULT FALSE,
   
   -- Update details
   title VARCHAR(255),
@@ -234,7 +235,7 @@ ON CONFLICT (id) DO NOTHING;
 -- Seed initial issue options with fixed deterministic IDs
 INSERT INTO polling_unit_issue_options (id, for_who, issue_category_id, name, severity, sort_order) VALUES
   -- Agent issues
-  (1, 'agent', 1, 'Inec officials are running', 'critical', 1),
+  (1, 'agent', 1, 'Violence and fighting at the polling unit', 'critical', 1),
   (2, 'agent', 1, 'Ballot box snatching or destruction', 'critical', 2),
   (3, 'agent', 1, 'Thugs disrupting voting', 'critical', 3),
   (4, 'agent', 1, 'Voter intimidation or harassment', 'high', 4),

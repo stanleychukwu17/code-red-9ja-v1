@@ -43,7 +43,7 @@ export const Route = createFileRoute("/_authenticated/_home/")({
  */
 function RouteComponent() {
   const navigate = useNavigate();
-  const { supervisorAssignment, pollingUnitAssignment } = useAssignments();
+  const { supervisorAssignment, pollingUnitAssignment, elections } = useAssignments();
   const { selectedElection, daysLeft, electionDay } = useElection();
 
   // Connect real-time WebSocket updates for election supervisor & voter dashboard
@@ -91,8 +91,12 @@ function RouteComponent() {
       <main className="w-full max-w-125 min-h-screen flex flex-col px-4 mb-30">
 
         {/* Active duty role badge (only shown when user has an assignment) */}
-        {roleLabel && <AssignmentRoleCard roleLabel={roleLabel} />}
-        <Separator />
+        {roleLabel && (
+          <>
+            <AssignmentRoleCard roleLabel={roleLabel} />
+            <Separator />
+          </>
+        )}
 
         {/* Update posting reminder and quick-action button (election day only) */}
         {roleLabel && electionDay && (
@@ -103,12 +107,20 @@ function RouteComponent() {
         )}
 
         {/* Assigned geographic designation (State, LGA, Ward, PU) */}
-        {roleLabel && <DesignationCard />}
-        <Separator />
+        {roleLabel && (
+          <>
+            <DesignationCard />
+            <Separator />
+          </>
+        )}
 
         {/* Summary of PUs / wards / LGAs under the user's watch */}
-        <UnderYourWatchCard />
-        <Separator />
+        {elections.length > 0 && (
+          <>
+            <UnderYourWatchCard />
+            <Separator />
+          </>
+        )}
 
         {/* Role-specific dashboard body */}
         {content}

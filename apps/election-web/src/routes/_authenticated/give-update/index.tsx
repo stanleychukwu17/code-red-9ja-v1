@@ -72,6 +72,7 @@ function GiveUpdate() {
 
   // Selected issue options (multi-select)
   const [selectedIssueOptionIds, setSelectedIssueOptionIds] = useState<number[]>([]);
+  const [isEmergency, setIsEmergency] = useState(false);
 
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
@@ -154,6 +155,7 @@ function GiveUpdate() {
         statusCategoryId: selectedStatusCategoryId,
         statusOptionId: selectedStatusOptionId,
         hasIssues,
+        isEmergency,
         issueAction: isNewIssue ? "create_new" : "none",
         newIssueOptionIds: isNewIssue ? selectedIssueOptionIds : undefined,
         title: title.trim(),
@@ -266,6 +268,40 @@ function GiveUpdate() {
             onIssueOptionIdsChange={setSelectedIssueOptionIds}
           />
         </div>
+
+        {/* Emergency Escalation Toggle */}
+        <button
+          type="button"
+          onClick={() => setIsEmergency((prev) => !prev)}
+          className={`w-full rounded-2xl border px-4 py-3.5 flex items-center justify-between gap-3 text-left transition cursor-pointer ${
+            isEmergency
+              ? "border-red-500 bg-red-500/10 text-red-700 dark:text-red-400"
+              : "border-border bg-card hover:bg-muted/40 text-foreground"
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <AlertTriangle
+              className={`size-5 shrink-0 ${
+                isEmergency ? "text-red-600 dark:text-red-400" : "text-muted-foreground"
+              }`}
+            />
+            <div>
+              <p className="text-sm font-semibold">Emergency situation</p>
+              <p className="text-xs text-muted-foreground">
+                Flag this update for immediate war-room &amp; supervisor attention
+              </p>
+            </div>
+          </div>
+          <span
+            className={`px-2.5 py-1 rounded-full text-xs font-bold shrink-0 ${
+              isEmergency
+                ? "bg-red-600 text-white"
+                : "bg-muted text-muted-foreground"
+            }`}
+          >
+            {isEmergency ? "URGENT" : "Normal"}
+          </span>
+        </button>
 
         {/* Optional Polling Unit Tag (supervisors only) */}
         {SHOW_SUPERVISOR_PU_TAG && isSupervisor && pollingUnitsList.length > 0 && (
