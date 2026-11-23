@@ -19,7 +19,6 @@ export const submitPollingUnitResult = createServerFn({ method: "POST" })
       party_id?: number;
       result_sheet_image_url?: string;
       result_sheet_video_url?: string;
-      uploaded_by_inec?: boolean;
     }) => data,
   )
   .handler(async ({ data }) => {
@@ -46,14 +45,14 @@ export const getPollingUnitResults = createServerFn({ method: "GET" })
     (
       data:
         | {
-            election_id?: number;
-            election_group_id?: number;
-            party_id?: number;
-            polling_unit_id?: number;
-            status?: string;
-            cursor?: number;
-            limit?: number;
-          }
+          election_id?: number;
+          election_group_id?: number;
+          party_id?: number;
+          polling_unit_id?: number;
+          status?: string;
+          cursor?: number;
+          limit?: number;
+        }
         | undefined,
     ) => data,
   )

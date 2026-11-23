@@ -1,5 +1,4 @@
 import { getPageHeader } from "#/lib/shared/meta";
-import { APP_URL } from "#/lib/config";
 import { PageHeader } from "#/components/Headers";
 import { PageWrapper } from "#/components/Wrappers";
 import { useAgentDutyEligibility } from "#/hooks/useAgentDutyEligibility";
@@ -14,17 +13,15 @@ import { MediaAttachmentActions, type AttachedMedia } from "./-components/MediaA
 import { LocationStatusBanner } from "./-components/LocationStatusBanner";
 import { IntervalStatusBanner } from "./-components/IntervalStatusBanner";
 import { MissingLocationAlertDialog } from "./-components/MissingLocationAlertDialog";
-import {
-  saveToOutbox,
-  type OutboxUpdateItem,
-} from "#/lib/outbox-db";
-import { useOfflineOutbox } from "#/lib/use-offline-outbox";
+import { saveToOutbox, type OutboxUpdateItem } from "#/lib/outbox-db";
+import { useOfflineOutbox } from "#/lib/use-offline-update-outbox";
+import { OfflineSyncBanner } from "#/components/OfflineSyncBanner";
 import { Button } from "@repo/ui/components/button";
 import { HeaderAccent } from "@repo/ui/components/header-accent";
 import { convertToWebP } from "@repo/ui/lib/image";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { WifiOff, CloudUpload, CalendarClock, AlertTriangle } from "lucide-react";
-import { useEffect, useState } from "react";
+import { CalendarClock, AlertTriangle } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 // Route definition for redesigned polling unit situation update screen
@@ -273,17 +270,15 @@ function GiveUpdate() {
         <button
           type="button"
           onClick={() => setIsEmergency((prev) => !prev)}
-          className={`w-full rounded-2xl border px-4 py-3.5 flex items-center justify-between gap-3 text-left transition cursor-pointer ${
-            isEmergency
-              ? "border-red-500 bg-red-500/10 text-red-700 dark:text-red-400"
-              : "border-border bg-card hover:bg-muted/40 text-foreground"
-          }`}
+          className={`w-full rounded-2xl border px-4 py-3.5 flex items-center justify-between gap-3 text-left transition cursor-pointer ${isEmergency
+            ? "border-red-500 bg-red-500/10 text-red-700 dark:text-red-400"
+            : "border-border bg-card hover:bg-muted/40 text-foreground"
+            }`}
         >
           <div className="flex items-center gap-3">
             <AlertTriangle
-              className={`size-5 shrink-0 ${
-                isEmergency ? "text-red-600 dark:text-red-400" : "text-muted-foreground"
-              }`}
+              className={`size-5 shrink-0 ${isEmergency ? "text-red-600 dark:text-red-400" : "text-muted-foreground"
+                }`}
             />
             <div>
               <p className="text-sm font-semibold">Emergency situation</p>
@@ -293,11 +288,10 @@ function GiveUpdate() {
             </div>
           </div>
           <span
-            className={`px-2.5 py-1 rounded-full text-xs font-bold shrink-0 ${
-              isEmergency
-                ? "bg-red-600 text-white"
-                : "bg-muted text-muted-foreground"
-            }`}
+            className={`px-2.5 py-1 rounded-full text-xs font-bold shrink-0 ${isEmergency
+              ? "bg-red-600 text-white"
+              : "bg-muted text-muted-foreground"
+              }`}
           >
             {isEmergency ? "URGENT" : "Normal"}
           </span>
@@ -388,42 +382,6 @@ export function ElectionDayBanner({ electionDay, daysLeft }: { electionDay?: boo
           ? `Election day is in ${daysLeft} day${daysLeft > 1 ? "s" : ""}. Situation updates open on election day.`
           : "Situation updates can only be submitted on the scheduled election day."}
       </span>
-    </div>
-  );
-}
-
-/**
- * Banner displayed when user is offline or has pending outbox updates to sync.
- */
-export function OfflineSyncBanner({ isOnline, pendingCount, onSync }: { isOnline: boolean; pendingCount: number; onSync: () => void }) {
-  if (isOnline && pendingCount === 0) return null;
-
-  return (
-    <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 text-xs text-amber-800 dark:text-amber-300">
-      <div className="flex items-center gap-2">
-        {!isOnline ? (
-          <>
-            <WifiOff className="size-4 shrink-0 text-amber-600" />
-            <span>Offline mode. All updates are stored safely on your phone.</span>
-          </>
-        ) : (
-          <>
-            <CloudUpload className="size-4 shrink-0 text-amber-600 animate-bounce" />
-            <span>
-              {pendingCount} update{pendingCount > 1 ? "s" : ""} waiting to sync...
-            </span>
-          </>
-        )}
-      </div>
-      {isOnline && (
-        <button
-          type="button"
-          onClick={onSync}
-          className="font-semibold underline hover:text-amber-950 cursor-pointer"
-        >
-          Sync now
-        </button>
-      )}
     </div>
   );
 }

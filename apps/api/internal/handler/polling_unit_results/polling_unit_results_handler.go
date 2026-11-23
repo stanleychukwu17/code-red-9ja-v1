@@ -13,11 +13,11 @@ import (
 	"free9ja/api/internal/utils"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-playground/validator/v10"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type PollingUnitResultsService interface {
-	SubmitBatchResults(ctx context.Context, input pu_results.SubmitBatchResultsInput) ([]queries.PollingUnitResult, error)
 	SubmitResult(ctx context.Context, input pu_results.SubmitResultInput) (queries.PollingUnitResult, error)
 	GetResult(ctx context.Context, id int64) (queries.PollingUnitResult, error)
 	ListResults(ctx context.Context, params queries.ListPollingUnitResultsParams) ([]queries.PollingUnitResult, error)
@@ -26,13 +26,30 @@ type PollingUnitResultsService interface {
 	GetFinalResult(ctx context.Context, electionID int64, pollingUnitID int32) (interface{}, error)
 }
 
-type Handler struct {
-	service PollingUnitResultsService
-	utils   *utils.Utils
+type PollingUnitAssignmentsService interface {
+	GetMyAssignment(ctx context.Context, userID int64, electionGroupID int32) (*queries.GetUserAssignmentRow, error)
 }
 
-func NewHandler(s PollingUnitResultsService, u *utils.Utils) *Handler {
-	return &Handler{service: s, utils: u}
+type PollingUnitsService interface {
+	GetPollingUnitByID(ctx context.Context, id int32) (queries.PollingUnit, error)
+}
+
+type Handler struct {
+	service             PollingUnitResultsService
+	assignmentsService  PollingUnitAssignmentsService
+	pollingUnitsService PollingUnitsService
+	utils               *utils.Utils
+	validate            *validator.Validate
+}
+
+func NewHandler(s PollingUnitResultsService, u *utils.Utils, asgnSvc PollingUnitAssignmentsService, puSvc PollingUnitsService) *Handler {
+	return &Handler{
+		service:             s,
+		assignmentsService:  asgnSvc,
+		pollingUnitsService: puSvc,
+		utils:               u,
+		validate:            validator.New(),
+	}
 }
 
 // ── Request/Response types ─────────────────────────────────────────────────
@@ -77,27 +94,11 @@ type PollingUnitFinalResultsListResponse struct {
 type SubmitResultRequest struct {
 	AssignmentID        *int64 `json:"assignment_id,omitempty"`
 	PartyID             *int16 `json:"party_id,omitempty"`
-	ElectionID          int32  `json:"election_id"`
-	ElectionGroupID     int32  `json:"election_group_id"`
-	PollingUnitID       int32  `json:"polling_unit_id"`
-	ResultSheetImageURL string `json:"result_sheet_image_url"`
+	ElectionID          int32  `json:"election_id" validate:"required,gt=0"`
+	ElectionGroupID     int32  `json:"election_group_id" validate:"required,gt=0"`
+	PollingUnitID       int32  `json:"polling_unit_id" validate:"required,gt=0"`
+	ResultSheetImageURL string `json:"result_sheet_image_url" validate:"required"`
 	ResultSheetVideoURL string `json:"result_sheet_video_url"`
-	UploadedByINEC      bool   `json:"uploaded_by_inec"`
-}
-
-type SingleElectionSubmissionRequest struct {
-	ElectionID          int32  `json:"election_id"`
-	ResultSheetImageURL string `json:"result_sheet_image_url"`
-	ResultSheetVideoURL string `json:"result_sheet_video_url,omitempty"`
-}
-
-type SubmitBatchResultRequest struct {
-	AssignmentID    *int64                            `json:"assignment_id,omitempty"`
-	PartyID         *int16                            `json:"party_id,omitempty"`
-	ElectionGroupID int32                             `json:"election_group_id"`
-	PollingUnitID   int32                             `json:"polling_unit_id"`
-	UploadedByINEC  bool                              `json:"uploaded_by_inec"`
-	Submissions     []SingleElectionSubmissionRequest `json:"submissions"`
 }
 
 type ReviewRequest struct {
@@ -106,78 +107,6 @@ type ReviewRequest struct {
 }
 
 // ── Handlers ───────────────────────────────────────────────────────────────
-
-// SubmitBatchResults godoc
-// @Summary Submit Polling Unit Results in Batch
-// @Description Submit multiple election results (e.g. Presidential, Senate, House of Reps) for a polling unit in a single request.
-// @Tags Results
-// @Accept json
-// @Produce json
-// @Param request body SubmitBatchResultRequest true "Batch Result Details"
-// @Success 201 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Failure 401 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
-// @Router /polling-unit-results/batch [post]
-// @Security BearerAuth
-func (h *Handler) SubmitBatchResults(w http.ResponseWriter, r *http.Request) {
-	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
-	if !ok {
-		return
-	}
-
-	var req SubmitBatchResultRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
-		return
-	}
-
-	if req.ElectionGroupID <= 0 || req.PollingUnitID <= 0 || len(req.Submissions) == 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "election_group_id, polling_unit_id, and non-empty submissions are required")
-		return
-	}
-
-	var partyID *int16
-	if claims.PartyID > 0 {
-		pid := claims.PartyID
-		partyID = &pid
-	}
-	if req.PartyID != nil {
-		partyID = req.PartyID
-	}
-
-	var submissions []pu_results.SingleElectionSubmission
-	for _, sub := range req.Submissions {
-		if sub.ElectionID <= 0 || sub.ResultSheetImageURL == "" {
-			h.utils.RespondError(w, http.StatusBadRequest, "each submission requires valid election_id and result_sheet_image_url")
-			return
-		}
-		submissions = append(submissions, pu_results.SingleElectionSubmission{
-			ElectionID:          sub.ElectionID,
-			ResultSheetImageURL: sub.ResultSheetImageURL,
-			ResultSheetVideoURL: sub.ResultSheetVideoURL,
-		})
-	}
-
-	results, err := h.service.SubmitBatchResults(r.Context(), pu_results.SubmitBatchResultsInput{
-		UserFakeID:      claims.FakeID,
-		AssignmentID:    req.AssignmentID,
-		PartyID:         partyID,
-		ElectionGroupID: req.ElectionGroupID,
-		PollingUnitID:   req.PollingUnitID,
-		UploadedByINEC:  req.UploadedByINEC,
-		Submissions:     submissions,
-	})
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	h.utils.RespondSuccess(w, http.StatusCreated, "Batch results submitted successfully", map[string]interface{}{
-		"results": results,
-		"count":   len(results),
-	})
-}
 
 // SubmitResult godoc
 // @Summary Submit Polling Unit Result
@@ -193,8 +122,9 @@ func (h *Handler) SubmitBatchResults(w http.ResponseWriter, r *http.Request) {
 // @Router /polling-unit-results [post]
 // @Security BearerAuth
 func (h *Handler) SubmitResult(w http.ResponseWriter, r *http.Request) {
-	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
+	claims, ok := apimiddleware.GetClaims(r)
 	if !ok {
+		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
@@ -204,8 +134,9 @@ func (h *Handler) SubmitResult(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.ElectionID <= 0 || req.ElectionGroupID <= 0 || req.PollingUnitID <= 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "election_id, election_group_id, and polling_unit_id are required")
+	// Validate required fields
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
 		return
 	}
 
@@ -219,16 +150,48 @@ func (h *Handler) SubmitResult(w http.ResponseWriter, r *http.Request) {
 		partyID = req.PartyID
 	}
 
+	if req.AssignmentID != nil && *req.AssignmentID > 0 {
+		assignment, err := h.assignmentsService.GetMyAssignment(r.Context(), claims.UserID, req.ElectionGroupID)
+		if err != nil {
+			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to verify assignment: "+err.Error())
+			return
+		}
+		if assignment == nil || assignment.ID <= 0 {
+			h.utils.RespondError(w, http.StatusNotFound, "No active assignment found for this election group")
+			return
+		}
+		if assignment.ID != *req.AssignmentID {
+			h.utils.RespondError(w, http.StatusForbidden, "Assignment does not belong to you")
+			return
+		}
+		if assignment.PollingUnitID != req.PollingUnitID {
+			h.utils.RespondError(w, http.StatusBadRequest, "Polling unit does not match assignment")
+			return
+		}
+		partyID = &assignment.PartyID
+	}
+
+	pu, err := h.pollingUnitsService.GetPollingUnitByID(r.Context(), req.PollingUnitID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid polling unit id: "+err.Error())
+		return
+	}
+
 	result, err := h.service.SubmitResult(r.Context(), pu_results.SubmitResultInput{
-		UserFakeID:          claims.FakeID,
-		AssignmentID:        req.AssignmentID,
-		PartyID:             partyID,
-		ElectionID:          req.ElectionID,
-		ElectionGroupID:     req.ElectionGroupID,
-		PollingUnitID:       req.PollingUnitID,
-		ResultSheetImageURL: req.ResultSheetImageURL,
-		ResultSheetVideoURL: req.ResultSheetVideoURL,
-		UploadedByINEC:      req.UploadedByINEC,
+		UserFakeID:            claims.FakeID,
+		AssignmentID:          req.AssignmentID,
+		PartyID:               partyID,
+		ElectionID:            req.ElectionID,
+		ElectionGroupID:       req.ElectionGroupID,
+		PollingUnitID:         req.PollingUnitID,
+		StateID:               pu.StateID,
+		LgaID:                 pu.LgaID,
+		WardID:                pu.WardID,
+		SenatorialDistrictID:  pu.SenatorialDistrictID,
+		FederalConstituencyID: pu.FederalConstituencyID,
+		StateConstituencyID:   pu.StateConstituencyID,
+		ResultSheetImageURL:   req.ResultSheetImageURL,
+		ResultSheetVideoURL:   req.ResultSheetVideoURL,
 	})
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, err.Error())

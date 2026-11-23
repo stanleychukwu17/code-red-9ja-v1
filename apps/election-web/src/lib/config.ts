@@ -397,4 +397,8 @@ export const QUERY_KEYS = {
   userPhoneNumbers: (userId?: string | number) =>
     userId !== undefined ? ["user-phonenumbers", userId] : ["user-phonenumbers"],
   myLatestUpdateTime: (electionGroupId: number) => ["MyLatestUpdateTime", electionGroupId],
+  pollingUnitResults: (electionGroupId?: number, pollingUnitId?: number | null) =>
+    electionGroupId !== undefined && pollingUnitId !== undefined
+      ? ["pollingUnitResults", electionGroupId, pollingUnitId]
+      : ["pollingUnitResults"],
 };

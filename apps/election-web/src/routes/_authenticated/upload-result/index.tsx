@@ -1,29 +1,31 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import {
-  Loader2,
-  X,
-  CalendarClock,
-  Camera,
-  Video,
-  CheckCircle2,
-  ArrowRight,
-} from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { toast } from "sonner";
-import { showFeedbackToast } from "../practice/page-components/utils";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useElection } from "#/hooks/useElection";
 import { useAssignments } from "#/hooks/useAssignments";
 import { PageHeader } from "#/components/Headers";
+import { OfflineSyncBanner } from "#/components/OfflineSyncBanner";
 import { Button } from "@repo/ui/components/button";
 import { StickyFooter } from "#/components/Footers";
 import { PageWrapper } from "#/components/Wrappers";
-import {
-  getPollingUnitResults,
-  submitPollingUnitResult,
-} from "#/lib/server/polling_unit_results";
-import { getPresignedUploadURL, confirmFileUpload } from "#/lib/server/parties";
+import { getPollingUnitResults } from "#/lib/server/polling_unit_results";
+import { saveResultToOutbox, type OutboxResultItem } from "#/lib/outbox-db";
+import { useOfflineResultOutbox } from "#/lib/use-offline-result-outbox";
+import { QUERY_KEYS } from "#/lib/config";
+import { convertToWebP } from "@repo/ui/lib/image";
 import { DescriptiveText, TitleText } from "@repo/ui/components/custom/Texts";
+import {
+  ElectionResultCard,
+  type ElectionMediaState,
+} from "./components/ElectionResultCard";
+import {
+  AssignmentsLoadingScreen,
+  NoActiveElectionGroup,
+  NoEligibleElections,
+  ResultUploadUnavailable,
+} from "./components/UploadResultGuard";
 
 /**
  * Route definition for EC8A polling unit result sheet photo & video upload.
@@ -32,16 +34,11 @@ export const Route = createFileRoute("/_authenticated/upload-result/")({
   component: UploadResultFlow,
 });
 
-/** Represents a captured media file and its preview blob URL */
-type MediaFile = {
-  url: string;
-  type: "image" | "video";
-  file: File;
-};
-
-type ElectionMediaState = {
-  image?: MediaFile;
-  video?: MediaFile;
+const FORM_BY_ROLE: Record<string, string> = {
+  polling_agent: "EC8A",
+  ward_election_supervisor: "EC8B",
+  lga_election_supervisor: "EC8C",
+  state_election_supervisor: "EC8D",
 };
 
 /**
@@ -53,11 +50,12 @@ type ElectionMediaState = {
  */
 function UploadResultFlow() {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const search = Route.useSearch() as any;
 
   const { selectedElectionGroup, electionDay } = useElection();
-  const { pollingUnitAssignment, pollingUnitId, elections: assignedElections, isLoading: assignmentsLoading } = useAssignments();
+  const { pollingUnitAssignment, pollingUnitId, elections, role_type, isLoading: assignmentsLoading } = useAssignments();
+  const { pendingCount, pendingElectionIds, isOnline, refreshCount, triggerSync } = useOfflineResultOutbox();
+  const expectedForm = role_type ? FORM_BY_ROLE[role_type] : undefined;
+  const uploadTitle = `${role_type && role_type !== "polling_agent" ? "Upload Collation Results" : "Upload Election Results"}${expectedForm ? ` (${expectedForm})` : ""}`;
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const [step, setStep] = useState<1 | 2>(1);
@@ -66,30 +64,18 @@ function UploadResultFlow() {
   const [mediaByElection, setMediaByElection] = useState<
     Record<number, ElectionMediaState>
   >({});
+
   const mediaByElectionRef = useRef(mediaByElection);
   mediaByElectionRef.current = mediaByElection;
   const [activeElectionId, setActiveElectionId] = useState<number | null>(null);
-  const [submittingElectionId, setSubmittingElectionId] = useState<
-    number | null
-  >(null);
+  const [submittingElectionId, setSubmittingElectionId] = useState<number | null>(null);
 
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
 
-  // Sort elections under the user's watch by rank
-  const elections = useMemo(() => {
-    return [...(assignedElections || [])].sort(
-      (a, b) => (a.rank || 0) - (b.rank || 0),
-    );
-  }, [assignedElections]);
-
   // Fetch already-submitted results for this polling unit & election group
   const { data: existingResultsRes } = useQuery({
-    queryKey: [
-      "pollingUnitResults",
-      selectedElectionGroup?.id,
-      pollingUnitId,
-    ],
+    queryKey: QUERY_KEYS.pollingUnitResults(selectedElectionGroup?.id, pollingUnitId),
     enabled: !!selectedElectionGroup?.id && !!pollingUnitId,
     queryFn: () =>
       getPollingUnitResults({
@@ -99,8 +85,10 @@ function UploadResultFlow() {
           limit: 50,
         },
       }),
+    staleTime: Infinity,
   });
 
+  // Track election IDs that already have submitted results for this polling unit
   const submittedElectionIds = useMemo(() => {
     const ids = new Set<number>();
     const list = existingResultsRes?.data?.results || existingResultsRes?.data;
@@ -129,26 +117,10 @@ function UploadResultFlow() {
     };
   }, []);
 
+  // Opens the camera/file picker for a specific election
   const triggerMediaPicker = (electionId: number, type: "image" | "video") => {
-    if (search.isPractice) {
-      const dummyFile = new File(["dummy"], `practice.${type === "image" ? "jpg" : "mp4"}`, {
-        type: type === "image" ? "image/jpeg" : "video/mp4",
-      });
-      setMediaByElection((prev) => ({
-        ...prev,
-        [electionId]: {
-          ...prev[electionId],
-          [type]: {
-            url: "https://res.cloudinary.com/dhtcwqsx4/image/upload/v1784365430/Free9ja/pictures/Example_-_Election_Result_zcloos.webp",
-            type,
-            file: dummyFile,
-          },
-        },
-      }));
-      return;
-    }
-
     setActiveElectionId(electionId);
+
     if (type === "image") {
       imageInputRef.current?.click();
     } else {
@@ -156,16 +128,17 @@ function UploadResultFlow() {
     }
   };
 
-  const handleMediaChange = (
-    e: React.ChangeEvent<HTMLInputElement>,
-    type: "image" | "video",
-  ) => {
+  // Store selected image or video file preview for the active election
+  const handleMediaChange = (e: React.ChangeEvent<HTMLInputElement>, type: "image" | "video") => {
     const file = e.target.files?.[0];
     if (!file || activeElectionId === null) return;
 
     setMediaByElection((prev) => {
       const existing = prev[activeElectionId]?.[type];
+
+      // Free memory from the previous preview URL if replacing an existing file
       if (existing) URL.revokeObjectURL(existing.url);
+
       return {
         ...prev,
         [activeElectionId]: {
@@ -178,16 +151,21 @@ function UploadResultFlow() {
         },
       };
     });
+
     e.target.value = "";
   };
 
+  // Clear selected media and revoke its preview blob URL
   const removeMedia = (electionId: number, type: "image" | "video") => {
     setMediaByElection((prev) => {
       const current = prev[electionId];
       if (!current?.[type]) return prev;
+
+      // Free preview blob URL before removing the entry from state
       URL.revokeObjectURL(current[type]!.url);
       const nextEntry = { ...current };
       delete nextEntry[type];
+
       return {
         ...prev,
         [electionId]: nextEntry,
@@ -195,6 +173,7 @@ function UploadResultFlow() {
     });
   };
 
+  // Step back to instructions or return to home
   const handleBack = () => {
     if (step === 2) {
       setStep(1);
@@ -203,144 +182,79 @@ function UploadResultFlow() {
     }
   };
 
-  // Presigned S3/R2 storage upload pipeline
-  const uploadFile = async (mediaFile: MediaFile): Promise<string> => {
-    const res = await getPresignedUploadURL({
-      data: {
-        original_name: mediaFile.file.name,
-        mime_type: mediaFile.file.type,
-        file_size: mediaFile.file.size,
-        folder: "results",
-        is_public: true,
-      },
-    });
-    if (!res.success || !res.data)
-      throw new Error("Failed to initiate file upload");
-
-    const { upload_url, public_url, file_id } = res.data;
-
-    const putRes = await fetch(upload_url, {
-      method: "PUT",
-      headers: { "Content-Type": mediaFile.file.type },
-      body: mediaFile.file,
-    });
-
-    if (!putRes.ok) {
-      await confirmFileUpload({ data: { id: file_id, success: false } });
-      throw new Error("Failed to upload file to storage");
-    }
-
-    await confirmFileUpload({ data: { id: file_id, success: true } });
-    return public_url;
-  };
-
-  // Mutation uploading image (and optional video) to storage and recording result submission
+  // Queue result image (compressed to WebP) and optional video into IndexedDB, then sync immediately if online
   const submitMutation = useMutation({
     mutationFn: async (electionId: number) => {
-      if (!selectedElectionGroup?.id)
-        throw new Error("No active election group.");
+      if (!selectedElectionGroup?.id) throw new Error("No active election group.");
+      if (!pollingUnitAssignment?.id) throw new Error("No active polling unit assignment.");
 
-      const media = mediaByElection[electionId];
+      // Ensure the required result sheet image is attached before queuing
+      const media = mediaByElection[electionId]; // grabs the object of image and video uploaded
       if (!media?.image) {
         throw new Error("Please upload a result sheet image first.");
       }
 
+      // Track which election card is currently submitting to show its spinner
       setSubmittingElectionId(electionId);
 
-      const imageUrl = await uploadFile(media.image);
-      const videoUrl = media.video ? await uploadFile(media.video) : undefined;
+      let imageBlob: Blob = media.image.file;
+      let imageName = media.image.file.name;
+      try {
+        const compressed = await convertToWebP(media.image.file, 0.85, 1600);
+        imageBlob = compressed;
+        imageName = compressed.name;
+      } catch {
+        // Fall back to original file if WebP compression fails
+      }
 
-      const payload: Parameters<typeof submitPollingUnitResult>[0]["data"] = {
-        election_id: electionId,
-        election_group_id: selectedElectionGroup.id,
-        polling_unit_id: pollingUnitId ?? 0,
-        result_sheet_image_url: imageUrl,
+      // Build offline outbox record with compressed image and optional video
+      const outboxItem: OutboxResultItem = {
+        id: `result_${electionId}_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+        electionId,
+        electionGroupId: selectedElectionGroup.id,
+        pollingUnitId: pollingUnitId ?? 0,
+        assignmentId: pollingUnitAssignment.id,
+        image: { name: imageName, blob: imageBlob },
+        video: media.video ? { name: media.video.file.name, blob: media.video.file } : undefined,
+        createdAt: Date.now(),
+        syncStatus: "pending",
+        retryCount: 0,
       };
 
-      if (videoUrl) {
-        payload.result_sheet_video_url = videoUrl;
-      }
+      await saveResultToOutbox(outboxItem);
+      await refreshCount();
 
-      if (pollingUnitAssignment?.id) {
-        payload.assignment_id = pollingUnitAssignment.id;
-      }
+      const synced = typeof navigator !== "undefined" && navigator.onLine
+        ? await triggerSync() : 0;
 
-      const res = await submitPollingUnitResult({ data: payload });
-      if (!res.success) {
-        throw new Error(res.message || "Failed to submit result");
-      }
-      return { electionId, res };
+      return { electionId, synced };
     },
-    onSuccess: ({ electionId }) => {
-      toast.success("Result submitted successfully!");
+
+    onSuccess: ({ electionId, synced }) => {
       removeMedia(electionId, "image");
       removeMedia(electionId, "video");
-      queryClient.invalidateQueries({
-        queryKey: ["pollingUnitResults", selectedElectionGroup?.id, pollingUnitId],
-      });
+
+      if (synced > 0) {
+        toast.success("Result submitted successfully!");
+      } else {
+        toast.info("Saved offline. Your result will sync automatically when connected.");
+      }
     },
+
     onError: (err: any) => {
-      toast.error(err.message || "An error occurred");
+      toast.error(err.message || "Failed to save result");
     },
+
     onSettled: () => {
       setSubmittingElectionId(null);
     },
   });
 
-  // Guard: No active election group selected
-  if (!selectedElectionGroup) {
-    return (
-      <div className="p-8 text-center text-neutral-500">
-        No active election group.
-      </div>
-    );
-  }
-
-  // Guard: Results can only be uploaded on election day
-  if (!electionDay) {
-    return (
-      <PageWrapper>
-        <PageHeader onBackClick={() => navigate({ to: "/" })} />
-        <div className="flex flex-col items-center justify-center px-6 py-16 text-center max-w-md mx-auto space-y-4">
-          <div className="size-12 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center">
-            <CalendarClock className="size-6" />
-          </div>
-          <div className="space-y-1.5">
-            <h2 className="text-lg font-bold text-foreground">
-              Result Upload Unavailable
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              You can only upload election results on election day.
-            </p>
-          </div>
-          <Button variant="outline" onClick={() => navigate({ to: "/" })}>
-            Back to Home
-          </Button>
-        </div>
-      </PageWrapper>
-    );
-  }
-
-  // Guard: Loading assigned elections
-  if (assignmentsLoading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
-      </div>
-    );
-  }
-
-  // Guard: No elections under watch
-  if (elections.length === 0) {
-    return (
-      <PageWrapper>
-        <PageHeader onBackClick={() => navigate({ to: "/" })} />
-        <div className="p-8 text-center text-neutral-500">
-          No eligible elections found under your watch.
-        </div>
-      </PageWrapper>
-    );
-  }
+  // Guards
+  if (!selectedElectionGroup) return <NoActiveElectionGroup />;
+  if (!electionDay) return <ResultUploadUnavailable onBack={() => navigate({ to: "/" })} />;
+  if (assignmentsLoading) return <AssignmentsLoadingScreen />;
+  if (elections.length === 0) return <NoEligibleElections onBack={() => navigate({ to: "/" })} />;
 
   return (
     <PageWrapper>
@@ -384,7 +298,7 @@ function UploadResultFlow() {
           <div className="px-4 flex flex-col gap-5 max-w-160 mx-auto">
             <div className="space-y-1.5 mt-2">
               <TitleText
-                text="Upload Election Results"
+                text={uploadTitle}
                 size="lg"
                 className="text-c-90"
               />
@@ -394,135 +308,32 @@ function UploadResultFlow() {
               />
             </div>
 
+            {/* Offline / Pending Sync Banner */}
+            <OfflineSyncBanner
+              isOnline={isOnline}
+              pendingCount={pendingCount}
+              onSync={triggerSync}
+              itemLabel="result"
+            />
+
             <div className="flex flex-col gap-4">
-              {elections.map((election: any) => {
-                const media = mediaByElection[election.id];
-                const isSubmitted = submittedElectionIds.has(Number(election.id));
-                const isSubmittingThis =
-                  submitMutation.isPending && submittingElectionId === election.id;
-
-                return (
-                  <div
-                    key={election.id}
-                    className="rounded-2xl border border-c-20 bg-white p-4 flex flex-col gap-4 shadow-xs"
-                  >
-                    {/* Election title & status */}
-                    <div className="flex items-center justify-between gap-3">
-                      <h3 className="text-base font-bold text-c-90">
-                        {election.name}
-                      </h3>
-                      {isSubmitted && (
-                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full shrink-0">
-                          <CheckCircle2 className="size-3.5" />
-                          Submitted
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Selected image/video previews */}
-                    {(media?.image || media?.video) && (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {media.image && (
-                          <div className="relative rounded-xl overflow-hidden border border-c-20 bg-neutral-100">
-                            <img
-                              src={media.image.url}
-                              alt={`${election.name} result sheet`}
-                              className="w-full h-40 object-cover"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => removeMedia(election.id, "image")}
-                              className="absolute top-2 right-2 bg-black/70 text-white rounded-full p-1.5 hover:bg-black/90 transition"
-                              aria-label="Remove image"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                          </div>
-                        )}
-
-                        {media.video && (
-                          <div className="relative rounded-xl overflow-hidden border border-c-20 bg-black">
-                            <video
-                              src={media.video.url}
-                              controls
-                              playsInline
-                              className="w-full h-40 object-contain"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => removeMedia(election.id, "video")}
-                              className="absolute top-2 right-2 bg-black/70 text-white rounded-full p-1.5 hover:bg-black/90 transition"
-                              aria-label="Remove video"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Upload Image & Upload Video buttons */}
-                    <div className="grid grid-cols-2 gap-3">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="w-full rounded-full h-11 font-semibold gap-2"
-                        disabled={isSubmittingThis}
-                        onClick={() => triggerMediaPicker(election.id, "image")}
-                      >
-                        <Camera className="size-4" />
-                        {media?.image ? "Change Image" : "Upload Image"}
-                      </Button>
-
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="w-full rounded-full h-11 font-semibold gap-2"
-                        disabled={isSubmittingThis}
-                        onClick={() => triggerMediaPicker(election.id, "video")}
-                      >
-                        <Video className="size-4" />
-                        {media?.video ? "Change Video" : "Upload Video"}
-                      </Button>
-                    </div>
-
-                    {/* Submit button when image is ready */}
-                    {media?.image && (
-                      <Button
-                        type="button"
-                        variant="black"
-                        className="w-full rounded-full h-11 font-semibold"
-                        disabled={submitMutation.isPending}
-                        onClick={() => {
-                          if (search.isPractice) {
-                            const failedAttempts = parseInt(
-                              search.failedAttemptCount || "0",
-                              10,
-                            );
-                            showFeedbackToast(true, failedAttempts);
-                            navigate({
-                              to: "/practice",
-                              search: {
-                                page: "completed",
-                                taskId: search.taskId,
-                                isPractice: "true",
-                              } as any,
-                            });
-                          } else {
-                            submitMutation.mutate(election.id);
-                          }
-                        }}
-                      >
-                        {isSubmittingThis ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          `Submit ${election.name}`
-                        )}
-                      </Button>
-                    )}
-                  </div>
-                );
-              })}
+              {elections.map((election: any) => (
+                <ElectionResultCard
+                  key={election.id}
+                  election={election}
+                  media={mediaByElection[election.id]}
+                  isSubmitted={submittedElectionIds.has(Number(election.id))}
+                  isQueuedOffline={pendingElectionIds.has(Number(election.id))}
+                  isSubmittingThis={
+                    submitMutation.isPending &&
+                    submittingElectionId === election.id
+                  }
+                  isSubmitDisabled={submitMutation.isPending}
+                  onTriggerMedia={(type) => triggerMediaPicker(election.id, type)}
+                  onRemoveMedia={(type) => removeMedia(election.id, type)}
+                  onSubmit={() => submitMutation.mutate(election.id)}
+                />
+              ))}
             </div>
           </div>
         )}
@@ -548,7 +359,7 @@ function UploadResultFlow() {
 
       {/* Step 1 Sticky Footer: Next button */}
       {step === 1 && (
-        <StickyFooter className="pb-14 bg-gradient-to-t from-white via-white to-white/90">
+        <StickyFooter className="pb-14 bg-linear-to-t from-white via-white to-white/90">
           <Button
             type="button"
             variant="black"

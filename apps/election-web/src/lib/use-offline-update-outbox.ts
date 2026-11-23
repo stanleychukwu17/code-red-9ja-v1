@@ -3,11 +3,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   getOutboxCount,
   getPendingUpdates,
-  removeFromOutbox,
+  removeUpdateFromOutbox,
   updateOutboxItemStatus,
   type OutboxUpdateItem,
 } from "./outbox-db";
-import { confirmFileUpload, getPresignedUploadURL } from "./server/parties";
+import { uploadOutboxMediaBlob } from "./outbox-media";
 import {
   createPollingUnitUpdate,
   type PollingUnitUpdateMediaInput,
@@ -27,54 +27,15 @@ async function syncSingleItem(item: OutboxUpdateItem): Promise<boolean> {
 
     // Upload each binary blob to storage
     for (const media of item.mediaFiles) {
-      const ext = media.name.split(".").pop()?.toLowerCase();
-      const fallbackMime =
-        ext === "mp4" ? "video/mp4" :
-          ext === "m4a" ? "audio/mp4" :
-            ext === "mp3" ? "audio/mpeg" :
-              ext === "wav" ? "audio/wav" :
-                ext === "webm" ? (media.type === "audio" ? "audio/webm" : "video/webm") :
-                  ext === "jpg" || ext === "jpeg" ? "image/jpeg" :
-                    ext === "png" ? "image/png" :
-                      ext === "webp" ? "image/webp" : "application/octet-stream";
+      const mediaSubfolder = media.type === "image" ? "photos" : media.type === "video" ? "videos" : "audio";
 
-      // Resolve MIME type and target subfolder based on media kind
-      const resolvedMime = media.blob.type || fallbackMime;
-      const mediaSubfolder =
-        media.type === "image" ? "photos" : media.type === "video" ? "videos" : "audio";
-
-      // 1. Request presigned upload ticket from API
-      const presignedRes = await getPresignedUploadURL({
-        data: {
-          original_name: media.name,
-          mime_type: resolvedMime,
-          file_size: media.blob.size,
-          folder: `situation-updates/${mediaSubfolder}`,
-          is_public: true,
-        },
+      const { file_id, public_url } = await uploadOutboxMediaBlob({
+        blob: media.blob,
+        name: media.name,
+        folder: `situation-updates/${mediaSubfolder}`,
+        mediaType: media.type,
       });
 
-      if (!presignedRes.success || !presignedRes.data) {
-        throw new Error("Failed to get presigned upload URL");
-      }
-
-      const { upload_url, public_url, file_id } = presignedRes.data;
-
-      // 2. Direct binary upload to Cloudflare R2
-      const putRes = await fetch(upload_url, {
-        method: "PUT",
-        headers: { "Content-Type": resolvedMime },
-        body: media.blob,
-      });
-
-      if (!putRes.ok) {
-        // Mark upload as failed in backend
-        await confirmFileUpload({ data: { id: file_id, success: false } });
-        throw new Error("Failed to upload binary asset");
-      }
-
-      // 3. Confirm successful upload and collect CDN public URL and media metadata
-      await confirmFileUpload({ data: { id: file_id, success: true } });
       uploadedMedia.push({
         file_id,
         url: public_url,
@@ -112,7 +73,7 @@ async function syncSingleItem(item: OutboxUpdateItem): Promise<boolean> {
     }
 
     // Successfully synced, remove from IndexedDB outbox
-    await removeFromOutbox(item.id);
+    await removeUpdateFromOutbox(item.id);
     return true;
   } catch (error: any) {
     await updateOutboxItemStatus(item.id, "failed", error.message);

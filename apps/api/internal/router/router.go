@@ -228,7 +228,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	pollingUnitAssignmentsHandler := puassignmentshandler.NewHandler(pollingUnitAssignmentsService, usersService, pollingUnitUpdatesService, utilsInstance, earningsService, supervisorAssignmentsService, pollingUnitsService, electionsService)
 	partyApplicationsHandler := partyapplicationshandler.NewHandler(partyApplicationsService, usersService, partiesService, permissionsService, campaignGroupsService, distributor, notificationsService, auditService, utilsInstance, electionGroupsService)
 	pollingUnitUpdatesHandler := puupdateshandler.NewHandler(pollingUnitUpdatesService, utilsInstance, pollingUnitAssignmentsService, supervisorAssignmentsService, pollingUnitsService)
-	pollingUnitResultsHandler := puresultshandler.NewHandler(pollingUnitResultsService, utilsInstance)
+	pollingUnitResultsHandler := puresultshandler.NewHandler(pollingUnitResultsService, utilsInstance, pollingUnitAssignmentsService, pollingUnitsService)
 	supervisorAssignmentsHandler := supervisorassignmentshandler.NewHandler(supervisorAssignmentsService, utilsInstance)
 	electionResultsHandler := electionresultshandler.NewHandler(pool, utilsInstance)
 	seedHandler := seedhandler.NewHandler(seedService, utilsInstance)
@@ -631,7 +631,6 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 
 		// polling unit results routes
 		r.Post("/api/v1/polling-unit-results", pollingUnitResultsHandler.SubmitResult)
-		r.Post("/api/v1/polling-unit-results/batch", pollingUnitResultsHandler.SubmitBatchResults)
 		r.Get("/api/v1/polling-unit-results", pollingUnitResultsHandler.ListResults)
 		r.Get("/api/v1/polling-unit-final-results", pollingUnitResultsHandler.ListFinalResults)
 		r.Get("/api/v1/polling-unit-results/final", pollingUnitResultsHandler.GetFinalResult)
