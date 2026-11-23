@@ -10,12 +10,12 @@ import { toast } from "sonner";
 /**
  * Props for `ReferralCard`.
  */
-interface ReferralCardProps {
+type ReferralCardProps = {
   /** Callback triggered when clicking "View Referrals" to navigate to the referrals management page */
   onClick: () => void;
   /** Optional callback invoked when the user copies their referral code to the clipboard */
   onCopyClick?: () => void;
-}
+};
 
 /**
  * Dashboard card promoting the agent referral incentive program.

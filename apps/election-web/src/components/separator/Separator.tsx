@@ -12,7 +12,7 @@ export function Separator({ className, ...props }: SeparatorProps) {
     <div
       role="separator"
       aria-orientation="horizontal"
-      className={cn("h-0.5 bg-sidebar-mobile/70 my-3", className)}
+      className={cn("h-0.5 bg-sidebar-mobile/70 my-4", className)}
       {...props}
     />
   );

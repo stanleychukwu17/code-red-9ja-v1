@@ -1,4 +1,5 @@
 import { CircleCheck } from "lucide-react";
+import { SectionTitle } from "#/components/separator/SectionTitle";
 import { useAssignments } from "#/hooks/useAssignments";
 import { useElection } from "#/hooks/useElection";
 
@@ -12,12 +13,10 @@ export function UnderYourWatchCard() {
   if (elections.length === 0) return null;
 
   return (
-    <section className="w-full max-w-110 px-5 py-5 flex flex-col gap-4">
-      <div className="bg-sidebar-mobile px-4 py-2.5 rounded-md w-fit">
-        <h3 className="text-sm font-bold text-c-90">
-          Under your watch {electionDay ? "today" : "on Election Day"}
-        </h3>
-      </div>
+    <section className="w-full max-w-110 py-2 flex flex-col gap-4">
+      <SectionTitle>
+        Under your watch {electionDay ? "today" : "on Election Day"}
+      </SectionTitle>
 
       <ul className="flex flex-col gap-4">
         {elections.map((election: any) => (

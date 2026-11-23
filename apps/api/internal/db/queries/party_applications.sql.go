@@ -926,7 +926,7 @@ SET
   polling_unit_id = $6,
   updated_at = NOW()
 WHERE id = $1
-RETURNING avatar_file_id
+RETURNING avatar_file_id, avatar
 `
 
 type UpdateUserAgentDetailsParams struct {
@@ -938,7 +938,12 @@ type UpdateUserAgentDetailsParams struct {
 	PollingUnitID pgtype.Int4 `json:"polling_unit_id"`
 }
 
-func (q *Queries) UpdateUserAgentDetails(ctx context.Context, arg UpdateUserAgentDetailsParams) (pgtype.Int8, error) {
+type UpdateUserAgentDetailsRow struct {
+	AvatarFileID pgtype.Int8 `json:"avatar_file_id"`
+	Avatar       pgtype.Text `json:"avatar"`
+}
+
+func (q *Queries) UpdateUserAgentDetails(ctx context.Context, arg UpdateUserAgentDetailsParams) (UpdateUserAgentDetailsRow, error) {
 	row := q.db.QueryRow(ctx, updateUserAgentDetails,
 		arg.ID,
 		arg.Avatar,
@@ -947,7 +952,7 @@ func (q *Queries) UpdateUserAgentDetails(ctx context.Context, arg UpdateUserAgen
 		arg.CurrentWard,
 		arg.PollingUnitID,
 	)
-	var avatar_file_id pgtype.Int8
-	err := row.Scan(&avatar_file_id)
-	return avatar_file_id, err
+	var i UpdateUserAgentDetailsRow
+	err := row.Scan(&i.AvatarFileID, &i.Avatar)
+	return i, err
 }

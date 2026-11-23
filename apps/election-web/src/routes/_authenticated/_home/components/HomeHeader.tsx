@@ -35,22 +35,12 @@ interface HomeHeaderProps {
  * - Right: Real-time election status badge ("LIVE" pulsing badge on election day vs "X days left" countdown)
  *   and notification bell with unread count badge.
  */
-export function HomeHeader({
-  daysLeft,
-  textClassName,
-  avatarImage,
-  containerClassName,
-  onPracticeClick,
-}: HomeHeaderProps) {
+export function HomeHeader({ daysLeft, textClassName, avatarImage, containerClassName, onPracticeClick }: HomeHeaderProps) {
   const user = useUser();
   const sidebar = useSidebar();
   const isMobile = sidebar?.isMobile ?? false;
-  const setOpenMobile = sidebar?.setOpenMobile ?? (() => {});
-  const {
-    selectedElectionGroup,
-    setSelectedElectionGroup,
-    setSelectedElection,
-  } = useElection();
+  const setOpenMobile = sidebar?.setOpenMobile ?? (() => { });
+  const { selectedElectionGroup, setSelectedElectionGroup, setSelectedElection } = useElection();
   const fetchGroups = useServerFn(getElectionGroups);
   const fetchElectionsByGroup = useServerFn(getElectionsByGroup);
 
@@ -86,6 +76,8 @@ export function HomeHeader({
               onPracticeClick();
               return;
             }
+
+            // Open the mobile sidebar when tapping the avatar (skipped above if practice mode intercepts)
             if (isMobile) {
               setOpenMobile(true);
             }

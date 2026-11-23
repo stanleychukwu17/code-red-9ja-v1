@@ -242,7 +242,8 @@ func (h *Handler) SubmitApplication(w http.ResponseWriter, r *http.Request) {
 		}
 		if errors.Is(err, partyapplications.ErrPollingUnitNotFound) ||
 			errors.Is(err, partyapplications.ErrPollingUnitMismatch) ||
-			errors.Is(err, partyapplications.ErrPollingUnitUnavailable) {
+			errors.Is(err, partyapplications.ErrPollingUnitUnavailable) ||
+			errors.Is(err, partyapplications.ErrAvatarRequired) {
 			h.utils.RespondError(w, http.StatusBadRequest, err.Error())
 			return
 		}

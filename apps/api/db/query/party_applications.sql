@@ -22,7 +22,7 @@ SET
   polling_unit_id = sqlc.arg(polling_unit_id),
   updated_at = NOW()
 WHERE id = $1
-RETURNING avatar_file_id;
+RETURNING avatar_file_id, avatar;
 
 -- name: GetApplicationByID :one
 SELECT * FROM party_agent_applications

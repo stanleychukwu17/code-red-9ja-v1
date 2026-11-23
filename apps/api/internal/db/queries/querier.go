@@ -532,7 +532,7 @@ type Querier interface {
 	UpdateStateSupervisorTracking(ctx context.Context, arg UpdateStateSupervisorTrackingParams) (StateElectionSupervisor, error)
 	UpdateSystemSetting(ctx context.Context, arg UpdateSystemSettingParams) (SystemSetting, error)
 	UpdateUnmatchedPollingUnitResultStatus(ctx context.Context, arg UpdateUnmatchedPollingUnitResultStatusParams) (UnmatchedPollingUnitResult, error)
-	UpdateUserAgentDetails(ctx context.Context, arg UpdateUserAgentDetailsParams) (pgtype.Int8, error)
+	UpdateUserAgentDetails(ctx context.Context, arg UpdateUserAgentDetailsParams) (UpdateUserAgentDetailsRow, error)
 	UpdateUserAgentMoreInfo(ctx context.Context, arg UpdateUserAgentMoreInfoParams) error
 	UpdateUserAvatar(ctx context.Context, arg UpdateUserAvatarParams) error
 	UpdateUserBankAccountsToNonPrimary(ctx context.Context, userID int64) error

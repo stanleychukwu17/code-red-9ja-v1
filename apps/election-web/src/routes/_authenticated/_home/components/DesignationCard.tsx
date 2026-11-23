@@ -1,4 +1,5 @@
 import { MapPin } from "lucide-react";
+import { SectionTitle } from "#/components/separator/SectionTitle";
 import { useAssignments } from "#/hooks/useAssignments";
 
 /**
@@ -20,11 +21,7 @@ export function DesignationCard() {
 
   return (
     <section className="w-full py-2 flex flex-col gap-4">
-      <div className="bg-sidebar-mobile px-4 py-2.5 rounded-md w-fit">
-        <h3 className="text-sm font-bold text-c-90">
-          Your Designation for today
-        </h3>
-      </div>
+      <SectionTitle>Your Designation for today</SectionTitle>
 
       <div className="grid grid-cols-2 gap-x-6 gap-y-4">
         {items.map((item) => (

@@ -60,6 +60,7 @@ var (
 	ErrPollingUnitNotFound    = errors.New("selected polling unit not found")
 	ErrPollingUnitMismatch    = errors.New("selected polling unit does not match the provided state, LGA, or ward")
 	ErrPollingUnitUnavailable = errors.New("selected polling unit has no active elections in this election cycle")
+	ErrAvatarRequired         = errors.New("an uploaded profile avatar is required to submit an application")
 )
 
 type SubmitApplicationInput struct {
@@ -128,8 +129,8 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 		return 0, ErrPollingUnitUnavailable
 	}
 
-	// Update user agent details and retrieve existing avatar_file_id
-	currentAvatarFileID, err := txQueries.UpdateUserAgentDetails(ctx, queries.UpdateUserAgentDetailsParams{
+	// Update user agent details and retrieve existing avatar_file_id and avatar URL
+	userAvatarDetails, err := txQueries.UpdateUserAgentDetails(ctx, queries.UpdateUserAgentDetailsParams{
 		ID:            input.UserID,
 		Avatar:        utils.PgTextFromString(input.Avatar),
 		CurrentState:  int16(input.CurrentState),
@@ -143,7 +144,7 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 
 	// Update user's avatar_file_id and file ownership only if avatar file actually changed
 	hasNewAvatar := input.AvatarFileID != nil && *input.AvatarFileID > 0 &&
-		(!currentAvatarFileID.Valid || currentAvatarFileID.Int64 != *input.AvatarFileID)
+		(!userAvatarDetails.AvatarFileID.Valid || userAvatarDetails.AvatarFileID.Int64 != *input.AvatarFileID)
 
 	// only update avatar when there is a new avatar uploaded
 	if hasNewAvatar {
@@ -159,6 +160,14 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 			ID:      *input.AvatarFileID,
 			OwnerID: pgtype.Int8{Int64: input.UserID, Valid: true},
 		})
+	}
+
+	// Ensure the applicant has a real uploaded avatar (not empty or a temporary placeholder avatar)
+	avatarURL := strings.TrimSpace(userAvatarDetails.Avatar.String)
+	hasUploadedAvatar := hasNewAvatar || (avatarURL != "" && !strings.Contains(avatarURL, "ui-avatars.com"))
+	// Reject submission if no real avatar has been uploaded
+	if !hasUploadedAvatar {
+		return 0, ErrAvatarRequired
 	}
 
 	// Update profile details if educational status is provided and not none

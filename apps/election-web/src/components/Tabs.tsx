@@ -1,26 +1,21 @@
-export interface TabItem {
+export type TabItem = {
   label: string;
   value: string;
-}
+};
 
-export interface TabsProps {
+export type TabsProps = {
   tabs: TabItem[];
   activeTab: string;
   onTabChange: (value: string) => void;
   className?: string;
-}
+};
 
-const Tab = ({
-  label,
-  value,
-  activeTab,
-  onTabChange,
-}: {
-  label: string;
-  value: string;
+type TabProps = TabItem & {
   activeTab: string;
   onTabChange: (value: string) => void;
-}) => (
+};
+
+const Tab = ({ label, value, activeTab, onTabChange }: TabProps) => (
   <button
     onClick={() => onTabChange(value)}
     className={`flex-1 py-2.5 rounded-10 text-c-80 font-medium text-center text-[15px] transition cursor-pointer ${activeTab === value ? "bg-primary text-white shadow-sm" : "hover:text-neutral-800"}`}
@@ -47,10 +42,10 @@ export function Tabs({ tabs, activeTab, onTabChange, className }: TabsProps) {
   );
 }
 
-interface HomeTabsProps {
+type HomeTabsProps = {
   activeTab: "Earnings" | "Uploads";
   onTabChange: (tab: "Earnings" | "Uploads") => void;
-}
+};
 
 export function HomeTabs({ activeTab, onTabChange }: HomeTabsProps) {
   return (
