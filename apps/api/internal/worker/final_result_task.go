@@ -66,6 +66,19 @@ func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskCalculateFinalResult(ct
 		return nil
 	}
 
+	allScores, err := redisTaskProcessor.queries.GetPollingUnitResultScoresByPU(ctx, queries.GetPollingUnitResultScoresByPUParams{
+		ElectionID:    payload.ElectionID,
+		PollingUnitID: payload.PollingUnitID,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to fetch PU result scores: %w", err)
+	}
+
+	scoresByResult := make(map[int64][]queries.PollingUnitResultScore)
+	for _, s := range allScores {
+		scoresByResult[s.ResultID] = append(scoresByResult[s.ResultID], s)
+	}
+
 	type groupData struct {
 		Hash       string
 		Count      int
@@ -77,10 +90,18 @@ func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskCalculateFinalResult(ct
 	maxCount := 0
 
 	for _, r := range results {
-		hash := hashCandidateResults(r.CandidateResults)
-		if hash == "" {
-			continue // Skip invalid JSON
+		scores := scoresByResult[r.ID]
+		if len(scores) == 0 {
+			continue
 		}
+		sort.Slice(scores, func(i, j int) bool {
+			return scores[i].PartyShortName < scores[j].PartyShortName
+		})
+		var builder strings.Builder
+		for _, s := range scores {
+			builder.WriteString(fmt.Sprintf("%s:%d;", s.PartyShortName, s.VoteCount))
+		}
+		hash := builder.String()
 
 		if g, exists := groups[hash]; exists {
 			g.Count++
@@ -119,26 +140,24 @@ func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskCalculateFinalResult(ct
 	}
 
 	r := winningGroup.BaseResult
-	candResults := r.CandidateResults
-	if len(r.CandidateResults) > 0 {
-		var candList []map[string]interface{}
-		if err := json.Unmarshal(r.CandidateResults, &candList); err == nil {
-			validVotes := float64(r.ValidVotes)
-			for _, cand := range candList {
-				voteCount := 0.0
-				if vc, ok := cand["vote_count"].(float64); ok {
-					voteCount = vc
-				}
-				if validVotes > 0 {
-					cand["vote_share"] = math.Round((voteCount/validVotes)*10000) / 100
-				} else {
-					cand["vote_share"] = 0.0
-				}
-			}
-			if updatedJSON, err := json.Marshal(candList); err == nil {
-				candResults = updatedJSON
-			}
+	validVotes := float64(r.ValidVotes)
+	candList := make([]map[string]interface{}, 0, len(scoresByResult[r.ID]))
+	for _, s := range scoresByResult[r.ID] {
+		voteShare := 0.0
+		if validVotes > 0 {
+			voteShare = math.Round((float64(s.VoteCount)/validVotes)*10000) / 100
 		}
+		candList = append(candList, map[string]interface{}{
+			"party_short_name": s.PartyShortName,
+			"vote_count":       s.VoteCount,
+			"vote_share":       voteShare,
+			"agent_name":       s.AgentName.String,
+			"has_signature":    s.HasSignature,
+		})
+	}
+	candResults, err := json.Marshal(candList)
+	if err != nil {
+		candResults = []byte("[]")
 	}
 
 	_, err = redisTaskProcessor.queries.UpsertPollingUnitFinalResult(ctx, queries.UpsertPollingUnitFinalResultParams{

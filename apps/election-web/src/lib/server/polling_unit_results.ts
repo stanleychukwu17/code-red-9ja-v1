@@ -16,7 +16,6 @@ export const submitPollingUnitResult = createServerFn({ method: "POST" })
       election_id: number;
       election_group_id: number;
       polling_unit_id: number;
-      party_id?: number;
       result_sheet_image_url?: string;
       result_sheet_video_url?: string;
     }) => data,

@@ -78,7 +78,7 @@ func (q *Queries) GetEligiblePollingUnitsForElection(ctx context.Context, arg Ge
 }
 
 const getPollingUnitFinalResult = `-- name: GetPollingUnitFinalResult :one
-SELECT id, election_id, election_group_id, polling_unit_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, polling_unit_result_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, candidate_results_live, matching_submissions_count, total_submissions_count, created_at, updated_at FROM election_polling_unit_final_results
+SELECT id, election_group_id, election_id, polling_unit_id, state_id, lga_id, ward_id, senatorial_district_id, federal_constituency_id, state_constituency_id, polling_unit_result_id, registered_voters, accredited_voters, ballot_papers_issued, unused_ballot_papers, spoiled_ballot_papers, votes_cast, valid_votes, rejected_votes, used_ballot_papers, candidate_results, candidate_results_live, matching_submissions_count, total_submissions_count, created_at, updated_at FROM election_polling_unit_final_results
 WHERE election_id = $1 AND polling_unit_id = $2
 `
 
@@ -92,20 +92,25 @@ func (q *Queries) GetPollingUnitFinalResult(ctx context.Context, arg GetPollingU
 	var i ElectionPollingUnitFinalResult
 	err := row.Scan(
 		&i.ID,
-		&i.ElectionID,
 		&i.ElectionGroupID,
+		&i.ElectionID,
 		&i.PollingUnitID,
 		&i.StateID,
+		&i.LgaID,
+		&i.WardID,
 		&i.SenatorialDistrictID,
 		&i.FederalConstituencyID,
 		&i.StateConstituencyID,
-		&i.LgaID,
-		&i.WardID,
 		&i.PollingUnitResultID,
+		&i.RegisteredVoters,
 		&i.AccreditedVoters,
+		&i.BallotPapersIssued,
+		&i.UnusedBallotPapers,
+		&i.SpoiledBallotPapers,
 		&i.VotesCast,
 		&i.ValidVotes,
 		&i.RejectedVotes,
+		&i.UsedBallotPapers,
 		&i.CandidateResults,
 		&i.CandidateResultsLive,
 		&i.MatchingSubmissionsCount,
@@ -427,7 +432,7 @@ DO UPDATE SET
   matching_submissions_count = EXCLUDED.matching_submissions_count,
   total_submissions_count = EXCLUDED.total_submissions_count,
   updated_at = NOW()
-RETURNING id, election_id, election_group_id, polling_unit_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, polling_unit_result_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, candidate_results_live, matching_submissions_count, total_submissions_count, created_at, updated_at
+RETURNING id, election_group_id, election_id, polling_unit_id, state_id, lga_id, ward_id, senatorial_district_id, federal_constituency_id, state_constituency_id, polling_unit_result_id, registered_voters, accredited_voters, ballot_papers_issued, unused_ballot_papers, spoiled_ballot_papers, votes_cast, valid_votes, rejected_votes, used_ballot_papers, candidate_results, candidate_results_live, matching_submissions_count, total_submissions_count, created_at, updated_at
 `
 
 type UpsertPollingUnitFinalResultParams struct {
@@ -473,20 +478,25 @@ func (q *Queries) UpsertPollingUnitFinalResult(ctx context.Context, arg UpsertPo
 	var i ElectionPollingUnitFinalResult
 	err := row.Scan(
 		&i.ID,
-		&i.ElectionID,
 		&i.ElectionGroupID,
+		&i.ElectionID,
 		&i.PollingUnitID,
 		&i.StateID,
+		&i.LgaID,
+		&i.WardID,
 		&i.SenatorialDistrictID,
 		&i.FederalConstituencyID,
 		&i.StateConstituencyID,
-		&i.LgaID,
-		&i.WardID,
 		&i.PollingUnitResultID,
+		&i.RegisteredVoters,
 		&i.AccreditedVoters,
+		&i.BallotPapersIssued,
+		&i.UnusedBallotPapers,
+		&i.SpoiledBallotPapers,
 		&i.VotesCast,
 		&i.ValidVotes,
 		&i.RejectedVotes,
+		&i.UsedBallotPapers,
 		&i.CandidateResults,
 		&i.CandidateResultsLive,
 		&i.MatchingSubmissionsCount,

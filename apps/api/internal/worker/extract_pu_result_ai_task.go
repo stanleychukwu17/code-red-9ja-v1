@@ -94,42 +94,61 @@ func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskExtractPUResultAI(ctx c
 		}
 	}
 
-	// Format candidate results array
-	var finalCandidates []ExtractedCandidateResult
-	for _, c := range extracted.Candidates {
-		shortName := strings.ToUpper(strings.TrimSpace(c.PartyShortName))
-		finalCandidates = append(finalCandidates, ExtractedCandidateResult{
-			PartyShortName: shortName,
-			VoteCount:      int32(c.VoteCount),
-			AgentName:      strings.TrimSpace(c.AgentName),
-			HasSignature:   c.HasSignature,
-		})
-	}
-
-	candidateJSON, err := json.Marshal(finalCandidates)
-	if err != nil {
-		return fmt.Errorf("failed to marshal candidate results: %w", err)
-	}
-
 	var confidence pgtype.Numeric
 	_ = confidence.Scan("0.9500")
 
+	var sheetDate pgtype.Date
+	if parsedDate, parseErr := time.Parse("2006-01-02", strings.TrimSpace(extracted.SheetDate)); parseErr == nil {
+		sheetDate = pgtype.Date{Time: parsedDate, Valid: true}
+	}
+
 	// Update the polling unit result record with extracted numbers
-	_, err = redisTaskProcessor.queries.UpdatePollingUnitResultAIExtraction(ctx, queries.UpdatePollingUnitResultAIExtractionParams{
-		ID:                  payload.ResultID,
-		AccreditedVoters:    int32(extracted.AccreditedVoters),
-		VotesCast:           int32(extracted.VotesCast),
-		ValidVotes:          int32(extracted.ValidVotes),
-		RejectedVotes:       int32(extracted.RejectedVotes),
-		CandidateResults:    candidateJSON,
-		Status:              status,
-		AiExtractedData:     rawJSON,
-		ResultIsAiGenerated: pgtype.Bool{Bool: extracted.IsAIGenerated, Valid: true},
-		AiConfidenceScore:   confidence,
-		DisputedReason:      disputedReason,
+	updatedResult, err := redisTaskProcessor.queries.UpdatePollingUnitResultAIExtraction(ctx, queries.UpdatePollingUnitResultAIExtractionParams{
+		ID:                           payload.ResultID,
+		RegisteredVoters:             int32(extracted.RegisteredVoters),
+		AccreditedVoters:             int32(extracted.AccreditedVoters),
+		BallotPapersIssued:           int32(extracted.BallotPapersIssued),
+		UnusedBallotPapers:           int32(extracted.UnusedBallotPapers),
+		SpoiledBallotPapers:          int32(extracted.SpoiledBallotPapers),
+		VotesCast:                    int32(extracted.VotesCast),
+		ValidVotes:                   int32(extracted.ValidVotes),
+		RejectedVotes:                int32(extracted.RejectedVotes),
+		UsedBallotPapers:             int32(extracted.UsedBallotPapers),
+		SerialNumber:                 utils.PgTextFromString(strings.TrimSpace(extracted.SerialNumber)),
+		SheetDate:                    sheetDate,
+		PresidingOfficerName:         utils.PgTextFromString(strings.TrimSpace(extracted.PresidingOfficerName)),
+		HasPresidingOfficerSignature: extracted.HasPresidingOfficerSignature,
+		Status:                       status,
+		AiExtractedData:              rawJSON,
+		ResultIsAiGenerated:          pgtype.Bool{Bool: extracted.IsAIGenerated, Valid: true},
+		AiConfidenceScore:            confidence,
+		DisputedReason:               disputedReason,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to save AI extracted data for result #%d: %w", payload.ResultID, err)
+	}
+
+	// Replace normalized per-party scores for this result
+	if err := redisTaskProcessor.queries.DeletePollingUnitResultScoresByResultID(ctx, payload.ResultID); err != nil {
+		return fmt.Errorf("failed to clear old scores for result #%d: %w", payload.ResultID, err)
+	}
+	for _, c := range extracted.Candidates {
+		shortName := strings.ToUpper(strings.TrimSpace(c.PartyShortName))
+		if shortName == "" {
+			continue
+		}
+		if _, err := redisTaskProcessor.queries.UpsertPollingUnitResultScore(ctx, queries.UpsertPollingUnitResultScoreParams{
+			ResultID:        payload.ResultID,
+			ElectionID:      updatedResult.ElectionID,
+			ElectionGroupID: updatedResult.ElectionGroupID,
+			PollingUnitID:   updatedResult.PollingUnitID,
+			PartyShortName:  shortName,
+			VoteCount:       int32(c.VoteCount),
+			AgentName:       utils.PgTextFromString(strings.TrimSpace(c.AgentName)),
+			HasSignature:    c.HasSignature,
+		}); err != nil {
+			return fmt.Errorf("failed to save score for party %s on result #%d: %w", shortName, payload.ResultID, err)
+		}
 	}
 
 	slog.Info("successfully extracted and saved AI result", "result_id", payload.ResultID, "status", status)

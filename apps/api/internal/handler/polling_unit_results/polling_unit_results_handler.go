@@ -7,9 +7,12 @@ import (
 	"net/http"
 	"strconv"
 
+	"free9ja/api/internal/constants"
 	"free9ja/api/internal/db/queries"
 	apimiddleware "free9ja/api/internal/middleware"
+	collation_results "free9ja/api/internal/service/collation_results"
 	pu_results "free9ja/api/internal/service/polling_unit_results"
+	supervisorassignmentsservice "free9ja/api/internal/service/supervisor_assignments"
 	"free9ja/api/internal/utils"
 
 	"github.com/go-chi/chi/v5"
@@ -22,8 +25,13 @@ type PollingUnitResultsService interface {
 	GetResult(ctx context.Context, id int64) (queries.PollingUnitResult, error)
 	ListResults(ctx context.Context, params queries.ListPollingUnitResultsParams) ([]queries.PollingUnitResult, error)
 	ListPollingUnitFinalResults(ctx context.Context, params queries.ListPollingUnitFinalResultsParams) ([]queries.ListPollingUnitFinalResultsRow, error)
-	ReviewResult(ctx context.Context, reviewerFakeID int64, input pu_results.ReviewResultInput) (queries.PollingUnitResult, error)
 	GetFinalResult(ctx context.Context, electionID int64, pollingUnitID int32) (interface{}, error)
+}
+
+type CollationResultsService interface {
+	SubmitCollationResult(ctx context.Context, input collation_results.SubmitCollationResultInput) (queries.CollationResult, error)
+	GetCollationResultByID(ctx context.Context, id int64) (queries.CollationResult, error)
+	ListCollationResults(ctx context.Context, params queries.ListCollationResultsByScopeParams) ([]queries.CollationResult, error)
 }
 
 type PollingUnitAssignmentsService interface {
@@ -34,19 +42,33 @@ type PollingUnitsService interface {
 	GetPollingUnitByID(ctx context.Context, id int32) (queries.PollingUnit, error)
 }
 
+type SupervisorAssignmentsService interface {
+	GetUserSupervisorAssignments(ctx context.Context, userID int64, electionGroupID int32) (*supervisorassignmentsservice.SupervisorAssignmentsResponse, error)
+}
+
+type ElectionsService interface {
+	GetElectionsForWard(ctx context.Context, electionGroupID, wardID int32) ([]queries.GetElectionsForWardRow, error)
+}
+
 type Handler struct {
 	service             PollingUnitResultsService
+	collationService    CollationResultsService
 	assignmentsService  PollingUnitAssignmentsService
+	supervisorService   SupervisorAssignmentsService
 	pollingUnitsService PollingUnitsService
+	electionsService    ElectionsService
 	utils               *utils.Utils
 	validate            *validator.Validate
 }
 
-func NewHandler(s PollingUnitResultsService, u *utils.Utils, asgnSvc PollingUnitAssignmentsService, puSvc PollingUnitsService) *Handler {
+func NewHandler(s PollingUnitResultsService, cs CollationResultsService, u *utils.Utils, asgnSvc PollingUnitAssignmentsService, supSvc SupervisorAssignmentsService, puSvc PollingUnitsService, elecSvc ElectionsService) *Handler {
 	return &Handler{
 		service:             s,
+		collationService:    cs,
 		assignmentsService:  asgnSvc,
+		supervisorService:   supSvc,
 		pollingUnitsService: puSvc,
+		electionsService:    elecSvc,
 		utils:               u,
 		validate:            validator.New(),
 	}
@@ -93,24 +115,18 @@ type PollingUnitFinalResultsListResponse struct {
 
 type SubmitResultRequest struct {
 	AssignmentID        *int64 `json:"assignment_id,omitempty"`
-	PartyID             *int16 `json:"party_id,omitempty"`
 	ElectionID          int32  `json:"election_id" validate:"required,gt=0"`
 	ElectionGroupID     int32  `json:"election_group_id" validate:"required,gt=0"`
-	PollingUnitID       int32  `json:"polling_unit_id" validate:"required,gt=0"`
+	PollingUnitID       int32  `json:"polling_unit_id"`
 	ResultSheetImageURL string `json:"result_sheet_image_url" validate:"required"`
 	ResultSheetVideoURL string `json:"result_sheet_video_url"`
-}
-
-type ReviewRequest struct {
-	Status         string `json:"status"` // "confirmed" or "nullified"
-	DisputedReason string `json:"disputed_reason,omitempty"`
 }
 
 // ── Handlers ───────────────────────────────────────────────────────────────
 
 // SubmitResult godoc
-// @Summary Submit Polling Unit Result
-// @Description Submit official election results for a polling unit. Assigned agents include assignment_id; general users leave it null.
+// @Summary Submit Election Result
+// @Description Submit official election results. Assigned polling agents upload EC8A; supervisors upload collation sheets (EC8B, EC8C, EC8D).
 // @Tags Results
 // @Accept json
 // @Produce json
@@ -140,66 +156,141 @@ func (h *Handler) SubmitResult(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Derive party_id from JWT if not explicitly provided and caller is a party member
-	var partyID *int16
-	if claims.PartyID > 0 {
-		pid := claims.PartyID
-		partyID = &pid
-	}
-	if req.PartyID != nil {
-		partyID = req.PartyID
-	}
-
 	if req.AssignmentID != nil && *req.AssignmentID > 0 {
+		// =========================================================================
+		// 1. Polling Unit Agent Flow -> polling_unit_results (Form EC8A)
+		// =========================================================================
+		if req.PollingUnitID <= 0 {
+			h.utils.RespondError(w, http.StatusBadRequest, "polling_unit_id is required for polling unit agent results")
+			return
+		}
+
 		assignment, err := h.assignmentsService.GetMyAssignment(r.Context(), claims.UserID, req.ElectionGroupID)
 		if err != nil {
 			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to verify assignment: "+err.Error())
 			return
 		}
-		if assignment == nil || assignment.ID <= 0 {
-			h.utils.RespondError(w, http.StatusNotFound, "No active assignment found for this election group")
+		if status, errMsg := utils.ValidateAssignmentMatch(assignment, *req.AssignmentID, req.PollingUnitID); status != 0 {
+			h.utils.RespondError(w, status, errMsg)
 			return
 		}
-		if assignment.ID != *req.AssignmentID {
-			h.utils.RespondError(w, http.StatusForbidden, "Assignment does not belong to you")
-			return
-		}
-		if assignment.PollingUnitID != req.PollingUnitID {
-			h.utils.RespondError(w, http.StatusBadRequest, "Polling unit does not match assignment")
-			return
-		}
-		partyID = &assignment.PartyID
-	}
 
-	pu, err := h.pollingUnitsService.GetPollingUnitByID(r.Context(), req.PollingUnitID)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid polling unit id: "+err.Error())
+		pu, err := h.pollingUnitsService.GetPollingUnitByID(r.Context(), req.PollingUnitID)
+		if err != nil {
+			h.utils.RespondError(w, http.StatusBadRequest, "Invalid polling unit id: "+err.Error())
+			return
+		}
+
+		// Verify the requested election applies to this polling unit's ward
+		wardElections, err := h.electionsService.GetElectionsForWard(r.Context(), req.ElectionGroupID, pu.WardID)
+		if err != nil {
+			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to verify eligible elections: "+err.Error())
+			return
+		}
+
+		// Ensure the requested election is actually contested in this PU's ward (blocks cross-ward/constituency submissions)
+		electionAllowed := false
+		for _, e := range wardElections {
+			if e.ID == req.ElectionID {
+				electionAllowed = true
+				break
+			}
+		}
+
+		// Reject if the election ID is not part of the PU's eligible ward ballot
+		if !electionAllowed {
+			h.utils.RespondError(w, http.StatusForbidden, "This election does not apply to your assigned polling unit")
+			return
+		}
+
+		result, err := h.service.SubmitResult(r.Context(), pu_results.SubmitResultInput{
+			UserFakeID:            claims.FakeID,
+			AssignmentID:          req.AssignmentID,
+			PartyID:               assignment.PartyID,
+			ElectionID:            req.ElectionID,
+			ElectionGroupID:       req.ElectionGroupID,
+			PollingUnitID:         req.PollingUnitID,
+			StateID:               pu.StateID,
+			LgaID:                 pu.LgaID,
+			WardID:                pu.WardID,
+			SenatorialDistrictID:  pu.SenatorialDistrictID,
+			FederalConstituencyID: pu.FederalConstituencyID,
+			StateConstituencyID:   pu.StateConstituencyID,
+			ResultSheetImageURL:   req.ResultSheetImageURL,
+			ResultSheetVideoURL:   req.ResultSheetVideoURL,
+		})
+		if err != nil {
+			h.utils.RespondError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
+		h.utils.RespondSuccess(w, http.StatusCreated, "Result submitted successfully", map[string]interface{}{
+			"result": result,
+		})
+
 		return
 	}
 
-	result, err := h.service.SubmitResult(r.Context(), pu_results.SubmitResultInput{
-		UserFakeID:            claims.FakeID,
-		AssignmentID:          req.AssignmentID,
-		PartyID:               partyID,
-		ElectionID:            req.ElectionID,
-		ElectionGroupID:       req.ElectionGroupID,
-		PollingUnitID:         req.PollingUnitID,
-		StateID:               pu.StateID,
-		LgaID:                 pu.LgaID,
-		WardID:                pu.WardID,
-		SenatorialDistrictID:  pu.SenatorialDistrictID,
-		FederalConstituencyID: pu.FederalConstituencyID,
-		StateConstituencyID:   pu.StateConstituencyID,
-		ResultSheetImageURL:   req.ResultSheetImageURL,
-		ResultSheetVideoURL:   req.ResultSheetVideoURL,
+	// =========================================================================
+	// 2. Supervisor Flow -> collation_results (Form EC8B / EC8C / EC8D)
+	// =========================================================================
+	supRes, err := h.supervisorService.GetUserSupervisorAssignments(r.Context(), claims.UserID, req.ElectionGroupID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to verify supervisor assignment: "+err.Error())
+		return
+	}
+
+	var roleType string
+	var stateID int16
+	var lgaID *int32
+	var wardID *int32
+	var partyID int16
+
+	if supRes != nil {
+		if supRes.WardSupervisor != nil && supRes.WardSupervisor.ID > 0 {
+			roleType = constants.RoleWardElectionSupervisor
+			partyID = supRes.WardSupervisor.PartyID
+			stateID = supRes.WardSupervisor.StateID
+			l := supRes.WardSupervisor.LgaID
+			lgaID = &l
+			w := supRes.WardSupervisor.WardID
+			wardID = &w
+		} else if supRes.LgaSupervisor != nil && supRes.LgaSupervisor.ID > 0 {
+			roleType = constants.RoleLgaElectionSupervisor
+			partyID = supRes.LgaSupervisor.PartyID
+			stateID = supRes.LgaSupervisor.StateID
+			l := supRes.LgaSupervisor.LgaID
+			lgaID = &l
+		} else if supRes.StateSupervisor != nil && supRes.StateSupervisor.ID > 0 {
+			roleType = constants.RoleStateElectionSupervisor
+			partyID = supRes.StateSupervisor.PartyID
+			stateID = supRes.StateSupervisor.StateID
+		}
+	}
+	if roleType == "" {
+		h.utils.RespondError(w, http.StatusForbidden, "You do not have an active assignment for this election")
+		return
+	}
+
+	collationResult, err := h.collationService.SubmitCollationResult(r.Context(), collation_results.SubmitCollationResultInput{
+		UserFakeID:          claims.FakeID,
+		ElectionID:          req.ElectionID,
+		ElectionGroupID:     req.ElectionGroupID,
+		RoleType:            roleType,
+		PartyID:             partyID,
+		StateID:             stateID,
+		LgaID:               lgaID,
+		WardID:              wardID,
+		ResultSheetImageURL: req.ResultSheetImageURL,
+		ResultSheetVideoURL: req.ResultSheetVideoURL,
 	})
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	h.utils.RespondSuccess(w, http.StatusCreated, "Result submitted successfully", map[string]interface{}{
-		"result": result,
+	h.utils.RespondSuccess(w, http.StatusCreated, "Collation result submitted successfully", map[string]interface{}{
+		"result": collationResult,
 	})
 }
 
@@ -253,7 +344,6 @@ func (h *Handler) GetResult(w http.ResponseWriter, r *http.Request) {
 // @Param lga_id query int false "Filter by LGA ID"
 // @Param ward_id query int false "Filter by Ward ID"
 // @Param status query string false "Filter by status (submitted|ai_verified|confirmed|disputed|nullified)"
-// @Param uploaded_by_inec query bool false "Filter by INEC upload flag"
 // @Param cursor query int false "Cursor (ID to paginate from)"
 // @Param limit query int false "Limit (default 20, max 100)"
 // @Success 200 {object} map[string]interface{}
@@ -262,8 +352,9 @@ func (h *Handler) GetResult(w http.ResponseWriter, r *http.Request) {
 // @Router /polling-unit-results [get]
 // @Security BearerAuth
 func (h *Handler) ListResults(w http.ResponseWriter, r *http.Request) {
-	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
+	claims, ok := apimiddleware.GetClaims(r)
 	if !ok {
+		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
@@ -312,14 +403,9 @@ func (h *Handler) ListResults(w http.ResponseWriter, r *http.Request) {
 	if val := r.URL.Query().Get("status"); val != "" {
 		params.Status = pgtype.Text{String: val, Valid: true}
 	}
-	if val := r.URL.Query().Get("uploaded_by_inec"); val != "" {
-		if v, err := strconv.ParseBool(val); err == nil {
-			params.UploadedByInec = pgtype.Bool{Bool: v, Valid: true}
-		}
-	}
 
-	// Enforce role-based scoping: non-admins can only see their party's results
-	if !claims.HasRole("admin") && int64(claims.PartyID) > 0 {
+	// Scope party-affiliated callers to their own party's results
+	if int64(claims.PartyID) > 0 {
 		params.PartyID = pgtype.Int2{Int16: int16(claims.PartyID), Valid: true}
 	}
 
@@ -379,8 +465,9 @@ func (h *Handler) ListResults(w http.ResponseWriter, r *http.Request) {
 // @Router /polling-unit-final-results [get]
 // @Security BearerAuth
 func (h *Handler) ListFinalResults(w http.ResponseWriter, r *http.Request) {
-	_, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
+	_, ok := apimiddleware.GetClaims(r)
 	if !ok {
+		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
@@ -492,54 +579,6 @@ func (h *Handler) ListFinalResults(w http.ResponseWriter, r *http.Request) {
 	h.utils.RespondSuccessData(w, http.StatusOK, "Final results fetched successfully", PollingUnitFinalResultsListResponse{
 		Results:    mappedResults,
 		NextCursor: nextCursor,
-	})
-}
-
-// ReviewResult godoc
-// @Summary Review a Polling Unit Result (Admin)
-// @Description Platform admin manually confirms or nullifies a polling unit result
-// @Tags Results
-// @Accept json
-// @Produce json
-// @Param id path int true "Result ID"
-// @Param request body ReviewRequest true "Review Details"
-// @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Failure 401 {object} map[string]interface{}
-// @Failure 403 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
-// @Router /polling-unit-results/{id}/review [patch]
-// @Security BearerAuth
-func (h *Handler) ReviewResult(w http.ResponseWriter, r *http.Request) {
-	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey, "admin")
-	if !ok {
-		return
-	}
-
-	resultID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
-	if err != nil || resultID <= 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid result ID")
-		return
-	}
-
-	var req ReviewRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
-		return
-	}
-
-	result, err := h.service.ReviewResult(r.Context(), claims.FakeID, pu_results.ReviewResultInput{
-		ResultID:       resultID,
-		Status:         req.Status,
-		DisputedReason: req.DisputedReason,
-	})
-	if err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to review result: "+err.Error())
-		return
-	}
-
-	h.utils.RespondSuccess(w, http.StatusOK, "Result reviewed successfully", map[string]interface{}{
-		"result": result,
 	})
 }
 

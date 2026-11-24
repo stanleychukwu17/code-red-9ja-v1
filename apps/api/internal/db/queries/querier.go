@@ -126,6 +126,7 @@ type Querier interface {
 	DeleteElectionGroup(ctx context.Context, id int32) error
 	DeleteElectionInstance(ctx context.Context, id int32) error
 	DeleteFederalConstituency(ctx context.Context, id int32) error
+	DeleteINECPollingUnitResultScoresByResultID(ctx context.Context, inecResultID int64) error
 	DeleteLGA(ctx context.Context, id int32) error
 	DeleteLGAPartyMemberships(ctx context.Context, arg DeleteLGAPartyMembershipsParams) ([]int32, error)
 	DeleteMediaAsset(ctx context.Context, id int32) error
@@ -138,6 +139,7 @@ type Querier interface {
 	DeletePartyMembership(ctx context.Context, arg DeletePartyMembershipParams) ([]int32, error)
 	DeletePlan(ctx context.Context, id int32) error
 	DeletePollingUnit(ctx context.Context, id int32) error
+	DeletePollingUnitResultScoresByResultID(ctx context.Context, resultID int64) error
 	DeleteSenatorialDistrict(ctx context.Context, id int32) error
 	DeleteState(ctx context.Context, id int16) error
 	DeleteStateConstituency(ctx context.Context, id int32) error
@@ -182,6 +184,8 @@ type Querier interface {
 	GetChapterMemberCount(ctx context.Context, arg GetChapterMemberCountParams) (int64, error)
 	GetCitiesByStateID(ctx context.Context, stateID int16) ([]GetCitiesByStateIDRow, error)
 	GetCityByID(ctx context.Context, id int32) (GetCityByIDRow, error)
+	GetCollationResultByID(ctx context.Context, id int64) (CollationResult, error)
+	GetCollationResultBySupervisorSubmission(ctx context.Context, arg GetCollationResultBySupervisorSubmissionParams) (CollationResult, error)
 	GetCountryByID(ctx context.Context, id int16) (GetCountryByIDRow, error)
 	GetElectionCandidateForParty(ctx context.Context, arg GetElectionCandidateForPartyParams) (ElectionCandidate, error)
 	GetElectionCandidatesCount(ctx context.Context, electionID int32) (int64, error)
@@ -204,6 +208,8 @@ type Querier interface {
 	GetFileByID(ctx context.Context, id int64) (File, error)
 	GetFileByKey(ctx context.Context, fileKey string) (File, error)
 	GetFileByPublicUrl(ctx context.Context, publicUrl string) (File, error)
+	GetINECPollingUnitResultByElectionAndPU(ctx context.Context, arg GetINECPollingUnitResultByElectionAndPUParams) (InecPollingUnitResult, error)
+	GetINECPollingUnitResultScoresByPU(ctx context.Context, arg GetINECPollingUnitResultScoresByPUParams) ([]InecPollingUnitResultScore, error)
 	GetINECResultGrabberByElectionID(ctx context.Context, electionID int32) (GetINECResultGrabberByElectionIDRow, error)
 	GetINECResultGrabberByID(ctx context.Context, id int64) (GetINECResultGrabberByIDRow, error)
 	GetIssueOptionByID(ctx context.Context, id int16) (GetIssueOptionByIDRow, error)
@@ -257,6 +263,7 @@ type Querier interface {
 	GetPollingUnitFinalResult(ctx context.Context, arg GetPollingUnitFinalResultParams) (ElectionPollingUnitFinalResult, error)
 	GetPollingUnitResult(ctx context.Context, id int64) (PollingUnitResult, error)
 	GetPollingUnitResultByUserAndElection(ctx context.Context, arg GetPollingUnitResultByUserAndElectionParams) (PollingUnitResult, error)
+	GetPollingUnitResultScoresByPU(ctx context.Context, arg GetPollingUnitResultScoresByPUParams) ([]PollingUnitResultScore, error)
 	// =====================================================
 	// AGENT COVERAGE BREAKDOWN QUERIES
 	// =====================================================
@@ -372,6 +379,7 @@ type Querier interface {
 	ListBlockedUsersByUser(ctx context.Context, arg ListBlockedUsersByUserParams) ([]ListBlockedUsersByUserRow, error)
 	ListCampaignGroupMembers(ctx context.Context, groupID int64) ([]ListCampaignGroupMembersRow, error)
 	ListCampaignGroupOfficials(ctx context.Context, groupID int64) ([]int64, error)
+	ListCollationResultsByScope(ctx context.Context, arg ListCollationResultsByScopeParams) ([]CollationResult, error)
 	ListContestedOffices(ctx context.Context) ([]Office, error)
 	ListCountries(ctx context.Context) ([]ListCountriesRow, error)
 	ListCustomPartyPositions(ctx context.Context, partyID pgtype.Int2) ([]PartyPosition, error)
@@ -476,6 +484,7 @@ type Querier interface {
 	SearchUsers(ctx context.Context, arg SearchUsersParams) ([]SearchUsersRow, error)
 	SeedUser(ctx context.Context, arg SeedUserParams) (int64, error)
 	SoftDeletePartyCustomPosition(ctx context.Context, arg SoftDeletePartyCustomPositionParams) error
+	SubmitCollationResult(ctx context.Context, arg SubmitCollationResultParams) (CollationResult, error)
 	SubmitPollingUnitResult(ctx context.Context, arg SubmitPollingUnitResultParams) (PollingUnitResult, error)
 	SubmitPracticeTest(ctx context.Context, arg SubmitPracticeTestParams) (UserPracticeTest, error)
 	SuspendAllUserPositionsInParty(ctx context.Context, arg SuspendAllUserPositionsInPartyParams) ([]SuspendAllUserPositionsInPartyRow, error)
@@ -555,10 +564,13 @@ type Querier interface {
 	UpsertFederalConstituency(ctx context.Context, arg UpsertFederalConstituencyParams) (FederalConstituency, error)
 	UpsertGroupedNotification(ctx context.Context, arg UpsertGroupedNotificationParams) (Notification, error)
 	UpsertGroupedPartyNotification(ctx context.Context, arg UpsertGroupedPartyNotificationParams) (PartyNotification, error)
+	UpsertINECPollingUnitResult(ctx context.Context, arg UpsertINECPollingUnitResultParams) (InecPollingUnitResult, error)
+	UpsertINECPollingUnitResultScore(ctx context.Context, arg UpsertINECPollingUnitResultScoreParams) (InecPollingUnitResultScore, error)
 	UpsertLGA(ctx context.Context, arg UpsertLGAParams) (Lga, error)
 	UpsertNotificationPreferences(ctx context.Context, arg UpsertNotificationPreferencesParams) (NotificationPreference, error)
 	UpsertPollingUnit(ctx context.Context, arg UpsertPollingUnitParams) (PollingUnit, error)
 	UpsertPollingUnitFinalResult(ctx context.Context, arg UpsertPollingUnitFinalResultParams) (ElectionPollingUnitFinalResult, error)
+	UpsertPollingUnitResultScore(ctx context.Context, arg UpsertPollingUnitResultScoreParams) (PollingUnitResultScore, error)
 	UpsertPrimaryBankAccount(ctx context.Context, arg UpsertPrimaryBankAccountParams) error
 	UpsertSenatorialDistrict(ctx context.Context, arg UpsertSenatorialDistrictParams) (SenatorialDistrict, error)
 	UpsertStateConstituency(ctx context.Context, arg UpsertStateConstituencyParams) (StateConstituency, error)

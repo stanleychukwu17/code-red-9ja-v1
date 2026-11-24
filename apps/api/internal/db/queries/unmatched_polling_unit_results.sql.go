@@ -79,7 +79,7 @@ INSERT INTO unmatched_polling_unit_results (
   $21,
   $22,
   $23
-) RETURNING id, election_id, election_group_id, submitted_by, party_id, raw_polling_unit_code, raw_polling_unit_name, raw_ward_name, raw_lga_name, raw_state_name, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, result_sheet_image_url, result_sheet_video_url, resolution_status, resolution_notes, resolved_polling_unit_id, resolved_result_id, resolved_by, resolved_at, created_at, updated_at
+) RETURNING id, election_id, election_group_id, submitted_by, party_id, raw_polling_unit_code, raw_polling_unit_name, raw_ward_name, raw_lga_name, raw_state_name, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, registered_voters, accredited_voters, ballot_papers_issued, unused_ballot_papers, spoiled_ballot_papers, votes_cast, valid_votes, rejected_votes, used_ballot_papers, candidate_results, result_sheet_image_url, result_sheet_video_url, serial_number, sheet_date, presiding_officer_name, has_presiding_officer_signature, resolution_status, resolution_notes, resolved_polling_unit_id, resolved_result_id, resolved_by, resolved_at, created_at, updated_at
 `
 
 type CreateUnmatchedPollingUnitResultParams struct {
@@ -152,13 +152,22 @@ func (q *Queries) CreateUnmatchedPollingUnitResult(ctx context.Context, arg Crea
 		&i.StateConstituencyID,
 		&i.LgaID,
 		&i.WardID,
+		&i.RegisteredVoters,
 		&i.AccreditedVoters,
+		&i.BallotPapersIssued,
+		&i.UnusedBallotPapers,
+		&i.SpoiledBallotPapers,
 		&i.VotesCast,
 		&i.ValidVotes,
 		&i.RejectedVotes,
+		&i.UsedBallotPapers,
 		&i.CandidateResults,
 		&i.ResultSheetImageUrl,
 		&i.ResultSheetVideoUrl,
+		&i.SerialNumber,
+		&i.SheetDate,
+		&i.PresidingOfficerName,
+		&i.HasPresidingOfficerSignature,
 		&i.ResolutionStatus,
 		&i.ResolutionNotes,
 		&i.ResolvedPollingUnitID,
@@ -172,7 +181,7 @@ func (q *Queries) CreateUnmatchedPollingUnitResult(ctx context.Context, arg Crea
 }
 
 const getUnmatchedPollingUnitResultByID = `-- name: GetUnmatchedPollingUnitResultByID :one
-SELECT id, election_id, election_group_id, submitted_by, party_id, raw_polling_unit_code, raw_polling_unit_name, raw_ward_name, raw_lga_name, raw_state_name, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, result_sheet_image_url, result_sheet_video_url, resolution_status, resolution_notes, resolved_polling_unit_id, resolved_result_id, resolved_by, resolved_at, created_at, updated_at FROM unmatched_polling_unit_results
+SELECT id, election_id, election_group_id, submitted_by, party_id, raw_polling_unit_code, raw_polling_unit_name, raw_ward_name, raw_lga_name, raw_state_name, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, registered_voters, accredited_voters, ballot_papers_issued, unused_ballot_papers, spoiled_ballot_papers, votes_cast, valid_votes, rejected_votes, used_ballot_papers, candidate_results, result_sheet_image_url, result_sheet_video_url, serial_number, sheet_date, presiding_officer_name, has_presiding_officer_signature, resolution_status, resolution_notes, resolved_polling_unit_id, resolved_result_id, resolved_by, resolved_at, created_at, updated_at FROM unmatched_polling_unit_results
 WHERE id = $1
 `
 
@@ -196,13 +205,22 @@ func (q *Queries) GetUnmatchedPollingUnitResultByID(ctx context.Context, id int6
 		&i.StateConstituencyID,
 		&i.LgaID,
 		&i.WardID,
+		&i.RegisteredVoters,
 		&i.AccreditedVoters,
+		&i.BallotPapersIssued,
+		&i.UnusedBallotPapers,
+		&i.SpoiledBallotPapers,
 		&i.VotesCast,
 		&i.ValidVotes,
 		&i.RejectedVotes,
+		&i.UsedBallotPapers,
 		&i.CandidateResults,
 		&i.ResultSheetImageUrl,
 		&i.ResultSheetVideoUrl,
+		&i.SerialNumber,
+		&i.SheetDate,
+		&i.PresidingOfficerName,
+		&i.HasPresidingOfficerSignature,
 		&i.ResolutionStatus,
 		&i.ResolutionNotes,
 		&i.ResolvedPollingUnitID,
@@ -216,7 +234,7 @@ func (q *Queries) GetUnmatchedPollingUnitResultByID(ctx context.Context, id int6
 }
 
 const listUnmatchedPollingUnitResults = `-- name: ListUnmatchedPollingUnitResults :many
-SELECT id, election_id, election_group_id, submitted_by, party_id, raw_polling_unit_code, raw_polling_unit_name, raw_ward_name, raw_lga_name, raw_state_name, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, result_sheet_image_url, result_sheet_video_url, resolution_status, resolution_notes, resolved_polling_unit_id, resolved_result_id, resolved_by, resolved_at, created_at, updated_at FROM unmatched_polling_unit_results
+SELECT id, election_id, election_group_id, submitted_by, party_id, raw_polling_unit_code, raw_polling_unit_name, raw_ward_name, raw_lga_name, raw_state_name, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, registered_voters, accredited_voters, ballot_papers_issued, unused_ballot_papers, spoiled_ballot_papers, votes_cast, valid_votes, rejected_votes, used_ballot_papers, candidate_results, result_sheet_image_url, result_sheet_video_url, serial_number, sheet_date, presiding_officer_name, has_presiding_officer_signature, resolution_status, resolution_notes, resolved_polling_unit_id, resolved_result_id, resolved_by, resolved_at, created_at, updated_at FROM unmatched_polling_unit_results
 WHERE ($1::int IS NULL OR election_id = $1)
   AND ($2::text IS NULL OR resolution_status = $2)
 ORDER BY id DESC
@@ -261,13 +279,22 @@ func (q *Queries) ListUnmatchedPollingUnitResults(ctx context.Context, arg ListU
 			&i.StateConstituencyID,
 			&i.LgaID,
 			&i.WardID,
+			&i.RegisteredVoters,
 			&i.AccreditedVoters,
+			&i.BallotPapersIssued,
+			&i.UnusedBallotPapers,
+			&i.SpoiledBallotPapers,
 			&i.VotesCast,
 			&i.ValidVotes,
 			&i.RejectedVotes,
+			&i.UsedBallotPapers,
 			&i.CandidateResults,
 			&i.ResultSheetImageUrl,
 			&i.ResultSheetVideoUrl,
+			&i.SerialNumber,
+			&i.SheetDate,
+			&i.PresidingOfficerName,
+			&i.HasPresidingOfficerSignature,
 			&i.ResolutionStatus,
 			&i.ResolutionNotes,
 			&i.ResolvedPollingUnitID,
@@ -298,7 +325,7 @@ SET
   resolved_at = NOW(),
   updated_at = NOW()
 WHERE id = $1
-RETURNING id, election_id, election_group_id, submitted_by, party_id, raw_polling_unit_code, raw_polling_unit_name, raw_ward_name, raw_lga_name, raw_state_name, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, result_sheet_image_url, result_sheet_video_url, resolution_status, resolution_notes, resolved_polling_unit_id, resolved_result_id, resolved_by, resolved_at, created_at, updated_at
+RETURNING id, election_id, election_group_id, submitted_by, party_id, raw_polling_unit_code, raw_polling_unit_name, raw_ward_name, raw_lga_name, raw_state_name, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, registered_voters, accredited_voters, ballot_papers_issued, unused_ballot_papers, spoiled_ballot_papers, votes_cast, valid_votes, rejected_votes, used_ballot_papers, candidate_results, result_sheet_image_url, result_sheet_video_url, serial_number, sheet_date, presiding_officer_name, has_presiding_officer_signature, resolution_status, resolution_notes, resolved_polling_unit_id, resolved_result_id, resolved_by, resolved_at, created_at, updated_at
 `
 
 type UpdateUnmatchedPollingUnitResultStatusParams struct {
@@ -337,13 +364,22 @@ func (q *Queries) UpdateUnmatchedPollingUnitResultStatus(ctx context.Context, ar
 		&i.StateConstituencyID,
 		&i.LgaID,
 		&i.WardID,
+		&i.RegisteredVoters,
 		&i.AccreditedVoters,
+		&i.BallotPapersIssued,
+		&i.UnusedBallotPapers,
+		&i.SpoiledBallotPapers,
 		&i.VotesCast,
 		&i.ValidVotes,
 		&i.RejectedVotes,
+		&i.UsedBallotPapers,
 		&i.CandidateResults,
 		&i.ResultSheetImageUrl,
 		&i.ResultSheetVideoUrl,
+		&i.SerialNumber,
+		&i.SheetDate,
+		&i.PresidingOfficerName,
+		&i.HasPresidingOfficerSignature,
 		&i.ResolutionStatus,
 		&i.ResolutionNotes,
 		&i.ResolvedPollingUnitID,

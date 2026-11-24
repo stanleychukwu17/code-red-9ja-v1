@@ -64,6 +64,7 @@ import (
 	blocksservice "free9ja/api/internal/service/blocks"
 	bodiesservice "free9ja/api/internal/service/bodies"
 	campaigngroupsservice "free9ja/api/internal/service/campaign_groups"
+	collationresults "free9ja/api/internal/service/collation_results"
 	earningsservice "free9ja/api/internal/service/earnings"
 	electiongroupsservice "free9ja/api/internal/service/election_groups"
 	electionstats "free9ja/api/internal/service/election_stats"
@@ -171,6 +172,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	partiesService := partiesservice.NewPartiesService(q, pool, rdb, utilsInstance, notificationsService, blocksService, auditService, bodiesService, usersService)
 	partyApplicationsService := partyapplications.NewService(q, pool, rdb, usersService, pollingUnitsService, partiesService)
 	pollingUnitResultsService := puresults.NewService(q, pool, distributor, earningsService, usersService)
+	collationResultsService := collationresults.NewService(q, pool, usersService)
 	supervisorAssignmentsService := supervisorassignmentsservice.NewService(q, rdb)
 	pollingUnitAssignmentsService := puassignments.NewService(q, rdb, distributor)
 	partiesWalletService := partiesservice.NewPartiesWalletService(q, pool, rdb, utilsInstance, partiesService)
@@ -228,7 +230,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	pollingUnitAssignmentsHandler := puassignmentshandler.NewHandler(pollingUnitAssignmentsService, usersService, pollingUnitUpdatesService, utilsInstance, earningsService, supervisorAssignmentsService, pollingUnitsService, electionsService)
 	partyApplicationsHandler := partyapplicationshandler.NewHandler(partyApplicationsService, usersService, partiesService, permissionsService, campaignGroupsService, distributor, notificationsService, auditService, utilsInstance, electionGroupsService)
 	pollingUnitUpdatesHandler := puupdateshandler.NewHandler(pollingUnitUpdatesService, utilsInstance, pollingUnitAssignmentsService, supervisorAssignmentsService, pollingUnitsService)
-	pollingUnitResultsHandler := puresultshandler.NewHandler(pollingUnitResultsService, utilsInstance, pollingUnitAssignmentsService, pollingUnitsService)
+	pollingUnitResultsHandler := puresultshandler.NewHandler(pollingUnitResultsService, collationResultsService, utilsInstance, pollingUnitAssignmentsService, supervisorAssignmentsService, pollingUnitsService, electionsService)
 	supervisorAssignmentsHandler := supervisorassignmentshandler.NewHandler(supervisorAssignmentsService, utilsInstance)
 	electionResultsHandler := electionresultshandler.NewHandler(pool, utilsInstance)
 	seedHandler := seedhandler.NewHandler(seedService, utilsInstance)
@@ -635,7 +637,6 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Get("/api/v1/polling-unit-final-results", pollingUnitResultsHandler.ListFinalResults)
 		r.Get("/api/v1/polling-unit-results/final", pollingUnitResultsHandler.GetFinalResult)
 		r.Get("/api/v1/polling-unit-results/{id}", pollingUnitResultsHandler.GetResult)
-		r.Patch("/api/v1/polling-unit-results/{id}/review", pollingUnitResultsHandler.ReviewResult)
 
 		// Notifications routes (User)
 		r.Get("/api/v1/notifications", notificationsHandler.ListUserNotifications)

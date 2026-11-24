@@ -24,8 +24,18 @@ func (q *Queries) CountDistinctSubmittedResultsForAssignment(ctx context.Context
 	return column_1, err
 }
 
+const deletePollingUnitResultScoresByResultID = `-- name: DeletePollingUnitResultScoresByResultID :exec
+DELETE FROM polling_unit_result_scores
+WHERE result_id = $1
+`
+
+func (q *Queries) DeletePollingUnitResultScoresByResultID(ctx context.Context, resultID int64) error {
+	_, err := q.db.Exec(ctx, deletePollingUnitResultScoresByResultID, resultID)
+	return err
+}
+
 const getAllPollingUnitResultsByPU = `-- name: GetAllPollingUnitResultsByPU :many
-SELECT id, assignment_id, election_id, election_group_id, polling_unit_id, submitted_by, party_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, result_sheet_image_url, result_sheet_video_url, status, ai_extracted_data, result_is_ai_generated, ai_confidence_score, disputed_reason, confirmed_at, confirmed_by, uploaded_by_inec, created_at, updated_at
+SELECT id, assignment_id, election_group_id, party_id, election_id, polling_unit_id, submitted_by, state_id, lga_id, ward_id, senatorial_district_id, federal_constituency_id, state_constituency_id, registered_voters, accredited_voters, ballot_papers_issued, unused_ballot_papers, spoiled_ballot_papers, rejected_votes, valid_votes, used_ballot_papers, votes_cast, serial_number, sheet_date, presiding_officer_name, has_presiding_officer_signature, result_sheet_image_url, result_sheet_video_url, status, ai_extracted_data, result_is_ai_generated, ai_confidence_score, disputed_reason, created_at, updated_at
 FROM polling_unit_results
 WHERE election_id = $1 AND polling_unit_id = $2
 AND status NOT IN ('nullified')
@@ -48,22 +58,30 @@ func (q *Queries) GetAllPollingUnitResultsByPU(ctx context.Context, arg GetAllPo
 		if err := rows.Scan(
 			&i.ID,
 			&i.AssignmentID,
-			&i.ElectionID,
 			&i.ElectionGroupID,
+			&i.PartyID,
+			&i.ElectionID,
 			&i.PollingUnitID,
 			&i.SubmittedBy,
-			&i.PartyID,
 			&i.StateID,
+			&i.LgaID,
+			&i.WardID,
 			&i.SenatorialDistrictID,
 			&i.FederalConstituencyID,
 			&i.StateConstituencyID,
-			&i.LgaID,
-			&i.WardID,
+			&i.RegisteredVoters,
 			&i.AccreditedVoters,
-			&i.VotesCast,
-			&i.ValidVotes,
+			&i.BallotPapersIssued,
+			&i.UnusedBallotPapers,
+			&i.SpoiledBallotPapers,
 			&i.RejectedVotes,
-			&i.CandidateResults,
+			&i.ValidVotes,
+			&i.UsedBallotPapers,
+			&i.VotesCast,
+			&i.SerialNumber,
+			&i.SheetDate,
+			&i.PresidingOfficerName,
+			&i.HasPresidingOfficerSignature,
 			&i.ResultSheetImageUrl,
 			&i.ResultSheetVideoUrl,
 			&i.Status,
@@ -71,9 +89,6 @@ func (q *Queries) GetAllPollingUnitResultsByPU(ctx context.Context, arg GetAllPo
 			&i.ResultIsAiGenerated,
 			&i.AiConfidenceScore,
 			&i.DisputedReason,
-			&i.ConfirmedAt,
-			&i.ConfirmedBy,
-			&i.UploadedByInec,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -88,7 +103,7 @@ func (q *Queries) GetAllPollingUnitResultsByPU(ctx context.Context, arg GetAllPo
 }
 
 const getPollingUnitResult = `-- name: GetPollingUnitResult :one
-SELECT id, assignment_id, election_id, election_group_id, polling_unit_id, submitted_by, party_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, result_sheet_image_url, result_sheet_video_url, status, ai_extracted_data, result_is_ai_generated, ai_confidence_score, disputed_reason, confirmed_at, confirmed_by, uploaded_by_inec, created_at, updated_at
+SELECT id, assignment_id, election_group_id, party_id, election_id, polling_unit_id, submitted_by, state_id, lga_id, ward_id, senatorial_district_id, federal_constituency_id, state_constituency_id, registered_voters, accredited_voters, ballot_papers_issued, unused_ballot_papers, spoiled_ballot_papers, rejected_votes, valid_votes, used_ballot_papers, votes_cast, serial_number, sheet_date, presiding_officer_name, has_presiding_officer_signature, result_sheet_image_url, result_sheet_video_url, status, ai_extracted_data, result_is_ai_generated, ai_confidence_score, disputed_reason, created_at, updated_at
 FROM polling_unit_results
 WHERE id = $1
 `
@@ -99,22 +114,30 @@ func (q *Queries) GetPollingUnitResult(ctx context.Context, id int64) (PollingUn
 	err := row.Scan(
 		&i.ID,
 		&i.AssignmentID,
-		&i.ElectionID,
 		&i.ElectionGroupID,
+		&i.PartyID,
+		&i.ElectionID,
 		&i.PollingUnitID,
 		&i.SubmittedBy,
-		&i.PartyID,
 		&i.StateID,
+		&i.LgaID,
+		&i.WardID,
 		&i.SenatorialDistrictID,
 		&i.FederalConstituencyID,
 		&i.StateConstituencyID,
-		&i.LgaID,
-		&i.WardID,
+		&i.RegisteredVoters,
 		&i.AccreditedVoters,
-		&i.VotesCast,
-		&i.ValidVotes,
+		&i.BallotPapersIssued,
+		&i.UnusedBallotPapers,
+		&i.SpoiledBallotPapers,
 		&i.RejectedVotes,
-		&i.CandidateResults,
+		&i.ValidVotes,
+		&i.UsedBallotPapers,
+		&i.VotesCast,
+		&i.SerialNumber,
+		&i.SheetDate,
+		&i.PresidingOfficerName,
+		&i.HasPresidingOfficerSignature,
 		&i.ResultSheetImageUrl,
 		&i.ResultSheetVideoUrl,
 		&i.Status,
@@ -122,9 +145,6 @@ func (q *Queries) GetPollingUnitResult(ctx context.Context, id int64) (PollingUn
 		&i.ResultIsAiGenerated,
 		&i.AiConfidenceScore,
 		&i.DisputedReason,
-		&i.ConfirmedAt,
-		&i.ConfirmedBy,
-		&i.UploadedByInec,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -132,7 +152,7 @@ func (q *Queries) GetPollingUnitResult(ctx context.Context, id int64) (PollingUn
 }
 
 const getPollingUnitResultByUserAndElection = `-- name: GetPollingUnitResultByUserAndElection :one
-SELECT id, assignment_id, election_id, election_group_id, polling_unit_id, submitted_by, party_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, result_sheet_image_url, result_sheet_video_url, status, ai_extracted_data, result_is_ai_generated, ai_confidence_score, disputed_reason, confirmed_at, confirmed_by, uploaded_by_inec, created_at, updated_at
+SELECT id, assignment_id, election_group_id, party_id, election_id, polling_unit_id, submitted_by, state_id, lga_id, ward_id, senatorial_district_id, federal_constituency_id, state_constituency_id, registered_voters, accredited_voters, ballot_papers_issued, unused_ballot_papers, spoiled_ballot_papers, rejected_votes, valid_votes, used_ballot_papers, votes_cast, serial_number, sheet_date, presiding_officer_name, has_presiding_officer_signature, result_sheet_image_url, result_sheet_video_url, status, ai_extracted_data, result_is_ai_generated, ai_confidence_score, disputed_reason, created_at, updated_at
 FROM polling_unit_results
 WHERE election_id = $1 AND polling_unit_id = $2 AND submitted_by = $3
 LIMIT 1
@@ -150,22 +170,30 @@ func (q *Queries) GetPollingUnitResultByUserAndElection(ctx context.Context, arg
 	err := row.Scan(
 		&i.ID,
 		&i.AssignmentID,
-		&i.ElectionID,
 		&i.ElectionGroupID,
+		&i.PartyID,
+		&i.ElectionID,
 		&i.PollingUnitID,
 		&i.SubmittedBy,
-		&i.PartyID,
 		&i.StateID,
+		&i.LgaID,
+		&i.WardID,
 		&i.SenatorialDistrictID,
 		&i.FederalConstituencyID,
 		&i.StateConstituencyID,
-		&i.LgaID,
-		&i.WardID,
+		&i.RegisteredVoters,
 		&i.AccreditedVoters,
-		&i.VotesCast,
-		&i.ValidVotes,
+		&i.BallotPapersIssued,
+		&i.UnusedBallotPapers,
+		&i.SpoiledBallotPapers,
 		&i.RejectedVotes,
-		&i.CandidateResults,
+		&i.ValidVotes,
+		&i.UsedBallotPapers,
+		&i.VotesCast,
+		&i.SerialNumber,
+		&i.SheetDate,
+		&i.PresidingOfficerName,
+		&i.HasPresidingOfficerSignature,
 		&i.ResultSheetImageUrl,
 		&i.ResultSheetVideoUrl,
 		&i.Status,
@@ -173,13 +201,55 @@ func (q *Queries) GetPollingUnitResultByUserAndElection(ctx context.Context, arg
 		&i.ResultIsAiGenerated,
 		&i.AiConfidenceScore,
 		&i.DisputedReason,
-		&i.ConfirmedAt,
-		&i.ConfirmedBy,
-		&i.UploadedByInec,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const getPollingUnitResultScoresByPU = `-- name: GetPollingUnitResultScoresByPU :many
+SELECT id, result_id, election_group_id, election_id, party_short_name, party_id, polling_unit_id, vote_count, agent_name, has_signature, created_at, updated_at
+FROM polling_unit_result_scores
+WHERE election_id = $1 AND polling_unit_id = $2
+ORDER BY result_id, party_short_name
+`
+
+type GetPollingUnitResultScoresByPUParams struct {
+	ElectionID    int32 `json:"election_id"`
+	PollingUnitID int32 `json:"polling_unit_id"`
+}
+
+func (q *Queries) GetPollingUnitResultScoresByPU(ctx context.Context, arg GetPollingUnitResultScoresByPUParams) ([]PollingUnitResultScore, error) {
+	rows, err := q.db.Query(ctx, getPollingUnitResultScoresByPU, arg.ElectionID, arg.PollingUnitID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PollingUnitResultScore
+	for rows.Next() {
+		var i PollingUnitResultScore
+		if err := rows.Scan(
+			&i.ID,
+			&i.ResultID,
+			&i.ElectionGroupID,
+			&i.ElectionID,
+			&i.PartyShortName,
+			&i.PartyID,
+			&i.PollingUnitID,
+			&i.VoteCount,
+			&i.AgentName,
+			&i.HasSignature,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getUserPollingUnitResultInElectionGroup = `-- name: GetUserPollingUnitResultInElectionGroup :one
@@ -202,7 +272,7 @@ func (q *Queries) GetUserPollingUnitResultInElectionGroup(ctx context.Context, a
 }
 
 const listPollingUnitResults = `-- name: ListPollingUnitResults :many
-SELECT id, assignment_id, election_id, election_group_id, polling_unit_id, submitted_by, party_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, result_sheet_image_url, result_sheet_video_url, status, ai_extracted_data, result_is_ai_generated, ai_confidence_score, disputed_reason, confirmed_at, confirmed_by, uploaded_by_inec, created_at, updated_at
+SELECT id, assignment_id, election_group_id, party_id, election_id, polling_unit_id, submitted_by, state_id, lga_id, ward_id, senatorial_district_id, federal_constituency_id, state_constituency_id, registered_voters, accredited_voters, ballot_papers_issued, unused_ballot_papers, spoiled_ballot_papers, rejected_votes, valid_votes, used_ballot_papers, votes_cast, serial_number, sheet_date, presiding_officer_name, has_presiding_officer_signature, result_sheet_image_url, result_sheet_video_url, status, ai_extracted_data, result_is_ai_generated, ai_confidence_score, disputed_reason, created_at, updated_at
 FROM polling_unit_results
 WHERE
   ($1::int    IS NULL OR election_id       = $1)
@@ -214,10 +284,9 @@ WHERE
   AND ($7::int        IS NULL OR lga_id            = $7)
   AND ($8::int       IS NULL OR ward_id           = $8)
   AND ($9::text       IS NULL OR status            = $9)
-  AND ($10::boolean IS NULL OR uploaded_by_inec = $10)
-  AND id < $11
+  AND id < $10
 ORDER BY id DESC
-LIMIT $12
+LIMIT $11
 `
 
 type ListPollingUnitResultsParams struct {
@@ -230,7 +299,6 @@ type ListPollingUnitResultsParams struct {
 	LgaID           pgtype.Int4 `json:"lga_id"`
 	WardID          pgtype.Int4 `json:"ward_id"`
 	Status          pgtype.Text `json:"status"`
-	UploadedByInec  pgtype.Bool `json:"uploaded_by_inec"`
 	Cursor          int64       `json:"cursor"`
 	Limit           int32       `json:"limit"`
 }
@@ -246,7 +314,6 @@ func (q *Queries) ListPollingUnitResults(ctx context.Context, arg ListPollingUni
 		arg.LgaID,
 		arg.WardID,
 		arg.Status,
-		arg.UploadedByInec,
 		arg.Cursor,
 		arg.Limit,
 	)
@@ -260,22 +327,30 @@ func (q *Queries) ListPollingUnitResults(ctx context.Context, arg ListPollingUni
 		if err := rows.Scan(
 			&i.ID,
 			&i.AssignmentID,
-			&i.ElectionID,
 			&i.ElectionGroupID,
+			&i.PartyID,
+			&i.ElectionID,
 			&i.PollingUnitID,
 			&i.SubmittedBy,
-			&i.PartyID,
 			&i.StateID,
+			&i.LgaID,
+			&i.WardID,
 			&i.SenatorialDistrictID,
 			&i.FederalConstituencyID,
 			&i.StateConstituencyID,
-			&i.LgaID,
-			&i.WardID,
+			&i.RegisteredVoters,
 			&i.AccreditedVoters,
-			&i.VotesCast,
-			&i.ValidVotes,
+			&i.BallotPapersIssued,
+			&i.UnusedBallotPapers,
+			&i.SpoiledBallotPapers,
 			&i.RejectedVotes,
-			&i.CandidateResults,
+			&i.ValidVotes,
+			&i.UsedBallotPapers,
+			&i.VotesCast,
+			&i.SerialNumber,
+			&i.SheetDate,
+			&i.PresidingOfficerName,
+			&i.HasPresidingOfficerSignature,
 			&i.ResultSheetImageUrl,
 			&i.ResultSheetVideoUrl,
 			&i.Status,
@@ -283,9 +358,6 @@ func (q *Queries) ListPollingUnitResults(ctx context.Context, arg ListPollingUni
 			&i.ResultIsAiGenerated,
 			&i.AiConfidenceScore,
 			&i.DisputedReason,
-			&i.ConfirmedAt,
-			&i.ConfirmedBy,
-			&i.UploadedByInec,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -343,10 +415,8 @@ INSERT INTO polling_unit_results (
   votes_cast,
   valid_votes,
   rejected_votes,
-  candidate_results,
   result_sheet_image_url,
   result_sheet_video_url,
-  uploaded_by_inec,
   status,
   ai_extracted_data,
   result_is_ai_generated,
@@ -370,13 +440,11 @@ INSERT INTO polling_unit_results (
   $16,
   $17,
   $18,
-  $19,
+  COALESCE($19::varchar(30), 'submitted'),
   $20,
-  COALESCE($21::varchar(30), 'submitted'),
-  $22,
-  $23,
-  $24
-) RETURNING id, assignment_id, election_id, election_group_id, polling_unit_id, submitted_by, party_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, result_sheet_image_url, result_sheet_video_url, status, ai_extracted_data, result_is_ai_generated, ai_confidence_score, disputed_reason, confirmed_at, confirmed_by, uploaded_by_inec, created_at, updated_at
+  $21,
+  $22
+) RETURNING id, assignment_id, election_group_id, party_id, election_id, polling_unit_id, submitted_by, state_id, lga_id, ward_id, senatorial_district_id, federal_constituency_id, state_constituency_id, registered_voters, accredited_voters, ballot_papers_issued, unused_ballot_papers, spoiled_ballot_papers, rejected_votes, valid_votes, used_ballot_papers, votes_cast, serial_number, sheet_date, presiding_officer_name, has_presiding_officer_signature, result_sheet_image_url, result_sheet_video_url, status, ai_extracted_data, result_is_ai_generated, ai_confidence_score, disputed_reason, created_at, updated_at
 `
 
 type SubmitPollingUnitResultParams struct {
@@ -385,7 +453,7 @@ type SubmitPollingUnitResultParams struct {
 	ElectionGroupID       int32          `json:"election_group_id"`
 	PollingUnitID         int32          `json:"polling_unit_id"`
 	SubmittedBy           pgtype.Int8    `json:"submitted_by"`
-	PartyID               pgtype.Int2    `json:"party_id"`
+	PartyID               int16          `json:"party_id"`
 	StateID               pgtype.Int2    `json:"state_id"`
 	SenatorialDistrictID  pgtype.Int4    `json:"senatorial_district_id"`
 	FederalConstituencyID pgtype.Int4    `json:"federal_constituency_id"`
@@ -396,10 +464,8 @@ type SubmitPollingUnitResultParams struct {
 	VotesCast             int32          `json:"votes_cast"`
 	ValidVotes            int32          `json:"valid_votes"`
 	RejectedVotes         int32          `json:"rejected_votes"`
-	CandidateResults      []byte         `json:"candidate_results"`
 	ResultSheetImageUrl   pgtype.Text    `json:"result_sheet_image_url"`
 	ResultSheetVideoUrl   pgtype.Text    `json:"result_sheet_video_url"`
-	UploadedByInec        bool           `json:"uploaded_by_inec"`
 	Status                pgtype.Text    `json:"status"`
 	AiExtractedData       []byte         `json:"ai_extracted_data"`
 	ResultIsAiGenerated   pgtype.Bool    `json:"result_is_ai_generated"`
@@ -424,10 +490,8 @@ func (q *Queries) SubmitPollingUnitResult(ctx context.Context, arg SubmitPolling
 		arg.VotesCast,
 		arg.ValidVotes,
 		arg.RejectedVotes,
-		arg.CandidateResults,
 		arg.ResultSheetImageUrl,
 		arg.ResultSheetVideoUrl,
-		arg.UploadedByInec,
 		arg.Status,
 		arg.AiExtractedData,
 		arg.ResultIsAiGenerated,
@@ -437,22 +501,30 @@ func (q *Queries) SubmitPollingUnitResult(ctx context.Context, arg SubmitPolling
 	err := row.Scan(
 		&i.ID,
 		&i.AssignmentID,
-		&i.ElectionID,
 		&i.ElectionGroupID,
+		&i.PartyID,
+		&i.ElectionID,
 		&i.PollingUnitID,
 		&i.SubmittedBy,
-		&i.PartyID,
 		&i.StateID,
+		&i.LgaID,
+		&i.WardID,
 		&i.SenatorialDistrictID,
 		&i.FederalConstituencyID,
 		&i.StateConstituencyID,
-		&i.LgaID,
-		&i.WardID,
+		&i.RegisteredVoters,
 		&i.AccreditedVoters,
-		&i.VotesCast,
-		&i.ValidVotes,
+		&i.BallotPapersIssued,
+		&i.UnusedBallotPapers,
+		&i.SpoiledBallotPapers,
 		&i.RejectedVotes,
-		&i.CandidateResults,
+		&i.ValidVotes,
+		&i.UsedBallotPapers,
+		&i.VotesCast,
+		&i.SerialNumber,
+		&i.SheetDate,
+		&i.PresidingOfficerName,
+		&i.HasPresidingOfficerSignature,
 		&i.ResultSheetImageUrl,
 		&i.ResultSheetVideoUrl,
 		&i.Status,
@@ -460,9 +532,6 @@ func (q *Queries) SubmitPollingUnitResult(ctx context.Context, arg SubmitPolling
 		&i.ResultIsAiGenerated,
 		&i.AiConfidenceScore,
 		&i.DisputedReason,
-		&i.ConfirmedAt,
-		&i.ConfirmedBy,
-		&i.UploadedByInec,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -476,13 +545,12 @@ SET
   votes_cast = $3,
   valid_votes = $4,
   rejected_votes = $5,
-  candidate_results = $6,
-  result_sheet_image_url = $7,
-  result_sheet_video_url = $8,
+  result_sheet_image_url = $6,
+  result_sheet_video_url = $7,
   status = 'submitted',
   updated_at = NOW()
 WHERE id = $1
-RETURNING id, assignment_id, election_id, election_group_id, polling_unit_id, submitted_by, party_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, result_sheet_image_url, result_sheet_video_url, status, ai_extracted_data, result_is_ai_generated, ai_confidence_score, disputed_reason, confirmed_at, confirmed_by, uploaded_by_inec, created_at, updated_at
+RETURNING id, assignment_id, election_group_id, party_id, election_id, polling_unit_id, submitted_by, state_id, lga_id, ward_id, senatorial_district_id, federal_constituency_id, state_constituency_id, registered_voters, accredited_voters, ballot_papers_issued, unused_ballot_papers, spoiled_ballot_papers, rejected_votes, valid_votes, used_ballot_papers, votes_cast, serial_number, sheet_date, presiding_officer_name, has_presiding_officer_signature, result_sheet_image_url, result_sheet_video_url, status, ai_extracted_data, result_is_ai_generated, ai_confidence_score, disputed_reason, created_at, updated_at
 `
 
 type UpdatePollingUnitResultParams struct {
@@ -491,7 +559,6 @@ type UpdatePollingUnitResultParams struct {
 	VotesCast           int32       `json:"votes_cast"`
 	ValidVotes          int32       `json:"valid_votes"`
 	RejectedVotes       int32       `json:"rejected_votes"`
-	CandidateResults    []byte      `json:"candidate_results"`
 	ResultSheetImageUrl pgtype.Text `json:"result_sheet_image_url"`
 	ResultSheetVideoUrl pgtype.Text `json:"result_sheet_video_url"`
 }
@@ -503,7 +570,6 @@ func (q *Queries) UpdatePollingUnitResult(ctx context.Context, arg UpdatePolling
 		arg.VotesCast,
 		arg.ValidVotes,
 		arg.RejectedVotes,
-		arg.CandidateResults,
 		arg.ResultSheetImageUrl,
 		arg.ResultSheetVideoUrl,
 	)
@@ -511,22 +577,30 @@ func (q *Queries) UpdatePollingUnitResult(ctx context.Context, arg UpdatePolling
 	err := row.Scan(
 		&i.ID,
 		&i.AssignmentID,
-		&i.ElectionID,
 		&i.ElectionGroupID,
+		&i.PartyID,
+		&i.ElectionID,
 		&i.PollingUnitID,
 		&i.SubmittedBy,
-		&i.PartyID,
 		&i.StateID,
+		&i.LgaID,
+		&i.WardID,
 		&i.SenatorialDistrictID,
 		&i.FederalConstituencyID,
 		&i.StateConstituencyID,
-		&i.LgaID,
-		&i.WardID,
+		&i.RegisteredVoters,
 		&i.AccreditedVoters,
-		&i.VotesCast,
-		&i.ValidVotes,
+		&i.BallotPapersIssued,
+		&i.UnusedBallotPapers,
+		&i.SpoiledBallotPapers,
 		&i.RejectedVotes,
-		&i.CandidateResults,
+		&i.ValidVotes,
+		&i.UsedBallotPapers,
+		&i.VotesCast,
+		&i.SerialNumber,
+		&i.SheetDate,
+		&i.PresidingOfficerName,
+		&i.HasPresidingOfficerSignature,
 		&i.ResultSheetImageUrl,
 		&i.ResultSheetVideoUrl,
 		&i.Status,
@@ -534,9 +608,6 @@ func (q *Queries) UpdatePollingUnitResult(ctx context.Context, arg UpdatePolling
 		&i.ResultIsAiGenerated,
 		&i.AiConfidenceScore,
 		&i.DisputedReason,
-		&i.ConfirmedAt,
-		&i.ConfirmedBy,
-		&i.UploadedByInec,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -546,69 +617,101 @@ func (q *Queries) UpdatePollingUnitResult(ctx context.Context, arg UpdatePolling
 const updatePollingUnitResultAIExtraction = `-- name: UpdatePollingUnitResultAIExtraction :one
 UPDATE polling_unit_results
 SET
-  accredited_voters      = $2,
-  votes_cast             = $3,
-  valid_votes            = $4,
-  rejected_votes         = $5,
-  candidate_results      = $6,
-  status                 = $7,
-  ai_extracted_data      = $8,
-  result_is_ai_generated = $9,
-  ai_confidence_score    = $10,
-  disputed_reason        = $11,
-  updated_at             = NOW()
-WHERE id = $1
-RETURNING id, assignment_id, election_id, election_group_id, polling_unit_id, submitted_by, party_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, result_sheet_image_url, result_sheet_video_url, status, ai_extracted_data, result_is_ai_generated, ai_confidence_score, disputed_reason, confirmed_at, confirmed_by, uploaded_by_inec, created_at, updated_at
+  registered_voters               = $1,
+  accredited_voters               = $2,
+  ballot_papers_issued            = $3,
+  unused_ballot_papers            = $4,
+  spoiled_ballot_papers           = $5,
+  votes_cast                      = $6,
+  valid_votes                     = $7,
+  rejected_votes                  = $8,
+  used_ballot_papers              = $9,
+  serial_number                   = $10,
+  sheet_date                      = $11,
+  presiding_officer_name          = $12,
+  has_presiding_officer_signature = $13,
+  status                          = $14,
+  ai_extracted_data               = $15,
+  result_is_ai_generated          = $16,
+  ai_confidence_score             = $17,
+  disputed_reason                 = $18,
+  updated_at                      = NOW()
+WHERE id = $19
+RETURNING id, assignment_id, election_group_id, party_id, election_id, polling_unit_id, submitted_by, state_id, lga_id, ward_id, senatorial_district_id, federal_constituency_id, state_constituency_id, registered_voters, accredited_voters, ballot_papers_issued, unused_ballot_papers, spoiled_ballot_papers, rejected_votes, valid_votes, used_ballot_papers, votes_cast, serial_number, sheet_date, presiding_officer_name, has_presiding_officer_signature, result_sheet_image_url, result_sheet_video_url, status, ai_extracted_data, result_is_ai_generated, ai_confidence_score, disputed_reason, created_at, updated_at
 `
 
 type UpdatePollingUnitResultAIExtractionParams struct {
-	ID                  int64          `json:"id"`
-	AccreditedVoters    int32          `json:"accredited_voters"`
-	VotesCast           int32          `json:"votes_cast"`
-	ValidVotes          int32          `json:"valid_votes"`
-	RejectedVotes       int32          `json:"rejected_votes"`
-	CandidateResults    []byte         `json:"candidate_results"`
-	Status              string         `json:"status"`
-	AiExtractedData     []byte         `json:"ai_extracted_data"`
-	ResultIsAiGenerated pgtype.Bool    `json:"result_is_ai_generated"`
-	AiConfidenceScore   pgtype.Numeric `json:"ai_confidence_score"`
-	DisputedReason      pgtype.Text    `json:"disputed_reason"`
+	RegisteredVoters             int32          `json:"registered_voters"`
+	AccreditedVoters             int32          `json:"accredited_voters"`
+	BallotPapersIssued           int32          `json:"ballot_papers_issued"`
+	UnusedBallotPapers           int32          `json:"unused_ballot_papers"`
+	SpoiledBallotPapers          int32          `json:"spoiled_ballot_papers"`
+	VotesCast                    int32          `json:"votes_cast"`
+	ValidVotes                   int32          `json:"valid_votes"`
+	RejectedVotes                int32          `json:"rejected_votes"`
+	UsedBallotPapers             int32          `json:"used_ballot_papers"`
+	SerialNumber                 pgtype.Text    `json:"serial_number"`
+	SheetDate                    pgtype.Date    `json:"sheet_date"`
+	PresidingOfficerName         pgtype.Text    `json:"presiding_officer_name"`
+	HasPresidingOfficerSignature bool           `json:"has_presiding_officer_signature"`
+	Status                       string         `json:"status"`
+	AiExtractedData              []byte         `json:"ai_extracted_data"`
+	ResultIsAiGenerated          pgtype.Bool    `json:"result_is_ai_generated"`
+	AiConfidenceScore            pgtype.Numeric `json:"ai_confidence_score"`
+	DisputedReason               pgtype.Text    `json:"disputed_reason"`
+	ID                           int64          `json:"id"`
 }
 
 func (q *Queries) UpdatePollingUnitResultAIExtraction(ctx context.Context, arg UpdatePollingUnitResultAIExtractionParams) (PollingUnitResult, error) {
 	row := q.db.QueryRow(ctx, updatePollingUnitResultAIExtraction,
-		arg.ID,
+		arg.RegisteredVoters,
 		arg.AccreditedVoters,
+		arg.BallotPapersIssued,
+		arg.UnusedBallotPapers,
+		arg.SpoiledBallotPapers,
 		arg.VotesCast,
 		arg.ValidVotes,
 		arg.RejectedVotes,
-		arg.CandidateResults,
+		arg.UsedBallotPapers,
+		arg.SerialNumber,
+		arg.SheetDate,
+		arg.PresidingOfficerName,
+		arg.HasPresidingOfficerSignature,
 		arg.Status,
 		arg.AiExtractedData,
 		arg.ResultIsAiGenerated,
 		arg.AiConfidenceScore,
 		arg.DisputedReason,
+		arg.ID,
 	)
 	var i PollingUnitResult
 	err := row.Scan(
 		&i.ID,
 		&i.AssignmentID,
-		&i.ElectionID,
 		&i.ElectionGroupID,
+		&i.PartyID,
+		&i.ElectionID,
 		&i.PollingUnitID,
 		&i.SubmittedBy,
-		&i.PartyID,
 		&i.StateID,
+		&i.LgaID,
+		&i.WardID,
 		&i.SenatorialDistrictID,
 		&i.FederalConstituencyID,
 		&i.StateConstituencyID,
-		&i.LgaID,
-		&i.WardID,
+		&i.RegisteredVoters,
 		&i.AccreditedVoters,
-		&i.VotesCast,
-		&i.ValidVotes,
+		&i.BallotPapersIssued,
+		&i.UnusedBallotPapers,
+		&i.SpoiledBallotPapers,
 		&i.RejectedVotes,
-		&i.CandidateResults,
+		&i.ValidVotes,
+		&i.UsedBallotPapers,
+		&i.VotesCast,
+		&i.SerialNumber,
+		&i.SheetDate,
+		&i.PresidingOfficerName,
+		&i.HasPresidingOfficerSignature,
 		&i.ResultSheetImageUrl,
 		&i.ResultSheetVideoUrl,
 		&i.Status,
@@ -616,9 +719,6 @@ func (q *Queries) UpdatePollingUnitResultAIExtraction(ctx context.Context, arg U
 		&i.ResultIsAiGenerated,
 		&i.AiConfidenceScore,
 		&i.DisputedReason,
-		&i.ConfirmedAt,
-		&i.ConfirmedBy,
-		&i.UploadedByInec,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -632,23 +732,19 @@ SET
   ai_extracted_data   = $3,
   ai_confidence_score = $4,
   disputed_reason     = $5,
-  confirmed_at        = $6,
-  confirmed_by        = $7,
-  result_is_ai_generated = $8,
+  result_is_ai_generated = $6,
   updated_at          = NOW()
 WHERE id = $1
-RETURNING id, assignment_id, election_id, election_group_id, polling_unit_id, submitted_by, party_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, result_sheet_image_url, result_sheet_video_url, status, ai_extracted_data, result_is_ai_generated, ai_confidence_score, disputed_reason, confirmed_at, confirmed_by, uploaded_by_inec, created_at, updated_at
+RETURNING id, assignment_id, election_group_id, party_id, election_id, polling_unit_id, submitted_by, state_id, lga_id, ward_id, senatorial_district_id, federal_constituency_id, state_constituency_id, registered_voters, accredited_voters, ballot_papers_issued, unused_ballot_papers, spoiled_ballot_papers, rejected_votes, valid_votes, used_ballot_papers, votes_cast, serial_number, sheet_date, presiding_officer_name, has_presiding_officer_signature, result_sheet_image_url, result_sheet_video_url, status, ai_extracted_data, result_is_ai_generated, ai_confidence_score, disputed_reason, created_at, updated_at
 `
 
 type UpdateResultStatusParams struct {
-	ID                  int64              `json:"id"`
-	Status              string             `json:"status"`
-	AiExtractedData     []byte             `json:"ai_extracted_data"`
-	AiConfidenceScore   pgtype.Numeric     `json:"ai_confidence_score"`
-	DisputedReason      pgtype.Text        `json:"disputed_reason"`
-	ConfirmedAt         pgtype.Timestamptz `json:"confirmed_at"`
-	ConfirmedBy         pgtype.Int8        `json:"confirmed_by"`
-	ResultIsAiGenerated pgtype.Bool        `json:"result_is_ai_generated"`
+	ID                  int64          `json:"id"`
+	Status              string         `json:"status"`
+	AiExtractedData     []byte         `json:"ai_extracted_data"`
+	AiConfidenceScore   pgtype.Numeric `json:"ai_confidence_score"`
+	DisputedReason      pgtype.Text    `json:"disputed_reason"`
+	ResultIsAiGenerated pgtype.Bool    `json:"result_is_ai_generated"`
 }
 
 func (q *Queries) UpdateResultStatus(ctx context.Context, arg UpdateResultStatusParams) (PollingUnitResult, error) {
@@ -658,30 +754,36 @@ func (q *Queries) UpdateResultStatus(ctx context.Context, arg UpdateResultStatus
 		arg.AiExtractedData,
 		arg.AiConfidenceScore,
 		arg.DisputedReason,
-		arg.ConfirmedAt,
-		arg.ConfirmedBy,
 		arg.ResultIsAiGenerated,
 	)
 	var i PollingUnitResult
 	err := row.Scan(
 		&i.ID,
 		&i.AssignmentID,
-		&i.ElectionID,
 		&i.ElectionGroupID,
+		&i.PartyID,
+		&i.ElectionID,
 		&i.PollingUnitID,
 		&i.SubmittedBy,
-		&i.PartyID,
 		&i.StateID,
+		&i.LgaID,
+		&i.WardID,
 		&i.SenatorialDistrictID,
 		&i.FederalConstituencyID,
 		&i.StateConstituencyID,
-		&i.LgaID,
-		&i.WardID,
+		&i.RegisteredVoters,
 		&i.AccreditedVoters,
-		&i.VotesCast,
-		&i.ValidVotes,
+		&i.BallotPapersIssued,
+		&i.UnusedBallotPapers,
+		&i.SpoiledBallotPapers,
 		&i.RejectedVotes,
-		&i.CandidateResults,
+		&i.ValidVotes,
+		&i.UsedBallotPapers,
+		&i.VotesCast,
+		&i.SerialNumber,
+		&i.SheetDate,
+		&i.PresidingOfficerName,
+		&i.HasPresidingOfficerSignature,
 		&i.ResultSheetImageUrl,
 		&i.ResultSheetVideoUrl,
 		&i.Status,
@@ -689,9 +791,77 @@ func (q *Queries) UpdateResultStatus(ctx context.Context, arg UpdateResultStatus
 		&i.ResultIsAiGenerated,
 		&i.AiConfidenceScore,
 		&i.DisputedReason,
-		&i.ConfirmedAt,
-		&i.ConfirmedBy,
-		&i.UploadedByInec,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const upsertPollingUnitResultScore = `-- name: UpsertPollingUnitResultScore :one
+INSERT INTO polling_unit_result_scores (
+  result_id,
+  election_id,
+  election_group_id,
+  polling_unit_id,
+  party_id,
+  party_short_name,
+  vote_count,
+  agent_name,
+  has_signature
+) VALUES (
+  $1,
+  $2,
+  $3,
+  $4,
+  (SELECT id FROM parties WHERE UPPER(short_name) = UPPER($5) LIMIT 1),
+  UPPER(TRIM($5)),
+  $6,
+  $7,
+  $8
+)
+ON CONFLICT (result_id, party_short_name) DO UPDATE SET
+  party_id      = COALESCE(EXCLUDED.party_id, polling_unit_result_scores.party_id),
+  vote_count    = EXCLUDED.vote_count,
+  agent_name    = EXCLUDED.agent_name,
+  has_signature = EXCLUDED.has_signature,
+  updated_at    = NOW()
+RETURNING id, result_id, election_group_id, election_id, party_short_name, party_id, polling_unit_id, vote_count, agent_name, has_signature, created_at, updated_at
+`
+
+type UpsertPollingUnitResultScoreParams struct {
+	ResultID        int64       `json:"result_id"`
+	ElectionID      int32       `json:"election_id"`
+	ElectionGroupID int32       `json:"election_group_id"`
+	PollingUnitID   int32       `json:"polling_unit_id"`
+	PartyShortName  interface{} `json:"party_short_name"`
+	VoteCount       int32       `json:"vote_count"`
+	AgentName       pgtype.Text `json:"agent_name"`
+	HasSignature    bool        `json:"has_signature"`
+}
+
+func (q *Queries) UpsertPollingUnitResultScore(ctx context.Context, arg UpsertPollingUnitResultScoreParams) (PollingUnitResultScore, error) {
+	row := q.db.QueryRow(ctx, upsertPollingUnitResultScore,
+		arg.ResultID,
+		arg.ElectionID,
+		arg.ElectionGroupID,
+		arg.PollingUnitID,
+		arg.PartyShortName,
+		arg.VoteCount,
+		arg.AgentName,
+		arg.HasSignature,
+	)
+	var i PollingUnitResultScore
+	err := row.Scan(
+		&i.ID,
+		&i.ResultID,
+		&i.ElectionGroupID,
+		&i.ElectionID,
+		&i.PartyShortName,
+		&i.PartyID,
+		&i.PollingUnitID,
+		&i.VoteCount,
+		&i.AgentName,
+		&i.HasSignature,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

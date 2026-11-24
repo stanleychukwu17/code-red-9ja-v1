@@ -53,7 +53,7 @@ type SubmitResultInput struct {
 	ElectionID            int32
 	ElectionGroupID       int32
 	PollingUnitID         int32
-	PartyID               *int16
+	PartyID               int16
 	StateID               int32
 	LgaID                 int32
 	WardID                int32
@@ -62,13 +62,6 @@ type SubmitResultInput struct {
 	StateConstituencyID   pgtype.Int4
 	ResultSheetImageURL   string
 	ResultSheetVideoURL   string
-}
-
-// ReviewResultInput is used by platform admins to manually override a result's status.
-type ReviewResultInput struct {
-	ResultID       int64
-	Status         string // "confirmed" or "nullified"
-	DisputedReason string
 }
 
 // AIVerificationInput is used internally to apply Gemini findings.
@@ -81,7 +74,7 @@ type AIVerificationInput struct {
 	IsAIGenerated   bool
 }
 
-// validateUserEligibility verifies election reporting window, user identity, polling agent assignment or registered voter status,
+// validateUserEligibility verifies the election reporting window, registered voter polling unit (when no assignment),
 // and ensures the user is not submitting results for a different polling unit in this election group.
 func (s *Service) validateUserEligibility(
 	ctx context.Context,
@@ -90,73 +83,45 @@ func (s *Service) validateUserEligibility(
 	assignmentID *int64,
 	electionGroupID int32,
 	pollingUnitID int32,
-) (queries.PollingUnit, queries.Lga, queries.Ward, *int16, error) {
-	// 0. Verify election group exists and current time is within the election reporting window
+) error {
+	// 1. Verify election group exists and current time is within the election reporting window
 	eg, err := qtx.GetElectionGroupByID(ctx, electionGroupID)
 	if err != nil {
-		return queries.PollingUnit{}, queries.Lga{}, queries.Ward{}, nil, errors.New("invalid election_group_id")
+		return errors.New("invalid election_group_id")
 	}
 	if err := utils.ValidateElectionReportingWindow(eg.ElectionDate.Time, time.Now(), utils.PostElectionCollationGraceDays); err != nil {
-		return queries.PollingUnit{}, queries.Lga{}, queries.Ward{}, nil, err
+		return err
 	}
 
-	// 1. Fetch Polling Unit, LGA, and Ward
-	pu, err := qtx.GetPollingUnitByID(ctx, pollingUnitID)
-	if err != nil {
-		return queries.PollingUnit{}, queries.Lga{}, queries.Ward{}, nil, errors.New("invalid polling_unit_id")
-	}
-
-	lga, err := qtx.GetLGAByID(ctx, pu.LgaID)
-	if err != nil {
-		return queries.PollingUnit{}, queries.Lga{}, queries.Ward{}, nil, errors.New("invalid lga for polling unit")
-	}
-
-	ward, err := qtx.GetWardByID(ctx, pu.WardID)
-	if err != nil {
-		return queries.PollingUnit{}, queries.Lga{}, queries.Ward{}, nil, errors.New("invalid ward for polling unit")
-	}
-
-	// 3. Verify Polling Agent assignment OR Registered Voter polling unit
-	var verifiedPartyID *int16
-	if assignmentID != nil {
-		assignment, err := qtx.GetAssignmentByID(ctx, *assignmentID)
-		if err != nil || assignment.UserID != user.ID {
-			return queries.PollingUnit{}, queries.Lga{}, queries.Ward{}, nil, errors.New("invalid or unauthorized polling unit assignment")
-		}
-		if assignment.ElectionGroupID != electionGroupID {
-			return queries.PollingUnit{}, queries.Lga{}, queries.Ward{}, nil, errors.New("polling unit assignment does not belong to this election group")
-		}
-		if assignment.PollingUnitID != pollingUnitID {
-			return queries.PollingUnit{}, queries.Lga{}, queries.Ward{}, nil, errors.New("you can only upload results for your assigned polling unit")
-		}
-		pid := assignment.PartyID
-		verifiedPartyID = &pid
-	} else {
-		// Registered Voter validation
+	// 2. Registered voter validation when submitting without a polling agent assignment
+	if assignmentID == nil {
 		if !user.PollingUnitID.Valid || user.PollingUnitID.Int32 == 0 {
-			return queries.PollingUnit{}, queries.Lga{}, queries.Ward{}, nil, errors.New("you do not have a registered polling unit. Please update your profile with your polling unit to submit results")
+			return errors.New("you do not have a registered polling unit. Please update your profile with your polling unit to submit results")
 		}
 		if user.PollingUnitID.Int32 != pollingUnitID {
-			return queries.PollingUnit{}, queries.Lga{}, queries.Ward{}, nil, errors.New("you can only upload election results for your registered polling unit")
+			return errors.New("you can only upload election results for your registered polling unit")
 		}
 	}
 
-	// 4. Cross-polling unit lock: Check if user already submitted results for a different polling unit in this election group
+	// 3. Cross-polling unit lock: ensure user has not submitted results for a different PU in this election group
 	existingPUID, err := qtx.GetUserPollingUnitResultInElectionGroup(ctx, queries.GetUserPollingUnitResultInElectionGroupParams{
 		SubmittedBy:     pgtype.Int8{Int64: user.ID, Valid: true},
 		ElectionGroupID: electionGroupID,
 	})
 	if err == nil && existingPUID > 0 && existingPUID != pollingUnitID {
-		return queries.PollingUnit{}, queries.Lga{}, queries.Ward{}, nil, fmt.Errorf("you have already submitted election results for polling unit #%d and cannot submit for other polling units", existingPUID)
+		return fmt.Errorf("you have already submitted election results for polling unit #%d and cannot submit for other polling units", existingPUID)
 	}
 
-	return pu, lga, ward, verifiedPartyID, nil
+	return nil
 }
 
 // SubmitResult inserts a new polling unit result record rapidly (<20ms) and queues an asynchronous AI extraction task.
 func (s *Service) SubmitResult(ctx context.Context, input SubmitResultInput) (queries.PollingUnitResult, error) {
 	if input.ResultSheetImageURL == "" {
 		return queries.PollingUnitResult{}, errors.New("result_sheet_image_url is required")
+	}
+	if input.PartyID <= 0 {
+		return queries.PollingUnitResult{}, errors.New("party_id is required")
 	}
 
 	user, err := s.usersSvc.GetUserByFakeID(ctx, input.UserFakeID)
@@ -172,15 +137,14 @@ func (s *Service) SubmitResult(ctx context.Context, input SubmitResultInput) (qu
 
 	qtx := s.queries.WithTx(tx)
 
-	pu, lga, ward, verifiedPartyID, err := s.validateUserEligibility(
+	if err := s.validateUserEligibility(
 		ctx,
 		qtx,
 		user,
 		input.AssignmentID,
 		input.ElectionGroupID,
 		input.PollingUnitID,
-	)
-	if err != nil {
+	); err != nil {
 		return queries.PollingUnitResult{}, err
 	}
 
@@ -200,36 +164,6 @@ func (s *Service) SubmitResult(ctx context.Context, input SubmitResultInput) (qu
 		return queries.PollingUnitResult{}, errors.New("you have already submitted results for this election at your polling unit")
 	}
 
-	partyID := utils.PgInt2FromPtrNullable(input.PartyID)
-	if verifiedPartyID != nil {
-		partyID = utils.PgInt2FromInt16(*verifiedPartyID)
-	}
-
-	stateID := input.StateID
-	if stateID == 0 {
-		stateID = pu.StateID
-	}
-	lgaID := input.LgaID
-	if lgaID == 0 {
-		lgaID = pu.LgaID
-	}
-	wardID := input.WardID
-	if wardID == 0 {
-		wardID = pu.WardID
-	}
-	senatorialDistrictID := input.SenatorialDistrictID
-	if !senatorialDistrictID.Valid {
-		senatorialDistrictID = lga.SenatorialDistrictID
-	}
-	federalConstituencyID := input.FederalConstituencyID
-	if !federalConstituencyID.Valid {
-		federalConstituencyID = lga.FederalConstituencyID
-	}
-	stateConstituencyID := input.StateConstituencyID
-	if !stateConstituencyID.Valid {
-		stateConstituencyID = ward.StateConstituencyID
-	}
-
 	// Insert raw submission record with initial status 'submitted'
 	result, err := qtx.SubmitPollingUnitResult(ctx, queries.SubmitPollingUnitResultParams{
 		AssignmentID:          utils.PgInt8FromPtr(input.AssignmentID),
@@ -237,21 +171,19 @@ func (s *Service) SubmitResult(ctx context.Context, input SubmitResultInput) (qu
 		ElectionGroupID:       input.ElectionGroupID,
 		PollingUnitID:         input.PollingUnitID,
 		SubmittedBy:           utils.PgInt8FromInt64(user.ID),
-		PartyID:               partyID,
-		StateID:               utils.PgInt2FromInt16(int16(stateID)),
-		SenatorialDistrictID:  senatorialDistrictID,
-		FederalConstituencyID: federalConstituencyID,
-		StateConstituencyID:   stateConstituencyID,
-		LgaID:                 utils.PgInt4FromInt32(lgaID),
-		WardID:                utils.PgInt4FromInt32(wardID),
+		PartyID:               input.PartyID,
+		StateID:               utils.PgInt2FromInt16(int16(input.StateID)),
+		SenatorialDistrictID:  input.SenatorialDistrictID,
+		FederalConstituencyID: input.FederalConstituencyID,
+		StateConstituencyID:   input.StateConstituencyID,
+		LgaID:                 utils.PgInt4FromInt32(input.LgaID),
+		WardID:                utils.PgInt4FromInt32(input.WardID),
 		AccreditedVoters:      0,
 		VotesCast:             0,
 		ValidVotes:            0,
 		RejectedVotes:         0,
-		CandidateResults:      []byte("[]"),
 		ResultSheetImageUrl:   utils.PgTextFromString(input.ResultSheetImageURL),
 		ResultSheetVideoUrl:   utils.PgTextFromString(input.ResultSheetVideoURL),
-		UploadedByInec:        false,
 		Status:                utils.PgTextFromString("submitted"),
 	})
 	if err != nil {
@@ -338,35 +270,6 @@ func (s *Service) ApplyAIVerification(ctx context.Context, input AIVerificationI
 		AiConfidenceScore:   score,
 		DisputedReason:      disputedReason,
 		ResultIsAiGenerated: isAIGenerated,
-	})
-}
-
-// ReviewResult allows a platform admin to manually confirm or nullify a result.
-func (s *Service) ReviewResult(ctx context.Context, adminUserID int64, input ReviewResultInput) (queries.PollingUnitResult, error) {
-	if input.Status != "confirmed" && input.Status != "nullified" {
-		return queries.PollingUnitResult{}, errors.New("status must be 'confirmed' or 'nullified'")
-	}
-
-	var confirmedAt pgtype.Timestamptz
-	var confirmedBy pgtype.Int8
-	var disputedReason pgtype.Text
-
-	if input.Status == "confirmed" {
-		confirmedAt = pgtype.Timestamptz{Valid: true}
-		_ = confirmedAt.Scan("now")
-		confirmedBy = pgtype.Int8{Int64: adminUserID, Valid: true}
-	}
-
-	if input.DisputedReason != "" {
-		disputedReason = pgtype.Text{String: input.DisputedReason, Valid: true}
-	}
-
-	return s.queries.UpdateResultStatus(ctx, queries.UpdateResultStatusParams{
-		ID:             input.ResultID,
-		Status:         input.Status,
-		DisputedReason: disputedReason,
-		ConfirmedAt:    confirmedAt,
-		ConfirmedBy:    confirmedBy,
 	})
 }
 

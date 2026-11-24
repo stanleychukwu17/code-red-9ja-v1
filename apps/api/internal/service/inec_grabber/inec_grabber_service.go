@@ -567,18 +567,10 @@ func (s *INECGrabberService) processWardPUs(
 		}
 
 		if puErr == nil {
-			existingResults, _ := s.queries.GetAllPollingUnitResultsByPU(ctx, queries.GetAllPollingUnitResultsByPUParams{
+			if _, err := s.queries.GetINECPollingUnitResultByElectionAndPU(ctx, queries.GetINECPollingUnitResultByElectionAndPUParams{
 				ElectionID:    grabber.ElectionID,
 				PollingUnitID: pu.ID,
-			})
-			alreadyIngested := false
-			for _, r := range existingResults {
-				if r.UploadedByInec {
-					alreadyIngested = true
-					break
-				}
-			}
-			if alreadyIngested {
+			}); err == nil {
 				slog.Debug("INEC SyncGrabber: PU result already ingested, skipping", "pu_code", rawPUCode)
 				continue
 			}
@@ -609,6 +601,7 @@ func (s *INECGrabberService) processWardPUs(
 		// AI extraction via Gemini if enabled
 		var accreditedVoters, votesCast, validVotes, rejectedVotes int32
 		candidateResultsBytes := []byte("[]")
+		var extractedCandidates []utils.GeminiExtractedCandidate
 		statusStr := "submitted"
 		var rawJSONBytes []byte
 		var isAIGenerated pgtype.Bool
@@ -630,6 +623,7 @@ func (s *INECGrabberService) processWardPUs(
 				validVotes = int32(extractedData.ValidVotes)
 				rejectedVotes = int32(extractedData.RejectedVotes)
 				if len(extractedData.Candidates) > 0 {
+					extractedCandidates = extractedData.Candidates
 					if cBytes, err := json.Marshal(extractedData.Candidates); err == nil {
 						candidateResultsBytes = cBytes
 					}
@@ -654,38 +648,35 @@ func (s *INECGrabberService) processWardPUs(
 			continue
 		}
 
-		// Insert into polling_unit_results
-		submittedRes, err := s.queries.SubmitPollingUnitResult(ctx, queries.SubmitPollingUnitResultParams{
-			AssignmentID:           pgtype.Int8{},
-			ElectionID:             grabber.ElectionID,
-			ElectionGroupID:        grabber.ElectionGroupID,
-			PollingUnitID:          pu.ID,
-			SubmittedBy:            pgtype.Int8{}, // NULL - ingested by INEC system, not a user
-			PartyID:                pgtype.Int2{},
-			StateID:                pgtype.Int2{Int16: int16(pu.StateID), Valid: true},
-			SenatorialDistrictID:   pgtype.Int4{}, // NULL - senatorial district not known during INEC ingestion
-			FederalConstituencyID:  pgtype.Int4{},
-			StateConstituencyID:    pgtype.Int4{},
-			LgaID:                  pgtype.Int4{Int32: pu.LgaID, Valid: true},
-			WardID:                 pgtype.Int4{Int32: pu.WardID, Valid: true},
-			AccreditedVoters:       accreditedVoters,
-			VotesCast:              votesCast,
-			ValidVotes:             validVotes,
-			RejectedVotes:          rejectedVotes,
-			CandidateResults:       candidateResultsBytes,
-			ResultSheetImageUrl:    pgtype.Text{String: finalImageURL, Valid: true},
-			ResultSheetVideoUrl:    pgtype.Text{},
-			UploadedByInec:         true,
-			Status:                 pgtype.Text{String: statusStr, Valid: true},
-			AiExtractedData:        rawJSONBytes,
+		// Insert or update in inec_polling_unit_results
+		submittedRes, err := s.queries.UpsertINECPollingUnitResult(ctx, queries.UpsertINECPollingUnitResultParams{
+			ElectionID:            grabber.ElectionID,
+			ElectionGroupID:       grabber.ElectionGroupID,
+			PollingUnitID:         pu.ID,
+			StateID:               pgtype.Int2{Int16: int16(pu.StateID), Valid: true},
+			SenatorialDistrictID:  pgtype.Int4{}, // NULL - senatorial district not known during INEC ingestion
+			FederalConstituencyID: pgtype.Int4{},
+			StateConstituencyID:   pgtype.Int4{},
+			LgaID:                 pgtype.Int4{Int32: pu.LgaID, Valid: true},
+			WardID:                pgtype.Int4{Int32: pu.WardID, Valid: true},
+			AccreditedVoters:      accreditedVoters,
+			VotesCast:             votesCast,
+			ValidVotes:            validVotes,
+			RejectedVotes:         rejectedVotes,
+			ResultSheetImageUrl:   pgtype.Text{String: finalImageURL, Valid: true},
+			IrevDocumentUrl:       pgtype.Text{String: docURL, Valid: docURL != ""},
+			Status:                pgtype.Text{String: statusStr, Valid: true},
+			AiExtractedData:       rawJSONBytes,
 			ResultIsAiGenerated:   isAIGenerated,
-			AiConfidenceScore:      confidenceScore,
+			AiConfidenceScore:     confidenceScore,
 		})
 
 		if err != nil {
 			slog.Error("failed to submit INEC polling unit result", "pu_code", rawPUCode, "err", err)
 			continue
 		}
+
+		s.saveINECResultScores(ctx, submittedRes.ID, grabber.ElectionGroupID, grabber.ElectionID, pu.ID, extractedCandidates)
 
 		slog.Info("INEC SyncGrabber: successfully ingested matched PU result",
 			"pu_code", rawPUCode,
@@ -852,34 +843,42 @@ func (s *INECGrabberService) ResolveUnmatchedResult(
 		if err == nil {
 			resolvedPU = pgtype.Int4{Int32: pu.ID, Valid: true}
 
-			// Copy into polling_unit_results
+			// Copy into inec_polling_unit_results
 			imgURL := unmatched.ResultSheetImageUrl.String
-			vidURL := unmatched.ResultSheetVideoUrl.String
 
-			pur, err := s.queries.SubmitPollingUnitResult(ctx, queries.SubmitPollingUnitResultParams{
-				AssignmentID:           pgtype.Int8{},
-				ElectionID:             unmatched.ElectionID,
-				ElectionGroupID:        unmatched.ElectionGroupID,
-				PollingUnitID:          pu.ID,
-				SubmittedBy:            pgtype.Int8{Int64: adminUserID, Valid: adminUserID > 0},
-				PartyID:                unmatched.PartyID,
-				StateID:                pgtype.Int2{Int16: int16(pu.StateID), Valid: true},
-				SenatorialDistrictID:   pgtype.Int4{},
-				FederalConstituencyID:  pgtype.Int4{},
-				StateConstituencyID:    pgtype.Int4{},
-				LgaID:                  pgtype.Int4{Int32: pu.LgaID, Valid: true},
-				WardID:                 pgtype.Int4{Int32: pu.WardID, Valid: true},
-				AccreditedVoters:       unmatched.AccreditedVoters,
-				VotesCast:              unmatched.VotesCast,
-				ValidVotes:             unmatched.ValidVotes,
-				RejectedVotes:          unmatched.RejectedVotes,
-				CandidateResults:       unmatched.CandidateResults,
-				ResultSheetImageUrl:    pgtype.Text{String: imgURL, Valid: imgURL != ""},
-				ResultSheetVideoUrl:    pgtype.Text{String: vidURL, Valid: vidURL != ""},
-				UploadedByInec:         true,
+			pur, err := s.queries.UpsertINECPollingUnitResult(ctx, queries.UpsertINECPollingUnitResultParams{
+				ElectionID:            unmatched.ElectionID,
+				ElectionGroupID:       unmatched.ElectionGroupID,
+				PollingUnitID:         pu.ID,
+				StateID:               pgtype.Int2{Int16: int16(pu.StateID), Valid: true},
+				SenatorialDistrictID:  pgtype.Int4{},
+				FederalConstituencyID: pgtype.Int4{},
+				StateConstituencyID:   pgtype.Int4{},
+				LgaID:                 pgtype.Int4{Int32: pu.LgaID, Valid: true},
+				WardID:                pgtype.Int4{Int32: pu.WardID, Valid: true},
+				RegisteredVoters:      pgtype.Int4{Int32: unmatched.RegisteredVoters, Valid: true},
+				AccreditedVoters:      unmatched.AccreditedVoters,
+				BallotPapersIssued:    pgtype.Int4{Int32: unmatched.BallotPapersIssued, Valid: true},
+				UnusedBallotPapers:    pgtype.Int4{Int32: unmatched.UnusedBallotPapers, Valid: true},
+				SpoiledBallotPapers:   pgtype.Int4{Int32: unmatched.SpoiledBallotPapers, Valid: true},
+				RejectedVotes:         unmatched.RejectedVotes,
+				ValidVotes:            unmatched.ValidVotes,
+				UsedBallotPapers:             pgtype.Int4{Int32: unmatched.UsedBallotPapers, Valid: true},
+				VotesCast:                    unmatched.VotesCast,
+				ResultSheetImageUrl:          pgtype.Text{String: imgURL, Valid: imgURL != ""},
+				SerialNumber:                 unmatched.SerialNumber,
+				SheetDate:                    unmatched.SheetDate,
+				PresidingOfficerName:         unmatched.PresidingOfficerName,
+				HasPresidingOfficerSignature: pgtype.Bool{Bool: unmatched.HasPresidingOfficerSignature, Valid: true},
 			})
 			if err == nil {
 				resolvedResult = pgtype.Int8{Int64: pur.ID, Valid: true}
+
+				var unmatchedCandidates []utils.GeminiExtractedCandidate
+				if len(unmatched.CandidateResults) > 0 {
+					_ = json.Unmarshal(unmatched.CandidateResults, &unmatchedCandidates)
+				}
+				s.saveINECResultScores(ctx, pur.ID, unmatched.ElectionGroupID, unmatched.ElectionID, pu.ID, unmatchedCandidates)
 
 				// Upsert election_polling_unit_final_results directly
 				_, _ = s.queries.UpsertPollingUnitFinalResult(ctx, queries.UpsertPollingUnitFinalResultParams{
@@ -892,7 +891,7 @@ func (s *INECGrabberService) ResolveUnmatchedResult(
 					StateConstituencyID:      pgtype.Int4{},
 					LgaID:                    pgtype.Int4{Int32: pu.LgaID, Valid: true},
 					WardID:                   pgtype.Int4{Int32: pu.WardID, Valid: true},
-					PollingUnitResultID:      pgtype.Int8{Int64: pur.ID, Valid: true},
+					PollingUnitResultID:      pgtype.Int8{},
 					AccreditedVoters:         unmatched.AccreditedVoters,
 					VotesCast:                unmatched.VotesCast,
 					ValidVotes:               unmatched.ValidVotes,
@@ -946,4 +945,30 @@ func (s *INECGrabberService) ListLogsPaginated(ctx context.Context, grabberID *i
 
 func (s *INECGrabberService) TogglePause(ctx context.Context, id int64) (queries.InecResultGrabber, error) {
 	return s.queries.ToggleINECResultGrabberPause(ctx, id)
+}
+
+// saveINECResultScores replaces the normalized per-party scores for an INEC polling unit result.
+func (s *INECGrabberService) saveINECResultScores(ctx context.Context, inecResultID int64, electionGroupID, electionID, pollingUnitID int32, candidates []utils.GeminiExtractedCandidate) {
+	if err := s.queries.DeleteINECPollingUnitResultScoresByResultID(ctx, inecResultID); err != nil {
+		slog.Warn("failed to clear old INEC result scores", "inec_result_id", inecResultID, "err", err)
+		return
+	}
+	for _, c := range candidates {
+		shortName := strings.ToUpper(strings.TrimSpace(c.PartyShortName))
+		if shortName == "" {
+			continue
+		}
+		if _, err := s.queries.UpsertINECPollingUnitResultScore(ctx, queries.UpsertINECPollingUnitResultScoreParams{
+			InecResultID:    inecResultID,
+			ElectionGroupID: electionGroupID,
+			ElectionID:      electionID,
+			PollingUnitID:   pollingUnitID,
+			PartyShortName:  shortName,
+			VoteCount:       int32(c.VoteCount),
+			AgentName:       utils.PgTextFromString(strings.TrimSpace(c.AgentName)),
+			HasSignature:    c.HasSignature,
+		}); err != nil {
+			slog.Warn("failed to upsert INEC result score", "inec_result_id", inecResultID, "party", shortName, "err", err)
+		}
+	}
 }

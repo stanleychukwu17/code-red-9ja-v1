@@ -16,10 +16,8 @@ INSERT INTO polling_unit_results (
   votes_cast,
   valid_votes,
   rejected_votes,
-  candidate_results,
   result_sheet_image_url,
   result_sheet_video_url,
-  uploaded_by_inec,
   status,
   ai_extracted_data,
   result_is_ai_generated,
@@ -30,7 +28,7 @@ INSERT INTO polling_unit_results (
   sqlc.arg('election_group_id'),
   sqlc.arg('polling_unit_id'),
   sqlc.narg('submitted_by'),
-  sqlc.narg('party_id'),
+  sqlc.arg('party_id'),
   sqlc.narg('state_id'),
   sqlc.narg('senatorial_district_id'),
   sqlc.narg('federal_constituency_id'),
@@ -41,10 +39,8 @@ INSERT INTO polling_unit_results (
   sqlc.arg('votes_cast'),
   sqlc.arg('valid_votes'),
   sqlc.arg('rejected_votes'),
-  sqlc.arg('candidate_results'),
   sqlc.narg('result_sheet_image_url'),
   sqlc.narg('result_sheet_video_url'),
-  sqlc.arg('uploaded_by_inec'),
   COALESCE(sqlc.narg('status')::varchar(30), 'submitted'),
   sqlc.narg('ai_extracted_data'),
   sqlc.narg('result_is_ai_generated'),
@@ -58,9 +54,8 @@ SET
   votes_cast = $3,
   valid_votes = $4,
   rejected_votes = $5,
-  candidate_results = $6,
-  result_sheet_image_url = $7,
-  result_sheet_video_url = $8,
+  result_sheet_image_url = $6,
+  result_sheet_video_url = $7,
   status = 'submitted',
   updated_at = NOW()
 WHERE id = $1
@@ -84,7 +79,6 @@ WHERE
   AND (sqlc.narg('lga_id')::int        IS NULL OR lga_id            = sqlc.narg('lga_id'))
   AND (sqlc.narg('ward_id')::int       IS NULL OR ward_id           = sqlc.narg('ward_id'))
   AND (sqlc.narg('status')::text       IS NULL OR status            = sqlc.narg('status'))
-  AND (sqlc.narg('uploaded_by_inec')::boolean IS NULL OR uploaded_by_inec = sqlc.narg('uploaded_by_inec'))
   AND id < sqlc.arg('cursor')
 ORDER BY id DESC
 LIMIT sqlc.arg('limit');
@@ -102,9 +96,7 @@ SET
   ai_extracted_data   = $3,
   ai_confidence_score = $4,
   disputed_reason     = $5,
-  confirmed_at        = $6,
-  confirmed_by        = $7,
-  result_is_ai_generated = $8,
+  result_is_ai_generated = $6,
   updated_at          = NOW()
 WHERE id = $1
 RETURNING *;
@@ -125,18 +117,26 @@ RETURNING id, completed_at;
 -- name: UpdatePollingUnitResultAIExtraction :one
 UPDATE polling_unit_results
 SET
-  accredited_voters      = $2,
-  votes_cast             = $3,
-  valid_votes            = $4,
-  rejected_votes         = $5,
-  candidate_results      = $6,
-  status                 = $7,
-  ai_extracted_data      = $8,
-  result_is_ai_generated = $9,
-  ai_confidence_score    = $10,
-  disputed_reason        = $11,
-  updated_at             = NOW()
-WHERE id = $1
+  registered_voters               = sqlc.arg('registered_voters'),
+  accredited_voters               = sqlc.arg('accredited_voters'),
+  ballot_papers_issued            = sqlc.arg('ballot_papers_issued'),
+  unused_ballot_papers            = sqlc.arg('unused_ballot_papers'),
+  spoiled_ballot_papers           = sqlc.arg('spoiled_ballot_papers'),
+  votes_cast                      = sqlc.arg('votes_cast'),
+  valid_votes                     = sqlc.arg('valid_votes'),
+  rejected_votes                  = sqlc.arg('rejected_votes'),
+  used_ballot_papers              = sqlc.arg('used_ballot_papers'),
+  serial_number                   = sqlc.narg('serial_number'),
+  sheet_date                      = sqlc.narg('sheet_date'),
+  presiding_officer_name          = sqlc.narg('presiding_officer_name'),
+  has_presiding_officer_signature = sqlc.arg('has_presiding_officer_signature'),
+  status                          = sqlc.arg('status'),
+  ai_extracted_data               = sqlc.narg('ai_extracted_data'),
+  result_is_ai_generated          = sqlc.narg('result_is_ai_generated'),
+  ai_confidence_score             = sqlc.narg('ai_confidence_score'),
+  disputed_reason                 = sqlc.narg('disputed_reason'),
+  updated_at                      = NOW()
+WHERE id = sqlc.arg('id')
 RETURNING *;
 
 -- name: GetUserPollingUnitResultInElectionGroup :one
@@ -150,3 +150,43 @@ SELECT *
 FROM polling_unit_results
 WHERE election_id = $1 AND polling_unit_id = $2 AND submitted_by = $3
 LIMIT 1;
+
+-- name: DeletePollingUnitResultScoresByResultID :exec
+DELETE FROM polling_unit_result_scores
+WHERE result_id = $1;
+
+-- name: UpsertPollingUnitResultScore :one
+INSERT INTO polling_unit_result_scores (
+  result_id,
+  election_id,
+  election_group_id,
+  polling_unit_id,
+  party_id,
+  party_short_name,
+  vote_count,
+  agent_name,
+  has_signature
+) VALUES (
+  sqlc.arg('result_id'),
+  sqlc.arg('election_id'),
+  sqlc.arg('election_group_id'),
+  sqlc.arg('polling_unit_id'),
+  (SELECT id FROM parties WHERE UPPER(short_name) = UPPER(sqlc.arg('party_short_name')) LIMIT 1),
+  UPPER(TRIM(sqlc.arg('party_short_name'))),
+  sqlc.arg('vote_count'),
+  sqlc.narg('agent_name'),
+  sqlc.arg('has_signature')
+)
+ON CONFLICT (result_id, party_short_name) DO UPDATE SET
+  party_id      = COALESCE(EXCLUDED.party_id, polling_unit_result_scores.party_id),
+  vote_count    = EXCLUDED.vote_count,
+  agent_name    = EXCLUDED.agent_name,
+  has_signature = EXCLUDED.has_signature,
+  updated_at    = NOW()
+RETURNING *;
+
+-- name: GetPollingUnitResultScoresByPU :many
+SELECT *
+FROM polling_unit_result_scores
+WHERE election_id = $1 AND polling_unit_id = $2
+ORDER BY result_id, party_short_name;
