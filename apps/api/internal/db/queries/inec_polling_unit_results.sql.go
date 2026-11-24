@@ -22,7 +22,7 @@ func (q *Queries) DeleteINECPollingUnitResultScoresByResultID(ctx context.Contex
 }
 
 const getINECPollingUnitResultByElectionAndPU = `-- name: GetINECPollingUnitResultByElectionAndPU :one
-SELECT id, election_group_id, election_id, polling_unit_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, registered_voters, accredited_voters, ballot_papers_issued, unused_ballot_papers, spoiled_ballot_papers, rejected_votes, valid_votes, used_ballot_papers, votes_cast, result_sheet_image_url, irev_document_url, serial_number, sheet_date, presiding_officer_name, has_presiding_officer_signature, status, ai_extracted_data, result_is_ai_generated, ai_confidence_score, disputed_reason, created_at, updated_at
+SELECT id, election_group_id, election_id, polling_unit_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, registered_voters, accredited_voters, ballot_papers_issued, unused_ballot_papers, spoiled_ballot_papers, rejected_votes, valid_votes, used_ballot_papers, votes_cast, result_sheet_image_url, irev_document_url, serial_number, sheet_date, presiding_officer_name, has_presiding_officer_signature, status, ai_extracted_data, is_valid_result_sheet, result_is_ai_generated, ai_confidence_score, dispute_codes, disputed_reason, created_at, updated_at
 FROM inec_polling_unit_results
 WHERE election_id = $1 AND polling_unit_id = $2
 LIMIT 1
@@ -64,8 +64,10 @@ func (q *Queries) GetINECPollingUnitResultByElectionAndPU(ctx context.Context, a
 		&i.HasPresidingOfficerSignature,
 		&i.Status,
 		&i.AiExtractedData,
+		&i.IsValidResultSheet,
 		&i.ResultIsAiGenerated,
 		&i.AiConfidenceScore,
+		&i.DisputeCodes,
 		&i.DisputedReason,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -199,7 +201,7 @@ ON CONFLICT (election_id, polling_unit_id) DO UPDATE SET
   result_is_ai_generated          = EXCLUDED.result_is_ai_generated,
   ai_confidence_score             = EXCLUDED.ai_confidence_score,
   updated_at                      = NOW()
-RETURNING id, election_group_id, election_id, polling_unit_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, registered_voters, accredited_voters, ballot_papers_issued, unused_ballot_papers, spoiled_ballot_papers, rejected_votes, valid_votes, used_ballot_papers, votes_cast, result_sheet_image_url, irev_document_url, serial_number, sheet_date, presiding_officer_name, has_presiding_officer_signature, status, ai_extracted_data, result_is_ai_generated, ai_confidence_score, disputed_reason, created_at, updated_at
+RETURNING id, election_group_id, election_id, polling_unit_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, registered_voters, accredited_voters, ballot_papers_issued, unused_ballot_papers, spoiled_ballot_papers, rejected_votes, valid_votes, used_ballot_papers, votes_cast, result_sheet_image_url, irev_document_url, serial_number, sheet_date, presiding_officer_name, has_presiding_officer_signature, status, ai_extracted_data, is_valid_result_sheet, result_is_ai_generated, ai_confidence_score, dispute_codes, disputed_reason, created_at, updated_at
 `
 
 type UpsertINECPollingUnitResultParams struct {
@@ -293,8 +295,10 @@ func (q *Queries) UpsertINECPollingUnitResult(ctx context.Context, arg UpsertINE
 		&i.HasPresidingOfficerSignature,
 		&i.Status,
 		&i.AiExtractedData,
+		&i.IsValidResultSheet,
 		&i.ResultIsAiGenerated,
 		&i.AiConfidenceScore,
+		&i.DisputeCodes,
 		&i.DisputedReason,
 		&i.CreatedAt,
 		&i.UpdatedAt,

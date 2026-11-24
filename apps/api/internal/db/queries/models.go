@@ -235,8 +235,10 @@ type CollationResult struct {
 	HasCollationOfficerSignature bool               `json:"has_collation_officer_signature"`
 	Status                       string             `json:"status"`
 	AiExtractedData              []byte             `json:"ai_extracted_data"`
+	IsValidResultSheet           pgtype.Bool        `json:"is_valid_result_sheet"`
 	ResultIsAiGenerated          pgtype.Bool        `json:"result_is_ai_generated"`
 	AiConfidenceScore            pgtype.Numeric     `json:"ai_confidence_score"`
+	DisputeCodes                 []string           `json:"dispute_codes"`
 	DisputedReason               pgtype.Text        `json:"disputed_reason"`
 	CreatedAt                    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt                    pgtype.Timestamptz `json:"updated_at"`
@@ -438,8 +440,10 @@ type InecPollingUnitResult struct {
 	HasPresidingOfficerSignature bool               `json:"has_presiding_officer_signature"`
 	Status                       string             `json:"status"`
 	AiExtractedData              []byte             `json:"ai_extracted_data"`
+	IsValidResultSheet           pgtype.Bool        `json:"is_valid_result_sheet"`
 	ResultIsAiGenerated          pgtype.Bool        `json:"result_is_ai_generated"`
 	AiConfidenceScore            pgtype.Numeric     `json:"ai_confidence_score"`
+	DisputeCodes                 []string           `json:"dispute_codes"`
 	DisputedReason               pgtype.Text        `json:"disputed_reason"`
 	CreatedAt                    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt                    pgtype.Timestamptz `json:"updated_at"`
@@ -959,8 +963,10 @@ type PollingUnitResult struct {
 	ResultSheetVideoUrl          pgtype.Text        `json:"result_sheet_video_url"`
 	Status                       string             `json:"status"`
 	AiExtractedData              []byte             `json:"ai_extracted_data"`
+	IsValidResultSheet           pgtype.Bool        `json:"is_valid_result_sheet"`
 	ResultIsAiGenerated          pgtype.Bool        `json:"result_is_ai_generated"`
 	AiConfidenceScore            pgtype.Numeric     `json:"ai_confidence_score"`
+	DisputeCodes                 []string           `json:"dispute_codes"`
 	DisputedReason               pgtype.Text        `json:"disputed_reason"`
 	CreatedAt                    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt                    pgtype.Timestamptz `json:"updated_at"`

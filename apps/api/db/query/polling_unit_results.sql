@@ -89,6 +89,7 @@ SET
   ai_confidence_score = $4,
   disputed_reason     = $5,
   result_is_ai_generated = $6,
+  dispute_codes       = COALESCE($7::text[], '{}'),
   updated_at          = NOW()
 WHERE id = $1
 RETURNING *;
@@ -124,8 +125,10 @@ SET
   has_presiding_officer_signature = sqlc.arg('has_presiding_officer_signature'),
   status                          = sqlc.arg('status'),
   ai_extracted_data               = sqlc.narg('ai_extracted_data'),
+  is_valid_result_sheet           = sqlc.narg('is_valid_result_sheet'),
   result_is_ai_generated          = sqlc.narg('result_is_ai_generated'),
   ai_confidence_score             = sqlc.narg('ai_confidence_score'),
+  dispute_codes                   = COALESCE(sqlc.narg('dispute_codes')::text[], '{}'),
   disputed_reason                 = sqlc.narg('disputed_reason'),
   updated_at                      = NOW()
 WHERE id = sqlc.arg('id')

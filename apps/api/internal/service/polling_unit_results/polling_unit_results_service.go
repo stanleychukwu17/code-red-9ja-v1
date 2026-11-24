@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"time"
 
+	"free9ja/api/internal/constants"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	earningsservice "free9ja/api/internal/service/earnings"
@@ -145,7 +146,7 @@ func (s *Service) SubmitResult(ctx context.Context, input SubmitResultInput) (qu
 		WardID:                utils.PgInt4FromInt32(input.WardID),
 		ResultSheetImageUrl:   utils.PgTextFromString(input.ResultSheetImageURL),
 		ResultSheetVideoUrl:   utils.PgTextFromString(input.ResultSheetVideoURL),
-		Status:                utils.PgTextFromString("submitted"),
+		Status:                utils.PgTextFromString(constants.ResultStatusSubmitted),
 	})
 	if err != nil {
 		var pgErr *pgconn.PgError
@@ -172,12 +173,6 @@ func (s *Service) SubmitResult(ctx context.Context, input SubmitResultInput) (qu
 	if completed {
 		_ = s.rdb.Del(ctx, fmt.Sprintf("%s%d:eg:%d", db.RedisUserPollingUnitAssignment, input.UserID, input.ElectionGroupID)).Err()
 	}
-
-	// Agent earnings processing via Redis worker queue
-	_ = s.distributor.DistributeTaskCalculateAgentEarnings(context.Background(), &worker.CalculateAgentEarningsPayload{
-		AssignmentID: input.AssignmentID,
-		TaskType:     "results",
-	})
 
 	// Dispatch asynchronous AI extraction task
 	if err := s.distributor.DistributeTaskExtractPUResultAI(context.Background(), &worker.ExtractPUResultAIPayload{

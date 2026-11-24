@@ -113,10 +113,12 @@ CREATE TABLE polling_unit_results (
   --   ]
   -- }
   ai_extracted_data        JSONB,           -- Raw data Gemini pulled from the image
+  is_valid_result_sheet    BOOLEAN,                -- NULL while pending AI check; TRUE if valid EC8A sheet, FALSE if non-EC8A/invalid image
   result_is_ai_generated   BOOLEAN DEFAULT FALSE, -- Flag indicating if Gemini suspects the result_sheet_image_url is AI-generated
   ai_confidence_score      NUMERIC(5, 4),   -- 0.0000 – 1.0000
 
   -- Manual override (platform admin)
+  dispute_codes            TEXT[] NOT NULL DEFAULT '{}',
   disputed_reason          TEXT,
 
   created_at               TIMESTAMPTZ DEFAULT NOW(),
@@ -251,10 +253,12 @@ CREATE TABLE IF NOT EXISTS collation_results (
   status                   VARCHAR(30) NOT NULL DEFAULT 'submitted'
                            CHECK (status IN ('submitted', 'ai_verified', 'confirmed', 'disputed', 'nullified')),
   ai_extracted_data        JSONB,
+  is_valid_result_sheet    BOOLEAN,
   result_is_ai_generated   BOOLEAN DEFAULT FALSE,
   ai_confidence_score      NUMERIC(5, 4),
 
   -- Manual override / discrepancy resolution
+  dispute_codes            TEXT[] NOT NULL DEFAULT '{}',
   disputed_reason          TEXT,
 
   created_at               TIMESTAMPTZ DEFAULT NOW() NOT NULL,
@@ -314,10 +318,12 @@ CREATE TABLE IF NOT EXISTS inec_polling_unit_results (
   status                   VARCHAR(30) NOT NULL DEFAULT 'submitted'
                            CHECK (status IN ('submitted', 'ai_verified', 'confirmed', 'disputed', 'nullified')),
   ai_extracted_data        JSONB,
+  is_valid_result_sheet    BOOLEAN,
   result_is_ai_generated   BOOLEAN DEFAULT FALSE,
   ai_confidence_score      NUMERIC(5, 4),
 
   -- Manual override (platform admin)
+  dispute_codes            TEXT[] NOT NULL DEFAULT '{}',
   disputed_reason          TEXT,
 
   created_at               TIMESTAMPTZ DEFAULT NOW() NOT NULL,

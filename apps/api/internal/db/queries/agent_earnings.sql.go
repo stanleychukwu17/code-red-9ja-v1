@@ -151,7 +151,7 @@ SELECT
   a.election_ended_at,
   a.last_update_at,
   COALESCE((SELECT COUNT(*)::int FROM polling_unit_updates puu WHERE puu.assignment_id = a.id), 0)::int AS updates_count,
-  COALESCE((SELECT COUNT(*)::int FROM polling_unit_results pur WHERE pur.assignment_id = a.id), 0)::int AS results_submitted_count,
+  COALESCE((SELECT COUNT(*)::int FROM polling_unit_results pur WHERE pur.assignment_id = a.id AND pur.is_valid_result_sheet = TRUE AND pur.result_is_ai_generated = FALSE), 0)::int AS results_submitted_count,
   a.potential_payment_kobo,
   pu.latitude AS pu_latitude,
   pu.longitude AS pu_longitude,

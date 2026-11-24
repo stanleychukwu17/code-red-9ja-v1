@@ -12,7 +12,7 @@ import (
 )
 
 const getCollationResultByID = `-- name: GetCollationResultByID :one
-SELECT id, election_id, election_group_id, submitted_by, party_id, form_type, role_type, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, registered_voters, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, result_sheet_image_url, result_sheet_video_url, serial_number, sheet_date, collation_officer_name, has_collation_officer_signature, status, ai_extracted_data, result_is_ai_generated, ai_confidence_score, disputed_reason, created_at, updated_at FROM collation_results
+SELECT id, election_id, election_group_id, submitted_by, party_id, form_type, role_type, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, registered_voters, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, result_sheet_image_url, result_sheet_video_url, serial_number, sheet_date, collation_officer_name, has_collation_officer_signature, status, ai_extracted_data, is_valid_result_sheet, result_is_ai_generated, ai_confidence_score, dispute_codes, disputed_reason, created_at, updated_at FROM collation_results
 WHERE id = $1
 `
 
@@ -47,8 +47,10 @@ func (q *Queries) GetCollationResultByID(ctx context.Context, id int64) (Collati
 		&i.HasCollationOfficerSignature,
 		&i.Status,
 		&i.AiExtractedData,
+		&i.IsValidResultSheet,
 		&i.ResultIsAiGenerated,
 		&i.AiConfidenceScore,
+		&i.DisputeCodes,
 		&i.DisputedReason,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -57,7 +59,7 @@ func (q *Queries) GetCollationResultByID(ctx context.Context, id int64) (Collati
 }
 
 const getCollationResultBySupervisorSubmission = `-- name: GetCollationResultBySupervisorSubmission :one
-SELECT id, election_id, election_group_id, submitted_by, party_id, form_type, role_type, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, registered_voters, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, result_sheet_image_url, result_sheet_video_url, serial_number, sheet_date, collation_officer_name, has_collation_officer_signature, status, ai_extracted_data, result_is_ai_generated, ai_confidence_score, disputed_reason, created_at, updated_at FROM collation_results
+SELECT id, election_id, election_group_id, submitted_by, party_id, form_type, role_type, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, registered_voters, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, result_sheet_image_url, result_sheet_video_url, serial_number, sheet_date, collation_officer_name, has_collation_officer_signature, status, ai_extracted_data, is_valid_result_sheet, result_is_ai_generated, ai_confidence_score, dispute_codes, disputed_reason, created_at, updated_at FROM collation_results
 WHERE election_id = $1
   AND submitted_by = $2
   AND form_type = $3
@@ -101,8 +103,10 @@ func (q *Queries) GetCollationResultBySupervisorSubmission(ctx context.Context, 
 		&i.HasCollationOfficerSignature,
 		&i.Status,
 		&i.AiExtractedData,
+		&i.IsValidResultSheet,
 		&i.ResultIsAiGenerated,
 		&i.AiConfidenceScore,
+		&i.DisputeCodes,
 		&i.DisputedReason,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -111,7 +115,7 @@ func (q *Queries) GetCollationResultBySupervisorSubmission(ctx context.Context, 
 }
 
 const listCollationResultsByScope = `-- name: ListCollationResultsByScope :many
-SELECT id, election_id, election_group_id, submitted_by, party_id, form_type, role_type, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, registered_voters, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, result_sheet_image_url, result_sheet_video_url, serial_number, sheet_date, collation_officer_name, has_collation_officer_signature, status, ai_extracted_data, result_is_ai_generated, ai_confidence_score, disputed_reason, created_at, updated_at FROM collation_results
+SELECT id, election_id, election_group_id, submitted_by, party_id, form_type, role_type, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, registered_voters, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, result_sheet_image_url, result_sheet_video_url, serial_number, sheet_date, collation_officer_name, has_collation_officer_signature, status, ai_extracted_data, is_valid_result_sheet, result_is_ai_generated, ai_confidence_score, dispute_codes, disputed_reason, created_at, updated_at FROM collation_results
 WHERE election_group_id = $1
   AND ($2::int IS NULL OR election_id = $2)
   AND ($3::varchar IS NULL OR form_type = $3)
@@ -179,8 +183,10 @@ func (q *Queries) ListCollationResultsByScope(ctx context.Context, arg ListColla
 			&i.HasCollationOfficerSignature,
 			&i.Status,
 			&i.AiExtractedData,
+			&i.IsValidResultSheet,
 			&i.ResultIsAiGenerated,
 			&i.AiConfidenceScore,
+			&i.DisputeCodes,
 			&i.DisputedReason,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -252,7 +258,7 @@ INSERT INTO collation_results (
   $25,
   COALESCE($26, false),
   $27
-) RETURNING id, election_id, election_group_id, submitted_by, party_id, form_type, role_type, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, registered_voters, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, result_sheet_image_url, result_sheet_video_url, serial_number, sheet_date, collation_officer_name, has_collation_officer_signature, status, ai_extracted_data, result_is_ai_generated, ai_confidence_score, disputed_reason, created_at, updated_at
+) RETURNING id, election_id, election_group_id, submitted_by, party_id, form_type, role_type, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, registered_voters, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, result_sheet_image_url, result_sheet_video_url, serial_number, sheet_date, collation_officer_name, has_collation_officer_signature, status, ai_extracted_data, is_valid_result_sheet, result_is_ai_generated, ai_confidence_score, dispute_codes, disputed_reason, created_at, updated_at
 `
 
 type SubmitCollationResultParams struct {
@@ -344,8 +350,10 @@ func (q *Queries) SubmitCollationResult(ctx context.Context, arg SubmitCollation
 		&i.HasCollationOfficerSignature,
 		&i.Status,
 		&i.AiExtractedData,
+		&i.IsValidResultSheet,
 		&i.ResultIsAiGenerated,
 		&i.AiConfidenceScore,
+		&i.DisputeCodes,
 		&i.DisputedReason,
 		&i.CreatedAt,
 		&i.UpdatedAt,
