@@ -6,6 +6,7 @@ import (
 	"math"
 	"net/http"
 	"strconv"
+	"time"
 
 	"free9ja/api/internal/constants"
 	"free9ja/api/internal/db/queries"
@@ -21,6 +22,7 @@ import (
 )
 
 type PollingUnitResultsService interface {
+	HasSubmittedResult(ctx context.Context, electionID int32, partyID int16, pollingUnitID int32, userID int64) (bool, error)
 	SubmitResult(ctx context.Context, input pu_results.SubmitResultInput) (queries.PollingUnitResult, error)
 	GetResult(ctx context.Context, id int64) (queries.PollingUnitResult, error)
 	ListResults(ctx context.Context, params queries.ListPollingUnitResultsParams) ([]queries.PollingUnitResult, error)
@@ -48,6 +50,12 @@ type SupervisorAssignmentsService interface {
 
 type ElectionsService interface {
 	GetElectionsForWard(ctx context.Context, electionGroupID, wardID int32) ([]queries.GetElectionsForWardRow, error)
+	GetElectionsForLGA(ctx context.Context, electionGroupID, lgaID int32) ([]queries.GetElectionsForLGARow, error)
+	GetElectionsForState(ctx context.Context, electionGroupID int32, stateID int16) ([]queries.GetElectionsForStateRow, error)
+}
+
+type ElectionGroupsService interface {
+	GetElectionGroupByID(ctx context.Context, id int32) (queries.ElectionGroup, error)
 }
 
 type BodiesService interface {
@@ -59,30 +67,32 @@ type WardsService interface {
 }
 
 type Handler struct {
-	service             PollingUnitResultsService
-	collationService    CollationResultsService
-	assignmentsService  PollingUnitAssignmentsService
-	supervisorService   SupervisorAssignmentsService
-	pollingUnitsService PollingUnitsService
-	electionsService    ElectionsService
-	bodiesService       BodiesService
-	wardsService        WardsService
-	utils               *utils.Utils
-	validate            *validator.Validate
+	service               PollingUnitResultsService
+	collationService      CollationResultsService
+	assignmentsService    PollingUnitAssignmentsService
+	supervisorService     SupervisorAssignmentsService
+	pollingUnitsService   PollingUnitsService
+	electionsService      ElectionsService
+	electionGroupsService ElectionGroupsService
+	bodiesService         BodiesService
+	wardsService          WardsService
+	utils                 *utils.Utils
+	validate              *validator.Validate
 }
 
-func NewHandler(s PollingUnitResultsService, cs CollationResultsService, u *utils.Utils, asgnSvc PollingUnitAssignmentsService, supSvc SupervisorAssignmentsService, puSvc PollingUnitsService, elecSvc ElectionsService, bodiesSvc BodiesService, wardsSvc WardsService) *Handler {
+func NewHandler(s PollingUnitResultsService, cs CollationResultsService, u *utils.Utils, asgnSvc PollingUnitAssignmentsService, supSvc SupervisorAssignmentsService, puSvc PollingUnitsService, elecSvc ElectionsService, egSvc ElectionGroupsService, bodiesSvc BodiesService, wardsSvc WardsService) *Handler {
 	return &Handler{
-		service:             s,
-		collationService:    cs,
-		assignmentsService:  asgnSvc,
-		supervisorService:   supSvc,
-		pollingUnitsService: puSvc,
-		electionsService:    elecSvc,
-		bodiesService:       bodiesSvc,
-		wardsService:        wardsSvc,
-		utils:               u,
-		validate:            validator.New(),
+		service:               s,
+		collationService:      cs,
+		assignmentsService:    asgnSvc,
+		supervisorService:     supSvc,
+		pollingUnitsService:   puSvc,
+		electionsService:      elecSvc,
+		electionGroupsService: egSvc,
+		bodiesService:         bodiesSvc,
+		wardsService:          wardsSvc,
+		utils:                 u,
+		validate:              validator.New(),
 	}
 }
 
@@ -168,6 +178,17 @@ func (h *Handler) SubmitResult(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Verify election group exists and current time is within the election reporting window
+	eg, err := h.electionGroupsService.GetElectionGroupByID(r.Context(), req.ElectionGroupID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election_group_id")
+		return
+	}
+	if err := utils.ValidateElectionReportingWindow(eg.ElectionDate.Time, time.Now(), utils.PostElectionCollationGraceDays); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	if req.AssignmentID != nil && *req.AssignmentID > 0 {
 		// =========================================================================
 		// 1. Polling Unit Agent Flow -> polling_unit_results (Form EC8A)
@@ -215,9 +236,20 @@ func (h *Handler) SubmitResult(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		// Fast-path duplicate check (Redis-cached) before opening a DB transaction
+		alreadySubmitted, err := h.service.HasSubmittedResult(r.Context(), req.ElectionID, assignment.PartyID, req.PollingUnitID, claims.UserID)
+		if err != nil {
+			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to verify existing result: "+err.Error())
+			return
+		}
+		if alreadySubmitted {
+			h.utils.RespondError(w, http.StatusConflict, "you have already submitted results for this election at your polling unit")
+			return
+		}
+
 		result, err := h.service.SubmitResult(r.Context(), pu_results.SubmitResultInput{
-			UserFakeID:            claims.FakeID,
-			AssignmentID:          req.AssignmentID,
+			UserID:                claims.UserID,
+			AssignmentID:          *req.AssignmentID,
 			PartyID:               assignment.PartyID,
 			ElectionID:            req.ElectionID,
 			ElectionGroupID:       req.ElectionGroupID,
@@ -284,6 +316,51 @@ func (h *Handler) SubmitResult(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Verify the requested election applies to the supervisor's assigned ward, LGA, or state
+	var electionAllowed bool
+	switch roleType {
+	case constants.RoleWardElectionSupervisor:
+		wardElections, wErr := h.electionsService.GetElectionsForWard(r.Context(), req.ElectionGroupID, *wardID)
+		if wErr != nil {
+			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to verify eligible elections: "+wErr.Error())
+			return
+		}
+		for _, e := range wardElections {
+			if e.ID == req.ElectionID {
+				electionAllowed = true
+				break
+			}
+		}
+	case constants.RoleLgaElectionSupervisor:
+		lgaElections, lErr := h.electionsService.GetElectionsForLGA(r.Context(), req.ElectionGroupID, *lgaID)
+		if lErr != nil {
+			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to verify eligible elections: "+lErr.Error())
+			return
+		}
+		for _, e := range lgaElections {
+			if e.ID == req.ElectionID {
+				electionAllowed = true
+				break
+			}
+		}
+	case constants.RoleStateElectionSupervisor:
+		stateElections, sErr := h.electionsService.GetElectionsForState(r.Context(), req.ElectionGroupID, stateID)
+		if sErr != nil {
+			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to verify eligible elections: "+sErr.Error())
+			return
+		}
+		for _, e := range stateElections {
+			if e.ID == req.ElectionID {
+				electionAllowed = true
+				break
+			}
+		}
+	}
+	if !electionAllowed {
+		h.utils.RespondError(w, http.StatusForbidden, "This election does not apply to your assigned collation scope")
+		return
+	}
+
 	// Resolve constituency IDs from the supervisor's assigned ward (EC8B) or LGA (EC8C)
 	var senatorialDistrictID, federalConstituencyID, stateConstituencyID pgtype.Int4
 	if wardID != nil {
@@ -300,7 +377,7 @@ func (h *Handler) SubmitResult(w http.ResponseWriter, r *http.Request) {
 	}
 
 	collationResult, err := h.collationService.SubmitCollationResult(r.Context(), collation_results.SubmitCollationResultInput{
-		UserFakeID:            claims.FakeID,
+		UserID:                claims.UserID,
 		ElectionID:            req.ElectionID,
 		ElectionGroupID:       req.ElectionGroupID,
 		RoleType:              roleType,

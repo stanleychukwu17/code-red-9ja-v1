@@ -8,25 +8,25 @@ import (
 	"log/slog"
 	"time"
 
+	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	earningsservice "free9ja/api/internal/service/earnings"
 	"free9ja/api/internal/utils"
 	"free9ja/api/internal/worker"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 )
-
-type usersService interface {
-	GetUserByFakeID(ctx context.Context, fakeID int64, opts ...queries.GetUserOptions) (queries.UserWithPlaces, error)
-}
 
 type Service struct {
 	queries     *queries.Queries
 	pool        *pgxpool.Pool
+	rdb         *redis.Client
 	distributor worker.TaskDistributor
 	earningsSvc earningsService
-	usersSvc    usersService
 }
 
 type earningsService interface {
@@ -34,8 +34,40 @@ type earningsService interface {
 	GetExpectedResultsCountForPU(ctx context.Context, electionGroupID int32, pollingUnitID int32) (int32, error)
 }
 
-func NewService(q *queries.Queries, pool *pgxpool.Pool, distributor worker.TaskDistributor, earningsSvc earningsService, usersSvc usersService) *Service {
-	return &Service{queries: q, pool: pool, distributor: distributor, earningsSvc: earningsSvc, usersSvc: usersSvc}
+func NewService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client, distributor worker.TaskDistributor, earningsSvc earningsService) *Service {
+	return &Service{queries: q, pool: pool, rdb: rdb, distributor: distributor, earningsSvc: earningsSvc}
+}
+
+func submittedResultCacheKey(electionID int32, partyID int16, pollingUnitID int32, userID int64) string {
+	return fmt.Sprintf("%s%d:%d:%d:%d", db.RedisPUResultSubmitted, electionID, partyID, pollingUnitID, userID)
+}
+
+// HasSubmittedResult checks Redis first, then Postgres, to see if the user already submitted a result for this election, party, and PU.
+func (s *Service) HasSubmittedResult(ctx context.Context, electionID int32, partyID int16, pollingUnitID int32, userID int64) (bool, error) {
+	key := submittedResultCacheKey(electionID, partyID, pollingUnitID, userID)
+	if _, err := s.rdb.Get(ctx, key).Result(); err == nil {
+		return true, nil
+	}
+
+	existing, err := s.queries.GetPollingUnitResultByUserAndElection(ctx, queries.GetPollingUnitResultByUserAndElectionParams{
+		ElectionID:    electionID,
+		PartyID:       partyID,
+		PollingUnitID: pollingUnitID,
+		SubmittedBy:   pgtype.Int8{Int64: userID, Valid: true},
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	if existing.ID > 0 {
+		_ = s.rdb.Set(ctx, key, "1", db.RedisSevenDaysTTL).Err()
+		return true, nil
+	}
+
+	return false, nil
 }
 
 // CandidateResult is the per-candidate entry stored in the JSONB column.
@@ -48,8 +80,8 @@ type CandidateResult struct {
 
 // SubmitResultInput carries everything needed to submit a polling unit result.
 type SubmitResultInput struct {
-	UserFakeID            int64
-	AssignmentID          *int64
+	UserID                int64
+	AssignmentID          int64
 	ElectionID            int32
 	ElectionGroupID       int32
 	PollingUnitID         int32
@@ -74,47 +106,6 @@ type AIVerificationInput struct {
 	IsAIGenerated   bool
 }
 
-// validateUserEligibility verifies the election reporting window, registered voter polling unit (when no assignment),
-// and ensures the user is not submitting results for a different polling unit in this election group.
-func (s *Service) validateUserEligibility(
-	ctx context.Context,
-	qtx *queries.Queries,
-	user queries.UserWithPlaces,
-	assignmentID *int64,
-	electionGroupID int32,
-	pollingUnitID int32,
-) error {
-	// 1. Verify election group exists and current time is within the election reporting window
-	eg, err := qtx.GetElectionGroupByID(ctx, electionGroupID)
-	if err != nil {
-		return errors.New("invalid election_group_id")
-	}
-	if err := utils.ValidateElectionReportingWindow(eg.ElectionDate.Time, time.Now(), utils.PostElectionCollationGraceDays); err != nil {
-		return err
-	}
-
-	// 2. Registered voter validation when submitting without a polling agent assignment
-	if assignmentID == nil {
-		if !user.PollingUnitID.Valid || user.PollingUnitID.Int32 == 0 {
-			return errors.New("you do not have a registered polling unit. Please update your profile with your polling unit to submit results")
-		}
-		if user.PollingUnitID.Int32 != pollingUnitID {
-			return errors.New("you can only upload election results for your registered polling unit")
-		}
-	}
-
-	// 3. Cross-polling unit lock: ensure user has not submitted results for a different PU in this election group
-	existingPUID, err := qtx.GetUserPollingUnitResultInElectionGroup(ctx, queries.GetUserPollingUnitResultInElectionGroupParams{
-		SubmittedBy:     pgtype.Int8{Int64: user.ID, Valid: true},
-		ElectionGroupID: electionGroupID,
-	})
-	if err == nil && existingPUID > 0 && existingPUID != pollingUnitID {
-		return fmt.Errorf("you have already submitted election results for polling unit #%d and cannot submit for other polling units", existingPUID)
-	}
-
-	return nil
-}
-
 // SubmitResult inserts a new polling unit result record rapidly (<20ms) and queues an asynchronous AI extraction task.
 func (s *Service) SubmitResult(ctx context.Context, input SubmitResultInput) (queries.PollingUnitResult, error) {
 	if input.ResultSheetImageURL == "" {
@@ -123,10 +114,11 @@ func (s *Service) SubmitResult(ctx context.Context, input SubmitResultInput) (qu
 	if input.PartyID <= 0 {
 		return queries.PollingUnitResult{}, errors.New("party_id is required")
 	}
-
-	user, err := s.usersSvc.GetUserByFakeID(ctx, input.UserFakeID)
-	if err != nil {
-		return queries.PollingUnitResult{}, errors.New("user not found")
+	if input.UserID <= 0 {
+		return queries.PollingUnitResult{}, errors.New("user_id is required")
+	}
+	if input.AssignmentID <= 0 {
+		return queries.PollingUnitResult{}, errors.New("assignment_id is required")
 	}
 
 	tx, err := s.pool.Begin(ctx)
@@ -137,40 +129,13 @@ func (s *Service) SubmitResult(ctx context.Context, input SubmitResultInput) (qu
 
 	qtx := s.queries.WithTx(tx)
 
-	if err := s.validateUserEligibility(
-		ctx,
-		qtx,
-		user,
-		input.AssignmentID,
-		input.ElectionGroupID,
-		input.PollingUnitID,
-	); err != nil {
-		return queries.PollingUnitResult{}, err
-	}
-
-	// Verify election exists and belongs to the requested election group
-	election, err := qtx.GetElectionInstanceByID(ctx, input.ElectionID)
-	if err != nil || election.ElectionGroupID != input.ElectionGroupID {
-		return queries.PollingUnitResult{}, errors.New("invalid election_id for this election group")
-	}
-
-	// Check if this user already submitted results for this specific election at this PU
-	existingResult, err := qtx.GetPollingUnitResultByUserAndElection(ctx, queries.GetPollingUnitResultByUserAndElectionParams{
-		ElectionID:    input.ElectionID,
-		PollingUnitID: input.PollingUnitID,
-		SubmittedBy:   pgtype.Int8{Int64: user.ID, Valid: true},
-	})
-	if err == nil && existingResult.ID > 0 {
-		return queries.PollingUnitResult{}, errors.New("you have already submitted results for this election at your polling unit")
-	}
-
 	// Insert raw submission record with initial status 'submitted'
 	result, err := qtx.SubmitPollingUnitResult(ctx, queries.SubmitPollingUnitResultParams{
-		AssignmentID:          utils.PgInt8FromPtr(input.AssignmentID),
+		AssignmentID:          utils.PgInt8FromInt64(input.AssignmentID),
 		ElectionID:            input.ElectionID,
 		ElectionGroupID:       input.ElectionGroupID,
 		PollingUnitID:         input.PollingUnitID,
-		SubmittedBy:           utils.PgInt8FromInt64(user.ID),
+		SubmittedBy:           utils.PgInt8FromInt64(input.UserID),
 		PartyID:               input.PartyID,
 		StateID:               utils.PgInt2FromInt16(int16(input.StateID)),
 		SenatorialDistrictID:  input.SenatorialDistrictID,
@@ -178,47 +143,44 @@ func (s *Service) SubmitResult(ctx context.Context, input SubmitResultInput) (qu
 		StateConstituencyID:   input.StateConstituencyID,
 		LgaID:                 utils.PgInt4FromInt32(input.LgaID),
 		WardID:                utils.PgInt4FromInt32(input.WardID),
-		AccreditedVoters:      0,
-		VotesCast:             0,
-		ValidVotes:            0,
-		RejectedVotes:         0,
 		ResultSheetImageUrl:   utils.PgTextFromString(input.ResultSheetImageURL),
 		ResultSheetVideoUrl:   utils.PgTextFromString(input.ResultSheetVideoURL),
 		Status:                utils.PgTextFromString("submitted"),
 	})
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return queries.PollingUnitResult{}, errors.New("you have already submitted results for this election at your polling unit")
+		}
 		return queries.PollingUnitResult{}, err
 	}
 
-	if input.AssignmentID != nil {
-		if err := s.syncAssignmentResultsProgress(ctx, qtx, *input.AssignmentID, input.ElectionGroupID, input.PollingUnitID); err != nil {
-			return queries.PollingUnitResult{}, err
-		}
+	// Check if this submission completes all expected elections for the PU and mark the assignment completed if so
+	if err := s.syncAssignmentResultsProgress(ctx, qtx, input.AssignmentID, input.ElectionGroupID, input.PollingUnitID); err != nil {
+		return queries.PollingUnitResult{}, err
 	}
 
 	if err := tx.Commit(ctx); err != nil {
 		return queries.PollingUnitResult{}, err
 	}
 
+	// Cache submission flag in Redis so subsequent retries/duplicates are rejected without hitting Postgres
+	_ = s.rdb.Set(ctx, submittedResultCacheKey(input.ElectionID, input.PartyID, input.PollingUnitID, input.UserID), "1", db.RedisSevenDaysTTL).Err()
+
 	// Agent earnings processing via Redis worker queue
-	if input.AssignmentID != nil && s.distributor != nil {
-		_ = s.distributor.DistributeTaskCalculateAgentEarnings(context.Background(), &worker.CalculateAgentEarningsPayload{
-			AssignmentID: *input.AssignmentID,
-			TaskType:     "results",
-		})
-	}
+	_ = s.distributor.DistributeTaskCalculateAgentEarnings(context.Background(), &worker.CalculateAgentEarningsPayload{
+		AssignmentID: input.AssignmentID,
+		TaskType:     "results",
+	})
 
 	// Dispatch asynchronous AI extraction task
-	if s.distributor != nil && input.ResultSheetImageURL != "" {
-		err := s.distributor.DistributeTaskExtractPUResultAI(context.Background(), &worker.ExtractPUResultAIPayload{
-			ResultID:            result.ID,
-			ElectionID:          result.ElectionID,
-			PollingUnitID:       result.PollingUnitID,
-			ResultSheetImageURL: input.ResultSheetImageURL,
-		})
-		if err != nil {
-			slog.Error("failed to enqueue AI extraction task", "result_id", result.ID, "err", err)
-		}
+	if err := s.distributor.DistributeTaskExtractPUResultAI(context.Background(), &worker.ExtractPUResultAIPayload{
+		ResultID:            result.ID,
+		ElectionID:          result.ElectionID,
+		PollingUnitID:       result.PollingUnitID,
+		ResultSheetImageURL: input.ResultSheetImageURL,
+	}); err != nil {
+		slog.Error("failed to enqueue AI extraction task", "result_id", result.ID, "err", err)
 	}
 
 	return result, nil

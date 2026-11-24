@@ -154,18 +154,24 @@ func (q *Queries) GetPollingUnitResult(ctx context.Context, id int64) (PollingUn
 const getPollingUnitResultByUserAndElection = `-- name: GetPollingUnitResultByUserAndElection :one
 SELECT id, assignment_id, election_group_id, party_id, election_id, polling_unit_id, submitted_by, state_id, lga_id, ward_id, senatorial_district_id, federal_constituency_id, state_constituency_id, registered_voters, accredited_voters, ballot_papers_issued, unused_ballot_papers, spoiled_ballot_papers, rejected_votes, valid_votes, used_ballot_papers, votes_cast, serial_number, sheet_date, presiding_officer_name, has_presiding_officer_signature, result_sheet_image_url, result_sheet_video_url, status, ai_extracted_data, result_is_ai_generated, ai_confidence_score, disputed_reason, created_at, updated_at
 FROM polling_unit_results
-WHERE election_id = $1 AND polling_unit_id = $2 AND submitted_by = $3
+WHERE election_id = $1 AND party_id = $2 AND polling_unit_id = $3 AND submitted_by = $4
 LIMIT 1
 `
 
 type GetPollingUnitResultByUserAndElectionParams struct {
 	ElectionID    int32       `json:"election_id"`
+	PartyID       int16       `json:"party_id"`
 	PollingUnitID int32       `json:"polling_unit_id"`
 	SubmittedBy   pgtype.Int8 `json:"submitted_by"`
 }
 
 func (q *Queries) GetPollingUnitResultByUserAndElection(ctx context.Context, arg GetPollingUnitResultByUserAndElectionParams) (PollingUnitResult, error) {
-	row := q.db.QueryRow(ctx, getPollingUnitResultByUserAndElection, arg.ElectionID, arg.PollingUnitID, arg.SubmittedBy)
+	row := q.db.QueryRow(ctx, getPollingUnitResultByUserAndElection,
+		arg.ElectionID,
+		arg.PartyID,
+		arg.PollingUnitID,
+		arg.SubmittedBy,
+	)
 	var i PollingUnitResult
 	err := row.Scan(
 		&i.ID,
@@ -411,10 +417,6 @@ INSERT INTO polling_unit_results (
   state_constituency_id,
   lga_id,
   ward_id,
-  accredited_voters,
-  votes_cast,
-  valid_votes,
-  rejected_votes,
   result_sheet_image_url,
   result_sheet_video_url,
   status,
@@ -436,14 +438,10 @@ INSERT INTO polling_unit_results (
   $12,
   $13,
   $14,
-  $15,
+  COALESCE($15::varchar(30), 'submitted'),
   $16,
   $17,
-  $18,
-  COALESCE($19::varchar(30), 'submitted'),
-  $20,
-  $21,
-  $22
+  $18
 ) RETURNING id, assignment_id, election_group_id, party_id, election_id, polling_unit_id, submitted_by, state_id, lga_id, ward_id, senatorial_district_id, federal_constituency_id, state_constituency_id, registered_voters, accredited_voters, ballot_papers_issued, unused_ballot_papers, spoiled_ballot_papers, rejected_votes, valid_votes, used_ballot_papers, votes_cast, serial_number, sheet_date, presiding_officer_name, has_presiding_officer_signature, result_sheet_image_url, result_sheet_video_url, status, ai_extracted_data, result_is_ai_generated, ai_confidence_score, disputed_reason, created_at, updated_at
 `
 
@@ -460,10 +458,6 @@ type SubmitPollingUnitResultParams struct {
 	StateConstituencyID   pgtype.Int4    `json:"state_constituency_id"`
 	LgaID                 pgtype.Int4    `json:"lga_id"`
 	WardID                pgtype.Int4    `json:"ward_id"`
-	AccreditedVoters      int32          `json:"accredited_voters"`
-	VotesCast             int32          `json:"votes_cast"`
-	ValidVotes            int32          `json:"valid_votes"`
-	RejectedVotes         int32          `json:"rejected_votes"`
 	ResultSheetImageUrl   pgtype.Text    `json:"result_sheet_image_url"`
 	ResultSheetVideoUrl   pgtype.Text    `json:"result_sheet_video_url"`
 	Status                pgtype.Text    `json:"status"`
@@ -486,10 +480,6 @@ func (q *Queries) SubmitPollingUnitResult(ctx context.Context, arg SubmitPolling
 		arg.StateConstituencyID,
 		arg.LgaID,
 		arg.WardID,
-		arg.AccreditedVoters,
-		arg.VotesCast,
-		arg.ValidVotes,
-		arg.RejectedVotes,
 		arg.ResultSheetImageUrl,
 		arg.ResultSheetVideoUrl,
 		arg.Status,

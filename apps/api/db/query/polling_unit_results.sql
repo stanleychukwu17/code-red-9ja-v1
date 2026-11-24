@@ -12,10 +12,6 @@ INSERT INTO polling_unit_results (
   state_constituency_id,
   lga_id,
   ward_id,
-  accredited_voters,
-  votes_cast,
-  valid_votes,
-  rejected_votes,
   result_sheet_image_url,
   result_sheet_video_url,
   status,
@@ -35,10 +31,6 @@ INSERT INTO polling_unit_results (
   sqlc.narg('state_constituency_id'),
   sqlc.narg('lga_id'),
   sqlc.narg('ward_id'),
-  sqlc.arg('accredited_voters'),
-  sqlc.arg('votes_cast'),
-  sqlc.arg('valid_votes'),
-  sqlc.arg('rejected_votes'),
   sqlc.narg('result_sheet_image_url'),
   sqlc.narg('result_sheet_video_url'),
   COALESCE(sqlc.narg('status')::varchar(30), 'submitted'),
@@ -148,7 +140,7 @@ LIMIT 1;
 -- name: GetPollingUnitResultByUserAndElection :one
 SELECT *
 FROM polling_unit_results
-WHERE election_id = $1 AND polling_unit_id = $2 AND submitted_by = $3
+WHERE election_id = $1 AND party_id = $2 AND polling_unit_id = $3 AND submitted_by = $4
 LIMIT 1;
 
 -- name: DeletePollingUnitResultScoresByResultID :exec

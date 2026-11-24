@@ -155,6 +155,7 @@ const (
 	RedisStateSupervisorAssignment      = "supervisor:state:"                     // STRING: "supervisor:state:<userID>:eg:<electionGroupID>" stores cached JSON of state supervisor assignment; cached for 7 days.
 	RedisLgaSupervisorAssignment        = "supervisor:lga:"                       // STRING: "supervisor:lga:<userID>:eg:<electionGroupID>" stores cached JSON of LGA supervisor assignment; cached for 7 days.
 	RedisWardSupervisorAssignment       = "supervisor:ward:"                      // STRING: "supervisor:ward:<userID>:eg:<electionGroupID>" stores cached JSON of ward supervisor assignment; cached for 7 days.
+	RedisPUResultSubmitted              = "pu_result:submitted:"                  // STRING: "pu_result:submitted:<electionID>:<puID>:<userID>" stores "1" when user has already submitted for an election & PU; cached for 7 days.
 	//--END--
 
 	//--START-- for background worker & cron distributed locks
@@ -284,6 +285,7 @@ var AllRedisPrefixes = []string{
 	RedisStateSupervisorAssignment,
 	RedisLgaSupervisorAssignment,
 	RedisWardSupervisorAssignment,
+	RedisPUResultSubmitted,
 	RedisCronLockINECGrabberSync,
 	RedisCronLockMarketingDeductionsPrefix,
 	RedisLockElectoralUnitsSync,

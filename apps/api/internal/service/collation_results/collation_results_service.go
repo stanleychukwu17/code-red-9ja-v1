@@ -4,37 +4,29 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"free9ja/api/internal/constants"
 	"free9ja/api/internal/db/queries"
-	"free9ja/api/internal/utils"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type usersService interface {
-	GetUserByFakeID(ctx context.Context, fakeID int64, opts ...queries.GetUserOptions) (queries.UserWithPlaces, error)
-}
-
 type Service struct {
-	queries  *queries.Queries
-	pool     *pgxpool.Pool
-	usersSvc usersService
+	queries *queries.Queries
+	pool    *pgxpool.Pool
 }
 
-func NewService(q *queries.Queries, pool *pgxpool.Pool, usersSvc usersService) *Service {
+func NewService(q *queries.Queries, pool *pgxpool.Pool) *Service {
 	return &Service{
-		queries:  q,
-		pool:     pool,
-		usersSvc: usersSvc,
+		queries: q,
+		pool:    pool,
 	}
 }
 
 // SubmitCollationResultInput carries all parameters needed to submit an EC8B, EC8C, or EC8D collation sheet.
 type SubmitCollationResultInput struct {
-	UserFakeID            int64
+	UserID                int64
 	ElectionID            int32
 	ElectionGroupID       int32
 	RoleType              string
@@ -58,22 +50,11 @@ func (s *Service) SubmitCollationResult(ctx context.Context, input SubmitCollati
 	if input.PartyID <= 0 {
 		return queries.CollationResult{}, errors.New("party_id is required")
 	}
-
-	user, err := s.usersSvc.GetUserByFakeID(ctx, input.UserFakeID)
-	if err != nil {
-		return queries.CollationResult{}, errors.New("user not found")
+	if input.UserID <= 0 {
+		return queries.CollationResult{}, errors.New("user_id is required")
 	}
 
-	// 1. Verify election group reporting window
-	eg, err := s.queries.GetElectionGroupByID(ctx, input.ElectionGroupID)
-	if err != nil {
-		return queries.CollationResult{}, errors.New("invalid election_group_id")
-	}
-	if err := utils.ValidateElectionReportingWindow(eg.ElectionDate.Time, time.Now(), utils.PostElectionCollationGraceDays); err != nil {
-		return queries.CollationResult{}, err
-	}
-
-	// 2. Determine form_type & validate geographic hierarchy matching DB check constraints
+	// 1. Determine form_type & validate geographic hierarchy matching DB check constraints
 	var formType string
 	var lgaID pgtype.Int4
 	var wardID pgtype.Int4
@@ -113,7 +94,7 @@ func (s *Service) SubmitCollationResult(ctx context.Context, input SubmitCollati
 	params := queries.SubmitCollationResultParams{
 		ElectionID:            input.ElectionID,
 		ElectionGroupID:       input.ElectionGroupID,
-		SubmittedBy:           pgtype.Int8{Int64: user.ID, Valid: true},
+		SubmittedBy:           pgtype.Int8{Int64: input.UserID, Valid: true},
 		PartyID:               input.PartyID,
 		FormType:              formType,
 		RoleType:              input.RoleType,
