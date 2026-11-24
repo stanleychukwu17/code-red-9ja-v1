@@ -34,16 +34,19 @@ func NewService(q *queries.Queries, pool *pgxpool.Pool, usersSvc usersService) *
 
 // SubmitCollationResultInput carries all parameters needed to submit an EC8B, EC8C, or EC8D collation sheet.
 type SubmitCollationResultInput struct {
-	UserFakeID          int64
-	ElectionID          int32
-	ElectionGroupID     int32
-	RoleType            string
-	PartyID             int16
-	StateID             int16
-	LgaID               *int32
-	WardID              *int32
-	ResultSheetImageURL string
-	ResultSheetVideoURL string
+	UserFakeID            int64
+	ElectionID            int32
+	ElectionGroupID       int32
+	RoleType              string
+	PartyID               int16
+	StateID               int16
+	SenatorialDistrictID  pgtype.Int4
+	FederalConstituencyID pgtype.Int4
+	StateConstituencyID   pgtype.Int4
+	LgaID                 *int32
+	WardID                *int32
+	ResultSheetImageURL   string
+	ResultSheetVideoURL   string
 }
 
 // SubmitCollationResult verifies the election window, validates geographic scope according to supervisor role,
@@ -101,22 +104,7 @@ func (s *Service) SubmitCollationResult(ctx context.Context, input SubmitCollati
 		return queries.CollationResult{}, fmt.Errorf("invalid supervisor role type: %s", input.RoleType)
 	}
 
-	// 3. Resolve constituency IDs from ward (EC8B) or LGA (EC8C)
-	var senatorialDistrictID, federalConstituencyID, stateConstituencyID pgtype.Int4
-	if wardID.Valid {
-		if ward, wErr := s.queries.GetWardByID(ctx, wardID.Int32); wErr == nil {
-			senatorialDistrictID = ward.SenatorialDistrictID
-			federalConstituencyID = ward.FederalConstituencyID
-			stateConstituencyID = ward.StateConstituencyID
-		}
-	} else if lgaID.Valid {
-		if lga, lErr := s.queries.GetLGAByID(ctx, lgaID.Int32); lErr == nil {
-			senatorialDistrictID = lga.SenatorialDistrictID
-			federalConstituencyID = lga.FederalConstituencyID
-		}
-	}
-
-	// 4. Prepare parameters
+	// 3. Prepare parameters
 	var videoURL pgtype.Text
 	if input.ResultSheetVideoURL != "" {
 		videoURL = pgtype.Text{String: input.ResultSheetVideoURL, Valid: true}
@@ -130,9 +118,9 @@ func (s *Service) SubmitCollationResult(ctx context.Context, input SubmitCollati
 		FormType:              formType,
 		RoleType:              input.RoleType,
 		StateID:               input.StateID,
-		SenatorialDistrictID:  senatorialDistrictID,
-		FederalConstituencyID: federalConstituencyID,
-		StateConstituencyID:   stateConstituencyID,
+		SenatorialDistrictID:  input.SenatorialDistrictID,
+		FederalConstituencyID: input.FederalConstituencyID,
+		StateConstituencyID:   input.StateConstituencyID,
 		LgaID:                 lgaID,
 		WardID:                wardID,
 		ResultSheetImageUrl:   input.ResultSheetImageURL,
