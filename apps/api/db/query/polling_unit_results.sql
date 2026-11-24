@@ -94,7 +94,7 @@ WHERE id = $1
 RETURNING *;
 
 -- name: CountDistinctSubmittedResultsForAssignment :one
-SELECT COUNT(DISTINCT election_id)::int
+SELECT COUNT(*)::int
 FROM polling_unit_results
 WHERE assignment_id = $1::bigint;
 

@@ -614,7 +614,7 @@ func (s *INECGrabberService) processWardPUs(
 
 		if aiExtract && apiKey != "" {
 			slog.Info("INEC SyncGrabber: extracting result sheet counts via Gemini AI Vision API", "pu_code", rawPUCode)
-			extractedData, rawJSON, aiErr := utils.ExtractPollingUnitResultFromImage(ctx, apiKey, finalImageURL)
+			extractedData, rawJSON, aiErr := utils.ExtractPollingUnitResultFromImage(ctx, apiKey, "", finalImageURL)
 			if aiErr != nil {
 				slog.Warn("AI result extraction failed for INEC PU sheet", "pu_code", rawPUCode, "err", aiErr)
 			} else if extractedData != nil {

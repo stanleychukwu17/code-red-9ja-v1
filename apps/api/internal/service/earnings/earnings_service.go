@@ -377,13 +377,10 @@ func (s *Service) ProcessTaskEarnings(ctx context.Context, params ProcessTaskEar
 	// Only credit the positive difference to the wallet, guaranteeing idempotency and preventing duplicate payouts.
 	delta := newFactorEarned - oldFactorEarned
 
-	if err := tx.Commit(ctx); err != nil {
-		return 0, fmt.Errorf("earnings: failed to commit transaction: %w", err)
-	}
-
-	// 4. Delegate wallet credit to users/wallet service (atomic balance update + ledger entry).
+	// 4. Credit wallet before committing earnings so a wallet failure rolls back and retries cleanly;
+	// deterministic txRef prevents double-credit if CreditUserWallet succeeds but tx.Commit fails.
 	if delta > 0 && s.usersSvc != nil {
-		txRef := fmt.Sprintf("%s-%d-%d", params.TaskType, params.AssignmentID, time.Now().UnixNano())
+		txRef := fmt.Sprintf("%s-%d-%d-%d", params.TaskType, params.AssignmentID, oldFactorEarned, newFactorEarned)
 		if _, creditErr := s.usersSvc.CreditUserWallet(ctx, usersservice.CreditUserWalletParams{
 			UserID:               asgn.UserID,
 			AmountKobo:           delta,
@@ -391,8 +388,12 @@ func (s *Service) ProcessTaskEarnings(ctx context.Context, params ProcessTaskEar
 			Narration:            narrationLabel,
 		}); creditErr != nil {
 			slog.Error("earnings: failed to credit wallet via usersService", "userID", asgn.UserID, "delta", delta, "err", creditErr)
-			return delta, fmt.Errorf("earnings: failed to credit wallet: %w", creditErr)
+			return 0, fmt.Errorf("earnings: failed to credit wallet: %w", creditErr)
 		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return 0, fmt.Errorf("earnings: failed to commit transaction: %w", err)
 	}
 
 	return delta, nil

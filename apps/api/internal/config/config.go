@@ -58,6 +58,8 @@ type Config struct {
 	Redis                RedisConfig    // Redis connection configuration
 	R2                   R2Config       // Cloudflare R2 storage configuration
 	GeminiAPIKey         string
+	GeminiModel          string
+	GeminiFallbackModel  string
 	JWTSecret            string
 	JWTAccessExpiration  time.Duration
 	JWTRefreshExpiration time.Duration
@@ -204,7 +206,9 @@ func LoadConfig() (*Config, error) {
 		},
 
 		// Google Gemini API key used by the INEC result grabber for OCR & result sheet parsing
-		GeminiAPIKey: GetEnv("GEMINI_API_KEY", ""),
+		GeminiAPIKey:        GetEnv("GEMINI_API_KEY", ""),
+		GeminiModel:         GetEnv("GEMINI_MODEL", "gemini-3.8-flash"),
+		GeminiFallbackModel: GetEnv("GEMINI_FALLBACK_MODEL", "gemini-3.1-pro"),
 
 		// Authentication tokens & lifetime settings
 		JWTSecret:            jwtSecret,     // Secret key used to sign and verify HMAC-SHA256 JWT tokens

@@ -114,7 +114,7 @@ SELECT
   a.election_ended_at,
   a.last_update_at,
   COALESCE((SELECT COUNT(*)::int FROM polling_unit_updates puu WHERE puu.assignment_id = a.id), 0)::int AS updates_count,
-  COALESCE((SELECT COUNT(DISTINCT pur.election_id)::int FROM polling_unit_results pur WHERE pur.assignment_id = a.id), 0)::int AS results_submitted_count,
+  COALESCE((SELECT COUNT(*)::int FROM polling_unit_results pur WHERE pur.assignment_id = a.id), 0)::int AS results_submitted_count,
   a.potential_payment_kobo,
   pu.latitude AS pu_latitude,
   pu.longitude AS pu_longitude,
@@ -123,7 +123,8 @@ FROM polling_unit_assignments a
 JOIN election_groups eg ON a.election_group_id = eg.id
 JOIN polling_units pu ON a.polling_unit_id = pu.id
 WHERE a.id = $1
-LIMIT 1;
+LIMIT 1
+FOR UPDATE OF a;
 
 -- name: GetAssignmentIDByUserAndElectionGroup :one
 SELECT id FROM polling_unit_assignments

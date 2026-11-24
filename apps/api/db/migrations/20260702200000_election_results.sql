@@ -125,6 +125,7 @@ CREATE TABLE polling_unit_results (
 
 -- One result per election per polling unit from a specific user
 CREATE UNIQUE INDEX uq_result_submission ON polling_unit_results (election_id, party_id, polling_unit_id, submitted_by);
+CREATE INDEX idx_pu_results_assignment ON polling_unit_results (assignment_id);
 
 
 

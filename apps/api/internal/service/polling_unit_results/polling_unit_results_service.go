@@ -156,7 +156,8 @@ func (s *Service) SubmitResult(ctx context.Context, input SubmitResultInput) (qu
 	}
 
 	// Check if this submission completes all expected elections for the PU and mark the assignment completed if so
-	if err := s.syncAssignmentResultsProgress(ctx, qtx, input.AssignmentID, input.ElectionGroupID, input.PollingUnitID); err != nil {
+	completed, err := s.syncAssignmentResultsProgress(ctx, qtx, input.AssignmentID, input.ElectionGroupID, input.PollingUnitID)
+	if err != nil {
 		return queries.PollingUnitResult{}, err
 	}
 
@@ -166,6 +167,11 @@ func (s *Service) SubmitResult(ctx context.Context, input SubmitResultInput) (qu
 
 	// Cache submission flag in Redis so subsequent retries/duplicates are rejected without hitting Postgres
 	_ = s.rdb.Set(ctx, submittedResultCacheKey(input.ElectionID, input.PartyID, input.PollingUnitID, input.UserID), "1", db.RedisSevenDaysTTL).Err()
+
+	// Invalidate cached user assignment so completed_at is reflected immediately
+	if completed {
+		_ = s.rdb.Del(ctx, fmt.Sprintf("%s%d:eg:%d", db.RedisUserPollingUnitAssignment, input.UserID, input.ElectionGroupID)).Err()
+	}
 
 	// Agent earnings processing via Redis worker queue
 	_ = s.distributor.DistributeTaskCalculateAgentEarnings(context.Background(), &worker.CalculateAgentEarningsPayload{
@@ -242,11 +248,11 @@ func (s *Service) GetFinalResult(ctx context.Context, electionID int64, pollingU
 
 // syncAssignmentResultsProgress recalculates the count of distinct results submitted for this assignment,
 // checks if the agent has fulfilled all expected results for the polling unit, and marks completed_at if so.
-func (s *Service) syncAssignmentResultsProgress(ctx context.Context, qtx *queries.Queries, assignmentID int64, electionGroupID int32, pollingUnitID int32) error {
-	// 1. Count actual distinct elections submitted for this assignment
+func (s *Service) syncAssignmentResultsProgress(ctx context.Context, qtx *queries.Queries, assignmentID int64, electionGroupID int32, pollingUnitID int32) (bool, error) {
+	// 1. Count actual results submitted for this assignment (uses idx_pu_results_assignment)
 	submittedCount, err := qtx.CountDistinctSubmittedResultsForAssignment(ctx, assignmentID)
 	if err != nil {
-		return fmt.Errorf("count submitted results: %w", err)
+		return false, fmt.Errorf("count submitted results: %w", err)
 	}
 
 	// 2. Fetch expected elections for this polling unit via Redis-cached earnings service
@@ -258,19 +264,15 @@ func (s *Service) syncAssignmentResultsProgress(ctx context.Context, qtx *querie
 	// 3. Mark completed if all expected results have been submitted
 	if submittedCount >= expectedCount {
 		completedAt := pgtype.Timestamptz{Time: time.Now(), Valid: true}
-		slog.Info("agent completed all expected polling unit results",
-			"assignment_id", assignmentID,
-			"submitted_count", submittedCount,
-			"expected_count", expectedCount,
-		)
 		_, err = qtx.MarkAssignmentCompleted(ctx, queries.MarkAssignmentCompletedParams{
 			ID:          assignmentID,
 			CompletedAt: completedAt,
 		})
 		if err != nil {
-			return fmt.Errorf("mark assignment completed: %w", err)
+			return false, fmt.Errorf("mark assignment completed: %w", err)
 		}
+		return true, nil
 	}
 
-	return nil
+	return false, nil
 }

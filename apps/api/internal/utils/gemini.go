@@ -6,8 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/google/generative-ai-go/genai"
@@ -39,6 +39,7 @@ type GeminiExtractedResult struct {
 	HasPresidingOfficerSignature bool                       `json:"has_presiding_officer_signature"`
 	Candidates                   []GeminiExtractedCandidate `json:"candidates"`
 	IsAIGenerated                bool                       `json:"is_ai_generated"`
+	ConfidenceScore              float64                    `json:"confidence_score"`
 }
 
 const resultExtractionPrompt = `
@@ -86,23 +87,30 @@ Return your response as a strict JSON object with this EXACT schema:
       "has_signature": false
     }
   ],
-  "is_ai_generated": false
+  "is_ai_generated": false,
+  "confidence_score": 0.0
 }
 
 Ensure that party_short_name matches standard acronyms (e.g., APC, PDP, LP, NNPP).
 If a signature or mark is present in the "NAME/SIGNATURE OF POLLING AGENT" column, set "has_signature" to true. If a name is clearly written, extract it into "agent_name".
 If a value cannot be clearly read, estimate to the best of your ability or return 0, but DO NOT change the schema structure.
+Set "confidence_score" between 0.0 and 1.0 reflecting how clearly legible the handwritten numbers and sheet are.
 Also, closely analyze the image for any signs of AI manipulation or generation (e.g., unnatural lighting, text artifacts, weird proportions). Set "is_ai_generated" to true if you strongly suspect the image is AI-generated, otherwise false.
 `
 
 // ExtractPollingUnitResultFromImage downloads an image from a URL and uses Gemini to extract the vote counts.
-func ExtractPollingUnitResultFromImage(ctx context.Context, apiKey string, imageURL string) (*GeminiExtractedResult, []byte, error) {
+// If modelName is empty, it falls back to GEMINI_MODEL or "gemini-3.8-flash".
+func ExtractPollingUnitResultFromImage(ctx context.Context, apiKey, modelName, imageURL string) (*GeminiExtractedResult, []byte, error) {
 	if apiKey == "" {
 		return nil, nil, errors.New("gemini api key is not configured")
 	}
 
-	// 1. Download the image bytes
-	imgResp, err := http.Get(imageURL)
+	// 1. Download the image bytes (respecting context deadline/cancellation)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, imageURL, nil)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create image request: %w", err)
+	}
+	imgResp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to download result sheet image: %w", err)
 	}
@@ -117,9 +125,9 @@ func ExtractPollingUnitResultFromImage(ctx context.Context, apiKey string, image
 		return nil, nil, fmt.Errorf("failed to read image body: %w", err)
 	}
 
-	mimeType := imgResp.Header.Get("Content-Type")
-	if mimeType == "" {
-		mimeType = "image/jpeg" // fallback
+	mimeType := strings.TrimSpace(strings.Split(imgResp.Header.Get("Content-Type"), ";")[0])
+	if mimeType == "" || mimeType == "application/octet-stream" {
+		mimeType = http.DetectContentType(imgBytes)
 	}
 
 	// 2. Initialize Gemini Client
@@ -129,11 +137,16 @@ func ExtractPollingUnitResultFromImage(ctx context.Context, apiKey string, image
 	}
 	defer client.Close()
 
-	// 3. Configure Model (gemini-2.5-pro is best for complex visual extraction)
-	// 3. Configure Model (gemini-1.5-flash is best for general free tier visual extraction)
-	model := client.GenerativeModel("gemini-2.5-pro")
+	// 3. Configure Model
+	if modelName == "" {
+		modelName = os.Getenv("GEMINI_MODEL")
+	}
+	if modelName == "" {
+		modelName = "gemini-3.8-flash"
+	}
+	model := client.GenerativeModel(modelName)
 	model.ResponseMIMEType = "application/json"
-	
+
 	// 4. Prepare prompt parts
 	imgPart := genai.Blob{
 		MIMEType: mimeType,
@@ -143,7 +156,6 @@ func ExtractPollingUnitResultFromImage(ctx context.Context, apiKey string, image
 	promptPart := genai.Text(resultExtractionPrompt)
 
 	// 5. Generate Content
-	slog.Info("Sending image to Gemini for analysis...", "url", imageURL)
 	resp, err := model.GenerateContent(ctx, imgPart, promptPart)
 	if err != nil {
 		return nil, nil, fmt.Errorf("gemini generation failed: %w", err)

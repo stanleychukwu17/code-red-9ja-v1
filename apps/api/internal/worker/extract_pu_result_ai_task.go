@@ -27,11 +27,11 @@ type ExtractPUResultAIPayload struct {
 	ResultSheetImageURL string `json:"result_sheet_image_url"`
 }
 
-type ExtractedCandidateResult struct {
-	PartyShortName string `json:"party_short_name"`
-	VoteCount      int32  `json:"vote_count"`
-	AgentName      string `json:"agent_name"`
-	HasSignature   bool   `json:"has_signature"`
+func clampNonNegInt32(v int) int32 {
+	if v < 0 {
+		return 0
+	}
+	return int32(v)
 }
 
 func (redisTaskDistributor *RedisTaskDistributor) DistributeTaskExtractPUResultAI(
@@ -67,10 +67,8 @@ func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskExtractPUResultAI(ctx c
 		return fmt.Errorf("failed to unmarshal extract PU result payload: %w", err)
 	}
 
-	slog.Info("starting AI result extraction", "result_id", payload.ResultID, "image_url", payload.ResultSheetImageURL)
-
 	cfg := config.Load()
-	extracted, rawJSON, err := utils.ExtractPollingUnitResultFromImage(ctx, cfg.GeminiAPIKey, payload.ResultSheetImageURL)
+	extracted, rawJSON, err := utils.ExtractPollingUnitResultFromImage(ctx, cfg.GeminiAPIKey, cfg.GeminiModel, payload.ResultSheetImageURL)
 	if err != nil {
 		slog.Error("failed to extract PU result from image with Gemini", "result_id", payload.ResultID, "err", err)
 		// Mark as disputed with reason if failure persists
@@ -82,38 +80,87 @@ func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskExtractPUResultAI(ctx c
 		return fmt.Errorf("gemini extraction failed for result #%d: %w", payload.ResultID, err)
 	}
 
-	// Validate vote arithmetic
-	status := "ai_verified"
-	var disputedReason pgtype.Text
-	if extracted.ValidVotes+extracted.RejectedVotes != extracted.VotesCast {
-		slog.Warn("AI extracted vote counts discrepancy", "result_id", payload.ResultID, "valid", extracted.ValidVotes, "rejected", extracted.RejectedVotes, "cast", extracted.VotesCast)
-		status = "disputed"
-		disputedReason = pgtype.Text{
-			String: fmt.Sprintf("Vote arithmetic mismatch: valid(%d) + rejected(%d) != cast(%d)", extracted.ValidVotes, extracted.RejectedVotes, extracted.VotesCast),
-			Valid:  true,
+	// Escalate to Pro model once if Flash hit an OCR-solvable math mismatch or low confidence (and not AI-generated)
+	if !extracted.IsAIGenerated && cfg.GeminiFallbackModel != "" && cfg.GeminiFallbackModel != cfg.GeminiModel {
+		validV := clampNonNegInt32(extracted.ValidVotes)
+		rejectedV := clampNonNegInt32(extracted.RejectedVotes)
+		castV := clampNonNegInt32(extracted.VotesCast)
+		if validV+rejectedV != castV || extracted.ConfidenceScore < 0.75 {
+			slog.Warn("escalating ambiguous sheet to fallback Gemini model", "result_id", payload.ResultID, "fallback_model", cfg.GeminiFallbackModel, "confidence", extracted.ConfidenceScore)
+			if fbExtracted, fbRawJSON, fbErr := utils.ExtractPollingUnitResultFromImage(ctx, cfg.GeminiAPIKey, cfg.GeminiFallbackModel, payload.ResultSheetImageURL); fbErr != nil {
+				slog.Warn("fallback Gemini extraction failed, keeping primary result", "result_id", payload.ResultID, "err", fbErr)
+			} else {
+				extracted = fbExtracted
+				rawJSON = fbRawJSON
+			}
 		}
 	}
 
+	// Validate integrity & vote arithmetic
+	status := "ai_verified"
+	var disputeReasons []string
+
+	if extracted.IsAIGenerated {
+		disputeReasons = append(disputeReasons, "Result sheet image flagged as potentially AI-generated or manipulated")
+	}
+
+	registeredVoters := clampNonNegInt32(extracted.RegisteredVoters)
+	accreditedVoters := clampNonNegInt32(extracted.AccreditedVoters)
+	ballotPapersIssued := clampNonNegInt32(extracted.BallotPapersIssued)
+	unusedBallotPapers := clampNonNegInt32(extracted.UnusedBallotPapers)
+	spoiledBallotPapers := clampNonNegInt32(extracted.SpoiledBallotPapers)
+	rejectedVotes := clampNonNegInt32(extracted.RejectedVotes)
+	validVotes := clampNonNegInt32(extracted.ValidVotes)
+	usedBallotPapers := clampNonNegInt32(extracted.UsedBallotPapers)
+	votesCast := clampNonNegInt32(extracted.VotesCast)
+
+	if validVotes+rejectedVotes != votesCast {
+		slog.Warn("AI extracted vote counts discrepancy", "result_id", payload.ResultID, "valid", validVotes, "rejected", rejectedVotes, "cast", votesCast)
+		disputeReasons = append(disputeReasons, fmt.Sprintf("Vote arithmetic mismatch: valid(%d) + rejected(%d) != cast(%d)", validVotes, rejectedVotes, votesCast))
+	}
+	if accreditedVoters > 0 && votesCast > accreditedVoters {
+		disputeReasons = append(disputeReasons, fmt.Sprintf("Over-voting detected: cast(%d) > accredited(%d)", votesCast, accreditedVoters))
+	}
+
+	var disputedReason pgtype.Text
+	if len(disputeReasons) > 0 {
+		status = "disputed"
+		disputedReason = pgtype.Text{String: strings.Join(disputeReasons, "; "), Valid: true}
+	}
+
+	confVal := extracted.ConfidenceScore
+	if confVal < 0 {
+		confVal = 0
+	} else if confVal > 1 {
+		confVal = 1
+	}
 	var confidence pgtype.Numeric
-	_ = confidence.Scan("0.9500")
+	_ = confidence.Scan(fmt.Sprintf("%.4f", confVal))
 
 	var sheetDate pgtype.Date
 	if parsedDate, parseErr := time.Parse("2006-01-02", strings.TrimSpace(extracted.SheetDate)); parseErr == nil {
 		sheetDate = pgtype.Date{Time: parsedDate, Valid: true}
 	}
 
+	tx, err := redisTaskProcessor.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction for result #%d: %w", payload.ResultID, err)
+	}
+	defer tx.Rollback(ctx)
+	qtx := redisTaskProcessor.queries.WithTx(tx)
+
 	// Update the polling unit result record with extracted numbers
-	updatedResult, err := redisTaskProcessor.queries.UpdatePollingUnitResultAIExtraction(ctx, queries.UpdatePollingUnitResultAIExtractionParams{
+	updatedResult, err := qtx.UpdatePollingUnitResultAIExtraction(ctx, queries.UpdatePollingUnitResultAIExtractionParams{
 		ID:                           payload.ResultID,
-		RegisteredVoters:             int32(extracted.RegisteredVoters),
-		AccreditedVoters:             int32(extracted.AccreditedVoters),
-		BallotPapersIssued:           int32(extracted.BallotPapersIssued),
-		UnusedBallotPapers:           int32(extracted.UnusedBallotPapers),
-		SpoiledBallotPapers:          int32(extracted.SpoiledBallotPapers),
-		VotesCast:                    int32(extracted.VotesCast),
-		ValidVotes:                   int32(extracted.ValidVotes),
-		RejectedVotes:                int32(extracted.RejectedVotes),
-		UsedBallotPapers:             int32(extracted.UsedBallotPapers),
+		RegisteredVoters:             registeredVoters,
+		AccreditedVoters:             accreditedVoters,
+		BallotPapersIssued:           ballotPapersIssued,
+		UnusedBallotPapers:           unusedBallotPapers,
+		SpoiledBallotPapers:          spoiledBallotPapers,
+		VotesCast:                    votesCast,
+		ValidVotes:                   validVotes,
+		RejectedVotes:                rejectedVotes,
+		UsedBallotPapers:             usedBallotPapers,
 		SerialNumber:                 utils.PgTextFromString(strings.TrimSpace(extracted.SerialNumber)),
 		SheetDate:                    sheetDate,
 		PresidingOfficerName:         utils.PgTextFromString(strings.TrimSpace(extracted.PresidingOfficerName)),
@@ -128,8 +175,8 @@ func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskExtractPUResultAI(ctx c
 		return fmt.Errorf("failed to save AI extracted data for result #%d: %w", payload.ResultID, err)
 	}
 
-	// Replace normalized per-party scores for this result
-	if err := redisTaskProcessor.queries.DeletePollingUnitResultScoresByResultID(ctx, payload.ResultID); err != nil {
+	// Replace normalized per-party scores for this result atomically
+	if err := qtx.DeletePollingUnitResultScoresByResultID(ctx, payload.ResultID); err != nil {
 		return fmt.Errorf("failed to clear old scores for result #%d: %w", payload.ResultID, err)
 	}
 	for _, c := range extracted.Candidates {
@@ -137,18 +184,22 @@ func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskExtractPUResultAI(ctx c
 		if shortName == "" {
 			continue
 		}
-		if _, err := redisTaskProcessor.queries.UpsertPollingUnitResultScore(ctx, queries.UpsertPollingUnitResultScoreParams{
+		if _, err := qtx.UpsertPollingUnitResultScore(ctx, queries.UpsertPollingUnitResultScoreParams{
 			ResultID:        payload.ResultID,
 			ElectionID:      updatedResult.ElectionID,
 			ElectionGroupID: updatedResult.ElectionGroupID,
 			PollingUnitID:   updatedResult.PollingUnitID,
 			PartyShortName:  shortName,
-			VoteCount:       int32(c.VoteCount),
+			VoteCount:       clampNonNegInt32(c.VoteCount),
 			AgentName:       utils.PgTextFromString(strings.TrimSpace(c.AgentName)),
 			HasSignature:    c.HasSignature,
 		}); err != nil {
 			return fmt.Errorf("failed to save score for party %s on result #%d: %w", shortName, payload.ResultID, err)
 		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("failed to commit AI extraction for result #%d: %w", payload.ResultID, err)
 	}
 
 	slog.Info("successfully extracted and saved AI result", "result_id", payload.ResultID, "status", status)
