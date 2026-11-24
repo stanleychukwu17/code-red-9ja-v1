@@ -50,6 +50,14 @@ type ElectionsService interface {
 	GetElectionsForWard(ctx context.Context, electionGroupID, wardID int32) ([]queries.GetElectionsForWardRow, error)
 }
 
+type BodiesService interface {
+	GetLGAByID(ctx context.Context, id int32) (queries.Lga, error)
+}
+
+type WardsService interface {
+	GetWardByID(ctx context.Context, id int32) (queries.Ward, error)
+}
+
 type Handler struct {
 	service             PollingUnitResultsService
 	collationService    CollationResultsService
@@ -57,11 +65,13 @@ type Handler struct {
 	supervisorService   SupervisorAssignmentsService
 	pollingUnitsService PollingUnitsService
 	electionsService    ElectionsService
+	bodiesService       BodiesService
+	wardsService        WardsService
 	utils               *utils.Utils
 	validate            *validator.Validate
 }
 
-func NewHandler(s PollingUnitResultsService, cs CollationResultsService, u *utils.Utils, asgnSvc PollingUnitAssignmentsService, supSvc SupervisorAssignmentsService, puSvc PollingUnitsService, elecSvc ElectionsService) *Handler {
+func NewHandler(s PollingUnitResultsService, cs CollationResultsService, u *utils.Utils, asgnSvc PollingUnitAssignmentsService, supSvc SupervisorAssignmentsService, puSvc PollingUnitsService, elecSvc ElectionsService, bodiesSvc BodiesService, wardsSvc WardsService) *Handler {
 	return &Handler{
 		service:             s,
 		collationService:    cs,
@@ -69,6 +79,8 @@ func NewHandler(s PollingUnitResultsService, cs CollationResultsService, u *util
 		supervisorService:   supSvc,
 		pollingUnitsService: puSvc,
 		electionsService:    elecSvc,
+		bodiesService:       bodiesSvc,
+		wardsService:        wardsSvc,
 		utils:               u,
 		validate:            validator.New(),
 	}
@@ -272,17 +284,35 @@ func (h *Handler) SubmitResult(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Resolve constituency IDs from the supervisor's assigned ward (EC8B) or LGA (EC8C)
+	var senatorialDistrictID, federalConstituencyID, stateConstituencyID pgtype.Int4
+	if wardID != nil {
+		if ward, wErr := h.wardsService.GetWardByID(r.Context(), *wardID); wErr == nil {
+			senatorialDistrictID = ward.SenatorialDistrictID
+			federalConstituencyID = ward.FederalConstituencyID
+			stateConstituencyID = ward.StateConstituencyID
+		}
+	} else if lgaID != nil {
+		if lga, lErr := h.bodiesService.GetLGAByID(r.Context(), *lgaID); lErr == nil {
+			senatorialDistrictID = lga.SenatorialDistrictID
+			federalConstituencyID = lga.FederalConstituencyID
+		}
+	}
+
 	collationResult, err := h.collationService.SubmitCollationResult(r.Context(), collation_results.SubmitCollationResultInput{
-		UserFakeID:          claims.FakeID,
-		ElectionID:          req.ElectionID,
-		ElectionGroupID:     req.ElectionGroupID,
-		RoleType:            roleType,
-		PartyID:             partyID,
-		StateID:             stateID,
-		LgaID:               lgaID,
-		WardID:              wardID,
-		ResultSheetImageURL: req.ResultSheetImageURL,
-		ResultSheetVideoURL: req.ResultSheetVideoURL,
+		UserFakeID:            claims.FakeID,
+		ElectionID:            req.ElectionID,
+		ElectionGroupID:       req.ElectionGroupID,
+		RoleType:              roleType,
+		PartyID:               partyID,
+		StateID:               stateID,
+		SenatorialDistrictID:  senatorialDistrictID,
+		FederalConstituencyID: federalConstituencyID,
+		StateConstituencyID:   stateConstituencyID,
+		LgaID:                 lgaID,
+		WardID:                wardID,
+		ResultSheetImageURL:   req.ResultSheetImageURL,
+		ResultSheetVideoURL:   req.ResultSheetVideoURL,
 	})
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
