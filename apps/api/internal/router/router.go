@@ -230,7 +230,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	pollingUnitAssignmentsHandler := puassignmentshandler.NewHandler(pollingUnitAssignmentsService, usersService, pollingUnitUpdatesService, utilsInstance, earningsService, supervisorAssignmentsService, pollingUnitsService, electionsService)
 	partyApplicationsHandler := partyapplicationshandler.NewHandler(partyApplicationsService, usersService, partiesService, permissionsService, campaignGroupsService, distributor, notificationsService, auditService, utilsInstance, electionGroupsService)
 	pollingUnitUpdatesHandler := puupdateshandler.NewHandler(pollingUnitUpdatesService, utilsInstance, pollingUnitAssignmentsService, supervisorAssignmentsService, pollingUnitsService)
-	pollingUnitResultsHandler := puresultshandler.NewHandler(pollingUnitResultsService, collationResultsService, utilsInstance, pollingUnitAssignmentsService, supervisorAssignmentsService, pollingUnitsService, electionsService)
+	pollingUnitResultsHandler := puresultshandler.NewHandler(pollingUnitResultsService, collationResultsService, utilsInstance, pollingUnitAssignmentsService, supervisorAssignmentsService, pollingUnitsService, electionsService, bodiesService, wardsService)
 	supervisorAssignmentsHandler := supervisorassignmentshandler.NewHandler(supervisorAssignmentsService, utilsInstance)
 	electionResultsHandler := electionresultshandler.NewHandler(pool, utilsInstance)
 	seedHandler := seedhandler.NewHandler(seedService, utilsInstance)
