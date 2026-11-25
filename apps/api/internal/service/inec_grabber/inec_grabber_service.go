@@ -314,125 +314,6 @@ func (s *INECGrabberService) SyncGrabber(ctx context.Context, grabberID int64, o
 	return &logRecord, syncErr
 }
 
-type ControlledScrapeParams struct {
-	OfficeID       int16   `json:"office_id"`
-	StateID        *int16  `json:"state_id"`
-	Year           *int    `json:"year"`
-	INECElectionID string  `json:"inec_election_id"`
-	LGAID          *string `json:"lga_id"`
-	WardID         *string `json:"ward_id"`
-	MaxPUs         *int    `json:"max_pus"`
-	UploadToR2     *bool   `json:"upload_to_r2"`
-	SaveToLocal    *bool   `json:"save_to_local"`
-	AIExtract      *bool   `json:"ai_extract"`
-	Force          *bool   `json:"force"`
-}
-
-type ControlledScrapeResult struct {
-	ResultsCollected  int                           `json:"results_collected"`
-	MatchedElectionID *int32                        `json:"matched_election_id,omitempty"`
-	Log               *queries.InecResultGrabberLog `json:"log,omitempty"`
-}
-
-// ControlledScrape scrapes a pinned upstream INEC election. If a matching local election exists in our DB,
-// it links election_id and election_group_id; otherwise it saves standalone results with election_id = NULL.
-func (s *INECGrabberService) ControlledScrape(ctx context.Context, params ControlledScrapeParams) (*ControlledScrapeResult, error) {
-	// Require a pinned upstream INEC election ID before doing any DB or HTTP work
-	if cleanStr(params.INECElectionID) == "" {
-		return nil, fmt.Errorf("inec_election_id is required")
-	}
-	// Guard local disk writes to development only so prod never writes scraped sheets to disk
-	if params.SaveToLocal != nil && *params.SaveToLocal && config.Load().Env != "development" {
-		return nil, fmt.Errorf("save_to_local is only allowed in development environment")
-	}
-
-	// Convert optional state_id filter to nullable pgtype.Int2 for SQLC lookup
-	var statePgID pgtype.Int2
-	if params.StateID != nil && *params.StateID > 0 {
-		statePgID = pgtype.Int2{Int16: *params.StateID, Valid: true}
-	}
-
-	// Convert optional year filter to nullable pgtype.Int4 for SQLC lookup
-	var yearPg pgtype.Int4
-	if params.Year != nil && *params.Year > 0 {
-		yearPg = pgtype.Int4{Int32: int32(*params.Year), Valid: true}
-	}
-
-	// Build shared sync options forwarded to either a matched grabber or standalone executeSync
-	syncOpts := SyncOptions{
-		UploadToR2:     params.UploadToR2,
-		SaveToLocal:    params.SaveToLocal,
-		AIExtract:      params.AIExtract,
-		Force:          params.Force,
-		Year:           params.Year,
-		INECElectionID: &params.INECElectionID,
-		LGAID:          params.LGAID,
-		WardID:         params.WardID,
-		MaxPUs:         params.MaxPUs,
-	}
-
-	// Try to match an existing local election + grabber in our DB
-	matchedGrabber, matchErr := s.queries.FindMatchingGrabberForINECScrape(ctx, queries.FindMatchingGrabberForINECScrapeParams{
-		OfficeID: params.OfficeID,
-		StateID:  statePgID,
-		Year:     yearPg,
-	})
-
-	if matchErr == nil {
-		// Delegate to the matched grabber so results link to its local election and log metrics
-		logRec, syncErr := s.SyncGrabber(ctx, matchedGrabber.ID, syncOpts)
-		collected := 0
-		if logRec != nil {
-			collected = int(logRec.ResultsCollectedCount)
-		}
-
-		// Copy ElectionID to take its address for the optional response field
-		electionID := matchedGrabber.ElectionID
-		return &ControlledScrapeResult{
-			ResultsCollected:  collected,
-			MatchedElectionID: &electionID,
-			Log:               logRec,
-		}, syncErr
-	}
-
-	// No local election match: run standalone scrape with election_id = NULL
-	office, err := s.queries.GetOfficeByID(ctx, params.OfficeID)
-	if err != nil {
-		return nil, fmt.Errorf("office not found: %w", err)
-	}
-	cfg, err := s.GetINECAPIConfig(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load inec api config: %w", err)
-	}
-
-	uploadToR2 := cfg.UploadToR2Default
-	if params.UploadToR2 != nil {
-		uploadToR2 = *params.UploadToR2
-	}
-	aiExtract := cfg.AIExtractDefault
-	if params.AIExtract != nil {
-		aiExtract = *params.AIExtract
-	}
-
-	standaloneGrabber := queries.GetINECResultGrabberByIDRow{
-		Scope:              office.Scope,
-		StateID:            statePgID,
-		OfficeID:           office.ID,
-		InecElectionTypeID: office.InecElectionTypeID,
-		OfficeName:         office.Name,
-	}
-
-	collected, syncErr := s.executeSync(ctx, standaloneGrabber, cfg, uploadToR2, aiExtract, syncOpts)
-	if syncErr != nil {
-		return nil, syncErr
-	}
-
-	return &ControlledScrapeResult{
-		ResultsCollected:  collected,
-		MatchedElectionID: nil,
-	}, nil
-}
-
 func (s *INECGrabberService) fetchINECElections(ctx context.Context, baseURL string, inecTypeID string, stateID pgtype.Int2) ([]INECElection, error) {
 	// Build IReV elections URL with optional state_id filter for non-nationwide elections
 	electionsURL := fmt.Sprintf("%s/elections?election_type=%s", baseURL, url.QueryEscape(inecTypeID))
@@ -540,64 +421,6 @@ func (s *INECGrabberService) PreviewINECElections(ctx context.Context, grabberID
 	}
 
 	return s.filterINECElections(ctx, inecTypeID, grabber.StateID, year)
-}
-
-// PreviewINECLGAs returns LGAs and their wards directly from the local database,
-// mapping their pre-seeded INEC MongoDB IDs to the expected INECLGA structure.
-func (s *INECGrabberService) PreviewINECLGAs(ctx context.Context, inecElectionID string, stateID *int16) ([]INECLGA, error) {
-	var stID int32
-	if stateID != nil && *stateID > 0 {
-		stID = int32(*stateID)
-	}
-
-	dbLGAs, err := s.queries.GetLGAs(ctx, stID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load LGAs: %w", err)
-	}
-
-	dbWards, err := s.queries.GetWards(ctx, queries.GetWardsParams{
-		StateID: stID,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to load wards: %w", err)
-	}
-
-	// Group wards by LGA (skipping unseeded/empty mongo_ids)
-	wardsByLGA := make(map[int32][]INECWard, len(dbLGAs))
-	for _, w := range dbWards {
-		mongoID := strings.TrimSpace(w.MongoID.String)
-		if !w.MongoID.Valid || mongoID == "" {
-			continue
-		}
-		wardsByLGA[w.LgaID] = append(wardsByLGA[w.LgaID], INECWard{
-			ID:     mongoID,
-			Name:   w.Name,
-			Code:   w.Code,
-			WardID: w.ID,
-		})
-	}
-
-	// Assemble []INECLGA with mongo_id as the _id expected by the frontend dropdown
-	res := make([]INECLGA, 0, len(dbLGAs))
-	for _, l := range dbLGAs {
-		mongoID := strings.TrimSpace(l.MongoID.String)
-		if !l.MongoID.Valid || mongoID == "" {
-			continue
-		}
-
-		wards := wardsByLGA[l.ID]
-		if wards == nil {
-			wards = []INECWard{}
-		}
-
-		res = append(res, INECLGA{
-			ID:    mongoID,
-			Name:  l.Name,
-			Wards: wards,
-		})
-	}
-
-	return res, nil
 }
 
 // syncLGAsAndWardsMongoIDs batch-backfills lgas.mongo_id and wards.mongo_id directly by local primary key (lga_id / ward_id).
@@ -710,7 +533,14 @@ func (s *INECGrabberService) SyncAllStatesMongoIDs(ctx context.Context, inecElec
 	return int(totalLGAs.Load()), int(totalWards.Load()), nil
 }
 
-func (s *INECGrabberService) executeSync(ctx context.Context, grabber queries.GetINECResultGrabberByIDRow, config INECAPIConfig, uploadToR2, aiExtract bool, opts SyncOptions) (int, error) {
+func (s *INECGrabberService) executeSync(
+	ctx context.Context,
+	grabber queries.GetINECResultGrabberByIDRow,
+	config INECAPIConfig,
+	uploadToR2 bool,
+	aiExtract bool,
+	opts SyncOptions,
+) (int, error) {
 	inecTypeID := cleanStr(grabber.InecElectionTypeID.String)
 	if !grabber.InecElectionTypeID.Valid || inecTypeID == "" {
 		return 0, fmt.Errorf("office for this election has no inec_election_type_id configured")
@@ -725,25 +555,31 @@ func (s *INECGrabberService) executeSync(ctx context.Context, grabber queries.Ge
 		matchedINECElection = &INECElection{ID: pinnedID}
 		slog.Info("INEC SyncGrabber: using pinned INEC election ID", "grabber_id", grabber.ID, "inec_election_id", pinnedID)
 	} else {
+		// No pinned INEC election ID provided: fetch upstream elections for this type/state and match by year/name
 		electionsData, err := s.fetchINECElections(ctx, baseURL, inecTypeID, grabber.StateID)
 		if err != nil {
 			slog.Error("INEC SyncGrabber: failed fetching elections list", "grabber_id", grabber.ID, "err", err)
 			return 0, err
 		}
+
+		// Exit early with 0 results if IReV returned no candidate elections
 		if len(electionsData) == 0 {
 			slog.Info("INEC SyncGrabber: no elections returned from INEC API", "grabber_id", grabber.ID)
 			return 0, nil
 		}
 
+		// Log the number of elections received from IReV
 		slog.Info("INEC SyncGrabber: received elections list from INEC API", "grabber_id", grabber.ID, "count", len(electionsData))
 
-		// Match INEC election
+		// Resolve target election year (defaulting to the local grabber's year, or overridden by opts.Year)
 		appYear := grabber.ElectionDate.Time.Year()
 		if opts.Year != nil && *opts.Year > 0 {
 			appYear = *opts.Year
 		}
 
+		// loops through the electionData received from inec
 		for i := range electionsData {
+			// Parse the upstream election date (RFC3339 or YYYY-MM-DD) and skip non-matching years
 			el := &electionsData[i]
 			elDate, err := time.Parse(time.RFC3339, el.ElectionDate)
 			if err != nil {
@@ -1133,28 +969,14 @@ func (s *INECGrabberService) processWardPUs(ctx context.Context, params processW
 		}
 
 		if puErr == nil {
-			if params.grabber.ElectionID > 0 {
-				if _, err := s.queries.GetINECPollingUnitResultByElectionAndPU(ctx, queries.GetINECPollingUnitResultByElectionAndPUParams{
-					ElectionID:    pgtype.Int4{Int32: params.grabber.ElectionID, Valid: true},
-					PollingUnitID: pu.ID,
-				}); err == nil {
-					slog.Debug("INEC SyncGrabber: PU result already ingested, skipping", "pu_code", rawPUCode)
-					continue
-				}
-			} else if cleanStr(params.inecElectionID) != "" {
-				if _, err := s.queries.GetINECPollingUnitResultByINECElectionAndPU(ctx, queries.GetINECPollingUnitResultByINECElectionAndPUParams{
-					InecElectionID: pgtype.Text{String: cleanStr(params.inecElectionID), Valid: true},
-					PollingUnitID:  pu.ID,
-				}); err == nil {
-					slog.Debug("INEC SyncGrabber: standalone PU result already ingested, skipping", "pu_code", rawPUCode)
-					continue
-				}
-			}
-		} else {
-			if params.grabber.ElectionID == 0 {
-				slog.Warn("INEC SyncGrabber: PU code not matched in standalone mode, skipping", "raw_pu_code", rawPUCode, "pu_name", puName)
+			if _, err := s.queries.GetINECPollingUnitResultByElectionAndPU(ctx, queries.GetINECPollingUnitResultByElectionAndPUParams{
+				ElectionID:    params.grabber.ElectionID,
+				PollingUnitID: pu.ID,
+			}); err == nil {
+				slog.Debug("INEC SyncGrabber: PU result already ingested, skipping", "pu_code", rawPUCode)
 				continue
 			}
+		} else {
 			// Check if already queued in unmatched_polling_unit_results
 			alreadyUnmatched, _ := s.queries.CheckUnmatchedPollingUnitResultExists(ctx, queries.CheckUnmatchedPollingUnitResultExistsParams{
 				ElectionID:         params.grabber.ElectionID,
@@ -1241,53 +1063,28 @@ func (s *INECGrabberService) processWardPUs(ctx context.Context, params processW
 			continue
 		}
 
-		// Insert or update in inec_polling_unit_results (linked to local election if matched, else election_id = NULL)
-		var submittedRes queries.InecPollingUnitResult
-		if params.grabber.ElectionID > 0 {
-			submittedRes, err = s.queries.UpsertINECPollingUnitResult(ctx, queries.UpsertINECPollingUnitResultParams{
-				ElectionID:            pgtype.Int4{Int32: params.grabber.ElectionID, Valid: true},
-				ElectionGroupID:       pgtype.Int4{Int32: params.grabber.ElectionGroupID, Valid: true},
-				InecElectionID:        pgtype.Text{String: cleanStr(params.inecElectionID), Valid: cleanStr(params.inecElectionID) != ""},
-				PollingUnitID:         pu.ID,
-				StateID:               pgtype.Int2{Int16: int16(pu.StateID), Valid: true},
-				SenatorialDistrictID:  pgtype.Int4{},
-				FederalConstituencyID: pgtype.Int4{},
-				StateConstituencyID:   pgtype.Int4{},
-				LgaID:                 pgtype.Int4{Int32: pu.LgaID, Valid: true},
-				WardID:                pgtype.Int4{Int32: pu.WardID, Valid: true},
-				AccreditedVoters:      accreditedVoters,
-				VotesCast:             votesCast,
-				ValidVotes:            validVotes,
-				RejectedVotes:         rejectedVotes,
-				ResultSheetImageUrl:   pgtype.Text{String: finalImageURL, Valid: true},
-				IrevDocumentUrl:       pgtype.Text{String: docURL, Valid: docURL != ""},
-				Status:                pgtype.Text{String: statusStr, Valid: true},
-				AiExtractedData:       rawJSONBytes,
-				ResultIsAiGenerated:   isAIGenerated,
-				AiConfidenceScore:     confidenceScore,
-			})
-		} else {
-			submittedRes, err = s.queries.UpsertStandaloneINECPollingUnitResult(ctx, queries.UpsertStandaloneINECPollingUnitResultParams{
-				InecElectionID:        pgtype.Text{String: cleanStr(params.inecElectionID), Valid: cleanStr(params.inecElectionID) != ""},
-				PollingUnitID:         pu.ID,
-				StateID:               pgtype.Int2{Int16: int16(pu.StateID), Valid: true},
-				SenatorialDistrictID:  pgtype.Int4{},
-				FederalConstituencyID: pgtype.Int4{},
-				StateConstituencyID:   pgtype.Int4{},
-				LgaID:                 pgtype.Int4{Int32: pu.LgaID, Valid: true},
-				WardID:                pgtype.Int4{Int32: pu.WardID, Valid: true},
-				AccreditedVoters:      accreditedVoters,
-				VotesCast:             votesCast,
-				ValidVotes:            validVotes,
-				RejectedVotes:         rejectedVotes,
-				ResultSheetImageUrl:   pgtype.Text{String: finalImageURL, Valid: true},
-				IrevDocumentUrl:       pgtype.Text{String: docURL, Valid: docURL != ""},
-				Status:                pgtype.Text{String: statusStr, Valid: true},
-				AiExtractedData:       rawJSONBytes,
-				ResultIsAiGenerated:   isAIGenerated,
-				AiConfidenceScore:     confidenceScore,
-			})
-		}
+		// Insert or update in inec_polling_unit_results
+		submittedRes, err := s.queries.UpsertINECPollingUnitResult(ctx, queries.UpsertINECPollingUnitResultParams{
+			ElectionID:            params.grabber.ElectionID,
+			ElectionGroupID:       params.grabber.ElectionGroupID,
+			PollingUnitID:         pu.ID,
+			StateID:               pgtype.Int2{Int16: int16(pu.StateID), Valid: true},
+			SenatorialDistrictID:  pgtype.Int4{},
+			FederalConstituencyID: pgtype.Int4{},
+			StateConstituencyID:   pgtype.Int4{},
+			LgaID:                 pgtype.Int4{Int32: pu.LgaID, Valid: true},
+			WardID:                pgtype.Int4{Int32: pu.WardID, Valid: true},
+			AccreditedVoters:      accreditedVoters,
+			VotesCast:             votesCast,
+			ValidVotes:            validVotes,
+			RejectedVotes:         rejectedVotes,
+			ResultSheetImageUrl:   pgtype.Text{String: finalImageURL, Valid: true},
+			IrevDocumentUrl:       pgtype.Text{String: docURL, Valid: docURL != ""},
+			Status:                pgtype.Text{String: statusStr, Valid: true},
+			AiExtractedData:       rawJSONBytes,
+			ResultIsAiGenerated:   isAIGenerated,
+			AiConfidenceScore:     confidenceScore,
+		})
 
 		if err != nil {
 			slog.Error("failed to submit INEC polling unit result", "pu_code", rawPUCode, "err", err)
@@ -1305,32 +1102,30 @@ func (s *INECGrabberService) processWardPUs(ctx context.Context, params processW
 			"status", statusStr,
 		)
 
-		// Only update local election final results and trigger rollups when linked to a local election
-		if params.grabber.ElectionID > 0 {
-			_, _ = s.queries.UpsertPollingUnitFinalResult(ctx, queries.UpsertPollingUnitFinalResultParams{
-				ElectionID:               params.grabber.ElectionID,
-				ElectionGroupID:          params.grabber.ElectionGroupID,
-				PollingUnitID:            pu.ID,
-				StateID:                  pgtype.Int2{Int16: int16(pu.StateID), Valid: true},
-				SenatorialDistrictID:     pgtype.Int4{},
-				FederalConstituencyID:    pgtype.Int4{},
-				StateConstituencyID:      pgtype.Int4{},
-				LgaID:                    pgtype.Int4{Int32: pu.LgaID, Valid: true},
-				WardID:                   pgtype.Int4{Int32: pu.WardID, Valid: true},
-				PollingUnitResultID:      pgtype.Int8{Int64: submittedRes.ID, Valid: true},
-				AccreditedVoters:         accreditedVoters,
-				VotesCast:                votesCast,
-				ValidVotes:               validVotes,
-				RejectedVotes:            rejectedVotes,
-				CandidateResults:         candidateResultsBytes,
-				MatchingSubmissionsCount: 1,
-				TotalSubmissionsCount:    1,
-			})
+		// Update local election final results and trigger rollups
+		_, _ = s.queries.UpsertPollingUnitFinalResult(ctx, queries.UpsertPollingUnitFinalResultParams{
+			ElectionID:               params.grabber.ElectionID,
+			ElectionGroupID:          params.grabber.ElectionGroupID,
+			PollingUnitID:            pu.ID,
+			StateID:                  pgtype.Int2{Int16: int16(pu.StateID), Valid: true},
+			SenatorialDistrictID:     pgtype.Int4{},
+			FederalConstituencyID:    pgtype.Int4{},
+			StateConstituencyID:      pgtype.Int4{},
+			LgaID:                    pgtype.Int4{Int32: pu.LgaID, Valid: true},
+			WardID:                   pgtype.Int4{Int32: pu.WardID, Valid: true},
+			PollingUnitResultID:      pgtype.Int8{Int64: submittedRes.ID, Valid: true},
+			AccreditedVoters:         accreditedVoters,
+			VotesCast:                votesCast,
+			ValidVotes:               validVotes,
+			RejectedVotes:            rejectedVotes,
+			CandidateResults:         candidateResultsBytes,
+			MatchingSubmissionsCount: 1,
+			TotalSubmissionsCount:    1,
+		})
 
-			// Notify background task processor if notifier callback is present
-			if s.resultNotifier != nil {
-				s.resultNotifier(ctx, params.grabber.ElectionID, pu.ID)
-			}
+		// Notify background task processor if notifier callback is present
+		if s.resultNotifier != nil {
+			s.resultNotifier(ctx, params.grabber.ElectionID, pu.ID)
 		}
 
 		newResults++
@@ -1511,8 +1306,8 @@ func (s *INECGrabberService) ResolveUnmatchedResult(
 			imgURL := unmatched.ResultSheetImageUrl.String
 
 			pur, err := s.queries.UpsertINECPollingUnitResult(ctx, queries.UpsertINECPollingUnitResultParams{
-				ElectionID:                   pgtype.Int4{Int32: unmatched.ElectionID, Valid: true},
-				ElectionGroupID:              pgtype.Int4{Int32: unmatched.ElectionGroupID, Valid: true},
+				ElectionID:                   unmatched.ElectionID,
+				ElectionGroupID:              unmatched.ElectionGroupID,
 				PollingUnitID:                pu.ID,
 				StateID:                      pgtype.Int2{Int16: int16(pu.StateID), Valid: true},
 				SenatorialDistrictID:         pgtype.Int4{},
@@ -1617,13 +1412,6 @@ func (s *INECGrabberService) saveINECResultScores(ctx context.Context, inecResul
 		slog.Warn("failed to clear old INEC result scores", "inec_result_id", inecResultID, "err", err)
 		return
 	}
-	var egPg, ePg pgtype.Int4
-	if electionGroupID > 0 {
-		egPg = pgtype.Int4{Int32: electionGroupID, Valid: true}
-	}
-	if electionID > 0 {
-		ePg = pgtype.Int4{Int32: electionID, Valid: true}
-	}
 	for _, c := range candidates {
 		shortName := strings.ToUpper(strings.TrimSpace(c.PartyShortName))
 		if shortName == "" {
@@ -1631,8 +1419,8 @@ func (s *INECGrabberService) saveINECResultScores(ctx context.Context, inecResul
 		}
 		if _, err := s.queries.UpsertINECPollingUnitResultScore(ctx, queries.UpsertINECPollingUnitResultScoreParams{
 			InecResultID:    inecResultID,
-			ElectionGroupID: egPg,
-			ElectionID:      ePg,
+			ElectionGroupID: electionGroupID,
+			ElectionID:      electionID,
 			PollingUnitID:   pollingUnitID,
 			PartyShortName:  shortName,
 			VoteCount:       int32(c.VoteCount),

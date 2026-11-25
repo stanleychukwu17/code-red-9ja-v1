@@ -179,53 +179,60 @@ type BulkDeleteElectionsRequest struct {
 	ElectionGroupID *int32  `json:"election_group_id,omitempty"`
 }
 
+func optionalJSONDate(d *utils.JSONDate) time.Time {
+	if d == nil {
+		return time.Time{}
+	}
+	return d.Time()
+}
+
 type CreateNationwideElectionRequest struct {
-	OfficeID        int16          `json:"office_id" validate:"required,gt=0"`
-	ElectionDate    utils.JSONDate `json:"election_date" validate:"required"`
-	ElectionGroupID int32          `json:"election_group_id" validate:"required,gt=0"`
+	OfficeID        int16           `json:"office_id" validate:"required,gt=0"`
+	ElectionDate    *utils.JSONDate `json:"election_date"`
+	ElectionGroupID int32           `json:"election_group_id" validate:"required,gt=0"`
 }
 
 type CreateStateElectionRequest struct {
-	OfficeID        int16          `json:"office_id" validate:"required,gt=0"`
-	ElectionDate    utils.JSONDate `json:"election_date" validate:"required"`
-	ElectionGroupID int32          `json:"election_group_id" validate:"required,gt=0"`
-	StateIDs        []int16        `json:"state_ids" validate:"required,min=1"`
+	OfficeID        int16           `json:"office_id" validate:"required,gt=0"`
+	ElectionDate    *utils.JSONDate `json:"election_date"`
+	ElectionGroupID int32           `json:"election_group_id" validate:"required,gt=0"`
+	StateIDs        []int16         `json:"state_ids" validate:"required,min=1"`
 }
 
 type CreateSenatorialDistrictElectionRequest struct {
-	OfficeID              int16          `json:"office_id" validate:"required,gt=0"`
-	ElectionDate          utils.JSONDate `json:"election_date" validate:"required"`
-	ElectionGroupID       int32          `json:"election_group_id" validate:"required,gt=0"`
-	SenatorialDistrictIDs []int32        `json:"senatorial_district_ids" validate:"required,min=1"`
+	OfficeID              int16           `json:"office_id" validate:"required,gt=0"`
+	ElectionDate          *utils.JSONDate `json:"election_date"`
+	ElectionGroupID       int32           `json:"election_group_id" validate:"required,gt=0"`
+	SenatorialDistrictIDs []int32         `json:"senatorial_district_ids" validate:"required,min=1"`
 }
 
 type CreateFederalConstituencyElectionRequest struct {
-	OfficeID               int16          `json:"office_id" validate:"required,gt=0"`
-	ElectionDate           utils.JSONDate `json:"election_date" validate:"required"`
-	ElectionGroupID        int32          `json:"election_group_id" validate:"required,gt=0"`
-	FederalConstituencyIDs []int32        `json:"federal_constituency_ids" validate:"required,min=1"`
+	OfficeID               int16           `json:"office_id" validate:"required,gt=0"`
+	ElectionDate           *utils.JSONDate `json:"election_date"`
+	ElectionGroupID        int32           `json:"election_group_id" validate:"required,gt=0"`
+	FederalConstituencyIDs []int32         `json:"federal_constituency_ids" validate:"required,min=1"`
 }
 
 type CreateStateConstituencyElectionRequest struct {
-	OfficeID             int16          `json:"office_id" validate:"required,gt=0"`
-	ElectionDate         utils.JSONDate `json:"election_date" validate:"required"`
-	ElectionGroupID      int32          `json:"election_group_id" validate:"required,gt=0"`
-	StateConstituencyIDs []int32        `json:"state_constituency_ids" validate:"required,min=1"`
+	OfficeID             int16           `json:"office_id" validate:"required,gt=0"`
+	ElectionDate         *utils.JSONDate `json:"election_date"`
+	ElectionGroupID      int32           `json:"election_group_id" validate:"required,gt=0"`
+	StateConstituencyIDs []int32         `json:"state_constituency_ids" validate:"required,min=1"`
 }
 
 type CreateLgaElectionRequest struct {
-	OfficeID        int16          `json:"office_id" validate:"required,gt=0"`
-	ElectionDate    utils.JSONDate `json:"election_date" validate:"required"`
-	ElectionGroupID int32          `json:"election_group_id" validate:"required,gt=0"`
-	LgaIDs          []int32        `json:"lga_ids" validate:"required,min=1"`
+	OfficeID        int16           `json:"office_id" validate:"required,gt=0"`
+	ElectionDate    *utils.JSONDate `json:"election_date"`
+	ElectionGroupID int32           `json:"election_group_id" validate:"required,gt=0"`
+	LgaIDs          []int32         `json:"lga_ids" validate:"required,min=1"`
 }
 
 type CreateWardElectionRequest struct {
-	OfficeID        int16          `json:"office_id" validate:"required,gt=0"`
-	ElectionDate    utils.JSONDate `json:"election_date" validate:"required"`
-	ElectionGroupID int32          `json:"election_group_id" validate:"required,gt=0"`
-	AllWards        bool           `json:"all_wards"`
-	WardIDs         []int32        `json:"ward_ids"`
+	OfficeID        int16           `json:"office_id" validate:"required,gt=0"`
+	ElectionDate    *utils.JSONDate `json:"election_date"`
+	ElectionGroupID int32           `json:"election_group_id" validate:"required,gt=0"`
+	AllWards        bool            `json:"all_wards"`
+	WardIDs         []int32         `json:"ward_ids"`
 }
 
 // CreateNationwideElection godoc

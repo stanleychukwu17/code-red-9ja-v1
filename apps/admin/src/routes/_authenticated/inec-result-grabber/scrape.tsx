@@ -11,27 +11,18 @@ import {
   PinINECElectionCard,
   type INECElectionPreview,
 } from "./-components/PinINECElectionCard";
-import {
-  ScrapeControlsCard,
-  type ScrapeOptions,
-} from "./-components/ScrapeControlsCard";
 import { SyncMongoIDsCard } from "./-components/SyncMongoIDsCard";
-import {
-  controlledScrapeINEC,
-  discoverINECElections,
-} from "#/lib/server/inec_grabber";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { discoverINECElections } from "#/lib/server/inec_grabber";
+import { useQuery } from "@tanstack/react-query";
 
 export const Route = createFileRoute(
   "/_authenticated/inec-result-grabber/scrape",
 )({
-  head: () => getPageHeader({ title: "Controlled INEC Scrape" }),
+  head: () => getPageHeader({ title: "Discover INEC Elections" }),
   component: RouteComponent,
 });
 
 function RouteComponent() {
-  const queryClient = useQueryClient();
-
   const [discoverFilter, setDiscoverFilter] = useState<DiscoverFilter>({
     officeId: "",
     stateId: "",
@@ -44,20 +35,9 @@ function RouteComponent() {
   } | null>(null);
   const [selectedInecElectionId, setSelectedInecElectionId] =
     useState<string>("");
-  const [scrapeOptions, setScrapeOptions] = useState<ScrapeOptions>({
-    scopeStateId: "",
-    lgaId: "",
-    wardId: "",
-    maxPUs: "5",
-    uploadToR2: true,
-    saveToLocal: false,
-    aiExtract: true,
-    force: true,
-  });
-  const [statusMessage, setStatusMessage] = useState<string>("");
   const [errorMessage, setErrorMessage] = useState<string>("");
 
-  // Step 1: Query IReV for matching elections by office, optional state, and year (cached per filter)
+  // Query IReV for matching elections by office, optional state, and year (cached per filter)
   const discoverQuery = useQuery({
     queryKey: ["inec-discover-elections", discoverParams],
     queryFn: async () => {
@@ -86,86 +66,13 @@ function RouteComponent() {
       ? Number(discoverFilter.year.trim())
       : undefined;
     setErrorMessage("");
-    setStatusMessage("");
     setSelectedInecElectionId("");
-    setScrapeOptions((prev) => ({
-      ...prev,
-      scopeStateId: "",
-      lgaId: "",
-      wardId: "",
-    }));
     setDiscoverParams({
       officeId: discoverFilter.officeId,
       stateId: discoverFilter.stateId || undefined,
       year: parsedYear,
     });
   };
-
-  // Pinning an INEC election resets LGA/Ward filters
-  const handleSelectInecElection = (inecElectionId: string) => {
-    setSelectedInecElectionId(inecElectionId);
-    setScrapeOptions((prev) => ({
-      ...prev,
-      scopeStateId: "",
-      lgaId: "",
-      wardId: "",
-    }));
-  };
-
-  // Step 3: Execute the controlled scrape (links matching local election if found, else election_id = NULL)
-  const runScrapeMutation = useMutation({
-    mutationFn: async () => {
-      if (!discoverFilter.officeId) {
-        throw new Error("Select an office / election type first");
-      }
-      if (!selectedInecElectionId) {
-        throw new Error("Pin an upstream INEC election from Step 2 first");
-      }
-      const parsedYear = discoverFilter.year.trim()
-        ? Number(discoverFilter.year.trim())
-        : undefined;
-      const parsedMaxPUs = scrapeOptions.maxPUs.trim()
-        ? Number(scrapeOptions.maxPUs.trim())
-        : undefined;
-
-      const res = await controlledScrapeINEC({
-        data: {
-          officeId: discoverFilter.officeId,
-          stateId: discoverFilter.stateId || undefined,
-          year: parsedYear,
-          inecElectionId: selectedInecElectionId,
-          lgaId: scrapeOptions.lgaId || undefined,
-          wardId: scrapeOptions.wardId || undefined,
-          maxPUs: parsedMaxPUs,
-          uploadToR2: scrapeOptions.uploadToR2,
-          saveToLocal: import.meta.env.DEV ? scrapeOptions.saveToLocal : false,
-          aiExtract: scrapeOptions.aiExtract,
-          force: scrapeOptions.force,
-        },
-      });
-      if (!res?.success) {
-        throw new Error(res?.message || "Controlled scrape failed");
-      }
-      return res.data;
-    },
-    onSuccess: (data) => {
-      setErrorMessage("");
-      const collected = data?.results_collected ?? 0;
-      const matchedElectionId = data?.matched_election_id;
-      const targetInfo = matchedElectionId
-        ? `linked to local election #${matchedElectionId}`
-        : "saved standalone (election_id = NULL)";
-      setStatusMessage(
-        `Scrape finished (${targetInfo}): ${collected} new polling unit result(s) collected.`,
-      );
-      queryClient.invalidateQueries({ queryKey: ["inec-result-grabbers"] });
-      queryClient.invalidateQueries({ queryKey: ["inec-result-grabber-logs"] });
-    },
-    onError: (err: Error) => {
-      setErrorMessage(err.message);
-      setStatusMessage("");
-    },
-  });
 
   const combinedError =
     errorMessage ||
@@ -187,25 +94,20 @@ function RouteComponent() {
           onDiscover={handleDiscover}
         />
 
+        {combinedError && (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700">
+            {combinedError}
+          </div>
+        )}
+
         {inecElections.length > 0 && (
           <PinINECElectionCard
             key={inecElections.map((e) => e._id).join(",")}
             elections={inecElections}
             selectedElectionId={selectedInecElectionId}
-            onSelect={handleSelectInecElection}
+            onSelect={setSelectedInecElectionId}
           />
         )}
-
-        <ScrapeControlsCard
-          value={scrapeOptions}
-          selectedInecElectionId={selectedInecElectionId}
-          stateId={discoverFilter.stateId}
-          isRunning={runScrapeMutation.isPending}
-          errorMessage={combinedError}
-          statusMessage={statusMessage}
-          onChange={setScrapeOptions}
-          onRun={() => runScrapeMutation.mutate()}
-        />
 
         <SyncMongoIDsCard selectedElection={selectedElection} />
       </div>

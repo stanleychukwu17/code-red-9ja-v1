@@ -282,10 +282,9 @@ CREATE UNIQUE INDEX uq_collation_state_submission ON collation_results (election
 CREATE TABLE IF NOT EXISTS inec_polling_unit_results (
   id                       BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 
-  -- Core relationships (election_id / election_group_id are NULL when scraped standalone from INEC before a local election exists)
-  election_group_id        INT      REFERENCES election_groups(id) ON DELETE CASCADE,
-  election_id              INT      REFERENCES elections(id) ON DELETE CASCADE,
-  inec_election_id         VARCHAR(100),
+  -- Core relationships
+  election_group_id        INT      REFERENCES election_groups(id) ON DELETE CASCADE NOT NULL,
+  election_id              INT      REFERENCES elections(id) ON DELETE CASCADE NOT NULL,
   polling_unit_id          INTEGER  REFERENCES polling_units(id) ON DELETE CASCADE NOT NULL,
 
   -- Denormalized for fast geo-filtering
@@ -330,16 +329,15 @@ CREATE TABLE IF NOT EXISTS inec_polling_unit_results (
   created_at               TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   updated_at               TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
-CREATE UNIQUE INDEX uq_inec_pu_result ON inec_polling_unit_results (election_id, polling_unit_id) WHERE election_id IS NOT NULL;
-CREATE UNIQUE INDEX uq_inec_pu_result_standalone ON inec_polling_unit_results (inec_election_id, polling_unit_id) WHERE election_id IS NULL AND inec_election_id IS NOT NULL;
+CREATE UNIQUE INDEX uq_inec_pu_result ON inec_polling_unit_results (election_id, polling_unit_id);
 
 
 CREATE TABLE IF NOT EXISTS inec_polling_unit_result_scores (
   id                BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   inec_result_id    BIGINT      REFERENCES inec_polling_unit_results(id) ON DELETE CASCADE NOT NULL,
 
-  election_group_id INT         REFERENCES election_groups(id) ON DELETE CASCADE,
-  election_id       INT         REFERENCES elections(id) ON DELETE CASCADE,
+  election_group_id INT         REFERENCES election_groups(id) ON DELETE CASCADE NOT NULL,
+  election_id       INT         REFERENCES elections(id) ON DELETE CASCADE NOT NULL,
   party_short_name  VARCHAR(30) NOT NULL,
   party_id          SMALLINT    REFERENCES parties(id) ON DELETE SET NULL, -- Resolved from party_short_name when matched
   polling_unit_id   INTEGER     REFERENCES polling_units(id) ON DELETE CASCADE NOT NULL,

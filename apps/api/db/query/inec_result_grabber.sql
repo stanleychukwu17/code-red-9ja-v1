@@ -12,17 +12,6 @@ JOIN elections e ON g.election_id = e.id
 JOIN offices o ON e.office_id = o.id
 WHERE g.election_id = $1;
 
--- name: FindMatchingGrabberForINECScrape :one
-SELECT g.*, e.scope, e.election_date, e.state_id, e.office_id, o.inec_election_type_id, o.name AS office_name
-FROM inec_result_grabber g
-JOIN elections e ON g.election_id = e.id
-JOIN offices o ON e.office_id = o.id
-WHERE e.office_id = sqlc.arg('office_id')
-  AND (sqlc.narg('state_id')::smallint IS NULL OR e.state_id = sqlc.narg('state_id'))
-  AND (sqlc.narg('year')::int IS NULL OR EXTRACT(YEAR FROM e.election_date)::int = sqlc.narg('year'))
-ORDER BY e.election_date DESC, g.id DESC
-LIMIT 1;
-
 -- name: ListActiveINECResultGrabbers :many
 SELECT g.*, e.scope, e.election_date, e.state_id, e.office_id, o.inec_election_type_id, o.name AS office_name
 FROM inec_result_grabber g

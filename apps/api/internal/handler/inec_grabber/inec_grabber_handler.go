@@ -173,68 +173,6 @@ func (h *INECGrabberHandler) DiscoverElections(w http.ResponseWriter, r *http.Re
 	})
 }
 
-// PreviewLGAs fetches LGAs and their wards for an upstream INEC election ID.
-func (h *INECGrabberHandler) PreviewLGAs(w http.ResponseWriter, r *http.Request) {
-	// Require the upstream INEC election _id selected in Step 2
-	inecElectionID := r.URL.Query().Get("inec_election_id")
-	if inecElectionID == "" {
-		h.utils.RespondError(w, http.StatusBadRequest, "inec_election_id is required")
-		return
-	}
-
-	// Parse optional state_id filter to scope LGAs for nationwide elections
-	var stateID *int16
-	if sStr := r.URL.Query().Get("state_id"); sStr != "" {
-		if sVal, err := strconv.ParseInt(sStr, 10, 16); err == nil && sVal > 0 {
-			v := int16(sVal)
-			stateID = &v
-		}
-	}
-
-	// Fetch LGAs/wards from IReV and backfill local mongo_id mappings
-	lgas, err := h.svc.PreviewINECLGAs(r.Context(), inecElectionID, stateID)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	h.utils.RespondSuccess(w, http.StatusOK, "INEC LGAs fetched successfully", map[string]interface{}{
-		"lgas": lgas,
-	})
-}
-
-// ControlledScrape runs a controlled INEC scrape by office/state/year/inec_election_id without requiring a pre-existing grabber.
-func (h *INECGrabberHandler) ControlledScrape(w http.ResponseWriter, r *http.Request) {
-	// Decode and validate required office_id and pinned upstream inec_election_id
-	var body inecservice.ControlledScrapeParams
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
-		return
-	}
-	if body.OfficeID <= 0 || body.INECElectionID == "" {
-		h.utils.RespondError(w, http.StatusBadRequest, "office_id and inec_election_id are required")
-		return
-	}
-
-	// Detach from request context with a 15-minute timeout so long scrapes survive client disconnects
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
-	defer cancel()
-
-	// Execute controlled scrape (links local election if matched, otherwise saves standalone results)
-	res, err := h.svc.ControlledScrape(ctx, body)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	// Return collected count, optional matched local election ID, and execution log
-	h.utils.RespondSuccess(w, http.StatusOK, "Controlled INEC scrape completed", map[string]interface{}{
-		"results_collected":   res.ResultsCollected,
-		"matched_election_id": res.MatchedElectionID,
-		"log":                 res.Log,
-	})
-}
-
 // SyncLGAWardMongoIDs loops through all states for an INEC election and backfills lgas.mongo_id and wards.mongo_id.
 func (h *INECGrabberHandler) SyncLGAWardMongoIDs(w http.ResponseWriter, r *http.Request) {
 	// Parse and validate the pinned upstream INEC election ID

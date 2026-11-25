@@ -97,51 +97,6 @@ export const syncINECResultGrabber = createServerFn({ method: "POST" })
     }
   });
 
-export const controlledScrapeINEC = createServerFn({ method: "POST" })
-  .inputValidator(
-    (data: {
-      officeId: number | string;
-      stateId?: number | string;
-      year?: number;
-      inecElectionId: string;
-      lgaId?: string;
-      wardId?: string;
-      maxPUs?: number;
-      uploadToR2?: boolean;
-      saveToLocal?: boolean;
-      aiExtract?: boolean;
-      force?: boolean;
-    }) => data,
-  )
-  .handler(async ({ data }) => {
-    try {
-      const body: Record<string, unknown> = {
-        office_id: Number(data.officeId),
-        inec_election_id: data.inecElectionId,
-      };
-      if (data.stateId) body.state_id = Number(data.stateId);
-      if (data.year !== undefined) body.year = data.year;
-      if (data.lgaId) body.lga_id = data.lgaId;
-      if (data.wardId) body.ward_id = data.wardId;
-      if (data.maxPUs !== undefined && data.maxPUs > 0)
-        body.max_pus = data.maxPUs;
-      if (data.uploadToR2 !== undefined) body.upload_to_r2 = data.uploadToR2;
-      if (data.saveToLocal !== undefined) body.save_to_local = data.saveToLocal;
-      if (data.aiExtract !== undefined) body.ai_extract = data.aiExtract;
-      if (data.force !== undefined) body.force = data.force;
-
-      return await apiFetchJson(API_URL.controlledScrapeINEC, {
-        method: "POST",
-        body: JSON.stringify(body),
-      });
-    } catch (error: any) {
-      return {
-        success: false,
-        message: error?.message || "Failed to run controlled INEC scrape",
-      };
-    }
-  });
-
 export const syncINECMongoIDs = createServerFn({ method: "POST" })
   .inputValidator((data: { inecElectionId: string }) => data)
   .handler(async ({ data }) => {
@@ -188,23 +143,6 @@ export const discoverINECElections = createServerFn({ method: "GET" })
       return {
         success: false,
         message: error?.message || "Failed to discover INEC elections",
-      };
-    }
-  });
-
-export const previewINECLGAs = createServerFn({ method: "GET" })
-  .inputValidator(
-    (data: { inecElectionId: string; stateId?: number }) => data,
-  )
-  .handler(async ({ data }) => {
-    try {
-      return await apiFetchJson(
-        API_URL.previewINECLGAs(data.inecElectionId, data.stateId),
-      );
-    } catch (error: any) {
-      return {
-        success: false,
-        message: error?.message || "Failed to preview INEC LGAs",
       };
     }
   });

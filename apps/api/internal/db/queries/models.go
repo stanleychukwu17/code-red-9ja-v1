@@ -414,9 +414,8 @@ type File struct {
 
 type InecPollingUnitResult struct {
 	ID                           int64              `json:"id"`
-	ElectionGroupID              pgtype.Int4        `json:"election_group_id"`
-	ElectionID                   pgtype.Int4        `json:"election_id"`
-	InecElectionID               pgtype.Text        `json:"inec_election_id"`
+	ElectionGroupID              int32              `json:"election_group_id"`
+	ElectionID                   int32              `json:"election_id"`
 	PollingUnitID                int32              `json:"polling_unit_id"`
 	StateID                      pgtype.Int2        `json:"state_id"`
 	SenatorialDistrictID         pgtype.Int4        `json:"senatorial_district_id"`
@@ -453,8 +452,8 @@ type InecPollingUnitResult struct {
 type InecPollingUnitResultScore struct {
 	ID              int64              `json:"id"`
 	InecResultID    int64              `json:"inec_result_id"`
-	ElectionGroupID pgtype.Int4        `json:"election_group_id"`
-	ElectionID      pgtype.Int4        `json:"election_id"`
+	ElectionGroupID int32              `json:"election_group_id"`
+	ElectionID      int32              `json:"election_id"`
 	PartyShortName  string             `json:"party_short_name"`
 	PartyID         pgtype.Int2        `json:"party_id"`
 	PollingUnitID   int32              `json:"polling_unit_id"`

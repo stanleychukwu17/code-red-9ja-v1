@@ -337,7 +337,6 @@ export const API_URL = {
   toggleINECResultGrabberPause: (id: number | string) => {
     return `${api}/admin/inec-result-grabbers/${id}/toggle-pause`;
   },
-  controlledScrapeINEC: `${api}/admin/inec-result-grabbers/controlled-scrape`,
   syncINECMongoIDs: `${api}/admin/inec-result-grabbers/sync-lga-ward-ids`,
   previewINECElections: (id: number | string, year?: number) => {
     const qs = year ? `?year=${year}` : "";
@@ -352,11 +351,6 @@ export const API_URL = {
     if (args.stateId) params.append("state_id", String(args.stateId));
     if (args.year) params.append("year", String(args.year));
     return `${api}/admin/inec-result-grabbers/discover-elections?${params.toString()}`;
-  },
-  previewINECLGAs: (inecElectionId: string, stateId?: number) => {
-    const params = new URLSearchParams({ inec_election_id: inecElectionId });
-    if (stateId) params.append("state_id", String(stateId));
-    return `${api}/admin/inec-result-grabbers/preview-lgas?${params.toString()}`;
   },
   adminAgentPayments: {
     overview: (electionGroupId?: number | string) => {

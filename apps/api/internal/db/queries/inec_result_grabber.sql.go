@@ -110,67 +110,6 @@ func (q *Queries) CalculateElectionMetrics(ctx context.Context, electionID int32
 	return i, err
 }
 
-const findMatchingGrabberForINECScrape = `-- name: FindMatchingGrabberForINECScrape :one
-SELECT g.id, g.election_group_id, g.election_id, g.name, g.scope, g.election_date, g.sync_status, g.sync_error_message, g.created_at, g.updated_at, e.scope, e.election_date, e.state_id, e.office_id, o.inec_election_type_id, o.name AS office_name
-FROM inec_result_grabber g
-JOIN elections e ON g.election_id = e.id
-JOIN offices o ON e.office_id = o.id
-WHERE e.office_id = $1
-  AND ($2::smallint IS NULL OR e.state_id = $2)
-  AND ($3::int IS NULL OR EXTRACT(YEAR FROM e.election_date)::int = $3)
-ORDER BY e.election_date DESC, g.id DESC
-LIMIT 1
-`
-
-type FindMatchingGrabberForINECScrapeParams struct {
-	OfficeID int16       `json:"office_id"`
-	StateID  pgtype.Int2 `json:"state_id"`
-	Year     pgtype.Int4 `json:"year"`
-}
-
-type FindMatchingGrabberForINECScrapeRow struct {
-	ID                 int64              `json:"id"`
-	ElectionGroupID    int32              `json:"election_group_id"`
-	ElectionID         int32              `json:"election_id"`
-	Name               pgtype.Text        `json:"name"`
-	Scope              string             `json:"scope"`
-	ElectionDate       pgtype.Date        `json:"election_date"`
-	SyncStatus         string             `json:"sync_status"`
-	SyncErrorMessage   pgtype.Text        `json:"sync_error_message"`
-	CreatedAt          pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
-	Scope_2            string             `json:"scope_2"`
-	ElectionDate_2     pgtype.Date        `json:"election_date_2"`
-	StateID            pgtype.Int2        `json:"state_id"`
-	OfficeID           int16              `json:"office_id"`
-	InecElectionTypeID pgtype.Text        `json:"inec_election_type_id"`
-	OfficeName         string             `json:"office_name"`
-}
-
-func (q *Queries) FindMatchingGrabberForINECScrape(ctx context.Context, arg FindMatchingGrabberForINECScrapeParams) (FindMatchingGrabberForINECScrapeRow, error) {
-	row := q.db.QueryRow(ctx, findMatchingGrabberForINECScrape, arg.OfficeID, arg.StateID, arg.Year)
-	var i FindMatchingGrabberForINECScrapeRow
-	err := row.Scan(
-		&i.ID,
-		&i.ElectionGroupID,
-		&i.ElectionID,
-		&i.Name,
-		&i.Scope,
-		&i.ElectionDate,
-		&i.SyncStatus,
-		&i.SyncErrorMessage,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.Scope_2,
-		&i.ElectionDate_2,
-		&i.StateID,
-		&i.OfficeID,
-		&i.InecElectionTypeID,
-		&i.OfficeName,
-	)
-	return i, err
-}
-
 const getINECResultGrabberByElectionID = `-- name: GetINECResultGrabberByElectionID :one
 SELECT g.id, g.election_group_id, g.election_id, g.name, g.scope, g.election_date, g.sync_status, g.sync_error_message, g.created_at, g.updated_at, e.scope, e.election_date, e.state_id, e.office_id, o.inec_election_type_id, o.name AS office_name
 FROM inec_result_grabber g
