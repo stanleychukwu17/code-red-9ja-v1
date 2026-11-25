@@ -261,7 +261,7 @@ func (h *Handler) CreateNationwideElection(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Create election instance, resolve election group, and seed skeleton results
-	election, err := h.service.CreateNationwideElection(r.Context(), req.OfficeID, req.ElectionDate.Time(), req.ElectionGroupID)
+	election, err := h.service.CreateNationwideElection(r.Context(), req.OfficeID, optionalJSONDate(req.ElectionDate), req.ElectionGroupID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create nationwide election: "+err.Error())
 		return
@@ -301,7 +301,7 @@ func (h *Handler) CreateStateElection(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Batch create election instances for each state, resolve election group, and seed skeleton results
-	count, err := h.service.CreateStateElection(r.Context(), req.OfficeID, req.ElectionDate.Time(), req.ElectionGroupID, req.StateIDs)
+	count, err := h.service.CreateStateElection(r.Context(), req.OfficeID, optionalJSONDate(req.ElectionDate), req.ElectionGroupID, req.StateIDs)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create state elections: "+err.Error())
 		return
@@ -343,7 +343,7 @@ func (h *Handler) CreateSenatorialDistrictElection(w http.ResponseWriter, r *htt
 	}
 
 	// Batch create elections across selected senatorial districts, resolve group, and seed skeleton results
-	count, err := h.service.CreateSenatorialDistrictElection(r.Context(), req.OfficeID, req.ElectionDate.Time(), req.ElectionGroupID, req.SenatorialDistrictIDs)
+	count, err := h.service.CreateSenatorialDistrictElection(r.Context(), req.OfficeID, optionalJSONDate(req.ElectionDate), req.ElectionGroupID, req.SenatorialDistrictIDs)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create senatorial district elections: "+err.Error())
 		return
@@ -385,7 +385,7 @@ func (h *Handler) CreateFederalConstituencyElection(w http.ResponseWriter, r *ht
 	}
 
 	// Batch create elections across selected federal constituencies, resolve group, and seed skeleton results
-	count, err := h.service.CreateFederalConstituencyElection(r.Context(), req.OfficeID, req.ElectionDate.Time(), req.ElectionGroupID, req.FederalConstituencyIDs)
+	count, err := h.service.CreateFederalConstituencyElection(r.Context(), req.OfficeID, optionalJSONDate(req.ElectionDate), req.ElectionGroupID, req.FederalConstituencyIDs)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create federal constituency elections: "+err.Error())
 		return
@@ -427,7 +427,7 @@ func (h *Handler) CreateStateConstituencyElection(w http.ResponseWriter, r *http
 	}
 
 	// Batch create elections across selected state assembly constituencies, resolve group, and seed skeleton results
-	count, err := h.service.CreateStateConstituencyElection(r.Context(), req.OfficeID, req.ElectionDate.Time(), req.ElectionGroupID, req.StateConstituencyIDs)
+	count, err := h.service.CreateStateConstituencyElection(r.Context(), req.OfficeID, optionalJSONDate(req.ElectionDate), req.ElectionGroupID, req.StateConstituencyIDs)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create state constituency elections: "+err.Error())
 		return
@@ -469,7 +469,7 @@ func (h *Handler) CreateLgaElection(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Batch create elections across selected LGAs, resolve group, and seed skeleton results
-	count, err := h.service.CreateLgaElection(r.Context(), req.OfficeID, req.ElectionDate.Time(), req.ElectionGroupID, req.LgaIDs)
+	count, err := h.service.CreateLgaElection(r.Context(), req.OfficeID, optionalJSONDate(req.ElectionDate), req.ElectionGroupID, req.LgaIDs)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create LGA elections: "+err.Error())
 		return
@@ -519,7 +519,7 @@ func (h *Handler) CreateWardElection(w http.ResponseWriter, r *http.Request) {
 	// Batch create elections across selected Wards, resolve group, and seed skeleton results
 	count, err := h.service.CreateWardElection(r.Context(), elections.CreateWardElectionParams{
 		OfficeID:        req.OfficeID,
-		ElectionDate:    req.ElectionDate.Time(),
+		ElectionDate:    optionalJSONDate(req.ElectionDate),
 		ElectionGroupID: req.ElectionGroupID,
 		AllWards:        req.AllWards,
 		WardIDs:         req.WardIDs,
@@ -719,7 +719,7 @@ func (h *Handler) UpdateElection(w http.ResponseWriter, r *http.Request) {
 	updated, err := h.service.UpdateElection(r.Context(), elections.UpdateElectionParams{
 		ID:              int32(id),
 		Name:            req.Name,
-		ElectionDate:    req.ElectionDate.Time(),
+		ElectionDate:    optionalJSONDate(req.ElectionDate),
 		ElectionGroupID: req.ElectionGroupID,
 	})
 	if err != nil {
