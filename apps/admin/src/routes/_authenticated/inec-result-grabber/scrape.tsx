@@ -45,10 +45,12 @@ function RouteComponent() {
   const [selectedInecElectionId, setSelectedInecElectionId] =
     useState<string>("");
   const [scrapeOptions, setScrapeOptions] = useState<ScrapeOptions>({
+    scopeStateId: "",
     lgaId: "",
     wardId: "",
     maxPUs: "5",
     uploadToR2: true,
+    saveToLocal: false,
     aiExtract: true,
     force: true,
   });
@@ -86,7 +88,12 @@ function RouteComponent() {
     setErrorMessage("");
     setStatusMessage("");
     setSelectedInecElectionId("");
-    setScrapeOptions((prev) => ({ ...prev, lgaId: "", wardId: "" }));
+    setScrapeOptions((prev) => ({
+      ...prev,
+      scopeStateId: "",
+      lgaId: "",
+      wardId: "",
+    }));
     setDiscoverParams({
       officeId: discoverFilter.officeId,
       stateId: discoverFilter.stateId || undefined,
@@ -97,7 +104,12 @@ function RouteComponent() {
   // Pinning an INEC election resets LGA/Ward filters
   const handleSelectInecElection = (inecElectionId: string) => {
     setSelectedInecElectionId(inecElectionId);
-    setScrapeOptions((prev) => ({ ...prev, lgaId: "", wardId: "" }));
+    setScrapeOptions((prev) => ({
+      ...prev,
+      scopeStateId: "",
+      lgaId: "",
+      wardId: "",
+    }));
   };
 
   // Step 3: Execute the controlled scrape (links matching local election if found, else election_id = NULL)
@@ -126,6 +138,7 @@ function RouteComponent() {
           wardId: scrapeOptions.wardId || undefined,
           maxPUs: parsedMaxPUs,
           uploadToR2: scrapeOptions.uploadToR2,
+          saveToLocal: import.meta.env.DEV ? scrapeOptions.saveToLocal : false,
           aiExtract: scrapeOptions.aiExtract,
           force: scrapeOptions.force,
         },

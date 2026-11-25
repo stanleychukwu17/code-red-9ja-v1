@@ -10,13 +10,6 @@ CREATE TABLE IF NOT EXISTS inec_result_grabber (
   scope VARCHAR(50) NOT NULL, -- nationwide, state, senatorial-district, federal-constituency, lga, state-constituency, ward
   election_date DATE NOT NULL,
 
-  -- Bodies with complete results
-  lgas_with_complete_results_count INT NOT NULL DEFAULT 0,
-  wards_with_complete_results_count INT NOT NULL DEFAULT 0,
-
-  -- Total uploaded results
-  uploaded_results_count INT NOT NULL DEFAULT 0,
-
   -- Party Vote Totals [{ "party_code": "apc", "votes": 1500 }, ...]
   -- party_results JSONB NOT NULL DEFAULT '[]'::jsonb,
 

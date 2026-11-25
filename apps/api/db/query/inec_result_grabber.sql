@@ -62,18 +62,6 @@ SET
 WHERE id = $1
 RETURNING *;
 
--- name: UpdateINECResultGrabberMetrics :one
-UPDATE inec_result_grabber
-SET
-  uploaded_results_count = $2,
-  wards_with_complete_results_count = $3,
-  lgas_with_complete_results_count = $4,
-  sync_status = $5,
-  sync_error_message = $6,
-  updated_at = NOW()
-WHERE id = $1
-RETURNING *;
-
 -- name: CalculateElectionMetrics :one
 WITH election_pu_totals AS (
   SELECT 

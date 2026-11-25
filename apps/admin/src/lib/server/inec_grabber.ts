@@ -108,6 +108,7 @@ export const controlledScrapeINEC = createServerFn({ method: "POST" })
       wardId?: string;
       maxPUs?: number;
       uploadToR2?: boolean;
+      saveToLocal?: boolean;
       aiExtract?: boolean;
       force?: boolean;
     }) => data,
@@ -125,6 +126,7 @@ export const controlledScrapeINEC = createServerFn({ method: "POST" })
       if (data.maxPUs !== undefined && data.maxPUs > 0)
         body.max_pus = data.maxPUs;
       if (data.uploadToR2 !== undefined) body.upload_to_r2 = data.uploadToR2;
+      if (data.saveToLocal !== undefined) body.save_to_local = data.saveToLocal;
       if (data.aiExtract !== undefined) body.ai_extract = data.aiExtract;
       if (data.force !== undefined) body.force = data.force;
 

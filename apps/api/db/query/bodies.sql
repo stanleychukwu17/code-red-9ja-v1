@@ -14,10 +14,6 @@ ORDER BY name ASC;
 SELECT id, name, state_ids FROM c_zones_nigeria
 ORDER BY id ASC;
 
--- name: ListAllStates :many
-SELECT * FROM c_states
-ORDER BY name ASC;
-
 -- name: GetStatesByCountryID :many
 SELECT * FROM c_states
 WHERE country_id = $1

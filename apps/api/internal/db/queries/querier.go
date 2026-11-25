@@ -376,7 +376,6 @@ type Querier interface {
 	ListAgentEarnings(ctx context.Context, arg ListAgentEarningsParams) ([]ListAgentEarningsRow, error)
 	ListAllPartyMarketingCampaigns(ctx context.Context, arg ListAllPartyMarketingCampaignsParams) ([]ListAllPartyMarketingCampaignsRow, error)
 	ListAllR2Keys(ctx context.Context) ([]string, error)
-	ListAllStates(ctx context.Context) ([]CState, error)
 	ListAssignmentUpdatesCoordinates(ctx context.Context, assignmentID pgtype.Int8) ([]ListAssignmentUpdatesCoordinatesRow, error)
 	ListAssignments(ctx context.Context, arg ListAssignmentsParams) ([]ListAssignmentsRow, error)
 	ListBlockedUsersByParty(ctx context.Context, arg ListBlockedUsersByPartyParams) ([]ListBlockedUsersByPartyRow, error)
@@ -510,7 +509,6 @@ type Querier interface {
 	UpdateElectionInstance(ctx context.Context, arg UpdateElectionInstanceParams) (Election, error)
 	UpdateFederalConstituency(ctx context.Context, arg UpdateFederalConstituencyParams) (FederalConstituency, error)
 	UpdateFileOwner(ctx context.Context, arg UpdateFileOwnerParams) error
-	UpdateINECResultGrabberMetrics(ctx context.Context, arg UpdateINECResultGrabberMetricsParams) (InecResultGrabber, error)
 	UpdateINECResultGrabberSyncStatus(ctx context.Context, arg UpdateINECResultGrabberSyncStatusParams) (InecResultGrabber, error)
 	UpdateLGA(ctx context.Context, arg UpdateLGAParams) (Lga, error)
 	UpdateLgaSupervisorEarnedAmountKobo(ctx context.Context, arg UpdateLgaSupervisorEarnedAmountKoboParams) (LgaElectionSupervisor, error)

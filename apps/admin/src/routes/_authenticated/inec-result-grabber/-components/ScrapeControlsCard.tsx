@@ -1,6 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { previewINECLGAs } from "#/lib/server/inec_grabber";
+import { getStates } from "#/lib/server/states";
 import { SearchableSelect } from "./SearchableSelect";
+
+type StatePreview = {
+  id: number;
+  name: string;
+};
 
 type INECWardPreview = {
   _id: string;
@@ -15,10 +21,12 @@ type INECLGAPreview = {
 };
 
 export type ScrapeOptions = {
+  scopeStateId: string;
   lgaId: string;
   wardId: string;
   maxPUs: string;
   uploadToR2: boolean;
+  saveToLocal: boolean;
   aiExtract: boolean;
   force: boolean;
 };
@@ -44,14 +52,29 @@ export function ScrapeControlsCard({
   onChange,
   onRun,
 }: ScrapeControlsCardProps) {
+  // Nigerian states (cached/shared with DiscoverElectionsCard) for drilling down LGAs
+  const { data: statesRes, isLoading: isLoadingStates } = useQuery({
+    queryKey: ["states", "for-inec-scrape"],
+    queryFn: async () => {
+      const res = await getStates({ data: { countryId: 161, limit: 100 } });
+      if (res?.success && res.data) {
+        return (res.data.states ?? res.data) as StatePreview[];
+      }
+      return [];
+    },
+    staleTime: Infinity,
+  });
+
+  const effectiveStateId = stateId || value.scopeStateId;
+
   // Load LGAs and wards for the pinned upstream INEC election (cached per election + state)
   const { data: lgasRes, isFetching: isLoadingLGAs, error: lgasError } = useQuery({
-    queryKey: ["inec-lgas", selectedInecElectionId, stateId],
+    queryKey: ["inec-lgas", selectedInecElectionId, effectiveStateId],
     queryFn: async () => {
       const res = await previewINECLGAs({
         data: {
           inecElectionId: selectedInecElectionId,
-          stateId: stateId ? Number(stateId) : undefined,
+          stateId: effectiveStateId ? Number(effectiveStateId) : undefined,
         },
       });
       if (!res?.success) {
@@ -63,6 +86,7 @@ export function ScrapeControlsCard({
     staleTime: Infinity,
   });
 
+  const states = statesRes ?? [];
   const lgas = lgasRes ?? [];
   const selectedLga = lgas.find((l) => l._id === value.lgaId);
   const wards = selectedLga?.wards ?? [];
@@ -82,7 +106,28 @@ export function ScrapeControlsCard({
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div>
+          <label className="block text-[13px] font-medium text-c-80 mb-1.5">
+            State (LGA Drill-down)
+          </label>
+          <SearchableSelect
+            value={effectiveStateId}
+            options={states.map((s) => ({ value: String(s.id), label: s.name }))}
+            placeholder={isLoadingStates ? "Loading states..." : "All States"}
+            searchPlaceholder="Search State..."
+            disabled={!!stateId || !selectedInecElectionId || isLoadingStates}
+            onChange={(nextStateId) =>
+              onChange({
+                ...value,
+                scopeStateId: nextStateId,
+                lgaId: "",
+                wardId: "",
+              })
+            }
+          />
+        </div>
+
         <div>
           <label className="block text-[13px] font-medium text-c-80 mb-1.5">
             LGA (Optional)
@@ -90,13 +135,7 @@ export function ScrapeControlsCard({
           <SearchableSelect
             value={value.lgaId}
             options={lgas.map((l) => ({ value: l._id, label: l.name }))}
-            placeholder={
-              isLoadingLGAs
-                ? "Loading LGAs..."
-                : lgas.length === 0
-                  ? "All LGAs (pin election first)"
-                  : "All LGAs"
-            }
+            placeholder={isLoadingLGAs ? "Loading LGAs..." : lgas.length === 0 ? "All LGAs (pin election first)" : "All LGAs"}
             searchPlaceholder="Search LGA..."
             disabled={lgas.length === 0 || isLoadingLGAs}
             onChange={(lgaId) => onChange({ ...value, lgaId, wardId: "" })}
@@ -119,7 +158,7 @@ export function ScrapeControlsCard({
 
         <div>
           <label className="block text-[13px] font-medium text-c-80 mb-1.5">
-            Max New PUs (0 = Unlimited)
+            Max PUs (0 = Unlimited)
           </label>
           <input
             type="number"
@@ -143,6 +182,18 @@ export function ScrapeControlsCard({
           />
           Upload sheets to R2
         </label>
+        {import.meta.env.DEV && (
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={value.saveToLocal}
+              onChange={(e) =>
+                onChange({ ...value, saveToLocal: e.target.checked })
+              }
+            />
+            Save sheets to local folder (dev only)
+          </label>
+        )}
         <label className="flex items-center gap-2 cursor-pointer">
           <input
             type="checkbox"

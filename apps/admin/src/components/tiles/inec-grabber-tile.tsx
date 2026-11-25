@@ -15,9 +15,6 @@ export type INECResultGrabberType = {
   election_name?: string;
   scope: string;
   election_date: string;
-  lgas_with_complete_results_count: number;
-  wards_with_complete_results_count: number;
-  uploaded_results_count: number;
   total_polling_units?: number;
   sync_status: string;
   sync_error_message?: string;
@@ -35,14 +32,11 @@ export function INECGrabberTableHeader() {
         <span className="text-c-80 text-[14px]">Election</span>
       </TileLeft>
       <TileRight>
-        <span className="text-c-50 text-[14px] w-35">
-          Results collected
+        <span className="text-c-50 text-[14px] w-32 hidden sm:block">
+          Scope
         </span>
-        <span className="text-c-50 text-[14px] w-[100px] hidden sm:block">
-          LGAs covered
-        </span>
-        <span className="text-c-50 text-[14px] w-[100px] hidden md:block">
-          Wards covered
+        <span className="text-c-50 text-[14px] w-24">
+          Status
         </span>
         <div className="w-8 shrink-0 ml-2" />
       </TileRight>
@@ -58,11 +52,6 @@ export function INECGrabberTableTile({
   const lastRunText = data.updated_at ? `${timeAgo(data.updated_at)} ago` : "—";
   const electionName =
     data.election_name || data.name || "Presidential Election";
-  const count = data.uploaded_results_count ?? 0;
-  const total = data.total_polling_units ?? 0;
-  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-  const resultsCountText =
-    pct > 0 ? `${count.toLocaleString()} (${pct}%)` : count.toLocaleString();
 
   return (
     <TileRow>
@@ -73,14 +62,11 @@ export function INECGrabberTableTile({
         <p className="truncate text-[16px] text-c-90">{electionName}</p>
       </TileLeft>
       <TileRight>
-        <span className="text-[15px] font-medium text-primary w-35">
-          {resultsCountText}
+        <span className="text-[15px] text-c-70 w-32 capitalize hidden sm:block">
+          {data.scope}
         </span>
-        <span className="text-[15px] text-c-70 w-[100px] hidden sm:block">
-          {(data.lgas_with_complete_results_count ?? 0).toLocaleString()}
-        </span>
-        <span className="text-[15px] text-c-70 w-[100px] hidden md:block">
-          {(data.wards_with_complete_results_count ?? 0).toLocaleString()}
+        <span className="text-[15px] font-medium text-primary w-24 capitalize">
+          {data.sync_status}
         </span>
         <INECGrabberDropdown data={data} className="ml-2" />
       </TileRight>

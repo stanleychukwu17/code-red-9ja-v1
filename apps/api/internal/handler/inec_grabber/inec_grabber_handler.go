@@ -205,6 +205,7 @@ func (h *INECGrabberHandler) PreviewLGAs(w http.ResponseWriter, r *http.Request)
 
 // ControlledScrape runs a controlled INEC scrape by office/state/year/inec_election_id without requiring a pre-existing grabber.
 func (h *INECGrabberHandler) ControlledScrape(w http.ResponseWriter, r *http.Request) {
+	// Decode and validate required office_id and pinned upstream inec_election_id
 	var body inecservice.ControlledScrapeParams
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
@@ -215,15 +216,18 @@ func (h *INECGrabberHandler) ControlledScrape(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	// Detach from request context with a 15-minute timeout so long scrapes survive client disconnects
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
 	defer cancel()
 
+	// Execute controlled scrape (links local election if matched, otherwise saves standalone results)
 	res, err := h.svc.ControlledScrape(ctx, body)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
+	// Return collected count, optional matched local election ID, and execution log
 	h.utils.RespondSuccess(w, http.StatusOK, "Controlled INEC scrape completed", map[string]interface{}{
 		"results_collected":   res.ResultsCollected,
 		"matched_election_id": res.MatchedElectionID,

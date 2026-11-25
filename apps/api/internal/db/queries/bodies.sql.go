@@ -1575,43 +1575,6 @@ func (q *Queries) GetWardsPaginated(ctx context.Context, arg GetWardsPaginatedPa
 	return items, nil
 }
 
-const listAllStates = `-- name: ListAllStates :many
-SELECT id, name, country_id, latitude, longitude, senatorial_districts_count, federal_constituencies_count, lgas_count, state_constituencies_count, wards_count, polling_units_count FROM c_states
-ORDER BY name ASC
-`
-
-func (q *Queries) ListAllStates(ctx context.Context) ([]CState, error) {
-	rows, err := q.db.Query(ctx, listAllStates)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []CState
-	for rows.Next() {
-		var i CState
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.CountryID,
-			&i.Latitude,
-			&i.Longitude,
-			&i.SenatorialDistrictsCount,
-			&i.FederalConstituenciesCount,
-			&i.LgasCount,
-			&i.StateConstituenciesCount,
-			&i.WardsCount,
-			&i.PollingUnitsCount,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const listCountries = `-- name: ListCountries :many
 SELECT id, name, iso2, phonecode FROM c_countries
 ORDER BY name ASC

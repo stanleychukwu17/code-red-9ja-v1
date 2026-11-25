@@ -466,19 +466,16 @@ type InecPollingUnitResultScore struct {
 }
 
 type InecResultGrabber struct {
-	ID                            int64              `json:"id"`
-	ElectionGroupID               int32              `json:"election_group_id"`
-	ElectionID                    int32              `json:"election_id"`
-	Name                          pgtype.Text        `json:"name"`
-	Scope                         string             `json:"scope"`
-	ElectionDate                  pgtype.Date        `json:"election_date"`
-	LgasWithCompleteResultsCount  int32              `json:"lgas_with_complete_results_count"`
-	WardsWithCompleteResultsCount int32              `json:"wards_with_complete_results_count"`
-	UploadedResultsCount          int32              `json:"uploaded_results_count"`
-	SyncStatus                    string             `json:"sync_status"`
-	SyncErrorMessage              pgtype.Text        `json:"sync_error_message"`
-	CreatedAt                     pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt                     pgtype.Timestamptz `json:"updated_at"`
+	ID               int64              `json:"id"`
+	ElectionGroupID  int32              `json:"election_group_id"`
+	ElectionID       int32              `json:"election_id"`
+	Name             pgtype.Text        `json:"name"`
+	Scope            string             `json:"scope"`
+	ElectionDate     pgtype.Date        `json:"election_date"`
+	SyncStatus       string             `json:"sync_status"`
+	SyncErrorMessage pgtype.Text        `json:"sync_error_message"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
 }
 
 type InecResultGrabberLog struct {
