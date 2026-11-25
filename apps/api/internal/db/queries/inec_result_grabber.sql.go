@@ -11,6 +11,50 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const batchUpdateLGAMongoIDs = `-- name: BatchUpdateLGAMongoIDs :execrows
+UPDATE lgas AS l
+SET mongo_id = COALESCE(NULLIF(l.mongo_id, ''), v.mongo_id)
+FROM (
+  SELECT UNNEST($1::int[]) AS id, UNNEST($2::text[]) AS mongo_id
+) AS v
+WHERE l.id = v.id
+`
+
+type BatchUpdateLGAMongoIDsParams struct {
+	Ids      []int32  `json:"ids"`
+	MongoIds []string `json:"mongo_ids"`
+}
+
+func (q *Queries) BatchUpdateLGAMongoIDs(ctx context.Context, arg BatchUpdateLGAMongoIDsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, batchUpdateLGAMongoIDs, arg.Ids, arg.MongoIds)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const batchUpdateWardMongoIDs = `-- name: BatchUpdateWardMongoIDs :execrows
+UPDATE wards AS w
+SET mongo_id = COALESCE(NULLIF(w.mongo_id, ''), v.mongo_id)
+FROM (
+  SELECT UNNEST($1::int[]) AS id, UNNEST($2::text[]) AS mongo_id
+) AS v
+WHERE w.id = v.id
+`
+
+type BatchUpdateWardMongoIDsParams struct {
+	Ids      []int32  `json:"ids"`
+	MongoIds []string `json:"mongo_ids"`
+}
+
+func (q *Queries) BatchUpdateWardMongoIDs(ctx context.Context, arg BatchUpdateWardMongoIDsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, batchUpdateWardMongoIDs, arg.Ids, arg.MongoIds)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const calculateElectionMetrics = `-- name: CalculateElectionMetrics :one
 WITH election_pu_totals AS (
   SELECT 
@@ -513,56 +557,4 @@ func (q *Queries) UpdateINECResultGrabberSyncStatus(ctx context.Context, arg Upd
 		&i.UpdatedAt,
 	)
 	return i, err
-}
-
-const updateLGAMongoID = `-- name: UpdateLGAMongoID :exec
-UPDATE lgas
-SET mongo_id = $1
-WHERE LOWER(TRIM(name)) = LOWER(TRIM($2))
-  AND ($3::int IS NULL OR state_id = $3)
-  AND (mongo_id IS NULL OR mongo_id = '')
-`
-
-type UpdateLGAMongoIDParams struct {
-	MongoID pgtype.Text `json:"mongo_id"`
-	LgaName string      `json:"lga_name"`
-	StateID pgtype.Int4 `json:"state_id"`
-}
-
-func (q *Queries) UpdateLGAMongoID(ctx context.Context, arg UpdateLGAMongoIDParams) error {
-	_, err := q.db.Exec(ctx, updateLGAMongoID, arg.MongoID, arg.LgaName, arg.StateID)
-	return err
-}
-
-const updateWardMongoID = `-- name: UpdateWardMongoID :exec
-UPDATE wards w
-SET mongo_id = $1
-FROM lgas l
-WHERE w.lga_id = l.id
-  AND LOWER(TRIM(l.name)) = LOWER(TRIM($2))
-  AND ($3::int IS NULL OR l.state_id = $3)
-  AND (
-    LOWER(TRIM(w.name)) = LOWER(TRIM($4))
-    OR ($5::text IS NOT NULL AND w.code = $5)
-  )
-  AND (w.mongo_id IS NULL OR w.mongo_id = '')
-`
-
-type UpdateWardMongoIDParams struct {
-	MongoID  pgtype.Text `json:"mongo_id"`
-	LgaName  string      `json:"lga_name"`
-	StateID  pgtype.Int4 `json:"state_id"`
-	WardName string      `json:"ward_name"`
-	WardCode pgtype.Text `json:"ward_code"`
-}
-
-func (q *Queries) UpdateWardMongoID(ctx context.Context, arg UpdateWardMongoIDParams) error {
-	_, err := q.db.Exec(ctx, updateWardMongoID,
-		arg.MongoID,
-		arg.LgaName,
-		arg.StateID,
-		arg.WardName,
-		arg.WardCode,
-	)
-	return err
 }

@@ -14,6 +14,8 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"free9ja/api/internal/config"
@@ -120,16 +122,25 @@ type INECLGAsResponse struct {
 	Data    []INECLGA `json:"data"`
 }
 
+type INECNestedLGA struct {
+	ID    string `json:"_id"`
+	Name  string `json:"name"`
+	Code  string `json:"code"`
+	LGAID int32  `json:"lga_id"`
+}
+
 type INECLGA struct {
-	ID    string     `json:"_id"`
-	Name  string     `json:"name"`
-	Wards []INECWard `json:"wards"`
+	ID    string         `json:"_id"`
+	Name  string         `json:"name"`
+	LGA   *INECNestedLGA `json:"lga"`
+	Wards []INECWard     `json:"wards"`
 }
 
 type INECWard struct {
-	ID   string `json:"_id"`
-	Name string `json:"name"`
-	Code string `json:"code"`
+	ID     string `json:"_id"`
+	Name   string `json:"name"`
+	Code   string `json:"code"`
+	WardID int32  `json:"ward_id"`
 }
 
 type INECPUsResponse struct {
@@ -322,8 +333,8 @@ type ControlledScrapeParams struct {
 }
 
 type ControlledScrapeResult struct {
-	ResultsCollected  int                         `json:"results_collected"`
-	MatchedElectionID *int32                      `json:"matched_election_id,omitempty"`
+	ResultsCollected  int                           `json:"results_collected"`
+	MatchedElectionID *int32                        `json:"matched_election_id,omitempty"`
 	Log               *queries.InecResultGrabberLog `json:"log,omitempty"`
 }
 
@@ -426,6 +437,7 @@ func (s *INECGrabberService) fetchINECElections(ctx context.Context, baseURL str
 		return nil, fmt.Errorf("failed to create inec elections request: %w", err)
 	}
 
+	// Send HTTP request using the service's configured timeout client
 	resp, err := s.client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to call inec elections endpoint: %w", err)
@@ -520,59 +532,131 @@ func (s *INECGrabberService) PreviewINECElections(ctx context.Context, grabberID
 	return s.filterINECElections(ctx, inecTypeID, grabber.StateID, year)
 }
 
-// PreviewINECLGAs fetches LGAs and their wards for a specific INEC election ID and syncs their mongo_ids into the DB.
+// PreviewINECLGAs fetches LGAs and their wards for a specific INEC election ID.
 func (s *INECGrabberService) PreviewINECLGAs(ctx context.Context, inecElectionID string, stateID *int16) ([]INECLGA, error) {
+	// Load base URL and INEC API settings from system_settings
 	cfg, err := s.GetINECAPIConfig(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load inec api config: %w", err)
 	}
 
+	// Use state-scoped LGA endpoint when stateID is provided, otherwise fetch election-wide LGAs
 	lgasURL := fmt.Sprintf("%s/elections/%s/lga", cfg.BaseURL, cleanStr(inecElectionID))
 	if stateID != nil && *stateID > 0 {
 		lgasURL = fmt.Sprintf("%s/elections/%s/lga/state/%d", cfg.BaseURL, cleanStr(inecElectionID), *stateID)
 	}
-	lgas, err := s.fetchLGAs(ctx, lgasURL)
-	if err != nil {
-		return nil, err
-	}
 
-	s.syncLGAsAndWardsMongoIDs(ctx, stateID, lgas)
-	return lgas, nil
+	return s.fetchLGAs(ctx, lgasURL)
 }
 
-// syncLGAsAndWardsMongoIDs backfills lgas.mongo_id and wards.mongo_id from INEC /lga responses.
-func (s *INECGrabberService) syncLGAsAndWardsMongoIDs(ctx context.Context, stateID *int16, lgas []INECLGA) {
-	var statePg pgtype.Int4
-	if stateID != nil && *stateID > 0 {
-		statePg = pgtype.Int4{Int32: int32(*stateID), Valid: true}
-	}
+// syncLGAsAndWardsMongoIDs batch-backfills lgas.mongo_id and wards.mongo_id directly by local primary key (lga_id / ward_id).
+func (s *INECGrabberService) syncLGAsAndWardsMongoIDs(ctx context.Context, lgas []INECLGA) (int, int) {
+	// Pre-allocate parallel slices for batch SQL updates
+	lgaIDs := make([]int32, 0, len(lgas))
+	lgaMongoIDs := make([]string, 0, len(lgas))
+	wardIDs := make([]int32, 0, len(lgas)*10)
+	wardMongoIDs := make([]string, 0, len(lgas)*10)
 
-	for _, lga := range lgas {
-		lgaID := cleanStr(lga.ID)
-		lgaName := cleanStr(lga.Name)
-		if lgaID != "" && lgaName != "" {
-			_ = s.queries.UpdateLGAMongoID(ctx, queries.UpdateLGAMongoIDParams{
-				MongoID: pgtype.Text{String: lgaID, Valid: true},
-				LgaName: lgaName,
-				StateID: statePg,
-			})
+	for i := range lgas {
+		// Use the nested lga object's _id and lga_id (matching local lgas.id) when available
+		var lgaMongoID string
+		var localLGAID int32
+		if lgas[i].LGA != nil {
+			lgaMongoID = cleanStr(lgas[i].LGA.ID)
+			localLGAID = lgas[i].LGA.LGAID
+		}
+		// Fallback to outer wrapper _id if nested lga._id is missing
+		if lgaMongoID == "" {
+			lgaMongoID = cleanStr(lgas[i].ID)
+		}
+		if lgaMongoID != "" && localLGAID > 0 {
+			lgaIDs = append(lgaIDs, localLGAID)
+			lgaMongoIDs = append(lgaMongoIDs, lgaMongoID)
 		}
 
-		for _, ward := range lga.Wards {
-			wardID := cleanStr(ward.ID)
-			wardName := cleanStr(ward.Name)
-			wardCode := cleanStr(ward.Code)
-			if wardID != "" && (wardName != "" || wardCode != "") {
-				_ = s.queries.UpdateWardMongoID(ctx, queries.UpdateWardMongoIDParams{
-					MongoID:  pgtype.Text{String: wardID, Valid: true},
-					LgaName:  lgaName,
-					StateID:  statePg,
-					WardName: wardName,
-					WardCode: pgtype.Text{String: wardCode, Valid: wardCode != ""},
-				})
+		// Collect valid ward_id -> mongo_id pairs
+		for _, ward := range lgas[i].Wards {
+			wardMongoID := cleanStr(ward.ID)
+			if wardMongoID != "" && ward.WardID > 0 {
+				wardIDs = append(wardIDs, ward.WardID)
+				wardMongoIDs = append(wardMongoIDs, wardMongoID)
 			}
 		}
 	}
+
+	// Persist LGA and ward mongo_ids in two batch queries
+	var lgasSynced, wardsSynced int
+	if len(lgaIDs) > 0 {
+		if n, err := s.queries.BatchUpdateLGAMongoIDs(ctx, queries.BatchUpdateLGAMongoIDsParams{
+			Ids:      lgaIDs,
+			MongoIds: lgaMongoIDs,
+		}); err == nil {
+			lgasSynced = int(n)
+		} else {
+			slog.Warn("BatchUpdateLGAMongoIDs failed", "err", err)
+		}
+	}
+
+	if len(wardIDs) > 0 {
+		if n, err := s.queries.BatchUpdateWardMongoIDs(ctx, queries.BatchUpdateWardMongoIDsParams{
+			Ids:      wardIDs,
+			MongoIds: wardMongoIDs,
+		}); err == nil {
+			wardsSynced = int(n)
+		} else {
+			slog.Warn("BatchUpdateWardMongoIDs failed", "err", err)
+		}
+	}
+
+	return lgasSynced, wardsSynced
+}
+
+// SyncAllStatesMongoIDs loops through all states (1..37) with bounded concurrency (5 workers)
+// for a nationwide INEC election and batch-backfills lgas.mongo_id and wards.mongo_id.
+func (s *INECGrabberService) SyncAllStatesMongoIDs(ctx context.Context, inecElectionID string) (int, int, error) {
+	// Load INEC base URL from system_settings
+	cfg, err := s.GetINECAPIConfig(ctx)
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to load inec api config: %w", err)
+	}
+
+	// Fetch only Nigerian states (country_id = 161, 37 states including FCT)
+	states, err := s.queries.GetStatesByCountryID(ctx, 161)
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to list Nigerian states: %w", err)
+	}
+
+	// Fetch and batch-update up to 3 states concurrently to avoid rate-limiting IReV
+	var totalLGAs, totalWards atomic.Int64
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, 3)
+
+	for _, st := range states {
+		wg.Add(1)
+
+		go func(stateID int16) {
+			defer wg.Done()
+			// Acquire a semaphore slot (max 5 concurrent IReV requests) and release on exit
+			sem <- struct{}{}
+			defer func() { <-sem }()
+
+			// Fetch this state's LGA/ward tree from INEC IReV
+			lgasURL := fmt.Sprintf("%s/elections/%s/lga/state/%d", cfg.BaseURL, cleanStr(inecElectionID), stateID)
+			lgas, err := s.fetchLGAs(ctx, lgasURL)
+			if err != nil {
+				slog.Warn("SyncAllStatesMongoIDs: failed fetching state LGAs", "state_id", stateID, "err", err)
+				return
+			}
+
+			// Batch-update lgas.mongo_id and wards.mongo_id and accumulate counts atomically
+			lCount, wCount := s.syncLGAsAndWardsMongoIDs(ctx, lgas)
+			totalLGAs.Add(int64(lCount))
+			totalWards.Add(int64(wCount))
+		}(st.ID)
+	}
+
+	wg.Wait()
+	return int(totalLGAs.Load()), int(totalWards.Load()), nil
 }
 
 func (s *INECGrabberService) executeSync(
@@ -696,12 +780,11 @@ func (s *INECGrabberService) executeSync(
 		if err != nil {
 			return 0, fmt.Errorf("failed to fetch LGAs for state %d: %w", stID, err)
 		}
-		s.syncLGAsAndWardsMongoIDs(ctx, &stID, lgas)
 		newResultsCount += s.traverseLGAs(ctx, grabber, matchedINECElection.ID, lgas, "", baseURL, uploadToR2, aiExtract, opts, maxPUs)
 	} else if grabber.Scope == "nationwide" {
-		states, err := s.queries.ListAllStates(ctx)
+		states, err := s.queries.GetStatesByCountryID(ctx, 161)
 		if err != nil {
-			return 0, fmt.Errorf("failed to fetch states from DB: %w", err)
+			return 0, fmt.Errorf("failed to fetch Nigerian states from DB: %w", err)
 		}
 
 		for _, st := range states {
@@ -714,8 +797,6 @@ func (s *INECGrabberService) executeSync(
 				slog.Warn("failed to fetch LGAs for state", "state_id", st.ID, "err", err)
 				continue
 			}
-			stID := int16(st.ID)
-			s.syncLGAsAndWardsMongoIDs(ctx, &stID, lgas)
 			newResultsCount += s.traverseLGAs(ctx, grabber, matchedINECElection.ID, lgas, st.Name, baseURL, uploadToR2, aiExtract, opts, maxPUs-newResultsCount)
 		}
 	} else {
@@ -724,12 +805,6 @@ func (s *INECGrabberService) executeSync(
 		if err != nil {
 			return 0, fmt.Errorf("failed to fetch LGAs for inec election %s: %w", matchedINECElection.ID, err)
 		}
-		var statePtr *int16
-		if grabber.StateID.Valid && grabber.StateID.Int16 > 0 {
-			stID := grabber.StateID.Int16
-			statePtr = &stID
-		}
-		s.syncLGAsAndWardsMongoIDs(ctx, statePtr, lgas)
 		newResultsCount += s.traverseLGAs(ctx, grabber, matchedINECElection.ID, lgas, "", baseURL, uploadToR2, aiExtract, opts, maxPUs)
 	}
 
@@ -783,22 +858,38 @@ func (s *INECGrabberService) traverseLGAs(
 	return collected
 }
 
+// fetchLGAs retrieves LGAs and their nested wards from the upstream INEC API.
 func (s *INECGrabberService) fetchLGAs(ctx context.Context, url string) ([]INECLGA, error) {
+	// Build and execute GET request for the election's LGAs/wards
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
 
+	// Send HTTP request using the service's configured timeout client
 	resp, err := s.client.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected HTTP %d from %s", resp.StatusCode, url)
+	}
+
+	// Decode the JSON envelope and return the LGA list
 	var res INECLGAsResponse
 	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
 		return nil, err
 	}
+
+	// Populate top-level Name from the nested lga object when IReV omits it at the root
+	for i := range res.Data {
+		if res.Data[i].Name == "" && res.Data[i].LGA != nil {
+			res.Data[i].Name = cleanStr(res.Data[i].LGA.Name)
+		}
+	}
+
 	return res.Data, nil
 }
 
@@ -824,6 +915,7 @@ func (s *INECGrabberService) processWardPUs(
 		return 0, err
 	}
 
+	// Send HTTP request using the service's configured timeout client
 	resp, err := s.client.Do(req)
 	if err != nil {
 		slog.Error("INEC SyncGrabber: failed to call ward PUs endpoint", "ward_id", wardID, "err", err)
@@ -1113,6 +1205,7 @@ func (s *INECGrabberService) uploadImageToR2(ctx context.Context, imageURL, puCo
 		return "", err
 	}
 
+	// Send HTTP request using the service's configured timeout client
 	resp, err := s.client.Do(req)
 	if err != nil {
 		return "", err

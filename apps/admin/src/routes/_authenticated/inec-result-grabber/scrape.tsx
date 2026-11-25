@@ -15,6 +15,7 @@ import {
   ScrapeControlsCard,
   type ScrapeOptions,
 } from "./-components/ScrapeControlsCard";
+import { SyncMongoIDsCard } from "./-components/SyncMongoIDsCard";
 import {
   controlledScrapeINEC,
   discoverINECElections,
@@ -70,6 +71,9 @@ function RouteComponent() {
   });
 
   const inecElections = discoverQuery.data ?? [];
+  const selectedElection = inecElections.find(
+    (e) => e._id === selectedInecElectionId,
+  );
 
   const handleDiscover = () => {
     if (!discoverFilter.officeId) {
@@ -189,6 +193,8 @@ function RouteComponent() {
           onChange={setScrapeOptions}
           onRun={() => runScrapeMutation.mutate()}
         />
+
+        <SyncMongoIDsCard selectedElection={selectedElection} />
       </div>
     </Layout>
   );

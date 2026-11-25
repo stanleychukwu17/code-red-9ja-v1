@@ -107,22 +107,18 @@ SELECT
   (SELECT COUNT(*) FROM ward_completion) AS total_wards_count,
   (SELECT COUNT(*) FROM lga_completion) AS total_lgas_count;
 
--- name: UpdateLGAMongoID :exec
-UPDATE lgas
-SET mongo_id = sqlc.arg('mongo_id')
-WHERE LOWER(TRIM(name)) = LOWER(TRIM(sqlc.arg('lga_name')))
-  AND (sqlc.narg('state_id')::int IS NULL OR state_id = sqlc.narg('state_id'))
-  AND (mongo_id IS NULL OR mongo_id = '');
+-- name: BatchUpdateLGAMongoIDs :execrows
+UPDATE lgas AS l
+SET mongo_id = COALESCE(NULLIF(l.mongo_id, ''), v.mongo_id)
+FROM (
+  SELECT UNNEST(sqlc.arg('ids')::int[]) AS id, UNNEST(sqlc.arg('mongo_ids')::text[]) AS mongo_id
+) AS v
+WHERE l.id = v.id;
 
--- name: UpdateWardMongoID :exec
-UPDATE wards w
-SET mongo_id = sqlc.arg('mongo_id')
-FROM lgas l
-WHERE w.lga_id = l.id
-  AND LOWER(TRIM(l.name)) = LOWER(TRIM(sqlc.arg('lga_name')))
-  AND (sqlc.narg('state_id')::int IS NULL OR l.state_id = sqlc.narg('state_id'))
-  AND (
-    LOWER(TRIM(w.name)) = LOWER(TRIM(sqlc.arg('ward_name')))
-    OR (sqlc.narg('ward_code')::text IS NOT NULL AND w.code = sqlc.narg('ward_code'))
-  )
-  AND (w.mongo_id IS NULL OR w.mongo_id = '');
+-- name: BatchUpdateWardMongoIDs :execrows
+UPDATE wards AS w
+SET mongo_id = COALESCE(NULLIF(w.mongo_id, ''), v.mongo_id)
+FROM (
+  SELECT UNNEST(sqlc.arg('ids')::int[]) AS id, UNNEST(sqlc.arg('mongo_ids')::text[]) AS mongo_id
+) AS v
+WHERE w.id = v.id;

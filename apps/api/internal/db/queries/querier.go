@@ -20,6 +20,8 @@ type Querier interface {
 	ApproveAgentEarnings(ctx context.Context, id int64) (AgentEarning, error)
 	AssignPartyPosition(ctx context.Context, arg AssignPartyPositionParams) (PartyPositionAssignment, error)
 	AssignUserRole(ctx context.Context, arg AssignUserRoleParams) error
+	BatchUpdateLGAMongoIDs(ctx context.Context, arg BatchUpdateLGAMongoIDsParams) (int64, error)
+	BatchUpdateWardMongoIDs(ctx context.Context, arg BatchUpdateWardMongoIDsParams) (int64, error)
 	// ========================================================
 	// USER BLOCKS
 	// ========================================================
@@ -511,7 +513,6 @@ type Querier interface {
 	UpdateINECResultGrabberMetrics(ctx context.Context, arg UpdateINECResultGrabberMetricsParams) (InecResultGrabber, error)
 	UpdateINECResultGrabberSyncStatus(ctx context.Context, arg UpdateINECResultGrabberSyncStatusParams) (InecResultGrabber, error)
 	UpdateLGA(ctx context.Context, arg UpdateLGAParams) (Lga, error)
-	UpdateLGAMongoID(ctx context.Context, arg UpdateLGAMongoIDParams) error
 	UpdateLgaSupervisorEarnedAmountKobo(ctx context.Context, arg UpdateLgaSupervisorEarnedAmountKoboParams) (LgaElectionSupervisor, error)
 	UpdateLgaSupervisorTracking(ctx context.Context, arg UpdateLgaSupervisorTrackingParams) (LgaElectionSupervisor, error)
 	UpdateMarketingCampaignStatus(ctx context.Context, arg UpdateMarketingCampaignStatusParams) (PartyMarketingCampaign, error)
@@ -561,7 +562,6 @@ type Querier interface {
 	UpdateUserStatus(ctx context.Context, arg UpdateUserStatusParams) error
 	UpdateUserVotersCard(ctx context.Context, arg UpdateUserVotersCardParams) error
 	UpdateWard(ctx context.Context, arg UpdateWardParams) (Ward, error)
-	UpdateWardMongoID(ctx context.Context, arg UpdateWardMongoIDParams) error
 	UpdateWardSupervisorEarnedAmountKobo(ctx context.Context, arg UpdateWardSupervisorEarnedAmountKoboParams) (WardElectionSupervisor, error)
 	UpdateWardSupervisorTracking(ctx context.Context, arg UpdateWardSupervisorTrackingParams) (WardElectionSupervisor, error)
 	UpsertAgentEarnings(ctx context.Context, arg UpsertAgentEarningsParams) (AgentEarning, error)

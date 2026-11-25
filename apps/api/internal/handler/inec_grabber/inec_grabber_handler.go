@@ -175,12 +175,14 @@ func (h *INECGrabberHandler) DiscoverElections(w http.ResponseWriter, r *http.Re
 
 // PreviewLGAs fetches LGAs and their wards for an upstream INEC election ID.
 func (h *INECGrabberHandler) PreviewLGAs(w http.ResponseWriter, r *http.Request) {
+	// Require the upstream INEC election _id selected in Step 2
 	inecElectionID := r.URL.Query().Get("inec_election_id")
 	if inecElectionID == "" {
 		h.utils.RespondError(w, http.StatusBadRequest, "inec_election_id is required")
 		return
 	}
 
+	// Parse optional state_id filter to scope LGAs for nationwide elections
 	var stateID *int16
 	if sStr := r.URL.Query().Get("state_id"); sStr != "" {
 		if sVal, err := strconv.ParseInt(sStr, 10, 16); err == nil && sVal > 0 {
@@ -189,6 +191,7 @@ func (h *INECGrabberHandler) PreviewLGAs(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
+	// Fetch LGAs/wards from IReV and backfill local mongo_id mappings
 	lgas, err := h.svc.PreviewINECLGAs(r.Context(), inecElectionID, stateID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, err.Error())
@@ -225,6 +228,35 @@ func (h *INECGrabberHandler) ControlledScrape(w http.ResponseWriter, r *http.Req
 		"results_collected":   res.ResultsCollected,
 		"matched_election_id": res.MatchedElectionID,
 		"log":                 res.Log,
+	})
+}
+
+// SyncLGAWardMongoIDs loops through all states for an INEC election and backfills lgas.mongo_id and wards.mongo_id.
+func (h *INECGrabberHandler) SyncLGAWardMongoIDs(w http.ResponseWriter, r *http.Request) {
+	// Parse and validate the pinned upstream INEC election ID
+	var body struct {
+		INECElectionID string `json:"inec_election_id"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.INECElectionID == "" {
+		h.utils.RespondError(w, http.StatusBadRequest, "inec_election_id is required")
+		return
+	}
+
+	// Use a detached 5-minute context so all 37 state requests finish even if the client disconnects
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	// Loop through all states and backfill lgas.mongo_id and wards.mongo_id by primary key
+	lgasSynced, wardsSynced, err := h.svc.SyncAllStatesMongoIDs(ctx, body.INECElectionID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "LGAs and wards mongo_id sync completed", map[string]interface{}{
+		"lgas_synced":  lgasSynced,
+		"wards_synced": wardsSynced,
 	})
 }
 

@@ -338,6 +338,7 @@ export const API_URL = {
     return `${api}/admin/inec-result-grabbers/${id}/toggle-pause`;
   },
   controlledScrapeINEC: `${api}/admin/inec-result-grabbers/controlled-scrape`,
+  syncINECMongoIDs: `${api}/admin/inec-result-grabbers/sync-lga-ward-ids`,
   previewINECElections: (id: number | string, year?: number) => {
     const qs = year ? `?year=${year}` : "";
     return `${api}/admin/inec-result-grabbers/${id}/preview-elections${qs}`;

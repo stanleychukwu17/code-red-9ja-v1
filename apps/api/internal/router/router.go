@@ -526,6 +526,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Get("/api/v1/admin/inec-result-grabbers", inecGrabberHandler.ListGrabbers)
 		r.Get("/api/v1/admin/inec-result-grabbers/discover-elections", inecGrabberHandler.DiscoverElections)
 		r.Post("/api/v1/admin/inec-result-grabbers/controlled-scrape", inecGrabberHandler.ControlledScrape)
+		r.Post("/api/v1/admin/inec-result-grabbers/sync-lga-ward-ids", inecGrabberHandler.SyncLGAWardMongoIDs)
 		r.Get("/api/v1/admin/inec-result-grabbers/{id}/preview-elections", inecGrabberHandler.PreviewElections)
 		r.Get("/api/v1/admin/inec-result-grabbers/preview-lgas", inecGrabberHandler.PreviewLGAs)
 		r.Post("/api/v1/admin/inec-result-grabbers/{id}/sync", inecGrabberHandler.SyncGrabber)

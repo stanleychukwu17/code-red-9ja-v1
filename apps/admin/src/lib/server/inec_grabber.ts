@@ -140,6 +140,22 @@ export const controlledScrapeINEC = createServerFn({ method: "POST" })
     }
   });
 
+export const syncINECMongoIDs = createServerFn({ method: "POST" })
+  .inputValidator((data: { inecElectionId: string }) => data)
+  .handler(async ({ data }) => {
+    try {
+      return await apiFetchJson(API_URL.syncINECMongoIDs, {
+        method: "POST",
+        body: JSON.stringify({ inec_election_id: data.inecElectionId }),
+      });
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error?.message || "Failed to sync LGA and ward IDs",
+      };
+    }
+  });
+
 export const previewINECElections = createServerFn({ method: "GET" })
   .inputValidator((data: { id: number | string; year?: number }) => data)
   .handler(async ({ data }) => {
