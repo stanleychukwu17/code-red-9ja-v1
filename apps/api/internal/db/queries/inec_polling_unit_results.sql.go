@@ -22,15 +22,15 @@ func (q *Queries) DeleteINECPollingUnitResultScoresByResultID(ctx context.Contex
 }
 
 const getINECPollingUnitResultByElectionAndPU = `-- name: GetINECPollingUnitResultByElectionAndPU :one
-SELECT id, election_group_id, election_id, polling_unit_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, registered_voters, accredited_voters, ballot_papers_issued, unused_ballot_papers, spoiled_ballot_papers, rejected_votes, valid_votes, used_ballot_papers, votes_cast, result_sheet_image_url, irev_document_url, serial_number, sheet_date, presiding_officer_name, has_presiding_officer_signature, status, ai_extracted_data, is_valid_result_sheet, result_is_ai_generated, ai_confidence_score, dispute_codes, disputed_reason, created_at, updated_at
+SELECT id, election_group_id, election_id, inec_election_id, polling_unit_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, registered_voters, accredited_voters, ballot_papers_issued, unused_ballot_papers, spoiled_ballot_papers, rejected_votes, valid_votes, used_ballot_papers, votes_cast, result_sheet_image_url, irev_document_url, serial_number, sheet_date, presiding_officer_name, has_presiding_officer_signature, status, ai_extracted_data, is_valid_result_sheet, result_is_ai_generated, ai_confidence_score, dispute_codes, disputed_reason, created_at, updated_at
 FROM inec_polling_unit_results
 WHERE election_id = $1 AND polling_unit_id = $2
 LIMIT 1
 `
 
 type GetINECPollingUnitResultByElectionAndPUParams struct {
-	ElectionID    int32 `json:"election_id"`
-	PollingUnitID int32 `json:"polling_unit_id"`
+	ElectionID    pgtype.Int4 `json:"election_id"`
+	PollingUnitID int32       `json:"polling_unit_id"`
 }
 
 func (q *Queries) GetINECPollingUnitResultByElectionAndPU(ctx context.Context, arg GetINECPollingUnitResultByElectionAndPUParams) (InecPollingUnitResult, error) {
@@ -40,6 +40,62 @@ func (q *Queries) GetINECPollingUnitResultByElectionAndPU(ctx context.Context, a
 		&i.ID,
 		&i.ElectionGroupID,
 		&i.ElectionID,
+		&i.InecElectionID,
+		&i.PollingUnitID,
+		&i.StateID,
+		&i.SenatorialDistrictID,
+		&i.FederalConstituencyID,
+		&i.StateConstituencyID,
+		&i.LgaID,
+		&i.WardID,
+		&i.RegisteredVoters,
+		&i.AccreditedVoters,
+		&i.BallotPapersIssued,
+		&i.UnusedBallotPapers,
+		&i.SpoiledBallotPapers,
+		&i.RejectedVotes,
+		&i.ValidVotes,
+		&i.UsedBallotPapers,
+		&i.VotesCast,
+		&i.ResultSheetImageUrl,
+		&i.IrevDocumentUrl,
+		&i.SerialNumber,
+		&i.SheetDate,
+		&i.PresidingOfficerName,
+		&i.HasPresidingOfficerSignature,
+		&i.Status,
+		&i.AiExtractedData,
+		&i.IsValidResultSheet,
+		&i.ResultIsAiGenerated,
+		&i.AiConfidenceScore,
+		&i.DisputeCodes,
+		&i.DisputedReason,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getINECPollingUnitResultByINECElectionAndPU = `-- name: GetINECPollingUnitResultByINECElectionAndPU :one
+SELECT id, election_group_id, election_id, inec_election_id, polling_unit_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, registered_voters, accredited_voters, ballot_papers_issued, unused_ballot_papers, spoiled_ballot_papers, rejected_votes, valid_votes, used_ballot_papers, votes_cast, result_sheet_image_url, irev_document_url, serial_number, sheet_date, presiding_officer_name, has_presiding_officer_signature, status, ai_extracted_data, is_valid_result_sheet, result_is_ai_generated, ai_confidence_score, dispute_codes, disputed_reason, created_at, updated_at
+FROM inec_polling_unit_results
+WHERE inec_election_id = $1 AND polling_unit_id = $2 AND election_id IS NULL
+LIMIT 1
+`
+
+type GetINECPollingUnitResultByINECElectionAndPUParams struct {
+	InecElectionID pgtype.Text `json:"inec_election_id"`
+	PollingUnitID  int32       `json:"polling_unit_id"`
+}
+
+func (q *Queries) GetINECPollingUnitResultByINECElectionAndPU(ctx context.Context, arg GetINECPollingUnitResultByINECElectionAndPUParams) (InecPollingUnitResult, error) {
+	row := q.db.QueryRow(ctx, getINECPollingUnitResultByINECElectionAndPU, arg.InecElectionID, arg.PollingUnitID)
+	var i InecPollingUnitResult
+	err := row.Scan(
+		&i.ID,
+		&i.ElectionGroupID,
+		&i.ElectionID,
+		&i.InecElectionID,
 		&i.PollingUnitID,
 		&i.StateID,
 		&i.SenatorialDistrictID,
@@ -83,8 +139,8 @@ ORDER BY inec_result_id, party_short_name
 `
 
 type GetINECPollingUnitResultScoresByPUParams struct {
-	ElectionID    int32 `json:"election_id"`
-	PollingUnitID int32 `json:"polling_unit_id"`
+	ElectionID    pgtype.Int4 `json:"election_id"`
+	PollingUnitID int32       `json:"polling_unit_id"`
 }
 
 func (q *Queries) GetINECPollingUnitResultScoresByPU(ctx context.Context, arg GetINECPollingUnitResultScoresByPUParams) ([]InecPollingUnitResultScore, error) {
@@ -124,6 +180,7 @@ const upsertINECPollingUnitResult = `-- name: UpsertINECPollingUnitResult :one
 INSERT INTO inec_polling_unit_results (
   election_id,
   election_group_id,
+  inec_election_id,
   polling_unit_id,
   state_id,
   senatorial_district_id,
@@ -160,27 +217,29 @@ INSERT INTO inec_polling_unit_results (
   $7,
   $8,
   $9,
-  COALESCE($10, 0),
-  $11,
-  COALESCE($12, 0),
+  $10,
+  COALESCE($11, 0),
+  $12,
   COALESCE($13, 0),
   COALESCE($14, 0),
-  $15,
+  COALESCE($15, 0),
   $16,
-  COALESCE($17, 0),
-  $18,
+  $17,
+  COALESCE($18, 0),
   $19,
   $20,
   $21,
   $22,
   $23,
-  COALESCE($24, false),
-  COALESCE($25::varchar(30), 'submitted'),
-  $26,
+  $24,
+  COALESCE($25, false),
+  COALESCE($26::varchar(30), 'submitted'),
   $27,
-  $28
+  $28,
+  $29
 )
-ON CONFLICT (election_id, polling_unit_id) DO UPDATE SET
+ON CONFLICT (election_id, polling_unit_id) WHERE election_id IS NOT NULL DO UPDATE SET
+  inec_election_id                = COALESCE(EXCLUDED.inec_election_id, inec_polling_unit_results.inec_election_id),
   registered_voters               = EXCLUDED.registered_voters,
   accredited_voters               = EXCLUDED.accredited_voters,
   ballot_papers_issued            = EXCLUDED.ballot_papers_issued,
@@ -201,12 +260,13 @@ ON CONFLICT (election_id, polling_unit_id) DO UPDATE SET
   result_is_ai_generated          = EXCLUDED.result_is_ai_generated,
   ai_confidence_score             = EXCLUDED.ai_confidence_score,
   updated_at                      = NOW()
-RETURNING id, election_group_id, election_id, polling_unit_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, registered_voters, accredited_voters, ballot_papers_issued, unused_ballot_papers, spoiled_ballot_papers, rejected_votes, valid_votes, used_ballot_papers, votes_cast, result_sheet_image_url, irev_document_url, serial_number, sheet_date, presiding_officer_name, has_presiding_officer_signature, status, ai_extracted_data, is_valid_result_sheet, result_is_ai_generated, ai_confidence_score, dispute_codes, disputed_reason, created_at, updated_at
+RETURNING id, election_group_id, election_id, inec_election_id, polling_unit_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, registered_voters, accredited_voters, ballot_papers_issued, unused_ballot_papers, spoiled_ballot_papers, rejected_votes, valid_votes, used_ballot_papers, votes_cast, result_sheet_image_url, irev_document_url, serial_number, sheet_date, presiding_officer_name, has_presiding_officer_signature, status, ai_extracted_data, is_valid_result_sheet, result_is_ai_generated, ai_confidence_score, dispute_codes, disputed_reason, created_at, updated_at
 `
 
 type UpsertINECPollingUnitResultParams struct {
-	ElectionID                   int32          `json:"election_id"`
-	ElectionGroupID              int32          `json:"election_group_id"`
+	ElectionID                   pgtype.Int4    `json:"election_id"`
+	ElectionGroupID              pgtype.Int4    `json:"election_group_id"`
+	InecElectionID               pgtype.Text    `json:"inec_election_id"`
 	PollingUnitID                int32          `json:"polling_unit_id"`
 	StateID                      pgtype.Int2    `json:"state_id"`
 	SenatorialDistrictID         pgtype.Int4    `json:"senatorial_district_id"`
@@ -239,6 +299,7 @@ func (q *Queries) UpsertINECPollingUnitResult(ctx context.Context, arg UpsertINE
 	row := q.db.QueryRow(ctx, upsertINECPollingUnitResult,
 		arg.ElectionID,
 		arg.ElectionGroupID,
+		arg.InecElectionID,
 		arg.PollingUnitID,
 		arg.StateID,
 		arg.SenatorialDistrictID,
@@ -271,6 +332,7 @@ func (q *Queries) UpsertINECPollingUnitResult(ctx context.Context, arg UpsertINE
 		&i.ID,
 		&i.ElectionGroupID,
 		&i.ElectionID,
+		&i.InecElectionID,
 		&i.PollingUnitID,
 		&i.StateID,
 		&i.SenatorialDistrictID,
@@ -339,8 +401,8 @@ RETURNING id, inec_result_id, election_group_id, election_id, party_short_name, 
 
 type UpsertINECPollingUnitResultScoreParams struct {
 	InecResultID    int64       `json:"inec_result_id"`
-	ElectionGroupID int32       `json:"election_group_id"`
-	ElectionID      int32       `json:"election_id"`
+	ElectionGroupID pgtype.Int4 `json:"election_group_id"`
+	ElectionID      pgtype.Int4 `json:"election_id"`
 	PollingUnitID   int32       `json:"polling_unit_id"`
 	PartyShortName  interface{} `json:"party_short_name"`
 	VoteCount       int32       `json:"vote_count"`
@@ -371,6 +433,193 @@ func (q *Queries) UpsertINECPollingUnitResultScore(ctx context.Context, arg Upse
 		&i.VoteCount,
 		&i.AgentName,
 		&i.HasSignature,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const upsertStandaloneINECPollingUnitResult = `-- name: UpsertStandaloneINECPollingUnitResult :one
+INSERT INTO inec_polling_unit_results (
+  election_id,
+  election_group_id,
+  inec_election_id,
+  polling_unit_id,
+  state_id,
+  senatorial_district_id,
+  federal_constituency_id,
+  state_constituency_id,
+  lga_id,
+  ward_id,
+  registered_voters,
+  accredited_voters,
+  ballot_papers_issued,
+  unused_ballot_papers,
+  spoiled_ballot_papers,
+  rejected_votes,
+  valid_votes,
+  used_ballot_papers,
+  votes_cast,
+  result_sheet_image_url,
+  irev_document_url,
+  serial_number,
+  sheet_date,
+  presiding_officer_name,
+  has_presiding_officer_signature,
+  status,
+  ai_extracted_data,
+  result_is_ai_generated,
+  ai_confidence_score
+) VALUES (
+  NULL,
+  NULL,
+  $1,
+  $2,
+  $3,
+  $4,
+  $5,
+  $6,
+  $7,
+  $8,
+  COALESCE($9, 0),
+  $10,
+  COALESCE($11, 0),
+  COALESCE($12, 0),
+  COALESCE($13, 0),
+  $14,
+  $15,
+  COALESCE($16, 0),
+  $17,
+  $18,
+  $19,
+  $20,
+  $21,
+  $22,
+  COALESCE($23, false),
+  COALESCE($24::varchar(30), 'submitted'),
+  $25,
+  $26,
+  $27
+)
+ON CONFLICT (inec_election_id, polling_unit_id) WHERE election_id IS NULL AND inec_election_id IS NOT NULL DO UPDATE SET
+  registered_voters               = EXCLUDED.registered_voters,
+  accredited_voters               = EXCLUDED.accredited_voters,
+  ballot_papers_issued            = EXCLUDED.ballot_papers_issued,
+  unused_ballot_papers            = EXCLUDED.unused_ballot_papers,
+  spoiled_ballot_papers           = EXCLUDED.spoiled_ballot_papers,
+  rejected_votes                  = EXCLUDED.rejected_votes,
+  valid_votes                     = EXCLUDED.valid_votes,
+  used_ballot_papers              = EXCLUDED.used_ballot_papers,
+  votes_cast                      = EXCLUDED.votes_cast,
+  result_sheet_image_url          = COALESCE(EXCLUDED.result_sheet_image_url, inec_polling_unit_results.result_sheet_image_url),
+  irev_document_url               = COALESCE(EXCLUDED.irev_document_url, inec_polling_unit_results.irev_document_url),
+  serial_number                   = COALESCE(EXCLUDED.serial_number, inec_polling_unit_results.serial_number),
+  sheet_date                      = COALESCE(EXCLUDED.sheet_date, inec_polling_unit_results.sheet_date),
+  presiding_officer_name          = COALESCE(EXCLUDED.presiding_officer_name, inec_polling_unit_results.presiding_officer_name),
+  has_presiding_officer_signature = EXCLUDED.has_presiding_officer_signature,
+  status                          = EXCLUDED.status,
+  ai_extracted_data               = EXCLUDED.ai_extracted_data,
+  result_is_ai_generated          = EXCLUDED.result_is_ai_generated,
+  ai_confidence_score             = EXCLUDED.ai_confidence_score,
+  updated_at                      = NOW()
+RETURNING id, election_group_id, election_id, inec_election_id, polling_unit_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, registered_voters, accredited_voters, ballot_papers_issued, unused_ballot_papers, spoiled_ballot_papers, rejected_votes, valid_votes, used_ballot_papers, votes_cast, result_sheet_image_url, irev_document_url, serial_number, sheet_date, presiding_officer_name, has_presiding_officer_signature, status, ai_extracted_data, is_valid_result_sheet, result_is_ai_generated, ai_confidence_score, dispute_codes, disputed_reason, created_at, updated_at
+`
+
+type UpsertStandaloneINECPollingUnitResultParams struct {
+	InecElectionID               pgtype.Text    `json:"inec_election_id"`
+	PollingUnitID                int32          `json:"polling_unit_id"`
+	StateID                      pgtype.Int2    `json:"state_id"`
+	SenatorialDistrictID         pgtype.Int4    `json:"senatorial_district_id"`
+	FederalConstituencyID        pgtype.Int4    `json:"federal_constituency_id"`
+	StateConstituencyID          pgtype.Int4    `json:"state_constituency_id"`
+	LgaID                        pgtype.Int4    `json:"lga_id"`
+	WardID                       pgtype.Int4    `json:"ward_id"`
+	RegisteredVoters             interface{}    `json:"registered_voters"`
+	AccreditedVoters             int32          `json:"accredited_voters"`
+	BallotPapersIssued           interface{}    `json:"ballot_papers_issued"`
+	UnusedBallotPapers           interface{}    `json:"unused_ballot_papers"`
+	SpoiledBallotPapers          interface{}    `json:"spoiled_ballot_papers"`
+	RejectedVotes                int32          `json:"rejected_votes"`
+	ValidVotes                   int32          `json:"valid_votes"`
+	UsedBallotPapers             interface{}    `json:"used_ballot_papers"`
+	VotesCast                    int32          `json:"votes_cast"`
+	ResultSheetImageUrl          pgtype.Text    `json:"result_sheet_image_url"`
+	IrevDocumentUrl              pgtype.Text    `json:"irev_document_url"`
+	SerialNumber                 pgtype.Text    `json:"serial_number"`
+	SheetDate                    pgtype.Date    `json:"sheet_date"`
+	PresidingOfficerName         pgtype.Text    `json:"presiding_officer_name"`
+	HasPresidingOfficerSignature interface{}    `json:"has_presiding_officer_signature"`
+	Status                       pgtype.Text    `json:"status"`
+	AiExtractedData              []byte         `json:"ai_extracted_data"`
+	ResultIsAiGenerated          pgtype.Bool    `json:"result_is_ai_generated"`
+	AiConfidenceScore            pgtype.Numeric `json:"ai_confidence_score"`
+}
+
+func (q *Queries) UpsertStandaloneINECPollingUnitResult(ctx context.Context, arg UpsertStandaloneINECPollingUnitResultParams) (InecPollingUnitResult, error) {
+	row := q.db.QueryRow(ctx, upsertStandaloneINECPollingUnitResult,
+		arg.InecElectionID,
+		arg.PollingUnitID,
+		arg.StateID,
+		arg.SenatorialDistrictID,
+		arg.FederalConstituencyID,
+		arg.StateConstituencyID,
+		arg.LgaID,
+		arg.WardID,
+		arg.RegisteredVoters,
+		arg.AccreditedVoters,
+		arg.BallotPapersIssued,
+		arg.UnusedBallotPapers,
+		arg.SpoiledBallotPapers,
+		arg.RejectedVotes,
+		arg.ValidVotes,
+		arg.UsedBallotPapers,
+		arg.VotesCast,
+		arg.ResultSheetImageUrl,
+		arg.IrevDocumentUrl,
+		arg.SerialNumber,
+		arg.SheetDate,
+		arg.PresidingOfficerName,
+		arg.HasPresidingOfficerSignature,
+		arg.Status,
+		arg.AiExtractedData,
+		arg.ResultIsAiGenerated,
+		arg.AiConfidenceScore,
+	)
+	var i InecPollingUnitResult
+	err := row.Scan(
+		&i.ID,
+		&i.ElectionGroupID,
+		&i.ElectionID,
+		&i.InecElectionID,
+		&i.PollingUnitID,
+		&i.StateID,
+		&i.SenatorialDistrictID,
+		&i.FederalConstituencyID,
+		&i.StateConstituencyID,
+		&i.LgaID,
+		&i.WardID,
+		&i.RegisteredVoters,
+		&i.AccreditedVoters,
+		&i.BallotPapersIssued,
+		&i.UnusedBallotPapers,
+		&i.SpoiledBallotPapers,
+		&i.RejectedVotes,
+		&i.ValidVotes,
+		&i.UsedBallotPapers,
+		&i.VotesCast,
+		&i.ResultSheetImageUrl,
+		&i.IrevDocumentUrl,
+		&i.SerialNumber,
+		&i.SheetDate,
+		&i.PresidingOfficerName,
+		&i.HasPresidingOfficerSignature,
+		&i.Status,
+		&i.AiExtractedData,
+		&i.IsValidResultSheet,
+		&i.ResultIsAiGenerated,
+		&i.AiConfidenceScore,
+		&i.DisputeCodes,
+		&i.DisputedReason,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

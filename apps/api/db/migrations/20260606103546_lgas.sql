@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS lgas (
     state_constituencies_count INTEGER DEFAULT 0,
     wards_count INTEGER DEFAULT 0,
     polling_units_count INTEGER DEFAULT 0,
+    mongo_id VARCHAR(50),
     status VARCHAR(50) DEFAULT 'active'
 );
 

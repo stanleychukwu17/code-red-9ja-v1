@@ -107,6 +107,127 @@ func (h *INECGrabberHandler) SyncGrabber(w http.ResponseWriter, r *http.Request)
 	})
 }
 
+// PreviewElections fetches matching upstream INEC elections for a grabber, optionally filtered by year.
+func (h *INECGrabberHandler) PreviewElections(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	grabberID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid grabber ID")
+		return
+	}
+
+	var year *int
+	if yStr := r.URL.Query().Get("year"); yStr != "" {
+		if y, err := strconv.Atoi(yStr); err == nil && y > 0 {
+			year = &y
+		}
+	}
+
+	elections, err := h.svc.PreviewINECElections(r.Context(), grabberID, year)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "INEC elections fetched successfully", map[string]interface{}{
+		"elections": elections,
+	})
+}
+
+// DiscoverElections queries INEC elections directly by office_id, optional state_id, and optional year.
+func (h *INECGrabberHandler) DiscoverElections(w http.ResponseWriter, r *http.Request) {
+	// Require a valid local office_id to map to an INEC election_type
+	officeStr := r.URL.Query().Get("office_id")
+	officeIDVal, err := strconv.ParseInt(officeStr, 10, 16)
+	if err != nil || officeIDVal <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "valid office_id is required")
+		return
+	}
+
+	// Parse optional state_id filter (omitted for nationwide elections)
+	var stateID *int16
+	if sStr := r.URL.Query().Get("state_id"); sStr != "" {
+		if sVal, err := strconv.ParseInt(sStr, 10, 16); err == nil && sVal > 0 {
+			v := int16(sVal)
+			stateID = &v
+		}
+	}
+
+	// Parse optional target year filter (e.g. 2023, 2022)
+	var year *int
+	if yStr := r.URL.Query().Get("year"); yStr != "" {
+		if y, err := strconv.Atoi(yStr); err == nil && y > 0 {
+			year = &y
+		}
+	}
+
+	// Query upstream INEC IReV API for matching elections
+	elections, err := h.svc.DiscoverINECElections(r.Context(), int16(officeIDVal), stateID, year)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "INEC elections discovered successfully", map[string]interface{}{
+		"elections": elections,
+	})
+}
+
+// PreviewLGAs fetches LGAs and their wards for an upstream INEC election ID.
+func (h *INECGrabberHandler) PreviewLGAs(w http.ResponseWriter, r *http.Request) {
+	inecElectionID := r.URL.Query().Get("inec_election_id")
+	if inecElectionID == "" {
+		h.utils.RespondError(w, http.StatusBadRequest, "inec_election_id is required")
+		return
+	}
+
+	var stateID *int16
+	if sStr := r.URL.Query().Get("state_id"); sStr != "" {
+		if sVal, err := strconv.ParseInt(sStr, 10, 16); err == nil && sVal > 0 {
+			v := int16(sVal)
+			stateID = &v
+		}
+	}
+
+	lgas, err := h.svc.PreviewINECLGAs(r.Context(), inecElectionID, stateID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "INEC LGAs fetched successfully", map[string]interface{}{
+		"lgas": lgas,
+	})
+}
+
+// ControlledScrape runs a controlled INEC scrape by office/state/year/inec_election_id without requiring a pre-existing grabber.
+func (h *INECGrabberHandler) ControlledScrape(w http.ResponseWriter, r *http.Request) {
+	var body inecservice.ControlledScrapeParams
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+	if body.OfficeID <= 0 || body.INECElectionID == "" {
+		h.utils.RespondError(w, http.StatusBadRequest, "office_id and inec_election_id are required")
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
+	defer cancel()
+
+	res, err := h.svc.ControlledScrape(ctx, body)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Controlled INEC scrape completed", map[string]interface{}{
+		"results_collected":   res.ResultsCollected,
+		"matched_election_id": res.MatchedElectionID,
+		"log":                 res.Log,
+	})
+}
+
 // TogglePause godoc
 // @Summary      Toggle pause/resume status of INEC result grabber
 // @Tags         INEC Result Grabber

@@ -56,7 +56,7 @@ func (q *Queries) CreateFederalConstituency(ctx context.Context, arg CreateFeder
 const createLGA = `-- name: CreateLGA :one
 INSERT INTO lgas (name, code, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-RETURNING id, name, code, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, state_constituencies_count, wards_count, polling_units_count, status
+RETURNING id, name, code, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, state_constituencies_count, wards_count, polling_units_count, mongo_id, status
 `
 
 type CreateLGAParams struct {
@@ -95,6 +95,7 @@ func (q *Queries) CreateLGA(ctx context.Context, arg CreateLGAParams) (Lga, erro
 		&i.StateConstituenciesCount,
 		&i.WardsCount,
 		&i.PollingUnitsCount,
+		&i.MongoID,
 		&i.Status,
 	)
 	return i, err
@@ -721,7 +722,7 @@ func (q *Queries) GetFederalConstituencyByID(ctx context.Context, id int32) (Fed
 }
 
 const getLGAByID = `-- name: GetLGAByID :one
-SELECT id, name, code, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, state_constituencies_count, wards_count, polling_units_count, status FROM lgas
+SELECT id, name, code, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, state_constituencies_count, wards_count, polling_units_count, mongo_id, status FROM lgas
 WHERE id = $1 LIMIT 1
 `
 
@@ -741,13 +742,14 @@ func (q *Queries) GetLGAByID(ctx context.Context, id int32) (Lga, error) {
 		&i.StateConstituenciesCount,
 		&i.WardsCount,
 		&i.PollingUnitsCount,
+		&i.MongoID,
 		&i.Status,
 	)
 	return i, err
 }
 
 const getLGAs = `-- name: GetLGAs :many
-SELECT id, name, code, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, state_constituencies_count, wards_count, polling_units_count, status FROM lgas
+SELECT id, name, code, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, state_constituencies_count, wards_count, polling_units_count, mongo_id, status FROM lgas
 WHERE ($1::int = 0 OR state_id = $1)
 ORDER BY name ASC
 `
@@ -774,6 +776,7 @@ func (q *Queries) GetLGAs(ctx context.Context, stateID int32) ([]Lga, error) {
 			&i.StateConstituenciesCount,
 			&i.WardsCount,
 			&i.PollingUnitsCount,
+			&i.MongoID,
 			&i.Status,
 		); err != nil {
 			return nil, err
@@ -1813,7 +1816,7 @@ const updateLGA = `-- name: UpdateLGA :one
 UPDATE lgas
 SET name = $2, code = $3, state_id = $4, state_name = $5, senatorial_district_id = $6, senatorial_district_name = $7, federal_constituency_id = $8, federal_constituency_name = $9
 WHERE id = $1
-RETURNING id, name, code, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, state_constituencies_count, wards_count, polling_units_count, status
+RETURNING id, name, code, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, state_constituencies_count, wards_count, polling_units_count, mongo_id, status
 `
 
 type UpdateLGAParams struct {
@@ -1854,6 +1857,7 @@ func (q *Queries) UpdateLGA(ctx context.Context, arg UpdateLGAParams) (Lga, erro
 		&i.StateConstituenciesCount,
 		&i.WardsCount,
 		&i.PollingUnitsCount,
+		&i.MongoID,
 		&i.Status,
 	)
 	return i, err
@@ -2246,7 +2250,7 @@ ON CONFLICT (id) DO UPDATE SET
   federal_constituency_id = EXCLUDED.federal_constituency_id,
   federal_constituency_name = EXCLUDED.federal_constituency_name,
   status = EXCLUDED.status
-RETURNING id, name, code, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, state_constituencies_count, wards_count, polling_units_count, status
+RETURNING id, name, code, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, state_constituencies_count, wards_count, polling_units_count, mongo_id, status
 `
 
 type UpsertLGAParams struct {
@@ -2289,6 +2293,7 @@ func (q *Queries) UpsertLGA(ctx context.Context, arg UpsertLGAParams) (Lga, erro
 		&i.StateConstituenciesCount,
 		&i.WardsCount,
 		&i.PollingUnitsCount,
+		&i.MongoID,
 		&i.Status,
 	)
 	return i, err

@@ -12,6 +12,17 @@ JOIN elections e ON g.election_id = e.id
 JOIN offices o ON e.office_id = o.id
 WHERE g.election_id = $1;
 
+-- name: FindMatchingGrabberForINECScrape :one
+SELECT g.*, e.scope, e.election_date, e.state_id, e.office_id, o.inec_election_type_id, o.name AS office_name
+FROM inec_result_grabber g
+JOIN elections e ON g.election_id = e.id
+JOIN offices o ON e.office_id = o.id
+WHERE e.office_id = sqlc.arg('office_id')
+  AND (sqlc.narg('state_id')::smallint IS NULL OR e.state_id = sqlc.narg('state_id'))
+  AND (sqlc.narg('year')::int IS NULL OR EXTRACT(YEAR FROM e.election_date)::int = sqlc.narg('year'))
+ORDER BY e.election_date DESC, g.id DESC
+LIMIT 1;
+
 -- name: ListActiveINECResultGrabbers :many
 SELECT g.*, e.scope, e.election_date, e.state_id, e.office_id, o.inec_election_type_id, o.name AS office_name
 FROM inec_result_grabber g
@@ -95,3 +106,23 @@ SELECT
   (SELECT COUNT(*) FROM lga_completion WHERE is_lga_complete = true) AS lgas_with_complete_results_count,
   (SELECT COUNT(*) FROM ward_completion) AS total_wards_count,
   (SELECT COUNT(*) FROM lga_completion) AS total_lgas_count;
+
+-- name: UpdateLGAMongoID :exec
+UPDATE lgas
+SET mongo_id = sqlc.arg('mongo_id')
+WHERE LOWER(TRIM(name)) = LOWER(TRIM(sqlc.arg('lga_name')))
+  AND (sqlc.narg('state_id')::int IS NULL OR state_id = sqlc.narg('state_id'))
+  AND (mongo_id IS NULL OR mongo_id = '');
+
+-- name: UpdateWardMongoID :exec
+UPDATE wards w
+SET mongo_id = sqlc.arg('mongo_id')
+FROM lgas l
+WHERE w.lga_id = l.id
+  AND LOWER(TRIM(l.name)) = LOWER(TRIM(sqlc.arg('lga_name')))
+  AND (sqlc.narg('state_id')::int IS NULL OR l.state_id = sqlc.narg('state_id'))
+  AND (
+    LOWER(TRIM(w.name)) = LOWER(TRIM(sqlc.arg('ward_name')))
+    OR (sqlc.narg('ward_code')::text IS NOT NULL AND w.code = sqlc.narg('ward_code'))
+  )
+  AND (w.mongo_id IS NULL OR w.mongo_id = '');

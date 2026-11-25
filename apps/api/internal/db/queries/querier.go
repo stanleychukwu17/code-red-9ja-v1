@@ -149,6 +149,7 @@ type Querier interface {
 	DeleteWard(ctx context.Context, id int32) error
 	DeleteWardPartyMembership(ctx context.Context, arg DeleteWardPartyMembershipParams) ([]int32, error)
 	DepositPartyAllowance(ctx context.Context, arg DepositPartyAllowanceParams) (DepositPartyAllowanceRow, error)
+	FindMatchingGrabberForINECScrape(ctx context.Context, arg FindMatchingGrabberForINECScrapeParams) (FindMatchingGrabberForINECScrapeRow, error)
 	FindOrCreateCampaignGroup(ctx context.Context, arg FindOrCreateCampaignGroupParams) (CampaignGroup, error)
 	FollowParty(ctx context.Context, arg FollowPartyParams) (int64, error)
 	FollowUser(ctx context.Context, arg FollowUserParams) error
@@ -209,6 +210,7 @@ type Querier interface {
 	GetFileByKey(ctx context.Context, fileKey string) (File, error)
 	GetFileByPublicUrl(ctx context.Context, publicUrl string) (File, error)
 	GetINECPollingUnitResultByElectionAndPU(ctx context.Context, arg GetINECPollingUnitResultByElectionAndPUParams) (InecPollingUnitResult, error)
+	GetINECPollingUnitResultByINECElectionAndPU(ctx context.Context, arg GetINECPollingUnitResultByINECElectionAndPUParams) (InecPollingUnitResult, error)
 	GetINECPollingUnitResultScoresByPU(ctx context.Context, arg GetINECPollingUnitResultScoresByPUParams) ([]InecPollingUnitResultScore, error)
 	GetINECResultGrabberByElectionID(ctx context.Context, electionID int32) (GetINECResultGrabberByElectionIDRow, error)
 	GetINECResultGrabberByID(ctx context.Context, id int64) (GetINECResultGrabberByIDRow, error)
@@ -509,6 +511,7 @@ type Querier interface {
 	UpdateINECResultGrabberMetrics(ctx context.Context, arg UpdateINECResultGrabberMetricsParams) (InecResultGrabber, error)
 	UpdateINECResultGrabberSyncStatus(ctx context.Context, arg UpdateINECResultGrabberSyncStatusParams) (InecResultGrabber, error)
 	UpdateLGA(ctx context.Context, arg UpdateLGAParams) (Lga, error)
+	UpdateLGAMongoID(ctx context.Context, arg UpdateLGAMongoIDParams) error
 	UpdateLgaSupervisorEarnedAmountKobo(ctx context.Context, arg UpdateLgaSupervisorEarnedAmountKoboParams) (LgaElectionSupervisor, error)
 	UpdateLgaSupervisorTracking(ctx context.Context, arg UpdateLgaSupervisorTrackingParams) (LgaElectionSupervisor, error)
 	UpdateMarketingCampaignStatus(ctx context.Context, arg UpdateMarketingCampaignStatusParams) (PartyMarketingCampaign, error)
@@ -558,6 +561,7 @@ type Querier interface {
 	UpdateUserStatus(ctx context.Context, arg UpdateUserStatusParams) error
 	UpdateUserVotersCard(ctx context.Context, arg UpdateUserVotersCardParams) error
 	UpdateWard(ctx context.Context, arg UpdateWardParams) (Ward, error)
+	UpdateWardMongoID(ctx context.Context, arg UpdateWardMongoIDParams) error
 	UpdateWardSupervisorEarnedAmountKobo(ctx context.Context, arg UpdateWardSupervisorEarnedAmountKoboParams) (WardElectionSupervisor, error)
 	UpdateWardSupervisorTracking(ctx context.Context, arg UpdateWardSupervisorTrackingParams) (WardElectionSupervisor, error)
 	UpsertAgentEarnings(ctx context.Context, arg UpsertAgentEarningsParams) (AgentEarning, error)
@@ -573,6 +577,7 @@ type Querier interface {
 	UpsertPollingUnitResultScore(ctx context.Context, arg UpsertPollingUnitResultScoreParams) (PollingUnitResultScore, error)
 	UpsertPrimaryBankAccount(ctx context.Context, arg UpsertPrimaryBankAccountParams) error
 	UpsertSenatorialDistrict(ctx context.Context, arg UpsertSenatorialDistrictParams) (SenatorialDistrict, error)
+	UpsertStandaloneINECPollingUnitResult(ctx context.Context, arg UpsertStandaloneINECPollingUnitResultParams) (InecPollingUnitResult, error)
 	UpsertStateConstituency(ctx context.Context, arg UpsertStateConstituencyParams) (StateConstituency, error)
 	UpsertUserPhoneNumber(ctx context.Context, arg UpsertUserPhoneNumberParams) (int64, error)
 	UpsertUserPreferences(ctx context.Context, arg UpsertUserPreferencesParams) (UserPreference, error)

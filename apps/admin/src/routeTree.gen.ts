@@ -34,6 +34,7 @@ import { Route as AuthenticatedAgentPaymentsIndexRouteImport } from './routes/_a
 import { Route as AuthenticatedUsersUsersRouteImport } from './routes/_authenticated/users/users'
 import { Route as AuthenticatedUsersPartyAdminRouteImport } from './routes/_authenticated/users/party-admin'
 import { Route as AuthenticatedUsersAdminRouteImport } from './routes/_authenticated/users/admin'
+import { Route as AuthenticatedInecResultGrabberScrapeRouteImport } from './routes/_authenticated/inec-result-grabber/scrape'
 import { Route as AuthenticatedInecResultGrabberLogsRouteImport } from './routes/_authenticated/inec-result-grabber/logs'
 import { Route as AuthenticatedElectionsOfficesRouteImport } from './routes/_authenticated/elections/offices'
 import { Route as AuthenticatedElectionsInstancesRouteImport } from './routes/_authenticated/elections/instances'
@@ -180,6 +181,12 @@ const AuthenticatedUsersAdminRoute = AuthenticatedUsersAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AuthenticatedUsersRoute,
 } as any)
+const AuthenticatedInecResultGrabberScrapeRoute =
+  AuthenticatedInecResultGrabberScrapeRouteImport.update({
+    id: '/inec-result-grabber/scrape',
+    path: '/inec-result-grabber/scrape',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedInecResultGrabberLogsRoute =
   AuthenticatedInecResultGrabberLogsRouteImport.update({
     id: '/inec-result-grabber/logs',
@@ -283,6 +290,7 @@ export interface FileRoutesByFullPath {
   '/elections/instances': typeof AuthenticatedElectionsInstancesRoute
   '/elections/offices': typeof AuthenticatedElectionsOfficesRoute
   '/inec-result-grabber/logs': typeof AuthenticatedInecResultGrabberLogsRoute
+  '/inec-result-grabber/scrape': typeof AuthenticatedInecResultGrabberScrapeRoute
   '/users/admin': typeof AuthenticatedUsersAdminRoute
   '/users/party-admin': typeof AuthenticatedUsersPartyAdminRoute
   '/users/users': typeof AuthenticatedUsersUsersRoute
@@ -318,6 +326,7 @@ export interface FileRoutesByTo {
   '/elections/instances': typeof AuthenticatedElectionsInstancesRoute
   '/elections/offices': typeof AuthenticatedElectionsOfficesRoute
   '/inec-result-grabber/logs': typeof AuthenticatedInecResultGrabberLogsRoute
+  '/inec-result-grabber/scrape': typeof AuthenticatedInecResultGrabberScrapeRoute
   '/users/admin': typeof AuthenticatedUsersAdminRoute
   '/users/party-admin': typeof AuthenticatedUsersPartyAdminRoute
   '/users/users': typeof AuthenticatedUsersUsersRoute
@@ -359,6 +368,7 @@ export interface FileRoutesById {
   '/_authenticated/elections/instances': typeof AuthenticatedElectionsInstancesRoute
   '/_authenticated/elections/offices': typeof AuthenticatedElectionsOfficesRoute
   '/_authenticated/inec-result-grabber/logs': typeof AuthenticatedInecResultGrabberLogsRoute
+  '/_authenticated/inec-result-grabber/scrape': typeof AuthenticatedInecResultGrabberScrapeRoute
   '/_authenticated/users/admin': typeof AuthenticatedUsersAdminRoute
   '/_authenticated/users/party-admin': typeof AuthenticatedUsersPartyAdminRoute
   '/_authenticated/users/users': typeof AuthenticatedUsersUsersRoute
@@ -400,6 +410,7 @@ export interface FileRouteTypes {
     | '/elections/instances'
     | '/elections/offices'
     | '/inec-result-grabber/logs'
+    | '/inec-result-grabber/scrape'
     | '/users/admin'
     | '/users/party-admin'
     | '/users/users'
@@ -435,6 +446,7 @@ export interface FileRouteTypes {
     | '/elections/instances'
     | '/elections/offices'
     | '/inec-result-grabber/logs'
+    | '/inec-result-grabber/scrape'
     | '/users/admin'
     | '/users/party-admin'
     | '/users/users'
@@ -475,6 +487,7 @@ export interface FileRouteTypes {
     | '/_authenticated/elections/instances'
     | '/_authenticated/elections/offices'
     | '/_authenticated/inec-result-grabber/logs'
+    | '/_authenticated/inec-result-grabber/scrape'
     | '/_authenticated/users/admin'
     | '/_authenticated/users/party-admin'
     | '/_authenticated/users/users'
@@ -675,6 +688,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedUsersAdminRouteImport
       parentRoute: typeof AuthenticatedUsersRoute
     }
+    '/_authenticated/inec-result-grabber/scrape': {
+      id: '/_authenticated/inec-result-grabber/scrape'
+      path: '/inec-result-grabber/scrape'
+      fullPath: '/inec-result-grabber/scrape'
+      preLoaderRoute: typeof AuthenticatedInecResultGrabberScrapeRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/inec-result-grabber/logs': {
       id: '/_authenticated/inec-result-grabber/logs'
       path: '/inec-result-grabber/logs'
@@ -874,6 +894,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedPartiesRoute: typeof AuthenticatedPartiesRoute
   AuthenticatedUsersRoute: typeof AuthenticatedUsersRouteWithChildren
   AuthenticatedInecResultGrabberLogsRoute: typeof AuthenticatedInecResultGrabberLogsRoute
+  AuthenticatedInecResultGrabberScrapeRoute: typeof AuthenticatedInecResultGrabberScrapeRoute
   AuthenticatedApplicationsIndexRoute: typeof AuthenticatedApplicationsIndexRoute
   AuthenticatedHomeIndexRoute: typeof AuthenticatedHomeIndexRoute
   AuthenticatedInecResultGrabberIndexRoute: typeof AuthenticatedInecResultGrabberIndexRoute
@@ -891,6 +912,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedUsersRoute: AuthenticatedUsersRouteWithChildren,
   AuthenticatedInecResultGrabberLogsRoute:
     AuthenticatedInecResultGrabberLogsRoute,
+  AuthenticatedInecResultGrabberScrapeRoute:
+    AuthenticatedInecResultGrabberScrapeRoute,
   AuthenticatedApplicationsIndexRoute: AuthenticatedApplicationsIndexRoute,
   AuthenticatedHomeIndexRoute: AuthenticatedHomeIndexRoute,
   AuthenticatedInecResultGrabberIndexRoute:
