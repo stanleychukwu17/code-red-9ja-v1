@@ -307,12 +307,112 @@ func (s *INECGrabberService) SyncGrabber(ctx context.Context, grabberID int64, o
 	return &logRecord, syncErr
 }
 
+func (s *INECGrabberService) fetchINECElections(
+	ctx context.Context,
+	baseURL string,
+	inecTypeID string,
+	stateID pgtype.Int2,
+) ([]INECElection, error) {
+	electionsURL := fmt.Sprintf("%s/elections?election_type=%s", baseURL, url.QueryEscape(inecTypeID))
+	if stateID.Valid && stateID.Int16 > 0 {
+		electionsURL = fmt.Sprintf("%s&state_id=%d", electionsURL, stateID.Int16)
+	}
+	slog.Info("INEC SyncGrabber: querying INEC elections API", "url", electionsURL, "inec_type_id", inecTypeID, "state_id", stateID.Int16)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, electionsURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create inec elections request: %w", err)
+	}
+
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to call inec elections endpoint: %w", err)
+	}
+	defer resp.Body.Close()
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read inec elections response: %w", err)
+	}
+
+	var electionsResp INECElectionsResponse
+	if err := json.Unmarshal(bodyBytes, &electionsResp); err != nil {
+		return nil, fmt.Errorf("failed to parse inec elections JSON: %w", err)
+	}
+
+	if !electionsResp.Success {
+		return nil, nil
+	}
+	return electionsResp.Data, nil
+}
+
+// PreviewINECElections fetches candidate INEC elections for a grabber, optionally filtered by year.
+func (s *INECGrabberService) PreviewINECElections(ctx context.Context, grabberID int64, year *int) ([]INECElection, error) {
+	grabber, err := s.queries.GetINECResultGrabberByID(ctx, grabberID)
+	if err != nil {
+		return nil, fmt.Errorf("grabber not found: %w", err)
+	}
+	inecTypeID := cleanStr(grabber.InecElectionTypeID.String)
+	if !grabber.InecElectionTypeID.Valid || inecTypeID == "" {
+		return nil, fmt.Errorf("office for this election has no inec_election_type_id configured")
+	}
+
+	cfg, err := s.GetINECAPIConfig(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load inec api config: %w", err)
+	}
+	baseURL := strings.TrimRight(cleanStr(cfg.BaseURL), "/")
+	if baseURL == "" {
+		baseURL = "https://dolphin-app-sleqh.ondigitalocean.app/api/v1"
+	}
+
+	allElections, err := s.fetchINECElections(ctx, baseURL, inecTypeID, grabber.StateID)
+	if err != nil {
+		return nil, err
+	}
+
+	if year == nil || *year <= 0 {
+		return allElections, nil
+	}
+
+	filtered := make([]INECElection, 0, len(allElections))
+	for _, el := range allElections {
+		elDate, parseErr := time.Parse(time.RFC3339, el.ElectionDate)
+		if parseErr != nil {
+			elDate, _ = time.Parse("2006-01-02", el.ElectionDate)
+		}
+		if elDate.Year() == *year {
+			filtered = append(filtered, el)
+		}
+	}
+	return filtered, nil
+}
+
+// PreviewINECLGAs fetches LGAs and their wards for a specific INEC election ID.
+func (s *INECGrabberService) PreviewINECLGAs(ctx context.Context, inecElectionID string, stateID *int16) ([]INECLGA, error) {
+	cfg, err := s.GetINECAPIConfig(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load inec api config: %w", err)
+	}
+	baseURL := strings.TrimRight(cleanStr(cfg.BaseURL), "/")
+	if baseURL == "" {
+		baseURL = "https://dolphin-app-sleqh.ondigitalocean.app/api/v1"
+	}
+
+	lgasURL := fmt.Sprintf("%s/elections/%s/lga", baseURL, cleanStr(inecElectionID))
+	if stateID != nil && *stateID > 0 {
+		lgasURL = fmt.Sprintf("%s/elections/%s/lga/state/%d", baseURL, cleanStr(inecElectionID), *stateID)
+	}
+	return s.fetchLGAs(ctx, lgasURL)
+}
+
 func (s *INECGrabberService) executeSync(
 	ctx context.Context,
 	grabber queries.GetINECResultGrabberByIDRow,
 	config INECAPIConfig,
 	uploadToR2 bool,
 	aiExtract bool,
+	opts SyncOptions,
 ) (int, error) {
 	inecTypeID := cleanStr(grabber.InecElectionTypeID.String)
 	if !grabber.InecElectionTypeID.Valid || inecTypeID == "" {
@@ -324,58 +424,40 @@ func (s *INECGrabberService) executeSync(
 		baseURL = "https://dolphin-app-sleqh.ondigitalocean.app/api/v1"
 	}
 
-	// 1. Fetch Elections list from INEC API
-	electionsURL := fmt.Sprintf("%s/elections?election_type=%s", baseURL, url.QueryEscape(inecTypeID))
-	if grabber.StateID.Valid && grabber.StateID.Int16 > 0 {
-		electionsURL = fmt.Sprintf("%s&state_id=%d", electionsURL, grabber.StateID.Int16)
-	}
-	slog.Info("INEC SyncGrabber: querying INEC elections API", "grabber_id", grabber.ID, "url", electionsURL, "inec_type_id", inecTypeID, "state_id", grabber.StateID.Int16)
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, electionsURL, nil)
-	if err != nil {
-		slog.Error("INEC SyncGrabber: failed to create request", "url", electionsURL, "err", err)
-		return 0, fmt.Errorf("failed to create inec elections request: %w", err)
-	}
-
-	resp, err := s.client.Do(req)
-	if err != nil {
-		slog.Error("INEC SyncGrabber: HTTP call failed", "url", electionsURL, "err", err)
-		return 0, fmt.Errorf("failed to call inec elections endpoint: %w", err)
-	}
-	defer resp.Body.Close()
-
-	bodyBytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		slog.Error("INEC SyncGrabber: failed reading response body", "url", electionsURL, "err", err)
-		return 0, fmt.Errorf("failed to read inec elections response: %w", err)
-	}
-
-	var electionsResp INECElectionsResponse
-	if err := json.Unmarshal(bodyBytes, &electionsResp); err != nil {
-		slog.Error("INEC SyncGrabber: failed parsing JSON response", "url", electionsURL, "err", err)
-		return 0, fmt.Errorf("failed to parse inec elections JSON: %w", err)
-	}
-
-	if !electionsResp.Success || len(electionsResp.Data) == 0 {
-		slog.Info("INEC SyncGrabber: no elections returned from INEC API", "grabber_id", grabber.ID, "success", electionsResp.Success)
-		return 0, nil
-	}
-
-	slog.Info("INEC SyncGrabber: received elections list from INEC API", "grabber_id", grabber.ID, "count", len(electionsResp.Data))
-
-	// Match INEC election
+	// 1. Resolve INEC Election (pinned ID from controlled scrape or year+name match)
 	var matchedINECElection *INECElection
-	appYear := grabber.ElectionDate.Time.Year()
-
-	for i := range electionsResp.Data {
-		el := &electionsResp.Data[i]
-		elDate, err := time.Parse(time.RFC3339, el.ElectionDate)
+	if opts.INECElectionID != nil && cleanStr(*opts.INECElectionID) != "" {
+		pinnedID := cleanStr(*opts.INECElectionID)
+		matchedINECElection = &INECElection{ID: pinnedID}
+		slog.Info("INEC SyncGrabber: using pinned INEC election ID", "grabber_id", grabber.ID, "inec_election_id", pinnedID)
+	} else {
+		electionsData, err := s.fetchINECElections(ctx, baseURL, inecTypeID, grabber.StateID)
 		if err != nil {
-			elDate, _ = time.Parse("2006-01-02", el.ElectionDate)
+			slog.Error("INEC SyncGrabber: failed fetching elections list", "grabber_id", grabber.ID, "err", err)
+			return 0, err
 		}
-		if elDate.Year() != appYear {
-			continue
+		if len(electionsData) == 0 {
+			slog.Info("INEC SyncGrabber: no elections returned from INEC API", "grabber_id", grabber.ID)
+			return 0, nil
 		}
+
+		slog.Info("INEC SyncGrabber: received elections list from INEC API", "grabber_id", grabber.ID, "count", len(electionsData))
+
+		// Match INEC election
+		appYear := grabber.ElectionDate.Time.Year()
+		if opts.Year != nil && *opts.Year > 0 {
+			appYear = *opts.Year
+		}
+
+		for i := range electionsData {
+			el := &electionsData[i]
+			elDate, err := time.Parse(time.RFC3339, el.ElectionDate)
+			if err != nil {
+				elDate, _ = time.Parse("2006-01-02", el.ElectionDate)
+			}
+			if elDate.Year() != appYear {
+				continue
+			}
 
 		if grabber.Scope == "nationwide" {
 			matchedINECElection = el
