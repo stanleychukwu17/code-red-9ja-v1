@@ -22,30 +22,6 @@ type CalculateFinalResultPayload struct {
 	PollingUnitID int32 `json:"polling_unit_id"`
 }
 
-// CandidateResult represents a simplified view of the vote counts
-type CandidateResult struct {
-	PartyShortName string `json:"party_short_name"`
-	VoteCount      int32  `json:"vote_count"`
-}
-
-// hashCandidateResults normalizes candidate results array so we can group them exactly
-func hashCandidateResults(rawJSON []byte) string {
-	var candidates []CandidateResult
-	if err := json.Unmarshal(rawJSON, &candidates); err != nil {
-		return ""
-	}
-	// Sort by party name
-	sort.Slice(candidates, func(i, j int) bool {
-		return candidates[i].PartyShortName < candidates[j].PartyShortName
-	})
-
-	var builder strings.Builder
-	for _, c := range candidates {
-		builder.WriteString(fmt.Sprintf("%s:%d;", c.PartyShortName, c.VoteCount))
-	}
-	return builder.String()
-}
-
 // ProcessTaskCalculateFinalResult processes a task to calculate the final result for a polling unit
 func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskCalculateFinalResult(ctx context.Context, task *asynq.Task) error {
 	var payload CalculateFinalResultPayload

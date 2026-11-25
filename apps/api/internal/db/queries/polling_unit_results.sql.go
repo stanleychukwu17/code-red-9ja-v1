@@ -756,7 +756,7 @@ type UpdateResultStatusParams struct {
 	AiConfidenceScore   pgtype.Numeric `json:"ai_confidence_score"`
 	DisputedReason      pgtype.Text    `json:"disputed_reason"`
 	ResultIsAiGenerated pgtype.Bool    `json:"result_is_ai_generated"`
-	Column7             []string       `json:"column_7"`
+	DisputeCodes        []string       `json:"dispute_codes"`
 }
 
 func (q *Queries) UpdateResultStatus(ctx context.Context, arg UpdateResultStatusParams) (PollingUnitResult, error) {
@@ -767,7 +767,7 @@ func (q *Queries) UpdateResultStatus(ctx context.Context, arg UpdateResultStatus
 		arg.AiConfidenceScore,
 		arg.DisputedReason,
 		arg.ResultIsAiGenerated,
-		arg.Column7,
+		arg.DisputeCodes,
 	)
 	var i PollingUnitResult
 	err := row.Scan(

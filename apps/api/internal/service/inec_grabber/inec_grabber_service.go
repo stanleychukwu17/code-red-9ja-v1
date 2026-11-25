@@ -66,9 +66,14 @@ func NewINECGrabberService(
 }
 
 type SyncOptions struct {
-	UploadToR2 *bool `json:"upload_to_r2"`
-	AIExtract  *bool `json:"ai_extract"`
-	Force      *bool `json:"force"`
+	UploadToR2     *bool   `json:"upload_to_r2"`
+	AIExtract      *bool   `json:"ai_extract"`
+	Force          *bool   `json:"force"`
+	Year           *int    `json:"year"`
+	INECElectionID *string `json:"inec_election_id"`
+	LGAID          *string `json:"lga_id"`
+	WardID         *string `json:"ward_id"`
+	MaxPUs         *int    `json:"max_pus"`
 }
 
 type INECAPIConfig struct {
@@ -242,7 +247,7 @@ func (s *INECGrabberService) SyncGrabber(ctx context.Context, grabberID int64, o
 		SyncErrorMessage: pgtype.Text{},
 	})
 
-	newResultsCount, syncErr := s.executeSync(ctx, grabber, config, uploadToR2, aiExtract)
+	newResultsCount, syncErr := s.executeSync(ctx, grabber, config, uploadToR2, aiExtract, opts)
 
 	// Calculate election metrics
 	metrics, calcErr := s.queries.CalculateElectionMetrics(ctx, grabber.ElectionID)

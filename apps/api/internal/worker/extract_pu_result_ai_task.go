@@ -32,6 +32,7 @@ func clampNonNegInt32(v int) int32 {
 	if v < 0 {
 		return 0
 	}
+
 	return int32(v)
 }
 
@@ -68,7 +69,10 @@ func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskExtractPUResultAI(ctx c
 		return fmt.Errorf("failed to unmarshal extract PU result payload: %w", err)
 	}
 
+	// Load Configuration
 	cfg := config.Load()
+
+	// Pass 1: fast, low-thinking OCR extraction via primary Flash model
 	extracted, rawJSON, err := utils.ExtractPollingUnitResultFromImage(ctx, cfg.GeminiAPIKey, cfg.GeminiModel, payload.ResultSheetImageURL, true)
 	if err != nil {
 		slog.Error("failed to extract PU result from image with Gemini", "result_id", payload.ResultID, "err", err)
@@ -80,6 +84,7 @@ func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskExtractPUResultAI(ctx c
 			DisputeCodes:   []string{constants.DisputeCodeAIExtractionFailed},
 			DisputedReason: pgtype.Text{String: fmt.Sprintf("AI extraction failed: %v", err), Valid: true},
 		})
+
 		return fmt.Errorf("gemini extraction failed for result #%d: %w", payload.ResultID, err)
 	}
 
@@ -94,17 +99,20 @@ func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskExtractPUResultAI(ctx c
 		}
 	}
 
-	confVal := extracted.ConfidenceScore
-	if confVal < 0 {
-		confVal = 0
-	} else if confVal > 1 {
-		confVal = 1
+	// Clamp OCR confidence score to [0.0, 1.0] to fit NUMERIC(5, 4)
+	confidenceScore := extracted.ConfidenceScore
+	if confidenceScore < 0 {
+		confidenceScore = 0
+	} else if confidenceScore > 1 {
+		confidenceScore = 1
 	}
 
 	// Validate integrity & vote arithmetic
 	status := constants.ResultStatusAIVerified
 	var disputeCodes []string
 	var disputeReasons []string
+
+	// Record each unique dispute code alongside its human-readable detail message
 	seenCodes := make(map[string]bool)
 	addDispute := func(code, reason string) {
 		if !seenCodes[code] {
@@ -118,6 +126,7 @@ func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskExtractPUResultAI(ctx c
 		addDispute(constants.DisputeCodeAIGeneratedImage, "Result sheet image flagged as potentially AI-generated or manipulated")
 	}
 
+	// Clamp extracted counts to non-negative int32 before running arithmetic checks or DB writes
 	registeredVoters := clampNonNegInt32(extracted.RegisteredVoters)
 	accreditedVoters := clampNonNegInt32(extracted.AccreditedVoters)
 	ballotPapersIssued := clampNonNegInt32(extracted.BallotPapersIssued)
@@ -128,57 +137,53 @@ func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskExtractPUResultAI(ctx c
 	usedBallotPapers := clampNonNegInt32(extracted.UsedBallotPapers)
 	votesCast := clampNonNegInt32(extracted.VotesCast)
 
+	// Reject non-EC8A uploads immediately; otherwise run arithmetic, turnout, and confidence checks
 	if !extracted.IsValidEC8AForm {
 		addDispute(constants.DisputeCodeInvalidEC8AForm, "Uploaded image is not a valid INEC Form EC8A result sheet")
 	} else {
+		// Box #7 + Box #6 must equal total votes cast
 		if validVotes+rejectedVotes != votesCast {
-			slog.Warn("AI extracted vote counts discrepancy", "result_id", payload.ResultID, "valid", validVotes, "rejected", rejectedVotes, "cast", votesCast)
 			addDispute(constants.DisputeCodeVoteArithmeticMismatch, fmt.Sprintf("Vote arithmetic mismatch: valid(%d) + rejected(%d) != cast(%d)", validVotes, rejectedVotes, votesCast))
 		}
+		// Box #5 + Box #6 + Box #7 must equal Box #8 (total used ballot papers) when Box #8 is present
 		if usedBallotPapers > 0 && spoiledBallotPapers+rejectedVotes+validVotes != usedBallotPapers {
 			addDispute(constants.DisputeCodeUsedBallotsMismatch, fmt.Sprintf("Used ballots mismatch: spoiled(%d) + rejected(%d) + valid(%d) != used(%d)", spoiledBallotPapers, rejectedVotes, validVotes, usedBallotPapers))
 		}
+		// Sum of individual party scores must equal Box #7 (valid votes)
 		if len(extracted.Parties) == 0 {
 			addDispute(constants.DisputeCodeNoPartyScores, "No political party scores could be extracted from the result sheet")
 		} else {
 			var partySum int32
 			for _, c := range extracted.Parties {
-				vc := clampNonNegInt32(c.VoteCount)
-				partySum += vc
-				if words := strings.TrimSpace(c.VotesInWords); words != "" {
-					if parsedWords, ok := parseEnglishNumber(words); ok && int32(parsedWords) != vc {
-						addDispute(constants.DisputeCodePartyWordsMismatch, fmt.Sprintf("Party %s figure(%d) != words(%q)", strings.ToUpper(strings.TrimSpace(c.PartyShortName)), vc, words))
-					}
-				}
+				partySum += clampNonNegInt32(c.VoteCount)
 			}
 			if partySum != validVotes {
 				addDispute(constants.DisputeCodePartySumMismatch, fmt.Sprintf("Party vote sum(%d) != valid_votes(%d)", partySum, validVotes))
 			}
 		}
+		// Turnout sanity: total votes cast cannot exceed accredited voters, nor accredited exceed registered
 		if accreditedVoters > 0 && votesCast > accreditedVoters {
 			addDispute(constants.DisputeCodeOverVoting, fmt.Sprintf("Over-voting detected: cast(%d) > accredited(%d)", votesCast, accreditedVoters))
 		}
 		if registeredVoters > 0 && accreditedVoters > registeredVoters {
 			addDispute(constants.DisputeCodeAccreditedExceedsRegistered, fmt.Sprintf("Accredited voters(%d) > registered_voters(%d)", accreditedVoters, registeredVoters))
 		}
-		if confVal < 0.6 {
-			addDispute(constants.DisputeCodeLowConfidence, fmt.Sprintf("Low OCR confidence score (%.2f)", confVal))
+		// Flag unreadable/ambiguous sheets that remained low-confidence even after fallback
+		if confidenceScore < 0.6 {
+			addDispute(constants.DisputeCodeLowConfidence, fmt.Sprintf("Low OCR confidence score (%.2f)", confidenceScore))
 		}
 	}
 
+	// Mark the result as disputed and join all failure reasons if any validation check triggered
 	var disputedReason pgtype.Text
 	if len(disputeReasons) > 0 {
 		status = constants.ResultStatusDisputed
-		disputedReason = pgtype.Text{String: strings.Join(disputeReasons, "; "), Valid: true}
+		disputedReason = utils.PgTextFromString(strings.Join(disputeReasons, "; "))
 	}
 
+	// Format confidenceScore to 4 decimal places for the PostgreSQL NUMERIC column
 	var confidence pgtype.Numeric
-	_ = confidence.Scan(fmt.Sprintf("%.4f", confVal))
-
-	var sheetDate pgtype.Date
-	if parsedDate, parseErr := time.Parse("2006-01-02", strings.TrimSpace(extracted.SheetDate)); parseErr == nil {
-		sheetDate = pgtype.Date{Time: parsedDate, Valid: true}
-	}
+	_ = confidence.Scan(fmt.Sprintf("%.4f", confidenceScore))
 
 	tx, err := redisTaskProcessor.pool.Begin(ctx)
 	if err != nil {
@@ -200,13 +205,13 @@ func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskExtractPUResultAI(ctx c
 		RejectedVotes:                rejectedVotes,
 		UsedBallotPapers:             usedBallotPapers,
 		SerialNumber:                 utils.PgTextFromString(strings.TrimSpace(extracted.SerialNumber)),
-		SheetDate:                    sheetDate,
+		SheetDate:                    utils.PgDateFromString(strings.TrimSpace(extracted.SheetDate)),
 		PresidingOfficerName:         utils.PgTextFromString(strings.TrimSpace(extracted.PresidingOfficerName)),
 		HasPresidingOfficerSignature: extracted.HasPresidingOfficerSignature,
 		Status:                       status,
 		AiExtractedData:              rawJSON,
-		IsValidResultSheet:           pgtype.Bool{Bool: extracted.IsValidEC8AForm, Valid: true},
-		ResultIsAiGenerated:          pgtype.Bool{Bool: extracted.IsAIGenerated, Valid: true},
+		IsValidResultSheet:           utils.PgBool(extracted.IsValidEC8AForm),
+		ResultIsAiGenerated:          utils.PgBool(extracted.IsAIGenerated),
 		AiConfidenceScore:            confidence,
 		DisputeCodes:                 disputeCodes,
 		DisputedReason:               disputedReason,
@@ -219,11 +224,16 @@ func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskExtractPUResultAI(ctx c
 	if err := qtx.DeletePollingUnitResultScoresByResultID(ctx, payload.ResultID); err != nil {
 		return fmt.Errorf("failed to clear old scores for result #%d: %w", payload.ResultID, err)
 	}
+
+	// loop through each extracted party score and save it
 	for _, c := range extracted.Parties {
+		// Normalize party acronym to match uq_pu_result_score_party and skip blank rows
 		shortName := strings.ToUpper(strings.TrimSpace(c.PartyShortName))
 		if shortName == "" {
 			continue
 		}
+
+		// Upsert so duplicate party entries from OCR update in place instead of violating the unique index
 		if _, err := qtx.UpsertPollingUnitResultScore(ctx, queries.UpsertPollingUnitResultScoreParams{
 			ResultID:        payload.ResultID,
 			ElectionID:      updatedResult.ElectionID,
@@ -254,6 +264,8 @@ func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskExtractPUResultAI(ctx c
 		}
 	}
 
+	// DONE: above NOTE:
+
 	// Trigger consensus calculation and hierarchical rollup
 	if status == constants.ResultStatusAIVerified {
 		err = redisTaskProcessor.taskDistributor.DistributeTaskCalculateFinalResult(ctx, &CalculateFinalResultPayload{
@@ -269,87 +281,35 @@ func (redisTaskProcessor *RedisTaskProcessor) ProcessTaskExtractPUResultAI(ctx c
 }
 
 func needsFallbackEscalation(extracted *utils.GeminiExtractedResult) bool {
+	// Escalate borderline/gray-zone legibility (0.60-0.74) before it settles at < 0.60 disputed
 	if extracted.ConfidenceScore < 0.75 {
 		return true
 	}
-	validV := clampNonNegInt32(extracted.ValidVotes)
-	rejectedV := clampNonNegInt32(extracted.RejectedVotes)
-	castV := clampNonNegInt32(extracted.VotesCast)
 
-	if validV+rejectedV != castV {
+	// Escalate if valid (#7) + rejected (#6) does not equal total votes cast
+	validVotes := clampNonNegInt32(extracted.ValidVotes)
+	rejectedVotes := clampNonNegInt32(extracted.RejectedVotes)
+	votesCast := clampNonNegInt32(extracted.VotesCast)
+	if validVotes+rejectedVotes != votesCast {
 		return true
 	}
 
-	spoiledV := clampNonNegInt32(extracted.SpoiledBallotPapers)
-	usedV := clampNonNegInt32(extracted.UsedBallotPapers)
-	if usedV > 0 && spoiledV+rejectedV+validV != usedV {
+	// Escalate if spoiled (#5) + rejected (#6) + valid (#7) does not equal used ballots (#8)
+	spoiledBallots := clampNonNegInt32(extracted.SpoiledBallotPapers)
+	usedBallots := clampNonNegInt32(extracted.UsedBallotPapers)
+	if usedBallots > 0 && spoiledBallots+rejectedVotes+validVotes != usedBallots {
 		return true
 	}
 
+	// Escalate if total party votes != valid_votes (#7)
 	if len(extracted.Parties) > 0 {
 		var partySum int32
-		for _, c := range extracted.Parties {
-			vc := clampNonNegInt32(c.VoteCount)
-			partySum += vc
-			if words := strings.TrimSpace(c.VotesInWords); words != "" {
-				if parsedWords, ok := parseEnglishNumber(words); ok && int32(parsedWords) != vc {
-					return true
-				}
-			}
+		for _, party := range extracted.Parties {
+			partySum += clampNonNegInt32(party.VoteCount)
 		}
-		if partySum != validV {
+		if partySum != validVotes {
 			return true
 		}
 	}
 	return false
-}
-
-var englishNumberWords = map[string]int{
-	"zero": 0, "nil": 0, "none": 0,
-	"one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
-	"six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
-	"eleven": 11, "twelve": 12, "thirteen": 13, "fourteen": 14, "fifteen": 15,
-	"sixteen": 16, "seventeen": 17, "eighteen": 18, "nineteen": 19,
-	"twenty": 20, "thirty": 30, "forty": 40, "fifty": 50,
-	"sixty": 60, "seventy": 70, "eighty": 80, "ninety": 90,
-}
-
-// parseEnglishNumber parses English number words (e.g. "One hundred and forty two") into an integer.
-func parseEnglishNumber(s string) (int, bool) {
-	cleaned := strings.NewReplacer("-", " ", ",", " ").Replace(strings.ToLower(strings.TrimSpace(s)))
-	fields := strings.Fields(cleaned)
-	if len(fields) == 0 {
-		return 0, false
-	}
-
-	total, current := 0, 0
-	matched := false
-	for _, w := range fields {
-		if w == "and" {
-			continue
-		}
-		if v, ok := englishNumberWords[w]; ok {
-			current += v
-			matched = true
-		} else if w == "hundred" {
-			if current == 0 {
-				current = 1
-			}
-			current *= 100
-			matched = true
-		} else if w == "thousand" {
-			if current == 0 {
-				current = 1
-			}
-			total += current * 1000
-			current = 0
-			matched = true
-		} else {
-			return 0, false
-		}
-	}
-	if !matched {
-		return 0, false
-	}
-	return total + current, true
 }

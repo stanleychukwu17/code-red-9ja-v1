@@ -89,7 +89,7 @@ SET
   ai_confidence_score = $4,
   disputed_reason     = $5,
   result_is_ai_generated = $6,
-  dispute_codes       = COALESCE($7::text[], '{}'),
+  dispute_codes       = COALESCE(sqlc.narg('dispute_codes')::text[], '{}'),
   updated_at          = NOW()
 WHERE id = $1
 RETURNING *;

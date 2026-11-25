@@ -17,7 +17,6 @@ const (
 	DisputeCodeVoteArithmeticMismatch      = "vote_arithmetic_mismatch"
 	DisputeCodeUsedBallotsMismatch         = "used_ballots_mismatch"
 	DisputeCodeNoPartyScores               = "no_party_scores"
-	DisputeCodePartyWordsMismatch          = "party_words_mismatch"
 	DisputeCodePartySumMismatch            = "party_sum_mismatch"
 	DisputeCodeOverVoting                  = "over_voting"
 	DisputeCodeAccreditedExceedsRegistered = "accredited_exceeds_registered"
